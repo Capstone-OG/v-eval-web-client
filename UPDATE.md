@@ -1,15 +1,14 @@
 # Nhật Ký Cập Nhật (Update Log) - V-Eval Web Client
 
-## [29/09/2026] - Khởi Tạo Cấu Hình Dịch Vụ, Đóng Gói Docker & Tích Hợp System Runner
+## [01/10/2026] - Kiểm Thử Toàn Diện Tầng Giao Tiếp API Gateway YARP & Đồng Bộ Kiến Trúc Dịch Vụ Frontend
 
-- **Thiết Lập Script Push Độc Lập**:
-  - Tạo [`Scripts/push.bat`](./Scripts/push.bat) hỗ trợ kiểm tra đồng bộ lịch sử git, chọn nhánh và commit push trực tiếp từ thư mục dịch vụ.
-- **Đóng Gói Docker & Nginx SPA**:
-  - Soạn thảo [`Dockerfile`](./Dockerfile) đa tầng (Node 22 Alpine build + Nginx Alpine serve) và cấu hình [`nginx.conf`](./nginx.conf) hỗ trợ fallback URL cho SPA routing.
-- **Hệ Thống Tài Liệu Chuẩn Hóa**:
-  - Khởi tạo bộ 3 tài liệu theo quy chuẩn: [`docs/daily.md`](./docs/daily.md), [`docs/process.md`](./docs/process.md), và [`docs/architecture_acceptance.md`](./docs/architecture_acceptance.md).
-- **Xây Dựng Phân Hệ Dịch Vụ Kết Nối API Gateway YARP (`src/services/`)**:
-  - Khởi tạo [`src/services/apiClient.js`](./src/services/apiClient.js) tích hợp cơ chế tự động đính kèm JWT, bắt header `X-Token-Refresh-Required` của Gateway để gia hạn ngầm (Silent Refresh), và xử lý lỗi tập trung.
-  - Xây dựng 4 service giao tiếp với 4 microservices qua Gateway: [`authService.js`](./src/services/authService.js) (Identity), [`contentService.js`](./src/services/contentService.js) (Content), [`practiceService.js`](./src/services/practiceService.js) (Practice), [`aiService.js`](./src/services/aiService.js) (AI Engine).
-  - Khởi tạo [`src/services/index.js`](./src/services/index.js) xuất khẩu toàn diện và cấu hình biến môi trường [`.env`](./.env) trỏ về `http://localhost:5212`.
-
+- **Tầng Giao Tiếp API Gateway Chuẩn Hóa (`src/services/`)**:
+  - Hoàn thiện HTTP Client trung tâm [`src/services/apiClient.js`](./src/services/apiClient.js) tích hợp Axios interceptor đính kèm JWT Bearer Token, bắt header `X-Token-Refresh-Required` của Gateway để kích hoạt Silent Refresh trong nền mà không ngắt quãng phiên làm việc.
+  - Hoàn thiện 4 client microservice:
+    - [`authService.js`](./src/services/authService.js): Xác thực đa vai trò, refresh token qua Identity Service (`/api/auth`, `/api/v1/auth`, `/api/v1/users`).
+    - [`contentService.js`](./src/services/contentService.js): Truy vấn ngân hàng câu hỏi, đề thi khảo sát chẩn đoán 30 câu hỏi qua Content Service (`/api/v1/content`).
+    - [`practiceService.js`](./src/services/practiceService.js): Đồng bộ lộ trình học tập cá nhân hóa, nộp bài kiểm tra chặng, lịch Live Q&A qua Practice Service (`/api/v1/practice`).
+    - [`aiService.js`](./src/services/aiService.js): Tương tác gia sư Socratic và theo dõi tiến trình OCR đề thi qua AI Engine (`/api/v1/ai`).
+- **Kiểm Thử Biên Dịch & Vận Hành (Verification & Build)**:
+  - Kiểm thử `npm run build` thành công 100% trong 619ms, tạo các bundle tĩnh `dist/` sẵn sàng phục vụ trong container Nginx Alpine.
+  - Kiểm thử tương thích môi trường cấu hình qua [`.env`](./.env) và [`.env.example`](./.env.example).

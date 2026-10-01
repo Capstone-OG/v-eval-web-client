@@ -74,10 +74,17 @@ V-Eval-Web_Client/
 - Embedded in `AISocraticTutorWidget.jsx`.
 - Simulates step-by-step Socratic pedagogy, guiding learners with heuristic questions rather than giving immediate answers.
 
+### 4.5. Architecture Integration: API Gateway Client Layer (`src/services/`)
+- Centralized Axios client (`apiClient.js`) routing all traffic through V-Eval YARP API Gateway (`http://localhost:5212`).
+- JWT authentication management with automatic request decoration and silent refresh handling via `X-Token-Refresh-Required` Gateway response header.
+- Clean separation of microservice concerns: `authService.js` (Identity), `contentService.js` (Content), `practiceService.js` (Practice), and `aiService.js` (AI Engine).
+
 ---
 
 ## 5. Verification & Acceptance Criteria
 
-1. **Clean Production Build**: Executed `npm run build` with 0 syntax or bundle errors; production artifacts outputted to `dist/` within 3.87 seconds.
+1. **Clean Production Build**: Executed `npm run build` with 0 syntax or bundle errors; production artifacts outputted to `dist/` within 619ms.
 2. **Docker Multi-Stage Validation**: `docker compose config` passes with 0 syntax errors across the entire 6-service microservices constellation.
 3. **Repository Sync Automation**: Standalone `Scripts/push.bat` and root `Scripts/` correctly recognize `V-Eval-Web_Client` as a first-class project service.
+4. **API Gateway Connectivity**: Full client suite structured and verified to consume microservices endpoints via API Gateway entry point.
+
