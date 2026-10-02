@@ -63,3 +63,21 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #94A3B8;
 }
+
+/* KaTeX Theme Tuning (Full High-Contrast Rendering) */
+.katex {
+  color: inherit !important;
+  font-size: 1.08em;
+}
+.katex-html {
+  user-select: text;
+}
+.katex-mathml {
+  user-select: none;
+}
+.inline-math {
+  display: inline-block;
+  vertical-align: middle;
+  line-height: 1.2;
+}
+

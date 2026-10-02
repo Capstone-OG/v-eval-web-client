@@ -19,7 +19,8 @@ import {
   AdaptiveQuizModal, 
   RadarChartModal 
 } from './components/modals';
-import { CheckCircle2, Globe, LogIn, LayoutDashboard, Sparkles } from 'lucide-react';
+import { DiagnosticAssessmentPage } from './components/diagnostic';
+import { CheckCircle2, Globe, LogIn, LayoutDashboard, Sparkles, Brain } from 'lucide-react';
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState('landing'); // 'landing' | 'login' | 'dashboard'
@@ -108,6 +109,16 @@ export default function App() {
           </button>
 
           <button
+            onClick={() => setCurrentPage('diagnostic')}
+            className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all ${
+              currentPage === 'diagnostic' ? 'bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-extrabold shadow-sm' : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <Brain className="w-3.5 h-3.5 text-cyan-300" />
+            <span>Khảo Sát 30 Câu AI (Core Flow 1)</span>
+          </button>
+
+          <button
             onClick={() => setCurrentPage('dashboard')}
             className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all ${
               currentPage === 'dashboard' ? 'bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-extrabold shadow-sm' : 'text-slate-400 hover:text-white'
@@ -123,9 +134,16 @@ export default function App() {
       {currentPage === 'landing' && (
         <PublicLandingPage 
           onOpenLogin={() => setCurrentPage('login')}
-          onOpenDiagnostic={() => setIsDiagnosticModalOpen(true)}
+          onOpenDiagnostic={() => setCurrentPage('diagnostic')}
           onOpenDashboard={() => setCurrentPage('dashboard')}
           onOpenArchModal={() => setIsArchModalOpen(true)}
+        />
+      )}
+
+      {currentPage === 'diagnostic' && (
+        <DiagnosticAssessmentPage 
+          onNavigateDashboard={() => setCurrentPage('dashboard')}
+          onNavigateHome={() => setCurrentPage('landing')}
         />
       )}
 
@@ -153,7 +171,7 @@ export default function App() {
               activeTab={activeTab}
               setActiveTab={setActiveTab}
               activeRole={activeRole}
-              onOpenDiagnostic={() => setIsDiagnosticModalOpen(true)}
+              onOpenDiagnostic={() => setCurrentPage('diagnostic')}
               onOpenZPD={() => setIsZpdModalOpen(true)}
               onOpenAiTutor={() => setIsZpdModalOpen(true)}
             />
@@ -176,7 +194,7 @@ export default function App() {
                   {/* Hero Banner with 3D Pop-out Avatar */}
                   <HeroBanner 
                     onStartMilestone={handleContinueMilestone}
-                    onStartMockTest={() => setIsDiagnosticModalOpen(true)}
+                    onStartMockTest={() => setCurrentPage('diagnostic')}
                     onOpenAiTutor={() => setIsZpdModalOpen(true)}
                   />
 

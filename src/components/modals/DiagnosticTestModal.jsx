@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Target, CheckCircle2, ArrowRight, X, Sparkles, Award } from 'lucide-react';
 import { sampleQuestionsForDiagnostic, mockUser } from '../../data/mockData';
+import MathText from '../common/MathText';
 
 export default function DiagnosticTestModal({ isOpen, onClose, onCompleteTest }) {
   const [currentStep, setCurrentStep] = useState(0);
@@ -84,7 +85,7 @@ export default function DiagnosticTestModal({ isOpen, onClose, onCompleteTest })
                   Kỹ năng: {currentQ.skill} (Độ khó b: {currentQ.difficulty})
                 </div>
                 <h3 className="text-sm font-extrabold text-slate-900 leading-snug">
-                  {currentQ.question}
+                  <MathText text={currentQ.question} />
                 </h3>
               </div>
 
@@ -102,7 +103,7 @@ export default function DiagnosticTestModal({ isOpen, onClose, onCompleteTest })
                           : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50'
                       }`}
                     >
-                      <span>{opt}</span>
+                      <MathText text={opt} />
                       {isSelected && <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0" />}
                     </button>
                   );
