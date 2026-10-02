@@ -1,23 +1,25 @@
 # Nhật Ký Cập Nhật (Update Log) - V-Eval Web Client
 
-## [02/10/2026] - Ra Mắt Trang Khảo Sát Năng Lực 30 Câu Thật Với AI & Tích Hợp Render Công Thức Toán Học KaTeX
+## [02/10/2026] - Hoàn Thiện Khảo Sát 30 Câu: Tích Hợp Đề Content Service & AI Cloud, Bảng Đáp Án Chi Tiết, Phân Tích Tốc Độ Pacing & Render KaTeX
 
-- **Phát Triển Trang Khảo Sát Năng Lực 30 Câu Chuẩn Hóa V-ACT (`DiagnosticAssessmentPage.jsx`)**:
-  - Khởi tạo trang làm bài thi thực chiến [`src/components/diagnostic/DiagnosticAssessmentPage.jsx`](./src/components/diagnostic/DiagnosticAssessmentPage.jsx):
-    - Cho phép thí sinh chọn sinh đề mới 100% bằng **Google Gemini AI** hoặc lấy từ **Calibrated Question Bank** (&lt;500ms).
-    - Bộ câu hỏi 30 câu bao phủ trọn vẹn 5 lĩnh vực (Toán học, Logic, Ngôn ngữ, KHTN, KHXH).
-    - Đồng hồ đếm ngược 45 phút, bảng điều hướng 30 ô câu hỏi, gắn cờ phân vân 🚩.
-    - Tích hợp khung **Gia sư AI Socratic RAG** gợi ý hướng giải tư duy từng bước ngay khi đang làm bài mà không làm lộ đáp án.
-    - Báo cáo kết quả chuẩn Psychometrics: Ước lượng năng lực IRT 2PL `\theta_0`, phân lớp học viên (`FOUNDATION`, `ACCELERATION`, `BREAKTHROUGH`), vẽ **Recharts Radar Chart 5 trục năng lực** so sánh với chuẩn 900+, và lời nhận xét sư phạm Socratic AI Commentary từ Gemini.
-  - Tích hợp tab **"Khảo Sát 30 Câu AI (Core Flow 1)"** vào thanh điều hướng chính của [`App.jsx`](./src/App.jsx).
-- **Tích Hợp Trình Render Công Thức Toán Học KaTeX Toàn Diện (`MathText.jsx`)**:
-  - Cài đặt thư viện `katex` và nạp stylesheet chuẩn `katex/dist/katex.min.css`.
-  - Xây dựng component dùng chung [`src/components/common/MathText.jsx`](./src/components/common/MathText.jsx) với thuật toán tự động nhận diện và bao bọc công thức toán học (`normalizeMathString`):
-    - Tự động bọc và hiển thị sắc nét các khoảng giá trị toán học: `(-\infty; +\infty)`, `[0; +\infty)`, `[-1; 1]`.
-    - Phân tích và render các cấu trúc LaTeX phức tạp: phân số `\frac{...}{...}`, căn thức `\sqrt{...}`, số mũ đa thức `y = x^4 + 2x^2`, `y = x^3 + 3x - 1`, đạo hàm `f'(x) = 3x^2 - 6x`.
-    - Phân biệt chính xác giữa công thức toán học và câu văn tiếng Việt có dấu, tuyệt đối không gây lỗi font hay vỡ giao diện.
-    - Áp dụng đồng bộ cho nội dung câu hỏi, 4 phương án A/B/C/D, và lời giải gia sư AI Socratic Tutor.
-- **Móc Nối 14+ API AI Engine Qua Gateway YARP (`http://localhost:5212`)**:
-  - Nâng cấp toàn diện [`src/services/aiService.js`](./src/services/aiService.js): Bóc tách OCR đề thi PDF, nạp SGK 250MB, sinh đề thi AI Bloom, phân tích chẩn đoán IRT/BKT, và chat SSE Token Streaming.
+- **Hỗ Trợ Đa Nguồn Đề Thi Khảo Sát 30 Câu Chuẩn Hóa V-ACT (`DiagnosticAssessmentPage.jsx`)**:
+  - **Nguồn 1 (Đề Có Sẵn - Content Service)**: Lấy trực tiếp từ Database PostgreSQL của Content Service (`GET /api/v1/content/exams/11111111-1111-1111-1111-111111111111`), tự động bóc tách các bài đọc hiểu (Passages), ngữ liệu ngữ văn và bảng đáp án chính xác.
+  - **Nguồn 2 (Sinh Đề AI Cloud - Google Gemini)**: Gọi API Gemini 3.6 Flash sinh đề thi mới 100% cân bằng ma trận Bloom 6 cấp độ.
+  - **Nguồn 3 (Hiệu Chuẩn AI Fast Bank)**: Trích xuất siêu tốc (<500ms) từ ngân hàng câu hỏi đã gán sẵn tham số Psychometrics.
+- **Phân Tích Tốc Độ & Chiến Thuật Làm Bài (Pacing & Speed Analysis)**:
+  - Thống kê thời gian trung bình từng câu (`s / câu`).
+  - Phân loại 3 nhóm tốc độ phản xạ: **Làm nhanh (<25s)**, **Chuẩn nhịp độ (25-90s)**, và **Tốn nhiều thời gian (>90s)**.
+  - Thống kê câu phân vân đã gắn cờ 🚩 và độ nhạy bén trực giác của thí sinh.
+- **Bảng Đánh Giá Chi Tiết & Tra Cứu Đáp Án 30 Câu Hỏi (Answer Key & Review Table)**:
+  - Bộ lọc thông minh: `Tất cả (30)`, `✅ Câu đúng`, `❌ Câu sai`, `🚩 Câu phân vân`.
+  - Hiển thị trực quan từng câu hỏi: Lĩnh vực, Kỹ năng, Cấp độ Bloom, Badge tốc độ thời gian làm câu.
+  - Đối chiếu phương án thí sinh chọn (xanh lá nếu đúng, đỏ nếu sai) với phương án đúng chính thức.
+  - Hộp lời giải chi tiết (Explanation) render KaTeX toán học sắc nét.
+- **Biểu Đồ Năng Lực Chuẩn Xác & Không Bịa**:
+  - Dữ liệu Recharts Radar Chart 5 trục (Toán học, Logic, Ngôn ngữ, KHTN, KHXH) được tính toán trực tiếp từ kết quả 30 câu hỏi thực tế của thí sinh so với chuẩn 900+.
+  - Ước lượng năng lực IRT 2PL `\theta_0` và xếp lớp đề xuất (`Lớp Bứt Phá`, `Lớp Tăng Tốc`, `Lớp Nền Tảng`).
+- **Tích Hợp Trình Render Toán Học KaTeX Toàn Diện (`MathText.jsx`)**:
+  - Cài đặt thư viện `katex` và nạp stylesheet `katex/dist/katex.min.css`.
+  - Hỗ trợ công thức toán học phân số, căn thức, số mũ đa thức, khoảng vô cực cho đề thi, 4 phương án A/B/C/D, gia sư AI Socratic và bảng lời giải chi tiết.
 - **Kiểm Thử Biên Dịch (Build Verification)**:
-  - Chạy `npm run build` thành công 100% (0 lỗi cú pháp, toàn bộ font chữ KaTeX woff/woff2/ttf được đóng gói hoàn chỉnh).
+  - `npm run build` thành công 100% trong 1.26s (0 lỗi cú pháp, toàn bộ assets font KaTeX woff/woff2/ttf được đóng gói chuẩn).

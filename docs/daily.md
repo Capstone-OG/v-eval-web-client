@@ -28,11 +28,18 @@
     - `getChatSessions()` & `clearChatSession(sessionId)`: Quản lý phiên hội thoại (`/api/v1/chat/sessions`).
   - **Nhóm 5: Quản trị Tài liệu Tri thức RAG**:
     - `uploadRagDocument(file)`: Nạp tài liệu tri thức RAG (`POST /api/v1/documents/upload`).
-- **Phát Triển Trang Khảo Sát Năng Lực 30 Câu Thật Với AI (`DiagnosticAssessmentPage.jsx`)**:
+- **Phát Triển Trang Khảo Sát Năng Lực 30 Câu Thật Với AI & Content Service (`DiagnosticAssessmentPage.jsx`)**:
   - Xây dựng component trang hoàn chỉnh `src/components/diagnostic/DiagnosticAssessmentPage.jsx`:
-    - Setup screen: Chọn nguồn đề Gemini Cloud AI hoặc Calibrated Question Bank (<500ms), nhập điểm mục tiêu.
-    - In-exam testing screen: Đồng hồ 45 phút, thanh điều hướng 30 câu hỏi kèm cờ phân vân, hiển thị công thức toán học LaTeX, tích hợp Gia sư AI Socratic trực tiếp hỗ trợ giải thích từng câu hỏi mà không spoil đáp án.
-    - Result & Psychometrics screen: Ước lượng năng lực IRT 2PL $\theta_0$, phân lớp học viên (`FOUNDATION`, `ACCELERATION`, `BREAKTHROUGH`), vẽ biểu đồ Recharts Radar Chart 5 trục năng lực so sánh với chuẩn 900+, và hiển thị lời nhận xét sư phạm Socratic AI Commentary từ Gemini.
+    - Setup screen: Hỗ trợ 3 nguồn đề thi linh hoạt:
+      + **Đề Có Sẵn (Content Service)**: Lấy trực tiếp từ Database PostgreSQL 30 câu hỏi chuẩn hóa V-ACT kèm bài đọc hiểu (Passages).
+      + **Google Gemini AI Cloud**: Sinh 30 câu hỏi mới 100% kèm công thức Toán KaTeX.
+      + **Hiệu Chuẩn AI Fast Bank (<500ms)**: Trích xuất siêu tốc 30 câu từ bộ nhớ hiệu chuẩn psychometrics.
+    - In-exam testing screen: Đồng hồ 45 phút, ngữ liệu đọc hiểu collapsible, thanh điều hướng 30 câu kèm cờ phân vân, hiển thị công thức KaTeX, tích hợp Gia sư AI Socratic RAG hỗ trợ tư duy từng bước.
+    - Result & Psychometrics screen:
+      + Điểm thô thực tế ($X/30$), ước lượng năng lực IRT 2PL `\theta_0`, phân lớp học viên (`FOUNDATION`, `ACCELERATION`, `BREAKTHROUGH`).
+      + **Phân tích Tốc độ & Chiến thuật (Pacing Analysis)**: Thời gian trung bình/câu, nhóm làm nhanh (&lt;25s), nhóm chuẩn (25-90s), nhóm tốn thời gian (&gt;90s), câu phân vân gắn cờ 🚩.
+      + **Biểu Đồ Radar Năng Lực 5 Lĩnh Vực**: Dữ liệu Recharts Radar Chart lấy trực tiếp từ kết quả 30 câu thật không bịa, đối chiếu chuẩn 900+.
+      + **Bảng Tra Cứu & Đáp Án Chi Tiết 30 Câu**: Bộ lọc (Tất cả, Đúng, Sai, Phân vân), đối chiếu đáp án của bạn vs đáp án đúng, badge thời gian, ngữ liệu và lời giải chi tiết KaTeX.
   - Tích hợp vào thanh chuyển trang (Top Page Control Bar) của `App.jsx` và liên kết điều hướng từ Landing Page, HeroBanner và Sidebar Dashboard.
 - **Tích Hợp Trình Render Toán Học KaTeX Toàn Diện (`MathText.jsx`, `DiagnosticAssessmentPage.jsx`, `DiagnosticTestModal.jsx`)**:
   - Cài đặt thư viện `katex` và nạp stylesheet `katex/dist/katex.min.css` vào `main.jsx` và font Plus Jakarta Sans.
@@ -41,7 +48,7 @@
     - Tự động nhận diện lệnh LaTeX: phân số `\frac{...}{...}`, căn thức `\sqrt{...}`, vô cực `\infty`, số mũ `x^4 + 2x^2`, tích phân `\int`, hình học `\perp`...
     - Điều chỉnh màu KaTeX thừa hưởng (inherit) đảm bảo độ tương phản cao, hiển thị sắc nét trên cả nền tối Dark Theme và nền sáng Light Theme.
 - **Kiểm Thử Biên Dịch**:
-  - `npm run build` thành công 100% trong 1.07s, đóng gói hoàn chỉnh các bộ font KaTeX (woff, woff2, ttf).
+  - `npm run build` thành công 100% trong 1.26s, đóng gói hoàn chỉnh các bộ font KaTeX (woff, woff2, ttf).
 
 ---
 

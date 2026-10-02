@@ -29,7 +29,7 @@ export const contentService = {
    */
   async getMockExams(params = {}) {
     const query = new URLSearchParams(params).toString();
-    const endpoint = query ? `/api/v1/content/mock-exams?${query}` : '/api/v1/content/mock-exams';
+    const endpoint = query ? `/api/v1/content/exams?${query}` : '/api/v1/content/exams';
     return (await apiClient.get(endpoint)).data;
   },
 
@@ -38,7 +38,7 @@ export const contentService = {
    * @param {string} examId
    */
   async getExamDetail(examId) {
-    return (await apiClient.get(`/api/v1/content/mock-exams/${examId}`)).data;
+    return (await apiClient.get(`/api/v1/content/exams/${examId}`)).data;
   },
 
   /**
