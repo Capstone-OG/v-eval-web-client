@@ -1,11 +1,11 @@
 # Nhật Ký Cập Nhật (Update Log) - V-Eval Web Client
 
-## [02/10/2026] - Hoàn Thiện Khảo Sát 30 Câu: Tích Hợp Đề Content Service & AI Cloud, Bảng Đáp Án Chi Tiết, Phân Tích Tốc Độ Pacing & Render KaTeX
+## [02/10/2026] - Hoàn Thiện Khảo Sát 30 Câu: Tích Hợp Đề Content Service & Gemini AI Cloud, Bảng Đáp Án Chi Tiết, Phân Tích Tốc Độ Pacing & Render KaTeX
 
-- **Hỗ Trợ Đa Nguồn Đề Thi Khảo Sát 30 Câu Chuẩn Hóa V-ACT (`DiagnosticAssessmentPage.jsx`)**:
+- **Hỗ Trợ 2 Nguồn Đề Thi Khảo Sát 30 Câu Chuẩn Hóa V-ACT Thực Tế (`DiagnosticAssessmentPage.jsx`)**:
   - **Nguồn 1 (Đề Có Sẵn - Content Service)**: Lấy trực tiếp từ Database PostgreSQL của Content Service (`GET /api/v1/content/exams/11111111-1111-1111-1111-111111111111`), tự động bóc tách các bài đọc hiểu (Passages), ngữ liệu ngữ văn và bảng đáp án chính xác.
-  - **Nguồn 2 (Sinh Đề AI Cloud - Google Gemini)**: Gọi API Gemini 3.6 Flash sinh đề thi mới 100% cân bằng ma trận Bloom 6 cấp độ.
-  - **Nguồn 3 (Hiệu Chuẩn AI Fast Bank)**: Trích xuất siêu tốc (<500ms) từ ngân hàng câu hỏi đã gán sẵn tham số Psychometrics.
+  - **Nguồn 2 (Sinh Đề AI Cloud - Google Gemini)**: Gọi API Gemini 3.6 Flash sinh đề thi mới 100% cân bằng ma trận Bloom 6 cấp độ và công thức Toán KaTeX.
+  - *Loại bỏ hoàn toàn tùy chọn hardcoded mock template để đảm bảo 100% tính chân thực của dữ liệu.*
 - **Phân Tích Tốc Độ & Chiến Thuật Làm Bài (Pacing & Speed Analysis)**:
   - Thống kê thời gian trung bình từng câu (`s / câu`).
   - Phân loại 3 nhóm tốc độ phản xạ: **Làm nhanh (<25s)**, **Chuẩn nhịp độ (25-90s)**, và **Tốn nhiều thời gian (>90s)**.
@@ -22,4 +22,4 @@
   - Cài đặt thư viện `katex` và nạp stylesheet `katex/dist/katex.min.css`.
   - Hỗ trợ công thức toán học phân số, căn thức, số mũ đa thức, khoảng vô cực cho đề thi, 4 phương án A/B/C/D, gia sư AI Socratic và bảng lời giải chi tiết.
 - **Kiểm Thử Biên Dịch (Build Verification)**:
-  - `npm run build` thành công 100% trong 1.26s (0 lỗi cú pháp, toàn bộ assets font KaTeX woff/woff2/ttf được đóng gói chuẩn).
+  - `npm run build` thành công 100% trong 1.03s (0 lỗi cú pháp, toàn bộ assets font KaTeX woff/woff2/ttf được đóng gói chuẩn).

@@ -99,7 +99,7 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
   const [stage, setStage] = useState('setup');
   
   // Setup options
-  const [generatorMode, setGeneratorMode] = useState('content_service'); // 'content_service' | 'gemini' | 'calibrated'
+  const [generatorMode, setGeneratorMode] = useState('content_service'); // 'content_service' | 'gemini'
   const [targetScore, setTargetScore] = useState(900);
   const [customPrompt, setCustomPrompt] = useState('Đề thi khảo sát năng lực chuẩn hóa V-ACT 5 lĩnh vực (30 câu)');
   
@@ -165,9 +165,7 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
     setLoadingMsg(
       generatorMode === 'content_service'
         ? 'Đang nạp 30 câu hỏi chuẩn hóa từ Ngân hàng Đề thi Content Service của trường...'
-        : generatorMode === 'gemini'
-        ? 'Mô hình Google Gemini đang khởi tạo và cân bằng ma trận 30 câu hỏi theo 5 lĩnh vực V-ACT...'
-        : 'Đang trích xuất siêu tốc 30 câu hỏi hiệu chuẩn từ Ngân hàng AI Calibrated Bank...'
+        : 'Mô hình Google Gemini đang khởi tạo và cân bằng ma trận 30 câu hỏi theo 5 lĩnh vực V-ACT...'
     );
 
     try {
@@ -281,18 +279,18 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
         }
       }
 
-      // NGUỒN 2: GOOGLE GEMINI CLOUD AI hoặc NGUỒN 3: CALIBRATED BANK
-      if (!data && (generatorMode === 'gemini' || generatorMode === 'calibrated')) {
+      // NGUỒN 2: GOOGLE GEMINI CLOUD AI
+      if (!data && generatorMode === 'gemini') {
         const aiExam = await aiService.generateExam({
           prompt: customPrompt,
           domainId: 'ALL',
           questionCount: 30,
-          generatorMode: generatorMode
+          generatorMode: 'gemini'
         });
 
         if (aiExam && aiExam.questions && aiExam.questions.length > 0) {
           data = {
-            title: aiExam.title || (generatorMode === 'gemini' ? 'Đề Thi Khảo Sát Google Gemini AI (30 Câu)' : 'Đề Thi Hiệu Chuẩn Psychometrics (30 Câu)'),
+            title: aiExam.title || 'Đề Thi Khảo Sát Google Gemini AI (30 Câu)',
             questions: aiExam.questions.map((q, idx) => ({
               id: String(q.id || `q_${idx + 1}`),
               question_number: idx + 1,
@@ -651,19 +649,19 @@ Hãy đóng vai Gia sư AI Socratic: KHÔNG TIẾT LỘ ĐÁP ÁN TRỰC TIẾP,
               ))}
             </div>
 
-            {/* Generator Mode Selector (3 Clear Options) */}
+            {/* Generator Mode Selector (2 Authentic Options) */}
             <div className="space-y-3 pt-2">
               <div className="text-xs font-black uppercase text-slate-400 tracking-wider">
                 Chọn Nguồn Đề Thi Khảo Sát
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 
                 {/* 1. Content Service */}
                 <button
                   type="button"
                   onClick={() => setGeneratorMode('content_service')}
-                  className={`p-4 rounded-2xl text-left border transition-all flex flex-col justify-between gap-3 ${
+                  className={`p-5 rounded-2xl text-left border transition-all flex flex-col justify-between gap-3 ${
                     generatorMode === 'content_service'
                       ? 'bg-blue-600/15 border-blue-500 text-white shadow-lg shadow-blue-500/10'
                       : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
@@ -673,12 +671,12 @@ Hãy đóng vai Gia sư AI Socratic: KHÔNG TIẾT LỘ ĐÁP ÁN TRỰC TIẾP,
                     <div className="p-2.5 rounded-xl bg-blue-500/20 text-blue-400">
                       <Building2 className="w-5 h-5" />
                     </div>
-                    <span className="px-2 py-0.5 rounded text-[10px] bg-blue-500/20 text-blue-300 font-black">Database</span>
+                    <span className="px-2 py-0.5 rounded text-[10px] bg-blue-500/20 text-blue-300 font-black">Ngân Hàng Đề Trường</span>
                   </div>
                   <div>
                     <div className="text-sm font-black text-white">Đề Có Sẵn (Content Service)</div>
                     <div className="text-xs text-slate-400 mt-1 leading-relaxed">
-                      Lấy trực tiếp 30 câu hỏi chuẩn hóa từ Ngân hàng Đề thi Content Service của trường.
+                      Lấy trực tiếp 30 câu hỏi chuẩn hóa từ Ngân hàng Đề thi Content Service của trường (bao gồm đầy đủ các bài đọc hiểu và đáp án chuẩn).
                     </div>
                   </div>
                 </button>
@@ -687,7 +685,7 @@ Hãy đóng vai Gia sư AI Socratic: KHÔNG TIẾT LỘ ĐÁP ÁN TRỰC TIẾP,
                 <button
                   type="button"
                   onClick={() => setGeneratorMode('gemini')}
-                  className={`p-4 rounded-2xl text-left border transition-all flex flex-col justify-between gap-3 ${
+                  className={`p-5 rounded-2xl text-left border transition-all flex flex-col justify-between gap-3 ${
                     generatorMode === 'gemini'
                       ? 'bg-purple-600/15 border-purple-500 text-white shadow-lg shadow-purple-500/10'
                       : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
@@ -697,36 +695,12 @@ Hãy đóng vai Gia sư AI Socratic: KHÔNG TIẾT LỘ ĐÁP ÁN TRỰC TIẾP,
                     <div className="p-2.5 rounded-xl bg-purple-500/20 text-purple-400">
                       <Brain className="w-5 h-5" />
                     </div>
-                    <span className="px-2 py-0.5 rounded text-[10px] bg-cyan-400/20 text-cyan-300 font-black">AI Live</span>
+                    <span className="px-2 py-0.5 rounded text-[10px] bg-cyan-400/20 text-cyan-300 font-black">Gemini AI Live</span>
                   </div>
                   <div>
-                    <div className="text-sm font-black text-white">Sinh Đề AI Cloud (Gemini)</div>
+                    <div className="text-sm font-black text-white">Sinh Đề AI Cloud (Google Gemini)</div>
                     <div className="text-xs text-slate-400 mt-1 leading-relaxed">
-                      Gemini 3.6 Flash sinh 30 câu hỏi mới 100%, chuẩn ma trận Bloom và công thức Toán KaTeX.
-                    </div>
-                  </div>
-                </button>
-
-                {/* 3. Calibrated Bank */}
-                <button
-                  type="button"
-                  onClick={() => setGeneratorMode('calibrated')}
-                  className={`p-4 rounded-2xl text-left border transition-all flex flex-col justify-between gap-3 ${
-                    generatorMode === 'calibrated'
-                      ? 'bg-amber-600/15 border-amber-500 text-white shadow-lg shadow-amber-500/10'
-                      : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
-                  }`}
-                >
-                  <div className="flex items-center justify-between w-full">
-                    <div className="p-2.5 rounded-xl bg-amber-500/20 text-amber-400">
-                      <Zap className="w-5 h-5" />
-                    </div>
-                    <span className="px-2 py-0.5 rounded text-[10px] bg-amber-400/20 text-amber-300 font-black">&lt; 500ms</span>
-                  </div>
-                  <div>
-                    <div className="text-sm font-black text-white">Hiệu Chuẩn AI Fast Bank</div>
-                    <div className="text-xs text-slate-400 mt-1 leading-relaxed">
-                      Trích xuất siêu tốc 30 câu hỏi đã được gán sẵn tham số Psychometrics từ RAM.
+                      Mô hình Gemini 3.6 Flash phân tích và sinh 30 câu hỏi mới 100%, chuẩn ma trận Bloom 6 cấp độ và công thức Toán KaTeX.
                     </div>
                   </div>
                 </button>
