@@ -56,10 +56,13 @@ V-Eval-Web_Client/
 
 ## 4. Key Functional Modules & Pedagogical Alignment
 
-### 4.1. Flow 1: Diagnostic Assessment (IRT 2PL Model)
-- Integrated via `DiagnosticTestModal.jsx`.
-- Measures initial student ability across 3 core evaluation domains (Mathematics, Language Arts, Natural & Social Sciences).
-- Employs 2-Parameter Logistic (IRT 2PL) probability scoring with guessing parameter `c = 0.25` and ability estimation `theta`.
+### 4.1. Flow 1: Diagnostic Assessment (IRT 2PL Model & 30-Question Real Test Page)
+- Implemented in `DiagnosticAssessmentPage.jsx` and quick modal `DiagnosticTestModal.jsx`.
+- Fetches real 30-question diagnostic exam from AI Engine (`generate-exam` with Gemini Cloud or Calibrated Bank) and Content Service.
+- Features in-exam question navigator, 45-minute timer, flagging, and embedded AI Socratic Tutor guidance.
+- Evaluates student ability across 5 core evaluation domains (Mathematics, Logic Reasoning, Language Arts, Natural Sciences, Social Sciences).
+- Employs 2-Parameter Logistic (IRT 2PL) probability scoring and Bayesian Knowledge Tracing initial mastery estimation `P(L_0)`.
+- Generates 5-axis Recharts Radar Chart and pedagogically calibrated Socratic AI Commentary.
 
 ### 4.2. Flow 2: Dynamic Learning Roadmap (Kahn Topo & FSM)
 - Visualized in `HeroBanner.jsx` and `MilestoneCard.jsx`.
@@ -78,13 +81,26 @@ V-Eval-Web_Client/
 - Centralized Axios client (`apiClient.js`) routing all traffic through V-Eval YARP API Gateway (`http://localhost:5212`).
 - JWT authentication management with automatic request decoration and silent refresh handling via `X-Token-Refresh-Required` Gateway response header.
 - Clean separation of microservice concerns: `authService.js` (Identity), `contentService.js` (Content), `practiceService.js` (Practice), and `aiService.js` (AI Engine).
+- **AI Engine Multi-Platform Integration (`aiService.js`)**:
+  - Exam OCR & Background Jobs: `uploadPdfExam()`, `getExamJobStatus()`, `getViewExamUrl()`.
+  - Textbook Ingestion & Vector Chunks (250MB): `uploadTextbookPdf()`, `getActiveTextbookJob()`, `getTextbookCheckpoint()`, `getTextbookChunks()`, `saveTextbookChunksToDb()`, `pingVisionModels()`.
+  - Exam Generator & Psychometrics: `generateExam()`, `analyzeDiagnosticSubmission()`, `getDiagnosticConfig()`.
+  - Conversational Socratic AI Tutor: `askSocraticTutor()`, `askSocraticTutorStream()` (Server-Sent Events streaming token-by-token for typewriter UX).
+
+### 4.6. KaTeX Mathematical Formula Rendering Engine (`src/components/common/MathText.jsx`)
+- Full KaTeX integration via `katex` package and `katex.min.css`.
+- Intelligent normalization heuristic (`normalizeMathString`):
+  - Detects explicit math delimiters (`$$...$$`, `$...$`, `\[...\]`, `\(...\)`).
+  - Automatically encloses mathematical intervals `(-\infty; +\infty)`, algebraic functions (`y = x^4 + 2x^2`, `y = \frac{2x - 1}{x + 1}`), derivatives, and LaTeX tags without interfering with Vietnamese typography.
+  - Used uniformly across exam questions, multiple choice options (A, B, C, D), and Socratic AI Tutor explanations.
 
 ---
 
 ## 5. Verification & Acceptance Criteria
 
-1. **Clean Production Build**: Executed `npm run build` with 0 syntax or bundle errors; production artifacts outputted to `dist/` within 619ms.
+1. **Clean Production Build**: Executed `npm run build` with 0 syntax or bundle errors; production artifacts outputted to `dist/` within 5.08s.
 2. **Docker Multi-Stage Validation**: `docker compose config` passes with 0 syntax errors across the entire 6-service microservices constellation.
 3. **Repository Sync Automation**: Standalone `Scripts/push.bat` and root `Scripts/` correctly recognize `V-Eval-Web_Client` as a first-class project service.
-4. **API Gateway Connectivity**: Full client suite structured and verified to consume microservices endpoints via API Gateway entry point.
+4. **API Gateway Connectivity**: Full client suite structured and verified to consume all microservices endpoints via API Gateway (`:5212`) entry point.
+
 
