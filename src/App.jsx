@@ -9,7 +9,9 @@ import {
   MilestoneCard, 
   LiveQnACard, 
   AISocraticTutorWidget, 
-  TeacherDashboardView 
+  TeacherDashboardView,
+  CampusManagerDashboardView,
+  ParentDashboardView
 } from './components/dashboard';
 import { PublicLandingPage } from './components/landing';
 import { WebLoginPage } from './components/auth';
@@ -20,11 +22,15 @@ import {
   RadarChartModal 
 } from './components/modals';
 import { DiagnosticAssessmentPage } from './components/diagnostic';
-import { CheckCircle2, Globe, LogIn, LayoutDashboard, Sparkles, Brain } from 'lucide-react';
+import { AccountProvisioningView } from './components/admin';
+import { CheckCircle2, Globe, LogIn, LayoutDashboard, Sparkles, Brain, UserPlus, ShieldCheck } from 'lucide-react';
+import authService from './services/authService';
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState('landing'); // 'landing' | 'login' | 'dashboard'
-  const [activeRole, setActiveRole] = useState('student');
+  const [authMode, setAuthMode] = useState('login'); // 'login' | 'register'
+  const [currentUser, setCurrentUser] = useState(() => authService.getStoredUser());
+  const [activeRole, setActiveRole] = useState(() => authService.getStoredUser()?.role || 'student');
   const [activeTab, setActiveTab] = useState('dashboard');
   
   // Modals
@@ -60,14 +66,30 @@ export default function App() {
     setIsZpdModalOpen(true);
   };
 
-  const handleLoginSuccess = (role) => {
-    setActiveRole(role);
-    setCurrentPage('dashboard');
-    showToast(`Đã đăng nhập thành công với vai trò ${role === 'student' ? 'Học sinh' : role === 'teacher' ? 'Giáo viên' : 'Quản lý'}!`);
+  const handleOpenAuth = (mode = 'login') => {
+    setAuthMode(mode);
+    setCurrentPage('login');
   };
 
-  const handleLogout = () => {
-    setCurrentPage('login');
+  const handleLoginSuccess = (role, user) => {
+    setActiveRole(role);
+    const resolvedUser = user || authService.getStoredUser();
+    setCurrentUser(resolvedUser);
+    setCurrentPage('dashboard');
+    const roleLabel = role === 'student' ? 'Học sinh' : 
+                      role === 'parent' ? 'Phụ huynh' : 
+                      role === 'teacher' ? 'Giáo viên Cơ sở' : 'Quản lý Học thuật Cơ sở / Admin';
+    showToast(`Đã đăng nhập thành công với vai trò ${roleLabel}!`);
+  };
+
+  const handleLogout = async () => {
+    try {
+      await authService.logout();
+    } catch {
+      // ignore
+    }
+    setCurrentUser(null);
+    setCurrentPage('landing');
     showToast("Đã đăng xuất khỏi hệ thống.");
   };
 
@@ -90,7 +112,7 @@ export default function App() {
         <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
           <button
             onClick={() => setCurrentPage('landing')}
-            className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all ${
+            className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${
               currentPage === 'landing' ? 'bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-extrabold shadow-sm' : 'text-slate-400 hover:text-white'
             }`}
           >
@@ -99,18 +121,28 @@ export default function App() {
           </button>
 
           <button
-            onClick={() => setCurrentPage('login')}
-            className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all ${
-              currentPage === 'login' ? 'bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-extrabold shadow-sm' : 'text-slate-400 hover:text-white'
+            onClick={() => handleOpenAuth('login')}
+            className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${
+              currentPage === 'login' && authMode === 'login' ? 'bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-extrabold shadow-sm' : 'text-slate-400 hover:text-white'
             }`}
           >
             <LogIn className="w-3.5 h-3.5" />
-            <span>Trang Đăng Nhập Web</span>
+            <span>Đăng Nhập</span>
+          </button>
+
+          <button
+            onClick={() => handleOpenAuth('register')}
+            className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${
+              currentPage === 'login' && authMode === 'register' ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-extrabold shadow-sm' : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <UserPlus className="w-3.5 h-3.5 text-cyan-300" />
+            <span>Đăng Ký Tài Khoản</span>
           </button>
 
           <button
             onClick={() => setCurrentPage('diagnostic')}
-            className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all ${
+            className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${
               currentPage === 'diagnostic' ? 'bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-extrabold shadow-sm' : 'text-slate-400 hover:text-white'
             }`}
           >
@@ -120,12 +152,22 @@ export default function App() {
 
           <button
             onClick={() => setCurrentPage('dashboard')}
-            className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all ${
+            className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${
               currentPage === 'dashboard' ? 'bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-extrabold shadow-sm' : 'text-slate-400 hover:text-white'
             }`}
           >
             <LayoutDashboard className="w-3.5 h-3.5" />
             <span>Trang Chủ Học Viên (Dashboard)</span>
+          </button>
+
+          <button
+            onClick={() => setCurrentPage('provision')}
+            className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${
+              currentPage === 'provision' ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-extrabold shadow-sm' : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <ShieldCheck className="w-3.5 h-3.5 text-cyan-300" />
+            <span>Cấp Tài Khoản (IAM)</span>
           </button>
         </div>
       </div>
@@ -133,7 +175,9 @@ export default function App() {
       {/* PAGE ROUTING */}
       {currentPage === 'landing' && (
         <PublicLandingPage 
-          onOpenLogin={() => setCurrentPage('login')}
+          currentUser={currentUser}
+          onOpenLogin={() => handleOpenAuth('login')}
+          onOpenRegister={() => handleOpenAuth('register')}
           onOpenDiagnostic={() => setCurrentPage('diagnostic')}
           onOpenDashboard={() => setCurrentPage('dashboard')}
           onOpenArchModal={() => setIsArchModalOpen(true)}
@@ -148,7 +192,11 @@ export default function App() {
       )}
 
       {currentPage === 'login' && (
-        <WebLoginPage onLoginSuccess={handleLoginSuccess} />
+        <WebLoginPage 
+          initialMode={authMode}
+          onLoginSuccess={handleLoginSuccess}
+          onNavigateHome={() => setCurrentPage('landing')}
+        />
       )}
 
       {currentPage === 'dashboard' && (
@@ -156,11 +204,13 @@ export default function App() {
           
           {/* Dashboard Header */}
           <Navbar 
+            currentUser={currentUser}
             activeRole={activeRole}
             setActiveRole={setActiveRole}
             onLogout={handleLogout}
             onOpenAuthModal={() => setCurrentPage('login')}
             onOpenArchModal={() => setIsArchModalOpen(true)}
+            onOpenProvision={() => setCurrentPage('provision')}
           />
 
           {/* Main Dashboard Container */}
@@ -174,6 +224,7 @@ export default function App() {
               onOpenDiagnostic={() => setCurrentPage('diagnostic')}
               onOpenZPD={() => setIsZpdModalOpen(true)}
               onOpenAiTutor={() => setIsZpdModalOpen(true)}
+              onOpenProvision={() => setCurrentPage('provision')}
             />
 
             {/* Main Content Area */}
@@ -193,6 +244,7 @@ export default function App() {
                   
                   {/* Hero Banner with 3D Pop-out Avatar */}
                   <HeroBanner 
+                    currentUser={currentUser}
                     onStartMilestone={handleContinueMilestone}
                     onStartMockTest={() => setCurrentPage('diagnostic')}
                     onOpenAiTutor={() => setIsZpdModalOpen(true)}
@@ -211,8 +263,10 @@ export default function App() {
                     
                     <div className="lg:col-span-2 space-y-6">
                       <MilestoneCard 
+                        currentUser={currentUser}
                         onStartTask={handleStartTask}
                         onContinueMilestone={handleContinueMilestone}
+                        onStartDiagnostic={() => setCurrentPage('diagnostic')}
                       />
                     </div>
 
@@ -233,6 +287,16 @@ export default function App() {
                 <TeacherDashboardView />
               )}
 
+              {/* Campus Manager / Admin View */}
+              {(activeRole === 'manager' || activeRole === 'admin') && (
+                <CampusManagerDashboardView onOpenProvisionPage={() => setCurrentPage('provision')} />
+              )}
+
+              {/* Parent View */}
+              {activeRole === 'parent' && (
+                <ParentDashboardView />
+              )}
+
             </main>
 
           </div>
@@ -248,6 +312,33 @@ export default function App() {
             </div>
           </footer>
 
+        </div>
+      )}
+
+      {/* ACCOUNT PROVISIONING & ROLE MANAGEMENT PAGE (IAM) */}
+      {currentPage === 'provision' && (
+        <div className="flex-1 flex flex-col bg-[#F4F7FC] text-slate-900 min-h-screen">
+          <Navbar 
+            currentUser={currentUser}
+            activeRole={activeRole}
+            setActiveRole={setActiveRole}
+            onLogout={handleLogout}
+            onOpenAuthModal={() => setCurrentPage('login')}
+            onOpenArchModal={() => setIsArchModalOpen(true)}
+            onOpenProvision={() => setCurrentPage('provision')}
+          />
+          <main className="flex-1 p-4 lg:p-8 max-w-7xl mx-auto w-full">
+            <AccountProvisioningView onBackToDashboard={() => setCurrentPage('dashboard')} />
+          </main>
+          <footer className="bg-white border-t border-slate-200/80 px-4 py-3 text-center text-xs text-slate-500 font-medium flex flex-col sm:flex-row items-center justify-between max-w-[1700px] w-full mx-auto">
+            <div>
+              <strong className="text-slate-700">ĐGNL AI Portal</strong> • Phân Hệ Quản Trị Cán Bộ & Cấp Quyền (IAM)
+            </div>
+            <div className="flex items-center gap-4 mt-2 sm:mt-0 text-[11px]">
+              <span>Ban Quản Trị: <strong className="text-blue-600">admin@veval.edu.vn</strong></span>
+              <span>© 2026 Trung tâm Đào tạo & Khoa học Thi Thích ứng</span>
+            </div>
+          </footer>
         </div>
       )}
 

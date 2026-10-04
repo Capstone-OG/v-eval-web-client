@@ -8,3 +8,4 @@ export { authService } from './authService';
 export { contentService } from './contentService';
 export { practiceService } from './practiceService';
 export { aiService } from './aiService';
+export { userService } from './userService';

@@ -2,11 +2,21 @@ import React, { useState } from 'react';
 import { Search, MapPin, Flame, Bell, User, LogOut, ChevronDown, BookOpen, Layers, ShieldCheck } from 'lucide-react';
 import { mockUser, campusesList } from '../../data/mockData';
 
-export default function Navbar({ activeRole, setActiveRole, onLogout, onOpenAuthModal, onOpenArchModal }) {
+export default function Navbar({ currentUser, activeRole, setActiveRole, onLogout, onOpenAuthModal, onOpenArchModal, onOpenProvision }) {
   const [selectedCampus, setSelectedCampus] = useState(mockUser.campusId);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
 
+  const displayName = currentUser?.fullName || mockUser.name;
+  const displayEmail = currentUser?.email || mockUser.email;
+  const isSuperAdmin = currentUser?.roles?.includes('ADMINISTRATOR') || activeRole === 'admin';
+  const displayRole = currentUser?.role ? currentUser.role.toUpperCase() : (
+    activeRole === 'student' ? 'Học sinh • Lớp 12' : 
+    activeRole === 'parent' ? 'Phụ huynh học sinh' : 
+    activeRole === 'teacher' ? 'Giáo viên cơ sở' : 'Trưởng ban Học thuật Cơ sở'
+  );
+
   const currentCampusObj = campusesList.find(c => c.id === selectedCampus) || campusesList[0];
+
 
   return (
     <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-slate-200/80 px-4 lg:px-8 py-3 transition-all">
@@ -66,6 +76,12 @@ export default function Navbar({ activeRole, setActiveRole, onLogout, onOpenAuth
               Học sinh
             </button>
             <button
+              onClick={() => setActiveRole('parent')}
+              className={`px-2.5 py-1 rounded-lg font-semibold transition-all ${activeRole === 'parent' ? 'bg-white text-blue-600 shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}
+            >
+              Phụ huynh
+            </button>
+            <button
               onClick={() => setActiveRole('teacher')}
               className={`px-2.5 py-1 rounded-lg font-semibold transition-all ${activeRole === 'teacher' ? 'bg-white text-blue-600 shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}
             >
@@ -73,9 +89,9 @@ export default function Navbar({ activeRole, setActiveRole, onLogout, onOpenAuth
             </button>
             <button
               onClick={() => setActiveRole('manager')}
-              className={`px-2.5 py-1 rounded-lg font-semibold transition-all ${activeRole === 'manager' ? 'bg-white text-blue-600 shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}
+              className={`px-2.5 py-1 rounded-lg font-semibold transition-all ${activeRole === 'manager' || activeRole === 'admin' ? 'bg-white text-blue-600 shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}
             >
-              Quản lý
+              Quản lý Cơ sở
             </button>
           </div>
 
@@ -97,8 +113,8 @@ export default function Navbar({ activeRole, setActiveRole, onLogout, onOpenAuth
                 className="w-9 h-9 rounded-xl object-cover ring-2 ring-blue-500/30" 
               />
               <div className="hidden md:block">
-                <div className="text-xs font-bold text-slate-800 leading-tight">{mockUser.name}</div>
-                <div className="text-[11px] font-medium text-slate-500 capitalize">{activeRole === 'student' ? 'Học sinh • Lớp 12' : activeRole === 'teacher' ? 'Giáo viên cơ sở' : 'Trưởng phòng Đào tạo'}</div>
+                <div className="text-xs font-bold text-slate-800 leading-tight">{displayName}</div>
+                <div className="text-[11px] font-medium text-slate-500 capitalize">{displayRole}</div>
               </div>
               <ChevronDown className="w-4 h-4 text-slate-400 hidden md:block" />
             </button>
@@ -107,10 +123,10 @@ export default function Navbar({ activeRole, setActiveRole, onLogout, onOpenAuth
             {showUserDropdown && (
               <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-slate-100 p-2 z-50 animate-fade-in">
                 <div className="px-3 py-2 border-b border-slate-100 mb-1">
-                  <div className="text-sm font-bold text-slate-800">{mockUser.name}</div>
-                  <div className="text-xs text-slate-500">{mockUser.email}</div>
+                  <div className="text-sm font-bold text-slate-800">{displayName}</div>
+                  <div className="text-xs text-slate-500">{displayEmail}</div>
                   <div className="mt-1 inline-block px-2 py-0.5 bg-blue-50 text-blue-700 text-[10px] font-bold rounded-md">
-                    {mockUser.classLevel}
+                    {displayRole}
                   </div>
                 </div>
 
@@ -121,6 +137,16 @@ export default function Navbar({ activeRole, setActiveRole, onLogout, onOpenAuth
                   <User className="w-4 h-4 text-slate-400" />
                   Đổi tài khoản / Màn Đăng nhập
                 </button>
+
+                {onOpenProvision && (
+                  <button 
+                    onClick={() => { setShowUserDropdown(false); onOpenProvision(); }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-bold text-indigo-700 bg-indigo-50/60 hover:bg-indigo-100/60 rounded-xl transition-all cursor-pointer"
+                  >
+                    <ShieldCheck className="w-4 h-4 text-indigo-600" />
+                    Cấp phát Tài khoản (IAM)
+                  </button>
+                )}
 
                 <button 
                   onClick={() => { setShowUserDropdown(false); onOpenArchModal(); }}

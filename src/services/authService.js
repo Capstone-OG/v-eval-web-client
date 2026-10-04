@@ -10,18 +10,38 @@ export const authService = {
    * @param {Object} credentials - { email, password }
    */
   async login({ email, password }) {
+    const payload = {
+      email: (email || '').trim().toLowerCase(),
+      password: password || ''
+    };
+
+    const extractAndSaveUser = (data) => {
+      const u = data.user || data;
+      const roles = u.roles || data.roles || [];
+      const rawRole = (roles[0] || 'student').toLowerCase();
+      const primaryRole = rawRole === 'administrator' ? 'admin' : rawRole;
+      const userObj = {
+        id: u.userId || u.id || data.userId || data.id,
+        email: u.email || data.email || payload.email,
+        fullName: u.fullName || data.fullName || 'Người dùng V-Eval',
+        roles: roles,
+        role: primaryRole
+      };
+      tokenStorage.setTokens(data.accessToken, data.refreshToken, userObj);
+      return { ...data, user: userObj };
+    };
+
     try {
-      const res = await apiClient.post('/api/auth/login', { email, password });
+      const res = await apiClient.post('/api/auth/login', payload);
       if (res.data?.accessToken) {
-        tokenStorage.setTokens(res.data.accessToken, res.data.refreshToken, res.data.user);
+        return extractAndSaveUser(res.data);
       }
       return res.data;
     } catch (err) {
-      // Fallback with prefix if gateway route requires it
       if (err.status === 404) {
-        const res = await apiClient.post('/api/v1/identity/auth/login', { email, password });
+        const res = await apiClient.post('/api/v1/identity/auth/login', payload);
         if (res.data?.accessToken) {
-          tokenStorage.setTokens(res.data.accessToken, res.data.refreshToken, res.data.user);
+          return extractAndSaveUser(res.data);
         }
         return res.data;
       }
@@ -31,15 +51,23 @@ export const authService = {
 
   /**
    * Đăng ký tài khoản học sinh mới (UC 01)
-   * @param {Object} userData - { email, password, fullName, phone, campusId }
+   * @param {Object} userData - { email, password, fullName, phone, roleName, campusId }
    */
   async register(userData) {
+    const payload = {
+      email: (userData.email || '').trim().toLowerCase(),
+      password: userData.password || '',
+      fullName: (userData.fullName || '').trim(),
+      phone: (userData.phone || '').trim(),
+      roleName: userData.roleName || 'STUDENT'
+    };
+
     try {
-      const res = await apiClient.post('/api/auth/register', userData);
+      const res = await apiClient.post('/api/auth/register', payload);
       return res.data;
     } catch (err) {
       if (err.status === 404) {
-        const res = await apiClient.post('/api/v1/identity/auth/register', userData);
+        const res = await apiClient.post('/api/v1/identity/auth/register', payload);
         return res.data;
       }
       throw err;
@@ -52,13 +80,16 @@ export const authService = {
    * @param {string} otpCode
    */
   async verifyOtp(email, otpCode) {
-    const payload = { email, otpCode, type: 'ACCOUNT_ACTIVATION' };
+    const payload = { 
+      email: (email || '').trim().toLowerCase(), 
+      otpCode: (otpCode || '').trim() 
+    };
     try {
-      const res = await apiClient.post('/api/auth/verify', payload);
+      const res = await apiClient.post('/api/auth/verify-account', payload);
       return res.data;
     } catch (err) {
       if (err.status === 404) {
-        const res = await apiClient.post('/api/v1/identity/auth/verify', payload);
+        const res = await apiClient.post('/api/v1/identity/auth/verify-account', payload);
         return res.data;
       }
       throw err;
@@ -147,12 +178,35 @@ export const authService = {
       return res.data;
     } catch (err) {
       if (err.status === 404) {
-        const res = await apiClient.get('/api/v1/identity/campuses');
-        return res.data;
+        try {
+          const res = await apiClient.get('/api/v1/identity/campuses');
+          return res.data;
+        } catch {
+          // Fall through to fallback
+        }
       }
-      throw err;
+      return [
+        { campusId: '11111111-1111-1111-1111-111111111111', code: 'CS_THUDUC', name: 'Cơ sở Thủ Đức (Khu ĐHQG)', address: 'Khu phố 6, Linh Trung, TP. Thủ Đức' },
+        { campusId: '22222222-2222-2222-2222-222222222222', code: 'CS_Q10', name: 'Cơ sở Quận 10 (Lý Thường Kiệt)', address: '268 Lý Thường Kiệt, Quận 10, TP.HCM' },
+        { campusId: '33333333-3333-3333-3333-333333333333', code: 'CS_BINHTHANH', name: 'Cơ sở Bình Thạnh (Điện Biên Phủ)', address: '475A Điện Biên Phủ, P.25, Bình Thạnh' }
+      ];
     }
+  },
+
+  /**
+   * Kiểm tra xem phiên làm việc hiện tại đã đăng nhập hay chưa
+   */
+  isAuthenticated() {
+    return !!tokenStorage.getAccessToken();
+  },
+
+  /**
+   * Lấy thông tin người dùng lưu trong localStorage
+   */
+  getStoredUser() {
+    return tokenStorage.getUser();
   }
 };
 
 export default authService;
+

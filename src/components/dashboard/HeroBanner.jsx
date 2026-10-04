@@ -4,7 +4,7 @@ import { ArrowRight, FileText, Bot, Clock, Sparkles, Award, CheckCircle2, Trendi
 import { mockUser } from '../../data/mockData';
 import studentAvatar from '../../assets/students_cutout_badge.jpg';
 
-export default function HeroBanner({ onStartMilestone, onStartMockTest, onOpenAiTutor }) {
+export default function HeroBanner({ currentUser, onStartMilestone, onStartMockTest, onOpenAiTutor }) {
   const tips = [
     "Hệ thống đang tự động điều chỉnh lộ trình học theo Vùng phát triển ZPD. Hôm nay em có 3 nhiệm vụ mới cần hoàn thành.",
     "Mục tiêu Theta 0 = +0.85 để duy trì tỷ lệ đỗ 82% vào ĐH Bách Khoa TP.HCM.",
@@ -12,6 +12,8 @@ export default function HeroBanner({ onStartMilestone, onStartMockTest, onOpenAi
     "Hoàn thành chặng thi thử 15 phút hôm nay để cập nhật ma trận lỗ hổng kiến thức BKT."
   ];
   const [tipIdx, setTipIdx] = useState(0);
+
+  const studentName = currentUser?.fullName || mockUser.name;
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -38,7 +40,7 @@ export default function HeroBanner({ onStartMilestone, onStartMockTest, onOpenAi
           </div>
 
           <h1 className="text-3xl lg:text-4xl font-extrabold tracking-tight text-white leading-tight font-sans">
-            Chào {mockUser.name}!
+            Chào {studentName}!
           </h1>
 
           {/* Dynamic Animated Sliding Text */}

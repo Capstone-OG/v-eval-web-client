@@ -11,10 +11,11 @@ import {
   Settings,
   Sparkles,
   HelpCircle,
-  Award
+  Award,
+  ShieldCheck
 } from 'lucide-react';
 
-export default function Sidebar({ activeTab, setActiveTab, activeRole, onOpenDiagnostic, onOpenZPD, onOpenAiTutor }) {
+export default function Sidebar({ activeTab, setActiveTab, activeRole, onOpenDiagnostic, onOpenZPD, onOpenAiTutor, onOpenProvision }) {
   
   const navItemsSection1 = [
     { id: 'dashboard', label: 'Dashboard (Tổng quan)', icon: LayoutDashboard },
@@ -28,6 +29,9 @@ export default function Sidebar({ activeTab, setActiveTab, activeRole, onOpenDia
     { id: 'ai_tutor', label: 'AI Socratic Tutor', icon: Bot, badge: 'Flow 4', highlight: true, onClick: onOpenAiTutor },
     { id: 'live_qa', label: 'Lớp học & Live Q&A', icon: Video, badge: 'Realtime' },
     { id: 'analytics', label: 'Báo cáo & Dự báo', icon: BarChart3, badge: 'Flow 5 & 6' },
+    ...((activeRole === 'manager' || activeRole === 'admin') ? [
+      { id: 'provision', label: 'Cấp tài khoản (IAM)', icon: ShieldCheck, badge: 'Postgres', onClick: onOpenProvision }
+    ] : []),
     { id: 'settings', label: 'Cài đặt tài khoản', icon: Settings },
   ];
 
