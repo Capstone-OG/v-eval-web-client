@@ -59,10 +59,13 @@ export default function App() {
     setIsZpdModalOpen(true);
   };
 
-  const handleLoginSuccess = (role) => {
-    setActiveRole(role);
+  const handleLoginSuccess = (role, userData) => {
+    const targetRole = role || 'student';
+    setActiveRole(targetRole);
     setCurrentPage('dashboard');
-    showToast(`Đã đăng nhập thành công với vai trò ${role === 'student' ? 'Học sinh' : role === 'teacher' ? 'Giáo viên' : 'Quản lý'}!`);
+    const roleName = targetRole === 'student' ? 'Học sinh' : targetRole === 'teacher' ? 'Giáo viên' : targetRole === 'manager' ? 'Quản lý' : 'Phụ huynh';
+    const nameDisplay = userData?.user?.fullName ? ` (${userData.user.fullName})` : '';
+    showToast(`Đã xác thực thành công với vai trò ${roleName}${nameDisplay}!`);
   };
 
   const handleLogout = () => {
@@ -71,53 +74,9 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-cyan-500 selection:text-slate-950">
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans selection:bg-blue-600 selection:text-white">
       
-      {/* Top Page Control Bar */}
-      <div className="bg-slate-900 text-white px-4 lg:px-8 py-2 border-b border-slate-800 flex items-center justify-between text-xs font-bold shadow-md z-50">
-        <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded-lg bg-gradient-to-r from-blue-600 to-cyan-500 text-white flex items-center justify-center font-extrabold text-[10px]">
-            ĐGNL
-          </div>
-          <span className="text-white text-sm font-extrabold tracking-tight">ĐGNL AI Portal (FA26SE090)</span>
-          <span className="px-2 py-0.5 bg-cyan-400/20 text-cyan-300 text-[10px] rounded-md border border-cyan-400/30">
-            v2.4 Live
-          </span>
-        </div>
-
-        {/* Page Switcher Tabs */}
-        <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
-          <button
-            onClick={() => setCurrentPage('landing')}
-            className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all ${
-              currentPage === 'landing' ? 'bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-extrabold shadow-sm' : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <Globe className="w-3.5 h-3.5" />
-            <span>Trang Chủ Công Khai (Landing Page)</span>
-          </button>
-
-          <button
-            onClick={() => setCurrentPage('login')}
-            className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all ${
-              currentPage === 'login' ? 'bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-extrabold shadow-sm' : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <LogIn className="w-3.5 h-3.5" />
-            <span>Trang Đăng Nhập Web</span>
-          </button>
-
-          <button
-            onClick={() => setCurrentPage('dashboard')}
-            className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all ${
-              currentPage === 'dashboard' ? 'bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-extrabold shadow-sm' : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <LayoutDashboard className="w-3.5 h-3.5" />
-            <span>Trang Chủ Học Viên (Dashboard)</span>
-          </button>
-        </div>
-      </div>
+      {/* PAGE ROUTING */}
 
       {/* PAGE ROUTING */}
       {currentPage === 'landing' && (
@@ -130,7 +89,10 @@ export default function App() {
       )}
 
       {currentPage === 'login' && (
-        <WebLoginPage onLoginSuccess={handleLoginSuccess} />
+        <WebLoginPage 
+          onLoginSuccess={handleLoginSuccess} 
+          onNavigateHome={() => setCurrentPage('landing')}
+        />
       )}
 
       {currentPage === 'dashboard' && (
