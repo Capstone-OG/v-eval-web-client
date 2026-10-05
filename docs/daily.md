@@ -2,6 +2,28 @@
 
 ---
 
+## [06/10/2026] - Tái Cấu Trúc Phân Hệ Xác Thực (Auth), Custom Rounded Dropdown & Validation Báo Lỗi Theo Trường
+
+- **Tái Cấu Trúc Mã Nguồn Phân Hệ Auth (`src/components/auth/`)**:
+  - Tách `WebLoginPage.jsx` (từ >1,240 dòng monolithic) thành 3 subcomponents độc lập, chuyên biệt và dễ bảo trì:
+    - `src/components/auth/LoginForm.jsx`: Chứa form đăng nhập Email/SĐT & Mật khẩu, ghi nhớ đăng nhập, nút Đăng nhập thử 1-Click tự động phân role Backend, và các cổng đăng nhập mạng xã hội (Google ID, Zalo Account).
+    - `src/components/auth/RegisterForm.jsx`: Chứa form đăng ký mới với chuyển đổi vai trò (Học sinh vs Phụ huynh), các ô thông tin riêng biệt (Họ tên, Email, SĐT, Mật khẩu, Nhập lại mật khẩu, Thanh đo độ mạnh mật khẩu, Checkbox điều khoản).
+    - `src/components/auth/ForgotPasswordModal.jsx`: Modal khôi phục mật khẩu 4 bước (Nhập Email -> Mã xác thực OTP 6 số -> Tạo mật khẩu mới -> Đăng nhập ngay).
+  - Tối ưu `WebLoginPage.jsx` chỉ còn ~350 dòng, đóng vai trò trang bao bọc (Page Container) quản lý Navigation Header, Cột học thuật bên trái & ảnh thực tế học sinh THPT Việt Nam.
+- **Tùy Biến Menu Thả Xuống Bo Tròn Sang Trọng (Custom Rounded Dropdown Select)**:
+  - Thay thế hoàn toàn các thẻ `<select>` mặc định của trình duyệt (bị góc vuông sắc nhọn OS) bằng **Custom Motion Dropdown Component** (`rounded-2xl` popover menu, các ô tùy chọn `rounded-xl` kèm icon `CheckCircle2` khi chọn).
+  - Áp dụng đồng bộ cho các ô chọn **Khối Lớp** (*Lớp 12, Lớp 11, Thí sinh tự do*) và **Mục tiêu ĐGNL** (*900+, 800+, 700+*) trong cả `WebLoginPage.jsx` và `AuthModal.jsx`.
+- **Phân Quyền Giao Diện Đăng Ký Chuẩn Xác Cho Phụ Huynh**:
+  - Tự động ẩn các trường dành riêng cho học sinh (**Khối Lớp** & **Mục tiêu ĐGNL**) khi chuyển sang tab đăng ký vai trò **Phụ huynh** (`role === 'parent'`).
+- **Nâng Cấp Hệ Thống Báo Lỗi Validate Form Toàn Diện (Per-field Validation)**:
+  - Hiển thị thông báo lỗi đồng thời ngay bên dưới tất cả các ô nhập liệu bị thiếu hoặc không hợp lệ khi bấm Submit (thay vì bắt bấm Submit 5 lần).
+  - Đổi màu viền sang đỏ (`border-rose-400 bg-rose-50/50`) giúp nhận biết trực quan tức thì.
+  - Tự động xóa dòng báo lỗi và màu viền đỏ realtime khi người dùng bắt đầu gõ điều chỉnh lại thông tin (Clear-on-type).
+- **Đồng Bộ Hoàn Toàn Với Modal Nhanh `AuthModal.jsx`**:
+  - Áp dụng toàn bộ quy tắc validate, custom dropdown bo tròn và ẩn/hiện trường học sinh cho `AuthModal.jsx`.
+
+---
+
 ## [02/10/2026] - Nâng Cấp Toàn Diện Tầng Dịch Vụ AI Engine (`src/services/aiService.js`) Qua API Gateway
 - **Móc Nối Đầy Đủ 14+ API AI Engine Qua Gateway YARP (`http://localhost:5212`)**:
   - **Nhóm 1: Bóc tách Đề thi PDF (Gemini Vision OCR)**:
