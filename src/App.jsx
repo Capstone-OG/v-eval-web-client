@@ -19,7 +19,8 @@ import {
   AdaptiveQuizModal, 
   RadarChartModal 
 } from './components/modals';
-import { CheckCircle2, Globe, LogIn, LayoutDashboard, Sparkles } from 'lucide-react';
+import { DiagnosticAssessmentPage } from './components/diagnostic';
+import { CheckCircle2, Globe, LogIn, LayoutDashboard, Sparkles, Brain } from 'lucide-react';
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState('landing'); // 'landing' | 'login' | 'dashboard'
@@ -77,14 +78,19 @@ export default function App() {
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans selection:bg-blue-600 selection:text-white">
       
       {/* PAGE ROUTING */}
-
-      {/* PAGE ROUTING */}
       {currentPage === 'landing' && (
         <PublicLandingPage 
           onOpenLogin={() => setCurrentPage('login')}
-          onOpenDiagnostic={() => setIsDiagnosticModalOpen(true)}
+          onOpenDiagnostic={() => setCurrentPage('diagnostic')}
           onOpenDashboard={() => setCurrentPage('dashboard')}
           onOpenArchModal={() => setIsArchModalOpen(true)}
+        />
+      )}
+
+      {currentPage === 'diagnostic' && (
+        <DiagnosticAssessmentPage 
+          onNavigateDashboard={() => setCurrentPage('dashboard')}
+          onNavigateHome={() => setCurrentPage('landing')}
         />
       )}
 
@@ -115,7 +121,7 @@ export default function App() {
               activeTab={activeTab}
               setActiveTab={setActiveTab}
               activeRole={activeRole}
-              onOpenDiagnostic={() => setIsDiagnosticModalOpen(true)}
+              onOpenDiagnostic={() => setCurrentPage('diagnostic')}
               onOpenZPD={() => setIsZpdModalOpen(true)}
               onOpenAiTutor={() => setIsZpdModalOpen(true)}
             />
@@ -138,7 +144,7 @@ export default function App() {
                   {/* Hero Banner with 3D Pop-out Avatar */}
                   <HeroBanner 
                     onStartMilestone={handleContinueMilestone}
-                    onStartMockTest={() => setIsDiagnosticModalOpen(true)}
+                    onStartMockTest={() => setCurrentPage('diagnostic')}
                     onOpenAiTutor={() => setIsZpdModalOpen(true)}
                   />
 
