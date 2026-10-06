@@ -61,4 +61,6 @@
 | 24 | **Trang Cấp Phát & Quản Trị Tài Khoản Đa Vai Trò (IAM Page)** | `src/components/admin/AccountProvisioningView.jsx` | 🟢 Hoàn thành | 100% | Giao diện quản trị cấp cao: Thống kê số lượng tài khoản, bộ lọc vai trò, bảng dữ liệu, nút gạt khóa/mở, modal cấp phát 6 vai trò kết nối trực tiếp PostgreSQL |
 | 25 | **Tầng Dịch Vụ Người Dùng Mới (User Service)** | `src/services/userService.js` | 🟢 Hoàn thành | 100% | Móc nối Gateway YARP `:5212`: `getUsers`, `provisionUser`, `toggleUserStatus`, `getCampuses` |
 | 26 | **Cổng Phụ Huynh Theo Dõi Học Tập (Parent Companion Portal)** | `src/components/dashboard/ParentDashboardView.jsx` | 🟢 Hoàn thành | 100% | Theo dõi năng lực IRT (+0.65 Theta), xác suất đỗ Bách Khoa 82%, chuyên cần học tập, và nhận cảnh báo sớm từ AI |
+| 27 | **Hợp Nhất Giao Diện Xác Thực (TNhan UI/UX) & Đấu Nối API IAM (ThinhTT)** | `src/components/auth/` | 🟢 Hoàn thành | 100% | Tích hợp layout split-screen, ticker, custom select bo tròn, form modular (`LoginForm`, `RegisterForm`, `ForgotPasswordModal`, `AuthModal`) và đấu nối 100% API `authService` |
+| 28 | **Thiết Lập CI/CD & Discord Commit Tracker Web Client** | `.github/workflows/` | 🟢 Hoàn thành | 100% | Thêm workflow `discord-commit-tracker.yml` gửi webhook embed commit về Discord và `ci.yml` kiểm thử build trên Node.js 20 |
 
