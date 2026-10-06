@@ -2,11 +2,14 @@ import React, { useState } from 'react';
 import { Search, MapPin, Flame, Bell, User, LogOut, ChevronDown, BookOpen, Layers, ShieldCheck } from 'lucide-react';
 import { mockUser, campusesList } from '../../data/mockData';
 
-export default function Navbar({ activeRole, setActiveRole, onLogout, onOpenAuthModal, onOpenArchModal }) {
+export default function Navbar({ activeRole, setActiveRole, currentUser, onLogout, onOpenAuthModal, onOpenArchModal }) {
   const [selectedCampus, setSelectedCampus] = useState(mockUser.campusId);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
 
   const currentCampusObj = campusesList.find(c => c.id === selectedCampus) || campusesList[0];
+  const displayName = currentUser?.fullName || mockUser.name;
+  const displayEmail = currentUser?.email || mockUser.email;
+  const displayAvatar = currentUser?.avatarUrl || mockUser.avatar;
 
   return (
     <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-slate-200/80 px-4 lg:px-8 py-3 transition-all">
@@ -92,12 +95,12 @@ export default function Navbar({ activeRole, setActiveRole, onLogout, onOpenAuth
               className="flex items-center gap-2.5 p-1.5 pl-2 rounded-xl hover:bg-slate-100 transition-all text-left"
             >
               <img 
-                src={mockUser.avatar} 
-                alt={mockUser.name}
+                src={displayAvatar} 
+                alt={displayName}
                 className="w-9 h-9 rounded-xl object-cover ring-2 ring-blue-500/30" 
               />
               <div className="hidden md:block">
-                <div className="text-xs font-bold text-slate-800 leading-tight">{mockUser.name}</div>
+                <div className="text-xs font-bold text-slate-800 leading-tight">{displayName}</div>
                 <div className="text-[11px] font-medium text-slate-500 capitalize">{activeRole === 'student' ? 'Học sinh • Lớp 12' : activeRole === 'teacher' ? 'Giáo viên cơ sở' : 'Trưởng phòng Đào tạo'}</div>
               </div>
               <ChevronDown className="w-4 h-4 text-slate-400 hidden md:block" />
@@ -107,8 +110,8 @@ export default function Navbar({ activeRole, setActiveRole, onLogout, onOpenAuth
             {showUserDropdown && (
               <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-slate-100 p-2 z-50 animate-fade-in">
                 <div className="px-3 py-2 border-b border-slate-100 mb-1">
-                  <div className="text-sm font-bold text-slate-800">{mockUser.name}</div>
-                  <div className="text-xs text-slate-500">{mockUser.email}</div>
+                  <div className="text-sm font-bold text-slate-800">{displayName}</div>
+                  <div className="text-xs text-slate-500 truncate">{displayEmail}</div>
                   <div className="mt-1 inline-block px-2 py-0.5 bg-blue-50 text-blue-700 text-[10px] font-bold rounded-md">
                     {mockUser.classLevel}
                   </div>

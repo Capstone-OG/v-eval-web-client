@@ -10,23 +10,11 @@ export const authService = {
    * @param {Object} credentials - { email, password }
    */
   async login({ email, password }) {
-    try {
-      const res = await apiClient.post('/api/auth/login', { email, password });
-      if (res.data?.accessToken) {
-        tokenStorage.setTokens(res.data.accessToken, res.data.refreshToken, res.data.user);
-      }
-      return res.data;
-    } catch (err) {
-      // Fallback with prefix if gateway route requires it
-      if (err.status === 404) {
-        const res = await apiClient.post('/api/v1/identity/auth/login', { email, password });
-        if (res.data?.accessToken) {
-          tokenStorage.setTokens(res.data.accessToken, res.data.refreshToken, res.data.user);
-        }
-        return res.data;
-      }
-      throw err;
+    const res = await apiClient.post('/api/auth/login', { email, password });
+    if (res.data?.accessToken) {
+      tokenStorage.setTokens(res.data.accessToken, res.data.refreshToken, res.data.user);
     }
+    return res.data;
   },
 
   /**
@@ -34,16 +22,8 @@ export const authService = {
    * @param {Object} userData - { email, password, fullName, phone, campusId }
    */
   async register(userData) {
-    try {
-      const res = await apiClient.post('/api/auth/register', userData);
-      return res.data;
-    } catch (err) {
-      if (err.status === 404) {
-        const res = await apiClient.post('/api/v1/identity/auth/register', userData);
-        return res.data;
-      }
-      throw err;
-    }
+    const res = await apiClient.post('/api/auth/register', userData);
+    return res.data;
   },
 
   /**
@@ -52,17 +32,8 @@ export const authService = {
    * @param {string} otpCode
    */
   async verifyOtp(email, otpCode) {
-    const payload = { email, otpCode, type: 'ACCOUNT_ACTIVATION' };
-    try {
-      const res = await apiClient.post('/api/auth/verify', payload);
-      return res.data;
-    } catch (err) {
-      if (err.status === 404) {
-        const res = await apiClient.post('/api/v1/identity/auth/verify', payload);
-        return res.data;
-      }
-      throw err;
-    }
+    const res = await apiClient.post('/api/auth/verify-account', { email, otpCode });
+    return res.data;
   },
 
   /**

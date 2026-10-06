@@ -145,7 +145,7 @@ async function request(endpoint, options = {}, isRetry = false) {
 
     // 1. Gateway Alert Check: Check if token is nearing expiration (< 5 mins)
     if (response.headers.get('X-Token-Refresh-Required') === 'true') {
-      silentRefreshToken().catch(() => {});
+      silentRefreshToken().catch(() => { });
     }
 
     // 2. Handle 401 Unauthorized with token refresh and single retry
@@ -202,27 +202,27 @@ async function request(endpoint, options = {}, isRetry = false) {
 export const apiClient = {
   getBaseUrl: () => BASE_URL,
 
-  get: (endpoint, options = {}) => 
+  get: (endpoint, options = {}) =>
     request(endpoint, { method: 'GET', ...options }),
 
-  post: (endpoint, body = {}, options = {}) => 
+  post: (endpoint, body = {}, options = {}) =>
     request(endpoint, {
       method: 'POST',
       body: body instanceof FormData ? body : JSON.stringify(body),
       ...options
     }),
 
-  put: (endpoint, body = {}, options = {}) => 
+  put: (endpoint, body = {}, options = {}) =>
     request(endpoint, {
       method: 'PUT',
       body: body instanceof FormData ? body : JSON.stringify(body),
       ...options
     }),
 
-  delete: (endpoint, options = {}) => 
+  delete: (endpoint, options = {}) =>
     request(endpoint, { method: 'DELETE', ...options }),
 
-  upload: (endpoint, formData, options = {}) => 
+  upload: (endpoint, formData, options = {}) =>
     request(endpoint, {
       method: 'POST',
       body: formData,

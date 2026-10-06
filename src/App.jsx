@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import confetti from 'canvas-confetti';
+import { authService, tokenStorage } from './services';
 
 // Components grouped by module folder
 import { Navbar, Sidebar } from './components/layout';
@@ -26,6 +27,7 @@ export default function App() {
   const [currentPage, setCurrentPage] = useState('landing'); // 'landing' | 'login' | 'dashboard'
   const [activeRole, setActiveRole] = useState('student');
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [currentUser, setCurrentUser] = useState(null);
   
   // Modals
   const [isArchModalOpen, setIsArchModalOpen] = useState(false);
@@ -35,6 +37,20 @@ export default function App() {
 
   // Toast notifications
   const [toastMsg, setToastMsg] = useState(null);
+
+  // Restore authenticated session on page load
+  useEffect(() => {
+    const savedUser = tokenStorage.getUser();
+    const token = tokenStorage.getAccessToken();
+    if (savedUser && token) {
+      setCurrentUser(savedUser);
+      const roles = savedUser.roles || [];
+      if (roles.some(r => r.toLowerCase().includes('teacher') || r.toLowerCase().includes('giaovien'))) setActiveRole('teacher');
+      else if (roles.some(r => r.toLowerCase().includes('manager') || r.toLowerCase().includes('admin'))) setActiveRole('manager');
+      else if (roles.some(r => r.toLowerCase().includes('parent'))) setActiveRole('parent');
+      else setActiveRole('student');
+    }
+  }, []);
 
   const showToast = (msg) => {
     setToastMsg(msg);
@@ -63,13 +79,22 @@ export default function App() {
   const handleLoginSuccess = (role, userData) => {
     const targetRole = role || 'student';
     setActiveRole(targetRole);
+    if (userData?.user) {
+      setCurrentUser(userData.user);
+    }
     setCurrentPage('dashboard');
     const roleName = targetRole === 'student' ? 'Học sinh' : targetRole === 'teacher' ? 'Giáo viên' : targetRole === 'manager' ? 'Quản lý' : 'Phụ huynh';
     const nameDisplay = userData?.user?.fullName ? ` (${userData.user.fullName})` : '';
     showToast(`Đã xác thực thành công với vai trò ${roleName}${nameDisplay}!`);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await authService.logout();
+    } catch (err) {
+      console.warn('Logout error:', err);
+    }
+    setCurrentUser(null);
     setCurrentPage('login');
     showToast("Đã đăng xuất khỏi hệ thống.");
   };
@@ -108,6 +133,7 @@ export default function App() {
           <Navbar 
             activeRole={activeRole}
             setActiveRole={setActiveRole}
+            currentUser={currentUser}
             onLogout={handleLogout}
             onOpenAuthModal={() => setCurrentPage('login')}
             onOpenArchModal={() => setIsArchModalOpen(true)}

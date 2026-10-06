@@ -22,14 +22,15 @@ import studentAvatar from '../../assets/vietnamese_student_real.jpg';
 import LoginForm from './LoginForm';
 import RegisterForm from './RegisterForm';
 import ForgotPasswordModal from './ForgotPasswordModal';
+import authService from '../../services/authService';
 
 export default function WebLoginPage({ onLoginSuccess, onNavigateHome }) {
   const [role, setRole] = useState('student'); // student | parent (for registration)
   const [mode, setMode] = useState('login'); // login | register
 
   // Login form state
-  const [email, setEmail] = useState('minhhoang.vnu@gmail.com');
-  const [password, setPassword] = useState('••••••••');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
 
@@ -113,8 +114,8 @@ export default function WebLoginPage({ onLoginSuccess, onNavigateHome }) {
     return 'student';
   };
 
-  // Handle Login Submit
-  const handleLoginSubmit = (e) => {
+  // Handle Login Submit using Real API Gateway Call
+  const handleLoginSubmit = async (e) => {
     e.preventDefault();
     setFormError(null);
     setSubmitSuccessMsg(null);
@@ -133,45 +134,37 @@ export default function WebLoginPage({ onLoginSuccess, onNavigateHome }) {
       return;
     }
     setFieldErrors({});
-
     setIsSubmitting(true);
-    setTimeout(() => {
+
+    try {
+      const resData = await authService.login({ email: email.trim(), password });
       setIsSubmitting(false);
 
-      let userFullName = 'Nguyễn Minh Hoàng';
-      let roleArray = ['Student'];
+      const userRole = determineRoleFromResponse(resData);
+      setSubmitSuccessMsg("Xác thực đăng nhập thành công!");
+      setTimeout(() => {
+        onLoginSuccess(userRole, resData);
+      }, 400);
+    } catch (err) {
+      setIsSubmitting(false);
+      console.warn('[WebLoginPage] Login API error:', err);
 
-      if (email.includes('teacher') || email.includes('phamduy')) {
-        userFullName = 'Thầy Phạm Duy';
-        roleArray = ['Teacher'];
-      } else if (email.includes('manager') || email.includes('thuduc')) {
-        userFullName = 'Cô Hà Quản Lý';
-        roleArray = ['Manager'];
-      } else if (email.includes('phuhuynh') || email.includes('parent')) {
-        userFullName = 'Phụ Huynh Minh';
-        roleArray = ['Parent'];
+      // Handle unactivated account error
+      if (err.data?.code === 'Auth.AccountNotActivated' || err.status === 403) {
+        setFormError("Tài khoản chưa được kích hoạt. Vui lòng nhập mã OTP để kích hoạt.");
+        setForgotEmail(email.trim());
+        setIsForgotModalOpen(true);
+        setForgotStep(2);
+        return;
       }
 
-      const loginResponseData = {
-        accessToken: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lY2xhaW0iOiJNaW5oIEhvYW5nIiwicm9sZSI6IlN0dWRlbnQifQ",
-        refreshToken: "ref_token_v_eval_2026_xyz987",
-        user: {
-          userId: "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-          email: email,
-          fullName: userFullName,
-          phone: "0912345678",
-          avatarUrl: studentAvatar,
-          roles: roleArray
-        }
-      };
-
-      const finalRole = determineRoleFromResponse(loginResponseData);
-      onLoginSuccess(finalRole, loginResponseData);
-    }, 600);
+      const errorMsg = err.message || err.data?.message || "Thông tin đăng nhập email hoặc mật khẩu không chính xác.";
+      setFormError(errorMsg);
+    }
   };
 
-  // Handle Registration Submit with full field checks
-  const handleRegisterSubmit = (e) => {
+  // Handle Registration Submit with full field checks using Real API
+  const handleRegisterSubmit = async (e) => {
     e.preventDefault();
     setFormError(null);
     setSubmitSuccessMsg(null);
@@ -223,65 +216,82 @@ export default function WebLoginPage({ onLoginSuccess, onNavigateHome }) {
       return;
     }
     setFieldErrors({});
-
     setIsSubmitting(true);
-    setTimeout(() => {
-      setIsSubmitting(false);
-      setSubmitSuccessMsg("Tạo tài khoản thành công! Đang chuyển đến không gian ôn luyện...");
 
-      const registerResponseData = {
-        accessToken: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lY2xhaW0iOiJNaW5oIEhvYW5nIiwicm9sZSI6IlN0dWRlbnQifQ",
-        refreshToken: "ref_token_v_eval_2026_xyz987",
-        user: {
-          userId: "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-          email: regEmail,
-          fullName: regFullName,
-          phone: regPhone,
-          avatarUrl: studentAvatar,
-          roles: [role === 'parent' ? 'Parent' : 'Student']
-        }
-      };
+    const targetRoleName = role === 'parent' ? 'PARENT' : 'STUDENT';
+
+    try {
+      const resData = await authService.register({
+        email: regEmail.trim(),
+        password: regPassword,
+        fullName: regFullName.trim(),
+        phone: regPhone.trim().replace(/\s/g, ''),
+        roleName: targetRoleName
+      });
+      setIsSubmitting(false);
+
+      const msg = resData?.message || "Tạo tài khoản thành công! Mã OTP kích hoạt đã được gửi.";
+      setSubmitSuccessMsg(msg);
 
       setTimeout(() => {
-        onLoginSuccess(role, registerResponseData);
-      }, 1000);
-    }, 800);
+        setForgotEmail(regEmail.trim());
+        if (resData?.otpCode) {
+          setOtpCode(resData.otpCode);
+        }
+        setIsForgotModalOpen(true);
+        setForgotStep(2);
+      }, 800);
+    } catch (err) {
+      setIsSubmitting(false);
+      console.warn('[WebLoginPage] Register API error:', err);
+      const errorMsg = err.message || err.data?.message || "Đăng ký không thành công. Vui lòng kiểm tra lại.";
+      setFormError(errorMsg);
+    }
   };
 
-  // Quick Demo Login Handler
-  const handleQuickDemo = (demoRole) => {
-    let demoEmail = 'minhhoang.vnu@gmail.com';
-    let demoName = 'Minh Hoàng';
+  // Quick Demo Login Handler (connects to real API with dev fallback)
+  const handleQuickDemo = async (demoRole) => {
+    let demoEmail = 'student@veval.edu.vn';
+    let demoPass = 'Student@123';
+    let demoName = 'Nguyễn Minh Hoàng';
     let demoRoleArray = ['Student'];
 
     if (demoRole === 'student') {
-      demoEmail = 'minhhoang.vnu@gmail.com';
+      demoEmail = 'student@veval.edu.vn';
+      demoPass = 'Student@123';
       demoName = 'Minh Hoàng';
       demoRoleArray = ['Student'];
     } else if (demoRole === 'teacher') {
-      demoEmail = 'thayphamduy.dgnl@gmail.com';
+      demoEmail = 'teacher@veval.edu.vn';
+      demoPass = 'Teacher@123';
       demoName = 'Thầy Phạm Duy';
       demoRoleArray = ['Teacher'];
     } else if (demoRole === 'manager') {
-      demoEmail = 'manager.thuduc@dgnl.edu.vn';
+      demoEmail = 'manager@veval.edu.vn';
+      demoPass = 'Manager@123';
       demoName = 'Cô Hà Quản Lý';
       demoRoleArray = ['Manager'];
     } else if (demoRole === 'parent') {
-      demoEmail = 'phuhuynh.minhhoang@gmail.com';
+      demoEmail = 'parent@veval.edu.vn';
+      demoPass = 'Parent@123';
       demoName = 'Phụ Huynh Minh';
       demoRoleArray = ['Parent'];
     }
 
     setEmail(demoEmail);
-    setPassword('••••••••');
-
+    setPassword(demoPass);
     setIsSubmitting(true);
-    setTimeout(() => {
-      setIsSubmitting(false);
 
+    try {
+      const resData = await authService.login({ email: demoEmail, password: demoPass });
+      setIsSubmitting(false);
+      const targetRole = determineRoleFromResponse(resData);
+      onLoginSuccess(targetRole, resData);
+    } catch {
+      setIsSubmitting(false);
       const demoResponse = {
-        accessToken: "eyDemoAccessToken123456",
-        refreshToken: "eyDemoRefreshToken123456",
+        accessToken: "eyDemoAccessToken_DevOnly",
+        refreshToken: "eyDemoRefreshToken_DevOnly",
         user: {
           userId: "3fa85f64-5717-4562-b3fc-2c963f66afa6",
           email: demoEmail,
@@ -291,10 +301,8 @@ export default function WebLoginPage({ onLoginSuccess, onNavigateHome }) {
           roles: demoRoleArray
         }
       };
-
-      const targetRole = determineRoleFromResponse(demoResponse);
-      onLoginSuccess(targetRole, demoResponse);
-    }, 400);
+      onLoginSuccess(demoRole, demoResponse);
+    }
   };
 
   // Password strength score
@@ -306,18 +314,64 @@ export default function WebLoginPage({ onLoginSuccess, onNavigateHome }) {
   };
   const passStrength = getPasswordStrength(regPassword);
 
-  // Forgot password submit handler
-  const handleForgotSubmit = (e) => {
+  // Forgot password & OTP verification submit handler via Real API
+  const handleForgotSubmit = async (e) => {
     e.preventDefault();
+    setFormError(null);
     if (forgotStep === 1) {
       if (!forgotEmail) return;
-      setForgotStep(2);
+      setIsSubmitting(true);
+      try {
+        await authService.forgotPassword(forgotEmail.trim());
+        setIsSubmitting(false);
+        setForgotStep(2);
+      } catch (err) {
+        setIsSubmitting(false);
+        setForgotStep(2);
+      }
     } else if (forgotStep === 2) {
       if (!otpCode) return;
-      setForgotStep(3);
+      setIsSubmitting(true);
+      try {
+        await authService.verifyOtp(forgotEmail.trim(), otpCode.trim());
+        setIsSubmitting(false);
+        setSubmitSuccessMsg("Xác thực mã OTP thành công!");
+
+        if (mode === 'register' && regPassword) {
+          try {
+            const loginRes = await authService.login({ email: forgotEmail.trim(), password: regPassword });
+            const userRole = determineRoleFromResponse(loginRes);
+            onLoginSuccess(userRole, loginRes);
+            setIsForgotModalOpen(false);
+            return;
+          } catch {
+            setMode('login');
+            setEmail(forgotEmail.trim());
+            setIsForgotModalOpen(false);
+            return;
+          }
+        }
+        setForgotStep(3);
+      } catch (err) {
+        setIsSubmitting(false);
+        setFormError(err.message || "Mã OTP không chính xác hoặc đã hết hạn.");
+      }
     } else if (forgotStep === 3) {
       if (!newPassword) return;
-      setForgotStep(4);
+      setIsSubmitting(true);
+      try {
+        await authService.resetPassword({
+          email: forgotEmail.trim(),
+          otpCode: otpCode.trim(),
+          newPassword
+        });
+        setIsSubmitting(false);
+        setSubmitSuccessMsg("Đặt lại mật khẩu mới thành công! Hãy đăng nhập lại.");
+        setForgotStep(4);
+      } catch (err) {
+        setIsSubmitting(false);
+        setFormError(err.message || "Không thể đặt lại mật khẩu. Vui lòng thử lại.");
+      }
     }
   };
 

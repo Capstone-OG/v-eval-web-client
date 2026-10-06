@@ -22,11 +22,13 @@ import {
   AlertCircle
 } from 'lucide-react';
 
+import authService from '../../services/authService';
+
 export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
   const [role, setRole] = useState('student'); // student | parent (for registration)
   const [mode, setMode] = useState('login'); // login | register
-  const [email, setEmail] = useState('minhhoang.vnu@gmail.com');
-  const [password, setPassword] = useState('••••••••');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
 
@@ -92,7 +94,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
     return 'student';
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setFormError(null);
     setSubmitSuccessMsg(null);
@@ -113,41 +115,19 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
         return;
       }
       setFieldErrors({});
-
       setIsSubmitting(true);
-      setTimeout(() => {
+
+      try {
+        const resData = await authService.login({ email: email.trim(), password });
         setIsSubmitting(false);
-
-        let detectedRoleArray = ['Student'];
-        let name = 'Nguyễn Minh Hoàng';
-        if (email.includes('teacher') || email.includes('phamduy')) {
-          detectedRoleArray = ['Teacher'];
-          name = 'Thầy Phạm Duy';
-        } else if (email.includes('manager')) {
-          detectedRoleArray = ['Manager'];
-          name = 'Cô Hà Quản Lý';
-        } else if (email.includes('parent') || email.includes('phuhuynh')) {
-          detectedRoleArray = ['Parent'];
-          name = 'Phụ Huynh Minh';
-        }
-
-        const loginPayload = {
-          accessToken: "eyToken123456",
-          refreshToken: "eyRefresh123456",
-          user: {
-            userId: "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-            email: email,
-            fullName: name,
-            phone: "0912345678",
-            avatarUrl: "",
-            roles: detectedRoleArray
-          }
-        };
-
-        const targetRole = determineRoleFromResponse(loginPayload);
-        onLoginSuccess(targetRole, loginPayload);
+        const targetRole = determineRoleFromResponse(resData);
+        onLoginSuccess(targetRole, resData);
         onClose();
-      }, 500);
+      } catch (err) {
+        setIsSubmitting(false);
+        const errorMsg = err.message || err.data?.message || "Đăng nhập thất bại. Vui lòng kiểm tra lại.";
+        setFormError(errorMsg);
+      }
     } else {
       if (!regFullName.trim()) {
         errs.regFullName = "Vui lòng nhập Họ và tên.";
@@ -193,54 +173,76 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
         return;
       }
       setFieldErrors({});
-
       setIsSubmitting(true);
-      setTimeout(() => {
+
+      const targetRoleName = role === 'parent' ? 'PARENT' : 'STUDENT';
+
+      try {
+        const resData = await authService.register({
+          email: regEmail.trim(),
+          password: regPassword,
+          fullName: regFullName.trim(),
+          phone: regPhone.trim().replace(/\s/g, ''),
+          roleName: targetRoleName
+        });
         setIsSubmitting(false);
         setSubmitSuccessMsg("Tạo tài khoản thành công!");
         setTimeout(() => {
-          onLoginSuccess(role);
+          onLoginSuccess(role, resData);
           onClose();
-        }, 800);
-      }, 600);
+        }, 600);
+      } catch (err) {
+        setIsSubmitting(false);
+        const errorMsg = err.message || err.data?.message || "Đăng ký không thành công.";
+        setFormError(errorMsg);
+      }
     }
   };
 
-  const handleQuickDemo = (demoRole) => {
-    let dEmail = 'minhhoang.vnu@gmail.com';
+  const handleQuickDemo = async (demoRole) => {
+    let dEmail = 'student@veval.edu.vn';
+    let dPass = 'Student@123';
     let dName = 'Minh Hoàng';
     let dRoles = ['Student'];
 
     if (demoRole === 'teacher') {
-      dEmail = 'thayphamduy.dgnl@gmail.com';
+      dEmail = 'teacher@veval.edu.vn';
+      dPass = 'Teacher@123';
       dName = 'Thầy Phạm Duy';
       dRoles = ['Teacher'];
     } else if (demoRole === 'manager') {
-      dEmail = 'manager.thuduc@dgnl.edu.vn';
+      dEmail = 'manager@veval.edu.vn';
+      dPass = 'Manager@123';
       dName = 'Cô Hà Quản Lý';
       dRoles = ['Manager'];
     } else if (demoRole === 'parent') {
-      dEmail = 'phuhuynh.minhhoang@gmail.com';
+      dEmail = 'parent@veval.edu.vn';
+      dPass = 'Parent@123';
       dName = 'Phụ Huynh Minh';
       dRoles = ['Parent'];
     }
 
-    const demoPayload = {
-      accessToken: "eyDemoToken",
-      refreshToken: "eyDemoRefresh",
-      user: {
-        userId: "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-        email: dEmail,
-        fullName: dName,
-        phone: "0912345678",
-        avatarUrl: "",
-        roles: dRoles
-      }
-    };
-
-    const targetRole = determineRoleFromResponse(demoPayload);
-    onLoginSuccess(targetRole, demoPayload);
-    onClose();
+    try {
+      const resData = await authService.login({ email: dEmail, password: dPass });
+      const targetRole = determineRoleFromResponse(resData);
+      onLoginSuccess(targetRole, resData);
+      onClose();
+    } catch {
+      const demoPayload = {
+        accessToken: "eyDemoToken",
+        refreshToken: "eyDemoRefresh",
+        user: {
+          userId: "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+          email: dEmail,
+          fullName: dName,
+          phone: "0912345678",
+          avatarUrl: "",
+          roles: dRoles
+        }
+      };
+      onLoginSuccess(demoRole, demoPayload);
+      onClose();
+    }
   };
 
   return (
@@ -737,31 +739,6 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
             </button>
 
           </form>
-
-          {/* Quick Demo Login Presets */}
-          <div className="pt-2 border-t border-slate-100">
-            <div className="text-[10px] font-bold text-slate-400 mb-1.5 text-center uppercase tracking-wider">
-              1-Click Đăng nhập thử nghiệm:
-            </div>
-            <div className="grid grid-cols-2 gap-1.5">
-              <button 
-                type="button"
-                onClick={() => handleQuickDemo('student')}
-                className="p-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-[11px] font-extrabold border border-blue-200 transition-all text-left flex items-center gap-1.5"
-              >
-                <GraduationCap className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                <span className="truncate">Học sinh Minh Hoàng</span>
-              </button>
-              <button 
-                type="button"
-                onClick={() => handleQuickDemo('teacher')}
-                className="p-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg text-[11px] font-extrabold border border-emerald-200 transition-all text-left flex items-center gap-1.5"
-              >
-                <UserCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                <span className="truncate">Thầy Phạm Duy</span>
-              </button>
-            </div>
-          </div>
 
           {/* Support Hotline Footer */}
           <div className="text-center pt-1 border-t border-slate-100 text-[11px] text-slate-500 font-semibold flex items-center justify-center gap-1.5">

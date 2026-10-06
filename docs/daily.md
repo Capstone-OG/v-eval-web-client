@@ -2,6 +2,23 @@
 
 ---
 
+## [06/10/2026] - Đấu Nối 100% API Real Auth, Loại Bỏ Hoàn Toàn Mock Pre-fill & Tự Động Khôi Phục Phiên Làm Việc
+
+- **Tích Hợp 100% API Thực Tế Cho Phân Hệ Xác Thực (`src/components/auth/`)**:
+  - Thay thế toàn bộ mã giả `setTimeout` và hardcode JWT Token trong `WebLoginPage.jsx` và `AuthModal.jsx` bằng các hàm `authService.login()`, `authService.register()`, `authService.verifyOtp()`, `authService.forgotPassword()`, `authService.resetPassword()`.
+  - **Xoá Hoàn Toàn Ô Pre-fill Giả Lập**: Đặt lại trạng thái ban đầu của ô Email và Password về chuỗi rỗng `''` (thay vì điền sẵn `minhhoang.vnu@gmail.com` và `••••••••`), đảm bảo form đăng nhập gửi đúng thông tin người dùng gõ tới API thực tế.
+  - Kết nối trực tiếp qua API Gateway YARP (`http://localhost:5212`) tới Identity Service (`:5155`).
+  - Tự động chuyển đổi vai trò hệ thống (`Student`, `Teacher`, `Manager`, `Parent`) từ mảng `roles` trả về của Backend.
+  - Xử lý mã lỗi `Auth.AccountNotActivated` (403) mở tự động modal nhập OTP kích hoạt 6 số.
+- **Hoàn Thiện Luồng Đăng Xuất & Khôi Phục Phiên (Session Restoration)**:
+  - Cập nhật `handleLogout` gọi `authService.logout()` thu hồi Refresh Token và xóa sạch `tokenStorage`.
+  - Bổ sung `useEffect` trên `App.jsx` tự động khôi phục thông tin người dùng và vai trò khi bấm F5 reload ứng dụng.
+  - Truyền prop `currentUser` thực tế vào `Navbar.jsx` hiển thị đúng Họ tên & Email thực của người dùng đăng nhập.
+- **Kiểm Thử Biên Dịch Nguồn (Build Verification)**:
+  - Biên dịch sản phẩm thành công với `npx vite build` trong 1.40s (0 error).
+
+---
+
 ## [06/10/2026] - Tái Cấu Trúc Phân Hệ Xác Thực (Auth), Custom Rounded Dropdown & Validation Báo Lỗi Theo Trường
 
 - **Tái Cấu Trúc Mã Nguồn Phân Hệ Auth (`src/components/auth/`)**:

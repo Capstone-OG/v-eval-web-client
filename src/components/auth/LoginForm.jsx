@@ -142,71 +142,6 @@ export default function LoginForm({
 
       </form>
 
-      {/* 1-Click Quick Demo Login Presets */}
-      <div className="pt-2 border-t border-slate-100 space-y-2">
-        <div className="text-[10px] font-extrabold text-slate-400 text-center uppercase tracking-wider">
-          ĐĂNG NHẬP THỬ TỰ ĐỘNG PHÂN ROLE BACKEND (1-CLICK):
-        </div>
-        
-        <div className="grid grid-cols-2 gap-2 text-xs">
-          <button 
-            type="button"
-            onClick={() => handleQuickDemo('student')}
-            className="p-2.5 bg-blue-50/90 hover:bg-blue-100 text-blue-900 rounded-xl font-extrabold border border-blue-200/80 transition-all text-left flex items-center gap-2 group shadow-2xs"
-          >
-            <div className="w-7 h-7 rounded-lg bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-xs">
-              <GraduationCap className="w-4 h-4" />
-            </div>
-            <div className="truncate min-w-0">
-              <div className="truncate font-black text-xs">Minh Hoàng</div>
-              <div className="text-[10px] text-blue-600 font-medium truncate">Role: Student</div>
-            </div>
-          </button>
-
-          <button 
-            type="button"
-            onClick={() => handleQuickDemo('teacher')}
-            className="p-2.5 bg-emerald-50/90 hover:bg-emerald-100 text-emerald-900 rounded-xl font-extrabold border border-emerald-200/80 transition-all text-left flex items-center gap-2 group shadow-2xs"
-          >
-            <div className="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
-              <UserCheck className="w-4 h-4" />
-            </div>
-            <div className="truncate min-w-0">
-              <div className="truncate font-black text-xs">Thầy Phạm Duy</div>
-              <div className="text-[10px] text-emerald-600 font-medium truncate">Role: Teacher</div>
-            </div>
-          </button>
-
-          <button 
-            type="button"
-            onClick={() => handleQuickDemo('manager')}
-            className="p-2.5 bg-purple-50/90 hover:bg-purple-100 text-purple-900 rounded-xl font-extrabold border border-purple-200/80 transition-all text-left flex items-center gap-2 group shadow-2xs"
-          >
-            <div className="w-7 h-7 rounded-lg bg-purple-600 text-white flex items-center justify-center shrink-0 shadow-xs">
-              <Building2 className="w-4 h-4" />
-            </div>
-            <div className="truncate min-w-0">
-              <div className="truncate font-black text-xs">Cô Hà Quản Lý</div>
-              <div className="text-[10px] text-purple-600 font-medium truncate">Role: Manager</div>
-            </div>
-          </button>
-
-          <button 
-            type="button"
-            onClick={() => handleQuickDemo('parent')}
-            className="p-2.5 bg-amber-50/90 hover:bg-amber-100 text-amber-900 rounded-xl font-extrabold border border-amber-200/80 transition-all text-left flex items-center gap-2 group shadow-2xs"
-          >
-            <div className="w-7 h-7 rounded-lg bg-amber-600 text-white flex items-center justify-center shrink-0 shadow-xs">
-              <Users className="w-4 h-4" />
-            </div>
-            <div className="truncate min-w-0">
-              <div className="truncate font-black text-xs">Phụ Huynh Minh</div>
-              <div className="text-[10px] text-amber-600 font-medium truncate">Role: Parent</div>
-            </div>
-          </button>
-        </div>
-      </div>
-
       {/* Social Logins */}
       <div className="space-y-2 pt-1">
         <div className="relative flex py-1 items-center">
@@ -218,8 +153,7 @@ export default function LoginForm({
         <div className="grid grid-cols-2 gap-2 text-xs font-extrabold">
           <button 
             type="button"
-            onClick={() => handleQuickDemo('student')}
-            className="flex items-center justify-center gap-2 py-2 px-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-slate-700 transition-all shadow-2xs"
+            className="flex items-center justify-center gap-2 py-2 px-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-slate-700 transition-all shadow-2xs cursor-pointer"
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -232,8 +166,7 @@ export default function LoginForm({
 
           <button 
             type="button"
-            onClick={() => handleQuickDemo('student')}
-            className="flex items-center justify-center gap-2 py-2 px-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-slate-700 transition-all shadow-2xs"
+            className="flex items-center justify-center gap-2 py-2 px-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-slate-700 transition-all shadow-2xs cursor-pointer"
           >
             <div className="w-4 h-4 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-[10px]">
               Z
