@@ -23,7 +23,7 @@ import {
 } from './components/modals';
 import { DiagnosticAssessmentPage } from './components/diagnostic';
 import { AccountProvisioningView } from './components/admin';
-import { CheckCircle2, Globe, LogIn, LayoutDashboard, Sparkles, Brain, UserPlus, ShieldCheck } from 'lucide-react';
+import { CheckCircle2 } from 'lucide-react';
 import authService from './services/authService';
 
 export default function App() {
@@ -96,82 +96,6 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-cyan-500 selection:text-slate-950">
       
-      {/* Top Page Control Bar */}
-      <div className="bg-slate-900 text-white px-4 lg:px-8 py-2 border-b border-slate-800 flex items-center justify-between text-xs font-bold shadow-md z-50">
-        <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded-lg bg-gradient-to-r from-blue-600 to-cyan-500 text-white flex items-center justify-center font-extrabold text-[10px]">
-            ĐGNL
-          </div>
-          <span className="text-white text-sm font-extrabold tracking-tight">ĐGNL AI Portal (FA26SE090)</span>
-          <span className="px-2 py-0.5 bg-cyan-400/20 text-cyan-300 text-[10px] rounded-md border border-cyan-400/30">
-            v2.4 Live
-          </span>
-        </div>
-
-        {/* Page Switcher Tabs */}
-        <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
-          <button
-            onClick={() => setCurrentPage('landing')}
-            className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${
-              currentPage === 'landing' ? 'bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-extrabold shadow-sm' : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <Globe className="w-3.5 h-3.5" />
-            <span>Trang Chủ Công Khai (Landing Page)</span>
-          </button>
-
-          <button
-            onClick={() => handleOpenAuth('login')}
-            className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${
-              currentPage === 'login' && authMode === 'login' ? 'bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-extrabold shadow-sm' : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <LogIn className="w-3.5 h-3.5" />
-            <span>Đăng Nhập</span>
-          </button>
-
-          <button
-            onClick={() => handleOpenAuth('register')}
-            className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${
-              currentPage === 'login' && authMode === 'register' ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-extrabold shadow-sm' : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <UserPlus className="w-3.5 h-3.5 text-cyan-300" />
-            <span>Đăng Ký Tài Khoản</span>
-          </button>
-
-          <button
-            onClick={() => setCurrentPage('diagnostic')}
-            className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${
-              currentPage === 'diagnostic' ? 'bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-extrabold shadow-sm' : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <Brain className="w-3.5 h-3.5 text-cyan-300" />
-            <span>Khảo Sát 30 Câu AI (Core Flow 1)</span>
-          </button>
-
-          <button
-            onClick={() => setCurrentPage('dashboard')}
-            className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${
-              currentPage === 'dashboard' ? 'bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-extrabold shadow-sm' : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <LayoutDashboard className="w-3.5 h-3.5" />
-            <span>Trang Chủ Học Viên (Dashboard)</span>
-          </button>
-
-          <button
-            onClick={() => setCurrentPage('provision')}
-            className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${
-              currentPage === 'provision' ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-extrabold shadow-sm' : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <ShieldCheck className="w-3.5 h-3.5 text-cyan-300" />
-            <span>Cấp Tài Khoản (IAM)</span>
-          </button>
-        </div>
-      </div>
-
       {/* PAGE ROUTING */}
       {currentPage === 'landing' && (
         <PublicLandingPage 
