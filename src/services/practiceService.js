@@ -80,16 +80,8 @@ export const practiceService = {
   },
 
   // =========================================================================
-  // Core Flow 2: Phân Hệ Live Q&A & Thời Khóa Biểu (APIs 8 - 15)
+  // Core Flow 2: Quản Lý Phân Công Lớp Học (API 9)
   // =========================================================================
-
-  /**
-   * API 8: Tạo lịch buổi học Live Q&A giải đáp cho lớp học cơ sở (Academic Manager)
-   * @param {Object} sessionData - { classId, teacherId, title, scheduledAt, durationMinutes, meetingUrl }
-   */
-  async createLiveSession(sessionData) {
-    return (await apiClient.post('/api/v1/practice/live-sessions', sessionData)).data;
-  },
 
   /**
    * API 9: Phân công hoặc điều chuyển giáo viên phụ trách lớp học cơ sở (Academic Manager)
@@ -98,55 +90,6 @@ export const practiceService = {
    */
   async assignTeacher(classId, teacherId) {
     return (await apiClient.put(`/api/v1/practice/classes/${classId}/assign-teacher`, { teacherId })).data;
-  },
-
-  /**
-   * API 10: Học sinh tra cứu thời khóa biểu các buổi Live Q&A lớp cơ sở
-   */
-  async getMyLiveSchedule() {
-    return (await apiClient.get('/api/v1/practice/live-sessions/my-schedule')).data;
-  },
-
-  /**
-   * API 11: Học sinh tham gia phòng học trực tuyến Live Q&A & lưu vết JoinedAt
-   * @param {string} sessionId
-   */
-  async joinLiveSession(sessionId) {
-    return (await apiClient.post(`/api/v1/practice/live-sessions/${sessionId}/join`)).data;
-  },
-
-  /**
-   * API 12: Giáo viên thực hiện điểm danh chuyên cần chính thức (Teacher)
-   * @param {string} sessionId
-   * @param {Array} attendances - [{ studentId, status: "ATTENDED" | "ABSENT" }]
-   */
-  async markTeacherAttendance(sessionId, attendances) {
-    return (await apiClient.post(`/api/v1/practice/live-sessions/${sessionId}/attendance`, { attendances })).data;
-  },
-
-  /**
-   * API 13: Giáo viên tra cứu thời khóa biểu giảng dạy cá nhân (Teacher)
-   */
-  async getTeacherSchedule() {
-    return (await apiClient.get('/api/v1/practice/live-sessions/teacher-schedule')).data;
-  },
-
-  /**
-   * API 14: Giáo viên cập nhật link video ghi hình xem lại sau buổi Live (Teacher)
-   * @param {string} sessionId
-   * @param {string} recordingUrl
-   */
-  async updateRecordingUrl(sessionId, recordingUrl) {
-    return (await apiClient.put(`/api/v1/practice/live-sessions/${sessionId}/recording`, { recordingUrl })).data;
-  },
-
-  /**
-   * API 15: Hủy buổi học trực tuyến khi có việc đột xuất (Academic Manager / Teacher)
-   * @param {string} sessionId
-   * @param {string} reason
-   */
-  async cancelLiveSession(sessionId, reason) {
-    return (await apiClient.put(`/api/v1/practice/live-sessions/${sessionId}/cancel`, { reason })).data;
   }
 };
 

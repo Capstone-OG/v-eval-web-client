@@ -2,6 +2,15 @@
 
 ---
 
+## [08/10/2026] - Đồng Bộ Tinh Gọn Tầng Dịch Vụ: Loại Bỏ Các Lời Gọi API Live Streaming Tại Client
+- **Loại Bỏ Các Phương Thức Gọi API Live Streaming Trong `practiceService.js`**:
+  - Gỡ bỏ các hàm gọi API tương ứng với các endpoint vừa được xóa: `createLiveSession`, `getMyLiveSchedule`, `joinLiveSession`, `markTeacherAttendance`, `getTeacherSchedule`, `updateRecordingUrl`, `cancelLiveSession`.
+  - Giữ lại phương thức phân công giáo viên lớp học `assignTeacher`.
+- **Kiểm Thử Đóng Gói (Build Verification)**:
+  - Chạy `npm run build` thành công 100% (**0 Error, 0 Warning**).
+
+---
+
 ## [06/10/2026] - Khắc Phục Sự Cố Thông Báo Discord, Thiết Lập CI/CD GitHub Actions & Hoàn Thiện Tích Hợp Web Client
 - **Sửa Lỗi Thiếu Thông Báo Discord & Thiết Lập CI/CD GitHub Actions Cho Web Client**:
   - Phát hiện nguyên nhân Web Client trước đó không gửi thông báo về Discord: Repo thiếu hoàn toàn thư mục cấu hình `.github/workflows`.
