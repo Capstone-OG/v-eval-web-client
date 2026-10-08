@@ -60,28 +60,6 @@ export default function Navbar({ activeRole, setActiveRole, currentUser, onLogou
             <span>Đặc tả Kiến trúc & 3 Q&A</span>
           </button>
 
-          {/* Role Switcher Pills */}
-          <div className="hidden lg:flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs">
-            <button
-              onClick={() => setActiveRole('student')}
-              className={`px-2.5 py-1 rounded-lg font-semibold transition-all ${activeRole === 'student' ? 'bg-white text-blue-600 shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}
-            >
-              Học sinh
-            </button>
-            <button
-              onClick={() => setActiveRole('teacher')}
-              className={`px-2.5 py-1 rounded-lg font-semibold transition-all ${activeRole === 'teacher' ? 'bg-white text-blue-600 shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}
-            >
-              Giáo viên
-            </button>
-            <button
-              onClick={() => setActiveRole('manager')}
-              className={`px-2.5 py-1 rounded-lg font-semibold transition-all ${activeRole === 'manager' ? 'bg-white text-blue-600 shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}
-            >
-              Quản lý
-            </button>
-          </div>
-
           {/* Notifications Icon */}
           <button className="relative p-2 text-slate-500 hover:text-slate-800 rounded-xl hover:bg-slate-100 transition-all">
             <Bell className="w-5 h-5" />

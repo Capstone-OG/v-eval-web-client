@@ -32,7 +32,7 @@ export default function Sidebar({ activeTab, setActiveTab, activeRole, onOpenDia
   ];
 
   return (
-    <aside className="w-64 bg-white border-r border-slate-200/80 flex flex-col justify-between shrink-0 select-none min-h-[calc(100vh-65px)]">
+    <aside className="w-64 bg-white border-r border-slate-200/80 flex flex-col justify-between shrink-0 select-none h-screen sticky top-0 z-30 shadow-xs overflow-y-auto">
       <div>
         
         {/* Brand Logo Header */}

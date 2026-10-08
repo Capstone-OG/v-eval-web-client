@@ -39,7 +39,10 @@ export default function LoginForm({
           </label>
           <div className="relative">
             <input
+              id="login-email"
+              name="email"
               type="text"
+              autoComplete="username"
               value={email}
               onChange={(e) => {
                 setEmail(e.target.value);
@@ -69,7 +72,10 @@ export default function LoginForm({
           </label>
           <div className="relative">
             <input
+              id="login-password"
+              name="password"
               type={showPassword ? 'text' : 'password'}
+              autoComplete="current-password"
               value={password}
               onChange={(e) => {
                 setPassword(e.target.value);

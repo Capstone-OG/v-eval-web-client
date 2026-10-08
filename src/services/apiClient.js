@@ -13,27 +13,56 @@ const REFRESH_TOKEN_KEY = 'veval_refresh_token';
 const USER_KEY = 'veval_user_profile';
 
 export const tokenStorage = {
-  getAccessToken: () => localStorage.getItem(TOKEN_KEY),
-  getRefreshToken: () => localStorage.getItem(REFRESH_TOKEN_KEY),
+  getAccessToken: () => localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(TOKEN_KEY),
+  getRefreshToken: () => localStorage.getItem(REFRESH_TOKEN_KEY) || sessionStorage.getItem(REFRESH_TOKEN_KEY),
   getUser: () => {
     try {
-      const u = localStorage.getItem(USER_KEY);
+      const u = localStorage.getItem(USER_KEY) || sessionStorage.getItem(USER_KEY);
       return u ? JSON.parse(u) : null;
     } catch {
       return null;
     }
   },
-  setTokens: (accessToken, refreshToken, user = null) => {
-    if (accessToken) localStorage.setItem(TOKEN_KEY, accessToken);
-    if (refreshToken) localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
-    if (user) localStorage.setItem(USER_KEY, JSON.stringify(user));
+  setTokens: (accessToken, refreshToken, user = null, rememberMe = true) => {
+    const storage = rememberMe ? localStorage : sessionStorage;
+    // Clear opposite storage to avoid stale tokens
+    const altStorage = rememberMe ? sessionStorage : localStorage;
+    altStorage.removeItem(TOKEN_KEY);
+    altStorage.removeItem(REFRESH_TOKEN_KEY);
+    altStorage.removeItem(USER_KEY);
+
+    if (accessToken) storage.setItem(TOKEN_KEY, accessToken);
+    if (refreshToken) storage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+    if (user) storage.setItem(USER_KEY, JSON.stringify(user));
   },
   clearTokens: () => {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(REFRESH_TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
+    sessionStorage.removeItem(TOKEN_KEY);
+    sessionStorage.removeItem(REFRESH_TOKEN_KEY);
+    sessionStorage.removeItem(USER_KEY);
   }
 };
+
+/**
+ * Check if a JWT token is nearing expiration (within 5 minutes / 300s)
+ */
+function isTokenNearingExpiry(token) {
+  if (!token) return false;
+  try {
+    const payloadBase64 = token.split('.')[1];
+    if (!payloadBase64) return false;
+    const decodedJson = atob(payloadBase64.replace(/-/g, '+').replace(/_/g, '/'));
+    const payload = JSON.parse(decodedJson);
+    if (!payload.exp) return false;
+    const nowInSeconds = Math.floor(Date.now() / 1000);
+    // Refresh if token expires in less than 5 minutes (300 seconds)
+    return (payload.exp - nowInSeconds) < 300;
+  } catch {
+    return false;
+  }
+}
 
 let isRefreshing = false;
 let refreshSubscribers = [];
@@ -121,7 +150,13 @@ async function silentRefreshToken() {
  */
 async function request(endpoint, options = {}, isRetry = false) {
   const url = endpoint.startsWith('http') ? endpoint : `${BASE_URL}${endpoint}`;
-  const token = tokenStorage.getAccessToken();
+  let token = tokenStorage.getAccessToken();
+
+  // Proactively check if token is nearing expiry (< 5 mins) before request
+  if (token && isTokenNearingExpiry(token) && !isRetry) {
+    const refreshedToken = await silentRefreshToken().catch(() => null);
+    if (refreshedToken) token = refreshedToken;
+  }
 
   const headers = {
     Accept: 'application/json',

@@ -63,9 +63,15 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
 
   const getPasswordStrength = (pass) => {
     if (!pass) return { score: 0, label: '', color: 'bg-slate-200' };
-    if (pass.length < 6) return { score: 1, label: 'Yếu', color: 'bg-rose-500' };
-    if (pass.length < 10 || !/\d/.test(pass)) return { score: 2, label: 'Trung bình', color: 'bg-amber-500' };
-    return { score: 3, label: 'Mạnh (Tối ưu)', color: 'bg-emerald-500' };
+    const hasLen = pass.length >= 8;
+    const hasUpper = /[A-Z]/.test(pass);
+    const hasLower = /[a-z]/.test(pass);
+    const hasDigit = /[0-9]/.test(pass);
+    const score = [hasLen, hasUpper, hasLower, hasDigit].filter(Boolean).length;
+
+    if (score <= 1) return { score: 1, label: 'Yếu (Cần ≥8 ký tự)', color: 'bg-rose-500' };
+    if (score < 4) return { score: 2, label: 'Ká (Cần 1 chữ hoa, 1 chữ thường, 1 chữ số)', color: 'bg-amber-500' };
+    return { score: 3, label: 'Mạnh (Thỏa mãn yêu cầu bảo mật)', color: 'bg-emerald-500' };
   };
   const passStrength = getPasswordStrength(regPassword);
 
@@ -102,10 +108,13 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
     const errs = {};
 
     if (mode === 'login') {
-      if (!email.trim()) {
+      const cleanEmail = email.trim();
+      const cleanPassword = password.trim();
+
+      if (!cleanEmail) {
         errs.email = "Vui lòng nhập Email hoặc Số điện thoại.";
       }
-      if (!password) {
+      if (!cleanPassword) {
         errs.password = "Vui lòng nhập Mật khẩu.";
       }
 
@@ -118,7 +127,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
       setIsSubmitting(true);
 
       try {
-        const resData = await authService.login({ email: email.trim(), password });
+        const resData = await authService.login({ email: cleanEmail, password: cleanPassword });
         setIsSubmitting(false);
         const targetRole = determineRoleFromResponse(resData);
         onLoginSuccess(targetRole, resData);
@@ -129,37 +138,50 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
         setFormError(errorMsg);
       }
     } else {
-      if (!regFullName.trim()) {
+      const cleanFullName = regFullName.trim();
+      const cleanEmail = regEmail.trim();
+      const cleanPhone = regPhone.trim().replace(/\s/g, '');
+      const cleanPassword = regPassword.trim();
+      const cleanConfirmPassword = regConfirmPassword.trim();
+
+      if (!cleanFullName) {
         errs.regFullName = "Vui lòng nhập Họ và tên.";
       }
 
-      if (!regEmail.trim()) {
+      if (!cleanEmail) {
         errs.regEmail = "Vui lòng nhập địa chỉ Email.";
       } else {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(regEmail.trim())) {
+        if (!emailRegex.test(cleanEmail)) {
           errs.regEmail = "Email không đúng định dạng.";
         }
       }
 
-      if (!regPhone.trim()) {
+      if (!cleanPhone) {
         errs.regPhone = "Vui lòng nhập Số điện thoại.";
       } else {
         const phoneRegex = /^(0[3|5|7|8|9])[0-9]{8}$/;
-        if (!phoneRegex.test(regPhone.trim().replace(/\s/g, ''))) {
+        if (!phoneRegex.test(cleanPhone)) {
           errs.regPhone = "SĐT không hợp lệ (10 chữ số).";
         }
       }
 
-      if (!regPassword) {
+      if (!cleanPassword) {
         errs.regPassword = "Vui lòng nhập Mật khẩu.";
-      } else if (regPassword.length < 6) {
-        errs.regPassword = "Mật khẩu tối thiểu 6 ký tự.";
+      } else {
+        const pwdErrs = [];
+        if (cleanPassword.length < 8) pwdErrs.push("ít nhất 8 ký tự");
+        if (!/[A-Z]/.test(cleanPassword)) pwdErrs.push("1 chữ hoa");
+        if (!/[a-z]/.test(cleanPassword)) pwdErrs.push("1 chữ thường");
+        if (!/[0-9]/.test(cleanPassword)) pwdErrs.push("1 chữ số");
+        if (pwdErrs.length > 0) {
+          errs.regPassword = `Mật khẩu yêu cầu: ${pwdErrs.join(', ')}.`;
+        }
       }
 
-      if (!regConfirmPassword) {
+      if (!cleanConfirmPassword) {
         errs.regConfirmPassword = "Vui lòng nhập lại mật khẩu.";
-      } else if (regPassword && regPassword !== regConfirmPassword) {
+      } else if (cleanPassword && cleanPassword !== cleanConfirmPassword) {
         errs.regConfirmPassword = "Mật khẩu xác nhận không khớp.";
       }
 
@@ -179,10 +201,10 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
 
       try {
         const resData = await authService.register({
-          email: regEmail.trim(),
-          password: regPassword,
-          fullName: regFullName.trim(),
-          phone: regPhone.trim().replace(/\s/g, ''),
+          email: cleanEmail,
+          password: cleanPassword,
+          fullName: cleanFullName,
+          phone: cleanPhone,
           roleName: targetRoleName
         });
         setIsSubmitting(false);
@@ -193,7 +215,11 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
         }, 600);
       } catch (err) {
         setIsSubmitting(false);
-        const errorMsg = err.message || err.data?.message || "Đăng ký không thành công.";
+        let errorMsg = err.message || err.data?.message;
+        if (Array.isArray(err.data?.errors) && err.data.errors.length > 0) {
+          errorMsg = err.data.errors.map(e => e.description || e.message).join(' ');
+        }
+        if (!errorMsg) errorMsg = "Đăng ký không thành công. Vui lòng kiểm tra lại thông tin.";
         setFormError(errorMsg);
       }
     }

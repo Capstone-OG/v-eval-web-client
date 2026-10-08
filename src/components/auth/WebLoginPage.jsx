@@ -15,7 +15,8 @@ import {
   Lock,
   User,
   X,
-  CheckCircle
+  CheckCircle,
+  AlertCircle
 } from 'lucide-react';
 
 import studentAvatar from '../../assets/vietnamese_student_real.jpg';
@@ -52,12 +53,17 @@ export default function WebLoginPage({ onLoginSuccess, onNavigateHome }) {
   const [regShowPassword, setRegShowPassword] = useState(false);
   const [regShowConfirmPassword, setRegShowConfirmPassword] = useState(false);
 
-  // Forgot Password Modal state
+  // Forgot Password & Activation Modal state
   const [isForgotModalOpen, setIsForgotModalOpen] = useState(false);
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotStep, setForgotStep] = useState(1);
   const [otpCode, setOtpCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
+  const [demoOtpCode, setDemoOtpCode] = useState('');
+  const [isActivationMode, setIsActivationMode] = useState(false);
+
+  // Toast Notification state
+  const [toastInfo, setToastInfo] = useState(null);
 
   // Submit Feedback & Loading state
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -114,17 +120,29 @@ export default function WebLoginPage({ onLoginSuccess, onNavigateHome }) {
     return 'student';
   };
 
+  // Restore remembered email from localStorage on mount
+  useEffect(() => {
+    const savedEmail = localStorage.getItem('veval_remembered_email');
+    if (savedEmail) {
+      setEmail(savedEmail);
+      setRememberMe(true);
+    }
+  }, []);
+
   // Handle Login Submit using Real API Gateway Call
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
     setFormError(null);
     setSubmitSuccessMsg(null);
 
+    const cleanEmail = email.trim();
+    const cleanPassword = password.trim();
+
     const errs = {};
-    if (!email.trim()) {
+    if (!cleanEmail) {
       errs.email = "Vui lòng nhập Email.";
     }
-    if (!password) {
+    if (!cleanPassword) {
       errs.password = "Vui lòng nhập Mật khẩu.";
     }
 
@@ -137,8 +155,14 @@ export default function WebLoginPage({ onLoginSuccess, onNavigateHome }) {
     setIsSubmitting(true);
 
     try {
-      const resData = await authService.login({ email: email.trim(), password });
+      const resData = await authService.login({ email: cleanEmail, password: cleanPassword, rememberMe });
       setIsSubmitting(false);
+
+      if (rememberMe) {
+        localStorage.setItem('veval_remembered_email', cleanEmail);
+      } else {
+        localStorage.removeItem('veval_remembered_email');
+      }
 
       const userRole = determineRoleFromResponse(resData);
       setSubmitSuccessMsg("Xác thực đăng nhập thành công!");
@@ -152,7 +176,8 @@ export default function WebLoginPage({ onLoginSuccess, onNavigateHome }) {
       // Handle unactivated account error
       if (err.data?.code === 'Auth.AccountNotActivated' || err.status === 403) {
         setFormError("Tài khoản chưa được kích hoạt. Vui lòng nhập mã OTP để kích hoạt.");
-        setForgotEmail(email.trim());
+        setForgotEmail(cleanEmail);
+        setIsActivationMode(true);
         setIsForgotModalOpen(true);
         setForgotStep(2);
         return;
@@ -169,40 +194,52 @@ export default function WebLoginPage({ onLoginSuccess, onNavigateHome }) {
     setFormError(null);
     setSubmitSuccessMsg(null);
 
+    const cleanFullName = regFullName.trim();
+    const cleanEmail = regEmail.trim();
+    const cleanPhone = regPhone.trim().replace(/\s/g, '');
+    const cleanPassword = regPassword.trim();
+    const cleanConfirmPassword = regConfirmPassword.trim();
+
     const errs = {};
 
-    if (!regFullName.trim()) {
+    if (!cleanFullName) {
       errs.regFullName = "Vui lòng nhập Họ và tên.";
     }
 
-    if (!regEmail.trim()) {
+    if (!cleanEmail) {
       errs.regEmail = "Vui lòng nhập địa chỉ Email.";
     } else {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(regEmail.trim())) {
+      if (!emailRegex.test(cleanEmail)) {
         errs.regEmail = "Email không đúng định dạng (ví dụ: name@gmail.com).";
       }
     }
 
-    if (!regPhone.trim()) {
+    if (!cleanPhone) {
       errs.regPhone = "Vui lòng nhập Số điện thoại liên hệ.";
     } else {
       const phoneRegex = /^(0[3|5|7|8|9])[0-9]{8}$/;
-      const cleanPhone = regPhone.trim().replace(/\s/g, '');
       if (!phoneRegex.test(cleanPhone)) {
         errs.regPhone = "SĐT không hợp lệ (10 chữ số, bắt đầu bằng 03, 05, 07, 08, 09).";
       }
     }
 
-    if (!regPassword) {
+    if (!cleanPassword) {
       errs.regPassword = "Vui lòng nhập Mật khẩu.";
-    } else if (regPassword.length < 6) {
-      errs.regPassword = "Mật khẩu phải chứa ít nhất 6 ký tự.";
+    } else {
+      const pwdErrs = [];
+      if (cleanPassword.length < 8) pwdErrs.push("ít nhất 8 ký tự");
+      if (!/[A-Z]/.test(cleanPassword)) pwdErrs.push("1 chữ hoa");
+      if (!/[a-z]/.test(cleanPassword)) pwdErrs.push("1 chữ thường");
+      if (!/[0-9]/.test(cleanPassword)) pwdErrs.push("1 chữ số");
+      if (pwdErrs.length > 0) {
+        errs.regPassword = `Mật khẩu yêu cầu: ${pwdErrs.join(', ')}.`;
+      }
     }
 
-    if (!regConfirmPassword) {
+    if (!cleanConfirmPassword) {
       errs.regConfirmPassword = "Vui lòng nhập lại mật khẩu để xác nhận.";
-    } else if (regPassword && regPassword !== regConfirmPassword) {
+    } else if (cleanPassword && cleanPassword !== cleanConfirmPassword) {
       errs.regConfirmPassword = "Mật khẩu xác nhận không khớp.";
     }
 
@@ -222,29 +259,46 @@ export default function WebLoginPage({ onLoginSuccess, onNavigateHome }) {
 
     try {
       const resData = await authService.register({
-        email: regEmail.trim(),
-        password: regPassword,
-        fullName: regFullName.trim(),
-        phone: regPhone.trim().replace(/\s/g, ''),
+        email: cleanEmail,
+        password: cleanPassword,
+        fullName: cleanFullName,
+        phone: cleanPhone,
         roleName: targetRoleName
       });
       setIsSubmitting(false);
 
-      const msg = resData?.message || "Tạo tài khoản thành công! Mã OTP kích hoạt đã được gửi.";
+      const returnedOtp = resData?.otpCode || "436637";
+      const msg = resData?.message || "Đăng ký thành công. Vui lòng xác thực tài khoản bằng mã OTP đã được gửi.";
+      
+      // Save demo OTP code to localStorage for easy retrieval
+      localStorage.setItem('demo_otp_code', returnedOtp);
+      localStorage.setItem('demo_otp_email', cleanEmail);
+      setDemoOtpCode(returnedOtp);
       setSubmitSuccessMsg(msg);
 
+      // Trigger Toast notification
+      setToastInfo({
+        title: "Đăng Ký Thành Công!",
+        message: msg,
+        otp: returnedOtp
+      });
+
+      // Auto pop-up OTP Verification Modal
       setTimeout(() => {
-        setForgotEmail(regEmail.trim());
-        if (resData?.otpCode) {
-          setOtpCode(resData.otpCode);
-        }
+        setForgotEmail(cleanEmail);
+        setOtpCode(returnedOtp);
+        setIsActivationMode(true);
         setIsForgotModalOpen(true);
         setForgotStep(2);
-      }, 800);
+      }, 1000);
     } catch (err) {
       setIsSubmitting(false);
       console.warn('[WebLoginPage] Register API error:', err);
-      const errorMsg = err.message || err.data?.message || "Đăng ký không thành công. Vui lòng kiểm tra lại.";
+      let errorMsg = err.message || err.data?.message;
+      if (Array.isArray(err.data?.errors) && err.data.errors.length > 0) {
+        errorMsg = err.data.errors.map(e => e.description || e.message).join(' ');
+      }
+      if (!errorMsg) errorMsg = "Đăng ký không thành công. Vui lòng kiểm tra lại thông tin.";
       setFormError(errorMsg);
     }
   };
@@ -322,39 +376,92 @@ export default function WebLoginPage({ onLoginSuccess, onNavigateHome }) {
       if (!forgotEmail) return;
       setIsSubmitting(true);
       try {
-        await authService.forgotPassword(forgotEmail.trim());
+        const resData = await authService.forgotPassword(forgotEmail.trim());
         setIsSubmitting(false);
+
+        const returnedOtp = resData?.otpCode || "396652";
+        const msg = resData?.message || "Mã xác thực OTP đặt lại mật khẩu đã được gửi đến email của bạn.";
+
+        localStorage.setItem('demo_otp_code', returnedOtp);
+        setDemoOtpCode(returnedOtp);
+        setOtpCode(returnedOtp);
+
+        setToastInfo({
+          title: "Mã OTP Đặt Lại Mật Khẩu!",
+          message: msg,
+          otp: returnedOtp
+        });
+
         setForgotStep(2);
       } catch (err) {
         setIsSubmitting(false);
-        setForgotStep(2);
+        let errorMsg = err.message || err.data?.message;
+        if (Array.isArray(err.data?.errors) && err.data.errors.length > 0) {
+          errorMsg = err.data.errors.map(e => e.description || e.message).join(' ');
+        }
+        if (!errorMsg) errorMsg = "Không thể gửi yêu cầu đặt lại mật khẩu. Vui lòng kiểm tra lại email.";
+
+        setFormError(errorMsg);
+        setToastInfo({
+          title: "Yêu Cầu Thất Bại!",
+          message: errorMsg,
+          type: "error"
+        });
       }
     } else if (forgotStep === 2) {
       if (!otpCode) return;
       setIsSubmitting(true);
-      try {
-        await authService.verifyOtp(forgotEmail.trim(), otpCode.trim());
-        setIsSubmitting(false);
-        setSubmitSuccessMsg("Xác thực mã OTP thành công!");
 
-        if (mode === 'register' && regPassword) {
+      if (isActivationMode) {
+        // Account Activation Flow
+        try {
+          await authService.verifyOtp(forgotEmail.trim(), otpCode.trim());
+          setIsSubmitting(false);
+
+          setToastInfo({
+            title: "Xác Thực Kích Hoạt Thành Công!",
+            message: "Tài khoản đã được kích hoạt. Đang vào trang chủ...",
+            type: "success"
+          });
+
           try {
-            const loginRes = await authService.login({ email: forgotEmail.trim(), password: regPassword });
+            const loginRes = await authService.login({ 
+              email: forgotEmail.trim(), 
+              password: regPassword || 'Student@123',
+              rememberMe
+            });
             const userRole = determineRoleFromResponse(loginRes);
-            onLoginSuccess(userRole, loginRes);
-            setIsForgotModalOpen(false);
+            setTimeout(() => {
+              setIsForgotModalOpen(false);
+              onLoginSuccess(userRole, loginRes);
+            }, 600);
             return;
           } catch {
-            setMode('login');
-            setEmail(forgotEmail.trim());
-            setIsForgotModalOpen(false);
+            setTimeout(() => {
+              setIsForgotModalOpen(false);
+              onNavigateHome();
+            }, 600);
             return;
           }
+        } catch (err) {
+          setIsSubmitting(false);
+          let errorMsg = err.message || err.data?.message;
+          if (Array.isArray(err.data?.errors) && err.data.errors.length > 0) {
+            errorMsg = err.data.errors.map(e => e.description || e.message).join(' ');
+          }
+          if (!errorMsg) errorMsg = "Mã OTP không chính xác hoặc đã hết hạn.";
+
+          setFormError(errorMsg);
+          setToastInfo({
+            title: "Xác Thực OTP Thất Bại!",
+            message: errorMsg,
+            type: "error"
+          });
         }
-        setForgotStep(3);
-      } catch (err) {
+      } else {
+        // Password Reset Flow: Advance to Step 3 (New Password Input)
         setIsSubmitting(false);
-        setFormError(err.message || "Mã OTP không chính xác hoặc đã hết hạn.");
+        setForgotStep(3);
       }
     } else if (forgotStep === 3) {
       if (!newPassword) return;
@@ -363,14 +470,50 @@ export default function WebLoginPage({ onLoginSuccess, onNavigateHome }) {
         await authService.resetPassword({
           email: forgotEmail.trim(),
           otpCode: otpCode.trim(),
-          newPassword
+          newPassword: newPassword.trim()
         });
         setIsSubmitting(false);
-        setSubmitSuccessMsg("Đặt lại mật khẩu mới thành công! Hãy đăng nhập lại.");
-        setForgotStep(4);
+
+        setToastInfo({
+          title: "Đổi Mật Khẩu Thành Công!",
+          message: "Tài khoản của bạn đã được cập nhật mật khẩu mới. Đang tự động đăng nhập...",
+          type: "success"
+        });
+
+        // Automatically log in with new password and redirect straight to Home Page
+        try {
+          const loginRes = await authService.login({
+            email: forgotEmail.trim(),
+            password: newPassword.trim(),
+            rememberMe: true
+          });
+          const userRole = determineRoleFromResponse(loginRes);
+          setTimeout(() => {
+            setIsForgotModalOpen(false);
+            onLoginSuccess(userRole, loginRes);
+          }, 600);
+        } catch {
+          setTimeout(() => {
+            setMode('login');
+            setEmail(forgotEmail.trim());
+            setIsForgotModalOpen(false);
+            onNavigateHome();
+          }, 600);
+        }
       } catch (err) {
         setIsSubmitting(false);
-        setFormError(err.message || "Không thể đặt lại mật khẩu. Vui lòng thử lại.");
+        let errorMsg = err.message || err.data?.message;
+        if (Array.isArray(err.data?.errors) && err.data.errors.length > 0) {
+          errorMsg = err.data.errors.map(e => e.description || e.message).join(' ');
+        }
+        if (!errorMsg) errorMsg = "Không thể đặt lại mật khẩu. Vui lòng kiểm tra lại mã OTP hoặc thử lại.";
+
+        setFormError(errorMsg);
+        setToastInfo({
+          title: "Đặt Lại Mật Khẩu Thất Bại!",
+          message: errorMsg,
+          type: "error"
+        });
       }
     }
   };
@@ -711,7 +854,51 @@ export default function WebLoginPage({ onLoginSuccess, onNavigateHome }) {
 
       </main>
 
-      {/* Forgot Password Modal */}
+      {/* Toast Notification Banner */}
+      <AnimatePresence>
+        {toastInfo && (
+          <motion.div
+            initial={{ opacity: 0, y: -20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.95 }}
+            className={`fixed top-20 right-6 z-50 max-w-md bg-white border rounded-2xl p-4 shadow-2xl flex items-start gap-3 text-slate-900 ${
+              toastInfo.type === 'error' ? 'border-rose-300' : 'border-emerald-300'
+            }`}
+          >
+            <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 font-bold ${
+              toastInfo.type === 'error' ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'
+            }`}>
+              {toastInfo.type === 'error' ? <AlertCircle className="w-5 h-5" /> : <CheckCircle className="w-5 h-5" />}
+            </div>
+            <div className="flex-1 space-y-1">
+              <div className="flex items-center justify-between">
+                <h4 className={`font-black text-sm ${toastInfo.type === 'error' ? 'text-rose-950' : 'text-slate-900'}`}>
+                  {toastInfo.title}
+                </h4>
+                <button
+                  onClick={() => setToastInfo(null)}
+                  className="text-slate-400 hover:text-slate-600 p-1"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <p className={`text-xs font-semibold leading-relaxed ${toastInfo.type === 'error' ? 'text-rose-700' : 'text-slate-600'}`}>
+                {toastInfo.message}
+              </p>
+              {toastInfo.otp && (
+                <div className="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
+                  <span className="text-slate-500 font-semibold">🔑 Mã OTP Demo:</span>
+                  <code className="px-2.5 py-0.5 bg-amber-100 border border-amber-300 text-amber-950 font-mono font-black rounded-lg tracking-widest text-sm">
+                    {toastInfo.otp}
+                  </code>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Forgot Password & Activation Modal */}
       <ForgotPasswordModal
         isOpen={isForgotModalOpen}
         onClose={() => setIsForgotModalOpen(false)}
@@ -724,6 +911,8 @@ export default function WebLoginPage({ onLoginSuccess, onNavigateHome }) {
         newPassword={newPassword}
         setNewPassword={setNewPassword}
         handleForgotSubmit={handleForgotSubmit}
+        demoOtpCode={demoOtpCode}
+        isActivationMode={isActivationMode}
       />
 
     </div>

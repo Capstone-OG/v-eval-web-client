@@ -90,7 +90,10 @@ export default function RegisterForm({
           </label>
           <div className="relative">
             <input
+              id="reg-email"
+              name="email"
               type="email"
+              autoComplete="email"
               value={regEmail}
               onChange={(e) => {
                 setRegEmail(e.target.value);
@@ -242,7 +245,10 @@ export default function RegisterForm({
           </label>
           <div className="relative">
             <input
+              id="reg-password"
+              name="password"
               type={regShowPassword ? 'text' : 'password'}
+              autoComplete="new-password"
               value={regPassword}
               onChange={(e) => {
                 setRegPassword(e.target.value);
@@ -264,10 +270,14 @@ export default function RegisterForm({
               {regShowPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
             </button>
           </div>
-          {fieldErrors.regPassword && (
+          {fieldErrors.regPassword ? (
             <p className="text-[11px] font-bold text-rose-600 mt-1 flex items-center gap-1 animate-fade">
               <AlertCircle className="w-3.5 h-3.5 shrink-0" />
               <span>{fieldErrors.regPassword}</span>
+            </p>
+          ) : (
+            <p className="text-[10px] font-semibold text-slate-500 mt-1">
+              Yêu cầu: Tối thiểu 8 ký tự, 1 chữ hoa, 1 chữ thường, 1 chữ số.
             </p>
           )}
         </div>
@@ -278,7 +288,10 @@ export default function RegisterForm({
           </label>
           <div className="relative">
             <input
+              id="reg-confirm-password"
+              name="confirmPassword"
               type={regShowConfirmPassword ? 'text' : 'password'}
+              autoComplete="new-password"
               value={regConfirmPassword}
               onChange={(e) => {
                 setRegConfirmPassword(e.target.value);

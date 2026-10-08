@@ -7,12 +7,12 @@ import apiClient, { tokenStorage } from './apiClient';
 export const authService = {
   /**
    * Đăng nhập tài khoản (UC 03)
-   * @param {Object} credentials - { email, password }
+   * @param {Object} credentials - { email, password, rememberMe }
    */
-  async login({ email, password }) {
+  async login({ email, password, rememberMe = true }) {
     const res = await apiClient.post('/api/auth/login', { email, password });
     if (res.data?.accessToken) {
-      tokenStorage.setTokens(res.data.accessToken, res.data.refreshToken, res.data.user);
+      tokenStorage.setTokens(res.data.accessToken, res.data.refreshToken, res.data.user, rememberMe);
     }
     return res.data;
   },
