@@ -2,6 +2,32 @@
 
 ---
 
+## [09/10/2026] - Nâng Cấp Giao Diện Thi Chẩn Đoán Flow 1, Full-Width Footer, Floating Sidebar & Sửa Bug Azota Proctored
+
+- **Tái Cấu Trúc Bố Cục Trang Dashboard & Public Footer Full-Width (`App.jsx`, `PublicFooter.jsx`)**:
+  - **Public Footer Full-Width (`w-full bg-slate-950`)**: Đưa `PublicFooter` ra ngoài wrapper cột phải, đặt ở tầng gốc trang Dashboard trải dài 100% bề ngang màn hình.
+  - **Sidebar Tự Động Cuộn Theo Trang (Natural Scroll-up)**: Cấu hình `Sidebar` dạng `sticky top-20` bên trong container giữa, tự động cuộn lên trên theo luồng nội dung khi người dùng cuộn xuống dưới cùng để nhường trọn vẹn diện tích chiều ngang cho `PublicFooter`.
+  - **Bổ Sung Khoảng Cách Đệm Thông Thoáng (Bottom Padding Spacing)**: Bổ sung `pb-16 lg:pb-24` cho thẻ `<main>` tránh tình trạng các khối card và nút bấm bị dính sát vào Footer.
+- **Di Dời Logo Thương Hiệu & Tinh Chỉnh Thanh Header / Sidebar (`Navbar.jsx`, `Sidebar.jsx`)**:
+  - **Đưa Logo Lên Top Navbar**: Chuyển cụm Logo thương hiệu **ĐGNL AI v2.4** cùng phụ đề *"Khảo thí & Luyện thi Thích ứng 4.0"* từ Sidebar lên góc trái trên cùng của thanh Header (`Navbar.jsx`).
+  - **Đẩy Danh Mục Sidebar Lên Sát Đỉnh**: Loại bỏ khối logo cũ ở Sidebar, giúp mục *"KHẢO THÍ & LUYỆN TẬP"* được đẩy sát lên đỉnh Sidebar, tối ưu không gian hiển thị danh sách điều hướng.
+  - **Giao Diện Sidebar Bo Tròn Nổi (Floating Rounded Card)**: Thiết kế Sidebar dạng Card bo tròn 4 góc `rounded-2xl`, hiệu ứng kính mờ `bg-white/95 backdrop-blur-md`, viền mờ `border-slate-200/80` và đổ bóng `shadow-md shadow-slate-200/40`.
+- **Tối Ưu Giao Diện Bài Thi Khảo Sát Năng Lực Flow 1 & Bảo Mật Passcode (`DiagnosticAssessmentPage.jsx`)**:
+  - **Phòng Thi Đặt Mã Bảo Mật (Strict Passcode Verification)**: Đặt ô nhập mã phòng thi rỗng `""` mặc định, bắt buộc gõ chính xác Passcode (`VACT2026`, `HCM120`, `LOGIC15`) mới cho phép vào thi, hiển thị thông báo lỗi tức thì nếu gõ sai.
+  - **Loại Bỏ Mini-Footer Thừa**: Xóa bỏ toàn bộ khối mini-footer nội bộ trùng lặp trong `DiagnosticAssessmentPage.jsx`, giữ giao diện thi sạch đẹp và sử dụng duy nhất `PublicFooter` của hệ thống.
+  - **Live IRT Status Badge**: Di dời chỉ số năng lực IRT `Theta 0: +0.65 (82% Trúng tuyển)` lên Top Navbar kế bên Streak Counter.
+  - **Bảng Số Câu Hỏi Bên Phải (Right Question Palette)**: Thiết kế 30 nút số câu hỏi sắc nét. Các câu học sinh đã chọn đáp án được tô đậm nổi bật bằng màu xanh ngọc/xanh lá lục bảo (`bg-emerald-600 text-white font-black border-emerald-400 shadow-md`) kèm chấm trắng trực quan.
+  - **Khung Làm Bài Bên Trái (Left Question Area)**: Trình bày nội dung câu hỏi KaTeX MathText, đoạn văn đọc hiểu, các lựa chọn A/B/C/D, cùng cụm nút chuyển câu (`Câu trước`, `Câu kế tiếp`, `Hoàn tất & Nộp bài`).
+- **Sửa Triệt Để Bug Pop-up Nộp Bài Tính Nhầm Vi Phạm Rời Tab**:
+  - Tách luồng `handlePromptSubmitExam` kích hoạt custom React modal `SubmitConfirmModal` thay cho `window.confirm()` native (vốn làm mất focus cửa sổ trình duyệt).
+  - Thêm cờ guard `showSubmitConfirmModalRef` tạm thời vô hiệu hóa bộ giám sát `visibilitychange` & `fullscreenchange` khi popup nộp bài đang mở, giải quyết triệt để lỗi bấm "Hủy" bị cộng số lần rời tab.
+- **Chế Độ Thi Giám Sát Azota Proctored (Anti-Cheat & Fullscreen)**:
+  - **Toàn Màn Hình (Fullscreen API)**: Tự động yêu cầu chế độ Toàn Màn Hình khi bấm bắt đầu thi.
+  - **Phát Hiện Vi Phạm Rời Tab / Mất Focus**: Tự động phát hiện khi học sinh chuyển tab hoặc thoát Fullscreen.
+  - **Modal Cảnh Báo Vi Phạm (Overlay Warning Modal)**: Bật giao diện cảnh báo vi phạm màu đỏ, đếm số lần vi phạm (`X/3`) và yêu cầu học sinh bấm quay lại Toàn Màn Hình để tiếp tục làm bài.
+
+---
+
 ## [06/10/2026] - Đấu Nối 100% API Real Auth, Loại Bỏ Hoàn Toàn Mock Pre-fill & Tự Động Khôi Phục Phiên Làm Việc
 
 - **Tích Hợp 100% API Thực Tế Cho Phân Hệ Xác Thực (`src/components/auth/`)**:

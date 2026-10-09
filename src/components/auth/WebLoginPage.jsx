@@ -854,6 +854,24 @@ export default function WebLoginPage({ onLoginSuccess, onNavigateHome }) {
 
       </main>
 
+      {/* 3. PAGE FOOTER BAR */}
+      <footer className="border-t border-slate-200/80 bg-white py-4 px-4 sm:px-8 text-center text-xs text-slate-500 font-medium">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px]">
+          <div>
+            <strong className="text-slate-800">ĐGNL AI Portal</strong> • Nền tảng Khảo thí & Luyện thi Thích ứng v2.4 • ĐHQG TP.HCM
+          </div>
+          <div className="flex items-center gap-4 text-slate-500 font-bold">
+            <button type="button" onClick={onNavigateHome} className="hover:text-blue-600 transition-colors">
+              Trang Chủ
+            </button>
+            <span>•</span>
+            <span>Hotline: <strong className="text-blue-600">1900 8889</strong></span>
+            <span>•</span>
+            <span>© 2026 Trung tâm Khảo thí ĐGNL</span>
+          </div>
+        </div>
+      </footer>
+
       {/* Toast Notification Banner */}
       <AnimatePresence>
         {toastInfo && (

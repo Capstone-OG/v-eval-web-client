@@ -14,6 +14,7 @@ import {
   TeacherDashboardView 
 } from './components/dashboard';
 import { PublicLandingPage } from './components/landing';
+import PublicFooter from './components/landing/PublicFooter';
 import { WebLoginPage } from './components/auth';
 import { 
   AcademicArchitectureModal, 
@@ -131,7 +132,10 @@ export default function App() {
       {currentPage === 'landing' && (
         <PublicLandingPage 
           onOpenLogin={() => setCurrentPage('login')}
-          onOpenDiagnostic={() => setCurrentPage('diagnostic')}
+          onOpenDiagnostic={() => {
+            setCurrentPage('dashboard');
+            setActiveTab('diagnostic');
+          }}
           onOpenDashboard={() => setCurrentPage('dashboard')}
           onOpenArchModal={() => setIsArchModalOpen(true)}
         />
@@ -139,6 +143,7 @@ export default function App() {
 
       {currentPage === 'diagnostic' && (
         <DiagnosticAssessmentPage 
+          isEmbedded={false}
           onNavigateDashboard={() => setCurrentPage('dashboard')}
           onNavigateHome={() => setCurrentPage('landing')}
         />
@@ -152,33 +157,33 @@ export default function App() {
       )}
 
       {currentPage === 'dashboard' && (
-        <div className="min-h-screen flex bg-[#F4F7FC] text-slate-900">
+        <div className="min-h-screen flex flex-col bg-[#F4F7FC] text-slate-900">
           
-          {/* Full-Height Left Sticky Sidebar (Occupies entire left column from top) */}
-          <Sidebar 
-            activeTab={activeTab}
-            setActiveTab={setActiveTab}
+          {/* Top Sticky Header */}
+          <Navbar 
             activeRole={activeRole}
-            onOpenDiagnostic={() => setCurrentPage('diagnostic')}
-            onOpenZPD={() => setIsZpdModalOpen(true)}
-            onOpenAiTutor={() => setIsZpdModalOpen(true)}
+            setActiveRole={setActiveRole}
+            currentUser={currentUser}
+            onLogout={handleLogout}
+            onOpenAuthModal={() => setCurrentPage('login')}
+            onOpenArchModal={() => setIsArchModalOpen(true)}
           />
 
-          {/* Right Main Container (Navbar Header + Content Area) */}
-          <div className="flex-1 flex flex-col min-w-0 min-h-screen">
+          {/* Main Content Body (Sidebar + Scrollable Main View) */}
+          <div className="flex-1 flex w-full">
             
-            {/* Top Sticky Header */}
-            <Navbar 
+            {/* Left Sticky Sidebar */}
+            <Sidebar 
+              activeTab={activeTab}
+              setActiveTab={setActiveTab}
               activeRole={activeRole}
-              setActiveRole={setActiveRole}
-              currentUser={currentUser}
-              onLogout={handleLogout}
-              onOpenAuthModal={() => setCurrentPage('login')}
-              onOpenArchModal={() => setIsArchModalOpen(true)}
+              onOpenDiagnostic={() => setActiveTab('diagnostic')}
+              onOpenZPD={() => setIsZpdModalOpen(true)}
+              onOpenAiTutor={() => setIsZpdModalOpen(true)}
             />
 
-            {/* Main Scrollable Content */}
-            <main className="flex-1 p-4 lg:p-8 overflow-y-auto max-w-[1700px] w-full mx-auto">
+            {/* Main Content Area */}
+            <main className="flex-1 p-4 lg:p-8 pb-16 lg:pb-24 min-w-0 max-w-[1700px] w-full mx-auto">
               
               {/* Toast Alert */}
               {toastMsg && (
@@ -188,15 +193,15 @@ export default function App() {
                 </div>
               )}
 
-              {/* Student View */}
-              {activeRole === 'student' && (
+              {/* Student Dashboard Overview View */}
+              {activeRole === 'student' && activeTab === 'dashboard' && (
                 <div className="space-y-6 animate-fade">
                   
                   {/* Hero Banner with 3D Pop-out Avatar */}
                   <HeroBanner 
                     currentUser={currentUser}
                     onStartMilestone={handleContinueMilestone}
-                    onStartMockTest={() => setCurrentPage('diagnostic')}
+                    onStartMockTest={() => setActiveTab('diagnostic')}
                     onOpenAiTutor={() => setIsZpdModalOpen(true)}
                   />
 
@@ -230,25 +235,29 @@ export default function App() {
                 </div>
               )}
 
+              {/* Student Diagnostic Exam List View (Rendered inside Dashboard shell with Sidebar & Navbar intact) */}
+              {activeTab === 'diagnostic' && (
+                <DiagnosticAssessmentPage 
+                  isEmbedded={true}
+                  onNavigateDashboard={() => setActiveTab('dashboard')}
+                  onNavigateHome={() => setCurrentPage('landing')}
+                />
+              )}
+
               {/* Teacher View */}
-              {activeRole === 'teacher' && (
+              {activeRole === 'teacher' && activeTab === 'dashboard' && (
                 <TeacherDashboardView />
               )}
 
             </main>
 
-            {/* Footer */}
-            <footer className="bg-white border-t border-slate-200/80 px-4 py-3 text-center text-xs text-slate-500 font-medium flex flex-col sm:flex-row items-center justify-between max-w-[1700px] w-full mx-auto">
-              <div>
-                <strong className="text-slate-700">ĐGNL AI Portal</strong> • Phân hệ v2.4 (Build IRT-Adaptive) • ĐGNL ĐHQG TP.HCM
-              </div>
-              <div className="flex items-center gap-4 mt-2 sm:mt-0 text-[11px]">
-                <span>Ban Học thuật: <strong className="text-blue-600">academic@dgnl.edu.vn</strong></span>
-                <span>© 2026 Trung tâm Đào tạo & Khoa học Thi Thích ứng</span>
-              </div>
-            </footer>
-
           </div>
+
+          {/* Full-Width Footer (Spans 100% horizontal width across bottom) */}
+          <PublicFooter 
+            onOpenLogin={() => setCurrentPage('login')}
+            onOpenDiagnostic={() => setActiveTab('diagnostic')}
+          />
 
         </div>
       )}
