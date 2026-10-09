@@ -90,6 +90,47 @@ export const practiceService = {
    */
   async assignTeacher(classId, teacherId) {
     return (await apiClient.put(`/api/v1/practice/classes/${classId}/assign-teacher`, { teacherId })).data;
+  },
+
+  // =========================================================================
+  // Phân Cụm Học Sinh & Nhóm Học Tập Vi Mô (Micro Study Groups: 3 - 5 bạn)
+  // =========================================================================
+
+  /**
+   * Tự động phân cụm K-Means tạo các Lớp Chuyên Đề theo lỗ hổng kiến thức
+   * @param {string} campusId
+   * @param {number} maxK
+   */
+  async autoClusterClasses(campusId, maxK = 6) {
+    return (await apiClient.post('/api/v1/practice/classes/auto-cluster', { campusId, maxK })).data;
+  },
+
+  /**
+   * Tự động phân chia học sinh trong lớp thành các nhóm vi mô (3 - 5 bạn/nhóm)
+   * @param {string} classId
+   * @param {number} preferredGroupSize - Mặc định 4 (chấp nhận 3 - 5)
+   */
+  async autoPartitionMicroGroups(classId, preferredGroupSize = 4) {
+    return (await apiClient.post(`/api/v1/practice/classes/${classId}/micro-groups/auto-partition`, { preferredGroupSize })).data;
+  },
+
+  /**
+   * Lấy danh sách các nhóm học tập vi mô của lớp học (phục vụ dashboard giáo viên)
+   * @param {string} classId
+   */
+  async getClassMicroGroups(classId) {
+    return (await apiClient.get(`/api/v1/practice/classes/${classId}/micro-groups`)).data;
+  },
+
+  /**
+   * Phân phối đề luyện tập / phiếu bài tập vi mô thích ứng cho nhóm học tập
+   * @param {string} classId
+   * @param {string} groupId
+   * @param {string} worksheetId
+   * @param {string} worksheetTitle
+   */
+  async assignGroupWorksheet(classId, groupId, worksheetId, worksheetTitle) {
+    return (await apiClient.post(`/api/v1/practice/classes/${classId}/micro-groups/${groupId}/assign-worksheet`, { worksheetId, worksheetTitle })).data;
   }
 };
 

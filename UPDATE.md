@@ -1,10 +1,11 @@
-# Nhật Ký Cập Nhật (Update Log) - V-Eval Web Client
+# Nhật Ký Cập Nhật (Update Log) - Web Client
 
-## [08/10/2026] - Đồng Bộ Tinh Gọn Tầng Dịch Vụ: Gỡ Bỏ Các Lời Gọi API Live Streaming
+## [09/10/2026] - Mở Rộng Client Service: Bổ Sung Tích Hợp API Phân Cụm Lớp Chuyên Đề & Nhóm Học Tập Vi Mô (3 - 5 Học Sinh)
 
-- **Loại Bỏ Các Phương Thức Gọi API Live Streaming (`practiceService.js`)**:
-  - Gỡ bỏ 7 hàm gọi API tương ứng với phân hệ Live Session đã decommission tại backend: `createLiveSession`, `getMyLiveSchedule`, `joinLiveSession`, `markTeacherAttendance`, `getTeacherSchedule`, `updateRecordingUrl`, `cancelLiveSession`.
-  - Giữ lại hàm nghiệp vụ điều phối lớp học `assignTeacher`.
+- **Mở Rộng Dịch Vụ `practiceService.js`**:
+  - Bổ sung `autoClusterClasses(campusId, maxK = 6)`: Gọi API `POST /api/v1/practice/classes/auto-cluster` tạo các lớp chuyên đề dựa trên thuật toán K-Means/Elbow Method.
+  - Bổ sung `autoPartitionMicroGroups(classId, preferredGroupSize = 4)`: Gọi API `POST /api/v1/practice/classes/{classId}/micro-groups/auto-partition` chia học sinh trong lớp thành các nhóm vi mô 3 - 5 bạn theo lỗ hổng kiến thức.
+  - Bổ sung `getClassMicroGroups(classId)`: Gọi API `GET /api/v1/practice/classes/{classId}/micro-groups` tra cứu danh sách và thành viên các nhóm học tập vi mô.
+  - Bổ sung `assignGroupWorksheet(classId, groupId, worksheetId, worksheetTitle)`: Gọi API `POST /api/v1/practice/classes/{classId}/micro-groups/{groupId}/assign-worksheet` phân phối đề luyện tập thích ứng theo nhóm.
 - **Kiểm Thử Đóng Gói (Build Verification)**:
-  - Biên dịch và đóng gói thành công 100% bằng Vite (`npm run build`) với **0 Error, 0 Warning**.
-  - Toàn bộ các module ứng dụng vận hành ổn định.
+  - Chạy `npm run build` thành công 100% (**0 Error, 0 Warning**).

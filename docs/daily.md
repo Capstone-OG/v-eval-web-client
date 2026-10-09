@@ -2,6 +2,17 @@
 
 ---
 
+## [09/10/2026] - Mở Rộng Client Service: Bổ Sung Tích Hợp API Phân Cụm Lớp Chuyên Đề & Nhóm Học Tập Vi Mô (3 - 5 Học Sinh)
+- **Cập Nhật Tầng Dịch Vụ `practiceService.js`**:
+  - Bổ sung phương thức `autoClusterClasses(campusId, maxK = 6)` gọi `POST /api/v1/practice/classes/auto-cluster` phục vụ tự động phân cụm tạo lớp chuyên đề theo K-Means/Elbow Method.
+  - Bổ sung phương thức `autoPartitionMicroGroups(classId, preferredGroupSize = 4)` gọi `POST /api/v1/practice/classes/{classId}/micro-groups/auto-partition` tự động chia học sinh trong lớp thành các nhóm vi mô 3 - 5 bạn theo lỗ hổng kiến thức.
+  - Bổ sung phương thức `getClassMicroGroups(classId)` gọi `GET /api/v1/practice/classes/{classId}/micro-groups` lấy sơ đồ bàn học và danh sách nhóm vi mô cho dashboard giáo viên.
+  - Bổ sung phương thức `assignGroupWorksheet(classId, groupId, worksheetId, worksheetTitle)` gọi `POST /api/v1/practice/classes/{classId}/micro-groups/{groupId}/assign-worksheet` phân phối đề luyện tập thích ứng theo nhóm.
+- **Kiểm Thử Đóng Gói (Build Verification)**:
+  - Chạy `npm run build` thành công 100% (**0 Error, 0 Warning**).
+
+---
+
 ## [08/10/2026] - Đồng Bộ Tinh Gọn Tầng Dịch Vụ: Loại Bỏ Các Lời Gọi API Live Streaming Tại Client
 - **Loại Bỏ Các Phương Thức Gọi API Live Streaming Trong `practiceService.js`**:
   - Gỡ bỏ các hàm gọi API tương ứng với các endpoint vừa được xóa: `createLiveSession`, `getMyLiveSchedule`, `joinLiveSession`, `markTeacherAttendance`, `getTeacherSchedule`, `updateRecordingUrl`, `cancelLiveSession`.
