@@ -2,6 +2,23 @@
 
 ---
 
+## [10/10/2026] - Giao Diện Quản Lý Nhóm Học Tập Vi Mô (Micro Study Groups: 3 - 5 Học Sinh) & Phân Bổ Sơ Đồ Bàn Học Offline
+- **Thiết Kế Modal Sơ Đồ Nhóm Bàn Học Vi Mô ([`ClassMicroGroupsModal.jsx`](../src/components/modals/ClassMicroGroupsModal.jsx))**:
+  - Xây dựng component modal hiển thị sơ đồ phân bổ bàn học offline của lớp (Trần sĩ số tối đa 20 em, mỗi bàn 3 - 5 học sinh).
+  - Tích hợp bộ chọn quy mô bàn học (`3 bạn/bàn`, `4 bạn/bàn`, `5 bạn/bàn`) với thuật toán gom cụm đồng nhất (Homogeneous Clustering) theo lỗ hổng kiến thức.
+  - Hiển thị danh sách các trạm bàn học: Tên bàn học sư phạm, chủ đề trọng tâm `FocusArea`, tag các kỹ năng yếu chung (`CommonWeakSkills`), danh sách học sinh tại bàn kèm chỉ số thành thạo kiến thức.
+  - Tích hợp tính năng **Phân phối đề luyện tập thích ứng** trực tiếp cho bàn học (`practiceService.assignGroupWorksheet`), hiển thị trạng thái phát đề và thời gian thực.
+  - Bổ sung nút xuất file sơ đồ bàn học dạng PDF cho Giảng viên in ra phát tận bàn offline.
+- **Nâng Cấp Cổng Điều Hành Học Thuật Cơ Sở ([`CampusManagerDashboardView.jsx`](../src/components/dashboard/CampusManagerDashboardView.jsx))**:
+  - Chuẩn hóa danh sách lớp học offline theo cơ chế trần 20 học sinh và số thứ tự tăng dần (`Lớp Nền tảng 01`, `Lớp Nền tảng 02`, `Lớp Tăng tốc 01`, `Lớp Bứt phá 01`).
+  - Hiển thị badge sĩ số chuẩn hóa: `Sĩ số: {studentCount}/20`.
+  - Tích hợp nút hành động **"Sơ Đồ Nhóm Bàn (3 - 5 Bạn)"** trên từng thẻ lớp học, mở modal tương tác trực tiếp.
+  - Bổ sung nút **"Tự Động Gom Cụm AI"** trên thanh công cụ lớp học gọi trực tiếp API K-Means Elbow Method (`practiceService.autoClusterClasses`).
+- **Kiểm Thử Đóng Gói (Build Verification)**:
+  - Chạy `npm run build` thành công 100% (**0 Error, 0 Warning**).
+
+---
+
 ## [09/10/2026] - Mở Rộng Client Service: Bổ Sung Tích Hợp API Phân Cụm Lớp Chuyên Đề & Nhóm Học Tập Vi Mô (3 - 5 Học Sinh)
 - **Cập Nhật Tầng Dịch Vụ `practiceService.js`**:
   - Bổ sung phương thức `autoClusterClasses(campusId, maxK = 6)` gọi `POST /api/v1/practice/classes/auto-cluster` phục vụ tự động phân cụm tạo lớp chuyên đề theo K-Means/Elbow Method.
