@@ -63,4 +63,5 @@
 | 26 | **Cổng Phụ Huynh Theo Dõi Học Tập (Parent Companion Portal)** | `src/components/dashboard/ParentDashboardView.jsx` | 🟢 Hoàn thành | 100% | Theo dõi năng lực IRT (+0.65 Theta), xác suất đỗ Bách Khoa 82%, chuyên cần học tập, và nhận cảnh báo sớm từ AI |
 | 27 | **Hợp Nhất Giao Diện Xác Thực (TNhan UI/UX) & Đấu Nối API IAM (ThinhTT)** | `src/components/auth/` | 🟢 Hoàn thành | 100% | Tích hợp layout split-screen, ticker, custom select bo tròn, form modular (`LoginForm`, `RegisterForm`, `ForgotPasswordModal`, `AuthModal`) và đấu nối 100% API `authService` |
 | 28 | **Thiết Lập CI/CD & Discord Commit Tracker Web Client** | `.github/workflows/` | 🟢 Hoàn thành | 100% | Thêm workflow `discord-commit-tracker.yml` gửi webhook embed commit về Discord và `ci.yml` kiểm thử build trên Node.js 20 |
+| 29 | **Giao Diện Sơ Đồ Nhóm Bàn Học Vi Mô (3 - 5 Bạn)** | `src/components/modals/ClassMicroGroupsModal.jsx` & `CampusManagerDashboardView.jsx` | 🟢 Hoàn thành | 100% | Sơ đồ trạm bàn học offline, thuật toán phân bổ đồng nhất 3-5 em/bàn, phân phối đề luyện tập vi mô thích ứng trực tiếp |
 

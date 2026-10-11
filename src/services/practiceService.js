@@ -80,16 +80,8 @@ export const practiceService = {
   },
 
   // =========================================================================
-  // Core Flow 2: Phân Hệ Live Q&A & Thời Khóa Biểu (APIs 8 - 15)
+  // Core Flow 2: Quản Lý Phân Công Lớp Học (API 9)
   // =========================================================================
-
-  /**
-   * API 8: Tạo lịch buổi học Live Q&A giải đáp cho lớp học cơ sở (Academic Manager)
-   * @param {Object} sessionData - { classId, teacherId, title, scheduledAt, durationMinutes, meetingUrl }
-   */
-  async createLiveSession(sessionData) {
-    return (await apiClient.post('/api/v1/practice/live-sessions', sessionData)).data;
-  },
 
   /**
    * API 9: Phân công hoặc điều chuyển giáo viên phụ trách lớp học cơ sở (Academic Manager)
@@ -100,53 +92,45 @@ export const practiceService = {
     return (await apiClient.put(`/api/v1/practice/classes/${classId}/assign-teacher`, { teacherId })).data;
   },
 
+  // =========================================================================
+  // Phân Cụm Học Sinh & Nhóm Học Tập Vi Mô (Micro Study Groups: 3 - 5 bạn)
+  // =========================================================================
+
   /**
-   * API 10: Học sinh tra cứu thời khóa biểu các buổi Live Q&A lớp cơ sở
+   * Tự động phân cụm K-Means tạo các Lớp Chuyên Đề theo lỗ hổng kiến thức
+   * @param {string} campusId
+   * @param {number} maxK
    */
-  async getMyLiveSchedule() {
-    return (await apiClient.get('/api/v1/practice/live-sessions/my-schedule')).data;
+  async autoClusterClasses(campusId, maxK = 6) {
+    return (await apiClient.post('/api/v1/practice/classes/auto-cluster', { campusId, maxK })).data;
   },
 
   /**
-   * API 11: Học sinh tham gia phòng học trực tuyến Live Q&A & lưu vết JoinedAt
-   * @param {string} sessionId
+   * Tự động phân chia học sinh trong lớp thành các nhóm vi mô (3 - 5 bạn/nhóm)
+   * @param {string} classId
+   * @param {number} preferredGroupSize - Mặc định 4 (chấp nhận 3 - 5)
    */
-  async joinLiveSession(sessionId) {
-    return (await apiClient.post(`/api/v1/practice/live-sessions/${sessionId}/join`)).data;
+  async autoPartitionMicroGroups(classId, preferredGroupSize = 4) {
+    return (await apiClient.post(`/api/v1/practice/classes/${classId}/micro-groups/auto-partition`, { preferredGroupSize })).data;
   },
 
   /**
-   * API 12: Giáo viên thực hiện điểm danh chuyên cần chính thức (Teacher)
-   * @param {string} sessionId
-   * @param {Array} attendances - [{ studentId, status: "ATTENDED" | "ABSENT" }]
+   * Lấy danh sách các nhóm học tập vi mô của lớp học (phục vụ dashboard giáo viên)
+   * @param {string} classId
    */
-  async markTeacherAttendance(sessionId, attendances) {
-    return (await apiClient.post(`/api/v1/practice/live-sessions/${sessionId}/attendance`, { attendances })).data;
+  async getClassMicroGroups(classId) {
+    return (await apiClient.get(`/api/v1/practice/classes/${classId}/micro-groups`)).data;
   },
 
   /**
-   * API 13: Giáo viên tra cứu thời khóa biểu giảng dạy cá nhân (Teacher)
+   * Phân phối đề luyện tập / phiếu bài tập vi mô thích ứng cho nhóm học tập
+   * @param {string} classId
+   * @param {string} groupId
+   * @param {string} worksheetId
+   * @param {string} worksheetTitle
    */
-  async getTeacherSchedule() {
-    return (await apiClient.get('/api/v1/practice/live-sessions/teacher-schedule')).data;
-  },
-
-  /**
-   * API 14: Giáo viên cập nhật link video ghi hình xem lại sau buổi Live (Teacher)
-   * @param {string} sessionId
-   * @param {string} recordingUrl
-   */
-  async updateRecordingUrl(sessionId, recordingUrl) {
-    return (await apiClient.put(`/api/v1/practice/live-sessions/${sessionId}/recording`, { recordingUrl })).data;
-  },
-
-  /**
-   * API 15: Hủy buổi học trực tuyến khi có việc đột xuất (Academic Manager / Teacher)
-   * @param {string} sessionId
-   * @param {string} reason
-   */
-  async cancelLiveSession(sessionId, reason) {
-    return (await apiClient.put(`/api/v1/practice/live-sessions/${sessionId}/cancel`, { reason })).data;
+  async assignGroupWorksheet(classId, groupId, worksheetId, worksheetTitle) {
+    return (await apiClient.post(`/api/v1/practice/classes/${classId}/micro-groups/${groupId}/assign-worksheet`, { worksheetId, worksheetTitle })).data;
   }
 };
 
