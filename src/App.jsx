@@ -19,7 +19,8 @@ import {
   AcademicArchitectureModal, 
   DiagnosticTestModal, 
   AdaptiveQuizModal, 
-  RadarChartModal 
+  RadarChartModal,
+  AISocraticTutorModal 
 } from './components/modals';
 import { DiagnosticAssessmentPage } from './components/diagnostic';
 import { AccountProvisioningView } from './components/admin';
@@ -38,6 +39,7 @@ export default function App() {
   const [isDiagnosticModalOpen, setIsDiagnosticModalOpen] = useState(false);
   const [isZpdModalOpen, setIsZpdModalOpen] = useState(false);
   const [isRadarModalOpen, setIsRadarModalOpen] = useState(false);
+  const [isAiTutorModalOpen, setIsAiTutorModalOpen] = useState(false);
 
   // Toast notifications
   const [toastMsg, setToastMsg] = useState(null);
@@ -147,7 +149,7 @@ export default function App() {
               activeRole={activeRole}
               onOpenDiagnostic={() => setCurrentPage('diagnostic')}
               onOpenZPD={() => setIsZpdModalOpen(true)}
-              onOpenAiTutor={() => setIsZpdModalOpen(true)}
+              onOpenAiTutor={() => setIsAiTutorModalOpen(true)}
               onOpenProvision={() => setCurrentPage('provision')}
             />
 
@@ -171,7 +173,7 @@ export default function App() {
                     currentUser={currentUser}
                     onStartMilestone={handleContinueMilestone}
                     onStartMockTest={() => setCurrentPage('diagnostic')}
-                    onOpenAiTutor={() => setIsZpdModalOpen(true)}
+                    onOpenAiTutor={() => setIsAiTutorModalOpen(true)}
                   />
 
                   {/* 4 Core Metrics Cards */}
@@ -197,7 +199,7 @@ export default function App() {
                     <div className="space-y-6">
                       <LiveQnACard />
                       <AISocraticTutorWidget 
-                        onOpenFullChat={() => setIsZpdModalOpen(true)}
+                        onOpenFullChat={() => setIsAiTutorModalOpen(true)}
                       />
                     </div>
 
@@ -286,6 +288,11 @@ export default function App() {
       <RadarChartModal 
         isOpen={isRadarModalOpen}
         onClose={() => setIsRadarModalOpen(false)}
+      />
+
+      <AISocraticTutorModal 
+        isOpen={isAiTutorModalOpen}
+        onClose={() => setIsAiTutorModalOpen(false)}
       />
 
     </div>

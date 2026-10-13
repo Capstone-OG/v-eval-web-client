@@ -153,6 +153,13 @@ V-Eval-Web_Client/
   - Supports one-click targeted worksheet distribution (`practiceService.assignGroupWorksheet`) directly to each station, updating distribution timestamps and real-time status indicators.
   - Provides offline PDF layout export simulation for on-campus instructors to print physical desk worksheets.
 
+### 4.14. Core Flow 4 Frontend Integration: Socratic AI Tutor & GraphRAG Live Streaming
+- **Real-Time Token Streaming Client (`practiceService.js`)**: Implemented `askAiTutorStream` using native Fetch API and `ReadableStream` reader with `TextDecoder`. Directly consumes `POST /api/practice/ai-tutor/ask-stream` through Gateway (`:5212`).
+- **Graceful Rate Limiting Handlers**: Intercepts HTTP 429 status codes enforced by the backend `StrictTutorPolicy` (10 req/min), transforming network exceptions into supportive, pedagogical throttle notifications in the UI.
+- **Upgraded Socratic Dashboard Widget (`AISocraticTutorWidget.jsx`)**: Replaced 100% mock setTimeout mechanisms with real-time SSE token-by-token streaming, KaTeX math parsing via `MathText.jsx`, abort controller cancellation, and GraphRAG knowledge attribution badges.
+- **Two-Column Socratic Dialogue Modal (`AISocraticTutorModal.jsx`)**: Built a comprehensive modal interface featuring guided dialog history, quick question prompts, 3-Hop Subgraph inspection (Archetype patterns, core theorems, misconception traps), and an in-chat student reporting dialog (`POST /api/practice/ai-tutor/report`) for flagging pedagogical violations.
+- **Router Alignment (`App.jsx` & `Sidebar.jsx`)**: Corrected navigation routing so clicking *AI Socratic Tutor* on the sidebar or hero banner opens the dedicated tutor modal instead of erroneously triggering the Flow 3 adaptive quiz modal.
+
 ---
 
 ## 5. Verification & Acceptance Criteria

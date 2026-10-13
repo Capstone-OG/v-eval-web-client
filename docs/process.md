@@ -64,4 +64,5 @@
 | 27 | **Hợp Nhất Giao Diện Xác Thực (TNhan UI/UX) & Đấu Nối API IAM (ThinhTT)** | `src/components/auth/` | 🟢 Hoàn thành | 100% | Tích hợp layout split-screen, ticker, custom select bo tròn, form modular (`LoginForm`, `RegisterForm`, `ForgotPasswordModal`, `AuthModal`) và đấu nối 100% API `authService` |
 | 28 | **Thiết Lập CI/CD & Discord Commit Tracker Web Client** | `.github/workflows/` | 🟢 Hoàn thành | 100% | Thêm workflow `discord-commit-tracker.yml` gửi webhook embed commit về Discord và `ci.yml` kiểm thử build trên Node.js 20 |
 | 29 | **Giao Diện Sơ Đồ Nhóm Bàn Học Vi Mô (3 - 5 Bạn)** | `src/components/modals/ClassMicroGroupsModal.jsx` & `CampusManagerDashboardView.jsx` | 🟢 Hoàn thành | 100% | Sơ đồ trạm bàn học offline, thuật toán phân bổ đồng nhất 3-5 em/bàn, phân phối đề luyện tập vi mô thích ứng trực tiếp |
+| 30 | **Giai Đoạn 1 Core Flow 4: Gia Sư AI Socratic & GraphRAG Live Streaming** | `AISocraticTutorWidget.jsx`, `AISocraticTutorModal.jsx`, `practiceService.js` | 🟢 Hoàn thành | 100% | Móc nối SSE live stream qua Gateway `:5212`, xử lý Rate Limit 429, render KaTeX MathText, modal chat 2 cột kèm Subgraph Tri thức và cắm cờ Báo cáo vi phạm |
 

@@ -1,17 +1,21 @@
-# Nhật Ký Cập Nhật (Update Log) - Web Client
+# NHẬT KÝ CẬP NHẬT (UPDATE LOG) - WEB CLIENT
 
-## [10/10/2026] - Giao Diện Quản Lý Nhóm Học Tập Vi Mô (Micro Study Groups: 3 - 5 Học Sinh) & Phân Bổ Sơ Đồ Bàn Học Offline
+## [13/10/2026] - Triển Khai Giai Đoạn 1 Core Flow 4: Gia Sư AI Socratic Tutor & GraphRAG Live Streaming
 
-- **Xây Dựng Modal Sơ Đồ Nhóm Bàn Học Vi Mô (`ClassMicroGroupsModal.jsx`)**:
-  - Triển khai giao diện phân bổ trạm bàn học offline của lớp (Trần sĩ số 20 học sinh, mỗi nhóm bàn từ 3 đến 5 học sinh).
-  - Tích hợp bộ chọn quy mô nhóm bàn (`3 bạn/bàn`, `4 bạn/bàn`, `5 bạn/bàn`) kết nối trực tiếp với thuật toán gom cụm đồng nhất (Homogeneous Clustering) theo lỗ hổng kiến thức.
-  - Hiển thị chi tiết từng trạm bàn học: Tên bàn học sư phạm, chủ đề trọng tâm `FocusArea`, tag các kỹ năng yếu chung (`CommonWeakSkills`), danh sách học sinh tại bàn kèm chỉ số thành thạo kiến thức.
-  - Tính năng **Phân phối đề luyện tập thích ứng** trực tiếp cho bàn học (`practiceService.assignGroupWorksheet`), hiển thị trạng thái phát đề và thời gian thực.
-  - Bổ sung nút xuất file sơ đồ bàn học dạng PDF cho Giảng viên in ra phát tận bàn offline.
-- **Nâng Cấp Cổng Điều Hành Học Thuật Cơ Sở (`CampusManagerDashboardView.jsx`)**:
-  - Chuẩn hóa danh sách lớp học offline theo cơ chế trần 20 học sinh và số thứ tự tăng dần (`Lớp Nền tảng 01`, `Lớp Nền tảng 02`, `Lớp Tăng tốc 01`, `Lớp Bứt phá 01`).
-  - Hiển thị badge sĩ số chuẩn hóa: `Sĩ số: {studentCount}/20`.
-  - Tích hợp nút hành động **"Sơ Đồ Nhóm Bàn (3 - 5 Bạn)"** trên từng thẻ lớp học, mở modal tương tác trực tiếp.
-  - Bổ sung nút **"Tự Động Gom Cụm AI"** trên thanh công cụ lớp học gọi trực tiếp API K-Means Elbow Method (`practiceService.autoClusterClasses`).
+- **Mở Rộng Tầng Dịch Vụ Client (`src/services/practiceService.js`)**:
+  - Bổ sung `askAiTutorStream`: Kết nối trực tiếp API Gateway `:5212` -> Practice Service `:5261` (`POST /api/practice/ai-tutor/ask-stream`) xử lý Server-Sent Events (SSE) theo thời gian thực.
+  - Tích hợp cơ chế kiểm soát giới hạn tần suất: Bắt mã lỗi `429 Too Many Requests` (chính sách `StrictTutorPolicy` 10 req/phút) và đưa ra thông báo sư phạm thân thiện.
+  - Bổ sung `askAiTutor` (REST fallback), `reportAiTutorInteraction` (`POST /api/practice/ai-tutor/report`) và `getAiTutorInteractions`.
+- **Nâng Cấp Widget Dashboard Học Sinh (`src/components/dashboard/AISocraticTutorWidget.jsx`)**:
+  - Xóa bỏ 100% mã mock giả lập `setTimeout`.
+  - Kết nối live SSE streaming với hiệu ứng hiển thị token chữ chạy mượt mà, hỗ trợ nút *Dừng (Abort)* khi đang phát stream.
+  - Tích hợp component `MathText` kết xuất công thức toán học KaTeX nội dòng (`$...$`) và khối (`$$...$$`).
+  - Hiển thị badge Đồ thị Tri thức GraphRAG và thanh cảnh báo khi chạm trần Rate Limit.
+- **Xây Dựng Component Modal Chuyên Sâu (`src/components/modals/AISocraticTutorModal.jsx`)**:
+  - Thiết kế giao diện hai cột hiện đại: Cột trái là khung chat Socratic toàn diện với dòng thời gian câu hỏi và gợi ý nhanh (Quick Prompts); Cột phải là bảng phân tích Đồ thị Tri thức 3-Hop (Dạng bài Archetype, Định lý cốt lõi, Bẫy ngộ nhận Misconception Traps).
+  - Tích hợp chức năng Báo cáo vi phạm (In-chat Flagging) cho từng câu trả lời của AI (lộ đáp án trực tiếp, ảo giác kiến thức, hướng dẫn khó hiểu) kết nối trực tiếp cơ sở dữ liệu giám sát sư phạm.
+- **Chuẩn Hóa Điều Hướng Router (`src/App.jsx` & `src/components/layout/Sidebar.jsx`)**:
+  - Sửa lỗi điều hướng: Bấm menu *AI Socratic Tutor* trên Sidebar và nút mở rộng trên Widget giờ đây mở chính xác `AISocraticTutorModal`, chấm dứt việc mở nhầm modal luyện tập ZPD của Flow 3.
 - **Kiểm Thử Đóng Gói (Build Verification)**:
-  - Chạy `npm run build` thành công 100% (**0 Error, 0 Warning**).
+  - Chạy `npm run build` (`vite build`) thành công 100% (**0 Error, 0 Warning**).
+  - Chạy `npm run lint` (`oxlint`) đạt tiêu chuẩn mã nguồn sạch.

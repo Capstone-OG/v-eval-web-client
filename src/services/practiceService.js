@@ -1,4 +1,4 @@
-import apiClient from './apiClient';
+import apiClient, { tokenStorage } from './apiClient';
 
 /**
  * Practice & Adaptive Learning Roadmap Service
@@ -131,6 +131,172 @@ export const practiceService = {
    */
   async assignGroupWorksheet(classId, groupId, worksheetId, worksheetTitle) {
     return (await apiClient.post(`/api/v1/practice/classes/${classId}/micro-groups/${groupId}/assign-worksheet`, { worksheetId, worksheetTitle })).data;
+  },
+
+  // =========================================================================
+  // Core Flow 4: Gia Sư AI Socratic & GraphRAG Continuous Learning
+  // =========================================================================
+
+  /**
+   * Hỏi đáp gợi mở Socratic dạng SSE Streaming qua API Gateway (:5212) -> Practice Service (:5261)
+   * Tự động xử lý giới hạn 10 req/phút (StrictTutorPolicy) và stream từng token chữ chạy.
+   *
+   * @param {Object} params
+   * @param {string} [params.studentId]
+   * @param {string} [params.questionId]
+   * @param {string} params.questionLatex - Câu hỏi bài tập hoặc thắc mắc tư duy (hỗ trợ KaTeX)
+   * @param {Object} [params.options] - Dictionary phương án trắc nghiệm (ví dụ: { A: "...", B: "..." })
+   * @param {string} [params.studentWrongOption='A'] - Phương án học sinh chọn sai
+   * @param {string} [params.correctOption='B'] - Phương án đáp án đúng
+   * @param {string} [params.skillId]
+   * @param {function} [params.onToken] - Callback nhận từng token chữ
+   * @param {function} [params.onError] - Callback khi có lỗi hoặc mã 429 Rate Limit
+   * @param {function} [params.onComplete] - Callback khi stream hoàn tất
+   * @param {AbortSignal} [params.signal] - Tín hiệu hủy yêu cầu stream
+   * @returns {Promise<string>} Toàn bộ câu trả lời hoàn chỉnh
+   */
+  async askAiTutorStream({
+    studentId,
+    questionId,
+    questionLatex,
+    options = null,
+    studentWrongOption = 'A',
+    correctOption = 'B',
+    skillId = null,
+    onToken,
+    onError,
+    onComplete,
+    signal
+  }) {
+    const baseUrl = apiClient.getBaseUrl();
+    const token = tokenStorage.getAccessToken();
+    const currentUser = tokenStorage.getUser();
+
+    const headers = {
+      'Content-Type': 'application/json',
+      Accept: 'text/event-stream'
+    };
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+
+    const resolvedStudentId = studentId || currentUser?.id || '00000000-0000-0000-0000-000000000001';
+    const resolvedQuestionId = questionId || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : '11111111-1111-1111-1111-111111111111');
+
+    const body = {
+      studentId: resolvedStudentId,
+      questionId: resolvedQuestionId,
+      questionLatex: questionLatex || '',
+      options: options || { A: 'Phương án A', B: 'Phương án B' },
+      studentWrongOption: studentWrongOption || 'A',
+      correctOption: correctOption || 'B',
+      skillId: skillId || null
+    };
+
+    let fullAnswer = '';
+
+    try {
+      const response = await fetch(`${baseUrl}/api/practice/ai-tutor/ask-stream`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(body),
+        signal
+      });
+
+      if (response.status === 429) {
+        const rateLimitErr = new Error('Bạn đang gửi câu hỏi quá nhanh (Tối đa 10 câu/phút). Vui lòng dành thời gian đọc kỹ câu hỏi gợi mở của AI trước khi gửi tiếp nhé!');
+        rateLimitErr.status = 429;
+        if (onError) onError(rateLimitErr);
+        throw rateLimitErr;
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        const msg = errorData.error || errorData.message || `Lỗi kết nối AI Tutor (HTTP ${response.status})`;
+        const httpErr = new Error(msg);
+        httpErr.status = response.status;
+        if (onError) onError(httpErr);
+        throw httpErr;
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder('utf-8');
+      let buffer = '';
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed || !trimmed.startsWith('data:')) continue;
+
+          const dataStr = trimmed.replace(/^data:\s*/, '');
+          if (dataStr === '[DONE]') {
+            if (onComplete) onComplete(fullAnswer);
+            return fullAnswer;
+          }
+
+          try {
+            const parsed = JSON.parse(dataStr);
+            if (parsed.error) {
+              throw new Error(parsed.error);
+            }
+            if (parsed.token) {
+              fullAnswer += parsed.token;
+              if (onToken) onToken(parsed.token);
+            }
+          } catch (jsonErr) {
+            // Nuốt lỗi parse các dòng không phải JSON chuẩn
+          }
+        }
+      }
+
+      if (onComplete) onComplete(fullAnswer);
+      return fullAnswer;
+    } catch (err) {
+      if (err.name === 'AbortError') {
+        console.info('[AI Tutor Stream] Yêu cầu stream đã bị hủy.');
+        return fullAnswer || '';
+      }
+      console.error('[AI Tutor Stream Error]:', err);
+      if (onError) onError(err);
+      throw err;
+    }
+  },
+
+  /**
+   * Hỏi đáp gợi mở Socratic dạng JSON đồng bộ (Single Request - Response)
+   */
+  async askAiTutor(payload) {
+    return (await apiClient.post('/api/practice/ai-tutor/ask', payload)).data;
+  },
+
+  /**
+   * Báo cáo câu trả lời của AI vi phạm quy tắc sư phạm (lộ đáp án, ảo giác, phản sư phạm)
+   * @param {Object} report
+   * @param {string} report.interactionId - GUID của phiên tương tác
+   * @param {string} report.reason - Lý do báo cáo
+   * @param {string} [report.studentId]
+   */
+  async reportAiTutorInteraction({ interactionId, reason, studentId }) {
+    const resolvedStudentId = studentId || tokenStorage.getUser()?.id || null;
+    return (await apiClient.post('/api/practice/ai-tutor/report', {
+      interactionId,
+      reason,
+      studentId: resolvedStudentId
+    })).data;
+  },
+
+  /**
+   * Truy vấn lịch sử tương tác AI Tutor (phục vụ Giáo viên / Mentor Studio)
+   */
+  async getAiTutorInteractions({ reportedOnly = false, limit = 50, offset = 0 } = {}) {
+    return (await apiClient.get(`/api/practice/ai-tutor/interactions?reportedOnly=${reportedOnly}&limit=${limit}&offset=${offset}`)).data;
   }
 };
 
