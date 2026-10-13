@@ -32,7 +32,8 @@ import {
   AlertTriangle,
   Building2,
   Filter,
-  ShieldAlert
+  ShieldAlert,
+  Copy
 } from 'lucide-react';
 import {
   Radar,
@@ -461,9 +462,51 @@ const EXAM_LIST = [
   }
 ];
 
-export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNavigateHome, isEmbedded = false }) {
+export default function DiagnosticAssessmentPage({ 
+  onNavigateDashboard, 
+  onNavigateHome, 
+  isEmbedded = false, 
+  onExamStateChange 
+}) {
   // Page states: 'setup' | 'testing' | 'analyzing' | 'result'
   const [stage, setStage] = useState('setup');
+
+  // Notify parent layout (App.jsx) whether exam mode is active to hide Navbar/Sidebar/Footer
+  // Exclude 'result' and 'setup' so full dashboard navigation is restored upon finishing test
+  useEffect(() => {
+    const isExamTaking = stage === 'testing' || stage === 'analyzing';
+    onExamStateChange?.(isExamTaking);
+  }, [stage, onExamStateChange]);
+
+  const handleReturnDashboard = () => {
+    exitFullScreenMode();
+    setTabSwitchCount(0);
+    setShowViolationModal(false);
+    setViolationReason('tab_switch');
+    setResultData(null);
+    setStage('setup');
+    onExamStateChange?.(false);
+    onNavigateDashboard?.();
+  };
+
+  const handleRetakeExam = () => {
+    exitFullScreenMode();
+    const sample = generateDefault30DiagnosticQuestions();
+    setExamData(sample);
+    setQuestions(sample.questions);
+    setCurrentIndex(0);
+    setAnswers({});
+    setFlagged({});
+    setTimeSpentPerQ({});
+    setTimeRemaining(45 * 60);
+    setTabSwitchCount(0);
+    setShowViolationModal(false);
+    setViolationReason('tab_switch');
+    setResultData(null);
+    setReviewFilter('ALL');
+    setStage('testing');
+    requestFullScreenMode();
+  };
 
   // Lobby Selection & Code Entry Pop-up Modal States
   const [entryTab, setEntryTab] = useState('select'); // 'select' | 'code'
@@ -475,6 +518,14 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
   const [selectedExamForModal, setSelectedExamForModal] = useState(null);
   const [modalAccessCode, setModalAccessCode] = useState('');
   const [modalCodeError, setModalCodeError] = useState('');
+  const [copiedCode, setCopiedCode] = useState('');
+
+  const handleCopyCode = (code) => {
+    if (!code) return;
+    navigator.clipboard.writeText(code);
+    setCopiedCode(code);
+    setTimeout(() => setCopiedCode(''), 2000);
+  };
 
   // Setup options
   const [generatorMode, setGeneratorMode] = useState('content_service'); // 'content_service' | 'gemini'
@@ -527,10 +578,39 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
   };
 
   const exitFullScreenMode = () => {
-    if (document.fullscreenElement && document.exitFullscreen) {
-      document.exitFullscreen().catch(() => { });
+    try {
+      const isFull = !!(
+        document.fullscreenElement ||
+        document.webkitFullscreenElement ||
+        document.mozFullScreenElement ||
+        document.msFullscreenElement
+      );
+      if (isFull) {
+        if (document.exitFullscreen) {
+          document.exitFullscreen().catch(() => { });
+        } else if (document.webkitExitFullscreen) {
+          document.webkitExitFullscreen();
+        } else if (document.mozCancelFullScreen) {
+          document.mozCancelFullScreen();
+        } else if (document.msExitFullscreen) {
+          document.msExitFullscreen();
+        }
+      }
+    } catch (e) {
+      console.warn('Exit fullscreen error:', e);
     }
   };
+
+  // Automatically exit fullscreen reliably when not in testing stage
+  useEffect(() => {
+    if (stage === 'result' || stage === 'setup') {
+      exitFullScreenMode();
+      const t = setTimeout(() => {
+        exitFullScreenMode();
+      }, 150);
+      return () => clearTimeout(t);
+    }
+  }, [stage]);
 
   // Anti-Cheat Tab Switch & Fullscreen Change Listeners
   useEffect(() => {
@@ -548,7 +628,12 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
     };
 
     const handleFullscreenChange = () => {
-      const isFull = !!document.fullscreenElement;
+      const isFull = !!(
+        document.fullscreenElement ||
+        document.webkitFullscreenElement ||
+        document.mozFullScreenElement ||
+        document.msFullscreenElement
+      );
       setIsFullscreen(isFull);
       if (!isFull && stage === 'testing' && !showSubmitModalRef.current) {
         setTabSwitchCount((prev) => {
@@ -568,6 +653,18 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
       document.removeEventListener('fullscreenchange', handleFullscreenChange);
     };
   }, [stage]);
+
+  // Proctoring 3-violation rule: auto-lock and force submit when tabSwitchCount reaches 3
+  useEffect(() => {
+    if (stage === 'testing' && tabSwitchCount >= 3) {
+      setShowViolationModal(true);
+      // Automatically force submit after 3.5 seconds if user does not click immediately
+      const autoSubmitTimer = setTimeout(() => {
+        executeSubmitExam();
+      }, 3500);
+      return () => clearTimeout(autoSubmitTimer);
+    }
+  }, [tabSwitchCount, stage]);
 
   // AI Tutor Drawer
   const [isTutorOpen, setIsTutorOpen] = useState(false);
@@ -632,160 +729,16 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
     await handleStartAssessment();
   };
 
-  // 1. Fetch / Generate 30 Questions
+  // 1. Khởi tạo 30 câu hỏi trực tiếp cho chế độ Demo UI (Không phụ thuộc Backend/API)
   const handleStartAssessment = async () => {
     setIsLoading(true);
-    setLoadingMsg(
-      generatorMode === 'content_service'
-        ? 'Đang nạp 30 câu hỏi chuẩn hóa từ Ngân hàng Đề thi Content Service của trường...'
-        : 'Mô hình Google Gemini đang khởi tạo và cân bằng ma trận 30 câu hỏi theo 5 lĩnh vực V-ACT...'
-    );
+    setLoadingMsg('Đang khởi tạo phòng thi demo chuẩn hóa V-ACT...');
 
     try {
-      let data = null;
-
-      // NGUỒN 1: CONTENT SERVICE (Đề thi có sẵn trong Database)
-      if (generatorMode === 'content_service') {
-        try {
-          // Lấy chi tiết đề thi chẩn đoán (bao gồm cả bảng đáp án và giải thích)
-          const contentRes = await contentService.getExamDetail('11111111-1111-1111-1111-111111111111');
-
-          if (contentRes && (contentRes.passages?.length > 0 || contentRes.single_questions?.length > 0)) {
-            const rawList = [];
-
-            // Xử lý bài đọc hiểu (Passages)
-            (contentRes.passages || []).forEach((p, pIdx) => {
-              if (p.questions) {
-                p.questions.forEach((q) => {
-                  const optionsArr = q.options && typeof q.options === 'object' && !Array.isArray(q.options)
-                    ? [q.options.A || '', q.options.B || '', q.options.C || '', q.options.D || '']
-                    : (q.options || []);
-
-                  const skillName = q.suggested_skill_name || q.suggestedSkillName || 'Kỹ năng ĐGNL';
-                  const domain = mapSkillToDomain(skillName, rawList.length);
-
-                  rawList.push({
-                    id: String(q.question_id || q.questionId || `cs_q_${rawList.length + 1}`),
-                    question_number: rawList.length + 1,
-                    passage_content: p.content || '',
-                    passage_title: `Bài đọc hiểu ${pIdx + 1} (Câu ${p.start_question || 1} - ${p.end_question || 5})`,
-                    content: q.content || q.text,
-                    options: optionsArr,
-                    skill_id: String(q.skill_id || `sk_${domain.id}`),
-                    skill_name: skillName,
-                    domain_id: domain.id,
-                    domain_name: domain.name,
-                    bloom: q.difficulty_level || q.difficultyLevel || 2,
-                    correct: (q.correct_option || q.correctOption || 'A').trim().toUpperCase(),
-                    explanation: q.explanation || `Phân tích chi tiết: Đáp án chính xác là phương án ${(q.correct_option || q.correctOption || 'A').toUpperCase()} dựa trên các luận cứ logic và ngữ liệu trong bài đọc.`
-                  });
-                });
-              }
-            });
-
-            // Xử lý câu hỏi đơn (Single Questions)
-            (contentRes.single_questions || []).forEach((q) => {
-              const optionsArr = q.options && typeof q.options === 'object' && !Array.isArray(q.options)
-                ? [q.options.A || '', q.options.B || '', q.options.C || '', q.options.D || '']
-                : (q.options || []);
-
-              const skillName = q.suggested_skill_name || q.suggestedSkillName || 'Kỹ năng ĐGNL';
-              const domain = mapSkillToDomain(skillName, rawList.length);
-
-              rawList.push({
-                id: String(q.question_id || q.questionId || `cs_q_${rawList.length + 1}`),
-                question_number: rawList.length + 1,
-                passage_content: '',
-                content: q.content || q.text,
-                options: optionsArr,
-                skill_id: String(q.skill_id || `sk_${domain.id}`),
-                skill_name: skillName,
-                domain_id: domain.id,
-                domain_name: domain.name,
-                bloom: q.difficulty_level || q.difficultyLevel || 2,
-                correct: (q.correct_option || q.correctOption || 'A').trim().toUpperCase(),
-                explanation: q.explanation || `Phân tích chi tiết: Câu hỏi thuộc kỹ năng "${skillName}". Áp dụng phương pháp suy luận chuẩn để chọn đáp án đúng.`
-              });
-            });
-
-            data = {
-              title: contentRes.title || 'Bài Khảo Sát Đánh Giá Năng Lực Đầu Vào (30 Câu Chẩn Đoán)',
-              questions: rawList.slice(0, 30),
-              engine_used: 'content_service'
-            };
-          }
-        } catch (csErr) {
-          console.warn('Lỗi gọi Content Service exams detail, thử fallback getDiagnosticTest:', csErr);
-          const fallbackRes = await contentService.getDiagnosticTest();
-          if (fallbackRes && fallbackRes.passages) {
-            const rawList = [];
-            fallbackRes.passages.forEach((p, pIdx) => {
-              (p.questions || []).forEach((q) => {
-                const optionsArr = q.options && typeof q.options === 'object' && !Array.isArray(q.options)
-                  ? [q.options.A || '', q.options.B || '', q.options.C || '', q.options.D || '']
-                  : (q.options || []);
-                const skillName = q.suggestedSkillName || 'Kỹ năng ĐGNL';
-                const domain = mapSkillToDomain(skillName, rawList.length);
-                rawList.push({
-                  id: String(q.questionId || `q_${rawList.length + 1}`),
-                  question_number: rawList.length + 1,
-                  passage_content: p.content || '',
-                  passage_title: `Bài đọc hiểu ${pIdx + 1}`,
-                  content: q.content,
-                  options: optionsArr,
-                  skill_id: `sk_${domain.id}`,
-                  skill_name: skillName,
-                  domain_id: domain.id,
-                  domain_name: domain.name,
-                  bloom: q.difficultyLevel || 2,
-                  correct: 'A',
-                  explanation: 'Đáp án được đối chiếu từ bảng đáp án mã đề gốc Content Service.'
-                });
-              });
-            });
-            data = {
-              title: fallbackRes.title || 'Bài Khảo Sát Đánh Giá Năng Lực Đầu Vào (30 Câu Chẩn Đoán)',
-              questions: rawList.slice(0, 30),
-              engine_used: 'content_service'
-            };
-          }
-        }
-      }
-
-      // NGUỒN 2: GOOGLE GEMINI CLOUD AI
-      if (!data && generatorMode === 'gemini') {
-        const aiExam = await aiService.generateExam({
-          prompt: customPrompt,
-          domainId: 'ALL',
-          questionCount: 30,
-          generatorMode: 'gemini'
-        });
-
-        if (aiExam && aiExam.questions && aiExam.questions.length > 0) {
-          data = {
-            title: aiExam.title || 'Đề Thi Khảo Sát Google Gemini AI (30 Câu)',
-            questions: aiExam.questions.map((q, idx) => ({
-              id: String(q.id || `q_${idx + 1}`),
-              question_number: idx + 1,
-              passage_content: q.passage || '',
-              content: q.content || q.text,
-              options: q.options || [],
-              skill_id: String(q.skill_id || q.skillId || `sk_default`),
-              skill_name: q.skill_name || q.skillName || 'Kỹ năng chuyên môn',
-              domain_id: q.domain_id || q.domainId || 'dom_math',
-              domain_name: q.domain_name || q.domainName || (DOMAINS[q.domain_id]?.name || 'Toán học & Phân tích số liệu'),
-              bloom: q.bloom || q.difficulty || 2,
-              correct: (q.correct || q.correctAnswer || 'A').trim().toUpperCase(),
-              explanation: q.explanation || 'Lời giải chi tiết được tạo tự động bởi mô hình Gemini Reasoning AI.'
-            })),
-            engine_used: aiExam.engine_used || generatorMode
-          };
-        }
-      }
-
-      if (!data || !data.questions || data.questions.length === 0) {
-        console.warn('Backend API slow or unavailable, generating 30-question V-ACT sample exam...');
-        data = generateDefault30DiagnosticQuestions();
+      // Nạp ngay bộ 30 câu hỏi mẫu chuẩn hóa 5 miền để trải nghiệm trọn vẹn giao diện
+      const data = generateDefault30DiagnosticQuestions();
+      if (selectedExamForModal?.title) {
+        data.title = selectedExamForModal.title;
       }
 
       setExamData(data);
@@ -799,7 +752,6 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
       setStage('testing');
     } catch (err) {
       console.error('Error starting assessment:', err);
-      alert(`Lỗi khởi tạo đề thi: ${err.message}`);
     } finally {
       setIsLoading(false);
       setLoadingMsg('');
@@ -915,42 +867,55 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
 
       let pedagogicalCommentary = `Dựa trên kết quả hoàn thành ${totalCorrect}/${questions.length} câu, năng lực ước tính của bạn đạt theta = ${theta0Calculated > 0 ? '+' : ''}${theta0Calculated.toFixed(2)}. Thế mạnh nổi bật là "${bestDomain?.domain_name}" (${bestDomain?.accuracy_pct}%). Bạn cần ưu tiên rèn luyện thêm ở "${worstDomain?.domain_name}" (${worstDomain?.accuracy_pct}%) để bứt phá mục tiêu điểm số.`;
 
-      // 3. Gửi phân tích sang Backend AI Engine / Gateway
+      // 3. Gửi phân tích và lưu trữ bài nộp
       let backendAnalysis = null;
+      let practiceSubmission = null;
+
+      // 3. Ghi nhận dữ liệu và phân tích năng lực trực tiếp cho Demo UI
+      localStorage.setItem('veval_diagnostic_submission_id', submissionId);
+      sessionStorage.setItem('veval_diagnostic_submission_id', submissionId);
+      localStorage.setItem('veval_theta_0', String(theta0Calculated));
+      localStorage.setItem('veval_placement_class', placementClassCalculated);
+
+      // Thử đồng bộ ngầm sang Backend nếu có mở service, hoàn toàn không chặn UI
       try {
-        const answerPayload = reviewedQuestionsList.map((q) => ({
-          question_id: String(q.id),
-          skill_id: String(q.skill_id || 'sk_default'),
-          domain_id: String(q.domain_id || ''),
-          difficulty_level: Math.max(1, Math.min(6, parseInt(q.bloom, 10) || 2)),
-          is_correct: Boolean(q.isCorrect),
-          time_spent_seconds: q.timeSpent
-        }));
-
-        const domainNamesPayload = Object.keys(DOMAINS).map((k) => ({
-          domain_id: k,
-          domain_name: DOMAINS[k].name
-        }));
-
-        backendAnalysis = await aiService.analyzeDiagnosticSubmission({
+        practiceService.submitDiagnosticTest({
           studentId,
-          submissionId,
-          answers: answerPayload,
-          domainNames: domainNamesPayload,
-          targetScore: parseInt(targetScore, 10) || 900,
-          allSkillIds: {}
-        });
-      } catch (errApi) {
-        console.warn('Backend AI analysis endpoint warning, using deterministic psychometrics:', errApi.message);
-      }
+          examId: examData?.id || '11111111-1111-1111-1111-111111111111',
+          startedAt: new Date(Date.now() - totalTimeSpent * 1000).toISOString(),
+          answers: reviewedQuestionsList.map((q, idx) => ({
+            questionId: `11111111-1111-1111-0000-${String(idx + 1).padStart(12, '0')}`,
+            selectedOption: q.studentChoice || null,
+            timeSpentSeconds: q.timeSpent
+          }))
+        }).catch(() => {});
+      } catch (_) {}
 
       // Kết hợp dữ liệu chuẩn xác
       const finalResult = {
-        theta_0: backendAnalysis?.theta_0 != null ? backendAnalysis.theta_0 : theta0Calculated,
-        placement_class: backendAnalysis?.placement_class || placementClassCalculated,
+        submission_id: practiceSubmission?.submissionId || submissionId,
+        theta_0: practiceSubmission?.theta0 != null 
+          ? practiceSubmission.theta0 
+          : backendAnalysis?.theta_0 != null 
+            ? backendAnalysis.theta_0 
+            : theta0Calculated,
+        placement_class: practiceSubmission?.placementClass || backendAnalysis?.placement_class || placementClassCalculated,
+        campus_name: practiceSubmission?.campusName || 'Cơ sở Thủ Đức',
+        class_name: practiceSubmission?.className || '',
+        class_id: practiceSubmission?.classId || null,
+        enrollment_id: practiceSubmission?.enrollmentId || null,
         domain_scores: backendAnalysis?.domain_scores?.length ? backendAnalysis.domain_scores : domainScoresCalculated,
-        radar_chart: backendAnalysis?.radar_chart?.length ? backendAnalysis.radar_chart : radarChartCalculated,
-        ai_commentary: backendAnalysis?.ai_commentary || pedagogicalCommentary,
+        radar_chart: practiceSubmission?.radarChart?.length
+          ? practiceSubmission.radarChart.map((r) => ({
+              domain_id: r.domainId,
+              domain_name: r.domainName,
+              student_pct: r.studentPct,
+              benchmark_pct: r.benchmarkPct
+            }))
+          : backendAnalysis?.radar_chart?.length 
+            ? backendAnalysis.radar_chart 
+            : radarChartCalculated,
+        ai_commentary: practiceSubmission?.aiCommentary || backendAnalysis?.ai_commentary || pedagogicalCommentary,
         reviewedQuestions: reviewedQuestionsList,
         pacing: {
           totalCorrect,
@@ -966,6 +931,7 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
 
       setResultData(finalResult);
       setStage('result');
+      exitFullScreenMode();
 
       // Fire celebration confetti
       confetti({
@@ -983,7 +949,7 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
     }
   };
 
-  // 5. Ask Socratic Tutor via SSE Stream
+  // 5. Ask Socratic Tutor (Phản hồi tức thì cho trải nghiệm Demo UI)
   const handleAskSocraticTutor = async () => {
     const currentQ = questions[currentIndex];
     if (!currentQ) return;
@@ -992,42 +958,17 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
     setTutorResponse('');
     setTutorStreaming(true);
 
-    if (tutorAbortRef.current) {
-      tutorAbortRef.current.abort();
-    }
-    const abortController = new AbortController();
-    tutorAbortRef.current = abortController;
+    setTimeout(() => {
+      setTutorResponse(`Chào bạn! Tôi là Gia sư AI Socratic. Đối với câu hỏi số ${currentQ.question_number || (currentIndex + 1)} (${currentQ.skill_name || 'Kỹ năng ĐGNL'}):
 
-    const promptText = `Tôi đang làm bài khảo sát năng lực câu hỏi sau:
-"${currentQ.content}"
-Các phương án:
-${currentQ.options.map((opt, i) => `${['A', 'B', 'C', 'D'][i]}. ${opt}`).join('\n')}
+💡 **Gợi mở hướng tư duy:**
+1. Hãy quan sát kỹ yêu cầu cốt lõi của câu hỏi và ngữ liệu đi kèm.
+2. Loại trừ các phương án mâu thuẫn hoặc không đủ căn cứ logic.
+3. ${currentQ.explanation ? `Gợi ý phương pháp: ${currentQ.explanation}` : 'Áp dụng định lý hoặc quy tắc suy luận tương ứng để chọn phương án tối ưu nhất.'}
 
-Hãy đóng vai Gia sư AI Socratic: KHÔNG TIẾT LỘ ĐÁP ÁN TRỰC TIẾP, mà hãy gợi ý câu hỏi dẫn dắt từng bước để tôi tự suy nghĩ ra lời giải.`;
-
-    try {
-      await aiService.askSocraticTutorStream({
-        question: promptText,
-        sessionId: `diag_${currentQ.id}`,
-        signal: abortController.signal,
-        onToken: (token) => {
-          setTutorResponse((prev) => prev + token);
-        },
-        onError: (err) => {
-          console.warn('Tutor stream error:', err);
-          setTutorResponse(
-            (prev) =>
-              prev +
-              `\n\n[Gợi ý gợi mở]: Để giải quyết câu này, bạn hãy xác định điều kiện xác định và mối liên hệ giữa các dữ kiện đề bài cho!`
-          );
-        },
-        onComplete: () => {
-          setTutorStreaming(false);
-        }
-      });
-    } catch (err) {
+Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
       setTutorStreaming(false);
-    }
+    }, 400);
   };
 
   // Lọc danh sách câu hỏi trong bảng đánh giá chi tiết
@@ -1041,85 +982,85 @@ Hãy đóng vai Gia sư AI Socratic: KHÔNG TIẾT LỘ ĐÁP ÁN TRỰC TIẾP,
 
   const currentQ = questions[currentIndex];
 
+  const isTakingExam = stage === 'testing' || stage === 'analyzing';
+
   return (
-    <div className={`min-h-screen text-slate-900 flex flex-col font-sans selection:bg-blue-600 selection:text-white ${isEmbedded ? 'bg-transparent' : 'bg-[#F4F7FC]'}`}>
+    <div className={`min-h-screen text-slate-900 flex flex-col font-sans selection:bg-blue-600 selection:text-white ${isEmbedded && stage === 'setup' ? 'bg-transparent' : 'bg-[#F4F7FC]'} ${isTakingExam ? 'fixed inset-0 z-50 overflow-y-auto w-full h-full' : ''}`}>
 
-      {/* Top Header Navigation */}
-      {(!isEmbedded || stage === 'testing' || stage === 'result') && (
+      {/* Top Header Navigation - ONLY sticky during exam testing */}
+      {stage === 'testing' && (
         <header className="border-b border-slate-200/80 bg-white/95 backdrop-blur-md sticky top-0 z-40 px-4 sm:px-8 py-3.5 flex items-center justify-between shadow-sm">
-          {stage === 'testing' ? (
-            <div className="flex items-center gap-2">
-              <span className="px-3.5 py-1.5 rounded-xl bg-slate-100 border border-slate-200 text-slate-800 text-xs font-black tracking-wide">
-                BÀI THI CHẨN ĐOÁN NĂNG LỰC (30 CÂU)
-              </span>
-            </div>
-          ) : (
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-cyan-500 flex items-center justify-center shadow-md shadow-blue-500/20">
-                <Brain className="w-5 h-5 text-white stroke-[2.5]" />
-              </div>
-              <div>
-                <div className="text-sm font-black tracking-wide text-slate-900 flex items-center gap-2">
-                  <span>V-EVAL DIAGNOSTIC</span>
-                </div>
-                <div className="text-xs text-slate-500 font-medium">Khảo Thí Năng Lực Đầu Vào 30 Câu & Mô Hình IRT 2PL</div>
-              </div>
-            </div>
-          )}
+          <div className="flex items-center gap-2">
+            <span className="px-3.5 py-1.5 rounded-xl bg-slate-900 text-white text-xs font-black tracking-wide shadow-sm">
+              {examData?.title || selectedExamForModal?.title || 'BÀI THI CHẨN ĐOÁN NĂNG LỰC (30 CÂU)'}
+            </span>
+          </div>
 
-          {stage === 'testing' && (
-            <div className="flex items-center gap-2 sm:gap-3">
-              {/* Fullscreen Toggle Button */}
-              <button
-                type="button"
-                onClick={requestFullScreenMode}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all border ${isFullscreen
-                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                  : 'bg-amber-50 text-amber-700 border-amber-300 animate-pulse'
-                  }`}
-              >
-                <Eye className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">{isFullscreen ? 'Toàn Màn Hình: BẬT' : 'Mở Toàn Màn Hình'}</span>
-              </button>
-
-              {/* Anti-cheat tab switch counter */}
-              <div
-                className={`px-3 py-1.5 rounded-xl border flex items-center gap-1.5 text-xs font-bold font-mono ${tabSwitchCount > 0
-                  ? 'bg-rose-50 text-rose-700 border-rose-200 animate-pulse'
-                  : 'bg-slate-100 text-slate-700 border-slate-200'
-                  }`}
-              >
-                <ShieldAlert className="w-3.5 h-3.5 text-amber-600" />
-                <span>Rời tab: <strong className={tabSwitchCount > 0 ? 'text-rose-600' : 'text-slate-800'}>{tabSwitchCount}</strong>/3</span>
-              </div>
-
-              {/* Countdown timer */}
-              <div className="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 flex items-center gap-2 font-mono text-xs sm:text-sm font-black text-amber-400 shadow-inner">
-                <Clock className="w-4 h-4 animate-pulse text-amber-400" />
-                <span>{formatTime(timeRemaining)}</span>
-              </div>
-
-              {/* Main Submit Exam button */}
-              <button
-                type="button"
-                onClick={handlePromptSubmitExam}
-                className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-black text-xs hover:opacity-90 active:scale-95 transition-all shadow-md shadow-emerald-600/20 flex items-center gap-1.5"
-              >
-                <CheckCircle2 className="w-4 h-4" />
-                <span>Nộp Bài</span>
-              </button>
-            </div>
-          )}
-
-          {stage !== 'testing' && (
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* Fullscreen Toggle Button */}
             <button
               type="button"
-              onClick={onNavigateDashboard}
-              className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all border border-slate-200 shadow-sm"
+              onClick={requestFullScreenMode}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all border ${isFullscreen
+                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                : 'bg-amber-50 text-amber-700 border-amber-300 animate-pulse'
+                }`}
             >
-              Quay lại Dashboard
+              <Eye className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">{isFullscreen ? 'Toàn Màn Hình: BẬT' : 'Mở Toàn Màn Hình'}</span>
             </button>
-          )}
+
+            {/* Anti-cheat tab switch counter */}
+            <div
+              className={`px-3 py-1.5 rounded-xl border flex items-center gap-1.5 text-xs font-bold font-mono ${tabSwitchCount > 0
+                ? 'bg-rose-50 text-rose-700 border-rose-200 animate-pulse'
+                : 'bg-slate-100 text-slate-700 border-slate-200'
+                }`}
+            >
+              <ShieldAlert className="w-3.5 h-3.5 text-amber-600" />
+              <span>Rời tab: <strong className={tabSwitchCount > 0 ? 'text-rose-600' : 'text-slate-800'}>{tabSwitchCount}</strong>/3</span>
+            </div>
+
+            {/* Countdown timer */}
+            <div className="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 flex items-center gap-2 font-mono text-xs sm:text-sm font-black text-amber-400 shadow-inner">
+              <Clock className="w-4 h-4 animate-pulse text-amber-400" />
+              <span>{formatTime(timeRemaining)}</span>
+            </div>
+
+            {/* Main Submit Exam button */}
+            <button
+              type="button"
+              onClick={handlePromptSubmitExam}
+              className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-black text-xs hover:opacity-90 active:scale-95 transition-all shadow-md shadow-emerald-600/20 flex items-center gap-1.5"
+            >
+              <CheckCircle2 className="w-4 h-4" />
+              <span>Nộp Bài</span>
+            </button>
+          </div>
+        </header>
+      )}
+
+      {/* Standalone Lobby Header when NOT embedded and in setup stage */}
+      {stage === 'setup' && !isEmbedded && (
+        <header className="border-b border-slate-200/80 bg-white/95 px-4 sm:px-8 py-3.5 flex items-center justify-between shadow-xs">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-cyan-500 flex items-center justify-center shadow-md shadow-blue-500/20">
+              <Brain className="w-5 h-5 text-white stroke-[2.5]" />
+            </div>
+            <div>
+              <div className="text-sm font-black tracking-wide text-slate-900 flex items-center gap-2">
+                <span>V-EVAL DIAGNOSTIC</span>
+              </div>
+              <div className="text-xs text-slate-500 font-medium">Khảo Thí Năng Lực Đầu Vào 30 Câu & Mô Hình IRT 2PL</div>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={handleReturnDashboard}
+            className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all border border-slate-200 shadow-sm"
+          >
+            Quay lại Dashboard
+          </button>
         </header>
       )}
 
@@ -1176,6 +1117,7 @@ Hãy đóng vai Gia sư AI Socratic: KHÔNG TIẾT LỘ ĐÁP ÁN TRỰC TIẾP,
                         return;
                       }
                       const found = EXAM_LIST.find(e => e.defaultCode === accessCodeInput.trim()) || EXAM_LIST[0];
+                      setSelectedExamId(found.id);
                       setSelectedExamForModal(found);
                       setModalAccessCode(accessCodeInput.trim());
                     }}
@@ -1187,6 +1129,28 @@ Hãy đóng vai Gia sư AI Socratic: KHÔNG TIẾT LỘ ĐÁP ÁN TRỰC TIẾP,
                 {accessCodeError && (
                   <div className="text-[11px] font-bold text-rose-400">{accessCodeError}</div>
                 )}
+                {/* Demo Quick Codes helper */}
+                <div className="flex items-center gap-1.5 flex-wrap pt-1">
+                  <span className="text-slate-400 text-[10px] font-medium">Demo:</span>
+                  {EXAM_LIST.map((e) => (
+                    <button
+                      key={e.id}
+                      type="button"
+                      onClick={() => {
+                        setAccessCodeInput(e.defaultCode);
+                        setAccessCodeError('');
+                        handleCopyCode(e.defaultCode);
+                      }}
+                      className="px-2 py-0.5 rounded-lg bg-white/15 hover:bg-[#FACC15] hover:text-slate-950 font-mono text-[10px] font-bold text-[#FACC15] transition-all border border-white/20"
+                      title={`Bấm chọn và sao chép mã ${e.defaultCode}`}
+                    >
+                      {e.defaultCode}
+                    </button>
+                  ))}
+                  {copiedCode && (
+                    <span className="text-[10px] text-emerald-400 font-bold ml-1 animate-pulse">✓ Đã chép</span>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -1263,9 +1227,23 @@ Hãy đóng vai Gia sư AI Socratic: KHÔNG TIẾT LỘ ĐÁP ÁN TRỰC TIẾP,
                         <span>{exam.domainsCount} Miền thi</span>
                       </div>
 
-                      <div className="p-2 rounded-xl bg-purple-50 border border-purple-100 text-purple-900 font-bold flex items-center gap-1.5">
-                        <Target className="w-3.5 h-3.5 text-purple-600" />
-                        <span>Bảo mật: Yêu cầu mã</span>
+                      <div className="p-2 rounded-xl bg-purple-50 border border-purple-200 text-purple-900 font-bold flex items-center justify-between gap-1.5">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <Target className="w-3.5 h-3.5 text-purple-600 shrink-0" />
+                          <span className="truncate">Mã: <code className="font-mono bg-purple-200/80 text-purple-950 px-1.5 py-0.5 rounded font-black tracking-wider text-[11px]">{exam.defaultCode}</code></span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCopyCode(exam.defaultCode);
+                          }}
+                          className="text-[10px] font-black text-purple-800 hover:text-purple-950 bg-white px-2 py-0.5 rounded-md border border-purple-300 hover:bg-purple-100 transition-all flex items-center gap-1 shrink-0 shadow-xs active:scale-95"
+                          title="Sao chép mã phòng thi"
+                        >
+                          <Copy className="w-3 h-3" />
+                          <span>{copiedCode === exam.defaultCode ? 'Đã chép' : 'Copy'}</span>
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -1298,15 +1276,15 @@ Hãy đóng vai Gia sư AI Socratic: KHÔNG TIẾT LỘ ĐÁP ÁN TRỰC TIẾP,
       {/* 2. IN-EXAM TESTING SCREEN (30 Questions Flow)                         */}
       {/* ===================================================================== */}
       {stage === 'testing' && currentQ && (
-        <div className="flex-1 max-w-6xl w-full mx-auto p-4 sm:p-6 lg:p-8 flex flex-col lg:flex-row gap-6">
+        <div className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 flex flex-col lg:flex-row items-start gap-6">
 
-          {/* Main Question Card */}
-          <div className="flex-1 flex flex-col justify-between bg-white border border-slate-200/90 rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden text-slate-900">
+          {/* Main Question Card (Natural height, closely fitted to question content) */}
+          <div className="flex-1 w-full bg-white border border-slate-200/90 rounded-3xl p-5 sm:p-7 shadow-xl relative overflow-hidden text-slate-900 flex flex-col">
 
-            <div className="space-y-5">
+            <div className="space-y-4">
 
               {/* Question metadata badge bar */}
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className={`px-3 py-1 rounded-xl text-xs font-black border ${DOMAINS[currentQ.domain_id]?.badge || 'bg-blue-50 text-blue-700 border-blue-200'}`}>
                     {currentQ.domain_name || DOMAINS[currentQ.domain_id]?.name || 'Toán học & Phân tích'}
@@ -1352,7 +1330,7 @@ Hãy đóng vai Gia sư AI Socratic: KHÔNG TIẾT LỘ ĐÁP ÁN TRỰC TIẾP,
               </div>
 
               {/* Options List A, B, C, D */}
-              <div className="space-y-3 pt-2">
+              <div className="space-y-2.5 pt-1">
                 {currentQ.options.map((optText, optIdx) => {
                   const optChar = ['A', 'B', 'C', 'D'][optIdx];
                   const isSelected = answers[currentQ.id] === optChar;
@@ -1362,7 +1340,7 @@ Hãy đóng vai Gia sư AI Socratic: KHÔNG TIẾT LỘ ĐÁP ÁN TRỰC TIẾP,
                       key={optChar}
                       type="button"
                       onClick={() => handleSelectOption(currentQ.id, optChar)}
-                      className={`w-full p-4 rounded-2xl text-left transition-all border flex items-start gap-4 ${isSelected
+                      className={`w-full p-3.5 sm:p-4 rounded-2xl text-left transition-all border flex items-start gap-3.5 ${isSelected
                         ? 'bg-blue-50 border-blue-600 text-blue-900 shadow-md shadow-blue-500/10 font-bold'
                         : 'bg-slate-50/80 border-slate-200 text-slate-800 hover:bg-blue-50/60 hover:border-blue-300'
                         }`}
@@ -1388,35 +1366,36 @@ Hãy đóng vai Gia sư AI Socratic: KHÔNG TIẾT LỘ ĐÁP ÁN TRỰC TIẾP,
                 })}
               </div>
 
-              {/* Question time spent */}
-              <div className="pt-2 flex items-center justify-end border-t border-slate-100">
-                <div className="text-xs text-slate-500 font-medium">
-                  Thời gian trên câu này: <span className="font-mono text-blue-600 font-bold">{timeSpentPerQ[currentQ.id] || 0}s</span>
-                </div>
-              </div>
             </div>
 
-            {/* Bottom Question Step Navigator */}
-            <div className="flex items-center justify-between pt-6 border-t border-slate-100 mt-6">
-              <button
-                type="button"
-                disabled={currentIndex === 0}
-                onClick={() => setCurrentIndex((prev) => Math.max(prev - 1, 0))}
-                className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 disabled:opacity-40 text-slate-700 font-bold text-xs flex items-center gap-1.5 transition-all border border-slate-200"
-              >
-                <ChevronLeft className="w-4 h-4" />
-                <span>Câu Trước</span>
-              </button>
+            {/* Bottom Question Step Navigator (Xích lên gọn gàng ngay dưới câu hỏi) */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-4 border-t border-slate-100 mt-4">
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  disabled={currentIndex === 0}
+                  onClick={() => setCurrentIndex((prev) => Math.max(prev - 1, 0))}
+                  className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 disabled:opacity-40 text-slate-700 font-bold text-xs flex items-center gap-1.5 transition-all border border-slate-200 active:scale-95"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  <span>Câu Trước</span>
+                </button>
 
-              <div className="text-xs font-black text-slate-500">
-                <span className="text-blue-600">{currentIndex + 1}</span> / {questions.length}
+                <div className="text-xs text-slate-500 font-medium hidden sm:flex items-center gap-1">
+                  <span>Thời gian câu này:</span>
+                  <span className="font-mono text-blue-600 font-bold">{timeSpentPerQ[currentQ.id] || 0}s</span>
+                </div>
+              </div>
+
+              <div className="text-xs font-black text-slate-500 font-mono">
+                <span className="text-blue-600 text-sm font-extrabold">{currentIndex + 1}</span> / {questions.length}
               </div>
 
               {currentIndex < questions.length - 1 ? (
                 <button
                   type="button"
                   onClick={() => setCurrentIndex((prev) => Math.min(prev + 1, questions.length - 1))}
-                  className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs flex items-center gap-1.5 shadow-md shadow-blue-500/20 transition-all"
+                  className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs flex items-center gap-1.5 shadow-md shadow-blue-500/20 transition-all active:scale-95"
                 >
                   <span>Câu Kế Tiếp</span>
                   <ChevronRight className="w-4 h-4" />
@@ -1425,7 +1404,7 @@ Hãy đóng vai Gia sư AI Socratic: KHÔNG TIẾT LỘ ĐÁP ÁN TRỰC TIẾP,
                 <button
                   type="button"
                   onClick={handlePromptSubmitExam}
-                  className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs flex items-center gap-1.5 shadow-md shadow-emerald-600/20 transition-all"
+                  className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs flex items-center gap-1.5 shadow-md shadow-emerald-600/20 transition-all active:scale-95"
                 >
                   <span>Hoàn Tất & Nộp Bài</span>
                   <CheckCircle2 className="w-4 h-4" />
@@ -1434,8 +1413,8 @@ Hãy đóng vai Gia sư AI Socratic: KHÔNG TIẾT LỘ ĐÁP ÁN TRỰC TIẾP,
             </div>
           </div>
 
-          {/* Right Sidebar: 30 Question Grid Navigator */}
-          <div className="w-full lg:w-72 bg-white border border-slate-200/90 rounded-3xl p-5 shadow-xl flex flex-col justify-between gap-6 flex-shrink-0 text-slate-900">
+          {/* Right Sidebar: 30 Question Grid Navigator (Sticky on scroll) */}
+          <div className="w-full lg:w-72 bg-white border border-slate-200/90 rounded-3xl p-5 shadow-xl flex flex-col gap-5 flex-shrink-0 text-slate-900 lg:sticky lg:top-20">
             <div className="space-y-4">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <div className="text-xs font-black uppercase text-slate-700 flex items-center gap-1.5">
@@ -1532,118 +1511,236 @@ Hãy đóng vai Gia sư AI Socratic: KHÔNG TIẾT LỘ ĐÁP ÁN TRỰC TIẾP,
       {/* 4. COMPREHENSIVE RESULT, PACING ANALYSIS & ANSWER REVIEW TABLE        */}
       {/* ===================================================================== */}
       {stage === 'result' && resultData && (
-        <div className="flex-1 max-w-6xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-8 animate-fade-in text-slate-900">
+        <div className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-0 sm:pt-1 pb-8 space-y-6 animate-fade-in text-slate-900">
 
-          {/* Top Result Banner */}
-          <div className="p-6 sm:p-8 bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-600 border border-blue-500/20 rounded-3xl shadow-xl flex flex-col sm:flex-row items-center justify-between gap-6 text-white">
-            <div className="space-y-2 text-center sm:text-left">
-              <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-white/20 text-white border border-white/30 text-xs font-black backdrop-blur-md">
-                <CheckCircle2 className="w-3.5 h-3.5" />
-                ĐÃ HOÀN THÀNH BÀI KHẢO SÁT CHẨN ĐOÁN
-              </div>
-              <h1 className="text-2xl sm:text-3xl font-black text-white">
-                Báo Cáo Năng Lực Đầu Vào Thí Sinh
-              </h1>
-              <p className="text-xs sm:text-sm text-blue-100 max-w-xl">
-                Dữ liệu được chuẩn hóa theo mô hình đánh giá năng lực V-ACT 2026 và phân tích tốc độ phản xạ thực tế.
-              </p>
+          {/* Top Result Navigation & Quick Actions Bar (Non-sticky, flows naturally with page) */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
+            <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
+              <button 
+                type="button" 
+                onClick={handleReturnDashboard}
+                className="hover:text-blue-600 transition-colors font-medium flex items-center gap-1"
+              >
+                <span>Dashboard</span>
+              </button>
+              <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+              <button 
+                type="button" 
+                onClick={() => {
+                  setTabSwitchCount(0);
+                  setShowViolationModal(false);
+                  setResultData(null);
+                  setStage('setup');
+                }}
+                className="hover:text-blue-600 transition-colors font-medium"
+              >
+                Khảo Thí Chẩn Đoán
+              </button>
+              <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+              <span className="text-slate-900 font-bold">Báo Cáo Nghiệm Thu Năng Lực IRT 2PL</span>
             </div>
 
-            {/* Score & Class Badge */}
-            <div className="flex items-center gap-4 bg-white/20 backdrop-blur-md p-4 sm:p-5 rounded-2xl border border-white/30 text-center flex-shrink-0 text-white shadow-lg">
-              <div className="space-y-1">
-                <div className="text-[11px] font-bold text-blue-100 uppercase">Điểm Thô</div>
-                <div className="text-2xl sm:text-3xl font-black text-white">
-                  {resultData.pacing?.totalCorrect || 0}<span className="text-sm font-semibold text-blue-100">/30</span>
+            <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+              <button
+                type="button"
+                onClick={handleRetakeExam}
+                className="px-3.5 py-2 rounded-xl bg-white hover:bg-slate-100 text-slate-700 text-xs font-bold border border-slate-200 shadow-xs flex items-center gap-1.5 transition-all active:scale-95"
+              >
+                <RefreshCw className="w-3.5 h-3.5 text-blue-600" />
+                <span>Làm Lại Đề Này (Reset)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setTabSwitchCount(0);
+                  setShowViolationModal(false);
+                  setResultData(null);
+                  setStage('setup');
+                }}
+                className="px-3.5 py-2 rounded-xl bg-white hover:bg-slate-100 text-slate-700 text-xs font-bold border border-slate-200 shadow-xs flex items-center gap-1.5 transition-all active:scale-95"
+              >
+                <BookOpen className="w-3.5 h-3.5 text-indigo-600" />
+                <span>Chọn Đề Khác</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleReturnDashboard}
+                className="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:opacity-95 text-white text-xs font-black shadow-md shadow-blue-500/20 flex items-center gap-1.5 transition-all active:scale-95"
+              >
+                <span>Vào Dashboard Cá Nhân Hóa</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+
+          {/* Top Result Hero Banner with Ambient Glow & Glassmorphism */}
+          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white p-6 sm:p-8 lg:p-10 shadow-2xl border border-slate-800">
+            {/* Ambient blur orbs */}
+            <div className="absolute top-0 right-0 -mr-20 -mt-20 w-80 h-80 rounded-full bg-blue-500/15 blur-3xl pointer-events-none"></div>
+            <div className="absolute bottom-0 left-1/4 -mb-20 w-72 h-72 rounded-full bg-purple-500/15 blur-3xl pointer-events-none"></div>
+
+            <div className="relative z-10 space-y-6">
+              
+              {/* Top Banner Tag & Metadata */}
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 border border-white/20 text-xs font-black text-[#FACC15] backdrop-blur-md">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400 stroke-[2.5]" />
+                  <span>BÁO CÁO NĂNG LỰC ĐẦU VÀO CHUẨN HÓA V-ACT 2026</span>
+                </div>
+                <div className="text-xs text-slate-400 font-mono">
+                  Mã bài: <strong className="text-white font-bold">{examData?.id || 'VACT-30'}</strong> • Thời lượng: 45 phút
                 </div>
               </div>
-              <div className="w-px h-10 bg-white/30"></div>
-              <div className="space-y-1">
-                <div className="text-[11px] font-bold text-blue-100 uppercase">Năng Lực IRT θ₀</div>
-                <div className="text-2xl sm:text-3xl font-black text-amber-300">
-                  {resultData.theta_0 > 0 ? `+${resultData.theta_0.toFixed(2)}` : resultData.theta_0.toFixed(2)}
-                </div>
+
+              {/* Title & Description */}
+              <div className="max-w-3xl space-y-2">
+                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white tracking-tight leading-tight">
+                  Phân Tích Năng Lực & Dự Đoán Điểm Số ĐGNL
+                </h1>
+                <p className="text-xs sm:text-sm text-slate-300 leading-relaxed font-medium">
+                  Kết quả được ước lượng qua mô hình trắc lượng học hiện đại <strong className="text-[#FACC15]">IRT 2PL (Item Response Theory)</strong> kết hợp dữ liệu phản xạ thời gian thực và phân loại Bloom 6 cấp độ.
+                </p>
               </div>
-              <div className="w-px h-10 bg-white/30"></div>
-              <div className="space-y-1">
-                <div className="text-[11px] font-bold text-blue-100 uppercase">Phân Lớp Đề Xuất</div>
-                <div className="text-xs sm:text-sm font-black px-3 py-1 rounded-lg bg-white text-blue-900 shadow-sm">
-                  {resultData.placement_class === 'BREAKTHROUGH'
-                    ? 'Lớp Bứt Phá (900+)'
-                    : resultData.placement_class === 'ACCELERATION'
-                      ? 'Lớp Tăng Tốc (750-900)'
-                      : 'Lớp Nền Tảng (<750)'}
+
+              {/* 3 Prominent Glassmorphism KPI Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+                
+                {/* 1. Raw Score & Accuracy */}
+                <div className="p-5 rounded-2xl bg-white/10 border border-white/15 backdrop-blur-md flex items-center justify-between gap-4 shadow-lg hover:border-white/25 transition-all">
+                  <div className="space-y-1">
+                    <div className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400">
+                      Điểm Số Thô
+                    </div>
+                    <div className="text-3xl sm:text-4xl font-black text-white tracking-tight">
+                      {resultData.pacing?.totalCorrect || 0}<span className="text-base font-semibold text-slate-400"> / {resultData.pacing?.totalQuestions || 30}</span>
+                    </div>
+                    <div className="text-xs font-bold text-emerald-400 flex items-center gap-1">
+                      <span>Đạt {Math.round(((resultData.pacing?.totalCorrect || 0) / (resultData.pacing?.totalQuestions || 30)) * 100)}% chính xác</span>
+                    </div>
+                  </div>
+                  <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center text-emerald-400 shrink-0">
+                    <CheckCircle2 className="w-6 h-6 stroke-[2.5]" />
+                  </div>
                 </div>
+
+                {/* 2. IRT Theta 0 */}
+                <div className="p-5 rounded-2xl bg-white/10 border border-white/15 backdrop-blur-md flex items-center justify-between gap-4 shadow-lg hover:border-white/25 transition-all">
+                  <div className="space-y-1">
+                    <div className="text-[11px] font-extrabold uppercase tracking-wider text-amber-300">
+                      Chỉ Số Năng Lực IRT θ₀
+                    </div>
+                    <div className="text-3xl sm:text-4xl font-black text-amber-300 font-mono tracking-tight">
+                      {resultData.theta_0 > 0 ? `+${resultData.theta_0.toFixed(2)}` : resultData.theta_0.toFixed(2)}
+                    </div>
+                    <div className="text-xs font-bold text-slate-300 flex items-center gap-1">
+                      <span>Top ~{resultData.theta_0 >= 1.2 ? '10%' : resultData.theta_0 >= 0.5 ? '25%' : '50%'} thí sinh toàn quốc</span>
+                    </div>
+                  </div>
+                  <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-400/30 flex items-center justify-center text-amber-300 shrink-0">
+                    <Brain className="w-6 h-6 stroke-[2.5]" />
+                  </div>
+                </div>
+
+                {/* 3. Placement Class */}
+                <div className="p-5 rounded-2xl bg-white/10 border border-white/15 backdrop-blur-md flex items-center justify-between gap-4 shadow-lg hover:border-white/25 transition-all">
+                  <div className="space-y-1">
+                    <div className="text-[11px] font-extrabold uppercase tracking-wider text-cyan-300">
+                      Phân Lớp Đề Xuất
+                    </div>
+                    <div className="text-base sm:text-lg font-black text-white leading-tight">
+                      {resultData.placement_class === 'BREAKTHROUGH'
+                        ? 'Lớp Bứt Phá (900+)'
+                        : resultData.placement_class === 'ACCELERATION'
+                          ? 'Lớp Tăng Tốc (750-900)'
+                          : 'Lớp Nền Tảng (<750)'}
+                    </div>
+                    <div className="text-xs font-semibold text-slate-300">
+                      {resultData.placement_class === 'BREAKTHROUGH'
+                        ? 'Chinh phục ĐHQG-HCM 900+'
+                        : resultData.placement_class === 'ACCELERATION'
+                          ? 'Tập trung bứt phá câu VDC'
+                          : 'Củng cố nền tảng kiến thức'}
+                    </div>
+                  </div>
+                  <div className="w-12 h-12 rounded-2xl bg-cyan-500/20 border border-cyan-400/30 flex items-center justify-center text-cyan-300 shrink-0">
+                    <Award className="w-6 h-6 stroke-[2.5]" />
+                  </div>
+                </div>
+
               </div>
+
             </div>
           </div>
 
           {/* ===================================================================== */}
           {/* PHÂN TÍCH TỐC ĐỘ & CHIẾN THUẬT LÀM BÀI (PACING ANALYSIS)              */}
           {/* ===================================================================== */}
-          <div className="p-6 bg-white border border-slate-200/90 rounded-3xl shadow-xl space-y-5 text-slate-900">
+          <div className="p-6 sm:p-7 bg-white border border-slate-200/90 rounded-3xl shadow-xl space-y-5 text-slate-900">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
               <div className="flex items-center gap-2.5 text-base font-black text-slate-900">
                 <Gauge className="w-5 h-5 text-amber-500" />
                 <span>Phân Tích Tốc Độ & Chiến Thuật Làm Bài (Pacing Analysis)</span>
               </div>
               <div className="text-xs text-slate-500 font-medium">
-                Tổng thời gian làm bài: <strong className="text-slate-900 font-mono font-bold">{formatTime(resultData.pacing?.totalTimeSpent || 0)}</strong>
+                Tổng thời gian làm bài: <strong className="text-slate-900 font-mono font-bold">{formatTime(resultData.pacing?.totalTimeSpent || 0)}</strong> / 45:00
               </div>
             </div>
 
-            {/* 4 Cards: Fast / Normal / Slow / Flagged */}
+            {/* 4 Speedometer Cards: Fast / Normal / Slow / Average */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
 
               {/* Average Time */}
-              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-1.5">
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-1.5 hover:shadow-sm transition-all">
                 <div className="flex items-center justify-between text-xs text-slate-600 font-bold">
                   <span>Thời Gian Trung Bình</span>
                   <Clock className="w-4 h-4 text-blue-600" />
                 </div>
-                <div className="text-2xl font-black text-slate-900">
+                <div className="text-2xl font-black text-slate-900 font-mono">
                   {resultData.pacing?.avgTimePerQ || 0}<span className="text-xs font-semibold text-slate-500">s / câu</span>
                 </div>
-                <div className="text-[11px] text-blue-700 font-semibold">Nhịp độ tiêu chuẩn V-ACT</div>
+                <div className="text-[11px] text-blue-700 font-semibold">Nhịp độ tiêu chuẩn V-ACT (90s)</div>
               </div>
 
               {/* Fast (<25s) */}
-              <div className="p-4 rounded-2xl bg-emerald-50/60 border border-emerald-200 space-y-1.5">
+              <div className="p-4 rounded-2xl bg-emerald-50/60 border border-emerald-200 space-y-1.5 hover:shadow-sm transition-all">
                 <div className="flex items-center justify-between text-xs text-emerald-700 font-bold">
-                  <span>Làm Nhanh (&lt;25s)</span>
+                  <span>Phản Xạ Nhanh (&lt;25s)</span>
                   <Zap className="w-4 h-4 text-emerald-600" />
                 </div>
-                <div className="text-2xl font-black text-emerald-900">
+                <div className="text-2xl font-black text-emerald-900 font-mono">
                   {resultData.pacing?.fastCount || 0}<span className="text-xs font-semibold text-slate-500"> câu</span>
                 </div>
                 <div className="text-[11px] text-emerald-700 font-semibold">Phản xạ nhạy bén ở câu quen thuộc</div>
               </div>
 
               {/* Normal (25-90s) */}
-              <div className="p-4 rounded-2xl bg-blue-50/60 border border-blue-200 space-y-1.5">
+              <div className="p-4 rounded-2xl bg-blue-50/60 border border-blue-200 space-y-1.5 hover:shadow-sm transition-all">
                 <div className="flex items-center justify-between text-xs text-blue-700 font-bold">
                   <span>Chuẩn Nhịp Độ (25-90s)</span>
                   <CheckSquare className="w-4 h-4 text-blue-600" />
                 </div>
-                <div className="text-2xl font-black text-blue-900">
+                <div className="text-2xl font-black text-blue-900 font-mono">
                   {resultData.pacing?.normalCount || 0}<span className="text-xs font-semibold text-slate-500"> câu</span>
                 </div>
                 <div className="text-[11px] text-blue-700 font-semibold">Kiểm soát tiến độ 45 phút tối ưu</div>
               </div>
 
               {/* Slow (>90s) */}
-              <div className="p-4 rounded-2xl bg-amber-50/60 border border-amber-200 space-y-1.5">
+              <div className="p-4 rounded-2xl bg-amber-50/60 border border-amber-200 space-y-1.5 hover:shadow-sm transition-all">
                 <div className="flex items-center justify-between text-xs text-amber-800 font-bold">
                   <span>Tốn Nhiều Thời Gian (&gt;90s)</span>
                   <AlertTriangle className="w-4 h-4 text-amber-600" />
                 </div>
-                <div className="text-2xl font-black text-amber-900">
+                <div className="text-2xl font-black text-amber-900 font-mono">
                   {resultData.pacing?.slowCount || 0}<span className="text-xs font-semibold text-slate-500"> câu</span>
                 </div>
                 <div className="text-[11px] text-amber-800 font-semibold">
-                  {resultData.pacing?.slowCount > 4 ? 'Cần tránh sa lầy ở câu khó' : 'Phân bổ an toàn'}
+                  {resultData.pacing?.slowCount > 4 ? 'Cần cải thiện tốc độ câu khó' : 'Phân bổ thời gian an toàn'}
                 </div>
               </div>
+
             </div>
           </div>
 
@@ -1651,7 +1748,7 @@ Hãy đóng vai Gia sư AI Socratic: KHÔNG TIẾT LỘ ĐÁP ÁN TRỰC TIẾP,
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
             {/* Left: Recharts 5-Axis Radar Chart */}
-            <div className="lg:col-span-6 p-6 bg-white border border-slate-200/90 rounded-3xl shadow-xl space-y-4 text-slate-900">
+            <div className="lg:col-span-6 p-6 sm:p-7 bg-white border border-slate-200/90 rounded-3xl shadow-xl space-y-4 text-slate-900">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <div className="flex items-center gap-2 text-sm font-black text-slate-900">
                   <BarChart3 className="w-4 h-4 text-blue-600" />
@@ -1689,13 +1786,13 @@ Hãy đóng vai Gia sư AI Socratic: KHÔNG TIẾT LỘ ĐÁP ÁN TRỰC TIẾP,
             <div className="lg:col-span-6 flex flex-col space-y-5">
 
               {/* AI Socratic Commentary Box */}
-              <div className="p-6 bg-purple-50 border border-purple-200 rounded-3xl shadow-xl space-y-3 text-slate-900">
+              <div className="p-6 bg-gradient-to-br from-purple-50/90 to-indigo-50/80 border border-purple-200/80 rounded-3xl shadow-xl space-y-3 text-slate-900">
                 <div className="flex items-center gap-2 text-sm font-black text-purple-900">
                   <Bot className="w-4 h-4 text-purple-600" />
                   <span>Lời Khuyên Sư Phạm Từ Cố Vấn AI (Gemini Commentary)</span>
                 </div>
-                <p className="text-xs sm:text-sm text-slate-800 leading-relaxed italic bg-white p-4 rounded-2xl border border-purple-200 shadow-sm">
-                  "{resultData.ai_commentary || 'Thí sinh thể hiện năng lực đồng đều ở các lĩnh vực. Hãy tập trung củng cố các kỹ năng vận dụng cao để bứt phá mục tiêu điểm số.'}"
+                <p className="text-xs sm:text-sm text-slate-800 leading-relaxed italic bg-white p-4 rounded-2xl border border-purple-200 shadow-xs">
+                  "{resultData.ai_commentary || 'Thí sinh thể hiện tư duy nhạy bén và phân bổ thời gian hợp lý. Hãy tiếp tục củng cố các kỹ năng vận dụng cao để bứt phá mục tiêu điểm số 900+.'}"
                 </p>
               </div>
 
@@ -1795,10 +1892,10 @@ Hãy đóng vai Gia sư AI Socratic: KHÔNG TIẾT LỘ ĐÁP ÁN TRỰC TIẾP,
                   <div
                     key={q.id}
                     className={`p-5 sm:p-6 rounded-2xl border transition-all space-y-4 ${q.isCorrect
-                      ? 'bg-emerald-50/40 border-emerald-200'
+                      ? 'bg-emerald-50/30 border-emerald-200'
                       : isSelected
-                        ? 'bg-rose-50/40 border-rose-200'
-                        : 'bg-slate-50 border-slate-200'
+                        ? 'bg-rose-50/30 border-rose-200'
+                        : 'bg-slate-50/80 border-slate-200'
                       }`}
                   >
                     {/* Question Card Header */}
@@ -1930,31 +2027,21 @@ Hãy đóng vai Gia sư AI Socratic: KHÔNG TIẾT LỘ ĐÁP ÁN TRỰC TIẾP,
             </div>
           </div>
 
-          {/* Action buttons */}
+          {/* Bottom Action buttons */}
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-slate-200">
             <button
               type="button"
-              onClick={() => {
-                const sample = generateDefault30DiagnosticQuestions();
-                setExamData(sample);
-                setQuestions(sample.questions);
-                setCurrentIndex(0);
-                setAnswers({});
-                setFlagged({});
-                setTimeSpentPerQ({});
-                setTimeRemaining(45 * 60);
-                setStage('testing');
-              }}
-              className="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-extrabold text-xs flex items-center justify-center gap-2 transition-all shadow-sm"
+              onClick={handleRetakeExam}
+              className="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-extrabold text-xs flex items-center justify-center gap-2 transition-all shadow-sm active:scale-95"
             >
               <RefreshCw className="w-4 h-4 text-blue-600" />
-              <span>Khảo Sát Đề Mới Khác</span>
+              <span>Khảo Sát Đề Mới Khác (Reset Cảnh Báo)</span>
             </button>
 
             <button
               type="button"
-              onClick={onNavigateDashboard}
-              className="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:opacity-90 text-white font-black text-xs flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20 transition-all"
+              onClick={handleReturnDashboard}
+              className="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:opacity-90 text-white font-black text-xs flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20 transition-all active:scale-95"
             >
               <span>Vào Lộ Trình Học Tập Cá Nhân Hóa (Dashboard)</span>
               <ArrowRight className="w-4 h-4" />
@@ -2054,10 +2141,29 @@ Hãy đóng vai Gia sư AI Socratic: KHÔNG TIẾT LỘ ĐÁP ÁN TRỰC TIẾP,
 
             {/* Code Input Section */}
             <div className="space-y-2">
-              <label className="text-xs font-black uppercase text-slate-600 flex items-center gap-1.5">
-                <Target className="w-4 h-4 text-purple-600" />
-                <span>Nhập Mã Code Bảo Mật Để Vào Phòng Thi:</span>
-              </label>
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <label className="text-xs font-black uppercase text-slate-600 flex items-center gap-1.5">
+                  <Target className="w-4 h-4 text-purple-600" />
+                  <span>Nhập Mã Code Vào Phòng Thi:</span>
+                </label>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[11px] text-slate-500 font-medium">Mã demo:</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setModalAccessCode(selectedExamForModal.defaultCode);
+                      setModalCodeError('');
+                      handleCopyCode(selectedExamForModal.defaultCode);
+                    }}
+                    className="px-2.5 py-1 rounded-xl bg-purple-100 hover:bg-purple-200 text-purple-900 font-mono text-xs font-black border border-purple-300 transition-all flex items-center gap-1.5 shadow-xs active:scale-95"
+                    title="Bấm để tự điền mã và sao chép"
+                  >
+                    <Copy className="w-3.5 h-3.5" />
+                    <span>{selectedExamForModal.defaultCode}</span>
+                    <span className="text-[10px] text-purple-700 font-sans font-bold">({copiedCode === selectedExamForModal.defaultCode ? 'Đã chép!' : 'Tự điền'})</span>
+                  </button>
+                </div>
+              </div>
 
               <input
                 type="text"
@@ -2066,7 +2172,7 @@ Hãy đóng vai Gia sư AI Socratic: KHÔNG TIẾT LỘ ĐÁP ÁN TRỰC TIẾP,
                   setModalAccessCode(e.target.value.toUpperCase());
                   setModalCodeError('');
                 }}
-                placeholder="Nhập mã phòng thi do Giáo viên cung cấp (Vd: VACT2026, HCM120...)"
+                placeholder={`Nhập mã phòng thi (Vd: ${selectedExamForModal.defaultCode})...`}
                 className="w-full py-3.5 px-4 rounded-2xl bg-slate-50 border border-slate-300 font-mono text-base font-black text-slate-900 uppercase tracking-widest focus:bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all placeholder:font-sans placeholder:font-normal placeholder:tracking-normal placeholder:text-xs"
               />
 
@@ -2134,46 +2240,79 @@ Hãy đóng vai Gia sư AI Socratic: KHÔNG TIẾT LỘ ĐÁP ÁN TRỰC TIẾP,
           <div className="max-w-md w-full bg-white border-2 border-rose-500 rounded-3xl p-6 sm:p-8 space-y-6 text-center shadow-2xl relative overflow-hidden text-slate-900">
 
             {/* Top Glowing Red Icon */}
-            <div className="w-16 h-16 rounded-2xl bg-rose-100 text-rose-600 border border-rose-200 flex items-center justify-center mx-auto animate-bounce">
+            <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mx-auto ${
+              tabSwitchCount >= 3
+                ? 'bg-rose-600 text-white animate-pulse shadow-lg shadow-rose-600/40'
+                : 'bg-rose-100 text-rose-600 border border-rose-200 animate-bounce'
+            }`}>
               <ShieldAlert className="w-8 h-8 stroke-[2.5]" />
             </div>
 
             <div className="space-y-2">
-              <span className="px-3 py-1 rounded-full bg-rose-100 text-rose-800 text-[10px] font-black uppercase tracking-wider border border-rose-200">
-                ⚠️ Giám Sát Phòng Thi Azota Proctored
+              <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${
+                tabSwitchCount >= 3
+                  ? 'bg-rose-600 text-white border-rose-700'
+                  : 'bg-rose-100 text-rose-800 border border-rose-200'
+              }`}>
+                {tabSwitchCount >= 3 ? '⛔ ĐÃ KHÓA BÀI THI DO VI PHẠM' : `⚠️ Giám Sát Phòng Thi Azota Proctored (Lần ${tabSwitchCount}/3)`}
               </span>
               <h2 className="text-xl font-black text-slate-900">
-                Phát Hiện Vi Phạm Quy Chế Bài Thi!
+                {tabSwitchCount >= 3
+                  ? 'Vi Phạm Quá 3 Lần - Bài Thi Bị Khóa!'
+                  : 'Phát Hiện Vi Phạm Quy Chế Bài Thi!'}
               </h2>
               <p className="text-xs text-slate-600 leading-relaxed">
-                {violationReason === 'tab_switch'
-                  ? 'Hệ thống vừa phát hiện bạn chuyển tab trình duyệt hoặc rời khỏi cửa sổ màn hình làm bài!'
-                  : 'Hệ thống vừa phát hiện bạn thoát khỏi Chế độ Toàn Màn Hình bài thi!'}
+                {tabSwitchCount >= 3
+                  ? 'Bạn đã rời khỏi màn hình hoặc chuyển tab 3 lần. Để đảm bảo tính công bằng và nghiêm túc, bài làm của bạn đã bị khóa và đang được tự động gửi đến hội đồng chấm điểm!'
+                  : violationReason === 'tab_switch'
+                    ? 'Hệ thống vừa phát hiện bạn chuyển tab trình duyệt hoặc rời khỏi cửa sổ màn hình làm bài!'
+                    : 'Hệ thống vừa phát hiện bạn thoát khỏi Chế độ Toàn Màn Hình bài thi!'}
               </p>
             </div>
 
             {/* Counter Box */}
-            <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 font-mono text-sm text-rose-800 flex items-center justify-center gap-2">
+            <div className={`p-4 rounded-2xl border font-mono text-sm flex items-center justify-center gap-2 ${
+              tabSwitchCount >= 3
+                ? 'bg-rose-100 border-rose-300 text-rose-900'
+                : 'bg-rose-50 border-rose-200 text-rose-800'
+            }`}>
               <span>Số lần rời màn hình:</span>
-              <strong className="text-rose-600 text-lg font-black">{tabSwitchCount} / 3</strong>
+              <strong className="text-rose-600 text-lg font-black">{Math.min(tabSwitchCount, 3)} / 3</strong>
             </div>
 
-            <div className="text-[11px] text-amber-800 bg-amber-50 p-3 rounded-xl border border-amber-200 leading-relaxed">
-              💡 <strong>Lưu ý:</strong> Kết quả bài khảo sát được dùng để chẩn đoán năng lực IRT $\theta_0$ và lập lộ trình cá nhân hóa. Vui lòng tập trung làm bài nghiêm túc.
+            <div className={`text-[11px] p-3 rounded-xl border leading-relaxed ${
+              tabSwitchCount >= 3
+                ? 'bg-rose-50 text-rose-900 border-rose-200 font-semibold animate-pulse'
+                : 'bg-amber-50 text-amber-800 border-amber-200'
+            }`}>
+              {tabSwitchCount >= 3
+                ? '⏳ Hệ thống đang tự động nộp bài và tính điểm năng lực IRT θ₀ trong giây lát...'
+                : '💡 Lưu ý: Nếu tiếp tục rời màn hình đủ 3 lần, bài thi sẽ bị TỰ ĐỘNG KHÓA VÀ NỘP BÀI NGAY LẬP TỨC!'}
             </div>
 
-            {/* Return Action Button */}
-            <button
-              type="button"
-              onClick={() => {
-                setShowViolationModal(false);
-                requestFullScreenMode();
-              }}
-              className="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-rose-600 via-rose-500 to-amber-500 text-white font-black text-sm shadow-xl shadow-rose-600/30 hover:opacity-95 active:scale-95 transition-all flex items-center justify-center gap-2"
-            >
-              <Eye className="w-4 h-4" />
-              <span>Quay Lại Toàn Màn Hình & Tiếp Tục Làm Bài</span>
-            </button>
+            {/* Action Buttons */}
+            {tabSwitchCount >= 3 ? (
+              <button
+                type="button"
+                onClick={executeSubmitExam}
+                className="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-rose-600 via-rose-500 to-amber-600 text-white font-black text-sm shadow-xl shadow-rose-600/30 hover:opacity-95 active:scale-95 transition-all flex items-center justify-center gap-2"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                <span>Nộp Bài & Chấm Điểm Ngay</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  setShowViolationModal(false);
+                  requestFullScreenMode();
+                }}
+                className="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-rose-600 via-rose-500 to-amber-500 text-white font-black text-sm shadow-xl shadow-rose-600/30 hover:opacity-95 active:scale-95 transition-all flex items-center justify-center gap-2"
+              >
+                <Eye className="w-4 h-4" />
+                <span>Quay Lại Toàn Màn Hình & Tiếp Tục Làm Bài</span>
+              </button>
+            )}
 
           </div>
         </div>

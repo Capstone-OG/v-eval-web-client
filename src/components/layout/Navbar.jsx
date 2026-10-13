@@ -6,6 +6,11 @@ export default function Navbar({ activeRole, setActiveRole, currentUser, onLogou
   const [selectedCampus, setSelectedCampus] = useState(mockUser.campusId);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
 
+  const savedTheta = localStorage.getItem('veval_theta_0');
+  const thetaDisplay = savedTheta 
+    ? (parseFloat(savedTheta) > 0 ? `+${parseFloat(savedTheta).toFixed(2)}` : parseFloat(savedTheta).toFixed(2)) 
+    : '+0.65';
+
   const currentCampusObj = campusesList.find(c => c.id === selectedCampus) || campusesList[0];
   const displayName = currentUser?.fullName || mockUser.name;
   const displayEmail = currentUser?.email || mockUser.email;
@@ -51,7 +56,7 @@ export default function Navbar({ activeRole, setActiveRole, currentUser, onLogou
           {/* IRT Psychometrics Live Status Badge */}
           <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-slate-900 border border-slate-800 rounded-xl text-white font-mono text-xs font-bold shadow-sm">
             <Award className="w-3.5 h-3.5 text-blue-400 shrink-0" />
-            <span>Theta 0: <strong className="text-emerald-400">+0.65</strong> <span className="text-slate-400 font-sans font-normal">(82% Bách Khoa)</span></span>
+            <span>Theta 0: <strong className="text-emerald-400">{thetaDisplay}</strong> <span className="text-slate-400 font-sans font-normal">(82% Bách Khoa)</span></span>
           </div>
 
           {/* Campus Selector */}

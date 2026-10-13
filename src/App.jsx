@@ -30,6 +30,7 @@ export default function App() {
   const [activeRole, setActiveRole] = useState('student');
   const [activeTab, setActiveTab] = useState('dashboard');
   const [currentUser, setCurrentUser] = useState(null);
+  const [isExamActive, setIsExamActive] = useState(false);
   
   // Modals
   const [isArchModalOpen, setIsArchModalOpen] = useState(false);
@@ -160,30 +161,34 @@ export default function App() {
         <div className="min-h-screen flex flex-col bg-[#F4F7FC] text-slate-900">
           
           {/* Top Sticky Header */}
-          <Navbar 
-            activeRole={activeRole}
-            setActiveRole={setActiveRole}
-            currentUser={currentUser}
-            onLogout={handleLogout}
-            onOpenAuthModal={() => setCurrentPage('login')}
-            onOpenArchModal={() => setIsArchModalOpen(true)}
-          />
+          {!isExamActive && (
+            <Navbar 
+              activeRole={activeRole}
+              setActiveRole={setActiveRole}
+              currentUser={currentUser}
+              onLogout={handleLogout}
+              onOpenAuthModal={() => setCurrentPage('login')}
+              onOpenArchModal={() => setIsArchModalOpen(true)}
+            />
+          )}
 
           {/* Main Content Body (Sidebar + Scrollable Main View) */}
           <div className="flex-1 flex w-full">
             
             {/* Left Sticky Sidebar */}
-            <Sidebar 
-              activeTab={activeTab}
-              setActiveTab={setActiveTab}
-              activeRole={activeRole}
-              onOpenDiagnostic={() => setActiveTab('diagnostic')}
-              onOpenZPD={() => setIsZpdModalOpen(true)}
-              onOpenAiTutor={() => setIsZpdModalOpen(true)}
-            />
+            {!isExamActive && (
+              <Sidebar 
+                activeTab={activeTab}
+                setActiveTab={setActiveTab}
+                activeRole={activeRole}
+                onOpenDiagnostic={() => setActiveTab('diagnostic')}
+                onOpenZPD={() => setIsZpdModalOpen(true)}
+                onOpenAiTutor={() => setIsZpdModalOpen(true)}
+              />
+            )}
 
             {/* Main Content Area */}
-            <main className="flex-1 p-4 lg:p-8 pb-16 lg:pb-24 min-w-0 max-w-[1700px] w-full mx-auto">
+            <main className={`flex-1 min-w-0 w-full ${isExamActive ? 'p-0 max-w-none' : activeTab === 'diagnostic' ? 'px-4 lg:px-8 pt-2 sm:pt-3 pb-16 lg:pb-24 max-w-[1700px] mx-auto' : 'p-4 lg:p-8 pb-16 lg:pb-24 max-w-[1700px] mx-auto'}`}>
               
               {/* Toast Alert */}
               {toastMsg && (
@@ -235,12 +240,19 @@ export default function App() {
                 </div>
               )}
 
-              {/* Student Diagnostic Exam List View (Rendered inside Dashboard shell with Sidebar & Navbar intact) */}
+              {/* Student Diagnostic Exam List View (Rendered full-screen during exam, or inside lobby) */}
               {activeTab === 'diagnostic' && (
                 <DiagnosticAssessmentPage 
-                  isEmbedded={true}
-                  onNavigateDashboard={() => setActiveTab('dashboard')}
-                  onNavigateHome={() => setCurrentPage('landing')}
+                  isEmbedded={!isExamActive}
+                  onExamStateChange={setIsExamActive}
+                  onNavigateDashboard={() => {
+                    setIsExamActive(false);
+                    setActiveTab('dashboard');
+                  }}
+                  onNavigateHome={() => {
+                    setIsExamActive(false);
+                    setCurrentPage('landing');
+                  }}
                 />
               )}
 
@@ -254,10 +266,12 @@ export default function App() {
           </div>
 
           {/* Full-Width Footer (Spans 100% horizontal width across bottom) */}
-          <PublicFooter 
-            onOpenLogin={() => setCurrentPage('login')}
-            onOpenDiagnostic={() => setActiveTab('diagnostic')}
-          />
+          {!isExamActive && (
+            <PublicFooter 
+              onOpenLogin={() => setCurrentPage('login')}
+              onOpenDiagnostic={() => setActiveTab('diagnostic')}
+            />
+          )}
 
         </div>
       )}

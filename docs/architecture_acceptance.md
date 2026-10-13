@@ -63,6 +63,7 @@ V-Eval-Web_Client/
 - Evaluates student ability across 5 core evaluation domains (Mathematics, Logic Reasoning, Language Arts, Natural Sciences, Social Sciences).
 - Employs 2-Parameter Logistic (IRT 2PL) probability scoring and Bayesian Knowledge Tracing initial mastery estimation `P(L_0)`.
 - Generates 5-axis Recharts Radar Chart and pedagogically calibrated Socratic AI Commentary.
+- Features secure exam room entry with proctored passcodes (`VACT2026`, `HCM120`, `LOGIC15`) and interactive 1-click Auto-fill & Copy helpers for demo testing workflows.
 
 ### 4.2. Flow 2: Dynamic Learning Roadmap (Kahn Topo & FSM)
 - Visualized in `HeroBanner.jsx` and `MilestoneCard.jsx`.

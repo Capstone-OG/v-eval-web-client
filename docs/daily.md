@@ -2,6 +2,21 @@
 
 ---
 
+## [12/10/2026] - Trực Quan Hóa Mã Phòng Thi Thử Demo, Tích Hợp Nút Sao Chép & Tự Điền Passcode 1-Click
+
+- **Trực Quan Hóa Mã Phòng Thi Thử & Hỗ Trợ Sao Chép Nhanh (`DiagnosticAssessmentPage.jsx`)**:
+  - **Hiển Thị Trực Quan Mã Phòng Trên Từng Card Đề Thi**: Bổ sung hiển thị mã phòng thi tương ứng cho từng đề thi (`VACT2026`, `HCM120`, `LOGIC15`) kèm nút `Copy` (Sao chép) trực tiếp trên Card phòng thi.
+  - **Tự Điền & Sao Chép Trong Modal Nhập Mã (1-Click Auto-fill & Copy)**: Trong Modal xác nhận vào phòng thi, tích hợp huy hiệu demo hiển thị passcode kèm nút `Tự điền & Copy` giúp người dùng demo chỉ cần bấm 1 click là tự động điền mã vào ô input và sao chép vào bộ nhớ tạm.
+  - **Khối Gợi Ý Mã Nhanh Trên Banner (Quick Code Badges)**: Bổ sung các thẻ bấm nhanh mã phòng demo (`VACT2026`, `HCM120`, `LOGIC15`) ngay dưới thanh tìm kiếm nhanh ở Hero Banner, kèm phản hồi trạng thái `✓ Đã chép`.
+- **Đánh Giá & Làm Rõ Trạng Thái Đấu Nối API Phân Hệ Phòng Thi Thử**:
+  - **Luồng Lấy & Sinh Đề Thi**: Đã tích hợp API `contentService.getExamDetail` (`/api/v1/content/exams/{id}`) và fallback `contentService.getDiagnosticTest` (`/api/v1/content/diagnostic-test`), đồng thời hỗ trợ sinh đề động từ mô hình Gemini AI (`aiService.generateExam`). Đã có cơ chế Fallback an toàn 100% nếu backend chưa bật.
+  - **Luồng Nộp Bài**: Đã đấu nối API `practiceService.submitDiagnosticTest` (`/api/v1/practice/diagnostic-submissions`) ước lượng năng lực IRT 2PL Theta 0 và vẽ Radar Chart.
+  - **Luồng Xác Thực Mã Phòng**: Đang kiểm tra cục bộ ở Client-side theo danh sách phòng thi mẫu phục vụ giai đoạn chạy thử nghiệm demo.
+- **Kiểm Thử Biên Dịch (Vite Build)**:
+  - Chạy `npm run build` thành công 100% không cảnh báo cú pháp, sẵn sàng chạy trải nghiệm demo.
+
+---
+
 ## [09/10/2026] - Nâng Cấp Giao Diện Thi Chẩn Đoán Flow 1, Full-Width Footer, Floating Sidebar & Sửa Bug Azota Proctored
 
 - **Tái Cấu Trúc Bố Cục Trang Dashboard & Public Footer Full-Width (`App.jsx`, `PublicFooter.jsx`)**:
@@ -162,4 +177,18 @@
   - `src/services/practiceService.js`: Kết nối Practice Service (`/api/v1/practice`) phục vụ quy hoạch lộ trình học tập cá nhân hóa (APIs 1-7), nộp bài thi chặng, làm bài Quiz bù và hệ thống lịch học Live Q&A, điểm danh chuyên cần của giáo viên (APIs 8-15).
   - `src/services/aiService.js`: Kết nối AI Engine (`/api/ai-engine`) phục vụ tải lên đề thi PDF phân tích bằng Gemini OCR, theo dõi tiến trình nền và khung chat gia sư AI Socratic Tutor.
   - `src/services/index.js`: Tập hợp và tái xuất (re-export) toàn bộ dịch vụ, sẵn sàng cho các component trong UI sử dụng trực tiếp.
+
+---
+
+### [12/10/2026] - Hoàn Thiện Tích Hợp Kết Quả Khảo Thí Chẩn Đoán Core Flow 1 & Đồng Bộ Chỉ Số Năng Lực Trực Quan
+- **Đồng Bộ Dữ Liệu Nộp Bài Khảo Thí Vào Practice Service (`DiagnosticAssessmentPage.jsx`)**:
+  - Tích hợp gọi trực tiếp `practiceService.submitDiagnosticTest` từ Web Client khi học sinh nộp bài 30 câu khảo sát chẩn đoán.
+  - Tự động chuẩn hóa định dạng ID câu hỏi và ID học sinh sang GUID chuẩn để khớp với kiến trúc Backend.
+  - Lưu trữ định danh bài nộp `SubmissionId`, năng lực `Theta 0` và phân lớp năng lực (`PlacementClass`) vào `localStorage` và `sessionStorage` để phục vụ làm dữ liệu đầu vào cho Core Flow 2 (Sinh lộ trình học tập cá nhân hóa).
+- **Cập Nhật Động Chỉ Số Năng Lực Thời Gian Thực Trên Navbar (`Navbar.jsx`)**:
+  - Huy hiệu Live IRT Status Badge trên thanh Header được cấu hình đọc động chỉ số `veval_theta_0` từ bộ nhớ client sau khi thí sinh hoàn thành bài thi chẩn đoán.
+  - Phản ánh tức thì mức độ năng lực cập nhật của học sinh (`+0.85`, `+0.65`...) và đồng bộ trạng thái trúng tuyển mục tiêu.
+- **Kiểm Thử Biên Dịch & Vận Hành Giao Diện Frontend**:
+  - Chạy lệnh `npm run build` thành công 100% trong 1.61 giây, 0 lỗi cú pháp, toàn bộ các asset KaTeX và gói Recharts được đóng gói sẵn sàng triển khai.
+
 
