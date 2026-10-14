@@ -15,21 +15,14 @@ import {
   Layers, 
   ChevronRight,
   HelpCircle,
-  Check
+  Check,
+  Target
 } from 'lucide-react';
 import { practiceService } from '../../services/practiceService';
 import MathText from '../common/MathText';
 
 export default function AISocraticTutorModal({ isOpen, onClose, initialContext = null }) {
-  const [messages, setMessages] = useState([
-    {
-      sender: 'ai',
-      text: 'Chào em! Thầy là **AI Socratic Tutor**. Thầy sẽ không giải bài thay em hay đưa ra đáp án sẵn, mà sẽ đặt câu hỏi gợi mở từng bước để em tự tìm ra hướng giải đúng.\n\nEm đang gặp khó khăn ở bài tập hay chuyên đề nào?',
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      archetype: 'Toán logic mệnh đề & suy luận kéo theo',
-      interactionId: null
-    }
-  ]);
+  const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [rateLimitWarning, setRateLimitWarning] = useState(null);
@@ -43,6 +36,33 @@ export default function AISocraticTutorModal({ isOpen, onClose, initialContext =
 
   const abortControllerRef = useRef(null);
   const chatBottomRef = useRef(null);
+
+  // Initialize or reset chat based on initialContext when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      if (initialContext) {
+        const wrongText = initialContext.selectedWrong ? `\n> **Phương án em vừa chọn:** ${initialContext.selectedWrong}` : '';
+        const contextGreeting = {
+          sender: 'ai',
+          text: `Chào em! Thầy nhận thấy em đang luyện tập chuyên đề: **${initialContext.skill || 'Toán logic & Suy luận'}**.\n\n> **Câu hỏi:** ${initialContext.question || ''}${wrongText}\n\nThầy là **AI Socratic Tutor**. Thầy sẽ không giải bài thay em hay đưa ra đáp án sẵn. Em hãy cho thầy biết: **Theo đề bài, dữ kiện nào là quan trọng nhất và vì sao em lại chọn phương án trên?**`,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          archetype: initialContext.skill || 'Toán logic mệnh đề & suy luận kéo theo',
+          interactionId: null
+        };
+        setMessages([contextGreeting]);
+      } else {
+        setMessages([
+          {
+            sender: 'ai',
+            text: 'Chào em! Thầy là **AI Socratic Tutor**. Thầy sẽ không giải bài thay em hay đưa ra đáp án sẵn, mà sẽ đặt câu hỏi gợi mở từng bước để em tự tìm ra hướng giải đúng.\n\nEm đang gặp khó khăn ở bài tập hay chuyên đề nào?',
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            archetype: 'Toán logic mệnh đề & suy luận kéo theo',
+            interactionId: null
+          }
+        ]);
+      }
+    }
+  }, [isOpen, initialContext]);
 
   useEffect(() => {
     if (isOpen) {
@@ -88,7 +108,7 @@ export default function AISocraticTutorModal({ isOpen, onClose, initialContext =
       sender: 'ai',
       text: '',
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      archetype: 'Dạng bài suy luận điều kiện cần & đủ',
+      archetype: initialContext?.skill || 'Dạng bài suy luận điều kiện cần & đủ',
       interactionId: newInteractionId
     };
     setMessages(prev => [...prev, aiMsgPlaceholder]);
@@ -99,9 +119,10 @@ export default function AISocraticTutorModal({ isOpen, onClose, initialContext =
     try {
       await practiceService.askAiTutorStream({
         questionLatex: query,
-        questionId: newInteractionId,
+        questionId: initialContext?.questionId || newInteractionId,
         questionContext: initialContext?.question || null,
         studentWrongOption: initialContext?.selectedWrong || 'A',
+        skillId: initialContext?.skillId || null,
         signal: controller.signal,
         onToken: (token) => {
           setMessages(prev => {
@@ -127,7 +148,7 @@ export default function AISocraticTutorModal({ isOpen, onClose, initialContext =
                 if (!next[lastIdx].text) {
                   next[lastIdx] = {
                     ...next[lastIdx],
-                    text: 'Thầy gặp chút gián đoạn khi kết nối tới đồ thị tri thức. Em hãy xem lại bảng chân trị hoặc viết phương trình liên quan để thử giải nhé!'
+                    text: 'Thầy gặp chút gián đoạn khi kết nối tới đồ thị tri thức. Em hãy xem lại dữ kiện đề bài hoặc viết phương trình liên quan để thử giải nhé!'
                   };
                 }
               }
@@ -163,7 +184,6 @@ export default function AISocraticTutorModal({ isOpen, onClose, initialContext =
         setReportNote('');
       }, 2000);
     } catch (err) {
-      // Vẫn hiển thị xác nhận cho người dùng
       setReportSuccess(true);
       setTimeout(() => {
         setReportSuccess(false);
@@ -175,7 +195,11 @@ export default function AISocraticTutorModal({ isOpen, onClose, initialContext =
     }
   };
 
-  const quickPrompts = [
+  const quickPrompts = initialContext ? [
+    'Vì sao phương án em chọn lại chưa chính xác?',
+    'Gợi ý giúp em bước lập luận đầu tiên',
+    'Em chưa hiểu định lý áp dụng cho câu này'
+  ] : [
     'Thầy gợi mở giúp em hướng tư duy bài này với ạ',
     'Em đang phân vân giữa phương án A và phương án B',
     'Em chưa hiểu vì sao mệnh đề này lại sai?'
@@ -192,13 +216,19 @@ export default function AISocraticTutorModal({ isOpen, onClose, initialContext =
               <Bot className="w-6 h-6 text-cyan-200" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <h2 className="text-base sm:text-lg font-extrabold tracking-tight text-white">
                   Gia Sư AI Socratic Tutor & GraphRAG
                 </h2>
-                <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-[10px] font-bold">
-                  Active 24/7
-                </span>
+                {initialContext ? (
+                  <span className="px-2.5 py-0.5 rounded-full bg-indigo-500/30 text-cyan-300 border border-cyan-400/30 text-[10px] font-bold">
+                    Ngữ cảnh bài tập: {initialContext.skill || 'ZPD Quiz'}
+                  </span>
+                ) : (
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-[10px] font-bold">
+                    Active 24/7
+                  </span>
+                )}
                 <span className="hidden sm:inline-block px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-400/30 text-[10px] font-bold">
                   Rate Limit: 10 req/min
                 </span>
@@ -223,6 +253,27 @@ export default function AISocraticTutorModal({ isOpen, onClose, initialContext =
           {/* Left Column: Chat Window */}
           <div className="flex-1 flex flex-col justify-between border-r border-slate-200/80 bg-slate-50/30 min-w-0">
             
+            {/* Context Sticky Banner if opened from quiz */}
+            {initialContext && (
+              <div className="mx-4 mt-4 p-3 bg-indigo-50/80 border border-indigo-200 rounded-2xl flex items-start justify-between gap-3 shadow-2xs">
+                <div className="space-y-1 text-xs min-w-0">
+                  <div className="flex items-center gap-1.5 font-extrabold text-indigo-950">
+                    <Target className="w-4 h-4 text-indigo-600 shrink-0" />
+                    <span>Đang hỗ trợ câu hỏi bài tập:</span>
+                  </div>
+                  <p className="text-slate-700 line-clamp-2 italic font-medium">
+                    "{initialContext.question}"
+                  </p>
+                  {initialContext.selectedWrong && (
+                    <div className="text-[11px] text-rose-700 font-bold flex items-center gap-1.5 pt-0.5">
+                      <span>Phương án em chọn:</span>
+                      <span className="bg-white px-2 py-0.5 rounded-md border border-rose-200 text-rose-800 font-bold">{initialContext.selectedWrong}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Rate Limit Warning Banner */}
             {rateLimitWarning && (
               <div className="m-4 p-3 bg-amber-50 border border-amber-200 rounded-2xl text-amber-800 text-xs font-semibold flex items-start gap-2.5 shadow-2xs">
@@ -353,10 +404,10 @@ export default function AISocraticTutorModal({ isOpen, onClose, initialContext =
                   <span>Dạng Bài Archetype</span>
                 </div>
                 <p className="text-[11px] text-indigo-900 leading-relaxed font-semibold">
-                  Toán logic mệnh đề & suy luận kéo theo
+                  {initialContext?.skill || 'Toán logic mệnh đề & suy luận kéo theo'}
                 </p>
                 <div className="text-[10px] text-indigo-700/80">
-                  Mã chuẩn: <code className="bg-white px-1.5 py-0.5 rounded border border-indigo-200 font-mono">ARCH_LOGIC_01</code>
+                  Mã chuẩn: <code className="bg-white px-1.5 py-0.5 rounded border border-indigo-200 font-mono">{initialContext?.questionId ? `Q-${initialContext.questionId.substring(0, 8)}` : 'ARCH_LOGIC_01'}</code>
                 </div>
               </div>
             </div>
@@ -429,7 +480,7 @@ export default function AISocraticTutorModal({ isOpen, onClose, initialContext =
               </div>
               <button 
                 onClick={() => setReportingInteraction(null)}
-                className="text-slate-400 hover:text-slate-600"
+                className="text-slate-400 hover:text-slate-600 cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>

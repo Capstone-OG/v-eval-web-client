@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Zap, CheckCircle2, XCircle, ArrowRight, X, Sparkles, AlertCircle, RefreshCw } from 'lucide-react';
+import { Zap, CheckCircle2, XCircle, ArrowRight, X, Sparkles, AlertCircle, RefreshCw, Bot } from 'lucide-react';
+import MathText from '../common/MathText';
 
-export default function AdaptiveQuizModal({ isOpen, onClose }) {
+export default function AdaptiveQuizModal({ isOpen, onClose, onOpenAiTutorWithContext }) {
   const [bktMastery, setBktMastery] = useState(0.72);
   const [consecutiveCorrect, setConsecutiveCorrect] = useState(1);
   const [consecutiveWrong, setConsecutiveWrong] = useState(0);
@@ -17,8 +18,8 @@ export default function AdaptiveQuizModal({ isOpen, onClose }) {
     {
       id: "ZPD-101",
       skill: "Toán logic mệnh đề & suy luận kéo theo",
-      question: "Nếu A kéo theo B (A => B) là đúng, và B là sai, thì ta có thể kết luận gì về A?",
-      options: ["A. A có thể đúng hoặc sai", "B. A bắt buộc phải sai", "C. A bắt buộc phải đúng", "D. Không đủ dữ kiện"],
+      question: "Nếu mệnh đề kéo theo $P \\Rightarrow Q$ là đúng, và $Q$ là sai, thì ta có thể kết luận chắc chắn gì về $P$?",
+      options: ["A. P có thể đúng hoặc sai", "B. P bắt buộc phải sai", "C. P bắt buộc phải đúng", "D. Không đủ dữ kiện"],
       correct: 1,
       difficultyB: 0.15,
       predictedProb: 0.68
@@ -26,7 +27,7 @@ export default function AdaptiveQuizModal({ isOpen, onClose }) {
     {
       id: "ZPD-102",
       skill: "Toán logic mệnh đề & suy luận kéo theo",
-      question: "Cho hệ 3 phát biểu P, Q, R. Nếu P => Q, Q => R và R sai. Phát biểu nào chắc chắn ĐÚNG?",
+      question: "Cho hệ 3 phát biểu $P, Q, R$. Nếu $P \\Rightarrow Q$, $Q \\Rightarrow R$ và $R$ sai. Phát biểu nào chắc chắn ĐÚNG?",
       options: ["A. P đúng", "B. P sai", "C. Q đúng", "D. Cả P và Q đều đúng"],
       correct: 1,
       difficultyB: 0.52, // Application level (b >= 0.50)
@@ -79,6 +80,18 @@ export default function AdaptiveQuizModal({ isOpen, onClose }) {
     }
   };
 
+  const handleAskSocraticTutor = () => {
+    onOpenAiTutorWithContext?.({
+      questionId: currentItem.id,
+      question: currentItem.question,
+      options: currentItem.options,
+      skill: currentItem.skill,
+      selectedWrong: selectedOpt !== null ? currentItem.options[selectedOpt] : null,
+      difficultyB: currentItem.difficultyB,
+      predictedProb: currentItem.predictedProb
+    });
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-fade-in">
       <div className="relative w-full max-w-xl bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col my-auto max-h-[90vh]">
@@ -101,7 +114,7 @@ export default function AdaptiveQuizModal({ isOpen, onClose }) {
 
           <button 
             onClick={onClose}
-            className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-full transition-all"
+            className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-full transition-all cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -138,8 +151,21 @@ export default function AdaptiveQuizModal({ isOpen, onClose }) {
                   </span>
                 </div>
                 <h3 className="text-sm font-extrabold text-slate-900 leading-snug">
-                  {currentItem.question}
+                  <MathText text={currentItem.question} />
                 </h3>
+
+                {/* Socratic quick prompt trigger */}
+                <div className="flex items-center justify-between pt-1 border-t border-slate-200/60">
+                  <span className="text-[10px] text-slate-400 font-medium">Độ khó IRT: b = {currentItem.difficultyB}</span>
+                  <button
+                    type="button"
+                    onClick={handleAskSocraticTutor}
+                    className="text-[11px] font-extrabold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer transition-colors"
+                  >
+                    <Bot className="w-3.5 h-3.5 text-indigo-500" />
+                    <span>Gợi mở tư duy Socratic</span>
+                  </button>
+                </div>
               </div>
 
               {/* Options */}
@@ -149,7 +175,7 @@ export default function AdaptiveQuizModal({ isOpen, onClose }) {
                     key={idx}
                     disabled={feedback !== null}
                     onClick={() => handleAnswerSubmit(idx)}
-                    className={`w-full p-3.5 rounded-2xl text-left text-xs font-bold transition-all flex items-center justify-between border ${
+                    className={`w-full p-3.5 rounded-2xl text-left text-xs font-bold transition-all flex items-center justify-between border cursor-pointer ${
                       selectedOpt === idx 
                         ? idx === currentItem.correct 
                           ? 'bg-emerald-50 border-emerald-500 text-emerald-800' 
@@ -157,7 +183,7 @@ export default function AdaptiveQuizModal({ isOpen, onClose }) {
                         : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50'
                     }`}
                   >
-                    <span>{opt}</span>
+                    <span><MathText text={opt} /></span>
                   </button>
                 ))}
               </div>
@@ -176,11 +202,23 @@ export default function AdaptiveQuizModal({ isOpen, onClose }) {
                 </div>
               )}
 
+              {/* Socratic AI Tutor Contextual Help Button */}
+              {feedback && (
+                <button
+                  type="button"
+                  onClick={handleAskSocraticTutor}
+                  className="w-full py-2.5 px-4 bg-gradient-to-r from-blue-50 via-indigo-50 to-blue-50 hover:from-blue-100 hover:to-indigo-100 border border-blue-200 text-blue-900 font-extrabold text-xs rounded-2xl flex items-center justify-center gap-2 transition-all cursor-pointer shadow-2xs"
+                >
+                  <Bot className="w-4 h-4 text-blue-600 animate-pulse" />
+                  <span>💡 Chưa hiểu bản chất câu này? Hỏi Gia sư Socratic bẻ khóa tư duy</span>
+                </button>
+              )}
+
               {/* Next button */}
               {feedback && (
                 <button
                   onClick={handleNextItem}
-                  className="w-full py-3 bg-amber-600 hover:bg-amber-700 text-white font-extrabold text-xs rounded-2xl shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2 transition-all"
+                  className="w-full py-3 bg-amber-600 hover:bg-amber-700 text-white font-extrabold text-xs rounded-2xl shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2 transition-all cursor-pointer"
                 >
                   <span>Câu tiếp theo trong dải ZPD</span>
                   <ArrowRight className="w-4 h-4" />
@@ -205,7 +243,7 @@ export default function AdaptiveQuizModal({ isOpen, onClose }) {
 
               <button
                 onClick={onClose}
-                className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs rounded-2xl shadow-lg shadow-blue-500/20"
+                className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs rounded-2xl shadow-lg shadow-blue-500/20 cursor-pointer"
               >
                 Trở về Lộ trình Dashboard
               </button>

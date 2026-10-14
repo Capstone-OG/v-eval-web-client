@@ -511,7 +511,7 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
     }
   };
 
-  // 5. Ask Socratic Tutor via SSE Stream
+  // 5. Ask Socratic Tutor via SSE Stream (Core Flow 4)
   const handleAskSocraticTutor = async () => {
     const currentQ = questions[currentIndex];
     if (!currentQ) return;
@@ -526,34 +526,48 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
     const abortController = new AbortController();
     tutorAbortRef.current = abortController;
 
-    const promptText = `Tôi đang làm bài khảo sát năng lực câu hỏi sau:
-"${currentQ.content}"
-Các phương án:
-${currentQ.options.map((opt, i) => `${['A', 'B', 'C', 'D'][i]}. ${opt}`).join('\n')}
+    const optionsDict = {};
+    if (Array.isArray(currentQ.options)) {
+      currentQ.options.forEach((opt, i) => {
+        optionsDict[['A', 'B', 'C', 'D'][i] || `${i}`] = opt;
+      });
+    }
 
-Hãy đóng vai Gia sư AI Socratic: KHÔNG TIẾT LỘ ĐÁP ÁN TRỰC TIẾP, mà hãy gợi ý câu hỏi dẫn dắt từng bước để tôi tự suy nghĩ ra lời giải.`;
+    const studentAttempt = answers[currentQ.id] || 'Chưa chọn phương án';
 
     try {
-      await aiService.askSocraticTutorStream({
-        question: promptText,
-        sessionId: `diag_${currentQ.id}`,
+      await practiceService.askAiTutorStream({
+        questionId: currentQ.id,
+        questionLatex: currentQ.content,
+        options: optionsDict,
+        studentWrongOption: studentAttempt,
+        correctOption: currentQ.correctOption || 'A',
+        skillId: currentQ.skillId || null,
         signal: abortController.signal,
         onToken: (token) => {
           setTutorResponse((prev) => prev + token);
         },
         onError: (err) => {
-          console.warn('Tutor stream error:', err);
-          setTutorResponse(
-            (prev) =>
-              prev +
-              `\n\n[Gợi ý gợi mở]: Để giải quyết câu này, bạn hãy xác định điều kiện xác định và mối liên hệ giữa các dữ kiện đề bài cho!`
-          );
+          if (err.status === 429) {
+            setTutorResponse(
+              (prev) =>
+                prev +
+                `\n\n⚠️ **Cảnh báo Tần suất:** ${err.message}`
+            );
+          } else if (err.name !== 'AbortError') {
+            console.warn('Tutor stream error:', err);
+            setTutorResponse(
+              (prev) =>
+                prev +
+                `\n\n[Gợi ý gợi mở]: Để giải quyết câu này, bạn hãy xác định điều kiện xác định và mối liên hệ giữa các dữ kiện đề bài cho!`
+            );
+          }
         },
         onComplete: () => {
           setTutorStreaming(false);
         }
       });
-    } catch (err) {
+    } catch {
       setTutorStreaming(false);
     }
   };

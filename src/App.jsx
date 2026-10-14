@@ -40,6 +40,12 @@ export default function App() {
   const [isZpdModalOpen, setIsZpdModalOpen] = useState(false);
   const [isRadarModalOpen, setIsRadarModalOpen] = useState(false);
   const [isAiTutorModalOpen, setIsAiTutorModalOpen] = useState(false);
+  const [tutorContext, setTutorContext] = useState(null);
+
+  const handleOpenAiTutor = (context = null) => {
+    setTutorContext(context);
+    setIsAiTutorModalOpen(true);
+  };
 
   // Toast notifications
   const [toastMsg, setToastMsg] = useState(null);
@@ -149,7 +155,7 @@ export default function App() {
               activeRole={activeRole}
               onOpenDiagnostic={() => setCurrentPage('diagnostic')}
               onOpenZPD={() => setIsZpdModalOpen(true)}
-              onOpenAiTutor={() => setIsAiTutorModalOpen(true)}
+              onOpenAiTutor={() => handleOpenAiTutor(null)}
               onOpenProvision={() => setCurrentPage('provision')}
             />
 
@@ -173,7 +179,7 @@ export default function App() {
                     currentUser={currentUser}
                     onStartMilestone={handleContinueMilestone}
                     onStartMockTest={() => setCurrentPage('diagnostic')}
-                    onOpenAiTutor={() => setIsAiTutorModalOpen(true)}
+                    onOpenAiTutor={() => handleOpenAiTutor(null)}
                   />
 
                   {/* 4 Core Metrics Cards */}
@@ -199,7 +205,7 @@ export default function App() {
                     <div className="space-y-6">
                       <LiveQnACard />
                       <AISocraticTutorWidget 
-                        onOpenFullChat={() => setIsAiTutorModalOpen(true)}
+                        onOpenFullChat={() => handleOpenAiTutor(null)}
                       />
                     </div>
 
@@ -283,6 +289,7 @@ export default function App() {
       <AdaptiveQuizModal 
         isOpen={isZpdModalOpen}
         onClose={() => setIsZpdModalOpen(false)}
+        onOpenAiTutorWithContext={(ctx) => handleOpenAiTutor(ctx)}
       />
 
       <RadarChartModal 
@@ -292,7 +299,11 @@ export default function App() {
 
       <AISocraticTutorModal 
         isOpen={isAiTutorModalOpen}
-        onClose={() => setIsAiTutorModalOpen(false)}
+        onClose={() => {
+          setIsAiTutorModalOpen(false);
+          setTutorContext(null);
+        }}
+        initialContext={tutorContext}
       />
 
     </div>

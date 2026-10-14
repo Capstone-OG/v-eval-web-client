@@ -160,6 +160,11 @@ V-Eval-Web_Client/
 - **Two-Column Socratic Dialogue Modal (`AISocraticTutorModal.jsx`)**: Built a comprehensive modal interface featuring guided dialog history, quick question prompts, 3-Hop Subgraph inspection (Archetype patterns, core theorems, misconception traps), and an in-chat student reporting dialog (`POST /api/practice/ai-tutor/report`) for flagging pedagogical violations.
 - **Router Alignment (`App.jsx` & `Sidebar.jsx`)**: Corrected navigation routing so clicking *AI Socratic Tutor* on the sidebar or hero banner opens the dedicated tutor modal instead of erroneously triggering the Flow 3 adaptive quiz modal.
 
+### 4.15. Contextual Socratic Problem-Solving & In-Exam Adaptive Assistance (Phase 2)
+- **ZPD Adaptive Quiz Socratic Hooks (`AdaptiveQuizModal.jsx`)**: Integrated real-time Socratic pedagogical assistance directly into the Flow 3 adaptive practice loop. When a student encounters difficulty or submits an incorrect option, a dedicated action trigger packages the complete question context (`questionId`, `question`, `options`, `skill`, `selectedWrong`, `difficultyB`, `predictedProb`) and transitions seamlessly to the Socratic Tutor.
+- **Dynamic Contextual Dialogue Orchestration (`AISocraticTutorModal.jsx`)**: Configured dynamic context ingestion via `initialContext`. Features an active *Target Context Banner*, initializes targeted Socratic inquiry addressing the student's specific misconception instead of generic greetings, and adapts quick prompts (`quickPrompts`) to focus on step-by-step reasoning and prerequisite theorems.
+- **Diagnostic In-Exam Socratic Modernization (`DiagnosticAssessmentPage.jsx`)**: Refactored `handleAskSocraticTutor` from deprecated legacy endpoints to the unified `practiceService.askAiTutorStream` pipeline via Gateway `:5212`, ensuring seamless Rate Limit compliance (10 req/min) and consistent math rendering during 30-question diagnostic assessments.
+
 ---
 
 ## 5. Verification & Acceptance Criteria
