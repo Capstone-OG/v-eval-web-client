@@ -23,7 +23,8 @@ import {
   RadarChartModal 
 } from './components/modals';
 import { DiagnosticAssessmentPage } from './components/diagnostic';
-import { CheckCircle2, Globe, LogIn, LayoutDashboard, Sparkles, Brain, X } from 'lucide-react';
+import { RoadmapLearningPage } from './components/roadmap';
+import { CheckCircle2, Globe, LogIn, LayoutDashboard, Sparkles, Brain, X, Target, ArrowRight } from 'lucide-react';
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState('landing'); // 'landing' | 'login' | 'dashboard'
@@ -32,6 +33,13 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [isExamActive, setIsExamActive] = useState(false);
   
+  // Direct exam launch & Auth navigation states
+  const [diagnosticAutoStart, setDiagnosticAutoStart] = useState(false);
+  const [loginInitialMode, setLoginInitialMode] = useState('login');
+  const [loginRedirectNotice, setLoginRedirectNotice] = useState(null);
+  const [pendingExamPrompt, setPendingExamPrompt] = useState(null);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
   // Modals
   const [isArchModalOpen, setIsArchModalOpen] = useState(false);
   const [isDiagnosticModalOpen, setIsDiagnosticModalOpen] = useState(false);
@@ -52,6 +60,16 @@ export default function App() {
       else if (roles.some(r => r.toLowerCase().includes('manager') || r.toLowerCase().includes('admin'))) setActiveRole('manager');
       else if (roles.some(r => r.toLowerCase().includes('parent'))) setActiveRole('parent');
       else setActiveRole('student');
+
+      // Check if there is an unfinished exam intent in session
+      try {
+        const rawIntent = sessionStorage.getItem('veval_pending_exam_intent');
+        if (rawIntent) {
+          setPendingExamPrompt(JSON.parse(rawIntent));
+        }
+      } catch (err) {
+        console.warn('Error reading exam intent from session', err);
+      }
     }
   }, []);
 
@@ -61,10 +79,8 @@ export default function App() {
   };
 
   const handleStartTask = (task) => {
-    if (task.type === 'quiz') {
-      setIsZpdModalOpen(true);
-    } else if (task.type === 'video') {
-      showToast(`Đang mở Video bài giảng: "${task.title}"`);
+    if (task.type === 'quiz' || task.type === 'video') {
+      setActiveTab('roadmap');
     } else {
       setIsDiagnosticModalOpen(true);
     }
@@ -76,7 +92,7 @@ export default function App() {
       spread: 60,
       origin: { y: 0.7 }
     });
-    setIsZpdModalOpen(true);
+    setActiveTab('roadmap');
   };
 
   const handleLoginSuccess = (role, userData) => {
@@ -90,6 +106,31 @@ export default function App() {
     const nameDisplay = userData?.user?.fullName || userData?.fullName || '';
     const nameStr = nameDisplay ? ` (${nameDisplay})` : '';
     showToast(`🎉 Đăng nhập thành công! Chào mừng ${roleName}${nameStr} vào hệ thống.`);
+
+    // 1. Check if user completed an exam as guest and just logged in
+    try {
+      const rawResult = sessionStorage.getItem('veval_pending_exam_result');
+      if (rawResult) {
+        const parsed = JSON.parse(rawResult);
+        sessionStorage.removeItem('veval_pending_exam_result');
+        sessionStorage.removeItem('veval_pending_exam_intent');
+        const thetaStr = parsed.theta0 != null ? ` (Theta = ${parsed.theta0 > 0 ? '+' : ''}${Number(parsed.theta0).toFixed(2)})` : '';
+        showToast(`🎉 Đã liên kết kết quả bài khảo sát${thetaStr} vào học bạ cá nhân của bạn!`);
+        return;
+      }
+    } catch (err) {
+      console.warn('Error reading exam result from session', err);
+    }
+
+    // 2. Check if user came from Exam entry popup intent (has not taken exam yet)
+    try {
+      const rawIntent = sessionStorage.getItem('veval_pending_exam_intent');
+      if (rawIntent) {
+        setPendingExamPrompt(JSON.parse(rawIntent));
+      }
+    } catch (err) {
+      console.warn('Error reading exam intent from session', err);
+    }
   };
 
   const handleLogout = async () => {
@@ -102,6 +143,33 @@ export default function App() {
     setCurrentPage('login');
     showToast("👋 Đã đăng xuất thành công khỏi hệ thống!");
   };
+
+  const handleOpenDashboard = () => {
+    const savedUser = tokenStorage.getUser();
+    const token = tokenStorage.getAccessToken();
+    if (!savedUser && !token && !currentUser) {
+      setLoginInitialMode('login');
+      setLoginRedirectNotice('🔒 Khách chưa đăng nhập. Vui lòng đăng nhập hoặc tạo tài khoản để truy cập Bảng điều khiển (Dashboard) và Lộ trình học!');
+      setCurrentPage('login');
+      showToast("🔒 Bạn cần đăng nhập để truy cập Dashboard!");
+      return;
+    }
+    setCurrentPage('dashboard');
+  };
+
+  // Route Guard: Prevent unauthenticated guests from entering dashboard
+  useEffect(() => {
+    if (currentPage === 'dashboard') {
+      const savedUser = tokenStorage.getUser();
+      const token = tokenStorage.getAccessToken();
+      if (!savedUser && !token && !currentUser) {
+        setLoginInitialMode('login');
+        setLoginRedirectNotice('🔒 Khách chưa đăng nhập. Vui lòng đăng nhập để truy cập Dashboard cá nhân hóa!');
+        setCurrentPage('login');
+        showToast("🔒 Khách không thể vào Dashboard. Vui lòng đăng nhập trước!");
+      }
+    }
+  }, [currentPage, currentUser]);
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans selection:bg-blue-600 selection:text-white relative">
@@ -132,12 +200,20 @@ export default function App() {
       {/* PAGE ROUTING */}
       {currentPage === 'landing' && (
         <PublicLandingPage 
-          onOpenLogin={() => setCurrentPage('login')}
-          onOpenDiagnostic={() => {
-            setCurrentPage('dashboard');
-            setActiveTab('diagnostic');
+          onOpenLogin={({ mode, notice } = {}) => {
+            setLoginInitialMode(mode || 'login');
+            setLoginRedirectNotice(notice || null);
+            setCurrentPage('login');
           }}
-          onOpenDashboard={() => setCurrentPage('dashboard')}
+          onOpenDiagnostic={() => {
+            setDiagnosticAutoStart(true);
+            setCurrentPage('diagnostic');
+          }}
+          onStartGuestExam={({ examCode, autoStart } = {}) => {
+            setDiagnosticAutoStart(true);
+            setCurrentPage('diagnostic');
+          }}
+          onOpenDashboard={handleOpenDashboard}
           onOpenArchModal={() => setIsArchModalOpen(true)}
         />
       )}
@@ -145,13 +221,25 @@ export default function App() {
       {currentPage === 'diagnostic' && (
         <DiagnosticAssessmentPage 
           isEmbedded={false}
-          onNavigateDashboard={() => setCurrentPage('dashboard')}
-          onNavigateHome={() => setCurrentPage('landing')}
+          autoStart={diagnosticAutoStart}
+          currentUser={currentUser}
+          onNavigateLogin={() => {
+            setLoginInitialMode('login');
+            setLoginRedirectNotice('🎯 Đăng nhập hoặc tạo tài khoản để lưu kết quả bài khảo sát năng lực 30 câu!');
+            setCurrentPage('login');
+          }}
+          onNavigateDashboard={handleOpenDashboard}
+          onNavigateHome={() => {
+            setDiagnosticAutoStart(false);
+            setCurrentPage('landing');
+          }}
         />
       )}
 
       {currentPage === 'login' && (
         <WebLoginPage 
+          initialMode={loginInitialMode}
+          redirectNotice={loginRedirectNotice}
           onLoginSuccess={handleLoginSuccess} 
           onNavigateHome={() => setCurrentPage('landing')}
         />
@@ -169,13 +257,14 @@ export default function App() {
               onLogout={handleLogout}
               onOpenAuthModal={() => setCurrentPage('login')}
               onOpenArchModal={() => setIsArchModalOpen(true)}
+              onToggleMobileMenu={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
             />
           )}
 
           {/* Main Content Body (Sidebar + Scrollable Main View) */}
           <div className="flex-1 flex w-full">
             
-            {/* Left Sticky Sidebar */}
+            {/* Left Sticky Sidebar (Desktop + Mobile Slide-over Drawer) */}
             {!isExamActive && (
               <Sidebar 
                 activeTab={activeTab}
@@ -184,6 +273,8 @@ export default function App() {
                 onOpenDiagnostic={() => setActiveTab('diagnostic')}
                 onOpenZPD={() => setIsZpdModalOpen(true)}
                 onOpenAiTutor={() => setIsZpdModalOpen(true)}
+                isMobileOpen={isMobileSidebarOpen}
+                onCloseMobile={() => setIsMobileSidebarOpen(false)}
               />
             )}
 
@@ -244,6 +335,7 @@ export default function App() {
               {activeTab === 'diagnostic' && (
                 <DiagnosticAssessmentPage 
                   isEmbedded={!isExamActive}
+                  currentUser={currentUser}
                   onExamStateChange={setIsExamActive}
                   onNavigateDashboard={() => {
                     setIsExamActive(false);
@@ -253,6 +345,14 @@ export default function App() {
                     setIsExamActive(false);
                     setCurrentPage('landing');
                   }}
+                />
+              )}
+
+              {/* Student Personalized Roadmap Learning View (Flow 2: DAG & Topological Milestones) */}
+              {activeTab === 'roadmap' && (
+                <RoadmapLearningPage 
+                  onNavigateDiagnostic={() => setActiveTab('diagnostic')}
+                  onNavigateDashboard={() => setActiveTab('dashboard')}
                 />
               )}
 
@@ -297,6 +397,89 @@ export default function App() {
         isOpen={isRadarModalOpen}
         onClose={() => setIsRadarModalOpen(false)}
       />
+
+      {/* PENDING EXAM RESUME ACTION PROMPT MODAL */}
+      <AnimatePresence>
+        {pendingExamPrompt && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md animate-fade-in">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden text-slate-900"
+            >
+              {/* Top Banner */}
+              <div className="relative overflow-hidden p-6 bg-gradient-to-r from-blue-700 via-indigo-700 to-blue-900 text-white">
+                <div className="absolute top-0 right-0 -mr-12 -mt-12 w-40 h-40 rounded-full bg-blue-400/20 blur-2xl pointer-events-none"></div>
+                <div className="relative z-10 flex items-start justify-between gap-4">
+                  <div className="space-y-1.5">
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 border border-white/20 text-[11px] font-black text-[#FACC15] uppercase tracking-wider">
+                      <Sparkles className="w-3.5 h-3.5 text-[#FACC15]" />
+                      <span>Nhắc Nhở Khảo Thí</span>
+                    </div>
+                    <h3 className="text-xl font-black text-white leading-snug">
+                      Sẵn Sàng Làm Bài Khảo Sát Đầu Vào?
+                    </h3>
+                    <p className="text-xs text-blue-100 font-medium">
+                      Chào mừng {currentUser?.fullName || 'bạn'}! Bạn đã đăng nhập thành công. Hãy tiếp tục làm bài thi để lưu kết quả vào học bạ.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      sessionStorage.removeItem('veval_pending_exam_intent');
+                      setPendingExamPrompt(null);
+                    }}
+                    className="p-1.5 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Content Body */}
+              <div className="p-6 space-y-4">
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-2">
+                  <div className="font-extrabold text-slate-900 flex items-center gap-2">
+                    <Target className="w-4 h-4 text-blue-600" />
+                    <span>{pendingExamPrompt.title || 'Bài Khảo Sát Đánh Giá Năng Lực Đầu Vào (30 Câu)'}</span>
+                  </div>
+                  <p className="text-slate-600 leading-relaxed font-medium">
+                    Hoàn thành 30 câu khảo sát để động cơ <strong className="text-blue-700">IRT 2PL</strong> tính toán tham số năng lực khởi điểm <strong className="text-blue-700">$\theta_0$</strong>, xếp lớp và tự động kích hoạt <strong className="text-indigo-700">Lộ Trình Học Thích Ứng (Flow 2 - DAG)</strong> cá nhân hóa cho bạn!
+                  </p>
+                </div>
+
+                <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      sessionStorage.removeItem('veval_pending_exam_intent');
+                      setPendingExamPrompt(null);
+                      setDiagnosticAutoStart(true);
+                      setCurrentPage('diagnostic');
+                    }}
+                    className="w-full sm:flex-1 py-3.5 px-5 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white font-black text-xs sm:text-sm shadow-lg shadow-blue-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+                  >
+                    <span>🚀 Vào Làm Bài Ngay</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      sessionStorage.removeItem('veval_pending_exam_intent');
+                      setPendingExamPrompt(null);
+                    }}
+                    className="w-full sm:w-auto py-3.5 px-5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs transition-all border border-slate-200 flex items-center justify-center cursor-pointer"
+                  >
+                    <span>Để Sau</span>
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
     </div>
   );

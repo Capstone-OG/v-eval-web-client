@@ -11,8 +11,8 @@ export const contentService = {
    */
   async getDiagnosticTest(excludeExamId = null) {
     const endpoint = excludeExamId 
-      ? `/api/v1/content/diagnostic-test?excludeExamId=${encodeURIComponent(excludeExamId)}`
-      : '/api/v1/content/diagnostic-test';
+      ? `/api/content/diagnostic-test?excludeExamId=${encodeURIComponent(excludeExamId)}`
+      : '/api/content/diagnostic-test';
     return (await apiClient.get(endpoint)).data;
   },
 
@@ -20,7 +20,7 @@ export const contentService = {
    * Core Flow 2 - Lấy toàn bộ cây kỹ năng DAG kèm trọng số (12 kỹ năng chuẩn ĐGNL)
    */
   async getSkillsTree() {
-    return (await apiClient.get('/api/v1/content/skills-tree')).data;
+    return (await apiClient.get('/api/content/skills-tree')).data;
   },
 
   /**
@@ -29,7 +29,7 @@ export const contentService = {
    */
   async getMockExams(params = {}) {
     const query = new URLSearchParams(params).toString();
-    const endpoint = query ? `/api/v1/content/exams?${query}` : '/api/v1/content/exams';
+    const endpoint = query ? `/api/content/exams?${query}` : '/api/content/exams';
     return (await apiClient.get(endpoint)).data;
   },
 
@@ -38,7 +38,7 @@ export const contentService = {
    * @param {string} examId
    */
   async getExamDetail(examId) {
-    return (await apiClient.get(`/api/v1/content/exams/${examId}`)).data;
+    return (await apiClient.get(`/api/content/exams/${examId}`)).data;
   },
 
   /**
@@ -47,7 +47,7 @@ export const contentService = {
    */
   async getQuestions(params = {}) {
     const query = new URLSearchParams(params).toString();
-    const endpoint = query ? `/api/v1/content/questions?${query}` : '/api/v1/content/questions';
+    const endpoint = query ? `/api/content/questions?${query}` : '/api/content/questions';
     return (await apiClient.get(endpoint)).data;
   }
 };

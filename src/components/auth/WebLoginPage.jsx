@@ -25,9 +25,20 @@ import RegisterForm from './RegisterForm';
 import ForgotPasswordModal from './ForgotPasswordModal';
 import authService from '../../services/authService';
 
-export default function WebLoginPage({ onLoginSuccess, onNavigateHome }) {
+export default function WebLoginPage({ 
+  onLoginSuccess, 
+  onNavigateHome, 
+  initialMode = 'login', 
+  redirectNotice = null 
+}) {
   const [role, setRole] = useState('student'); // student | parent (for registration)
-  const [mode, setMode] = useState('login'); // login | register
+  const [mode, setMode] = useState(initialMode || 'login'); // login | register
+
+  useEffect(() => {
+    if (initialMode) {
+      setMode(initialMode);
+    }
+  }, [initialMode]);
 
   // Login form state
   const [email, setEmail] = useState('');
@@ -553,10 +564,11 @@ export default function WebLoginPage({ onLoginSuccess, onNavigateHome }) {
 
             <button
               onClick={onNavigateHome}
-              className="flex items-center gap-2 text-xs font-bold text-slate-700 hover:text-blue-700 bg-slate-100 hover:bg-slate-200 px-4 py-2 rounded-xl border border-slate-200/80 transition-all active:scale-95 shadow-2xs"
+              className="flex items-center gap-1.5 sm:gap-2 text-xs font-bold text-slate-700 hover:text-blue-700 bg-slate-100 hover:bg-slate-200 px-3 sm:px-4 py-2 rounded-xl border border-slate-200/80 transition-all active:scale-95 shadow-2xs"
             >
               <ArrowLeft className="w-4 h-4 text-blue-600" />
-              <span>Quay lại Trang Chủ</span>
+              <span className="hidden sm:inline">Quay lại Trang Chủ</span>
+              <span className="sm:hidden">Trang Chủ</span>
             </button>
           </div>
 
@@ -570,10 +582,10 @@ export default function WebLoginPage({ onLoginSuccess, onNavigateHome }) {
         <div className="absolute top-1/4 left-10 w-96 h-96 rounded-full bg-blue-400/10 blur-[120px] pointer-events-none"></div>
         <div className="absolute bottom-10 right-10 w-96 h-96 rounded-full bg-indigo-400/10 blur-[120px] pointer-events-none"></div>
 
-        <div className="w-full max-w-6xl bg-white rounded-[32px] shadow-2xl overflow-hidden grid grid-cols-1 lg:grid-cols-12 min-h-[720px] border border-slate-200/90 text-slate-900 z-10">
+        <div className="w-full max-w-md lg:max-w-6xl bg-white rounded-[32px] shadow-2xl overflow-hidden grid grid-cols-1 lg:grid-cols-12 min-h-0 lg:min-h-[720px] border border-slate-200/90 text-slate-900 z-10 my-4 sm:my-8">
 
-          {/* LEFT COLUMN (7 Spans): Light Academic Showcase & Real Authentic Student Photo */}
-          <div className="lg:col-span-7 bg-gradient-to-br from-blue-50/90 via-indigo-50/60 to-cyan-50/40 p-8 lg:p-12 text-slate-900 flex flex-col justify-between relative overflow-hidden border-r border-slate-200/80">
+          {/* LEFT COLUMN (7 Spans): Light Academic Showcase & Real Authentic Student Photo (Desktop >= lg) */}
+          <div className="hidden lg:flex lg:col-span-7 bg-gradient-to-br from-blue-50/90 via-indigo-50/60 to-cyan-50/40 p-8 lg:p-12 text-slate-900 flex-col justify-between relative overflow-hidden border-r border-slate-200/80">
 
             {/* Ambient inner highlights */}
             <div className="absolute -top-24 -left-24 w-96 h-96 rounded-full bg-blue-300/20 blur-3xl pointer-events-none"></div>
@@ -768,6 +780,14 @@ export default function WebLoginPage({ onLoginSuccess, onNavigateHome }) {
                       <span>Phụ huynh</span>
                     </button>
                   </div>
+                </div>
+              )}
+
+              {/* Redirect Notice from Exam Flow */}
+              {redirectNotice && (
+                <div className="p-3.5 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 text-blue-900 text-xs font-semibold rounded-2xl flex items-center gap-2.5 shadow-xs animate-fade">
+                  <Sparkles className="w-4 h-4 shrink-0 text-blue-600" />
+                  <span>{redirectNotice}</span>
                 </div>
               )}
 

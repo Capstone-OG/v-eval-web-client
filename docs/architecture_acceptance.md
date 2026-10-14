@@ -58,16 +58,20 @@ V-Eval-Web_Client/
 
 ### 4.1. Flow 1: Diagnostic Assessment (IRT 2PL Model & 30-Question Real Test Page)
 - Implemented in `DiagnosticAssessmentPage.jsx` and quick modal `DiagnosticTestModal.jsx`.
-- Fetches real 30-question diagnostic exam from AI Engine (`generate-exam` with Gemini Cloud or Calibrated Bank) and Content Service.
-- Features in-exam question navigator, 45-minute timer, flagging, and embedded AI Socratic Tutor guidance.
+- **Dual Entry Architecture (Guest Mode vs. Logged-in Mode)**:
+  - *Guest Mode (Unauthenticated)*: Triggered from Public Landing Page via quick entry modal (`autoStart: true`), directly entering the proctored 30-question diagnostic test without requiring registration or exposing student dashboard.
+  - *Logged-in Mode (Authenticated)*: Accessed from Dashboard Sidebar (`Khảo thí & Chẩn đoán - Flow 1`), presenting the official **Exam Center Lobby** with 5 assessment domains strip, quick room code search, and exam catalog cards. Clicking an exam opens the **Passcode Verification Modal** prefilled with `VACT2026`, launching the test upon confirmation.
+- Fetches real 30-question diagnostic exam from Content Service (`/api/content/diagnostic-test` or `getExamDetail`) and AI Engine.
+- Features in-exam question navigator, 45-minute timer, flagging, adaptive 2-column split view for reading passages, and embedded AI Socratic Tutor guidance.
 - Evaluates student ability across 5 core evaluation domains (Mathematics, Logic Reasoning, Language Arts, Natural Sciences, Social Sciences).
 - Employs 2-Parameter Logistic (IRT 2PL) probability scoring and Bayesian Knowledge Tracing initial mastery estimation `P(L_0)`.
 - Generates 5-axis Recharts Radar Chart and pedagogically calibrated Socratic AI Commentary.
-- Features secure exam room entry with proctored passcodes (`VACT2026`, `HCM120`, `LOGIC15`) and interactive 1-click Auto-fill & Copy helpers for demo testing workflows.
+- Features Azota proctoring with Fullscreen mode, Web Audio warning chime, and secure room code entry (`VACT2026`).
+- Zero Native Dialogs: Replaced native browser `window.alert` and `window.confirm` with dedicated React overlay modals (`showPopupAlert`, `showExitConfirmModal`) to eliminate window blur triggers and tab-switch violation miscounts.
 
-### 4.2. Flow 2: Dynamic Learning Roadmap (Kahn Topo & FSM)
-- Visualized in `HeroBanner.jsx` and `MilestoneCard.jsx`.
-- Tracks progressive stage unlocking based on Finite State Machine criteria: Lecture Video completion (`>= 80%`) and Quiz mastery (`>= 60%`).
+### 4.2. Flow 2: Dynamic Learning Roadmap & Milestone Quizzes (Kahn Topo & FSM)
+- Visualized in `HeroBanner.jsx`, `MilestoneCard.jsx`, and `RoadmapLearningPage.jsx`.
+- Progressive stage unlocking based on Finite State Machine criteria: Lecture Video completion (`>= 80%`) followed by the 20-question **Milestone Quiz** (`>= 60%`) before unlocking subsequent graph nodes.
 
 ### 4.3. Flow 3: Adaptive Practice & Remediation (ZPD & BKT)
 - Executed in `AdaptiveQuizModal.jsx`.
