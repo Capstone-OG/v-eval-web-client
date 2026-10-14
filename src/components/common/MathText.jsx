@@ -60,8 +60,54 @@ export function normalizeMathString(text) {
  * - Inline math: $...$ or \(...\)
  * - Raw math expressions: auto-normalized and rendered beautifully
  */
+/**
+ * Helper to render non-math text with support for Markdown images ![alt](url)
+ */
+function renderTextWithMarkdown(text) {
+  if (!text) return null;
+  if (typeof text !== 'string') return text;
+  const imageRegex = /!\[(.*?)\]\((.*?)\)/g;
+  if (!imageRegex.test(text)) {
+    return text;
+  }
+  const elements = [];
+  let lastIndex = 0;
+  let match;
+  imageRegex.lastIndex = 0;
+  while ((match = imageRegex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      elements.push(text.substring(lastIndex, match.index));
+    }
+    const alt = match[1] || 'Hình minh họa';
+    const src = match[2];
+    elements.push(
+      <span key={`img-${match.index}`} className="block my-3 text-center">
+        <img
+          src={src}
+          alt={alt}
+          className="inline-block max-w-full max-h-80 rounded-2xl border border-slate-200/90 shadow-md object-contain bg-white p-1 hover:shadow-lg transition-shadow"
+          loading="lazy"
+        />
+        {alt && alt !== 'Hình minh họa' && (
+          <span className="block text-[11px] text-slate-500 font-medium mt-1 italic">
+            {alt}
+          </span>
+        )}
+      </span>
+    );
+    lastIndex = match.index + match[0].length;
+  }
+  if (lastIndex < text.length) {
+    elements.push(text.substring(lastIndex));
+  }
+  return elements;
+}
+
 export default function MathText({ text, className = '' }) {
   if (!text) return null;
+  if (typeof text !== 'string') {
+    return <span className={className}>{String(text)}</span>;
+  }
   const raw = normalizeMathString(text);
 
   // Split by explicit delimiters: $$, $, \[, \], \(, \)
@@ -90,7 +136,7 @@ export default function MathText({ text, className = '' }) {
           return (
             <span
               key={idx}
-              className="inline-math mx-0.5 text-slate-100"
+              className="inline-math mx-0.5"
               dangerouslySetInnerHTML={{ __html: renderKatexHtml(math, false) }}
             />
           );
@@ -114,15 +160,16 @@ export default function MathText({ text, className = '' }) {
           return (
             <span
               key={idx}
-              className="inline-math mx-0.5 text-slate-100"
+              className="inline-math mx-0.5"
               dangerouslySetInnerHTML={{ __html: renderKatexHtml(math, false) }}
             />
           );
         }
 
-        // Regular text
-        return <span key={idx}>{part}</span>;
+        // Regular text with image support
+        return <span key={idx}>{renderTextWithMarkdown(part)}</span>;
       })}
     </span>
   );
 }
+

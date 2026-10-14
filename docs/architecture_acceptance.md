@@ -163,11 +163,58 @@ V-Eval-Web_Client/
 - **Dynamic Mastery & Weak Skill Remediation Strip**:
   - Automatically correlates user IRT $\theta_0$ and Bayesian Knowledge Tracing $P(L_t)$ from practice assessments. Flags skills with $P(L_t) < 0.60$ with red alert badges and instant remediation callouts.
 
+### 4.15. 3-Level Hierarchical Curriculum Tree & 4 Pedagogical Layers Architecture
+- **Interactive 3-Level Accordion Tree Navigation**:
+  - Replaces flat competency lists with a nested accordion tree strictly reflecting K12 curriculum hierarchies (GDPT 2018):
+    - Level 1: `Chapter` (Collapsible with chapter title, weight, and lesson count).
+    - Level 2: `Lesson` (Nested collapsible sub-accordion with lesson title and pattern count).
+    - Level 3: `Pattern` (Selectable leaf nodes featuring individual diagnostic mastery badges: `` `Severe (<10%)` ``, `` `Weak (<60%)` ``, and `` `Mastered (>=60%)` ``).
+- **Four Dedicated Pedagogical Content Layers**:
+  - *Layer 1 (Foundational Knowledge & Prerequisites)*: Formatted textbook definitions, theorems, and visual Directed Acyclic Graph (DAG) prerequisite linkages.
+  - *Layer 2 (Step-by-Step Solution Method & KaTeX Formulas)*: Algorithmic derivation steps (Step 1 -> Step 2 -> Step 3), KaTeX formula bank, and Cross-Disciplinary GraphRAG notes.
+  - *Layer 3 (Video Lecture & Exemplar Question)*: Video lecture card with duration indicator (satisfying FSM Gate $\ge 80\%$) and verified test bank sample question with step-by-step derivation.
+### 4.16. Instructor Curation Suite & Live KaTeX Authoring Architecture
+- **Maximized Instructor Curation Authority**:
+  - Implements a dedicated pedagogical management suite enabling teachers and academic coordinators to inspect, refine, and calibrate all 4 pedagogical layers after automated textbook parsing by the AI Engine.
+  - Interactive Curation Modal (`CurriculumExplorerView.jsx`) provides a 5-tab workspace:
+    - *Tab 1 (Layer 1 - Foundational Theory)*: Markdown & KaTeX editor for definitions, conditions, and core theorems.
+    - *Tab 2 (Layer 2 - Methodological Procedures)*: Step-by-step procedure authoring with one-click math palette buttons (`\frac{a}{b}`, `\sqrt{x}`, `\int`, `\lim`, `\Delta`, `\ge`, `\le`, `\in`, `\forall`, `\Rightarrow`).
+    - *Tab 3 (Layer 3 - Video Lecture Management)*: Video URL input with live embedded video test player (supporting YouTube iframe embedding and direct streaming).
+    - *Tab 4 (Layer 4 - Flagship Exemplar Item)*: Item stem authoring with 4 choices (A-D), interactive correct answer radio selector, and step-by-step LaTeX derivation.
+    - *Tab 5 (Pattern Configuration & Governance)*: Pattern name, competence weight percentage, Bloom cognitive level, and safe deletion cascade.
+- **Real-Time Live KaTeX Preview & Pedagogical AI Assistant**:
+  - Dual-column split view provides live `<MathText />` rendering, giving instructors instant feedback on formula typography and layout as experienced by learners.
+  - One-click AI Pedagogical Assistant button (`AI Method Assistant`) scaffolds standard 3-step solution templates aligned with Ministry of Education (GDPT 2018) guidelines.
+- **Dynamic SGK Ingestion Portal**:
+  - Provides a dedicated modal for pasting and verifying structured JSON trees outputted by the RAG/OCR AI service, seamlessly syncing into PostgreSQL via `POST /api/content/curriculum/import`.
+
+### 4.17. Dedicated Pedagogical Studio & Real-Time Student Experience Review Mode
+- **Full-Scale Authoring Environment (`CurriculumStudioEditor.jsx`)**:
+  - Upgrades from lightweight modal popups to a full-screen, heavy-duty authoring studio designed to handle rich textbook authoring with graphics, multi-variable formulas, video segment markers, and question banking.
+  - Features 3 dedicated view layouts:
+    - `Editor Mode`: Focus layout with section navigation across all 4 pedagogical layers.
+    - `Split 50-50 Mode`: Live side-by-side editing and instant student rendering.
+    - `Student Experience Review Mode`: Full-width simulated student view replicating actual learner interaction with theory recaps, step-by-step algorithms, exam pitfalls, Casio calculator shortcuts, embedded video playback, and formative quizzes.
+- **Graphic Assets & Diagram Library Integration**:
+  - Seamlessly integrates geometric curves, variation tables, and 3D coordinate diagrams into pedagogical texts.
+  - Enhanced `MathText.jsx` parsing engine safely renders Markdown images `` `![alt](url)` `` with responsive styling, rounded elevation borders, and lazy loading.
+- **Question Bank Studio (API 16-18)**:
+  - Dynamically retrieves, displays, creates, and deletes pattern-linked items in PostgreSQL database, categorized by Bloom taxonomy levels (L1 Knowledge to L4 High-Order Thinking).
+
+### 4.18. Runtime Hardening, Global Error Boundary & Reference Fix
+- **Defensive Error Handling (`RootErrorBoundary` in `main.jsx`)**:
+  - Implements a top-level React Error Boundary wrapping `<App />` to intercept unhandled runtime errors, preventing blank white screen states.
+  - Presents a recovery interface with detailed error diagnostics, component stack trace, and quick recovery actions (Reload Page, Clear LocalStorage Cache).
+- **Reference Error Resolution**:
+  - Resolved `ReferenceError: weakPrerequisites is not defined` in `CurriculumExplorerView.jsx` by establishing a reactive prerequisite filter against real BKT/IRT mastery scores in `skillMasteryMap`.
+- **String & Markdown Guarding (`MathText.jsx`)**:
+  - Fortified `MathText` against non-string inputs with type-checked guards (`typeof text !== 'string'`), preventing rendering aborts on nullish or complex object payloads.
+
 ---
 
 ## 5. Verification & Acceptance Criteria
 
-1. **Clean Production Build**: Executed `npm run build` with 0 syntax or bundle errors; production artifacts outputted to `dist/` within 681ms.
+1. **Clean Production Build**: Executed `npm run build` with 0 syntax or bundle errors; production artifacts outputted to `dist/` within 781ms.
 2. **Linter & Code Health**: `npm run lint` passes with 0 syntax errors across all components and services.
 3. **Docker Multi-Stage Validation**: `docker compose config` passes with 0 syntax errors across the entire 6-service microservices constellation.
 4. **Repository Sync Automation**: Standalone `Scripts/push.bat` and root `Scripts/` correctly recognize `V-Eval-Web_Client` as a first-class project service.

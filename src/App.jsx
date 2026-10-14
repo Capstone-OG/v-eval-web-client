@@ -166,76 +166,79 @@ export default function App() {
                 </div>
               )}
 
-              {/* Student View */}
-              {activeRole === 'student' && (
-                activeTab === 'roadmap' ? (
-                  <CurriculumExplorerView 
-                    onStartQuizModal={() => setIsZpdModalOpen(true)} 
-                    onNavigateDiagnostic={() => setActiveTab('diagnostic')}
-                  />
-                ) : activeTab === 'diagnostic' ? (
-                  <DiagnosticAssessmentPage 
-                    embedded={true}
-                    onNavigateDashboard={() => setActiveTab('dashboard')}
-                    onNavigateHome={() => setActiveTab('dashboard')}
-                  />
-                ) : (
-                  <div className="space-y-6 animate-fade">
-                    
-                    {/* Hero Banner with 3D Pop-out Avatar */}
-                    <HeroBanner 
-                      currentUser={currentUser}
-                      onStartMilestone={handleContinueMilestone}
-                      onStartMockTest={() => setActiveTab('diagnostic')}
-                      onOpenAiTutor={() => setIsZpdModalOpen(true)}
-                    />
-
-                    {/* 4 Core Metrics Cards */}
-                    <MetricsGrid 
-                      onOpenRadar={() => setIsRadarModalOpen(true)}
-                      onOpenDAG={() => setActiveTab('roadmap')}
-                      onOpenZPD={() => setIsZpdModalOpen(true)}
-                      onOpenAnalytics={() => setIsRadarModalOpen(true)}
-                    />
-
-                    {/* Bottom 2 Column Grid */}
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Tab Dàn Kiến Thức & Lộ Trình (Curriculum Explorer) - Hiển thị cho Mọi Vai Trò */}
+              {activeTab === 'roadmap' ? (
+                <CurriculumExplorerView 
+                  onStartQuizModal={() => setIsZpdModalOpen(true)} 
+                  onNavigateDiagnostic={() => setActiveTab('diagnostic')}
+                />
+              ) : activeTab === 'diagnostic' ? (
+                <DiagnosticAssessmentPage 
+                  embedded={true}
+                  onNavigateDashboard={() => setActiveTab('dashboard')}
+                  onNavigateHome={() => setActiveTab('dashboard')}
+                />
+              ) : (
+                <>
+                  {/* Student View */}
+                  {activeRole === 'student' && (
+                    <div className="space-y-6 animate-fade">
                       
-                      <div className="lg:col-span-2 space-y-6">
-                        <MilestoneCard 
-                          currentUser={currentUser}
-                          onStartTask={handleStartTask}
-                          onContinueMilestone={handleContinueMilestone}
-                          onStartDiagnostic={() => setActiveTab('diagnostic')}
-                        />
-                      </div>
+                      {/* Hero Banner with 3D Pop-out Avatar */}
+                      <HeroBanner 
+                        currentUser={currentUser}
+                        onStartMilestone={handleContinueMilestone}
+                        onStartMockTest={() => setActiveTab('diagnostic')}
+                        onOpenAiTutor={() => setIsZpdModalOpen(true)}
+                      />
 
-                      <div className="space-y-6">
-                        <LiveQnACard />
-                        <AISocraticTutorWidget 
-                          onOpenFullChat={() => setIsZpdModalOpen(true)}
-                        />
+                      {/* 4 Core Metrics Cards */}
+                      <MetricsGrid 
+                        onOpenRadar={() => setIsRadarModalOpen(true)}
+                        onOpenDAG={() => setActiveTab('roadmap')}
+                        onOpenZPD={() => setIsZpdModalOpen(true)}
+                        onOpenAnalytics={() => setIsRadarModalOpen(true)}
+                      />
+
+                      {/* Bottom 2 Column Grid */}
+                      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        
+                        <div className="lg:col-span-2 space-y-6">
+                          <MilestoneCard 
+                            currentUser={currentUser}
+                            onStartTask={handleStartTask}
+                            onContinueMilestone={handleContinueMilestone}
+                            onStartDiagnostic={() => setActiveTab('diagnostic')}
+                          />
+                        </div>
+
+                        <div className="space-y-6">
+                          <LiveQnACard />
+                          <AISocraticTutorWidget 
+                            onOpenFullChat={() => setIsZpdModalOpen(true)}
+                          />
+                        </div>
+
                       </div>
 
                     </div>
+                  )}
 
-                  </div>
-                )
-              )}
+                  {/* Teacher View */}
+                  {activeRole === 'teacher' && (
+                    <TeacherDashboardView />
+                  )}
 
-              {/* Teacher View */}
-              {activeRole === 'teacher' && (
-                <TeacherDashboardView />
-              )}
+                  {/* Campus Manager / Admin View */}
+                  {(activeRole === 'manager' || activeRole === 'admin') && (
+                    <CampusManagerDashboardView onOpenProvisionPage={() => setCurrentPage('provision')} />
+                  )}
 
-              {/* Campus Manager / Admin View */}
-              {(activeRole === 'manager' || activeRole === 'admin') && (
-                <CampusManagerDashboardView onOpenProvisionPage={() => setCurrentPage('provision')} />
-              )}
-
-              {/* Parent View */}
-              {activeRole === 'parent' && (
-                <ParentDashboardView />
+                  {/* Parent View */}
+                  {activeRole === 'parent' && (
+                    <ParentDashboardView />
+                  )}
+                </>
               )}
 
             </main>

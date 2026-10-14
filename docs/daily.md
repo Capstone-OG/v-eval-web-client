@@ -2,6 +2,48 @@
 
 ---
 
+## [15/10/2026] - Nâng Cấp Cây Tri Thức Phân Cấp 3 Tầng, Phân Hệ Studio Sư Phạm Chuyên Sâu (Curriculum Studio Editor), Khắc Phục Lỗi Màn Trắng & Xóa Bỏ 100% Hardcode
+
+- **Khắc Phục Triệt Để Lỗi Màn Trắng (White Screen Fix) & Tăng Cường Bền Vững Runtime**:
+  - Khắc phục `ReferenceError: weakPrerequisites is not defined` tại `CurriculumExplorerView.jsx:1303` bằng cách bổ sung bộ lọc dạng bài tiên quyết vùng trũng `<10%` đồng bộ từ `skillMasteryMap`.
+  - Bọc `RootErrorBoundary` toàn cục tại `src/main.jsx` bắt mọi ngoại lệ render của React, hiển thị giao diện báo lỗi chi tiết cùng nút khôi phục reload/xóa cache.
+  - Bổ sung type safety cho `MathText.jsx` với kiểm tra nghiêm ngặt `typeof text !== 'string'`.
+  - Mở rộng hiển thị tab Lộ trình (`roadmap`) trên `App.jsx` cho mọi vai trò (Học sinh, Giáo viên, Quản trị viên).
+
+- **Triển Khai Studio Sư Phạm Chuyên Sâu Toàn Diện (Curriculum Studio Editor & Authoring Environment)**:
+  - Đáp ứng yêu cầu nghiệp vụ chuyên sâu của giảng viên: thay vì modal nhập liệu đơn sơ chật hẹp, chuyển đổi sang không gian Studio toàn màn hình (`CurriculumStudioEditor.jsx`) hỗ trợ tải nặng và đa dạng nội dung:
+    - *3 Chế Độ Xem Linh Hoạt (View Mode Switcher)*:
+      + `Biên soạn (Editor)`: Toàn màn hình tập trung soạn thảo lý thuyết, bẫy đề thi, Casio và câu hỏi.
+      + `Chia đôi (Split 50-50)`: Nửa trái soạn thảo - nửa phải hiển thị Live Preview tức thời theo thời gian thực.
+      + `Review Học sinh (Live Preview)`: Mô phỏng chính xác 100% giao diện học sinh nhìn thấy và trải nghiệm học tập dạng bài.
+    - *Bảng Ký Tự Toán Học Đa Chủ Đề (KaTeX Palette)*: Phân loại theo 3 nhóm chuyên sâu: Đại số & Giải tích, Hình học & Không gian Oxyz, Logic & Tập hợp.
+    - *Bộ Công Cụ Chèn Hình Ảnh & Thư Viện Đồ Thị (Diagram Gallery & Image Uploader)*: Hỗ trợ chèn trực tiếp link hình ảnh đồ thị hàm bậc ba, bảng biến thiên, hình chóp tam giác S.ABC, hệ trục Oxyz vào các khối lý thuyết và đề bài trắc nghiệm.
+    - *Nâng Cấp Động Cơ Render Toán Học (`MathText.jsx`)*: Bổ sung bộ phân tích và render Markdown Image `![alt](url)` tự động, hiển thị hình ảnh đồ thị sắc nét, bo góc và hiệu ứng bóng đổ chuẩn sách giáo khoa.
+    - *Trình Quản Lý Video Bài Giảng & Bảng Phân Đoạn Thời Gian (Timestamps Table)*: Cho phép xem thử video nhúng trực tiếp và thêm/sửa/xóa các mốc thời gian phân đoạn video (ví dụ: `00:00 Lý thuyết`, `03:15 Phương pháp`, `07:30 Ví dụ mẫu`).
+    - *Studio Quản Trị Ngân Hàng Câu Hỏi Thích Ứng (API 16-18)*: Tải danh sách câu hỏi thuộc dạng bài từ PostgreSQL, hỗ trợ xem chi tiết, xóa câu hỏi và mở Dialog thêm câu hỏi mới với 4 bậc Bloom (L1 Nhận biết - L4 Vận dụng cao), 4 phương án A-D và lời giải chi tiết KaTeX.
+    - *Tích Hợp Chặt Chẽ Với Cây Tri Thức (`CurriculumExplorerView.jsx`)*: Nút "Mở Studio Biên Soạn Sư Phạm" trên thanh công cụ, trên từng dạng bài và trong modal thêm mới cho phép chuyển đổi mượt mà giữa cây tri thức và Studio.
+- **Tái Thiết Kế Cột Trái Cây Tri Thức 3 Tầng (Accordion Tree Navigation)**:
+  - Chuyển đổi danh sách kỹ năng phẳng thành Accordion phân cấp 3 tầng chuẩn sư phạm SGK GDPT 2018:
+    - *Tầng 1 (Chương học)*: Hiển thị tên chương, mã chuyên đề, số lượng bài học, trọng số, hỗ trợ đóng/mở linh hoạt.
+    - *Tầng 2 (Bài học cụ thể)*: Hiển thị tên bài, biểu tượng sách, số lượng dạng bài con, hỗ trợ đóng/mở lồng nhau.
+    - *Tầng 3 (Dạng bài cụ thể)*: Thẻ chọn dạng bài trực quan với mã code, chuẩn Bloom, nút sửa nhanh và hệ thống huy hiệu năng lực cá nhân:
+      + `🚨 Hổng kiến thức (<10%)`: Màu đỏ đậm, nhấp nháy cảnh báo cần phục hồi vi mô ngay.
+      + `⚠️ Vùng trũng (<60%)`: Màu vàng cam, cảnh báo kỹ năng chưa đạt chuẩn.
+      + `✅ Đã vững (≥60%)`: Màu xanh ngọc, biểu thị kỹ năng đã thành thạo.
+- **Xóa Bỏ Toàn Bộ Dữ Liệu Mẫu Hardcode Trên Frontend**:
+  - Loại bỏ hoàn toàn các GUID hardcode mẫu trong `skillMasteryMap`. Toàn bộ chỉ số năng lực được trích xuất động từ kết quả khảo sát `diagData.skill_scores` hoặc `roadmapData.nodes`.
+  - Loại bỏ hoàn toàn các câu hỏi giả fabricated trong fallback của `handleLaunchAdaptiveQuiz`. Nếu ngân hàng đề chưa có câu hỏi, hiển thị thông báo trạng thái cập nhật từ Ban Chuyên Môn/AI.
+- **Hoàn Thiện 4 Khối Nội Dung Sư Phạm Cho Từng Dạng Bài (Cột Phải)**:
+  - *Khối 1: Kiến thức nền tảng & Điều kiện tiên quyết (SGK Chuẩn)*: Định lý, định nghĩa, điều kiện đủ và đồ thị DAG liên kết.
+  - *Khối 2: Phương pháp giải chuyên biệt từng bước & Công thức KaTeX*: Trình bày quy trình giải (Bước 1 -> Bước 2 -> Bước 3), ngân hàng công thức toán học KaTeX, các bẫy đề thi ĐGNL, kỹ thuật Casio và thẻ GraphRAG liên môn.
+  - *Khối 3: Video bài giảng phương pháp & Lời giải mẫu chi tiết*: Video lecture preview kèm thời lượng (chuẩn FSM Gate ≥ 80%) và bài toán mẫu trắc nghiệm có lời giải chi tiết từng bước.
+  - *Khối 4: Luyện tập củng cố thích ứng (API 19 Content Service)*: Tự động phát hiện các dạng bài tiên quyết liên kết đang bị hổng (&lt;10%) và tự động gom thêm câu hỏi từ dạng tiên quyết vào đề luyện tập để học sinh chữa dứt điểm gốc rễ.
+- **Kiểm Thử Đóng Gói (Build Verification)**:
+  - `npm run build` thành công 100% (**0 Error, 0 Warning**, hoàn thành trong 3.91s).
+
+
+---
+
 ## [14/10/2026] - Triển Khai Phân Hệ Dàn Kiến Thức Khung Năng Lực Chuẩn ĐGNL & Tích Hợp Luyện Tập Củng Cố API 19
 
 - **Xây Dựng Giao Diện Phân Hệ Dàn Kiến Thức (`src/components/curriculum/CurriculumExplorerView.jsx`)**:
