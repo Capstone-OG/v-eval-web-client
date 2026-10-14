@@ -151,7 +151,17 @@ V-Eval-Web_Client/
   - Implements an offline table station layout where each class is partitioned into study groups of 3 to 5 students based on homogeneous skill deficiencies.
   - Features configurable group sizing (`3`, `4`, `5` students/table), deficiency tagging, and individual student mastery indicators.
   - Supports one-click targeted worksheet distribution (`practiceService.assignGroupWorksheet`) directly to each station, updating distribution timestamps and real-time status indicators.
-  - Provides offline PDF layout export simulation for on-campus instructors to print physical desk worksheets.
+### 4.14. Curriculum Knowledge Explorer & Content Service API 19 Integration
+- **Database-Driven Knowledge Hierarchy (`CurriculumExplorerView.jsx`)**:
+  - Dynamically fetches the 4 core domains and 12 standard V-ACT competencies directly from Content Service (`GET /api/content/curriculum`) via YARP Gateway, completely eliminating static frontend `DOMAINS_DATA` hardcoding.
+  - Integrates standardized KaTeX formula rendering via `MathText.jsx` for all mathematical and scientific models (derivatives, Newton-Leibniz integrals, De Morgan rules, Arrhenius, Hardy-Weinberg).
+  - Highlights Cross-Disciplinary GraphRAG model inheritance: showcases how single mathematical formalisms solve physical, chemical, and biological problems.
+  - Features video lecture preview cards and exemplar V-ACT questions with step-by-step LaTeX derivations.
+- **On-Demand Adaptive Quiz Packaging (Content Service API 19)**:
+  - Direct integration with `POST /api/content/exams/quiz` via `contentService.createAdaptiveQuiz`: dynamically packages 5 Bloom-calibrated questions for any selected skill.
+  - Interactive quiz runner modal provides instant option verification, real-time scoring, and step-by-step KaTeX explanations.
+- **Dynamic Mastery & Weak Skill Remediation Strip**:
+  - Automatically correlates user IRT $\theta_0$ and Bayesian Knowledge Tracing $P(L_t)$ from practice assessments. Flags skills with $P(L_t) < 0.60$ with red alert badges and instant remediation callouts.
 
 ---
 

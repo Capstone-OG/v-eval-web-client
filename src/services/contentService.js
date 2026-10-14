@@ -49,6 +49,29 @@ export const contentService = {
     const query = new URLSearchParams(params).toString();
     const endpoint = query ? `/api/v1/content/questions?${query}` : '/api/v1/content/questions';
     return (await apiClient.get(endpoint)).data;
+  },
+
+  /**
+   * Core Flow 2 (API 19) - Đóng gói đề Quiz củng cố thích ứng từ SkillIds / Bloom Levels
+   * @param {Object} payload - { title, skillIds, questionCount, minBloomLevel, maxBloomLevel }
+   */
+  async createAdaptiveQuiz(payload) {
+    return (await apiClient.post('/api/content/exams/quiz', payload)).data;
+  },
+
+  /**
+   * Lấy danh sách câu hỏi theo Skill ID từ Content Service
+   * @param {string} skillId 
+   */
+  async getQuestionsBySkill(skillId) {
+    return (await apiClient.get(`/api/content/questions/by-skill/${encodeURIComponent(skillId)}`)).data;
+  },
+
+  /**
+   * Lấy toàn bộ cây dàn kiến thức 4 miền và các kỹ năng chuẩn từ Backend Content Service (Database Dynamic)
+   */
+  async getCurriculum() {
+    return (await apiClient.get('/api/content/curriculum')).data;
   }
 };
 

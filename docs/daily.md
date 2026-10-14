@@ -2,6 +2,42 @@
 
 ---
 
+## [14/10/2026] - Triển Khai Phân Hệ Dàn Kiến Thức Khung Năng Lực Chuẩn ĐGNL & Tích Hợp Luyện Tập Củng Cố API 19
+
+- **Xây Dựng Giao Diện Phân Hệ Dàn Kiến Thức (`src/components/curriculum/CurriculumExplorerView.jsx`)**:
+  - Tích hợp 4 miền năng lực cốt lõi theo cấu trúc chuẩn ĐGNL ĐHQG-HCM (Ngôn ngữ, Toán học & Logic, Phân tích số liệu, Khoa học Tự nhiên & Xã hội).
+  - Tích hợp công cụ tìm kiếm theo từ khóa kỹ năng, công thức toán học và mô hình liên môn.
+  - Hiển thị ngân hàng công thức KaTeX chuẩn hóa (Đạo hàm, Tích phân Newton-Leibniz, Logic Boole De Morgan, Arrhenius, Hardy-Weinberg...) thông qua component `MathText`.
+  - Tích hợp khối **Tri thức liên môn (Cross-Disciplinary GraphRAG)** mô tả sự kế thừa mô hình toán học giải quyết các bài toán Vật lý, Hóa học, Sinh học và Phân tích số liệu.
+  - Thẻ bài giảng video mini-preview kèm giảng viên và thời lượng.
+  - Câu hỏi mẫu chuẩn V-ACT kèm lời giải chi tiết từng bước.
+- **Tích Hợp Modal Luyện Tập Củng Cố Tức Thì (Content Service API 19 Runner)**:
+  - Nút bấm **"Luyện tập 5 câu củng cố"** gọi trực tiếp `contentService.createAdaptiveQuiz` (`POST /api/content/exams/quiz`).
+  - Giao diện làm bài trắc nghiệm thích ứng trực tiếp trên modal: Hỗ trợ render KaTeX cho câu hỏi và phương án, bộ đếm câu, nộp bài chấm điểm thời gian thực, bảng tổng kết điểm và xem lại lời giải chi tiết.
+- **Mở Rộng Tầng Dịch Vụ `contentService.js`**:
+  - Bổ sung `createAdaptiveQuiz(payload)` gọi `POST /api/content/exams/quiz` bên Content Service.
+  - Bổ sung `getQuestionsBySkill(skillId)` gọi `GET /api/content/questions/by-skill/{skillId}`.
+- **Tích Hợp Điều Hướng Dashboard Học Sinh (`App.jsx` & `Sidebar.jsx`)**:
+  - Điều hướng tab `roadmap` hiển thị trực tiếp `CurriculumExplorerView`.
+  - Liên kết thẻ Metric DAG trên Dashboard chuyển thẳng vào Dàn kiến thức.
+- **Xóa Bỏ Hoàn Toàn Dữ Liệu Hardcode `DOMAINS_DATA` Trên Frontend**:
+  - Gỡ bỏ 100% mảng dữ liệu tĩnh `DOMAINS_DATA` trong `CurriculumExplorerView.jsx`.
+  - Kết nối động trực tiếp với API Content Service thông qua `contentService.getCurriculum()` (`GET /api/content/curriculum`).
+  - Tự động map các biểu tượng icon (`Cpu`, `BookOpen`, `Atom`, `BarChart2`, `Layers`), tiêu đề, chuyên đề, công thức KaTeX và câu hỏi mẫu được nạp từ cơ sở dữ liệu.
+  - Bổ sung màn hình nạp (Loading Skeleton & Spinner) mượt mà khi truy vấn dữ liệu từ API Gateway.
+- **Tích Hợp Đo Lường Năng Lực Cá Nhân & Định Vị Vùng Trũng Động (Dynamic Mastery Detection)**:
+  - Bổ sung banner thông báo tương tác trong `CurriculumExplorerView`: Nếu học viên chưa thi khảo sát, hiển thị banner cảnh báo khung chuẩn 120 câu kèm nút chuyển nhanh sang tab Khảo sát 30 câu.
+  - Sau khi học viên hoàn thành bài thi khảo sát, tự động tính toán và gắn badge cờ đỏ `⚠️ Vùng trũng (Mastery: X%)` cho các kỹ năng có độ thành thạo dưới 60%, cờ xanh `✅ Đã vững` cho các kỹ năng đạt chuẩn.
+  - Bổ sung callout đề xuất củng cố tức thì tại chi tiết kỹ năng yếu để gọi API 19 Content Service.
+- **Hợp Nhất Phân Hệ Khảo Sát Năng Lực Đầu Vào Vào Chung Dashboard (Tab-based Flow 1)**:
+  - Loại bỏ hoàn toàn cơ chế tách rời toàn màn hình gây đứt gãy luồng người dùng (`setCurrentPage('diagnostic')`).
+  - Tích hợp `DiagnosticAssessmentPage` (chế độ `embedded = true`) trực tiếp vào khung nội dung chính khi `activeTab === 'diagnostic'`.
+  - Giữ vững thanh `Navbar` phía trên và `Sidebar` bên trái, cho phép học sinh chuyển đổi linh hoạt giữa Dashboard tổng quan, Khảo thí chẩn đoán và Dàn kiến thức mà không bị mất ngữ cảnh làm việc.
+- **Kiểm Thử Đóng Gói (Build Verification)**:
+  - Chạy `npm run build` thành công 100% (**0 Error, 0 Warning**).
+
+---
+
 ## [10/10/2026] - Giao Diện Quản Lý Nhóm Học Tập Vi Mô (Micro Study Groups: 3 - 5 Học Sinh) & Phân Bổ Sơ Đồ Bàn Học Offline
 - **Thiết Kế Modal Sơ Đồ Nhóm Bàn Học Vi Mô ([`ClassMicroGroupsModal.jsx`](../src/components/modals/ClassMicroGroupsModal.jsx))**:
   - Xây dựng component modal hiển thị sơ đồ phân bổ bàn học offline của lớp (Trần sĩ số tối đa 20 em, mỗi bàn 3 - 5 học sinh).

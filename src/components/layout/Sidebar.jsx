@@ -19,8 +19,8 @@ export default function Sidebar({ activeTab, setActiveTab, activeRole, onOpenDia
   
   const navItemsSection1 = [
     { id: 'dashboard', label: 'Dashboard (Tổng quan)', icon: LayoutDashboard },
-    { id: 'diagnostic', label: 'Khảo thí & Chẩn đoán', icon: Target, badge: 'Flow 1', onClick: onOpenDiagnostic },
-    { id: 'roadmap', label: 'Lộ trình học (DAG)', icon: GitFork, badge: 'Flow 2' },
+    { id: 'diagnostic', label: 'Khảo thí & Chẩn đoán', icon: Target, badge: 'Flow 1' },
+    { id: 'roadmap', label: 'Dàn kiến thức & Lộ trình', icon: GitFork, badge: 'Flow 2' },
     { id: 'adaptive', label: 'Luyện tập ZPD', icon: Zap, badge: 'Flow 3', onClick: onOpenZPD },
     { id: 'question_bank', label: 'Ngân hàng đề & Thi thử', icon: BookOpenCheck },
   ];

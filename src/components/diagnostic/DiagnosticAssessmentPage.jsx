@@ -94,7 +94,7 @@ function mapSkillToDomain(skillName, index) {
   return { id: 'dom_nat_sci', name: DOMAINS.dom_nat_sci.name };
 }
 
-export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNavigateHome }) {
+export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNavigateHome, embedded = false }) {
   // Page states: 'setup' | 'testing' | 'analyzing' | 'result'
   const [stage, setStage] = useState('setup');
   
@@ -493,6 +493,11 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
       };
 
       setResultData(finalResult);
+      try {
+        localStorage.setItem('veval_last_diagnostic_result', JSON.stringify(finalResult));
+      } catch (e) {
+        console.warn('Could not cache diagnostic result:', e);
+      }
       setStage('result');
       
       // Fire celebration confetti
@@ -570,32 +575,75 @@ Hãy đóng vai Gia sư AI Socratic: KHÔNG TIẾT LỘ ĐÁP ÁN TRỰC TIẾP,
   const currentQ = questions[currentIndex];
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-cyan-500 selection:text-slate-950">
+    <div className={`flex flex-col font-sans selection:bg-cyan-500 selection:text-slate-950 ${
+      embedded ? 'w-full space-y-6 animate-fade pb-12' : 'min-h-screen bg-slate-950 text-slate-100'
+    }`}>
       
       {/* Top Header Navigation */}
-      <header className="border-b border-slate-800 bg-slate-900/80 backdrop-blur-md sticky top-0 z-40 px-4 sm:px-8 py-3.5 flex items-center justify-between shadow-md">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 via-cyan-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
-            <Brain className="w-5 h-5 text-slate-950 stroke-[2.5]" />
-          </div>
-          <div>
-            <div className="text-sm font-black tracking-wide text-white flex items-center gap-2">
-              <span>V-EVAL DIAGNOSTIC</span>
-              <span className="text-[10px] uppercase font-extrabold px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
-                Core Flow 1
-              </span>
-            </div>
-            <div className="text-xs text-slate-400 font-medium">Khảo Thí Năng Lực Đầu Vào 30 Câu & IRT 2PL</div>
-          </div>
-        </div>
-
-        {stage === 'testing' && (
+      {!embedded ? (
+        <header className="border-b border-slate-800 bg-slate-900/80 backdrop-blur-md sticky top-0 z-40 px-4 sm:px-8 py-3.5 flex items-center justify-between shadow-md">
           <div className="flex items-center gap-3">
-            <div className="px-3.5 py-1.5 rounded-xl bg-slate-950 border border-slate-800 flex items-center gap-2 font-mono text-sm font-black text-amber-400 shadow-inner">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 via-cyan-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
+              <Brain className="w-5 h-5 text-slate-950 stroke-[2.5]" />
+            </div>
+            <div>
+              <div className="text-sm font-black tracking-wide text-white flex items-center gap-2">
+                <span>V-EVAL DIAGNOSTIC</span>
+                <span className="text-[10px] uppercase font-extrabold px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                  Core Flow 1
+                </span>
+              </div>
+              <div className="text-xs text-slate-400 font-medium">Khảo Thí Năng Lực Đầu Vào 30 Câu & IRT 2PL</div>
+            </div>
+          </div>
+
+          {stage === 'testing' && (
+            <div className="flex items-center gap-3">
+              <div className="px-3.5 py-1.5 rounded-xl bg-slate-950 border border-slate-800 flex items-center gap-2 font-mono text-sm font-black text-amber-400 shadow-inner">
+                <Clock className="w-4 h-4 animate-pulse text-amber-400" />
+                <span>{formatTime(timeRemaining)}</span>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleSubmitExam}
+                className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-950 font-black text-xs hover:opacity-90 active:scale-95 transition-all shadow-md shadow-emerald-500/20"
+              >
+                Nộp Bài
+              </button>
+            </div>
+          )}
+
+          {stage !== 'testing' && (
+            <button
+              type="button"
+              onClick={onNavigateDashboard}
+              className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition-all border border-slate-700"
+            >
+              Quay lại Dashboard
+            </button>
+          )}
+        </header>
+      ) : stage === 'testing' ? (
+        /* Embedded In-Exam Header Strip */
+        <div className="bg-slate-900 text-white p-4 rounded-2xl border border-slate-800 flex items-center justify-between shadow-lg">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center font-bold text-white shadow-md shadow-blue-500/30">
+              <Brain className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <div className="text-xs font-bold text-slate-200 flex items-center gap-2">
+                <span>Khảo Thí Năng Lực Đầu Vào 30 Câu</span>
+                <span className="text-[10px] bg-blue-500/20 text-cyan-300 px-2 py-0.5 rounded-full border border-cyan-500/30 font-extrabold">Core Flow 1</span>
+              </div>
+              <div className="text-[11px] text-slate-400">Động cơ Psychometrics IRT 2PL & BKT ước lượng theta_0</div>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="px-3.5 py-1.5 rounded-xl bg-slate-950 border border-slate-800 flex items-center gap-2 font-mono text-xs font-black text-amber-400 shadow-inner">
               <Clock className="w-4 h-4 animate-pulse text-amber-400" />
               <span>{formatTime(timeRemaining)}</span>
             </div>
-
             <button
               type="button"
               onClick={handleSubmitExam}
@@ -604,18 +652,8 @@ Hãy đóng vai Gia sư AI Socratic: KHÔNG TIẾT LỘ ĐÁP ÁN TRỰC TIẾP,
               Nộp Bài
             </button>
           </div>
-        )}
-
-        {stage !== 'testing' && (
-          <button
-            type="button"
-            onClick={onNavigateDashboard}
-            className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition-all border border-slate-700"
-          >
-            Quay lại Dashboard
-          </button>
-        )}
-      </header>
+        </div>
+      ) : null}
 
       {/* ===================================================================== */}
       {/* 1. SETUP / CONFIG SCREEN                                              */}

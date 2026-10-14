@@ -1,17 +1,17 @@
 # Nhật Ký Cập Nhật (Update Log) - Web Client
 
-## [10/10/2026] - Giao Diện Quản Lý Nhóm Học Tập Vi Mô (Micro Study Groups: 3 - 5 Học Sinh) & Phân Bổ Sơ Đồ Bàn Học Offline
+## [14/10/2026] - Chuyển Đổi Hoàn Toàn Dàn Kiến Thức Sang Dữ Liệu Động Từ Database & Bỏ Hardcode FE
 
-- **Xây Dựng Modal Sơ Đồ Nhóm Bàn Học Vi Mô (`ClassMicroGroupsModal.jsx`)**:
-  - Triển khai giao diện phân bổ trạm bàn học offline của lớp (Trần sĩ số 20 học sinh, mỗi nhóm bàn từ 3 đến 5 học sinh).
-  - Tích hợp bộ chọn quy mô nhóm bàn (`3 bạn/bàn`, `4 bạn/bàn`, `5 bạn/bàn`) kết nối trực tiếp với thuật toán gom cụm đồng nhất (Homogeneous Clustering) theo lỗ hổng kiến thức.
-  - Hiển thị chi tiết từng trạm bàn học: Tên bàn học sư phạm, chủ đề trọng tâm `FocusArea`, tag các kỹ năng yếu chung (`CommonWeakSkills`), danh sách học sinh tại bàn kèm chỉ số thành thạo kiến thức.
-  - Tính năng **Phân phối đề luyện tập thích ứng** trực tiếp cho bàn học (`practiceService.assignGroupWorksheet`), hiển thị trạng thái phát đề và thời gian thực.
-  - Bổ sung nút xuất file sơ đồ bàn học dạng PDF cho Giảng viên in ra phát tận bàn offline.
-- **Nâng Cấp Cổng Điều Hành Học Thuật Cơ Sở (`CampusManagerDashboardView.jsx`)**:
-  - Chuẩn hóa danh sách lớp học offline theo cơ chế trần 20 học sinh và số thứ tự tăng dần (`Lớp Nền tảng 01`, `Lớp Nền tảng 02`, `Lớp Tăng tốc 01`, `Lớp Bứt phá 01`).
-  - Hiển thị badge sĩ số chuẩn hóa: `Sĩ số: {studentCount}/20`.
-  - Tích hợp nút hành động **"Sơ Đồ Nhóm Bàn (3 - 5 Bạn)"** trên từng thẻ lớp học, mở modal tương tác trực tiếp.
-  - Bổ sung nút **"Tự Động Gom Cụm AI"** trên thanh công cụ lớp học gọi trực tiếp API K-Means Elbow Method (`practiceService.autoClusterClasses`).
+- **Xóa Bỏ Hoàn Toàn Dữ Liệu Hardcode `DOMAINS_DATA` Trên Frontend**:
+  - Gỡ bỏ toàn bộ mảng dữ liệu tĩnh `DOMAINS_DATA` trong `CurriculumExplorerView.jsx`.
+  - Kết nối động trực tiếp với API Content Service thông qua `contentService.getCurriculum()` (`GET /api/content/curriculum`).
+  - Thêm trạng thái nạp dữ liệu (Loading Skeleton & Spinner) khi truy vấn cơ sở dữ liệu qua Gateway.
+- **Tích Hợp Đo Lường Năng Lực Cá Nhân & Định Vị Vùng Trũng Động (Dynamic Mastery Detection)**:
+  - Bổ sung banner thông báo tương tác trong `CurriculumExplorerView`: Nếu học viên chưa thi khảo sát, hiển thị banner cảnh báo khung chuẩn 120 câu kèm nút chuyển nhanh sang tab Khảo sát 30 câu.
+  - Sau khi học viên hoàn thành bài thi khảo sát, tự động tính toán và gắn badge cờ đỏ `⚠️ Vùng trũng (Mastery: X%)` cho các kỹ năng có độ thành thạo dưới 60%, cờ xanh `✅ Đã vững` cho các kỹ năng đạt chuẩn.
+  - Bổ sung callout đề xuất củng cố tức thì tại chi tiết kỹ năng yếu để gọi API 19 Content Service.
+- **Hợp Nhất Phân Hệ Khảo Sát Năng Lực Đầu Vào Vào Chung Dashboard (Tab-based Flow 1)**:
+  - Loại bỏ hoàn toàn cơ chế tách rời toàn màn hình (`setCurrentPage('diagnostic')`).
+  - Nhúng trực tiếp `DiagnosticAssessmentPage` (`embedded = true`) vào tab `diagnostic` của Dashboard, bảo toàn trọn vẹn `Navbar`, `Sidebar` và trạng thái phiên làm việc.
 - **Kiểm Thử Đóng Gói (Build Verification)**:
   - Chạy `npm run build` thành công 100% (**0 Error, 0 Warning**).
