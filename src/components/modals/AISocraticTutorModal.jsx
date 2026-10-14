@@ -118,12 +118,26 @@ export default function AISocraticTutorModal({ isOpen, onClose, initialContext =
 
     try {
       await practiceService.askAiTutorStream({
-        questionLatex: query,
+        questionLatex: initialContext?.question ? `${query}\n\n[Ngữ cảnh câu hỏi: ${initialContext.question}]` : query,
         questionId: initialContext?.questionId || newInteractionId,
-        questionContext: initialContext?.question || null,
+        options: initialContext?.options || null,
         studentWrongOption: initialContext?.selectedWrong || 'A',
+        correctOption: initialContext?.correctOption || 'B',
         skillId: initialContext?.skillId || null,
         signal: controller.signal,
+        onInteractionId: (id) => {
+          setMessages(prev => {
+            const next = [...prev];
+            const lastIdx = next.length - 1;
+            if (lastIdx >= 0 && next[lastIdx].sender === 'ai') {
+              next[lastIdx] = {
+                ...next[lastIdx],
+                interactionId: id
+              };
+            }
+            return next;
+          });
+        },
         onToken: (token) => {
           setMessages(prev => {
             const next = [...prev];

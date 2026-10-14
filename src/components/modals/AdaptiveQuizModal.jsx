@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Zap, CheckCircle2, XCircle, ArrowRight, X, Sparkles, AlertCircle, RefreshCw, Bot } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Zap, CheckCircle2, XCircle, ArrowRight, X, Sparkles, AlertCircle, RefreshCw, Bot, Clock } from 'lucide-react';
 import MathText from '../common/MathText';
 
 export default function AdaptiveQuizModal({ isOpen, onClose, onOpenAiTutorWithContext }) {
@@ -13,10 +13,11 @@ export default function AdaptiveQuizModal({ isOpen, onClose, onOpenAiTutorWithCo
   const [itemIndex, setItemIndex] = useState(0);
   const [selectedOpt, setSelectedOpt] = useState(null);
   const [feedback, setFeedback] = useState(null);
+  const [secondsOnQuestion, setSecondsOnQuestion] = useState(0);
 
   const sampleItems = [
     {
-      id: "ZPD-101",
+      id: "a1b2c3d4-0001-4000-8000-000000000001",
       skill: "Toán logic mệnh đề & suy luận kéo theo",
       question: "Nếu mệnh đề kéo theo $P \\Rightarrow Q$ là đúng, và $Q$ là sai, thì ta có thể kết luận chắc chắn gì về $P$?",
       options: ["A. P có thể đúng hoặc sai", "B. P bắt buộc phải sai", "C. P bắt buộc phải đúng", "D. Không đủ dữ kiện"],
@@ -25,7 +26,7 @@ export default function AdaptiveQuizModal({ isOpen, onClose, onOpenAiTutorWithCo
       predictedProb: 0.68
     },
     {
-      id: "ZPD-102",
+      id: "a1b2c3d4-0002-4000-8000-000000000002",
       skill: "Toán logic mệnh đề & suy luận kéo theo",
       question: "Cho hệ 3 phát biểu $P, Q, R$. Nếu $P \\Rightarrow Q$, $Q \\Rightarrow R$ và $R$ sai. Phát biểu nào chắc chắn ĐÚNG?",
       options: ["A. P đúng", "B. P sai", "C. Q đúng", "D. Cả P và Q đều đúng"],
@@ -34,6 +35,16 @@ export default function AdaptiveQuizModal({ isOpen, onClose, onOpenAiTutorWithCo
       predictedProb: 0.64
     }
   ];
+
+  // Track hesitation time (> 45s without answering)
+  useEffect(() => {
+    if (!isOpen) return;
+    setSecondsOnQuestion(0);
+    const timer = setInterval(() => {
+      setSecondsOnQuestion((prev) => prev + 1);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [itemIndex, isOpen]);
 
   if (!isOpen) return null;
 
@@ -87,6 +98,7 @@ export default function AdaptiveQuizModal({ isOpen, onClose, onOpenAiTutorWithCo
       options: currentItem.options,
       skill: currentItem.skill,
       selectedWrong: selectedOpt !== null ? currentItem.options[selectedOpt] : null,
+      correctOption: currentItem.options[currentItem.correct] || 'B',
       difficultyB: currentItem.difficultyB,
       predictedProb: currentItem.predictedProb
     });
@@ -187,6 +199,24 @@ export default function AdaptiveQuizModal({ isOpen, onClose, onOpenAiTutorWithCo
                   </button>
                 ))}
               </div>
+
+              {/* 45-Second Contemplation Nudge */}
+              {!feedback && secondsOnQuestion >= 45 && (
+                <div className="p-3 bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-200 rounded-2xl flex items-center justify-between gap-3 animate-fade-in shadow-2xs">
+                  <div className="flex items-center gap-2 text-indigo-950 text-xs font-bold">
+                    <Clock className="w-4 h-4 text-indigo-600 animate-pulse shrink-0" />
+                    <span>Đang suy nghĩ câu này khá lâu ({secondsOnQuestion}s)? Gia sư Socratic có thể gợi mở hướng tư duy!</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleAskSocraticTutor}
+                    className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-[11px] font-extrabold flex items-center gap-1 cursor-pointer transition-all shadow-xs shrink-0"
+                  >
+                    <Bot className="w-3.5 h-3.5" />
+                    <span>Hỏi gợi mở</span>
+                  </button>
+                </div>
+              )}
 
               {/* Feedback alert */}
               {feedback && (

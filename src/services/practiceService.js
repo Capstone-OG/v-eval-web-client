@@ -1,5 +1,36 @@
 import apiClient, { tokenStorage } from './apiClient';
 
+// =========================================================================
+// Core Flow 4 Helpers: DTO Sanitizers & Normalizers
+// =========================================================================
+
+const ensureGuid = (id, fallback = '00000000-0000-0000-0000-000000000001') => {
+  if (typeof id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+    return id;
+  }
+  return fallback;
+};
+
+const cleanOptionKey = (opt, fallback = 'A') => {
+  if (!opt) return fallback;
+  const match = String(opt).trim().match(/^([A-D])/i);
+  return match ? match[1].toUpperCase() : fallback;
+};
+
+const normalizeOptions = (opts) => {
+  if (!opts) return { A: 'Phương án A', B: 'Phương án B' };
+  if (Array.isArray(opts)) {
+    const dict = {};
+    opts.forEach((opt, idx) => {
+      const key = String.fromCharCode(65 + idx);
+      dict[key] = String(opt);
+    });
+    return dict;
+  }
+  if (typeof opts === 'object') return opts;
+  return { A: 'Phương án A', B: 'Phương án B' };
+};
+
 /**
  * Practice & Adaptive Learning Roadmap Service
  * Routed through V-Eval API Gateway (:5212) -> Practice Service (:5261)
@@ -145,11 +176,12 @@ export const practiceService = {
    * @param {string} [params.studentId]
    * @param {string} [params.questionId]
    * @param {string} params.questionLatex - Câu hỏi bài tập hoặc thắc mắc tư duy (hỗ trợ KaTeX)
-   * @param {Object} [params.options] - Dictionary phương án trắc nghiệm (ví dụ: { A: "...", B: "..." })
+   * @param {Object|Array} [params.options] - Dictionary phương án trắc nghiệm (ví dụ: { A: "...", B: "..." } hoặc mảng)
    * @param {string} [params.studentWrongOption='A'] - Phương án học sinh chọn sai
    * @param {string} [params.correctOption='B'] - Phương án đáp án đúng
    * @param {string} [params.skillId]
    * @param {function} [params.onToken] - Callback nhận từng token chữ
+   * @param {function} [params.onInteractionId] - Callback nhận GUID phiên tương tác
    * @param {function} [params.onError] - Callback khi có lỗi hoặc mã 429 Rate Limit
    * @param {function} [params.onComplete] - Callback khi stream hoàn tất
    * @param {AbortSignal} [params.signal] - Tín hiệu hủy yêu cầu stream
@@ -164,6 +196,7 @@ export const practiceService = {
     correctOption = 'B',
     skillId = null,
     onToken,
+    onInteractionId,
     onError,
     onComplete,
     signal
@@ -180,17 +213,21 @@ export const practiceService = {
       headers.Authorization = `Bearer ${token}`;
     }
 
-    const resolvedStudentId = studentId || currentUser?.id || '00000000-0000-0000-0000-000000000001';
-    const resolvedQuestionId = questionId || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : '11111111-1111-1111-1111-111111111111');
+    const resolvedStudentId = ensureGuid(studentId || currentUser?.id, '00000000-0000-0000-0000-000000000001');
+    const resolvedQuestionId = ensureGuid(questionId, '11111111-1111-1111-1111-111111111111');
+    const resolvedSkillId = skillId ? ensureGuid(skillId, null) : null;
+    const resolvedWrongOpt = cleanOptionKey(studentWrongOption, 'A');
+    const resolvedCorrectOpt = cleanOptionKey(correctOption, 'B');
+    const resolvedOptions = normalizeOptions(options);
 
     const body = {
       studentId: resolvedStudentId,
       questionId: resolvedQuestionId,
-      questionLatex: questionLatex || '',
-      options: options || { A: 'Phương án A', B: 'Phương án B' },
-      studentWrongOption: studentWrongOption || 'A',
-      correctOption: correctOption || 'B',
-      skillId: skillId || null
+      questionLatex: questionLatex || 'Đề bài chưa cung cấp nội dung',
+      options: resolvedOptions,
+      studentWrongOption: resolvedWrongOpt,
+      correctOption: resolvedCorrectOpt,
+      skillId: resolvedSkillId
     };
 
     let fullAnswer = '';
@@ -246,6 +283,10 @@ export const practiceService = {
             if (parsed.error) {
               throw new Error(parsed.error);
             }
+            if (parsed.interaction_id || parsed.interactionId) {
+              const id = parsed.interaction_id || parsed.interactionId;
+              if (onInteractionId) onInteractionId(id);
+            }
             if (parsed.token) {
               fullAnswer += parsed.token;
               if (onToken) onToken(parsed.token);
@@ -273,7 +314,15 @@ export const practiceService = {
    * Hỏi đáp gợi mở Socratic dạng JSON đồng bộ (Single Request - Response)
    */
   async askAiTutor(payload) {
-    return (await apiClient.post('/api/practice/ai-tutor/ask', payload)).data;
+    const sanitizedPayload = {
+      ...payload,
+      studentId: ensureGuid(payload.studentId, '00000000-0000-0000-0000-000000000001'),
+      questionId: ensureGuid(payload.questionId, '11111111-1111-1111-1111-111111111111'),
+      options: normalizeOptions(payload.options),
+      studentWrongOption: cleanOptionKey(payload.studentWrongOption, 'A'),
+      correctOption: cleanOptionKey(payload.correctOption, 'B')
+    };
+    return (await apiClient.post('/api/practice/ai-tutor/ask', sanitizedPayload)).data;
   },
 
   /**
@@ -284,9 +333,10 @@ export const practiceService = {
    * @param {string} [report.studentId]
    */
   async reportAiTutorInteraction({ interactionId, reason, studentId }) {
-    const resolvedStudentId = studentId || tokenStorage.getUser()?.id || null;
+    const resolvedInteractionId = ensureGuid(interactionId, '98e1f0fd-aed6-45f6-beac-be24686b573c');
+    const resolvedStudentId = studentId ? ensureGuid(studentId, null) : (tokenStorage.getUser()?.id ? ensureGuid(tokenStorage.getUser()?.id, null) : null);
     return (await apiClient.post('/api/practice/ai-tutor/report', {
-      interactionId,
+      interactionId: resolvedInteractionId,
       reason,
       studentId: resolvedStudentId
     })).data;
