@@ -37,12 +37,18 @@ import {
   Eye,
   Sliders,
   UploadCloud,
-  Code
+  Code,
+  Wand2,
+  FileUp,
+  FileType,
+  CheckCheck,
+  Upload
 } from 'lucide-react';
 import MathText from '../common/MathText';
-import CurriculumStudioEditor from './CurriculumStudioEditor';
+import CurriculumStudioEditor, { parseSolutionMethodSections } from './CurriculumStudioEditor';
 import contentService from '../../services/contentService';
 import { practiceService } from '../../services/practiceService';
+import { aiService } from '../../services/aiService';
 
 const DOMAIN_ICONS = {
   Cpu,
@@ -164,10 +170,28 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
   });
   const [savingCreate, setSavingCreate] = useState(false);
 
-  // Import Dynamic SGK State
+  // Import Dynamic SGK & AI Document Ingestion State
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [importTab, setImportTab] = useState('document'); // 'document' | 'json'
+  const [importFile, setImportFile] = useState(null);
+  const [importTextSnippet, setImportTextSnippet] = useState('');
+  const [importTargetDomainId, setImportTargetDomainId] = useState('');
+  const [isExtractingAi, setIsExtractingAi] = useState(false);
+  const [aiExtractStep, setAiExtractStep] = useState(0); // 0: Idle, 1: Reading, 2: Structure, 3: Patterns, 4: Done
+  const [extractedCurriculum, setExtractedCurriculum] = useState(null);
   const [importJsonText, setImportJsonText] = useState('');
   const [importingCurriculum, setImportingCurriculum] = useState(false);
+
+  // Large Document (e.g. 99-page books) & Deep Extraction Controls
+  const [importPageMode, setImportPageMode] = useState('all'); // 'all' | 'custom'
+  const [importStartPage, setImportStartPage] = useState(1);
+  const [importEndPage, setImportEndPage] = useState(35);
+  const [importExtractionDepth, setImportExtractionDepth] = useState('deep'); // 'deep' | 'standard'
+
+  // Panoramic Verification Workspace State
+  const [previewSelectedLessonKey, setPreviewSelectedLessonKey] = useState('0-0'); // 'cIdx-lIdx'
+  const [previewSelectedPattern, setPreviewSelectedPattern] = useState(null);
+  const [previewBloomFilter, setPreviewBloomFilter] = useState('all');
 
   // 1. Fetch Curriculum from Backend Content Service API (Database Dynamic)
   const fetchCurriculumData = async (preservePatternId = null) => {
@@ -736,6 +760,77 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
     }
   };
 
+  const handleRunAiExtraction = async () => {
+    if (!importFile && !importTextSnippet.trim()) {
+      alert("Vui lòng tải lên tệp tài liệu (.pdf, .docx, .txt) hoặc nhập trích đoạn văn bản chuyên đề.");
+      return;
+    }
+
+    setIsExtractingAi(true);
+    setAiExtractStep(1);
+    setExtractedCurriculum(null);
+
+    try {
+      const currentD = domains.find(d => d.id === (importTargetDomainId || activeDomainId)) || domains[0];
+      const targetDomId = currentD?.domainId || (currentD?.id ? currentD.id.replace('domain-', '') : '6f3765db-943e-4810-bf74-d6a8bdc215da');
+      const targetDomName = currentD?.title || currentD?.name || 'Toán học & Tư duy định lượng';
+
+      const formData = new FormData();
+      if (importFile) {
+        formData.append('file', importFile);
+      }
+      if (importTextSnippet.trim()) {
+        formData.append('text_content', importTextSnippet.trim());
+      }
+      formData.append('domain_id', targetDomId);
+      formData.append('domain_name', targetDomName);
+
+      if (importPageMode === 'custom') {
+        if (importStartPage) formData.append('start_page', importStartPage.toString());
+        if (importEndPage) formData.append('end_page', importEndPage.toString());
+      }
+      formData.append('extraction_depth', importExtractionDepth);
+
+      setAiExtractStep(2);
+
+      const result = await aiService.extractCurriculumFromDocument(formData);
+      setAiExtractStep(3);
+
+      if (result && result.chapters && result.chapters.length > 0) {
+        setExtractedCurriculum(result);
+        setAiExtractStep(4);
+        setPreviewSelectedLessonKey('0-0');
+        const firstPat = result.chapters[0]?.lessons?.[0]?.patterns?.[0] || null;
+        setPreviewSelectedPattern(firstPat);
+      } else {
+        throw new Error("AI không trích xuất được dạng bài từ tài liệu đã cung cấp.");
+      }
+    } catch (err) {
+      alert("Lỗi bóc tách tài liệu bằng AI: " + (err?.response?.data?.detail || err.message));
+      setAiExtractStep(0);
+    } finally {
+      setIsExtractingAi(false);
+    }
+  };
+
+  const handleSaveExtractedCurriculum = async () => {
+    if (!extractedCurriculum) return;
+    setImportingCurriculum(true);
+    try {
+      const res = await contentService.importCurriculum(extractedCurriculum);
+      alert(`Nạp cây tri thức thành công!\n- Chương: ${res.chaptersImported}\n- Bài học: ${res.lessonsImported}\n- Dạng bài nhận diện: ${res.patternsImported}\n- Câu hỏi trắc nghiệm: ${res.questionsImported}`);
+      setIsImportModalOpen(false);
+      setExtractedCurriculum(null);
+      setImportFile(null);
+      setImportTextSnippet('');
+      await fetchCurriculumData();
+    } catch (err) {
+      alert('Lỗi nạp dữ liệu tri thức vào CSDL: ' + (err?.response?.data?.message || err.message));
+    } finally {
+      setImportingCurriculum(false);
+    }
+  };
+
   if (loadingCurriculum) {
     return (
       <div className="py-24 text-center space-y-4 animate-fade bg-white rounded-3xl border border-slate-200/80 p-8 shadow-sm">
@@ -976,14 +1071,14 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
             <span>Vào Studio Sư Phạm</span>
           </button>
 
-          {/* Nút Nạp Cây SGK từ AI Engine */}
+          {/* Nút AI Bóc Tách Tài Liệu & Dạng Bài */}
           <button
             onClick={() => setIsImportModalOpen(true)}
-            className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold flex items-center gap-1.5 transition-colors shadow-xs"
-            title="Nạp dữ liệu tri thức SGK cấu trúc JSON từ AI Engine"
+            className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-purple-50 to-indigo-50 hover:from-purple-100 hover:to-indigo-100 border border-purple-200 text-purple-800 text-xs font-black flex items-center gap-1.5 transition-all shadow-xs"
+            title="Kéo thả file PDF/DOCX SGK để AI Tri Thức tự động bóc tách Chương, Bài và các Dạng bài toán"
           >
-            <UploadCloud className="w-3.5 h-3.5 text-blue-600" />
-            <span>Nạp Cây SGK (AI Engine)</span>
+            <Wand2 className="w-3.5 h-3.5 text-purple-600" />
+            <span>AI Bóc Tách Tài Liệu & Dạng Bài</span>
           </button>
 
           {/* Badge Chế độ Giảng viên Hiệu đính */}
@@ -2307,98 +2402,798 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
         </div>
       )}
 
-      {/* 7. MODAL NẠP CÂY TRI THỨC PHÂN CẤP TỪ AI ENGINE (DYNAMIC INGESTION) */}
+      {/* 7. PHÂN HỆ AI TRI THỨC BÓC TÁCH TÀI LIỆU & TỰ ĐỘNG NHẬN DIỆN DẠNG BÀI */}
       {isImportModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md animate-fade-in">
-          <div className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col my-auto max-h-[90vh]">
-            <div className="p-5 border-b border-slate-100 bg-gradient-to-r from-blue-900 to-indigo-900 text-white flex items-center justify-between">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
+          <div className={`relative w-full ${extractedCurriculum ? 'max-w-[1580px] h-[95vh]' : 'max-w-4xl max-h-[92vh]'} bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col transition-all duration-300`}>
+            
+            {/* Header */}
+            <div className="p-4 sm:p-5 border-b border-slate-100 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white flex items-center justify-between shrink-0">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-white/10 text-cyan-400 flex items-center justify-center">
-                  <UploadCloud className="w-5 h-5" />
+                <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-gradient-to-tr from-purple-600 to-indigo-600 text-white flex items-center justify-center shadow-lg shadow-purple-500/25 shrink-0">
+                  <Wand2 className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-extrabold">Nạp Cây Tri Thức SGK (AI Engine Ingestion)</h3>
-                  <p className="text-[11px] text-blue-200">Kênh nạp dữ liệu phân cấp động chuẩn GDPT 2018 vào Database</p>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm sm:text-base font-extrabold tracking-tight">
+                      {extractedCurriculum ? "Không Gian Xem Trước & Thẩm Định Tri Thức AI (Panoramic Workspace)" : "AI Tri Thức Bóc Tách Tài Liệu & Nhận Diện Dạng Bài"}
+                    </h3>
+                    <span className="px-2 py-0.5 rounded-full bg-purple-500/30 border border-purple-400/40 text-[10px] font-black text-purple-200">
+                      C# .NET 9 AI Engine • Gemini RAG
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-300 font-medium mt-0.5">
+                    Hỗ trợ tài liệu SGK/Chuyên đề nhiều trang (lên tới 99+ trang) • Trích xuất Chương → Bài học → Dạng bài kèm 4 khối Sư phạm
+                  </p>
                 </div>
               </div>
               <button 
-                onClick={() => setIsImportModalOpen(false)}
-                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white"
+                onClick={() => {
+                  setIsImportModalOpen(false);
+                  setExtractedCurriculum(null);
+                  setAiExtractStep(0);
+                  setPreviewSelectedPattern(null);
+                }}
+                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="p-6 space-y-4 overflow-y-auto">
-              <p className="text-xs text-slate-600 leading-relaxed font-medium">
-                Dán chuỗi JSON đã được AI Engine (RAG/OCR) trích xuất từ SGK. Hệ thống sẽ tự động cập nhật phân cấp 
-                <strong> Miền → Chương → Bài học → Dạng bài → Tài liệu & Câu hỏi</strong> vào PostgreSQL. Giảng viên sau đó có thể dùng nút <strong>"Hiệu đính Sư phạm"</strong> để chỉnh sửa hoàn thiện.
-              </p>
+            {/* Tab Switcher (Only visible before extraction) */}
+            {!extractedCurriculum && (
+              <div className="flex items-center gap-2 px-6 pt-4 border-b border-slate-200/80 bg-slate-50/70 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setImportTab('document')}
+                  className={`flex items-center gap-2 px-4 py-2.5 border-b-2 text-xs font-extrabold transition-all ${
+                    importTab === 'document'
+                      ? 'border-indigo-600 text-indigo-700 bg-white rounded-t-xl shadow-xs'
+                      : 'border-transparent text-slate-500 hover:text-slate-900'
+                  }`}
+                >
+                  <FileUp className="w-4 h-4" />
+                  <span>Nạp File Tài Liệu (PDF / DOCX / Text)</span>
+                  <span className="px-1.5 py-0.5 rounded-md bg-purple-100 text-purple-700 text-[10px] font-black">AI Auto</span>
+                </button>
 
-              <textarea
-                rows={10}
-                value={importJsonText}
-                onChange={(e) => setImportJsonText(e.target.value)}
-                placeholder='{ "domainId": "6f3765db-943e-4810-bf74-d6a8bdc215da", "domainName": "Toán học & Tư duy định lượng", "chapters": [...] }'
-                className="w-full p-3.5 rounded-2xl border border-slate-300 font-mono text-xs leading-relaxed focus:outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50 text-slate-900"
-              />
-            </div>
+                <button
+                  type="button"
+                  onClick={() => setImportTab('json')}
+                  className={`flex items-center gap-2 px-4 py-2.5 border-b-2 text-xs font-extrabold transition-all ${
+                    importTab === 'json'
+                      ? 'border-indigo-600 text-indigo-700 bg-white rounded-t-xl shadow-xs'
+                      : 'border-transparent text-slate-500 hover:text-slate-900'
+                  }`}
+                >
+                  <Code className="w-4 h-4" />
+                  <span>Dán JSON Cấu Trúc Thủ Công</span>
+                </button>
+              </div>
+            )}
 
-            <div className="p-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
-              <button
-                type="button"
-                onClick={() => {
-                  const sample = {
-                    domainId: "6f3765db-943e-4810-bf74-d6a8bdc215da",
-                    domainName: "Toán học & Tư duy định lượng",
-                    chapters: [
-                      {
-                        chapterName: "Chương 1: Ứng dụng đạo hàm khảo sát hàm số",
-                        weight: 0.25,
-                        lessons: [
-                          {
-                            lessonName: "Bài 1: Tính đơn điệu của hàm số",
-                            weight: 0.08,
-                            patterns: [
-                              {
-                                patternName: "Dạng 1: Xét tính đơn điệu bằng dấu đạo hàm",
-                                weight: 0.04,
-                                theoryRecap: "Hàm số đồng biến trên K khi và chỉ khi f'(x) >= 0 với mọi x thuộc K.",
-                                solutionMethod: "Bước 1: Tìm TXĐ.\nBước 2: Tính đạo hàm f'(x).\nBước 3: Lập bảng biến thiên.",
-                                durationSeconds: 600
-                              }
-                            ]
-                          }
-                        ]
+            {/* Modal Body */}
+            {extractedCurriculum ? (
+              /* ================= PANORAMIC 3-COLUMN STUDIO WORKSPACE ================= */
+              <div className="flex-1 flex flex-col min-h-0 bg-slate-100 overflow-hidden">
+                {/* Summary Header Banner */}
+                <div className="px-6 py-3 bg-gradient-to-r from-emerald-50 via-teal-50 to-indigo-50 border-b border-emerald-200/80 flex items-center justify-between shrink-0">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-xs shrink-0">
+                      <CheckCheck className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="text-xs font-black text-emerald-950 uppercase tracking-wide flex items-center gap-2">
+                        <span>AI ĐÃ BÓC TÁCH & CHUẨN HÓA THÀNH CÔNG TOÀN BỘ CÂY TRI THỨC</span>
+                        <span className="px-2 py-0.5 rounded-full bg-emerald-200 text-emerald-900 text-[10px] font-bold">Chuẩn GDPT 2018</span>
+                      </div>
+                      <div className="text-[11px] text-emerald-800 font-medium">
+                        <strong>{extractedCurriculum.chapters?.length || 0} Chương</strong> • 
+                        <strong> {extractedCurriculum.chapters?.reduce((acc, c) => acc + (c.lessons?.length || 0), 0)} Bài học</strong> • 
+                        <strong> {extractedCurriculum.chapters?.reduce((acc, c) => acc + (c.lessons?.reduce((a, l) => a + (l.patterns?.length || 0), 0) || 0), 0)} Dạng bài chi tiết</strong>
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setExtractedCurriculum(null);
+                      setAiExtractStep(0);
+                      setPreviewSelectedPattern(null);
+                    }}
+                    className="px-3.5 py-1.5 rounded-xl border border-emerald-300 bg-white hover:bg-emerald-100 text-xs font-bold text-emerald-900 transition-colors shadow-2xs"
+                  >
+                    Phân Tích Tệp Khác
+                  </button>
+                </div>
+
+                {/* 3-Column Workspace Grid */}
+                <div className="flex-1 grid grid-cols-12 gap-0 overflow-hidden min-h-0">
+                  
+                  {/* COLUMN 1: CÂY PHÂN CẤP CHƯƠNG - BÀI HỌC (3 Cols / 25%) */}
+                  <div className="col-span-12 lg:col-span-3 border-r border-slate-200 bg-white overflow-y-auto p-4 space-y-3">
+                    <div className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center justify-between pb-2 border-b border-slate-100">
+                      <span>1. Cây Chương & Bài Học</span>
+                      <span className="text-[10px] text-slate-400 font-normal">Click để xem dạng</span>
+                    </div>
+
+                    <div className="space-y-3">
+                      {extractedCurriculum.chapters?.map((chap, cIdx) => (
+                        <div key={cIdx} className="space-y-1.5">
+                          <div className="text-xs font-extrabold text-slate-900 flex items-center gap-1.5 px-2 py-1 bg-slate-50 rounded-lg">
+                            <span className="w-4 h-4 rounded bg-indigo-600 text-white flex items-center justify-center text-[10px] font-black">C{cIdx+1}</span>
+                            <span className="truncate">{chap.chapterName}</span>
+                          </div>
+
+                          <div className="pl-3 space-y-1 border-l-2 border-indigo-100">
+                            {chap.lessons?.map((les, lIdx) => {
+                              const key = `${cIdx}-${lIdx}`;
+                              const isSelected = (previewSelectedLessonKey || '0-0') === key;
+                              return (
+                                <button
+                                  key={lIdx}
+                                  type="button"
+                                  onClick={() => {
+                                    setPreviewSelectedLessonKey(key);
+                                    setPreviewSelectedPattern(les.patterns?.[0] || null);
+                                  }}
+                                  className={`w-full text-left px-2.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-between gap-1.5 ${
+                                    isSelected
+                                      ? 'bg-indigo-600 text-white shadow-xs'
+                                      : 'text-slate-700 hover:bg-slate-100'
+                                  }`}
+                                >
+                                  <span className="truncate">{les.lessonName}</span>
+                                  <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-mono shrink-0 ${
+                                    isSelected ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'
+                                  }`}>
+                                    {les.patterns?.length || 0} dạng
+                                  </span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* COLUMN 2: DANH MỤC DẠNG BÀI THEO BÀI HỌC (4 Cols / 33.3%) */}
+                  <div className="col-span-12 lg:col-span-4 border-r border-slate-200 bg-slate-50/70 overflow-y-auto p-4 space-y-3">
+                    {(() => {
+                      const [cIdx, lIdx] = (previewSelectedLessonKey || '0-0').split('-').map(Number);
+                      const activeChap = extractedCurriculum.chapters?.[cIdx] || extractedCurriculum.chapters?.[0];
+                      const activeLes = activeChap?.lessons?.[lIdx] || activeChap?.lessons?.[0];
+                      const allPatterns = activeLes?.patterns || [];
+                      const filteredPatterns = previewBloomFilter === 'all' 
+                        ? allPatterns 
+                        : allPatterns.filter(p => String(p.bloomLevel || p.difficultyLevel || '') === previewBloomFilter);
+
+                      return (
+                        <>
+                          <div className="space-y-2 pb-2 border-b border-slate-200">
+                            <div className="flex items-center justify-between">
+                              <div className="text-xs font-black text-slate-800 uppercase tracking-wider">
+                                2. Danh Mục Dạng Bài ({filteredPatterns.length}/{allPatterns.length})
+                              </div>
+                              <span className="text-[11px] font-bold text-indigo-700 truncate max-w-[160px]">
+                                {activeLes?.lessonName}
+                              </span>
+                            </div>
+
+                            {/* Filter pills */}
+                            <div className="flex items-center gap-1 overflow-x-auto text-[10px] font-bold pb-1">
+                              {[
+                                { id: 'all', label: 'Tất cả' },
+                                { id: '1', label: 'L1 Nhận biết' },
+                                { id: '2', label: 'L2 Thông hiểu' },
+                                { id: '3', label: 'L3 Vận dụng' },
+                                { id: '4', label: 'L4 Vận dụng cao' }
+                              ].map(f => (
+                                <button
+                                  key={f.id}
+                                  type="button"
+                                  onClick={() => setPreviewBloomFilter(f.id)}
+                                  className={`px-2 py-0.5 rounded-lg transition-colors whitespace-nowrap ${
+                                    previewBloomFilter === f.id
+                                      ? 'bg-slate-900 text-white'
+                                      : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+                                  }`}
+                                >
+                                  {f.label}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Pattern cards */}
+                          <div className="space-y-2.5">
+                            {filteredPatterns.length === 0 ? (
+                              <div className="p-6 text-center text-slate-400 text-xs">
+                                Không có dạng bài nào ở cấp độ này.
+                              </div>
+                            ) : (
+                              filteredPatterns.map((pat, pIdx) => {
+                                const isSelected = (previewSelectedPattern?.patternName === pat.patternName) || (!previewSelectedPattern && pIdx === 0);
+                                return (
+                                  <div
+                                    key={pIdx}
+                                    onClick={() => setPreviewSelectedPattern(pat)}
+                                    className={`p-3.5 rounded-2xl border text-xs space-y-2 cursor-pointer transition-all ${
+                                      isSelected
+                                        ? 'bg-white border-indigo-500 ring-2 ring-indigo-500/20 shadow-md'
+                                        : 'bg-white border-slate-200/90 hover:border-indigo-300 hover:shadow-xs'
+                                    }`}
+                                  >
+                                    <div className="flex items-start justify-between gap-2">
+                                      <div className="font-extrabold text-slate-900 flex items-center gap-2">
+                                        <span className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-[10px] font-black shrink-0">
+                                          {pIdx + 1}
+                                        </span>
+                                        <span className="leading-snug">{pat.patternName}</span>
+                                      </div>
+                                      {isSelected && (
+                                        <span className="p-1 rounded-full bg-indigo-600 text-white shrink-0">
+                                          <Check className="w-3 h-3" />
+                                        </span>
+                                      )}
+                                    </div>
+
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                      {pat.classification && (
+                                        <span className="px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 text-[10px] font-bold border border-purple-200">
+                                          {pat.classification}
+                                        </span>
+                                      )}
+                                      <span className="px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 text-[10px] font-bold border border-indigo-100">
+                                        Trọng số: {Math.round((pat.weight || 0.05) * 100)}%
+                                      </span>
+                                    </div>
+
+                                    <div className="flex items-center justify-between pt-1 border-t border-slate-100 text-[11px]">
+                                      <span className="text-slate-500 font-medium">
+                                        {pat.questions?.length ? `${pat.questions.length} câu mẫu` : 'Chưa có câu mẫu'}
+                                      </span>
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setIsImportModalOpen(false);
+                                          handleOpenStudio(pat, activeChap, activeLes);
+                                        }}
+                                        className="px-2.5 py-1 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold flex items-center gap-1 transition-colors"
+                                      >
+                                        <Sparkles className="w-3 h-3 text-amber-500" />
+                                        <span>Mở Studio</span>
+                                      </button>
+                                    </div>
+                                  </div>
+                                );
+                              })
+                            )}
+                          </div>
+                        </>
+                      );
+                    })()}
+                  </div>
+
+                  {/* COLUMN 3: LIVE KATEX PATTERN INSPECTOR (5 Cols / 41.7%) */}
+                  <div className="col-span-12 lg:col-span-5 bg-white overflow-y-auto p-5 space-y-4">
+                    {(() => {
+                      const [cIdx, lIdx] = (previewSelectedLessonKey || '0-0').split('-').map(Number);
+                      const activeChap = extractedCurriculum.chapters?.[cIdx] || extractedCurriculum.chapters?.[0];
+                      const activeLes = activeChap?.lessons?.[lIdx] || activeChap?.lessons?.[0];
+                      const pat = previewSelectedPattern || activeLes?.patterns?.[0];
+
+                      if (!pat) {
+                        return (
+                          <div className="p-12 text-center text-slate-400 text-xs">
+                            Chọn một dạng bài ở cột giữa để xem trước chi tiết 4 khối sư phạm KaTeX.
+                          </div>
+                        );
                       }
-                    ]
-                  };
-                  setImportJsonText(JSON.stringify(sample, null, 2));
-                }}
-                className="text-xs font-bold text-blue-600 hover:text-blue-800 underline"
-              >
-                Chèn JSON Mẫu
-              </button>
+
+                      const parsedMethod = parseSolutionMethodSections(pat.solutionMethod || '');
+
+                      return (
+                        <div className="space-y-4 animate-fade">
+                          {/* Pattern Header */}
+                          <div className="p-4 rounded-2xl bg-gradient-to-r from-slate-900 to-indigo-950 text-white space-y-2 shadow-sm">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="px-2 py-0.5 rounded-full bg-white/20 text-white text-[10px] font-bold">
+                                Trọng số: {Math.round((pat.weight || 0.05) * 100)}%
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setIsImportModalOpen(false);
+                                  handleOpenStudio(pat, activeChap, activeLes);
+                                }}
+                                className="px-3 py-1 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-900 text-xs font-black flex items-center gap-1 shadow-sm transition-all"
+                              >
+                                <Sparkles className="w-3.5 h-3.5" />
+                                <span>Mở Dạng Này Trong Studio Sư Phạm</span>
+                              </button>
+                            </div>
+                            <h4 className="text-sm font-black leading-tight text-white">{pat.patternName}</h4>
+                            {pat.classification && (
+                              <div className="text-[11px] text-indigo-200 font-medium">
+                                Phân loại: {pat.classification}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Khối 1: Nền tảng SGK */}
+                          <div className="space-y-1.5">
+                            <div className="text-xs font-extrabold text-cyan-800 uppercase tracking-wider flex items-center gap-1.5">
+                              <span className="w-4 h-4 rounded-full bg-cyan-100 text-cyan-700 flex items-center justify-center text-[10px] font-black">1</span>
+                              <span>Khối 1: Kiến thức nền tảng SGK</span>
+                            </div>
+                            <div className="p-3.5 rounded-2xl bg-cyan-50/50 border border-cyan-200 text-xs text-slate-800 font-medium leading-relaxed">
+                              <MathText text={pat.theoryRecap || 'Chưa nhập lý thuyết'} />
+                            </div>
+                          </div>
+
+                          {/* Khối 2: Phương pháp giải chi tiết & Bẫy */}
+                          <div className="space-y-1.5">
+                            <div className="text-xs font-extrabold text-amber-800 uppercase tracking-wider flex items-center gap-1.5">
+                              <span className="w-4 h-4 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center text-[10px] font-black">2</span>
+                              <span>Khối 2: Phương pháp giải chi tiết & Bẫy</span>
+                            </div>
+                            <div className="p-3.5 rounded-2xl bg-amber-50/40 border border-amber-200 text-xs text-slate-800 font-medium leading-relaxed space-y-2.5">
+                              <MathText text={parsedMethod.method || pat.solutionMethod || 'Chưa nhập phương pháp giải'} />
+
+                              {parsedMethod.traps && (
+                                <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-900 text-xs space-y-1">
+                                  <div className="font-bold flex items-center gap-1 text-rose-700">
+                                    <AlertTriangle className="w-3.5 h-3.5" />
+                                    <span>Bẫy đề thi ĐGNL thường gặp:</span>
+                                  </div>
+                                  <MathText text={parsedMethod.traps} />
+                                </div>
+                              )}
+
+                              {parsedMethod.casio && (
+                                <div className="p-3 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-900 text-xs space-y-1">
+                                  <div className="font-bold flex items-center gap-1 text-indigo-700">
+                                    <Sparkles className="w-3.5 h-3.5" />
+                                    <span>Kỹ thuật Casio & Mẹo tư duy nhanh:</span>
+                                  </div>
+                                  <MathText text={parsedMethod.casio} />
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Khối 3: Video bài giảng */}
+                          <div className="space-y-1.5">
+                            <div className="text-xs font-extrabold text-emerald-800 uppercase tracking-wider flex items-center gap-1.5">
+                              <span className="w-4 h-4 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-[10px] font-black">3</span>
+                              <span>Khối 3: Video bài giảng</span>
+                            </div>
+                            <div className="p-3 rounded-2xl bg-emerald-50/40 border border-emerald-200 text-xs text-emerald-900 font-medium flex items-center justify-between">
+                              <span>Thời lượng bài giảng khuyến nghị:</span>
+                              <span className="font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[11px]">
+                                {Math.round((pat.durationSeconds || 600) / 60)} phút ({pat.durationSeconds || 600}s)
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Khối 4: Câu hỏi trắc nghiệm mẫu */}
+                          <div className="space-y-1.5">
+                            <div className="text-xs font-extrabold text-indigo-800 uppercase tracking-wider flex items-center gap-1.5">
+                              <span className="w-4 h-4 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-[10px] font-black">4</span>
+                              <span>Khối 4: Bài toán mẫu chuẩn ĐGNL VNU-HCM</span>
+                            </div>
+                            {pat.questions && pat.questions.length > 0 ? (
+                              <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-2.5">
+                                <div className="font-bold text-slate-900">
+                                  <MathText text={pat.questions[0].contentLatex} />
+                                </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                  {['A', 'B', 'C', 'D'].map((optKey) => {
+                                    const optText = pat.questions[0][`option${optKey}`];
+                                    const isCorrect = pat.questions[0].correctOption === optKey;
+                                    return (
+                                      <div
+                                        key={optKey}
+                                        className={`p-2 rounded-xl border text-xs ${
+                                          isCorrect
+                                            ? 'bg-emerald-50 border-emerald-400 text-emerald-950 font-bold'
+                                            : 'bg-white border-slate-200 text-slate-700'
+                                        }`}
+                                      >
+                                        <MathText text={`${optKey}. ${optText || ''}`} />
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                                {pat.questions[0].explanation && (
+                                  <div className="p-2.5 rounded-xl bg-white border border-slate-200 text-slate-700 text-xs">
+                                    <strong className="text-slate-900">Lời giải: </strong>
+                                    <MathText text={pat.questions[0].explanation} />
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-400 text-center">
+                                Chưa có câu hỏi trắc nghiệm mẫu.
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+
+                </div>
+              </div>
+            ) : (
+              <div className="p-6 overflow-y-auto space-y-5 flex-1">
+                {/* TAB 1: NẠP FILE TÀI LIỆU BẰNG AI */}
+                {importTab === 'document' && (
+                  <div className="space-y-5">
+                    {/* Chọn Miền Năng Lực Mục Tiêu */}
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-extrabold text-slate-700 flex items-center gap-2">
+                        <span>1. Chọn Miền Năng Lực Mục Tiêu Của Tài Liệu:</span>
+                      </label>
+                      <select
+                        value={importTargetDomainId || activeDomainId}
+                        onChange={(e) => setImportTargetDomainId(e.target.value)}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      >
+                        {domains.map((d) => (
+                          <option key={d.id} value={d.id}>
+                            {d.title} ({d.subtitle || 'Chuẩn GDPT 2018'})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Dropzone Tải Tệp Tài Liệu */}
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-extrabold text-slate-700 flex items-center justify-between">
+                        <span>2. Tải Lên Tệp Sách Giáo Khoa / Tài Liệu Chuyên Đề:</span>
+                        <span className="text-[11px] text-slate-400 font-normal">Hỗ trợ: .pdf, .docx, .txt (Tối đa 250MB)</span>
+                      </label>
+
+                      {!importFile ? (
+                        <label className="relative flex flex-col items-center justify-center p-8 border-2 border-dashed border-indigo-200 hover:border-indigo-500 rounded-3xl bg-indigo-50/30 hover:bg-indigo-50/60 cursor-pointer transition-all group text-center space-y-3">
+                          <input
+                            type="file"
+                            accept=".pdf,.docx,.txt,.md"
+                            onChange={(e) => {
+                              if (e.target.files && e.target.files[0]) {
+                                setImportFile(e.target.files[0]);
+                              }
+                            }}
+                            className="hidden"
+                          />
+                          <div className="w-14 h-14 rounded-2xl bg-white shadow-md text-indigo-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+                            <UploadCloud className="w-7 h-7 text-indigo-600" />
+                          </div>
+                          <div>
+                            <div className="text-xs font-bold text-slate-800">
+                              Kéo & thả tệp tài liệu vào đây hoặc <span className="text-indigo-600 underline">bấm để chọn từ máy tính</span>
+                            </div>
+                            <div className="text-[11px] text-slate-500 mt-1">
+                              Ví dụ: <em>SGK_Toan_12_Tap_1.pdf</em>, <em>Chuyen_de_Khao_sat_Ham_so.pdf</em>, <em>Tai_lieu_Cuc_tri.docx</em>
+                            </div>
+                          </div>
+                        </label>
+                      ) : (
+                        <div className="p-4 rounded-2xl bg-indigo-50/60 border border-indigo-200 flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-xs">
+                              <FileType className="w-5 h-5" />
+                            </div>
+                            <div>
+                              <div className="text-xs font-extrabold text-slate-900">{importFile.name}</div>
+                              <div className="text-[11px] text-slate-500 font-medium">
+                                Dung lượng: {(importFile.size / 1024 / 1024).toFixed(2)} MB • Sẵn sàng để AI phân tích
+                              </div>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setImportFile(null)}
+                            className="p-2 rounded-xl bg-white hover:bg-rose-50 text-slate-400 hover:text-rose-600 border border-slate-200 transition-colors"
+                            title="Xóa tệp chọn lại"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Cấu Hình Tài Liệu Nhiều Trang (VD: Sách 99 trang) & Độ Sâu Trích Xuất */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 rounded-2xl bg-indigo-50/40 border border-indigo-100">
+                      {/* 1. Phạm vi trang */}
+                      <div className="space-y-2">
+                        <label className="text-xs font-extrabold text-slate-800 flex items-center justify-between">
+                          <span>Phạm vi trang (Hỗ trợ sách 99+ trang):</span>
+                          <span className="text-[10px] text-indigo-700 font-bold bg-indigo-100 px-2 py-0.5 rounded-full">PDF Page Filter</span>
+                        </label>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setImportPageMode('all')}
+                            className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-bold transition-all ${
+                              importPageMode === 'all'
+                                ? 'bg-indigo-600 text-white shadow-xs'
+                                : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
+                            }`}
+                          >
+                            Toàn bộ tài liệu
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setImportPageMode('custom')}
+                            className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-bold transition-all ${
+                              importPageMode === 'custom'
+                                ? 'bg-indigo-600 text-white shadow-xs'
+                                : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
+                            }`}
+                          >
+                            Khoảng trang
+                          </button>
+                        </div>
+
+                        {importPageMode === 'custom' && (
+                          <div className="flex items-center gap-2 pt-1 animate-fade">
+                            <div className="flex-1">
+                              <span className="text-[10px] text-slate-500 font-bold">Từ trang:</span>
+                              <input
+                                type="number"
+                                min="1"
+                                value={importStartPage}
+                                onChange={(e) => setImportStartPage(parseInt(e.target.value, 10) || 1)}
+                                className="w-full mt-0.5 px-2.5 py-1.5 rounded-xl border border-slate-300 text-xs font-bold text-slate-900 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                              />
+                            </div>
+                            <div className="flex-1">
+                              <span className="text-[10px] text-slate-500 font-bold">Đến trang:</span>
+                              <input
+                                type="number"
+                                min={importStartPage}
+                                value={importEndPage}
+                                onChange={(e) => setImportEndPage(parseInt(e.target.value, 10) || importStartPage)}
+                                className="w-full mt-0.5 px-2.5 py-1.5 rounded-xl border border-slate-300 text-xs font-bold text-slate-900 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* 2. Chế độ phân tích chuyên sâu */}
+                      <div className="space-y-2">
+                        <label className="text-xs font-extrabold text-slate-800 flex items-center justify-between">
+                          <span>Độ sâu nhận diện dạng bài:</span>
+                          <span className="text-[10px] text-purple-700 font-bold bg-purple-100 px-2 py-0.5 rounded-full">Bloom L1-L4</span>
+                        </label>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setImportExtractionDepth('deep')}
+                            className={`flex-1 p-2 rounded-xl text-xs font-bold transition-all text-left ${
+                              importExtractionDepth === 'deep'
+                                ? 'bg-purple-600 text-white shadow-xs'
+                                : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
+                            }`}
+                          >
+                            <div className="font-extrabold">Chuyên sâu ĐGNL</div>
+                            <div className="text-[10px] opacity-80">2-4 dạng/bài, chuẩn 4 khối KaTeX</div>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setImportExtractionDepth('standard')}
+                            className={`flex-1 p-2 rounded-xl text-xs font-bold transition-all text-left ${
+                              importExtractionDepth === 'standard'
+                                ? 'bg-purple-600 text-white shadow-xs'
+                                : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
+                            }`}
+                          >
+                            <div className="font-extrabold">Tiêu chuẩn</div>
+                            <div className="text-[10px] opacity-80">Trọng tâm cốt lõi mục lục</div>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Hoặc Nhập Trích Đoạn Văn Bản / Mục Lục */}
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-600 flex items-center justify-between">
+                        <span>Hoặc dán trực tiếp trích đoạn văn bản chuyên đề (tùy chọn):</span>
+                        <span className="text-[11px] text-slate-400">Nếu không muốn tải file</span>
+                      </label>
+                      <textarea
+                        rows={3}
+                        value={importTextSnippet}
+                        onChange={(e) => setImportTextSnippet(e.target.value)}
+                        placeholder="Dán nội dung lý thuyết, mục lục hoặc các dạng bài tập tại đây..."
+                        className="w-full p-3 rounded-2xl border border-slate-300 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50 text-slate-800"
+                      />
+                    </div>
+
+                    {/* Tiến Trình Phân Tích AI (Nếu đang chạy) */}
+                    {isExtractingAi && (
+                      <div className="p-5 rounded-2xl bg-gradient-to-r from-purple-50 via-indigo-50 to-blue-50 border border-purple-200 space-y-3 animate-fade">
+                        <div className="flex items-center justify-between text-xs font-extrabold text-purple-900">
+                          <span className="flex items-center gap-2">
+                            <RefreshCw className="w-4 h-4 animate-spin text-purple-600" />
+                            <span>AI Tri Thức Đang Bóc Tách & Nhận Diện Dạng Bài...</span>
+                          </span>
+                          <span>{aiExtractStep * 25}%</span>
+                        </div>
+
+                        <div className="w-full h-2 rounded-full bg-purple-100 overflow-hidden">
+                          <div 
+                            className="h-full bg-gradient-to-r from-purple-600 to-indigo-600 transition-all duration-500 rounded-full"
+                            style={{ width: `${aiExtractStep * 25}%` }}
+                          ></div>
+                        </div>
+
+                        <div className="grid grid-cols-4 gap-2 text-[10px] font-bold text-slate-600">
+                          <div className={aiExtractStep >= 1 ? "text-purple-700 font-black" : "text-slate-400"}>
+                            1. Đọc tệp & OCR
+                          </div>
+                          <div className={aiExtractStep >= 2 ? "text-purple-700 font-black" : "text-slate-400"}>
+                            2. Phân tích Chương - Bài
+                          </div>
+                          <div className={aiExtractStep >= 3 ? "text-purple-700 font-black" : "text-slate-400"}>
+                            3. Nhận diện Dạng bài
+                          </div>
+                          <div className={aiExtractStep >= 4 ? "text-purple-700 font-black" : "text-slate-400"}>
+                            4. Chuẩn hóa KaTeX
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* TAB 2: DÁN JSON THỦ CÔNG */}
+                {importTab === 'json' && (
+                  <div className="space-y-3">
+                    <p className="text-xs text-slate-600 leading-relaxed font-medium">
+                      Dán chuỗi JSON cấu trúc cây tri thức. Hệ thống sẽ tự động cập nhật phân cấp 
+                      <strong> Miền → Chương → Bài học → Dạng bài → Tài liệu & Câu hỏi</strong> vào PostgreSQL.
+                    </p>
+
+                    <textarea
+                      rows={12}
+                      value={importJsonText}
+                      onChange={(e) => setImportJsonText(e.target.value)}
+                      placeholder='{ "domainId": "6f3765db-943e-4810-bf74-d6a8bdc215da", "domainName": "Toán học & Tư duy định lượng", "chapters": [...] }'
+                      className="w-full p-3.5 rounded-2xl border border-slate-300 font-mono text-xs leading-relaxed focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50 text-slate-900"
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Footer Buttons */}
+            <div className="p-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between shrink-0">
+              {importTab === 'json' ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const sample = {
+                      domainId: "6f3765db-943e-4810-bf74-d6a8bdc215da",
+                      domainName: "Toán học & Tư duy định lượng",
+                      chapters: [
+                        {
+                          chapterName: "Chương 1: Ứng dụng đạo hàm khảo sát hàm số",
+                          weight: 0.25,
+                          lessons: [
+                            {
+                              lessonName: "Bài 1: Tính đơn điệu của hàm số",
+                              weight: 0.08,
+                              patterns: [
+                                {
+                                  patternName: "Dạng 1: Xét tính đơn điệu bằng dấu đạo hàm",
+                                  weight: 0.04,
+                                  theoryRecap: "Hàm số đồng biến trên K khi và chỉ khi f'(x) >= 0 với mọi x thuộc K.",
+                                  solutionMethod: "Bước 1: Tìm TXĐ.\nBước 2: Tính đạo hàm f'(x).\nBước 3: Lập bảng biến thiên.",
+                                  durationSeconds: 600
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    };
+                    setImportJsonText(JSON.stringify(sample, null, 2));
+                  }}
+                  className="text-xs font-bold text-indigo-600 hover:text-indigo-800 underline"
+                >
+                  Chèn JSON Mẫu
+                </button>
+              ) : (
+                <div className="text-[11px] text-slate-500 font-medium">
+                  {extractedCurriculum ? "Xem trước toàn cảnh 3 cột • Bấm nạp để cập nhật CSDL PostgreSQL" : "AI phân tích tự động chuẩn SGK 2018"}
+                </div>
+              )}
 
               <div className="flex items-center gap-2.5">
                 <button
                   type="button"
-                  onClick={() => setIsImportModalOpen(false)}
+                  onClick={() => {
+                    setIsImportModalOpen(false);
+                    setExtractedCurriculum(null);
+                    setAiExtractStep(0);
+                    setPreviewSelectedPattern(null);
+                  }}
                   className="px-4 py-2 rounded-xl border border-slate-300 text-xs font-bold text-slate-700 hover:bg-white"
                 >
                   Đóng
                 </button>
-                <button
-                  type="button"
-                  disabled={importingCurriculum}
-                  onClick={handleImportCurriculum}
-                  className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black shadow-md flex items-center gap-1.5 disabled:opacity-50"
-                >
-                  {importingCurriculum ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <UploadCloud className="w-3.5 h-3.5" />}
-                  <span>Nạp Tri Thức Vào Hệ Thống</span>
-                </button>
+
+                {importTab === 'document' ? (
+                  !extractedCurriculum ? (
+                    <button
+                      type="button"
+                      disabled={isExtractingAi || (!importFile && !importTextSnippet.trim())}
+                      onClick={handleRunAiExtraction}
+                      className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-700 hover:to-indigo-700 text-white text-xs font-black shadow-md shadow-indigo-500/25 flex items-center gap-2 disabled:opacity-50 transition-all hover:scale-105 active:scale-95"
+                    >
+                      {isExtractingAi ? (
+                        <>
+                          <RefreshCw className="w-4 h-4 animate-spin" />
+                          <span>AI Đang Nhận Diện Dạng Bài...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Wand2 className="w-4 h-4 text-amber-300" />
+                          <span>Khởi Chạy AI Nhận Diện Dạng Bài</span>
+                        </>
+                      )}
+                    </button>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const [cIdx, lIdx] = (previewSelectedLessonKey || '0-0').split('-').map(Number);
+                          const activeChap = extractedCurriculum.chapters?.[cIdx] || extractedCurriculum.chapters?.[0];
+                          const activeLes = activeChap?.lessons?.[lIdx] || activeChap?.lessons?.[0];
+                          const pat = previewSelectedPattern || activeLes?.patterns?.[0];
+                          setIsImportModalOpen(false);
+                          handleOpenStudio(pat, activeChap, activeLes);
+                        }}
+                        className="px-4 py-2 rounded-xl border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-black flex items-center gap-1.5 transition-colors shadow-2xs"
+                      >
+                        <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                        <span>Mở Trong Studio Sư Phạm</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        disabled={importingCurriculum}
+                        onClick={handleSaveExtractedCurriculum}
+                        className="px-6 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-md shadow-emerald-500/25 flex items-center gap-1.5 transition-all disabled:opacity-50"
+                      >
+                        {importingCurriculum ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                        <span>Nạp Vào CSDL PostgreSQL</span>
+                      </button>
+                    </div>
+                  )
+                ) : (
+                  <button
+                    type="button"
+                    disabled={importingCurriculum}
+                    onClick={handleImportCurriculum}
+                    className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black shadow-md flex items-center gap-1.5 disabled:opacity-50"
+                  >
+                    {importingCurriculum ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <UploadCloud className="w-3.5 h-3.5" />}
+                    <span>Nạp Tri Thức Vào Hệ Thống</span>
+                  </button>
+                )}
               </div>
             </div>
+
           </div>
         </div>
       )}

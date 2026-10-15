@@ -1,6 +1,7 @@
 import React from 'react';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
+import { AlertTriangle, Sparkles } from 'lucide-react';
 
 /**
  * Safe KaTeX HTML generator with fallback
@@ -19,90 +20,331 @@ export function renderKatexHtml(latex, displayMode = false) {
 }
 
 /**
- * Intelligently normalizes text strings containing math expressions:
- * 1. If explicit delimiters are present ($$, $, \[, \]), preserves them.
- * 2. If it's a standalone math expression (e.g. "y = x^4 + 2x^2", "y = \frac{2x - 1}{x + 1}"), wraps it into $...$.
- * 3. If it's a natural language sentence with embedded math patterns (e.g. "đồng biến trên khoảng (-\infty; +\infty) ?"),
- *    auto-encloses the isolated intervals/LaTeX commands in $...$ without corrupting Vietnamese diacritics.
+ * Unescapes literal '\n' string escapes to real newlines,
+ * while protecting actual LaTeX commands that start with '\n':
+ * \neq, \notin, \nabla, \nu, \natural, \nearrow, \nwarrow, \nsubseteq, etc.
+ */
+export function unescapeLiteralNewlines(text) {
+  if (!text) return '';
+  return String(text).replace(
+    /\\n(?!(?:eq|otin|abla|u|atural|earrow|warrow|subseteq|supseteq|gtr|less|parallel|ormalsize|ot|ewcommand)\b)/g,
+    '\n'
+  );
+}
+
+/**
+ * Intelligently normalizes text strings containing math & chemistry expressions:
+ * 1. Unescapes literal '\n' to actual newlines (protecting \neq, \notin, \nabla, \nu).
+ * 2. Restores corrupted LaTeX commands (e.g. \text, \times).
+ * 3. In non-math segments, automatically encloses isolated raw LaTeX expressions
+ *    and chemistry formulas (such as H^+, OH^-, SO_4^{2-}, H_2O, H_2SO_4, HNO_3, x_0) in $...$.
  */
 export function normalizeMathString(text) {
   if (!text) return '';
-  let str = String(text).trim();
+  let str = String(text);
 
-  // If already has explicit delimiters, keep as is
-  if (str.includes('$') || str.includes('\\(') || str.includes('\\[') || str.includes('$$')) {
-    return str;
-  }
+  // 1. Unescape literal string escaped newlines e.g. "\n" -> real newlines
+  str = unescapeLiteralNewlines(str);
 
-  // Check if string contains multi-word natural language text
-  const hasVietnameseWords = /[a-zA-Z\u00C0-\u024F]{2,}\s+[a-zA-Z\u00C0-\u024F]{2,}/i.test(str);
-  const isPureMathExpr = !hasVietnameseWords && (
-    /\\[a-zA-Z]+|[\^_]|(\b[a-zA-Z]_{?[a-zA-Z0-9]+}?)|(^[a-zA-Z](\([a-zA-Z0-9, ]+\))?\s*=)/i.test(str) ||
-    /^\s*[(\[][\s]*[+-]?\\infty/i.test(str)
-  );
+  // Recover LaTeX commands that may have lost their backslash from past tab-replacement or JSON parsing
+  str = str.replace(/(?<!\\)\bext\{/g, '\\text{');
+  str = str.replace(/(?<!\\)\bimes\b/g, '\\times');
 
-  if (isPureMathExpr) {
-    return `$${str}$`;
-  }
+  // 2. Tokenize by existing explicit math delimiters
+  const mathDelimiterRegex = /(\$\$[\s\S]*?\$\$|\$[^\$\n]+?\$|\\\[[\s\S]*?\\\]|\\\([\s\S]*?\\\))/g;
+  const parts = str.split(mathDelimiterRegex);
 
-  // Mixed sentence: auto-wrap mathematical intervals e.g. (-\infty; +\infty), [0; +\infty)
-  str = str.replace(/([(\[][\s]*[+-]?\\infty\s*;\s*[+-]?\\infty[\s]*[)\]])/g, '$$$1$$');
-  // Auto-wrap isolated LaTeX commands like \frac{...}{...}, \sqrt{...}
-  str = str.replace(/(\\[a-zA-Z]+(?:\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\})+(?:\^[a-zA-Z0-9]+)?)/g, '$$$1$$');
+  const processed = parts.map((part) => {
+    if (!part) return '';
+    // If it's already an explicit math delimiter block, preserve as-is
+    if (
+      (part.startsWith('$$') && part.endsWith('$$')) ||
+      (part.startsWith('$') && part.endsWith('$')) ||
+      (part.startsWith('\\[') && part.endsWith('\\]')) ||
+      (part.startsWith('\\(') && part.endsWith('\\)'))
+    ) {
+      return part;
+    }
 
-  return str;
+    let textChunk = part;
+
+    // Wrap LaTeX commands with curly braces or sub/superscripts e.g. \frac{a}{b}, \sqrt{x}, \lim_{x \to 0}, \Delta
+    textChunk = textChunk.replace(
+      /(\\(?:text|mathrm|mathbf|Delta|frac|sqrt|lim|int|sum|prod|alpha|beta|gamma|delta|epsilon|theta|lambda|mu|pi|rho|sigma|tau|phi|omega|Omega|left|right|partial|infty|vec|le|ge|neq|approx|equiv|pm|times|div|cdot|in|notin|subset|cap|cup|forall|exists|mathbb)\b(?:\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}|_[a-zA-Z0-9{}]*(?:\{[^{}]*\})?|\^[a-zA-Z0-9{}]*(?:\{[^{}]*\})?)*)/g,
+      '$$$1$$'
+    );
+
+    // Wrap chemical ions with charges like H^+, OH^-, Fe^{3+}, Fe^3+, SO_4^{2-}, NO_3^-, Na^+, Cl^-
+    textChunk = textChunk.replace(
+      /(?<![$\\\w])((?:[A-Z][a-z]?(?:_\d+)?)+\^\{?[+-]?\d*[+-]?\}?)(?![$\w])/g,
+      '$$$1$$'
+    );
+
+    // Wrap chemical compounds with subscripts like H_2O, H_2SO_4, HNO_3, CO_2, Fe_2O_3, KMnO_4, O_2, N_2
+    textChunk = textChunk.replace(
+      /(?<![$\\\w])((?:[A-Z][a-z]?(?:_\d+)?)*(?:[A-Z][a-z]?_\d+)(?:[A-Z][a-z]?(?:_\d+)?)*)(?![$\w])/g,
+      '$$$1$$'
+    );
+
+    // Wrap single variable subscripts like x_0, y_0, x_1, f'(x_0)
+    textChunk = textChunk.replace(/(?<![$\\\w])([a-zA-Z]_[0-9a-zA-Z])(?![$\w])/g, '$$$1$$');
+
+    // Wrap mathematical intervals e.g. (-\infty; +\infty), [0; +\infty)
+    textChunk = textChunk.replace(/([(\[][\s]*[+-]?(?:\\infty|\d+)\s*;\s*[+-]?(?:\\infty|\d+)[\s]*[)\]])/g, '$$$1$$');
+
+    return textChunk;
+  });
+
+  return processed.join('');
+}
+
+/**
+ * Render purely inline content without any block wrappers.
+ * Everything returned is inline (<span>, <strong>, <img>) so that text,
+ * math, punctuation, and parentheses flow seamlessly on the same line.
+ */
+function renderInlineContent(text, keyPrefix = '') {
+  if (!text) return null;
+  if (typeof text !== 'string') return text;
+
+  // Split by explicit math delimiters
+  const mathRegex = /(\$\$[\s\S]*?\$\$|\$[^\$]+?\$|\\\[[\s\S]*?\\\]|\\\([\s\S]*?\\\))/g;
+  const parts = text.split(mathRegex);
+
+  return parts.map((part, idx) => {
+    if (!part) return null;
+    const partKey = `${keyPrefix}-m${idx}`;
+
+    // Block math in inline context -> render as inline-block KaTeX
+    if (part.startsWith('$$') && part.endsWith('$$')) {
+      const math = part.slice(2, -2).trim();
+      return (
+        <span
+          key={partKey}
+          className="inline-block mx-1 align-middle select-all font-serif"
+          dangerouslySetInnerHTML={{ __html: renderKatexHtml(math, true) }}
+        />
+      );
+    }
+
+    // Inline math $...$
+    if (part.startsWith('$') && part.endsWith('$')) {
+      const math = part.slice(1, -1).trim();
+      return (
+        <span
+          key={partKey}
+          className="inline-math mx-0.5 align-baseline select-all font-serif"
+          dangerouslySetInnerHTML={{ __html: renderKatexHtml(math, false) }}
+        />
+      );
+    }
+
+    // Block math \[...\]
+    if (part.startsWith('\\[') && part.endsWith('\\]')) {
+      const math = part.slice(2, -2).trim();
+      return (
+        <span
+          key={partKey}
+          className="inline-block mx-1 align-middle select-all font-serif"
+          dangerouslySetInnerHTML={{ __html: renderKatexHtml(math, true) }}
+        />
+      );
+    }
+
+    // Inline math \(...\)
+    if (part.startsWith('\\(') && part.endsWith('\\)')) {
+      const math = part.slice(2, -2).trim();
+      return (
+        <span
+          key={partKey}
+          className="inline-math mx-0.5 align-baseline select-all font-serif"
+          dangerouslySetInnerHTML={{ __html: renderKatexHtml(math, false) }}
+        />
+      );
+    }
+
+    // Non-math text: parse markdown images and bold
+    const mdParts = part.split(/(!\[.*?\]\(.*?\)|\*\*.*?\*\*)/g);
+
+    return (
+      <React.Fragment key={partKey}>
+        {mdParts.map((chunk, cIdx) => {
+          if (!chunk) return null;
+          const chunkKey = `${partKey}-c${cIdx}`;
+
+          // Markdown image ![alt](url)
+          const imgMatch = chunk.match(/^!\[(.*?)\]\((.*?)\)$/);
+          if (imgMatch) {
+            const alt = imgMatch[1] || 'Hình minh họa';
+            const src = imgMatch[2];
+            return (
+              <img
+                key={chunkKey}
+                src={src}
+                alt={alt}
+                className="inline-block max-h-36 rounded-xl border border-slate-200/90 shadow-sm object-contain bg-white p-1 my-1 mx-1 align-middle"
+                loading="lazy"
+              />
+            );
+          }
+
+          // Markdown bold **text**
+          if (chunk.startsWith('**') && chunk.endsWith('**')) {
+            return (
+              <strong key={chunkKey} className="font-bold text-slate-900">
+                {chunk.slice(2, -2)}
+              </strong>
+            );
+          }
+
+          // Plain text chunk
+          return <span key={chunkKey}>{chunk}</span>;
+        })}
+      </React.Fragment>
+    );
+  });
+}
+
+/**
+ * Render structured multi-line text (paragraphs, bullet lists, step highlights, callouts).
+ */
+function renderStructuredContent(raw) {
+  // First split by multi-line display math blocks ($$...$$ or \[...\])
+  const displayMathRegex = /(\$\$[\s\S]*?\$\$|\\\[[\s\S]*?\\\])/g;
+  const blocks = raw.split(displayMathRegex);
+
+  return blocks.map((block, bIdx) => {
+    if (!block) return null;
+
+    // Multi-line display math block
+    if (block.startsWith('$$') && block.endsWith('$$')) {
+      const math = block.slice(2, -2).trim();
+      return (
+        <div
+          key={`b-${bIdx}`}
+          className="my-2.5 overflow-x-auto text-center select-all py-1"
+          dangerouslySetInnerHTML={{ __html: renderKatexHtml(math, true) }}
+        />
+      );
+    }
+    if (block.startsWith('\\[') && block.endsWith('\\]')) {
+      const math = block.slice(2, -2).trim();
+      return (
+        <div
+          key={`b-${bIdx}`}
+          className="my-2.5 overflow-x-auto text-center select-all py-1"
+          dangerouslySetInnerHTML={{ __html: renderKatexHtml(math, true) }}
+        />
+      );
+    }
+
+    // Text block: process line by line
+    const lines = block.split('\n');
+
+    return (
+      <React.Fragment key={`b-${bIdx}`}>
+        {lines.map((line, lIdx) => {
+          const lineKey = `b-${bIdx}-l-${lIdx}`;
+          const trimmed = line.trim();
+
+          // Empty line -> spacing
+          if (!trimmed) {
+            return <div key={lineKey} className="h-1.5" />;
+          }
+
+          // Callout Warning e.g. "### ⚠️ Các bẫy đề thi:" or "⚠️ ..."
+          if (line.includes('### ⚠️') || line.startsWith('⚠️')) {
+            const cleanHeading = line.replace(/^###\s*/, '').replace(/^⚠️\s*/, '').trim();
+            return (
+              <div
+                key={lineKey}
+                className="my-2.5 p-3 rounded-xl bg-rose-50/90 border border-rose-200/90 text-rose-950 font-bold text-xs flex items-center gap-2 shadow-2xs"
+              >
+                <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                <span>{cleanHeading}</span>
+              </div>
+            );
+          }
+
+          // Callout Tip e.g. "### 💡 Mẹo Casio:" or "💡 ..."
+          if (line.includes('### 💡') || line.startsWith('💡')) {
+            const cleanHeading = line.replace(/^###\s*/, '').replace(/^💡\s*/, '').trim();
+            return (
+              <div
+                key={lineKey}
+                className="my-2.5 p-3 rounded-xl bg-indigo-50/90 border border-indigo-200/90 text-indigo-950 font-bold text-xs flex items-center gap-2 shadow-2xs"
+              >
+                <Sparkles className="w-4 h-4 text-indigo-600 shrink-0" />
+                <span>{cleanHeading}</span>
+              </div>
+            );
+          }
+
+          // Bullet list items e.g. "- ...", "* ...", "• ...", or duplicate "• - ..."
+          const bulletMatch = line.match(/^(\s*)(?:[-*•]|\u2022)\s*(?:[-*•]\s*)?(.*)$/);
+          if (bulletMatch) {
+            const indentSpaces = bulletMatch[1].length;
+            const indentClass = indentSpaces >= 4 ? 'ml-6' : indentSpaces >= 2 ? 'ml-3.5' : 'ml-1';
+            const bulletContent = bulletMatch[2];
+            return (
+              <div key={lineKey} className={`flex items-start gap-2 ${indentClass} text-slate-700 leading-relaxed my-0.5`}>
+                <span className="text-indigo-500 font-bold select-none leading-relaxed">•</span>
+                <span className="flex-1 min-w-0">{renderInlineContent(bulletContent, lineKey)}</span>
+              </div>
+            );
+          }
+
+          // Numbered list items e.g. "1. ...", "2) ..."
+          const numMatch = line.match(/^(\s*)(\d+[\.\)])\s+(.*)$/);
+          if (numMatch) {
+            const indentSpaces = numMatch[1].length;
+            const indentClass = indentSpaces >= 4 ? 'ml-6' : indentSpaces >= 2 ? 'ml-3.5' : 'ml-1';
+            const numMarker = numMatch[2];
+            const numContent = numMatch[3];
+            return (
+              <div key={lineKey} className={`flex items-start gap-2 ${indentClass} text-slate-700 leading-relaxed my-0.5`}>
+                <span className="font-bold text-indigo-600 select-none leading-relaxed text-xs pt-0.5 shrink-0">
+                  {numMarker}
+                </span>
+                <span className="flex-1 min-w-0">{renderInlineContent(numContent, lineKey)}</span>
+              </div>
+            );
+          }
+
+          // Step highlight line e.g. "**Bước 1: ...**" or "Bước 1: ..."
+          const isStepLine = /^\s*(\*\*Bước \d+:|Bước \d+:)/i.test(line);
+          if (isStepLine) {
+            return (
+              <div key={lineKey} className="font-bold text-slate-900 mt-2.5 mb-1 leading-relaxed">
+                {renderInlineContent(line, lineKey)}
+              </div>
+            );
+          }
+
+          // Default regular line/paragraph
+          return (
+            <div key={lineKey} className="leading-relaxed text-slate-700 my-0.5">
+              {renderInlineContent(line, lineKey)}
+            </div>
+          );
+        })}
+      </React.Fragment>
+    );
+  });
 }
 
 /**
  * MathText Component:
  * Automatically parses and renders LaTeX math formulas embedded in text:
- * - Block math: $$...$$ or \[...\]
+ * - Block display math: $$...$$ or \[...\]
  * - Inline math: $...$ or \(...\)
- * - Raw math expressions: auto-normalized and rendered beautifully
+ * - Raw math expressions: auto-normalized and wrapped in $...$
+ * - Markdown features: bold (**...**), images (![alt](url)), bullets (- / * / •), numbered lists (1. / 2.)
+ * - Callout blocks: "### ⚠️ ..." and "### 💡 ..."
+ *
+ * Designed to preserve natural inline text flow so that formulas, numbers,
+ * commas, periods, and parentheses never shatter across separate lines.
  */
-/**
- * Helper to render non-math text with support for Markdown images ![alt](url)
- */
-function renderTextWithMarkdown(text) {
-  if (!text) return null;
-  if (typeof text !== 'string') return text;
-  const imageRegex = /!\[(.*?)\]\((.*?)\)/g;
-  if (!imageRegex.test(text)) {
-    return text;
-  }
-  const elements = [];
-  let lastIndex = 0;
-  let match;
-  imageRegex.lastIndex = 0;
-  while ((match = imageRegex.exec(text)) !== null) {
-    if (match.index > lastIndex) {
-      elements.push(text.substring(lastIndex, match.index));
-    }
-    const alt = match[1] || 'Hình minh họa';
-    const src = match[2];
-    elements.push(
-      <span key={`img-${match.index}`} className="block my-3 text-center">
-        <img
-          src={src}
-          alt={alt}
-          className="inline-block max-w-full max-h-80 rounded-2xl border border-slate-200/90 shadow-md object-contain bg-white p-1 hover:shadow-lg transition-shadow"
-          loading="lazy"
-        />
-        {alt && alt !== 'Hình minh họa' && (
-          <span className="block text-[11px] text-slate-500 font-medium mt-1 italic">
-            {alt}
-          </span>
-        )}
-      </span>
-    );
-    lastIndex = match.index + match[0].length;
-  }
-  if (lastIndex < text.length) {
-    elements.push(text.substring(lastIndex));
-  }
-  return elements;
-}
-
 export default function MathText({ text, className = '' }) {
   if (!text) return null;
   if (typeof text !== 'string') {
@@ -110,66 +352,24 @@ export default function MathText({ text, className = '' }) {
   }
   const raw = normalizeMathString(text);
 
-  // Split by explicit delimiters: $$, $, \[, \], \(, \)
-  const parts = raw.split(/(\$\$[\s\S]*?\$\$|\$[^\$]+?\$|\\\[[\s\S]*?\\\]|\\\([\s\S]*?\\\))/g);
+  // Check if content has document structure (multiple lines, block math, bullets, callouts)
+  const hasLinebreaks = raw.includes('\n');
+  const hasBlockMath = raw.includes('$$') || raw.includes('\\[');
+  const hasBullets = /^\s*(?:[-*•]|\u2022)\s+/m.test(raw);
+  const hasCallouts = /###\s*[⚠️💡]/m.test(raw) || /^[⚠️💡]/m.test(raw);
+  const isStructured = hasLinebreaks || hasBlockMath || hasBullets || hasCallouts;
+
+  if (!isStructured) {
+    return (
+      <span className={`inline leading-relaxed ${className}`}>
+        {renderInlineContent(raw, 'root')}
+      </span>
+    );
+  }
 
   return (
-    <span className={`inline-block align-baseline ${className}`}>
-      {parts.map((part, idx) => {
-        if (!part) return null;
-
-        // Block display: $$...$$
-        if (part.startsWith('$$') && part.endsWith('$$')) {
-          const math = part.slice(2, -2).trim();
-          return (
-            <span
-              key={idx}
-              className="my-2 block text-center overflow-x-auto"
-              dangerouslySetInnerHTML={{ __html: renderKatexHtml(math, true) }}
-            />
-          );
-        }
-
-        // Inline display: $...$
-        if (part.startsWith('$') && part.endsWith('$')) {
-          const math = part.slice(1, -1).trim();
-          return (
-            <span
-              key={idx}
-              className="inline-math mx-0.5"
-              dangerouslySetInnerHTML={{ __html: renderKatexHtml(math, false) }}
-            />
-          );
-        }
-
-        // Block display: \[...\]
-        if (part.startsWith('\\[') && part.endsWith('\\]')) {
-          const math = part.slice(2, -2).trim();
-          return (
-            <span
-              key={idx}
-              className="my-2 block text-center overflow-x-auto"
-              dangerouslySetInnerHTML={{ __html: renderKatexHtml(math, true) }}
-            />
-          );
-        }
-
-        // Inline display: \(...\)
-        if (part.startsWith('\\(') && part.endsWith('\\)')) {
-          const math = part.slice(2, -2).trim();
-          return (
-            <span
-              key={idx}
-              className="inline-math mx-0.5"
-              dangerouslySetInnerHTML={{ __html: renderKatexHtml(math, false) }}
-            />
-          );
-        }
-
-        // Regular text with image support
-        return <span key={idx}>{renderTextWithMarkdown(part)}</span>;
-      })}
-    </span>
+    <div className={`space-y-0.5 ${className}`}>
+      {renderStructuredContent(raw)}
+    </div>
   );
 }
-

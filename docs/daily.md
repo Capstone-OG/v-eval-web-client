@@ -2,8 +2,73 @@
 
 ---
 
-## [15/10/2026] - Nâng Cấp Cây Tri Thức Phân Cấp 3 Tầng, Phân Hệ Studio Sư Phạm Chuyên Sâu (Curriculum Studio Editor), Khắc Phục Lỗi Màn Trắng & Xóa Bỏ 100% Hardcode
+## [15/10/2026] - Nâng Cấp Cây Tri Thức Phân Cấp 3 Tầng, Studio Sư Phạm Chuyên Sâu (Curriculum Studio Editor), Bàn Phím KaTeX STEM 10 Danh Mục, Không Gian Bóc Tách Khổ Lớn 3 Cột, Khắc Phục Lỗi Màn Trắng & KaTeX
 
+- **Kiến Trúc Soạn Thảo Đa Chế Độ: Soạn Thảo Trực Quan (Text In Preview Chuẩn Học Sinh) Song Hành Mã Nguồn LaTeX Thuần (Nhập Nhanh Từ AI) (`CurriculumStudioEditor.jsx`)**:
+  - *Giải Phóng Giáo Viên Khỏi Rào Cản Kỹ Thuật*: Không ép buộc giáo viên phải cắt vụn bài giảng thành 4 ô form rời rạc (Định nghĩa, Công thức, Quy tắc, Hình ảnh) gây mất mạch tư duy sư phạm. Hệ thống trang bị 2 chế độ soạn thảo chuyên sâu:
+    1. Chế độ **Soạn Thảo Trực Quan (Text In Preview - Chuẩn Học Sinh)** (Mặc định):
+       - Cho phép giáo viên soạn thảo tự nhiên, hỗ trợ chèn nhanh cấu trúc: `+ Khối công thức $$...$$`, `+ Gạch đầu dòng`.
+       - Tích hợp trực tiếp **Khung Hiển Thị Trực Quan (Text In Preview - Giao Diện Học Sinh Thấy)** song hành ngay bên dưới ô soạn thảo. Khung này sử dụng `<MathText />` render thời gian thực các công thức toán học KaTeX thật (phân số, căn thức, giới hạn, tích phân, đồ thị minh họa), mô phỏng chuẩn xác 100% thẻ lý thuyết mà học sinh sẽ trải nghiệm.
+    2. Chế độ **Mã Nguồn LaTeX Thuần (Nhập Nhanh Từ AI)**:
+       - Trang bị khung soạn thảo monospace nền tối chuyên dụng, tối ưu cho thao tác copy-paste nhanh 1-chạm kết quả trích xuất từ Gemini / ChatGPT / AI Engine mà không phải chuyển đổi thủ công.
+  - *Cơ Chế Chèn Ký Hiệu KaTeX STEM Chuẩn Xác Tại Vị Trí Con Trỏ (Cursor-Precision Insertion Engine)*:
+    - Bổ sung `useRef` quản lý `textareaRefs` theo dõi vị trí con trỏ chuột (`selectionStart` / `selectionEnd`) trên từng ô soạn thảo đang active.
+    - Khi giáo viên click vào bất kỳ ký hiệu nào trên Bảng KaTeX STEM 10 danh mục (hơn 120+ công thức toán học), công thức tự động chèn đúng vào vị trí con trỏ chuột đang đứng và tự động khôi phục focus, chấm dứt hoàn toàn hiện tượng công thức bị nối đuôi về cuối văn bản.
+  - *Áp Dụng Cho Cả Khối 1 (Lý Thuyết Nền Tảng) & Khối 2 (Phương Pháp Giải Chuyên Biệt)*:
+    - Ở Khối 2, chế độ trực quan cung cấp khung soạn bước giải kèm xem trước thẻ Bẫy đề thi ĐGNL (Rose Alert) và Mẹo Casio (Indigo Tip) sống động, song song với chế độ mã nguồn LaTeX thuần để nạp nhanh từ AI.
+
+- **Tái Cấu Trúc Toàn Diện Động Cơ Render KaTeX & Sửa Triệt Để Lỗi Vỡ Dòng Văn Bản (`MathText.jsx`)**:
+  - *Nguyên Nhân Vỡ Dòng Từng Chữ (Sentence Shattering Root Cause)*: Trước đó, hàm `MathText` chia chuỗi toàn cục theo ký tự phân cách toán học trước, sau đó bọc mỗi mẩu text trung gian (dấu phẩy, dấu chấm, dấu ngoặc, từ ngữ) vào một thẻ `display: block` (`span className="block leading-relaxed"`). Điều này khiến câu văn bị xé nhỏ thành hàng chục dòng dọc riêng biệt cho từng dấu chấm, dấu phẩy và công thức toán.
+  - *Tách Biệt Hai Tầng Render (Line-Level vs Inline-Level)*: Tái cấu trúc kiến trúc phân tích thành 2 tầng độc lập:
+    1. Tầng dòng (Line-Level): Chỉ bóc tách các dòng ngắt `\n` thực sự, nhận diện Khối cảnh báo Callout (`### ⚠️`, `### 💡`), Dòng bước giải (`Bước 1:`, `**Bước 1:**`), và Danh sách dấu chấm/dấu gạch.
+    2. Tầng nội dòng (Inline-Level): Toàn bộ văn bản, công thức toán (`$...$`, `\(...\)`), chữ in đậm (`**...**`), và ảnh Markdown (`![alt](url)`) bên trong một dòng đều được render dưới dạng inline thuần túy (`<span>`, `<strong>`, `<img>`), tuyệt đối không chứa thẻ `block` nào, đảm bảo câu văn và công thức toán học/hóa học tuôn chảy mượt mà trên cùng một dòng.
+  - *Khắc Phục Lỗi Trùng Lặp Bullet (`• - `)*: Cập nhật biểu thức chính quy bóc tách danh sách để cắt bỏ hoàn toàn dấu gạch ngang đầu dòng `- ` hoặc bullet trùng lặp, chỉ hiển thị duy nhất 1 bullet chấm tròn màu Indigo `•` thanh lịch, thẳng hàng hoàn hảo.
+  - *Khắc Phục Triệt Để Ký Tự Thoát `\n` Bị Hiển Thị Thô*:
+    - Trước đó, biểu thức `replace(/\\n(?![a-zA-Z])/g, '\n')` chặn tất cả các chữ cái đứng sau `\n`, dẫn đến các từ tiếng Việt như `\nTrong`, `\nKiểm`, `\nBước 2:` không bao giờ được unescape mà hiển thị trần trụi dạng text thô `.\nTrong` và `.\nBước`.
+    - Nâng cấp negative lookahead chính xác chỉ bảo vệ đúng 15 lệnh LaTeX thực sự bắt đầu bằng `\n` (`` `\neq` ``, `` `\notin` ``, `` `\nabla` ``, `` `\nu` ``, v.v.), giải phóng 100% các từ tiếng Việt và ngắt dòng thực sự, giúp chia đoạn và chia bước giải rõ ràng, ngăn nắp.
+    - Xuất hàm helper `unescapeLiteralNewlines` đồng bộ vào `CurriculumStudioEditor.jsx` để textarea nhập liệu cũng tự động giải phóng `\n` thành Enter xuống dòng thực tế, giúp giảng viên soạn thảo cực kỳ trực quan.
+  - *Tự Động Nhận Diện & Bọc KaTeX Cho Công Thức Hóa Học & Ion Đa Nguyên Tử*:
+    - Tự động bọc KaTeX cho các ion đơn/đa nguyên tử có điện tích: `` `H^+` ``, `` `OH^-` ``, `` `SO_4^{2-}` ``, `` `NO_3^-` ``, `` `Fe^{3+}` ``, `` `Na^+` ``.
+    - Tự động bọc KaTeX cho các hợp chất có chỉ số dưới: `` `H_2O` ``, `` `H_2SO_4` ``, `` `HNO_3` ``, `` `CO_2` ``, `` `Fe_2O_3` ``, `` `KMnO_4` `` ngay cả khi người dùng hoặc AI không gõ cặp dấu `$`.
+  - *Hỗ Trợ Danh Sách Thụt Lề & Phân Cấp*: Hỗ trợ thụt lề nhiều cấp cho danh sách lồng nhau và danh sách đánh số (`1.`, `2)`).
+  - *Xử Lý Inline Thông Minh*: Đối với các chuỗi ngắn không chứa cấu trúc dòng (như phương án trắc nghiệm A-D, tiêu đề, công thức rời), `MathText` tự động render dưới dạng `<span>` nội dòng để tránh vi phạm cấu trúc DOM React (`div cannot appear as child of span`).
+- **Khắc Phục Triệt Để Lỗi Hiển Thị KaTeX & Chuỗi Ký Tự (`MathText.jsx`)**:
+  - Xử lý triệt để ký tự thoát `\n\n` bị hiển thị thô thành text (`str.replace(/\\n/g, '\n')`).
+  - Tự động bọc KaTeX cho các lệnh LaTeX độc lập (`\Delta`, `\frac`, `\lim`, `\int`, `\alpha`, `x_0`, v.v.) nằm ngoài khối `$...$`, loại bỏ hoàn toàn tình trạng mã LaTeX xuất hiện dạng chuỗi code thô.
+  - Bóc tách và render các khối Callout cảnh báo sư phạm (`### ⚠️ Các bẫy đề thi:` thành thẻ cảnh báo Rose Alert, `### 💡 Mẹo Casio:` thành thẻ mẹo Indigo Tip) và các bước giải nổi bật `**Bước X:**`.
+- **Bàn Phím Ảo & Bảng Ký Hiệu Công Thức KaTeX STEM Chuyên Sâu 10 Danh Mục (`CurriculumStudioEditor.jsx`)**:
+  - Mở rộng từ 10 ký tự cơ bản lên hơn 120+ công thức toán học chuyên sâu trải dài 10 danh mục:
+    1. Đại số & Giải tích cơ bản
+    2. Đạo hàm & Tiếp tuyến
+    3. Tích phân & Giới hạn
+    4. Mũ & Logarit
+    5. Lượng giác
+    6. Hình học & Không gian Oxyz (vectơ, tích có hướng, khoảng cách, mặt cầu)
+    7. Hệ phương trình & Dấu ngoặc
+    8. Tập hợp & Logic
+    9. Ký tự Hy Lạp (Alpha, Beta, Delta, Omega, Pi, Theta...)
+    10. Xác suất & Thống kê (Chỉnh hợp, Tổ hợp, Xác suất có điều kiện, Kỳ vọng, Phương sai)
+  - Render trực tiếp KaTeX sống động trên từng nút bấm preview.
+  - Thêm bộ chọn mục tiêu chèn thông minh (`Khối 1: Nền tảng SGK`, `Khối 2: Phương pháp giải`, `Bẫy đề thi`, `Mẹo Casio`, `Khối 4: Câu hỏi mẫu`, `Lời giải mẫu`) tự động theo dõi con trỏ focus của người dùng và hỗ trợ chèn ở cả Khối 1, Khối 2 và Khối 4.
+  - Bổ sung hàm regex `parseSolutionMethodSections` tự động bóc tách các mục nhúng `### ⚠️` và `### 💡` vào đúng các ô nhập liệu chuyên biệt.
+- **Không Gian Làm Việc Bóc Tách Tài Liệu Khổ Lớn Toàn Màn Hình 3 Cột (Fullscreen Panoramic Ingestion Studio - `CurriculumExplorerView.jsx`)**:
+  - Nâng cấp modal chật hẹp cũ thành Workspace Studio kích thước cực đại (`max-w-[1580px] h-[95vh]`).
+  - Hỗ trợ tài liệu lớn (sách 99+ trang, giáo trình chuyên đề) với bộ lọc phạm vi trang linh hoạt: `Toàn bộ tài liệu` hoặc `Chỉ định phạm vi trang` (`startPage` đến `endPage`), tránh tràn RAM và giới hạn token.
+  - Bổ sung tùy chọn độ sâu phân tích (`Mặc định` hoặc `Chuyên sâu ĐGNL VNU-HCM & TN THPT (Chi tiết từng dạng & bẫy)`).
+  - Layout 3 cột trực quan chuyên nghiệp:
+    - Cột 1: Cây mục lục Chương & Bài học (kèm thống kê tổng số Dạng bài).
+    - Cột 2: Danh mục Dạng bài học thuật theo bài học được chọn, tích hợp bộ lọc mức độ Bloom (Tất cả, L1, L2, L3, L4).
+    - Cột 3: Chi tiết dạng bài & Thanh tra KaTeX sống động (Live KaTeX Pattern Inspector) xem trước 4 khối sư phạm và mở trực tiếp vào Studio.
+- **Phân Hệ AI Bóc Tách Tài Liệu (PDF/DOCX) & Tự Động Nhận Diện Dạng Bài Sư Phạm (`CurriculumExplorerView.jsx`, `aiService.js`)**:
+  - *Bộ Tiếp Nhận Đa Định Dạng Tài Liệu*: Hỗ trợ kéo & thả tệp sách giáo khoa hoặc tài liệu chuyên đề (.pdf, .docx, .txt) hoặc nhập trích đoạn mục lục/chuyên đề với thanh tiến trình trực quan 4 bước: `1. Đọc tệp & OCR` -> `2. Phân tích Chương - Bài` -> `3. Nhận diện Dạng bài` -> `4. Chuẩn hóa KaTeX`.
+  - *Móc Nối API Gateway & AI Engine*: Tích hợp `aiService.extractCurriculumFromDocument` gọi trực tiếp `POST /api/ai-engine/curriculum/extract` (.NET 9 C#).
+  - *Khu Vực Duyệt Dạng Bài Trực Quan (Pattern Showcase Accordion)*: Hiển thị toàn bộ cây tri thức bóc tách được (Số chương, số bài, số dạng bài), kèm các huy hiệu nhận diện phân loại dạng toán, cấp độ Bloom, kỹ năng cốt lõi và xem trước 4 khối sư phạm (Nền tảng SGK, Phương pháp KaTeX từng bước, Đề thi trắc nghiệm mẫu).
+  - *Chuyển Tiếp Trực Tiếp Vào Studio*: Tích hợp nút "Mở Trong Studio" trên từng Dạng bài bóc tách được, cho phép giảng viên nhảy thẳng vào Studio toàn màn hình để kiểm tra, tinh chỉnh và thêm hình ảnh minh họa trước khi lưu vào CSDL.
+  - *Nạp Trực Tiếp Vào PostgreSQL*: Nút "Nạp Vào CSDL PostgreSQL" gọi `contentService.importCurriculum` (`POST /api/content/curriculum/import`) lưu toàn bộ cây phân cấp vào database với 0 giá trị hardcode.
+- **Trợ Lý AI Tri Thức Nhận Diện & Chuẩn Hóa Dạng Bài Trong Studio (`CurriculumStudioEditor.jsx`)**:
+  - *Tích Hợp API `aiService.analyzePatternWithAi`*: Nút bấm **"AI Nhận Diện Dạng Bài"** gửi tên dạng bài hiện tại lên động cơ AI Knowledge (`POST /api/v1/documents/analyze-pattern`).
+  - *Tự Động Điền & Tối Ưu Nội Dung Sư Phạm*: Tự động nhận diện bản chất toán học (Tham số m, Cực trị, Tiệm cận, Tối ưu thực tế, Không gian Oxyz...), điền quy trình 4 bước KaTeX, bẫy đề thi ĐGNL thường gặp, mẹo Casio fx-580/fx-880 và sinh câu hỏi trắc nghiệm chuẩn Bloom kèm lời giải chi tiết.
+  - *Banner Phân Loại Sư Phạm*: Hiển thị banner chuyên nghiệp ghi rõ phân loại dạng bài, kỹ năng cốt lõi và cấp độ Bloom.
 - **Khắc Phục Triệt Để Lỗi Màn Trắng (White Screen Fix) & Tăng Cường Bền Vững Runtime**:
   - Khắc phục `ReferenceError: weakPrerequisites is not defined` tại `CurriculumExplorerView.jsx:1303` bằng cách bổ sung bộ lọc dạng bài tiên quyết vùng trũng `<10%` đồng bộ từ `skillMasteryMap`.
   - Bọc `RootErrorBoundary` toàn cục tại `src/main.jsx` bắt mọi ngoại lệ render của React, hiển thị giao diện báo lỗi chi tiết cùng nút khôi phục reload/xóa cache.

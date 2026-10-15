@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   ArrowLeft, 
   Save, 
@@ -25,66 +25,323 @@ import {
   ExternalLink,
   Sliders,
   AlertCircle,
-  FolderOpen
+  FolderOpen,
+  PenTool,
+  Code2
 } from 'lucide-react';
-import MathText from '../common/MathText';
+import MathText, { unescapeLiteralNewlines } from '../common/MathText';
 import contentService from '../../services/contentService';
+import aiService from '../../services/aiService';
 
-const MATH_CATEGORIES = {
+export const MATH_CATEGORIES = {
   algebra: {
-    name: 'Đại số & Giải tích',
+    name: 'Đại số & Căn thức',
+    icon: '🔢',
     items: [
-      { label: 'Phân số', code: '\\frac{a}{b}' },
+      { label: 'Phân số a/b', code: '\\frac{a}{b}' },
       { label: 'Căn bậc 2', code: '\\sqrt{x}' },
       { label: 'Căn bậc n', code: '\\sqrt[n]{x}' },
-      { label: 'Lũy thừa', code: 'x^n' },
-      { label: 'Chỉ số dưới', code: 'x_0' },
-      { label: 'Đạo hàm', code: "f'(x)" },
-      { label: 'Đạo hàm cấp 2', code: "f''(x)" },
-      { label: 'Tích phân', code: '\\int_{a}^{b} f(x)dx' },
-      { label: 'Giới hạn', code: '\\lim_{x \\to x_0}' },
-      { label: 'Logarit', code: '\\log_a b' },
-      { label: 'Logarit tự nhiên', code: '\\ln x' },
-      { label: 'Delta', code: '\\Delta = b^2 - 4ac' },
-      { label: 'Tổng xích-ma', code: '\\sum_{i=1}^{n}' }
+      { label: 'Lũy thừa x^n', code: 'x^n' },
+      { label: 'Chỉ số dưới x_0', code: 'x_0' },
+      { label: 'Trị tuyệt đối |x|', code: '|x|' },
+      { label: 'Cộng trừ \\pm', code: '\\pm' },
+      { label: 'Trừ cộng \\mp', code: '\\mp' },
+      { label: 'Gần bằng \\approx', code: '\\approx' },
+      { label: 'Khác \\neq', code: '\\neq' },
+      { label: 'Lớn hơn bằng \\ge', code: '\\ge' },
+      { label: 'Nhỏ hơn bằng \\le', code: '\\le' },
+      { label: 'Vô cực \\infty', code: '\\infty' },
+      { label: 'Nhân dấu chấm', code: '\\cdot' }
     ]
   },
-  geometry: {
-    name: 'Hình học & Không gian Oxyz',
+  calculus_diff: {
+    name: 'Đạo hàm & Cực trị',
+    icon: '📈',
+    items: [
+      { label: 'Đạo hàm f\'(x)', code: "f'(x)" },
+      { label: 'Đạo hàm cấp 2 f\'\'(x)', code: "f''(x)" },
+      { label: 'Đạo hàm tại x0', code: "f'(x_0)" },
+      { label: 'dy/dx', code: '\\frac{dy}{dx}' },
+      { label: 'Điểm cực đại', code: 'x_{CĐ}' },
+      { label: 'Điểm cực tiểu', code: 'x_{CT}' },
+      { label: 'Giá trị cực đại', code: 'y_{CĐ}' },
+      { label: 'Giá trị cực tiểu', code: 'y_{CT}' },
+      { label: 'Max hàm số', code: '\\max_{[a;b]} f(x)' },
+      { label: 'Min hàm số', code: '\\min_{[a;b]} f(x)' },
+      { label: 'Biệt thức Delta', code: '\\Delta = b^2 - 4ac' },
+      { label: 'Delta phẩy', code: "\\Delta' = b'^2 - ac" },
+      { label: 'Đạo hàm phân số u/v', code: "\\left(\\frac{u}{v}\\right)' = \\frac{u'v - uv'}{v^2}" },
+      { label: 'Đạo hàm tích u.v', code: "(uv)' = u'v + uv'" }
+    ]
+  },
+  calculus_int: {
+    name: 'Tích phân & Giới hạn',
+    icon: '📉',
+    items: [
+      { label: 'Nguyên hàm f(x)dx', code: '\\int f(x)dx' },
+      { label: 'Tích phân cận a đến b', code: '\\int_{a}^{b} f(x)dx' },
+      { label: 'Giới hạn x dần tới x0', code: '\\lim_{x \\to x_0} f(x)' },
+      { label: 'Giới hạn tại +vô cực', code: '\\lim_{x \\to +\\infty} f(x)' },
+      { label: 'Giới hạn tại -vô cực', code: '\\lim_{x \\to -\\infty} f(x)' },
+      { label: 'Giới hạn bên phải x0+', code: '\\lim_{x \\to x_0^+} f(x)' },
+      { label: 'Giới hạn bên trái x0-', code: '\\lim_{x \\to x_0^-} f(x)' },
+      { label: 'Tổng xích-ma', code: '\\sum_{i=1}^{n} a_i' },
+      { label: 'Tích Pi', code: '\\prod_{i=1}^{n} a_i' },
+      { label: 'Tích phân từng phần', code: '\\int u dv = uv - \\int v du' },
+      { label: 'Diện tích hình phẳng', code: 'S = \\int_{a}^{b} |f(x) - g(x)| dx' },
+      { label: 'Thể tích tròn xoay', code: 'V = \\pi \\int_{a}^{b} [f(x)]^2 dx' }
+    ]
+  },
+  exponent_log: {
+    name: 'Mũ & Logarit',
+    icon: '⚡',
+    items: [
+      { label: 'Logarit cơ số a của b', code: '\\log_a b' },
+      { label: 'Logarit tự nhiên ln(x)', code: '\\ln x' },
+      { label: 'Logarit thập phân log(x)', code: '\\log x' },
+      { label: 'Hàm số e^x', code: 'e^x' },
+      { label: 'Hàm số a^x', code: 'a^x' },
+      { label: 'Logarit cơ số 2', code: '\\log_2 x' },
+      { label: 'Đạo hàm ln(x)', code: "(\\ln x)' = \\frac{1}{x}" },
+      { label: 'Đạo hàm a^x', code: "(a^x)' = a^x \\ln a" },
+      { label: 'Đổi cơ số log', code: '\\log_a b = \\frac{\\ln b}{\\ln a}' },
+      { label: 'Công thức log tích', code: '\\log_a (xy) = \\log_a x + \\log_a y' }
+    ]
+  },
+  trigonometry: {
+    name: 'Lượng giác',
+    icon: '📐',
+    items: [
+      { label: 'sin(x)', code: '\\sin x' },
+      { label: 'cos(x)', code: '\\cos x' },
+      { label: 'tan(x)', code: '\\tan x' },
+      { label: 'cot(x)', code: '\\cot x' },
+      { label: 'sin^2 + cos^2 = 1', code: '\\sin^2 x + \\cos^2 x = 1' },
+      { label: 'sin 2x', code: '\\sin 2x = 2\\sin x \\cos x' },
+      { label: 'cos 2x', code: '\\cos 2x = \\cos^2 x - \\sin^2 x' },
+      { label: 'Số Pi', code: '\\pi' },
+      { label: 'Pi / 2', code: '\\frac{\\pi}{2}' },
+      { label: 'Pi / 4', code: '\\frac{\\pi}{4}' },
+      { label: 'arcsin(x)', code: '\\arcsin x' },
+      { label: 'arccos(x)', code: '\\arccos x' }
+    ]
+  },
+  geometry_oxyz: {
+    name: 'Hình học & Oxyz',
+    icon: '🌐',
     items: [
       { label: 'Vector a', code: '\\vec{a}' },
       { label: 'Vector AB', code: '\\vec{AB}' },
       { label: 'Độ dài vector', code: '|\\vec{a}|' },
-      { label: 'Vector pháp tuyến', code: '\\vec{n} = (A; B; C)' },
+      { label: 'Tích vô hướng', code: '\\vec{u} \\cdot \\vec{v}' },
+      { label: 'Tích có hướng', code: '[\\vec{u}, \\vec{v}]' },
+      { label: 'Vector pháp tuyến n=(A;B;C)', code: '\\vec{n} = (A; B; C)' },
+      { label: 'Vector chỉ phương u=(a;b;c)', code: '\\vec{u} = (a; b; c)' },
       { label: 'Vuông góc', code: '\\perp' },
       { label: 'Song song', code: '\\parallel' },
       { label: 'Góc', code: '\\angle ABC' },
-      { label: 'Khoảng cách', code: 'd(M, (P)) = \\frac{|Ax_0 + By_0 + Cz_0 + D|}{\\sqrt{A^2 + B^2 + C^2}}' },
+      { label: 'Khoảng cách từ điểm tới mp', code: 'd(M, (P)) = \\frac{|Ax_0 + By_0 + Cz_0 + D|}{\\sqrt{A^2 + B^2 + C^2}}' },
       { label: 'Mặt phẳng Alpha', code: '(\\alpha)' },
-      { label: 'Mặt cầu S', code: '(S)' },
-      { label: 'Pi', code: '\\pi' }
+      { label: 'Mặt phẳng Beta', code: '(\\beta)' },
+      { label: 'Mặt cầu (S)', code: '(S): (x-a)^2 + (y-b)^2 + (z-c)^2 = R^2' }
     ]
   },
-  logic: {
-    name: 'Logic & Tập hợp',
+  systems_brackets: {
+    name: 'Hệ PT & Dấu ngoặc',
+    icon: '🧱',
     items: [
-      { label: 'Suy ra', code: '\\Rightarrow' },
-      { label: 'Tương đương', code: '\\Leftrightarrow' },
-      { label: 'Với mọi', code: '\\forall x \\in D' },
-      { label: 'Tồn tại', code: '\\exists x' },
-      { label: 'Thuộc', code: '\\in' },
-      { label: 'Không thuộc', code: '\\notin' },
-      { label: 'Tập rỗng', code: '\\emptyset' },
+      { label: 'Hệ 2 phương trình', code: '\\begin{cases} ax + by = c \\\\ dx + ey = f \\end{cases}' },
+      { label: 'Hệ 3 phương trình', code: '\\begin{cases} a_1 x + b_1 y + c_1 z = d_1 \\\\ a_2 x + b_2 y + c_2 z = d_2 \\\\ a_3 x + b_3 y + c_3 z = d_3 \\end{cases}' },
+      { label: 'Dấu ngoặc vuông hoặc', code: '\\begin{bmatrix} x = a \\\\ x = b \\end{bmatrix}' },
+      { label: 'Ngoặc tròn lớn \\left( ... \\right)', code: '\\left( \\frac{a}{b} \\right)' },
+      { label: 'Ngoặc vuông lớn \\left[ ... \\right]', code: '\\left[ a; b \\right]' },
+      { label: 'Khoảng (a; b)', code: '(a; b)' },
+      { label: 'Đoạn [a; b]', code: '[a; b]' },
+      { label: 'Nửa khoảng [a; b)', code: '[a; b)' },
+      { label: 'Tập hợp { x | ... }', code: '\\{ x \\in \\mathbb{R} \\mid P(x) \\}' }
+    ]
+  },
+  sets_logic: {
+    name: 'Tập hợp & Logic',
+    icon: '🧩',
+    items: [
+      { label: 'Suy ra =>', code: '\\Rightarrow' },
+      { label: 'Tương đương <=>', code: '\\Leftrightarrow' },
+      { label: 'Với mọi \\forall', code: '\\forall x \\in D' },
+      { label: 'Tồn tại \\exists', code: '\\exists x' },
+      { label: 'Thuộc \\in', code: '\\in' },
+      { label: 'Không thuộc \\notin', code: '\\notin' },
+      { label: 'Tập rỗng \\emptyset', code: '\\emptyset' },
       { label: 'Tập số thực R', code: '\\mathbb{R}' },
-      { label: 'Tập con', code: '\\subset' },
-      { label: 'Hợp', code: '\\cup' },
-      { label: 'Giao', code: '\\cap' },
-      { label: 'Lớn hơn bằng', code: '\\ge' },
-      { label: 'Nhỏ hơn bằng', code: '\\le' },
-      { label: 'Khác', code: '\\neq' }
+      { label: 'Tập số tự nhiên N', code: '\\mathbb{N}' },
+      { label: 'Tập số nguyên Z', code: '\\mathbb{Z}' },
+      { label: 'Tập số hữu tỉ Q', code: '\\mathbb{Q}' },
+      { label: 'Tập con \\subset', code: '\\subset' },
+      { label: 'Hợp \\cup', code: '\\cup' },
+      { label: 'Giao \\cap', code: '\\cap' },
+      { label: 'Hiệu \\setminus', code: '\\setminus' }
+    ]
+  },
+  greek_letters: {
+    name: 'Ký tự Hy Lạp',
+    icon: '🔤',
+    items: [
+      { label: 'alpha', code: '\\alpha' },
+      { label: 'beta', code: '\\beta' },
+      { label: 'gamma', code: '\\gamma' },
+      { label: 'delta nhỏ', code: '\\delta' },
+      { label: 'Delta lớn', code: '\\Delta' },
+      { label: 'epsilon', code: '\\epsilon' },
+      { label: 'theta', code: '\\theta' },
+      { label: 'lambda', code: '\\lambda' },
+      { label: 'mu', code: '\\mu' },
+      { label: 'pi', code: '\\pi' },
+      { label: 'rho', code: '\\rho' },
+      { label: 'sigma nhỏ', code: '\\sigma' },
+      { label: 'Sigma lớn', code: '\\Sigma' },
+      { label: 'tau', code: '\\tau' },
+      { label: 'phi', code: '\\phi' },
+      { label: 'omega', code: '\\omega' },
+      { label: 'Omega lớn', code: '\\Omega' }
+    ]
+  },
+  probability_stats: {
+    name: 'Xác suất & Thống kê',
+    icon: '🎲',
+    items: [
+      { label: 'Tổ hợp C(n, k)', code: 'C_n^k = \\frac{n!}{k!(n-k)!}' },
+      { label: 'Chỉnh hợp A(n, k)', code: 'A_n^k = \\frac{n!}{(n-k)!}' },
+      { label: 'Hoán vị P_n', code: 'P_n = n!' },
+      { label: 'Xác suất biến cố P(A)', code: 'P(A) = \\frac{n(A)}{n(\\Omega)}' },
+      { label: 'Biến cố đối P(A ngang)', code: 'P(\\bar{A}) = 1 - P(A)' },
+      { label: 'Xác suất có điều kiện', code: 'P(A|B) = \\frac{P(A \\cap B)}{P(B)}' },
+      { label: 'Công thức Bernoulli', code: 'P_n(k) = C_n^k p^k (1-p)^{n-k}' },
+      { label: 'Kỳ vọng E(X)', code: 'E(X) = \\sum x_i p_i' },
+      { label: 'Phương sai V(X)', code: 'V(X) = E(X^2) - [E(X)]^2' },
+      { label: 'Độ lệch chuẩn', code: '\\sigma = \\sqrt{V(X)}' },
+      { label: 'Số trung bình X ngang', code: '\\bar{X}' }
     ]
   }
 };
+
+export function parseSolutionMethodSections(rawMethod) {
+  if (!rawMethod) return { method: '', traps: '', casio: '' };
+  let method = String(rawMethod);
+  let traps = '';
+  let casio = '';
+
+  const trapsMatch = method.match(/###\s*(?:⚠️|Các bẫy đề thi|Bẫy đề thi)[^\n]*\n([\s\S]*?)(?=(?:###\s*(?:💡|Kỹ thuật Casio|Mẹo Casio)|$))/i);
+  if (trapsMatch) {
+    traps = trapsMatch[1].trim();
+  }
+
+  const casioMatch = method.match(/###\s*(?:💡|Kỹ thuật Casio|Mẹo Casio)[^\n]*\n([\s\S]*?)(?=(?:###\s*(?:⚠️|Các bẫy đề thi|Bẫy đề thi)|$))/i);
+  if (casioMatch) {
+    casio = casioMatch[1].trim();
+  }
+
+  method = method
+    .replace(/###\s*(?:⚠️|Các bẫy đề thi|Bẫy đề thi)[^\n]*\n[\s\S]*?(?=(?:###\s*(?:💡|Kỹ thuật Casio|Mẹo Casio)|$))/gi, '')
+    .replace(/###\s*(?:💡|Kỹ thuật Casio|Mẹo Casio)[^\n]*\n[\s\S]*?(?=(?:###\s*(?:⚠️|Các bẫy đề thi|Bẫy đề thi)|$))/gi, '')
+    .trim();
+
+  return { method, traps, casio };
+}
+
+/**
+ * Visual Helpers for Khối 1: Lý Thuyết Nền Tảng SGK
+ */
+export function parseTheoryRecapVisual(rawText) {
+  if (!rawText) return { definition: '', formula: '', rules: [''], imageUrl: '', imageAlt: '' };
+  const text = unescapeLiteralNewlines(rawText);
+
+  let imageUrl = '';
+  let imageAlt = '';
+  const imgMatch = text.match(/!\[(.*?)\]\((.*?)\)/);
+  if (imgMatch) {
+    imageAlt = imgMatch[1];
+    imageUrl = imgMatch[2];
+  }
+  const cleanText = text.replace(/!\[(.*?)\]\((.*?)\)/g, '').trim();
+
+  let formula = '';
+  const formulaMatch = cleanText.match(/\$\$([\s\S]*?)\$\$/);
+  let textWithoutFormula = cleanText;
+  if (formulaMatch) {
+    formula = formulaMatch[1].trim();
+    textWithoutFormula = cleanText.replace(/\$\$[\s\S]*?\$\$/g, '').trim();
+  }
+
+  const lines = textWithoutFormula.split('\n');
+  const defLines = [];
+  const rules = [];
+
+  lines.forEach(line => {
+    const trimmed = line.trim();
+    if (!trimmed) return;
+    const bulletMatch = trimmed.match(/^[-*•]\s+(.*)$/);
+    if (bulletMatch) {
+      rules.push(bulletMatch[1].trim());
+    } else {
+      defLines.push(trimmed);
+    }
+  });
+
+  return {
+    definition: defLines.join('\n'),
+    formula,
+    rules: rules.length > 0 ? rules : [''],
+    imageUrl,
+    imageAlt
+  };
+}
+
+export function buildTheoryRecapMarkdown({ definition, formula, rules, imageUrl, imageAlt }) {
+  const parts = [];
+  if (definition && definition.trim()) {
+    parts.push(definition.trim());
+  }
+  if (formula && formula.trim()) {
+    parts.push(`$$${formula.trim()}$$`);
+  }
+  if (rules && rules.length > 0) {
+    const validRules = rules.filter(r => r && r.trim());
+    if (validRules.length > 0) {
+      parts.push(validRules.map(r => `- ${r.trim()}`).join('\n'));
+    }
+  }
+  if (imageUrl && imageUrl.trim()) {
+    parts.push(`![${imageAlt || 'Hình minh họa'}](${imageUrl.trim()})`);
+  }
+  return parts.join('\n\n');
+}
+
+/**
+ * Visual Helpers for Khối 2: Phương Pháp Giải Chi Tiết
+ */
+export function parseSolutionStepsVisual(rawMethod) {
+  if (!rawMethod) return [''];
+  const text = unescapeLiteralNewlines(rawMethod);
+  const lines = text.split('\n');
+  const steps = [];
+  lines.forEach(line => {
+    const trimmed = line.trim();
+    if (!trimmed) return;
+    const stepMatch = trimmed.match(/^(?:\*\*Bước \d+:?\*\*|Bước \d+:?|\d+[\.\)])\s*(.*)$/i);
+    if (stepMatch && stepMatch[1]) {
+      steps.push(stepMatch[1].trim());
+    } else {
+      steps.push(trimmed);
+    }
+  });
+  return steps.length > 0 ? steps : [''];
+}
+
+export function buildSolutionStepsMarkdown(steps) {
+  const validSteps = steps.filter(s => s && s.trim());
+  if (validSteps.length === 0) return '';
+  return validSteps.map((s, idx) => `**Bước ${idx + 1}:** ${s.trim()}`).join('\n\n');
+}
 
 const SAMPLE_DIAGRAM_IMAGES = [
   { label: 'Đồ thị hàm bậc ba (2 cực trị)', url: 'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?auto=format&fit=crop&w=800&q=80' },
@@ -110,22 +367,108 @@ const getEmbedVideoUrl = (url) => {
   }
 };
 
+export function MathFormulaPalette({
+  activeCategory,
+  onSelectCategory,
+  onInsert,
+  activeTarget,
+  onSelectTarget,
+  accentColor = 'indigo'
+}) {
+  const categories = Object.keys(MATH_CATEGORIES);
+  const currentCat = MATH_CATEGORIES[activeCategory] || MATH_CATEGORIES.algebra;
+
+  return (
+    <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200/90 space-y-2.5 shadow-2xs">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200/60 pb-2">
+        <div className="flex items-center gap-2">
+          <span className="text-[11px] font-black text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span>
+            <span>Bảng Ký Hiệu KaTeX STEM Chuyên Sâu</span>
+            <span className="px-1.5 py-0.5 rounded-md bg-indigo-100 text-indigo-700 text-[10px] font-bold">10 Chuyên Mục</span>
+          </span>
+        </div>
+
+        {/* Target Field Pill Selector */}
+        {onSelectTarget && (
+          <div className="flex items-center gap-1.5 text-[11px]">
+            <span className="text-slate-500 font-bold">Chèn vào:</span>
+            <select
+              value={activeTarget}
+              onChange={(e) => onSelectTarget(e.target.value)}
+              className="px-2.5 py-1 rounded-xl border border-slate-300 bg-white text-[11px] font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-2xs"
+            >
+              <option value="theoryRecap">Khối 1: Lý Thuyết SGK</option>
+              <option value="solutionMethod">Khối 2: Quy Trình Giải</option>
+              <option value="examTraps">Khối 2: Bẫy Đề Thi ĐGNL</option>
+              <option value="casioTricks">Khối 2: Mẹo Casio</option>
+              <option value="sampleQuestion">Khối 4: Đề Bài Mẫu</option>
+              <option value="sampleExplanation">Khối 4: Lời Giải Mẫu</option>
+            </select>
+          </div>
+        )}
+      </div>
+
+      {/* Category Tabs */}
+      <div className="flex items-center gap-1 overflow-x-auto pb-1 text-[11px] font-bold scrollbar-thin">
+        {categories.map((catKey) => {
+          const cat = MATH_CATEGORIES[catKey];
+          const isActive = activeCategory === catKey;
+          return (
+            <button
+              key={catKey}
+              type="button"
+              onClick={() => onSelectCategory(catKey)}
+              className={`px-2.5 py-1 rounded-xl transition-all whitespace-nowrap flex items-center gap-1 shrink-0 ${
+                isActive
+                  ? 'bg-slate-900 text-white shadow-xs'
+                  : 'bg-white hover:bg-slate-100 text-slate-600 border border-slate-200/80'
+              }`}
+            >
+              <span>{cat.icon}</span>
+              <span>{cat.name}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Formula Buttons Grid with Live KaTeX Preview */}
+      <div className="flex items-center gap-1.5 flex-wrap max-h-36 overflow-y-auto p-1.5 bg-white rounded-xl border border-slate-200/70">
+        {currentCat.items.map((snip, idx) => (
+          <button
+            key={idx}
+            type="button"
+            onClick={() => onInsert(activeTarget, snip.code)}
+            className="px-2.5 py-1.5 rounded-lg bg-slate-50 hover:bg-indigo-50 hover:border-indigo-300 text-slate-800 border border-slate-200/90 transition-all shadow-2xs hover:scale-105 active:scale-95 flex items-center justify-center min-h-[30px]"
+            title={`${snip.label}: ${snip.code}`}
+          >
+            <MathText text={`$${snip.code}$`} />
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function CurriculumStudioEditor({ pattern, domain, chapter, lesson, onClose, onSaveSuccess }) {
   // View mode: 'editor' | 'preview' | 'split'
   const [viewMode, setViewMode] = useState('split');
   const [activeSection, setActiveSection] = useState('theory'); // 'theory' | 'method' | 'video' | 'questions' | 'settings'
   const [mathCategory, setMathCategory] = useState('algebra');
+  const [activeFormulaTarget, setActiveFormulaTarget] = useState('theoryRecap'); // 'theoryRecap' | 'solutionMethod' | 'examTraps' | 'casioTricks' | 'sampleQuestion' | 'sampleExplanation'
+
+  const parsedInitial = parseSolutionMethodSections(pattern?.solutionMethod || '');
 
   // Form State for Pattern Content
   const [form, setForm] = useState({
     patternId: pattern?.patternId || '',
-    name: pattern?.name || '',
+    name: pattern?.name || pattern?.patternName || '',
     weight: pattern?.weight ? String(pattern.weight).replace('%', '').trim() : '5',
-    level: pattern?.level || 'Vận dụng',
-    theoryRecap: pattern?.theoryRecap || '',
-    solutionMethod: pattern?.solutionMethod || '',
-    examTraps: '',
-    casioTricks: '',
+    level: pattern?.level || pattern?.classification || 'Vận dụng',
+    theoryRecap: unescapeLiteralNewlines(pattern?.theoryRecap || ''),
+    solutionMethod: unescapeLiteralNewlines(parsedInitial.method),
+    examTraps: unescapeLiteralNewlines(pattern?.examTraps || parsedInitial.traps || ''),
+    casioTricks: unescapeLiteralNewlines(pattern?.casioTricks || parsedInitial.casio || ''),
     videoUrl: pattern?.videoLesson?.videoUrl || '',
     durationSeconds: pattern?.videoLesson?.durationSeconds || 600,
     videoTimestamps: [
@@ -146,6 +489,13 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
     }
   });
 
+  // Dual-mode switcher: 'visual' (Soạn thảo trực quan - Text in preview) vs 'markdown' (Mã nguồn LaTeX thuần từ AI)
+  const [theoryMode, setTheoryMode] = useState('visual');
+  const [methodMode, setMethodMode] = useState('visual');
+
+  // Textarea DOM refs for precision cursor insertion
+  const textareaRefs = useRef({});
+
   // Question Bank State for this Pattern
   const [questionsList, setQuestionsList] = useState([]);
   const [loadingQuestions, setLoadingQuestions] = useState(false);
@@ -158,6 +508,10 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
   const [saving, setSaving] = useState(false);
   const [saveSuccessMsg, setSaveSuccessMsg] = useState('');
   const [saveErrorMsg, setSaveErrorMsg] = useState('');
+
+  // AI Knowledge Pattern Reasoning State
+  const [isAiAnalyzing, setIsAiAnalyzing] = useState(false);
+  const [aiIdentificationResult, setAiIdentificationResult] = useState(null);
 
   // Fetch Questions from Database for this Pattern
   useEffect(() => {
@@ -179,35 +533,129 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
     fetchQuestions();
   }, [pattern?.patternId]);
 
-  // Insert math formula at target field
+  // Insert math formula at target field (universal across Khối 1, 2, 4 with cursor precision)
   const handleInsertMath = (targetField, snippet) => {
-    setForm(prev => {
-      const current = prev[targetField] || '';
-      return {
+    const field = targetField || activeFormulaTarget;
+    const insertText = `$${snippet}$`;
+
+    const el = textareaRefs.current[field];
+    if (el && typeof el.selectionStart === 'number') {
+      const start = el.selectionStart;
+      const end = el.selectionEnd;
+      const val = el.value || '';
+      const nextVal = val.slice(0, start) + insertText + val.slice(end);
+
+      if (field === 'sampleQuestion') {
+        setForm(prev => ({
+          ...prev,
+          sampleQuestion: { ...prev.sampleQuestion, contentLatex: nextVal }
+        }));
+      } else if (field === 'sampleExplanation') {
+        setForm(prev => ({
+          ...prev,
+          sampleQuestion: { ...prev.sampleQuestion, explanation: nextVal }
+        }));
+      } else {
+        setForm(prev => ({ ...prev, [field]: nextVal }));
+      }
+
+      setTimeout(() => {
+        el.focus();
+        el.setSelectionRange(start + insertText.length, start + insertText.length);
+      }, 0);
+      return;
+    }
+
+    if (field === 'sampleQuestion') {
+      setForm(prev => ({
         ...prev,
-        [targetField]: current ? `${current} $${snippet}$` : `$${snippet}$`
-      };
-    });
+        sampleQuestion: {
+          ...prev.sampleQuestion,
+          contentLatex: prev.sampleQuestion.contentLatex ? `${prev.sampleQuestion.contentLatex} ${insertText}` : insertText
+        }
+      }));
+    } else if (field === 'sampleExplanation') {
+      setForm(prev => ({
+        ...prev,
+        sampleQuestion: {
+          ...prev.sampleQuestion,
+          explanation: prev.sampleQuestion.explanation ? `${prev.sampleQuestion.explanation} ${insertText}` : insertText
+        }
+      }));
+    } else {
+      setForm(prev => {
+        const current = prev[field] || '';
+        return {
+          ...prev,
+          [field]: current ? `${current} ${insertText}` : insertText
+        };
+      });
+    }
   };
 
-  // Insert image markdown
+  // Insert image markdown at cursor or end
   const handleInsertImage = (targetField, url, label = 'Hình minh họa') => {
     if (!url) return;
+    const field = targetField || activeFormulaTarget || 'theoryRecap';
     const imgMarkdown = `\n\n![${label}](${url})\n\n`;
-    setForm(prev => {
-      const current = prev[targetField] || '';
-      return {
+
+    const el = textareaRefs.current[field];
+    if (el && typeof el.selectionStart === 'number') {
+      const start = el.selectionStart;
+      const end = el.selectionEnd;
+      const val = el.value || '';
+      const nextVal = val.slice(0, start) + imgMarkdown + val.slice(end);
+      setForm(prev => ({ ...prev, [field]: nextVal }));
+    } else {
+      setForm(prev => ({
         ...prev,
-        [targetField]: `${current}${imgMarkdown}`
-      };
-    });
+        [field]: `${prev[field] || ''}${imgMarkdown}`
+      }));
+    }
     setCustomImageUrl('');
     setImageModalTarget(null);
   };
 
-  // AI Pedagogical Assistant Template
-  const handleAIApplyStandardMethod = () => {
-    const standardProcedure = `### Quy trình tư duy giải nhanh chuẩn ĐGNL VNU-HCM:
+  // AI Tri Thức Nhận Diện & Chuẩn Hóa Dạng Bài Sư Phạm
+  const handleAIApplyStandardMethod = async () => {
+    setIsAiAnalyzing(true);
+    setSaveErrorMsg('');
+    try {
+      const targetPatternName = form.name?.trim() || pattern?.name || 'Dạng bài toán trọng tâm';
+      const result = await aiService.analyzePatternWithAi({
+        patternName: targetPatternName,
+        lessonName: lesson?.name || '',
+        domainName: domain?.title || 'Toán học & Tư duy định lượng'
+      });
+
+      if (result) {
+        setAiIdentificationResult(result);
+        const parsedMethod = parseSolutionMethodSections(result.solution_method || '');
+        setForm(prev => ({
+          ...prev,
+          theoryRecap: prev.theoryRecap?.trim() ? prev.theoryRecap : unescapeLiteralNewlines(result.theory_recap),
+          solutionMethod: unescapeLiteralNewlines(parsedMethod.method || result.solution_method),
+          examTraps: unescapeLiteralNewlines(result.exam_traps || parsedMethod.traps || prev.examTraps),
+          casioTricks: unescapeLiteralNewlines(result.casio_tricks || parsedMethod.casio || prev.casioTricks),
+          sampleQuestion: result.sample_question ? {
+            questionId: prev.sampleQuestion?.questionId || null,
+            difficultyLevel: result.sample_question.difficulty_level || 2,
+            contentLatex: result.sample_question.content_latex || '',
+            optionA: result.sample_question.option_a || '',
+            optionB: result.sample_question.option_b || '',
+            optionC: result.sample_question.option_c || '',
+            optionD: result.sample_question.option_d || '',
+            correctOption: result.sample_question.correct_option || 'A',
+            explanation: result.sample_question.explanation || ''
+          } : prev.sampleQuestion
+        }));
+        setSaveSuccessMsg(`AI Tri Thức đã nhận diện thành công: "${result.classification}" (Bloom L${result.bloom_level})`);
+        setTimeout(() => setSaveSuccessMsg(''), 4500);
+      }
+    } catch (err) {
+      console.warn("AI pattern analysis fallback:", err);
+      // Fallback template
+      const standardProcedure = `### Quy trình tư duy giải nhanh chuẩn ĐGNL VNU-HCM:
 **Bước 1: Tìm tập xác định & Phân tích cấu trúc hàm số**
 - Xác định tập xác định $D$ của biểu thức / hàm số.
 - Nhận diện các tham số $m$ và điều kiện ràng buộc.
@@ -224,12 +672,15 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
 - Rút ra kết quả thỏa mãn yêu cầu đề bài.
 - Loại trừ các phương án nhiễu (bẫy đề thi).`;
 
-    setForm(prev => ({
-      ...prev,
-      solutionMethod: prev.solutionMethod ? `${prev.solutionMethod}\n\n${standardProcedure}` : standardProcedure,
-      examTraps: prev.examTraps || `- Học sinh hay quên kiểm tra điều kiện tập xác định trước khi tính đạo hàm.\n- Nhầm lẫn giữa "giá trị cực trị" ($y_{CT}$) và "điểm cực trị" ($x_{CT}$).\n- Khi xét dấu đạo hàm hàm chứa tham số, quên xét trường hợp hệ số $a = 0$.`,
-      casioTricks: prev.casioTricks || `- Dùng tính năng TABLE [Menu 8]: Nhập hàm số, Start: -5, End: 5, Step: 0.5 để quan sát chiều tăng/giảm giá trị $f(x)$.\n- Dùng đạo hàm tại điểm [Shift $\\frac{d}{dx}$] để thử các giá trị nghiệm biên.`
-    }));
+      setForm(prev => ({
+        ...prev,
+        solutionMethod: prev.solutionMethod ? `${prev.solutionMethod}\n\n${standardProcedure}` : standardProcedure,
+        examTraps: prev.examTraps || `- Học sinh hay quên kiểm tra điều kiện tập xác định trước khi tính đạo hàm.\n- Nhầm lẫn giữa "giá trị cực trị" ($y_{CT}$) và "điểm cực trị" ($x_{CT}$).\n- Khi xét dấu đạo hàm hàm chứa tham số, quên xét trường hợp hệ số $a = 0$.`,
+        casioTricks: prev.casioTricks || `- Dùng tính năng TABLE [Menu 8]: Nhập hàm số, Start: -5, End: 5, Step: 0.5 để quan sát chiều tăng/giảm giá trị $f(x)$.\n- Dùng đạo hàm tại điểm [Shift $\\frac{d}{dx}$] để thử các giá trị nghiệm biên.`
+      }));
+    } finally {
+      setIsAiAnalyzing(false);
+    }
   };
 
   // Save all changes to PostgreSQL Database
@@ -369,12 +820,22 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
           </div>
 
           <button
+            disabled={isAiAnalyzing}
             onClick={handleAIApplyStandardMethod}
-            className="px-3.5 py-2 rounded-xl bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-200 border border-indigo-400/30 text-xs font-bold flex items-center gap-1.5 transition-colors"
-            title="Tự động nạp khung quy trình giải 4 bước & bẫy đề thi chuẩn GDPT 2018"
+            className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-purple-600/30 to-indigo-600/30 hover:from-purple-600/50 hover:to-indigo-600/50 text-indigo-200 border border-purple-400/30 text-xs font-bold flex items-center gap-1.5 transition-colors disabled:opacity-50"
+            title="AI Tri Thức nhận diện bản chất dạng bài, nạp quy trình 4 bước KaTeX, bẫy đề thi & mẹo Casio"
           >
-            <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-            <span>AI Chuẩn Hóa</span>
+            {isAiAnalyzing ? (
+              <>
+                <RefreshCw className="w-3.5 h-3.5 animate-spin text-purple-300" />
+                <span>AI Đang Nhận Diện...</span>
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                <span>AI Nhận Diện Dạng Bài</span>
+              </>
+            )}
           </button>
 
           <button
@@ -396,6 +857,40 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
           </button>
         </div>
       </div>
+
+      {/* AI Identification Result Banner */}
+      {aiIdentificationResult && (
+        <div className="p-4 rounded-2xl bg-gradient-to-r from-indigo-950 via-slate-900 to-purple-950 border border-indigo-500/40 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md animate-fade">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-purple-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+              <Sparkles className="w-5 h-5 text-amber-300" />
+            </div>
+            <div className="space-y-0.5">
+              <div className="text-[11px] font-black text-purple-300 uppercase tracking-wider flex items-center gap-1.5">
+                <span>AI Tri Thức Sư Phạm Đã Nhận Diện Dạng Bài</span>
+              </div>
+              <div className="text-xs font-extrabold text-white">
+                {aiIdentificationResult.classification}
+              </div>
+              <div className="text-[11px] text-slate-300 font-medium">
+                Kỹ năng cốt lõi: <strong>{aiIdentificationResult.core_skill}</strong>
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="px-2.5 py-1 rounded-lg bg-indigo-500/30 text-indigo-300 border border-indigo-400/30 text-[11px] font-bold">
+              Bloom L{aiIdentificationResult.bloom_level}
+            </span>
+            <button
+              onClick={() => setAiIdentificationResult(null)}
+              className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 text-slate-300 flex items-center justify-center text-xs transition-colors"
+              title="Đóng thông báo"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Alert Messages */}
       {saveSuccessMsg && (
@@ -469,56 +964,168 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
                   </button>
                 </div>
 
-                {/* Formula Palette Toolbar */}
-                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200/80 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                      Bảng ký hiệu KaTeX chuyên sâu (Click để chèn)
-                    </span>
-                    <div className="flex items-center gap-1 text-[11px] font-bold text-slate-500">
-                      {Object.keys(MATH_CATEGORIES).map(catKey => (
-                        <button
-                          key={catKey}
-                          onClick={() => setMathCategory(catKey)}
-                          className={`px-2 py-0.5 rounded-md transition-colors ${
-                            mathCategory === catKey ? 'bg-blue-600 text-white' : 'hover:bg-slate-200'
-                          }`}
-                        >
-                          {MATH_CATEGORIES[catKey].name}
-                        </button>
-                      ))}
+                {/* STEM KaTeX Virtual Palette for Khối 1 */}
+                <MathFormulaPalette
+                  activeCategory={mathCategory}
+                  onSelectCategory={setMathCategory}
+                  onInsert={handleInsertMath}
+                  activeTarget={activeFormulaTarget}
+                  onSelectTarget={setActiveFormulaTarget}
+                  accentColor="cyan"
+                />
+
+                {/* Dual-Mode Selector for Khối 1 */}
+                <div className="flex items-center justify-between p-1.5 rounded-2xl bg-slate-100 border border-slate-200">
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setTheoryMode('visual')}
+                      className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${
+                        theoryMode === 'visual'
+                          ? 'bg-white text-cyan-800 shadow-sm border border-slate-200/80 font-black'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      <Eye className="w-3.5 h-3.5 text-cyan-600" />
+                      <span>Soạn Thảo Trực Quan (Text In Preview - Chuẩn Học Sinh)</span>
+                      <span className="px-1.5 py-0.5 rounded-md bg-cyan-100 text-cyan-700 text-[10px] font-black">Khuyên dùng</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setTheoryMode('markdown')}
+                      className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${
+                        theoryMode === 'markdown'
+                          ? 'bg-white text-slate-900 shadow-sm border border-slate-200/80 font-black'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      <Code2 className="w-3.5 h-3.5 text-slate-600" />
+                      <span>Mã Nguồn LaTeX Thuần (Nhập Nhanh Từ AI)</span>
+                      <span className="px-1.5 py-0.5 rounded-md bg-slate-200 text-slate-700 text-[10px] font-mono">Raw</span>
+                    </button>
+                  </div>
+                  <span className="text-[11px] text-slate-500 font-medium hidden sm:inline">
+                    {theoryMode === 'visual' ? 'Soạn thảo & công thức toán học hiển thị trực tiếp cho học sinh' : 'Chế độ mã nguồn toàn văn để dán từ AI'}
+                  </span>
+                </div>
+
+                {/* MODE 1: SOẠN THẢO TRỰC QUAN (TEXT IN PREVIEW - CHUẨN HỌC SINH) */}
+                {theoryMode === 'visual' && (
+                  <div className="space-y-4 animate-fade">
+                    {/* Ô Soạn thảo trực tiếp */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                          <Edit3 className="w-3.5 h-3.5 text-cyan-600" />
+                          <span>Soạn thảo nội dung bài học (Click ký hiệu ở trên để chèn công thức vào vị trí con trỏ):</span>
+                        </label>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const el = textareaRefs.current['theoryRecap'];
+                              const insertText = '\n\n$$\\frac{a}{b}$$\n\n';
+                              if (el && typeof el.selectionStart === 'number') {
+                                const start = el.selectionStart;
+                                const val = el.value || '';
+                                setForm(prev => ({ ...prev, theoryRecap: val.slice(0, start) + insertText + val.slice(el.selectionEnd) }));
+                              } else {
+                                setForm(prev => ({ ...prev, theoryRecap: (prev.theoryRecap || '') + insertText }));
+                              }
+                            }}
+                            className="px-2.5 py-1 rounded-lg bg-cyan-50 hover:bg-cyan-100 text-cyan-800 text-[11px] font-bold border border-cyan-200 transition-colors"
+                          >
+                            + Khối công thức $$...$$
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const el = textareaRefs.current['theoryRecap'];
+                              const insertText = '\n- ';
+                              if (el && typeof el.selectionStart === 'number') {
+                                const start = el.selectionStart;
+                                const val = el.value || '';
+                                setForm(prev => ({ ...prev, theoryRecap: val.slice(0, start) + insertText + val.slice(el.selectionEnd) }));
+                              } else {
+                                setForm(prev => ({ ...prev, theoryRecap: (prev.theoryRecap || '') + insertText }));
+                              }
+                            }}
+                            className="px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-800 text-[11px] font-bold border border-indigo-200 transition-colors"
+                          >
+                            + Gạch đầu dòng
+                          </button>
+                        </div>
+                      </div>
+                      <textarea
+                        ref={el => (textareaRefs.current['theoryRecap'] = el)}
+                        rows={6}
+                        value={form.theoryRecap}
+                        onFocus={() => setActiveFormulaTarget('theoryRecap')}
+                        onChange={(e) => setForm(prev => ({ ...prev, theoryRecap: e.target.value }))}
+                        placeholder="Nhập kiến thức nền tảng SGK: Định nghĩa, định lý, công thức... Click các ký hiệu trên Bảng STEM để chèn công thức toán vào vị trí con trỏ."
+                        className="w-full p-4 rounded-2xl border border-slate-300 font-sans text-xs leading-relaxed focus:outline-none focus:ring-2 focus:ring-cyan-500 bg-slate-50/70 text-slate-900 placeholder:text-slate-400"
+                      />
+                    </div>
+
+                    {/* KHUNG HIỂN THỊ TRỰC QUAN (TEXT IN PREVIEW - GIAO DIỆN HỌC SINH THẤY) */}
+                    <div className="rounded-2xl border-2 border-cyan-200/90 bg-gradient-to-b from-cyan-50/30 to-white p-4 sm:p-5 space-y-3 shadow-2xs">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-cyan-100 pb-3">
+                        <div className="flex items-center gap-2">
+                          <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                          <span className="text-xs font-black text-cyan-950 uppercase tracking-wider flex items-center gap-1.5">
+                            <Eye className="w-3.5 h-3.5 text-cyan-600" />
+                            <span>Giao Diện Hiển Thị Cho Học Sinh (Text In Preview)</span>
+                          </span>
+                        </div>
+                        <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold shrink-0 self-start sm:self-auto">
+                          Công thức KaTeX hiển thị thực tế
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-slate-500 font-medium">
+                        Học sinh sẽ nhìn thấy chính xác văn bản, công thức toán học và hình ảnh như dưới đây:
+                      </div>
+
+                      {form.theoryRecap?.trim() ? (
+                        <div className="p-4 rounded-xl bg-white border border-cyan-100 text-sm leading-relaxed text-slate-900 shadow-2xs overflow-x-auto min-h-[100px]">
+                          <MathText text={form.theoryRecap} />
+                        </div>
+                      ) : (
+                        <div className="p-8 text-center text-slate-400 text-xs italic bg-white/70 rounded-xl border border-dashed border-slate-200">
+                          Chưa có nội dung lý thuyết. Hãy gõ văn bản vào ô ở trên hoặc click các ký hiệu toán trên Bảng STEM để xem công thức toán học hiển thị trực quan tại đây...
+                        </div>
+                      )}
                     </div>
                   </div>
+                )}
 
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    {MATH_CATEGORIES[mathCategory].items.map((snip, idx) => (
+                {/* MODE 2: MÃ NGUỒN LATEX THUẦN (NHẬP NHANH TỪ AI) */}
+                {theoryMode === 'markdown' && (
+                  <div className="space-y-2 animate-fade">
+                    <div className="flex items-center justify-between text-xs font-bold text-slate-700">
+                      <span>Mã nguồn LaTeX & Markdown thuần (Dành cho việc copy / paste nhanh toàn văn từ AI):</span>
+                      <span className="text-slate-400 font-mono">{(form.theoryRecap || '').length} ký tự</span>
+                    </div>
+                    <textarea
+                      ref={el => (textareaRefs.current['theoryRecap'] = el)}
+                      rows={12}
+                      value={form.theoryRecap}
+                      onFocus={() => setActiveFormulaTarget('theoryRecap')}
+                      onChange={(e) => setForm(prev => ({ ...prev, theoryRecap: e.target.value }))}
+                      placeholder="Dán mã nguồn Markdown / LaTeX trực tiếp từ ChatGPT, Gemini hoặc AI Engine tại đây..."
+                      className="w-full p-4 rounded-2xl border border-slate-300 font-mono text-xs leading-relaxed focus:outline-none focus:ring-2 focus:ring-cyan-500 bg-slate-900 text-emerald-400"
+                    />
+                    <div className="flex justify-end pt-1">
                       <button
-                        key={idx}
                         type="button"
-                        onClick={() => handleInsertMath('theoryRecap', snip.code)}
-                        className="px-2 py-1 rounded-lg bg-white hover:bg-cyan-50 hover:text-cyan-700 hover:border-cyan-300 text-slate-700 font-mono text-[11px] border border-slate-200 transition-all shadow-2xs"
-                        title={snip.label}
+                        onClick={() => setTheoryMode('visual')}
+                        className="px-3.5 py-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all"
                       >
-                        ${snip.code}$
+                        <Eye className="w-3.5 h-3.5" />
+                        <span>Xem trước công thức toán học hiển thị cho học sinh</span>
                       </button>
-                    ))}
+                    </div>
                   </div>
-                </div>
-
-                {/* Textarea for Theory */}
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between text-xs font-bold text-slate-700">
-                    <span>Nội dung Markdown & KaTeX (Hỗ trợ chèn công thức và ảnh `![alt](url)`):</span>
-                    <span className="text-slate-400 font-mono">{(form.theoryRecap || '').length} ký tự</span>
-                  </div>
-                  <textarea
-                    rows={12}
-                    value={form.theoryRecap}
-                    onChange={(e) => setForm(prev => ({ ...prev, theoryRecap: e.target.value }))}
-                    placeholder="Nhập kiến thức nền tảng SGK: Định lý, công thức, bảng biến thiên..."
-                    className="w-full p-4 rounded-2xl border border-slate-300 font-mono text-xs leading-relaxed focus:outline-none focus:ring-2 focus:ring-cyan-500 bg-slate-50 text-slate-900"
-                  />
-                </div>
+                )}
               </div>
             )}
 
@@ -545,56 +1152,246 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
                   </button>
                 </div>
 
-                {/* Step-by-Step Procedure */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-800 flex items-center justify-between">
-                    <span>1. Quy trình giải chi tiết từng bước (Bước 1 $\to$ Bước 4):</span>
-                    <button 
-                      onClick={() => setImageModalTarget('solutionMethod')}
-                      className="text-[11px] text-amber-700 hover:underline flex items-center gap-1"
+                {/* STEM KaTeX Virtual Palette for Khối 2 */}
+                <MathFormulaPalette
+                  activeCategory={mathCategory}
+                  onSelectCategory={setMathCategory}
+                  onInsert={handleInsertMath}
+                  activeTarget={activeFormulaTarget || 'solutionMethod'}
+                  onSelectTarget={setActiveFormulaTarget}
+                  accentColor="amber"
+                />
+
+                {/* Dual-Mode Selector for Khối 2 */}
+                <div className="flex items-center justify-between p-1.5 rounded-2xl bg-slate-100 border border-slate-200">
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setMethodMode('visual')}
+                      className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${
+                        methodMode === 'visual'
+                          ? 'bg-white text-amber-900 shadow-sm border border-slate-200/80 font-black'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
                     >
-                      <ImageIcon className="w-3 h-3" />
-                      <span>Chèn sơ đồ giải</span>
+                      <Eye className="w-3.5 h-3.5 text-amber-600" />
+                      <span>Soạn Thảo Trực Quan (Text In Preview - Chuẩn Học Sinh)</span>
+                      <span className="px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-800 text-[10px] font-black">Khuyên dùng</span>
                     </button>
-                  </label>
-                  <textarea
-                    rows={8}
-                    value={form.solutionMethod}
-                    onChange={(e) => setForm(prev => ({ ...prev, solutionMethod: e.target.value }))}
-                    placeholder="Bước 1: ..., Bước 2: ..., Bước 3: ..., Bước 4: ..."
-                    className="w-full p-4 rounded-2xl border border-slate-300 font-mono text-xs leading-relaxed focus:outline-none focus:ring-2 focus:ring-amber-500 bg-slate-50 text-slate-900"
-                  />
+                    <button
+                      type="button"
+                      onClick={() => setMethodMode('markdown')}
+                      className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${
+                        methodMode === 'markdown'
+                          ? 'bg-white text-slate-900 shadow-sm border border-slate-200/80 font-black'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      <Code2 className="w-3.5 h-3.5 text-slate-600" />
+                      <span>Mã Nguồn LaTeX Thuần (Nhập Nhanh Từ AI)</span>
+                      <span className="px-1.5 py-0.5 rounded-md bg-slate-200 text-slate-700 text-[10px] font-mono">Raw</span>
+                    </button>
+                  </div>
+                  <span className="text-[11px] text-slate-500 font-medium hidden sm:inline">
+                    {methodMode === 'visual' ? 'Soạn thảo & các bước, bẫy đề thi hiển thị trực tiếp cho học sinh' : 'Chế độ mã nguồn toàn văn để dán từ AI'}
+                  </span>
                 </div>
 
-                {/* Exam Traps Input */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-rose-800 flex items-center gap-1.5">
-                    <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
-                    <span>2. Các bẫy đề thi ĐGNL thường gặp & Lưu ý học sinh hay sai:</span>
-                  </label>
-                  <textarea
-                    rows={4}
-                    value={form.examTraps}
-                    onChange={(e) => setForm(prev => ({ ...prev, examTraps: e.target.value }))}
-                    placeholder="- Quên xét điều kiện tập xác định...\n- Nhầm lẫn giữa cực đại và giá trị cực đại..."
-                    className="w-full p-3.5 rounded-2xl border border-rose-200 font-sans text-xs leading-relaxed focus:outline-none focus:ring-2 focus:ring-rose-500 bg-rose-50/30 text-rose-950"
-                  />
-                </div>
+                {/* MODE 1: SOẠN THẢO TRỰC QUAN (TEXT IN PREVIEW - CHUẨN HỌC SINH) CHO KHỐI 2 */}
+                {methodMode === 'visual' && (
+                  <div className="space-y-5 animate-fade">
+                    {/* 1. Quy trình thuật toán giải */}
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-amber-600" />
+                          <span>1. Soạn thảo Quy trình giải chi tiết từng bước:</span>
+                        </label>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setImageModalTarget('solutionMethod')}
+                            className="text-[11px] font-bold text-amber-700 hover:underline flex items-center gap-1"
+                          >
+                            <ImageIcon className="w-3 h-3" />
+                            <span>Chèn sơ đồ giải</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const el = textareaRefs.current['solutionMethod'];
+                              const stepCount = (form.solutionMethod?.match(/\*\*Bước \d+:/g) || []).length + 1;
+                              const insertText = `\n\n**Bước ${stepCount}:** `;
+                              if (el && typeof el.selectionStart === 'number') {
+                                const start = el.selectionStart;
+                                const val = el.value || '';
+                                setForm(prev => ({ ...prev, solutionMethod: val.slice(0, start) + insertText + val.slice(el.selectionEnd) }));
+                              } else {
+                                setForm(prev => ({ ...prev, solutionMethod: (prev.solutionMethod || '') + insertText }));
+                              }
+                            }}
+                            className="px-2.5 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 text-[11px] font-bold border border-amber-200 transition-colors"
+                          >
+                            + Thêm Bước mới
+                          </button>
+                        </div>
+                      </div>
+                      <textarea
+                        ref={el => (textareaRefs.current['solutionMethod'] = el)}
+                        rows={6}
+                        value={form.solutionMethod}
+                        onFocus={() => setActiveFormulaTarget('solutionMethod')}
+                        onChange={(e) => setForm(prev => ({ ...prev, solutionMethod: e.target.value }))}
+                        placeholder="Nhập các bước giải: **Bước 1:** ..., **Bước 2:** ... Click ký hiệu toán ở trên để chèn công thức tại con trỏ."
+                        className="w-full p-4 rounded-2xl border border-slate-300 font-sans text-xs leading-relaxed focus:outline-none focus:ring-2 focus:ring-amber-500 bg-slate-50/70 text-slate-900"
+                      />
 
-                {/* Casio Tricks Input */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-indigo-800 flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
-                    <span>3. Kỹ thuật Casio & Mẹo tư duy nhanh độc quyền:</span>
-                  </label>
-                  <textarea
-                    rows={3}
-                    value={form.casioTricks}
-                    onChange={(e) => setForm(prev => ({ ...prev, casioTricks: e.target.value }))}
-                    placeholder="- Dùng tính năng TABLE [Menu 8] để dò nghiệm...\n- Kỹ thuật Cal x = 1000..."
-                    className="w-full p-3.5 rounded-2xl border border-indigo-200 font-sans text-xs leading-relaxed focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-indigo-50/30 text-indigo-950"
-                  />
-                </div>
+                      {/* TEXT IN PREVIEW CHO QUY TRÌNH GIẢI */}
+                      <div className="rounded-2xl border-2 border-amber-200/90 bg-gradient-to-b from-amber-50/30 to-white p-4 space-y-2.5 shadow-2xs">
+                        <div className="flex items-center justify-between border-b border-amber-100 pb-2">
+                          <span className="text-xs font-black text-amber-950 uppercase tracking-wider flex items-center gap-1.5">
+                            <Eye className="w-3.5 h-3.5 text-amber-600" />
+                            <span>Hiển Thị Quy Trình Giải Cho Học Sinh (Text In Preview)</span>
+                          </span>
+                          <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-bold">
+                            Công thức toán hiển thị thực tế
+                          </span>
+                        </div>
+                        {form.solutionMethod?.trim() ? (
+                          <div className="p-3.5 rounded-xl bg-white border border-amber-100 text-xs leading-relaxed text-slate-900 shadow-2xs overflow-x-auto min-h-[80px]">
+                            <MathText text={form.solutionMethod} />
+                          </div>
+                        ) : (
+                          <div className="p-6 text-center text-slate-400 text-xs italic bg-white/70 rounded-xl border border-dashed border-slate-200">
+                            Chưa có quy trình giải. Nhập nội dung ở trên hoặc click "Nạp mẫu chuẩn 4 bước" để xem hiển thị trực quan tại đây...
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* 2. Bẫy đề thi ĐGNL */}
+                    <div className="space-y-2 p-4 rounded-2xl bg-rose-50/40 border border-rose-200">
+                      <label className="text-xs font-bold text-rose-900 flex items-center justify-between">
+                        <span className="flex items-center gap-1.5">
+                          <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
+                          <span>2. Các bẫy đề thi ĐGNL thường gặp & Lưu ý học sinh hay sai:</span>
+                        </span>
+                        <span className="text-[11px] text-rose-600 font-medium">Hỗ trợ click ký hiệu KaTeX để chèn</span>
+                      </label>
+                      <textarea
+                        ref={el => (textareaRefs.current['examTraps'] = el)}
+                        rows={3}
+                        value={form.examTraps}
+                        onFocus={() => setActiveFormulaTarget('examTraps')}
+                        onChange={(e) => setForm(prev => ({ ...prev, examTraps: e.target.value }))}
+                        placeholder="- Quên xét điều kiện tập xác định...\n- Nhầm lẫn giữa cực đại và giá trị cực đại..."
+                        className="w-full p-3 rounded-xl border border-rose-200 font-sans text-xs leading-relaxed focus:outline-none focus:ring-2 focus:ring-rose-500 bg-white text-rose-950"
+                      />
+                      {form.examTraps?.trim() && (
+                        <div className="p-3.5 rounded-xl bg-white border border-rose-200/80 text-xs text-rose-900 shadow-2xs space-y-1">
+                          <div className="text-[10px] font-black text-rose-600 uppercase flex items-center gap-1">
+                            <AlertTriangle className="w-3 h-3 text-rose-600" />
+                            <span>Thẻ cảnh báo hiển thị cho học sinh (Text In Preview):</span>
+                          </div>
+                          <MathText text={form.examTraps} />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* 3. Mẹo Casio */}
+                    <div className="space-y-2 p-4 rounded-2xl bg-indigo-50/40 border border-indigo-200">
+                      <label className="text-xs font-bold text-indigo-900 flex items-center justify-between">
+                        <span className="flex items-center gap-1.5">
+                          <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+                          <span>3. Kỹ thuật Casio & Mẹo tư duy nhanh độc quyền:</span>
+                        </span>
+                        <span className="text-[11px] text-indigo-600 font-medium">Hỗ trợ click ký hiệu KaTeX để chèn</span>
+                      </label>
+                      <textarea
+                        ref={el => (textareaRefs.current['casioTricks'] = el)}
+                        rows={3}
+                        value={form.casioTricks}
+                        onFocus={() => setActiveFormulaTarget('casioTricks')}
+                        onChange={(e) => setForm(prev => ({ ...prev, casioTricks: e.target.value }))}
+                        placeholder="- Dùng tính năng TABLE [Menu 8] để dò nghiệm...\n- Kỹ thuật Cal x = 1000..."
+                        className="w-full p-3 rounded-xl border border-indigo-200 font-sans text-xs leading-relaxed focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-indigo-950"
+                      />
+                      {form.casioTricks?.trim() && (
+                        <div className="p-3.5 rounded-xl bg-white border border-indigo-200/80 text-xs text-indigo-900 shadow-2xs space-y-1">
+                          <div className="text-[10px] font-black text-indigo-600 uppercase flex items-center gap-1">
+                            <Sparkles className="w-3 h-3 text-indigo-600" />
+                            <span>Thẻ mẹo Casio hiển thị cho học sinh (Text In Preview):</span>
+                          </div>
+                          <MathText text={form.casioTricks} />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* MODE 2: MÃ NGUỒN LATEX THUẦN CHO KHỐI 2 */}
+                {methodMode === 'markdown' && (
+                  <div className="space-y-4 animate-fade">
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between text-xs font-bold text-slate-700">
+                        <span>1. Quy trình giải chi tiết từng bước (Mã nguồn Markdown & KaTeX):</span>
+                        <span className="text-slate-400 font-mono">{(form.solutionMethod || '').length} ký tự</span>
+                      </div>
+                      <textarea
+                        ref={el => (textareaRefs.current['solutionMethod'] = el)}
+                        rows={8}
+                        value={form.solutionMethod}
+                        onFocus={() => setActiveFormulaTarget('solutionMethod')}
+                        onChange={(e) => setForm(prev => ({ ...prev, solutionMethod: e.target.value }))}
+                        placeholder="**Bước 1:** ...\n\n**Bước 2:** ..."
+                        className="w-full p-4 rounded-2xl border border-slate-300 font-mono text-xs leading-relaxed focus:outline-none focus:ring-2 focus:ring-amber-500 bg-slate-900 text-amber-300"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-rose-800 flex items-center gap-1.5">
+                        <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
+                        <span>2. Các bẫy đề thi ĐGNL thường gặp & Lưu ý học sinh hay sai:</span>
+                      </label>
+                      <textarea
+                        ref={el => (textareaRefs.current['examTraps'] = el)}
+                        rows={4}
+                        value={form.examTraps}
+                        onFocus={() => setActiveFormulaTarget('examTraps')}
+                        onChange={(e) => setForm(prev => ({ ...prev, examTraps: e.target.value }))}
+                        placeholder="- Quên xét điều kiện tập xác định...\n- Nhầm lẫn giữa cực đại và giá trị cực đại..."
+                        className="w-full p-3.5 rounded-2xl border border-rose-200 font-sans text-xs leading-relaxed focus:outline-none focus:ring-2 focus:ring-rose-500 bg-rose-50/30 text-rose-950"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-indigo-800 flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+                        <span>3. Kỹ thuật Casio & Mẹo tư duy nhanh độc quyền:</span>
+                      </label>
+                      <textarea
+                        ref={el => (textareaRefs.current['casioTricks'] = el)}
+                        rows={3}
+                        value={form.casioTricks}
+                        onFocus={() => setActiveFormulaTarget('casioTricks')}
+                        onChange={(e) => setForm(prev => ({ ...prev, casioTricks: e.target.value }))}
+                        placeholder="- Dùng tính năng TABLE [Menu 8] để dò nghiệm...\n- Kỹ thuật Cal x = 1000..."
+                        className="w-full p-3.5 rounded-2xl border border-indigo-200 font-sans text-xs leading-relaxed focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-indigo-50/30 text-indigo-950"
+                      />
+                    </div>
+
+                    <div className="flex justify-end pt-1">
+                      <button
+                        type="button"
+                        onClick={() => setMethodMode('visual')}
+                        className="px-3.5 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                        <span>Xem trước công thức toán học hiển thị cho học sinh</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -772,11 +1569,22 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
                     </span>
                   </div>
 
+                  {/* STEM KaTeX Virtual Palette for Khối 4 */}
+                  <MathFormulaPalette
+                    activeCategory={mathCategory}
+                    onSelectCategory={setMathCategory}
+                    onInsert={handleInsertMath}
+                    activeTarget={activeFormulaTarget === 'sampleExplanation' ? 'sampleExplanation' : 'sampleQuestion'}
+                    onSelectTarget={setActiveFormulaTarget}
+                    accentColor="indigo"
+                  />
+
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold text-slate-700">Đề bài (KaTeX & Markdown):</label>
                     <textarea
                       rows={3}
                       value={form.sampleQuestion?.contentLatex || ''}
+                      onFocus={() => setActiveFormulaTarget('sampleQuestion')}
                       onChange={(e) => setForm(prev => ({
                         ...prev,
                         sampleQuestion: { ...prev.sampleQuestion, contentLatex: e.target.value }
@@ -832,6 +1640,7 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
                     <textarea
                       rows={3}
                       value={form.sampleQuestion?.explanation || ''}
+                      onFocus={() => setActiveFormulaTarget('sampleExplanation')}
                       onChange={(e) => setForm(prev => ({
                         ...prev,
                         sampleQuestion: { ...prev.sampleQuestion, explanation: e.target.value }

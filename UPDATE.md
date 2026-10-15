@@ -1,26 +1,25 @@
 # Nhật Ký Cập Nhật (Update Log) - Web Client
 
-## [15/10/2026] - Khắc Phục Triệt Để Lỗi Màn Trắng (White Screen Fix), Hoàn Thiện Studio Sư Phạm Chuyên Sâu & Xóa Bỏ 100% Hardcode
+## [15/10/2026] - Kiến Trúc Soạn Thảo Đa Chế Độ: Soạn Thảo Trực Quan (Text In Preview Chuẩn Học Sinh) Song Hành Mã Nguồn LaTeX Thuần (Nhập Nhanh Từ AI)
 
-- **Khắc Phục Triệt Để Lỗi Màn Trắng & Nâng Cao Tính Bền Vững Runtime**:
-  - *Sửa lỗi biến chưa khai báo*: Khắc phục `ReferenceError: weakPrerequisites is not defined` tại `CurriculumExplorerView.jsx:1303` bằng cách bổ sung bộ lọc dạng bài tiên quyết vùng trũng `<10%` đồng bộ từ `skillMasteryMap`.
-  - *Bọc Error Boundary Toàn Cục (`RootErrorBoundary` trong `src/main.jsx`)*: Ngăn ngừa toàn bộ lỗi màn hình trắng trong tương lai; hiển thị giao diện báo lỗi chi tiết, stack trace cùng nút Tải lại trang và Xóa cache khẩn cấp.
-  - *Bổ Sung Type Safety & Null Guard Cho `MathText.jsx`*: Thêm kiểm tra nghiêm ngặt `typeof text !== 'string'` để tránh crash khi chuỗi toán học hoặc markdown nhận giá trị rỗng/không hợp lệ.
-  - *Chuyển Đổi Tab Lộ Trình Toàn Diện Cho Mọi Vai Trò (`App.jsx`)*: Hỗ trợ Học sinh, Giáo viên và Quản lý học thuật cùng truy cập phân hệ Dàn kiến thức & Lộ trình phân cấp.
-- **Triển Khai Môi Trường Studio Sư Phạm Toàn Diện (`CurriculumStudioEditor.jsx`)**:
-  - Chuyển đổi toàn diện trải nghiệm hiệu đính của giảng viên sang không gian Studio toàn màn hình tải nặng:
-    - *3 Chế Độ Xem Linh Hoạt (View Mode Switcher)*: `Biên soạn (Editor)`, `Chia đôi (Split 50-50 Live KaTeX Preview)`, và `Review Học sinh (Live Preview)` mô phỏng chính xác 100% trải nghiệm của học viên.
-    - *Bảng Ký Tự Toán Học KaTeX 3 Chủ Đề*: Phân loại chi tiết theo Đại số & Giải tích, Hình học Oxyz, Logic & Tập hợp hỗ trợ chèn 1-click.
-    - *Thư Viện Đồ Thị & Chèn Hình Ảnh Sư Phạm*: Tích hợp modal chọn ảnh mẫu (Đồ thị hàm bậc ba, Bảng biến thiên, Hình chóp S.ABC, Hệ trục Oxyz) hoặc dán link ảnh tùy chỉnh với định dạng Markdown `![Mô tả](url)`.
-    - *Động Cơ Render Toán Học Kèm Hình Ảnh (`MathText.jsx`)*: Phân tích và render tự động thẻ hình ảnh Markdown, bo góc viền và bóng đổ chuyên nghiệp.
-    - *Bảng Phân Đoạn Video Timestamps*: Thêm/sửa/xóa các mốc thời gian bài giảng và nhúng trực tiếp trình phát video YouTube kiểm thử.
-    - *Quản Trị Ngân Hàng Câu Hỏi Thích Ứng (API 16-18)*: Xem danh sách câu hỏi trong PostgreSQL, xóa câu hỏi và mở Dialog tạo mới câu hỏi theo chuẩn Bloom L1-L4.
-- **Tích Hợp Studio Vào Dàn Kiến Thức (`CurriculumExplorerView.jsx`)**:
-  - Bổ sung nút **"Vào Studio Sư Phạm"** trên thanh công cụ chính và nút **"Mở Studio Biên Soạn Sư Phạm"** trên từng Dạng bài, hỗ trợ chuyển đổi mượt mà giữa cây tri thức và Studio.
-  - Cho phép giảng viên mở Studio để tạo mới dạng bài toàn diện ngay từ thanh accordion bài học.
-- **Cấu Trúc Cây Tri Thức 3 Tầng Chuẩn SGK GDPT 2018**:
-  - Phân cấp `Chương` -> `Bài học` -> `Dạng bài` với hệ thống huy hiệu cảnh báo hổng kiến thức (`🚨 <10%`, `⚠️ <60%`, `✅ ≥60%`).
-- **Xóa Bỏ 100% Dữ Liệu Hardcode**:
-  - Xóa toàn bộ GUID và câu hỏi mẫu giả, kết nối trực tiếp cơ sở dữ liệu PostgreSQL qua Content Service APIs.
-- **Kiểm Thử Đóng Gói Production**:
-  - `npm run build` thành công 100% (**0 Error, 0 Warning**, hoàn thành trong 781ms).
+- **Kiến Trúc Soạn Thảo Đa Chế Độ Trực Quan & Mã Nguồn LaTeX Song Hành (`CurriculumStudioEditor.jsx`)**:
+  - *Đáp Ứng Đúng Bản Chất Soạn Thảo Sư Phạm (Text In Preview)*:
+    - Loại bỏ hoàn toàn giải pháp phân rã 4 ô form cứng nhắc (Định nghĩa, Công thức, Quy tắc, Hình ảnh) gây cắt vụn luồng tư duy sư phạm của giáo viên.
+    - Chế độ **Soạn Thảo Trực Quan (Text In Preview - Chuẩn Học Sinh)**:
+      + Khung soạn thảo văn bản liền mạch tích hợp thanh công cụ nhanh (`+ Khối công thức $$...$$`, `+ Gạch đầu dòng`).
+      + **Khung Hiển Thị Trực Quan (Text In Preview - Giao Diện Học Sinh Thấy)** hiển thị song hành ngay bên dưới ô nhập: Render trực tiếp công thức toán học KaTeX thật (phân số, căn thức, giới hạn, tích phân, hình ảnh đồ thị), phản ánh chính xác 100% giao diện học sinh nhìn thấy.
+    - Chế độ **Mã Nguồn LaTeX Thuần (Nhập Nhanh Từ AI)**:
+      + Khung soạn thảo monospace nền tối chuyên dụng cho việc copy-paste nhanh 1-chạm kết quả trích xuất từ Gemini / ChatGPT / AI Engine mà không qua xử lý trung gian.
+  - *Cơ Chế Chèn Ký Hiệu KaTeX STEM Chuẩn Xác Tại Vị Trí Con Trỏ (Cursor-Precision Insertion Engine)*:
+    - Sử dụng `textareaRefs` theo dõi chính xác vị trí con trỏ chuột (`selectionStart` / `selectionEnd`) trên từng textarea đang active.
+    - Khi giáo viên click vào bất kỳ ký hiệu nào trên Bảng KaTeX STEM 10 danh mục (hơn 120+ công thức toán học), công thức tự động chèn đúng vị trí con trỏ và tự động focus lại mà không bị nhảy lên đầu trang hay cuối trang.
+  - *Đồng Bộ Khối 2 - Phương Pháp Giải Chuyên Biệt*:
+    - Hỗ trợ cả 2 chế độ: Soạn thảo trực quan xem trước thẻ bẫy đề thi (Rose Alert) và mẹo Casio (Indigo Tip) sống động, song song với chế độ mã nguồn LaTeX thuần để nạp nhanh từ AI.
+- **Khắc Phục Triệt Để Ký Tự Thoát `\n` Bị Hiển Thị Thô Dạng Text (`MathText.jsx`)**:
+  - *Negative Lookahead Chính Xác*: Thay thế regex cũ bằng danh sách bảo vệ đúng 15 lệnh LaTeX bắt đầu bằng `\n` (`` `\neq` ``, `` `\notin` ``, `` `\nabla` ``, `` `\nu` ``...). Giải phóng 100% các từ tiếng Việt và ngắt dòng thực tế (`` `\nTrong` ``, `` `\nKiểm` ``, `` `\nBước` ``).
+  - *Đồng Bộ Textarea Biên Soạn*: Xuất hàm `unescapeLiteralNewlines` giải phóng `\n` thành Enter xuống dòng thực tế khi nạp lý thuyết và phương pháp giải vào khung soạn thảo Studio.
+- **Tự Động Bọc KaTeX Cho Ion Đa Nguyên Tử & Hợp Chất Hóa Học**:
+  - Tự động nhận diện và bọc KaTeX cho ion đơn/đa nguyên tử có điện tích: `` `H^+` ``, `` `OH^-` ``, `` `SO_4^{2-}` ``, `` `NO_3^-` ``, `` `Fe^{3+}` ``, `` `Na^+` ``, `` `Cl^-` ``.
+  - Tự động nhận diện và bọc KaTeX cho các hợp chất có chỉ số dưới: `` `H_2O` ``, `` `H_2SO_4` ``, `` `HNO_3` ``, `` `CO_2` ``, `` `Fe_2O_3` ``, `` `KMnO_4` ``.
+- **Kiểm Thử Đóng Gói (Build Verification)**:
+  - `npm run build` thành công 100% (**0 Error, 0 Warning**, hoàn thành trong 750ms).

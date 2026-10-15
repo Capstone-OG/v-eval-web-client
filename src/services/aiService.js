@@ -157,6 +157,36 @@ export const aiService = {
     return `${apiClient.getBaseUrl()}/view-textbook`;
   },
 
+  /**
+   * AI Tri Thức bóc tách và nhận diện rõ từng Dạng bài từ file tài liệu (PDF, DOCX) hoặc văn bản (C# .NET 9 AI Engine :5104)
+   * @param {FormData} formData - Chứa file hoặc textContent/text_content, domainId/domain_id, domainName/domain_name
+   * @returns {Promise<object>} - Cấu trúc ImportCurriculumRequestDto chuẩn mực
+   */
+  async extractCurriculumFromDocument(formData) {
+    const response = await apiClient.upload('/api/ai-engine/curriculum/extract', formData);
+    return response.data;
+  },
+
+  /**
+   * AI Tri Thức nhận diện bản chất Dạng bài và tự động bóc tách 4 khối nội dung sư phạm (C# .NET 9 AI Engine :5104)
+   * @param {object} payload
+   * @param {string} payload.patternName - Tên Dạng bài (ví dụ: 'Dạng 2: Tìm tham số m để hàm số đơn điệu')
+   * @param {string} [payload.lessonName] - Tên Bài học
+   * @param {string} [payload.domainName] - Tên Miền
+   * @param {string} [payload.context] - Ngữ cảnh tài liệu
+   * @returns {Promise<{pattern_name: string, classification: string, core_skill: string, bloom_level: number, theory_recap: string, solution_method: string, exam_traps: string, casio_tricks: string, sample_question: object}>}
+   */
+  async analyzePatternWithAi({ patternName, lessonName = '', domainName = 'Toán học & Tư duy định lượng', context = '' }) {
+    const body = {
+      pattern_name: patternName,
+      lesson_name: lessonName,
+      domain_name: domainName,
+      context
+    };
+    const response = await apiClient.post('/api/ai-engine/curriculum/analyze-pattern', body);
+    return response.data;
+  },
+
   // =========================================================================
   // 3. SINH ĐỀ THI AI & CHẨN ĐOÁN NĂNG LỰC IRT/BKT (Python FastAPI RAG :8000)
   // =========================================================================

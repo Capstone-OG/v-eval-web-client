@@ -210,14 +210,65 @@ V-Eval-Web_Client/
 - **String & Markdown Guarding (`MathText.jsx`)**:
   - Fortified `MathText` against non-string inputs with type-checked guards (`typeof text !== 'string'`), preventing rendering aborts on nullish or complex object payloads.
 
+### 4.19. AI Document Ingestion & Curriculum Pattern Identification Suite
+- **Multi-Format Textbook Ingestion (`CurriculumExplorerView.jsx` & `aiService.js`)**:
+  - Instructors can drag-and-drop `.pdf`, `.docx`, `.txt` monographs/textbooks up to 250MB or paste syllabus snippets into a high-capacity ingestion modal.
+  - Features an animated 4-step progress tracker: `1. Đọc tệp & OCR` -> `2. Phân tích Chương - Bài` -> `3. Nhận diện Dạng bài` -> `4. Chuẩn hóa KaTeX`.
+  - Communicates directly through Gateway YARP to AI Engine (`POST /api/v1/documents/extract-curriculum`).
+- **Interactive Pattern Discovery Showcase**:
+  - Visual hierarchy cards display extracted chapters, lessons, and patterns with pattern classification tags, Bloom taxonomy level badges, and KaTeX preview blocks.
+### 4.20. KaTeX String Sanitization & Callout Extraction Engine (`MathText.jsx`)
+- **Literal Escape Remediation**: Resolves double-escaped literal newlines (`\n\n`) preventing them from rendering as raw plaintext in methodological solutions.
+- **Auto-Enclosure for Unwrapped LaTeX Commands**: Automatically encloses isolated LaTeX symbols and commands (`\Delta`, `\frac`, `\lim`, `\int`, `\alpha`, `x_0`) inside KaTeX formatting blocks when occurring outside explicit delimiters.
+- **Pedagogical Callout Cards**: Detects and parses `### ⚠️ Các bẫy đề thi:` into custom Rose Alert Callout Cards and `### 💡 Mẹo Casio:` into Indigo Tip Callout Cards, with bold step markers (`**Bước X:**`).
+
+### 4.21. Comprehensive STEM KaTeX Virtual Keyboard & Fullscreen Panoramic Ingestion Workspace
+- **10-Category STEM Virtual Keyboard (`CurriculumStudioEditor.jsx`)**:
+  - Provides 120+ calibrated STEM mathematical symbols across Algebra, Derivatives, Integrals & Limits, Exponents & Logs, Trigonometry, Oxyz Geometry, Systems & Brackets, Sets & Logic, Greek Alphabet, and Probability & Statistics.
+  - Active input field target selector dynamically injects equations into the focused input across Foundational SGK, Solutions, Traps, Casio, or Exemplar Questions.
+- **Fullscreen Panoramic 3-Column Studio Ingestion Workspace (`CurriculumExplorerView.jsx`)**:
+  - Replaces cramped modals with an expansive Panoramic Workspace (`max-w-[1580px] h-[95vh]`).
+  - Implements multi-page range slicing (`startPage` to `endPage`) and depth selection (`Standard` vs `Deep VNU-HCM Examination`) enabling resilient ingestion of 99+ page textbooks.
+  - 3-column verification layout: Chapter & Lesson Hierarchy -> Bloom-filtered Pattern Showcase -> Live KaTeX Pattern Inspector.
+
+### 4.22. Two-Tier Mathematical Typography Engine & Sentence Flow Preservation (`MathText.jsx`)
+- **Root Cause Elimination of Sentence Shattering**:
+  - Previously, global delimiter tokenization wrapped intermediate non-math string chunks inside `display: block` elements (`span className="block leading-relaxed"`), causing sentences to break vertically across every punctuation mark, parenthesis, comma, and inline equation.
+  - Re-engineered into a strict **Two-Tier Rendering Architecture**:
+    1. *Document / Line Tier*: Parses multiline blocks, real newlines, pedagogical alert callouts (Rose Alert, Indigo Tip), bold step rows (`` `**Bước X:**` ``), and list items.
+    2. *Inline Content Tier*: Parses math formulas (`` `$...$` ``, `` `\(...\)` ``), bold marks (`` `**...**` ``), and plain text exclusively as pure inline spans (`` `<span>` ``, `` `<strong>` ``, `` `<img>` ``). Guarantees seamless horizontal text flow with zero block breaks.
+- **Single-Bullet Deduplication**:
+  - Employs regex sanitization to strip leading dashes or duplicate bullet symbols (`` `• - ` ``), standardizing bullet items into a single, elegant indigo dot (`•`) with responsive multi-level indentation.
+- **Smart DOM Conformance**:
+  - Detects unstructured single-line strings (e.g., question choices A-D, titles) and outputs pure inline `` `<span>` `` elements, eliminating React DOM nesting warnings (`` `<div>` `` inside `` `<span>` ``).
+- **Accurate LaTeX Command Negative Lookahead & Chemistry Formula Auto-Wrapping**:
+  - Replaces crude alphanumeric lookahead with an exact 15-command LaTeX negative lookahead (`` `\neq` ``, `` `\notin` ``, `` `\nabla` ``, `` `\nu` ``), unescaping 100% of Vietnamese words and step prefixes (`` `\nTrong` ``, `` `\nKiểm` ``, `` `\nBước` ``) into proper newlines across preview and editor textareas.
+  - Automatically encloses polyatomic ions with charges (`` `H^+` ``, `` `OH^-` ``, `` `SO_4^{2-}` ``, `` `NO_3^-` ``) and chemical compounds with subscripts (`` `H_2O` ``, `` `H_2SO_4` ``, `` `HNO_3` ``) in KaTeX blocks.
+
+### 4.23. Dual-Mode Pedagogical Authoring Architecture (`CurriculumStudioEditor.jsx`)
+- **Teacher-First Text In Preview vs Raw LaTeX Fast Ingestion Parallelism**:
+  - Replaces rigid 4-field fragmented forms with an organic, unified pedagogical authoring workflow supporting two distinct modes:
+    1. *Visual Authoring Mode (Text In Preview - Student Standard)*:
+       - Offers continuous pedagogical composition with quick structural helpers (`+ Khối công thức $$...$$`, `+ Gạch đầu dòng`).
+       - Features an in-place **Live In-Place Student View (Text In Preview)** directly beneath the input, powered by `<MathText />` to render true mathematical typography (fractions, square roots, limits, integrals, diagram illustrations) identical to the learner's actual card view.
+    2. *Raw LaTeX & Markdown Mode (Rapid AI Ingestion)*:
+       - Monospace dark-themed syntax textarea tailored for instantaneous 1-click pasting of raw generative AI outputs (Gemini, ChatGPT, or backend AI Engine) without manual intermediate schema translation.
+- **Cursor-Precision STEM KaTeX Virtual Keyboard Injection**:
+  - Implements `textareaRefs` tracking `selectionStart` and `selectionEnd` on the actively focused input.
+  - When clicking on any mathematical symbol in the 10-category STEM KaTeX virtual palette (120+ calibrated formulas), the equation snippet is precisely inserted at the current caret position, and focus is automatically retained without page scrolling or caret jump.
+- **Block 2 (Step-by-Step Problem Solving & Traps)**:
+  - Both modes natively support structured algorithmic step derivation alongside dedicated live-preview alert cards: Exam Pitfalls (Rose Alert) and Casio fx-580/880 Shortcuts (Indigo Tip).
+
+
 ---
 
 ## 5. Verification & Acceptance Criteria
 
-1. **Clean Production Build**: Executed `npm run build` with 0 syntax or bundle errors; production artifacts outputted to `dist/` within 781ms.
+1. **Clean Production Build**: Executed `npm run build` with 0 syntax or bundle errors; production artifacts outputted to `dist/` within 796ms.
 2. **Linter & Code Health**: `npm run lint` passes with 0 syntax errors across all components and services.
 3. **Docker Multi-Stage Validation**: `docker compose config` passes with 0 syntax errors across the entire 6-service microservices constellation.
 4. **Repository Sync Automation**: Standalone `Scripts/push.bat` and root `Scripts/` correctly recognize `V-Eval-Web_Client` as a first-class project service.
 5. **API Gateway Connectivity**: Full client suite structured and verified to consume all microservices endpoints via API Gateway (`:5212`) entry point.
+
 
 
