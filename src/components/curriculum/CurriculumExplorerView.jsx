@@ -45,7 +45,7 @@ import {
   Upload
 } from 'lucide-react';
 import MathText from '../common/MathText';
-import CurriculumStudioEditor, { parseSolutionMethodSections } from './CurriculumStudioEditor';
+import CurriculumStudioEditor, { parseSolutionMethodSections, parseTheoryRecapSections } from './CurriculumStudioEditor';
 import contentService from '../../services/contentService';
 import { practiceService } from '../../services/practiceService';
 import { aiService } from '../../services/aiService';
@@ -192,6 +192,8 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
   const [previewSelectedLessonKey, setPreviewSelectedLessonKey] = useState('0-0'); // 'cIdx-lIdx'
   const [previewSelectedPattern, setPreviewSelectedPattern] = useState(null);
   const [previewBloomFilter, setPreviewBloomFilter] = useState('all');
+  const [previewQuestionBloomTab, setPreviewQuestionBloomTab] = useState('all');
+  const [previewActiveQuestionIdx, setPreviewActiveQuestionIdx] = useState(0);
 
   // 1. Fetch Curriculum from Backend Content Service API (Database Dynamic)
   const fetchCurriculumData = async (preservePatternId = null) => {
@@ -828,6 +830,45 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
       alert('Lỗi nạp dữ liệu tri thức vào CSDL: ' + (err?.response?.data?.message || err.message));
     } finally {
       setImportingCurriculum(false);
+    }
+  };
+
+  const handleAddAiPracticeQuestions = (targetPattern) => {
+    if (!targetPattern) return;
+    
+    const patName = targetPattern.patternName || "Dạng bài";
+    const currentCount = targetPattern.questions ? targetPattern.questions.length : 0;
+
+    const newQ1 = {
+      difficultyLevel: 3,
+      contentLatex: `[Bài tập rèn luyện ${currentCount + 1}] Bài toán vận dụng định lượng cho '${patName}': Cho dữ kiện thực tế khi tiến hành phản ứng/khảo sát, đại lượng cần xác định sau quá trình biến đổi là:`,
+      optionA: `Phương án chuẩn hóa theo hệ thức bảo toàn ($X = 2,07$)`,
+      optionB: `Giá trị chưa tính đến hệ số môi trường ($X = 1,38$)`,
+      optionC: `Giá trị ngoại suy sai số ($X = 3,11$)`,
+      optionD: `Giá trị tối thiểu khi chưa cân bằng ($X = 0,92$)`,
+      correctOption: 'A',
+      explanation: `Áp dụng phương pháp giải chuẩn mực của dạng '${patName}', thiết lập phương trình và giải đại số ta thu được kết quả chính xác là phương án A.`
+    };
+
+    const newQ2 = {
+      difficultyLevel: 4,
+      contentLatex: `[Bài tập rèn luyện ${currentCount + 2} - Vận dụng cao] Bài toán phân loại nâng cao cho '${patName}': Khi xét thêm các yếu tố nhiễu và bẫy đề thi ĐGNL thường gặp, kết luận suy luận nào sau đây là chính xác?`,
+      optionA: `Bảo toàn toàn diện và thỏa mãn các điều kiện biên của bài toán`,
+      optionB: `Bỏ qua điều kiện xác định và lấy nghiệm kỳ dị`,
+      optionC: `Chỉ xét trường hợp đặc biệt mà không biện luận tổng quát`,
+      optionD: `Đổi sai đơn vị đo lường thể tích hoặc nồng độ`,
+      correctOption: 'A',
+      explanation: `Ở cấp độ Vận dụng cao của dạng '${patName}', học sinh cần tỉnh táo nhận diện các bẫy đề thi về điều kiện biên và bảo toàn để chọn đáp án A.`
+    };
+
+    if (!targetPattern.questions) {
+      targetPattern.questions = [];
+    }
+    targetPattern.questions.push(newQ1, newQ2);
+
+    if (extractedCurriculum) {
+      setExtractedCurriculum({ ...extractedCurriculum });
+      setPreviewActiveQuestionIdx(targetPattern.questions.length - 1);
     }
   };
 
@@ -2490,7 +2531,8 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
                       <div className="text-[11px] text-emerald-800 font-medium">
                         <strong>{extractedCurriculum.chapters?.length || 0} Chương</strong> • 
                         <strong> {extractedCurriculum.chapters?.reduce((acc, c) => acc + (c.lessons?.length || 0), 0)} Bài học</strong> • 
-                        <strong> {extractedCurriculum.chapters?.reduce((acc, c) => acc + (c.lessons?.reduce((a, l) => a + (l.patterns?.length || 0), 0) || 0), 0)} Dạng bài chi tiết</strong>
+                        <strong> {extractedCurriculum.chapters?.reduce((acc, c) => acc + (c.lessons?.reduce((a, l) => a + (l.patterns?.length || 0), 0) || 0), 0)} Dạng bài chi tiết</strong> • 
+                        <strong className="text-indigo-950 font-black"> {extractedCurriculum.chapters?.reduce((acc, c) => acc + (c.lessons?.reduce((a, l) => a + (l.patterns?.reduce((aq, p) => aq + (p.questions?.length || 0), 0) || 0), 0) || 0), 0)} Bài tập mẫu chuyên sâu</strong>
                       </div>
                     </div>
                   </div>
@@ -2501,6 +2543,7 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
                       setExtractedCurriculum(null);
                       setAiExtractStep(0);
                       setPreviewSelectedPattern(null);
+                      setPreviewActiveQuestionIdx(0);
                     }}
                     className="px-3.5 py-1.5 rounded-xl border border-emerald-300 bg-white hover:bg-emerald-100 text-xs font-bold text-emerald-900 transition-colors shadow-2xs"
                   >
@@ -2508,178 +2551,220 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
                   </button>
                 </div>
 
-                {/* 3-Column Workspace Grid */}
+                {/* 2-Master-Pane Balanced Workspace Grid */}
                 <div className="flex-1 grid grid-cols-12 gap-0 overflow-hidden min-h-0">
                   
-                  {/* COLUMN 1: CÂY PHÂN CẤP CHƯƠNG - BÀI HỌC (3 Cols / 25%) */}
-                  <div className="col-span-12 lg:col-span-3 border-r border-slate-200 bg-white overflow-y-auto p-4 space-y-3">
-                    <div className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center justify-between pb-2 border-b border-slate-100">
-                      <span>1. Cây Chương & Bài Học</span>
-                      <span className="text-[10px] text-slate-400 font-normal">Click để xem dạng</span>
-                    </div>
+                  {/* PANE 1: CỘT TRÁI ĐIỀU HƯỚNG PHÂN CẤP (4 Cols / ~33%) */}
+                  <div className="col-span-12 lg:col-span-4 border-r border-slate-200 bg-slate-50/70 flex flex-col min-h-0 overflow-hidden">
+                    
+                    {/* TẦNG 1: CÂY CHƯƠNG & BÀI HỌC (Top Section: max 40% height, scrollable) */}
+                    <div className="flex-none max-h-[42%] border-b border-slate-200 bg-white p-3.5 overflow-y-auto space-y-2.5 shadow-2xs">
+                      <div className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center justify-between pb-1.5 border-b border-slate-100">
+                        <span className="flex items-center gap-1.5">
+                          <Layers className="w-3.5 h-3.5 text-indigo-600" />
+                          <span>1. Cây Chương & Bài Học</span>
+                        </span>
+                        <span className="text-[10px] text-slate-400 font-normal">Click chọn bài</span>
+                      </div>
 
-                    <div className="space-y-3">
-                      {extractedCurriculum.chapters?.map((chap, cIdx) => (
-                        <div key={cIdx} className="space-y-1.5">
-                          <div className="text-xs font-extrabold text-slate-900 flex items-center gap-1.5 px-2 py-1 bg-slate-50 rounded-lg">
-                            <span className="w-4 h-4 rounded bg-indigo-600 text-white flex items-center justify-center text-[10px] font-black">C{cIdx+1}</span>
-                            <span className="truncate">{chap.chapterName}</span>
-                          </div>
-
-                          <div className="pl-3 space-y-1 border-l-2 border-indigo-100">
-                            {chap.lessons?.map((les, lIdx) => {
-                              const key = `${cIdx}-${lIdx}`;
-                              const isSelected = (previewSelectedLessonKey || '0-0') === key;
-                              return (
-                                <button
-                                  key={lIdx}
-                                  type="button"
-                                  onClick={() => {
-                                    setPreviewSelectedLessonKey(key);
-                                    setPreviewSelectedPattern(les.patterns?.[0] || null);
-                                  }}
-                                  className={`w-full text-left px-2.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-between gap-1.5 ${
-                                    isSelected
-                                      ? 'bg-indigo-600 text-white shadow-xs'
-                                      : 'text-slate-700 hover:bg-slate-100'
-                                  }`}
-                                >
-                                  <span className="truncate">{les.lessonName}</span>
-                                  <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-mono shrink-0 ${
-                                    isSelected ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'
-                                  }`}>
-                                    {les.patterns?.length || 0} dạng
-                                  </span>
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* COLUMN 2: DANH MỤC DẠNG BÀI THEO BÀI HỌC (4 Cols / 33.3%) */}
-                  <div className="col-span-12 lg:col-span-4 border-r border-slate-200 bg-slate-50/70 overflow-y-auto p-4 space-y-3">
-                    {(() => {
-                      const [cIdx, lIdx] = (previewSelectedLessonKey || '0-0').split('-').map(Number);
-                      const activeChap = extractedCurriculum.chapters?.[cIdx] || extractedCurriculum.chapters?.[0];
-                      const activeLes = activeChap?.lessons?.[lIdx] || activeChap?.lessons?.[0];
-                      const allPatterns = activeLes?.patterns || [];
-                      const filteredPatterns = previewBloomFilter === 'all' 
-                        ? allPatterns 
-                        : allPatterns.filter(p => String(p.bloomLevel || p.difficultyLevel || '') === previewBloomFilter);
-
-                      return (
-                        <>
-                          <div className="space-y-2 pb-2 border-b border-slate-200">
-                            <div className="flex items-center justify-between">
-                              <div className="text-xs font-black text-slate-800 uppercase tracking-wider">
-                                2. Danh Mục Dạng Bài ({filteredPatterns.length}/{allPatterns.length})
+                      <div className="space-y-2">
+                        {extractedCurriculum.chapters?.map((chap, cIdx) => (
+                          <div key={cIdx} className="space-y-1">
+                            <div className="text-[11px] font-extrabold text-slate-900 flex items-center justify-between gap-1.5 px-2 py-1 bg-slate-100/80 rounded-lg">
+                              <div className="flex items-center gap-1.5 truncate">
+                                <span className="w-4 h-4 rounded bg-indigo-600 text-white flex items-center justify-center text-[9px] font-black shrink-0">C{cIdx+1}</span>
+                                <span className="truncate">{chap.chapterName}</span>
                               </div>
-                              <span className="text-[11px] font-bold text-indigo-700 truncate max-w-[160px]">
-                                {activeLes?.lessonName}
+                              <span className="text-[10px] text-slate-500 font-mono shrink-0">
+                                {chap.lessons?.length || 0} bài
                               </span>
                             </div>
 
-                            {/* Filter pills */}
-                            <div className="flex items-center gap-1 overflow-x-auto text-[10px] font-bold pb-1">
-                              {[
-                                { id: 'all', label: 'Tất cả' },
-                                { id: '1', label: 'L1 Nhận biết' },
-                                { id: '2', label: 'L2 Thông hiểu' },
-                                { id: '3', label: 'L3 Vận dụng' },
-                                { id: '4', label: 'L4 Vận dụng cao' }
-                              ].map(f => (
-                                <button
-                                  key={f.id}
-                                  type="button"
-                                  onClick={() => setPreviewBloomFilter(f.id)}
-                                  className={`px-2 py-0.5 rounded-lg transition-colors whitespace-nowrap ${
-                                    previewBloomFilter === f.id
-                                      ? 'bg-slate-900 text-white'
-                                      : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
-                                  }`}
-                                >
-                                  {f.label}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-
-                          {/* Pattern cards */}
-                          <div className="space-y-2.5">
-                            {filteredPatterns.length === 0 ? (
-                              <div className="p-6 text-center text-slate-400 text-xs">
-                                Không có dạng bài nào ở cấp độ này.
-                              </div>
-                            ) : (
-                              filteredPatterns.map((pat, pIdx) => {
-                                const isSelected = (previewSelectedPattern?.patternName === pat.patternName) || (!previewSelectedPattern && pIdx === 0);
+                            <div className="pl-2 space-y-1 border-l-2 border-indigo-100">
+                              {chap.lessons?.map((les, lIdx) => {
+                                const key = `${cIdx}-${lIdx}`;
+                                const isSelected = (previewSelectedLessonKey || '0-0') === key;
+                                const totalQ = les.patterns?.reduce((acc, p) => acc + (p.questions?.length || 0), 0) || 0;
                                 return (
-                                  <div
-                                    key={pIdx}
-                                    onClick={() => setPreviewSelectedPattern(pat)}
-                                    className={`p-3.5 rounded-2xl border text-xs space-y-2 cursor-pointer transition-all ${
+                                  <button
+                                    key={lIdx}
+                                    type="button"
+                                    onClick={() => {
+                                      setPreviewSelectedLessonKey(key);
+                                      setPreviewSelectedPattern(les.patterns?.[0] || null);
+                                      setPreviewActiveQuestionIdx(0);
+                                    }}
+                                    className={`w-full text-left px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center justify-between gap-1.5 ${
                                       isSelected
-                                        ? 'bg-white border-indigo-500 ring-2 ring-indigo-500/20 shadow-md'
-                                        : 'bg-white border-slate-200/90 hover:border-indigo-300 hover:shadow-xs'
+                                        ? 'bg-indigo-600 text-white shadow-xs'
+                                        : 'text-slate-700 hover:bg-slate-100'
                                     }`}
                                   >
-                                    <div className="flex items-start justify-between gap-2">
-                                      <div className="font-extrabold text-slate-900 flex items-center gap-2">
-                                        <span className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-[10px] font-black shrink-0">
-                                          {pIdx + 1}
-                                        </span>
-                                        <span className="leading-snug">{pat.patternName}</span>
-                                      </div>
-                                      {isSelected && (
-                                        <span className="p-1 rounded-full bg-indigo-600 text-white shrink-0">
-                                          <Check className="w-3 h-3" />
+                                    <span className="truncate">{les.lessonName}</span>
+                                    <div className="flex items-center gap-1 shrink-0">
+                                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-mono ${
+                                        isSelected ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'
+                                      }`}>
+                                        {les.patterns?.length || 0} dạng
+                                      </span>
+                                      {totalQ > 0 && (
+                                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-mono ${
+                                          isSelected ? 'bg-amber-400 text-slate-950 font-black' : 'bg-amber-100 text-amber-800 font-bold'
+                                        }`}>
+                                          {totalQ} bài mẫu
                                         </span>
                                       )}
                                     </div>
-
-                                    <div className="flex items-center gap-1.5 flex-wrap">
-                                      {pat.classification && (
-                                        <span className="px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 text-[10px] font-bold border border-purple-200">
-                                          {pat.classification}
-                                        </span>
-                                      )}
-                                      <span className="px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 text-[10px] font-bold border border-indigo-100">
-                                        Trọng số: {Math.round((pat.weight || 0.05) * 100)}%
-                                      </span>
-                                    </div>
-
-                                    <div className="flex items-center justify-between pt-1 border-t border-slate-100 text-[11px]">
-                                      <span className="text-slate-500 font-medium">
-                                        {pat.questions?.length ? `${pat.questions.length} câu mẫu` : 'Chưa có câu mẫu'}
-                                      </span>
-                                      <button
-                                        type="button"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          setIsImportModalOpen(false);
-                                          handleOpenStudio(pat, activeChap, activeLes);
-                                        }}
-                                        className="px-2.5 py-1 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold flex items-center gap-1 transition-colors"
-                                      >
-                                        <Sparkles className="w-3 h-3 text-amber-500" />
-                                        <span>Mở Studio</span>
-                                      </button>
-                                    </div>
-                                  </div>
+                                  </button>
                                 );
-                              })
-                            )}
+                              })}
+                            </div>
                           </div>
-                        </>
-                      );
-                    })()}
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* TẦNG 2: DANH MỤC DẠNG BÀI THEO BÀI HỌC (Bottom Section: flex-1 overflow-y-auto) */}
+                    <div className="flex-1 p-3.5 overflow-y-auto space-y-2.5 min-h-0 bg-slate-50/50">
+                      {(() => {
+                        const [cIdx, lIdx] = (previewSelectedLessonKey || '0-0').split('-').map(Number);
+                        const activeChap = extractedCurriculum.chapters?.[cIdx] || extractedCurriculum.chapters?.[0];
+                        const activeLes = activeChap?.lessons?.[lIdx] || activeChap?.lessons?.[0];
+                        const allPatterns = activeLes?.patterns || [];
+                        const filteredPatterns = previewBloomFilter === 'all' 
+                          ? allPatterns 
+                          : allPatterns.filter(p => String(p.bloomLevel || p.difficultyLevel || '') === previewBloomFilter);
+
+                        return (
+                          <>
+                            <div className="space-y-1.5 pb-2 border-b border-slate-200">
+                              <div className="flex items-center justify-between">
+                                <div className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                                  <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                                  <span>2. Dạng Bài Học Thuật ({filteredPatterns.length}/{allPatterns.length})</span>
+                                </div>
+                                <span className="text-[11px] font-bold text-indigo-700 truncate max-w-[150px]">
+                                  {activeLes?.lessonName}
+                                </span>
+                              </div>
+
+                              {/* Filter pills */}
+                              <div className="flex items-center gap-1 overflow-x-auto text-[10px] font-bold pb-1">
+                                {[
+                                  { id: 'all', label: 'Tất cả' },
+                                  { id: '1', label: 'L1 Nhận biết' },
+                                  { id: '2', label: 'L2 Thông hiểu' },
+                                  { id: '3', label: 'L3 Vận dụng' },
+                                  { id: '4', label: 'L4 Vận dụng cao' }
+                                ].map(f => (
+                                  <button
+                                    key={f.id}
+                                    type="button"
+                                    onClick={() => setPreviewBloomFilter(f.id)}
+                                    className={`px-2 py-0.5 rounded-lg transition-colors whitespace-nowrap ${
+                                      previewBloomFilter === f.id
+                                        ? 'bg-slate-900 text-white'
+                                        : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+                                    }`}
+                                  >
+                                    {f.label}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Pattern cards */}
+                            <div className="space-y-2">
+                              {filteredPatterns.length === 0 ? (
+                                <div className="p-6 text-center text-slate-400 text-xs">
+                                  Không có dạng bài nào ở cấp độ này.
+                                </div>
+                              ) : (
+                                filteredPatterns.map((pat, pIdx) => {
+                                  const isSelected = (previewSelectedPattern?.patternName === pat.patternName) || (!previewSelectedPattern && pIdx === 0);
+                                  const qCount = pat.questions?.length || 0;
+                                  return (
+                                    <div
+                                      key={pIdx}
+                                      onClick={() => {
+                                        setPreviewSelectedPattern(pat);
+                                        setPreviewActiveQuestionIdx(0);
+                                      }}
+                                      className={`p-3 rounded-2xl border text-xs space-y-1.5 cursor-pointer transition-all ${
+                                        isSelected
+                                          ? 'bg-white border-indigo-500 ring-2 ring-indigo-500/20 shadow-md'
+                                          : 'bg-white border-slate-200/90 hover:border-indigo-300 hover:shadow-xs'
+                                      }`}
+                                    >
+                                      <div className="flex items-start justify-between gap-1.5">
+                                        <div className="font-extrabold text-slate-900 flex items-center gap-2">
+                                          <span className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-[10px] font-black shrink-0">
+                                            {pIdx + 1}
+                                          </span>
+                                          <span className="leading-snug">{pat.patternName}</span>
+                                        </div>
+                                        {isSelected && (
+                                          <span className="p-1 rounded-full bg-indigo-600 text-white shrink-0">
+                                            <Check className="w-3 h-3" />
+                                          </span>
+                                        )}
+                                      </div>
+
+                                      {(() => {
+                                        const qL1 = pat.questions?.filter(q => q.difficultyLevel === 1).length || 0;
+                                        const qL2 = pat.questions?.filter(q => q.difficultyLevel === 2).length || 0;
+                                        const qL3 = pat.questions?.filter(q => q.difficultyLevel === 3).length || 0;
+                                        const qL4 = pat.questions?.filter(q => q.difficultyLevel === 4).length || 0;
+                                        return (
+                                          <>
+                                            <div className="flex items-center gap-1.5 flex-wrap">
+                                              {pat.classification && (
+                                                <span className="px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 text-[10px] font-bold border border-purple-200 truncate max-w-[180px]">
+                                                  {pat.classification}
+                                                </span>
+                                              )}
+                                              <span className="px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 text-[10px] font-bold border border-indigo-100">
+                                                Trọng số: {Math.round((pat.weight || 0.05) * 100)}%
+                                              </span>
+                                              <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 text-[10px] font-extrabold border border-amber-200 flex items-center gap-1">
+                                                <span>🎯</span>
+                                                <span>{qCount} bài mẫu (L1: {qL1} • L2: {qL2} • L3: {qL3} • L4: {qL4})</span>
+                                              </span>
+                                            </div>
+
+                                            <div className="flex items-center justify-between pt-1 border-t border-slate-100 text-[11px]">
+                                              <span className="text-slate-500 font-medium">
+                                                {qCount > 0 ? `Chuẩn ĐGNL: L3 (${qL3} câu) • L4 (${qL4} câu)` : 'Chưa có câu mẫu'}
+                                              </span>
+                                              <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  setIsImportModalOpen(false);
+                                                  handleOpenStudio(pat, activeChap, activeLes);
+                                                }}
+                                                className="px-2 py-0.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold flex items-center gap-1 text-[11px] transition-colors"
+                                              >
+                                                <Sparkles className="w-3 h-3 text-amber-500" />
+                                                <span>Mở Studio</span>
+                                              </button>
+                                            </div>
+                                          </>
+                                        );
+                                      })()}
+                                    </div>
+                                  );
+                                })
+                              )}
+                            </div>
+                          </>
+                        );
+                      })()}
+                    </div>
                   </div>
 
-                  {/* COLUMN 3: LIVE KATEX PATTERN INSPECTOR (5 Cols / 41.7%) */}
-                  <div className="col-span-12 lg:col-span-5 bg-white overflow-y-auto p-5 space-y-4">
+                  {/* PANE 2: KHUNG CHÍNH CHI TIẾT SƯ PHẠM & BỘ SƯU TẬP BÀI MẪU (8 Cols / ~67%) */}
+                  <div className="col-span-12 lg:col-span-8 bg-white flex flex-col min-h-0 overflow-hidden">
                     {(() => {
                       const [cIdx, lIdx] = (previewSelectedLessonKey || '0-0').split('-').map(Number);
                       const activeChap = extractedCurriculum.chapters?.[cIdx] || extractedCurriculum.chapters?.[0];
@@ -2689,139 +2774,425 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
                       if (!pat) {
                         return (
                           <div className="p-12 text-center text-slate-400 text-xs">
-                            Chọn một dạng bài ở cột giữa để xem trước chi tiết 4 khối sư phạm KaTeX.
+                            Chọn một dạng bài ở cột bên trái để xem trước chi tiết sư phạm & bài tập chuyên sâu.
                           </div>
                         );
                       }
 
+                      const parsedTheory = parseTheoryRecapSections(pat.theoryRecap || '');
                       const parsedMethod = parseSolutionMethodSections(pat.solutionMethod || '');
+                      const questions = pat.questions || [];
+                      const currentQuestion = questions[previewActiveQuestionIdx] || questions[0];
 
                       return (
-                        <div className="space-y-4 animate-fade">
-                          {/* Pattern Header */}
-                          <div className="p-4 rounded-2xl bg-gradient-to-r from-slate-900 to-indigo-950 text-white space-y-2 shadow-sm">
-                            <div className="flex items-center justify-between gap-2">
-                              <span className="px-2 py-0.5 rounded-full bg-white/20 text-white text-[10px] font-bold">
-                                Trọng số: {Math.round((pat.weight || 0.05) * 100)}%
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setIsImportModalOpen(false);
-                                  handleOpenStudio(pat, activeChap, activeLes);
-                                }}
-                                className="px-3 py-1 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-900 text-xs font-black flex items-center gap-1 shadow-sm transition-all"
-                              >
-                                <Sparkles className="w-3.5 h-3.5" />
-                                <span>Mở Dạng Này Trong Studio Sư Phạm</span>
-                              </button>
-                            </div>
-                            <h4 className="text-sm font-black leading-tight text-white">{pat.patternName}</h4>
-                            {pat.classification && (
-                              <div className="text-[11px] text-indigo-200 font-medium">
-                                Phân loại: {pat.classification}
+                        <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+                          
+                          {/* Header Dạng Bài */}
+                          <div className="px-5 py-3.5 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white shrink-0 border-b border-indigo-900/50 shadow-xs flex items-center justify-between gap-3">
+                            <div className="space-y-0.5 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="px-2 py-0.5 rounded-full bg-white/20 text-white text-[10px] font-bold">
+                                  Trọng số: {Math.round((pat.weight || 0.05) * 100)}%
+                                </span>
+                                {pat.classification && (
+                                  <span className="px-2 py-0.5 rounded-full bg-purple-500/30 text-purple-200 text-[10px] font-medium border border-purple-400/30">
+                                    Phân loại: {pat.classification}
+                                  </span>
+                                )}
+                                <span className="px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-300 text-[10px] font-black border border-amber-400/30">
+                                  🎯 Nguồn bài: {questions.length} bài mẫu chuyên sâu
+                                </span>
                               </div>
-                            )}
+                              <h4 className="text-sm font-black leading-tight text-white truncate">{pat.patternName}</h4>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setIsImportModalOpen(false);
+                                handleOpenStudio(pat, activeChap, activeLes);
+                              }}
+                              className="px-3 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-900 text-xs font-black flex items-center gap-1.5 shadow-sm transition-all shrink-0"
+                            >
+                              <Sparkles className="w-3.5 h-3.5" />
+                              <span>Mở Trong Studio Sư Phạm</span>
+                            </button>
                           </div>
 
-                          {/* Khối 1: Nền tảng SGK */}
-                          <div className="space-y-1.5">
-                            <div className="text-xs font-extrabold text-cyan-800 uppercase tracking-wider flex items-center gap-1.5">
-                              <span className="w-4 h-4 rounded-full bg-cyan-100 text-cyan-700 flex items-center justify-center text-[10px] font-black">1</span>
-                              <span>Khối 1: Kiến thức nền tảng SGK</span>
-                            </div>
-                            <div className="p-3.5 rounded-2xl bg-cyan-50/50 border border-cyan-200 text-xs text-slate-800 font-medium leading-relaxed">
-                              <MathText text={pat.theoryRecap || 'Chưa nhập lý thuyết'} />
-                            </div>
-                          </div>
-
-                          {/* Khối 2: Phương pháp giải chi tiết & Bẫy */}
-                          <div className="space-y-1.5">
-                            <div className="text-xs font-extrabold text-amber-800 uppercase tracking-wider flex items-center gap-1.5">
-                              <span className="w-4 h-4 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center text-[10px] font-black">2</span>
-                              <span>Khối 2: Phương pháp giải chi tiết & Bẫy</span>
-                            </div>
-                            <div className="p-3.5 rounded-2xl bg-amber-50/40 border border-amber-200 text-xs text-slate-800 font-medium leading-relaxed space-y-2.5">
-                              <MathText text={parsedMethod.method || pat.solutionMethod || 'Chưa nhập phương pháp giải'} />
-
-                              {parsedMethod.traps && (
-                                <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-900 text-xs space-y-1">
-                                  <div className="font-bold flex items-center gap-1 text-rose-700">
-                                    <AlertTriangle className="w-3.5 h-3.5" />
-                                    <span>Bẫy đề thi ĐGNL thường gặp:</span>
+                          {/* Khung Chia Đôi Song Song 2 Cột Cân Đối: [Lý Thuyết & Bẫy] vs [Ngân Hàng Bài Mẫu Chuyên Sâu] */}
+                          <div className="flex-1 grid grid-cols-12 gap-0 overflow-hidden min-h-0">
+                            
+                            {/* CỘT A: KIẾN THỨC NỀN TẢNG & PHƯƠNG PHÁP GIẢI (6 Cols / 50%) */}
+                            <div className="col-span-12 lg:col-span-6 border-r border-slate-200 overflow-y-auto p-4 space-y-3.5 bg-white">
+                              
+                              {/* Khối 1: Nền tảng SGK */}
+                              <div className="space-y-2">
+                                <div className="text-xs font-extrabold text-cyan-800 uppercase tracking-wider flex items-center justify-between">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="w-4 h-4 rounded-full bg-cyan-100 text-cyan-700 flex items-center justify-center text-[10px] font-black">1</span>
+                                    <span>Khối 1: Kiến thức nền tảng SGK</span>
                                   </div>
-                                  <MathText text={parsedMethod.traps} />
+                                  <span className="text-[10px] text-cyan-600 font-medium">Định lý & Công thức</span>
                                 </div>
-                              )}
 
-                              {parsedMethod.casio && (
-                                <div className="p-3 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-900 text-xs space-y-1">
-                                  <div className="font-bold flex items-center gap-1 text-indigo-700">
-                                    <Sparkles className="w-3.5 h-3.5" />
-                                    <span>Kỹ thuật Casio & Mẹo tư duy nhanh:</span>
-                                  </div>
-                                  <MathText text={parsedMethod.casio} />
+                                {/* Định lý & Công thức cốt lõi */}
+                                <div className="p-3.5 rounded-2xl bg-cyan-50/50 border border-cyan-200 text-xs text-slate-800 font-medium leading-relaxed shadow-2xs">
+                                  <MathText text={parsedTheory.theory || pat.theoryRecap || 'Chưa nhập lý thuyết'} />
                                 </div>
-                              )}
-                            </div>
-                          </div>
 
-                          {/* Khối 3: Video bài giảng */}
-                          <div className="space-y-1.5">
-                            <div className="text-xs font-extrabold text-emerald-800 uppercase tracking-wider flex items-center gap-1.5">
-                              <span className="w-4 h-4 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-[10px] font-black">3</span>
-                              <span>Khối 3: Video bài giảng</span>
-                            </div>
-                            <div className="p-3 rounded-2xl bg-emerald-50/40 border border-emerald-200 text-xs text-emerald-900 font-medium flex items-center justify-between">
-                              <span>Thời lượng bài giảng khuyến nghị:</span>
-                              <span className="font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[11px]">
-                                {Math.round((pat.durationSeconds || 600) / 60)} phút ({pat.durationSeconds || 600}s)
-                              </span>
-                            </div>
-                          </div>
-
-                          {/* Khối 4: Câu hỏi trắc nghiệm mẫu */}
-                          <div className="space-y-1.5">
-                            <div className="text-xs font-extrabold text-indigo-800 uppercase tracking-wider flex items-center gap-1.5">
-                              <span className="w-4 h-4 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-[10px] font-black">4</span>
-                              <span>Khối 4: Bài toán mẫu chuẩn ĐGNL VNU-HCM</span>
-                            </div>
-                            {pat.questions && pat.questions.length > 0 ? (
-                              <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-2.5">
-                                <div className="font-bold text-slate-900">
-                                  <MathText text={pat.questions[0].contentLatex} />
-                                </div>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                  {['A', 'B', 'C', 'D'].map((optKey) => {
-                                    const optText = pat.questions[0][`option${optKey}`];
-                                    const isCorrect = pat.questions[0].correctOption === optKey;
-                                    return (
-                                      <div
-                                        key={optKey}
-                                        className={`p-2 rounded-xl border text-xs ${
-                                          isCorrect
-                                            ? 'bg-emerald-50 border-emerald-400 text-emerald-950 font-bold'
-                                            : 'bg-white border-slate-200 text-slate-700'
-                                        }`}
-                                      >
-                                        <MathText text={`${optKey}. ${optText || ''}`} />
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                                {pat.questions[0].explanation && (
-                                  <div className="p-2.5 rounded-xl bg-white border border-slate-200 text-slate-700 text-xs">
-                                    <strong className="text-slate-900">Lời giải: </strong>
-                                    <MathText text={pat.questions[0].explanation} />
+                                {/* Ví Dụ Minh Họa SGK */}
+                                {parsedTheory.example && (
+                                  <div className="p-3.5 rounded-2xl bg-gradient-to-br from-teal-50/80 via-emerald-50/50 to-cyan-50/80 border border-teal-200/90 text-xs text-slate-800 space-y-1.5 shadow-2xs">
+                                    <div className="font-extrabold flex items-center gap-1.5 text-teal-800 border-b border-teal-200/60 pb-1.5">
+                                      <BookOpen className="w-3.5 h-3.5 text-teal-600" />
+                                      <span>Ví Dụ Minh Họa SGK:</span>
+                                    </div>
+                                    <div className="leading-relaxed">
+                                      <MathText text={parsedTheory.example} />
+                                    </div>
                                   </div>
                                 )}
                               </div>
-                            ) : (
-                              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-400 text-center">
-                                Chưa có câu hỏi trắc nghiệm mẫu.
+
+                              {/* Khối 2: Phương pháp giải chi tiết & Bẫy */}
+                              <div className="space-y-2">
+                                <div className="text-xs font-extrabold text-amber-800 uppercase tracking-wider flex items-center justify-between">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="w-4 h-4 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center text-[10px] font-black">2</span>
+                                    <span>Khối 2: Phương pháp giải chi tiết & Bẫy</span>
+                                  </div>
+                                  <span className="text-[10px] text-amber-600 font-medium">Thuật toán giải</span>
+                                </div>
+                                <div className="p-3.5 rounded-2xl bg-amber-50/40 border border-amber-200 text-xs text-slate-800 font-medium leading-relaxed space-y-2.5 shadow-2xs">
+                                  {/* Thuật toán các bước */}
+                                  <MathText text={parsedMethod.method || pat.solutionMethod || 'Chưa nhập phương pháp giải'} />
+
+                                  {/* Bài Toán Mẫu Áp Dụng Phương Pháp */}
+                                  {parsedMethod.sampleProblem && (
+                                    <div className="p-3.5 rounded-xl bg-gradient-to-br from-amber-100/70 via-orange-50/80 to-amber-50/90 border border-amber-300 text-amber-950 text-xs space-y-1.5 shadow-2xs">
+                                      <div className="font-bold flex items-center gap-1.5 text-amber-900 border-b border-amber-200/80 pb-1">
+                                        <FileText className="w-3.5 h-3.5 text-amber-700" />
+                                        <span>Bài Toán Mẫu Áp Dụng Phương Pháp:</span>
+                                      </div>
+                                      <div className="leading-relaxed text-slate-800">
+                                        <MathText text={parsedMethod.sampleProblem} />
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {parsedMethod.traps && (
+                                    <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-900 text-xs space-y-1 shadow-2xs">
+                                      <div className="font-bold flex items-center gap-1 text-rose-700">
+                                        <AlertTriangle className="w-3.5 h-3.5" />
+                                        <span>Bẫy đề thi ĐGNL thường gặp:</span>
+                                      </div>
+                                      <MathText text={parsedMethod.traps} />
+                                    </div>
+                                  )}
+
+                                  {parsedMethod.casio && (
+                                    <div className="p-3 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-900 text-xs space-y-1 shadow-2xs">
+                                      <div className="font-bold flex items-center gap-1 text-indigo-700">
+                                        <Sparkles className="w-3.5 h-3.5" />
+                                        <span>Kỹ thuật Casio & Mẹo tư duy nhanh:</span>
+                                      </div>
+                                      <MathText text={parsedMethod.casio} />
+                                    </div>
+                                  )}
+                                </div>
                               </div>
-                            )}
+
+                              {/* Khối 3: Video bài giảng */}
+                              <div className="space-y-1.5">
+                                <div className="text-xs font-extrabold text-emerald-800 uppercase tracking-wider flex items-center gap-1.5">
+                                  <span className="w-4 h-4 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-[10px] font-black">3</span>
+                                  <span>Khối 3: Video bài giảng sư phạm</span>
+                                </div>
+                                <div className="p-3 rounded-2xl bg-emerald-50/40 border border-emerald-200 text-xs text-emerald-900 font-medium flex items-center justify-between shadow-2xs">
+                                  <span>Thời lượng bài giảng khuyến nghị:</span>
+                                  <span className="font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[11px]">
+                                    {Math.round((pat.durationSeconds || 600) / 60)} phút ({pat.durationSeconds || 600}s)
+                                  </span>
+                                </div>
+                              </div>
+
+                            </div>
+
+                            {/* CỘT B: BỘ SƯU TẬP BÀI MẪU & LUYỆN TẬP CHUYÊN SÂU (6 Cols / 50%) */}
+                            <div className="col-span-12 lg:col-span-6 overflow-y-auto p-4 space-y-3.5 bg-slate-50/50">
+                              
+                              <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                  <div className="text-xs font-extrabold text-indigo-900 uppercase tracking-wider flex items-center gap-1.5">
+                                    <span className="w-4 h-4 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px] font-black">4</span>
+                                    <span>Khối 4: Ngân Hàng Bài Mẫu Chuyên Sâu ({questions.length} Câu)</span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleAddAiPracticeQuestions(pat)}
+                                      className="px-2.5 py-1 rounded-xl text-[11px] font-black bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-2xs flex items-center gap-1 transition-all hover:scale-105 active:scale-95 cursor-pointer"
+                                      title="AI tự động tạo thêm 2 bài tập rèn luyện cho dạng này"
+                                    >
+                                      <Sparkles className="w-3 h-3 text-amber-300" />
+                                      <span>+ AI Tạo Thêm 2 Bài Mẫu</span>
+                                    </button>
+                                    <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-md">
+                                      Chuẩn VNU-HCM
+                                    </span>
+                                  </div>
+                                </div>
+
+                                {(() => {
+                                  const l1Questions = questions.filter(q => q.difficultyLevel === 1);
+                                  const l2Questions = questions.filter(q => q.difficultyLevel === 2);
+                                  const l3Questions = questions.filter(q => q.difficultyLevel === 3);
+                                  const l4Questions = questions.filter(q => q.difficultyLevel === 4);
+
+                                  const visibleQuestions = previewQuestionBloomTab === 'all'
+                                    ? questions
+                                    : questions.filter(q => String(q.difficultyLevel) === previewQuestionBloomTab);
+
+                                  return (
+                                    <div className="space-y-2">
+                                      {/* Cấp Độ Bloom Filter Tabs */}
+                                      <div className="flex items-center gap-1.5 flex-wrap bg-slate-100 p-1.5 rounded-xl border border-slate-200">
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            setPreviewQuestionBloomTab('all');
+                                            setPreviewActiveQuestionIdx(0);
+                                          }}
+                                          className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                                            previewQuestionBloomTab === 'all'
+                                              ? 'bg-indigo-600 text-white shadow-xs'
+                                              : 'text-slate-700 hover:bg-white'
+                                          }`}
+                                        >
+                                          Tất cả ({questions.length})
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            setPreviewQuestionBloomTab('1');
+                                            const idx = questions.findIndex(q => q.difficultyLevel === 1);
+                                            if (idx >= 0) setPreviewActiveQuestionIdx(idx);
+                                          }}
+                                          className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                                            previewQuestionBloomTab === '1'
+                                              ? 'bg-emerald-600 text-white shadow-xs'
+                                              : 'text-emerald-800 hover:bg-emerald-50'
+                                          }`}
+                                        >
+                                          L1: Nhận biết ({l1Questions.length})
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            setPreviewQuestionBloomTab('2');
+                                            const idx = questions.findIndex(q => q.difficultyLevel === 2);
+                                            if (idx >= 0) setPreviewActiveQuestionIdx(idx);
+                                          }}
+                                          className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                                            previewQuestionBloomTab === '2'
+                                              ? 'bg-cyan-600 text-white shadow-xs'
+                                              : 'text-cyan-800 hover:bg-cyan-50'
+                                          }`}
+                                        >
+                                          L2: Thông hiểu ({l2Questions.length})
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            setPreviewQuestionBloomTab('3');
+                                            const idx = questions.findIndex(q => q.difficultyLevel === 3);
+                                            if (idx >= 0) setPreviewActiveQuestionIdx(idx);
+                                          }}
+                                          className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                                            previewQuestionBloomTab === '3'
+                                              ? 'bg-amber-500 text-white shadow-xs'
+                                              : 'text-amber-900 hover:bg-amber-50'
+                                          }`}
+                                        >
+                                          L3: Vận dụng ({l3Questions.length} câu)
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            setPreviewQuestionBloomTab('4');
+                                            const idx = questions.findIndex(q => q.difficultyLevel === 4);
+                                            if (idx >= 0) setPreviewActiveQuestionIdx(idx);
+                                          }}
+                                          className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                                            previewQuestionBloomTab === '4'
+                                              ? 'bg-rose-600 text-white shadow-xs'
+                                              : 'text-rose-800 hover:bg-rose-50'
+                                          }`}
+                                        >
+                                          L4: Vận dụng cao ({l4Questions.length} câu)
+                                        </button>
+                                      </div>
+
+                                      {/* Thanh Chuyển Đổi Câu Hỏi Tương Tác */}
+                                      {visibleQuestions.length > 0 && (
+                                        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 pt-0.5">
+                                          {visibleQuestions.map((q) => {
+                                            const originalIdx = questions.indexOf(q);
+                                            const isActive = (previewActiveQuestionIdx === originalIdx);
+                                            const bloomLabel = q.difficultyLevel === 1 ? 'L1: Nhận biết'
+                                              : q.difficultyLevel === 2 ? 'L2: Thông hiểu'
+                                              : q.difficultyLevel === 3 ? 'L3: Vận dụng'
+                                              : 'L4: Vận dụng cao';
+                                            return (
+                                              <button
+                                                key={originalIdx}
+                                                type="button"
+                                                onClick={() => setPreviewActiveQuestionIdx(originalIdx)}
+                                                className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 ${
+                                                  isActive
+                                                    ? 'bg-indigo-600 text-white shadow-xs scale-102 ring-2 ring-indigo-400/40'
+                                                    : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
+                                                }`}
+                                              >
+                                                <span>Câu {originalIdx + 1}</span>
+                                                <span className={`text-[9px] px-1.5 py-0.2 rounded font-medium ${
+                                                  isActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
+                                                }`}>
+                                                  {bloomLabel}
+                                                </span>
+                                              </button>
+                                            );
+                                          })}
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })()}
+                              </div>
+
+                              {/* Chi Tiết Bài Mẫu Đang Chọn */}
+                              {currentQuestion ? (
+                                <div className="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-xs space-y-3">
+                                  <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                                    <div className="flex items-center gap-2">
+                                      <span className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-[10px] font-black">
+                                        {previewActiveQuestionIdx + 1}
+                                      </span>
+                                      <span className="text-xs font-extrabold text-slate-900">
+                                        Bài Toán Mẫu {previewActiveQuestionIdx + 1}
+                                      </span>
+                                    </div>
+                                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                                      currentQuestion.difficultyLevel === 1
+                                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                        : currentQuestion.difficultyLevel === 2
+                                        ? 'bg-cyan-50 text-cyan-700 border-cyan-200'
+                                        : currentQuestion.difficultyLevel === 3
+                                        ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                        : 'bg-rose-50 text-rose-700 border-rose-200'
+                                    }`}>
+                                      Cấp độ: {currentQuestion.difficultyLevel === 1 ? 'L1 - Nhận biết'
+                                        : currentQuestion.difficultyLevel === 2 ? 'L2 - Thông hiểu'
+                                        : currentQuestion.difficultyLevel === 3 ? 'L3 - Vận dụng'
+                                        : 'L4 - Vận dụng cao'} (Độ khó: {currentQuestion.difficultyLevel}/4)
+                                    </span>
+                                  </div>
+
+                                  {/* Đề bài KaTeX */}
+                                  <div className="text-xs font-bold text-slate-900 leading-relaxed p-3 rounded-xl bg-slate-50 border border-slate-100">
+                                    <MathText text={currentQuestion.contentLatex} />
+                                  </div>
+
+                                  {/* Lưới 4 phương án A-B-C-D */}
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    {['A', 'B', 'C', 'D'].map((optKey) => {
+                                      const optText = currentQuestion[`option${optKey}`];
+                                      const isCorrect = currentQuestion.correctOption === optKey;
+                                      return (
+                                        <div
+                                          key={optKey}
+                                          className={`p-2.5 rounded-xl border text-xs flex items-start gap-1.5 transition-all ${
+                                            isCorrect
+                                              ? 'bg-emerald-50/90 border-emerald-400 text-emerald-950 font-bold ring-1 ring-emerald-400/30 shadow-2xs'
+                                              : 'bg-white border-slate-200 text-slate-700'
+                                          }`}
+                                        >
+                                          <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 ${
+                                            isCorrect ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600'
+                                          }`}>
+                                            {optKey}
+                                          </span>
+                                          <div className="flex-1 min-w-0">
+                                            <MathText text={optText || ''} />
+                                          </div>
+                                          {isCorrect && (
+                                            <span className="text-emerald-700 text-[10px] font-extrabold shrink-0">
+                                              ✓ Đúng
+                                            </span>
+                                          )}
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+
+                                  {/* Khung Lời Giải Chi Tiết */}
+                                  {currentQuestion.explanation && (
+                                    <div className="p-3 rounded-xl bg-indigo-50/60 border border-indigo-200/80 text-slate-800 text-xs space-y-1">
+                                      <div className="font-extrabold text-indigo-950 flex items-center gap-1.5">
+                                        <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                                        <span>Lời giải chi tiết từng bước:</span>
+                                      </div>
+                                      <div className="leading-relaxed text-slate-800 font-medium">
+                                        <MathText text={currentQuestion.explanation} />
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {/* Pagination / Điều hướng câu hỏi */}
+                                  <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-[11px]">
+                                    <button
+                                      type="button"
+                                      disabled={previewActiveQuestionIdx <= 0}
+                                      onClick={() => setPreviewActiveQuestionIdx(p => Math.max(0, p - 1))}
+                                      className="px-2.5 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed font-bold text-slate-700 transition-colors"
+                                    >
+                                      ← Câu trước
+                                    </button>
+                                    <span className="text-slate-500 font-medium">
+                                      Câu {previewActiveQuestionIdx + 1} / {questions.length}
+                                    </span>
+                                    <button
+                                      type="button"
+                                      disabled={previewActiveQuestionIdx >= questions.length - 1}
+                                      onClick={() => setPreviewActiveQuestionIdx(p => Math.min(questions.length - 1, p + 1))}
+                                      className="px-2.5 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed font-bold text-slate-700 transition-colors"
+                                    >
+                                      Câu tiếp theo →
+                                    </button>
+                                  </div>
+
+                                </div>
+                              ) : (
+                                <div className="p-8 rounded-2xl bg-white border border-slate-200 text-xs text-slate-400 text-center space-y-2">
+                                  <BookOpen className="w-8 h-8 text-slate-300 mx-auto" />
+                                  <div>Dạng bài này chưa có câu hỏi mẫu.</div>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setIsImportModalOpen(false);
+                                      handleOpenStudio(pat, activeChap, activeLes);
+                                    }}
+                                    className="px-3 py-1 rounded-xl bg-indigo-50 text-indigo-700 font-bold hover:bg-indigo-100 transition-colors"
+                                  >
+                                    Mở Studio để thêm câu hỏi mẫu
+                                  </button>
+                                </div>
+                              )}
+
+                            </div>
+
                           </div>
+
                         </div>
                       );
                     })()}

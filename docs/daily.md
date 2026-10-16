@@ -2,6 +2,43 @@
 
 ---
 
+## [16/10/2026] - Tái Cân Đối Bố Cục Không Gian Panoramic Workspace, Thẻ Ví Dụ Minh Họa SGK & Bài Toán Mẫu Áp Dụng (Khối 1 & Khối 2), Mở Rộng Ngân Hàng Bài Mẫu Chuyên Sâu Đa Cấp Độ
+
+- **Tích Hợp Khối Thẻ Ví Dụ Minh Họa SGK (Khối 1) & Bài Toán Mẫu Áp Dụng Phương Pháp (Khối 2) Chuẩn Sư Phạm**:
+  - *Tách Biệt Nội Dung Bằng Parser Chuyên Sâu (`CurriculumStudioEditor.jsx`)*:
+    + Bổ sung hàm xuất khẩu `parseTheoryRecapSections`: Phân tách chuỗi `theoryRecap` thành `{ theory, example }` dựa trên điểm neo `### 📌 Ví dụ minh họa SGK:`.
+    + Nâng cấp hàm xuất khẩu `parseSolutionMethodSections`: Phân tách chuỗi `solutionMethod` thành `{ method, sampleProblem, traps, casio }` sử dụng regex lookahead phân định rõ ràng giữa các bước giải thuật, `### 📝 Bài toán mẫu áp dụng phương pháp:`, `### ⚠️ Các bẫy đề thi`, và `### 💡 Kỹ thuật Casio & mẹo tư duy nhanh`.
+  - *Hiển Thị Thẻ Trực Quan Độc Lập Nổi Bật (`CurriculumExplorerView.jsx`)*:
+    + **Khối 1 (Kiến Thức Nền Tảng SGK)**: Bên dưới phần định lý và công thức, bố trí Thẻ **📌 Ví Dụ Minh Họa SGK** với viền gradient Emerald/Teal dịu mát, huy hiệu "VÍ DỤ SGK", bài toán ngữ cảnh và lời giải KaTeX từng bước.
+    + **Khối 2 (Phương Pháp Giải Chi Tiết & Bẫy)**: Bên dưới các bước giải thuật (Bước 1, Bước 2, Bước 3...), hiển thị Thẻ **📝 Bài Toán Mẫu Áp Dụng Phương Pháp** với viền gradient Amber/Orange ấm áp, huy hiệu "BÀI TOÁN MẪU ÁP DỤNG", minh họa cách áp dụng trực tiếp thuật toán vào bài tập cụ thể, đặt trước khối Callout Bẫy đề thi (Rose Alert) và Mẹo Casio (Indigo Tip).
+    + Toàn bộ nội dung công thức, phương trình phản ứng hóa học và ký hiệu được render mượt mà qua `<MathText />`.
+- **Tái Cân Đối Toàn Diện Bố Cục Không Gian Panoramic Workspace (`CurriculumExplorerView.jsx`)**:
+  - *Giải Quyết Triệt Để Tình Trạng Mất Cân Đối*: Xóa bỏ hoàn toàn bố cục 3 cột cũ gây lệch diện tích (Cột 1 và Cột 2 bị trống 70% không gian đáy, Cột 3 dồn toàn bộ 4 khối sư phạm cuộn dài vô tận).
+  - *Chuyển Đổi Sang Bố Cục 2 Phân Vùng Cân Xứng (2-Master-Pane Layout)*:
+    - **Phân Vùng 1: Cột Trái Điều Hướng Phân Cấp (4 Cols / ~33% width)**:
+      + *Tầng 1 (Cây Chương & Bài Học)*: Chiếm tối đa 40% chiều cao, hiển thị danh sách Chương và Bài học với badge tổng hợp số lượng Dạng bài và tổng số Bài toán mẫu (`X dạng • Y bài mẫu`).
+      + *Tầng 2 (Danh Mục Dạng Bài Của Bài Học)*: Chiếm 60% chiều cao còn lại với thanh cuộn độc lập, tích hợp bộ lọc Bloom L1 - L4, hiển thị badge phân loại, trọng số và **huy hiệu nổi bật số lượng bài mẫu chuyên sâu (`🎯 X bài mẫu chuyên sâu`)**.
+    - **Phân Vùng 2: Khung Chính Chi Tiết Sư Phạm & Ngân Hàng Bài Mẫu (8 Cols / ~67% width)**:
+      + *Top Banner Thống Kê Tổng Lực*: Hiển thị tự động tổng số bài tập mẫu chuyên sâu trên toàn bộ chuyên đề: `X Chương • Y Bài học • Z Dạng bài chi tiết • W Bài tập mẫu chuyên sâu`.
+      + *Khung Chia Đôi Song Song 2 Cột Cân Đối (50% - 50%)*:
+        * **Cột Trái (Kiến Thức & Phương Pháp Sư Phạm)**: Hiển thị Khối 1 (Lý thuyết SGK nền tảng & Thẻ Ví Dụ Minh Họa SGK), Khối 2 (Phương pháp giải, Thẻ Bài Toán Mẫu Áp Dụng Phương Pháp, Bẫy đề thi ĐGNL Rose Alert, Mẹo Casio Indigo Tip), và Khối 3 (Thời lượng video bài giảng khuyến nghị).
+        * **Cột Phải (Ngân Hàng Bài Mẫu & Luyện Tập Chuyên Sâu - Khối 4)**: Hiển thị toàn bộ bộ sưu tập 4 câu hỏi trắc nghiệm chuẩn Bloom L1-L4.
+- **Tính Năng Động: Sinh Thêm Bài Tập Rèn Luyện AI Tức Thì (`+ AI Tạo Thêm 2 Bài Mẫu`)**:
+  - Tích hợp nút bấm gradient tím-xanh `+ AI Tạo Thêm 2 Bài Mẫu` ngay trên header của Khối 4.
+  - Cho phép giáo viên nhấp 1 phát để sinh tức thì 2 bài tập rèn luyện (L3 Vận dụng & L4 Vận dụng cao) bám sát lý thuyết và phương pháp giải của dạng bài hiện tại.
+  - Tự động cập nhật tổng số câu hỏi trên thanh tab và focus ngay vào câu hỏi mới sinh.
+- **Bộ Chuyển Đổi Câu Hỏi Mẫu Tương Tác & Bộ Lọc Cấp Độ Bloom Thông Minh (Khối 4)**:
+  - Thanh bộ lọc Bloom theo tab trực quan: `[Tất cả (14)]`, `[L1: Nhận biết (2)]`, `[L2: Thông hiểu (2)]`, `[L3: Vận dụng (5 câu)]`, `[L4: Vận dụng cao (5 câu)]`.
+  - Giúp giáo viên nhanh chóng lọc và duyệt riêng từng nhóm câu hỏi, đặc biệt là nhóm 4-5 câu Vận dụng (L3) và Vận dụng cao (L4) mà không bị choáng ngợp hay rối mắt.
+  - Thanh tab pills trực quan cho từng câu hỏi trong nhóm được chọn: `[Câu 1 • L1: Nhận biết]`, `[Câu 2 • L2: Thông hiểu]`, `[Câu 3 • L3: Vận dụng]`, `[Câu 4 • L4: Vận dụng cao]`...
+  - Hiển thị đầy đủ: Đề bài KaTeX, lưới 4 phương án A-B-C-D với phương án đúng được viền xanh ngọc Emerald kèm icon Check, và khung Lời giải chi tiết KaTeX từng bước.
+  - Tích hợp thanh điều hướng phân trang câu hỏi `← Câu trước` / `Câu tiếp theo →`.
+  - Hiển thị thẻ phân bổ chi tiết mật độ câu hỏi ở Pane 1: `(L1: 2 • L2: 2 • L3: 5 • L4: 5)` và `Chuẩn ĐGNL: L3 (5 câu) • L4 (5 câu)`.
+- **Kiểm Thử Đóng Gói (Build Verification)**:
+  - `npm run build` thành công 100% (**0 Error, 0 Warning**, hoàn thành trong 732ms).
+
+---
+
 ## [15/10/2026] - Nâng Cấp Cây Tri Thức Phân Cấp 3 Tầng, Studio Sư Phạm Chuyên Sâu (Curriculum Studio Editor), Bàn Phím KaTeX STEM 10 Danh Mục, Không Gian Bóc Tách Khổ Lớn 3 Cột, Khắc Phục Lỗi Màn Trắng & KaTeX
 
 - **Kiến Trúc Soạn Thảo Đa Chế Độ: Soạn Thảo Trực Quan (Text In Preview Chuẩn Học Sinh) Song Hành Mã Nguồn LaTeX Thuần (Nhập Nhanh Từ AI) (`CurriculumStudioEditor.jsx`)**:

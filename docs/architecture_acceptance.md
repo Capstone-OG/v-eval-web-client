@@ -259,6 +259,39 @@ V-Eval-Web_Client/
 - **Block 2 (Step-by-Step Problem Solving & Traps)**:
   - Both modes natively support structured algorithmic step derivation alongside dedicated live-preview alert cards: Exam Pitfalls (Rose Alert) and Casio fx-580/880 Shortcuts (Indigo Tip).
 
+### 4.24. Panoramic Workspace 2-Master-Pane Rebalancing & Deep Exemplar Bank Integration (`CurriculumExplorerView.jsx`)
+- **Elimination of Visual & Cognitive Layout Imbalance**:
+  - Replaced the asymmetrical 3-column layout (which suffered from 70% bottom white-space dead zones in Columns 1 & 2 while excessively cramming all 4 pedagogical blocks into Column 3) with a **2-Master-Pane Balanced Grid**:
+    - *Pane 1 (Hierarchical Navigation & Pattern Index - 4 Cols / ~33%)*:
+      - Section 1 (Chapter & Lesson Tree): Compact header with total pattern count and exemplar question badges (`X dạng • Y bài mẫu`).
+      - Section 2 (Pattern Roster with Bloom Filtering): Independent scrollable container displaying pattern titles, weightings, classification badges, and a prominent badge for available exemplar questions (`🎯 X bài mẫu chuyên sâu`).
+    - *Pane 2 (Main Pedagogical & Question Workspace - 8 Cols / ~67%)*:
+      - Top Banner: Global curriculum statistics aggregating total exemplar questions across the whole topic (`X Chương • Y Bài học • Z Dạng bài chi tiết • W Bài tập mẫu chuyên sâu`).
+      - Top Bar: Pattern metadata, Bloom taxonomy tag, question count, and 1-click launch to Curriculum Studio Editor.
+      - **Balanced Side-by-Side 50/50 Dual Column**:
+        - *Left Column (Foundational Theory & Methodology)*: Block 1 (SGK Theory in Cyan Card), Block 2 (Step-by-Step Algorithm, Rose Alert Traps, Indigo Tip Casio in Amber Card), and Block 3 (Video Duration in Emerald Card).
+        - *Right Column (Exemplar Question Bank - Block 4)*: Houses the complete collection of 4 exemplar questions spanning Bloom levels L1 to L4.
+- **Dynamic On-The-Fly Question Expansion (`+ AI Tạo Thêm 2 Bài Mẫu`)**:
+  - Embedded an interactive action button within Block 4 header allowing instructors to dynamically synthesize 2 additional practice questions (L3 Application and L4 Advanced) tailored directly to the active pattern's theory and method.
+- **Interactive Question Switcher & Live Solution Derivation**:
+  - Provides instant pill tabs (`[Câu 1 • L1: Nhận biết]`, `[Câu 2 • L2: Thông hiểu]`, `[Câu 3 • L3: Vận dụng]`, `[Câu 4 • L4: Vận dụng cao]`) allowing instructors to toggle seamlessly between exemplar items.
+  - Renders LaTeX item stems, an interactive 4-option grid (A-D) with emerald checkmarks highlighting the verified correct answer, step-by-step KaTeX mathematical derivations, and responsive previous/next pagination controls.
+  - Synchronizes all extracted question items into PostgreSQL via `contentService.importCurriculum` (`POST /api/content/curriculum/import`) to enrich the ZPD adaptive practice bank (API 19).
+
+### 4.25. Dedicated Pedagogical Exemplar Presentation & Section Parsing (`CurriculumExplorerView.jsx` & `CurriculumStudioEditor.jsx`)
+- **Pedagogical Structure Isolation Architecture**:
+  - `parseTheoryRecapSections(theoryRecap)`: Uses an anchor-based delimiter regex `/(?:^|\n)###\s*(?:📌\s*)?Ví dụ minh họa SGK:?/i` to split raw theory into core foundational principles (`theory`) and dedicated real-world STEM illustrative examples (`example`).
+  - `parseSolutionMethodSections(solutionMethod)`: Uses positive lookaheads `(?=(?:###\s*(?:⚠️|💡)|$))` to split algorithmic steps (`method`), applied sample problem (`sampleProblem`), exam pitfalls (`traps`), and Casio fx-580/880 shortcuts (`casio`).
+- **Visual Design & Typography Hierarchy**:
+  - **Block 1 (Foundational SGK Theory)**: Features an emerald-themed **"📌 Ví Dụ Minh Họa SGK"** card (`bg-gradient-to-br from-emerald-500/10 to-teal-500/5 border-emerald-500/30`) with an explicit "VÍ DỤ SGK" badge, separating abstract theorem statements from contextual numerical examples.
+  - **Block 2 (Methodology & Pitfalls)**: Features an amber/orange-themed **"📝 Bài Toán Mẫu Áp Dụng Phương Pháp"** card (`bg-gradient-to-br from-amber-500/10 to-orange-500/5 border-amber-500/30`) with an explicit "BÀI TOÁN MẪU ÁP DỤNG" badge positioned directly after algorithm steps, clearly showing students how Step 1, Step 2, and Step 3 operate in concrete problem scenarios before presenting common exam pitfalls and Casio tips.
+
+### 4.26. Interactive Bloom Taxonomy Filtering & 14-Question Exemplar Inspection Suite (Block 4)
+- **Multi-Level Cognitive Segregation**:
+  - Implemented an interactive Bloom filter tab bar (`[Tất cả (14)]`, `[L1: Nhận biết (2)]`, `[L2: Thông hiểu (2)]`, `[L3: Vận dụng (5 câu)]`, `[L4: Vận dụng cao (5 câu)]`) directly above the question switcher pills.
+  - Allows educators and curriculum curators to effortlessly navigate dense 14-question banks per pattern (especially isolating the 5 L3 Application and 5 L4 Advanced questions) without cognitive overload.
+- **Pattern Density Indicators in Pane 1**:
+  - Displays explicit level distribution pills `(L1: 2 • L2: 2 • L3: 5 • L4: 5)` and high-order competency badges `Chuẩn ĐGNL: L3 (5 câu) • L4 (5 câu)` for each pattern in the left navigation hierarchy, providing immediate pedagogical transparency.
 
 ---
 

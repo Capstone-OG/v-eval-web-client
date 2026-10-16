@@ -1,25 +1,23 @@
 # Nhật Ký Cập Nhật (Update Log) - Web Client
 
-## [15/10/2026] - Kiến Trúc Soạn Thảo Đa Chế Độ: Soạn Thảo Trực Quan (Text In Preview Chuẩn Học Sinh) Song Hành Mã Nguồn LaTeX Thuần (Nhập Nhanh Từ AI)
+## [16/10/2026] - Trình Diễn Chuyên Biệt Thẻ Ví Dụ Minh Họa SGK (Khối 1), Bài Toán Mẫu (Khối 2) & Bộ Lọc Bloom L1-L4 Duyệt Ngân Hàng 14 Câu Hỏi Trắc Nghiệm
 
-- **Kiến Trúc Soạn Thảo Đa Chế Độ Trực Quan & Mã Nguồn LaTeX Song Hành (`CurriculumStudioEditor.jsx`)**:
-  - *Đáp Ứng Đúng Bản Chất Soạn Thảo Sư Phạm (Text In Preview)*:
-    - Loại bỏ hoàn toàn giải pháp phân rã 4 ô form cứng nhắc (Định nghĩa, Công thức, Quy tắc, Hình ảnh) gây cắt vụn luồng tư duy sư phạm của giáo viên.
-    - Chế độ **Soạn Thảo Trực Quan (Text In Preview - Chuẩn Học Sinh)**:
-      + Khung soạn thảo văn bản liền mạch tích hợp thanh công cụ nhanh (`+ Khối công thức $$...$$`, `+ Gạch đầu dòng`).
-      + **Khung Hiển Thị Trực Quan (Text In Preview - Giao Diện Học Sinh Thấy)** hiển thị song hành ngay bên dưới ô nhập: Render trực tiếp công thức toán học KaTeX thật (phân số, căn thức, giới hạn, tích phân, hình ảnh đồ thị), phản ánh chính xác 100% giao diện học sinh nhìn thấy.
-    - Chế độ **Mã Nguồn LaTeX Thuần (Nhập Nhanh Từ AI)**:
-      + Khung soạn thảo monospace nền tối chuyên dụng cho việc copy-paste nhanh 1-chạm kết quả trích xuất từ Gemini / ChatGPT / AI Engine mà không qua xử lý trung gian.
-  - *Cơ Chế Chèn Ký Hiệu KaTeX STEM Chuẩn Xác Tại Vị Trí Con Trỏ (Cursor-Precision Insertion Engine)*:
-    - Sử dụng `textareaRefs` theo dõi chính xác vị trí con trỏ chuột (`selectionStart` / `selectionEnd`) trên từng textarea đang active.
-    - Khi giáo viên click vào bất kỳ ký hiệu nào trên Bảng KaTeX STEM 10 danh mục (hơn 120+ công thức toán học), công thức tự động chèn đúng vị trí con trỏ và tự động focus lại mà không bị nhảy lên đầu trang hay cuối trang.
-  - *Đồng Bộ Khối 2 - Phương Pháp Giải Chuyên Biệt*:
-    - Hỗ trợ cả 2 chế độ: Soạn thảo trực quan xem trước thẻ bẫy đề thi (Rose Alert) và mẹo Casio (Indigo Tip) sống động, song song với chế độ mã nguồn LaTeX thuần để nạp nhanh từ AI.
-- **Khắc Phục Triệt Để Ký Tự Thoát `\n` Bị Hiển Thị Thô Dạng Text (`MathText.jsx`)**:
-  - *Negative Lookahead Chính Xác*: Thay thế regex cũ bằng danh sách bảo vệ đúng 15 lệnh LaTeX bắt đầu bằng `\n` (`` `\neq` ``, `` `\notin` ``, `` `\nabla` ``, `` `\nu` ``...). Giải phóng 100% các từ tiếng Việt và ngắt dòng thực tế (`` `\nTrong` ``, `` `\nKiểm` ``, `` `\nBước` ``).
-  - *Đồng Bộ Textarea Biên Soạn*: Xuất hàm `unescapeLiteralNewlines` giải phóng `\n` thành Enter xuống dòng thực tế khi nạp lý thuyết và phương pháp giải vào khung soạn thảo Studio.
-- **Tự Động Bọc KaTeX Cho Ion Đa Nguyên Tử & Hợp Chất Hóa Học**:
-  - Tự động nhận diện và bọc KaTeX cho ion đơn/đa nguyên tử có điện tích: `` `H^+` ``, `` `OH^-` ``, `` `SO_4^{2-}` ``, `` `NO_3^-` ``, `` `Fe^{3+}` ``, `` `Na^+` ``, `` `Cl^-` ``.
-  - Tự động nhận diện và bọc KaTeX cho các hợp chất có chỉ số dưới: `` `H_2O` ``, `` `H_2SO_4` ``, `` `HNO_3` ``, `` `CO_2` ``, `` `Fe_2O_3` ``, `` `KMnO_4` ``.
+- **Nâng Cấp Giao Diện Panoramic Workspace (`CurriculumExplorerView.jsx`)**:
+  - *Khối 1 (Kiến Thức Nền Tảng SGK)*:
+    - Hiển thị Lý thuyết chuyên sâu chuẩn SGK GDPT 2018 (Khái niệm đa đoạn, 4 quy tắc vàng, bảng ngoại lệ oxy hóa $H_2O_2, KO_2, OF_2, NaH$, lưu ý thi cử).
+    - **Thẻ Card Chuyên Biệt: Ví Dụ Minh Họa SGK (`📌 Ví Dụ Minh Họa SGK:`)**: Nằm ngay bên dưới phần lý thuyết với viền xanh Teal/Emerald, hiển thị bài toán ví dụ minh họa công thức kèm phân tích và lời giải chi tiết KaTeX.
+  - *Khối 2 (Phương Pháp Giải Chi Tiết & Bẫy)*:
+    - Hiển thị Quy trình các bước giải thuật toán chuẩn mực.
+    - **Thẻ Card Chuyên Biệt: Bài Toán Mẫu Áp Dụng Phương Pháp (`📝 Bài Toán Mẫu Áp Dụng Phương Pháp:`)**: Nằm ngay sau các bước giải với gradient hổ phách/cam ấm áp, trình bày bài toán mẫu giải chi tiết bám sát theo từng Bước 1, Bước 2, Bước 3.
+    - Card Bẫy đề thi ĐGNL (Rose Alert) và Card Kỹ thuật Casio & Mẹo tư duy nhanh (Indigo Tip).
+  - *Khối 4 (Ngân Hàng Bài Mẫu Chuyên Sâu & Bộ Lọc Bloom Phân Cấp)*:
+    - **Thanh Tab Lọc Bloom Trực Quan**: `[Tất cả (14)]`, `[L1: Nhận biết (2)]`, `[L2: Thông hiểu (2)]`, `[L3: Vận dụng (5 câu)]`, `[L4: Vận dụng cao (5 câu)]`. Cho phép giáo viên lọc và duyệt mượt mà từng câu trong số 4-5 câu vận dụng mà không bị rối mắt.
+    - Tab pills tương tác chuyển đổi giữa các câu hỏi trong nhóm được chọn kèm nút điều hướng phân trang `← Câu trước` / `Câu tiếp theo →`.
+    - Nút bấm `+ AI Tạo Thêm 2 Bài Mẫu` cho phép giáo viên sinh thêm câu hỏi rèn luyện tức thì.
+  - *Phân Vùng 1 (Điều Hướng Phân Cấp)*:
+    - Hiển thị huy hiệu mật độ câu hỏi chi tiết theo cấp độ Bloom `(L1: 2 • L2: 2 • L3: 5 • L4: 5)` và nhãn chuẩn hóa `Chuẩn ĐGNL: L3 (5 câu) • L4 (5 câu)`.
+- **Bộ Xử Lý Phân Tách Nội Dung Sư Phạm (`CurriculumStudioEditor.jsx`)**:
+  - Xuất bản hàm `parseTheoryRecapSections(rawTheory)`: Tách riêng phần lý thuyết cốt lõi và phần ví dụ minh họa `### 📌 Ví dụ minh họa SGK:`.
+  - Nâng cấp hàm `parseSolutionMethodSections(rawMethod)`: Tách riêng thuật toán giải, bài toán mẫu `### 📝 Bài toán mẫu áp dụng phương pháp:`, bẫy đề thi và mẹo Casio.
 - **Kiểm Thử Đóng Gói (Build Verification)**:
-  - `npm run build` thành công 100% (**0 Error, 0 Warning**, hoàn thành trong 750ms).
+  - `npm run build` hoàn thành 100% (**0 Error, 0 Warning**, thời gian build 732ms).

@@ -224,11 +224,31 @@ export const MATH_CATEGORIES = {
   }
 };
 
+export function parseTheoryRecapSections(rawTheory) {
+  if (!rawTheory) return { theory: '', example: '' };
+  let theory = String(rawTheory);
+  let example = '';
+
+  const exampleMatch = theory.match(/###\s*(?:📌|Ví dụ minh họa SGK|Ví dụ minh họa|Ví dụ)[^\n]*\n([\s\S]*)$/i);
+  if (exampleMatch) {
+    example = exampleMatch[1].trim();
+    theory = theory.replace(/###\s*(?:📌|Ví dụ minh họa SGK|Ví dụ minh họa|Ví dụ)[^\n]*\n[\s\S]*$/i, '').trim();
+  }
+
+  return { theory, example };
+}
+
 export function parseSolutionMethodSections(rawMethod) {
-  if (!rawMethod) return { method: '', traps: '', casio: '' };
+  if (!rawMethod) return { method: '', sampleProblem: '', traps: '', casio: '' };
   let method = String(rawMethod);
+  let sampleProblem = '';
   let traps = '';
   let casio = '';
+
+  const sampleMatch = method.match(/###\s*(?:📝|Bài toán mẫu áp dụng|Bài toán mẫu|Ví dụ áp dụng|Bài toán minh họa)[^\n]*\n([\s\S]*?)(?=(?:###\s*(?:⚠️|💡|Các bẫy đề thi|Bẫy đề thi|Kỹ thuật Casio|Mẹo Casio)|$))/i);
+  if (sampleMatch) {
+    sampleProblem = sampleMatch[1].trim();
+  }
 
   const trapsMatch = method.match(/###\s*(?:⚠️|Các bẫy đề thi|Bẫy đề thi)[^\n]*\n([\s\S]*?)(?=(?:###\s*(?:💡|Kỹ thuật Casio|Mẹo Casio)|$))/i);
   if (trapsMatch) {
@@ -241,11 +261,12 @@ export function parseSolutionMethodSections(rawMethod) {
   }
 
   method = method
+    .replace(/###\s*(?:📝|Bài toán mẫu áp dụng|Bài toán mẫu|Ví dụ áp dụng|Bài toán minh họa)[^\n]*\n[\s\S]*?(?=(?:###\s*(?:⚠️|💡|Các bẫy đề thi|Bẫy đề thi|Kỹ thuật Casio|Mẹo Casio)|$))/gi, '')
     .replace(/###\s*(?:⚠️|Các bẫy đề thi|Bẫy đề thi)[^\n]*\n[\s\S]*?(?=(?:###\s*(?:💡|Kỹ thuật Casio|Mẹo Casio)|$))/gi, '')
     .replace(/###\s*(?:💡|Kỹ thuật Casio|Mẹo Casio)[^\n]*\n[\s\S]*?(?=(?:###\s*(?:⚠️|Các bẫy đề thi|Bẫy đề thi)|$))/gi, '')
     .trim();
 
-  return { method, traps, casio };
+  return { method, sampleProblem, traps, casio };
 }
 
 /**
