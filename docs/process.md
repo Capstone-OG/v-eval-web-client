@@ -24,6 +24,14 @@
     + `RadarChartModal`: Phóng to biểu đồ Radar năng lực chi tiết 3 miền Toán - Văn - Khoa học tự nhiên/xã hội.
     + `AcademicArchitectureModal`: Bảng đối chiếu kiến trúc học thuật và 22 công thức hệ thống V-Eval.
   - `src/data/mockData.js`: Dữ liệu mô phỏng đồng bộ chuẩn hóa theo đặc tả toán học hệ thống V-Eval.
+  - `src/components/common/`:
+    + `MathText.jsx`: Động cơ render KaTeX, nhận diện Markdown, công thức hóa học, khối bảng biến thiên và thẻ đồ thị.
+    + `VariationTable.jsx`: Renderer Bảng biến thiên 3 dòng vector HTML/SVG chuẩn SGK GDPT 2018 (mũi tên dốc, vạch kép, cực trị).
+    + `MathGraphView.jsx`: Renderer Đồ thị hàm số Oxy vector SVG (bậc 3, phân thức, trùng phương, parabol, dóng nét đứt CĐ/CT, tiệm cận) & Tích hợp đồ thị tương tác Desmos Graphing Calculator.
+  - `src/components/curriculum/`:
+    + `CurriculumExplorerView.jsx`: Cây tri thức phân cấp 3 tầng, không gian Panoramic Workspace, bộ lọc Bloom L1-L4 và duyệt câu hỏi mẫu.
+    + `CurriculumStudioEditor.jsx`: Studio hiệu đính sư phạm toàn diện, chế độ Text In Preview, bàn phím ảo KaTeX STEM 10 danh mục, dán ảnh màn hình clipboard Ctrl+V.
+    + `InteractiveFormulaBuilderModal.jsx`: Trình tạo công thức và đồ thị trực quan (Click-to-Fill Formula Builder) không cần gõ mã LaTeX.
 - **Tích Hợp Hệ Thống**:
   - Tích hợp cổng Gateway YARP (`http://localhost:5212`) cho các luồng API Auth, Content, Practice và AI Ingestion/Tutor.
   - Script điều khiển độc lập `Scripts/push.bat` hỗ trợ commit & push trực tiếp từ thư mục Web Client.
@@ -80,6 +88,14 @@
 | 43 | **Tái Cân Đối Bố Cục Không Gian Panoramic Workspace & Ngân Hàng Bài Mẫu Chuyên Sâu (Kèm Nút Sinh Thêm Câu Hỏi AI)** | `CurriculumExplorerView.jsx` | 🟢 Hoàn thành | 100% | Tái cấu trúc 2 phân vùng cân xứng (Cột trái 4 cols: Cây Chương & Bài Học + Dạng bài; Khung phải 8 cols: Chia đôi song song Lý thuyết vs Ngân hàng 4 câu hỏi mẫu chuẩn Bloom L1-L4 kèm Interactive Question Switcher, nút bấm dynamic `+ AI Tạo Thêm 2 Bài Mẫu` và banner thống kê tổng lực) |
 | 44 | **Tích Hợp Khối Thẻ Ví Dụ Minh Họa SGK (Khối 1) & Bài Toán Mẫu Áp Dụng Phương Pháp (Khối 2)** | `CurriculumStudioEditor.jsx`, `CurriculumExplorerView.jsx` | 🟢 Hoàn thành | 100% | Bóc tách độc lập và hiển thị 2 khối thẻ sư phạm chuyên biệt: Thẻ Ví Dụ Minh Họa SGK (Emerald/Teal) trong Khối 1 và Thẻ Bài Toán Mẫu Áp Dụng Phương Pháp (Amber/Orange) trong Khối 2, kết hợp chuẩn hóa parser phân tách nội dung lý thuyết/phương pháp |
 | 45 | **Bộ Lọc Phân Cấp Bloom & Duyệt Ngân Hàng 14 Câu Hỏi Trắc Nghiệm (2 L1, 2 L2, 5 L3, 5 L4) Mỗi Dạng Bài** | `src/components/curriculum/CurriculumExplorerView.jsx` | 🟢 Hoàn thành | 100% | Thanh tab lọc Bloom tương tác (Tất cả, L1, L2, L3 Vận dụng 5 câu, L4 Vận dụng cao 5 câu), hiển thị chi tiết mật độ câu hỏi ở Pane 1 `(L1: 2 • L2: 2 • L3: 5 • L4: 5)` và duyệt toàn bộ ngân hàng câu hỏi vận dụng chuyên sâu |
+| 46 | **Bộ Renderer Bảng Biến Thiên Nội Sinh Chuẩn SGK GDPT 2018 (3 Dòng Vector HTML/SVG)** | `src/components/common/VariationTable.jsx` | 🟢 Hoàn thành | 100% | Render vector sắc nét bảng biến thiên 3 dòng (dòng `x`, dòng `y'`, dòng mũi tên biến thiên `y`), hỗ trợ mũi tên dốc `\nearrow`, `\searrow`, vạch kép `||`, vô cực, điểm cực trị và parser khối `[VARIATION_TABLE]` |
+| 47 | **Bộ Renderer Đồ Thị Hàm Số Oxy Vector SVG & Dóng Nét Đứt Cực Trị / Tiệm Cận** | `src/components/common/MathGraphView.jsx` | 🟢 Hoàn thành | 100% | Tự động vẽ hệ trục toạ độ Oxy, lưới toạ độ grid, đường cong hàm số (bậc 3, phân thức, trùng phương, parabol), dóng nét đứt tọa độ cực đại, cực tiểu và tiệm cận |
+| 48 | **Tích Hợp Đồ Thị Tương Tác Chuẩn Quốc Tế Desmos Graphing Calculator** | `src/components/common/MathGraphView.jsx` | 🟢 Hoàn thành | 100% | Nút chuyển đổi 1-chạm sang Desmos Interactive Calculator nhúng iframe, cho phép giáo viên & học sinh zoom, pan, tra cứu tọa độ cực trị và tiếp tuyến như phần mềm MATLAB/GeoGebra |
+| 49 | **Trình Điền Công Thức & Đồ Thị Trực Quan Cho Giảng Viên (Click-to-Fill Formula Builder)** | `src/components/curriculum/InteractiveFormulaBuilderModal.jsx` | 🟢 Hoàn thành | 100% | Loại bỏ hoàn toàn việc gõ mã LaTeX thô; giao diện click chọn mẫu và điền số vào ô (Phân số, Căn thức, Lũy thừa, Tích phân, Giới hạn, Hệ PT, Bảng biến thiên SGK, Đồ thị Oxy) kèm Live KaTeX Preview |
+| 50 | **Cơ Chế Dán Ảnh Trực Tiếp Clipboard Ctrl+V & Tải Ảnh Minh Họa Đề Thi** | `src/components/curriculum/CurriculumStudioEditor.jsx` | 🟢 Hoàn thành | 100% | Bắt sự kiện `onPaste` tự động đọc ảnh chụp màn hình Snipping Tool/Zalo thành Base64 Data URL nhúng tức thì vào nội dung, hỗ trợ nút bấm `🖼️ Dán/Tải Ảnh` đồng bộ trên Khối 1, Khối 2 và Khối 4 |
+| 51 | **Tinh Chỉnh Kích Thước Compact, Thoáng Đãng & High-Density UI Cho Panoramic Workspace** | `src/components/curriculum/CurriculumExplorerView.jsx` | 🟢 Hoàn thành | 100% | Tinh gọn 30% thể tích toàn modal: thu nhỏ padding `p-4`/`p-5` xuống `p-2.5`/`p-3`, font size `text-[11px]`, card dạng bài và lưới đáp án A-D thanh thoát, chuyên nghiệp, xóa bỏ tình trạng to phồng và rối mắt |
+| 52 | **Trình Soạn Thảo Sư Phạm Trực Tiếp Kiểu Microsoft Word (Word Document Sheet Canvas) & Tách Riêng Trang LaTeX Thuần** | `src/components/curriculum/CurriculumStudioEditor.jsx` | 🟢 Hoàn thành | 100% | Xóa bỏ hoàn toàn mô hình 2 ô chia trên dưới "Text In Preview", gõ & sửa trực tiếp tại chỗ trên trang giấy Word A4, thanh Ribbon Toolbar định dạng văn bản & công cụ STEM, thẻ Cảnh báo bẫy & Mẹo Casio sửa trực tiếp, tab riêng biệt cho Mã nguồn LaTeX thuần |
+| 53 | **Trình Soạn Thảo Ký Hiệu Trực Quan WYSIWYG & Bộ Công Cụ Hóa Học / Toán Học Thực Tế Chèn Số & Tự Tính Toán** | `src/components/curriculum/InteractiveFormulaBuilderModal.jsx`, `CurriculumStudioEditor.jsx` | 🟢 Hoàn thành | 100% | Ẩn hoàn toàn mã lệnh `\frac` thô trên trang soạn thảo, hiển thị 100% ký hiệu toán/hóa học thực tế; tích hợp bộ tính toán Hóa học (CM = n/V, C%, m = n×M, Hiệu suất H%), phân số tính toán và đạo hàm số gia tự động |
 
 
 

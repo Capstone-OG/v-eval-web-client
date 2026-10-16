@@ -2,6 +2,94 @@
 
 ---
 
+## [17/10/2026] - Trình Soạn Thảo Ký Hiệu Trực Quan WYSIWYG (Không Lộ Mã Lệnh), Bộ Công Cụ Hóa Học & Toán Học Thực Tế Chèn Số & Tự Động Tính Toán Kết Quả (Interactive Smart Science Calculator), Loại Bỏ Hoàn Toàn Text In Preview Thụ Động, Tách Riêng Trang LaTeX Thuần, Bộ Renderer Đồ Thị Oxy / Bảng Biến Thiên Nội Sinh & Desmos Calculator
+
+- **Trình Soạn Thảo Ký Hiệu Trực Quan WYSIWYG & Bộ Công Cụ Hóa Học / Toán Học Thực Tế (`CurriculumStudioEditor.jsx` & `InteractiveFormulaBuilderModal.jsx`)**:
+  - *Giải Quyết Triệt Để Phàn Nàn Của Người Dùng Về Mã Code `\frac` ("frag")*:
+    + Người dùng phản hồi việc nhìn thấy mã code LaTeX thô như `` `\frac{...}{...}` ``, `` `\lim` ``, `` `\Delta` ``, `` `$` `` trong khung soạn thảo gây ức chế, không giống trải nghiệm Microsoft Word, và yêu cầu công thức phải là ký hiệu thực sự có thể chèn số vào và tính toán.
+    + **Chế Độ Ký Hiệu Trực Quan WYSIWYG (Mặc định)**: Toàn bộ nội dung bài học hiển thị 100% bằng ký hiệu toán học và hóa học chuẩn sách giáo khoa (phân số có thanh ngang tử/mẫu, căn thức, đạo hàm số gia, nồng độ mol), tuyệt đối không để lộ bất kỳ mã lệnh cú pháp `\frac` hay dấu `$` nào.
+    + Nút chuyển đổi linh hoạt: `` `[Xem Ký Hiệu Thật (WYSIWYG)]` `` ⟷ `` `[Gõ Văn Bản Bàn Phím]` `` cho phép giáo viên tùy ý lựa chọn khi cần gõ văn bản thuần hoặc thao tác trực quan.
+  - *Bộ Công Cụ Hóa Học Thực Tế: Chèn Số Vào Công Thức & Tự Động Tính Toán*:
+    + **🧪 Nồng độ mol dung dịch ($C_M = \frac{n}{V}$)**: Nhập số mol $n$ (mol) và thể tích $V$ (Lít) -> Hệ thống tự động tính toán $C_M = n / V$ (M) và hiển thị ký hiệu thật `` `C_M = \frac{n}{V} = \frac{0.2}{0.5} = 0.4\text{ M}` ``.
+    + **💧 Nồng độ phần trăm ($C\% = \frac{m_{ct}}{m_{dd}} \times 100\%$)**: Nhập $m_{ct}$ (g) và $m_{dd}$ (g) -> Tự động tính toán ra $C\%$.
+    + **⚖️ Khối lượng chất ($m = n \times M$)**: Nhập số mol $n$ và khối lượng mol $M$ -> Tự động tính ra khối lượng $m$ (gam).
+    + **⚡ Hiệu suất phản ứng ($H = \frac{m_{tt}}{m_{lt}} \times 100\%$)**: Nhập $m_{tt}$ (thực tế) và $m_{lt}$ (lý thuyết) -> Tự động tính ra $H\%$.
+    + Tùy chọn chèn: Cho phép giáo viên lựa chọn chèn chỉ công thức thay số hoặc chèn toàn bộ chuỗi tính toán kèm đáp số hoàn chỉnh vào bài học.
+  - *Bộ Tính Toán Phân Số & Đạo Hàm Số Gia Tự Động*:
+    + **➗ Phân số tính toán ($A/B$)**: Nhập số vào ô Tử số và Mẫu số -> Tự động rút gọn và tính ra kết quả (ví dụ: `` `\frac{12}{4} = 3` ``).
+    + **🎯 Đạo hàm bằng số gia ($f'(x_0) = \lim_{\Delta x \to 0}\frac{\Delta y}{\Delta x}$)**: Hỗ trợ nhập hàm số $f(x)$ và điểm $x_0$, tự động hiển thị quy trình số gia và tính toán ra kết quả đạo hàm như trong ví dụ SGK.
+  - *Nút Thao Tác Nhanh Trên Thanh Ribbon Word Toolbar*:
+    + Bổ sung 2 nút chuyên dụng: `` `🧪 Hóa Học & Nồng Độ` `` và `` `➗ Phân Số & Tính Toán` `` trên thanh công cụ của cả Khối 1 và Khối 2 để giáo viên mở nhanh bộ chèn số và tính toán chỉ với 1 click.
+
+- **Trình Soạn Thảo Sư Phạm Trực Tiếp Kiểu Microsoft Word (Word Document Sheet Canvas - `CurriculumStudioEditor.jsx`)**:
+  - *Chấm Dứt Hoàn Toàn Mô Hình Chia Ô Thụ Động Cũ ("Gõ Ô Trên - Preview Ô Dưới")*:
+    + Theo phản hồi từ người dùng, mô hình chia 2 ô (ô nhập liệu phía trên và ô đọc chỉ xem "Text In Preview" phía dưới) làm đứt gãy luồng tư duy sư phạm và gây bất tiện khi phải cuộn lên cuộn xuống để sửa lỗi.
+    + Xóa bỏ triệt để 100% các ô "Text In Preview" thụ động trên cả Khối 1 (Lý thuyết SGK) và Khối 2 (Phương pháp giải, Bẫy đề thi & Mẹo Casio).
+  - *Trải Nghiệm Gõ & Sửa Trực Tiếp Tại Chỗ Như Microsoft Word (In-Place Document Canvas)*:
+    + **Thanh Ribbon Word Toolbar Chuẩn Quốc Tế**: Tích hợp các nút định dạng văn bản trực quan: In đậm (Bold `` `**` ``), In nghiêng (Italic `` `*` ``), Tiêu đề (Heading `` `###` ``), Danh sách gạch đầu dòng (`` `-` ``), Danh sách đánh số thứ tự (`` `1.` ``).
+    + **Tích Hợp Tiện Ích Toán Học STEM 1-Chạm**: Các nút chèn nhanh `` `✨ Điền Công Thức` `` (mở Interactive Formula Builder), `` `📊 Bảng Biến Thiên` `` (chèn preset SGK 3 dòng), `` `📈 Đồ Thị Hàm Số` `` (chèn đồ thị Oxy / Desmos), `` `🖼️ Dán (Ctrl+V) / Tải Ảnh` `` và nút `` `+ Thêm Bước mới` `` (tự động đếm số bước tiếp theo).
+    + **Trang Giấy Word Canvas Trắng Tinh**: Thiết kế trang tài liệu chuẩn A4 có bóng đổ thanh lịch (`shadow-md border border-slate-300 rounded-2xl`), cho phép giáo viên gõ, xóa, chèn ảnh và sửa trực tiếp tại chỗ không giới hạn.
+    + **Nút Chuyển Đổi Nhanh Linh Hoạt**: Cụm nút `` `✍️ Sửa Trực Tiếp` `` ⟷ `` `👁️ Xem Trang In / Học Sinh` `` ngay trên đầu trang giấy giúp giáo viên chuyển đổi chỉ trong 1 click để kiểm tra thành phẩm KaTeX thực tế mà học sinh sẽ nhìn thấy khi in hoặc học trực tuyến.
+  - *Hộp Thẻ Cảnh Báo & Mẹo Casio Tương Tác Trực Tiếp*:
+    + **Thẻ Bẫy Đề Thi ĐGNL**: Chuyển thành Thẻ Cảnh Báo Sư Phạm màu hồng ấm áp (`bg-rose-50/60 border-2 border-rose-200`), cho phép gõ và sửa trực tiếp nội dung bẫy đề thi bên trong thẻ, có nút chèn ký hiệu KaTeX và thêm nhanh mục bẫy.
+    + **Thẻ Kỹ Thuật Casio & Mẹo Tư Duy Nhanh**: Chuyển thành Thẻ Mẹo Công Nghệ màu tím Indigo (`bg-indigo-50/60 border-2 border-indigo-200`), gõ và sửa trực tiếp bên trong thẻ, có nút chèn nhanh mẫu mẹo Casio `[Menu 8]` và phím tắt KaTeX.
+  - *Tách Riêng Trang Mã Nguồn LaTeX Thuần Độc Lập Dành Cho AI*:
+    + Tách biệt hoàn toàn thành một tab riêng biệt: `` `⚡ Trang Mã Nguồn LaTeX Thuần (Dành Cho AI)` ``, giao diện Dark Mode (`bg-slate-900`) chuyên dụng cho việc dán nhanh toàn văn mã nguồn Markdown / LaTeX thô từ ChatGPT, Gemini hoặc AI Engine.
+    + Khi chuyển qua lại giữa Trang Mã Nguồn LaTeX và Trình Soạn Thảo Word Trực Tiếp, dữ liệu được tự động đồng bộ hai chiều mượt mà 100%.
+
+- **Bộ Renderer Bảng Biến Thiên Nội Sinh Chuẩn SGK GDPT 2018 (`VariationTable.jsx`)**:
+  - *Kết Cấu 3 Dòng Sư Phạm Chuẩn Mực*: Render bảng biến thiên vector HTML/SVG 3 dòng phân định sắc nét gồm: dòng `` `x` ``, dòng dấu đạo hàm `` `y'` ``, dòng chiều biến thiên `` `y` `` với mũi tên dốc lên `` `\nearrow` `` và dốc xuống `` `\searrow` ``.
+  - *Xóa Bỏ Nhược Điểm Ảnh Scan Mờ Nhòe*: Hiển thị vector sắc nét 100% trên mọi độ phân giải màn hình (Retina / 4K), hỗ trợ đầy đủ các ký hiệu toán học đặc biệt như vô cực (`` `-\infty` ``, `` `+\infty` ``), vạch kép không xác định `` `||` ``, điểm cực đại, cực tiểu.
+  - *Parser Chuẩn Hóa Cú Pháp Khối*: Tự động bóc tách khối nội dung dạng `` `[VARIATION_TABLE]...[/VARIATION_TABLE]` `` với cấu trúc dòng `` `x: ...` ``, `` `y_prime: ...` ``, `` `y: ...` ``.
+
+- **Bộ Renderer Đồ Thị Hàm Số Oxy & Tích Hợp Đồ Thị Tương Tác Desmos Calculator (`MathGraphView.jsx`)**:
+  - *Đồ Thị Hàm Số Vector SVG*: Tự động vẽ hệ trục toạ độ Oxy, gốc toạ độ O, mũi tên định hướng, lưới toạ độ phụ (grid), vạch chia đơn vị toạ độ, và đường cong giải tích liên tục cho các hàm số toán học THPT phổ biến:
+    + Hàm bậc 3: `` `y = ax^3 + bx^2 + cx + d` ``
+    + Hàm phân thức bậc nhất trên bậc nhất: `` `y = \frac{ax+b}{cx+d}` `` (tự động vẽ 2 đường tiệm cận đứng và tiệm cận ngang dạng nét đứt màu đỏ / xanh)
+    + Hàm trùng phương: `` `y = ax^4 + bx^2 + c` ``
+    + Parabol bậc 2: `` `y = ax^2 + bx + c` ``
+  - *Dóng Nét Đứt Tọa Độ Cực Trị*: Tự động dóng đường nét đứt (dashed line) từ điểm cực đại `` `(x_{CĐ}; y_{CĐ})` `` và cực tiểu `` `(x_{CT}; y_{CT})` `` vuông góc về 2 trục tọa độ Ox, Oy kèm nhãn tọa độ KaTeX rõ nét.
+  - *Tích Hợp Đồ Thị Tương Tác Chuẩn Quốc Tế Kiểu MATLAB / Desmos*: Bổ sung nút chuyển đổi 1-chạm giữa chế độ SVG tĩnh và chế độ **Interactive Desmos Graphing Calculator** (nhúng iframe Desmos trực quan), cho phép giáo viên và học sinh trực tiếp zoom in/out, pan chuyển động, tra cứu toạ độ điểm cực trị, tiếp tuyến và nghiệm của phương trình toán học một cách sinh động, chuyên nghiệp.
+  - *Hỗ Trợ Cú Pháp Khối Đồ Thị*: Nhận diện thẻ `` `[GRAPH: type=cubic | formula=y=x^3-3x+1 | cd=(1,4) | ct=(-1,0)]` ``.
+
+- **Bộ Nhận Diện & Render Toán Học Toàn Cục (`MathText.jsx`)**:
+  - Mở rộng regex tách khối nhận diện song song cả khối `` `[VARIATION_TABLE]...[/VARIATION_TABLE]` `` và thẻ `` `[GRAPH: ...]` ``.
+  - Tự động mount `<VariationTable />` và `<MathGraphView />` đồng bộ trên toàn bộ nền tảng: Khối 1 (Lý thuyết nền tảng), Khối 2 (Phương pháp giải), Khối 4 (Đề bài câu hỏi mẫu, Lời giải chi tiết) và Khung Trợ lý Gia sư AI Socratic.
+
+- **Trình Điền Công Thức & Đồ Thị Trực Quan Cho Giảng Viên (Click-to-Fill Formula Builder - `InteractiveFormulaBuilderModal.jsx`)**:
+  - *Giải Phóng Giảng Viên Khỏi Rào Cản Mã LaTeX Thô*: Giảng viên không cần nhớ hoặc gõ các đoạn mã cú pháp phức tạp như `` `\frac{a}{b}` ``, `` `\sqrt[n]{x}` ``, `` `\int_{a}^{b} f(x)dx` ``.
+  - *Trải Nghiệm Click-to-Fill Dễ Dàng*: Giảng viên chỉ cần nhấp vào công thức mong muốn, hệ thống sẽ mở modal chuyên biệt với các ô điền số / ký tự tương ứng:
+    + Phân số: Điền ô Tử số và ô Mẫu số.
+    + Căn thức: Điền ô Bậc căn và ô Biểu thức dưới căn.
+    + Lũy thừa / Chỉ số: Điền Cơ số, Số mũ trên, Chỉ số dưới.
+    + Tích phân: Điền Cận dưới, Cận trên, Biểu thức hàm số `` `f(x)` ``, Biến vi phân `` `dx` ``.
+    + Giới hạn: Điền Biến tiến tới (ví dụ: `` `x \to x_0` ``) và Biểu thức.
+    + Hệ phương trình: Điền Phương trình 1, Phương trình 2.
+    + Bảng biến thiên SGK: 4 mẫu Presets phổ biến (Bậc 3 `` `a > 0` ``, Bậc 3 `` `a < 0` ``, Phân thức `` `ad - bc > 0` ``, Trùng phương) kèm tuỳ chỉnh các dòng tọa độ.
+    + Đồ thị hàm số: Chọn dạng hàm, phương trình toán học và toạ độ cực trị.
+  - *Khung Xem Trước KaTeX Thời Gian Thực (Live Preview)*: Cập nhật trực quan công thức toán học ngay khi gõ từng con số; phím tắt `` `Ctrl + Enter` `` để chèn tức thì vào vị trí con trỏ chuột, phím `` `Esc` `` để đóng.
+
+- **Cơ Chế Dán Trực Tiếp Ảnh Chụp Màn Hình (Ctrl+V) & Tải Tệp Minh Họa Đề Thi (`CurriculumStudioEditor.jsx`)**:
+  - Bắt sự kiện clipboard `` `onPaste` `` trên toàn bộ các khung soạn thảo (Lý thuyết Khối 1, Phương pháp giải Khối 2, Bẫy đề thi, Mẹo Casio, Đề bài mẫu Khối 4, Lời giải mẫu Khối 4).
+  - Tự động phát hiện Blob hình ảnh từ Snipping Tool, Zalo, clipboard và chuyển đổi sang Base64 Data URL qua `` `FileReader` ``, chèn ngay cú pháp Markdown ảnh `` `![Ảnh minh họa](data:image/...)` `` vào đúng vị trí con trỏ.
+  - Bổ sung nút bấm `` `🖼️ Dán/Tải Ảnh` `` trên thanh công cụ nhanh của mọi khối soạn thảo để tải ảnh minh họa trực tiếp từ máy tính.
+  - Đính kèm đầy đủ thanh công cụ tiện ích nhanh: `` `✨ Điền Công Thức` ``, `` `📊 Bảng Biến Thiên` ``, `` `📈 Đồ Thị Hàm Số` ``, `` `🖼️ Dán/Tải Ảnh` ``.
+
+- **Tinh Chỉnh Kích Thước Tinh Gọn, Thoáng Đãng & Thiết Kế Mật Độ Cao Cho Panoramic Workspace Modal (`CurriculumExplorerView.jsx`)**:
+  - *Giải Quyết Tình Trạng To Phồng & Rối Mắt*: Người dùng phản hồi giao diện modal bóc tách toàn cảnh 3 cột có kích thước các thành phần khá to (padding `p-4`, `p-5`, font chữ lớn, card bài mẫu và các ô đáp án chiếm nhiều diện tích), gây choán ngợp khi hiển thị danh sách 5 bài học, 10 dạng bài và 40 câu hỏi.
+  - *Thiết Kế Lại Theo Tiêu Chuẩn Compact & High-Density Studio UI*:
+    + **Header & Summary Banner**: Thu gọn padding từ `p-4 sm:p-5` xuống `px-4 py-2.5 sm:px-5 sm:py-3`, icon Wand giảm còn `w-8 h-8`, title `text-xs sm:text-sm font-extrabold`. Banner thành công giảm padding xuống `px-4 py-2`, icon Check `w-7 h-7`, nút "Phân Tích Tệp Khác" thanh mảnh `px-2.5 py-1 text-[11px]`.
+    + **Cột 1 (Điều Hướng Phân Cấp - 4 Cols / 33%)**: Thu gọn Tầng 1 (Chương & Bài học) với padding `p-2.5`, chữ bài học `text-[11px]`, badge số dạng và bài mẫu `text-[9.5px]`. Tầng 2 (Dạng bài học thuật) tối ưu card dạng bài thành `p-2 rounded-xl text-[11px]`, font tiêu đề `text-[11px] leading-snug`, badge phân loại/trọng số/số bài `text-[9px] px-1.5 py-0.2`, nút mở Studio `text-[10px]`.
+    + **Cột 2 (Khối 1 & Khối 2 - Sư Phạm Nền Tảng)**: Header dạng bài tinh gọn `px-4 py-2`, nút "Mở Trong Studio Sư Phạm" thu nhỏ `px-2.5 py-1 text-[11px]`. Các ô Định lý SGK, Ví dụ minh họa, Thuật toán giải Khối 2, Bẫy đề thi và Casio giảm padding còn `p-2.5` và `p-2`, font chữ `text-[11px]`, giúp bao quát toàn bộ lý thuyết và phương pháp mà không cần cuộn trang nhiều lần.
+    + **Cột 3 (Khối 4 - Ngân Hàng Bài Mẫu Chuyên Sâu)**: Thanh tabs cấp độ Bloom và pills câu hỏi (Câu 1, Câu 2...) thu gọn chiều cao với padding `py-0.5` / `py-1`, text `text-[10.5px]`. Lưới 4 phương án A-B-C-D được tối ưu với padding `p-1.5 px-2 rounded-lg text-[11px]`, badge chữ cái `w-3.5 h-3.5 text-[9px]`, khung lời giải chi tiết `p-2.5 text-[11px]`.
+    + **Modal Footer**: Giảm padding còn `px-4 py-2 sm:px-5 sm:py-2.5`, kích thước các nút Đóng / Nạp PostgreSQL vừa vặn, thanh lịch.
+  - *Trải Nghiệm Trực Quan*: Toàn bộ modal thu gọn ~30% thể tích, hiển thị sắc nét, thoáng đãng, chuyên nghiệp và tối ưu hóa không gian hiển thị thông tin học thuật.
+
+- **Kiểm Thử Đóng Gói Toàn Diện (Build Verification)**:
+  - `npm run build` thành công 100% (**0 Error, 0 Warning**, hoàn thành trong 829ms trên Vite 8 và React 19).
+
+---
+
 ## [16/10/2026] - Tái Cân Đối Bố Cục Không Gian Panoramic Workspace, Thẻ Ví Dụ Minh Họa SGK & Bài Toán Mẫu Áp Dụng (Khối 1 & Khối 2), Mở Rộng Ngân Hàng Bài Mẫu Chuyên Sâu Đa Cấp Độ
 
 - **Tích Hợp Khối Thẻ Ví Dụ Minh Họa SGK (Khối 1) & Bài Toán Mẫu Áp Dụng Phương Pháp (Khối 2) Chuẩn Sư Phạm**:

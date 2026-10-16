@@ -2449,21 +2449,21 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
           <div className={`relative w-full ${extractedCurriculum ? 'max-w-[1580px] h-[95vh]' : 'max-w-4xl max-h-[92vh]'} bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col transition-all duration-300`}>
             
             {/* Header */}
-            <div className="p-4 sm:p-5 border-b border-slate-100 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white flex items-center justify-between shrink-0">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-gradient-to-tr from-purple-600 to-indigo-600 text-white flex items-center justify-center shadow-lg shadow-purple-500/25 shrink-0">
-                  <Wand2 className="w-5 h-5" />
+            <div className="px-4 py-2.5 sm:px-5 sm:py-3 border-b border-slate-100 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-purple-600 to-indigo-600 text-white flex items-center justify-center shadow-md shadow-purple-500/20 shrink-0">
+                  <Wand2 className="w-4 h-4" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <h3 className="text-sm sm:text-base font-extrabold tracking-tight">
+                    <h3 className="text-xs sm:text-sm font-extrabold tracking-tight">
                       {extractedCurriculum ? "Không Gian Xem Trước & Thẩm Định Tri Thức AI (Panoramic Workspace)" : "AI Tri Thức Bóc Tách Tài Liệu & Nhận Diện Dạng Bài"}
                     </h3>
-                    <span className="px-2 py-0.5 rounded-full bg-purple-500/30 border border-purple-400/40 text-[10px] font-black text-purple-200">
+                    <span className="px-1.5 py-0.2 rounded-full bg-purple-500/30 border border-purple-400/40 text-[9px] font-black text-purple-200">
                       C# .NET 9 AI Engine • Gemini RAG
                     </span>
                   </div>
-                  <p className="text-[11px] text-slate-300 font-medium mt-0.5">
+                  <p className="text-[10px] sm:text-[10.5px] text-slate-300 font-medium">
                     Hỗ trợ tài liệu SGK/Chuyên đề nhiều trang (lên tới 99+ trang) • Trích xuất Chương → Bài học → Dạng bài kèm 4 khối Sư phạm
                   </p>
                 </div>
@@ -2475,9 +2475,9 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
                   setAiExtractStep(0);
                   setPreviewSelectedPattern(null);
                 }}
-                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
+                className="w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
               >
-                <X className="w-4 h-4" />
+                <X className="w-3.5 h-3.5" />
               </button>
             </div>
 
@@ -2518,17 +2518,17 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
               /* ================= PANORAMIC 3-COLUMN STUDIO WORKSPACE ================= */
               <div className="flex-1 flex flex-col min-h-0 bg-slate-100 overflow-hidden">
                 {/* Summary Header Banner */}
-                <div className="px-6 py-3 bg-gradient-to-r from-emerald-50 via-teal-50 to-indigo-50 border-b border-emerald-200/80 flex items-center justify-between shrink-0">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-xs shrink-0">
-                      <CheckCheck className="w-5 h-5" />
+                <div className="px-4 py-2 bg-gradient-to-r from-emerald-50 via-teal-50 to-indigo-50 border-b border-emerald-200/80 flex items-center justify-between shrink-0">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center shadow-2xs shrink-0">
+                      <CheckCheck className="w-4 h-4" />
                     </div>
                     <div>
-                      <div className="text-xs font-black text-emerald-950 uppercase tracking-wide flex items-center gap-2">
+                      <div className="text-[11px] font-black text-emerald-950 uppercase tracking-wide flex items-center gap-1.5">
                         <span>AI ĐÃ BÓC TÁCH & CHUẨN HÓA THÀNH CÔNG TOÀN BỘ CÂY TRI THỨC</span>
-                        <span className="px-2 py-0.5 rounded-full bg-emerald-200 text-emerald-900 text-[10px] font-bold">Chuẩn GDPT 2018</span>
+                        <span className="px-1.5 py-0.2 rounded-full bg-emerald-200 text-emerald-900 text-[9px] font-bold">Chuẩn GDPT 2018</span>
                       </div>
-                      <div className="text-[11px] text-emerald-800 font-medium">
+                      <div className="text-[10px] sm:text-[10.5px] text-emerald-800 font-medium">
                         <strong>{extractedCurriculum.chapters?.length || 0} Chương</strong> • 
                         <strong> {extractedCurriculum.chapters?.reduce((acc, c) => acc + (c.lessons?.length || 0), 0)} Bài học</strong> • 
                         <strong> {extractedCurriculum.chapters?.reduce((acc, c) => acc + (c.lessons?.reduce((a, l) => a + (l.patterns?.length || 0), 0) || 0), 0)} Dạng bài chi tiết</strong> • 
@@ -2545,7 +2545,7 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
                       setPreviewSelectedPattern(null);
                       setPreviewActiveQuestionIdx(0);
                     }}
-                    className="px-3.5 py-1.5 rounded-xl border border-emerald-300 bg-white hover:bg-emerald-100 text-xs font-bold text-emerald-900 transition-colors shadow-2xs"
+                    className="px-2.5 py-1 rounded-lg border border-emerald-300 bg-white hover:bg-emerald-100 text-[11px] font-bold text-emerald-900 transition-colors shadow-2xs"
                   >
                     Phân Tích Tệp Khác
                   </button>
@@ -2557,30 +2557,30 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
                   {/* PANE 1: CỘT TRÁI ĐIỀU HƯỚNG PHÂN CẤP (4 Cols / ~33%) */}
                   <div className="col-span-12 lg:col-span-4 border-r border-slate-200 bg-slate-50/70 flex flex-col min-h-0 overflow-hidden">
                     
-                    {/* TẦNG 1: CÂY CHƯƠNG & BÀI HỌC (Top Section: max 40% height, scrollable) */}
-                    <div className="flex-none max-h-[42%] border-b border-slate-200 bg-white p-3.5 overflow-y-auto space-y-2.5 shadow-2xs">
-                      <div className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center justify-between pb-1.5 border-b border-slate-100">
+                    {/* TẦNG 1: CÂY CHƯƠNG & BÀI HỌC (Top Section: max 38% height, scrollable) */}
+                    <div className="flex-none max-h-[38%] border-b border-slate-200 bg-white p-2.5 overflow-y-auto space-y-1.5 shadow-2xs">
+                      <div className="text-[11px] font-black text-slate-800 uppercase tracking-wider flex items-center justify-between pb-1 border-b border-slate-100">
                         <span className="flex items-center gap-1.5">
                           <Layers className="w-3.5 h-3.5 text-indigo-600" />
                           <span>1. Cây Chương & Bài Học</span>
                         </span>
-                        <span className="text-[10px] text-slate-400 font-normal">Click chọn bài</span>
+                        <span className="text-[9.5px] text-slate-400 font-normal">Click chọn bài</span>
                       </div>
 
-                      <div className="space-y-2">
+                      <div className="space-y-1.5">
                         {extractedCurriculum.chapters?.map((chap, cIdx) => (
                           <div key={cIdx} className="space-y-1">
-                            <div className="text-[11px] font-extrabold text-slate-900 flex items-center justify-between gap-1.5 px-2 py-1 bg-slate-100/80 rounded-lg">
+                            <div className="text-[10.5px] font-extrabold text-slate-900 flex items-center justify-between gap-1.5 px-2 py-0.5 bg-slate-100/80 rounded-md">
                               <div className="flex items-center gap-1.5 truncate">
-                                <span className="w-4 h-4 rounded bg-indigo-600 text-white flex items-center justify-center text-[9px] font-black shrink-0">C{cIdx+1}</span>
+                                <span className="w-3.5 h-3.5 rounded bg-indigo-600 text-white flex items-center justify-center text-[8.5px] font-black shrink-0">C{cIdx+1}</span>
                                 <span className="truncate">{chap.chapterName}</span>
                               </div>
-                              <span className="text-[10px] text-slate-500 font-mono shrink-0">
+                              <span className="text-[9.5px] text-slate-500 font-mono shrink-0">
                                 {chap.lessons?.length || 0} bài
                               </span>
                             </div>
 
-                            <div className="pl-2 space-y-1 border-l-2 border-indigo-100">
+                            <div className="pl-1.5 space-y-0.5 border-l-2 border-indigo-100">
                               {chap.lessons?.map((les, lIdx) => {
                                 const key = `${cIdx}-${lIdx}`;
                                 const isSelected = (previewSelectedLessonKey || '0-0') === key;
@@ -2594,7 +2594,7 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
                                       setPreviewSelectedPattern(les.patterns?.[0] || null);
                                       setPreviewActiveQuestionIdx(0);
                                     }}
-                                    className={`w-full text-left px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center justify-between gap-1.5 ${
+                                    className={`w-full text-left px-2 py-1 rounded-lg text-[11px] font-bold transition-all flex items-center justify-between gap-1.5 ${
                                       isSelected
                                         ? 'bg-indigo-600 text-white shadow-xs'
                                         : 'text-slate-700 hover:bg-slate-100'
@@ -2602,13 +2602,13 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
                                   >
                                     <span className="truncate">{les.lessonName}</span>
                                     <div className="flex items-center gap-1 shrink-0">
-                                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-mono ${
+                                      <span className={`px-1 py-0.2 rounded text-[9.5px] font-mono ${
                                         isSelected ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'
                                       }`}>
                                         {les.patterns?.length || 0} dạng
                                       </span>
                                       {totalQ > 0 && (
-                                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-mono ${
+                                        <span className={`px-1 py-0.2 rounded text-[9.5px] font-mono ${
                                           isSelected ? 'bg-amber-400 text-slate-950 font-black' : 'bg-amber-100 text-amber-800 font-bold'
                                         }`}>
                                           {totalQ} bài mẫu
@@ -2625,7 +2625,7 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
                     </div>
 
                     {/* TẦNG 2: DANH MỤC DẠNG BÀI THEO BÀI HỌC (Bottom Section: flex-1 overflow-y-auto) */}
-                    <div className="flex-1 p-3.5 overflow-y-auto space-y-2.5 min-h-0 bg-slate-50/50">
+                    <div className="flex-1 p-2.5 overflow-y-auto space-y-1.5 min-h-0 bg-slate-50/50">
                       {(() => {
                         const [cIdx, lIdx] = (previewSelectedLessonKey || '0-0').split('-').map(Number);
                         const activeChap = extractedCurriculum.chapters?.[cIdx] || extractedCurriculum.chapters?.[0];
@@ -2637,19 +2637,19 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
 
                         return (
                           <>
-                            <div className="space-y-1.5 pb-2 border-b border-slate-200">
+                            <div className="space-y-1 pb-1.5 border-b border-slate-200">
                               <div className="flex items-center justify-between">
-                                <div className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                                  <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                                  <span>2. Dạng Bài Học Thuật ({filteredPatterns.length}/{allPatterns.length})</span>
+                                <div className="text-[11px] font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                                  <Sparkles className="w-3 h-3 text-amber-500" />
+                                  <span>2. Dạng Bài ({filteredPatterns.length}/{allPatterns.length})</span>
                                 </div>
-                                <span className="text-[11px] font-bold text-indigo-700 truncate max-w-[150px]">
+                                <span className="text-[10.5px] font-bold text-indigo-700 truncate max-w-[150px]">
                                   {activeLes?.lessonName}
                                 </span>
                               </div>
 
                               {/* Filter pills */}
-                              <div className="flex items-center gap-1 overflow-x-auto text-[10px] font-bold pb-1">
+                              <div className="flex items-center gap-1 overflow-x-auto text-[9.5px] font-bold pb-0.5">
                                 {[
                                   { id: 'all', label: 'Tất cả' },
                                   { id: '1', label: 'L1 Nhận biết' },
@@ -2661,7 +2661,7 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
                                     key={f.id}
                                     type="button"
                                     onClick={() => setPreviewBloomFilter(f.id)}
-                                    className={`px-2 py-0.5 rounded-lg transition-colors whitespace-nowrap ${
+                                    className={`px-1.5 py-0.5 rounded-md transition-colors whitespace-nowrap ${
                                       previewBloomFilter === f.id
                                         ? 'bg-slate-900 text-white'
                                         : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
@@ -2674,9 +2674,9 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
                             </div>
 
                             {/* Pattern cards */}
-                            <div className="space-y-2">
+                            <div className="space-y-1.5">
                               {filteredPatterns.length === 0 ? (
-                                <div className="p-6 text-center text-slate-400 text-xs">
+                                <div className="p-4 text-center text-slate-400 text-[11px]">
                                   Không có dạng bài nào ở cấp độ này.
                                 </div>
                               ) : (
@@ -2690,22 +2690,22 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
                                         setPreviewSelectedPattern(pat);
                                         setPreviewActiveQuestionIdx(0);
                                       }}
-                                      className={`p-3 rounded-2xl border text-xs space-y-1.5 cursor-pointer transition-all ${
+                                      className={`p-2 rounded-xl border text-[11px] space-y-1 cursor-pointer transition-all ${
                                         isSelected
-                                          ? 'bg-white border-indigo-500 ring-2 ring-indigo-500/20 shadow-md'
-                                          : 'bg-white border-slate-200/90 hover:border-indigo-300 hover:shadow-xs'
+                                          ? 'bg-white border-indigo-500 ring-2 ring-indigo-500/20 shadow-xs'
+                                          : 'bg-white border-slate-200/90 hover:border-indigo-300 hover:shadow-2xs'
                                       }`}
                                     >
                                       <div className="flex items-start justify-between gap-1.5">
-                                        <div className="font-extrabold text-slate-900 flex items-center gap-2">
-                                          <span className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-[10px] font-black shrink-0">
+                                        <div className="font-bold text-slate-900 flex items-center gap-1.5">
+                                          <span className="w-4 h-4 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-[9px] font-black shrink-0">
                                             {pIdx + 1}
                                           </span>
-                                          <span className="leading-snug">{pat.patternName}</span>
+                                          <span className="leading-snug text-[11px]">{pat.patternName}</span>
                                         </div>
                                         {isSelected && (
-                                          <span className="p-1 rounded-full bg-indigo-600 text-white shrink-0">
-                                            <Check className="w-3 h-3" />
+                                          <span className="p-0.5 rounded-full bg-indigo-600 text-white shrink-0">
+                                            <Check className="w-2.5 h-2.5" />
                                           </span>
                                         )}
                                       </div>
@@ -2717,24 +2717,24 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
                                         const qL4 = pat.questions?.filter(q => q.difficultyLevel === 4).length || 0;
                                         return (
                                           <>
-                                            <div className="flex items-center gap-1.5 flex-wrap">
+                                            <div className="flex items-center gap-1 flex-wrap">
                                               {pat.classification && (
-                                                <span className="px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 text-[10px] font-bold border border-purple-200 truncate max-w-[180px]">
+                                                <span className="px-1.5 py-0.2 rounded-md bg-purple-50 text-purple-700 text-[9px] font-bold border border-purple-200 truncate max-w-[160px]">
                                                   {pat.classification}
                                                 </span>
                                               )}
-                                              <span className="px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 text-[10px] font-bold border border-indigo-100">
+                                              <span className="px-1.5 py-0.2 rounded-md bg-indigo-50 text-indigo-700 text-[9px] font-bold border border-indigo-100">
                                                 Trọng số: {Math.round((pat.weight || 0.05) * 100)}%
                                               </span>
-                                              <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 text-[10px] font-extrabold border border-amber-200 flex items-center gap-1">
+                                              <span className="px-1.5 py-0.2 rounded-md bg-amber-50 text-amber-800 text-[9px] font-extrabold border border-amber-200 flex items-center gap-0.5">
                                                 <span>🎯</span>
-                                                <span>{qCount} bài mẫu (L1: {qL1} • L2: {qL2} • L3: {qL3} • L4: {qL4})</span>
+                                                <span>{qCount} bài (L1:{qL1} • L2:{qL2} • L3:{qL3} • L4:{qL4})</span>
                                               </span>
                                             </div>
 
-                                            <div className="flex items-center justify-between pt-1 border-t border-slate-100 text-[11px]">
-                                              <span className="text-slate-500 font-medium">
-                                                {qCount > 0 ? `Chuẩn ĐGNL: L3 (${qL3} câu) • L4 (${qL4} câu)` : 'Chưa có câu mẫu'}
+                                            <div className="flex items-center justify-between pt-1 border-t border-slate-100 text-[10px]">
+                                              <span className="text-slate-500 font-medium truncate max-w-[180px]">
+                                                {qCount > 0 ? `ĐGNL: L3 (${qL3}) • L4 (${qL4})` : 'Chưa có câu mẫu'}
                                               </span>
                                               <button
                                                 type="button"
@@ -2743,10 +2743,10 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
                                                   setIsImportModalOpen(false);
                                                   handleOpenStudio(pat, activeChap, activeLes);
                                                 }}
-                                                className="px-2 py-0.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold flex items-center gap-1 text-[11px] transition-colors"
+                                                className="px-1.5 py-0.5 rounded-md bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold flex items-center gap-1 text-[10px] transition-colors"
                                               >
-                                                <Sparkles className="w-3 h-3 text-amber-500" />
-                                                <span>Mở Studio</span>
+                                                <Sparkles className="w-2.5 h-2.5 text-amber-500" />
+                                                <span>Studio</span>
                                               </button>
                                             </div>
                                           </>
@@ -2773,7 +2773,7 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
 
                       if (!pat) {
                         return (
-                          <div className="p-12 text-center text-slate-400 text-xs">
+                          <div className="p-8 text-center text-slate-400 text-xs">
                             Chọn một dạng bài ở cột bên trái để xem trước chi tiết sư phạm & bài tập chuyên sâu.
                           </div>
                         );
@@ -2788,22 +2788,22 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
                         <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
                           
                           {/* Header Dạng Bài */}
-                          <div className="px-5 py-3.5 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white shrink-0 border-b border-indigo-900/50 shadow-xs flex items-center justify-between gap-3">
+                          <div className="px-4 py-2 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white shrink-0 border-b border-indigo-900/50 shadow-xs flex items-center justify-between gap-2.5">
                             <div className="space-y-0.5 min-w-0">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <span className="px-2 py-0.5 rounded-full bg-white/20 text-white text-[10px] font-bold">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="px-1.5 py-0.2 rounded-full bg-white/20 text-white text-[9px] font-bold">
                                   Trọng số: {Math.round((pat.weight || 0.05) * 100)}%
                                 </span>
                                 {pat.classification && (
-                                  <span className="px-2 py-0.5 rounded-full bg-purple-500/30 text-purple-200 text-[10px] font-medium border border-purple-400/30">
+                                  <span className="px-1.5 py-0.2 rounded-full bg-purple-500/30 text-purple-200 text-[9px] font-medium border border-purple-400/30">
                                     Phân loại: {pat.classification}
                                   </span>
                                 )}
-                                <span className="px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-300 text-[10px] font-black border border-amber-400/30">
+                                <span className="px-1.5 py-0.2 rounded-full bg-amber-400/20 text-amber-300 text-[9px] font-black border border-amber-400/30">
                                   🎯 Nguồn bài: {questions.length} bài mẫu chuyên sâu
                                 </span>
                               </div>
-                              <h4 className="text-sm font-black leading-tight text-white truncate">{pat.patternName}</h4>
+                              <h4 className="text-xs sm:text-[13px] font-black leading-tight text-white truncate">{pat.patternName}</h4>
                             </div>
 
                             <button
@@ -2812,9 +2812,9 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
                                 setIsImportModalOpen(false);
                                 handleOpenStudio(pat, activeChap, activeLes);
                               }}
-                              className="px-3 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-900 text-xs font-black flex items-center gap-1.5 shadow-sm transition-all shrink-0"
+                              className="px-2.5 py-1 rounded-lg bg-amber-400 hover:bg-amber-300 text-slate-900 text-[11px] font-black flex items-center gap-1 shadow-xs transition-all shrink-0"
                             >
-                              <Sparkles className="w-3.5 h-3.5" />
+                              <Sparkles className="w-3 h-3" />
                               <span>Mở Trong Studio Sư Phạm</span>
                             </button>
                           </div>
@@ -2823,28 +2823,28 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
                           <div className="flex-1 grid grid-cols-12 gap-0 overflow-hidden min-h-0">
                             
                             {/* CỘT A: KIẾN THỨC NỀN TẢNG & PHƯƠNG PHÁP GIẢI (6 Cols / 50%) */}
-                            <div className="col-span-12 lg:col-span-6 border-r border-slate-200 overflow-y-auto p-4 space-y-3.5 bg-white">
+                            <div className="col-span-12 lg:col-span-6 border-r border-slate-200 overflow-y-auto p-3 space-y-2.5 bg-white">
                               
                               {/* Khối 1: Nền tảng SGK */}
-                              <div className="space-y-2">
-                                <div className="text-xs font-extrabold text-cyan-800 uppercase tracking-wider flex items-center justify-between">
+                              <div className="space-y-1.5">
+                                <div className="text-[11px] font-extrabold text-cyan-800 uppercase tracking-wider flex items-center justify-between">
                                   <div className="flex items-center gap-1.5">
-                                    <span className="w-4 h-4 rounded-full bg-cyan-100 text-cyan-700 flex items-center justify-center text-[10px] font-black">1</span>
+                                    <span className="w-3.5 h-3.5 rounded-full bg-cyan-100 text-cyan-700 flex items-center justify-center text-[9px] font-black">1</span>
                                     <span>Khối 1: Kiến thức nền tảng SGK</span>
                                   </div>
-                                  <span className="text-[10px] text-cyan-600 font-medium">Định lý & Công thức</span>
+                                  <span className="text-[9.5px] text-cyan-600 font-medium">Định lý & Công thức</span>
                                 </div>
 
                                 {/* Định lý & Công thức cốt lõi */}
-                                <div className="p-3.5 rounded-2xl bg-cyan-50/50 border border-cyan-200 text-xs text-slate-800 font-medium leading-relaxed shadow-2xs">
+                                <div className="p-2.5 rounded-xl bg-cyan-50/50 border border-cyan-200 text-[11px] text-slate-800 font-medium leading-relaxed shadow-2xs">
                                   <MathText text={parsedTheory.theory || pat.theoryRecap || 'Chưa nhập lý thuyết'} />
                                 </div>
 
                                 {/* Ví Dụ Minh Họa SGK */}
                                 {parsedTheory.example && (
-                                  <div className="p-3.5 rounded-2xl bg-gradient-to-br from-teal-50/80 via-emerald-50/50 to-cyan-50/80 border border-teal-200/90 text-xs text-slate-800 space-y-1.5 shadow-2xs">
-                                    <div className="font-extrabold flex items-center gap-1.5 text-teal-800 border-b border-teal-200/60 pb-1.5">
-                                      <BookOpen className="w-3.5 h-3.5 text-teal-600" />
+                                  <div className="p-2.5 rounded-xl bg-gradient-to-br from-teal-50/80 via-emerald-50/50 to-cyan-50/80 border border-teal-200/90 text-[11px] text-slate-800 space-y-1 shadow-2xs">
+                                    <div className="font-extrabold flex items-center gap-1 text-teal-800 border-b border-teal-200/60 pb-1 text-[11px]">
+                                      <BookOpen className="w-3 h-3 text-teal-600" />
                                       <span>Ví Dụ Minh Họa SGK:</span>
                                     </div>
                                     <div className="leading-relaxed">
@@ -2855,23 +2855,23 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
                               </div>
 
                               {/* Khối 2: Phương pháp giải chi tiết & Bẫy */}
-                              <div className="space-y-2">
-                                <div className="text-xs font-extrabold text-amber-800 uppercase tracking-wider flex items-center justify-between">
+                              <div className="space-y-1.5">
+                                <div className="text-[11px] font-extrabold text-amber-800 uppercase tracking-wider flex items-center justify-between">
                                   <div className="flex items-center gap-1.5">
-                                    <span className="w-4 h-4 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center text-[10px] font-black">2</span>
+                                    <span className="w-3.5 h-3.5 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center text-[9px] font-black">2</span>
                                     <span>Khối 2: Phương pháp giải chi tiết & Bẫy</span>
                                   </div>
-                                  <span className="text-[10px] text-amber-600 font-medium">Thuật toán giải</span>
+                                  <span className="text-[9.5px] text-amber-600 font-medium">Thuật toán giải</span>
                                 </div>
-                                <div className="p-3.5 rounded-2xl bg-amber-50/40 border border-amber-200 text-xs text-slate-800 font-medium leading-relaxed space-y-2.5 shadow-2xs">
+                                <div className="p-2.5 rounded-xl bg-amber-50/40 border border-amber-200 text-[11px] text-slate-800 font-medium leading-relaxed space-y-2 shadow-2xs">
                                   {/* Thuật toán các bước */}
                                   <MathText text={parsedMethod.method || pat.solutionMethod || 'Chưa nhập phương pháp giải'} />
 
                                   {/* Bài Toán Mẫu Áp Dụng Phương Pháp */}
                                   {parsedMethod.sampleProblem && (
-                                    <div className="p-3.5 rounded-xl bg-gradient-to-br from-amber-100/70 via-orange-50/80 to-amber-50/90 border border-amber-300 text-amber-950 text-xs space-y-1.5 shadow-2xs">
-                                      <div className="font-bold flex items-center gap-1.5 text-amber-900 border-b border-amber-200/80 pb-1">
-                                        <FileText className="w-3.5 h-3.5 text-amber-700" />
+                                    <div className="p-2 rounded-lg bg-gradient-to-br from-amber-100/70 via-orange-50/80 to-amber-50/90 border border-amber-300 text-amber-950 text-[10.5px] space-y-1 shadow-2xs">
+                                      <div className="font-bold flex items-center gap-1 text-amber-900 border-b border-amber-200/80 pb-0.5">
+                                        <FileText className="w-3 h-3 text-amber-700" />
                                         <span>Bài Toán Mẫu Áp Dụng Phương Pháp:</span>
                                       </div>
                                       <div className="leading-relaxed text-slate-800">
@@ -2881,9 +2881,9 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
                                   )}
 
                                   {parsedMethod.traps && (
-                                    <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-900 text-xs space-y-1 shadow-2xs">
+                                    <div className="p-2 rounded-lg bg-rose-50 border border-rose-200 text-rose-900 text-[10.5px] space-y-0.5 shadow-2xs">
                                       <div className="font-bold flex items-center gap-1 text-rose-700">
-                                        <AlertTriangle className="w-3.5 h-3.5" />
+                                        <AlertTriangle className="w-3 h-3" />
                                         <span>Bẫy đề thi ĐGNL thường gặp:</span>
                                       </div>
                                       <MathText text={parsedMethod.traps} />
@@ -2891,9 +2891,9 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
                                   )}
 
                                   {parsedMethod.casio && (
-                                    <div className="p-3 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-900 text-xs space-y-1 shadow-2xs">
+                                    <div className="p-2 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-900 text-[10.5px] space-y-0.5 shadow-2xs">
                                       <div className="font-bold flex items-center gap-1 text-indigo-700">
-                                        <Sparkles className="w-3.5 h-3.5" />
+                                        <Sparkles className="w-3 h-3" />
                                         <span>Kỹ thuật Casio & Mẹo tư duy nhanh:</span>
                                       </div>
                                       <MathText text={parsedMethod.casio} />
@@ -2903,14 +2903,14 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
                               </div>
 
                               {/* Khối 3: Video bài giảng */}
-                              <div className="space-y-1.5">
-                                <div className="text-xs font-extrabold text-emerald-800 uppercase tracking-wider flex items-center gap-1.5">
-                                  <span className="w-4 h-4 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-[10px] font-black">3</span>
+                              <div className="space-y-1">
+                                <div className="text-[11px] font-extrabold text-emerald-800 uppercase tracking-wider flex items-center gap-1.5">
+                                  <span className="w-3.5 h-3.5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-[9px] font-black">3</span>
                                   <span>Khối 3: Video bài giảng sư phạm</span>
                                 </div>
-                                <div className="p-3 rounded-2xl bg-emerald-50/40 border border-emerald-200 text-xs text-emerald-900 font-medium flex items-center justify-between shadow-2xs">
+                                <div className="p-2 rounded-xl bg-emerald-50/40 border border-emerald-200 text-[10.5px] text-emerald-900 font-medium flex items-center justify-between shadow-2xs">
                                   <span>Thời lượng bài giảng khuyến nghị:</span>
-                                  <span className="font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[11px]">
+                                  <span className="font-bold px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-800 text-[10px]">
                                     {Math.round((pat.durationSeconds || 600) / 60)} phút ({pat.durationSeconds || 600}s)
                                   </span>
                                 </div>
@@ -2919,25 +2919,25 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
                             </div>
 
                             {/* CỘT B: BỘ SƯU TẬP BÀI MẪU & LUYỆN TẬP CHUYÊN SÂU (6 Cols / 50%) */}
-                            <div className="col-span-12 lg:col-span-6 overflow-y-auto p-4 space-y-3.5 bg-slate-50/50">
+                            <div className="col-span-12 lg:col-span-6 overflow-y-auto p-3 space-y-2 bg-slate-50/50">
                               
-                              <div className="space-y-2">
+                              <div className="space-y-1.5">
                                 <div className="flex items-center justify-between">
-                                  <div className="text-xs font-extrabold text-indigo-900 uppercase tracking-wider flex items-center gap-1.5">
-                                    <span className="w-4 h-4 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px] font-black">4</span>
+                                  <div className="text-[11px] font-extrabold text-indigo-900 uppercase tracking-wider flex items-center gap-1.5">
+                                    <span className="w-3.5 h-3.5 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[9px] font-black">4</span>
                                     <span>Khối 4: Ngân Hàng Bài Mẫu Chuyên Sâu ({questions.length} Câu)</span>
                                   </div>
-                                  <div className="flex items-center gap-2">
+                                  <div className="flex items-center gap-1.5">
                                     <button
                                       type="button"
                                       onClick={() => handleAddAiPracticeQuestions(pat)}
-                                      className="px-2.5 py-1 rounded-xl text-[11px] font-black bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-2xs flex items-center gap-1 transition-all hover:scale-105 active:scale-95 cursor-pointer"
+                                      className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-2xs flex items-center gap-1 transition-all hover:scale-105 active:scale-95 cursor-pointer"
                                       title="AI tự động tạo thêm 2 bài tập rèn luyện cho dạng này"
                                     >
-                                      <Sparkles className="w-3 h-3 text-amber-300" />
+                                      <Sparkles className="w-2.5 h-2.5 text-amber-300" />
                                       <span>+ AI Tạo Thêm 2 Bài Mẫu</span>
                                     </button>
-                                    <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-md">
+                                    <span className="text-[9px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-1.5 py-0.2 rounded-md">
                                       Chuẩn VNU-HCM
                                     </span>
                                   </div>
@@ -2954,18 +2954,18 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
                                     : questions.filter(q => String(q.difficultyLevel) === previewQuestionBloomTab);
 
                                   return (
-                                    <div className="space-y-2">
+                                    <div className="space-y-1.5">
                                       {/* Cấp Độ Bloom Filter Tabs */}
-                                      <div className="flex items-center gap-1.5 flex-wrap bg-slate-100 p-1.5 rounded-xl border border-slate-200">
+                                      <div className="flex items-center gap-1 flex-wrap bg-slate-100 p-1 rounded-lg border border-slate-200">
                                         <button
                                           type="button"
                                           onClick={() => {
                                             setPreviewQuestionBloomTab('all');
                                             setPreviewActiveQuestionIdx(0);
                                           }}
-                                          className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                                          className={`px-2 py-0.5 rounded-md text-[10.5px] font-bold transition-all ${
                                             previewQuestionBloomTab === 'all'
-                                              ? 'bg-indigo-600 text-white shadow-xs'
+                                              ? 'bg-indigo-600 text-white shadow-2xs'
                                               : 'text-slate-700 hover:bg-white'
                                           }`}
                                         >
@@ -2978,9 +2978,9 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
                                             const idx = questions.findIndex(q => q.difficultyLevel === 1);
                                             if (idx >= 0) setPreviewActiveQuestionIdx(idx);
                                           }}
-                                          className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                                          className={`px-2 py-0.5 rounded-md text-[10.5px] font-bold transition-all ${
                                             previewQuestionBloomTab === '1'
-                                              ? 'bg-emerald-600 text-white shadow-xs'
+                                              ? 'bg-emerald-600 text-white shadow-2xs'
                                               : 'text-emerald-800 hover:bg-emerald-50'
                                           }`}
                                         >
@@ -2993,9 +2993,9 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
                                             const idx = questions.findIndex(q => q.difficultyLevel === 2);
                                             if (idx >= 0) setPreviewActiveQuestionIdx(idx);
                                           }}
-                                          className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                                          className={`px-2 py-0.5 rounded-md text-[10.5px] font-bold transition-all ${
                                             previewQuestionBloomTab === '2'
-                                              ? 'bg-cyan-600 text-white shadow-xs'
+                                              ? 'bg-cyan-600 text-white shadow-2xs'
                                               : 'text-cyan-800 hover:bg-cyan-50'
                                           }`}
                                         >
@@ -3008,13 +3008,13 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
                                             const idx = questions.findIndex(q => q.difficultyLevel === 3);
                                             if (idx >= 0) setPreviewActiveQuestionIdx(idx);
                                           }}
-                                          className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                                          className={`px-2 py-0.5 rounded-md text-[10.5px] font-bold transition-all ${
                                             previewQuestionBloomTab === '3'
-                                              ? 'bg-amber-500 text-white shadow-xs'
+                                              ? 'bg-amber-500 text-white shadow-2xs'
                                               : 'text-amber-900 hover:bg-amber-50'
                                           }`}
                                         >
-                                          L3: Vận dụng ({l3Questions.length} câu)
+                                          L3: Vận dụng ({l3Questions.length})
                                         </button>
                                         <button
                                           type="button"
@@ -3023,19 +3023,19 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
                                             const idx = questions.findIndex(q => q.difficultyLevel === 4);
                                             if (idx >= 0) setPreviewActiveQuestionIdx(idx);
                                           }}
-                                          className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                                          className={`px-2 py-0.5 rounded-md text-[10.5px] font-bold transition-all ${
                                             previewQuestionBloomTab === '4'
-                                              ? 'bg-rose-600 text-white shadow-xs'
+                                              ? 'bg-rose-600 text-white shadow-2xs'
                                               : 'text-rose-800 hover:bg-rose-50'
                                           }`}
                                         >
-                                          L4: Vận dụng cao ({l4Questions.length} câu)
+                                          L4: Vận dụng cao ({l4Questions.length})
                                         </button>
                                       </div>
 
                                       {/* Thanh Chuyển Đổi Câu Hỏi Tương Tác */}
                                       {visibleQuestions.length > 0 && (
-                                        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 pt-0.5">
+                                        <div className="flex items-center gap-1 overflow-x-auto pb-0.5 pt-0.5">
                                           {visibleQuestions.map((q) => {
                                             const originalIdx = questions.indexOf(q);
                                             const isActive = (previewActiveQuestionIdx === originalIdx);
@@ -3048,14 +3048,14 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
                                                 key={originalIdx}
                                                 type="button"
                                                 onClick={() => setPreviewActiveQuestionIdx(originalIdx)}
-                                                className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 ${
+                                                className={`px-2 py-1 rounded-lg text-[10.5px] font-bold transition-all flex items-center gap-1 shrink-0 ${
                                                   isActive
-                                                    ? 'bg-indigo-600 text-white shadow-xs scale-102 ring-2 ring-indigo-400/40'
+                                                    ? 'bg-indigo-600 text-white shadow-2xs ring-1 ring-indigo-400/40'
                                                     : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
                                                 }`}
                                               >
                                                 <span>Câu {originalIdx + 1}</span>
-                                                <span className={`text-[9px] px-1.5 py-0.2 rounded font-medium ${
+                                                <span className={`text-[8.5px] px-1 py-0.2 rounded font-medium ${
                                                   isActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
                                                 }`}>
                                                   {bloomLabel}
@@ -3072,17 +3072,17 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
 
                               {/* Chi Tiết Bài Mẫu Đang Chọn */}
                               {currentQuestion ? (
-                                <div className="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-xs space-y-3">
-                                  <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-                                    <div className="flex items-center gap-2">
-                                      <span className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-[10px] font-black">
+                                <div className="p-3 rounded-xl bg-white border border-slate-200/90 shadow-2xs space-y-2">
+                                  <div className="flex items-center justify-between pb-1.5 border-b border-slate-100">
+                                    <div className="flex items-center gap-1.5">
+                                      <span className="w-4 h-4 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-[9px] font-black">
                                         {previewActiveQuestionIdx + 1}
                                       </span>
-                                      <span className="text-xs font-extrabold text-slate-900">
+                                      <span className="text-[11px] font-extrabold text-slate-900">
                                         Bài Toán Mẫu {previewActiveQuestionIdx + 1}
                                       </span>
                                     </div>
-                                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                                    <span className={`px-1.5 py-0.2 rounded-full text-[9px] font-bold border ${
                                       currentQuestion.difficultyLevel === 1
                                         ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                                         : currentQuestion.difficultyLevel === 2
@@ -3099,34 +3099,34 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
                                   </div>
 
                                   {/* Đề bài KaTeX */}
-                                  <div className="text-xs font-bold text-slate-900 leading-relaxed p-3 rounded-xl bg-slate-50 border border-slate-100">
+                                  <div className="text-[11px] font-semibold text-slate-900 leading-relaxed p-2.5 rounded-lg bg-slate-50 border border-slate-100">
                                     <MathText text={currentQuestion.contentLatex} />
                                   </div>
 
                                   {/* Lưới 4 phương án A-B-C-D */}
-                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                                     {['A', 'B', 'C', 'D'].map((optKey) => {
                                       const optText = currentQuestion[`option${optKey}`];
                                       const isCorrect = currentQuestion.correctOption === optKey;
                                       return (
                                         <div
                                           key={optKey}
-                                          className={`p-2.5 rounded-xl border text-xs flex items-start gap-1.5 transition-all ${
+                                          className={`p-1.5 px-2 rounded-lg border text-[11px] flex items-start gap-1.5 transition-all ${
                                             isCorrect
                                               ? 'bg-emerald-50/90 border-emerald-400 text-emerald-950 font-bold ring-1 ring-emerald-400/30 shadow-2xs'
                                               : 'bg-white border-slate-200 text-slate-700'
                                           }`}
                                         >
-                                          <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 ${
+                                          <span className={`w-3.5 h-3.5 rounded-full flex items-center justify-center text-[9px] font-black shrink-0 ${
                                             isCorrect ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600'
                                           }`}>
                                             {optKey}
                                           </span>
-                                          <div className="flex-1 min-w-0">
+                                          <div className="flex-1 min-w-0 leading-snug">
                                             <MathText text={optText || ''} />
                                           </div>
                                           {isCorrect && (
-                                            <span className="text-emerald-700 text-[10px] font-extrabold shrink-0">
+                                            <span className="text-emerald-700 text-[9.5px] font-extrabold shrink-0">
                                               ✓ Đúng
                                             </span>
                                           )}
@@ -3137,9 +3137,9 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
 
                                   {/* Khung Lời Giải Chi Tiết */}
                                   {currentQuestion.explanation && (
-                                    <div className="p-3 rounded-xl bg-indigo-50/60 border border-indigo-200/80 text-slate-800 text-xs space-y-1">
-                                      <div className="font-extrabold text-indigo-950 flex items-center gap-1.5">
-                                        <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                                    <div className="p-2.5 rounded-lg bg-indigo-50/60 border border-indigo-200/80 text-slate-800 text-[11px] space-y-1">
+                                      <div className="font-extrabold text-indigo-950 flex items-center gap-1 text-[11px]">
+                                        <Sparkles className="w-3 h-3 text-amber-500" />
                                         <span>Lời giải chi tiết từng bước:</span>
                                       </div>
                                       <div className="leading-relaxed text-slate-800 font-medium">
@@ -3149,12 +3149,12 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
                                   )}
 
                                   {/* Pagination / Điều hướng câu hỏi */}
-                                  <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-[11px]">
+                                  <div className="flex items-center justify-between pt-1.5 border-t border-slate-100 text-[10.5px]">
                                     <button
                                       type="button"
                                       disabled={previewActiveQuestionIdx <= 0}
                                       onClick={() => setPreviewActiveQuestionIdx(p => Math.max(0, p - 1))}
-                                      className="px-2.5 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed font-bold text-slate-700 transition-colors"
+                                      className="px-2 py-0.5 rounded-md border border-slate-200 bg-white hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed font-bold text-slate-700 transition-colors"
                                     >
                                       ← Câu trước
                                     </button>
@@ -3165,7 +3165,7 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
                                       type="button"
                                       disabled={previewActiveQuestionIdx >= questions.length - 1}
                                       onClick={() => setPreviewActiveQuestionIdx(p => Math.min(questions.length - 1, p + 1))}
-                                      className="px-2.5 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed font-bold text-slate-700 transition-colors"
+                                      className="px-2 py-0.5 rounded-md border border-slate-200 bg-white hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed font-bold text-slate-700 transition-colors"
                                     >
                                       Câu tiếp theo →
                                     </button>
@@ -3173,8 +3173,8 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
 
                                 </div>
                               ) : (
-                                <div className="p-8 rounded-2xl bg-white border border-slate-200 text-xs text-slate-400 text-center space-y-2">
-                                  <BookOpen className="w-8 h-8 text-slate-300 mx-auto" />
+                                <div className="p-6 rounded-xl bg-white border border-slate-200 text-[11px] text-slate-400 text-center space-y-1.5">
+                                  <BookOpen className="w-6 h-6 text-slate-300 mx-auto" />
                                   <div>Dạng bài này chưa có câu hỏi mẫu.</div>
                                   <button
                                     type="button"
@@ -3182,7 +3182,7 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
                                       setIsImportModalOpen(false);
                                       handleOpenStudio(pat, activeChap, activeLes);
                                     }}
-                                    className="px-3 py-1 rounded-xl bg-indigo-50 text-indigo-700 font-bold hover:bg-indigo-100 transition-colors"
+                                    className="px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 font-bold hover:bg-indigo-100 transition-colors"
                                   >
                                     Mở Studio để thêm câu hỏi mẫu
                                   </button>
@@ -3446,7 +3446,7 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
             )}
 
             {/* Footer Buttons */}
-            <div className="p-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between shrink-0">
+            <div className="px-4 py-2 sm:px-5 sm:py-2.5 border-t border-slate-100 bg-slate-50 flex items-center justify-between shrink-0">
               {importTab === 'json' ? (
                 <button
                   type="button"
@@ -3483,12 +3483,12 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
                   Chèn JSON Mẫu
                 </button>
               ) : (
-                <div className="text-[11px] text-slate-500 font-medium">
+                <div className="text-[10.5px] text-slate-500 font-medium">
                   {extractedCurriculum ? "Xem trước toàn cảnh 3 cột • Bấm nạp để cập nhật CSDL PostgreSQL" : "AI phân tích tự động chuẩn SGK 2018"}
                 </div>
               )}
 
-              <div className="flex items-center gap-2.5">
+              <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={() => {
@@ -3497,7 +3497,7 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
                     setAiExtractStep(0);
                     setPreviewSelectedPattern(null);
                   }}
-                  className="px-4 py-2 rounded-xl border border-slate-300 text-xs font-bold text-slate-700 hover:bg-white"
+                  className="px-3 py-1.5 rounded-lg border border-slate-300 text-xs font-bold text-slate-700 hover:bg-white"
                 >
                   Đóng
                 </button>
@@ -3508,16 +3508,16 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
                       type="button"
                       disabled={isExtractingAi || (!importFile && !importTextSnippet.trim())}
                       onClick={handleRunAiExtraction}
-                      className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-700 hover:to-indigo-700 text-white text-xs font-black shadow-md shadow-indigo-500/25 flex items-center gap-2 disabled:opacity-50 transition-all hover:scale-105 active:scale-95"
+                      className="px-5 py-2 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-700 hover:to-indigo-700 text-white text-xs font-black shadow-md shadow-indigo-500/25 flex items-center gap-1.5 disabled:opacity-50 transition-all hover:scale-105 active:scale-95"
                     >
                       {isExtractingAi ? (
                         <>
-                          <RefreshCw className="w-4 h-4 animate-spin" />
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
                           <span>AI Đang Nhận Diện Dạng Bài...</span>
                         </>
                       ) : (
                         <>
-                          <Wand2 className="w-4 h-4 text-amber-300" />
+                          <Wand2 className="w-3.5 h-3.5 text-amber-300" />
                           <span>Khởi Chạy AI Nhận Diện Dạng Bài</span>
                         </>
                       )}
@@ -3534,7 +3534,7 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
                           setIsImportModalOpen(false);
                           handleOpenStudio(pat, activeChap, activeLes);
                         }}
-                        className="px-4 py-2 rounded-xl border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-black flex items-center gap-1.5 transition-colors shadow-2xs"
+                        className="px-3 py-1.5 rounded-lg border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold flex items-center gap-1.5 transition-colors shadow-2xs"
                       >
                         <Sparkles className="w-3.5 h-3.5 text-amber-500" />
                         <span>Mở Trong Studio Sư Phạm</span>
@@ -3544,7 +3544,7 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
                         type="button"
                         disabled={importingCurriculum}
                         onClick={handleSaveExtractedCurriculum}
-                        className="px-6 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-md shadow-emerald-500/25 flex items-center gap-1.5 transition-all disabled:opacity-50"
+                        className="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-sm shadow-emerald-500/25 flex items-center gap-1.5 transition-all disabled:opacity-50"
                       >
                         {importingCurriculum ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
                         <span>Nạp Vào CSDL PostgreSQL</span>
@@ -3556,7 +3556,7 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
                     type="button"
                     disabled={importingCurriculum}
                     onClick={handleImportCurriculum}
-                    className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black shadow-md flex items-center gap-1.5 disabled:opacity-50"
+                    className="px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-black shadow-sm flex items-center gap-1.5 disabled:opacity-50"
                   >
                     {importingCurriculum ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <UploadCloud className="w-3.5 h-3.5" />}
                     <span>Nạp Tri Thức Vào Hệ Thống</span>

@@ -2,6 +2,8 @@ import React from 'react';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
 import { AlertTriangle, Sparkles } from 'lucide-react';
+import VariationTable, { parseVariationTableString } from './VariationTable';
+import MathGraphView, { parseGraphTag } from './MathGraphView';
 
 /**
  * Safe KaTeX HTML generator with fallback
@@ -209,12 +211,28 @@ function renderInlineContent(text, keyPrefix = '') {
  * Render structured multi-line text (paragraphs, bullet lists, step highlights, callouts).
  */
 function renderStructuredContent(raw) {
-  // First split by multi-line display math blocks ($$...$$ or \[...\])
-  const displayMathRegex = /(\$\$[\s\S]*?\$\$|\\\[[\s\S]*?\\\])/g;
-  const blocks = raw.split(displayMathRegex);
+  // First split by special block tags:
+  // 1. [VARIATION_TABLE]...[/VARIATION_TABLE]
+  // 2. [GRAPH:...]
+  // 3. Display math $$...$$ or \[...\]
+  const blockRegex = /(\[VARIATION_TABLE\][\s\S]*?\[\/VARIATION_TABLE\]|\[GRAPH:[\s\S]*?\]|\$\$[\s\S]*?\$\$|\\\[[\s\S]*?\\\])/gi;
+  const blocks = raw.split(blockRegex);
 
   return blocks.map((block, bIdx) => {
     if (!block) return null;
+
+    // Variation Table Block [VARIATION_TABLE]...[/VARIATION_TABLE]
+    if (block.toUpperCase().startsWith('[VARIATION_TABLE]') && block.toUpperCase().endsWith('[/VARIATION_TABLE]')) {
+      const content = block.slice(17, -18).trim();
+      const parsed = parseVariationTableString(content);
+      return <VariationTable key={`vt-${bIdx}`} data={parsed} />;
+    }
+
+    // Math Graph Block [GRAPH: ...]
+    if (block.toUpperCase().startsWith('[GRAPH:') && block.endsWith(']')) {
+      const parsed = parseGraphTag(block);
+      return <MathGraphView key={`mg-${bIdx}`} data={parsed} />;
+    }
 
     // Multi-line display math block
     if (block.startsWith('$$') && block.endsWith('$$')) {
@@ -352,12 +370,13 @@ export default function MathText({ text, className = '' }) {
   }
   const raw = normalizeMathString(text);
 
-  // Check if content has document structure (multiple lines, block math, bullets, callouts)
+  // Check if content has document structure (multiple lines, block math, bullets, callouts, tables, graphs)
   const hasLinebreaks = raw.includes('\n');
   const hasBlockMath = raw.includes('$$') || raw.includes('\\[');
   const hasBullets = /^\s*(?:[-*•]|\u2022)\s+/m.test(raw);
   const hasCallouts = /###\s*[⚠️💡]/m.test(raw) || /^[⚠️💡]/m.test(raw);
-  const isStructured = hasLinebreaks || hasBlockMath || hasBullets || hasCallouts;
+  const hasSpecialBlocks = raw.includes('[VARIATION_TABLE]') || raw.includes('[GRAPH:');
+  const isStructured = hasLinebreaks || hasBlockMath || hasBullets || hasCallouts || hasSpecialBlocks;
 
   if (!isStructured) {
     return (

@@ -293,11 +293,87 @@ V-Eval-Web_Client/
 - **Pattern Density Indicators in Pane 1**:
   - Displays explicit level distribution pills `(L1: 2 • L2: 2 • L3: 5 • L4: 5)` and high-order competency badges `Chuẩn ĐGNL: L3 (5 câu) • L4 (5 câu)` for each pattern in the left navigation hierarchy, providing immediate pedagogical transparency.
 
+### 4.27. Native SGK Variation Table Component (`VariationTable.jsx`)
+- **Crisp 3-Row Vector Geometry**:
+  - Implements an exact HTML/SVG representation of textbook variation tables (Bảng biến thiên) complying with Vietnamese high school curriculum (GDPT 2018).
+  - Renders 3 discrete pedagogical layers:
+    1. Independent variable row `` `x` ``.
+    2. Derivative sign row `` `y'` `` with zeros and undefined double-vertical bars `` `||` ``.
+    3. Function variation row `` `y` `` featuring smooth dynamic vector arrows (upward `` `\nearrow` `` and downward `` `\searrow` ``), extreme values (local maxima and minima), and asymptotic limits (`` `-\infty` ``, `` `+\infty` ``).
+  - Eliminates pixelation and blurriness inherent in scanned image crops across high-DPI displays.
+- **Dedicated Parser & Integration**:
+  - `parseVariationTableString()` parses structured markup blocks `` `[VARIATION_TABLE]...[/VARIATION_TABLE]` ``.
+  - Seamlessly integrated into `MathText.jsx` to render anywhere within theory summaries, step-by-step algorithms, or practice question items.
+
+### 4.28. Native SVG Function Graph Plotter & Interactive Desmos Calculator (`MathGraphView.jsx`)
+- **Cartesian Coordinate System & Analytic Curve Generation**:
+  - Renders a razor-sharp SVG Oxy coordinate system complete with major axis arrows, origin label `` `O` ``, grid lines, and tick marks.
+  - Generates mathematically accurate piecewise and continuous cubic, rational, quartic, and parabolic curves.
+  - Automatically draws dashed projection lines from critical points (local maxima and minima) perpendicular to both axes alongside KaTeX coordinate labels.
+  - Renders vertical and horizontal asymptotes for rational functions `` `y = \frac{ax+b}{cx+d}` ``.
+- **Interactive Desmos Graphing Calculator Embed Mode**:
+  - Provides a 1-click switcher between the lightweight static SVG mode and the **Interactive Desmos Calculator** iframe.
+  - Allows educators and learners to zoom, pan, evaluate intersection points, inspect tangents, and trace function values in a professional mathematical environment akin to MATLAB or GeoGebra.
+- **Structured Block Parsing**:
+  - Automatically translates `` `[GRAPH: type=... | formula=... | cd=... | ct=...]` `` tags embedded in curriculum or question text.
+
+### 4.29. Interactive Click-to-Fill Formula Builder & Clipboard Image Ingestion (`InteractiveFormulaBuilderModal.jsx` & `CurriculumStudioEditor.jsx`)
+- **Frictionless Non-LaTeX Authoring for Instructors**:
+  - Completely frees educators from the requirement of typing or understanding raw LaTeX code (e.g. `` `\frac{a}{b}` ``, `` `\sqrt[n]{x}` ``, `` `\int_{a}^{b} f(x)dx` ``).
+  - Clicking any fillable formula button in the STEM palette opens an intuitive modal featuring dedicated input fields for each parameter (Numerator/Denominator, Radical index/Expression, Limits, Integrand/Differential variable, Equation systems, Preset variation tables, and Oxy function graphs).
+  - Features real-time Live KaTeX and SVG component preview before insertion, with keyboard shortcuts (`` `Ctrl + Enter` `` to confirm, `` `Esc` `` to cancel).
+- **Direct Clipboard Image Pasting (`Ctrl + V`) & File Upload**:
+  - Captures `onPaste` events across all editor textareas (Theory, Method, Pitfalls, Casio Tips, Question Stem, Explanation).
+  - Automatically extracts image blobs from Windows Snipping Tool, Zalo, or browser clipboard, converts them via `FileReader.readAsDataURL` to Base64 Data URLs, and injects clean Markdown image tags directly at the caret position.
+  - Provides a universal quick toolbar on every pedagogical block: `` `✨ Điền Công Thức` ``, `` `📊 Bảng Biến Thiên` ``, `` `📈 Đồ Thị Hàm Số` ``, `` `🖼️ Dán/Tải Ảnh` ``.
+
+### 4.30. Compact & High-Density UI Optimization for Panoramic Workspace (`CurriculumExplorerView.jsx`)
+- **Visual Clutter & Oversized Element Mitigation**:
+  - Addressed user feedback regarding oversized padding, inflated card elements, and excessive vertical spacing across the 3-column Panoramic Ingestion Workspace.
+  - Reduced overall modal component footprint by ~30%, transitioning from bloated layouts to an elegant, high-density academic studio interface.
+- **Architectural & Aesthetic Refinements**:
+  - *Header & Summary Bar*: Streamlined padding to `px-4 py-2.5`, Wand icon to `w-8 h-8`, and banner height by 35% while preserving all metadata telemetry.
+  - *Hierarchy Navigation (Pane 1)*: Compacted Chapter/Lesson accordion (`p-2.5`) and Academic Pattern cards (`p-2 rounded-xl`, font `11px`), optimizing scrollable area so educators can view all 10 patterns without excessive scrolling.
+  - *Pedagogical Core (Pane 2A)*: Tightened Box 1 (Textbook Foundations) and Box 2 (Solution Algorithms & Pitfalls) to `p-2.5` padding with refined `11px` typography, maximizing readable screen real estate.
+  - *Exemplar Question Bank (Pane 2B)*: Optimized Bloom difficulty tabs, question pills, and the 2x2 multiple-choice option grid (`A-B-C-D` boxes scaled to `p-1.5 px-2 text-[11px]`) for a clean, non-intrusive layout.
+  - *Modal Footer*: Compacted navigation actions (`px-3 py-1.5`) for seamless PostgreSQL database persistence.
+
+### 4.31. Word-Style In-Place Document Canvas & Isolated Raw LaTeX Architecture (`CurriculumStudioEditor.jsx`)
+- **Elimination of Passive "Text In Preview" Dual-Box Paradigms**:
+  - Completely deprecates the disjointed two-box model (top textarea for inputting raw text, bottom readonly card for viewing "Text In Preview").
+  - Educators previously found scrolling back and forth between upper input and lower preview disruptive to pedagogical continuity and error correction.
+- **In-Place Word Document Sheet Canvas Experience**:
+  - **Modern Ribbon Formatting Toolbar**: Features standard Word formatting actions: Bold (`` `**` ``), Italic (`` `*` ``), Headings (`` `###` ``), Bulleted lists (`` `-` ``), Numbered lists (`` `1.` ``).
+  - **1-Click STEM Mathematical Tools**: Quick-insertion buttons for `✨ Điền Công Thức` (interactive click-to-fill builder), `📊 Bảng Biến Thiên` (3-row SVG table), `📈 Đồ Thị Hàm Số` (Oxy coordinate & Desmos Calculator), `🖼️ Dán (Ctrl+V) / Tải Ảnh`, and auto-incrementing `+ Thêm Bước mới` buttons.
+  - **Standard A4 Document Sheet**: High-fidelity white document sheet with subtle drop shadows (`shadow-md border border-slate-300 rounded-2xl p-6 sm:p-8`), providing an authentic Microsoft Word typing experience.
+  - **Instant Canvas View Switcher**: A seamless 1-click switcher between `✍️ Sửa Trực Tiếp` (editable canvas) and `👁️ Xem Trang In / Học Sinh` (final KaTeX rendered student handout) positioned directly on the document sheet header.
+- **Direct Interactive Warning & Casio Cards**:
+  - Exam Pitfalls (Rose Alert) and Casio Tricks (Indigo Tip) refactored into direct in-card editors, eliminating passive preview boxes and allowing educators to write, format, and modify pedagogical warnings directly within the card context.
+- **Isolated Raw LaTeX & Markdown Code Workspace**:
+  - Decoupled into an independent, distraction-free tab: `⚡ Trang Mã Nguồn LaTeX Thuần (Dành Cho AI)` styled with a dark developer theme (`bg-slate-900 text-emerald-400 / amber-300`).
+  - Specially optimized for bulk copy/pasting raw generative AI outputs (Gemini, ChatGPT) with 100% two-way bidirectional state synchronization upon switching tabs.
+
+### 4.32. WYSIWYG Real Symbols & Interactive Chemistry / Math Calculator Architecture (`InteractiveFormulaBuilderModal.jsx` & `CurriculumStudioEditor.jsx`)
+- **Eradication of Raw Code Exposure (`\frac`, `\lim`, `$` Symbols)**:
+  - Addressed educator frustration regarding the visibility of raw LaTeX markup (`\frac`, `\lim`, `\Delta`) in the active typing canvas.
+  - Implemented default **WYSIWYG Interactive Math & Science Mode**: All mathematical and chemical formulas are rendered into 100% authentic pedagogical graphical typography (horizontal fraction bars, subscripts, superscripts, increment symbols) with zero exposed syntax delimiters.
+  - Quick toggle button provided: `` `[Xem Ký Hiệu Thật (WYSIWYG)]` `` ⟷ `` `[Gõ Văn Bản Bàn Phím]` `` allowing smooth transitions between visual exploration and bulk keyboard typing.
+- **Interactive Chemistry Formula Calculator & Real-Time Evaluator**:
+  - Integrated dedicated Chemistry models supporting direct numerical substitution and automatic arithmetic evaluation:
+    - **Molar Concentration ($C_M = \frac{n}{V}$)**: Accepts moles ($n$) and volume in Liters ($V$), outputting full derivation string: `` `C_M = \frac{n}{V} = \frac{0.2}{0.5} = 0.4\text{ M}` ``.
+    - **Mass Percentage ($C\% = \frac{m_{ct}}{m_{dd}} \times 100\%$)**: Calculates percentage concentration from solute and solution masses.
+    - **Substance Mass ($m = n \times M$)**: Computes grams from molar mass and moles.
+    - **Reaction Yield ($H = \frac{m_{tt}}{m_{lt}} \times 100\%$)**: Evaluates practical vs theoretical mass yields.
+  - Educators can toggle between inserting the substituted formula alone or the complete step-by-step derivation with final computed units.
+- **Fractional Arithmetic & SGK Derivative Increment Calculator**:
+  - **Fraction Simplification**: Dynamically reduces numerical fractions (e.g. `` `\frac{12}{4} = 3` ``) and formats integers or 2-decimal rounded approximations.
+  - **Derivative Increment Step-by-Step Generator**: Automates standard Vietnamese textbook derivative formulations ($f'(x_0) = \lim_{\Delta x \to 0}\frac{\Delta y}{\Delta x}$) based on chosen function expressions and evaluation points.
+
 ---
 
 ## 5. Verification & Acceptance Criteria
 
-1. **Clean Production Build**: Executed `npm run build` with 0 syntax or bundle errors; production artifacts outputted to `dist/` within 796ms.
+1. **Clean Production Build**: Executed `npm run build` with 0 syntax or bundle errors; production artifacts outputted to `dist/` within 743ms on Vite 8 and React 19.
 2. **Linter & Code Health**: `npm run lint` passes with 0 syntax errors across all components and services.
 3. **Docker Multi-Stage Validation**: `docker compose config` passes with 0 syntax errors across the entire 6-service microservices constellation.
 4. **Repository Sync Automation**: Standalone `Scripts/push.bat` and root `Scripts/` correctly recognize `V-Eval-Web_Client` as a first-class project service.
