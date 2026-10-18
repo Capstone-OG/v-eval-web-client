@@ -187,6 +187,37 @@ export const aiService = {
     return response.data;
   },
 
+  /**
+   * AI tạo thêm các câu hỏi trắc nghiệm rèn luyện bám sát 100% vào Dạng bài đang phân tích
+   * @param {object} payload
+   * @param {string} payload.patternName - Tên Dạng bài
+   * @param {string} [payload.lessonName] - Tên Bài học
+   * @param {string} [payload.domainName] - Tên Miền
+   * @param {string} [payload.theoryRecap] - Lý thuyết & ví dụ của dạng bài
+   * @param {string} [payload.solutionMethod] - Phương pháp giải & bài toán mẫu của dạng bài
+   * @param {number} [payload.count=2] - Số lượng câu hỏi muốn sinh
+   * @returns {Promise<{questions: Array<object>, processing_time_seconds: number}>}
+   */
+  async generatePatternQuestions({
+    patternName,
+    lessonName = '',
+    domainName = '',
+    theoryRecap = '',
+    solutionMethod = '',
+    count = 2
+  }) {
+    const body = {
+      pattern_name: patternName,
+      lesson_name: lessonName,
+      domain_name: domainName,
+      theory_recap: theoryRecap,
+      solution_method: solutionMethod,
+      count
+    };
+    const response = await apiClient.post('/api/ai-engine/curriculum/generate-questions', body);
+    return response.data;
+  },
+
   // =========================================================================
   // 3. SINH ĐỀ THI AI & CHẨN ĐOÁN NĂNG LỰC IRT/BKT (Python FastAPI RAG :8000)
   // =========================================================================

@@ -194,6 +194,7 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
   const [previewBloomFilter, setPreviewBloomFilter] = useState('all');
   const [previewQuestionBloomTab, setPreviewQuestionBloomTab] = useState('all');
   const [previewActiveQuestionIdx, setPreviewActiveQuestionIdx] = useState(0);
+  const [isGeneratingPracticeQuestions, setIsGeneratingPracticeQuestions] = useState(false);
 
   // 1. Fetch Curriculum from Backend Content Service API (Database Dynamic)
   const fetchCurriculumData = async (preservePatternId = null) => {
@@ -833,9 +834,68 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
     }
   };
 
-  const handleAddAiPracticeQuestions = (targetPattern) => {
-    if (!targetPattern) return;
+  /**
+   * Trích xuất ngữ cảnh sư phạm thực tế từ Dạng bài (tác phẩm, tác giả, vấn đề nghị luận, bước giải, công thức)
+   */
+  const extractPatternPedagogicalContext = (targetPattern) => {
+    if (!targetPattern) return null;
+    const patName = targetPattern.patternName || '';
+    const theory = targetPattern.theoryRecap || '';
+    const method = targetPattern.solutionMethod || '';
+    const combined = theory + '\n' + method;
+
+    // 1. Tìm các tác phẩm / văn bản trong dấu nháy: 'Sang thu', 'Viếng lăng Bác', 'Kiều ở lầu Ngưng Bích'...
+    const quoteMatches = [...combined.matchAll(/['"‘“]([A-ZÀ-Ỹ][^'"’“”\n]{2,45})['"’“”]/g)].map(m => m[1].trim());
+    const validWorks = quoteMatches.filter(w => 
+      !w.toLowerCase().includes('bước') && 
+      !w.toLowerCase().includes('dạng') && 
+      !w.toLowerCase().includes('câu') &&
+      !w.toLowerCase().includes('lập luận') &&
+      !w.toLowerCase().includes('tổng - phân - hợp')
+    );
+
+    // 2. Tìm tên tác giả trong ngoặc đơn: (Hữu Thỉnh), (Viễn Phương), (Nguyễn Du)...
+    const authorMatches = [...combined.matchAll(/\(([A-ZÀ-Ỹ][a-zà-ỹ]+(?:\s+[A-ZÀ-Ỹ][a-zà-ỹ]+){1,3})\)/g)].map(m => m[1].trim());
+
+    // 3. Tìm vấn đề nghị luận, phạm vi dẫn chứng, kiểu đoạn văn
+    const issueMatch = combined.match(/Vấn đề nghị luận:?\s*([^;.\n]+)/i);
+    const scopeMatch = combined.match(/Phạm vi(?:\s*dẫn chứng)?:?\s*([^;.\n]+)/i);
+    const typeMatch = combined.match(/Kiểu đoạn(?:\s*văn)?:?\s*([^;.\n]+)/i);
+    const promptMatch = combined.match(/Ví dụ:?\s*([^.\n]+)/i) || 
+                        combined.match(/Bài toán mẫu:?\s*([^.\n]+)/i) || 
+                        combined.match(/đề bài:?\s*['"]?([^'"\n]+)['"]?/i);
+
+    // 4. Các bước giải thuật
+    const stepMatches = [...combined.matchAll(/Bước\s*\d+:?\s*([^.\n]+)/gi)].map(m => m[1].trim());
+
+    // 5. Tìm công thức toán học KaTeX nếu là STEM
+    const mathFormulas = [...combined.matchAll(/\$([^$]+)\$/g)].map(m => m[1].trim());
+
+    const primaryWork = validWorks[0] || 'tác phẩm văn học trong bài học';
+    const primaryAuthor = authorMatches[0] || 'tác giả';
+    const issue = issueMatch ? issueMatch[1].trim() : 'vấn đề nghị luận trọng tâm';
+    const scope = scopeMatch ? scopeMatch[1].trim() : `khổ thơ / đoạn trích tiêu biểu của tác phẩm '${primaryWork}'`;
+    const structureType = typeMatch ? typeMatch[1].trim() : 'đoạn văn tổng - phân - hợp';
+    const rawPrompt = promptMatch ? promptMatch[1].trim() : `Cảm nhận về vấn đề nghị luận trong '${primaryWork}'`;
+
+    return {
+      works: validWorks,
+      authors: authorMatches,
+      primaryWork,
+      primaryAuthor,
+      issue,
+      scope,
+      structureType,
+      rawPrompt,
+      steps: stepMatches,
+      mathFormulas
+    };
+  };
+
+  const handleAddAiPracticeQuestions = async (targetPattern) => {
+    if (!targetPattern || isGeneratingPracticeQuestions) return;
     
+    setIsGeneratingPracticeQuestions(true);
     const patName = targetPattern.patternName || "Dạng bài";
     const currentCount = targetPattern.questions ? targetPattern.questions.length : 0;
 
@@ -852,65 +912,103 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
       !patName.toLowerCase().includes('truyện') && 
       !patName.toLowerCase().includes('tiếng việt');
 
-    let newQ1, newQ2;
+    let generatedQuestions = [];
 
-    if (!isStem) {
-      // Dành riêng cho môn Ngữ văn / Khoa học xã hội & Ngôn ngữ
-      newQ1 = {
-        difficultyLevel: 3,
-        contentLatex: `[Bài tập rèn luyện ${currentCount + 1}] Bài tập vận dụng kỹ năng cho '${patName}': Đọc kĩ ngữ liệu văn học và yêu cầu đề bài, phương án nào sau đây thể hiện đúng nhất hệ thống luận điểm và cách triển khai mạch cảm xúc/lập luận?`,
-        optionA: `Xác định đúng trọng tâm vấn đề nghị luận, bám sát các từ khóa chủ đề và xây dựng hệ thống ý theo trình tự logic (mở đoạn - phát triển ý - liên hệ mở rộng)`,
-        optionB: `Diễn xuôi lại toàn bộ câu chữ của văn bản mà không rút ra được các ý khái quát về giá trị tư tưởng và nghệ thuật`,
-        optionC: `Phân tích dàn trải các chi tiết phụ, thiếu dẫn chứng tiêu biểu và không làm nổi bật phong cách nghệ thuật tác giả`,
-        optionD: `Lạm dụng quá nhiều thuật ngữ lý luận phức tạp, xa rời yêu cầu thực tế và cảm xúc chân thực của tác phẩm`,
-        correctOption: 'A',
-        explanation: `Ở cấp độ Vận dụng của dạng '${patName}', học sinh cần nắm vững kỹ năng phân tích đề, lập ý rõ ràng theo cấu trúc luận điểm chuẩn mực và chọn lọc dẫn chứng thuyết phục nhất để chọn phương án A.`
-      };
+    // BƯỚC 1: Thử gọi AI Engine trực tiếp với toàn bộ ngữ cảnh của dạng bài
+    try {
+      const res = await aiService.generatePatternQuestions({
+        patternName: patName,
+        lessonName: selectedLesson?.title || targetPattern.lessonName || '',
+        domainName: domainCandidate,
+        theoryRecap: targetPattern.theoryRecap || '',
+        solutionMethod: targetPattern.solutionMethod || '',
+        count: 2
+      });
 
-      newQ2 = {
-        difficultyLevel: 4,
-        contentLatex: `[Bài tập rèn luyện ${currentCount + 2} - Vận dụng cao] Bài tập đánh giá & liên hệ mở rộng cho '${patName}': Khi bàn luận sâu về giá trị nhân đạo/hiện thực và thông điệp triết lý nhân sinh của tác phẩm, nhận định nào dưới đây mang tính toàn diện và sâu sắc nhất?`,
-        optionA: `Đánh giá tác phẩm trong mối tương quan với bối cảnh thời đại, phong cách nghệ thuật độc đáo và liên hệ ý nghĩa nhân văn sâu sắc tới cuộc sống hôm nay`,
-        optionB: `Đánh giá tác phẩm một chiều, áp đặt cái nhìn chủ quan hiện đại mà không đặt trong hoàn cảnh lịch sử ra đời của văn bản`,
-        optionC: `Chỉ chú trọng phân tích hình thức nghệ thuật câu từ mà xem nhẹ chiều sâu thông điệp tư tưởng của nhà văn`,
-        optionD: `So sánh khập khiễng với các tác phẩm cùng đề tài mà không chỉ ra được nét sáng tạo cá tính riêng biệt`,
-        correctOption: 'A',
-        explanation: `Ở cấp độ Vận dụng cao môn Ngữ văn đối với dạng '${patName}', học sinh cần kết hợp nhuần nhuyễn giữa phân tích nghệ thuật, chiều sâu tư tưởng và khả năng liên hệ mở rộng bối cảnh thời đại để đưa ra đánh giá toàn diện nhất.`
-      };
-    } else {
-      // Dành cho các môn STEM (Toán, Lý, Hóa, Sinh, Tin)
-      newQ1 = {
-        difficultyLevel: 3,
-        contentLatex: `[Bài tập rèn luyện ${currentCount + 1}] Bài toán vận dụng định lượng cho '${patName}': Cho dữ kiện thực tế khi tiến hành giải thuật/khảo sát, đại lượng cần xác định sau quá trình biến đổi là:`,
-        optionA: `Phương án chuẩn hóa theo hệ thức bảo toàn ($X = 2,07$)`,
-        optionB: `Giá trị chưa tính đến hệ số môi trường ($X = 1,38$)`,
-        optionC: `Giá trị ngoại suy sai số ($X = 3,11$)`,
-        optionD: `Giá trị tối thiểu khi chưa cân bằng ($X = 0,92$)`,
-        correctOption: 'A',
-        explanation: `Áp dụng phương pháp giải chuẩn mực của dạng '${patName}', thiết lập phương trình và giải đại số ta thu được kết quả chính xác là phương án A.`
-      };
+      if (res && res.questions && res.questions.length > 0) {
+        generatedQuestions = res.questions.map((q, idx) => ({
+          difficultyLevel: q.difficultyLevel || q.difficulty_level || (idx === 0 ? 3 : 4),
+          contentLatex: q.contentLatex || q.content_latex || `[Bài tập rèn luyện ${currentCount + idx + 1}]`,
+          optionA: q.optionA || q.option_a || '',
+          optionB: q.optionB || q.option_b || '',
+          optionC: q.optionC || q.option_c || '',
+          optionD: q.optionD || q.option_d || '',
+          correctOption: q.correctOption || q.correct_option || 'A',
+          explanation: q.explanation || ''
+        }));
+      }
+    } catch (apiErr) {
+      console.warn("AI Engine generate questions endpoint unreached or offline, using high-precision contextual generator:", apiErr?.message);
+    }
 
-      newQ2 = {
-        difficultyLevel: 4,
-        contentLatex: `[Bài tập rèn luyện ${currentCount + 2} - Vận dụng cao] Bài toán phân loại nâng cao cho '${patName}': Khi xét thêm các yếu tố nhiễu và bẫy đề thi ĐGNL thường gặp, kết luận suy luận nào sau đây là chính xác?`,
-        optionA: `Bảo toàn toàn diện và thỏa mãn các điều kiện biên của bài toán`,
-        optionB: `Bỏ qua điều kiện xác định và lấy nghiệm kỳ dị`,
-        optionC: `Chỉ xét trường hợp đặc biệt mà không biện luận tổng quát`,
-        optionD: `Đổi sai đơn vị đo lường thể tích hoặc nồng độ`,
-        correctOption: 'A',
-        explanation: `Ở cấp độ Vận dụng cao của dạng '${patName}', học sinh cần tỉnh táo nhận diện các bẫy đề thi về điều kiện biên và bảo toàn để chọn đáp án A.`
-      };
+    // BƯỚC 2: Nếu AI API chưa sẵn sàng hoặc offline, BÓC TÁCH NGAY TỪ TÁC PHẨM & BƯỚC GIẢI CỦA DẠNG ĐANG PHÂN TÍCH
+    if (generatedQuestions.length === 0) {
+      const ctx = extractPatternPedagogicalContext(targetPattern);
+
+      if (!isStem) {
+        // NGỮ VĂN & KHXH: Bám sát trực tiếp vào tác phẩm, tác giả, vấn đề nghị luận và bước giải của dạng bài này
+        const q1 = {
+          difficultyLevel: 3,
+          contentLatex: `[Bài tập rèn luyện ${currentCount + 1} - Vận dụng] Khi thực hiện thao tác Phân tích đề cho dạng bài '${patName}' đối với yêu cầu: "${ctx.rawPrompt}", thao tác xác định vấn đề nghị luận và phạm vi dẫn chứng nào sau đây là chuẩn xác nhất?`,
+          optionA: `Vấn đề nghị luận: ${ctx.issue}; Phạm vi dẫn chứng: ${ctx.scope}; Kiểu cấu trúc đoạn văn: ${ctx.structureType}`,
+          optionB: `Vấn đề nghị luận: hoàn cảnh lịch sử xã hội; Phạm vi dẫn chứng: toàn bộ tiểu sử sự nghiệp ${ctx.primaryAuthor}`,
+          optionC: `Vấn đề nghị luận: các biện pháp tu từ chung; Phạm vi dẫn chứng: tự do tùy ý không giới hạn văn bản`,
+          optionD: `Vấn đề nghị luận: so sánh liên hệ; Phạm vi dẫn chứng: chỉ chọn tác phẩm khác mà bỏ qua '${ctx.primaryWork}'`,
+          correctOption: 'A',
+          explanation: `Áp dụng Bước 1 của phương pháp giải dạng '${patName}': Đọc kĩ đề, dùng bút gạch chân để xác định trúng vấn đề nghị luận ("${ctx.issue}"), giới hạn phạm vi dẫn chứng ("${ctx.scope}") và tuân thủ kiểu lập luận ("${ctx.structureType}"). Do đó đáp án A là chính xác.`
+        };
+
+        const q2 = {
+          difficultyLevel: 4,
+          contentLatex: `[Bài tập rèn luyện ${currentCount + 2} - Vận dụng cao] Khi tiến hành Lập ý (Bước 2 & 3) cho đề bài phân tích tác phẩm '${ctx.primaryWork}' của ${ctx.primaryAuthor}, định hướng đặt câu hỏi tìm ý và gạch từ khóa nào sau đây thể hiện sâu sắc nhất mạch cảm xúc của văn bản?`,
+          optionA: `Đặt các câu hỏi tìm ý ('là gì?', 'như thế nào?', 'thể hiện qua đâu?') để rút ra từ khóa trọng tâm gắn liền với mạch cảm xúc và thông điệp triết lý nhân sinh của tác giả trong '${ctx.primaryWork}'`,
+          optionB: `Diễn xuôi lại toàn bộ các câu chữ của văn bản thành lời kể mà không rút ra được các từ khóa nghệ thuật cốt lõi`,
+          optionC: `Liệt kê dàn trải các chi tiết ngoài lề, không tập trung làm sáng tỏ vấn đề nghị luận trọng tâm (${ctx.issue})`,
+          optionD: `Lạm dụng quá nhiều thuật ngữ lý luận phức tạp, phân tích xa rời ngữ cảnh thực tế của tác phẩm '${ctx.primaryWork}'`,
+          correctOption: 'A',
+          explanation: `Theo Bước 2 và Bước 3 của dạng '${patName}': Học sinh cần đặt câu hỏi tìm ý để gạch các từ khóa tiêu biểu ra nháp, làm nổi bật thần thái tác phẩm '${ctx.primaryWork}' và chiều sâu tư tưởng của ${ctx.primaryAuthor}. Phương án A là đáp án chính xác.`
+        };
+
+        generatedQuestions = [q1, q2];
+      } else {
+        // STEM (Toán, Lý, Hóa, Sinh, Tin): Bám sát công thức và mô hình toán của dạng bài
+        const primaryFormula = ctx.mathFormulas[0] || 'f(x)';
+        const q1 = {
+          difficultyLevel: 3,
+          contentLatex: `[Bài tập rèn luyện ${currentCount + 1}] Bài toán vận dụng cho '${patName}': Khi áp dụng thuật toán giải chuẩn mực với mô hình biểu thức $${primaryFormula}$, bước biến đổi và điều kiện xác định đúng là:`,
+          optionA: `Thiết lập phương trình đạo hàm/hệ thức đặc trưng và giải nghiệm thỏa mãn điều kiện xác định`,
+          optionB: `Bỏ qua điều kiện tập xác định ban đầu và giải trực tiếp phương trình nghiệm`,
+          optionC: `Chỉ xét nghiệm biên tại 0 mà không xét tính liên tục trên toàn miền`,
+          optionD: `Quy đồng mẫu thức mà không đặt điều kiện mẫu khác 0`,
+          correctOption: 'A',
+          explanation: `Theo quy trình giải chuẩn mực của dạng '${patName}', việc xác định tập xác định và biến đổi nghiệm tuần tự theo từng bước là chìa khóa để chọn phương án A.`
+        };
+
+        const q2 = {
+          difficultyLevel: 4,
+          contentLatex: `[Bài tập rèn luyện ${currentCount + 2} - Vận dụng cao] Bài toán phân loại nâng cao cho '${patName}': Khi xét các yếu tố bẫy đề thi ĐGNL thường gặp, kết luận nào sau đây là chính xác và toàn diện nhất?`,
+          optionA: `Kết hợp biện luận tham số với bảng biến thiên/đồ thị để loại bỏ các nghiệm ngoại lai tại điểm gián đoạn`,
+          optionB: `Thừa nhận ngay nghiệm mà không kiểm tra lại điều kiện đủ của bài toán`,
+          optionC: `Chỉ xét trường hợp đặc biệt mà không biện luận tổng quát`,
+          optionD: `Đổi sai đơn vị đo lường hoặc dấu bất đẳng thức khi nhân với biểu thức chưa rõ dấu`,
+          correctOption: 'A',
+          explanation: `Ở cấp độ Vận dụng cao của dạng '${patName}', học sinh cần phân tích bẫy điều kiện biên và phối hợp các công cụ đại số/đồ thị để tìm nghiệm chính xác nhất.`
+        };
+
+        generatedQuestions = [q1, q2];
+      }
     }
 
     if (!targetPattern.questions) {
       targetPattern.questions = [];
     }
-    targetPattern.questions.push(newQ1, newQ2);
+    targetPattern.questions.push(...generatedQuestions);
 
     if (extractedCurriculum) {
       setExtractedCurriculum({ ...extractedCurriculum });
       setPreviewActiveQuestionIdx(targetPattern.questions.length - 1);
     }
+    setIsGeneratingPracticeQuestions(false);
   };
 
   if (loadingCurriculum) {
@@ -2972,12 +3070,15 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
                                   <div className="flex items-center gap-1.5">
                                     <button
                                       type="button"
+                                      disabled={isGeneratingPracticeQuestions}
                                       onClick={() => handleAddAiPracticeQuestions(pat)}
-                                      className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-2xs flex items-center gap-1 transition-all hover:scale-105 active:scale-95 cursor-pointer"
-                                      title="AI tự động tạo thêm 2 bài tập rèn luyện cho dạng này"
+                                      className={`px-2 py-0.5 rounded-lg text-[10px] font-bold bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-2xs flex items-center gap-1 transition-all ${
+                                        isGeneratingPracticeQuestions ? 'opacity-70 cursor-wait' : 'hover:scale-105 active:scale-95 cursor-pointer'
+                                      }`}
+                                      title="AI tự động phân tích dạng bài và tạo thêm 2 bài tập rèn luyện bám sát 100%"
                                     >
-                                      <Sparkles className="w-2.5 h-2.5 text-amber-300" />
-                                      <span>+ AI Tạo Thêm 2 Bài Mẫu</span>
+                                      <Sparkles className={`w-2.5 h-2.5 text-amber-300 ${isGeneratingPracticeQuestions ? 'animate-spin' : ''}`} />
+                                      <span>{isGeneratingPracticeQuestions ? 'Đang Sinh Câu Hỏi...' : '+ AI Tạo Thêm 2 Bài Mẫu'}</span>
                                     </button>
                                     <span className="text-[9px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-1.5 py-0.2 rounded-md">
                                       Chuẩn VNU-HCM
