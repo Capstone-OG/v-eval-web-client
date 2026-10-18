@@ -2,43 +2,46 @@
 
 ---
 
-## [19/10/2026] - Trình Soạn Thảo Ký Hiệu Trực Quan WYSIWYG Như Microsoft Word Equation: Chỉnh Sửa Số Trực Tiếp Trên Công Thức, Thanh Công Cụ Nổi Math Bubble & Chèn Ký Hiệu 1-Click Ribbon Không Cần Popup Modal
+## [19/10/2026] - Trình Soạn Thảo Ký Hiệu Trực Quan WYSIWYG Như Microsoft Word Equation: Thanh Công Cụ Ký Hiệu Phân Cấp Bên Trái (Hierarchical Math Palette), Tinh Gọn Duy Nhất 1 Phiên Bản Toolbar & Khắc Phục Triệt Để Lỗi Nhảy Dòng / Tiết Diện Công Thức Quá Lớn
 
-- **Trình Soạn Thảo Công Thức Trực Quan Tại Chỗ (In-Place WYSIWYG Equation Canvas - `WordStyleFormulaCanvas.jsx`)**:
-  - *Thay Thế Toàn Diện Cơ Chế Cũ (Read-only + Popup Modal)*:
-    + Loại bỏ hoàn toàn sự bất tiện khi phải chuyển sang textarea "Gõ văn bản bàn phím" hoặc mở hộp thoại pop-up modal chắn màn hình để điền số.
-    + Xây dựng component mới `WordStyleFormulaCanvas.jsx` mang lại trải nghiệm chuẩn mực như Microsoft Word Equation Tools: toàn bộ công thức và văn bản hiển thị ký hiệu sách giáo khoa thực tế nhưng cho phép người dùng click chuột trực tiếp vào từng vị trí để sửa số hoặc chữ.
-  - *Bộ Nhận Diện Cấu Trúc Đa Tầng (In-Place Slot Editors)*:
-    + **Phân số (`\frac{A}{B}` hoặc `\frac{A}{B} = C`)**: Render cấu trúc 2 tầng với ô tử số `[ A ]` nền vàng hổ phách và ô mẫu số `[ B ]` nền xanh ngọc, kèm vạch kẻ phân số thanh mảnh. Người dùng click vào gõ số trực tiếp trên trang. Tích hợp nút `⚡` tự động tính thương số `A / B` và điền số vào kết quả.
-    + **Số mũ & Lũy thừa (`A^{B}`)**: Hiển thị ô cơ số và ô số mũ nhỏ phía trên góc phải, co dãn kích thước theo độ dài ký tự nhập vào.
-    + **Căn thức (`\sqrt{A}` hoặc `\sqrt[n]{A}`)**: Dấu căn thức bao quanh ô nhập số bên trong, có thể tự động tính căn bậc hai số học khi bấm tính.
-    + **Công thức Hóa học & Nồng độ Mol (`C_M = n/V`, `C%`)**: Hiển thị đầy đủ phương trình hóa học với các ô nhập số mol, thể tích dung dịch (Lít), khối lượng chất tan/dung dịch và nút tự động tính nồng độ kết quả tức thì.
-    + **Công thức tổng quát**: Hỗ trợ sửa nhanh bằng inline input kèm Live KaTeX rendering ngay lập tức bên cạnh.
+- **Tái Cấu Trúc Toàn Diện Bộ Công Cụ & Loại Bỏ Hoàn Toàn Trùng Lặp (Single-Version Rule)**:
+  - *Thanh Lọc 100% Các Thành Phần Trùng Lặp*:
+    + Trước đây, giao diện soạn thảo có tới 4-5 thanh công cụ xếp chồng (Bảng ký hiệu KaTeX ở trên, thanh Ribbon, thanh chuyển chế độ submode có các nút Hóa học/Phân số bị lặp lại, thanh toolbar bên trong canvas).
+    + Triệt để áp dụng nguyên tắc *"Nếu cùng cách thức chỉ cho 1 phiên bản tồn tại"*: Loại bỏ toàn bộ các nút trùng lặp, thống nhất thành 1 thanh Word Ribbon duy nhất trên đầu trang tài liệu tích hợp bộ chuyển đổi 3 chế độ xem (`✍️ Sửa Trực Tiếp` | `👁️ Trang In` | `Raw`).
+
+- **Thanh Công Cụ Ký Hiệu Phân Cấp Thu Gọn Bên Trái (Hierarchical Math Palette Sidebar - `HierarchicalMathPalette.jsx`)**:
+  - *Cấu Trúc Phân Cấp 3 Tầng Chuẩn Mực*:
+    + **Tầng 1 (Chuyên Môn / Môn Học)**: Phân tách rõ ràng giữa Toán Học 📐, Hóa Học 🧪, Vật Lý ⚡, và Ký Hiệu Đặc Biệt 🔣.
+    + **Tầng 2 (Chuyên Mục Theo Môn)**:
+      * *Hóa Học*: Nồng độ dung dịch ($C_M, C\%$), Số oxi hóa ($0, +1, +2, -2, +6$), Ion điện tích ($SO_4^{2-}, OH^-$), Phương trình & Mũi tên phản ứng ($\rightarrow, \rightleftharpoons, \uparrow, \downarrow$).
+      * *Toán Học*: Đại số & Căn thức, Đạo hàm & Giới hạn, Mũ & Logarit, Hình học & Oxyz, Lượng giác, Xác suất & Thống kê.
+      * *Ký Hiệu Đặc Biệt*: Ký tự Hy Lạp ($\pi, \Delta, \alpha, \beta, \theta, \lambda$), Phép toán & So sánh ($\pm, \times, \div, \approx, \neq, \le, \ge, \infty$).
+    + **Tầng 3 (Chip Ký Hiệu & Công Thức Nhỏ Gọn)**: Các chip KaTeX render trực quan ký hiệu thật, người dùng click 1 chạm để chèn thẳng vào vị trí con trỏ trên canvas hoặc áp dụng cho Khối 1 (`theoryRecap`) và Khối 2 (`solutionMethod`).
+  - *Cơ Chế Thu Gọn Linh Hoạt*:
+    + Nút gập/mở sidebar bên góc trái: Thu hẹp thành thanh icon rail siêu mỏng (`w-11`) với tooltip hướng dẫn, mở rộng (`w-64` / `w-72`) chỉ bằng 1 click chuột, giúp giải phóng tối đa diện tích soạn thảo văn bản.
+
+- **Khắc Phục Triệt Để Hiện Tượng Nhảy Dòng & Tiết Diện Công Thức Quá Lớn (`WordStyleFormulaCanvas.jsx`)**:
+  - *Chấm Dứt Lỗi Flex-wrapping Xé Dòng & Rơi Rớt Dấu Câu*:
+    + Trước đây, toàn bộ văn bản được bọc trong một container `flex flex-wrap items-baseline`. Khi có công thức hoặc ô nhập số, các phần tử bị chiếm khoảng cách lớn, khiến các từ kế tiếp và dấu câu (ví dụ dấu chấm `.` sau phân tử $H_2SO_4$ hoặc sau số oxi hóa) bị đẩy rớt xuống dòng mới độc lập một cách méo mó.
+    + Tái thiết kế kiến trúc dòng văn bản tự nhiên theo từng dòng/đoạn (`tokenizeLine`, `parseDocumentLines`, `serializeDocumentLines`). Từng dòng được render trong thẻ paragraph riêng biệt (`<div className="text-[13.5px] leading-relaxed my-0.5">`), đảm bảo chữ và công thức chảy liên tục theo văn phong chuẩn tiếng Việt.
+  - *Thu Gọn Tiết Diện Công Thức (Ultra-Compact Inline Formula Footprint)*:
+    + Giảm cỡ chữ công thức xuống `text-[13.5px]` đồng bộ với chữ viết thường.
+    + Thu nhỏ khoảng đệm xuống tối thiểu `px-0.5 py-0 mx-0.5`. Ở trạng thái nghỉ, công thức chỉ có đường gạch chân mờ (dashed hairline underline), xóa bỏ hoàn toàn các khung bo viền dày, hộp màu to phồng làm méo chiều cao dòng (line-height).
+  - *Hỗ Trợ Thao Tác Soạn Thảo Tự Nhiên*:
+    + Hỗ trợ phím Enter để ngắt dòng và tách đoạn tự nhiên như Microsoft Word.
+    + Bổ sung nút `+ Thêm dòng mới` thanh lịch ở chân trang.
 
 - **Thanh Công Cụ Mini Nổi (Floating Math Bubble Toolbar)**:
   - Tự động định vị và nổi ngay phía trên công thức đang được chọn/kích hoạt.
   - Cung cấp bảng ký hiệu toán học nhanh 1 chạm: `+`, `−`, `×`, `÷`, `±`, `√`, `x²`, `xⁿ`, `x₀`, `π`, `Δ`, `α`, `β`, `∞`, `≠`, `≈`, `≤`, `≥`, `→`, `⇔`, `∈`.
   - Tích hợp các nút chức năng nhanh: `⚡ Tính tự động` (áp dụng cho phân số, nồng độ hóa học, căn bậc hai), `🗑️ Xóa công thức`, và `✓ Xong` để lưu trạng thái.
 
-- **Thanh Ribbon Chèn Ký Hiệu 1-Click (1-Click Word Equation Ribbon)**:
-  - Tích hợp dải Ribbon đầu trang với các nút thao tác 1 chạm:
-    + `➗ Phân Số & Số (12/4)`
-    + `a/b Phân Số Đại Số`
-    + `√16 Căn Bậc Hai`
-    + `x² Số Mũ`
-    + `🧪 Nồng Độ CM (n/V)`
-    + `💧 C% Nồng Độ Khối Lượng`
-    + `🎯 Đạo Hàm Số Gia SGK`
-    + `📋 Hệ Phương Trình`
-  - Khi người dùng bấm nút trên Ribbon, công thức mẫu được chèn trực tiếp vào vị trí con trỏ trên trang tài liệu và lập tức kích hoạt các ô slot để người dùng gõ số ngay tại chỗ, hoàn toàn không mở bất kỳ popup modal nào.
-
 - **Đồng Bộ Dữ Liệu Hai Chiều & Tích Hợp Toàn Diện Studio (`CurriculumStudioEditor.jsx`)**:
-  - Tích hợp `WordStyleFormulaCanvas` vào cả **Khối 1: Kiến thức nền tảng SGK (`theoryRecap`)** và **Khối 2: Phương pháp giải & thuật toán (`solutionMethod`)**.
-  - Tự động serialize các token văn bản và cấu trúc công thức thành chuỗi Markdown/LaTeX chuẩn mực.
+  - Tích hợp bố cục 2 cột tinh tế (Cột trái: `HierarchicalMathPalette`, Khung chính: Ribbon Word + `WordStyleFormulaCanvas`) vào cả **Khối 1: Kiến thức nền tảng SGK (`theoryRecap`)** và **Khối 2: Phương pháp giải & thuật toán (`solutionMethod`)**.
   - Dữ liệu đồng bộ hoàn hảo 100% giữa chế độ WYSIWYG, chế độ "Mã nguồn LaTeX thuần (Raw)", chế độ "Xem trang in KaTeX", và lưu thành công vào cơ sở dữ liệu PostgreSQL.
 
 - **Kiểm Thử Vận Hành (Build Verification)**:
-  - `npm run build` thành công 100% (**0 Error, 0 Warning**, build hoàn tất trong 751ms trên Vite 8 và React 19).
+  - `npm run build` thành công 100% (**0 Error, 0 Warning**, build hoàn tất trong 753ms trên Vite 8 và React 19).
 
 ---
 

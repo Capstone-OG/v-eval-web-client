@@ -40,6 +40,7 @@ import {
 import MathText, { unescapeLiteralNewlines } from '../common/MathText';
 import InteractiveFormulaBuilderModal from './InteractiveFormulaBuilderModal';
 import WordStyleFormulaCanvas from './WordStyleFormulaCanvas';
+import HierarchicalMathPalette from './HierarchicalMathPalette';
 import contentService from '../../services/contentService';
 import aiService from '../../services/aiService';
 
@@ -567,6 +568,7 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
   const [activeSection, setActiveSection] = useState('theory'); // 'theory' | 'method' | 'video' | 'questions' | 'settings'
   const [mathCategory, setMathCategory] = useState('algebra');
   const [activeFormulaTarget, setActiveFormulaTarget] = useState('theoryRecap'); // 'theoryRecap' | 'solutionMethod' | 'examTraps' | 'casioTricks' | 'sampleQuestion' | 'sampleExplanation'
+  const [isPaletteCollapsed, setIsPaletteCollapsed] = useState(false);
 
   const parsedInitial = parseSolutionMethodSections(pattern?.solutionMethod || '');
 
@@ -1197,55 +1199,19 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
                   </button>
                 </div>
 
-                {/* STEM KaTeX Virtual Palette for Khối 1 */}
-                <MathFormulaPalette
-                  activeCategory={mathCategory}
-                  onSelectCategory={setMathCategory}
-                  onInsert={handleInsertMath}
-                  onOpenBuilder={handleOpenFormulaBuilder}
-                  activeTarget={activeFormulaTarget}
-                  onSelectTarget={setActiveFormulaTarget}
-                  accentColor="cyan"
-                />
+                {/* 2-COLUMN UNIFIED WORKSPACE: HIERARCHICAL SIDEBAR (LEFT) + WORD CANVAS (RIGHT) */}
+                <div className="flex flex-col lg:flex-row items-stretch rounded-2xl border border-slate-200 overflow-hidden bg-slate-50 shadow-sm min-h-[580px]">
+                  
+                  {/* LEFT: HIERARCHICAL FORMULA TOOLBAR SIDEBAR */}
+                  <HierarchicalMathPalette
+                    isCollapsed={isPaletteCollapsed}
+                    onToggleCollapse={() => setIsPaletteCollapsed(prev => !prev)}
+                    activeTarget="theoryRecap"
+                    onInsertSnippet={(target, snippet) => handleInsertMath(target, snippet, false)}
+                  />
 
-                {/* Mode Selector for Khối 1: Soạn Thảo Trực Tiếp (Như Word) vs Mã Nguồn LaTeX Thuần */}
-                <div className="flex items-center justify-between p-1.5 rounded-2xl bg-slate-100 border border-slate-200">
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => setTheoryMode('visual')}
-                      className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${
-                        theoryMode === 'visual'
-                          ? 'bg-white text-cyan-900 shadow-sm border border-slate-200/80 font-black'
-                          : 'text-slate-600 hover:text-slate-900'
-                      }`}
-                    >
-                      <PenTool className="w-3.5 h-3.5 text-cyan-600" />
-                      <span>Trình Soạn Thảo Trực Tiếp (Như Word)</span>
-                      <span className="px-1.5 py-0.5 rounded-md bg-cyan-100 text-cyan-700 text-[10px] font-black">Chính</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setTheoryMode('markdown')}
-                      className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${
-                        theoryMode === 'markdown'
-                          ? 'bg-white text-slate-900 shadow-sm border border-slate-200/80 font-black'
-                          : 'text-slate-600 hover:text-slate-900'
-                      }`}
-                    >
-                      <Code2 className="w-3.5 h-3.5 text-slate-600" />
-                      <span>Trang Mã Nguồn LaTeX Thuần (Dành Cho AI)</span>
-                      <span className="px-1.5 py-0.5 rounded-md bg-slate-200 text-slate-700 text-[10px] font-mono">Raw</span>
-                    </button>
-                  </div>
-                  <span className="text-[11px] text-slate-500 font-medium hidden sm:inline">
-                    {theoryMode === 'visual' ? 'Soạn thảo & sửa trực tiếp văn bản như Microsoft Word' : 'Chuyên trang dán toàn văn mã nguồn LaTeX từ AI'}
-                  </span>
-                </div>
-
-                {/* MODE 1: TRÌNH SOẠN THẢO SƯ PHẠM TRỰC TIẾP NHƯ WORD */}
-                {theoryMode === 'visual' && (
-                  <div className="space-y-3 animate-fade">
+                  {/* RIGHT: MAIN WORKSPACE */}
+                  <div className="flex-1 flex flex-col bg-white overflow-hidden p-4 sm:p-5 space-y-3">
                     
                     {/* THANH CÔNG CỤ ĐỊNH DẠNG PHONG CÁCH MICROSOFT WORD (WORD RIBBON TOOLBAR) */}
                     <div className="p-2 sm:p-2.5 rounded-2xl bg-white border border-slate-200 shadow-2xs flex flex-wrap items-center justify-between gap-2">
@@ -1359,14 +1325,14 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
                         </button>
                       </div>
 
-                      {/* Chuyển đổi chế độ trang giấy Word */}
-                      <div className="p-0.5 rounded-xl bg-slate-100 border border-slate-200 flex items-center gap-0.5 text-[11px] font-bold">
+                      {/* Chuyển đổi chế độ: Sửa Trực Tiếp vs Xem Trang In vs Mã Nguồn LaTeX Raw */}
+                      <div className="p-0.5 rounded-xl bg-slate-200/80 border border-slate-300 flex items-center gap-0.5 text-[11px] font-bold">
                         <button
                           type="button"
-                          onClick={() => setTheoryCanvasView('edit')}
-                          className={`px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 ${
-                            theoryCanvasView === 'edit'
-                              ? 'bg-white text-cyan-800 shadow-2xs font-extrabold'
+                          onClick={() => { setTheoryMode('visual'); setTheoryCanvasView('edit'); }}
+                          className={`px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
+                            theoryMode === 'visual' && theoryCanvasView === 'edit'
+                              ? 'bg-white text-cyan-900 shadow-2xs font-extrabold'
                               : 'text-slate-600 hover:text-slate-900'
                           }`}
                         >
@@ -1375,177 +1341,84 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
                         </button>
                         <button
                           type="button"
-                          onClick={() => setTheoryCanvasView('preview')}
-                          className={`px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 ${
-                            theoryCanvasView === 'preview'
+                          onClick={() => { setTheoryMode('visual'); setTheoryCanvasView('preview'); }}
+                          className={`px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
+                            theoryMode === 'visual' && theoryCanvasView === 'preview'
                               ? 'bg-white text-emerald-800 shadow-2xs font-extrabold'
                               : 'text-slate-600 hover:text-slate-900'
                           }`}
                         >
                           <Eye className="w-3 h-3 text-emerald-600" />
-                          <span>👁️ Xem Trang In / Học Sinh</span>
+                          <span>👁️ Trang In</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setTheoryMode('markdown')}
+                          className={`px-2 py-1 rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
+                            theoryMode === 'markdown'
+                              ? 'bg-slate-900 text-white shadow-2xs font-mono font-bold'
+                              : 'text-slate-600 hover:text-slate-900 font-mono'
+                          }`}
+                        >
+                          <Code2 className="w-3 h-3 text-slate-400" />
+                          <span>Raw</span>
                         </button>
                       </div>
                     </div>
 
-                    {/* TRANG TÀI LIỆU SOẠN THẢO TRỰC TIẾP (WORD DOCUMENT SHEET CANVAS) */}
-                    <div className="bg-white rounded-2xl border border-slate-300 shadow-md p-6 sm:p-8 min-h-[380px] flex flex-col space-y-4 relative transition-all">
-                      {theoryCanvasView === 'edit' ? (
-                        <>
-                          {/* THANH ĐIỀU HƯỚNG SUBMODE: KÝ HIỆU TRỰC QUAN WYSIWYG vs GÕ VĂN BẢN BÀN PHÍM */}
-                          <div className="flex flex-wrap items-center justify-between border-b border-cyan-100 pb-3 text-xs bg-gradient-to-r from-cyan-50/70 via-teal-50/50 to-indigo-50/50 p-3 rounded-2xl gap-2">
-                            <div className="flex items-center gap-2 text-cyan-950 font-bold">
-                              <span className="w-2.5 h-2.5 rounded-full bg-cyan-600 animate-pulse"></span>
-                              <span className="font-extrabold">
-                                {theorySubMode === 'wysiwyg'
-                                  ? 'Trang Soạn Thảo Ký Hiệu Trực Quan (WYSIWYG) • Hiển Thị Ký Hiệu Thực Tế'
-                                  : 'Chế Độ Gõ Nhanh Văn Bản Bằng Bàn Phím'}
-                              </span>
-                            </div>
-
-                            <div className="flex flex-wrap items-center gap-1.5">
-                              <button
-                                type="button"
-                                onClick={() => handleOpenFormulaBuilder('chemistry', 'theoryRecap')}
-                                className="px-3 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer"
-                              >
-                                <FlaskConical className="w-3.5 h-3.5 text-amber-300" />
-                                <span>🧪 Chèn Số Hóa Học & Tính</span>
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleOpenFormulaBuilder('fraction', 'theoryRecap')}
-                                className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer"
-                              >
-                                <Calculator className="w-3.5 h-3.5 text-amber-300" />
-                                <span>➗ Chèn Số Phân Số & Tính</span>
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setTheorySubMode(prev => prev === 'wysiwyg' ? 'text' : 'wysiwyg')}
-                                className={`px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 border transition-all cursor-pointer ${
-                                  theorySubMode === 'text'
-                                    ? 'bg-cyan-700 text-white border-cyan-800 shadow-2xs'
-                                    : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-300 shadow-2xs'
-                                }`}
-                              >
-                                <Edit3 className="w-3.5 h-3.5 text-cyan-500" />
-                                <span>{theorySubMode === 'wysiwyg' ? 'Gõ Văn Bản Bàn Phím' : 'Xem Ký Hiệu Thật'}</span>
-                              </button>
-                            </div>
-                          </div>
-
-                          {/* SUBMODE 1: WYSIWYG - SOẠN THẢO VÀ CHỈNH SỬA SỐ TRỰC TIẾP TRÊN CÔNG THỨC NHƯ WORD */}
-                          {theorySubMode === 'wysiwyg' ? (
-                            <div className="space-y-4">
-                              <WordStyleFormulaCanvas
-                                content={form.theoryRecap}
-                                onChange={(val) => setForm(prev => ({ ...prev, theoryRecap: val }))}
-                                isStem={isStem}
-                                accentColor="cyan"
-                                title="Trang Soạn Thảo Lý Thuyết WYSIWYG • Sửa Số Trực Tiếp Trên Công Thức"
-                                placeholder="Gõ lý thuyết nền tảng SGK tại đây. Bấm các nút ký hiệu để chèn phân số, số mũ, căn thức hoặc công thức hóa học và sửa số trực tiếp trên trang..."
-                              />
-                            </div>
-                          ) : (
-                            /* SUBMODE 2: GÕ VĂN BẢN BÀN PHÍM (TEXTAREA THUẦN) */
-                            <div className="space-y-2">
-                              <textarea
-                                ref={el => (textareaRefs.current['theoryRecap'] = el)}
-                                rows={12}
-                                value={form.theoryRecap}
-                                onFocus={() => setActiveFormulaTarget('theoryRecap')}
-                                onPaste={(e) => handlePasteEvent(e, 'theoryRecap')}
-                                onChange={(e) => setForm(prev => ({ ...prev, theoryRecap: e.target.value }))}
-                                placeholder="Gõ văn bản thường tại đây: Bấm các nút 'Chèn Số Hóa Học' hoặc 'Chèn Số Phân Số' ở trên để điền số và tính toán tự động..."
-                                className="w-full p-4 rounded-xl border border-slate-300 font-sans text-sm leading-relaxed text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 bg-slate-50/50 resize-y min-h-[260px]"
-                              />
-                              <div className="flex justify-between items-center text-[11px] text-slate-400">
-                                <span>Gõ xong có thể bấm nút <strong>"Xem Ký Hiệu Thật"</strong> ở trên để xem công thức toán/hóa học thực tế.</span>
-                                <button
-                                  type="button"
-                                  onClick={() => setTheorySubMode('wysiwyg')}
-                                  className="text-cyan-700 font-bold hover:underline"
-                                >
-                                  Quay lại xem ký hiệu thật
-                                </button>
-                              </div>
-                            </div>
-                          )}
-
-                          <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-[10.5px] text-slate-400 font-medium">
-                            <div className="flex items-center gap-3">
-                              <span>Số ký tự: <strong>{(form.theoryRecap || '').length}</strong></span>
-                              <span>•</span>
-                              <span>Số dòng: <strong>{(form.theoryRecap || '').split('\n').length}</strong></span>
-                            </div>
-                            <span className="text-slate-400 italic">Mẹo: Bấm "Xem Trang In / Học Sinh" ở trên để kiểm tra kết quả KaTeX thành phẩm</span>
-                          </div>
-                        </>
-                      ) : (
-                        <div className="space-y-4">
-                          <div className="flex items-center justify-between border-b border-emerald-100 pb-2.5">
-                            <div className="flex items-center gap-2">
-                              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                              <span className="text-xs font-black text-emerald-950 uppercase tracking-wider">
-                                Thành Phẩm Hiển Thị Trang In Sách Giáo Khoa (KaTeX Rendered)
-                              </span>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => setTheoryCanvasView('edit')}
-                              className="px-3 py-1 rounded-lg bg-cyan-600 hover:bg-cyan-700 text-white text-xs font-bold flex items-center gap-1 transition-colors shadow-2xs"
-                            >
-                              <Edit3 className="w-3 h-3" />
-                              <span>Quay lại sửa trực tiếp</span>
-                            </button>
-                          </div>
-
-                          {form.theoryRecap?.trim() ? (
-                            <div className="text-sm leading-relaxed text-slate-900 overflow-x-auto min-h-[200px] p-2">
-                              <MathText text={form.theoryRecap} />
-                            </div>
-                          ) : (
-                            <div className="p-12 text-center text-slate-400 text-xs italic bg-slate-50 rounded-xl border border-dashed border-slate-200">
-                              Chưa có nội dung lý thuyết. Bấm nút "Quay lại sửa trực tiếp" ở trên để gõ bài giảng.
-                            </div>
-                          )}
+                    {/* CONTENT BODY */}
+                    {theoryMode === 'markdown' ? (
+                      /* RAW LATEX TEXTAREA */
+                      <div className="space-y-2 flex-1 flex flex-col">
+                        <div className="flex items-center justify-between text-xs font-bold text-slate-700">
+                          <span>Mã nguồn LaTeX & Markdown thuần:</span>
+                          <span className="text-slate-400 font-mono">{(form.theoryRecap || '').length} ký tự</span>
                         </div>
-                      )}
+                        <textarea
+                          ref={el => (textareaRefs.current['theoryRecap'] = el)}
+                          rows={14}
+                          value={form.theoryRecap}
+                          onFocus={() => setActiveFormulaTarget('theoryRecap')}
+                          onChange={(e) => setForm(prev => ({ ...prev, theoryRecap: e.target.value }))}
+                          placeholder="Dán toàn bộ mã nguồn Markdown / LaTeX trực tiếp từ ChatGPT, Gemini hoặc AI Engine tại đây..."
+                          className="w-full flex-1 p-4 rounded-xl border border-slate-300 font-mono text-xs leading-relaxed focus:outline-none focus:ring-2 focus:ring-cyan-500 bg-slate-900 text-emerald-400 shadow-inner"
+                        />
+                      </div>
+                    ) : theoryCanvasView === 'preview' ? (
+                      /* PREVIEW PRINT SHEET */
+                      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8 min-h-[380px] overflow-x-auto">
+                        <div className="flex items-center justify-between border-b border-slate-100 pb-2 mb-4">
+                          <span className="text-xs font-black text-emerald-700 uppercase tracking-wider">Trang In Giáo Khoa KaTeX (Học Sinh Thấy)</span>
+                        </div>
+                        {form.theoryRecap?.trim() ? (
+                          <div className="text-sm leading-relaxed text-slate-900 overflow-x-auto min-h-[200px] p-2">
+                            <MathText text={form.theoryRecap} />
+                          </div>
+                        ) : (
+                          <div className="p-12 text-center text-slate-400 text-xs italic bg-slate-50 rounded-xl border border-dashed border-slate-200">
+                            Chưa có nội dung lý thuyết. Chuyển sang "Sửa Trực Tiếp" để nhập nội dung.
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      /* WYSIWYG CANVAS */
+                      <WordStyleFormulaCanvas
+                        content={form.theoryRecap}
+                        onChange={(val) => setForm(prev => ({ ...prev, theoryRecap: val }))}
+                        isStem={isStem}
+                        accentColor="cyan"
+                        placeholder="Gõ lý thuyết nền tảng SGK tại đây. Nhấp các ký hiệu ở thanh công cụ bên trái để chèn công thức, nhấp vào công thức để sửa số trực tiếp..."
+                      />
+                    )}
+
+                    {/* FOOTER STATS */}
+                    <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-[10.5px] text-slate-400 font-medium">
+                      <span>Số ký tự: <strong>{(form.theoryRecap || '').length}</strong></span>
+                      <span className="italic">💡 Mẹo: Nhấp chuột vào bất kỳ công thức nào để sửa số tại chỗ mà không làm nhảy dòng.</span>
                     </div>
 
                   </div>
-                )}
-
-                {/* MODE 2: MÃ NGUỒN LATEX THUẦN CHUYÊN DỤNG (DÀNH CHO AI & COPY-PASTE) */}
-                {theoryMode === 'markdown' && (
-                  <div className="space-y-2 animate-fade">
-                    <div className="flex items-center justify-between text-xs font-bold text-slate-700">
-                      <span>Mã nguồn LaTeX & Markdown thuần (Dành riêng cho việc copy / paste toàn văn từ ChatGPT, Gemini):</span>
-                      <span className="text-slate-400 font-mono">{(form.theoryRecap || '').length} ký tự</span>
-                    </div>
-                    <textarea
-                      ref={el => (textareaRefs.current['theoryRecap'] = el)}
-                      rows={14}
-                      value={form.theoryRecap}
-                      onFocus={() => setActiveFormulaTarget('theoryRecap')}
-                      onChange={(e) => setForm(prev => ({ ...prev, theoryRecap: e.target.value }))}
-                      placeholder="Dán toàn bộ mã nguồn Markdown / LaTeX trực tiếp từ ChatGPT, Gemini hoặc AI Engine tại đây..."
-                      className="w-full p-4 rounded-2xl border border-slate-300 font-mono text-xs leading-relaxed focus:outline-none focus:ring-2 focus:ring-cyan-500 bg-slate-900 text-emerald-400 shadow-inner"
-                    />
-                    <div className="flex justify-between items-center pt-1">
-                      <span className="text-[11px] text-slate-500">Mã nguồn sẽ tự động đồng bộ sang Trình Soạn Thảo Trực Tiếp Như Word khi chuyển tab.</span>
-                      <button
-                        type="button"
-                        onClick={() => setTheoryMode('visual')}
-                        className="px-3.5 py-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all"
-                      >
-                        <PenTool className="w-3.5 h-3.5" />
-                        <span>Mở Trình Soạn Thảo Trực Tiếp (Như Word)</span>
-                      </button>
-                    </div>
-                  </div>
-                )}
+                </div>
               </div>
             )}
 
@@ -1572,59 +1445,21 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
                   </button>
                 </div>
 
-                {/* STEM KaTeX Virtual Palette for Khối 2 */}
-                <MathFormulaPalette
-                  activeCategory={mathCategory}
-                  onSelectCategory={setMathCategory}
-                  onInsert={handleInsertMath}
-                  onOpenBuilder={handleOpenFormulaBuilder}
-                  activeTarget={activeFormulaTarget || 'solutionMethod'}
-                  onSelectTarget={setActiveFormulaTarget}
-                  accentColor="amber"
-                />
+                {/* 2-COLUMN UNIFIED WORKSPACE: HIERARCHICAL SIDEBAR (LEFT) + WORD CANVAS (RIGHT) */}
+                <div className="flex flex-col lg:flex-row items-stretch rounded-2xl border border-slate-200 overflow-hidden bg-slate-50 shadow-sm min-h-[580px]">
+                  
+                  {/* LEFT: HIERARCHICAL FORMULA TOOLBAR SIDEBAR */}
+                  <HierarchicalMathPalette
+                    isCollapsed={isPaletteCollapsed}
+                    onToggleCollapse={() => setIsPaletteCollapsed(prev => !prev)}
+                    activeTarget="solutionMethod"
+                    onInsertSnippet={(target, snippet) => handleInsertMath(target, snippet, false)}
+                  />
 
-                {/* Dual-Mode Selector for Khối 2 */}
-                <div className="flex items-center justify-between p-1.5 rounded-2xl bg-slate-100 border border-slate-200">
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => setMethodMode('visual')}
-                      className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${
-                        methodMode === 'visual'
-                          ? 'bg-white text-amber-900 shadow-sm border border-slate-200/80 font-black'
-                          : 'text-slate-600 hover:text-slate-900'
-                      }`}
-                    >
-                      <Edit3 className="w-3.5 h-3.5 text-amber-600" />
-                      <span>Trình Soạn Thảo Trực Tiếp (Như Word)</span>
-                      <span className="px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-800 text-[10px] font-black">Khuyên dùng</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setMethodMode('markdown')}
-                      className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${
-                        methodMode === 'markdown'
-                          ? 'bg-white text-slate-900 shadow-sm border border-slate-200/80 font-black'
-                          : 'text-slate-600 hover:text-slate-900'
-                      }`}
-                    >
-                      <Code2 className="w-3.5 h-3.5 text-slate-600" />
-                      <span>⚡ Trang Mã Nguồn LaTeX Thuần (Dành Cho AI)</span>
-                      <span className="px-1.5 py-0.5 rounded-md bg-slate-200 text-slate-700 text-[10px] font-mono">Raw</span>
-                    </button>
-                  </div>
-                  <span className="text-[11px] text-slate-500 font-medium hidden sm:inline">
-                    {methodMode === 'visual' ? 'Soạn thảo & gõ sửa trực tiếp trên trang tài liệu' : 'Trang riêng biệt cho mã nguồn LaTeX dán từ ChatGPT / Gemini'}
-                  </span>
-                </div>
-
-                {/* MODE 1: TRÌNH SOẠN THẢO TRỰC TIẾP NHƯ WORD CHO KHỐI 2 */}
-                {methodMode === 'visual' && (
-                  <div className="space-y-6 animate-fade">
-                    {/* 1. Quy trình thuật toán giải */}
-                    <div className="space-y-3">
-                      {/* THANH CÔNG CỤ WORD RIBBON TOOLBAR CHO QUY TRÌNH GIẢI */}
-                      <div className="bg-gradient-to-r from-slate-50 via-white to-slate-50 border border-slate-200 rounded-2xl p-2.5 flex flex-wrap items-center justify-between gap-2 shadow-2xs">
+                  {/* RIGHT: MAIN WORKSPACE */}
+                  <div className="flex-1 flex flex-col bg-white overflow-hidden p-4 sm:p-5 space-y-4">
+                    {/* THANH CÔNG CỤ WORD RIBBON TOOLBAR CHO QUY TRÌNH GIẢI */}
+                    <div className="bg-gradient-to-r from-slate-50 via-white to-slate-50 border border-slate-200 rounded-2xl p-2.5 flex flex-wrap items-center justify-between gap-2 shadow-2xs">
                         {/* Nhóm 1: Định dạng chữ & Tiêu đề như Word */}
                         <div className="flex items-center gap-1 border-r border-slate-200 pr-2">
                           <button
@@ -1746,14 +1581,14 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
                           </button>
                         </div>
 
-                        {/* Nhóm 3: Chuyển đổi chế độ trang giấy Word */}
-                        <div className="p-0.5 rounded-xl bg-slate-100 border border-slate-200 flex items-center gap-0.5 text-[11px] font-bold">
+                        {/* Nhóm 3: Chuyển đổi chế độ: Sửa Trực Tiếp vs Xem Trang In vs Mã Nguồn LaTeX Raw */}
+                        <div className="p-0.5 rounded-xl bg-slate-200/80 border border-slate-300 flex items-center gap-0.5 text-[11px] font-bold">
                           <button
                             type="button"
-                            onClick={() => setMethodCanvasView('edit')}
-                            className={`px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 ${
-                              methodCanvasView === 'edit'
-                                ? 'bg-white text-amber-800 shadow-2xs font-extrabold'
+                            onClick={() => { setMethodMode('visual'); setMethodCanvasView('edit'); }}
+                            className={`px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
+                              methodMode === 'visual' && methodCanvasView === 'edit'
+                                ? 'bg-white text-amber-900 shadow-2xs font-extrabold'
                                 : 'text-slate-600 hover:text-slate-900'
                             }`}
                           >
@@ -1762,144 +1597,62 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
                           </button>
                           <button
                             type="button"
-                            onClick={() => setMethodCanvasView('preview')}
-                            className={`px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 ${
-                              methodCanvasView === 'preview'
+                            onClick={() => { setMethodMode('visual'); setMethodCanvasView('preview'); }}
+                            className={`px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
+                              methodMode === 'visual' && methodCanvasView === 'preview'
                                 ? 'bg-white text-emerald-800 shadow-2xs font-extrabold'
                                 : 'text-slate-600 hover:text-slate-900'
                             }`}
                           >
                             <Eye className="w-3 h-3 text-emerald-600" />
-                            <span>👁️ Xem Trang In / Học Sinh</span>
+                            <span>👁️ Trang In</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setMethodMode('markdown')}
+                            className={`px-2 py-1 rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
+                              methodMode === 'markdown'
+                                ? 'bg-slate-900 text-white shadow-2xs font-mono font-bold'
+                                : 'text-slate-600 hover:text-slate-900 font-mono'
+                            }`}
+                          >
+                            <Code2 className="w-3 h-3 text-slate-400" />
+                            <span>Raw</span>
                           </button>
                         </div>
                       </div>
 
-                      {/* TRANG TÀI LIỆU SOẠN THẢO TRỰC TIẾP (WORD DOCUMENT SHEET CANVAS) */}
-                      <div className="bg-white rounded-2xl border border-slate-300 shadow-md p-6 sm:p-8 min-h-[350px] flex flex-col space-y-4 relative transition-all">
-                        {methodCanvasView === 'edit' ? (
-                          <>
-                            {/* THANH ĐIỀU HƯỚNG SUBMODE: KÝ HIỆU TRỰC QUAN WYSIWYG vs GÕ VĂN BẢN BÀN PHÍM */}
-                            <div className="flex flex-wrap items-center justify-between border-b border-amber-100 pb-3 text-xs bg-gradient-to-r from-amber-50/70 via-orange-50/50 to-teal-50/50 p-3 rounded-2xl gap-2">
-                              <div className="flex items-center gap-2 text-amber-950 font-bold">
-                                <span className="w-2.5 h-2.5 rounded-full bg-amber-600 animate-pulse"></span>
-                                <span className="font-extrabold">
-                                  {methodSubMode === 'wysiwyg'
-                                    ? 'Trang Quy Trình Giải Ký Hiệu Trực Quan (WYSIWYG) • Hiển Thị Ký Hiệu Thực Tế'
-                                    : 'Chế Độ Gõ Nhanh Quy Trình Giải Bằng Bàn Phím'}
-                                </span>
-                              </div>
-
-                              <div className="flex flex-wrap items-center gap-1.5">
-                                <button
-                                  type="button"
-                                  onClick={() => handleOpenFormulaBuilder('chemistry', 'solutionMethod')}
-                                  className="px-3 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer"
-                                >
-                                  <FlaskConical className="w-3.5 h-3.5 text-amber-300" />
-                                  <span>🧪 Chèn Số Hóa Học & Tính</span>
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleOpenFormulaBuilder('fraction', 'solutionMethod')}
-                                  className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer"
-                                >
-                                  <Calculator className="w-3.5 h-3.5 text-amber-300" />
-                                  <span>➗ Chèn Số Phân Số & Tính</span>
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => setMethodSubMode(prev => prev === 'wysiwyg' ? 'text' : 'wysiwyg')}
-                                  className={`px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 border transition-all cursor-pointer ${
-                                    methodSubMode === 'text'
-                                      ? 'bg-amber-700 text-white border-amber-800 shadow-2xs'
-                                      : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-300 shadow-2xs'
-                                  }`}
-                                >
-                                  <Edit3 className="w-3.5 h-3.5 text-amber-500" />
-                                  <span>{methodSubMode === 'wysiwyg' ? 'Gõ Văn Bản Bàn Phím' : 'Xem Ký Hiệu Thật'}</span>
-                                </button>
-                              </div>
-                            </div>
-
-                            {/* SUBMODE 1: WYSIWYG - SOẠN THẢO VÀ CHỈNH SỬA SỐ TRỰC TIẾP TRÊN CÔNG THỨC NHƯ WORD */}
-                            {methodSubMode === 'wysiwyg' ? (
-                              <div className="space-y-4">
-                                <WordStyleFormulaCanvas
-                                  content={form.solutionMethod}
-                                  onChange={(val) => setForm(prev => ({ ...prev, solutionMethod: val }))}
-                                  isStem={isStem}
-                                  accentColor="amber"
-                                  title="Trang Soạn Thảo Quy Trình Giải WYSIWYG • Sửa Số Trực Tiếp Trên Công Thức"
-                                  placeholder="Gõ quy trình giải và các bước thuật toán tại đây. Bấm các nút ký hiệu để chèn phân số, số mũ, căn thức hoặc công thức hóa học và sửa số trực tiếp trên trang..."
-                                />
-                              </div>
-                            ) : (
-                              /* SUBMODE 2: GÕ VĂN BẢN BÀN PHÍM */
-                              <div className="space-y-2">
-                                <textarea
-                                  ref={el => (textareaRefs.current['solutionMethod'] = el)}
-                                  rows={12}
-                                  value={form.solutionMethod}
-                                  onFocus={() => setActiveFormulaTarget('solutionMethod')}
-                                  onPaste={(e) => handlePasteEvent(e, 'solutionMethod')}
-                                  onChange={(e) => setForm(prev => ({ ...prev, solutionMethod: e.target.value }))}
-                                  placeholder="Nhập các bước giải trực tiếp tại đây: Gõ văn bản thường, bấm các nút trên thanh công cụ để chèn công thức toán, hoặc nhấn Ctrl+V để dán ảnh minh họa..."
-                                  className="w-full p-4 rounded-xl border border-slate-300 font-sans text-sm leading-relaxed text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500 bg-slate-50/50 resize-y min-h-[260px]"
-                                />
-                                <div className="flex justify-between items-center text-[11px] text-slate-400">
-                                  <span>Gõ xong có thể bấm nút <strong>"Xem Ký Hiệu Thật"</strong> ở trên để xem công thức toán học/hóa học thực tế.</span>
-                                  <button
-                                    type="button"
-                                    onClick={() => setMethodSubMode('wysiwyg')}
-                                    className="text-amber-700 font-bold hover:underline"
-                                  >
-                                    Quay lại xem ký hiệu thật
-                                  </button>
-                                </div>
-                              </div>
-                            )}
-
-                            <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-[10.5px] text-slate-400 font-medium">
-                              <div className="flex items-center gap-3">
-                                <span>Số ký tự: <strong>{(form.solutionMethod || '').length}</strong></span>
-                                <span>•</span>
-                                <span>Số dòng: <strong>{(form.solutionMethod || '').split('\n').length}</strong></span>
-                              </div>
-                              <span className="text-slate-400 italic">Mẹo: Bấm "Xem Trang In / Học Sinh" ở trên để kiểm tra kết quả KaTeX thành phẩm</span>
-                            </div>
-                          </>
-                        ) : (
-                          <div className="space-y-4">
-                            <div className="flex items-center justify-between border-b border-emerald-100 pb-2.5">
-                              <div className="flex items-center gap-2">
-                                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                                <span className="text-xs font-black text-emerald-950 uppercase tracking-wider">
-                                  Thành Phẩm Hiển Thị Quy Trình Giải (KaTeX Rendered)
-                                </span>
-                              </div>
-                              <button
-                                type="button"
-                                onClick={() => setMethodCanvasView('edit')}
-                                className="px-3 py-1 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold flex items-center gap-1 transition-colors shadow-2xs"
-                              >
-                                <Edit3 className="w-3 h-3" />
-                                <span>Quay lại sửa trực tiếp</span>
-                              </button>
-                            </div>
-
-                            {form.solutionMethod?.trim() ? (
-                              <div className="text-sm leading-relaxed text-slate-900 overflow-x-auto min-h-[180px] p-2">
-                                <MathText text={form.solutionMethod} />
-                              </div>
-                            ) : (
-                              <div className="p-12 text-center text-slate-400 text-xs italic bg-slate-50 rounded-xl border border-dashed border-slate-200">
-                                Chưa có quy trình giải. Bấm nút "Quay lại sửa trực tiếp" ở trên hoặc "Nạp mẫu chuẩn 4 bước" để gõ bài giảng.
-                              </div>
-                            )}
+                    {/* VISUAL WORKSPACE FOR KHỐI 2 */}
+                    {methodMode !== 'markdown' && (
+                      <div className="space-y-6 animate-fade">
+                        {/* 1. Quy trình thuật toán giải */}
+                        <div className="space-y-3">
+                          {methodCanvasView === 'preview' ? (
+                        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8 min-h-[350px] overflow-x-auto">
+                          <div className="flex items-center justify-between border-b border-emerald-100 pb-2 mb-4">
+                            <span className="text-xs font-black text-emerald-800 uppercase tracking-wider">
+                              Trang In Quy Trình Giải KaTeX (Học Sinh Thấy)
+                            </span>
                           </div>
-                        )}
-                      </div>
+                          {form.solutionMethod?.trim() ? (
+                            <div className="text-sm leading-relaxed text-slate-900 overflow-x-auto min-h-[180px] p-2">
+                              <MathText text={form.solutionMethod} />
+                            </div>
+                          ) : (
+                            <div className="p-12 text-center text-slate-400 text-xs italic bg-slate-50 rounded-xl border border-dashed border-slate-200">
+                              Chưa có quy trình giải. Chuyển sang "Sửa Trực Tiếp" hoặc "Nạp mẫu chuẩn 4 bước" để gõ bài giảng.
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <WordStyleFormulaCanvas
+                          content={form.solutionMethod}
+                          onChange={(val) => setForm(prev => ({ ...prev, solutionMethod: val }))}
+                          isStem={isStem}
+                          accentColor="amber"
+                          placeholder="Gõ quy trình giải và các bước thuật toán tại đây. Nhấp các ký hiệu ở thanh công cụ bên trái để chèn công thức, nhấp vào công thức để sửa số trực tiếp..."
+                        />
+                      )}
                     </div>
 
                     {/* 2. Bẫy đề thi ĐGNL - Thẻ Cảnh Báo Sư Phạm Trực Tiếp */}
@@ -2047,7 +1800,9 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
                   </div>
                 )}
               </div>
-            )}
+            </div>
+          </div>
+        )}
 
             {/* ================= SECTION: KHỐI 3 - VIDEO BÀI GIẢNG & TIMESTAMPS ================= */}
             {activeSection === 'video' && (
@@ -2223,16 +1978,7 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
                     </span>
                   </div>
 
-                  {/* STEM KaTeX Virtual Palette for Khối 4 */}
-                  <MathFormulaPalette
-                    activeCategory={mathCategory}
-                    onSelectCategory={setMathCategory}
-                    onInsert={handleInsertMath}
-                    onOpenBuilder={handleOpenFormulaBuilder}
-                    activeTarget={activeFormulaTarget === 'sampleExplanation' ? 'sampleExplanation' : 'sampleQuestion'}
-                    onSelectTarget={setActiveFormulaTarget}
-                    accentColor="indigo"
-                  />
+                  {/* STEM Helpers are embedded directly on question & explanation headers */}
 
                   <div className="space-y-1.5">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">

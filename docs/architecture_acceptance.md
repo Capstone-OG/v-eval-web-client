@@ -425,8 +425,21 @@ V-Eval-Web_Client/
 - **1-Click Ribbon Equation Inserter**:
   - Top Ribbon provides 1-click template insertion: `➗ Phân Số & Số (12/4)`, `a/b Phân Số Đại Số`, `√16 Căn Bậc Hai`, `x² Số Mũ`, `🧪 Nồng Độ CM (n/V)`, `💧 C%`, `🎯 Đạo Hàm Số Gia SGK`, `📋 Hệ PT`.
   - Inserts directly into the document canvas at cursor position and immediately focuses the active slots for zero-friction editing.
-- **Bidirectional Serialization & Studio Integration**:
-  - Automatically serializes document tokens into standard Markdown/LaTeX strings, fully synchronized with raw source mode, KaTeX student preview, and PostgreSQL database storage across both Khối 1 (`theoryRecap`) and Khối 2 (`solutionMethod`).
+### 4.36. Hierarchical Math & Science Palette Sidebar, Single-Version Toolbar Consolidation, and Inline Equation Line-Flow Engine (`HierarchicalMathPalette.jsx`, `WordStyleFormulaCanvas.jsx`, `CurriculumStudioEditor.jsx`)
+- **Single-Version Tooling Rule & Clutter Elimination**:
+  - Completely purged duplicate toolbars that created visual fatigue (top math palette, ribbon duplicates, submode action bar with redundant fraction/chemistry buttons, and canvas-internal toolbars).
+  - Established a singular, streamlined Microsoft Word-style Ribbon at the top of the canvas, housing a clean 3-view switcher (`✍️ Sửa Trực Tiếp`, `👁️ Trang In`, `Raw`).
+- **3-Tier Hierarchical Collapsible Left Sidebar (`HierarchicalMathPalette.jsx`)**:
+  - Replaced horizontal palettes with an ergonomic, subject-categorized left sidebar:
+    - **Domain Tier**: Mathematics (📐), Chemistry (🧪), Physics (⚡), Special Mathematical Symbols (🔣).
+    - **Category Tier**: Subject-specific classifications (Chemistry: Solution Concentration, Oxidation States & Ions, Reaction Arrows; Math: Algebra, Calculus, Exponents, Geometry, Trigonometry, Probability; Symbols: Greek Alphabet, Operators & Relations).
+    - **Chip Tier**: High-density KaTeX rendered chips with 1-click document canvas injection.
+  - **Responsive Collapsibility**: Collapses into an ultra-slim 44px (`w-11`) vertical rail with tooltips, allowing the editor canvas to expand to full width on demand.
+- **Natural Paragraph Token Flow & Footprint Optimization (`WordStyleFormulaCanvas.jsx`)**:
+  - *Root Cause Analysis*: The prior container-level `flex flex-wrap items-baseline` layout combined with oversized badge styling (`px-2 py-0.5 mx-1.5 border-2`) resulted in erratic line-wrapping, disproportionate line heights, and isolated punctuation marks (e.g. periods dropping to new lines following $H_2SO_4$ or oxidation numbers).
+  - *Line & Paragraph Tokenizer*: Redesigned with a dedicated line/paragraph tokenizer (`tokenizeLine`, `parseDocumentLines`, `serializeDocumentLines`). Text segments, inline KaTeX chips, and interactive slots flow inside standard `<div className="text-[13.5px] leading-relaxed my-0.5">` paragraphs.
+  - *Compact Typographic Footprint*: Reduced idle formula footprint to `text-[13.5px]`, `px-0.5 py-0 mx-0.5`, with subtle hairline dashed underlines, preserving natural typographic rhythm and textbook line-height without line-hopping.
+  - *Natural Editing Gestures*: Enter key paragraph splitting and footer newline injection (`+ Thêm dòng mới`) seamlessly integrated.
 
 ---
 
