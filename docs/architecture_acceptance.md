@@ -389,23 +389,22 @@ V-Eval-Web_Client/
     - **Resolution of Inappropriate $X$ Variable Injection (`handleAddAiPracticeQuestions`)**:
       - Identified root cause where clicking `+ AI Tạo Thêm 2 Bài Mẫu` relied on a static fallback template using chemical/quantitative equations ($X = 2.07$, conservation laws, algebraic reduction).
       - Re-architected `handleAddAiPracticeQuestions` with domain detection (`isMathOrStemDomain`): for Literature and Social Sciences, dynamically generates Bloom L3 and L4 items centered on thematic thesis formulation, rhetorical evidence synthesis, artistic critique, and humanistic philosophy, thoroughly purging all mathematical variables.
-### 4.34. Adaptive Pattern-Contextual Question Generation Architecture (`CurriculumExplorerView.jsx`, `aiService.js`)
-- **Architectural Motivation**:
-  - The feature `+ AI Tạo Thêm 2 Bài Mẫu` in the Panoramic Workspace previously relied on generic templates. Users rightfully expected dynamically generated questions to directly exercise the exact pattern, literary works, and problem-solving steps being displayed.
+### 4.34. Adaptive Pattern-Contextual Question Generation Architecture & Zero-Hardcode Anti-Duplication (`CurriculumExplorerView.jsx`, `aiService.js`)
+- **Architectural Motivation & Elimination of Hardcoded Heuristics**:
+  - The feature `+ AI Tạo Thêm 2 Bài Mẫu` in the Panoramic Workspace previously relied on client-side heuristic fallbacks, which caused repeated question generation when the user clicked multiple times.
+  - In alignment with V-Eval's 100% Real-Data Architecture, all client-side mock generators (`extractPatternPedagogicalContext`) were completely eliminated. If an API issue occurs, the system surfaces genuine diagnostic errors rather than injecting synthetic static data.
 - **Full-Context AI Engine Integration (`POST /api/ai-engine/curriculum/generate-questions`)**:
   - When the user clicks the action button, `CurriculumExplorerView.jsx` dispatches a payload encapsulating the complete pedagogical context:
     - `pattern_name`: Name of the active pattern under analysis.
-    - `lesson_name`: Active lesson title.
+    - `lesson_name`: Active lesson title safely retrieved from `previewSelectedLessonKey` or `targetPattern.lessonName`.
     - `domain_name`: Specific subject domain (e.g., "Ngữ văn", "Toán học").
     - `theory_recap`: Theoretical background, definitions, and excerpted literary works.
     - `solution_method`: Algorithmic or analytical steps, examples, and strategies.
     - `count`: Desired number of practice questions (default 2).
-  - Gemini LLM processes the full theoretical and methodological context to synthesize authentic Bloom L3/L4 items referencing the exact literary works, authors, and analytical strategies.
-- **Resilient Client-Side Pedagogical Extractor (`extractPatternPedagogicalContext`)**:
-  - To guarantee zero-downtime and high fidelity in intermittent connectivity scenarios, an intelligent AST-like heuristic regex extractor mines:
-    - Quoted literary titles (e.g., `'Sang thu'` by Hữu Thỉnh, `'Viếng lăng Bác'` by Viễn Phương).
-    - Authors, thesis problems, analytical scopes, and methodology steps.
-  - Fallback generation strictly models these extracted tokens into tailored multiple-choice items, ensuring 100% thematic cohesion with the analyzed pattern.
+    - `existing_questions`: Array of already generated question prompts to enforce anti-duplication.
+- **Anti-Duplication Prompting & High-Creativity Temperature**:
+  - Google Gemini receives the list of existing questions along with an explicit constraint barring reuse of prior prompts or literary excerpts.
+  - Temperature was adjusted to `0.7` to ensure distinct, authentic questions across consecutive button presses.
 - **Interactive UX & Focus Choreography**:
   - Features asynchronous loading state `isGeneratingPracticeQuestions` with spinning loader and disabled click guards.
   - Automatically activates the newly appended question card (`activeQuestionIndex`) and re-calculates the question count badge.

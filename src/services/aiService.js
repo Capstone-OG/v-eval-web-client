@@ -196,6 +196,7 @@ export const aiService = {
    * @param {string} [payload.theoryRecap] - Lý thuyết & ví dụ của dạng bài
    * @param {string} [payload.solutionMethod] - Phương pháp giải & bài toán mẫu của dạng bài
    * @param {number} [payload.count=2] - Số lượng câu hỏi muốn sinh
+   * @param {Array<string>} [payload.existingQuestions=[]] - Danh sách đề bài các câu hỏi đã có để AI chống trùng lặp
    * @returns {Promise<{questions: Array<object>, processing_time_seconds: number}>}
    */
   async generatePatternQuestions({
@@ -204,7 +205,8 @@ export const aiService = {
     domainName = '',
     theoryRecap = '',
     solutionMethod = '',
-    count = 2
+    count = 2,
+    existingQuestions = []
   }) {
     const body = {
       pattern_name: patternName,
@@ -212,7 +214,8 @@ export const aiService = {
       domain_name: domainName,
       theory_recap: theoryRecap,
       solution_method: solutionMethod,
-      count
+      count,
+      existing_questions: existingQuestions
     };
     const response = await apiClient.post('/api/ai-engine/curriculum/generate-questions', body);
     return response.data;

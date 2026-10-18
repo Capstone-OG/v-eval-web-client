@@ -32,15 +32,15 @@
     + Mở rộng regex nhận diện cả icon `📄` và tiêu đề Ngữ văn `### 💡 Mẹo tư duy & Chiến thuật làm bài:`.
 
 - **Sinh Câu Hỏi Rèn Luyện Thích Ứng Bám Sát 100% Tri Thức Dạng Bài Đang Phân Tích (`CurriculumExplorerView.jsx` & `aiService.js`)**:
-  - *Kết Nối Trực Tiếp Backend AI Engine (`POST /api/ai-engine/curriculum/generate-questions`)*:
-    + Loại bỏ hoàn toàn cơ chế sinh câu hỏi cứng hoặc ngẫu nhiên khi nhấn `+ AI Tạo Thêm 2 Bài Mẫu`.
-    + Đấu nối trực tiếp `aiService.generatePatternQuestions` gửi toàn bộ dữ liệu ngữ cảnh của dạng bài hiện hành: `pattern_name`, `lesson_name`, `domain_name`, `theory_recap`, `solution_method` và số lượng câu cần sinh (`count: 2`).
-    + Tự động hiển thị trạng thái đang xử lý (`isGeneratingPracticeQuestions`) với biểu tượng spinner xoay và vô hiệu hóa nút bấm để ngăn bấm lặp.
-  - *Bộ Bóc Tách Sư Phạm Thông Minh Phía Client (`extractPatternPedagogicalContext`)*:
-    + Tự động quét và trích xuất tên tác phẩm văn học trong dấu ngoặc kép (ví dụ `'Sang thu'` của Hữu Thỉnh, `'Viếng lăng Bác'` của Viễn Phương, `'Ánh trăng'` của Nguyễn Duy...), tác giả, vấn đề nghị luận trọng tâm, phạm vi dẫn chứng và các bước giải cụ thể từ nội dung `theory_recap` và `solution_method`.
-    + Khi xảy ra sự cố mạng ngoại tuyến, hệ thống kích hoạt cơ chế sinh thông minh dự phòng bám sát 100% ngữ cảnh đã trích xuất, tạo ra đúng 2 câu hỏi rèn luyện L3 & L4 xoay quanh chính tác phẩm và phương pháp nghị luận đang phân tích, loại bỏ hoàn toàn các câu hỏi chung chung.
+  - *Kết Nối Trực Tiếp Backend AI Engine & Triệt Tiêu 100% Hardcode / Fallback*:
+    + Loại bỏ hoàn toàn toàn bộ mã lệnh hardcode và hàm fallback giả lập (`extractPatternPedagogicalContext`), tuân thủ triệt để nguyên tắc Dữ liệu thật 100% của hệ thống V-Eval.
+    + Khắc phục triệt để lỗi tham chiếu biến `selectedLesson` chưa được khai báo trong Panoramic Workspace khiến hàm nhảy vào khối catch; chuẩn hóa trích xuất `currentLessonName` an toàn từ `previewSelectedLessonKey` và `targetPattern.lessonName`.
+    + Đấu nối trực tiếp `aiService.generatePatternQuestions` gửi toàn bộ dữ liệu ngữ cảnh: `pattern_name`, `lesson_name`, `domain_name`, `theory_recap`, `solution_method`, `count: 2`, và danh sách đề bài các câu hỏi đã có (`existing_questions`).
+  - *Cơ Chế Chống Trùng Lặp Khi Bấm Tạo Nhiều Lần (Anti-Duplication Prompting)*:
+    + Thu thập danh sách câu hỏi hiện có trong dạng bài và chuyển giao cho AI Engine; Gemini được chỉ thị bắt buộc khai thác các trích đoạn, khía cạnh cảm thụ hoặc góc độ bài tập mới, không bao giờ lặp lại câu hỏi cũ khi người dùng nhấn tạo nhiều lần.
   - *Tự Động Chọn & Cuộn Đến Câu Hỏi Vừa Sinh*:
-    + Khi 2 câu hỏi mới được thêm vào ngân hàng câu hỏi của dạng bài, hệ thống tự động cập nhật số lượng badge câu hỏi và chuyển `activeQuestionIndex` đến ngay câu hỏi vừa được sinh để giáo viên/học sinh kiểm tra và tương tác tức thì.
+    + Khi 2 câu hỏi mới từ Gemini được thêm vào ngân hàng câu hỏi của dạng bài, hệ thống tự động cập nhật số lượng badge câu hỏi và chuyển `activeQuestionIndex` đến ngay câu hỏi vừa được sinh để giáo viên/học sinh kiểm tra và tương tác tức thì.
+    + Nếu AI Engine gặp sự cố mạng hoặc lỗi xử lý, hệ thống hiển thị thông báo lỗi minh thị (alert/toast) thay vì ngụy tạo câu hỏi giả.
 
 - **Kiểm Thử Đóng Gói (Build Verification)**:
   - `npm run build` thành công 100% (**0 Error, 0 Warning**, hoàn thành trong 2.30s trên Vite 8 và React 19).
