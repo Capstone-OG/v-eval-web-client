@@ -233,15 +233,57 @@ export const MATH_CATEGORIES = {
   }
 };
 
+/**
+ * Helper to determine whether a domain is STEM/Math (using Casio) vs Literature/Social (no Casio)
+ */
+export function isMathOrStemDomain(domain) {
+  if (!domain) return false;
+  const name = typeof domain === 'string' ? domain : (domain.title || domain.name || domain.domainName || domain.domainCode || '');
+  const lower = name.toLowerCase();
+  if (
+    lower.includes('văn') ||
+    lower.includes('ngữ') ||
+    lower.includes('tiếng việt') ||
+    lower.includes('ngoại ngữ') ||
+    lower.includes('tiếng anh') ||
+    lower.includes('english') ||
+    lower.includes('sử') ||
+    lower.includes('địa') ||
+    lower.includes('lịch sử') ||
+    lower.includes('địa lí') ||
+    lower.includes('địa lý') ||
+    lower.includes('triết') ||
+    lower.includes('xã hội') ||
+    lower.includes('định tính')
+  ) {
+    return false;
+  }
+  if (
+    lower.includes('toán') ||
+    lower.includes('math') ||
+    lower.includes('lý') ||
+    lower.includes('lí') ||
+    lower.includes('physics') ||
+    lower.includes('hóa') ||
+    lower.includes('chem') ||
+    lower.includes('sinh') ||
+    lower.includes('bio') ||
+    lower.includes('định lượng')
+  ) {
+    return true;
+  }
+  return false;
+}
+
 export function parseTheoryRecapSections(rawTheory) {
   if (!rawTheory) return { theory: '', example: '' };
-  let theory = String(rawTheory);
+  let theory = unescapeLiteralNewlines(String(rawTheory));
   let example = '';
 
-  const exampleMatch = theory.match(/###\s*(?:📌|Ví dụ minh họa SGK|Ví dụ minh họa|Ví dụ)[^\n]*\n([\s\S]*)$/i);
+  const exampleMatch = theory.match(/(?:^|\n)###\s*(?:📌\s*)?(?:Ví dụ minh họa SGK|Ví dụ minh họa|Ví dụ)[^\n]*(?:\r?\n)([\s\S]*)$/i);
   if (exampleMatch) {
     example = exampleMatch[1].trim();
-    theory = theory.replace(/###\s*(?:📌|Ví dụ minh họa SGK|Ví dụ minh họa|Ví dụ)[^\n]*\n[\s\S]*$/i, '').trim();
+    theory = theory.replace(/(?:^|\n)###\s*(?:📌\s*)?(?:Ví dụ minh họa SGK|Ví dụ minh họa|Ví dụ)[^\n]*(?:\r?\n)[\s\S]*$/i, '').trim();
   }
 
   return { theory, example };
@@ -249,30 +291,36 @@ export function parseTheoryRecapSections(rawTheory) {
 
 export function parseSolutionMethodSections(rawMethod) {
   if (!rawMethod) return { method: '', sampleProblem: '', traps: '', casio: '' };
-  let method = String(rawMethod);
+  let method = unescapeLiteralNewlines(String(rawMethod));
   let sampleProblem = '';
   let traps = '';
   let casio = '';
 
-  const sampleMatch = method.match(/###\s*(?:📝|Bài toán mẫu áp dụng|Bài toán mẫu|Ví dụ áp dụng|Bài toán minh họa)[^\n]*\n([\s\S]*?)(?=(?:###\s*(?:⚠️|💡|Các bẫy đề thi|Bẫy đề thi|Kỹ thuật Casio|Mẹo Casio)|$))/i);
+  const sampleMatch = method.match(
+    /(?:^|\n)###\s*(?:[📝📄]\s*)?(?:Bài toán mẫu áp dụng|Bài toán mẫu|Ví dụ áp dụng|Bài toán minh họa|Đoạn trích \/ Bài mẫu minh họa|Bài mẫu áp dụng phương pháp|Bài mẫu áp dụng|Bài mẫu minh họa|Bài mẫu)[^\n]*(?:\r?\n)([\s\S]*?)(?=(?:(?:^|\n)###\s*(?:[⚠️💡]|Các bẫy đề thi|Bẫy đề thi|Kỹ thuật Casio|Mẹo Casio|Mẹo tư duy)|$))/i
+  );
   if (sampleMatch) {
     sampleProblem = sampleMatch[1].trim();
   }
 
-  const trapsMatch = method.match(/###\s*(?:⚠️|Các bẫy đề thi|Bẫy đề thi)[^\n]*\n([\s\S]*?)(?=(?:###\s*(?:💡|Kỹ thuật Casio|Mẹo Casio)|$))/i);
+  const trapsMatch = method.match(
+    /(?:^|\n)###\s*(?:⚠️\s*)?(?:Các bẫy đề thi ĐGNL thường gặp|Các bẫy đề thi|Bẫy đề thi thường gặp|Bẫy đề thi|Các bẫy)[^\n]*(?:\r?\n)([\s\S]*?)(?=(?:(?:^|\n)###\s*(?:[💡📝📄]|Kỹ thuật Casio|Mẹo Casio|Mẹo tư duy)|$))/i
+  );
   if (trapsMatch) {
     traps = trapsMatch[1].trim();
   }
 
-  const casioMatch = method.match(/###\s*(?:💡|Kỹ thuật Casio|Mẹo Casio)[^\n]*\n([\s\S]*?)(?=(?:###\s*(?:⚠️|Các bẫy đề thi|Bẫy đề thi)|$))/i);
+  const casioMatch = method.match(
+    /(?:^|\n)###\s*(?:💡\s*)?(?:Kỹ thuật Casio & Mẹo tư duy nhanh|Kỹ thuật Casio|Mẹo Casio|Mẹo tư duy & Chiến thuật làm bài|Mẹo tư duy|Chiến thuật làm bài|Mẹo làm bài)[^\n]*(?:\r?\n)([\s\S]*?)(?=(?:(?:^|\n)###\s*(?:[⚠️📝📄]|Các bẫy đề thi|Bẫy đề thi)|$))/i
+  );
   if (casioMatch) {
     casio = casioMatch[1].trim();
   }
 
   method = method
-    .replace(/###\s*(?:📝|Bài toán mẫu áp dụng|Bài toán mẫu|Ví dụ áp dụng|Bài toán minh họa)[^\n]*\n[\s\S]*?(?=(?:###\s*(?:⚠️|💡|Các bẫy đề thi|Bẫy đề thi|Kỹ thuật Casio|Mẹo Casio)|$))/gi, '')
-    .replace(/###\s*(?:⚠️|Các bẫy đề thi|Bẫy đề thi)[^\n]*\n[\s\S]*?(?=(?:###\s*(?:💡|Kỹ thuật Casio|Mẹo Casio)|$))/gi, '')
-    .replace(/###\s*(?:💡|Kỹ thuật Casio|Mẹo Casio)[^\n]*\n[\s\S]*?(?=(?:###\s*(?:⚠️|Các bẫy đề thi|Bẫy đề thi)|$))/gi, '')
+    .replace(/(?:^|\n)###\s*(?:[📝📄]\s*)?(?:Bài toán mẫu áp dụng|Bài toán mẫu|Ví dụ áp dụng|Bài toán minh họa|Đoạn trích \/ Bài mẫu minh họa|Bài mẫu áp dụng phương pháp|Bài mẫu áp dụng|Bài mẫu minh họa|Bài mẫu)[^\n]*(?:\r?\n)[\s\S]*?(?=(?:(?:^|\n)###\s*(?:[⚠️💡]|Các bẫy đề thi|Bẫy đề thi|Kỹ thuật Casio|Mẹo Casio|Mẹo tư duy)|$))/gi, '')
+    .replace(/(?:^|\n)###\s*(?:⚠️\s*)?(?:Các bẫy đề thi ĐGNL thường gặp|Các bẫy đề thi|Bẫy đề thi thường gặp|Bẫy đề thi|Các bẫy)[^\n]*(?:\r?\n)[\s\S]*?(?=(?:(?:^|\n)###\s*(?:[💡📝📄]|Kỹ thuật Casio|Mẹo Casio|Mẹo tư duy)|$))/gi, '')
+    .replace(/(?:^|\n)###\s*(?:💡\s*)?(?:Kỹ thuật Casio & Mẹo tư duy nhanh|Kỹ thuật Casio|Mẹo Casio|Mẹo tư duy & Chiến thuật làm bài|Mẹo tư duy|Chiến thuật làm bài|Mẹo làm bài)[^\n]*(?:\r?\n)[\s\S]*?(?=(?:(?:^|\n)###\s*(?:[⚠️📝📄]|Các bẫy đề thi|Bẫy đề thi)|$))/gi, '')
     .trim();
 
   return { method, sampleProblem, traps, casio };
@@ -404,7 +452,8 @@ export function MathFormulaPalette({
   onOpenBuilder,
   activeTarget,
   onSelectTarget,
-  accentColor = 'indigo'
+  accentColor = 'indigo',
+  isStem = true
 }) {
   const categories = Object.keys(MATH_CATEGORIES);
   const currentCat = MATH_CATEGORIES[activeCategory] || MATH_CATEGORIES.algebra;
@@ -444,7 +493,7 @@ export function MathFormulaPalette({
                 <option value="theoryRecap">Khối 1: Lý Thuyết SGK</option>
                 <option value="solutionMethod">Khối 2: Quy Trình Giải</option>
                 <option value="examTraps">Khối 2: Bẫy Đề Thi ĐGNL</option>
-                <option value="casioTricks">Khối 2: Mẹo Casio</option>
+                <option value="casioTricks">{isStem ? 'Khối 2: Mẹo Casio' : 'Khối 2: Mẹo tư duy & Chiến thuật'}</option>
                 <option value="sampleQuestion">Khối 4: Đề Bài Mẫu</option>
                 <option value="sampleExplanation">Khối 4: Lời Giải Mẫu</option>
               </select>
@@ -510,6 +559,8 @@ export function MathFormulaPalette({
 }
 
 export default function CurriculumStudioEditor({ pattern, domain, chapter, lesson, onClose, onSaveSuccess }) {
+  const isStem = isMathOrStemDomain(domain);
+
   // View mode: 'editor' | 'preview' | 'split'
   const [viewMode, setViewMode] = useState('split');
   const [activeSection, setActiveSection] = useState('theory'); // 'theory' | 'method' | 'video' | 'questions' | 'settings'
@@ -811,8 +862,8 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
       }
     } catch (err) {
       console.warn("AI pattern analysis fallback:", err);
-      // Fallback template
-      const standardProcedure = `### Quy trình tư duy giải nhanh chuẩn ĐGNL VNU-HCM:
+      // Fallback template adapted to domain
+      const standardProcedure = isStem ? `### Quy trình tư duy giải nhanh chuẩn ĐGNL VNU-HCM:
 **Bước 1: Tìm tập xác định & Phân tích cấu trúc hàm số**
 - Xác định tập xác định $D$ của biểu thức / hàm số.
 - Nhận diện các tham số $m$ và điều kiện ràng buộc.
@@ -827,13 +878,36 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
 
 **Bước 4: Đối chiếu điều kiện & Kết luận trắc nghiệm**
 - Rút ra kết quả thỏa mãn yêu cầu đề bài.
-- Loại trừ các phương án nhiễu (bẫy đề thi).`;
+- Loại trừ các phương án nhiễu (bẫy đề thi).` : `### Quy trình xử lý dạng bài & Đọc hiểu/Làm văn:
+**Bước 1: Phân tích đề bài & Xác định từ khóa trọng tâm**
+- Gạch chân các yêu cầu cốt lõi, phạm vi dẫn chứng, kiểu bài và dung lượng.
+- Nhận diện phương thức biểu đạt, thể loại hoặc thao tác lập luận.
+
+**Bước 2: Lập dàn ý & Huy động kiến thức nền**
+- Liệt kê các luận điểm, luận cứ chính ra nháp.
+- Lựa chọn dẫn chứng tiêu biểu, giàu sức thuyết phục và sát với ngữ cảnh.
+
+**Bước 3: Viết bài/đoạn văn bám sát cấu trúc sư phạm**
+- Mở đoạn/bài: Giới thiệu trực tiếp vấn đề nghị luận.
+- Thân đoạn/bài: Triển khai các luận điểm chặt chẽ, kết hợp lí lẽ và dẫn chứng.
+- Kết đoạn/bài: Khái quát lại vấn đề, liên hệ bài học bản thân.
+
+**Bước 4: Soát lỗi chính tả, diễn đạt & Tiêu chí chấm điểm**
+- Kiểm tra lại tính liên kết câu, ngữ pháp và tính mạch lạc của bài viết.`;
+
+      const standardTraps = isStem 
+        ? `- Học sinh hay quên kiểm tra điều kiện tập xác định trước khi tính đạo hàm.\n- Nhầm lẫn giữa "giá trị cực trị" ($y_{CT}$) và "điểm cực trị" ($x_{CT}$).\n- Khi xét dấu đạo hàm hàm chứa tham số, quên xét trường hợp hệ số $a = 0$.`
+        : `- Diễn xuôi lại ý thơ/văn bản thay vì phân tích nghệ thuật và nội dung tư tưởng.\n- Lạc đề hoặc sa vào kể lể dài dòng, không bám sát yêu cầu từ khóa đề thi.\n- Thiếu dẫn chứng cụ thể hoặc phân tích dẫn chứng còn chung chung, hời hợt.`;
+
+      const standardTips = isStem
+        ? `- Dùng tính năng TABLE [Menu 8]: Nhập hàm số, Start: -5, End: 5, Step: 0.5 để quan sát chiều tăng/giảm giá trị $f(x)$.\n- Dùng đạo hàm tại điểm [Shift $\\frac{d}{dx}$] để thử các giá trị nghiệm biên.`
+        : `- Kỹ thuật gạch chân từ khóa trong 30 giây đầu tiên để không bỏ sót yêu cầu Tiếng Việt.\n- Phân bổ thời gian hợp lý: 3-5 phút lập dàn ý nhanh ra nháp, 15 phút hành văn súc tích.\n- Mẹo ghi điểm mở rộng: Liên hệ thực tế xã hội thời sự hoặc trải nghiệm cá nhân sâu sắc.`;
 
       setForm(prev => ({
         ...prev,
         solutionMethod: prev.solutionMethod ? `${prev.solutionMethod}\n\n${standardProcedure}` : standardProcedure,
-        examTraps: prev.examTraps || `- Học sinh hay quên kiểm tra điều kiện tập xác định trước khi tính đạo hàm.\n- Nhầm lẫn giữa "giá trị cực trị" ($y_{CT}$) và "điểm cực trị" ($x_{CT}$).\n- Khi xét dấu đạo hàm hàm chứa tham số, quên xét trường hợp hệ số $a = 0$.`,
-        casioTricks: prev.casioTricks || `- Dùng tính năng TABLE [Menu 8]: Nhập hàm số, Start: -5, End: 5, Step: 0.5 để quan sát chiều tăng/giảm giá trị $f(x)$.\n- Dùng đạo hàm tại điểm [Shift $\\frac{d}{dx}$] để thử các giá trị nghiệm biên.`
+        examTraps: prev.examTraps || standardTraps,
+        casioTricks: prev.casioTricks || standardTips
       }));
     } finally {
       setIsAiAnalyzing(false);
@@ -855,7 +929,8 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
         fullSolutionMethod += `\n\n### ⚠️ Các bẫy đề thi ĐGNL thường gặp:\n${form.examTraps.trim()}`;
       }
       if (form.casioTricks?.trim()) {
-        fullSolutionMethod += `\n\n### 💡 Kỹ thuật Casio & Mẹo tư duy nhanh:\n${form.casioTricks.trim()}`;
+        const tipHeading = isStem ? '### 💡 Kỹ thuật Casio & Mẹo tư duy nhanh:' : '### 💡 Mẹo tư duy & Chiến thuật làm bài:';
+        fullSolutionMethod += `\n\n${tipHeading}\n${form.casioTricks.trim()}`;
       }
 
       const payload = {
@@ -980,7 +1055,7 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
             disabled={isAiAnalyzing}
             onClick={handleAIApplyStandardMethod}
             className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-purple-600/30 to-indigo-600/30 hover:from-purple-600/50 hover:to-indigo-600/50 text-indigo-200 border border-purple-400/30 text-xs font-bold flex items-center gap-1.5 transition-colors disabled:opacity-50"
-            title="AI Tri Thức nhận diện bản chất dạng bài, nạp quy trình 4 bước KaTeX, bẫy đề thi & mẹo Casio"
+            title={`AI Tri Thức nhận diện bản chất dạng bài, nạp quy trình các bước, bẫy đề thi & ${isStem ? 'mẹo Casio' : 'mẹo tư duy & chiến thuật làm bài'}`}
           >
             {isAiAnalyzing ? (
               <>
@@ -1505,7 +1580,7 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
                   <div>
                     <h3 className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
                       <span className="w-6 h-6 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center text-xs font-black">2</span>
-                      <span>Khối 2: Phương Pháp Giải Chuyên Biệt, Bẫy Đề Thi & Mẹo Casio</span>
+                      <span>Khối 2: Phương Pháp Giải Chuyên Biệt, Bẫy Đề Thi & {isStem ? 'Mẹo Casio' : 'Mẹo Tư Duy & Chiến Thuật'}</span>
                     </h3>
                     <p className="text-xs text-slate-500 font-medium mt-0.5">
                       Giúp học sinh định hình thuật toán giải từng bước và khắc phục các sai lầm kinh điển
@@ -1915,20 +1990,20 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
                       />
                     </div>
 
-                    {/* 3. Mẹo Casio & Kỹ thuật tư duy nhanh - Thẻ Mẹo Trực Tiếp */}
+                    {/* 3. Mẹo Casio / Mẹo tư duy nhanh - Thẻ Mẹo Trực Tiếp */}
                     <div className="p-5 rounded-2xl bg-indigo-50/60 border-2 border-indigo-200 shadow-2xs space-y-3">
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-indigo-200/80 pb-2.5">
                         <label className="text-xs font-bold text-indigo-950 flex items-center gap-1.5">
                           <Sparkles className="w-4 h-4 text-indigo-600" />
-                          <span>3. Kỹ Thuật Casio & Mẹo Tư Duy Nhanh Độc Quyền (Sửa Trực Tiếp Trên Thẻ Mẹo):</span>
+                          <span>3. {isStem ? 'Kỹ Thuật Casio & Mẹo Tư Duy Nhanh Độc Quyền' : 'Mẹo Tư Duy & Chiến Thuật Làm Bài Độc Quyền'} (Sửa Trực Tiếp Trên Thẻ Mẹo):</span>
                         </label>
                         <div className="flex items-center gap-1.5">
                           <button
                             type="button"
-                            onClick={() => handleFormatText('casioTricks', '\n- 💡 Mẹo bấm máy [Menu 8]: ', ' để dò nhanh giá trị')}
+                            onClick={() => handleFormatText('casioTricks', isStem ? '\n- 💡 Mẹo bấm máy [Menu 8]: ' : '\n- 💡 Mẹo làm bài: ', isStem ? ' để dò nhanh giá trị' : ' để ghi điểm tối đa')}
                             className="px-2.5 py-1 rounded-lg bg-white hover:bg-indigo-100 text-indigo-800 text-[11px] font-bold border border-indigo-200 transition-colors shadow-2xs"
                           >
-                            + Thêm mẹo Casio
+                            + {isStem ? 'Thêm mẹo Casio' : 'Thêm mẹo làm bài'}
                           </button>
                           <button
                             type="button"
@@ -1949,7 +2024,7 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
                         onFocus={() => setActiveFormulaTarget('casioTricks')}
                         onPaste={(e) => handlePasteEvent(e, 'casioTricks')}
                         onChange={(e) => setForm(prev => ({ ...prev, casioTricks: e.target.value }))}
-                        placeholder="Gõ trực tiếp các kỹ thuật bấm máy tính Casio & công thức giải nhanh tại đây:&#10;- Bấm [Menu 8] nhập f(x) để dò dấu và cực trị nhanh trong 15s...&#10;- Kỹ thuật Cal x = 1000..."
+                        placeholder={isStem ? "Gõ trực tiếp các kỹ thuật bấm máy tính Casio & công thức giải nhanh tại đây:\n- Bấm [Menu 8] nhập f(x) để dò dấu và cực trị nhanh trong 15s...\n- Kỹ thuật Cal x = 1000..." : "Gõ trực tiếp các mẹo làm bài & chiến thuật tư duy nhanh tại đây:\n- Kỹ thuật gạch chân từ khóa đề bài trong 30s...\n- Công thức phân bổ thời gian và mẹo liên hệ thực tế ghi điểm tối đa..."}
                         className="w-full p-3.5 rounded-xl border border-indigo-200 font-sans text-xs leading-relaxed focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white text-indigo-950 shadow-2xs placeholder:text-indigo-300 resize-y"
                       />
                     </div>
@@ -1994,7 +2069,7 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
                     <div className="space-y-1.5">
                       <label className="text-xs font-bold text-indigo-800 flex items-center gap-1.5">
                         <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
-                        <span>3. Kỹ thuật Casio & Mẹo tư duy nhanh độc quyền:</span>
+                        <span>3. {isStem ? 'Kỹ thuật Casio & Mẹo tư duy nhanh độc quyền:' : 'Mẹo tư duy & Chiến thuật làm bài độc quyền:'}</span>
                       </label>
                       <textarea
                         ref={el => (textareaRefs.current['casioTricks'] = el)}
@@ -2002,7 +2077,7 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
                         value={form.casioTricks}
                         onFocus={() => setActiveFormulaTarget('casioTricks')}
                         onChange={(e) => setForm(prev => ({ ...prev, casioTricks: e.target.value }))}
-                        placeholder="- Dùng tính năng TABLE [Menu 8] để dò nghiệm...\n- Kỹ thuật Cal x = 1000..."
+                        placeholder={isStem ? "- Dùng tính năng TABLE [Menu 8] để dò nghiệm...\n- Kỹ thuật Cal x = 1000..." : "- Kỹ thuật gạch chân từ khóa đề bài trong 30s...\n- Mẹo liên hệ thực tế ghi điểm mở rộng..."}
                         className="w-full p-3.5 rounded-2xl border border-indigo-200 font-sans text-xs leading-relaxed focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-indigo-50/30 text-indigo-950"
                       />
                     </div>
@@ -2534,7 +2609,7 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
                     <div className="p-3 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-900 text-xs mt-2">
                       <div className="font-bold mb-1 flex items-center gap-1">
                         <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
-                        <span>Kỹ thuật Casio & Mẹo tư duy nhanh:</span>
+                        <span>{isStem ? 'Kỹ thuật Casio & Mẹo tư duy nhanh:' : 'Mẹo tư duy & Chiến thuật làm bài:'}</span>
                       </div>
                       <MathText text={form.casioTricks} />
                     </div>

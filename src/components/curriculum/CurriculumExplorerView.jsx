@@ -45,7 +45,7 @@ import {
   Upload
 } from 'lucide-react';
 import MathText from '../common/MathText';
-import CurriculumStudioEditor, { parseSolutionMethodSections, parseTheoryRecapSections } from './CurriculumStudioEditor';
+import CurriculumStudioEditor, { parseSolutionMethodSections, parseTheoryRecapSections, isMathOrStemDomain } from './CurriculumStudioEditor';
 import contentService from '../../services/contentService';
 import { practiceService } from '../../services/practiceService';
 import { aiService } from '../../services/aiService';
@@ -2781,6 +2781,7 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
 
                       const parsedTheory = parseTheoryRecapSections(pat.theoryRecap || '');
                       const parsedMethod = parseSolutionMethodSections(pat.solutionMethod || '');
+                      const isStem = isMathOrStemDomain(currentDomain);
                       const questions = pat.questions || [];
                       const currentQuestion = questions[previewActiveQuestionIdx] || questions[0];
 
@@ -2832,7 +2833,7 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
                                     <span className="w-3.5 h-3.5 rounded-full bg-cyan-100 text-cyan-700 flex items-center justify-center text-[9px] font-black">1</span>
                                     <span>Khối 1: Kiến thức nền tảng SGK</span>
                                   </div>
-                                  <span className="text-[9.5px] text-cyan-600 font-medium">Định lý & Công thức</span>
+                                  <span className="text-[9.5px] text-cyan-600 font-medium">{isStem ? 'Định lý & Công thức' : 'Kiến thức cốt lõi & Khái niệm'}</span>
                                 </div>
 
                                 {/* Định lý & Công thức cốt lõi */}
@@ -2861,7 +2862,7 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
                                     <span className="w-3.5 h-3.5 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center text-[9px] font-black">2</span>
                                     <span>Khối 2: Phương pháp giải chi tiết & Bẫy</span>
                                   </div>
-                                  <span className="text-[9.5px] text-amber-600 font-medium">Thuật toán giải</span>
+                                  <span className="text-[9.5px] text-amber-600 font-medium">{isStem ? 'Thuật toán giải' : 'Phương pháp làm bài'}</span>
                                 </div>
                                 <div className="p-2.5 rounded-xl bg-amber-50/40 border border-amber-200 text-[11px] text-slate-800 font-medium leading-relaxed space-y-2 shadow-2xs">
                                   {/* Thuật toán các bước */}
@@ -2872,7 +2873,7 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
                                     <div className="p-2 rounded-lg bg-gradient-to-br from-amber-100/70 via-orange-50/80 to-amber-50/90 border border-amber-300 text-amber-950 text-[10.5px] space-y-1 shadow-2xs">
                                       <div className="font-bold flex items-center gap-1 text-amber-900 border-b border-amber-200/80 pb-0.5">
                                         <FileText className="w-3 h-3 text-amber-700" />
-                                        <span>Bài Toán Mẫu Áp Dụng Phương Pháp:</span>
+                                        <span>{isStem ? 'Bài Toán Mẫu Áp Dụng Phương Pháp:' : 'Bài Mẫu Áp Dụng Phương Pháp:'}</span>
                                       </div>
                                       <div className="leading-relaxed text-slate-800">
                                         <MathText text={parsedMethod.sampleProblem} />
@@ -2894,7 +2895,7 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
                                     <div className="p-2 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-900 text-[10.5px] space-y-0.5 shadow-2xs">
                                       <div className="font-bold flex items-center gap-1 text-indigo-700">
                                         <Sparkles className="w-3 h-3" />
-                                        <span>Kỹ thuật Casio & Mẹo tư duy nhanh:</span>
+                                        <span>{isStem ? 'Kỹ thuật Casio & Mẹo tư duy nhanh:' : 'Mẹo tư duy & Chiến thuật làm bài:'}</span>
                                       </div>
                                       <MathText text={parsedMethod.casio} />
                                     </div>

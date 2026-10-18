@@ -1,7 +1,7 @@
 import React from 'react';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
-import { AlertTriangle, Sparkles } from 'lucide-react';
+import { AlertTriangle, Sparkles, BookOpen, FileText } from 'lucide-react';
 import VariationTable, { parseVariationTableString } from './VariationTable';
 import MathGraphView, { parseGraphTag } from './MathGraphView';
 
@@ -51,6 +51,9 @@ export function normalizeMathString(text) {
   // Recover LaTeX commands that may have lost their backslash from past tab-replacement or JSON parsing
   str = str.replace(/(?<!\\)\bext\{/g, '\\text{');
   str = str.replace(/(?<!\\)\bimes\b/g, '\\times');
+
+  // Fix orphaned trailing :** (e.g. "Ví dụ:**" or "- Ví dụ:**" where leading ** got stripped)
+  str = str.replace(/(^|[\n•\-*]\s*)([A-ZÀ-Ỹa-zà-ỹ0-9\s&]{2,30}):\*\*/g, '$1**$2:**');
 
   // 2. Tokenize by existing explicit math delimiters
   const mathDelimiterRegex = /(\$\$[\s\S]*?\$\$|\$[^\$\n]+?\$|\\\[[\s\S]*?\\\]|\\\([\s\S]*?\\\))/g;
@@ -102,7 +105,7 @@ export function normalizeMathString(text) {
 
 /**
  * Render purely inline content without any block wrappers.
- * Everything returned is inline (<span>, <strong>, <img>) so that text,
+ * Everything returned is inline (<span>, <strong>, <em>, <img>) so that text,
  * math, punctuation, and parentheses flow seamlessly on the same line.
  */
 function renderInlineContent(text, keyPrefix = '') {
@@ -165,8 +168,8 @@ function renderInlineContent(text, keyPrefix = '') {
       );
     }
 
-    // Non-math text: parse markdown images and bold
-    const mdParts = part.split(/(!\[.*?\]\(.*?\)|\*\*.*?\*\*)/g);
+    // Non-math text: parse markdown images, bold-italic, bold, italic
+    const mdParts = part.split(/(!\[.*?\]\(.*?\)|\*\*\*[^\*\n]+?\*\*\*|\*\*[^\*\n]+?\*\*|\*[^\*\n\s][^\*\n]*?[^\*\n\s]\*|\*[^\*\n\s]\*)/g);
 
     return (
       <React.Fragment key={partKey}>
@@ -190,8 +193,17 @@ function renderInlineContent(text, keyPrefix = '') {
             );
           }
 
+          // Markdown bold + italic ***text***
+          if (chunk.startsWith('***') && chunk.endsWith('***') && chunk.length >= 6) {
+            return (
+              <strong key={chunkKey} className="font-bold italic text-slate-900">
+                {chunk.slice(3, -3)}
+              </strong>
+            );
+          }
+
           // Markdown bold **text**
-          if (chunk.startsWith('**') && chunk.endsWith('**')) {
+          if (chunk.startsWith('**') && chunk.endsWith('**') && chunk.length >= 4) {
             return (
               <strong key={chunkKey} className="font-bold text-slate-900">
                 {chunk.slice(2, -2)}
@@ -199,8 +211,21 @@ function renderInlineContent(text, keyPrefix = '') {
             );
           }
 
+          // Markdown italic *text*
+          if (chunk.startsWith('*') && chunk.endsWith('*') && chunk.length >= 2) {
+            return (
+              <em key={chunkKey} className="italic text-slate-800">
+                {chunk.slice(1, -1)}
+              </em>
+            );
+          }
+
+          // Clean stray asterisks if any remain unclosed e.g. "***" or "**" at edge
+          const cleanChunk = chunk.replace(/^\*{2,3}$/, '');
+          if (!cleanChunk) return null;
+
           // Plain text chunk
-          return <span key={chunkKey}>{chunk}</span>;
+          return <span key={chunkKey}>{cleanChunk}</span>;
         })}
       </React.Fragment>
     );
@@ -298,8 +323,55 @@ function renderStructuredContent(raw) {
             );
           }
 
+          // Callout Pedagogical Example SGK e.g. "### 📌 Ví dụ minh họa SGK:" or "📌 ..."
+          if (line.includes('### 📌') || line.startsWith('📌')) {
+            const cleanHeading = line.replace(/^###\s*/, '').replace(/^📌\s*/, '').trim();
+            return (
+              <div
+                key={lineKey}
+                className="my-2.5 p-2.5 rounded-xl bg-teal-50/90 border border-teal-200/90 text-teal-950 font-bold text-xs flex items-center gap-2 shadow-2xs"
+              >
+                <BookOpen className="w-4 h-4 text-teal-600 shrink-0" />
+                <span>{cleanHeading}</span>
+              </div>
+            );
+          }
+
+          // Callout Sample Problem / Practice e.g. "### 📝 Bài toán mẫu..." or "### 📄 Bài toán mẫu..." or "📝 ..." or "📄 ..."
+          if (line.includes('### 📝') || line.includes('### 📄') || line.startsWith('📝') || line.startsWith('📄')) {
+            const cleanHeading = line.replace(/^###\s*/, '').replace(/^[📝📄]\s*/, '').trim();
+            return (
+              <div
+                key={lineKey}
+                className="my-2.5 p-2.5 rounded-lg bg-amber-50/90 border border-amber-300/90 text-amber-950 font-bold text-xs flex items-center gap-2 shadow-2xs"
+              >
+                <FileText className="w-4 h-4 text-amber-700 shrink-0" />
+                <span>{cleanHeading}</span>
+              </div>
+            );
+          }
+
+          // General Markdown Headings (# H1, ## H2, ### H3, #### H4)
+          const headingMatch = line.match(/^(#{1,4})\s+(.*)$/);
+          if (headingMatch) {
+            const level = headingMatch[1].length;
+            const headingText = headingMatch[2].trim();
+            const headingStyles = {
+              1: 'text-base font-black text-slate-900 border-b border-slate-200 pb-1.5 mt-3 mb-2',
+              2: 'text-sm font-extrabold text-slate-900 border-b border-slate-100 pb-1 mt-2.5 mb-1.5',
+              3: 'text-xs font-bold text-slate-800 mt-2 mb-1 flex items-center gap-1.5',
+              4: 'text-xs font-semibold text-slate-700 mt-1.5 mb-1'
+            };
+            return (
+              <div key={lineKey} className={headingStyles[level] || headingStyles[3]}>
+                {renderInlineContent(headingText, lineKey)}
+              </div>
+            );
+          }
+
           // Bullet list items e.g. "- ...", "* ...", "• ...", or duplicate "• - ..."
-          const bulletMatch = line.match(/^(\s*)(?:[-*•]|\u2022)\s*(?:[-*•]\s*)?(.*)$/);
+          // NOTE: Must have whitespace after bullet marker so bold "**text**" or "***text***" is NOT treated as a bullet!
+          const bulletMatch = line.match(/^(\s*)(?:[-+•\u2022]|\*(?!\*))\s+(?:[-+•\u2022]\s+)?(.*)$/);
           if (bulletMatch) {
             const indentSpaces = bulletMatch[1].length;
             const indentClass = indentSpaces >= 4 ? 'ml-6' : indentSpaces >= 2 ? 'ml-3.5' : 'ml-1';
@@ -357,8 +429,9 @@ function renderStructuredContent(raw) {
  * - Block display math: $$...$$ or \[...\]
  * - Inline math: $...$ or \(...\)
  * - Raw math expressions: auto-normalized and wrapped in $...$
- * - Markdown features: bold (**...**), images (![alt](url)), bullets (- / * / •), numbered lists (1. / 2.)
- * - Callout blocks: "### ⚠️ ..." and "### 💡 ..."
+ * - Markdown features: bold (**...**), bold-italic (***...***), images (![alt](url)), bullets (- / * / •), numbered lists (1. / 2.)
+ * - Callout blocks: "### ⚠️ ...", "### 💡 ...", "### 📌 ...", "### 📝 ..." / "### 📄 ..."
+ * - Markdown headings: #, ##, ###, ####
  *
  * Designed to preserve natural inline text flow so that formulas, numbers,
  * commas, periods, and parentheses never shatter across separate lines.
@@ -370,13 +443,14 @@ export default function MathText({ text, className = '' }) {
   }
   const raw = normalizeMathString(text);
 
-  // Check if content has document structure (multiple lines, block math, bullets, callouts, tables, graphs)
+  // Check if content has document structure (multiple lines, block math, bullets, callouts, tables, graphs, headings)
   const hasLinebreaks = raw.includes('\n');
   const hasBlockMath = raw.includes('$$') || raw.includes('\\[');
-  const hasBullets = /^\s*(?:[-*•]|\u2022)\s+/m.test(raw);
-  const hasCallouts = /###\s*[⚠️💡]/m.test(raw) || /^[⚠️💡]/m.test(raw);
+  const hasBullets = /^\s*(?:[-+•\u2022]|\*(?!\*))\s+/m.test(raw);
+  const hasCallouts = /###\s*[⚠️💡📌📝📄]/m.test(raw) || /^[⚠️💡📌📝📄]/m.test(raw);
+  const hasHeadings = /^(?:#{1,4})\s+/m.test(raw);
   const hasSpecialBlocks = raw.includes('[VARIATION_TABLE]') || raw.includes('[GRAPH:');
-  const isStructured = hasLinebreaks || hasBlockMath || hasBullets || hasCallouts || hasSpecialBlocks;
+  const isStructured = hasLinebreaks || hasBlockMath || hasBullets || hasCallouts || hasHeadings || hasSpecialBlocks;
 
   if (!isStructured) {
     return (

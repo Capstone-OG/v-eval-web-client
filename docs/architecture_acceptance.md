@@ -369,6 +369,26 @@ V-Eval-Web_Client/
   - **Fraction Simplification**: Dynamically reduces numerical fractions (e.g. `` `\frac{12}{4} = 3` ``) and formats integers or 2-decimal rounded approximations.
   - **Derivative Increment Step-by-Step Generator**: Automates standard Vietnamese textbook derivative formulations ($f'(x_0) = \lim_{\Delta x \to 0}\frac{\Delta y}{\Delta x}$) based on chosen function expressions and evaluation points.
 
+### 4.33. Domain-Aware Pedagogical Adaptation (STEM vs Literature) & Advanced Markdown / Heading KaTeX Parsing (`MathText.jsx`, `CurriculumStudioEditor.jsx`, `CurriculumExplorerView.jsx`)
+- **Root Cause & Resolution of Markdown Asterisk / Heading Parsing**:
+  - *Bullet Regex Overreach*: Investigated user reported visual defects where lines starting with bold labels (e.g. `**Ví dụ:**` or `### 📌 Ví dụ minh họa SGK:`) were displayed as raw text `• Ví dụ:**`. Identified that regex `^(\s*)(?:[-*•]|\u2022)\s*` greedily consumed the first two asterisks `**` as bullet characters without requiring succeeding whitespace, stripping the opening bold delimiter and leaving trailing `Ví dụ:**` unrendered.
+  - *Constrained Bullet Matching*: Updated regex to `^(\s*)(?:[-+•\u2022]|\*(?!\*))\s+(?:[-+•\u2022]\s+)?(.*)$`, strictly guarding `**` and `***` sequences from being categorized as bullets and demanding mandatory trailing whitespace.
+  - *Full Markdown Headings & Dedicated Callout Cards*:
+    - Implemented native Markdown heading renderer for levels 1 through 4 (`#`, `##`, `###`, `####`) with tailored font sizing and leading.
+    - Designed dedicated Callout Components: `### 📌 Ví dụ minh họa SGK:` renders into an elegant Teal/Emerald card (`bg-teal-50/70 border border-teal-200/80 rounded-xl`) with a distinct badge, while `### 📝` / `### 📄 Bài toán mẫu áp dụng phương pháp:` renders into an Amber card (`bg-amber-50/70 border border-amber-200/80 rounded-xl`).
+    - Added automated healing for orphaned colon closures `([A-ZÀ-Ỹa-zà-ỹ0-9\s&]{2,30}):\*\*` restored to `**$1:**`.
+- **Domain-Aware Curriculum Adaptation (STEM vs Literature / Social Sciences)**:
+  - *Elimination of Casio Calculator Mismatch in Literature*:
+    - Addressed fundamental pedagogical flaw where Literature ("Ngữ văn") and Social Science subjects erroneously displayed Casio calculator tips (`Mẹo Casio`).
+    - Implemented `isMathOrStemDomain(domain)` utility distinguishing Mathematics, Physics, Chemistry, Biology, Informatics (STEM) from Literature, History, Geography, Civic Education.
+  - *Curriculum Studio Editor Integration (`CurriculumStudioEditor.jsx`)*:
+    - STEM domains retain `💡 Kỹ thuật Casio & mẹo tư duy nhanh` with fx-580 / fx-880 button shortcuts.
+    - Literature & Social Sciences dynamically transform the card into `💡 Mẹo tư duy & Chiến thuật làm bài (Ngữ văn)` with violet palette, dedicated text templates (reading comprehension strategies, essay argument structure, evidence selection, and time management), and appropriate placeholders.
+  - *Curriculum Explorer Workspace (`CurriculumExplorerView.jsx`)*:
+    - Side-by-side cards dynamically display `Chiến thuật làm bài` instead of `Kỹ thuật Casio` and `Bài mẫu` instead of `Bài toán mẫu`.
+  - *Sanitized Section Parsing*:
+    - `parseTheoryRecapSections` and `parseSolutionMethodSections` pre-process content with `unescapeLiteralNewlines` and support both document icons (`📝`, `📄`) and Literature strategy headings.
+
 ---
 
 ## 5. Verification & Acceptance Criteria
