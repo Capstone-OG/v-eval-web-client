@@ -839,27 +839,68 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
     const patName = targetPattern.patternName || "Dạng bài";
     const currentCount = targetPattern.questions ? targetPattern.questions.length : 0;
 
-    const newQ1 = {
-      difficultyLevel: 3,
-      contentLatex: `[Bài tập rèn luyện ${currentCount + 1}] Bài toán vận dụng định lượng cho '${patName}': Cho dữ kiện thực tế khi tiến hành phản ứng/khảo sát, đại lượng cần xác định sau quá trình biến đổi là:`,
-      optionA: `Phương án chuẩn hóa theo hệ thức bảo toàn ($X = 2,07$)`,
-      optionB: `Giá trị chưa tính đến hệ số môi trường ($X = 1,38$)`,
-      optionC: `Giá trị ngoại suy sai số ($X = 3,11$)`,
-      optionD: `Giá trị tối thiểu khi chưa cân bằng ($X = 0,92$)`,
-      correctOption: 'A',
-      explanation: `Áp dụng phương pháp giải chuẩn mực của dạng '${patName}', thiết lập phương trình và giải đại số ta thu được kết quả chính xác là phương án A.`
-    };
+    const domainCandidate = extractedCurriculum?.domainName || 
+      domains?.find(d => d.id === (importTargetDomainId || activeDomainId))?.title || 
+      targetPattern.domainName || '';
 
-    const newQ2 = {
-      difficultyLevel: 4,
-      contentLatex: `[Bài tập rèn luyện ${currentCount + 2} - Vận dụng cao] Bài toán phân loại nâng cao cho '${patName}': Khi xét thêm các yếu tố nhiễu và bẫy đề thi ĐGNL thường gặp, kết luận suy luận nào sau đây là chính xác?`,
-      optionA: `Bảo toàn toàn diện và thỏa mãn các điều kiện biên của bài toán`,
-      optionB: `Bỏ qua điều kiện xác định và lấy nghiệm kỳ dị`,
-      optionC: `Chỉ xét trường hợp đặc biệt mà không biện luận tổng quát`,
-      optionD: `Đổi sai đơn vị đo lường thể tích hoặc nồng độ`,
-      correctOption: 'A',
-      explanation: `Ở cấp độ Vận dụng cao của dạng '${patName}', học sinh cần tỉnh táo nhận diện các bẫy đề thi về điều kiện biên và bảo toàn để chọn đáp án A.`
-    };
+    const isStem = isMathOrStemDomain(domainCandidate) && 
+      !patName.toLowerCase().includes('văn') && 
+      !patName.toLowerCase().includes('nghị luận') && 
+      !patName.toLowerCase().includes('đoạn văn') && 
+      !patName.toLowerCase().includes('tác phẩm') && 
+      !patName.toLowerCase().includes('thơ') && 
+      !patName.toLowerCase().includes('truyện') && 
+      !patName.toLowerCase().includes('tiếng việt');
+
+    let newQ1, newQ2;
+
+    if (!isStem) {
+      // Dành riêng cho môn Ngữ văn / Khoa học xã hội & Ngôn ngữ
+      newQ1 = {
+        difficultyLevel: 3,
+        contentLatex: `[Bài tập rèn luyện ${currentCount + 1}] Bài tập vận dụng kỹ năng cho '${patName}': Đọc kĩ ngữ liệu văn học và yêu cầu đề bài, phương án nào sau đây thể hiện đúng nhất hệ thống luận điểm và cách triển khai mạch cảm xúc/lập luận?`,
+        optionA: `Xác định đúng trọng tâm vấn đề nghị luận, bám sát các từ khóa chủ đề và xây dựng hệ thống ý theo trình tự logic (mở đoạn - phát triển ý - liên hệ mở rộng)`,
+        optionB: `Diễn xuôi lại toàn bộ câu chữ của văn bản mà không rút ra được các ý khái quát về giá trị tư tưởng và nghệ thuật`,
+        optionC: `Phân tích dàn trải các chi tiết phụ, thiếu dẫn chứng tiêu biểu và không làm nổi bật phong cách nghệ thuật tác giả`,
+        optionD: `Lạm dụng quá nhiều thuật ngữ lý luận phức tạp, xa rời yêu cầu thực tế và cảm xúc chân thực của tác phẩm`,
+        correctOption: 'A',
+        explanation: `Ở cấp độ Vận dụng của dạng '${patName}', học sinh cần nắm vững kỹ năng phân tích đề, lập ý rõ ràng theo cấu trúc luận điểm chuẩn mực và chọn lọc dẫn chứng thuyết phục nhất để chọn phương án A.`
+      };
+
+      newQ2 = {
+        difficultyLevel: 4,
+        contentLatex: `[Bài tập rèn luyện ${currentCount + 2} - Vận dụng cao] Bài tập đánh giá & liên hệ mở rộng cho '${patName}': Khi bàn luận sâu về giá trị nhân đạo/hiện thực và thông điệp triết lý nhân sinh của tác phẩm, nhận định nào dưới đây mang tính toàn diện và sâu sắc nhất?`,
+        optionA: `Đánh giá tác phẩm trong mối tương quan với bối cảnh thời đại, phong cách nghệ thuật độc đáo và liên hệ ý nghĩa nhân văn sâu sắc tới cuộc sống hôm nay`,
+        optionB: `Đánh giá tác phẩm một chiều, áp đặt cái nhìn chủ quan hiện đại mà không đặt trong hoàn cảnh lịch sử ra đời của văn bản`,
+        optionC: `Chỉ chú trọng phân tích hình thức nghệ thuật câu từ mà xem nhẹ chiều sâu thông điệp tư tưởng của nhà văn`,
+        optionD: `So sánh khập khiễng với các tác phẩm cùng đề tài mà không chỉ ra được nét sáng tạo cá tính riêng biệt`,
+        correctOption: 'A',
+        explanation: `Ở cấp độ Vận dụng cao môn Ngữ văn đối với dạng '${patName}', học sinh cần kết hợp nhuần nhuyễn giữa phân tích nghệ thuật, chiều sâu tư tưởng và khả năng liên hệ mở rộng bối cảnh thời đại để đưa ra đánh giá toàn diện nhất.`
+      };
+    } else {
+      // Dành cho các môn STEM (Toán, Lý, Hóa, Sinh, Tin)
+      newQ1 = {
+        difficultyLevel: 3,
+        contentLatex: `[Bài tập rèn luyện ${currentCount + 1}] Bài toán vận dụng định lượng cho '${patName}': Cho dữ kiện thực tế khi tiến hành giải thuật/khảo sát, đại lượng cần xác định sau quá trình biến đổi là:`,
+        optionA: `Phương án chuẩn hóa theo hệ thức bảo toàn ($X = 2,07$)`,
+        optionB: `Giá trị chưa tính đến hệ số môi trường ($X = 1,38$)`,
+        optionC: `Giá trị ngoại suy sai số ($X = 3,11$)`,
+        optionD: `Giá trị tối thiểu khi chưa cân bằng ($X = 0,92$)`,
+        correctOption: 'A',
+        explanation: `Áp dụng phương pháp giải chuẩn mực của dạng '${patName}', thiết lập phương trình và giải đại số ta thu được kết quả chính xác là phương án A.`
+      };
+
+      newQ2 = {
+        difficultyLevel: 4,
+        contentLatex: `[Bài tập rèn luyện ${currentCount + 2} - Vận dụng cao] Bài toán phân loại nâng cao cho '${patName}': Khi xét thêm các yếu tố nhiễu và bẫy đề thi ĐGNL thường gặp, kết luận suy luận nào sau đây là chính xác?`,
+        optionA: `Bảo toàn toàn diện và thỏa mãn các điều kiện biên của bài toán`,
+        optionB: `Bỏ qua điều kiện xác định và lấy nghiệm kỳ dị`,
+        optionC: `Chỉ xét trường hợp đặc biệt mà không biện luận tổng quát`,
+        optionD: `Đổi sai đơn vị đo lường thể tích hoặc nồng độ`,
+        correctOption: 'A',
+        explanation: `Ở cấp độ Vận dụng cao của dạng '${patName}', học sinh cần tỉnh táo nhận diện các bẫy đề thi về điều kiện biên và bảo toàn để chọn đáp án A.`
+      };
+    }
 
     if (!targetPattern.questions) {
       targetPattern.questions = [];

@@ -386,6 +386,9 @@ V-Eval-Web_Client/
     - Literature & Social Sciences dynamically transform the card into `💡 Mẹo tư duy & Chiến thuật làm bài (Ngữ văn)` with violet palette, dedicated text templates (reading comprehension strategies, essay argument structure, evidence selection, and time management), and appropriate placeholders.
   - *Curriculum Explorer Workspace (`CurriculumExplorerView.jsx`)*:
     - Side-by-side cards dynamically display `Chiến thuật làm bài` instead of `Kỹ thuật Casio` and `Bài mẫu` instead of `Bài toán mẫu`.
+    - **Resolution of Inappropriate $X$ Variable Injection (`handleAddAiPracticeQuestions`)**:
+      - Identified root cause where clicking `+ AI Tạo Thêm 2 Bài Mẫu` relied on a static fallback template using chemical/quantitative equations ($X = 2.07$, conservation laws, algebraic reduction).
+      - Re-architected `handleAddAiPracticeQuestions` with domain detection (`isMathOrStemDomain`): for Literature and Social Sciences, dynamically generates Bloom L3 and L4 items centered on thematic thesis formulation, rhetorical evidence synthesis, artistic critique, and humanistic philosophy, thoroughly purging all mathematical variables.
   - *Sanitized Section Parsing*:
     - `parseTheoryRecapSections` and `parseSolutionMethodSections` pre-process content with `unescapeLiteralNewlines` and support both document icons (`📝`, `📄`) and Literature strategy headings.
 
