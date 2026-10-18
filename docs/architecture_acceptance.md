@@ -409,15 +409,31 @@ V-Eval-Web_Client/
   - Features asynchronous loading state `isGeneratingPracticeQuestions` with spinning loader and disabled click guards.
   - Automatically activates the newly appended question card (`activeQuestionIndex`) and re-calculates the question count badge.
 
+### 4.35. In-Place Microsoft Word-Style Equation Canvas Architecture (`WordStyleFormulaCanvas.jsx` & `CurriculumStudioEditor.jsx`)
+- **Direct In-Place Slot Editing (Eradication of Passive Previews & Popup Modals)**:
+  - Eliminated the cumbersome workflow where educators had to switch between "Gõ văn bản bàn phím" and read-only preview cards, or fill numbers through obstructive popup dialogs.
+  - Implemented `WordStyleFormulaCanvas.jsx`, delivering a true Microsoft Word Equation experience: equations and text are rendered directly in textbook typography, but each fraction, exponent, root, or chemical equation exposes interactive, in-place editable number slots.
+  - Slot Editors:
+    - **Fraction 2-Tier Slot Editor (`\frac{A}{B}`)**: Numerator `[ A ]` (amber highlight) vertically stacked over denominator `[ B ]` (cyan highlight) with an ultra-crisp horizontal fraction bar. Clicking directly into slots allows instant numerical changes. Integrated with a 1-click `⚡` calculator button that auto-evaluates division and updates the equality result `[ C ]`.
+    - **Power & Exponent Slot Editor (`A^{B}`)**: Exposes base slot and raised exponent slot with dynamic width auto-sizing.
+    - **Radical / Square Root Slot Editor (`\sqrt{A}`)**: Surrounds the expression slot with mathematical square root styling.
+    - **Chemistry Molar & Percentage Concentration Slots (`C_M = n/V`, `C%`)**: Displays complete chemical equations with slots for moles ($n$), volume ($V$), solute mass, solution mass, and instant unit evaluation ($0.4\text{ M}$).
+- **Floating Math Bubble Toolbar**:
+  - Dynamically positioned directly above the actively focused equation token.
+  - Features 1-touch symbol insertion: `+`, `−`, `×`, `÷`, `±`, `√`, `x²`, `xⁿ`, `x₀`, `π`, `Δ`, `α`, `β`, `∞`, `≠`, `≈`, `≤`, `≥`, `→`, `⇔`, `∈`.
+  - Functional action buttons: `⚡ Auto Calculate` (evaluates numerical fractions/chemistry), `🗑️ Delete Equation`, and `✓ Done`.
+- **1-Click Ribbon Equation Inserter**:
+  - Top Ribbon provides 1-click template insertion: `➗ Phân Số & Số (12/4)`, `a/b Phân Số Đại Số`, `√16 Căn Bậc Hai`, `x² Số Mũ`, `🧪 Nồng Độ CM (n/V)`, `💧 C%`, `🎯 Đạo Hàm Số Gia SGK`, `📋 Hệ PT`.
+  - Inserts directly into the document canvas at cursor position and immediately focuses the active slots for zero-friction editing.
+- **Bidirectional Serialization & Studio Integration**:
+  - Automatically serializes document tokens into standard Markdown/LaTeX strings, fully synchronized with raw source mode, KaTeX student preview, and PostgreSQL database storage across both Khối 1 (`theoryRecap`) and Khối 2 (`solutionMethod`).
+
 ---
 
 ## 5. Verification & Acceptance Criteria
 
-1. **Clean Production Build**: Executed `npm run build` with 0 syntax or bundle errors; production artifacts outputted to `dist/` within 743ms on Vite 8 and React 19.
+1. **Clean Production Build**: Executed `npm run build` with 0 syntax or bundle errors; production artifacts outputted to `dist/` within 751ms on Vite 8 and React 19.
 2. **Linter & Code Health**: `npm run lint` passes with 0 syntax errors across all components and services.
 3. **Docker Multi-Stage Validation**: `docker compose config` passes with 0 syntax errors across the entire 6-service microservices constellation.
 4. **Repository Sync Automation**: Standalone `Scripts/push.bat` and root `Scripts/` correctly recognize `V-Eval-Web_Client` as a first-class project service.
 5. **API Gateway Connectivity**: Full client suite structured and verified to consume all microservices endpoints via API Gateway (`:5212`) entry point.
-
-
-

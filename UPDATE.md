@@ -1,44 +1,39 @@
 # NHẬT KÝ CẬP NHẬT (UPDATE LOG) - WEB CLIENT
 
-## [18/10/2026] - Sinh Câu Hỏi Rèn Luyện Thích Ứng Bám Sát Dạng Bài Đang Phân Tích (Zero-Hardcode & Anti-Duplication), Khắc Phục Lỗi Render Markdown Đầu Dòng (Heading ###, In Đậm **, In Nghiêng ***) & Chuẩn Hóa Sư Phạm Phân Biệt STEM (Casio) vs Ngữ Văn / KHXH
+## [19/10/2026] - Trình Soạn Thảo Ký Hiệu Trực Quan WYSIWYG Như Microsoft Word Equation: Chỉnh Sửa Số Trực Tiếp Trên Công Thức, Thanh Công Cụ Nổi Math Bubble & Chèn Ký Hiệu 1-Click Ribbon Không Cần Popup Modal
 
-- **Sinh Câu Hỏi Rèn Luyện Thích Ứng Bám Sát 100% Tri Thức Dạng Bài Đang Phân Tích (`CurriculumExplorerView.jsx` & `aiService.js`)**:
-  - *Kết Nối Trực Tiếp Backend AI Engine & Triệt Tiêu 100% Hardcode / Fallback*:
-    + Loại bỏ hoàn toàn toàn bộ mã lệnh hardcode và hàm fallback giả lập (`extractPatternPedagogicalContext`), tuân thủ triệt để nguyên tắc Dữ liệu thật 100% của hệ thống V-Eval.
-    + Khắc phục triệt để lỗi tham chiếu biến `selectedLesson` chưa được khai báo trong Panoramic Workspace khiến hàm nhảy vào khối catch; chuẩn hóa trích xuất `currentLessonName` an toàn từ `previewSelectedLessonKey` và `targetPattern.lessonName`.
-    + Đấu nối trực tiếp `aiService.generatePatternQuestions` gửi toàn bộ dữ liệu ngữ cảnh: `pattern_name`, `lesson_name`, `domain_name`, `theory_recap`, `solution_method`, `count: 2`, và danh sách đề bài các câu hỏi đã có (`existing_questions`).
-  - *Cơ Chế Chống Trùng Lặp Khi Bấm Tạo Nhiều Lần (Anti-Duplication Prompting)*:
-    + Thu thập danh sách câu hỏi hiện có trong dạng bài và chuyển giao cho AI Engine; Gemini được chỉ thị bắt buộc khai thác các trích đoạn, khía cạnh cảm thụ hoặc góc độ bài tập mới, không bao giờ lặp lại câu hỏi cũ khi người dùng nhấn tạo nhiều lần.
-  - *Tự Động Chọn & Cuộn Đến Câu Hỏi Vừa Sinh*:
-    + Khi 2 câu hỏi mới từ Gemini được thêm vào ngân hàng câu hỏi của dạng bài, hệ thống tự động cập nhật số lượng badge câu hỏi và chuyển `activeQuestionIndex` đến ngay câu hỏi vừa được sinh để giáo viên/học sinh kiểm tra và tương tác tức thì.
-    + Nếu AI Engine gặp sự cố mạng hoặc lỗi xử lý, hệ thống hiển thị thông báo lỗi minh thị (alert/toast) thay vì ngụy tạo câu hỏi giả.
+- **Trình Soạn Thảo Công Thức Trực Quan Tại Chỗ (In-Place WYSIWYG Equation Canvas - `WordStyleFormulaCanvas.jsx`)**:
+  - *Thay Thế Toàn Diện Cơ Chế Cũ (Read-only + Popup Modal)*:
+    + Loại bỏ hoàn toàn sự bất tiện khi phải chuyển sang textarea "Gõ văn bản bàn phím" hoặc mở hộp thoại pop-up modal chắn màn hình để điền số.
+    + Xây dựng component mới `WordStyleFormulaCanvas.jsx` mang lại trải nghiệm chuẩn mực như Microsoft Word Equation Tools: toàn bộ công thức và văn bản hiển thị ký hiệu sách giáo khoa thực tế nhưng cho phép người dùng click chuột trực tiếp vào từng vị trí để sửa số hoặc chữ.
+  - *Bộ Nhận Diện Cấu Trúc Đa Tầng (In-Place Slot Editors)*:
+    + **Phân số (`\frac{A}{B}` hoặc `\frac{A}{B} = C`)**: Render cấu trúc 2 tầng với ô tử số `[ A ]` nền vàng hổ phách và ô mẫu số `[ B ]` nền xanh ngọc, kèm vạch kẻ phân số thanh mảnh. Người dùng click vào gõ số trực tiếp trên trang. Tích hợp nút `⚡` tự động tính thương số `A / B` và điền số vào kết quả.
+    + **Số mũ & Lũy thừa (`A^{B}`)**: Hiển thị ô cơ số và ô số mũ nhỏ phía trên góc phải, co dãn kích thước theo độ dài ký tự nhập vào.
+    + **Căn thức (`\sqrt{A}` hoặc `\sqrt[n]{A}`)**: Dấu căn thức bao quanh ô nhập số bên trong, có thể tự động tính căn bậc hai số học khi bấm tính.
+    + **Công thức Hóa học & Nồng độ Mol (`C_M = n/V`, `C%`)**: Hiển thị đầy đủ phương trình hóa học với các ô nhập số mol, thể tích dung dịch (Lít), khối lượng chất tan/dung dịch và nút tự động tính nồng độ kết quả tức thì.
+    + **Công thức tổng quát**: Hỗ trợ sửa nhanh bằng inline input kèm Live KaTeX rendering ngay lập tức bên cạnh.
 
-- **Khắc Phục Triệt Để Lỗi Render Markdown & Ký Tự Đầu Dòng (`MathText.jsx`)**:
-  - *Sửa Lỗi Regex Bullet Nuốt Ký Tự In Đậm `**`*:
-    + Trước đây, regex bullet `line.match(/^(\s*)(?:[-*•]|\u2022)\s*(?:[-*•]\s*)?(.*)$/)` xem ký tự `*` đầu dòng là bullet point mà không bắt buộc có khoảng trắng, dẫn đến các dòng in đậm bắt đầu bằng `**Ví dụ:**` bị nuốt 2 dấu `**` đầu tiên thành bullet `•`, để lại đuôi `Ví dụ:**` không có cặp mở, render thành `• Ví dụ:**` dạng thô.
-    + Cập nhật regex mới: `^(\s*)(?:[-+•\u2022]|\*(?!\*))\s+(?:[-+•\u2022]\s+)?(.*)$`, bảo vệ tuyệt đối chuỗi `**` hoặc `***` không bị nhận nhầm thành bullet marker, bắt buộc phải có khoảng trắng phía sau dấu `*` đơn.
-  - *Hỗ Trợ Toàn Diện Markdown Headings (`#`, `##`, `###`, `####`)*:
-    + Tự động nhận diện cú pháp heading tiêu chuẩn Markdown và phân cấp font chữ rõ ràng, trang nhã.
-    + Nhận diện các thẻ khối sư phạm chuyên dụng:
-      * `### 📌 Ví dụ minh họa SGK:`: Render thành **Thẻ Ví Dụ Minh Họa SGK (Teal/Emerald Card)** với viền thanh nhã, huy hiệu nổi bật `📌 VÍ DỤ MINH HỌA SGK`, nền `bg-teal-50/70 border border-teal-200/80`.
-      * `### 📝` / `### 📄 Bài toán mẫu áp dụng phương pháp:`: Render thành **Thẻ Bài Toán Mẫu Áp Dụng (Amber Card)** với huy hiệu `📝 BÀI TOÁN MẪU ÁP DỤNG`, nền `bg-amber-50/70 border border-amber-200/80`.
-  - *Tự Động Chuẩn Hóa Cặp Dấu In Đậm / In Nghiêng*:
-    + Bổ sung bộ xử lý Regex nội dòng hỗ trợ `***bold italic***`, `**bold**`, `*italic*`.
-    + Tự động bù cặp mở in đậm đối với các nhãn bị mất dấu mở ở đầu dòng: `([A-ZÀ-Ỹa-zà-ỹ0-9\s&]{2,30}):\*\*` -> `**$1:**`.
+- **Thanh Công Cụ Mini Nổi (Floating Math Bubble Toolbar)**:
+  - Tự động định vị và nổi ngay phía trên công thức đang được chọn/kích hoạt.
+  - Cung cấp bảng ký hiệu toán học nhanh 1 chạm: `+`, `−`, `×`, `÷`, `±`, `√`, `x²`, `xⁿ`, `x₀`, `π`, `Δ`, `α`, `β`, `∞`, `≠`, `≈`, `≤`, `≥`, `→`, `⇔`, `∈`.
+  - Tích hợp các nút chức năng nhanh: `⚡ Tính tự động` (áp dụng cho phân số, nồng độ hóa học, căn bậc hai), `🗑️ Xóa công thức`, và `✓ Xong` để lưu trạng thái.
 
-- **Chuẩn Hóa Sư Phạm Đa Miền: Phân Biệt Rõ STEM vs Ngữ Văn / KHXH (`CurriculumStudioEditor.jsx` & `CurriculumExplorerView.jsx`)**:
-  - *Loại Bỏ Hoàn Toàn Khái Niệm Mẹo Casio Với Môn Ngữ Văn & Khoa Học Xã Hội*:
-    + Xây dựng hàm kiểm tra lĩnh vực `isMathOrStemDomain(domain)` nhận diện chính xác các môn Toán, Lý, Hóa, Sinh, Tin học (STEM) so với Ngữ văn, Lịch sử, Địa lí, GDCD, Ngoại ngữ.
-    + **Giao diện Studio (`CurriculumStudioEditor.jsx`)**:
-      * Đối với môn STEM: Giữ nguyên Thẻ `💡 Kỹ thuật Casio & mẹo tư duy nhanh` (hướng dẫn phím bấm fx-580VN X, fx-880BTG, Table Mode).
-      * Đối với môn Ngữ văn / KHXH: Tự động đổi thành Thẻ `💡 Mẹo tư duy & Chiến thuật làm bài (Ngữ văn)` với viền tím violet sư phạm, hướng dẫn chiến thuật đọc hiểu, cấu trúc đoạn văn tổng - phân - hợp, dẫn chứng thực tế và phân bổ thời gian làm bài; tuyệt đối không hiển thị phím bấm máy tính Casio.
-    + **Panoramic Workspace (`CurriculumExplorerView.jsx`)**:
-      * Đổi tiêu đề thẻ Khối 2: "Bài toán mẫu" -> "Bài mẫu" (cho Ngữ văn).
-      * Thẻ mẹo công nghệ hiển thị nhãn `Chiến thuật làm bài` thay cho `Kỹ thuật Casio`.
-      * **Khắc phục triệt để lỗi nút `+ AI Tạo Thêm 2 Bài Mẫu` sinh nhầm biến số `$X = 2,07$`**: Nâng cấp kiểm tra lĩnh vực `isStem`: với môn Ngữ văn/KHXH, gọi AI sinh câu hỏi rèn luyện L3 & L4 chuẩn mực về lập ý, phân tích luận điểm, nghệ thuật dẫn chứng và đánh giá tư tưởng nhân văn, loại bỏ hoàn toàn các biến số $X$ và thuật ngữ đại số.
-  - *Nâng Cấp Bộ Bóc Tách Khối Sư Phạm (`parseTheoryRecapSections` & `parseSolutionMethodSections`)*:
-    + Tự động giải phóng ký tự ngắt dòng `\n` thô (`unescapeLiteralNewlines`) trước khi match regex.
-    + Mở rộng regex nhận diện cả icon `📄` và tiêu đề Ngữ văn `### 💡 Mẹo tư duy & Chiến thuật làm bài:`.
+- **Thanh Ribbon Chèn Ký Hiệu 1-Click (1-Click Word Equation Ribbon)**:
+  - Tích hợp dải Ribbon đầu trang với các nút thao tác 1 chạm:
+    + `➗ Phân Số & Số (12/4)`
+    + `a/b Phân Số Đại Số`
+    + `√16 Căn Bậc Hai`
+    + `x² Số Mũ`
+    + `🧪 Nồng Độ CM (n/V)`
+    + `💧 C% Nồng Độ Khối Lượng`
+    + `🎯 Đạo Hàm Số Gia SGK`
+    + `📋 Hệ Phương Trình`
+  - Khi người dùng bấm nút trên Ribbon, công thức mẫu được chèn trực tiếp vào vị trí con trỏ trên trang tài liệu và lập tức kích hoạt các ô slot để người dùng gõ số ngay tại chỗ, hoàn toàn không mở bất kỳ popup modal nào.
 
-- **Kiểm Thử Đóng Gói (Build Verification)**:
-  - `npm run build` thành công 100% (**0 Error, 0 Warning**, hoàn thành trong 770ms trên Vite 8 và React 19).
+- **Đồng Bộ Dữ Liệu Hai Chiều & Tích Hợp Toàn Diện Studio (`CurriculumStudioEditor.jsx`)**:
+  - Tích hợp `WordStyleFormulaCanvas` vào cả **Khối 1: Kiến thức nền tảng SGK (`theoryRecap`)** và **Khối 2: Phương pháp giải & thuật toán (`solutionMethod`)**.
+  - Tự động serialize các token văn bản và cấu trúc công thức thành chuỗi Markdown/LaTeX chuẩn mực.
+  - Dữ liệu đồng bộ hoàn hảo 100% giữa chế độ WYSIWYG, chế độ "Mã nguồn LaTeX thuần (Raw)", chế độ "Xem trang in KaTeX", và lưu thành công vào cơ sở dữ liệu PostgreSQL.
+
+- **Kiểm Thử Vận Hành (Build Verification)**:
+  - `npm run build` thành công 100% (**0 Error, 0 Warning**, build hoàn tất trong 751ms trên Vite 8 và React 19).

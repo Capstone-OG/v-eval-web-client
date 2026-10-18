@@ -39,6 +39,7 @@ import {
 } from 'lucide-react';
 import MathText, { unescapeLiteralNewlines } from '../common/MathText';
 import InteractiveFormulaBuilderModal from './InteractiveFormulaBuilderModal';
+import WordStyleFormulaCanvas from './WordStyleFormulaCanvas';
 import contentService from '../../services/contentService';
 import aiService from '../../services/aiService';
 
@@ -1434,42 +1435,17 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
                             </div>
                           </div>
 
-                          {/* SUBMODE 1: WYSIWYG - HIỂN THỊ KÝ HIỆU TOÁN & HÓA HỌC THẬT SỰ (KHÔNG LỘ MÃ \frac) */}
+                          {/* SUBMODE 1: WYSIWYG - SOẠN THẢO VÀ CHỈNH SỬA SỐ TRỰC TIẾP TRÊN CÔNG THỨC NHƯ WORD */}
                           {theorySubMode === 'wysiwyg' ? (
                             <div className="space-y-4">
-                              {form.theoryRecap?.trim() ? (
-                                <div className="p-4 rounded-xl bg-slate-50/40 border border-slate-200/80 text-sm leading-relaxed text-slate-900 min-h-[220px] font-sans overflow-x-auto space-y-2">
-                                  <MathText text={form.theoryRecap} />
-                                </div>
-                              ) : (
-                                <div className="p-12 text-center text-slate-400 text-xs italic bg-slate-50 rounded-xl border border-dashed border-slate-200">
-                                  Chưa có nội dung. Bấm nút "🧪 Chèn Số Hóa Học & Tính" hoặc "➗ Chèn Số Phân Số" ở trên để bắt đầu soạn thảo bài học.
-                                </div>
-                              )}
-
-                              {/* Hộp gợi ý chèn số và tính toán */}
-                              <div className="p-3.5 bg-gradient-to-r from-teal-50/70 via-white to-indigo-50/70 rounded-xl border border-teal-200/80 flex flex-wrap items-center justify-between gap-2 text-xs">
-                                <span className="font-bold text-slate-800 flex items-center gap-1.5">
-                                  <Calculator className="w-4 h-4 text-teal-600" />
-                                  <span>Công thức toán và hóa học trên trang được render chuẩn ký hiệu sách giáo khoa (phân số, số gia, nồng độ mol) và có thể tính toán tự động.</span>
-                                </span>
-                                <div className="flex items-center gap-1.5">
-                                  <button
-                                    type="button"
-                                    onClick={() => handleOpenFormulaBuilder('chemistry', 'theoryRecap')}
-                                    className="px-2.5 py-1 rounded-lg bg-teal-100 hover:bg-teal-200 text-teal-900 font-bold text-[11px] transition-colors"
-                                  >
-                                    🧪 Tính nồng độ CM = n/V
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleOpenFormulaBuilder('fraction', 'theoryRecap')}
-                                    className="px-2.5 py-1 rounded-lg bg-indigo-100 hover:bg-indigo-200 text-indigo-900 font-bold text-[11px] transition-colors"
-                                  >
-                                    ➗ Tính phân số A/B
-                                  </button>
-                                </div>
-                              </div>
+                              <WordStyleFormulaCanvas
+                                content={form.theoryRecap}
+                                onChange={(val) => setForm(prev => ({ ...prev, theoryRecap: val }))}
+                                isStem={isStem}
+                                accentColor="cyan"
+                                title="Trang Soạn Thảo Lý Thuyết WYSIWYG • Sửa Số Trực Tiếp Trên Công Thức"
+                                placeholder="Gõ lý thuyết nền tảng SGK tại đây. Bấm các nút ký hiệu để chèn phân số, số mũ, căn thức hoặc công thức hóa học và sửa số trực tiếp trên trang..."
+                              />
                             </div>
                           ) : (
                             /* SUBMODE 2: GÕ VĂN BẢN BÀN PHÍM (TEXTAREA THUẦN) */
@@ -1846,42 +1822,17 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
                               </div>
                             </div>
 
-                            {/* SUBMODE 1: WYSIWYG - HIỂN THỊ KÝ HIỆU TOÁN & HÓA HỌC THẬT SỰ */}
+                            {/* SUBMODE 1: WYSIWYG - SOẠN THẢO VÀ CHỈNH SỬA SỐ TRỰC TIẾP TRÊN CÔNG THỨC NHƯ WORD */}
                             {methodSubMode === 'wysiwyg' ? (
                               <div className="space-y-4">
-                                {form.solutionMethod?.trim() ? (
-                                  <div className="p-4 rounded-xl bg-slate-50/40 border border-slate-200/80 text-sm leading-relaxed text-slate-900 min-h-[200px] font-sans overflow-x-auto space-y-2">
-                                    <MathText text={form.solutionMethod} />
-                                  </div>
-                                ) : (
-                                  <div className="p-12 text-center text-slate-400 text-xs italic bg-slate-50 rounded-xl border border-dashed border-slate-200">
-                                    Chưa có quy trình giải. Bấm nút "+ Thêm Bước mới" hoặc "🧪 Chèn Số Hóa Học & Tính" ở trên để bắt đầu.
-                                  </div>
-                                )}
-
-                                {/* Hộp gợi ý chèn số và tính toán */}
-                                <div className="p-3.5 bg-gradient-to-r from-amber-50/70 via-white to-teal-50/70 rounded-xl border border-amber-200/80 flex flex-wrap items-center justify-between gap-2 text-xs">
-                                  <span className="font-bold text-slate-800 flex items-center gap-1.5">
-                                    <Calculator className="w-4 h-4 text-amber-600" />
-                                    <span>Quy trình giải hiển thị chuẩn ký hiệu toán học / hóa học, hỗ trợ thay số và tự động tính toán.</span>
-                                  </span>
-                                  <div className="flex items-center gap-1.5">
-                                    <button
-                                      type="button"
-                                      onClick={() => handleOpenFormulaBuilder('chemistry', 'solutionMethod')}
-                                      className="px-2.5 py-1 rounded-lg bg-teal-100 hover:bg-teal-200 text-teal-900 font-bold text-[11px] transition-colors"
-                                    >
-                                      🧪 Tính nồng độ CM = n/V
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleOpenFormulaBuilder('fraction', 'solutionMethod')}
-                                      className="px-2.5 py-1 rounded-lg bg-indigo-100 hover:bg-indigo-200 text-indigo-900 font-bold text-[11px] transition-colors"
-                                    >
-                                      ➗ Tính phân số A/B
-                                    </button>
-                                  </div>
-                                </div>
+                                <WordStyleFormulaCanvas
+                                  content={form.solutionMethod}
+                                  onChange={(val) => setForm(prev => ({ ...prev, solutionMethod: val }))}
+                                  isStem={isStem}
+                                  accentColor="amber"
+                                  title="Trang Soạn Thảo Quy Trình Giải WYSIWYG • Sửa Số Trực Tiếp Trên Công Thức"
+                                  placeholder="Gõ quy trình giải và các bước thuật toán tại đây. Bấm các nút ký hiệu để chèn phân số, số mũ, căn thức hoặc công thức hóa học và sửa số trực tiếp trên trang..."
+                                />
                               </div>
                             ) : (
                               /* SUBMODE 2: GÕ VĂN BẢN BÀN PHÍM */
