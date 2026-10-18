@@ -68,6 +68,22 @@ V-Eval-Web_Client/
 - Generates 5-axis Recharts Radar Chart and pedagogically calibrated Socratic AI Commentary.
 - Features Azota proctoring with Fullscreen mode, Web Audio warning chime, and secure room code entry (`VACT2026`).
 - Zero Native Dialogs: Replaced native browser `window.alert` and `window.confirm` with dedicated React overlay modals (`showPopupAlert`, `showExitConfirmModal`) to eliminate window blur triggers and tab-switch violation miscounts.
+- **Streamlined Diagnostic Hub & Historical Attempts Subsystem (`DiagnosticAssessmentPage.jsx`, `diagnosticData.js`)**:
+  - *Unified Dual-Mode Interface (Zero Tab Clutter)*:
+    1. **Historical Attempts List (Overview Mode)**: Displays longitudinal performance tracking with 4 KPI summary cards (Total Tests, Highest Score, Peak `` `\theta` ``, Average Duration), an IRT Growth Trend Area Chart visualising `` `\theta` `` progression against benchmark (`` `\theta \ge +0.80` ``), and an interactive Test Attempts Table.
+    2. **Attempt Detail View (Deep-Dive Psychometrics Mode)**: Clicking any attempt immediately loads its comprehensive diagnostic report:
+       - Top navigation bar with *← Quay Lại Danh Sách Lần Thi* button and attempt metadata.
+       - **5-Axis Competency Radar Chart**: Compares student ability against V-ACT 900+ target standard across Mathematics, Logic, Language Arts, Natural Sciences, and Social Sciences.
+       - **Domain Accuracy Bar Chart**: Measures accuracy percentage and correct question count per subject area.
+       - **Pacing Speedometer Grid**: 4 metric cards measuring question response time distribution (<25s rapid reflex, 25-90s standard pacing, >90s time-sink traps, and overall average time per item).
+       - **AI Socratic Diagnostic Synthesis**: Automated pedagogical qualitative assessment, identifying strengths, critical gaps, and tailored recommendations.
+       - **30-Question Interactive Review**: Complete post-test review with filterable states (All, Correct, Incorrect, Flagged), showing options, correct answers, and KaTeX-rendered step-by-step solutions.
+  - *Data Persistence Layer*: Seamless local persistence via `localStorage` keys `veval_exam_history` and `veval_latest_diagnostic_result`, automatically appending new attempts upon test submission and seamlessly opening the new attempt's detail view.
+
+### 4.2. Dedicated Exam Catalog & Testing Hub: Question Bank (`QuestionBankPage.jsx`)
+- Implemented in `src/components/question_bank/QuestionBankPage.jsx`, accessible directly via Sidebar item *"Ngân hàng đề & Thi thử"*.
+- Eliminates functional redundancy by decoupling the test catalog and room entry from Flow 1.
+- Features V-ACT 2026 Examination Lobby, 5 Core Domains strip, room code quick search (`VACT2026`), category filters (All, Diagnostic, Mock 120, Skill Refinement), and exam detail cards with Azota proctoring modal and passcode verification.
 
 ### 4.2. Flow 2: Dynamic Learning Roadmap & Milestone Quizzes (Kahn Topo & FSM)
 - Visualized in `HeroBanner.jsx`, `MilestoneCard.jsx`, and `RoadmapLearningPage.jsx`.

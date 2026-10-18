@@ -35,7 +35,14 @@ import {
   ShieldAlert,
   Copy,
   LogIn,
-  Lock
+  Lock,
+  History,
+  Calendar,
+  Activity,
+  ChevronDown,
+  ChevronUp,
+  Download,
+  ExternalLink
 } from 'lucide-react';
 import {
   Radar,
@@ -48,7 +55,14 @@ import {
   Bar,
   XAxis,
   YAxis,
-  Tooltip
+  Tooltip,
+  LineChart,
+  Line,
+  AreaChart,
+  Area,
+  CartesianGrid,
+  Legend,
+  ReferenceLine
 } from 'recharts';
 
 import { aiService } from '../../services/aiService';
@@ -56,15 +70,7 @@ import { contentService } from '../../services/contentService';
 import { practiceService } from '../../services/practiceService';
 import { tokenStorage } from '../../services/apiClient';
 import MathText from '../common/MathText';
-
-// 5 Miền năng lực chuẩn V-ACT 2026
-const DOMAINS = {
-  dom_math: { name: 'Toán học & Phân tích số liệu', color: 'from-blue-600 to-cyan-500', badge: 'bg-blue-50 text-blue-700 border-blue-200' },
-  dom_logic: { name: 'Tư duy Logic & Suy luận', color: 'from-purple-600 to-indigo-500', badge: 'bg-purple-50 text-purple-700 border-purple-200' },
-  dom_lang: { name: 'Sử dụng Ngôn ngữ & Văn học', color: 'from-emerald-600 to-teal-500', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-  dom_nat_sci: { name: 'Khoa học Tự nhiên (Lý - Hóa - Sinh)', color: 'from-amber-600 to-orange-500', badge: 'bg-amber-50 text-amber-700 border-amber-200' },
-  dom_soc_sci: { name: 'Khoa học Xã hội (Sử - Địa)', color: 'from-rose-600 to-pink-500', badge: 'bg-rose-50 text-rose-700 border-rose-200' }
-};
+import { DOMAINS, getFallbackDiagnosticResult, getDefaultExamHistory, SAMPLE_30_QUESTIONS } from './diagnosticData';
 
 // Danh mục bài kiểm tra khảo thí chuẩn hóa V-ACT
 const EXAM_LIST = [
@@ -232,6 +238,7 @@ export default function DiagnosticAssessmentPage({
   onNavigateDashboard,
   onNavigateHome,
   onNavigateLogin,
+  onNavigateQuestionBank,
   currentUser = null,
   isEmbedded = false,
   onExamStateChange,
@@ -249,6 +256,69 @@ export default function DiagnosticAssessmentPage({
   const [copiedCode, setCopiedCode] = useState('');
   const [accessCodeInput, setAccessCodeInput] = useState('');
   const [accessCodeError, setAccessCodeError] = useState('');
+
+  // Selected attempt from history to view in detail (null = show history overview list)
+  const [selectedHistoryExam, setSelectedHistoryExam] = useState(null);
+
+  // Exam History persistence
+  const [examHistory, setExamHistory] = useState(() => {
+    try {
+      const raw = localStorage.getItem('veval_exam_history');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {
+      console.warn('Lỗi đọc exam history:', e);
+    }
+    const savedTheta = localStorage.getItem('veval_theta_0');
+    return getDefaultExamHistory(savedTheta ? parseFloat(savedTheta) : null);
+  });
+
+  // Latest saved diagnostic result persistence
+  const [savedLatestResult, setSavedLatestResult] = useState(() => {
+    try {
+      const raw = localStorage.getItem('veval_latest_diagnostic_result');
+      if (raw) return JSON.parse(raw);
+    } catch (e) {
+      console.warn('Lỗi đọc latest diagnostic result:', e);
+    }
+    const savedTheta = localStorage.getItem('veval_theta_0');
+    return getFallbackDiagnosticResult(savedTheta ? parseFloat(savedTheta) : null);
+  });
+
+  // Live in-exam result state
+  const [resultData, setResultData] = useState(null);
+  const [reviewFilter, setReviewFilter] = useState('ALL'); // 'ALL' | 'CORRECT' | 'WRONG' | 'FLAGGED'
+
+  // Lấy dữ liệu bài kiểm tra chẩn đoán để hiển thị (từ bài vừa nộp, hoặc bài chọn từ lịch sử, hoặc bài đã lưu, hoặc fallback mẫu)
+  const currentDisplayResult = useMemo(() => {
+    if (selectedHistoryExam?.resultData) return selectedHistoryExam.resultData;
+    if (resultData) return resultData;
+    if (savedLatestResult) return savedLatestResult;
+    if (examHistory && examHistory.length > 0 && examHistory[0]?.resultData) return examHistory[0].resultData;
+    const savedTheta = localStorage.getItem('veval_theta_0');
+    return getFallbackDiagnosticResult(savedTheta ? parseFloat(savedTheta) : null);
+  }, [selectedHistoryExam, resultData, savedLatestResult, examHistory]);
+
+  // Dữ liệu biểu đồ xu hướng năng lực IRT theta qua các đợt thi (sắp xếp theo thời gian tăng dần)
+  const trendChartData = useMemo(() => {
+    if (!examHistory || examHistory.length === 0) return [];
+    const sorted = [...examHistory].sort((a, b) => new Date(a.completedAt) - new Date(b.completedAt));
+    return sorted.map((item, idx) => {
+      const d = new Date(item.completedAt);
+      const dateLabel = isNaN(d.getTime()) ? `Đợt ${idx + 1}` : `${d.getDate()}/${d.getMonth() + 1}`;
+      const thetaVal = typeof item.theta === 'number' ? item.theta : parseFloat(item.theta) || 0;
+      return {
+        attemptNumber: `Lần ${idx + 1}`,
+        displayLabel: `${dateLabel} (Lần ${idx + 1})`,
+        examTitle: item.examTitle || 'Khảo sát năng lực V-ACT',
+        theta: Math.round(thetaVal * 100) / 100,
+        accuracy: item.accuracy || Math.round(((item.totalCorrect || 0) / (item.totalQuestions || 1)) * 100),
+        benchmark: 0.80 // Mốc chuẩn 900+ ĐHQG-HCM
+      };
+    });
+  }, [examHistory]);
 
   // Auto start diagnostic assessment directly ONLY IF autoStart is true
   useEffect(() => {
@@ -556,9 +626,7 @@ export default function DiagnosticAssessmentPage({
   const [tutorResponse, setTutorResponse] = useState('');
   const tutorAbortRef = useRef(null);
 
-  // Result state
-  const [resultData, setResultData] = useState(null);
-  const [reviewFilter, setReviewFilter] = useState('ALL'); // 'ALL' | 'CORRECT' | 'WRONG' | 'FLAGGED'
+  // (Result state is declared at top of component)
 
   // Timer interval
   useEffect(() => {
@@ -814,10 +882,43 @@ export default function DiagnosticAssessmentPage({
       };
 
       setResultData(finalResult);
+      setSavedLatestResult(finalResult);
+      try {
+        localStorage.setItem('veval_latest_diagnostic_result', JSON.stringify(finalResult));
+      } catch (saveErr) {
+        console.warn('Lỗi lưu latest result:', saveErr);
+      }
+
+      // Thêm bài thi vừa nộp vào đầu lịch sử các lần thi
+      const newAttempt = {
+        id: finalSubmissionId,
+        examId: examData?.id || 'diag_30_vact',
+        examTitle: examData?.title || 'Bài Khảo Sát Năng Lực Đầu Vào 30 Câu V-ACT 2026',
+        completedAt: new Date().toISOString(),
+        totalCorrect,
+        totalQuestions: questions.length,
+        accuracy: Math.round((totalCorrect / (questions.length || 1)) * 100),
+        theta: finalTheta,
+        placementClass: finalPlacement,
+        timeSpentSeconds: totalTimeSpent,
+        resultData: finalResult
+      };
+
+      setExamHistory((prevHistory) => {
+        const nextHistory = [newAttempt, ...(prevHistory || []).filter((h) => h.id !== finalSubmissionId)];
+        try {
+          localStorage.setItem('veval_exam_history', JSON.stringify(nextHistory));
+        } catch (e) {
+          console.warn('Lỗi lưu exam history:', e);
+        }
+        return nextHistory;
+      });
+
       setShowViolationModal(false);
       setShowSubmitModal(false);
       setShowExitConfirmModal(false);
-      setStage('result');
+      setSelectedHistoryExam(newAttempt);
+      setStage('setup');
       exitFullScreenMode();
 
       // Fire celebration confetti
@@ -860,12 +961,12 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
 
   // Lọc danh sách câu hỏi trong bảng đánh giá chi tiết
   const filteredReviewQuestions = useMemo(() => {
-    if (!resultData?.reviewedQuestions) return [];
-    if (reviewFilter === 'CORRECT') return resultData.reviewedQuestions.filter((q) => q.isCorrect);
-    if (reviewFilter === 'WRONG') return resultData.reviewedQuestions.filter((q) => !q.isCorrect);
-    if (reviewFilter === 'FLAGGED') return resultData.reviewedQuestions.filter((q) => q.isFlagged);
-    return resultData.reviewedQuestions;
-  }, [resultData, reviewFilter]);
+    const list = currentDisplayResult?.reviewedQuestions || [];
+    if (reviewFilter === 'CORRECT') return list.filter((q) => q.isCorrect);
+    if (reviewFilter === 'WRONG') return list.filter((q) => !q.isCorrect);
+    if (reviewFilter === 'FLAGGED') return list.filter((q) => q.isFlagged);
+    return list;
+  }, [currentDisplayResult, reviewFilter]);
 
   const currentQ = questions[currentIndex];
 
@@ -944,198 +1045,830 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
       {/* 1. SETUP / EXAM LOBBY & CATALOG SCREEN (Flow 1: Khảo Thí & Chẩn Đoán) */}
       {/* ===================================================================== */}
       {stage === 'setup' && (
-        <div className="flex-1 w-full max-w-[1700px] mx-auto p-4 sm:p-6 lg:p-8 space-y-8 animate-fade-in">
+        <div className="flex-1 w-full max-w-[1700px] mx-auto p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8 animate-fade-in">
 
-          {/* Top Hero Banner */}
-          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-blue-700 via-indigo-700 to-slate-900 text-white p-6 sm:p-10 shadow-xl border border-blue-500/20">
-            <div className="absolute top-0 right-0 -mr-16 -mt-16 w-80 h-80 rounded-full bg-blue-400/20 blur-3xl pointer-events-none"></div>
-            <div className="absolute bottom-0 left-1/3 -mb-20 w-60 h-60 rounded-full bg-purple-500/20 blur-3xl pointer-events-none"></div>
+          {selectedHistoryExam ? (
+            <div className="space-y-8 animate-fade-in">
 
-            <div className="relative z-10 max-w-4xl space-y-4">
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-xs font-black text-amber-300">
-                <Sparkles className="w-4 h-4 text-amber-300" />
-                <span>TRUNG TÂM KHẢO THÍ & CHẨN ĐOÁN NĂNG LỰC CHUẨN HÓA V-ACT</span>
-              </div>
-
-              <h1 className="text-2xl sm:text-4xl font-black text-white tracking-tight leading-tight">
-                Khảo Sát Năng Lực Đầu Vào <span className="text-amber-300">Chuẩn Hóa 2026</span>
-              </h1>
-
-              <p className="text-sm sm:text-base text-blue-100 font-medium leading-relaxed max-w-3xl">
-                Làm bài khảo sát 30 câu với động cơ <strong>IRT 2PL</strong> để đo lường tham số năng lực khởi điểm <strong className="text-amber-300">&theta;₀</strong>, xếp lớp học lực và kích hoạt <strong>Lộ Trình Học Thích Ứng (DAG)</strong> cá nhân hóa 100%.
-              </p>
-
-              {/* Quick Code Entry Bar */}
-              <form onSubmit={handleQuickEnterCode} className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 max-w-xl">
-                <div className="relative flex-1">
-                  <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="text"
-                    value={accessCodeInput}
-                    onChange={(e) => {
-                      setAccessCodeInput(e.target.value);
-                      if (accessCodeError) setAccessCodeError('');
+              {/* Top Navigation Bar with Back Button */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-3xl bg-white border border-slate-200/90 shadow-sm">
+                <div className="flex items-center gap-3 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedHistoryExam(null);
+                      setResultData(null);
                     }}
-                    placeholder="Nhập mã phòng thi (ví dụ: VACT2026)..."
-                    className="w-full pl-10 pr-4 py-3 bg-white text-slate-900 placeholder-slate-400 font-mono font-bold text-xs sm:text-sm rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-400 border border-white/20 uppercase"
-                  />
-                </div>
-                <button
-                  type="submit"
-                  className="px-6 py-3 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-black text-xs sm:text-sm shadow-lg shadow-amber-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 shrink-0"
-                >
-                  <Play className="w-4 h-4 fill-slate-950" />
-                  <span>Vào Phòng Thi</span>
-                </button>
-              </form>
-
-              {accessCodeError && (
-                <div className="text-xs text-rose-300 font-bold flex items-center gap-1.5 pt-1">
-                  <AlertCircle className="w-4 h-4" />
-                  <span>{accessCodeError}</span>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* 5 Domains Overview Strip */}
-          <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <Target className="w-5 h-5 text-blue-600" />
-                <h3 className="text-sm font-black text-slate-900 uppercase tracking-wide">
-                  5 Miền Năng Lực Chuẩn V-ACT 2026 (Bộ 30 Câu Khảo Sát)
-                </h3>
-              </div>
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px] font-bold">
-                <ShieldAlert className="w-3.5 h-3.5 text-emerald-600" />
-                <span>Giám Sát Azota Proctored (Toàn màn hình & chống rời tab)</span>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-              {Object.entries(DOMAINS).map(([key, domain], idx) => (
-                <div key={key} className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 hover:border-blue-300 hover:bg-blue-50/40 transition-all space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-black text-slate-600">PHẦN {idx + 1}</span>
-                    <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-white border border-slate-200 text-slate-700">6 câu</span>
-                  </div>
-                  <div className="text-xs font-bold text-slate-800 line-clamp-1" title={domain.name}>
-                    {domain.name}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Exam List Cards Grid */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-                  <FileText className="w-5 h-5 text-blue-600" />
-                  <span>Danh Sách Đề Khảo Thí & Thi Thử</span>
-                </h2>
-                <p className="text-xs text-slate-500 font-medium mt-0.5">
-                  Chọn bài kiểm tra bên dưới để xem thông tin chi tiết và bắt đầu làm bài
-                </p>
-              </div>
-              <span className="px-3 py-1 rounded-xl bg-blue-50 text-blue-700 border border-blue-200 text-xs font-bold">
-                {EXAM_LIST.length} đề thi sẵn sàng
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {EXAM_LIST.map((exam) => {
-                const isHighlight = exam.id === 'diag_30_vact';
-                return (
-                  <div
-                    key={exam.id}
-                    className={`relative bg-white rounded-3xl p-6 border transition-all duration-300 flex flex-col justify-between group ${isHighlight
-                        ? 'border-blue-500/80 shadow-xl shadow-blue-500/10 ring-2 ring-blue-500/20'
-                        : 'border-slate-200 hover:border-slate-300 shadow-md hover:shadow-xl'
-                      }`}
+                    className="px-4 py-2 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs flex items-center gap-2 transition-all cursor-pointer shadow-xs active:scale-95"
                   >
-                    {/* Top Badges */}
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between gap-2 flex-wrap">
-                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-black tracking-wide ${exam.badgeColor || 'bg-blue-600 text-white'}`}>
-                          {exam.badge}
-                        </span>
-                        <div className="flex items-center gap-1.5 text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full">
-                          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                          <span>ĐANG MỞ THI</span>
+                    <ChevronLeft className="w-4 h-4" />
+                    <span>← Quay Lại Danh Sách Lần Thi</span>
+                  </button>
+                  <div className="h-6 w-px bg-slate-200 hidden sm:block"></div>
+                  <div className="text-xs text-slate-600 font-medium flex items-center gap-1.5 flex-wrap">
+                    <Eye className="w-4 h-4 text-blue-600 shrink-0" />
+                    <span>Đang xem chi tiết: <strong className="text-slate-900 font-black">{selectedHistoryExam.examTitle || 'Bài Khảo Sát Năng Lực'}</strong></span>
+                    <span className="text-slate-400">•</span>
+                    <span className="font-mono text-slate-500">
+                      Nộp lúc {new Date(selectedHistoryExam.completedAt).toLocaleString('vi-VN')}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => onNavigateQuestionBank ? onNavigateQuestionBank() : handleRetakeExam()}
+                    className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:opacity-95 text-white font-bold text-xs shadow-md shadow-blue-500/20 flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
+                  >
+                    <Play className="w-3.5 h-3.5 fill-white" />
+                    <span>Làm Đề Mới (Ngân Hàng Đề)</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Top Result Hero Banner with Ambient Glow & Glassmorphism */}
+              <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white p-6 sm:p-8 lg:p-10 shadow-2xl border border-slate-800">
+                <div className="absolute top-0 right-0 -mr-20 -mt-20 w-80 h-80 rounded-full bg-blue-500/15 blur-3xl pointer-events-none"></div>
+                <div className="absolute bottom-0 left-1/4 -mb-20 w-72 h-72 rounded-full bg-purple-500/15 blur-3xl pointer-events-none"></div>
+
+                <div className="relative z-10 space-y-6">
+                  {/* Top Tag */}
+                  <div className="flex flex-wrap items-center justify-between gap-4">
+                    <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 border border-white/20 text-xs font-black text-[#FACC15] backdrop-blur-md">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 stroke-[2.5]" />
+                      <span>BÁO CÁO NĂNG LỰC ĐẦU VÀO CHUẨN HÓA V-ACT 2026</span>
+                    </div>
+                    <div className="text-xs text-slate-400 font-mono">
+                      Mã bài: <strong className="text-white font-bold">{selectedHistoryExam?.examId || 'VACT-30'}</strong> • Thời lượng: 45 phút
+                    </div>
+                  </div>
+
+                  {/* Title & Description */}
+                  <div className="max-w-3xl space-y-2">
+                    <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white tracking-tight leading-tight">
+                      Phân Tích Năng Lực & Dự Đoán Điểm Số ĐGNL
+                    </h2>
+                    <p className="text-xs sm:text-sm text-slate-300 leading-relaxed font-medium">
+                      Kết quả được ước lượng qua mô hình trắc lượng học hiện đại <strong className="text-[#FACC15]">IRT 2PL (Item Response Theory)</strong> kết hợp dữ liệu phản xạ thời gian thực và phân loại Bloom 6 cấp độ.
+                    </p>
+                  </div>
+
+                  {/* 3 Prominent Glassmorphism KPI Cards */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+                    {/* 1. Raw Score & Accuracy */}
+                    <div className="p-5 rounded-2xl bg-white/10 border border-white/15 backdrop-blur-md flex items-center justify-between gap-4 shadow-lg hover:border-white/25 transition-all">
+                      <div className="space-y-1">
+                        <div className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400">
+                          Điểm Số Thô
+                        </div>
+                        <div className="text-3xl sm:text-4xl font-black text-white tracking-tight">
+                          {currentDisplayResult.pacing?.totalCorrect || 0}<span className="text-base font-semibold text-slate-400"> / {currentDisplayResult.pacing?.totalQuestions || 30}</span>
+                        </div>
+                        <div className="text-xs font-bold text-emerald-400 flex items-center gap-1">
+                          <span>Đạt {Math.round(((currentDisplayResult.pacing?.totalCorrect || 0) / (currentDisplayResult.pacing?.totalQuestions || 30)) * 100)}% chính xác</span>
                         </div>
                       </div>
-
-                      {/* Title & Desc */}
-                      <div className="space-y-2">
-                        <h3 className="text-base sm:text-lg font-black text-slate-900 leading-snug group-hover:text-blue-600 transition-colors">
-                          {exam.title}
-                        </h3>
-                        <p className="text-xs text-slate-600 font-medium leading-relaxed line-clamp-3">
-                          {exam.description}
-                        </p>
-                      </div>
-
-                      {/* Specs Chips */}
-                      <div className="grid grid-cols-2 gap-2 pt-2 text-xs">
-                        <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 flex items-center gap-2">
-                          <Clock className="w-4 h-4 text-blue-600 shrink-0" />
-                          <div>
-                            <div className="text-[10px] text-slate-600 font-bold uppercase">Thời gian</div>
-                            <div className="font-extrabold text-slate-800">{exam.durationMinutes} phút</div>
-                          </div>
-                        </div>
-
-                        <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 flex items-center gap-2">
-                          <Target className="w-4 h-4 text-indigo-600 shrink-0" />
-                          <div>
-                            <div className="text-[10px] text-slate-600 font-bold uppercase">Số câu hỏi</div>
-                            <div className="font-extrabold text-slate-800">{exam.questionCount} câu</div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Default Passcode Chip */}
-                      <div className="p-3 rounded-2xl bg-amber-50/80 border border-amber-200/80 flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <Lock className="w-3.5 h-3.5 text-amber-700 shrink-0" />
-                          <div className="text-xs text-amber-900 font-semibold truncate">
-                            Mã phòng: <strong className="font-mono font-black text-amber-800">{exam.defaultCode}</strong>
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => handleCopyCode(exam.defaultCode)}
-                          className="px-2 py-1 rounded-lg bg-white border border-amber-300 text-[11px] font-bold text-amber-800 hover:bg-amber-100 transition-colors flex items-center gap-1 shrink-0 cursor-pointer"
-                        >
-                          <Copy className="w-3 h-3" />
-                          <span>{copiedCode === exam.defaultCode ? 'Đã chép!' : 'Chép mã'}</span>
-                        </button>
+                      <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center text-emerald-400 shrink-0">
+                        <CheckCircle2 className="w-6 h-6 stroke-[2.5]" />
                       </div>
                     </div>
 
-                    {/* Action Button */}
-                    <div className="pt-6 mt-6 border-t border-slate-100">
-                      <button
-                        type="button"
-                        onClick={() => handleOpenExamModal(exam)}
-                        className={`w-full py-3.5 px-4 rounded-2xl font-black text-xs sm:text-sm transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md active:scale-95 ${isHighlight
-                            ? 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-blue-500/25'
-                            : 'bg-slate-900 hover:bg-blue-600 text-white shadow-slate-900/10'
+                    {/* 2. IRT Theta 0 */}
+                    <div className="p-5 rounded-2xl bg-white/10 border border-white/15 backdrop-blur-md flex items-center justify-between gap-4 shadow-lg hover:border-white/25 transition-all">
+                      <div className="space-y-1">
+                        <div className="text-[11px] font-extrabold uppercase tracking-wider text-amber-300">
+                          Chỉ Số Năng Lực IRT θ₀
+                        </div>
+                        <div className="text-3xl sm:text-4xl font-black text-amber-300 font-mono tracking-tight">
+                          {currentDisplayResult.theta_0 > 0 ? `+${Number(currentDisplayResult.theta_0).toFixed(2)}` : Number(currentDisplayResult.theta_0 || 0).toFixed(2)}
+                        </div>
+                        <div className="text-xs font-bold text-slate-300 flex items-center gap-1">
+                          <span>Top ~{currentDisplayResult.theta_0 >= 1.2 ? '10%' : currentDisplayResult.theta_0 >= 0.5 ? '20%' : '45%'} thí sinh toàn quốc</span>
+                        </div>
+                      </div>
+                      <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-400/30 flex items-center justify-center text-amber-300 shrink-0">
+                        <Brain className="w-6 h-6 stroke-[2.5]" />
+                      </div>
+                    </div>
+
+                    {/* 3. Placement Class */}
+                    <div className="p-5 rounded-2xl bg-white/10 border border-white/15 backdrop-blur-md flex items-center justify-between gap-4 shadow-lg hover:border-white/25 transition-all">
+                      <div className="space-y-1">
+                        <div className="text-[11px] font-extrabold uppercase tracking-wider text-cyan-300">
+                          Phân Lớp Đề Xuất
+                        </div>
+                        <div className="text-base sm:text-lg font-black text-white leading-tight">
+                          {currentDisplayResult.placement_class === 'BREAKTHROUGH'
+                            ? 'Lớp Bứt Phá (900+)'
+                            : currentDisplayResult.placement_class === 'ACCELERATION'
+                              ? 'Lớp Tăng Tốc (750-900)'
+                              : 'Lớp Nền Tảng (<750)'}
+                        </div>
+                        <div className="text-xs font-semibold text-slate-300">
+                          {currentDisplayResult.placement_class === 'BREAKTHROUGH'
+                            ? 'Chinh phục ĐHQG-HCM 900+'
+                            : currentDisplayResult.placement_class === 'ACCELERATION'
+                              ? 'Tập trung bứt phá câu VDC'
+                              : 'Củng cố nền tảng kiến thức'}
+                        </div>
+                      </div>
+                      <div className="w-12 h-12 rounded-2xl bg-cyan-500/20 border border-cyan-400/30 flex items-center justify-center text-cyan-300 shrink-0">
+                        <Award className="w-6 h-6 stroke-[2.5]" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* ================================================================= */}
+              {/* PACING ANALYSIS SPEEDOMETERS                                      */}
+              {/* ================================================================= */}
+              <div className="p-6 sm:p-7 bg-white border border-slate-200/90 rounded-3xl shadow-xl space-y-5 text-slate-900">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+                  <div className="flex items-center gap-2.5 text-base font-black text-slate-900">
+                    <Gauge className="w-5 h-5 text-amber-500" />
+                    <span>Phân Tích Tốc Độ & Chiến Thuật Làm Bài (Pacing Analysis)</span>
+                  </div>
+                  <div className="text-xs text-slate-500 font-medium">
+                    Tổng thời gian làm bài: <strong className="text-slate-900 font-mono font-bold">{formatTime(currentDisplayResult.pacing?.totalTimeSpent || 0)}</strong> / 45:00
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  {/* Average Time */}
+                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-1.5 hover:shadow-sm transition-all">
+                    <div className="flex items-center justify-between text-xs text-slate-600 font-bold">
+                      <span>Thời Gian Trung Bình</span>
+                      <Clock className="w-4 h-4 text-blue-600" />
+                    </div>
+                    <div className="text-2xl font-black text-slate-900 font-mono">
+                      {currentDisplayResult.pacing?.avgTimePerQ || 0}<span className="text-xs font-semibold text-slate-500">s / câu</span>
+                    </div>
+                    <div className="text-[11px] text-blue-700 font-semibold">Nhịp độ tiêu chuẩn V-ACT (90s)</div>
+                  </div>
+
+                  {/* Fast (<25s) */}
+                  <div className="p-4 rounded-2xl bg-emerald-50/60 border border-emerald-200 space-y-1.5 hover:shadow-sm transition-all">
+                    <div className="flex items-center justify-between text-xs text-emerald-700 font-bold">
+                      <span>Phản Xạ Nhanh (&lt;25s)</span>
+                      <Zap className="w-4 h-4 text-emerald-600" />
+                    </div>
+                    <div className="text-2xl font-black text-emerald-900 font-mono">
+                      {currentDisplayResult.pacing?.fastCount || 0}<span className="text-xs font-semibold text-slate-500"> câu</span>
+                    </div>
+                    <div className="text-[11px] text-emerald-700 font-semibold">Phản xạ nhạy bén ở câu quen thuộc</div>
+                  </div>
+
+                  {/* Normal (25-90s) */}
+                  <div className="p-4 rounded-2xl bg-blue-50/60 border border-blue-200 space-y-1.5 hover:shadow-sm transition-all">
+                    <div className="flex items-center justify-between text-xs text-blue-700 font-bold">
+                      <span>Chuẩn Nhịp Độ (25-90s)</span>
+                      <CheckSquare className="w-4 h-4 text-blue-600" />
+                    </div>
+                    <div className="text-2xl font-black text-blue-900 font-mono">
+                      {currentDisplayResult.pacing?.normalCount || 0}<span className="text-xs font-semibold text-slate-500"> câu</span>
+                    </div>
+                    <div className="text-[11px] text-blue-700 font-semibold">Kiểm soát tiến độ 45 phút tối ưu</div>
+                  </div>
+
+                  {/* Slow (>90s) */}
+                  <div className="p-4 rounded-2xl bg-amber-50/60 border border-amber-200 space-y-1.5 hover:shadow-sm transition-all">
+                    <div className="flex items-center justify-between text-xs text-amber-800 font-bold">
+                      <span>Tốn Thời Gian (&gt;90s)</span>
+                      <AlertTriangle className="w-4 h-4 text-amber-600" />
+                    </div>
+                    <div className="text-2xl font-black text-amber-900 font-mono">
+                      {currentDisplayResult.pacing?.slowCount || 0}<span className="text-xs font-semibold text-slate-500"> câu</span>
+                    </div>
+                    <div className="text-[11px] text-amber-800 font-semibold">
+                      {(currentDisplayResult.pacing?.slowCount || 0) > 4 ? 'Cần cải thiện tốc độ câu khó' : 'Phân bổ thời gian an toàn'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* ================================================================= */}
+              {/* 2 COLUMN GRAPHS: RADAR CHART & ACCURACY BAR CHART                 */}
+              {/* ================================================================= */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+                {/* Left: Recharts 5-Axis Radar Chart */}
+                <div className="lg:col-span-6 p-6 sm:p-7 bg-white border border-slate-200/90 rounded-3xl shadow-xl space-y-4 text-slate-900">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                    <div className="flex items-center gap-2 text-sm font-black text-slate-900">
+                      <BarChart3 className="w-4 h-4 text-blue-600" />
+                      <span>Biểu Đồ Radar Năng Lực 5 Lĩnh Vực</span>
+                    </div>
+                    <div className="text-xs text-slate-500 font-bold">Thang đo %</div>
+                  </div>
+
+                  <div className="h-72 w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <RadarChart data={currentDisplayResult.radar_chart || []}>
+                        <PolarGrid stroke="#cbd5e1" />
+                        <PolarAngleAxis dataKey="domain_name" tick={{ fill: '#334155', fontSize: 11, fontWeight: 700 }} />
+                        <PolarRadiusAxis angle={30} domain={[0, 100]} stroke="#94a3b8" />
+                        <Radar name="Điểm Thí Sinh" dataKey="student_pct" stroke="#2563eb" fill="#2563eb" fillOpacity={0.45} />
+                        <Radar name="Chuẩn Mục Tiêu" dataKey="benchmark_pct" stroke="#6366f1" fill="#6366f1" fillOpacity={0.15} />
+                        <Tooltip contentStyle={{ backgroundColor: '#ffffff', borderColor: '#e2e8f0', borderRadius: '12px', color: '#0f172a' }} />
+                      </RadarChart>
+                    </ResponsiveContainer>
+                  </div>
+
+                  <div className="flex items-center justify-center gap-6 text-xs font-bold pt-2">
+                    <div className="flex items-center gap-2 text-blue-600">
+                      <span className="w-3 h-3 rounded-full bg-blue-600"></span>
+                      <span>Kết quả của bạn</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-indigo-600">
+                      <span className="w-3 h-3 rounded-full bg-indigo-500"></span>
+                      <span>Chuẩn đầu vào 900+</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right: Domain Bar Chart & AI Commentary */}
+                <div className="lg:col-span-6 flex flex-col space-y-5">
+                  {/* AI Socratic Commentary Box */}
+                  <div className="p-6 bg-gradient-to-br from-purple-50/90 to-indigo-50/80 border border-purple-200/80 rounded-3xl shadow-xl space-y-3 text-slate-900">
+                    <div className="flex items-center gap-2 text-sm font-black text-purple-900">
+                      <Bot className="w-4 h-4 text-purple-600" />
+                      <span>Lời Khuyên Sư Phạm Từ Cố Vấn AI (Gemini Commentary)</span>
+                    </div>
+                    <p className="text-xs sm:text-sm text-slate-800 leading-relaxed italic bg-white p-4 rounded-2xl border border-purple-200 shadow-xs whitespace-pre-line">
+                      "{currentDisplayResult.ai_commentary || 'Thí sinh thể hiện tư duy nhạy bén và phân bổ thời gian hợp lý. Hãy tiếp tục củng cố các kỹ năng vận dụng cao để bứt phá mục tiêu điểm số 900+.'}"
+                    </p>
+                  </div>
+
+                  {/* 5 Domains Accuracy Progress Bar Chart */}
+                  <div className="p-6 bg-white border border-slate-200/90 rounded-3xl shadow-xl space-y-3.5 flex-1 text-slate-900">
+                    <div className="text-xs font-black uppercase text-slate-400 tracking-wider">
+                      Tỷ Lệ Chính Xác Từng Miền Năng Lực
+                    </div>
+                    <div className="h-44 w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={currentDisplayResult.domain_scores || []} margin={{ top: 10, right: 10, left: -20, bottom: 20 }}>
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                          <XAxis dataKey="domain_name" tick={{ fontSize: 10, fill: '#64748b' }} interval={0} angle={-15} textAnchor="end" height={40} />
+                          <YAxis domain={[0, 100]} tick={{ fontSize: 10, fill: '#64748b' }} />
+                          <Tooltip formatter={(value) => [`${value}%`, 'Chính xác']} />
+                          <Bar dataKey="accuracy_pct" fill="#3b82f6" radius={[6, 6, 0, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
+              {/* ================================================================= */}
+              {/* PERFORMANCE GROWTH TREND GRAPH OVER ATTEMPTS (Area Chart)         */}
+              {/* ================================================================= */}
+              <div className="p-6 sm:p-7 bg-white border border-slate-200/90 rounded-3xl shadow-xl space-y-4 text-slate-900">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                  <div className="flex items-center gap-2">
+                    <TrendingUp className="w-5 h-5 text-blue-600" />
+                    <h3 className="text-base font-black text-slate-900">
+                      Đồ Thị Tăng Trưởng Năng Lực IRT θ Qua Các Đợt Khảo Thí
+                    </h3>
+                  </div>
+                  <span className="text-xs text-slate-500 font-medium">
+                    Theo dõi tiến trình bứt phá năng lực từ bài khảo sát đầu vào đến hiện tại
+                  </span>
+                </div>
+
+                <div className="h-64 sm:h-72 w-full pt-2">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={trendChartData} margin={{ top: 15, right: 20, left: -10, bottom: 10 }}>
+                      <defs>
+                        <linearGradient id="colorThetaLobby" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#2563eb" stopOpacity={0.35}/>
+                          <stop offset="95%" stopColor="#2563eb" stopOpacity={0.0}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                      <XAxis dataKey="displayLabel" tick={{ fontSize: 11, fill: '#475569', fontWeight: 600 }} />
+                      <YAxis domain={[-3.5, 2.0]} tick={{ fontSize: 11, fill: '#475569' }} tickFormatter={(v) => (v > 0 ? `+${v}` : v)} />
+                      <Tooltip
+                        contentStyle={{ backgroundColor: '#ffffff', borderColor: '#cbd5e1', borderRadius: '12px', color: '#0f172a' }}
+                        formatter={(val, name) => [name === 'theta' ? (val > 0 ? `+${val}` : val) : `${val}%`, name === 'theta' ? 'Tham số IRT θ' : 'Chuẩn 900+']}
+                        labelFormatter={(label) => `Đợt thi: ${label}`}
+                      />
+                      <ReferenceLine y={0.80} stroke="#10b981" strokeDasharray="4 4" label={{ value: "Chuẩn 900+ (θ = +0.80)", fill: "#059669", fontSize: 11, fontWeight: "bold" }} />
+                      <Area type="monotone" dataKey="theta" name="theta" stroke="#2563eb" strokeWidth={3} fillOpacity={1} fill="url(#colorThetaLobby)" dot={{ r: 5, fill: '#2563eb', strokeWidth: 2, stroke: '#ffffff' }} activeDot={{ r: 7 }} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+
+                <div className="flex flex-wrap items-center justify-between gap-4 text-xs font-semibold text-slate-600 bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
+                  <div className="flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-full bg-blue-600"></span>
+                    <span>Đường tham số năng lực IRT &theta; thực tế của thí sinh</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-4 h-0.5 bg-emerald-500 border-t-2 border-dashed border-emerald-500"></span>
+                    <span>Ngưỡng chuẩn ĐHQG-HCM 900+ (&theta; &ge; +0.80)</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* ================================================================= */}
+              {/* BẢNG ĐÁNH GIÁ CHI TIẾT & ĐÁP ÁN 30 CÂU HỎI                        */}
+              {/* ================================================================= */}
+              <div className="p-6 sm:p-8 bg-white border border-slate-200/90 rounded-3xl shadow-xl space-y-6 text-slate-900">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-5">
+                  <div>
+                    <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
+                      <FileText className="w-5 h-5 text-blue-600" />
+                      <span>Bảng Đánh Giá Chi Tiết & Đáp Án 30 Câu Hỏi</span>
+                    </h3>
+                    <p className="text-xs text-slate-500 mt-1">
+                      Đối chiếu câu trả lời của thí sinh với đáp án chính xác, lời giải chi tiết và thời gian làm bài.
+                    </p>
+                  </div>
+
+                  {/* Review Filters */}
+                  <div className="flex items-center gap-1.5 bg-slate-100 p-1.5 rounded-2xl border border-slate-200 flex-shrink-0 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => setReviewFilter('ALL')}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${reviewFilter === 'ALL'
+                        ? 'bg-blue-600 text-white shadow-md'
+                        : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                    >
+                      Tất Cả ({currentDisplayResult.reviewedQuestions?.length || 30})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setReviewFilter('CORRECT')}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${reviewFilter === 'CORRECT'
+                        ? 'bg-emerald-600 text-white shadow-md'
+                        : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                    >
+                      Đúng ({currentDisplayResult.pacing?.totalCorrect || 0})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setReviewFilter('WRONG')}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${reviewFilter === 'WRONG'
+                        ? 'bg-rose-600 text-white shadow-md'
+                        : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                    >
+                      Sai ({(currentDisplayResult.pacing?.totalQuestions || 30) - (currentDisplayResult.pacing?.totalCorrect || 0)})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setReviewFilter('FLAGGED')}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${reviewFilter === 'FLAGGED'
+                        ? 'bg-amber-600 text-white shadow-md'
+                        : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                    >
+                      Phân Vân ({currentDisplayResult.pacing?.flaggedCount || 0})
+                    </button>
+                  </div>
+                </div>
+
+                {/* List of 30 Detailed Questions */}
+                <div className="space-y-4">
+                  {filteredReviewQuestions.map((q) => {
+                    const isSelected = !!q.studentChoice;
+
+                    return (
+                      <div
+                        key={q.id}
+                        className={`p-5 sm:p-6 rounded-2xl border transition-all space-y-4 ${q.isCorrect
+                          ? 'bg-emerald-50/30 border-emerald-200'
+                          : isSelected
+                            ? 'bg-rose-50/30 border-rose-200'
+                            : 'bg-slate-50/80 border-slate-200'
                           }`}
                       >
-                        <Play className="w-4 h-4 fill-white" />
-                        <span>🚀 Bắt Đầu Vào Thi (Xem Chi Tiết)</span>
-                      </button>
-                    </div>
+                        {/* Question Card Header */}
+                        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200/80 pb-3">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-sm font-black text-blue-600">
+                              Câu {q.question_number}:
+                            </span>
+                            <span className={`px-2.5 py-0.5 rounded-lg text-xs font-bold border ${DOMAINS[q.domain_id]?.badge || 'bg-slate-100 text-slate-700 border-slate-200'}`}>
+                              {q.domain_name}
+                            </span>
+                            <span className="text-xs text-slate-500 font-medium">
+                              {q.skill_name}
+                            </span>
+                            <span className="px-2 py-0.5 rounded bg-slate-200 text-[10px] font-bold text-slate-700">
+                              Bloom {q.bloom}/6
+                            </span>
+                            {q.isFlagged && (
+                              <span className="px-2 py-0.5 rounded bg-amber-100 text-amber-800 text-[10px] font-black border border-amber-300 flex items-center gap-1">
+                                <Flag className="w-3 h-3 fill-amber-500 text-amber-500" />
+                                <span>Phân vân</span>
+                              </span>
+                            )}
+                          </div>
 
-                  </div>
-                );
-              })}
+                          {/* Speed badge & status */}
+                          <div className="flex items-center gap-2">
+                            <span className={`px-2.5 py-1 rounded-xl text-xs font-bold flex items-center gap-1 ${q.speedCategory === 'fast'
+                              ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                              : q.speedCategory === 'slow'
+                                ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                                : 'bg-blue-100 text-blue-800 border border-blue-300'
+                              }`}>
+                              <Clock className="w-3.5 h-3.5" />
+                              <span>{q.timeSpent}s</span>
+                              <span className="text-[10px] opacity-80">
+                                ({q.speedCategory === 'fast' ? '⚡ Nhanh' : q.speedCategory === 'slow' ? '⏳ Chậm' : '⏱️ Chuẩn'})
+                              </span>
+                            </span>
+
+                            <span className={`px-3 py-1 rounded-xl text-xs font-black ${q.isCorrect
+                              ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                              : isSelected
+                                ? 'bg-rose-100 text-rose-800 border border-rose-300'
+                                : 'bg-slate-200 text-slate-700 border border-slate-300'
+                              }`}>
+                              {q.isCorrect ? '✅ Chính xác' : isSelected ? '❌ Chưa đúng' : '⚪ Chưa trả lời'}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Passage text if any */}
+                        {q.passage_content && (
+                          <div className="p-3.5 rounded-xl bg-blue-50/70 border border-blue-100 text-xs text-slate-800 font-serif leading-relaxed">
+                            <div className="text-[10px] font-bold text-blue-700 uppercase mb-1">
+                              {q.passage_title || 'Ngữ liệu đọc hiểu'}:
+                            </div>
+                            <div className="line-clamp-3 hover:line-clamp-none transition-all cursor-pointer">
+                              {q.passage_content}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Question Content */}
+                        <div className="text-sm sm:text-base font-bold text-slate-900 leading-relaxed">
+                          <MathText text={q.content} />
+                        </div>
+
+                        {/* Options Grid */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                          {q.options.map((optText, optIdx) => {
+                            const optChar = ['A', 'B', 'C', 'D'][optIdx];
+                            const isStudentChoice = q.studentChoice === optChar;
+                            const isCorrectChoice = q.correctChoice === optChar;
+
+                            let cardStyle = 'bg-white border-slate-200 text-slate-800';
+                            if (isCorrectChoice) {
+                              cardStyle = 'bg-emerald-100/70 border-emerald-400 text-emerald-900 font-bold shadow-sm';
+                            } else if (isStudentChoice && !q.isCorrect) {
+                              cardStyle = 'bg-rose-100/70 border-rose-400 text-rose-900 font-bold';
+                            }
+
+                            return (
+                              <div
+                                key={optChar}
+                                className={`p-3 rounded-xl border text-xs sm:text-sm flex items-start gap-3 transition-all ${cardStyle}`}
+                              >
+                                <div
+                                  className={`w-6 h-6 rounded-lg flex items-center justify-center font-black text-xs shrink-0 ${isCorrectChoice
+                                    ? 'bg-emerald-600 text-white'
+                                    : isStudentChoice
+                                      ? 'bg-rose-600 text-white'
+                                      : 'bg-slate-200 text-slate-700'
+                                    }`}
+                                >
+                                  {optChar}
+                                </div>
+                                <div className="flex-1 pt-0.5 leading-relaxed">
+                                  <MathText text={optText} />
+                                </div>
+                                {isCorrectChoice && (
+                                  <span className="px-2 py-0.5 rounded text-[10px] bg-emerald-600 text-white font-black flex-shrink-0">
+                                    Đáp án đúng
+                                  </span>
+                                )}
+                                {isStudentChoice && !isCorrectChoice && (
+                                  <span className="px-2 py-0.5 rounded text-[10px] bg-rose-600 text-white font-black flex-shrink-0">
+                                    Bạn đã chọn
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        {/* Detailed Explanation */}
+                        <div className="p-4 rounded-xl bg-purple-50/80 border border-purple-200 text-xs sm:text-sm space-y-1.5 text-slate-800">
+                          <div className="text-xs font-black text-purple-900 flex items-center gap-1.5">
+                            <Sparkles className="w-3.5 h-3.5 text-purple-600" />
+                            <span>Lời Giải & Hướng Dẫn Tư Duy Chi Tiết:</span>
+                          </div>
+                          <div className="text-slate-800 leading-relaxed font-medium">
+                            <MathText text={q.explanation} />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Bottom Action buttons */}
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedHistoryExam(null);
+                    setResultData(null);
+                  }}
+                  className="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-extrabold text-xs flex items-center justify-center gap-2 transition-all shadow-sm active:scale-95 cursor-pointer"
+                >
+                  <ChevronLeft className="w-4 h-4 text-blue-600" />
+                  <span>← Quay Lại Danh Sách Lần Thi</span>
+                </button>
+
+                <div className="flex items-center gap-3 w-full sm:w-auto">
+                  <button
+                    type="button"
+                    onClick={() => onNavigateQuestionBank ? onNavigateQuestionBank() : handleRetakeExam()}
+                    className="w-full sm:w-auto px-7 py-3.5 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:opacity-90 text-white font-black text-xs flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20 transition-all active:scale-95 cursor-pointer"
+                  >
+                    <Play className="w-4 h-4 fill-white" />
+                    <span>Làm Đề Mới (Ngân Hàng Đề)</span>
+                  </button>
+                </div>
+              </div>
+
             </div>
-          </div>
+          ) : (
+            <div className="space-y-8 animate-fade-in">
+
+              {/* Top Title & Header */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-sm">
+                <div className="space-y-1">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-xs font-black text-blue-700">
+                    <Target className="w-4 h-4 text-blue-600" />
+                    <span>FLOW 1 • KHẢO THÍ & CHẨN ĐOÁN NĂNG LỰC</span>
+                  </div>
+                  <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2.5 pt-1">
+                    <History className="w-6 h-6 text-blue-600" />
+                    <span>Lịch Sử Các Lần Làm Bài Kiểm Tra</span>
+                  </h1>
+                  <p className="text-xs sm:text-sm text-slate-500 font-medium">
+                    Hệ thống lưu vết toàn bộ kết quả các đợt làm bài. Nhấp vào bất kỳ lần thi nào bên dưới hoặc bấm nút <strong>"Xem Đồ Thị & Báo Cáo"</strong> để mở trang phân tích chi tiết.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => onNavigateQuestionBank ? onNavigateQuestionBank() : handleRetakeExam()}
+                    className="px-5 py-3.5 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-black text-xs sm:text-sm shadow-md shadow-blue-500/25 transition-all flex items-center gap-2 cursor-pointer active:scale-95"
+                  >
+                    <Play className="w-4 h-4 fill-white" />
+                    <span>🚀 Làm Bài Kiểm Tra Mới</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* 4 Overview Statistics KPI Cards */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="p-5 bg-white rounded-3xl border border-slate-200 shadow-sm space-y-2">
+                  <div className="flex items-center justify-between text-xs font-bold text-slate-500 uppercase">
+                    <span>Tổng Số Đợt Thi</span>
+                    <Layers className="w-4 h-4 text-blue-600" />
+                  </div>
+                  <div className="text-2xl sm:text-3xl font-black text-slate-900 font-mono">
+                    {examHistory.length} <span className="text-xs font-semibold text-slate-500">lần làm bài</span>
+                  </div>
+                  <div className="text-[11px] text-emerald-600 font-bold">Khảo sát & thi thử chuẩn hóa</div>
+                </div>
+
+                <div className="p-5 bg-white rounded-3xl border border-slate-200 shadow-sm space-y-2">
+                  <div className="flex items-center justify-between text-xs font-bold text-slate-500 uppercase">
+                    <span>Điểm Số Cao Nhất</span>
+                    <Award className="w-4 h-4 text-emerald-600" />
+                  </div>
+                  <div className="text-2xl sm:text-3xl font-black text-emerald-600 font-mono">
+                    {Math.max(...examHistory.map(h => h.totalCorrect || 0))} <span className="text-xs font-semibold text-slate-500">/ 30 câu</span>
+                  </div>
+                  <div className="text-[11px] text-emerald-700 font-bold">Đạt tỷ lệ {Math.round((Math.max(...examHistory.map(h => h.totalCorrect || 0)) / 30) * 100)}% chính xác</div>
+                </div>
+
+                <div className="p-5 bg-white rounded-3xl border border-slate-200 shadow-sm space-y-2">
+                  <div className="flex items-center justify-between text-xs font-bold text-slate-500 uppercase">
+                    <span>Năng Lực Đỉnh (θ)</span>
+                    <Brain className="w-4 h-4 text-amber-500" />
+                  </div>
+                  <div className="text-2xl sm:text-3xl font-black text-amber-500 font-mono">
+                    +{Math.max(...examHistory.map(h => Number(h.theta) || 0)).toFixed(2)}
+                  </div>
+                  <div className="text-[11px] text-blue-600 font-bold">Thuộc phân lớp Bứt Phá (900+)</div>
+                </div>
+
+                <div className="p-5 bg-white rounded-3xl border border-slate-200 shadow-sm space-y-2">
+                  <div className="flex items-center justify-between text-xs font-bold text-slate-500 uppercase">
+                    <span>Thời Gian Trung Bình</span>
+                    <Clock className="w-4 h-4 text-purple-600" />
+                  </div>
+                  <div className="text-2xl sm:text-3xl font-black text-slate-900 font-mono">
+                    {Math.round(examHistory.reduce((acc, h) => acc + (h.timeSpentSeconds || 0), 0) / (examHistory.length || 1) / 60)} <span className="text-xs font-semibold text-slate-500">phút / bài</span>
+                  </div>
+                  <div className="text-[11px] text-purple-700 font-bold">Tốc độ làm bài chuẩn nhịp độ</div>
+                </div>
+              </div>
+
+              {/* Performance Trend Area Chart Card */}
+              <div className="p-6 sm:p-7 bg-white border border-slate-200/90 rounded-3xl shadow-xl space-y-4 text-slate-900">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                  <div className="flex items-center gap-2">
+                    <TrendingUp className="w-5 h-5 text-blue-600" />
+                    <h3 className="text-base font-black text-slate-900">
+                      Biểu Đồ Tiến Trình Năng Lực IRT θ Qua Các Lần Khảo Thí
+                    </h3>
+                  </div>
+                  <span className="text-xs text-slate-500 font-medium">
+                    Đo lường sự bứt phá sau mỗi đợt làm bài khảo sát
+                  </span>
+                </div>
+
+                <div className="h-64 sm:h-72 w-full pt-2">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={trendChartData} margin={{ top: 15, right: 20, left: -10, bottom: 10 }}>
+                      <defs>
+                        <linearGradient id="colorThetaHistory" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#2563eb" stopOpacity={0.35}/>
+                          <stop offset="95%" stopColor="#2563eb" stopOpacity={0.0}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                      <XAxis dataKey="displayLabel" tick={{ fontSize: 11, fill: '#475569', fontWeight: 600 }} />
+                      <YAxis domain={[-3.5, 2.0]} tick={{ fontSize: 11, fill: '#475569' }} tickFormatter={(v) => (v > 0 ? `+${v}` : v)} />
+                      <Tooltip
+                        contentStyle={{ backgroundColor: '#ffffff', borderColor: '#cbd5e1', borderRadius: '12px', color: '#0f172a' }}
+                        formatter={(val, name) => [name === 'theta' ? (val > 0 ? `+${val}` : val) : `${val}%`, name === 'theta' ? 'Tham số IRT θ' : 'Chuẩn 900+']}
+                        labelFormatter={(label) => `Đợt thi: ${label}`}
+                      />
+                      <ReferenceLine y={0.80} stroke="#10b981" strokeDasharray="4 4" label={{ value: "Chuẩn 900+ (θ = +0.80)", fill: "#059669", fontSize: 11, fontWeight: "bold" }} />
+                      <Area type="monotone" dataKey="theta" name="theta" stroke="#2563eb" strokeWidth={3} fillOpacity={1} fill="url(#colorThetaHistory)" dot={{ r: 5, fill: '#2563eb', strokeWidth: 2, stroke: '#ffffff' }} activeDot={{ r: 7 }} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              {/* Detailed Exam Attempts History Table */}
+              <div className="bg-white rounded-3xl border border-slate-200/90 shadow-xl overflow-hidden text-slate-900">
+                <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <FileText className="w-5 h-5 text-blue-600" />
+                    <h3 className="text-base font-black text-slate-900">Bảng Chi Tiết Các Lần Làm Bài Thi</h3>
+                  </div>
+                  <span className="text-xs font-bold text-slate-500">
+                    Sắp xếp theo thời gian mới nhất
+                  </span>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase tracking-wider font-extrabold text-[11px]">
+                        <th className="py-3.5 px-5">Đợt Thi & Đề Bài</th>
+                        <th className="py-3.5 px-4">Ngày Nộp Bài</th>
+                        <th className="py-3.5 px-4">Điểm Số & Tỷ Lệ</th>
+                        <th className="py-3.5 px-4">Tham Số IRT θ</th>
+                        <th className="py-3.5 px-4">Xếp Lớp</th>
+                        <th className="py-3.5 px-4">Thời Lượng</th>
+                        <th className="py-3.5 px-5 text-right">Thao Tác</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 font-medium">
+                      {examHistory.map((attempt, index) => {
+                        const isLatest = index === 0;
+                        const formattedDate = new Date(attempt.completedAt).toLocaleString('vi-VN', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        });
+                        const durationM = Math.floor((attempt.timeSpentSeconds || 1800) / 60);
+                        const durationS = (attempt.timeSpentSeconds || 1800) % 60;
+
+                        return (
+                          <tr 
+                            key={attempt.id} 
+                            onClick={() => setSelectedHistoryExam(attempt)}
+                            className="hover:bg-blue-50/50 transition-colors cursor-pointer group"
+                          >
+                            {/* Exam Title & Badge */}
+                            <td className="py-4 px-5">
+                              <div className="flex items-center gap-3">
+                                <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${isLatest ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20' : 'bg-slate-100 text-slate-700'}`}>
+                                  <FileText className="w-4 h-4" />
+                                </div>
+                                <div className="space-y-0.5 min-w-0">
+                                  <div className="font-bold text-slate-900 truncate flex items-center gap-1.5 group-hover:text-blue-600 transition-colors">
+                                    <span>{attempt.examTitle}</span>
+                                    {isLatest && (
+                                      <span className="px-2 py-0.5 rounded-md bg-blue-100 text-blue-700 text-[10px] font-black">
+                                        Mới nhất
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="text-[11px] text-slate-600 font-mono">
+                                    Mã: {attempt.id}
+                                  </div>
+                                </div>
+                              </div>
+                            </td>
+
+                            {/* Date */}
+                            <td className="py-4 px-4 text-slate-600 whitespace-nowrap">
+                              <div className="flex items-center gap-1.5">
+                                <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                                <span>{formattedDate}</span>
+                              </div>
+                            </td>
+
+                            {/* Score */}
+                            <td className="py-4 px-4 whitespace-nowrap">
+                              <div className="space-y-1">
+                                <div className="font-black text-slate-900 text-sm">
+                                  {attempt.totalCorrect} <span className="text-slate-500 text-xs font-normal">/ {attempt.totalQuestions || 30} câu</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <div className="w-16 bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                                    <div
+                                      className="bg-emerald-500 h-full rounded-full"
+                                      style={{ width: `${Math.min(attempt.accuracy || 80, 100)}%` }}
+                                    ></div>
+                                  </div>
+                                  <span className="text-[11px] font-bold text-emerald-600">{attempt.accuracy || 80}%</span>
+                                </div>
+                              </div>
+                            </td>
+
+                            {/* Theta */}
+                            <td className="py-4 px-4 whitespace-nowrap">
+                              <span className="px-2.5 py-1 rounded-xl bg-amber-50 text-amber-900 border border-amber-200 font-mono font-black text-xs">
+                                {Number(attempt.theta) > 0 ? `+${Number(attempt.theta).toFixed(2)}` : Number(attempt.theta).toFixed(2)}
+                              </span>
+                            </td>
+
+                            {/* Placement */}
+                            <td className="py-4 px-4 whitespace-nowrap">
+                              <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold ${attempt.placementClass === 'BREAKTHROUGH'
+                                ? 'bg-cyan-50 text-cyan-800 border border-cyan-200'
+                                : attempt.placementClass === 'ACCELERATION'
+                                  ? 'bg-blue-50 text-blue-800 border border-blue-200'
+                                  : 'bg-slate-100 text-slate-700 border border-slate-200'
+                                }`}>
+                                {attempt.placementClass === 'BREAKTHROUGH' ? 'Bứt Phá (900+)' : attempt.placementClass === 'ACCELERATION' ? 'Tăng Tốc (750-900)' : 'Nền Tảng'}
+                              </span>
+                            </td>
+
+                            {/* Duration */}
+                            <td className="py-4 px-4 text-slate-600 whitespace-nowrap font-mono">
+                              {durationM}p {durationS.toString().padStart(2, '0')}s
+                            </td>
+
+                            {/* Actions */}
+                            <td className="py-4 px-5 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                              <div className="flex items-center justify-end gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedHistoryExam(attempt)}
+                                  className="px-3.5 py-1.5 rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 font-bold transition-all flex items-center gap-1 cursor-pointer"
+                                  title="Xem báo cáo và biểu đồ bài thi này"
+                                >
+                                  <Eye className="w-3.5 h-3.5" />
+                                  <span>Xem Đồ Thị & Báo Cáo</span>
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => onNavigateQuestionBank ? onNavigateQuestionBank() : handleRetakeExam()}
+                                  className="p-1.5 rounded-xl bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200 transition-colors cursor-pointer"
+                                  title="Làm lại hoặc chọn đề mới"
+                                >
+                                  <Play className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+            </div>
+          )}
 
         </div>
       )}

@@ -2,6 +2,38 @@
 
 ---
 
+## [18/10/2026] - Nâng Cấp Trung Tâm Khảo Thí & Chẩn Đoán (Flow 1): Tích Hợp Hệ Thống 3 Sub-Tabs, Biểu Đồ Năng Lực Đa Chiều & Bảng Lịch Sử Các Lần Thi
+
+- **Tích Hợp Hệ Thống 3 Sub-Tabs Chuyên Nghiệp Trong Sảnh Khảo Thí (`DiagnosticAssessmentPage.jsx`)**:
+  - Bổ sung thanh điều hướng sub-tabs hiện đại:
+    1. *Phòng Thi & Đề Khảo Thí*: Giữ nguyên giao diện phòng thi chuẩn hóa V-ACT 2026, 5 miền năng lực, thẻ đề thi và modal nhập passcode.
+    2. *Kết Quả Chẩn Đoán & Biểu Đồ*: Báo cáo phân tích năng lực chi tiết kèm 4 biểu đồ trực quan chuyên sâu.
+    3. *Lịch Sử Các Lần Làm Bài*: Nhật ký thống kê toàn diện các đợt khảo thí và thi thử đã thực hiện.
+  - Tích hợp huy hiệu trạng thái năng lực thời gian thực hiển thị tham số IRT `` `\theta_0` `` và phân lớp đề xuất ngay trên thanh điều hướng.
+- **Xây Dựng Hệ Thống Biểu Đồ Năng Lực Đa Chiều (Diagnostic Analytics & Multi-Chart System)**:
+  - **Biểu Đồ Radar 5 Miền Năng Lực (5-Axis Radar Chart)**: Trực quan hóa tương quan năng lực của học sinh so với chuẩn mục tiêu 900+ ĐHQG-HCM across 5 miền: Toán học & Số liệu, Tư duy Logic, Ngôn ngữ & Văn học, KHTN, KHXH.
+  - **Biểu Đồ Cột Tỷ Lệ Chính Xác Theo Miền (Domain Accuracy Bar Chart)**: Thống kê chi tiết tỷ lệ % hoàn thành và số câu đúng từng phân môn.
+  - **Biểu Đồ Vùng Tiến Trình Năng Lực IRT `` `\theta` `` (Performance Growth Trend Area Chart)**: Đồ thị đường/vùng biểu diễn sự bứt phá của tham số `` `\theta` `` qua từng đợt làm bài, đối chiếu với đường ngưỡng chuẩn 900+ (`` `\theta \ge +0.80` ``).
+  - **Hệ Thống Đồng Hồ Tốc Độ & Chiến Thuật Làm Bài (Pacing Speedometer Grid)**: 4 thẻ đo lường thời gian trung bình mỗi câu, số câu phản xạ nhanh (<25s), chuẩn nhịp độ (25-90s) và câu tốn thời gian (>90s).
+- **Trực Quan Hóa Nhật Ký & Bảng Lịch Sử Các Đợt Khảo Thí (Test Attempts History Table)**:
+  - 4 thẻ KPI tổng kết: Tổng số đợt thi, Điểm số cao nhất, Năng lực đỉnh `` `\theta` ``, Thời gian rèn luyện trung bình.
+  - Bảng lịch sử chi tiết hiển thị: Tên đề thi, Ngày nộp bài, Điểm số & Tỷ lệ %, Tham số IRT `` `\theta` ``, Xếp lớp học lực, Thời lượng làm bài.
+  - Tích hợp nút tương tác *Xem Đồ Thị*: Bấm vào sẽ tự động chuyển sang tab Kết Quả Chẩn Đoán nạp đúng dữ liệu bài thi đó để xem lại biểu đồ và lời giải 30 câu hỏi.
+- **Cơ Chế Bền Vững & Lưu Vết Lịch Sử (Persistence & Realtime Sync)**:
+  - Tạo mới module chuẩn hóa `diagnosticData.js` cung cấp dữ liệu chẩn đoán mẫu và lịch sử bài thi ban đầu.
+  - Đồng bộ tự động `veval_exam_history` và `veval_latest_diagnostic_result` vào `localStorage`, lưu vết tức thì mỗi khi nộp bài thi mới.
+- **Tách Bạch Ngân Hàng Đề Thi & Tinh Gọn Flow 1 Chỉ Lưu Vết Lịch Sử & Chi Tiết Lần Thi (`QuestionBankPage.jsx`, `DiagnosticAssessmentPage.jsx`)**:
+  - Di chuyển toàn bộ Sảnh Phòng Thi, 5 Miền Năng Lực, thanh nhập passcode và danh mục đề thi xuống mục **"Ngân hàng đề & Thi thử"** (`QuestionBankPage.jsx`) trong sidebar, khắc phục hoàn toàn sự trùng lặp tính năng giữa Flow 1 và Ngân hàng đề.
+  - Tinh gọn **"Khảo thí & Chẩn đoán (Flow 1)"** thành 2 chế độ hiển thị thống nhất không cần sub-tabs:
+    1. *Danh Sách Lịch Sử*: Hiển thị trực tiếp các đợt làm bài khảo sát, thẻ chỉ số KPI tổng quan, và biểu đồ tiến trình IRT `` `\theta` ``.
+    2. *Trang Chi Tiết Lần Thi*: Nhấp vào bất kỳ dòng nào trong bảng hoặc nút *Xem Đồ Thị & Báo Cáo* sẽ mở ngay trang phân tích chi tiết của bài thi đó (Radar 5 miền, nhịp độ pacing, nhận xét AI Socratic, bảng 30 câu hỏi) kèm nút *← Quay Lại Danh Sách Lần Thi* mượt mà.
+- **Kiểm Thử Vận Hành & Trải Nghiệm Trình Duyệt**:
+  - Chạy `npm run build` thành công 100% trong 1.15 giây, 0 lỗi cú pháp.
+  - Trình duyệt tự động (Browser Subagent) kiểm thử end-to-end: truy cập Flow 1 -> xem bảng lịch sử -> click vào chi tiết lần thi -> kiểm tra các đồ thị -> quay lại danh sách -> chuyển sang Ngân hàng đề -> mở modal nhập passcode `VACT2026` hoạt động hoàn hảo 100%.
+
+
+---
+
 ## [15/10/2026] - Tích Hợp Nút "Thi Thử Ngay" Trên Top Navbar Kế Bên "Đặc Tả Kiến Trúc", Bật Modal Thông Tin & Nhập Passcode Khởi Động Bài Thi Đầu Vào
 
 - **Tích Hợp Nút "Thi Thử Ngay" Trực Tiếp Trên Thanh Điều Hướng Header (`Navbar.jsx`)**:

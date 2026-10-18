@@ -1,20 +1,21 @@
 # Nhật Ký Cập Nhật (Update Log) - V-Eval Web Client
 
-## [15/10/2026] - Tích Hợp Nút "Thi Thử Ngay" Trên Top Header & Modal Xác Thực Passcode Khởi Động Bài Thi Đầu Vào
+## [18/10/2026] - Tách Bạch Ngân Hàng Đề Thi & Tinh Gọn Flow 1 Chỉ Lưu Vết Lịch Sử & Chi Tiết Lần Thi
 
-- **Tích Hợp Nút "Thi Thử Ngay" Trực Tiếp Trên Thanh Điều Hướng Header (`Navbar.jsx`)**:
-  - Bổ sung nút gradient xanh-tím nổi bật (`from-blue-600 to-indigo-600`) kèm biểu tượng tia sét vàng `Zap` ngay cạnh nút *Đặc tả Kiến trúc & 3 Q&A* trên thanh Top Navbar của Dashboard.
-  - Hỗ trợ responsive đa màn hình (`Thi thử ngay` trên màn hình vừa/lớn và `Thi Thử` trên màn hình nhỏ), giúp học sinh truy cập bài khảo sát năng lực 30 câu tức thì tại mọi vị trí trong hệ thống.
-- **Xây Dựng Component Modal Chi Tiết & Nhập Passcode Tái Sử Dụng (`ExamPasscodeModal.jsx`)**:
-  - Tạo mới component `ExamPasscodeModal.jsx` hiển thị trực quan thông số bài thi khảo sát đầu vào 30 câu V-ACT 2026:
-    - *Số lượng câu hỏi*: 30 câu trắc nghiệm.
-    - *Thời gian làm bài*: 45 phút.
-    - *Quy chế phòng thi*: Azota Proctored Toàn Màn Hình.
-    - *Động cơ chấm điểm*: IRT 2PL & Theta 0.
-  - Tích hợp khối cảnh báo giám sát thi trực tuyến Azota (toàn màn hình, phát hiện rời tab/mất focus quá 3 lần).
-  - Tích hợp ô nhập mã phòng thi / mật mã truy cập kèm nút *Điền mã mẫu* (`VACT2026`), xác thực mã hợp lệ và báo lỗi trực quan nếu nhập sai.
-- **Đấu Nối Khởi Động Trực Tiếp Phòng Thi Từ Dashboard (`App.jsx`, `DiagnosticAssessmentPage.jsx`)**:
-  - Khi học sinh xác nhận mã thành công từ Modal trên Dashboard, hệ thống tự động thiết lập `diagnosticAutoStart = true`, chuyển sang tab `diagnostic`, kích hoạt chế độ thi toàn màn hình và ẩn thanh Navbar/Sidebar để bước vào bài thi tập trung cao độ.
-  - Khi nộp bài hoặc chọn quay lại Dashboard, hệ thống tự động reset `autoStart` và khôi phục giao diện điều hướng tổng quan.
-- **Kiểm Thử Biên Dịch & Vận Hành**:
-  - Chạy `npm run build` thành công 100% trong 1.23 giây, 2902 modules được chuyển đổi sạch, 0 lỗi cú pháp.
+- **Di Chuyển Toàn Bộ Phòng Thi & Danh Mục Đề Thi Xuống Ngân Hàng Đề (`QuestionBankPage.jsx`)**:
+  - Tạo mới component `QuestionBankPage.jsx` phụ trách mục *"Ngân hàng đề & Thi thử"* trên Sidebar.
+  - Tích hợp Sảnh Thi Chuẩn Hóa V-ACT 2026, thanh tìm kiếm / nhập mã phòng thi (`VACT2026`), dải 5 Miền Năng Lực Chuẩn, bộ lọc danh mục (Tất Cả, Khảo Sát Đầu Vào, Thi Thử 120 Câu, Luyện Chuyên Sâu) và thẻ đề thi chi tiết kèm modal passcode.
+- **Tinh Gọn Trung Tâm Khảo Thí & Chẩn Đoán (Flow 1) Thành 2 Chế Độ Trực Quan (`DiagnosticAssessmentPage.jsx`)**:
+  - Loại bỏ hoàn toàn các tab phòng thi trùng lặp, trả Flow 1 về đúng trọng tâm: Quản lý kết quả các lần khảo thí và chẩn đoán năng lực.
+  - *Chế độ 1 (Danh Sách Các Lần Làm Bài)*: Hiển thị trực tiếp 4 thẻ chỉ số KPI tổng quan (Tổng số đợt thi, Điểm cao nhất, Năng lực đỉnh IRT `` `\theta` ``, Thời gian trung bình), biểu đồ diện tích Recharts AreaChart xu hướng tiến trình `` `\theta` `` qua các đợt thi so với mốc chuẩn 900+ (`` `\theta \ge +0.80` ``), và bảng lịch sử các lần thi.
+  - *Chế độ 2 (Chi Tiết Lần Làm Bài & Biểu Đồ Đa Chiều)*: Nhấp vào bất kỳ lần thi nào trong bảng sẽ mở trang báo cáo chi tiết lần thi đó:
+    1. Thanh điều hướng đầu trang với nút *← Quay Lại Danh Sách Lần Thi* và thông tin lần thi.
+    2. Cụm 4 thẻ đo nhịp độ Pacing Speedometers (<25s nhanh, 25-90s chuẩn, >90s tốn thời gian, trung bình).
+    3. Biểu đồ Radar 5 Miền Năng Lực đối chiếu chuẩn 900+ ĐHQG-HCM.
+    4. Thanh tiến trình độ chính xác từng lĩnh vực và lời khuyên sư phạm Cố vấn AI Socratic.
+    5. Bảng xem lại 30 câu hỏi chi tiết có bộ lọc (Tất cả / Đúng / Sai / Phân vân) với công thức toán học KaTeX và lời giải từng bước.
+- **Cơ Chế Bền Vững & Đồng Bộ Lịch Sử**:
+  - Tự động ghi nhận bài thi vừa hoàn thành vào `veval_exam_history` trong `localStorage` và chuyển tiếp tức thì sang trang chi tiết lần thi đó.
+- **Kiểm Thử Biên Dịch & Vận Hành Trình Duyệt**:
+  - Chạy `npm run build` thành công 100% trong 1.15 giây, 0 lỗi cú pháp.
+  - Browser subagent tự động kiểm thử Flow 1 -> Xem lịch sử -> Mở chi tiết đồ thị -> Quay lại -> Sang Ngân hàng đề -> Mở modal passcode `VACT2026` hoạt động trơn tru 100%.

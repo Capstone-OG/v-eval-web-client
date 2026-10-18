@@ -25,6 +25,7 @@ import {
 } from './components/modals';
 import { DiagnosticAssessmentPage } from './components/diagnostic';
 import { RoadmapLearningPage } from './components/roadmap';
+import { QuestionBankPage } from './components/question_bank';
 import { 
   CheckCircle2, 
   Globe, 
@@ -359,6 +360,7 @@ export default function App() {
                   examCode={diagnosticExamCode}
                   currentUser={currentUser}
                   onExamStateChange={setIsExamActive}
+                  onNavigateQuestionBank={() => setActiveTab('question_bank')}
                   onNavigateDashboard={() => {
                     setIsExamActive(false);
                     setDiagnosticAutoStart(false);
@@ -370,6 +372,18 @@ export default function App() {
                     setDiagnosticAutoStart(false);
                     setCurrentPage('landing');
                   }}
+                />
+              )}
+
+              {/* Question Bank & Practice Exam Catalog (Ngân hàng đề & Thi thử) */}
+              {activeTab === 'question_bank' && (
+                <QuestionBankPage 
+                  onStartExam={(exam) => {
+                    setDiagnosticExamCode(exam?.id || 'diag_30_vact');
+                    setDiagnosticAutoStart(true);
+                    setActiveTab('diagnostic');
+                  }}
+                  onNavigateDiagnostic={() => setActiveTab('diagnostic')}
                 />
               )}
 
