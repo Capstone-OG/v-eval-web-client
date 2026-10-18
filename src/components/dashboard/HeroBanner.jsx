@@ -24,16 +24,16 @@ export default function HeroBanner({ currentUser, onStartMilestone, onStartMockT
 
   return (
     <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-900 via-slate-950 to-indigo-950 text-white p-6 lg:p-8 shadow-2xl border border-slate-800">
-      
+
       {/* Background Decorative Blur Orbs */}
       <div className="absolute top-0 right-0 -mr-16 -mt-16 w-80 h-80 rounded-full bg-[#FACC15]/10 blur-3xl pointer-events-none"></div>
       <div className="absolute bottom-0 left-1/3 -mb-16 w-60 h-60 rounded-full bg-indigo-500/10 blur-2xl pointer-events-none"></div>
 
       <div className="relative z-10 flex flex-col lg:flex-row items-center justify-between gap-8">
-        
+
         {/* Left Column: Greeting & Info */}
         <div className="space-y-4 max-w-2xl flex-1">
-          
+
           <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-white/10 border border-white/20 backdrop-blur-md text-xs font-bold tracking-wide uppercase text-[#FACC15]">
             <Sparkles className="w-4 h-4 text-[#FACC15] animate-spin" style={{ animationDuration: '6s' }} />
             <span>Chiến dịch ĐGNL ĐHQG TP.HCM 2026</span>
@@ -72,7 +72,7 @@ export default function HeroBanner({ currentUser, onStartMilestone, onStartMockT
 
           {/* Action Buttons */}
           <div className="flex flex-wrap items-center gap-3 pt-2">
-            <button 
+            <button
               onClick={onStartMilestone}
               className="flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl bg-[#FACC15] text-slate-950 font-black text-sm hover:bg-[#eab308] transition-all shadow-xl shadow-yellow-500/10 hover:scale-[1.02] active:scale-[0.98]"
             >
@@ -80,7 +80,7 @@ export default function HeroBanner({ currentUser, onStartMilestone, onStartMockT
               <ArrowRight className="w-4.5 h-4.5" />
             </button>
 
-            <button 
+            <button
               onClick={onStartMockTest}
               className="flex items-center justify-center gap-2 px-5 py-3.5 rounded-2xl bg-white/10 hover:bg-white/20 border border-white/20 backdrop-blur-md text-white font-bold text-sm transition-all hover:scale-[1.02]"
             >
@@ -88,7 +88,7 @@ export default function HeroBanner({ currentUser, onStartMilestone, onStartMockT
               <span>Làm đề thi thử mới</span>
             </button>
 
-            <button 
+            <button
               onClick={onOpenAiTutor}
               className="flex items-center justify-center gap-2 px-5 py-3.5 rounded-2xl bg-slate-800/80 hover:bg-slate-800 border border-slate-700 backdrop-blur-md text-slate-200 font-bold text-sm transition-all hover:scale-[1.02]"
             >
@@ -101,18 +101,18 @@ export default function HeroBanner({ currentUser, onStartMilestone, onStartMockT
 
         {/* Right Column: 3D POP-OUT STUDENT AVATAR */}
         <div className="relative shrink-0 w-full sm:w-72 lg:w-80 group">
-          
+
           {/* Glowing Aura Ring */}
           <div className="absolute -inset-1 rounded-3xl bg-gradient-to-r from-[#FACC15] via-amber-500 to-indigo-500 blur-lg opacity-40 group-hover:opacity-70 transition-opacity"></div>
 
           {/* Container */}
           <div className="relative bg-slate-950/80 border border-slate-700 rounded-3xl p-2.5 backdrop-blur-md shadow-2xl transition-all duration-500 transform group-hover:scale-[1.03]">
-            
+
             <div className="relative overflow-hidden rounded-2xl h-56 sm:h-64 w-full bg-slate-900">
-              <img 
-                src={studentAvatar} 
+              <img
+                src={studentAvatar}
                 alt="4 Học sinh ĐGNL"
-                className="w-full h-full object-cover object-center filter drop-shadow-2xl transition-transform duration-700 group-hover:scale-105" 
+                className="w-full h-full object-cover object-center filter drop-shadow-2xl transition-transform duration-700 group-hover:scale-105"
               />
 
               <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent"></div>

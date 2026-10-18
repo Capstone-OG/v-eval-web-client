@@ -201,9 +201,20 @@ async function request(endpoint, options = {}, isRetry = false) {
     }
 
     if (!response.ok) {
-      const errorMessage = (typeof data === 'object' && data !== null)
-        ? data.message || data.title || data.error || `HTTP Error ${response.status}`
-        : data || `HTTP Error ${response.status}`;
+      let errorMessage = `HTTP Error ${response.status}`;
+      if (typeof data === 'object' && data !== null) {
+        if (data.error && typeof data.error === 'object') {
+          errorMessage = data.error.description || data.error.message || JSON.stringify(data.error);
+        } else if (Array.isArray(data.errors) && data.errors.length > 0) {
+          errorMessage = data.errors.map(e => (typeof e === 'object' ? e.description || e.message : e)).join('; ');
+        } else if (data.message || data.title) {
+          errorMessage = data.message || data.title;
+        } else if (typeof data.error === 'string') {
+          errorMessage = data.error;
+        }
+      } else if (typeof data === 'string' && data.trim()) {
+        errorMessage = data;
+      }
 
       const error = new Error(errorMessage);
       error.status = response.status;

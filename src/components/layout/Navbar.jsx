@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { Search, MapPin, Flame, Bell, User, LogOut, ChevronDown, BookOpen, Layers, ShieldCheck, Award, Sparkles, Menu } from 'lucide-react';
+import { Search, MapPin, Flame, Bell, User, LogOut, ChevronDown, BookOpen, Layers, ShieldCheck, Award, Sparkles, Menu, Zap } from 'lucide-react';
 import { mockUser, campusesList } from '../../data/mockData';
 
-export default function Navbar({ activeRole, setActiveRole, currentUser, onLogout, onOpenAuthModal, onOpenArchModal, onToggleMobileMenu }) {
+export default function Navbar({ activeRole, setActiveRole, currentUser, onLogout, onOpenAuthModal, onOpenArchModal, onToggleMobileMenu, onOpenDiagnostic }) {
   const [selectedCampus, setSelectedCampus] = useState(mockUser.campusId);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
 
@@ -89,14 +89,16 @@ export default function Navbar({ activeRole, setActiveRole, currentUser, onLogou
             <span>{mockUser.streakDays} Ngày</span>
           </div>
 
-          {/* Architecture Q&A Modal Trigger Button (>= 1280px xl) */}
-          <button
-            onClick={onOpenArchModal}
-            className="hidden xl:flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 border border-indigo-200 rounded-xl text-indigo-700 font-semibold text-xs hover:bg-indigo-100 transition-all shrink-0 cursor-pointer"
-            title="Xem giải đáp 3 câu hỏi kiến thức nghiệp vụ (Chống gian lận, Real-time ZPD, Atomic RAG)"
+          {/* Direct Diagnostic Exam Trigger Button */}
+          <button 
+            type="button"
+            onClick={onOpenDiagnostic}
+            className="flex items-center gap-1.5 px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-extrabold text-xs shadow-md shadow-blue-500/20 hover:scale-102 active:scale-95 transition-all duration-200 shrink-0 cursor-pointer"
+            title="Kiểm tra năng lực đầu vào chuẩn hóa V-ACT 2026"
           >
-            <ShieldCheck className="w-4 h-4 text-indigo-600 shrink-0" />
-            <span>Đặc tả Kiến trúc & 3 Q&A</span>
+            <span className="hidden xs:inline sm:inline">Kiểm tra năng lực đầu vào</span>
+            <span className="xs:hidden sm:hidden">KT Năng Lực</span>
+            <Zap className="w-3.5 h-3.5 text-[#FACC15] fill-[#FACC15]" />
           </button>
 
           {/* Notifications Icon */}
@@ -140,14 +142,6 @@ export default function Navbar({ activeRole, setActiveRole, currentUser, onLogou
                 >
                   <User className="w-4 h-4 text-slate-400" />
                   Đổi tài khoản / Màn Đăng nhập
-                </button>
-
-                <button 
-                  onClick={() => { setShowUserDropdown(false); onOpenArchModal(); }}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 rounded-xl transition-all"
-                >
-                  <BookOpen className="w-4 h-4 text-slate-400" />
-                  Xem Đặc tả 6 Luồng & 3 Q&A
                 </button>
 
                 <div className="my-1 border-t border-slate-100"></div>

@@ -369,7 +369,7 @@ export default function DiagnosticAssessmentPage({
 
   // Submit confirmation modal state (custom React modal to avoid browser window.confirm tab switch bugs)
   const [showSubmitModal, setShowSubmitModal] = useState(false);
-  
+
   // Exit confirmation modal state (custom React modal to replace raw window.confirm)
   const [showExitConfirmModal, setShowExitConfirmModal] = useState(false);
 
@@ -945,7 +945,7 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
       {/* ===================================================================== */}
       {stage === 'setup' && (
         <div className="flex-1 w-full max-w-[1700px] mx-auto p-4 sm:p-6 lg:p-8 space-y-8 animate-fade-in">
-          
+
           {/* Top Hero Banner */}
           <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-blue-700 via-indigo-700 to-slate-900 text-white p-6 sm:p-10 shadow-xl border border-blue-500/20">
             <div className="absolute top-0 right-0 -mr-16 -mt-16 w-80 h-80 rounded-full bg-blue-400/20 blur-3xl pointer-events-none"></div>
@@ -1051,11 +1051,10 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
                 return (
                   <div
                     key={exam.id}
-                    className={`relative bg-white rounded-3xl p-6 border transition-all duration-300 flex flex-col justify-between group ${
-                      isHighlight
+                    className={`relative bg-white rounded-3xl p-6 border transition-all duration-300 flex flex-col justify-between group ${isHighlight
                         ? 'border-blue-500/80 shadow-xl shadow-blue-500/10 ring-2 ring-blue-500/20'
                         : 'border-slate-200 hover:border-slate-300 shadow-md hover:shadow-xl'
-                    }`}
+                      }`}
                   >
                     {/* Top Badges */}
                     <div className="space-y-4">
@@ -1122,11 +1121,10 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
                       <button
                         type="button"
                         onClick={() => handleOpenExamModal(exam)}
-                        className={`w-full py-3.5 px-4 rounded-2xl font-black text-xs sm:text-sm transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md active:scale-95 ${
-                          isHighlight
+                        className={`w-full py-3.5 px-4 rounded-2xl font-black text-xs sm:text-sm transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md active:scale-95 ${isHighlight
                             ? 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-blue-500/25'
                             : 'bg-slate-900 hover:bg-blue-600 text-white shadow-slate-900/10'
-                        }`}
+                          }`}
                       >
                         <Play className="w-4 h-4 fill-white" />
                         <span>🚀 Bắt Đầu Vào Thi (Xem Chi Tiết)</span>
@@ -1173,11 +1171,10 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
       {/* 2. IN-EXAM TESTING SCREEN (30 Questions Flow)                         */}
       {/* ===================================================================== */}
       {stage === 'testing' && currentQ && (
-        <div className={`flex-1 w-full mx-auto p-4 sm:p-6 lg:p-8 flex flex-col lg:flex-row items-start gap-6 transition-all duration-300 ${
-          currentQ.passage_content 
-            ? 'max-w-[1720px]' 
+        <div className={`flex-1 w-full mx-auto p-4 sm:p-6 lg:p-8 flex flex-col lg:flex-row items-start gap-6 transition-all duration-300 ${currentQ.passage_content
+            ? 'max-w-[1720px]'
             : 'max-w-[1440px]'
-        }`}>
+          }`}>
 
           {/* Main Question Card (Adaptive sizing & roomy layout) */}
           <div className="flex-1 w-full bg-white border border-slate-200/90 rounded-3xl p-6 sm:p-8 lg:p-9 shadow-xl relative overflow-hidden text-slate-900 flex flex-col transition-all">
@@ -2169,13 +2166,12 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
       {customAlert && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in">
           <div className="max-w-md w-full bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 space-y-5 text-center shadow-2xl relative overflow-hidden text-slate-900">
-            <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mx-auto border ${
-              customAlert.type === 'error' 
-                ? 'bg-rose-100 text-rose-600 border-rose-200' 
+            <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mx-auto border ${customAlert.type === 'error'
+                ? 'bg-rose-100 text-rose-600 border-rose-200'
                 : customAlert.type === 'warning'
                   ? 'bg-amber-100 text-amber-600 border-amber-200'
                   : 'bg-blue-100 text-blue-600 border-blue-200'
-            }`}>
+              }`}>
               {customAlert.type === 'error' ? (
                 <AlertCircle className="w-8 h-8 stroke-[2.5]" />
               ) : customAlert.type === 'warning' ? (
@@ -2218,16 +2214,16 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
 
             {/* Top Glowing Red Icon */}
             <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mx-auto ${tabSwitchCount >= 3
-                ? 'bg-rose-600 text-white animate-pulse shadow-lg shadow-rose-600/40'
-                : 'bg-rose-100 text-rose-600 border border-rose-200 animate-bounce'
+              ? 'bg-rose-600 text-white animate-pulse shadow-lg shadow-rose-600/40'
+              : 'bg-rose-100 text-rose-600 border border-rose-200 animate-bounce'
               }`}>
               <ShieldAlert className="w-8 h-8 stroke-[2.5]" />
             </div>
 
             <div className="space-y-2">
               <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${tabSwitchCount >= 3
-                  ? 'bg-rose-600 text-white border-rose-700'
-                  : 'bg-rose-100 text-rose-800 border border-rose-200'
+                ? 'bg-rose-600 text-white border-rose-700'
+                : 'bg-rose-100 text-rose-800 border border-rose-200'
                 }`}>
                 {tabSwitchCount >= 3 ? '⛔ ĐÃ KHÓA BÀI THI DO VI PHẠM' : `⚠️ Giám Sát Phòng Thi Azota Proctored (Lần ${tabSwitchCount}/3)`}
               </span>
@@ -2247,16 +2243,16 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
 
             {/* Counter Box */}
             <div className={`p-4 rounded-2xl border font-mono text-sm flex items-center justify-center gap-2 ${tabSwitchCount >= 3
-                ? 'bg-rose-100 border-rose-300 text-rose-900'
-                : 'bg-rose-50 border-rose-200 text-rose-800'
+              ? 'bg-rose-100 border-rose-300 text-rose-900'
+              : 'bg-rose-50 border-rose-200 text-rose-800'
               }`}>
               <span>Số lần rời màn hình:</span>
               <strong className="text-rose-600 text-lg font-black">{Math.min(tabSwitchCount, 3)} / 3</strong>
             </div>
 
             <div className={`text-[11px] p-3 rounded-xl border leading-relaxed ${tabSwitchCount >= 3
-                ? 'bg-rose-50 text-rose-900 border-rose-200 font-semibold animate-pulse'
-                : 'bg-amber-50 text-amber-800 border-amber-200'
+              ? 'bg-rose-50 text-rose-900 border-rose-200 font-semibold animate-pulse'
+              : 'bg-amber-50 text-amber-800 border-amber-200'
               }`}>
               {tabSwitchCount >= 3
                 ? '⏳ Hệ thống đang tự động nộp bài và tính điểm năng lực IRT θ₀ trong giây lát...'
@@ -2297,7 +2293,7 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
       {selectedExamForModal && (
         <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in">
           <div className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden text-slate-900 animate-scale-up">
-            
+
             {/* Header Banner */}
             <div className="relative overflow-hidden p-6 bg-gradient-to-r from-blue-700 via-indigo-700 to-slate-900 text-white">
               <div className="relative z-10 flex items-start justify-between gap-4">
@@ -2324,7 +2320,7 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
 
             {/* Modal Body */}
             <div className="p-6 space-y-5">
-              
+
               {/* Specs Grid */}
               <div className="grid grid-cols-2 gap-3 text-xs">
                 <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200">

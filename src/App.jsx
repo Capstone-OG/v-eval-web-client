@@ -11,7 +11,8 @@ import {
   MilestoneCard, 
   LiveQnACard, 
   AISocraticTutorWidget, 
-  TeacherDashboardView 
+  TeacherDashboardView,
+  DiagnosticExamModal
 } from './components/dashboard';
 import { PublicLandingPage } from './components/landing';
 import PublicFooter from './components/landing/PublicFooter';
@@ -24,7 +25,18 @@ import {
 } from './components/modals';
 import { DiagnosticAssessmentPage } from './components/diagnostic';
 import { RoadmapLearningPage } from './components/roadmap';
-import { CheckCircle2, Globe, LogIn, LayoutDashboard, Sparkles, Brain, X, Target, ArrowRight } from 'lucide-react';
+import { 
+  CheckCircle2, 
+  Globe, 
+  LogIn, 
+  LayoutDashboard, 
+  Sparkles, 
+  Brain, 
+  X, 
+  Target, 
+  ArrowRight,
+  Zap
+} from 'lucide-react';
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState('landing'); // 'landing' | 'login' | 'dashboard'
@@ -45,6 +57,8 @@ export default function App() {
   const [isDiagnosticModalOpen, setIsDiagnosticModalOpen] = useState(false);
   const [isZpdModalOpen, setIsZpdModalOpen] = useState(false);
   const [isRadarModalOpen, setIsRadarModalOpen] = useState(false);
+  const [isExamPasscodeModalOpen, setIsExamPasscodeModalOpen] = useState(false);
+  const [diagnosticExamCode, setDiagnosticExamCode] = useState('VACT2026');
 
   // Toast notifications
   const [toastMsg, setToastMsg] = useState(null);
@@ -215,6 +229,7 @@ export default function App() {
           }}
           onOpenDashboard={handleOpenDashboard}
           onOpenArchModal={() => setIsArchModalOpen(true)}
+          currentUser={currentUser}
         />
       )}
 
@@ -228,7 +243,11 @@ export default function App() {
             setLoginRedirectNotice('🎯 Đăng nhập hoặc tạo tài khoản để lưu kết quả bài khảo sát năng lực 30 câu!');
             setCurrentPage('login');
           }}
-          onNavigateDashboard={handleOpenDashboard}
+          onNavigateDashboard={() => {
+            setCurrentPage('dashboard');
+            setActiveTab('roadmap');
+            showToast("🎉 Đã lưu kết quả bài kiểm tra năng lực và kích hoạt Lộ trình học thích ứng (DAG)!");
+          }}
           onNavigateHome={() => {
             setDiagnosticAutoStart(false);
             setCurrentPage('landing');
@@ -258,6 +277,7 @@ export default function App() {
               onOpenAuthModal={() => setCurrentPage('login')}
               onOpenArchModal={() => setIsArchModalOpen(true)}
               onToggleMobileMenu={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
+              onOpenDiagnostic={() => setIsExamPasscodeModalOpen(true)}
             />
           )}
 
@@ -335,14 +355,19 @@ export default function App() {
               {activeTab === 'diagnostic' && (
                 <DiagnosticAssessmentPage 
                   isEmbedded={!isExamActive}
+                  autoStart={diagnosticAutoStart}
+                  examCode={diagnosticExamCode}
                   currentUser={currentUser}
                   onExamStateChange={setIsExamActive}
                   onNavigateDashboard={() => {
                     setIsExamActive(false);
-                    setActiveTab('dashboard');
+                    setDiagnosticAutoStart(false);
+                    setActiveTab('roadmap');
+                    showToast("🎉 Chúc mừng bạn đã hoàn thành bài kiểm tra đầu vào! Lộ trình học thích ứng đã sẵn sàng.");
                   }}
                   onNavigateHome={() => {
                     setIsExamActive(false);
+                    setDiagnosticAutoStart(false);
                     setCurrentPage('landing');
                   }}
                 />
@@ -396,6 +421,22 @@ export default function App() {
       <RadarChartModal 
         isOpen={isRadarModalOpen}
         onClose={() => setIsRadarModalOpen(false)}
+      />
+
+      {/* DIRECT 30-QUESTION DIAGNOSTIC EXAM ENTRY MODAL */}
+      <DiagnosticExamModal 
+        isOpen={isExamPasscodeModalOpen}
+        onClose={() => setIsExamPasscodeModalOpen(false)}
+        currentUser={currentUser}
+        isLoggedIn={true}
+        cancelLabel="Hủy / Ở Lại Dashboard"
+        onStartExam={(code) => {
+          setIsExamPasscodeModalOpen(false);
+          setDiagnosticExamCode(code);
+          setDiagnosticAutoStart(true);
+          setIsExamActive(true);
+          setActiveTab('diagnostic');
+        }}
       />
 
       {/* PENDING EXAM RESUME ACTION PROMPT MODAL */}

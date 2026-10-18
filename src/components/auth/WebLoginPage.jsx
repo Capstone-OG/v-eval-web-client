@@ -25,11 +25,11 @@ import RegisterForm from './RegisterForm';
 import ForgotPasswordModal from './ForgotPasswordModal';
 import authService from '../../services/authService';
 
-export default function WebLoginPage({ 
-  onLoginSuccess, 
-  onNavigateHome, 
-  initialMode = 'login', 
-  redirectNotice = null 
+export default function WebLoginPage({
+  onLoginSuccess,
+  onNavigateHome,
+  initialMode = 'login',
+  redirectNotice = null
 }) {
   const [role, setRole] = useState('student'); // student | parent (for registration)
   const [mode, setMode] = useState(initialMode || 'login'); // login | register
@@ -280,7 +280,7 @@ export default function WebLoginPage({
 
       const returnedOtp = resData?.otpCode || "436637";
       const msg = resData?.message || "Đăng ký thành công. Vui lòng xác thực tài khoản bằng mã OTP đã được gửi.";
-      
+
       // Save demo OTP code to localStorage for easy retrieval
       localStorage.setItem('demo_otp_code', returnedOtp);
       localStorage.setItem('demo_otp_email', cleanEmail);
@@ -436,8 +436,8 @@ export default function WebLoginPage({
           });
 
           try {
-            const loginRes = await authService.login({ 
-              email: forgotEmail.trim(), 
+            const loginRes = await authService.login({
+              email: forgotEmail.trim(),
               password: regPassword || 'Student@123',
               rememberMe
             });
@@ -576,16 +576,15 @@ export default function WebLoginPage({
       </header>
 
       {/* 2. MAIN CENTER CONTENT CONTAINER */}
-      <main className="flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-10 relative overflow-hidden">
+      <main className="flex-1 flex items-center justify-center p-2 sm:p-4 lg:p-2 relative overflow-hidden">
 
         {/* Soft Ambient Background Glows */}
         <div className="absolute top-1/4 left-10 w-96 h-96 rounded-full bg-blue-400/10 blur-[120px] pointer-events-none"></div>
         <div className="absolute bottom-10 right-10 w-96 h-96 rounded-full bg-indigo-400/10 blur-[120px] pointer-events-none"></div>
 
-        <div className="w-full max-w-md lg:max-w-6xl bg-white rounded-[32px] shadow-2xl overflow-hidden grid grid-cols-1 lg:grid-cols-12 min-h-0 lg:min-h-[720px] border border-slate-200/90 text-slate-900 z-10 my-4 sm:my-8">
-
+        <div className="w-full max-w-md lg:max-w-6xl bg-white/95 rounded-[36px] shadow-[0_24px_80px_-20px_rgba(30,58,138,0.18)] overflow-hidden grid grid-cols-1 lg:grid-cols-12 min-h-0 lg:min-h-[720px] border border-white/80 text-slate-900 z-10 my-4 sm:my-8 backdrop-blur-xl">
           {/* LEFT COLUMN (7 Spans): Light Academic Showcase & Real Authentic Student Photo (Desktop >= lg) */}
-          <div className="hidden lg:flex lg:col-span-7 bg-gradient-to-br from-blue-50/90 via-indigo-50/60 to-cyan-50/40 p-8 lg:p-12 text-slate-900 flex-col justify-between relative overflow-hidden border-r border-slate-200/80">
+          <div className="hidden lg:flex lg:col-span-7 bg-gradient-to-br from-[#EFF6FF] via-[#EEF2FF] to-[#ECFEFF] p-8 lg:p-12 text-slate-900 flex-col justify-between relative overflow-hidden border-r border-indigo-100">
 
             {/* Ambient inner highlights */}
             <div className="absolute -top-24 -left-24 w-96 h-96 rounded-full bg-blue-300/20 blur-3xl pointer-events-none"></div>
@@ -633,10 +632,10 @@ export default function WebLoginPage({
                 <div className="absolute inset-0 rounded-3xl bg-gradient-to-r from-blue-400 to-cyan-400 blur-xl opacity-20 group-hover:opacity-40 transition-opacity"></div>
 
                 {/* Card Container */}
-                <div className="relative bg-white border border-slate-200/90 rounded-3xl p-3 shadow-xl transition-all duration-500 transform group-hover:scale-[1.01]">
+                <div className="relative bg-white/95 border border-white rounded-[28px] p-3 shadow-[0_20px_50px_-15px_rgba(59,130,246,0.25)] transition-all duration-500 transform group-hover:scale-[1.015] group-hover:shadow-2xl">
 
                   {/* Real Student Photograph */}
-                  <div className="relative overflow-hidden rounded-2xl h-60 sm:h-64 w-full">
+                  <div className="relative overflow-hidden rounded-[22px] h-60 sm:h-64 w-full">
                     <img
                       src={studentAvatar}
                       alt="Học sinh THPT Việt Nam ôn thi ĐGNL"
@@ -707,18 +706,18 @@ export default function WebLoginPage({
           </div>
 
           {/* RIGHT COLUMN (5 Spans): Form Column */}
-          <div className="lg:col-span-5 p-6 sm:p-8 lg:p-10 flex flex-col justify-between bg-white relative">
+          <div className="lg:col-span-5 p-6 sm:p-8 lg:p-10 flex flex-col justify-between bg-gradient-to-b from-white via-white to-slate-50/70 relative">
 
             <div className="space-y-5">
 
               {/* Header Mode Switcher: Login / Register */}
               <div className="space-y-4">
-                <div className="p-1 bg-slate-100 rounded-2xl flex items-center border border-slate-200">
+                <div className="p-1.5 bg-slate-100/90 rounded-2xl flex items-center border border-slate-200/80 shadow-inner">
                   <button
                     onClick={() => handleModeSwitch('login')}
                     className={`flex-1 py-2.5 rounded-xl font-black text-xs transition-all flex items-center justify-center gap-1.5 ${mode === 'login'
-                        ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md'
-                        : 'text-slate-600 hover:text-slate-900'
+                      ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-indigo-500/20'
+                      : 'text-slate-500 hover:text-slate-900 hover:bg-white/70'
                       }`}
                   >
                     <Lock className="w-3.5 h-3.5" />
@@ -728,8 +727,8 @@ export default function WebLoginPage({
                   <button
                     onClick={() => handleModeSwitch('register')}
                     className={`flex-1 py-2.5 rounded-xl font-black text-xs transition-all flex items-center justify-center gap-1.5 ${mode === 'register'
-                        ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md'
-                        : 'text-slate-600 hover:text-slate-900'
+                      ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md'
+                      : 'text-slate-600 hover:text-slate-900'
                       }`}
                   >
                     <User className="w-3.5 h-3.5" />
@@ -738,9 +737,9 @@ export default function WebLoginPage({
                 </div>
 
                 <div>
-                  <h2 className="text-2xl font-black text-slate-900 tracking-tight">
+                  <h1 className="text-3xl font-black text-slate-900 tracking-tight text-center my-4">
                     {mode === 'login' ? 'Đăng Nhập' : 'Đăng Ký Tài Khoản Mới'}
-                  </h2>
+                  </h1>
                   <p className="text-xs text-slate-500 font-semibold mt-1">
                     {mode === 'login'
                       ? 'Nhập Email hoặc Số điện thoại và Mật khẩu để đăng nhập.'
@@ -899,13 +898,11 @@ export default function WebLoginPage({
             initial={{ opacity: 0, y: -20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -20, scale: 0.95 }}
-            className={`fixed top-20 right-6 z-50 max-w-md bg-white border rounded-2xl p-4 shadow-2xl flex items-start gap-3 text-slate-900 ${
-              toastInfo.type === 'error' ? 'border-rose-300' : 'border-emerald-300'
-            }`}
+            className={`fixed top-20 right-6 z-50 max-w-md bg-white border rounded-2xl p-4 shadow-2xl flex items-start gap-3 text-slate-900 ${toastInfo.type === 'error' ? 'border-rose-300' : 'border-emerald-300'
+              }`}
           >
-            <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 font-bold ${
-              toastInfo.type === 'error' ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'
-            }`}>
+            <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 font-bold ${toastInfo.type === 'error' ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'
+              }`}>
               {toastInfo.type === 'error' ? <AlertCircle className="w-5 h-5" /> : <CheckCircle className="w-5 h-5" />}
             </div>
             <div className="flex-1 space-y-1">

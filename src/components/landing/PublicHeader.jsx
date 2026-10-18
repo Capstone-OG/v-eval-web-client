@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Zap, Menu, X, ArrowRight, LogIn, HelpCircle, Layers, Target, Compass, BookOpen, Trophy } from 'lucide-react';
+import { Search, Zap, Menu, X, ArrowRight, LogIn, LayoutDashboard, HelpCircle, Layers, Target, Compass, BookOpen, Trophy } from 'lucide-react';
 
 export default function PublicHeader({ 
   onOpenLogin, 
   onOpenDiagnostic, 
   onOpenArchModal, 
+  onOpenDashboard,
+  currentUser = null,
   searchQuery, 
   setSearchQuery,
   activeSection = 'hero'
@@ -91,27 +93,30 @@ export default function PublicHeader({
                 </a>
               );
             })}
-
-            <button 
-              type="button"
-              onClick={onOpenArchModal}
-              className="hover:text-blue-700 transition-colors text-indigo-600 font-extrabold bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-xl border border-indigo-200/80 shadow-2xs ml-1 cursor-pointer"
-            >
-              Đặc tả 3 Q&A
-            </button>
           </nav>
         </div>
 
         {/* Right Action Controls */}
         <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
-          <button 
-            type="button"
-            onClick={onOpenLogin}
-            className="hidden md:inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-2 rounded-full border border-slate-300 hover:border-slate-900 text-slate-800 font-extrabold text-xs hover:bg-slate-900 hover:text-white transition-all duration-200 cursor-pointer"
-          >
-            <LogIn className="w-3.5 h-3.5" />
-            <span>Đăng Nhập</span>
-          </button>
+          {currentUser ? (
+            <button 
+              type="button"
+              onClick={onOpenDashboard}
+              className="hidden md:inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-2 rounded-full border border-blue-500 bg-blue-50 text-blue-900 font-extrabold text-xs hover:bg-blue-600 hover:text-white transition-all duration-200 cursor-pointer shadow-xs"
+            >
+              <LayoutDashboard className="w-3.5 h-3.5" />
+              <span>Vào Dashboard ({currentUser.fullName ? currentUser.fullName.split(' ').slice(-1)[0] : 'Tôi'})</span>
+            </button>
+          ) : (
+            <button 
+              type="button"
+              onClick={onOpenLogin}
+              className="hidden md:inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-2 rounded-full border border-slate-300 hover:border-slate-900 text-slate-800 font-extrabold text-xs hover:bg-slate-900 hover:text-white transition-all duration-200 cursor-pointer"
+            >
+              <LogIn className="w-3.5 h-3.5" />
+              <span>Đăng Nhập</span>
+            </button>
+          )}
 
           <button 
             type="button"
@@ -190,29 +195,31 @@ export default function PublicHeader({
 
             {/* Extra Mobile Actions */}
             <div className="pt-2 border-t border-slate-100 flex flex-col sm:flex-row gap-2">
-              <button 
-                type="button"
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  onOpenArchModal?.();
-                }}
-                className="w-full py-2.5 px-4 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-extrabold text-xs transition-colors border border-indigo-200 flex items-center justify-center gap-2 cursor-pointer"
-              >
-                <HelpCircle className="w-4 h-4 text-indigo-600" />
-                <span>Xem Đặc Tả Kiến Trúc 3 Q&A</span>
-              </button>
-
-              <button 
-                type="button"
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  onOpenLogin?.();
-                }}
-                className="w-full py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-xs transition-colors flex items-center justify-center gap-2 cursor-pointer"
-              >
-                <LogIn className="w-4 h-4 text-slate-200" />
-                <span>Đăng Nhập / Tạo Tài Khoản</span>
-              </button>
+              {currentUser ? (
+                <button 
+                  type="button"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    onOpenDashboard?.();
+                  }}
+                  className="w-full py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-sm"
+                >
+                  <LayoutDashboard className="w-4 h-4 text-white" />
+                  <span>Vào Dashboard ({currentUser.fullName || 'Học sinh'})</span>
+                </button>
+              ) : (
+                <button 
+                  type="button"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    onOpenLogin?.();
+                  }}
+                  className="w-full py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-xs transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <LogIn className="w-4 h-4 text-slate-200" />
+                  <span>Đăng Nhập / Tạo Tài Khoản</span>
+                </button>
+              )}
             </div>
           </motion.div>
         )}

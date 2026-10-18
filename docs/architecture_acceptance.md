@@ -60,7 +60,7 @@ V-Eval-Web_Client/
 - Implemented in `DiagnosticAssessmentPage.jsx` and quick modal `DiagnosticTestModal.jsx`.
 - **Dual Entry Architecture (Guest Mode vs. Logged-in Mode)**:
   - *Guest Mode (Unauthenticated)*: Triggered from Public Landing Page via quick entry modal (`autoStart: true`), directly entering the proctored 30-question diagnostic test without requiring registration or exposing student dashboard.
-  - *Logged-in Mode (Authenticated)*: Accessed from Dashboard Sidebar (`Khảo thí & Chẩn đoán - Flow 1`), presenting the official **Exam Center Lobby** with 5 assessment domains strip, quick room code search, and exam catalog cards. Clicking an exam opens the **Passcode Verification Modal** prefilled with `VACT2026`, launching the test upon confirmation.
+  - *Logged-in Mode (Authenticated)*: Accessed either via the **"Thi thử ngay" Top Header button** (adjacent to Architecture 3 Q&A in `Navbar.jsx`) or Dashboard Sidebar (`Khảo thí & Chẩn đoán - Flow 1`). Triggering the Top Header button opens the standalone **Exam Detail & Passcode Verification Modal** (`ExamPasscodeModal.jsx`), showing 30 questions / 45-min specs and prefilled code `VACT2026`. Confirming passcode immediately launches the proctored test in full-screen mode, hiding navigation chrome.
 - Fetches real 30-question diagnostic exam from Content Service (`/api/content/diagnostic-test` or `getExamDetail`) and AI Engine.
 - Features in-exam question navigator, 45-minute timer, flagging, adaptive 2-column split view for reading passages, and embedded AI Socratic Tutor guidance.
 - Evaluates student ability across 5 core evaluation domains (Mathematics, Logic Reasoning, Language Arts, Natural Sciences, Social Sciences).
