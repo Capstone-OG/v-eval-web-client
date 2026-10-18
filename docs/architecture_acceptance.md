@@ -465,11 +465,18 @@ V-Eval-Web_Client/
   - Sanitized trailing backslashes (`\`) and stray markdown escapes (`.\`, `:\`) in both canvas tokenizer and KaTeX renderer.
   - Replaced corrupted `📝` emoji with crisp Lucide vector icons (`FileEdit`, `FileText`, `BookOpen`, `AlertTriangle`, `Sparkles`).
 
+### 4.39. Chemical Formula & Ion LaTeX Typographic Normalization Engine (`MathText.jsx`)
+- **Stray 'text' Prefix Elimination**:
+  - Identified edge-case where KaTeX rendered chemical ion formulas with an unwanted italic variable prefix `$textSO_4^{2-}$` due to unbracketed `\text` commands losing backslash prefixes.
+  - Implemented proactive normalization in `normalizeMathString`:
+    `str.replace(/(?:\\text|\btext)(?=[A-Z])/g, '')` and `str.replace(/(?:\\text|\btext)\{([A-Z][a-zA-Z0-9_+\-^]*)\}/g, '$1')`.
+  - Automatically cleanses stray `text` or `\text` immediately preceding uppercase chemical symbols (e.g. `SO_4^{2-}`, `H_2O`, `Fe^{3+}`), allowing the automatic chemical ion tokenizer to wrap them cleanly in KaTeX math mode ($SO_4^{2-}$) with zero typographical distortion.
+
 ---
 
 ## 5. Verification & Acceptance Criteria
 
-1. **Clean Production Build**: Executed `npm run build` with 0 syntax or bundle errors; production artifacts outputted to `dist/` within 773ms on Vite 8 and React 19.
+1. **Clean Production Build**: Executed `npm run build` with 0 syntax or bundle errors; production artifacts outputted to `dist/` within 800ms on Vite 8 and React 19.
 2. **Linter & Code Health**: `npm run lint` passes with 0 syntax errors across all components and services.
 3. **Docker Multi-Stage Validation**: `docker compose config` passes with 0 syntax errors across the entire 6-service microservices constellation.
 4. **Repository Sync Automation**: Standalone `Scripts/push.bat` and root `Scripts/` correctly recognize `V-Eval-Web_Client` as a first-class project service.

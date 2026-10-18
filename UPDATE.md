@@ -1,6 +1,13 @@
 # NHẬT KÝ CẬP NHẬT (UPDATE LOG) - WEB CLIENT
 
-## [19/10/2026] - Chuẩn Hóa Toàn Diện Studio Soạn Thảo Sư Phạm WYSIWYG: Chèn Công Thức Tại Vị Trí Con Trỏ, Giao Diện Trắng Sáng Thanh Lịch, Cây Thư Mục Accordion Hợp Chất & Ký Hiệu Đồ Sộ, Nhấp Khoảng Trống Nhảy Cuối Dòng & Xóa Sổ Lỗi Ký Tự
+## [19/10/2026] - Chuẩn Hóa Toàn Diện Studio Soạn Thảo Sư Phạm WYSIWYG: Chèn Công Thức Tại Vị Trí Con Trỏ, Giao Diện Trắng Sáng Thanh Lịch, Cây Thư Mục Accordion Hợp Chất Đồ Sộ & Loại Bỏ Chữ 'text' Thừa Trước Công Thức Hóa Học
+
+- **Loại Bỏ Hoàn Toàn Chữ 'text' Thừa Trước Công Thức Hóa Học & Ion (`MathText.jsx`)**:
+  - *Nguyên Nhân Sự Cố*: Trong đề bài hoặc đáp án chứa ion hóa học (ví dụ: `Số oxi hóa của sulfur (S) trong ion textSO_4^{2-} là:`), các lệnh LaTeX `\text` bị mất backslash hoặc không có ngoặc nhọn khiến chữ "text" bị KaTeX hiển thị nghiêng dạng biến số toán học ($textSO_4^{2-}$).
+  - *Cơ Chế Làm Sạch Tinh Vi*: Bổ sung bộ lọc trong hàm `normalizeMathString`:
+    + `str = str.replace(/(?:\\text|\btext)(?=[A-Z])/g, '');`
+    + `str = str.replace(/(?:\\text|\btext)\{([A-Z][a-zA-Z0-9_+\-^]*)\}/g, '$1');`
+    Tự động tách bỏ tiền tố `text` / `\text` khi đứng liền trước các ký hiệu hóa học viết hoa ($SO_4^{2-}$, $H_2O$, $Fe^{3+}$, $KMnO_4$), khôi phục công thức hóa học gốc hiển thị trong trẻo, sắc nét 100%.
 
 - **Chèn Công Thức Ngay Tại Vị Trí Con Trỏ (Active Caret Precision Insertion - `WordStyleFormulaCanvas.jsx` & `CurriculumStudioEditor.jsx`)**:
   - *Khắc Phục Lỗi Chèn Rơi Xuống Cuối Văn Bản*: Trước đây khi giáo viên đang soạn thảo trên canvas WYSIWYG và nhấp chọn ký hiệu từ sidebar hoặc thanh tra, hệ thống không tìm thấy `textarea` nên fallback nối chuỗi vào cuối văn bản (`. a/b a/b a/b`).
@@ -42,4 +49,4 @@
   - Thay thế biểu tượng cảm xúc `📝` bằng các icon vector Lucide sắc nét (`FileEdit`, `FileText`, `BookOpen`, `AlertTriangle`, `Sparkles`), đảm bảo hiển thị 100% đồng nhất trên mọi hệ điều hành Windows và trình duyệt.
 
 - **Kiểm Thử Vận Hành (Build Verification)**:
-  - `npm run build` hoàn thành 100% (**0 Error, 0 Warning**, hoàn tất trong 773ms trên Vite 8 và React 19).
+  - `npm run build` hoàn thành 100% (**0 Error, 0 Warning**, hoàn tất trong 800ms trên Vite 8 và React 19).

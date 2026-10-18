@@ -54,6 +54,10 @@ export function normalizeMathString(text) {
   str = str.replace(/(?<!\\)\bext\{/g, '\\text{');
   str = str.replace(/(?<!\\)\bimes\b/g, '\\times');
 
+  // Strip stray 'text' or '\text' immediately glued to chemical formulas or ions (e.g. textSO_4^{2-}, \textSO_4^{2-} -> SO_4^{2-})
+  str = str.replace(/(?:\\text|\btext)(?=[A-Z])/g, '');
+  str = str.replace(/(?:\\text|\btext)\{([A-Z][a-zA-Z0-9_+\-^]*)\}/g, '$1');
+
   // Fix orphaned trailing :** (e.g. "Ví dụ:**" or "- Ví dụ:**" where leading ** got stripped)
   str = str.replace(/(^|[\n•\-*]\s*)([A-ZÀ-Ỹa-zà-ỹ0-9\s&]{2,30}):\*\*/g, '$1**$2:**');
 
