@@ -951,7 +951,7 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
 
   if (isStudioOpen) {
     return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 animate-fade">
+      <div className="fixed inset-0 z-50 bg-slate-950 flex flex-col w-screen h-screen overflow-hidden">
         <CurriculumStudioEditor
           pattern={studioTargetPattern}
           domain={currentDomain}

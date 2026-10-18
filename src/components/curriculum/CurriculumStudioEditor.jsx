@@ -992,157 +992,161 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
   };
 
   return (
-    <div className="space-y-6 animate-fade pb-16">
+    <div className="w-full h-full flex flex-col bg-slate-950 text-slate-100 overflow-hidden">
       
-      {/* 1. TOP STUDIO CONTROL BAR */}
-      <div className="bg-slate-900 text-white p-4 sm:p-5 rounded-3xl border border-slate-800 shadow-xl flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
-        <div className="flex items-center gap-3.5 flex-1">
+      {/* 1. TOP STUDIO CONTROL BAR (Fixed Height Standalone Navbar) */}
+      <div className="h-14 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-4 sm:px-6 shrink-0 z-30 shadow-md">
+        <div className="flex items-center gap-3 flex-1 min-w-0">
           <button
             onClick={onClose}
-            className="w-10 h-10 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition-colors border border-slate-700 shrink-0"
-            title="Trở về Dàn kiến thức"
+            className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center gap-1.5 transition-colors border border-slate-700 shrink-0 text-xs font-bold cursor-pointer"
+            title="Trở về Lộ trình & Dàn kiến thức"
           >
-            <ArrowLeft className="w-5 h-5" />
+            <ArrowLeft className="w-4 h-4 text-cyan-400" />
+            <span className="hidden sm:inline">Quay lại Lộ trình</span>
           </button>
           
-          <div>
-            <div className="flex items-center gap-2 text-[11px] text-cyan-400 font-mono font-bold flex-wrap">
+          <div className="flex items-center gap-2 overflow-hidden">
+            <div className="flex items-center gap-1.5 text-[11px] text-cyan-400 font-mono font-bold truncate">
               <span>{domain?.title || "Môn học"}</span>
-              <span>/</span>
-              <span>{chapter?.name || "Chương"}</span>
-              <span>/</span>
-              <span>{lesson?.name || "Bài học"}</span>
-              <span className="px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+              <span className="text-slate-600">/</span>
+              <span className="text-slate-300 truncate max-w-[140px]">{lesson?.name || "Bài học"}</span>
+              <span className="px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 text-[10px]">
                 {pattern?.code}
               </span>
             </div>
-            <h1 className="text-lg lg:text-xl font-black text-white mt-0.5 flex items-center gap-2">
-              <span>Studio Hiệu Đính Sư Phạm: {form.name}</span>
-            </h1>
+            <span className="text-slate-600 hidden md:inline">•</span>
+            <span className="text-xs font-extrabold text-white truncate hidden md:inline">
+              {form.name}
+            </span>
           </div>
         </div>
 
         {/* View mode switcher & Actions */}
-        <div className="flex items-center gap-2.5 w-full lg:w-auto justify-between lg:justify-end flex-wrap">
-          <div className="p-1 rounded-2xl bg-slate-800 border border-slate-700 flex items-center gap-1 text-xs font-bold text-slate-300">
+        <div className="flex items-center gap-2.5 shrink-0">
+          <div className="p-1 rounded-xl bg-slate-800 border border-slate-700 flex items-center gap-1 text-xs font-bold text-slate-300">
             <button
               onClick={() => setViewMode('editor')}
-              className={`px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 ${
+              className={`px-2.5 py-1 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
                 viewMode === 'editor' ? 'bg-blue-600 text-white shadow-sm' : 'hover:text-white'
               }`}
             >
               <Edit3 className="w-3.5 h-3.5" />
-              <span>Biên soạn</span>
+              <span className="hidden sm:inline">Biên soạn</span>
             </button>
             <button
               onClick={() => setViewMode('split')}
-              className={`px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 ${
+              className={`px-2.5 py-1 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
                 viewMode === 'split' ? 'bg-indigo-600 text-white shadow-sm' : 'hover:text-white'
               }`}
             >
               <Columns className="w-3.5 h-3.5" />
-              <span>Chia đôi (Split)</span>
+              <span className="hidden sm:inline">Chia đôi (Split)</span>
             </button>
             <button
               onClick={() => setViewMode('preview')}
-              className={`px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 ${
+              className={`px-2.5 py-1 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
                 viewMode === 'preview' ? 'bg-emerald-600 text-white shadow-sm' : 'hover:text-white'
               }`}
             >
               <Eye className="w-3.5 h-3.5" />
-              <span>Review Học sinh</span>
+              <span className="hidden sm:inline">Review Học sinh</span>
             </button>
           </div>
 
           <button
             disabled={isAiAnalyzing}
             onClick={handleAIApplyStandardMethod}
-            className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-purple-600/30 to-indigo-600/30 hover:from-purple-600/50 hover:to-indigo-600/50 text-indigo-200 border border-purple-400/30 text-xs font-bold flex items-center gap-1.5 transition-colors disabled:opacity-50"
-            title={`AI Tri Thức nhận diện bản chất dạng bài, nạp quy trình các bước, bẫy đề thi & ${isStem ? 'mẹo Casio' : 'mẹo tư duy & chiến thuật làm bài'}`}
+            className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-purple-600/30 to-indigo-600/30 hover:from-purple-600/50 hover:to-indigo-600/50 text-indigo-200 border border-purple-400/30 text-xs font-bold flex items-center gap-1.5 transition-colors disabled:opacity-50 cursor-pointer"
+            title={`AI Tri Thức nhận diện bản chất dạng bài, nạp quy trình các bước`}
           >
             {isAiAnalyzing ? (
-              <>
-                <RefreshCw className="w-3.5 h-3.5 animate-spin text-purple-300" />
-                <span>AI Đang Nhận Diện...</span>
-              </>
+              <RefreshCw className="w-3.5 h-3.5 animate-spin text-purple-300" />
             ) : (
-              <>
-                <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-                <span>AI Nhận Diện Dạng Bài</span>
-              </>
+              <Sparkles className="w-3.5 h-3.5 text-amber-300" />
             )}
+            <span className="hidden md:inline">AI Nhận Diện</span>
           </button>
 
           <button
             disabled={saving}
             onClick={handleSaveAll}
-            className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-black shadow-lg shadow-blue-500/25 flex items-center gap-2 transition-all disabled:opacity-50"
+            className="px-4 py-1.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-black shadow-lg shadow-blue-500/25 flex items-center gap-1.5 transition-all disabled:opacity-50 cursor-pointer"
           >
             {saving ? (
-              <>
-                <RefreshCw className="w-4 h-4 animate-spin" />
-                <span>Đang lưu...</span>
-              </>
+              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
             ) : (
-              <>
-                <Save className="w-4 h-4" />
-                <span>Lưu Vào PostgreSQL</span>
-              </>
+              <Save className="w-3.5 h-3.5" />
             )}
+            <span>Lưu Thay Đổi</span>
           </button>
         </div>
       </div>
 
-      {/* AI Identification Result Banner */}
-      {aiIdentificationResult && (
-        <div className="p-4 rounded-2xl bg-gradient-to-r from-indigo-950 via-slate-900 to-purple-950 border border-indigo-500/40 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md animate-fade">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-purple-600 text-white flex items-center justify-center shrink-0 shadow-sm">
-              <Sparkles className="w-5 h-5 text-amber-300" />
-            </div>
-            <div className="space-y-0.5">
-              <div className="text-[11px] font-black text-purple-300 uppercase tracking-wider flex items-center gap-1.5">
-                <span>AI Tri Thức Sư Phạm Đã Nhận Diện Dạng Bài</span>
-              </div>
-              <div className="text-xs font-extrabold text-white">
-                {aiIdentificationResult.classification}
-              </div>
-              <div className="text-[11px] text-slate-300 font-medium">
-                Kỹ năng cốt lõi: <strong>{aiIdentificationResult.core_skill}</strong>
-              </div>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <span className="px-2.5 py-1 rounded-lg bg-indigo-500/30 text-indigo-300 border border-indigo-400/30 text-[11px] font-bold">
-              Bloom L{aiIdentificationResult.bloom_level}
-            </span>
-            <button
-              onClick={() => setAiIdentificationResult(null)}
-              className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 text-slate-300 flex items-center justify-center text-xs transition-colors"
-              title="Đóng thông báo"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        </div>
-      )}
+      {/* 2. STUDIO BODY: LEFT HIERARCHICAL SIDEBAR (REPLACES APP SIDEBAR) + RIGHT FULL-WIDTH WORKSPACE */}
+      <div className="flex-1 flex overflow-hidden relative">
+        
+        {/* LEFT SIDEBAR: HIERARCHICAL FORMULA TOOLBAR */}
+        <HierarchicalMathPalette
+          isCollapsed={isPaletteCollapsed}
+          onToggleCollapse={() => setIsPaletteCollapsed(prev => !prev)}
+          activeTarget={activeSection === 'theory' ? 'theoryRecap' : activeSection === 'method' ? 'solutionMethod' : activeFormulaTarget}
+          onInsertSnippet={(target, snippet) => handleInsertMath(target, snippet, false)}
+        />
 
-      {/* Alert Messages */}
-      {saveSuccessMsg && (
-        <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs font-bold text-emerald-800 flex items-center gap-2 shadow-sm animate-fade">
-          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-          <span>{saveSuccessMsg}</span>
-        </div>
-      )}
-      {saveErrorMsg && (
-        <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-xs font-bold text-rose-800 flex items-center gap-2 shadow-sm animate-fade">
-          <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
-          <span>{saveErrorMsg}</span>
-        </div>
-      )}
+        {/* RIGHT WORKSPACE: SCROLLABLE WITH MAXIMUM UNRESTRICTED WIDTH */}
+        <div className="flex-1 flex flex-col overflow-y-auto bg-slate-900/40 p-4 sm:p-6 space-y-4">
+          
+          {/* AI Identification Result Banner */}
+          {aiIdentificationResult && (
+            <div className="p-4 rounded-2xl bg-gradient-to-r from-indigo-950 via-slate-900 to-purple-950 border border-indigo-500/40 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md animate-fade">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-purple-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+                  <Sparkles className="w-5 h-5 text-amber-300" />
+                </div>
+                <div className="space-y-0.5">
+                  <div className="text-[11px] font-black text-purple-300 uppercase tracking-wider flex items-center gap-1.5">
+                    <span>AI Tri Thức Sư Phạm Đã Nhận Diện Dạng Bài</span>
+                  </div>
+                  <div className="text-xs font-extrabold text-white">
+                    {aiIdentificationResult.classification}
+                  </div>
+                  <div className="text-[11px] text-slate-300 font-medium">
+                    Kỹ năng cốt lõi: <strong>{aiIdentificationResult.core_skill}</strong>
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="px-2.5 py-1 rounded-lg bg-indigo-500/30 text-indigo-300 border border-indigo-400/30 text-[11px] font-bold">
+                  Bloom L{aiIdentificationResult.bloom_level}
+                </span>
+                <button
+                  onClick={() => setAiIdentificationResult(null)}
+                  className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 text-slate-300 flex items-center justify-center text-xs transition-colors"
+                  title="Đóng thông báo"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          )}
 
-      {/* 2. MAIN WORKSPACE (Split view or single view) */}
-      <div className={`grid gap-6 ${viewMode === 'split' ? 'grid-cols-1 lg:grid-cols-12' : 'grid-cols-1'}`}>
+          {/* Alert Messages */}
+          {saveSuccessMsg && (
+            <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs font-bold text-emerald-800 flex items-center gap-2 shadow-sm animate-fade">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>{saveSuccessMsg}</span>
+            </div>
+          )}
+          {saveErrorMsg && (
+            <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-xs font-bold text-rose-800 flex items-center gap-2 shadow-sm animate-fade">
+              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+              <span>{saveErrorMsg}</span>
+            </div>
+          )}
+
+          {/* 3. MAIN WORKSPACE (Split view or single view) */}
+          <div className={`grid gap-6 ${viewMode === 'split' ? 'grid-cols-1 lg:grid-cols-12' : 'grid-cols-1'}`}>
         
         {/* ================= LEFT: AUTHORING STUDIO (7 Cols in Split, Full in Editor) ================= */}
         {(viewMode === 'editor' || viewMode === 'split') && (
@@ -1199,21 +1203,10 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
                   </button>
                 </div>
 
-                {/* 2-COLUMN UNIFIED WORKSPACE: HIERARCHICAL SIDEBAR (LEFT) + WORD CANVAS (RIGHT) */}
-                <div className="flex flex-col lg:flex-row items-stretch rounded-2xl border border-slate-200 overflow-hidden bg-slate-50 shadow-sm min-h-[580px]">
+                {/* UNIFIED WORKSPACE: WORD CANVAS (FULL WIDTH) */}
+                <div className="flex flex-col rounded-2xl border border-slate-200 overflow-hidden bg-white shadow-sm min-h-[580px] p-4 sm:p-5 space-y-3">
                   
-                  {/* LEFT: HIERARCHICAL FORMULA TOOLBAR SIDEBAR */}
-                  <HierarchicalMathPalette
-                    isCollapsed={isPaletteCollapsed}
-                    onToggleCollapse={() => setIsPaletteCollapsed(prev => !prev)}
-                    activeTarget="theoryRecap"
-                    onInsertSnippet={(target, snippet) => handleInsertMath(target, snippet, false)}
-                  />
-
-                  {/* RIGHT: MAIN WORKSPACE */}
-                  <div className="flex-1 flex flex-col bg-white overflow-hidden p-4 sm:p-5 space-y-3">
-                    
-                    {/* THANH CÔNG CỤ ĐỊNH DẠNG PHONG CÁCH MICROSOFT WORD (WORD RIBBON TOOLBAR) */}
+                  {/* THANH CÔNG CỤ ĐỊNH DẠNG PHONG CÁCH MICROSOFT WORD (WORD RIBBON TOOLBAR) */}
                     <div className="p-2 sm:p-2.5 rounded-2xl bg-white border border-slate-200 shadow-2xs flex flex-wrap items-center justify-between gap-2">
                       {/* Nhóm định dạng chữ & danh sách */}
                       <div className="flex flex-wrap items-center gap-1">
@@ -1416,11 +1409,9 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
                       <span>Số ký tự: <strong>{(form.theoryRecap || '').length}</strong></span>
                       <span className="italic">💡 Mẹo: Nhấp chuột vào bất kỳ công thức nào để sửa số tại chỗ mà không làm nhảy dòng.</span>
                     </div>
-
                   </div>
                 </div>
-              </div>
-            )}
+              )}
 
             {/* ================= SECTION: KHỐI 2 - PHƯƠNG PHÁP GIẢI & BẪY ĐỀ THI ================= */}
             {activeSection === 'method' && (
@@ -1445,20 +1436,9 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
                   </button>
                 </div>
 
-                {/* 2-COLUMN UNIFIED WORKSPACE: HIERARCHICAL SIDEBAR (LEFT) + WORD CANVAS (RIGHT) */}
-                <div className="flex flex-col lg:flex-row items-stretch rounded-2xl border border-slate-200 overflow-hidden bg-slate-50 shadow-sm min-h-[580px]">
-                  
-                  {/* LEFT: HIERARCHICAL FORMULA TOOLBAR SIDEBAR */}
-                  <HierarchicalMathPalette
-                    isCollapsed={isPaletteCollapsed}
-                    onToggleCollapse={() => setIsPaletteCollapsed(prev => !prev)}
-                    activeTarget="solutionMethod"
-                    onInsertSnippet={(target, snippet) => handleInsertMath(target, snippet, false)}
-                  />
-
-                  {/* RIGHT: MAIN WORKSPACE */}
-                  <div className="flex-1 flex flex-col bg-white overflow-hidden p-4 sm:p-5 space-y-4">
-                    {/* THANH CÔNG CỤ WORD RIBBON TOOLBAR CHO QUY TRÌNH GIẢI */}
+                {/* UNIFIED WORKSPACE: WORD CANVAS (FULL WIDTH) */}
+                <div className="flex flex-col rounded-2xl border border-slate-200 overflow-hidden bg-white shadow-sm min-h-[580px] p-4 sm:p-5 space-y-4">
+                  {/* THANH CÔNG CỤ WORD RIBBON TOOLBAR CHO QUY TRÌNH GIẢI */}
                     <div className="bg-gradient-to-r from-slate-50 via-white to-slate-50 border border-slate-200 rounded-2xl p-2.5 flex flex-wrap items-center justify-between gap-2 shadow-2xs">
                         {/* Nhóm 1: Định dạng chữ & Tiêu đề như Word */}
                         <div className="flex items-center gap-1 border-r border-slate-200 pr-2">
@@ -1801,7 +1781,6 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
                 )}
               </div>
             </div>
-          </div>
         )}
 
             {/* ================= SECTION: KHỐI 3 - VIDEO BÀI GIẢNG & TIMESTAMPS ================= */}
@@ -2378,6 +2357,9 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
         )}
 
       </div>
+      
+        </div> {/* End right workspace */}
+      </div> {/* End studio body flex */}
 
       {/* 3. MODAL ĐÍNH KÈM HÌNH ẢNH MINH HỌA (IMAGE UPLOADER & LINKER) */}
       {imageModalTarget && (

@@ -439,7 +439,18 @@ V-Eval-Web_Client/
   - *Root Cause Analysis*: The prior container-level `flex flex-wrap items-baseline` layout combined with oversized badge styling (`px-2 py-0.5 mx-1.5 border-2`) resulted in erratic line-wrapping, disproportionate line heights, and isolated punctuation marks (e.g. periods dropping to new lines following $H_2SO_4$ or oxidation numbers).
   - *Line & Paragraph Tokenizer*: Redesigned with a dedicated line/paragraph tokenizer (`tokenizeLine`, `parseDocumentLines`, `serializeDocumentLines`). Text segments, inline KaTeX chips, and interactive slots flow inside standard `<div className="text-[13.5px] leading-relaxed my-0.5">` paragraphs.
   - *Compact Typographic Footprint*: Reduced idle formula footprint to `text-[13.5px]`, `px-0.5 py-0 mx-0.5`, with subtle hairline dashed underlines, preserving natural typographic rhythm and textbook line-height without line-hopping.
-  - *Natural Editing Gestures*: Enter key paragraph splitting and footer newline injection (`+ Thêm dòng mới`) seamlessly integrated.
+### 4.37. Dedicated Standalone Fullscreen Studio Page Architecture, 2-Second Hover Preview Engine, and Hierarchical Quick Formula Inspector (`CurriculumExplorerView.jsx`, `HierarchicalMathPalette.jsx`, `WordStyleFormulaCanvas.jsx`, `CurriculumStudioEditor.jsx`)
+- **Dedicated Standalone Studio Fullscreen Mode**:
+  - Decoupled the Pedagogical Authoring Studio from the restricted sub-view container (`max-w-7xl` inside Roadmap view), transitioning to a dedicated fullscreen portal (`fixed inset-0 z-50 w-screen h-screen bg-slate-950 overflow-hidden`).
+  - The outer application sidebar is completely eclipsed during studio editing, freeing 100% of the viewport width without visual obstruction.
+  - The `HierarchicalMathPalette` is repositioned as the official left sidebar of the studio workspace, replacing the app sidebar's screen coordinates and providing a toggle collapse to a 44px (`w-11`) icon rail.
+  - Top studio navbar (`h-14`) incorporates clean `← Quay lại Lộ trình` breadcrumb navigation, lesson identification, view switchers, and PostgreSQL persistence triggers.
+- **2-Second Hover Card with Large KaTeX Rendering & Pedagogical Guidance**:
+  - Engineered a 2000ms debounce timer (`hoverTimerRef`) that activates only when an educator pauses cursor motion over any symbol or formula item, preventing noisy UI flashes during fast mouse traversal.
+  - Surfaces a rich floating hover card showing: enlarged vector KaTeX equation, classification domain, comprehensive textbook explanation (GDPT 2018), and raw LaTeX syntax with 1-click insertion guidance.
+- **Hierarchical 4-Tab Quick Formula Inspector & Dual-Mode LaTeX Editing**:
+  - Upgraded in-place formula editing into an ergonomic inspector with 4 distinct tabs: Structures (`📐 Cấu trúc`), Chemistry (`🧪 Hóa học`), Symbols (`🔣 Ký hiệu`), and Brackets & Logic (`🧱 Ngoặc & Logic`).
+  - Integrated direct inline LaTeX string editing with synchronized zero-latency Live KaTeX preview alongside in-place numerical slot inputs, providing complete pedagogical authoring flexibility.
 
 ---
 

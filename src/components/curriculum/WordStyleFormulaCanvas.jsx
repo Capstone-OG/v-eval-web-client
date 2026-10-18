@@ -226,28 +226,84 @@ const QUICK_BUBBLE_SYMBOLS = [
   { label: '+', code: '+' },
   { label: '−', code: '-' },
   { label: '×', code: '\\times ' },
-  { label: '÷', code: '\\div ' },
-  { label: '±', code: '\\pm ' },
-  { label: '√', code: '\\sqrt{x}' },
-  { label: 'x²', code: '^2' },
-  { label: 'π', code: '\\pi ' },
-  { label: 'Δ', code: '\\Delta ' },
-  { label: '∞', code: '\\infty ' },
-  { label: '≠', code: '\\neq ' },
-  { label: '≈', code: '\\approx ' },
-  { label: '→', code: '\\rightarrow ' },
-  { label: '⇔', code: '\\Leftrightarrow ' }
+  { label: '÷', code: '\\div ' }
 ];
 
-/**
- * RE-ENGINEERED WORD-STYLE FORMULA CANVAS
- * Fixes all visual layout hopping, oversized footprints, and cluttered duplicate toolbars.
- * Features:
- * 1. Strict Paragraph/Line flow: Text flows naturally with inline-block formulas (no jumpy flex-wrap).
- * 2. Minimalist formula footprint: In idle state, formulas blend seamlessly into the sentence font size.
- * 3. In-place micro slot editing: Click to edit numbers in-place without expanding line-height.
- * 4. Floating Math Bubble: Micro actions right above the active token.
- */
+export const HIERARCHICAL_BUBBLE_INSERTER = {
+  structures: {
+    name: '📐 Cấu trúc',
+    items: [
+      { label: 'a/b', code: '\\frac{a}{b}', title: 'Phân số a/b' },
+      { label: '√x', code: '\\sqrt{x}', title: 'Căn bậc hai' },
+      { label: 'ⁿ√x', code: '\\sqrt[n]{x}', title: 'Căn bậc n' },
+      { label: 'x²', code: '^2', title: 'Bình phương' },
+      { label: 'xⁿ', code: '^{n}', title: 'Số mũ tổng quát' },
+      { label: 'x₀', code: '_0', title: 'Chỉ số dưới' },
+      { label: '|x|', code: '|x|', title: 'Trị tuyệt đối' },
+      { label: 'y\'', code: 'y\'', title: 'Đạo hàm' },
+      { label: '∫', code: '\\int', title: 'Tích phân' },
+      { label: 'lim', code: '\\lim_{x \\to x_0}', title: 'Giới hạn' },
+      { label: '∑', code: '\\sum', title: 'Tổng' },
+      { label: 'v⃗', code: '\\vec{v}', title: 'Vectơ' }
+    ]
+  },
+  chem: {
+    name: '🧪 Hóa học',
+    items: [
+      { label: 'CM', code: 'C_M = \\frac{n}{V}', title: 'Nồng độ CM' },
+      { label: 'C%', code: 'C\\%', title: 'Nồng độ C%' },
+      { label: 'H₂SO₄', code: 'H_2SO_4', title: 'Axit H2SO4' },
+      { label: 'SO₄²⁻', code: 'SO_4^{2-}', title: 'Ion Sunfat' },
+      { label: 'OH⁻', code: 'OH^-', title: 'Ion Hidroxit' },
+      { label: 'Fe³⁺', code: 'Fe^{3+}', title: 'Ion Sắt III' },
+      { label: '0', code: '0', title: 'Số oxi hóa 0' },
+      { label: '+1', code: '+1', title: 'Số oxi hóa +1' },
+      { label: '+2', code: '+2', title: 'Số oxi hóa +2' },
+      { label: '+6', code: '+6', title: 'Số oxi hóa +6' },
+      { label: '-2', code: '-2', title: 'Số oxi hóa -2' },
+      { label: '→', code: '\\rightarrow ', title: 'Phản ứng 1 chiều' },
+      { label: '⇌', code: '\\rightleftharpoons ', title: 'Thuận nghịch' },
+      { label: '↑', code: '\\uparrow ', title: 'Khí thoát' },
+      { label: '↓', code: '\\downarrow ', title: 'Kết tủa' }
+    ]
+  },
+  symbols: {
+    name: '🔣 Ký hiệu',
+    items: [
+      { label: '±', code: '\\pm ', title: 'Cộng trừ' },
+      { label: '×', code: '\\times ', title: 'Dấu nhân' },
+      { label: '÷', code: '\\div ', title: 'Dấu chia' },
+      { label: '≠', code: '\\neq ', title: 'Khác' },
+      { label: '≈', code: '\\approx ', title: 'Xấp xỉ' },
+      { label: '≤', code: '\\le ', title: 'Nhỏ hơn bằng' },
+      { label: '≥', code: '\\ge ', title: 'Lớn hơn bằng' },
+      { label: '∞', code: '\\infty ', title: 'Vô cực' },
+      { label: '·', code: '\\cdot ', title: 'Chấm nhân' },
+      { label: 'π', code: '\\pi ', title: 'Số Pi' },
+      { label: 'Δ', code: '\\Delta ', title: 'Delta' },
+      { label: 'α', code: '\\alpha ', title: 'Alpha' },
+      { label: 'β', code: '\\beta ', title: 'Beta' },
+      { label: 'θ', code: '\\theta ', title: 'Theta' },
+      { label: 'λ', code: '\\lambda ', title: 'Lambda' },
+      { label: 'Ω', code: '\\Omega ', title: 'Omega' }
+    ]
+  },
+  brackets: {
+    name: '🧱 Ngoặc & Logic',
+    items: [
+      { label: '( )', code: '(x)', title: 'Ngoặc tròn' },
+      { label: '[ ]', code: '[x]', title: 'Ngoặc vuông' },
+      { label: '{ }', code: '\\{x\\}', title: 'Ngoặc nhọn' },
+      { label: '⇒', code: '\\Rightarrow ', title: 'Suy ra' },
+      { label: '⇔', code: '\\Leftrightarrow ', title: 'Tương đương' },
+      { label: '∈', code: '\\in ', title: 'Thuộc' },
+      { label: '∉', code: '\\notin ', title: 'Không thuộc' },
+      { label: '∀', code: '\\forall ', title: 'Với mọi' },
+      { label: '∃', code: '\\exists ', title: 'Tồn tại' },
+      { label: 'ℝ', code: '\\mathbb{R}', title: 'Tập số thực' }
+    ]
+  }
+};
 export default function WordStyleFormulaCanvas({
   content,
   onChange,
@@ -257,6 +313,7 @@ export default function WordStyleFormulaCanvas({
   const [docLines, setDocLines] = useState(() => parseDocumentLines(content || ''));
   const [activeFormulaId, setActiveFormulaId] = useState(null);
   const [bubblePos, setBubblePos] = useState({ top: 0, left: 0 });
+  const [bubbleTab, setBubbleTab] = useState('structures');
   const activeFormulaRef = useRef(null);
   const containerRef = useRef(null);
 
@@ -440,68 +497,117 @@ export default function WordStyleFormulaCanvas({
   return (
     <div className="relative font-sans text-slate-800" ref={containerRef}>
       
-      {/* FLOATING MATH BUBBLE TOOLBAR (Micro footprint, only shows when formula active) */}
+      {/* HIERARCHICAL FORMULA QUICK INSPECTOR & INSERTER (SIÊU LINH HOẠT) */}
       {activeFormulaId && activeTokenInfo && (
         <div
           style={{
             position: 'absolute',
             top: `${Math.max(6, bubblePos.top)}px`,
             left: `${Math.max(8, bubblePos.left)}px`,
-            zIndex: 40
+            zIndex: 50
           }}
-          className="bg-slate-900/95 text-white backdrop-blur-md rounded-xl shadow-xl border border-slate-700/80 px-2 py-1 flex items-center gap-1.5 animate-in fade-in zoom-in-95 duration-100"
+          className="bg-slate-900/98 text-white backdrop-blur-md rounded-2xl shadow-2xl border border-cyan-500/60 p-2.5 flex flex-col gap-2 min-w-[340px] max-w-[440px] animate-in fade-in zoom-in-95 duration-100"
         >
-          <div className="flex items-center gap-1 text-[11px] font-bold text-cyan-400 border-r border-slate-700 pr-1.5">
-            <Sparkles className="w-3 h-3 text-amber-400" />
-            <span>Sửa:</span>
+          {/* Row 1: Header with Live KaTeX Preview & Actions */}
+          <div className="flex items-center justify-between gap-2 pb-1.5 border-b border-slate-800">
+            <div className="flex items-center gap-1.5 overflow-hidden">
+              <span className="px-2 py-0.5 rounded-full bg-cyan-950 text-cyan-300 border border-cyan-700/60 text-[10px] font-bold">
+                {activeTokenInfo.token.structure?.type === 'FRACTION' ? 'Phân Số' :
+                 activeTokenInfo.token.structure?.type === 'CHEM_CM' ? 'Nồng Độ CM' :
+                 activeTokenInfo.token.structure?.type === 'CHEM_CPERCENT' ? 'Nồng Độ C%' :
+                 activeTokenInfo.token.structure?.type === 'POWER' ? 'Số Mũ' :
+                 activeTokenInfo.token.structure?.type === 'SQRT' ? 'Căn Thức' : 'Công Thức'}
+              </span>
+              <div 
+                className="text-xs text-amber-300 font-serif max-w-[140px] overflow-hidden truncate"
+                dangerouslySetInnerHTML={{ __html: renderKatexHtml(activeTokenInfo.token.latex || 'x', false) }}
+              />
+            </div>
+
+            <div className="flex items-center gap-1 shrink-0">
+              {(activeTokenInfo.token.structure?.type === 'FRACTION' || activeTokenInfo.token.structure?.type === 'CHEM_CM' || activeTokenInfo.token.structure?.type === 'SQRT') && (
+                <button
+                  type="button"
+                  onClick={() => handleAutoCalc(activeTokenInfo.lineId, activeTokenInfo.token.id)}
+                  className="px-2 py-0.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-[10.5px] flex items-center gap-0.5 shadow-2xs cursor-pointer"
+                  title="Tự tính kết quả số"
+                >
+                  <Zap className="w-2.5 h-2.5 fill-slate-950" />
+                  <span>Tính</span>
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => handleDeleteActiveFormula(activeTokenInfo.lineId, activeTokenInfo.token.id)}
+                className="p-1 rounded-lg hover:bg-rose-900/60 text-rose-400 transition-colors cursor-pointer"
+                title="Xóa công thức"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveFormulaId(null)}
+                className="px-2.5 py-0.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-[11px] flex items-center gap-0.5 cursor-pointer"
+              >
+                <Check className="w-3 h-3" />
+                <span>Xong</span>
+              </button>
+            </div>
           </div>
 
-          {/* Quick symbol chips */}
-          <div className="flex items-center gap-0.5 max-w-[210px] overflow-x-auto scrollbar-none py-0.5">
-            {QUICK_BUBBLE_SYMBOLS.slice(0, 8).map((s) => (
+          {/* Row 2: Hierarchical Category Tabs (Cấu trúc, Hóa học, Ký hiệu, Ngoặc & Logic) */}
+          <div className="flex items-center gap-1 overflow-x-auto scrollbar-none pb-0.5">
+            {Object.keys(HIERARCHICAL_BUBBLE_INSERTER).map((tabKey) => {
+              const tab = HIERARCHICAL_BUBBLE_INSERTER[tabKey];
+              const isAct = bubbleTab === tabKey;
+              return (
+                <button
+                  key={tabKey}
+                  type="button"
+                  onClick={() => setBubbleTab(tabKey)}
+                  className={`px-2 py-0.5 rounded-md text-[10px] font-bold whitespace-nowrap transition-colors cursor-pointer ${
+                    isAct 
+                      ? 'bg-cyan-600 text-white shadow-2xs' 
+                      : 'bg-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-700'
+                  }`}
+                >
+                  {tab.name}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Row 3: Quick Insertion Chips of Active Tab */}
+          <div className="flex flex-wrap items-center gap-1 max-h-[64px] overflow-y-auto scrollbar-thin p-1 rounded-lg bg-slate-950/70 border border-slate-800/80">
+            {HIERARCHICAL_BUBBLE_INSERTER[bubbleTab]?.items?.map((item, idx) => (
               <button
-                key={s.label}
+                key={idx}
                 type="button"
-                onClick={() => handleInsertSymbolIntoActive(s.code)}
-                className="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-mono cursor-pointer transition-colors"
-                title={`Chèn ${s.label}`}
+                onClick={() => handleInsertSymbolIntoActive(item.code)}
+                className="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-cyan-900/60 hover:text-cyan-300 border border-slate-700/60 text-slate-200 text-[10.5px] font-mono cursor-pointer transition-colors shadow-2xs"
+                title={`${item.title} (Nhấp để chèn)`}
               >
-                {s.label}
+                {item.label}
               </button>
             ))}
           </div>
 
-          {/* Action buttons */}
-          <div className="flex items-center gap-1 pl-1 border-l border-slate-700">
-            {(activeTokenInfo.token.structure?.type === 'FRACTION' || activeTokenInfo.token.structure?.type === 'CHEM_CM' || activeTokenInfo.token.structure?.type === 'SQRT') && (
-              <button
-                type="button"
-                onClick={() => handleAutoCalc(activeTokenInfo.lineId, activeTokenInfo.token.id)}
-                className="px-2 py-0.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-[11px] flex items-center gap-0.5 shadow-2xs cursor-pointer"
-                title="Tự tính kết quả số"
-              >
-                <Zap className="w-2.5 h-2.5 fill-slate-950" />
-                <span>Tính</span>
-              </button>
-            )}
-
-            <button
-              type="button"
-              onClick={() => handleDeleteActiveFormula(activeTokenInfo.lineId, activeTokenInfo.token.id)}
-              className="p-1 rounded-lg hover:bg-rose-900/60 text-rose-400 transition-colors cursor-pointer"
-              title="Xóa công thức"
-            >
-              <Trash2 className="w-3 h-3" />
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveFormulaId(null)}
-              className="px-2 py-0.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-[11px] flex items-center gap-0.5 cursor-pointer"
-            >
-              <Check className="w-2.5 h-2.5" />
-              <span>Xong</span>
-            </button>
+          {/* Row 4: Direct LaTeX Input Line for Ultimate Flexibility */}
+          <div className="flex items-center gap-1.5 pt-1 border-t border-slate-800/80">
+            <span className="text-[10px] font-bold text-cyan-400 font-mono shrink-0">LaTeX:</span>
+            <input
+              type="text"
+              value={activeTokenInfo.token.latex}
+              onChange={(e) => handleGenericLatexChange(activeTokenInfo.lineId, activeTokenInfo.token.id, e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  setActiveFormulaId(null);
+                }
+              }}
+              className="flex-1 bg-slate-950 border border-slate-700 focus:border-cyan-400 rounded px-2 py-0.5 text-[11px] font-mono text-cyan-200 outline-none transition-colors"
+              placeholder="Gõ hoặc dán mã LaTeX..."
+            />
           </div>
         </div>
       )}
