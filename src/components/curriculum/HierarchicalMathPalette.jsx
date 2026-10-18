@@ -1,19 +1,25 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { 
   ChevronLeft, 
   ChevronRight, 
+  ChevronDown,
   Sparkles,
   Info,
   Clock,
-  ArrowRight
+  ArrowRight,
+  Search,
+  FolderOpen,
+  Layers,
+  Atom,
+  BookOpen
 } from 'lucide-react';
 import { renderKatexHtml } from '../common/MathText';
 
 /**
- * HIERARCHICAL SUBJECT & FORMULA CATALOG
- * Level 1: Domain / Subject (Toán, Hóa, Lý, Ký hiệu đặc biệt)
- * Level 2: Category (Đại số, Hình học, Nồng độ, Số oxi hóa, v.v.)
- * Level 3: Formula / Symbol items with rich pedagogical descriptions
+ * HIERARCHICAL STEM CATALOG (MASSIVE REPOSITORY)
+ * Level 1: Domain / Subject (Toán, Hóa, Lý, Ký hiệu & Logic)
+ * Level 2: Category (Accordion Toggle Cây Thư Mục)
+ * Level 3: Compact Formula / Chemical Compound Chips with 2s Rich Guidance Tooltip
  */
 export const HIERARCHICAL_CATALOG = {
   math: {
@@ -25,201 +31,106 @@ export const HIERARCHICAL_CATALOG = {
       algebra: {
         name: 'Đại số & Căn thức',
         items: [
-          { 
-            label: 'Phân số a/b', 
-            code: '\\frac{a}{b}', 
-            preview: '\\frac{a}{b}',
-            desc: 'Phân số đại số 2 tầng (tử số / mẫu số). Cho phép click sửa số tại chỗ hoặc bấm tính.',
-            latexNote: '\\frac{tử}{mẫu}'
-          },
-          { 
-            label: 'Phân số có số 12/4', 
-            code: '\\frac{12}{4} = 3', 
-            preview: '\\frac{12}{4}',
-            desc: 'Phân số số học có sẵn số cụ thể và kết quả thương số. Nhấp để thay đổi số.',
-            latexNote: '\\frac{12}{4} = 3'
-          },
-          { 
-            label: 'Căn bậc hai √x', 
-            code: '\\sqrt{x}', 
-            preview: '\\sqrt{x}',
-            desc: 'Căn bậc hai số học chuẩn SGK. Hỗ trợ tự động tính căn bậc hai khi nhập số.',
-            latexNote: '\\sqrt{biểu_thức}'
-          },
-          { 
-            label: 'Căn bậc n', 
-            code: '\\sqrt[n]{x}', 
-            preview: '\\sqrt[n]{x}',
-            desc: 'Căn bậc n tổng quát với chỉ số bậc căn n và biểu thức dưới dấu căn.',
-            latexNote: '\\sqrt[n]{x}'
-          },
-          { 
-            label: 'Số mũ x²', 
-            code: 'x^2', 
-            preview: 'x^2',
-            desc: 'Lũy thừa bậc hai (bình phương). Click cơ số hoặc số mũ để chỉnh sửa.',
-            latexNote: 'x^2'
-          },
-          { 
-            label: 'Số mũ tổng quát xⁿ', 
-            code: 'x^{n}', 
-            preview: 'x^{n}',
-            desc: 'Lũy thừa bậc n với số mũ tự do (số nguyên, phân số hoặc biểu thức).',
-            latexNote: 'x^{n}'
-          },
-          { 
-            label: 'Chỉ số dưới x₀', 
-            code: 'x_0', 
-            preview: 'x_0',
-            desc: 'Chỉ số tọa độ điểm ban đầu hoặc nghiệm đặc biệt trong giải tích SGK.',
-            latexNote: 'x_0'
-          },
-          { 
-            label: 'Trị tuyệt đối |x|', 
-            code: '|x|', 
-            preview: '|x|',
-            desc: 'Dấu giá trị tuyệt đối hai vạch thẳng đứng song song quanh biểu thức.',
-            latexNote: '|x|'
-          },
-          { 
-            label: 'Hằng đẳng thức (a+b)²', 
-            code: '(a + b)^2 = a^2 + 2ab + b^2', 
-            preview: '(a+b)^2',
-            desc: 'Hằng đẳng thức bình phương của một tổng trong chương trình Đại số phổ thông.',
-            latexNote: '(a+b)^2 = a^2+2ab+b^2'
-          }
+          { label: 'a/b', code: '\\frac{a}{b}', preview: '\\frac{a}{b}', desc: 'Phân số đại số 2 tầng (tử số / mẫu số). Click vào phân số để sửa số hoặc tự tính.', latexNote: '\\frac{tử}{mẫu}' },
+          { label: '12/4', code: '\\frac{12}{4} = 3', preview: '\\frac{12}{4}', desc: 'Phân số số học có thương số cụ thể. Nhấp để thay đổi số.', latexNote: '\\frac{12}{4} = 3' },
+          { label: '√x', code: '\\sqrt{x}', preview: '\\sqrt{x}', desc: 'Căn bậc hai số học chuẩn SGK. Hỗ trợ tự động tính căn bậc hai khi nhập số.', latexNote: '\\sqrt{x}' },
+          { label: 'ⁿ√x', code: '\\sqrt[n]{x}', preview: '\\sqrt[n]{x}', desc: 'Căn bậc n tổng quát với chỉ số bậc căn n và biểu thức dưới dấu căn.', latexNote: '\\sqrt[n]{x}' },
+          { label: 'x²', code: 'x^2', preview: 'x^2', desc: 'Lũy thừa bậc hai (bình phương). Click cơ số hoặc số mũ để chỉnh sửa.', latexNote: 'x^2' },
+          { label: 'xⁿ', code: 'x^{n}', preview: 'x^{n}', desc: 'Lũy thừa bậc n với số mũ tự do (số nguyên, phân số hoặc biểu thức).', latexNote: 'x^{n}' },
+          { label: 'x₀', code: 'x_0', preview: 'x_0', desc: 'Chỉ số tọa độ điểm ban đầu hoặc nghiệm đặc biệt trong giải tích SGK.', latexNote: 'x_0' },
+          { label: '|x|', code: '|x|', preview: '|x|', desc: 'Dấu giá trị tuyệt đối hai vạch thẳng đứng song song quanh biểu thức.', latexNote: '|x|' },
+          { label: '(a+b)²', code: '(a + b)^2 = a^2 + 2ab + b^2', preview: '(a+b)^2', desc: 'Hằng đẳng thức bình phương của một tổng trong chương trình Đại số.', latexNote: '(a+b)^2 = a^2+2ab+b^2' },
+          { label: 'a²-b²', code: 'a^2 - b^2 = (a-b)(a+b)', preview: 'a^2-b^2', desc: 'Hằng đẳng thức hiệu hai bình phương.', latexNote: 'a^2-b^2' },
+          { label: 'Δ', code: '\\Delta = b^2 - 4ac', preview: '\\Delta', desc: 'Biệt thức Delta của phương trình bậc hai ax² + bx + c = 0.', latexNote: '\\Delta = b^2 - 4ac' },
+          { label: "Δ'", code: "\\Delta' = b'^2 - ac", preview: "\\Delta'", desc: "Biệt thức Delta phẩy khi b = 2b'.", latexNote: "\\Delta' = b'^2 - ac" }
         ]
       },
-      calculus: {
-        name: 'Đạo hàm & Giải tích',
+      calculus_diff: {
+        name: 'Đạo hàm & Hàm số',
         items: [
-          { 
-            label: 'Đạo hàm số gia f\'(x₀)', 
-            code: 'f\'(x_0) = \\lim_{\\Delta x \\to 0} \\frac{f(x_0 + \\Delta x) - f(x_0)}{\\Delta x}', 
-            preview: 'f\'(x_0)',
-            desc: 'Định nghĩa đạo hàm bằng giới hạn tỉ số gia số của hàm số và gia số của đối số chuẩn SGK Toán 11-12.',
-            latexNote: 'f\'(x_0) = \\lim_{\\Delta x \\to 0}...'
-          },
-          { 
-            label: 'Đạo hàm y\'', 
-            code: 'y\' = f\'(x)', 
-            preview: 'y\'',
-            desc: 'Ký hiệu đạo hàm cấp 1 theo biến x dùng trong khảo sát sự biến thiên hàm số.',
-            latexNote: 'y\' = f\'(x)'
-          },
-          { 
-            label: 'Giới hạn lim', 
-            code: '\\lim_{x \\to x_0} f(x)', 
-            preview: '\\lim',
-            desc: 'Giới hạn của hàm số f(x) khi x tiến dần về điểm x₀ hoặc vô cực.',
-            latexNote: '\\lim_{x \\to x_0} f(x)'
-          },
-          { 
-            label: 'Tích phân xác định', 
-            code: '\\int_{a}^{b} f(x) dx', 
-            preview: '\\int',
-            desc: 'Tích phân xác định từ cận dưới a đến cận trên b tính diện tích hình phẳng.',
-            latexNote: '\\int_{a}^{b} f(x) dx'
-          },
-          { 
-            label: 'Vi phân dy/dx', 
-            code: '\\frac{dy}{dx}', 
-            preview: '\\frac{dy}{dx}',
-            desc: 'Ký hiệu Leibniz vi phân thương số dy trên dx.',
-            latexNote: '\\frac{dy}{dx}'
-          },
-          { 
-            label: 'Tổng Sigma ∑', 
-            code: '\\sum_{i=1}^{n} x_i', 
-            preview: '\\sum',
-            desc: 'Phép lấy tổng liên tiếp các phần tử từ chỉ số dưới i=1 đến n.',
-            latexNote: '\\sum_{i=1}^{n} x_i'
-          }
+          { label: "y'", code: "y' = f'(x)", preview: "y'", desc: 'Ký hiệu đạo hàm cấp 1 theo biến x dùng trong xét chiều biến thiên hàm số.', latexNote: "y' = f'(x)" },
+          { label: "y''", code: "y'' = f''(x)", preview: "y''", desc: 'Đạo hàm cấp hai dùng để tìm điểm uốn và xét tính lồi lõm của đồ thị.', latexNote: "y'' = f''(x)" },
+          { label: "f'(x₀)", code: "f'(x_0)", preview: "f'(x_0)", desc: 'Hệ số góc tiếp tuyến của đồ thị hàm số tại điểm có hoành độ x₀.', latexNote: "f'(x_0)" },
+          { label: 'dy/dx', code: '\\frac{dy}{dx}', preview: '\\frac{dy}{dx}', desc: 'Ký hiệu Leibniz vi phân thương số dy trên dx.', latexNote: '\\frac{dy}{dx}' },
+          { label: 'x_CĐ', code: 'x_{CĐ}', preview: 'x_{CĐ}', desc: 'Điểm cực đại của hàm số chuẩn GDPT 2018.', latexNote: 'x_{CĐ}' },
+          { label: 'x_CT', code: 'x_{CT}', preview: 'x_{CT}', desc: 'Điểm cực tiểu của hàm số.', latexNote: 'x_{CT}' },
+          { label: 'y_CĐ', code: 'y_{CĐ}', preview: 'y_{CĐ}', desc: 'Giá trị cực đại (cực đại) của hàm số.', latexNote: 'y_{CĐ}' },
+          { label: 'y_CT', code: 'y_{CT}', preview: 'y_{CT}', desc: 'Giá trị cực tiểu của hàm số.', latexNote: 'y_{CT}' },
+          { label: '(uv)', code: "(uv)' = u'v + uv'", preview: "(uv)'", desc: 'Công thức đạo hàm của một tích hai hàm số.', latexNote: "(uv)' = u'v + uv'" },
+          { label: '(u/v)', code: "\\left(\\frac{u}{v}\\right)' = \\frac{u'v - uv'}{v^2}", preview: "\\left(\\frac{u}{v}\\right)'", desc: 'Công thức đạo hàm của một thương hai hàm số.', latexNote: "(u/v)' = (u'v - uv') / v^2" },
+          { label: 'TCN', code: '\\lim_{x \\to \\pm\\infty} f(x) = y_0', preview: '\\lim_{x\\to\\infty}', desc: 'Điều kiện tiệm cận ngang y = y₀ của đồ thị hàm số.', latexNote: '\\lim_{x \\to \\pm\\infty} f(x) = y_0' },
+          { label: 'TCĐ', code: '\\lim_{x \\to x_0^+} f(x) = \\infty', preview: '\\lim_{x\\to x_0}', desc: 'Điều kiện tiệm cận đứng x = x₀ của đồ thị hàm số.', latexNote: '\\lim_{x \\to x_0} f(x) = \\infty' }
         ]
       },
-      geometry: {
-        name: 'Hình học & Oxyz',
+      calculus_int: {
+        name: 'Tích phân & Giới hạn',
         items: [
-          { 
-            label: 'Vectơ u', 
-            code: '\\vec{u}', 
-            preview: '\\vec{u}',
-            desc: 'Vectơ có hướng mũi tên phía trên trong hình học không gian Oxyz.',
-            latexNote: '\\vec{u}'
-          },
-          { 
-            label: 'Độ dài vectơ |AB|', 
-            code: '|\\vec{AB}|', 
-            preview: '|\\vec{AB}|',
-            desc: 'Độ dài đoạn thẳng định hướng nối từ điểm A đến điểm B.',
-            latexNote: '|\\vec{AB}|'
-          },
-          { 
-            label: 'Góc ∠ABC', 
-            code: '\\angle ABC', 
-            preview: '\\angle ABC',
-            desc: 'Ký hiệu góc hình học tạo bởi hai tia BA và BC.',
-            latexNote: '\\angle ABC'
-          },
-          { 
-            label: 'Song song ∥', 
-            code: '\\parallel', 
-            preview: '\\parallel',
-            desc: 'Ký hiệu hai đường thẳng hoặc hai mặt phẳng song song với nhau.',
-            latexNote: '\\parallel'
-          },
-          { 
-            label: 'Vuông góc ⊥', 
-            code: '\\perp', 
-            preview: '\\perp',
-            desc: 'Ký hiệu hai đường thẳng hoặc đường thẳng vuông góc với mặt phẳng.',
-            latexNote: '\\perp'
-          },
-          { 
-            label: 'Mặt phẳng (α)', 
-            code: '(\\alpha)', 
-            preview: '(\\alpha)',
-            desc: 'Ký hiệu mặt phẳng đặt tên theo ký tự Hy Lạp trong hình học không gian.',
-            latexNote: '(\\alpha)'
-          },
-          { 
-            label: 'Mặt cầu (S)', 
-            code: '(S): (x-a)^2 + (y-b)^2 + (z-c)^2 = R^2', 
-            preview: '(S)',
-            desc: 'Phương trình chính tắc của mặt cầu tâm I(a,b,c) bán kính R trong không gian Oxyz.',
-            latexNote: '(S): (x-a)^2 + ... = R^2'
-          }
+          { label: '∫ f(x)', code: '\\int f(x) dx', preview: '\\int f(x)', desc: 'Nguyên hàm bất định của hàm số f(x).', latexNote: '\\int f(x) dx' },
+          { label: '∫[a,b]', code: '\\int_{a}^{b} f(x) dx', preview: '\\int_{a}^{b}', desc: 'Tích phân xác định từ cận a đến cận b.', latexNote: '\\int_{a}^{b} f(x) dx' },
+          { label: 'lim', code: '\\lim_{x \\to x_0} f(x)', preview: '\\lim', desc: 'Giới hạn của hàm số khi x dần tới x₀.', latexNote: '\\lim_{x \\to x_0} f(x)' },
+          { label: 'lim +∞', code: '\\lim_{x \\to +\\infty} f(x)', preview: '\\lim_{+\\infty}', desc: 'Giới hạn hàm số khi x tiến ra dương vô cực.', latexNote: '\\lim_{x \\to +\\infty}' },
+          { label: 'lim -∞', code: '\\lim_{x \\to -\\infty} f(x)', preview: '\\lim_{-\\infty}', desc: 'Giới hạn hàm số khi x tiến ra âm vô cực.', latexNote: '\\lim_{x \\to -\\infty}' },
+          { label: '∑', code: '\\sum_{i=1}^{n} x_i', preview: '\\sum', desc: 'Phép lấy tổng liên tiếp các số hạng từ 1 đến n.', latexNote: '\\sum_{i=1}^{n}' },
+          { label: '∫ u dv', code: '\\int u dv = uv - \\int v du', preview: '\\int u dv', desc: 'Công thức tích phân từng phần kinh điển SGK 12.', latexNote: '\\int u dv = uv - \\int v du' },
+          { label: 'S hình phẳng', code: 'S = \\int_{a}^{b} |f(x) - g(x)| dx', preview: 'S = \\int', desc: 'Công thức diện tích hình phẳng giới hạn bởi hai đồ thị.', latexNote: 'S = \\int_{a}^{b} |f - g| dx' },
+          { label: 'V tròn xoay', code: 'V = \\pi \\int_{a}^{b} [f(x)]^2 dx', preview: 'V = \\pi\\int', desc: 'Thể tích khối tròn xoay quay quanh trục hoành Ox.', latexNote: 'V = \\pi \\int [f(x)]^2 dx' }
         ]
       },
       trigonometry: {
         name: 'Lượng giác',
         items: [
-          { label: 'sin x', code: '\\sin x', preview: '\\sin x', desc: 'Hàm số lượng giác sin x chu kỳ 2π.', latexNote: '\\sin x' },
-          { label: 'cos x', code: '\\cos x', preview: '\\cos x', desc: 'Hàm số lượng giác cosin x chu kỳ 2π.', latexNote: '\\cos x' },
-          { label: 'tan x', code: '\\tan x', preview: '\\tan x', desc: 'Hàm số lượng giác tang x (sin x / cos x).', latexNote: '\\tan x' },
-          { label: 'cot x', code: '\\cot x', preview: '\\cot x', desc: 'Hàm số lượng giác côtang x (cos x / sin x).', latexNote: '\\cot x' },
-          { label: 'sin²x + cos²x = 1', code: '\\sin^2 x + \\cos^2 x = 1', preview: '\\sin^2+\\cos^2', desc: 'Công thức lượng giác cơ bản trong tam giác vuông.', latexNote: '\\sin^2 x + \\cos^2 x = 1' }
+          { label: 'sin x', code: '\\sin x', preview: '\\sin x', desc: 'Hàm số lượng giác sin x.', latexNote: '\\sin x' },
+          { label: 'cos x', code: '\\cos x', preview: '\\cos x', desc: 'Hàm số lượng giác cos x.', latexNote: '\\cos x' },
+          { label: 'tan x', code: '\\tan x', preview: '\\tan x', desc: 'Hàm số lượng giác tan x (sin x / cos x).', latexNote: '\\tan x' },
+          { label: 'cot x', code: '\\cot x', preview: '\\cot x', desc: 'Hàm số lượng giác cot x (cos x / sin x).', latexNote: '\\cot x' },
+          { label: 'sin²+cos²', code: '\\sin^2 x + \\cos^2 x = 1', preview: '\\sin^2+\\cos^2', desc: 'Hằng đẳng thức lượng giác cơ bản nhất.', latexNote: '\\sin^2 x + \\cos^2 x = 1' },
+          { label: 'sin 2x', code: '\\sin 2x = 2\\sin x \\cos x', preview: '\\sin 2x', desc: 'Công thức nhân đôi của hàm sin.', latexNote: '\\sin 2x = 2\\sin x \\cos x' },
+          { label: 'cos 2x', code: '\\cos 2x = \\cos^2 x - \\sin^2 x', preview: '\\cos 2x', desc: 'Công thức nhân đôi của hàm cos.', latexNote: '\\cos 2x = \\cos^2 x - \\sin^2 x' },
+          { label: 'tan 2x', code: '\\tan 2x = \\frac{2\\tan x}{1 - \\tan^2 x}', preview: '\\tan 2x', desc: 'Công thức nhân đôi của hàm tan.', latexNote: '\\tan 2x' },
+          { label: 'π', code: '\\pi', preview: '\\pi', desc: 'Hằng số Pi trong đơn vị Radian (≈ 3.14159).', latexNote: '\\pi' },
+          { label: 'π/2', code: '\\frac{\\pi}{2}', preview: '\\frac{\\pi}{2}', desc: 'Góc 90 độ (vuông góc) biểu diễn theo radian.', latexNote: '\\frac{\\pi}{2}' },
+          { label: 'π/4', code: '\\frac{\\pi}{4}', preview: '\\frac{\\pi}{4}', desc: 'Góc 45 độ biểu diễn theo radian.', latexNote: '\\frac{\\pi}{4}' }
         ]
       },
-      logic_sets: {
-        name: 'Tập hợp & Logic',
+      exponent_log: {
+        name: 'Mũ & Logarit',
         items: [
-          { label: 'Suy ra ⇒', code: '\\Rightarrow', preview: '\\Rightarrow', desc: 'Mệnh đề kéo theo A suy ra B trong suy luận toán học.', latexNote: '\\Rightarrow' },
-          { label: 'Tương đương ⇔', code: '\\Leftrightarrow', preview: '\\Leftrightarrow', desc: 'Mệnh đề tương đương (nếu và chỉ nếu) hai chiều.', latexNote: '\\Leftrightarrow' },
-          { label: 'Với mọi ∀', code: '\\forall x \\in D', preview: '\\forall', desc: 'Lượng từ phổ dụng: Đúng với mọi phần tử thuộc tập xác định D.', latexNote: '\\forall x \\in D' },
-          { label: 'Tồn tại ∃', code: '\\exists x', preview: '\\exists', desc: 'Lượng từ tồn tại: Tồn tại ít nhất một phần tử thỏa mãn tính chất.', latexNote: '\\exists x' },
-          { label: 'Thuộc ∈', code: '\\in', preview: '\\in', desc: 'Ký hiệu quan hệ phần tử thuộc vào một tập hợp.', latexNote: '\\in' },
-          { label: 'Không thuộc ∉', code: '\\notin', preview: '\\notin', desc: 'Ký hiệu quan hệ phần tử không thuộc tập hợp.', latexNote: '\\notin' },
-          { label: 'Tập số thực R', code: '\\mathbb{R}', preview: '\\mathbb{R}', desc: 'Tập hợp tất cả các số thực trên trục số.', latexNote: '\\mathbb{R}' }
+          { label: 'log_a(b)', code: '\\log_a b', preview: '\\log_a b', desc: 'Logarit cơ số a của b với điều kiện a > 0, a ≠ 1, b > 0.', latexNote: '\\log_a b' },
+          { label: 'ln x', code: '\\ln x', preview: '\\ln x', desc: 'Logarit tự nhiên (cơ số e ≈ 2.71828).', latexNote: '\\ln x' },
+          { label: 'log x', code: '\\log x', preview: '\\log x', desc: 'Logarit thập phân (cơ số 10).', latexNote: '\\log x' },
+          { label: 'eˣ', code: 'e^x', preview: 'e^x', desc: 'Hàm số mũ tự nhiên e mũ x.', latexNote: 'e^x' },
+          { label: 'aˣ', code: 'a^x', preview: 'a^x', desc: 'Hàm số mũ cơ số a.', latexNote: 'a^x' },
+          { label: 'log_2(x)', code: '\\log_2 x', preview: '\\log_2 x', desc: 'Logarit cơ số 2 thường gặp trong đề thi THPT.', latexNote: '\\log_2 x' },
+          { label: "(ln x)'", code: "(\\ln x)' = \\frac{1}{x}", preview: "(\\ln x)'", desc: 'Đạo hàm của hàm logarit tự nhiên ln(x).', latexNote: "(\\ln x)' = 1/x" },
+          { label: "(aˣ)'", code: "(a^x)' = a^x \\ln a", preview: "(a^x)'", desc: 'Đạo hàm của hàm số mũ cơ số a.', latexNote: "(a^x)' = a^x \\ln a" },
+          { label: 'log(xy)', code: '\\log_a (xy) = \\log_a x + \\log_a y', preview: '\\log(xy)', desc: 'Công thức logarit của một tích bằng tổng các logarit.', latexNote: '\\log_a (xy)' }
         ]
       },
-      probability: {
-        name: 'Xác suất & Thống kê',
+      geometry_oxyz: {
+        name: 'Hình học Không gian & Oxyz',
         items: [
-          { label: 'Tổ hợp C(n, k)', code: 'C_n^k', preview: 'C_n^k', desc: 'Số tổ hợp chập k của n phần tử không tính thứ tự.', latexNote: 'C_n^k' },
-          { label: 'Chỉnh hợp A(n, k)', code: 'A_n^k', preview: 'A_n^k', desc: 'Số chỉnh hợp chập k của n phần tử có thứ tự sắp xếp.', latexNote: 'A_n^k' },
-          { label: 'Giai thừa n!', code: 'n!', preview: 'n!', desc: 'Tích các số tự nhiên liên tiếp từ 1 đến n.', latexNote: 'n!' },
-          { label: 'Xác suất P(A)', code: 'P(A) = \\frac{n(A)}{n(\\Omega)}', preview: 'P(A)', desc: 'Xác suất cổ điển biến cố A trên không gian mẫu Omega.', latexNote: 'P(A) = \\frac{n(A)}{n(\\Omega)}' }
+          { label: 'v⃗', code: '\\vec{v}', preview: '\\vec{v}', desc: 'Vectơ trong không gian tọa độ Oxyz.', latexNote: '\\vec{v}' },
+          { label: 'AB⃗', code: '\\vec{AB}', preview: '\\vec{AB}', desc: 'Vectơ định hướng từ điểm A đến điểm B.', latexNote: '\\vec{AB}' },
+          { label: '|a⃗|', code: '|\\vec{a}|', preview: '|\\vec{a}|', desc: 'Độ dài (môđun) của vectơ.', latexNote: '|\\vec{a}|' },
+          { label: 'u⃗·v⃗', code: '\\vec{u} \\cdot \\vec{v}', preview: '\\vec{u}\\cdot\\vec{v}', desc: 'Tích vô hướng của hai vectơ: |u||v|cos(u,v).', latexNote: '\\vec{u} \\cdot \\vec{v}' },
+          { label: '[u⃗, v⃗]', code: '[\\vec{u}, \\vec{v}]', preview: '[\\vec{u},\\vec{v}]', desc: 'Tích có hướng của hai vectơ trong không gian Oxyz.', latexNote: '[\\vec{u}, \\vec{v}]' },
+          { label: '∠ABC', code: '\\angle ABC', preview: '\\angle ABC', desc: 'Ký hiệu góc hình học tạo bởi ba điểm A, B, C.', latexNote: '\\angle ABC' },
+          { label: '∥', code: '\\parallel', preview: '\\parallel', desc: 'Ký hiệu hai đường thẳng hoặc hai mặt phẳng song song.', latexNote: '\\parallel' },
+          { label: '⊥', code: '\\perp', preview: '\\perp', desc: 'Ký hiệu vuông góc giữa hai đường thẳng hoặc đường thẳng và mặt phẳng.', latexNote: '\\perp' },
+          { label: '(α)', code: '(\\alpha)', preview: '(\\alpha)', desc: 'Ký hiệu mặt phẳng Alpha trong hình học.', latexNote: '(\\alpha)' },
+          { label: '(S)', code: '(S): (x-a)^2 + (y-b)^2 + (z-c)^2 = R^2', preview: '(S)', desc: 'Phương trình mặt cầu tâm I(a,b,c) bán kính R trong Oxyz.', latexNote: '(S): (x-a)^2...' },
+          { label: 'd(M,(P))', code: 'd(M, (P)) = \\frac{|Ax_0 + By_0 + Cz_0 + D|}{\\sqrt{A^2 + B^2 + C^2}}', preview: 'd(M,(P))', desc: 'Khoảng cách từ điểm M(x₀,y₀,z₀) đến mặt phẳng (P).', latexNote: 'd(M, (P))' }
+        ]
+      },
+      complex_prob: {
+        name: 'Số phức & Xác suất',
+        items: [
+          { label: 'z = a+bi', code: 'z = a + bi', preview: 'z = a+bi', desc: 'Dạng đại số của số phức với phần thực a và phần ảo b (i² = -1).', latexNote: 'z = a + bi' },
+          { label: 'z̄', code: '\\bar{z} = a - bi', preview: '\\bar{z}', desc: 'Số phức liên hợp của số phức z = a + bi.', latexNote: '\\bar{z} = a - bi' },
+          { label: '|z|', code: '|z| = \\sqrt{a^2 + b^2}', preview: '|z|', desc: 'Môđun của số phức z.', latexNote: '|z| = \\sqrt{a^2+b^2}' },
+          { label: 'C_n^k', code: 'C_n^k = \\frac{n!}{k!(n-k)!}', preview: 'C_n^k', desc: 'Số tổ hợp chập k của n phần tử.', latexNote: 'C_n^k' },
+          { label: 'A_n^k', code: 'A_n^k = \\frac{n!}{(n-k)!}', preview: 'A_n^k', desc: 'Số chỉnh hợp chập k của n phần tử.', latexNote: 'A_n^k' },
+          { label: 'P(A)', code: 'P(A) = \\frac{n(A)}{n(\\Omega)}', preview: 'P(A)', desc: 'Công thức tính xác suất cổ điển của biến cố A.', latexNote: 'P(A)' }
         ]
       }
     }
@@ -228,205 +139,300 @@ export const HIERARCHICAL_CATALOG = {
     name: 'Hóa Học',
     shortName: 'Hóa',
     icon: '🧪',
-    badgeColor: 'teal',
+    badgeColor: 'emerald',
     categories: {
-      concentration: {
-        name: 'Nồng độ & Khối lượng',
+      acids: {
+        name: 'Axit Vô Cơ & Hữu Cơ',
         items: [
-          { 
-            label: 'Nồng độ CM = n/V', 
-            code: 'C_M = \\frac{n}{V} = \\frac{0.2}{0.5} = 0.4\\text{ M}', 
-            preview: 'C_M=\\frac{n}{V}',
-            desc: 'Nồng độ mol dung dịch bằng số mol chất tan chia thể tích dung dịch (Lít). Có ô sửa số và tự tính.',
-            latexNote: 'C_M = \\frac{n}{V}'
-          },
-          { 
-            label: 'Nồng độ C%', 
-            code: 'C\\% = \\frac{m_{ct}}{m_{dd}} \\times 100\\%', 
-            preview: 'C\\%',
-            desc: 'Nồng độ phần trăm khối lượng chất tan trên khối lượng dung dịch nhân 100%.',
-            latexNote: 'C\\% = \\frac{m_{ct}}{m_{dd}} \\times 100\\%'
-          },
-          { 
-            label: 'Khối lượng m = n×M', 
-            code: 'm = n \\times M', 
-            preview: 'm=n\\times M',
-            desc: 'Khối lượng chất bằng số mol nhân khối lượng mol phân tử (gam).',
-            latexNote: 'm = n \\times M'
-          },
-          { 
-            label: 'Hiệu suất H%', 
-            code: 'H = \\frac{m_{tt}}{m_{lt}} \\times 100\\%', 
-            preview: 'H\\%',
-            desc: 'Hiệu suất phản ứng hóa học tính bằng khối lượng thực tế chia lý thuyết nhân 100%.',
-            latexNote: 'H = \\frac{m_{tt}}{m_{lt}} \\times 100\\%'
-          },
-          { 
-            label: 'Thể tích khí chuẩn V', 
-            code: 'V = n \\times 24.79', 
-            preview: 'V=n\\times 24.79',
-            desc: 'Thể tích khí ở điều kiện chuẩn (đkc 25°C, 1 bar) theo chương trình GDPT 2018.',
-            latexNote: 'V = n \\times 24.79'
-          }
+          { label: 'H₂SO₄', code: 'H_2SO_4', preview: 'H_2SO_4', desc: 'Axit Sunfuric - Axit mạnh 2 nấc, chất lỏng sánh, háo nước cực mạnh.', latexNote: 'H_2SO_4' },
+          { label: 'HCl', code: 'HCl', preview: 'HCl', desc: 'Axit Clohiđric - Axit mạnh 1 nấc trong dạ dày và phòng thí nghiệm.', latexNote: 'HCl' },
+          { label: 'HNO₃', code: 'HNO_3', preview: 'HNO_3', desc: 'Axit Nitric - Axit có tính oxi hóa rất mạnh, hòa tan hầu hết kim loại.', latexNote: 'HNO_3' },
+          { label: 'H₃PO₄', code: 'H_3PO_4', preview: 'H_3PO_4', desc: 'Axit Photphoric - Axit trung bình 3 nấc.', latexNote: 'H_3PO_4' },
+          { label: 'CH₃COOH', code: 'CH_3COOH', preview: 'CH_3COOH', desc: 'Axit Axetic (Giấm ăn) - Axit cacboxylic đơn chức.', latexNote: 'CH_3COOH' },
+          { label: 'HCOOH', code: 'HCOOH', preview: 'HCOOH', desc: 'Axit Fomic - Axit đơn chức có phản ứng tráng bạc.', latexNote: 'HCOOH' },
+          { label: 'H₂S', code: 'H_2S', preview: 'H_2S', desc: 'Hiđro Sunfua - Khí mùi trứng thối, tính khử mạnh.', latexNote: 'H_2S' },
+          { label: 'H₂CO₃', code: 'H_2CO_3', preview: 'H_2CO_3', desc: 'Axit Cacbonic - Axit yếu, không bền phân hủy ra CO₂ + H₂O.', latexNote: 'H_2CO_3' },
+          { label: 'HF', code: 'HF', preview: 'HF', desc: 'Axit Flohiđric - Ăn mòn thủy tinh (SiO₂).', latexNote: 'HF' },
+          { label: 'HBr', code: 'HBr', preview: 'HBr', desc: 'Axit Bromhiđric - Axit mạnh hơn HCl.', latexNote: 'HBr' },
+          { label: 'HI', code: 'HI', preview: 'HI', desc: 'Axit Iothiđric - Axit mạnh nhất trong dãy halogen.', latexNote: 'HI' }
         ]
       },
-      oxidation: {
-        name: 'Số Oxi Hóa',
+      bases: {
+        name: 'Bazơ & Kiềm',
         items: [
-          { label: 'Số oxi hóa 0', code: '0', preview: '0', desc: 'Số oxi hóa của đơn chất tự do (ví dụ Cu, H₂, O₂).', latexNote: '0' },
-          { label: 'Số oxi hóa +1', code: '+1', preview: '+1', desc: 'Số oxi hóa thông thường của H và kim loại kiềm nhóm IA.', latexNote: '+1' },
-          { label: 'Số oxi hóa +2', code: '+2', preview: '+2', desc: 'Số oxi hóa của kim loại kiềm thổ nhóm IIA, Zn, Fe(II).', latexNote: '+2' },
-          { label: 'Số oxi hóa +3', code: '+3', preview: '+3', desc: 'Số oxi hóa của nhôm Al, sắt Fe(III).', latexNote: '+3' },
-          { label: 'Số oxi hóa +6', code: '+6', preview: '+6', desc: 'Số oxi hóa cực đại của lưu huỳnh S trong phân tử H₂SO₄.', latexNote: '+6' },
-          { label: 'Số oxi hóa -1', code: '-1', preview: '-1', desc: 'Số oxi hóa của halogen trong hợp chất halide.', latexNote: '-1' },
-          { label: 'Số oxi hóa -2', code: '-2', preview: '-2', desc: 'Số oxi hóa thông thường của nguyên tố oxi trong oxit.', latexNote: '-2' }
+          { label: 'NaOH', code: 'NaOH', preview: 'NaOH', desc: 'Natri Hiđroxit (Xút ăn da) - Bazơ mạnh kiềm tan tốt trong nước.', latexNote: 'NaOH' },
+          { label: 'KOH', code: 'KOH', preview: 'KOH', desc: 'Kali Hiđroxit (Potash kiềm).', latexNote: 'KOH' },
+          { label: 'Ca(OH)₂', code: 'Ca(OH)_2', preview: 'Ca(OH)_2', desc: 'Canxi Hiđroxit (Nước vôi trong) - Dùng nhận biết khí CO₂.', latexNote: 'Ca(OH)_2' },
+          { label: 'Ba(OH)₂', code: 'Ba(OH)_2', preview: 'Ba(OH)_2', desc: 'Bari Hiđroxit - Dung dịch kiềm dùng kết tủa ion Sunfat.', latexNote: 'Ba(OH)_2' },
+          { label: 'Cu(OH)₂', code: 'Cu(OH)_2', preview: 'Cu(OH)_2', desc: 'Đồng(II) Hiđroxit - Kết tủa màu xanh lam, tan trong glixerol tạo phức.', latexNote: 'Cu(OH)_2' },
+          { label: 'Fe(OH)₃', code: 'Fe(OH)_3', preview: 'Fe(OH)_3', desc: 'Sắt(III) Hiđroxit - Kết tủa màu nâu đỏ.', latexNote: 'Fe(OH)_3' },
+          { label: 'Fe(OH)₂', code: 'Fe(OH)_2', preview: 'Fe(OH)_2', desc: 'Sắt(II) Hiđroxit - Kết tủa trắng xanh, hóa nâu đỏ trong không khí.', latexNote: 'Fe(OH)_2' },
+          { label: 'Al(OH)₃', code: 'Al(OH)_3', preview: 'Al(OH)_3', desc: 'Nhôm Hiđroxit - Hiđroxit lưỡng tính, kết tủa keo trắng.', latexNote: 'Al(OH)_3' },
+          { label: 'NH₃', code: 'NH_3', preview: 'NH_3', desc: 'Amoniac - Khí mùi khai, bazơ yếu tan rất nhiều trong nước.', latexNote: 'NH_3' }
         ]
       },
-      ions: {
-        name: 'Ion & Điện tích',
+      salts: {
+        name: 'Muối Vô Cơ',
         items: [
-          { label: 'H⁺ (Cation hydro)', code: 'H^+', preview: 'H^+', desc: 'Cation hydro quyết định tính axit trong dung dịch nước.', latexNote: 'H^+' },
-          { label: 'OH⁻ (Anion hidroxit)', code: 'OH^-', preview: 'OH^-', desc: 'Anion hidroxit quyết định tính bazơ (kiềm).', latexNote: 'OH^-' },
-          { label: 'Fe²⁺ (Sắt II)', code: 'Fe^{2+}', preview: 'Fe^{2+}', desc: 'Cation sắt mang 2 điện tích dương.', latexNote: 'Fe^{2+}' },
-          { label: 'Fe³⁺ (Sắt III)', code: 'Fe^{3+}', preview: 'Fe^{3+}', desc: 'Cation sắt mang 3 điện tích dương.', latexNote: 'Fe^{3+}' },
-          { label: 'SO₄²⁻ (Sunfat)', code: 'SO_4^{2-}', preview: 'SO_4^{2-}', desc: 'Gốc axit sunfat trong dung dịch muối hoặc axit sunfuric.', latexNote: 'SO_4^{2-}' },
-          { label: 'NO₃⁻ (Nitrat)', code: 'NO_3^-', preview: 'NO_3^-', desc: 'Gốc axit nitrat trong muối tan và axit nitric.', latexNote: 'NO_3^-' },
-          { label: 'CO₃²⁻ (Cacbonat)', code: 'CO_3^{2-}', preview: 'CO_3^{2-}', desc: 'Gốc axit cacbonat tạo kết tủa trắng với Ca²⁺ hoặc Ba²⁺.', latexNote: 'CO_3^{2-}' }
+          { label: 'NaCl', code: 'NaCl', preview: 'NaCl', desc: 'Natri Clorua (Muối ăn) - Muối trung hòa phổ biến nhất.', latexNote: 'NaCl' },
+          { label: 'CaCO₃', code: 'CaCO_3', preview: 'CaCO_3', desc: 'Canxi Cacbonat (Đá vôi) - Kết tủa trắng tan trong axit mạnh.', latexNote: 'CaCO_3' },
+          { label: 'BaSO₄', code: 'BaSO_4', preview: 'BaSO_4', desc: 'Bari Sunfat - Kết tủa trắng không tan trong axit mạnh.', latexNote: 'BaSO_4' },
+          { label: 'FeSO₄', code: 'FeSO_4', preview: 'FeSO_4', desc: 'Sắt(II) Sunfat - Dung dịch màu xanh nhạt.', latexNote: 'FeSO_4' },
+          { label: 'FeCl₃', code: 'FeCl_3', preview: 'FeCl_3', desc: 'Sắt(III) Clorua - Dung dịch vàng nâu, có tính oxi hóa.', latexNote: 'FeCl_3' },
+          { label: 'CuSO₄', code: 'CuSO_4', preview: 'CuSO_4', desc: 'Đồng(II) Sunfat - Muối khan màu trắng, ngậm nước màu xanh lam.', latexNote: 'CuSO_4' },
+          { label: 'NaHCO₃', code: 'NaHCO_3', preview: 'NaHCO_3', desc: 'Natri Hiđrocacbonat (Baking soda) - Muối lưỡng tính.', latexNote: 'NaHCO_3' },
+          { label: 'Na₂CO₃', code: 'Na_2CO_3', preview: 'Na_2CO_3', desc: 'Natri Cacbonat (Soda) - Dung dịch có tính bazơ mạnh.', latexNote: 'Na_2CO_3' },
+          { label: 'Al₂(SO₄)₃', code: 'Al_2(SO_4)_3', preview: 'Al_2(SO_4)_3', desc: 'Nhôm Sunfat (Thành phần phèn chua làm trong nước).', latexNote: 'Al_2(SO_4)_3' },
+          { label: 'AgNO₃', code: 'AgNO_3', preview: 'AgNO_3', desc: 'Bạc Nitrat - Thuốc thử ion halogenua (Cl⁻, Br⁻, I⁻).', latexNote: 'AgNO_3' },
+          { label: 'NH₄Cl', code: 'NH_4Cl', preview: 'NH_4Cl', desc: 'Amoni Clorua - Muối amoni thăng hoa khi đun nóng.', latexNote: 'NH_4Cl' }
         ]
       },
-      compounds: {
-        name: 'Hợp chất phổ biến',
+      oxides: {
+        name: 'Oxit Axit & Oxit Bazơ',
         items: [
-          { label: 'H₂SO₄ (Axit sunfuric)', code: 'H_2SO_4', preview: 'H_2SO_4', desc: 'Axit sunfuric đậm đặc hoặc loãng chuẩn SGK Hóa.', latexNote: 'H_2SO_4' },
-          { label: 'HNO₃ (Axit nitric)', code: 'HNO_3', preview: 'HNO_3', desc: 'Axit nitric có tính oxi hóa mạnh.', latexNote: 'HNO_3' },
-          { label: 'H₂O (Nước)', code: 'H_2O', preview: 'H_2O', desc: 'Phân tử nước dung môi phổ biến.', latexNote: 'H_2O' },
-          { label: 'NaOH (Xút ăn da)', code: 'NaOH', preview: 'NaOH', desc: 'Natri hidroxit dung dịch bazơ mạnh.', latexNote: 'NaOH' },
-          { label: 'CO₂ (Khí cacbonic)', code: 'CO_2', preview: 'CO_2', desc: 'Khí cacbonic gây hiệu ứng nhà kính và tạo kết tủa với nước vôi trong.', latexNote: 'CO_2' }
+          { label: 'CO₂', code: 'CO_2', preview: 'CO_2', desc: 'Cacbon Đioxit - Khí nhà kính, làm đục nước vôi trong Ca(OH)₂.', latexNote: 'CO_2' },
+          { label: 'SO₂', code: 'SO_2', preview: 'SO_2', desc: 'Lưu huỳnh Đioxit - Khí mùi hắc, làm mất màu dung dịch Brom.', latexNote: 'SO_2' },
+          { label: 'P₂O₅', code: 'P_2O_5', preview: 'P_2O_5', desc: 'Điphotpho Pentaoxit - Hút ẩm cực mạnh, tác dụng nước tạo H₃PO₄.', latexNote: 'P_2O_5' },
+          { label: 'Fe₂O₃', code: 'Fe_2O_3', preview: 'Fe_2O_3', desc: 'Sắt(III) Oxit - Bột màu nâu đỏ trong quặng hematit.', latexNote: 'Fe_2O_3' },
+          { label: 'Fe₃O₄', code: 'Fe_3O_4', preview: 'Fe_3O_4', desc: 'Oxit Sắt từ - Màu nâu đen, quặng manhetit có từ tính.', latexNote: 'Fe_3O_4' },
+          { label: 'CuO', code: 'CuO', preview: 'CuO', desc: 'Đồng(II) Oxit - Chất rắn màu đen, bị khử bởi H₂ hoặc CO ra Cu đỏ.', latexNote: 'CuO' },
+          { label: 'Al₂O₃', code: 'Al_2O_3', preview: 'Al_2O_3', desc: 'Nhôm Oxit - Oxit lưỡng tính, thành phần quặng boxit và đá quý.', latexNote: 'Al_2O_3' },
+          { label: 'CaO', code: 'CaO', preview: 'CaO', desc: 'Canxi Oxit (Vôi sống) - Tác dụng mạnh với nước tỏa nhiều nhiệt.', latexNote: 'CaO' },
+          { label: 'NO₂', code: 'NO_2', preview: 'NO_2', desc: 'Nitơ Đioxit - Khí màu nâu đỏ độc hại.', latexNote: 'NO_2' }
         ]
       },
-      reaction_arrows: {
-        name: 'Mũi tên phản ứng',
+      organic: {
+        name: 'Hợp Chất Hữu Cơ',
         items: [
-          { label: 'Một chiều →', code: '\\rightarrow', preview: '\\rightarrow', desc: 'Phản ứng một chiều diễn ra hoàn toàn.', latexNote: '\\rightarrow' },
-          { label: 'Thuận nghịch ⇌', code: '\\rightleftharpoons', preview: '\\rightleftharpoons', desc: 'Cân bằng hóa học phản ứng hai chiều thuận nghịch.', latexNote: '\\rightleftharpoons' },
-          { label: 'Đun nóng t°', code: '\\xrightarrow{t^o}', preview: '\\xrightarrow{t^o}', desc: 'Phản ứng hóa học cần điều kiện xúc tác nhiệt độ.', latexNote: '\\xrightarrow{t^o}' },
-          { label: 'Kết tủa ↓', code: '\\downarrow', preview: '\\downarrow', desc: 'Chất rắn tạo thành kết tủa lắng xuống đáy dung dịch.', latexNote: '\\downarrow' },
-          { label: 'Bay hơi ↑', code: '\\uparrow', preview: '\\uparrow', desc: 'Khí sinh ra bay hơi thoát khỏi bình phản ứng.', latexNote: '\\uparrow' }
+          { label: 'CH₄', code: 'CH_4', preview: 'CH_4', desc: 'Metan - Hiđrocacbon no đơn giản nhất trong khí thiên nhiên.', latexNote: 'CH_4' },
+          { label: 'C₂H₄', code: 'C_2H_4', preview: 'C_2H_4', desc: 'Etilen - Anken có 1 liên kết đôi C=C, làm mất màu dd Brom.', latexNote: 'C_2H_4' },
+          { label: 'C₂H₂', code: 'C_2H_2', preview: 'C_2H_2', desc: 'Axetilen - Ankin có 1 liên kết ba C≡C, tác dụng AgNO₃/NH₃ tạo kết tủa vàng.', latexNote: 'C_2H_2' },
+          { label: 'C₆H₆', code: 'C_6H_6', preview: 'C_6H_6', desc: 'Benzen - Hiđrocacbon thơm với vòng benzen 6 cạnh bền vững.', latexNote: 'C_6H_6' },
+          { label: 'C₂H₅OH', code: 'C_2H_5OH', preview: 'C_2H_5OH', desc: 'Etanol (Cồn) - Ancol no đơn chức bậc 1 lên men từ tinh bột.', latexNote: 'C_2H_5OH' },
+          { label: 'CH₃CHO', code: 'CH_3CHO', preview: 'CH_3CHO', desc: 'Axetanđehit - Anđehit đơn chức có phản ứng tráng bạc.', latexNote: 'CH_3CHO' },
+          { label: 'HCOOCH₃', code: 'HCOOCH_3', preview: 'HCOOCH_3', desc: 'Metyl Fomat - Este đơn giản nhất có tráng bạc.', latexNote: 'HCOOCH_3' },
+          { label: 'CH₃COOC₂H₅', code: 'CH_3COOC_2H_5', preview: 'CH_3COOC_2H_5', desc: 'Etyl Axetat - Este mùi thơm hoa quả, dung môi hữu cơ.', latexNote: 'CH_3COOC_2H_5' },
+          { label: 'CH₃NH₂', code: 'CH_3NH_2', preview: 'CH_3NH_2', desc: 'Metylamin - Khí mùi khai tương tự amoniac, tính bazơ mạnh hơn NH₃.', latexNote: 'CH_3NH_2' },
+          { label: 'Gly', code: 'H_2N-CH_2-COOH', preview: 'Gly', desc: 'Glyxin - Amino axit đơn giản nhất không làm đổi màu quỳ tím.', latexNote: 'H_2N-CH_2-COOH' },
+          { label: 'Ala', code: 'CH_3-CH(NH_2)-COOH', preview: 'Ala', desc: 'Alanin - Amino axit có 3 nguyên tử cacbon.', latexNote: 'Ala' },
+          { label: 'C₆H₁₂O₆', code: 'C_6H_{12}O_6', preview: 'C_6H_{12}O_6', desc: 'Glucozơ - Monosaccarit cung cấp năng lượng trong máu (0.1%).', latexNote: 'C_6H_{12}O_6' },
+          { label: 'C₁₂H₂₂O₁₁', code: 'C_{12}H_{22}O_{11}', preview: 'C_{12}H_{22}O_{11}', desc: 'Saccarozơ (Đường mía) - Đisaccarit thủy phân ra Glucozơ + Fructozơ.', latexNote: 'C_{12}H_{22}O_{11}' }
+        ]
+      },
+      ions_redox: {
+        name: 'Điện Tích Ion & Số Oxi Hóa',
+        items: [
+          { label: 'H⁺', code: 'H^+', preview: 'H^+', desc: 'Cation Hiđro xác định môi trường axit và độ pH.', latexNote: 'H^+' },
+          { label: 'OH⁻', code: 'OH^-', preview: 'OH^-', desc: 'Anion Hiđroxit đặc trưng cho môi trường kiềm bazơ.', latexNote: 'OH^-' },
+          { label: 'Na⁺', code: 'Na^+', preview: 'Na^+', desc: 'Cation Natri điện tích 1+.', latexNote: 'Na^+' },
+          { label: 'Ca²⁺', code: 'Ca^{2+}', preview: 'Ca^{2+}', desc: 'Cation Canxi gây độ cứng của nước.', latexNote: 'Ca^{2+}' },
+          { label: 'Fe²⁺', code: 'Fe^{2+}', preview: 'Fe^{2+}', desc: 'Cation Sắt II có tính khử và tính oxi hóa.', latexNote: 'Fe^{2+}' },
+          { label: 'Fe³⁺', code: 'Fe^{3+}', preview: 'Fe^{3+}', desc: 'Cation Sắt III có tính oxi hóa mạnh.', latexNote: 'Fe^{3+}' },
+          { label: 'Al³⁺', code: 'Al^{3+}', preview: 'Al^{3+}', desc: 'Cation Nhôm III.', latexNote: 'Al^{3+}' },
+          { label: 'SO₄²⁻', code: 'SO_4^{2-}', preview: 'SO_4^{2-}', desc: 'Anion Sunfat gốc axit mạnh.', latexNote: 'SO_4^{2-}' },
+          { label: 'NO₃⁻', code: 'NO_3^-', preview: 'NO_3^-', desc: 'Anion Nitrat hầu như mọi muối đều tan tốt.', latexNote: 'NO_3^-' },
+          { label: 'CO₃²⁻', code: 'CO_3^{2-}', preview: 'CO_3^{2-}', desc: 'Anion Cacbonat.', latexNote: 'CO_3^{2-}' },
+          { label: '+1', code: '+1', preview: '+1', desc: 'Số oxi hóa dương một (+1).', latexNote: '+1' },
+          { label: '+2', code: '+2', preview: '+2', desc: 'Số oxi hóa dương hai (+2).', latexNote: '+2' },
+          { label: '+3', code: '+3', preview: '+3', desc: 'Số oxi hóa dương ba (+3).', latexNote: '+3' },
+          { label: '+6', code: '+6', preview: '+6', desc: 'Số oxi hóa cực đại của Lưu huỳnh trong H₂SO₄.', latexNote: '+6' },
+          { label: '-2', code: '-2', preview: '-2', desc: 'Số oxi hóa thông thường của Oxi (-2).', latexNote: '-2' },
+          { label: '0', code: '0', preview: '0', desc: 'Số oxi hóa của đơn chất tự do bằng 0.', latexNote: '0' }
+        ]
+      },
+      reactions: {
+        name: 'Mũi Tên & Ký Hiệu Phản Ứng',
+        items: [
+          { label: '→', code: '\\rightarrow ', preview: '\\rightarrow', desc: 'Mũi tên phản ứng một chiều không thuận nghịch.', latexNote: '\\rightarrow' },
+          { label: '⇌', code: '\\rightleftharpoons ', preview: '\\rightleftharpoons', desc: 'Mũi tên cân bằng hóa học thuận nghịch hai chiều.', latexNote: '\\rightleftharpoons' },
+          { label: '↑', code: '\\uparrow ', preview: '\\uparrow', desc: 'Ký hiệu chất khí thoát ra khỏi dung dịch.', latexNote: '\\uparrow' },
+          { label: '↓', code: '\\downarrow ', preview: '\\downarrow', desc: 'Ký hiệu kết tủa lắng xuống đáy dung dịch.', latexNote: '\\downarrow' },
+          { label: 't°', code: '\\xrightarrow{t^\\circ} ', preview: '\\xrightarrow{t^\\circ}', desc: 'Phản ứng cần đun nóng nhiệt độ.', latexNote: '\\xrightarrow{t^\\circ}' },
+          { label: 'xt', code: '\\xrightarrow{xt} ', preview: '\\xrightarrow{xt}', desc: 'Phản ứng có mặt chất xúc tác.', latexNote: '\\xrightarrow{xt}' }
+        ]
+      },
+      calc: {
+        name: 'Công Thức Tính Nồng Độ & Mol',
+        items: [
+          { label: 'CM', code: 'C_M = \\frac{n}{V} = \\frac{0.2}{0.5} = 0.4\\text{ M}', preview: 'C_M = \\frac{n}{V}', desc: 'Nồng độ mol/lít (C_M). Hỗ trợ bấm nút tự động tính số liệu!', latexNote: 'C_M = \\frac{n}{V}' },
+          { label: 'C%', code: 'C\\% = \\frac{m_{ct}}{m_{dd}} \\times 100\\%', preview: 'C\\%', desc: 'Nồng độ phần trăm khối lượng dung dịch.', latexNote: 'C\\% = \\frac{m_{ct}}{m_{dd}} \\times 100\\%' },
+          { label: 'n = m/M', code: 'n = \\frac{m}{M}', preview: 'n = \\frac{m}{M}', desc: 'Công thức tính số mol từ khối lượng chất.', latexNote: 'n = \\frac{m}{M}' },
+          { label: 'n = V/22.4', code: 'n = \\frac{V}{22.4}', preview: 'n = \\frac{V}{22.4}', desc: 'Số mol chất khí ở điều kiện tiêu chuẩn (đktc 0°C, 1 atm).', latexNote: 'n = \\frac{V}{22.4}' },
+          { label: 'pH', code: 'pH = -\\log[H^+]', preview: 'pH', desc: 'Chỉ số đo độ axit hay bazơ của dung dịch nước.', latexNote: 'pH = -\\log[H^+]' }
         ]
       }
     }
   },
   physics: {
-    name: 'Vật Lí',
-    shortName: 'Lý',
-    icon: '⚡',
+    name: 'Vật Lý',
+    shortName: 'Vật Lý',
+    icon: '⚛️',
     badgeColor: 'amber',
     categories: {
-      mechanics: {
-        name: 'Cơ học & Dao động',
+      oscillations: {
+        name: 'Dao Động Điều Hòa',
         items: [
-          { label: 'Vận tốc v = s/t', code: 'v = \\frac{s}{t}', preview: 'v=\\frac{s}{t}', desc: 'Công thức tính vận tốc trung bình của chuyển động thẳng đều.', latexNote: 'v = \\frac{s}{t}' },
-          { label: 'Gia tốc a', code: 'a = \\frac{v - v_0}{t}', preview: 'a=\\frac{\\Delta v}{t}', desc: 'Gia tốc bằng biến thiên vận tốc theo thời gian.', latexNote: 'a = \\frac{v - v_0}{t}' },
-          { label: 'Dao động điều hòa', code: 'x = A \\cos(\\omega t + \\varphi)', preview: 'x=A\\cos(\\omega t+\\varphi)', desc: 'Phương trình dao động điều hòa ly độ x theo thời gian t.', latexNote: 'x = A \\cos(\\omega t + \\varphi)' },
-          { label: 'Chu kỳ T', code: 'T = \\frac{2\\pi}{\\omega}', preview: 'T=\\frac{2\\pi}{\\omega}', desc: 'Chu kỳ dao động điều hòa hoặc sóng cơ học.', latexNote: 'T = \\frac{2\\pi}{\\omega}' },
-          { label: 'Động năng Wđ', code: 'W_đ = \\frac{1}{2}mv^2', preview: 'W_đ=\\frac{1}{2}mv^2', desc: 'Động năng của vật khối lượng m chuyển động với vận tốc v.', latexNote: 'W_đ = \\frac{1}{2}mv^2' }
+          { label: 'x(t)', code: 'x = A\\cos(\\omega t + \\varphi)', preview: 'x(t)', desc: 'Phương trình dao động điều hòa li độ theo thời gian t.', latexNote: 'x = A\\cos(\\omega t + \\varphi)' },
+          { label: 'v(t)', code: 'v = -\\omega A \\sin(\\omega t + \\varphi)', preview: 'v(t)', desc: 'Phương trình vận tốc sớm pha π/2 so với li độ.', latexNote: 'v = x\'' },
+          { label: 'a(t)', code: 'a = -\\omega^2 x', preview: 'a(t)', desc: 'Gia tốc luôn hướng về vị trí cân bằng và ngược pha với li độ.', latexNote: 'a = -\\omega^2 x' },
+          { label: 'T lò xo', code: 'T = 2\\pi \\sqrt{\\frac{m}{k}}', preview: 'T = 2\\pi\\sqrt{\\frac{m}{k}}', desc: 'Chu kỳ dao động của con lắc lò xo.', latexNote: 'T = 2\\pi \\sqrt{m/k}' },
+          { label: 'T con lắc đơn', code: 'T = 2\\pi \\sqrt{\\frac{l}{g}}', preview: 'T = 2\\pi\\sqrt{\\frac{l}{g}}', desc: 'Chu kỳ dao động con lắc đơn chiều dài l trong trọng trường g.', latexNote: 'T = 2\\pi \\sqrt{l/g}' }
         ]
       },
-      electricity: {
-        name: 'Điện xoay chiều',
+      waves: {
+        name: 'Sóng Cơ & Âm Học',
         items: [
-          { label: 'Định luật Ohm I=U/R', code: 'I = \\frac{U}{R}', preview: 'I=\\frac{U}{R}', desc: 'Cường độ dòng điện qua điện trở R khi đặt điện áp U.', latexNote: 'I = \\frac{U}{R}' },
-          { label: 'Tổng trở Z', code: 'Z = \\sqrt{R^2 + (Z_L - Z_C)^2}', preview: 'Z=\\sqrt{R^2+...}', desc: 'Tổng trở của mạch xoay chiều RLC nối tiếp.', latexNote: 'Z = \\sqrt{R^2 + (Z_L - Z_C)^2}' },
-          { label: 'Công suất P', code: 'P = U I \\cos\\varphi', preview: 'P=UI\\cos\\varphi', desc: 'Công suất tiêu thụ trong mạch xoay chiều với hệ số công suất cosφ.', latexNote: 'P = U I \\cos\\varphi' }
+          { label: 'λ = v/f', code: '\\lambda = \\frac{v}{f} = v \\cdot T', preview: '\\lambda = \\frac{v}{f}', desc: 'Bước sóng là quãng đường sóng truyền đi trong một chu kỳ.', latexNote: '\\lambda = v / f' },
+          { label: 'u(t, x)', code: 'u = A\\cos\\left(\\omega t - \\frac{2\\pi x}{\\lambda}\\right)', preview: 'u(x,t)', desc: 'Phương trình sóng cơ hình sin tại điểm cách nguồn khoảng x.', latexNote: 'u = A\\cos(...)' },
+          { label: 'Mức âm L', code: 'L = 10\\log\\left(\\frac{I}{I_0}\\right)', preview: 'L(dB)', desc: 'Mức cường độ âm tính theo đơn vị Đềxiben (dB).', latexNote: 'L = 10\\log(I/I_0)' }
+        ]
+      },
+      ac_current: {
+        name: 'Dòng Điện Xoay Chiều',
+        items: [
+          { label: 'i(t)', code: 'i = I_0 \\cos(\\omega t)', preview: 'i = I_0\\cos', desc: 'Phương trình cường độ dòng điện tức thời.', latexNote: 'i = I_0 \\cos(\\omega t)' },
+          { label: 'Z tổng trở', code: 'Z = \\sqrt{R^2 + (Z_L - Z_C)^2}', preview: 'Z', desc: 'Tổng trở của đoạn mạch RLC mắc nối tiếp.', latexNote: 'Z = \\sqrt{R^2 + (Z_L - Z_C)^2}' },
+          { label: 'Z_L', code: 'Z_L = \\omega L', preview: 'Z_L', desc: 'Cảm kháng của cuộn cảm thuần L.', latexNote: 'Z_L = \\omega L' },
+          { label: 'Z_C', code: 'Z_C = \\frac{1}{\\omega C}', preview: 'Z_C', desc: 'Dung kháng của tụ điện C.', latexNote: 'Z_C = \\frac{1}{\\omega C}' },
+          { label: 'P công suất', code: 'P = U I \\cos\\varphi', preview: 'P = UI\\cos', desc: 'Công suất tiêu thụ của dòng điện xoay chiều.', latexNote: 'P = UI\\cos\\varphi' }
+        ]
+      },
+      optics_nuclear: {
+        name: 'Sóng Ánh Sáng & Hạt Nhân',
+        items: [
+          { label: 'Khoảng vân i', code: 'i = \\frac{\\lambda D}{a}', preview: 'i = \\frac{\\lambda D}{a}', desc: 'Khoảng vân giao thoa khe Y-âng trong thí nghiệm ánh sáng.', latexNote: 'i = \\frac{\\lambda D}{a}' },
+          { label: 'ε = hf', code: '\\varepsilon = hf = \\frac{hc}{\\lambda}', preview: '\\varepsilon = hf', desc: 'Năng lượng của một lượng tử ánh sáng (photon).', latexNote: '\\varepsilon = hf' },
+          { label: 'E = mc²', code: 'E = mc^2', preview: 'E = mc^2', desc: 'Hệ thức tương đối Einstein giữa khối lượng và năng lượng.', latexNote: 'E = mc^2' },
+          { label: 'Độ hụt khối', code: '\\Delta m = Z m_p + (A - Z) m_n - m_X', preview: '\\Delta m', desc: 'Độ hụt khối khi liên kết các nucleon thành hạt nhân.', latexNote: '\\Delta m' }
         ]
       }
     }
   },
   symbols: {
-    name: 'Ký Tự Đặc Biệt',
-    shortName: 'Ký hiệu',
+    name: 'Ký Hiệu & Logic',
+    shortName: 'Ký Hiệu',
     icon: '🔣',
-    badgeColor: 'slate',
+    badgeColor: 'purple',
     categories: {
-      greek: {
-        name: 'Ký tự Hy Lạp',
+      math_sym: {
+        name: 'Ký Hiệu Phép Tính',
         items: [
-          { label: 'alpha (α)', code: '\\alpha', preview: '\\alpha', desc: 'Ký tự alpha thường dùng cho góc hình học hoặc gia tốc góc.', latexNote: '\\alpha' },
-          { label: 'beta (β)', code: '\\beta', preview: '\\beta', desc: 'Ký tự beta dùng trong góc hoặc hạt phóng xạ beta.', latexNote: '\\beta' },
-          { label: 'gamma (γ)', code: '\\gamma', preview: '\\gamma', desc: 'Ký tự gamma thường dùng trong vật lý hạt nhân.', latexNote: '\\gamma' },
-          { label: 'Delta lớn (Δ)', code: '\\Delta', preview: '\\Delta', desc: 'Độ biến thiên, biệt thức Delta phương trình bậc hai.', latexNote: '\\Delta' },
-          { label: 'pi (π)', code: '\\pi', preview: '\\pi', desc: 'Hằng số Pi xấp xỉ 3.14159...', latexNote: '\\pi' },
-          { label: 'theta (θ)', code: '\\theta', preview: '\\theta', desc: 'Ký hiệu góc trong tọa độ cực và vật lý sóng.', latexNote: '\\theta' },
-          { label: 'lambda (λ)', code: '\\lambda', preview: '\\lambda', desc: 'Ký hiệu bước sóng hoặc hằng số phân rã.', latexNote: '\\lambda' },
-          { label: 'omega (ω)', code: '\\omega', preview: '\\omega', desc: 'Tần số góc dao động điều hòa (rad/s).', latexNote: '\\omega' },
-          { label: 'Omega lớn (Ω)', code: '\\Omega', preview: '\\Omega', desc: 'Đơn vị điện trở Ôm (Ω) hoặc không gian mẫu xác suất.', latexNote: '\\Omega' }
+          { label: '±', code: '\\pm ', preview: '\\pm', desc: 'Dấu cộng trừ.', latexNote: '\\pm' },
+          { label: '∓', code: '\\mp ', preview: '\\mp', desc: 'Dấu trừ cộng.', latexNote: '\\mp' },
+          { label: '×', code: '\\times ', preview: '\\times', desc: 'Dấu nhân đại số.', latexNote: '\\times' },
+          { label: '÷', code: '\\div ', preview: '\\div', desc: 'Dấu chia.', latexNote: '\\div' },
+          { label: '·', code: '\\cdot ', preview: '\\cdot', desc: 'Dấu chấm nhân.', latexNote: '\\cdot' },
+          { label: '≠', code: '\\neq ', preview: '\\neq', desc: 'Dấu khác nhau.', latexNote: '\\neq' },
+          { label: '≈', code: '\\approx ', preview: '\\approx', desc: 'Dấu xấp xỉ gần bằng.', latexNote: '\\approx' },
+          { label: '≤', code: '\\le ', preview: '\\le', desc: 'Nhỏ hơn hoặc bằng.', latexNote: '\\le' },
+          { label: '≥', code: '\\ge ', preview: '\\ge', desc: 'Lớn hơn hoặc bằng.', latexNote: '\\ge' },
+          { label: '∞', code: '\\infty ', preview: '\\infty', desc: 'Ký hiệu vô cực (vô cùng).', latexNote: '\\infty' }
         ]
       },
-      operators: {
-        name: 'Phép toán & So sánh',
+      greek: {
+        name: 'Ký Tự Hy Lạp',
         items: [
-          { label: 'Cộng trừ ±', code: '\\pm', preview: '\\pm', desc: 'Dấu cộng hoặc trừ đồng thời, nghiệm kép phương trình.', latexNote: '\\pm' },
-          { label: 'Nhân ×', code: '\\times', preview: '\\times', desc: 'Dấu nhân chữ thập cho phép tính số học hoặc tích có hướng.', latexNote: '\\times' },
-          { label: 'Chia ÷', code: '\\div', preview: '\\div', desc: 'Dấu chia số học.', latexNote: '\\div' },
-          { label: 'Khác ≠', code: '\\neq', preview: '\\neq', desc: 'Dấu khác biệt giữa hai vế phương trình hoặc điều kiện xác định.', latexNote: '\\neq' },
-          { label: 'Xấp xỉ ≈', code: '\\approx', preview: '\\approx', desc: 'Dấu xấp xỉ giá trị làm tròn.', latexNote: '\\approx' },
-          { label: 'Nhỏ hơn bằng ≤', code: '\\le', preview: '\\le', desc: 'Quan hệ bất đẳng thức nhỏ hơn hoặc bằng.', latexNote: '\\le' },
-          { label: 'Lớn hơn bằng ≥', code: '\\ge', preview: '\\ge', desc: 'Quan hệ bất đẳng thức lớn hơn hoặc bằng.', latexNote: '\\ge' },
-          { label: 'Vô cực ∞', code: '\\infty', preview: '\\infty', desc: 'Dương vô cực hoặc âm vô cực trong khảo sát giới hạn.', latexNote: '\\infty' },
-          { label: 'Chấm nhân ·', code: '\\cdot', preview: '\\cdot', desc: 'Dấu chấm nhân đại số giữa hai biến số hoặc số học.', latexNote: '\\cdot' }
+          { label: 'π', code: '\\pi ', preview: '\\pi', desc: 'Ký tự Pi.', latexNote: '\\pi' },
+          { label: 'Δ', code: '\\Delta ', preview: '\\Delta', desc: 'Ký tự Delta in hoa.', latexNote: '\\Delta' },
+          { label: 'α', code: '\\alpha ', preview: '\\alpha', desc: 'Ký tự Alpha.', latexNote: '\\alpha' },
+          { label: 'β', code: '\\beta ', preview: '\\beta', desc: 'Ký tự Beta.', latexNote: '\\beta' },
+          { label: 'γ', code: '\\gamma ', preview: '\\gamma', desc: 'Ký tự Gamma.', latexNote: '\\gamma' },
+          { label: 'θ', code: '\\theta ', preview: '\\theta', desc: 'Ký tự Theta (góc).', latexNote: '\\theta' },
+          { label: 'λ', code: '\\lambda ', preview: '\\lambda', desc: 'Ký tự Lambda (bước sóng).', latexNote: '\\lambda' },
+          { label: 'μ', code: '\\mu ', preview: '\\mu', desc: 'Ký tự Mu (vi mô, micro 10⁻⁶).', latexNote: '\\mu' },
+          { label: 'σ', code: '\\sigma ', preview: '\\sigma', desc: 'Ký tự Sigma thường (độ lệch chuẩn).', latexNote: '\\sigma' },
+          { label: 'ω', code: '\\omega ', preview: '\\omega', desc: 'Ký tự Omega thường (tần số góc).', latexNote: '\\omega' },
+          { label: 'Ω', code: '\\Omega ', preview: '\\Omega', desc: 'Ký tự Omega in hoa (Ohm đơn vị điện trở).', latexNote: '\\Omega' }
+        ]
+      },
+      logic_set: {
+        name: 'Tập Hợp & Mệnh Đề Logic',
+        items: [
+          { label: '⇒', code: '\\Rightarrow ', preview: '\\Rightarrow', desc: 'Dấu suy ra (kéo theo).', latexNote: '\\Rightarrow' },
+          { label: '⇔', code: '\\Leftrightarrow ', preview: '\\Leftrightarrow', desc: 'Dấu tương đương (khi và chỉ khi).', latexNote: '\\Leftrightarrow' },
+          { label: '∈', code: '\\in ', preview: '\\in', desc: 'Ký hiệu phần tử thuộc tập hợp.', latexNote: '\\in' },
+          { label: '∉', code: '\\notin ', preview: '\\notin', desc: 'Ký hiệu không thuộc tập hợp.', latexNote: '\\notin' },
+          { label: '⊂', code: '\\subset ', preview: '\\subset', desc: 'Tập hợp con.', latexNote: '\\subset' },
+          { label: '∪', code: '\\cup ', preview: '\\cup', desc: 'Phép hợp hai tập hợp.', latexNote: '\\cup' },
+          { label: '∩', code: '\\cap ', preview: '\\cap', desc: 'Phép giao hai tập hợp.', latexNote: '\\cap' },
+          { label: '∀', code: '\\forall ', preview: '\\forall', desc: 'Ký hiệu với mọi.', latexNote: '\\forall' },
+          { label: '∃', code: '\\exists ', preview: '\\exists', desc: 'Ký hiệu tồn tại.', latexNote: '\\exists' },
+          { label: 'ℝ', code: '\\mathbb{R}', preview: '\\mathbb{R}', desc: 'Tập hợp số thực.', latexNote: '\\mathbb{R}' },
+          { label: 'ℕ', code: '\\mathbb{N}', preview: '\\mathbb{N}', desc: 'Tập hợp số tự nhiên.', latexNote: '\\mathbb{N}' },
+          { label: 'ℤ', code: '\\mathbb{Z}', preview: '\\mathbb{Z}', desc: 'Tập hợp số nguyên.', latexNote: '\\mathbb{Z}' },
+          { label: '∅', code: '\\emptyset ', preview: '\\emptyset', desc: 'Tập hợp rỗng.', latexNote: '\\emptyset' }
+        ]
+      },
+      brackets_sys: {
+        name: 'Dấu Ngoặc & Hệ PT',
+        items: [
+          { label: '( )', code: '(x)', preview: '(x)', desc: 'Ngoặc tròn.', latexNote: '(x)' },
+          { label: '[ ]', code: '[x]', preview: '[x]', desc: 'Ngoặc vuông.', latexNote: '[x]' },
+          { label: '{ }', code: '\\{x\\}', preview: '\\{x\\}', desc: 'Ngoặc nhọn tập hợp.', latexNote: '\\{x\\}' },
+          { label: 'Hệ 2 PT', code: '\\begin{cases} ax + by = c \\\\ dx + ey = f \\end{cases}', preview: '\\begin{cases} ... \\end{cases}', desc: 'Hệ hai phương trình đại số.', latexNote: '\\begin{cases} ... \\end{cases}' },
+          { label: '(a; b)', code: '(a; b)', preview: '(a; b)', desc: 'Khoảng mở từ a đến b.', latexNote: '(a; b)' },
+          { label: '[a; b]', code: '[a; b]', preview: '[a; b)', desc: 'Đoạn đóng từ a đến b.', latexNote: '[a; b]' },
+          { label: '[a; b)', code: '[a; b)', preview: '[a; b)', desc: 'Nửa khoảng lấy đầu mút a.', latexNote: '[a; b)' }
         ]
       }
     }
   }
 };
 
-/**
- * COMPACT HIERARCHICAL FORMULA TOOLBAR WITH 2-SECOND HOVER CARD
- * Clean, structured, space-efficient sidebar palette
- */
 export default function HierarchicalMathPalette({
-  onInsertSnippet,
   isCollapsed = false,
   onToggleCollapse,
-  activeTarget = 'theoryRecap'
+  activeTarget = 'theoryRecap',
+  onInsertSnippet
 }) {
   const [selectedDomain, setSelectedDomain] = useState('math');
-  const [selectedCategory, setSelectedCategory] = useState('algebra');
+  const [searchQuery, setSearchQuery] = useState('');
+  
+  // Accordion toggle state: map categoryKey -> boolean (default all open)
+  const [openCategories, setOpenCategories] = useState(() => {
+    const initial = {};
+    Object.keys(HIERARCHICAL_CATALOG).forEach(domKey => {
+      Object.keys(HIERARCHICAL_CATALOG[domKey].categories).forEach((catKey, idx) => {
+        // Open first 2 categories by default for fast reach
+        initial[`${domKey}-${catKey}`] = idx < 2;
+      });
+    });
+    return initial;
+  });
 
-  // 2-second hover timer state
+  // 2-second hover card state
   const [hoveredItem, setHoveredItem] = useState(null);
-  const [hoverCardPos, setHoverCardPos] = useState({ top: 100, left: 300 });
+  const [hoverCardPos, setHoverCardPos] = useState({ top: 0, left: 0 });
   const hoverTimerRef = useRef(null);
 
   const domainKeys = Object.keys(HIERARCHICAL_CATALOG);
   const currentDomain = HIERARCHICAL_CATALOG[selectedDomain] || HIERARCHICAL_CATALOG.math;
-  const categoryKeys = Object.keys(currentDomain.categories);
-  const currentCategory = currentDomain.categories[selectedCategory] || currentDomain.categories[categoryKeys[0]];
 
-  // Clean timer on unmount
+  // Cleanup timer on unmount
   useEffect(() => {
     return () => {
       if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
     };
   }, []);
 
-  // When domain changes, auto-select first category of that domain
-  const handleDomainChange = (domKey) => {
-    setSelectedDomain(domKey);
-    const firstCat = Object.keys(HIERARCHICAL_CATALOG[domKey].categories)[0];
-    setSelectedCategory(firstCat);
+  const toggleCategoryOpen = (domKey, catKey) => {
+    const key = `${domKey}-${catKey}`;
+    setOpenCategories(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
   };
 
   // Hover 2s handler
-  const handleItemMouseEnter = (item, e) => {
+  const handleItemMouseEnter = (item, catName, e) => {
     if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
     const rect = e.currentTarget.getBoundingClientRect();
     
     // Exactly 2 seconds (2000ms) hover trigger as requested by user
     hoverTimerRef.current = setTimeout(() => {
-      setHoveredItem(item);
+      setHoveredItem({ ...item, categoryName: catName });
       setHoverCardPos({
-        top: Math.min(window.innerHeight - 280, Math.max(20, rect.top - 10)),
+        top: Math.min(window.innerHeight - 300, Math.max(20, rect.top - 20)),
         left: rect.right + 12
       });
     }, 2000);
@@ -445,18 +451,44 @@ export default function HierarchicalMathPalette({
     }
   };
 
+  // Filtered search results across all categories
+  const searchResults = useMemo(() => {
+    if (!searchQuery.trim()) return null;
+    const query = searchQuery.trim().toLowerCase();
+    const results = [];
+
+    Object.keys(HIERARCHICAL_CATALOG).forEach(domKey => {
+      const dom = HIERARCHICAL_CATALOG[domKey];
+      Object.keys(dom.categories).forEach(catKey => {
+        const cat = dom.categories[catKey];
+        cat.items.forEach(item => {
+          if (
+            item.label.toLowerCase().includes(query) ||
+            item.desc?.toLowerCase().includes(query) ||
+            item.code.toLowerCase().includes(query)
+          ) {
+            results.push({ ...item, domainName: dom.name, categoryName: cat.name });
+          }
+        });
+      });
+    });
+
+    return results;
+  }, [searchQuery]);
+
+  // COLLAPSED ULTRA-THIN SIDEBAR (CLEAN WHITE TONE)
   if (isCollapsed) {
     return (
-      <div className="w-11 bg-slate-900 border-r border-slate-800 flex flex-col items-center py-3 space-y-3 shrink-0 select-none h-full z-20">
+      <div className="w-12 bg-white border-r border-slate-200 flex flex-col items-center py-3 space-y-3 shrink-0 select-none h-full z-20 shadow-xs">
         <button
           type="button"
           onClick={onToggleCollapse}
-          className="w-8 h-8 rounded-xl bg-slate-800 hover:bg-cyan-900/60 text-slate-300 hover:text-cyan-300 flex items-center justify-center transition-colors shadow-2xs cursor-pointer"
+          className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-cyan-50 text-slate-600 hover:text-cyan-700 flex items-center justify-center transition-colors shadow-2xs cursor-pointer border border-slate-200"
           title="Mở rộng thanh công cụ ký hiệu"
         >
-          <ChevronRight className="w-4 h-4 text-cyan-400" />
+          <ChevronRight className="w-4 h-4 text-cyan-600" />
         </button>
-        <div className="w-5 h-[1px] bg-slate-800 my-1"></div>
+        <div className="w-6 h-[1px] bg-slate-200 my-1"></div>
         {domainKeys.map((key) => {
           const dom = HIERARCHICAL_CATALOG[key];
           return (
@@ -464,13 +496,13 @@ export default function HierarchicalMathPalette({
               key={key}
               type="button"
               onClick={() => {
-                handleDomainChange(key);
+                setSelectedDomain(key);
                 if (onToggleCollapse) onToggleCollapse();
               }}
               className={`w-8 h-8 rounded-xl flex items-center justify-center text-sm transition-all cursor-pointer ${
                 selectedDomain === key
-                  ? 'bg-cyan-600 text-white shadow-sm'
-                  : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                  ? 'bg-cyan-600 text-white shadow-sm font-bold'
+                  : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900 border border-transparent'
               }`}
               title={dom.name}
             >
@@ -482,114 +514,184 @@ export default function HierarchicalMathPalette({
     );
   }
 
+  // EXPANDED SIDEBAR: PURE WHITE TONE WITH ACCORDION TOGGLE TREE
   return (
-    <div className="w-64 sm:w-72 bg-slate-900 text-white border-r border-slate-800 flex flex-col shrink-0 select-none text-xs h-full relative z-20">
+    <div className="w-72 sm:w-80 bg-white text-slate-800 border-r border-slate-200 flex flex-col shrink-0 select-none text-xs h-full relative z-20 shadow-sm">
       
-      {/* Top Header of Palette with Collapse Button */}
-      <div className="p-3 border-b border-slate-800 flex items-center justify-between bg-slate-950/80">
+      {/* 1. Header with Collapse Button & Active Target Display */}
+      <div className="p-3 border-b border-slate-200 flex items-center justify-between bg-slate-50/90">
         <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
-          <span className="font-black text-slate-200 uppercase tracking-wider text-[11px]">
-            Ký Hiệu Phân Cấp
+          <span className="w-2.5 h-2.5 rounded-full bg-cyan-600 animate-pulse"></span>
+          <span className="font-black text-slate-800 uppercase tracking-wider text-[11px]">
+            Thư Viện Ký Hiệu & Hợp Chất
           </span>
         </div>
         <button
           type="button"
           onClick={onToggleCollapse}
-          className="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-colors cursor-pointer"
+          className="p-1 rounded-lg hover:bg-slate-200 text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
           title="Thu gọn sidebar sang thanh icon siêu mỏng"
         >
           <ChevronLeft className="w-4 h-4" />
         </button>
       </div>
 
-      {/* LEVEL 1: DOMAIN TABS (Toán, Hóa, Lý, Ký hiệu) */}
-      <div className="p-2 border-b border-slate-800/80 bg-slate-900/90 grid grid-cols-4 gap-1">
-        {domainKeys.map((domKey) => {
-          const dom = HIERARCHICAL_CATALOG[domKey];
-          const isAct = selectedDomain === domKey;
-          return (
+      {/* 2. Fast Instant Search Input */}
+      <div className="p-2 border-b border-slate-200 bg-white">
+        <div className="relative">
+          <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="🔍 Tìm nhanh H2SO4, NaOH, √x, a/b, sin..."
+            className="w-full bg-slate-50 hover:bg-white focus:bg-white border border-slate-200 focus:border-cyan-500 rounded-xl pl-8 pr-3 py-1.5 text-xs text-slate-800 placeholder-slate-400 outline-none transition-all shadow-inner"
+          />
+          {searchQuery && (
             <button
-              key={domKey}
               type="button"
-              onClick={() => handleDomainChange(domKey)}
-              className={`py-1.5 px-1 rounded-xl font-bold text-[11px] flex flex-col items-center justify-center gap-0.5 transition-all cursor-pointer ${
-                isAct
-                  ? 'bg-cyan-600 text-white shadow-sm'
-                  : 'bg-slate-800/80 text-slate-400 hover:bg-slate-700/80 hover:text-slate-200'
-              }`}
-              title={dom.name}
+              onClick={() => setSearchQuery('')}
+              className="absolute right-2.5 top-2 text-slate-400 hover:text-slate-600 text-[10px] font-bold"
             >
-              <span className="text-sm">{dom.icon}</span>
-              <span className="text-[10px] truncate max-w-full">{dom.shortName}</span>
+              ✕
             </button>
-          );
-        })}
-      </div>
-
-      {/* LEVEL 2: CATEGORY PILLS (Đại số, Hình học, Nồng độ, v.v.) */}
-      <div className="p-2 border-b border-slate-800 flex items-center gap-1 overflow-x-auto scrollbar-none bg-slate-950/40">
-        {categoryKeys.map((catKey) => {
-          const cat = currentDomain.categories[catKey];
-          const isAct = selectedCategory === catKey;
-          return (
-            <button
-              key={catKey}
-              type="button"
-              onClick={() => setSelectedCategory(catKey)}
-              className={`px-2.5 py-1 rounded-lg text-[10.5px] font-bold whitespace-nowrap transition-all cursor-pointer ${
-                isAct
-                  ? 'bg-slate-800 text-cyan-300 border border-cyan-500/40 shadow-2xs'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-              }`}
-            >
-              {cat.name}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* LEVEL 3: CLEAN HIGH-DENSITY CHIPS (Click để chèn, Di chuột 2 giây hiện công thức to & mô tả) */}
-      <div className="flex-1 overflow-y-auto p-2.5 space-y-1.5 scrollbar-thin">
-        <div className="text-[10px] font-bold text-slate-400 px-1 pb-1 flex items-center justify-between">
-          <span>{currentCategory?.name || 'Ký hiệu'}</span>
-          <span className="text-slate-500 font-mono text-[9px] flex items-center gap-1">
-            <Clock className="w-2.5 h-2.5 text-cyan-400" />
-            <span>Rê chuột 2s xem chi tiết</span>
-          </span>
+          )}
         </div>
+      </div>
 
-        <div className="space-y-1">
-          {currentCategory?.items?.map((item, idx) => (
-            <button
-              key={idx}
-              type="button"
-              onClick={() => handleItemClick(item)}
-              onMouseEnter={(e) => handleItemMouseEnter(item, e)}
-              onMouseLeave={handleItemMouseLeave}
-              className="w-full text-left px-2.5 py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 hover:border-cyan-500/50 border border-slate-700/50 text-slate-200 transition-all flex items-center justify-between gap-2 cursor-pointer group shadow-2xs"
-            >
-              <div className="flex items-center gap-2 overflow-hidden flex-1">
-                <span className="text-[11px] font-semibold text-slate-200 group-hover:text-cyan-300 transition-colors truncate">
-                  {item.label}
-                </span>
+      {/* 3. Domain Switcher Tabs (Toán, Hóa, Lý, Ký Hiệu) */}
+      {!searchResults && (
+        <div className="p-2 border-b border-slate-200 bg-slate-50/70 grid grid-cols-4 gap-1">
+          {domainKeys.map((domKey) => {
+            const dom = HIERARCHICAL_CATALOG[domKey];
+            const isAct = selectedDomain === domKey;
+            return (
+              <button
+                key={domKey}
+                type="button"
+                onClick={() => setSelectedDomain(domKey)}
+                className={`py-1.5 px-1 rounded-xl font-bold text-[11px] flex flex-col items-center justify-center gap-0.5 transition-all cursor-pointer ${
+                  isAct
+                    ? 'bg-cyan-600 text-white shadow-xs font-bold'
+                    : 'bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-slate-200/80 shadow-2xs'
+                }`}
+                title={dom.name}
+              >
+                <span className="text-sm">{dom.icon}</span>
+                <span className="text-[10px] truncate max-w-full font-medium">{dom.shortName}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* 4. MAIN BODY: ACCORDION TOGGLE TREE (CÂY THƯ MỤC CÔNG THỨC & HỢP CHẤT ĐỒ SỘ) */}
+      <div className="flex-1 overflow-y-auto p-2 space-y-2 scrollbar-thin">
+        
+        {/* CASE A: SEARCH RESULTS LIST */}
+        {searchResults ? (
+          <div className="space-y-1.5">
+            <div className="text-[10.5px] font-bold text-slate-500 px-1 pb-1 flex items-center justify-between">
+              <span>Tìm thấy {searchResults.length} kết quả:</span>
+              <span className="text-cyan-700 font-mono text-[9px]">Click chèn ngay</span>
+            </div>
+
+            {searchResults.length === 0 ? (
+              <div className="py-8 text-center text-slate-400 text-xs italic">
+                Không tìm thấy công thức hoặc hợp chất phù hợp.
               </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-1.5">
+                {searchResults.map((item, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => handleItemClick(item)}
+                    onMouseEnter={(e) => handleItemMouseEnter(item, item.categoryName, e)}
+                    onMouseLeave={handleItemMouseLeave}
+                    className="p-1.5 rounded-xl bg-slate-50 hover:bg-cyan-50/80 hover:border-cyan-400 border border-slate-200 text-slate-700 hover:text-cyan-900 transition-all flex flex-col items-start gap-1 cursor-pointer group shadow-2xs"
+                  >
+                    <div className="w-full flex items-center justify-between gap-1">
+                      <span className="text-[11px] font-bold truncate">{item.label}</span>
+                      <span className="text-[9px] text-slate-400 font-normal truncate max-w-[50px]">{item.domainName}</span>
+                    </div>
+                    <div 
+                      className="text-xs text-cyan-800 font-serif self-center"
+                      dangerouslySetInnerHTML={{ __html: renderKatexHtml(item.preview || item.code, false) }}
+                    />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
+          /* CASE B: ACCORDION TREE OF CATEGORIES */
+          Object.keys(currentDomain.categories).map((catKey) => {
+            const cat = currentDomain.categories[catKey];
+            const isCatOpen = openCategories[`${selectedDomain}-${catKey}`] ?? true;
+
+            return (
               <div 
-                className="text-xs text-cyan-400 font-mono shrink-0 px-1.5 py-0.5 rounded bg-slate-950/70 border border-slate-800 group-hover:border-cyan-500/40"
-                dangerouslySetInnerHTML={{ __html: renderKatexHtml(item.preview || item.code, false) }}
-              />
-            </button>
-          ))}
-        </div>
+                key={catKey}
+                className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-2xs transition-colors"
+              >
+                {/* Accordion Folder Header */}
+                <button
+                  type="button"
+                  onClick={() => toggleCategoryOpen(selectedDomain, catKey)}
+                  className="w-full px-3 py-2 bg-slate-50 hover:bg-slate-100 flex items-center justify-between gap-2 text-slate-800 font-bold text-[11.5px] transition-colors cursor-pointer border-b border-slate-200/60"
+                >
+                  <div className="flex items-center gap-2 overflow-hidden">
+                    {isCatOpen ? (
+                      <ChevronDown className="w-3.5 h-3.5 text-cyan-600 shrink-0" />
+                    ) : (
+                      <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                    )}
+                    <span className="truncate">{cat.name}</span>
+                  </div>
+                  <span className="px-1.5 py-0.5 rounded-full bg-slate-200 text-slate-600 text-[9.5px] font-mono shrink-0">
+                    {cat.items?.length || 0}
+                  </span>
+                </button>
+
+                {/* Accordion Folder Content (Compact Formula/Compound Chips) */}
+                {isCatOpen && (
+                  <div className="p-2 bg-white">
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {cat.items?.map((item, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => handleItemClick(item)}
+                          onMouseEnter={(e) => handleItemMouseEnter(item, cat.name, e)}
+                          onMouseLeave={handleItemMouseLeave}
+                          className="px-2 py-1.5 rounded-xl bg-slate-50 hover:bg-cyan-50/80 hover:border-cyan-400 border border-slate-200 text-slate-700 hover:text-cyan-900 transition-all flex items-center justify-between gap-1 cursor-pointer group shadow-2xs"
+                        >
+                          <span className="text-[11px] font-semibold text-slate-800 group-hover:text-cyan-800 truncate">
+                            {item.label}
+                          </span>
+                          <div 
+                            className="text-[11.5px] text-cyan-700 font-serif shrink-0 px-1 py-0.5 rounded bg-white border border-slate-200 group-hover:border-cyan-300"
+                            dangerouslySetInnerHTML={{ __html: renderKatexHtml(item.preview || item.code, false) }}
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })
+        )}
       </div>
 
-      {/* Footer hint */}
-      <div className="p-2 border-t border-slate-800 bg-slate-950/80 text-[10px] text-slate-400 text-center flex items-center justify-center gap-1.5">
-        <Sparkles className="w-3 h-3 text-cyan-400" />
-        <span>Nhấp để chèn • Rê chuột 2s xem mô tả SGK</span>
+      {/* 5. Minimalist Footer Guidance */}
+      <div className="p-2 border-t border-slate-200 bg-slate-50 text-[10.5px] text-slate-500 text-center flex items-center justify-center gap-1.5">
+        <Clock className="w-3 h-3 text-cyan-600" />
+        <span>Rê chuột 2s xem hướng dẫn SGK • Nhấp để chèn tại con trỏ</span>
       </div>
 
-      {/* 2-SECOND HOVER CARD (Floating rich preview card) */}
+      {/* 6. 2-SECOND HOVER CARD (CLEAN WHITE PREVIEW MODAL) */}
       {hoveredItem && (
         <div
           style={{ 
@@ -597,45 +699,45 @@ export default function HierarchicalMathPalette({
             left: `${hoverCardPos.left}px`,
             position: 'fixed'
           }}
-          className="z-[999] w-80 bg-slate-900/98 backdrop-blur-md rounded-2xl border border-cyan-500/60 shadow-2xl p-4 text-white pointer-events-none animate-in fade-in zoom-in-95 duration-150"
+          className="z-[999] w-80 bg-white/98 backdrop-blur-md rounded-2xl border-2 border-cyan-500 shadow-2xl p-4 text-slate-900 pointer-events-none animate-in fade-in zoom-in-95 duration-150"
         >
-          <div className="flex items-center justify-between pb-2 border-b border-slate-800">
-            <span className="text-[10.5px] font-black uppercase text-cyan-400 tracking-wider flex items-center gap-1.5">
-              <Sparkles className="w-3 h-3 text-amber-400" />
-              <span>{currentDomain?.name} • {currentCategory?.name}</span>
+          <div className="flex items-center justify-between pb-2 border-b border-slate-200">
+            <span className="text-[10.5px] font-black uppercase text-cyan-700 tracking-wider flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+              <span>{currentDomain?.name} • {hoveredItem.categoryName}</span>
             </span>
-            <span className="text-[9.5px] px-2 py-0.5 rounded-full bg-cyan-950 text-cyan-300 border border-cyan-800 font-mono">
-              Live KaTeX
+            <span className="text-[9.5px] px-2 py-0.5 rounded-full bg-cyan-50 text-cyan-800 border border-cyan-200 font-mono font-bold">
+              Chuẩn GDPT 2018
             </span>
           </div>
 
-          {/* Big Live KaTeX Formula */}
-          <div className="my-3 py-3 px-3 rounded-xl bg-slate-950/90 border border-slate-800 text-center flex items-center justify-center min-h-[60px] shadow-inner">
+          {/* Large Live KaTeX Formula */}
+          <div className="my-3 py-3 px-3 rounded-xl bg-slate-50 border border-slate-200 text-center flex items-center justify-center min-h-[60px] shadow-inner">
             <div 
-              className="text-lg text-cyan-300 font-serif leading-none"
+              className="text-lg text-cyan-900 font-serif leading-none"
               dangerouslySetInnerHTML={{ __html: renderKatexHtml(hoveredItem.preview || hoveredItem.code, true) }}
             />
           </div>
 
           {/* Title & Pedagogical Description */}
           <div className="space-y-1">
-            <div className="font-extrabold text-[12.5px] text-white">
+            <div className="font-extrabold text-[13px] text-slate-900">
               {hoveredItem.label}
             </div>
-            <p className="text-[11px] text-slate-300 leading-relaxed font-normal">
-              {hoveredItem.desc || 'Chèn ký hiệu hoặc công thức vào văn bản soạn thảo tại vị trí con trỏ.'}
+            <p className="text-[11.5px] text-slate-600 leading-relaxed font-normal">
+              {hoveredItem.desc || 'Chèn ký hiệu hoặc công thức vào bài giảng tại vị trí con trỏ.'}
             </p>
           </div>
 
           {/* LaTeX Syntax */}
-          <div className="mt-2.5 pt-2 border-t border-slate-800/80 flex items-center justify-between text-[10.5px]">
-            <span className="text-slate-400 font-medium">Mã nguồn LaTeX:</span>
-            <code className="text-cyan-300 bg-slate-950 px-1.5 py-0.5 rounded border border-slate-800 font-mono text-[11px]">
+          <div className="mt-2.5 pt-2 border-t border-slate-200 flex items-center justify-between text-[10.5px]">
+            <span className="text-slate-500 font-medium">Mã nguồn LaTeX:</span>
+            <code className="text-cyan-800 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 font-mono text-[11px] font-bold">
               ${hoveredItem.code}$
             </code>
           </div>
 
-          <div className="mt-2 text-[10px] text-emerald-400 font-bold flex items-center gap-1">
+          <div className="mt-2 text-[10.5px] text-emerald-700 font-extrabold flex items-center gap-1">
             <span>⚡ Nhấp chuột để chèn ngay vào vị trí con trỏ</span>
           </div>
         </div>

@@ -28,10 +28,12 @@ export function renderKatexHtml(latex, displayMode = false) {
  */
 export function unescapeLiteralNewlines(text) {
   if (!text) return '';
-  return String(text).replace(
-    /\\n(?!(?:eq|otin|abla|u|atural|earrow|warrow|subseteq|supseteq|gtr|less|parallel|ormalsize|ot|ewcommand)\b)/g,
-    '\n'
-  );
+  return String(text)
+    .replace(/\\+\s*(?=\r?\n|$)/g, '')
+    .replace(
+      /\\n(?!(?:eq|otin|abla|u|atural|earrow|warrow|subseteq|supseteq|gtr|less|parallel|ormalsize|ot|ewcommand)\b)/g,
+      '\n'
+    );
 }
 
 /**
@@ -286,8 +288,10 @@ function renderStructuredContent(raw) {
 
     return (
       <React.Fragment key={`b-${bIdx}`}>
-        {lines.map((line, lIdx) => {
+        {lines.map((rawLine, lIdx) => {
           const lineKey = `b-${bIdx}-l-${lIdx}`;
+          // Strip trailing backslashes e.g. text\ or text\\ at line endings
+          const line = rawLine.replace(/\\+\s*$/, '').trimEnd();
           const trimmed = line.trim();
 
           // Empty line -> spacing
@@ -297,7 +301,7 @@ function renderStructuredContent(raw) {
 
           // Callout Warning e.g. "### ⚠️ Các bẫy đề thi:" or "⚠️ ..."
           if (line.includes('### ⚠️') || line.startsWith('⚠️')) {
-            const cleanHeading = line.replace(/^###\s*/, '').replace(/^⚠️\s*/, '').trim();
+            const cleanHeading = line.replace(/^###\s*/, '').replace(/^⚠️\s*/, '').replace(/\\+\s*$/, '').trim();
             return (
               <div
                 key={lineKey}
@@ -311,7 +315,7 @@ function renderStructuredContent(raw) {
 
           // Callout Tip e.g. "### 💡 Mẹo Casio:" or "💡 ..."
           if (line.includes('### 💡') || line.startsWith('💡')) {
-            const cleanHeading = line.replace(/^###\s*/, '').replace(/^💡\s*/, '').trim();
+            const cleanHeading = line.replace(/^###\s*/, '').replace(/^💡\s*/, '').replace(/\\+\s*$/, '').trim();
             return (
               <div
                 key={lineKey}
@@ -325,7 +329,7 @@ function renderStructuredContent(raw) {
 
           // Callout Pedagogical Example SGK e.g. "### 📌 Ví dụ minh họa SGK:" or "📌 ..."
           if (line.includes('### 📌') || line.startsWith('📌')) {
-            const cleanHeading = line.replace(/^###\s*/, '').replace(/^📌\s*/, '').trim();
+            const cleanHeading = line.replace(/^###\s*/, '').replace(/^📌\s*/, '').replace(/\\+\s*$/, '').trim();
             return (
               <div
                 key={lineKey}
@@ -338,8 +342,8 @@ function renderStructuredContent(raw) {
           }
 
           // Callout Sample Problem / Practice e.g. "### 📝 Bài toán mẫu..." or "### 📄 Bài toán mẫu..." or "📝 ..." or "📄 ..."
-          if (line.includes('### 📝') || line.includes('### 📄') || line.startsWith('📝') || line.startsWith('📄')) {
-            const cleanHeading = line.replace(/^###\s*/, '').replace(/^[📝📄]\s*/, '').trim();
+          if (line.includes('### 📝') || line.includes('### 📄') || line.includes('### ✍️') || line.startsWith('📝') || line.startsWith('📄') || line.startsWith('✍️')) {
+            const cleanHeading = line.replace(/^###\s*/, '').replace(/^[📝📄✍️]\s*/, '').replace(/\\+\s*$/, '').trim();
             return (
               <div
                 key={lineKey}

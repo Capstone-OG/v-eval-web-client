@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import { 
   Calculator, 
   FlaskConical, 
@@ -7,10 +7,12 @@ import {
   X, 
   Trash2, 
   Zap, 
-  Plus, 
-  Edit2
+  BookOpen,
+  FileEdit,
+  AlertTriangle,
+  Lightbulb
 } from 'lucide-react';
-import { renderKatexHtml } from '../common/MathText';
+import { renderKatexHtml, unescapeLiteralNewlines } from '../common/MathText';
 
 /**
  * Helper to safely evaluate simple arithmetic strings (e.g. "12/4", "0.2/0.5")
@@ -26,9 +28,18 @@ function safeCalcDivision(numStr, denStr) {
 }
 
 /**
+ * Sanitize a single line of text by stripping any accidental trailing backslashes
+ * (e.g. text\ or text\\ or text\ ) that cause ugly '\' or '/' at the line ends
+ */
+export function sanitizeLineText(text) {
+  if (!text) return '';
+  return String(text).replace(/\\+\s*$/, '').trimEnd();
+}
+
+/**
  * Parse an equation string into known editable structures
  */
-function parseEquationStructure(latex) {
+export function parseEquationStructure(latex) {
   if (!latex) return { type: 'GENERIC', raw: '' };
   const str = latex.trim();
 
@@ -100,7 +111,7 @@ function parseEquationStructure(latex) {
 /**
  * Assemble back to LaTeX string from parsed structure
  */
-function buildLatexFromStructure(struct) {
+export function buildLatexFromStructure(struct) {
   if (!struct) return '';
   switch (struct.type) {
     case 'CHEM_CM': {
@@ -142,7 +153,8 @@ function buildLatexFromStructure(struct) {
  * Tokenize a single line of text into plain text chunks and explicit $...$ / $$...$$ formula tokens
  */
 function tokenizeLine(lineText, lineIdx) {
-  if (lineText === '' || lineText === undefined) {
+  const cleanLine = sanitizeLineText(lineText);
+  if (cleanLine === '' || cleanLine === undefined) {
     return [{
       id: `line-${lineIdx}-tok-0`,
       isFormula: false,
@@ -150,7 +162,7 @@ function tokenizeLine(lineText, lineIdx) {
     }];
   }
   const regex = /(\$\$[\s\S]*?\$\$|\$[^\$\n]+?\$)/g;
-  const parts = lineText.split(regex);
+  const parts = cleanLine.split(regex);
   const tokens = [];
 
   parts.forEach((part, partIdx) => {
@@ -183,7 +195,7 @@ function tokenizeLine(lineText, lineIdx) {
     }
   });
 
-  return tokens;
+  return tokens.length > 0 ? tokens : [{ id: `line-${lineIdx}-tok-0`, isFormula: false, text: '' }];
 }
 
 /**
@@ -191,17 +203,20 @@ function tokenizeLine(lineText, lineIdx) {
  */
 function parseDocumentLines(rawText) {
   if (!rawText) return [];
-  const rawLines = String(rawText).split('\n');
+  const normalized = unescapeLiteralNewlines(String(rawText));
+  const rawLines = normalized.split('\n');
+
   return rawLines.map((line, lineIdx) => {
-    const isHeading = line.trim().startsWith('###') || line.trim().startsWith('##') || line.trim().startsWith('#');
-    const isBullet = line.trim().startsWith('- ') || line.trim().startsWith('* ') || line.trim().startsWith('• ');
+    const clean = sanitizeLineText(line);
+    const isHeading = clean.trim().startsWith('###') || clean.trim().startsWith('##') || clean.trim().startsWith('#');
+    const isBullet = clean.trim().startsWith('- ') || clean.trim().startsWith('* ') || clean.trim().startsWith('• ');
     return {
       id: `line-${lineIdx}`,
       lineIdx,
-      raw: line,
+      raw: clean,
       isHeading,
       isBullet,
-      tokens: tokenizeLine(line, lineIdx)
+      tokens: tokenizeLine(clean, lineIdx)
     };
   });
 }
@@ -211,24 +226,18 @@ function parseDocumentLines(rawText) {
  */
 function serializeDocumentLines(lines) {
   return lines.map(line => {
-    return line.tokens.map(t => {
+    const assembled = line.tokens.map(t => {
       if (!t.isFormula) return t.text;
       const latex = t.structure ? buildLatexFromStructure(t.structure) : t.latex;
       return t.displayMode ? `$$${latex}$$` : `$${latex}$`;
     }).join('');
+    return sanitizeLineText(assembled);
   }).join('\n');
 }
 
 /**
  * Compact Quick Math Symbols for Floating Bubble
  */
-const QUICK_BUBBLE_SYMBOLS = [
-  { label: '+', code: '+' },
-  { label: '−', code: '-' },
-  { label: '×', code: '\\times ' },
-  { label: '÷', code: '\\div ' }
-];
-
 export const HIERARCHICAL_BUBBLE_INSERTER = {
   structures: {
     name: '📐 Cấu trúc',
@@ -253,6 +262,9 @@ export const HIERARCHICAL_BUBBLE_INSERTER = {
       { label: 'CM', code: 'C_M = \\frac{n}{V}', title: 'Nồng độ CM' },
       { label: 'C%', code: 'C\\%', title: 'Nồng độ C%' },
       { label: 'H₂SO₄', code: 'H_2SO_4', title: 'Axit H2SO4' },
+      { label: 'HCl', code: 'HCl', title: 'Axit Clohidric' },
+      { label: 'HNO₃', code: 'HNO_3', title: 'Axit Nitric' },
+      { label: 'NaOH', code: 'NaOH', title: 'Natri Hidroxit' },
       { label: 'SO₄²⁻', code: 'SO_4^{2-}', title: 'Ion Sunfat' },
       { label: 'OH⁻', code: 'OH^-', title: 'Ion Hidroxit' },
       { label: 'Fe³⁺', code: 'Fe^{3+}', title: 'Ion Sắt III' },
@@ -304,18 +316,28 @@ export const HIERARCHICAL_BUBBLE_INSERTER = {
     ]
   }
 };
-export default function WordStyleFormulaCanvas({
+
+const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
   content,
   onChange,
   placeholder = "Nhập nội dung bài giảng tại đây...",
   accentColor = "cyan"
-}) {
+}, ref) {
   const [docLines, setDocLines] = useState(() => parseDocumentLines(content || ''));
   const [activeFormulaId, setActiveFormulaId] = useState(null);
   const [bubblePos, setBubblePos] = useState({ top: 0, left: 0 });
   const [bubbleTab, setBubbleTab] = useState('structures');
+  
   const activeFormulaRef = useRef(null);
   const containerRef = useRef(null);
+  const lineRefs = useRef({});
+
+  // Active cursor tracking for precise insertion at cursor location
+  const activePositionRef = useRef({
+    lineId: null,
+    tokenId: null,
+    offset: 0
+  });
 
   // Sync incoming content if changed externally
   useEffect(() => {
@@ -344,6 +366,174 @@ export default function WordStyleFormulaCanvas({
     if (onChange) onChange(serialized);
   };
 
+  // Record active caret position inside an editable span
+  const updateActiveCaret = (lineId, tokenId) => {
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0) {
+      const range = sel.getRangeAt(0);
+      activePositionRef.current = {
+        lineId,
+        tokenId,
+        offset: range.startOffset
+      };
+    } else {
+      activePositionRef.current = {
+        lineId,
+        tokenId,
+        offset: 0
+      };
+    }
+  };
+
+  /**
+   * REQUIREMENT 4: Click on line whitespace automatically places cursor at end of line
+   */
+  const handleLineRowClick = (e, lineId) => {
+    // If the user clicked directly on an editable span, an input, or a formula button, let natural focus happen
+    if (e.target.closest('[contenteditable="true"]') || e.target.closest('input') || e.target.closest('button')) {
+      return;
+    }
+
+    // User clicked the whitespace/empty margin of the line
+    const lineEl = lineRefs.current[lineId];
+    if (!lineEl) return;
+
+    const editableSpans = lineEl.querySelectorAll('[contenteditable="true"]');
+    if (editableSpans.length > 0) {
+      const lastSpan = editableSpans[editableSpans.length - 1];
+      lastSpan.focus();
+
+      // Place caret at the very end of the text
+      const sel = window.getSelection();
+      if (sel) {
+        const range = document.createRange();
+        range.selectNodeContents(lastSpan);
+        range.collapse(false); // false = collapse to end
+        sel.removeAllRanges();
+        sel.addRange(range);
+      }
+
+      // Update active position
+      const targetLine = docLines.find(l => l.id === lineId);
+      if (targetLine && targetLine.tokens.length > 0) {
+        for (let i = targetLine.tokens.length - 1; i >= 0; i--) {
+          if (!targetLine.tokens[i].isFormula) {
+            activePositionRef.current = {
+              lineId,
+              tokenId: targetLine.tokens[i].id,
+              offset: (targetLine.tokens[i].text || '').length
+            };
+            break;
+          }
+        }
+      }
+    }
+  };
+
+  /**
+   * REQUIREMENT 1: INSERT DIRECTLY AT CURSOR (CHÈN NGAY TẠI CON TRỎ, KHÔNG PHẢI VỨT XUỐNG CUỐI)
+   * Expose imperative handle so left palette or quick inserter inserts directly where user was typing
+   */
+  useImperativeHandle(ref, () => ({
+    insertSnippet: (latexSnippet) => {
+      if (!latexSnippet) return;
+      const formulaLatex = latexSnippet.trim();
+      const formulaStructure = parseEquationStructure(formulaLatex);
+
+      let targetLineId = activePositionRef.current?.lineId;
+      let targetTokenId = activePositionRef.current?.tokenId;
+      let caretOffset = activePositionRef.current?.offset ?? 0;
+
+      // If document is empty, initialize first line
+      if (docLines.length === 0) {
+        const newLId = `line-${Date.now()}`;
+        const fId = `tok-f-${Date.now()}`;
+        const afterId = `tok-t-${Date.now() + 1}`;
+        const newLines = [{
+          id: newLId,
+          lineIdx: 0,
+          raw: '',
+          isHeading: false,
+          isBullet: false,
+          tokens: [
+            { id: fId, isFormula: true, displayMode: false, latex: formulaLatex, structure: formulaStructure },
+            { id: afterId, isFormula: false, text: ' ' }
+          ]
+        }];
+        commitDocLines(newLines);
+        setActiveFormulaId(fId);
+        activePositionRef.current = { lineId: newLId, tokenId: afterId, offset: 1 };
+        return;
+      }
+
+      // If no active line or active line not found in doc, target the last line
+      if (!targetLineId || !docLines.some(l => l.id === targetLineId)) {
+        const lastLine = docLines[docLines.length - 1];
+        targetLineId = lastLine.id;
+        const lastTok = lastLine.tokens[lastLine.tokens.length - 1];
+        targetTokenId = lastTok?.id;
+        caretOffset = (lastTok?.text || '').length;
+      }
+
+      const newFormulaId = `tok-f-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
+      const formulaToken = {
+        id: newFormulaId,
+        isFormula: true,
+        displayMode: false,
+        latex: formulaLatex,
+        structure: formulaStructure
+      };
+
+      const updatedLines = docLines.map(line => {
+        if (line.id !== targetLineId) return line;
+
+        // Find token index
+        const tokIdx = line.tokens.findIndex(t => t.id === targetTokenId);
+        if (tokIdx === -1) {
+          // Append to end of tokens
+          const afterId = `tok-t-${Date.now()}`;
+          activePositionRef.current = { lineId: line.id, tokenId: afterId, offset: 1 };
+          return {
+            ...line,
+            tokens: [...line.tokens, formulaToken, { id: afterId, isFormula: false, text: ' ' }]
+          };
+        }
+
+        const currentTok = line.tokens[tokIdx];
+        if (currentTok.isFormula) {
+          // Insert formula immediately after current formula token
+          const afterId = `tok-t-${Date.now()}`;
+          activePositionRef.current = { lineId: line.id, tokenId: afterId, offset: 1 };
+          const nextTokens = [...line.tokens];
+          nextTokens.splice(tokIdx + 1, 0, formulaToken, { id: afterId, isFormula: false, text: ' ' });
+          return { ...line, tokens: nextTokens };
+        }
+
+        // Text token: split at caretOffset
+        const textVal = currentTok.text || '';
+        const safeOffset = Math.min(caretOffset, textVal.length);
+        const beforeText = textVal.slice(0, safeOffset);
+        const afterText = textVal.slice(safeOffset);
+
+        const afterId = `tok-after-${Date.now()}-${Math.random().toString(36).substr(2, 3)}`;
+        const nextTokens = [...line.tokens];
+
+        const replacements = [
+          { ...currentTok, text: beforeText },
+          formulaToken,
+          { id: afterId, isFormula: false, text: afterText.startsWith(' ') ? afterText : ` ${afterText}` }
+        ];
+
+        nextTokens.splice(tokIdx, 1, ...replacements);
+        activePositionRef.current = { lineId: line.id, tokenId: afterId, offset: 1 };
+        return { ...line, tokens: nextTokens };
+      });
+
+      commitDocLines(updatedLines);
+      setActiveFormulaId(newFormulaId);
+    }
+  }));
+
   // Modify text token on line
   const handleTextChange = (lineId, tokenId, newText) => {
     const updated = docLines.map(line => {
@@ -357,36 +547,40 @@ export default function WordStyleFormulaCanvas({
   // Insert new line after target line (triggered by Enter key)
   const handleInsertNewLineAfter = (targetLineId) => {
     const idx = docLines.findIndex(l => l.id === targetLineId);
+    const newLId = `line-${Date.now()}`;
+    const newTokId = `tok-${Date.now()}`;
     const newLine = {
-      id: `line-${Date.now()}`,
+      id: newLId,
       lineIdx: idx + 1,
       raw: '',
       isHeading: false,
       isBullet: false,
-      tokens: [{ id: `line-${Date.now()}-tok-0`, isFormula: false, text: '' }]
+      tokens: [{ id: newTokId, isFormula: false, text: '' }]
     };
+
+    let nextLines;
     if (idx === -1) {
-      commitDocLines([...docLines, newLine]);
+      nextLines = [...docLines, newLine];
     } else {
-      commitDocLines([
+      nextLines = [
         ...docLines.slice(0, idx + 1),
         newLine,
         ...docLines.slice(idx + 1)
-      ]);
+      ];
     }
-  };
+    commitDocLines(nextLines);
 
-  // Add new line at bottom
-  const handleAddNewLine = () => {
-    const newLine = {
-      id: `line-${Date.now()}`,
-      lineIdx: docLines.length,
-      raw: '',
-      isHeading: false,
-      isBullet: false,
-      tokens: [{ id: `line-${Date.now()}-tok-0`, isFormula: false, text: '' }]
-    };
-    commitDocLines([...docLines, newLine]);
+    // Auto-focus the newly created line
+    setTimeout(() => {
+      const lineEl = lineRefs.current[newLId];
+      if (lineEl) {
+        const span = lineEl.querySelector('[contenteditable="true"]');
+        if (span) {
+          span.focus();
+          activePositionRef.current = { lineId: newLId, tokenId: newTokId, offset: 0 };
+        }
+      }
+    }, 20);
   };
 
   // Modify formula slot value
@@ -497,7 +691,7 @@ export default function WordStyleFormulaCanvas({
   return (
     <div className="relative font-sans text-slate-800" ref={containerRef}>
       
-      {/* HIERARCHICAL FORMULA QUICK INSPECTOR & INSERTER (SIÊU LINH HOẠT) */}
+      {/* HIERARCHICAL FORMULA QUICK INSPECTOR & INSERTER */}
       {activeFormulaId && activeTokenInfo && (
         <div
           style={{
@@ -506,12 +700,12 @@ export default function WordStyleFormulaCanvas({
             left: `${Math.max(8, bubblePos.left)}px`,
             zIndex: 50
           }}
-          className="bg-slate-900/98 text-white backdrop-blur-md rounded-2xl shadow-2xl border border-cyan-500/60 p-2.5 flex flex-col gap-2 min-w-[340px] max-w-[440px] animate-in fade-in zoom-in-95 duration-100"
+          className="bg-white/98 text-slate-900 backdrop-blur-md rounded-2xl shadow-2xl border-2 border-cyan-500/80 p-2.5 flex flex-col gap-2 min-w-[340px] max-w-[440px] animate-in fade-in zoom-in-95 duration-100"
         >
           {/* Row 1: Header with Live KaTeX Preview & Actions */}
-          <div className="flex items-center justify-between gap-2 pb-1.5 border-b border-slate-800">
+          <div className="flex items-center justify-between gap-2 pb-1.5 border-b border-slate-200">
             <div className="flex items-center gap-1.5 overflow-hidden">
-              <span className="px-2 py-0.5 rounded-full bg-cyan-950 text-cyan-300 border border-cyan-700/60 text-[10px] font-bold">
+              <span className="px-2 py-0.5 rounded-full bg-cyan-100 text-cyan-800 border border-cyan-300 text-[10px] font-bold">
                 {activeTokenInfo.token.structure?.type === 'FRACTION' ? 'Phân Số' :
                  activeTokenInfo.token.structure?.type === 'CHEM_CM' ? 'Nồng Độ CM' :
                  activeTokenInfo.token.structure?.type === 'CHEM_CPERCENT' ? 'Nồng Độ C%' :
@@ -519,7 +713,7 @@ export default function WordStyleFormulaCanvas({
                  activeTokenInfo.token.structure?.type === 'SQRT' ? 'Căn Thức' : 'Công Thức'}
               </span>
               <div 
-                className="text-xs text-amber-300 font-serif max-w-[140px] overflow-hidden truncate"
+                className="text-xs text-cyan-900 font-serif max-w-[140px] overflow-hidden truncate"
                 dangerouslySetInnerHTML={{ __html: renderKatexHtml(activeTokenInfo.token.latex || 'x', false) }}
               />
             </div>
@@ -539,7 +733,7 @@ export default function WordStyleFormulaCanvas({
               <button
                 type="button"
                 onClick={() => handleDeleteActiveFormula(activeTokenInfo.lineId, activeTokenInfo.token.id)}
-                className="p-1 rounded-lg hover:bg-rose-900/60 text-rose-400 transition-colors cursor-pointer"
+                className="p-1 rounded-lg hover:bg-rose-100 text-rose-600 transition-colors cursor-pointer"
                 title="Xóa công thức"
               >
                 <Trash2 className="w-3.5 h-3.5" />
@@ -547,7 +741,7 @@ export default function WordStyleFormulaCanvas({
               <button
                 type="button"
                 onClick={() => setActiveFormulaId(null)}
-                className="px-2.5 py-0.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-[11px] flex items-center gap-0.5 cursor-pointer"
+                className="px-2.5 py-0.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-[11px] flex items-center gap-0.5 cursor-pointer shadow-2xs"
               >
                 <Check className="w-3 h-3" />
                 <span>Xong</span>
@@ -555,7 +749,7 @@ export default function WordStyleFormulaCanvas({
             </div>
           </div>
 
-          {/* Row 2: Hierarchical Category Tabs (Cấu trúc, Hóa học, Ký hiệu, Ngoặc & Logic) */}
+          {/* Row 2: Hierarchical Category Tabs */}
           <div className="flex items-center gap-1 overflow-x-auto scrollbar-none pb-0.5">
             {Object.keys(HIERARCHICAL_BUBBLE_INSERTER).map((tabKey) => {
               const tab = HIERARCHICAL_BUBBLE_INSERTER[tabKey];
@@ -568,7 +762,7 @@ export default function WordStyleFormulaCanvas({
                   className={`px-2 py-0.5 rounded-md text-[10px] font-bold whitespace-nowrap transition-colors cursor-pointer ${
                     isAct 
                       ? 'bg-cyan-600 text-white shadow-2xs' 
-                      : 'bg-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-700'
+                      : 'bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200'
                   }`}
                 >
                   {tab.name}
@@ -578,13 +772,13 @@ export default function WordStyleFormulaCanvas({
           </div>
 
           {/* Row 3: Quick Insertion Chips of Active Tab */}
-          <div className="flex flex-wrap items-center gap-1 max-h-[64px] overflow-y-auto scrollbar-thin p-1 rounded-lg bg-slate-950/70 border border-slate-800/80">
+          <div className="flex flex-wrap items-center gap-1 max-h-[68px] overflow-y-auto scrollbar-thin p-1 rounded-lg bg-slate-50 border border-slate-200">
             {HIERARCHICAL_BUBBLE_INSERTER[bubbleTab]?.items?.map((item, idx) => (
               <button
                 key={idx}
                 type="button"
                 onClick={() => handleInsertSymbolIntoActive(item.code)}
-                className="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-cyan-900/60 hover:text-cyan-300 border border-slate-700/60 text-slate-200 text-[10.5px] font-mono cursor-pointer transition-colors shadow-2xs"
+                className="px-1.5 py-0.5 rounded bg-white hover:bg-cyan-100 hover:text-cyan-800 border border-slate-200 text-slate-700 text-[10.5px] font-mono cursor-pointer transition-colors shadow-2xs"
                 title={`${item.title} (Nhấp để chèn)`}
               >
                 {item.label}
@@ -593,8 +787,8 @@ export default function WordStyleFormulaCanvas({
           </div>
 
           {/* Row 4: Direct LaTeX Input Line for Ultimate Flexibility */}
-          <div className="flex items-center gap-1.5 pt-1 border-t border-slate-800/80">
-            <span className="text-[10px] font-bold text-cyan-400 font-mono shrink-0">LaTeX:</span>
+          <div className="flex items-center gap-1.5 pt-1 border-t border-slate-200">
+            <span className="text-[10px] font-bold text-cyan-700 font-mono shrink-0">LaTeX:</span>
             <input
               type="text"
               value={activeTokenInfo.token.latex}
@@ -605,44 +799,80 @@ export default function WordStyleFormulaCanvas({
                   setActiveFormulaId(null);
                 }
               }}
-              className="flex-1 bg-slate-950 border border-slate-700 focus:border-cyan-400 rounded px-2 py-0.5 text-[11px] font-mono text-cyan-200 outline-none transition-colors"
+              className="flex-1 bg-slate-50 border border-slate-300 focus:border-cyan-500 rounded px-2 py-0.5 text-[11px] font-mono text-cyan-900 outline-none transition-colors"
               placeholder="Gõ hoặc dán mã LaTeX..."
             />
           </div>
         </div>
       )}
 
-      {/* THE ACTUAL DOCUMENT CANVAS (Standard typography, natural paragraph flow) */}
-      <div className="bg-white rounded-2xl border border-slate-300 shadow-sm p-6 sm:p-8 min-h-[380px] text-[14px] leading-relaxed select-text space-y-2">
+      {/* THE ACTUAL DOCUMENT CANVAS */}
+      <div className="bg-white rounded-2xl border border-slate-300 shadow-sm p-6 sm:p-8 min-h-[380px] text-[14px] leading-relaxed select-text space-y-2 cursor-text">
         {docLines.length === 0 ? (
-          <div className="py-12 text-center text-slate-400 text-xs italic">
-            {placeholder}
+          <div 
+            onClick={() => handleInsertNewLineAfter(null)}
+            className="py-12 text-center text-slate-400 text-xs italic cursor-pointer hover:text-slate-600"
+          >
+            {placeholder} (Nhấp vào đây để bắt đầu soạn bài giảng)
           </div>
         ) : (
           docLines.map((line) => {
             const isHeading = line.isHeading;
             const isBullet = line.isBullet;
 
+            // Safe icon badges for pedagogic headings (replaces broken emojis)
+            const isPin = line.raw?.includes('### 📌') || line.raw?.startsWith('📌');
+            const isSample = line.raw?.includes('### 📝') || line.raw?.includes('### 📄') || line.raw?.includes('### ✍️') || line.raw?.startsWith('📝') || line.raw?.startsWith('📄');
+            const isTrap = line.raw?.includes('### ⚠️') || line.raw?.startsWith('⚠️');
+            const isTip = line.raw?.includes('### 💡') || line.raw?.startsWith('💡');
+
             return (
               <div
                 key={line.id}
-                className={`transition-colors rounded px-1.5 py-0.5 ${
+                ref={(el) => { lineRefs.current[line.id] = el; }}
+                onClick={(e) => handleLineRowClick(e, line.id)}
+                className={`transition-colors rounded px-1.5 py-0.5 cursor-text ${
                   isHeading
-                    ? 'font-bold text-slate-900 text-[15px] mt-3 mb-1 border-b border-slate-100 pb-1'
+                    ? isPin
+                      ? 'font-bold text-teal-900 bg-teal-50/70 border border-teal-200/80 rounded-xl p-2 my-2 text-[14px]'
+                      : isSample
+                      ? 'font-bold text-amber-950 bg-amber-50/80 border border-amber-300/80 rounded-xl p-2 my-2 text-[14px]'
+                      : isTrap
+                      ? 'font-bold text-rose-950 bg-rose-50/80 border border-rose-300/80 rounded-xl p-2 my-2 text-[14px]'
+                      : isTip
+                      ? 'font-bold text-indigo-950 bg-indigo-50/80 border border-indigo-200/80 rounded-xl p-2 my-2 text-[14px]'
+                      : 'font-bold text-slate-900 text-[15px] mt-3 mb-1 border-b border-slate-100 pb-1'
                     : isBullet
                     ? 'pl-3 relative text-[13.5px] text-slate-800 my-0.5'
                     : 'text-[13.5px] text-slate-800 my-0.5'
                 }`}
               >
+                {/* SVG badge icon in headings to eliminate broken emoji display */}
+                {isPin && <BookOpen className="w-4 h-4 text-teal-600 inline mr-1.5 -translate-y-0.5 shrink-0" />}
+                {isSample && <FileEdit className="w-4 h-4 text-amber-600 inline mr-1.5 -translate-y-0.5 shrink-0" />}
+                {isTrap && <AlertTriangle className="w-4 h-4 text-rose-600 inline mr-1.5 -translate-y-0.5 shrink-0" />}
+                {isTip && <Sparkles className="w-4 h-4 text-indigo-600 inline mr-1.5 -translate-y-0.5 shrink-0" />}
+
                 {line.tokens.map((token) => {
                   // CASE 1: PLAIN TEXT CHUNK (NATURAL INLINE FLOW, NO LINE HOPPING)
                   if (!token.isFormula) {
+                    // Clean heading prefix symbols from text display if icon is already shown
+                    let displayText = token.text;
+                    if (isPin) displayText = displayText.replace(/^###\s*📌?\s*/, '').replace(/^📌\s*/, '');
+                    if (isSample) displayText = displayText.replace(/^###\s*[📝📄✍️]?\s*/, '').replace(/^[📝📄✍️]\s*/, '');
+                    if (isTrap) displayText = displayText.replace(/^###\s*⚠️?\s*/, '').replace(/^⚠️\s*/, '');
+                    if (isTip) displayText = displayText.replace(/^###\s*💡?\s*/, '').replace(/^💡\s*/, '');
+
                     return (
                       <span
                         key={token.id}
                         contentEditable
                         suppressContentEditableWarning
                         onBlur={(e) => handleTextChange(line.id, token.id, e.currentTarget.textContent || '')}
+                        onKeyUp={() => updateActiveCaret(line.id, token.id)}
+                        onMouseUp={() => updateActiveCaret(line.id, token.id)}
+                        onFocus={() => updateActiveCaret(line.id, token.id)}
+                        onInput={() => updateActiveCaret(line.id, token.id)}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') {
                             e.preventDefault();
@@ -651,7 +881,7 @@ export default function WordStyleFormulaCanvas({
                         }}
                         className="outline-none focus:bg-cyan-50/50 rounded-xs transition-colors whitespace-pre-wrap font-sans align-baseline min-w-[6px] inline-block"
                       >
-                        {token.text}
+                        {displayText}
                       </span>
                     );
                   }
@@ -749,7 +979,15 @@ export default function WordStyleFormulaCanvas({
                   return (
                     <span
                       key={token.id}
-                      onClick={() => setActiveFormulaId(token.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActiveFormulaId(token.id);
+                        activePositionRef.current = {
+                          lineId: line.id,
+                          tokenId: token.id,
+                          offset: 0
+                        };
+                      }}
                       className="inline-block align-baseline mx-0.5 px-0.5 py-0 rounded-xs border-b border-dashed border-slate-300 hover:border-indigo-400 hover:bg-indigo-50/70 text-[13.5px] cursor-pointer transition-colors"
                       title="Nhấp để sửa số hoặc ký hiệu trực tiếp trên công thức"
                       dangerouslySetInnerHTML={{ __html: renderKatexHtml(token.latex, false) }}
@@ -761,22 +999,16 @@ export default function WordStyleFormulaCanvas({
           })
         )}
 
-        {/* BOTTOM QUICK ACTIONS FOR CANVAS */}
-        <div className="flex items-center justify-between pt-3 mt-3 border-t border-slate-100 text-xs">
-          <button
-            type="button"
-            onClick={handleAddNewLine}
-            className="px-3 py-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold flex items-center gap-1.5 transition-colors cursor-pointer text-xs"
-          >
-            <Plus className="w-3.5 h-3.5 text-slate-600" />
-            <span>+ Thêm dòng mới</span>
-          </button>
+        {/* REQUIREMENT 5: REMOVED "+ THÊM DÒNG MỚI" BUTTON (ENTER KEY NATURALLY CREATES NEW LINE) */}
+        <div className="flex items-center justify-end pt-3 mt-3 border-t border-slate-100 text-xs">
           <span className="text-[11px] text-slate-400 italic">
-            💡 Gõ bình thường như Word • Bấm Enter để xuống dòng • Nhấp vào công thức để sửa số tại chỗ
+            💡 Gõ văn bản như Word • Bấm Enter để xuống dòng • Nhấp khoảng trống tự nhảy trỏ về cuối dòng • Nhấp công thức để sửa số tại chỗ
           </span>
         </div>
       </div>
 
     </div>
   );
-}
+});
+
+export default WordStyleFormulaCanvas;

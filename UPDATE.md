@@ -1,42 +1,45 @@
 # NHẬT KÝ CẬP NHẬT (UPDATE LOG) - WEB CLIENT
 
-## [19/10/2026] - Trình Soạn Thảo Ký Hiệu Trực Quan WYSIWYG Như Microsoft Word Equation: Studio Toàn Màn Hình Độc Lập Thay Thế Sidebar App, Thẻ Nổi Rê Chuột 2 Giây KaTeX & Thanh Tra Công Thức Siêu Linh Hoạt 4 Tab
+## [19/10/2026] - Chuẩn Hóa Toàn Diện Studio Soạn Thảo Sư Phạm WYSIWYG: Chèn Công Thức Tại Vị Trí Con Trỏ, Giao Diện Trắng Sáng Thanh Lịch, Cây Thư Mục Accordion Hợp Chất & Ký Hiệu Đồ Sộ, Nhấp Khoảng Trống Nhảy Cuối Dòng & Xóa Sổ Lỗi Ký Tự
 
-- **Studio Soạn Thảo Toàn Màn Hình Độc Lập (Dedicated Standalone Studio Workspace - Không Bị Giới Hạn Khung Hiển Thị)**:
-  - *Giải Phóng Toàn Diện Không Gian Làm Việc*:
-    + Trước đây, `CurriculumStudioEditor` bị giới hạn trong khung con `max-w-7xl` nằm bên trong trang Lộ trình, bị sidebar chính của app chiếm 240px bên trái dẫn đến tình trạng xuất hiện "2 sidebar song song" và làm chật hẹp khung soạn thảo.
-    + Nâng cấp `CurriculumExplorerView.jsx` mở Studio dưới dạng trang độc lập toàn màn hình (`fixed inset-0 z-50 w-screen h-screen bg-slate-950 overflow-hidden`), ẩn hoàn toàn layout ngoài của app.
-  - *Thanh Công Cụ Ký Hiệu Phân Cấp Thay Thế Sidebar App*:
-    + Đưa `HierarchicalMathPalette.jsx` lên làm Left Sidebar chính của toàn bộ Studio, thay thế trực tiếp vị trí của sidebar app cũ.
-    + Tích hợp nút thu gọn/mở rộng: Thu hẹp thành thanh icon rail siêu mỏng 44px (`w-11`), mở rộng (`w-64`/`w-72`) chỉ với 1 click, giúp canvas soạn thảo chiếm trọn vẹn 100% chiều ngang màn hình.
-    + Bổ sung thanh điều hướng đỉnh trang (Studio Navbar h-14) với nút `← Quay lại Lộ trình`, breadcrumb bài học, nút chuyển 3 chế độ xem, nút AI nhận diện và nút lưu PostgreSQL.
+- **Chèn Công Thức Ngay Tại Vị Trí Con Trỏ (Active Caret Precision Insertion - `WordStyleFormulaCanvas.jsx` & `CurriculumStudioEditor.jsx`)**:
+  - *Khắc Phục Lỗi Chèn Rơi Xuống Cuối Văn Bản*: Trước đây khi giáo viên đang soạn thảo trên canvas WYSIWYG và nhấp chọn ký hiệu từ sidebar hoặc thanh tra, hệ thống không tìm thấy `textarea` nên fallback nối chuỗi vào cuối văn bản (`. a/b a/b a/b`).
+  - *Giải Pháp Bắt Con Trỏ Tinh Vi*:
+    + Nâng cấp `WordStyleFormulaCanvas` bằng `forwardRef` và `useImperativeHandle`, xuất bản phương thức `insertSnippet(latexSnippet)`.
+    + Theo dõi liên tục vị trí con trỏ `activePositionRef.current = { lineId, tokenId, offset }` thông qua các sự kiện `onKeyUp`, `onMouseUp`, `onFocus`, `onInput`.
+    + Khi giáo viên nhấp chọn ký hiệu, hệ thống chia tách chính xác đoạn text token hiện tại tại `offset`, chèn token công thức `formulaToken` vào ngay vị trí con trỏ và tự động đưa tiêu điểm ra sau công thức mới chèn để giáo viên tiếp tục gõ văn bản liền mạch.
+    + Kết nối `theoryCanvasRef` và `methodCanvasRef` trong `CurriculumStudioEditor.jsx`, tự động điều hướng luồng chèn vào đúng canvas đang kích hoạt.
 
-- **Thẻ Nổi KaTeX Rê Chuột 2 Giây (2-Second Hover Preview Card - `HierarchicalMathPalette.jsx`)**:
-  - *Cơ Chế Rê Chuột Đỗ 2 Giây Không Gây Rối Mắt*:
-    + Tích hợp bộ đếm thời gian trễ chính xác 2000ms (`hoverTimerRef`). Khi người dùng lướt nhanh chuột, không có popup nào chớp nháy gây khó chịu. Chỉ khi rê chuột dừng lại trên ký hiệu đúng 2 giây, thẻ nổi mới xuất hiện mượt mà.
-  - *Nội Dung Thẻ Nổi Sư Phạm Toàn Diện*:
-    + **Công thức KaTeX phóng to**: Hiển thị ký hiệu/phương trình cỡ lớn ở trung tâm, nét vector chuẩn mực.
-    + **Thông tin môn & danh mục**: Nhãn phân loại trực quan (Toán học, Hóa học, Ký hiệu).
-    + **Mô tả ứng dụng sư phạm SGK GDPT 2018**: Giải thích chi tiết ý nghĩa và cách dùng (ví dụ: công thức nồng độ mol $C_M = n/V$, số oxi hóa cực đại $+6$ của S trong $H_2SO_4$, đạo hàm bằng gia số, v.v.).
-    + **Cú pháp LaTeX thô & hướng dẫn**: Hiển thị rõ mã lệnh LaTeX (như `\frac{a}{b}`) kèm chỉ dẫn nhấp chuột để chèn ngay tại con trỏ.
+- **Khôi Phục Giao Diện Trắng Sáng Thanh Lịch (Clean White Tone Reversion - `HierarchicalMathPalette.jsx`)**:
+  - *Loại Bỏ Hoàn Toàn Giao Diện Tối (Dark Theme)*: Chuyển toàn bộ khung thanh công cụ từ `bg-slate-900` sang tone màu trắng sáng sang trọng `bg-white border-r border-slate-200 text-slate-800 shadow-sm`.
+  - *Chuẩn Hóa Bộ Nhận Diện Sư Phạm Nền Sáng*:
+    + Header và thanh lọc danh mục: Nền `bg-slate-50/90 border-slate-200`, chữ `text-slate-800`.
+    + Nút môn học (Toán, Hóa, Lý, Ký hiệu): Nút kích hoạt `bg-cyan-600 text-white font-bold shadow-xs`, nút không kích hoạt `bg-white text-slate-600 hover:bg-slate-100 border-slate-200/80`.
+    + Nút công thức: Nền sáng nhẹ `bg-slate-50 hover:bg-cyan-50/80 border border-slate-200 hover:border-cyan-400 text-slate-700 hover:text-cyan-900 shadow-2xs`.
+    + Thẻ nổi 2 giây (Hover Card): Nền trắng mờ cao cấp `bg-white/98 text-slate-900 border-2 border-cyan-500 shadow-2xl`, khung KaTeX nền `bg-slate-50 text-cyan-900`.
 
-- **Thanh Tra Công Thức Siêu Linh Hoạt Phân Cấp 4 Tab (Hierarchical Quick Formula Inspector - `WordStyleFormulaCanvas.jsx`)**:
-  - *Đột Phá Tính Năng Sửa Trực Tiếp Trên Trang (In-Place Super Flexibility)*:
-    + Khi người dùng nhấp vào bất kỳ công thức nào trên trang, popup thanh tra công thức nổi mở ra với đầy đủ sức mạnh thay vì chỉ vài nút đơn giản.
-    + **Phân cấp 4 tab ký hiệu nhanh**:
-      * `📐 Cấu trúc`: Phân số $a/b$, Căn $\sqrt{x}, \sqrt[n]{x}$, Số mũ $x^2, x^n$, Chỉ số dưới $x_0$, Trị tuyệt đối $|x|$, Đạo hàm $y'$, Tích phân $\int$, Giới hạn $\lim$, Tổng $\sum$, Vectơ $\vec{u}$.
-      * `🧪 Hóa học`: Nồng độ $C_M, C\%$, Hợp chất $H_2SO_4, H_2O, HNO_3$, Ion $SO_4^{2-}, OH^-, Fe^{3+}$, Số oxi hóa $0, +1, +2, +3, +6, -1, -2$, Mũi tên phản ứng $\rightarrow, \rightleftharpoons, \uparrow, \downarrow$.
-      * `🔣 Ký hiệu`: Phép toán và so sánh $\pm, \times, \div, \neq, \approx, \le, \ge, \infty, \cdot$, ký tự Hy Lạp $\pi, \Delta, \alpha, \beta, \theta, \lambda, \Omega$.
-      * `🧱 Ngoặc & Logic`: Ngoặc tròn $( )$, vuông $[ ]$, nhọn $\{ \}$, suy ra $\Rightarrow$, tương đương $\Leftrightarrow$, thuộc $\in$, không thuộc $\notin$, với mọi $\forall$, tồn tại $\exists$, tập số thực $\mathbb{R}$.
-    + Nhấp vào bất kỳ ký hiệu nào sẽ chèn hoặc bao bọc ngay lập tức vào công thức đang chọn.
-  - *Nhập Mã LaTeX Trực Tiếp Song Hành Ô Nhập Số (Dual Visual & LaTeX Editing)*:
-    + Tích hợp dòng input LaTeX trực tiếp kèm Live KaTeX Preview hiển thị thời gian thực với độ trễ 0ms. Giáo viên có thể gõ hoặc dán bất kỳ đoạn mã LaTeX tùy ý mà không bị gò bó.
-    + Giữ nguyên các ô nhập số trực quan (tử số, mẫu số, số mũ) kèm nút `⚡ Tính tự động` thương số/căn bậc hai và nút xóa công thức.
+- **Cây Thư Mục Accordion Toggles & Kho Tàng Ký Hiệu, Hợp Chất Đồ Sộ (`HierarchicalMathPalette.jsx`)**:
+  - *Cấu Trúc Accordion Toggle Cây Thư Mục (Folder Tree Navigation)*:
+    + Thay thế thanh cuộn ngang đơn điệu bằng các thư mục Accordion có thể mở/đóng linh hoạt (`ChevronDown` / `ChevronRight`).
+    + Hiển thị nhãn đếm số lượng công thức trong từng mục (ví dụ: `12`, `14`, `16`).
+    + Tên nút ngắn gọn, súc tích (chỉ chứa ký hiệu hoặc tên viết tắt: `a/b`, `√x`, `H₂SO₄`, `SO₄²⁻`, `NaOH`, `x²`, `∫`, `lim`, `sin`, `cos`...), bố trí lưới 2 cột gọn gàng, tăng gấp 5 lần mật độ hiển thị mà không gây rối mắt.
+  - *Bổ Sung Thanh Tìm Kiếm Tức Thì (Instant Search Filter)*:
+    + Tích hợp ô tìm kiếm `🔍 Tìm nhanh H2SO4, NaOH, √x, a/b, sin...` ở đầu sidebar, lọc trực tiếp hàng trăm công thức trong thời gian thực.
+  - *Thư Viện Hóa Học & Toán Học Chuyên Sâu GDPT 2018*:
+    + **Toán Học**: Đại số & Căn thức, Đạo hàm & Khảo sát hàm số, Tích phân & Giới hạn, Lượng giác, Mũ & Logarit, Hình học Không gian & Oxyz, Số phức & Xác suất.
+    + **Hóa Học**: Axit vô cơ & hữu cơ ($H_2SO_4, HCl, HNO_3, H_3PO_4, CH_3COOH...$), Bazơ & Kiềm ($NaOH, KOH, Ba(OH)_2, Cu(OH)_2, Fe(OH)_3, NH_3...$), Muối ($NaCl, CaCO_3, BaSO_4, CuSO_4, FeSO_4, NaHCO_3...$), Oxit ($CO_2, SO_2, P_2O_5, Fe_2O_3, CuO, Al_2O_3...$), Hợp chất hữu cơ ($CH_4, C_2H_4, C_2H_2, C_6H_6, C_2H_5OH, CH_3CHO, HCOOCH_3, Gly, Ala, C_6H_{12}O_6...$), Cation & Anion ($H^+, OH^-, Na^+, Ca^{2+}, Fe^{2+}, Fe^{3+}, Al^{3+}, SO_4^{2-}, NO_3^-, CO_3^{2-}...$), Số oxi hóa ($0, +1, +2, +3, +6, -2...$), Mũi tên phản ứng ($\rightarrow, \rightleftharpoons, \uparrow, \downarrow, \xrightarrow{t^\circ}, \xrightarrow{xt}$), Công thức tính nồng độ & mol ($C_M, C\%, n=m/M, pH$).
+    + **Vật Lý**: Dao động cơ ($x, v, a, T$), Sóng cơ & âm ($\lambda, u, L$), Điện xoay chiều ($i, u, Z, Z_L, Z_C, P$), Sóng ánh sáng & Lượng tử ($i, \varepsilon, E=mc^2, \Delta m$).
+    + **Ký Hiệu & Logic**: $\pm, \mp, \times, \div, \neq, \approx, \le, \ge, \infty, \pi, \Delta, \alpha, \beta, \theta, \lambda, \Omega, \Rightarrow, \Leftrightarrow, \in, \notin, \forall, \exists, \mathbb{R}, \mathbb{N}, \mathbb{Z}, \emptyset$.
 
-- **Khắc Phục Triệt Để Hiện Tượng Nhảy Dòng & Tiết Diện Công Thức Quá Lớn (`WordStyleFormulaCanvas.jsx`)**:
-  - Xóa bỏ cơ chế `flex-wrap`, chuyển sang dòng văn bản tự nhiên theo đoạn (`tokenizeLine`, `parseDocumentLines`, `serializeDocumentLines`), đảm bảo dấu chấm `.` và dấu phẩy `,` bám sát từ ngữ trên cùng dòng, không bao giờ bị rơi rớt xuống dòng độc lập.
-  - Tiết diện công thức siêu gọn `text-[13.5px]`, padding `px-0.5 py-0 mx-0.5`, hairline dashed underline khi nghỉ.
-  - Hỗ trợ phím Enter tách dòng tự nhiên như Microsoft Word.
+- **Tự Động Nhảy Con Trỏ Về Cuối Dòng Khi Nhấp Khoảng Trống (Whitespace Click Focus - `WordStyleFormulaCanvas.jsx`)**:
+  - Bổ sung hàm xử lý `handleLineRowClick` trên từng dòng văn bản: Nếu người dùng nhấp chuột vào vùng đệm trống bên phải hoặc khoảng trắng của dòng, hệ thống tự động tìm thẻ text cuối dòng, kích hoạt `focus()` và kéo con trỏ về cuối chữ bằng `Selection.collapse()`.
+
+- **Loại Bỏ Nút "+ Thêm dòng mới" Dư Thừa & Xóa Bỏ Dấu Gạch Chéo Ngược Đuôi Dòng (`\`)**:
+  - *Bỏ Nút Dư Thừa*: Thao tác bấm `Enter` đã hỗ trợ tách dòng mới mượt mà, loại bỏ nút bấm rườm rà dưới chân canvas.
+  - *Xóa Sổ Ký Tự `\` Cuối Dòng*: Bổ sung hàm lọc `sanitizeLineText` và regex stripping trên `WordStyleFormulaCanvas.jsx` và `MathText.jsx`, loại bỏ hoàn toàn các ký tự `\` hoặc `/` thừa ở cuối câu (`liên kết ion.\`, `Ví dụ minh họa SGK:\`).
+
+- **Khắc Phục Lỗi Hiển Thị Emoji `📝`**:
+  - Thay thế biểu tượng cảm xúc `📝` bằng các icon vector Lucide sắc nét (`FileEdit`, `FileText`, `BookOpen`, `AlertTriangle`, `Sparkles`), đảm bảo hiển thị 100% đồng nhất trên mọi hệ điều hành Windows và trình duyệt.
 
 - **Kiểm Thử Vận Hành (Build Verification)**:
-  - `npm run build` thành công 100% (**0 Error, 0 Warning**, hoàn tất trong 777ms trên Vite 8 và React 19).
+  - `npm run build` hoàn thành 100% (**0 Error, 0 Warning**, hoàn tất trong 773ms trên Vite 8 và React 19).

@@ -614,8 +614,10 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
   const [theorySubMode, setTheorySubMode] = useState('wysiwyg');
   const [methodSubMode, setMethodSubMode] = useState('wysiwyg');
 
-  // Textarea DOM refs for precision cursor insertion
+  // Textarea & Canvas DOM refs for precision cursor insertion
   const textareaRefs = useRef({});
+  const theoryCanvasRef = useRef(null);
+  const methodCanvasRef = useRef(null);
 
   // Handle Word-like text formatting (Bold, Italic, Headings, Lists, Callouts)
   const handleFormatText = (targetField, prefix = '', suffix = '') => {
@@ -747,6 +749,19 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
   // Insert math formula at target field (universal across Khối 1, 2, 4 with cursor precision)
   const handleInsertMath = (targetField, snippet, isRaw = false) => {
     const field = targetField || activeFormulaTarget;
+
+    // 1. If currently editing Khối 1 and WYSIWYG canvas is active, insert directly at active cursor!
+    if (field === 'theoryRecap' && theoryMode !== 'markdown' && theoryCanvasRef.current) {
+      theoryCanvasRef.current.insertSnippet(snippet);
+      return;
+    }
+
+    // 2. If currently editing Khối 2 and WYSIWYG canvas is active, insert directly at active cursor!
+    if (field === 'solutionMethod' && methodMode !== 'markdown' && methodCanvasRef.current) {
+      methodCanvasRef.current.insertSnippet(snippet);
+      return;
+    }
+
     const insertText = isRaw ? snippet : `$${snippet}$`;
 
     const el = textareaRefs.current[field];
@@ -1396,6 +1411,7 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
                     ) : (
                       /* WYSIWYG CANVAS */
                       <WordStyleFormulaCanvas
+                        ref={theoryCanvasRef}
                         content={form.theoryRecap}
                         onChange={(val) => setForm(prev => ({ ...prev, theoryRecap: val }))}
                         isStem={isStem}
@@ -1626,6 +1642,7 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
                         </div>
                       ) : (
                         <WordStyleFormulaCanvas
+                          ref={methodCanvasRef}
                           content={form.solutionMethod}
                           onChange={(val) => setForm(prev => ({ ...prev, solutionMethod: val }))}
                           isStem={isStem}

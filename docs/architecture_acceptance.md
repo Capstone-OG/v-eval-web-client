@@ -448,15 +448,28 @@ V-Eval-Web_Client/
 - **2-Second Hover Card with Large KaTeX Rendering & Pedagogical Guidance**:
   - Engineered a 2000ms debounce timer (`hoverTimerRef`) that activates only when an educator pauses cursor motion over any symbol or formula item, preventing noisy UI flashes during fast mouse traversal.
   - Surfaces a rich floating hover card showing: enlarged vector KaTeX equation, classification domain, comprehensive textbook explanation (GDPT 2018), and raw LaTeX syntax with 1-click insertion guidance.
-- **Hierarchical 4-Tab Quick Formula Inspector & Dual-Mode LaTeX Editing**:
-  - Upgraded in-place formula editing into an ergonomic inspector with 4 distinct tabs: Structures (`📐 Cấu trúc`), Chemistry (`🧪 Hóa học`), Symbols (`🔣 Ký hiệu`), and Brackets & Logic (`🧱 Ngoặc & Logic`).
-  - Integrated direct inline LaTeX string editing with synchronized zero-latency Live KaTeX preview alongside in-place numerical slot inputs, providing complete pedagogical authoring flexibility.
+### 4.38. Active Caret Insertion Precision, Light-Themed Accordion Folder Tree, Whitespace Auto-Focus, and Typographic Sanitization Engine (`WordStyleFormulaCanvas.jsx`, `HierarchicalMathPalette.jsx`, `CurriculumStudioEditor.jsx`, `MathText.jsx`)
+- **Active Caret Precision Insertion via Imperative Ref**:
+  - Implemented `forwardRef` and `useImperativeHandle` in `WordStyleFormulaCanvas` exposing `insertSnippet(latexSnippet)`.
+  - Continuously samples editor caret coordinates (`activePositionRef = { lineId, tokenId, offset }`). When an educator clicks any formula/symbol, the active text token is cleanly sliced at the exact cursor offset and the formula token is spliced in-place, eliminating trailing-document appends.
+  - Linked `theoryCanvasRef` and `methodCanvasRef` in `CurriculumStudioEditor.jsx` to route insertions to the active authoring canvas.
+- **Clean White Theme Reversion & Accordion Toggle Folder Architecture**:
+  - Reverted palette styling from dark `bg-slate-900` to clean, modern white (`bg-white border-r border-slate-200 text-slate-800 shadow-sm`).
+  - Restructured categories into expandable Accordion Toggle folders (`ChevronDown` / `ChevronRight`) with item counters, boosting display density by 500% with compact 2-column chip grids.
+  - Added real-time instant search (`Search` input) filtering across hundreds of high school STEM formulas and chemical compounds.
+  - Supported comprehensive STEM library: Mathematics (Algebra, Calculus, Integrals, Trig, Exponents/Log, Geometry Oxyz, Complex & Probability), Chemistry (Inorganic & Organic Acids, Bases, Salts, Oxides, Hydrocarbons, Alcohols, Esters, Peptides, Ions, Oxidation Numbers, Reaction Arrows, Molar Calculations), Physics, and Mathematical Logic.
+- **Whitespace Click Line Auto-Focus**:
+  - Attached line container click handlers (`handleLineRowClick`). Clicking line whitespace automatically locates the trailing text node and invokes `window.getSelection().collapse()` to jump the cursor to the end of the line.
+- **Redundant Control Elimination & Line-End Sanitization**:
+  - Removed redundant "+ Thêm dòng mới" button (handled natively by Enter key).
+  - Sanitized trailing backslashes (`\`) and stray markdown escapes (`.\`, `:\`) in both canvas tokenizer and KaTeX renderer.
+  - Replaced corrupted `📝` emoji with crisp Lucide vector icons (`FileEdit`, `FileText`, `BookOpen`, `AlertTriangle`, `Sparkles`).
 
 ---
 
 ## 5. Verification & Acceptance Criteria
 
-1. **Clean Production Build**: Executed `npm run build` with 0 syntax or bundle errors; production artifacts outputted to `dist/` within 751ms on Vite 8 and React 19.
+1. **Clean Production Build**: Executed `npm run build` with 0 syntax or bundle errors; production artifacts outputted to `dist/` within 773ms on Vite 8 and React 19.
 2. **Linter & Code Health**: `npm run lint` passes with 0 syntax errors across all components and services.
 3. **Docker Multi-Stage Validation**: `docker compose config` passes with 0 syntax errors across the entire 6-service microservices constellation.
 4. **Repository Sync Automation**: Standalone `Scripts/push.bat` and root `Scripts/` correctly recognize `V-Eval-Web_Client` as a first-class project service.
