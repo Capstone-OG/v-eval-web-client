@@ -346,8 +346,22 @@ function renderStructuredContent(raw) {
           }
 
           // Callout Sample Problem / Practice e.g. "### 📝 Bài toán mẫu..." or "### 📄 Bài toán mẫu..." or "📝 ..." or "📄 ..."
-          if (line.includes('### 📝') || line.includes('### 📄') || line.includes('### ✍️') || line.startsWith('📝') || line.startsWith('📄') || line.startsWith('✍️')) {
-            const cleanHeading = line.replace(/^###\s*/, '').replace(/^[📝📄✍️]\s*/, '').replace(/\\+\s*$/, '').trim();
+          if (
+            line.includes('### 📝') || 
+            line.includes('### 📄') || 
+            line.includes('### ✍️') || 
+            line.includes('Bài toán mẫu') ||
+            line.includes('Bài mẫu áp dụng') ||
+            line.startsWith('📝') || 
+            line.startsWith('📄') || 
+            line.startsWith('✍️')
+          ) {
+            // Strip ###, and strip ALL leading emojis, corrupted replacement symbols (like \uFFFD diamond ), quotes, or bullets
+            const cleanHeading = line
+              .replace(/^###\s*/, '')
+              .replace(/^[^\p{L}\p{N}\s]+/u, '')
+              .replace(/\\+\s*$/, '')
+              .trim();
             return (
               <div
                 key={lineKey}

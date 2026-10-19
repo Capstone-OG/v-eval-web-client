@@ -496,7 +496,25 @@ V-Eval-Web_Client/
   - Because the action buttons consume ~500px of horizontal width, the title element was compressed into an unsustainable ~180px column, forcing 4-word titles ("Nhận biết sự kiện lịch sử") to fragment into three cramped lines.
 - **Hierarchical Two-Tier Header Layout**:
   - *Tier 1 (Metadata & Controls)*: Renders pattern classification badges (`selectedPattern.code`, `weight`, `level`) on the left, counterbalanced by the three action buttons on the right.
-  - *Tier 2 (Full-Width Title Banner)*: Dedicates 100% of the pane width to `h2.text-xl lg:text-2xl font-black text-slate-900`, ensuring clean single-line typographical flow across all desktop and tablet viewports.
+### 4.43. Comprehensive STEM & Humanities Catalog Expansion, Word Canvas Caret Editing, and Visual Cohesion Polish (`HierarchicalMathPalette.jsx`, `WordStyleFormulaCanvas.jsx`, `CurriculumStudioEditor.jsx`, `MathText.jsx`)
+- **Unicode Replacement Character Sanitization & Icon Modernization**:
+  - Identified corruption where unicode emoji bytes decoded as `\uFFFD` (diamond question mark ``) in the callout card heading 'Bài toán mẫu áp dụng phương pháp:'.
+  - Implemented regex `^[^\p{L}\p{N}\s]+` to strip leading non-alphanumeric unicode corruption while preserving Vietnamese diacritics. Replaced all legacy emojis with crisp Lucide SVG icons (`FileText`, `BookOpen`) in warm amber tones.
+- **Panoramic Ingestion & Pattern Header Clean White Synchronization**:
+  - Replaced the dark navy gradient (`from-slate-900 via-indigo-950 to-slate-900`) on both the Panoramic Document Ingestion modal header and pattern detail subheader with clean white styling (`bg-white border-b border-slate-200 text-slate-900`), achieving 100% theme consistency across authoring workflows.
+- **Word Equation Canvas Backspace & Line Management**:
+  - Implemented `handleDeleteLine` and attached Backspace event handlers to `contentEditable` spans. When deleting at offset 0 or on empty lines, lines are merged or deleted naturally, mimicking Microsoft Word's editing behavior.
+  - Removed unwanted footer advice text banner to maximize clean workspace area.
+- **KaTeX Inspector Truncation Removal**:
+  - Removed `truncate` class and expanded inspector KaTeX preview to `max-w-[280px]` with horizontal scroll, widening popup modal to `max-w-[540px]`, eliminating formula clipping (`...`) on long chemical and algebraic expressions.
+- **Input Contrast Rectification in Question Creator**:
+  - Fixed white-on-white text bug in Block 4 and `NewQuestionDialog` by explicitly declaring `text-slate-900 placeholder:text-slate-400 font-medium` across all textareas and option inputs (A-D).
+- **GDPT 2018 National High-School Subject Library Expansion (Grades 10–12)**:
+  - Multiplied formula catalog coverage across 7 full high-school subjects:
+    - *Literature (Ngữ Văn)*: Rhetorical devices (So sánh, Ẩn dụ, Hoán dụ, Nhân hóa, Điệp ngữ, Nói quá, Nói giảm), Argumentation tactics (Giải thích, Phân tích, Chứng minh, Bác bỏ, Bình luận), Paragraph discourse structures, and Classical & Free poetic genres.
+    - *Geography (Địa Lý)*: Population density, natural growth, urban ratio, climate amplitude, rainfall, balance of trade, economic structure %, agricultural productivity, and map coordinates.
+    - *Biology (Sinh Học)*: Molecular genetics (DNA/RNA nucleotide counts, length, molecular mass, hydrogen bonds, translation), cell division (mitosis/meiosis, fertilization efficiency), and population genetics (Mendelian ratios, Hardy-Weinberg equilibrium).
+    - *Advanced Math (Toán Học)*: Space analytic geometry Oxyz (plane/line equations, sphere, point-to-plane distance) and high-school probability & statistics (conditional probability, Bayes' theorem, expectation, variance, grouped frequency tables).
 
 ---
 

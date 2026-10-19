@@ -256,6 +256,33 @@ export const HIERARCHICAL_BUBBLE_INSERTER = {
       { label: 'v⃗', code: '\\vec{v}', title: 'Vectơ' }
     ]
   },
+  math_adv: {
+    name: '📐 Oxyz & XSTK',
+    items: [
+      { label: 'u⃗·v⃗', code: '\\vec{u} \\cdot \\vec{v}', title: 'Tích vô hướng' },
+      { label: '[u⃗,v⃗]', code: '[\\vec{u}, \\vec{v}]', title: 'Tích có hướng' },
+      { label: '(P) mp', code: '(P): Ax + By + Cz + D = 0', title: 'Mặt phẳng Oxyz' },
+      { label: 'd(M,(P))', code: 'd(M, (P)) = \\frac{|Ax_0 + By_0 + Cz_0 + D|}{\\sqrt{A^2 + B^2 + C^2}}', title: 'Khoảng cách điểm đến mp' },
+      { label: 'C_n^k', code: 'C_n^k = \\frac{n!}{k!(n-k)!}', title: 'Tổ hợp C_n^k' },
+      { label: 'A_n^k', code: 'A_n^k = \\frac{n!}{(n-k)!}', title: 'Chỉnh hợp A_n^k' },
+      { label: 'P(A|B)', code: 'P(A|B) = \\frac{P(AB)}{P(B)}', title: 'Xác suất có điều kiện' },
+      { label: 'E(X)', code: 'E(X) = \\sum x_i p_i', title: 'Kỳ vọng toán' },
+      { label: 'σ(X)', code: '\\sigma(X) = \\sqrt{V(X)}', title: 'Độ lệch chuẩn' }
+    ]
+  },
+  physics: {
+    name: '⚛️ Vật lý',
+    items: [
+      { label: 'x(t)', code: 'x = A\\cos(\\omega t + \\varphi)', title: 'DĐ điều hòa' },
+      { label: 'v(t)', code: 'v = -\\omega A\\sin(\\omega t + \\varphi)', title: 'Vận tốc' },
+      { label: 'a(t)', code: 'a = -\\omega^2 x', title: 'Gia tốc' },
+      { label: 'T lò xo', code: 'T = 2\\pi \\sqrt{\\frac{m}{k}}', title: 'Chu kỳ lò xo' },
+      { label: 'λ = v/f', code: '\\lambda = \\frac{v}{f}', title: 'Bước sóng' },
+      { label: 'Z mạch', code: 'Z = \\sqrt{R^2 + (Z_L - Z_C)^2}', title: 'Tổng trở RLC' },
+      { label: 'Khoảng vân', code: 'i = \\frac{\\lambda D}{a}', title: 'Khoảng vân Y-âng' },
+      { label: 'E = mc²', code: 'E = mc^2', title: 'Năng lượng Einstein' }
+    ]
+  },
   chem: {
     name: '🧪 Hóa học',
     items: [
@@ -277,6 +304,50 @@ export const HIERARCHICAL_BUBBLE_INSERTER = {
       { label: '⇌', code: '\\rightleftharpoons ', title: 'Thuận nghịch' },
       { label: '↑', code: '\\uparrow ', title: 'Khí thoát' },
       { label: '↓', code: '\\downarrow ', title: 'Kết tủa' }
+    ]
+  },
+  biology: {
+    name: '🧬 Sinh học',
+    items: [
+      { label: 'N = 2A+2G', code: 'N = 2A + 2G', title: 'Tổng số nucleotit gen' },
+      { label: 'Chiều dài L', code: 'L = \\frac{N}{2} \\times 3.4\\text{ \\AA}', title: 'Chiều dài ADN' },
+      { label: 'Liên kết H', code: 'H = 2A + 3G', title: 'Số liên kết hidro' },
+      { label: 'Chu kỳ C', code: 'C = \\frac{N}{20}', title: 'Chu kỳ xoắn ADN' },
+      { label: '2^k tế bào', code: '2^k', title: 'Số tế bào nguyên phân' },
+      { label: 'F2 3:1', code: '3 : 1 \\quad (1AA:2Aa:1aa)', title: 'Menđen 1 cặp tính trạng' },
+      { label: 'F2 9:3:3:1', code: '9 : 3 : 3 : 1', title: 'Menđen phân ly độc lập' },
+      { label: 'Hardy-Weinberg', code: 'p^2 AA + 2pq Aa + q^2 aa = 1', title: 'Cân bằng di truyền' }
+    ]
+  },
+  literature: {
+    name: '📖 Ngữ văn',
+    items: [
+      { label: 'So sánh', code: '\\text{So sánh}', title: 'Biện pháp so sánh' },
+      { label: 'Ẩn dụ', code: '\\text{Ẩn dụ}', title: 'Ẩn dụ chuyển đổi cảm giác' },
+      { label: 'Hoán dụ', code: '\\text{Hoán dụ}', title: 'Hoán dụ tương cận' },
+      { label: 'Nhân hóa', code: '\\text{Nhân hóa}', title: 'Biện pháp nhân hóa' },
+      { label: 'Điệp ngữ', code: '\\text{Điệp từ/ngữ}', title: 'Điệp từ điệp cấu trúc' },
+      { label: 'Nói quá', code: '\\text{Nói quá}', title: 'Phóng đại cường điệu' },
+      { label: 'Nói giảm', code: '\\text{Nói giảm nói tránh}', title: 'Diễn đạt tế nhị' },
+      { label: 'Lục bát', code: '\\text{Thể thơ Lục bát (6-8)}', title: 'Thể thơ lục bát' },
+      { label: 'Song thất LB', code: '\\text{Song thất lục bát (7-7-6-8)}', title: 'Song thất lục bát' },
+      { label: 'Diễn dịch', code: '\\text{Đoạn Diễn dịch}', title: 'Mở đầu câu chủ đề' },
+      { label: 'Quy nạp', code: '\\text{Đoạn Quy nạp}', title: 'Đúc kết cuối đoạn' },
+      { label: 'Tổng-Phân-Hợp', code: '\\text{Đoạn Tổng - Phân - Hợp}', title: 'Tổng phân hợp' }
+    ]
+  },
+  geography: {
+    name: '🌍 Địa lý',
+    items: [
+      { label: 'Mật độ DS', code: '\\text{MĐDS} = \\frac{\\text{Dân số}}{\\text{Diện tích}}', title: 'Mật độ dân số (người/km2)' },
+      { label: 'Gia tăng TN', code: 'T_g = S - T', title: 'Gia tăng tự nhiên (%)' },
+      { label: 'Biên độ nhiệt', code: 'A_T = T_{\\max} - T_{\\min}', title: 'Biên độ nhiệt độ (°C)' },
+      { label: 'Nhiệt độ TB', code: '\\bar{T} = \\frac{\\sum T_i}{12}', title: 'Nhiệt độ trung bình năm' },
+      { label: 'Cán cân XNK', code: '\\text{Cán cân} = \\text{XK} - \\text{NK}', title: 'Cán cân xuất nhập khẩu' },
+      { label: 'Cơ cấu %', code: '\\%_i = \\frac{X_i}{\\text{Tổng}} \\times 100\\%', title: 'Tỉ trọng cơ cấu kinh tế' },
+      { label: 'Tốc độ TT', code: '\\text{TĐTT} = \\frac{Y_n}{Y_0} \\times 100\\%', title: 'Tốc độ tăng trưởng năm gốc' },
+      { label: 'Năng suất', code: '\\text{Năng suất} = \\frac{\\text{Sản lượng}}{\\text{Diện tích}}', title: 'Năng suất cây trồng' },
+      { label: 'Bán kính R', code: 'R_n = R_1 \\sqrt{\\frac{S_n}{S_1}}', title: 'Bán kính biểu đồ tròn' }
     ]
   },
   symbols: {
@@ -583,6 +654,48 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
     }, 20);
   };
 
+  // Delete or merge line with previous line (triggered by Backspace on empty line or start of line)
+  const handleDeleteLine = (targetLineId) => {
+    if (docLines.length <= 1) return; // Keep at least 1 line
+    const idx = docLines.findIndex(l => l.id === targetLineId);
+    if (idx <= 0) return; // If first line, cannot merge upward
+
+    const prevLine = docLines[idx - 1];
+    const currLine = docLines[idx];
+
+    // Merge current line tokens into previous line
+    const mergedTokens = [...prevLine.tokens, ...currLine.tokens];
+    const updatedPrevLine = {
+      ...prevLine,
+      tokens: mergedTokens
+    };
+
+    const nextLines = [
+      ...docLines.slice(0, idx - 1),
+      updatedPrevLine,
+      ...docLines.slice(idx + 1)
+    ];
+
+    commitDocLines(nextLines);
+
+    // Auto-focus previous line at the merge junction
+    setTimeout(() => {
+      const lineEl = lineRefs.current[prevLine.id];
+      if (lineEl) {
+        const spans = lineEl.querySelectorAll('[contenteditable="true"]');
+        const targetSpan = spans[spans.length - 1];
+        if (targetSpan) {
+          targetSpan.focus();
+          const sel = window.getSelection();
+          if (sel) {
+            sel.selectAllChildren(targetSpan);
+            sel.collapseToEnd();
+          }
+        }
+      }
+    }, 20);
+  };
+
   // Modify formula slot value
   const handleSlotChange = (lineId, tokenId, field, val) => {
     const updated = docLines.map(line => {
@@ -700,12 +813,12 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
             left: `${Math.max(8, bubblePos.left)}px`,
             zIndex: 50
           }}
-          className="bg-white/98 text-slate-900 backdrop-blur-md rounded-2xl shadow-2xl border-2 border-cyan-500/80 p-2.5 flex flex-col gap-2 min-w-[340px] max-w-[440px] animate-in fade-in zoom-in-95 duration-100"
+          className="bg-white/98 text-slate-900 backdrop-blur-md rounded-2xl shadow-2xl border-2 border-cyan-500/80 p-2.5 flex flex-col gap-2 min-w-[340px] max-w-[540px] animate-in fade-in zoom-in-95 duration-100"
         >
           {/* Row 1: Header with Live KaTeX Preview & Actions */}
           <div className="flex items-center justify-between gap-2 pb-1.5 border-b border-slate-200">
-            <div className="flex items-center gap-1.5 overflow-hidden">
-              <span className="px-2 py-0.5 rounded-full bg-cyan-100 text-cyan-800 border border-cyan-300 text-[10px] font-bold">
+            <div className="flex items-center gap-1.5 overflow-hidden flex-1 min-w-0">
+              <span className="px-2 py-0.5 rounded-full bg-cyan-100 text-cyan-800 border border-cyan-300 text-[10px] font-bold shrink-0">
                 {activeTokenInfo.token.structure?.type === 'FRACTION' ? 'Phân Số' :
                  activeTokenInfo.token.structure?.type === 'CHEM_CM' ? 'Nồng Độ CM' :
                  activeTokenInfo.token.structure?.type === 'CHEM_CPERCENT' ? 'Nồng Độ C%' :
@@ -713,7 +826,7 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
                  activeTokenInfo.token.structure?.type === 'SQRT' ? 'Căn Thức' : 'Công Thức'}
               </span>
               <div 
-                className="text-xs text-cyan-900 font-serif max-w-[140px] overflow-hidden truncate"
+                className="text-xs text-cyan-950 font-serif max-w-[280px] overflow-x-auto scrollbar-none whitespace-nowrap px-1 py-0.5"
                 dangerouslySetInnerHTML={{ __html: renderKatexHtml(activeTokenInfo.token.latex || 'x', false) }}
               />
             </div>
@@ -772,7 +885,7 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
           </div>
 
           {/* Row 3: Quick Insertion Chips of Active Tab */}
-          <div className="flex flex-wrap items-center gap-1 max-h-[68px] overflow-y-auto scrollbar-thin p-1 rounded-lg bg-slate-50 border border-slate-200">
+          <div className="flex flex-wrap items-center gap-1 max-h-[85px] overflow-y-auto scrollbar-thin p-1 rounded-lg bg-slate-50 border border-slate-200">
             {HIERARCHICAL_BUBBLE_INSERTER[bubbleTab]?.items?.map((item, idx) => (
               <button
                 key={idx}
@@ -877,6 +990,19 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
                           if (e.key === 'Enter') {
                             e.preventDefault();
                             handleInsertNewLineAfter(line.id);
+                          } else if (e.key === 'Backspace') {
+                            const sel = window.getSelection();
+                            const isAtStart = sel && (sel.anchorOffset === 0 && sel.focusOffset === 0);
+                            const isLineEmpty = line.tokens.every(t => !t.isFormula && (!t.text || t.text.trim() === ''));
+                            const isFirstToken = line.tokens[0]?.id === token.id;
+
+                            if ((isLineEmpty || (isAtStart && isFirstToken)) && docLines.length > 1) {
+                              const lineIdx = docLines.findIndex(l => l.id === line.id);
+                              if (lineIdx > 0) {
+                                e.preventDefault();
+                                handleDeleteLine(line.id);
+                              }
+                            }
                           }
                         }}
                         className="outline-none focus:bg-cyan-50/50 rounded-xs transition-colors whitespace-pre-wrap font-sans align-baseline min-w-[6px] inline-block"
@@ -999,12 +1125,6 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
           })
         )}
 
-        {/* REQUIREMENT 5: REMOVED "+ THÊM DÒNG MỚI" BUTTON (ENTER KEY NATURALLY CREATES NEW LINE) */}
-        <div className="flex items-center justify-end pt-3 mt-3 border-t border-slate-100 text-xs">
-          <span className="text-[11px] text-slate-400 italic">
-            💡 Gõ văn bản như Word • Bấm Enter để xuống dòng • Nhấp khoảng trống tự nhảy trỏ về cuối dòng • Nhấp công thức để sửa số tại chỗ
-          </span>
-        </div>
       </div>
 
     </div>

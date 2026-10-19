@@ -299,30 +299,30 @@ export function parseSolutionMethodSections(rawMethod) {
   let casio = '';
 
   const sampleMatch = method.match(
-    /(?:^|\n)###\s*(?:[📝📄]\s*)?(?:Bài toán mẫu áp dụng|Bài toán mẫu|Ví dụ áp dụng|Bài toán minh họa|Đoạn trích \/ Bài mẫu minh họa|Bài mẫu áp dụng phương pháp|Bài mẫu áp dụng|Bài mẫu minh họa|Bài mẫu)[^\n]*(?:\r?\n)([\s\S]*?)(?=(?:(?:^|\n)###\s*(?:[⚠️💡]|Các bẫy đề thi|Bẫy đề thi|Kỹ thuật Casio|Mẹo Casio|Mẹo tư duy)|$))/i
+    /(?:^|\n)###\s*(?:[^\p{L}\p{N}\s#]+\s*)?(?:Bài toán mẫu áp dụng|Bài toán mẫu|Ví dụ áp dụng|Bài toán minh họa|Đoạn trích \/ Bài mẫu minh họa|Bài mẫu áp dụng phương pháp|Bài mẫu áp dụng|Bài mẫu minh họa|Bài mẫu)[^\n]*(?:\r?\n)([\s\S]*?)(?=(?:(?:^|\n)###\s*(?:[^\p{L}\p{N}\s#]+\s*)?(?:Các bẫy|Bẫy đề thi|Kỹ thuật Casio|Mẹo Casio|Mẹo tư duy)|$))/iu
   );
   if (sampleMatch) {
     sampleProblem = sampleMatch[1].trim();
   }
 
   const trapsMatch = method.match(
-    /(?:^|\n)###\s*(?:⚠️\s*)?(?:Các bẫy đề thi ĐGNL thường gặp|Các bẫy đề thi|Bẫy đề thi thường gặp|Bẫy đề thi|Các bẫy)[^\n]*(?:\r?\n)([\s\S]*?)(?=(?:(?:^|\n)###\s*(?:[💡📝📄]|Kỹ thuật Casio|Mẹo Casio|Mẹo tư duy)|$))/i
+    /(?:^|\n)###\s*(?:[^\p{L}\p{N}\s#]+\s*)?(?:Các bẫy đề thi ĐGNL thường gặp|Các bẫy đề thi|Bẫy đề thi thường gặp|Bẫy đề thi|Các bẫy)[^\n]*(?:\r?\n)([\s\S]*?)(?=(?:(?:^|\n)###\s*(?:[^\p{L}\p{N}\s#]+\s*)?(?:Bài toán mẫu|Kỹ thuật Casio|Mẹo Casio|Mẹo tư duy)|$))/iu
   );
   if (trapsMatch) {
     traps = trapsMatch[1].trim();
   }
 
   const casioMatch = method.match(
-    /(?:^|\n)###\s*(?:💡\s*)?(?:Kỹ thuật Casio & Mẹo tư duy nhanh|Kỹ thuật Casio|Mẹo Casio|Mẹo tư duy & Chiến thuật làm bài|Mẹo tư duy|Chiến thuật làm bài|Mẹo làm bài)[^\n]*(?:\r?\n)([\s\S]*?)(?=(?:(?:^|\n)###\s*(?:[⚠️📝📄]|Các bẫy đề thi|Bẫy đề thi)|$))/i
+    /(?:^|\n)###\s*(?:[^\p{L}\p{N}\s#]+\s*)?(?:Kỹ thuật Casio & Mẹo tư duy nhanh|Kỹ thuật Casio|Mẹo Casio|Mẹo tư duy & Chiến thuật làm bài|Mẹo tư duy|Chiến thuật làm bài|Mẹo làm bài)[^\n]*(?:\r?\n)([\s\S]*?)(?=(?:(?:^|\n)###\s*(?:[^\p{L}\p{N}\s#]+\s*)?(?:Các bẫy đề thi|Bẫy đề thi|Bài toán mẫu)|$))/iu
   );
   if (casioMatch) {
     casio = casioMatch[1].trim();
   }
 
   method = method
-    .replace(/(?:^|\n)###\s*(?:[📝📄]\s*)?(?:Bài toán mẫu áp dụng|Bài toán mẫu|Ví dụ áp dụng|Bài toán minh họa|Đoạn trích \/ Bài mẫu minh họa|Bài mẫu áp dụng phương pháp|Bài mẫu áp dụng|Bài mẫu minh họa|Bài mẫu)[^\n]*(?:\r?\n)[\s\S]*?(?=(?:(?:^|\n)###\s*(?:[⚠️💡]|Các bẫy đề thi|Bẫy đề thi|Kỹ thuật Casio|Mẹo Casio|Mẹo tư duy)|$))/gi, '')
-    .replace(/(?:^|\n)###\s*(?:⚠️\s*)?(?:Các bẫy đề thi ĐGNL thường gặp|Các bẫy đề thi|Bẫy đề thi thường gặp|Bẫy đề thi|Các bẫy)[^\n]*(?:\r?\n)[\s\S]*?(?=(?:(?:^|\n)###\s*(?:[💡📝📄]|Kỹ thuật Casio|Mẹo Casio|Mẹo tư duy)|$))/gi, '')
-    .replace(/(?:^|\n)###\s*(?:💡\s*)?(?:Kỹ thuật Casio & Mẹo tư duy nhanh|Kỹ thuật Casio|Mẹo Casio|Mẹo tư duy & Chiến thuật làm bài|Mẹo tư duy|Chiến thuật làm bài|Mẹo làm bài)[^\n]*(?:\r?\n)[\s\S]*?(?=(?:(?:^|\n)###\s*(?:[⚠️📝📄]|Các bẫy đề thi|Bẫy đề thi)|$))/gi, '')
+    .replace(/(?:^|\n)###\s*(?:[^\p{L}\p{N}\s#]+\s*)?(?:Bài toán mẫu áp dụng|Bài toán mẫu|Ví dụ áp dụng|Bài toán minh họa|Đoạn trích \/ Bài mẫu minh họa|Bài mẫu áp dụng phương pháp|Bài mẫu áp dụng|Bài mẫu minh họa|Bài mẫu)[^\n]*(?:\r?\n)[\s\S]*?(?=(?:(?:^|\n)###\s*(?:[^\p{L}\p{N}\s#]+\s*)?(?:Các bẫy|Bẫy đề thi|Kỹ thuật Casio|Mẹo Casio|Mẹo tư duy)|$))/giu, '')
+    .replace(/(?:^|\n)###\s*(?:[^\p{L}\p{N}\s#]+\s*)?(?:Các bẫy đề thi ĐGNL thường gặp|Các bẫy đề thi|Bẫy đề thi thường gặp|Bẫy đề thi|Các bẫy)[^\n]*(?:\r?\n)[\s\S]*?(?=(?:(?:^|\n)###\s*(?:[^\p{L}\p{N}\s#]+\s*)?(?:Bài toán mẫu|Kỹ thuật Casio|Mẹo Casio|Mẹo tư duy)|$))/giu, '')
+    .replace(/(?:^|\n)###\s*(?:[^\p{L}\p{N}\s#]+\s*)?(?:Kỹ thuật Casio & Mẹo tư duy nhanh|Kỹ thuật Casio|Mẹo Casio|Mẹo tư duy & Chiến thuật làm bài|Mẹo tư duy|Chiến thuật làm bài|Mẹo làm bài)[^\n]*(?:\r?\n)[\s\S]*?(?=(?:(?:^|\n)###\s*(?:[^\p{L}\p{N}\s#]+\s*)?(?:Các bẫy đề thi|Bẫy đề thi|Bài toán mẫu)|$))/giu, '')
     .trim();
 
   return { method, sampleProblem, traps, casio };
@@ -2023,7 +2023,7 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
                         sampleQuestion: { ...prev.sampleQuestion, contentLatex: e.target.value }
                       }))}
                       placeholder="Cho hàm số y = f(x)... Hỗ trợ gõ text, bấm 'Điền Công Thức' hoặc bấm Ctrl+V để dán ảnh đề bài."
-                      className="w-full p-3 rounded-xl border border-slate-300 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                      className="w-full p-3 rounded-xl border border-slate-300 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-slate-900 placeholder:text-slate-400 shadow-2xs"
                     />
                   </div>
 
@@ -2047,9 +2047,9 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
                               ...prev,
                               sampleQuestion: { ...prev.sampleQuestion, correctOption: optKey }
                             }))}
-                            className="w-4 h-4 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                            className="w-4 h-4 text-emerald-600 focus:ring-emerald-500 cursor-pointer shrink-0"
                           />
-                          <span className="font-bold text-xs text-slate-800">{optKey}.</span>
+                          <span className="font-bold text-xs text-slate-800 shrink-0">{optKey}.</span>
                           <input
                             type="text"
                             value={form.sampleQuestion?.[fieldName] || ''}
@@ -2061,7 +2061,7 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
                               }));
                             }}
                             placeholder={`Phương án ${optKey}...`}
-                            className="w-full text-xs font-medium focus:outline-none bg-transparent"
+                            className="w-full text-xs font-semibold focus:outline-none bg-transparent text-slate-900 placeholder:text-slate-400"
                           />
                         </div>
                       );
@@ -2115,7 +2115,7 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
                         sampleQuestion: { ...prev.sampleQuestion, explanation: e.target.value }
                       }))}
                       placeholder="Lời giải chi tiết theo các bước của Dạng bài... Hỗ trợ gõ text, bấm 'Điền Công Thức' hoặc bấm Ctrl+V để dán ảnh giải thích."
-                      className="w-full p-3 rounded-xl border border-slate-300 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                      className="w-full p-3 rounded-xl border border-slate-300 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-slate-900 placeholder:text-slate-400 shadow-2xs"
                     />
                   </div>
                 </div>
@@ -2549,7 +2549,7 @@ function NewQuestionDialog({ skillId, onClose, onCreated }) {
               value={contentLatex}
               onChange={(e) => setContentLatex(e.target.value)}
               placeholder="Cho hàm số y = f(x)..."
-              className="w-full p-3 rounded-xl border border-slate-300 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50"
+              className="w-full p-3 rounded-xl border border-slate-300 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50 text-slate-900 placeholder:text-slate-400"
             />
           </div>
 
@@ -2561,9 +2561,9 @@ function NewQuestionDialog({ skillId, onClose, onCreated }) {
                   name="newQuestionRadio"
                   checked={correctOption === opt}
                   onChange={() => setCorrectOption(opt)}
-                  className="w-4 h-4 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                  className="w-4 h-4 text-emerald-600 focus:ring-emerald-500 cursor-pointer shrink-0"
                 />
-                <span className="font-bold text-xs text-slate-800">{opt}.</span>
+                <span className="font-bold text-xs text-slate-800 shrink-0">{opt}.</span>
                 <input
                   type="text"
                   value={opt === 'A' ? optionA : opt === 'B' ? optionB : opt === 'C' ? optionC : optionD}
@@ -2575,7 +2575,7 @@ function NewQuestionDialog({ skillId, onClose, onCreated }) {
                     if (opt === 'D') setOptionD(val);
                   }}
                   placeholder={`Phương án ${opt}...`}
-                  className="w-full text-xs font-medium focus:outline-none bg-transparent"
+                  className="w-full text-xs font-semibold focus:outline-none bg-transparent text-slate-900 placeholder:text-slate-400"
                 />
               </div>
             ))}
@@ -2587,7 +2587,7 @@ function NewQuestionDialog({ skillId, onClose, onCreated }) {
               <select
                 value={difficultyLevel}
                 onChange={(e) => setDifficultyLevel(e.target.value)}
-                className="w-full p-2 rounded-xl border border-slate-300 text-xs font-medium bg-white"
+                className="w-full p-2 rounded-xl border border-slate-300 text-xs font-semibold bg-white text-slate-900"
               >
                 <option value={1}>Bloom L1: Nhận biết</option>
                 <option value={2}>Bloom L2: Thông hiểu</option>
@@ -2610,7 +2610,7 @@ function NewQuestionDialog({ skillId, onClose, onCreated }) {
               value={explanation}
               onChange={(e) => setExplanation(e.target.value)}
               placeholder="Giải thích từng bước..."
-              className="w-full p-3 rounded-xl border border-slate-300 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50"
+              className="w-full p-3 rounded-xl border border-slate-300 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50 text-slate-900 placeholder:text-slate-400"
             />
           </div>
 

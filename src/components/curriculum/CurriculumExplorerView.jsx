@@ -2486,22 +2486,22 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
         <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
           <div className={`relative w-full ${extractedCurriculum ? 'max-w-[1580px] h-[95vh]' : 'max-w-4xl max-h-[92vh]'} bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col transition-all duration-300`}>
             
-            {/* Header */}
-            <div className="px-4 py-2.5 sm:px-5 sm:py-3 border-b border-slate-100 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white flex items-center justify-between shrink-0">
+            {/* Header (Clean White Theme) */}
+            <div className="px-4 py-2.5 sm:px-5 sm:py-3 border-b border-slate-200 bg-white text-slate-900 flex items-center justify-between shrink-0 shadow-2xs">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-purple-600 to-indigo-600 text-white flex items-center justify-center shadow-md shadow-purple-500/20 shrink-0">
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center shadow-xs shrink-0">
                   <Wand2 className="w-4 h-4" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <h3 className="text-xs sm:text-sm font-extrabold tracking-tight">
+                    <h3 className="text-xs sm:text-sm font-extrabold tracking-tight text-slate-900">
                       {extractedCurriculum ? "Không Gian Xem Trước & Thẩm Định Tri Thức AI (Panoramic Workspace)" : "AI Tri Thức Bóc Tách Tài Liệu & Nhận Diện Dạng Bài"}
                     </h3>
-                    <span className="px-1.5 py-0.2 rounded-full bg-purple-500/30 border border-purple-400/40 text-[9px] font-black text-purple-200">
+                    <span className="px-2 py-0.5 rounded-full bg-purple-50 border border-purple-200 text-[9.5px] font-bold text-purple-700">
                       C# .NET 9 AI Engine • Gemini RAG
                     </span>
                   </div>
-                  <p className="text-[10px] sm:text-[10.5px] text-slate-300 font-medium">
+                  <p className="text-[10px] sm:text-[10.5px] text-slate-500 font-medium">
                     Hỗ trợ tài liệu SGK/Chuyên đề nhiều trang (lên tới 99+ trang) • Trích xuất Chương → Bài học → Dạng bài kèm 4 khối Sư phạm
                   </p>
                 </div>
@@ -2513,7 +2513,7 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
                   setAiExtractStep(0);
                   setPreviewSelectedPattern(null);
                 }}
-                className="w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
+                className="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 hover:text-slate-900 transition-colors cursor-pointer"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -2826,23 +2826,23 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
                       return (
                         <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
                           
-                          {/* Header Dạng Bài */}
-                          <div className="px-4 py-2 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white shrink-0 border-b border-indigo-900/50 shadow-xs flex items-center justify-between gap-2.5">
-                            <div className="space-y-0.5 min-w-0">
+                          {/* Header Dạng Bài (Clean White Theme) */}
+                          <div className="px-4 py-2.5 bg-white text-slate-900 shrink-0 border-b border-slate-200 shadow-2xs flex items-center justify-between gap-2.5">
+                            <div className="space-y-1 min-w-0">
                               <div className="flex items-center gap-1.5 flex-wrap">
-                                <span className="px-1.5 py-0.2 rounded-full bg-white/20 text-white text-[9px] font-bold">
+                                <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[9.5px] font-bold border border-slate-200">
                                   Trọng số: {Math.round((pat.weight || 0.05) * 100)}%
                                 </span>
                                 {pat.classification && (
-                                  <span className="px-1.5 py-0.2 rounded-full bg-purple-500/30 text-purple-200 text-[9px] font-medium border border-purple-400/30">
+                                  <span className="px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 text-[9.5px] font-bold border border-purple-200">
                                     Phân loại: {pat.classification}
                                   </span>
                                 )}
-                                <span className="px-1.5 py-0.2 rounded-full bg-amber-400/20 text-amber-300 text-[9px] font-black border border-amber-400/30">
+                                <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 text-[9.5px] font-black border border-amber-200">
                                   🎯 Nguồn bài: {questions.length} bài mẫu chuyên sâu
                                 </span>
                               </div>
-                              <h4 className="text-xs sm:text-[13px] font-black leading-tight text-white truncate">{pat.patternName}</h4>
+                              <h4 className="text-xs sm:text-[13px] font-black leading-tight text-slate-900 truncate">{pat.patternName}</h4>
                             </div>
 
                             <button
@@ -2851,9 +2851,9 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
                                 setIsImportModalOpen(false);
                                 handleOpenStudio(pat, activeChap, activeLes);
                               }}
-                              className="px-2.5 py-1 rounded-lg bg-amber-400 hover:bg-amber-300 text-slate-900 text-[11px] font-black flex items-center gap-1 shadow-xs transition-all shrink-0"
+                              className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-black flex items-center gap-1.5 shadow-md shadow-blue-500/20 transition-all hover:scale-105 active:scale-95 shrink-0"
                             >
-                              <Sparkles className="w-3 h-3" />
+                              <Sparkles className="w-3.5 h-3.5 text-amber-300" />
                               <span>Mở Trong Studio Sư Phạm</span>
                             </button>
                           </div>

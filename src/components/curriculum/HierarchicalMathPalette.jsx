@@ -118,19 +118,37 @@ export const HIERARCHICAL_CATALOG = {
           { label: '∥', code: '\\parallel', preview: '\\parallel', desc: 'Ký hiệu hai đường thẳng hoặc hai mặt phẳng song song.', latexNote: '\\parallel' },
           { label: '⊥', code: '\\perp', preview: '\\perp', desc: 'Ký hiệu vuông góc giữa hai đường thẳng hoặc đường thẳng và mặt phẳng.', latexNote: '\\perp' },
           { label: '(α)', code: '(\\alpha)', preview: '(\\alpha)', desc: 'Ký hiệu mặt phẳng Alpha trong hình học.', latexNote: '(\\alpha)' },
+          { label: '(P) mp', code: '(P): Ax + By + Cz + D = 0', preview: 'Ax+By+Cz+D=0', desc: 'Phương trình tổng quát mặt phẳng (P) trong Oxyz.', latexNote: '(P): Ax+By+Cz+D=0' },
+          { label: 'PT tham số', code: '\\begin{cases} x = x_0 + at \\\\ y = y_0 + bt \\\\ z = z_0 + ct \\end{cases}', preview: '\\begin{cases} x=x_0+at \\end{cases}', desc: 'Phương trình tham số đường thẳng Oxyz.', latexNote: 'PT tham số d' },
+          { label: 'PT chính tắc', code: '\\frac{x - x_0}{a} = \\frac{y - y_0}{b} = \\frac{z - z_0}{c}', preview: '\\frac{x-x_0}{a}=\\frac{y-y_0}{b}', desc: 'Phương trình chính tắc của đường thẳng Oxyz.', latexNote: 'PT chính tắc d' },
           { label: '(S)', code: '(S): (x-a)^2 + (y-b)^2 + (z-c)^2 = R^2', preview: '(S)', desc: 'Phương trình mặt cầu tâm I(a,b,c) bán kính R trong Oxyz.', latexNote: '(S): (x-a)^2...' },
-          { label: 'd(M,(P))', code: 'd(M, (P)) = \\frac{|Ax_0 + By_0 + Cz_0 + D|}{\\sqrt{A^2 + B^2 + C^2}}', preview: 'd(M,(P))', desc: 'Khoảng cách từ điểm M(x₀,y₀,z₀) đến mặt phẳng (P).', latexNote: 'd(M, (P))' }
+          { label: 'd(M,(P))', code: 'd(M, (P)) = \\frac{|Ax_0 + By_0 + Cz_0 + D|}{\\sqrt{A^2 + B^2 + C^2}}', preview: 'd(M,(P))', desc: 'Khoảng cách từ điểm M(x₀,y₀,z₀) đến mặt phẳng (P).', latexNote: 'd(M, (P))' },
+          { label: 'V tứ diện', code: 'V = \\frac{1}{6} |[\\vec{AB}, \\vec{AC}] \\cdot \\vec{AD}|', preview: 'V = \\frac{1}{6}|[\\vec{u},\\vec{v}]\\cdot\\vec{w}|', desc: 'Thể tích tứ diện ABCD bằng tích hỗn tạp Oxyz.', latexNote: 'V tứ diện' }
         ]
       },
-      complex_prob: {
-        name: 'Số phức & Xác suất',
+      prob_stats: {
+        name: 'Xác suất & Thống kê GDPT 2018',
+        items: [
+          { label: 'C_n^k', code: 'C_n^k = \\frac{n!}{k!(n-k)!}', preview: 'C_n^k', desc: 'Số tổ hợp chập k của n phần tử.', latexNote: 'C_n^k' },
+          { label: 'A_n^k', code: 'A_n^k = \\frac{n!}{(n-k)!}', preview: 'A_n^k', desc: 'Số chỉnh hợp chập k của n phần tử.', latexNote: 'A_n^k' },
+          { label: 'P_n', code: 'P_n = n!', preview: 'P_n = n!', desc: 'Số hoán vị của n phần tử.', latexNote: 'P_n = n!' },
+          { label: 'P(A)', code: 'P(A) = \\frac{n(A)}{n(\\Omega)}', preview: 'P(A)', desc: 'Công thức tính xác suất cổ điển của biến cố A.', latexNote: 'P(A)' },
+          { label: 'P(A|B)', code: 'P(A|B) = \\frac{P(AB)}{P(B)}', preview: 'P(A|B)', desc: 'Xác suất có điều kiện của A khi biết B đã xảy ra (Lớp 12).', latexNote: 'P(A|B)' },
+          { label: 'CT Bayes', code: 'P(A_k|B) = \\frac{P(A_k) P(B|A_k)}{\\sum P(A_i) P(B|A_i)}', preview: 'P(A_k|B)', desc: 'Công thức Bayes và công thức xác suất toàn phần.', latexNote: 'Bayes' },
+          { label: 'E(X)', code: 'E(X) = \\sum x_i p_i', preview: 'E(X)', desc: 'Kỳ vọng toán học của biến ngẫu nhiên rời rạc.', latexNote: 'E(X)' },
+          { label: 'V(X)', code: 'V(X) = E(X^2) - [E(X)]^2', preview: 'V(X)', desc: 'Phương sai của biến ngẫu nhiên rời rạc.', latexNote: 'V(X)' },
+          { label: 'σ(X)', code: '\\sigma(X) = \\sqrt{V(X)}', preview: '\\sigma(X)', desc: 'Độ lệch chuẩn của biến ngẫu nhiên.', latexNote: '\\sigma(X)' },
+          { label: 'x̄ nhóm', code: '\\bar{x} = \\frac{\\sum m_i c_i}{n}', preview: '\\bar{x}', desc: 'Số trung bình của mẫu số liệu ghép nhóm (Lớp 11 & 12).', latexNote: '\\bar{x}' }
+        ]
+      },
+      complex_nums: {
+        name: 'Số Phức',
         items: [
           { label: 'z = a+bi', code: 'z = a + bi', preview: 'z = a+bi', desc: 'Dạng đại số của số phức với phần thực a và phần ảo b (i² = -1).', latexNote: 'z = a + bi' },
           { label: 'z̄', code: '\\bar{z} = a - bi', preview: '\\bar{z}', desc: 'Số phức liên hợp của số phức z = a + bi.', latexNote: '\\bar{z} = a - bi' },
           { label: '|z|', code: '|z| = \\sqrt{a^2 + b^2}', preview: '|z|', desc: 'Môđun của số phức z.', latexNote: '|z| = \\sqrt{a^2+b^2}' },
-          { label: 'C_n^k', code: 'C_n^k = \\frac{n!}{k!(n-k)!}', preview: 'C_n^k', desc: 'Số tổ hợp chập k của n phần tử.', latexNote: 'C_n^k' },
-          { label: 'A_n^k', code: 'A_n^k = \\frac{n!}{(n-k)!}', preview: 'A_n^k', desc: 'Số chỉnh hợp chập k của n phần tử.', latexNote: 'A_n^k' },
-          { label: 'P(A)', code: 'P(A) = \\frac{n(A)}{n(\\Omega)}', preview: 'P(A)', desc: 'Công thức tính xác suất cổ điển của biến cố A.', latexNote: 'P(A)' }
+          { label: 'z₁·z₂', code: 'z_1 \\cdot z_2', preview: 'z_1 z_2', desc: 'Tích hai số phức.', latexNote: 'z_1 z_2' },
+          { label: 'z₁/z₂', code: '\\frac{z_1}{z_2} = \\frac{z_1 \\bar{z}_2}{|z_2|^2}', preview: '\\frac{z_1}{z_2}', desc: 'Thương hai số phức.', latexNote: 'z_1 / z_2' }
         ]
       }
     }
@@ -304,6 +322,160 @@ export const HIERARCHICAL_CATALOG = {
           { label: 'ε = hf', code: '\\varepsilon = hf = \\frac{hc}{\\lambda}', preview: '\\varepsilon = hf', desc: 'Năng lượng của một lượng tử ánh sáng (photon).', latexNote: '\\varepsilon = hf' },
           { label: 'E = mc²', code: 'E = mc^2', preview: 'E = mc^2', desc: 'Hệ thức tương đối Einstein giữa khối lượng và năng lượng.', latexNote: 'E = mc^2' },
           { label: 'Độ hụt khối', code: '\\Delta m = Z m_p + (A - Z) m_n - m_X', preview: '\\Delta m', desc: 'Độ hụt khối khi liên kết các nucleon thành hạt nhân.', latexNote: '\\Delta m' }
+        ]
+      }
+    }
+  },
+  biology: {
+    name: 'Sinh Học',
+    shortName: 'Sinh',
+    icon: '🧬',
+    badgeColor: 'teal',
+    categories: {
+      dna_genetics: {
+        name: 'Di Truyền Phân Tử (ADN & ARN)',
+        items: [
+          { label: 'N = 2A+2G', code: 'N = 2A + 2G = 2T + 2X', preview: 'N = 2A + 2G', desc: 'Tổng số nucleotit của gen ADN mạch kép.', latexNote: 'N = 2A+2G' },
+          { label: 'Chiều dài L', code: 'L = \\frac{N}{2} \\times 3.4\\text{ \\AA}', preview: 'L = \\frac{N}{2} \\times 3.4', desc: 'Chiều dài ADN theo Angstrom (1 nm = 10 Å = 10⁻⁴ μm).', latexNote: 'L = (N/2)*3.4' },
+          { label: 'Khối lượng M', code: 'M = N \\times 300\\text{ đvC}', preview: 'M = N \\times 300', desc: 'Khối lượng phân tử của gen ADN (1 nu = 300 đvC).', latexNote: 'M = N * 300' },
+          { label: 'Chu kỳ C', code: 'C = \\frac{N}{20} = \\frac{L}{34}', preview: 'C = \\frac{N}{20}', desc: 'Số chu kỳ xoắn của ADN (mỗi chu kỳ 10 cặp nu = 34 Å).', latexNote: 'C = N/20' },
+          { label: 'Liên kết H', code: 'H = 2A + 3G = 2T + 3X', preview: 'H = 2A + 3G', desc: 'Số liên kết hidro giữa các bazơ nitơ theo NTBS.', latexNote: 'H = 2A+3G' },
+          { label: 'Liên kết HT', code: 'HT = 2N - 2', preview: 'HT = 2N - 2', desc: 'Số liên kết hóa trị photphodieste trong gen.', latexNote: 'HT = 2N - 2' },
+          { label: 'mARN rN', code: 'rN = rA + rU + rG + rX = \\frac{N}{2}', preview: 'rN = \\frac{N}{2}', desc: 'Số ribonucleotit của phân tử mARN phiên mã từ 1 mạch gốc.', latexNote: 'rN = N/2' },
+          { label: 'Số axit amin', code: 'N_{aa} = \\frac{rN}{3} - 1 = \\frac{N}{6} - 1', preview: 'N_{aa} = \\frac{rN}{3} - 1', desc: 'Số axit amin trong chuỗi polipeptit hoàn chỉnh (trừ bộ ba mở đầu và kết thúc).', latexNote: 'N_aa' }
+        ]
+      },
+      cell_div: {
+        name: 'Nguyên Phân & Giảm Phân',
+        items: [
+          { label: '2^k tế bào', code: '2^k', preview: '2^k', desc: 'Số tế bào con tạo thành sau k lần nguyên phân liên tiếp.', latexNote: '2^k' },
+          { label: 'NST cung cấp', code: '2n \\times (2^k - 1)', preview: '2n(2^k - 1)', desc: 'Số NST đơn môi trường cung cấp cho tế bào 2n nguyên phân k lần.', latexNote: '2n(2^k - 1)' },
+          { label: 'Bộ NST 2n', code: '2n = 46', preview: '2n = 46', desc: 'Bộ NST lưỡng bội loài (người 2n = 46).', latexNote: '2n' },
+          { label: 'Giao tử đực', code: '4 \\times \\text{Tế bào sinh tinh}', preview: '4 \\times \\text{TB tinh}', desc: 'Mỗi tế bào sinh tinh qua giảm phân tạo 4 tinh trùng thụ tinh.', latexNote: '4 tinh trùng' },
+          { label: 'Giao tử cái', code: '1 \\times \\text{Trứng} + 3 \\times \\text{Thể cực}', preview: '1 \\text{ trứng} + 3 \\text{ cực}', desc: 'Mỗi tế bào sinh trứng qua giảm phân tạo 1 trứng và 3 thể cực.', latexNote: '1 trứng + 3 cực' },
+          { label: 'Hiệu suất TT', code: 'H = \\frac{\\text{Số hợp tử}}{\\text{Tổng giao tử}} \\times 100\\%', preview: 'H = \\frac{\\text{Hợp tử}}{\\text{Giao tử}}', desc: 'Hiệu suất thụ tinh của giao tử đực hoặc giao tử cái.', latexNote: 'H thụ tinh' }
+        ]
+      },
+      mendel_pop: {
+        name: 'Quy Luật Di Truyền & Quần Thể',
+        items: [
+          { label: 'F2 Menđen', code: '3 : 1 \\quad (1AA : 2Aa : 1aa)', preview: '3:1 \\ (1:2:1)', desc: 'Tỉ lệ kiểu hình 3:1 và kiểu gen 1:2:1 ở F2 khi lai 1 cặp tính trạng.', latexNote: '3:1' },
+          { label: 'F2 Phân ly ĐL', code: '9 : 3 : 3 : 1', preview: '9:3:3:1', desc: 'Tỉ lệ phân ly kiểu hình F2 của phép lai hai cặp tính trạng độc lập.', latexNote: '9:3:3:1' },
+          { label: 'Tương tác 9:7', code: '9 : 7', preview: '9 : 7', desc: 'Tỉ lệ tương tác gen bổ sung hai gen không alen.', latexNote: '9:7' },
+          { label: 'Hardy-Weinberg', code: 'p^2 AA + 2pq Aa + q^2 aa = 1', preview: 'p^2+2pq+q^2=1', desc: 'Định luật Hacdi - Vanbec về cân bằng di truyền quần thể ngẫu phối (p + q = 1).', latexNote: 'p^2+2pq+q^2=1' },
+          { label: 'Tần số alen p', code: 'p_A = d + \\frac{h}{2}', preview: 'p_A = d + \\frac{h}{2}', desc: 'Tần số alen trội A từ cấu trúc dAA + hAa + raa = 1.', latexNote: 'p_A = d + h/2' },
+          { label: 'Tần số alen q', code: 'q_a = r + \\frac{h}{2}', preview: 'q_a = r + \\frac{h}{2}', desc: 'Tần số alen lặn a (p + q = 1).', latexNote: 'q_a = r + h/2' },
+          { label: 'Hoán vị gen f', code: 'f = \\frac{\\text{Số cá thể HV}}{\\text{Tổng số cá thể}} \\times 100\\% \\quad (f \\le 50\\%)', preview: 'f \\le 50\\%', desc: 'Tần số hoán vị gen giữa hai gen trên cùng 1 NST.', latexNote: 'f hoán vị gen' }
+        ]
+      }
+    }
+  },
+  literature: {
+    name: 'Ngữ Văn',
+    shortName: 'Văn',
+    icon: '📖',
+    badgeColor: 'rose',
+    categories: {
+      rhetoric_devices: {
+        name: 'Biện Pháp Tu Từ',
+        items: [
+          { label: 'So sánh', code: '\\text{So sánh: } A \\text{ như/là } B', preview: '\\text{So sánh}', desc: 'Đối chiếu hai sự vật hiện tượng có nét tương đồng nhằm tăng gợi hình gợi cảm.', latexNote: 'So sánh' },
+          { label: 'Ẩn dụ', code: '\\text{Ẩn dụ (So sánh ngầm dựa trên nét tương đồng)}', preview: '\\text{Ẩn dụ}', desc: 'Gọi tên sự vật hiện tượng này bằng tên sự vật khác dựa trên nét tương đồng ngầm.', latexNote: 'Ẩn dụ' },
+          { label: 'Hoán dụ', code: '\\text{Hoán dụ (Dựa trên quan hệ tương cận/gần gũi)}', preview: '\\text{Hoán dụ}', desc: 'Gọi tên sự vật này bằng tên sự vật khác có quan hệ đi đôi, gần gũi.', latexNote: 'Hoán dụ' },
+          { label: 'Nhân hóa', code: '\\text{Nhân hóa: Gán tính chất/hành động người cho vật}', preview: '\\text{Nhân hóa}', desc: 'Gán cho loài vật, đồ vật tâm tư tình cảm và hành động như con người.', latexNote: 'Nhân hóa' },
+          { label: 'Điệp từ/ngữ', code: '\\text{Điệp từ / Điệp ngữ / Điệp cấu trúc}', preview: '\\text{Điệp ngữ}', desc: 'Lặp lại từ ngữ cấu trúc nhằm nhấn mạnh cảm xúc, tạo nhịp điệu sinh động.', latexNote: 'Điệp ngữ' },
+          { label: 'Nói quá', code: '\\text{Nói quá (Phóng đại, thậm xưng)}', preview: '\\text{Nói quá}', desc: 'Phóng đại quy mô, mức độ tính chất sự vật nhằm gây ấn tượng mạnh.', latexNote: 'Nói quá' },
+          { label: 'Nói giảm tránh', code: '\\text{Nói giảm nói tránh (Nhã nhặn, tế nhị)}', preview: '\\text{Nói giảm}', desc: 'Diễn đạt nhã nhặn, tế nhị tránh cảm giác đau buồn, nặng nề.', latexNote: 'Nói giảm nói tránh' },
+          { label: 'Liệt kê', code: '\\text{Liệt kê: } X_1, X_2, X_3, \\dots', preview: '\\text{Liệt kê}', desc: 'Sắp xếp nối tiếp hàng loạt từ cụm từ cùng loại để diễn tả đầy đủ các khía cạnh.', latexNote: 'Liệt kê' },
+          { label: 'Tương phản', code: '\\text{Tương phản / Đối lập}', preview: '\\text{Tương phản}', desc: 'Đặt các sự vật hình ảnh trái ngược nhau cạnh nhau làm nổi bật tư tưởng.', latexNote: 'Tương phản' },
+          { label: 'Câu hỏi tu từ', code: '\\text{Câu hỏi tu từ (?)}', preview: '\\text{Câu hỏi tu từ}', desc: 'Câu hỏi bộc lộ cảm xúc, khẳng định ý mà không cần trả lời.', latexNote: 'Câu hỏi tu từ' }
+        ]
+      },
+      argumentation: {
+        name: 'Thao Tác Lập Luận & Diễn Đạt',
+        items: [
+          { label: 'Giải thích', code: '\\text{Thao tác Giải thích: Làm rõ khái niệm/nghĩa đen/nghĩa bóng}', preview: '\\text{Giải thích}', desc: 'Dùng lí lẽ để chỉ rõ bản chất, nội dung khái niệm vấn đề.', latexNote: 'Giải thích' },
+          { label: 'Phân tích', code: '\\text{Thao tác Phân tích: Chia nhỏ đối tượng thành các khía cạnh}', preview: '\\text{Phân tích}', desc: 'Chia nhỏ đối tượng thành nhiều mặt để xem xét toàn diện, thấu đáo.', latexNote: 'Phân tích' },
+          { label: 'Chứng minh', code: '\\text{Thao tác Chứng minh: Dẫn chứng thực tế xác thực}', preview: '\\text{Chứng minh}', desc: 'Dùng dẫn chứng thực tế, số liệu tin cậy để làm sáng tỏ luận điểm.', latexNote: 'Chứng minh' },
+          { label: 'Bác bỏ', code: '\\text{Thao tác Bác bỏ: Chỉ ra chỗ sai lầm, phi lí}', preview: '\\text{Bác bỏ}', desc: 'Chỉ ra cái sai, lệch lạc của một ý kiến để khẳng định quan điểm đúng đắn.', latexNote: 'Bác bỏ' },
+          { label: 'Bình luận', code: '\\text{Thao tác Bình luận: Đánh giá đúng/sai và bài học}', preview: '\\text{Bình luận}', desc: 'Đưa ra nhận xét, đánh giá đúng sai và rút ra bài học nhận thức, hành động.', latexNote: 'Bình luận' },
+          { label: 'So sánh', code: '\\text{Thao tác So sánh: Đối chiếu tìm nét tương đồng/dị biệt}', preview: '\\text{So sánh}', desc: 'Đặt các đối tượng cạnh nhau để làm rõ nét giống và khác biệt.', latexNote: 'So sánh' }
+        ]
+      },
+      paragraph_types: {
+        name: 'Cấu Trúc Đoạn Văn & Liên Kết Câu',
+        items: [
+          { label: 'Diễn dịch', code: '\\text{Đoạn Diễn dịch: Câu chủ đề ở đầu đoạn}', preview: '\\text{Diễn dịch}', desc: 'Câu chủ đề nằm ở đầu đoạn văn, các câu sau triển khai chi tiết.', latexNote: 'Diễn dịch' },
+          { label: 'Quy nạp', code: '\\text{Đoạn Quy nạp: Câu chủ đề ở cuối đoạn}', preview: '\\text{Quy nạp}', desc: 'Các câu trước nêu dẫn chứng phân tích, câu cuối đúc kết chủ đề.', latexNote: 'Quy nạp' },
+          { label: 'Tổng-Phân-Hợp', code: '\\text{Đoạn Tổng - Phân - Hợp}', preview: '\\text{Tổng-Phân-Hợp}', desc: 'Mở ý khái quát (Tổng), phân tích chi tiết (Phân), đúc kết nâng cao (Hợp).', latexNote: 'Tổng-Phân-Hợp' },
+          { label: 'Song hành', code: '\\text{Đoạn Song hành: Các câu bình đẳng về ý nghĩa}', preview: '\\text{Song hành}', desc: 'Các câu trong đoạn có quan hệ bình đẳng ngang hàng.', latexNote: 'Song hành' },
+          { label: 'Móc xích', code: '\\text{Đoạn Móc xích: Từ ngữ câu sau gối đầu câu trước}', preview: '\\text{Móc xích}', desc: 'Ý câu sau kế thừa, gối đầu từ ý câu đi liền trước.', latexNote: 'Móc xích' },
+          { label: 'Phép thế', code: '\\text{Phép thế: Dùng đại từ/từ đồng nghĩa}', preview: '\\text{Phép thế}', desc: 'Dùng đại từ hoặc từ ngữ tương đương để thay thế, tránh lặp từ.', latexNote: 'Phép thế' },
+          { label: 'Phép nối', code: '\\text{Phép nối: Tuy nhiên, Mặc dù, Do đó, Hơn nữa}', preview: '\\text{Phép nối}', desc: 'Dùng quan hệ từ nối liên kết chặt chẽ các câu và các đoạn.', latexNote: 'Phép nối' }
+        ]
+      },
+      poetry_genres: {
+        name: 'Thể Thơ & Phong Cách Ngôn Ngữ',
+        items: [
+          { label: 'Lục bát', code: '\\text{Thể thơ Lục bát (6 - 8, gieo vần lưng)}', preview: '\\text{Lục bát}', desc: 'Thể thơ truyền thống dân tộc: câu 6 hiệp vần tiếng thứ 6 câu 8.', latexNote: 'Lục bát' },
+          { label: 'Song thất LB', code: '\\text{Thể thơ Song thất lục bát (7 - 7 - 6 - 8)}', preview: '\\text{Song thất LB}', desc: 'Kết hợp hai câu thất (7 chữ) và một cặp lục bát (6-8 chữ).', latexNote: 'Song thất LB' },
+          { label: 'Thất ngôn bát cú', code: '\\text{Thất ngôn bát cú Đường luật (Đề - Thực - Luận - Kết)}', preview: '\\text{Thất ngôn}', desc: '8 câu, mỗi câu 7 chữ, niêm luật chặt chẽ, đối ở liên thực và luận.', latexNote: 'Thất ngôn bát cú' },
+          { label: 'Thơ tự do', code: '\\text{Thể thơ Tự do (Số chữ linh hoạt, nhịp điệu mở)}', preview: '\\text{Thơ tự do}', desc: 'Không gò bó số câu số chữ, nhịp điệu cảm xúc khoáng đạt.', latexNote: 'Thơ tự do' },
+          { label: 'PC Ngôn ngữ', code: '\\text{PC Ngôn ngữ: Sinh hoạt, Nghệ thuật, Báo chí, Chính luận, Khoa học, Hành chính}', preview: '\\text{PC Ngôn ngữ}', desc: '6 phong cách chức năng ngôn ngữ THPT.', latexNote: 'Phong cách ngôn ngữ' }
+        ]
+      }
+    }
+  },
+  geography: {
+    name: 'Địa Lý',
+    shortName: 'Địa',
+    icon: '🌍',
+    badgeColor: 'sky',
+    categories: {
+      pop_labor: {
+        name: 'Dân Số & Lao Động',
+        items: [
+          { label: 'Mật độ DS', code: '\\text{MĐDS} = \\frac{\\text{Số dân (người)}}{\\text{Diện tích (km}^2\\text{)}} \\text{ (người/km}^2\\text{)}', preview: '\\text{MĐDS} = \\frac{\\text{Dân}}{\\text{Diện tích}}', desc: 'Mật độ dân số: Số dân chia cho diện tích tự nhiên tương ứng.', latexNote: 'MĐDS = Dân / Diện tích' },
+          { label: 'Gia tăng TN', code: 'T_g = S - T \\quad (\\% \\text{ hoặc } \\text{\\textperthousand})', preview: 'T_g = S - T', desc: 'Tỉ suất gia tăng tự nhiên bằng tỉ suất sinh (S) trừ tỉ suất tử (T).', latexNote: 'Tg = Sinh - Tử' },
+          { label: 'Tỉ lệ thành thị', code: '\\% \\text{ Thành thị} = \\frac{\\text{Dân số thành thị}}{\\text{Tổng dân số}} \\times 100\\%', preview: '\\% \\text{Thành thị}', desc: 'Tỉ lệ dân số thành thị trong quá trình đô thị hóa.', latexNote: '% Thành thị' },
+          { label: 'Tỉ lệ thất nghiệp', code: '\\% \\text{ TN} = \\frac{\\text{Số người thất nghiệp}}{\\text{Lực lượng lao động}} \\times 100\\%', preview: '\\% \\text{Thất nghiệp}', desc: 'Tỉ lệ thất nghiệp trong độ tuổi lao động.', latexNote: '% Thất nghiệp' }
+        ]
+      },
+      climate_hydro: {
+        name: 'Khí Hậu & Thủy Văn',
+        items: [
+          { label: 'Biên độ nhiệt', code: 'A_T = T_{\\max} - T_{\\min} \\text{ (}^\\circ\\text{C)}', preview: 'A_T = T_{\\max} - T_{\\min}', desc: 'Biên độ nhiệt độ năm (hoặc ngày) bằng nhiệt độ cao nhất trừ thấp nhất.', latexNote: 'Biên độ nhiệt' },
+          { label: 'Nhiệt độ TB', code: '\\bar{T} = \\frac{\\sum_{i=1}^{12} T_i}{12} \\text{ (}^\\circ\\text{C)}', preview: '\\bar{T} = \\frac{\\sum T_i}{12}', desc: 'Nhiệt độ trung bình năm bằng tổng nhiệt độ 12 tháng chia cho 12.', latexNote: 'Nhiệt độ trung bình' },
+          { label: 'Tổng lượng mưa', code: '\\sum P = \\sum_{i=1}^{12} P_i \\text{ (mm)}', preview: '\\sum P = \\sum P_i', desc: 'Tổng lượng mưa cả năm bằng tổng lượng mưa của cả 12 tháng.', latexNote: 'Tổng lượng mưa' },
+          { label: 'Cân bằng ẩm', code: '\\text{Cân bằng ẩm} = P - E \\text{ (mm)}', preview: 'P - E \\text{ (mm)}', desc: 'Cân bằng ẩm bằng lượng mưa (P) trừ đi lượng bốc hơi (E).', latexNote: 'Cân bằng ẩm = Mưa - Bốc hơi' },
+          { label: 'Lưu lượng nước', code: 'Q = \\frac{W}{t} \\text{ (m}^3\\text{/s)}', preview: 'Q = \\frac{W}{t}', desc: 'Lưu lượng dòng chảy sông ngòi (thể tích nước qua mặt cắt trên giây).', latexNote: 'Q = W / t' }
+        ]
+      },
+      econ_trade: {
+        name: 'Kinh Tế & Xuất Nhập Khẩu',
+        items: [
+          { label: 'Cán cân XNK', code: '\\text{Cán cân XNK} = \\text{Xuất khẩu} - \\text{Nhập khẩu (triệu USD)}', preview: '\\text{Cán cân} = \\text{XK} - \\text{NK}', desc: 'Cán cân xuất nhập khẩu (>0 xuất siêu, <0 nhập siêu).', latexNote: 'XK - NK' },
+          { label: 'Tỉ số XK/NK', code: '\\text{Tỉ lệ} = \\frac{\\text{Xuất khẩu}}{\\text{Nhập khẩu}} \\times 100\\%', preview: '\\frac{\\text{XK}}{\\text{NK}} \\times 100\\%', desc: 'Tỉ số phần trăm giữa giá trị xuất khẩu so với nhập khẩu.', latexNote: 'XK / NK * 100%' },
+          { label: 'Cơ cấu (%)', code: '\\%_i = \\frac{\\text{Giá trị } i}{\\text{Tổng số}} \\times 100\\%', preview: '\\%_i = \\frac{X_i}{\\text{Tổng}} \\times 100\\%', desc: 'Tỉ trọng của một ngành/thành phần trong tổng thể kinh tế (biểu đồ tròn/miền).', latexNote: 'Cơ cấu %' },
+          { label: 'Tốc độ TT', code: '\\text{TĐTT} = \\frac{\\text{Giá trị năm sau}}{\\text{Giá trị năm gốc}} \\times 100\\% \\text{ (gốc = 100\\%)}', preview: '\\text{TĐTT} = \\frac{Y_n}{Y_0} \\times 100\\%', desc: 'Tốc độ tăng trưởng lấy năm đầu làm mốc 100% (biểu đồ đường).', latexNote: 'Tốc độ tăng trưởng' },
+          { label: 'GDP / người', code: '\\text{GDP/người} = \\frac{\\text{Tổng GDP}}{\\text{Tổng dân số}} \\text{ (USD/người)}', preview: '\\text{GDP/người}', desc: 'Thu nhập bình quân GDP trên đầu người.', latexNote: 'GDP / người' }
+        ]
+      },
+      agri_resources: {
+        name: 'Nông Nghiệp & Tài Nguyên',
+        items: [
+          { label: 'Năng suất', code: '\\text{Năng suất} = \\frac{\\text{Sản lượng (tạ)}}{\\text{Diện tích gieo trồng (ha)}} \\text{ (tạ/ha)}', preview: '\\text{Năng suất} = \\frac{\\text{Sản lượng}}{\\text{Diện tích}}', desc: 'Năng suất cây trồng tính bằng tạ/ha hoặc tấn/ha.', latexNote: 'Sản lượng / Diện tích' },
+          { label: 'Sản lượng', code: '\\text{Sản lượng} = \\text{Diện tích} \\times \\text{Năng suất}', preview: '\\text{Sản lượng} = S \\times NS', desc: 'Sản lượng nông nghiệp bằng diện tích nhân năng suất.', latexNote: 'Sản lượng = S * NS' },
+          { label: 'Bình quân LT', code: '\\text{BQLT} = \\frac{\\text{Sản lượng lương thực (kg)}}{\\text{Dân số (người)}} \\text{ (kg/người)}', preview: '\\text{BQLT} = \\frac{\\text{Sản lượng}}{\\text{Dân số}}', desc: 'Bình quân lương thực có hạt trên đầu người hàng năm.', latexNote: 'BQLT / người' },
+          { label: 'Độ che phủ rừng', code: 'R\\% = \\frac{\\text{Diện tích rừng}}{\\text{Tổng diện tích tự nhiên}} \\times 100\\%', preview: 'R\\% = \\frac{\\text{DT rừng}}{\\text{DT tự nhiên}}', desc: 'Tỉ lệ che phủ rừng so với diện tích tự nhiên.', latexNote: 'Độ che phủ rừng' }
+        ]
+      },
+      carto_coords: {
+        name: 'Tọa Độ & Kỹ Năng Biểu Đồ',
+        items: [
+          { label: 'Tọa độ VN', code: '23^\\circ 23\'\\text{B} - 8^\\circ 34\'\\text{B}, \\ 102^\\circ 09\'\\text{Đ} - 109^\\circ 28\'\\text{Đ}', preview: '23^\\circ 23\'\\text{B} \\dots', desc: 'Khung tọa độ các điểm cực phần đất liền nước ta (Lũng Cú, Đất Mũi, A Pa Chải, Mũi Đôi).', latexNote: 'Tọa độ cực VN' },
+          { label: 'Bán kính R tròn', code: 'R_n = R_1 \\times \\sqrt{\\frac{S_n}{S_1}}', preview: 'R_n = R_1 \\sqrt{S_n / S_1}', desc: 'Bán kính biểu đồ tròn thể hiện quy mô và cơ cấu.', latexNote: 'R_n = R_1 * sqrt(S_n/S_1)' },
+          { label: 'Tỉ lệ bản đồ', code: '\\frac{1}{M} = \\frac{d}{D}', preview: '1 / M = d / D', desc: 'Tỉ lệ bản đồ: khoảng cách trên bản đồ (d) so với thực địa (D).', latexNote: '1/M = d/D' }
         ]
       }
     }
@@ -544,7 +716,7 @@ export default function HierarchicalMathPalette({
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="🔍 Tìm nhanh H2SO4, NaOH, √x, a/b, sin..."
+            placeholder="🔍 Tìm nhanh H2SO4, √x, ADN, MĐDS, So sánh, a/b..."
             className="w-full bg-slate-50 hover:bg-white focus:bg-white border border-slate-200 focus:border-cyan-500 rounded-xl pl-8 pr-3 py-1.5 text-xs text-slate-800 placeholder-slate-400 outline-none transition-all shadow-inner"
           />
           {searchQuery && (
@@ -559,7 +731,7 @@ export default function HierarchicalMathPalette({
         </div>
       </div>
 
-      {/* 3. Domain Switcher Tabs (Toán, Hóa, Lý, Ký Hiệu) */}
+      {/* 3. Domain Switcher Tabs (Toán, Hóa, Lý, Sinh, Văn, Địa, Ký Hiệu) */}
       {!searchResults && (
         <div className="p-2 border-b border-slate-200 bg-slate-50/70 grid grid-cols-4 gap-1">
           {domainKeys.map((domKey) => {
