@@ -986,45 +986,51 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
   return (
     <div className="space-y-6 animate-fade pb-12">
       
-      {/* 1. HERO BANNER: LỘ TRÌNH PHỔ THÔNG PHÂN CẤP */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white p-6 lg:p-8 shadow-xl border border-slate-800">
-        <div className="absolute top-0 right-0 -mr-16 -mt-16 w-80 h-80 rounded-full bg-blue-500/10 blur-3xl pointer-events-none"></div>
-        <div className="absolute bottom-0 left-1/3 -mb-20 w-80 h-80 rounded-full bg-indigo-500/10 blur-3xl pointer-events-none"></div>
+      {/* 1. HERO BANNER: LỘ TRÌNH PHỔ THÔNG PHÂN CẤP (CLEAN LIGHT THEME) */}
+      <div className="relative overflow-hidden rounded-2xl bg-white border border-slate-200/80 shadow-xs p-5 lg:p-6 transition-all">
+        <div className="absolute top-0 right-0 -mr-16 -mt-16 w-72 h-72 rounded-full bg-indigo-50/70 blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 left-1/3 -mb-20 w-72 h-72 rounded-full bg-cyan-50/70 blur-3xl pointer-events-none" />
         
-        <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
-          <div className="space-y-3 max-w-3xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-300 text-xs font-bold tracking-wide">
-              <Sparkles className="w-3.5 h-3.5 text-blue-300" />
-              <span>LỘ TRÌNH HỌC PHỔ THÔNG PHÂN CẤP 3 TẦNG: CHƯƠNG → BÀI → DẠNG BÀI</span>
+        <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+          <div className="space-y-2 max-w-3xl">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-indigo-50 border border-indigo-200/70 text-indigo-700 text-[11px] font-bold tracking-wide">
+              <Sparkles className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+              <span>LỘ TRÌNH HỌC PHỔ THÔNG PHÂN CẤP: CHƯƠNG → BÀI → DẠNG BÀI</span>
             </div>
             
-            <h1 className="text-2xl lg:text-3xl font-extrabold tracking-tight text-white leading-tight">
+            <h1 className="text-xl lg:text-2xl font-black tracking-tight text-slate-900 leading-tight">
               Dàn Kiến Thức Chuẩn SGK & Phương Pháp Giải Từng Dạng Bài
             </h1>
             
-            <p className="text-sm text-slate-300 font-medium leading-relaxed">
+            <p className="text-xs text-slate-600 font-medium leading-relaxed">
               Mỗi dạng bài được trang bị đầy đủ 4 khối nội dung sư phạm: 
-              <strong className="text-cyan-300"> (1) Nền tảng SGK</strong>, 
-              <strong className="text-amber-300"> (2) Phương pháp giải riêng biệt & Công thức KaTeX</strong>, 
-              <strong className="text-emerald-300"> (3) Video bài giảng & Lời giải mẫu chi tiết</strong>, và 
-              <strong className="text-rose-300"> (4) Quiz củng cố thích ứng</strong> tự động gom các dạng bài tiên quyết đang bị hổng (&lt;10%).
+              <strong className="text-indigo-600 font-bold"> (1) Nền tảng SGK</strong>, 
+              <strong className="text-amber-600 font-bold"> (2) Phương pháp giải KaTeX</strong>, 
+              <strong className="text-emerald-600 font-bold"> (3) Video & Bài toán mẫu</strong>, và 
+              <strong className="text-rose-600 font-bold"> (4) Quiz thích ứng</strong> tự động gom các dạng bài cần cải thiện.
             </p>
           </div>
 
-          <div className="flex flex-wrap lg:flex-col gap-3 shrink-0">
-            <div className="px-4 py-3 rounded-2xl bg-white/10 backdrop-blur-md border border-white/10 text-center">
-              <div className="text-xs text-slate-400 font-semibold">Cấu trúc phân cấp</div>
-              <div className="text-xl font-extrabold text-cyan-400">Chương • Bài • Dạng</div>
+          <div className="flex items-center gap-2.5 shrink-0 self-start lg:self-center">
+            <div className="px-3.5 py-2 rounded-xl bg-slate-50/90 border border-slate-200/80 text-left">
+              <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Cấu trúc phân cấp</div>
+              <div className="text-xs font-black text-slate-800 flex items-center gap-1.5 mt-0.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-cyan-500"></span>
+                Chương <span className="text-slate-300">•</span> Bài <span className="text-slate-300">•</span> Dạng
+              </div>
             </div>
-            <div className="px-4 py-3 rounded-2xl bg-white/10 backdrop-blur-md border border-white/10 text-center">
-              <div className="text-xs text-slate-400 font-semibold">Trọng số chuẩn hóa</div>
-              <div className="text-xl font-extrabold text-emerald-400">1.200 Điểm</div>
+            <div className="px-3.5 py-2 rounded-xl bg-slate-50/90 border border-slate-200/80 text-left">
+              <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Trọng số chuẩn hóa</div>
+              <div className="text-xs font-black text-emerald-700 flex items-center gap-1.5 mt-0.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                1.200 Điểm
+              </div>
             </div>
           </div>
         </div>
 
-        {/* 4 Core Domains Tabs */}
-        <div className="mt-8 grid grid-cols-2 lg:grid-cols-4 gap-3 pt-6 border-t border-slate-800/80">
+        {/* 4/5 Core Domains Tabs */}
+        <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2 pt-4 border-t border-slate-100">
           {domains.map((domain) => {
             const Icon = getDomainIcon(domain.icon);
             const isActive = domain.id === activeDomainId;
@@ -1032,22 +1038,24 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
               <button
                 key={domain.id}
                 onClick={() => setActiveDomainId(domain.id)}
-                className={`flex items-center gap-3.5 p-3.5 rounded-2xl text-left transition-all group ${
+                className={`flex items-center gap-2.5 p-2.5 px-3 rounded-xl text-left transition-all group ${
                   isActive 
-                    ? 'bg-white text-slate-900 shadow-xl scale-[1.02] font-bold' 
-                    : 'bg-slate-800/60 hover:bg-slate-800 text-slate-300 border border-slate-700/50'
+                    ? 'bg-indigo-50/90 border-2 border-indigo-500 text-slate-900 shadow-xs font-bold ring-2 ring-indigo-500/10' 
+                    : 'bg-slate-50/70 hover:bg-white hover:border-slate-300 text-slate-700 border border-slate-200/70 hover:shadow-2xs'
                 }`}
               >
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-                  isActive ? 'bg-gradient-to-tr ' + domain.gradient + ' text-white shadow-md' : 'bg-slate-700 text-slate-300 group-hover:text-white'
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                  isActive 
+                    ? 'bg-gradient-to-tr ' + domain.gradient + ' text-white shadow-xs' 
+                    : 'bg-white border border-slate-200/90 text-slate-500 group-hover:text-indigo-600 shadow-2xs'
                 }`}>
-                  <Icon className="w-5 h-5" />
+                  <Icon className="w-4 h-4" />
                 </div>
-                <div>
-                  <div className={`text-xs font-bold leading-tight ${isActive ? 'text-slate-900' : 'text-slate-200'}`}>
+                <div className="min-w-0 flex-1">
+                  <div className={`text-xs font-bold leading-tight truncate ${isActive ? 'text-indigo-950 font-black' : 'text-slate-800'}`}>
                     {domain.title}
                   </div>
-                  <div className="text-[10px] text-slate-400 font-medium mt-0.5">
+                  <div className="text-[10px] text-slate-500 font-medium truncate mt-0.5">
                     {domain.subtitle}
                   </div>
                 </div>

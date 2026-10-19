@@ -472,11 +472,20 @@ V-Eval-Web_Client/
     `str.replace(/(?:\\text|\btext)(?=[A-Z])/g, '')` and `str.replace(/(?:\\text|\btext)\{([A-Z][a-zA-Z0-9_+\-^]*)\}/g, '$1')`.
   - Automatically cleanses stray `text` or `\text` immediately preceding uppercase chemical symbols (e.g. `SO_4^{2-}`, `H_2O`, `Fe^{3+}`), allowing the automatic chemical ion tokenizer to wrap them cleanly in KaTeX math mode ($SO_4^{2-}$) with zero typographical distortion.
 
+### 4.40. Unified Clean White Hero Banner & Symmetric 5-Domain Grid Architecture (`CurriculumExplorerView.jsx`)
+- **Tone Cohesion & Visual De-Cluttering**:
+  - Replaced the dark navy/black gradient hero banner (`bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900`) with a clean, light-themed container (`bg-white border border-slate-200/80 shadow-xs rounded-2xl`).
+  - Completely aligns the top header section with the application's clean white primary visual identity, eliminating the jarring "black top, white bottom" contrast.
+  - Reduced vertical footprint (`p-5 lg:p-6`), simplified pedagogical description with crisp font weights, and flattened the two bulky stat boxes into compact, inline stat chips (`px-3.5 py-2 rounded-xl bg-slate-50/90`).
+- **Symmetric 5-Domain Horizontal Layout (`lg:grid-cols-5`)**:
+  - Re-architected domain tab switcher from `grid-cols-4` to `lg:grid-cols-5`, placing all 5 standard competencies (General, Math/STEM, Natural Sciences, Social Sciences, Language Arts) onto a single, perfectly balanced horizontal row without orphaned wrap-around items.
+  - Active domain state utilizes a refined indigo tint (`bg-indigo-50/90 border-2 border-indigo-500 font-bold ring-2 ring-indigo-500/10`), while inactive domains maintain subtle light slate hover states (`bg-slate-50/70 hover:bg-white hover:border-slate-300`).
+
 ---
 
 ## 5. Verification & Acceptance Criteria
 
-1. **Clean Production Build**: Executed `npm run build` with 0 syntax or bundle errors; production artifacts outputted to `dist/` within 800ms on Vite 8 and React 19.
+1. **Clean Production Build**: Executed `npm run build` with 0 syntax or bundle errors; production artifacts outputted to `dist/` within 3.47s on Vite 8 and React 19.
 2. **Linter & Code Health**: `npm run lint` passes with 0 syntax errors across all components and services.
 3. **Docker Multi-Stage Validation**: `docker compose config` passes with 0 syntax errors across the entire 6-service microservices constellation.
 4. **Repository Sync Automation**: Standalone `Scripts/push.bat` and root `Scripts/` correctly recognize `V-Eval-Web_Client` as a first-class project service.
