@@ -34,6 +34,7 @@
     + `HierarchicalMathPalette.jsx`: Thanh công cụ ký hiệu phân cấp 3 tầng (Môn -> Chuyên mục -> Chip KaTeX), hỗ trợ thu gọn rail w-11 mỏng nhẹ.
     + `WordStyleFormulaCanvas.jsx`: Canvas soạn thảo trực quan Microsoft Word Equation, dòng văn bản tự nhiên, tiết diện công thức siêu gọn, sửa số tại chỗ.
     + `InteractiveFormulaBuilderModal.jsx`: Trình tạo công thức và đồ thị trực quan (Click-to-Fill Formula Builder) không cần gõ mã LaTeX.
+    + `InteractiveMathWorkbenchModal.jsx`: Phòng thí nghiệm MathLab 2D/3D chuyên sâu sử dụng JSXGraph v1.14.0 nội sinh (tùy chỉnh tọa độ X,Y,Z và đổi tên đỉnh không gian, kẻ đường phụ, và bộ 6 chuyên đề đồ thị VD/VDC GDPT 2018).
 - **Tích Hợp Hệ Thống**:
   - Tích hợp cổng Gateway YARP (`http://localhost:5212`) cho các luồng API Auth, Content, Practice và AI Ingestion/Tutor.
   - Script điều khiển độc lập `Scripts/push.bat` hỗ trợ commit & push trực tiếp từ thư mục Web Client.
@@ -115,4 +116,5 @@
 | 68 | **Chống Cắt Cụt '...' Công Thức KaTeX Dài Trong Thanh Tra Nổi** | `src/components/curriculum/WordStyleFormulaCanvas.jsx` | 🟢 Hoàn thành | 100% | Gỡ bỏ class truncate, mở rộng preview container lên 280px kèm cuộn ngang và popup inspector lên max-w-540px |
 | 69 | **Khắc Phục Hiện Tượng Chữ Trắng Trên Nền Trắng Khi Tạo Câu Hỏi** | `src/components/curriculum/CurriculumStudioEditor.jsx` | 🟢 Hoàn thành | 100% | Định nghĩa rõ ràng `text-slate-900 placeholder:text-slate-400 font-medium` cho tất cả các textarea đề bài, đáp án A-D và dialog tạo mới |
 | 70 | **Mở Rộng Thư Viện Ký Hiệu & Công Thức Đồ Sộ GDPT 2018 (Lớp 10 - 12)** | `src/components/curriculum/HierarchicalMathPalette.jsx`, `WordStyleFormulaCanvas.jsx` | 🟢 Hoàn thành | 100% | Mở rộng trọn vẹn 7 môn học: Ngữ Văn (Tu từ, Lập luận, Cấu trúc đoạn, Thể thơ), Địa Lý (Dân số, Khí hậu, XNK, Nông nghiệp, Tọa độ), Sinh Học (Di truyền ADN/ARN, Nguyên phân/Giảm phân, Hardy-Weinberg), và Toán Học Oxyz & Xác suất thống kê |
+| 71 | **MathLab 2D/3D (JSXGraph Native Engine): Đa Dạng Hình Khối Không Gian, Tùy Chỉnh Đỉnh (X,Y,Z), Kẻ Đường Phụ Tự Do & Hệ Thống Đồ Thị VD/VDC GDPT 2018** | `src/components/curriculum/InteractiveMathWorkbenchModal.jsx`, `CurriculumStudioEditor.jsx`, `CurriculumExplorerView.jsx` | 🟢 Hoàn thành | 100% | Thống nhất 100% JSXGraph nội sinh (loại bỏ GeoGebra); toggle sửa tọa độ (X,Y,Z) và đổi tên mọi đỉnh; 9 hình không gian THPT; tự do tạo điểm phụ trên cạnh và kẻ đường phụ; 6 chuyên đề đồ thị VD/VDC (tiệm cận xiên, trị tuyệt đối phức hợp, đạo hàm f'(x), biện luận nghiệm, tích phân diện tích, nhận dạng bộ 3 đồ thị) |
 

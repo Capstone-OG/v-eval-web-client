@@ -516,6 +516,29 @@ V-Eval-Web_Client/
     - *Biology (Sinh Học)*: Molecular genetics (DNA/RNA nucleotide counts, length, molecular mass, hydrogen bonds, translation), cell division (mitosis/meiosis, fertilization efficiency), and population genetics (Mendelian ratios, Hardy-Weinberg equilibrium).
     - *Advanced Math (Toán Học)*: Space analytic geometry Oxyz (plane/line equations, sphere, point-to-plane distance) and high-school probability & statistics (conditional probability, Bayes' theorem, expectation, variance, grouped frequency tables).
 
+### 4.44. Unified MathLab JSXGraph Native Engine, 3D Spatial Geometry Vertex Customization, and High-Order (VD/VDC) Calculus Graphing Architecture (`InteractiveMathWorkbenchModal.jsx`, `CurriculumStudioEditor.jsx`, `CurriculumExplorerView.jsx`)
+- **Native JSXGraph v1.14.0 Engine Unification & Third-Party Decoupling**:
+  - Decoupled authoring workflows completely from external GeoGebra web-applet iframes, eradicating network latency, cross-origin security overhead, and offline unavailability.
+  - Standardized on client-side JSXGraph v1.14.0 vector rendering at 60 FPS across both HTML5 Canvas and SVG backends.
+  - Unified Ribbon navigation across `CurriculumStudioEditor.jsx` and `CurriculumExplorerView.jsx` with standard `⚡ MathLab 2D/3D (JSXGraph)` controls.
+- **3D Spatial Geometry Vertex Repositioning & Renaming Architecture**:
+  - Engineered reactive state-driven vertex configuration `customBasePoints` with an explicit toggle `isCustomizingBasePoints` positioned immediately below shape selection.
+  - Enables educators to rename any canonical vertex (e.g., `A` to `M`, `S` to `P`, `A'` to `A₁`) and micro-adjust its 3D spatial coordinates `(X, Y, Z)` with 0.2 numerical step increments.
+  - Real-time geometric graph recalculation: all associated frame edges, altitudes, projections, and cross-section polygons dynamically morph and anchor to updated vertex coordinates.
+  - Integrated 1-click `🔄 Mặc định` reset button restoring canonical textbook geometry coordinates and labels.
+- **Comprehensive 3D Spatial Geometry Library & Auxiliary Construction Suite**:
+  - Supports 9 standard high-school geometries: rectangular pyramid (`SA` perpendicular to base), triangular pyramid (right-angled base), regular square pyramid (`SO` perpendicular to base), regular triangular pyramid (`SG` perpendicular to base), side-perpendicular pyramid (`(SAB)` perpendicular to base), triangular prism, rectangular box / cube, solids of revolution (cone/cylinder), and sphere-plane intersection.
+  - Canonical exam presets: 2-step distance model `d(A, (SBC)) = AK` (`AH` perp `BC`, `AK` perp `SB`), line-to-plane angle `(SC, (ABCD))`, and cross-section polygons `(MNPQ)`.
+  - Freehand auxiliary line and extra point studio: edge point interpolation (midpoint `1/2`, centroid `1/3`), and connecting arbitrary vertices with dashed/solid styles and customized palette colors.
+- **Advanced 2D Calculus & High-Order Exam (VD/VDC) Graphing Engine**:
+  - Integrated 6 core exam problem suites:
+    1. Oblique asymptote rational functions (`y = (ax² + bx + c)/(dx + e)`) with automated vertical/oblique asymptotes and center of symmetry `I`.
+    2. Composite absolute value transformations (`|f(x)|`, `f(|x|)`, `|f(|x|)|`, `|f(x) + m|` with vertical shift parameter slider and critical point counter).
+    3. Derivative graph `f'(x)` and composite function intersection `f'(x) = h(x)` with root highlighting.
+    4. Parametric linear intersection `y = ax + m` with real-time root multiplicity scanner and badge counters.
+    5. Definite integral area bounded by 2 curves with numerical integration.
+    6. Triple curve identification `f(x)`, `f'(x)`, `F(x)` with interactive student quiz toggle.
+
 ---
 
 ## 5. Verification & Acceptance Criteria

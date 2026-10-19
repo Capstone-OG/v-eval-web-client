@@ -46,6 +46,7 @@ import {
 } from 'lucide-react';
 import MathText from '../common/MathText';
 import CurriculumStudioEditor, { parseSolutionMethodSections, parseTheoryRecapSections, isMathOrStemDomain } from './CurriculumStudioEditor';
+import InteractiveMathWorkbenchModal from './InteractiveMathWorkbenchModal';
 import contentService from '../../services/contentService';
 import { practiceService } from '../../services/practiceService';
 import { aiService } from '../../services/aiService';
@@ -195,6 +196,10 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
   const [previewQuestionBloomTab, setPreviewQuestionBloomTab] = useState('all');
   const [previewActiveQuestionIdx, setPreviewActiveQuestionIdx] = useState(0);
   const [isGeneratingPracticeQuestions, setIsGeneratingPracticeQuestions] = useState(false);
+
+  // Interactive MathLab & 3D Spatial Geometry Modal (Flow 3 & Flow 2 Testing)
+  const [isMathLabModalOpen, setIsMathLabModalOpen] = useState(false);
+  const [mathLabEngine, setMathLabEngine] = useState('jsxgraph');
 
   // 1. Fetch Curriculum from Backend Content Service API (Database Dynamic)
   const fetchCurriculumData = async (preservePatternId = null) => {
@@ -951,7 +956,7 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
 
   if (isStudioOpen) {
     return (
-      <div className="fixed inset-0 z-50 bg-slate-950 flex flex-col w-screen h-screen overflow-hidden">
+      <div className="fixed inset-0 z-50 bg-white flex flex-col w-screen h-screen overflow-hidden">
         <CurriculumStudioEditor
           pattern={studioTargetPattern}
           domain={currentDomain}
@@ -1009,6 +1014,18 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
           </div>
 
           <div className="flex items-center gap-2.5 shrink-0 self-start lg:self-center">
+            <button
+              type="button"
+              onClick={() => {
+                setMathLabEngine('jsxgraph');
+                setIsMathLabModalOpen(true);
+              }}
+              className="px-3.5 py-2 rounded-xl bg-linear-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white text-xs font-black shadow-sm flex items-center gap-2 transition-all cursor-pointer"
+              title="Phòng thí nghiệm MathLab 2D & Hình học không gian 3D (JSXGraph Native Engine)"
+            >
+              <Compass className="w-4 h-4 text-amber-300" />
+              <span>⚡ MathLab 2D/3D (JSXGraph)</span>
+            </button>
             <div className="px-3.5 py-2 rounded-xl bg-slate-50/90 border border-slate-200/80 text-left">
               <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Cấu trúc phân cấp</div>
               <div className="text-xs font-black text-slate-800 flex items-center gap-1.5 mt-0.5">
@@ -1699,12 +1716,26 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
                   </p>
                 </div>
               </div>
-              <button 
-                onClick={() => setIsQuizModalOpen(false)}
-                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
-              >
-                <X className="w-4 h-4" />
-              </button>
+              <div className="flex items-center gap-2">
+                <button 
+                  type="button"
+                  onClick={() => {
+                    setMathLabEngine('jsxgraph');
+                    setIsMathLabModalOpen(true);
+                  }}
+                  className="px-2.5 py-1 rounded-xl bg-white/20 hover:bg-white/30 text-white text-[11px] font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+                  title="Mở phòng thí nghiệm Toán học & Hình học không gian 3D"
+                >
+                  <Compass className="w-3.5 h-3.5 text-amber-300" />
+                  <span>MathLab 3D/2D</span>
+                </button>
+                <button 
+                  onClick={() => setIsQuizModalOpen(false)}
+                  className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
             </div>
 
             {/* Modal Body */}
@@ -3609,6 +3640,15 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
 
           </div>
         </div>
+      )}
+
+      {/* 5. INTERACTIVE MATHLAB & 3D SPATIAL GEOMETRY MODAL (FLOW 3 & FLOW 2 TEST) */}
+      {isMathLabModalOpen && (
+        <InteractiveMathWorkbenchModal
+          isOpen={isMathLabModalOpen}
+          initialTab={mathLabEngine}
+          onClose={() => setIsMathLabModalOpen(false)}
+        />
       )}
 
     </div>

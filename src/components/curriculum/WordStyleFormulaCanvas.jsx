@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
+import { flushSync } from 'react-dom';
 import { 
   Calculator, 
   FlaskConical, 
@@ -620,80 +621,178 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
     const idx = docLines.findIndex(l => l.id === targetLineId);
     const newLId = `line-${Date.now()}`;
     const newTokId = `tok-${Date.now()}`;
+
+    let currLineTokens = null;
+    let nextLineTokens = [{ id: newTokId, isFormula: false, text: '' }];
+
+    if (idx !== -1 && activePositionRef.current?.lineId === targetLineId) {
+      const currLine = docLines[idx];
+      const targetTokenId = activePositionRef.current.tokenId;
+      const caretOffset = activePositionRef.current.offset ?? 0;
+      const tokIdx = currLine.tokens.findIndex(t => t.id === targetTokenId);
+
+      if (tokIdx !== -1) {
+        const currTok = currLine.tokens[tokIdx];
+        if (!currTok.isFormula) {
+          const fullText = currTok.text || '';
+          const before = fullText.slice(0, caretOffset);
+          const after = fullText.slice(caretOffset);
+
+          currLineTokens = [
+            ...currLine.tokens.slice(0, tokIdx),
+            { ...currTok, text: before }
+          ];
+
+          nextLineTokens = [
+            { id: newTokId, isFormula: false, text: after },
+            ...currLine.tokens.slice(tokIdx + 1)
+          ];
+        }
+      }
+    }
+
     const newLine = {
       id: newLId,
       lineIdx: idx + 1,
       raw: '',
       isHeading: false,
       isBullet: false,
-      tokens: [{ id: newTokId, isFormula: false, text: '' }]
+      tokens: nextLineTokens
     };
 
     let nextLines;
     if (idx === -1) {
       nextLines = [...docLines, newLine];
     } else {
+      const updatedCurr = currLineTokens ? { ...docLines[idx], tokens: currLineTokens } : docLines[idx];
       nextLines = [
-        ...docLines.slice(0, idx + 1),
+        ...docLines.slice(0, idx),
+        updatedCurr,
         newLine,
         ...docLines.slice(idx + 1)
       ];
     }
-    commitDocLines(nextLines);
 
-    // Auto-focus the newly created line
-    setTimeout(() => {
-      const lineEl = lineRefs.current[newLId];
-      if (lineEl) {
-        const span = lineEl.querySelector('[contenteditable="true"]');
-        if (span) {
-          span.focus();
-          activePositionRef.current = { lineId: newLId, tokenId: newTokId, offset: 0 };
+    flushSync(() => {
+      commitDocLines(nextLines);
+    });
+
+    // Auto-focus the newly created line immediately
+    const lineEl = lineRefs.current[newLId];
+    if (lineEl) {
+      const span = lineEl.querySelector('[contenteditable="true"]');
+      if (span) {
+        span.focus();
+        activePositionRef.current = { lineId: newLId, tokenId: newTokId, offset: 0 };
+        const sel = window.getSelection();
+        if (sel) {
+          const range = document.createRange();
+          range.selectNodeContents(span);
+          range.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(range);
         }
       }
-    }, 20);
+    }
   };
 
-  // Delete or merge line with previous line (triggered by Backspace on empty line or start of line)
-  const handleDeleteLine = (targetLineId) => {
+  // Delete empty line or merge line with previous line (triggered by Backspace)
+  const handleDeleteOrMergeLine = (targetLineId) => {
     if (docLines.length <= 1) return; // Keep at least 1 line
     const idx = docLines.findIndex(l => l.id === targetLineId);
-    if (idx <= 0) return; // If first line, cannot merge upward
+    if (idx <= 0) return; // Cannot delete/merge line 0 upward
 
     const prevLine = docLines[idx - 1];
     const currLine = docLines[idx];
 
-    // Merge current line tokens into previous line
-    const mergedTokens = [...prevLine.tokens, ...currLine.tokens];
-    const updatedPrevLine = {
-      ...prevLine,
-      tokens: mergedTokens
-    };
+    // Check if current line is completely empty in DOM and state
+    const currLineEl = lineRefs.current[targetLineId];
+    const hasFormulas = currLine.tokens.some(t => t.isFormula);
+    const domLineText = currLineEl ? (currLineEl.innerText || '').replace(/\r?\n/g, '').trim() : '';
+    const isLineEmpty = !hasFormulas && (domLineText === '' || currLine.tokens.every(t => !t.isFormula && (!t.text || t.text.trim() === '')));
 
-    const nextLines = [
-      ...docLines.slice(0, idx - 1),
-      updatedPrevLine,
-      ...docLines.slice(idx + 1)
-    ];
+    let nextLines;
+    let targetFocusTokenId = null;
+    let targetFocusOffset = null;
 
-    commitDocLines(nextLines);
+    if (isLineEmpty) {
+      // CASE 1: Line is completely empty -> DISCARD line completely without leaving any ghost tokens!
+      nextLines = docLines.filter(l => l.id !== targetLineId);
 
-    // Auto-focus previous line at the merge junction
-    setTimeout(() => {
-      const lineEl = lineRefs.current[prevLine.id];
-      if (lineEl) {
-        const spans = lineEl.querySelectorAll('[contenteditable="true"]');
-        const targetSpan = spans[spans.length - 1];
-        if (targetSpan) {
-          targetSpan.focus();
-          const sel = window.getSelection();
-          if (sel) {
-            sel.selectAllChildren(targetSpan);
-            sel.collapseToEnd();
-          }
+      const prevTextTokens = prevLine.tokens.filter(t => !t.isFormula);
+      const lastPrevTok = prevTextTokens[prevTextTokens.length - 1];
+      targetFocusTokenId = lastPrevTok?.id;
+      targetFocusOffset = (lastPrevTok?.text || '').length;
+    } else {
+      // CASE 2: Line has content and cursor is at start of line -> Merge with previous line
+      const updatedCurrTokens = currLine.tokens.map(t => {
+        if (!t.isFormula && currLineEl) {
+          const span = currLineEl.querySelector(`[data-token-id="${t.id}"]`);
+          if (span) return { ...t, text: span.textContent || '' };
         }
+        return t;
+      });
+
+      const prevTextTokens = prevLine.tokens.filter(t => !t.isFormula);
+      const lastPrevTok = prevTextTokens[prevTextTokens.length - 1];
+      targetFocusTokenId = lastPrevTok?.id;
+      targetFocusOffset = (lastPrevTok?.text || '').length;
+
+      const mergedTokens = [...prevLine.tokens, ...updatedCurrTokens];
+      const updatedPrevLine = {
+        ...prevLine,
+        tokens: mergedTokens
+      };
+
+      nextLines = [
+        ...docLines.slice(0, idx - 1),
+        updatedPrevLine,
+        ...docLines.slice(idx + 1)
+      ];
+    }
+
+    flushSync(() => {
+      commitDocLines(nextLines);
+    });
+
+    // Auto-focus previous line immediately so repeat Backspace deletes seamlessly
+    const prevLineEl = lineRefs.current[prevLine.id];
+    if (prevLineEl) {
+      const spans = prevLineEl.querySelectorAll('[contenteditable="true"]');
+      if (spans.length > 0) {
+        let targetSpan = targetFocusTokenId
+          ? prevLineEl.querySelector(`[data-token-id="${targetFocusTokenId}"]`)
+          : spans[spans.length - 1];
+        if (!targetSpan) targetSpan = spans[spans.length - 1];
+
+        targetSpan.focus();
+        const sel = window.getSelection();
+        if (sel) {
+          const range = document.createRange();
+          range.selectNodeContents(targetSpan);
+          if (targetFocusOffset !== null && targetSpan.firstChild) {
+            try {
+              const maxOff = targetSpan.firstChild.textContent?.length || 0;
+              const off = Math.min(targetFocusOffset, maxOff);
+              range.setStart(targetSpan.firstChild, off);
+              range.setEnd(targetSpan.firstChild, off);
+            } catch (err) {
+              range.collapse(false);
+            }
+          } else {
+            range.collapse(false);
+          }
+          sel.removeAllRanges();
+          sel.addRange(range);
+        }
+
+        activePositionRef.current = {
+          lineId: prevLine.id,
+          tokenId: targetFocusTokenId || prevLine.tokens[prevLine.tokens.length - 1]?.id,
+          offset: targetFocusOffset ?? 0
+        };
       }
-    }, 20);
+    }
   };
 
   // Modify formula slot value
@@ -979,6 +1078,7 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
                     return (
                       <span
                         key={token.id}
+                        data-token-id={token.id}
                         contentEditable
                         suppressContentEditableWarning
                         onBlur={(e) => handleTextChange(line.id, token.id, e.currentTarget.textContent || '')}
@@ -992,20 +1092,33 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
                             handleInsertNewLineAfter(line.id);
                           } else if (e.key === 'Backspace') {
                             const sel = window.getSelection();
+                            const spanText = e.currentTarget.textContent || '';
                             const isAtStart = sel && (sel.anchorOffset === 0 && sel.focusOffset === 0);
-                            const isLineEmpty = line.tokens.every(t => !t.isFormula && (!t.text || t.text.trim() === ''));
                             const isFirstToken = line.tokens[0]?.id === token.id;
 
-                            if ((isLineEmpty || (isAtStart && isFirstToken)) && docLines.length > 1) {
+                            const lineEl = lineRefs.current[line.id];
+                            const domLineText = lineEl ? (lineEl.innerText || '').replace(/\r?\n/g, '').trim() : '';
+                            const isLineEmpty = !line.tokens.some(t => t.isFormula) && (domLineText === '' || spanText === '');
+
+                            if (docLines.length > 1) {
                               const lineIdx = docLines.findIndex(l => l.id === line.id);
                               if (lineIdx > 0) {
-                                e.preventDefault();
-                                handleDeleteLine(line.id);
+                                if (isLineEmpty) {
+                                  e.preventDefault();
+                                  handleDeleteOrMergeLine(line.id);
+                                  return;
+                                }
+
+                                if (isAtStart && isFirstToken) {
+                                  e.preventDefault();
+                                  handleDeleteOrMergeLine(line.id);
+                                  return;
+                                }
                               }
                             }
                           }
                         }}
-                        className="outline-none focus:bg-cyan-50/50 rounded-xs transition-colors whitespace-pre-wrap font-sans align-baseline min-w-[6px] inline-block"
+                        className="outline-none focus:bg-cyan-50/50 rounded-xs transition-colors whitespace-pre-wrap font-sans align-baseline min-w-[8px] min-h-[1.25em] inline-block"
                       >
                         {displayText}
                       </span>

@@ -39,6 +39,7 @@ import {
 } from 'lucide-react';
 import MathText, { unescapeLiteralNewlines } from '../common/MathText';
 import InteractiveFormulaBuilderModal from './InteractiveFormulaBuilderModal';
+import InteractiveMathWorkbenchModal from './InteractiveMathWorkbenchModal';
 import WordStyleFormulaCanvas from './WordStyleFormulaCanvas';
 import HierarchicalMathPalette from './HierarchicalMathPalette';
 import contentService from '../../services/contentService';
@@ -662,6 +663,17 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
   const fileInputRef = useRef(null);
   const [uploadTargetField, setUploadTargetField] = useState('theoryRecap');
 
+  // Interactive MathLab & 3D Spatial Geometry Workbench Modal State (JSXGraph vs GeoGebra)
+  const [mathWorkbenchOpen, setMathWorkbenchOpen] = useState(false);
+  const [mathWorkbenchEngine, setMathWorkbenchEngine] = useState('jsxgraph');
+
+  // Open interactive math workbench modal
+  const handleOpenMathWorkbench = (engine = 'jsxgraph', targetField = null) => {
+    if (targetField) setActiveFormulaTarget(targetField);
+    setMathWorkbenchEngine(engine);
+    setMathWorkbenchOpen(true);
+  };
+
   // Status & saving
   const [saving, setSaving] = useState(false);
   const [saveSuccessMsg, setSaveSuccessMsg] = useState('');
@@ -1007,31 +1019,31 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
   };
 
   return (
-    <div className="w-full h-full flex flex-col bg-slate-950 text-slate-100 overflow-hidden">
+    <div className="w-full h-full flex flex-col bg-slate-100 text-slate-900 overflow-hidden">
       
       {/* 1. TOP STUDIO CONTROL BAR (Fixed Height Standalone Navbar) */}
-      <div className="h-14 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-4 sm:px-6 shrink-0 z-30 shadow-md">
+      <div className="h-14 bg-white border-b border-slate-200 flex items-center justify-between px-4 sm:px-6 shrink-0 z-30 shadow-xs">
         <div className="flex items-center gap-3 flex-1 min-w-0">
           <button
             onClick={onClose}
-            className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center gap-1.5 transition-colors border border-slate-700 shrink-0 text-xs font-bold cursor-pointer"
+            className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 flex items-center gap-1.5 transition-colors border border-slate-200 shrink-0 text-xs font-bold cursor-pointer"
             title="Trở về Lộ trình & Dàn kiến thức"
           >
-            <ArrowLeft className="w-4 h-4 text-cyan-400" />
+            <ArrowLeft className="w-4 h-4 text-cyan-600" />
             <span className="hidden sm:inline">Quay lại Lộ trình</span>
           </button>
           
           <div className="flex items-center gap-2 overflow-hidden">
-            <div className="flex items-center gap-1.5 text-[11px] text-cyan-400 font-mono font-bold truncate">
+            <div className="flex items-center gap-1.5 text-[11px] text-cyan-700 font-mono font-bold truncate">
               <span>{domain?.title || "Môn học"}</span>
-              <span className="text-slate-600">/</span>
-              <span className="text-slate-300 truncate max-w-[140px]">{lesson?.name || "Bài học"}</span>
-              <span className="px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 text-[10px]">
+              <span className="text-slate-400">/</span>
+              <span className="text-slate-600 truncate max-w-[140px]">{lesson?.name || "Bài học"}</span>
+              <span className="px-2 py-0.5 rounded-full bg-cyan-50 text-cyan-800 border border-cyan-200 text-[10px]">
                 {pattern?.code}
               </span>
             </div>
-            <span className="text-slate-600 hidden md:inline">•</span>
-            <span className="text-xs font-extrabold text-white truncate hidden md:inline">
+            <span className="text-slate-400 hidden md:inline">•</span>
+            <span className="text-xs font-extrabold text-slate-900 truncate hidden md:inline">
               {form.name}
             </span>
           </div>
@@ -1039,11 +1051,11 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
 
         {/* View mode switcher & Actions */}
         <div className="flex items-center gap-2.5 shrink-0">
-          <div className="p-1 rounded-xl bg-slate-800 border border-slate-700 flex items-center gap-1 text-xs font-bold text-slate-300">
+          <div className="p-1 rounded-xl bg-slate-100 border border-slate-200 flex items-center gap-1 text-xs font-bold text-slate-600">
             <button
               onClick={() => setViewMode('editor')}
               className={`px-2.5 py-1 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
-                viewMode === 'editor' ? 'bg-blue-600 text-white shadow-sm' : 'hover:text-white'
+                viewMode === 'editor' ? 'bg-cyan-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900 hover:bg-white'
               }`}
             >
               <Edit3 className="w-3.5 h-3.5" />
@@ -1052,7 +1064,7 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
             <button
               onClick={() => setViewMode('split')}
               className={`px-2.5 py-1 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
-                viewMode === 'split' ? 'bg-indigo-600 text-white shadow-sm' : 'hover:text-white'
+                viewMode === 'split' ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900 hover:bg-white'
               }`}
             >
               <Columns className="w-3.5 h-3.5" />
@@ -1061,7 +1073,7 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
             <button
               onClick={() => setViewMode('preview')}
               className={`px-2.5 py-1 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
-                viewMode === 'preview' ? 'bg-emerald-600 text-white shadow-sm' : 'hover:text-white'
+                viewMode === 'preview' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900 hover:bg-white'
               }`}
             >
               <Eye className="w-3.5 h-3.5" />
@@ -1072,21 +1084,32 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
           <button
             disabled={isAiAnalyzing}
             onClick={handleAIApplyStandardMethod}
-            className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-purple-600/30 to-indigo-600/30 hover:from-purple-600/50 hover:to-indigo-600/50 text-indigo-200 border border-purple-400/30 text-xs font-bold flex items-center gap-1.5 transition-colors disabled:opacity-50 cursor-pointer"
+            className="px-3 py-1.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 text-xs font-bold flex items-center gap-1.5 transition-colors disabled:opacity-50 cursor-pointer"
             title={`AI Tri Thức nhận diện bản chất dạng bài, nạp quy trình các bước`}
           >
             {isAiAnalyzing ? (
-              <RefreshCw className="w-3.5 h-3.5 animate-spin text-purple-300" />
+              <RefreshCw className="w-3.5 h-3.5 animate-spin text-purple-600" />
             ) : (
-              <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+              <Sparkles className="w-3.5 h-3.5 text-amber-500" />
             )}
             <span className="hidden md:inline">AI Nhận Diện</span>
           </button>
 
           <button
+            type="button"
+            onClick={() => handleOpenMathWorkbench('jsxgraph', 'sampleQuestion')}
+            className="px-3.5 py-1.5 rounded-xl bg-linear-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white text-xs font-black shadow-sm flex items-center gap-1.5 transition-all cursor-pointer"
+            title="Phòng thí nghiệm MathLab 2D & Hình học không gian 3D (JSXGraph Engine)"
+          >
+            <Compass className="w-4 h-4 text-amber-300" />
+            <span className="hidden lg:inline">⚡ MathLab 2D/3D (JSXGraph)</span>
+            <span className="lg:hidden">⚡ MathLab 3D</span>
+          </button>
+
+          <button
             disabled={saving}
             onClick={handleSaveAll}
-            className="px-4 py-1.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-black shadow-lg shadow-blue-500/25 flex items-center gap-1.5 transition-all disabled:opacity-50 cursor-pointer"
+            className="px-4 py-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white text-xs font-black shadow-sm flex items-center gap-1.5 transition-all disabled:opacity-50 cursor-pointer"
           >
             {saving ? (
               <RefreshCw className="w-3.5 h-3.5 animate-spin" />
@@ -1110,7 +1133,7 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
         />
 
         {/* RIGHT WORKSPACE: SCROLLABLE WITH MAXIMUM UNRESTRICTED WIDTH */}
-        <div className="flex-1 flex flex-col overflow-y-auto bg-slate-900/40 p-4 sm:p-6 space-y-4">
+        <div className="flex-1 flex flex-col overflow-y-auto bg-slate-100/70 p-4 sm:p-6 space-y-4">
           
           {/* AI Identification Result Banner */}
           {aiIdentificationResult && (
@@ -1312,6 +1335,14 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
                           title="Chèn đồ thị Oxy / Desmos Calculator"
                         >
                           <span>📈 Đồ Thị Hàm Số</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleOpenMathWorkbench('jsxgraph', 'theoryRecap')}
+                          className="px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[11px] font-bold border border-indigo-200 transition-colors flex items-center gap-1 cursor-pointer shadow-2xs"
+                          title="Dựng đồ thị hàm số hoặc hình học không gian 3D (JSXGraph Engine)"
+                        >
+                          <span>🧊 MathLab 3D/2D</span>
                         </button>
                         <button
                           type="button"
@@ -1547,6 +1578,14 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
                             title="Chèn đồ thị Oxy / Desmos Calculator"
                           >
                             <span>📈 Đồ Thị Hàm Số</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenMathWorkbench('jsxgraph', 'solutionMethod')}
+                            className="px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[11px] font-bold border border-indigo-200 transition-colors flex items-center gap-1 cursor-pointer shadow-2xs"
+                            title="Dựng đồ thị hàm số hoặc hình học không gian 3D (JSXGraph Engine)"
+                          >
+                            <span>🧊 MathLab 3D/2D</span>
                           </button>
                           <button
                             type="button"
@@ -2004,6 +2043,14 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
                         </button>
                         <button
                           type="button"
+                          onClick={() => handleOpenMathWorkbench('jsxgraph', 'sampleQuestion')}
+                          className="px-2 py-0.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[10px] font-bold border border-indigo-200 transition-colors flex items-center gap-1 cursor-pointer"
+                          title="Chèn đồ thị hoặc hình học không gian 3D vào đề bài"
+                        >
+                          <span>🧊 MathLab 3D/2D</span>
+                        </button>
+                        <button
+                          type="button"
                           onClick={() => handleTriggerUpload('sampleQuestion')}
                           className="px-2 py-0.5 rounded-lg bg-cyan-50 hover:bg-cyan-100 text-cyan-800 text-[10px] font-bold border border-cyan-200 transition-colors flex items-center gap-1 cursor-pointer"
                         >
@@ -2382,14 +2429,14 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
       {imageModalTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md animate-fade-in">
           <div className="relative w-full max-w-xl bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col my-auto max-h-[90vh]">
-            <div className="p-5 border-b border-slate-100 bg-slate-900 text-white flex items-center justify-between">
+            <div className="p-5 border-b border-slate-200 bg-white text-slate-900 flex items-center justify-between">
               <div className="flex items-center gap-2.5">
-                <ImageIcon className="w-5 h-5 text-cyan-400" />
-                <h3 className="text-base font-extrabold">Đính Kèm Hình Ảnh Minh Họa / Đồ Thị</h3>
+                <ImageIcon className="w-5 h-5 text-cyan-600" />
+                <h3 className="text-base font-extrabold text-slate-900">Đính Kèm Hình Ảnh Minh Họa / Đồ Thị</h3>
               </div>
               <button 
                 onClick={() => setImageModalTarget(null)}
-                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white"
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 hover:text-slate-800"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -2474,6 +2521,17 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
         />
       )}
 
+      {/* 5.5 INTERACTIVE MATHLAB & 3D SPATIAL GEOMETRY WORKBENCH MODAL */}
+      {mathWorkbenchOpen && (
+        <InteractiveMathWorkbenchModal
+          isOpen={mathWorkbenchOpen}
+          initialTab={mathWorkbenchEngine}
+          targetField={activeFormulaTarget}
+          onClose={() => setMathWorkbenchOpen(false)}
+          onInsert={(snippet, field) => handleInsertMath(field || activeFormulaTarget, snippet, true)}
+        />
+      )}
+
       {/* HIDDEN FILE INPUT FOR IMAGE UPLOAD & CLIPBOARD PASTING */}
       <input
         type="file"
@@ -2531,12 +2589,12 @@ function NewQuestionDialog({ skillId, onClose, onCreated }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md animate-fade-in">
       <div className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col my-auto max-h-[92vh]">
-        <div className="p-5 border-b border-slate-100 bg-slate-900 text-white flex items-center justify-between">
+        <div className="p-5 border-b border-slate-200 bg-white text-slate-900 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <FileText className="w-5 h-5 text-indigo-400" />
-            <h3 className="text-base font-extrabold">Thêm Câu Hỏi Mới Vào Ngân Hàng Đề (API 16)</h3>
+            <FileText className="w-5 h-5 text-indigo-600" />
+            <h3 className="text-base font-extrabold text-slate-900">Thêm Câu Hỏi Mới Vào Ngân Hàng Đề (API 16)</h3>
           </div>
-          <button onClick={onClose} className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white">
+          <button onClick={onClose} className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 hover:text-slate-800">
             <X className="w-4 h-4" />
           </button>
         </div>
