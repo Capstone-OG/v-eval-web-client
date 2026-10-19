@@ -988,9 +988,6 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
       
       {/* 1. HERO BANNER: LỘ TRÌNH PHỔ THÔNG PHÂN CẤP (CLEAN LIGHT THEME) */}
       <div className="relative overflow-hidden rounded-2xl bg-white border border-slate-200/80 shadow-xs p-5 lg:p-6 transition-all">
-        <div className="absolute top-0 right-0 -mr-16 -mt-16 w-72 h-72 rounded-full bg-indigo-50/70 blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-1/3 -mb-20 w-72 h-72 rounded-full bg-cyan-50/70 blur-3xl pointer-events-none" />
-        
         <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
           <div className="space-y-2 max-w-3xl">
             <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-indigo-50 border border-indigo-200/70 text-indigo-700 text-[11px] font-bold tracking-wide">
@@ -1030,7 +1027,7 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
         </div>
 
         {/* 4/5 Core Domains Tabs */}
-        <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2 pt-4 border-t border-slate-100">
+        <div className="relative z-10 mt-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5 pt-4 border-t border-slate-100">
           {domains.map((domain) => {
             const Icon = getDomainIcon(domain.icon);
             const isActive = domain.id === activeDomainId;
@@ -1040,22 +1037,22 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
                 onClick={() => setActiveDomainId(domain.id)}
                 className={`flex items-center gap-2.5 p-2.5 px-3 rounded-xl text-left transition-all group ${
                   isActive 
-                    ? 'bg-indigo-50/90 border-2 border-indigo-500 text-slate-900 shadow-xs font-bold ring-2 ring-indigo-500/10' 
-                    : 'bg-slate-50/70 hover:bg-white hover:border-slate-300 text-slate-700 border border-slate-200/70 hover:shadow-2xs'
+                    ? 'bg-indigo-50/90 border-2 border-indigo-600 text-slate-900 shadow-sm font-bold ring-2 ring-indigo-500/15' 
+                    : 'bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 hover:border-slate-300 shadow-2xs hover:shadow-xs'
                 }`}
               >
                 <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
                   isActive 
                     ? 'bg-gradient-to-tr ' + domain.gradient + ' text-white shadow-xs' 
-                    : 'bg-white border border-slate-200/90 text-slate-500 group-hover:text-indigo-600 shadow-2xs'
+                    : 'bg-slate-100/90 border border-slate-200/80 text-slate-600 group-hover:bg-indigo-50 group-hover:text-indigo-600 group-hover:border-indigo-200 shadow-2xs transition-colors'
                 }`}>
                   <Icon className="w-4 h-4" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className={`text-xs font-bold leading-tight truncate ${isActive ? 'text-indigo-950 font-black' : 'text-slate-800'}`}>
+                  <div className={`text-xs font-bold leading-tight truncate ${isActive ? 'text-indigo-950 font-black' : 'text-slate-800 group-hover:text-slate-900'}`}>
                     {domain.title}
                   </div>
-                  <div className="text-[10px] text-slate-500 font-medium truncate mt-0.5">
+                  <div className={`text-[10px] font-medium truncate mt-0.5 ${isActive ? 'text-indigo-700/80' : 'text-slate-500'}`}>
                     {domain.subtitle}
                   </div>
                 </div>
@@ -1394,8 +1391,9 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
             <div className="bg-white rounded-3xl border border-slate-200/90 shadow-md p-6 lg:p-8 space-y-6">
               
               {/* Header: Pattern Identity & Mastery Status */}
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-5 border-b border-slate-100">
-                <div className="space-y-1.5">
+              <div className="pb-5 border-b border-slate-100 space-y-3">
+                {/* Top Row: Meta Badges & Action Buttons */}
+                <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-700 text-[11px] font-black font-mono">
                       {selectedPattern.code}
@@ -1407,39 +1405,41 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
                       {selectedPattern.level || "Vận dụng"}
                     </span>
                   </div>
-                  <h2 className="text-lg lg:text-xl font-black text-slate-900 leading-tight">
-                    {selectedPattern.name}
-                  </h2>
+
+                  {/* Layer Actions: Edit & Adaptive Quiz Buttons */}
+                  <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
+                    <button
+                      onClick={() => handleOpenStudio(selectedPattern)}
+                      className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-black flex items-center gap-2 shadow-md shadow-blue-500/25 transition-all hover:scale-105 active:scale-95"
+                      title="Mở Studio sư phạm toàn diện: đồ thị minh họa, bẫy đề thi, Casio, video timestamps và review học sinh"
+                    >
+                      <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                      <span>Mở Studio Biên Soạn Sư Phạm</span>
+                    </button>
+
+                    <button
+                      onClick={() => handleOpenEditModal(selectedPattern)}
+                      className="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold flex items-center gap-1.5 transition-colors"
+                      title="Mở bảng hiệu đính nhanh nội dung dạng bài"
+                    >
+                      <Edit3 className="w-3.5 h-3.5 text-slate-500" />
+                      <span>Sửa nhanh</span>
+                    </button>
+
+                    <button
+                      onClick={() => handleLaunchAdaptiveQuiz(selectedPattern)}
+                      className="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-bold flex items-center gap-2 shadow-lg shadow-blue-500/25 hover:scale-105 active:scale-95 transition-all shrink-0"
+                    >
+                      <Zap className="w-4 h-4 text-amber-300 fill-amber-300" />
+                      <span>Luyện tập củng cố (5 câu)</span>
+                    </button>
+                  </div>
                 </div>
 
-                {/* Layer Actions: Edit & Adaptive Quiz Buttons */}
-                <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
-                  <button
-                    onClick={() => handleOpenStudio(selectedPattern)}
-                    className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-black flex items-center gap-2 shadow-md shadow-blue-500/25 transition-all hover:scale-105 active:scale-95"
-                    title="Mở Studio sư phạm toàn diện: đồ thị minh họa, bẫy đề thi, Casio, video timestamps và review học sinh"
-                  >
-                    <Sparkles className="w-4 h-4 text-amber-300" />
-                    <span>Mở Studio Biên Soạn Sư Phạm</span>
-                  </button>
-
-                  <button
-                    onClick={() => handleOpenEditModal(selectedPattern)}
-                    className="px-3.5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold flex items-center gap-1.5 transition-colors"
-                    title="Mở bảng hiệu đính nhanh nội dung dạng bài"
-                  >
-                    <Edit3 className="w-3.5 h-3.5 text-slate-500" />
-                    <span>Sửa nhanh</span>
-                  </button>
-
-                  <button
-                    onClick={() => handleLaunchAdaptiveQuiz(selectedPattern)}
-                    className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-bold flex items-center gap-2 shadow-lg shadow-blue-500/25 hover:scale-105 active:scale-95 transition-all shrink-0"
-                  >
-                    <Zap className="w-4 h-4 text-amber-300 fill-amber-300" />
-                    <span>Luyện tập củng cố (5 câu)</span>
-                  </button>
-                </div>
+                {/* Main Title - Spans full width without being squished */}
+                <h2 className="text-xl lg:text-2xl font-black text-slate-900 leading-tight">
+                  {selectedPattern.name}
+                </h2>
               </div>
 
               {/* Severe Weakness & Adjacent Remedial Notification */}

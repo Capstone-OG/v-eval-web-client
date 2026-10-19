@@ -1,22 +1,23 @@
 # NHẬT KÝ CẬP NHẬT (UPDATE LOG) - WEB CLIENT
 
-## [19/10/2026] - Redesign Toàn Diện Banner Lộ Trình Chuẩn Tone Trắng Sáng & Tinh Gọn: Đồng Bộ Thẩm Mỹ Nền Trắng, Căn Đều 5 Miền Năng Lực & Loại Bỏ Hoàn Toàn Khối Đen Lạc Tone
+## [19/10/2026] - Tái Cấu Trúc Header Chi Tiết Dạng Bài Tránh Chèn Ép Tiêu Đề, Khắc Phục Triệt Để Lỗi Mờ Tab 'Khoa Học Tự Nhiên' & Redesign Hero Banner Tone Trắng Sáng
+
+- **Tái Cấu Trúc Header Chi Tiết Dạng Bài (`CurriculumExplorerView.jsx`)**:
+  - *Khắc Phục Lỗi Tiêu Đề Bị Bóp Nghẹt, Bẻ Thành 3 Dòng*:
+    + Trước đây header chi tiết dạng bài đặt cụm meta badges và tiêu đề `h2` chung trong một cột flex bên trái, song song hàng ngang với 3 nút chức năng (`Mở Studio`, `Sửa nhanh`, `Luyện tập củng cố`). Do 3 nút chiếm tới gần 500px, tiêu đề dạng bài (như "Nhận biết sự kiện lịch sử") bị ép vào khoảng trống hẹp còn lại ~180px, dẫn đến vỡ dòng thành 3 đoạn chữ cụt lủn rất xấu xí.
+    + Tách cấu trúc header thành 2 hàng phân cấp rõ ràng:
+      * **Hàng 1 (Top Bar)**: Meta badges (`Mã Dạng`, `Trọng số`, `Mức độ Bloom`) bố trí gọn gàng bên trái; 3 nút hành động căn chỉnh bên phải.
+      * **Hàng 2 (Full-Width Title)**: Tiêu đề `h2` (`text-xl lg:text-2xl font-black text-slate-900`) độc chiếm 100% bề ngang khung nhìn, hiển thị liền mạch trên 1 dòng duy nhất, không bao giờ bị chèn ép hay vỡ chữ.
+
+- **Khắc Phục Triệt Để Lỗi Mờ/Mất Tương Phản Tab 'Khoa Học Tự Nhiên' (`CurriculumExplorerView.jsx`)**:
+  - *Gỡ Bỏ Khối Blur Nền Bị Nhuộm Màu*: Gỡ bỏ vệt trang trí `bg-cyan-50/70 blur-3xl` tại tọa độ `left-1/3 bottom-0` từng nằm trực tiếp bên dưới tab "Khoa học tự nhiên" khiến Chromium làm nhòe chữ và nhuộm mờ màu cyan.
+  - *Tạo Stacking Context Độc Lập*: Bổ sung `relative z-10` và chuẩn hóa 5 tab sang nền trắng thuần `bg-white hover:bg-slate-50`, viền `border-slate-200` và văn bản `text-slate-800 font-bold` sắc nét 100%.
 
 - **Redesign Toàn Diện Hero Banner & Thanh Chọn Miền Kiến Thức Chuẩn Tone Trắng Sáng (`CurriculumExplorerView.jsx`)**:
-  - *Khắc Phục Lệch Tone Màu "Trên Đen Dưới Trắng"*:
-    + Trước đây banner đầu trang sử dụng gradient nền tối (`bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900`) tương phản đột ngột và lệch tone hoàn toàn so với toàn bộ giao diện nền sáng của hệ thống.
-    + Chuyển đổi 100% sang **Tone Trắng Sáng Thanh Lịch**: `bg-white border border-slate-200/80 rounded-2xl shadow-xs`, điểm xuyết vệt sáng mờ tinh tế (`bg-indigo-50/70`, `bg-cyan-50/70 blur-3xl`).
-  - *Thiết Kế Tinh Gọn, Đơn Giản & Hiện Đại*:
-    + Giảm padding cồng kềnh từ `p-8` xuống `p-5 lg:p-6` giúp tiết kiệm chiều cao màn hình, thông thoáng và vừa vặn khung nhìn.
-    + Title `text-xl lg:text-2xl font-black text-slate-900`, badge `bg-indigo-50 text-indigo-700` nhỏ gọn, tinh tế.
-    + Chuyển 2 khối thống kê "Cấu trúc phân cấp" và "Trọng số chuẩn hóa 1.200 Điểm" từ dạng hộp to thành các chip ngang compact `px-3.5 py-2 rounded-xl bg-slate-50/90 border border-slate-200/80` căn thẳng hàng với tiêu đề.
-  - *Căn Đều 5 Miền Năng Lực Trên 1 Hàng Ngang Duy Nhất (`lg:grid-cols-5`)*:
-    + Thay thế lưới `grid-cols-4` (vốn làm miền thứ 5 "Sử dụng Ngôn ngữ" bị rớt xuống hàng 2 cô độc) bằng lưới 5 cột hoàn hảo `lg:grid-cols-5`.
-    + Tab kích hoạt (Active): Nền `bg-indigo-50/90 border-2 border-indigo-500 text-slate-900 shadow-xs ring-2 ring-indigo-500/10`, icon đổi sang gradient màu rực rỡ.
-    + Tab chưa kích hoạt: Nền `bg-slate-50/70 hover:bg-white hover:border-slate-300 text-slate-700`, chuyển động hover êm ái.
+  - Đồng bộ 100% sang tone trắng sáng thanh lịch `bg-white border border-slate-200/80 rounded-2xl shadow-xs`, xóa bỏ khối đen lạc tone; tinh gọn padding và căn đều 5 miền năng lực trên 1 hàng ngang duy nhất (`lg:grid-cols-5`).
 
 - **Loại Bỏ Hoàn Toàn Chữ 'text' Thừa Trước Công Thức Hóa Học & Ion (`MathText.jsx`)**:
-  - *Khắc Phục Lỗi Hiển Thị KaTeX Nghiêng*: Bổ sung bộ lọc trong hàm `normalizeMathString` tự động tách bỏ tiền tố `text` / `\text` khi đứng liền trước các ký hiệu hóa học viết hoa ($SO_4^{2-}$, $H_2O$, $Fe^{3+}$, $KMnO_4$).
+  - Tự động tách bỏ tiền tố `text` / `\text` khi đứng liền trước các ký hiệu hóa học viết hoa ($SO_4^{2-}$, $H_2O$, $Fe^{3+}$, $KMnO_4$).
 
 - **Chèn Công Thức Ngay Tại Vị Trí Con Trỏ (Active Caret Precision Insertion - `WordStyleFormulaCanvas.jsx` & `CurriculumStudioEditor.jsx`)**:
   - Bắt chính xác vị trí con trỏ văn bản (`activePositionRef`) chèn công thức ngay vị trí con trỏ thay vì nối xuống cuối bài.
@@ -28,4 +29,4 @@
   - Nhấp khoảng trống tự động focus về cuối chữ, phím Enter tách dòng tự nhiên, xóa ký tự `\` cuối câu, icon Lucide sắc nét.
 
 - **Kiểm Thử Vận Hành (Build Verification)**:
-  - `npm run build` hoàn thành 100% (**0 Error, 0 Warning**, hoàn tất trong 3.47s trên Vite 8 và React 19).
+  - `npm run build` hoàn thành 100% (**0 Error, 0 Warning**, hoàn tất trong 763ms trên Vite 8 và React 19).

@@ -2,20 +2,34 @@
 
 ---
 
-## [19/10/2026] - Redesign Toàn Diện Banner Lộ Trình Chuẩn Tone Trắng Sáng & Tinh Gọn: Đồng Bộ Thẩm Mỹ Nền Trắng, Căn Đều 5 Miền Năng Lực & Loại Bỏ Hoàn Toàn Khối Đen Lạc Tone
+## [19/10/2026] - Tái Cấu Trúc Header Chi Tiết Dạng Bài Tránh Chèn Ép Tiêu Đề, Khắc Phục Triệt Để Lỗi Mờ Tab 'Khoa Học Tự Nhiên' & Redesign Hero Banner Tone Trắng Sáng
+
+- **Tái Cấu Trúc Header Chi Tiết Dạng Bài Tránh Chèn Ép Tiêu Đề (`CurriculumExplorerView.jsx`)**:
+  - *Khắc Phục Lỗi Tiêu Đề Bị Bóp Nghẹt, Bẻ Thành 3 Dòng*:
+    + Trước đây header chi tiết dạng bài gom chung meta badges và tiêu đề `h2` trong cùng một khối flex bên trái, đặt ngang hàng với 3 nút chức năng bên phải (`Mở Studio`, `Sửa nhanh`, `Luyện tập củng cố`). Do 3 nút này chiếm tới ~500px, tiêu đề dạng bài (như "Nhận biết sự kiện lịch sử") bị ép vào phần không gian hẹp còn lại ~180px, dẫn đến vỡ dòng thành 3 đoạn chữ cụt lủn rất xấu xí.
+    + Tách cấu trúc header thành 2 hàng phân cấp rõ ràng:
+      * **Hàng 1 (Top Bar)**: Meta badges (`Mã Dạng`, `Trọng số`, `Mức độ Bloom`) bố trí gọn gàng bên trái; 3 nút hành động căn chỉnh bên phải.
+      * **Hàng 2 (Full-Width Title)**: Tiêu đề `h2` (`text-xl lg:text-2xl font-black text-slate-900`) độc chiếm 100% bề ngang khung nhìn, hiển thị liền mạch trên 1 dòng duy nhất, không bao giờ bị chèn ép hay vỡ chữ.
+
+- **Khắc Phục Triệt Để Lỗi Mờ/Mất Tương Phản Tab 'Khoa Học Tự Nhiên' (`CurriculumExplorerView.jsx`)**:
+  - *Nguyên Nhân Sự Cố*: Vệt trang trí nền `bg-cyan-50/70 blur-3xl` đặt tại vị trí `left-1/3 bottom-0` nằm trực tiếp bên dưới tab thứ 3 "Khoa học tự nhiên". Do tab dùng nền bán trong suốt `bg-slate-50/70`, bộ lọc Gaussian blur làm sai lệch cơ chế khử răng cưa subpixel font-smoothing của trình duyệt Blink/Chromium, đồng thời nhuộm mờ màu cyan lên viền, chữ và biểu tượng `Atom`, khiến tab thứ 3 trông nhợt nhạt và bị mờ hẳn so với 4 tab còn lại.
+  - *Giải Pháp Triệt Để*:
+    + Gỡ bỏ hoàn toàn 2 khối cầu blur trang trí nền (`bg-cyan-50/70 blur-3xl` và `bg-indigo-50/70 blur-3xl`), giữ nền thẻ `bg-white` phẳng, sạch và tinh khôi 100%.
+    + Bổ sung lớp ngữ cảnh xếp chồng độc lập `relative z-10` cho lưới chứa 5 tab miền năng lực (`lg:grid-cols-5`).
+    + Chuyển đổi các tab chưa kích hoạt sang nền trắng thuần `bg-white hover:bg-slate-50`, viền đặc sắc nét `border border-slate-200 hover:border-slate-300`, chữ `text-slate-800 font-bold group-hover:text-slate-900` và icon box `bg-slate-100/90 text-slate-600`, đảm bảo cả 5 miền năng lực đồng nhất, sắc nét, tương phản cao trên mọi màn hình.
 
 - **Redesign Toàn Diện Hero Banner & Thanh Chọn Miền Kiến Thức Chuẩn Tone Trắng Sáng (`CurriculumExplorerView.jsx`)**:
   - *Khắc Phục Lệch Tone Màu "Trên Đen Dưới Trắng"*:
     + Trước đây banner đầu trang sử dụng gradient nền tối (`bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900`) tương phản đột ngột và lệch tone hoàn toàn so với toàn bộ giao diện nền sáng của hệ thống.
-    + Chuyển đổi 100% sang **Tone Trắng Sáng Thanh Lịch**: `bg-white border border-slate-200/80 rounded-2xl shadow-xs`, điểm xuyết vệt sáng mờ tinh tế (`bg-indigo-50/70`, `bg-cyan-50/70 blur-3xl`).
+    + Chuyển đổi 100% sang **Tone Trắng Sáng Thanh Lịch**: `bg-white border border-slate-200/80 rounded-2xl shadow-xs`.
   - *Thiết Kế Tinh Gọn, Đơn Giản & Hiện Đại*:
     + Giảm padding cồng kềnh từ `p-8` xuống `p-5 lg:p-6` giúp tiết kiệm chiều cao màn hình, thông thoáng và vừa vặn khung nhìn.
     + Title `text-xl lg:text-2xl font-black text-slate-900`, badge `bg-indigo-50 text-indigo-700` nhỏ gọn, tinh tế.
     + Chuyển 2 khối thống kê "Cấu trúc phân cấp" và "Trọng số chuẩn hóa 1.200 Điểm" từ dạng hộp to thành các chip ngang compact `px-3.5 py-2 rounded-xl bg-slate-50/90 border border-slate-200/80` căn thẳng hàng với tiêu đề.
   - *Căn Đều 5 Miền Năng Lực Trên 1 Hàng Ngang Duy Nhất (`lg:grid-cols-5`)*:
     + Thay thế lưới `grid-cols-4` (vốn làm miền thứ 5 "Sử dụng Ngôn ngữ" bị rớt xuống hàng 2 cô độc) bằng lưới 5 cột hoàn hảo `lg:grid-cols-5`.
-    + Tab kích hoạt (Active): Nền `bg-indigo-50/90 border-2 border-indigo-500 text-slate-900 shadow-xs ring-2 ring-indigo-500/10`, icon đổi sang gradient màu rực rỡ.
-    + Tab chưa kích hoạt: Nền `bg-slate-50/70 hover:bg-white hover:border-slate-300 text-slate-700`, chuyển động hover êm ái.
+    + Tab kích hoạt (Active): Nền `bg-indigo-50/90 border-2 border-indigo-600 text-slate-900 shadow-sm ring-2 ring-indigo-500/15`, icon đổi sang gradient màu rực rỡ.
+    + Tab chưa kích hoạt: Nền `bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 hover:border-slate-300 shadow-2xs`, sắc nét và ổn định.
 
 - **Loại Bỏ Hoàn Toàn Chữ 'text' Thừa Trước Công Thức Hóa Học & Ion (`MathText.jsx`)**:
   - *Nguyên Nhân Sự Cố*: Trong đề bài hoặc đáp án chứa ion hóa học (ví dụ: `Số oxi hóa của sulfur (S) trong ion textSO_4^{2-} là:`), các lệnh LaTeX `\text` bị mất backslash hoặc không có ngoặc nhọn khiến chữ "text" bị KaTeX hiển thị nghiêng dạng biến số toán học ($textSO_4^{2-}$).

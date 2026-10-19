@@ -479,13 +479,30 @@ V-Eval-Web_Client/
   - Reduced vertical footprint (`p-5 lg:p-6`), simplified pedagogical description with crisp font weights, and flattened the two bulky stat boxes into compact, inline stat chips (`px-3.5 py-2 rounded-xl bg-slate-50/90`).
 - **Symmetric 5-Domain Horizontal Layout (`lg:grid-cols-5`)**:
   - Re-architected domain tab switcher from `grid-cols-4` to `lg:grid-cols-5`, placing all 5 standard competencies (General, Math/STEM, Natural Sciences, Social Sciences, Language Arts) onto a single, perfectly balanced horizontal row without orphaned wrap-around items.
-  - Active domain state utilizes a refined indigo tint (`bg-indigo-50/90 border-2 border-indigo-500 font-bold ring-2 ring-indigo-500/10`), while inactive domains maintain subtle light slate hover states (`bg-slate-50/70 hover:bg-white hover:border-slate-300`).
+  - Active domain state utilizes a refined indigo tint (`bg-indigo-50/90 border-2 border-indigo-600 font-bold ring-2 ring-indigo-500/15`), while inactive domains maintain subtle light slate hover states (`bg-white hover:bg-slate-50 border border-slate-200 hover:border-slate-300`).
+
+### 4.41. Elimination of Blur Artifacts & High-Contrast Domain Navigation Polish (`CurriculumExplorerView.jsx`)
+- **Root-Cause Analysis of Subpixel Blur Artifact**:
+  - A decorative background blur element (`bg-cyan-50/70 blur-3xl`) was statically anchored at `left-1/3 bottom-0 -mb-20 w-72 h-72`. Because the 3rd item in the 5-column grid ("Khoa học tự nhiên") occupies 40%-60% of the horizontal width, the 64px Gaussian blur filter sat directly behind this button.
+  - When combined with semi-transparent tab backgrounds (`bg-slate-50/70`), Blink/Chromium's hardware compositor disabled subpixel font antialiasing over the blurred layer, causing the text, icon, and borders of "Khoa học tự nhiên" to appear faded, hazy, and tinted cyan relative to its crisp siblings.
+- **Structural Layering & Contrast Rectification**:
+  - Completely purged the uncontained background blur spheres from the card canvas, enforcing pure flat `bg-white` surface neutrality.
+  - Wrapped the 5-domain grid in an explicit `relative z-10` stacking context to isolate tab interactions from any parent pseudo-elements.
+  - Hardened inactive tab styling to 100% opaque `bg-white`, crisp `border-slate-200`, and high-contrast typography (`text-slate-800 font-bold group-hover:text-slate-900`) alongside neutral `bg-slate-100/90 text-slate-600` icon containers, guaranteeing 100% visual uniformity and legibility across all 5 domains.
+
+### 4.42. Pattern Detail Header Decoupling & Full-Width Typography Architecture (`CurriculumExplorerView.jsx`)
+- **De-coupling of Title & Multi-Button Action Row**:
+  - Previously, the pattern detail view colocated identity badges, the `<h2>` pattern title, and three primary action buttons (`Mở Studio`, `Sửa nhanh`, `Luyện tập củng cố`) within a shared single-row flex container (`flex flex-col sm:flex-row items-center justify-between`).
+  - Because the action buttons consume ~500px of horizontal width, the title element was compressed into an unsustainable ~180px column, forcing 4-word titles ("Nhận biết sự kiện lịch sử") to fragment into three cramped lines.
+- **Hierarchical Two-Tier Header Layout**:
+  - *Tier 1 (Metadata & Controls)*: Renders pattern classification badges (`selectedPattern.code`, `weight`, `level`) on the left, counterbalanced by the three action buttons on the right.
+  - *Tier 2 (Full-Width Title Banner)*: Dedicates 100% of the pane width to `h2.text-xl lg:text-2xl font-black text-slate-900`, ensuring clean single-line typographical flow across all desktop and tablet viewports.
 
 ---
 
 ## 5. Verification & Acceptance Criteria
 
-1. **Clean Production Build**: Executed `npm run build` with 0 syntax or bundle errors; production artifacts outputted to `dist/` within 3.47s on Vite 8 and React 19.
+1. **Clean Production Build**: Executed `npm run build` with 0 syntax or bundle errors; production artifacts outputted to `dist/` within 763ms on Vite 8 and React 19.
 2. **Linter & Code Health**: `npm run lint` passes with 0 syntax errors across all components and services.
 3. **Docker Multi-Stage Validation**: `docker compose config` passes with 0 syntax errors across the entire 6-service microservices constellation.
 4. **Repository Sync Automation**: Standalone `Scripts/push.bat` and root `Scripts/` correctly recognize `V-Eval-Web_Client` as a first-class project service.
