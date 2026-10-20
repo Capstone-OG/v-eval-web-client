@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Zap, CheckCircle2, XCircle, ArrowRight, X, Sparkles, AlertCircle, RefreshCw } from 'lucide-react';
+import MathText from '../common/MathText';
 
 export default function AdaptiveQuizModal({ isOpen, onClose }) {
   const [bktMastery, setBktMastery] = useState(0.72);
@@ -137,9 +138,9 @@ export default function AdaptiveQuizModal({ isOpen, onClose }) {
                     P(Correct) dự đoán = {currentItem.predictedProb}
                   </span>
                 </div>
-                <h3 className="text-sm font-extrabold text-slate-900 leading-snug">
-                  {currentItem.question}
-                </h3>
+                <div className="text-sm font-extrabold text-slate-900 leading-snug">
+                  <MathText text={currentItem.question} />
+                </div>
               </div>
 
               {/* Options */}
@@ -157,7 +158,7 @@ export default function AdaptiveQuizModal({ isOpen, onClose }) {
                         : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50'
                     }`}
                   >
-                    <span>{opt}</span>
+                    <span className="flex-1"><MathText text={opt} /></span>
                   </button>
                 ))}
               </div>

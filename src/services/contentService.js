@@ -72,7 +72,11 @@ export const contentService = {
    * @param {Object} payload 
    */
   async createQuestion(payload) {
-    return (await apiClient.post('/api/content/questions', payload)).data;
+    const cleanPayload = { ...payload };
+    if (cleanPayload.correctOption !== undefined) {
+      cleanPayload.correctOption = normalizeCorrectOption(cleanPayload.correctOption);
+    }
+    return (await apiClient.post('/api/content/questions', cleanPayload)).data;
   },
 
   /**
@@ -81,7 +85,11 @@ export const contentService = {
    * @param {Object} payload 
    */
   async updateQuestion(questionId, payload) {
-    return (await apiClient.put(`/api/content/questions/${encodeURIComponent(questionId)}`, payload)).data;
+    const cleanPayload = { ...payload };
+    if (cleanPayload.correctOption !== undefined) {
+      cleanPayload.correctOption = normalizeCorrectOption(cleanPayload.correctOption);
+    }
+    return (await apiClient.put(`/api/content/questions/${encodeURIComponent(questionId)}`, cleanPayload)).data;
   },
 
   /**
@@ -101,10 +109,12 @@ export const contentService = {
 
   /**
    * Nạp cây tri thức phân cấp từ Giảng viên / AI Engine (Dynamic Ingestion)
+   * Tự động chuẩn hóa toàn bộ các trường, chuyển đổi đáp án đúng về 'A'|'B'|'C'|'D'
    * @param {Object} payload 
    */
   async importCurriculum(payload) {
-    return (await apiClient.post('/api/content/curriculum/import', payload)).data;
+    const cleanPayload = sanitizeCurriculumPayload(payload);
+    return (await apiClient.post('/api/content/curriculum/import', cleanPayload)).data;
   },
 
   /**
@@ -141,5 +151,90 @@ export const contentService = {
     return (await apiClient.delete(`/api/content/curriculum/nodes/${encodeURIComponent(nodeId)}`)).data;
   }
 };
+
+/**
+ * Chuẩn hóa đáp án đúng về duy nhất 1 ký tự 'A', 'B', 'C', 'D'
+ * Xử lý an toàn mọi định dạng từ OCR / AI: "A.", "Phương án B", "0", 0, null...
+ */
+export function normalizeCorrectOption(raw) {
+  if (raw === null || raw === undefined) return 'A';
+  
+  if (typeof raw === 'number') {
+    if (raw >= 0 && raw <= 3) return String.fromCharCode(65 + raw); // 0->A, 1->B, 2->C, 3->D
+    if (raw >= 1 && raw <= 4) return String.fromCharCode(64 + raw); // 1->A, 2->B, 3->C, 4->D
+    if (raw >= 65 && raw <= 68) return String.fromCharCode(raw);
+    return 'A';
+  }
+
+  const str = String(raw).trim();
+  if (!str) return 'A';
+
+  // 1. Nếu là 1 ký tự sau khi bỏ dấu câu như "A.", "(B)", "[C]", "D:"
+  const stripped = str.replace(/^[ \t\r\n.:();,\[\]'"\-_]+|[ \t\r\n.:();,\[\]'"\-_]+$/g, '');
+  if (stripped.length === 1) {
+    const upper = stripped.toUpperCase();
+    if (upper >= 'A' && upper <= 'D') return upper;
+    if (upper >= '0' && upper <= '3') return String.fromCharCode(65 + Number(upper));
+    if (upper >= '1' && upper <= '4') return String.fromCharCode(64 + Number(upper));
+  }
+
+  // 2. Tìm theo từ khóa (đáp án A, phương án B, option C, answer D...)
+  const match = str.match(/(?:đáp\s*án|phương\s*án|chọn|câu|answer|choice|option)\s*[:\-\.]?\s*([A-D])\b/i);
+  if (match && match[1]) {
+    return match[1].toUpperCase();
+  }
+
+  // 3. Quét ký tự A, B, C, D đầu tiên
+  for (const ch of str) {
+    const upper = ch.toUpperCase();
+    if (upper >= 'A' && upper <= 'D') return upper;
+  }
+
+  // 4. Quét số 0..3 trong chuỗi
+  for (const ch of str) {
+    if (ch >= '0' && ch <= '3') return String.fromCharCode(65 + Number(ch));
+    if (ch >= '1' && ch <= '4') return String.fromCharCode(64 + Number(ch));
+  }
+
+  return 'A';
+}
+
+/**
+ * Đảm bảo toàn bộ payload nạp tri thức tuân thủ 100% schema backend
+ */
+export function sanitizeCurriculumPayload(payload) {
+  if (!payload || typeof payload !== 'object') return payload;
+
+  const sanitized = JSON.parse(JSON.stringify(payload));
+
+  if (Array.isArray(sanitized.chapters)) {
+    sanitized.chapters.forEach(ch => {
+      if (Array.isArray(ch.lessons)) {
+        ch.lessons.forEach(les => {
+          if (Array.isArray(les.patterns)) {
+            les.patterns.forEach(pat => {
+              if (Array.isArray(pat.questions)) {
+                pat.questions.forEach(q => {
+                  q.correctOption = normalizeCorrectOption(q.correctOption);
+                  if (typeof q.difficultyLevel !== 'number') {
+                    q.difficultyLevel = Number(q.difficultyLevel) || 2;
+                  }
+                  q.contentLatex = q.contentLatex || '';
+                  q.optionA = q.optionA || '';
+                  q.optionB = q.optionB || '';
+                  q.optionC = q.optionC || '';
+                  q.optionD = q.optionD || '';
+                  q.explanation = q.explanation || '';
+                });
+              }
+            });
+          }
+        });
+      }
+    });
+  }
+
+  return sanitized;
+}
 
 export default contentService;

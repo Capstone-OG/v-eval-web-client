@@ -581,6 +581,7 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
     level: pattern?.level || pattern?.classification || 'Vận dụng',
     theoryRecap: unescapeLiteralNewlines(pattern?.theoryRecap || ''),
     solutionMethod: unescapeLiteralNewlines(parsedInitial.method),
+    sampleProblem: unescapeLiteralNewlines(parsedInitial.sampleProblem || ''),
     examTraps: unescapeLiteralNewlines(pattern?.examTraps || parsedInitial.traps || ''),
     casioTricks: unescapeLiteralNewlines(pattern?.casioTricks || parsedInitial.casio || ''),
     videoUrl: pattern?.videoLesson?.videoUrl || '',
@@ -666,11 +667,26 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
   // Interactive MathLab & 3D Spatial Geometry Workbench Modal State (JSXGraph vs GeoGebra)
   const [mathWorkbenchOpen, setMathWorkbenchOpen] = useState(false);
   const [mathWorkbenchEngine, setMathWorkbenchEngine] = useState('jsxgraph');
+  const [mathWorkbenchInitialTag, setMathWorkbenchInitialTag] = useState('');
+  const [customWorkbenchCallback, setCustomWorkbenchCallback] = useState(null);
 
   // Open interactive math workbench modal
-  const handleOpenMathWorkbench = (engine = 'jsxgraph', targetField = null) => {
-    if (targetField) setActiveFormulaTarget(targetField);
+  const handleOpenMathWorkbench = (engine = 'jsxgraph', targetField = null, initialTag = '') => {
+    const field = targetField || activeFormulaTarget || 'sampleQuestion';
+    setActiveFormulaTarget(field);
     setMathWorkbenchEngine(engine);
+
+    let tagToUse = initialTag;
+    if (!tagToUse) {
+      let currentVal = '';
+      if (field === 'sampleQuestion') currentVal = form.sampleQuestion?.contentLatex || '';
+      else if (field === 'sampleExplanation') currentVal = form.sampleQuestion?.explanation || '';
+      else currentVal = form[field] || '';
+
+      const match = currentVal.match(/(\[MATH_GRAPH_3D\][\s\S]*?\[\/MATH_GRAPH_3D\]|\[MATH_GRAPH\][\s\S]*?\[\/MATH_GRAPH\])/i);
+      if (match) tagToUse = match[0];
+    }
+    setMathWorkbenchInitialTag(tagToUse || '');
     setMathWorkbenchOpen(true);
   };
 
@@ -804,12 +820,22 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
       return;
     }
 
+    // Helper to replace or append graph tag cleanly
+    const updateTextWithGraph = (oldText) => {
+      const graphRegex = /(\[MATH_GRAPH_3D\][\s\S]*?\[\/MATH_GRAPH_3D\]|\[MATH_GRAPH\][\s\S]*?\[\/MATH_GRAPH\])/i;
+      const isNewGraph = /(\[MATH_GRAPH_3D\]|\[MATH_GRAPH\])/i.test(insertText);
+      if (isNewGraph && graphRegex.test(oldText || '')) {
+        return (oldText || '').replace(graphRegex, insertText.trim());
+      }
+      return oldText ? `${oldText} ${insertText}` : insertText;
+    };
+
     if (field === 'sampleQuestion') {
       setForm(prev => ({
         ...prev,
         sampleQuestion: {
           ...prev.sampleQuestion,
-          contentLatex: prev.sampleQuestion.contentLatex ? `${prev.sampleQuestion.contentLatex} ${insertText}` : insertText
+          contentLatex: updateTextWithGraph(prev.sampleQuestion?.contentLatex)
         }
       }));
     } else if (field === 'sampleExplanation') {
@@ -817,7 +843,7 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
         ...prev,
         sampleQuestion: {
           ...prev.sampleQuestion,
-          explanation: prev.sampleQuestion.explanation ? `${prev.sampleQuestion.explanation} ${insertText}` : insertText
+          explanation: updateTextWithGraph(prev.sampleQuestion?.explanation)
         }
       }));
     } else {
@@ -825,7 +851,7 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
         const current = prev[field] || '';
         return {
           ...prev,
-          [field]: current ? `${current} ${insertText}` : insertText
+          [field]: updateTextWithGraph(current)
         };
       });
     }
@@ -873,6 +899,7 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
           ...prev,
           theoryRecap: prev.theoryRecap?.trim() ? prev.theoryRecap : unescapeLiteralNewlines(result.theory_recap),
           solutionMethod: unescapeLiteralNewlines(parsedMethod.method || result.solution_method),
+          sampleProblem: unescapeLiteralNewlines(parsedMethod.sampleProblem || prev.sampleProblem || ''),
           examTraps: unescapeLiteralNewlines(result.exam_traps || parsedMethod.traps || prev.examTraps),
           casioTricks: unescapeLiteralNewlines(result.casio_tricks || parsedMethod.casio || prev.casioTricks),
           sampleQuestion: result.sample_question ? {
@@ -953,8 +980,14 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
       const rawWeight = parseFloat(form.weight);
       const weightVal = !isNaN(rawWeight) ? (rawWeight > 1 ? rawWeight / 100 : rawWeight) : 0.05;
 
-      // Combine step-by-step method with traps & tricks
+      // Combine step-by-step method with sample problem, traps & tricks
       let fullSolutionMethod = form.solutionMethod || '';
+      if (form.sampleProblem?.trim()) {
+        const sampleHeading = isStem ? '### 📄 Bài toán mẫu áp dụng phương pháp:' : '### 📄 Bài mẫu áp dụng phương pháp:';
+        if (!fullSolutionMethod.includes('Bài toán mẫu') && !fullSolutionMethod.includes('Bài mẫu')) {
+          fullSolutionMethod += `\n\n${sampleHeading}\n${form.sampleProblem.trim()}`;
+        }
+      }
       if (form.examTraps?.trim()) {
         fullSolutionMethod += `\n\n### ⚠️ Các bẫy đề thi ĐGNL thường gặp:\n${form.examTraps.trim()}`;
       }
@@ -2388,7 +2421,10 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
                 {form.sampleQuestion?.contentLatex ? (
                   <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-3">
                     <div className="font-bold text-slate-900">
-                      <MathText text={form.sampleQuestion.contentLatex} />
+                      <MathText 
+                        text={form.sampleQuestion.contentLatex} 
+                        onEditMathGraph={(tag) => handleOpenMathWorkbench('jsxgraph', 'sampleQuestion', tag)}
+                      />
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {['A', 'B', 'C', 'D'].map((opt) => (
@@ -2406,7 +2442,10 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
                     </div>
                     <div className="p-2.5 rounded-xl bg-white border border-slate-200 text-slate-700">
                       <strong>Lời giải: </strong>
-                      <MathText text={form.sampleQuestion.explanation} />
+                      <MathText 
+                        text={form.sampleQuestion.explanation} 
+                        onEditMathGraph={(tag) => handleOpenMathWorkbench('jsxgraph', 'sampleExplanation', tag)}
+                      />
                     </div>
                   </div>
                 ) : (
@@ -2507,6 +2546,16 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
             setQuestionsList(prev => [newQ, ...prev]);
             setNewQuestionModalOpen(false);
           }}
+          onOpenWorkbench={(cb, existingText) => {
+            let initialTag = '';
+            if (existingText) {
+              const match = existingText.match(/(\[MATH_GRAPH_3D\][\s\S]*?\[\/MATH_GRAPH_3D\]|\[MATH_GRAPH\][\s\S]*?\[\/MATH_GRAPH\])/i);
+              if (match) initialTag = match[0];
+            }
+            setWorkbenchInitialTag(initialTag);
+            setCustomWorkbenchCallback(() => cb);
+            setMathWorkbenchOpen(true);
+          }}
         />
       )}
 
@@ -2527,8 +2576,20 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
           isOpen={mathWorkbenchOpen}
           initialTab={mathWorkbenchEngine}
           targetField={activeFormulaTarget}
-          onClose={() => setMathWorkbenchOpen(false)}
-          onInsert={(snippet, field) => handleInsertMath(field || activeFormulaTarget, snippet, true)}
+          initialTag={mathWorkbenchInitialTag}
+          onClose={() => {
+            setMathWorkbenchOpen(false);
+            setCustomWorkbenchCallback(null);
+            setWorkbenchInitialTag('');
+          }}
+          onInsert={(snippet, field) => {
+            if (customWorkbenchCallback) {
+              customWorkbenchCallback(snippet);
+              setCustomWorkbenchCallback(null);
+            } else {
+              handleInsertMath(field || activeFormulaTarget, snippet, true);
+            }
+          }}
         />
       )}
 
@@ -2546,7 +2607,7 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
 }
 
 // Subcomponent: New Question Modal
-function NewQuestionDialog({ skillId, onClose, onCreated }) {
+function NewQuestionDialog({ skillId, onClose, onCreated, onOpenWorkbench }) {
   const [contentLatex, setContentLatex] = useState('');
   const [optionA, setOptionA] = useState('');
   const [optionB, setOptionB] = useState('');
@@ -2601,14 +2662,53 @@ function NewQuestionDialog({ skillId, onClose, onCreated }) {
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto">
           <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-700">Đề bài (KaTeX / Markdown):</label>
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-slate-700">Đề bài (KaTeX / Markdown):</label>
+              {onOpenWorkbench && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onOpenWorkbench((snippet) => {
+                      setContentLatex(prev => {
+                        const graphRegex = /(\[MATH_GRAPH_3D\][\s\S]*?\[\/MATH_GRAPH_3D\]|\[MATH_GRAPH\][\s\S]*?\[\/MATH_GRAPH\])/i;
+                        if (graphRegex.test(prev)) return prev.replace(graphRegex, snippet.trim());
+                        return prev ? `${prev} ${snippet}` : snippet;
+                      });
+                    }, contentLatex);
+                  }}
+                  className="px-2 py-0.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[10px] font-bold border border-indigo-200 flex items-center gap-1 transition-all"
+                >
+                  <Sparkles className="w-3 h-3 text-indigo-600" />
+                  <span>📐 Chèn/Sửa MathLab 2D/3D</span>
+                </button>
+              )}
+            </div>
             <textarea
               rows={3}
               value={contentLatex}
               onChange={(e) => setContentLatex(e.target.value)}
-              placeholder="Cho hàm số y = f(x)..."
+              placeholder="Cho hình chóp S.ABCD hoặc hàm số y = f(x)..."
               className="w-full p-3 rounded-xl border border-slate-300 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50 text-slate-900 placeholder:text-slate-400"
             />
+            {contentLatex.trim() && (
+              <div className="p-3 bg-white border border-slate-200 rounded-xl space-y-1">
+                <div className="text-[10px] font-bold text-slate-400">Xem trước trực tiếp (Live Preview):</div>
+                <MathText 
+                  text={contentLatex}
+                  onEditMathGraph={(tag) => {
+                    if (onOpenWorkbench) {
+                      onOpenWorkbench((snippet) => {
+                        setContentLatex(prev => {
+                          const graphRegex = /(\[MATH_GRAPH_3D\][\s\S]*?\[\/MATH_GRAPH_3D\]|\[MATH_GRAPH\][\s\S]*?\[\/MATH_GRAPH\])/i;
+                          if (graphRegex.test(prev)) return prev.replace(graphRegex, snippet.trim());
+                          return prev ? `${prev} ${snippet}` : snippet;
+                        });
+                      }, tag);
+                    }
+                  }}
+                />
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-3">

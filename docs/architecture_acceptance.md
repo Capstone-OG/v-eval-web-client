@@ -539,6 +539,64 @@ V-Eval-Web_Client/
     5. Definite integral area bounded by 2 curves with numerical integration.
     6. Triple curve identification `f(x)`, `f'(x)`, `F(x)` with interactive student quiz toggle.
 
+### 4.45. Standalone Live Math Renderer Component (`InteractiveMathRenderer.jsx`), Canonical Tag Serialization, and Educator-Student Visual Parity
+- **Elimination of Static Screenshots & Pure Client Vector Rendering**:
+  - Replaced the brittle approach of storing static PNG/JPG screenshots in question banks with a live vector rendering architecture.
+  - Implemented `InteractiveMathRenderer.jsx` powered by JSXGraph v1.14.0, executing directly on client SVG/Canvas at 60 FPS.
+  - Preserves full 3D interactive capabilities: students can freely rotate 3D geometries 360° via trackball mouse dragging, zoom in/out with the mouse wheel, inspect coordinates, reset viewpoints, and expand to fullscreen modals.
+- **Canonical Metadata Tag Architecture (`mathGraphUtils.js`)**:
+  - Devised human-readable, lossless, text-based tags:
+    - `[MATH_GRAPH]...[/MATH_GRAPH]`: Serializes 2D function calculus types, parameters ($a, b, c, d, e$), custom expressions, auxiliary curves, parametric lines $y=mx+m$, and integration boundaries.
+    - `[MATH_GRAPH_3D]...[/MATH_GRAPH_3D]`: Serializes 3D spatial models, dimensions, customized vertex labels & coordinates `(X, Y, Z)`, extra points with division ratios, and auxiliary lines with dashed/solid styles and palette colors.
+  - Fully compatible with PostgreSQL database column types (`ContentLatex` and `Explanation` stored as unbounded `text`), requiring zero database schema changes or migrations.
+  - AI Engine (Gemini) friendly: AI easily outputs structured tags in question JSON payloads during document parsing or exemplar question generation without escaping hazards.
+- **Global `MathText.jsx` Integration & Deep System Reach**:
+  - Expanded `MathText.jsx` block tokenizers to recognize `[MATH_GRAPH]`, `[MATH_GRAPH_3D]`, and `[MATH_GEOMETRY_2D]`.
+  - Automatically activates live interactive rendering across all system views: Student Diagnostic Assessment (`DiagnosticAssessmentPage.jsx`), Diagnostic Modal (`DiagnosticTestModal.jsx`), Adaptive Practice Quiz (`AdaptiveQuizModal.jsx`), Studio Editor question bank & preview drawer (`CurriculumStudioEditor.jsx`), and Knowledge Explorer (`CurriculumExplorerView.jsx`).
+- **Guaranteed Educator-Student Data & Visual Parity**:
+  - Identical rendering algorithms ensure that what the educator constructs and fine-tunes in the authoring studio renders with 100% fidelity on the student's quiz screen.
+
+### 4.46. Elimination of 3D Bounding-Box Wall Artifacts, Oxyz Coordinate Axis Toggle, and KaTeX Sample Problem Callout Parsing Architecture
+- **Root Cause & Elimination of 3D Half-White Screen Artifact (`InteractiveMathRenderer.jsx` & `InteractiveMathWorkbenchModal.jsx`)**:
+  - *Defect Diagnosis*: In JSXGraph's native 3D module, `board.create('view3d', ...)` instantiates default rear bounding box walls (`xPlaneRear`, `yPlaneRear`, `zPlaneRear`) with visible gray tiled grid meshes. Because the 3D bounding box coordinates range over $[-6, 6]$, these backplanes only encompass the rear quadrants. The front and right quadrant lacks walls, yielding an abrupt vertical dividing line where the left half displayed grids while the right half displayed plain white canvas—creating the visual illusion of a white block occluding the 3D figure.
+  - *Architectural Resolution*: Explicitly disabled bounding box walls across both the view renderer and workbench modal (`xPlaneRear: { visible: false }, yPlaneRear: { visible: false }, zPlaneRear: { visible: false }, xPlaneFront: { visible: false }, yPlaneFront: { visible: false }, zPlaneFront: { visible: false }`). This provides a 100% uniform, clean, pure white background across the entire canvas viewport with zero vertical cutoff lines.
+  - *Pedagogical Oxyz Axis Toggle (`Compass` Button)*: In standard Vietnamese GDPT 2018 geometry textbooks, synthetic spatial figures (tetrahedrons, pyramids, prisms) are presented without analytical coordinate axes. Added a dedicated `Trục Oxyz` toggle on the 3D renderer card toolbar. Coordinate axes default to hidden for authentic textbook aesthetics, while allowing educators and students to seamlessly inspect spatial coordinates with a single click.
+
+- **Sample Problem Callout Parser Hardening & KaTeX Restitution (`MathText.jsx`)**:
+  - *Defect Diagnosis*: The structured text parser in `MathText.jsx` matched pedagogical callouts via overly permissive substring matching `line.includes('Bài toán mẫu')`. Consequently, legitimate problem body lines (e.g. `**Bài toán mẫu:** Cho tứ diện $ABCD$...`) were hijacked into the callout heading handler. The heading cleaner then stripped the opening double asterisk via `^[^\p{L}\p{N}\s]+`, leaving an orphaned closing `**` (`Bài toán mẫu:**`) and injecting the entire problem text into a plain `<span>` element without passing through KaTeX tokenization.
+  - *Architectural Resolution*:
+    - Constrained `isSampleHeadingCallout` regex strictly to bona fide markdown headings (prefixed with `###` or standalone header emoji `[📝📄✍️]`).
+    - Routed sample problem content directly to inline token stream, fully bolding `**Bài toán mẫu:**` and compiling all mathematical variables (`$ABCD$`, `$M, N$`, `$AB$`, `$AC$`, `$(DMN)$`, `$(BCD)$`) into native KaTeX mathematical serif typography.
+    - Wrapped callout heading text in `renderInlineContent(cleanHeading, lineKey)` to ensure that even section headers containing math notation render flawlessly.
+    - Augmented `normalizeMathString` with lookbehind regex repairs for orphaned bold markers (`(?<!\*)\b(Bài toán mẫu|...):\*\*` -> `**$1:**`).
+
+---
+
+### 4.47. Dynamic Mathematical Function Graph & Rational Variation Table Rendering Architecture (Zero-Hardcode)
+- **Vector Variation Table Engine with Vertical Asymptotes (`VariationTable.jsx`)**:
+  - *Rational Function Asymptote Rendering*: Extended the 3-row vector layout to represent rational functions with vertical asymptotes (`x = -d/c` for 1/1 and `x = -e/d` for 2/1). Supported standard Vietnamese textbook double vertical bar notation `||` in both the derivative row (`y'`) and the function variation row (`y`).
+  - *Dynamic Direction Inference*: When LLMs omit the `dir` property, the component automatically infers arrow transitions directly from the signs of `y'` (`+` -> ascending arrow, `-` -> descending arrow, `||` -> split discontinuity), guaranteeing resilient rendering without visual clipping.
+  - *Sanitized Delimiter Parsing*: Parser gracefully handles both pipe (`|`) and comma (`,`) delimiters while stripping extraneous LaTeX formatting artifacts.
+- **2D Calculus Graph & Asymptote Rendering Engine (`InteractiveMathRenderer.jsx`)**:
+  - *Automated Asymptote & Center of Symmetry Construction*:
+    - For linear rational functions (`y = (ax+b)/(cx+d)`): Automatically calculates and renders the vertical asymptote `x = -d/c` (dashed line), the horizontal asymptote `y = a/c` (dashed line), and the intersection point representing the center of symmetry `I(-d/c, a/c)`.
+    - For quadratic-over-linear rational functions (`y = (ax^2+bx+c)/(dx+e)`): Automatically calculates and renders the vertical asymptote `x = -e/d`, the slant/oblique asymptote `y = (a/d)x + (bd - ae)/d^2` (dashed line), and the center of symmetry `I`.
+  - *Discontinuity Guard*: Configured JSXGraph `functiongraph` with `discontinuous: isRational`, eliminating false vertical connecting line artifacts across vertical asymptotes.
+- **Curriculum Studio State Preservation**:
+  - Maintained `sampleProblem` across the curriculum editor state cycle, ensuring that worked sample problems with variation tables and function graphs are preserved across pedagogical curation saves.
+
+---
+
+### 4.48. Client-Side Defensive Ingestion Sanitizer & Validation Resilience (`contentService.js`, `CurriculumExplorerView.jsx`)
+- **Architectural Motivation**:
+  - LLM extraction models output irregular formatting for multiple-choice answer keys (e.g. `"A."`, `"(B)"`, `"Đáp án C"`, integers `0..3`, or null).
+  - To prevent client-side payloads from triggering ASP.NET Core deserialization failures on `POST /api/content/curriculum/import`, a defensive client-side sanitization layer was established.
+- **Client-Side Sanitizer Engine (`contentService.js`)**:
+  - `normalizeCorrectOption(raw)`: Strips non-alphanumeric punctuation and extracts isolated single uppercase tokens `'A'`, `'B'`, `'C'`, `'D'`. Handles ordinal integer mappings (`0->A`, `1->B`, `2->C`, `3->D`).
+  - `sanitizeCurriculumPayload(payload)`: Traverses hierarchical trees (`chapters` -> `lessons` -> `patterns` -> `questions`), ensuring all question items carry compliant single-character `correctOption` fields, valid integer `difficultyLevel`, and default empty strings for options.
+- **Problem Details Error Formatter (`CurriculumExplorerView.jsx`)**:
+  - Unrolls RFC 9110 `errors` dictionaries returned by backend validation handlers, rendering actionable line-item error diagnostics rather than opaque JSON dumps.
+
 ---
 
 ## 5. Verification & Acceptance Criteria

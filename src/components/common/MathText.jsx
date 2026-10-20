@@ -4,6 +4,8 @@ import 'katex/dist/katex.min.css';
 import { AlertTriangle, Sparkles, BookOpen, FileText } from 'lucide-react';
 import VariationTable, { parseVariationTableString } from './VariationTable';
 import MathGraphView, { parseGraphTag } from './MathGraphView';
+import InteractiveMathRenderer from './InteractiveMathRenderer';
+import { autoSynthesizeMathGraph3DFromText, autoSynthesizeMathGraph2DFromText, autoSynthesizeVariationTableFromText } from '../../utils/mathGraphUtils';
 
 /**
  * Safe KaTeX HTML generator with fallback
@@ -58,21 +60,30 @@ export function normalizeMathString(text) {
   str = str.replace(/(?:\\text|\btext)(?=[A-Z])/g, '');
   str = str.replace(/(?:\\text|\btext)\{([A-Z][a-zA-Z0-9_+\-^]*)\}/g, '$1');
 
-  // Fix orphaned trailing :** (e.g. "Ví dụ:**" or "- Ví dụ:**" where leading ** got stripped)
+  // Fix orphaned trailing :** (e.g. "Bài toán mẫu:**" or "Ví dụ:**" where leading ** got stripped)
   str = str.replace(/(^|[\n•\-*]\s*)([A-ZÀ-Ỹa-zà-ỹ0-9\s&]{2,30}):\*\*/g, '$1**$2:**');
+  str = str.replace(/(?<!\*)\b(Bài toán mẫu|Bài mẫu|Ví dụ minh họa|Ví dụ|Hướng dẫn giải|Lời giải|Phương pháp giải|Phương pháp|Bước \d+):\*\*/gi, '**$1:**');
+  str = str.replace(/\*\*(Bài toán mẫu|Bài mẫu|Ví dụ minh họa|Ví dụ|Hướng dẫn giải|Lời giải|Phương pháp giải|Phương pháp|Bước \d+):(?!\*)/gi, '**$1:**');
 
-  // 2. Tokenize by existing explicit math delimiters
-  const mathDelimiterRegex = /(\$\$[\s\S]*?\$\$|\$[^\$\n]+?\$|\\\[[\s\S]*?\\\]|\\\([\s\S]*?\\\))/g;
-  const parts = str.split(mathDelimiterRegex);
+  // 2. Tokenize by existing explicit math delimiters AND special tags ([VARIATION_TABLE], [MATH_GRAPH], etc.)
+  // This guarantees tag contents are NEVER corrupted by auto-wrap math/chemistry regexes!
+  const specialBlockAndMathDelimiterRegex = /(\[MATH_GRAPH_3D\][\s\S]*?\[\/MATH_GRAPH_3D\]|\[MATH_GRAPH\][\s\S]*?\[\/MATH_GRAPH\]|\[MATH_GEOMETRY_2D\][\s\S]*?\[\/MATH_GEOMETRY_2D\]|\[VARIATION_TABLE\][\s\S]*?\[\/VARIATION_TABLE\]|\[GRAPH:[\s\S]*?\]|\$\$[\s\S]*?\$\$|\$[^\$\n]+?\$|\\\[[\s\S]*?\\\]|\\\([\s\S]*?\\\))/gi;
+  const parts = str.split(specialBlockAndMathDelimiterRegex);
 
   const processed = parts.map((part) => {
     if (!part) return '';
-    // If it's already an explicit math delimiter block, preserve as-is
+    // If it's already an explicit math delimiter block or a special tag, preserve 100% as-is
+    const trimmedPart = part.trim().toUpperCase();
     if (
       (part.startsWith('$$') && part.endsWith('$$')) ||
       (part.startsWith('$') && part.endsWith('$')) ||
       (part.startsWith('\\[') && part.endsWith('\\]')) ||
-      (part.startsWith('\\(') && part.endsWith('\\)'))
+      (part.startsWith('\\(') && part.endsWith('\\)')) ||
+      (trimmedPart.startsWith('[VARIATION_TABLE]') && trimmedPart.endsWith('[/VARIATION_TABLE]')) ||
+      (trimmedPart.startsWith('[MATH_GRAPH]') && trimmedPart.endsWith('[/MATH_GRAPH]')) ||
+      (trimmedPart.startsWith('[MATH_GRAPH_3D]') && trimmedPart.endsWith('[/MATH_GRAPH_3D]')) ||
+      (trimmedPart.startsWith('[MATH_GEOMETRY_2D]') && trimmedPart.endsWith('[/MATH_GEOMETRY_2D]')) ||
+      (trimmedPart.startsWith('[GRAPH:') && trimmedPart.endsWith(']'))
     ) {
       return part;
     }
@@ -241,25 +252,71 @@ function renderInlineContent(text, keyPrefix = '') {
 /**
  * Render structured multi-line text (paragraphs, bullet lists, step highlights, callouts).
  */
-function renderStructuredContent(raw) {
+function renderStructuredContent(raw, onEditMathGraph = null) {
+  // Check if text describes 3D spatial geometry or 2D function graphs without tags, and auto-synthesize
+  let effectiveRaw = raw;
+  if (
+    typeof effectiveRaw === 'string' &&
+    !effectiveRaw.includes('[MATH_GRAPH_3D]') &&
+    !effectiveRaw.includes('[MATH_GRAPH]') &&
+    !effectiveRaw.includes('[MATH_GEOMETRY_2D]') &&
+    !effectiveRaw.includes('[VARIATION_TABLE]') &&
+    !effectiveRaw.includes('[GRAPH:')
+  ) {
+    const synth3D = autoSynthesizeMathGraph3DFromText(effectiveRaw);
+    if (synth3D) {
+      effectiveRaw = effectiveRaw + synth3D;
+    } else {
+      const synth2D = autoSynthesizeMathGraph2DFromText(effectiveRaw);
+      if (synth2D) {
+        effectiveRaw = effectiveRaw + synth2D;
+      } else {
+        const synthVar = autoSynthesizeVariationTableFromText(effectiveRaw);
+        if (synthVar) {
+          effectiveRaw = effectiveRaw + synthVar;
+        }
+      }
+    }
+  }
+
   // First split by special block tags:
-  // 1. [VARIATION_TABLE]...[/VARIATION_TABLE]
-  // 2. [GRAPH:...]
-  // 3. Display math $$...$$ or \[...\]
-  const blockRegex = /(\[VARIATION_TABLE\][\s\S]*?\[\/VARIATION_TABLE\]|\[GRAPH:[\s\S]*?\]|\$\$[\s\S]*?\$\$|\\\[[\s\S]*?\\\])/gi;
-  const blocks = raw.split(blockRegex);
+  // 1. [MATH_GRAPH_3D]...[/MATH_GRAPH_3D]
+  // 2. [MATH_GRAPH]...[/MATH_GRAPH]
+  // 3. [MATH_GEOMETRY_2D]...[/MATH_GEOMETRY_2D]
+  // 4. [VARIATION_TABLE]...[/VARIATION_TABLE]
+  // 5. [GRAPH:...]
+  // 6. Display math $$...$$ or \[...\]
+  const blockRegex = /(\[MATH_GRAPH_3D\][\s\S]*?\[\/MATH_GRAPH_3D\]|\[MATH_GRAPH\][\s\S]*?\[\/MATH_GRAPH\]|\[MATH_GEOMETRY_2D\][\s\S]*?\[\/MATH_GEOMETRY_2D\]|\[VARIATION_TABLE\][\s\S]*?\[\/VARIATION_TABLE\]|\[GRAPH:[\s\S]*?\]|\$\$[\s\S]*?\$\$|\\\[[\s\S]*?\\\])/gi;
+  const blocks = effectiveRaw.split(blockRegex);
 
   return blocks.map((block, bIdx) => {
     if (!block) return null;
 
+    const trimmedBlock = typeof block === 'string' ? block.trim() : '';
+
+    // Interactive 3D Spatial Geometry Block [MATH_GRAPH_3D]...[/MATH_GRAPH_3D]
+    if (trimmedBlock.toUpperCase().startsWith('[MATH_GRAPH_3D]') && trimmedBlock.toUpperCase().endsWith('[/MATH_GRAPH_3D]')) {
+      return <InteractiveMathRenderer key={`mg3d-${bIdx}`} rawTag={trimmedBlock} onEdit={onEditMathGraph} />;
+    }
+
+    // Interactive 2D Function Calculus Block [MATH_GRAPH]...[/MATH_GRAPH]
+    if (trimmedBlock.toUpperCase().startsWith('[MATH_GRAPH]') && trimmedBlock.toUpperCase().endsWith('[/MATH_GRAPH]')) {
+      return <InteractiveMathRenderer key={`mg2d-${bIdx}`} rawTag={trimmedBlock} onEdit={onEditMathGraph} />;
+    }
+
+    // Interactive 2D Geometry Block [MATH_GEOMETRY_2D]...[/MATH_GEOMETRY_2D]
+    if (trimmedBlock.toUpperCase().startsWith('[MATH_GEOMETRY_2D]') && trimmedBlock.toUpperCase().endsWith('[/MATH_GEOMETRY_2D]')) {
+      return <InteractiveMathRenderer key={`mg2dg-${bIdx}`} rawTag={trimmedBlock} onEdit={onEditMathGraph} />;
+    }
+
     // Variation Table Block [VARIATION_TABLE]...[/VARIATION_TABLE]
-    if (block.toUpperCase().startsWith('[VARIATION_TABLE]') && block.toUpperCase().endsWith('[/VARIATION_TABLE]')) {
-      const content = block.slice(17, -18).trim();
+    if (trimmedBlock.toUpperCase().startsWith('[VARIATION_TABLE]') && trimmedBlock.toUpperCase().endsWith('[/VARIATION_TABLE]')) {
+      const content = trimmedBlock.replace(/^\[VARIATION_TABLE\]/i, '').replace(/\[\/VARIATION_TABLE\]$/i, '').trim();
       const parsed = parseVariationTableString(content);
       return <VariationTable key={`vt-${bIdx}`} data={parsed} />;
     }
 
-    // Math Graph Block [GRAPH: ...]
+    // Math Graph Block [GRAPH: ...] (Legacy fallback)
     if (block.toUpperCase().startsWith('[GRAPH:') && block.endsWith(']')) {
       const parsed = parseGraphTag(block);
       return <MathGraphView key={`mg-${bIdx}`} data={parsed} />;
@@ -312,7 +369,7 @@ function renderStructuredContent(raw) {
                 className="my-2.5 p-3 rounded-xl bg-rose-50/90 border border-rose-200/90 text-rose-950 font-bold text-xs flex items-center gap-2 shadow-2xs"
               >
                 <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
-                <span>{cleanHeading}</span>
+                <span className="flex-1 min-w-0 font-extrabold">{renderInlineContent(cleanHeading, lineKey)}</span>
               </div>
             );
           }
@@ -326,7 +383,7 @@ function renderStructuredContent(raw) {
                 className="my-2.5 p-3 rounded-xl bg-indigo-50/90 border border-indigo-200/90 text-indigo-950 font-bold text-xs flex items-center gap-2 shadow-2xs"
               >
                 <Sparkles className="w-4 h-4 text-indigo-600 shrink-0" />
-                <span>{cleanHeading}</span>
+                <span className="flex-1 min-w-0 font-extrabold">{renderInlineContent(cleanHeading, lineKey)}</span>
               </div>
             );
           }
@@ -340,35 +397,51 @@ function renderStructuredContent(raw) {
                 className="my-2.5 p-2.5 rounded-xl bg-teal-50/90 border border-teal-200/90 text-teal-950 font-bold text-xs flex items-center gap-2 shadow-2xs"
               >
                 <BookOpen className="w-4 h-4 text-teal-600 shrink-0" />
-                <span>{cleanHeading}</span>
+                <span className="flex-1 min-w-0 font-extrabold">{renderInlineContent(cleanHeading, lineKey)}</span>
               </div>
             );
           }
 
-          // Callout Sample Problem / Practice e.g. "### 📝 Bài toán mẫu..." or "### 📄 Bài toán mẫu..." or "📝 ..." or "📄 ..."
-          if (
-            line.includes('### 📝') || 
-            line.includes('### 📄') || 
-            line.includes('### ✍️') || 
-            line.includes('Bài toán mẫu') ||
-            line.includes('Bài mẫu áp dụng') ||
-            line.startsWith('📝') || 
-            line.startsWith('📄') || 
-            line.startsWith('✍️')
-          ) {
-            // Strip ###, and strip ALL leading emojis, corrupted replacement symbols (like \uFFFD diamond ), quotes, or bullets
-            const cleanHeading = line
+          // Callout Sample Problem / Practice Heading e.g. "### 📝 Bài toán mẫu..." or "### 📄 Bài toán mẫu áp dụng phương pháp:"
+          // CRITICAL: MUST be a real markdown heading (starting with ###) or a standalone heading label (e.g. "📄 Bài toán mẫu:").
+          // It MUST NOT match normal content lines like "**Bài toán mẫu:** Cho tứ diện ABCD..." or "- Bài toán mẫu: ...".
+          const isSampleHeadingCallout =
+            /^(?:###\s*(?:[^\p{L}\p{N}\s#]+\s*)?(?:Bài toán mẫu áp dụng|Bài toán mẫu|Bài mẫu áp dụng|Bài mẫu minh họa|Bài mẫu))\b/iu.test(trimmed) ||
+            /^[📝📄✍️]\s*(?:Bài toán mẫu|Bài mẫu)(?:[^\n:]*)?:?$/iu.test(trimmed);
+
+          if (isSampleHeadingCallout) {
+            // Strip ###, and strip leading emojis, quotes, or bullets (do NOT strip asterisks)
+            let cleanHeading = line
               .replace(/^###\s*/, '')
-              .replace(/^[^\p{L}\p{N}\s]+/u, '')
+              .replace(/^[📝📄✍️📌💡⚠️•\-\s]+(?=(?:Bài toán|Bài mẫu|Ví dụ|Các bẫy|Kỹ thuật|Mẹo))/iu, '')
               .replace(/\\+\s*$/, '')
               .trim();
+
+            // Auto-repair any orphaned bold marker in the heading e.g. "Bài toán mẫu:**" -> "**Bài toán mẫu:**"
+            cleanHeading = cleanHeading.replace(/(?<!\*)\b(Bài toán mẫu|Bài mẫu|Ví dụ minh họa|Ví dụ):\*\*/gi, '**$1:**');
+
+            // If the heading line also contains the problem body (e.g. "Bài toán mẫu: Cho tứ diện ABCD..."):
+            // Split into badge title and body text so the problem is rendered as body text, not jammed into the heading!
+            let badgeTitle = cleanHeading;
+            let bodyText = null;
+
+            const splitColon = cleanHeading.match(/^(?:(?:\*\*)?(?:Bài toán mẫu áp dụng phương pháp|Bài toán mẫu|Bài mẫu áp dụng phương pháp|Bài mẫu minh họa|Bài mẫu)(?:\*\*)?:?)\s*(.+)$/is);
+            if (splitColon && splitColon[1] && splitColon[1].trim()) {
+              badgeTitle = cleanHeading.slice(0, cleanHeading.length - splitColon[1].length).replace(/:\s*$/, '').trim();
+              bodyText = splitColon[1].trim();
+            }
+
             return (
-              <div
-                key={lineKey}
-                className="my-2.5 p-2.5 rounded-lg bg-amber-50/90 border border-amber-300/90 text-amber-950 font-bold text-xs flex items-center gap-2 shadow-2xs"
-              >
-                <FileText className="w-4 h-4 text-amber-700 shrink-0" />
-                <span>{cleanHeading}</span>
+              <div key={lineKey} className="my-2.5 space-y-1.5">
+                <div className="p-2.5 rounded-lg bg-amber-50/90 border border-amber-300/90 text-amber-950 font-bold text-xs flex items-center gap-2 shadow-2xs">
+                  <FileText className="w-4 h-4 text-amber-700 shrink-0" />
+                  <span className="flex-1 min-w-0 font-extrabold">{renderInlineContent(badgeTitle, `${lineKey}-title`)}</span>
+                </div>
+                {bodyText && (
+                  <div className="text-slate-800 text-xs leading-relaxed px-1">
+                    {renderInlineContent(bodyText, `${lineKey}-body`)}
+                  </div>
+                )}
               </div>
             );
           }
@@ -458,7 +531,7 @@ function renderStructuredContent(raw) {
  * Designed to preserve natural inline text flow so that formulas, numbers,
  * commas, periods, and parentheses never shatter across separate lines.
  */
-export default function MathText({ text, className = '' }) {
+export default function MathText({ text, className = '', onEditMathGraph = null }) {
   if (!text) return null;
   if (typeof text !== 'string') {
     return <span className={className}>{String(text)}</span>;
@@ -471,7 +544,7 @@ export default function MathText({ text, className = '' }) {
   const hasBullets = /^\s*(?:[-+•\u2022]|\*(?!\*))\s+/m.test(raw);
   const hasCallouts = /###\s*[⚠️💡📌📝📄]/m.test(raw) || /^[⚠️💡📌📝📄]/m.test(raw);
   const hasHeadings = /^(?:#{1,4})\s+/m.test(raw);
-  const hasSpecialBlocks = raw.includes('[VARIATION_TABLE]') || raw.includes('[GRAPH:');
+  const hasSpecialBlocks = raw.includes('[VARIATION_TABLE]') || raw.includes('[GRAPH:') || raw.includes('[MATH_GRAPH') || raw.includes('[MATH_GRAPH_3D');
   const isStructured = hasLinebreaks || hasBlockMath || hasBullets || hasCallouts || hasHeadings || hasSpecialBlocks;
 
   if (!isStructured) {
@@ -484,7 +557,7 @@ export default function MathText({ text, className = '' }) {
 
   return (
     <div className={`space-y-0.5 ${className}`}>
-      {renderStructuredContent(raw)}
+      {renderStructuredContent(raw, onEditMathGraph)}
     </div>
   );
 }

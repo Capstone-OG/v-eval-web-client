@@ -762,7 +762,10 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
       setImportJsonText('');
       await fetchCurriculumData();
     } catch (err) {
-      alert('Lỗi nạp dữ liệu tri thức: ' + (err?.response?.data?.message || err.message));
+      const detail = err?.response?.data?.errors 
+        ? Object.entries(err.response.data.errors).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`).join('\n')
+        : (err?.response?.data?.message || err?.response?.data?.title || err.message);
+      alert('Lỗi nạp dữ liệu tri thức:\n' + detail);
     } finally {
       setImportingCurriculum(false);
     }
@@ -833,7 +836,10 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
       setImportTextSnippet('');
       await fetchCurriculumData();
     } catch (err) {
-      alert('Lỗi nạp dữ liệu tri thức vào CSDL: ' + (err?.response?.data?.message || err.message));
+      const detail = err?.response?.data?.errors 
+        ? Object.entries(err.response.data.errors).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`).join('\n')
+        : (err?.response?.data?.message || err?.response?.data?.title || err.message);
+      alert('Lỗi nạp dữ liệu tri thức vào CSDL:\n' + detail);
     } finally {
       setImportingCurriculum(false);
     }

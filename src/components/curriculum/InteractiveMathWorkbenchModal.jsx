@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import JXG from 'jsxgraph';
+import { formatMathGraphTag, formatMathGraph3DTag, parseMathGraphTag, parseMathGraph3DTag } from '../../utils/mathGraphUtils';
 import { 
   X, 
   Sparkles, 
@@ -164,7 +165,8 @@ export default function InteractiveMathWorkbenchModal({
   onClose,
   onInsert,
   targetField = 'sampleQuestion',
-  initialTab = '2d_function'
+  initialTab = '2d_function',
+  initialTag = ''
 }) {
   if (!isOpen) return null;
 
@@ -335,6 +337,69 @@ export default function InteractiveMathWorkbenchModal({
   const [newLineTo, setNewLineTo] = useState('C');
   const [newLineDash, setNewLineDash] = useState(2); // 2 = dashed (nét đứt SGK), 0 = solid (nét liền)
   const [newLineColor, setNewLineColor] = useState('#ef4444');
+
+  // Parse initialTag if provided to hydrate edit mode
+  useEffect(() => {
+    if (!initialTag || typeof initialTag !== 'string') return;
+    const tag = initialTag.trim();
+    if (tag.toUpperCase().startsWith('[MATH_GRAPH_3D]')) {
+      const parsed = parseMathGraph3DTag(tag);
+      if (parsed) {
+        setJsxSubTab('3d_space');
+        if (parsed.shapeType) setShape3DType(parsed.shapeType);
+        if (parsed.preset) setExam3DConstructionPreset(parsed.preset);
+        if (parsed.dimensions) {
+          if (parsed.dimensions.h) setShape3dHeight(parsed.dimensions.h);
+          if (parsed.dimensions.w) setShape3dWidth(parsed.dimensions.w);
+          if (parsed.dimensions.d) setShape3dDepth(parsed.dimensions.d);
+          if (parsed.dimensions.r) setShape3dRadius(parsed.dimensions.r);
+          if (parsed.dimensions.planeD) setPlaneD(parsed.dimensions.planeD);
+        }
+        if (parsed.vertices && Object.keys(parsed.vertices).length > 0) {
+          setCustomBasePoints(parsed.vertices);
+          setIsCustomizingBasePoints(true);
+        }
+        if (parsed.extraPoints && parsed.extraPoints.length > 0) {
+          setExtraPoints(parsed.extraPoints);
+        }
+        if (parsed.auxLines && parsed.auxLines.length > 0) {
+          setCustomAuxLines(parsed.auxLines);
+        }
+        if (parsed.azimuth !== undefined) setAzimuthAngle(parsed.azimuth);
+        if (parsed.elevation !== undefined) setElevationAngle(parsed.elevation);
+      }
+    } else if (tag.toUpperCase().startsWith('[MATH_GRAPH]')) {
+      const parsed = parseMathGraphTag(tag);
+      if (parsed) {
+        setJsxSubTab('2d_function');
+        if (parsed.type === 'custom' || parsed.customExpr) {
+          setFuncInputMode('custom');
+          if (parsed.customExpr) setCustomExpr(parsed.customExpr);
+        } else {
+          setFuncInputMode('preset');
+          if (parsed.type) setFuncType(parsed.type);
+          if (parsed.params) {
+            if (parsed.params.a !== undefined) setParamA(parsed.params.a);
+            if (parsed.params.b !== undefined) setParamB(parsed.params.b);
+            if (parsed.params.c !== undefined) setParamC(parsed.params.c);
+            if (parsed.params.d !== undefined) setParamD(parsed.params.d);
+            if (parsed.params.e !== undefined) setParamE(parsed.params.e);
+          }
+        }
+        if (parsed.examMode) setExam2DMode(parsed.examMode);
+        if (parsed.auxExpr) setAuxiliaryExpr(parsed.auxExpr);
+        if (parsed.slopeM !== undefined) setSlopeM(parsed.slopeM);
+        if (parsed.paramM !== undefined) setParamM(parsed.paramM);
+        if (parsed.absTransform) setAbsTransformType(parsed.absTransform);
+        if (parsed.shiftM !== undefined) setParamShiftM(parsed.shiftM);
+        if (parsed.tangentX0 !== undefined) setTangentX0(parsed.tangentX0);
+        if (parsed.showTangent !== undefined) setShowTangent(parsed.showTangent);
+        if (parsed.integralUpper) setIntegralUpperExpr(parsed.integralUpper);
+        if (parsed.integralLower) setIntegralLowerExpr(parsed.integralLower);
+        if (parsed.hideCurveLabels !== undefined) setHideCurveLabels(parsed.hideCurveLabels);
+      }
+    }
+  }, [initialTag]);
 
   // -------------------------------------------------------------
   // REFS FOR JSXGRAPH BOARDS
@@ -894,6 +959,13 @@ export default function InteractiveMathWorkbenchModal({
           az: azimuthAngle,
           el: elevationAngle,
           trackball: { enabled: true },
+          // Tắt các mặt phẳng thành hộp phía sau/trước để loại bỏ hoàn toàn hiện tượng vách lưới chia nửa màn hình
+          xPlaneRear: { visible: false },
+          yPlaneRear: { visible: false },
+          zPlaneRear: { visible: false },
+          xPlaneFront: { visible: false },
+          yPlaneFront: { visible: false },
+          zPlaneFront: { visible: false },
           xAxis: { name: 'x', strokeColor: '#ef4444', strokeWidth: 1.2 },
           yAxis: { name: 'y', strokeColor: '#10b981', strokeWidth: 1.2 },
           zAxis: { name: 'z', strokeColor: '#3b82f6', strokeWidth: 1.2 }
@@ -1200,20 +1272,55 @@ export default function InteractiveMathWorkbenchModal({
     elevationAngle
   ]);
 
+  // Compute the current canonical snippet tag for insert & simulation preview
+  const currentSnippetTag = useMemo(() => {
+    if (jsxSubTab === '2d_function') {
+      return formatMathGraphTag({
+        title: funcInputMode === 'custom' ? 'Đồ thị hàm số tùy chọn' : 'Đồ thị hàm số Vận dụng & Vận dụng cao',
+        formula: getCurrentFormulaString(),
+        examMode: exam2DMode,
+        type: funcInputMode === 'custom' ? 'custom' : funcType,
+        params: { a: paramA, b: paramB, c: paramC, d: paramD, e: paramE },
+        customExpr: funcInputMode === 'custom' ? customExpr : '',
+        auxExpr: auxiliaryExpr,
+        slopeM,
+        paramM,
+        absTransform: absTransformType,
+        shiftM: paramShiftM,
+        tangentX0,
+        showTangent,
+        integralUpper: integralUpperExpr,
+        integralLower: integralLowerExpr,
+        hideCurveLabels
+      });
+    } else if (jsxSubTab === '3d_space') {
+      return formatMathGraph3DTag({
+        title: 'Mô hình không gian tùy biến đỉnh & kẻ đường phụ',
+        shapeType: shape3DType,
+        preset: exam3DConstructionPreset,
+        formula: `$${getCurrentFormulaString()}$`,
+        dimensions: { h: shape3dHeight, w: shape3dWidth, d: shape3dDepth, r: shape3dRadius, planeD },
+        vertices: customBasePoints,
+        extraPoints,
+        auxLines: customAuxLines,
+        azimuth: azimuthAngle,
+        elevation: elevationAngle
+      });
+    } else {
+      return `\n\n[MATH_GEOMETRY_2D]\ntitle: Hình học phẳng 2D\nformula: $Tam\\ giác\\ vuông\\ ABC\\ tại\\ A$\n[/MATH_GEOMETRY_2D]\n\n`;
+    }
+  }, [
+    jsxSubTab, funcInputMode, funcType, paramA, paramB, paramC, paramD, paramE, customExpr,
+    exam2DMode, auxiliaryExpr, slopeM, paramM, absTransformType, paramShiftM, tangentX0, showTangent,
+    integralUpperExpr, integralLowerExpr, hideCurveLabels, shape3DType, exam3DConstructionPreset,
+    shape3dHeight, shape3dWidth, shape3dDepth, shape3dRadius, planeD, customBasePoints, extraPoints,
+    customAuxLines, azimuthAngle, elevationAngle
+  ]);
+
   // Handle Insert into Current Authoring Studio (Flow 2)
   const handleInsertToStudio = () => {
-    let snippet = '';
-    if (jsxSubTab === '2d_function') {
-      snippet = `\n\n[MATH_GRAPH]\ntitle: Đồ thị hàm số Vận dụng & Vận dụng cao\nformula: ${getCurrentFormulaString()}\nexamMode: ${exam2DMode}\ntype: ${funcInputMode === 'custom' ? 'custom' : funcType}\nparams: ${funcInputMode === 'custom' ? `expr=${customExpr}` : `a=${paramA},b=${paramB},c=${paramC},d=${paramD},e=${paramE}`}\n[/MATH_GRAPH]\n\n`;
-    } else if (jsxSubTab === '3d_space') {
-      const verticesSummary = Object.entries(customBasePoints).map(([k, v]) => `${k}:${v.label}(${v.x},${v.y},${v.z})`).join(';');
-      snippet = `\n\n[MATH_GRAPH_3D]\ntitle: Mô hình không gian tùy biến đỉnh & kẻ đường phụ\nshapeType: ${shape3DType}\npreset: ${exam3DConstructionPreset}\nformula: $${getCurrentFormulaString()}$\ndimensions: h=${shape3dHeight},w=${shape3dWidth},d=${shape3dDepth}\nvertices: ${verticesSummary}\nextraPoints: ${extraPoints.map(p => p.id).join(',')}\nauxLines: ${customAuxLines.map(l => `${l.from}-${l.to}`).join(',')}\n[/MATH_GRAPH_3D]\n\n`;
-    } else {
-      snippet = `\n\n[MATH_GEOMETRY_2D]\ntitle: Hình học phẳng 2D\nformula: $Tam\\ giác\\ vuông\\ ABC\\ tại\\ A$\n[/MATH_GEOMETRY_2D]\n\n`;
-    }
-
     if (onInsert) {
-      onInsert(snippet, targetField);
+      onInsert(currentSnippetTag, targetField);
     }
     onClose();
   };
@@ -2182,8 +2289,8 @@ export default function InteractiveMathWorkbenchModal({
                 <div className="text-xs font-bold text-slate-800">
                   <b>Câu hỏi (Mức độ Vận dụng cao):</b> Cho hình chóp $S.ABCD$ có đáy là hình vuông cạnh $a$, $SA \perp (ABCD)$. Kẻ đường cao phụ $AK \perp SB$. Tính khoảng cách $d(A, (SBC))$?
                 </div>
-                <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-200 text-xs text-indigo-700 font-extrabold flex items-center justify-center">
-                  <MathText text={`$${getCurrentFormulaString()}$`} />
+                <div className="rounded-xl border border-indigo-100 overflow-hidden shadow-xs">
+                  <MathText text={currentSnippetTag} />
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                   <div className="p-2 rounded-lg border border-slate-200 hover:border-indigo-400 bg-white cursor-pointer font-medium">

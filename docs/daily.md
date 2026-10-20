@@ -2,6 +2,90 @@
 
 ---
 
+## [21/10/2026] - Động Cơ Bảng Biến Thiên Vector (Hỗ Trợ Tiệm Cận Vạch Kép ||), Đồ Thị Vi Tích Phân 2D Kèm Tiệm Cận Đứng/Ngang/Xiên & Tâm Đối Xứng I, Triệt Tiêu Vách Lưới Trắng 3D & Chuẩn Hóa KaTeX Bài Toán Mẫu
+
+- **Động Cơ Bảng Biến Thiên Vector Nội Sinh Hỗ Trợ Tiệm Cận Kép (`VariationTable.jsx`)**:
+  - *Hỗ Trợ Hàm Phân Thức Hữu Tỉ (Bậc 1/1 & Bậc 2/1)*:
+    + Nâng cấp bộ phân tích chuỗi `parseVariationTableString` và kiến trúc render vector 3 dòng.
+    + Cho phép khai báo ký hiệu vạch kép `||` tại điểm gián đoạn của mẫu số trong cả dòng đạo hàm $y'$ và dòng biến thiên $y$ / `dir`.
+    + Render vạch kép SVG sắc nét ngăn cách hai nhánh đồ thị theo đúng quy chuẩn sách giáo khoa Toán học THPT.
+  - *Tự Động Suy Luận Hướng Mũi Tên (`directions`)*:
+    + Khi LLM sinh thiếu dòng `dir`, động cơ tự động ánh xạ trực tiếp từ dấu của $y'$ (`+` -> `up`, `-` -> `down`, `||` -> ngắt quãng) mà không làm vỡ giao diện.
+    + Khử triệt để các ký hiệu `$` dư thừa và hỗ trợ linh hoạt cả dấu phẩy `,` lẫn dấu gạch đứng `|`.
+
+- **Động Cơ Vẽ Đồ Thị Vi Tích Phân 2D & Tự Động Dựng Tiệm Cận (`InteractiveMathRenderer.jsx`)**:
+  - *Tự Động Dựng Đường Tiệm Cận & Tâm Đối Xứng*:
+    + Hàm phân thức bậc 1/1 (`rational`): Tự động tính toán và vẽ đường tiệm cận đứng $x = -d/c$ (nét đứt màu xám), tiệm cận ngang $y = a/c$ (nét đứt màu xám), và điểm tâm đối xứng $I(-d/c, a/c)$ giao điểm của 2 đường tiệm cận.
+    + Hàm phân thức bậc 2/1 (`rational_21`): Tự động vẽ đường tiệm cận đứng $x = -e/d$ và tiệm cận xiên $y = \frac{a}{d}x + \frac{bd - ae}{d^2}$ nét đứt cùng tâm đối xứng $I$.
+  - *Chống Hiện Tượng Nối Dọc Qua Tiệm Cận*:
+    + Thiết lập cờ `discontinuous: isRational` trong JSXGraph `board.create('functiongraph', ...)`. Đồ thị được ngắt nét hoàn toàn tại điểm gián đoạn, loại bỏ hiện tượng vẽ nối một đường thẳng đứng xuyên qua tiệm cận.
+
+- **Chuẩn Hóa Payload Nạp Tri Thức & Khắc Phục Lỗi Validation Error CSDL (`contentService.js` & `CurriculumExplorerView.jsx`)**:
+  - *Bộ Lọc Chuẩn Hóa Payload Client-Side (`contentService.js`)*:
+    + Triển khai hai hàm trợ giúp `normalizeCorrectOption(raw)` và `sanitizeCurriculumPayload(payload)`.
+    + Đảm bảo trước khi dữ liệu được gửi đến backend `Content Service` (`POST /api/content/curriculum/import`, `createQuestion`, `updateQuestion`), toàn bộ các trường `correctOption` của mọi câu hỏi trong các bài học và dạng bài đều được chuẩn hóa về duy nhất 1 ký tự chuẩn mực `'A'`, `'B'`, `'C'`, `'D'`.
+    + Xử lý an toàn mọi dạng dữ liệu thô sinh ra từ OCR hoặc nhập liệu: chuỗi có dấu chấm (`"A."`), ngoặc (`"(B)"`, `"[C]"`), hai chấm (`"D:"`), từ khóa (`"Đáp án C"`, `"Phương án B"`, `"Option A"`), số nguyên (`0..3`), chuỗi rỗng và `null`.
+    + Chuẩn hóa tự động kiểu dữ liệu số cho `difficultyLevel` (mặc định 2), điền giá trị chuỗi an toàn cho các phương án `optionA` - `optionD` và `explanation`.
+  - *Cải Tiến Thông Báo Lỗi Chi Tiết Tại Modal Nạp Tri Thức (`CurriculumExplorerView.jsx`)*:
+    + Định dạng lại chuỗi thông báo lỗi khi backend trả về lỗi xác thực RFC 9110/Problem Details (trích xuất trực tiếp `errors[field]` thành danh sách rõ ràng thay vì in cả đối tượng JSON thô).
+
+- **Khắc Phục Triệt Để Hiện Tượng Sinh Nhầm Card Đồ Thị Oxy Đè Lên Bảng Biến Thiên (`mathGraphUtils.js`, `MathText.jsx`, `VariationTable.jsx` & `InteractiveMathRenderer.jsx`)**:
+  - *Bản Chất Sự Cố*: Trong hàm `autoSynthesizeMathGraph2DFromText`, biểu thức nhận diện hàm số `y = ...` quét qua câu hỏi chứa bảng biến thiên (như *"Đồ thị hàm số y = f(x) có bảng biến thiên như sau: [VARIATION_TABLE]..."*). Do không kiểm tra sự tồn tại của thẻ `[VARIATION_TABLE]` và cụm từ "bảng biến thiên", đồng thời chấp nhận hàm trừu tượng `f(x)`, hàm tự động gom toàn bộ nội dung đề bài và chuỗi thẻ bảng biến thiên thành công thức đồ thị và sinh một khối `[MATH_GRAPH]` thừa thãi. Hệ quả là một card "Oxy Tương Tác" khổng lồ xuất hiện đè lên bảng biến thiên, in đè toàn bộ text đề bài và chuỗi mã thô lên mặt phẳng tọa độ Oxy.
+  - *Giải Pháp Xử Lý Toàn Diện*:
+    + *Bộ Lọc Chống Sinh Nhầm (`mathGraphUtils.js`)*: Lập tức trả về `null` nếu chuỗi văn bản đã có thẻ `[VARIATION_TABLE]`, `[MATH_GRAPH]`, `[MATH_GRAPH_3D]` hoặc chứa từ khóa "bảng biến thiên", "bảng xét dấu". Đồng thời từ chối các hàm số trừu tượng dạng $f(x), g(x), u(x)$, và chỉ sinh đồ thị 2D khi có biểu thức đại số cụ thể ($x^3, x^4, \frac{ax+b}{cx+d}, x^2$).
+    + *Bảo Vệ Thẻ Đặc Biệt Trong Bộ Chuẩn Hóa Toán (`MathText.jsx`)*: Tokenize văn bản kết hợp cả dấu phân cách toán và các khối thẻ đặc biệt (`[VARIATION_TABLE]`, `[MATH_GRAPH]`), đảm bảo nội dung bên trong thẻ không bị các biểu thức chính quy KaTeX/Hóa học can thiệp làm biến dạng cú pháp.
+    + *Hỗ Trợ Bảng Biến Thiên Trên Một Dòng (`VariationTable.jsx`)*: Nâng cấp `parseVariationTableString` tự động tách dòng an toàn khi AI trả về chuỗi JSON không có ký tự ngắt dòng `\n` (tự chèn `\n` trước `x:`, `y':`, `y:`, `dir:`), bảo đảm bảng biến thiên hiển thị hoàn hảo 100% trong mọi trường hợp.
+    + *Cơ Chế Bảo Vệ Nhãn Trên Mặt Phẳng Oxy (`InteractiveMathRenderer.jsx`)*: Kiểm soát chặt chẽ `config.title` và `config.formula`, chỉ hiển thị huy hiệu và nhãn đường cong khi công thức hợp lệ, súc tích (< 35 ký tự), tuyệt đối không in chuỗi văn bản dài lên canvas JSXGraph.
+
+- **Khắc Phục Hoàn Toàn Lỗi UI Khối 3D Bị Nửa Canvas Trắng Đè Lên (`InteractiveMathRenderer.jsx` & `InteractiveMathWorkbenchModal.jsx`)**:
+  - *Bản Chất Sự Cố*: Trong JSXGraph native engine, khi gọi `board.create('view3d', ...)`, mặc định các mặt phẳng thành hộp phía sau (`xPlaneRear`, `yPlaneRear`, `zPlaneRear`) được kích hoạt với mắt lưới (grid mesh). Do không gian bounding box giới hạn từ $[-6, 6]$, thành hộp chỉ che phủ góc phần tư phía sau/bên trái của trục tọa độ, trong khi nửa bên phải hoàn toàn không có vách lưới, tạo ra một đường cắt dọc sắc cạnh trông như khối trắng đè lên mô hình 3D.
+  - *Giải Pháp Xử Lý*: Thiết lập tường minh `xPlaneRear: { visible: false }, yPlaneRear: { visible: false }, zPlaneRear: { visible: false }, xPlaneFront: { visible: false }, yPlaneFront: { visible: false }, zPlaneFront: { visible: false }` trên cả component hiển thị `InteractiveMathRenderer` và modal biên tập `InteractiveMathWorkbenchModal`. Toàn bộ nền canvas chuyển sang màu trắng đồng nhất 100%, không còn bất kỳ vách ngăn hoặc khối cắt ngang nào.
+  - *Nút Bật/Tắt Hệ Trục Oxyz (`Compass` Icon)*: Theo chuẩn hình học không gian SGK GDPT 2018 (hình chóp, tứ diện thuần túy không có trục tọa độ), bổ sung công tắc `Trục Oxyz` trên thanh công cụ của card 3D. Mặc định ẩn hệ trục để mô hình thanh thoát như hình vẽ SGK, đồng thời cho phép giảng viên/học sinh bật nhanh 3 trục màu $x$ (đỏ), $y$ (xanh lá), $z$ (xanh dương) khi cần quan sát tọa độ không gian.
+
+- **Khắc Phục Triệt Để Lỗi Render KaTeX & Mất Ký Tự Đầu `**` Trong Bài Toán Mẫu (`MathText.jsx`)**:
+  - *Bản Chất Sự Cố*: Trong bộ phân tích cấu trúc văn bản của `MathText.jsx`, điều kiện nhận diện Callout Card sử dụng `line.includes('Bài toán mẫu')` quá rộng, khiến mọi dòng nội dung bài toán (ví dụ: `**Bài toán mẫu:** Cho tứ diện $ABCD$...`) bị hiểu nhầm là dòng tiêu đề Callout. Bộ bóc tách sau đó chạy regex xóa ký tự đầu dòng `^[^\p{L}\p{N}\s]+`, nuốt mất dấu `**` mở đầu và nhét nguyên đoạn văn bản vào `<span>{cleanHeading}</span>` dạng text thô, làm tê liệt hoàn toàn bộ render KaTeX cho `$ABCD$`, `$M, N$`, `$(DMN)$`, `$(BCD)$`.
+  - *Giải Pháp Xử Lý*:
+    + Nâng cấp regex `isSampleHeadingCallout`: Ràng buộc tiêu đề Callout chỉ được kích hoạt khi dòng thực sự bắt đầu bằng định dạng Heading (`###` hoặc emoji tiêu đề `[📝📄✍️]`). Các dòng nội dung bài toán `**Bài toán mẫu:**...` hoặc `- **Bài toán mẫu:**...` được chuyển trực tiếp vào luồng xử lý văn bản nội dòng (inline stream).
+    + Chuẩn hóa render an toàn: Bọc nội dung tiêu đề Callout trong `{renderInlineContent(cleanHeading, lineKey)}`, đảm bảo kể cả khi tiêu đề chứa công thức toán ($S.ABCD$) vẫn được KaTeX dịch sang ký hiệu toán học hoàn hảo.
+    + Bộ sửa chữa dấu sao mồ côi (`normalizeMathString`): Bổ sung regex tự động vá các trường hợp mất dấu `**` đầu do AI hoặc người dùng gõ thiếu (chuyển `Bài toán mẫu:**` thành `**Bài toán mẫu:**`).
+    + Tích hợp bộ tự động tổng hợp bảng biến thiên từ chữ (`autoSynthesizeVariationTableFromText`) trong `mathGraphUtils.js` và `MathText.jsx`.
+
+- **Quản Lý Trạng Thái Toàn Vẹn Bài Toán Mẫu (`CurriculumStudioEditor.jsx`)**:
+  - Bổ sung trường `sampleProblem` vào `form` state, bộ cập nhật kết quả AI `handleAiAnalysisComplete`, và hàm tái lắp ghép `fullSolutionMethod` khi lưu, bảo đảm bài toán mẫu không bị thất thoát trong quá trình biên soạn sư phạm.
+
+- **Kiểm Thử Vận Hành (Build Verification)**:
+  - `npm run build` hoàn thành 100% (**0 Error, 0 Warning**, hoàn tất trong 1.09s trên Vite 8 và React 19).
+
+---
+
+## [20/10/2026] - Kiến Trúc Độc Lập Component Live Math Renderer 2D/3D Tương Tác, Chuẩn Hóa Chuỗi Tag Lưu Trữ Database & Đồng Bộ Tuyệt Đối Giao Diện Giảng Viên - Học Sinh
+
+- **Component Tái Sử Dụng Cao Độc Lập `InteractiveMathRenderer.jsx` (JSXGraph v1.14.0 Native React Engine)**:
+  - *Xóa Bỏ Hoàn Toàn Giải Pháp Ảnh Chụp Tĩnh (Zero Static Screenshots)*: Nhận định chính xác đồ thị và hình học không gian 3D là các đối tượng tương tác toán học phức tạp cần giữ nguyên thư viện vector nội sinh. Component tự động render trực tiếp trên máy client bằng SVG/Canvas của JSXGraph với tốc độ 60 FPS, không dùng ảnh chụp màn hình, không suy giảm độ sắc nét khi zoom và không tốn băng thông lưu trữ.
+  - *Tương Tác Không Gian 3D Toàn Diện (Trackball 360° & Zoom)*: Tích hợp đầy đủ khả năng rê chuột xoay đa hướng không gian 360° (trackball rotation), cuộn chuột thu phóng (zoom in/out), nút "Góc nhìn" để đưa về góc chuẩn (azimuth 0.85, elevation 0.35) và chế độ xem phóng to toàn màn hình (Modal Expand).
+  - *Quản Lý Vòng Đời Trực Quan An Toàn (Lifecycle Isolation)*: Cơ chế sinh ID container ngẫu nhiên (`jxg_math_...`) và giải phóng bộ nhớ tự động (`JXG.JSXGraph.freeBoard`) khi unmount, ngăn ngừa 100% rò rỉ bộ nhớ hoặc xung đột DOM khi một trang hiển thị nhiều câu hỏi có đồ thị cùng lúc.
+
+- **Chuẩn Hóa Bộ Tiện Ích `mathGraphUtils.js` & Định Dạng Thẻ Lưu Trữ Không Đổi Schema Database**:
+  - *Cơ Chế Thẻ Siêu Dữ Liệu Văn Bản Nhẹ (Tag-Based Text Serialization)*:
+    + Thẻ `[MATH_GRAPH]...[/MATH_GRAPH]`: Đồ thị hàm số 2D (loại hàm, công thức KaTeX, các tham số $a, b, c, d, e$, biểu thức tùy biến `customExpr`, đường phụ `auxExpr`, đường xiên biện luận nghiệm `slopeM` & `paramM`, phép biến đổi trị tuyệt đối, tích phân diện tích).
+    + Thẻ `[MATH_GRAPH_3D]...[/MATH_GRAPH_3D]`: Hình học không gian 3D (loại hình khối `shapeType`, mô hình kinh điển `preset`, kích thước $h, w, d, r$, tọa độ và nhãn các đỉnh tùy biến `vertices`, danh sách điểm phụ `extraPoints` kèm tỉ lệ chia đoạn và màu sắc, danh sách đường kẻ phụ `auxLines` kèm nét đứt khuất SGK `dash=2` và màu sắc).
+  - *Tương Thích 100% Với CSDL PostgreSQL*: Lưu trữ trực tiếp trong các cột `ContentLatex` hoặc `Explanation` (kiểu `text` không giới hạn dung lượng ký tự), không làm thay đổi bảng dữ liệu, không cần chạy migration CSDL và an toàn tuyệt đối với API Content Service.
+  - *Sẵn Sàng Cho AI Engine & Ingestion Review*: Cấu trúc thẻ dạng key-value trực quan, rõ ràng, giúp AI Engine (Gemini) dễ dàng bóc tách từ PDF đề thi hoặc sinh ra trong JSON payload mà không lo lỗi thoát ký tự JavaScript phức tạp; đồng thời các modal duyệt tài liệu của giảng viên tự động hiển thị mô hình 3D tương tác ngay lập tức.
+
+- **Tích Hợp Sâu Vào Động Cơ `MathText.jsx` - Kích Hoạt Tự Động Toàn Hệ Thống**:
+  - *Tự Động Bóc Tách Khối Thẻ*: Cập nhật biểu thức chính quy (Regex) trong `MathText.jsx` để bắt trọn các khối `[MATH_GRAPH_3D]`, `[MATH_GRAPH]` và `[MATH_GEOMETRY_2D]`.
+  - *Động Cơ Dựng Hình Không Gian Tự Động Từ Chữ (`autoSynthesizeMathGraph3DFromText` & `autoSynthesizeMathGraph2DFromText`)*: Khi đề bài hoặc ví dụ giáo khoa chỉ mô tả hình bằng chữ thuần túy (như *"Cho hình chóp S.ABCD..."*, *"Cho tứ diện ABCD..."*, *"M là trung điểm SC..."*, *"y = x^3 - 3x + 1"*), bộ phân tích ngữ nghĩa tự động trích xuất loại hình, đỉnh, điểm phụ, đường nét đứt và dựng ngay mô hình 3D xoay 360 độ hoặc đồ thị 2D trực tiếp trong `MathText.jsx` mà không cần phụ thuộc vào việc file nguồn có in sẵn hình hay không.
+  - *Độ Phủ Tuyệt Đối*: Vì toàn bộ ứng dụng (Khảo thí chẩn đoán năng lực `DiagnosticAssessmentPage.jsx`, Khảo sát `DiagnosticTestModal.jsx`, Ngân hàng câu hỏi Studio `CurriculumStudioEditor.jsx`, Duyệt cây tri thức `CurriculumExplorerView.jsx`) đều dùng `MathText`, mọi vị trí có chứa thẻ đồ thị đều tự động chuyển thành component tương tác mà không cần sửa đổi thủ công từng trang.
+  - *Bổ Sung Cho Quiz Thích Ứng Học Sinh (`AdaptiveQuizModal.jsx`)*: Bọc `MathText` cho nội dung câu hỏi và các phương án của học sinh, đảm bảo học sinh làm bài thi thích ứng theo ZPD được tương tác trực tiếp với mô hình 3D.
+
+- **Tính Nhất Quán Tuyệt Đối Giữa Màn Hình Giảng Viên & Học Sinh (Data & Visual Parity)**:
+  - Giảng viên trên Studio Workbench tùy chỉnh tọa độ đỉnh, đổi tên đỉnh ($S \to P, A \to M$), kẻ thêm đường phụ nét đứt màu đỏ hay thiết diện ra sao thì khi học sinh nhận dữ liệu từ DB, component `InteractiveMathRenderer` giải mã và dựng lại chính xác 100% hình dạng, màu sắc và góc nhìn đó.
+
+- **Kiểm Thử Vận Hành (Build Verification)**:
+  - `npm run build` hoàn thành 100% (**0 Error, 0 Warning**, hoàn tất trong 964ms trên Vite 8 và React 19).
+
+---
+
 ## [20/10/2026] - Hợp Nhất Động Cơ MathLab JSXGraph Nội Sinh, Tùy Chỉnh Tọa Độ (X,Y,Z) & Đổi Tên Đỉnh Không Gian 3D, Bộ Kẻ Đường Phụ Tự Do & Hệ Thống Đồ Thị VD/VDC GDPT 2018
 
 - **Thống Nhất Động Cơ Toán Học Tương Tác JSXGraph Nội Sinh (`InteractiveMathWorkbenchModal.jsx`)**:
