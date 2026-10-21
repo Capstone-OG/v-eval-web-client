@@ -3,9 +3,10 @@
 ## [21/10/2026] - Chuẩn Hóa Payload Nạp Tri Thức Client-Side, Động Cơ Bảng Biến Thiên Vector (Vạch Kép ||) Và Đồ Thị Vi Tích Phân 2D
 
 - **Chuẩn Hóa Payload Nạp Tri Thức & Khắc Phục Lỗi Validation Error CSDL (`contentService.js` & `CurriculumExplorerView.jsx`)**:
-  - *Bộ Lọc Chuẩn Hóa Payload Client-Side (`contentService.js`)*:
+  - *Bộ Lọc Chuẩn Hóa Payload Client-Side Toàn Diện (`contentService.js`)*:
     + Triển khai hai hàm trợ giúp `normalizeCorrectOption(raw)` và `sanitizeCurriculumPayload(payload)`.
-    + Đảm bảo trước khi dữ liệu được gửi đến backend `Content Service` (`POST /api/content/curriculum/import`, `createQuestion`, `updateQuestion`), toàn bộ các trường `correctOption` của mọi câu hỏi trong các bài học và dạng bài đều được chuẩn hóa về duy nhất 1 ký tự chuẩn mực `'A'`, `'B'`, `'C'`, `'D'`.
+    + Đảm bảo trước khi dữ liệu được gửi đến backend `Content Service` (`POST /api/content/curriculum/import`, `createQuestion`, `updateQuestion`), toàn bộ các cấp Chương (`chapterName`), Bài học (`lessonName`), Dạng bài (`patternName`), Lý thuyết (`theoryRecap`), Phương pháp (`solutionMethod`), Video (`videoUrl`) và các trường `correctOption` của mọi câu hỏi đều được lọc sạch và gán fallback an toàn.
+    + Khắc phục triệt để lỗi HTTP 400 (`The TheoryRecap field is required`): Ép kiểu chuỗi tường minh và fallback `pat.theoryRecap ?? pat.theory_recap ?? pat.theory ?? ''`, đảm bảo payload gửi lên máy chủ luôn có đầy đủ các trường yêu cầu kể cả khi AI trả về snake_case hoặc null.
     + Xử lý an toàn mọi dạng dữ liệu thô sinh ra từ OCR hoặc nhập liệu: chuỗi có dấu chấm (`"A."`), ngoặc (`"(B)"`, `"[C]"`), hai chấm (`"D:"`), từ khóa (`"Đáp án C"`, `"Phương án B"`, `"Option A"`), số nguyên (`0..3`), chuỗi rỗng và `null`.
     + Chuẩn hóa tự động kiểu dữ liệu số cho `difficultyLevel` (mặc định 2), điền giá trị chuỗi an toàn cho các phương án `optionA` - `optionD` và `explanation`.
   - *Cải Tiến Thông Báo Lỗi Chi Tiết Tại Modal Nạp Tri Thức (`CurriculumExplorerView.jsx`)*:

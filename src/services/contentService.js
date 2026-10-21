@@ -206,32 +206,58 @@ export function sanitizeCurriculumPayload(payload) {
   if (!payload || typeof payload !== 'object') return payload;
 
   const sanitized = JSON.parse(JSON.stringify(payload));
+  sanitized.domainName = sanitized.domainName || sanitized.domain_name || 'Toán học';
+  sanitized.domainDescription = sanitized.domainDescription || sanitized.domain_description || '';
 
   if (Array.isArray(sanitized.chapters)) {
-    sanitized.chapters.forEach(ch => {
+    sanitized.chapters.forEach((ch, chIdx) => {
+      ch.chapterName = ch.chapterName || ch.chapter_name || `Chương ${chIdx + 1}`;
+      ch.description = ch.description || '';
+      ch.weight = typeof ch.weight === 'number' ? ch.weight : 0.25;
+
       if (Array.isArray(ch.lessons)) {
-        ch.lessons.forEach(les => {
+        ch.lessons.forEach((les, lesIdx) => {
+          les.lessonName = les.lessonName || les.lesson_name || `Bài ${lesIdx + 1}`;
+          les.summary = les.summary || '';
+          les.weight = typeof les.weight === 'number' ? les.weight : 0.08;
+
           if (Array.isArray(les.patterns)) {
-            les.patterns.forEach(pat => {
+            les.patterns.forEach((pat, patIdx) => {
+              pat.patternName = pat.patternName || pat.pattern_name || `Dạng ${patIdx + 1}`;
+              pat.theoryRecap = (pat.theoryRecap ?? pat.theory_recap ?? pat.theory ?? '').toString();
+              pat.solutionMethod = (pat.solutionMethod ?? pat.solution_method ?? pat.method ?? '').toString();
+              pat.videoUrl = (pat.videoUrl ?? pat.video_url ?? '').toString();
+              pat.durationSeconds = typeof pat.durationSeconds === 'number' ? pat.durationSeconds : 600;
+              pat.weight = typeof pat.weight === 'number' ? pat.weight : 0.04;
+              pat.prerequisiteSkillIds = Array.isArray(pat.prerequisiteSkillIds) ? pat.prerequisiteSkillIds : [];
+
               if (Array.isArray(pat.questions)) {
                 pat.questions.forEach(q => {
-                  q.correctOption = normalizeCorrectOption(q.correctOption);
+                  q.correctOption = normalizeCorrectOption(q.correctOption ?? q.correct_option);
                   if (typeof q.difficultyLevel !== 'number') {
-                    q.difficultyLevel = Number(q.difficultyLevel) || 2;
+                    q.difficultyLevel = Number(q.difficultyLevel ?? q.difficulty_level) || 2;
                   }
-                  q.contentLatex = q.contentLatex || '';
-                  q.optionA = q.optionA || '';
-                  q.optionB = q.optionB || '';
-                  q.optionC = q.optionC || '';
-                  q.optionD = q.optionD || '';
-                  q.explanation = q.explanation || '';
+                  q.contentLatex = (q.contentLatex ?? q.content_latex ?? q.content ?? '').toString();
+                  q.optionA = (q.optionA ?? q.option_a ?? '').toString();
+                  q.optionB = (q.optionB ?? q.option_b ?? '').toString();
+                  q.optionC = (q.optionC ?? q.option_c ?? '').toString();
+                  q.optionD = (q.optionD ?? q.option_d ?? '').toString();
+                  q.explanation = (q.explanation ?? '').toString();
                 });
+              } else {
+                pat.questions = [];
               }
             });
+          } else {
+            les.patterns = [];
           }
         });
+      } else {
+        ch.lessons = [];
       }
     });
+  } else {
+    sanitized.chapters = [];
   }
 
   return sanitized;
