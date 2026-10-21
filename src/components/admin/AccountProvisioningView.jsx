@@ -26,6 +26,7 @@ import {
   Check
 } from 'lucide-react';
 import { userService } from '../../services/userService';
+import { toast } from '../../context/ToastContext';
 
 const ROLE_CONFIG = {
   TEACHER: {
@@ -157,8 +158,9 @@ export default function AccountProvisioningView({ onBackToDashboard }) {
     try {
       const updatedActive = await userService.toggleUserStatus(user.userId);
       setUsers(prev => prev.map(u => u.userId === user.userId ? { ...u, isActive: updatedActive } : u));
+      toast.success(updatedActive ? 'Đã kích hoạt tài khoản thành công!' : 'Đã tạm khóa tài khoản!');
     } catch (err) {
-      alert('Không thể đổi trạng thái tài khoản: ' + err.message);
+      toast.error('Không thể đổi trạng thái tài khoản: ' + err.message);
     }
   };
 

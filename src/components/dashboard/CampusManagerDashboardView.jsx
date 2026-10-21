@@ -23,6 +23,7 @@ import {
 import { campusesList } from '../../data/mockData';
 import { userService } from '../../services/userService';
 import { practiceService } from '../../services/practiceService';
+import { toast } from '../../context/ToastContext';
 import { ClassMicroGroupsModal } from '../modals';
 
 export default function CampusManagerDashboardView({ onOpenProvisionPage }) {
@@ -174,7 +175,7 @@ export default function CampusManagerDashboardView({ onOpenProvisionPage }) {
       setTimeout(() => setCreatedNotice(''), 6000);
     } catch (err) {
       const msg = err.response?.data?.error?.message || err.message || 'Lỗi cấp tài khoản';
-      alert('Không thể cấp tài khoản: ' + msg);
+      toast.error('Không thể cấp tài khoản: ' + msg);
     }
   };
 

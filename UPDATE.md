@@ -1,17 +1,28 @@
-# Nhật Ký Cập Nhật (Update Log) - Web Client
+# NHẬT KÝ CẬP NHẬT (UPDATE LOG) - WEB CLIENT
 
-## [10/10/2026] - Giao Diện Quản Lý Nhóm Học Tập Vi Mô (Micro Study Groups: 3 - 5 Học Sinh) & Phân Bổ Sơ Đồ Bàn Học Offline
+## [22/10/2026] - Hộp Thoại Xác Nhận Xóa In-App, Tinh Gọn Modal Sửa Nhanh (Icon Cây Bút), Tự Động Nạp Dạng Bài Khi Mở Chương & Hệ Thống Toast Toàn Cục
 
-- **Xây Dựng Modal Sơ Đồ Nhóm Bàn Học Vi Mô (`ClassMicroGroupsModal.jsx`)**:
-  - Triển khai giao diện phân bổ trạm bàn học offline của lớp (Trần sĩ số 20 học sinh, mỗi nhóm bàn từ 3 đến 5 học sinh).
-  - Tích hợp bộ chọn quy mô nhóm bàn (`3 bạn/bàn`, `4 bạn/bàn`, `5 bạn/bàn`) kết nối trực tiếp với thuật toán gom cụm đồng nhất (Homogeneous Clustering) theo lỗ hổng kiến thức.
-  - Hiển thị chi tiết từng trạm bàn học: Tên bàn học sư phạm, chủ đề trọng tâm `FocusArea`, tag các kỹ năng yếu chung (`CommonWeakSkills`), danh sách học sinh tại bàn kèm chỉ số thành thạo kiến thức.
-  - Tính năng **Phân phối đề luyện tập thích ứng** trực tiếp cho bàn học (`practiceService.assignGroupWorksheet`), hiển thị trạng thái phát đề và thời gian thực.
-  - Bổ sung nút xuất file sơ đồ bàn học dạng PDF cho Giảng viên in ra phát tận bàn offline.
-- **Nâng Cấp Cổng Điều Hành Học Thuật Cơ Sở (`CampusManagerDashboardView.jsx`)**:
-  - Chuẩn hóa danh sách lớp học offline theo cơ chế trần 20 học sinh và số thứ tự tăng dần (`Lớp Nền tảng 01`, `Lớp Nền tảng 02`, `Lớp Tăng tốc 01`, `Lớp Bứt phá 01`).
-  - Hiển thị badge sĩ số chuẩn hóa: `Sĩ số: {studentCount}/20`.
-  - Tích hợp nút hành động **"Sơ Đồ Nhóm Bàn (3 - 5 Bạn)"** trên từng thẻ lớp học, mở modal tương tác trực tiếp.
-  - Bổ sung nút **"Tự Động Gom Cụm AI"** trên thanh công cụ lớp học gọi trực tiếp API K-Means Elbow Method (`practiceService.autoClusterClasses`).
-- **Kiểm Thử Đóng Gói (Build Verification)**:
-  - Chạy `npm run build` thành công 100% (**0 Error, 0 Warning**).
+- **Hộp Thoại Xác Nhận Xóa In-App Hiện Đại (Zero Native Browser Confirm / Alert)**:
+  - Loại bỏ hoàn toàn hộp thoại chặn luồng `window.confirm()` của trình duyệt khi xóa Chương, Bài học hoặc Dạng bài trong [`CurriculumExplorerView.jsx`](./src/components/curriculum/CurriculumExplorerView.jsx).
+  - Triển khai modal xác nhận in-app `confirmDeleteDialog` đồng bộ ngôn ngữ thiết kế Glassmorphism, hiển thị cảnh báo đỏ (`rose-500`), icon `<AlertTriangle />`, chi tiết các nội dung con bị xóa cascade và nút "Xác Nhận Xóa" chuyên nghiệp.
+  - Trong [`CurriculumStudioEditor.jsx`](./src/components/curriculum/CurriculumStudioEditor.jsx), cơ chế xóa câu hỏi được thay thế bằng xác nhận 2 chạm (Two-Tap Confirmation) đếm ngược 3 giây an toàn.
+
+- **Tinh Gọn Modal Sửa Nhanh (Metadata-Only) & Chuyển Nút Sửa Nhanh Sang Icon Cây Bút**:
+  - Chuyển đổi nút bấm văn bản "Sửa nhanh" trên thanh công cụ thành icon button `<Pencil className="w-4 h-4" />` tinh gọn kèm tooltip "Sửa thông tin nhanh".
+  - Tái cấu trúc modal `isEditModalOpen`:
+    - Chỉ cho phép chỉnh sửa siêu dữ liệu định danh: Tên Dạng bài / Tiêu đề, Chương học trực thuộc, Khối lớp (Lớp 10, 11, 12), Mức độ nhận thức chuẩn Bloom (Nhận biết, Thông hiểu, Vận dụng, Vận dụng cao), và Trọng số năng lực (%).
+    - Loại bỏ toàn bộ 4 tab biên soạn nội dung bên trong (lý thuyết, phương pháp, video, câu hỏi mẫu) để tránh trùng lặp tính năng.
+    - Bổ sung banner điều hướng trực quan: "Cần chỉnh sửa nội dung bài học chuyên sâu? Mở Studio Biên Soạn Sư Phạm".
+
+- **Tự Động Nạp & Mở Dạng Bài Đầu Tiên Khi Chọn Chương / Bài Học**:
+  - Cập nhật `toggleChapter` và `toggleLesson` trong [`CurriculumExplorerView.jsx`](./src/components/curriculum/CurriculumExplorerView.jsx): Khi người dùng nhấp vào tiêu đề Chương hoặc Bài học, hệ thống tự động tìm và chọn dạng bài đầu tiên (`selectedPattern`), đảm bảo khung bài học bên phải luôn hiển thị nội dung tức thì.
+
+- **Khắc Phục Cảnh Báo KaTeX Strict Mode Đối Với Ký Tự Tiếng Việt (`MathText.jsx`)**:
+  - Bổ sung cấu hình `strict: 'ignore'` trong trình dựng `renderKatexHtml` của [`MathText.jsx`](./src/components/common/MathText.jsx), triệt tiêu hoàn toàn cảnh báo `LaTeX-incompatible input Unicode text character "Đ" used in math mode`.
+
+- **Hệ Thống Thông Báo Toàn Cục (Global Toast Notification System)**:
+  - Triển khai `ToastContext.jsx` & `GlobalToastContainer.jsx` thay thế triệt để `window.alert()`.
+  - Hỗ trợ 4 nhóm trạng thái (Success, Error, Warning, Info), thanh đếm ngược tự động dừng khi rê chuột, và cơ chế bọc tự động chặn `window.alert()` toàn hệ thống.
+
+- **Kiểm Thử Vận Hành (Build Verification)**:
+  - `npm run build` hoàn thành 100% (**0 Error, 0 Warning**, hoàn tất trong 940ms trên Vite 8 và React 19).

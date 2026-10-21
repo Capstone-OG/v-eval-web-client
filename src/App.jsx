@@ -23,6 +23,7 @@ import {
 } from './components/modals';
 import { DiagnosticAssessmentPage } from './components/diagnostic';
 import { AccountProvisioningView } from './components/admin';
+import { CurriculumExplorerView } from './components/curriculum';
 import { CheckCircle2 } from 'lucide-react';
 import authService from './services/authService';
 
@@ -102,7 +103,10 @@ export default function App() {
           currentUser={currentUser}
           onOpenLogin={() => handleOpenAuth('login')}
           onOpenRegister={() => handleOpenAuth('register')}
-          onOpenDiagnostic={() => setCurrentPage('diagnostic')}
+          onOpenDiagnostic={() => {
+            setCurrentPage('dashboard');
+            setActiveTab('diagnostic');
+          }}
           onOpenDashboard={() => setCurrentPage('dashboard')}
           onOpenArchModal={() => setIsArchModalOpen(true)}
         />
@@ -145,7 +149,7 @@ export default function App() {
               activeTab={activeTab}
               setActiveTab={setActiveTab}
               activeRole={activeRole}
-              onOpenDiagnostic={() => setCurrentPage('diagnostic')}
+              onOpenDiagnostic={() => setActiveTab('diagnostic')}
               onOpenZPD={() => setIsZpdModalOpen(true)}
               onOpenAiTutor={() => setIsZpdModalOpen(true)}
               onOpenProvision={() => setCurrentPage('provision')}
@@ -162,63 +166,79 @@ export default function App() {
                 </div>
               )}
 
-              {/* Student View */}
-              {activeRole === 'student' && (
-                <div className="space-y-6 animate-fade">
-                  
-                  {/* Hero Banner with 3D Pop-out Avatar */}
-                  <HeroBanner 
-                    currentUser={currentUser}
-                    onStartMilestone={handleContinueMilestone}
-                    onStartMockTest={() => setCurrentPage('diagnostic')}
-                    onOpenAiTutor={() => setIsZpdModalOpen(true)}
-                  />
-
-                  {/* 4 Core Metrics Cards */}
-                  <MetricsGrid 
-                    onOpenRadar={() => setIsRadarModalOpen(true)}
-                    onOpenDAG={() => setIsRadarModalOpen(true)}
-                    onOpenZPD={() => setIsZpdModalOpen(true)}
-                    onOpenAnalytics={() => setIsRadarModalOpen(true)}
-                  />
-
-                  {/* Bottom 2 Column Grid */}
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    
-                    <div className="lg:col-span-2 space-y-6">
-                      <MilestoneCard 
+              {/* Tab Dàn Kiến Thức & Lộ Trình (Curriculum Explorer) - Hiển thị cho Mọi Vai Trò */}
+              {activeTab === 'roadmap' ? (
+                <CurriculumExplorerView 
+                  onStartQuizModal={() => setIsZpdModalOpen(true)} 
+                  onNavigateDiagnostic={() => setActiveTab('diagnostic')}
+                />
+              ) : activeTab === 'diagnostic' ? (
+                <DiagnosticAssessmentPage 
+                  embedded={true}
+                  onNavigateDashboard={() => setActiveTab('dashboard')}
+                  onNavigateHome={() => setActiveTab('dashboard')}
+                />
+              ) : (
+                <>
+                  {/* Student View */}
+                  {activeRole === 'student' && (
+                    <div className="space-y-6 animate-fade">
+                      
+                      {/* Hero Banner with 3D Pop-out Avatar */}
+                      <HeroBanner 
                         currentUser={currentUser}
-                        onStartTask={handleStartTask}
-                        onContinueMilestone={handleContinueMilestone}
-                        onStartDiagnostic={() => setCurrentPage('diagnostic')}
+                        onStartMilestone={handleContinueMilestone}
+                        onStartMockTest={() => setActiveTab('diagnostic')}
+                        onOpenAiTutor={() => setIsZpdModalOpen(true)}
                       />
-                    </div>
 
-                    <div className="space-y-6">
-                      <LiveQnACard />
-                      <AISocraticTutorWidget 
-                        onOpenFullChat={() => setIsZpdModalOpen(true)}
+                      {/* 4 Core Metrics Cards */}
+                      <MetricsGrid 
+                        onOpenRadar={() => setIsRadarModalOpen(true)}
+                        onOpenDAG={() => setActiveTab('roadmap')}
+                        onOpenZPD={() => setIsZpdModalOpen(true)}
+                        onOpenAnalytics={() => setIsRadarModalOpen(true)}
                       />
+
+                      {/* Bottom 2 Column Grid */}
+                      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        
+                        <div className="lg:col-span-2 space-y-6">
+                          <MilestoneCard 
+                            currentUser={currentUser}
+                            onStartTask={handleStartTask}
+                            onContinueMilestone={handleContinueMilestone}
+                            onStartDiagnostic={() => setActiveTab('diagnostic')}
+                          />
+                        </div>
+
+                        <div className="space-y-6">
+                          <LiveQnACard />
+                          <AISocraticTutorWidget 
+                            onOpenFullChat={() => setIsZpdModalOpen(true)}
+                          />
+                        </div>
+
+                      </div>
+
                     </div>
+                  )}
 
-                  </div>
+                  {/* Teacher View */}
+                  {activeRole === 'teacher' && (
+                    <TeacherDashboardView />
+                  )}
 
-                </div>
-              )}
+                  {/* Campus Manager / Admin View */}
+                  {(activeRole === 'manager' || activeRole === 'admin') && (
+                    <CampusManagerDashboardView onOpenProvisionPage={() => setCurrentPage('provision')} />
+                  )}
 
-              {/* Teacher View */}
-              {activeRole === 'teacher' && (
-                <TeacherDashboardView />
-              )}
-
-              {/* Campus Manager / Admin View */}
-              {(activeRole === 'manager' || activeRole === 'admin') && (
-                <CampusManagerDashboardView onOpenProvisionPage={() => setCurrentPage('provision')} />
-              )}
-
-              {/* Parent View */}
-              {activeRole === 'parent' && (
-                <ParentDashboardView />
+                  {/* Parent View */}
+                  {activeRole === 'parent' && (
+                    <ParentDashboardView />
+                  )}
+                </>
               )}
 
             </main>
