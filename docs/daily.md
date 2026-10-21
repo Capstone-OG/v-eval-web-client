@@ -2,7 +2,124 @@
 
 ---
 
-## [21/10/2026] - Động Cơ Bảng Biến Thiên Vector (Hỗ Trợ Tiệm Cận Vạch Kép ||), Đồ Thị Vi Tích Phân 2D Kèm Tiệm Cận Đứng/Ngang/Xiên & Tâm Đối Xứng I, Triệt Tiêu Vách Lưới Trắng 3D & Chuẩn Hóa KaTeX Bài Toán Mẫu
+## [22/10/2026] - Hệ Thống Thông Báo Toàn Cục (Global Notification Toast System) Thay Thế Toàn Bộ Browser Alert
+
+- **Kiến Trúc Điều Phối Thông Báo Toàn Cục (`ToastContext.jsx` & `GlobalToastContainer.jsx`)**:
+  - *Thay Thế Triệt Để Hộp Thoại Chặn Luồng `window.alert()` Của Trình Duyệt*:
+    + Hộp thoại `alert()` truyền thống của trình duyệt web làm đông cứng giao diện (blocking modal), tạo trải nghiệm gián đoạn và thiếu chuyên nghiệp cho giáo viên lẫn học sinh.
+    + Xây dựng hệ thống Toast thông báo nổi hiện đại, mượt mà, phân cấp 4 nhóm trạng thái nhận diện thị giác rõ ràng:
+      * **Thành công (Success - Xanh ngọc lục bảo `emerald`)**: Thông báo lưu bài, tạo câu hỏi, cập nhật node, nạp đề thành công.
+      * **Báo lỗi (Error - Đỏ hồng `rose`)**: Bắt lỗi API, ngoại lệ kết nối mạng, lỗi phân tích bài thi hoặc lỗi xác thực CSDL.
+      * **Cảnh báo (Warning - Vàng hổ phách `amber`)**: Nhắc nhở thiếu dữ liệu, chọn thiếu đáp án, xác nhận thao tác.
+      * **Thông tin (Info - Xanh dương `indigo`)**: Hướng dẫn tiến trình, xuất bản sơ đồ hoặc trạng thái đếm ngầm.
+  - *Bộ Khung Giao Diện Card Toast Nổi Cao Cấp (`GlobalToastContainer.jsx`)*:
+    + Định vị góc trên bên phải màn hình (`top-4 right-4 sm:top-6 sm:right-6`) với chỉ số lớp tối cao `z-[999999]`, đảm bảo luôn nổi trên mọi modal full-screen hay sidebar.
+    + Thiết kế kính mờ Glassmorphism (`backdrop-blur-md bg-white/95 border shadow-xl rounded-2xl`).
+    + Hiển thị đa dòng tự nhiên: Tự động tách dòng câu thông báo dài, hỗ trợ cả tiêu đề (`title`) và nội dung chi tiết (`message`).
+    + Thanh đếm ngược tiến độ (Countdown Progress Bar) tự động co ngắn mượt mà theo thời gian chờ (`duration` mặc định 4000ms).
+    + Tính năng thông minh tạm dừng đếm ngược khi người dùng rê chuột vào card (`onMouseEnter` / `onMouseLeave`) để đọc nội dung dài mà không lo bị đóng mất.
+    + Nút bấm `X` đóng nhanh tiện lợi kèm hiệu ứng viền sáng hover.
+  - *Cơ Chế Gọi Đa Dụng (Hook & Universal Singleton)*:
+    + Cung cấp React Hook `useToast()` dùng bên trong các component React: `const { showToast, toast } = useToast()`.
+    + Đồng thời xuất bản đối tượng Singleton `toast` toàn cục có thể import và gọi từ bất kỳ đâu (kể cả ngoài component lifecycle, file helper, service hay callback Axios):
+      * `toast.success(message, options)`
+      * `toast.error(message, options)`
+      * `toast.warning(message, options)`
+      * `toast.info(message, options)`
+      * `toast.dismiss(id)`
+  - *Cơ Chế Phòng Vệ Tự Động Bọc `window.alert` (Defensive Interception Layer)*:
+    + Khi `ToastProvider` được gắn vào DOM, hệ thống tự động ghi đè an toàn `window.alert(msg)` để chuyển tiếp toàn bộ chuỗi thông báo sang `toast.info(...)` (hoặc `toast.error` nếu chuỗi chứa chữ 'lỗi' / 'thất bại').
+    + Đảm bảo ngay cả khi có code bên thứ ba, thư viện ngoài hoặc các component chưa kịp refactor gọi `alert()`, trình duyệt cũng sẽ không bao giờ bật pop-up modal thô ráp chặn đứng người dùng.
+
+- **Di Chuyển & Chuẩn Hóa 100% Các Lệnh Alert Cũ Sang Toast Thông Minh**:
+  - `CurriculumExplorerView.jsx`: Chuyển đổi 13+ vị trí `alert(...)` (khởi chạy bài kiểm tra, tạo/xóa dạng bài, xóa chương học, xóa bài học, tạo chương, tạo bài, import JSON, bóc tách AI, sinh đề) sang `toast.success`, `toast.error`, `toast.warning`, `toast.info`.
+  - `CurriculumStudioEditor.jsx`: Chuyển đổi các thông báo xóa câu hỏi, cảnh báo thiếu nội dung/đáp án và lưu câu hỏi mới sang `toast.warning`, `toast.success`, `toast.error`.
+  - `DiagnosticAssessmentPage.jsx`: Chuyển đổi các khối `catch` khởi tạo đề thi và nộp bài thi chẩn đoán từ `alert(...)` sang `toast.error(...)`.
+  - `CampusManagerDashboardView.jsx`: Chuyển đổi lỗi cấp tài khoản sang `toast.error(...)`.
+  - `AccountProvisioningView.jsx`: Chuyển đổi lỗi đổi trạng thái tài khoản sang `toast.error(...)` và bổ sung `toast.success` khi kích hoạt/tạm khóa thành công.
+  - `ClassMicroGroupsModal.jsx`: Chuyển đổi thông báo in sơ đồ phân bàn sang `toast.info(...)`.
+
+- **Hộp Thoại Xác Nhận Xóa In-App Hiện Đại (In-App Confirm Dialogs - Zero Browser Modals)**:
+  - *Thay thế triệt để `window.confirm` bằng Hộp thoại Xác nhận Trong Ứng Dụng*:
+    + Loại bỏ hoàn toàn hộp thoại modal mặc định của trình duyệt (`window.confirm`) khi xóa Chương, xóa Bài học và xóa Dạng bài trong [`CurriculumExplorerView.jsx`](./src/components/curriculum/CurriculumExplorerView.jsx).
+    + Xây dựng modal `confirmDeleteDialog` đồng bộ giao diện Glassmorphism với màu cảnh báo đỏ (`rose-500`), icon `<AlertTriangle />`, hiển thị tường minh tên Node chuẩn bị xóa, danh sách tài liệu / bài tập bị ảnh hưởng và nút "Xác Nhận Xóa" chuyên nghiệp.
+    + Trong [`CurriculumStudioEditor.jsx`](./src/components/curriculum/CurriculumStudioEditor.jsx), cơ chế xóa câu hỏi được thay bằng thao tác 2 chạm (Two-Tap Confirmation): chạm lần 1 hiển thị đếm ngược "Nhấn để xác nhận xóa", chạm lần 2 thực hiện xóa an toàn kèm `toast.success`.
+
+- **Tối Giản Hóa Hộp Thoại Sửa Nhanh & Chuyển Đổi Nút "Sửa Nhanh" Sang Icon Cây Bút (`CurriculumExplorerView.jsx`)**:
+  - *Chuyển đổi nút Sửa Nhanh sang Icon Bút*: Thay thế nút bấm văn bản "Sửa nhanh" bằng icon button `<Pencil className="w-4 h-4" />` tinh gọn, bo góc hiện đại kèm tooltip "Sửa thông tin nhanh".
+  - *Tái cấu trúc Modal Sửa Nhanh (`isEditModalOpen`)*:
+    + Loại bỏ toàn bộ 4 tab biên soạn nội dung bên trong (Lý thuyết SGK, Phương pháp KaTeX, Video giảng, Câu hỏi mẫu) khỏi hộp thoại này theo đúng yêu cầu sư phạm.
+    + Tập trung 100% vào việc chỉnh sửa metadata: Tên/Tiêu đề dạng bài, Chương học trực thuộc, Khối lớp (Lớp 10, 11, 12), Mức độ nhận thức chuẩn Bloom (Nhận biết, Thông hiểu, Vận dụng, Vận dụng cao) và Trọng số năng lực (%).
+    + Tích hợp banner điều hướng nổi bật: "Cần chỉnh sửa nội dung bài học chuyên sâu? Mở Studio Biên Soạn Sư Phạm", giúp giảng viên dễ dàng chuyển hướng sang Studio khi cần soạn công thức phức tạp hoặc vẽ đồ thị JSXGraph.
+
+- **Tự Động Nạp & Mở Dạng Bài Đầu Tiên Khi Chọn Chương / Bài Học**:
+  - Cập nhật hàm `toggleChapter` và `toggleLesson` trong [`CurriculumExplorerView.jsx`](./src/components/curriculum/CurriculumExplorerView.jsx): Khi người dùng bấm vào tiêu đề Chương hoặc Bài học, hệ thống tự động tìm và chọn dạng bài đầu tiên (`selectedPattern`), giải quyết dứt điểm hiện tượng khung bên phải bị trống/không tải nội dung khi mới chọn chương.
+
+- **Khắc Phục Cảnh Báo KaTeX Strict Mode Đối Với Ký Tự Tiếng Việt (`MathText.jsx`)**:
+  - Bổ sung cấu hình `strict: 'ignore'` trong trình dựng `renderKatexHtml` của [`MathText.jsx`](./src/components/common/MathText.jsx), triệt tiêu hoàn toàn cảnh báo `LaTeX-incompatible input Unicode text character "Đ" used in math mode`.
+
+
+---
+
+## [21/10/2026] - Nền Ô Ly Vở Học Sinh 2D Phẳng Cho Hình Học Không Gian 3D, Mở Quyền Xóa Chương/Bài Học (Cascade Delete), Thêm Chương/Bài Mới & Bộ Lọc Phân Loại Tri Thức Đa Chiều
+
+- **Nền Giấy Ô Ly Vở Học Sinh 2D Phẳng Cho Hình Học Không Gian 3D (`InteractiveMathRenderer.jsx`, `InteractiveMathWorkbenchModal.jsx`, `index.css`)**:
+  - *Thay Thế Nền Trắng Đơn Điệu Bằng Nền Giấy Ô Ly Chuẩn Sư Phạm THPT*:
+    + Theo phản hồi sư phạm, thay vì để nền trắng trơn gây trống trải hoặc dùng lưới 3D nghiêng phối cảnh làm rối mắt hình khối, áp dụng nền giấy ô ly 2D phẳng (`flat 2D notebook squared paper grid`).
+    + Triển khai hai lớp lưới đồng tâm bằng CSS Linear Gradients:
+      * Lưới phụ `20px x 20px` nét mờ nhẹ (`#e2e8f0` 1px).
+      * Lưới chính `100px x 100px` nét đậm định vị (`#cbd5e1` 1px) trên nền trắng tinh khiết `#ffffff`.
+    + Lưới là dạng 2D phẳng tuyệt đối ("không chia 3D"), cố định ở hậu cảnh (background), tạo cảm giác thân thuộc như đang dựng hình trên trang vở ghi chép môn Toán Hình học không gian THPT.
+  - *Cơ Chế Khử Nền Trắng Che Phủ SVG Của JSXGraph (`index.css`)*:
+    + Mặc định CSS của JSXGraph gán `background-color: #ffffff !important` cho thẻ `<svg>`.
+    + Bổ sung selector có độ ưu tiên cao `.jxgbox.jxgbox-3d-grid svg { background-color: transparent !important; background: transparent !important; }`, cho phép các ô ly 2D phía sau container lộ rõ sắc nét mà không bị SVG đè lên.
+    + Áp dụng đồng bộ trên cả component hiển thị `InteractiveMathRenderer` khi `is3D === true` và Workbench biên tập `InteractiveMathWorkbenchModal` tại tab `3d_space`.
+
+- **Tái Cấu Trúc Toàn Diện Hệ Trục Tọa Độ Oxyz 3D Vector & Bật/Tắt Trực Quan (`InteractiveMathRenderer.jsx` & `InteractiveMathWorkbenchModal.jsx`)**:
+  - *Khắc Phục Hiện Tượng Trục Oxyz Không Hiện Khi Nhấp Nút*:
+    + Nhận diện nguyên nhân gốc: `view3d.defaultAxes` của JSXGraph sử dụng đối tượng `axis3d` không hỗ trợ mũi tên nhọn, thiếu nhãn gốc tọa độ $O$ và `setAttribute({ visible })` không cập nhật được các phần tử 2D con. Đồng thời, biến tham chiếu `v.defaultAxes?.x` bị lệch định danh so với thuộc tính nội bộ `xAxis`, khiến lệnh chuyển trạng thái bị bỏ qua.
+    + Loại bỏ cơ chế trục mặc định (`axesPosition: 'none'`), chủ động dựng hệ trục Oxyz vector độc lập.
+  - *Hệ Trục Oxyz 3D Vector Chuẩn SGK Hình Học Không Gian GDPT 2018*:
+    + Điểm gốc tọa độ $O(0, 0, 0)$ có nhãn $O$ màu slate xám đậm (`#334155`).
+    + Trục hoành $Ox$: Vector đi từ $[0, 0, 0]$ đến $[5.5, 0, 0]$, màu đỏ rực (`#ef4444`), độ dày nét 2px, mũi tên nhọn (`lastArrow: true`), nhãn $x$ in đậm nổi bật.
+    + Trục tung $Oy$: Vector đi từ $[0, 0, 0]$ đến $[0, 5.5, 0]$, màu xanh lá (`#10b981`), độ dày nét 2px, mũi tên nhọn (`lastArrow: true`), nhãn $y$ in đậm.
+    + Trục cao $Oz$: Vector đi từ $[0, 0, 0]$ đến $[0, 0, 6.5]$, màu xanh dương (`#3b82f6`), độ dày nét 2px, mũi tên nhọn (`lastArrow: true`), nhãn $z$ in đậm.
+    + Ba tia đối âm nét đứt ($Ox^-, Oy^-, Oz^-$): Dựng các tia nét đứt mờ (`dash: 2`) về phía trục âm, hỗ trợ học sinh định vị không gian 3D trực quan khi xoay góc nhìn.
+  - *Cơ Chế Bật/Tắt Linh Hoạt (Interactive Toggle)*:
+    + Lưu trữ các phần tử trục vào `axesElementsRef.current`, cập nhật tức thì visibility trên cả đối tượng 3D lẫn `element2D` SVG, phản hồi 60 FPS khi bấm nút.
+    + Nâng cấp nút bấm trên toolbar: Thể hiện trạng thái active rõ ràng (`bg-indigo-600 text-white shadow-xs`), icon la bàn chuyển trắng và nhãn chuyển thành "Đang bật Oxyz".
+    + Bổ sung nút bấm và hệ trục Oxyz tương ứng trên canvas phòng thí nghiệm MathLab (`InteractiveMathWorkbenchModal.jsx`).
+
+- **Mở Quyền Quản Trị Xóa & Thêm Chương / Bài Học Trên Cây Tri Thức (`CurriculumExplorerView.jsx`)**:
+  - *Xóa Chương Học Đa Cấp (Cascade Delete Chapter)*:
+    + Tích hợp nút thùng rác `Trash2` trực tiếp trên từng header Chương học (`chap.chapterId`).
+    + Hộp thoại cảnh báo thông minh: Hiển thị rõ số lượng bài học, dạng bài và câu hỏi sẽ bị xóa vĩnh viễn khỏi CSDL trước khi xác nhận.
+    + Kết nối API backend `DELETE /api/content/curriculum/nodes/{nodeId}`, tự động kích hoạt bộ thu thập đệ quy `CollectDescendantIds` xóa sạch các thực thể phụ thuộc (`SkillPrerequisites`, `Materials`, `Questions`, `Skills`).
+    + Cập nhật tức thì giao diện thông qua `fetchCurriculumData()` và reset lựa chọn an toàn nếu dạng bài đang xem nằm trong nhánh bị xóa.
+  - *Xóa Bài Học (Delete Lesson)*:
+    + Tích hợp nút xóa `Trash2` trên từng header Bài học (`les.lessonId`), cảnh báo số lượng dạng bài trực thuộc.
+  - *Tạo Chương Học Mới (`+ Thêm Chương Mới`)*:
+    + Bổ sung nút `+ Thêm Chương Mới` nổi bật trên đỉnh cột Cấu trúc phân cấp.
+    + Modal `CreateChapterModal` chuyên nghiệp: Cho phép Giảng viên/Ban Chuyên Môn chọn Miền tri thức, Phân môn trực thuộc (Vật lí, Hóa học, Sinh học, v.v.), Khối lớp (Lớp 12, 11, 10), Năm học áp dụng (2025 - 2026, 2024 - 2025), Tên chương, Trọng số (%) và Mục tiêu chuẩn đầu ra.
+    + Tự động format định danh chuẩn hóa: `[Lớp 12] [Tên chương] (2025-2026)`.
+  - *Thêm Bài Học Mới (`+ Thêm bài`)*:
+    + Bổ sung nút `+ Thêm bài` trên từng Chapter Header, mở modal `CreateLessonModal` với trường tên bài, trọng số và tóm tắt nội dung cốt lõi; tự động bung mở Chương (auto-expand) ngay sau khi tạo thành công.
+
+- **Bộ Lọc Phân Loại Tri Thức Đa Chiều (`Bộ Lọc Phân Loại Tri Thức` Toolbar)**:
+  - *Phân Tách Phân Môn Riêng Biệt (Sub-Subjects)*:
+    + Thay vì chỉ hiển thị các Miền tri thức lớn, giao diện cho phép học sinh và giáo viên lọc sâu theo từng môn học cụ thể:
+      * **Khoa học Tự nhiên**: Tất cả môn, Vật lí, Hóa học, Sinh học.
+      * **Khoa học Xã hội**: Tất cả môn, Lịch sử, Địa lí, GDKT & Pháp luật.
+      * **Sử dụng Ngôn ngữ**: Tất cả môn, Tiếng Việt / Ngữ văn, Tiếng Anh.
+      * **Toán học & Tư duy định lượng**: Tất cả môn, Đại số & Giải tích, Hình học & Đo lường, Xác suất & Thống kê, Tư duy Logic & Dữ liệu.
+  - *Phân Loại Theo Khối Lớp (Grade Filter)*:
+    + Hỗ trợ các nút lọc tức thì: `Tất cả lớp`, `Lớp 12 (Trọng tâm ĐGNL V-ACT)`, `Lớp 11`, `Lớp 10`.
+    + Động cơ suy luận regex quét thông minh từ khóa khối lớp từ tên chương và bài học.
+  - *Phân Loại Theo Năm Học (Academic Year Filter)*:
+    + Hỗ trợ chọn lọc: `Tất cả năm`, `2025 - 2026 (Chương trình GDPT 2018 Mới)`, `2024 - 2025`.
+  - *Thống Kê Khớp Thời Gian Thực & Đặt Lại Bộ Lọc*:
+    + Hiển thị số lượng Chương và Bài học khớp bộ lọc theo thời gian thực (real-time badge).
+    + Nút "Đặt lại bộ lọc" xuất hiện tự động khi có ít nhất một tiêu chí lọc được kích hoạt.
 
 - **Động Cơ Bảng Biến Thiên Vector Nội Sinh Hỗ Trợ Tiệm Cận Kép (`VariationTable.jsx`)**:
   - *Hỗ Trợ Hàm Phân Thức Hữu Tỉ (Bậc 1/1 & Bậc 2/1)*:

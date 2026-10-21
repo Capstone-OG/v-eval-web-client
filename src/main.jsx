@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import 'katex/dist/katex.min.css'
 import App from './App.jsx'
+import { ToastProvider } from './context/ToastContext.jsx'
 
 class RootErrorBoundary extends Component {
   constructor(props) {
@@ -59,7 +60,9 @@ class RootErrorBoundary extends Component {
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <RootErrorBoundary>
-      <App />
+      <ToastProvider>
+        <App />
+      </ToastProvider>
     </RootErrorBoundary>
   </StrictMode>,
 )

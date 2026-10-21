@@ -58,6 +58,7 @@ export default function InteractiveMathRenderer({
   const containerRef = useRef(null);
   const boardRef = useRef(null);
   const view3dRef = useRef(null);
+  const axesElementsRef = useRef([]);
 
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [boardReady, setBoardReady] = useState(false);
@@ -121,6 +122,7 @@ export default function InteractiveMathRenderer({
             az: config.azimuth || 0.85,
             el: config.elevation || 0.35,
             trackball: { enabled: interactive },
+            axesPosition: 'none',
             // Tắt hoàn toàn các mặt phẳng thành hộp (rear/front walls) để tránh lỗi vạch chia nửa trắng/nửa lưới
             xPlaneRear: { visible: false },
             yPlaneRear: { visible: false },
@@ -128,12 +130,121 @@ export default function InteractiveMathRenderer({
             xPlaneFront: { visible: false },
             yPlaneFront: { visible: false },
             zPlaneFront: { visible: false },
-            xAxis: { name: 'x', strokeColor: '#ef4444', strokeWidth: 1.2, visible: showAxes },
-            yAxis: { name: 'y', strokeColor: '#10b981', strokeWidth: 1.2, visible: showAxes },
-            zAxis: { name: 'z', strokeColor: '#3b82f6', strokeWidth: 1.2, visible: showAxes }
+            xAxis: { visible: false },
+            yAxis: { visible: false },
+            zAxis: { visible: false }
           }
         );
         view3dRef.current = view;
+
+        // =========================================================
+        // HỆ TRỤC TỌA ĐỘ OXYZ CHUYÊN NGHIỆP (CHUẨN SGK TOÁN GDPT 2018)
+        // =========================================================
+        const axesList = [];
+
+        // Gốc O(0, 0, 0)
+        const ptO = view.create('point3d', [0, 0, 0], {
+          name: 'O',
+          size: 2.5,
+          color: '#475569',
+          fixed: true,
+          visible: showAxes,
+          withLabel: true,
+          label: { offset: [-12, -8], color: '#334155', fontWeight: 'bold', fontSize: 11 }
+        });
+        axesList.push(ptO);
+
+        // Trục Ox (Vector [1, 0, 0], màu đỏ #ef4444)
+        const ptX = view.create('point3d', [5.5, 0, 0], {
+          name: 'x',
+          size: 1.5,
+          color: '#ef4444',
+          fixed: true,
+          visible: showAxes,
+          withLabel: true,
+          label: { offset: [6, 2], color: '#dc2626', fontWeight: 'bold', fontSize: 12 }
+        });
+        const lineOx = view.create('line3d', [ptO, ptX], {
+          straightFirst: false,
+          straightLast: false,
+          lastArrow: true,
+          strokeColor: '#ef4444',
+          strokeWidth: 2,
+          visible: showAxes
+        });
+        axesList.push(ptX, lineOx);
+
+        // Trục Oy (Vector [0, 1, 0], màu xanh lá #10b981)
+        const ptY = view.create('point3d', [0, 5.5, 0], {
+          name: 'y',
+          size: 1.5,
+          color: '#10b981',
+          fixed: true,
+          visible: showAxes,
+          withLabel: true,
+          label: { offset: [6, 6], color: '#059669', fontWeight: 'bold', fontSize: 12 }
+        });
+        const lineOy = view.create('line3d', [ptO, ptY], {
+          straightFirst: false,
+          straightLast: false,
+          lastArrow: true,
+          strokeColor: '#10b981',
+          strokeWidth: 2,
+          visible: showAxes
+        });
+        axesList.push(ptY, lineOy);
+
+        // Trục Oz (Vector [0, 0, 1], màu xanh dương #3b82f6)
+        const ptZ = view.create('point3d', [0, 0, 6.5], {
+          name: 'z',
+          size: 1.5,
+          color: '#3b82f6',
+          fixed: true,
+          visible: showAxes,
+          withLabel: true,
+          label: { offset: [-4, 10], color: '#2563eb', fontWeight: 'bold', fontSize: 12 }
+        });
+        const lineOz = view.create('line3d', [ptO, ptZ], {
+          straightFirst: false,
+          straightLast: false,
+          lastArrow: true,
+          strokeColor: '#3b82f6',
+          strokeWidth: 2,
+          visible: showAxes
+        });
+        axesList.push(ptZ, lineOz);
+
+        // Các tia âm nét đứt (Negative axis rays)
+        const ptXNeg = view.create('point3d', [-2.5, 0, 0], { visible: false, fixed: true });
+        const lineOxNeg = view.create('line3d', [ptO, ptXNeg], {
+          straightFirst: false,
+          straightLast: false,
+          dash: 2,
+          strokeColor: '#fca5a5',
+          strokeWidth: 1.2,
+          visible: showAxes
+        });
+        const ptYNeg = view.create('point3d', [0, -2.5, 0], { visible: false, fixed: true });
+        const lineOyNeg = view.create('line3d', [ptO, ptYNeg], {
+          straightFirst: false,
+          straightLast: false,
+          dash: 2,
+          strokeColor: '#86efac',
+          strokeWidth: 1.2,
+          visible: showAxes
+        });
+        const ptZNeg = view.create('point3d', [0, 0, -2], { visible: false, fixed: true });
+        const lineOzNeg = view.create('line3d', [ptO, ptZNeg], {
+          straightFirst: false,
+          straightLast: false,
+          dash: 2,
+          strokeColor: '#93c5fd',
+          strokeWidth: 1.2,
+          visible: showAxes
+        });
+        axesList.push(ptXNeg, lineOxNeg, ptYNeg, lineOyNeg, ptZNeg, lineOzNeg);
+
+        axesElementsRef.current = axesList;
 
         const ptsMap = {};
         const coordMap = {};
@@ -601,6 +712,7 @@ export default function InteractiveMathRenderer({
         }
         boardRef.current = null;
         view3dRef.current = null;
+        axesElementsRef.current = [];
       }
     };
   }, [config, is3D, interactive, boardId]);
@@ -609,15 +721,18 @@ export default function InteractiveMathRenderer({
   const handleToggleAxes = () => {
     const next = !showAxes;
     setShowAxes(next);
-    if (view3dRef.current && boardRef.current) {
+    if (axesElementsRef.current.length > 0 && boardRef.current) {
       try {
-        const v = view3dRef.current;
-        const x = v.xAxis || v.defaultAxes?.x;
-        const y = v.yAxis || v.defaultAxes?.y;
-        const z = v.zAxis || v.defaultAxes?.z;
-        if (x && typeof x.setAttribute === 'function') x.setAttribute({ visible: next });
-        if (y && typeof y.setAttribute === 'function') y.setAttribute({ visible: next });
-        if (z && typeof z.setAttribute === 'function') z.setAttribute({ visible: next });
+        axesElementsRef.current.forEach(el => {
+          if (el) {
+            if (typeof el.setAttribute === 'function') {
+              el.setAttribute({ visible: next });
+            }
+            if (el.element2D && typeof el.element2D.setAttribute === 'function') {
+              el.element2D.setAttribute({ visible: next });
+            }
+          }
+        });
         boardRef.current.update();
       } catch (e) {
         console.warn('Toggle axes error:', e);
@@ -730,14 +845,14 @@ export default function InteractiveMathRenderer({
                   type="button"
                   onClick={handleToggleAxes}
                   title={showAxes ? 'Ẩn hệ trục tọa độ Oxyz' : 'Hiện hệ trục tọa độ Oxyz'}
-                  className={`p-1.5 rounded-lg border transition-colors shadow-2xs flex items-center gap-1 text-[10px] font-bold ${
+                  className={`p-1.5 rounded-lg border transition-all shadow-2xs flex items-center gap-1.5 text-[10px] font-bold cursor-pointer ${
                     showAxes
-                      ? 'bg-indigo-50 border-indigo-300 text-indigo-700'
+                      ? 'bg-indigo-600 border-indigo-600 text-white shadow-xs'
                       : 'bg-white border-slate-200 text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 hover:border-indigo-200'
                   }`}
                 >
-                  <Compass className="w-3 h-3 text-indigo-600" />
-                  <span className="hidden sm:inline">{showAxes ? 'Ẩn Trục' : 'Trục Oxyz'}</span>
+                  <Compass className={`w-3 h-3 ${showAxes ? 'text-white' : 'text-indigo-600'}`} />
+                  <span className="hidden sm:inline">{showAxes ? 'Đang bật Oxyz' : 'Trục Oxyz'}</span>
                 </button>
                 <button
                   type="button"
@@ -787,13 +902,15 @@ export default function InteractiveMathRenderer({
       {/* CANVAS CONTAINER FOR JSXGRAPH */}
       {/* ========================================================= */}
       <div
-        className="relative w-full bg-slate-50/50 flex-1 overflow-hidden select-none"
+        className={`relative w-full flex-1 overflow-hidden select-none ${
+          is3D ? 'bg-grid-notebook' : 'bg-slate-50/50'
+        }`}
         style={{ minHeight: isFullscreen ? 'auto' : `${height}px`, height: isFullscreen ? '100%' : `${height}px` }}
       >
         <div
           ref={containerRef}
           id={boardId}
-          className="w-full h-full"
+          className={`w-full h-full jxgbox ${is3D ? 'jxgbox-3d-grid' : ''}`}
           style={{ width: '100%', height: '100%', overflow: 'hidden' }}
         />
 

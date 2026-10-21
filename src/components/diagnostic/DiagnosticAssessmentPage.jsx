@@ -48,6 +48,7 @@ import {
 } from 'recharts';
 
 import { aiService } from '../../services/aiService';
+import { toast } from '../../context/ToastContext';
 import { contentService } from '../../services/contentService';
 import { practiceService } from '../../services/practiceService';
 import { tokenStorage } from '../../services/apiClient';
@@ -324,7 +325,7 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
       setStage('testing');
     } catch (err) {
       console.error('Error starting assessment:', err);
-      alert(`Lỗi khởi tạo đề thi: ${err.message}`);
+      toast.error(`Lỗi khởi tạo đề thi: ${err.message}`);
     } finally {
       setIsLoading(false);
       setLoadingMsg('');
@@ -508,7 +509,7 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
       });
     } catch (err) {
       console.error('Submit exam error:', err);
-      alert(`Lỗi phân tích bài thi: ${err.message}`);
+      toast.error(`Lỗi phân tích bài thi: ${err.message}`);
       setStage('testing');
     } finally {
       setIsLoading(false);

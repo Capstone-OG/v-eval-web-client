@@ -260,6 +260,7 @@ export default function InteractiveMathWorkbenchModal({
   const [planeD, setPlaneD] = useState(1.8);
   const [azimuthAngle, setAzimuthAngle] = useState(0.85);
   const [elevationAngle, setElevationAngle] = useState(0.35);
+  const [show3DAxes, setShow3DAxes] = useState(false);
 
   // =============================================================
   // 3. TÙY CHỈNH VỊ TRÍ & ĐỔI TÊN CÁC ĐỈNH CỦA HÌNH 3D (USER REQUEST)
@@ -959,6 +960,7 @@ export default function InteractiveMathWorkbenchModal({
           az: azimuthAngle,
           el: elevationAngle,
           trackball: { enabled: true },
+          axesPosition: 'none',
           // Tắt các mặt phẳng thành hộp phía sau/trước để loại bỏ hoàn toàn hiện tượng vách lưới chia nửa màn hình
           xPlaneRear: { visible: false },
           yPlaneRear: { visible: false },
@@ -966,11 +968,60 @@ export default function InteractiveMathWorkbenchModal({
           xPlaneFront: { visible: false },
           yPlaneFront: { visible: false },
           zPlaneFront: { visible: false },
-          xAxis: { name: 'x', strokeColor: '#ef4444', strokeWidth: 1.2 },
-          yAxis: { name: 'y', strokeColor: '#10b981', strokeWidth: 1.2 },
-          zAxis: { name: 'z', strokeColor: '#3b82f6', strokeWidth: 1.2 }
+          xAxis: { visible: false },
+          yAxis: { visible: false },
+          zAxis: { visible: false }
         }
       );
+
+      // Render custom vector Oxyz axes if enabled
+      if (show3DAxes) {
+        const ptO = view.create('point3d', [0, 0, 0], {
+          name: 'O',
+          size: 2.5,
+          color: '#475569',
+          fixed: true,
+          withLabel: true,
+          label: { offset: [-12, -8], color: '#334155', fontWeight: 'bold', fontSize: 11 }
+        });
+        const ptX = view.create('point3d', [5.5, 0, 0], {
+          name: 'x',
+          size: 1.5,
+          color: '#ef4444',
+          fixed: true,
+          withLabel: true,
+          label: { offset: [6, 2], color: '#dc2626', fontWeight: 'bold', fontSize: 12 }
+        });
+        view.create('line3d', [ptO, ptX], { straightFirst: false, straightLast: false, lastArrow: true, strokeColor: '#ef4444', strokeWidth: 2 });
+
+        const ptY = view.create('point3d', [0, 5.5, 0], {
+          name: 'y',
+          size: 1.5,
+          color: '#10b981',
+          fixed: true,
+          withLabel: true,
+          label: { offset: [6, 6], color: '#059669', fontWeight: 'bold', fontSize: 12 }
+        });
+        view.create('line3d', [ptO, ptY], { straightFirst: false, straightLast: false, lastArrow: true, strokeColor: '#10b981', strokeWidth: 2 });
+
+        const ptZ = view.create('point3d', [0, 0, 6.5], {
+          name: 'z',
+          size: 1.5,
+          color: '#3b82f6',
+          fixed: true,
+          withLabel: true,
+          label: { offset: [-4, 10], color: '#2563eb', fontWeight: 'bold', fontSize: 12 }
+        });
+        view.create('line3d', [ptO, ptZ], { straightFirst: false, straightLast: false, lastArrow: true, strokeColor: '#3b82f6', strokeWidth: 2 });
+
+        // Negative rays
+        const ptXNeg = view.create('point3d', [-2.5, 0, 0], { visible: false, fixed: true });
+        view.create('line3d', [ptO, ptXNeg], { straightFirst: false, straightLast: false, dash: 2, strokeColor: '#fca5a5', strokeWidth: 1.2 });
+        const ptYNeg = view.create('point3d', [0, -2.5, 0], { visible: false, fixed: true });
+        view.create('line3d', [ptO, ptYNeg], { straightFirst: false, straightLast: false, dash: 2, strokeColor: '#86efac', strokeWidth: 1.2 });
+        const ptZNeg = view.create('point3d', [0, 0, -2], { visible: false, fixed: true });
+        view.create('line3d', [ptO, ptZNeg], { straightFirst: false, straightLast: false, dash: 2, strokeColor: '#93c5fd', strokeWidth: 1.2 });
+      }
 
       // Dictionary to store all 3D points
       const ptsMap = {};
@@ -1269,7 +1320,8 @@ export default function InteractiveMathWorkbenchModal({
     extraPoints,
     customAuxLines,
     azimuthAngle,
-    elevationAngle
+    elevationAngle,
+    show3DAxes
   ]);
 
   // Compute the current canonical snippet tag for insert & simulation preview
@@ -2236,6 +2288,21 @@ export default function InteractiveMathWorkbenchModal({
                     <span className="text-[11px] text-slate-500 font-medium hidden sm:inline">
                       Lăn chuột Zoom • Kéo Di chuyển
                     </span>
+                    {jsxSubTab === '3d_space' && (
+                      <button
+                        type="button"
+                        onClick={() => setShow3DAxes(!show3DAxes)}
+                        className={`px-2 py-1 rounded-lg border text-[11px] font-bold flex items-center gap-1 transition-all cursor-pointer ${
+                          show3DAxes
+                            ? 'bg-indigo-600 border-indigo-600 text-white shadow-xs'
+                            : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                        }`}
+                        title={show3DAxes ? 'Ẩn hệ trục tọa độ Oxyz' : 'Hiện hệ trục tọa độ Oxyz'}
+                      >
+                        <Compass className={`w-3.5 h-3.5 ${show3DAxes ? 'text-white' : 'text-indigo-600'}`} />
+                        <span>{show3DAxes ? 'Đang bật Oxyz' : 'Trục Oxyz'}</span>
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={() => handleCopyCode(getCurrentFormulaString(), 'công thức')}
@@ -2249,11 +2316,15 @@ export default function InteractiveMathWorkbenchModal({
                 </div>
 
                 {/* JSXGraph Canvas DOM Container */}
-                <div className="flex-1 w-full min-h-[440px] relative rounded-xl overflow-hidden border border-slate-200 bg-white">
+                <div className={`flex-1 w-full min-h-[440px] relative rounded-xl overflow-hidden border border-slate-200 ${
+                  jsxSubTab === '3d_space' ? 'bg-grid-notebook' : 'bg-white'
+                }`}>
                   <div
                     id="jsxgraph_board_container"
                     ref={jxgContainerRef}
-                    className="jxgbox w-full h-full min-h-[440px]"
+                    className={`jxgbox w-full h-full min-h-[440px] ${
+                      jsxSubTab === '3d_space' ? 'jxgbox-3d-grid' : ''
+                    }`}
                   />
                 </div>
 

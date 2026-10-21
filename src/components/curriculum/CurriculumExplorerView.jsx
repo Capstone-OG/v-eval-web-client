@@ -28,9 +28,9 @@ import {
   Folder,
   FolderOpen,
   Bookmark,
-  CheckCircle,
   AlertCircle,
   Edit3,
+  Pencil,
   Save,
   Plus,
   Trash2,
@@ -42,7 +42,11 @@ import {
   FileUp,
   FileType,
   CheckCheck,
-  Upload
+  Upload,
+  Filter,
+  Calendar,
+  GraduationCap,
+  Book
 } from 'lucide-react';
 import MathText from '../common/MathText';
 import CurriculumStudioEditor, { parseSolutionMethodSections, parseTheoryRecapSections, isMathOrStemDomain } from './CurriculumStudioEditor';
@@ -50,6 +54,82 @@ import InteractiveMathWorkbenchModal from './InteractiveMathWorkbenchModal';
 import contentService from '../../services/contentService';
 import { practiceService } from '../../services/practiceService';
 import { aiService } from '../../services/aiService';
+import { toast } from '../../context/ToastContext';
+
+// Cấu hình phân môn riêng biệt theo từng Miền tri thức
+export const SUB_SUBJECTS_BY_DOMAIN = {
+  // Khoa học tự nhiên: Vật lí, Hóa học, Sinh học
+  'NATURAL_SCIENCES': [
+    { id: 'all', name: 'Tất cả môn KHTN', keywords: [] },
+    { id: 'physics', name: 'Vật lí', keywords: ['vật lí', 'vật lý', 'dao động', 'sóng', 'điện', 'quang', 'hạt nhân', 'nhiệt', 'khí', 'lực', 'chuyển động', 'năng lượng', 'cơ học', 'physics'] },
+    { id: 'chemistry', name: 'Hóa học', keywords: ['hóa', 'hóa học', 'este', 'lipit', 'cacbohidrat', 'amin', 'polime', 'kim loại', 'hữu cơ', 'vô cơ', 'nguyên tử', 'dung dịch', 'phản ứng', 'axit', 'bazơ', 'muối', 'chemistry'] },
+    { id: 'biology', name: 'Sinh học', keywords: ['sinh', 'sinh học', 'di truyền', 'tiến hóa', 'sinh thái', 'tế bào', 'nhiễm sắc thể', 'adn', 'arn', 'quần thể', 'hệ sinh thái', 'đột biến', 'gen', 'biology'] }
+  ],
+  // Khoa học xã hội: Lịch sử, Địa lí, GDKT & Pháp luật
+  'SOCIAL_SCIENCES': [
+    { id: 'all', name: 'Tất cả môn KHXH', keywords: [] },
+    { id: 'history', name: 'Lịch sử', keywords: ['lịch sử', 'sử', 'cách mạng', 'chiến tranh', 'kháng chiến', 'đảng', 'thế giới', 'việt nam 19', 'việt nam 1945', 'phục hưng', 'phong kiến', 'chiến tranh thế giới', 'history'] },
+    { id: 'geography', name: 'Địa lí', keywords: ['địa lí', 'địa lý', 'địa hình', 'khí hậu', 'dân cư', 'kinh tế vùng', 'biển đảo', 'đồng bằng', 'sông ngòi', 'khoáng sản', 'tự nhiên việt nam', 'đô thị hóa', 'geography'] },
+    { id: 'civics', name: 'GDKT & Pháp luật', keywords: ['pháp luật', 'kinh tế', 'hiến pháp', 'quyền', 'nghĩa vụ', 'doanh nghiệp', 'thị trường', 'tiền tệ', 'công dân', 'gdkt', 'luật'] }
+  ],
+  // Sử dụng ngôn ngữ: Tiếng Việt / Ngữ văn, Tiếng Anh
+  'LANGUAGE': [
+    { id: 'all', name: 'Tất cả môn Ngôn ngữ', keywords: [] },
+    { id: 'vietnamese', name: 'Tiếng Việt / Ngữ văn', keywords: ['tiếng việt', 'ngữ văn', 'văn học', 'đọc hiểu', 'nghị luận', 'biện pháp tu từ', 'phương thức biểu đạt', 'từ ngữ', 'văn bản', 'liên kết câu', 'phong cách ngôn ngữ', 'thơ', 'truyện', 'tác phẩm'] },
+    { id: 'english', name: 'Tiếng Anh', keywords: ['tiếng anh', 'english', 'reading', 'cloze', 'grammar', 'vocabulary', 'pronoun', 'sentence', 'inference', 'factual', 'passage', 'comprehension'] }
+  ],
+  // Toán học & Tư duy định lượng
+  'DOM_MATH': [
+    { id: 'all', name: 'Tất cả phân môn Toán', keywords: [] },
+    { id: 'algebra', name: 'Đại số & Giải tích', keywords: ['đại số', 'giải tích', 'hàm số', 'đạo hàm', 'tích phân', 'nguyên hàm', 'mũ', 'logarit', 'phương trình', 'bất đẳng thức', 'dãy số', 'cấp số'] },
+    { id: 'geometry', name: 'Hình học & Đo lường', keywords: ['hình học', 'không gian', 'tọa độ', 'vectơ', 'khối đa diện', 'mặt nón', 'mặt trụ', 'mặt cầu', 'tam giác', 'đường tròn', 'song song', 'vuông góc'] },
+    { id: 'probability', name: 'Xác suất & Thống kê', keywords: ['xác suất', 'thống kê', 'biến cố', 'tổ hợp', 'chỉnh hợp', 'mẫu số liệu', 'độ lệch chuẩn', 'kỳ vọng', 'phương sai', 'tần số', 'trung vị'] },
+    { id: 'logic', name: 'Tư duy logic & Dữ liệu', keywords: ['logic', 'mệnh đề', 'suy luận', 'biểu đồ', 'bảng biểu', 'phân tích số liệu', 'xử lý số liệu', 'tư duy', 'suy đoán'] }
+  ]
+};
+
+// Nhận diện Khối lớp từ tên chương hoặc bài học
+export const detectGrade = (text) => {
+  if (!text) return '12';
+  const lower = text.toLowerCase();
+  if (lower.includes('lớp 10') || lower.includes('grade 10') || lower.includes('[10]') || lower.includes('khối 10')) return '10';
+  if (lower.includes('lớp 11') || lower.includes('grade 11') || lower.includes('[11]') || lower.includes('khối 11')) return '11';
+  if (lower.includes('lớp 12') || lower.includes('grade 12') || lower.includes('[12]') || lower.includes('khối 12')) return '12';
+  return '12'; // Trọng tâm chuẩn ĐGNL V-ACT
+};
+
+// Nhận diện Năm học từ tên chương hoặc mô tả
+export const detectAcademicYear = (text) => {
+  if (!text) return '2025-2026';
+  const lower = text.toLowerCase();
+  if (lower.includes('2023-2024') || lower.includes('2023 - 2024')) return '2023-2024';
+  if (lower.includes('2024-2025') || lower.includes('2024 - 2025')) return '2024-2025';
+  if (lower.includes('2025-2026') || lower.includes('2025 - 2026')) return '2025-2026';
+  return '2025-2026'; // Khung chuẩn GDPT 2018 Mới
+};
+
+// Xác định key của domain
+export const getDomainKey = (domain) => {
+  if (!domain) return 'DOM_MATH';
+  const code = (domain.domainCode || domain.code || domain.id || '').toUpperCase();
+  const title = (domain.title || domain.name || '').toLowerCase();
+  if (code.includes('NATURAL') || title.includes('tự nhiên')) return 'NATURAL_SCIENCES';
+  if (code.includes('SOCIAL') || title.includes('xã hội')) return 'SOCIAL_SCIENCES';
+  if (code.includes('LANG') || title.includes('ngôn ngữ')) return 'LANGUAGE';
+  if (code.includes('MATH') || title.includes('toán')) return 'DOM_MATH';
+  return 'DOM_MATH';
+};
+
+// Kiểm tra xem chương/bài học có khớp với phân môn không
+export const matchesSubSubject = (chap, subSubjectId, domainKey) => {
+  if (!subSubjectId || subSubjectId === 'all') return true;
+  const config = SUB_SUBJECTS_BY_DOMAIN[domainKey] || [];
+  const target = config.find(s => s.id === subSubjectId);
+  if (!target || !target.keywords || target.keywords.length === 0) return true;
+
+  const combinedText = `${chap.name || ''} ${chap.description || ''} ${(chap.lessons || []).map(l => l.name + ' ' + (l.patterns || []).map(p => p.name).join(' ')).join(' ')}`.toLowerCase();
+  return target.keywords.some(kw => combinedText.includes(kw.toLowerCase()));
+};
 
 const DOMAIN_ICONS = {
   Cpu,
@@ -122,28 +202,22 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
   // Giảng viên & Ban Chuyên Môn Curation Suite State (Tối đa hóa hỗ trợ chỉnh sửa)
   // =========================================================================
   const [instructorMode, setInstructorMode] = useState(true);
+  const [confirmDeleteDialog, setConfirmDeleteDialog] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [activeEditTab, setActiveEditTab] = useState('theory'); // 'theory' | 'method' | 'video' | 'sample' | 'settings'
+  const [activeEditTab, setActiveEditTab] = useState('settings');
   const [editingForm, setEditingForm] = useState({
     patternId: '',
     name: '',
     weight: '5',
+    level: 'Vận dụng',
+    grade: '12',
+    chapterId: '',
+    lessonId: '',
     theoryRecap: '',
     solutionMethod: '',
     videoUrl: '',
     durationSeconds: 600,
-    prerequisiteSkillIds: [],
-    sampleQuestion: {
-      questionId: null,
-      difficultyLevel: 2,
-      contentLatex: '',
-      optionA: '',
-      optionB: '',
-      optionC: '',
-      optionD: '',
-      correctOption: 'A',
-      explanation: ''
-    }
+    prerequisiteSkillIds: []
   });
   const [savingEdit, setSavingEdit] = useState(false);
   const [editSuccessMsg, setEditSuccessMsg] = useState('');
@@ -156,6 +230,38 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
   const [studioTargetPattern, setStudioTargetPattern] = useState(null);
   const [studioTargetChapter, setStudioTargetChapter] = useState(null);
   const [studioTargetLesson, setStudioTargetLesson] = useState(null);
+
+  // Multi-Dimensional Classification & Filter States (Lớp, Năm học, Phân môn riêng biệt)
+  const [selectedGrade, setSelectedGrade] = useState('all'); // 'all' | '12' | '11' | '10'
+  const [selectedAcademicYear, setSelectedAcademicYear] = useState('all'); // 'all' | '2025-2026' | '2024-2025'
+  const [selectedSubSubject, setSelectedSubSubject] = useState('all');
+
+  // Node Deletion Tracking
+  const [deletingNodeId, setDeletingNodeId] = useState(null);
+
+  // Create Chapter State
+  const [isCreateChapterModalOpen, setIsCreateChapterModalOpen] = useState(false);
+  const [createChapterForm, setCreateChapterForm] = useState({
+    domainId: '',
+    name: '',
+    grade: '12',
+    academicYear: '2025-2026',
+    subSubject: '',
+    weight: '25',
+    description: ''
+  });
+  const [savingCreateChapter, setSavingCreateChapter] = useState(false);
+
+  // Create Lesson State
+  const [isCreateLessonModalOpen, setIsCreateLessonModalOpen] = useState(false);
+  const [createLessonForm, setCreateLessonForm] = useState({
+    chapterId: '',
+    chapterName: '',
+    name: '',
+    weight: '10',
+    summary: ''
+  });
+  const [savingCreateLesson, setSavingCreateLesson] = useState(false);
 
   // Create Pattern State
   const [isCreatePatternModalOpen, setIsCreatePatternModalOpen] = useState(false);
@@ -282,10 +388,11 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
 
   const currentDomain = domains.find(d => d.id === activeDomainId) || domains[0] || { chapters: [], skills: [] };
 
-  // When switching domains, re-init selection
+  // When switching domains, re-init selection and reset sub-subject
   useEffect(() => {
     if (currentDomain) {
       initSelection(currentDomain);
+      setSelectedSubSubject('all');
     }
   }, [activeDomainId]);
 
@@ -367,19 +474,35 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
     loadRoadmapAndAssessment();
   }, []);
 
-  // Helper to toggle chapter / lesson accordion
-  const toggleChapter = (chapterId) => {
-    setExpandedChapters(prev => ({
-      ...prev,
-      [chapterId]: !prev[chapterId]
-    }));
+  // Helper to toggle chapter / lesson accordion & auto-load content
+  const toggleChapter = (chapterId, chap) => {
+    setExpandedChapters(prev => {
+      const willExpand = !prev[chapterId];
+      if (willExpand && chap?.lessons?.length > 0) {
+        const firstLes = chap.lessons[0];
+        setExpandedLessons(lPrev => ({ ...lPrev, [firstLes.lessonId]: true }));
+        if (firstLes.patterns && firstLes.patterns.length > 0) {
+          setSelectedPattern(firstLes.patterns[0]);
+        }
+      }
+      return {
+        ...prev,
+        [chapterId]: willExpand
+      };
+    });
   };
 
-  const toggleLesson = (lessonId) => {
-    setExpandedLessons(prev => ({
-      ...prev,
-      [lessonId]: !prev[lessonId]
-    }));
+  const toggleLesson = (lessonId, les) => {
+    setExpandedLessons(prev => {
+      const willExpand = !prev[lessonId];
+      if (willExpand && les?.patterns && les.patterns.length > 0) {
+        setSelectedPattern(les.patterns[0]);
+      }
+      return {
+        ...prev,
+        [lessonId]: willExpand
+      };
+    });
   };
 
   // Get effective chapters (handling fallback if domain only has flat skills)
@@ -420,33 +543,62 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
     return [];
   }, [currentDomain]);
 
-  // Filter 3-level tree based on search query
-  const filteredChapters = useMemo(() => {
-    if (!searchQuery.trim()) return chapters;
-    const q = searchQuery.toLowerCase();
+  const domainKey = useMemo(() => getDomainKey(currentDomain), [currentDomain]);
+  const subSubjectsList = useMemo(() => SUB_SUBJECTS_BY_DOMAIN[domainKey] || [], [domainKey]);
 
-    return chapters.map(chap => {
-      const matchChap = chap.name.toLowerCase().includes(q) || chap.code.toLowerCase().includes(q);
-      const filteredLessons = chap.lessons.map(les => {
-        const matchLes = les.name.toLowerCase().includes(q) || les.code.toLowerCase().includes(q);
-        const filteredPatterns = les.patterns.filter(pat => 
-          pat.name.toLowerCase().includes(q) ||
-          pat.code.toLowerCase().includes(q) ||
-          (pat.theoryRecap && pat.theoryRecap.toLowerCase().includes(q)) ||
-          (pat.crossModel && pat.crossModel.toLowerCase().includes(q))
-        );
-        if (matchLes || filteredPatterns.length > 0) {
-          return { ...les, patterns: matchLes ? les.patterns : filteredPatterns };
+  // Bộ lọc đa chiều 3 tầng: Tìm kiếm văn bản + Khối lớp + Năm học + Phân môn riêng biệt
+  const filteredChapters = useMemo(() => {
+    let result = chapters;
+
+    // 1. Lọc theo Khối Lớp
+    if (selectedGrade !== 'all') {
+      result = result.filter(chap => {
+        const text = `${chap.name} ${chap.description || ''} ${(chap.lessons || []).map(l => l.name).join(' ')}`;
+        return detectGrade(text) === selectedGrade;
+      });
+    }
+
+    // 2. Lọc theo Năm học
+    if (selectedAcademicYear !== 'all') {
+      result = result.filter(chap => {
+        const text = `${chap.name} ${chap.description || ''}`;
+        return detectAcademicYear(text) === selectedAcademicYear;
+      });
+    }
+
+    // 3. Lọc theo Phân môn riêng biệt (Sub-Subject)
+    if (selectedSubSubject !== 'all') {
+      result = result.filter(chap => matchesSubSubject(chap, selectedSubSubject, domainKey));
+    }
+
+    // 4. Lọc theo Search Query (Chương, Bài học, Dạng bài, KaTeX)
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      result = result.map(chap => {
+        const matchChap = chap.name.toLowerCase().includes(q) || (chap.code && chap.code.toLowerCase().includes(q));
+        const filteredLessons = (chap.lessons || []).map(les => {
+          const matchLes = les.name.toLowerCase().includes(q) || (les.code && les.code.toLowerCase().includes(q));
+          const filteredPatterns = (les.patterns || []).filter(pat => 
+            pat.name.toLowerCase().includes(q) ||
+            (pat.code && pat.code.toLowerCase().includes(q)) ||
+            (pat.theoryRecap && pat.theoryRecap.toLowerCase().includes(q)) ||
+            (pat.crossModel && pat.crossModel.toLowerCase().includes(q))
+          );
+          if (matchLes || filteredPatterns.length > 0) {
+            return { ...les, patterns: matchLes ? les.patterns : filteredPatterns };
+          }
+          return null;
+        }).filter(Boolean);
+
+        if (matchChap || filteredLessons.length > 0) {
+          return { ...chap, lessons: matchChap ? chap.lessons : filteredLessons };
         }
         return null;
       }).filter(Boolean);
+    }
 
-      if (matchChap || filteredLessons.length > 0) {
-        return { ...chap, lessons: matchChap ? chap.lessons : filteredLessons };
-      }
-      return null;
-    }).filter(Boolean);
-  }, [chapters, searchQuery]);
+    return result;
+  }, [chapters, selectedGrade, selectedAcademicYear, selectedSubSubject, domainKey, searchQuery]);
 
   // Helper to get Mastery percentage for a Pattern
   const getPatternMastery = (pattern) => {
@@ -511,7 +663,7 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
           ]
         });
       } else {
-        alert("Dạng bài này hiện chưa có câu hỏi được nạp trong cơ sở dữ liệu. Giảng viên hoặc AI đang trong quá trình cập nhật ngân hàng đề.");
+        toast.info("Dạng bài này hiện chưa có câu hỏi được nạp trong cơ sở dữ liệu. Giảng viên hoặc AI đang trong quá trình cập nhật ngân hàng đề.");
         setIsQuizModalOpen(false);
       }
     } catch (err) {
@@ -531,7 +683,7 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
           ]
         });
       } else {
-        alert("Không thể tải câu hỏi củng cố lúc này. Vui lòng kiểm tra kết nối API.");
+        toast.error("Không thể tải câu hỏi củng cố lúc này. Vui lòng kiểm tra kết nối API.");
         setIsQuizModalOpen(false);
       }
     } finally {
@@ -562,53 +714,41 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
   // =========================================================================
   // HANDLERS HIỆU ĐÍNH TRI THỨC SƯ PHẠM DÀNH RIÊNG CHO GIẢNG VIÊN (CURATION SUITE)
   // =========================================================================
+  // HANDLERS HIỆU ĐÍNH THÔNG TIN NHANH DÀNH CHO GIẢNG VIÊN
+  // (Chỉ sửa Tiêu đề, Chương trực thuộc, Khối lớp, Mức độ Bloom, Trọng số)
+  // =========================================================================
   const handleOpenEditModal = (pattern) => {
     if (!pattern) return;
-    const sample = pattern.sampleQuestion;
+    let currentChapId = '';
+    let currentLesId = '';
+    for (const chap of (chapters || [])) {
+      for (const les of (chap.lessons || [])) {
+        if (les.patterns?.some(p => p.patternId === pattern.patternId)) {
+          currentChapId = chap.chapterId;
+          currentLesId = les.lessonId;
+          break;
+        }
+      }
+      if (currentChapId) break;
+    }
+
     setEditingForm({
       patternId: pattern.patternId,
       name: pattern.name || '',
-      weight: pattern.weight ? pattern.weight.replace('%', '').trim() : '5',
+      weight: pattern.weight ? String(pattern.weight).replace('%', '').trim() : '5',
+      level: pattern.level || 'Vận dụng',
+      grade: pattern.name?.includes('12') ? '12' : pattern.name?.includes('11') ? '11' : pattern.name?.includes('10') ? '10' : '12',
+      chapterId: currentChapId,
+      lessonId: currentLesId,
       theoryRecap: pattern.theoryRecap || '',
       solutionMethod: pattern.solutionMethod || '',
       videoUrl: pattern.videoLesson?.videoUrl || '',
       durationSeconds: pattern.videoLesson?.durationSeconds || 600,
-      prerequisiteSkillIds: pattern.prerequisiteIds || [],
-      sampleQuestion: {
-        questionId: sample?.questionId || null,
-        difficultyLevel: 2,
-        contentLatex: sample?.content || '',
-        optionA: sample?.options?.[0]?.replace(/^A\.\s*/, '') || '',
-        optionB: sample?.options?.[1]?.replace(/^B\.\s*/, '') || '',
-        optionC: sample?.options?.[2]?.replace(/^C\.\s*/, '') || '',
-        optionD: sample?.options?.[3]?.replace(/^D\.\s*/, '') || '',
-        correctOption: sample?.correct !== undefined ? String.fromCharCode(65 + sample.correct) : 'A',
-        explanation: sample?.explanation || ''
-      }
+      prerequisiteSkillIds: pattern.prerequisiteIds || []
     });
-    setActiveEditTab('theory');
     setEditErrorMsg('');
     setEditSuccessMsg('');
     setIsEditModalOpen(true);
-  };
-
-  const handleInsertMathFormula = (targetField, snippet) => {
-    setEditingForm(prev => {
-      const currentText = prev[targetField] || '';
-      return {
-        ...prev,
-        [targetField]: currentText ? `${currentText} $${snippet}$` : `$${snippet}$`
-      };
-    });
-  };
-
-  const handleAIEnhanceMethod = () => {
-    const template = `**Bước 1: Tìm tập xác định & Nhận diện bài toán**\n- Xác định tập xác định $D$ của hàm số / biểu thức.\n- Nhận diện các tham số và điều kiện đặc biệt.\n\n**Bước 2: Áp dụng định lý & Phương pháp biến đổi chuyên biệt**\n- Lấy đạo hàm $y' = f'(x)$ hoặc biến đổi tương đương.\n- Giải phương trình $y' = 0$ để tìm các nghiệm tới hạn $x_0 \\in D$.\n\n**Bước 3: Lập bảng biến thiên & Đối chiếu đáp án ĐGNL VNU**\n- Xét dấu trên từng khoảng xác định.\n- Đọc kết quả cực trị, tiệm cận hoặc giá trị lớn nhất/nhỏ nhất theo yêu cầu đề bài.`;
-    
-    setEditingForm(prev => ({
-      ...prev,
-      solutionMethod: prev.solutionMethod ? `${prev.solutionMethod}\n\n${template}` : template
-    }));
   };
 
   const handleSaveEdit = async () => {
@@ -627,62 +767,24 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
         solutionMethod: editingForm.solutionMethod,
         videoUrl: editingForm.videoUrl?.trim() || null,
         durationSeconds: parseInt(editingForm.durationSeconds, 10) || 0,
-        prerequisiteSkillIds: editingForm.prerequisiteSkillIds || [],
-        sampleQuestion: editingForm.sampleQuestion?.contentLatex?.trim() ? {
-          questionId: editingForm.sampleQuestion.questionId || null,
-          difficultyLevel: parseInt(editingForm.sampleQuestion.difficultyLevel, 10) || 2,
-          contentLatex: editingForm.sampleQuestion.contentLatex,
-          optionA: editingForm.sampleQuestion.optionA,
-          optionB: editingForm.sampleQuestion.optionB,
-          optionC: editingForm.sampleQuestion.optionC,
-          optionD: editingForm.sampleQuestion.optionD,
-          correctOption: editingForm.sampleQuestion.correctOption || 'A',
-          explanation: editingForm.sampleQuestion.explanation
-        } : null
+        prerequisiteSkillIds: editingForm.prerequisiteSkillIds || []
       };
 
-      const updated = await contentService.updatePattern(editingForm.patternId, payload);
-      setEditSuccessMsg('Đã lưu thành công hiệu đính sư phạm vào cơ sở dữ liệu PostgreSQL!');
-
-      // Cập nhật selectedPattern ngay lập tức
+      await contentService.updatePattern(editingForm.patternId, payload);
+      
       setSelectedPattern(prev => ({
         ...prev,
         name: editingForm.name.trim(),
         weight: `${Math.round(weightVal * 100)}%`,
-        theoryRecap: editingForm.theoryRecap,
-        solutionMethod: editingForm.solutionMethod,
-        videoLesson: editingForm.videoUrl ? {
-          title: editingForm.name.trim(),
-          teacher: "Ban Chuyên Môn / Giảng Viên",
-          duration: `${Math.max(5, Math.round((parseInt(editingForm.durationSeconds, 10) || 0) / 60))} phút`,
-          durationSeconds: parseInt(editingForm.durationSeconds, 10) || 0,
-          views: "Cơ sở dữ liệu",
-          videoUrl: editingForm.videoUrl.trim()
-        } : prev?.videoLesson,
-        sampleQuestion: editingForm.sampleQuestion?.contentLatex?.trim() ? {
-          questionId: editingForm.sampleQuestion.questionId || prev?.sampleQuestion?.questionId || 'Q-SAMPLE',
-          content: editingForm.sampleQuestion.contentLatex,
-          options: [
-            `A. ${editingForm.sampleQuestion.optionA}`,
-            `B. ${editingForm.sampleQuestion.optionB}`,
-            `C. ${editingForm.sampleQuestion.optionC}`,
-            `D. ${editingForm.sampleQuestion.optionD}`
-          ],
-          correct: (editingForm.sampleQuestion.correctOption || 'A').charCodeAt(0) - 65,
-          explanation: editingForm.sampleQuestion.explanation
-        } : prev?.sampleQuestion
+        level: editingForm.level
       }));
 
-      // Đồng bộ ngầm cây tri thức
-      fetchCurriculumData(editingForm.patternId);
-
-      setTimeout(() => {
-        setIsEditModalOpen(false);
-        setEditSuccessMsg('');
-      }, 1000);
+      await fetchCurriculumData(editingForm.patternId);
+      toast.success('Đã cập nhật thông tin dạng bài thành công!');
+      setIsEditModalOpen(false);
     } catch (err) {
-      console.error('Lỗi khi lưu hiệu đính:', err);
-      setEditErrorMsg(err?.response?.data?.message || err.message || 'Không thể lưu thay đổi vào cơ sở dữ liệu.');
+      console.error('Lỗi khi lưu thông tin nhanh:', err);
+      toast.error('Không thể cập nhật: ' + (err?.response?.data?.message || err.message));
     } finally {
       setSavingEdit(false);
     }
@@ -704,7 +806,7 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
 
   const handleCreatePattern = async () => {
     if (!createPatternForm.name.trim() || !createPatternForm.lessonId) {
-      alert("Vui lòng nhập tên Dạng bài.");
+      toast.warning("Vui lòng nhập tên Dạng bài.");
       return;
     }
     setSavingCreate(true);
@@ -726,38 +828,193 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
       const newId = await contentService.createNode(payload);
       setIsCreatePatternModalOpen(false);
       await fetchCurriculumData(newId);
-      alert("Đã tạo mới dạng bài thành công vào Cây tri thức!");
+      toast.success("Đã tạo mới dạng bài thành công vào Cây tri thức!");
     } catch (err) {
-      alert('Không thể tạo dạng bài: ' + (err?.response?.data?.message || err.message));
+      toast.error('Không thể tạo dạng bài: ' + (err?.response?.data?.message || err.message));
     } finally {
       setSavingCreate(false);
     }
   };
 
-  const handleDeletePattern = async (patternId, patternName) => {
-    if (!window.confirm(`Thầy/Cô có chắc chắn muốn xóa Dạng bài "${patternName}" không?\nThao tác này sẽ xóa toàn bộ nội dung lý thuyết, phương pháp giải, video và câu hỏi liên quan khỏi cơ sở dữ liệu.`)) {
-      return;
-    }
+  const executeDeletePattern = async (patternId) => {
     try {
       await contentService.deleteNode(patternId);
       setIsEditModalOpen(false);
       await fetchCurriculumData();
-      alert('Đã xóa dạng bài thành công khỏi cơ sở dữ liệu!');
+      toast.success('Đã xóa dạng bài thành công khỏi cơ sở dữ liệu!');
     } catch (err) {
-      alert('Lỗi khi xóa dạng bài: ' + (err?.response?.data?.message || err.message));
+      toast.error('Lỗi khi xóa dạng bài: ' + (err?.response?.data?.message || err.message));
+    }
+  };
+
+  const handleDeletePattern = (patternId, patternName) => {
+    setConfirmDeleteDialog({
+      title: '⚠️ Xác Nhận Xóa Dạng Bài',
+      message: `Thầy/Cô có chắc chắn muốn xóa Dạng bài "${patternName}" không?\n\nThao tác này sẽ xóa toàn bộ nội dung lý thuyết, phương pháp giải, video và câu hỏi liên quan khỏi cơ sở dữ liệu.`,
+      onConfirm: () => executeDeletePattern(patternId)
+    });
+  };
+
+  const executeDeleteChapter = async (chap) => {
+    setDeletingNodeId(chap.chapterId);
+    try {
+      await contentService.deleteNode(chap.chapterId);
+      if (selectedPattern && chap.lessons?.some(l => l.patterns?.some(p => p.patternId === selectedPattern.patternId))) {
+        setSelectedPattern(null);
+      }
+      await fetchCurriculumData();
+      toast.success(`Đã xóa thành công Chương "${chap.name}" và toàn bộ bài học trực thuộc!`);
+    } catch (err) {
+      console.error('Lỗi khi xóa chương:', err);
+      toast.error('Không thể xóa chương: ' + (err?.response?.data?.message || err.message || 'Lỗi kết nối cơ sở dữ liệu'));
+    } finally {
+      setDeletingNodeId(null);
+    }
+  };
+
+  // Giảng viên xóa toàn bộ Chương (và các bài học, dạng bài bên trong)
+  const handleDeleteChapter = (chap) => {
+    setConfirmDeleteDialog({
+      title: '⚠️ Xác Nhận Xóa Chương Học',
+      message: `Thầy/Cô có chắc chắn muốn xóa Chương "${chap.name}" không?\n\n❗ CẢNH BÁO: Thao tác này sẽ xóa vĩnh viễn:\n- Toàn bộ ${chap.lessons?.length || 0} bài học trong chương\n- Toàn bộ các dạng bài, lý thuyết và ngân hàng câu hỏi trực thuộc\n- Quan hệ đồ thị tri thức DAG liên quan trong cơ sở dữ liệu.`,
+      onConfirm: () => executeDeleteChapter(chap)
+    });
+  };
+
+  const executeDeleteLesson = async (les) => {
+    setDeletingNodeId(les.lessonId);
+    try {
+      await contentService.deleteNode(les.lessonId);
+      if (selectedPattern && les.patterns?.some(p => p.patternId === selectedPattern.patternId)) {
+        setSelectedPattern(null);
+      }
+      await fetchCurriculumData();
+      toast.success(`Đã xóa thành công Bài học "${les.name}"!`);
+    } catch (err) {
+      console.error('Lỗi khi xóa bài học:', err);
+      toast.error('Không thể xóa bài học: ' + (err?.response?.data?.message || err.message || 'Lỗi kết nối cơ sở dữ liệu'));
+    } finally {
+      setDeletingNodeId(null);
+    }
+  };
+
+  // Giảng viên xóa Bài học (và các dạng bài bên trong)
+  const handleDeleteLesson = (les, chapName) => {
+    setConfirmDeleteDialog({
+      title: '⚠️ Xác Nhận Xóa Bài Học',
+      message: `Thầy/Cô có chắc chắn muốn xóa Bài học "${les.name}" (thuộc ${chapName}) không?\n\n❗ Thao tác này sẽ xóa vĩnh viễn ${les.patterns?.length || 0} dạng bài và các câu hỏi trực thuộc.`,
+      onConfirm: () => executeDeleteLesson(les)
+    });
+  };
+
+  // Giảng viên mở modal tạo mới Chương
+  const handleOpenCreateChapterModal = () => {
+    setCreateChapterForm({
+      domainId: currentDomain.domainId || (currentDomain.id ? currentDomain.id.replace('domain-', '') : ''),
+      name: '',
+      grade: selectedGrade !== 'all' ? selectedGrade : '12',
+      academicYear: selectedAcademicYear !== 'all' ? selectedAcademicYear : '2025-2026',
+      subSubject: selectedSubSubject !== 'all' ? selectedSubSubject : '',
+      weight: '25',
+      description: ''
+    });
+    setIsCreateChapterModalOpen(true);
+  };
+
+  // Giảng viên tạo mới Chương
+  const handleCreateChapter = async () => {
+    if (!createChapterForm.name.trim()) {
+      toast.warning("Vui lòng nhập Tên chương.");
+      return;
+    }
+    setSavingCreateChapter(true);
+    try {
+      const rawWeight = parseFloat(createChapterForm.weight);
+      const weightVal = !isNaN(rawWeight) ? (rawWeight > 1 ? rawWeight / 100 : rawWeight) : 0.25;
+
+      let formattedName = createChapterForm.name.trim();
+      const tagPrefix = `[Lớp ${createChapterForm.grade}]`;
+      if (!formattedName.toLowerCase().includes(`lớp ${createChapterForm.grade}`)) {
+        formattedName = `${tagPrefix} ${formattedName}`;
+      }
+      if (createChapterForm.academicYear && !formattedName.includes(createChapterForm.academicYear)) {
+        formattedName = `${formattedName} (${createChapterForm.academicYear})`;
+      }
+
+      const payload = {
+        domainId: createChapterForm.domainId || currentDomain.domainId || (currentDomain.id ? currentDomain.id.replace('domain-', '') : '6f3765db-943e-4810-bf74-d6a8bdc215da'),
+        parentId: null, // Level 1 Chương
+        name: formattedName,
+        weight: weightVal,
+        theoryRecap: createChapterForm.description?.trim() || `Hệ thống kiến thức: ${formattedName}`
+      };
+
+      const newId = await contentService.createNode(payload);
+      setIsCreateChapterModalOpen(false);
+      await fetchCurriculumData();
+      toast.success(`Đã tạo thành công Chương mới: "${formattedName}"!`);
+    } catch (err) {
+      console.error('Lỗi khi tạo chương:', err);
+      toast.error('Không thể tạo chương mới: ' + (err?.response?.data?.message || err.message));
+    } finally {
+      setSavingCreateChapter(false);
+    }
+  };
+
+  // Giảng viên mở modal thêm Bài học mới
+  const handleOpenCreateLessonModal = (chap) => {
+    setCreateLessonForm({
+      chapterId: chap.chapterId,
+      chapterName: chap.name,
+      name: '',
+      weight: '10',
+      summary: ''
+    });
+    setIsCreateLessonModalOpen(true);
+  };
+
+  // Giảng viên thêm Bài học mới
+  const handleCreateLesson = async () => {
+    if (!createLessonForm.name.trim() || !createLessonForm.chapterId) {
+      toast.warning("Vui lòng nhập Tên bài học.");
+      return;
+    }
+    setSavingCreateLesson(true);
+    try {
+      const rawWeight = parseFloat(createLessonForm.weight);
+      const weightVal = !isNaN(rawWeight) ? (rawWeight > 1 ? rawWeight / 100 : rawWeight) : 0.10;
+
+      const payload = {
+        domainId: currentDomain.domainId || (currentDomain.id ? currentDomain.id.replace('domain-', '') : '6f3765db-943e-4810-bf74-d6a8bdc215da'),
+        parentId: createLessonForm.chapterId, // Level 2 Bài học
+        name: createLessonForm.name.trim(),
+        weight: weightVal,
+        theoryRecap: createLessonForm.summary?.trim() || `Bài học: ${createLessonForm.name.trim()}`
+      };
+
+      const newId = await contentService.createNode(payload);
+      setIsCreateLessonModalOpen(false);
+      setExpandedChapters(prev => ({ ...prev, [createLessonForm.chapterId]: true }));
+      await fetchCurriculumData();
+      toast.success(`Đã thêm bài học "${createLessonForm.name}" vào chương thành công!`);
+    } catch (err) {
+      console.error('Lỗi khi tạo bài học:', err);
+      toast.error('Không thể tạo bài học mới: ' + (err?.response?.data?.message || err.message));
+    } finally {
+      setSavingCreateLesson(false);
     }
   };
 
   const handleImportCurriculum = async () => {
     if (!importJsonText.trim()) {
-      alert("Vui lòng dán nội dung JSON cây tri thức.");
+      toast.warning("Vui lòng dán nội dung JSON cây tri thức.");
       return;
     }
     setImportingCurriculum(true);
     try {
       const parsed = JSON.parse(importJsonText);
       const res = await contentService.importCurriculum(parsed);
-      alert(`Nạp cây tri thức thành công!\n- Chương: ${res.chaptersImported}\n- Bài học: ${res.lessonsImported}\n- Dạng bài: ${res.patternsImported}\n- Tài liệu: ${res.materialsImported}\n- Câu hỏi: ${res.questionsImported}`);
+      toast.success(`Nạp cây tri thức thành công!\n- Chương: ${res.chaptersImported}\n- Bài học: ${res.lessonsImported}\n- Dạng bài: ${res.patternsImported}\n- Tài liệu: ${res.materialsImported}\n- Câu hỏi: ${res.questionsImported}`, 'Nạp CSDL Thành Công');
       setIsImportModalOpen(false);
       setImportJsonText('');
       await fetchCurriculumData();
@@ -765,7 +1022,7 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
       const detail = err?.response?.data?.errors 
         ? Object.entries(err.response.data.errors).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`).join('\n')
         : (err?.response?.data?.message || err?.response?.data?.title || err.message);
-      alert('Lỗi nạp dữ liệu tri thức:\n' + detail);
+      toast.error('Lỗi nạp dữ liệu tri thức:\n' + detail, 'Lỗi Nạp Dữ Liệu');
     } finally {
       setImportingCurriculum(false);
     }
@@ -773,7 +1030,7 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
 
   const handleRunAiExtraction = async () => {
     if (!importFile && !importTextSnippet.trim()) {
-      alert("Vui lòng tải lên tệp tài liệu (.pdf, .docx, .txt) hoặc nhập trích đoạn văn bản chuyên đề.");
+      toast.warning("Vui lòng tải lên tệp tài liệu (.pdf, .docx, .txt) hoặc nhập trích đoạn văn bản chuyên đề.");
       return;
     }
 
@@ -817,7 +1074,7 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
         throw new Error("AI không trích xuất được dạng bài từ tài liệu đã cung cấp.");
       }
     } catch (err) {
-      alert("Lỗi bóc tách tài liệu bằng AI: " + (err?.response?.data?.detail || err.message));
+      toast.error("Lỗi bóc tách tài liệu bằng AI: " + (err?.response?.data?.detail || err.message));
       setAiExtractStep(0);
     } finally {
       setIsExtractingAi(false);
@@ -829,7 +1086,7 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
     setImportingCurriculum(true);
     try {
       const res = await contentService.importCurriculum(extractedCurriculum);
-      alert(`Nạp cây tri thức thành công!\n- Chương: ${res.chaptersImported}\n- Bài học: ${res.lessonsImported}\n- Dạng bài nhận diện: ${res.patternsImported}\n- Câu hỏi trắc nghiệm: ${res.questionsImported}`);
+      toast.success(`Nạp cây tri thức thành công!\n- Chương: ${res.chaptersImported}\n- Bài học: ${res.lessonsImported}\n- Dạng bài nhận diện: ${res.patternsImported}\n- Câu hỏi trắc nghiệm: ${res.questionsImported}`, 'Nạp CSDL Thành Công');
       setIsImportModalOpen(false);
       setExtractedCurriculum(null);
       setImportFile(null);
@@ -839,7 +1096,7 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
       const detail = err?.response?.data?.errors 
         ? Object.entries(err.response.data.errors).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`).join('\n')
         : (err?.response?.data?.message || err?.response?.data?.title || err.message);
-      alert('Lỗi nạp dữ liệu tri thức vào CSDL:\n' + detail);
+      toast.error('Lỗi nạp dữ liệu tri thức vào CSDL:\n' + detail, 'Lỗi Nạp CSDL');
     } finally {
       setImportingCurriculum(false);
     }
@@ -907,7 +1164,7 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
       }
     } catch (apiErr) {
       console.error("[AI Engine Generate Questions Error]:", apiErr);
-      alert("Lỗi khi AI sinh câu hỏi: " + (apiErr?.data?.detail || apiErr?.data?.message || apiErr?.message || "Không thể kết nối đến AI Engine."));
+      toast.error("Lỗi khi AI sinh câu hỏi: " + (apiErr?.data?.detail || apiErr?.data?.message || apiErr?.message || "Không thể kết nối đến AI Engine."));
     } finally {
       setIsGeneratingPracticeQuestions(false);
     }
@@ -1144,6 +1401,143 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
         </div>
       )}
 
+      {/* 1.8 MULTI-DIMENSIONAL CLASSIFICATION & FILTER SUITE (Môn học riêng biệt • Khối lớp • Năm học) */}
+      <div className="bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-slate-200/80 space-y-3.5">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center shrink-0">
+              <Filter className="w-4 h-4" />
+            </div>
+            <div>
+              <h4 className="text-xs font-black text-slate-900 uppercase tracking-wide">Bộ Lọc Phân Loại Tri Thức</h4>
+              <p className="text-[11px] text-slate-500 font-medium">Phân tách rõ ràng theo phân môn riêng biệt, khối lớp và năm học chuẩn GDPT 2018</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap">
+            {(selectedGrade !== 'all' || selectedAcademicYear !== 'all' || selectedSubSubject !== 'all' || searchQuery.trim()) && (
+              <button
+                onClick={() => {
+                  setSelectedGrade('all');
+                  setSelectedAcademicYear('all');
+                  setSelectedSubSubject('all');
+                  setSearchQuery('');
+                }}
+                className="px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 text-[11px] font-bold border border-rose-200 transition-colors flex items-center gap-1 cursor-pointer"
+              >
+                <X className="w-3 h-3" />
+                <span>Đặt lại bộ lọc</span>
+              </button>
+            )}
+            <span className="text-[11px] font-bold text-slate-600 px-2.5 py-1 rounded-lg bg-slate-100">
+              Khớp: <strong className="text-blue-700 font-mono">{filteredChapters.length}</strong> Chương • <strong className="text-indigo-700 font-mono">{filteredChapters.reduce((acc, c) => acc + (c.lessons?.length || 0), 0)}</strong> Bài học
+            </span>
+          </div>
+        </div>
+
+        {/* Dòng 1: Môn học riêng biệt (Sub-Subjects) */}
+        {subSubjectsList.length > 0 && (
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 text-xs">
+            <span className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider shrink-0 w-24 flex items-center gap-1.5">
+              <Book className="w-3.5 h-3.5 text-indigo-600" />
+              <span>Phân môn:</span>
+            </span>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {subSubjectsList.map(subj => {
+                const isActive = selectedSubSubject === subj.id;
+                return (
+                  <button
+                    key={subj.id}
+                    onClick={() => setSelectedSubSubject(subj.id)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      isActive 
+                        ? 'bg-indigo-600 text-white shadow-xs ring-2 ring-indigo-500/20' 
+                        : 'bg-slate-100/80 hover:bg-slate-200/80 text-slate-700 border border-slate-200/60'
+                    }`}
+                  >
+                    {subj.name}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Dòng 2: Khối lớp & Năm học */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+          {/* Khối lớp */}
+          <div className="flex items-center gap-2 text-xs">
+            <span className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider shrink-0 w-24 flex items-center gap-1.5">
+              <GraduationCap className="w-3.5 h-3.5 text-blue-600" />
+              <span>Khối lớp:</span>
+            </span>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {[
+                { id: 'all', label: 'Tất cả lớp' },
+                { id: '12', label: 'Lớp 12 (Trọng tâm ĐGNL)', badge: 'V-ACT' },
+                { id: '11', label: 'Lớp 11' },
+                { id: '10', label: 'Lớp 10' }
+              ].map(g => {
+                const isActive = selectedGrade === g.id;
+                return (
+                  <button
+                    key={g.id}
+                    onClick={() => setSelectedGrade(g.id)}
+                    className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                      isActive 
+                        ? 'bg-blue-600 text-white shadow-xs' 
+                        : 'bg-slate-100 hover:bg-slate-200/80 text-slate-700 border border-slate-200/60'
+                    }`}
+                  >
+                    <span>{g.label}</span>
+                    {g.badge && (
+                      <span className={`text-[9px] px-1 py-0.2 rounded font-black ${isActive ? 'bg-blue-800 text-white' : 'bg-blue-100 text-blue-700'}`}>
+                        {g.badge}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Năm học */}
+          <div className="flex items-center gap-2 text-xs">
+            <span className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider shrink-0 w-24 flex items-center gap-1.5">
+              <Calendar className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Năm học:</span>
+            </span>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {[
+                { id: 'all', label: 'Tất cả năm' },
+                { id: '2025-2026', label: '2025 - 2026', badge: 'Mới' },
+                { id: '2024-2025', label: '2024 - 2025' }
+              ].map(y => {
+                const isActive = selectedAcademicYear === y.id;
+                return (
+                  <button
+                    key={y.id}
+                    onClick={() => setSelectedAcademicYear(y.id)}
+                    className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                      isActive 
+                        ? 'bg-emerald-600 text-white shadow-xs' 
+                        : 'bg-slate-100 hover:bg-slate-200/80 text-slate-700 border border-slate-200/60'
+                    }`}
+                  >
+                    <span>{y.label}</span>
+                    {y.badge && (
+                      <span className={`text-[9px] px-1 py-0.2 rounded font-black ${isActive ? 'bg-emerald-800 text-white' : 'bg-emerald-100 text-emerald-700'}`}>
+                        {y.badge}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* 2. SEARCH & SUMMARY BAR (KÈM CÔNG CỤ HIỆU ĐÍNH GIẢNG VIÊN & NẠP AI SGK) */}
       <div className="flex flex-col md:flex-row items-center justify-between gap-4 bg-white p-4 rounded-2xl shadow-sm border border-slate-200/80">
         <div className="flex items-center gap-3 w-full md:w-auto flex-1 max-w-xl">
@@ -1163,7 +1557,7 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
           {/* Nút Vào Studio Biên Soạn Sư Phạm */}
           <button
             onClick={() => handleOpenStudio(selectedPattern)}
-            className="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-black flex items-center gap-2 shadow-md shadow-blue-500/20 transition-all hover:scale-105 active:scale-95"
+            className="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-black flex items-center gap-2 shadow-md shadow-blue-500/20 transition-all hover:scale-105 active:scale-95 cursor-pointer"
             title="Mở toàn màn hình Studio biên soạn sư phạm, đồ thị minh họa và review học sinh"
           >
             <Sparkles className="w-3.5 h-3.5 text-amber-300" />
@@ -1173,7 +1567,7 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
           {/* Nút AI Bóc Tách Tài Liệu & Dạng Bài */}
           <button
             onClick={() => setIsImportModalOpen(true)}
-            className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-purple-50 to-indigo-50 hover:from-purple-100 hover:to-indigo-100 border border-purple-200 text-purple-800 text-xs font-black flex items-center gap-1.5 transition-all shadow-xs"
+            className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-purple-50 to-indigo-50 hover:from-purple-100 hover:to-indigo-100 border border-purple-200 text-purple-800 text-xs font-black flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
             title="Kéo thả file PDF/DOCX SGK để AI Tri Thức tự động bóc tách Chương, Bài và các Dạng bài toán"
           >
             <Wand2 className="w-3.5 h-3.5 text-purple-600" />
@@ -1209,8 +1603,22 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
         {/* Left Column: 3-Level Hierarchical Accordion (5 Cols) */}
         <div className="lg:col-span-5 space-y-4">
           <div className="flex items-center justify-between text-xs font-bold text-slate-600 px-1">
-            <span>CẤU TRÚC PHÂN CẤP BÀI HỌC</span>
-            <span className="text-slate-400">{filteredChapters.length} Chương học</span>
+            <div className="flex items-center gap-2">
+              <Layers className="w-3.5 h-3.5 text-blue-600" />
+              <span>CẤU TRÚC PHÂN CẤP BÀI HỌC</span>
+              <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[10px] font-black">
+                {filteredChapters.length} Chương
+              </span>
+            </div>
+            {/* Nút Thêm Chương Mới */}
+            <button
+              onClick={handleOpenCreateChapterModal}
+              className="px-2.5 py-1 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold flex items-center gap-1 shadow-sm transition-all hover:scale-105 active:scale-95 cursor-pointer"
+              title="Thêm một Chương mới vào miền tri thức này"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>+ Thêm Chương Mới</span>
+            </button>
           </div>
 
           <div className="space-y-3">
@@ -1223,27 +1631,62 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
                 >
                   {/* Chapter Header */}
                   <div 
-                    onClick={() => toggleChapter(chap.chapterId)}
-                    className="p-4 bg-slate-50/80 hover:bg-slate-100/80 flex items-center justify-between cursor-pointer border-b border-slate-100 transition-colors"
+                    onClick={() => toggleChapter(chap.chapterId, chap)}
+                    className="p-3.5 bg-slate-50/90 hover:bg-slate-100/90 flex items-center justify-between cursor-pointer border-b border-slate-100 transition-colors group/chap"
                   >
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center font-black text-xs shrink-0">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="w-8 h-8 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center font-black text-xs shrink-0 shadow-2xs">
                         {chap.code?.slice(-2) || "CH"}
                       </div>
-                      <div>
-                        <h3 className="text-xs font-black text-slate-900 leading-tight">
+                      <div className="min-w-0">
+                        <h3 className="text-xs font-black text-slate-900 leading-tight truncate">
                           {chap.name}
                         </h3>
-                        <div className="text-[10px] text-slate-500 font-medium mt-0.5">
-                          {chap.lessons?.length || 0} bài học • Trọng số: {Math.round((chap.weight || 0.25) * 100)}%
+                        <div className="text-[10px] text-slate-500 font-medium mt-0.5 flex items-center gap-2">
+                          <span>{chap.lessons?.length || 0} bài học</span>
+                          <span>•</span>
+                          <span>Trọng số: {Math.round((chap.weight || 0.25) * 100)}%</span>
                         </div>
                       </div>
                     </div>
-                    {isChapExpanded ? (
-                      <ChevronDown className="w-4 h-4 text-slate-400" />
-                    ) : (
-                      <ChevronRight className="w-4 h-4 text-slate-400" />
-                    )}
+
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {/* Nút Thêm Bài Học Mới vào Chương */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenCreateLessonModal(chap);
+                        }}
+                        title="Thêm Bài học mới vào chương này"
+                        className="px-2 py-1 rounded-lg bg-white hover:bg-indigo-50 border border-slate-200 hover:border-indigo-300 text-indigo-700 text-[10px] font-bold flex items-center gap-1 shadow-2xs transition-all cursor-pointer"
+                      >
+                        <Plus className="w-3 h-3 text-indigo-600" />
+                        <span>Thêm bài</span>
+                      </button>
+
+                      {/* Nút Xóa Chương */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteChapter(chap);
+                        }}
+                        disabled={deletingNodeId === chap.chapterId}
+                        title="Xóa chương này và toàn bộ bài học, dạng bài bên trong"
+                        className="p-1.5 rounded-lg bg-white hover:bg-rose-50 border border-slate-200 hover:border-rose-300 text-slate-400 hover:text-rose-600 shadow-2xs transition-all disabled:opacity-50 cursor-pointer"
+                      >
+                        {deletingNodeId === chap.chapterId ? (
+                          <RefreshCw className="w-3 h-3 animate-spin text-rose-500" />
+                        ) : (
+                          <Trash2 className="w-3 h-3" />
+                        )}
+                      </button>
+
+                      {isChapExpanded ? (
+                        <ChevronDown className="w-4 h-4 text-slate-400 ml-0.5" />
+                      ) : (
+                        <ChevronRight className="w-4 h-4 text-slate-400 ml-0.5" />
+                      )}
+                    </div>
                   </div>
 
                   {/* Lessons List (Level 2) */}
@@ -1258,8 +1701,8 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
                           >
                             {/* Lesson Header */}
                             <div 
-                              onClick={() => toggleLesson(les.lessonId)}
-                              className="p-3 hover:bg-slate-50 flex items-center justify-between cursor-pointer transition-colors"
+                              onClick={() => toggleLesson(les.lessonId, les)}
+                              className="p-3 hover:bg-slate-50 flex items-center justify-between cursor-pointer transition-colors group/les"
                             >
                               <div className="flex items-center gap-2 truncate">
                                 <BookOpen className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
@@ -1267,14 +1710,14 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
                                   {les.name}
                                 </span>
                               </div>
-                              <div className="flex items-center gap-2 shrink-0">
+                              <div className="flex items-center gap-1.5 shrink-0">
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     handleOpenCreatePatternModal(les.lessonId, les.name);
                                   }}
                                   title="Thêm Dạng bài mới vào bài học này"
-                                  className="px-2 py-0.5 rounded-md bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[10px] font-bold flex items-center gap-1 border border-indigo-200/60 transition-colors"
+                                  className="px-2 py-0.5 rounded-md bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[10px] font-bold flex items-center gap-1 border border-indigo-200/60 transition-colors cursor-pointer"
                                 >
                                   <Plus className="w-3 h-3" />
                                   <span>Thêm dạng</span>
@@ -1285,11 +1728,29 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
                                     handleOpenStudio(null, chap, les);
                                   }}
                                   title="Mở Studio thiết kế dạng bài mới toàn diện với đồ thị và phương pháp"
-                                  className="px-2 py-0.5 rounded-md bg-blue-50 hover:bg-blue-100 text-blue-700 text-[10px] font-bold flex items-center gap-1 border border-blue-200/60 transition-colors"
+                                  className="px-2 py-0.5 rounded-md bg-blue-50 hover:bg-blue-100 text-blue-700 text-[10px] font-bold flex items-center gap-1 border border-blue-200/60 transition-colors cursor-pointer"
                                 >
                                   <Sparkles className="w-2.5 h-2.5 text-amber-500" />
                                   <span>+ Studio</span>
                                 </button>
+
+                                {/* Nút Xóa Bài Học */}
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteLesson(les, chap.name);
+                                  }}
+                                  disabled={deletingNodeId === les.lessonId}
+                                  title="Xóa bài học này và toàn bộ dạng bài bên trong"
+                                  className="p-1 rounded-md bg-white hover:bg-rose-50 border border-slate-200 hover:border-rose-300 text-slate-400 hover:text-rose-600 transition-all disabled:opacity-50 cursor-pointer"
+                                >
+                                  {deletingNodeId === les.lessonId ? (
+                                    <RefreshCw className="w-2.5 h-2.5 animate-spin text-rose-500" />
+                                  ) : (
+                                    <Trash2 className="w-2.5 h-2.5" />
+                                  )}
+                                </button>
+
                                 <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[10px] font-bold">
                                   {les.patterns?.length || 0} dạng
                                 </span>
@@ -1382,7 +1843,7 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
                                             title="Sửa nhanh dạng bài này"
                                             className="opacity-0 group-hover:opacity-100 p-1 rounded-md bg-white border border-slate-200 hover:border-slate-400 text-slate-500 hover:text-slate-800 transition-all shadow-xs"
                                           >
-                                            <Edit3 className="w-3 h-3" />
+                                            <Pencil className="w-3 h-3" />
                                           </button>
                                         </div>
                                       </div>
@@ -1442,11 +1903,10 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
 
                     <button
                       onClick={() => handleOpenEditModal(selectedPattern)}
-                      className="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold flex items-center gap-1.5 transition-colors"
-                      title="Mở bảng hiệu đính nhanh nội dung dạng bài"
+                      className="p-2 rounded-xl bg-slate-100 hover:bg-indigo-50 hover:border-indigo-300 border border-slate-200 text-slate-600 hover:text-indigo-600 transition-all shadow-2xs cursor-pointer"
+                      title="Sửa thông tin nhanh (Tên dạng bài, Chương, Khối lớp, Mức độ Bloom)"
                     >
-                      <Edit3 className="w-3.5 h-3.5 text-slate-500" />
-                      <span>Sửa nhanh</span>
+                      <Pencil className="w-4 h-4" />
                     </button>
 
                     <button
@@ -1615,7 +2075,7 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
                       </div>
                     </div>
                     <button 
-                      onClick={() => alert(`Đang phát video bài giảng chuyên sâu: ${selectedPattern.videoLesson.title}`)}
+                      onClick={() => toast.info(`Đang phát video bài giảng chuyên sâu: ${selectedPattern.videoLesson.title}`, 'Video Bài Giảng')}
                       className="px-3.5 py-2 bg-white border border-slate-200 hover:border-emerald-500 text-emerald-700 text-xs font-bold rounded-xl shadow-sm shrink-0 transition-colors flex items-center gap-1.5"
                     >
                       <PlayCircle className="w-3.5 h-3.5" />
@@ -1691,11 +2151,40 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
 
             </div>
           ) : (
-            <div className="bg-white rounded-3xl border border-slate-200 p-12 text-center text-slate-400 space-y-2">
-              <Compass className="w-10 h-10 text-slate-300 mx-auto animate-bounce" />
-              <div className="text-sm font-bold text-slate-600">
-                Chọn một Dạng bài ở cây phân cấp bên trái để xem đầy đủ 4 khối nội dung sư phạm.
+            <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm p-12 text-center text-slate-400 space-y-4">
+              <div className="w-16 h-16 rounded-2xl bg-indigo-50 text-indigo-500 flex items-center justify-center mx-auto shadow-2xs">
+                <Compass className="w-8 h-8 animate-pulse text-indigo-600" />
               </div>
+              <div className="space-y-1">
+                <div className="text-base font-extrabold text-slate-800">
+                  Chưa chọn Dạng bài nào
+                </div>
+                <div className="text-xs text-slate-500 max-w-md mx-auto">
+                  Nhấp vào một Chương hoặc Dạng bài ở cây phân cấp bên trái để tải nội dung lý thuyết, phương pháp KaTeX và câu hỏi luyện tập.
+                </div>
+              </div>
+              {chapters.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const firstChap = chapters[0];
+                    const firstLes = firstChap.lessons?.[0];
+                    if (firstChap) {
+                      setExpandedChapters(prev => ({ ...prev, [firstChap.chapterId]: true }));
+                    }
+                    if (firstLes) {
+                      setExpandedLessons(prev => ({ ...prev, [firstLes.lessonId]: true }));
+                      if (firstLes.patterns?.[0]) {
+                        setSelectedPattern(firstLes.patterns[0]);
+                      }
+                    }
+                  }}
+                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-bold shadow-md shadow-indigo-600/20 transition-all cursor-pointer inline-flex items-center gap-2"
+                >
+                  <Sparkles className="w-4 h-4 text-amber-300" />
+                  <span>Tự Động Mở Dạng Bài Đầu Tiên</span>
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -1895,460 +2384,197 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
         </div>
       )}
 
-      {/* 5. MODAL HIỆU ĐÍNH TRI THỨC SƯ PHẠM DÀNH RIÊNG CHO GIẢNG VIÊN (CURATION SUITE) */}
+      {/* 5. MODAL SỬA THÔNG TIN NHANH (QUICK METADATA EDIT) */}
       {isEditModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-slate-950/75 backdrop-blur-md animate-fade-in">
-          <div className="relative w-full max-w-4xl bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col my-auto max-h-[92vh]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md animate-fade-in">
+          <div className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col my-auto max-h-[90vh]">
             
             {/* Header Modal */}
             <div className="p-5 border-b border-slate-100 bg-slate-900 text-white flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center border border-cyan-500/30">
-                  <Edit3 className="w-5 h-5" />
+                <div className="w-10 h-10 rounded-2xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center border border-indigo-500/30">
+                  <Pencil className="w-5 h-5" />
                 </div>
                 <div>
                   <h3 className="text-base font-extrabold tracking-tight flex items-center gap-2">
-                    <span>Trung Tâm Hiệu Đính Sư Phạm: {editingForm.name || "Dạng bài"}</span>
-                    <span className="px-2 py-0.5 rounded-full bg-cyan-400/20 text-cyan-300 text-[10px] font-mono font-bold">
-                      {selectedPattern?.code}
-                    </span>
+                    <span>Sửa Thông Tin Nhanh</span>
+                    {selectedPattern?.code && (
+                      <span className="px-2 py-0.5 rounded-full bg-indigo-400/20 text-indigo-300 text-[10px] font-mono font-bold">
+                        {selectedPattern.code}
+                      </span>
+                    )}
                   </h3>
                   <p className="text-[11px] text-slate-400 font-medium mt-0.5">
-                    Chỉnh sửa trực tiếp 4 khối nội dung • Lưu vào cơ sở dữ liệu PostgreSQL • Chuẩn SGK GDPT 2018
+                    Hiệu chỉnh định danh, phân bổ chương học, khối lớp và trọng số
                   </p>
                 </div>
               </div>
               
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={handleAIEnhanceMethod}
-                  className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-200 border border-indigo-400/30 text-xs font-bold transition-colors"
-                  title="Tự động chèn khung quy trình giải 3 bước chuẩn của Ban Chuyên Môn"
-                >
-                  <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-                  <span>AI Gợi ý Mẫu giải</span>
-                </button>
-                <button 
-                  onClick={() => setIsEditModalOpen(false)}
-                  className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-
-            {/* Navigation Tabs */}
-            <div className="px-5 pt-3 bg-slate-50 border-b border-slate-200 flex items-center gap-2 overflow-x-auto">
-              <button
-                onClick={() => setActiveEditTab('theory')}
-                className={`px-4 py-2 text-xs font-bold rounded-t-xl transition-all border-b-2 flex items-center gap-1.5 shrink-0 ${
-                  activeEditTab === 'theory'
-                    ? 'bg-white border-blue-600 text-blue-700 shadow-xs'
-                    : 'border-transparent text-slate-500 hover:text-slate-800'
-                }`}
+              <button 
+                onClick={() => setIsEditModalOpen(false)}
+                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors cursor-pointer"
               >
-                <span className="w-4 h-4 rounded-full bg-cyan-100 text-cyan-700 flex items-center justify-center text-[10px] font-black">1</span>
-                <span>Khối 1: Nền Tảng SGK</span>
-              </button>
-
-              <button
-                onClick={() => setActiveEditTab('method')}
-                className={`px-4 py-2 text-xs font-bold rounded-t-xl transition-all border-b-2 flex items-center gap-1.5 shrink-0 ${
-                  activeEditTab === 'method'
-                    ? 'bg-white border-amber-600 text-amber-700 shadow-xs'
-                    : 'border-transparent text-slate-500 hover:text-slate-800'
-                }`}
-              >
-                <span className="w-4 h-4 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center text-[10px] font-black">2</span>
-                <span>Khối 2: Phương Pháp Giải KaTeX</span>
-              </button>
-
-              <button
-                onClick={() => setActiveEditTab('video')}
-                className={`px-4 py-2 text-xs font-bold rounded-t-xl transition-all border-b-2 flex items-center gap-1.5 shrink-0 ${
-                  activeEditTab === 'video'
-                    ? 'bg-white border-emerald-600 text-emerald-700 shadow-xs'
-                    : 'border-transparent text-slate-500 hover:text-slate-800'
-                }`}
-              >
-                <span className="w-4 h-4 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-[10px] font-black">3</span>
-                <span>Khối 3: Video Bài Giảng</span>
-              </button>
-
-              <button
-                onClick={() => setActiveEditTab('sample')}
-                className={`px-4 py-2 text-xs font-bold rounded-t-xl transition-all border-b-2 flex items-center gap-1.5 shrink-0 ${
-                  activeEditTab === 'sample'
-                    ? 'bg-white border-indigo-600 text-indigo-700 shadow-xs'
-                    : 'border-transparent text-slate-500 hover:text-slate-800'
-                }`}
-              >
-                <span className="w-4 h-4 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-[10px] font-black">4</span>
-                <span>Khối 4: Bài Toán Mẫu & Lời Giải</span>
-              </button>
-
-              <button
-                onClick={() => setActiveEditTab('settings')}
-                className={`px-4 py-2 text-xs font-bold rounded-t-xl transition-all border-b-2 flex items-center gap-1.5 shrink-0 ${
-                  activeEditTab === 'settings'
-                    ? 'bg-white border-slate-700 text-slate-900 shadow-xs'
-                    : 'border-transparent text-slate-500 hover:text-slate-800'
-                }`}
-              >
-                <Sliders className="w-3.5 h-3.5" />
-                <span>Cài Đặt Dạng & Trọng Số</span>
+                <X className="w-4 h-4" />
               </button>
             </div>
 
             {/* Modal Body */}
-            <div className="p-5 sm:p-6 overflow-y-auto flex-1 space-y-4">
+            <div className="p-6 space-y-4 overflow-y-auto text-xs">
               
-              {/* TAB 1: KHỐI 1 - NỀN TẢNG SGK */}
-              {activeEditTab === 'theory' && (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="text-xs font-bold text-slate-900">
-                        Nội dung Lý thuyết, Khái niệm và Điều kiện Tiên quyết (SGK GDPT 2018)
-                      </h4>
-                      <p className="text-[11px] text-slate-500 font-medium">
-                        Hỗ trợ Markdown và công thức toán học KaTeX kẹp giữa 2 dấu đô la <code>$công_thức$</code>
-                      </p>
-                    </div>
-
-                    {/* Quick Math Insert Bar */}
-                    <div className="hidden sm:flex items-center gap-1 text-[11px] flex-wrap max-w-md justify-end">
-                      {MATH_SNIPPETS.slice(0, 7).map((snip, idx) => (
-                        <button
-                          key={idx}
-                          type="button"
-                          onClick={() => handleInsertMathFormula('theoryRecap', snip.code)}
-                          className="px-2 py-0.5 rounded bg-slate-100 hover:bg-blue-100 hover:text-blue-700 text-slate-700 font-mono text-[10px] border border-slate-200 transition-colors"
-                          title={`Chèn ${snip.label}`}
-                        >
-                          ${snip.code}$
-                        </button>
-                      ))}
-                    </div>
+              {/* Studio Banner Hint */}
+              <div className="p-3.5 rounded-2xl bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200/80 flex items-center justify-between gap-3">
+                <div className="space-y-0.5">
+                  <div className="text-xs font-black text-blue-900 flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+                    <span>Cần chỉnh sửa nội dung bài học chuyên sâu?</span>
                   </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <div className="text-[11px] font-bold text-slate-600 flex items-center justify-between">
-                        <span>Trình soạn thảo Markdown / KaTeX</span>
-                        <span className="text-[10px] text-slate-400 font-mono">{(editingForm.theoryRecap || '').length} ký tự</span>
-                      </div>
-                      <textarea
-                        rows={12}
-                        value={editingForm.theoryRecap}
-                        onChange={(e) => setEditingForm(prev => ({ ...prev, theoryRecap: e.target.value }))}
-                        placeholder="Nhập kiến thức nền tảng SGK: định nghĩa, điều kiện xác định, định lý cốt lõi..."
-                        className="w-full p-3.5 rounded-2xl border border-slate-300 font-mono text-xs leading-relaxed focus:outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50 text-slate-900"
-                      />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <div className="text-[11px] font-bold text-cyan-800 flex items-center justify-between">
-                        <span>Xem trước kết quả trực tiếp (Live KaTeX Preview)</span>
-                        <span className="text-[10px] text-emerald-600 font-bold">Hiển thị cho học sinh</span>
-                      </div>
-                      <div className="p-4 rounded-2xl border border-cyan-200 bg-cyan-50/40 min-h-[260px] max-h-[300px] overflow-y-auto text-xs leading-relaxed text-slate-800">
-                        <MathText text={editingForm.theoryRecap || "*(Nội dung xem trước sẽ hiển thị ở đây)*"} />
-                      </div>
-                    </div>
-                  </div>
+                  <p className="text-[11px] text-blue-700/80 font-medium">
+                    Để soạn công thức KaTeX, phương pháp giải, video và câu hỏi mẫu, vui lòng mở Studio Sư Phạm.
+                  </p>
                 </div>
-              )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsEditModalOpen(false);
+                    handleOpenStudio(selectedPattern);
+                  }}
+                  className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shrink-0 transition-colors shadow-xs cursor-pointer flex items-center gap-1"
+                >
+                  <span>Mở Studio</span>
+                  <ExternalLink className="w-3 h-3" />
+                </button>
+              </div>
 
-              {/* TAB 2: KHỐI 2 - PHƯƠNG PHÁP GIẢI KATEX TỪNG BƯỚC */}
-              {activeEditTab === 'method' && (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="text-xs font-bold text-slate-900">
-                        Quy Trình & Phương Pháp Giải Chuyên Biệt Từng Bước
-                      </h4>
-                      <p className="text-[11px] text-slate-500 font-medium">
-                        Giúp học sinh định hình sơ đồ tư duy: Bước 1 (TXĐ) → Bước 2 (Đạo hàm/Biến đổi) → Bước 3 (BBT/Kết luận)
-                      </p>
-                    </div>
+              {/* Tên Dạng bài / Tiêu đề */}
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Tên Dạng bài / Tiêu đề <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={editingForm.name}
+                  onChange={(e) => setEditingForm(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder="Ví dụ: Dạng 01: Khảo sát sự biến thiên và vẽ đồ thị hàm số"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white text-slate-800 text-xs"
+                />
+              </div>
 
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        type="button"
-                        onClick={handleAIEnhanceMethod}
-                        className="px-2.5 py-1 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-900 text-xs font-bold flex items-center gap-1 border border-amber-300 transition-colors shadow-xs"
-                      >
-                        <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-                        <span>Chèn mẫu 3 bước</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Math chips */}
-                  <div className="flex items-center gap-1.5 text-[11px] flex-wrap pb-1">
-                    <span className="text-slate-400 font-medium text-[10px]">Chèn nhanh:</span>
-                    {MATH_SNIPPETS.map((snip, idx) => (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={() => handleInsertMathFormula('solutionMethod', snip.code)}
-                        className="px-2 py-0.5 rounded bg-slate-100 hover:bg-amber-100 hover:text-amber-900 text-slate-700 font-mono text-[10px] border border-slate-200 transition-colors"
-                      >
-                        ${snip.code}$
-                      </button>
+              {/* Chương học trực thuộc */}
+              {currentDomain?.chapters && currentDomain.chapters.length > 0 && (
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1 flex items-center gap-1.5">
+                    <Layers className="w-3.5 h-3.5 text-blue-600" />
+                    <span>Chương học trực thuộc</span>
+                  </label>
+                  <select
+                    value={editingForm.chapterId || ''}
+                    onChange={(e) => {
+                      const newChapId = e.target.value;
+                      const targetChap = currentDomain.chapters.find(c => c.chapterId === newChapId);
+                      const firstLes = targetChap?.lessons?.[0];
+                      setEditingForm(prev => ({
+                        ...prev,
+                        chapterId: newChapId,
+                        lessonId: firstLes ? firstLes.lessonId : prev.lessonId
+                      }));
+                    }}
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-800 text-xs"
+                  >
+                    {currentDomain.chapters.map(chap => (
+                      <option key={chap.chapterId} value={chap.chapterId}>
+                        {chap.name} ({chap.lessons?.length || 0} bài học)
+                      </option>
                     ))}
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <div className="text-[11px] font-bold text-slate-600 flex items-center justify-between">
-                        <span>Quy trình các bước (Markdown / KaTeX)</span>
-                        <span className="text-[10px] text-slate-400 font-mono">{(editingForm.solutionMethod || '').length} ký tự</span>
-                      </div>
-                      <textarea
-                        rows={12}
-                        value={editingForm.solutionMethod}
-                        onChange={(e) => setEditingForm(prev => ({ ...prev, solutionMethod: e.target.value }))}
-                        placeholder="Nhập quy trình giải: **Bước 1:** ..., **Bước 2:** ..., **Bước 3:** ..."
-                        className="w-full p-3.5 rounded-2xl border border-slate-300 font-mono text-xs leading-relaxed focus:outline-none focus:ring-2 focus:ring-amber-500 bg-slate-50 text-slate-900"
-                      />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <div className="text-[11px] font-bold text-amber-800 flex items-center justify-between">
-                        <span>Xem trước kết quả trực tiếp (Live KaTeX Preview)</span>
-                        <span className="text-[10px] text-amber-700 font-bold">Khối 2</span>
-                      </div>
-                      <div className="p-4 rounded-2xl border border-amber-200 bg-amber-50/40 min-h-[260px] max-h-[300px] overflow-y-auto text-xs leading-relaxed text-slate-800">
-                        <MathText text={editingForm.solutionMethod || "*(Nội dung phương pháp giải sẽ hiển thị ở đây)*"} />
-                      </div>
-                    </div>
-                  </div>
+                  </select>
                 </div>
               )}
 
-              {/* TAB 3: KHỐI 3 - VIDEO BÀI GIẢNG */}
-              {activeEditTab === 'video' && (
-                <div className="space-y-5">
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div className="sm:col-span-2 space-y-1.5">
-                      <label className="text-xs font-bold text-slate-700">
-                        Đường dẫn Video bài giảng (YouTube, Vimeo, Cloudflare hoặc MP4)
-                      </label>
-                      <input
-                        type="text"
-                        value={editingForm.videoUrl || ''}
-                        onChange={(e) => setEditingForm(prev => ({ ...prev, videoUrl: e.target.value }))}
-                        placeholder="Ví dụ: https://www.youtube.com/watch?v=dQw4w9WgXcQ"
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 text-slate-900"
-                      />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-slate-700">
-                        Thời lượng dự kiến (Giây)
-                      </label>
-                      <input
-                        type="number"
-                        min="0"
-                        step="60"
-                        value={editingForm.durationSeconds}
-                        onChange={(e) => setEditingForm(prev => ({ ...prev, durationSeconds: e.target.value }))}
-                        placeholder="600 (tức 10 phút)"
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 text-slate-900"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Video Live Player Preview */}
-                  <div className="space-y-2">
-                    <div className="text-xs font-bold text-slate-700 flex items-center justify-between">
-                      <span>Kiểm tra phát video trực tiếp (Video Player Test):</span>
-                      <span className="text-[11px] text-emerald-600 font-bold">
-                        {Math.max(1, Math.round((parseInt(editingForm.durationSeconds, 10) || 0) / 60))} phút
-                      </span>
-                    </div>
-
-                    {editingForm.videoUrl ? (
-                      <div className="aspect-video w-full max-w-xl mx-auto rounded-2xl overflow-hidden border border-slate-300 bg-slate-950 shadow-md flex items-center justify-center">
-                        {editingForm.videoUrl.includes('youtube.com') || editingForm.videoUrl.includes('youtu.be') ? (
-                          <iframe
-                            src={getEmbedVideoUrl(editingForm.videoUrl)}
-                            title="Video bài giảng xem trước"
-                            className="w-full h-full"
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                            allowFullScreen
-                          />
-                        ) : (
-                          <div className="p-8 text-center text-slate-400 text-xs space-y-2">
-                            <PlayCircle className="w-10 h-10 mx-auto text-emerald-500" />
-                            <div>Đường dẫn video ngoài YouTube: <strong>{editingForm.videoUrl}</strong></div>
-                            <div className="text-[11px] text-slate-500">Video sẽ được phát bằng trình phát tùy chỉnh của hệ thống trên client.</div>
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="p-8 border-2 border-dashed border-slate-200 rounded-2xl text-center text-slate-400 text-xs space-y-1">
-                        <PlayCircle className="w-8 h-8 mx-auto text-slate-300" />
-                        <div>Chưa có đường dẫn video bài giảng cho dạng bài này.</div>
-                        <div className="text-[11px] text-slate-400">Dán link YouTube ở trên để kích hoạt xem trước.</div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* TAB 4: KHỐI 4 - BÀI TOÁN MẪU & MINH HỌA */}
-              {activeEditTab === 'sample' && (
-                <div className="space-y-4">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700">
-                      Nội dung câu hỏi mẫu minh họa (Hỗ trợ KaTeX)
-                    </label>
-                    <textarea
-                      rows={3}
-                      value={editingForm.sampleQuestion?.contentLatex || ''}
-                      onChange={(e) => setEditingForm(prev => ({
-                        ...prev,
-                        sampleQuestion: { ...prev.sampleQuestion, contentLatex: e.target.value }
-                      }))}
-                      placeholder="Ví dụ: Tìm số điểm cực trị của hàm số $y = x^3 - 3x^2 + 2$..."
-                      className="w-full p-3 rounded-xl border border-slate-300 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900 bg-slate-50"
-                    />
-                  </div>
-
-                  {/* 4 Options Grid */}
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700 flex items-center justify-between">
-                      <span>4 Phương án trắc nghiệm (Chọn đáp án đúng bằng radio button):</span>
-                      <span className="text-indigo-600 text-[11px] font-bold">
-                        Đáp án đúng: {editingForm.sampleQuestion?.correctOption || 'A'}
-                      </span>
-                    </label>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {['A', 'B', 'C', 'D'].map((optKey) => {
-                        const fieldName = `option${optKey}`;
-                        const isCorrect = editingForm.sampleQuestion?.correctOption === optKey;
-                        return (
-                          <div 
-                            key={optKey}
-                            className={`p-2.5 rounded-xl border flex items-center gap-2.5 transition-colors ${
-                              isCorrect ? 'bg-emerald-50/70 border-emerald-400 ring-1 ring-emerald-400' : 'bg-slate-50 border-slate-200'
-                            }`}
-                          >
-                            <input
-                              type="radio"
-                              name="correctOptionRadio"
-                              checked={isCorrect}
-                              onChange={() => setEditingForm(prev => ({
-                                ...prev,
-                                sampleQuestion: { ...prev.sampleQuestion, correctOption: optKey }
-                              }))}
-                              className="w-4 h-4 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
-                            />
-                            <span className="font-black text-xs text-slate-700 shrink-0">{optKey}.</span>
-                            <input
-                              type="text"
-                              value={editingForm.sampleQuestion?.[fieldName] || ''}
-                              onChange={(e) => {
-                                const val = e.target.value;
-                                setEditingForm(prev => ({
-                                  ...prev,
-                                  sampleQuestion: { ...prev.sampleQuestion, [fieldName]: val }
-                                }));
-                              }}
-                              placeholder={`Nội dung phương án ${optKey}...`}
-                              className="w-full bg-white px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-indigo-500 text-slate-900"
-                            />
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Detailed Explanation */}
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700">
-                      Lời giải chi tiết theo các bước của Dạng bài (KaTeX)
-                    </label>
-                    <textarea
-                      rows={4}
-                      value={editingForm.sampleQuestion?.explanation || ''}
-                      onChange={(e) => setEditingForm(prev => ({
-                        ...prev,
-                        sampleQuestion: { ...prev.sampleQuestion, explanation: e.target.value }
-                      }))}
-                      placeholder="Trình bày lời giải chi tiết theo từng bước..."
-                      className="w-full p-3 rounded-xl border border-slate-300 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900 bg-slate-50"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* TAB 5: CÀI ĐẶT DẠNG & TRỌNG SỐ */}
-              {activeEditTab === 'settings' && (
-                <div className="space-y-5">
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div className="sm:col-span-2 space-y-1.5">
-                      <label className="text-xs font-bold text-slate-700">
-                        Tên Dạng bài
-                      </label>
-                      <input
-                        type="text"
-                        value={editingForm.name}
-                        onChange={(e) => setEditingForm(prev => ({ ...prev, name: e.target.value }))}
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
-                      />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-slate-700">
-                        Trọng số năng lực (%)
-                      </label>
-                      <input
-                        type="number"
-                        min="1"
-                        max="100"
-                        step="1"
-                        value={editingForm.weight}
-                        onChange={(e) => setEditingForm(prev => ({ ...prev, weight: e.target.value }))}
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Danger Zone */}
-                  <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 space-y-2 mt-6">
-                    <div className="text-xs font-extrabold text-rose-900 flex items-center gap-2">
-                      <AlertTriangle className="w-4 h-4 text-rose-600" />
-                      <span>VÙNG THAO TÁC NGUY HIỂM (DANGER ZONE)</span>
-                    </div>
-                    <p className="text-[11px] text-rose-800 font-medium">
-                      Xóa dạng bài này sẽ đồng thời xóa toàn bộ tài liệu lý thuyết, video liên kết và các câu hỏi thuộc dạng bài này trong cơ sở dữ liệu.
-                    </p>
+              {/* Khối lớp */}
+              <div>
+                <label className="block font-bold text-slate-700 mb-1 flex items-center gap-1.5">
+                  <GraduationCap className="w-3.5 h-3.5 text-blue-600" />
+                  <span>Khối lớp</span>
+                </label>
+                <div className="flex items-center gap-2">
+                  {[
+                    { id: '12', label: 'Lớp 12' },
+                    { id: '11', label: 'Lớp 11' },
+                    { id: '10', label: 'Lớp 10' }
+                  ].map(g => (
                     <button
+                      key={g.id}
                       type="button"
-                      onClick={() => handleDeletePattern(editingForm.patternId, editingForm.name)}
-                      className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold flex items-center gap-1.5 transition-colors shadow-xs"
+                      onClick={() => setEditingForm(prev => ({ ...prev, grade: g.id }))}
+                      className={`flex-1 py-2 rounded-xl font-bold text-xs transition-all cursor-pointer ${
+                        editingForm.grade === g.id
+                          ? 'bg-indigo-600 text-white shadow-xs'
+                          : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
+                      }`}
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      <span>Xóa Vĩnh Viễn Dạng Bài Này</span>
+                      {g.label}
                     </button>
-                  </div>
+                  ))}
                 </div>
-              )}
+              </div>
+
+              {/* Mức độ tư duy Bloom & Trọng số (%) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1 flex items-center gap-1.5">
+                    <Target className="w-3.5 h-3.5 text-purple-600" />
+                    <span>Mức độ nhận thức</span>
+                  </label>
+                  <select
+                    value={editingForm.level || 'Vận dụng'}
+                    onChange={(e) => setEditingForm(prev => ({ ...prev, level: e.target.value }))}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-800 text-xs"
+                  >
+                    <option value="Nhận biết">Nhận biết</option>
+                    <option value="Thông hiểu">Thông hiểu</option>
+                    <option value="Vận dụng">Vận dụng</option>
+                    <option value="Vận dụng cao">Vận dụng cao</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1 flex items-center gap-1.5">
+                    <Sliders className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Trọng số năng lực (%)</span>
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="100"
+                    value={editingForm.weight}
+                    onChange={(e) => setEditingForm(prev => ({ ...prev, weight: e.target.value }))}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-800 text-xs"
+                  />
+                </div>
+              </div>
+
+              {/* Danger Zone: Xóa dạng bài */}
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsEditModalOpen(false);
+                    handleDeletePattern(editingForm.patternId, editingForm.name);
+                  }}
+                  className="w-full py-2 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <Trash2 className="w-3.5 h-3.5 text-rose-500" />
+                  <span>Xóa Dạng Bài Này</span>
+                </button>
+              </div>
 
             </div>
 
             {/* Modal Footer */}
-            <div className="p-4 sm:p-5 border-t border-slate-100 bg-slate-50 flex items-center justify-between gap-3">
+            <div className="p-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between gap-3">
               <div>
                 {editSuccessMsg && (
                   <div className="text-xs font-bold text-emerald-600 flex items-center gap-1.5 animate-fade">
-                    <CheckCircle className="w-4 h-4" />
+                    <CheckCircle2 className="w-4 h-4" />
                     <span>{editSuccessMsg}</span>
                   </div>
                 )}
@@ -2364,7 +2590,7 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
                 <button
                   type="button"
                   onClick={() => setIsEditModalOpen(false)}
-                  className="px-4 py-2.5 rounded-xl border border-slate-300 text-xs font-bold text-slate-700 hover:bg-white transition-colors"
+                  className="px-4 py-2 rounded-xl border border-slate-300 text-xs font-bold text-slate-700 hover:bg-white transition-colors cursor-pointer"
                 >
                   Hủy bỏ
                 </button>
@@ -2373,23 +2599,64 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
                   type="button"
                   disabled={savingEdit}
                   onClick={handleSaveEdit}
-                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-black shadow-md shadow-blue-500/25 flex items-center gap-2 transition-all disabled:opacity-50"
+                  className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-md shadow-indigo-500/25 flex items-center gap-2 transition-all disabled:opacity-50 cursor-pointer"
                 >
                   {savingEdit ? (
                     <>
                       <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                      <span>Đang lưu vào PostgreSQL...</span>
+                      <span>Đang lưu...</span>
                     </>
                   ) : (
                     <>
                       <Save className="w-3.5 h-3.5" />
-                      <span>Lưu Thay Đổi (Cập nhật DB)</span>
+                      <span>Lưu Thay Đổi</span>
                     </>
                   )}
                 </button>
               </div>
             </div>
 
+          </div>
+        </div>
+      )}
+
+      {/* 5.1 MODAL XÁC NHẬN XÓA CHUYÊN NGHIỆP (ZERO NATIVE BROWSER ALERTS) */}
+      {confirmDeleteDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md animate-fade-in">
+          <div className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl border border-rose-200 overflow-hidden flex flex-col p-6 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center shrink-0">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-base font-extrabold text-slate-900">{confirmDeleteDialog.title}</h3>
+                <p className="text-xs text-slate-500 font-medium">Hành động này không thể hoàn tác</p>
+              </div>
+            </div>
+            <div className="p-3.5 bg-rose-50/70 rounded-2xl border border-rose-100 text-xs text-rose-950 whitespace-pre-line leading-relaxed font-medium">
+              {confirmDeleteDialog.message}
+            </div>
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setConfirmDeleteDialog(null)}
+                className="px-4 py-2 rounded-xl border border-slate-300 text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const action = confirmDeleteDialog.onConfirm;
+                  setConfirmDeleteDialog(null);
+                  action();
+                }}
+                className="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-sm transition-colors cursor-pointer flex items-center gap-1.5"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Xác Nhận Xóa</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -2512,6 +2779,256 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
               >
                 {savingCreate ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
                 <span>Tạo Dạng Bài Mới</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 6.1 MODAL THÊM CHƯƠNG MỚI (CREATE CHAPTER) */}
+      {isCreateChapterModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md animate-fade-in">
+          <div className="relative w-full max-w-xl bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col my-auto max-h-[90vh]">
+            <div className="p-5 border-b border-slate-100 bg-slate-900 text-white flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-extrabold flex items-center gap-2">
+                  <Layers className="w-4 h-4 text-blue-400" />
+                  <span>Thêm Chương Học Mới</span>
+                </h3>
+                <p className="text-[11px] text-slate-400 mt-0.5">Thuộc Miền: {currentDomain?.title}</p>
+              </div>
+              <button 
+                onClick={() => setIsCreateChapterModalOpen(false)}
+                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4 overflow-y-auto text-xs">
+              {/* Phân môn nếu có */}
+              {subSubjectsList.length > 0 && (
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1.5 flex items-center gap-1.5">
+                    <Book className="w-3.5 h-3.5 text-indigo-600" />
+                    <span>Phân môn trực thuộc:</span>
+                  </label>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {subSubjectsList.filter(s => s.id !== 'all').map(subj => {
+                      const isSel = createChapterForm.subSubject === subj.id;
+                      return (
+                        <button
+                          key={subj.id}
+                          type="button"
+                          onClick={() => setCreateChapterForm(prev => ({ ...prev, subSubject: subj.id }))}
+                          className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer ${
+                            isSel 
+                              ? 'bg-indigo-600 text-white shadow-xs' 
+                              : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
+                          }`}
+                        >
+                          {subj.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Khối lớp & Năm học */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1.5 flex items-center gap-1.5">
+                    <GraduationCap className="w-3.5 h-3.5 text-blue-600" />
+                    <span>Khối lớp:</span>
+                  </label>
+                  <div className="flex items-center gap-1.5">
+                    {[
+                      { id: '12', label: 'Lớp 12' },
+                      { id: '11', label: 'Lớp 11' },
+                      { id: '10', label: 'Lớp 10' }
+                    ].map(g => (
+                      <button
+                        key={g.id}
+                        type="button"
+                        onClick={() => setCreateChapterForm(prev => ({ ...prev, grade: g.id }))}
+                        className={`flex-1 py-1.5 rounded-xl font-bold transition-all cursor-pointer ${
+                          createChapterForm.grade === g.id
+                            ? 'bg-blue-600 text-white shadow-xs'
+                            : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
+                        }`}
+                      >
+                        {g.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1.5 flex items-center gap-1.5">
+                    <Calendar className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Năm học áp dụng:</span>
+                  </label>
+                  <select
+                    value={createChapterForm.academicYear}
+                    onChange={(e) => setCreateChapterForm(prev => ({ ...prev, academicYear: e.target.value }))}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="2025-2026">2025 - 2026 (GDPT 2018 Mới)</option>
+                    <option value="2024-2025">2024 - 2025</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Tên chương */}
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Tên Chương học <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ví dụ: Chương 01: Dao động cơ và Sóng cơ học"
+                  value={createChapterForm.name}
+                  onChange={(e) => setCreateChapterForm(prev => ({ ...prev, name: e.target.value }))}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white text-slate-800"
+                />
+              </div>
+
+              {/* Trọng số */}
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Trọng số phân bổ trong kỳ thi ĐGNL (%)
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max="100"
+                  value={createChapterForm.weight}
+                  onChange={(e) => setCreateChapterForm(prev => ({ ...prev, weight: e.target.value }))}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white text-slate-800"
+                />
+                <p className="text-[10px] text-slate-400 mt-1">Mặc định 25% (0.25) phân bổ trong miền tri thức</p>
+              </div>
+
+              {/* Mô tả chương học */}
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Mô tả / Mục tiêu chuẩn đầu ra của Chương
+                </label>
+                <textarea
+                  rows="3"
+                  placeholder="Khái quát nội dung cốt lõi và các năng lực cần đạt theo chuẩn Bộ GD&ĐT..."
+                  value={createChapterForm.description}
+                  onChange={(e) => setCreateChapterForm(prev => ({ ...prev, description: e.target.value }))}
+                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white text-slate-800"
+                />
+              </div>
+            </div>
+
+            <div className="p-4 border-t border-slate-100 bg-slate-50 flex items-center justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => setIsCreateChapterModalOpen(false)}
+                className="px-4 py-2 rounded-xl border border-slate-300 text-xs font-bold text-slate-700 hover:bg-white cursor-pointer"
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                disabled={savingCreateChapter}
+                onClick={handleCreateChapter}
+                className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm disabled:opacity-50 cursor-pointer"
+              >
+                {savingCreateChapter ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+                <span>Tạo Chương Mới</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 6.2 MODAL THÊM BÀI HỌC MỚI (CREATE LESSON) */}
+      {isCreateLessonModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md animate-fade-in">
+          <div className="relative w-full max-w-xl bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col my-auto max-h-[90vh]">
+            <div className="p-5 border-b border-slate-100 bg-slate-900 text-white flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-extrabold flex items-center gap-2">
+                  <BookOpen className="w-4 h-4 text-indigo-400" />
+                  <span>Thêm Bài Học Mới</span>
+                </h3>
+                <p className="text-[11px] text-slate-400 mt-0.5">Thuộc Chương: {createLessonForm.chapterName}</p>
+              </div>
+              <button 
+                onClick={() => setIsCreateLessonModalOpen(false)}
+                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4 overflow-y-auto text-xs">
+              {/* Tên bài học */}
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Tên Bài học <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ví dụ: Bài 01: Dao động điều hòa và các đại lượng đặc trưng"
+                  value={createLessonForm.name}
+                  onChange={(e) => setCreateLessonForm(prev => ({ ...prev, name: e.target.value }))}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white text-slate-800"
+                />
+              </div>
+
+              {/* Trọng số */}
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Trọng số phân bổ (%)
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max="100"
+                  value={createLessonForm.weight}
+                  onChange={(e) => setCreateLessonForm(prev => ({ ...prev, weight: e.target.value }))}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white text-slate-800"
+                />
+                <p className="text-[10px] text-slate-400 mt-1">Mặc định 10% (0.10)</p>
+              </div>
+
+              {/* Tóm tắt bài học */}
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Tóm tắt nội dung cốt lõi của Bài học
+                </label>
+                <textarea
+                  rows="3"
+                  placeholder="Tóm tắt ngắn gọn phạm vi kiến thức mà bài học này bao quát..."
+                  value={createLessonForm.summary}
+                  onChange={(e) => setCreateLessonForm(prev => ({ ...prev, summary: e.target.value }))}
+                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white text-slate-800"
+                />
+              </div>
+            </div>
+
+            <div className="p-4 border-t border-slate-100 bg-slate-50 flex items-center justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => setIsCreateLessonModalOpen(false)}
+                className="px-4 py-2 rounded-xl border border-slate-300 text-xs font-bold text-slate-700 hover:bg-white cursor-pointer"
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                disabled={savingCreateLesson}
+                onClick={handleCreateLesson}
+                className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm disabled:opacity-50 cursor-pointer"
+              >
+                {savingCreateLesson ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+                <span>Thêm Bài Học Mới</span>
               </button>
             </div>
           </div>

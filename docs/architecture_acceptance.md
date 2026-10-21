@@ -597,6 +597,106 @@ V-Eval-Web_Client/
 - **Problem Details Error Formatter (`CurriculumExplorerView.jsx`)**:
   - Unrolls RFC 9110 `errors` dictionaries returned by backend validation handlers, rendering actionable line-item error diagnostics rather than opaque JSON dumps.
 
+### 4.49. Hierarchical Chapter & Lesson Cascade Deletion and Multi-Dimensional Knowledge Taxonomy Classification Architecture (`CurriculumExplorerView.jsx`)
+- **Hierarchical Node Deletion & Cascade Management (`DELETE /api/content/curriculum/nodes/{id}`)**:
+  - *Pedagogical & Structural Control*: Empowered educators and curriculum administrators with direct node pruning capabilities at all three tiers of the knowledge tree.
+  - *Cascade Warning Dialogs*: Initiates pre-flight confirmation prompts detailing the count of child lessons, patterns, materials, prerequisite DAG edges, and question items marked for irreversible removal.
+  - *Backend Cascade Orchestration*: Leverages the recursive descendant collector (`CollectDescendantIds`) in Content Service, cascading deletions cleanly across `Skills`, `Materials`, `SkillPrerequisites`, and `Questions`.
+  - *Client State Synchronization*: Triggers `fetchCurriculumData()` post-deletion and safeguards selected pattern pointers to prevent null reference errors on right-hand detail panels.
+- **Dynamic Node Creation Suite (`+ Thêm Chương Mới` & `+ Thêm bài`)**:
+  - *Chapter Provisioning Modal (`CreateChapterModal`)*: Enables instructors to create top-level chapters (`ParentId == null`) tagged with Grade Level (10, 11, 12), Academic Year (2025-2026, 2024-2025), Domain/Sub-Subject affiliation, normalized weight, and syllabus competencies.
+  - *Lesson Provisioning Modal (`CreateLessonModal`)*: Binds child lessons to selected chapters (`ParentId == Chapter.SkillId`), dynamically expanding the target chapter upon successful creation.
+- **Multi-Dimensional Taxonomy Filter Toolbar (`Bộ Lọc Phân Loại Tri Thức`)**:
+  - *Sub-Subject Disaggregation*: Bridges broad competency domains into dedicated subject tracks:
+    - **Natural Sciences**: Physics, Chemistry, Biology.
+    - **Social Sciences**: History, Geography, Economic & Legal Education (GDKT & PL).
+    - **Language**: Vietnamese / Literature, English.
+    - **Mathematics & Quantitative Reasoning**: Algebra & Calculus, Geometry & Measurement, Probability & Statistics, Logic & Data Analysis.
+  - *Grade-Level Categorization*: Supports instant one-click filtering across `Grade 12 (Core V-ACT)`, `Grade 11`, `Grade 10`, and `All Grades`.
+  - *Academic Year Alignment*: Allows segregation by syllabus cycles (`2025 - 2026 GDPT 2018 New Framework` vs `2024 - 2025`).
+  - *Live Match Aggregation & Reset*: Computes real-time match counts for chapters and lessons, providing a one-click reset action whenever filters are active.
+
+### 4.50. 2D Flat Notebook Paper Grid Architecture for 3D Spatial Geometry Canvas (`InteractiveMathRenderer.jsx`, `InteractiveMathWorkbenchModal.jsx`, `index.css`)
+- **Pedagogical Motivation**:
+  - In Vietnamese high school mathematics education (GDPT 2018), 3D spatial geometry diagrams (pyramids, prisms, tetrahedrons) are traditionally drafted on 2D ruled notebook graph paper.
+  - A plain white background lacks depth reference, while tilted 3D perspective grids / bounding box walls distort spatial perception and clutter geometric wireframes.
+  - A flat 2D notebook paper grid background provides familiar visual anchoring without interfering with the 3D trackball rotation of spatial objects.
+- **Dual-Layered CSS Grid Implementation (`index.css`)**:
+  - Implemented `.bg-grid-notebook` utilizing concentric CSS linear gradients:
+    - Minor grid: `20px x 20px` subtle rulings in `#e2e8f0` (1px line width).
+    - Major grid: `100px x 100px` accented rulings in `#cbd5e1` (1px line width) on pure white `#ffffff`.
+  - The grid is rendered at the container level as a 2D stationary background plane (`background-size: 100px 100px, 20px 20px`).
+- **JSXGraph SVG Canvas Transparency Override**:
+  - JSXGraph boards inject an internal `<svg>` element with default opaque white background (`background-color: #ffffff !important;`).
+  - Added high-specificity CSS rule:
+    ```css
+    .jxgbox.jxgbox-3d-grid svg {
+      background-color: transparent !important;
+      background: transparent !important;
+    }
+    ```
+  - Allows the container's 2D notebook grid to show through cleanly beneath the rotating 3D geometry wireframes.
+- **Component Application**:
+  - `InteractiveMathRenderer.jsx`: Applies `bg-grid-notebook jxgbox-3d-grid` dynamically whenever `is3D === true`.
+  - `InteractiveMathWorkbenchModal.jsx`: Applies `bg-grid-notebook jxgbox-3d-grid` when rendering the 3D spatial geometry lab (`jsxSubTab === '3d_space'`).
+
+### 4.51. High-Precision 3D Vector Coordinate System (Oxyz) & Interactive Visibility Toggle Architecture (`InteractiveMathRenderer.jsx`, `InteractiveMathWorkbenchModal.jsx`)
+- **Architectural Motivation**:
+  - In Vietnamese curriculum GDPT 2018 (Grade 12 V-ACT assessment), problems often transition between synthetic geometry (uncoordinated wireframe) and analytic coordinate geometry (algebrization via $Oxyz$ frame).
+  - Built-in JSXGraph `axis3d` elements do not support arrowheads, omit the origin label $O$, and fail to synchronize visibility across nested 2D SVG canvas primitives when manipulated dynamically.
+- **Dedicated Vector Oxyz Coordinate Axis Engine**:
+  - Disabled opaque default axes via `axesPosition: 'none'`.
+  - Implemented dedicated 3D vector axes with standard mathematical conventions:
+    - Origin point $O(0, 0, 0)$ with dark slate label (`#334155`).
+    - $Ox$-axis: Directed ray from $(0, 0, 0)$ to $(5.5, 0, 0)$ with bold red styling (`#ef4444`, `strokeWidth: 2`, `lastArrow: true`, label $x$).
+    - $Oy$-axis: Directed ray from $(0, 0, 0)$ to $(0, 5.5, 0)$ with vibrant emerald styling (`#10b981`, `strokeWidth: 2`, `lastArrow: true`, label $y$).
+    - $Oz$-axis: Directed ray from $(0, 0, 0)$ to $(0, 0, 6.5)$ with royal blue styling (`#3b82f6`, `strokeWidth: 2`, `lastArrow: true`, label $z$).
+    - Negative dashed rays ($Ox^-, Oy^-, Oz^-$) in muted tint colors (`dash: 2`) providing depth cues during 360° trackball rotation.
+- **Imperative Visibility Orchestration (`axesElementsRef`)**:
+  - Stores all 3D and underlying 2D SVG line and point primitives in a mutable `axesElementsRef.current` collection.
+  - On toggle (`handleToggleAxes`), iterates through all references calling both `.setAttribute({ visible: next })` and `.element2D.setAttribute({ visible: next })` followed by atomic `board.update()`.
+  - Toolbar button provides active visual feedback with solid indigo fill (`bg-indigo-600 text-white shadow-xs`) and dynamic text "Đang bật Oxyz".
+
+### 4.52. Enterprise Global Toast Notification & Browser Alert Interception Architecture (`ToastContext.jsx`, `GlobalToastContainer.jsx`, `main.jsx`, `index.css`)
+- **Architectural Motivation**:
+  - Legacy web applications often rely on native browser modal dialogues (`window.alert()`), which block the JavaScript single thread, freeze browser tab interactions, disrupt smooth CSS animations, and degrade the user experience for students and instructors.
+  - V-Eval requires a non-intrusive, reactive, high-priority notification system that provides immediate visual feedback across asynchronous microservice operations (content curation, AI question generation, exam submissions, and IAM operations).
+- **Core Architecture Components**:
+  - **Global Toast Container (`GlobalToastContainer.jsx`)**:
+    - Placed at the top-right viewport anchor (`top-4 right-4 sm:top-6 sm:right-6`) with highest stacking context `z-[999999]`, ensuring toasts remain visible above all full-screen modals, drawers, and panoramic workspaces.
+    - Features a modern Glassmorphism visual language (`backdrop-blur-md bg-white/95 border shadow-xl rounded-2xl`).
+    - 4 distinct semantic status variants:
+      - `success`: Emerald badge (`CheckCircle2`), emerald border, and emerald progress bar.
+      - `error`: Rose badge (`AlertCircle`), rose border, and rose progress bar.
+      - `warning`: Amber badge (`AlertTriangle`), amber border, and amber progress bar.
+      - `info`: Indigo badge (`Info`), indigo border, and indigo progress bar.
+    - Dynamic linear countdown progress bar visually reflecting remaining auto-dismiss duration (default: 4000ms).
+    - Intelligent interactive hover pausing: Hovering the cursor over any active toast card (`onMouseEnter` / `onMouseLeave`) freezes the dismissal timer, allowing users to comfortably read extended error traces or instructions.
+  - **Universal Context & Singleton Dispatcher (`ToastContext.jsx`)**:
+    - Implements a Dual-Mode dispatch interface:
+      1. React Hook: `useToast()` providing `{ toasts, showToast, dismissToast, toast }` within standard React lifecycle.
+      2. Universal Singleton Object: `toast.success()`, `toast.error()`, `toast.warning()`, `toast.info()`, `toast.dismiss()` invocable anywhere in the client codebase—including non-React utility files, Axios interceptors, or background event listeners.
+  - **Defensive Browser Alert Interception Layer**:
+    - Automatically overrides `window.alert()` upon component mount, forwarding raw string messages directly to `toast.info(...)` (or `toast.error` for failure patterns).
+    - Guarantees zero blocking pop-ups can ever disrupt the end-user, even if legacy or third-party code invokes `alert()`.
+- **System-Wide Migration**:
+  - Migrated 100% of legacy `alert()` invocations across `CurriculumExplorerView.jsx`, `CurriculumStudioEditor.jsx`, `DiagnosticAssessmentPage.jsx`, `CampusManagerDashboardView.jsx`, `AccountProvisioningView.jsx`, and `ClassMicroGroupsModal.jsx`.
+
+### 4.53. In-App Confirmation Modals, Lightweight Quick Metadata Editing & KaTeX Strict Mode Optimization (`CurriculumExplorerView.jsx`, `CurriculumStudioEditor.jsx`, `MathText.jsx`)
+- **Zero Native Browser Confirm / Modal Architecture**:
+  - Eliminated legacy blocking `window.confirm()` calls across all curriculum administration workflows.
+  - Implemented an elegant in-app confirmation modal (`confirmDeleteDialog`) in `CurriculumExplorerView.jsx` featuring high-contrast risk styling (`border-rose-200`, `bg-rose-50/70`, `Trash2` action button), clearly communicating cascade impacts before deleting Chapters, Lessons, or Skill Patterns.
+  - In `CurriculumStudioEditor.jsx`, implemented a two-tap inline deletion confirmation flow for test questions, featuring a temporary countdown state that auto-resets if unconfirmed.
+- **Lightweight Metadata-Only Quick Edit Suite (`isEditModalOpen`)**:
+  - Replaced the cumbersome 5-tab pedagogical editing modal with a focused, single-purpose metadata dialog.
+  - Restricts modifications strictly to structural node attributes: Pattern Name/Title, Parent Chapter selection, High School Grade level (Grade 10, 11, 12), Bloom Cognitive Level, and Competency Weight (%).
+  - Offloads deep pedagogical composition (theory, stepwise KaTeX methods, video URLs, and JSXGraph interactive canvas) exclusively to the full-screen Curriculum Studio Editor via a prominent quick-launch banner.
+  - Streamlined the trigger control from text "Sửa nhanh" to a minimalist `<Pencil className="w-4 h-4" />` icon button.
+- **KaTeX Strict Mode Unicode Character Resolution (`MathText.jsx`)**:
+  - Configured `strict: 'ignore'` in `renderKatexHtml` to eliminate spurious developer console warnings regarding Vietnamese characters (such as "Đ") embedded within mathematical expressions (`[unicodeTextInMathMode]`).
+- **Immediate First-Pattern Chapter Loading**:
+  - Refactored `toggleChapter` and `toggleLesson` to automatically expand and select the first available pattern, ensuring the right pedagogical workspace pane immediately loads content upon chapter navigation.
+
 ---
 
 ## 5. Verification & Acceptance Criteria

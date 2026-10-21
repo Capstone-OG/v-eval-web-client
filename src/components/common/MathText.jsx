@@ -15,6 +15,7 @@ export function renderKatexHtml(latex, displayMode = false) {
     return katex.renderToString(latex, {
       displayMode,
       throwOnError: false,
+      strict: 'ignore', // Suppress Unicode character warnings in math mode like "Đ"
       output: 'htmlAndMathml'
     });
   } catch (err) {

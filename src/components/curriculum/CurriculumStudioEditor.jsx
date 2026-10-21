@@ -44,6 +44,7 @@ import WordStyleFormulaCanvas from './WordStyleFormulaCanvas';
 import HierarchicalMathPalette from './HierarchicalMathPalette';
 import contentService from '../../services/contentService';
 import aiService from '../../services/aiService';
+import { toast } from '../../context/ToastContext';
 
 export const MATH_CATEGORIES = {
   algebra: {
@@ -653,6 +654,7 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
   // Question Bank State for this Pattern
   const [questionsList, setQuestionsList] = useState([]);
   const [loadingQuestions, setLoadingQuestions] = useState(false);
+  const [deletingQId, setDeletingQId] = useState(null);
   const [editingQuestionIndex, setEditingQuestionIndex] = useState(null);
   const [newQuestionModalOpen, setNewQuestionModalOpen] = useState(false);
   const [customImageUrl, setCustomImageUrl] = useState('');
@@ -2232,16 +2234,27 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
                           
                           <button
                             onClick={async () => {
-                              if (!window.confirm("Thầy/Cô có chắc chắn muốn xóa câu hỏi này?")) return;
+                              if (deletingQId !== q.questionId) {
+                                setDeletingQId(q.questionId);
+                                toast.warning("Bấm nút Thùng rác một lần nữa để xác nhận xóa vĩnh viễn câu hỏi này!");
+                                setTimeout(() => setDeletingQId(null), 5000);
+                                return;
+                              }
                               try {
                                 await contentService.deleteQuestion(q.questionId);
                                 setQuestionsList(prev => prev.filter(item => item.questionId !== q.questionId));
+                                setDeletingQId(null);
+                                toast.success("Đã xóa câu hỏi thành công khỏi ngân hàng đề!");
                               } catch (e) {
-                                alert("Không thể xóa câu hỏi: " + e.message);
+                                toast.error("Không thể xóa câu hỏi: " + e.message);
                               }
                             }}
-                            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg"
-                            title="Xóa câu hỏi"
+                            className={`p-1.5 rounded-lg transition-all ${
+                              deletingQId === q.questionId
+                                ? 'bg-rose-600 text-white shadow-xs animate-pulse'
+                                : 'text-slate-400 hover:text-rose-600 hover:bg-rose-50'
+                            }`}
+                            title={deletingQId === q.questionId ? "Bấm để xác nhận xóa vĩnh viễn!" : "Xóa câu hỏi"}
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
@@ -2621,7 +2634,7 @@ function NewQuestionDialog({ skillId, onClose, onCreated, onOpenWorkbench }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!contentLatex.trim()) {
-      alert("Vui lòng nhập đề bài câu hỏi.");
+      toast.warning("Vui lòng nhập đề bài câu hỏi.");
       return;
     }
     setSaving(true);
@@ -2638,10 +2651,10 @@ function NewQuestionDialog({ skillId, onClose, onCreated, onOpenWorkbench }) {
         explanation: explanation.trim()
       };
       const result = await contentService.createQuestion(payload);
-      alert("Đã thêm câu hỏi thành công vào ngân hàng đề!");
+      toast.success("Đã thêm câu hỏi thành công vào ngân hàng đề!");
       if (onCreated) onCreated(result || payload);
     } catch (err) {
-      alert("Lỗi khi thêm câu hỏi: " + (err?.response?.data?.message || err.message));
+      toast.error("Lỗi khi thêm câu hỏi: " + (err?.response?.data?.message || err.message));
     } finally {
       setSaving(false);
     }
