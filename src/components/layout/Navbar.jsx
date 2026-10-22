@@ -1,9 +1,55 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, MapPin, Flame, Bell, User, LogOut, ChevronDown, BookOpen, Layers, ShieldCheck, Award, Sparkles, Menu, Zap } from 'lucide-react';
-import { mockUser, campusesList } from '../../data/mockData';
+import { mockUser } from '../../data/mockData';
+import apiClient from '../../services/apiClient';
+import { authService } from '../../services/authService';
 
 export default function Navbar({ activeRole, setActiveRole, currentUser, onLogout, onOpenAuthModal, onOpenArchModal, onToggleMobileMenu, onOpenDiagnostic }) {
-  const [selectedCampus, setSelectedCampus] = useState(mockUser.campusId);
+  const [selectedCampus, setSelectedCampus] = useState('');
+  const [campuses, setCampuses] = useState([]);
+  const [campusLoading, setCampusLoading] = useState(true);
+  const [campusError, setCampusError] = useState('');
+
+  useEffect(() => {
+    let active = true;
+    const load = async () => {
+      setCampusLoading(true);
+      setCampusError('');
+      setSelectedCampus('');
+      try {
+        const list = await authService.getCampuses();
+        if (!Array.isArray(list) || !list.length) throw new Error('Không tải được danh sách cơ sở.');
+        let campusId = '';
+        if (activeRole === 'student' && currentUser) {
+          try {
+            campusId = (await apiClient.get('/api/v1/students/me/profile')).data?.campusId || '';
+          } catch (err) {
+            if (err.status !== 404) throw err;
+          }
+        } else {
+          campusId = currentUser?.campusId || '';
+        }
+        if (active) {
+          setCampuses(list);
+          setSelectedCampus(list.some((c) => c.campusId === campusId) ? campusId : '');
+        }
+      } catch (err) {
+        if (active) setCampusError(err.message);
+      } finally {
+        if (active) setCampusLoading(false);
+      }
+    };
+    load();
+    const syncCampus = (event) => {
+      if (active) setSelectedCampus(event.detail.campusId);
+    };
+    window.addEventListener('veval-campus-updated', syncCampus);
+    return () => {
+      active = false;
+      window.removeEventListener('veval-campus-updated', syncCampus);
+    };
+  }, [currentUser?.id, currentUser?.userId, activeRole]);
+
   const [showUserDropdown, setShowUserDropdown] = useState(false);
 
   const savedTheta = localStorage.getItem('veval_theta_0');
@@ -11,7 +57,6 @@ export default function Navbar({ activeRole, setActiveRole, currentUser, onLogou
     ? (parseFloat(savedTheta) > 0 ? `+${parseFloat(savedTheta).toFixed(2)}` : parseFloat(savedTheta).toFixed(2)) 
     : '+0.65';
 
-  const currentCampusObj = campusesList.find(c => c.id === selectedCampus) || campusesList[0];
   const displayName = currentUser?.fullName || mockUser.name;
   const displayEmail = currentUser?.email || mockUser.email;
   const displayAvatar = currentUser?.avatarUrl || mockUser.avatar;
@@ -70,17 +115,14 @@ export default function Navbar({ activeRole, setActiveRole, currentUser, onLogou
           </div>
 
           {/* Campus Selector (>= 1280px xl only, prevents colliding on tablet) */}
-          <div className="hidden xl:flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 border border-blue-200/60 rounded-xl text-xs font-semibold text-blue-700 hover:bg-blue-100/60 transition-all cursor-pointer shrink-0 max-w-[210px] overflow-hidden min-w-0">
+          <div className="hidden xl:flex flex-col gap-1 px-3 py-1.5 bg-blue-50 border border-blue-200/60 rounded-xl text-xs font-semibold text-blue-700 shrink-0 max-w-[260px] min-w-0">
+            <div className="flex items-center gap-1.5 min-w-0">
             <MapPin className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-            <select 
-              value={selectedCampus}
-              onChange={(e) => setSelectedCampus(e.target.value)}
-              className="bg-transparent text-blue-800 font-semibold focus:outline-none cursor-pointer text-xs truncate w-full min-w-0"
-            >
-              {campusesList.map(c => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
+            <span aria-label="Cơ sở theo học" className="truncate" title={campuses.find((c) => c.campusId === selectedCampus)?.name}>
+              {campusLoading ? 'Đang tải cơ sở...' : campusError ? 'Không tải được cơ sở' : campuses.find((c) => c.campusId === selectedCampus)?.name || 'Chưa cập nhật cơ sở'}
+            </span>
+            </div>
+            {campusError && <span role="alert" className="text-red-600 whitespace-normal">{campusError}</span>}
           </div>
 
           {/* Streak Counter Badge */}
@@ -136,9 +178,11 @@ export default function Navbar({ activeRole, setActiveRole, currentUser, onLogou
                   </div>
                 </div>
 
+
+
                 <button 
                   onClick={() => { setShowUserDropdown(false); onOpenAuthModal(); }}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 rounded-xl transition-all"
+                  className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 rounded-xl transition-all cursor-pointer"
                 >
                   <User className="w-4 h-4 text-slate-400" />
                   Đổi tài khoản / Màn Đăng nhập

@@ -288,3 +288,63 @@
 
 
 
+
+
+## [22/10/2026] - Diagnostic submission: require backend results
+
+- Removed frontend grading, theta/placement estimation, generated submission IDs, radar benchmarks and commentary fallbacks from submission handling.
+- Failed requests or incomplete responses show an error and keep answers in component state; they do not create a result or successful history entry. Answers are not persisted across reloads.
+- Backend unchanged. Existing historical/demo displays and backend fallback behavior are outside this change.
+- Validation: Vite production build passed; targeted Oxlint passed with existing warnings. No live POST was sent.
+
+
+### Campus prerequisite correction [22/10/2026]
+
+- Apply changes to the lowercase v-eval-web-client project. Before loading any diagnostic exam, require authentication and fetch student profile plus active campuses.
+- Missing/inactive campus opens a selection dialog. Confirm campus through PUT /api/v1/students/me/profile before continuing; failed reads/writes do not enter the exam. Existing valid campus requires no new selection.
+- Auto-start begins in setup until prerequisites and exam loading succeed. No mock campus list. Backend unchanged.
+- Production build passed; authenticated end-to-end writes not tested.
+
+
+### Real campus selector [22/10/2026]
+
+- Navbar reads active campuses from GET /api/v1/campuses and the student campus from GET /api/v1/students/me/profile. Removed mock campus list and default campus.
+- Student selection is saved through PUT /api/v1/students/me/profile; update selection only after server confirmation. Errors appear beside the selector. Diagnostic setup dispatches a campus update to synchronize Navbar.
+- Non-student campus selection is read-only. Backend registration does not accept CampusId; campus remains a profile setup step before the diagnostic exam.
+- Live read-only campus API returned CS_THU_DUC and CS_QUAN_10. Vite build passed; targeted lint has warnings and no errors. Authenticated writes were not exercised. Backend unchanged.
+
+
+### Read-only campus badge [22/10/2026]
+
+- Navbar displays the saved campus name from live API data as plain text. Removed selection control and profile write handler. Missing campus shows an unset state; loading and API errors remain explicit.
+- Production build passed. Backend unchanged.
+
+
+### Mandatory campus prerequisite before all exam entry paths [22/10/2026]
+
+- Removed premature testing transitions from passcode confirmation and retake entry; auto-start no longer requests fullscreen before prerequisite checks.
+- Exam loading and timer start happen only after the saved campus is verified against live active campuses. Missing campus requires registration in the pre-exam dialog and confirmed profile save.
+- Updated Vietnamese prerequisite messaging. Account registration remains separate; backend unchanged.
+- Validation: production build passed. Isolated handler checks passed for missing campus, valid campus, profile API failure and campus API failure; only valid campus loads the exam and enters testing. No authenticated live writes.
+
+
+### Exam exit control [22/10/2026]
+
+- Removed the in-exam Exit button and its exit confirmation modal/navigation path. Submit remains the normal completion action.
+- Added beforeunload warning during testing and submission analysis, cleaned up when leaving those states. Browsers retain control over closing/reloading tabs; no absolute browser exit lock is claimed.
+- Production build passed. Backend unchanged.
+
+
+### Diagnostic report visual refresh [22/10/2026]
+
+- Shared DiagnosticResultSummary renders a dark introductory panel and responsive score, IRT and duration metrics for both historical and newly submitted results. Removed overall placement and hardcoded national percentile claims from these summaries.
+- History table removes the overall placement column and play/retry action; keeps the explicit report action. Refined spacing, alternating rows and report button styling.
+- History accuracy is derived from correct/total counts, preserving zero; duration no longer defaults to a fabricated 30 minutes. No subject placement is invented and backend placement processing is unchanged.
+- Validation: production build and targeted lint passed (existing warnings remain). Visual browser verification not performed.
+
+
+### Compact report header [22/10/2026]
+
+- Confirmed the shared report summary contains no exam ID label. Redesigned historical report navigation with an accessible compact back button, title and separate submission date.
+- Reduced setup top padding, report section gaps and summary hero height; refined gradient and concise report heading. No scoring or API changes.
+- Validation: production build passed. Browser visual review not performed.

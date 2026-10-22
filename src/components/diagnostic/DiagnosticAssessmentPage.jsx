@@ -68,8 +68,9 @@ import {
 import { aiService } from '../../services/aiService';
 import { contentService } from '../../services/contentService';
 import { practiceService } from '../../services/practiceService';
-import { tokenStorage } from '../../services/apiClient';
+import apiClient, { tokenStorage } from '../../services/apiClient';
 import MathText from '../common/MathText';
+import DiagnosticResultSummary from './DiagnosticResultSummary';
 import { DOMAINS, getFallbackDiagnosticResult, getDefaultExamHistory, SAMPLE_30_QUESTIONS } from './diagnosticData';
 
 // Danh mục bài kiểm tra khảo thí chuẩn hóa V-ACT
@@ -246,8 +247,13 @@ export default function DiagnosticAssessmentPage({
   examCode = 'VACT2026'
 }) {
   // Page states: 'setup' | 'testing' | 'analyzing' | 'result'
-  const [stage, setStage] = useState(autoStart ? 'testing' : 'setup');
+  const [stage, setStage] = useState('setup');
   const autoStartedRef = useRef(false);
+  const [campuses, setCampuses] = useState([]);
+  const [selectedCampusId, setSelectedCampusId] = useState('');
+  const [showCampusSetup, setShowCampusSetup] = useState(false);
+  const [campusSaving, setCampusSaving] = useState(false);
+  const [campusError, setCampusError] = useState('');
 
   // Setup / Lobby states
   const [selectedExamForModal, setSelectedExamForModal] = useState(null);
@@ -324,7 +330,6 @@ export default function DiagnosticAssessmentPage({
   useEffect(() => {
     if (autoStart && !autoStartedRef.current) {
       autoStartedRef.current = true;
-      requestFullScreenMode();
       handleStartAssessment();
     }
   }, [autoStart]);
@@ -354,8 +359,6 @@ export default function DiagnosticAssessmentPage({
 
     setModalCodeError('');
     setSelectedExamForModal(null);
-    setStage('testing');
-    requestFullScreenMode();
     await handleStartAssessment();
   };
 
@@ -415,8 +418,6 @@ export default function DiagnosticAssessmentPage({
     setViolationReason('tab_switch');
     setResultData(null);
     setReviewFilter('ALL');
-    setStage('testing');
-    requestFullScreenMode();
     await handleStartAssessment();
   };
 
@@ -440,8 +441,6 @@ export default function DiagnosticAssessmentPage({
   // Submit confirmation modal state (custom React modal to avoid browser window.confirm tab switch bugs)
   const [showSubmitModal, setShowSubmitModal] = useState(false);
 
-  // Exit confirmation modal state (custom React modal to replace raw window.confirm)
-  const [showExitConfirmModal, setShowExitConfirmModal] = useState(false);
 
   // Custom system alert modal popup state (custom React modal to replace raw window.alert)
   const [customAlert, setCustomAlert] = useState(null); // { title, message, type: 'error' | 'warning' | 'info', onConfirm?: () => void }
@@ -451,7 +450,18 @@ export default function DiagnosticAssessmentPage({
   };
 
   const showSubmitModalRef = useRef(false);
-  showSubmitModalRef.current = showSubmitModal || showExitConfirmModal || !!customAlert;
+  showSubmitModalRef.current = showSubmitModal || !!customAlert;
+
+  // Browsers can warn before closing/reloading; they cannot lock the tab.
+  useEffect(() => {
+    if (stage !== 'testing' && stage !== 'analyzing') return;
+    const warnBeforeLeaving = (event) => {
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', warnBeforeLeaving);
+    return () => window.removeEventListener('beforeunload', warnBeforeLeaving);
+  }, [stage]);
 
   // Fullscreen Helper Functions
   const requestFullScreenMode = () => {
@@ -492,7 +502,6 @@ export default function DiagnosticAssessmentPage({
     if (stage === 'result' || stage === 'setup') {
       setShowViolationModal(false);
       setShowSubmitModal(false);
-      setShowExitConfirmModal(false);
       exitFullScreenMode();
       const t = setTimeout(() => {
         exitFullScreenMode();
@@ -664,10 +673,29 @@ export default function DiagnosticAssessmentPage({
 
   // 1. Tải đề thi thật từ Backend Content Service (Port 5249 qua API Gateway :5212)
   const handleStartAssessment = async () => {
+    setStage('setup');
     setIsLoading(true);
-    setLoadingMsg('Đang nạp bộ 30 câu hỏi khảo sát chẩn đoán năng lực chuẩn hóa V-ACT...');
+    setLoadingMsg('Đang kiểm tra cơ sở theo học trước khi vào thi...');
 
     try {
+      if (!tokenStorage.getAccessToken()) throw new Error('Vui lòng đăng nhập trước khi làm bài kiểm tra đầu vào.');
+      let profile = null;
+      try {
+        profile = (await apiClient.get('/api/v1/students/me/profile')).data;
+      } catch (err) {
+        if (err.status !== 404) throw err;
+      }
+      const activeCampuses = (await apiClient.get('/api/v1/campuses')).data;
+      if (!Array.isArray(activeCampuses) || !activeCampuses.length) throw new Error('Không tải được danh sách cơ sở đào tạo.');
+      if (!activeCampuses.some((campus) => campus.campusId === profile?.campusId)) {
+        setCampuses(activeCampuses);
+        setSelectedCampusId('');
+        setCampusError('');
+        setShowCampusSetup(true);
+        setStage('setup');
+        return;
+      }
+      setLoadingMsg('Đang nạp đề kiểm tra đầu vào...');
       const rawExamDto = await contentService.getDiagnosticTest();
       const transformed = transformBackendExamToQuestions(rawExamDto);
       if (!transformed.questions || transformed.questions.length === 0) {
@@ -705,6 +733,23 @@ export default function DiagnosticAssessmentPage({
     }
   };
 
+  const saveCampusAndStart = async () => {
+    if (!campuses.some((campus) => campus.campusId === selectedCampusId) || campusSaving) return;
+    setCampusSaving(true);
+    setCampusError('');
+    try {
+      const profile = (await apiClient.put('/api/v1/students/me/profile', { campusId: selectedCampusId })).data;
+      if (profile?.campusId !== selectedCampusId) throw new Error('Chưa xác nhận được cơ sở đã đăng ký. Vui lòng thử lại.');
+      window.dispatchEvent(new CustomEvent('veval-campus-updated', { detail: { campusId: profile.campusId } }));
+      setShowCampusSetup(false);
+      await handleStartAssessment();
+    } catch (err) {
+      setCampusError(err.message);
+    } finally {
+      setCampusSaving(false);
+    }
+  };
+
   // 2. Select Option
   const handleSelectOption = (qId, optionChar) => {
     setAnswers((prev) => ({
@@ -728,7 +773,6 @@ export default function DiagnosticAssessmentPage({
 
   const executeSubmitExam = async () => {
     setShowSubmitModal(false);
-    setShowExitConfirmModal(false);
     setShowViolationModal(false);
     setTabSwitchCount(0);
     setStage('analyzing');
@@ -738,7 +782,7 @@ export default function DiagnosticAssessmentPage({
     try {
       const user = tokenStorage.getUser();
       const studentId = user?.userId || user?.id || user?.studentId || '00000000-0000-0000-0000-000000000001';
-      const submissionId = `sub_${Date.now()}`;
+
 
       let totalTimeSpent = 0;
       const answersPayload = questions.map((q) => {
@@ -758,14 +802,18 @@ export default function DiagnosticAssessmentPage({
         answers: answersPayload
       };
 
-      let apiResponse = null;
-      try {
-        apiResponse = await practiceService.submitDiagnosticTest(submissionPayload);
-      } catch (submitErr) {
-        console.warn('Practice Service submission API error:', submitErr);
+      const apiResponse = await practiceService.submitDiagnosticTest(submissionPayload);
+      if (!apiResponse?.submissionId || !Number.isFinite(apiResponse.theta0)
+        || !apiResponse.placementClass || !Array.isArray(apiResponse.questions)
+        || apiResponse.questions.length !== questions.length
+        || !Number.isInteger(apiResponse.totalCorrect)
+        || apiResponse.totalQuestions !== questions.length
+        || !questions.every((q) => apiResponse.questions.some((item) =>
+          item.questionId === q.id && typeof item.isCorrect === 'boolean'
+          && typeof item.correctOption === 'string' && item.correctOption.trim()))) {
+        throw new Error('Máy chủ chưa trả về đầy đủ kết quả bài nộp.');
       }
 
-      // 1. Thống kê số câu đúng / sai thực tế và thời gian từng câu
       let totalCorrect = 0;
       const domainStats = {};
       Object.keys(DOMAINS).forEach((k) => {
@@ -773,10 +821,10 @@ export default function DiagnosticAssessmentPage({
       });
 
       const reviewedQuestionsList = questions.map((q, idx) => {
-        const backendQ = apiResponse?.questions?.find((bq) => bq.questionId === q.id) || apiResponse?.questions?.[idx];
+        const backendQ = apiResponse.questions.find((bq) => bq.questionId === q.id);
         const studentChoice = answers[q.id] ? answers[q.id].trim().toUpperCase() : (backendQ?.selectedOption || '');
-        const correctChoice = backendQ?.correctOption ? backendQ.correctOption.trim().toUpperCase() : (q.correct || 'A');
-        const isCorrect = backendQ != null ? Boolean(backendQ.isCorrect) : (studentChoice === correctChoice);
+        const correctChoice = backendQ.correctOption.trim().toUpperCase();
+        const isCorrect = backendQ.isCorrect;
         const timeSpent = Math.max(1, parseInt(timeSpentPerQ[q.id], 10) || 25);
 
         if (isCorrect) totalCorrect += 1;
@@ -810,14 +858,9 @@ export default function DiagnosticAssessmentPage({
         accuracy_pct: d.total > 0 ? Math.round((d.correct / d.total) * 100) : 0
       }));
 
-      const overallAcc = totalCorrect / (questions.length || 30);
-      const clampedP = Math.max(0.04, Math.min(0.96, overallAcc));
-      const theta0Calculated = Math.round(Math.log(clampedP / (1 - clampedP)) * 100) / 100;
-      const placementClassCalculated = theta0Calculated >= 0.5 ? 'BREAKTHROUGH' : theta0Calculated >= -0.5 ? 'ACCELERATION' : 'FOUNDATION';
-
-      const finalTheta = apiResponse?.theta0 != null ? apiResponse.theta0 : theta0Calculated;
-      const finalPlacement = apiResponse?.placementClass || placementClassCalculated;
-      const finalSubmissionId = apiResponse?.submissionId || submissionId;
+      const finalTheta = apiResponse.theta0;
+      const finalPlacement = apiResponse.placementClass;
+      const finalSubmissionId = apiResponse.submissionId;
 
       localStorage.setItem('veval_diagnostic_submission_id', String(finalSubmissionId));
       sessionStorage.setItem('veval_diagnostic_submission_id', String(finalSubmissionId));
@@ -838,11 +881,6 @@ export default function DiagnosticAssessmentPage({
         console.warn('Cannot save exam result to session', saveErr);
       }
 
-      const sortedByAcc = [...domainScoresCalculated].sort((a, b) => b.accuracy_pct - a.accuracy_pct);
-      const bestDomain = sortedByAcc[0];
-      const worstDomain = sortedByAcc[sortedByAcc.length - 1];
-      const defaultCommentary = `Dựa trên kết quả hoàn thành ${totalCorrect}/${questions.length} câu, năng lực ước tính của bạn đạt theta = ${finalTheta > 0 ? '+' : ''}${Number(finalTheta).toFixed(2)}. Thế mạnh nổi bật là "${bestDomain?.domain_name}" (${bestDomain?.accuracy_pct}%). Bạn cần ưu tiên rèn luyện thêm ở "${worstDomain?.domain_name}" (${worstDomain?.accuracy_pct}%) để bứt phá mục tiêu điểm số.`;
-
       const finalResult = {
         submission_id: finalSubmissionId,
         theta_0: finalTheta,
@@ -852,20 +890,13 @@ export default function DiagnosticAssessmentPage({
         class_id: apiResponse?.classId || null,
         enrollment_id: apiResponse?.enrollmentId || null,
         domain_scores: domainScoresCalculated,
-        radar_chart: apiResponse?.radarChart?.length
-          ? apiResponse.radarChart.map((r) => ({
-            domain_id: r.domainId,
-            domain_name: r.domainName,
-            student_pct: r.studentPct,
-            benchmark_pct: r.benchmarkPct
-          }))
-          : domainScoresCalculated.map((d) => ({
-            domain_id: d.domain_id,
-            domain_name: d.domain_name,
-            student_pct: d.accuracy_pct,
-            benchmark_pct: d.domain_id === 'dom_math' ? 85 : d.domain_id === 'dom_logic' ? 80 : 75
-          })),
-        ai_commentary: apiResponse?.aiCommentary || defaultCommentary,
+        radar_chart: (apiResponse.radarChart || []).map((r) => ({
+          domain_id: r.domainId,
+          domain_name: r.domainName,
+          student_pct: r.studentPct,
+          benchmark_pct: r.benchmarkPct
+        })),
+        ai_commentary: apiResponse.aiCommentary || '',
         reviewedQuestions: reviewedQuestionsList,
         weakSkills: apiResponse?.weakSkills || [],
         skillBreakdowns: apiResponse?.skillBreakdowns || [],
@@ -916,7 +947,6 @@ export default function DiagnosticAssessmentPage({
 
       setShowViolationModal(false);
       setShowSubmitModal(false);
-      setShowExitConfirmModal(false);
       setSelectedHistoryExam(newAttempt);
       setStage('setup');
       exitFullScreenMode();
@@ -929,7 +959,7 @@ export default function DiagnosticAssessmentPage({
       });
     } catch (err) {
       console.error('Submit exam error:', err);
-      showPopupAlert(`Lỗi nộp bài thi: ${err.message}`, 'Lỗi Nộp Bài Thi', 'error');
+      showPopupAlert(`Chưa xác nhận được kết quả nộp bài: ${err.message}\nBài làm vẫn được giữ trên màn hình hiện tại.`, 'Nộp bài chưa thành công', 'error');
       setStage('testing');
     } finally {
       setIsLoading(false);
@@ -974,6 +1004,21 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
 
   return (
     <div className={`min-h-screen text-slate-900 flex flex-col font-sans selection:bg-blue-600 selection:text-white bg-[#F4F7FC] ${isTakingExam ? 'fixed inset-0 z-50 overflow-y-auto w-full h-full' : ''}`}>
+      {showCampusSetup && <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/70 p-4">
+        <div role="dialog" aria-modal="true" aria-labelledby="campus-title" className="w-full max-w-lg rounded-2xl bg-white p-6 space-y-4">
+          <h2 id="campus-title" className="text-xl font-bold">Đăng ký cơ sở trước khi làm bài</h2>
+          <p className="text-sm text-slate-600">Hồ sơ của bạn chưa có cơ sở theo học hợp lệ. Vui lòng chọn và lưu cơ sở để tiếp tục vào bài kiểm tra. Thời gian làm bài chưa bắt đầu.</p>
+          <label htmlFor="diagnostic-campus" className="block">Cơ sở theo học</label>
+          <select id="diagnostic-campus" className="w-full border rounded-xl p-3" value={selectedCampusId} onChange={(e) => setSelectedCampusId(e.target.value)} disabled={campusSaving}>
+            <option value="">Chọn cơ sở</option>
+            {campuses.map((c) => <option key={c.campusId} value={c.campusId}>{c.name}</option>)}
+          </select>
+          {campusError && <p role="alert" className="text-red-600">{campusError}</p>}
+          <button type="button" disabled={!selectedCampusId || campusSaving} onClick={saveCampusAndStart} className="rounded-xl bg-blue-600 text-white p-3 disabled:opacity-50">{campusSaving ? 'Đang lưu...' : 'Lưu và bắt đầu'}</button>
+          <button type="button" disabled={campusSaving} onClick={() => setShowCampusSetup(false)} className="p-3">Hủy</button>
+        </div>
+      </div>}
+
 
       {/* Top Header Navigation - ONLY sticky during exam testing */}
       {stage === 'testing' && (
@@ -1016,17 +1061,6 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
               <span>{formatTime(timeRemaining)}</span>
             </div>
 
-            {/* Exit to Home / Dashboard Button (Triggers custom React Exit modal) */}
-            <button
-              type="button"
-              onClick={() => setShowExitConfirmModal(true)}
-              className="px-2 sm:px-3 py-1 sm:py-1.5 rounded-xl text-xs font-bold text-slate-600 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 transition-all cursor-pointer flex items-center gap-1"
-              title="Rời khỏi bài thi"
-            >
-              <X className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Thoát</span>
-            </button>
-
             {/* Main Submit Exam button */}
             <button
               type="button"
@@ -1045,31 +1079,30 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
       {/* 1. SETUP / EXAM LOBBY & CATALOG SCREEN (Flow 1: Khảo Thí & Chẩn Đoán) */}
       {/* ===================================================================== */}
       {stage === 'setup' && (
-        <div className="flex-1 w-full max-w-[1700px] mx-auto p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8 animate-fade-in">
+        <div className="flex-1 w-full max-w-[1700px] mx-auto px-4 sm:px-6 lg:px-8 pt-1 sm:pt-2 pb-8 space-y-5 animate-fade-in">
 
           {selectedHistoryExam ? (
-            <div className="space-y-8 animate-fade-in">
+            <div className="space-y-4 sm:space-y-5 animate-fade-in">
 
               {/* Top Navigation Bar with Back Button */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-3xl bg-white border border-slate-200/90 shadow-sm">
-                <div className="flex items-center gap-3 flex-wrap">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 px-4 sm:px-5 py-4 rounded-2xl bg-white border border-slate-200/80 shadow-sm">
+                <div className="flex items-start sm:items-center gap-4 min-w-0">
                   <button
                     type="button"
                     onClick={() => {
                       setSelectedHistoryExam(null);
                       setResultData(null);
                     }}
-                    className="px-4 py-2 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs flex items-center gap-2 transition-all cursor-pointer shadow-xs active:scale-95"
+                    className="p-2.5 rounded-xl bg-slate-50 hover:bg-blue-50 text-slate-600 hover:text-blue-700 border border-slate-200 text-xs flex items-center gap-2 transition-colors cursor-pointer shrink-0"
+                    aria-label="Quay lại danh sách lần thi"
+                    title="Quay lại danh sách lần thi"
                   >
                     <ChevronLeft className="w-4 h-4" />
-                    <span>← Quay Lại Danh Sách Lần Thi</span>
                   </button>
-                  <div className="h-6 w-px bg-slate-200 hidden sm:block"></div>
-                  <div className="text-xs text-slate-600 font-medium flex items-center gap-1.5 flex-wrap">
-                    <Eye className="w-4 h-4 text-blue-600 shrink-0" />
-                    <span>Đang xem chi tiết: <strong className="text-slate-900 font-black">{selectedHistoryExam.examTitle || 'Bài Khảo Sát Năng Lực'}</strong></span>
-                    <span className="text-slate-400">•</span>
-                    <span className="font-mono text-slate-500">
+                  <div className="min-w-0 space-y-1">
+                    <span className="block text-[10px] font-bold uppercase tracking-widest text-blue-600">Chi tiết lần thi</span>
+                    <h1 className="text-sm sm:text-base font-bold text-slate-900 leading-snug">{selectedHistoryExam.examTitle || 'Bài Khảo Sát Năng Lực'}</h1>
+                    <span className="block text-xs text-slate-500">
                       Nộp lúc {new Date(selectedHistoryExam.completedAt).toLocaleString('vi-VN')}
                     </span>
                   </div>
@@ -1087,99 +1120,7 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
                 </div>
               </div>
 
-              {/* Top Result Hero Banner with Ambient Glow & Glassmorphism */}
-              <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white p-6 sm:p-8 lg:p-10 shadow-2xl border border-slate-800">
-                <div className="absolute top-0 right-0 -mr-20 -mt-20 w-80 h-80 rounded-full bg-blue-500/15 blur-3xl pointer-events-none"></div>
-                <div className="absolute bottom-0 left-1/4 -mb-20 w-72 h-72 rounded-full bg-purple-500/15 blur-3xl pointer-events-none"></div>
-
-                <div className="relative z-10 space-y-6">
-                  {/* Top Tag */}
-                  <div className="flex flex-wrap items-center justify-between gap-4">
-                    <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 border border-white/20 text-xs font-black text-[#FACC15] backdrop-blur-md">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400 stroke-[2.5]" />
-                      <span>BÁO CÁO NĂNG LỰC ĐẦU VÀO CHUẨN HÓA V-ACT 2026</span>
-                    </div>
-                    <div className="text-xs text-slate-400 font-mono">
-                      Mã bài: <strong className="text-white font-bold">{selectedHistoryExam?.examId || 'VACT-30'}</strong> • Thời lượng: 45 phút
-                    </div>
-                  </div>
-
-                  {/* Title & Description */}
-                  <div className="max-w-3xl space-y-2">
-                    <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white tracking-tight leading-tight">
-                      Phân Tích Năng Lực & Dự Đoán Điểm Số ĐGNL
-                    </h2>
-                    <p className="text-xs sm:text-sm text-slate-300 leading-relaxed font-medium">
-                      Kết quả được ước lượng qua mô hình trắc lượng học hiện đại <strong className="text-[#FACC15]">IRT 2PL (Item Response Theory)</strong> kết hợp dữ liệu phản xạ thời gian thực và phân loại Bloom 6 cấp độ.
-                    </p>
-                  </div>
-
-                  {/* 3 Prominent Glassmorphism KPI Cards */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
-                    {/* 1. Raw Score & Accuracy */}
-                    <div className="p-5 rounded-2xl bg-white/10 border border-white/15 backdrop-blur-md flex items-center justify-between gap-4 shadow-lg hover:border-white/25 transition-all">
-                      <div className="space-y-1">
-                        <div className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400">
-                          Điểm Số Thô
-                        </div>
-                        <div className="text-3xl sm:text-4xl font-black text-white tracking-tight">
-                          {currentDisplayResult.pacing?.totalCorrect || 0}<span className="text-base font-semibold text-slate-400"> / {currentDisplayResult.pacing?.totalQuestions || 30}</span>
-                        </div>
-                        <div className="text-xs font-bold text-emerald-400 flex items-center gap-1">
-                          <span>Đạt {Math.round(((currentDisplayResult.pacing?.totalCorrect || 0) / (currentDisplayResult.pacing?.totalQuestions || 30)) * 100)}% chính xác</span>
-                        </div>
-                      </div>
-                      <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center text-emerald-400 shrink-0">
-                        <CheckCircle2 className="w-6 h-6 stroke-[2.5]" />
-                      </div>
-                    </div>
-
-                    {/* 2. IRT Theta 0 */}
-                    <div className="p-5 rounded-2xl bg-white/10 border border-white/15 backdrop-blur-md flex items-center justify-between gap-4 shadow-lg hover:border-white/25 transition-all">
-                      <div className="space-y-1">
-                        <div className="text-[11px] font-extrabold uppercase tracking-wider text-amber-300">
-                          Chỉ Số Năng Lực IRT θ₀
-                        </div>
-                        <div className="text-3xl sm:text-4xl font-black text-amber-300 font-mono tracking-tight">
-                          {currentDisplayResult.theta_0 > 0 ? `+${Number(currentDisplayResult.theta_0).toFixed(2)}` : Number(currentDisplayResult.theta_0 || 0).toFixed(2)}
-                        </div>
-                        <div className="text-xs font-bold text-slate-300 flex items-center gap-1">
-                          <span>Top ~{currentDisplayResult.theta_0 >= 1.2 ? '10%' : currentDisplayResult.theta_0 >= 0.5 ? '20%' : '45%'} thí sinh toàn quốc</span>
-                        </div>
-                      </div>
-                      <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-400/30 flex items-center justify-center text-amber-300 shrink-0">
-                        <Brain className="w-6 h-6 stroke-[2.5]" />
-                      </div>
-                    </div>
-
-                    {/* 3. Placement Class */}
-                    <div className="p-5 rounded-2xl bg-white/10 border border-white/15 backdrop-blur-md flex items-center justify-between gap-4 shadow-lg hover:border-white/25 transition-all">
-                      <div className="space-y-1">
-                        <div className="text-[11px] font-extrabold uppercase tracking-wider text-cyan-300">
-                          Phân Lớp Đề Xuất
-                        </div>
-                        <div className="text-base sm:text-lg font-black text-white leading-tight">
-                          {currentDisplayResult.placement_class === 'BREAKTHROUGH'
-                            ? 'Lớp Bứt Phá (900+)'
-                            : currentDisplayResult.placement_class === 'ACCELERATION'
-                              ? 'Lớp Tăng Tốc (750-900)'
-                              : 'Lớp Nền Tảng (<750)'}
-                        </div>
-                        <div className="text-xs font-semibold text-slate-300">
-                          {currentDisplayResult.placement_class === 'BREAKTHROUGH'
-                            ? 'Chinh phục ĐHQG-HCM 900+'
-                            : currentDisplayResult.placement_class === 'ACCELERATION'
-                              ? 'Tập trung bứt phá câu VDC'
-                              : 'Củng cố nền tảng kiến thức'}
-                        </div>
-                      </div>
-                      <div className="w-12 h-12 rounded-2xl bg-cyan-500/20 border border-cyan-400/30 flex items-center justify-center text-cyan-300 shrink-0">
-                        <Award className="w-6 h-6 stroke-[2.5]" />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <DiagnosticResultSummary result={currentDisplayResult} />
 
               {/* ================================================================= */}
               {/* PACING ANALYSIS SPEEDOMETERS                                      */}
@@ -1619,7 +1560,7 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
                     <span>Lịch Sử Các Lần Làm Bài Kiểm Tra</span>
                   </h1>
                   <p className="text-xs sm:text-sm text-slate-500 font-medium">
-                    Hệ thống lưu vết toàn bộ kết quả các đợt làm bài. Nhấp vào bất kỳ lần thi nào bên dưới hoặc bấm nút <strong>"Xem Đồ Thị & Báo Cáo"</strong> để mở trang phân tích chi tiết.
+                    Hệ thống lưu vết toàn bộ kết quả các đợt làm bài. Nhấp vào bất kỳ lần thi nào bên dưới hoặc bấm nút <strong>"Xem báo cáo"</strong> để mở trang phân tích chi tiết.
                   </p>
                 </div>
 
@@ -1721,8 +1662,8 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
               </div>
 
               {/* Detailed Exam Attempts History Table */}
-              <div className="bg-white rounded-3xl border border-slate-200/90 shadow-xl overflow-hidden text-slate-900">
-                <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+              <div className="bg-white rounded-[28px] border border-slate-200 shadow-sm overflow-hidden text-slate-900">
+                <div className="p-6 sm:p-8 border-b border-slate-100 flex flex-wrap gap-4 items-center justify-between">
                   <div className="flex items-center gap-2">
                     <FileText className="w-5 h-5 text-blue-600" />
                     <h3 className="text-base font-black text-slate-900">Bảng Chi Tiết Các Lần Làm Bài Thi</h3>
@@ -1733,14 +1674,13 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
                 </div>
 
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse text-xs">
+                  <table className="w-full min-w-[900px] text-left border-collapse text-xs">
                     <thead>
                       <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase tracking-wider font-extrabold text-[11px]">
                         <th className="py-3.5 px-5">Đợt Thi & Đề Bài</th>
                         <th className="py-3.5 px-4">Ngày Nộp Bài</th>
                         <th className="py-3.5 px-4">Điểm Số & Tỷ Lệ</th>
                         <th className="py-3.5 px-4">Tham Số IRT θ</th>
-                        <th className="py-3.5 px-4">Xếp Lớp</th>
                         <th className="py-3.5 px-4">Thời Lượng</th>
                         <th className="py-3.5 px-5 text-right">Thao Tác</th>
                       </tr>
@@ -1748,6 +1688,7 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
                     <tbody className="divide-y divide-slate-100 font-medium">
                       {examHistory.map((attempt, index) => {
                         const isLatest = index === 0;
+                        const attemptAccuracy = attempt.totalQuestions > 0 ? Math.round((attempt.totalCorrect ?? 0) / attempt.totalQuestions * 100) : 0;
                         const formattedDate = new Date(attempt.completedAt).toLocaleString('vi-VN', {
                           day: '2-digit',
                           month: '2-digit',
@@ -1755,14 +1696,14 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
                           hour: '2-digit',
                           minute: '2-digit'
                         });
-                        const durationM = Math.floor((attempt.timeSpentSeconds || 1800) / 60);
-                        const durationS = (attempt.timeSpentSeconds || 1800) % 60;
+                        const durationM = Math.floor((attempt.timeSpentSeconds ?? 0) / 60);
+                        const durationS = (attempt.timeSpentSeconds ?? 0) % 60;
 
                         return (
                           <tr 
                             key={attempt.id} 
                             onClick={() => setSelectedHistoryExam(attempt)}
-                            className="hover:bg-blue-50/50 transition-colors cursor-pointer group"
+                            className="hover:bg-blue-50/40 transition-colors cursor-pointer group even:bg-slate-50/40"
                           >
                             {/* Exam Title & Badge */}
                             <td className="py-4 px-5">
@@ -1804,10 +1745,10 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
                                   <div className="w-16 bg-slate-100 h-1.5 rounded-full overflow-hidden">
                                     <div
                                       className="bg-emerald-500 h-full rounded-full"
-                                      style={{ width: `${Math.min(attempt.accuracy || 80, 100)}%` }}
+                                      style={{ width: `${Math.min(attemptAccuracy, 100)}%` }}
                                     ></div>
                                   </div>
-                                  <span className="text-[11px] font-bold text-emerald-600">{attempt.accuracy || 80}%</span>
+                                  <span className="text-[11px] font-bold text-emerald-600">{attemptAccuracy}%</span>
                                 </div>
                               </div>
                             </td>
@@ -1816,18 +1757,6 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
                             <td className="py-4 px-4 whitespace-nowrap">
                               <span className="px-2.5 py-1 rounded-xl bg-amber-50 text-amber-900 border border-amber-200 font-mono font-black text-xs">
                                 {Number(attempt.theta) > 0 ? `+${Number(attempt.theta).toFixed(2)}` : Number(attempt.theta).toFixed(2)}
-                              </span>
-                            </td>
-
-                            {/* Placement */}
-                            <td className="py-4 px-4 whitespace-nowrap">
-                              <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold ${attempt.placementClass === 'BREAKTHROUGH'
-                                ? 'bg-cyan-50 text-cyan-800 border border-cyan-200'
-                                : attempt.placementClass === 'ACCELERATION'
-                                  ? 'bg-blue-50 text-blue-800 border border-blue-200'
-                                  : 'bg-slate-100 text-slate-700 border border-slate-200'
-                                }`}>
-                                {attempt.placementClass === 'BREAKTHROUGH' ? 'Bứt Phá (900+)' : attempt.placementClass === 'ACCELERATION' ? 'Tăng Tốc (750-900)' : 'Nền Tảng'}
                               </span>
                             </td>
 
@@ -1842,21 +1771,14 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
                                 <button
                                   type="button"
                                   onClick={() => setSelectedHistoryExam(attempt)}
-                                  className="px-3.5 py-1.5 rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 font-bold transition-all flex items-center gap-1 cursor-pointer"
+                                  className="px-4 py-2.5 rounded-xl bg-white text-blue-700 hover:bg-blue-600 hover:text-white border border-blue-200 font-bold transition-all flex items-center gap-2 cursor-pointer shadow-sm"
                                   title="Xem báo cáo và biểu đồ bài thi này"
                                 >
                                   <Eye className="w-3.5 h-3.5" />
-                                  <span>Xem Đồ Thị & Báo Cáo</span>
+                                  <span>Xem báo cáo</span>
                                 </button>
 
-                                <button
-                                  type="button"
-                                  onClick={() => onNavigateQuestionBank ? onNavigateQuestionBank() : handleRetakeExam()}
-                                  className="p-1.5 rounded-xl bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200 transition-colors cursor-pointer"
-                                  title="Làm lại hoặc chọn đề mới"
-                                >
-                                  <Play className="w-3.5 h-3.5" />
-                                </button>
+
                               </div>
                             </td>
                           </tr>
@@ -2305,106 +2227,9 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
             </div>
           )}
 
-          {/* Top Result Hero Banner with Ambient Glow & Glassmorphism */}
-          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white p-6 sm:p-8 lg:p-10 shadow-2xl border border-slate-800">
-            {/* Ambient blur orbs */}
-            <div className="absolute top-0 right-0 -mr-20 -mt-20 w-80 h-80 rounded-full bg-blue-500/15 blur-3xl pointer-events-none"></div>
-            <div className="absolute bottom-0 left-1/4 -mb-20 w-72 h-72 rounded-full bg-purple-500/15 blur-3xl pointer-events-none"></div>
+          <DiagnosticResultSummary result={resultData} />
 
-            <div className="relative z-10 space-y-6">
-
-              {/* Top Banner Tag & Metadata */}
-              <div className="flex flex-wrap items-center justify-between gap-4">
-                <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 border border-white/20 text-xs font-black text-[#FACC15] backdrop-blur-md">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400 stroke-[2.5]" />
-                  <span>BÁO CÁO NĂNG LỰC ĐẦU VÀO CHUẨN HÓA V-ACT 2026</span>
-                </div>
-                <div className="text-xs text-slate-400 font-mono">
-                  Mã bài: <strong className="text-white font-bold">{examData?.id || 'VACT-30'}</strong> • Thời lượng: 45 phút
-                </div>
-              </div>
-
-              {/* Title & Description */}
-              <div className="max-w-3xl space-y-2">
-                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white tracking-tight leading-tight">
-                  Phân Tích Năng Lực & Dự Đoán Điểm Số ĐGNL
-                </h1>
-                <p className="text-xs sm:text-sm text-slate-300 leading-relaxed font-medium">
-                  Kết quả được ước lượng qua mô hình trắc lượng học hiện đại <strong className="text-[#FACC15]">IRT 2PL (Item Response Theory)</strong> kết hợp dữ liệu phản xạ thời gian thực và phân loại Bloom 6 cấp độ.
-                </p>
-              </div>
-
-              {/* 3 Prominent Glassmorphism KPI Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
-
-                {/* 1. Raw Score & Accuracy */}
-                <div className="p-5 rounded-2xl bg-white/10 border border-white/15 backdrop-blur-md flex items-center justify-between gap-4 shadow-lg hover:border-white/25 transition-all">
-                  <div className="space-y-1">
-                    <div className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400">
-                      Điểm Số Thô
-                    </div>
-                    <div className="text-3xl sm:text-4xl font-black text-white tracking-tight">
-                      {resultData.pacing?.totalCorrect || 0}<span className="text-base font-semibold text-slate-400"> / {resultData.pacing?.totalQuestions || 30}</span>
-                    </div>
-                    <div className="text-xs font-bold text-emerald-400 flex items-center gap-1">
-                      <span>Đạt {Math.round(((resultData.pacing?.totalCorrect || 0) / (resultData.pacing?.totalQuestions || 30)) * 100)}% chính xác</span>
-                    </div>
-                  </div>
-                  <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center text-emerald-400 shrink-0">
-                    <CheckCircle2 className="w-6 h-6 stroke-[2.5]" />
-                  </div>
-                </div>
-
-                {/* 2. IRT Theta 0 */}
-                <div className="p-5 rounded-2xl bg-white/10 border border-white/15 backdrop-blur-md flex items-center justify-between gap-4 shadow-lg hover:border-white/25 transition-all">
-                  <div className="space-y-1">
-                    <div className="text-[11px] font-extrabold uppercase tracking-wider text-amber-300">
-                      Chỉ Số Năng Lực IRT θ₀
-                    </div>
-                    <div className="text-3xl sm:text-4xl font-black text-amber-300 font-mono tracking-tight">
-                      {resultData.theta_0 > 0 ? `+${resultData.theta_0.toFixed(2)}` : resultData.theta_0.toFixed(2)}
-                    </div>
-                    <div className="text-xs font-bold text-slate-300 flex items-center gap-1">
-                      <span>Top ~{resultData.theta_0 >= 1.2 ? '10%' : resultData.theta_0 >= 0.5 ? '25%' : '50%'} thí sinh toàn quốc</span>
-                    </div>
-                  </div>
-                  <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-400/30 flex items-center justify-center text-amber-300 shrink-0">
-                    <Brain className="w-6 h-6 stroke-[2.5]" />
-                  </div>
-                </div>
-
-                {/* 3. Placement Class */}
-                <div className="p-5 rounded-2xl bg-white/10 border border-white/15 backdrop-blur-md flex items-center justify-between gap-4 shadow-lg hover:border-white/25 transition-all">
-                  <div className="space-y-1">
-                    <div className="text-[11px] font-extrabold uppercase tracking-wider text-cyan-300">
-                      Phân Lớp Đề Xuất
-                    </div>
-                    <div className="text-base sm:text-lg font-black text-white leading-tight">
-                      {resultData.placement_class === 'BREAKTHROUGH'
-                        ? 'Lớp Bứt Phá (900+)'
-                        : resultData.placement_class === 'ACCELERATION'
-                          ? 'Lớp Tăng Tốc (750-900)'
-                          : 'Lớp Nền Tảng (<750)'}
-                    </div>
-                    <div className="text-xs font-semibold text-slate-300">
-                      {resultData.placement_class === 'BREAKTHROUGH'
-                        ? 'Chinh phục ĐHQG-HCM 900+'
-                        : resultData.placement_class === 'ACCELERATION'
-                          ? 'Tập trung bứt phá câu VDC'
-                          : 'Củng cố nền tảng kiến thức'}
-                    </div>
-                  </div>
-                  <div className="w-12 h-12 rounded-2xl bg-cyan-500/20 border border-cyan-400/30 flex items-center justify-center text-cyan-300 shrink-0">
-                    <Award className="w-6 h-6 stroke-[2.5]" />
-                  </div>
-                </div>
-
-              </div>
-
-            </div>
-          </div>
-
-          {/* ===================================================================== */}
+              {/* ===================================================================== */}
           {/* PHÂN TÍCH TỐC ĐỘ & CHIẾN THUẬT LÀM BÀI (PACING ANALYSIS)              */}
           {/* ===================================================================== */}
           <div className="p-6 sm:p-7 bg-white border border-slate-200/90 rounded-3xl shadow-xl space-y-5 text-slate-900">
@@ -2848,52 +2673,6 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
         </div>
       )}
 
-
-      {/* Exit Confirmation Modal (React Overlay - Replaces raw window.confirm) */}
-      {showExitConfirmModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in">
-          <div className="max-w-md w-full bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 space-y-6 text-center shadow-2xl relative overflow-hidden text-slate-900">
-            <div className="w-16 h-16 rounded-2xl bg-amber-100 text-amber-600 border border-amber-200 flex items-center justify-center mx-auto">
-              <AlertTriangle className="w-8 h-8 stroke-[2.5]" />
-            </div>
-
-            <div className="space-y-2">
-              <h2 className="text-xl font-black text-slate-900">
-                Rời Khỏi Phòng Thi?
-              </h2>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                Tiến trình làm bài hiện tại sẽ không được lưu lại. Bạn có chắc chắn muốn rời khỏi bài thi khảo sát và quay về không?
-              </p>
-            </div>
-
-            <div className="flex items-center gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => setShowExitConfirmModal(false)}
-                className="flex-1 py-3 px-4 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs transition-all border border-slate-200 cursor-pointer"
-              >
-                Tiếp Tục Làm Bài
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setShowExitConfirmModal(false);
-                  exitFullScreenMode();
-                  if (currentUser) {
-                    onNavigateDashboard?.();
-                  } else {
-                    onNavigateHome?.();
-                  }
-                }}
-                className="flex-1 py-3 px-4 rounded-2xl bg-rose-600 hover:bg-rose-700 text-white font-black text-xs shadow-lg shadow-rose-600/20 transition-all cursor-pointer"
-              >
-                Xác Nhận Thoát
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Custom System Alert Popup Modal (React Overlay - Replaces raw window.alert) */}
       {customAlert && (
