@@ -90,7 +90,7 @@ export default function MathText({ text, className = '' }) {
           return (
             <span
               key={idx}
-              className="inline-math mx-0.5 text-slate-100"
+              className="inline-math mx-0.5 text-inherit font-medium"
               dangerouslySetInnerHTML={{ __html: renderKatexHtml(math, false) }}
             />
           );
@@ -102,7 +102,7 @@ export default function MathText({ text, className = '' }) {
           return (
             <span
               key={idx}
-              className="my-2 block text-center overflow-x-auto"
+              className="my-2 block text-center overflow-x-auto text-inherit font-medium"
               dangerouslySetInnerHTML={{ __html: renderKatexHtml(math, true) }}
             />
           );
@@ -114,7 +114,7 @@ export default function MathText({ text, className = '' }) {
           return (
             <span
               key={idx}
-              className="inline-math mx-0.5 text-slate-100"
+              className="inline-math mx-0.5 text-inherit font-medium"
               dangerouslySetInnerHTML={{ __html: renderKatexHtml(math, false) }}
             />
           );

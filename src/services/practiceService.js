@@ -23,7 +23,7 @@ export const practiceService = {
 
   /**
    * API 1: Khởi tạo lộ trình học tập thích ứng cá nhân hóa từ kết quả khảo thí
-   * @param {Object} data - { studentId, targetScore, availableWeeklyHours }
+   * @param {Object} data - { studentId, diagnosticSubmissionId, examDate, studyHoursPerDay }
    */
   async generateRoadmap(data) {
     return (await apiClient.post('/api/v1/practice/roadmaps/generate', data)).data;
@@ -32,8 +32,17 @@ export const practiceService = {
   /**
    * API 2: Lấy toàn bộ lộ trình học tập cá nhân hóa hiện tại của học sinh
    */
-  async getMyRoadmap() {
-    return (await apiClient.get('/api/v1/practice/roadmaps/my-roadmap')).data;
+  async getMyRoadmap(studentId) {
+    const query = studentId ? `?studentId=${encodeURIComponent(studentId)}` : '';
+    return (await apiClient.get(`/api/v1/practice/roadmaps/my-roadmap${query}`)).data;
+  },
+
+  async getDiagnosticHistory(studentId) {
+    return (await apiClient.get(`/api/v1/practice/diagnostic-submissions/student/${encodeURIComponent(studentId)}`)).data;
+  },
+
+  async getDiagnosticResult(submissionId) {
+    return (await apiClient.get(`/api/v1/practice/diagnostic-submissions/${encodeURIComponent(submissionId)}`)).data;
   },
 
   /**

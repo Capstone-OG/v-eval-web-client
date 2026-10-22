@@ -1004,7 +1004,7 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
 
   return (
     <div className={`min-h-screen text-slate-900 flex flex-col font-sans selection:bg-blue-600 selection:text-white bg-[#F4F7FC] ${isTakingExam ? 'fixed inset-0 z-50 overflow-y-auto w-full h-full' : ''}`}>
-      {showCampusSetup && <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/70 p-4">
+      {showCampusSetup && <div className="fixed inset-0 z-100 flex items-center justify-center bg-slate-950/70 p-4">
         <div role="dialog" aria-modal="true" aria-labelledby="campus-title" className="w-full max-w-lg rounded-2xl bg-white p-6 space-y-4">
           <h2 id="campus-title" className="text-xl font-bold">Đăng ký cơ sở trước khi làm bài</h2>
           <p className="text-sm text-slate-600">Hồ sơ của bạn chưa có cơ sở theo học hợp lệ. Vui lòng chọn và lưu cơ sở để tiếp tục vào bài kiểm tra. Thời gian làm bài chưa bắt đầu.</p>
@@ -1065,7 +1065,7 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
             <button
               type="button"
               onClick={handlePromptSubmitExam}
-              className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-black text-xs hover:opacity-90 active:scale-95 transition-all shadow-md shadow-emerald-600/20 flex items-center gap-1.5 cursor-pointer"
+              className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-linear-to-r from-emerald-600 to-teal-600 text-white font-black text-xs hover:opacity-90 active:scale-95 transition-all shadow-md shadow-emerald-600/20 flex items-center gap-1.5 cursor-pointer"
             >
               <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               <span>Nộp Bài</span>
@@ -1112,7 +1112,7 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
                   <button
                     type="button"
                     onClick={() => onNavigateQuestionBank ? onNavigateQuestionBank() : handleRetakeExam()}
-                    className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:opacity-95 text-white font-bold text-xs shadow-md shadow-blue-500/20 flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
+                    className="px-4 py-2.5 rounded-2xl bg-linear-to-r from-blue-600 to-indigo-600 hover:opacity-95 text-white font-bold text-xs shadow-md shadow-blue-500/20 flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
                   >
                     <Play className="w-3.5 h-3.5 fill-white" />
                     <span>Làm Đề Mới (Ngân Hàng Đề)</span>
@@ -1232,7 +1232,7 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
                 {/* Right: Domain Bar Chart & AI Commentary */}
                 <div className="lg:col-span-6 flex flex-col space-y-5">
                   {/* AI Socratic Commentary Box */}
-                  <div className="p-6 bg-gradient-to-br from-purple-50/90 to-indigo-50/80 border border-purple-200/80 rounded-3xl shadow-xl space-y-3 text-slate-900">
+                  <div className="p-6 bg-linear-to-br from-purple-50/90 to-indigo-50/80 border border-purple-200/80 rounded-3xl shadow-xl space-y-3 text-slate-900">
                     <div className="flex items-center gap-2 text-sm font-black text-purple-900">
                       <Bot className="w-4 h-4 text-purple-600" />
                       <span>Lời Khuyên Sư Phạm Từ Cố Vấn AI (Gemini Commentary)</span>
@@ -1330,7 +1330,7 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
                   </div>
 
                   {/* Review Filters */}
-                  <div className="flex items-center gap-1.5 bg-slate-100 p-1.5 rounded-2xl border border-slate-200 flex-shrink-0 flex-wrap">
+                  <div className="flex items-center gap-1.5 bg-slate-100 p-1.5 rounded-2xl border border-slate-200 shrink-0 flex-wrap">
                     <button
                       type="button"
                       onClick={() => setReviewFilter('ALL')}
@@ -1488,12 +1488,12 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
                                   <MathText text={optText} />
                                 </div>
                                 {isCorrectChoice && (
-                                  <span className="px-2 py-0.5 rounded text-[10px] bg-emerald-600 text-white font-black flex-shrink-0">
+                                  <span className="px-2 py-0.5 rounded text-[10px] bg-emerald-600 text-white font-black shrink-0">
                                     Đáp án đúng
                                   </span>
                                 )}
                                 {isStudentChoice && !isCorrectChoice && (
-                                  <span className="px-2 py-0.5 rounded text-[10px] bg-rose-600 text-white font-black flex-shrink-0">
+                                  <span className="px-2 py-0.5 rounded text-[10px] bg-rose-600 text-white font-black shrink-0">
                                     Bạn đã chọn
                                   </span>
                                 )}
@@ -1536,7 +1536,7 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
                   <button
                     type="button"
                     onClick={() => onNavigateQuestionBank ? onNavigateQuestionBank() : handleRetakeExam()}
-                    className="w-full sm:w-auto px-7 py-3.5 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:opacity-90 text-white font-black text-xs flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20 transition-all active:scale-95 cursor-pointer"
+                    className="w-full sm:w-auto px-7 py-3.5 rounded-2xl bg-linear-to-r from-blue-600 to-indigo-600 hover:opacity-90 text-white font-black text-xs flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20 transition-all active:scale-95 cursor-pointer"
                   >
                     <Play className="w-4 h-4 fill-white" />
                     <span>Làm Đề Mới (Ngân Hàng Đề)</span>
@@ -1568,7 +1568,7 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
                   <button
                     type="button"
                     onClick={() => onNavigateQuestionBank ? onNavigateQuestionBank() : handleRetakeExam()}
-                    className="px-5 py-3.5 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-black text-xs sm:text-sm shadow-md shadow-blue-500/25 transition-all flex items-center gap-2 cursor-pointer active:scale-95"
+                    className="px-5 py-3.5 rounded-2xl bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-black text-xs sm:text-sm shadow-md shadow-blue-500/25 transition-all flex items-center gap-2 cursor-pointer active:scale-95"
                   >
                     <Play className="w-4 h-4 fill-white" />
                     <span>🚀 Làm Bài Kiểm Tra Mới</span>
@@ -1905,7 +1905,7 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
                               }`}
                           >
                             <div
-                              className={`w-9 h-9 rounded-xl flex items-center justify-center font-black text-sm flex-shrink-0 transition-all ${isSelected
+                              className={`w-9 h-9 rounded-xl flex items-center justify-center font-black text-sm shrink-0 transition-all ${isSelected
                                 ? 'bg-blue-600 text-white shadow-md'
                                 : 'bg-slate-200 text-slate-700'
                                 }`}
@@ -1916,8 +1916,8 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
                               <MathText text={optText} />
                             </div>
                             {isSelected && (
-                              <div className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center flex-shrink-0 mt-1.5">
-                                <Check className="w-4 h-4 stroke-[3]" />
+                              <div className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center shrink-0 mt-1.5">
+                                <Check className="w-4 h-4 stroke-3" />
                               </div>
                             )}
                           </button>
@@ -1950,7 +1950,7 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
                             }`}
                         >
                           <div
-                            className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-base flex-shrink-0 transition-all ${isSelected
+                            className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-base shrink-0 transition-all ${isSelected
                               ? 'bg-blue-600 text-white shadow-md'
                               : 'bg-slate-200 text-slate-700'
                               }`}
@@ -1961,8 +1961,8 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
                             <MathText text={optText} />
                           </div>
                           {isSelected && (
-                            <div className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center flex-shrink-0 mt-2">
-                              <Check className="w-4 h-4 stroke-[3]" />
+                            <div className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center shrink-0 mt-2">
+                              <Check className="w-4 h-4 stroke-3" />
                             </div>
                           )}
                         </button>
@@ -2020,7 +2020,7 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
           </div>
 
           {/* Right Sidebar: 30 Question Grid Navigator (Sticky on scroll, wider and spacious) */}
-          <div className="w-full lg:w-80 bg-white border border-slate-200/90 rounded-3xl p-5 sm:p-6 shadow-xl flex flex-col gap-5 flex-shrink-0 text-slate-900 lg:sticky lg:top-20">
+          <div className="w-full lg:w-80 bg-white border border-slate-200/90 rounded-3xl p-5 sm:p-6 shadow-xl flex flex-col gap-5 shrink-0 text-slate-900 lg:sticky lg:top-20">
             <div className="space-y-4">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <div className="text-xs font-black uppercase text-slate-700 flex items-center gap-1.5">
@@ -2107,7 +2107,7 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
               </p>
             </div>
             <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden border border-slate-200">
-              <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 h-full w-2/3 rounded-full animate-pulse"></div>
+              <div className="bg-linear-to-r from-blue-600 via-indigo-600 to-cyan-500 h-full w-2/3 rounded-full animate-pulse"></div>
             </div>
           </div>
         </div>
@@ -2163,7 +2163,7 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
                 <button
                   type="button"
                   onClick={handleReturnDashboard}
-                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:opacity-95 text-white text-xs font-black shadow-md shadow-blue-500/20 flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
+                  className="px-4 py-2 rounded-xl bg-linear-to-r from-blue-600 to-indigo-600 hover:opacity-95 text-white text-xs font-black shadow-md shadow-blue-500/20 flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
                 >
                   <span>Vào Dashboard Cá Nhân Hóa</span>
                   <ArrowRight className="w-3.5 h-3.5" />
@@ -2183,7 +2183,7 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
                     <button
                       type="button"
                       onClick={onNavigateLogin}
-                      className="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:opacity-95 text-white text-xs font-black shadow-md shadow-blue-500/20 flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
+                      className="px-4 py-2 rounded-xl bg-linear-to-r from-blue-600 to-indigo-600 hover:opacity-95 text-white text-xs font-black shadow-md shadow-blue-500/20 flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
                     >
                       <LogIn className="w-3.5 h-3.5" />
                       <span>Đăng Nhập Để Lưu Điểm</span>
@@ -2196,7 +2196,7 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
 
           {/* Guest Notice Call-to-Action Banner */}
           {!currentUser && (
-            <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-amber-50 via-indigo-50 to-blue-50 border border-amber-300/80 shadow-md flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div className="p-4 sm:p-5 rounded-3xl bg-linear-to-r from-amber-50 via-indigo-50 to-blue-50 border border-amber-300/80 shadow-md flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
               <div className="flex items-start gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-md shadow-amber-500/30">
                   <Sparkles className="w-5 h-5" />
@@ -2216,7 +2216,7 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
                   <button
                     type="button"
                     onClick={onNavigateLogin}
-                    className="w-full md:w-auto px-5 py-3 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white font-black text-xs shadow-lg shadow-blue-500/25 transition-all hover:scale-[1.02] active:scale-98 flex items-center justify-center gap-2 cursor-pointer"
+                    className="w-full md:w-auto px-5 py-3 rounded-2xl bg-linear-to-r from-blue-600 via-indigo-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white font-black text-xs shadow-lg shadow-blue-500/25 transition-all hover:scale-[1.02] active:scale-98 flex items-center justify-center gap-2 cursor-pointer"
                   >
                     <LogIn className="w-4 h-4" />
                     <span>Đăng Nhập / Đăng Ký Lưu Kết Quả</span>
@@ -2341,7 +2341,7 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
             <div className="lg:col-span-6 flex flex-col space-y-5">
 
               {/* AI Socratic Commentary Box */}
-              <div className="p-6 bg-gradient-to-br from-purple-50/90 to-indigo-50/80 border border-purple-200/80 rounded-3xl shadow-xl space-y-3 text-slate-900">
+              <div className="p-6 bg-linear-to-br from-purple-50/90 to-indigo-50/80 border border-purple-200/80 rounded-3xl shadow-xl space-y-3 text-slate-900">
                 <div className="flex items-center gap-2 text-sm font-black text-purple-900">
                   <Bot className="w-4 h-4 text-purple-600" />
                   <span>Lời Khuyên Sư Phạm Từ Cố Vấn AI (Gemini Commentary)</span>
@@ -2365,7 +2365,7 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
                       </div>
                       <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden border border-slate-200">
                         <div
-                          className="bg-gradient-to-r from-blue-600 to-indigo-600 h-full rounded-full transition-all"
+                          className="bg-linear-to-r from-blue-600 to-indigo-600 h-full rounded-full transition-all"
                           style={{ width: `${Math.min(ds.accuracy_pct, 100)}%` }}
                         ></div>
                       </div>
@@ -2394,7 +2394,7 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
               </div>
 
               {/* Filters */}
-              <div className="flex items-center gap-1.5 bg-slate-100 p-1.5 rounded-2xl border border-slate-200 flex-shrink-0">
+              <div className="flex items-center gap-1.5 bg-slate-100 p-1.5 rounded-2xl border border-slate-200 shrink-0">
                 <button
                   type="button"
                   onClick={() => setReviewFilter('ALL')}
@@ -2552,12 +2552,12 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
                               <MathText text={optText} />
                             </div>
                             {isCorrectChoice && (
-                              <span className="px-2 py-0.5 rounded text-[10px] bg-emerald-600 text-white font-black flex-shrink-0">
+                              <span className="px-2 py-0.5 rounded text-[10px] bg-emerald-600 text-white font-black shrink-0">
                                 Đáp án đúng
                               </span>
                             )}
                             {isStudentChoice && !isCorrectChoice && (
-                              <span className="px-2 py-0.5 rounded text-[10px] bg-rose-600 text-white font-black flex-shrink-0">
+                              <span className="px-2 py-0.5 rounded text-[10px] bg-rose-600 text-white font-black shrink-0">
                                 Bạn đã chọn
                               </span>
                             )}
@@ -2597,7 +2597,7 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
               <button
                 type="button"
                 onClick={handleReturnDashboard}
-                className="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:opacity-90 text-white font-black text-xs flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20 transition-all active:scale-95"
+                className="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-linear-to-r from-blue-600 to-indigo-600 hover:opacity-90 text-white font-black text-xs flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20 transition-all active:scale-95"
               >
                 <span>Vào Lộ Trình Học Tập Cá Nhân Hóa (Dashboard)</span>
                 <ArrowRight className="w-4 h-4" />
@@ -2617,7 +2617,7 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
                   <button
                     type="button"
                     onClick={onNavigateLogin}
-                    className="w-full sm:w-auto px-7 py-3.5 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:opacity-90 text-white font-black text-xs flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20 transition-all active:scale-95"
+                    className="w-full sm:w-auto px-7 py-3.5 rounded-2xl bg-linear-to-r from-blue-600 to-indigo-600 hover:opacity-90 text-white font-black text-xs flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20 transition-all active:scale-95"
                   >
                     <LogIn className="w-4 h-4" />
                     <span>Đăng Nhập / Đăng Ký Để Lưu Điểm Số</span>
@@ -2776,7 +2776,7 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
               <button
                 type="button"
                 onClick={executeSubmitExam}
-                className="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-rose-600 via-rose-500 to-amber-600 text-white font-black text-sm shadow-xl shadow-rose-600/30 hover:opacity-95 active:scale-95 transition-all flex items-center justify-center gap-2"
+                className="w-full py-3.5 px-6 rounded-2xl bg-linear-to-r from-rose-600 via-rose-500 to-amber-600 text-white font-black text-sm shadow-xl shadow-rose-600/30 hover:opacity-95 active:scale-95 transition-all flex items-center justify-center gap-2"
               >
                 <CheckCircle2 className="w-4 h-4" />
                 <span>Nộp Bài & Chấm Điểm Ngay</span>
@@ -2788,7 +2788,7 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
                   setShowViolationModal(false);
                   requestFullScreenMode();
                 }}
-                className="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-rose-600 via-rose-500 to-amber-500 text-white font-black text-sm shadow-xl shadow-rose-600/30 hover:opacity-95 active:scale-95 transition-all flex items-center justify-center gap-2"
+                className="w-full py-3.5 px-6 rounded-2xl bg-linear-to-r from-rose-600 via-rose-500 to-amber-500 text-white font-black text-sm shadow-xl shadow-rose-600/30 hover:opacity-95 active:scale-95 transition-all flex items-center justify-center gap-2"
               >
                 <Eye className="w-4 h-4" />
                 <span>Quay Lại Toàn Màn Hình & Tiếp Tục Làm Bài</span>
@@ -2807,7 +2807,7 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
           <div className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden text-slate-900 animate-scale-up">
 
             {/* Header Banner */}
-            <div className="relative overflow-hidden p-6 bg-gradient-to-r from-blue-700 via-indigo-700 to-slate-900 text-white">
+            <div className="relative overflow-hidden p-6 bg-linear-to-r from-blue-700 via-indigo-700 to-slate-900 text-white">
               <div className="relative z-10 flex items-start justify-between gap-4">
                 <div className="space-y-1.5">
                   <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-white/20 text-amber-300 border border-white/20">
@@ -2913,7 +2913,7 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
                 <button
                   type="button"
                   onClick={() => handleConfirmStartExam(selectedExamForModal)}
-                  className="flex-1 py-3.5 px-4 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-black text-xs sm:text-sm shadow-lg shadow-blue-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+                  className="flex-1 py-3.5 px-4 rounded-2xl bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-black text-xs sm:text-sm shadow-lg shadow-blue-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
                 >
                   <Play className="w-4 h-4 fill-white" />
                   <span>🚀 Bắt Đầu Vào Làm Bài Ngay</span>

@@ -1,1 +1,1 @@
-export { default as RoadmapLearningPage } from './RoadmapLearningPage';
+export { default as RoadmapLearningPage } from './ConnectedRoadmapPage';

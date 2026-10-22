@@ -91,10 +91,10 @@ export default function AdaptiveQuizModal({ isOpen, onClose }) {
             </div>
             <div>
               <h2 className="text-lg font-extrabold tracking-tight">
-                Luyện Tập Thích Ứng ZPD & BKT (Flow 3)
+                Luyện Tập Thích Ứng Theo Năng Lực (Flow 3)
               </h2>
               <p className="text-xs text-amber-100 font-medium">
-                Quy tắc BR-02: Chọn câu có P(Correct) từ 0.60 đến 0.75
+                Tự động chọn câu hỏi vừa sức (độ chính xác kỳ vọng 60% - 75%)
               </p>
             </div>
           </div>
@@ -182,7 +182,7 @@ export default function AdaptiveQuizModal({ isOpen, onClose }) {
                   onClick={handleNextItem}
                   className="w-full py-3 bg-amber-600 hover:bg-amber-700 text-white font-extrabold text-xs rounded-2xl shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2 transition-all"
                 >
-                  <span>Câu tiếp theo trong dải ZPD</span>
+                  <span>Câu tiếp theo phù hợp năng lực</span>
                   <ArrowRight className="w-4 h-4" />
                 </button>
               )}

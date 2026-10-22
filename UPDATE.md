@@ -16,3 +16,9 @@
 - Fixed academic profile false-success fallback, disabled unsupported aspiration field, removed fake device/session information and corrected current-session logout copy. Build and four save checks passed.
 
 - Account settings commit includes required page/menu/API integration, fixes academic save confirmation and current-session security copy. Latest production build passed.
+
+- Normalized diagnostic page Tailwind utility names to address suggestCanonicalClasses warnings. Build passed; no logic changes.
+
+- Connected Flow 1 server results to roadmap retrieval/creation and node details. Documented actual domain-based response and missing per-subject phases. No backend changes or live writes; build passed.
+
+- Checkpoint remaining Flow 2 API connection, preserved demo work, menu naming and Tailwind cleanup before reviewing upstream. Build passed; known per-subject phase and video/quiz gaps documented.

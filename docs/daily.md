@@ -2,6 +2,80 @@
 
 ---
 
+## [20/10/2026] - Triển Khai Hoàn Thiện Màn Hình Cài Đặt Tài Khoản, Tích Hợp Thông Tin Đại Diện Phụ Huynh (Cha HOẶC Mẹ), Mã Kết Nối Học Sinh & Học Bạ Điện Tử ĐGNL VNU-HCM 2026
+
+- **Mở Rộng Màn Hình Cài Đặt Tài Khoản (`src/components/settings/AccountSettingsPage.jsx`)**:
+  - Triển khai toàn diện 5 Tabs chuyên sâu đáp ứng yêu cầu quản lý thông tin phụ huynh và tra cứu học bạ của học sinh:
+    1. **Tab 1: Thông tin Cá nhân (Profile & Identity)**: Họ tên, Số điện thoại, Email đã xác thực OTP, Cơ sở đào tạo, Vai trò hệ thống, User ID, thông tin người đại diện phụ huynh, bộ chọn nhanh 6 Avatar 3D học sinh và tùy biến URL ảnh. Tự động đồng bộ ngay vào `Navbar` và `HeroBanner`.
+    2. **Tab 2: Mục tiêu Thi cử & ĐGNL (Academic & IRT Goals)**: Thanh trượt tương tác điểm mục tiêu ĐGNL 1200 điểm V-ACT gắn chuẩn đại học (750+, 850+, 950+, 1050+); cập nhật nguyện vọng 1, trường THPT, ngày thi dự kiến, thời lượng học (giờ/ngày) và theo dõi năng lực IRT Theta 0 (+0.65).
+    3. **Tab 3: Phụ huynh & Học bạ Điện tử (Family Link & Digital Transcript)** *(MỚI)*:
+       - **Mã kết nối học sinh (Student Connection Code)**: Thẻ VIP Card phong cách Dark Glassmorphism hiển thị mã định danh duy nhất (ví dụ: `VEVAL-STU-88902`) kèm nút 1-click sao chép, tính năng tạo mới mã và chỉ báo trạng thái liên kết thời gian thực.
+       - **Thông tin Đại diện Phụ huynh (Cha HOẶC Mẹ)**: Bộ chọn chuyển đổi linh hoạt `Cha (Bố)` | `Mẹ` | `Người giám hộ`, ô nhập Họ và tên phụ huynh, Số điện thoại (SMS/Zalo nhận điểm danh & liên hệ khẩn cấp) và Email nhận báo cáo. Hiển thị rõ tên Cha hoặc Mẹ để phân định người đại diện nhận thông báo.
+       - **Học bạ Điện tử ĐGNL Chuẩn Hóa**: Khung hiển thị trang trọng bảng điểm V-ACT 1200 điểm, chi tiết 3 phần thi (Ngôn ngữ 310/400, Toán & Logic 255/300, Giải quyết vấn đề 220/500); tỷ lệ chuyên cần (12 ngày streak, 48.5 giờ tự học); lời phê sư phạm từ Giáo viên chủ nhiệm (Thầy Phạm Duy); khuyến nghị chiến lược từ Gia sư AI Socratic; cùng 2 nút hành động: **In / Xuất PDF** và **Gửi Báo Cáo Về Email Phụ Huynh**.
+    4. **Tab 4: Bảo mật & Đổi Mật khẩu (Security & Credentials)**: Biểu mẫu đổi mật khẩu với mắt bật/tắt, thanh đo độ mạnh mật khẩu 4 cấp độ (Yếu, Trung bình, Mạnh, Rất an toàn), thẻ thông tin phiên đăng nhập đang hoạt động và nút đăng xuất toàn bộ phiên.
+    5. **Tab 5: Tùy chọn Học tập & AI (Preferences & AI Tutor)**: Tùy biến bật/tắt Gia sư AI gợi mở Socratic, lịch nhắc nhở học tập mỗi ngày, âm thanh & pháo hoa confetti, nhận báo cáo tiến độ tuần qua email.
+- **Nâng Cấp API Client & Auth Service (`src/services/authService.js`)**:
+  - Bổ sung `getParentInfo()` và `updateParentInfo(parentData)` kết nối Identity Service qua Gateway: `GET /api/v1/students/me/parent`, `PUT /api/v1/students/me/parent`.
+  - Cơ chế đệm ngoại tuyến (`localStorage`, `tokenStorage`) giúp UI vận hành mượt mà 100% ngay cả khi chưa bật backend.
+- **Kiểm Thử Vận Hành & Biên Dịch (Vite Build)**:
+  - Chạy `npm run build` thành công 100% trong 1.91 giây, 0 lỗi cú pháp hay bundle.
+
+---
+
+## [20/10/2026] - Chuẩn Hóa Tên Gọi Các Trang & Menu Điều Hướng Sidebar: Loại Bỏ Thuật Ngữ Kỹ Thuật (DAG, ZPD, Socratic), Tối Ưu UX Trực Quan Cho Học Sinh
+
+- **Chuẩn Hóa Danh Mục Điều Hướng Thanh Bên (Sidebar Navigation UX Optimization)**:
+  - Tái cấu trúc và đặt lại tên toàn bộ các mục điều hướng trong `Sidebar.jsx` để học sinh và người dùng đọc vào hiểu ngay bản chất tính năng mà không bị bỡ ngỡ bởi các thuật ngữ kỹ thuật / sư phạm chuyên sâu:
+    1. *`Dashboard (Tổng quan)`* ➔ **`Tổng quan học tập`**: Thể hiện trực quan đây là trang tổng hợp tiến độ, điểm số và nhiệm vụ học tập hằng ngày.
+    2. *`Khảo thí & Chẩn đoán` (Flow 1)* ➔ **`Thi đánh giá đầu vào` (Flow 1)**: Thay thế từ ngữ Hán-Việt chuyên ngành khảo thí bằng tên gọi hành động cụ thể, giúp học sinh hiểu ngay đây là bài thi kiểm tra năng lực đầu vào để xác định trình độ xuất phát.
+    3. *`Lộ trình học (DAG)` (Flow 2)* ➔ **`Lộ trình học cá nhân` (Flow 2)**: Loại bỏ từ viết tắt lý thuyết đồ thị máy tính `DAG` (Directed Acyclic Graph), định danh rõ lộ trình học được may đo cá nhân hóa theo từng chuyên đề.
+    4. *`Luyện tập ZPD` (Flow 3)* ➔ **`Luyện tập thích ứng` (Flow 3)**: Loại bỏ khái niệm tâm lý học giáo dục `ZPD` (Zone of Proximal Development), thay bằng thuật ngữ công nghệ giáo dục chuẩn xác mô tả cơ chế thích ứng độ khó theo năng lực.
+    5. *`AI Socratic Tutor` (Flow 4)* ➔ **`Gia sư AI gợi mở` (Flow 4)**: Việt hóa và giải thích rõ bản chất phương pháp Socratic là gợi ý, định hướng tư duy thay vì giải hộ.
+    6. *`Lớp học & Live Q&A`* ➔ **`Lớp học & Hỏi đáp` (Trực tiếp)**: Đơn giản hóa và thuần Việt, loại bỏ thuật ngữ tiếng Anh `Live Q&A`.
+    7. *`Báo cáo & Dự báo` (Flow 5 & 6)* ➔ **`Báo cáo & Dự báo điểm` (Flow 5 & 6)**: Làm rõ mục tiêu báo cáo là phân tích năng lực và dự đoán điểm thi đại học.
+  - Phân nhóm lại 2 Section trong Sidebar thân thiện hơn:
+    + Section 1: *`Khảo thí & Luyện tập`* ➔ **`Học tập & Luyện thi`**.
+    + Section 2: *`Hỗ trợ & Năng lực`* ➔ **`Hỗ trợ & Phân tích`**.
+- **Đồng Bộ Ngôn Ngữ Trực Quan Trên Các Màn Hình & Modal Liên Quan**:
+  - `MetricsGrid.jsx`: Cập nhật thẻ chỉ số *`Lộ trình học thích ứng (DAG)`* ➔ *`Lộ trình học cá nhân hóa`*; nút bấm *`Xem toàn bộ Lộ trình DAG`* ➔ *`Xem toàn bộ Lộ trình học`*; *`Xác suất trúng tuyển BKT`* ➔ *`Xác suất trúng tuyển đại học`*.
+  - `DiagnosticAssessmentPage.jsx`: Cập nhật thẻ nhãn danh mục từ *`FLOW 1 • KHẢO THÍ & CHẨN ĐOÁN NĂNG LỰC`* ➔ *`FLOW 1 • THI ĐÁNH GIÁ NĂNG LỰC ĐẦU VÀO`*.
+  - `AdaptiveQuizModal.jsx`: Đổi tiêu đề modal *`Luyện Tập Thích Ứng ZPD & BKT (Flow 3)`* ➔ *`Luyện Tập Thích Ứng Theo Năng Lực (Flow 3)`*; cập nhật nút *`Câu tiếp theo trong dải ZPD`* ➔ *`Câu tiếp theo phù hợp năng lực`*.
+  - `RadarChartModal.jsx`: Cập nhật tiêu đề *`Biểu Đồ Radar Năng Lực & Đồ Thị DAG`* ➔ *`Biểu Đồ Radar Năng Lực & Cây Tri Thức`*.
+  - `HeroBanner.jsx`: Tinh chỉnh các câu động lực học tập, thay thế thuật ngữ kỹ thuật bằng thông điệp truyền cảm hứng trực quan.
+  - `QuestionBankPage.jsx`: Cập nhật mô tả đề thi chuẩn hóa nhằm loại bỏ từ viết tắt `DAG`.
+- **Kiểm Thử Vận Hành & Biên Dịch (Vite Build)**:
+  - Chạy `npm run build` thành công 100% trong 7.21 giây, không phát sinh bất kỳ lỗi cú pháp nào.
+
+---
+
+## [19/10/2026] - Nâng Cấp Lộ Trình Học Cá Nhân Hóa (Flow 2): Phân Cấp 9 Môn Thi Vào 3 Giai Đoạn Dựa Vào Điểm Đầu Vào, Cây Chương & Bài Học, Tích Hợp Video YouTube, Bài Giảng Panorama SGK & Bẫy ĐGNL, Lịch Học Live Google Meet & Quiz Củng Cố
+
+- **Phân Bổ 9 Môn Thi ĐGNL VNU-HCM Vào 3 Giai Đoạn Dựa Trên Điểm Thi Khảo Sát Đầu Vào (`roadmapSubjectsData.js`)**:
+  - Tích hợp chuẩn 9 môn thi cốt lõi cấu thành 120 câu đề ĐGNL ĐHQG-HCM phân thành 3 miền: Toán học & Tư duy, Sử dụng ngôn ngữ, Khoa học Tự nhiên & Xã hội.
+  - Phân bổ linh hoạt từng môn vào 1 trong 3 Giai đoạn tối ưu hóa Vùng phát triển ZPD căn cứ trên điểm kiểm tra đầu vào (Diagnostic Score):
+    1. *Giai đoạn 1: Nền tảng cốt lõi (Score < 50%)*: Dành cho môn có điểm thi đầu vào yếu cần lấy lại gốc SGK và công thức cơ bản: Toán học (42/100), Vật lý (38/100), Sinh học (46/100).
+    2. *Giai đoạn 2: Tăng tốc chuyên sâu (Score 50% - 74%)*: Dành cho môn có học lực khá cần rèn luyện phản xạ dạng bài và bẫy đề: Tiếng Việt (68/100), Hóa học (70/100), Lịch sử (72/100).
+    3. *Giai đoạn 3: Bứt phá 900+ Master (Score >= 75%)*: Dành cho môn có học lực giỏi cần chinh phục câu phân loại top 5% và tối ưu thời gian: Tư duy Logic & Số liệu (90/100), Tiếng Anh (84/100), Địa lý (80/100).
+- **Thiết Kế Không Gian Học Tập Trực Quan & Bộ Lọc Giai Đoạn (`RoadmapLearningPage.jsx`)**:
+  - Banner tổng quan hiển thị kết quả kiểm tra đầu vào: `710/1200 Điểm` (Theta IRT = `+0.45`, Top 15%), tóm tắt số lượng môn ở từng giai đoạn (3 môn GĐ 1, 3 môn GĐ 2, 3 môn GĐ 3).
+  - Thanh bộ lọc nhanh: Tất cả 9 môn, Giai đoạn 1 (Nền tảng), Giai đoạn 2 (Tăng tốc), Giai đoạn 3 (Bứt phá).
+  - Dải thẻ 9 môn học hiển thị trực quan: Icon, tên môn, trọng số điểm, tên giảng viên ĐHQG, thanh tiến trình điểm số đầu vào kèm badge giai đoạn.
+- **Cấu Trúc Cây Chương & Bài Học (Chapter & Lesson Accordion Tree)**:
+  - Cột bên trái hiển thị danh sách các Chương của môn được chọn; bấm vào mở rộng xem các Bài học.
+  - Mỗi bài học hiển thị thời lượng (ví dụ 26 phút), trạng thái (Đã hoàn thành, Đang học, Khóa) và nhãn báo có lịch Live tương tác.
+- **Không Gian Học Tập Đa Năng 4 Tabs Toàn Diện**:
+  - **Tab 1: Video Bài Giảng**: Tích hợp trình phát video YouTube embed xem trực tiếp, thanh theo dõi thời lượng và % đã xem, nút phóng to toàn màn hình, nút mô phỏng xem (+5 phút) và xem xong 100%.
+  - **Tab 2: Bài Giảng & Bẫy Đề (Chuẩn Panorama SGK)**: Thiết kế 3 khối tri thức sư phạm:
+    - *Khối 1: Kiến thức nền tảng SGK*: Định nghĩa toán học, danh sách công thức tóm tắt, ví dụ minh họa chuẩn SGK.
+    - *Khối 2: Phương pháp giải chi tiết & Bẫy đề ĐGNL*: Thuật toán từng bước, cảnh báo các bẫy đề thi VNU-HCM hay giăng.
+    - *Khối 3: Bài toán mẫu & Lời giải*: Câu hỏi phân loại chuẩn độ khó (L1, L2, L3, L4), 4 phương án lựa chọn và lời giải từng bước rõ ràng.
+  - **Tab 3: Lịch Học Live & Google Meet**: Hiển thị chuyên đề Live Q&A hàng tuần, thông tin giảng viên phụ trách, lịch học định kỳ, nút tham gia phòng Google Meet trực tiếp (`meet.google.com`), trạng thái điểm danh và tài liệu chuẩn bị trước buổi học.
+  - **Tab 4: Quiz Củng Cố**: Bài tập trắc nghiệm củng cố kiến thức bài học (2-3 câu chuẩn IRT), chọn đáp án nộp bài chấm điểm tự động kèm lời giải chi tiết và hiệu ứng confetti khi đạt `>= 60%`.
+- **Kiểm Thử Vận Hành & Biên Dịch**:
+  - Chạy `npm run build` thành công 100% trong 4.89 giây, toàn bộ bundle sẵn sàng phục vụ kiểm thử giao diện.
+
+---
+
 ## [18/10/2026] - Nâng Cấp Trung Tâm Khảo Thí & Chẩn Đoán (Flow 1): Tích Hợp Hệ Thống 3 Sub-Tabs, Biểu Đồ Năng Lực Đa Chiều & Bảng Lịch Sử Các Lần Thi
 
 - **Tích Hợp Hệ Thống 3 Sub-Tabs Chuyên Nghiệp Trong Sảnh Khảo Thí (`DiagnosticAssessmentPage.jsx`)**:
@@ -350,9 +424,53 @@
 - Validation: production build passed. Browser visual review not performed.
 
 
+### Account settings banner redesign [22/10/2026]
+
+- Replaced only the account settings header with AccountSettingsBanner: light blue/white split layout, compact navigation, profile card and existing target score. Removed hardcoded theta and technical JWT badge from this banner.
+- Settings tabs, lower cards/forms and save handlers remain unchanged. Responsive single-column layout on small screens.
+- Validation: production build and targeted banner lint passed. Browser visual verification not performed.
+
+
+### Repair incomplete banner undo [22/10/2026]
+
+- Removed the dangling AccountSettingsBanner import and component call after its file was undone. Restored the previous inline header only; lower settings content unchanged.
+- Validation: reproduced unresolved import before the fix; production build passed after restoration. Banner redesign reverted.
+
+
+### Academic save and security accuracy [22/10/2026]
+
+- Academic save requires confirmed targetScore/campusId from the profile API. Errors show failure without local success/cache writes; browser cache failure after confirmed server save does not misreport server failure. Campus changes notify Navbar. Zero target scores load correctly.
+- Disabled unsupported university aspiration input and removed its mock default; explicitly marked unavailable for persistence.
+- Removed fabricated Chrome/IP/session status and fixed-refresh claims. Logout copy now describes only the current browser session. Real password API flow unchanged; backend token revocation behavior unchanged.
+- Validation: production build passed; isolated save checks passed for success, API failure, incomplete response and browser-cache failure. No live profile/password writes.
+
+
 ### Academic save and security accuracy [22/10/2026]
 
 - Include the existing account settings page, Navbar/App entry and authentication service integration required to expose these fixes.
 - Academic saves require confirmed target score/campus response; API failures show errors without local success. Unsupported aspirations are disabled.
 - Removed mock Chrome/IP/session information; logout describes only the current browser session. Password changes use the existing backend API.
 - Build passed; four isolated academic-save checks passed. No live profile/password writes. Backend unchanged; other existing family/preferences demo behavior is outside this fix.
+
+
+### Tailwind canonical class cleanup [22/10/2026]
+
+- Normalized DiagnosticAssessmentPage classes using the installed Tailwind design system: gradient aliases, flex-shrink alias, z-index and stroke arbitrary values now use canonical utility names. No application logic changes.
+- Production build passed. IDE diagnostics cannot be read directly; editor may need to refresh diagnostics.
+
+
+### Flow 1 to Flow 2 API integration [22/10/2026]
+
+- Main roadmap export now uses ConnectedRoadmapPage with backend diagnostic history/results, existing roadmap retrieval, explicit creation and node detail. No mock imports in the active page. Existing demo source is preserved.
+- Request generation uses diagnosticSubmissionId, examDate and studyHoursPerDay; reads actual student identity and completed server submissions. No automatic class clustering or bulk enrollment.
+- Contract audit: stages group domains, not per-subject learning phases. Backend does not return subject learningPhase; generation targetScore is fixed at 800. Documented roadmap/class request and response fields in flow_2_api_contract.md.
+- Video/quiz execution and individual-subject phase analysis remain pending backend contract/integration; no fabricated results. Backend unchanged.
+- Validation: production build passed; targeted lint has warnings only. No authenticated live writes; full browser integration not verified.
+
+
+### Frontend checkpoint before upstream review [22/10/2026]
+
+- Checkpoint remaining lowercase frontend work: Flow 1 Tailwind aliases, existing roadmap demo/content and menu naming, and real diagnostic-to-roadmap API integration. Main roadmap export uses the connected page; demo source remains preserved.
+- Known gaps: no backend per-subject phase response; video/quiz execution not integrated; target score in BE generation fixed at 800. No claim of full Flow 2 completion.
+- Validation: latest production build passed; targeted connected-roadmap lint exits successfully with warnings. No authenticated writes or end-to-end browser verification.
+- Excludes backend controller edits, uppercase frontend and configuration backups.

@@ -85,9 +85,21 @@ V-Eval-Web_Client/
 - Eliminates functional redundancy by decoupling the test catalog and room entry from Flow 1.
 - Features V-ACT 2026 Examination Lobby, 5 Core Domains strip, room code quick search (`VACT2026`), category filters (All, Diagnostic, Mock 120, Skill Refinement), and exam detail cards with Azota proctoring modal and passcode verification.
 
-### 4.2. Flow 2: Dynamic Learning Roadmap & Milestone Quizzes (Kahn Topo & FSM)
-- Visualized in `HeroBanner.jsx`, `MilestoneCard.jsx`, and `RoadmapLearningPage.jsx`.
-- Progressive stage unlocking based on Finite State Machine criteria: Lecture Video completion (`>= 80%`) followed by the 20-question **Milestone Quiz** (`>= 60%`) before unlocking subsequent graph nodes.
+### 4.2. Flow 2: Dynamic Learning Roadmap & Subject Mastery (3-Stage Placement & Chapter-Lesson Architecture)
+- Visualized in `HeroBanner.jsx`, `MilestoneCard.jsx`, `RoadmapLearningPage.jsx`, and `roadmapSubjectsData.js`.
+- **9-Subject Diagnostic Stage Placement Architecture**:
+  - Dynamically classifies all 9 V-ACT subjects (Mathematics, Logic & Data Analysis, Vietnamese, English, Physics, Chemistry, Biology, History, Geography) into 3 optimal stages based on individual diagnostic test scores:
+    1. *Stage 1 (Foundation - Score < 50%)*: Remedial core textbooks and essential definitions (e.g. Mathematics 42/100, Physics 38/100, Biology 46/100).
+    2. *Stage 2 (Acceleration - Score 50% - 74%)*: Problem-solving heuristics and common traps (e.g. Vietnamese 68/100, Chemistry 70/100, History 72/100).
+    3. *Stage 3 (Mastery 900+ - Score >= 75%)*: Advanced synthesis, rapid pacing (<1.5 min/item), and top 5% discrimination items (e.g. Logic 90/100, English 84/100, Geography 80/100).
+- **Chapter & Lesson Hierarchical Navigation**:
+  - Collapsible left accordion displaying Chapters and Lessons per subject with completion states.
+- **Quad-Resource Pedagogical Workspace (4 Interactive Tabs)**:
+  - *Tab 1 (Lecture Video)*: Integrated responsive YouTube player, watch time telemetry, and fullscreen toggle.
+  - *Tab 2 (Textbook Knowledge & VNU-HCM Exam Traps)*: Panoramic tri-block view (Block 1: SGK Theorems & Formulas, Block 2: Step-by-Step Algorithm & Trap Warnings, Block 3: Sample Standard Problem with Detailed Solutions).
+  - *Tab 3 (Interactive Live Q&A)*: Direct Google Meet room integration, weekly scheduled sessions, lecturer profile, and attendance tracking.
+  - *Tab 4 (Milestone Quiz)*: irt-calibrated practice items with automated scoring and confetti rewards.
+- Progressive stage unlocking based on Finite State Machine criteria: Lecture Video completion (`>= 80%`) followed by the Milestone Quiz (`>= 60%`) before unlocking subsequent graph nodes.
 
 ### 4.3. Flow 3: Adaptive Practice & Remediation (ZPD & BKT)
 - Executed in `AdaptiveQuizModal.jsx`.
@@ -114,6 +126,45 @@ V-Eval-Web_Client/
   - Detects explicit math delimiters (`$$...$$`, `$...$`, `\[...\]`, `\(...\)`).
   - Automatically encloses mathematical intervals `(-\infty; +\infty)`, algebraic functions (`y = x^4 + 2x^2`, `y = \frac{2x - 1}{x + 1}`), derivatives, and LaTeX tags without interfering with Vietnamese typography.
   - Used uniformly across exam questions, multiple choice options (A, B, C, D), and Socratic AI Tutor explanations.
+
+### 4.7. Intuitive User-Centric Navigation & Nomenclature Architecture (`src/components/layout/Sidebar.jsx`)
+- Re-architected system navigation menu items to eliminate confusing academic and technical acronyms (DAG, ZPD, BKT, Socratic) in favor of immediately self-explanatory, user-centric labels:
+  - `dashboard`: **"Tổng quan học tập"** (replacing "Dashboard (Tổng quan)").
+  - `diagnostic` (Flow 1): **"Thi đánh giá đầu vào"** (replacing "Khảo thí & Chẩn đoán").
+  - `roadmap` (Flow 2): **"Lộ trình học cá nhân"** (replacing "Lộ trình học (DAG)").
+  - `adaptive` (Flow 3): **"Luyện tập thích ứng"** (replacing "Luyện tập ZPD").
+  - `ai_tutor` (Flow 4): **"Gia sư AI gợi mở"** (replacing "AI Socratic Tutor").
+  - `live_qa`: **"Lớp học & Hỏi đáp"** (replacing "Lớp học & Live Q&A").
+  - `analytics` (Flow 5 & 6): **"Báo cáo & Dự báo điểm"** (replacing "Báo cáo & Dự báo").
+- Re-sectioned the Sidebar hierarchy into two intuitive pedagogical domains: **"Học tập & Luyện thi"** and **"Hỗ trợ & Phân tích"**.
+- Synchronized metric cards and modal headers in `MetricsGrid.jsx`, `DiagnosticAssessmentPage.jsx`, and `AdaptiveQuizModal.jsx` for consistent, accessible terminology throughout the application.
+
+### 4.8. Comprehensive Account Settings, Parent Link & Digital Academic Transcript (`src/components/settings/AccountSettingsPage.jsx`)
+- Implemented a unified 5-tab Account Management view for students, teachers, and coordinators:
+  1. **Personal Identity & Profile (`Tab: profile`)**:
+     - Full Name (`fullName`), Phone Number (`phone`), Verified Email badge, Campus Affiliation (`campusId`), System Role, and Unique User ID.
+     - Interactive 6-preset 3D student avatar picker + custom URL override.
+     - Real-time client session synchronization via `tokenStorage` and `onUpdateUser` dispatching immediate updates to `Navbar` and `HeroBanner`.
+  2. **Academic & IRT Competency Goals (`Tab: academic`)**:
+     - Interactive V-ACT 1200-point target score range slider (`targetScore`), dynamically annotated with university benchmark thresholds (750+ Natural Sciences/Pedagogy, 850+ Polytechnic/Economics, 950+ Medicine/Top 1%, 1050+ Valedictorian).
+     - Target University / Major selection, High School name, Target Exam Date, and daily self-study hours allocation (`studyHoursDay`).
+     - Real-time IRT psychometrics status card displaying current student ability vector (Theta 0 = `+0.65`, 18/28 mastered skills).
+  3. **Parent Link & Digital Academic Transcript (`Tab: family`)**:
+     - **Student Connection VIP Card (`StudentLinkCode`)**: Dark glassmorphic card displaying unique student link identifier (`VEVAL-STU-88902`) with 1-click clipboard copy, real-time live link badge, and on-demand code regeneration.
+     - **Designated Guardian Representative**: Form selector supporting `Cha (Bố)`, `Mẹ`, or `Người giám hộ` with full name, contact phone (SMS/Zalo attendance alerts), and automatic progress report email delivery.
+     - **Digital Academic Transcript (VNU-HCM 2026 E-Transcript)**: Official standardized grade sheet layout breaking down the 3 core exam sections (Language 310/400, Math & Logic 255/300, Science Problem Solving 220/500), current estimate `785/1200`, study diligence metrics (12-day streak, 48.5h study time), pedagogical evaluation by Head Teacher (Thầy Phạm Duy), and actionable AI diagnostic insights with PDF print and email forwarding capabilities.
+  4. **Security & Password Management (`Tab: security`)**:
+     - Current Password, New Password, Confirm New Password with toggleable visibility.
+     - Dynamic 4-tier Password Strength Meter with strict validation rules (min 8 chars, uppercase, lowercase, numeric).
+     - Active Session Inspector (Web Browser on Windows, YARP Gateway IP, HMAC-SHA256 JWT validation) and global session revocation action.
+  5. **Learning & AI Preferences (`Tab: preferences`)**:
+     - AI Socratic Guidance Mode toggle (Flow 4 - conceptual scaffolding vs. direct answer).
+     - Daily study reminder scheduler with custom time picker (e.g. `19:30`).
+     - Gamified audio feedback & victory confetti triggers.
+     - Weekly Monday morning learning progress email report delivery.
+- **Backend API Integration (`src/services/authService.js`)**:
+  - Direct integration with `V-Eval-Identity_Service`: `PUT /api/v1/users/me/profile`, `GET /api/v1/students/me/profile`, `PUT /api/v1/students/me/profile`, `POST /api/v1/users/me/change-password`, `GET /api/v1/students/me/parent`, `PUT /api/v1/students/me/parent`.
+  - Robust offline / disconnected fallback utilizing browser storage ensures zero UI degradation during local testing.
 
 ---
 
@@ -187,9 +238,53 @@ V-Eval-Web_Client/
 - Validation: production build passed. Browser visual review not performed.
 
 
+### Account settings banner redesign [22/10/2026]
+
+- Replaced only the account settings header with AccountSettingsBanner: light blue/white split layout, compact navigation, profile card and existing target score. Removed hardcoded theta and technical JWT badge from this banner.
+- Settings tabs, lower cards/forms and save handlers remain unchanged. Responsive single-column layout on small screens.
+- Validation: production build and targeted banner lint passed. Browser visual verification not performed.
+
+
+### Repair incomplete banner undo [22/10/2026]
+
+- Removed the dangling AccountSettingsBanner import and component call after its file was undone. Restored the previous inline header only; lower settings content unchanged.
+- Validation: reproduced unresolved import before the fix; production build passed after restoration. Banner redesign reverted.
+
+
+### Academic save and security accuracy [22/10/2026]
+
+- Academic save requires confirmed targetScore/campusId from the profile API. Errors show failure without local success/cache writes; browser cache failure after confirmed server save does not misreport server failure. Campus changes notify Navbar. Zero target scores load correctly.
+- Disabled unsupported university aspiration input and removed its mock default; explicitly marked unavailable for persistence.
+- Removed fabricated Chrome/IP/session status and fixed-refresh claims. Logout copy now describes only the current browser session. Real password API flow unchanged; backend token revocation behavior unchanged.
+- Validation: production build passed; isolated save checks passed for success, API failure, incomplete response and browser-cache failure. No live profile/password writes.
+
+
 ### Academic save and security accuracy [22/10/2026]
 
 - Include the existing account settings page, Navbar/App entry and authentication service integration required to expose these fixes.
 - Academic saves require confirmed target score/campus response; API failures show errors without local success. Unsupported aspirations are disabled.
 - Removed mock Chrome/IP/session information; logout describes only the current browser session. Password changes use the existing backend API.
 - Build passed; four isolated academic-save checks passed. No live profile/password writes. Backend unchanged; other existing family/preferences demo behavior is outside this fix.
+
+
+### Tailwind canonical class cleanup [22/10/2026]
+
+- Normalized DiagnosticAssessmentPage classes using the installed Tailwind design system: gradient aliases, flex-shrink alias, z-index and stroke arbitrary values now use canonical utility names. No application logic changes.
+- Production build passed. IDE diagnostics cannot be read directly; editor may need to refresh diagnostics.
+
+
+### Flow 1 to Flow 2 API integration [22/10/2026]
+
+- Main roadmap export now uses ConnectedRoadmapPage with backend diagnostic history/results, existing roadmap retrieval, explicit creation and node detail. No mock imports in the active page. Existing demo source is preserved.
+- Request generation uses diagnosticSubmissionId, examDate and studyHoursPerDay; reads actual student identity and completed server submissions. No automatic class clustering or bulk enrollment.
+- Contract audit: stages group domains, not per-subject learning phases. Backend does not return subject learningPhase; generation targetScore is fixed at 800. Documented roadmap/class request and response fields in flow_2_api_contract.md.
+- Video/quiz execution and individual-subject phase analysis remain pending backend contract/integration; no fabricated results. Backend unchanged.
+- Validation: production build passed; targeted lint has warnings only. No authenticated live writes; full browser integration not verified.
+
+
+### Frontend checkpoint before upstream review [22/10/2026]
+
+- Checkpoint remaining lowercase frontend work: Flow 1 Tailwind aliases, existing roadmap demo/content and menu naming, and real diagnostic-to-roadmap API integration. Main roadmap export uses the connected page; demo source remains preserved.
+- Known gaps: no backend per-subject phase response; video/quiz execution not integrated; target score in BE generation fixed at 800. No claim of full Flow 2 completion.
+- Validation: latest production build passed; targeted connected-roadmap lint exits successfully with warnings. No authenticated writes or end-to-end browser verification.
+- Excludes backend controller edits, uppercase frontend and configuration backups.

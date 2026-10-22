@@ -1,3 +1,5 @@
+<!-- Navbar campus data: active campus API + authenticated student profile; confirmed profile PUT on selection. -->
+<!-- Submission architecture update: POST results must be validated before result/history writes. Failure returns to the exam with in-memory answers intact. -->
 # KIẾN TRÚC & BẢNG THEO DÕI TIẾN ĐỘ CHỦ THỂ (PROCESS & PLANNING) - V-EVAL WEB CLIENT
 
 ---
@@ -62,6 +64,9 @@
 | 25 | **Nút Thi Thử Ngay Top Header & Modal Xác Thực Passcode** | `Navbar.jsx`, `ExamPasscodeModal.jsx`, `App.jsx` | 🟢 Hoàn thành | 100% | Tích hợp nút Thi Thử Ngay trên Top Header cạnh Đặc tả Kiến trúc, bật modal thông số 30 câu và xác thực passcode vào thi trực tiếp |
 | 26 | **Hệ Thống 3 Sub-Tabs, Biểu Đồ Năng Lực Đa Chiều & Lịch Sử Khảo Thí** | `DiagnosticAssessmentPage.jsx`, `diagnosticData.js` | 🟢 Hoàn thành | 100% | 3 sub-tabs Sảnh Khảo thí, 4 biểu đồ trực quan (Radar 5 miền, Cột độ chính xác, Vùng tiến trình Theta, Đo nhịp độ câu hỏi), bảng lịch sử bài thi và xem lại lời giải chi tiết |
 | 27 | **Tách Bạch Ngân Hàng Đề Thi & Tinh Gọn Flow 1 Chỉ Lưu Vết Lịch Sử & Chi Tiết Lần Thi** | `QuestionBankPage.jsx`, `DiagnosticAssessmentPage.jsx`, `App.jsx` | 🟢 Hoàn thành | 100% | Di chuyển toàn bộ danh mục đề thi & phòng thi xuống sidebar 'Ngân hàng đề & Thi thử'; tinh gọn Flow 1 chỉ tập trung danh sách các lần kiểm tra, click vào 1 lần thi sẽ mở trang phân tích đồ thị chi tiết kèm nút quay lại mượt mà |
+| 28 | **Nâng Cấp Lộ Trình Học Cá Nhân Hóa (Flow 2) 9 Môn Thi, Phân Cấp 3 Giai Đoạn & Cây Chương - Bài** | `RoadmapLearningPage.jsx`, `roadmapSubjectsData.js` | 🟢 Hoàn thành | 100% | Phân lớp 9 môn thi vào 3 GĐ dựa vào điểm thi đầu vào; Cây Chương - Bài học; 4 tab học liệu (Video YouTube, Tri thức Panorama SGK & Bẫy ĐGNL, Lịch Live Google Meet, Quiz củng cố) |
+| 29 | **Chuẩn Hóa Tên Gọi Menu Sidebar & Nhãn Chức Năng Sang Ngôn Ngữ Người Dùng Trực Quan** | `Sidebar.jsx`, `MetricsGrid.jsx`, `DiagnosticAssessmentPage.jsx`, `AdaptiveQuizModal.jsx` | 🟢 Hoàn thành | 100% | Loại bỏ thuật ngữ kỹ thuật/sư phạm khó hiểu (DAG, ZPD, Socratic, BKT); đổi tên: Tổng quan học tập, Thi đánh giá đầu vào, Lộ trình học cá nhân, Luyện tập thích ứng, Gia sư AI gợi mở; phân nhóm Học tập & Luyện thi, Hỗ trợ & Phân tích |
+| 30 | **Màn Hình Cài Đặt Tài Khoản & Hồ Sơ Năng Lực (Account Settings)** | `AccountSettingsPage.jsx`, `authService.js`, `App.jsx`, `Navbar.jsx` | 🟢 Hoàn thành | 100% | Triển khai màn hình Cài đặt tài khoản 5 tabs (Hồ sơ cá nhân, Mục tiêu 1200 điểm, Liên kết phụ huynh Cha/Mẹ & Học bạ điện tử ĐGNL, Đổi mật khẩu, Tùy chọn AI); tích hợp mã kết nối VIP card, bộ chọn avatar 3D và nút in/xuất học bạ PDF |
 
 
 
@@ -135,9 +140,53 @@
 - Validation: production build passed. Browser visual review not performed.
 
 
+### Account settings banner redesign [22/10/2026]
+
+- Replaced only the account settings header with AccountSettingsBanner: light blue/white split layout, compact navigation, profile card and existing target score. Removed hardcoded theta and technical JWT badge from this banner.
+- Settings tabs, lower cards/forms and save handlers remain unchanged. Responsive single-column layout on small screens.
+- Validation: production build and targeted banner lint passed. Browser visual verification not performed.
+
+
+### Repair incomplete banner undo [22/10/2026]
+
+- Removed the dangling AccountSettingsBanner import and component call after its file was undone. Restored the previous inline header only; lower settings content unchanged.
+- Validation: reproduced unresolved import before the fix; production build passed after restoration. Banner redesign reverted.
+
+
+### Academic save and security accuracy [22/10/2026]
+
+- Academic save requires confirmed targetScore/campusId from the profile API. Errors show failure without local success/cache writes; browser cache failure after confirmed server save does not misreport server failure. Campus changes notify Navbar. Zero target scores load correctly.
+- Disabled unsupported university aspiration input and removed its mock default; explicitly marked unavailable for persistence.
+- Removed fabricated Chrome/IP/session status and fixed-refresh claims. Logout copy now describes only the current browser session. Real password API flow unchanged; backend token revocation behavior unchanged.
+- Validation: production build passed; isolated save checks passed for success, API failure, incomplete response and browser-cache failure. No live profile/password writes.
+
+
 ### Academic save and security accuracy [22/10/2026]
 
 - Include the existing account settings page, Navbar/App entry and authentication service integration required to expose these fixes.
 - Academic saves require confirmed target score/campus response; API failures show errors without local success. Unsupported aspirations are disabled.
 - Removed mock Chrome/IP/session information; logout describes only the current browser session. Password changes use the existing backend API.
 - Build passed; four isolated academic-save checks passed. No live profile/password writes. Backend unchanged; other existing family/preferences demo behavior is outside this fix.
+
+
+### Tailwind canonical class cleanup [22/10/2026]
+
+- Normalized DiagnosticAssessmentPage classes using the installed Tailwind design system: gradient aliases, flex-shrink alias, z-index and stroke arbitrary values now use canonical utility names. No application logic changes.
+- Production build passed. IDE diagnostics cannot be read directly; editor may need to refresh diagnostics.
+
+
+### Flow 1 to Flow 2 API integration [22/10/2026]
+
+- Main roadmap export now uses ConnectedRoadmapPage with backend diagnostic history/results, existing roadmap retrieval, explicit creation and node detail. No mock imports in the active page. Existing demo source is preserved.
+- Request generation uses diagnosticSubmissionId, examDate and studyHoursPerDay; reads actual student identity and completed server submissions. No automatic class clustering or bulk enrollment.
+- Contract audit: stages group domains, not per-subject learning phases. Backend does not return subject learningPhase; generation targetScore is fixed at 800. Documented roadmap/class request and response fields in flow_2_api_contract.md.
+- Video/quiz execution and individual-subject phase analysis remain pending backend contract/integration; no fabricated results. Backend unchanged.
+- Validation: production build passed; targeted lint has warnings only. No authenticated live writes; full browser integration not verified.
+
+
+### Frontend checkpoint before upstream review [22/10/2026]
+
+- Checkpoint remaining lowercase frontend work: Flow 1 Tailwind aliases, existing roadmap demo/content and menu naming, and real diagnostic-to-roadmap API integration. Main roadmap export uses the connected page; demo source remains preserved.
+- Known gaps: no backend per-subject phase response; video/quiz execution not integrated; target score in BE generation fixed at 800. No claim of full Flow 2 completion.
+- Validation: latest production build passed; targeted connected-roadmap lint exits successfully with warnings. No authenticated writes or end-to-end browser verification.
+- Excludes backend controller edits, uppercase frontend and configuration backups.

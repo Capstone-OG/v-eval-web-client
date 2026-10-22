@@ -35,7 +35,7 @@ export const EXAM_CATALOG = [
     defaultCode: 'VACT2026',
     badge: 'ĐỀ MẪU NỔI BẬT',
     badgeColor: 'bg-blue-600 text-white',
-    description: 'Đánh giá 5 miền năng lực (Toán học, Logic, Ngôn ngữ, KHTN, KHXH) nhằm ước lượng tham số IRT θ₀ và kích hoạt Lộ Trình Học Thích Ứng (DAG).'
+    description: 'Đánh giá 5 miền năng lực (Toán học, Logic, Ngôn ngữ, KHTN, KHXH) nhằm xác định điểm xuất phát và tự động kích hoạt Lộ Trình Học Cá Nhân Hóa.'
   },
   {
     id: 'full_120_mock',

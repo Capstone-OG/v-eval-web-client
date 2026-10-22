@@ -46,11 +46,11 @@ export default function MetricsGrid({ onOpenRadar, onOpenDAG, onOpenZPD, onOpenA
         </button>
       </div>
 
-      {/* CARD 2: BKT Admission Probability */}
+      {/* CARD 2: Admission Probability */}
       <div className="bg-white rounded-2xl p-5 border border-slate-200/80 card-shadow flex flex-col justify-between hover:border-emerald-300 transition-all group">
         <div>
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[11px] font-bold tracking-wider uppercase text-slate-400">Xác suất trúng tuyển BKT</span>
+            <span className="text-[11px] font-bold tracking-wider uppercase text-slate-400">Xác suất trúng tuyển đại học</span>
             <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 text-xs font-bold border border-emerald-200">
               Đã tin cậy cao
             </span>
@@ -75,11 +75,11 @@ export default function MetricsGrid({ onOpenRadar, onOpenDAG, onOpenZPD, onOpenA
         </button>
       </div>
 
-      {/* CARD 3: Adaptive DAG Roadmap */}
+      {/* CARD 3: Adaptive Roadmap */}
       <div className="bg-white rounded-2xl p-5 border border-slate-200/80 card-shadow flex flex-col justify-between hover:border-indigo-300 transition-all group">
         <div>
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[11px] font-bold tracking-wider uppercase text-slate-400">Lộ trình học thích ứng (DAG)</span>
+            <span className="text-[11px] font-bold tracking-wider uppercase text-slate-400">Lộ trình học cá nhân hóa</span>
             <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 text-xs font-bold border border-blue-200">
               Chặng 3/8
             </span>
@@ -108,7 +108,7 @@ export default function MetricsGrid({ onOpenRadar, onOpenDAG, onOpenZPD, onOpenA
           onClick={onOpenDAG}
           className="w-full flex items-center justify-between text-xs font-bold text-indigo-600 group-hover:text-indigo-700 pt-2 border-t border-slate-100"
         >
-          <span>Xem toàn bộ Lộ trình DAG</span>
+          <span>Xem toàn bộ Lộ trình học</span>
           <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
         </button>
       </div>

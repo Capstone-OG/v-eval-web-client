@@ -18,7 +18,7 @@ export default function RadarChartModal({ isOpen, onClose }) {
             </div>
             <div>
               <h2 className="text-lg font-extrabold tracking-tight">
-                Biểu Đồ Radar Năng Lực & Đồ Thị DAG (Flow 2 & 5)
+                Biểu Đồ Radar Năng Lực & Cây Tri Thức (Flow 2 & 5)
               </h2>
               <p className="text-xs text-blue-200 font-medium">
                 Khung ma trận khảo thí 120 câu hỏi ĐGNL ĐHQG TP.HCM
@@ -60,7 +60,7 @@ export default function RadarChartModal({ isOpen, onClose }) {
           <div className="space-y-3">
             <div className="text-xs font-extrabold text-slate-900 flex items-center gap-2">
               <GitFork className="w-4 h-4 text-indigo-600" />
-              <span>Các mốc chặng tiên quyết DAG (Topological Sorted):</span>
+              <span>Các mốc bài học tiên quyết theo lộ trình:</span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">

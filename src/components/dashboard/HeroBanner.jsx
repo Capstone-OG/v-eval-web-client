@@ -8,10 +8,10 @@ export default function HeroBanner({ currentUser, onStartMilestone, onStartMockT
   const displayName = currentUser?.fullName || currentUser?.user?.fullName || currentUser?.name || mockUser.name;
 
   const tips = [
-    "Hệ thống đang tự động điều chỉnh lộ trình học theo Vùng phát triển ZPD. Hôm nay em có 3 nhiệm vụ mới cần hoàn thành.",
-    "Mục tiêu Theta 0 = +0.85 để duy trì tỷ lệ đỗ 82% vào ĐH Bách Khoa TP.HCM.",
-    "Trợ lý AI Tutor 24/7 sẵn sàng giải thích gợi mở Socratic bất kỳ bài tập thắc mắc nào.",
-    "Hoàn thành chặng thi thử 15 phút hôm nay để cập nhật ma trận lỗ hổng kiến thức BKT."
+    "Hệ thống đang tự động điều chỉnh lộ trình học thích ứng theo năng lực của em. Hôm nay em có 3 nhiệm vụ mới cần hoàn thành.",
+    "Mục tiêu năng lực xuất sắc để duy trì tỷ lệ đỗ 82% vào ĐH Bách Khoa TP.HCM.",
+    "Gia sư AI 24/7 sẵn sàng giải thích gợi mở tư duy cho bất kỳ bài tập nào em còn thắc mắc.",
+    "Hoàn thành chặng thi thử 15 phút hôm nay để phát hiện sớm các lỗ hổng kiến thức cần ôn luyện."
   ];
   const [tipIdx, setTipIdx] = useState(0);
 
