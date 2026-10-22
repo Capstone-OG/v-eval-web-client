@@ -348,3 +348,11 @@
 - Confirmed the shared report summary contains no exam ID label. Redesigned historical report navigation with an accessible compact back button, title and separate submission date.
 - Reduced setup top padding, report section gaps and summary hero height; refined gradient and concise report heading. No scoring or API changes.
 - Validation: production build passed. Browser visual review not performed.
+
+
+### Academic save and security accuracy [22/10/2026]
+
+- Include the existing account settings page, Navbar/App entry and authentication service integration required to expose these fixes.
+- Academic saves require confirmed target score/campus response; API failures show errors without local success. Unsupported aspirations are disabled.
+- Removed mock Chrome/IP/session information; logout describes only the current browser session. Password changes use the existing backend API.
+- Build passed; four isolated academic-save checks passed. No live profile/password writes. Backend unchanged; other existing family/preferences demo behavior is outside this fix.

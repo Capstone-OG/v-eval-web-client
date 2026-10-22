@@ -5,36 +5,37 @@ import { authService, tokenStorage } from './services';
 
 // Components grouped by module folder
 import { Navbar, Sidebar } from './components/layout';
-import { 
-  HeroBanner, 
-  MetricsGrid, 
-  MilestoneCard, 
-  LiveQnACard, 
-  AISocraticTutorWidget, 
+import {
+  HeroBanner,
+  MetricsGrid,
+  MilestoneCard,
+  LiveQnACard,
+  AISocraticTutorWidget,
   TeacherDashboardView,
   DiagnosticExamModal
 } from './components/dashboard';
 import { PublicLandingPage } from './components/landing';
 import PublicFooter from './components/landing/PublicFooter';
 import { WebLoginPage } from './components/auth';
-import { 
-  AcademicArchitectureModal, 
-  DiagnosticTestModal, 
-  AdaptiveQuizModal, 
-  RadarChartModal 
+import {
+  AcademicArchitectureModal,
+  DiagnosticTestModal,
+  AdaptiveQuizModal,
+  RadarChartModal
 } from './components/modals';
 import { DiagnosticAssessmentPage } from './components/diagnostic';
 import { RoadmapLearningPage } from './components/roadmap';
 import { QuestionBankPage } from './components/question_bank';
-import { 
-  CheckCircle2, 
-  Globe, 
-  LogIn, 
-  LayoutDashboard, 
-  Sparkles, 
-  Brain, 
-  X, 
-  Target, 
+import { AccountSettingsPage } from './components/settings';
+import {
+  CheckCircle2,
+  Globe,
+  LogIn,
+  LayoutDashboard,
+  Sparkles,
+  Brain,
+  X,
+  Target,
   ArrowRight,
   Zap
 } from 'lucide-react';
@@ -45,7 +46,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [currentUser, setCurrentUser] = useState(null);
   const [isExamActive, setIsExamActive] = useState(false);
-  
+
   // Direct exam launch & Auth navigation states
   const [diagnosticAutoStart, setDiagnosticAutoStart] = useState(false);
   const [loginInitialMode, setLoginInitialMode] = useState('login');
@@ -188,7 +189,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans selection:bg-blue-600 selection:text-white relative">
-      
+
       {/* GLOBAL FLOATING TOAST NOTIFICATION */}
       <AnimatePresence>
         {toastMsg && (
@@ -211,10 +212,10 @@ export default function App() {
           </motion.div>
         )}
       </AnimatePresence>
-      
+
       {/* PAGE ROUTING */}
       {currentPage === 'landing' && (
-        <PublicLandingPage 
+        <PublicLandingPage
           onOpenLogin={({ mode, notice } = {}) => {
             setLoginInitialMode(mode || 'login');
             setLoginRedirectNotice(notice || null);
@@ -235,7 +236,7 @@ export default function App() {
       )}
 
       {currentPage === 'diagnostic' && (
-        <DiagnosticAssessmentPage 
+        <DiagnosticAssessmentPage
           isEmbedded={false}
           autoStart={diagnosticAutoStart}
           currentUser={currentUser}
@@ -257,20 +258,20 @@ export default function App() {
       )}
 
       {currentPage === 'login' && (
-        <WebLoginPage 
+        <WebLoginPage
           initialMode={loginInitialMode}
           redirectNotice={loginRedirectNotice}
-          onLoginSuccess={handleLoginSuccess} 
+          onLoginSuccess={handleLoginSuccess}
           onNavigateHome={() => setCurrentPage('landing')}
         />
       )}
 
       {currentPage === 'dashboard' && (
         <div className="min-h-screen flex flex-col bg-[#F4F7FC] text-slate-900">
-          
+
           {/* Top Sticky Header */}
           {!isExamActive && (
-            <Navbar 
+            <Navbar
               activeRole={activeRole}
               setActiveRole={setActiveRole}
               currentUser={currentUser}
@@ -279,15 +280,16 @@ export default function App() {
               onOpenArchModal={() => setIsArchModalOpen(true)}
               onToggleMobileMenu={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
               onOpenDiagnostic={() => setIsExamPasscodeModalOpen(true)}
+              onOpenSettings={() => setActiveTab('settings')}
             />
           )}
 
           {/* Main Content Body (Sidebar + Scrollable Main View) */}
           <div className="flex-1 flex w-full">
-            
+
             {/* Left Sticky Sidebar (Desktop + Mobile Slide-over Drawer) */}
             {!isExamActive && (
-              <Sidebar 
+              <Sidebar
                 activeTab={activeTab}
                 setActiveTab={setActiveTab}
                 activeRole={activeRole}
@@ -301,7 +303,7 @@ export default function App() {
 
             {/* Main Content Area */}
             <main className={`flex-1 min-w-0 w-full ${isExamActive ? 'p-0 max-w-none' : activeTab === 'diagnostic' ? 'px-4 lg:px-8 pt-2 sm:pt-3 pb-16 lg:pb-24 max-w-[1700px] mx-auto' : 'p-4 lg:p-8 pb-16 lg:pb-24 max-w-[1700px] mx-auto'}`}>
-              
+
               {/* Toast Alert */}
               {toastMsg && (
                 <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-2xl border border-slate-700 text-xs font-bold flex items-center gap-2.5 animate-fade">
@@ -313,9 +315,9 @@ export default function App() {
               {/* Student Dashboard Overview View */}
               {activeRole === 'student' && activeTab === 'dashboard' && (
                 <div className="space-y-6 animate-fade">
-                  
+
                   {/* Hero Banner with 3D Pop-out Avatar */}
-                  <HeroBanner 
+                  <HeroBanner
                     currentUser={currentUser}
                     onStartMilestone={handleContinueMilestone}
                     onStartMockTest={() => setActiveTab('diagnostic')}
@@ -323,7 +325,7 @@ export default function App() {
                   />
 
                   {/* 4 Core Metrics Cards */}
-                  <MetricsGrid 
+                  <MetricsGrid
                     onOpenRadar={() => setIsRadarModalOpen(true)}
                     onOpenDAG={() => setIsRadarModalOpen(true)}
                     onOpenZPD={() => setIsZpdModalOpen(true)}
@@ -332,9 +334,9 @@ export default function App() {
 
                   {/* Bottom 2 Column Grid */}
                   <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-                    
+
                     <div className="lg:col-span-8 space-y-6">
-                      <MilestoneCard 
+                      <MilestoneCard
                         onStartTask={handleStartTask}
                         onContinueMilestone={handleContinueMilestone}
                       />
@@ -342,7 +344,7 @@ export default function App() {
 
                     <div className="lg:col-span-4 space-y-6">
                       <LiveQnACard />
-                      <AISocraticTutorWidget 
+                      <AISocraticTutorWidget
                         onOpenFullChat={() => setIsZpdModalOpen(true)}
                       />
                     </div>
@@ -354,7 +356,7 @@ export default function App() {
 
               {/* Student Diagnostic Exam List View (Rendered full-screen during exam, or inside lobby) */}
               {activeTab === 'diagnostic' && (
-                <DiagnosticAssessmentPage 
+                <DiagnosticAssessmentPage
                   isEmbedded={!isExamActive}
                   autoStart={diagnosticAutoStart}
                   examCode={diagnosticExamCode}
@@ -377,7 +379,7 @@ export default function App() {
 
               {/* Question Bank & Practice Exam Catalog (Ngân hàng đề & Thi thử) */}
               {activeTab === 'question_bank' && (
-                <QuestionBankPage 
+                <QuestionBankPage
                   onStartExam={(exam) => {
                     setDiagnosticExamCode(exam?.id || 'diag_30_vact');
                     setDiagnosticAutoStart(true);
@@ -389,7 +391,7 @@ export default function App() {
 
               {/* Student Personalized Roadmap Learning View (Flow 2: DAG & Topological Milestones) */}
               {activeTab === 'roadmap' && (
-                <RoadmapLearningPage 
+                <RoadmapLearningPage
                   onNavigateDiagnostic={() => setActiveTab('diagnostic')}
                   onNavigateDashboard={() => setActiveTab('dashboard')}
                 />
@@ -400,13 +402,27 @@ export default function App() {
                 <TeacherDashboardView />
               )}
 
+              {/* Account Settings Page (Cài đặt tài khoản & Hồ sơ năng lực) */}
+              {activeTab === 'settings' && (
+                <AccountSettingsPage
+                  currentUser={currentUser}
+                  onUpdateUser={(updatedUser) => {
+                    setCurrentUser(updatedUser);
+                    showToast("🎉 Đã cập nhật thông tin tài khoản thành công!");
+                  }}
+                  activeRole={activeRole}
+                  onNavigateTab={setActiveTab}
+                  onLogout={handleLogout}
+                />
+              )}
+
             </main>
 
           </div>
 
           {/* Full-Width Footer (Spans 100% horizontal width across bottom) */}
           {!isExamActive && (
-            <PublicFooter 
+            <PublicFooter
               onOpenLogin={() => setCurrentPage('login')}
               onOpenDiagnostic={() => setActiveTab('diagnostic')}
             />
@@ -416,29 +432,29 @@ export default function App() {
       )}
 
       {/* MODALS */}
-      <AcademicArchitectureModal 
+      <AcademicArchitectureModal
         isOpen={isArchModalOpen}
         onClose={() => setIsArchModalOpen(false)}
       />
 
-      <DiagnosticTestModal 
+      <DiagnosticTestModal
         isOpen={isDiagnosticModalOpen}
         onClose={() => setIsDiagnosticModalOpen(false)}
         onCompleteTest={() => showToast("Đã cập nhật vector Theta 0 và mở khóa lộ trình!")}
       />
 
-      <AdaptiveQuizModal 
+      <AdaptiveQuizModal
         isOpen={isZpdModalOpen}
         onClose={() => setIsZpdModalOpen(false)}
       />
 
-      <RadarChartModal 
+      <RadarChartModal
         isOpen={isRadarModalOpen}
         onClose={() => setIsRadarModalOpen(false)}
       />
 
       {/* DIRECT 30-QUESTION DIAGNOSTIC EXAM ENTRY MODAL */}
-      <DiagnosticExamModal 
+      <DiagnosticExamModal
         isOpen={isExamPasscodeModalOpen}
         onClose={() => setIsExamPasscodeModalOpen(false)}
         currentUser={currentUser}

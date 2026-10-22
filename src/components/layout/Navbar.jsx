@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Search, MapPin, Flame, Bell, User, LogOut, ChevronDown, BookOpen, Layers, ShieldCheck, Award, Sparkles, Menu, Zap } from 'lucide-react';
+import { Search, MapPin, Flame, Bell, User, LogOut, ChevronDown, BookOpen, Layers, ShieldCheck, Award, Sparkles, Menu, Zap, Settings } from 'lucide-react';
 import { mockUser } from '../../data/mockData';
 import apiClient from '../../services/apiClient';
 import { authService } from '../../services/authService';
 
-export default function Navbar({ activeRole, setActiveRole, currentUser, onLogout, onOpenAuthModal, onOpenArchModal, onToggleMobileMenu, onOpenDiagnostic }) {
+export default function Navbar({ activeRole, setActiveRole, currentUser, onLogout, onOpenAuthModal, onOpenArchModal, onToggleMobileMenu, onOpenDiagnostic, onOpenSettings }) {
   const [selectedCampus, setSelectedCampus] = useState('');
   const [campuses, setCampuses] = useState([]);
   const [campusLoading, setCampusLoading] = useState(true);
@@ -53,8 +53,8 @@ export default function Navbar({ activeRole, setActiveRole, currentUser, onLogou
   const [showUserDropdown, setShowUserDropdown] = useState(false);
 
   const savedTheta = localStorage.getItem('veval_theta_0');
-  const thetaDisplay = savedTheta 
-    ? (parseFloat(savedTheta) > 0 ? `+${parseFloat(savedTheta).toFixed(2)}` : parseFloat(savedTheta).toFixed(2)) 
+  const thetaDisplay = savedTheta
+    ? (parseFloat(savedTheta) > 0 ? `+${parseFloat(savedTheta).toFixed(2)}` : parseFloat(savedTheta).toFixed(2))
     : '+0.65';
 
   const displayName = currentUser?.fullName || mockUser.name;
@@ -64,10 +64,10 @@ export default function Navbar({ activeRole, setActiveRole, currentUser, onLogou
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-3 sm:px-6 lg:px-8 py-2.5 sm:py-3 transition-all shadow-xs">
       <div className="max-w-[1700px] mx-auto flex items-center justify-between gap-3 sm:gap-4">
-        
+
         {/* Left Section: Mobile Menu Toggle + Brand Logo + Search Bar */}
         <div className="flex items-center gap-2.5 sm:gap-4 lg:gap-6 flex-1 min-w-0 max-w-2xl">
-          
+
           {/* Mobile Sidebar Hamburger Button (< 1024px lg) */}
           <button
             type="button"
@@ -96,8 +96,8 @@ export default function Navbar({ activeRole, setActiveRole, currentUser, onLogou
           {/* Search Bar */}
           <div className="relative w-full hidden sm:block max-w-md">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <input 
-              type="text" 
+            <input
+              type="text"
               placeholder="Tìm kiếm bài học, chuyên đề, mã đề..."
               className="w-full pl-10 pr-4 py-2 text-sm bg-slate-100/80 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all text-slate-800 placeholder-slate-400"
             />
@@ -107,7 +107,7 @@ export default function Navbar({ activeRole, setActiveRole, currentUser, onLogou
 
         {/* Center / Right controls */}
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-          
+
           {/* IRT Psychometrics Live Status Badge (>= 1536px 2xl) */}
           <div className="hidden 2xl:flex items-center gap-2 px-3 py-1.5 bg-slate-900 border border-slate-800 rounded-xl text-white font-mono text-xs font-bold shadow-sm shrink-0">
             <Award className="w-3.5 h-3.5 text-blue-400 shrink-0" />
@@ -132,7 +132,7 @@ export default function Navbar({ activeRole, setActiveRole, currentUser, onLogou
           </div>
 
           {/* Direct Diagnostic Exam Trigger Button */}
-          <button 
+          <button
             type="button"
             onClick={onOpenDiagnostic}
             className="flex items-center gap-1.5 px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-extrabold text-xs shadow-md shadow-blue-500/20 hover:scale-102 active:scale-95 transition-all duration-200 shrink-0 cursor-pointer"
@@ -151,14 +151,14 @@ export default function Navbar({ activeRole, setActiveRole, currentUser, onLogou
 
           {/* User Profile / Auth State */}
           <div className="relative">
-            <button 
+            <button
               onClick={() => setShowUserDropdown(!showUserDropdown)}
               className="flex items-center gap-2.5 p-1.5 pl-2 rounded-xl hover:bg-slate-100 transition-all text-left"
             >
-              <img 
-                src={displayAvatar} 
+              <img
+                src={displayAvatar}
                 alt={displayName}
-                className="w-9 h-9 rounded-xl object-cover ring-2 ring-blue-500/30" 
+                className="w-9 h-9 rounded-xl object-cover ring-2 ring-blue-500/30"
               />
               <div className="hidden md:block">
                 <div className="text-xs font-bold text-slate-800 leading-tight">{displayName}</div>
@@ -178,9 +178,15 @@ export default function Navbar({ activeRole, setActiveRole, currentUser, onLogou
                   </div>
                 </div>
 
+                <button
+                  onClick={() => { setShowUserDropdown(false); if (onOpenSettings) onOpenSettings(); }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 rounded-xl transition-all cursor-pointer"
+                >
+                  <Settings className="w-4 h-4 text-slate-400" />
+                  Cài đặt tài khoản
+                </button>
 
-
-                <button 
+                <button
                   onClick={() => { setShowUserDropdown(false); onOpenAuthModal(); }}
                   className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 rounded-xl transition-all cursor-pointer"
                 >
@@ -190,7 +196,7 @@ export default function Navbar({ activeRole, setActiveRole, currentUser, onLogou
 
                 <div className="my-1 border-t border-slate-100"></div>
 
-                <button 
+                <button
                   onClick={() => { setShowUserDropdown(false); onLogout(); }}
                   className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-bold text-red-600 hover:bg-red-50 rounded-xl transition-all"
                 >

@@ -85,16 +85,16 @@ export const authService = {
   },
 
   /**
-   * Cập nhật hồ sơ học sinh (thang điểm 1200, giờ học, trường THPT)
-   * @param {Object} profileData
+   * Cập nhật thông tin tài khoản chung (Họ tên, SĐT, Avatar) (UC 04)
+   * @param {Object} profileData - { fullName, phone, avatarUrl }
    */
   async updateProfile(profileData) {
     try {
-      const res = await apiClient.put('/api/v1/users/profile', profileData);
+      const res = await apiClient.put('/api/v1/users/me/profile', profileData);
       return res.data;
     } catch (err) {
       if (err.status === 404) {
-        const res = await apiClient.put('/api/v1/identity/users/profile', profileData);
+        const res = await apiClient.put('/api/v1/users/profile', profileData);
         return res.data;
       }
       throw err;
@@ -102,11 +102,87 @@ export const authService = {
   },
 
   /**
-   * Đổi mật khẩu cá nhân
-   * @param {Object} passwordData - { currentPassword, newPassword }
+   * Lấy thông tin hồ sơ học sinh (Điểm mục tiêu, cơ sở, ngày thi, giờ học) (UC 04)
+   */
+  async getStudentProfile() {
+    try {
+      const res = await apiClient.get('/api/v1/students/me/profile');
+      return res.data;
+    } catch (err) {
+      if (err.status === 404) {
+        const res = await apiClient.get('/api/v1/students/profile');
+        return res.data;
+      }
+      throw err;
+    }
+  },
+
+  /**
+   * Cập nhật hồ sơ học sinh chuyên sâu (UC 04 & UC 10)
+   * @param {Object} studentData - { campusId, targetScore, examDate, studyHoursDay, schoolName }
+   */
+  async updateStudentProfile(studentData) {
+    try {
+      const res = await apiClient.put('/api/v1/students/me/profile', studentData);
+      return res.data;
+    } catch (err) {
+      if (err.status === 404) {
+        const res = await apiClient.put('/api/v1/students/profile', studentData);
+        return res.data;
+      }
+      throw err;
+    }
+  },
+
+  /**
+   * Lấy thông tin phụ huynh liên kết (Cha/Mẹ) (UC 04)
+   */
+  async getParentInfo() {
+    try {
+      const res = await apiClient.get('/api/v1/students/me/parent');
+      return res.data;
+    } catch (err) {
+      const cached = localStorage.getItem('veval_parent_info');
+      if (cached) {
+        try { return JSON.parse(cached); } catch { return null; }
+      }
+      return null;
+    }
+  },
+
+  /**
+   * Cập nhật thông tin phụ huynh liên kết (Cha HOẶC Mẹ)
+   * @param {Object} parentData - { parentRelation, parentName, parentPhone, parentEmail, parentConnectCode }
+   */
+  async updateParentInfo(parentData) {
+    try {
+      const res = await apiClient.put('/api/v1/students/me/parent', parentData);
+      localStorage.setItem('veval_parent_info', JSON.stringify(parentData));
+      return res.data;
+    } catch (err) {
+      localStorage.setItem('veval_parent_info', JSON.stringify(parentData));
+      return parentData;
+    }
+  },
+
+  /**
+   * Đổi mật khẩu cá nhân (UC 04)
+   * @param {Object} passwordData - { currentPassword, newPassword, confirmPassword }
    */
   async changePassword(passwordData) {
-    return (await apiClient.put('/api/v1/users/change-password', passwordData)).data;
+    const payload = {
+      currentPassword: passwordData.currentPassword,
+      newPassword: passwordData.newPassword,
+      confirmPassword: passwordData.confirmPassword || passwordData.newPassword
+    };
+    try {
+      return (await apiClient.post('/api/v1/users/me/change-password', payload)).data;
+    } catch (err) {
+      if (err.status === 404 || err.status === 405) {
+        return (await apiClient.put('/api/v1/users/change-password', payload)).data;
+      }
+      throw err;
+    }
   },
 
   /**
