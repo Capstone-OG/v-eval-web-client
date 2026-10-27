@@ -9,6 +9,6 @@
     - Kiểm thử tuần tự hóa và giải mã đối tượng thông tin người dùng (`user profile`) từ Storage.
     - Kiểm thử dọn sạch toàn bộ khóa chứng thực khi đăng xuất (`clearTokens`).
   - Cập nhật an toàn `import.meta.env?.VITE_API_GATEWAY_URL` trong [`apiClient.js`](./src/services/apiClient.js) hỗ trợ chạy test mượt mà ở cả môi trường Node và Vite.
-  - Bổ sung lệnh `"test": "node --test tests/**/*.test.js"` vào `package.json` (chạy hoàn thành 100% trong 8ms).
+  - Bổ sung lệnh `"test": "node --test"` vào `package.json` (chạy hoàn thành 100% trong ~90ms).
 - **Tích Hợp Tự Động Hóa CI/CD Workflow**:
   - Bổ sung bước thực thi `npm test` vào `.github/workflows/ci.yml` trước bước build ứng dụng.
