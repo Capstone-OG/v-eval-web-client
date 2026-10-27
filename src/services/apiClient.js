@@ -6,7 +6,7 @@
  * token refresh on 401, and standardized response formatting.
  */
 
-const BASE_URL = import.meta.env.VITE_API_GATEWAY_URL || 'http://localhost:5212';
+const BASE_URL = import.meta.env?.VITE_API_GATEWAY_URL || 'http://localhost:5212';
 
 const TOKEN_KEY = 'veval_access_token';
 const REFRESH_TOKEN_KEY = 'veval_refresh_token';
