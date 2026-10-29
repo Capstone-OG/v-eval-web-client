@@ -831,3 +831,645 @@ export function autoSynthesizeVariationTableFromText(rawText) {
   return null;
 }
 
+
+/**
+ * Returns default 2D points for each canonical 2D plane geometry model
+ */
+export function getDefault2DGeometryPoints(shape2DType = 'right_triangle') {
+  switch (shape2DType) {
+    case 'acute_triangle':
+      return {
+        A: { name: 'A', x: 1, y: 4.5 },
+        B: { name: 'B', x: -3.5, y: -1.5 },
+        C: { name: 'C', x: 4.5, y: -1.5 }
+      };
+    case 'circle_tangent':
+      return {
+        O: { name: 'O', x: 0, y: 0 },
+        M: { name: 'M', x: 6, y: 0 },
+        A: { name: 'A', x: 1.5, y: 2.598 }
+      };
+    case 'quadrilateral_cyclic':
+      return {
+        A: { name: 'A', x: -2.2, y: 2.6 },
+        B: { name: 'B', x: 2.5, y: 2.3 },
+        C: { name: 'C', x: 2.8, y: -1.9 },
+        D: { name: 'D', x: -2.6, y: -2.2 }
+      };
+    case 'parallelogram_rhombus':
+      return {
+        A: { name: 'A', x: -3.5, y: -1.8 },
+        B: { name: 'B', x: 1.5, y: -1.8 },
+        C: { name: 'C', x: 3.5, y: 2.2 },
+        D: { name: 'D', x: -1.5, y: 2.2 }
+      };
+    case 'trapezoid_right':
+      return {
+        A: { name: 'A', x: -3, y: 2.2 },
+        B: { name: 'B', x: 1.5, y: 2.2 },
+        C: { name: 'C', x: 4, y: -1.8 },
+        D: { name: 'D', x: -3, y: -1.8 }
+      };
+    case 'right_triangle':
+    default:
+      // Right triangle at A(0,0), B(6,0), C(0,3.5) -> H(1.53, 2.61) and M(3.0, 1.75) are well separated!
+      return {
+        A: { name: 'A', x: 0, y: 0 },
+        B: { name: 'B', x: 6, y: 0 },
+        C: { name: 'C', x: 0, y: 3.5 }
+      };
+  }
+}
+
+/**
+ * Formats a 2D Plane Geometry configuration into a [MATH_GEOMETRY_2D] tag string
+ */
+export function formatMathGeometry2DTag(config) {
+  const {
+    shapeType = 'right_triangle',
+    title = 'Hình học phẳng 2D tương tác',
+    formula = '\\triangle ABC',
+    vertices = null,
+    extraPoints = [],
+    auxLines = [],
+    showCircumcircle = true,
+    showAltitude = true,
+    showMedian = true,
+    showAxes = false
+  } = config || {};
+
+  let tag = `\n\n[MATH_GEOMETRY_2D]\n`;
+  tag += `shape: ${shapeType}\n`;
+  tag += `title: ${title}\n`;
+  tag += `formula: ${formula}\n`;
+  tag += `circumcircle: ${showCircumcircle ? 'true' : 'false'}\n`;
+  tag += `altitude: ${showAltitude ? 'true' : 'false'}\n`;
+  tag += `median: ${showMedian ? 'true' : 'false'}\n`;
+  tag += `axes: ${showAxes ? 'true' : 'false'}\n`;
+
+  if (vertices && typeof vertices === 'object') {
+    const vStr = Object.entries(vertices)
+      .map(([k, v]) => `${k}:${v.name || k}(${Number(v.x ?? 0)},${Number(v.y ?? 0)})`)
+      .join('; ');
+    if (vStr) tag += `vertices: ${vStr}\n`;
+  }
+
+  if (Array.isArray(extraPoints) && extraPoints.length > 0) {
+    const epStr = extraPoints
+      .map(ep => `${ep.id}:${ep.name || ep.id}@${ep.parentA}-${ep.parentB}:${ep.ratio ?? 0.5}`)
+      .join('; ');
+    if (epStr) tag += `extra_points: ${epStr}\n`;
+  }
+
+  if (Array.isArray(auxLines) && auxLines.length > 0) {
+    const auxStr = auxLines
+      .map(l => `${l.from}-${l.to}:${l.style || 'dashed'}:${l.color || '#f97316'}:${l.label || ''}`)
+      .join('; ');
+    if (auxStr) tag += `aux_lines: ${auxStr}\n`;
+  }
+
+  tag += `[/MATH_GEOMETRY_2D]\n\n`;
+  return tag;
+}
+
+/**
+ * Parses a [MATH_GEOMETRY_2D]...[/MATH_GEOMETRY_2D] tag into a configuration object
+ */
+export function parseMathGeometry2DTag(tagString) {
+  if (!tagString || typeof tagString !== 'string') return null;
+
+  const match = tagString.match(/\[MATH_GEOMETRY_2D\]([\s\S]*?)\[\/MATH_GEOMETRY_2D\]/i);
+  if (!match) return null;
+
+  const content = match[1].trim();
+  const lines = content.split('\n').map(l => l.trim()).filter(Boolean);
+
+  const config = {
+    is2DGeometry: true,
+    shapeType: 'right_triangle',
+    title: 'Hình học phẳng 2D tương tác',
+    formula: '\\triangle ABC',
+    showCircumcircle: true,
+    showAltitude: true,
+    showMedian: true,
+    showAxes: false,
+    vertices: null,
+    extraPoints: [],
+    auxLines: []
+  };
+
+  for (const line of lines) {
+    const colonIdx = line.indexOf(':');
+    if (colonIdx === -1) continue;
+    const key = line.slice(0, colonIdx).trim().toLowerCase();
+    const val = line.slice(colonIdx + 1).trim();
+
+    if (key === 'shape' || key === 'type') {
+      config.shapeType = val;
+    } else if (key === 'title') {
+      config.title = val;
+    } else if (key === 'formula') {
+      config.formula = val;
+    } else if (key === 'circumcircle') {
+      config.showCircumcircle = val.toLowerCase() !== 'false';
+    } else if (key === 'altitude') {
+      config.showAltitude = val.toLowerCase() !== 'false';
+    } else if (key === 'median') {
+      config.showMedian = val.toLowerCase() !== 'false';
+    } else if (key === 'axes') {
+      config.showAxes = val.toLowerCase() === 'true';
+    } else if (key === 'vertices') {
+      const parsedVertices = {};
+      val.split(';').map(s => s.trim()).filter(Boolean).forEach(part => {
+        const m = part.match(/^([A-Za-z0-9_]+):([^(]+)\(\s*([-\d.]+)\s*,\s*([-\d.]+)\s*\)$/);
+        if (m) {
+          parsedVertices[m[1]] = {
+            name: m[2].trim(),
+            x: parseFloat(m[3]),
+            y: parseFloat(m[4])
+          };
+        }
+      });
+      if (Object.keys(parsedVertices).length > 0) {
+        config.vertices = parsedVertices;
+      }
+    } else if (key === 'extra_points') {
+      val.split(';').map(s => s.trim()).filter(Boolean).forEach(part => {
+        const m = part.match(/^([^:]+):([^@]+)@([^-]+)-([^:]+):([-\d.]+)$/);
+        if (m) {
+          config.extraPoints.push({
+            id: m[1].trim(),
+            name: m[2].trim(),
+            parentA: m[3].trim(),
+            parentB: m[4].trim(),
+            ratio: parseFloat(m[5])
+          });
+        }
+      });
+    } else if (key === 'aux_lines') {
+      val.split(';').map(s => s.trim()).filter(Boolean).forEach(part => {
+        const parts = part.split(':');
+        if (parts.length >= 1) {
+          const [from, to] = parts[0].split('-').map(s => s.trim());
+          if (from && to) {
+            config.auxLines.push({
+              from,
+              to,
+              style: parts[1] || 'dashed',
+              color: parts[2] || '#f97316',
+              label: parts.slice(3).join(':') || ''
+            });
+          }
+        }
+      });
+    }
+  }
+
+  if (!config.vertices) {
+    config.vertices = getDefault2DGeometryPoints(config.shapeType);
+  }
+
+  return config;
+}
+
+export const SHAPES_2D_META = {
+  right_triangle: {
+    id: 'right_triangle',
+    label: 'Tam giác vuông ABC',
+    title: 'Tam giác vuông ABC (Đường cao AH, Trung tuyến AM)',
+    formula: '\\triangle ABC \\text{ vuông tại } A, AH \\perp BC',
+    desc: 'Tam giác vuông $ABC$ tại $A$, đường cao $AH \\perp BC$ ($AH^2 = BH \\cdot HC$), trung tuyến $AM = \\frac{1}{2}BC$ và đường tròn ngoại tiếp tâm $M$.'
+  },
+  acute_triangle: {
+    id: 'acute_triangle',
+    label: 'Tam giác & Đường tròn (O)',
+    title: 'Tam giác nhọn ABC (Trực tâm H, Trọng tâm G, Tâm O)',
+    formula: '\\triangle ABC, (O), H, G',
+    desc: 'Tam giác $ABC$ nội tiếp đường tròn $(O)$, đường cao $AH_a, BH_b$ cắt nhau tại trực tâm $H$, trung tuyến $AM$ và trọng tâm $G$.'
+  },
+  circle_tangent: {
+    id: 'circle_tangent',
+    label: 'Đường tròn & Tiếp tuyến MA, MB',
+    title: 'Hai tiếp tuyến MA, MB của đường tròn (O; R)',
+    formula: 'MA, MB \\text{ là tiếp tuyến của } (O; R)',
+    desc: 'Từ điểm $M$ nằm ngoài đường tròn $(O; R)$ kẻ hai tiếp tuyến $MA, MB$ ($A, B$ là tiếp điểm). Khi đó $OM \\perp AB$ tại $H$ và $OA^2 = OH \\cdot OM$.'
+  },
+  quadrilateral_cyclic: {
+    id: 'quadrilateral_cyclic',
+    label: 'Tứ giác nội tiếp ABCD',
+    title: 'Tứ giác nội tiếp ABCD & Giao điểm hai đường chéo',
+    formula: 'ABCD \\text{ nội tiếp } (O)',
+    desc: 'Tứ giác $ABCD$ nội tiếp đường tròn $(O)$ có tổng hai góc đối bằng $180^\\circ$ và hai đường chéo $AC, BD$ cắt nhau tại $I$.'
+  },
+  parallelogram_rhombus: {
+    id: 'parallelogram_rhombus',
+    label: 'Hình bình hành / Hình thoi ABCD',
+    title: 'Hình bình hành ABCD & Giao điểm hai đường chéo O',
+    formula: 'ABCD \\text{ là hình bình hành}, AC \\cap BD = O',
+    desc: 'Hình bình hành $ABCD$ có hai đường chéo $AC, BD$ cắt nhau tại trung điểm $O$ của mỗi đường và đường cao $AH \\perp CD$.'
+  },
+  trapezoid_right: {
+    id: 'trapezoid_right',
+    label: 'Hình thang vuông ABCD',
+    title: 'Hình thang vuông ABCD (Vuông tại A và D)',
+    formula: 'ABCD \\text{ là hình thang vuông tại } A, D',
+    desc: 'Hình thang vuông $ABCD$ ($AB \\parallel CD$, $\\hat{A} = \\hat{D} = 90^\\circ$) với đường cao $BH \\perp CD$ và hai đường chéo $AC, BD$.'
+  }
+};
+
+/**
+ * Renders an interactive 2D Plane Geometry model onto an initialized JSXGraph board
+ */
+export function mount2DGeometryBoard(board, config = {}, interactive = true) {
+  if (!board) return {};
+
+  const shapeType = config.shapeType || 'right_triangle';
+  const rawVertices = config.vertices || getDefault2DGeometryPoints(shapeType);
+  const showCircumcircle = config.showCircumcircle !== false;
+  const showAltitude = config.showAltitude !== false;
+  const showMedian = config.showMedian !== false;
+
+  const ptsMap = {};
+
+  const createVertex = (key, fallbackX, fallbackY, color = '#2563eb', labelOffset = [8, 10], extraLabel = '') => {
+    const v = rawVertices[key] || { name: key, x: fallbackX, y: fallbackY };
+    const displayName = extraLabel ? `${v.name || key} ${extraLabel}` : (v.name || key);
+    const pt = board.create('point', [Number(v.x ?? fallbackX), Number(v.y ?? fallbackY)], {
+      name: displayName,
+      size: 4,
+      color,
+      fixed: !interactive,
+      label: {
+        offset: labelOffset,
+        color: '#0f172a',
+        fontWeight: 'bold',
+        fontSize: 12
+      }
+    });
+    ptsMap[key] = pt;
+    return pt;
+  };
+
+  if (shapeType === 'right_triangle') {
+    const pA = createVertex('A', 0, 0, '#ef4444', [-18, -16], '(Góc vuông)');
+    const pB = createVertex('B', 6, 0, '#2563eb', [10, -10]);
+    const pC = createVertex('C', 0, 3.5, '#10b981', [-18, 12]);
+
+    board.create('polygon', [pA, pB, pC], {
+      fillColor: '#e0e7ff',
+      fillOpacity: 0.28,
+      borders: { strokeColor: '#1e293b', strokeWidth: 2.4 }
+    });
+
+    // Right angle marker at A
+    board.create('angle', [pB, pA, pC], {
+      type: 'square',
+      orthoType: 'square',
+      radius: 0.45,
+      fillColor: '#fca5a5',
+      fillOpacity: 0.45,
+      strokeColor: '#ef4444',
+      withLabel: false
+    });
+
+    const lineBC = board.create('line', [pB, pC], { visible: false });
+
+    if (showAltitude) {
+      const perpAH = board.create('perpendicular', [lineBC, pA], { visible: false });
+      const pH = board.create('intersection', [lineBC, perpAH, 0], {
+        name: 'H (Chân đường cao)',
+        size: 3.5,
+        color: '#f97316',
+        label: { offset: [-65, -18], color: '#c2410c', fontWeight: 'bold', fontSize: 11 }
+      });
+      ptsMap['H'] = pH;
+      board.create('segment', [pA, pH], {
+        strokeColor: '#f97316',
+        dash: 2,
+        strokeWidth: 2.2
+      });
+      board.create('angle', [pA, pH, pB], {
+        type: 'square',
+        orthoType: 'square',
+        radius: 0.35,
+        fillColor: '#fdba74',
+        fillOpacity: 0.4,
+        strokeColor: '#ea580c',
+        withLabel: false
+      });
+    }
+
+    if (showMedian) {
+      const pM = board.create('midpoint', [pB, pC], {
+        name: 'M (Tâm ngoại tiếp)',
+        size: 3.5,
+        color: '#6366f1',
+        label: { offset: [12, 14], color: '#4338ca', fontWeight: 'bold', fontSize: 11 }
+      });
+      ptsMap['M'] = pM;
+      board.create('segment', [pA, pM], {
+        strokeColor: '#6366f1',
+        dash: 3,
+        strokeWidth: 1.8
+      });
+    }
+
+    if (showCircumcircle) {
+      board.create('circumcircle', [pA, pB, pC], {
+        strokeColor: '#8b5cf6',
+        dash: 2,
+        strokeWidth: 1.6,
+        center: { visible: false }
+      });
+    }
+  } else if (shapeType === 'acute_triangle') {
+    const pA = createVertex('A', 1, 4.5, '#ef4444', [0, 14]);
+    const pB = createVertex('B', -3.5, -1.5, '#2563eb', [-20, -12]);
+    const pC = createVertex('C', 4.5, -1.5, '#10b981', [10, -12]);
+
+    board.create('polygon', [pA, pB, pC], {
+      fillColor: '#dbeafe',
+      fillOpacity: 0.25,
+      borders: { strokeColor: '#1e293b', strokeWidth: 2.4 }
+    });
+
+    const lineBC = board.create('line', [pB, pC], { visible: false });
+    const lineAC = board.create('line', [pA, pC], { visible: false });
+
+    if (showAltitude) {
+      const perpA = board.create('perpendicular', [lineBC, pA], { visible: false });
+      const perpB = board.create('perpendicular', [lineAC, pB], { visible: false });
+      const pHa = board.create('intersection', [lineBC, perpA, 0], {
+        name: 'H_a',
+        size: 2.8,
+        color: '#f97316',
+        label: { offset: [-8, -16], color: '#c2410c', fontSize: 10, fontWeight: 'bold' }
+      });
+      const pHb = board.create('intersection', [lineAC, perpB, 0], {
+        name: 'H_b',
+        size: 2.8,
+        color: '#f97316',
+        label: { offset: [10, 6], color: '#c2410c', fontSize: 10, fontWeight: 'bold' }
+      });
+      const pH = board.create('intersection', [perpA, perpB, 0], {
+        name: 'H (Trực tâm)',
+        size: 3.5,
+        color: '#ea580c',
+        label: { offset: [-55, 12], color: '#c2410c', fontWeight: 'bold', fontSize: 11 }
+      });
+      ptsMap['H'] = pH;
+      ptsMap['Ha'] = pHa;
+      ptsMap['Hb'] = pHb;
+      board.create('segment', [pA, pHa], { strokeColor: '#f97316', dash: 2, strokeWidth: 1.8 });
+      board.create('segment', [pB, pHb], { strokeColor: '#f97316', dash: 2, strokeWidth: 1.8 });
+    }
+
+    if (showMedian) {
+      const pM = board.create('midpoint', [pB, pC], {
+        name: 'M',
+        size: 3,
+        color: '#10b981',
+        label: { offset: [6, -16], color: '#047857', fontWeight: 'bold', fontSize: 11 }
+      });
+      const pN = board.create('midpoint', [pA, pC], { visible: false });
+      const medA = board.create('segment', [pA, pM], { strokeColor: '#10b981', dash: 3, strokeWidth: 1.7 });
+      const medB = board.create('line', [pB, pN], { visible: false });
+      const pG = board.create('intersection', [medA, medB, 0], {
+        name: 'G (Trọng tâm)',
+        size: 3.5,
+        color: '#059669',
+        label: { offset: [10, 10], color: '#065f46', fontWeight: 'bold', fontSize: 11 }
+      });
+      ptsMap['M'] = pM;
+      ptsMap['G'] = pG;
+    }
+
+    if (showCircumcircle) {
+      const pO = board.create('circumcenter', [pA, pB, pC], {
+        name: 'O (Tâm ngoại tiếp)',
+        size: 3.5,
+        color: '#7c3aed',
+        label: { offset: [10, -14], color: '#5b21b6', fontWeight: 'bold', fontSize: 11 }
+      });
+      ptsMap['O'] = pO;
+      board.create('circumcircle', [pA, pB, pC], {
+        strokeColor: '#8b5cf6',
+        dash: 2,
+        strokeWidth: 1.6,
+        center: { visible: false }
+      });
+    }
+  } else if (shapeType === 'circle_tangent') {
+    const pO = createVertex('O', 0, 0, '#7c3aed', [-16, -14]);
+    const pM = createVertex('M', 6, 0, '#ef4444', [10, -12]);
+    const pA = createVertex('A', 1.5, 2.598, '#2563eb', [-8, 14]);
+
+    const circle = board.create('circle', [pO, pA], {
+      strokeColor: '#4f46e5',
+      strokeWidth: 2.4,
+      fillColor: '#eef2ff',
+      fillOpacity: 0.2
+    });
+
+    const lineOM = board.create('line', [pO, pM], { visible: false });
+    const pB = board.create('reflection', [pA, lineOM], {
+      name: 'B (Tiếp điểm)',
+      size: 3.8,
+      color: '#2563eb',
+      label: { offset: [-8, -18], color: '#1e40af', fontWeight: 'bold', fontSize: 11 }
+    });
+    ptsMap['B'] = pB;
+
+    board.create('segment', [pM, pA], { strokeColor: '#1e293b', strokeWidth: 2.4 });
+    board.create('segment', [pM, pB], { strokeColor: '#1e293b', strokeWidth: 2.4 });
+    board.create('segment', [pO, pA], { strokeColor: '#7c3aed', dash: 2, strokeWidth: 1.8 });
+    board.create('segment', [pO, pB], { strokeColor: '#7c3aed', dash: 2, strokeWidth: 1.8 });
+
+    if (showMedian) {
+      board.create('segment', [pO, pM], { strokeColor: '#6366f1', dash: 3, strokeWidth: 1.8 });
+    }
+
+    if (showAltitude) {
+      const segAB = board.create('segment', [pA, pB], { strokeColor: '#f97316', strokeWidth: 2 });
+      const pH = board.create('intersection', [lineOM, segAB, 0], {
+        name: 'H',
+        size: 3.2,
+        color: '#ea580c',
+        label: { offset: [-14, 12], color: '#c2410c', fontWeight: 'bold', fontSize: 11 }
+      });
+      ptsMap['H'] = pH;
+    }
+
+    if (showCircumcircle) {
+      board.create('circumcircle', [pO, pA, pM], {
+        strokeColor: '#ec4899',
+        dash: 2,
+        strokeWidth: 1.5,
+        center: { visible: false }
+      });
+    }
+  } else if (shapeType === 'quadrilateral_cyclic') {
+    const pA = createVertex('A', -2.2, 2.6, '#ef4444', [-16, 12]);
+    const pB = createVertex('B', 2.5, 2.3, '#2563eb', [10, 12]);
+    const pC = createVertex('C', 2.8, -1.9, '#10b981', [10, -14]);
+    const pD = createVertex('D', -2.6, -2.2, '#f59e0b', [-18, -14]);
+
+    board.create('polygon', [pA, pB, pC, pD], {
+      fillColor: '#e0e7ff',
+      fillOpacity: 0.25,
+      borders: { strokeColor: '#1e293b', strokeWidth: 2.4 }
+    });
+
+    if (showAltitude) {
+      const diagAC = board.create('segment', [pA, pC], { strokeColor: '#f97316', dash: 2, strokeWidth: 1.8 });
+      const diagBD = board.create('segment', [pB, pD], { strokeColor: '#f97316', dash: 2, strokeWidth: 1.8 });
+      const pI = board.create('intersection', [diagAC, diagBD, 0], {
+        name: 'I (Giao 2 đường chéo)',
+        size: 3.5,
+        color: '#ea580c',
+        label: { offset: [10, 10], color: '#c2410c', fontWeight: 'bold', fontSize: 11 }
+      });
+      ptsMap['I'] = pI;
+    }
+
+    if (showCircumcircle) {
+      const pO = board.create('circumcenter', [pA, pB, pC], {
+        name: 'O',
+        size: 3.2,
+        color: '#7c3aed',
+        label: { offset: [-14, -14], color: '#5b21b6', fontWeight: 'bold', fontSize: 11 }
+      });
+      ptsMap['O'] = pO;
+      board.create('circumcircle', [pA, pB, pC], {
+        strokeColor: '#8b5cf6',
+        dash: 2,
+        strokeWidth: 1.7,
+        center: { visible: false }
+      });
+    }
+  } else if (shapeType === 'parallelogram_rhombus') {
+    const pA = createVertex('A', -3.5, -1.8, '#ef4444', [-18, -14]);
+    const pB = createVertex('B', 1.5, -1.8, '#2563eb', [10, -14]);
+    const pD = createVertex('D', -1.5, 2.2, '#f59e0b', [-18, 12]);
+    const pC = board.create('point', [
+      () => pB.X() + pD.X() - pA.X(),
+      () => pB.Y() + pD.Y() - pA.Y()
+    ], {
+      name: rawVertices.C?.name || 'C',
+      size: 3.8,
+      color: '#10b981',
+      label: { offset: [10, 12], color: '#0f172a', fontWeight: 'bold', fontSize: 12 }
+    });
+    ptsMap['C'] = pC;
+
+    board.create('polygon', [pA, pB, pC, pD], {
+      fillColor: '#dcfce7',
+      fillOpacity: 0.25,
+      borders: { strokeColor: '#1e293b', strokeWidth: 2.4 }
+    });
+
+    if (showMedian) {
+      board.create('segment', [pA, pC], { strokeColor: '#6366f1', dash: 2, strokeWidth: 1.8 });
+      board.create('segment', [pB, pD], { strokeColor: '#6366f1', dash: 2, strokeWidth: 1.8 });
+      const pO = board.create('midpoint', [pA, pC], {
+        name: 'O (Tâm đối xứng)',
+        size: 3.5,
+        color: '#4f46e5',
+        label: { offset: [10, -14], color: '#3730a3', fontWeight: 'bold', fontSize: 11 }
+      });
+      ptsMap['O'] = pO;
+    }
+
+    if (showAltitude) {
+      const lineAB = board.create('line', [pA, pB], { visible: false });
+      const perpDH = board.create('perpendicular', [lineAB, pD], { visible: false });
+      const pH = board.create('intersection', [lineAB, perpDH, 0], {
+        name: 'H (Đường cao)',
+        size: 3.2,
+        color: '#f97316',
+        label: { offset: [-10, -18], color: '#c2410c', fontWeight: 'bold', fontSize: 11 }
+      });
+      ptsMap['H'] = pH;
+      board.create('segment', [pD, pH], { strokeColor: '#f97316', dash: 2, strokeWidth: 2 });
+    }
+  } else if (shapeType === 'trapezoid_right') {
+    const pA = createVertex('A', -3, 2.2, '#ef4444', [-18, 12]);
+    const pB = createVertex('B', 1.5, 2.2, '#2563eb', [8, 12]);
+    const pC = createVertex('C', 4, -1.8, '#10b981', [10, -14]);
+    const pD = createVertex('D', -3, -1.8, '#f59e0b', [-18, -14]);
+
+    board.create('polygon', [pA, pB, pC, pD], {
+      fillColor: '#fef3c7',
+      fillOpacity: 0.3,
+      borders: { strokeColor: '#1e293b', strokeWidth: 2.4 }
+    });
+
+    board.create('angle', [pD, pA, pB], {
+      type: 'square', orthoType: 'square', radius: 0.4,
+      fillColor: '#fca5a5', fillOpacity: 0.4, strokeColor: '#ef4444', withLabel: false
+    });
+    board.create('angle', [pC, pD, pA], {
+      type: 'square', orthoType: 'square', radius: 0.4,
+      fillColor: '#fca5a5', fillOpacity: 0.4, strokeColor: '#ef4444', withLabel: false
+    });
+
+    if (showAltitude) {
+      const lineCD = board.create('line', [pC, pD], { visible: false });
+      const perpBH = board.create('perpendicular', [lineCD, pB], { visible: false });
+      const pH = board.create('intersection', [lineCD, perpBH, 0], {
+        name: 'H',
+        size: 3.2,
+        color: '#f97316',
+        label: { offset: [-6, -18], color: '#c2410c', fontWeight: 'bold', fontSize: 11 }
+      });
+      ptsMap['H'] = pH;
+      board.create('segment', [pB, pH], { strokeColor: '#f97316', dash: 2, strokeWidth: 2 });
+    }
+
+    if (showMedian) {
+      board.create('segment', [pA, pC], { strokeColor: '#6366f1', dash: 3, strokeWidth: 1.7 });
+      board.create('segment', [pB, pD], { strokeColor: '#6366f1', dash: 3, strokeWidth: 1.7 });
+    }
+  }
+
+  // Render extra points (midpoints / ratio points on segments)
+  if (Array.isArray(config.extraPoints)) {
+    config.extraPoints.forEach(ep => {
+      const p1 = ptsMap[ep.parentA];
+      const p2 = ptsMap[ep.parentB];
+      if (p1 && p2) {
+        const r = Number(ep.ratio ?? 0.5);
+        const pt = board.create('point', [
+          () => (1 - r) * p1.X() + r * p2.X(),
+          () => (1 - r) * p1.Y() + r * p2.Y()
+        ], {
+          name: ep.name || ep.id,
+          size: 3.5,
+          color: '#ec4899',
+          label: { offset: [8, 10], color: '#be185d', fontWeight: 'bold', fontSize: 11 }
+        });
+        ptsMap[ep.id] = pt;
+      }
+    });
+  }
+
+  // Render custom auxiliary lines
+  if (Array.isArray(config.auxLines)) {
+    config.auxLines.forEach(line => {
+      const p1 = ptsMap[line.from];
+      const p2 = ptsMap[line.to];
+      if (p1 && p2) {
+        board.create('segment', [p1, p2], {
+          strokeColor: line.color || '#f97316',
+          strokeWidth: 2.2,
+          dash: line.style === 'solid' ? 0 : 2,
+          name: line.label || '',
+          withLabel: Boolean(line.label),
+          label: { position: 'top', color: line.color || '#ea580c', fontWeight: 'bold', fontSize: 11 }
+        });
+      }
+    });
+  }
+
+  return ptsMap;
+}

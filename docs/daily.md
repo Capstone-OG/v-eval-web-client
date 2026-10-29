@@ -2,6 +2,35 @@
 
 ---
 
+## [29/10/2026] - Chuẩn Hóa Hiển Thị Công Thức Trực Quan WYSIWYG Toàn Diện Trong Studio Sư Phạm & Nâng Cấp Phòng Thí Nghiệm Hình Học Phẳng 2D Tương Tác (`JSXGraph`)
+
+- **Chuyển Đổi Toàn Bộ Ô Nhập Text Thô Sang Canvas Công Thức Trực Quan (`WordStyleFormulaCanvas.jsx` & `CurriculumStudioEditor.jsx`)**:
+  - *Khắc Phục Triệt Để Hiện Tượng Lộ Mã LaTeX Thô (`$y'$`, `$y = f(x)$`, `[VARIATION_TABLE]\`)*:
+    + Nâng cấp [`WordStyleFormulaCanvas.jsx`](./src/components/curriculum/WordStyleFormulaCanvas.jsx) bổ sung 2 chế độ bố cục mới: `compact` (dành cho thẻ Bẫy đề thi, thẻ Mẹo làm bài, Đề bài mẫu và Lời giải chi tiết) và `singleLine` (dành cho 4 phương án trắc nghiệm A, B, C, D).
+    + Thay thế hoàn toàn các thẻ `<textarea>` và `<input type="text">` thô trong Khối 2 (Mục 2 `examTraps`, Mục 3 `casioTricks`) và Khối 4 (`sampleQuestion.contentLatex`, `optionA..D`, `explanation`) của [`CurriculumStudioEditor.jsx`](./src/components/curriculum/CurriculumStudioEditor.jsx) bằng `<WordStyleFormulaCanvas />`. Giảng viên và cán bộ học vụ luôn nhìn thấy công thức toán học thực tế như người đọc bình thường tiếp cận, nhấp trực tiếp vào công thức để sửa số/ký hiệu tại chỗ.
+  - *Bóc Tách, Render Trực Quan & Chỉnh Sửa Kéo - Thả (Drag & Drop) Khối Bảng Biến Thiên (`VariationTable.jsx`), Thư Viện Công Thức / Hợp Chất (`HierarchicalMathPalette.jsx`) Và Đồ Thị 2D/3D Ngay Trong Canvas*:
+    + Nâng cấp `parseDocumentLines`, `serializeDocumentLines` và `handleDropSnippetOnCanvas` trong [`WordStyleFormulaCanvas.jsx`](./src/components/curriculum/WordStyleFormulaCanvas.jsx) để nhận diện nguyên khối các thẻ `[VARIATION_TABLE]...[/VARIATION_TABLE]`, `[MATH_GRAPH]...[/MATH_GRAPH]`, `[MATH_GRAPH_3D]...[/MATH_GRAPH_3D]`, `[MATH_GEOMETRY_2D]...[/MATH_GEOMETRY_2D]` và ảnh `![alt](url)`, hiển thị trực tiếp `<VariationTable />` và `<InteractiveMathRenderer />` ngay trong vùng soạn thảo và nhận thao tác kéo - thả trực tiếp từ thư viện bên trái.
+    + Nâng cấp [`VariationTable.jsx`](./src/components/common/VariationTable.jsx) và [`InteractiveFormulaBuilderModal.jsx`](./src/components/curriculum/InteractiveFormulaBuilderModal.jsx) sang **Kiến trúc Lưới Cột Chuẩn SGK `2N - 1` Cột & Tương Tác Không Nhảy Bảng (Zero-Jump Grid Editor)**:
+      * Khắc phục triệt để lỗi lệch cột giữa dòng `x`, dòng `y'` và dòng `y` bằng thuật toán `normalizeVariationGrid` chia bảng thành đúng `2N - 1` cột dọc cố định: các cột chẵn (`2m`) căn thẳng hàng dọc giữa mốc `x_m`, đạo hàm tại điểm (`0` hoặc tiệm cận đứng `||`) và giá trị cực trị `y_m`; các cột lẻ (`2k + 1`) căn thẳng hàng dọc giữa khoảng dấu `+` / `-` và mũi tên вектор chéo SVG `↗` / `↘`.
+      * Loại bỏ hoàn toàn cơ chế đóng/mở khung phía trên làm đẩy bảng nhảy xuống dưới chuột khi click; cố định chiều cao 3 dòng (`h-11`, `h-11`, `h-24`) và đặt **Thanh Công Cụ Kéo - Thả & Chỉnh Nhanh** cố định phía dưới bảng.
+      * Tối ưu hóa thao tác 1 chạm: Nhấp 1 lần vào dấu `+` / `-` (hoặc mũi tên `↗` / `↘`) để đảo chiều biến thiên tại chỗ; nhấp 1 lần vào `0` / `||` ở dòng `y'` để đổi giữa điểm cực trị và tiệm cận đứng vạch kép; nhấp vào ô `x` hoặc `y` để chọn rồi chạm thẻ ký hiệu / gõ số trực tiếp hoặc kéo thẻ thả thẳng vào ô.
+      * Sửa lỗi lệch prop `initialTemplateId` trong `InteractiveFormulaBuilderModal.jsx` giúp nút `📊 Bảng Biến Thiên` mở đúng tab ngay lập tức và tích hợp trực tiếp bảng biến thiên tương tác kéo - thả vào trong modal thay cho 4 ô nhập chuỗi thô.
+    + Tái thiết kế toàn diện [`HierarchicalMathPalette.jsx`](./src/components/curriculum/HierarchicalMathPalette.jsx) (**Thư Viện Công Thức & Hợp Chất Kéo - Thả**): Phân phối bảng màu chủ đề riêng cho 7 lĩnh vực (`Toán Học`, `Hóa Học`, `Vật Lý`, `Sinh Học`, `Ngữ Văn`, `Địa Lý`, `Ký Hiệu`), hiển thị mỗi công thức/hợp chất dưới dạng **Studio Tile trực quan** (`draggable={true}`) với khung chữ KaTeX nổi bật ở trung tâm, bổ sung danh mục `Bảng Biến Thiên & Cực Trị (Kéo - Thả)` và rút ngắn thời gian hiện thẻ xem trước xuống `450ms`.
+  - *Khử Triệt Để Dấu Nháy Đơn Thừa `'...'`, Dấu Gạch Chéo Ngược Cuối Dòng `\` & Đồng Bộ Nút Mức Độ Bloom*:
+    + Bổ sung hàm làm sạch `cleanOptionOrText` và nâng cấp `sanitizeLineText` tự động loại bỏ cặp dấu nháy đơn bao quanh phương án trắc nghiệm (ví dụ `'Hàm số đồng biến trên ...'`) và các dấu `\` thừa cuối dòng.
+    + Bổ sung hàm `normalizeBloomLevel` ánh xạ chính xác các giá trị `'Nhận biết'`, `'Thông hiểu'`, `'Vận dụng'`, `'Vận dụng cao'` về chuẩn `'Nhận biết (L1)'`..`'Vận dụng cao (L4)'`, đảm bảo nút mức độ nhận thức Bloom trong phần Cài đặt Định danh luôn sáng rõ trạng thái đang chọn.
+
+- **Nâng Cấp Toàn Diện Phòng Thí Nghiệm Hình Học Phẳng 2D Tương Tác (`InteractiveMathWorkbenchModal.jsx`, `InteractiveMathRenderer.jsx` & `mathGraphUtils.js`)**:
+  - *Khắc Phục Lỗi Dính Chữ Nghiêng Trên Header `Mô hình:` & Chồng Lấp Nhãn Điểm `H`, `M` Trên Mặt Phẳng 2D*:
+    + Tách biệt văn bản tiếng Việt khỏi cặp dấu `$...$` trong `getCurrentFormulaString()` và header `Mô hình:`, chấm dứt hiện tượng chữ tiếng Việt bị KaTeX ép thành chuỗi nghiêng dính liền (`TamgiácvuôngABCtạiA`).
+    + Dựng chân đường cao `H` bằng phép chiếu vuông góc thực sự (`perpendicular` + `intersection` kèm ký hiệu góc vuông `angle` tại `A` và `H`) với tọa độ chuẩn `A(0,0), B(6,0), C(0,3.5)` và `label.offset` tách biệt hoàn toàn giữa `H (Chân đường cao)` và `M (Tâm ngoại tiếp)`.
+  - *Bổ Sung 6 Mô Hình Hình Học Phẳng Chuẩn Đề Thi & Bảng Điều Khiển Tùy Biến Đỉnh / Đường Phụ (`SHAPES_2D_META`, `mount2DGeometryBoard`)*:
+    + Cung cấp 6 mô hình hình học phẳng kinh điển: Tam giác vuông `ABC` (đường cao `AH`, trung tuyến `AM`), Tam giác nhọn `ABC` nội tiếp `(O)` (trực tâm `H`, trọng tâm `G`), Đường tròn `(O; R)` & hai tiếp tuyến `MA, MB`, Tứ giác nội tiếp `ABCD`, Hình bình hành / Hình thoi `ABCD`, và Hình thang vuông `ABCD`.
+    + Trang bị bảng điều khiển cột trái đầy đủ cho tab `📐 Hình Phẳng 2D`: chọn mô hình, bật/tắt đường cao, trung tuyến, đường tròn ngoại tiếp, hệ trục `Oxy`, sửa tên & tọa độ `(X, Y)` từng đỉnh, thêm điểm phụ chia đoạn và kẻ đoạn thẳng phụ nét đứt/nét liền.
+    + Hoàn thiện bộ tuần tự hóa & giải mã `formatMathGeometry2DTag` / `parseMathGeometry2DTag` cho thẻ `[MATH_GEOMETRY_2D]...[/MATH_GEOMETRY_2D]` và tích hợp vào `InteractiveMathRenderer.jsx`.
+
+---
+
 ## [22/10/2026] - Hệ Thống Thông Báo Toàn Cục (Global Notification Toast System) Thay Thế Toàn Bộ Browser Alert
 
 - **Kiến Trúc Điều Phối Thông Báo Toàn Cục (`ToastContext.jsx` & `GlobalToastContainer.jsx`)**:

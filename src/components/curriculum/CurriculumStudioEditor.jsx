@@ -562,6 +562,25 @@ export function MathFormulaPalette({
   );
 }
 
+function normalizeBloomLevel(rawLevel) {
+  if (!rawLevel) return 'Vận dụng (L3)';
+  const s = String(rawLevel).trim().toLowerCase();
+  if (s.includes('l1') || s.includes('nhận biết')) return 'Nhận biết (L1)';
+  if (s.includes('l2') || s.includes('thông hiểu')) return 'Thông hiểu (L2)';
+  if (s.includes('l4') || s.includes('vận dụng cao')) return 'Vận dụng cao (L4)';
+  if (s.includes('l3') || s.includes('vận dụng')) return 'Vận dụng (L3)';
+  return 'Vận dụng (L3)';
+}
+
+function cleanOptionOrText(str) {
+  if (!str) return '';
+  let s = unescapeLiteralNewlines(String(str)).replace(/\\+\s*$/gm, '').trim();
+  if (s.length >= 2 && s.startsWith("'") && s.endsWith("'") && !s.slice(1, -1).includes("'")) {
+    s = s.slice(1, -1).trim();
+  }
+  return s;
+}
+
 export default function CurriculumStudioEditor({ pattern, domain, chapter, lesson, onClose, onSaveSuccess }) {
   const isStem = isMathOrStemDomain(domain);
 
@@ -577,14 +596,14 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
   // Form State for Pattern Content
   const [form, setForm] = useState({
     patternId: pattern?.patternId || '',
-    name: pattern?.name || pattern?.patternName || '',
+    name: cleanOptionOrText(pattern?.name || pattern?.patternName || ''),
     weight: pattern?.weight ? String(pattern.weight).replace('%', '').trim() : '5',
-    level: pattern?.level || pattern?.classification || 'Vận dụng',
+    level: normalizeBloomLevel(pattern?.level || pattern?.classification || 'Vận dụng (L3)'),
     theoryRecap: unescapeLiteralNewlines(pattern?.theoryRecap || ''),
     solutionMethod: unescapeLiteralNewlines(parsedInitial.method),
     sampleProblem: unescapeLiteralNewlines(parsedInitial.sampleProblem || ''),
-    examTraps: unescapeLiteralNewlines(pattern?.examTraps || parsedInitial.traps || ''),
-    casioTricks: unescapeLiteralNewlines(pattern?.casioTricks || parsedInitial.casio || ''),
+    examTraps: cleanOptionOrText(pattern?.examTraps || parsedInitial.traps || ''),
+    casioTricks: cleanOptionOrText(pattern?.casioTricks || parsedInitial.casio || ''),
     videoUrl: pattern?.videoLesson?.videoUrl || '',
     durationSeconds: pattern?.videoLesson?.durationSeconds || 600,
     videoTimestamps: [
@@ -595,13 +614,13 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
     sampleQuestion: {
       questionId: pattern?.sampleQuestion?.questionId || null,
       difficultyLevel: 2,
-      contentLatex: pattern?.sampleQuestion?.content || '',
-      optionA: pattern?.sampleQuestion?.options?.[0]?.replace(/^A\.\s*/, '') || '',
-      optionB: pattern?.sampleQuestion?.options?.[1]?.replace(/^B\.\s*/, '') || '',
-      optionC: pattern?.sampleQuestion?.options?.[2]?.replace(/^C\.\s*/, '') || '',
-      optionD: pattern?.sampleQuestion?.options?.[3]?.replace(/^D\.\s*/, '') || '',
+      contentLatex: cleanOptionOrText(pattern?.sampleQuestion?.content || ''),
+      optionA: cleanOptionOrText(pattern?.sampleQuestion?.options?.[0]?.replace(/^A\.\s*/, '') || ''),
+      optionB: cleanOptionOrText(pattern?.sampleQuestion?.options?.[1]?.replace(/^B\.\s*/, '') || ''),
+      optionC: cleanOptionOrText(pattern?.sampleQuestion?.options?.[2]?.replace(/^C\.\s*/, '') || ''),
+      optionD: cleanOptionOrText(pattern?.sampleQuestion?.options?.[3]?.replace(/^D\.\s*/, '') || ''),
       correctOption: pattern?.sampleQuestion?.correct !== undefined ? String.fromCharCode(65 + pattern.sampleQuestion.correct) : 'A',
-      explanation: pattern?.sampleQuestion?.explanation || ''
+      explanation: cleanOptionOrText(pattern?.sampleQuestion?.explanation || '')
     }
   });
 
@@ -621,6 +640,10 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
   const textareaRefs = useRef({});
   const theoryCanvasRef = useRef(null);
   const methodCanvasRef = useRef(null);
+  const examTrapsCanvasRef = useRef(null);
+  const casioTricksCanvasRef = useRef(null);
+  const sampleQuestionCanvasRef = useRef(null);
+  const sampleExplanationCanvasRef = useRef(null);
 
   // Handle Word-like text formatting (Bold, Italic, Headings, Lists, Callouts)
   const handleFormatText = (targetField, prefix = '', suffix = '') => {
@@ -792,6 +815,26 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
       return;
     }
 
+    if (field === 'examTraps' && methodMode !== 'markdown' && examTrapsCanvasRef.current) {
+      examTrapsCanvasRef.current.insertSnippet(snippet);
+      return;
+    }
+
+    if (field === 'casioTricks' && methodMode !== 'markdown' && casioTricksCanvasRef.current) {
+      casioTricksCanvasRef.current.insertSnippet(snippet);
+      return;
+    }
+
+    if (field === 'sampleQuestion' && sampleQuestionCanvasRef.current) {
+      sampleQuestionCanvasRef.current.insertSnippet(snippet);
+      return;
+    }
+
+    if (field === 'sampleExplanation' && sampleExplanationCanvasRef.current) {
+      sampleExplanationCanvasRef.current.insertSnippet(snippet);
+      return;
+    }
+
     const insertText = isRaw ? snippet : `$${snippet}$`;
 
     const el = textareaRefs.current[field];
@@ -824,8 +867,8 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
 
     // Helper to replace or append graph tag cleanly
     const updateTextWithGraph = (oldText) => {
-      const graphRegex = /(\[MATH_GRAPH_3D\][\s\S]*?\[\/MATH_GRAPH_3D\]|\[MATH_GRAPH\][\s\S]*?\[\/MATH_GRAPH\])/i;
-      const isNewGraph = /(\[MATH_GRAPH_3D\]|\[MATH_GRAPH\])/i.test(insertText);
+      const graphRegex = /(\[MATH_GRAPH_3D\][\s\S]*?\[\/MATH_GRAPH_3D\]|\[MATH_GEOMETRY_2D\][\s\S]*?\[\/MATH_GEOMETRY_2D\]|\[MATH_GRAPH\][\s\S]*?\[\/MATH_GRAPH\])/i;
+      const isNewGraph = /(\[MATH_GRAPH_3D\]|\[MATH_GEOMETRY_2D\]|\[MATH_GRAPH\])/i.test(insertText);
       if (isNewGraph && graphRegex.test(oldText || '')) {
         return (oldText || '').replace(graphRegex, insertText.trim());
       }
@@ -871,7 +914,29 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
       const end = el.selectionEnd;
       const val = el.value || '';
       const nextVal = val.slice(0, start) + imgMarkdown + val.slice(end);
-      setForm(prev => ({ ...prev, [field]: nextVal }));
+      if (field === 'sampleQuestion') {
+        setForm(prev => ({ ...prev, sampleQuestion: { ...prev.sampleQuestion, contentLatex: nextVal } }));
+      } else if (field === 'sampleExplanation') {
+        setForm(prev => ({ ...prev, sampleQuestion: { ...prev.sampleQuestion, explanation: nextVal } }));
+      } else {
+        setForm(prev => ({ ...prev, [field]: nextVal }));
+      }
+    } else if (field === 'sampleQuestion') {
+      setForm(prev => ({
+        ...prev,
+        sampleQuestion: {
+          ...prev.sampleQuestion,
+          contentLatex: `${prev.sampleQuestion?.contentLatex || ''}${imgMarkdown}`
+        }
+      }));
+    } else if (field === 'sampleExplanation') {
+      setForm(prev => ({
+        ...prev,
+        sampleQuestion: {
+          ...prev.sampleQuestion,
+          explanation: `${prev.sampleQuestion?.explanation || ''}${imgMarkdown}`
+        }
+      }));
     } else {
       setForm(prev => ({
         ...prev,
@@ -1752,17 +1817,19 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
                         </div>
                       </div>
 
-                      {/* Soạn thảo trực tiếp trong thẻ cảnh báo */}
-                      <textarea
-                        ref={el => (textareaRefs.current['examTraps'] = el)}
-                        rows={3}
-                        value={form.examTraps}
-                        onFocus={() => setActiveFormulaTarget('examTraps')}
+                      {/* Soạn thảo trực tiếp công thức hiển thị chuẩn trong thẻ cảnh báo */}
+                      <div
+                        onClick={() => setActiveFormulaTarget('examTraps')}
                         onPaste={(e) => handlePasteEvent(e, 'examTraps')}
-                        onChange={(e) => setForm(prev => ({ ...prev, examTraps: e.target.value }))}
-                        placeholder="Gõ trực tiếp các bẫy đề thi cần cảnh báo cho học sinh tại đây:&#10;- Quên xét điều kiện xác định khi rút gọn biểu thức...&#10;- Nhầm lẫn giữa cực trị của hàm số y và điểm cực trị x..."
-                        className="w-full p-3.5 rounded-xl border border-rose-200 font-sans text-xs leading-relaxed focus:outline-none focus:ring-2 focus:ring-rose-400 bg-white text-rose-950 shadow-2xs placeholder:text-rose-300 resize-y"
-                      />
+                      >
+                        <WordStyleFormulaCanvas
+                          ref={examTrapsCanvasRef}
+                          compact
+                          content={form.examTraps}
+                          onChange={(val) => setForm(prev => ({ ...prev, examTraps: val }))}
+                          placeholder="Gõ trực tiếp các bẫy đề thi cần cảnh báo cho học sinh tại đây (công thức tự động hiển thị chuẩn)..."
+                        />
+                      </div>
                     </div>
 
                     {/* 3. Mẹo Casio / Mẹo tư duy nhanh - Thẻ Mẹo Trực Tiếp */}
@@ -1791,17 +1858,19 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
                         </div>
                       </div>
 
-                      {/* Soạn thảo trực tiếp trong thẻ mẹo Casio */}
-                      <textarea
-                        ref={el => (textareaRefs.current['casioTricks'] = el)}
-                        rows={3}
-                        value={form.casioTricks}
-                        onFocus={() => setActiveFormulaTarget('casioTricks')}
+                      {/* Soạn thảo trực tiếp công thức hiển thị chuẩn trong thẻ mẹo Casio */}
+                      <div
+                        onClick={() => setActiveFormulaTarget('casioTricks')}
                         onPaste={(e) => handlePasteEvent(e, 'casioTricks')}
-                        onChange={(e) => setForm(prev => ({ ...prev, casioTricks: e.target.value }))}
-                        placeholder={isStem ? "Gõ trực tiếp các kỹ thuật bấm máy tính Casio & công thức giải nhanh tại đây:\n- Bấm [Menu 8] nhập f(x) để dò dấu và cực trị nhanh trong 15s...\n- Kỹ thuật Cal x = 1000..." : "Gõ trực tiếp các mẹo làm bài & chiến thuật tư duy nhanh tại đây:\n- Kỹ thuật gạch chân từ khóa đề bài trong 30s...\n- Công thức phân bổ thời gian và mẹo liên hệ thực tế ghi điểm tối đa..."}
-                        className="w-full p-3.5 rounded-xl border border-indigo-200 font-sans text-xs leading-relaxed focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white text-indigo-950 shadow-2xs placeholder:text-indigo-300 resize-y"
-                      />
+                      >
+                        <WordStyleFormulaCanvas
+                          ref={casioTricksCanvasRef}
+                          compact
+                          content={form.casioTricks}
+                          onChange={(val) => setForm(prev => ({ ...prev, casioTricks: val }))}
+                          placeholder={isStem ? "Gõ trực tiếp các kỹ thuật bấm máy tính Casio & công thức giải nhanh tại đây..." : "Gõ trực tiếp các mẹo làm bài & chiến thuật tư duy nhanh tại đây..."}
+                        />
+                      </div>
                     </div>
                   </div>
                 )}
@@ -2094,19 +2163,22 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
                         </button>
                       </div>
                     </div>
-                    <textarea
-                      ref={el => (textareaRefs.current['sampleQuestion'] = el)}
-                      rows={3}
-                      value={form.sampleQuestion?.contentLatex || ''}
-                      onFocus={() => setActiveFormulaTarget('sampleQuestion')}
+                    <div
+                      onClick={() => setActiveFormulaTarget('sampleQuestion')}
                       onPaste={(e) => handlePasteEvent(e, 'sampleQuestion')}
-                      onChange={(e) => setForm(prev => ({
-                        ...prev,
-                        sampleQuestion: { ...prev.sampleQuestion, contentLatex: e.target.value }
-                      }))}
-                      placeholder="Cho hàm số y = f(x)... Hỗ trợ gõ text, bấm 'Điền Công Thức' hoặc bấm Ctrl+V để dán ảnh đề bài."
-                      className="w-full p-3 rounded-xl border border-slate-300 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-slate-900 placeholder:text-slate-400 shadow-2xs"
-                    />
+                    >
+                      <WordStyleFormulaCanvas
+                        ref={sampleQuestionCanvasRef}
+                        compact
+                        content={form.sampleQuestion?.contentLatex || ''}
+                        onChange={(val) => setForm(prev => ({
+                          ...prev,
+                          sampleQuestion: { ...prev.sampleQuestion, contentLatex: val }
+                        }))}
+                        onEditMathGraph={(tag) => handleOpenMathWorkbench('jsxgraph', 'sampleQuestion', tag)}
+                        placeholder="Cho hàm số y = f(x)... Hỗ trợ hiển thị trực tiếp công thức, bảng biến thiên, đồ thị và dán ảnh (Ctrl+V)."
+                      />
+                    </div>
                   </div>
 
                   {/* 4 Options Grid */}
@@ -2132,18 +2204,16 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
                             className="w-4 h-4 text-emerald-600 focus:ring-emerald-500 cursor-pointer shrink-0"
                           />
                           <span className="font-bold text-xs text-slate-800 shrink-0">{optKey}.</span>
-                          <input
-                            type="text"
-                            value={form.sampleQuestion?.[fieldName] || ''}
-                            onChange={(e) => {
-                              const val = e.target.value;
+                          <WordStyleFormulaCanvas
+                            singleLine
+                            content={form.sampleQuestion?.[fieldName] || ''}
+                            onChange={(val) => {
                               setForm(prev => ({
                                 ...prev,
                                 sampleQuestion: { ...prev.sampleQuestion, [fieldName]: val }
                               }));
                             }}
                             placeholder={`Phương án ${optKey}...`}
-                            className="w-full text-xs font-semibold focus:outline-none bg-transparent text-slate-900 placeholder:text-slate-400"
                           />
                         </div>
                       );
@@ -2186,19 +2256,22 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
                         </button>
                       </div>
                     </div>
-                    <textarea
-                      ref={el => (textareaRefs.current['sampleExplanation'] = el)}
-                      rows={3}
-                      value={form.sampleQuestion?.explanation || ''}
-                      onFocus={() => setActiveFormulaTarget('sampleExplanation')}
+                    <div
+                      onClick={() => setActiveFormulaTarget('sampleExplanation')}
                       onPaste={(e) => handlePasteEvent(e, 'sampleExplanation')}
-                      onChange={(e) => setForm(prev => ({
-                        ...prev,
-                        sampleQuestion: { ...prev.sampleQuestion, explanation: e.target.value }
-                      }))}
-                      placeholder="Lời giải chi tiết theo các bước của Dạng bài... Hỗ trợ gõ text, bấm 'Điền Công Thức' hoặc bấm Ctrl+V để dán ảnh giải thích."
-                      className="w-full p-3 rounded-xl border border-slate-300 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-slate-900 placeholder:text-slate-400 shadow-2xs"
-                    />
+                    >
+                      <WordStyleFormulaCanvas
+                        ref={sampleExplanationCanvasRef}
+                        compact
+                        content={form.sampleQuestion?.explanation || ''}
+                        onChange={(val) => setForm(prev => ({
+                          ...prev,
+                          sampleQuestion: { ...prev.sampleQuestion, explanation: val }
+                        }))}
+                        onEditMathGraph={(tag) => handleOpenMathWorkbench('jsxgraph', 'sampleExplanation', tag)}
+                        placeholder="Lời giải chi tiết theo các bước của Dạng bài (công thức hiển thị trực quan)..."
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -2303,20 +2376,23 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-slate-700">Mức độ nhận thức chuẩn Bloom:</label>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                    {['Nhận biết (L1)', 'Thông hiểu (L2)', 'Vận dụng (L3)', 'Vận dụng cao (L4)'].map((lvl) => (
-                      <button
-                        key={lvl}
-                        type="button"
-                        onClick={() => setForm(prev => ({ ...prev, level: lvl }))}
-                        className={`p-2.5 rounded-xl border text-xs font-bold transition-all ${
-                          form.level === lvl 
-                            ? 'bg-blue-600 text-white border-blue-600 shadow-sm' 
-                            : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
-                        }`}
-                      >
-                        {lvl}
-                      </button>
-                    ))}
+                    {['Nhận biết (L1)', 'Thông hiểu (L2)', 'Vận dụng (L3)', 'Vận dụng cao (L4)'].map((lvl) => {
+                      const isSelected = normalizeBloomLevel(form.level) === lvl;
+                      return (
+                        <button
+                          key={lvl}
+                          type="button"
+                          onClick={() => setForm(prev => ({ ...prev, level: lvl }))}
+                          className={`p-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                            isSelected
+                              ? 'bg-blue-600 text-white border-blue-600 shadow-sm ring-2 ring-blue-100' 
+                              : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+                          }`}
+                        >
+                          {lvl}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               </div>

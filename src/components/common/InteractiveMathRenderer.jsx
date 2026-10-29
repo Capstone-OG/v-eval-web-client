@@ -20,6 +20,8 @@ import {
   compileMathFunction,
   parseMathGraphTag,
   parseMathGraph3DTag,
+  parseMathGeometry2DTag,
+  mount2DGeometryBoard,
   getDefaultBasePoints
 } from '../../utils/mathGraphUtils';
 
@@ -73,6 +75,9 @@ export default function InteractiveMathRenderer({
     const trimmed = rawTag.trim();
     if (trimmed.toUpperCase().startsWith('[MATH_GRAPH_3D]')) {
       return parseMathGraph3DTag(trimmed);
+    }
+    if (trimmed.toUpperCase().startsWith('[MATH_GEOMETRY_2D]')) {
+      return parseMathGeometry2DTag(trimmed);
     }
     if (trimmed.toUpperCase().startsWith('[MATH_GRAPH]')) {
       return parseMathGraphTag(trimmed);
@@ -451,6 +456,23 @@ export default function InteractiveMathRenderer({
           });
         }
 
+        boardRef.current = board;
+      }
+
+      // =========================================================
+      // 1B. RENDER 2D PLANE GEOMETRY MODEL
+      // =========================================================
+      else if (config.is2DGeometry) {
+        const board = JXG.JSXGraph.initBoard(elId, {
+          boundingbox: [-6, 6, 8, -4.5],
+          axis: Boolean(config.showAxes),
+          showNavigation: false,
+          showCopyright: false,
+          pan: { enabled: interactive },
+          zoom: { factorX: 1.25, factorY: 1.25, wheel: interactive, needOption: false }
+        });
+
+        mount2DGeometryBoard(board, config, interactive);
         boardRef.current = board;
       }
 

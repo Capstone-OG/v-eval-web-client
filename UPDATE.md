@@ -1,14 +1,13 @@
 # NHẬT KÝ CẬP NHẬT (UPDATE LOG) - WEB CLIENT
 
-## [27/10/2026] - Khởi Tạo Bộ Unit Test Cho Token Storage Client Và Tích Hợp CI Test
+## [29/10/2026] - Chuẩn Hóa Hiển Thị Công Thức Trực Quan WYSIWYG, Bảng Biến Thiên Lưới `2N - 1` Cột Không Nhảy Layout, Tái Thiết Kế Thư Viện Công Thức/Hợp Chất & Nâng Cấp Hình Học Phẳng 2D (`JSXGraph`)
 
-- **Khởi Tạo Bộ Unit Test Cho Token Storage (`tests/tokenStorage.test.js`, 3 Tests)**:
-  - Tận dụng chuẩn Node.js Native Test Runner (`node:test`, `node:assert/strict`) tương thích hoàn toàn môi trường ESM / Node 20 / Node 24.
-  - Triển khai bộ 3 unit test cho module quản lý phiên làm việc & JWT `tokenStorage`:
-    - Kiểm thử lưu trữ và trích xuất Access Token & Refresh Token hợp lệ.
-    - Kiểm thử tuần tự hóa và giải mã đối tượng thông tin người dùng (`user profile`) từ Storage.
-    - Kiểm thử dọn sạch toàn bộ khóa chứng thực khi đăng xuất (`clearTokens`).
-  - Cập nhật an toàn `import.meta.env?.VITE_API_GATEWAY_URL` trong [`apiClient.js`](./src/services/apiClient.js) hỗ trợ chạy test mượt mà ở cả môi trường Node và Vite.
-  - Bổ sung lệnh `"test": "node --test"` vào `package.json` (chạy hoàn thành 100% trong ~90ms).
-- **Tích Hợp Tự Động Hóa CI/CD Workflow**:
-  - Bổ sung bước thực thi `npm test` vào `.github/workflows/ci.yml` trước bước build ứng dụng.
+- **Chuyển Đổi Toàn Bộ Ô Nhập Text Thô Sang Canvas Công Thức Trực Quan & Bảng Biến Thiên Lưới `2N - 1` Cột Không Nhảy Layout (`WordStyleFormulaCanvas.jsx`, `VariationTable.jsx`, `InteractiveFormulaBuilderModal.jsx`, `CurriculumStudioEditor.jsx`)**:
+  - Nâng cấp [`VariationTable.jsx`](./src/components/common/VariationTable.jsx) và [`InteractiveFormulaBuilderModal.jsx`](./src/components/curriculum/InteractiveFormulaBuilderModal.jsx) sang **Kiến trúc Lưới Cột Chuẩn SGK (`2N - 1` cột)**: Căn thẳng hàng dọc tuyệt đối giữa mốc `x`, đạo hàm `0`/`||` và cực trị `y`; cố định chiều cao dòng và đặt **Thanh Công Cụ Kéo - Thả & Chỉnh Nhanh** ở phía dưới bảng để bảng không bao giờ bị đẩy nhảy lên/xuống khi click.
+  - Hỗ trợ 1-click đổi dấu `+`/`-` (tự động đảo mũi tên chéo SVG `↗`/`↘`), 1-click đổi giữa điểm cực trị `0` và tiệm cận đứng vạch kép `||`, chọn ô `x`/`y` để gõ số hoặc kéo thả thẻ ký hiệu; sửa lỗi prop `initialTemplateId` giúp nút `📊 Bảng Biến Thiên` mở đúng tab ngay lập tức.
+  - Thay thế các `<textarea>` và `<input>` thô tại Khối 2 (`examTraps`, `casioTricks`) và Khối 4 (`contentLatex`, `optionA..D`, `explanation`) bằng `<WordStyleFormulaCanvas />`; tự động làm sạch dấu nháy đơn bao ngoài phương án (`'...'`), xóa ký tự `\` thừa cuối dòng và chuẩn hóa ánh xạ mức độ nhận thức Bloom (`Nhận biết (L1)` .. `Vận dụng cao (L4)`).
+- **Tái Thiết Kế Thư Viện Công Thức & Hợp Chất Kéo - Thả (`HierarchicalMathPalette.jsx`)**:
+  - Tái thiết kế thư viện 7 môn học (`Toán Học`, `Hóa Học`, `Vật Lý`, `Sinh Học`, `Ngữ Văn`, `Địa Lý`, `Ký Hiệu`) sang giao diện **Studio Tile** phân màu theo môn, hiển thị công thức KaTeX và hợp chất hóa học trực quan ngay ở trung tâm thẻ, hỗ trợ kéo - thả HTML5 (`draggable={true}`) thẳng vào vùng soạn thảo hoặc vào ô Bảng biến thiên và bổ sung danh mục `Bảng Biến Thiên & Cực Trị (Kéo - Thả)`.
+- **Nâng Cấp Phòng Thí Nghiệm Hình Học Phẳng 2D Tương Tác (`InteractiveMathWorkbenchModal.jsx`, `InteractiveMathRenderer.jsx`, `mathGraphUtils.js`)**:
+  - Khắc phục lỗi ép chữ tiếng Việt vào môi trường toán gây nghiêng dính chữ trên huy hiệu `Mô hình:` và lỗi chồng lấp nhãn giữa chân đường cao `H` và trung điểm `M`.
+  - Bổ sung 6 mô hình hình học phẳng chuẩn SGK, bảng tùy chỉnh tọa độ `(X, Y)` các đỉnh, tạo điểm phụ chia đoạn, kẻ đoạn thẳng phụ nét đứt/liền và hỗ trợ đầy đủ thẻ `[MATH_GEOMETRY_2D]...[/MATH_GEOMETRY_2D]`.

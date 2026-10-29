@@ -697,6 +697,17 @@ V-Eval-Web_Client/
 - **Immediate First-Pattern Chapter Loading**:
   - Refactored `toggleChapter` and `toggleLesson` to automatically expand and select the first available pattern, ensuring the right pedagogical workspace pane immediately loads content upon chapter navigation.
 
+### 4.54. Universal WYSIWYG Formula Canvas, Drag-and-Drop Variation Table & Redesigned Formula/Compound Studio Library (`WordStyleFormulaCanvas.jsx`, `VariationTable.jsx`, `HierarchicalMathPalette.jsx`, `CurriculumStudioEditor.jsx`, `InteractiveMathWorkbenchModal.jsx`, `InteractiveMathRenderer.jsx`, `mathGraphUtils.js`)
+- **Universal In-Place Visual Formula Rendering & Drag-and-Drop Variation Table (`VariationTable.jsx`)**:
+  - Extended `WordStyleFormulaCanvas.jsx` with `compact` and `singleLine` layout variants, HTML5 drag-and-drop drop zones (`handleDropSnippetOnCanvas`), and embedded block-level parsers for `[VARIATION_TABLE]`, `[MATH_GRAPH]`, `[MATH_GRAPH_3D]`, `[MATH_GEOMETRY_2D]`, and Markdown images.
+  - Upgraded `VariationTable.jsx` and `InteractiveFormulaBuilderModal.jsx` with a **Zero-Jump `2N - 1` Column Grid Architecture (`normalizeVariationGrid`)**: aligns every milestone `x_m` vertically above its derivative zero/asymptote (`0` or `||`) and extremum `y_m`, while placing interval signs (`+`/`-`) and SVG diagonal arrows directly in odd interval columns (`2k + 1`). Fixed row heights and a bottom-docked Drag-and-Drop / Quick-Edit bar guarantee zero layout shifting when clicking cells.
+  - Redesigned `HierarchicalMathPalette.jsx` into a color-coded 7-domain Studio Library where every formula and chemical compound chip renders live KaTeX typography on a draggable visual tile (`draggable={true}`) and includes a dedicated `variation_table` category.
+  - Replaced raw `<textarea>` and `<input>` controls in Block 2 (`examTraps`, `casioTricks`) and Block 4 (`sampleQuestion.contentLatex`, `optionA..D`, `explanation`) with `<WordStyleFormulaCanvas />`, eliminating raw LaTeX code exposure, stray wrapping single quotes `'...'`, and trailing backslashes `\`.
+  - Standardized Bloom taxonomy level matching via `normalizeBloomLevel` so cognitive level buttons (`L1`–`L4`) always reflect active pattern state.
+- **Full-Featured 2D Plane Geometry Studio & `[MATH_GEOMETRY_2D]` Serialization**:
+  - Implemented `getDefault2DGeometryPoints`, `formatMathGeometry2DTag`, `parseMathGeometry2DTag`, `SHAPES_2D_META`, and `mount2DGeometryBoard` in `src/utils/mathGraphUtils.js`.
+  - Supports 6 canonical plane geometry configurations (`right_triangle`, `acute_triangle`, `circle_tangent`, `quadrilateral_cyclic`, `parallelogram_rhombus`, `trapezoid_right`) with exact perpendicular altitude projection, right-angle square markers, non-overlapping label offsets for `H` and `M`, interactive vertex `(X, Y)` coordinate editing, custom ratio points, and dashed/solid auxiliary segments.
+
 ---
 
 ## 5. Verification & Acceptance Criteria
