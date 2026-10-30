@@ -196,13 +196,15 @@ export function parseEquationStructure(latex) {
     };
   }
 
-  // 5. Square Root: \sqrt{A} or \sqrt[n]{A}
-  const sqrtMatch = str.match(/^\\sqrt(?:\[([^\]]*)\])?\{([^}]*)\}$/);
+  // 5. Square Root: \sqrt{A} = B or \sqrt[n]{A} = B or \sqrt{A}
+  const sqrtMatch = str.match(/^\\sqrt(?:\[([^\]]*)\])?\{([^}]*)\}(?:\s*=\s*([^\s$]*))?$/);
   if (sqrtMatch) {
     return {
       type: 'SQRT',
       deg: sqrtMatch[1] || '2',
       expr: sqrtMatch[2] ?? '',
+      hasEqual: sqrtMatch[3] !== undefined,
+      result: sqrtMatch[3] || '',
       raw: str
     };
   }
@@ -244,11 +246,155 @@ export function buildLatexFromStructure(struct) {
     case 'SQRT': {
       const expr = struct.expr ?? '';
       const deg = struct.deg?.trim();
-      return deg && deg !== '2' ? `\\sqrt[${deg}]{${expr}}` : `\\sqrt{${expr}}`;
+      const rootStr = deg && deg !== '2' ? `\\sqrt[${deg}]{${expr}}` : `\\sqrt{${expr}}`;
+      if (struct.hasEqual || struct.result) {
+        return `${rootStr} = ${struct.result ?? ''}`;
+      }
+      return rootStr;
     }
     default:
       return struct.raw || '';
   }
+}
+
+/**
+ * Convert any LaTeX formula into human-readable Natural Math notation
+ * (NEVER exposes \frac, \sqrt, \cdot, etc. to teachers / end-users)
+ */
+export function latexToNaturalMath(latex) {
+  if (!latex) return '';
+  let s = String(latex).trim();
+  s = s.replace(/^\$+|\$+$/g, '').trim();
+
+  // Balanced-brace replacer for \frac{a}{b}
+  while (s.includes('\\frac{')) {
+    const idx = s.indexOf('\\frac{');
+    let depth = 0;
+    let numEnd = -1;
+    let denStart = -1;
+    let denEnd = -1;
+    for (let i = idx + 5; i < s.length; i++) {
+      if (s[i] === '{') depth++;
+      else if (s[i] === '}') {
+        depth--;
+        if (depth === 0) {
+          numEnd = i;
+          break;
+        }
+      }
+    }
+    if (numEnd !== -1 && s[numEnd + 1] === '{') {
+      denStart = numEnd + 1;
+      depth = 0;
+      for (let i = denStart; i < s.length; i++) {
+        if (s[i] === '{') depth++;
+        else if (s[i] === '}') {
+          depth--;
+          if (depth === 0) {
+            denEnd = i;
+            break;
+          }
+        }
+      }
+    }
+    if (numEnd !== -1 && denEnd !== -1) {
+      const num = s.substring(idx + 6, numEnd);
+      const den = s.substring(denStart + 1, denEnd);
+      const isSimpleNum = /^[a-zA-Z0-9.]+$/.test(num.trim());
+      const isSimpleDen = /^[a-zA-Z0-9.]+$/.test(den.trim());
+      const fracStr = (isSimpleNum && isSimpleDen) ? `${num.trim()}/${den.trim()}` : `(${num.trim()})/(${den.trim()})`;
+      s = s.substring(0, idx) + fracStr + s.substring(denEnd + 1);
+    } else {
+      break;
+    }
+  }
+
+  // Sqrt
+  s = s.replace(/\\sqrt\[([^\]]+)\]\{([^}]+)\}/g, '$1√($2)');
+  s = s.replace(/\\sqrt\{([^}]+)\}/g, '√($1)');
+
+  // Text
+  s = s.replace(/\\text\{\s*([^}]+)\s*\}/g, ' $1');
+
+  // Math symbols
+  s = s.replace(/\\cdot/g, '*');
+  s = s.replace(/\\times/g, '×');
+  s = s.replace(/\\div/g, '÷');
+  s = s.replace(/\\pm/g, '±');
+  s = s.replace(/\\le/g, '≤');
+  s = s.replace(/\\ge/g, '≥');
+  s = s.replace(/\\ne/g, '≠');
+  s = s.replace(/\\approx/g, '≈');
+  s = s.replace(/\\to/g, '→');
+  s = s.replace(/\\rightarrow/g, '→');
+  s = s.replace(/\\Delta/g, 'Δ');
+  s = s.replace(/\\pi/g, 'π');
+  s = s.replace(/\\alpha/g, 'α');
+  s = s.replace(/\\beta/g, 'β');
+  s = s.replace(/\\theta/g, 'θ');
+  s = s.replace(/\\lambda/g, 'λ');
+  s = s.replace(/\\Omega/g, 'Ω');
+  s = s.replace(/\\infty/g, '∞');
+  s = s.replace(/x_0/g, 'x₀');
+  s = s.replace(/x_1/g, 'x₁');
+  s = s.replace(/x_2/g, 'x₂');
+  s = s.replace(/y_0/g, 'y₀');
+  s = s.replace(/\\lim_\{([^}]+)\s*\\to\s*([^}]+)\}/g, 'lim($1 → $2)');
+  s = s.replace(/\\lim/g, 'lim');
+  s = s.replace(/\\int_\{([^}]+)\}\^\{([^}]+)\}/g, '∫($1 → $2)');
+  s = s.replace(/\\int/g, '∫');
+  s = s.replace(/\\sum/g, '∑');
+  s = s.replace(/\\vec\{([^}]+)\}/g, '$1⃗');
+
+  return s.trim();
+}
+
+/**
+ * Convert Natural Math back to clean LaTeX
+ */
+export function naturalMathToLatex(natural) {
+  if (!natural) return '';
+  let s = String(natural).trim();
+
+  // lim
+  s = s.replace(/lim\s*\(\s*([^→\-]+)\s*(?:→|->)\s*([^)]+)\)/gi, '\\lim_{$1 \\to $2}');
+  s = s.replace(/\\?lim\s*_\s*\{([^}]+)\}/gi, '\\lim_{$1}');
+  s = s.replace(/\\?lim\b/gi, '\\lim');
+
+  // Sqrt
+  s = s.replace(/(?:√|sqrt)\s*\(([^)]+)\)/gi, '\\sqrt{$1}');
+
+  // Fractions: (expr1)/(expr2)
+  s = s.replace(/\(([^)]+)\)\/\(([^)]+)\)/g, '\\frac{$1}{$2}');
+  // Simple fractions: 12/4
+  s = s.replace(/\b([a-zA-Z0-9.]+)\/([a-zA-Z0-9.]+)\b/g, '\\frac{$1}{$2}');
+
+  // Symbols
+  s = s.replace(/x₀/g, 'x_0');
+  s = s.replace(/x₁/g, 'x_1');
+  s = s.replace(/x₂/g, 'x_2');
+  s = s.replace(/y₀/g, 'y_0');
+  s = s.replace(/→/g, '\\to');
+  s = s.replace(/∞/g, '\\infty');
+  s = s.replace(/Δ/g, '\\Delta');
+  s = s.replace(/π/g, '\\pi');
+  s = s.replace(/α/g, '\\alpha');
+  s = s.replace(/β/g, '\\beta');
+  s = s.replace(/θ/g, '\\theta');
+  s = s.replace(/λ/g, '\\lambda');
+  s = s.replace(/Ω/g, '\\Omega');
+  s = s.replace(/≤/g, '\\le');
+  s = s.replace(/≥/g, '\\ge');
+  s = s.replace(/≠/g, '\\ne');
+  s = s.replace(/≈/g, '\\approx');
+  s = s.replace(/±/g, '\\pm');
+  s = s.replace(/×/g, '\\times');
+  s = s.replace(/·/g, '\\cdot');
+
+  // Chemistry unit: e.g. "0.4 M" -> "0.4\text{ M}"
+  s = s.replace(/(\d+(?:\.\d+)?)\s*M\b/g, '$1\\text{ M}');
+
+  return s.trim();
 }
 
 /**
@@ -1003,12 +1149,81 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
     commitDocLines(updated);
   };
 
+  // Update specific slot of structured equation (Fraction num/den, Sqrt expr, Power base/exp, Chem)
+  const handleSlotUpdate = (field, val) => {
+    if (!activeFormulaId || !activeTokenInfo) return;
+    const targetTokenInfo = activeTokenInfo;
+    const currentStruct = targetTokenInfo.token.structure || parseEquationStructure(targetTokenInfo.token.latex);
+    const nextStruct = { ...currentStruct, [field]: val };
+    if (field === 'result' && val) {
+      nextStruct.hasEqual = true;
+    }
+    const nextLatex = buildLatexFromStructure(nextStruct);
+
+    const updated = docLines.map(line => {
+      if (line.id !== targetTokenInfo.lineId) return line;
+      const nextTokens = line.tokens.map(t => {
+        if (t.id !== targetTokenInfo.token.id) return t;
+        return {
+          ...t,
+          latex: nextLatex,
+          structure: nextStruct
+        };
+      });
+      return { ...line, tokens: nextTokens };
+    });
+    commitDocLines(updated);
+  };
+
+  // Modify formula via Natural Math (0% LaTeX, automatically converts to clean KaTeX)
+  const handleNaturalMathChange = (lineId, tokenId, naturalVal) => {
+    const convertedLatex = naturalMathToLatex(naturalVal);
+    const nextStruct = parseEquationStructure(convertedLatex);
+
+    const updated = docLines.map(line => {
+      if (line.id !== lineId) return line;
+      const nextTokens = line.tokens.map(t => {
+        if (t.id !== tokenId) return t;
+        return {
+          ...t,
+          latex: convertedLatex,
+          structure: nextStruct
+        };
+      });
+      return { ...line, tokens: nextTokens };
+    });
+    commitDocLines(updated);
+  };
+
   // Auto-calculate formula numbers
   const handleAutoCalc = (lineId, tokenId) => {
     const updated = docLines.map(line => {
       if (line.id !== lineId) return line;
       const nextTokens = line.tokens.map(t => {
         if (t.id !== tokenId) return t;
+        const struct = t.structure || parseEquationStructure(t.latex || '');
+
+        if (struct.type === 'FRACTION') {
+          const res = safeCalcDivision(struct.num, struct.den);
+          const nextStruct = { ...struct, hasEqual: true, result: res };
+          const nextLatex = buildLatexFromStructure(nextStruct);
+          return { ...t, latex: nextLatex, structure: nextStruct };
+        } else if (struct.type === 'SQRT') {
+          const val = parseFloat(struct.expr);
+          if (!isNaN(val) && val >= 0) {
+            const res = Math.sqrt(val);
+            const formatted = Number.isInteger(res) ? `${res}` : res.toFixed(2).replace(/\.00$/, '');
+            const nextStruct = { ...struct, hasEqual: true, result: formatted };
+            const nextLatex = buildLatexFromStructure(nextStruct);
+            return { ...t, latex: nextLatex, structure: nextStruct };
+          }
+        } else if (struct.type === 'CHEM_CM') {
+          const res = safeCalcDivision(struct.num, struct.den);
+          const nextStruct = { ...struct, result: res };
+          const nextLatex = buildLatexFromStructure(nextStruct);
+          return { ...t, latex: nextLatex, structure: nextStruct };
+        }
+
         const calculatedLatex = autoCalculateEquation(t.latex || '');
         return {
           ...t,
@@ -1036,80 +1251,99 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
   };
 
   // Insert quick symbol into active formula (Cursor-aware insertion and text wrapping)
-  const handleInsertSymbolIntoActive = (symbolCode) => {
-    if (!activeFormulaId) return;
+  const handleInsertSymbolIntoActive = (symbolItem) => {
+    if (!activeFormulaId || !activeTokenInfo) return;
 
+    const lineId = activeTokenInfo.lineId;
+    const tokenId = activeTokenInfo.token.id;
+    const currentLatex = activeTokenInfo.token.latex || '';
+
+    // Switch to FRACTION slots if user clicked fraction button
+    if (symbolItem.code === '\\frac{a}{b}') {
+      const curNat = latexToNaturalMath(currentLatex);
+      const nextStruct = {
+        type: 'FRACTION',
+        num: curNat || '12',
+        den: '4',
+        hasEqual: false,
+        result: ''
+      };
+      const nextLatex = buildLatexFromStructure(nextStruct);
+      const updated = docLines.map(line => {
+        if (line.id !== lineId) return line;
+        const nextTokens = line.tokens.map(t => {
+          if (t.id !== tokenId) return t;
+          return { ...t, latex: nextLatex, structure: nextStruct };
+        });
+        return { ...line, tokens: nextTokens };
+      });
+      commitDocLines(updated);
+      return;
+    }
+
+    // Switch to SQRT slots if user clicked sqrt button
+    if (symbolItem.code === '\\sqrt{x}') {
+      const curNat = latexToNaturalMath(currentLatex);
+      const nextStruct = {
+        type: 'SQRT',
+        deg: '2',
+        expr: curNat || '16',
+        hasEqual: false,
+        result: ''
+      };
+      const nextLatex = buildLatexFromStructure(nextStruct);
+      const updated = docLines.map(line => {
+        if (line.id !== lineId) return line;
+        const nextTokens = line.tokens.map(t => {
+          if (t.id !== tokenId) return t;
+          return { ...t, latex: nextLatex, structure: nextStruct };
+        });
+        return { ...line, tokens: nextTokens };
+      });
+      commitDocLines(updated);
+      return;
+    }
+
+    // Insert natural symbol into active natural math input
     const inputEl = activeInputRef.current;
     let cursorStart = inputEl ? inputEl.selectionStart : null;
     let cursorEnd = inputEl ? inputEl.selectionEnd : null;
 
-    let newLatexAfterInsert = '';
+    const naturalSymbol = latexToNaturalMath(symbolItem.code);
+    const currentNatural = latexToNaturalMath(currentLatex);
+
+    let nextNatural = '';
     let newCursorPos = 0;
+    if (cursorStart !== null && cursorEnd !== null && cursorStart <= currentNatural.length) {
+      const before = currentNatural.substring(0, cursorStart);
+      const selected = currentNatural.substring(cursorStart, cursorEnd);
+      const after = currentNatural.substring(cursorEnd);
 
-    const updated = docLines.map(line => {
-      const targetToken = line.tokens.find(t => t.id === activeFormulaId);
-      if (!targetToken) return line;
+      if (selected && symbolItem.code.includes('^2')) {
+        const ins = `(${selected})^2`;
+        nextNatural = before + ins + after;
+        newCursorPos = before.length + ins.length;
+      } else if (selected && naturalSymbol.includes('√')) {
+        const ins = `√(${selected})`;
+        nextNatural = before + ins + after;
+        newCursorPos = before.length + ins.length;
+      } else {
+        nextNatural = before + naturalSymbol + after;
+        newCursorPos = before.length + naturalSymbol.length;
+      }
+    } else {
+      nextNatural = currentNatural + (currentNatural && !currentNatural.endsWith(' ') ? ' ' : '') + naturalSymbol;
+      newCursorPos = nextNatural.length;
+    }
 
-      const nextTokens = line.tokens.map(t => {
-        if (t.id !== activeFormulaId) return t;
-
-        const current = t.latex || '';
-        if (cursorStart !== null && cursorEnd !== null && cursorStart <= current.length) {
-          const before = current.substring(0, cursorStart);
-          const selected = current.substring(cursorStart, cursorEnd);
-          const after = current.substring(cursorEnd);
-
-          if (selected) {
-            // Wrapping selected text
-            if (symbolCode.includes('\\frac{a}{b}')) {
-              const inserted = `\\frac{${selected}}{}`;
-              newLatexAfterInsert = before + inserted + after;
-              newCursorPos = before.length + inserted.length - 1; // inside denominator {}
-            } else if (symbolCode.includes('\\sqrt{x}')) {
-              const inserted = `\\sqrt{${selected}}`;
-              newLatexAfterInsert = before + inserted + after;
-              newCursorPos = before.length + inserted.length;
-            } else if (symbolCode === '^2') {
-              const inserted = `(${selected})^2`;
-              newLatexAfterInsert = before + inserted + after;
-              newCursorPos = before.length + inserted.length;
-            } else {
-              newLatexAfterInsert = before + symbolCode + after;
-              newCursorPos = before.length + symbolCode.length;
-            }
-          } else {
-            // Inserting at caret
-            newLatexAfterInsert = before + symbolCode + after;
-            if (symbolCode.includes('\\frac{a}{b}')) {
-              newCursorPos = before.length + 6; // right inside numerator \frac{
-            } else if (symbolCode.includes('\\sqrt{x}')) {
-              newCursorPos = before.length + 6; // right inside \sqrt{
-            } else {
-              newCursorPos = before.length + symbolCode.length;
-            }
-          }
-        } else {
-          newLatexAfterInsert = current + symbolCode;
-          newCursorPos = newLatexAfterInsert.length;
-        }
-
-        return {
-          ...t,
-          latex: newLatexAfterInsert,
-          structure: parseEquationStructure(newLatexAfterInsert)
-        };
-      });
-      return { ...line, tokens: nextTokens };
-    });
-
-    commitDocLines(updated);
+    handleNaturalMathChange(lineId, tokenId, nextNatural);
 
     setTimeout(() => {
       if (activeInputRef.current) {
         activeInputRef.current.focus();
         try {
           activeInputRef.current.setSelectionRange(newCursorPos, newCursorPos);
-        } catch (e) {
+        } catch {
           // ignore
         }
       }
@@ -1241,151 +1475,308 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
     <div className="relative font-sans text-slate-800" ref={containerRef}>
       
       {/* UNIVERSAL FORMULA FLOATING STUDIO & CURSOR-AWARE INSERTER */}
-      {activeFormulaId && activeTokenInfo && (
-        <div
-          style={{
-            position: 'absolute',
-            top: `${Math.max(6, bubblePos.top)}px`,
-            left: `${Math.max(8, bubblePos.left)}px`,
-            zIndex: 50
-          }}
-          className="bg-white/98 text-slate-900 backdrop-blur-md rounded-2xl shadow-2xl border-2 border-indigo-500/80 p-3 flex flex-col gap-2.5 min-w-[360px] max-w-[580px] animate-in fade-in zoom-in-95 duration-100"
-        >
-          {/* Row 1: Universal Equation Bar & Quick Action Buttons */}
-          <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-200">
-            <div className="flex items-center gap-2 flex-1 min-w-0">
-              <span className="px-2.5 py-1 rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white text-[10px] font-black shrink-0 uppercase tracking-wider shadow-2xs">
-                Soạn Công Thức
-              </span>
+      {activeFormulaId && activeTokenInfo && (() => {
+        const token = activeTokenInfo.token;
+        const struct = token.structure || parseEquationStructure(token.latex);
+        const naturalMath = latexToNaturalMath(token.latex);
+        const structType = struct.type;
 
-              {/* UNIVERSAL CONTINUOUS FORMULA INPUT - FREELY TYPE OR PASTE ANY FORMULA */}
-              <div className="flex-1 min-w-0 relative">
-                <input
-                  ref={activeInputRef}
-                  type="text"
-                  value={activeTokenInfo.token.latex}
-                  onChange={(e) => handleGenericLatexChange(activeTokenInfo.lineId, activeTokenInfo.token.id, e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Backspace' && !activeTokenInfo.token.latex) {
-                      e.preventDefault();
-                      handleDeleteActiveFormula(activeTokenInfo.lineId, activeTokenInfo.token.id);
-                    }
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      setActiveFormulaId(null);
-                    }
-                    if (e.key === 'Escape') {
-                      e.preventDefault();
-                      setActiveFormulaId(null);
-                    }
-                  }}
-                  placeholder="Gõ hoặc dán mọi công thức (12/4 = 3, f(x), căn thức, tích phân...)"
-                  autoFocus
-                  className="w-full bg-slate-50 hover:bg-white focus:bg-white border-2 border-indigo-300 focus:border-indigo-600 rounded-xl px-3 py-1.5 text-xs font-mono font-bold text-slate-900 outline-none shadow-inner transition-colors"
-                />
+        return (
+          <div
+            style={{
+              position: 'absolute',
+              top: `${Math.max(6, bubblePos.top)}px`,
+              left: `${Math.max(8, bubblePos.left)}px`,
+              zIndex: 50
+            }}
+            className="bg-white/98 text-slate-900 backdrop-blur-md rounded-2xl shadow-2xl border-2 border-indigo-500/80 p-3.5 flex flex-col gap-3 min-w-[380px] max-w-[620px] animate-in fade-in zoom-in-95 duration-100"
+          >
+            {/* Row 1: Header Bar with Structure Badge & Quick Action Buttons */}
+            <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-200">
+              <div className="flex items-center gap-2">
+                <span className="px-2.5 py-1 rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white text-[10px] font-black shrink-0 uppercase tracking-wider shadow-2xs flex items-center gap-1">
+                  <Sparkles className="w-3 h-3 text-amber-300" />
+                  <span>
+                    {structType === 'FRACTION' ? 'Phân Số' :
+                     structType === 'SQRT' ? 'Căn Thức' :
+                     structType === 'POWER' ? 'Lũy Thừa' :
+                     structType === 'CHEM_CM' ? 'Nồng Độ C_M' :
+                     structType === 'CHEM_CPERCENT' ? 'Nồng Độ C%' :
+                     'Soạn Công Thức'}
+                  </span>
+                </span>
+                <span className="text-[11px] font-bold text-slate-500 hidden sm:inline">
+                  (Điền số trực tiếp vào ô bên dưới)
+                </span>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => handleAutoCalc(activeTokenInfo.lineId, activeTokenInfo.token.id)}
+                  className="px-2.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs flex items-center gap-1 shadow-xs cursor-pointer transition-transform hover:scale-102"
+                  title="Tự tính đáp số tự động cho mọi phép toán (12/4 = 3, căn bậc 2, nồng độ...)"
+                >
+                  <Zap className="w-3.5 h-3.5 fill-slate-950 text-slate-950" />
+                  <span>Tính</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDeleteActiveFormula(activeTokenInfo.lineId, activeTokenInfo.token.id)}
+                  className="px-2 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs flex items-center gap-1 transition-colors cursor-pointer"
+                  title="Xóa công thức này khỏi bài giảng (Delete / Backspace)"
+                >
+                  <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                  <span>Xóa</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveFormulaId(null)}
+                  className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs flex items-center gap-1 cursor-pointer shadow-xs transition-transform hover:scale-102"
+                  title="Hoàn tất soạn thảo (Enter / Esc)"
+                >
+                  <Check className="w-3.5 h-3.5 stroke-[3]" />
+                  <span>Xong</span>
+                </button>
               </div>
             </div>
 
-            {/* Action Buttons */}
-            <div className="flex items-center gap-1.5 shrink-0">
-              <button
-                type="button"
-                onClick={() => handleAutoCalc(activeTokenInfo.lineId, activeTokenInfo.token.id)}
-                className="px-2.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs flex items-center gap-1 shadow-xs cursor-pointer transition-transform hover:scale-102"
-                title="Tự tính đáp số tự động cho mọi phép toán (12/4, căn bậc 2, nồng độ...)"
-              >
-                <Zap className="w-3.5 h-3.5 fill-slate-950 text-slate-950" />
-                <span>Tính</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => handleDeleteActiveFormula(activeTokenInfo.lineId, activeTokenInfo.token.id)}
-                className="px-2 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs flex items-center gap-1 transition-colors cursor-pointer"
-                title="Xóa công thức này khỏi bài giảng (Delete / Backspace)"
-              >
-                <Trash2 className="w-3.5 h-3.5 text-rose-600" />
-                <span>Xóa</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveFormulaId(null)}
-                className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs flex items-center gap-1 cursor-pointer shadow-xs transition-transform hover:scale-102"
-                title="Hoàn tất soạn thảo (Enter / Esc)"
-              >
-                <Check className="w-3.5 h-3.5 stroke-[3]" />
-                <span>Xong</span>
-              </button>
-            </div>
-          </div>
+            {/* Row 2: INTERACTIVE VISUAL SLOTS (CHỈNH SỬA SỐ & BIỂU THỨC TRỰC TIẾP TRÊN Ô MẪU SGK) */}
+            {structType === 'FRACTION' && (
+              <div className="p-2.5 rounded-xl bg-gradient-to-r from-indigo-50/90 to-purple-50/90 border border-indigo-200/90 flex items-center justify-between gap-3 shadow-inner">
+                <span className="text-[11px] font-extrabold text-indigo-900 shrink-0">
+                  Ô điền phân số:
+                </span>
+                <div className="flex items-center gap-2.5">
+                  {/* Vertical Fraction */}
+                  <div className="flex flex-col items-center">
+                    <input
+                      type="text"
+                      value={struct.num ?? ''}
+                      onChange={(e) => handleSlotUpdate('num', e.target.value)}
+                      placeholder="Tử số"
+                      className="w-16 px-2 py-0.5 text-center font-bold text-xs bg-white rounded-lg border border-indigo-300 focus:ring-2 focus:ring-indigo-500 shadow-2xs"
+                      title="Tử số (Nhập số hoặc biểu thức phía trên)"
+                    />
+                    <div className="w-full h-0.5 bg-indigo-900 my-1 rounded-full"></div>
+                    <input
+                      type="text"
+                      value={struct.den ?? ''}
+                      onChange={(e) => handleSlotUpdate('den', e.target.value)}
+                      placeholder="Mẫu số"
+                      className="w-16 px-2 py-0.5 text-center font-bold text-xs bg-white rounded-lg border border-indigo-300 focus:ring-2 focus:ring-indigo-500 shadow-2xs"
+                      title="Mẫu số (Nhập số hoặc biểu thức phía dưới)"
+                    />
+                  </div>
 
-          {/* Row 2: Live KaTeX Typography Preview Dock (CHUẨN SGK TRỰC QUAN 100%) */}
-          <div className="px-3 py-2 rounded-xl bg-indigo-50/70 border border-indigo-200/90 flex items-center justify-between gap-3 shadow-inner">
-            <div className="flex items-center gap-2 overflow-x-auto scrollbar-none flex-1 min-w-0">
-              <span className="text-[10px] font-extrabold text-indigo-700 uppercase tracking-wider shrink-0 flex items-center gap-1">
-                <Sparkles className="w-3 h-3 text-amber-500" />
-                <span>Học sinh thấy:</span>
+                  <span className="text-base font-black text-slate-700">=</span>
+
+                  {/* Result */}
+                  <input
+                    type="text"
+                    value={struct.result ?? ''}
+                    onChange={(e) => handleSlotUpdate('result', e.target.value)}
+                    placeholder="Đáp số"
+                    className="w-16 px-2 py-1 text-center font-black text-xs bg-white rounded-lg border border-emerald-300 text-emerald-800 focus:ring-2 focus:ring-emerald-500 shadow-2xs"
+                    title="Đáp số (Nhấp nút Tính để tự động tính)"
+                  />
+                </div>
+              </div>
+            )}
+
+            {structType === 'SQRT' && (
+              <div className="p-2.5 rounded-xl bg-gradient-to-r from-indigo-50/90 to-purple-50/90 border border-indigo-200/90 flex items-center justify-between gap-3 shadow-inner">
+                <span className="text-[11px] font-extrabold text-indigo-900 shrink-0">
+                  Ô điền căn thức:
+                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xl font-serif font-black text-indigo-950">√</span>
+                  <input
+                    type="text"
+                    value={struct.expr ?? ''}
+                    onChange={(e) => handleSlotUpdate('expr', e.target.value)}
+                    placeholder="Số trong căn"
+                    className="w-20 px-2 py-1 text-center font-bold text-xs bg-white rounded-lg border border-indigo-300 focus:ring-2 focus:ring-indigo-500 shadow-2xs"
+                  />
+                  <span className="text-base font-black text-slate-700">=</span>
+                  <input
+                    type="text"
+                    value={struct.result ?? ''}
+                    onChange={(e) => handleSlotUpdate('result', e.target.value)}
+                    placeholder="Đáp số"
+                    className="w-16 px-2 py-1 text-center font-black text-xs bg-white rounded-lg border border-emerald-300 text-emerald-800 shadow-2xs"
+                  />
+                </div>
+              </div>
+            )}
+
+            {structType === 'POWER' && (
+              <div className="p-2.5 rounded-xl bg-gradient-to-r from-indigo-50/90 to-purple-50/90 border border-indigo-200/90 flex items-center justify-between gap-3 shadow-inner">
+                <span className="text-[11px] font-extrabold text-indigo-900 shrink-0">
+                  Ô điền lũy thừa:
+                </span>
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="text"
+                    value={struct.base ?? ''}
+                    onChange={(e) => handleSlotUpdate('base', e.target.value)}
+                    placeholder="Cơ số (x)"
+                    className="w-16 px-2 py-1 text-center font-bold text-xs bg-white rounded-lg border border-indigo-300 focus:ring-2 focus:ring-indigo-500 shadow-2xs"
+                  />
+                  <span className="text-xs font-bold text-slate-400">^</span>
+                  <input
+                    type="text"
+                    value={struct.exp ?? ''}
+                    onChange={(e) => handleSlotUpdate('exp', e.target.value)}
+                    placeholder="Số mũ"
+                    className="w-14 px-2 py-1 text-center font-bold text-xs bg-white rounded-lg border border-indigo-300 focus:ring-2 focus:ring-indigo-500 shadow-2xs"
+                  />
+                </div>
+              </div>
+            )}
+
+            {structType === 'CHEM_CM' && (
+              <div className="p-2.5 rounded-xl bg-gradient-to-r from-teal-50/90 to-emerald-50/90 border border-teal-200/90 flex items-center justify-between gap-3 shadow-inner">
+                <span className="text-[11px] font-extrabold text-teal-950 font-serif">
+                  C_M = n / V =
+                </span>
+                <div className="flex items-center gap-1.5">
+                  <div className="flex flex-col items-center">
+                    <input
+                      type="text"
+                      value={struct.num ?? ''}
+                      onChange={(e) => handleSlotUpdate('num', e.target.value)}
+                      placeholder="n (mol)"
+                      className="w-14 px-1 py-0.5 text-center font-bold text-xs bg-white rounded border border-teal-300"
+                    />
+                    <div className="w-full h-0.5 bg-teal-800 my-0.5"></div>
+                    <input
+                      type="text"
+                      value={struct.den ?? ''}
+                      onChange={(e) => handleSlotUpdate('den', e.target.value)}
+                      placeholder="V (lít)"
+                      className="w-14 px-1 py-0.5 text-center font-bold text-xs bg-white rounded border border-teal-300"
+                    />
+                  </div>
+                  <span className="text-xs font-bold text-slate-700">=</span>
+                  <input
+                    type="text"
+                    value={struct.result ?? ''}
+                    onChange={(e) => handleSlotUpdate('result', e.target.value)}
+                    placeholder="Đáp số"
+                    className="w-14 px-1 py-0.5 text-center font-black text-xs bg-white rounded border border-emerald-300 text-emerald-800"
+                  />
+                  <span className="text-xs font-bold text-teal-900 font-serif">M</span>
+                </div>
+              </div>
+            )}
+
+            {/* Row 3: UNIVERSAL NATURAL MATH BAR (SOẠN NHANH TOÀN NĂNG - 0% LATEX) */}
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-extrabold text-slate-700 shrink-0">
+                Toán tự nhiên:
               </span>
-              <div 
-                className="text-sm sm:text-base text-indigo-950 font-serif whitespace-nowrap overflow-x-auto py-0.5"
-                dangerouslySetInnerHTML={{ 
-                  __html: renderKatexHtml(activeTokenInfo.token.latex || '\\text{(Trống)}', false) 
+              <input
+                ref={activeInputRef}
+                type="text"
+                value={naturalMath}
+                onChange={(e) => handleNaturalMathChange(activeTokenInfo.lineId, activeTokenInfo.token.id, e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Backspace' && !naturalMath) {
+                    e.preventDefault();
+                    handleDeleteActiveFormula(activeTokenInfo.lineId, activeTokenInfo.token.id);
+                  }
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    setActiveFormulaId(null);
+                  }
+                  if (e.key === 'Escape') {
+                    e.preventDefault();
+                    setActiveFormulaId(null);
+                  }
                 }}
-                title="Xem trước hiển thị công thức chuẩn sách giáo khoa"
+                placeholder="Gõ hoặc dán mọi biểu thức tự nhiên: 12/4 = 3, căn(16) = 4, (x+1)/(x-1)..."
+                className="flex-1 bg-slate-50 hover:bg-white focus:bg-white border-2 border-indigo-300 focus:border-indigo-600 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-900 outline-none shadow-inner transition-colors"
+                title="Gõ công thức theo dạng toán tự nhiên thông thường (không cần gõ mã LaTeX)"
               />
             </div>
-            {onOpenAdvancedModal && (
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveFormulaId(null);
-                  onOpenAdvancedModal();
-                }}
-                className="text-[10.5px] font-bold text-indigo-700 hover:text-indigo-900 bg-white hover:bg-indigo-100 px-2 py-1 rounded-lg border border-indigo-300 shadow-2xs whitespace-nowrap cursor-pointer transition-colors shrink-0"
-                title="Mở Studio đầy đủ để vẽ đồ thị hàm số hoặc bảng biến thiên"
-              >
-                🚀 Mở Studio
-              </button>
-            )}
-          </div>
 
-          {/* Row 3: Hierarchical Category Tabs */}
-          <div className="flex items-center gap-1 overflow-x-auto scrollbar-none pb-0.5">
-            {Object.keys(HIERARCHICAL_BUBBLE_INSERTER).map((tabKey) => {
-              const tab = HIERARCHICAL_BUBBLE_INSERTER[tabKey];
-              const isAct = bubbleTab === tabKey;
-              return (
+            {/* Row 4: LIVE KATEX TYPOGRAPHY PREVIEW DOCK (CHUẨN SGK TRỰC QUAN 100%) */}
+            <div 
+              onClick={() => {
+                if (activeInputRef.current) activeInputRef.current.focus();
+              }}
+              className="px-3 py-2 rounded-xl bg-indigo-50/70 border border-indigo-200/90 flex items-center justify-between gap-3 shadow-inner cursor-pointer hover:bg-indigo-50 transition-colors"
+              title="Nhấp vào đây để tiếp tục nhập chỉnh sửa biểu thức"
+            >
+              <div className="flex items-center gap-2 overflow-x-auto scrollbar-none flex-1 min-w-0">
+                <span className="text-[10px] font-extrabold text-indigo-700 uppercase tracking-wider shrink-0 flex items-center gap-1">
+                  <Sparkles className="w-3 h-3 text-amber-500" />
+                  <span>Học sinh thấy:</span>
+                </span>
+                <div 
+                  className="text-sm sm:text-base text-indigo-950 font-serif whitespace-nowrap overflow-x-auto py-0.5"
+                  dangerouslySetInnerHTML={{ 
+                    __html: renderKatexHtml(token.latex || '\\text{(Trống)}', false) 
+                  }}
+                />
+              </div>
+              {onOpenAdvancedModal && (
                 <button
-                  key={tabKey}
                   type="button"
-                  onClick={() => setBubbleTab(tabKey)}
-                  className={`px-2 py-0.5 rounded-md text-[10px] font-bold whitespace-nowrap transition-colors cursor-pointer ${
-                    isAct 
-                      ? 'bg-indigo-600 text-white shadow-2xs' 
-                      : 'bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200'
-                  }`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveFormulaId(null);
+                    onOpenAdvancedModal();
+                  }}
+                  className="text-[10.5px] font-bold text-indigo-700 hover:text-indigo-900 bg-white hover:bg-indigo-100 px-2.5 py-1 rounded-lg border border-indigo-300 shadow-2xs whitespace-nowrap cursor-pointer transition-colors shrink-0"
+                  title="Mở Studio đầy đủ để vẽ đồ thị hàm số hoặc bảng biến thiên"
                 >
-                  {tab.name}
+                  🚀 Mở Studio
                 </button>
-              );
-            })}
-          </div>
+              )}
+            </div>
 
-          {/* Row 4: Quick Insertion Chips of Active Tab (Cursor-Aware Insertion) */}
-          <div className="flex flex-wrap items-center gap-1 max-h-[85px] overflow-y-auto scrollbar-thin p-1 rounded-lg bg-slate-50 border border-slate-200">
-            {HIERARCHICAL_BUBBLE_INSERTER[bubbleTab]?.items?.map((item, idx) => (
-              <button
-                key={idx}
-                type="button"
-                onClick={() => handleInsertSymbolIntoActive(item.code)}
-                className="px-1.5 py-0.5 rounded bg-white hover:bg-indigo-100 hover:text-indigo-800 border border-slate-200 text-slate-700 text-[10.5px] font-mono cursor-pointer transition-colors shadow-2xs"
-                title={`${item.title} (Nhấp để chèn tại vị trí con trỏ)`}
-              >
-                {item.label}
-              </button>
-            ))}
+            {/* Row 5: Quick Symbol Inserter Tabs */}
+            <div className="flex items-center gap-1 overflow-x-auto scrollbar-none pb-0.5 border-t border-slate-100 pt-1.5">
+              {Object.keys(HIERARCHICAL_BUBBLE_INSERTER).map((tabKey) => {
+                const tab = HIERARCHICAL_BUBBLE_INSERTER[tabKey];
+                const isAct = bubbleTab === tabKey;
+                return (
+                  <button
+                    key={tabKey}
+                    type="button"
+                    onClick={() => setBubbleTab(tabKey)}
+                    className={`px-2 py-1 rounded-lg text-[10.5px] font-bold transition-all whitespace-nowrap cursor-pointer shrink-0 ${
+                      isAct 
+                        ? 'bg-indigo-600 text-white shadow-2xs font-extrabold' 
+                        : 'bg-slate-100/90 text-slate-700 hover:bg-slate-200/90'
+                    }`}
+                  >
+                    {tab.name}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Row 6: Quick Symbol Inserter Buttons */}
+            <div className="flex flex-wrap items-center gap-1 max-h-[68px] overflow-y-auto scrollbar-none p-1 bg-slate-50/80 rounded-xl border border-slate-200/80">
+              {HIERARCHICAL_BUBBLE_INSERTER[bubbleTab]?.items?.map((item) => (
+                <button
+                  key={item.label}
+                  type="button"
+                  onClick={() => handleInsertSymbolIntoActive(item)}
+                  title={item.title || item.label}
+                  className="px-2 py-1 bg-white hover:bg-indigo-50 text-indigo-950 font-serif font-bold text-xs rounded-lg border border-slate-200 hover:border-indigo-400 shadow-2xs transition-all active:scale-95 cursor-pointer shrink-0"
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* THE ACTUAL DOCUMENT CANVAS */}
       <div

@@ -47,6 +47,17 @@
     - Khung xem trước trực quan (Live KaTeX Preview Dock) tập trung duy nhất vào việc hiển thị công thức toán học kích thước lớn (text-2xl) sắc nét như trong sách giáo khoa, không có bất kỳ yếu tố kỹ thuật gây xao nhãng.
 
 - **Tối Ưu Hóa Chỉnh Sửa & Xóa Trực Tiếp Công Thức Trực Quan Trong Khung Soạn Thảo Văn Bản (`WordStyleFormulaCanvas.jsx`)**:
+  - *Khung Điền Số & Biểu Thức Trực Quan (Interactive Visual Slots) Dạng Phân Số Chuẩn SGK*:
+    + Tự động nhận diện cấu trúc công thức và hiển thị **Khung Điền Số Trực Quan (Visual Slots)**:
+      * **Phân số**: Hiển thị chồng dọc chuẩn SGK với ô nhập Tử số (phía trên), thanh gạch ngang phân số, ô nhập Mẫu số (phía dưới), dấu `=` và ô Đáp số tự động. Người dùng chỉ cần nhập số vào từng ô mà không cần quan tâm đến cú pháp lệnh.
+      * **Căn thức**: Hiển thị dấu căn $\sqrt{}$ kèm ô nhập số/biểu thức bên trong và ô đáp số.
+      * **Lũy thừa**: Hiển thị ô nhập Cơ số và ô Số mũ nhỏ góc trên.
+      * **Hóa học**: Hiển thị biểu thức $C_M = n / V = [n]/[V] = [kết\_quả]\text{ M}$ và $C\%$ với các ô điền số rõ ràng.
+    + Đồng bộ tức thì hai chiều: Mọi thay đổi trên ô điền số lập tức cập nhật lên Thanh Toán Tự Nhiên, Live KaTeX Preview và dòng văn bản canvas.
+  - *Bộ Chuyển Đổi Toán Tự Nhiên Hai Chiều (`latexToNaturalMath` & `naturalMathToLatex`) Tuyệt Đối 0% Lộ Mã LaTeX*:
+    + Thanh soạn thảo công thức hỗ trợ hoàn toàn định dạng **Toán Tự Nhiên (Natural Math)**: Chuyển đổi mã lệnh LaTeX nội bộ thành chuỗi biểu thức tự nhiên thân thiện (`12/4 = 3`, `√(16) = 4`, `lim(x → x₀)`), triệt tiêu hoàn toàn dấu gạch chéo `\` và ngoặc nhọn `{}`.
+    + Giảng viên và học sinh có thể gõ hoặc dán bất kỳ biểu thức thông thường (`(x+1)/(x-1) = 5`, `2x^2 + 5x - 3 = 0`), hệ thống tự động biên dịch sang KaTeX chuẩn xác mà không bao giờ ép người dùng nhìn thấy hay học mã LaTeX.
+    + Xóa bỏ 100% nhãn kỹ thuật gây phản cảm như `LaTeX: ...` hay `Mã công thức KaTeX:` trên mọi khung popover thanh công cụ.
   - *Thanh Soạn Thảo Công Thức Toàn Năng Siêu Linh Hoạt (Universal Formula Bar) & Dock Xem Trước Trực Quan SGK*:
     + Xóa bỏ triệt để hệ thống ô con phân mảnh bó hẹp (vốn ép người dùng vào khung cứng tử/mẫu phân số hoặc số mũ mà không thể thêm bớt phép tính hay gõ tự do). Thay thế bằng **Thanh Soạn Thảo Công Thức Toàn Năng (Universal Formula Bar)**: Chấp nhận mọi dạng công thức toán học, vật lý, hóa học không giới hạn độ phức tạp (`12/4 = 3`, `f(x) = (x^2-1)/(x-1) = x+1`, căn thức, tích phân, giới hạn, nồng độ mol `C_M`...).
     + Tích hợp **Dock Xem Trước Trực Quan Học Sinh Thấy (Live KaTeX Typography Preview Dock)** ngay bên dưới thanh soạn thảo: Hiển thị lập tức công thức kết quả chuẩn sách giáo khoa (serif typography) sắc nét theo thời gian thực khi gõ.

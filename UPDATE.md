@@ -1,12 +1,19 @@
 # NHẬT KÝ CẬP NHẬT (UPDATE LOG) - WEB CLIENT
 
-## [31/10/2026] - Thanh Soạn Thảo Công Thức Toàn Năng Siêu Linh Hoạt, Tự Tính Đáp Số Cho Mọi Phép Toán, Chèn Ký Hiệu Theo Con Trỏ, 100% Ẩn Mã KaTeX Thô & AI Sinh Đề (API 16)
+## [31/10/2026] - Khung Điền Số Trực Quan Kiểu Phân Số Chuẩn SGK, Bộ Chuyển Đổi Toán Tự Nhiên Hai Chiều (0% Lộ Mã LaTeX), Thanh Soạn Thảo Toàn Năng & AI Sinh Đề (API 16)
 
-- **Thanh Soạn Thảo Công Thức Toàn Năng & Tự Động Tính Toán Đáp Số (`WordStyleFormulaCanvas.jsx`)**:
-  - *Thanh Soạn Thảo Toàn Năng (Universal Formula Bar) & Dock Trực Quan Chuẩn SGK*:
-    + Xóa bỏ triệt để hệ thống ô con phân mảnh bó hẹp (ép người dùng vào khung cứng tử/mẫu). Thay thế bằng **Thanh Soạn Thảo Công Thức Toàn Năng (Universal Formula Bar)**: Chấp nhận mọi dạng công thức toán học, vật lý, hóa học không giới hạn độ phức tạp (`12/4 = 3`, `f(x) = (x^2-1)/(x-1) = x+1`, căn thức, tích phân, giới hạn, nồng độ mol `C_M`...).
-    + Tích hợp **Dock Xem Trước Trực Quan Học Sinh Thấy (Live KaTeX Typography Preview Dock)** ngay bên dưới thanh soạn thảo: Hiển thị lập tức công thức kết quả chuẩn sách giáo khoa (serif typography) sắc nét theo thời gian thực khi gõ.
-    + Tuyệt đối xóa sạch 100% nhãn kỹ thuật gây phản cảm như `LaTeX: ...` hay `Mã công thức KaTeX`, mang lại trải nghiệm sư phạm tinh tế 100% WYSIWYG.
+- **Khung Điền Số Trực Quan Chuẩn SGK & Bộ Chuyển Đổi Toán Tự Nhiên Hai Chiều (`WordStyleFormulaCanvas.jsx`)**:
+  - *Khung Điền Số & Biểu Thức Trực Quan (Interactive Visual Slots) Dạng Phân Số Chuẩn SGK*:
+    + Tự động nhận diện cấu trúc công thức và hiển thị **Khung Điền Số Trực Quan (Visual Slots)**:
+      * **Phân số**: Hiển thị dạng phân số dọc với ô nhập Tử số (phía trên), thanh gạch ngang, ô nhập Mẫu số (phía dưới), dấu `=` và ô Đáp số. Giảng viên nhập số trực tiếp vào ô như sách giáo khoa, không cần gõ mã.
+      * **Căn thức**: Dấu căn $\sqrt{}$ kèm ô số/biểu thức bên trong và ô đáp số.
+      * **Lũy thừa**: Ô nhập Cơ số và ô Số mũ nhỏ.
+      * **Hóa học**: $C_M = n / V = [n]/[V] = [kết\_quả]\text{ M}$ và $C\%$ với các ô điền số rõ ràng.
+    + Đồng bộ tức thì hai chiều: Mọi thay đổi trên ô điền số lập tức cập nhật lên Thanh Toán Tự Nhiên, Live KaTeX Preview và dòng văn bản canvas.
+  - *Bộ Chuyển Đổi Toán Tự Nhiên Hai Chiều (`latexToNaturalMath` & `naturalMathToLatex`) Tuyệt Đối 0% Lộ Mã LaTeX*:
+    + Thanh soạn thảo công thức hỗ trợ hoàn toàn định dạng **Toán Tự Nhiên (Natural Math)**: Chuyển đổi mã lệnh LaTeX nội bộ thành chuỗi biểu thức tự nhiên thân thiện (`12/4 = 3`, `√(16) = 4`, `lim(x → x₀)`), triệt tiêu hoàn toàn dấu gạch chéo `\` và ngoặc nhọn `{}`.
+    + Giảng viên và học sinh có thể gõ hoặc dán bất kỳ biểu thức thông thường (`(x+1)/(x-1) = 5`, `2x^2 + 5x - 3 = 0`), hệ thống tự động biên dịch sang KaTeX chuẩn xác mà không bao giờ ép người dùng nhìn thấy hay học mã LaTeX.
+    + Xóa bỏ 100% nhãn kỹ thuật gây phản cảm như `LaTeX: ...` hay `Mã công thức KaTeX:` trên mọi khung popover thanh công cụ.
   - *Bộ Máy Tự Động Tính Toán Đáp Số Thông Minh Cho Mọi Phép Toán (`autoCalculateEquation` & Nút `⚡ Tính`)*:
     + Nâng cấp nút `[ ⚡ Tính ]` thành công cụ tự động tính toán số liệu toàn năng: Tự động phân tích và tính nhẩm kết quả chính xác cho mọi biểu thức chứa phân số/phép chia (`12/4` -> `= 3`, `0.2/0.5` -> `= 0.4`), căn bậc hai (`\sqrt{16}` -> `= 4`), lũy thừa (`2^3` -> `= 8`), số học cơ bản (`10 + 2*5` -> `= 20`) và nồng độ hóa học (`C_M`, `C%`). Nếu công thức đã có kết quả sai từ trước, nút `Tính` sẽ tự động cập nhật lại đáp số chính xác.
   - *Chèn Ký Hiệu Thông Minh Nhận Biết Vị Trí Con Trỏ (Cursor-Aware Insertion) & Bao Bọc Vùng Chọn*:

@@ -772,6 +772,20 @@ V-Eval-Web_Client/
   - Dynamically calculates available screen space: places the popover above the formula if space allows (>200px) or below if at the top of the canvas, completely avoiding any visual obscuration of the active line.
   - Connects to the full Studio builder via `[ 🚀 Mở Studio ]` for 3D spatial models and variation tables.
 
+### 4.60. Visual Interactive Math Slots & Bidirectional Natural Math Architecture (Zero LaTeX Exposure) (`WordStyleFormulaCanvas.jsx`)
+- **Visual Interactive Math Slots Widget**:
+  - Automatically detects formula structures and renders textbook-grade interactive input slots:
+    - **Fraction**: Vertical fraction with numerator input, horizontal divider bar, denominator input, equals sign, and answer slot.
+    - **Radical**: Square root symbol with radicand input and answer slot.
+    - **Power**: Base and exponent inline input slots.
+    - **Chemistry**: Empirical molarity ($C_M = n / V = [n]/[V] = [result]\text{ M}$) and mass concentration ($C\%$) slots.
+  - Direct real-time bidirectional synchronization: Modifying values in visual slots immediately updates the live KaTeX preview, the Natural Math Bar, and the underlying document model.
+- **Bidirectional Natural Math Engine (`latexToNaturalMath` & `naturalMathToLatex`)**:
+  - Translates complex internal LaTeX strings into intuitive, human-friendly natural math notation ($12/4 = 3$, $\sqrt{16} = 4$, $\lim(x \to x_0)$), completely stripping backslashes and curly brace syntax.
+  - Enables teachers to type or paste any mathematical expression using standard arithmetic characters (`+`, `-`, `*`, `/`, `^`, `(`, `)`), automatically converting to textbook-crisp KaTeX without exposing technical markup.
+- **Absolute 100% Elimination of Raw LaTeX / KaTeX Labels**:
+  - Completely purged all occurrences of `LaTeX:`, `KaTeX:`, and literal string badges (`$formula$`) from canvas popovers and modal preview docks.
+
 ---
 
 ## 5. Verification & Acceptance Criteria
