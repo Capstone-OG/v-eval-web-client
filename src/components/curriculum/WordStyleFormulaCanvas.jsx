@@ -9,7 +9,7 @@ import {
   AlertTriangle 
 } from 'lucide-react';
 import { renderKatexHtml, normalizeMathString, unescapeLiteralNewlines } from '../common/MathText';
-import VariationTable from '../common/VariationTable';
+import VariationTable, { parseVariationTableString } from '../common/VariationTable';
 import InteractiveMathRenderer from '../common/InteractiveMathRenderer';
 
 /**

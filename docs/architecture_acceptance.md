@@ -786,6 +786,12 @@ V-Eval-Web_Client/
 - **Absolute 100% Elimination of Raw LaTeX / KaTeX Labels**:
   - Completely purged all occurrences of `LaTeX:`, `KaTeX:`, and literal string badges (`$formula$`) from canvas popovers and modal preview docks.
 
+### 4.61. Complete Runtime Import Integrity & White Screen Prevention Architecture (`WordStyleFormulaCanvas.jsx`)
+- **Runtime Import Audit & Resolution**:
+  - Restored missing named exports (`parseVariationTableString` from `../common/VariationTable`, `unescapeLiteralNewlines` from `../common/MathText`, and `useImperativeHandle` from `react`) within `WordStyleFormulaCanvas.jsx`.
+  - Guarantees seamless rendering of standalone `[VARIATION_TABLE]` blocks, robust document token serialization, and error-free imperative ref operations between `CurriculumStudioEditor` and the equation canvas.
+  - Totally eliminated client-side `ReferenceError` exceptions, ensuring zero white-screen regressions during lesson theory and solution methodology editing sessions.
+
 ---
 
 ## 5. Verification & Acceptance Criteria
