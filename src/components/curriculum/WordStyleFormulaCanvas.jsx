@@ -1,20 +1,15 @@
-import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
-import { flushSync } from 'react-dom';
+import React, { useState, useEffect, useRef, forwardRef } from 'react';
 import { 
-  Calculator, 
-  FlaskConical, 
   Sparkles, 
   Check, 
-  X, 
   Trash2, 
   Zap, 
-  BookOpen,
-  FileEdit,
-  AlertTriangle,
-  Lightbulb
+  BookOpen, 
+  FileEdit, 
+  AlertTriangle 
 } from 'lucide-react';
-import { renderKatexHtml, unescapeLiteralNewlines, normalizeMathString } from '../common/MathText';
-import VariationTable, { parseVariationTableString } from '../common/VariationTable';
+import { renderKatexHtml, normalizeMathString } from '../common/MathText';
+import VariationTable from '../common/VariationTable';
 import InteractiveMathRenderer from '../common/InteractiveMathRenderer';
 
 /**
@@ -28,6 +23,105 @@ function safeCalcDivision(numStr, denStr) {
     return Number.isInteger(val) ? `${val}` : `${val.toFixed(2).replace(/\.00$/, '')}`;
   }
   return '';
+}
+
+/**
+ * Automatically calculates and evaluates arithmetic or fractions in any math equation
+ * Examples:
+ * - "\frac{12}{4}" -> "\frac{12}{4} = 3"
+ * - "\frac{12}{4} = 5" -> "\frac{12}{4} = 3" (updates wrong result)
+ * - "C_M = \frac{0.2}{0.5}" -> "C_M = \frac{0.2}{0.5} = 0.4\text{ M}"
+ * - "C\% = \frac{20}{200} \times 100\%" -> "C\% = \frac{20}{200} \times 100\% = 10\%"
+ * - "\sqrt{16}" -> "\sqrt{16} = 4"
+ * - "12/4" -> "12/4 = 3"
+ * - "10 + 2 * 5" -> "10 + 2 * 5 = 20"
+ */
+export function autoCalculateEquation(latex) {
+  if (!latex || typeof latex !== 'string') return latex;
+  const str = latex.trim();
+
+  // 1. Chemistry CM: C_M = \frac{n}{V} = \frac{0.2}{0.5} = 0.4\text{ M}
+  const chemCmMatch = str.match(/C_M\s*=\s*(?:\\frac\{n\}\{V\}\s*=\s*)?\\frac\{([^}]+)\}\{([^}]+)\}(?:\s*=\s*[^\\$]+)?/);
+  if (chemCmMatch) {
+    const num = parseFloat(chemCmMatch[1]);
+    const den = parseFloat(chemCmMatch[2]);
+    if (!isNaN(num) && !isNaN(den) && den !== 0) {
+      const val = num / den;
+      const formatted = Number.isInteger(val) ? `${val}` : val.toFixed(2).replace(/\.00$/, '');
+      return `C_M = \\frac{n}{V} = \\frac{${chemCmMatch[1]}}{${chemCmMatch[2]}} = ${formatted}\\text{ M}`;
+    }
+  }
+
+  // 2. Chemistry C%: C\% = \frac{m_{ct}}{m_{dd}} \times 100\% = \frac{20}{200} \times 100\% = 10\%
+  const chemCpMatch = str.match(/C\\%\s*=\s*(?:\\frac\{m_\{ct\}\}\{m_\{dd\}\}\s*\\times\s*100\\%\s*=\s*)?\\frac\{([^}]+)\}\{([^}]+)\}\s*\\times\s*100\\%(?:\s*=\s*[^%\\$]+\\%)?/);
+  if (chemCpMatch) {
+    const num = parseFloat(chemCpMatch[1]);
+    const den = parseFloat(chemCpMatch[2]);
+    if (!isNaN(num) && !isNaN(den) && den !== 0) {
+      const val = (num / den) * 100;
+      const formatted = Number.isInteger(val) ? `${val}` : val.toFixed(1).replace(/\.0$/, '');
+      return `C\\% = \\frac{m_{ct}}{m_{dd}} \\times 100\\% = \\frac{${chemCpMatch[1]}}{${chemCpMatch[2]}} \\times 100\\% = ${formatted}\\%`;
+    }
+  }
+
+  // 3. Fraction: \frac{A}{B} or prefix \frac{A}{B}
+  const fracMatch = str.match(/^([\s\S]*?)\\frac\{([0-9.]+)\}\{([0-9.]+)\}(?:\s*=\s*([0-9.]+))?$/);
+  if (fracMatch) {
+    const prefix = fracMatch[1] || '';
+    const num = parseFloat(fracMatch[2]);
+    const den = parseFloat(fracMatch[3]);
+    if (!isNaN(num) && !isNaN(den) && den !== 0) {
+      const val = num / den;
+      const formatted = Number.isInteger(val) ? `${val}` : val.toFixed(2).replace(/\.00$/, '');
+      return `${prefix}\\frac{${fracMatch[2]}}{${fracMatch[3]}} = ${formatted}`;
+    }
+  }
+
+  // 4. Square root: \sqrt{16} or \sqrt[3]{27}
+  const sqrtMatch = str.match(/^([\s\S]*?)\\sqrt(?:\[([0-9.]+)\])?\{([0-9.]+)\}(?:\s*=\s*([0-9.]+))?$/);
+  if (sqrtMatch) {
+    const prefix = sqrtMatch[1] || '';
+    const deg = parseFloat(sqrtMatch[2]) || 2;
+    const val = parseFloat(sqrtMatch[3]);
+    if (!isNaN(val) && val >= 0) {
+      const res = deg === 2 ? Math.sqrt(val) : Math.pow(val, 1 / deg);
+      const formatted = Number.isInteger(res) ? `${res}` : res.toFixed(2).replace(/\.00$/, '');
+      return deg === 2
+        ? `${prefix}\\sqrt{${sqrtMatch[3]}} = ${formatted}`
+        : `${prefix}\\sqrt[${deg}]{${sqrtMatch[3]}} = ${formatted}`;
+    }
+  }
+
+  // 5. General Arithmetic or division: "12/4", "10 + 2*5", "25 - 5", etc.
+  let exprToEval = str;
+  let prefix = '';
+  if (str.includes('=')) {
+    const lastEqIdx = str.lastIndexOf('=');
+    prefix = str.substring(0, lastEqIdx).trim();
+    exprToEval = prefix;
+  }
+
+  const sanitized = exprToEval
+    .replace(/\\times/g, '*')
+    .replace(/\\cdot/g, '*')
+    .replace(/\\div/g, '/')
+    .replace(/:/g, '/')
+    .replace(/\^\{?([0-9]+)\}?/g, '**$1')
+    .trim();
+
+  if (/^[0-9\.\s\+\-\*\/\(\)]+$/.test(sanitized)) {
+    try {
+      const res = Function(`"use strict"; return (${sanitized})`)();
+      if (typeof res === 'number' && !isNaN(res) && isFinite(res)) {
+        const formatted = Number.isInteger(res) ? `${res}` : res.toFixed(2).replace(/\.00$/, '');
+        return `${prefix || exprToEval} = ${formatted}`;
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  return str;
 }
 
 /**
@@ -79,36 +173,36 @@ export function parseEquationStructure(latex) {
   }
 
   // 3. Fraction: \frac{A}{B} = C or \frac{A}{B}
-  const fracMatch = str.match(/^\\frac\{([^}]+)\}\{([^}]+)\}(?:\s*=\s*([^\s$]+))?$/);
+  const fracMatch = str.match(/^\\frac\{([^}]*)\}\{([^}]*)\}(?:\s*=\s*([^\s$]*))?$/);
   if (fracMatch) {
     return {
       type: 'FRACTION',
-      num: fracMatch[1],
-      den: fracMatch[2],
-      hasEqual: !!fracMatch[3],
+      num: fracMatch[1] ?? '',
+      den: fracMatch[2] ?? '',
+      hasEqual: fracMatch[3] !== undefined,
       result: fracMatch[3] || '',
       raw: str
     };
   }
 
   // 4. Power: A^{B} or A^B
-  const powMatch = str.match(/^([a-zA-Z0-9\(\)]+)\^\{?([a-zA-Z0-9+-]+)\}?$/);
+  const powMatch = str.match(/^([a-zA-Z0-9\(\)]*)\^\{?([a-zA-Z0-9+-]*)\}?$/);
   if (powMatch) {
     return {
       type: 'POWER',
-      base: powMatch[1],
-      exp: powMatch[2],
+      base: powMatch[1] ?? '',
+      exp: powMatch[2] ?? '',
       raw: str
     };
   }
 
   // 5. Square Root: \sqrt{A} or \sqrt[n]{A}
-  const sqrtMatch = str.match(/^\\sqrt(?:\[([^\]]+)\])?\{([^}]+)\}$/);
+  const sqrtMatch = str.match(/^\\sqrt(?:\[([^\]]*)\])?\{([^}]*)\}$/);
   if (sqrtMatch) {
     return {
       type: 'SQRT',
       deg: sqrtMatch[1] || '2',
-      expr: sqrtMatch[2],
+      expr: sqrtMatch[2] ?? '',
       raw: str
     };
   }
@@ -123,32 +217,32 @@ export function buildLatexFromStructure(struct) {
   if (!struct) return '';
   switch (struct.type) {
     case 'CHEM_CM': {
-      const num = struct.num || '0';
-      const den = struct.den || '1';
+      const num = struct.num ?? '0';
+      const den = struct.den ?? '1';
       const res = struct.result || safeCalcDivision(num, den);
       return `C_M = \\frac{n}{V} = \\frac{${num}}{${den}} = ${res}\\text{ M}`;
     }
     case 'CHEM_CPERCENT': {
-      const mct = struct.mct || '0';
-      const mdd = struct.mdd || '1';
+      const mct = struct.mct ?? '0';
+      const mdd = struct.mdd ?? '1';
       const res = struct.result || '0';
       return `C\\% = \\frac{m_{ct}}{m_{dd}} \\times 100\\% = \\frac{${mct}}{${mdd}} \\times 100\\% = ${res}\\%`;
     }
     case 'FRACTION': {
-      const num = struct.num || '1';
-      const den = struct.den || '1';
-      if (struct.hasEqual && struct.result) {
-        return `\\frac{${num}}{${den}} = ${struct.result}`;
+      const num = struct.num ?? '';
+      const den = struct.den ?? '';
+      if (struct.hasEqual || struct.result) {
+        return `\\frac{${num}}{${den}} = ${struct.result ?? ''}`;
       }
       return `\\frac{${num}}{${den}}`;
     }
     case 'POWER': {
-      const b = struct.base || 'x';
-      const e = struct.exp || '2';
+      const b = struct.base ?? '';
+      const e = struct.exp ?? '';
       return `${b}^{${e}}`;
     }
     case 'SQRT': {
-      const expr = struct.expr || 'x';
+      const expr = struct.expr ?? '';
       const deg = struct.deg?.trim();
       return deg && deg !== '2' ? `\\sqrt[${deg}]{${expr}}` : `\\sqrt{${expr}}`;
     }
@@ -454,10 +548,12 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
   content,
   onChange,
   placeholder = "Nhập nội dung bài giảng tại đây...",
-  accentColor = "cyan",
+  accentColor: _accentColor = "cyan",
   compact = false,
   singleLine = false,
-  onEditMathGraph = null
+  isStem: _isStem = false,
+  onEditMathGraph = null,
+  onOpenAdvancedModal = null
 }, ref) {
   const [docLines, setDocLines] = useState(() => parseDocumentLines(content || ''));
   const [activeFormulaId, setActiveFormulaId] = useState(null);
@@ -465,6 +561,7 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
   const [bubbleTab, setBubbleTab] = useState('structures');
   
   const activeFormulaRef = useRef(null);
+  const activeInputRef = useRef(null);
   const containerRef = useRef(null);
   const lineRefs = useRef({});
   const lastCommittedContentRef = useRef(content || '');
@@ -486,14 +583,24 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
     }
   }, [content]);
 
-  // Update floating bubble position relative to active formula element
+  // Update floating bubble position relative to active formula element (never obscure the formula)
   useEffect(() => {
     if (activeFormulaId && activeFormulaRef.current && containerRef.current) {
       const formulaRect = activeFormulaRef.current.getBoundingClientRect();
       const containerRect = containerRef.current.getBoundingClientRect();
+      const bubbleHeight = 200;
+      const spaceAbove = formulaRect.top - containerRect.top;
+
+      let topPos;
+      if (spaceAbove > bubbleHeight + 15) {
+        topPos = formulaRect.top - containerRect.top - bubbleHeight - 12;
+      } else {
+        topPos = formulaRect.bottom - containerRect.top + 8;
+      }
+
       setBubblePos({
-        top: formulaRect.top - containerRect.top - 42,
-        left: Math.max(8, formulaRect.left - containerRect.left + (formulaRect.width / 2) - 130)
+        top: Math.max(6, topPos),
+        left: Math.max(8, formulaRect.left - containerRect.left + (formulaRect.width / 2) - 170)
       });
     }
   }, [activeFormulaId]);
@@ -878,23 +985,6 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
     }
   };
 
-  // Modify formula slot value
-  const handleSlotChange = (lineId, tokenId, field, val) => {
-    const updated = docLines.map(line => {
-      if (line.id !== lineId) return line;
-      const nextTokens = line.tokens.map(t => {
-        if (t.id !== tokenId) return t;
-        const nextStruct = { ...t.structure, [field]: val };
-        return {
-          ...t,
-          structure: nextStruct,
-          latex: buildLatexFromStructure(nextStruct)
-        };
-      });
-      return { ...line, tokens: nextTokens };
-    });
-    commitDocLines(updated);
-  };
 
   // Modify generic formula latex
   const handleGenericLatexChange = (lineId, tokenId, newLatex) => {
@@ -919,24 +1009,12 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
       if (line.id !== lineId) return line;
       const nextTokens = line.tokens.map(t => {
         if (t.id !== tokenId) return t;
-        if (t.structure.type === 'FRACTION') {
-          const res = safeCalcDivision(t.structure.num, t.structure.den);
-          const nextStruct = { ...t.structure, hasEqual: true, result: res };
-          return { ...t, structure: nextStruct, latex: buildLatexFromStructure(nextStruct) };
-        } else if (t.structure.type === 'CHEM_CM') {
-          const res = safeCalcDivision(t.structure.num, t.structure.den);
-          const nextStruct = { ...t.structure, result: res };
-          return { ...t, structure: nextStruct, latex: buildLatexFromStructure(nextStruct) };
-        } else if (t.structure.type === 'SQRT') {
-          const val = parseFloat(t.structure.expr);
-          if (!isNaN(val) && val >= 0) {
-            const res = Math.sqrt(val);
-            const formatted = Number.isInteger(res) ? `${res}` : `${res.toFixed(2)}`;
-            const nextLatex = `\\sqrt{${t.structure.expr}} = ${formatted}`;
-            return { ...t, latex: nextLatex, structure: { type: 'GENERIC', raw: nextLatex } };
-          }
-        }
-        return t;
+        const calculatedLatex = autoCalculateEquation(t.latex || '');
+        return {
+          ...t,
+          latex: calculatedLatex,
+          structure: parseEquationStructure(calculatedLatex)
+        };
       });
       return { ...line, tokens: nextTokens };
     });
@@ -957,25 +1035,85 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
     commitDocLines(updated);
   };
 
-  // Insert quick symbol into active formula
+  // Insert quick symbol into active formula (Cursor-aware insertion and text wrapping)
   const handleInsertSymbolIntoActive = (symbolCode) => {
     if (!activeFormulaId) return;
+
+    const inputEl = activeInputRef.current;
+    let cursorStart = inputEl ? inputEl.selectionStart : null;
+    let cursorEnd = inputEl ? inputEl.selectionEnd : null;
+
+    let newLatexAfterInsert = '';
+    let newCursorPos = 0;
+
     const updated = docLines.map(line => {
       const targetToken = line.tokens.find(t => t.id === activeFormulaId);
       if (!targetToken) return line;
 
       const nextTokens = line.tokens.map(t => {
         if (t.id !== activeFormulaId) return t;
-        const nextLatex = (t.latex || '') + symbolCode;
+
+        const current = t.latex || '';
+        if (cursorStart !== null && cursorEnd !== null && cursorStart <= current.length) {
+          const before = current.substring(0, cursorStart);
+          const selected = current.substring(cursorStart, cursorEnd);
+          const after = current.substring(cursorEnd);
+
+          if (selected) {
+            // Wrapping selected text
+            if (symbolCode.includes('\\frac{a}{b}')) {
+              const inserted = `\\frac{${selected}}{}`;
+              newLatexAfterInsert = before + inserted + after;
+              newCursorPos = before.length + inserted.length - 1; // inside denominator {}
+            } else if (symbolCode.includes('\\sqrt{x}')) {
+              const inserted = `\\sqrt{${selected}}`;
+              newLatexAfterInsert = before + inserted + after;
+              newCursorPos = before.length + inserted.length;
+            } else if (symbolCode === '^2') {
+              const inserted = `(${selected})^2`;
+              newLatexAfterInsert = before + inserted + after;
+              newCursorPos = before.length + inserted.length;
+            } else {
+              newLatexAfterInsert = before + symbolCode + after;
+              newCursorPos = before.length + symbolCode.length;
+            }
+          } else {
+            // Inserting at caret
+            newLatexAfterInsert = before + symbolCode + after;
+            if (symbolCode.includes('\\frac{a}{b}')) {
+              newCursorPos = before.length + 6; // right inside numerator \frac{
+            } else if (symbolCode.includes('\\sqrt{x}')) {
+              newCursorPos = before.length + 6; // right inside \sqrt{
+            } else {
+              newCursorPos = before.length + symbolCode.length;
+            }
+          }
+        } else {
+          newLatexAfterInsert = current + symbolCode;
+          newCursorPos = newLatexAfterInsert.length;
+        }
+
         return {
           ...t,
-          latex: nextLatex,
-          structure: parseEquationStructure(nextLatex)
+          latex: newLatexAfterInsert,
+          structure: parseEquationStructure(newLatexAfterInsert)
         };
       });
       return { ...line, tokens: nextTokens };
     });
+
     commitDocLines(updated);
+
+    setTimeout(() => {
+      if (activeInputRef.current) {
+        activeInputRef.current.focus();
+        try {
+          activeInputRef.current.setSelectionRange(newCursorPos, newCursorPos);
+        } catch (e) {
+          // ignore
+        }
+      }
+    }, 10);
   };
 
   // Handle Drag-and-Drop of formula/compound/block chips from HierarchicalMathPalette
@@ -1102,7 +1240,7 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
   return (
     <div className="relative font-sans text-slate-800" ref={containerRef}>
       
-      {/* HIERARCHICAL FORMULA QUICK INSPECTOR & INSERTER */}
+      {/* UNIVERSAL FORMULA FLOATING STUDIO & CURSOR-AWARE INSERTER */}
       {activeFormulaId && activeTokenInfo && (
         <div
           style={{
@@ -1111,56 +1249,106 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
             left: `${Math.max(8, bubblePos.left)}px`,
             zIndex: 50
           }}
-          className="bg-white/98 text-slate-900 backdrop-blur-md rounded-2xl shadow-2xl border-2 border-cyan-500/80 p-2.5 flex flex-col gap-2 min-w-[340px] max-w-[540px] animate-in fade-in zoom-in-95 duration-100"
+          className="bg-white/98 text-slate-900 backdrop-blur-md rounded-2xl shadow-2xl border-2 border-indigo-500/80 p-3 flex flex-col gap-2.5 min-w-[360px] max-w-[580px] animate-in fade-in zoom-in-95 duration-100"
         >
-          {/* Row 1: Header with Live KaTeX Preview & Actions */}
-          <div className="flex items-center justify-between gap-2 pb-1.5 border-b border-slate-200">
-            <div className="flex items-center gap-1.5 overflow-hidden flex-1 min-w-0">
-              <span className="px-2 py-0.5 rounded-full bg-cyan-100 text-cyan-800 border border-cyan-300 text-[10px] font-bold shrink-0">
-                {activeTokenInfo.token.structure?.type === 'FRACTION' ? 'Phân Số' :
-                 activeTokenInfo.token.structure?.type === 'CHEM_CM' ? 'Nồng Độ CM' :
-                 activeTokenInfo.token.structure?.type === 'CHEM_CPERCENT' ? 'Nồng Độ C%' :
-                 activeTokenInfo.token.structure?.type === 'POWER' ? 'Số Mũ' :
-                 activeTokenInfo.token.structure?.type === 'SQRT' ? 'Căn Thức' : 'Công Thức'}
+          {/* Row 1: Universal Equation Bar & Quick Action Buttons */}
+          <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-200">
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <span className="px-2.5 py-1 rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white text-[10px] font-black shrink-0 uppercase tracking-wider shadow-2xs">
+                Soạn Công Thức
               </span>
-              <div 
-                className="text-xs text-cyan-950 font-serif max-w-[280px] overflow-x-auto scrollbar-none whitespace-nowrap px-1 py-0.5"
-                dangerouslySetInnerHTML={{ __html: renderKatexHtml(activeTokenInfo.token.latex || 'x', false) }}
-              />
+
+              {/* UNIVERSAL CONTINUOUS FORMULA INPUT - FREELY TYPE OR PASTE ANY FORMULA */}
+              <div className="flex-1 min-w-0 relative">
+                <input
+                  ref={activeInputRef}
+                  type="text"
+                  value={activeTokenInfo.token.latex}
+                  onChange={(e) => handleGenericLatexChange(activeTokenInfo.lineId, activeTokenInfo.token.id, e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Backspace' && !activeTokenInfo.token.latex) {
+                      e.preventDefault();
+                      handleDeleteActiveFormula(activeTokenInfo.lineId, activeTokenInfo.token.id);
+                    }
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      setActiveFormulaId(null);
+                    }
+                    if (e.key === 'Escape') {
+                      e.preventDefault();
+                      setActiveFormulaId(null);
+                    }
+                  }}
+                  placeholder="Gõ hoặc dán mọi công thức (12/4 = 3, f(x), căn thức, tích phân...)"
+                  autoFocus
+                  className="w-full bg-slate-50 hover:bg-white focus:bg-white border-2 border-indigo-300 focus:border-indigo-600 rounded-xl px-3 py-1.5 text-xs font-mono font-bold text-slate-900 outline-none shadow-inner transition-colors"
+                />
+              </div>
             </div>
 
-            <div className="flex items-center gap-1 shrink-0">
-              {(activeTokenInfo.token.structure?.type === 'FRACTION' || activeTokenInfo.token.structure?.type === 'CHEM_CM' || activeTokenInfo.token.structure?.type === 'SQRT') && (
-                <button
-                  type="button"
-                  onClick={() => handleAutoCalc(activeTokenInfo.lineId, activeTokenInfo.token.id)}
-                  className="px-2 py-0.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-[10.5px] flex items-center gap-0.5 shadow-2xs cursor-pointer"
-                  title="Tự tính kết quả số"
-                >
-                  <Zap className="w-2.5 h-2.5 fill-slate-950" />
-                  <span>Tính</span>
-                </button>
-              )}
+            {/* Action Buttons */}
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                type="button"
+                onClick={() => handleAutoCalc(activeTokenInfo.lineId, activeTokenInfo.token.id)}
+                className="px-2.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs flex items-center gap-1 shadow-xs cursor-pointer transition-transform hover:scale-102"
+                title="Tự tính đáp số tự động cho mọi phép toán (12/4, căn bậc 2, nồng độ...)"
+              >
+                <Zap className="w-3.5 h-3.5 fill-slate-950 text-slate-950" />
+                <span>Tính</span>
+              </button>
               <button
                 type="button"
                 onClick={() => handleDeleteActiveFormula(activeTokenInfo.lineId, activeTokenInfo.token.id)}
-                className="p-1 rounded-lg hover:bg-rose-100 text-rose-600 transition-colors cursor-pointer"
-                title="Xóa công thức"
+                className="px-2 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs flex items-center gap-1 transition-colors cursor-pointer"
+                title="Xóa công thức này khỏi bài giảng (Delete / Backspace)"
               >
-                <Trash2 className="w-3.5 h-3.5" />
+                <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                <span>Xóa</span>
               </button>
               <button
                 type="button"
                 onClick={() => setActiveFormulaId(null)}
-                className="px-2.5 py-0.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-[11px] flex items-center gap-0.5 cursor-pointer shadow-2xs"
+                className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs flex items-center gap-1 cursor-pointer shadow-xs transition-transform hover:scale-102"
+                title="Hoàn tất soạn thảo (Enter / Esc)"
               >
-                <Check className="w-3 h-3" />
+                <Check className="w-3.5 h-3.5 stroke-[3]" />
                 <span>Xong</span>
               </button>
             </div>
           </div>
 
-          {/* Row 2: Hierarchical Category Tabs */}
+          {/* Row 2: Live KaTeX Typography Preview Dock (CHUẨN SGK TRỰC QUAN 100%) */}
+          <div className="px-3 py-2 rounded-xl bg-indigo-50/70 border border-indigo-200/90 flex items-center justify-between gap-3 shadow-inner">
+            <div className="flex items-center gap-2 overflow-x-auto scrollbar-none flex-1 min-w-0">
+              <span className="text-[10px] font-extrabold text-indigo-700 uppercase tracking-wider shrink-0 flex items-center gap-1">
+                <Sparkles className="w-3 h-3 text-amber-500" />
+                <span>Học sinh thấy:</span>
+              </span>
+              <div 
+                className="text-sm sm:text-base text-indigo-950 font-serif whitespace-nowrap overflow-x-auto py-0.5"
+                dangerouslySetInnerHTML={{ 
+                  __html: renderKatexHtml(activeTokenInfo.token.latex || '\\text{(Trống)}', false) 
+                }}
+                title="Xem trước hiển thị công thức chuẩn sách giáo khoa"
+              />
+            </div>
+            {onOpenAdvancedModal && (
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveFormulaId(null);
+                  onOpenAdvancedModal();
+                }}
+                className="text-[10.5px] font-bold text-indigo-700 hover:text-indigo-900 bg-white hover:bg-indigo-100 px-2 py-1 rounded-lg border border-indigo-300 shadow-2xs whitespace-nowrap cursor-pointer transition-colors shrink-0"
+                title="Mở Studio đầy đủ để vẽ đồ thị hàm số hoặc bảng biến thiên"
+              >
+                🚀 Mở Studio
+              </button>
+            )}
+          </div>
+
+          {/* Row 3: Hierarchical Category Tabs */}
           <div className="flex items-center gap-1 overflow-x-auto scrollbar-none pb-0.5">
             {Object.keys(HIERARCHICAL_BUBBLE_INSERTER).map((tabKey) => {
               const tab = HIERARCHICAL_BUBBLE_INSERTER[tabKey];
@@ -1172,7 +1360,7 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
                   onClick={() => setBubbleTab(tabKey)}
                   className={`px-2 py-0.5 rounded-md text-[10px] font-bold whitespace-nowrap transition-colors cursor-pointer ${
                     isAct 
-                      ? 'bg-cyan-600 text-white shadow-2xs' 
+                      ? 'bg-indigo-600 text-white shadow-2xs' 
                       : 'bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200'
                   }`}
                 >
@@ -1182,37 +1370,19 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
             })}
           </div>
 
-          {/* Row 3: Quick Insertion Chips of Active Tab */}
+          {/* Row 4: Quick Insertion Chips of Active Tab (Cursor-Aware Insertion) */}
           <div className="flex flex-wrap items-center gap-1 max-h-[85px] overflow-y-auto scrollbar-thin p-1 rounded-lg bg-slate-50 border border-slate-200">
             {HIERARCHICAL_BUBBLE_INSERTER[bubbleTab]?.items?.map((item, idx) => (
               <button
                 key={idx}
                 type="button"
                 onClick={() => handleInsertSymbolIntoActive(item.code)}
-                className="px-1.5 py-0.5 rounded bg-white hover:bg-cyan-100 hover:text-cyan-800 border border-slate-200 text-slate-700 text-[10.5px] font-mono cursor-pointer transition-colors shadow-2xs"
-                title={`${item.title} (Nhấp để chèn)`}
+                className="px-1.5 py-0.5 rounded bg-white hover:bg-indigo-100 hover:text-indigo-800 border border-slate-200 text-slate-700 text-[10.5px] font-mono cursor-pointer transition-colors shadow-2xs"
+                title={`${item.title} (Nhấp để chèn tại vị trí con trỏ)`}
               >
                 {item.label}
               </button>
             ))}
-          </div>
-
-          {/* Row 4: Direct LaTeX Input Line for Ultimate Flexibility */}
-          <div className="flex items-center gap-1.5 pt-1 border-t border-slate-200">
-            <span className="text-[10px] font-bold text-cyan-700 font-mono shrink-0">LaTeX:</span>
-            <input
-              type="text"
-              value={activeTokenInfo.token.latex}
-              onChange={(e) => handleGenericLatexChange(activeTokenInfo.lineId, activeTokenInfo.token.id, e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  setActiveFormulaId(null);
-                }
-              }}
-              className="flex-1 bg-slate-50 border border-slate-300 focus:border-cyan-500 rounded px-2 py-0.5 text-[11px] font-mono text-cyan-900 outline-none transition-colors"
-              placeholder="Gõ hoặc dán mã LaTeX..."
-            />
           </div>
         </div>
       )}
@@ -1424,6 +1594,16 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
                             const isAtStart = sel && (sel.anchorOffset === 0 && sel.focusOffset === 0);
                             const isFirstToken = line.tokens[0]?.id === token.id;
 
+                            // If at start of text span immediately after a formula, Backspace deletes the formula!
+                            if (isAtStart && !isFirstToken) {
+                              const tokenIdx = line.tokens.findIndex(t => t.id === token.id);
+                              if (tokenIdx > 0 && line.tokens[tokenIdx - 1]?.isFormula) {
+                                e.preventDefault();
+                                handleDeleteActiveFormula(line.id, line.tokens[tokenIdx - 1].id);
+                                return;
+                              }
+                            }
+
                             const lineEl = lineRefs.current[line.id];
                             const domLineText = lineEl ? (lineEl.innerText || '').replace(/\r?\n/g, '').trim() : '';
                             const isLineEmpty = !line.tokens.some(t => t.isFormula) && (domLineText === '' || spanText === '');
@@ -1455,11 +1635,10 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
 
                   // CASE 2: FORMULA TOKEN (COMPACT INLINE FOOTPRINT)
                   const isActive = token.id === activeFormulaId;
-                  const struct = token.structure;
 
-                  // ACTIVE EDITING STATE: MINIMALIST SLOT BOX
+                  // ACTIVE EDITING STATE: CLEAN VISUAL HIGHLIGHT IN PLACE
                   if (isActive) {
-                    const handleDropOnFormulaInput = (e, slotField = null) => {
+                    const handleDropOnFormulaInput = (e) => {
                       const dropped =
                         e.dataTransfer?.getData('text/veval-math') ||
                         e.dataTransfer?.getData('text/veval-bbt') ||
@@ -1469,11 +1648,7 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
                       e.stopPropagation();
                       const cleanDrop = String(dropped).trim().replace(/^\$+|\$+$/g, '');
                       if (!cleanDrop) return;
-                      if (slotField) {
-                        handleSlotChange(line.id, token.id, slotField, cleanDrop);
-                      } else {
-                        handleGenericLatexChange(line.id, token.id, cleanDrop);
-                      }
+                      handleGenericLatexChange(line.id, token.id, cleanDrop);
                     };
 
                     return (
@@ -1484,96 +1659,15 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
                           e.preventDefault();
                           e.dataTransfer.dropEffect = 'copy';
                         }}
-                        onDrop={(e) => handleDropOnFormulaInput(e, null)}
-                        className="inline-flex items-center align-middle mx-0.5 px-1 py-0.5 bg-amber-50/90 ring-1 ring-amber-400 rounded-lg shadow-2xs z-30"
+                        onDrop={handleDropOnFormulaInput}
+                        className="inline-flex items-center align-baseline mx-0.5 px-1.5 py-0.5 bg-indigo-50/90 border-2 border-indigo-500 rounded-lg shadow-sm z-30 transition-all cursor-pointer"
+                        title="Đang sửa công thức trong khung Studio nổi phía trên"
                       >
-                        {struct?.type === 'FRACTION' ? (
-                          /* COMPACT FRACTION SLOTS */
-                          <span className="inline-flex items-center gap-0.5 text-xs">
-                            <span className="inline-flex flex-col items-center justify-center">
-                              <input
-                                type="text"
-                                value={struct.num}
-                                onChange={(e) => handleSlotChange(line.id, token.id, 'num', e.target.value)}
-                                onDragOver={(e) => e.preventDefault()}
-                                onDrop={(e) => handleDropOnFormulaInput(e, 'num')}
-                                className="text-center font-bold text-amber-950 bg-white border border-amber-300 rounded px-1 py-0 text-[11px] font-mono outline-none"
-                                style={{ width: `${Math.max(20, (struct.num || '').length * 8 + 8)}px` }}
-                              />
-                              <span className="w-full h-[1px] bg-slate-700 my-0.5"></span>
-                              <input
-                                type="text"
-                                value={struct.den}
-                                onChange={(e) => handleSlotChange(line.id, token.id, 'den', e.target.value)}
-                                onDragOver={(e) => e.preventDefault()}
-                                onDrop={(e) => handleDropOnFormulaInput(e, 'den')}
-                                className="text-center font-bold text-cyan-950 bg-white border border-cyan-300 rounded px-1 py-0 text-[11px] font-mono outline-none"
-                                style={{ width: `${Math.max(20, (struct.den || '').length * 8 + 8)}px` }}
-                              />
-                            </span>
-                            {(struct.hasEqual || struct.result) && (
-                              <span className="inline-flex items-center gap-0.5 font-bold text-slate-700 ml-0.5 text-xs">
-                                <span>=</span>
-                                <input
-                                  type="text"
-                                  value={struct.result}
-                                  onChange={(e) => handleSlotChange(line.id, token.id, 'result', e.target.value)}
-                                  onDragOver={(e) => e.preventDefault()}
-                                  onDrop={(e) => handleDropOnFormulaInput(e, 'result')}
-                                  className="text-center font-extrabold text-emerald-900 bg-white border border-emerald-300 rounded px-1 py-0 text-[11px] font-mono outline-none"
-                                  style={{ width: `${Math.max(22, (struct.result || '').length * 8 + 8)}px` }}
-                                />
-                              </span>
-                            )}
-                          </span>
-                        ) : struct?.type === 'POWER' ? (
-                          /* COMPACT POWER SLOTS */
-                          <span className="inline-flex items-baseline gap-0.5 text-xs">
-                            <input
-                              type="text"
-                              value={struct.base}
-                              onChange={(e) => handleSlotChange(line.id, token.id, 'base', e.target.value)}
-                              onDragOver={(e) => e.preventDefault()}
-                              onDrop={(e) => handleDropOnFormulaInput(e, 'base')}
-                              className="text-center font-bold text-indigo-950 bg-white border border-indigo-300 rounded px-1 py-0 text-[11px] font-mono outline-none"
-                              style={{ width: `${Math.max(16, (struct.base || '').length * 8 + 6)}px` }}
-                            />
-                            <input
-                              type="text"
-                              value={struct.exp}
-                              onChange={(e) => handleSlotChange(line.id, token.id, 'exp', e.target.value)}
-                              onDragOver={(e) => e.preventDefault()}
-                              onDrop={(e) => handleDropOnFormulaInput(e, 'exp')}
-                              className="text-center font-extrabold text-rose-950 bg-white border border-rose-300 rounded px-0.5 py-0 text-[10px] font-mono -translate-y-1 outline-none"
-                              style={{ width: `${Math.max(14, (struct.exp || '').length * 7 + 6)}px` }}
-                            />
-                          </span>
-                        ) : struct?.type === 'SQRT' ? (
-                          /* COMPACT SQRT SLOT */
-                          <span className="inline-flex items-center gap-0.5 text-xs font-mono">
-                            <span className="text-sm font-serif">√</span>
-                            <input
-                              type="text"
-                              value={struct.expr}
-                              onChange={(e) => handleSlotChange(line.id, token.id, 'expr', e.target.value)}
-                              onDragOver={(e) => e.preventDefault()}
-                              onDrop={(e) => handleDropOnFormulaInput(e, 'expr')}
-                              className="text-center font-bold text-emerald-950 bg-white border-b border-emerald-500 rounded-t px-1 py-0 text-[11px] outline-none"
-                              style={{ width: `${Math.max(20, (struct.expr || '').length * 8 + 8)}px` }}
-                            />
-                          </span>
-                        ) : (
-                          /* GENERIC SHORT INLINE INPUT */
-                          <input
-                            type="text"
-                            value={token.latex}
-                            onChange={(e) => handleGenericLatexChange(line.id, token.id, e.target.value)}
-                            onDragOver={(e) => e.preventDefault()}
-                            onDrop={(e) => handleDropOnFormulaInput(e, null)}
-                            className="font-mono text-center text-xs font-bold bg-white text-slate-900 border border-amber-400 rounded px-1.5 py-0 outline-none shadow-2xs"
-                            style={{ width: `${Math.max(32, token.latex.length * 8 + 14)}px` }}
-                          />
-                        )}
+                        <span 
+                          className="text-[13.5px] text-indigo-950 font-serif select-none"
+                          dangerouslySetInnerHTML={{ __html: renderKatexHtml(token.latex || '\\text{(Trống)}', false) }}
+                        />
+                        <span className="w-1.5 h-1.5 rounded-full bg-indigo-600 animate-pulse ml-1.5 shrink-0"></span>
                       </span>
                     );
                   }

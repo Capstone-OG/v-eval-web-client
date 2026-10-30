@@ -711,6 +711,67 @@ V-Eval-Web_Client/
   - Preserves empty cells in `parseVariationTableString` when splitting `x:` and `y:` rows by `|` and renders an inline `Thả số` drop prompt in `renderMath`, ensuring clearing a cell's text never collapses the column or prevents subsequent drag-and-drop insertion.
   - Added `lastCommittedContentRef` and `handleDropOnFormulaInput` in `WordStyleFormulaCanvas.jsx` so clearing a formula sub-slot (`num`, `den`, `result`, `base`, `exp`, `expr`, `latex`) never destroys the active formula token and allows direct drag-and-drop replacement into any sub-slot or cleared editor canvas.
 
+### 4.55. AI-Powered Adaptive Question Generator for Curriculum Studio Editor (`CurriculumStudioEditor.jsx`, `aiService.js`, `contentService.js`)
+- **Dual-Action Trigger & Persistent Pattern Validation**:
+  - Implemented prominent `✨ AI Sinh Câu Hỏi` action buttons on Block 4 ("Ngân Hàng Câu Hỏi Dạng Bài & Bài Toán Mẫu") header and the empty question list fallback state.
+  - Guards against orphan question creation: verifies if `form.patternId` or `pattern.patternId` exists in the database; if not, alerts the instructor with a non-blocking toast to save the pattern first before initiating batch generation.
+- **Batch Adaptive Question Generator Modal (`AiQuestionGeneratorModal`)**:
+  - Allows educators to configure question batch count (`1`, `2`, `3`, `5`) and target Bloom cognitive taxonomy (`L1` Knowledge to `L4` High Application).
+  - Integrates `aiService.generatePatternQuestions` calling the backend AI Engine endpoint `POST /api/ai-engine/curriculum/generate-questions` with full pedagogical context: `patternName`, `lessonName`, `domainName`, `theoryRecap`, `solutionMethod`, and `existingQuestions` for anti-duplication.
+  - Interactive preview card layout featuring KaTeX mathematical typography rendering (`<MathText />`), 2x2 multiple-choice option grid with emerald-highlighted correct answers, stepwise explanations, individual selection checkboxes, and a select-all toggle.
+  - Batch persistence via `contentService.createQuestion` (`POST /api/content/questions` API 16), immediately appending saved questions to the local state.
+- **1-Click AI Auto-Fill in Manual Creation Dialog (`NewQuestionDialog`)**:
+  - Added an inline `✨ AI Tự Điền Câu Hỏi` button in the manual question modal that calls `aiService.generatePatternQuestions` (count: 1) to automatically populate question content, options A–D, correct answer, Bloom level, and detailed explanation in a single tap.
+
+### 4.56. Two-Row Text Ribbon & Section Header STEM Dropdown Architecture (`StemToolsDropdown` in `CurriculumStudioEditor.jsx`)
+- **Section Header Dropdown & 2-Tier In-Canvas Editorial Layout**:
+  - Anchors the consolidated `StemToolsDropdown` independently inside the overarching Section Header of each active editing block (Block 1 `theoryRecap` and Block 2 `solutionMethod`).
+  - Restructures the in-canvas editorial toolbar into 2 distinct, purpose-driven rows:
+    + **Row 1 (Above Text Controls)**: Hosts content-insertion actions (`+ Ví Dụ SGK` in Block 1 or `+ Thêm Bước mới`, `Nạp mẫu chuẩn 4 bước` in Block 2; images pasted directly via Ctrl+V) on the left, and view mode switchers (`✍️ Sửa Trực Tiếp`, `👁️ Trang In`, `📄 Raw`) on the right.
+    + **Row 2 (Pure Text Formatting)**: Exclusively reserves text typography styling (`Văn bản: Bold`, `Italic`, `Heading/Step`, `Bullet List`, `Numbered List`), ensuring an uncluttered, zero-wrap Microsoft Word style user experience.
+- **Graphing & MathLab Consolidation**:
+  - Merged two redundant visual controls (`Function Graph Oxy` and `MathLab 3D/2D`) into a single high-capability entry point: `📈 Đồ Thị & MathLab (2D/3D)`, which directly launches the full JSXGraph interactive studio covering 2D algebraic curves, 2D synthetic plane geometry, and 3D rotatable spatial figures.
+  - Houses the complete STEM formula builder suite: Variation Table 3-row vector grid, Consolidated MathLab, Fraction & Arithmetic calculator, Difference quotient derivative, and Chemical molarity formulas.
+
+### 4.57. Studio-Grade 2-Column Formula & STEM Builder Modal (`InteractiveFormulaBuilderModal.jsx`) & Mega-Dropdown Architecture (`StemToolsDropdown`)
+- **Studio-Grade 2-Column Modal Architecture (`InteractiveFormulaBuilderModal.jsx`)**:
+  - Re-engineered the formula builder modal from a constrained `max-w-2xl` dialog into an expansive, high-productivity Studio modal (`max-w-5xl h-[88vh] max-h-[840px]`).
+  - Implements a modern 2-column studio layout:
+    + *Left Category Sidebar (`w-72`)*: Neatly segments tools into "Mathematics & Calculus" (Variation Table, Fractions, Radicals, Powers, Integrals, Systems, Oxy Function Graphs) and "STEM & Empirical Chemistry" (Molarity, Mass, Concentration, Reaction Yields). Employs rich Lucide icons (`Table2`, `Divide`, `Activity`, `FlaskConical`, etc.), descriptive dual-line subtitles, and vibrant indicator accents.
+    + *Right Interactive Canvas (`flex-1`)*: Delivers spacious visual editors for each domain. Embeds the full-width `<VariationTable />` (700px+) without horizontal cramping, maintaining full access to the bottom Drag-and-Drop quick edit bar. Chemistry formulas feature 4 auto-calculating cards with standard units (`mol`, `L`, `g`, `g/mol`) and real-time emerald computation badges.
+    + *Floating KaTeX Live Preview Dock*: Renders instant KaTeX mathematical typesetting in an elevated preview dock with keyboard shortcuts (Esc / Enter).
+- **Studio Mega-Dropdown Popover Architecture (`StemToolsDropdown`)**:
+  - Expanded the dropdown menu into a deluxe `w-[420px]` mega popover card featuring a dark gradient branding banner (`STUDIO CÔNG CỤ TOÁN & STEM - GDPT 2018`).
+  - Provides rich interactive tiles with categorized tags (`SGK 2018`, `JSXGraph Native`, `Auto Calc`, `Vi Tích Phân`, `Thực Nghiệm`), clear descriptions, and responsive outside-click auto-dismissal.
+
+### 4.58. 100% Elimination of Raw LaTeX Exposure & Visual Number Slot Editing (`InteractiveFormulaBuilderModal.jsx`)
+- **Strict Prohibition of Raw LaTeX / Textarea Exposure**:
+  - Completely purged raw LaTeX textareas and literal equation string wrappers (`$formula$`) from the formula studio dock, adhering to the foundational pedagogical rule that educators and end-users must never interact with raw command syntax like `\frac` or `\lim`.
+  - Re-anchored the user experience around dedicated visual number and expression slots (Fraction Numerator/Denominator, Radical Index/Radicand, Power Base/Exponent, Integral Bounds), allowing teachers to input numbers and expressions naturally.
+- **1-Click Pedagogical Template Presets (Insert Mẫu)**:
+  - Fraction: Provides instant presets for 1/2, 3/4, integer division 12/4 = 3, and algebraic rational expressions $(2x+1)/(x-1)$ and $(x^2-4)/(x-2)$.
+  - Limit & Calculus: Integrates 5 classic GDPT 2018 limit presets ($f'(x_0)$ derivative definition, $\sin(x)/x=1$, rational asymptote limits, $0/0$ cancellation, and sequence convergence $1/n$). Dedicated inputs for numerator $P(x)$ and denominator $Q(x)$ eliminate manual fraction syntax.
+- **High-Definition WYSIWYG KaTeX Preview Dock**:
+  - Showcases large, razor-sharp textbook typography (`text-2xl`) directly rendered via KaTeX without any technical clutter.
+
+### 4.59. Universal Formula Bar, Live Textbook Typography Dock & Cursor-Aware Symbol Insertion Architecture (`WordStyleFormulaCanvas.jsx`)
+- **Universal Continuous Formula Bar (Ô Soạn Thảo Công Thức Toàn Năng Siêu Linh Hoạt)**:
+  - Replaces rigid, partitioned single-equation slots with a universal equation bar capable of accommodating any mathematical expression without domain restrictions ($12/4 = 3$, $f(x) = \frac{x^2 - 1}{x - 1} = x + 1$, square roots, general powers, limits, integrals, chemistry $C_M$ equations, physics kinematics).
+  - Directly binds `bubbleInputRef` to capture user input seamlessly, supporting standard keyboard shortcuts (`Enter` to complete, `Escape` to dismiss, `Backspace` on empty input to delete).
+  - Pairs directly with the **Live KaTeX Typography Preview Dock (`👀 Học sinh thấy:`)** situated directly beneath the equation bar, continuously rendering textbook-grade serif KaTeX mathematics in real time without exposing raw `LaTeX:` or `KaTeX:` code tags.
+- **Universal Automatic Calculation Engine (`autoCalculateEquation` & Nút `⚡ Tính`)**:
+  - Delivers a smart evaluation engine that automatically parses and evaluates fractions/divisions (`\frac{12}{4}` -> `= 3`, `0.2/0.5` -> `= 0.4`), square roots (`\sqrt{16}` -> `= 4`), powers (`2^3` -> `= 8`), basic arithmetic (`10 + 2*5` -> `= 20`), and empirical chemistry concentrations ($C_M$, $C\%$).
+  - Automatically appends or corrects the right-hand side answer (`= [result]`) with a single click of the golden `[ ⚡ Tính ]` button.
+- **Cursor-Aware Symbol Insertion & Text Wrapping (`handleInsertSymbolIntoActive`)**:
+  - Leverages `selectionStart` and `selectionEnd` from `activeInputRef`: clicking any symbol chip from the 8 disciplinary tabs (`Cấu trúc`, `Oxyz`, `Vật lý`, `Hóa học`, `Sinh học`, `Ngữ văn`, `Địa lý`, `Ký hiệu & Logic`) inserts the snippet at the exact caret position and automatically repositions focus inside the primary placeholder.
+  - Supports selection wrapping: highlighting existing text and clicking `a/b` wraps the selection into the numerator, while clicking `√x` wraps it inside a radical.
+- **Natural Backspace & Delete Key Integration**:
+  - Enables Microsoft Word-grade deletion: pressing `Backspace` at offset 0 of a text segment immediately following a formula automatically deletes the formula token.
+  - Pressing `Backspace` within an empty formula slot or clicking `[ 🗑️ Xóa ]` immediately removes the formula from the canvas.
+- **Smart Popover Positioning Anti-Overlap (`bubblePos`)**:
+  - Dynamically calculates available screen space: places the popover above the formula if space allows (>200px) or below if at the top of the canvas, completely avoiding any visual obscuration of the active line.
+  - Connects to the full Studio builder via `[ 🚀 Mở Studio ]` for 3D spatial models and variation tables.
+
 ---
 
 ## 5. Verification & Acceptance Criteria

@@ -2,6 +2,66 @@
 
 ---
 
+## [31/10/2026] - Tích Hợp AI Sinh Câu Hỏi Thích Ứng Bám Sát Dạng Bài (API 16), Modal `AiQuestionGeneratorModal` & Trợ Lý AI Tự Điền Đề Bài 1-Click Trong Studio Sư Phạm
+
+- **Tích Hợp AI Sinh Câu Hỏi Trắc Nghiệm Tự Động Bám Sát Dạng Bài Vào Khối 4 Ngân Hàng Đề (`CurriculumStudioEditor.jsx`)**:
+  - *Bộ Đôi Nút Tác Vụ AI & Kiểm Tra Định Danh Dạng Bài Trước Khi Sinh*:
+    - Bổ sung nút bấm nổi bật `✨ AI Sinh Câu Hỏi` (gradient tím - indigo) tại header Khối 4 và trạng thái danh sách trống (`Chưa có câu hỏi bổ sung nào trong cơ sở dữ liệu`).
+    - Tự động kiểm tra định danh dạng bài `skillId`: Nếu dạng bài chưa được lưu vào cơ sở dữ liệu (`!form.patternId && !pattern?.patternId`), hệ thống lập tức hiển thị thông báo nhắc nhở giáo viên bấm `Lưu Dạng Bài` ở góc trên trước, sau đó AI mới tiến hành sinh câu hỏi và lưu tự động vào ngân hàng đề để đảm bảo tính toàn vẹn dữ liệu.
+  - *Modal Sinh Câu Hỏi Thích Ứng Hàng Loạt Chuẩn Cấu Trúc Thi (`AiQuestionGeneratorModal`)*:
+    - Cho phép giáo viên linh hoạt chọn số lượng câu hỏi cần tạo (`1 câu`, `2 câu`, `3 câu`, `5 câu`) và mức độ tư duy mục tiêu (Bloom L1 Nhận biết, L2 Thông hiểu, L3 Vận dụng, L4 Vận dụng cao).
+    - Kết nối dịch vụ `aiService.generatePatternQuestions` (gọi AI Engine `/api/ai-engine/curriculum/generate-questions`) truyền đầy đủ ngữ cảnh `patternName`, `lessonName`, `domainName`, `theoryRecap`, `solutionMethod` và danh sách đề bài hiện có để AI tạo đề mới bám sát 100% bản đồ tri thức dạng bài và không trùng lặp.
+    - Hiển thị trực quan kết quả sinh với Live KaTeX Preview, lưới 4 phương án A, B, C, D nổi bật phương án đúng màu xanh ngọc, lời giải chi tiết từng bước và checkbox chọn lọc từng câu.
+    - Hỗ trợ lưu hàng loạt (Batch Save) các câu hỏi đã chọn trực tiếp vào cơ sở dữ liệu thông qua `contentService.createQuestion` (API 16), tự động cập nhật danh sách câu hỏi ngân hàng đề ngay lập tức.
+  - *Tích Hợp `✨ AI Tự Điền Câu Hỏi` Vào Hộp Thoại Thêm Câu Hỏi Thủ Công (`NewQuestionDialog`)*:
+    - Trang bị nút `✨ AI Tự Điền Câu Hỏi` ngay cạnh nhãn Đề bài trong modal thêm câu hỏi thủ công: 1-click nhờ Gemini AI tự động soạn thảo và điền đầy đủ đề bài KaTeX, 4 phương án, đáp án đúng, mức độ Bloom và lời giải chi tiết theo đúng Dạng bài đang mở.
+
+- **Tái Thiết Kế Thanh Soạn Thảo 2 Dòng Trong Văn Bản & Đưa Dropdown STEM Lên Header Khối (`CurriculumStudioEditor.jsx`)**:
+  - *Tách Biệt Section Header Tổng Thể & Thanh Soạn Thảo Văn Bản 2 Dòng*:
+    - Giữ trọn vẹn dropdown `✨ Công Cụ Toán & STEM ▾` độc lập trên thanh Section Header tổng thể của mục đang sửa (Khối 1 `theoryRecap` và Khối 2 `solutionMethod`).
+    - Chuyển các nút đính kèm nội dung ngoại vi về đúng khu vực văn bản và phân tách thành 2 dòng rõ rệt:
+      + **Dòng 1 (Nằm trên văn bản)**: Loại bỏ hoàn toàn nút `+ Thêm / Dán Ảnh` (người dùng dán ảnh trực tiếp qua phím tắt Ctrl+V nhanh chóng), giữ lại nút tiện ích sư phạm (`+ Ví Dụ SGK` ở Khối 1 hoặc `+ Thêm Bước mới`, `Nạp mẫu chuẩn 4 bước` ở Khối 2) và bộ nút chuyển đổi chế độ xem (`✍️ Sửa Trực Tiếp`, `👁️ Trang In`, `📄 Raw`) ở bên phải.
+      + **Dòng 2 (Văn bản & công cụ chữ)**: Chuyên biệt phục vụ định dạng chữ chuẩn Word (`Văn bản: Bold`, `Italic`, `Tiêu đề / Bước`, `Danh sách`, `Đánh số`), tạo bố cục 2 tầng thanh thoát, không chồng chéo.
+  - *Dropdown Menu Tương Tác & Gộp 2 Nút Đồ Thị (`StemToolsDropdown`)*:
+    - Xây dựng component `StemToolsDropdown` hỗ trợ chế độ chuẩn và `compact`, tự động đóng khi nhấp chuột ra ngoài (click outside).
+    - Gộp 2 nút `📈 Đồ Thị Hàm Số` và `🧊 MathLab 3D/2D` thành 1 tùy chọn duy nhất: **`📈 Đồ Thị & MathLab (2D/3D)`** mở thẳng phòng thí nghiệm MathLab trực quan toàn diện (hàm số Oxy, hình phẳng 2D và không gian 3D).
+    - Tích hợp đầy đủ các công cụ chuyên sâu: `📊 Bảng Biến Thiên`, `📈 Đồ Thị & MathLab (2D/3D)`, `➗ Phân Số & Tính Toán`, `🎯 Đạo Hàm Số Gia`, và `🧪 Hóa Học & Nồng Độ`.
+
+- **Đại Tu Toàn Diện Studio Popup Bộ Công Cụ & STEM Chuyên Sâu (`InteractiveFormulaBuilderModal.jsx` & `StemToolsDropdown` Trong `CurriculumStudioEditor.jsx`)**:
+  - *Tái Thiết Kế Modal Studio Soạn Thảo Công Thức & STEM 2 Cột Đẳng Cấp (`InteractiveFormulaBuilderModal.jsx`)*:
+    - Nâng cấp kích thước modal từ `max-w-2xl` (672px chật hẹp) lên Studio cỡ lớn `max-w-5xl h-[88vh] max-h-[840px]` với kiến trúc 2 cột chuyên nghiệp:
+      + **Cột Trái (Sidebar công cụ w-72)**: Phân nhóm trực quan thành 2 chuyên mục lớn: "Toán Học & Giải Tích" (Bảng Biến Thiên, Phân Số, Căn Thức, Lũy Thừa, Tích Phân, Hệ Phương Trình, Đồ Thị Oxy) và "STEM & Hóa Học Thực Nghiệm" (Hóa Học Nồng Độ Mol & Khối Lượng), với các tile icon Lucide rực rỡ, badge chỉ mục và mô tả 2 dòng rõ nét.
+      + **Cột Phải (Không gian làm việc tương tác rộng rãi flex-1)**:
+        * Bảng Biến Thiên: Tích hợp trực tiếp toàn bộ lưới tương tác `<VariationTable />` 700px+ cùng 4 preset nhanh (Bậc 3 a>0, Bậc 3 a<0, Bậc 4 trùng phương, Phân thức ||), bảo toàn toàn bộ thanh công cụ Kéo - Thả mà không bị co cụm cột hay tràn vỡ layout.
+        * Bộ Tính Toán Hóa Học: 4 thẻ tương tác chuyên sâu (`CM = n/V`, `C% = m_ct/m_dd * 100%`, `m = n * M`, `H% = m_tt/m_lt * 100%`) kèm các ô nhập có đơn vị chuẩn (`mol`, `Lít`, `g`, `g/mol`), tự động hiển thị kết quả tính toán tức thì trên badge xanh ngọc emerald.
+        * Phân Số & Tính Toán: Giao diện thẻ 2 tầng trực quan phân cách bởi gạch ngang tử/mẫu, tự động rút gọn phân số và tính giá trị thập phân.
+    - Cập nhật Live KaTeX Preview Dock nổi phía dưới cùng nút bấm "Chèn Vào Bài Giảng (Enter)" rực rỡ, hỗ trợ phím tắt Esc/Enter mượt mà.
+  - *Nâng Cấp Menu Thả Dropdown STEM Lên Chuẩn Mega Menu Studio (`StemToolsDropdown`)*:
+    - Mở rộng kích thước từ `w-64` (đơn điệu, nhỏ) thành Mega Menu `w-[420px]` sang trọng với banner gradient tối màu `STUDIO CÔNG CỤ TOÁN & STEM (GDPT 2018)`.
+    - Trình bày 5 thẻ chức năng chi tiết với icon đa sắc, tiêu đề in đậm, phụ đề 2 dòng giải thích tính năng và badge nhận diện chuẩn mực (`SGK 2018`, `JSXGraph Native`, `Auto Calc`, `Vi Tích Phân`, `Thực Nghiệm`).
+    - Nút kích hoạt trên Header khối được nâng cấp thành nút bo tròn sang trọng với icon Sparkles phát sáng tinh tế.
+  - *Tuyệt Đối Ẩn 100% Mã KaTeX/LaTeX Thô, Chuyên Biệt Hóa 100% Ô Nhập Số & Ký Hiệu Trực Quan Kèm Preset Nạp Mẫu 1-Click*:
+    - Xóa bỏ triệt để 100% ô textarea hiển thị mã lệnh KaTeX thô và các chuỗi text raw như `$formula$`, tuân thủ nghiêm ngặt tôn chỉ trải nghiệm người dùng sư phạm: Giảng viên và người dùng cuối không bao giờ phải nhìn thấy hay gõ mã lệnh LaTeX thô.
+    - Chuyên biệt hóa toàn bộ việc nhập liệu qua các ô số và ký hiệu trực quan (Visual Slots): Ô nhập Tử số / Mẫu số phân số, ô Bậc căn / Biểu thức trong căn, ô Cơ số / Số mũ, ô Cận tích phân và hệ phương trình.
+    - Trang bị bộ nút nạp mẫu thông dụng 1-click (1-Click Presets) cho từng dạng bài toán: Phân số (1/2, 3/4, 12/4=3, phân thức đại số), Giới hạn SGK 2018 (f'(x₀) định nghĩa, sin(x)/x=1, phân thức hữu tỉ, khử vô định 0/0, dãy số 1/n), Đạo hàm số gia, Căn thức, Lũy thừa và Tích phân.
+    - Khung xem trước trực quan (Live KaTeX Preview Dock) tập trung duy nhất vào việc hiển thị công thức toán học kích thước lớn (text-2xl) sắc nét như trong sách giáo khoa, không có bất kỳ yếu tố kỹ thuật gây xao nhãng.
+
+- **Tối Ưu Hóa Chỉnh Sửa & Xóa Trực Tiếp Công Thức Trực Quan Trong Khung Soạn Thảo Văn Bản (`WordStyleFormulaCanvas.jsx`)**:
+  - *Thanh Soạn Thảo Công Thức Toàn Năng Siêu Linh Hoạt (Universal Formula Bar) & Dock Xem Trước Trực Quan SGK*:
+    + Xóa bỏ triệt để hệ thống ô con phân mảnh bó hẹp (vốn ép người dùng vào khung cứng tử/mẫu phân số hoặc số mũ mà không thể thêm bớt phép tính hay gõ tự do). Thay thế bằng **Thanh Soạn Thảo Công Thức Toàn Năng (Universal Formula Bar)**: Chấp nhận mọi dạng công thức toán học, vật lý, hóa học không giới hạn độ phức tạp (`12/4 = 3`, `f(x) = (x^2-1)/(x-1) = x+1`, căn thức, tích phân, giới hạn, nồng độ mol `C_M`...).
+    + Tích hợp **Dock Xem Trước Trực Quan Học Sinh Thấy (Live KaTeX Typography Preview Dock)** ngay bên dưới thanh soạn thảo: Hiển thị lập tức công thức kết quả chuẩn sách giáo khoa (serif typography) sắc nét theo thời gian thực khi gõ.
+    + Tuyệt đối xóa sạch 100% nhãn kỹ thuật gây phản cảm như `LaTeX: ...` hay `Mã công thức KaTeX`, mang lại trải nghiệm sư phạm tinh tế 100% WYSIWYG.
+  - *Bộ Máy Tự Động Tính Toán Đáp Số Thông Minh Cho Mọi Phép Toán (`autoCalculateEquation` & Nút `⚡ Tính`)*:
+    + Nâng cấp nút `[ ⚡ Tính ]` thành công cụ tự động tính toán số liệu toàn năng: Tự động phân tích và tính nhẩm kết quả chính xác cho mọi biểu thức chứa phân số/phép chia (`12/4` -> `= 3`, `0.2/0.5` -> `= 0.4`), căn bậc hai (`\sqrt{16}` -> `= 4`), lũy thừa (`2^3` -> `= 8`), số học cơ bản (`10 + 2*5` -> `= 20`) và nồng độ hóa học (`C_M`, `C%`). Nếu công thức đã có kết quả sai từ trước, nút `Tính` sẽ tự động cập nhật lại đáp số chính xác.
+  - *Chèn Ký Hiệu Thông Minh Nhận Biết Vị Trí Con Trỏ (Cursor-Aware Insertion) & Bao Bọc Vùng Chọn*:
+    + Trang bị `activeInputRef` theo dõi chính xác vị trí con trỏ `selectionStart`/`selectionEnd` trong ô soạn thảo: Khi nhấp bất kỳ nút ký hiệu/công thức nào từ các tab môn học (`Cấu trúc`, `Oxyz`, `Vật lý`, `Hóa học`, `Ký hiệu`, `Ngoặc & Logic`), hệ thống chèn ngay tại đúng vị trí con trỏ và đưa con trỏ vào bên trong vị trí nhập số. Nếu người dùng bôi đen một đoạn text/biểu thức, nhấp `a/b` sẽ tự động đưa đoạn đó lên tử số, nhấp `√x` sẽ bao bọc đoạn đó trong căn thức.
+  - *Cơ Chế Xóa Công Thức Bằng Nút 1-Click & Phím Tắt Backspace Tự Nhiên*:
+    + Trang bị nút đỏ `[ 🗑️ Xóa ]` trên thanh popover để xóa bỏ công thức tức thì chỉ với 1 click.
+    + Khi con trỏ văn bản nằm ở đầu đoạn text liền kề ngay sau một công thức, nhấn `Backspace` sẽ tự động xóa sạch công thức đứng trước mà không làm hỏng cấu trúc dòng; khi ô công thức trống, bấm `Backspace` cũng xóa gọn công thức và trả lại con trỏ cho dòng văn bản.
+    + Bổ sung nút bấm `[ 🚀 Mở Studio ]` kết nối trực tiếp đến Modal Studio toán học & STEM khi người dùng muốn vẽ đồ thị hàm số hay dựng bảng biến thiên 3 dòng phức tạp.
+
+---
+
 ## [30/10/2026] - Hoàn Thiện Bảng Biến Thiên Lưới `2N - 1` Cột Chống Mất Ô Khi Xóa Chữ, Tái Thiết Kế Thư Viện Công Thức / Hợp Chất Kéo - Thả & Nâng Cấp Kéo - Thả Trực Tiếp Vào Ô Con Công Thức
 
 - **Hoàn Thiện Bảng Biến Thiên Lưới `2N - 1` Cột & Bảo Toàn Ô Trống Khi Xóa Chữ (`VariationTable.jsx`, `InteractiveFormulaBuilderModal.jsx`)**:
