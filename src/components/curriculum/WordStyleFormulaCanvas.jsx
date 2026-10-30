@@ -8,7 +8,7 @@ import {
   FileEdit, 
   AlertTriangle 
 } from 'lucide-react';
-import { renderKatexHtml, normalizeMathString } from '../common/MathText';
+import { renderKatexHtml, normalizeMathString, unescapeLiteralNewlines } from '../common/MathText';
 import VariationTable from '../common/VariationTable';
 import InteractiveMathRenderer from '../common/InteractiveMathRenderer';
 
