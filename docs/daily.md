@@ -2,6 +2,32 @@
 
 ---
 
+## [30/10/2026] - Hoàn Thiện Bảng Biến Thiên Lưới `2N - 1` Cột Chống Mất Ô Khi Xóa Chữ, Tái Thiết Kế Thư Viện Công Thức / Hợp Chất Kéo - Thả & Nâng Cấp Kéo - Thả Trực Tiếp Vào Ô Con Công Thức
+
+- **Hoàn Thiện Bảng Biến Thiên Lưới `2N - 1` Cột & Bảo Toàn Ô Trống Khi Xóa Chữ (`VariationTable.jsx`, `InteractiveFormulaBuilderModal.jsx`)**:
+  - *Chuẩn Hóa Lưới Cột `2N - 1` Không Nhảy Layout*:
+    + Triển khai hàm `normalizeVariationGrid` và `buildDataFromGrid` trong [`VariationTable.jsx`](./src/components/common/VariationTable.jsx) căn thẳng hàng dọc tuyệt đối giữa mốc `x_m`, đạo hàm tại điểm (`0` hoặc tiệm cận đứng vạch kép `||`) và giá trị cực trị `y_m` ở các cột chẵn (`2m`), đồng thời đặt dấu khoảng `+`/`-` và mũi tên chéo SVG `↗`/`↘` ở các cột lẻ (`2k + 1`).
+    + Cố định chiều cao 3 dòng (`h-11`, `h-11`, `h-24`) và đặt thanh công cụ Kéo - Thả ở phía dưới bảng để bảng không bao giờ bị giật/nhảy vị trí khi click.
+    + Sửa lỗi lệch prop `initialTemplateId` trong [`InteractiveFormulaBuilderModal.jsx`](./src/components/curriculum/InteractiveFormulaBuilderModal.jsx) để nút `📊 Bảng Biến Thiên` mở đúng tab ngay lập tức và nhúng trực tiếp `<VariationTable />` tương tác vào trong modal.
+  - *Bảo Toàn Ô Trống (`Thả số`), Tiệm Cận Đứng (`||`) & Hiển Thị Ký Hiệu Toán Học Thân Thiện (`-∞` Thay Vì `-\infty`) Khi Sửa Ô*:
+    + Triển khai `splitVariationRow` bảo toàn tuyệt đối ký hiệu vạch kép `||` khi tách dòng theo dấu `|` và giữ nguyên các ô đang để trống (`""`), kết hợp `healSplitDoubleBars` và toán tử `??` (thay cho `|| '-\infty'`) để xóa trắng ô (`Backspace` hoặc nút `✕ Xóa ô`) không bao giờ bị mất ô hay tự nhảy về `-\infty`, luôn hiển thị nhãn gợi ý `Thả số` sẵn sàng nhận kéo thả mới.
+    + Bổ sung `formatSlotDisplayValue` và `parseSlotInputToLatex` trên thanh `QuickEditorToolbar` giúp ô `Gõ số/chữ:` luôn hiển thị ký hiệu trực quan (`-∞`, `+∞`, `1/2`, `√2`, `y_CĐ`) thay vì mã LaTeX thô (`-\infty`), đồng thời tự động focus ô nhập khi nhấp chọn ô trên bảng và xóa gọn toàn bộ ký hiệu đặc biệt chỉ với 1 phím `Backspace`.
+    + Loại bỏ hoàn toàn nhãn thừa `Chuẩn SGK GDPT 2018` / `SGK GDPT 2018` trên header Bảng biến thiên, modal chèn công thức và các thẻ danh mục để giao diện luôn tinh gọn, thoáng rộng và không bị tràn/cắt xén chữ.
+    + Khắc phục triệt để hiện tượng tràn số khỏi ô bảng khi thêm nhiều cực trị: Thiết lập `<colgroup>` và thuật toán tính độ rộng tối thiểu động `calculatedTableMinWidth` (mốc thường `74px`, tiệm cận `104px`, khoảng biến thiên `68px`), kết hợp `overflow-hidden` và container cuộn ngang tự động `overflow-x-auto pb-1.5` để mỗi ô luôn giữ trọn vẹn số, ký hiệu và mũi tên mà không bao giờ bị ép méo hay tràn vỡ ra ngoài.
+    + *Nâng Cấp Kéo - Thả & Thêm Tiệm Cận Đứng 1-Click (`handleAddAsymptoteColumn`)*:
+      * Trang bị nút bấm **`|| Thêm tiệm cận`** màu hổ phách ngay trên thanh công cụ bảng, 1-click chèn ngay 1 cột tiệm cận đứng vạch kép `||` hoàn chỉnh (tính toán hoành độ `x_0` tự động, đạo hàm `y' = ||`, giá trị giới hạn hai bên `-\infty || +\infty`).
+      * Hỗ trợ **Kéo - Thả thẻ `|| (Tiệm cận)` vào khoảng giữa 2 cột (Interval Drop)**: Thả vào bất kỳ dòng nào (`x`, `y'`, `y`) giữa 2 cột lập tức chèn 1 cột tiệm cận đứng vào đúng vị trí đó.
+      * Hỗ trợ **Kéo - Thả thẻ `|| (Tiệm cận)` vào cột mốc bất kỳ**: Thả vào dòng `x`, dòng `y'` hoặc dòng `y` lập tức chuyển đổi cột mốc thành tiệm cận đứng vạch kép `||`, mở rộng toàn bộ `<td>` thành vùng DropZone mượt mà không bị trượt chuột.
+
+- **Tái Thiết Kế Thư Viện Công Thức & Hợp Chất Kéo - Thả 7 Môn Học (`HierarchicalMathPalette.jsx`) & Kéo - Thả Vào Ô Con Công Thức (`WordStyleFormulaCanvas.jsx`)**:
+  - *Giao Diện Thẻ Studio Tile 7 Môn Học (`HierarchicalMathPalette.jsx`)*:
+    + Thiết kế bảng màu chủ đề riêng cho 7 môn học (`Toán Học`, `Hóa Học`, `Vật Lý`, `Sinh Học`, `Ngữ Văn`, `Địa Lý`, `Ký Hiệu`), hiển thị trực tiếp công thức KaTeX và hợp chất hóa học sắc nét ngay giữa thẻ (`draggable={true}`) và bổ sung danh mục `Bảng Biến Thiên & Cực Trị (Kéo - Thả)`.
+  - *Bảo Toàn Khung Công Thức & Nhận Kéo - Thả Trực Tiếp Vào Ô Con (`WordStyleFormulaCanvas.jsx`)*:
+    + Bổ sung `lastCommittedContentRef` ngăn `useEffect` перезагружать lại toàn bộ dòng khi người dùng đang xóa trắng chữ trong ô công thức đang mở, giữ nguyên trạng thái `activeFormulaId` và gán placeholder `\square` an toàn khi serialize.
+    + Bổ sung `handleDropOnFormulaInput` (`onDragOver` & `onDrop`) trực tiếp trên từng ô `<input>` con của phân số (`num`, `den`, `result`), lũy thừa (`base`, `exp`), căn thức (`expr`) và công thức chung (`latex`), đồng thời tự động khôi phục dòng trống khi xóa hết khối bảng/công thức để người dùng luôn kéo thả lại được vào mọi khung soạn thảo.
+
+---
+
 ## [29/10/2026] - Chuẩn Hóa Hiển Thị Công Thức Trực Quan WYSIWYG Toàn Diện Trong Studio Sư Phạm & Nâng Cấp Phòng Thí Nghiệm Hình Học Phẳng 2D Tương Tác (`JSXGraph`)
 
 - **Chuyển Đổi Toàn Bộ Ô Nhập Text Thô Sang Canvas Công Thức Trực Quan (`WordStyleFormulaCanvas.jsx` & `CurriculumStudioEditor.jsx`)**:

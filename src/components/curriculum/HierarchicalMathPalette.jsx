@@ -11,7 +11,8 @@ import {
   FolderOpen,
   Layers,
   Atom,
-  BookOpen
+  BookOpen,
+  GripVertical
 } from 'lucide-react';
 import { renderKatexHtml } from '../common/MathText';
 
@@ -19,7 +20,7 @@ import { renderKatexHtml } from '../common/MathText';
  * HIERARCHICAL STEM CATALOG (MASSIVE REPOSITORY)
  * Level 1: Domain / Subject (Toán, Hóa, Lý, Ký hiệu & Logic)
  * Level 2: Category (Accordion Toggle Cây Thư Mục)
- * Level 3: Compact Formula / Chemical Compound Chips with 2s Rich Guidance Tooltip
+ * Level 3: Compact Formula / Chemical Compound Chips with Drag & Drop + Rich Guidance Tooltip
  */
 export const HIERARCHICAL_CATALOG = {
   math: {
@@ -28,6 +29,23 @@ export const HIERARCHICAL_CATALOG = {
     icon: '📐',
     badgeColor: 'indigo',
     categories: {
+      variation_table: {
+        name: 'Bảng Biến Thiên & Cực Trị (Kéo - Thả)',
+        items: [
+          { label: 'Âm vô cực', code: '-\\infty', preview: '-\\infty', desc: 'Kéo thả trực tiếp vào ô dòng x hoặc dòng y của Bảng biến thiên.' },
+          { label: 'Dương vô cực', code: '+\\infty', preview: '+\\infty', desc: 'Kéo thả trực tiếp vào ô dòng x hoặc dòng y của Bảng biến thiên.' },
+          { label: 'Tiệm cận ||', code: '||', preview: '\\parallel', desc: 'Vạch kép không xác định (tiệm cận đứng) trong Bảng biến thiên.' },
+          { label: 'Đồng biến ↗', code: '\\nearrow', preview: '\\nearrow', desc: 'Mũi tên đồng biến (đồ thị đi lên trên khoảng).' },
+          { label: 'Nghịch biến ↘', code: '\\searrow', preview: '\\searrow', desc: 'Mũi tên nghịch biến (đồ thị đi xuống trên khoảng).' },
+          { label: 'Điểm CĐ', code: 'x_{CĐ}', preview: 'x_{\\text{CĐ}}', desc: 'Hoành độ điểm cực đại của hàm số.' },
+          { label: 'Điểm CT', code: 'x_{CT}', preview: 'x_{\\text{CT}}', desc: 'Hoành độ điểm cực tiểu của hàm số.' },
+          { label: 'Giá trị CĐ', code: 'y_{CĐ}', preview: 'y_{\\text{CĐ}}', desc: 'Giá trị cực đại của hàm số.' },
+          { label: 'Giá trị CT', code: 'y_{CT}', preview: 'y_{\\text{CT}}', desc: 'Giá trị cực tiểu của hàm số.' },
+          { label: 'Khối BBT Bậc 3', code: '[VARIATION_TABLE]\ntitle: Bảng biến thiên hàm số bậc ba\nx: -\\infty | 0 | 2 | +\\infty\ny\': + | 0 | - | 0 | +\ny: -\\infty | 4 | 0 | +\\infty\ndir: up | down | up\n[/VARIATION_TABLE]', preview: '\\text{BBT Bậc 3}', isBlockTemplate: true, desc: 'Kéo thả vào khung đề bài/lời giải để chèn nguyên khối Bảng biến thiên hàm bậc ba chuẩn SGK.' },
+          { label: 'Khối BBT Bậc 4', code: '[VARIATION_TABLE]\ntitle: Bảng biến thiên hàm trùng phương\nx: -\\infty | -1 | 0 | 1 | +\\infty\ny\': - | 0 | + | 0 | - | 0 | +\ny: +\\infty | -2 | 1 | -2 | +\\infty\ndir: down | up | down | up\n[/VARIATION_TABLE]', preview: '\\text{BBT Bậc 4}', isBlockTemplate: true, desc: 'Kéo thả vào khung đề bài/lời giải để chèn nguyên khối Bảng biến thiên hàm trùng phương.' },
+          { label: 'Khối BBT Phân Thức', code: '[VARIATION_TABLE]\ntitle: Bảng biến thiên hàm phân thức hữu tỉ\nx: -\\infty | 1 | +\\infty\ny\': - | || | -\ny: 2 | -\\infty | || | +\\infty | 2\ndir: down | down\n[/VARIATION_TABLE]', preview: '\\text{BBT } \\parallel', isBlockTemplate: true, desc: 'Kéo thả vào khung đề bài/lời giải để chèn Bảng biến thiên hàm phân thức có tiệm cận đứng ||.' }
+        ]
+      },
       algebra: {
         name: 'Đại số & Căn thức',
         items: [
@@ -560,25 +578,79 @@ export default function HierarchicalMathPalette({
   const [selectedDomain, setSelectedDomain] = useState('math');
   const [searchQuery, setSearchQuery] = useState('');
   
-  // Accordion toggle state: map categoryKey -> boolean (default all open)
+  // Accordion toggle state: map categoryKey -> boolean
   const [openCategories, setOpenCategories] = useState(() => {
     const initial = {};
     Object.keys(HIERARCHICAL_CATALOG).forEach(domKey => {
       Object.keys(HIERARCHICAL_CATALOG[domKey].categories).forEach((catKey, idx) => {
-        // Open first 2 categories by default for fast reach
-        initial[`${domKey}-${catKey}`] = idx < 2;
+        // Open first 3 categories by default for fast reach
+        initial[`${domKey}-${catKey}`] = idx < 3;
       });
     });
     return initial;
   });
 
-  // 2-second hover card state
+  // Hover preview state (fast 400ms studio preview)
   const [hoveredItem, setHoveredItem] = useState(null);
   const [hoverCardPos, setHoverCardPos] = useState({ top: 0, left: 0 });
   const hoverTimerRef = useRef(null);
 
   const domainKeys = Object.keys(HIERARCHICAL_CATALOG);
   const currentDomain = HIERARCHICAL_CATALOG[selectedDomain] || HIERARCHICAL_CATALOG.math;
+
+  const DOMAIN_STYLES = {
+    math: {
+      pillActive: 'bg-indigo-600 text-white border-indigo-600 shadow-xs',
+      headerBg: 'bg-indigo-50/70 border-indigo-100 text-indigo-950',
+      badge: 'bg-indigo-100 text-indigo-700',
+      cardHover: 'hover:border-indigo-400 hover:bg-indigo-50/40',
+      formulaText: 'text-indigo-950'
+    },
+    chemistry: {
+      pillActive: 'bg-emerald-600 text-white border-emerald-600 shadow-xs',
+      headerBg: 'bg-emerald-50/70 border-emerald-100 text-emerald-950',
+      badge: 'bg-emerald-100 text-emerald-700',
+      cardHover: 'hover:border-emerald-400 hover:bg-emerald-50/40',
+      formulaText: 'text-emerald-950'
+    },
+    physics: {
+      pillActive: 'bg-amber-600 text-white border-amber-600 shadow-xs',
+      headerBg: 'bg-amber-50/70 border-amber-100 text-amber-950',
+      badge: 'bg-amber-100 text-amber-800',
+      cardHover: 'hover:border-amber-400 hover:bg-amber-50/40',
+      formulaText: 'text-amber-950'
+    },
+    biology: {
+      pillActive: 'bg-rose-600 text-white border-rose-600 shadow-xs',
+      headerBg: 'bg-rose-50/70 border-rose-100 text-rose-950',
+      badge: 'bg-rose-100 text-rose-700',
+      cardHover: 'hover:border-rose-400 hover:bg-rose-50/40',
+      formulaText: 'text-rose-950'
+    },
+    literature: {
+      pillActive: 'bg-purple-600 text-white border-purple-600 shadow-xs',
+      headerBg: 'bg-purple-50/70 border-purple-100 text-purple-950',
+      badge: 'bg-purple-100 text-purple-700',
+      cardHover: 'hover:border-purple-400 hover:bg-purple-50/40',
+      formulaText: 'text-purple-950'
+    },
+    geography: {
+      pillActive: 'bg-sky-600 text-white border-sky-600 shadow-xs',
+      headerBg: 'bg-sky-50/70 border-sky-100 text-sky-950',
+      badge: 'bg-sky-100 text-sky-700',
+      cardHover: 'hover:border-sky-400 hover:bg-sky-50/40',
+      formulaText: 'text-sky-950'
+    },
+    symbols: {
+      pillActive: 'bg-cyan-600 text-white border-cyan-600 shadow-xs',
+      headerBg: 'bg-cyan-50/70 border-cyan-100 text-cyan-950',
+      badge: 'bg-cyan-100 text-cyan-700',
+      cardHover: 'hover:border-cyan-400 hover:bg-cyan-50/40',
+      formulaText: 'text-cyan-950'
+    }
+  };
+
+  const activeTheme = DOMAIN_STYLES[selectedDomain] || DOMAIN_STYLES.math;
 
   // Cleanup timer on unmount
   useEffect(() => {
@@ -595,19 +667,26 @@ export default function HierarchicalMathPalette({
     }));
   };
 
-  // Hover 2s handler
+  const handleToggleAllCategories = (expand) => {
+    const next = { ...openCategories };
+    Object.keys(currentDomain.categories).forEach((catKey) => {
+      next[`${selectedDomain}-${catKey}`] = expand;
+    });
+    setOpenCategories(next);
+  };
+
+  // Hover handler (450ms responsive studio preview)
   const handleItemMouseEnter = (item, catName, e) => {
     if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
     const rect = e.currentTarget.getBoundingClientRect();
     
-    // Exactly 2 seconds (2000ms) hover trigger as requested by user
     hoverTimerRef.current = setTimeout(() => {
       setHoveredItem({ ...item, categoryName: catName });
       setHoverCardPos({
         top: Math.min(window.innerHeight - 300, Math.max(20, rect.top - 20)),
         left: rect.right + 12
       });
-    }, 2000);
+    }, 450);
   };
 
   const handleItemMouseLeave = () => {
@@ -621,6 +700,18 @@ export default function HierarchicalMathPalette({
     if (onInsertSnippet) {
       onInsertSnippet(activeTarget, item.code);
     }
+  };
+
+  const handleItemDragStart = (e, item) => {
+    if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+    setHoveredItem(null);
+    e.dataTransfer.setData('text/veval-math', item.code);
+    e.dataTransfer.setData('text/veval-bbt', item.code);
+    e.dataTransfer.setData('text/plain', item.code);
+    if (item.isBlockTemplate) {
+      e.dataTransfer.setData('text/veval-block', item.code);
+    }
+    e.dataTransfer.effectAllowed = 'copy';
   };
 
   // Filtered search results across all categories
@@ -655,10 +746,10 @@ export default function HierarchicalMathPalette({
         <button
           type="button"
           onClick={onToggleCollapse}
-          className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-cyan-50 text-slate-600 hover:text-cyan-700 flex items-center justify-center transition-colors shadow-2xs cursor-pointer border border-slate-200"
-          title="Mở rộng thanh công cụ ký hiệu"
+          className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-indigo-50 text-slate-600 hover:text-indigo-700 flex items-center justify-center transition-colors shadow-2xs cursor-pointer border border-slate-200"
+          title="Mở rộng Thư viện Công thức & Hợp chất"
         >
-          <ChevronRight className="w-4 h-4 text-cyan-600" />
+          <ChevronRight className="w-4 h-4 text-indigo-600" />
         </button>
         <div className="w-6 h-[1px] bg-slate-200 my-1"></div>
         {domainKeys.map((key) => {
@@ -673,7 +764,7 @@ export default function HierarchicalMathPalette({
               }}
               className={`w-8 h-8 rounded-xl flex items-center justify-center text-sm transition-all cursor-pointer ${
                 selectedDomain === key
-                  ? 'bg-cyan-600 text-white shadow-sm font-bold'
+                  ? 'bg-indigo-600 text-white shadow-sm font-bold'
                   : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900 border border-transparent'
               }`}
               title={dom.name}
@@ -686,44 +777,52 @@ export default function HierarchicalMathPalette({
     );
   }
 
-  // EXPANDED SIDEBAR: PURE WHITE TONE WITH ACCORDION TOGGLE TREE
+  // EXPANDED SIDEBAR: STUDIO FORMULA & CHEMICAL COMPOUND LIBRARY
   return (
-    <div className="w-72 sm:w-80 bg-white text-slate-800 border-r border-slate-200 flex flex-col shrink-0 select-none text-xs h-full relative z-20 shadow-sm">
+    <div className="w-76 sm:w-84 bg-slate-50/40 text-slate-800 border-r border-slate-200 flex flex-col shrink-0 select-none text-xs h-full relative z-20 shadow-sm">
       
-      {/* 1. Header with Collapse Button & Active Target Display */}
-      <div className="p-3 border-b border-slate-200 flex items-center justify-between bg-slate-50/90">
-        <div className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-cyan-600 animate-pulse"></span>
-          <span className="font-black text-slate-800 uppercase tracking-wider text-[11px]">
-            Thư Viện Ký Hiệu & Hợp Chất
+      {/* 1. Studio Header with Drag-and-Drop Badge */}
+      <div className="px-3 py-2.5 border-b border-slate-200 bg-gradient-to-r from-indigo-950 via-slate-900 to-cyan-950 text-white">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span className="font-black uppercase tracking-wider text-[11px] text-white">
+              Thư Viện Công Thức & Hợp Chất
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={onToggleCollapse}
+            className="p-1 rounded-lg bg-white/10 hover:bg-white/20 text-slate-200 hover:text-white transition-colors cursor-pointer"
+            title="Thu gọn thư viện"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+        </div>
+        <div className="mt-1.5 flex items-center justify-between text-[10px] text-cyan-200/90 font-medium">
+          <span className="flex items-center gap-1">
+            <Sparkles className="w-3 h-3 text-amber-300 shrink-0" />
+            <span>Kéo - Thả vào đề/BBT hoặc Nhấp để chèn</span>
           </span>
         </div>
-        <button
-          type="button"
-          onClick={onToggleCollapse}
-          className="p-1 rounded-lg hover:bg-slate-200 text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
-          title="Thu gọn sidebar sang thanh icon siêu mỏng"
-        >
-          <ChevronLeft className="w-4 h-4" />
-        </button>
       </div>
 
       {/* 2. Fast Instant Search Input */}
-      <div className="p-2 border-b border-slate-200 bg-white">
+      <div className="p-2.5 border-b border-slate-200 bg-white">
         <div className="relative">
-          <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2" />
+          <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="🔍 Tìm nhanh H2SO4, √x, ADN, MĐDS, So sánh, a/b..."
-            className="w-full bg-slate-50 hover:bg-white focus:bg-white border border-slate-200 focus:border-cyan-500 rounded-xl pl-8 pr-3 py-1.5 text-xs text-slate-800 placeholder-slate-400 outline-none transition-all shadow-inner"
+            placeholder="Tìm H2SO4, Fe3O4, √x, BBT, đạo hàm, este..."
+            className="w-full bg-slate-50 hover:bg-white focus:bg-white border border-slate-200 focus:border-indigo-500 rounded-xl pl-8 pr-6 py-1.5 text-xs text-slate-800 placeholder-slate-400 outline-none transition-all shadow-2xs"
           />
           {searchQuery && (
             <button
               type="button"
               onClick={() => setSearchQuery('')}
-              className="absolute right-2.5 top-2 text-slate-400 hover:text-slate-600 text-[10px] font-bold"
+              className="absolute right-2.5 top-2 text-slate-400 hover:text-slate-700 text-[11px] font-bold cursor-pointer"
             >
               ✕
             </button>
@@ -731,73 +830,107 @@ export default function HierarchicalMathPalette({
         </div>
       </div>
 
-      {/* 3. Domain Switcher Tabs (Toán, Hóa, Lý, Sinh, Văn, Địa, Ký Hiệu) */}
+      {/* 3. Domain Switcher Pills (Toán, Hóa, Lý, Sinh, Văn, Địa, Ký Hiệu) */}
       {!searchResults && (
-        <div className="p-2 border-b border-slate-200 bg-slate-50/70 grid grid-cols-4 gap-1">
-          {domainKeys.map((domKey) => {
-            const dom = HIERARCHICAL_CATALOG[domKey];
-            const isAct = selectedDomain === domKey;
-            return (
+        <div className="px-2.5 py-2 border-b border-slate-200 bg-white space-y-1.5">
+          <div className="flex flex-wrap gap-1">
+            {domainKeys.map((domKey) => {
+              const dom = HIERARCHICAL_CATALOG[domKey];
+              const isAct = selectedDomain === domKey;
+              const domStyle = DOMAIN_STYLES[domKey] || DOMAIN_STYLES.math;
+              return (
+                <button
+                  key={domKey}
+                  type="button"
+                  onClick={() => setSelectedDomain(domKey)}
+                  className={`py-1 px-2 rounded-xl font-bold text-[11px] flex items-center gap-1 transition-all cursor-pointer border ${
+                    isAct
+                      ? domStyle.pillActive
+                      : 'bg-slate-50/80 text-slate-600 hover:bg-slate-100 hover:text-slate-900 border-slate-200/80'
+                  }`}
+                  title={dom.name}
+                >
+                  <span className="text-xs leading-none">{dom.icon}</span>
+                  <span>{dom.shortName}</span>
+                </button>
+              );
+            })}
+          </div>
+          <div className="flex items-center justify-between pt-0.5 px-0.5 text-[10px] text-slate-500">
+            <span className="font-bold text-slate-700">
+              {currentDomain.icon} {currentDomain.name}
+            </span>
+            <div className="flex items-center gap-2">
               <button
-                key={domKey}
                 type="button"
-                onClick={() => setSelectedDomain(domKey)}
-                className={`py-1.5 px-1 rounded-xl font-bold text-[11px] flex flex-col items-center justify-center gap-0.5 transition-all cursor-pointer ${
-                  isAct
-                    ? 'bg-cyan-600 text-white shadow-xs font-bold'
-                    : 'bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-slate-200/80 shadow-2xs'
-                }`}
-                title={dom.name}
+                onClick={() => handleToggleAllCategories(true)}
+                className="hover:text-indigo-600 font-semibold cursor-pointer"
               >
-                <span className="text-sm">{dom.icon}</span>
-                <span className="text-[10px] truncate max-w-full font-medium">{dom.shortName}</span>
+                Mở hết
               </button>
-            );
-          })}
+              <span>•</span>
+              <button
+                type="button"
+                onClick={() => handleToggleAllCategories(false)}
+                className="hover:text-indigo-600 font-semibold cursor-pointer"
+              >
+                Thu gọn
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
-      {/* 4. MAIN BODY: ACCORDION TOGGLE TREE (CÂY THƯ MỤC CÔNG THỨC & HỢP CHẤT ĐỒ SỘ) */}
-      <div className="flex-1 overflow-y-auto p-2 space-y-2 scrollbar-thin">
+      {/* 4. MAIN BODY: VISUAL FORMULA & CHEMICAL COMPOUND CARDS */}
+      <div className="flex-1 overflow-y-auto p-2.5 space-y-2.5 scrollbar-thin">
         
         {/* CASE A: SEARCH RESULTS LIST */}
         {searchResults ? (
-          <div className="space-y-1.5">
-            <div className="text-[10.5px] font-bold text-slate-500 px-1 pb-1 flex items-center justify-between">
-              <span>Tìm thấy {searchResults.length} kết quả:</span>
-              <span className="text-cyan-700 font-mono text-[9px]">Click chèn ngay</span>
+          <div className="space-y-2">
+            <div className="text-[10.5px] font-bold text-slate-600 px-1 flex items-center justify-between">
+              <span>Tìm thấy {searchResults.length} công thức / hợp chất:</span>
+              <span className="text-indigo-600 font-semibold text-[10px]">Kéo thả hoặc Click</span>
             </div>
 
             {searchResults.length === 0 ? (
-              <div className="py-8 text-center text-slate-400 text-xs italic">
-                Không tìm thấy công thức hoặc hợp chất phù hợp.
+              <div className="py-8 text-center text-slate-400 text-xs italic bg-white rounded-2xl border border-slate-200 p-4">
+                Không tìm thấy công thức hoặc hợp chất phù hợp với từ khóa.
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-1.5">
+              <div className="grid grid-cols-2 gap-2">
                 {searchResults.map((item, idx) => (
-                  <button
+                  <div
                     key={idx}
-                    type="button"
+                    draggable
+                    onDragStart={(e) => handleItemDragStart(e, item)}
                     onClick={() => handleItemClick(item)}
                     onMouseEnter={(e) => handleItemMouseEnter(item, item.categoryName, e)}
                     onMouseLeave={handleItemMouseLeave}
-                    className="p-1.5 rounded-xl bg-slate-50 hover:bg-cyan-50/80 hover:border-cyan-400 border border-slate-200 text-slate-700 hover:text-cyan-900 transition-all flex flex-col items-start gap-1 cursor-pointer group shadow-2xs"
+                    className="p-2 rounded-2xl bg-white hover:bg-indigo-50/40 border border-slate-200/90 hover:border-indigo-400 transition-all flex flex-col justify-between gap-1.5 cursor-grab active:cursor-grabbing group shadow-2xs hover:shadow-md hover:-translate-y-0.5"
                   >
-                    <div className="w-full flex items-center justify-between gap-1">
-                      <span className="text-[11px] font-bold truncate">{item.label}</span>
-                      <span className="text-[9px] text-slate-400 font-normal truncate max-w-[50px]">{item.domainName}</span>
+                    {/* Live Rendered KaTeX Preview Box */}
+                    <div className="w-full min-h-[38px] px-2 py-1.5 rounded-xl bg-slate-50/90 group-hover:bg-white border border-slate-100 group-hover:border-indigo-200 flex items-center justify-center overflow-x-auto scrollbar-none">
+                      <div
+                        className="text-[13px] text-slate-900 font-serif leading-none"
+                        dangerouslySetInnerHTML={{ __html: renderKatexHtml(item.preview || item.code, false) }}
+                      />
                     </div>
-                    <div 
-                      className="text-xs text-cyan-800 font-serif self-center"
-                      dangerouslySetInnerHTML={{ __html: renderKatexHtml(item.preview || item.code, false) }}
-                    />
-                  </button>
+                    {/* Subtitle Label + Domain Badge */}
+                    <div className="w-full flex items-center justify-between gap-1 px-0.5">
+                      <span className="text-[10.5px] font-bold text-slate-700 group-hover:text-indigo-900 truncate">
+                        {item.label}
+                      </span>
+                      <span className="text-[9px] px-1.5 py-0.2 rounded bg-slate-100 text-slate-500 font-medium shrink-0">
+                        {item.domainName}
+                      </span>
+                    </div>
+                  </div>
                 ))}
               </div>
             )}
           </div>
         ) : (
-          /* CASE B: ACCORDION TREE OF CATEGORIES */
+          /* CASE B: ACCORDION TREE OF CATEGORIES WITH VISUAL STUDIO TILES */
           Object.keys(currentDomain.categories).map((catKey) => {
             const cat = currentDomain.categories[catKey];
             const isCatOpen = openCategories[`${selectedDomain}-${catKey}`] ?? true;
@@ -805,48 +938,63 @@ export default function HierarchicalMathPalette({
             return (
               <div 
                 key={catKey}
-                className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-2xs transition-colors"
+                className="rounded-2xl border border-slate-200/90 bg-white overflow-hidden shadow-2xs transition-all"
               >
                 {/* Accordion Folder Header */}
                 <button
                   type="button"
                   onClick={() => toggleCategoryOpen(selectedDomain, catKey)}
-                  className="w-full px-3 py-2 bg-slate-50 hover:bg-slate-100 flex items-center justify-between gap-2 text-slate-800 font-bold text-[11.5px] transition-colors cursor-pointer border-b border-slate-200/60"
+                  className={`w-full px-3 py-2 flex items-center justify-between gap-2 font-extrabold text-[11.5px] transition-colors cursor-pointer border-b ${
+                    isCatOpen
+                      ? activeTheme.headerBg
+                      : 'bg-white hover:bg-slate-50 text-slate-800 border-transparent'
+                  }`}
                 >
-                  <div className="flex items-center gap-2 overflow-hidden">
+                  <div className="flex items-center gap-1.5 overflow-hidden">
                     {isCatOpen ? (
-                      <ChevronDown className="w-3.5 h-3.5 text-cyan-600 shrink-0" />
+                      <ChevronDown className="w-3.5 h-3.5 shrink-0" />
                     ) : (
                       <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                     )}
                     <span className="truncate">{cat.name}</span>
                   </div>
-                  <span className="px-1.5 py-0.5 rounded-full bg-slate-200 text-slate-600 text-[9.5px] font-mono shrink-0">
+                  <span className={`px-2 py-0.5 rounded-full text-[9.5px] font-bold shrink-0 ${
+                    isCatOpen ? activeTheme.badge : 'bg-slate-100 text-slate-600'
+                  }`}>
                     {cat.items?.length || 0}
                   </span>
                 </button>
 
-                {/* Accordion Folder Content (Compact Formula/Compound Chips) */}
+                {/* Accordion Folder Content: Visual KaTeX / Chemical Tiles */}
                 {isCatOpen && (
                   <div className="p-2 bg-white">
                     <div className="grid grid-cols-2 gap-1.5">
                       {cat.items?.map((item, idx) => (
-                        <button
+                        <div
                           key={idx}
-                          type="button"
+                          draggable
+                          onDragStart={(e) => handleItemDragStart(e, item)}
                           onClick={() => handleItemClick(item)}
                           onMouseEnter={(e) => handleItemMouseEnter(item, cat.name, e)}
                           onMouseLeave={handleItemMouseLeave}
-                          className="px-2 py-1.5 rounded-xl bg-slate-50 hover:bg-cyan-50/80 hover:border-cyan-400 border border-slate-200 text-slate-700 hover:text-cyan-900 transition-all flex items-center justify-between gap-1 cursor-pointer group shadow-2xs"
+                          className={`p-1.5 rounded-xl bg-white border border-slate-200/90 ${activeTheme.cardHover} transition-all flex flex-col justify-between gap-1 cursor-grab active:cursor-grabbing group shadow-2xs hover:shadow-sm hover:-translate-y-0.5`}
                         >
-                          <span className="text-[11px] font-semibold text-slate-800 group-hover:text-cyan-800 truncate">
-                            {item.label}
-                          </span>
-                          <div 
-                            className="text-[11.5px] text-cyan-700 font-serif shrink-0 px-1 py-0.5 rounded bg-white border border-slate-200 group-hover:border-cyan-300"
-                            dangerouslySetInnerHTML={{ __html: renderKatexHtml(item.preview || item.code, false) }}
-                          />
-                        </button>
+                          {/* Top Visual KaTeX Formula / Chemical Compound Display */}
+                          <div className="w-full min-h-[34px] px-1.5 py-1 rounded-lg bg-slate-50/90 group-hover:bg-white border border-slate-100 group-hover:border-slate-200 flex items-center justify-center overflow-x-auto scrollbar-none">
+                            <div
+                              className={`text-[12.5px] font-serif leading-none ${activeTheme.formulaText}`}
+                              dangerouslySetInnerHTML={{ __html: renderKatexHtml(item.preview || item.code, false) }}
+                            />
+                          </div>
+
+                          {/* Bottom Label + Drag Grip Indicator */}
+                          <div className="w-full flex items-center justify-between gap-1 px-0.5">
+                            <span className="text-[10px] font-bold text-slate-600 group-hover:text-slate-900 truncate">
+                              {item.label}
+                            </span>
+                            <GripVertical className="w-3 h-3 text-slate-300 group-hover:text-indigo-500 shrink-0 transition-colors" />
+                          </div>
+                        </div>
                       ))}
                     </div>
                   </div>
@@ -857,13 +1005,16 @@ export default function HierarchicalMathPalette({
         )}
       </div>
 
-      {/* 5. Minimalist Footer Guidance */}
-      <div className="p-2 border-t border-slate-200 bg-slate-50 text-[10.5px] text-slate-500 text-center flex items-center justify-center gap-1.5">
-        <Clock className="w-3 h-3 text-cyan-600" />
-        <span>Rê chuột 2s xem hướng dẫn SGK • Nhấp để chèn tại con trỏ</span>
+      {/* 5. Minimalist Studio Footer Guidance */}
+      <div className="px-3 py-2 border-t border-slate-200 bg-white text-[10px] text-slate-600 flex items-center justify-between">
+        <span className="flex items-center gap-1 font-semibold text-indigo-700">
+          <GripVertical className="w-3 h-3" />
+          <span>Hỗ trợ Kéo - Thả trực tiếp</span>
+        </span>
+        <span className="text-slate-400">Chạm để chèn nhanh</span>
       </div>
 
-      {/* 6. 2-SECOND HOVER CARD (CLEAN WHITE PREVIEW MODAL) */}
+      {/* 6. STUDIO HOVER PREVIEW CARD */}
       {hoveredItem && (
         <div
           style={{ 
@@ -871,22 +1022,22 @@ export default function HierarchicalMathPalette({
             left: `${hoverCardPos.left}px`,
             position: 'fixed'
           }}
-          className="z-[999] w-80 bg-white/98 backdrop-blur-md rounded-2xl border-2 border-cyan-500 shadow-2xl p-4 text-slate-900 pointer-events-none animate-in fade-in zoom-in-95 duration-150"
+          className="z-[999] w-80 bg-white/98 backdrop-blur-md rounded-2xl border-2 border-indigo-500 shadow-2xl p-4 text-slate-900 pointer-events-none animate-in fade-in zoom-in-95 duration-150"
         >
           <div className="flex items-center justify-between pb-2 border-b border-slate-200">
-            <span className="text-[10.5px] font-black uppercase text-cyan-700 tracking-wider flex items-center gap-1.5">
+            <span className="text-[10.5px] font-black uppercase text-indigo-700 tracking-wider flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5 text-amber-500" />
               <span>{currentDomain?.name} • {hoveredItem.categoryName}</span>
             </span>
-            <span className="text-[9.5px] px-2 py-0.5 rounded-full bg-cyan-50 text-cyan-800 border border-cyan-200 font-mono font-bold">
-              Chuẩn GDPT 2018
+            <span className="text-[9.5px] px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-800 border border-indigo-200 font-mono font-bold">
+              Kéo - Thả
             </span>
           </div>
 
           {/* Large Live KaTeX Formula */}
           <div className="my-3 py-3 px-3 rounded-xl bg-slate-50 border border-slate-200 text-center flex items-center justify-center min-h-[60px] shadow-inner">
             <div 
-              className="text-lg text-cyan-900 font-serif leading-none"
+              className="text-lg text-indigo-950 font-serif leading-none"
               dangerouslySetInnerHTML={{ __html: renderKatexHtml(hoveredItem.preview || hoveredItem.code, true) }}
             />
           </div>
@@ -897,20 +1048,13 @@ export default function HierarchicalMathPalette({
               {hoveredItem.label}
             </div>
             <p className="text-[11.5px] text-slate-600 leading-relaxed font-normal">
-              {hoveredItem.desc || 'Chèn ký hiệu hoặc công thức vào bài giảng tại vị trí con trỏ.'}
+              {hoveredItem.desc || 'Kéo thả trực tiếp vào khung soạn thảo / Bảng biến thiên hoặc nhấp chuột để chèn.'}
             </p>
           </div>
 
-          {/* LaTeX Syntax */}
-          <div className="mt-2.5 pt-2 border-t border-slate-200 flex items-center justify-between text-[10.5px]">
-            <span className="text-slate-500 font-medium">Mã nguồn LaTeX:</span>
-            <code className="text-cyan-800 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 font-mono text-[11px] font-bold">
-              ${hoveredItem.code}$
-            </code>
-          </div>
-
-          <div className="mt-2 text-[10.5px] text-emerald-700 font-extrabold flex items-center gap-1">
-            <span>⚡ Nhấp chuột để chèn ngay vào vị trí con trỏ</span>
+          <div className="mt-2.5 pt-2 border-t border-slate-200 flex items-center justify-between text-[10.5px] text-emerald-700 font-extrabold">
+            <span>✋ Kéo thả vào vị trí bất kỳ</span>
+            <span>⚡ Nhấp để chèn ngay</span>
           </div>
         </div>
       )}

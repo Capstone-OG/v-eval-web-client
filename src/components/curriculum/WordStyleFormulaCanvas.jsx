@@ -13,7 +13,9 @@ import {
   AlertTriangle,
   Lightbulb
 } from 'lucide-react';
-import { renderKatexHtml, unescapeLiteralNewlines } from '../common/MathText';
+import { renderKatexHtml, unescapeLiteralNewlines, normalizeMathString } from '../common/MathText';
+import VariationTable, { parseVariationTableString } from '../common/VariationTable';
+import InteractiveMathRenderer from '../common/InteractiveMathRenderer';
 
 /**
  * Helper to safely evaluate simple arithmetic strings (e.g. "12/4", "0.2/0.5")
@@ -34,7 +36,12 @@ function safeCalcDivision(numStr, denStr) {
  */
 export function sanitizeLineText(text) {
   if (!text) return '';
-  return String(text).replace(/\\+\s*$/, '').trimEnd();
+  let s = String(text).replace(/\\+\s*$/, '').trimEnd();
+  // Strip stray outer single quotes around a sentence e.g. 'Hàm số đồng biến trên $(0; 2)$.'
+  if (s.length >= 2 && s.startsWith("'") && s.endsWith("'") && !s.slice(1, -1).includes("'")) {
+    s = s.slice(1, -1).trim();
+  }
+  return s;
 }
 
 /**
@@ -154,14 +161,15 @@ export function buildLatexFromStructure(struct) {
  * Tokenize a single line of text into plain text chunks and explicit $...$ / $$...$$ formula tokens
  */
 function tokenizeLine(lineText, lineIdx) {
-  const cleanLine = sanitizeLineText(lineText);
-  if (cleanLine === '' || cleanLine === undefined) {
+  const rawClean = sanitizeLineText(lineText);
+  if (rawClean === '' || rawClean === undefined) {
     return [{
       id: `line-${lineIdx}-tok-0`,
       isFormula: false,
       text: ''
     }];
   }
+  const cleanLine = normalizeMathString(rawClean);
   const regex = /(\$\$[\s\S]*?\$\$|\$[^\$\n]+?\$)/g;
   const parts = cleanLine.split(regex);
   const tokens = [];
@@ -200,26 +208,76 @@ function tokenizeLine(lineText, lineIdx) {
 }
 
 /**
- * Parse full document into Lines, each containing its tokens
+ * Parse full document into Lines, each containing its tokens or visual block tags
  */
 function parseDocumentLines(rawText) {
   if (!rawText) return [];
-  const normalized = unescapeLiteralNewlines(String(rawText));
-  const rawLines = normalized.split('\n');
+  const normalized = unescapeLiteralNewlines(String(rawText))
+    .replace(/\\+\s*$/gm, '');
 
-  return rawLines.map((line, lineIdx) => {
-    const clean = sanitizeLineText(line);
-    const isHeading = clean.trim().startsWith('###') || clean.trim().startsWith('##') || clean.trim().startsWith('#');
-    const isBullet = clean.trim().startsWith('- ') || clean.trim().startsWith('* ') || clean.trim().startsWith('• ');
-    return {
-      id: `line-${lineIdx}`,
-      lineIdx,
-      raw: clean,
-      isHeading,
-      isBullet,
-      tokens: tokenizeLine(clean, lineIdx)
-    };
+  const blockRegex = /(\[VARIATION_TABLE\][\s\S]*?\[\/VARIATION_TABLE\]|\[MATH_GRAPH_3D\][\s\S]*?\[\/MATH_GRAPH_3D\]|\[MATH_GEOMETRY_2D\][\s\S]*?\[\/MATH_GEOMETRY_2D\]|\[MATH_GRAPH\][\s\S]*?\[\/MATH_GRAPH\]|!\[[^\]]*\]\([^\)]+\))/gi;
+  const segments = normalized.split(blockRegex);
+  const resultLines = [];
+  let lineIdx = 0;
+
+  segments.forEach((segment) => {
+    if (!segment) return;
+    const trimmed = segment.trim();
+    const upper = trimmed.toUpperCase();
+
+    if (
+      (upper.startsWith('[VARIATION_TABLE]') && upper.endsWith('[/VARIATION_TABLE]')) ||
+      (upper.startsWith('[MATH_GRAPH_3D]') && upper.endsWith('[/MATH_GRAPH_3D]')) ||
+      (upper.startsWith('[MATH_GEOMETRY_2D]') && upper.endsWith('[/MATH_GEOMETRY_2D]')) ||
+      (upper.startsWith('[MATH_GRAPH]') && upper.endsWith('[/MATH_GRAPH]')) ||
+      /^!\[[^\]]*\]\([^\)]+\)$/.test(trimmed)
+    ) {
+      const blockType = upper.startsWith('[VARIATION_TABLE]')
+        ? 'VARIATION_TABLE'
+        : upper.startsWith('[MATH_GRAPH_3D]')
+        ? 'MATH_GRAPH_3D'
+        : upper.startsWith('[MATH_GEOMETRY_2D]')
+        ? 'MATH_GEOMETRY_2D'
+        : upper.startsWith('[MATH_GRAPH]')
+        ? 'MATH_GRAPH'
+        : 'IMAGE';
+
+      resultLines.push({
+        id: `line-block-${lineIdx}`,
+        lineIdx,
+        isBlock: true,
+        blockType,
+        rawBlock: trimmed,
+        raw: trimmed,
+        tokens: []
+      });
+      lineIdx++;
+      return;
+    }
+
+    const subLines = segment.split('\n');
+    subLines.forEach((line, subIdx) => {
+      // Skip leading/trailing empty newline right around a block tag to avoid extra blank gaps
+      if ((subIdx === 0 || subIdx === subLines.length - 1) && line.trim() === '' && segments.length > 1) {
+        return;
+      }
+      const clean = sanitizeLineText(line);
+      const isHeading = clean.trim().startsWith('###') || clean.trim().startsWith('##') || clean.trim().startsWith('#');
+      const isBullet = clean.trim().startsWith('- ') || clean.trim().startsWith('* ') || clean.trim().startsWith('• ');
+      resultLines.push({
+        id: `line-${lineIdx}`,
+        lineIdx,
+        isBlock: false,
+        raw: clean,
+        isHeading,
+        isBullet,
+        tokens: tokenizeLine(clean, lineIdx)
+      });
+      lineIdx++;
+    });
   });
+
+  return resultLines;
 }
 
 /**
@@ -227,10 +285,13 @@ function parseDocumentLines(rawText) {
  */
 function serializeDocumentLines(lines) {
   return lines.map(line => {
-    const assembled = line.tokens.map(t => {
+    if (line.isBlock) {
+      return line.rawBlock || line.raw || '';
+    }
+    const assembled = (line.tokens || []).map(t => {
       if (!t.isFormula) return t.text;
       const latex = t.structure ? buildLatexFromStructure(t.structure) : t.latex;
-      return t.displayMode ? `$$${latex}$$` : `$${latex}$`;
+      return t.displayMode ? `$$${(latex || '').trim() || '\\square'}$$` : `$${(latex || '').trim() || '\\square'}$`;
     }).join('');
     return sanitizeLineText(assembled);
   }).join('\n');
@@ -393,7 +454,10 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
   content,
   onChange,
   placeholder = "Nhập nội dung bài giảng tại đây...",
-  accentColor = "cyan"
+  accentColor = "cyan",
+  compact = false,
+  singleLine = false,
+  onEditMathGraph = null
 }, ref) {
   const [docLines, setDocLines] = useState(() => parseDocumentLines(content || ''));
   const [activeFormulaId, setActiveFormulaId] = useState(null);
@@ -403,6 +467,7 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
   const activeFormulaRef = useRef(null);
   const containerRef = useRef(null);
   const lineRefs = useRef({});
+  const lastCommittedContentRef = useRef(content || '');
 
   // Active cursor tracking for precise insertion at cursor location
   const activePositionRef = useRef({
@@ -411,10 +476,12 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
     offset: 0
   });
 
-  // Sync incoming content if changed externally
+  // Sync incoming content only if changed externally (never wipe active editing state on internal keystrokes)
   useEffect(() => {
+    if (content === lastCommittedContentRef.current) return;
     const currentSerialized = serializeDocumentLines(docLines);
     if (content !== currentSerialized) {
+      lastCommittedContentRef.current = content || '';
       setDocLines(parseDocumentLines(content || ''));
     }
   }, [content]);
@@ -435,6 +502,7 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
   const commitDocLines = (newLines) => {
     setDocLines(newLines);
     const serialized = serializeDocumentLines(newLines);
+    lastCommittedContentRef.current = serialized;
     if (onChange) onChange(serialized);
   };
 
@@ -509,7 +577,22 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
   useImperativeHandle(ref, () => ({
     insertSnippet: (latexSnippet) => {
       if (!latexSnippet) return;
-      const formulaLatex = latexSnippet.trim();
+      const trimmedSnippet = latexSnippet.trim();
+
+      // If inserting a full visual block ([VARIATION_TABLE], [MATH_GRAPH], [MATH_GRAPH_3D], [MATH_GEOMETRY_2D], or image ![...](...))
+      if (
+        /\[(VARIATION_TABLE|MATH_GRAPH|MATH_GRAPH_3D|MATH_GEOMETRY_2D)\]/i.test(trimmedSnippet) ||
+        /^!\[[^\]]*\]\([^\)]+\)$/.test(trimmedSnippet) ||
+        trimmedSnippet.includes('\n')
+      ) {
+        const currentRaw = serializeDocumentLines(docLines);
+        const combined = currentRaw ? `${currentRaw}\n${trimmedSnippet}` : trimmedSnippet;
+        const nextLines = parseDocumentLines(combined);
+        commitDocLines(nextLines);
+        return;
+      }
+
+      const formulaLatex = trimmedSnippet.replace(/^\$+|\$+$/g, '').trim();
       const formulaStructure = parseEquationStructure(formulaLatex);
 
       let targetLineId = activePositionRef.current?.lineId;
@@ -860,11 +943,15 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
     commitDocLines(updated);
   };
 
-  // Delete active formula
+  // Delete active formula (Ensure line still has at least 1 text token so user can always type or drag back into it)
   const handleDeleteActiveFormula = (lineId, tokenId) => {
     const updated = docLines.map(line => {
       if (line.id !== lineId) return line;
-      return { ...line, tokens: line.tokens.filter(t => t.id !== tokenId) };
+      const remaining = line.tokens.filter(t => t.id !== tokenId);
+      if (remaining.length === 0 || !remaining.some(t => !t.isFormula)) {
+        remaining.push({ id: `tok-t-${Date.now()}`, isFormula: false, text: '' });
+      }
+      return { ...line, tokens: remaining };
     });
     setActiveFormulaId(null);
     commitDocLines(updated);
@@ -889,6 +976,118 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
       return { ...line, tokens: nextTokens };
     });
     commitDocLines(updated);
+  };
+
+  // Handle Drag-and-Drop of formula/compound/block chips from HierarchicalMathPalette
+  const handleDropSnippetOnCanvas = (e, targetLineId = null) => {
+    const blockCode = e.dataTransfer?.getData('text/veval-block');
+    const mathCode = e.dataTransfer?.getData('text/veval-math') || e.dataTransfer?.getData('text/veval-bbt');
+    if (!blockCode && !mathCode) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    const rawSnippet = (blockCode || mathCode || '').trim();
+    if (!rawSnippet) return;
+
+    // Case 1: Block tag (e.g. [VARIATION_TABLE]...[/VARIATION_TABLE])
+    if (
+      rawSnippet.startsWith('[VARIATION_TABLE]') ||
+      rawSnippet.startsWith('[MATH_GRAPH]') ||
+      rawSnippet.startsWith('[MATH_GRAPH_3D]') ||
+      rawSnippet.startsWith('[MATH_GEOMETRY_2D]')
+    ) {
+      const bType = rawSnippet.startsWith('[VARIATION_TABLE]')
+        ? 'VARIATION_TABLE'
+        : rawSnippet.startsWith('[MATH_GRAPH_3D]')
+        ? 'MATH_GRAPH_3D'
+        : rawSnippet.startsWith('[MATH_GEOMETRY_2D]')
+        ? 'MATH_GEOMETRY_2D'
+        : 'MATH_GRAPH';
+      const newBlockLine = {
+        id: `block-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+        lineIdx: docLines.length,
+        raw: rawSnippet,
+        isBlock: true,
+        blockType: bType,
+        rawBlock: rawSnippet,
+        tokens: []
+      };
+      if (targetLineId) {
+        const idx = docLines.findIndex((l) => l.id === targetLineId);
+        if (idx !== -1) {
+          const next = [...docLines];
+          next.splice(idx + 1, 0, newBlockLine);
+          commitDocLines(next);
+          return;
+        }
+      }
+      commitDocLines([...docLines, newBlockLine]);
+      return;
+    }
+
+    // Case 2: Formula or chemical compound token
+    const cleanLatex = rawSnippet.replace(/^\$+|\$+$/g, '').trim();
+    const formulaStructure = parseEquationStructure(cleanLatex);
+    const newFormulaId = `tok-f-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
+    const formulaToken = {
+      id: newFormulaId,
+      isFormula: true,
+      displayMode: false,
+      latex: cleanLatex,
+      structure: formulaStructure
+    };
+
+    if (docLines.length === 0) {
+      const newLId = `line-${Date.now()}`;
+      const afterId = `tok-t-${Date.now() + 1}`;
+      commitDocLines([
+        {
+          id: newLId,
+          lineIdx: 0,
+          raw: '',
+          isHeading: false,
+          isBullet: false,
+          tokens: [formulaToken, { id: afterId, isFormula: false, text: ' ' }]
+        }
+      ]);
+      setActiveFormulaId(newFormulaId);
+      return;
+    }
+
+    const resolvedLineId =
+      targetLineId && docLines.some((l) => l.id === targetLineId && !l.isBlock)
+        ? targetLineId
+        : [...docLines].reverse().find((l) => !l.isBlock)?.id;
+
+    if (!resolvedLineId) {
+      const newLId = `line-${Date.now()}`;
+      const afterId = `tok-t-${Date.now() + 1}`;
+      commitDocLines([
+        ...docLines,
+        {
+          id: newLId,
+          lineIdx: docLines.length,
+          raw: '',
+          isHeading: false,
+          isBullet: false,
+          tokens: [formulaToken, { id: afterId, isFormula: false, text: ' ' }]
+        }
+      ]);
+      setActiveFormulaId(newFormulaId);
+      return;
+    }
+
+    const updated = docLines.map((line) => {
+      if (line.id !== resolvedLineId) return line;
+      const afterId = `tok-t-${Date.now()}`;
+      return {
+        ...line,
+        tokens: [...line.tokens, formulaToken, { id: afterId, isFormula: false, text: ' ' }]
+      };
+    });
+    commitDocLines(updated);
+    setActiveFormulaId(newFormulaId);
   };
 
   // Find active token object
@@ -1019,16 +1218,140 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
       )}
 
       {/* THE ACTUAL DOCUMENT CANVAS */}
-      <div className="bg-white rounded-2xl border border-slate-300 shadow-sm p-6 sm:p-8 min-h-[380px] text-[14px] leading-relaxed select-text space-y-2 cursor-text">
+      <div
+        onDragOver={(e) => {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'copy';
+        }}
+        onDrop={(e) => handleDropSnippetOnCanvas(e, null)}
+        className={
+          singleLine
+            ? 'bg-transparent border-0 shadow-none px-1 py-0.5 min-h-[26px] text-[13.5px] leading-snug select-text cursor-text flex-1'
+            : compact
+            ? 'bg-white rounded-xl border border-slate-200/90 shadow-2xs p-3 sm:p-3.5 min-h-[84px] text-[13.5px] leading-relaxed select-text space-y-1.5 cursor-text focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-100/70 transition-all'
+            : 'bg-white rounded-2xl border border-slate-300 shadow-sm p-6 sm:p-8 min-h-[380px] text-[14px] leading-relaxed select-text space-y-2 cursor-text'
+        }
+      >
         {docLines.length === 0 ? (
           <div 
             onClick={() => handleInsertNewLineAfter(null)}
-            className="py-12 text-center text-slate-400 text-xs italic cursor-pointer hover:text-slate-600"
+            onDragOver={(e) => {
+              e.preventDefault();
+              e.dataTransfer.dropEffect = 'copy';
+            }}
+            onDrop={(e) => handleDropSnippetOnCanvas(e, null)}
+            className={`${singleLine ? 'py-0.5 text-left' : compact ? 'py-3 text-left px-1' : 'py-12 text-center'} text-slate-400 text-xs italic cursor-pointer hover:text-slate-600`}
           >
-            {placeholder} (Nhấp vào đây để bắt đầu soạn bài giảng)
+            {placeholder} {!singleLine && !compact && '(Nhấp vào đây hoặc kéo thả công thức vào để bắt đầu soạn bài giảng)'}
           </div>
         ) : (
           docLines.map((line) => {
+            if (line.isBlock) {
+              const handleDeleteBlock = (e) => {
+                e.stopPropagation();
+                const filtered = docLines.filter((l) => l.id !== line.id);
+                if (filtered.length === 0) {
+                  const newLId = `line-${Date.now()}`;
+                  const newTokId = `tok-${Date.now()}`;
+                  commitDocLines([
+                    {
+                      id: newLId,
+                      lineIdx: 0,
+                      isBlock: false,
+                      raw: '',
+                      isHeading: false,
+                      isBullet: false,
+                      tokens: [{ id: newTokId, isFormula: false, text: '' }]
+                    }
+                  ]);
+                  return;
+                }
+                commitDocLines(filtered);
+              };
+
+              if (line.blockType === 'VARIATION_TABLE') {
+                const tableData = parseVariationTableString(line.rawBlock);
+                const handleUpdateVariationBlock = (newRawBlock) => {
+                  const updated = docLines.map((l) =>
+                    l.id === line.id ? { ...l, rawBlock: newRawBlock, raw: newRawBlock } : l
+                  );
+                  commitDocLines(updated);
+                };
+                return (
+                  <div key={line.id} className="relative group my-2">
+                    <button
+                      type="button"
+                      onClick={handleDeleteBlock}
+                      title="Xóa bảng biến thiên này"
+                      className="absolute top-3 right-3 z-20 px-2 py-1 rounded-lg bg-rose-50 border border-rose-200 text-rose-600 hover:bg-rose-100 text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer shadow-2xs"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                      <span>Xóa</span>
+                    </button>
+                    {tableData ? (
+                      <VariationTable
+                        data={tableData}
+                        onChange={handleUpdateVariationBlock}
+                      />
+                    ) : (
+                      <pre className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs font-mono text-slate-700 overflow-x-auto">
+                        {line.rawBlock}
+                      </pre>
+                    )}
+                  </div>
+                );
+              }
+
+              if (
+                line.blockType === 'MATH_GRAPH' ||
+                line.blockType === 'MATH_GRAPH_3D' ||
+                line.blockType === 'MATH_GEOMETRY_2D'
+              ) {
+                return (
+                  <div key={line.id} className="relative group my-2">
+                    <button
+                      type="button"
+                      onClick={handleDeleteBlock}
+                      title="Xóa đồ thị / mô hình này"
+                      className="absolute top-2.5 right-24 z-20 opacity-0 group-hover:opacity-100 px-2 py-1 rounded-lg bg-rose-50 border border-rose-200 text-rose-600 hover:bg-rose-100 text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer shadow-xs"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                      <span>Xóa mô hình</span>
+                    </button>
+                    <InteractiveMathRenderer
+                      rawTag={line.rawBlock}
+                      height={compact ? 250 : 300}
+                      onEdit={onEditMathGraph ? () => onEditMathGraph(line.rawBlock) : null}
+                    />
+                  </div>
+                );
+              }
+
+              if (line.blockType === 'IMAGE') {
+                const imgMatch = line.rawBlock.match(/^!\[([^\]]*)\]\(([^\)]+)\)$/);
+                const altText = imgMatch ? imgMatch[1] : 'Hình minh họa';
+                const imgUrl = imgMatch ? imgMatch[2] : '';
+                return (
+                  <div key={line.id} className="relative group my-2 inline-block max-w-full">
+                    <button
+                      type="button"
+                      onClick={handleDeleteBlock}
+                      title="Xóa ảnh minh họa"
+                      className="absolute top-2 right-2 z-20 opacity-0 group-hover:opacity-100 px-2 py-1 rounded-lg bg-rose-600 text-white text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer shadow-md"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                      <span>Xóa ảnh</span>
+                    </button>
+                    <img
+                      src={imgUrl}
+                      alt={altText}
+                      className="max-h-64 rounded-xl border border-slate-200 shadow-xs object-contain bg-white p-1"
+                    />
+                  </div>
+                );
+              }
+            }
+
             const isHeading = line.isHeading;
             const isBullet = line.isBullet;
 
@@ -1043,6 +1366,11 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
                 key={line.id}
                 ref={(el) => { lineRefs.current[line.id] = el; }}
                 onClick={(e) => handleLineRowClick(e, line.id)}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.dataTransfer.dropEffect = 'copy';
+                }}
+                onDrop={(e) => handleDropSnippetOnCanvas(e, line.id)}
                 className={`transition-colors rounded px-1.5 py-0.5 cursor-text ${
                   isHeading
                     ? isPin
@@ -1089,7 +1417,7 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') {
                             e.preventDefault();
-                            handleInsertNewLineAfter(line.id);
+                            if (!singleLine) handleInsertNewLineAfter(line.id);
                           } else if (e.key === 'Backspace') {
                             const sel = window.getSelection();
                             const spanText = e.currentTarget.textContent || '';
@@ -1131,10 +1459,32 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
 
                   // ACTIVE EDITING STATE: MINIMALIST SLOT BOX
                   if (isActive) {
+                    const handleDropOnFormulaInput = (e, slotField = null) => {
+                      const dropped =
+                        e.dataTransfer?.getData('text/veval-math') ||
+                        e.dataTransfer?.getData('text/veval-bbt') ||
+                        e.dataTransfer?.getData('text/plain');
+                      if (!dropped) return;
+                      e.preventDefault();
+                      e.stopPropagation();
+                      const cleanDrop = String(dropped).trim().replace(/^\$+|\$+$/g, '');
+                      if (!cleanDrop) return;
+                      if (slotField) {
+                        handleSlotChange(line.id, token.id, slotField, cleanDrop);
+                      } else {
+                        handleGenericLatexChange(line.id, token.id, cleanDrop);
+                      }
+                    };
+
                     return (
                       <span
                         key={token.id}
                         ref={activeFormulaRef}
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          e.dataTransfer.dropEffect = 'copy';
+                        }}
+                        onDrop={(e) => handleDropOnFormulaInput(e, null)}
                         className="inline-flex items-center align-middle mx-0.5 px-1 py-0.5 bg-amber-50/90 ring-1 ring-amber-400 rounded-lg shadow-2xs z-30"
                       >
                         {struct?.type === 'FRACTION' ? (
@@ -1145,6 +1495,8 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
                                 type="text"
                                 value={struct.num}
                                 onChange={(e) => handleSlotChange(line.id, token.id, 'num', e.target.value)}
+                                onDragOver={(e) => e.preventDefault()}
+                                onDrop={(e) => handleDropOnFormulaInput(e, 'num')}
                                 className="text-center font-bold text-amber-950 bg-white border border-amber-300 rounded px-1 py-0 text-[11px] font-mono outline-none"
                                 style={{ width: `${Math.max(20, (struct.num || '').length * 8 + 8)}px` }}
                               />
@@ -1153,6 +1505,8 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
                                 type="text"
                                 value={struct.den}
                                 onChange={(e) => handleSlotChange(line.id, token.id, 'den', e.target.value)}
+                                onDragOver={(e) => e.preventDefault()}
+                                onDrop={(e) => handleDropOnFormulaInput(e, 'den')}
                                 className="text-center font-bold text-cyan-950 bg-white border border-cyan-300 rounded px-1 py-0 text-[11px] font-mono outline-none"
                                 style={{ width: `${Math.max(20, (struct.den || '').length * 8 + 8)}px` }}
                               />
@@ -1164,6 +1518,8 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
                                   type="text"
                                   value={struct.result}
                                   onChange={(e) => handleSlotChange(line.id, token.id, 'result', e.target.value)}
+                                  onDragOver={(e) => e.preventDefault()}
+                                  onDrop={(e) => handleDropOnFormulaInput(e, 'result')}
                                   className="text-center font-extrabold text-emerald-900 bg-white border border-emerald-300 rounded px-1 py-0 text-[11px] font-mono outline-none"
                                   style={{ width: `${Math.max(22, (struct.result || '').length * 8 + 8)}px` }}
                                 />
@@ -1177,6 +1533,8 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
                               type="text"
                               value={struct.base}
                               onChange={(e) => handleSlotChange(line.id, token.id, 'base', e.target.value)}
+                              onDragOver={(e) => e.preventDefault()}
+                              onDrop={(e) => handleDropOnFormulaInput(e, 'base')}
                               className="text-center font-bold text-indigo-950 bg-white border border-indigo-300 rounded px-1 py-0 text-[11px] font-mono outline-none"
                               style={{ width: `${Math.max(16, (struct.base || '').length * 8 + 6)}px` }}
                             />
@@ -1184,6 +1542,8 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
                               type="text"
                               value={struct.exp}
                               onChange={(e) => handleSlotChange(line.id, token.id, 'exp', e.target.value)}
+                              onDragOver={(e) => e.preventDefault()}
+                              onDrop={(e) => handleDropOnFormulaInput(e, 'exp')}
                               className="text-center font-extrabold text-rose-950 bg-white border border-rose-300 rounded px-0.5 py-0 text-[10px] font-mono -translate-y-1 outline-none"
                               style={{ width: `${Math.max(14, (struct.exp || '').length * 7 + 6)}px` }}
                             />
@@ -1196,6 +1556,8 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
                               type="text"
                               value={struct.expr}
                               onChange={(e) => handleSlotChange(line.id, token.id, 'expr', e.target.value)}
+                              onDragOver={(e) => e.preventDefault()}
+                              onDrop={(e) => handleDropOnFormulaInput(e, 'expr')}
                               className="text-center font-bold text-emerald-950 bg-white border-b border-emerald-500 rounded-t px-1 py-0 text-[11px] outline-none"
                               style={{ width: `${Math.max(20, (struct.expr || '').length * 8 + 8)}px` }}
                             />
@@ -1206,6 +1568,8 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
                             type="text"
                             value={token.latex}
                             onChange={(e) => handleGenericLatexChange(line.id, token.id, e.target.value)}
+                            onDragOver={(e) => e.preventDefault()}
+                            onDrop={(e) => handleDropOnFormulaInput(e, null)}
                             className="font-mono text-center text-xs font-bold bg-white text-slate-900 border border-amber-400 rounded px-1.5 py-0 outline-none shadow-2xs"
                             style={{ width: `${Math.max(32, token.latex.length * 8 + 14)}px` }}
                           />

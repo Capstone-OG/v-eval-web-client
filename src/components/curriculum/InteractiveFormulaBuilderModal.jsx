@@ -26,7 +26,7 @@ export const FORMULA_TEMPLATES = [
   { id: 'power', name: '⚡ Lũy Thừa x^n', icon: '⚡', desc: 'Cơ số & Số mũ' },
   { id: 'integral', name: '📉 Tích Phân ∫', icon: '📉', desc: 'Cận dưới, cận trên & f(x)' },
   { id: 'system', name: '📋 Hệ Phương Trình', icon: '📋', desc: 'Hệ 2 phương trình' },
-  { id: 'variation_table', name: '📊 Bảng Biến Thiên', icon: '📊', desc: 'Chuẩn SGK GDPT 2018' },
+  { id: 'variation_table', name: '📊 Bảng Biến Thiên', icon: '📊', desc: 'Bảng biến thiên hàm số' },
   { id: 'math_graph', name: '📈 Đồ Thị Hàm Số', icon: '📈', desc: 'Oxy & Desmos tương tác' }
 ];
 
@@ -34,15 +34,17 @@ export default function InteractiveFormulaBuilderModal({
   isOpen,
   onClose,
   onInsert,
-  initialTemplate = 'chemistry'
+  initialTemplate = 'chemistry',
+  initialTemplateId = null
 }) {
-  const [activeTab, setActiveTab] = useState(initialTemplate);
+  const [activeTab, setActiveTab] = useState(initialTemplateId || initialTemplate || 'chemistry');
 
   useEffect(() => {
-    if (initialTemplate) {
-      setActiveTab(initialTemplate);
+    const nextTab = initialTemplateId || initialTemplate;
+    if (nextTab) {
+      setActiveTab(nextTab);
     }
-  }, [initialTemplate]);
+  }, [initialTemplate, initialTemplateId]);
 
   // Form states for each template
   // 0. Chemistry Formulas (Chèn số vào và tự động tính toán)
@@ -772,99 +774,29 @@ export default function InteractiveFormulaBuilderModal({
             </div>
           )}
 
-          {/* TAB 7: BẢNG BIẾN THIÊN */}
+          {/* TAB 7: BẢNG BIẾN THIÊN (CHỈNH SỬA TRỰC QUAN KÉO - THẢ NGAY TRÊN BẢNG) */}
           {activeTab === 'variation_table' && (
-            <div className="space-y-4">
-              <div className="p-3 bg-indigo-50/70 rounded-2xl border border-indigo-200/80">
-                <span className="text-[11px] font-bold text-indigo-950 block mb-2">
-                  ⚡ Chọn nhanh mẫu bảng biến thiên phổ biến:
-                </span>
-                <div className="flex flex-wrap gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => handleSelectVarPreset('cubic_up')}
-                    className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all ${
-                      varPreset === 'cubic_up'
-                        ? 'bg-indigo-600 text-white shadow-2xs'
-                        : 'bg-white text-indigo-700 border border-indigo-200 hover:bg-indigo-100'
-                    }`}
-                  >
-                    📈 Hàm bậc ba (a &gt; 0)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleSelectVarPreset('cubic_down')}
-                    className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all ${
-                      varPreset === 'cubic_down'
-                        ? 'bg-indigo-600 text-white shadow-2xs'
-                        : 'bg-white text-indigo-700 border border-indigo-200 hover:bg-indigo-100'
-                    }`}
-                  >
-                    📉 Hàm bậc ba (a &lt; 0)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleSelectVarPreset('rational')}
-                    className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all ${
-                      varPreset === 'rational'
-                        ? 'bg-indigo-600 text-white shadow-2xs'
-                        : 'bg-white text-indigo-700 border border-indigo-200 hover:bg-indigo-100'
-                    }`}
-                  >
-                    ⚡ Hàm phân thức (x = 1)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleSelectVarPreset('quartic')}
-                    className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all ${
-                      varPreset === 'quartic'
-                        ? 'bg-indigo-600 text-white shadow-2xs'
-                        : 'bg-white text-indigo-700 border border-indigo-200 hover:bg-indigo-100'
-                    }`}
-                  >
-                    〰️ Hàm bậc 4 trùng phương
-                  </button>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Dòng x (phân cách bằng |):</label>
-                  <input
-                    type="text"
-                    value={varX}
-                    onChange={(e) => setVarX(e.target.value)}
-                    className="w-full px-3 py-1.5 rounded-xl border border-slate-300 font-mono text-xs"
-                  />
-                </div>
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Dòng y' (+, -, 0, ||):</label>
-                  <input
-                    type="text"
-                    value={varYPrime}
-                    onChange={(e) => setVarYPrime(e.target.value)}
-                    className="w-full px-3 py-1.5 rounded-xl border border-slate-300 font-mono text-xs"
-                  />
-                </div>
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Dòng y (giá trị đỉnh/đáy):</label>
-                  <input
-                    type="text"
-                    value={varY}
-                    onChange={(e) => setVarY(e.target.value)}
-                    className="w-full px-3 py-1.5 rounded-xl border border-slate-300 font-mono text-xs"
-                  />
-                </div>
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Mũi tên (up | down):</label>
-                  <input
-                    type="text"
-                    value={varDir}
-                    onChange={(e) => setVarDir(e.target.value)}
-                    className="w-full px-3 py-1.5 rounded-xl border border-slate-300 font-mono text-xs"
-                  />
-                </div>
-              </div>
+            <div className="space-y-3">
+              <VariationTable
+                data={{
+                  title: varTitle,
+                  xValues: varX.split('|').map(s => s.trim()),
+                  yPrime: varYPrime.split('|').map(s => s.trim()),
+                  yValues: {
+                    values: varY.split('|').map(s => s.trim()),
+                    directions: varDir.split('|').map(s => s.trim())
+                  }
+                }}
+                onChange={(_, nextObj) => {
+                  if (!nextObj) return;
+                  setVarTitle(nextObj.title || 'Bảng biến thiên hàm số');
+                  setVarX((nextObj.xValues || []).join(' | '));
+                  setVarYPrime((nextObj.yPrime || []).join(' | '));
+                  setVarY((nextObj.yValues?.values || []).join(' | '));
+                  setVarDir((nextObj.yValues?.directions || []).join(' | '));
+                }}
+                className="w-full my-0"
+              />
             </div>
           )}
 
@@ -910,48 +842,37 @@ export default function InteractiveFormulaBuilderModal({
             </div>
           )}
 
-          {/* LIVE PREVIEW BOX */}
-          <div className="p-4 rounded-2xl bg-gradient-to-br from-slate-50 to-indigo-50/30 border border-slate-200/90 shadow-2xs">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[11px] font-black text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span>👀 Khung Xem Trước Trực Quan Học Sinh Thấy (Live KaTeX Preview)</span>
-              </span>
-              <span className="text-[10px] font-mono text-slate-400">
-                {activeTab === 'variation_table' ? 'Thẻ Bảng Biến Thiên' : activeTab === 'math_graph' ? 'Thẻ Đồ Thị Hàm Số' : `$${generateSnippet()}$`}
-              </span>
-            </div>
+          {/* LIVE PREVIEW BOX (Ẩn khi ở tab variation_table vì bảng biến thiên phía trên đã là bảng trực quan) */}
+          {activeTab !== 'variation_table' && (
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-slate-50 to-indigo-50/30 border border-slate-200/90 shadow-2xs">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[11px] font-black text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                  <span>👀 Khung Xem Trước Trực Quan Học Sinh Thấy (Live KaTeX Preview)</span>
+                </span>
+                <span className="text-[10px] font-mono text-slate-400">
+                  {activeTab === 'math_graph' ? 'Thẻ Đồ Thị Hàm Số' : `$${generateSnippet()}$`}
+                </span>
+              </div>
 
-            <div className="p-4 rounded-xl bg-white border border-slate-200/90 flex items-center justify-center min-h-[70px] overflow-x-auto text-base">
-              {activeTab === 'variation_table' ? (
-                <VariationTable
-                  data={{
-                    title: varTitle,
-                    xValues: varX.split('|').map(s => s.trim()),
-                    yPrime: varYPrime.split('|').map(s => s.trim()),
-                    yValues: {
-                      values: varY.split('|').map(s => s.trim()),
-                      directions: varDir.split('|').map(s => s.trim())
-                    }
-                  }}
-                  className="w-full max-w-lg my-0"
-                />
-              ) : activeTab === 'math_graph' ? (
-                <MathGraphView
-                  data={{
-                    type: graphType,
-                    formula: graphFormula,
-                    title: 'Đồ thị hàm số minh họa'
-                  }}
-                  className="w-full max-w-md my-0"
-                />
-              ) : (
-                <div className="text-indigo-950 font-serif text-lg">
-                  <MathText text={`$$${generateSnippet()}$$`} />
-                </div>
-              )}
+              <div className="p-4 rounded-xl bg-white border border-slate-200/90 flex items-center justify-center min-h-[70px] overflow-x-auto text-base">
+                {activeTab === 'math_graph' ? (
+                  <MathGraphView
+                    data={{
+                      type: graphType,
+                      formula: graphFormula,
+                      title: 'Đồ thị hàm số minh họa'
+                    }}
+                    className="w-full max-w-md my-0"
+                  />
+                ) : (
+                  <div className="text-indigo-950 font-serif text-lg">
+                    <MathText text={`$$${generateSnippet()}$$`} />
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Footer actions */}

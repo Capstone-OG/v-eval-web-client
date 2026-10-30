@@ -1976,11 +1976,8 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
                 <div className="flex items-center justify-between">
                   <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-2">
                     <span className="w-5 h-5 rounded-full bg-cyan-100 text-cyan-700 flex items-center justify-center text-[10px] font-black">1</span>
-                    <span>Khối 1: Kiến Thức Nền Tảng & Điều Kiện Tiên Quyết (SGK Chuẩn)</span>
+                    <span>Khối 1: Kiến Thức Nền Tảng & Điều Kiện Tiên Quyết</span>
                   </h4>
-                  <span className="text-[10px] text-cyan-600 bg-cyan-50 px-2 py-0.5 rounded-full font-bold">
-                    SGK GDPT 2018
-                  </span>
                 </div>
                 
                 <div className="p-4 rounded-2xl bg-cyan-50/40 border border-cyan-100 text-xs text-slate-800 font-medium leading-relaxed">
@@ -3118,7 +3115,6 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
                     <div>
                       <div className="text-[11px] font-black text-emerald-950 uppercase tracking-wide flex items-center gap-1.5">
                         <span>AI ĐÃ BÓC TÁCH & CHUẨN HÓA THÀNH CÔNG TOÀN BỘ CÂY TRI THỨC</span>
-                        <span className="px-1.5 py-0.2 rounded-full bg-emerald-200 text-emerald-900 text-[9px] font-bold">Chuẩn GDPT 2018</span>
                       </div>
                       <div className="text-[10px] sm:text-[10.5px] text-emerald-800 font-medium">
                         <strong>{extractedCurriculum.chapters?.length || 0} Chương</strong> • 
@@ -3813,7 +3809,7 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
                       >
                         {domains.map((d) => (
                           <option key={d.id} value={d.id}>
-                            {d.title} ({d.subtitle || 'Chuẩn GDPT 2018'})
+                            {d.title} {d.subtitle ? `(${d.subtitle})` : ''}
                           </option>
                         ))}
                       </select>

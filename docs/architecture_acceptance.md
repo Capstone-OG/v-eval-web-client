@@ -707,6 +707,9 @@ V-Eval-Web_Client/
 - **Full-Featured 2D Plane Geometry Studio & `[MATH_GEOMETRY_2D]` Serialization**:
   - Implemented `getDefault2DGeometryPoints`, `formatMathGeometry2DTag`, `parseMathGeometry2DTag`, `SHAPES_2D_META`, and `mount2DGeometryBoard` in `src/utils/mathGraphUtils.js`.
   - Supports 6 canonical plane geometry configurations (`right_triangle`, `acute_triangle`, `circle_tangent`, `quadrilateral_cyclic`, `parallelogram_rhombus`, `trapezoid_right`) with exact perpendicular altitude projection, right-angle square markers, non-overlapping label offsets for `H` and `M`, interactive vertex `(X, Y)` coordinate editing, custom ratio points, and dashed/solid auxiliary segments.
+- **Empty-Slot Preservation & Sub-Slot Drag-and-Drop Resilience (`VariationTable.jsx`, `WordStyleFormulaCanvas.jsx`)**:
+  - Preserves empty cells in `parseVariationTableString` when splitting `x:` and `y:` rows by `|` and renders an inline `Thả số` drop prompt in `renderMath`, ensuring clearing a cell's text never collapses the column or prevents subsequent drag-and-drop insertion.
+  - Added `lastCommittedContentRef` and `handleDropOnFormulaInput` in `WordStyleFormulaCanvas.jsx` so clearing a formula sub-slot (`num`, `den`, `result`, `base`, `exp`, `expr`, `latex`) never destroys the active formula token and allows direct drag-and-drop replacement into any sub-slot or cleared editor canvas.
 
 ---
 
