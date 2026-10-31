@@ -852,3 +852,15 @@ V-Eval-Web_Client/
 - **Low-Profile Single-Row Formula Items with Dwell-Hover Simulation Inspector**:
   - Item listing is reduced to an ultra-clean, minimalist single row (~30px height) featuring inline KaTeX/symbol rendering, truncated label, and drag handle.
   - Replaced passive cluttered containers with an asynchronous dwell-hover inspector (~380ms debounce threshold): hovering and holding over any item displays an enlarged vector KaTeX formula, ASCII structure simulation for complex block templates (such as Variation Tables and coordinate graphs), comprehensive pedagogical usage guidelines, and insertion syntax.
+
+### 4.40. Comprehensive Visual Redesign of the STEM & Symbol Sidebar with 2-Domain Zero-Truncation Carousel (`HierarchicalMathPalette.jsx`)
+- **Modern Clean-Slate UI Architecture**:
+  - Overhauled the legacy dark navbar header with a light, Apple-inspired header featuring pure white background, subtle border dividers, an indigo `Sparkles` icon badge, and refined typography (`Ký Hiệu & STEM`).
+  - Integrated an ergonomic rounded-xl search input with soft focus-ring interaction.
+- **2-Domain Parallel Carousel Engine (Zero-Truncation Architecture)**:
+  - Constrained the carousel viewport to display **exactly 2 subject domains side-by-side** between the circular navigation buttons (`<` and `>`).
+  - By dedicating ~75px - 85px to each domain button, all subject names (`📐 Toán`, `🧪 Hóa`, `⚛️ Vật Lý`, `🧬 Sinh`, `📖 Ngữ Văn`, `🌍 Địa Lý`, `🔣 Ký Hiệu`) render cleanly with zero awkward ellipsis truncation (eliminating `T...` and `H...`).
+  - Retained the infinite circular modulo rotation loop: cycling past the boundaries continuously loops through all 7 subjects in both forward and reverse directions.
+- **Refined Accordion Containers & Tactile Formula Rows**:
+  - Accordion folders feature smooth 90-degree chevron rotation and subtle badges.
+  - Formula items are formatted as sleek single-row pills with KaTeX rendering, formula labels, and subtle drag grips, while dwell-hovering triggers the detailed simulation inspector modal.

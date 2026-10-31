@@ -2,6 +2,22 @@
 
 ---
 
+## [01/11/2026] - Đại Tu Toàn Diện Giao Diện Sidebar Ký Hiệu & STEM (Modern Redesign) & Băng Chuyền 2 Môn Học Không Bao Giờ Tràn Chữ
+
+- **Đại Tu Toàn Diện Giao Diện Sidebar Trực Quan & Sang Trọng (`HierarchicalMathPalette.jsx`)**:
+  - *Thiết Kế Lại Toàn Bộ Header Chuẩn Apple / Linear*: Thay thế thanh header màu tối cũ bằng giao diện trắng tinh khôi (`bg-white`), huy hiệu ngôi sao tím `Sparkles` mềm mại, tiêu đề rõ nét `Ký Hiệu & STEM` và nút thu gọn tối giản.
+  - *Thanh Tìm Kiếm Bo Tròn Hiện Đại*: Input bo tròn `rounded-xl` màu xám phấn (`bg-slate-50 focus:bg-white`), viền tương tác tím pastel, hỗ trợ tìm kiếm tức thì mọi ký hiệu, công thức, hợp chất.
+  - *Tái Cấu Trúc Băng Chuyền Môn Học 2 Môn Song Song (`visibleDomainKeys`, `handleNextDomain`, `handlePrevDomain`)*:
+    + Thu hẹp từ 3 môn xuống hiển thị **chính xác 2 môn học song song**, loại bỏ 100% tình trạng tràn chữ hoặc co cụm `T...`, `H...`.
+    + Không gian mỗi nút môn học rộng rãi (~75px - 85px), hiển thị trọn vẹn icon cùng tên phân môn chuẩn mực (`📐 Toán`, `🧪 Hóa`, `⚛️ Vật Lý`, `🧬 Sinh`, `📖 Ngữ Văn`, `🌍 Địa Lý`, `🔣 Ký Hiệu`).
+    + Giữ nguyên cơ chế vòng lặp xoay tròn vô hạn (Modulo loop) khi bấm `<` hoặc `>`, xoay chuyển mượt mà liên tục không có điểm dừng.
+  - *Chuẩn Hóa Thẻ Danh Mục Accordion & Dòng Công Thức Tinh Tế*:
+    + Folder Accordion bo góc `rounded-xl`, mũi tên Chevron xoay mượt mà 90 độ khi đóng/mở.
+    + Thẻ công thức dạng viên thuốc (pill) 1 dòng siêu gọn gàng: công thức KaTeX sắc nét, tên nhãn thanh thoát và tay nắm kéo thả mờ tinh tế (`opacity-40 hover:opacity-100`).
+  - *Thẻ Hover Dwell Phóng To & Mô Phỏng Sư Phạm*: Rê chuột giữ yên (~380ms) kích hoạt popup Glassmorphism nổi bật hiển thị chi tiết công thức phóng to, mô phỏng Bảng biến thiên, mô tả sư phạm GDPT 2018 và cú pháp.
+
+---
+
 ## [01/11/2026] - Tối Ưu Siêu Tinh Gọn Chiều Rộng Sidebar, Carousel 3 Môn Học Vòng Lặp Vô Hạn (< >) & Hiển Thị Đơn Giản Rê Chuột Giữ Để Xem Mô Phỏng Chi Tiết
 
 - **Thu Hẹp Chiều Rộng Tối Đa & Tiết Kiệm Không Gian (`HierarchicalMathPalette.jsx`)**:
