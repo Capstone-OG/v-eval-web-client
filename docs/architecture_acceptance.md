@@ -794,6 +794,24 @@ V-Eval-Web_Client/
 
 ---
 
+### 4.62. Floating Right-Edge STEM Tools Drawer & Unified Header Toolbar Architecture (`CurriculumStudioEditor.jsx`)
+- **Right-Edge Docked Floating Drawer (`FloatingStemDrawer` & Toggle Button `<`)**:
+  - Engineered an interactive docked trigger button on the right edge of the viewport (`fixed right-0 top-1/2 -translate-y-1/2`) featuring a pulsing `<` arrow and vertical text banner (`CÔNG CỤ STEM`).
+  - Clicking the toggle expands an ultra-modern slide-over palette drawer containing all pedagogical tools:
+    - **MathLab 2D/3D**: Full JSXGraph workspace for 3D spatial rotations (360° trackball), 2D Cartesian function curves, and planar geometry.
+    - **Variation Table Studio**: Instant 2N-1 grid table builder with double-bar asymptotes (`||`) and textbook inflection vectors.
+    - **Fraction & Arithmetic Calculator**: 2-story fractions with automatic real-time result evaluation.
+    - **Calculus & Textbook Limits**: First-principle limits, derivative definitions, and indeterminate quotient cancellations.
+    - **Chemistry Lab Workbench**: Molarity ($C_M$), mass concentration ($C%$), mass equation, and reaction yield calculations.
+    - **7-Subject Symbol Library**: Quick link to open the full left hierarchical math palette.
+  - Features an intuitive **Target Selector** (`theoryRecap`, `solutionMethod`, `sampleQuestion`, `sampleExplanation`) allowing teachers to effortlessly direct mathematical assets to any active section without navigating away.
+- **Header Unification & Inline Subheader De-cluttering**:
+  - Removed fragmented, redundant STEM dropdowns and standalone image buttons from individual section subheaders (Block 1, Block 2, Block 4 question and solution prompts), streamlining the editing canvas.
+  - Positioned a unified, prominent `StemToolsDropdown` directly in the top sticky header of the studio editor.
+  - Re-aligned the Block 4 Question Bank header with fixed single-line horizontal alignment (`flex items-center gap-2.5 shrink-0 whitespace-nowrap`) and purged duplicate emojis.
+
+---
+
 ## 5. Verification & Acceptance Criteria
 
 1. **Clean Production Build**: Executed `npm run build` with 0 syntax or bundle errors; production artifacts outputted to `dist/` within 763ms on Vite 8 and React 19.

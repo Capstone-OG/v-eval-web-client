@@ -2,8 +2,21 @@
 
 ---
 
-## [31/10/2026] - Tích Hợp AI Sinh Câu Hỏi Thích Ứng Bám Sát Dạng Bài (API 16), Modal `AiQuestionGeneratorModal` & Trợ Lý AI Tự Điền Đề Bài 1-Click Trong Studio Sư Phạm
+## [31/10/2026] - Chuẩn Hóa UI Khối 4 Ngang Hàng Thẳng Lối, Xóa Bỏ Nút Dán Ảnh & Bảng Công Cụ STEM Trôi Nổi Cạnh Phải Màn Hình Mũi Tên "<" Trong Studio Sư Phạm
 
+- **Chuẩn Hóa UI Khối 4 Ngân Hàng Đề Hàng Thẳng Lối, Xóa Bỏ Nút Dán Ảnh & Bảng Công Cụ STEM Trôi Nổi Cạnh Phải Màn Hình (`CurriculumStudioEditor.jsx`)**:
+  - *Sắp Xếp Ngang Hàng Thẳng Lối Khối 4 & Loại Bỏ Emoji Ký Tự Trùng Lặp*:
+    + Căn thẳng hàng 1 dòng duy nhất cho bộ đôi nút tác vụ `AI Sinh Câu Hỏi` và `Thêm Câu Hỏi Mới` tại Header Khối 4 (`flex items-center gap-2.5 shrink-0 whitespace-nowrap`), triệt tiêu hiện tượng co cụm bẻ 2 hàng gây kênh lệch layout.
+    + Khử triệt để ký hiệu trùng lặp: Loại bỏ emoji `✨` và `+` thừa trong text nhãn khi đã có icon Lucide `Sparkles` và `Plus` đi kèm, mang lại diện mạo chỉn chu, chuyên nghiệp.
+  - *Loại Bỏ Hoàn Toàn Nút Dán/Tải Ảnh Rời Rạc & Tối Giản Nhãn Tiêu Đề*:
+    + Gỡ bỏ hoàn toàn nút `🖼️ Dán/Tải Ảnh` thừa thãi tại tiểu mục Đề bài và Lời giải mẫu (giảng viên dán ảnh trực tiếp từ clipboard vào canvas bằng phím tắt `Ctrl+V` tiện lợi).
+    + Tối giản và làm sạch nhãn tiểu mục, xóa bỏ toàn bộ nút phụ gây xao nhãng.
+  - *Thống Nhất Công Cụ STEM Duy Nhất Trên Đầu & Bảng Công Cụ Trôi Nổi Cạnh Phải Mũi Tên "<"*:
+    + Gỡ bỏ toàn bộ các nút dropdown STEM rải rác bên trong từng khối (Khối 1, Khối 2, Khối 4) để tránh phân mảnh giao diện.
+    + Đưa `StemToolsDropdown` duy nhất lên thanh Header Studio trên cùng, tích hợp đầy đủ MathLab 2D/3D, Bảng biến thiên, Phân số, Đạo hàm, Hóa học.
+    + Trang bị nút trôi nổi neo cố định cạnh phải màn hình `[ < ✨ CÔNG CỤ STEM ]`: Nhấp vào sẽ trượt ra Bảng Công Cụ Studio Toàn Năng (`FloatingStemDrawer`) với bộ chọn mục tiêu chèn động (`Khối 1: Nền tảng SGK`, `Khối 2: Phương pháp giải`, `Khối 4: Đề bài mẫu`, `Khối 4: Lời giải mẫu`) cùng đầy đủ các công cụ chuyên sâu MathLab 2D/3D, Bảng biến thiên, Phân số, Vi tích phân, Hóa học và Thư viện ký hiệu 7 môn học.
+
+- **Tích Hợp AI Sinh Câu Hỏi Thích Ứng Bám Sát Dạng Bài (API 16), Modal `AiQuestionGeneratorModal` & Trợ Lý AI Tự Điền Đề Bài 1-Click Trong Studio Sư Phạm**:
 - **Tích Hợp AI Sinh Câu Hỏi Trắc Nghiệm Tự Động Bám Sát Dạng Bài Vào Khối 4 Ngân Hàng Đề (`CurriculumStudioEditor.jsx`)**:
   - *Bộ Đôi Nút Tác Vụ AI & Kiểm Tra Định Danh Dạng Bài Trước Khi Sinh*:
     - Bổ sung nút bấm nổi bật `✨ AI Sinh Câu Hỏi` (gradient tím - indigo) tại header Khối 4 và trạng thái danh sách trống (`Chưa có câu hỏi bổ sung nào trong cơ sở dữ liệu`).

@@ -36,7 +36,10 @@ import {
   FileEdit,
   Calculator,
   FlaskConical,
-  ChevronDown
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Table2
 } from 'lucide-react';
 import MathText, { unescapeLiteralNewlines } from '../common/MathText';
 import InteractiveFormulaBuilderModal from './InteractiveFormulaBuilderModal';
@@ -591,6 +594,7 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
   const [mathCategory, setMathCategory] = useState('algebra');
   const [activeFormulaTarget, setActiveFormulaTarget] = useState('theoryRecap'); // 'theoryRecap' | 'solutionMethod' | 'examTraps' | 'casioTricks' | 'sampleQuestion' | 'sampleExplanation'
   const [isPaletteCollapsed, setIsPaletteCollapsed] = useState(false);
+  const [isStemDrawerOpen, setIsStemDrawerOpen] = useState(false);
 
   const parsedInitial = parseSolutionMethodSections(pattern?.solutionMethod || '');
 
@@ -1197,16 +1201,12 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
             <span className="hidden md:inline">AI Nhận Diện</span>
           </button>
 
-          <button
-            type="button"
-            onClick={() => handleOpenMathWorkbench('jsxgraph', 'sampleQuestion')}
-            className="px-3.5 py-1.5 rounded-xl bg-linear-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white text-xs font-black shadow-sm flex items-center gap-1.5 transition-all cursor-pointer"
-            title="Phòng thí nghiệm MathLab 2D & Hình học không gian 3D (JSXGraph Engine)"
-          >
-            <Compass className="w-4 h-4 text-amber-300" />
-            <span className="hidden lg:inline">⚡ MathLab 2D/3D (JSXGraph)</span>
-            <span className="lg:hidden">⚡ MathLab 3D</span>
-          </button>
+          {/* CÔNG CỤ TOÁN & STEM DUY NHẤT NẰM TRÊN ĐẦU */}
+          <StemToolsDropdown
+            targetField={activeSection === 'theory' ? 'theoryRecap' : activeSection === 'method' ? 'solutionMethod' : (activeFormulaTarget || 'sampleQuestion')}
+            onOpenFormulaBuilder={handleOpenFormulaBuilder}
+            onOpenMathWorkbench={handleOpenMathWorkbench}
+          />
 
           <button
             disabled={saving}
@@ -1323,23 +1323,14 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
             {/* ================= SECTION: KHỐI 1 - NỀN TẢNG SGK & HÌNH ẢNH ================= */}
             {activeSection === 'theory' && (
               <div className="bg-white rounded-3xl border border-slate-200 p-6 space-y-5 shadow-sm">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
-                  <div>
-                    <h3 className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
-                      <span className="w-6 h-6 rounded-lg bg-cyan-100 text-cyan-700 flex items-center justify-center text-xs font-black">1</span>
-                      <span>Khối 1: Kiến Thức Nền Tảng & Hình Ảnh Minh Họa SGK</span>
-                    </h3>
-                    <p className="text-xs text-slate-500 font-medium mt-0.5">
-                      Định nghĩa, định lý, điều kiện xác định, đồ thị hàm số và hình học không gian chuẩn GDPT 2018
-                    </p>
-                  </div>
-                  
-                  {/* Dropdown Công cụ STEM nằm trong tổng thể mục đang sửa */}
-                  <StemToolsDropdown
-                    targetField="theoryRecap"
-                    onOpenFormulaBuilder={handleOpenFormulaBuilder}
-                    onOpenMathWorkbench={handleOpenMathWorkbench}
-                  />
+                <div className="border-b border-slate-100 pb-4">
+                  <h3 className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
+                    <span className="w-6 h-6 rounded-lg bg-cyan-100 text-cyan-700 flex items-center justify-center text-xs font-black">1</span>
+                    <span>Khối 1: Kiến Thức Nền Tảng & Hình Ảnh Minh Họa SGK</span>
+                  </h3>
+                  <p className="text-xs text-slate-500 font-medium mt-0.5">
+                    Định nghĩa, định lý, điều kiện xác định, đồ thị hàm số và hình học không gian chuẩn GDPT 2018
+                  </p>
                 </div>
 
                 {/* UNIFIED WORKSPACE: WORD CANVAS (FULL WIDTH) */}
@@ -1508,23 +1499,14 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
             {/* ================= SECTION: KHỐI 2 - PHƯƠNG PHÁP GIẢI & BẪY ĐỀ THI ================= */}
             {activeSection === 'method' && (
               <div className="bg-white rounded-3xl border border-slate-200 p-6 space-y-5 shadow-sm">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
-                  <div>
-                    <h3 className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
-                      <span className="w-6 h-6 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center text-xs font-black">2</span>
-                      <span>Khối 2: Phương Pháp Giải Chuyên Biệt, Bẫy Đề Thi & {isStem ? 'Mẹo Casio' : 'Mẹo Tư Duy & Chiến Thuật'}</span>
-                    </h3>
-                    <p className="text-xs text-slate-500 font-medium mt-0.5">
-                      Giúp học sinh định hình thuật toán giải từng bước và khắc phục các sai lầm kinh điển
-                    </p>
-                  </div>
-
-                  {/* Dropdown Công cụ STEM nằm trong tổng thể mục đang sửa */}
-                  <StemToolsDropdown
-                    targetField="solutionMethod"
-                    onOpenFormulaBuilder={handleOpenFormulaBuilder}
-                    onOpenMathWorkbench={handleOpenMathWorkbench}
-                  />
+                <div className="border-b border-slate-100 pb-4">
+                  <h3 className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
+                    <span className="w-6 h-6 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center text-xs font-black">2</span>
+                    <span>Khối 2: Phương Pháp Giải Chuyên Biệt, Bẫy Đề Thi & {isStem ? 'Mẹo Casio' : 'Mẹo Tư Duy & Chiến Thuật'}</span>
+                  </h3>
+                  <p className="text-xs text-slate-500 font-medium mt-0.5">
+                    Giúp học sinh định hình thuật toán giải từng bước và khắc phục các sai lầm kinh điển
+                  </p>
                 </div>
 
                 {/* UNIFIED WORKSPACE: WORD CANVAS (FULL WIDTH) */}
@@ -2024,18 +2006,18 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
             {/* ================= SECTION: KHỐI 4 - NGÂN HÀNG CÂU HỎI DẠNG BÀI ================= */}
             {activeSection === 'questions' && (
               <div className="bg-white rounded-3xl border border-slate-200 p-6 space-y-5 shadow-sm">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-                  <div>
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+                  <div className="min-w-0">
                     <h3 className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
-                      <span className="w-6 h-6 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs font-black">4</span>
+                      <span className="w-6 h-6 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs font-black shrink-0">4</span>
                       <span>Khối 4: Ngân Hàng Câu Hỏi Dạng Bài & Bài Toán Mẫu</span>
                     </h3>
                     <p className="text-xs text-slate-500 font-medium mt-0.5">
-                      Quản lý ngân hàng câu hỏi thích ứng (API 16-18) bốc tự động cho học sinh luyện tập vi mô
+                      Quản lý ngân hàng câu hỏi thích ứng (API 16–18) bốc tự động cho học sinh luyện tập vi mô
                     </p>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex items-center gap-2.5 shrink-0 self-start md:self-auto">
                     <button
                       type="button"
                       onClick={() => {
@@ -2046,11 +2028,11 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
                         }
                         setAiQuestionModalOpen(true);
                       }}
-                      className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-700 hover:to-indigo-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer hover:shadow-md active:scale-98"
+                      className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-700 hover:to-indigo-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer hover:shadow-md active:scale-98 whitespace-nowrap"
                       title="Sử dụng Gemini AI để sinh các câu hỏi trắc nghiệm rèn luyện bám sát 100% vào Dạng bài này và lưu vào database"
                     >
                       <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-                      <span>✨ AI Sinh Câu Hỏi</span>
+                      <span>AI Sinh Câu Hỏi</span>
                     </button>
 
                     <button
@@ -2058,10 +2040,10 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
                       onClick={() => {
                         setNewQuestionModalOpen(true);
                       }}
-                      className="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm cursor-pointer"
+                      className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer hover:shadow-md active:scale-98 whitespace-nowrap"
                     >
                       <Plus className="w-3.5 h-3.5" />
-                      <span>+ Thêm Câu Hỏi Mới</span>
+                      <span>Thêm Câu Hỏi Mới</span>
                     </button>
                   </div>
                 </div>
@@ -2081,25 +2063,7 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
                   {/* STEM Helpers are embedded directly on question & explanation headers */}
 
                   <div className="space-y-1.5">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                      <label className="text-xs font-bold text-slate-700">Đề bài (KaTeX, Markdown & Ctrl+V dán ảnh):</label>
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => handleTriggerUpload('sampleQuestion')}
-                          className="px-2 py-0.5 rounded-lg bg-cyan-50 hover:bg-cyan-100 text-cyan-800 text-[10px] font-bold border border-cyan-200 transition-colors flex items-center gap-1 cursor-pointer"
-                        >
-                          <ImageIcon className="w-3 h-3 text-cyan-600" />
-                          <span>🖼️ Dán/Tải Ảnh</span>
-                        </button>
-                        <StemToolsDropdown
-                          compact
-                          targetField="sampleQuestion"
-                          onOpenFormulaBuilder={handleOpenFormulaBuilder}
-                          onOpenMathWorkbench={handleOpenMathWorkbench}
-                        />
-                      </div>
-                    </div>
+                    <label className="text-xs font-bold text-slate-700 block">Đề bài câu hỏi mẫu (KaTeX, Markdown & dán ảnh bằng Ctrl+V):</label>
                     <div
                       onClick={() => setActiveFormulaTarget('sampleQuestion')}
                       onPaste={(e) => handlePasteEvent(e, 'sampleQuestion')}
@@ -2159,25 +2123,7 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
                   </div>
 
                   <div className="space-y-1.5">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                      <label className="text-xs font-bold text-slate-700">Lời giải chi tiết từng bước (Hỗ trợ text thường & Ctrl+V dán ảnh):</label>
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => handleTriggerUpload('sampleExplanation')}
-                          className="px-2 py-0.5 rounded-lg bg-cyan-50 hover:bg-cyan-100 text-cyan-800 text-[10px] font-bold border border-cyan-200 transition-colors flex items-center gap-1 cursor-pointer"
-                        >
-                          <ImageIcon className="w-3 h-3 text-cyan-600" />
-                          <span>🖼️ Dán/Tải Ảnh</span>
-                        </button>
-                        <StemToolsDropdown
-                          compact
-                          targetField="sampleExplanation"
-                          onOpenFormulaBuilder={handleOpenFormulaBuilder}
-                          onOpenMathWorkbench={handleOpenMathWorkbench}
-                        />
-                      </div>
-                    </div>
+                    <label className="text-xs font-bold text-slate-700 block">Lời giải chi tiết từng bước (Hỗ trợ text thường & dán ảnh bằng Ctrl+V):</label>
                     <div
                       onClick={() => setActiveFormulaTarget('sampleExplanation')}
                       onPaste={(e) => handlePasteEvent(e, 'sampleExplanation')}
@@ -2219,18 +2165,18 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
                             }
                             setAiQuestionModalOpen(true);
                           }}
-                          className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-700 hover:to-indigo-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                          className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-700 hover:to-indigo-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer hover:shadow-md active:scale-98 whitespace-nowrap"
                         >
                           <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-                          <span>✨ AI Sinh Câu Hỏi Tự Động</span>
+                          <span>AI Sinh Câu Hỏi Tự Động</span>
                         </button>
                         <button
                           type="button"
                           onClick={() => setNewQuestionModalOpen(true)}
-                          className="px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+                          className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors whitespace-nowrap"
                         >
                           <Plus className="w-3.5 h-3.5" />
-                          <span>+ Tự Thêm Câu Hỏi Thủ Công</span>
+                          <span>Tự Thêm Câu Hỏi Thủ Công</span>
                         </button>
                       </div>
                     </div>
@@ -2675,6 +2621,34 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
         className="hidden"
       />
 
+      {/* 6. FLOATING STEM TOOLS TOGGLE (RIGHT EDGE) */}
+      {!isStemDrawerOpen && (
+        <button
+          type="button"
+          onClick={() => setIsStemDrawerOpen(true)}
+          className="fixed right-0 top-1/2 -translate-y-1/2 z-40 bg-gradient-to-b from-indigo-600 via-purple-600 to-indigo-700 text-white pl-2.5 pr-2 py-4 rounded-l-2xl shadow-xl hover:shadow-2xl hover:pl-3.5 transition-all flex flex-col items-center gap-2 group cursor-pointer border-y border-l border-indigo-400/50"
+          title="Nhấp để mở Bộ Công Cụ Toán & STEM trôi nổi (<)"
+        >
+          <ChevronLeft className="w-4 h-4 stroke-[3] text-amber-300 animate-pulse group-hover:-translate-x-1 transition-transform" />
+          <div className="[writing-mode:vertical-rl] text-[11px] font-black tracking-widest uppercase flex items-center gap-1.5 py-1 select-none">
+            <span className="text-amber-300">✨</span>
+            <span>CÔNG CỤ STEM</span>
+          </div>
+          <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+        </button>
+      )}
+
+      {/* 6.5. FLOATING STEM TOOLS DRAWER (RIGHT SLIDE-OVER PANEL) */}
+      <FloatingStemDrawer
+        isOpen={isStemDrawerOpen}
+        onClose={() => setIsStemDrawerOpen(false)}
+        targetField={activeFormulaTarget || (activeSection === 'theory' ? 'theoryRecap' : activeSection === 'method' ? 'solutionMethod' : 'sampleQuestion')}
+        onSelectTarget={(target) => setActiveFormulaTarget(target)}
+        onOpenFormulaBuilder={handleOpenFormulaBuilder}
+        onOpenMathWorkbench={handleOpenMathWorkbench}
+        onOpenSymbolPalette={() => setIsPaletteCollapsed(false)}
+      />
+
     </div>
   );
 }
@@ -2866,6 +2840,241 @@ function StemToolsDropdown({ targetField, compact = false, onOpenFormulaBuilder,
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// Subcomponent: Bảng công cụ STEM trôi nổi cạnh phải màn hình
+function FloatingStemDrawer({ 
+  isOpen, 
+  onClose, 
+  targetField, 
+  onSelectTarget, 
+  onOpenFormulaBuilder, 
+  onOpenMathWorkbench,
+  onOpenSymbolPalette 
+}) {
+  const drawerRef = useRef(null);
+
+  useEffect(() => {
+    const handleOutsideClick = (e) => {
+      if (drawerRef.current && !drawerRef.current.contains(e.target)) {
+        onClose();
+      }
+    };
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') onClose();
+    };
+    if (isOpen) {
+      document.addEventListener('mousedown', handleOutsideClick);
+      document.addEventListener('keydown', handleKeyDown);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, onClose]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div 
+      ref={drawerRef}
+      className="fixed right-0 top-1/2 -translate-y-1/2 z-50 w-88 sm:w-[420px] max-h-[90vh] bg-white/98 backdrop-blur-md rounded-l-3xl shadow-2xl border-l-2 border-y-2 border-indigo-500/80 flex flex-col overflow-hidden animate-in slide-in-from-right duration-200"
+    >
+      {/* Drawer Header */}
+      <div className="p-3.5 bg-gradient-to-r from-slate-950 via-indigo-950 to-purple-950 text-white flex items-center justify-between shrink-0 shadow-xs border-b border-indigo-900/60">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-xl bg-indigo-500/20 border border-indigo-400/30 flex items-center justify-center shrink-0">
+            <Sparkles className="w-4 h-4 text-amber-300" />
+          </div>
+          <div>
+            <div className="text-xs font-black tracking-wide text-white flex items-center gap-2">
+              <span>STUDIO CÔNG CỤ TOÁN & STEM</span>
+              <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded-full bg-indigo-500/30 text-indigo-200 border border-indigo-400/30">GDPT 2018</span>
+            </div>
+            <div className="text-[10px] text-slate-300 font-medium">Toàn bộ công cụ sư phạm: MathLab, Bảng biến thiên, Hóa học...</div>
+          </div>
+        </div>
+        <button 
+          type="button" 
+          onClick={onClose}
+          className="w-7 h-7 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center text-slate-300 hover:text-white transition-colors cursor-pointer group"
+          title="Thu gọn bảng công cụ (Esc)"
+        >
+          <ChevronRight className="w-5 h-5 group-hover:translate-x-0.5 transition-transform" />
+        </button>
+      </div>
+
+      {/* Target Selector */}
+      <div className="px-3.5 py-2 bg-indigo-50/90 border-b border-indigo-100 flex items-center justify-between gap-2 shrink-0">
+        <span className="text-[10.5px] font-extrabold text-indigo-950 flex items-center gap-1 shrink-0">
+          <span>🎯 Chèn vào mục:</span>
+        </span>
+        <select
+          value={targetField}
+          onChange={(e) => onSelectTarget(e.target.value)}
+          className="text-[10.5px] font-bold text-indigo-900 bg-white border border-indigo-200 rounded-lg px-2 py-1 outline-none focus:border-indigo-500 cursor-pointer flex-1 text-right max-w-[240px] shadow-2xs"
+        >
+          <option value="theoryRecap">Khối 1: Nền tảng SGK</option>
+          <option value="solutionMethod">Khối 2: Phương pháp giải</option>
+          <option value="sampleQuestion">Khối 4: Đề bài mẫu</option>
+          <option value="sampleExplanation">Khối 4: Lời giải mẫu</option>
+        </select>
+      </div>
+
+      {/* Drawer Body */}
+      <div className="p-3 space-y-2.5 overflow-y-auto flex-1 max-h-[calc(90vh-115px)]">
+        {/* 1. MathLab 2D/3D */}
+        <div className="p-3 rounded-2xl bg-gradient-to-r from-amber-50/90 to-orange-50/90 border border-amber-200/90 space-y-2 shadow-2xs">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center font-bold text-base shadow-2xs">
+                📈
+              </div>
+              <div>
+                <h4 className="text-xs font-black text-slate-900">Phòng Thí Nghiệm MathLab 2D & 3D</h4>
+                <p className="text-[10px] text-slate-500 font-medium">Đồ thị Oxy, hình không gian 3D xoay 360°, hình phẳng</p>
+              </div>
+            </div>
+            <span className="text-[9px] font-extrabold text-amber-800 bg-amber-200/60 px-1.5 py-0.5 rounded-md shrink-0">JSXGraph</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              if (onOpenMathWorkbench) onOpenMathWorkbench('jsxgraph', targetField);
+              onClose();
+            }}
+            className="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-black text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all cursor-pointer hover:shadow"
+          >
+            <Compass className="w-4 h-4" />
+            <span>Mở Phòng Thí Nghiệm MathLab Studio</span>
+          </button>
+        </div>
+
+        {/* 2. Bảng Biến Thiên */}
+        <div className="p-3 rounded-2xl bg-gradient-to-r from-emerald-50/90 to-teal-50/90 border border-emerald-200/90 space-y-2 shadow-2xs">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold text-base shadow-2xs">
+                📊
+              </div>
+              <div>
+                <h4 className="text-xs font-black text-slate-900">Bảng Biến Thiên Động (3 Dòng Vector)</h4>
+                <p className="text-[10px] text-slate-500 font-medium">Lưới 2N-1 cột, cực trị, tiệm cận kép ||, kéo thả khoảng</p>
+              </div>
+            </div>
+            <span className="text-[9px] font-extrabold text-emerald-800 bg-emerald-200/60 px-1.5 py-0.5 rounded-md shrink-0">SGK 2018</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              if (onOpenFormulaBuilder) onOpenFormulaBuilder('variation_table', targetField);
+              onClose();
+            }}
+            className="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-black text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all cursor-pointer hover:shadow"
+          >
+            <Table2 className="w-4 h-4" />
+            <span>Mở Studio Bảng Biến Thiên</span>
+          </button>
+        </div>
+
+        {/* 3. Phân Số & Tính Toán */}
+        <div className="p-3 rounded-2xl bg-gradient-to-r from-indigo-50/90 to-purple-50/90 border border-indigo-200/90 space-y-2 shadow-2xs">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold text-base shadow-2xs">
+                <Calculator className="w-4 h-4" />
+              </div>
+              <div>
+                <h4 className="text-xs font-black text-slate-900">Phân Số, Căn Thức & Lũy Thừa</h4>
+                <p className="text-[10px] text-slate-500 font-medium">Phân số 2 tầng, căn bậc n, số mũ & tự động tính đáp số</p>
+              </div>
+            </div>
+            <span className="text-[9px] font-extrabold text-indigo-800 bg-indigo-200/60 px-1.5 py-0.5 rounded-md shrink-0">Auto Calc</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              if (onOpenFormulaBuilder) onOpenFormulaBuilder('fraction', targetField);
+              onClose();
+            }}
+            className="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-black text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all cursor-pointer hover:shadow"
+          >
+            <Calculator className="w-4 h-4" />
+            <span>Mở Trình Soạn Phân Số & Tính Toán</span>
+          </button>
+        </div>
+
+        {/* 4. Đạo Hàm & Giới Hạn */}
+        <div className="p-3 rounded-2xl bg-gradient-to-r from-rose-50/90 to-pink-50/90 border border-rose-200/90 space-y-2 shadow-2xs">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl bg-rose-600 text-white flex items-center justify-center font-bold text-base shadow-2xs">
+                🎯
+              </div>
+              <div>
+                <h4 className="text-xs font-black text-slate-900">Đạo Hàm Số Gia & Giới Hạn SGK</h4>
+                <p className="text-[10px] text-slate-500 font-medium">Định nghĩa f'(x₀) = lim Δy/Δx, khử vô định 0/0, tích phân</p>
+              </div>
+            </div>
+            <span className="text-[9px] font-extrabold text-rose-800 bg-rose-200/60 px-1.5 py-0.5 rounded-md shrink-0">Vi Tích Phân</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              if (onOpenFormulaBuilder) onOpenFormulaBuilder('limit', targetField);
+              onClose();
+            }}
+            className="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-700 hover:to-pink-700 text-white font-black text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all cursor-pointer hover:shadow"
+          >
+            <Sparkles className="w-4 h-4" />
+            <span>Mở Soạn Thảo Đạo Hàm & Giới Hạn</span>
+          </button>
+        </div>
+
+        {/* 5. Hóa Học & Nồng Độ Thực Nghiệm */}
+        <div className="p-3 rounded-2xl bg-gradient-to-r from-teal-50/90 to-cyan-50/90 border border-teal-200/90 space-y-2 shadow-2xs">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl bg-teal-600 text-white flex items-center justify-center font-bold text-base shadow-2xs">
+                <FlaskConical className="w-4 h-4" />
+              </div>
+              <div>
+                <h4 className="text-xs font-black text-slate-900">Hóa Học & Nồng Độ Mol Thực Nghiệm</h4>
+                <p className="text-[10px] text-slate-500 font-medium">CM = n/V, C%, m = n*M, hiệu suất H% tự động tính</p>
+              </div>
+            </div>
+            <span className="text-[9px] font-extrabold text-teal-800 bg-teal-200/60 px-1.5 py-0.5 rounded-md shrink-0">Thực Nghiệm</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              if (onOpenFormulaBuilder) onOpenFormulaBuilder('chemistry', targetField);
+              onClose();
+            }}
+            className="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white font-black text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all cursor-pointer hover:shadow"
+          >
+            <FlaskConical className="w-4 h-4" />
+            <span>Mở Bộ Tính Toán Hóa Học</span>
+          </button>
+        </div>
+
+        {/* 6. Mở Thư Viện Ký Hiệu 7 Môn Học */}
+        <div className="pt-1">
+          <button
+            type="button"
+            onClick={() => {
+              if (onOpenSymbolPalette) onOpenSymbolPalette();
+              onClose();
+            }}
+            className="w-full py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+          >
+            <BookOpen className="w-4 h-4 text-slate-600" />
+            <span>Mở Thư Viện Ký Hiệu & Môn Học (Bên Trái)</span>
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
