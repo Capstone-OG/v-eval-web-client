@@ -174,7 +174,7 @@ const getEmbedVideoUrl = (url) => {
   }
 };
 
-export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDiagnostic }) {
+export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDiagnostic, onOpenAiTutorWithContext }) {
   const [domains, setDomains] = useState([]);
   const [loadingCurriculum, setLoadingCurriculum] = useState(true);
   const [activeDomainId, setActiveDomainId] = useState("");
@@ -702,9 +702,42 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
   const handleFinishQuiz = () => {
     if (!activeQuiz) return;
     let correctCount = 0;
-    activeQuiz.questions.forEach((q, idx) => {
-      if (quizUserAnswers[idx] === q.correct) {
-        correctCount++;
+    const reviewedQuestions = activeQuiz.questions.map((q, idx) => {
+      const userAnsIdx = quizUserAnswers[idx];
+      const isCorrect = userAnsIdx === q.correct;
+      if (isCorrect) correctCount++;
+      const chosenChar = userAnsIdx !== undefined ? ['A', 'B', 'C', 'D'][userAnsIdx] : '';
+      const correctChar = ['A', 'B', 'C', 'D'][q.correct] || 'A';
+      return {
+        id: q.id || `topic_q_${idx + 1}`,
+        question_number: idx + 1,
+        content: q.content,
+        options: (q.options || []).map((o) => String(o).replace(/^[A-D]\.\s*/, '')),
+        skill_name: activeQuiz.title || 'Chuyên đề Dàn kiến thức',
+        domain_name: 'Dàn kiến thức & Lộ trình',
+        bloom: 2,
+        studentChoice: chosenChar,
+        correctChoice: correctChar,
+        correct: correctChar,
+        isCorrect,
+        timeSpent: 35,
+        explanation: q.explanation || 'Lời giải chi tiết theo phương pháp tư duy ĐHQG-HCM.'
+      };
+    });
+    practiceService.saveSubmissionToHistory({
+      id: `topic_${Date.now()}`,
+      title: activeQuiz.title || 'Phiếu Kiểm Tra Chuyên Đề Dàn Kiến Thức',
+      examType: 'TOPIC_QUIZ',
+      completedAt: new Date().toISOString(),
+      theta_0: 0.45,
+      placement_class: 'ACCELERATION',
+      ai_commentary: `Hoàn thành phiếu bài tập "${activeQuiz.title}" với kết quả ${correctCount}/${activeQuiz.questions.length} câu đúng.`,
+      reviewedQuestions,
+      pacing: {
+        totalCorrect: correctCount,
+        totalQuestions: activeQuiz.questions.length,
+        totalTimeSpent: activeQuiz.questions.length * 35,
+        avgTimePerQ: 35
       }
     });
     setQuizScore(correctCount);
@@ -2342,27 +2375,56 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
                   </div>
 
                   {/* Review Questions */}
-                  <div className="text-left space-y-4 pt-4 border-t border-slate-100 max-h-60 overflow-y-auto">
+                  <div className="text-left space-y-4 pt-4 border-t border-slate-100 max-h-72 overflow-y-auto">
                     <div className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                      Xem Lại Lời Giải Chi Tiết
+                      Xem Lại Đáp Án & Lời Giải Chi Tiết
                     </div>
                     {activeQuiz.questions.map((q, idx) => {
                       const userAns = quizUserAnswers[idx];
                       const isCorrect = userAns === q.correct;
                       return (
-                        <div key={idx} className={`p-4 rounded-2xl border text-xs space-y-2 ${
+                        <div key={idx} className={`p-4 rounded-2xl border text-xs space-y-2.5 ${
                           isCorrect ? 'bg-emerald-50/60 border-emerald-200' : 'bg-rose-50/60 border-rose-200'
                         }`}>
-                          <div className="font-bold text-slate-900 flex items-center justify-between">
+                          <div className="font-bold text-slate-900 flex items-center justify-between gap-2">
                             <span>Câu {idx + 1}: <MathText text={q.content} /></span>
-                            <span className={`px-2 py-0.5 rounded text-[10px] font-extrabold ${isCorrect ? 'bg-emerald-200 text-emerald-800' : 'bg-rose-200 text-rose-800'}`}>
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-extrabold shrink-0 ${isCorrect ? 'bg-emerald-200 text-emerald-800' : 'bg-rose-200 text-rose-800'}`}>
                               {isCorrect ? 'ĐÚNG' : 'CHƯA ĐÚNG'}
+                            </span>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-3 text-[11px]">
+                            <span className="text-slate-600">
+                              Bạn chọn: <strong className={isCorrect ? 'text-emerald-700' : 'text-rose-700'}>{userAns !== undefined ? (q.options?.[userAns] || userAns) : 'Chưa chọn'}</strong>
+                            </span>
+                            <span className="text-slate-600">
+                              Đáp án đúng: <strong className="text-emerald-700">{q.options?.[q.correct] || q.correct}</strong>
                             </span>
                           </div>
                           <div className="text-slate-600">
                             <strong>Lời giải: </strong>
                             <MathText text={q.explanation} />
                           </div>
+                          {onOpenAiTutorWithContext && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                onOpenAiTutorWithContext({
+                                  questionId: q.id || `quiz_q_${idx + 1}`,
+                                  question: q.content,
+                                  options: q.options || [],
+                                  skill: activeQuiz.title || 'Luyện tập củng cố',
+                                  selectedWrong: !isCorrect && userAns !== undefined ? (q.options?.[userAns] || String(userAns)) : null,
+                                  correctOption: q.options?.[q.correct] || String(q.correct || 'A'),
+                                  difficultyB: 0.25,
+                                  predictedProb: 0.68
+                                })
+                              }
+                              className="w-full py-2 px-3 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-[11px] rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs"
+                            >
+                              <Sparkles className="w-3.5 h-3.5 text-amber-200" />
+                              <span>💡 Chưa hiểu rõ câu {idx + 1}? Hỏi Gia sư AI Socratic giải thích</span>
+                            </button>
+                          )}
                         </div>
                       );
                     })}

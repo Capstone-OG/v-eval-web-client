@@ -19,9 +19,10 @@ import {
   AcademicArchitectureModal, 
   DiagnosticTestModal, 
   AdaptiveQuizModal, 
-  RadarChartModal 
+  RadarChartModal,
+  AISocraticTutorModal 
 } from './components/modals';
-import { DiagnosticAssessmentPage } from './components/diagnostic';
+import { DiagnosticAssessmentPage, SubmissionHistoryView } from './components/diagnostic';
 import { AccountProvisioningView } from './components/admin';
 import { CurriculumExplorerView } from './components/curriculum';
 import { CheckCircle2 } from 'lucide-react';
@@ -39,6 +40,13 @@ export default function App() {
   const [isDiagnosticModalOpen, setIsDiagnosticModalOpen] = useState(false);
   const [isZpdModalOpen, setIsZpdModalOpen] = useState(false);
   const [isRadarModalOpen, setIsRadarModalOpen] = useState(false);
+  const [isAiTutorModalOpen, setIsAiTutorModalOpen] = useState(false);
+  const [tutorContext, setTutorContext] = useState(null);
+
+  const handleOpenAiTutor = (context = null) => {
+    setTutorContext(context);
+    setIsAiTutorModalOpen(true);
+  };
 
   // Toast notifications
   const [toastMsg, setToastMsg] = useState(null);
@@ -116,6 +124,7 @@ export default function App() {
         <DiagnosticAssessmentPage 
           onNavigateDashboard={() => setCurrentPage('dashboard')}
           onNavigateHome={() => setCurrentPage('landing')}
+          onOpenAiTutorWithContext={(ctx) => handleOpenAiTutor(ctx)}
         />
       )}
 
@@ -151,7 +160,7 @@ export default function App() {
               activeRole={activeRole}
               onOpenDiagnostic={() => setActiveTab('diagnostic')}
               onOpenZPD={() => setIsZpdModalOpen(true)}
-              onOpenAiTutor={() => setIsZpdModalOpen(true)}
+              onOpenAiTutor={() => handleOpenAiTutor(null)}
               onOpenProvision={() => setCurrentPage('provision')}
             />
 
@@ -171,12 +180,19 @@ export default function App() {
                 <CurriculumExplorerView 
                   onStartQuizModal={() => setIsZpdModalOpen(true)} 
                   onNavigateDiagnostic={() => setActiveTab('diagnostic')}
+                  onOpenAiTutorWithContext={(ctx) => handleOpenAiTutor(ctx)}
                 />
               ) : activeTab === 'diagnostic' ? (
                 <DiagnosticAssessmentPage 
                   embedded={true}
                   onNavigateDashboard={() => setActiveTab('dashboard')}
                   onNavigateHome={() => setActiveTab('dashboard')}
+                  onOpenAiTutorWithContext={(ctx) => handleOpenAiTutor(ctx)}
+                />
+              ) : (activeTab === 'history' || activeTab === 'question_bank') ? (
+                <SubmissionHistoryView 
+                  onStartNewDiagnostic={() => setActiveTab('diagnostic')}
+                  onOpenAiTutorWithContext={(ctx) => handleOpenAiTutor(ctx)}
                 />
               ) : (
                 <>
@@ -189,7 +205,7 @@ export default function App() {
                         currentUser={currentUser}
                         onStartMilestone={handleContinueMilestone}
                         onStartMockTest={() => setActiveTab('diagnostic')}
-                        onOpenAiTutor={() => setIsZpdModalOpen(true)}
+                        onOpenAiTutor={() => handleOpenAiTutor(null)}
                       />
 
                       {/* 4 Core Metrics Cards */}
@@ -215,7 +231,7 @@ export default function App() {
                         <div className="space-y-6">
                           <LiveQnACard />
                           <AISocraticTutorWidget 
-                            onOpenFullChat={() => setIsZpdModalOpen(true)}
+                            onOpenFullChat={() => handleOpenAiTutor(null)}
                           />
                         </div>
 
@@ -301,11 +317,21 @@ export default function App() {
       <AdaptiveQuizModal 
         isOpen={isZpdModalOpen}
         onClose={() => setIsZpdModalOpen(false)}
+        onOpenAiTutorWithContext={(ctx) => handleOpenAiTutor(ctx)}
       />
 
       <RadarChartModal 
         isOpen={isRadarModalOpen}
         onClose={() => setIsRadarModalOpen(false)}
+      />
+
+      <AISocraticTutorModal 
+        isOpen={isAiTutorModalOpen}
+        onClose={() => {
+          setIsAiTutorModalOpen(false);
+          setTutorContext(null);
+        }}
+        initialContext={tutorContext}
       />
 
     </div>

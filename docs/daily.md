@@ -2,6 +2,82 @@
 
 ---
 
+## [31/10/2026] - Triển Khai Phân Hệ Lịch Sử Làm Bài & Sổ Tay Lỗi Sai Socratic, Chuẩn Hóa Luồng Xem Lại Đáp Án & Khắc Phục Tương Phản `MathText`
+
+- **Triển Khai Phân Hệ Lịch Sử Làm Bài & Sổ Tay Lỗi Sai Socratic ([`SubmissionHistoryView.jsx`](../src/components/diagnostic/SubmissionHistoryView.jsx), [`Sidebar.jsx`](../src/components/layout/Sidebar.jsx), [`App.jsx`](../src/App.jsx))**:
+  - Xây dựng giao diện **Lịch Sử Làm Bài & Sổ Tay Lỗi Sai Socratic** cho phép học sinh tra cứu lại toàn bộ các bài khảo sát ĐGNL 30 câu, phiếu luyện tập thích ứng ZPD và bài kiểm tra chuyên đề đã thực hiện.
+  - Khi bấm **"Xem Lại Đáp Án & Hỏi AI"** trên bất kỳ bài làm cũ nào, học sinh xem được toàn bộ câu hỏi, phương án đã chọn so với đáp án đúng, lời giải chi tiết và bấm hỏi Gia sư AI Socratic (cả chế độ stream trực tiếp dưới câu hỏi lẫn mở Modal Chat Socratic Chuyên Sâu).
+  - Bổ sung tab **Sổ Tay Câu Làm Sai** tự động gom nhóm các câu làm sai từ mọi đề thi trước đó để ôn luyện tập trung cùng AI.
+  - Bổ sung danh sách **Lịch Sử Làm Bài Đã Hoàn Thành** ngay trên màn hình khởi tạo của [`DiagnosticAssessmentPage.jsx`](../src/components/diagnostic/DiagnosticAssessmentPage.jsx) và nối tự động lưu lịch sử khi hoàn thành bài làm tại [`DiagnosticAssessmentPage.jsx`](../src/components/diagnostic/DiagnosticAssessmentPage.jsx), [`AdaptiveQuizModal.jsx`](../src/components/modals/AdaptiveQuizModal.jsx) và [`CurriculumExplorerView.jsx`](../src/components/curriculum/CurriculumExplorerView.jsx).
+- **Khắc Phục Lỗi Chữ Tối Không Đọc Được Trên Nền Tối & Lỗi Ký Tự `:**` Trong [`MathText.jsx`](../src/components/common/MathText.jsx)**:
+  - Loại bỏ các class màu chữ tối cố định (`text-slate-700`, `text-slate-800`, `text-slate-900`) trên các dòng văn bản, danh sách bullet, chữ in đậm `<strong>` và chữ in nghiêng `<em>`, cho phép `MathText` kế thừa màu chữ sáng (`text-white` / `text-slate-100`) khi hiển thị trên nền tối của trang kết quả khảo thí.
+  - Sửa biểu thức chính quy chuẩn hóa tiêu đề in đậm để không cắt mất dấu `**` mở đầu trong chuỗi `💡 **Gợi ý phương pháp giải:**` và làm sạch hoàn toàn dấu `**` thừa ở cuối thẻ Callout.
+- **Tích Hợp Phân Tích Socratic Giàu Ngữ Cảnh Theo Từng Câu Hỏi ([`DiagnosticAssessmentPage.jsx`](../src/components/diagnostic/DiagnosticAssessmentPage.jsx) & [`practiceService.js`](../src/services/practiceService.js))**:
+  - Xây dựng hàm `buildContextualSocraticAnalysis(q)` và `buildRichSocraticFallback`: Khi học sinh bấm hỏi Gia sư AI ở màn hình kết quả mà dịch vụ RAG chưa bật hoặc trả về chuỗi mẫu chung chung, hệ thống tự động phân tích chi tiết phương án học sinh vừa chọn (ví dụ `A: y = x^4 + 2x^2`), đối chiếu với đáp án đúng (`C: y = x^3 + 3x - 1`), trích xuất định lý/đạo hàm từ lời giải của câu hỏi và đặt câu hỏi gợi mở sát 100% nội dung đề bài.
+  - Thiết kế lại khung hiển thị phân tích Socratic với nền Indigo/Purple tương phản cao và chữ trắng sắc nét (`text-white`).
+- **Cải Tiến Luồng Khảo Thí Chẩn Đoán 30 Câu ([`DiagnosticAssessmentPage.jsx`](../src/components/diagnostic/DiagnosticAssessmentPage.jsx))**:
+  - Gỡ bỏ nút bấm và ngăn kéo *Socratic Tutor* khỏi màn hình đang thi (`stage === 'testing'`) để đảm bảo tính nghiêm túc khi khảo thí và học sinh tập trung hoàn thành bài làm.
+  - Bổ sung chức năng **Hỏi Gia Sư AI Socratic** trực tiếp tại từng thẻ câu hỏi trong **Bảng Đánh Giá Chi Tiết & Đáp Án 30 Câu Hỏi** ở màn hình kết quả (`stage === 'result'`):
+    + Nút **"💡 Hỏi Gia Sư AI Socratic Về Câu Này"**: Stream trực tiếp lời dẫn Socratic phân tích lỗi sai và hướng tư duy ngay bên dưới lời giải của câu hỏi đó.
+    + Nút **"Chat Socratic Chuyên Sâu"**: Đóng gói ngữ cảnh câu hỏi, phương án chọn sai và đáp án đúng chuyển sang modal [`AISocraticTutorModal.jsx`](../src/components/modals/AISocraticTutorModal.jsx).
+- **Cải Tiến Luồng Luyện Tập Thích Ứng ZPD ([`AdaptiveQuizModal.jsx`](../src/components/modals/AdaptiveQuizModal.jsx))**:
+  - Gỡ bỏ các nút hỏi AI khi đang làm câu hỏi (`!quizFinished`), lưu lịch sử phương án chọn của học sinh (`answerHistory`).
+  - Nâng cấp màn hình hoàn thành bài tập (`quizFinished === true`): Hiển thị thống kê số câu đúng, xác suất `P(L_t)` và **Danh sách Xem lại đáp án từng câu** (đối chiếu phương án học sinh chọn với đáp án đúng, giải thích chi tiết) kèm nút **"💡 Chưa hiểu bản chất câu này? Hỏi Gia sư AI Socratic bẻ khóa tư duy"** cho từng câu.
+- **Tích Hợp Hỏi Gia Sư AI Khi Xem Lại Phiếu Bài Tập Củng Cố ([`CurriculumExplorerView.jsx`](../src/components/curriculum/CurriculumExplorerView.jsx) & [`App.jsx`](../src/App.jsx))**:
+  - Bổ sung đối chiếu phương án chọn / đáp án đúng và nút **"💡 Chưa hiểu rõ câu này? Hỏi Gia sư AI Socratic giải thích"** tại màn hình kết quả `quizShowResults` của phiếu bài tập củng cố.
+- **Kiểm Thử Đóng Gói (Build & Unit Test Verification)**:
+  - Chạy `npm test` (3/3 pass) và `npm run build` (`vite build`) thành công 100%.
+
+---
+
+## [14/10/2026] - Hoàn Tất Giai Đoạn 2 Core Flow 4: Tích Hợp Ngữ Cảnh Bài Tập Socratic (ZPD Quiz & Diagnostic)
+- **Tích Hợp Ngữ Cảnh Vào Luyện Tập Thích Ứng ZPD ([`AdaptiveQuizModal.jsx`](../src/components/modals/AdaptiveQuizModal.jsx))**:
+  - Bổ sung nút hành động thông minh **"💡 Chưa hiểu bản chất câu này? Hỏi Gia sư Socratic bẻ khóa tư duy"** xuất hiện ngay khi học sinh làm sai hoặc phân vân đáp án.
+  - Bổ sung thanh cảnh báo suy ngẫm sau 45 giây (**Contemplation Nudge**): Tự động hiển thị gợi ý hỗ trợ bẻ khóa tư duy khi học sinh dừng lại quá 45 giây ở câu hỏi khó mà chưa thể đưa ra phương án.
+  - Thêm nút gọi nhanh **"Gợi mở tư duy Socratic"** ngay dưới nội dung câu hỏi trước khi nộp bài.
+  - Tích hợp component `MathText` kết xuất công thức toán học KaTeX trong câu hỏi và 4 phương án trắc nghiệm.
+  - Chuẩn hóa định danh GUID cho ngân hàng câu hỏi thích ứng mẫu (`a1b2c3d4-0001-...`).
+  - Tự động đóng gói toàn bộ bối cảnh bài tập (`questionId`, `question`, `options`, `skill`, `selectedWrong`, `correctOption`, `difficultyB`, `predictedProb`) chuyển tiếp đến `AISocraticTutorModal`.
+- **Tầng Dịch Vụ Chuẩn Hóa Hợp Đồng DTO ([`practiceService.js`](../src/services/practiceService.js))**:
+  - Xây dựng bộ lọc chuẩn hóa DTO: `ensureGuid` (đảm bảo GUID hợp lệ tránh lỗi 400 Bad Request từ ASP.NET Core), `cleanOptionKey` (chuẩn hóa ký tự A, B, C, D để khớp Misconception Trap của AI Engine) và `normalizeOptions` (tự động chuyển đổi Array sang Dictionary `<string, string>`).
+  - Bổ sung callback `onInteractionId` bắt sự kiện trả về GUID phiên từ dòng SSE stream, phục vụ chính xác tính năng báo cáo vi phạm.
+- **Nâng Cấp Modal Chat Socratic Hỗ Trợ Ngữ Cảnh ([`AISocraticTutorModal.jsx`](../src/components/modals/AISocraticTutorModal.jsx))**:
+  - Tự động nhận diện `initialContext`: Hiển thị thanh thông tin ngữ cảnh nổi bật (*Target Context Banner*) gồm trích đoạn đề bài, kỹ năng và phương án học sinh chọn sai.
+  - Khởi tạo lời dẫn Socratic cá nhân hóa theo đúng trọng tâm câu hỏi và phương án làm sai thay vì câu chào chung chung.
+  - Tự động đóng gói nội dung câu hỏi vào `questionLatex` và truyền `options`, `correctOption` khi người dùng nhập câu hỏi hoặc chọn quick prompt.
+  - Cập nhật linh hoạt `interactionId` từ stream cho tính năng gắn cờ báo cáo vi phạm sư phạm.
+- **Chuẩn Hóa Khảo Thí Chẩn Đoán 30 Câu ([`DiagnosticAssessmentPage.jsx`](../src/components/diagnostic/DiagnosticAssessmentPage.jsx))**:
+  - Chuyển đổi phương thức `handleAskSocraticTutor` sang gọi trực tiếp `practiceService.askAiTutorStream` qua Gateway `:5212`, truyền đầy đủ mã câu hỏi, công thức KaTeX và phương án học sinh vừa làm.
+  - Xử lý mượt mà mã lỗi `429 Too Many Requests` (Rate Limit 10 req/phút).
+- **Điều Phối Trạng Thái Ứng Dụng ([`App.jsx`](../src/App.jsx))**:
+  - Bổ sung state `tutorContext` và hàm điều phối `handleOpenAiTutor(context)`, kết nối liền mạch từ `AdaptiveQuizModal` sang `AISocraticTutorModal`.
+- **Kiểm Thử Đóng Gói (Build Verification)**:
+  - Chạy `npm run build` (`vite build`) thành công 100% (**0 Error, 0 Warning**).
+  - Chạy `npm run lint` (`oxlint`) đạt chuẩn mã nguồn sạch.
+
+---
+
+## [13/10/2026] - Triển Khai Giai Đoạn 1 Core Flow 4: Gia Sư AI Socratic Tutor & GraphRAG Live Streaming
+- **Mở Rộng Tầng Dịch Vụ Client ([`practiceService.js`](../src/services/practiceService.js))**:
+  - Bổ sung `askAiTutorStream`: Kết nối trực tiếp API Gateway `:5212` -> Practice Service `:5261` (`POST /api/practice/ai-tutor/ask-stream`) xử lý Server-Sent Events (SSE) theo thời gian thực.
+  - Tích hợp cơ chế kiểm soát giới hạn tần suất: Bắt mã lỗi `429 Too Many Requests` (chính sách `StrictTutorPolicy` 10 req/phút) và đưa ra thông báo sư phạm thân thiện.
+  - Bổ sung `askAiTutor` (REST fallback), `reportAiTutorInteraction` (`POST /api/practice/ai-tutor/report`) và `getAiTutorInteractions`.
+- **Nâng Cấp Widget Dashboard Học Sinh ([`AISocraticTutorWidget.jsx`](../src/components/dashboard/AISocraticTutorWidget.jsx))**:
+  - Xóa bỏ 100% mã mock giả lập `setTimeout`.
+  - Kết nối live SSE streaming với hiệu ứng hiển thị token chữ chạy mượt mà, hỗ trợ nút *Dừng (Abort)* khi đang phát stream.
+  - Tích hợp component `MathText` kết xuất công thức toán học KaTeX nội dòng (`$...$`) và khối (`$$...$$`).
+  - Hiển thị badge Đồ thị Tri thức GraphRAG và thanh cảnh báo khi chạm trần Rate Limit.
+- **Xây Dựng Component Modal Chuyên Sâu ([`AISocraticTutorModal.jsx`](../src/components/modals/AISocraticTutorModal.jsx))**:
+  - Thiết kế giao diện hai cột hiện đại: Cột trái là khung chat Socratic toàn diện với dòng thời gian câu hỏi và gợi ý nhanh (Quick Prompts); Cột phải là bảng phân tích Đồ thị Tri thức 3-Hop (Dạng bài Archetype, Định lý cốt lõi, Bẫy ngộ nhận Misconception Traps).
+  - Tích hợp chức năng Báo cáo vi phạm (In-chat Flagging) cho từng câu trả lời của AI (lộ đáp án trực tiếp, ảo giác kiến thức, hướng dẫn khó hiểu) kết nối trực tiếp cơ sở dữ liệu giám sát sư phạm.
+- **Chuẩn Hóa Điều Hướng Router ([`App.jsx`](../src/App.jsx) & [`Sidebar.jsx`](../src/components/layout/Sidebar.jsx))**:
+  - Sửa lỗi điều hướng: Bấm menu *AI Socratic Tutor* trên Sidebar và nút mở rộng trên Widget giờ đây mở chính xác `AISocraticTutorModal`, chấm dứt việc mở nhầm modal luyện tập ZPD của Flow 3.
+- **Kiểm Thử Đóng Gói (Build Verification)**:
+  - Chạy `npm run build` (`vite build`) thành công 100% (**0 Error, 0 Warning**).
+  - Chạy `npm run lint` (`oxlint`) đạt tiêu chuẩn mã nguồn sạch.
+
+---
+
 ## [22/10/2026] - Hệ Thống Thông Báo Toàn Cục (Global Notification Toast System) Thay Thế Toàn Bộ Browser Alert
 
 - **Kiến Trúc Điều Phối Thông Báo Toàn Cục (`ToastContext.jsx` & `GlobalToastContainer.jsx`)**:

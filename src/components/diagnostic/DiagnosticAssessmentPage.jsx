@@ -95,7 +95,7 @@ function mapSkillToDomain(skillName, index) {
   return { id: 'dom_nat_sci', name: DOMAINS.dom_nat_sci.name };
 }
 
-export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNavigateHome, embedded = false }) {
+export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNavigateHome, onOpenAiTutorWithContext, embedded = false }) {
   // Page states: 'setup' | 'testing' | 'analyzing' | 'result'
   const [stage, setStage] = useState('setup');
   
@@ -115,16 +115,28 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMsg, setLoadingMsg] = useState('');
 
-  // AI Tutor Drawer
-  const [isTutorOpen, setIsTutorOpen] = useState(false);
+  // AI Tutor Drawer (Post-Exam Review)
+  const [activeTutorQuestionId, setActiveTutorQuestionId] = useState(null);
   const [tutorQuery, setTutorQuery] = useState('');
   const [tutorStreaming, setTutorStreaming] = useState(false);
   const [tutorResponse, setTutorResponse] = useState('');
   const tutorAbortRef = useRef(null);
 
-  // Result state
+  // Result state & Submission History
   const [resultData, setResultData] = useState(null);
   const [reviewFilter, setReviewFilter] = useState('ALL'); // 'ALL' | 'CORRECT' | 'WRONG' | 'FLAGGED'
+  const [submissionHistory, setSubmissionHistory] = useState(() =>
+    practiceService.getSubmissionHistory()
+  );
+
+  const handleOpenPastSubmission = (sub) => {
+    if (!sub) return;
+    setResultData(sub);
+    setReviewFilter('ALL');
+    setActiveTutorQuestionId(null);
+    setTutorResponse('');
+    setStage('result');
+  };
 
   // Timer interval
   useEffect(() => {
@@ -475,6 +487,11 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
 
       // Kết hợp dữ liệu chuẩn xác
       const finalResult = {
+        id: submissionId,
+        title: examData?.title || 'Bài Khảo Sát Đánh Giá Năng Lực Đầu Vào (30 Câu)',
+        examType: 'DIAGNOSTIC',
+        engineUsed: examData?.engine_used || generatorMode,
+        completedAt: new Date().toISOString(),
         theta_0: backendAnalysis?.theta_0 != null ? backendAnalysis.theta_0 : theta0Calculated,
         placement_class: backendAnalysis?.placement_class || placementClassCalculated,
         domain_scores: backendAnalysis?.domain_scores?.length ? backendAnalysis.domain_scores : domainScoresCalculated,
@@ -496,6 +513,8 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
       setResultData(finalResult);
       try {
         localStorage.setItem('veval_last_diagnostic_result', JSON.stringify(finalResult));
+        practiceService.saveSubmissionToHistory(finalResult);
+        setSubmissionHistory(practiceService.getSubmissionHistory());
       } catch (e) {
         console.warn('Could not cache diagnostic result:', e);
       }
@@ -517,12 +536,39 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
     }
   };
 
-  // 5. Ask Socratic Tutor via SSE Stream
-  const handleAskSocraticTutor = async () => {
-    const currentQ = questions[currentIndex];
-    if (!currentQ) return;
+  // Build rich, question-specific Socratic guidance when backend returns generic offline fallback
+  const buildContextualSocraticAnalysis = (q) => {
+    const chosenChar = q.studentChoice || answers[q.id] || '';
+    const chosenIdx = ['A', 'B', 'C', 'D'].indexOf(chosenChar);
+    const chosenText = chosenIdx >= 0 && q.options?.[chosenIdx] ? q.options[chosenIdx] : '';
 
-    setIsTutorOpen(true);
+    const correctChar = q.correctChoice || q.correct || 'A';
+    const correctIdx = ['A', 'B', 'C', 'D'].indexOf(correctChar);
+    const correctText = correctIdx >= 0 && q.options?.[correctIdx] ? q.options[correctIdx] : '';
+
+    const choiceLine = chosenChar
+      ? q.isCorrect
+        ? `- **Ghi nhận kết quả:** Em đã chọn đúng phương án **${chosenChar}** (${chosenText}). Hãy cùng kiểm tra lại bản chất toán học để nắm chắc phương pháp giải nhanh cho dạng bài **${q.skill_name || 'ĐGNL'}** này.`
+        : `- **Phân tích lựa chọn của em:** Em đã chọn phương án **${chosenChar}** (${chosenText}), trong khi đáp án chuẩn của câu hỏi là **${correctChar}** (${correctText}). Điểm dễ nhầm lẫn ở câu này thường nằm ở việc chưa xét hết điều kiện trên toàn miền xác định hoặc nhầm dấu khi biến đổi.`
+      : `- **Phân tích câu hỏi:** Ở câu này em chưa chọn phương án trả lời. Đáp án đúng là **${correctChar}** (${correctText}) thuộc chuyên đề **${q.skill_name || 'ĐGNL'}**.`;
+
+    const theoremLine = q.explanation
+      ? `- **Định lý & Lập luận cốt lõi:** ${q.explanation}`
+      : `- **Định lý & Lập luận cốt lõi:** Áp dụng trực tiếp tính chất của chuyên đề **${q.skill_name || 'ĐGNL'}** để loại trừ các phương án vi phạm điều kiện cần.`;
+
+    const socraticQuestion = !q.isCorrect && chosenChar
+      ? `👉 *Câu hỏi gợi mở:* Khi thay một giá trị cụ thể hoặc xét đạo hàm / điều kiện của phương án **${chosenChar}** (${chosenText}) so với phương án **${correctChar}** (${correctText}), em thấy phương án **${chosenChar}** bị vi phạm ở điều kiện nào?`
+      : `👉 *Câu hỏi gợi mở:* Nếu bài toán đổi dữ kiện theo chiều ngược lại, em sẽ biến đổi bước nào trong lập luận trên để tìm nhanh đáp án?`;
+
+    return `💡 **Phân tích tư duy Socratic (${q.skill_name || 'Chuyên đề ĐGNL'}):**\n\n${choiceLine}\n${theoremLine}\n\n${socraticQuestion}`;
+  };
+
+  // 5. Ask Socratic Tutor via SSE Stream in Post-Exam Review (Core Flow 4)
+  const handleAskSocraticTutor = async (targetQ) => {
+    const q = targetQ || questions[currentIndex];
+    if (!q) return;
+
+    setActiveTutorQuestionId(q.id);
     setTutorResponse('');
     setTutorStreaming(true);
 
@@ -532,36 +578,87 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
     const abortController = new AbortController();
     tutorAbortRef.current = abortController;
 
-    const promptText = `Tôi đang làm bài khảo sát năng lực câu hỏi sau:
-"${currentQ.content}"
-Các phương án:
-${currentQ.options.map((opt, i) => `${['A', 'B', 'C', 'D'][i]}. ${opt}`).join('\n')}
+    const optionsDict = {};
+    if (Array.isArray(q.options)) {
+      q.options.forEach((opt, i) => {
+        optionsDict[['A', 'B', 'C', 'D'][i] || `${i}`] = opt;
+      });
+    }
 
-Hãy đóng vai Gia sư AI Socratic: KHÔNG TIẾT LỘ ĐÁP ÁN TRỰC TIẾP, mà hãy gợi ý câu hỏi dẫn dắt từng bước để tôi tự suy nghĩ ra lời giải.`;
+    const studentAttempt = q.studentChoice || answers[q.id] || 'A';
+    const correctChoice = q.correctChoice || q.correct || q.correctOption || 'A';
+
+    let accumulated = '';
 
     try {
-      await aiService.askSocraticTutorStream({
-        question: promptText,
-        sessionId: `diag_${currentQ.id}`,
+      await practiceService.askAiTutorStream({
+        questionId: q.id,
+        questionLatex: q.content,
+        options: optionsDict,
+        studentWrongOption: studentAttempt,
+        correctOption: correctChoice,
+        skillId: q.skill_id || q.skillId || null,
         signal: abortController.signal,
         onToken: (token) => {
-          setTutorResponse((prev) => prev + token);
+          accumulated += token;
+          // If backend emitted the static generic fallback, replace with question-specific Socratic analysis (with q.explanation)
+          if (
+            accumulated.includes('Bước nào trong quá trình biến đổi khiến em chọn phương án này') ||
+            accumulated.includes('Hướng kiểm tra bản chất:')
+          ) {
+            const contextual = buildContextualSocraticAnalysis(q);
+            setTutorResponse(contextual);
+          } else {
+            setTutorResponse(accumulated);
+          }
         },
         onError: (err) => {
-          console.warn('Tutor stream error:', err);
-          setTutorResponse(
-            (prev) =>
-              prev +
-              `\n\n[Gợi ý gợi mở]: Để giải quyết câu này, bạn hãy xác định điều kiện xác định và mối liên hệ giữa các dữ kiện đề bài cho!`
-          );
+          if (err.status === 429) {
+            setTutorResponse(
+              (prev) =>
+                (prev || buildContextualSocraticAnalysis(q)) +
+                `\n\n⚠️ **Cảnh báo Tần suất:** ${err.message}`
+            );
+          } else if (err.name !== 'AbortError') {
+            console.warn('Tutor stream error:', err);
+            setTutorResponse(buildContextualSocraticAnalysis(q));
+          }
         },
         onComplete: () => {
+          if (
+            !accumulated ||
+            accumulated.includes('Bước nào trong quá trình biến đổi khiến em chọn phương án này') ||
+            accumulated.includes('Hướng kiểm tra bản chất:')
+          ) {
+            setTutorResponse(buildContextualSocraticAnalysis(q));
+          }
           setTutorStreaming(false);
         }
       });
-    } catch (err) {
+    } catch {
+      if (!accumulated) {
+        setTutorResponse(buildContextualSocraticAnalysis(q));
+      }
       setTutorStreaming(false);
     }
+  };
+
+  const handleOpenFullSocraticModal = (q) => {
+    if (!q || !onOpenAiTutorWithContext) return;
+    const chosenChar = q.studentChoice || answers[q.id];
+    const chosenIdx = ['A', 'B', 'C', 'D'].indexOf(chosenChar);
+    const correctChar = q.correctChoice || q.correct || 'A';
+    const correctIdx = ['A', 'B', 'C', 'D'].indexOf(correctChar);
+    onOpenAiTutorWithContext({
+      questionId: q.id,
+      question: q.content,
+      options: q.options,
+      skill: q.skill_name,
+      selectedWrong: !q.isCorrect && chosenIdx >= 0 ? `${chosenChar}. ${q.options[chosenIdx] || ''}` : null,
+      correctOption: correctIdx >= 0 ? `${correctChar}. ${q.options[correctIdx] || ''}` : correctChar,
+      difficultyB: q.bloom ? ((q.bloom - 3) * 0.5).toFixed(2) : 0.25,
+      predictedProb: 0.65
+    });
   };
 
   // Lọc danh sách câu hỏi trong bảng đánh giá chi tiết
@@ -799,6 +896,86 @@ Hãy đóng vai Gia sư AI Socratic: KHÔNG TIẾT LỘ ĐÁP ÁN TRỰC TIẾP,
                 Hủy bỏ
               </button>
             </div>
+
+            {/* Lịch Sử Làm Bài Gần Đây (Xem lại đáp án & hỏi AI Socratic) */}
+            {submissionHistory.length > 0 && (
+              <div className="pt-6 border-t border-slate-800 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs font-black uppercase tracking-wider text-cyan-400 flex items-center gap-2">
+                    <FileText className="w-4 h-4" />
+                    <span>Lịch Sử Làm Bài Đã Hoàn Thành ({submissionHistory.length})</span>
+                  </div>
+                  <span className="text-[11px] text-slate-400">
+                    Bấm chọn để xem lại bảng đáp án và hỏi Gia sư AI Socratic
+                  </span>
+                </div>
+
+                <div className="space-y-2.5 max-h-64 overflow-y-auto pr-1">
+                  {submissionHistory.slice(0, 5).map((item) => {
+                    const correctCount =
+                      item.pacing?.totalCorrect ??
+                      (item.reviewedQuestions || []).filter((q) => q.isCorrect).length;
+                    const totalQ =
+                      item.pacing?.totalQuestions || (item.reviewedQuestions || []).length || 1;
+                    const accPct = Math.round((correctCount / totalQ) * 100);
+
+                    return (
+                      <div
+                        key={item.id}
+                        onClick={() => handleOpenPastSubmission(item)}
+                        className="p-4 rounded-2xl bg-slate-950/80 hover:bg-slate-950 border border-slate-800 hover:border-cyan-500/40 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 cursor-pointer group"
+                      >
+                        <div className="space-y-1">
+                          <div className="text-sm font-extrabold text-white group-hover:text-cyan-300 transition-colors">
+                            {item.title}
+                          </div>
+                          <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400">
+                            <span>
+                              Kết quả:{' '}
+                              <strong className="text-emerald-400">
+                                {correctCount}/{totalQ} câu ({accPct}%)
+                              </strong>
+                            </span>
+                            {item.theta_0 !== undefined && (
+                              <span>
+                                Theta IRT:{' '}
+                                <strong className="text-cyan-300">
+                                  {item.theta_0 > 0 ? `+${item.theta_0}` : item.theta_0}
+                                </strong>
+                              </span>
+                            )}
+                            {item.completedAt && (
+                              <span>
+                                Ngày:{' '}
+                                {new Date(item.completedAt).toLocaleString('vi-VN', {
+                                  day: '2-digit',
+                                  month: '2-digit',
+                                  year: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenPastSubmission(item);
+                          }}
+                          className="px-3.5 py-2 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/40 text-purple-300 font-extrabold text-xs flex items-center gap-1.5 shrink-0 cursor-pointer transition-all"
+                        >
+                          <Eye className="w-3.5 h-3.5 text-purple-400" />
+                          <span>Xem Lại Đáp Án & Hỏi AI</span>
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -900,17 +1077,8 @@ Hãy đóng vai Gia sư AI Socratic: KHÔNG TIẾT LỘ ĐÁP ÁN TRỰC TIẾP,
                 })}
               </div>
 
-              {/* Ask AI Socratic Tutor helper button */}
-              <div className="pt-2 flex items-center justify-between border-t border-slate-800/80">
-                <button
-                  type="button"
-                  onClick={handleAskSocraticTutor}
-                  className="px-4 py-2.5 rounded-xl bg-purple-600/15 hover:bg-purple-600/25 border border-purple-500/30 text-purple-300 font-extrabold text-xs flex items-center gap-2 transition-all shadow-sm"
-                >
-                  <Bot className="w-4 h-4 text-purple-400" />
-                  <span>Hỏi Gia Sư AI Về Câu Này (Socratic Tutor)</span>
-                </button>
-
+              {/* Time spent on current question */}
+              <div className="pt-2 flex items-center justify-end border-t border-slate-800/80">
                 <div className="text-xs text-slate-500 font-medium">
                   Thời gian trên câu này: <span className="font-mono text-cyan-400 font-bold">{timeSpentPerQ[currentQ.id] || 0}s</span>
                 </div>
@@ -1015,42 +1183,6 @@ Hãy đóng vai Gia sư AI Socratic: KHÔNG TIẾT LỘ ĐÁP ÁN TRỰC TIẾP,
                   <span>Đánh dấu phân vân</span>
                 </div>
               </div>
-            </div>
-
-            {/* Socratic AI Tutor Quick Drawer Trigger */}
-            <div className="p-4 rounded-2xl bg-purple-950/20 border border-purple-500/20 space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-xs font-bold text-purple-300">
-                  <Bot className="w-4 h-4 text-purple-400" />
-                  <span>Socratic Tutor</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsTutorOpen(!isTutorOpen)}
-                  className="text-[11px] font-extrabold text-cyan-400 hover:underline"
-                >
-                  {isTutorOpen ? 'Thu gọn' : 'Mở rộng'}
-                </button>
-              </div>
-
-              {isTutorOpen && (
-                <div className="space-y-3 pt-2">
-                  <div className="text-[11px] text-slate-400 leading-relaxed">
-                    Gia sư AI giúp học sinh gợi mở tư duy, không tiết lộ đáp án trực tiếp:
-                  </div>
-
-                  <div className="text-xs text-slate-300 bg-slate-950/60 p-4 rounded-2xl border border-purple-500/20 max-h-60 overflow-y-auto leading-relaxed whitespace-pre-wrap">
-                    {tutorResponse ? (
-                      <MathText text={tutorResponse} />
-                    ) : (
-                      <div className="flex items-center gap-2 text-purple-400 animate-pulse">
-                        <Sparkles className="w-4 h-4 animate-spin" />
-                        <span>AI đang phân tích câu hỏi và soạn hướng dẫn tư duy...</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
             </div>
           </div>
         </div>
@@ -1470,15 +1602,70 @@ Hãy đóng vai Gia sư AI Socratic: KHÔNG TIẾT LỘ ĐÁP ÁN TRỰC TIẾP,
                       })}
                     </div>
 
-                    {/* Detailed Explanation */}
-                    <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800/90 text-xs sm:text-sm space-y-1.5">
-                      <div className="text-xs font-black text-purple-400 flex items-center gap-1.5">
-                        <Sparkles className="w-3.5 h-3.5" />
-                        <span>Lời Giải & Hướng Dẫn Tư Duy Chi Tiết:</span>
+                    {/* Detailed Explanation & Post-Exam Socratic AI Tutor */}
+                    <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800/90 text-xs sm:text-sm space-y-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="text-xs font-black text-purple-400 flex items-center gap-1.5">
+                          <Sparkles className="w-3.5 h-3.5" />
+                          <span>Lời Giải & Hướng Dẫn Tư Duy Chi Tiết:</span>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleAskSocraticTutor(q)}
+                            className="px-3.5 py-1.5 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/40 text-purple-300 font-extrabold text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
+                          >
+                            <Bot className="w-3.5 h-3.5 text-purple-400" />
+                            <span>💡 Hỏi Gia Sư AI Socratic Về Câu Này</span>
+                          </button>
+
+                          {onOpenAiTutorWithContext && (
+                            <button
+                              type="button"
+                              onClick={() => handleOpenFullSocraticModal(q)}
+                              className="px-3.5 py-1.5 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/40 text-indigo-300 font-extrabold text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
+                            >
+                              <MessageSquare className="w-3.5 h-3.5 text-indigo-400" />
+                              <span>Chat Socratic Chuyên Sâu</span>
+                            </button>
+                          )}
+                        </div>
                       </div>
+
                       <div className="text-slate-300 leading-relaxed">
                         <MathText text={q.explanation} />
                       </div>
+
+                      {/* Inline Socratic Tutor Stream for this Question */}
+                      {activeTutorQuestionId === q.id && (
+                        <div className="mt-3 p-5 rounded-2xl bg-gradient-to-br from-indigo-950/90 via-slate-900 to-purple-950/90 border border-indigo-400/40 shadow-lg space-y-3 animate-fade-in">
+                          <div className="flex items-center justify-between border-b border-indigo-400/20 pb-2.5">
+                            <div className="flex items-center gap-2 text-xs sm:text-sm font-extrabold text-cyan-300">
+                              <Bot className="w-4 h-4 text-cyan-400" />
+                              <span>Gia Sư AI Socratic Phân Tích Tư Duy Câu {q.question_number}:</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setActiveTutorQuestionId(null)}
+                              className="px-2.5 py-1 rounded-lg bg-slate-800/80 text-[11px] font-bold text-slate-300 hover:text-white hover:bg-slate-700 cursor-pointer transition-all"
+                            >
+                              Đóng
+                            </button>
+                          </div>
+
+                          <div className="text-xs sm:text-sm text-white leading-relaxed">
+                            {tutorResponse ? (
+                              <MathText text={tutorResponse} className="text-white" />
+                            ) : (
+                              <div className="flex items-center gap-2 text-cyan-300 animate-pulse py-2">
+                                <Sparkles className="w-4 h-4 animate-spin" />
+                                <span>Gia sư Socratic đang phân tích lỗi sai và gợi mở hướng tư duy...</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 );

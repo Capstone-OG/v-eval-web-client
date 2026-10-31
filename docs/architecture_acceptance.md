@@ -59,10 +59,10 @@ V-Eval-Web_Client/
 ### 4.1. Flow 1: Diagnostic Assessment (IRT 2PL Model & 30-Question Real Test Page)
 - Implemented in `DiagnosticAssessmentPage.jsx` and quick modal `DiagnosticTestModal.jsx`.
 - Fetches real 30-question diagnostic exam from AI Engine (`generate-exam` with Gemini Cloud or Calibrated Bank) and Content Service.
-- Features in-exam question navigator, 45-minute timer, flagging, and embedded AI Socratic Tutor guidance.
+- Features distraction-free in-exam question navigator, 45-minute timer, and question flagging during testing, reserving Socratic AI Tutor guidance for the post-exam answer review table (`stage === 'result'`).
 - Evaluates student ability across 5 core evaluation domains (Mathematics, Logic Reasoning, Language Arts, Natural Sciences, Social Sciences).
 - Employs 2-Parameter Logistic (IRT 2PL) probability scoring and Bayesian Knowledge Tracing initial mastery estimation `P(L_0)`.
-- Generates 5-axis Recharts Radar Chart and pedagogically calibrated Socratic AI Commentary.
+- Generates 5-axis Recharts Radar Chart and pedagogically calibrated Socratic AI Commentary, allowing students to review every question's answer key and invoke inline or modal Socratic AI Tutor analysis per question.
 
 ### 4.2. Flow 2: Dynamic Learning Roadmap (Kahn Topo & FSM)
 - Visualized in `HeroBanner.jsx` and `MilestoneCard.jsx`.
@@ -71,7 +71,7 @@ V-Eval-Web_Client/
 ### 4.3. Flow 3: Adaptive Practice & Remediation (ZPD & BKT)
 - Executed in `AdaptiveQuizModal.jsx`.
 - Dynamically delivers question items targeted within the Zone of Proximal Development (`ZPD \in [0.60, 0.75]`).
-- Updates student mastery probability `P(L_t)` using Bayesian Knowledge Tracing transitions.
+- Updates student mastery probability `P(L_t)` using Bayesian Knowledge Tracing transitions, and upon quiz completion presents a full answer review screen where students can inspect their choices against the answer key and ask the Socratic AI Tutor about any question.
 
 ### 4.4. Flow 4: AI Socratic Tutor Widget
 - Embedded in `AISocraticTutorWidget.jsx`.
@@ -696,6 +696,20 @@ V-Eval-Web_Client/
   - Configured `strict: 'ignore'` in `renderKatexHtml` to eliminate spurious developer console warnings regarding Vietnamese characters (such as "Đ") embedded within mathematical expressions (`[unicodeTextInMathMode]`).
 - **Immediate First-Pattern Chapter Loading**:
   - Refactored `toggleChapter` and `toggleLesson` to automatically expand and select the first available pattern, ensuring the right pedagogical workspace pane immediately loads content upon chapter navigation.
+
+### 4.14. Core Flow 4 Frontend Integration: Socratic AI Tutor & GraphRAG Live Streaming
+- **Real-Time Token Streaming Client (`practiceService.js`)**: Implemented `askAiTutorStream` using native Fetch API and `ReadableStream` reader with `TextDecoder`. Directly consumes `POST /api/practice/ai-tutor/ask-stream` through Gateway (`:5212`).
+- **Graceful Rate Limiting Handlers**: Intercepts HTTP 429 status codes enforced by the backend `StrictTutorPolicy` (10 req/min), transforming network exceptions into supportive, pedagogical throttle notifications in the UI.
+- **Upgraded Socratic Dashboard Widget (`AISocraticTutorWidget.jsx`)**: Replaced 100% mock setTimeout mechanisms with real-time SSE token-by-token streaming, KaTeX math parsing via `MathText.jsx`, abort controller cancellation, and GraphRAG knowledge attribution badges.
+- **Two-Column Socratic Dialogue Modal (`AISocraticTutorModal.jsx`)**: Built a comprehensive modal interface featuring guided dialog history, quick question prompts, 3-Hop Subgraph inspection (Archetype patterns, core theorems, misconception traps), and an in-chat student reporting dialog (`POST /api/practice/ai-tutor/report`) for flagging pedagogical violations.
+- **Router Alignment (`App.jsx` & `Sidebar.jsx`)**: Corrected navigation routing so clicking *AI Socratic Tutor* on the sidebar or hero banner opens the dedicated tutor modal instead of erroneously triggering the Flow 3 adaptive quiz modal.
+
+### 4.15. Contextual Socratic Problem-Solving & In-Exam Adaptive Assistance (Phase 2)
+- **ZPD Adaptive Quiz Socratic Hooks (`AdaptiveQuizModal.jsx`)**: Integrated real-time Socratic pedagogical assistance directly into the Flow 3 adaptive practice loop. Features both reactive post-answer triggers and a 45-second contemplation nudge (`secondsOnQuestion >= 45`) for students hesitating on difficult questions. Packages the complete question context (`questionId`, `question`, `options`, `skill`, `selectedWrong`, `correctOption`, `difficultyB`, `predictedProb`) and transitions seamlessly to the Socratic Tutor.
+- **DTO Sanitization & Robust Gateway Proxying (`practiceService.js`)**: Implemented `ensureGuid`, `cleanOptionKey`, and `normalizeOptions` ensuring runtime payloads strictly comply with ASP.NET Core `AskTutorRequest` schema (Guid format, Dictionary options, single character option keys). Employs `onInteractionId` callback to bind streamed session IDs.
+- **Dynamic Contextual Dialogue Orchestration (`AISocraticTutorModal.jsx`)**: Configured dynamic context ingestion via `initialContext`. Features an active *Target Context Banner*, initializes targeted Socratic inquiry addressing the student's specific misconception instead of generic greetings, and forwards contextually enriched `questionLatex` alongside options dictionary.
+- **Diagnostic In-Exam Socratic Modernization (`DiagnosticAssessmentPage.jsx`)**: Refactored `handleAskSocraticTutor` from deprecated legacy endpoints to the unified `practiceService.askAiTutorStream` pipeline via Gateway `:5212`, ensuring seamless Rate Limit compliance (10 req/min) and consistent math rendering during 30-question diagnostic assessments.
+- **Submission History & Socratic Mistake Notebook (`SubmissionHistoryView.jsx` & `practiceService.js`)**: Implemented a comprehensive exam history and mistake notebook subsystem synchronizing with Backend Practice Service (`GET /api/v1/practice/diagnostic-submissions/student/{studentId}`, `GET /api/v1/practice/diagnostic-submissions/{id}`, `GET /api/v1/practice/mistakes`) and persistent local history storage. Enables students to revisit any past Diagnostic Exam, ZPD Adaptive Quiz, or Topic Quiz, inspect full answer keys, and invoke inline or modal Socratic AI guidance on any historical question.
 
 ---
 

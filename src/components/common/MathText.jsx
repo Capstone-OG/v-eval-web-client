@@ -62,9 +62,9 @@ export function normalizeMathString(text) {
   str = str.replace(/(?:\\text|\btext)\{([A-Z][a-zA-Z0-9_+\-^]*)\}/g, '$1');
 
   // Fix orphaned trailing :** (e.g. "Bài toán mẫu:**" or "Ví dụ:**" where leading ** got stripped)
-  str = str.replace(/(^|[\n•\-*]\s*)([A-ZÀ-Ỹa-zà-ỹ0-9\s&]{2,30}):\*\*/g, '$1**$2:**');
-  str = str.replace(/(?<!\*)\b(Bài toán mẫu|Bài mẫu|Ví dụ minh họa|Ví dụ|Hướng dẫn giải|Lời giải|Phương pháp giải|Phương pháp|Bước \d+):\*\*/gi, '**$1:**');
-  str = str.replace(/\*\*(Bài toán mẫu|Bài mẫu|Ví dụ minh họa|Ví dụ|Hướng dẫn giải|Lời giải|Phương pháp giải|Phương pháp|Bước \d+):(?!\*)/gi, '**$1:**');
+  str = str.replace(/(^|[\n•\-]\s*)(?!\*)([A-ZÀ-Ỹa-zà-ỹ0-9\s&]{2,30}):\*\*/g, '$1**$2:**');
+  str = str.replace(/(?<!\*)\b(Bài toán mẫu|Bài mẫu|Ví dụ minh họa|Ví dụ|Hướng dẫn giải|Lời giải|Phương pháp giải|Phương pháp|Gợi ý phương pháp giải|Bước \d+):\*\*/gi, '**$1:**');
+  str = str.replace(/\*\*(Bài toán mẫu|Bài mẫu|Ví dụ minh họa|Ví dụ|Hướng dẫn giải|Lời giải|Phương pháp giải|Phương pháp|Gợi ý phương pháp giải|Bước \d+):(?!\*)/gi, '**$1:**');
 
   // 2. Tokenize by existing explicit math delimiters AND special tags ([VARIATION_TABLE], [MATH_GRAPH], etc.)
   // This guarantees tag contents are NEVER corrupted by auto-wrap math/chemistry regexes!
@@ -214,7 +214,7 @@ function renderInlineContent(text, keyPrefix = '') {
           // Markdown bold + italic ***text***
           if (chunk.startsWith('***') && chunk.endsWith('***') && chunk.length >= 6) {
             return (
-              <strong key={chunkKey} className="font-bold italic text-slate-900">
+              <strong key={chunkKey} className="font-extrabold italic">
                 {chunk.slice(3, -3)}
               </strong>
             );
@@ -223,7 +223,7 @@ function renderInlineContent(text, keyPrefix = '') {
           // Markdown bold **text**
           if (chunk.startsWith('**') && chunk.endsWith('**') && chunk.length >= 4) {
             return (
-              <strong key={chunkKey} className="font-bold text-slate-900">
+              <strong key={chunkKey} className="font-extrabold">
                 {chunk.slice(2, -2)}
               </strong>
             );
@@ -232,7 +232,7 @@ function renderInlineContent(text, keyPrefix = '') {
           // Markdown italic *text*
           if (chunk.startsWith('*') && chunk.endsWith('*') && chunk.length >= 2) {
             return (
-              <em key={chunkKey} className="italic text-slate-800">
+              <em key={chunkKey} className="italic opacity-95">
                 {chunk.slice(1, -1)}
               </em>
             );
@@ -363,42 +363,63 @@ function renderStructuredContent(raw, onEditMathGraph = null) {
 
           // Callout Warning e.g. "### ⚠️ Các bẫy đề thi:" or "⚠️ ..."
           if (line.includes('### ⚠️') || line.startsWith('⚠️')) {
-            const cleanHeading = line.replace(/^###\s*/, '').replace(/^⚠️\s*/, '').replace(/\\+\s*$/, '').trim();
+            const cleanHeading = line
+              .replace(/^###\s*/, '')
+              .replace(/^\*\*\s*⚠️\s*/, '')
+              .replace(/^⚠️\s*/, '')
+              .replace(/\\+\s*$/, '')
+              .replace(/^\*\*(.*)\*\*$/, '$1')
+              .replace(/:\*\*$/, ':')
+              .trim();
             return (
               <div
                 key={lineKey}
-                className="my-2.5 p-3 rounded-xl bg-rose-50/90 border border-rose-200/90 text-rose-950 font-bold text-xs flex items-center gap-2 shadow-2xs"
+                className="my-2.5 p-3 rounded-xl bg-rose-50/95 border border-rose-200/90 text-rose-950 font-bold text-xs flex items-center gap-2 shadow-2xs"
               >
                 <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
-                <span className="flex-1 min-w-0 font-extrabold">{renderInlineContent(cleanHeading, lineKey)}</span>
+                <span className="flex-1 min-w-0 font-extrabold text-rose-950">{renderInlineContent(cleanHeading, lineKey)}</span>
               </div>
             );
           }
 
           // Callout Tip e.g. "### 💡 Mẹo Casio:" or "💡 ..."
           if (line.includes('### 💡') || line.startsWith('💡')) {
-            const cleanHeading = line.replace(/^###\s*/, '').replace(/^💡\s*/, '').replace(/\\+\s*$/, '').trim();
+            const cleanHeading = line
+              .replace(/^###\s*/, '')
+              .replace(/^\*\*\s*💡\s*/, '')
+              .replace(/^💡\s*/, '')
+              .replace(/\\+\s*$/, '')
+              .replace(/^\*\*(.*)\*\*$/, '$1')
+              .replace(/:\*\*$/, ':')
+              .trim();
             return (
               <div
                 key={lineKey}
-                className="my-2.5 p-3 rounded-xl bg-indigo-50/90 border border-indigo-200/90 text-indigo-950 font-bold text-xs flex items-center gap-2 shadow-2xs"
+                className="my-2.5 p-3 rounded-xl bg-indigo-50/95 border border-indigo-200/90 text-indigo-950 font-bold text-xs flex items-center gap-2 shadow-2xs"
               >
                 <Sparkles className="w-4 h-4 text-indigo-600 shrink-0" />
-                <span className="flex-1 min-w-0 font-extrabold">{renderInlineContent(cleanHeading, lineKey)}</span>
+                <span className="flex-1 min-w-0 font-extrabold text-indigo-950">{renderInlineContent(cleanHeading, lineKey)}</span>
               </div>
             );
           }
 
           // Callout Pedagogical Example SGK e.g. "### 📌 Ví dụ minh họa SGK:" or "📌 ..."
           if (line.includes('### 📌') || line.startsWith('📌')) {
-            const cleanHeading = line.replace(/^###\s*/, '').replace(/^📌\s*/, '').replace(/\\+\s*$/, '').trim();
+            const cleanHeading = line
+              .replace(/^###\s*/, '')
+              .replace(/^\*\*\s*📌\s*/, '')
+              .replace(/^📌\s*/, '')
+              .replace(/\\+\s*$/, '')
+              .replace(/^\*\*(.*)\*\*$/, '$1')
+              .replace(/:\*\*$/, ':')
+              .trim();
             return (
               <div
                 key={lineKey}
-                className="my-2.5 p-2.5 rounded-xl bg-teal-50/90 border border-teal-200/90 text-teal-950 font-bold text-xs flex items-center gap-2 shadow-2xs"
+                className="my-2.5 p-2.5 rounded-xl bg-teal-50/95 border border-teal-200/90 text-teal-950 font-bold text-xs flex items-center gap-2 shadow-2xs"
               >
                 <BookOpen className="w-4 h-4 text-teal-600 shrink-0" />
-                <span className="flex-1 min-w-0 font-extrabold">{renderInlineContent(cleanHeading, lineKey)}</span>
+                <span className="flex-1 min-w-0 font-extrabold text-teal-950">{renderInlineContent(cleanHeading, lineKey)}</span>
               </div>
             );
           }
@@ -473,7 +494,7 @@ function renderStructuredContent(raw, onEditMathGraph = null) {
             const indentClass = indentSpaces >= 4 ? 'ml-6' : indentSpaces >= 2 ? 'ml-3.5' : 'ml-1';
             const bulletContent = bulletMatch[2];
             return (
-              <div key={lineKey} className={`flex items-start gap-2 ${indentClass} text-slate-700 leading-relaxed my-0.5`}>
+              <div key={lineKey} className={`flex items-start gap-2 ${indentClass} leading-relaxed my-0.5`}>
                 <span className="text-indigo-500 font-bold select-none leading-relaxed">•</span>
                 <span className="flex-1 min-w-0">{renderInlineContent(bulletContent, lineKey)}</span>
               </div>
@@ -488,8 +509,8 @@ function renderStructuredContent(raw, onEditMathGraph = null) {
             const numMarker = numMatch[2];
             const numContent = numMatch[3];
             return (
-              <div key={lineKey} className={`flex items-start gap-2 ${indentClass} text-slate-700 leading-relaxed my-0.5`}>
-                <span className="font-bold text-indigo-600 select-none leading-relaxed text-xs pt-0.5 shrink-0">
+              <div key={lineKey} className={`flex items-start gap-2 ${indentClass} leading-relaxed my-0.5`}>
+                <span className="font-bold text-indigo-500 select-none leading-relaxed text-xs pt-0.5 shrink-0">
                   {numMarker}
                 </span>
                 <span className="flex-1 min-w-0">{renderInlineContent(numContent, lineKey)}</span>
@@ -501,7 +522,7 @@ function renderStructuredContent(raw, onEditMathGraph = null) {
           const isStepLine = /^\s*(\*\*Bước \d+:|Bước \d+:)/i.test(line);
           if (isStepLine) {
             return (
-              <div key={lineKey} className="font-bold text-slate-900 mt-2.5 mb-1 leading-relaxed">
+              <div key={lineKey} className="font-bold mt-2.5 mb-1 leading-relaxed">
                 {renderInlineContent(line, lineKey)}
               </div>
             );
@@ -509,7 +530,7 @@ function renderStructuredContent(raw, onEditMathGraph = null) {
 
           // Default regular line/paragraph
           return (
-            <div key={lineKey} className="leading-relaxed text-slate-700 my-0.5">
+            <div key={lineKey} className="leading-relaxed my-0.5">
               {renderInlineContent(line, lineKey)}
             </div>
           );
