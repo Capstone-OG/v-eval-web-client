@@ -162,9 +162,9 @@ export default function AdaptiveQuizModal({ isOpen, onClose, onOpenAiTutorWithCo
                     P(Correct) dự đoán = {currentItem.predictedProb}
                   </span>
                 </div>
-                <h3 className="text-sm font-extrabold text-slate-900 leading-snug">
+                <div className="text-sm font-extrabold text-slate-900 leading-snug">
                   <MathText text={currentItem.question} />
-                </h3>
+                </div>
 
                 {/* Socratic quick prompt trigger */}
                 <div className="flex items-center justify-between pt-1 border-t border-slate-200/60">
@@ -195,7 +195,7 @@ export default function AdaptiveQuizModal({ isOpen, onClose, onOpenAiTutorWithCo
                         : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50'
                     }`}
                   >
-                    <span><MathText text={opt} /></span>
+                    <span className="flex-1"><MathText text={opt} /></span>
                   </button>
                 ))}
               </div>

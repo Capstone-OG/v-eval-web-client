@@ -17,6 +17,7 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { practiceService } from '../../services/practiceService';
+import { toast } from '../../context/ToastContext';
 
 export default function ClassMicroGroupsModal({ isOpen, onClose, classData }) {
   const [groups, setGroups] = useState([]);
@@ -285,7 +286,7 @@ export default function ClassMicroGroupsModal({ isOpen, onClose, classData }) {
             </button>
 
             <button
-              onClick={() => alert('Đã xuất file sơ đồ phân bàn PDF cho Giảng viên in trực tiếp tại văn phòng cơ sở!')}
+              onClick={() => toast.info('Đã xuất file sơ đồ phân bàn PDF cho Giảng viên in trực tiếp tại văn phòng cơ sở!')}
               className="flex items-center gap-1.5 px-3 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 font-bold text-xs rounded-xl transition-all cursor-pointer shadow-2xs"
             >
               <Printer className="w-4 h-4 text-slate-500" />
