@@ -59,10 +59,10 @@ V-Eval-Web_Client/
 ### 4.1. Flow 1: Diagnostic Assessment (IRT 2PL Model & 30-Question Real Test Page)
 - Implemented in `DiagnosticAssessmentPage.jsx` and quick modal `DiagnosticTestModal.jsx`.
 - Fetches real 30-question diagnostic exam from AI Engine (`generate-exam` with Gemini Cloud or Calibrated Bank) and Content Service.
-- Features in-exam question navigator, 45-minute timer, flagging, and embedded AI Socratic Tutor guidance.
+- Features distraction-free in-exam question navigator, 45-minute timer, and question flagging during testing, reserving Socratic AI Tutor guidance for the post-exam answer review table (`stage === 'result'`).
 - Evaluates student ability across 5 core evaluation domains (Mathematics, Logic Reasoning, Language Arts, Natural Sciences, Social Sciences).
 - Employs 2-Parameter Logistic (IRT 2PL) probability scoring and Bayesian Knowledge Tracing initial mastery estimation `P(L_0)`.
-- Generates 5-axis Recharts Radar Chart and pedagogically calibrated Socratic AI Commentary.
+- Generates 5-axis Recharts Radar Chart and pedagogically calibrated Socratic AI Commentary, allowing students to review every question's answer key and invoke inline or modal Socratic AI Tutor analysis per question.
 
 ### 4.2. Flow 2: Dynamic Learning Roadmap (Kahn Topo & FSM)
 - Visualized in `HeroBanner.jsx` and `MilestoneCard.jsx`.
@@ -71,7 +71,7 @@ V-Eval-Web_Client/
 ### 4.3. Flow 3: Adaptive Practice & Remediation (ZPD & BKT)
 - Executed in `AdaptiveQuizModal.jsx`.
 - Dynamically delivers question items targeted within the Zone of Proximal Development (`ZPD \in [0.60, 0.75]`).
-- Updates student mastery probability `P(L_t)` using Bayesian Knowledge Tracing transitions.
+- Updates student mastery probability `P(L_t)` using Bayesian Knowledge Tracing transitions, and upon quiz completion presents a full answer review screen where students can inspect their choices against the answer key and ask the Socratic AI Tutor about any question.
 
 ### 4.4. Flow 4: AI Socratic Tutor Widget
 - Embedded in `AISocraticTutorWidget.jsx`.

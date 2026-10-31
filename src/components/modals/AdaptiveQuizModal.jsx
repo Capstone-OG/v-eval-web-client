@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Zap, CheckCircle2, XCircle, ArrowRight, X, Sparkles, AlertCircle, RefreshCw, Bot, Clock } from 'lucide-react';
+import React, { useState } from 'react';
+import { Zap, CheckCircle2, XCircle, ArrowRight, X, AlertCircle, Bot, FileText } from 'lucide-react';
 import MathText from '../common/MathText';
 
 export default function AdaptiveQuizModal({ isOpen, onClose, onOpenAiTutorWithContext }) {
@@ -13,7 +13,7 @@ export default function AdaptiveQuizModal({ isOpen, onClose, onOpenAiTutorWithCo
   const [itemIndex, setItemIndex] = useState(0);
   const [selectedOpt, setSelectedOpt] = useState(null);
   const [feedback, setFeedback] = useState(null);
-  const [secondsOnQuestion, setSecondsOnQuestion] = useState(0);
+  const [answerHistory, setAnswerHistory] = useState({}); // { [questionId]: selectedOptIndex }
 
   const sampleItems = [
     {
@@ -23,7 +23,8 @@ export default function AdaptiveQuizModal({ isOpen, onClose, onOpenAiTutorWithCo
       options: ["A. P có thể đúng hoặc sai", "B. P bắt buộc phải sai", "C. P bắt buộc phải đúng", "D. Không đủ dữ kiện"],
       correct: 1,
       difficultyB: 0.15,
-      predictedProb: 0.68
+      predictedProb: 0.68,
+      explanation: "Trong bảng chân trị của mệnh đề kéo theo $P \\Rightarrow Q$, mệnh đề chỉ sai khi $P$ đúng và $Q$ sai. Vì $P \\Rightarrow Q$ đúng và $Q$ sai, nên $P$ bắt buộc phải sai."
     },
     {
       id: "a1b2c3d4-0002-4000-8000-000000000002",
@@ -32,19 +33,10 @@ export default function AdaptiveQuizModal({ isOpen, onClose, onOpenAiTutorWithCo
       options: ["A. P đúng", "B. P sai", "C. Q đúng", "D. Cả P và Q đều đúng"],
       correct: 1,
       difficultyB: 0.52, // Application level (b >= 0.50)
-      predictedProb: 0.64
+      predictedProb: 0.64,
+      explanation: "Theo quy tắc Modus Tollens (phản đảo): Vì $Q \\Rightarrow R$ đúng mà $R$ sai nên $Q$ sai. Tiếp tục vì $P \\Rightarrow Q$ đúng mà $Q$ sai nên $P$ bắt buộc phải sai."
     }
   ];
-
-  // Track hesitation time (> 45s without answering)
-  useEffect(() => {
-    if (!isOpen) return;
-    setSecondsOnQuestion(0);
-    const timer = setInterval(() => {
-      setSecondsOnQuestion((prev) => prev + 1);
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [itemIndex, isOpen]);
 
   if (!isOpen) return null;
 
@@ -52,6 +44,7 @@ export default function AdaptiveQuizModal({ isOpen, onClose, onOpenAiTutorWithCo
 
   const handleAnswerSubmit = (optIdx) => {
     setSelectedOpt(optIdx);
+    setAnswerHistory((prev) => ({ ...prev, [currentItem.id]: optIdx }));
     const isCorrect = optIdx === currentItem.correct;
     
     if (isCorrect) {
@@ -60,11 +53,7 @@ export default function AdaptiveQuizModal({ isOpen, onClose, onOpenAiTutorWithCo
       const newConsec = consecutiveCorrect + 1;
       setConsecutiveCorrect(newConsec);
       setConsecutiveWrong(0);
-      setFeedback({ type: 'correct', msg: `Chính xác! Mô hình BKT cập nhật P(Lt) lên ${(newMastery * 100).toFixed(0)}%.` });
-
-      if (newMastery >= 0.85 && newConsec >= 2 && currentItem.difficultyB >= 0.50) {
-        setQuizFinished(true);
-      }
+      setFeedback({ type: 'correct', msg: `Đã ghi nhận câu trả lời! Mô hình BKT cập nhật P(Lt) lên ${(newMastery * 100).toFixed(0)}%.` });
     } else {
       const newMastery = Math.max(0.05, bktMastery - 0.15);
       setBktMastery(newMastery);
@@ -76,7 +65,7 @@ export default function AdaptiveQuizModal({ isOpen, onClose, onOpenAiTutorWithCo
         setRemedialNodeActive(true);
         setFeedback({ type: 'remedial', msg: 'Quy tắc BR-03 kích hoạt: Bạn đã sai 3 câu liên tiếp. Hệ thống tự động chèn Remedial Node củng cố kiến thức!' });
       } else {
-        setFeedback({ type: 'wrong', msg: `Chưa chính xác. BKT cập nhật P(Lt) giảm còn ${(newMastery * 100).toFixed(0)}%.` });
+        setFeedback({ type: 'wrong', msg: `Đã ghi nhận câu trả lời. BKT cập nhật P(Lt) còn ${(newMastery * 100).toFixed(0)}%.` });
       }
     }
   };
@@ -91,22 +80,35 @@ export default function AdaptiveQuizModal({ isOpen, onClose, onOpenAiTutorWithCo
     }
   };
 
-  const handleAskSocraticTutor = () => {
+  const handleAskSocraticForQuestion = (item) => {
+    const chosenIdx = answerHistory[item.id];
     onOpenAiTutorWithContext?.({
-      questionId: currentItem.id,
-      question: currentItem.question,
-      options: currentItem.options,
-      skill: currentItem.skill,
-      selectedWrong: selectedOpt !== null ? currentItem.options[selectedOpt] : null,
-      correctOption: currentItem.options[currentItem.correct] || 'B',
-      difficultyB: currentItem.difficultyB,
-      predictedProb: currentItem.predictedProb
+      questionId: item.id,
+      question: item.question,
+      options: item.options,
+      skill: item.skill,
+      selectedWrong: chosenIdx !== undefined && chosenIdx !== item.correct ? item.options[chosenIdx] : null,
+      correctOption: item.options[item.correct] || 'B',
+      difficultyB: item.difficultyB,
+      predictedProb: item.predictedProb
     });
   };
 
+  const handleResetQuiz = () => {
+    setItemIndex(0);
+    setSelectedOpt(null);
+    setFeedback(null);
+    setAnswerHistory({});
+    setQuizFinished(false);
+  };
+
+  const totalCorrectCount = sampleItems.filter(
+    (item) => answerHistory[item.id] === item.correct
+  ).length;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-fade-in">
-      <div className="relative w-full max-w-xl bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col my-auto max-h-[90vh]">
+      <div className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col my-auto max-h-[90vh]">
         
         {/* Header */}
         <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-amber-600 via-amber-500 to-orange-600 text-white flex items-center justify-between">
@@ -154,6 +156,12 @@ export default function AdaptiveQuizModal({ isOpen, onClose, onOpenAiTutorWithCo
           {!quizFinished ? (
             <div className="space-y-4">
               
+              {/* Question progress */}
+              <div className="flex items-center justify-between text-xs font-bold text-slate-500">
+                <span>Câu hỏi {itemIndex + 1} / {sampleItems.length}</span>
+                <span className="text-[11px] text-slate-400">Độ khó IRT: b = {currentItem.difficultyB}</span>
+              </div>
+
               {/* Question card */}
               <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
                 <div className="flex items-center justify-between text-[11px] font-bold text-slate-500">
@@ -164,19 +172,6 @@ export default function AdaptiveQuizModal({ isOpen, onClose, onOpenAiTutorWithCo
                 </div>
                 <div className="text-sm font-extrabold text-slate-900 leading-snug">
                   <MathText text={currentItem.question} />
-                </div>
-
-                {/* Socratic quick prompt trigger */}
-                <div className="flex items-center justify-between pt-1 border-t border-slate-200/60">
-                  <span className="text-[10px] text-slate-400 font-medium">Độ khó IRT: b = {currentItem.difficultyB}</span>
-                  <button
-                    type="button"
-                    onClick={handleAskSocraticTutor}
-                    className="text-[11px] font-extrabold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer transition-colors"
-                  >
-                    <Bot className="w-3.5 h-3.5 text-indigo-500" />
-                    <span>Gợi mở tư duy Socratic</span>
-                  </button>
                 </div>
               </div>
 
@@ -189,9 +184,7 @@ export default function AdaptiveQuizModal({ isOpen, onClose, onOpenAiTutorWithCo
                     onClick={() => handleAnswerSubmit(idx)}
                     className={`w-full p-3.5 rounded-2xl text-left text-xs font-bold transition-all flex items-center justify-between border cursor-pointer ${
                       selectedOpt === idx 
-                        ? idx === currentItem.correct 
-                          ? 'bg-emerald-50 border-emerald-500 text-emerald-800' 
-                          : 'bg-red-50 border-red-500 text-red-800'
+                        ? 'bg-amber-50 border-amber-500 text-amber-900 ring-2 ring-amber-500/20'
                         : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50'
                     }`}
                   >
@@ -200,83 +193,150 @@ export default function AdaptiveQuizModal({ isOpen, onClose, onOpenAiTutorWithCo
                 ))}
               </div>
 
-              {/* 45-Second Contemplation Nudge */}
-              {!feedback && secondsOnQuestion >= 45 && (
-                <div className="p-3 bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-200 rounded-2xl flex items-center justify-between gap-3 animate-fade-in shadow-2xs">
-                  <div className="flex items-center gap-2 text-indigo-950 text-xs font-bold">
-                    <Clock className="w-4 h-4 text-indigo-600 animate-pulse shrink-0" />
-                    <span>Đang suy nghĩ câu này khá lâu ({secondsOnQuestion}s)? Gia sư Socratic có thể gợi mở hướng tư duy!</span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleAskSocraticTutor}
-                    className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-[11px] font-extrabold flex items-center gap-1 cursor-pointer transition-all shadow-xs shrink-0"
-                  >
-                    <Bot className="w-3.5 h-3.5" />
-                    <span>Hỏi gợi mở</span>
-                  </button>
-                </div>
-              )}
-
-              {/* Feedback alert */}
-              {feedback && (
-                <div className={`p-3 rounded-2xl text-xs font-bold flex items-center gap-2 ${
-                  feedback.type === 'correct' 
-                    ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' 
-                    : feedback.type === 'remedial' 
-                      ? 'bg-red-50 text-red-800 border border-red-200' 
-                      : 'bg-amber-50 text-amber-800 border border-amber-200'
-                }`}>
-                  {feedback.type === 'correct' ? <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" /> : <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />}
-                  <span>{feedback.msg}</span>
-                </div>
-              )}
-
-              {/* Socratic AI Tutor Contextual Help Button */}
-              {feedback && (
-                <button
-                  type="button"
-                  onClick={handleAskSocraticTutor}
-                  className="w-full py-2.5 px-4 bg-gradient-to-r from-blue-50 via-indigo-50 to-blue-50 hover:from-blue-100 hover:to-indigo-100 border border-blue-200 text-blue-900 font-extrabold text-xs rounded-2xl flex items-center justify-center gap-2 transition-all cursor-pointer shadow-2xs"
-                >
-                  <Bot className="w-4 h-4 text-blue-600 animate-pulse" />
-                  <span>💡 Chưa hiểu bản chất câu này? Hỏi Gia sư Socratic bẻ khóa tư duy</span>
-                </button>
-              )}
-
-              {/* Next button */}
+              {/* Next / Finish button */}
               {feedback && (
                 <button
                   onClick={handleNextItem}
                   className="w-full py-3 bg-amber-600 hover:bg-amber-700 text-white font-extrabold text-xs rounded-2xl shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2 transition-all cursor-pointer"
                 >
-                  <span>Câu tiếp theo trong dải ZPD</span>
+                  <span>{itemIndex < sampleItems.length - 1 ? 'Câu tiếp theo trong dải ZPD' : 'Nộp bài & Xem kết quả đáp án'}</span>
                   <ArrowRight className="w-4 h-4" />
                 </button>
               )}
 
             </div>
           ) : (
-            /* Quiz completed view */
-            <div className="text-center space-y-4 py-4 animate-fade-in">
-              <div className="w-16 h-16 mx-auto rounded-3xl bg-emerald-100 text-emerald-600 flex items-center justify-center">
-                <CheckCircle2 className="w-8 h-8" />
-              </div>
+            /* Quiz completed view: Result Summary + Answer Review + Ask AI Socratic Tutor */
+            <div className="space-y-5 py-2 animate-fade-in">
               
-              <h3 className="text-xl font-extrabold text-slate-900">
-                Chúc mừng! Chặng học đã được Mở khóa (BR-01)
-              </h3>
+              {/* Top Result Banner */}
+              <div className="text-center space-y-2 pb-4 border-b border-slate-200">
+                <div className="w-14 h-14 mx-auto rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center">
+                  <CheckCircle2 className="w-7 h-7" />
+                </div>
+                
+                <h3 className="text-lg font-extrabold text-slate-900">
+                  Hoàn Thành Phiên Luyện Tập ZPD!
+                </h3>
 
-              <p className="text-xs text-slate-600">
-                Xác suất P(Lt) đạt <strong>{(bktMastery * 100).toFixed(0)}%</strong> và bạn đã làm đúng liên tiếp 2 câu vận dụng b &ge; 0.50.
-              </p>
+                <p className="text-xs text-slate-600">
+                  Kết quả: Đúng <strong>{totalCorrectCount}/{sampleItems.length}</strong> câu • Xác suất làm chủ BKT P(Lt) đạt <strong>{(bktMastery * 100).toFixed(0)}%</strong>
+                </p>
+              </div>
 
-              <button
-                onClick={onClose}
-                className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs rounded-2xl shadow-lg shadow-blue-500/20 cursor-pointer"
-              >
-                Trở về Lộ trình Dashboard
-              </button>
+              {/* Answer Review List */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                    <FileText className="w-4 h-4 text-amber-600" />
+                    <span>Xem Lại Đáp Án & Hỏi Gia Sư AI Socratic</span>
+                  </h4>
+                  <span className="text-[11px] text-slate-500 font-medium">
+                    Bấm hỏi AI ở bất kỳ câu nào bạn cần giải thích sâu
+                  </span>
+                </div>
+
+                {sampleItems.map((item, idx) => {
+                  const chosenIdx = answerHistory[item.id];
+                  const isCorrect = chosenIdx === item.correct;
+
+                  return (
+                    <div
+                      key={item.id}
+                      className={`p-4 rounded-2xl border space-y-3 ${
+                        isCorrect
+                          ? 'bg-emerald-50/40 border-emerald-200'
+                          : 'bg-rose-50/40 border-rose-200'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs font-extrabold text-slate-800">
+                          Câu {idx + 1}: <span className="font-semibold text-slate-500">({item.skill})</span>
+                        </span>
+                        <span
+                          className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold ${
+                            isCorrect
+                              ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                              : 'bg-rose-100 text-rose-800 border border-rose-300'
+                          }`}
+                        >
+                          {isCorrect ? '✓ Chính xác' : '✗ Chưa chính xác'}
+                        </span>
+                      </div>
+
+                      <div className="text-xs font-bold text-slate-900 leading-relaxed">
+                        <MathText text={item.question} />
+                      </div>
+
+                      {/* Options comparison */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {item.options.map((opt, oIdx) => {
+                          const isItemCorrect = oIdx === item.correct;
+                          const isUserSelected = oIdx === chosenIdx;
+
+                          let optStyle = 'bg-white border-slate-200 text-slate-600';
+                          if (isItemCorrect) {
+                            optStyle = 'bg-emerald-100/80 border-emerald-500 text-emerald-950 font-extrabold';
+                          } else if (isUserSelected && !isItemCorrect) {
+                            optStyle = 'bg-rose-100/80 border-rose-500 text-rose-950 font-extrabold';
+                          }
+
+                          return (
+                            <div
+                              key={oIdx}
+                              className={`p-2.5 rounded-xl border text-[11px] flex items-center justify-between gap-2 ${optStyle}`}
+                            >
+                              <span><MathText text={opt} /></span>
+                              {isItemCorrect && (
+                                <span className="text-[10px] font-extrabold text-emerald-700 shrink-0">Đáp án đúng</span>
+                              )}
+                              {isUserSelected && !isItemCorrect && (
+                                <span className="text-[10px] font-extrabold text-rose-700 shrink-0">Bạn chọn</span>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Explanation */}
+                      {item.explanation && (
+                        <div className="p-3 rounded-xl bg-white/90 border border-slate-200/80 text-[11px] text-slate-700 leading-relaxed">
+                          <strong className="text-slate-900">Giải thích: </strong>
+                          <MathText text={item.explanation} />
+                        </div>
+                      )}
+
+                      {/* Ask AI Socratic Tutor Button (Only in Post-Quiz Answer Review) */}
+                      <button
+                        type="button"
+                        onClick={() => handleAskSocraticForQuestion(item)}
+                        className="w-full py-2.5 px-4 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-extrabold text-xs rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm"
+                      >
+                        <Bot className="w-4 h-4 text-cyan-200" />
+                        <span>💡 Chưa hiểu bản chất câu {idx + 1}? Hỏi Gia sư AI Socratic bẻ khóa tư duy</span>
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Action buttons */}
+              <div className="flex items-center gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={handleResetQuiz}
+                  className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-2xl cursor-pointer transition-all"
+                >
+                  Làm lại bộ câu hỏi
+                </button>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs rounded-2xl shadow-lg shadow-blue-500/20 cursor-pointer transition-all"
+                >
+                  Trở về Lộ trình Dashboard
+                </button>
+              </div>
             </div>
           )}
         </div>

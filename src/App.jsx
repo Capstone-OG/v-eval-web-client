@@ -124,6 +124,7 @@ export default function App() {
         <DiagnosticAssessmentPage 
           onNavigateDashboard={() => setCurrentPage('dashboard')}
           onNavigateHome={() => setCurrentPage('landing')}
+          onOpenAiTutorWithContext={(ctx) => handleOpenAiTutor(ctx)}
         />
       )}
 
@@ -179,12 +180,14 @@ export default function App() {
                 <CurriculumExplorerView 
                   onStartQuizModal={() => setIsZpdModalOpen(true)} 
                   onNavigateDiagnostic={() => setActiveTab('diagnostic')}
+                  onOpenAiTutorWithContext={(ctx) => handleOpenAiTutor(ctx)}
                 />
               ) : activeTab === 'diagnostic' ? (
                 <DiagnosticAssessmentPage 
                   embedded={true}
                   onNavigateDashboard={() => setActiveTab('dashboard')}
                   onNavigateHome={() => setActiveTab('dashboard')}
+                  onOpenAiTutorWithContext={(ctx) => handleOpenAiTutor(ctx)}
                 />
               ) : (
                 <>

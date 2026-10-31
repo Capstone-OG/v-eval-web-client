@@ -1,4 +1,4 @@
-﻿# KIẾN TRÚC & BẢNG THEO DÕI TIẾN ĐỘ CHỦ THỂ (PROCESS & PLANNING) - V-EVAL WEB CLIENT
+# KIẾN TRÚC & BẢNG THEO DÕI TIẾN ĐỘ CHỦ THỂ (PROCESS & PLANNING) - V-EVAL WEB CLIENT
 
 ---
 
@@ -138,4 +138,5 @@
 | 84 | **Tự Động Nạp Dạng Bài Khi Mở Chương & Khắc Phục KaTeX Strict Mode Unicode "Đ"** | `CurriculumExplorerView.jsx`, `MathText.jsx` | 🟢 Hoàn thành | 100% | Bổ sung `strict: 'ignore'` trong `renderKatexHtml` triệt tiêu lỗi ký tự Unicode "Đ" trong math mode; tự động chọn dạng bài đầu tiên khi nhấp vào Chương/Bài học giúp khung bên phải luôn nạp dữ liệu tức thì |
 | 85 | **Giai Đoạn 1 Core Flow 4: Gia Sư AI Socratic & GraphRAG Live Streaming** | `AISocraticTutorWidget.jsx`, `AISocraticTutorModal.jsx`, `practiceService.js` | 🟢 Hoàn thành | 100% | Móc nối SSE live stream qua Gateway `:5212`, xử lý Rate Limit 429, render KaTeX MathText, modal chat 2 cột kèm Subgraph Tri thức và cắm cờ Báo cáo vi phạm |
 | 86 | **Giai Đoạn 2 Core Flow 4: Tích Hợp Ngữ Cảnh Bài Tập Socratic (ZPD & Diagnostic)** | `AdaptiveQuizModal.jsx`, `AISocraticTutorModal.jsx`, `DiagnosticAssessmentPage.jsx` | 🟢 Hoàn thành | 100% | Nút hỏi gia sư Socratic khi học sinh làm sai, tự động đóng gói ngữ cảnh đề bài & phương án sai, khởi tạo lời dẫn bẻ khóa bẫy ngộ nhận, chuẩn hóa 30 câu khảo thí |
+| 87 | **Chuẩn Hóa Luồng Sư Phạm: Xem Lại Đáp Án Sau Khi Nộp Bài Mới Hỏi Gia Sư AI Socratic** | `AdaptiveQuizModal.jsx`, `DiagnosticAssessmentPage.jsx`, `CurriculumExplorerView.jsx`, `App.jsx` | 🟢 Hoàn thành | 100% | Ẩn nút hỏi AI trong lúc đang làm bài; hiển thị bảng đối chiếu đáp án sau khi hoàn thành bài làm và tích hợp nút hỏi Gia sư AI Socratic cho từng câu hỏi ở màn hình kết quả |
 

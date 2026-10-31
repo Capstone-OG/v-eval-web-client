@@ -95,7 +95,7 @@ function mapSkillToDomain(skillName, index) {
   return { id: 'dom_nat_sci', name: DOMAINS.dom_nat_sci.name };
 }
 
-export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNavigateHome, embedded = false }) {
+export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNavigateHome, onOpenAiTutorWithContext, embedded = false }) {
   // Page states: 'setup' | 'testing' | 'analyzing' | 'result'
   const [stage, setStage] = useState('setup');
   
@@ -115,8 +115,8 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMsg, setLoadingMsg] = useState('');
 
-  // AI Tutor Drawer
-  const [isTutorOpen, setIsTutorOpen] = useState(false);
+  // AI Tutor Drawer (Post-Exam Review)
+  const [activeTutorQuestionId, setActiveTutorQuestionId] = useState(null);
   const [tutorQuery, setTutorQuery] = useState('');
   const [tutorStreaming, setTutorStreaming] = useState(false);
   const [tutorResponse, setTutorResponse] = useState('');
@@ -517,12 +517,12 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
     }
   };
 
-  // 5. Ask Socratic Tutor via SSE Stream (Core Flow 4)
-  const handleAskSocraticTutor = async () => {
-    const currentQ = questions[currentIndex];
-    if (!currentQ) return;
+  // 5. Ask Socratic Tutor via SSE Stream in Post-Exam Review (Core Flow 4)
+  const handleAskSocraticTutor = async (targetQ) => {
+    const q = targetQ || questions[currentIndex];
+    if (!q) return;
 
-    setIsTutorOpen(true);
+    setActiveTutorQuestionId(q.id);
     setTutorResponse('');
     setTutorStreaming(true);
 
@@ -533,22 +533,23 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
     tutorAbortRef.current = abortController;
 
     const optionsDict = {};
-    if (Array.isArray(currentQ.options)) {
-      currentQ.options.forEach((opt, i) => {
+    if (Array.isArray(q.options)) {
+      q.options.forEach((opt, i) => {
         optionsDict[['A', 'B', 'C', 'D'][i] || `${i}`] = opt;
       });
     }
 
-    const studentAttempt = answers[currentQ.id] || 'Chưa chọn phương án';
+    const studentAttempt = q.studentChoice || answers[q.id] || 'Chưa chọn phương án';
+    const correctChoice = q.correctChoice || q.correct || q.correctOption || 'A';
 
     try {
       await practiceService.askAiTutorStream({
-        questionId: currentQ.id,
-        questionLatex: currentQ.content,
+        questionId: q.id,
+        questionLatex: q.content,
         options: optionsDict,
         studentWrongOption: studentAttempt,
-        correctOption: currentQ.correctOption || 'A',
-        skillId: currentQ.skillId || null,
+        correctOption: correctChoice,
+        skillId: q.skill_id || q.skillId || null,
         signal: abortController.signal,
         onToken: (token) => {
           setTutorResponse((prev) => prev + token);
@@ -576,6 +577,24 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
     } catch {
       setTutorStreaming(false);
     }
+  };
+
+  const handleOpenFullSocraticModal = (q) => {
+    if (!q || !onOpenAiTutorWithContext) return;
+    const chosenChar = q.studentChoice || answers[q.id];
+    const chosenIdx = ['A', 'B', 'C', 'D'].indexOf(chosenChar);
+    const correctChar = q.correctChoice || q.correct || 'A';
+    const correctIdx = ['A', 'B', 'C', 'D'].indexOf(correctChar);
+    onOpenAiTutorWithContext({
+      questionId: q.id,
+      question: q.content,
+      options: q.options,
+      skill: q.skill_name,
+      selectedWrong: !q.isCorrect && chosenIdx >= 0 ? `${chosenChar}. ${q.options[chosenIdx] || ''}` : null,
+      correctOption: correctIdx >= 0 ? `${correctChar}. ${q.options[correctIdx] || ''}` : correctChar,
+      difficultyB: q.bloom ? ((q.bloom - 3) * 0.5).toFixed(2) : 0.25,
+      predictedProb: 0.65
+    });
   };
 
   // Lọc danh sách câu hỏi trong bảng đánh giá chi tiết
@@ -914,17 +933,8 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
                 })}
               </div>
 
-              {/* Ask AI Socratic Tutor helper button */}
-              <div className="pt-2 flex items-center justify-between border-t border-slate-800/80">
-                <button
-                  type="button"
-                  onClick={handleAskSocraticTutor}
-                  className="px-4 py-2.5 rounded-xl bg-purple-600/15 hover:bg-purple-600/25 border border-purple-500/30 text-purple-300 font-extrabold text-xs flex items-center gap-2 transition-all shadow-sm"
-                >
-                  <Bot className="w-4 h-4 text-purple-400" />
-                  <span>Hỏi Gia Sư AI Về Câu Này (Socratic Tutor)</span>
-                </button>
-
+              {/* Time spent on current question */}
+              <div className="pt-2 flex items-center justify-end border-t border-slate-800/80">
                 <div className="text-xs text-slate-500 font-medium">
                   Thời gian trên câu này: <span className="font-mono text-cyan-400 font-bold">{timeSpentPerQ[currentQ.id] || 0}s</span>
                 </div>
@@ -1029,42 +1039,6 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
                   <span>Đánh dấu phân vân</span>
                 </div>
               </div>
-            </div>
-
-            {/* Socratic AI Tutor Quick Drawer Trigger */}
-            <div className="p-4 rounded-2xl bg-purple-950/20 border border-purple-500/20 space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-xs font-bold text-purple-300">
-                  <Bot className="w-4 h-4 text-purple-400" />
-                  <span>Socratic Tutor</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsTutorOpen(!isTutorOpen)}
-                  className="text-[11px] font-extrabold text-cyan-400 hover:underline"
-                >
-                  {isTutorOpen ? 'Thu gọn' : 'Mở rộng'}
-                </button>
-              </div>
-
-              {isTutorOpen && (
-                <div className="space-y-3 pt-2">
-                  <div className="text-[11px] text-slate-400 leading-relaxed">
-                    Gia sư AI giúp học sinh gợi mở tư duy, không tiết lộ đáp án trực tiếp:
-                  </div>
-
-                  <div className="text-xs text-slate-300 bg-slate-950/60 p-4 rounded-2xl border border-purple-500/20 max-h-60 overflow-y-auto leading-relaxed whitespace-pre-wrap">
-                    {tutorResponse ? (
-                      <MathText text={tutorResponse} />
-                    ) : (
-                      <div className="flex items-center gap-2 text-purple-400 animate-pulse">
-                        <Sparkles className="w-4 h-4 animate-spin" />
-                        <span>AI đang phân tích câu hỏi và soạn hướng dẫn tư duy...</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
             </div>
           </div>
         </div>
@@ -1484,15 +1458,70 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
                       })}
                     </div>
 
-                    {/* Detailed Explanation */}
-                    <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800/90 text-xs sm:text-sm space-y-1.5">
-                      <div className="text-xs font-black text-purple-400 flex items-center gap-1.5">
-                        <Sparkles className="w-3.5 h-3.5" />
-                        <span>Lời Giải & Hướng Dẫn Tư Duy Chi Tiết:</span>
+                    {/* Detailed Explanation & Post-Exam Socratic AI Tutor */}
+                    <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800/90 text-xs sm:text-sm space-y-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="text-xs font-black text-purple-400 flex items-center gap-1.5">
+                          <Sparkles className="w-3.5 h-3.5" />
+                          <span>Lời Giải & Hướng Dẫn Tư Duy Chi Tiết:</span>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleAskSocraticTutor(q)}
+                            className="px-3.5 py-1.5 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/40 text-purple-300 font-extrabold text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
+                          >
+                            <Bot className="w-3.5 h-3.5 text-purple-400" />
+                            <span>💡 Hỏi Gia Sư AI Socratic Về Câu Này</span>
+                          </button>
+
+                          {onOpenAiTutorWithContext && (
+                            <button
+                              type="button"
+                              onClick={() => handleOpenFullSocraticModal(q)}
+                              className="px-3.5 py-1.5 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/40 text-indigo-300 font-extrabold text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
+                            >
+                              <MessageSquare className="w-3.5 h-3.5 text-indigo-400" />
+                              <span>Chat Socratic Chuyên Sâu</span>
+                            </button>
+                          )}
+                        </div>
                       </div>
+
                       <div className="text-slate-300 leading-relaxed">
                         <MathText text={q.explanation} />
                       </div>
+
+                      {/* Inline Socratic Tutor Stream for this Question */}
+                      {activeTutorQuestionId === q.id && (
+                        <div className="mt-3 p-4 rounded-2xl bg-purple-950/30 border border-purple-500/30 space-y-2 animate-fade-in">
+                          <div className="flex items-center justify-between text-xs font-extrabold text-purple-300">
+                            <div className="flex items-center gap-1.5">
+                              <Bot className="w-4 h-4 text-purple-400" />
+                              <span>Gia Sư AI Socratic Phân Tích Tư Duy Câu {q.question_number}:</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setActiveTutorQuestionId(null)}
+                              className="text-[11px] text-slate-400 hover:text-white cursor-pointer"
+                            >
+                              Đóng
+                            </button>
+                          </div>
+
+                          <div className="text-xs sm:text-sm text-slate-200 leading-relaxed whitespace-pre-wrap">
+                            {tutorResponse ? (
+                              <MathText text={tutorResponse} />
+                            ) : (
+                              <div className="flex items-center gap-2 text-purple-400 animate-pulse">
+                                <Sparkles className="w-4 h-4 animate-spin" />
+                                <span>Gia sư Socratic đang phân tích lỗi sai và gợi mở hướng tư duy...</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 );

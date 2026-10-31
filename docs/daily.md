@@ -1,4 +1,21 @@
-﻿# NHẬT KÝ TIẾN ĐỘ HẰNG NGÀY (DAILY LOG) - V-EVAL WEB CLIENT
+# NHẬT KÝ TIẾN ĐỘ HẰNG NGÀY (DAILY LOG) - V-EVAL WEB CLIENT
+
+---
+
+## [31/10/2026] - Chuẩn Hóa Luồng Sư Phạm: Chỉ Mở Hỏi Gia Sư AI Socratic Ở Màn Hình Kết Quả & Xem Lại Đáp Án Sau Khi Làm Bài Xong
+
+- **Cải Tiến Luồng Khảo Thí Chẩn Đoán 30 Câu ([`DiagnosticAssessmentPage.jsx`](../src/components/diagnostic/DiagnosticAssessmentPage.jsx))**:
+  - Gỡ bỏ nút bấm và ngăn kéo *Socratic Tutor* khỏi màn hình đang thi (`stage === 'testing'`) để đảm bảo tính nghiêm túc khi khảo thí và học sinh tập trung hoàn thành bài làm.
+  - Bổ sung chức năng **Hỏi Gia Sư AI Socratic** trực tiếp tại từng thẻ câu hỏi trong **Bảng Đánh Giá Chi Tiết & Đáp Án 30 Câu Hỏi** ở màn hình kết quả (`stage === 'result'`):
+    + Nút **"💡 Hỏi Gia Sư AI Socratic Về Câu Này"**: Stream trực tiếp lời dẫn Socratic phân tích lỗi sai và hướng tư duy ngay bên dưới lời giải của câu hỏi đó.
+    + Nút **"Chat Socratic Chuyên Sâu"**: Đóng gói ngữ cảnh câu hỏi, phương án chọn sai và đáp án đúng chuyển sang modal [`AISocraticTutorModal.jsx`](../src/components/modals/AISocraticTutorModal.jsx).
+- **Cải Tiến Luồng Luyện Tập Thích Ứng ZPD ([`AdaptiveQuizModal.jsx`](../src/components/modals/AdaptiveQuizModal.jsx))**:
+  - Gỡ bỏ các nút hỏi AI khi đang làm câu hỏi (`!quizFinished`), lưu lịch sử phương án chọn của học sinh (`answerHistory`).
+  - Nâng cấp màn hình hoàn thành bài tập (`quizFinished === true`): Hiển thị thống kê số câu đúng, xác suất `P(L_t)` và **Danh sách Xem lại đáp án từng câu** (đối chiếu phương án học sinh chọn với đáp án đúng, giải thích chi tiết) kèm nút **"💡 Chưa hiểu bản chất câu này? Hỏi Gia sư AI Socratic bẻ khóa tư duy"** cho từng câu.
+- **Tích Hợp Hỏi Gia Sư AI Khi Xem Lại Phiếu Bài Tập Củng Cố ([`CurriculumExplorerView.jsx`](../src/components/curriculum/CurriculumExplorerView.jsx) & [`App.jsx`](../src/App.jsx))**:
+  - Bổ sung đối chiếu phương án chọn / đáp án đúng và nút **"💡 Chưa hiểu rõ câu này? Hỏi Gia sư AI Socratic giải thích"** tại màn hình kết quả `quizShowResults` của phiếu bài tập củng cố.
+- **Kiểm Thử Đóng Gói (Build & Unit Test Verification)**:
+  - Chạy `npm test` (3/3 pass) và `npm run build` (`vite build`) thành công 100%.
 
 ---
 
