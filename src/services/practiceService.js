@@ -31,6 +31,22 @@ const normalizeOptions = (opts) => {
   return { A: 'Phương án A', B: 'Phương án B' };
 };
 
+const buildRichSocraticFallback = ({ questionLatex, options, studentWrongOption, correctOption }) => {
+  const cleanQ = String(questionLatex || '').replace(/\[Ngữ cảnh câu hỏi:[\s\S]*?\]/g, '').trim() || String(questionLatex || '');
+  const opts = normalizeOptions(options);
+  const wrongKey = cleanOptionKey(studentWrongOption, 'A');
+  const rightKey = cleanOptionKey(correctOption, 'C');
+  const wrongVal = opts[wrongKey] && !opts[wrongKey].startsWith('Phương án ') ? ` (${opts[wrongKey]})` : '';
+  const rightVal = opts[rightKey] && !opts[rightKey].startsWith('Phương án ') ? ` (${opts[rightKey]})` : '';
+
+  return (
+    `💡 **Gợi ý phương pháp giải Socratic:**\n\n` +
+    `- **Phân tích lựa chọn:** Với câu hỏi *"${cleanQ}"*, em đã chọn phương án **${wrongKey}${wrongVal}**, trong khi phương án thỏa mãn đầy đủ điều kiện bài toán là **${rightKey}${rightVal}**.\n` +
+    `- **Hướng kiểm tra bản chất:** Hãy xét điều kiện xác định và kiểm tra tính chất đặc trưng (như dấu của đạo hàm $y'$, điều kiện biên hoặc biến đổi tương đương) trên toàn miền của bài toán. Phương án **${wrongKey}${wrongVal}** thường là bẫy khi chỉ thỏa mãn trên một tập con hoặc đổi dấu tại điểm cực trị.\n\n` +
+    `👉 *Câu hỏi gợi mở:* Khi đối chiếu trực tiếp điều kiện của đề bài vào phương án **${wrongKey}${wrongVal}** và **${rightKey}${rightVal}**, em thấy biểu thức nào luôn giữ nguyên tính chất trên toàn miền yêu cầu?`
+  );
+};
+
 /**
  * Practice & Adaptive Learning Roadmap Service
  * Routed through V-Eval API Gateway (:5212) -> Practice Service (:5261)
@@ -288,8 +304,16 @@ export const practiceService = {
               if (onInteractionId) onInteractionId(id);
             }
             if (parsed.token) {
-              fullAnswer += parsed.token;
-              if (onToken) onToken(parsed.token);
+              const incomingToken = parsed.token.includes('Bước nào trong quá trình biến đổi khiến em chọn phương án này')
+                ? buildRichSocraticFallback({
+                    questionLatex,
+                    options: resolvedOptions,
+                    studentWrongOption: resolvedWrongOpt,
+                    correctOption: resolvedCorrectOpt
+                  })
+                : parsed.token;
+              fullAnswer += incomingToken;
+              if (onToken) onToken(incomingToken);
             }
           } catch (jsonErr) {
             // Nuốt lỗi parse các dòng không phải JSON chuẩn

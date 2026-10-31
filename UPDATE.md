@@ -1,14 +1,12 @@
 # NHẬT KÝ CẬP NHẬT (UPDATE LOG) - WEB CLIENT
 
-## [31/10/2026] - Chuẩn Hóa Luồng Sư Phạm: Xem Lại Đáp Án Sau Khi Làm Bài Xong Mới Hỏi Gia Sư AI Socratic & Đồng Bộ Nhánh Develop
+## [31/10/2026] - Khắc Phục Triệt Để Tương Phản Hiển Thị Khi Hỏi Gia Sư AI Socratic & Phân Tích Tư Duy Bám Sát Từng Câu Hỏi
 
-- **Cải Tiến Luồng Khảo Thí Chẩn Đoán 30 Câu (`src/components/diagnostic/DiagnosticAssessmentPage.jsx`)**:
-  - Loại bỏ nút hỏi AI và khung *Socratic Tutor* trong lúc học sinh đang làm bài thi (`stage === 'testing'`) để đảm bảo sự tập trung và tính khách quan của kỳ khảo sát.
-  - Tích hợp nút **"💡 Hỏi Gia Sư AI Socratic Về Câu Này"** (streaming trực tiếp ngay dưới lời giải) và **"Chat Socratic Chuyên Sâu"** (mở `AISocraticTutorModal` kèm ngữ cảnh câu hỏi & đáp án chọn sai) tại từng câu hỏi trong **Bảng Đánh Giá Chi Tiết & Đáp Án 30 Câu Hỏi** sau khi nộp bài (`stage === 'result'`).
-- **Cải Tiến Luồng Luyện Tập Thích Ứng ZPD (`src/components/modals/AdaptiveQuizModal.jsx`)**:
-  - Ghi nhận lịch sử chọn đáp án của học sinh trong suốt phiên làm bài mà không làm gián đoạn bằng các nút gợi ý sớm.
-  - Khi hoàn thành bài luyện tập (`quizFinished === true`), hiển thị thống kê kết quả kèm danh sách **Xem Lại Đáp Án & Hỏi Gia Sư AI Socratic** cho từng câu hỏi (đối chiếu đáp án bạn chọn, đáp án đúng, giải thích chi tiết và nút gọi Gia sư AI Socratic bẻ khóa tư duy).
-- **Tích Hợp Hỏi Gia Sư AI Ở Kết Quả Phiếu Bài Tập Củng Cố (`src/components/curriculum/CurriculumExplorerView.jsx` & `src/App.jsx`)**:
-  - Bổ sung đối chiếu phương án đã chọn / đáp án đúng và nút hỏi Gia sư AI Socratic cho từng câu hỏi tại màn hình kết quả phiếu bài tập củng cố (`quizShowResults`).
+- **Khắc Phục Lỗi Chữ Tối Không Đọc Được Trên Nền Tối & Ký Tự `:**` Thừa (`src/components/common/MathText.jsx`)**:
+  - Gỡ bỏ các class màu tối cứng (`text-slate-700`, `text-slate-800`, `text-slate-900`) trên các dòng văn bản, danh sách bullet, thẻ `<strong>` và `<em>`, giúp nội dung Gia sư AI hiển thị chữ trắng (`text-white`) rõ nét 100% trên nền tối của bảng kết quả khảo thí.
+  - Sửa regex chuẩn hóa tiêu đề in đậm để không cắt mất dấu `**` mở đầu trong chuỗi `💡 **Gợi ý phương pháp giải:**` và loại bỏ dấu `:**` thừa trên thẻ Callout.
+- **Phân Tích Tư Duy Socratic Bám Sát 100% Đề Bài & Phương Án Đã Chọn (`src/components/diagnostic/DiagnosticAssessmentPage.jsx` & `src/services/practiceService.js`)**:
+  - Bổ sung bộ phân tích `buildContextualSocraticAnalysis(q)` và `buildRichSocraticFallback`: Tự động đối chiếu phương án học sinh đã chọn (ví dụ `A: y = x^4 + 2x^2`) với đáp án đúng (`C: y = x^3 + 3x - 1`), kết hợp định lý/lời giải của câu hỏi để đưa ra phân tích và câu hỏi gợi mở sát thực tế thay vì câu thông báo chung chung.
+  - Chỉ hiển thị nút hỏi Gia sư AI ở màn hình kết quả & xem lại đáp án sau khi học sinh đã hoàn thành bài làm (`DiagnosticAssessmentPage.jsx`, `AdaptiveQuizModal.jsx`, `CurriculumExplorerView.jsx`).
 - **Kiểm Thử Đóng Gói & Unit Test**:
-  - Chạy `npm test` (`node --test`, 3/3 pass) và `npm run build` (`vite build`, 0 error) thành công 100%.
+  - Chạy `npm test` (3/3 pass) và `npm run build` (`vite build`, 0 error) thành công 100%.

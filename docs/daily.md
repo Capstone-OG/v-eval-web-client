@@ -2,8 +2,14 @@
 
 ---
 
-## [31/10/2026] - Chuẩn Hóa Luồng Sư Phạm: Chỉ Mở Hỏi Gia Sư AI Socratic Ở Màn Hình Kết Quả & Xem Lại Đáp Án Sau Khi Làm Bài Xong
+## [31/10/2026] - Chuẩn Hóa Luồng Sư Phạm Hỏi Gia Sư AI Socratic Sau Khi Nộp Bài & Khắc Phục Triệt Để Tương Phản Chữ Tối Trên Nền Tối Trong `MathText`
 
+- **Khắc Phục Lỗi Chữ Tối Không Đọc Được Trên Nền Tối & Lỗi Ký Tự `:**` Trong [`MathText.jsx`](../src/components/common/MathText.jsx)**:
+  - Loại bỏ các class màu chữ tối cố định (`text-slate-700`, `text-slate-800`, `text-slate-900`) trên các dòng văn bản, danh sách bullet, chữ in đậm `<strong>` và chữ in nghiêng `<em>`, cho phép `MathText` kế thừa màu chữ sáng (`text-white` / `text-slate-100`) khi hiển thị trên nền tối của trang kết quả khảo thí.
+  - Sửa biểu thức chính quy chuẩn hóa tiêu đề in đậm để không cắt mất dấu `**` mở đầu trong chuỗi `💡 **Gợi ý phương pháp giải:**` và làm sạch hoàn toàn dấu `**` thừa ở cuối thẻ Callout.
+- **Tích Hợp Phân Tích Socratic Giàu Ngữ Cảnh Theo Từng Câu Hỏi ([`DiagnosticAssessmentPage.jsx`](../src/components/diagnostic/DiagnosticAssessmentPage.jsx) & [`practiceService.js`](../src/services/practiceService.js))**:
+  - Xây dựng hàm `buildContextualSocraticAnalysis(q)` và `buildRichSocraticFallback`: Khi học sinh bấm hỏi Gia sư AI ở màn hình kết quả mà dịch vụ RAG chưa bật hoặc trả về chuỗi mẫu chung chung, hệ thống tự động phân tích chi tiết phương án học sinh vừa chọn (ví dụ `A: y = x^4 + 2x^2`), đối chiếu với đáp án đúng (`C: y = x^3 + 3x - 1`), trích xuất định lý/đạo hàm từ lời giải của câu hỏi và đặt câu hỏi gợi mở sát 100% nội dung đề bài.
+  - Thiết kế lại khung hiển thị phân tích Socratic với nền Indigo/Purple tương phản cao và chữ trắng sắc nét (`text-white`).
 - **Cải Tiến Luồng Khảo Thí Chẩn Đoán 30 Câu ([`DiagnosticAssessmentPage.jsx`](../src/components/diagnostic/DiagnosticAssessmentPage.jsx))**:
   - Gỡ bỏ nút bấm và ngăn kéo *Socratic Tutor* khỏi màn hình đang thi (`stage === 'testing'`) để đảm bảo tính nghiêm túc khi khảo thí và học sinh tập trung hoàn thành bài làm.
   - Bổ sung chức năng **Hỏi Gia Sư AI Socratic** trực tiếp tại từng thẻ câu hỏi trong **Bảng Đánh Giá Chi Tiết & Đáp Án 30 Câu Hỏi** ở màn hình kết quả (`stage === 'result'`):
