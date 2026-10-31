@@ -810,6 +810,10 @@ V-Eval-Web_Client/
     - **Equation Systems & Matrix Logic**: 2-3 variable linear systems with simultaneous brace notations.
     - **Chemistry Lab Workbench**: Molarity (`C_M`), mass concentration (`C%`), mass equation, and reaction yield calculations.
     - **7-Subject Symbol Library**: Quick link to open the full left hierarchical math palette.
+- **Ultra-Slim Left Pedagogical Symbol Palette Architecture**:
+  - Downscaled expanded sidebar width by ~25-30% from `w-76 sm:w-84` (304px - 336px) down to high-density `w-60 sm:w-64` (240px - 256px), freeing up over 80px-96px of critical horizontal viewport for the central pedagogical sheet and split preview.
+  - Slimmed the collapsed icon rail down from `w-12` to minimal `w-10` with 28px square icon buttons (`w-7 h-7`).
+  - Consolidated header chrome to a single tight title bar, optimized quick search input to `py-1 text-[11px]`, and streamlined subject domain pills and KaTeX tile footprints (`min-h-[30px]`) with clean typography.
 - **Adaptive Question Bank Cards & Proportional Rectangular Solution Container**:
   - Eliminated the restrictive fixed-height `max-h-80 overflow-y-auto` scroll wrapper on the supplementary question bank list in Block 4.
   - Re-architected questions into decoupled, individually structured cards with natural vertical height (`h-auto`), preventing clipping and double scrollbar artifacts on nested SVG variation tables and 2D/3D graphs.

@@ -2,6 +2,21 @@
 
 ---
 
+## [01/11/2026] - Tinh Gọn Thanh Sidebar Ký Hiệu Bên Trái Studio Sư Phạm & Tiết Kiệm Tối Đa Không Gian Soạn Thảo
+
+- **Tinh Gọn Thanh Sidebar Ký Hiệu Bên Trái (`HierarchicalMathPalette.jsx` & `CurriculumStudioEditor.jsx`)**:
+  - *Thu Hẹp Chiều Rộng Đáng Kể (~25-30% Diện Tích)*:
+    + Giảm mạnh chiều rộng thanh Sidebar mở rộng từ `w-76 sm:w-84` (304px - 336px) xuống `w-60 sm:w-64` (240px - 256px), hoàn trả ngay lập tức gần 80px - 96px chiều ngang cho không gian làm việc và khung soạn thảo bài giảng chính.
+    + Thu gọn thanh ray khi đóng (Collapsed Rail) từ `w-12` xuống `w-10` với bộ nút icon tròn nhỏ gọn (`w-7 h-7 rounded-lg`).
+  - *Thiết Kế Lại Header & Ô Tìm Kiếm Siêu Gọn Nhẹ*:
+    + Nén Header thành 1 hàng ngang duy nhất (`px-2.5 py-2 text-[10px]`), loại bỏ dòng mô tả phụ rườm rà.
+    + Tối ưu ô tìm kiếm nhanh (`Search Input`) với padding mỏng `py-1 text-[11px]` và khoảng đệm nhỏ nhắn.
+  - *Tinh Gọn Lưới Thẻ Ký Hiệu & Hợp Chất 7 Môn Học*:
+    + Thu nhỏ chiều cao tối thiểu của thẻ công thức từ `min-h-[38px]` xuống `min-h-[30px] - min-h-[32px]`, cỡ chữ KaTeX `text-[12px]`, nhãn tên `text-[9.5px]` sắc nét.
+    + Tinh giản thanh chuyển đổi phân môn (Domain Pills) với padding `py-0.5 px-1.5 text-[10px]` và thanh footer chân trang ngắn gọn (`text-[9.5px]`).
+
+---
+
 ## [01/11/2026] - Giải Phóng Khung Câu Hỏi Bổ Sung & Tự Động Co Giãn Khung Chữ Nhật Lời Giải Chi Tiết Chuẩn Sư Phạm
 
 - **Tách Rời Từng Thẻ Câu Hỏi Linh Hoạt & Xóa Bỏ Khung Cuộn Gò Bó (`CurriculumStudioEditor.jsx`)**:

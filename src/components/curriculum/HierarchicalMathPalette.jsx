@@ -742,16 +742,16 @@ export default function HierarchicalMathPalette({
   // COLLAPSED ULTRA-THIN SIDEBAR (CLEAN WHITE TONE)
   if (isCollapsed) {
     return (
-      <div className="w-12 bg-white border-r border-slate-200 flex flex-col items-center py-3 space-y-3 shrink-0 select-none h-full z-20 shadow-xs">
+      <div className="w-10 bg-white border-r border-slate-200 flex flex-col items-center py-2.5 space-y-2 shrink-0 select-none h-full z-20 shadow-xs">
         <button
           type="button"
           onClick={onToggleCollapse}
-          className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-indigo-50 text-slate-600 hover:text-indigo-700 flex items-center justify-center transition-colors shadow-2xs cursor-pointer border border-slate-200"
-          title="Mở rộng Thư viện Công thức & Hợp chất"
+          className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-indigo-50 text-slate-600 hover:text-indigo-700 flex items-center justify-center transition-colors shadow-2xs cursor-pointer border border-slate-200"
+          title="Mở rộng Thư viện Công thức (»)"
         >
-          <ChevronRight className="w-4 h-4 text-indigo-600" />
+          <ChevronRight className="w-3.5 h-3.5 text-indigo-600" />
         </button>
-        <div className="w-6 h-[1px] bg-slate-200 my-1"></div>
+        <div className="w-5 h-[1px] bg-slate-200 my-0.5"></div>
         {domainKeys.map((key) => {
           const dom = HIERARCHICAL_CATALOG[key];
           return (
@@ -762,7 +762,7 @@ export default function HierarchicalMathPalette({
                 setSelectedDomain(key);
                 if (onToggleCollapse) onToggleCollapse();
               }}
-              className={`w-8 h-8 rounded-xl flex items-center justify-center text-sm transition-all cursor-pointer ${
+              className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs transition-all cursor-pointer ${
                 selectedDomain === key
                   ? 'bg-indigo-600 text-white shadow-sm font-bold'
                   : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900 border border-transparent'
@@ -779,50 +779,42 @@ export default function HierarchicalMathPalette({
 
   // EXPANDED SIDEBAR: STUDIO FORMULA & CHEMICAL COMPOUND LIBRARY
   return (
-    <div className="w-76 sm:w-84 bg-slate-50/40 text-slate-800 border-r border-slate-200 flex flex-col shrink-0 select-none text-xs h-full relative z-20 shadow-sm">
+    <div className="w-60 sm:w-64 bg-slate-50/40 text-slate-800 border-r border-slate-200 flex flex-col shrink-0 select-none text-xs h-full relative z-20 shadow-sm">
       
       {/* 1. Studio Header with Drag-and-Drop Badge */}
-      <div className="px-3 py-2.5 border-b border-slate-200 bg-gradient-to-r from-indigo-950 via-slate-900 to-cyan-950 text-white">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span className="font-black uppercase tracking-wider text-[11px] text-white">
-              Thư Viện Công Thức & Hợp Chất
-            </span>
-          </div>
-          <button
-            type="button"
-            onClick={onToggleCollapse}
-            className="p-1 rounded-lg bg-white/10 hover:bg-white/20 text-slate-200 hover:text-white transition-colors cursor-pointer"
-            title="Thu gọn thư viện"
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </button>
-        </div>
-        <div className="mt-1.5 flex items-center justify-between text-[10px] text-cyan-200/90 font-medium">
-          <span className="flex items-center gap-1">
-            <Sparkles className="w-3 h-3 text-amber-300 shrink-0" />
-            <span>Kéo - Thả vào đề/BBT hoặc Nhấp để chèn</span>
+      <div className="px-2.5 py-2 border-b border-slate-200 bg-gradient-to-r from-indigo-950 via-slate-900 to-cyan-950 text-white flex items-center justify-between shrink-0">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0"></span>
+          <span className="font-extrabold uppercase tracking-wider text-[10px] text-white truncate">
+            Thư Viện Công Thức
           </span>
         </div>
+        <button
+          type="button"
+          onClick={onToggleCollapse}
+          className="p-1 rounded-lg bg-white/10 hover:bg-white/20 text-slate-200 hover:text-white transition-colors cursor-pointer shrink-0"
+          title="Thu gọn thư viện («)"
+        >
+          <ChevronLeft className="w-3.5 h-3.5" />
+        </button>
       </div>
 
       {/* 2. Fast Instant Search Input */}
-      <div className="p-2.5 border-b border-slate-200 bg-white">
+      <div className="p-2 border-b border-slate-200 bg-white shrink-0">
         <div className="relative">
-          <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
+          <Search className="w-3 h-3 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Tìm H2SO4, Fe3O4, √x, BBT, đạo hàm, este..."
-            className="w-full bg-slate-50 hover:bg-white focus:bg-white border border-slate-200 focus:border-indigo-500 rounded-xl pl-8 pr-6 py-1.5 text-xs text-slate-800 placeholder-slate-400 outline-none transition-all shadow-2xs"
+            placeholder="Tìm H2SO4, √x, đạo hàm, este..."
+            className="w-full bg-slate-50 hover:bg-white focus:bg-white border border-slate-200 focus:border-indigo-500 rounded-lg pl-7 pr-6 py-1 text-[11px] text-slate-800 placeholder-slate-400 outline-none transition-all shadow-2xs"
           />
           {searchQuery && (
             <button
               type="button"
               onClick={() => setSearchQuery('')}
-              className="absolute right-2.5 top-2 text-slate-400 hover:text-slate-700 text-[11px] font-bold cursor-pointer"
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 text-[10px] font-bold cursor-pointer"
             >
               ✕
             </button>
@@ -832,7 +824,7 @@ export default function HierarchicalMathPalette({
 
       {/* 3. Domain Switcher Pills (Toán, Hóa, Lý, Sinh, Văn, Địa, Ký Hiệu) */}
       {!searchResults && (
-        <div className="px-2.5 py-2 border-b border-slate-200 bg-white space-y-1.5">
+        <div className="px-2 py-1.5 border-b border-slate-200 bg-white space-y-1 shrink-0">
           <div className="flex flex-wrap gap-1">
             {domainKeys.map((domKey) => {
               const dom = HIERARCHICAL_CATALOG[domKey];
@@ -843,7 +835,7 @@ export default function HierarchicalMathPalette({
                   key={domKey}
                   type="button"
                   onClick={() => setSelectedDomain(domKey)}
-                  className={`py-1 px-2 rounded-xl font-bold text-[11px] flex items-center gap-1 transition-all cursor-pointer border ${
+                  className={`py-0.5 px-1.5 rounded-lg font-bold text-[10px] flex items-center gap-1 transition-all cursor-pointer border ${
                     isAct
                       ? domStyle.pillActive
                       : 'bg-slate-50/80 text-slate-600 hover:bg-slate-100 hover:text-slate-900 border-slate-200/80'
@@ -856,7 +848,7 @@ export default function HierarchicalMathPalette({
               );
             })}
           </div>
-          <div className="flex items-center justify-between pt-0.5 px-0.5 text-[10px] text-slate-500">
+          <div className="flex items-center justify-between pt-0.5 px-0.5 text-[9.5px] text-slate-500">
             <span className="font-bold text-slate-700">
               {currentDomain.icon} {currentDomain.name}
             </span>
@@ -882,7 +874,7 @@ export default function HierarchicalMathPalette({
       )}
 
       {/* 4. MAIN BODY: VISUAL FORMULA & CHEMICAL COMPOUND CARDS */}
-      <div className="flex-1 overflow-y-auto p-2.5 space-y-2.5 scrollbar-thin">
+      <div className="flex-1 overflow-y-auto p-2 space-y-2 scrollbar-thin">
         
         {/* CASE A: SEARCH RESULTS LIST */}
         {searchResults ? (
@@ -909,7 +901,7 @@ export default function HierarchicalMathPalette({
                     className="p-2 rounded-2xl bg-white hover:bg-indigo-50/40 border border-slate-200/90 hover:border-indigo-400 transition-all flex flex-col justify-between gap-1.5 cursor-grab active:cursor-grabbing group shadow-2xs hover:shadow-md hover:-translate-y-0.5"
                   >
                     {/* Live Rendered KaTeX Preview Box */}
-                    <div className="w-full min-h-[38px] px-2 py-1.5 rounded-xl bg-slate-50/90 group-hover:bg-white border border-slate-100 group-hover:border-indigo-200 flex items-center justify-center overflow-x-auto scrollbar-none">
+                    <div className="w-full min-h-[32px] px-1 py-1 rounded-lg bg-slate-50/90 group-hover:bg-white border border-slate-100 group-hover:border-indigo-200 flex items-center justify-center overflow-x-auto scrollbar-none">
                       <div
                         className="text-[13px] text-slate-900 font-serif leading-none"
                         dangerouslySetInnerHTML={{ __html: renderKatexHtml(item.preview || item.code, false) }}
@@ -980,7 +972,7 @@ export default function HierarchicalMathPalette({
                           className={`p-1.5 rounded-xl bg-white border border-slate-200/90 ${activeTheme.cardHover} transition-all flex flex-col justify-between gap-1 cursor-grab active:cursor-grabbing group shadow-2xs hover:shadow-sm hover:-translate-y-0.5`}
                         >
                           {/* Top Visual KaTeX Formula / Chemical Compound Display */}
-                          <div className="w-full min-h-[34px] px-1.5 py-1 rounded-lg bg-slate-50/90 group-hover:bg-white border border-slate-100 group-hover:border-slate-200 flex items-center justify-center overflow-x-auto scrollbar-none">
+                          <div className="w-full min-h-[30px] px-1 py-0.5 rounded-lg bg-slate-50/90 group-hover:bg-white border border-slate-100 group-hover:border-slate-200 flex items-center justify-center overflow-x-auto scrollbar-none">
                             <div
                               className={`text-[12.5px] font-serif leading-none ${activeTheme.formulaText}`}
                               dangerouslySetInnerHTML={{ __html: renderKatexHtml(item.preview || item.code, false) }}
@@ -1006,7 +998,7 @@ export default function HierarchicalMathPalette({
       </div>
 
       {/* 5. Minimalist Studio Footer Guidance */}
-      <div className="px-3 py-2 border-t border-slate-200 bg-white text-[10px] text-slate-600 flex items-center justify-between">
+      <div className="px-2 py-1.5 border-t border-slate-200 bg-white text-[9.5px] text-slate-500 flex items-center justify-between shrink-0">
         <span className="flex items-center gap-1 font-semibold text-indigo-700">
           <GripVertical className="w-3 h-3" />
           <span>Hỗ trợ Kéo - Thả trực tiếp</span>

@@ -1,20 +1,21 @@
 # NHẬT KÝ CẬP NHẬT (UPDATE LOG) - WEB CLIENT
 
-## [01/11/2026] - Tách Rời Thẻ Câu Hỏi Linh Hoạt & Khung Chữ Nhật Lời Giải Chi Tiết Tự Động Co Giãn Trong Studio Sư Phạm
+## [01/11/2026] - Tinh Gọn Chiều Rộng Sidebar Ký Hiệu Bên Trái & Tiết Kiệm Tối Đa Diện Tích Soạn Thảo
 
-- **Tách Rời Từng Thẻ Câu Hỏi Linh Hoạt & Xóa Bỏ Khung Cuộn Gò Bó (`CurriculumStudioEditor.jsx`)**:
-  - *Giải Phóng Khung Giới Hạn Chiều Cao (max-h-80)*:
-    + Loại bỏ hoàn toàn `max-h-80 overflow-y-auto` bó hẹp danh sách câu hỏi trong ngân hàng đề Khối 4.
-    + Tách rời từng câu hỏi thành các Card độc lập (`p-5 rounded-2xl border border-slate-200 bg-white shadow-xs`), co giãn tự nhiên theo chiều cao thực tế (`h-auto`), triệt tiêu hiện tượng vỡ bảng biến thiên hay thanh cuộn kép.
-  - *Hiển Thị Đầy Đủ 4 Phương Án A, B, C, D & Lưới Lựa Chọn Chuẩn Mực*:
-    + Hiển thị lưới phương án trực quan, làm nổi bật phương án đúng màu xanh ngọc (`emerald`).
-  - *Khung Lời Giải Chi Tiết Hình Chữ Nhật Tự Động Co Giãn Cân Đối*:
-    + Thiết kế khung Lời giải chi tiết (`q.explanation`) thành một hình chữ nhật hoàn chỉnh (`w-full p-4 rounded-2xl bg-slate-50 border border-slate-200 shadow-2xs`).
-    + Tự động co giãn chiều cao tương ứng với số lượng chữ và công thức (`h-auto break-words whitespace-pre-line`), đảm bảo bố cục chữ nhật vuông vức, cân đối và thẩm mỹ.
+- **Tinh Gọn Thanh Sidebar Ký Hiệu Bên Trái (`HierarchicalMathPalette.jsx` & `CurriculumStudioEditor.jsx`)**:
+  - *Thu Hẹp Chiều Rộng Đáng Kể (~25-30% Diện Tích)*:
+    + Giảm mạnh chiều rộng thanh Sidebar mở rộng từ `w-76 sm:w-84` (304px - 336px) xuống `w-60 sm:w-64` (240px - 256px), giải phóng ngay gần 80px - 96px chiều ngang cho không gian làm việc và khung soạn thảo bài giảng.
+    + Thu gọn thanh ray khi đóng (Collapsed Rail) từ `w-12` xuống `w-10` với bộ nút icon tròn nhỏ gọn (`w-7 h-7`).
+  - *Thiết Kế Lại Header & Ô Tìm Kiếm Siêu Gọn Nhẹ*:
+    + Nén Header thành 1 hàng ngang duy nhất (`text-[10px]`), loại bỏ dòng mô tả phụ rườm rà.
+    + Tối ưu ô tìm kiếm nhanh (`Search Input`) với padding mỏng `py-1 text-[11px]`.
+  - *Tinh Gọn Lưới Thẻ Ký Hiệu & Hợp Chất 7 Môn Học*:
+    + Thu nhỏ thẻ công thức xuống `min-h-[30px]`, cỡ chữ KaTeX `text-[12px]`, nhãn tên `text-[9.5px]` sắc nét.
+    + Tinh giản thanh chuyển đổi phân môn (Domain Pills) với padding `py-0.5 px-1.5 text-[10px]`.
+
+- **Tách Rời Từng Thẻ Câu Hỏi Linh Hoạt & Khung Chữ Nhật Lời Giải Chi Tiết (`CurriculumStudioEditor.jsx`)**:
+  - Loại bỏ hoàn toàn `max-h-80 overflow-y-auto`, tách rời từng câu hỏi thành card độc lập (`h-auto`).
+  - Hiển thị đầy đủ 4 phương án A-D và khung chữ nhật lời giải chi tiết tự động co giãn theo dung lượng chữ.
 
 - **Loại Bỏ Banner Header Live Preview Xanh Lá Cây (`CurriculumStudioEditor.jsx`)**:
   - Gỡ bỏ banner xanh ngọc ở đỉnh cột phải xem trước, tiết kiệm ~60px chiều cao màn hình.
-
-- **Tối Giản Hóa Toàn Diện Bảng Slide-Over STEM Drawer (`CurriculumStudioEditor.jsx`)**:
-  - Gỡ bỏ dropdown STEM thừa trên thanh top header; loại bỏ huy hiệu `GDPT 2018` và các badge phụ.
-  - Thêm ô tìm kiếm trực tiếp (`Search input`); danh sách chỉ hiển thị Tiêu đề và Mô tả ngắn gọn (0% icon/emoji); chèn trực tiếp tại đúng dòng con trỏ.
