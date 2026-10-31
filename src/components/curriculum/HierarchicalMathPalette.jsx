@@ -602,6 +602,19 @@ export default function HierarchicalMathPalette({
   // Single domain display with smooth slide transition direction
   const [slideDirection, setSlideDirection] = useState('next');
 
+  // Parse Bảng Biến Thiên for visual preview in hover card
+  const hoveredBbtData = useMemo(() => {
+    if (!hoveredItem?.code) return null;
+    if (hoveredItem.isBlockTemplate && hoveredItem.code.includes('[VARIATION_TABLE]')) {
+      try {
+        return parseVariationTableString(hoveredItem.code);
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  }, [hoveredItem]);
+
   const handleNextDomain = () => {
     const n = domainKeys.length;
     const curIdx = domainKeys.indexOf(selectedDomain);

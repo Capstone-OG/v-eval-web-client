@@ -884,3 +884,8 @@ V-Eval-Web_Client/
   - Integrated `parseVariationTableString` and the native `<VariationTable />` engine directly within the hover preview card.
   - When educators hover over `BBT Bậc 3`, `BBT Bậc 4`, or `BBT Phân Thức`, the inspector instantly renders an authentic, vector-drawn, 3-row variation table complete with exact coordinate poles, derivative sign alternation, double-vertical asymptotic bars (`||`), and directional trajectory arrows.
   - Standard formulas continue to render in high-resolution, enlarged vector KaTeX typography with natural-case subject headers.
+
+### 4.43. Safe Memoized AST Deserialization for In-Hover Variation Tables (`HierarchicalMathPalette.jsx`)
+- **Resolution of Runtime ReferenceError**:
+  - Resolved missing declaration bug where `hoveredBbtData` was referenced conditionally in JSX before being bound to component scope.
+  - Memoized the AST parsing logic via `useMemo` with error boundary wrapping (`try/catch` fallback to null) so that hover traversal across thousands of formulas remains performant at 60fps without runtime exceptions.

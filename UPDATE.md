@@ -1,12 +1,14 @@
 # NHẬT KÝ CẬP NHẬT (UPDATE LOG) - WEB CLIENT
 
-## [01/11/2026] - Loại Bỏ Khối Terminal Đen Thô Kệch & Render Trực Quan Bảng Biến Thiên Trong Thẻ Hover Sư Phạm
+## [01/11/2026] - Khắc Phục Lỗi Runtime ReferenceError & Hoàn Thiện Render Bảng Biến Thiên Trực Quan Trong Thẻ Hover
 
-- **Loại Bỏ Khối Terminal Đen Thô Kệch & Render Trực Quan Bảng Biến Thiên (`HierarchicalMathPalette.jsx`)**:
-  - Xóa bỏ 100% khối hộp đen developer debug dump hiển thị code thô `[VARIATION_TABLE]` gây phản cảm cho người dùng sư phạm.
-  - Tích hợp component `<VariationTable />` trực tiếp vào thẻ Hover: Tự động render Bảng biến thiên trực quan vector mẫu với đầy đủ 3 dòng `x`, `y'`, `y`, vạch kép tiệm cận `||`, mũi tên và cực trị chuẩn SGK.
-  - Chuẩn hóa Header thẻ Hover sang chữ thường thanh lịch (`Icon + Tên Môn • Danh mục`), loại bỏ dòng cú pháp code kỹ thuật.
-  - Bộ chuyển đổi 1 môn học duy nhất ở trung tâm không bao giờ tràn chữ, tích hợp hiệu ứng trượt động mượt mà khi bấm `<` hoặc `>` và 7 chấm định vị trực quan.
+- **Khắc Phục Lỗi Runtime ReferenceError (`HierarchicalMathPalette.jsx`)**:
+  - Khai báo an toàn `hoveredBbtData` qua `useMemo` và `parseVariationTableString`, triệt tiêu hoàn toàn lỗi `hoveredBbtData is not defined` khi mở thẻ xem trước trực quan.
+  - Component `<VariationTable />` render mượt mà bảng biến thiên vector mẫu trực tiếp bên trong thẻ Hover sư phạm, loại bỏ 100% khối hộp đen code thô.
+
+- **Bộ Chuyển Đổi 1 Môn Học Duy Nhất Kèm Hiệu Ứng Slide Trượt Mượt Mà**:
+  - Trung tâm hiển thị duy nhất 1 môn học rõ nét, font đậm `text-[12px]`, 100% không bao giờ tràn chữ hay co cụm.
+  - Hiệu ứng trượt mượt mà (`animate-in fade-in slide-in-from-right-4 / slide-in-from-left-4`), dải 7 chấm tròn định vị và vòng lặp vô hạn.
 
 - **Đại Tu Toàn Diện Giao Diện Sidebar Ký Hiệu & STEM**:
   - Header trắng tinh khôi chuẩn Apple / Linear, huy hiệu `Sparkles` và tiêu đề `Ký Hiệu & STEM`.

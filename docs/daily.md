@@ -2,6 +2,15 @@
 
 ---
 
+## [01/11/2026] - Khắc Phục Lỗi Runtime ReferenceError (hoveredBbtData Is Not Defined) & Hoàn Thiện Render Bảng Biến Thiên Trực Quan
+
+- **Khắc Phục Triệt Để Lỗi Khai Báo `hoveredBbtData` (`HierarchicalMathPalette.jsx`)*:
+  - Bổ sung khai báo `hoveredBbtData` qua React hook `useMemo` gắn với `hoveredItem`, tự động phân tích cú pháp khối Bảng Biến Thiên `[VARIATION_TABLE]` bằng `parseVariationTableString`.
+  - Triệt tiêu hoàn toàn lỗi màn hình trắng `ReferenceError: hoveredBbtData is not defined` khi người dùng rê chuột vào bất kỳ công thức hoặc Bảng biến thiên nào trong thư viện.
+  - Bảo đảm component `<VariationTable data={hoveredBbtData} />` nhận dữ liệu chuẩn xác và render sống động 100% trên thẻ xem trước trực quan.
+
+---
+
 ## [01/11/2026] - Loại Bỏ Triệt Để Khối Terminal Đen Thô Kệch & Tích Hợp Render Trực Quan Bảng Biến Thiên Vector Trong Thẻ Hover Sư Phạm
 
 - **Loại Bỏ Khối Terminal Đen Thô Kệch & Tích Hợp Render Trực Quan (`HierarchicalMathPalette.jsx` & `VariationTable.jsx`)**:
