@@ -2297,20 +2297,6 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
         {/* ================= RIGHT: HIGH-FIDELITY LIVE STUDENT PREVIEW (5 Cols in Split, Full in Preview) ================= */}
         {(viewMode === 'preview' || viewMode === 'split') && (
           <div className={`${viewMode === 'split' ? 'lg:col-span-5' : 'w-full'} space-y-4`}>
-            
-            {/* Preview Banner Header */}
-            <div className="p-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white flex items-center justify-between shadow-sm">
-              <div className="flex items-center gap-2">
-                <Eye className="w-4 h-4 text-emerald-200" />
-                <span className="text-xs font-extrabold uppercase tracking-wide">
-                  Giao Diện Trực Quan Học Sinh Nhìn Thấy (Live Preview)
-                </span>
-              </div>
-              <span className="px-2 py-0.5 rounded-full bg-white/20 text-white text-[10px] font-bold">
-                Thời gian thực
-              </span>
-            </div>
-
             {/* The Actual Simulated Student Container */}
             <div className="bg-white rounded-3xl border border-slate-200/90 shadow-md p-6 space-y-6">
               

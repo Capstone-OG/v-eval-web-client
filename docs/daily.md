@@ -2,6 +2,16 @@
 
 ---
 
+## [01/11/2026] - Loại Bỏ Banner Xanh Lá Live Preview & Tối Ưu Không Gian Xem Trước Học Sinh Trong Studio Sư Phạm
+
+- **Loại Bỏ Banner Header Live Preview Xanh Lá Cây (`CurriculumStudioEditor.jsx`)**:
+  - *Gỡ Bỏ Banner Rườm Rà "Giao Diện Trực Quan Học Sinh Nhìn Thấy (Live Preview) - Thời gian thực"*:
+    + Gỡ bỏ hoàn toàn thanh banner màu xanh ngọc (`bg-gradient-to-r from-emerald-600 to-teal-600`) ở đỉnh cột phải của chế độ Chia đôi (Split) và Xem trước (Preview).
+    + Giải phóng không gian dọc đáng kể (~60px), giúp khu vực mô phỏng giao diện học sinh (`Simulated Student Container`) bắt đầu ngay từ trên cùng với thẻ định danh dạng bài, trọng số và mức độ Bloom chuẩn xác.
+    + Mang lại diện mạo liền mạch, tinh gọn và chuyên nghiệp hơn cho giao diện soạn thảo sư phạm.
+
+---
+
 ## [31/10/2026] - Chuẩn Hóa UI Khối 4 Ngang Hàng Thẳng Lối, Xóa Bỏ Nút Dán Ảnh & Bảng Công Cụ STEM Trôi Nổi Cạnh Phải Màn Hình Mũi Tên "<" Trong Studio Sư Phạm
 
 - **Tối Giản Hóa Bảng STEM Cạnh Phải (Thanh Tìm Kiếm Search, Không Icon/Huy Hiệu, Gỡ Bỏ Dropdown Header & Chèn Chuẩn Xác Tại Con Trỏ)**:

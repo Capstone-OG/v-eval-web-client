@@ -810,6 +810,9 @@ V-Eval-Web_Client/
     - **Equation Systems & Matrix Logic**: 2-3 variable linear systems with simultaneous brace notations.
     - **Chemistry Lab Workbench**: Molarity (`C_M`), mass concentration (`C%`), mass equation, and reaction yield calculations.
     - **7-Subject Symbol Library**: Quick link to open the full left hierarchical math palette.
+- **Student Live Preview Streamlining & Vertical Space Optimization**:
+  - Removed the bulky top green gradient banner ("Giao Diện Trực Quan Học Sinh Nhìn Thấy (Live Preview) - Thời gian thực") from the right preview column in both Split and Preview view modes.
+  - Grants immediate visual access to the simulated student card container, optimizing vertical density and eliminating unnecessary title chrome.
 - **Top Header De-cluttering & Single Source of Truth**:
   - Removed redundant `StemToolsDropdown` from the top header bar, establishing the right floating mini-tab as the single, authoritative entry point for STEM tool invocation.
   - Re-aligned the Block 4 Question Bank header with fixed single-line horizontal alignment (`flex items-center gap-2.5 shrink-0 whitespace-nowrap`) and purged duplicate emojis.
