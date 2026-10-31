@@ -22,7 +22,7 @@ import {
   RadarChartModal,
   AISocraticTutorModal 
 } from './components/modals';
-import { DiagnosticAssessmentPage } from './components/diagnostic';
+import { DiagnosticAssessmentPage, SubmissionHistoryView } from './components/diagnostic';
 import { AccountProvisioningView } from './components/admin';
 import { CurriculumExplorerView } from './components/curriculum';
 import { CheckCircle2 } from 'lucide-react';
@@ -187,6 +187,11 @@ export default function App() {
                   embedded={true}
                   onNavigateDashboard={() => setActiveTab('dashboard')}
                   onNavigateHome={() => setActiveTab('dashboard')}
+                  onOpenAiTutorWithContext={(ctx) => handleOpenAiTutor(ctx)}
+                />
+              ) : (activeTab === 'history' || activeTab === 'question_bank') ? (
+                <SubmissionHistoryView 
+                  onStartNewDiagnostic={() => setActiveTab('diagnostic')}
                   onOpenAiTutorWithContext={(ctx) => handleOpenAiTutor(ctx)}
                 />
               ) : (

@@ -702,9 +702,42 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
   const handleFinishQuiz = () => {
     if (!activeQuiz) return;
     let correctCount = 0;
-    activeQuiz.questions.forEach((q, idx) => {
-      if (quizUserAnswers[idx] === q.correct) {
-        correctCount++;
+    const reviewedQuestions = activeQuiz.questions.map((q, idx) => {
+      const userAnsIdx = quizUserAnswers[idx];
+      const isCorrect = userAnsIdx === q.correct;
+      if (isCorrect) correctCount++;
+      const chosenChar = userAnsIdx !== undefined ? ['A', 'B', 'C', 'D'][userAnsIdx] : '';
+      const correctChar = ['A', 'B', 'C', 'D'][q.correct] || 'A';
+      return {
+        id: q.id || `topic_q_${idx + 1}`,
+        question_number: idx + 1,
+        content: q.content,
+        options: (q.options || []).map((o) => String(o).replace(/^[A-D]\.\s*/, '')),
+        skill_name: activeQuiz.title || 'Chuyên đề Dàn kiến thức',
+        domain_name: 'Dàn kiến thức & Lộ trình',
+        bloom: 2,
+        studentChoice: chosenChar,
+        correctChoice: correctChar,
+        correct: correctChar,
+        isCorrect,
+        timeSpent: 35,
+        explanation: q.explanation || 'Lời giải chi tiết theo phương pháp tư duy ĐHQG-HCM.'
+      };
+    });
+    practiceService.saveSubmissionToHistory({
+      id: `topic_${Date.now()}`,
+      title: activeQuiz.title || 'Phiếu Kiểm Tra Chuyên Đề Dàn Kiến Thức',
+      examType: 'TOPIC_QUIZ',
+      completedAt: new Date().toISOString(),
+      theta_0: 0.45,
+      placement_class: 'ACCELERATION',
+      ai_commentary: `Hoàn thành phiếu bài tập "${activeQuiz.title}" với kết quả ${correctCount}/${activeQuiz.questions.length} câu đúng.`,
+      reviewedQuestions,
+      pacing: {
+        totalCorrect: correctCount,
+        totalQuestions: activeQuiz.questions.length,
+        totalTimeSpent: activeQuiz.questions.length * 35,
+        avgTimePerQ: 35
       }
     });
     setQuizScore(correctCount);

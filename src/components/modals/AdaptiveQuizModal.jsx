@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Zap, CheckCircle2, XCircle, ArrowRight, X, AlertCircle, Bot, FileText } from 'lucide-react';
 import MathText from '../common/MathText';
+import { practiceService } from '../../services/practiceService';
 
 export default function AdaptiveQuizModal({ isOpen, onClose, onOpenAiTutorWithContext }) {
   const [bktMastery, setBktMastery] = useState(0.72);
@@ -76,6 +77,43 @@ export default function AdaptiveQuizModal({ isOpen, onClose, onOpenAiTutorWithCo
     if (itemIndex < sampleItems.length - 1) {
       setItemIndex(itemIndex + 1);
     } else {
+      const reviewedQuestions = sampleItems.map((item, idx) => {
+        const chosenIdx = answerHistory[item.id];
+        const chosenChar = chosenIdx !== undefined ? ['A', 'B', 'C', 'D'][chosenIdx] : '';
+        const correctChar = ['A', 'B', 'C', 'D'][item.correct] || 'B';
+        return {
+          id: item.id,
+          question_number: idx + 1,
+          content: item.question,
+          options: item.options.map((o) => o.replace(/^[A-D]\.\s*/, '')),
+          skill_name: item.skill,
+          domain_name: 'Luyện tập Thích ứng ZPD',
+          bloom: 2,
+          studentChoice: chosenChar,
+          correctChoice: correctChar,
+          correct: correctChar,
+          isCorrect: chosenIdx === item.correct,
+          timeSpent: 30,
+          explanation: item.explanation
+        };
+      });
+      const correctCount = reviewedQuestions.filter((q) => q.isCorrect).length;
+      practiceService.saveSubmissionToHistory({
+        id: `zpd_${Date.now()}`,
+        title: 'Phiếu Luyện Tập Thích Ứng ZPD & BKT (Flow 3)',
+        examType: 'ZPD_QUIZ',
+        completedAt: new Date().toISOString(),
+        theta_0: Number((bktMastery - 0.25).toFixed(2)),
+        placement_class: bktMastery >= 0.85 ? 'BREAKTHROUGH' : 'ACCELERATION',
+        ai_commentary: `Hoàn thành phiên luyện tập ZPD với xác suất làm chủ BKT P(Lt) = ${(bktMastery * 100).toFixed(0)}%.`,
+        reviewedQuestions,
+        pacing: {
+          totalCorrect: correctCount,
+          totalQuestions: sampleItems.length,
+          totalTimeSpent: sampleItems.length * 30,
+          avgTimePerQ: 30
+        }
+      });
       setQuizFinished(true);
     }
   };

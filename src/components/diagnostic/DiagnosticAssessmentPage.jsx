@@ -122,9 +122,21 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
   const [tutorResponse, setTutorResponse] = useState('');
   const tutorAbortRef = useRef(null);
 
-  // Result state
+  // Result state & Submission History
   const [resultData, setResultData] = useState(null);
   const [reviewFilter, setReviewFilter] = useState('ALL'); // 'ALL' | 'CORRECT' | 'WRONG' | 'FLAGGED'
+  const [submissionHistory, setSubmissionHistory] = useState(() =>
+    practiceService.getSubmissionHistory()
+  );
+
+  const handleOpenPastSubmission = (sub) => {
+    if (!sub) return;
+    setResultData(sub);
+    setReviewFilter('ALL');
+    setActiveTutorQuestionId(null);
+    setTutorResponse('');
+    setStage('result');
+  };
 
   // Timer interval
   useEffect(() => {
@@ -475,6 +487,11 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
 
       // Kết hợp dữ liệu chuẩn xác
       const finalResult = {
+        id: submissionId,
+        title: examData?.title || 'Bài Khảo Sát Đánh Giá Năng Lực Đầu Vào (30 Câu)',
+        examType: 'DIAGNOSTIC',
+        engineUsed: examData?.engine_used || generatorMode,
+        completedAt: new Date().toISOString(),
         theta_0: backendAnalysis?.theta_0 != null ? backendAnalysis.theta_0 : theta0Calculated,
         placement_class: backendAnalysis?.placement_class || placementClassCalculated,
         domain_scores: backendAnalysis?.domain_scores?.length ? backendAnalysis.domain_scores : domainScoresCalculated,
@@ -496,6 +513,8 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
       setResultData(finalResult);
       try {
         localStorage.setItem('veval_last_diagnostic_result', JSON.stringify(finalResult));
+        practiceService.saveSubmissionToHistory(finalResult);
+        setSubmissionHistory(practiceService.getSubmissionHistory());
       } catch (e) {
         console.warn('Could not cache diagnostic result:', e);
       }
@@ -877,6 +896,86 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
                 Hủy bỏ
               </button>
             </div>
+
+            {/* Lịch Sử Làm Bài Gần Đây (Xem lại đáp án & hỏi AI Socratic) */}
+            {submissionHistory.length > 0 && (
+              <div className="pt-6 border-t border-slate-800 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs font-black uppercase tracking-wider text-cyan-400 flex items-center gap-2">
+                    <FileText className="w-4 h-4" />
+                    <span>Lịch Sử Làm Bài Đã Hoàn Thành ({submissionHistory.length})</span>
+                  </div>
+                  <span className="text-[11px] text-slate-400">
+                    Bấm chọn để xem lại bảng đáp án và hỏi Gia sư AI Socratic
+                  </span>
+                </div>
+
+                <div className="space-y-2.5 max-h-64 overflow-y-auto pr-1">
+                  {submissionHistory.slice(0, 5).map((item) => {
+                    const correctCount =
+                      item.pacing?.totalCorrect ??
+                      (item.reviewedQuestions || []).filter((q) => q.isCorrect).length;
+                    const totalQ =
+                      item.pacing?.totalQuestions || (item.reviewedQuestions || []).length || 1;
+                    const accPct = Math.round((correctCount / totalQ) * 100);
+
+                    return (
+                      <div
+                        key={item.id}
+                        onClick={() => handleOpenPastSubmission(item)}
+                        className="p-4 rounded-2xl bg-slate-950/80 hover:bg-slate-950 border border-slate-800 hover:border-cyan-500/40 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 cursor-pointer group"
+                      >
+                        <div className="space-y-1">
+                          <div className="text-sm font-extrabold text-white group-hover:text-cyan-300 transition-colors">
+                            {item.title}
+                          </div>
+                          <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400">
+                            <span>
+                              Kết quả:{' '}
+                              <strong className="text-emerald-400">
+                                {correctCount}/{totalQ} câu ({accPct}%)
+                              </strong>
+                            </span>
+                            {item.theta_0 !== undefined && (
+                              <span>
+                                Theta IRT:{' '}
+                                <strong className="text-cyan-300">
+                                  {item.theta_0 > 0 ? `+${item.theta_0}` : item.theta_0}
+                                </strong>
+                              </span>
+                            )}
+                            {item.completedAt && (
+                              <span>
+                                Ngày:{' '}
+                                {new Date(item.completedAt).toLocaleString('vi-VN', {
+                                  day: '2-digit',
+                                  month: '2-digit',
+                                  year: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenPastSubmission(item);
+                          }}
+                          className="px-3.5 py-2 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/40 text-purple-300 font-extrabold text-xs flex items-center gap-1.5 shrink-0 cursor-pointer transition-all"
+                        >
+                          <Eye className="w-3.5 h-3.5 text-purple-400" />
+                          <span>Xem Lại Đáp Án & Hỏi AI</span>
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

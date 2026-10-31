@@ -12,7 +12,8 @@ import {
   Sparkles,
   HelpCircle,
   Award,
-  ShieldCheck
+  ShieldCheck,
+  History
 } from 'lucide-react';
 
 export default function Sidebar({ activeTab, setActiveTab, activeRole, onOpenDiagnostic, onOpenZPD, onOpenAiTutor, onOpenProvision }) {
@@ -20,6 +21,7 @@ export default function Sidebar({ activeTab, setActiveTab, activeRole, onOpenDia
   const navItemsSection1 = [
     { id: 'dashboard', label: 'Dashboard (Tổng quan)', icon: LayoutDashboard },
     { id: 'diagnostic', label: 'Khảo thí & Chẩn đoán', icon: Target, badge: 'Flow 1' },
+    { id: 'history', label: 'Lịch sử làm bài', icon: History, badge: 'Xem lại & AI' },
     { id: 'roadmap', label: 'Dàn kiến thức & Lộ trình', icon: GitFork, badge: 'Flow 2' },
     { id: 'adaptive', label: 'Luyện tập ZPD', icon: Zap, badge: 'Flow 3', onClick: onOpenZPD },
     { id: 'question_bank', label: 'Ngân hàng đề & Thi thử', icon: BookOpenCheck },

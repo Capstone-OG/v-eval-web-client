@@ -2,8 +2,13 @@
 
 ---
 
-## [31/10/2026] - Chuẩn Hóa Luồng Sư Phạm Hỏi Gia Sư AI Socratic Sau Khi Nộp Bài & Khắc Phục Triệt Để Tương Phản Chữ Tối Trên Nền Tối Trong `MathText`
+## [31/10/2026] - Triển Khai Phân Hệ Lịch Sử Làm Bài & Sổ Tay Lỗi Sai Socratic, Chuẩn Hóa Luồng Xem Lại Đáp Án & Khắc Phục Tương Phản `MathText`
 
+- **Triển Khai Phân Hệ Lịch Sử Làm Bài & Sổ Tay Lỗi Sai Socratic ([`SubmissionHistoryView.jsx`](../src/components/diagnostic/SubmissionHistoryView.jsx), [`Sidebar.jsx`](../src/components/layout/Sidebar.jsx), [`App.jsx`](../src/App.jsx))**:
+  - Xây dựng giao diện **Lịch Sử Làm Bài & Sổ Tay Lỗi Sai Socratic** cho phép học sinh tra cứu lại toàn bộ các bài khảo sát ĐGNL 30 câu, phiếu luyện tập thích ứng ZPD và bài kiểm tra chuyên đề đã thực hiện.
+  - Khi bấm **"Xem Lại Đáp Án & Hỏi AI"** trên bất kỳ bài làm cũ nào, học sinh xem được toàn bộ câu hỏi, phương án đã chọn so với đáp án đúng, lời giải chi tiết và bấm hỏi Gia sư AI Socratic (cả chế độ stream trực tiếp dưới câu hỏi lẫn mở Modal Chat Socratic Chuyên Sâu).
+  - Bổ sung tab **Sổ Tay Câu Làm Sai** tự động gom nhóm các câu làm sai từ mọi đề thi trước đó để ôn luyện tập trung cùng AI.
+  - Bổ sung danh sách **Lịch Sử Làm Bài Đã Hoàn Thành** ngay trên màn hình khởi tạo của [`DiagnosticAssessmentPage.jsx`](../src/components/diagnostic/DiagnosticAssessmentPage.jsx) và nối tự động lưu lịch sử khi hoàn thành bài làm tại [`DiagnosticAssessmentPage.jsx`](../src/components/diagnostic/DiagnosticAssessmentPage.jsx), [`AdaptiveQuizModal.jsx`](../src/components/modals/AdaptiveQuizModal.jsx) và [`CurriculumExplorerView.jsx`](../src/components/curriculum/CurriculumExplorerView.jsx).
 - **Khắc Phục Lỗi Chữ Tối Không Đọc Được Trên Nền Tối & Lỗi Ký Tự `:**` Trong [`MathText.jsx`](../src/components/common/MathText.jsx)**:
   - Loại bỏ các class màu chữ tối cố định (`text-slate-700`, `text-slate-800`, `text-slate-900`) trên các dòng văn bản, danh sách bullet, chữ in đậm `<strong>` và chữ in nghiêng `<em>`, cho phép `MathText` kế thừa màu chữ sáng (`text-white` / `text-slate-100`) khi hiển thị trên nền tối của trang kết quả khảo thí.
   - Sửa biểu thức chính quy chuẩn hóa tiêu đề in đậm để không cắt mất dấu `**` mở đầu trong chuỗi `💡 **Gợi ý phương pháp giải:**` và làm sạch hoàn toàn dấu `**` thừa ở cuối thẻ Callout.
