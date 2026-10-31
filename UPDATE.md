@@ -1,10 +1,15 @@
 # NHẬT KÝ CẬP NHẬT (UPDATE LOG) - WEB CLIENT
 
-## [01/11/2026] - Khắc Phục Lỗi Runtime ReferenceError & Hoàn Thiện Render Bảng Biến Thiên Trực Quan Trong Thẻ Hover
+## [01/11/2026] - Khắc Phục Hiện Tượng Mất Thẻ Hover Khi Rê Chuột (Hover Bridge & Grace Period) & Hoàn Thiện Tương Tác Kéo Thả Trực Tiếp
 
-- **Khắc Phục Lỗi Runtime ReferenceError (`HierarchicalMathPalette.jsx`)**:
-  - Khai báo an toàn `hoveredBbtData` qua `useMemo` và `parseVariationTableString`, triệt tiêu hoàn toàn lỗi `hoveredBbtData is not defined` khi mở thẻ xem trước trực quan.
-  - Component `<VariationTable />` render mượt mà bảng biến thiên vector mẫu trực tiếp bên trong thẻ Hover sư phạm, loại bỏ 100% khối hộp đen code thô.
+- **Khắc Phục Hiện Tượng Thẻ Hover Bị Biến Mất Khi Rê Chuột Qua (`HierarchicalMathPalette.jsx`)**:
+  - Bổ sung cơ chế trì hoãn đóng thẻ an toàn `hoverCloseTimerRef` (320ms) thay vì tắt lập tức, giải quyết 100% tình trạng "kéo chuột qua cái bảng hiển thị đó thì bị mất tiêu ảo".
+  - Tích hợp lớp đệm tàng hình `before:` nối liền không khoảng hở giữa danh mục sidebar và bảng hiển thị bên cạnh.
+  - Bật `pointer-events-auto` kèm sự kiện `handleCardMouseEnter`, cho phép người dùng thoải mái rê chuột vào bên trong xem chi tiết, cuộn ngang xem trọn vẹn Bảng Biến Thiên (`overflow-x-auto`) mà thẻ vẫn hiển thị vững vàng.
+
+- **Hỗ Trợ Kéo Thả & Chèn Trực Tiếp Từ Thẻ Hover**:
+  - Khối Bảng biến thiên trực quan và nút "✋ Kéo thả" trên thẻ hover hỗ trợ `draggable={true}`, giáo viên có thể kéo trực tiếp từ thẻ xem trước thả vào bài soạn.
+  - Bổ sung nút bấm "⚡ Nhấp chèn ngay" hỗ trợ chèn nhanh công thức/bảng biến thiên vào đúng vị trí con trỏ đang đứng trong văn bản.
 
 - **Bộ Chuyển Đổi 1 Môn Học Duy Nhất Kèm Hiệu Ứng Slide Trượt Mượt Mà**:
   - Trung tâm hiển thị duy nhất 1 môn học rõ nét, font đậm `text-[12px]`, 100% không bao giờ tràn chữ hay co cụm.

@@ -889,3 +889,13 @@ V-Eval-Web_Client/
 - **Resolution of Runtime ReferenceError**:
   - Resolved missing declaration bug where `hoveredBbtData` was referenced conditionally in JSX before being bound to component scope.
   - Memoized the AST parsing logic via `useMemo` with error boundary wrapping (`try/catch` fallback to null) so that hover traversal across thousands of formulas remains performant at 60fps without runtime exceptions.
+
+### 4.44. Non-Disappearing Hover Bridge, Dual Grace-Period Debouncing, and Direct Drag-to-Drop Action Architecture (`HierarchicalMathPalette.jsx`)
+- **Hover Bridge & Cursor Traversal Safety**:
+  - Eliminated the abrupt popover dismissal bug where moving the cursor from a palette snippet item across the 8px spatial gap into the preview card instantly fired `onMouseLeave`, destroying the component.
+  - Implemented an invisible geometrical hover bridge via a CSS pseudo-element (`before:absolute before:-left-3 before:top-0 before:w-4 before:h-full`) spanning the gap.
+  - Integrated dual debounced timers: a 300ms opening timer (`hoverTimerRef`) and a 320ms grace window closing timer (`hoverCloseTimerRef`). When the cursor enters the preview card, `handleCardMouseEnter` clears the dismissal schedule, allowing educators to explore multi-column variation tables and copy formulas without premature unmounts.
+- **Direct Interactive Click & Drag Affordances**:
+  - Upgraded the preview card to `pointer-events-auto` with dedicated interactive controls:
+    1. *Direct Drag-and-Drop*: Both the showcase preview block and the footer grip button support HTML5 drag initiation (`draggable={true}` + `handleItemDragStart`), permitting teachers to grab the expanded variation table or formula and drop it directly onto the Word Canvas or editor target.
+    2. *One-Click Immediate Insertion*: Equipped with a prominent `⚡ Nhấp chèn ngay` action button executing `handleItemClick`, instantly inserting the formula at the caret.

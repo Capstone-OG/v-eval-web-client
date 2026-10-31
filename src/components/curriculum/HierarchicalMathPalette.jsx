@@ -715,27 +715,76 @@ export default function HierarchicalMathPalette({
     setOpenCategories(next);
   };
 
-  // Hover handler (450ms responsive studio preview)
+  const clearAllHoverTimers = () => {
+    if (hoverTimerRef.current) {
+      clearTimeout(hoverTimerRef.current);
+      hoverTimerRef.current = null;
+    }
+    if (hoverCloseTimerRef.current) {
+      clearTimeout(hoverCloseTimerRef.current);
+      hoverCloseTimerRef.current = null;
+    }
+  };
+
+  // Hover handler with bridge & grace period (không bị mất tiêu khi kéo chuột qua)
   const handleItemMouseEnter = (item, catName, e) => {
-    if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+    if (hoverCloseTimerRef.current) {
+      clearTimeout(hoverCloseTimerRef.current);
+      hoverCloseTimerRef.current = null;
+    }
+    if (hoverTimerRef.current) {
+      clearTimeout(hoverTimerRef.current);
+    }
     const rect = e.currentTarget.getBoundingClientRect();
     
+    const delay = hoveredItem ? 100 : 300;
     hoverTimerRef.current = setTimeout(() => {
       setHoveredItem({ ...item, categoryName: catName });
+      const cardMaxHeight = 440;
+      const topPos = Math.min(
+        Math.max(16, rect.top - 16),
+        Math.max(16, window.innerHeight - cardMaxHeight - 20)
+      );
+      const leftPos = Math.min(
+        window.innerWidth - 410,
+        rect.right + 8
+      );
       setHoverCardPos({
-        top: Math.min(window.innerHeight - 300, Math.max(20, rect.top - 20)),
-        left: rect.right + 12
+        top: topPos,
+        left: leftPos
       });
-    }, 450);
+    }, delay);
   };
 
   const handleItemMouseLeave = () => {
-    if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
-    setHoveredItem(null);
+    if (hoverTimerRef.current) {
+      clearTimeout(hoverTimerRef.current);
+      hoverTimerRef.current = null;
+    }
+    // Grace period of 320ms: cho phép con trỏ chuột di chuyển vào bảng hiển thị mà không bị mất
+    if (hoverCloseTimerRef.current) clearTimeout(hoverCloseTimerRef.current);
+    hoverCloseTimerRef.current = setTimeout(() => {
+      setHoveredItem(null);
+    }, 320);
+  };
+
+  const handleCardMouseEnter = () => {
+    // Con trỏ đang ở trong bảng hiển thị: giữ nguyên không đóng
+    if (hoverCloseTimerRef.current) {
+      clearTimeout(hoverCloseTimerRef.current);
+      hoverCloseTimerRef.current = null;
+    }
+  };
+
+  const handleCardMouseLeave = () => {
+    if (hoverCloseTimerRef.current) clearTimeout(hoverCloseTimerRef.current);
+    hoverCloseTimerRef.current = setTimeout(() => {
+      setHoveredItem(null);
+    }, 280);
   };
 
   const handleItemClick = (item) => {
-    if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+    clearAllHoverTimers();
     setHoveredItem(null);
     if (onInsertSnippet) {
       onInsertSnippet(activeTarget, item.code);
@@ -743,7 +792,7 @@ export default function HierarchicalMathPalette({
   };
 
   const handleItemDragStart = (e, item) => {
-    if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+    clearAllHoverTimers();
     setHoveredItem(null);
     e.dataTransfer.setData('text/veval-math', item.code);
     e.dataTransfer.setData('text/veval-bbt', item.code);
@@ -1079,12 +1128,14 @@ export default function HierarchicalMathPalette({
       {/* 6. STUDIO HOVER PREVIEW CARD: HIỂN THỊ RÕ CHI TIẾT TRỰC QUAN & MÔ PHỎNG */}
       {hoveredItem && (
         <div
+          onMouseEnter={handleCardMouseEnter}
+          onMouseLeave={handleCardMouseLeave}
           style={{ 
             top: `${hoverCardPos.top}px`, 
             left: `${hoverCardPos.left}px`,
             position: 'fixed'
           }}
-          className="z-[999] w-96 max-w-[90vw] bg-white/98 backdrop-blur-md rounded-2xl border border-slate-200 shadow-2xl p-4 text-slate-900 pointer-events-none ring-1 ring-slate-900/5 animate-in fade-in zoom-in-95 duration-150"
+          className="z-[999] w-96 max-w-[90vw] max-h-[85vh] overflow-y-auto bg-white/98 backdrop-blur-md rounded-2xl border border-slate-200 shadow-2xl p-4 text-slate-900 pointer-events-auto ring-1 ring-slate-900/5 animate-in fade-in zoom-in-95 duration-150 select-text before:absolute before:-left-3 before:top-0 before:w-4 before:h-full before:content-['']"
         >
           {/* Header */}
           <div className="flex items-center justify-between pb-2 border-b border-slate-100">
@@ -1098,23 +1149,42 @@ export default function HierarchicalMathPalette({
                 {hoveredItem.categoryName}
               </span>
             </div>
-            <span className="text-[9px] px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 font-semibold border border-indigo-100 shrink-0">
-              Kéo - Thả
-            </span>
+            <div 
+              draggable
+              onDragStart={(e) => handleItemDragStart(e, hoveredItem)}
+              className="text-[9px] px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 font-semibold border border-indigo-100 shrink-0 cursor-grab active:cursor-grabbing flex items-center gap-1 hover:bg-indigo-100 transition-colors select-none"
+              title="Kéo thả trực tiếp khối này vào bài soạn"
+            >
+              <GripVertical className="w-2.5 h-2.5" />
+              <span>Kéo - Thả</span>
+            </div>
           </div>
 
           {/* Visual Showcase: Real Visual VariationTable OR Clean Large KaTeX Equation */}
           {hoveredBbtData ? (
-            <div className="my-2.5 rounded-xl border border-slate-200/90 bg-white p-2.5 overflow-x-auto shadow-2xs">
-              <div className="text-[10px] font-bold text-indigo-700 mb-1.5 flex items-center gap-1">
-                <span>📊 Bảng biến thiên trực quan mẫu:</span>
+            <div 
+              draggable
+              onDragStart={(e) => handleItemDragStart(e, hoveredItem)}
+              className="my-2.5 rounded-xl border border-slate-200/90 bg-white p-2.5 overflow-x-auto shadow-2xs cursor-grab active:cursor-grabbing group/bbt"
+              title="Có thể nhấn giữ và kéo thả trực tiếp Bảng biến thiên này vào bài soạn"
+            >
+              <div className="text-[10px] font-bold text-indigo-700 mb-1.5 flex items-center justify-between">
+                <span className="flex items-center gap-1">📊 Bảng biến thiên trực quan mẫu:</span>
+                <span className="text-[9px] text-slate-400 group-hover/bbt:text-indigo-600 flex items-center gap-0.5 font-normal">
+                  <GripVertical className="w-3 h-3" /> Kéo thả
+                </span>
               </div>
               <div className="min-w-[340px]">
                 <VariationTable data={hoveredBbtData} />
               </div>
             </div>
           ) : (
-            <div className="my-2.5 py-3.5 px-4 rounded-xl bg-gradient-to-b from-slate-50 to-white border border-slate-200/80 text-center flex items-center justify-center min-h-[58px] shadow-2xs">
+            <div 
+              draggable
+              onDragStart={(e) => handleItemDragStart(e, hoveredItem)}
+              className="my-2.5 py-3.5 px-4 rounded-xl bg-gradient-to-b from-slate-50 to-white border border-slate-200/80 text-center flex items-center justify-center min-h-[58px] shadow-2xs cursor-grab active:cursor-grabbing group/formula"
+              title="Có thể nhấn giữ và kéo thả trực tiếp công thức này vào bài soạn"
+            >
               <div 
                 className="text-xl text-indigo-950 font-serif leading-none"
                 dangerouslySetInnerHTML={{ __html: renderKatexHtml(hoveredItem.preview || hoveredItem.code, true) }}
@@ -1122,7 +1192,7 @@ export default function HierarchicalMathPalette({
             </div>
           )}
 
-          {/* Title & Pedagogical Description (100% No Raw Code Terminal) */}
+          {/* Title & Pedagogical Description */}
           <div className="space-y-1">
             <div className="font-extrabold text-[13px] text-slate-900">
               {hoveredItem.label}
@@ -1132,14 +1202,25 @@ export default function HierarchicalMathPalette({
             </p>
           </div>
 
-          {/* Footer Guide */}
-          <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[10.5px] text-slate-600 font-medium">
-            <span className="flex items-center gap-1 text-emerald-600 font-bold">
-              <span>✋</span> Kéo thả vào bài soạn
-            </span>
-            <span className="flex items-center gap-1 text-indigo-600 font-bold">
-              <span>⚡</span> Nhấp để chèn ngay
-            </span>
+          {/* Footer Guide & Action Buttons */}
+          <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px] font-medium gap-2">
+            <div
+              draggable
+              onDragStart={(e) => handleItemDragStart(e, hoveredItem)}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:text-emerald-800 border border-emerald-200/80 cursor-grab active:cursor-grabbing font-bold transition-colors select-none shadow-2xs"
+              title="Nhấn giữ và kéo vào bài soạn"
+            >
+              <GripVertical className="w-3.5 h-3.5 text-emerald-600" />
+              <span>✋ Kéo thả</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => handleItemClick(hoveredItem)}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-bold transition-all shadow-sm active:scale-95 cursor-pointer"
+              title="Nhấp để chèn ngay vào vị trí con trỏ"
+            >
+              <span>⚡ Nhấp chèn ngay</span>
+            </button>
           </div>
         </div>
       )}

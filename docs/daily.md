@@ -2,6 +2,16 @@
 
 ---
 
+## [01/11/2026] - Khắc Phục Hiện Tượng Thẻ Hover Bị Biến Mất Khi Rê Chuột Qua (Hover Bridge & Grace Period) & Hỗ Trợ Kéo Thả Trực Tiếp
+
+- **Khắc Phục Triệt Để Hiện Tượng Thẻ Bảng Hiển Thị Bị Mất Khi Rê Chuột Sang (`HierarchicalMathPalette.jsx`)*:
+  - *Bộ Đệm Thời Gian Trì Hoãn (Grace Period 320ms)*: Khi con trỏ chuột rời nút công thức trong sidebar, thẻ hiển thị không bị đóng tức thì mà chờ 320ms, cho phép người dùng di chuyển chuột sang bảng xem trước một cách êm ái, tự nhiên mà không bị tắt đột ngột ("không còn bị mất tiêu ảo").
+  - *Lớp Đệm Tàng Hình Nối Liền (Hover Bridge)*: Tích hợp pseudo-element `before:absolute before:-left-3 before:top-0 before:w-4 before:h-full` phủ kín khoảng hở 8px giữa sidebar và thẻ hover, bảo đảm chuột luôn nằm trong vùng tương tác khi di chuyển qua lại.
+  - *Giữ Thẻ Mở Ổn Định Khi Rê Chuột Vào Trong (`pointer-events-auto`)*: Bổ sung sự kiện `handleCardMouseEnter` để hủy lệnh tắt, giúp người dùng thoải mái cuộn ngang xem chi tiết các cột của Bảng Biến Thiên (`overflow-x-auto`), đọc ghi chú sư phạm hoặc chọn văn bản.
+  - *Hỗ Trợ Thao Tác Kéo Thả Trực Tiếp Từ Thẻ Hover*: Người dùng có thể kéo trực tiếp từ khối Bảng biến thiên, công thức hoặc nút "✋ Kéo thả" trên thẻ hover thả ngay vào bài soạn, hoặc bấm "⚡ Nhấp chèn ngay" để chèn nhanh vào vị trí con trỏ.
+
+---
+
 ## [01/11/2026] - Khắc Phục Lỗi Runtime ReferenceError (hoveredBbtData Is Not Defined) & Hoàn Thiện Render Bảng Biến Thiên Trực Quan
 
 - **Khắc Phục Triệt Để Lỗi Khai Báo `hoveredBbtData` (`HierarchicalMathPalette.jsx`)*:
