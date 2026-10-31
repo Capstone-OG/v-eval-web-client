@@ -598,53 +598,30 @@ export default function HierarchicalMathPalette({
   const domainKeys = Object.keys(HIERARCHICAL_CATALOG);
   const currentDomain = HIERARCHICAL_CATALOG[selectedDomain] || HIERARCHICAL_CATALOG.math;
 
-  // Domain carousel index (displays 3 domains at a time in infinite circular loop)
-  const [domainCarouselIndex, setDomainCarouselIndex] = useState(() => {
-    const idx = domainKeys.indexOf(selectedDomain);
-    return idx !== -1 ? idx : 0;
-  });
-
-  const visibleDomainKeys = useMemo(() => {
-    const n = domainKeys.length;
-    if (n === 0) return [];
-    if (n <= 3) return domainKeys;
-    return [
-      domainKeys[domainCarouselIndex % n],
-      domainKeys[(domainCarouselIndex + 1) % n],
-      domainKeys[(domainCarouselIndex + 2) % n],
-    ];
-  }, [domainKeys, domainCarouselIndex]);
+  // Single domain display with smooth slide transition direction
+  const [slideDirection, setSlideDirection] = useState('next');
 
   const handleNextDomain = () => {
-    setDomainCarouselIndex((prev) => {
-      const nextIdx = (prev + 1) % domainKeys.length;
-      setSelectedDomain(domainKeys[nextIdx]);
-      return nextIdx;
-    });
+    const n = domainKeys.length;
+    const curIdx = domainKeys.indexOf(selectedDomain);
+    const nextIdx = (curIdx + 1) % n;
+    setSlideDirection('next');
+    setSelectedDomain(domainKeys[nextIdx]);
   };
 
   const handlePrevDomain = () => {
-    setDomainCarouselIndex((prev) => {
-      const prevIdx = (prev - 1 + domainKeys.length) % domainKeys.length;
-      setSelectedDomain(domainKeys[prevIdx]);
-      return prevIdx;
-    });
+    const n = domainKeys.length;
+    const curIdx = domainKeys.indexOf(selectedDomain);
+    const prevIdx = (curIdx - 1 + n) % n;
+    setSlideDirection('prev');
+    setSelectedDomain(domainKeys[prevIdx]);
   };
 
   const handleSelectDomain = (domKey) => {
+    const curIdx = domainKeys.indexOf(selectedDomain);
+    const targetIdx = domainKeys.indexOf(domKey);
+    setSlideDirection(targetIdx >= curIdx ? 'next' : 'prev');
     setSelectedDomain(domKey);
-    const idx = domainKeys.indexOf(domKey);
-    if (idx !== -1) {
-      const n = domainKeys.length;
-      const isVisible = [
-        domainCarouselIndex % n,
-        (domainCarouselIndex + 1) % n,
-        (domainCarouselIndex + 2) % n,
-      ].includes(idx);
-      if (!isVisible) {
-        setDomainCarouselIndex(idx);
-      }
-    }
   };
 
   const DOMAIN_STYLES = {
@@ -873,63 +850,72 @@ export default function HierarchicalMathPalette({
         </div>
       </div>
 
-      {/* 3. Horizontal Domain Carousel (Only 2 visible subjects at a time, infinite circular loop) */}
+      {/* 3. Single Domain Switcher with Slide Transition & Infinite Circular Loop */}
       {!searchResults && (
-        <div className="px-2.5 py-2 border-b border-slate-100 bg-slate-50/60 space-y-2 shrink-0">
-          <div className="flex items-center gap-1.5 w-full bg-slate-200/60 p-1 rounded-xl">
+        <div className="px-2.5 py-2 border-b border-slate-100 bg-slate-50/50 space-y-2 shrink-0">
+          {/* Horizontal Switcher: [<] [ 1 Subject Card With Transition ] [>] */}
+          <div className="flex items-center gap-1.5 w-full bg-slate-200/60 p-1 rounded-2xl border border-slate-200/80 shadow-2xs">
             {/* Prev Button < */}
             <button
               type="button"
               onClick={handlePrevDomain}
-              className="w-6 h-7 rounded-lg bg-white hover:bg-slate-50 text-slate-600 hover:text-indigo-600 flex items-center justify-center transition-all cursor-pointer shadow-2xs border border-slate-200/60 shrink-0"
+              className="w-7 h-8 rounded-xl bg-white hover:bg-slate-50 text-slate-600 hover:text-indigo-600 flex items-center justify-center transition-all cursor-pointer shadow-2xs border border-slate-200/80 shrink-0 hover:scale-105 active:scale-95"
               title="Môn trước (<)"
             >
-              <ChevronLeft className="w-3.5 h-3.5" />
+              <ChevronLeft className="w-4 h-4" />
             </button>
 
-            {/* 2 Visible Subject Pills */}
-            <div className="flex items-center gap-1.5 flex-1 min-w-0">
-              {visibleDomainKeys.map((domKey) => {
-                const dom = HIERARCHICAL_CATALOG[domKey];
-                const isAct = selectedDomain === domKey;
-                const domStyle = DOMAIN_STYLES[domKey] || DOMAIN_STYLES.math;
-                return (
-                  <button
-                    key={domKey}
-                    type="button"
-                    onClick={() => handleSelectDomain(domKey)}
-                    className={`flex-1 min-w-0 py-1.5 px-2 rounded-lg font-bold text-[10.5px] flex items-center justify-center gap-1.5 transition-all cursor-pointer border shadow-2xs truncate ${
-                      isAct
-                        ? `${domStyle.pillActive} shadow-xs font-extrabold`
-                        : 'bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900 border-transparent hover:border-slate-200'
-                    }`}
-                    title={dom.name}
-                  >
-                    <span className="text-xs leading-none shrink-0">{dom.icon}</span>
-                    <span className="truncate">{dom.shortName}</span>
-                  </button>
-                );
-              })}
+            {/* Single Active Subject Badge with Smooth Slide / Fade Animation */}
+            <div className="flex-1 min-w-0 overflow-hidden px-0.5">
+              <div 
+                key={selectedDomain}
+                className={`w-full py-1.5 px-3 rounded-xl font-extrabold text-[12px] flex items-center justify-center gap-2 border shadow-xs transition-all duration-200 cursor-default truncate ${
+                  slideDirection === 'next' 
+                    ? 'animate-in fade-in slide-in-from-right-4' 
+                    : 'animate-in fade-in slide-in-from-left-4'
+                } ${activeTheme.pillActive}`}
+              >
+                <span className="text-base leading-none shrink-0 drop-shadow-xs">{currentDomain.icon}</span>
+                <span className="truncate tracking-wide">{currentDomain.name}</span>
+              </div>
             </div>
 
             {/* Next Button > */}
             <button
               type="button"
               onClick={handleNextDomain}
-              className="w-6 h-7 rounded-lg bg-white hover:bg-slate-50 text-slate-600 hover:text-indigo-600 flex items-center justify-center transition-all cursor-pointer shadow-2xs border border-slate-200/60 shrink-0"
+              className="w-7 h-8 rounded-xl bg-white hover:bg-slate-50 text-slate-600 hover:text-indigo-600 flex items-center justify-center transition-all cursor-pointer shadow-2xs border border-slate-200/80 shrink-0 hover:scale-105 active:scale-95"
               title="Môn tiếp theo (>)"
             >
-              <ChevronRight className="w-3.5 h-3.5" />
+              <ChevronRight className="w-4 h-4" />
             </button>
           </div>
 
-          {/* Subheader: Active Subject Name + Expand/Collapse All */}
+          {/* 7 Circular Dots Indicator + Expand/Collapse All */}
           <div className="flex items-center justify-between px-1 text-[10px] text-slate-500">
-            <span className="font-extrabold text-slate-800 flex items-center gap-1 truncate max-w-[125px]">
-              <span>{currentDomain.icon}</span>
-              <span className="truncate">{currentDomain.name}</span>
-            </span>
-            <div className="flex items-center gap-1.5 shrink-0 text-slate-400">
+            {/* 7 Domain Dots */}
+            <div className="flex items-center gap-1">
+              {domainKeys.map((key) => {
+                const isCurrent = key === selectedDomain;
+                const dom = HIERARCHICAL_CATALOG[key];
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => handleSelectDomain(key)}
+                    title={dom.name}
+                    className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
+                      isCurrent
+                        ? 'w-4 bg-indigo-600 shadow-xs'
+                        : 'w-1.5 bg-slate-300 hover:bg-slate-400'
+                    }`}
+                  />
+                );
+              })}
+            </div>
+
+            {/* Category Expand / Collapse */}
+            <div className="flex items-center gap-1.5 shrink-0 text-slate-400 text-[9.5px]">
               <button
                 type="button"
                 onClick={() => handleToggleAllCategories(true)}

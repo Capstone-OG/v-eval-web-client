@@ -2,6 +2,17 @@
 
 ---
 
+## [01/11/2026] - Chuyển Đổi Sang Hiển Thị 1 Môn Học Duy Nhất Kèm Hiệu Ứng Slide Chuyển Động Mượt Mà (< >) & 7 Chấm Định Vị Trực Quan
+
+- **Bộ Chuyển Đổi 1 Môn Học Duy Nhất Kèm Hiệu Ứng Trượt Mượt Mà (`HierarchicalMathPalette.jsx` - `slideDirection` & `animate-in`)*:
+  - *Hiển Thị Đúng 1 Môn Học Trung Tâm*: Thay vì chia nhiều cột gây co cụm, trung tâm thanh điều hướng giờ đây hiển thị duy nhất 1 môn học tích cực (`📐 Toán Học`, `🧪 Hóa Học`, `⚛️ Vật Lý`, `🧬 Sinh Học`, `📖 Ngữ Văn`, `🌍 Địa Lý`, `🔣 Ký Hiệu & Logic`).
+  - *Không Gian Rộng Rãi 100% Không Bao Giờ Tràn Chữ*: Tên phân môn và icon hiển thị trọn vẹn, font đậm `text-[12px]`, tuyệt đối không còn hiện tượng rớt chữ, tràn viền hay ba chấm `...`.
+  - *Hiệu Ứng Slide Chuyển Đổi Mượt Mà*: Tích hợp hướng trượt `slideDirection` (`next` / `prev`) kết hợp Tailwind animation (`animate-in fade-in slide-in-from-right-4` hoặc `slide-in-from-left-4`), khi bấm `>` hoặc `<` thẻ môn học lướt vào êm ái, sống động.
+  - *Hàng 7 Chấm Tròn Định Vị Phân Môn*: Bổ sung dải 7 chấm tròn ở chân thanh điều hướng, chấm của môn hiện tại kéo dài (`w-4 bg-indigo-600`), người dùng có thể nhấp vào bất kỳ chấm nào để nhảy thẳng tới môn học đó.
+  - *Vòng Lặp Vô Hạn (Modulo Infinite Loop)*: Xoay vòng liên tục không có điểm nghẽn qua lại giữa 7 môn học.
+
+---
+
 ## [01/11/2026] - Đại Tu Toàn Diện Giao Diện Sidebar Ký Hiệu & STEM (Modern Redesign) & Băng Chuyền 2 Môn Học Không Bao Giờ Tràn Chữ
 
 - **Đại Tu Toàn Diện Giao Diện Sidebar Trực Quan & Sang Trọng (`HierarchicalMathPalette.jsx`)**:

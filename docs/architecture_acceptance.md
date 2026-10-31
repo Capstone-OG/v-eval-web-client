@@ -864,3 +864,14 @@ V-Eval-Web_Client/
 - **Refined Accordion Containers & Tactile Formula Rows**:
   - Accordion folders feature smooth 90-degree chevron rotation and subtle badges.
   - Formula items are formatted as sleek single-row pills with KaTeX rendering, formula labels, and subtle drag grips, while dwell-hovering triggers the detailed simulation inspector modal.
+
+### 4.41. Single-Domain Motion Switcher with Directional Slide Transitions & Paging Indicators (`HierarchicalMathPalette.jsx`)
+- **Single-Domain Hero Switcher Architecture**:
+  - Re-architected the domain navigation to spotlight exactly **1 active subject at a time** flanked by tactile navigation controls (`<` and `>`).
+  - Completely eradicates horizontal text truncation, allowing each subject's full name (`📐 Toán Học`, `🧪 Hóa Học`, `⚛️ Vật Lý`, `🧬 Sinh Học`, `📖 Ngữ Văn`, `🌍 Địa Lý`, `🔣 Ký Hiệu & Logic`) to render at full scale (`text-[12px] font-extrabold`).
+- **Dynamic Directional Slide Animations**:
+  - Managed via `slideDirection` state (`'next'` vs `'prev'`), coupled with React dynamic keying (`key={selectedDomain}`) and CSS utility classes (`animate-in fade-in slide-in-from-right-4` or `slide-in-from-left-4`).
+  - Clicking forward pushes the active card smoothly from the right, while clicking backward glides in from the left, delivering a fluid, native-app feel.
+- **7-Point Dot Pagination Bar & Infinite Modulo Loop**:
+  - Integrated 7 pill-shaped dot indicators beneath the switcher: active domain expands to a vibrant pill (`w-4 bg-indigo-600`), while inactive dots provide 1-click random access jumping.
+  - Preserved the circular modulo navigation loop (`(index ± 1 + length) % length`) without boundary deadlocks.
