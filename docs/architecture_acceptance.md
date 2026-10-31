@@ -921,3 +921,13 @@ V-Eval-Web_Client/
 - **Explicit React-DOM Module Resolution**:
   - Bound `createPortal` directly from `react-dom` into the top-level lexical module scope of `HierarchicalMathPalette.jsx`.
   - Eradicated runtime evaluation crashes when mounting the hover popover portal to `document.body`.
+
+### 4.48. ContentEditable Synchronous Mutation Tracking, Stale Closure Elimination, and Seamless Line Pruning (`WordStyleFormulaCanvas.jsx`)
+- **Stale Closure and Synchronous State Mutation Elimination**:
+  - Rectified an issue where deleting all text within a line and pressing Backspace or Delete failed to delete or merge the empty line due to `handleDeleteOrMergeLine` evaluating closed-over `docLines` rather than the mutable `docLinesRef.current`.
+  - Re-routed all line index computations, filter actions, slice operations, and formula slot mutations to source directly from `currentLines = docLinesRef.current || docLines`.
+- **In-Span Input State Sync without Unwanted Re-Renders**:
+  - Attached real-time text synchronization within the contentEditable span `onInput` handler. As keystrokes occur, `tok.text` in `docLinesRef.current` updates synchronously in memory without triggering component re-renders that would disrupt IME composition or caret positioning.
+- **Robust Line Emptiness Detection & Caret Restoration**:
+  - Standardized emptiness verification using whitespace-, newline-, and non-breaking space/zero-width space stripping (`/[\s\u00A0\r\n\u200B]+/g`).
+  - Upon Backspace on an empty line or at the beginning of a line, `handleDeleteOrMergeLine` prunes the line immediately via `flushSync`, cleanly targeting the last token of the preceding line and restoring the caret at its terminal boundary.

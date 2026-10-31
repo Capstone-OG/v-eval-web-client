@@ -2,6 +2,20 @@
 
 ---
 
+## [01/11/2026] - Khắc Phục Triệt Để Lỗi Xóa Hết Nội Dung Dòng Nhấn Phím Xóa (Backspace/Delete) Không Tự Động Xóa Dòng
+
+- **Khắc Phục Lỗi Xóa Hết Chữ Nhấn Backspace Không Tự Động Xóa Dòng (`WordStyleFormulaCanvas.jsx`)**:
+  - *Nguyên Nhân Sâu Xa*:
+    1. Trong `handleDeleteOrMergeLine` và `onKeyDown`, hàm sử dụng trực tiếp biến state React `docLines` (bị dính closure cũ khi người dùng vừa Enter tạo dòng mới hoặc chèn công thức), dẫn đến `idx` trả về `-1` và thoát sớm mà không thực hiện xóa dòng.
+    2. Trong `handleDeleteOrMergeLine`, mảng `nextLines` được lọc từ `docLines` cũ thay vì `docLinesRef.current`, làm mất đồng bộ danh sách dòng.
+    3. Trong `onInput` của thẻ `<span contentEditable>`, chuỗi văn bản mới chỉ cập nhật khi `onBlur`, khiến state `tokens` vẫn còn giữ chuỗi văn bản cũ trước khi xóa, làm điều kiện kiểm tra rỗng `tokens.every(...)` thất bại.
+  - *Giải Pháp Xử Lý Toàn Diện*:
+    - *Đồng Bộ State Tức Thời Trên `onInput`*: Cập nhật `tok.text` trực tiếp vào `docLinesRef.current` ngay khi người dùng gõ hoặc xóa từng ký tự mà không kích hoạt re-render React (bảo đảm con trỏ chuột không bị nhảy, không đứt gãy gõ tiếng Việt có dấu).
+    - *Chuẩn Hóa Nhận Diện Dòng Trống Tuyệt Đối*: Lọc bỏ toàn bộ ký tự khoảng trắng, xuống dòng, khoảng trắng không ngắt `\u00A0` và zero-width space `\u200B`. Khi dòng không chứa công thức toán và chuỗi văn bản DOM rỗng, hệ thống xác nhận 100% dòng đã được xóa sạch.
+    - *Tự Động Xóa Dòng & Thu Hồi Con Trỏ Về Dòng Liền Trước*: Khi người dùng nhấn Backspace hoặc Delete trên dòng trống, `handleDeleteOrMergeLine` tức tốc loại bỏ dòng khỏi `docLinesRef.current`, kích hoạt `commitDocLines` qua `flushSync`, và tự động chuyển con trỏ chuột về cuối dòng phía trước (hoặc đầu dòng sau nếu là dòng 0) để người dùng tiếp tục soạn thảo liền mạch.
+
+---
+
 ## [01/11/2026] - Khắc Phục Lỗi Runtime ReferenceError (createPortal Is Not Defined) Trong HierarchicalMathPalette
 
 - **Bổ Sung Import `createPortal` Từ `react-dom` (`HierarchicalMathPalette.jsx`)*:
