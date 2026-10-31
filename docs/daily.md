@@ -2,6 +2,20 @@
 
 ---
 
+## [01/11/2026] - Giải Phóng Khung Câu Hỏi Bổ Sung & Tự Động Co Giãn Khung Chữ Nhật Lời Giải Chi Tiết Chuẩn Sư Phạm
+
+- **Tách Rời Từng Thẻ Câu Hỏi Linh Hoạt & Xóa Bỏ Khung Cuộn Gò Bó (`CurriculumStudioEditor.jsx`)**:
+  - *Giải Phóng Khung Giới Hạn Chiều Cao (max-h-80 overflow-y-auto)*:
+    + Loại bỏ hoàn toàn giới hạn chiều cao cố định `max-h-80` vốn làm co cụm các câu hỏi vào một hộp cuộn chật hẹp, triệt tiêu hiện tượng vỡ khung và xuất hiện thanh cuộn kép khi câu hỏi có bảng biến thiên lớn hoặc đồ thị.
+    + Tách rời từng câu hỏi thành các thẻ Card độc lập, thoáng đãng (`p-5 rounded-2xl border border-slate-200 bg-white shadow-xs space-y-3.5`) với chiều cao tự động co giãn (`h-auto`).
+  - *Hiển Thị Đầy Đủ 4 Phương Án A, B, C, D & Nổi Bật Đáp Án Đúng*:
+    + Tự động hiển thị lưới 2 cột đáp án A, B, C, D chuẩn mực; đáp án đúng được làm nổi bật với viền và badge xanh ngọc (`emerald`).
+  - *Khung Lời Giải Chi Tiết Hình Chữ Nhật Tự Động Co Giãn Chuẩn Mực*:
+    + Thiết kế khung Lời giải chi tiết (`q.explanation`) thành một hình chữ nhật hoàn chỉnh (`w-full p-4 rounded-2xl bg-slate-50 border border-slate-200 shadow-2xs`).
+    + Tự động điều chỉnh chiều cao tương ứng với dung lượng chữ (`h-auto break-words whitespace-pre-line`), đảm bảo bất kể lời giải ngắn hay dài hàng chục dòng, khung chữ nhật luôn bao bọc cân đối, thẩm mỹ và không bao giờ bị cắt cụt hay tràn viền.
+
+---
+
 ## [01/11/2026] - Loại Bỏ Banner Xanh Lá Live Preview & Tối Ưu Không Gian Xem Trước Học Sinh Trong Studio Sư Phạm
 
 - **Loại Bỏ Banner Header Live Preview Xanh Lá Cây (`CurriculumStudioEditor.jsx`)**:

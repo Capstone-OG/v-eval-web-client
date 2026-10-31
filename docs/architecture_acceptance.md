@@ -810,6 +810,11 @@ V-Eval-Web_Client/
     - **Equation Systems & Matrix Logic**: 2-3 variable linear systems with simultaneous brace notations.
     - **Chemistry Lab Workbench**: Molarity (`C_M`), mass concentration (`C%`), mass equation, and reaction yield calculations.
     - **7-Subject Symbol Library**: Quick link to open the full left hierarchical math palette.
+- **Adaptive Question Bank Cards & Proportional Rectangular Solution Container**:
+  - Eliminated the restrictive fixed-height `max-h-80 overflow-y-auto` scroll wrapper on the supplementary question bank list in Block 4.
+  - Re-architected questions into decoupled, individually structured cards with natural vertical height (`h-auto`), preventing clipping and double scrollbar artifacts on nested SVG variation tables and 2D/3D graphs.
+  - Added full 4-option (A, B, C, D) responsive grids with correct option highlighting in emerald green.
+  - Formatted detailed solutions (`q.explanation`) into a dedicated geometric rectangle (`w-full p-4 rounded-2xl bg-slate-50 border border-slate-200 shadow-2xs`) that dynamically adjusts its height proportionally to content length, guaranteeing balanced rectangular alignment regardless of solution complexity.
 - **Student Live Preview Streamlining & Vertical Space Optimization**:
   - Removed the bulky top green gradient banner ("Giao Diện Trực Quan Học Sinh Nhìn Thấy (Live Preview) - Thời gian thực") from the right preview column in both Split and Preview view modes.
   - Grants immediate visual access to the simulated student card container, optimizing vertical density and eliminating unnecessary title chrome.
