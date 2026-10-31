@@ -916,3 +916,8 @@ V-Eval-Web_Client/
 - **Universal DataTransfer Fallback & Seamless Drop Acceptance**:
   - Expanded drag-and-drop deserialization in `WordStyleFormulaCanvas.jsx` to read `text/plain` and `Text` streams alongside proprietary MIME types, resolving Chromium strict drag payload omissions.
   - Upgraded block recognition with resilient `.includes('[VARIATION_TABLE]')` matching to ingest variation tables and equations seamlessly without intrusive auto-modal focus.
+
+### 4.47. Import Scope Normalization for Portal Body Elements (`HierarchicalMathPalette.jsx`)
+- **Explicit React-DOM Module Resolution**:
+  - Bound `createPortal` directly from `react-dom` into the top-level lexical module scope of `HierarchicalMathPalette.jsx`.
+  - Eradicated runtime evaluation crashes when mounting the hover popover portal to `document.body`.

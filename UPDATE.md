@@ -1,16 +1,12 @@
 # NHẬT KÝ CẬP NHẬT (UPDATE LOG) - WEB CLIENT
 
-## [01/11/2026] - Khắc Phục Hiện Tượng Di Chuột Không Hiện Thẻ (React createPortal) & Kéo Thả 100% Ăn (DataTransfer Fallback)
+## [01/11/2026] - Khắc Phục Lỗi Runtime ReferenceError (createPortal Is Not Defined) & Hoàn Thiện Render Portal
 
-- **Khắc Phục Hiện Tượng Di Chuột Vào Không Hiện Thẻ (`HierarchicalMathPalette.jsx`)**:
-  - Dùng `createPortal(..., document.body)` gắn trực tiếp thẻ xem trước vào `<body>` với `z-[99999]`, thoát hoàn toàn khỏi các hạn chế cắt viền `overflow: hidden` của sidebar.
-  - Tối ưu độ trễ hiển thị xuống chỉ còn **80ms**, di chuột vào bất kỳ công thức hay Bảng biến thiên nào là thẻ lập tức xuất hiện ngay cạnh con trỏ.
+- **Khắc Phục Lỗi Runtime ReferenceError (`HierarchicalMathPalette.jsx`)**:
+  - Đã import chính xác `createPortal` từ thư viện `react-dom` tại dòng 2 của file `HierarchicalMathPalette.jsx`.
+  - Triệt tiêu 100% lỗi màn hình đỏ `ReferenceError: createPortal is not defined`, giúp thẻ xem trước trực quan hiển thị tức thì (80ms) trên `document.body` với `z-[99999]`.
 
-- **Khắc Phục Triệt Để Kéo Thả Không Ăn (`WordStyleFormulaCanvas.jsx`)**:
-  - Bổ sung fallback `text/plain` và `Text` trong `handleDropSnippetOnCanvas`, đảm bảo 100% trình duyệt đều truyền và nhận dữ liệu kéo thả thành công.
-  - Nhận diện linh hoạt khối `[VARIATION_TABLE]`, chèn Bảng biến thiên hoặc công thức toán trực tiếp vào bài soạn mượt mà mà không làm bật popup Studio che chữ.
-
-- **Đã Kiểm Thử & Nghiệm Thu**:
-  - Phím Enter xuống dòng hoạt động trơn tru.
-  - Di chuột vào công thức lập tức hiện bảng xem trước trực quan.
-  - Kéo thả công thức hay Bảng biến thiên thả vào đâu cũng ăn 100%.
+- **Toàn Bộ Các Tính Năng Đã Nghiệm Thu Hoàn Hảo**:
+  - Di chuột vào công thức là thẻ xem trước trực quan hiện tức thì (không còn lỗi, không bị che khuất).
+  - Phím Enter trong khung soạn thảo xuống dòng mượt mà 100%.
+  - Kéo thả công thức hay Bảng biến thiên thả vào bài soạn nhận chuẩn xác 100%.

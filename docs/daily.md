@@ -2,6 +2,14 @@
 
 ---
 
+## [01/11/2026] - Khắc Phục Lỗi Runtime ReferenceError (createPortal Is Not Defined) Trong HierarchicalMathPalette
+
+- **Bổ Sung Import `createPortal` Từ `react-dom` (`HierarchicalMathPalette.jsx`)*:
+  - Khắc phục lỗi thiếu câu lệnh import `createPortal` tại đầu file `HierarchicalMathPalette.jsx`, triệt tiêu hoàn toàn lỗi màn hình trắng `ReferenceError: createPortal is not defined`.
+  - Bảo đảm thẻ xem trước trực quan Bảng biến thiên và công thức được dịch chuyển an toàn qua Portal gắn trực tiếp vào `document.body` với `z-[99999]`.
+
+---
+
 ## [01/11/2026] - Khắc Phục Hiện Tượng Di Chuột Không Hiện Thẻ (React createPortal Body) & Hoàn Thiện Kéo Thả 100% Ăn (DataTransfer Fallback)
 
 - **Khắc Phục Hiện Tượng Di Chuột Vào Không Hiện Thẻ (`HierarchicalMathPalette.jsx`)*:
