@@ -2,6 +2,15 @@
 
 ---
 
+## [01/11/2026] - Loại Bỏ Triệt Để Khối Terminal Đen Thô Kệch & Tích Hợp Render Trực Quan Bảng Biến Thiên Vector Trong Thẻ Hover Sư Phạm
+
+- **Loại Bỏ Khối Terminal Đen Thô Kệch & Tích Hợp Render Trực Quan (`HierarchicalMathPalette.jsx` & `VariationTable.jsx`)**:
+  - *Xóa Bỏ 100% Khối Code Terminal Đen Thô*: Triệt tiêu hoàn toàn hộp đen developer debug dump (`[VARIATION_TABLE] title: ... x: ...`) gây phản cảm cho giáo viên và người dùng sư phạm.
+  - *Tích Hợp Render Trực Quan Chuẩn Vector (`<VariationTable data={hoveredBbtData} />`)*: Tự động phân tích cú pháp khối mẫu và render ngay một Bảng biến thiên trực quan sống động với đầy đủ dòng `x`, dòng `y'`, dấu `+/-`, vạch kép tiệm cận `||`, mũi tên biến thiên vector `↗` / `↘` và giá trị cực trị chuẩn SGK.
+  - *Chuẩn Hóa Header Thẻ Hover Nhã Nhặn*: Thay thế chuỗi chữ hoa in đậm tím gắt bằng bố cục phân tầng thanh lịch (`Icon + Tên Môn Học • Danh mục`), huy hiệu `Kéo - Thả` mềm mại và hướng dẫn thao tác rõ nét.
+
+---
+
 ## [01/11/2026] - Chuyển Đổi Sang Hiển Thị 1 Môn Học Duy Nhất Kèm Hiệu Ứng Slide Chuyển Động Mượt Mà (< >) & 7 Chấm Định Vị Trực Quan
 
 - **Bộ Chuyển Đổi 1 Môn Học Duy Nhất Kèm Hiệu Ứng Trượt Mượt Mà (`HierarchicalMathPalette.jsx` - `slideDirection` & `animate-in`)*:

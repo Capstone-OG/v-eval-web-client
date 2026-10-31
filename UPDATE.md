@@ -1,18 +1,17 @@
 # NHẬT KÝ CẬP NHẬT (UPDATE LOG) - WEB CLIENT
 
-## [01/11/2026] - Chuyển Đổi Sang Hiển Thị 1 Môn Học Duy Nhất Kèm Hiệu Ứng Slide Chuyển Động Mượt Mà (< >)
+## [01/11/2026] - Loại Bỏ Khối Terminal Đen Thô Kệch & Render Trực Quan Bảng Biến Thiên Trong Thẻ Hover Sư Phạm
 
-- **Bộ Chuyển Đổi 1 Môn Học Duy Nhất Kèm Hiệu Ứng Slide Trượt Mượt Mà (`HierarchicalMathPalette.jsx`)**:
-  - Trung tâm thanh điều hướng hiển thị **duy nhất 1 môn học** rõ nét, font đậm `text-[12px]`, hiển thị 100% đầy đủ cả icon và tên môn học (`📐 Toán Học`, `🧪 Hóa Học`, `⚛️ Vật Lý`, `🧬 Sinh Học`, `📖 Ngữ Văn`, `🌍 Địa Lý`, `🔣 Ký Hiệu & Logic`), chấm dứt triệt để lỗi tràn chữ hay co cụm.
-  - Tích hợp hiệu ứng trượt mượt mà (`animate-in fade-in slide-in-from-right-4 / slide-in-from-left-4`) theo đúng chiều bấm nút `<` hoặc `>`.
-  - Dải 7 chấm tròn định vị hỗ trợ theo dõi vị trí môn học và nhấp chuyển nhanh trực tiếp.
-  - Vòng lặp xoay tròn vô hạn (Modulo loop) liên tục qua 7 môn học khi nhấn `<` hoặc `>`.
+- **Loại Bỏ Khối Terminal Đen Thô Kệch & Render Trực Quan Bảng Biến Thiên (`HierarchicalMathPalette.jsx`)**:
+  - Xóa bỏ 100% khối hộp đen developer debug dump hiển thị code thô `[VARIATION_TABLE]` gây phản cảm cho người dùng sư phạm.
+  - Tích hợp component `<VariationTable />` trực tiếp vào thẻ Hover: Tự động render Bảng biến thiên trực quan vector mẫu với đầy đủ 3 dòng `x`, `y'`, `y`, vạch kép tiệm cận `||`, mũi tên và cực trị chuẩn SGK.
+  - Chuẩn hóa Header thẻ Hover sang chữ thường thanh lịch (`Icon + Tên Môn • Danh mục`), loại bỏ dòng cú pháp code kỹ thuật.
+  - Bộ chuyển đổi 1 môn học duy nhất ở trung tâm không bao giờ tràn chữ, tích hợp hiệu ứng trượt động mượt mà khi bấm `<` hoặc `>` và 7 chấm định vị trực quan.
 
 - **Đại Tu Toàn Diện Giao Diện Sidebar Ký Hiệu & STEM**:
   - Header trắng tinh khôi chuẩn Apple / Linear, huy hiệu `Sparkles` và tiêu đề `Ký Hiệu & STEM`.
   - Ô tìm kiếm bo tròn `rounded-xl` màu phấn nhã nhặn, viền tím tương tác êm ái.
   - Thẻ Accordion bo góc mềm mại, mũi tên xoay 90 độ, dòng công thức 1 hàng ngang tối giản thanh lịch.
-  - Rê chuột giữ yên (~380ms) để mở thẻ popup Glassmorphism mô phỏng chi tiết KaTeX phóng to và cấu trúc Bảng biến thiên.
 
 - **Tách Rời Từng Thẻ Câu Hỏi Linh Hoạt & Khung Chữ Nhật Lời Giải Chi Tiết (`CurriculumStudioEditor.jsx`)**:
   - Loại bỏ hoàn toàn `max-h-80 overflow-y-auto`, tách rời từng câu hỏi thành card độc lập (`h-auto`).

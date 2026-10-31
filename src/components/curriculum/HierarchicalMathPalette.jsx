@@ -15,6 +15,7 @@ import {
   GripVertical
 } from 'lucide-react';
 import { renderKatexHtml } from '../common/MathText';
+import VariationTable, { parseVariationTableString } from '../common/VariationTable';
 
 /**
  * HIERARCHICAL STEM CATALOG (MASSIVE REPOSITORY)
@@ -1062,7 +1063,7 @@ export default function HierarchicalMathPalette({
         <span className="text-slate-400">⚡ Nhấp để chèn</span>
       </div>
 
-      {/* 6. STUDIO HOVER PREVIEW CARD: HIỂN THỊ RÕ CHI TIẾT & MÔ PHỎNG */}
+      {/* 6. STUDIO HOVER PREVIEW CARD: HIỂN THỊ RÕ CHI TIẾT TRỰC QUAN & MÔ PHỎNG */}
       {hoveredItem && (
         <div
           style={{ 
@@ -1070,31 +1071,37 @@ export default function HierarchicalMathPalette({
             left: `${hoverCardPos.left}px`,
             position: 'fixed'
           }}
-          className="z-[999] w-84 bg-white/98 backdrop-blur-md rounded-2xl border-2 border-indigo-500 shadow-2xl p-3.5 text-slate-900 pointer-events-none animate-in fade-in zoom-in-95 duration-150"
+          className="z-[999] w-96 max-w-[90vw] bg-white/98 backdrop-blur-md rounded-2xl border border-slate-200 shadow-2xl p-4 text-slate-900 pointer-events-none ring-1 ring-slate-900/5 animate-in fade-in zoom-in-95 duration-150"
         >
           {/* Header */}
-          <div className="flex items-center justify-between pb-2 border-b border-slate-200">
-            <span className="text-[10.5px] font-black uppercase text-indigo-700 tracking-wider flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-              <span>{currentDomain?.name} • {hoveredItem.categoryName}</span>
-            </span>
-            <span className="text-[9px] px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-800 border border-indigo-200 font-mono font-bold">
-              Kéo - Thả hoặc Click
+          <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="text-sm shrink-0">{currentDomain?.icon}</span>
+              <span className="text-[11px] font-bold text-slate-800 truncate">
+                {currentDomain?.name}
+              </span>
+              <span className="text-slate-300">•</span>
+              <span className="text-[10.5px] font-medium text-slate-500 truncate">
+                {hoveredItem.categoryName}
+              </span>
+            </div>
+            <span className="text-[9px] px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 font-semibold border border-indigo-100 shrink-0">
+              Kéo - Thả
             </span>
           </div>
 
-          {/* Visual Showcase (Big KaTeX or Block Template Mockup) */}
-          {hoveredItem.isBlockTemplate ? (
-            <div className="my-2.5 p-2.5 rounded-xl bg-slate-900 text-slate-100 font-mono text-[10.5px] border border-slate-800 shadow-inner">
-              <div className="text-[9.5px] uppercase font-bold text-emerald-400 mb-1 flex items-center gap-1">
-                <span>📊 Mô phỏng cấu trúc Bảng Biến Thiên / Đồ Thị:</span>
+          {/* Visual Showcase: Real Visual VariationTable OR Clean Large KaTeX Equation */}
+          {hoveredBbtData ? (
+            <div className="my-2.5 rounded-xl border border-slate-200/90 bg-white p-2.5 overflow-x-auto shadow-2xs">
+              <div className="text-[10px] font-bold text-indigo-700 mb-1.5 flex items-center gap-1">
+                <span>📊 Bảng biến thiên trực quan mẫu:</span>
               </div>
-              <div className="text-slate-300 whitespace-pre text-[9.5px] bg-slate-950/90 p-2 rounded border border-slate-800 max-h-28 overflow-hidden">
-                {hoveredItem.code.slice(0, 160)}...
+              <div className="min-w-[340px]">
+                <VariationTable data={hoveredBbtData} />
               </div>
             </div>
           ) : (
-            <div className="my-2.5 py-3 px-3 rounded-xl bg-gradient-to-b from-slate-50 to-white border border-slate-200 text-center flex items-center justify-center min-h-[56px] shadow-inner">
+            <div className="my-2.5 py-3.5 px-4 rounded-xl bg-gradient-to-b from-slate-50 to-white border border-slate-200/80 text-center flex items-center justify-center min-h-[58px] shadow-2xs">
               <div 
                 className="text-xl text-indigo-950 font-serif leading-none"
                 dangerouslySetInnerHTML={{ __html: renderKatexHtml(hoveredItem.preview || hoveredItem.code, true) }}
@@ -1102,27 +1109,24 @@ export default function HierarchicalMathPalette({
             </div>
           )}
 
-          {/* Title & Pedagogical Description */}
+          {/* Title & Pedagogical Description (100% No Raw Code Terminal) */}
           <div className="space-y-1">
             <div className="font-extrabold text-[13px] text-slate-900">
               {hoveredItem.label}
             </div>
             <p className="text-[11.5px] text-slate-600 leading-relaxed font-normal">
-              {hoveredItem.desc || 'Kéo thả trực tiếp vào khung soạn thảo / Bảng biến thiên hoặc nhấp chuột để chèn.'}
+              {hoveredItem.desc || 'Kéo thả trực tiếp vào khung soạn thảo hoặc nhấp chuột để chèn.'}
             </p>
-            {(hoveredItem.latexNote || (hoveredItem.code && !hoveredItem.isBlockTemplate)) && (
-              <div className="mt-1.5 px-2 py-1 bg-slate-100 rounded-md border border-slate-200 text-[10px] font-mono text-slate-700 flex items-center gap-1.5">
-                <span className="text-slate-400 font-sans font-medium shrink-0">Cú pháp:</span>
-                <span className="text-indigo-700 font-bold truncate">
-                  {hoveredItem.latexNote || hoveredItem.code}
-                </span>
-              </div>
-            )}
           </div>
 
-          <div className="mt-2.5 pt-2 border-t border-slate-200 flex items-center justify-between text-[10px] text-emerald-700 font-extrabold">
-            <span>✋ Kéo thả vào vị trí bất kỳ</span>
-            <span>⚡ Nhấp để chèn ngay</span>
+          {/* Footer Guide */}
+          <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[10.5px] text-slate-600 font-medium">
+            <span className="flex items-center gap-1 text-emerald-600 font-bold">
+              <span>✋</span> Kéo thả vào bài soạn
+            </span>
+            <span className="flex items-center gap-1 text-indigo-600 font-bold">
+              <span>⚡</span> Nhấp để chèn ngay
+            </span>
           </div>
         </div>
       )}

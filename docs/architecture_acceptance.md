@@ -875,3 +875,12 @@ V-Eval-Web_Client/
 - **7-Point Dot Pagination Bar & Infinite Modulo Loop**:
   - Integrated 7 pill-shaped dot indicators beneath the switcher: active domain expands to a vibrant pill (`w-4 bg-indigo-600`), while inactive dots provide 1-click random access jumping.
   - Preserved the circular modulo navigation loop (`(index ± 1 + length) % length`) without boundary deadlocks.
+
+### 4.42. Native Visual Vector Variation Table Hover Inspector Architecture (`HierarchicalMathPalette.jsx`, `VariationTable.jsx`)
+- **Eradication of Raw Developer Terminal Dumps**:
+  - Addressed and removed raw ASCII/terminal code syntax dumps (e.g., black monospace blocks displaying `[VARIATION_TABLE] title: ... x: ...`) from the hover inspector card.
+  - Enforced a strictly pedagogical presentation policy: users are educators and students who must never be exposed to internal serialization formats or developer diagnostics.
+- **Dynamic In-Hover Visual Variation Table Rendering**:
+  - Integrated `parseVariationTableString` and the native `<VariationTable />` engine directly within the hover preview card.
+  - When educators hover over `BBT Bậc 3`, `BBT Bậc 4`, or `BBT Phân Thức`, the inspector instantly renders an authentic, vector-drawn, 3-row variation table complete with exact coordinate poles, derivative sign alternation, double-vertical asymptotic bars (`||`), and directional trajectory arrows.
+  - Standard formulas continue to render in high-resolution, enlarged vector KaTeX typography with natural-case subject headers.
