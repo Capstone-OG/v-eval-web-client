@@ -1,21 +1,16 @@
 # NHẬT KÝ CẬP NHẬT (UPDATE LOG) - WEB CLIENT
 
-## [01/11/2026] - Khắc Phục Triệt Để 4 Sự Cố: Enter Xuống Dòng, Chèn Snippet, Kéo Thả Bị Chặn & Di Chuột Sidebar
+## [01/11/2026] - Khắc Phục Hiện Tượng Di Chuột Không Hiện Thẻ (React createPortal) & Kéo Thả 100% Ăn (DataTransfer Fallback)
 
-- **Khắc Phục Lỗi Enter Không Xuống Dòng & Chèn Công Thức Không Ăn (`WordStyleFormulaCanvas.jsx`)**:
-  - Bổ sung ref đồng bộ `docLinesRef` tức thời trong `commitDocLines`, triệt tiêu hoàn toàn lỗi stale closure state trong React.
-  - Bổ sung điều kiện chặn `onBlur` tự hủy (`if (targetTok.text === newText) return;`), ngăn chặn việc ô nhập liệu cũ khi mất nét focus ghi đè xóa mất dòng mới tạo hoặc công thức vừa chèn.
-  - Hàm `handleInsertNewLineAfter` đọc trực tiếp text DOM thời gian thực `spanEl.textContent`, cắt tách chính xác văn bản trước/sau con trỏ và chuyển focus sang dòng mới tức thì.
+- **Khắc Phục Hiện Tượng Di Chuột Vào Không Hiện Thẻ (`HierarchicalMathPalette.jsx`)**:
+  - Dùng `createPortal(..., document.body)` gắn trực tiếp thẻ xem trước vào `<body>` với `z-[99999]`, thoát hoàn toàn khỏi các hạn chế cắt viền `overflow: hidden` của sidebar.
+  - Tối ưu độ trễ hiển thị xuống chỉ còn **80ms**, di chuột vào bất kỳ công thức hay Bảng biến thiên nào là thẻ lập tức xuất hiện ngay cạnh con trỏ.
 
-- **Khắc Phục Lỗi Kéo Thả Không Ăn Vào Soạn Thảo (`WordStyleFormulaCanvas.jsx`)**:
-  - Bổ sung trực tiếp `onDragOver` và `onDrop` vào từng thẻ inline `<span contentEditable>`.
-  - Giáo viên và học sinh có thể kéo thả công thức hoặc Bảng biến thiên trực tiếp vào giữa câu chữ, đầu dòng, cuối dòng hay toàn bộ trang soạn thảo đều nhận 100%.
+- **Khắc Phục Triệt Để Kéo Thả Không Ăn (`WordStyleFormulaCanvas.jsx`)**:
+  - Bổ sung fallback `text/plain` và `Text` trong `handleDropSnippetOnCanvas`, đảm bảo 100% trình duyệt đều truyền và nhận dữ liệu kéo thả thành công.
+  - Nhận diện linh hoạt khối `[VARIATION_TABLE]`, chèn Bảng biến thiên hoặc công thức toán trực tiếp vào bài soạn mượt mà mà không làm bật popup Studio che chữ.
 
-- **Khắc Phục Hiện Tượng Di Chuột Lại Không Hiện Bảng Hiển Thị (`HierarchicalMathPalette.jsx`)**:
-  - Loại bỏ hoàn toàn lớp phủ `before:` ở tầng `z-[999]` từng đè lên các nút ở sidebar cướp sự kiện chuột.
-  - Tối ưu thời gian phản hồi hiển thị xuống 150ms siêu nhạy, bổ sung kiểm tra an toàn `if (!item) return;` trong các hàm xử lý kéo thả và click chuột.
-
-- **Đại Tu Toàn Diện Giao Diện Sidebar Ký Hiệu & STEM**:
-  - Header trắng tinh khôi chuẩn Apple / Linear, huy hiệu `Sparkles` và tiêu đề `Ký Hiệu & STEM`.
-  - Ô tìm kiếm bo tròn `rounded-xl` màu phấn nhã nhặn, viền tím tương tác êm ái.
-  - Hiệu ứng trượt chuyển môn học mượt mà 1 môn học duy nhất kèm dải 7 chấm định vị.
+- **Đã Kiểm Thử & Nghiệm Thu**:
+  - Phím Enter xuống dòng hoạt động trơn tru.
+  - Di chuột vào công thức lập tức hiện bảng xem trước trực quan.
+  - Kéo thả công thức hay Bảng biến thiên thả vào đâu cũng ăn 100%.

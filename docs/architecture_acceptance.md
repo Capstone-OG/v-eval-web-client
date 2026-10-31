@@ -908,3 +908,11 @@ V-Eval-Web_Client/
   - Implemented explicit `onDragOver` and `onDrop` event delegation across granular inline contentEditable text spans, eliminating browser default forbidden drop cursors and ensuring drops register anywhere within running sentences.
 - **Palette Sidebar Overlay Deconfliction**:
   - Purged aggressive pseudo-element spatial bridges at `z-[999]` that previously occluded sidebar button hitboxes, optimizing re-hover activation latency to a brisk 150ms.
+
+### 4.46. React Portal Body-Mounted Hover Architecture and Universal DataTransfer Drag Fallback (`HierarchicalMathPalette.jsx`, `WordStyleFormulaCanvas.jsx`)
+- **Direct Body-Mounted Portal Pipeline**:
+  - Re-architected the hover preview inspector to render via `createPortal(..., document.body)` at `z-[99999]`.
+  - Permanently decoupled the popup from ancestor `overflow: hidden` clipping and stacking context limitations, lowering trigger delay to 80ms for instant hover visibility.
+- **Universal DataTransfer Fallback & Seamless Drop Acceptance**:
+  - Expanded drag-and-drop deserialization in `WordStyleFormulaCanvas.jsx` to read `text/plain` and `Text` streams alongside proprietary MIME types, resolving Chromium strict drag payload omissions.
+  - Upgraded block recognition with resilient `.includes('[VARIATION_TABLE]')` matching to ingest variation tables and equations seamlessly without intrusive auto-modal focus.

@@ -1412,29 +1412,28 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
 
   // Handle Drag-and-Drop of formula/compound/block chips from HierarchicalMathPalette
   const handleDropSnippetOnCanvas = (e, targetLineId = null) => {
-    const currentLines = docLinesRef.current || docLines;
-    const blockCode = e.dataTransfer?.getData('text/veval-block');
-    const mathCode = e.dataTransfer?.getData('text/veval-math') || e.dataTransfer?.getData('text/veval-bbt');
-    if (!blockCode && !mathCode) return;
-
     e.preventDefault();
     e.stopPropagation();
 
-    const rawSnippet = (blockCode || mathCode || '').trim();
+    const currentLines = docLinesRef.current || docLines;
+    const blockCode = e.dataTransfer?.getData('text/veval-block');
+    const mathCode = e.dataTransfer?.getData('text/veval-math') || e.dataTransfer?.getData('text/veval-bbt');
+    const plainText = e.dataTransfer?.getData('text/plain') || e.dataTransfer?.getData('Text');
+    const rawSnippet = (blockCode || mathCode || plainText || '').trim();
     if (!rawSnippet) return;
 
     // Case 1: Block tag (e.g. [VARIATION_TABLE]...[/VARIATION_TABLE])
     if (
-      rawSnippet.startsWith('[VARIATION_TABLE]') ||
-      rawSnippet.startsWith('[MATH_GRAPH]') ||
-      rawSnippet.startsWith('[MATH_GRAPH_3D]') ||
-      rawSnippet.startsWith('[MATH_GEOMETRY_2D]')
+      rawSnippet.includes('[VARIATION_TABLE]') ||
+      rawSnippet.includes('[MATH_GRAPH]') ||
+      rawSnippet.includes('[MATH_GRAPH_3D]') ||
+      rawSnippet.includes('[MATH_GEOMETRY_2D]')
     ) {
-      const bType = rawSnippet.startsWith('[VARIATION_TABLE]')
+      const bType = rawSnippet.includes('[VARIATION_TABLE]')
         ? 'VARIATION_TABLE'
-        : rawSnippet.startsWith('[MATH_GRAPH_3D]')
+        : rawSnippet.includes('[MATH_GRAPH_3D]')
         ? 'MATH_GRAPH_3D'
-        : rawSnippet.startsWith('[MATH_GEOMETRY_2D]')
+        : rawSnippet.includes('[MATH_GEOMETRY_2D]')
         ? 'MATH_GEOMETRY_2D'
         : 'MATH_GRAPH';
       const newBlockLine = {
@@ -1484,7 +1483,6 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
           tokens: [formulaToken, { id: afterId, isFormula: false, text: ' ' }]
         }
       ]);
-      setActiveFormulaId(newFormulaId);
       return;
     }
 
@@ -1507,7 +1505,6 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
           tokens: [formulaToken, { id: afterId, isFormula: false, text: ' ' }]
         }
       ]);
-      setActiveFormulaId(newFormulaId);
       return;
     }
 
@@ -1520,7 +1517,6 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
       };
     });
     commitDocLines(updated);
-    setActiveFormulaId(newFormulaId);
   };
 
   // Find active token object

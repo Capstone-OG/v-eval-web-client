@@ -595,6 +595,7 @@ export default function HierarchicalMathPalette({
   const [hoveredItem, setHoveredItem] = useState(null);
   const [hoverCardPos, setHoverCardPos] = useState({ top: 0, left: 0 });
   const hoverTimerRef = useRef(null);
+  const hoverCloseTimerRef = useRef(null);
 
   const domainKeys = Object.keys(HIERARCHICAL_CATALOG);
   const currentDomain = HIERARCHICAL_CATALOG[selectedDomain] || HIERARCHICAL_CATALOG.math;
@@ -696,6 +697,7 @@ export default function HierarchicalMathPalette({
   useEffect(() => {
     return () => {
       if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+      if (hoverCloseTimerRef.current) clearTimeout(hoverCloseTimerRef.current);
     };
   }, []);
 
@@ -726,7 +728,7 @@ export default function HierarchicalMathPalette({
     }
   };
 
-  // Hover handler with bridge & grace period (không bị mất tiêu khi kéo chuột qua)
+  // Hover handler with instant 80ms responsiveness & Portal rendering
   const handleItemMouseEnter = (item, catName, e) => {
     if (hoverCloseTimerRef.current) {
       clearTimeout(hoverCloseTimerRef.current);
@@ -734,26 +736,25 @@ export default function HierarchicalMathPalette({
     }
     if (hoverTimerRef.current) {
       clearTimeout(hoverTimerRef.current);
+      hoverTimerRef.current = null;
     }
     const rect = e.currentTarget.getBoundingClientRect();
     
-    const delay = 150;
     hoverTimerRef.current = setTimeout(() => {
       setHoveredItem({ ...item, categoryName: catName });
-      const cardMaxHeight = 440;
       const topPos = Math.min(
         Math.max(16, rect.top - 16),
-        Math.max(16, window.innerHeight - cardMaxHeight - 20)
+        Math.max(16, window.innerHeight - 380)
       );
       const leftPos = Math.min(
         window.innerWidth - 410,
-        rect.right + 8
+        rect.right + 10
       );
       setHoverCardPos({
         top: topPos,
         left: leftPos
       });
-    }, delay);
+    }, 80);
   };
 
   const handleItemMouseLeave = () => {
@@ -1128,7 +1129,7 @@ export default function HierarchicalMathPalette({
       </div>
 
       {/* 6. STUDIO HOVER PREVIEW CARD: HIỂN THỊ RÕ CHI TIẾT TRỰC QUAN & MÔ PHỎNG */}
-      {hoveredItem && (
+      {hoveredItem && typeof document !== 'undefined' && createPortal(
         <div
           onMouseEnter={handleCardMouseEnter}
           onMouseLeave={handleCardMouseLeave}
@@ -1137,7 +1138,7 @@ export default function HierarchicalMathPalette({
             left: `${hoverCardPos.left}px`,
             position: 'fixed'
           }}
-          className="z-[999] w-96 max-w-[90vw] max-h-[85vh] overflow-y-auto bg-white/98 backdrop-blur-md rounded-2xl border border-slate-200 shadow-2xl p-4 text-slate-900 pointer-events-auto ring-1 ring-slate-900/5 animate-in fade-in zoom-in-95 duration-150 select-text "
+          className="z-[99999] w-96 max-w-[90vw] max-h-[85vh] overflow-y-auto bg-white/98 backdrop-blur-md rounded-2xl border border-slate-200 shadow-2xl p-4 text-slate-900 pointer-events-auto ring-1 ring-slate-900/5 select-text"
         >
           {/* Header */}
           <div className="flex items-center justify-between pb-2 border-b border-slate-100">
@@ -1224,7 +1225,8 @@ export default function HierarchicalMathPalette({
               <span>⚡ Nhấp chèn ngay</span>
             </button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
     </div>

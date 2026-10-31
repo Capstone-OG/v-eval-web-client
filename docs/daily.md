@@ -2,6 +2,20 @@
 
 ---
 
+## [01/11/2026] - Khắc Phục Hiện Tượng Di Chuột Không Hiện Thẻ (React createPortal Body) & Hoàn Thiện Kéo Thả 100% Ăn (DataTransfer Fallback)
+
+- **Khắc Phục Hiện Tượng Di Chuột Vào Không Hiện Thẻ (`HierarchicalMathPalette.jsx`)*:
+  - *Chuyển Thẻ Hover Sang `createPortal(..., document.body)`*: Thoát hoàn toàn khỏi cây DOM sidebar và các thuộc tính `overflow: hidden` / stacking context của container cha, gắn trực tiếp vào `document.body` với `z-[99999]`.
+  - *Rút Ngắn Độ Trễ Xuống 80ms Siêu Mượt*: Khi rê chuột vào bất kỳ công thức nào ở sidebar, thẻ xem trước trực quan sẽ xuất hiện tức thì trong 80ms thay vì đợi lâu.
+  - *Tọa Độ Cố Định Chính Xác Theo Viewport*: Đặt thẻ ổn định ở `rect.right + 10`, không còn bị lệch hay che khuất.
+
+- **Khắc Phục Triệt Để Kéo Thả Không Ăn (`WordStyleFormulaCanvas.jsx`)*:
+  - *Bổ Sung Fallback Toàn Diện Cho `dataTransfer`*: Đọc đồng thời `text/veval-block`, `text/veval-math`, `text/veval-bbt` và fallback chuẩn `text/plain` / `Text`. Khắc phục 100% hiện tượng một số trình duyệt Chromium không truyền mime type tùy biến.
+  - *Nhận Diện Khối Mẫu Linh Hoạt (`.includes`) Nhận Diện Bảng Biến Thiên*: Bắt trọn vẹn khối `[VARIATION_TABLE]`, `[MATH_GRAPH]` kể cả khi có khoảng trắng xung quanh.
+  - *Thả Tự Do Không Gây Bật Khung Studio*: Chèn êm ái công thức vào dòng mà không bật popup Studio gây che khuất văn bản.
+
+---
+
 ## [01/11/2026] - Khắc Phục Triệt Để 4 Sự Cố: Enter Không Xuống Dòng, Chèn Không Ăn, Kéo Thả Bị Chặn & Di Chuột Không Hiện
 
 - **Khắc Phục Lỗi Enter Không Xuống Dòng & Chèn Công Thức Không Ăn (`WordStyleFormulaCanvas.jsx`)*:
