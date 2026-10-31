@@ -1,27 +1,25 @@
 # NHẬT KÝ CẬP NHẬT (UPDATE LOG) - WEB CLIENT
 
-## [31/10/2026] - Khắc Phục Lỗi Cú Pháp Import Dấu Phẩy & Tinh Chỉnh Nút STEM Trôi Nổi Cạnh Phải Siêu Gọn Nhẹ Trong Studio Sư Phạm
+## [31/10/2026] - Tối Giản Bảng STEM (Search Đầu Trang, Không Icon/GDPT 2018, Gỡ Bỏ Dropdown Header & Chèn Chuẩn Xác Tại Con Trỏ)
+
+- **Tối Giản Hóa Toàn Diện Bảng Slide-Over STEM Drawer (`CurriculumStudioEditor.jsx`)**:
+  - *Gỡ Bỏ Hoàn Toàn Dropdown STEM Trên Header Trên Cùng*:
+    + Loại bỏ nút `StemToolsDropdown` khỏi top header, triệt tiêu sự trùng lặp (dư thừa công cụ STEM) khi đã có mini-tab `< STEM` neo cạnh phải màn hình.
+  - *Làm Sạch Bảng Drawer & Bổ Sung Thanh Tìm Kiếm Search Ở Đầu*:
+    + Xóa bỏ huy hiệu `GDPT 2018` và các badge công nghệ phụ (`JSXGraph`, `SGK 2018`, `Auto Calc`, `Vi Tích Phân`, `Thực Nghiệm`) gây rối mắt.
+    + Thêm ô tìm kiếm trực tiếp (`Search input`) ở đầu bảng trượt, lọc thời gian thực toàn bộ 8 công cụ theo tiêu đề, mô tả và từ khóa.
+    + Tinh giản danh sách công cụ: Chỉ hiển thị rõ nét Tiêu đề công cụ (`font-bold text-xs`) và Mô tả ngắn gọn (`text-[11px] text-slate-500`), loại bỏ 100% icon/emoji màu mè và các nút lồng nhau.
+  - *Tự Động Bắt Mục Tiêu & Loại Bỏ Dropdown Thủ Công*:
+    + Xóa bỏ dropdown `🎯 Chèn vào mục`, tự động bắt chính xác canvas và dòng con trỏ mà giáo viên đang thao tác.
+
+- **Động Cơ Chèn Khối Đồ Thị, Bảng Biến Thiên & Công Thức Chuẩn Xác Tại Con Trỏ (`WordStyleFormulaCanvas.jsx`)**:
+  - Nâng cấp hàm `insertSnippet`: Đối với các khối trực quan lớn (`[VARIATION_TABLE]`, `[MATH_GRAPH]`, `[MATH_GRAPH_3D]`, `[MATH_GEOMETRY_2D]`), hệ thống chèn trực tiếp tại đúng chỉ mục dòng (`targetIdx`) con trỏ đang đứng thay vì vứt xuống cuối tài liệu.
+  - Tự động thay thế dòng trống hoặc chèn ngay sau dòng văn bản hiện tại và cập nhật con trỏ tiếp theo mượt mà.
 
 - **Khắc Phục Lỗi Cú Pháp Import Dấu Phẩy & Tinh Chỉnh Nút STEM Trôi Nổi Cạnh Phải Siêu Gọn Nhẹ (`CurriculumStudioEditor.jsx`)**:
-  - *Sửa Triệt Để Lỗi Cú Pháp TypeScript (TS1005 `',' expected`)*:
-    + Bổ sung dấu phẩy kết thúc `Table2,` trong khối destructuring import `lucide-react`, bảo đảm 100% chuẩn cú pháp ES Module và triệt tiêu cảnh báo lỗi parser của IDE.
-  - *Thiết Kế Lại Nút Neo Cạnh Phải Màn Hình Mũi Tên "<" Siêu Gọn Nhẹ (Ultra-Compact Sleek Tab)*:
-    + Thu gọn toàn diện thanh tab từ 160px (`CÔNG CỤ STEM`) xuống mini-tab `[ < ✨ STEM ]` kích thước chỉ ~55px x ~20px (`pl-1.5 pr-1 py-2 rounded-l-xl`), ôm sát mép phải màn hình, triệt tiêu hoàn toàn hiện tượng che lấn nội dung trang giấy Word.
-    + Tinh chỉnh chiều rộng ngăn kéo trượt `FloatingStemDrawer` từ `420px` xuống `380px` (`max-h-[86vh]`), tối ưu mật độ hiển thị High-Density.
+  - Bổ sung dấu phẩy kết thúc `Table2,` trong khối import `lucide-react`, triệt tiêu hoàn toàn lỗi TS1005 `',' expected`.
+  - Thay thế tab dài 160px bằng mini-tab `[ < ✨ STEM ]` kích thước chỉ ~55px x ~20px (`pl-1.5 pr-1 py-2 rounded-l-xl`), ôm sát mép phải màn hình, không đè lấn trang soạn thảo.
 
-- **Chuẩn Hóa UI Khối 4 Ngân Hàng Đề Hàng Thẳng Lối & Xóa Bỏ Nút Dán Ảnh Rời Rạc (`CurriculumStudioEditor.jsx`)**:
-  - *Sắp Xếp Ngang Hàng Thẳng Lối Khối 4 & Loại Bỏ Emoji Trùng Lặp*:
-    + Căn thẳng hàng 1 dòng duy nhất cho bộ đôi nút tác vụ `AI Sinh Câu Hỏi` và `Thêm Câu Hỏi Mới` tại Header Khối 4 (`flex items-center gap-2.5 shrink-0 whitespace-nowrap`), triệt tiêu hiện tượng vỡ 2 hàng gây lệch layout.
-    + Loại bỏ emoji `✨` và `+` thừa trong nhãn chữ khi đã có icon Lucide `Sparkles` và `Plus` đi kèm.
-  - *Loại Bỏ Hoàn Toàn Nút Dán/Tải Ảnh Rời Rạc & Tối Giản Nhãn Tiêu Đề*:
-    + Gỡ bỏ hoàn toàn nút `🖼️ Dán/Tải Ảnh` thừa thãi tại Đề bài và Lời giải mẫu (giáo viên dán ảnh trực tiếp từ clipboard vào canvas bằng phím tắt `Ctrl+V`).
-  - *Thống Nhất Công Cụ STEM Duy Nhất Trên Đầu & Bảng Công Cụ Trôi Nổi Cạnh Phải Mũi Tên "<"*:
-    + Đưa `StemToolsDropdown` duy nhất lên thanh Header Studio trên cùng (MathLab 2D/3D, Bảng biến thiên, Phân số, Đạo hàm, Hóa học).
-    + Trang bị nút trôi nổi neo cố định cạnh phải màn hình `[ < ✨ STEM ]`: Nhấp vào sẽ mở Slide-over Drawer với bộ chọn mục tiêu chèn động (`Khối 1: Nền tảng SGK`, `Khối 2: Phương pháp giải`, `Khối 4: Đề bài mẫu`, `Khối 4: Lời giải mẫu`).
-
-- **Khung Điền Số Trực Quan Chuẩn SGK & Bộ Chuyển Đổi Toán Tự Nhiên Hai Chiều (`WordStyleFormulaCanvas.jsx`)**:
-  - Khung điền số trực quan dạng phân số chuẩn SGK (Tử số, gạch ngang, Mẫu số, đáp số), căn thức, lũy thừa, hóa học; bộ chuyển đổi hai chiều `latexToNaturalMath` & `naturalMathToLatex` (0% lộ mã LaTeX).
-  - Nút đỏ `[ 🗑️ Xóa ]` và phím Backspace xóa gọn công thức.
-
-- **Tích Hợp AI Sinh Câu Hỏi Trắc Nghiệm Tự Động Bám Sát Dạng Bài Vào Khối 4 Ngân Hàng Đề (`CurriculumStudioEditor.jsx`)**:
-  - Bộ đôi nút tác vụ nổi bật tại Khối 4; modal sinh đề thích ứng (`AiQuestionGeneratorModal`) kết nối API 16; nút `✨ AI Tự Điền Câu Hỏi` 1-click trong hộp thoại thêm câu hỏi thủ công.
+- **Chuẩn Hóa UI Khối 4 Ngân Hàng Đề & Xóa Bỏ Nút Dán Ảnh Rời Rạc (`CurriculumStudioEditor.jsx`)**:
+  - Căn thẳng hàng 1 dòng header Khối 4 (`AI Sinh Câu Hỏi` & `Thêm Câu Hỏi Mới`), loại bỏ emoji trùng lặp.
+  - Xóa bỏ nút phụ `🖼️ Dán/Tải Ảnh`, hỗ trợ phím tắt `Ctrl+V` dán ảnh clipboard trực tiếp.

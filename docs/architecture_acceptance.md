@@ -798,17 +798,20 @@ V-Eval-Web_Client/
 - **Right-Edge Docked Floating Drawer (`FloatingStemDrawer` & Ultra-Compact Toggle Button `<`)**:
   - Engineered a sleek, ultra-compact docked trigger button on the right edge of the viewport (`fixed right-0 top-1/2 -translate-y-1/2 z-40`) featuring a minimal `<` chevron (`ChevronLeft className="w-3.5 h-3.5"`), mini-sparkle `✨`, and vertical label `STEM` (~55px height, ~20px width, `rounded-l-xl`), hugging the right border closely to completely prevent overlapping onto the editor canvas.
   - Added trailing comma to `Table2,` inside the multiline `lucide-react` import statement to ensure strict ES module compliance and resolve TypeScript TS1005 `',' expected` diagnostic warnings.
-  - Clicking the toggle expands an ultra-modern slide-over palette drawer (`w-80 sm:w-[380px] max-h-[86vh]`) containing all pedagogical tools:
-    - **MathLab 2D/3D**: Full JSXGraph workspace for 3D spatial rotations (360° trackball), 2D Cartesian function curves, and planar geometry.
+  - Clicking the toggle expands an ultra-modern slide-over palette drawer (`w-80 sm:w-[380px] max-h-[86vh]`) with a top real-time `Search` bar, filtered across all mathematical and science tools.
+  - Purged redundant `GDPT 2018` badges, emoji boxes, and secondary buttons, streamlining every tool item down to clean typography: Tool Title (`font-bold text-xs`) and Descriptive Summary (`text-[11px] text-slate-500`) with 0% distracting icons.
+  - Integrated active cursor insertion: Removed manual target selector dropdown in favor of automatic active cursor tracking; upgraded `insertSnippet` in `WordStyleFormulaCanvas.jsx` to insert large visual blocks (`[VARIATION_TABLE]`, `[MATH_GRAPH]`, `[MATH_GRAPH_3D]`, `[MATH_GEOMETRY_2D]`) directly at the active cursor line index (`targetIdx`) instead of dumping at document bottom.
+  - Available tools in drawer:
+    - **MathLab 2D & 3D**: Full JSXGraph workspace for 3D spatial rotations (360° trackball), 2D Cartesian function curves, and planar geometry.
     - **Variation Table Studio**: Instant 2N-1 grid table builder with double-bar asymptotes (`||`) and textbook inflection vectors.
     - **Fraction & Arithmetic Calculator**: 2-story fractions with automatic real-time result evaluation.
     - **Calculus & Textbook Limits**: First-principle limits, derivative definitions, and indeterminate quotient cancellations.
+    - **Definite Integrals & Differential Calculus**: Definite integral bounds and differentials.
+    - **Equation Systems & Matrix Logic**: 2-3 variable linear systems with simultaneous brace notations.
     - **Chemistry Lab Workbench**: Molarity (`C_M`), mass concentration (`C%`), mass equation, and reaction yield calculations.
     - **7-Subject Symbol Library**: Quick link to open the full left hierarchical math palette.
-  - Features an intuitive **Target Selector** (`theoryRecap`, `solutionMethod`, `sampleQuestion`, `sampleExplanation`) allowing teachers to effortlessly direct mathematical assets to any active section without navigating away.
-- **Header Unification & Inline Subheader De-cluttering**:
-  - Removed fragmented, redundant STEM dropdowns and standalone image buttons from individual section subheaders (Block 1, Block 2, Block 4 question and solution prompts), streamlining the editing canvas.
-  - Positioned a unified, prominent `StemToolsDropdown` directly in the top sticky header of the studio editor.
+- **Top Header De-cluttering & Single Source of Truth**:
+  - Removed redundant `StemToolsDropdown` from the top header bar, establishing the right floating mini-tab as the single, authoritative entry point for STEM tool invocation.
   - Re-aligned the Block 4 Question Bank header with fixed single-line horizontal alignment (`flex items-center gap-2.5 shrink-0 whitespace-nowrap`) and purged duplicate emojis.
 
 ---

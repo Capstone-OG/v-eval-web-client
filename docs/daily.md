@@ -4,6 +4,17 @@
 
 ## [31/10/2026] - Chuẩn Hóa UI Khối 4 Ngang Hàng Thẳng Lối, Xóa Bỏ Nút Dán Ảnh & Bảng Công Cụ STEM Trôi Nổi Cạnh Phải Màn Hình Mũi Tên "<" Trong Studio Sư Phạm
 
+- **Tối Giản Hóa Bảng STEM Cạnh Phải (Thanh Tìm Kiếm Search, Không Icon/Huy Hiệu, Gỡ Bỏ Dropdown Header & Chèn Chuẩn Xác Tại Con Trỏ)**:
+  - *Gỡ Bỏ Hoàn Toàn Dropdown STEM Trên Thanh Header*:
+    + Loại bỏ nút `StemToolsDropdown` khỏi header chính của Studio, triệt tiêu sự trùng lặp (dư thừa công cụ STEM) khi giảng viên đã có mini-tab `< STEM` neo cố định mép phải màn hình.
+  - *Làm Sạch Toàn Diện Bảng Slide-over STEM Drawer (`FloatingStemDrawer`)*:
+    + Xóa bỏ huy hiệu `GDPT 2018` và các nhãn công nghệ phụ (`JSXGraph`, `SGK 2018`, `Auto Calc`, `Vi Tích Phân`) gây rối mắt.
+    + Bổ sung thanh tìm kiếm công cụ thời gian thực (`Search input`) ở đầu bảng, hỗ trợ tìm kiếm tức thì theo tên, mô tả hoặc từ khóa (MathLab, Bảng biến thiên, Phân số, Đạo hàm, Hóa học...).
+    + Chuẩn hóa danh sách công cụ: Chỉ hiển thị rõ nét Tiêu đề công cụ và Mô tả ngắn gọn, loại bỏ 100% icon emoji, hộp icon màu sắc và các nút lồng nhau, tạo diện mạo tối giản, thanh lịch.
+  - *Chèn Công Thức & Khối Đồ Thị/Bảng Biến Thiên Ngay Tại Vị Trí Con Trỏ Đang Đứng*:
+    + Gỡ bỏ dropdown thủ công `🎯 Chèn vào mục`, tự động bắt chính xác canvas và dòng con trỏ mà giáo viên đang thao tác.
+    + Nâng cấp động cơ `insertSnippet` trong [`WordStyleFormulaCanvas.jsx`](./src/components/curriculum/WordStyleFormulaCanvas.jsx): Đối với các khối trực quan lớn (`[VARIATION_TABLE]`, `[MATH_GRAPH]`, `[MATH_GRAPH_3D]`, `[MATH_GEOMETRY_2D]`), hệ thống chèn trực tiếp tại đúng chỉ mục dòng (`targetIdx`) con trỏ đang đứng thay vì vứt xuống cuối tài liệu.
+
 - **Khắc Phục Lỗi Cú Pháp Import Dấu Phẩy & Tinh Chỉnh Nút STEM Trôi Nổi Cạnh Phải Siêu Gọn Nhẹ (`CurriculumStudioEditor.jsx`)**:
   - *Sửa Triệt Để Lỗi Cú Pháp TypeScript (TS1005 `',' expected`)*:
     + Bổ sung dấu phẩy kết thúc `Table2,` trong khối destructuring import từ thư viện `lucide-react` tại đầu file `CurriculumStudioEditor.jsx`, loại bỏ hoàn toàn cảnh báo parser của TypeScript Language Server và linter IDE.

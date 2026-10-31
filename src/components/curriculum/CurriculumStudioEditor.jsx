@@ -40,6 +40,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Table2,
+  Search,
 } from 'lucide-react';
 import MathText, { unescapeLiteralNewlines } from '../common/MathText';
 import InteractiveFormulaBuilderModal from './InteractiveFormulaBuilderModal';
@@ -1201,13 +1202,6 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
             <span className="hidden md:inline">AI Nhận Diện</span>
           </button>
 
-          {/* CÔNG CỤ TOÁN & STEM DUY NHẤT NẰM TRÊN ĐẦU */}
-          <StemToolsDropdown
-            targetField={activeSection === 'theory' ? 'theoryRecap' : activeSection === 'method' ? 'solutionMethod' : (activeFormulaTarget || 'sampleQuestion')}
-            onOpenFormulaBuilder={handleOpenFormulaBuilder}
-            onOpenMathWorkbench={handleOpenMathWorkbench}
-          />
-
           <button
             disabled={saving}
             onClick={handleSaveAll}
@@ -1306,7 +1300,12 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
                 return (
                   <button
                     key={tab.id}
-                    onClick={() => setActiveSection(tab.id)}
+                    onClick={() => {
+                      setActiveSection(tab.id);
+                      if (tab.id === 'theory') setActiveFormulaTarget('theoryRecap');
+                      else if (tab.id === 'method') setActiveFormulaTarget('solutionMethod');
+                      else if (tab.id === 'questions') setActiveFormulaTarget('sampleQuestion');
+                    }}
                     className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all shrink-0 ${
                       isActive 
                         ? 'bg-slate-900 text-white shadow-sm' 
@@ -2642,7 +2641,7 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
         isOpen={isStemDrawerOpen}
         onClose={() => setIsStemDrawerOpen(false)}
         targetField={activeFormulaTarget || (activeSection === 'theory' ? 'theoryRecap' : activeSection === 'method' ? 'solutionMethod' : 'sampleQuestion')}
-        onSelectTarget={(target) => setActiveFormulaTarget(target)}
+        
         onOpenFormulaBuilder={handleOpenFormulaBuilder}
         onOpenMathWorkbench={handleOpenMathWorkbench}
         onOpenSymbolPalette={() => setIsPaletteCollapsed(false)}
@@ -2652,208 +2651,17 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
   );
 }
 
-// Subcomponent: Dropdown gom nhóm công cụ Toán học & STEM
-function StemToolsDropdown({ targetField, compact = false, onOpenFormulaBuilder, onOpenMathWorkbench }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef(null);
-
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
-        setIsOpen(false);
-      }
-    };
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isOpen]);
-
-  return (
-    <div className="relative inline-block" ref={dropdownRef}>
-      <button
-        type="button"
-        onClick={() => setIsOpen(prev => !prev)}
-        className={`${
-          compact
-            ? 'px-2.5 py-1 text-[11px]'
-            : 'px-3.5 py-1.5 text-xs'
-        } rounded-xl bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-700 hover:from-indigo-700 hover:to-purple-800 text-white font-extrabold shadow-sm hover:shadow transition-all flex items-center gap-2 cursor-pointer active:scale-98`}
-        title="Mở Studio công cụ Toán học, Bảng biến thiên, Đồ thị Oxy và Hóa học STEM"
-      >
-        <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
-        <span>Công Cụ Toán & STEM</span>
-        <ChevronDown className={`w-3.5 h-3.5 text-indigo-200 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-      </button>
-
-      {isOpen && (
-        <div className="absolute right-0 sm:left-0 mt-2 w-[420px] max-w-[95vw] bg-white rounded-3xl shadow-2xl border border-slate-200/90 p-2.5 z-50 animate-fade-in space-y-2">
-          {/* Header Banner */}
-          <div className="p-3.5 rounded-2xl bg-gradient-to-r from-indigo-950 via-slate-900 to-purple-950 text-white shadow-xs">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-indigo-500/20 border border-indigo-400/30 flex items-center justify-center shrink-0">
-                  <Sparkles className="w-4 h-4 text-amber-300" />
-                </div>
-                <div>
-                  <div className="text-xs font-black tracking-wide text-white flex items-center gap-2">
-                    <span>STUDIO CÔNG CỤ TOÁN & STEM</span>
-                    <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded-full bg-indigo-500/30 text-indigo-200 border border-indigo-400/30">GDPT 2018</span>
-                  </div>
-                  <div className="text-[10px] text-slate-300 font-medium">Click chọn công cụ để mở Studio soạn thảo & tính toán trực quan</div>
-                </div>
-              </div>
-              <button 
-                type="button" 
-                onClick={(e) => { e.stopPropagation(); setIsOpen(false); }}
-                className="w-6 h-6 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center text-slate-300 hover:text-white transition-colors cursor-pointer"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          </div>
-
-          {/* Section: Toán Học & Giải Tích */}
-          <div className="space-y-1">
-            <div className="px-2 pt-1 text-[10px] font-black text-slate-400 uppercase tracking-wider">
-              Toán Học & Giải Tích
-            </div>
-            
-            {/* 1. Bảng Biến Thiên */}
-            <button
-              type="button"
-              onClick={() => {
-                if (onOpenFormulaBuilder) onOpenFormulaBuilder('variation_table', targetField);
-                setIsOpen(false);
-              }}
-              className="w-full p-2.5 rounded-2xl text-left hover:bg-emerald-50/80 text-slate-800 hover:text-emerald-950 flex items-center gap-3 transition-all cursor-pointer group border border-transparent hover:border-emerald-200"
-            >
-              <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 text-base font-bold group-hover:scale-105 transition-transform">
-                📊
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between gap-1">
-                  <div className="text-xs font-extrabold text-slate-800 group-hover:text-emerald-900">Bảng Biến Thiên Động</div>
-                  <span className="text-[9px] font-bold text-emerald-700 bg-emerald-100/70 px-1.5 py-0.5 rounded-md">SGK 2018</span>
-                </div>
-                <div className="text-[10.5px] text-slate-500 truncate mt-0.5">Lưới 2N-1 cột, cực trị, tiệm cận || & kéo thả khoảng</div>
-              </div>
-            </button>
-
-            {/* 2. Đồ Thị & MathLab (2D/3D) */}
-            <button
-              type="button"
-              onClick={() => {
-                if (onOpenMathWorkbench) onOpenMathWorkbench('jsxgraph', targetField);
-                setIsOpen(false);
-              }}
-              className="w-full p-2.5 rounded-2xl text-left hover:bg-amber-50/80 text-slate-800 hover:text-amber-950 flex items-center gap-3 transition-all cursor-pointer group border border-transparent hover:border-amber-200"
-            >
-              <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 text-base font-bold group-hover:scale-105 transition-transform">
-                📈
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between gap-1">
-                  <div className="text-xs font-extrabold text-slate-800 group-hover:text-amber-900">Phòng Thí Nghiệm MathLab 2D/3D</div>
-                  <span className="text-[9px] font-bold text-amber-700 bg-amber-100/70 px-1.5 py-0.5 rounded-md">JSXGraph Native</span>
-                </div>
-                <div className="text-[10.5px] text-slate-500 truncate mt-0.5">Đồ thị Oxy, hình không gian 3D xoay 360°, hình học phẳng</div>
-              </div>
-            </button>
-
-            {/* 3. Phân Số & Tính Toán */}
-            <button
-              type="button"
-              onClick={() => {
-                if (onOpenFormulaBuilder) onOpenFormulaBuilder('fraction', targetField);
-                setIsOpen(false);
-              }}
-              className="w-full p-2.5 rounded-2xl text-left hover:bg-indigo-50/80 text-slate-800 hover:text-indigo-950 flex items-center gap-3 transition-all cursor-pointer group border border-transparent hover:border-indigo-200"
-            >
-              <div className="w-9 h-9 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center shrink-0 text-base font-bold group-hover:scale-105 transition-transform">
-                <Calculator className="w-4 h-4 text-indigo-600" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between gap-1">
-                  <div className="text-xs font-extrabold text-slate-800 group-hover:text-indigo-900">Phân Số, Căn Thức & Tích Phân</div>
-                  <span className="text-[9px] font-bold text-indigo-700 bg-indigo-100/70 px-1.5 py-0.5 rounded-md">Auto Calc</span>
-                </div>
-                <div className="text-[10.5px] text-slate-500 truncate mt-0.5">Tử/mẫu phân số, căn bậc n, số mũ xⁿ & tự tính kết quả</div>
-              </div>
-            </button>
-
-            {/* 4. Đạo Hàm Số Gia */}
-            <button
-              type="button"
-              onClick={() => {
-                if (onOpenFormulaBuilder) onOpenFormulaBuilder('limit', targetField);
-                setIsOpen(false);
-              }}
-              className="w-full p-2.5 rounded-2xl text-left hover:bg-rose-50/80 text-slate-800 hover:text-rose-900 flex items-center gap-3 transition-all cursor-pointer group border border-transparent hover:border-rose-200"
-            >
-              <div className="w-9 h-9 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center shrink-0 text-base font-bold group-hover:scale-105 transition-transform">
-                🎯
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between gap-1">
-                  <div className="text-xs font-extrabold text-slate-800 group-hover:text-rose-900">Đạo Hàm Số Gia & Giới Hạn</div>
-                  <span className="text-[9px] font-bold text-rose-700 bg-rose-100/70 px-1.5 py-0.5 rounded-md">Vi Tích Phân</span>
-                </div>
-                <div className="text-[10.5px] text-slate-500 truncate mt-0.5">Định nghĩa f'(x₀) = lim Δy/Δx & giới hạn hàm/dãy số</div>
-              </div>
-            </button>
-          </div>
-
-          {/* Section: STEM & Khoa Học Thực Nghiệm */}
-          <div className="space-y-1 pt-1 border-t border-slate-100">
-            <div className="px-2 pt-1 text-[10px] font-black text-slate-400 uppercase tracking-wider">
-              STEM & Khoa Học Tự Nhiên
-            </div>
-
-            {/* 5. Hóa Học & Nồng Độ */}
-            <button
-              type="button"
-              onClick={() => {
-                if (onOpenFormulaBuilder) onOpenFormulaBuilder('chemistry', targetField);
-                setIsOpen(false);
-              }}
-              className="w-full p-2.5 rounded-2xl text-left hover:bg-teal-50/80 text-slate-800 hover:text-teal-950 flex items-center gap-3 transition-all cursor-pointer group border border-transparent hover:border-teal-200"
-            >
-              <div className="w-9 h-9 rounded-xl bg-teal-100 text-teal-700 flex items-center justify-center shrink-0 text-base font-bold group-hover:scale-105 transition-transform">
-                <FlaskConical className="w-4 h-4 text-teal-600" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between gap-1">
-                  <div className="text-xs font-extrabold text-slate-800 group-hover:text-teal-900">Hóa Học & Nồng Độ Thực Nghiệm</div>
-                  <span className="text-[9px] font-bold text-teal-700 bg-teal-100/70 px-1.5 py-0.5 rounded-md">Thực Nghiệm</span>
-                </div>
-                <div className="text-[10.5px] text-slate-500 truncate mt-0.5">CM = n/V, C%, khối lượng m, hiệu suất H% tự động tính</div>
-              </div>
-            </button>
-          </div>
-
-          {/* Footer Note */}
-          <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/60 text-[10.5px] text-slate-500 flex items-center gap-2">
-            <Sparkles className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
-            <span>Điền số trực quan trên Studio, hệ thống tự động sinh KaTeX chuẩn mực.</span>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// Subcomponent: Bảng công cụ STEM trôi nổi cạnh phải màn hình
+// Subcomponent: Bảng công cụ STEM trôi nổi cạnh phải màn hình (Siêu gọn, có search, không icon)
 function FloatingStemDrawer({ 
   isOpen, 
   onClose, 
   targetField, 
-  onSelectTarget, 
   onOpenFormulaBuilder, 
   onOpenMathWorkbench,
   onOpenSymbolPalette 
 }) {
   const drawerRef = useRef(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     const handleOutsideClick = (e) => {
@@ -2876,23 +2684,112 @@ function FloatingStemDrawer({
 
   if (!isOpen) return null;
 
+  const stemTools = [
+    {
+      id: 'mathlab',
+      title: 'Phòng Thí Nghiệm MathLab 2D & 3D',
+      desc: 'Đồ thị Oxy, hình không gian 3D xoay 360°, hình học phẳng chuẩn SGK',
+      keywords: 'mathlab do thi oxy hinh khong gian 3d phang jsxgraph',
+      action: () => {
+        if (onOpenMathWorkbench) onOpenMathWorkbench('jsxgraph', targetField);
+        onClose();
+      }
+    },
+    {
+      id: 'variation_table',
+      title: 'Bảng Biến Thiên Động (3 Dòng Vector)',
+      desc: 'Lưới 2N-1 cột, cực trị, tiệm cận đứng kép (||), tự động suy luận hướng biến thiên',
+      keywords: 'bang bien thien bbt cuc tri tiem can vector 2n-1',
+      action: () => {
+        if (onOpenFormulaBuilder) onOpenFormulaBuilder('variation_table', targetField);
+        onClose();
+      }
+    },
+    {
+      id: 'fraction',
+      title: 'Phân Số, Căn Thức & Lũy Thừa',
+      desc: 'Phân số 2 tầng, căn bậc n, số mũ & tự động tính đáp số',
+      keywords: 'phan so can thuc luy thua mu tinh toan',
+      action: () => {
+        if (onOpenFormulaBuilder) onOpenFormulaBuilder('fraction', targetField);
+        onClose();
+      }
+    },
+    {
+      id: 'limit',
+      title: 'Đạo Hàm Số Gia & Giới Hạn SGK',
+      desc: 'Định nghĩa f\'(x₀) = lim Δy/Δx, khử vô định 0/0, tích phân',
+      keywords: 'dao ham so gia gioi han lim tich phan',
+      action: () => {
+        if (onOpenFormulaBuilder) onOpenFormulaBuilder('limit', targetField);
+        onClose();
+      }
+    },
+    {
+      id: 'integral',
+      title: 'Tích Phân & Vi Phân Hàm Số',
+      desc: 'Tích phân xác định cận từ a đến b, nguyên hàm f(x)dx',
+      keywords: 'tich phan vi phan nguyen ham can a b dx',
+      action: () => {
+        if (onOpenFormulaBuilder) onOpenFormulaBuilder('integral', targetField);
+        onClose();
+      }
+    },
+    {
+      id: 'system',
+      title: 'Hệ Phương Trình & Tuyển Nghiệm',
+      desc: 'Hệ phương trình 2-3 ẩn, dấu ngoặc nhọn hệ và ngoặc vuông tuyển',
+      keywords: 'he phuong trinh tuyen nghiem ngoac nhon he 2 an 3 an',
+      action: () => {
+        if (onOpenFormulaBuilder) onOpenFormulaBuilder('system', targetField);
+        onClose();
+      }
+    },
+    {
+      id: 'chemistry',
+      title: 'Hóa Học & Nồng Độ Mol Thực Nghiệm',
+      desc: 'CM = n/V, C%, m = n*M, hiệu suất H% tự động tính toán',
+      keywords: 'hoa hoc nong do mol cm c% khoi luong hieu suat thuc nghiem',
+      action: () => {
+        if (onOpenFormulaBuilder) onOpenFormulaBuilder('chemistry', targetField);
+        onClose();
+      }
+    },
+    {
+      id: 'symbols',
+      title: 'Thư Viện Ký Hiệu & 7 Môn Học',
+      desc: 'Mở toàn bộ danh mục ký hiệu Toán, Hóa, Lý, Sinh, Văn, Sử, Địa bên trái',
+      keywords: 'thu vien ky hieu 7 mon hoc toan hoa ly sinh van su dia',
+      action: () => {
+        if (onOpenSymbolPalette) onOpenSymbolPalette();
+        onClose();
+      }
+    }
+  ];
+
+  const filteredTools = stemTools.filter(tool => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase().trim();
+    return (
+      tool.title.toLowerCase().includes(q) ||
+      tool.desc.toLowerCase().includes(q) ||
+      tool.keywords.toLowerCase().includes(q)
+    );
+  });
+
   return (
     <div 
       ref={drawerRef}
-      className="fixed right-0 top-1/2 -translate-y-1/2 z-50 w-80 sm:w-[380px] max-h-[86vh] bg-white/98 backdrop-blur-md rounded-l-2xl shadow-2xl border-l-2 border-y-2 border-indigo-500/80 flex flex-col overflow-hidden animate-in slide-in-from-right duration-200"
+      className="fixed right-0 top-1/2 -translate-y-1/2 z-50 w-80 sm:w-[380px] max-h-[86vh] bg-white rounded-l-2xl shadow-2xl border-l-2 border-y-2 border-indigo-500/80 flex flex-col overflow-hidden animate-in slide-in-from-right duration-200"
     >
-      {/* Drawer Header */}
+      {/* Drawer Header (Không còn chữ GDPT 2018) */}
       <div className="p-3.5 bg-gradient-to-r from-slate-950 via-indigo-950 to-purple-950 text-white flex items-center justify-between shrink-0 shadow-xs border-b border-indigo-900/60">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-indigo-500/20 border border-indigo-400/30 flex items-center justify-center shrink-0">
-            <Sparkles className="w-4 h-4 text-amber-300" />
+        <div>
+          <div className="text-xs font-black tracking-wide text-white">
+            BỘ CÔNG CỤ TOÁN & STEM
           </div>
-          <div>
-            <div className="text-xs font-black tracking-wide text-white flex items-center gap-2">
-              <span>STUDIO CÔNG CỤ TOÁN & STEM</span>
-              <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded-full bg-indigo-500/30 text-indigo-200 border border-indigo-400/30">GDPT 2018</span>
-            </div>
-            <div className="text-[10px] text-slate-300 font-medium">Toàn bộ công cụ sư phạm: MathLab, Bảng biến thiên, Hóa học...</div>
+          <div className="text-[10px] text-slate-300 font-medium mt-0.5">
+            Chèn công thức & đồ thị trực tiếp tại vị trí con trỏ
           </div>
         </div>
         <button 
@@ -2905,174 +2802,52 @@ function FloatingStemDrawer({
         </button>
       </div>
 
-      {/* Target Selector */}
-      <div className="px-3.5 py-2 bg-indigo-50/90 border-b border-indigo-100 flex items-center justify-between gap-2 shrink-0">
-        <span className="text-[10.5px] font-extrabold text-indigo-950 flex items-center gap-1 shrink-0">
-          <span>🎯 Chèn vào mục:</span>
-        </span>
-        <select
-          value={targetField}
-          onChange={(e) => onSelectTarget(e.target.value)}
-          className="text-[10.5px] font-bold text-indigo-900 bg-white border border-indigo-200 rounded-lg px-2 py-1 outline-none focus:border-indigo-500 cursor-pointer flex-1 text-right max-w-[240px] shadow-2xs"
-        >
-          <option value="theoryRecap">Khối 1: Nền tảng SGK</option>
-          <option value="solutionMethod">Khối 2: Phương pháp giải</option>
-          <option value="sampleQuestion">Khối 4: Đề bài mẫu</option>
-          <option value="sampleExplanation">Khối 4: Lời giải mẫu</option>
-        </select>
+      {/* Ở trên là Search */}
+      <div className="p-3 bg-slate-50 border-b border-slate-200 shrink-0">
+        <div className="relative">
+          <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Tìm kiếm công cụ (MathLab, bảng biến thiên, phân số...)"
+            className="w-full pl-8 pr-7 py-1.5 text-xs bg-white border border-slate-300 rounded-xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 shadow-2xs"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery('')}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs font-bold"
+            >
+              ×
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* Drawer Body */}
-      <div className="p-3 space-y-2.5 overflow-y-auto flex-1 max-h-[calc(90vh-115px)]">
-        {/* 1. MathLab 2D/3D */}
-        <div className="p-3 rounded-2xl bg-gradient-to-r from-amber-50/90 to-orange-50/90 border border-amber-200/90 space-y-2 shadow-2xs">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center font-bold text-base shadow-2xs">
-                📈
-              </div>
-              <div>
-                <h4 className="text-xs font-black text-slate-900">Phòng Thí Nghiệm MathLab 2D & 3D</h4>
-                <p className="text-[10px] text-slate-500 font-medium">Đồ thị Oxy, hình không gian 3D xoay 360°, hình phẳng</p>
-              </div>
-            </div>
-            <span className="text-[9px] font-extrabold text-amber-800 bg-amber-200/60 px-1.5 py-0.5 rounded-md shrink-0">JSXGraph</span>
+      {/* Drawer Body: Ghi tiêu đề công cụ, mô tả và không thêm icon gì cả */}
+      <div className="p-3 space-y-2 overflow-y-auto flex-1 max-h-[calc(86vh-115px)]">
+        {filteredTools.length === 0 ? (
+          <div className="py-8 text-center text-xs text-slate-400 italic">
+            Không tìm thấy công cụ nào phù hợp với từ khóa "{searchQuery}"
           </div>
-          <button
-            type="button"
-            onClick={() => {
-              if (onOpenMathWorkbench) onOpenMathWorkbench('jsxgraph', targetField);
-              onClose();
-            }}
-            className="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-black text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all cursor-pointer hover:shadow"
-          >
-            <Compass className="w-4 h-4" />
-            <span>Mở Phòng Thí Nghiệm MathLab Studio</span>
-          </button>
-        </div>
-
-        {/* 2. Bảng Biến Thiên */}
-        <div className="p-3 rounded-2xl bg-gradient-to-r from-emerald-50/90 to-teal-50/90 border border-emerald-200/90 space-y-2 shadow-2xs">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold text-base shadow-2xs">
-                📊
+        ) : (
+          filteredTools.map((tool) => (
+            <button
+              key={tool.id}
+              type="button"
+              onClick={tool.action}
+              className="w-full text-left p-3 rounded-xl border border-slate-200 bg-white hover:bg-indigo-50/60 hover:border-indigo-300 transition-all cursor-pointer group shadow-2xs hover:shadow-xs block"
+            >
+              <div className="font-bold text-xs text-slate-900 group-hover:text-indigo-900 transition-colors">
+                {tool.title}
               </div>
-              <div>
-                <h4 className="text-xs font-black text-slate-900">Bảng Biến Thiên Động (3 Dòng Vector)</h4>
-                <p className="text-[10px] text-slate-500 font-medium">Lưới 2N-1 cột, cực trị, tiệm cận kép ||, kéo thả khoảng</p>
+              <div className="text-[11px] text-slate-500 mt-1 leading-relaxed">
+                {tool.desc}
               </div>
-            </div>
-            <span className="text-[9px] font-extrabold text-emerald-800 bg-emerald-200/60 px-1.5 py-0.5 rounded-md shrink-0">SGK 2018</span>
-          </div>
-          <button
-            type="button"
-            onClick={() => {
-              if (onOpenFormulaBuilder) onOpenFormulaBuilder('variation_table', targetField);
-              onClose();
-            }}
-            className="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-black text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all cursor-pointer hover:shadow"
-          >
-            <Table2 className="w-4 h-4" />
-            <span>Mở Studio Bảng Biến Thiên</span>
-          </button>
-        </div>
-
-        {/* 3. Phân Số & Tính Toán */}
-        <div className="p-3 rounded-2xl bg-gradient-to-r from-indigo-50/90 to-purple-50/90 border border-indigo-200/90 space-y-2 shadow-2xs">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold text-base shadow-2xs">
-                <Calculator className="w-4 h-4" />
-              </div>
-              <div>
-                <h4 className="text-xs font-black text-slate-900">Phân Số, Căn Thức & Lũy Thừa</h4>
-                <p className="text-[10px] text-slate-500 font-medium">Phân số 2 tầng, căn bậc n, số mũ & tự động tính đáp số</p>
-              </div>
-            </div>
-            <span className="text-[9px] font-extrabold text-indigo-800 bg-indigo-200/60 px-1.5 py-0.5 rounded-md shrink-0">Auto Calc</span>
-          </div>
-          <button
-            type="button"
-            onClick={() => {
-              if (onOpenFormulaBuilder) onOpenFormulaBuilder('fraction', targetField);
-              onClose();
-            }}
-            className="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-black text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all cursor-pointer hover:shadow"
-          >
-            <Calculator className="w-4 h-4" />
-            <span>Mở Trình Soạn Phân Số & Tính Toán</span>
-          </button>
-        </div>
-
-        {/* 4. Đạo Hàm & Giới Hạn */}
-        <div className="p-3 rounded-2xl bg-gradient-to-r from-rose-50/90 to-pink-50/90 border border-rose-200/90 space-y-2 shadow-2xs">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-xl bg-rose-600 text-white flex items-center justify-center font-bold text-base shadow-2xs">
-                🎯
-              </div>
-              <div>
-                <h4 className="text-xs font-black text-slate-900">Đạo Hàm Số Gia & Giới Hạn SGK</h4>
-                <p className="text-[10px] text-slate-500 font-medium">Định nghĩa f'(x₀) = lim Δy/Δx, khử vô định 0/0, tích phân</p>
-              </div>
-            </div>
-            <span className="text-[9px] font-extrabold text-rose-800 bg-rose-200/60 px-1.5 py-0.5 rounded-md shrink-0">Vi Tích Phân</span>
-          </div>
-          <button
-            type="button"
-            onClick={() => {
-              if (onOpenFormulaBuilder) onOpenFormulaBuilder('limit', targetField);
-              onClose();
-            }}
-            className="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-700 hover:to-pink-700 text-white font-black text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all cursor-pointer hover:shadow"
-          >
-            <Sparkles className="w-4 h-4" />
-            <span>Mở Soạn Thảo Đạo Hàm & Giới Hạn</span>
-          </button>
-        </div>
-
-        {/* 5. Hóa Học & Nồng Độ Thực Nghiệm */}
-        <div className="p-3 rounded-2xl bg-gradient-to-r from-teal-50/90 to-cyan-50/90 border border-teal-200/90 space-y-2 shadow-2xs">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-xl bg-teal-600 text-white flex items-center justify-center font-bold text-base shadow-2xs">
-                <FlaskConical className="w-4 h-4" />
-              </div>
-              <div>
-                <h4 className="text-xs font-black text-slate-900">Hóa Học & Nồng Độ Mol Thực Nghiệm</h4>
-                <p className="text-[10px] text-slate-500 font-medium">CM = n/V, C%, m = n*M, hiệu suất H% tự động tính</p>
-              </div>
-            </div>
-            <span className="text-[9px] font-extrabold text-teal-800 bg-teal-200/60 px-1.5 py-0.5 rounded-md shrink-0">Thực Nghiệm</span>
-          </div>
-          <button
-            type="button"
-            onClick={() => {
-              if (onOpenFormulaBuilder) onOpenFormulaBuilder('chemistry', targetField);
-              onClose();
-            }}
-            className="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white font-black text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all cursor-pointer hover:shadow"
-          >
-            <FlaskConical className="w-4 h-4" />
-            <span>Mở Bộ Tính Toán Hóa Học</span>
-          </button>
-        </div>
-
-        {/* 6. Mở Thư Viện Ký Hiệu 7 Môn Học */}
-        <div className="pt-1">
-          <button
-            type="button"
-            onClick={() => {
-              if (onOpenSymbolPalette) onOpenSymbolPalette();
-              onClose();
-            }}
-            className="w-full py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-          >
-            <BookOpen className="w-4 h-4 text-slate-600" />
-            <span>Mở Thư Viện Ký Hiệu & Môn Học (Bên Trái)</span>
-          </button>
-        </div>
+            </button>
+          ))
+        )}
       </div>
     </div>
   );

@@ -832,12 +832,48 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
       if (!latexSnippet) return;
       const trimmedSnippet = latexSnippet.trim();
 
-      // If inserting a full visual block ([VARIATION_TABLE], [MATH_GRAPH], [MATH_GRAPH_3D], [MATH_GEOMETRY_2D], or image ![...](...))
+      // If inserting a full visual block ([VARIATION_TABLE], [MATH_GRAPH], [MATH_GRAPH_3D], [MATH_GEOMETRY_2D], or image ![...](...) or multi-line)
       if (
         /\[(VARIATION_TABLE|MATH_GRAPH|MATH_GRAPH_3D|MATH_GEOMETRY_2D)\]/i.test(trimmedSnippet) ||
         /^!\[[^\]]*\]\([^\)]+\)$/.test(trimmedSnippet) ||
         trimmedSnippet.includes('\n')
       ) {
+        const targetLineId = activePositionRef.current?.lineId;
+        const targetIdx = targetLineId ? docLines.findIndex(l => l.id === targetLineId) : -1;
+        const blockLines = parseDocumentLines(trimmedSnippet);
+
+        if (targetIdx !== -1) {
+          const targetLine = docLines[targetIdx];
+          const isTargetEmpty = (!targetLine.tokens || targetLine.tokens.length === 0 || 
+            (targetLine.tokens.length === 1 && !targetLine.tokens[0].isFormula && !(targetLine.tokens[0].text || '').trim()));
+
+          let nextLines;
+          if (isTargetEmpty) {
+            nextLines = [
+              ...docLines.slice(0, targetIdx),
+              ...blockLines,
+              ...docLines.slice(targetIdx + 1)
+            ];
+          } else {
+            nextLines = [
+              ...docLines.slice(0, targetIdx + 1),
+              ...blockLines,
+              ...docLines.slice(targetIdx + 1)
+            ];
+          }
+          commitDocLines(nextLines);
+          if (blockLines.length > 0) {
+            const lastBlockLine = blockLines[blockLines.length - 1];
+            activePositionRef.current = {
+              lineId: lastBlockLine.id,
+              tokenId: lastBlockLine.tokens?.[lastBlockLine.tokens.length - 1]?.id,
+              offset: (lastBlockLine.tokens?.[lastBlockLine.tokens.length - 1]?.text || '').length
+            };
+          }
+          return;
+        }
+
+        // Fallback: append at end if no active cursor line
         const currentRaw = serializeDocumentLines(docLines);
         const combined = currentRaw ? `${currentRaw}\n${trimmedSnippet}` : trimmedSnippet;
         const nextLines = parseDocumentLines(combined);
