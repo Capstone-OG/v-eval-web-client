@@ -702,6 +702,8 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
   onOpenAdvancedModal = null
 }, ref) {
   const [docLines, setDocLines] = useState(() => parseDocumentLines(content || ''));
+  const docLinesRef = useRef(docLines);
+  docLinesRef.current = docLines;
   const [activeFormulaId, setActiveFormulaId] = useState(null);
   const [bubblePos, setBubblePos] = useState({ top: 0, left: 0 });
   const [bubbleTab, setBubbleTab] = useState('structures');
@@ -753,6 +755,7 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
 
   // Propagate changes upstream
   const commitDocLines = (newLines) => {
+    docLinesRef.current = newLines;
     setDocLines(newLines);
     const serialized = serializeDocumentLines(newLines);
     lastCommittedContentRef.current = serialized;
@@ -830,6 +833,7 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
   useImperativeHandle(ref, () => ({
     insertSnippet: (latexSnippet) => {
       if (!latexSnippet) return;
+      const currentLines = docLinesRef.current || docLines;
       const trimmedSnippet = latexSnippet.trim();
 
       // If inserting a full visual block ([VARIATION_TABLE], [MATH_GRAPH], [MATH_GRAPH_3D], [MATH_GEOMETRY_2D], or image ![...](...) or multi-line)
@@ -839,26 +843,26 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
         trimmedSnippet.includes('\n')
       ) {
         const targetLineId = activePositionRef.current?.lineId;
-        const targetIdx = targetLineId ? docLines.findIndex(l => l.id === targetLineId) : -1;
+        const targetIdx = targetLineId ? currentLines.findIndex(l => l.id === targetLineId) : -1;
         const blockLines = parseDocumentLines(trimmedSnippet);
 
         if (targetIdx !== -1) {
-          const targetLine = docLines[targetIdx];
+          const targetLine = currentLines[targetIdx];
           const isTargetEmpty = (!targetLine.tokens || targetLine.tokens.length === 0 || 
             (targetLine.tokens.length === 1 && !targetLine.tokens[0].isFormula && !(targetLine.tokens[0].text || '').trim()));
 
           let nextLines;
           if (isTargetEmpty) {
             nextLines = [
-              ...docLines.slice(0, targetIdx),
+              ...currentLines.slice(0, targetIdx),
               ...blockLines,
-              ...docLines.slice(targetIdx + 1)
+              ...currentLines.slice(targetIdx + 1)
             ];
           } else {
             nextLines = [
-              ...docLines.slice(0, targetIdx + 1),
+              ...currentLines.slice(0, targetIdx + 1),
               ...blockLines,
-              ...docLines.slice(targetIdx + 1)
+              ...currentLines.slice(targetIdx + 1)
             ];
           }
           commitDocLines(nextLines);
@@ -874,7 +878,7 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
         }
 
         // Fallback: append at end if no active cursor line
-        const currentRaw = serializeDocumentLines(docLines);
+        const currentRaw = serializeDocumentLines(currentLines);
         const combined = currentRaw ? `${currentRaw}\n${trimmedSnippet}` : trimmedSnippet;
         const nextLines = parseDocumentLines(combined);
         commitDocLines(nextLines);
@@ -889,7 +893,7 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
       let caretOffset = activePositionRef.current?.offset ?? 0;
 
       // If document is empty, initialize first line
-      if (docLines.length === 0) {
+      if (currentLines.length === 0) {
         const newLId = `line-${Date.now()}`;
         const fId = `tok-f-${Date.now()}`;
         const afterId = `tok-t-${Date.now() + 1}`;
@@ -911,10 +915,10 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
       }
 
       // If no active line or active line not found in doc, target the last line
-      if (!targetLineId || !docLines.some(l => l.id === targetLineId)) {
-        const lastLine = docLines[docLines.length - 1];
-        targetLineId = lastLine.id;
-        const lastTok = lastLine.tokens[lastLine.tokens.length - 1];
+      if (!targetLineId || !currentLines.some(l => l.id === targetLineId)) {
+        const lastLine = currentLines[currentLines.length - 1];
+        targetLineId = lastLine?.id;
+        const lastTok = lastLine?.tokens?.[lastLine.tokens.length - 1];
         targetTokenId = lastTok?.id;
         caretOffset = (lastTok?.text || '').length;
       }
@@ -928,7 +932,7 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
         structure: formulaStructure
       };
 
-      const updatedLines = docLines.map(line => {
+      const updatedLines = currentLines.map(line => {
         if (line.id !== targetLineId) return line;
 
         // Find token index
@@ -980,7 +984,15 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
 
   // Modify text token on line
   const handleTextChange = (lineId, tokenId, newText) => {
-    const updated = docLines.map(line => {
+    const currentLines = docLinesRef.current || docLines;
+    const targetLine = currentLines.find(l => l.id === lineId);
+    if (!targetLine) return;
+    const targetTok = targetLine.tokens?.find(t => t.id === tokenId);
+    if (targetTok && targetTok.text === newText) {
+      // Content did not change - avoid stomping on newly created lines or snippets
+      return;
+    }
+    const updated = currentLines.map(line => {
       if (line.id !== lineId) return line;
       const nextTokens = line.tokens.map(t => t.id === tokenId ? { ...t, text: newText } : t);
       return { ...line, tokens: nextTokens };
@@ -990,25 +1002,37 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
 
   // Insert new line after target line (triggered by Enter key)
   const handleInsertNewLineAfter = (targetLineId) => {
-    const idx = docLines.findIndex(l => l.id === targetLineId);
-    const newLId = `line-${Date.now()}`;
-    const newTokId = `tok-${Date.now()}`;
+    const currentLines = docLinesRef.current || docLines;
+    const idx = currentLines.findIndex(l => l.id === targetLineId);
+    const newLId = `line-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
+    const newTokId = `tok-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
 
     let currLineTokens = null;
     let nextLineTokens = [{ id: newTokId, isFormula: false, text: '' }];
 
-    if (idx !== -1 && activePositionRef.current?.lineId === targetLineId) {
-      const currLine = docLines[idx];
-      const targetTokenId = activePositionRef.current.tokenId;
-      const caretOffset = activePositionRef.current.offset ?? 0;
-      const tokIdx = currLine.tokens.findIndex(t => t.id === targetTokenId);
+    if (idx !== -1) {
+      const currLine = currentLines[idx];
+      let targetTokenId = activePositionRef.current?.tokenId;
+      let caretOffset = activePositionRef.current?.offset ?? 0;
 
-      if (tokIdx !== -1) {
+      if (activePositionRef.current?.lineId !== targetLineId || !currLine.tokens?.some(t => t.id === targetTokenId)) {
+        const lastTok = currLine.tokens?.[currLine.tokens.length - 1];
+        targetTokenId = lastTok?.id;
+        caretOffset = (lastTok?.text || '').length;
+      }
+
+      const tokIdx = currLine.tokens?.findIndex(t => t.id === targetTokenId);
+
+      if (tokIdx !== undefined && tokIdx !== -1) {
         const currTok = currLine.tokens[tokIdx];
         if (!currTok.isFormula) {
-          const fullText = currTok.text || '';
-          const before = fullText.slice(0, caretOffset);
-          const after = fullText.slice(caretOffset);
+          const lineEl = lineRefs.current[targetLineId];
+          const spanEl = lineEl?.querySelector(`[data-token-id="${targetTokenId}"]`);
+          const liveText = spanEl ? (spanEl.textContent || '') : (currTok.text || '');
+
+          const safeOffset = Math.min(caretOffset, liveText.length);
+          const before = liveText.slice(0, safeOffset);
+          const after = liveText.slice(safeOffset);
 
           currLineTokens = [
             ...currLine.tokens.slice(0, tokIdx),
@@ -1034,38 +1058,38 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
 
     let nextLines;
     if (idx === -1) {
-      nextLines = [...docLines, newLine];
+      nextLines = [...currentLines, newLine];
     } else {
-      const updatedCurr = currLineTokens ? { ...docLines[idx], tokens: currLineTokens } : docLines[idx];
+      const updatedCurr = currLineTokens ? { ...currentLines[idx], tokens: currLineTokens } : currentLines[idx];
       nextLines = [
-        ...docLines.slice(0, idx),
+        ...currentLines.slice(0, idx),
         updatedCurr,
         newLine,
-        ...docLines.slice(idx + 1)
+        ...currentLines.slice(idx + 1)
       ];
     }
 
-    flushSync(() => {
-      commitDocLines(nextLines);
-    });
+    commitDocLines(nextLines);
 
     // Auto-focus the newly created line immediately
-    const lineEl = lineRefs.current[newLId];
-    if (lineEl) {
-      const span = lineEl.querySelector('[contenteditable="true"]');
-      if (span) {
-        span.focus();
-        activePositionRef.current = { lineId: newLId, tokenId: newTokId, offset: 0 };
-        const sel = window.getSelection();
-        if (sel) {
-          const range = document.createRange();
-          range.selectNodeContents(span);
-          range.collapse(true);
-          sel.removeAllRanges();
-          sel.addRange(range);
+    setTimeout(() => {
+      const lineEl = lineRefs.current[newLId];
+      if (lineEl) {
+        const span = lineEl.querySelector('[contenteditable="true"]');
+        if (span) {
+          span.focus();
+          activePositionRef.current = { lineId: newLId, tokenId: newTokId, offset: 0 };
+          const sel = window.getSelection();
+          if (sel) {
+            const range = document.createRange();
+            range.selectNodeContents(span);
+            range.collapse(true);
+            sel.removeAllRanges();
+            sel.addRange(range);
+          }
         }
       }
-    }
+    }, 15);
   };
 
   // Delete empty line or merge line with previous line (triggered by Backspace)
@@ -1388,6 +1412,7 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
 
   // Handle Drag-and-Drop of formula/compound/block chips from HierarchicalMathPalette
   const handleDropSnippetOnCanvas = (e, targetLineId = null) => {
+    const currentLines = docLinesRef.current || docLines;
     const blockCode = e.dataTransfer?.getData('text/veval-block');
     const mathCode = e.dataTransfer?.getData('text/veval-math') || e.dataTransfer?.getData('text/veval-bbt');
     if (!blockCode && !mathCode) return;
@@ -1414,7 +1439,7 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
         : 'MATH_GRAPH';
       const newBlockLine = {
         id: `block-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
-        lineIdx: docLines.length,
+        lineIdx: currentLines.length,
         raw: rawSnippet,
         isBlock: true,
         blockType: bType,
@@ -1422,15 +1447,15 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
         tokens: []
       };
       if (targetLineId) {
-        const idx = docLines.findIndex((l) => l.id === targetLineId);
+        const idx = currentLines.findIndex((l) => l.id === targetLineId);
         if (idx !== -1) {
-          const next = [...docLines];
+          const next = [...currentLines];
           next.splice(idx + 1, 0, newBlockLine);
           commitDocLines(next);
           return;
         }
       }
-      commitDocLines([...docLines, newBlockLine]);
+      commitDocLines([...currentLines, newBlockLine]);
       return;
     }
 
@@ -1446,7 +1471,7 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
       structure: formulaStructure
     };
 
-    if (docLines.length === 0) {
+    if (currentLines.length === 0) {
       const newLId = `line-${Date.now()}`;
       const afterId = `tok-t-${Date.now() + 1}`;
       commitDocLines([
@@ -1464,18 +1489,18 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
     }
 
     const resolvedLineId =
-      targetLineId && docLines.some((l) => l.id === targetLineId && !l.isBlock)
+      targetLineId && currentLines.some((l) => l.id === targetLineId && !l.isBlock)
         ? targetLineId
-        : [...docLines].reverse().find((l) => !l.isBlock)?.id;
+        : [...currentLines].reverse().find((l) => !l.isBlock)?.id;
 
     if (!resolvedLineId) {
       const newLId = `line-${Date.now()}`;
       const afterId = `tok-t-${Date.now() + 1}`;
       commitDocLines([
-        ...docLines,
+        ...currentLines,
         {
           id: newLId,
-          lineIdx: docLines.length,
+          lineIdx: currentLines.length,
           raw: '',
           isHeading: false,
           isBullet: false,
@@ -1486,7 +1511,7 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
       return;
     }
 
-    const updated = docLines.map((line) => {
+    const updated = currentLines.map((line) => {
       if (line.id !== resolvedLineId) return line;
       const afterId = `tok-t-${Date.now()}`;
       return {
@@ -2011,6 +2036,16 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
                         onMouseUp={() => updateActiveCaret(line.id, token.id)}
                         onFocus={() => updateActiveCaret(line.id, token.id)}
                         onInput={() => updateActiveCaret(line.id, token.id)}
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          e.dataTransfer.dropEffect = 'copy';
+                        }}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleDropSnippetOnCanvas(e, line.id);
+                        }}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') {
                             e.preventDefault();

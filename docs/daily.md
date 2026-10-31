@@ -2,6 +2,23 @@
 
 ---
 
+## [01/11/2026] - Khắc Phục Triệt Để 4 Sự Cố: Enter Không Xuống Dòng, Chèn Không Ăn, Kéo Thả Bị Chặn & Di Chuột Không Hiện
+
+- **Khắc Phục Lỗi Enter Không Xuống Dòng & Chèn Công Thức Không Ăn (`WordStyleFormulaCanvas.jsx`)*:
+  - *Đồng Bộ State `docLinesRef` Tức Thời*: Bổ sung `docLinesRef = useRef(docLines)` và cập nhật tức thì trong `commitDocLines`, loại bỏ hoàn toàn hiện tượng closure cũ (stale closure) của React.
+  - *Chặn Sự Kiện `onBlur` Xóa Mất Dòng Mới*: Trong `handleTextChange`, bổ sung điều kiện bảo vệ `if (targetTok.text === newText) return;`. Khi người dùng nhấn Enter để xuống dòng hoặc nhấp nút chèn công thức, sự kiện blur của ô soạn thảo trước đó không còn ghi đè làm xóa mất dòng mới tạo hay snippet vừa chèn.
+  - *Cắt Tách Chuỗi Nhập Liệu Chuẩn Xác Từng Ký Tự*: `handleInsertNewLineAfter` đọc trực tiếp chuỗi văn bản DOM thời gian thực từ `spanEl.textContent`, tách chính xác phần trước và sau con trỏ chuột `caretOffset` và đưa con trỏ chuột sang dòng mới mượt mà.
+
+- **Khắc Phục Lỗi Kéo Thả Bị Chặn (`WordStyleFormulaCanvas.jsx`)*:
+  - Bổ sung `onDragOver` (`e.preventDefault()`, `e.dataTransfer.dropEffect = 'copy'`) và `onDrop` trực tiếp vào từng thẻ `<span contentEditable>`.
+  - Giáo viên và học sinh giờ đây có thể kéo thả công thức hoặc Bảng biến thiên thả vào bất kỳ vị trí nào: giữa các chữ cái, đầu dòng, cuối dòng hay toàn bộ khung soạn thảo đều ăn 100%.
+
+- **Khắc Phục Hiện Tượng Di Chuột Lại Không Hiện Bảng (`HierarchicalMathPalette.jsx`)*:
+  - Gỡ bỏ hoàn toàn pseudo-element `before:` ở mức `z-[999]` từng che khuất cạnh phải danh mục sidebar và cướp sự kiện chuột.
+  - Giảm độ trễ hiển thị xuống 150ms siêu nhạy, bổ sung bảo vệ an toàn `if (!item) return;` trong các hàm xử lý kéo thả và nhấp chuột.
+
+---
+
 ## [01/11/2026] - Khắc Phục Hiện Tượng Thẻ Hover Bị Biến Mất Khi Rê Chuột Qua (Hover Bridge & Grace Period) & Hỗ Trợ Kéo Thả Trực Tiếp
 
 - **Khắc Phục Triệt Để Hiện Tượng Thẻ Bảng Hiển Thị Bị Mất Khi Rê Chuột Sang (`HierarchicalMathPalette.jsx`)*:

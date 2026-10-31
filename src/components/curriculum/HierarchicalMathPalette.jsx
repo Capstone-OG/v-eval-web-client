@@ -737,7 +737,7 @@ export default function HierarchicalMathPalette({
     }
     const rect = e.currentTarget.getBoundingClientRect();
     
-    const delay = hoveredItem ? 100 : 300;
+    const delay = 150;
     hoverTimerRef.current = setTimeout(() => {
       setHoveredItem({ ...item, categoryName: catName });
       const cardMaxHeight = 440;
@@ -784,6 +784,7 @@ export default function HierarchicalMathPalette({
   };
 
   const handleItemClick = (item) => {
+    if (!item) return;
     clearAllHoverTimers();
     setHoveredItem(null);
     if (onInsertSnippet) {
@@ -792,6 +793,7 @@ export default function HierarchicalMathPalette({
   };
 
   const handleItemDragStart = (e, item) => {
+    if (!item?.code) return;
     clearAllHoverTimers();
     setHoveredItem(null);
     e.dataTransfer.setData('text/veval-math', item.code);
@@ -1135,7 +1137,7 @@ export default function HierarchicalMathPalette({
             left: `${hoverCardPos.left}px`,
             position: 'fixed'
           }}
-          className="z-[999] w-96 max-w-[90vw] max-h-[85vh] overflow-y-auto bg-white/98 backdrop-blur-md rounded-2xl border border-slate-200 shadow-2xl p-4 text-slate-900 pointer-events-auto ring-1 ring-slate-900/5 animate-in fade-in zoom-in-95 duration-150 select-text before:absolute before:-left-3 before:top-0 before:w-4 before:h-full before:content-['']"
+          className="z-[999] w-96 max-w-[90vw] max-h-[85vh] overflow-y-auto bg-white/98 backdrop-blur-md rounded-2xl border border-slate-200 shadow-2xl p-4 text-slate-900 pointer-events-auto ring-1 ring-slate-900/5 animate-in fade-in zoom-in-95 duration-150 select-text "
         >
           {/* Header */}
           <div className="flex items-center justify-between pb-2 border-b border-slate-100">

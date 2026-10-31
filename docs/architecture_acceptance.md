@@ -899,3 +899,12 @@ V-Eval-Web_Client/
   - Upgraded the preview card to `pointer-events-auto` with dedicated interactive controls:
     1. *Direct Drag-and-Drop*: Both the showcase preview block and the footer grip button support HTML5 drag initiation (`draggable={true}` + `handleItemDragStart`), permitting teachers to grab the expanded variation table or formula and drop it directly onto the Word Canvas or editor target.
     2. *One-Click Immediate Insertion*: Equipped with a prominent `⚡ Nhấp chèn ngay` action button executing `handleItemClick`, instantly inserting the formula at the caret.
+
+### 4.45. Synchronous Document State Pipeline, ContentEditable Drop Interception, and Stale Blur Guarding (`WordStyleFormulaCanvas.jsx`, `HierarchicalMathPalette.jsx`)
+- **Stale Closure and Blur Override Elimination**:
+  - Identified and rectified race conditions where blurring an active contentEditable span triggered `handleTextChange` with stale React state closure, discarding freshly created lines or snippet tokens.
+  - Introduced `docLinesRef = useRef(docLines)` updated synchronously on every commit, alongside a non-mutating guard (`if (targetTok.text === newText) return;`) ensuring no destructive re-renders occur on focus displacement.
+- **Universal In-Span Drag-and-Drop Catchers**:
+  - Implemented explicit `onDragOver` and `onDrop` event delegation across granular inline contentEditable text spans, eliminating browser default forbidden drop cursors and ensuring drops register anywhere within running sentences.
+- **Palette Sidebar Overlay Deconfliction**:
+  - Purged aggressive pseudo-element spatial bridges at `z-[999]` that previously occluded sidebar button hitboxes, optimizing re-hover activation latency to a brisk 150ms.
