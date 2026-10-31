@@ -835,3 +835,9 @@ V-Eval-Web_Client/
 3. **Docker Multi-Stage Validation**: `docker compose config` passes with 0 syntax errors across the entire 6-service microservices constellation.
 4. **Repository Sync Automation**: Standalone `Scripts/push.bat` and root `Scripts/` correctly recognize `V-Eval-Web_Client` as a first-class project service.
 5. **API Gateway Connectivity**: Full client suite structured and verified to consume all microservices endpoints via API Gateway (`:5212`) entry point.
+
+### 4.38. Single-Column Visual Formula Card Palette Architecture (`HierarchicalMathPalette.jsx`)
+- **Single-Item-Per-Row Layout Architecture**:
+  - Re-engineered the symbol and formula palette repository from a cramped 2-column grid (`grid-cols-2`) to a focused, single-column vertical flow (`grid-cols-1 gap-1.5`).
+  - *Full-Width Formula Canvas*: Provides each formula card with the full width of the palette (~220px active area), allowing long multi-term equations (harmonic motion equations `x = A\cos(\omega t + \varphi)`, rational calculus functions, limits, integration, and chemical formulas) to render cleanly without truncation or awkward text wraps.
+  - *Ergonomic Interaction & Drag Target*: Enlarged horizontal drag target with live KaTeX rendering, formula title, domain classification badge, subtle "Chèn" insertion hint, and `GripVertical` drag indicator, maximizing tactile usability for curriculum editors.

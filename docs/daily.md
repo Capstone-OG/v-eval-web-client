@@ -2,6 +2,20 @@
 
 ---
 
+## [01/11/2026] - Chuyển Đổi Sắp Xếp Danh Sách Công Thức Sang 1 Cột Duy Nhất (Single-Column Formula Rows) Trong Thư Viện Ký Hiệu Studio
+
+- **Chuyển Đổi Sắp Xếp Công Thức Sang 1 Dòng 1 Mục Độc Lập (`HierarchicalMathPalette.jsx`)**:
+  - *Loại Bỏ Lưới 2 Cột Chật Hẹp (`grid-cols-2`)*:
+    + Thay thế toàn bộ bố cục 2 cột cũ (`grid-cols-2`) ở cả danh mục Accordion cây thư mục và danh sách kết quả tìm kiếm thời gian thực bằng bố cục 1 cột chuẩn mực (`grid-cols-1 gap-1.5`).
+    + Khắc phục triệt để tình trạng công thức dài (như hàm phân thức, biểu thức dao động điều hòa, tích phân, công thức di truyền hay phản ứng hóa học) bị gò bó, co cụm hoặc tràn viền ngang khi hiển thị cạnh nhau trên thanh sidebar hẹp.
+  - *Mở Rộng Không Gian Hiển Thị Thẻ Công Thức (Full-Width Formula Cards)*:
+    + Tận dụng 100% bề ngang của thanh sidebar (~220px khả dụng): Hộp preview KaTeX (`min-h-[32px] px-2 py-1 rounded-lg bg-slate-50/90`) cho phép công thức toán học và hợp chất hiển thị tự nhiên, sắc nét, cân đối và dễ nhìn mà không bị che khuất.
+    + Hàng thông tin dưới cùng hiển thị đầy đủ nhãn công thức (`text-[10.5px] font-bold text-slate-600 truncate`), huy hiệu phân môn, nút gợi ý `Chèn` tinh tế và biểu tượng tay nắm kéo thả `GripVertical`.
+  - *Nâng Tầm Trải Nghiệm Kéo - Thả & Nhấp Chuột*:
+    + Toàn bộ diện tích thẻ ngang lớn trở thành đích ngắm thao tác trực quan (Click-to-insert hoặc Drag-and-drop), giúp giảng viên và người biên soạn thao tác cực kỳ chuẩn xác, nhanh gọn và thuận tiện.
+
+---
+
 ## [01/11/2026] - Tinh Gọn Thanh Sidebar Ký Hiệu Bên Trái Studio Sư Phạm & Tiết Kiệm Tối Đa Không Gian Soạn Thảo
 
 - **Tinh Gọn Thanh Sidebar Ký Hiệu Bên Trái (`HierarchicalMathPalette.jsx` & `CurriculumStudioEditor.jsx`)**:

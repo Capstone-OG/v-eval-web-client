@@ -889,7 +889,7 @@ export default function HierarchicalMathPalette({
                 Không tìm thấy công thức hoặc hợp chất phù hợp với từ khóa.
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 gap-1.5">
                 {searchResults.map((item, idx) => (
                   <div
                     key={idx}
@@ -912,9 +912,12 @@ export default function HierarchicalMathPalette({
                       <span className="text-[10.5px] font-bold text-slate-700 group-hover:text-indigo-900 truncate">
                         {item.label}
                       </span>
-                      <span className="text-[9px] px-1.5 py-0.2 rounded bg-slate-100 text-slate-500 font-medium shrink-0">
-                        {item.domainName}
-                      </span>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 font-medium">
+                          {item.domainName}
+                        </span>
+                        <GripVertical className="w-3.5 h-3.5 text-slate-300 group-hover:text-indigo-500 shrink-0 transition-colors" />
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -960,7 +963,7 @@ export default function HierarchicalMathPalette({
                 {/* Accordion Folder Content: Visual KaTeX / Chemical Tiles */}
                 {isCatOpen && (
                   <div className="p-2 bg-white">
-                    <div className="grid grid-cols-2 gap-1.5">
+                    <div className="grid grid-cols-1 gap-1.5">
                       {cat.items?.map((item, idx) => (
                         <div
                           key={idx}
@@ -969,22 +972,27 @@ export default function HierarchicalMathPalette({
                           onClick={() => handleItemClick(item)}
                           onMouseEnter={(e) => handleItemMouseEnter(item, cat.name, e)}
                           onMouseLeave={handleItemMouseLeave}
-                          className={`p-1.5 rounded-xl bg-white border border-slate-200/90 ${activeTheme.cardHover} transition-all flex flex-col justify-between gap-1 cursor-grab active:cursor-grabbing group shadow-2xs hover:shadow-sm hover:-translate-y-0.5`}
+                          className={`p-2 rounded-xl bg-white border border-slate-200/90 ${activeTheme.cardHover} transition-all flex flex-col justify-between gap-1.5 cursor-grab active:cursor-grabbing group shadow-2xs hover:shadow-md hover:-translate-y-0.5`}
                         >
                           {/* Top Visual KaTeX Formula / Chemical Compound Display */}
-                          <div className="w-full min-h-[30px] px-1 py-0.5 rounded-lg bg-slate-50/90 group-hover:bg-white border border-slate-100 group-hover:border-slate-200 flex items-center justify-center overflow-x-auto scrollbar-none">
+                          <div className="w-full min-h-[32px] px-2 py-1 rounded-lg bg-slate-50/90 group-hover:bg-white border border-slate-100 group-hover:border-slate-200 flex items-center justify-center overflow-x-auto scrollbar-none">
                             <div
-                              className={`text-[12.5px] font-serif leading-none ${activeTheme.formulaText}`}
+                              className={`text-[13px] font-serif leading-none ${activeTheme.formulaText}`}
                               dangerouslySetInnerHTML={{ __html: renderKatexHtml(item.preview || item.code, false) }}
                             />
                           </div>
 
                           {/* Bottom Label + Drag Grip Indicator */}
                           <div className="w-full flex items-center justify-between gap-1 px-0.5">
-                            <span className="text-[10px] font-bold text-slate-600 group-hover:text-slate-900 truncate">
+                            <span className="text-[10.5px] font-bold text-slate-600 group-hover:text-slate-900 truncate">
                               {item.label}
                             </span>
-                            <GripVertical className="w-3 h-3 text-slate-300 group-hover:text-indigo-500 shrink-0 transition-colors" />
+                            <div className="flex items-center gap-1 shrink-0">
+                              <span className="text-[9px] text-indigo-500 font-semibold opacity-0 group-hover:opacity-100 transition-opacity">
+                                Chèn
+                              </span>
+                              <GripVertical className="w-3.5 h-3.5 text-slate-300 group-hover:text-indigo-500 shrink-0 transition-colors" />
+                            </div>
                           </div>
                         </div>
                       ))}
