@@ -795,14 +795,15 @@ V-Eval-Web_Client/
 ---
 
 ### 4.62. Floating Right-Edge STEM Tools Drawer & Unified Header Toolbar Architecture (`CurriculumStudioEditor.jsx`)
-- **Right-Edge Docked Floating Drawer (`FloatingStemDrawer` & Toggle Button `<`)**:
-  - Engineered an interactive docked trigger button on the right edge of the viewport (`fixed right-0 top-1/2 -translate-y-1/2`) featuring a pulsing `<` arrow and vertical text banner (`CÔNG CỤ STEM`).
-  - Clicking the toggle expands an ultra-modern slide-over palette drawer containing all pedagogical tools:
+- **Right-Edge Docked Floating Drawer (`FloatingStemDrawer` & Ultra-Compact Toggle Button `<`)**:
+  - Engineered a sleek, ultra-compact docked trigger button on the right edge of the viewport (`fixed right-0 top-1/2 -translate-y-1/2 z-40`) featuring a minimal `<` chevron (`ChevronLeft className="w-3.5 h-3.5"`), mini-sparkle `✨`, and vertical label `STEM` (~55px height, ~20px width, `rounded-l-xl`), hugging the right border closely to completely prevent overlapping onto the editor canvas.
+  - Added trailing comma to `Table2,` inside the multiline `lucide-react` import statement to ensure strict ES module compliance and resolve TypeScript TS1005 `',' expected` diagnostic warnings.
+  - Clicking the toggle expands an ultra-modern slide-over palette drawer (`w-80 sm:w-[380px] max-h-[86vh]`) containing all pedagogical tools:
     - **MathLab 2D/3D**: Full JSXGraph workspace for 3D spatial rotations (360° trackball), 2D Cartesian function curves, and planar geometry.
     - **Variation Table Studio**: Instant 2N-1 grid table builder with double-bar asymptotes (`||`) and textbook inflection vectors.
     - **Fraction & Arithmetic Calculator**: 2-story fractions with automatic real-time result evaluation.
     - **Calculus & Textbook Limits**: First-principle limits, derivative definitions, and indeterminate quotient cancellations.
-    - **Chemistry Lab Workbench**: Molarity ($C_M$), mass concentration ($C%$), mass equation, and reaction yield calculations.
+    - **Chemistry Lab Workbench**: Molarity (`C_M`), mass concentration (`C%`), mass equation, and reaction yield calculations.
     - **7-Subject Symbol Library**: Quick link to open the full left hierarchical math palette.
   - Features an intuitive **Target Selector** (`theoryRecap`, `solutionMethod`, `sampleQuestion`, `sampleExplanation`) allowing teachers to effortlessly direct mathematical assets to any active section without navigating away.
 - **Header Unification & Inline Subheader De-cluttering**:

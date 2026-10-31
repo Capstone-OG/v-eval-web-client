@@ -39,7 +39,7 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  Table2
+  Table2,
 } from 'lucide-react';
 import MathText, { unescapeLiteralNewlines } from '../common/MathText';
 import InteractiveFormulaBuilderModal from './InteractiveFormulaBuilderModal';
@@ -2621,20 +2621,19 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
         className="hidden"
       />
 
-      {/* 6. FLOATING STEM TOOLS TOGGLE (RIGHT EDGE) */}
+      {/* 6. FLOATING STEM TOOLS TOGGLE (COMPACT SLEEK TAB) */}
       {!isStemDrawerOpen && (
         <button
           type="button"
           onClick={() => setIsStemDrawerOpen(true)}
-          className="fixed right-0 top-1/2 -translate-y-1/2 z-40 bg-gradient-to-b from-indigo-600 via-purple-600 to-indigo-700 text-white pl-2.5 pr-2 py-4 rounded-l-2xl shadow-xl hover:shadow-2xl hover:pl-3.5 transition-all flex flex-col items-center gap-2 group cursor-pointer border-y border-l border-indigo-400/50"
-          title="Nhấp để mở Bộ Công Cụ Toán & STEM trôi nổi (<)"
+          className="fixed right-0 top-1/2 -translate-y-1/2 z-40 bg-gradient-to-b from-indigo-600 to-purple-700 text-white pl-1.5 pr-1 py-2 rounded-l-xl shadow-md hover:shadow-lg hover:pl-2.5 transition-all flex flex-col items-center gap-1 group cursor-pointer border-y border-l border-indigo-300/40 opacity-90 hover:opacity-100"
+          title="Mở Bộ Công Cụ STEM (<)"
         >
-          <ChevronLeft className="w-4 h-4 stroke-[3] text-amber-300 animate-pulse group-hover:-translate-x-1 transition-transform" />
-          <div className="[writing-mode:vertical-rl] text-[11px] font-black tracking-widest uppercase flex items-center gap-1.5 py-1 select-none">
-            <span className="text-amber-300">✨</span>
-            <span>CÔNG CỤ STEM</span>
-          </div>
-          <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+          <ChevronLeft className="w-3.5 h-3.5 stroke-[2.5] text-amber-300 group-hover:-translate-x-0.5 transition-transform" />
+          <span className="text-[8.5px] text-amber-300 leading-none">✨</span>
+          <span className="[writing-mode:vertical-rl] text-[9.5px] font-extrabold tracking-wider uppercase select-none text-indigo-50">
+            STEM
+          </span>
         </button>
       )}
 
@@ -2880,7 +2879,7 @@ function FloatingStemDrawer({
   return (
     <div 
       ref={drawerRef}
-      className="fixed right-0 top-1/2 -translate-y-1/2 z-50 w-88 sm:w-[420px] max-h-[90vh] bg-white/98 backdrop-blur-md rounded-l-3xl shadow-2xl border-l-2 border-y-2 border-indigo-500/80 flex flex-col overflow-hidden animate-in slide-in-from-right duration-200"
+      className="fixed right-0 top-1/2 -translate-y-1/2 z-50 w-80 sm:w-[380px] max-h-[86vh] bg-white/98 backdrop-blur-md rounded-l-2xl shadow-2xl border-l-2 border-y-2 border-indigo-500/80 flex flex-col overflow-hidden animate-in slide-in-from-right duration-200"
     >
       {/* Drawer Header */}
       <div className="p-3.5 bg-gradient-to-r from-slate-950 via-indigo-950 to-purple-950 text-white flex items-center justify-between shrink-0 shadow-xs border-b border-indigo-900/60">

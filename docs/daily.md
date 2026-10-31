@@ -4,6 +4,14 @@
 
 ## [31/10/2026] - Chuẩn Hóa UI Khối 4 Ngang Hàng Thẳng Lối, Xóa Bỏ Nút Dán Ảnh & Bảng Công Cụ STEM Trôi Nổi Cạnh Phải Màn Hình Mũi Tên "<" Trong Studio Sư Phạm
 
+- **Khắc Phục Lỗi Cú Pháp Import Dấu Phẩy & Tinh Chỉnh Nút STEM Trôi Nổi Cạnh Phải Siêu Gọn Nhẹ (`CurriculumStudioEditor.jsx`)**:
+  - *Sửa Triệt Để Lỗi Cú Pháp TypeScript (TS1005 `',' expected`)*:
+    + Bổ sung dấu phẩy kết thúc `Table2,` trong khối destructuring import từ thư viện `lucide-react` tại đầu file `CurriculumStudioEditor.jsx`, loại bỏ hoàn toàn cảnh báo parser của TypeScript Language Server và linter IDE.
+  - *Thiết Kế Lại Nút Neo Cạnh Phải Màn Hình Mũi Tên "<" Siêu Gọn Nhẹ (Ultra-Compact Sleek Tab)*:
+    + Thay thế thanh tab dài 160px (`CÔNG CỤ STEM`) bằng mini-tab siêu tinh tế `[ < ✨ STEM ]` với chiều cao chỉ ~55px và chiều rộng ~20px (`pl-1.5 pr-1 py-2 rounded-l-xl`), ôm sát mép phải màn hình.
+    + Bố trí mũi tên nhỏ `<` (`ChevronLeft className="w-3.5 h-3.5"`), biểu tượng ngôi sao `✨` nhỏ nhắn và chữ `STEM` xoay dọc thanh thoát, triệt tiêu 100% tình trạng che lấn hay va chạm vào nội dung trang soạn thảo bên dưới.
+    + Tinh chỉnh kích thước ngăn kéo trượt `FloatingStemDrawer` từ `w-88 sm:w-[420px] max-h-[90vh]` xuống `w-80 sm:w-[380px] max-h-[86vh]`, gia tăng không gian thoáng đãng cho khu vực làm việc chính.
+
 - **Chuẩn Hóa UI Khối 4 Ngân Hàng Đề Hàng Thẳng Lối, Xóa Bỏ Nút Dán Ảnh & Bảng Công Cụ STEM Trôi Nổi Cạnh Phải Màn Hình (`CurriculumStudioEditor.jsx`)**:
   - *Sắp Xếp Ngang Hàng Thẳng Lối Khối 4 & Loại Bỏ Emoji Ký Tự Trùng Lặp*:
     + Căn thẳng hàng 1 dòng duy nhất cho bộ đôi nút tác vụ `AI Sinh Câu Hỏi` và `Thêm Câu Hỏi Mới` tại Header Khối 4 (`flex items-center gap-2.5 shrink-0 whitespace-nowrap`), triệt tiêu hiện tượng co cụm bẻ 2 hàng gây kênh lệch layout.
