@@ -2,6 +2,21 @@
 
 ---
 
+## [01/11/2026] - Tối Ưu Siêu Tinh Gọn Chiều Rộng Sidebar, Carousel 3 Môn Học Vòng Lặp Vô Hạn (< >) & Hiển Thị Đơn Giản Rê Chuột Giữ Để Xem Mô Phỏng Chi Tiết
+
+- **Thu Hẹp Chiều Rộng Tối Đa & Tiết Kiệm Không Gian (`HierarchicalMathPalette.jsx`)**:
+  - Giảm chiều ngang sidebar từ `w-60 sm:w-64` (240px - 256px) xuống `w-48 sm:w-52` (192px - 208px), tiết kiệm thêm ~50px chiều ngang màn hình, nhường hơn 85-90% diện tích cho canvas soạn thảo bài giảng.
+- **Băng Chuyền Danh Sách Môn Học Ngang 3 Môn Với Vòng Lặp Vô Hạn (`visibleDomainKeys`, `handleNextDomain`, `handlePrevDomain`)**:
+  - Tích hợp carousel ngang với 2 nút điều hướng `<` và `>` ở hai đầu.
+  - Mỗi lần hiển thị chính xác **3 môn học** song song (`📐 Toán`, `🧪 Hóa`, `⚡ Lý`, `🧬 Sinh`, `📖 Văn`, `🌍 Địa`, `🔣 Ký Hiệu`).
+  - Vòng lặp xoay tròn vô tận (Infinite Circular Modulo Loop): Nhấn `>` hoặc `<` sẽ xoay chuyển tịnh tiến 1 môn học và tự động lặp lại liên tục không có điểm dừng, đồng thời kích hoạt môn học tương ứng.
+  - Người dùng có thể nhấp trực tiếp vào bất kỳ tab nào trong 3 môn hiển thị để chuyển nhanh.
+- **Hiển Thị Danh Sách Công Thức Đơn Giản & Rê Chuột Giữ Để Xem Mô Phỏng Chi Tiết**:
+  - Trong danh sách: Mỗi mục công thức/đồ thị được tinh giản thành 1 dòng siêu gọn nhẹ (`h-[32px]`, hiển thị công thức/ký hiệu + nhãn + biểu tượng kéo thả), không còn hộp chứa 2 tầng cồng kềnh.
+  - Khi rê chuột và giữ bên trong (~380ms): Bật popup Card mô phỏng chi tiết (`hoveredItem`) hiển thị công thức phóng to KaTeX/mô phỏng cấu trúc Bảng biến thiên, mô tả sư phạm, cú pháp mã lệnh và hướng dẫn kéo thả / nhấp chuột.
+
+---
+
 ## [01/11/2026] - Chuyển Đổi Sắp Xếp Danh Sách Công Thức Sang 1 Cột Duy Nhất (Single-Column Formula Rows) Trong Thư Viện Ký Hiệu Studio
 
 - **Chuyển Đổi Sắp Xếp Công Thức Sang 1 Dòng 1 Mục Độc Lập (`HierarchicalMathPalette.jsx`)**:

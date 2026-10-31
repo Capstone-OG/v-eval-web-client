@@ -301,7 +301,7 @@ export const HIERARCHICAL_CATALOG = {
   },
   physics: {
     name: 'Vật Lý',
-    shortName: 'Vật Lý',
+    shortName: 'Lý',
     icon: '⚛️',
     badgeColor: 'amber',
     categories: {
@@ -598,6 +598,55 @@ export default function HierarchicalMathPalette({
   const domainKeys = Object.keys(HIERARCHICAL_CATALOG);
   const currentDomain = HIERARCHICAL_CATALOG[selectedDomain] || HIERARCHICAL_CATALOG.math;
 
+  // Domain carousel index (displays 3 domains at a time in infinite circular loop)
+  const [domainCarouselIndex, setDomainCarouselIndex] = useState(() => {
+    const idx = domainKeys.indexOf(selectedDomain);
+    return idx !== -1 ? idx : 0;
+  });
+
+  const visibleDomainKeys = useMemo(() => {
+    const n = domainKeys.length;
+    if (n === 0) return [];
+    if (n <= 3) return domainKeys;
+    return [
+      domainKeys[domainCarouselIndex % n],
+      domainKeys[(domainCarouselIndex + 1) % n],
+      domainKeys[(domainCarouselIndex + 2) % n],
+    ];
+  }, [domainKeys, domainCarouselIndex]);
+
+  const handleNextDomain = () => {
+    setDomainCarouselIndex((prev) => {
+      const nextIdx = (prev + 1) % domainKeys.length;
+      setSelectedDomain(domainKeys[nextIdx]);
+      return nextIdx;
+    });
+  };
+
+  const handlePrevDomain = () => {
+    setDomainCarouselIndex((prev) => {
+      const prevIdx = (prev - 1 + domainKeys.length) % domainKeys.length;
+      setSelectedDomain(domainKeys[prevIdx]);
+      return prevIdx;
+    });
+  };
+
+  const handleSelectDomain = (domKey) => {
+    setSelectedDomain(domKey);
+    const idx = domainKeys.indexOf(domKey);
+    if (idx !== -1) {
+      const n = domainKeys.length;
+      const isVisible = [
+        domainCarouselIndex % n,
+        (domainCarouselIndex + 1) % n,
+        (domainCarouselIndex + 2) % n,
+      ].includes(idx);
+      if (!isVisible) {
+        setDomainCarouselIndex(idx);
+      }
+    }
+  };
+
   const DOMAIN_STYLES = {
     math: {
       pillActive: 'bg-indigo-600 text-white border-indigo-600 shadow-xs',
@@ -759,7 +808,7 @@ export default function HierarchicalMathPalette({
               key={key}
               type="button"
               onClick={() => {
-                setSelectedDomain(key);
+                handleSelectDomain(key);
                 if (onToggleCollapse) onToggleCollapse();
               }}
               className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs transition-all cursor-pointer ${
@@ -779,7 +828,7 @@ export default function HierarchicalMathPalette({
 
   // EXPANDED SIDEBAR: STUDIO FORMULA & CHEMICAL COMPOUND LIBRARY
   return (
-    <div className="w-60 sm:w-64 bg-slate-50/40 text-slate-800 border-r border-slate-200 flex flex-col shrink-0 select-none text-xs h-full relative z-20 shadow-sm">
+    <div className="w-48 sm:w-52 bg-slate-50/40 text-slate-800 border-r border-slate-200 flex flex-col shrink-0 select-none text-xs h-full relative z-20 shadow-sm">
       
       {/* 1. Studio Header with Drag-and-Drop Badge */}
       <div className="px-2.5 py-2 border-b border-slate-200 bg-gradient-to-r from-indigo-950 via-slate-900 to-cyan-950 text-white flex items-center justify-between shrink-0">
@@ -822,37 +871,62 @@ export default function HierarchicalMathPalette({
         </div>
       </div>
 
-      {/* 3. Domain Switcher Pills (Toán, Hóa, Lý, Sinh, Văn, Địa, Ký Hiệu) */}
+      {/* 3. Horizontal Domain Carousel (3 visible subjects at a time, infinite circular loop) */}
       {!searchResults && (
-        <div className="px-2 py-1.5 border-b border-slate-200 bg-white space-y-1 shrink-0">
-          <div className="flex flex-wrap gap-1">
-            {domainKeys.map((domKey) => {
-              const dom = HIERARCHICAL_CATALOG[domKey];
-              const isAct = selectedDomain === domKey;
-              const domStyle = DOMAIN_STYLES[domKey] || DOMAIN_STYLES.math;
-              return (
-                <button
-                  key={domKey}
-                  type="button"
-                  onClick={() => setSelectedDomain(domKey)}
-                  className={`py-0.5 px-1.5 rounded-lg font-bold text-[10px] flex items-center gap-1 transition-all cursor-pointer border ${
-                    isAct
-                      ? domStyle.pillActive
-                      : 'bg-slate-50/80 text-slate-600 hover:bg-slate-100 hover:text-slate-900 border-slate-200/80'
-                  }`}
-                  title={dom.name}
-                >
-                  <span className="text-xs leading-none">{dom.icon}</span>
-                  <span>{dom.shortName}</span>
-                </button>
-              );
-            })}
+        <div className="px-1.5 py-1.5 border-b border-slate-200 bg-white space-y-1.5 shrink-0">
+          <div className="flex items-center gap-1 w-full bg-slate-100/90 p-1 rounded-xl border border-slate-200/80">
+            {/* Prev Button < */}
+            <button
+              type="button"
+              onClick={handlePrevDomain}
+              className="w-5 h-6 rounded-md bg-white hover:bg-slate-50 text-slate-600 hover:text-indigo-600 flex items-center justify-center transition-all cursor-pointer shadow-2xs border border-slate-200 shrink-0"
+              title="Môn trước (<)"
+            >
+              <ChevronLeft className="w-3.5 h-3.5" />
+            </button>
+
+            {/* 3 Visible Subject Pills */}
+            <div className="flex items-center gap-1 flex-1 min-w-0">
+              {visibleDomainKeys.map((domKey) => {
+                const dom = HIERARCHICAL_CATALOG[domKey];
+                const isAct = selectedDomain === domKey;
+                const domStyle = DOMAIN_STYLES[domKey] || DOMAIN_STYLES.math;
+                return (
+                  <button
+                    key={domKey}
+                    type="button"
+                    onClick={() => handleSelectDomain(domKey)}
+                    className={`flex-1 min-w-0 py-1 px-1 rounded-lg font-bold text-[9.5px] flex items-center justify-center gap-0.5 transition-all cursor-pointer border truncate ${
+                      isAct
+                        ? domStyle.pillActive + ' shadow-2xs'
+                        : 'bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900 border-slate-200/80'
+                    }`}
+                    title={dom.name}
+                  >
+                    <span className="text-[10px] leading-none shrink-0">{dom.icon}</span>
+                    <span className="truncate">{dom.shortName}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Next Button > */}
+            <button
+              type="button"
+              onClick={handleNextDomain}
+              className="w-5 h-6 rounded-md bg-white hover:bg-slate-50 text-slate-600 hover:text-indigo-600 flex items-center justify-center transition-all cursor-pointer shadow-2xs border border-slate-200 shrink-0"
+              title="Môn tiếp theo (>)"
+            >
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
           </div>
-          <div className="flex items-center justify-between pt-0.5 px-0.5 text-[9.5px] text-slate-500">
-            <span className="font-bold text-slate-700">
+
+          {/* Subheader: Active Subject Name + Expand/Collapse All */}
+          <div className="flex items-center justify-between px-0.5 text-[9px] text-slate-500">
+            <span className="font-bold text-slate-700 truncate max-w-[100px]">
               {currentDomain.icon} {currentDomain.name}
             </span>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 shrink-0">
               <button
                 type="button"
                 onClick={() => handleToggleAllCategories(true)}
@@ -889,7 +963,7 @@ export default function HierarchicalMathPalette({
                 Không tìm thấy công thức hoặc hợp chất phù hợp với từ khóa.
               </div>
             ) : (
-              <div className="grid grid-cols-1 gap-1.5">
+              <div className="grid grid-cols-1 gap-1">
                 {searchResults.map((item, idx) => (
                   <div
                     key={idx}
@@ -898,26 +972,22 @@ export default function HierarchicalMathPalette({
                     onClick={() => handleItemClick(item)}
                     onMouseEnter={(e) => handleItemMouseEnter(item, item.categoryName, e)}
                     onMouseLeave={handleItemMouseLeave}
-                    className="p-2 rounded-2xl bg-white hover:bg-indigo-50/40 border border-slate-200/90 hover:border-indigo-400 transition-all flex flex-col justify-between gap-1.5 cursor-grab active:cursor-grabbing group shadow-2xs hover:shadow-md hover:-translate-y-0.5"
+                    className="px-2 py-1.5 rounded-lg bg-white border border-slate-200/80 hover:border-indigo-400 hover:bg-indigo-50/40 transition-all flex items-center justify-between gap-1.5 cursor-grab active:cursor-grabbing group shadow-2xs hover:shadow-xs"
                   >
-                    {/* Live Rendered KaTeX Preview Box */}
-                    <div className="w-full min-h-[32px] px-1 py-1 rounded-lg bg-slate-50/90 group-hover:bg-white border border-slate-100 group-hover:border-indigo-200 flex items-center justify-center overflow-x-auto scrollbar-none">
+                    <div className="flex items-center gap-1.5 min-w-0 flex-1 overflow-hidden">
                       <div
-                        className="text-[13px] text-slate-900 font-serif leading-none"
+                        className="text-[12px] font-serif leading-none shrink-0 text-slate-900"
                         dangerouslySetInnerHTML={{ __html: renderKatexHtml(item.preview || item.code, false) }}
                       />
-                    </div>
-                    {/* Subtitle Label + Domain Badge */}
-                    <div className="w-full flex items-center justify-between gap-1 px-0.5">
-                      <span className="text-[10.5px] font-bold text-slate-700 group-hover:text-indigo-900 truncate">
+                      <span className="text-[10px] font-semibold text-slate-700 truncate">
                         {item.label}
                       </span>
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 font-medium">
-                          {item.domainName}
-                        </span>
-                        <GripVertical className="w-3.5 h-3.5 text-slate-300 group-hover:text-indigo-500 shrink-0 transition-colors" />
-                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <span className="text-[8.5px] px-1 py-0.2 rounded bg-slate-100 text-slate-500 font-medium">
+                        {item.domainName}
+                      </span>
+                      <GripVertical className="w-3 h-3 text-slate-300 group-hover:text-indigo-500 shrink-0 transition-colors" />
                     </div>
                   </div>
                 ))}
@@ -962,41 +1032,32 @@ export default function HierarchicalMathPalette({
 
                 {/* Accordion Folder Content: Visual KaTeX / Chemical Tiles */}
                 {isCatOpen && (
-                  <div className="p-2 bg-white">
-                    <div className="grid grid-cols-1 gap-1.5">
-                      {cat.items?.map((item, idx) => (
-                        <div
-                          key={idx}
-                          draggable
-                          onDragStart={(e) => handleItemDragStart(e, item)}
-                          onClick={() => handleItemClick(item)}
-                          onMouseEnter={(e) => handleItemMouseEnter(item, cat.name, e)}
-                          onMouseLeave={handleItemMouseLeave}
-                          className={`p-2 rounded-xl bg-white border border-slate-200/90 ${activeTheme.cardHover} transition-all flex flex-col justify-between gap-1.5 cursor-grab active:cursor-grabbing group shadow-2xs hover:shadow-md hover:-translate-y-0.5`}
-                        >
-                          {/* Top Visual KaTeX Formula / Chemical Compound Display */}
-                          <div className="w-full min-h-[32px] px-2 py-1 rounded-lg bg-slate-50/90 group-hover:bg-white border border-slate-100 group-hover:border-slate-200 flex items-center justify-center overflow-x-auto scrollbar-none">
-                            <div
-                              className={`text-[13px] font-serif leading-none ${activeTheme.formulaText}`}
-                              dangerouslySetInnerHTML={{ __html: renderKatexHtml(item.preview || item.code, false) }}
-                            />
-                          </div>
-
-                          {/* Bottom Label + Drag Grip Indicator */}
-                          <div className="w-full flex items-center justify-between gap-1 px-0.5">
-                            <span className="text-[10.5px] font-bold text-slate-600 group-hover:text-slate-900 truncate">
-                              {item.label}
-                            </span>
-                            <div className="flex items-center gap-1 shrink-0">
-                              <span className="text-[9px] text-indigo-500 font-semibold opacity-0 group-hover:opacity-100 transition-opacity">
-                                Chèn
-                              </span>
-                              <GripVertical className="w-3.5 h-3.5 text-slate-300 group-hover:text-indigo-500 shrink-0 transition-colors" />
-                            </div>
-                          </div>
+                  <div className="p-1.5 bg-white space-y-1">
+                    {cat.items?.map((item, idx) => (
+                      <div
+                        key={idx}
+                        draggable
+                        onDragStart={(e) => handleItemDragStart(e, item)}
+                        onClick={() => handleItemClick(item)}
+                        onMouseEnter={(e) => handleItemMouseEnter(item, cat.name, e)}
+                        onMouseLeave={handleItemMouseLeave}
+                        className={`px-2 py-1.5 rounded-lg bg-white border border-slate-200/80 ${activeTheme.cardHover} transition-all flex items-center justify-between gap-1.5 cursor-grab active:cursor-grabbing group shadow-2xs hover:shadow-xs`}
+                      >
+                        {/* Left: Compact Formula / Symbol Preview */}
+                        <div className="flex items-center gap-1.5 min-w-0 flex-1 overflow-hidden">
+                          <div
+                            className={`text-[12px] font-serif leading-none shrink-0 ${activeTheme.formulaText}`}
+                            dangerouslySetInnerHTML={{ __html: renderKatexHtml(item.preview || item.code, false) }}
+                          />
+                          <span className="text-[10px] font-semibold text-slate-600 group-hover:text-slate-900 truncate">
+                            {item.label}
+                          </span>
                         </div>
-                      ))}
-                    </div>
+
+                        {/* Right: Grip indicator */}
+                        <GripVertical className="w-3 h-3 text-slate-300 group-hover:text-indigo-500 shrink-0 transition-colors" />
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
@@ -1014,7 +1075,7 @@ export default function HierarchicalMathPalette({
         <span className="text-slate-400">Chạm để chèn nhanh</span>
       </div>
 
-      {/* 6. STUDIO HOVER PREVIEW CARD */}
+      {/* 6. STUDIO HOVER PREVIEW CARD: HIỂN THỊ RÕ CHI TIẾT & MÔ PHỎNG */}
       {hoveredItem && (
         <div
           style={{ 
@@ -1022,25 +1083,37 @@ export default function HierarchicalMathPalette({
             left: `${hoverCardPos.left}px`,
             position: 'fixed'
           }}
-          className="z-[999] w-80 bg-white/98 backdrop-blur-md rounded-2xl border-2 border-indigo-500 shadow-2xl p-4 text-slate-900 pointer-events-none animate-in fade-in zoom-in-95 duration-150"
+          className="z-[999] w-84 bg-white/98 backdrop-blur-md rounded-2xl border-2 border-indigo-500 shadow-2xl p-3.5 text-slate-900 pointer-events-none animate-in fade-in zoom-in-95 duration-150"
         >
+          {/* Header */}
           <div className="flex items-center justify-between pb-2 border-b border-slate-200">
             <span className="text-[10.5px] font-black uppercase text-indigo-700 tracking-wider flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5 text-amber-500" />
               <span>{currentDomain?.name} • {hoveredItem.categoryName}</span>
             </span>
-            <span className="text-[9.5px] px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-800 border border-indigo-200 font-mono font-bold">
-              Kéo - Thả
+            <span className="text-[9px] px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-800 border border-indigo-200 font-mono font-bold">
+              Kéo - Thả hoặc Click
             </span>
           </div>
 
-          {/* Large Live KaTeX Formula */}
-          <div className="my-3 py-3 px-3 rounded-xl bg-slate-50 border border-slate-200 text-center flex items-center justify-center min-h-[60px] shadow-inner">
-            <div 
-              className="text-lg text-indigo-950 font-serif leading-none"
-              dangerouslySetInnerHTML={{ __html: renderKatexHtml(hoveredItem.preview || hoveredItem.code, true) }}
-            />
-          </div>
+          {/* Visual Showcase (Big KaTeX or Block Template Mockup) */}
+          {hoveredItem.isBlockTemplate ? (
+            <div className="my-2.5 p-2.5 rounded-xl bg-slate-900 text-slate-100 font-mono text-[10.5px] border border-slate-800 shadow-inner">
+              <div className="text-[9.5px] uppercase font-bold text-emerald-400 mb-1 flex items-center gap-1">
+                <span>📊 Mô phỏng cấu trúc Bảng Biến Thiên / Đồ Thị:</span>
+              </div>
+              <div className="text-slate-300 whitespace-pre text-[9.5px] bg-slate-950/90 p-2 rounded border border-slate-800 max-h-28 overflow-hidden">
+                {hoveredItem.code.slice(0, 160)}...
+              </div>
+            </div>
+          ) : (
+            <div className="my-2.5 py-3 px-3 rounded-xl bg-gradient-to-b from-slate-50 to-white border border-slate-200 text-center flex items-center justify-center min-h-[56px] shadow-inner">
+              <div 
+                className="text-xl text-indigo-950 font-serif leading-none"
+                dangerouslySetInnerHTML={{ __html: renderKatexHtml(hoveredItem.preview || hoveredItem.code, true) }}
+              />
+            </div>
+          )}
 
           {/* Title & Pedagogical Description */}
           <div className="space-y-1">
@@ -1050,9 +1123,17 @@ export default function HierarchicalMathPalette({
             <p className="text-[11.5px] text-slate-600 leading-relaxed font-normal">
               {hoveredItem.desc || 'Kéo thả trực tiếp vào khung soạn thảo / Bảng biến thiên hoặc nhấp chuột để chèn.'}
             </p>
+            {(hoveredItem.latexNote || (hoveredItem.code && !hoveredItem.isBlockTemplate)) && (
+              <div className="mt-1.5 px-2 py-1 bg-slate-100 rounded-md border border-slate-200 text-[10px] font-mono text-slate-700 flex items-center gap-1.5">
+                <span className="text-slate-400 font-sans font-medium shrink-0">Cú pháp:</span>
+                <span className="text-indigo-700 font-bold truncate">
+                  {hoveredItem.latexNote || hoveredItem.code}
+                </span>
+              </div>
+            )}
           </div>
 
-          <div className="mt-2.5 pt-2 border-t border-slate-200 flex items-center justify-between text-[10.5px] text-emerald-700 font-extrabold">
+          <div className="mt-2.5 pt-2 border-t border-slate-200 flex items-center justify-between text-[10px] text-emerald-700 font-extrabold">
             <span>✋ Kéo thả vào vị trí bất kỳ</span>
             <span>⚡ Nhấp để chèn ngay</span>
           </div>

@@ -841,3 +841,14 @@ V-Eval-Web_Client/
   - Re-engineered the symbol and formula palette repository from a cramped 2-column grid (`grid-cols-2`) to a focused, single-column vertical flow (`grid-cols-1 gap-1.5`).
   - *Full-Width Formula Canvas*: Provides each formula card with the full width of the palette (~220px active area), allowing long multi-term equations (harmonic motion equations `x = A\cos(\omega t + \varphi)`, rational calculus functions, limits, integration, and chemical formulas) to render cleanly without truncation or awkward text wraps.
   - *Ergonomic Interaction & Drag Target*: Enlarged horizontal drag target with live KaTeX rendering, formula title, domain classification badge, subtle "Chèn" insertion hint, and `GripVertical` drag indicator, maximizing tactile usability for curriculum editors.
+
+### 4.39. Ultra-Compact Palette Footprint, 3-Domain Infinite Circular Carousel, and Dwell-Hover Simulation Inspector (`HierarchicalMathPalette.jsx`)
+- **Ultra-Compact Palette Width Optimization**:
+  - Further constrained the expanded sidebar width from `w-60 sm:w-64` (240px - 256px) down to an ultra-slim `w-48 sm:w-52` (192px - 208px), freeing over 85-90% of screen viewport real estate for the primary pedagogical document canvas.
+- **3-Subject Horizontal Infinite Circular Carousel (`visibleDomainKeys`, `handleNextDomain`, `handlePrevDomain`)**:
+  - Replaced the wrapped pill row with an elegant 3-item horizontal carousel flanked by `<` and `>` navigation buttons.
+  - Implemented circular modulo mathematics (`(index ± 1 + length) % length`) ensuring an infinite non-terminating loop across all 7 subject domains (Mathematics, Chemistry, Physics, Biology, Literature, Geography, Mathematical Logic & Symbols).
+  - Actively synchronizes the current domain selection and centers the carousel window upon direct tab clicks or collapsed rail selection.
+- **Low-Profile Single-Row Formula Items with Dwell-Hover Simulation Inspector**:
+  - Item listing is reduced to an ultra-clean, minimalist single row (~30px height) featuring inline KaTeX/symbol rendering, truncated label, and drag handle.
+  - Replaced passive cluttered containers with an asynchronous dwell-hover inspector (~380ms debounce threshold): hovering and holding over any item displays an enlarged vector KaTeX formula, ASCII structure simulation for complex block templates (such as Variation Tables and coordinate graphs), comprehensive pedagogical usage guidelines, and insertion syntax.
