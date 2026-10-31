@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
+import { flushSync } from 'react-dom';
 import { 
   Sparkles, 
   Check, 
@@ -1113,9 +1114,13 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
     if (idx === 0) {
       if (isLineEmpty && currentLines.length > 1) {
         const nextLines = currentLines.slice(1);
-        flushSync(() => {
+        try {
+          flushSync(() => {
+            commitDocLines(nextLines);
+          });
+        } catch (err) {
           commitDocLines(nextLines);
-        });
+        }
         const firstLine = nextLines[0];
         if (firstLine) {
           setTimeout(() => {
@@ -1168,7 +1173,18 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
       targetFocusTokenId = lastPrevTok?.id;
       targetFocusOffset = (lastPrevTok?.text || '').length;
 
-      const mergedTokens = [...(prevLine.tokens || []), ...updatedCurrTokens];
+      // Combine adjacent plain text tokens so text flows naturally in a single span
+      const mergedTokens = [];
+      const combined = [...(prevLine.tokens || []), ...updatedCurrTokens];
+      for (const tok of combined) {
+        const last = mergedTokens[mergedTokens.length - 1];
+        if (last && !last.isFormula && !tok.isFormula) {
+          last.text = (last.text || '') + (tok.text || '');
+        } else {
+          mergedTokens.push({ ...tok });
+        }
+      }
+
       const updatedPrevLine = {
         ...prevLine,
         tokens: mergedTokens
@@ -1181,9 +1197,13 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
       ];
     }
 
-    flushSync(() => {
+    try {
+      flushSync(() => {
+        commitDocLines(nextLines);
+      });
+    } catch (err) {
       commitDocLines(nextLines);
-    });
+    }
 
     // Auto-focus previous line immediately so repeat Backspace deletes seamlessly
     const focusPrevLine = () => {
@@ -2106,7 +2126,8 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
                             const sel = window.getSelection();
                             const rawSpan = e.currentTarget.textContent || '';
                             const cleanSpanText = rawSpan.replace(/[\s\u00A0\r\n\u200B]+/g, '');
-                            const isAtStart = sel && (sel.anchorOffset === 0 && sel.focusOffset === 0);
+                            const range = sel && sel.rangeCount > 0 ? sel.getRangeAt(0) : null;
+                            const isAtStart = (sel && (sel.anchorOffset === 0 && sel.focusOffset === 0)) || (range && range.collapsed && range.startOffset === 0);
                             const isFirstToken = line.tokens[0]?.id === token.id;
 
                             // If at start of text span immediately after a formula, Backspace deletes the formula!

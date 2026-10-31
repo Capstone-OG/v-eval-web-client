@@ -931,3 +931,11 @@ V-Eval-Web_Client/
 - **Robust Line Emptiness Detection & Caret Restoration**:
   - Standardized emptiness verification using whitespace-, newline-, and non-breaking space/zero-width space stripping (`/[\s\u00A0\r\n\u200B]+/g`).
   - Upon Backspace on an empty line or at the beginning of a line, `handleDeleteOrMergeLine` prunes the line immediately via `flushSync`, cleanly targeting the last token of the preceding line and restoring the caret at its terminal boundary.
+
+### 4.49. React-DOM flushSync Resolution, Boundary Caret Calibration, and Adjacent Token Coalescing (`WordStyleFormulaCanvas.jsx`)
+- **Explicit `flushSync` Namespace Import**:
+  - Imported `flushSync` directly from `react-dom` inside `WordStyleFormulaCanvas.jsx`, wrapped in `try/catch` fallbacks to eliminate runtime `ReferenceError: flushSync is not defined` exceptions that interrupted line pruning executions.
+- **Dual-Metric Caret Boundary Calibration**:
+  - Refined beginning-of-line caret detection by measuring both `sel.anchorOffset === 0 && sel.focusOffset === 0` and `range.collapsed && range.startOffset === 0`, ensuring Backspace triggers immediate upward line jump across all browser selection states.
+- **Adjacent Text Token Coalescence**:
+  - Upgraded the line merger algorithm to coalesce adjacent plain text tokens into a single unbroken token (`last.text += tok.text`), preventing fragmented spans and restoring natural word processing cursor navigation.

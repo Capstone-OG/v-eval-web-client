@@ -2,6 +2,20 @@
 
 ---
 
+## [01/11/2026] - Khắc Phục Lỗi Runtime flushSync Is Not Defined & Hoàn Thiện Cơ Chế Nhảy Dòng Lên (Backspace Line Merge)
+
+- **Bổ Sung Import `flushSync` Từ `react-dom` & Gộp Dòng Liền Mạch (`WordStyleFormulaCanvas.jsx`)**:
+  - *Nguyên Nhân Sâu Xa*:
+    1. Hàm `flushSync` được gọi trong `handleDeleteOrMergeLine` nhưng chưa được import từ `react-dom`, gây lỗi runtime `ReferenceError: flushSync is not defined` âm thầm ngắt quãng luồng xử lý khiến dòng không thể xóa hay nhảy lên dòng trên.
+    2. Điều kiện con trỏ đầu dòng `isAtStart` trước đây chỉ kiểm tra `sel.anchorOffset === 0`, dễ bị trượt khi con trỏ nằm trong node text con hoặc selection collapsed.
+    3. Khi gộp hai dòng có nội dung, các token chữ nằm cạnh nhau bị phân mảnh thành nhiều thẻ span riêng biệt khiến luồng văn bản bị đứt đoạn.
+  - *Giải Pháp Xử Lý Toàn Diện*:
+    - *Import Trực Tiếp `flushSync`*: Bổ sung `import { flushSync } from 'react-dom';` kèm khối bọc an toàn `try/catch` fallback gọi `commitDocLines(nextLines)`.
+    - *Chuẩn Hóa Nhận Diện Con Trỏ Đầu Dòng*: Kiểm tra đồng thời `sel.anchorOffset === 0` và `range.startOffset === 0` để nhận biết 100% thời điểm con trỏ ở vị trí đầu dòng để nhảy dòng lên (`e.key === 'Backspace'`).
+    - *Gộp Liền Khối Các Token Chữ Liền Kề*: Khi gộp dòng dưới lên dòng trên, các token chữ liên tiếp được nối chuỗi `last.text += tok.text` thành 1 span duy nhất, định vị con trỏ chính xác tại điểm nối giữa hai dòng.
+
+---
+
 ## [01/11/2026] - Khắc Phục Triệt Để Lỗi Xóa Hết Nội Dung Dòng Nhấn Phím Xóa (Backspace/Delete) Không Tự Động Xóa Dòng
 
 - **Khắc Phục Lỗi Xóa Hết Chữ Nhấn Backspace Không Tự Động Xóa Dòng (`WordStyleFormulaCanvas.jsx`)**:
