@@ -1,32 +1,34 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import confetti from 'canvas-confetti';
 
 // Components grouped by module folder
 import { Navbar, Sidebar } from './components/layout';
-import { 
-  HeroBanner, 
-  MetricsGrid, 
-  MilestoneCard, 
-  LiveQnACard, 
-  AISocraticTutorWidget, 
+import {
+  HeroBanner,
+  MetricsGrid,
+  MilestoneCard,
+  LiveQnACard,
+  AISocraticTutorWidget,
   TeacherDashboardView,
   CampusManagerDashboardView,
-  ParentDashboardView
+  ParentDashboardView,
+  LearningAnalyticsView
 } from './components/dashboard';
 import { PublicLandingPage } from './components/landing';
 import { WebLoginPage } from './components/auth';
-import { 
-  AcademicArchitectureModal, 
-  DiagnosticTestModal, 
-  AdaptiveQuizModal, 
+import {
+  AcademicArchitectureModal,
+  DiagnosticTestModal,
+  AdaptiveQuizModal,
   RadarChartModal,
-  AISocraticTutorModal 
+  AISocraticTutorModal
 } from './components/modals';
 import { DiagnosticAssessmentPage, SubmissionHistoryView } from './components/diagnostic';
 import { AccountProvisioningView } from './components/admin';
 import { CurriculumExplorerView } from './components/curriculum';
 import { CheckCircle2 } from 'lucide-react';
 import authService from './services/authService';
+import { practiceService } from './services/practiceService';
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState('landing'); // 'landing' | 'login' | 'dashboard'
@@ -34,7 +36,8 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState(() => authService.getStoredUser());
   const [activeRole, setActiveRole] = useState(() => authService.getStoredUser()?.role || 'student');
   const [activeTab, setActiveTab] = useState('dashboard');
-  
+  const [studentDashboard, setStudentDashboard] = useState(null);
+
   // Modals
   const [isArchModalOpen, setIsArchModalOpen] = useState(false);
   const [isDiagnosticModalOpen, setIsDiagnosticModalOpen] = useState(false);
@@ -42,6 +45,19 @@ export default function App() {
   const [isRadarModalOpen, setIsRadarModalOpen] = useState(false);
   const [isAiTutorModalOpen, setIsAiTutorModalOpen] = useState(false);
   const [tutorContext, setTutorContext] = useState(null);
+
+  const refreshStudentAnalytics = useCallback(async () => {
+    try {
+      const data = await practiceService.getStudentDashboard(currentUser?.id);
+      setStudentDashboard(data);
+    } catch {
+      // resilient fallback handled inside practiceService
+    }
+  }, [currentUser?.id]);
+
+  useEffect(() => {
+    refreshStudentAnalytics();
+  }, [refreshStudentAnalytics]);
 
   const handleOpenAiTutor = (context = null) => {
     setTutorContext(context);
@@ -85,9 +101,14 @@ export default function App() {
     const resolvedUser = user || authService.getStoredUser();
     setCurrentUser(resolvedUser);
     setCurrentPage('dashboard');
-    const roleLabel = role === 'student' ? 'Học sinh' : 
-                      role === 'parent' ? 'Phụ huynh' : 
-                      role === 'teacher' ? 'Giáo viên Cơ sở' : 'Quản lý Học thuật Cơ sở / Admin';
+    const roleLabel =
+      role === 'student'
+        ? 'Học sinh'
+        : role === 'parent'
+          ? 'Phụ huynh'
+          : role === 'teacher'
+            ? 'Giáo viên Cơ sở'
+            : 'Quản lý Học thuật Cơ sở / Admin';
     showToast(`Đã đăng nhập thành công với vai trò ${roleLabel}!`);
   };
 
@@ -99,15 +120,14 @@ export default function App() {
     }
     setCurrentUser(null);
     setCurrentPage('landing');
-    showToast("Đã đăng xuất khỏi hệ thống.");
+    showToast('Đã đăng xuất khỏi hệ thống.');
   };
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-cyan-500 selection:text-slate-950">
-      
       {/* PAGE ROUTING */}
       {currentPage === 'landing' && (
-        <PublicLandingPage 
+        <PublicLandingPage
           currentUser={currentUser}
           onOpenLogin={() => handleOpenAuth('login')}
           onOpenRegister={() => handleOpenAuth('register')}
@@ -121,7 +141,7 @@ export default function App() {
       )}
 
       {currentPage === 'diagnostic' && (
-        <DiagnosticAssessmentPage 
+        <DiagnosticAssessmentPage
           onNavigateDashboard={() => setCurrentPage('dashboard')}
           onNavigateHome={() => setCurrentPage('landing')}
           onOpenAiTutorWithContext={(ctx) => handleOpenAiTutor(ctx)}
@@ -129,7 +149,7 @@ export default function App() {
       )}
 
       {currentPage === 'login' && (
-        <WebLoginPage 
+        <WebLoginPage
           initialMode={authMode}
           onLoginSuccess={handleLoginSuccess}
           onNavigateHome={() => setCurrentPage('landing')}
@@ -138,9 +158,8 @@ export default function App() {
 
       {currentPage === 'dashboard' && (
         <div className="flex-1 flex flex-col bg-[#F4F7FC] text-slate-900">
-          
           {/* Dashboard Header */}
-          <Navbar 
+          <Navbar
             currentUser={currentUser}
             activeRole={activeRole}
             setActiveRole={setActiveRole}
@@ -152,9 +171,8 @@ export default function App() {
 
           {/* Main Dashboard Container */}
           <div className="flex-1 flex max-w-[1700px] w-full mx-auto">
-            
             {/* Sidebar */}
-            <Sidebar 
+            <Sidebar
               activeTab={activeTab}
               setActiveTab={setActiveTab}
               activeRole={activeRole}
@@ -166,7 +184,6 @@ export default function App() {
 
             {/* Main Content Area */}
             <main className="flex-1 p-4 lg:p-8 overflow-y-auto max-w-full">
-              
               {/* Toast Alert */}
               {toastMsg && (
                 <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-2xl border border-slate-700 text-xs font-bold flex items-center gap-2.5 animate-fade">
@@ -175,52 +192,64 @@ export default function App() {
                 </div>
               )}
 
-              {/* Tab Dàn Kiến Thức & Lộ Trình (Curriculum Explorer) - Hiển thị cho Mọi Vai Trò */}
+              {/* Tab Dàn Kiến Thức & Lộ Trình (Curriculum Explorer) */}
               {activeTab === 'roadmap' ? (
-                <CurriculumExplorerView 
-                  onStartQuizModal={() => setIsZpdModalOpen(true)} 
+                <CurriculumExplorerView
+                  onStartQuizModal={() => setIsZpdModalOpen(true)}
                   onNavigateDiagnostic={() => setActiveTab('diagnostic')}
                   onOpenAiTutorWithContext={(ctx) => handleOpenAiTutor(ctx)}
                 />
               ) : activeTab === 'diagnostic' ? (
-                <DiagnosticAssessmentPage 
+                <DiagnosticAssessmentPage
                   embedded={true}
                   onNavigateDashboard={() => setActiveTab('dashboard')}
                   onNavigateHome={() => setActiveTab('dashboard')}
                   onOpenAiTutorWithContext={(ctx) => handleOpenAiTutor(ctx)}
                 />
-              ) : (activeTab === 'history' || activeTab === 'question_bank') ? (
-                <SubmissionHistoryView 
+              ) : activeTab === 'history' || activeTab === 'question_bank' ? (
+                <SubmissionHistoryView
                   onStartNewDiagnostic={() => setActiveTab('diagnostic')}
                   onOpenAiTutorWithContext={(ctx) => handleOpenAiTutor(ctx)}
+                />
+              ) : activeTab === 'analytics' ? (
+                <LearningAnalyticsView
+                  currentUser={currentUser}
+                  activeRole={activeRole}
+                  initialData={studentDashboard}
+                  onStartDiagnostic={() => setActiveTab('diagnostic')}
+                  onOpenRoadmap={() => setActiveTab('roadmap')}
+                  onOpenZPD={() => setIsZpdModalOpen(true)}
+                  onOpenHistory={() => setActiveTab('history')}
+                  onOpenAiTutor={(ctx) => handleOpenAiTutor(ctx)}
+                  onNavigateRoleDashboard={() => setActiveTab('dashboard')}
                 />
               ) : (
                 <>
                   {/* Student View */}
                   {activeRole === 'student' && (
                     <div className="space-y-6 animate-fade">
-                      
                       {/* Hero Banner with 3D Pop-out Avatar */}
-                      <HeroBanner 
+                      <HeroBanner
                         currentUser={currentUser}
+                        studentDashboard={studentDashboard}
                         onStartMilestone={handleContinueMilestone}
                         onStartMockTest={() => setActiveTab('diagnostic')}
                         onOpenAiTutor={() => handleOpenAiTutor(null)}
                       />
 
                       {/* 4 Core Metrics Cards */}
-                      <MetricsGrid 
+                      <MetricsGrid
+                        studentDashboard={studentDashboard}
                         onOpenRadar={() => setIsRadarModalOpen(true)}
                         onOpenDAG={() => setActiveTab('roadmap')}
                         onOpenZPD={() => setIsZpdModalOpen(true)}
-                        onOpenAnalytics={() => setIsRadarModalOpen(true)}
+                        onOpenAnalytics={() => setActiveTab('analytics')}
                       />
 
                       {/* Bottom 2 Column Grid */}
                       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        
                         <div className="lg:col-span-2 space-y-6">
-                          <MilestoneCard 
+                          <MilestoneCard
                             currentUser={currentUser}
                             onStartTask={handleStartTask}
                             onContinueMilestone={handleContinueMilestone}
@@ -230,35 +259,28 @@ export default function App() {
 
                         <div className="space-y-6">
                           <LiveQnACard />
-                          <AISocraticTutorWidget 
-                            onOpenFullChat={() => handleOpenAiTutor(null)}
-                          />
+                          <AISocraticTutorWidget onOpenFullChat={() => handleOpenAiTutor(null)} />
                         </div>
-
                       </div>
-
                     </div>
                   )}
 
                   {/* Teacher View */}
-                  {activeRole === 'teacher' && (
-                    <TeacherDashboardView />
-                  )}
+                  {activeRole === 'teacher' && <TeacherDashboardView currentUser={currentUser} />}
 
                   {/* Campus Manager / Admin View */}
                   {(activeRole === 'manager' || activeRole === 'admin') && (
-                    <CampusManagerDashboardView onOpenProvisionPage={() => setCurrentPage('provision')} />
+                    <CampusManagerDashboardView
+                      currentUser={currentUser}
+                      onOpenProvisionPage={() => setCurrentPage('provision')}
+                    />
                   )}
 
                   {/* Parent View */}
-                  {activeRole === 'parent' && (
-                    <ParentDashboardView />
-                  )}
+                  {activeRole === 'parent' && <ParentDashboardView currentUser={currentUser} />}
                 </>
               )}
-
             </main>
-
           </div>
 
           {/* Footer */}
@@ -267,18 +289,19 @@ export default function App() {
               <strong className="text-slate-700">ĐGNL AI Portal</strong> • Phân hệ v2.4 (Build IRT-Adaptive) • ĐGNL ĐHQG TP.HCM
             </div>
             <div className="flex items-center gap-4 mt-2 sm:mt-0 text-[11px]">
-              <span>Ban Học thuật: <strong className="text-blue-600">academic@dgnl.edu.vn</strong></span>
+              <span>
+                Ban Học thuật: <strong className="text-blue-600">academic@dgnl.edu.vn</strong>
+              </span>
               <span>© 2026 Trung tâm Đào tạo & Khoa học Thi Thích ứng</span>
             </div>
           </footer>
-
         </div>
       )}
 
       {/* ACCOUNT PROVISIONING & ROLE MANAGEMENT PAGE (IAM) */}
       {currentPage === 'provision' && (
         <div className="flex-1 flex flex-col bg-[#F4F7FC] text-slate-900 min-h-screen">
-          <Navbar 
+          <Navbar
             currentUser={currentUser}
             activeRole={activeRole}
             setActiveRole={setActiveRole}
@@ -295,7 +318,9 @@ export default function App() {
               <strong className="text-slate-700">ĐGNL AI Portal</strong> • Phân Hệ Quản Trị Cán Bộ & Cấp Quyền (IAM)
             </div>
             <div className="flex items-center gap-4 mt-2 sm:mt-0 text-[11px]">
-              <span>Ban Quản Trị: <strong className="text-blue-600">admin@veval.edu.vn</strong></span>
+              <span>
+                Ban Quản Trị: <strong className="text-blue-600">admin@veval.edu.vn</strong>
+              </span>
               <span>© 2026 Trung tâm Đào tạo & Khoa học Thi Thích ứng</span>
             </div>
           </footer>
@@ -303,29 +328,34 @@ export default function App() {
       )}
 
       {/* MODALS */}
-      <AcademicArchitectureModal 
-        isOpen={isArchModalOpen}
-        onClose={() => setIsArchModalOpen(false)}
-      />
+      <AcademicArchitectureModal isOpen={isArchModalOpen} onClose={() => setIsArchModalOpen(false)} />
 
-      <DiagnosticTestModal 
+      <DiagnosticTestModal
         isOpen={isDiagnosticModalOpen}
         onClose={() => setIsDiagnosticModalOpen(false)}
-        onCompleteTest={() => showToast("Đã cập nhật vector Theta 0 và mở khóa lộ trình!")}
+        onCompleteTest={() => {
+          showToast('Đã cập nhật vector Theta 0 và mở khóa lộ trình!');
+          refreshStudentAnalytics();
+        }}
       />
 
-      <AdaptiveQuizModal 
+      <AdaptiveQuizModal
         isOpen={isZpdModalOpen}
-        onClose={() => setIsZpdModalOpen(false)}
+        onClose={() => {
+          setIsZpdModalOpen(false);
+          refreshStudentAnalytics();
+        }}
         onOpenAiTutorWithContext={(ctx) => handleOpenAiTutor(ctx)}
       />
 
-      <RadarChartModal 
+      <RadarChartModal
         isOpen={isRadarModalOpen}
         onClose={() => setIsRadarModalOpen(false)}
+        studentDashboard={studentDashboard}
+        onOpenFullAnalytics={() => setActiveTab('analytics')}
       />
 
-      <AISocraticTutorModal 
+      <AISocraticTutorModal
         isOpen={isAiTutorModalOpen}
         onClose={() => {
           setIsAiTutorModalOpen(false);
@@ -333,7 +363,6 @@ export default function App() {
         }}
         initialContext={tutorContext}
       />
-
     </div>
   );
 }

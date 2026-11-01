@@ -6,4 +6,4 @@ export { default as MilestoneCard } from './MilestoneCard';
 export { default as TeacherDashboardView } from './TeacherDashboardView';
 export { default as CampusManagerDashboardView } from './CampusManagerDashboardView';
 export { default as ParentDashboardView } from './ParentDashboardView';
-
+export { default as LearningAnalyticsView } from './LearningAnalyticsView';

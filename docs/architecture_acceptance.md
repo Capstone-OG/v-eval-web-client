@@ -713,6 +713,7 @@ V-Eval-Web_Client/
 
 ### 4.16. Core Flow 5 Frontend Integration: Multi-Stakeholder Learning Analytics & 2D Class Heatmap
 - **Unified Gateway Path Alignment & Core Flow 5 Client (`practiceService.js`)**: Standardized all Practice Service client calls onto `/api/practice/...` matching YARP Gateway (`:5212`) routing rules without `/v1` prefix stripping. Implemented `getStudentDashboard`, `getClassHeatmap`, `forceAggregateClassHeatmap`, `getParentDashboard`, and `getCampusComparativeHeatmap` with deterministic GUID validation (`FLOW5_DEFAULTS`) and offline-resilient DTO fallbacks verified by automated unit tests (`practiceService.flow5.test.js`).
+- **Student Learning Analytics Center (`LearningAnalyticsView.jsx`, `MetricsGrid.jsx`, `HeroBanner.jsx`, `RadarChartModal.jsx`)**: Wired `GET /api/practice/analytics/student/{studentId}/dashboard` across the Student Dashboard and dedicated `analytics` route. Delivers Ghost Onboarding detection (`needsOnboarding`), dual-polygon 4-domain Recharts Radar (`DOM_LANG`, `DOM_MATH`, `DOM_NAT_SCI`, `DOM_SOC_SCI`), 7-day active study streak tracker with Streak Freeze shield indicators, DAG milestone progression, and standardized mock exam history.
 
 ---
 

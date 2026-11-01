@@ -13,6 +13,10 @@
     + `getParentDashboard(parentId)` -> `GET /api/practice/analytics/parent/{parentId}/children`
     + `getCampusComparativeHeatmap(campusId)` -> `GET /api/practice/analytics/campus/{campusId}/comparative-heatmap`
   - Bổ sung bộ unit test kiểm chứng đường dẫn endpoint, chuẩn hóa GUID và cấu trúc DTO fallback (`5/5 tests pass`).
+- **Triển Khai Trung Tâm Phân Tích Học Tập Học Sinh Core Flow 5 ([`LearningAnalyticsView.jsx`](../src/components/dashboard/LearningAnalyticsView.jsx), [`HeroBanner.jsx`](../src/components/dashboard/HeroBanner.jsx), [`MetricsGrid.jsx`](../src/components/dashboard/MetricsGrid.jsx), [`RadarChartModal.jsx`](../src/components/modals/RadarChartModal.jsx), [`App.jsx`](../src/App.jsx))**:
+  - Đấu nối tab `Báo cáo & Dự báo (Flow 5 & 6)` trên Sidebar vào giao diện `LearningAnalyticsView.jsx` kết nối `practiceService.getStudentDashboard`.
+  - Hỗ trợ trạng thái **Ghost Onboarding UI** (`needsOnboarding = true`) điều hướng làm bài khảo sát 30 câu đầu vào.
+  - Hiển thị **Biểu đồ Đa giác Năng lực 4 Miền Kép (Dual Radar)** đối sánh `studentScore` thực tế với `targetScore` ngành mục tiêu, **Bộ theo dõi chuỗi 7 ngày chuyên cần (`weeklyActivityDays` + Khiên `Streak Freeze`)**, tiến độ đồ thị tiên quyết DAG và lịch sử đề thi thử ĐGNL chuẩn hóa.
 
 ---
 
