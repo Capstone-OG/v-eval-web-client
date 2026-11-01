@@ -2,6 +2,20 @@
 
 ---
 
+## [01/11/2026] - Triển Khai Toàn Diện Frontend Core Flow 5: Phân Tích Học Tập, Ma Trận Nhiệt Lớp Học 2D, Cổng Phụ Huynh & Bản Đồ Nhiệt So Sánh Cấp Cơ Sở
+
+- **Chuẩn Hóa Tầng Dịch Vụ `practiceService.js` & Hợp Đồng API Core Flow 5 ([`practiceService.js`](../src/services/practiceService.js), [`practiceService.flow5.test.js`](../tests/practiceService.flow5.test.js))**:
+  - Đồng bộ toàn bộ tiền tố đường dẫn Practice Service từ `/api/v1/practice/...` về chuẩn `/api/practice/...` khớp 100% với cấu hình YARP Gateway (`:5212`) và các Controller tại `V-Eval-Practice_Service` (`:5261`).
+  - Triển khai trọn bộ 5 phương thức API Core Flow 5 kèm kiểm tra chuẩn GUID (`FLOW5_DEFAULTS`) và cơ chế seed fallback an toàn đúng schema DTO của ASP.NET Core:
+    + `getStudentDashboard(studentId)` -> `GET /api/practice/analytics/student/{studentId}/dashboard`
+    + `getClassHeatmap(classId, { domainCode, minMastery })` -> `GET /api/practice/classes/{classId}/heatmap`
+    + `forceAggregateClassHeatmap(classId)` -> `POST /api/practice/classes/{classId}/heatmap/force-aggregate`
+    + `getParentDashboard(parentId)` -> `GET /api/practice/analytics/parent/{parentId}/children`
+    + `getCampusComparativeHeatmap(campusId)` -> `GET /api/practice/analytics/campus/{campusId}/comparative-heatmap`
+  - Bổ sung bộ unit test kiểm chứng đường dẫn endpoint, chuẩn hóa GUID và cấu trúc DTO fallback (`5/5 tests pass`).
+
+---
+
 ## [31/10/2026] - Triển Khai Phân Hệ Lịch Sử Làm Bài & Sổ Tay Lỗi Sai Socratic, Chuẩn Hóa Luồng Xem Lại Đáp Án & Khắc Phục Tương Phản `MathText`
 
 - **Triển Khai Phân Hệ Lịch Sử Làm Bài & Sổ Tay Lỗi Sai Socratic ([`SubmissionHistoryView.jsx`](../src/components/diagnostic/SubmissionHistoryView.jsx), [`Sidebar.jsx`](../src/components/layout/Sidebar.jsx), [`App.jsx`](../src/App.jsx))**:
