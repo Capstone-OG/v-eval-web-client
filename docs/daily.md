@@ -21,6 +21,11 @@
   - Xóa bỏ 100% bảng tĩnh `mockTeacherHeatmap`, kết nối trực tiếp `GET /api/practice/classes/{classId}/heatmap` và nút **Cập nhật tức thì (`POST .../force-aggregate`)**.
   - Hỗ trợ chuyển đổi lớp học phụ trách, lọc theo 4 miền năng lực (`DOM_MATH`, `DOM_LANG`, `DOM_NAT_SCI`, `DOM_SOC_SCI`), lọc ngưỡng thành thạo `` `P(L_t)` ``, lọc mức rủi ro (`HIGH_RISK`, `MEDIUM_RISK`, `SAFE`) và tìm kiếm học sinh.
   - Hiển thị tự động các thẻ cảnh báo sư phạm `CRITICAL_RED` / `WARNING_AMBER`, nhãn nhận diện phân hóa 2 cực `Phân cực` (`isBimodal = true` khi `` `\sigma \ge 0.28` ``) và nút hành động **1-Click Xếp Nhóm & Giao Phiếu Thích Ứng** mở trực tiếp `ClassMicroGroupsModal` theo đúng mô hình Offline Cohort 3–5 học sinh/bàn.
+- **Nâng Cấp Cổng Phụ Huynh Đồng Hành & Bản Đồ Nhiệt So Sánh Cấp Cơ Sở ([`ParentDashboardView.jsx`](../src/components/dashboard/ParentDashboardView.jsx), [`CampusManagerDashboardView.jsx`](../src/components/dashboard/CampusManagerDashboardView.jsx))**:
+  - `ParentDashboardView.jsx`: Kết nối trực tiếp `GET /api/practice/analytics/parent/{parentId}/children`, hỗ trợ chuyển đổi danh sách con, hiển thị **Chỉ số Sẵn sàng Thi `` `R_{\text{exam}}` ``** (`READY` / `NEAR_READY` / `AT_RISK`), thanh phân rã 3 trụ cột (`` `0.50 \cdot S_\theta + 0.35 \cdot C_{\text{BKT}} + 0.15 \cdot F_{\text{consistency}}` ``), tiến độ kỷ luật tự học xác thực 12 giờ/tuần (`EXCEEDED_GOAL` / `ON_TRACK` / `NEEDS_IMPROVEMENT`), thông điệp AI đồng hành và kênh trao đổi 1-1 với giáo viên phụ trách lớp Offline.
+  - `CampusManagerDashboardView.jsx`: Tích hợp khối **Bản Đồ Nhiệt So Sánh Năng Lực 4 Miền Cấp Cơ Sở** (`GET /api/practice/analytics/campus/{campusId}/comparative-heatmap`) hiển thị mức thành thạo trung bình toàn cơ sở, bảng ma trận đối sánh `` `P(L_t)` `` và tỷ lệ học sinh yếu của từng lớp kèm nút mở nhanh sơ đồ bàn vi mô 3–5 học sinh cho các lớp rủi ro cao (`HIGH_RISK`).
+- **Kiểm Thử & Xác Thực**:
+  - Thực thi `npx oxlint`, `npm test` (`5/5 tests pass`) và `npm run build` (`vite build`) thành công 100%.
 
 ---
 

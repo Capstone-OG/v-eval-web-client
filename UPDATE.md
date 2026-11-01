@@ -9,5 +9,7 @@
   - Đấu nối trực tiếp `GET /api/practice/analytics/student/{studentId}/dashboard`, hỗ trợ trạng thái Ghost Onboarding (`needsOnboarding`), biểu đồ Dual Radar 4 miền năng lực, chuỗi 7 ngày chuyên cần kèm khiên bảo vệ Streak Freeze, tiến độ DAG và lịch sử đề thi thử ĐGNL.
 - **Ma Trận Nhiệt Lớp Học 2D Cho Giáo Viên & Nhóm Bàn Vi Mô 1-Click ([`TeacherDashboardView.jsx`](./src/components/dashboard/TeacherDashboardView.jsx))**:
   - Đấu nối `GET /api/practice/classes/{classId}/heatmap` và nút **Cập nhật tức thì (`POST .../force-aggregate`)**, bộ lọc Domain/Mastery/Risk, cảnh báo đỏ `CRITICAL_RED`, nhãn phân hóa 2 cực `isBimodal` và nút 1-Click mở `ClassMicroGroupsModal` chia bàn 3–5 học sinh & phát phiếu bài tập thích ứng.
+- **Cổng Phụ Huynh Đồng Hành & Bản Đồ Nhiệt So Sánh Cấp Cơ Sở ([`ParentDashboardView.jsx`](./src/components/dashboard/ParentDashboardView.jsx), [`CampusManagerDashboardView.jsx`](./src/components/dashboard/CampusManagerDashboardView.jsx))**:
+  - Hiển thị chỉ số sẵn sàng thi `` `R_{\text{exam}}` `` với thanh phân rã 3 trụ cột (50% Năng lực + 35% Độ phủ + 15% Chuyên cần), cam kết kỷ luật 12 giờ/tuần, cảnh báo AI đồng hành và bảng đối sánh năng lực 4 miền giữa các lớp cấp cơ sở.
 - **Kiểm Thử & Xác Thực**:
-  - `npm test` (5/5 tests pass) và `npm run build` (`vite build`) thành công 100%.
+  - `npx oxlint`, `npm test` (5/5 tests pass) và `npm run build` (`vite build`) thành công 100%.
