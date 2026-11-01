@@ -17,6 +17,10 @@
   - Đấu nối tab `Báo cáo & Dự báo (Flow 5 & 6)` trên Sidebar vào giao diện `LearningAnalyticsView.jsx` kết nối `practiceService.getStudentDashboard`.
   - Hỗ trợ trạng thái **Ghost Onboarding UI** (`needsOnboarding = true`) điều hướng làm bài khảo sát 30 câu đầu vào.
   - Hiển thị **Biểu đồ Đa giác Năng lực 4 Miền Kép (Dual Radar)** đối sánh `studentScore` thực tế với `targetScore` ngành mục tiêu, **Bộ theo dõi chuỗi 7 ngày chuyên cần (`weeklyActivityDays` + Khiên `Streak Freeze`)**, tiến độ đồ thị tiên quyết DAG và lịch sử đề thi thử ĐGNL chuẩn hóa.
+- **Nâng Cấp Ma Trận Nhiệt Lớp Học 2D Cho Giáo Viên & Can Thiệp Nhóm Vi Mô Offline ([`TeacherDashboardView.jsx`](../src/components/dashboard/TeacherDashboardView.jsx))**:
+  - Xóa bỏ 100% bảng tĩnh `mockTeacherHeatmap`, kết nối trực tiếp `GET /api/practice/classes/{classId}/heatmap` và nút **Cập nhật tức thì (`POST .../force-aggregate`)**.
+  - Hỗ trợ chuyển đổi lớp học phụ trách, lọc theo 4 miền năng lực (`DOM_MATH`, `DOM_LANG`, `DOM_NAT_SCI`, `DOM_SOC_SCI`), lọc ngưỡng thành thạo `` `P(L_t)` ``, lọc mức rủi ro (`HIGH_RISK`, `MEDIUM_RISK`, `SAFE`) và tìm kiếm học sinh.
+  - Hiển thị tự động các thẻ cảnh báo sư phạm `CRITICAL_RED` / `WARNING_AMBER`, nhãn nhận diện phân hóa 2 cực `Phân cực` (`isBimodal = true` khi `` `\sigma \ge 0.28` ``) và nút hành động **1-Click Xếp Nhóm & Giao Phiếu Thích Ứng** mở trực tiếp `ClassMicroGroupsModal` theo đúng mô hình Offline Cohort 3–5 học sinh/bàn.
 
 ---
 
