@@ -1,4 +1,5 @@
 import React from 'react';
+import { ROLE_LABELS, ROLE_MENUS } from '../../config/roles';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard,
@@ -27,7 +28,7 @@ export default function Sidebar({
   onCloseMobile
 }) {
 
-  const navItemsSection1 = [
+  const studentSection1 = [
     { id: 'dashboard', label: 'Tổng quan học tập', icon: LayoutDashboard },
     { id: 'diagnostic', label: 'Kết quả năng lực đầu vào', icon: Target, onClick: onOpenDiagnostic },
     { id: 'roadmap', label: 'Lộ trình học cá nhân', icon: GitFork },
@@ -35,13 +36,15 @@ export default function Sidebar({
     { id: 'question_bank', label: 'Ngân hàng đề & Thi thử', icon: BookOpenCheck },
   ];
 
-  const navItemsSection2 = [
+  const studentSection2 = [
     { id: 'ai_tutor', label: 'Gia sư AI gợi mở', icon: Bot, badge: 'Flow 4', highlight: true, onClick: onOpenAiTutor },
     { id: 'live_qa', label: 'Lớp học & Hỏi đáp', icon: Video, badge: 'Trực tiếp' },
     { id: 'analytics', label: 'Báo cáo & Dự báo điểm', icon: BarChart3, badge: 'Flow 5 & 6' },
     { id: 'settings', label: 'Cài đặt tài khoản', icon: Settings },
   ];
 
+  const navItemsSection1 = activeRole === 'student' ? studentSection1 : (ROLE_MENUS[activeRole] || ROLE_MENUS.unknown).map(([id, label]) => ({ id, label, icon: id === 'dashboard' ? LayoutDashboard : BookOpenCheck }));
+  const navItemsSection2 = activeRole === 'student' ? studentSection2 : [{ id: 'settings', label: 'Cài đặt tài khoản', icon: Settings }];
   const handleSelectTab = (item) => {
     setActiveTab(item.id);
     if (item.onClick) item.onClick();
@@ -53,7 +56,7 @@ export default function Sidebar({
       {/* Section 1: Học tập & Luyện thi */}
       <div>
         <div className="px-3 mb-2 text-[11px] font-extrabold uppercase tracking-wider text-slate-400">
-          Học tập & Luyện thi
+          {activeRole === 'student' ? 'Học tập & Luyện thi' : ROLE_LABELS[activeRole]}
         </div>
         <nav className="space-y-1">
           {navItemsSection1.map((item) => {
@@ -88,7 +91,7 @@ export default function Sidebar({
       {/* Section 2: Hỗ trợ & Phân tích */}
       <div className="pt-3 border-t border-slate-100">
         <div className="px-3 mb-2 text-[11px] font-bold uppercase tracking-wider text-slate-400">
-          Hỗ trợ & Phân tích
+          {activeRole === 'student' ? 'Hỗ trợ & Phân tích' : 'Tài khoản'}
         </div>
         <nav className="space-y-1">
           {navItemsSection2.map((item) => {

@@ -1,10 +1,11 @@
+import { ROLE_LABELS } from '../../config/roles';
 import React, { useState, useEffect } from 'react';
 import { Search, MapPin, Flame, Bell, User, LogOut, ChevronDown, BookOpen, Layers, ShieldCheck, Award, Sparkles, Menu, Zap, Settings } from 'lucide-react';
 import { mockUser } from '../../data/mockData';
 import apiClient from '../../services/apiClient';
 import { authService } from '../../services/authService';
 
-export default function Navbar({ activeRole, setActiveRole, currentUser, onLogout, onOpenAuthModal, onOpenArchModal, onToggleMobileMenu, onOpenDiagnostic, onOpenSettings }) {
+export default function Navbar({ activeRole, currentUser, onLogout, onOpenAuthModal, onOpenArchModal, onToggleMobileMenu, onOpenDiagnostic, onOpenSettings }) {
   const [selectedCampus, setSelectedCampus] = useState('');
   const [campuses, setCampuses] = useState([]);
   const [campusLoading, setCampusLoading] = useState(true);
@@ -108,12 +109,14 @@ export default function Navbar({ activeRole, setActiveRole, currentUser, onLogou
         {/* Center / Right controls */}
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
 
+          {activeRole === 'student' && <>
           {/* IRT Psychometrics Live Status Badge (>= 1536px 2xl) */}
           <div className="hidden 2xl:flex items-center gap-2 px-3 py-1.5 bg-slate-900 border border-slate-800 rounded-xl text-white font-mono text-xs font-bold shadow-sm shrink-0">
             <Award className="w-3.5 h-3.5 text-blue-400 shrink-0" />
             <span>Theta 0: <strong className="text-emerald-400">{thetaDisplay}</strong> <span className="text-slate-400 font-sans font-normal">(82% Bách Khoa)</span></span>
           </div>
 
+          </>}
           {/* Campus Selector (>= 1280px xl only, prevents colliding on tablet) */}
           <div className="hidden xl:flex flex-col gap-1 px-3 py-1.5 bg-blue-50 border border-blue-200/60 rounded-xl text-xs font-semibold text-blue-700 shrink-0 max-w-[260px] min-w-0">
             <div className="flex items-center gap-1.5 min-w-0">
@@ -125,6 +128,7 @@ export default function Navbar({ activeRole, setActiveRole, currentUser, onLogou
             {campusError && <span role="alert" className="text-red-600 whitespace-normal">{campusError}</span>}
           </div>
 
+          {activeRole === 'student' && <>
           {/* Streak Counter Badge */}
           <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 border border-amber-200/80 rounded-xl text-amber-700 font-bold text-xs shadow-xs shrink-0 whitespace-nowrap">
             <Flame className="w-4 h-4 text-amber-500 fill-amber-500 animate-pulse shrink-0" />
@@ -143,6 +147,7 @@ export default function Navbar({ activeRole, setActiveRole, currentUser, onLogou
             <Zap className="w-3.5 h-3.5 text-[#FACC15] fill-[#FACC15]" />
           </button>
 
+          </>}
           {/* Notifications Icon */}
           <button className="relative p-2 text-slate-500 hover:text-slate-800 rounded-xl hover:bg-slate-100 transition-all shrink-0 cursor-pointer">
             <Bell className="w-5 h-5" />
@@ -162,7 +167,7 @@ export default function Navbar({ activeRole, setActiveRole, currentUser, onLogou
               />
               <div className="hidden md:block">
                 <div className="text-xs font-bold text-slate-800 leading-tight">{displayName}</div>
-                <div className="text-[11px] font-medium text-slate-500 capitalize">{activeRole === 'student' ? 'Học sinh • Lớp 12' : activeRole === 'teacher' ? 'Giáo viên cơ sở' : 'Trưởng phòng Đào tạo'}</div>
+                <div className="text-[11px] font-medium text-slate-500 capitalize">{ROLE_LABELS[activeRole]}</div>
               </div>
               <ChevronDown className="w-4 h-4 text-slate-400 hidden md:block" />
             </button>

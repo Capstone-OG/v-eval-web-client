@@ -1,3 +1,5 @@
+import { resolveRole, ROLE_LABELS, canAccessTab } from './config/roles';
+import RoleWorkspace from './components/dashboard/RoleWorkspace';
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
@@ -11,7 +13,6 @@ import {
   MilestoneCard,
   LiveQnACard,
   AISocraticTutorWidget,
-  TeacherDashboardView,
   DiagnosticExamModal
 } from './components/dashboard';
 import { PublicLandingPage } from './components/landing';
@@ -71,11 +72,9 @@ export default function App() {
     const token = tokenStorage.getAccessToken();
     if (savedUser && token) {
       setCurrentUser(savedUser);
-      const roles = savedUser.roles || [];
-      if (roles.some(r => r.toLowerCase().includes('teacher') || r.toLowerCase().includes('giaovien'))) setActiveRole('teacher');
-      else if (roles.some(r => r.toLowerCase().includes('manager') || r.toLowerCase().includes('admin'))) setActiveRole('manager');
-      else if (roles.some(r => r.toLowerCase().includes('parent'))) setActiveRole('parent');
-      else setActiveRole('student');
+      setActiveRole(resolveRole(savedUser));
+      setActiveTab('dashboard');
+      setCurrentPage('dashboard');
 
       // Check if there is an unfinished exam intent in session
       try {
@@ -111,17 +110,25 @@ export default function App() {
     setActiveTab('roadmap');
   };
 
-  const handleLoginSuccess = (role, userData) => {
-    const targetRole = role || 'student';
+  const handleLoginSuccess = (_role, userData) => {
+    const targetRole = resolveRole(userData?.user);
+    setActiveTab('dashboard');
+    setIsMobileSidebarOpen(false);
+    setIsExamActive(false);
     setActiveRole(targetRole);
     if (userData?.user) {
       setCurrentUser(userData.user);
     }
     setCurrentPage('dashboard');
-    const roleName = targetRole === 'student' ? 'Học sinh' : targetRole === 'teacher' ? 'Giáo viên' : targetRole === 'manager' ? 'Quản lý' : 'Phụ huynh';
+    const roleName = ROLE_LABELS[targetRole];
     const nameDisplay = userData?.user?.fullName || userData?.fullName || '';
     const nameStr = nameDisplay ? ` (${nameDisplay})` : '';
     showToast(`🎉 Đăng nhập thành công! Chào mừng ${roleName}${nameStr} vào hệ thống.`);
+
+    if (targetRole !== 'student') {
+      setPendingExamPrompt(null);
+      return;
+    }
 
     // 1. Check if user completed an exam as guest and just logged in
     try {
@@ -186,6 +193,10 @@ export default function App() {
       }
     }
   }, [currentPage, currentUser]);
+
+  useEffect(() => {
+    if (!canAccessTab(activeRole, activeTab)) setActiveTab('dashboard');
+  }, [activeRole, activeTab]);
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans selection:bg-blue-600 selection:text-white relative">
@@ -273,13 +284,12 @@ export default function App() {
           {!isExamActive && (
             <Navbar
               activeRole={activeRole}
-              setActiveRole={setActiveRole}
               currentUser={currentUser}
               onLogout={handleLogout}
               onOpenAuthModal={() => setCurrentPage('login')}
               onOpenArchModal={() => setIsArchModalOpen(true)}
               onToggleMobileMenu={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
-              onOpenDiagnostic={() => setIsExamPasscodeModalOpen(true)}
+              onOpenDiagnostic={activeRole === 'student' ? () => setIsExamPasscodeModalOpen(true) : undefined}
               onOpenSettings={() => setActiveTab('settings')}
             />
           )}
@@ -293,7 +303,7 @@ export default function App() {
                 activeTab={activeTab}
                 setActiveTab={setActiveTab}
                 activeRole={activeRole}
-                onOpenDiagnostic={() => setActiveTab('diagnostic')}
+                onOpenDiagnostic={() => activeRole === 'student' && setActiveTab('diagnostic')}
                 onOpenZPD={() => setIsZpdModalOpen(true)}
                 onOpenAiTutor={() => setIsZpdModalOpen(true)}
                 isMobileOpen={isMobileSidebarOpen}
@@ -355,7 +365,7 @@ export default function App() {
               )}
 
               {/* Student Diagnostic Exam List View (Rendered full-screen during exam, or inside lobby) */}
-              {activeTab === 'diagnostic' && (
+              {activeRole === 'student' && activeTab === 'diagnostic' && (
                 <DiagnosticAssessmentPage
                   isEmbedded={!isExamActive}
                   autoStart={diagnosticAutoStart}
@@ -378,7 +388,7 @@ export default function App() {
               )}
 
               {/* Question Bank & Practice Exam Catalog (Ngân hàng đề & Thi thử) */}
-              {activeTab === 'question_bank' && (
+              {activeRole === 'student' && activeTab === 'question_bank' && (
                 <QuestionBankPage
                   onStartExam={(exam) => {
                     setDiagnosticExamCode(exam?.id || 'diag_30_vact');
@@ -390,7 +400,7 @@ export default function App() {
               )}
 
               {/* Student Personalized Roadmap Learning View (Flow 2: DAG & Topological Milestones) */}
-              {activeTab === 'roadmap' && (
+              {activeRole === 'student' && activeTab === 'roadmap' && (
                 <RoadmapLearningPage
                   onNavigateDiagnostic={() => setActiveTab('diagnostic')}
                   onNavigateDashboard={() => setActiveTab('dashboard')}
@@ -398,8 +408,8 @@ export default function App() {
               )}
 
               {/* Teacher View */}
-              {activeRole === 'teacher' && activeTab === 'dashboard' && (
-                <TeacherDashboardView />
+              {activeRole !== 'student' && activeTab !== 'settings' && canAccessTab(activeRole, activeTab) && (
+                <RoleWorkspace role={activeRole} activeTab={activeTab} currentUser={currentUser} onNavigate={setActiveTab} />
               )}
 
               {/* Account Settings Page (Cài đặt tài khoản & Hồ sơ năng lực) */}
@@ -424,7 +434,7 @@ export default function App() {
           {!isExamActive && (
             <PublicFooter
               onOpenLogin={() => setCurrentPage('login')}
-              onOpenDiagnostic={() => setActiveTab('diagnostic')}
+              onOpenDiagnostic={() => activeRole === 'student' && setActiveTab('diagnostic')}
             />
           )}
 
@@ -471,7 +481,7 @@ export default function App() {
 
       {/* PENDING EXAM RESUME ACTION PROMPT MODAL */}
       <AnimatePresence>
-        {pendingExamPrompt && (
+        {activeRole === 'student' && pendingExamPrompt && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md animate-fade-in">
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}

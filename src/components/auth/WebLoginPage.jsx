@@ -1,3 +1,4 @@
+import { resolveRole } from '../../config/roles';
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -123,13 +124,7 @@ export default function WebLoginPage({
   };
 
   // Determine App Role from BE roles array response
-  const determineRoleFromResponse = (res) => {
-    const roles = res?.user?.roles || [];
-    if (roles.some(r => r.toLowerCase().includes('teacher') || r.toLowerCase().includes('giaovien'))) return 'teacher';
-    if (roles.some(r => r.toLowerCase().includes('manager') || r.toLowerCase().includes('admin') || r.toLowerCase().includes('quanly'))) return 'manager';
-    if (roles.some(r => r.toLowerCase().includes('parent') || r.toLowerCase().includes('phuhuynh'))) return 'parent';
-    return 'student';
-  };
+  const determineRoleFromResponse = (res) => resolveRole(res?.user);
 
   // Restore remembered email from localStorage on mount
   useEffect(() => {

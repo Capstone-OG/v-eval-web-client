@@ -1,3 +1,4 @@
+import { ROLE_LABELS } from '../../config/roles';
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
@@ -555,7 +556,7 @@ export default function AccountSettingsPage({
               <div className="text-sm font-extrabold text-white flex items-center gap-2">
                 <span>{fullName || mockUser.name}</span>
                 <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 font-bold border border-blue-400/30">
-                  {activeRole === 'student' ? 'Học sinh V-ACT' : activeRole === 'teacher' ? 'Giáo viên' : 'Quản lý Đào tạo'}
+                  {ROLE_LABELS[activeRole]}
                 </span>
               </div>
               <div className="text-xs text-slate-400 font-mono mt-0.5">
@@ -758,7 +759,7 @@ export default function AccountSettingsPage({
               <div className="flex items-center justify-between py-1.5 border-b border-slate-50">
                 <span className="text-slate-500">Vai trò hệ thống:</span>
                 <span className="font-bold text-blue-700 capitalize">
-                  {activeRole === 'student' ? 'Học sinh (Student)' : activeRole === 'teacher' ? 'Giảng viên (Teacher)' : 'Quản lý Đào tạo (Manager)'}
+                  {ROLE_LABELS[activeRole]}
                 </span>
               </div>
               <div className="flex items-center justify-between py-1.5 border-b border-slate-50">
