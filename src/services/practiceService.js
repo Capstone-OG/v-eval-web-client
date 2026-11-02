@@ -1,7 +1,7 @@
 import apiClient, { tokenStorage } from './apiClient.js';
 
 // =========================================================================
-// Core Flow 4 & 5 Helpers: DTO Sanitizers & Normalizers
+// Core Flow 4 & 5 Helpers: DTO Sanitizers, Deterministic UUID & Normalizers
 // =========================================================================
 
 const ensureGuid = (id, fallback = '00000000-0000-0000-0000-000000000001') => {
@@ -9,6 +9,29 @@ const ensureGuid = (id, fallback = '00000000-0000-0000-0000-000000000001') => {
     return id;
   }
   return fallback;
+};
+
+const deterministicUuidFromText = (rawText) => {
+  const str = String(rawText || 'veval_default');
+  let h1 = 0x811c9dc5;
+  let h2 = 0x01000193;
+  let h3 = 0x9e3779b9;
+  let h4 = 0x85ebca6b;
+
+  for (let i = 0; i < str.length; i++) {
+    const c = str.charCodeAt(i);
+    h1 = Math.imul(h1 ^ c, 0x01000193) >>> 0;
+    h2 = Math.imul(h2 ^ (c + i), 0x85ebca6b) >>> 0;
+    h3 = Math.imul(h3 ^ (c * 31), 0xc2b2ae35) >>> 0;
+    h4 = Math.imul(h4 ^ (c * 131), 0x27d4eb2f) >>> 0;
+  }
+
+  const hex1 = h1.toString(16).padStart(8, '0');
+  const hex2 = h2.toString(16).padStart(8, '0');
+  const hex3 = h3.toString(16).padStart(8, '0');
+  const hex4 = h4.toString(16).padStart(8, '0');
+
+  return `${hex1}-${hex2.slice(0, 4)}-4${hex2.slice(5, 8)}-8${hex3.slice(1, 4)}-${hex3.slice(4, 8)}${hex4}`;
 };
 
 const cleanOptionKey = (opt, fallback = 'A') => {
@@ -29,6 +52,49 @@ const normalizeOptions = (opts) => {
   }
   if (typeof opts === 'object') return opts;
   return { A: 'Phương án A', B: 'Phương án B' };
+};
+
+const normalizeCanonicalDomain = (domainId, domainName) => {
+  const raw = `${domainId || ''} ${domainName || ''}`.toLowerCase();
+  if (raw.includes('dom_lang') || raw.includes('ngôn ngữ') || raw.includes('tiếng việt') || raw.includes('english') || raw.includes('văn')) {
+    return 'DOM_LANG';
+  }
+  if (raw.includes('dom_nat') || raw.includes('tự nhiên') || raw.includes('lý') || raw.includes('hóa') || raw.includes('sinh')) {
+    return 'DOM_NAT_SCI';
+  }
+  if (raw.includes('dom_soc') || raw.includes('xã hội') || raw.includes('sử') || raw.includes('địa')) {
+    return 'DOM_SOC_SCI';
+  }
+  return 'DOM_MATH';
+};
+
+const CANONICAL_DOMAIN_META = [
+  { domainCode: 'DOM_LANG', domainName: 'Sử dụng Ngôn ngữ (Việt - Anh)' },
+  { domainCode: 'DOM_MATH', domainName: 'Toán học, Tư duy Logic & Phân tích số liệu' },
+  { domainCode: 'DOM_NAT_SCI', domainName: 'Giải quyết vấn đề - Khoa học Tự nhiên' },
+  { domainCode: 'DOM_SOC_SCI', domainName: 'Giải quyết vấn đề - Khoa học Xã hội' }
+];
+
+const toLocalDayKey = (dateInput) => {
+  const d = dateInput instanceof Date ? dateInput : new Date(dateInput);
+  if (Number.isNaN(d.getTime())) return null;
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+};
+
+const scaleLocalSubmissionScore = (sub) => {
+  if (typeof sub?.score === 'number' && sub.score > (sub?.pacing?.totalQuestions || 30)) {
+    return Math.min(1200, Math.max(0, Math.round(sub.score)));
+  }
+  const totalCorrect =
+    sub?.pacing?.totalCorrect ?? (sub?.reviewedQuestions || []).filter((q) => q.isCorrect).length;
+  const totalQuestions = Math.max(
+    1,
+    sub?.pacing?.totalQuestions || (sub?.reviewedQuestions || []).length || 30
+  );
+  return Math.min(1200, Math.max(0, Math.round((totalCorrect / totalQuestions) * 1200)));
 };
 
 const buildRichSocraticFallback = ({ questionLatex, options, studentWrongOption, correctOption }) => {
@@ -70,6 +136,7 @@ const buildSeedStudentDashboard = (studentId) => ({
   currentEstimatedScore: 845,
   targetScore: 920,
   confidenceInterval: '820 - 870',
+  theta0: 0.65,
   radarCompetency: [
     { domainCode: 'DOM_LANG', domainName: 'Sử dụng Ngôn ngữ (Việt - Anh)', studentScore: 82.0, targetScore: 85.0 },
     { domainCode: 'DOM_MATH', domainName: 'Toán học, Tư duy Logic & Phân tích số liệu', studentScore: 68.5, targetScore: 85.0 },
@@ -180,7 +247,7 @@ const buildSeedClassHeatmap = (classId, { domainCode = '', minMastery = null } =
       studentName: 'Phạm Minh Hoàng',
       avatarUrl: null,
       thetaScore: 0.72,
-      plts: [0.82, 0.68, 0.86, 0.79, 0.80]
+      plts: [0.82, 0.68, 0.86, 0.79, 0.8]
     },
     {
       studentId: '4fa85f64-5717-4562-b3fc-2c963f66afa6',
@@ -545,6 +612,8 @@ const getDefaultSeedHistory = () => [
   }
 ];
 
+let isBackgroundSyncRunning = false;
+
 /**
  * Practice & Adaptive Learning Roadmap Service
  * Routed through V-Eval API Gateway (:5212) -> Practice Service (:5261)
@@ -589,9 +658,13 @@ export const practiceService = {
 
   saveSubmissionToHistory(record) {
     try {
+      const currentUser = tokenStorage.getUser();
       const existing = this.getSubmissionHistory();
       const entry = {
         id: record.id || record.submissionId || `sub_${Date.now()}`,
+        studentId: record.studentId || currentUser?.id || currentUser?.userId || null,
+        examId: record.examId || null,
+        targetScore: Number(record.targetScore || 900),
         title: record.title || 'Bài Khảo Sát Đánh Giá Năng Lực Đầu Vào (30 Câu)',
         examType: record.examType || 'DIAGNOSTIC',
         engineUsed: record.engineUsed || 'content_service',
@@ -602,6 +675,8 @@ export const practiceService = {
         radar_chart: record.radar_chart || [],
         ai_commentary: record.ai_commentary || '',
         reviewedQuestions: record.reviewedQuestions || [],
+        backendSynced: Boolean(record.backendSynced),
+        backendSubmissionId: record.backendSubmissionId || null,
         pacing: record.pacing || {
           totalCorrect: (record.reviewedQuestions || []).filter((q) => q.isCorrect).length,
           totalQuestions: (record.reviewedQuestions || []).length || 1,
@@ -617,11 +692,129 @@ export const practiceService = {
       const filtered = existing.filter((item) => item.id !== entry.id);
       const updated = [entry, ...filtered].slice(0, 30);
       localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(updated));
+
+      if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+        window.dispatchEvent(new CustomEvent('veval:submission-updated', { detail: entry }));
+      }
       return entry;
     } catch (e) {
       console.warn('Could not save submission to history:', e);
       return record;
     }
+  },
+
+  markSubmissionSynced(localId, backendSubmissionId = null) {
+    try {
+      const raw = localStorage.getItem(HISTORY_STORAGE_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return;
+      const updated = parsed.map((item) =>
+        item.id === localId
+          ? { ...item, backendSynced: true, backendSubmissionId: backendSubmissionId || item.backendSubmissionId }
+          : item
+      );
+      localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(updated));
+    } catch {
+      // ignore storage errors
+    }
+  },
+
+  async syncSubmissionToBackend(entry, explicitStudentId = null) {
+    if (!entry || entry.id === 'sub_seed_vact_01' || entry.backendSynced) {
+      return null;
+    }
+    const questions = Array.isArray(entry.reviewedQuestions) ? entry.reviewedQuestions : [];
+    if (questions.length === 0) {
+      return null;
+    }
+
+    const currentUser = tokenStorage.getUser();
+    const resolvedStudentId = ensureGuid(
+      explicitStudentId || entry.studentId || currentUser?.id || currentUser?.userId,
+      FLOW5_DEFAULTS.STUDENT_ID
+    );
+    const resolvedExamId = ensureGuid(
+      entry.examId,
+      deterministicUuidFromText(`exam:${entry.engineUsed || 'diag'}:${entry.title || entry.id}`)
+    );
+
+    const completedAtDate = entry.completedAt ? new Date(entry.completedAt) : new Date();
+    const totalTimeSecs = Math.max(
+      questions.length,
+      Number(entry.pacing?.totalTimeSpent || questions.reduce((acc, q) => acc + (Number(q.timeSpent) || 25), 0))
+    );
+    const startedAtIso = new Date(completedAtDate.getTime() - totalTimeSecs * 1000).toISOString();
+
+    const payload = {
+      studentId: resolvedStudentId,
+      examId: resolvedExamId,
+      examTitle: entry.title || 'Bài Khảo Sát Đánh Giá Năng Lực Đầu Vào (30 Câu)',
+      targetScore: Number(entry.targetScore || 900),
+      startedAt: startedAtIso,
+      completedAt: completedAtDate.toISOString(),
+      answers: questions.map((q, idx) => ({
+        questionId: ensureGuid(q.id, deterministicUuidFromText(`q:${entry.id}:${idx + 1}`)),
+        selectedOption: q.studentChoice ? cleanOptionKey(q.studentChoice, '') : null,
+        correctOption: cleanOptionKey(q.correctChoice || q.correct || 'A', 'A'),
+        skillId: String(q.skill_id || q.skillId || `sk_${q.domain_id || 'math'}`),
+        skillName: String(q.skill_name || q.skillName || 'Kỹ năng ĐGNL'),
+        domainId: String(q.domain_id || q.domainId || 'dom_math'),
+        domainName: String(q.domain_name || q.domainName || ''),
+        difficultyLevel: Math.max(1, Math.min(6, Number(q.bloom || q.difficultyLevel || 2))),
+        timeSpentSeconds: Math.max(1, Number(q.timeSpent || 25))
+      }))
+    };
+
+    try {
+      const res = await this.submitDiagnosticTest(payload);
+      const backendSubId = res?.submissionId || res?.data?.submissionId || null;
+      this.markSubmissionSynced(entry.id, backendSubId);
+      return res;
+    } catch (err) {
+      console.info('[Flow 1->5 Sync] Deferred backend persistence:', err?.message);
+      return null;
+    }
+  },
+
+  async syncUnsyncedSubmissions(studentId) {
+    if (isBackgroundSyncRunning) return;
+    const realSubs = this.getRealUserSubmissions(studentId);
+    const unsynced = realSubs.filter(
+      (item) => !item.backendSynced && (item.examType === 'DIAGNOSTIC' || !item.examType)
+    );
+    if (unsynced.length === 0) return;
+
+    isBackgroundSyncRunning = true;
+    try {
+      // Sync chronological oldest -> newest so latest submission becomes current profile state
+      for (const sub of [...unsynced].reverse()) {
+        await this.syncSubmissionToBackend(sub, studentId);
+      }
+    } finally {
+      isBackgroundSyncRunning = false;
+    }
+  },
+
+  getRealUserSubmissions(studentId = null) {
+    const raw = localStorage.getItem(HISTORY_STORAGE_KEY);
+    const lastRaw = localStorage.getItem('veval_last_diagnostic_result');
+    if (!raw && !lastRaw) {
+      return [];
+    }
+
+    const all = this.getSubmissionHistory();
+    const activeUserId = studentId || tokenStorage.getUser()?.id || tokenStorage.getUser()?.userId || null;
+
+    return all
+      .filter((item) => {
+        if (!item || item.id === 'sub_seed_vact_01') return false;
+        if (activeUserId && item.studentId && item.studentId !== activeUserId) {
+          return false;
+        }
+        return true;
+      })
+      .sort((a, b) => new Date(b.completedAt || 0).getTime() - new Date(a.completedAt || 0).getTime());
   },
 
   getSubmissionHistory() {
@@ -668,11 +861,285 @@ export const practiceService = {
       const current = this.getSubmissionHistory();
       const filtered = current.filter((item) => item.id !== submissionId);
       localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(filtered));
+      if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+        window.dispatchEvent(new CustomEvent('veval:submission-updated', { detail: { deletedId: submissionId } }));
+      }
       return filtered;
     } catch (e) {
       console.warn('Could not delete submission from history:', e);
       return [];
     }
+  },
+
+  hydrateStudentDashboardWithLocalHistory(baseDashboard, resolvedStudentId) {
+    const currentUser = tokenStorage.getUser();
+    const realSubs = this.getRealUserSubmissions(resolvedStudentId);
+
+    const resolvedName =
+      currentUser?.fullName ||
+      (baseDashboard?.fullName && baseDashboard.fullName !== 'Học sinh V-Eval'
+        ? baseDashboard.fullName
+        : 'Học sinh V-Eval');
+
+    if (realSubs.length === 0) {
+      if (!baseDashboard) return null;
+      if (baseDashboard.needsOnboarding) {
+        return {
+          ...baseDashboard,
+          fullName: resolvedName,
+          currentEstimatedScore: 0,
+          confidenceInterval: 'Chưa có dữ liệu',
+          streakAnalytics: {
+            currentStreak: 0,
+            longestStreak: 0,
+            hasStreakFreeze: true,
+            isTodayCompleted: false,
+            weeklyActivityDays: [false, false, false, false, false, false, false]
+          },
+          recentMockExams: []
+        };
+      }
+      return {
+        ...baseDashboard,
+        fullName: resolvedName
+      };
+    }
+
+    const latest = realSubs[0];
+    const targetScore = Number(latest.targetScore || baseDashboard?.targetScore || 900);
+    const targetPct = Math.min(95, Math.max(60, Math.round((targetScore / 1200) * 1000) / 10));
+
+    const latestTotalQ = Math.max(
+      1,
+      latest.pacing?.totalQuestions || (latest.reviewedQuestions || []).length || 30
+    );
+    const localEstimatedScore = scaleLocalSubmissionScore(latest);
+    const semMargin = latestTotalQ >= 100 ? 25 : 45;
+    const localConfidenceInterval = `${Math.max(0, localEstimatedScore - semMargin)} - ${Math.min(
+      1200,
+      localEstimatedScore + semMargin
+    )}`;
+
+    // Aggregate 4 canonical V-ACT domains from the latest submission (falling back across history if a domain had 0 questions)
+    const buildDomainBucketMap = (subList) => {
+      const buckets = {
+        DOM_LANG: { correct: 0, total: 0 },
+        DOM_MATH: { correct: 0, total: 0 },
+        DOM_NAT_SCI: { correct: 0, total: 0 },
+        DOM_SOC_SCI: { correct: 0, total: 0 }
+      };
+
+      subList.forEach((sub) => {
+        if (Array.isArray(sub.reviewedQuestions) && sub.reviewedQuestions.length > 0) {
+          sub.reviewedQuestions.forEach((q) => {
+            const code = normalizeCanonicalDomain(q.domain_id || q.domainId, q.domain_name || q.domainName);
+            buckets[code].total += 1;
+            if (q.isCorrect) buckets[code].correct += 1;
+          });
+        } else if (Array.isArray(sub.domain_scores) && sub.domain_scores.length > 0) {
+          sub.domain_scores.forEach((ds) => {
+            const code = normalizeCanonicalDomain(ds.domain_id, ds.domain_name);
+            const t = Number(ds.total_questions || 0);
+            const c = Number(ds.correct_count || 0);
+            if (t > 0) {
+              buckets[code].total += t;
+              buckets[code].correct += c;
+            }
+          });
+        }
+      });
+
+      return buckets;
+    };
+
+    const latestBuckets = buildDomainBucketMap([latest]);
+    const historicalBuckets = buildDomainBucketMap(realSubs);
+    const overallLatestPct =
+      Math.round(
+        (((latest.pacing?.totalCorrect ?? (latest.reviewedQuestions || []).filter((q) => q.isCorrect).length) /
+          latestTotalQ) *
+          100) *
+          10
+      ) / 10;
+
+    const localRadarCompetency = CANONICAL_DOMAIN_META.map((meta) => {
+      const bLatest = latestBuckets[meta.domainCode];
+      const bHist = historicalBuckets[meta.domainCode];
+      const studentScore =
+        bLatest.total > 0
+          ? Math.round((bLatest.correct / bLatest.total) * 1000) / 10
+          : bHist.total > 0
+            ? Math.round((bHist.correct / bHist.total) * 1000) / 10
+            : overallLatestPct;
+
+      const domTarget =
+        meta.domainCode === 'DOM_MATH'
+          ? Math.min(95, targetPct + 5)
+          : meta.domainCode === 'DOM_SOC_SCI'
+            ? Math.max(60, targetPct - 2)
+            : targetPct;
+
+      return {
+        domainCode: meta.domainCode,
+        domainName: meta.domainName,
+        studentScore,
+        targetScore: domTarget
+      };
+    });
+
+    // Compute real 7-day activity & streak from completed submission dates (+ valid backend dates if not onboarding)
+    const activeDayKeys = new Set();
+    realSubs.forEach((s) => {
+      const key = toLocalDayKey(s.completedAt);
+      if (key) activeDayKeys.add(key);
+    });
+
+    const now = new Date();
+    const backendValid = baseDashboard && !baseDashboard.needsOnboarding;
+    if (backendValid && Array.isArray(baseDashboard.streakAnalytics?.weeklyActivityDays)) {
+      const beDays = baseDashboard.streakAnalytics.weeklyActivityDays;
+      for (let idx = 0; idx < Math.min(7, beDays.length); idx++) {
+        if (beDays[idx]) {
+          const d = new Date(now);
+          d.setDate(now.getDate() - (6 - idx));
+          const k = toLocalDayKey(d);
+          if (k) activeDayKeys.add(k);
+        }
+      }
+    }
+
+    const weeklyActivityDays = [];
+    for (let offset = 6; offset >= 0; offset--) {
+      const d = new Date(now);
+      d.setDate(now.getDate() - offset);
+      weeklyActivityDays.push(activeDayKeys.has(toLocalDayKey(d)));
+    }
+
+    const todayKey = toLocalDayKey(now);
+    const yesterdayDate = new Date(now);
+    yesterdayDate.setDate(now.getDate() - 1);
+    const yesterdayKey = toLocalDayKey(yesterdayDate);
+    const isTodayCompleted = activeDayKeys.has(todayKey);
+
+    let computedCurrentStreak = 0;
+    if (isTodayCompleted || activeDayKeys.has(yesterdayKey)) {
+      const cursor = new Date(isTodayCompleted ? now : yesterdayDate);
+      while (activeDayKeys.has(toLocalDayKey(cursor))) {
+        computedCurrentStreak += 1;
+        cursor.setDate(cursor.getDate() - 1);
+      }
+    }
+
+    const sortedActiveDates = [...activeDayKeys].sort();
+    let computedLongestStreak = computedCurrentStreak;
+    let running = 0;
+    let prevTime = null;
+    sortedActiveDates.forEach((k) => {
+      const t = new Date(`${k}T00:00:00`).getTime();
+      if (prevTime !== null && Math.round((t - prevTime) / 86400000) === 1) {
+        running += 1;
+      } else {
+        running = 1;
+      }
+      if (running > computedLongestStreak) computedLongestStreak = running;
+      prevTime = t;
+    });
+
+    const backendStreak = backendValid ? Number(baseDashboard.streakAnalytics?.currentStreak || 0) : 0;
+    const backendLongest = backendValid ? Number(baseDashboard.streakAnalytics?.longestStreak || 0) : 0;
+
+    // Build real recent exams list combining local history + authentic backend submissions
+    const localExamItems = realSubs.map((s) => {
+      const totalCorrect =
+        s.pacing?.totalCorrect ?? (s.reviewedQuestions || []).filter((q) => q.isCorrect).length;
+      const totalQuestions = Math.max(
+        1,
+        s.pacing?.totalQuestions || (s.reviewedQuestions || []).length || 30
+      );
+      return {
+        submissionId: s.backendSubmissionId || s.id,
+        examTitle: s.title || `Bài Khảo Sát Chẩn Đoán ĐGNL (${totalQuestions} Câu)`,
+        score: scaleLocalSubmissionScore(s),
+        totalCorrect,
+        totalQuestions,
+        theta0: s.theta_0,
+        completedAt: s.completedAt
+      };
+    });
+
+    const backendExams = backendValid && Array.isArray(baseDashboard.recentMockExams)
+      ? baseDashboard.recentMockExams.filter(
+          (be) => be.examTitle !== 'Đề thi thử ĐGNL ĐHQG-HCM Đợt 1' || be.totalCorrect !== 88
+        )
+      : [];
+
+    const seenExamKeys = new Set();
+    const mergedRecentExams = [...localExamItems, ...backendExams]
+      .filter((item) => {
+        const dedupKey = `${item.submissionId}|${Math.floor(new Date(item.completedAt || 0).getTime() / 60000)}`;
+        if (seenExamKeys.has(item.submissionId) || seenExamKeys.has(dedupKey)) return false;
+        seenExamKeys.add(item.submissionId);
+        seenExamKeys.add(dedupKey);
+        return true;
+      })
+      .sort((a, b) => new Date(b.completedAt || 0).getTime() - new Date(a.completedAt || 0).getTime())
+      .slice(0, 5);
+
+    const newestBackendExamMs =
+      backendExams.length > 0 ? new Date(backendExams[0].completedAt || 0).getTime() : 0;
+    const newestLocalMs = new Date(latest.completedAt || 0).getTime();
+    const preferLocalSnapshot = !backendValid || newestLocalMs >= newestBackendExamMs - 5000;
+
+    const roadmapProgress =
+      backendValid &&
+      baseDashboard.roadmapProgress &&
+      !(
+        baseDashboard.roadmapProgress.totalMilestones === 8 &&
+        baseDashboard.roadmapProgress.completedMilestones === 3 &&
+        baseDashboard.roadmapProgress.currentMilestoneTitle?.includes('Chặng 4')
+      )
+        ? baseDashboard.roadmapProgress
+        : {
+            totalMilestones: 8,
+            completedMilestones: Math.min(8, Math.max(1, realSubs.filter((s) => s.examType !== 'DIAGNOSTIC').length + 1)),
+            progressPercentage: Math.round(
+              (Math.min(8, Math.max(1, realSubs.filter((s) => s.examType !== 'DIAGNOSTIC').length + 1)) / 8) * 1000
+            ) / 10,
+            currentMilestoneTitle:
+              latest.placement_class === 'FOUNDATION'
+                ? 'Chặng 01 (Nền tảng): Củng cố miền năng lực trọng tâm sau khảo sát'
+                : latest.placement_class === 'BREAKTHROUGH'
+                  ? 'Chặng 01 (Bứt phá): Tối ưu vận dụng cao hướng đích 900+'
+                  : 'Chặng 01 (Tăng tốc): Bù đắp lỗ hổng năng lực từ khảo sát chẩn đoán'
+          };
+
+    return {
+      studentId: ensureGuid(resolvedStudentId, FLOW5_DEFAULTS.STUDENT_ID),
+      fullName: resolvedName,
+      currentEstimatedScore: preferLocalSnapshot
+        ? localEstimatedScore
+        : baseDashboard.currentEstimatedScore ?? localEstimatedScore,
+      targetScore,
+      confidenceInterval: preferLocalSnapshot
+        ? localConfidenceInterval
+        : baseDashboard.confidenceInterval || localConfidenceInterval,
+      theta0: latest.theta_0 ?? baseDashboard?.theta0 ?? 0,
+      placementClass: latest.placement_class || baseDashboard?.placementClass || 'ACCELERATION',
+      radarCompetency: preferLocalSnapshot
+        ? localRadarCompetency
+        : baseDashboard.radarCompetency || localRadarCompetency,
+      roadmapProgress,
+      streakAnalytics: {
+        currentStreak: Math.max(computedCurrentStreak, backendStreak),
+        longestStreak: Math.max(computedLongestStreak, backendLongest),
+        hasStreakFreeze: baseDashboard?.streakAnalytics?.hasStreakFreeze ?? true,
+        isTodayCompleted: isTodayCompleted || Boolean(backendValid && baseDashboard?.streakAnalytics?.isTodayCompleted),
+        weeklyActivityDays
+      },
+      recentMockExams: mergedRecentExams,
+      needsOnboarding: false,
+      _source: baseDashboard ? baseDashboard._source || 'backend' : 'local_history'
+    };
   },
 
   // =========================================================================
@@ -925,12 +1392,28 @@ export const practiceService = {
   // =========================================================================
 
   async getStudentDashboard(studentId) {
-    const resolvedStudentId = ensureGuid(studentId || tokenStorage.getUser()?.id, FLOW5_DEFAULTS.STUDENT_ID);
+    const currentUser = tokenStorage.getUser();
+    const resolvedStudentId = ensureGuid(
+      studentId || currentUser?.id || currentUser?.userId,
+      FLOW5_DEFAULTS.STUDENT_ID
+    );
+    const realSubs = this.getRealUserSubmissions(resolvedStudentId);
+
     try {
       const data = (await apiClient.get(`/api/practice/analytics/student/${resolvedStudentId}/dashboard`)).data;
-      return { ...data, _source: 'backend' };
+      const hydrated = this.hydrateStudentDashboardWithLocalHistory(
+        { ...data, _source: 'backend' },
+        resolvedStudentId
+      );
+      if (realSubs.some((s) => !s.backendSynced)) {
+        this.syncUnsyncedSubmissions(resolvedStudentId).catch(() => {});
+      }
+      return hydrated;
     } catch (err) {
       console.warn('[Core Flow 5] getStudentDashboard fallback activated:', err?.message);
+      if (realSubs.length > 0) {
+        return this.hydrateStudentDashboardWithLocalHistory(null, resolvedStudentId);
+      }
       return buildSeedStudentDashboard(resolvedStudentId);
     }
   },

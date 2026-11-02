@@ -16,7 +16,7 @@ import {
   History
 } from 'lucide-react';
 
-export default function Sidebar({ activeTab, setActiveTab, activeRole, onOpenDiagnostic, onOpenZPD, onOpenAiTutor, onOpenProvision }) {
+export default function Sidebar({ activeTab, setActiveTab, activeRole, studentDashboard, onOpenDiagnostic, onOpenZPD, onOpenAiTutor, onOpenProvision }) {
   
   const navItemsSection1 = [
     { id: 'dashboard', label: 'Dashboard (Tổng quan)', icon: LayoutDashboard },
@@ -151,11 +151,48 @@ export default function Sidebar({ activeTab, setActiveTab, activeRole, onOpenDia
           Mô hình đo lường năng lực chuẩn ĐHQG-HCM đang chạy định kỳ.
         </div>
         <div className="w-full bg-slate-700 h-1.5 rounded-full overflow-hidden mb-1">
-          <div className="bg-gradient-to-r from-blue-400 to-emerald-400 h-full w-[82%] rounded-full"></div>
+          <div
+            className="bg-gradient-to-r from-blue-400 to-emerald-400 h-full rounded-full transition-all duration-500"
+            style={{
+              width: `${Math.min(
+                100,
+                Math.max(
+                  8,
+                  studentDashboard?.needsOnboarding
+                    ? 0
+                    : Math.round(
+                        ((studentDashboard?.currentEstimatedScore ?? 820) /
+                          (studentDashboard?.targetScore || 1000)) *
+                          100
+                      )
+                )
+              )}%`
+            }}
+          ></div>
         </div>
         <div className="flex justify-between text-[10px] text-slate-400 font-semibold">
-          <span>Theta 0: +0.65</span>
-          <span className="text-emerald-400 font-bold">82% Trúng tuyển</span>
+          <span>
+            Theta 0:{' '}
+            {studentDashboard?.needsOnboarding
+              ? 'Chưa đo'
+              : studentDashboard?.theta0 !== undefined && studentDashboard?.theta0 !== null
+                ? studentDashboard.theta0 > 0
+                  ? `+${studentDashboard.theta0}`
+                  : studentDashboard.theta0
+                : '+0.65'}
+          </span>
+          <span className="text-emerald-400 font-bold">
+            {studentDashboard?.needsOnboarding
+              ? '0% Đích'
+              : `${Math.min(
+                  100,
+                  Math.round(
+                    ((studentDashboard?.currentEstimatedScore ?? 820) /
+                      (studentDashboard?.targetScore || 1000)) *
+                      100
+                  )
+                )}% Đích`}
+          </span>
         </div>
       </div>
 

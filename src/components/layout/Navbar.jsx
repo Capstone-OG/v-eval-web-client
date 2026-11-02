@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Search, MapPin, Flame, Bell, User, LogOut, ChevronDown, BookOpen, Layers, ShieldCheck } from 'lucide-react';
 import { mockUser, campusesList } from '../../data/mockData';
 
-export default function Navbar({ currentUser, activeRole, setActiveRole, onLogout, onOpenAuthModal, onOpenArchModal, onOpenProvision }) {
+export default function Navbar({ currentUser, studentDashboard, activeRole, setActiveRole, onLogout, onOpenAuthModal, onOpenArchModal, onOpenProvision }) {
   const [selectedCampus, setSelectedCampus] = useState(mockUser.campusId);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
 
@@ -54,7 +54,7 @@ export default function Navbar({ currentUser, activeRole, setActiveRole, onLogou
           {/* Streak Counter Badge */}
           <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 border border-amber-200/80 rounded-xl text-amber-700 font-bold text-xs shadow-xs">
             <Flame className="w-4 h-4 text-amber-500 fill-amber-500 animate-pulse" />
-            <span>{mockUser.streakDays} Ngày</span>
+            <span>{studentDashboard?.streakAnalytics?.currentStreak ?? mockUser.streakDays} Ngày</span>
           </div>
 
           {/* Architecture Q&A Modal Trigger Button */}

@@ -95,7 +95,7 @@ function mapSkillToDomain(skillName, index) {
   return { id: 'dom_nat_sci', name: DOMAINS.dom_nat_sci.name };
 }
 
-export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNavigateHome, onOpenAiTutorWithContext, embedded = false }) {
+export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNavigateHome, onOpenAiTutorWithContext, onCompleteDiagnostic, embedded = false }) {
   // Page states: 'setup' | 'testing' | 'analyzing' | 'result'
   const [stage, setStage] = useState('setup');
   
@@ -249,6 +249,7 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
             });
 
             data = {
+              examId: contentRes.exam_id || contentRes.examId || '11111111-1111-1111-1111-111111111111',
               title: contentRes.title || 'Bài Khảo Sát Đánh Giá Năng Lực Đầu Vào (30 Câu Chẩn Đoán)',
               questions: rawList.slice(0, 30),
               engine_used: 'content_service'
@@ -376,7 +377,7 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
 
     try {
       const user = tokenStorage.getUser();
-      const studentId = user?.userId || '00000000-0000-0000-0000-000000000001';
+      const studentId = user?.id || user?.userId || '3fa85f64-5717-4562-b3fc-2c963f66afa6';
       const submissionId = `sub_${Date.now()}`;
 
       // 1. Thống kê số câu đúng / sai thực tế và thời gian từng câu
@@ -488,6 +489,9 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
       // Kết hợp dữ liệu chuẩn xác
       const finalResult = {
         id: submissionId,
+        studentId,
+        examId: examData?.examId || null,
+        targetScore: parseInt(targetScore, 10) || 900,
         title: examData?.title || 'Bài Khảo Sát Đánh Giá Năng Lực Đầu Vào (30 Câu)',
         examType: 'DIAGNOSTIC',
         engineUsed: examData?.engine_used || generatorMode,
@@ -513,7 +517,11 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
       setResultData(finalResult);
       try {
         localStorage.setItem('veval_last_diagnostic_result', JSON.stringify(finalResult));
-        practiceService.saveSubmissionToHistory(finalResult);
+        const savedEntry = practiceService.saveSubmissionToHistory(finalResult);
+        await practiceService.syncSubmissionToBackend(savedEntry, studentId);
+        if (onCompleteDiagnostic) {
+          onCompleteDiagnostic(savedEntry);
+        }
         setSubmissionHistory(practiceService.getSubmissionHistory());
       } catch (e) {
         console.warn('Could not cache diagnostic result:', e);

@@ -2,6 +2,24 @@
 
 ---
 
+## [02/11/2026] - Đồng Bộ Dữ Liệu Khảo Thí Chẩn Đoán Thực Tế Sang Trung Tâm Phân Tích Học Tập Core Flow 5, Thanh Navbar & Sidebar
+
+- **Đồng Bộ Hai Chiều Kết Quả Khảo Thí Thực Tế & Bù Đắp Dữ Liệu Tức Thì (`Local History Hydration`) ([`practiceService.js`](../src/services/practiceService.js), [`practiceService.flow5.test.js`](../tests/practiceService.flow5.test.js))**:
+  - Xây dựng bộ hàm `syncSubmissionToBackend`, `syncUnsyncedSubmissions`, `getRealUserSubmissions`, `scaleLocalSubmissionScore` và `hydrateStudentDashboardWithLocalHistory` trong `practiceService.js`.
+  - Khi học sinh đã hoàn thành các bài khảo sát chẩn đoán 30 câu trong kho lịch sử `veval_submission_history_v1` nhưng Backend trả về `needsOnboarding = true` (do chưa đồng bộ hoặc dịch vụ chưa nạp lại), Frontend tự động kích hoạt chế độ **Real Data Hydration**: tắt trạng thái Onboarding, quy đổi điểm thực chuẩn thang ĐGNL V-ACT `0..1200`, tính `Theta_0`, dựng biểu đồ Radar 4 miền thực tế từ tỷ lệ đúng từng miền của các câu đã làm, tính chuỗi ngày tự học thực tế 7 ngày gần nhất, hiển thị đúng họ tên tài khoản đang đăng nhập (`fullName`) và tự động đẩy ngầm (`POST /api/practice/diagnostic-submissions`) lên PostgreSQL.
+  - Phát sự kiện đồng bộ toàn cục `CustomEvent('veval:submission-updated')` mỗi khi nộp bài mới hoặc xóa bài trong lịch sử để mọi màn hình cập nhật tức thì mà không cần tải lại trang.
+  - Bổ sung unit test kiểm chứng kịch bản bù đắp dữ liệu thật khi `needsOnboarding = true` (`6/6 tests pass`).
+- **Khắc Phục Định Danh Học Sinh & Đấu Nối Lưu Trữ Backend Khi Nộp Bài 30 Câu ([`DiagnosticAssessmentPage.jsx`](../src/components/diagnostic/DiagnosticAssessmentPage.jsx))**:
+  - Khắc phục lỗi đọc nhầm trường `user?.userId` (luôn `undefined`) sang `user?.id || user?.userId`, đảm bảo gắn đúng GUID của học sinh đang đăng nhập vào lịch sử bài làm và yêu cầu chấm điểm.
+  - Tự động gọi `practiceService.syncSubmissionToBackend(savedEntry, studentId)` kèm siêu dữ liệu câu hỏi (`correctOption`, `domainId`, `skillId`, `difficultyLevel`) ngay sau khi hoàn thành bài khảo sát 30 câu và kích hoạt callback `onCompleteDiagnostic`.
+- **Hiển Thị Số Liệu Thực Trên `LearningAnalyticsView`, `Navbar` & `Sidebar` ([`LearningAnalyticsView.jsx`](../src/components/dashboard/LearningAnalyticsView.jsx), [`App.jsx`](../src/App.jsx), [`Navbar.jsx`](../src/components/layout/Navbar.jsx), [`Sidebar.jsx`](../src/components/layout/Sidebar.jsx))**:
+  - Sửa nút chuyển đổi chế độ xem trước Onboarding trong `LearningAnalyticsView.jsx` sang biến trạng thái 3 chiều (`null | boolean`), hiển thị nhãn thứ thực tế của 7 ngày gần nhất kết thúc tại `Hôm nay`, hiển thị huy hiệu `Theta` trên danh sách đề vừa hoàn thành và tự động làm mới khi nhận sự kiện `veval:submission-updated`.
+  - Xóa bỏ số liệu cứng `12 Ngày` trên `Navbar.jsx` và `Theta 0: +0.65 | 82% Trúng tuyển` dưới chân `Sidebar.jsx`, thay bằng số liệu thực tế từ `studentDashboard` của học sinh đang đăng nhập.
+- **Kiểm Thử & Xác Thực**:
+  - Thực thi `npx oxlint`, `npm test` (`6/6 tests pass`) và `npm run build` (`vite build`) thành công 100%.
+
+---
+
 ## [01/11/2026] - Triển Khai Toàn Diện Frontend Core Flow 5: Phân Tích Học Tập, Ma Trận Nhiệt Lớp Học 2D, Cổng Phụ Huynh & Bản Đồ Nhiệt So Sánh Cấp Cơ Sở
 
 - **Chuẩn Hóa Tầng Dịch Vụ `practiceService.js` & Hợp Đồng API Core Flow 5 ([`practiceService.js`](../src/services/practiceService.js), [`practiceService.flow5.test.js`](../tests/practiceService.flow5.test.js))**:

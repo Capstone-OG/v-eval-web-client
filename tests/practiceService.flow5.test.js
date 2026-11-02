@@ -43,14 +43,86 @@ describe('practiceService Core Flow 5 APIs', () => {
 
     assert.strictEqual(capturedCalls.length, 5);
     assert.ok(capturedCalls[0].url.endsWith(`/api/practice/analytics/student/${FLOW5_DEFAULTS.STUDENT_ID}/dashboard`));
-    assert.ok(capturedCalls[1].url.endsWith(`/api/practice/classes/${FLOW5_DEFAULTS.CLASS_ID}/heatmap?domainCode=DOM_MATH&minMastery=0.6`));
+    assert.ok(
+      capturedCalls[1].url.endsWith(`/api/practice/classes/${FLOW5_DEFAULTS.CLASS_ID}/heatmap?domainCode=DOM_MATH&minMastery=0.6`)
+    );
     assert.ok(capturedCalls[2].url.endsWith(`/api/practice/classes/${FLOW5_DEFAULTS.CLASS_ID}/heatmap/force-aggregate`));
     assert.strictEqual(capturedCalls[2].method, 'POST');
     assert.ok(capturedCalls[3].url.endsWith(`/api/practice/analytics/parent/${FLOW5_DEFAULTS.PARENT_ID}/children`));
     assert.ok(capturedCalls[4].url.endsWith(`/api/practice/analytics/campus/${FLOW5_DEFAULTS.CAMPUS_ID}/comparative-heatmap`));
   });
 
-  it('provides schema-compliant seed fallbacks when Gateway is offline', async () => {
+  it('hydrates real completed diagnostic history when backend still reports needsOnboarding=true', async () => {
+    const studentId = 'a1b2c3d4-e5f6-4789-8012-34567890abcd';
+    globalThis.localStorage.setItem(
+      'veval_user_profile',
+      JSON.stringify({ id: studentId, fullName: 'Nguyễn Duy Khôi', role: 'student' })
+    );
+
+    const reviewedQuestions = Array.from({ length: 30 }, (_, idx) => ({
+      id: `q_${idx + 1}`,
+      domain_id: idx < 6 ? 'dom_lang' : idx < 18 ? 'dom_math' : idx < 24 ? 'dom_nat_sci' : 'dom_soc_sci',
+      skill_id: `sk_${idx + 1}`,
+      skill_name: `Kỹ năng ${idx + 1}`,
+      studentChoice: idx < 8 ? 'A' : 'B',
+      correctChoice: 'A',
+      isCorrect: idx < 8,
+      timeSpent: 30,
+      bloom: 2
+    }));
+
+    practiceService.saveSubmissionToHistory({
+      id: 'sub_real_30q',
+      title: '⚡ Đề Chuẩn Hóa Siêu Tốc (30 câu) • Toàn Diện 5 Lĩnh Vực',
+      examType: 'DIAGNOSTIC',
+      targetScore: 900,
+      completedAt: new Date().toISOString(),
+      theta_0: -3,
+      placement_class: 'FOUNDATION',
+      reviewedQuestions,
+      pacing: { totalCorrect: 8, totalQuestions: 30, totalTimeSpent: 900 }
+    });
+
+    globalThis.fetch = async (url, options = {}) => {
+      capturedCalls.push({ url, method: options.method || 'GET' });
+      if (url.includes('/diagnostic-submissions')) {
+        return {
+          ok: true,
+          status: 200,
+          headers: { get: (k) => (k.toLowerCase() === 'content-type' ? 'application/json' : null) },
+          json: async () => ({ submissionId: 'bbbbbbbb-cccc-4ddd-8eee-ffffffffffff' })
+        };
+      }
+      return {
+        ok: true,
+        status: 200,
+        headers: { get: (k) => (k.toLowerCase() === 'content-type' ? 'application/json' : null) },
+        json: async () => ({
+          studentId,
+          fullName: 'Học sinh V-Eval',
+          currentEstimatedScore: 785,
+          targetScore: 850,
+          needsOnboarding: true,
+          streakAnalytics: { currentStreak: 12, longestStreak: 18, weeklyActivityDays: [false, false, false, false, false, false, false] },
+          recentMockExams: []
+        })
+      };
+    };
+
+    const dashboard = await practiceService.getStudentDashboard(studentId);
+    assert.strictEqual(dashboard.needsOnboarding, false);
+    assert.strictEqual(dashboard.fullName, 'Nguyễn Duy Khôi');
+    assert.strictEqual(dashboard.currentEstimatedScore, 320);
+    assert.strictEqual(dashboard.targetScore, 900);
+    assert.strictEqual(dashboard.radarCompetency.length, 4);
+    assert.strictEqual(dashboard.streakAnalytics.isTodayCompleted, true);
+    assert.strictEqual(dashboard.streakAnalytics.currentStreak, 1);
+    assert.strictEqual(dashboard.recentMockExams[0].examTitle, '⚡ Đề Chuẩn Hóa Siêu Tốc (30 câu) • Toàn Diện 5 Lĩnh Vực');
+    assert.strictEqual(dashboard.recentMockExams[0].totalCorrect, 8);
+    assert.strictEqual(dashboard.recentMockExams[0].totalQuestions, 30);
+  });
+
+  it('provides schema-compliant seed fallbacks when Gateway is offline and no local history exists', async () => {
     globalThis.fetch = async () => {
       throw new Error('Failed to fetch');
     };

@@ -719,6 +719,13 @@ V-Eval-Web_Client/
 
 ---
 
+### 4.17. End-to-End Diagnostic-to-Analytics Synchronization & Local History Hydration (Core Flow 1 -> Core Flow 5)
+- **Write-Through Diagnostic Persistence & Identity Key Alignment (`DiagnosticAssessmentPage.jsx`, `practiceService.js`)**: Resolved the `user.id` vs `user.userId` identity mismatch during diagnostic completion and wired `syncSubmissionToBackend` (`POST /api/practice/diagnostic-submissions`) alongside client question metadata (`correctOption`, `domainId`, `skillId`, `difficultyLevel`) so both database-backed and AI-generated 30-question diagnostic exams persist directly into PostgreSQL.
+- **Immediate Local History Hydration & Background Backfill (`practiceService.js`)**: Implemented `hydrateStudentDashboardWithLocalHistory` and `syncUnsyncedSubmissions`. Whenever a student already holds real completed assessments in `veval_submission_history_v1` while the upstream API still reports `needsOnboarding = true`, the client deterministically computes real V-ACT `0..1200` scaled scores, `Theta_0`, 4-domain accuracy polygons, rolling 7-day study streaks, and recent exam records from actual question-level submissions while asynchronously backfilling unsynced exams to the backend.
+- **Live Reactive Telemetry Across Shell & Analytics Views (`App.jsx`, `LearningAnalyticsView.jsx`, `Navbar.jsx`, `Sidebar.jsx`)**: Broadcasts `CustomEvent('veval:submission-updated')` on submission save/delete and replaces static shell placeholders (`12 Ngày` in `Navbar`, `+0.65 / 82%` in `Sidebar`) with live student metrics from `studentDashboard`.
+
+---
+
 ## 5. Verification & Acceptance Criteria
 
 1. **Clean Production Build**: Executed `npm run build` with 0 syntax or bundle errors; production artifacts outputted to `dist/` within 763ms on Vite 8 and React 19.

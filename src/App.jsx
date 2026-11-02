@@ -59,6 +59,20 @@ export default function App() {
     refreshStudentAnalytics();
   }, [refreshStudentAnalytics]);
 
+  useEffect(() => {
+    if (activeTab === 'dashboard' || activeTab === 'analytics') {
+      refreshStudentAnalytics();
+    }
+  }, [activeTab, refreshStudentAnalytics]);
+
+  useEffect(() => {
+    const handleSubmissionUpdated = () => {
+      refreshStudentAnalytics();
+    };
+    window.addEventListener('veval:submission-updated', handleSubmissionUpdated);
+    return () => window.removeEventListener('veval:submission-updated', handleSubmissionUpdated);
+  }, [refreshStudentAnalytics]);
+
   const handleOpenAiTutor = (context = null) => {
     setTutorContext(context);
     setIsAiTutorModalOpen(true);
@@ -145,6 +159,7 @@ export default function App() {
           onNavigateDashboard={() => setCurrentPage('dashboard')}
           onNavigateHome={() => setCurrentPage('landing')}
           onOpenAiTutorWithContext={(ctx) => handleOpenAiTutor(ctx)}
+          onCompleteDiagnostic={() => refreshStudentAnalytics()}
         />
       )}
 
@@ -161,6 +176,7 @@ export default function App() {
           {/* Dashboard Header */}
           <Navbar
             currentUser={currentUser}
+            studentDashboard={studentDashboard}
             activeRole={activeRole}
             setActiveRole={setActiveRole}
             onLogout={handleLogout}
@@ -176,6 +192,7 @@ export default function App() {
               activeTab={activeTab}
               setActiveTab={setActiveTab}
               activeRole={activeRole}
+              studentDashboard={studentDashboard}
               onOpenDiagnostic={() => setActiveTab('diagnostic')}
               onOpenZPD={() => setIsZpdModalOpen(true)}
               onOpenAiTutor={() => handleOpenAiTutor(null)}
@@ -205,6 +222,7 @@ export default function App() {
                   onNavigateDashboard={() => setActiveTab('dashboard')}
                   onNavigateHome={() => setActiveTab('dashboard')}
                   onOpenAiTutorWithContext={(ctx) => handleOpenAiTutor(ctx)}
+                  onCompleteDiagnostic={() => refreshStudentAnalytics()}
                 />
               ) : activeTab === 'history' || activeTab === 'question_bank' ? (
                 <SubmissionHistoryView
@@ -303,6 +321,7 @@ export default function App() {
         <div className="flex-1 flex flex-col bg-[#F4F7FC] text-slate-900 min-h-screen">
           <Navbar
             currentUser={currentUser}
+            studentDashboard={studentDashboard}
             activeRole={activeRole}
             setActiveRole={setActiveRole}
             onLogout={handleLogout}

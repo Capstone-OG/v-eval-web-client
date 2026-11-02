@@ -1,15 +1,12 @@
 # NHẬT KÝ CẬP NHẬT (UPDATE LOG) - V-EVAL WEB CLIENT
 
-## [01/11/2026] - Triển Khai Toàn Diện Frontend Core Flow 5 (Learning Analytics, Teacher 2D Class Heatmap, Parent Readiness Portal & Campus Comparative Heatmap)
+## [02/11/2026] - Đồng Bộ Kết Quả Chẩn Đoán Thực Tế Sang Trung Tâm Phân Tích Học Tập Core Flow 5, Navbar & Sidebar
 
-- **Chuẩn Hóa Tầng Dịch Vụ API Client Core Flow 5 ([`practiceService.js`](./src/services/practiceService.js), [`practiceService.flow5.test.js`](./tests/practiceService.flow5.test.js))**:
-  - Đồng bộ toàn bộ đường dẫn gọi `Practice Service` qua API Gateway sang chuẩn `/api/practice/...`.
-  - Bổ sung trọn bộ 5 phương thức API Core Flow 5 (`getStudentDashboard`, `getClassHeatmap`, `forceAggregateClassHeatmap`, `getParentDashboard`, `getCampusComparativeHeatmap`) kèm chuẩn hóa GUID (`FLOW5_DEFAULTS`) và dữ liệu dự phòng đúng chuẩn DTO ASP.NET Core.
-- **Trung Tâm Phân Tích Học Tập Học Sinh ([`LearningAnalyticsView.jsx`](./src/components/dashboard/LearningAnalyticsView.jsx), [`MetricsGrid.jsx`](./src/components/dashboard/MetricsGrid.jsx), [`HeroBanner.jsx`](./src/components/dashboard/HeroBanner.jsx), [`RadarChartModal.jsx`](./src/components/modals/RadarChartModal.jsx), [`App.jsx`](./src/App.jsx))**:
-  - Đấu nối trực tiếp `GET /api/practice/analytics/student/{studentId}/dashboard`, hỗ trợ trạng thái Ghost Onboarding (`needsOnboarding`), biểu đồ Dual Radar 4 miền năng lực, chuỗi 7 ngày chuyên cần kèm khiên bảo vệ Streak Freeze, tiến độ DAG và lịch sử đề thi thử ĐGNL.
-- **Ma Trận Nhiệt Lớp Học 2D Cho Giáo Viên & Nhóm Bàn Vi Mô 1-Click ([`TeacherDashboardView.jsx`](./src/components/dashboard/TeacherDashboardView.jsx))**:
-  - Đấu nối `GET /api/practice/classes/{classId}/heatmap` và nút **Cập nhật tức thì (`POST .../force-aggregate`)**, bộ lọc Domain/Mastery/Risk, cảnh báo đỏ `CRITICAL_RED`, nhãn phân hóa 2 cực `isBimodal` và nút 1-Click mở `ClassMicroGroupsModal` chia bàn 3–5 học sinh & phát phiếu bài tập thích ứng.
-- **Cổng Phụ Huynh Đồng Hành & Bản Đồ Nhiệt So Sánh Cấp Cơ Sở ([`ParentDashboardView.jsx`](./src/components/dashboard/ParentDashboardView.jsx), [`CampusManagerDashboardView.jsx`](./src/components/dashboard/CampusManagerDashboardView.jsx))**:
-  - Hiển thị chỉ số sẵn sàng thi `` `R_{\text{exam}}` `` với thanh phân rã 3 trụ cột (50% Năng lực + 35% Độ phủ + 15% Chuyên cần), cam kết kỷ luật 12 giờ/tuần, cảnh báo AI đồng hành và bảng đối sánh năng lực 4 miền giữa các lớp cấp cơ sở.
+- **Đồng Bộ Kết Quả Khảo Thí Lên Backend & Bù Đắp Dữ Liệu Tức Thì ([`practiceService.js`](./src/services/practiceService.js), [`DiagnosticAssessmentPage.jsx`](./src/components/diagnostic/DiagnosticAssessmentPage.jsx), [`practiceService.flow5.test.js`](./tests/practiceService.flow5.test.js))**:
+  - Sửa lỗi đọc `user?.userId` sang `user?.id || user?.userId` khi nộp bài khảo sát 30 câu và tự động đồng bộ bài làm lên `POST /api/practice/diagnostic-submissions` kèm siêu dữ liệu chấm điểm từng câu hỏi (`correctOption`, `domainId`, `skillId`, `difficultyLevel`).
+  - Triển khai `hydrateStudentDashboardWithLocalHistory` và `syncUnsyncedSubmissions`: Tự động tổng hợp kết quả từ lịch sử làm bài thực tế của học sinh (quy đổi điểm chuẩn V-ACT `0..1200`, `Theta_0`, biểu đồ Radar 4 miền năng lực, chuỗi tự học 7 ngày thực tế, họ tên `fullName` và danh sách đề đã hoàn thành) ngay cả khi Backend chưa khởi động lại và trả về `needsOnboarding = true`, đồng thời đẩy ngầm các bài chưa đồng bộ lên PostgreSQL.
+- **Cập Nhật Số Liệu Sống Trên Giao Diện Phân Tích & Khung Điều Hướng ([`LearningAnalyticsView.jsx`](./src/components/dashboard/LearningAnalyticsView.jsx), [`App.jsx`](./src/App.jsx), [`Navbar.jsx`](./src/components/layout/Navbar.jsx), [`Sidebar.jsx`](./src/components/layout/Sidebar.jsx))**:
+  - Lắng nghe sự kiện `veval:submission-updated` để làm mới tức thì Dashboard & Trung tâm Phân tích sau khi nộp hoặc xóa bài làm; tính toán nhãn thứ động cho 7 ngày gần nhất kết thúc ở `Hôm nay` và sửa nút xem trước trạng thái Onboarding hai chiều.
+  - Thay thế hoàn toàn số liệu cứng trên `Navbar.jsx` (`12 Ngày`) và `Sidebar.jsx` (`Theta 0: +0.65 | 82% Trúng tuyển`) bằng chuỗi chuyên cần, `Theta 0` và tiến độ đạt mục tiêu thực tế của học sinh.
 - **Kiểm Thử & Xác Thực**:
-  - `npx oxlint`, `npm test` (5/5 tests pass) và `npm run build` (`vite build`) thành công 100%.
+  - `npx oxlint`, `npm test` (`6/6 tests pass`) và `npm run build` (`vite build`) thành công 100%.
