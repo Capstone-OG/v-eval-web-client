@@ -24,6 +24,7 @@ import {
 import { DiagnosticAssessmentPage } from './components/diagnostic';
 import { AccountProvisioningView } from './components/admin';
 import { CurriculumExplorerView } from './components/curriculum';
+import { TuitionPaymentView } from './components/payment';
 import { CheckCircle2 } from 'lucide-react';
 import authService from './services/authService';
 
@@ -153,6 +154,7 @@ export default function App() {
               onOpenZPD={() => setIsZpdModalOpen(true)}
               onOpenAiTutor={() => setIsZpdModalOpen(true)}
               onOpenProvision={() => setCurrentPage('provision')}
+              onOpenTuition={() => setActiveTab('tuition')}
             />
 
             {/* Main Content Area */}
@@ -166,7 +168,7 @@ export default function App() {
                 </div>
               )}
 
-              {/* Tab Dàn Kiến Thức & Lộ Trình (Curriculum Explorer) - Hiển thị cho Mọi Vai Trò */}
+              {/* Tab Routing */}
               {activeTab === 'roadmap' ? (
                 <CurriculumExplorerView 
                   onStartQuizModal={() => setIsZpdModalOpen(true)} 
@@ -177,6 +179,12 @@ export default function App() {
                   embedded={true}
                   onNavigateDashboard={() => setActiveTab('dashboard')}
                   onNavigateHome={() => setActiveTab('dashboard')}
+                />
+              ) : activeTab === 'tuition' ? (
+                <TuitionPaymentView 
+                  currentUser={currentUser}
+                  onNavigateRoadmap={() => setActiveTab('roadmap')}
+                  showToast={showToast}
                 />
               ) : (
                 <>
@@ -236,7 +244,7 @@ export default function App() {
 
                   {/* Parent View */}
                   {activeRole === 'parent' && (
-                    <ParentDashboardView />
+                    <ParentDashboardView onNavigateTuition={() => setActiveTab('tuition')} />
                   )}
                 </>
               )}
@@ -259,34 +267,7 @@ export default function App() {
         </div>
       )}
 
-      {/* ACCOUNT PROVISIONING & ROLE MANAGEMENT PAGE (IAM) */}
-      {currentPage === 'provision' && (
-        <div className="flex-1 flex flex-col bg-[#F4F7FC] text-slate-900 min-h-screen">
-          <Navbar 
-            currentUser={currentUser}
-            activeRole={activeRole}
-            setActiveRole={setActiveRole}
-            onLogout={handleLogout}
-            onOpenAuthModal={() => setCurrentPage('login')}
-            onOpenArchModal={() => setIsArchModalOpen(true)}
-            onOpenProvision={() => setCurrentPage('provision')}
-          />
-          <main className="flex-1 p-4 lg:p-8 max-w-7xl mx-auto w-full">
-            <AccountProvisioningView onBackToDashboard={() => setCurrentPage('dashboard')} />
-          </main>
-          <footer className="bg-white border-t border-slate-200/80 px-4 py-3 text-center text-xs text-slate-500 font-medium flex flex-col sm:flex-row items-center justify-between max-w-[1700px] w-full mx-auto">
-            <div>
-              <strong className="text-slate-700">ĐGNL AI Portal</strong> • Phân Hệ Quản Trị Cán Bộ & Cấp Quyền (IAM)
-            </div>
-            <div className="flex items-center gap-4 mt-2 sm:mt-0 text-[11px]">
-              <span>Ban Quản Trị: <strong className="text-blue-600">admin@veval.edu.vn</strong></span>
-              <span>© 2026 Trung tâm Đào tạo & Khoa học Thi Thích ứng</span>
-            </div>
-          </footer>
-        </div>
-      )}
-
-      {/* MODALS */}
+      {/* Global Modals */}
       <AcademicArchitectureModal 
         isOpen={isArchModalOpen}
         onClose={() => setIsArchModalOpen(false)}
@@ -295,7 +276,6 @@ export default function App() {
       <DiagnosticTestModal 
         isOpen={isDiagnosticModalOpen}
         onClose={() => setIsDiagnosticModalOpen(false)}
-        onCompleteTest={() => showToast("Đã cập nhật vector Theta 0 và mở khóa lộ trình!")}
       />
 
       <AdaptiveQuizModal 

@@ -262,12 +262,17 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
         campusId: selectedCampusId || (campuses[0]?.campusId || campuses[0]?.id)
       };
 
-      await authService.register(payload);
+      const regRes = await authService.register(payload);
       setIsSubmitting(false);
-      setSubmitSuccessMsg("Đăng ký thành công! Vui lòng nhập mã OTP để kích hoạt tài khoản.");
 
       // Open OTP verification step in modal
       setForgotEmail(regEmail.trim());
+      if (regRes?.otpCode) {
+        setOtpCode(regRes.otpCode);
+        setModalSuccess(`Đăng ký thành công! Mã OTP kích hoạt của bạn là: ${regRes.otpCode} (Đã tự động điền sẵn).`);
+      } else {
+        setSubmitSuccessMsg("Đăng ký thành công! Vui lòng nhập mã OTP để kích hoạt tài khoản.");
+      }
       setForgotStep(2);
       setIsForgotModalOpen(true);
     } catch (err) {

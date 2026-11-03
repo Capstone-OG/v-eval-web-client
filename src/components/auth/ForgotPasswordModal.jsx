@@ -91,7 +91,13 @@ export default function ForgotPasswordModal({
                 className="w-full px-4 py-2.5 text-center tracking-widest text-base font-black bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                 required
               />
-              <p className="text-[10px] text-slate-400 text-center mt-1">Mã dùng thử: 123456</p>
+              {otpCode ? (
+                <p className="text-[11px] text-emerald-600 font-bold text-center mt-1">
+                  Mã OTP kích hoạt hệ thống: <span className="font-mono text-xs px-1.5 py-0.5 bg-emerald-100 rounded border border-emerald-300">{otpCode}</span>
+                </p>
+              ) : (
+                <p className="text-[10px] text-slate-400 text-center mt-1">Vui lòng kiểm tra mã OTP kích hoạt tài khoản</p>
+              )}
             </div>
           )}
 

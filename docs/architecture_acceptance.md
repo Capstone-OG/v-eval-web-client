@@ -939,3 +939,17 @@ V-Eval-Web_Client/
   - Refined beginning-of-line caret detection by measuring both `sel.anchorOffset === 0 && sel.focusOffset === 0` and `range.collapsed && range.startOffset === 0`, ensuring Backspace triggers immediate upward line jump across all browser selection states.
 - **Adjacent Text Token Coalescence**:
   - Upgraded the line merger algorithm to coalesce adjacent plain text tokens into a single unbroken token (`last.text += tok.text`), preventing fragmented spans and restoring natural word processing cursor navigation.
+
+### 4.50. PayOS VietQR Payment Client Architecture, Auto-Polling Modal & PLAR Roadmap Activation (`paymentService.js`, `PayOsCheckoutModal.jsx`, `TuitionPaymentView.jsx`)
+- **Unified Payment Service Client (`src/services/paymentService.js`)**:
+  - Implements client-side abstractions interfacing with the API Gateway (`/api/practice/payments`) targeting the Practice Service backend.
+  - Generates secure PayOS VietQR payment links, verifies orders, polls payment statuses via `orderCode`, and inspects transactional audit trails.
+  - Implements defensive offline fallbacks for zero-crash frontend operation during network interruptions or mock demonstrations.
+- **Interactive PayOS VietQR Modal (`src/components/modals/PayOsCheckoutModal.jsx`)**:
+  - Features real-time state listeners polling `/api/practice/payments/status/{orderCode}` at 3-second intervals.
+  - Provides a direct link to the official PayOS VietQR checkout portal and an instant verify simulator for end-to-end user testing.
+  - Upon webhook success detection (`SUCCESS` state), triggers celebratory visual feedback via `canvas-confetti` and presents clear roadmap activation indicators.
+- **Tuition & Course Package Portal (`src/components/payment/TuitionPaymentView.jsx`)**:
+  - Showcases 3 standard competency-based packages: Fast-Track Sprint (8 weeks), Standard Adaptive (12 weeks), and Intensive Plus (16 weeks).
+  - Integrates an audit log history table displaying past transactions, payment methods, and clearance states.
+  - Directly binds into the Parent Companion Portal (`ParentDashboardView.jsx`) and Main Navigation (`Sidebar.jsx`).
