@@ -4,6 +4,9 @@
 
 ## [03/11/2026] - Tinh Gọn Khung Chat Gia Sư AI Socratic (`AISocraticTutorModal` & `AISocraticTutorWidget`)
 
+- **Tách Biệt Đề Bài Gốc & Thắc Mắc Trò Chuyện Trong Khung Chat Socratic ([`AISocraticTutorModal.jsx`](../src/components/modals/AISocraticTutorModal.jsx), [`practiceService.js`](../src/services/practiceService.js))**:
+  - Truyền `questionLatex` là đề bài gốc (`initialContext.question || query`) và `studentQuery` là câu hỏi cụ thể học sinh gõ (`query`), loại bỏ hoàn toàn việc nối chuỗi `[Ngữ cảnh câu hỏi: ...]`.
+  - Nâng cấp `buildRichSocraticFallback` trong `practiceService.js` xóa bỏ câu văn mẫu *"dấu của đạo hàm $y'$"*, thay bằng gợi mở bản chất giả thiết và mâu thuẫn thích ứng cho mọi môn học.
 - **Loại Bỏ Cột Cứng `Mạng Lưới Tri Thức 3-Hop` & Các Khái Niệm Giả Lập Cố Định ([`AISocraticTutorModal.jsx`](../src/components/modals/AISocraticTutorModal.jsx), [`AISocraticTutorWidget.jsx`](../src/components/dashboard/AISocraticTutorWidget.jsx))**:
   - Xóa bỏ hoàn toàn cột phụ bên phải chứa các thông tin cứng không khớp ngữ cảnh câu hỏi thực tế (`Mạng Lưới Tri Thức 3-Hop`, `Dạng Bài Archetype`, `Toán logic mệnh đề & suy luận kéo theo`, `Mã chuẩn: ARCH_LOGIC_01`, `Định Lý & Công Thức Cốt Lõi`, `Bẫy Sai Lầm Hay Mắc Phải: Bẫy ngộ nhận đảo`).
   - Gỡ bỏ nhãn `Toán logic mệnh đề & suy luận kéo theo` gắn cứng dưới chân bóng chat khởi tạo và trong `AISocraticTutorWidget.jsx`; chỉ hiển thị nhãn chủ đề khi học sinh thực sự mở chat từ một câu hỏi bài tập cụ thể (`initialContext.skill`).

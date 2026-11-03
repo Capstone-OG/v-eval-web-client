@@ -97,22 +97,20 @@ const scaleLocalSubmissionScore = (sub) => {
   return Math.min(1200, Math.max(0, Math.round((totalCorrect / totalQuestions) * 1200)));
 };
 
-const buildRichSocraticFallback = ({ questionLatex, options, studentWrongOption, correctOption }) => {
+const buildRichSocraticFallback = ({ questionLatex, options, studentWrongOption, _correctOption }) => {
   const cleanQ =
     String(questionLatex || '')
       .replace(/\[Ngữ cảnh câu hỏi:[\s\S]*?\]/g, '')
       .trim() || String(questionLatex || '');
   const opts = normalizeOptions(options);
   const wrongKey = cleanOptionKey(studentWrongOption, 'A');
-  const rightKey = cleanOptionKey(correctOption, 'C');
   const wrongVal = opts[wrongKey] && !opts[wrongKey].startsWith('Phương án ') ? ` (${opts[wrongKey]})` : '';
-  const rightVal = opts[rightKey] && !opts[rightKey].startsWith('Phương án ') ? ` (${opts[rightKey]})` : '';
 
   return (
-    `💡 **Gợi ý phương pháp giải Socratic:**\n\n` +
-    `- **Phân tích lựa chọn:** Với câu hỏi *"${cleanQ}"*, em đã chọn phương án **${wrongKey}${wrongVal}**, trong khi phương án thỏa mãn đầy đủ điều kiện bài toán là **${rightKey}${rightVal}**.\n` +
-    `- **Hướng kiểm tra bản chất:** Hãy xét điều kiện xác định và kiểm tra tính chất đặc trưng (như dấu của đạo hàm $y'$, điều kiện biên hoặc biến đổi tương đương) trên toàn miền của bài toán. Phương án **${wrongKey}${wrongVal}** thường là bẫy khi chỉ thỏa mãn trên một tập con hoặc đổi dấu tại điểm cực trị.\n\n` +
-    `👉 *Câu hỏi gợi mở:* Khi đối chiếu trực tiếp điều kiện của đề bài vào phương án **${wrongKey}${wrongVal}** và **${rightKey}${rightVal}**, em thấy biểu thức nào luôn giữ nguyên tính chất trên toàn miền yêu cầu?`
+    `💡 **Gợi ý tư duy Socratic:**\n\n` +
+    `- **Phân tích lựa chọn:** Với câu hỏi *"${cleanQ}"*, em đang chọn phương án **${wrongKey}${wrongVal}**.\n` +
+    `- **Bản chất vấn đề:** Hãy đối chiếu kỹ giả thiết đề bài với các điều kiện ràng buộc. Một kết luận trắc nghiệm chỉ đúng khi nó thỏa mãn trong mọi trường hợp và không mâu thuẫn với bất kỳ giả thiết ban đầu nào.\n\n` +
+    `👉 *Câu hỏi gợi mở:* Nếu giả sử phương án **${wrongKey}${wrongVal}** là đúng, em hãy thử kiểm tra xem có trường hợp nào làm nảy sinh mâu thuẫn với dữ kiện đề bài không?`
   );
 };
 
@@ -1226,6 +1224,7 @@ export const practiceService = {
     studentWrongOption = 'A',
     correctOption = 'B',
     skillId = null,
+    studentQuery = null,
     onToken,
     onInteractionId,
     onError,
@@ -1258,7 +1257,8 @@ export const practiceService = {
       options: resolvedOptions,
       studentWrongOption: resolvedWrongOpt,
       correctOption: resolvedCorrectOpt,
-      skillId: resolvedSkillId
+      skillId: resolvedSkillId,
+      studentQuery: studentQuery || null
     };
 
     let fullAnswer = '';

@@ -112,7 +112,8 @@ export default function AISocraticTutorModal({ isOpen, onClose, initialContext =
 
     try {
       await practiceService.askAiTutorStream({
-        questionLatex: initialContext?.question ? `${query}\n\n[Ngữ cảnh câu hỏi: ${initialContext.question}]` : query,
+        questionLatex: initialContext?.question || query,
+        studentQuery: initialContext?.question ? query : null,
         questionId: initialContext?.questionId || newInteractionId,
         options: initialContext?.options || null,
         studentWrongOption: initialContext?.selectedWrong || 'A',
