@@ -105,6 +105,45 @@ const buildRichSocraticFallback = ({ questionLatex, options, studentWrongOption,
   const opts = normalizeOptions(options);
   const wrongKey = cleanOptionKey(studentWrongOption, 'A');
   const wrongVal = opts[wrongKey] && !opts[wrongKey].startsWith('Phương án ') ? ` (${opts[wrongKey]})` : '';
+  const qLower = cleanQ.toLowerCase();
+
+  if (qLower.includes('p \\Rightarrow q') || qLower.includes('p \Rightarrow q') || qLower.includes('kéo theo') || qLower.includes('mệnh đề') || qLower.includes('bảng chân trị')) {
+    return (
+      `💡 **Gợi ý phương pháp giải Socratic (Toán logic mệnh đề & suy luận kéo theo):**\n\n` +
+      `- **Phân tích lựa chọn:** Với câu hỏi *"${cleanQ}"*, em đang chọn phương án **${wrongKey}${wrongVal}**.\n` +
+      `- **Kiến thức trọng tâm:** Bảng chân trị của phép kéo theo $P \\Rightarrow Q$ chỉ nhận giá trị **Sai** duy nhất khi $P$ Đúng và $Q$ Sai ($1 \\Rightarrow 0 = 0$). Trong mọi trường hợp khác, mệnh đề kéo theo luôn Đúng.\n` +
+      `- **Lưu ý bẫy thường gặp:** Nhiều bạn lầm tưởng khi $Q$ sai thì $P$ có thể nhận bất kỳ giá trị nào, quên mất rằng nếu $P$ đúng thì $P \\Rightarrow Q$ sẽ bị sai mâu thuẫn giả thiết đề bài.\n\n` +
+      `👉 *Câu hỏi gợi mở:* Đề bài đã cho $P \\Rightarrow Q$ là Đúng và $Q$ là Sai. Nếu $P$ nhận giá trị Đúng thì mệnh đề $P \\Rightarrow Q$ sẽ mang giá trị Đúng hay Sai?`
+    );
+  }
+
+  if (qLower.includes('cấp số cộng') || qLower.includes('công sai') || qLower.includes('u_n')) {
+    return (
+      `💡 **Gợi ý phương pháp giải Socratic (Dãy số & Cấp số cộng):**\n\n` +
+      `- **Phân tích lựa chọn:** Với câu hỏi *"${cleanQ}"*, em đang chọn phương án **${wrongKey}${wrongVal}**.\n` +
+      `- **Kiến thức trọng tâm:** Số hạng tổng quát của cấp số cộng $(u_n)$ được xác định theo công thức $u_n = u_1 + (n - 1)d$.\n` +
+      `- **Lưu ý bẫy thường gặp:** Cẩn thận lỗi quên trừ 1 ở chỉ số số hạng (lấy $u_1 + n \\times d$ thay vì $(n-1)d$).\n\n` +
+      `👉 *Câu hỏi gợi mở:* Khoảng cách giữa số hạng đầu $u_1$ và số hạng thứ $n$ là bao nhiêu lần công sai $d$?`
+    );
+  }
+
+  if (qLower.includes('log') || qLower.includes('tập xác định')) {
+    return (
+      `💡 **Gợi ý phương pháp giải Socratic (Hàm số Lũy thừa, Mũ & Logarit):**\n\n` +
+      `- **Phân tích lựa chọn:** Với câu hỏi *"${cleanQ}"*, em đang chọn phương án **${wrongKey}${wrongVal}**.\n` +
+      `- **Kiến thức trọng tâm:** Biểu thức $\\log_a f(x)$ xác định khi và chỉ khi $f(x) > 0$ nghiêm ngặt và cơ số $0 < a \\neq 1$.\n\n` +
+      `👉 *Câu hỏi gợi mở:* Khi giải bất phương trình $f(x) > 0$, tập nghiệm của tam thức bậc hai lấy khoảng nằm phía trong hay phía ngoài hai nghiệm?`
+    );
+  }
+
+  if (qLower.includes('chính tả') || qLower.includes('xán lạn') || qLower.includes('sáng lạng')) {
+    return (
+      `💡 **Gợi ý phương pháp giải Socratic (Chính tả Tiếng Việt):**\n\n` +
+      `- **Phân tích lựa chọn:** Với câu hỏi *"${cleanQ}"*, em đang chọn phương án **${wrongKey}${wrongVal}**.\n` +
+      `- **Kiến thức trọng tâm:** Từ Hán Việt chuẩn là 'Xán lạn' ('xán' nghĩa là rực rỡ, 'lạn' nghĩa là sáng sủa, viết x-l). Trong từ điển tiếng Việt chuẩn không có từ 'sáng lạng'.\n\n` +
+      `👉 *Câu hỏi gợi mở:* Trong từ điển chính tả tiếng Việt, từ chỉ tương lai rực rỡ bắt đầu bằng âm 'x' hay 's'?`
+    );
+  }
 
   return (
     `💡 **Gợi ý tư duy Socratic:**\n\n` +
@@ -804,15 +843,36 @@ export const practiceService = {
     const all = this.getSubmissionHistory();
     const activeUserId = studentId || tokenStorage.getUser()?.id || tokenStorage.getUser()?.userId || null;
 
-    return all
+    let hasAdopted = false;
+    const filtered = all
       .filter((item) => {
         if (!item || item.id === 'sub_seed_vact_01') return false;
         if (activeUserId && item.studentId && item.studentId !== activeUserId) {
+          // Adopt submissions saved under default / guest student id
+          if (
+            item.studentId === FLOW5_DEFAULTS.STUDENT_ID ||
+            item.studentId === '3fa85f64-5717-4562-b3fc-2c963f66afa6' ||
+            !item.studentId
+          ) {
+            item.studentId = activeUserId;
+            hasAdopted = true;
+            return true;
+          }
           return false;
         }
         return true;
       })
       .sort((a, b) => new Date(b.completedAt || 0).getTime() - new Date(a.completedAt || 0).getTime());
+
+    if (hasAdopted) {
+      try {
+        localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(all));
+      } catch {
+        // ignore storage errors
+      }
+    }
+
+    return filtered;
   },
 
   getSubmissionHistory() {
