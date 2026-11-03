@@ -2,6 +2,17 @@
 
 ---
 
+## [03/11/2026] - Tinh Gọn Khung Chat Gia Sư AI Socratic (`AISocraticTutorModal` & `AISocraticTutorWidget`)
+
+- **Loại Bỏ Cột Cứng `Mạng Lưới Tri Thức 3-Hop` & Các Khái Niệm Giả Lập Cố Định ([`AISocraticTutorModal.jsx`](../src/components/modals/AISocraticTutorModal.jsx), [`AISocraticTutorWidget.jsx`](../src/components/dashboard/AISocraticTutorWidget.jsx))**:
+  - Xóa bỏ hoàn toàn cột phụ bên phải chứa các thông tin cứng không khớp ngữ cảnh câu hỏi thực tế (`Mạng Lưới Tri Thức 3-Hop`, `Dạng Bài Archetype`, `Toán logic mệnh đề & suy luận kéo theo`, `Mã chuẩn: ARCH_LOGIC_01`, `Định Lý & Công Thức Cốt Lõi`, `Bẫy Sai Lầm Hay Mắc Phải: Bẫy ngộ nhận đảo`).
+  - Gỡ bỏ nhãn `Toán logic mệnh đề & suy luận kéo theo` gắn cứng dưới chân bóng chat khởi tạo và trong `AISocraticTutorWidget.jsx`; chỉ hiển thị nhãn chủ đề khi học sinh thực sự mở chat từ một câu hỏi bài tập cụ thể (`initialContext.skill`).
+  - Chuyển bố cục `AISocraticTutorModal.jsx` sang khung chat 1 cột tập trung (`max-w-3xl`), hỗ trợ render công thức toán học bằng `MathText` ngay trên thanh ngữ cảnh câu hỏi đang hỏi và giữ nguyên tính năng **Báo cáo** vi phạm quy tắc Socratic trên từng phản hồi của AI.
+- **Kiểm Thử & Xác Thực**:
+  - Thực thi `npm test` (`6/6 tests pass`) và `npm run build` (`vite build`) thành công 100%.
+
+---
+
 ## [02/11/2026] - Đồng Bộ Dữ Liệu Khảo Thí Chẩn Đoán Thực Tế Sang Trung Tâm Phân Tích Học Tập Core Flow 5, Thanh Navbar & Sidebar
 
 - **Đồng Bộ Hai Chiều Kết Quả Khảo Thí Thực Tế & Bù Đắp Dữ Liệu Tức Thì (`Local History Hydration`) ([`practiceService.js`](../src/services/practiceService.js), [`practiceService.flow5.test.js`](../tests/practiceService.flow5.test.js))**:
