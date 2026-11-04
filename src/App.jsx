@@ -8,7 +8,6 @@ import {
   MetricsGrid,
   MilestoneCard,
   LiveQnACard,
-  AISocraticTutorWidget,
   TeacherDashboardView,
   CampusManagerDashboardView,
   ParentDashboardView,
@@ -26,7 +25,7 @@ import {
 import { DiagnosticAssessmentPage, SubmissionHistoryView } from './components/diagnostic';
 import { AccountProvisioningView } from './components/admin';
 import { CurriculumExplorerView } from './components/curriculum';
-import { CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, Bot, Sparkles } from 'lucide-react';
 import authService from './services/authService';
 import { practiceService } from './services/practiceService';
 
@@ -269,15 +268,15 @@ export default function App() {
                         <div className="lg:col-span-2 space-y-6">
                           <MilestoneCard
                             currentUser={currentUser}
+                            studentDashboard={studentDashboard}
                             onStartTask={handleStartTask}
                             onContinueMilestone={handleContinueMilestone}
                             onStartDiagnostic={() => setActiveTab('diagnostic')}
                           />
                         </div>
 
-                        <div className="space-y-6">
+                        <div className="lg:col-span-1 space-y-6">
                           <LiveQnACard />
-                          <AISocraticTutorWidget onOpenFullChat={() => handleOpenAiTutor(null)} />
                         </div>
                       </div>
                     </div>
@@ -382,6 +381,27 @@ export default function App() {
         }}
         initialContext={tutorContext}
       />
+
+      {/* Sleek Floating AI Socratic Tutor FAB (Bottom-Right Corner) */}
+      {currentPage === 'dashboard' && activeRole === 'student' && (
+        <div className="fixed bottom-6 right-6 z-40 flex items-center gap-3">
+          <div className="hidden sm:flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-slate-900/90 text-white text-xs font-bold shadow-xl border border-slate-700/80 backdrop-blur-md pointer-events-none">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+            <span>Gia sư AI Socratic</span>
+          </div>
+
+          <button
+            onClick={() => handleOpenAiTutor(null)}
+            className="relative group p-4 rounded-full bg-gradient-to-tr from-blue-600 via-indigo-600 to-violet-600 text-white shadow-2xl shadow-blue-500/40 hover:shadow-indigo-500/60 hover:scale-110 active:scale-95 transition-all duration-300 cursor-pointer border-2 border-white/20 flex items-center justify-center focus:outline-none focus:ring-4 focus:ring-blue-400/40"
+            title="Mở Gia sư AI Socratic & GraphRAG"
+            aria-label="Mở Gia sư AI Socratic"
+          >
+            <span className="absolute -inset-1 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 opacity-40 blur-sm group-hover:opacity-80 transition duration-300 animate-pulse pointer-events-none" />
+            <Bot className="w-7 h-7 relative z-10 text-white group-hover:rotate-6 transition-transform" />
+            <span className="absolute top-0 right-0 w-3.5 h-3.5 bg-emerald-400 border-2 border-white rounded-full z-20 shadow-xs" />
+          </button>
+        </div>
+      )}
     </div>
   );
 }

@@ -15,7 +15,7 @@ import {
 import { mockMilestone } from '../../data/mockData';
 import { practiceService } from '../../services/practiceService';
 
-export default function MilestoneCard({ currentUser, onStartTask, onContinueMilestone, onStartDiagnostic }) {
+export default function MilestoneCard({ currentUser, studentDashboard, onStartTask, onContinueMilestone, onStartDiagnostic }) {
   const [roadmapData, setRoadmapData] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [hasNoRoadmap, setHasNoRoadmap] = useState(false);
@@ -26,25 +26,69 @@ export default function MilestoneCard({ currentUser, onStartTask, onContinueMile
     // Only attempt fetch if user has active session
     const fetchRoadmap = async () => {
       setIsLoading(true);
+      const resolvedStudentId = currentUser?.id || currentUser?.userId;
       try {
-        const res = await practiceService.getMyRoadmap();
+        const res = await practiceService.getMyRoadmap(resolvedStudentId);
         if (isMounted) {
           if (res && res.stages && res.stages.length > 0) {
             setRoadmapData(res);
             setHasNoRoadmap(false);
           } else {
-            setHasNoRoadmap(true);
+            const hasExamHistory =
+              (studentDashboard && !studentDashboard.needsOnboarding && studentDashboard.currentEstimatedScore > 0) ||
+              practiceService.getRealUserSubmissions(resolvedStudentId).length > 0;
+
+            if (hasExamHistory && resolvedStudentId) {
+              try {
+                const gen = await practiceService.generateRoadmap({
+                  studentId: resolvedStudentId,
+                  targetScore: studentDashboard?.targetScore || 800
+                });
+                if (gen && gen.stages && gen.stages.length > 0) {
+                  setRoadmapData(gen);
+                  setHasNoRoadmap(false);
+                  setIsLoading(false);
+                  return;
+                }
+              } catch (e) {
+                console.warn('[MilestoneCard] generateRoadmap error:', e);
+              }
+              setRoadmapData(null);
+              setHasNoRoadmap(false);
+            } else {
+              setHasNoRoadmap(true);
+            }
           }
           setIsLoading(false);
         }
       } catch (err) {
         if (isMounted) {
           setIsLoading(false);
-          // 404 means no roadmap generated yet
-          if (err.status === 404 || err.response?.status === 404) {
+          const hasExamHistory =
+            (studentDashboard && !studentDashboard.needsOnboarding && studentDashboard.currentEstimatedScore > 0) ||
+            practiceService.getRealUserSubmissions(resolvedStudentId).length > 0;
+
+          if (hasExamHistory) {
+            if (err.status === 404 || err.response?.status === 404) {
+              try {
+                const gen = await practiceService.generateRoadmap({
+                  studentId: resolvedStudentId,
+                  targetScore: studentDashboard?.targetScore || 800
+                });
+                if (gen && gen.stages && gen.stages.length > 0) {
+                  setRoadmapData(gen);
+                  setHasNoRoadmap(false);
+                  return;
+                }
+              } catch {
+                // fall through
+              }
+            }
+            setRoadmapData(null);
+            setHasNoRoadmap(false);
+          } else if (err.status === 404 || err.response?.status === 404) {
             setHasNoRoadmap(true);
           } else {
-            // Fallback to mock data for demo smoothness
             setRoadmapData(null);
             setHasNoRoadmap(false);
           }
@@ -113,14 +157,26 @@ export default function MilestoneCard({ currentUser, onStartTask, onContinueMile
   }
 
   // If real roadmap data exists, map it; otherwise fallback to mockMilestone
+  const stageNodes = (roadmapData?.stages?.[0]?.nodes || []).slice(0, 3);
   const activeMilestone = roadmapData ? {
     currentMilestoneIndex: 1,
     totalMilestones: roadmapData.totalStages || roadmapData.stages?.length || 4,
     estimatedTime: `${roadmapData.targetWeeklyHours || 6} giờ/tuần`,
-    title: roadmapData.stages?.[0]?.stageName || mockMilestone.title,
-    progressPercent: Math.round(roadmapData.overallProgressPercent || 35),
-    nextMilestoneTitle: roadmapData.stages?.[1]?.stageName || mockMilestone.nextMilestoneTitle,
-    tasks: mockMilestone.tasks
+    title: roadmapData.stages?.[0]?.domainName
+      ? `Chặng 01 (${roadmapData.stages[0].domainName}): Luyện tập chuyên đề thích ứng`
+      : (roadmapData.stages?.[0]?.stageName || mockMilestone.title),
+    progressPercent: Math.round(roadmapData.progressPercentage || roadmapData.overallProgressPercent || 0),
+    nextMilestoneTitle: roadmapData.stages?.[1]?.domainName
+      ? `Chặng 02 (${roadmapData.stages[1].domainName})`
+      : (roadmapData.stages?.[1]?.stageName || mockMilestone.nextMilestoneTitle),
+    tasks: stageNodes.length > 0 ? stageNodes.map((n, idx) => ({
+      id: n.nodeId || `task_${idx}`,
+      title: n.skillName || `Chuyên đề #${n.stepOrder}`,
+      meta: `Kỹ năng #${n.stepOrder} • Miền: ${n.domainName || 'Tổng hợp'}`,
+      badge: n.status === 'COMPLETED' ? 'Đã hoàn thành' : n.status === 'IN_PROGRESS' ? 'Đang học' : 'Kế tiếp',
+      type: idx % 2 === 0 ? 'video' : 'quiz',
+      status: n.status === 'COMPLETED' ? 'completed' : n.status === 'IN_PROGRESS' ? 'in_progress' : 'pending'
+    })) : mockMilestone.tasks
   } : mockMilestone;
 
   return (

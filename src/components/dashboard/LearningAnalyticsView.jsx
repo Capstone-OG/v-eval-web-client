@@ -122,7 +122,14 @@ export default function LearningAnalyticsView({
   }
 
   const data = dashboard || {};
-  const isOnboarding = onboardingOverride !== null ? onboardingOverride : Boolean(data.needsOnboarding);
+    const hasHistory =
+    (Array.isArray(data.recentMockExams) && data.recentMockExams.length > 0) ||
+    Number(data.currentEstimatedScore || 0) > 0 ||
+    practiceService.getRealUserSubmissions(currentUser?.id).length > 0;
+  const isOnboarding =
+    onboardingOverride !== null
+      ? onboardingOverride
+      : (hasHistory ? false : Boolean(data.needsOnboarding));
   const studentDisplayName =
     currentUser?.fullName ||
     (data.fullName && data.fullName !== 'Học sinh V-Eval' ? data.fullName : 'Học sinh V-Eval');

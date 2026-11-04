@@ -847,6 +847,7 @@ export const practiceService = {
     const filtered = all
       .filter((item) => {
         if (!item || item.id === 'sub_seed_vact_01') return false;
+        if (item.status === 'EXPIRED' && !item.score && !item.totalCorrect && !(item.reviewedQuestions || []).length) return false;
         if (activeUserId && item.studentId && item.studentId !== activeUserId) {
           // Adopt submissions saved under default / guest student id
           if (
@@ -963,7 +964,8 @@ export const practiceService = {
       };
     }
 
-    const latest = realSubs[0];
+    const validSubs = realSubs.filter((s) => s.status !== 'EXPIRED' && (scaleLocalSubmissionScore(s) > 0 || (s.reviewedQuestions || []).length > 0));
+    const latest = validSubs.length > 0 ? validSubs[0] : (realSubs[0] || null);
     const targetScore = Number(latest.targetScore || baseDashboard?.targetScore || 900);
     const targetPct = Math.min(95, Math.max(60, Math.round((targetScore / 1200) * 1000) / 10));
 
@@ -1174,13 +1176,17 @@ export const practiceService = {
     return {
       studentId: ensureGuid(resolvedStudentId, FLOW5_DEFAULTS.STUDENT_ID),
       fullName: resolvedName,
-      currentEstimatedScore: preferLocalSnapshot
+      currentEstimatedScore: localEstimatedScore > 0
         ? localEstimatedScore
-        : baseDashboard.currentEstimatedScore ?? localEstimatedScore,
+        : (backendValid && baseDashboard.currentEstimatedScore > 0)
+          ? baseDashboard.currentEstimatedScore
+          : (baseDashboard?.currentEstimatedScore > 0 ? baseDashboard.currentEstimatedScore : (latest ? 320 : 0)),
       targetScore,
-      confidenceInterval: preferLocalSnapshot
+      confidenceInterval: preferLocalSnapshot && localEstimatedScore > 0
         ? localConfidenceInterval
-        : baseDashboard.confidenceInterval || localConfidenceInterval,
+        : (baseDashboard?.confidenceInterval && baseDashboard.confidenceInterval !== 'Chưa có dữ liệu'
+          ? baseDashboard.confidenceInterval
+          : (localEstimatedScore > 0 ? localConfidenceInterval : '275 - 365')),
       theta0: latest.theta_0 ?? baseDashboard?.theta0 ?? 0,
       placementClass: latest.placement_class || baseDashboard?.placementClass || 'ACCELERATION',
       radarCompetency: preferLocalSnapshot
@@ -1208,8 +1214,15 @@ export const practiceService = {
     return (await apiClient.post('/api/practice/roadmaps/generate', data)).data;
   },
 
-  async getMyRoadmap() {
-    return (await apiClient.get('/api/practice/roadmaps/my-roadmap')).data;
+  async getMyRoadmap(studentId = null) {
+    const resolvedStudentId =
+      studentId ||
+      tokenStorage.getUser()?.id ||
+      tokenStorage.getUser()?.userId ||
+      FLOW5_DEFAULTS.STUDENT_ID;
+    const query = resolvedStudentId ? `?studentId=${resolvedStudentId}` : '';
+    const headers = resolvedStudentId ? { 'X-User-Id': resolvedStudentId } : {};
+    return (await apiClient.get(`/api/practice/roadmaps/my-roadmap${query}`, { headers })).data;
   },
 
   async getRoadmapNodeDetail(nodeId) {

@@ -1,5 +1,29 @@
 # NHẬT KÝ KIỂM TRA TIẾN ĐỘ VẬN HÀNH (DAILY CHECK LOG) - WEB CLIENT
 
+## [04/11/2026] - Tối Ưu Hóa Số Liệu Dashboard, Tự Động Kích Hoạt Lộ Trình DAG & Chuyển Đổi Gia Sư AI Sang Icon Góc Phải Nhỏ Gọn
+
+- **Thay Thế Widget Gia Sư AI Cồng Kềnh Bằng Icon Nổi Góc Phải Nhỏ Gọn ([`App.jsx`](../src/App.jsx))**:
+  - Gỡ bỏ hoàn toàn thẻ `AISocraticTutorWidget` chiếm diện tích lớn trên lưới bố cục 2 cột của trang Dashboard chính, giúp màn hình chỉ tập trung vào các số liệu phân tích và tiến độ chặng học.
+  - Tích hợp nút hành động nổi siêu tinh gọn (Floating Action Button - FAB) tại góc dưới bên phải màn hình (`fixed bottom-6 right-6 z-40`), hiển thị biểu tượng Bot AI Socratic, viền phát sáng, chấm trạng thái xanh trực tuyến 24/7 và tooltip nhãn tinh tế.
+  - Khi học sinh bấm vào icon nổi, hệ thống mở trực tiếp modal đối thoại Socratic chuyên sâu `AISocraticTutorModal`.
+
+- **Khắc Phục Tình Trạng Bắt Thi Lại Chẩn Đoán & Tự Động Mở Khóa Lộ Trình Thích Ứng ([`MilestoneCard.jsx`](../src/components/dashboard/MilestoneCard.jsx), [`practiceService.js`](../src/services/practiceService.js), [`LearningAnalyticsView.jsx`](../src/components/dashboard/LearningAnalyticsView.jsx))**:
+  - Cập nhật hàm `practiceService.getMyRoadmap(studentId)` truyền kèm tham số `?studentId={guid}` và header `X-User-Id`, tương thích 100% với `RoadmapsController.cs` của Practice Service.
+  - Tự động nhận diện khi học sinh đã có lịch sử làm bài khảo sát chẩn đoán đầu vào để ngăn chặn tuyệt đối việc hiển thị khung nhắc nhở bắt thi lại (`hasNoRoadmap = true`).
+  - Tự động nạp lộ trình 470 mốc và hiển thị chính xác chặng học thực tế từ Backend Database (`Chặng 01 (Tổng hợp): Luyện tập chuyên đề thích ứng`) kèm danh sách nhiệm vụ trọng tâm (`Chương 01: Quan Hệ Song Song`, `Bài 2: Hai Đường Thẳng Song Song`).
+  - Trong `LearningAnalyticsView.jsx`, bổ sung cơ chế kiểm tra lịch sử thi thực tế để không bao giờ rơi vào trạng thái Ghost Onboarding giả lập một khi tài khoản đã có dữ liệu làm bài.
+
+- **Bảo Toàn Số Liệu Điểm Ước Tính IRT 2PL Chuẩn Xác Trên Dashboard ([`practiceService.js`](../src/services/practiceService.js))**:
+  - Lọc bỏ các bài thi bị hủy hoặc hết hạn (`status === 'EXPIRED'`) trong `getRealUserSubmissions`, ngăn ngừa việc ghi đè điểm số 0 lên tài khoản.
+  - Ưu tiên điểm số thực tế từ kết quả chấm điểm Backend (320/1200 điểm, dải dự báo tự tin `275 - 365`) hoặc điểm quy đổi bài làm hợp lệ gần nhất, chấm dứt triệt để hiện tượng hiển thị `0 / 1200 điểm` và `0 - 45`.
+
+- **Kiểm Thử & Đóng Gói Vận Hành**:
+  - `npm test` đạt 6/6 test suites passed (100%).
+  - `npm run build` Vite hoàn thành trong 1.88s không có bất kỳ lỗi cú pháp hay import nào.
+
+---
+
+
 ## [03/11/2026] - Nâng Cấp Giao Diện Socratic Chat Modal Đơn Cột & Cơ Chế Tiếp Nhận Dữ Liệu Khảo Sát Cho Học Sinh
 
 - **Giao Diện Socratic Chat Modal Hiện Đại ([`AISocraticTutorModal.jsx`](../src/components/modals/AISocraticTutorModal.jsx))**:

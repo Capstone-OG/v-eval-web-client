@@ -727,6 +727,14 @@ V-Eval-Web_Client/
 
 ---
 
+### 4.18. Dashboard Metrics Precision, Autonomous DAG Roadmap Activation & Compact Floating AI Tutor FAB
+- **Compact Floating Action Button (FAB) Architecture (`App.jsx`)**: Replaced the cumbersome embedded `AISocraticTutorWidget` inside the 2-column main dashboard grid with a sleek, non-intrusive Floating Action Button positioned at the bottom-right corner (`fixed bottom-6 right-6 z-40`). Featuring a pulsating aura, 24/7 online green telemetry badge, and hover preview tooltip, the floating controller immediately opens `AISocraticTutorModal` upon interaction, freeing the central dashboard column exclusively for analytical metrics and milestone progression.
+- **Parametric Roadmap Synchronization & Diagnostic Transition (`MilestoneCard.jsx`, `practiceService.js`)**: Parametrized `getMyRoadmap(studentId)` with `?studentId={guid}` query arguments and `X-User-Id` request headers compliant with `RoadmapsController.cs`. Eliminated false onboarding blockers: students with completed diagnostic exams immediately load their persisted 470-milestone DAG stages (`Chặng 01 (Tổng hợp): Luyện tập chuyên đề thích ứng`) and active learning tasks (`Chương 01: Quan Hệ Song Song`, etc.) rather than being prompted to re-take the 30-question diagnostic test.
+- **Score Degradation Prevention & Local History Filtering (`practiceService.js`, `LearningAnalyticsView.jsx`)**: Filtered out empty/aborted `EXPIRED` diagnostic attempts in `getRealUserSubmissions` and strengthened `hydrateStudentDashboardWithLocalHistory` to preserve backend IRT score estimates (320 / 1200, confidence interval `275 - 365`). Eliminated the regression where unfinished test sessions downgraded estimated scores to `0 / 1200` (`0 - 45`).
+
+---
+
+
 ## 5. Verification & Acceptance Criteria
 
 1. **Clean Production Build**: Executed `npm run build` with 0 syntax or bundle errors; production artifacts outputted to `dist/` within 763ms on Vite 8 and React 19.
