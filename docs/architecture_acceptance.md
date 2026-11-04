@@ -734,6 +734,13 @@ V-Eval-Web_Client/
 
 ---
 
+### 4.19. Decoupling Freeform Inquiries & Greetings from Exam Question Retrieval
+- **Dual Interaction Modes (`AISocraticTutorModal.jsx`)**: Formally decoupled the Socratic dialogue workflow into *Question Review Mode* (when `initialContext?.question` is active with an explicit exam question, option set, and student chosen answer) and *General Guidance / Exploration Mode* (invoked from the floating launcher).
+- **Zero Dummy Options Injection (`practiceService.js`)**: Refactored `normalizeOptions` to return `null` when no options are present, terminating the fabrication of artificial `{ A: 'Phương án A', B: 'Phương án B' }` payloads. Passes `"NONE"` for non-existent option keys to satisfy backend validation contracts while explicitly instructing the AI engine not to fabricate false accusations of choosing wrong choices.
+- **Greeting Detection & Warm Socratic Initiation**: Implemented regex-based greeting recognition in `buildRichSocraticFallback` and downstream services, delivering an encouraging greeting and inviting students to ask pedagogical questions without triggering false vector queries or hallucinated math problem analyses.
+
+---
+
 
 ## 5. Verification & Acceptance Criteria
 

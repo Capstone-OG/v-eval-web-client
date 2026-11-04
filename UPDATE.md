@@ -1,7 +1,13 @@
 # NHẬT KÝ CẬP NHẬT (UPDATE LOG) - WEB CLIENT
 
-## [04/11/2026] - Tối Ưu Hóa Số Liệu Dashboard, Tự Động Kích Hoạt Lộ Trình DAG & Chuyển Đổi Gia Sư AI Sang Icon Góc Phải Nhỏ Gọn
+## [04/11/2026] - Phân Tách Hội Thoại Chào Hỏi Tự Do Khỏi Luồng Đề Bài Thi Của Gia Sư AI Socratic & Tối Ưu Hóa Số Liệu Dashboard
 
+- **Tách Biệt Hội Thoại Tự Do / Lời Chào Khỏi Luồng Đề Bài Thi ([`AISocraticTutorModal.jsx`](./src/components/modals/AISocraticTutorModal.jsx), [`practiceService.js`](./src/services/practiceService.js))**:
+  - Khắc phục triệt để hiện tượng học sinh vừa nhắn "hi" hoặc chào hỏi thì AI lập tức lôi một đề toán tam thức bậc hai/bất phương trình ra giảng và phê bình học sinh chọn sai phương án A.
+  - Phân định rõ ràng 2 trạng thái: *In-Exam Question Mode* (`initialContext?.question` có thực) vs *General Freeform Mode* (`initialContext === null`).
+  - Trong chế độ hội thoại tự do, thiết lập `options = null`, `studentWrongOption = null`, `correctOption = null`, và đưa trực tiếp lời thoại của học sinh vào `studentQuery`.
+  - Trong `practiceService.js`: Sửa đổi `normalizeOptions` trả về `null` thay vì tự tạo phương án giả lập `{ A: 'Phương án A', B: 'Phương án B' }`; bổ sung bộ nhận diện lời chào trong `buildRichSocraticFallback` để phản hồi thân thiện, ấm áp và hướng dẫn học sinh đặt câu hỏi học tập cụ thể.
+  - Cập nhật payload gửi sang Backend gửi `studentWrongOption: resolvedWrongOpt || 'NONE'` và `correctOption: resolvedCorrectOpt || 'NONE'` tuân thủ schema Pydantic/ASP.NET Core.
 - **Nút Nổi FAB Gia Sư AI Socratic Góc Phải ([`App.jsx`](./src/App.jsx))**:
   - Gỡ bỏ hoàn toàn `AISocraticTutorWidget` cồng kềnh chiếm không gian trong lưới Dashboard, giải phóng không gian để tập trung 100% vào các chỉ số phân tích và tiến độ chặng học.
   - Thiết kế nút nổi Floating Action Button (FAB) tại góc dưới bên phải (`fixed bottom-6 right-6 z-40`) với hiệu ứng aura phát sáng, chấm xanh trực tuyến 24/7 và tooltip tinh gọn. Bấm vào nút sẽ kích hoạt modal đối thoại chuyên sâu `AISocraticTutorModal`.
@@ -14,4 +20,4 @@
   - Loại bỏ các bài thi hết hạn/hủy dở dang (`status === 'EXPIRED'`) khỏi danh sách tính điểm chính; bảo toàn điểm số thực tế từ Backend (320/1200 điểm, dải tin cậy `275 - 365`), chấm dứt triệt để hiện tượng ghi đè về `0 / 1200 điểm` và `0 - 45`.
 - **Kiểm Thử & Đóng Gói Vận Hành**:
   - `npm test` đạt 6/6 tests passed (100%).
-  - `npm run build` Vite hoàn thành sạch sẽ trong 1.88s.
+  - `npm run build` Vite hoàn thành sạch sẽ trong 1.08s.

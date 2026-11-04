@@ -1,6 +1,13 @@
 # NHẬT KÝ KIỂM TRA TIẾN ĐỘ VẬN HÀNH (DAILY CHECK LOG) - WEB CLIENT
 
-## [04/11/2026] - Tối Ưu Hóa Số Liệu Dashboard, Tự Động Kích Hoạt Lộ Trình DAG & Chuyển Đổi Gia Sư AI Sang Icon Góc Phải Nhỏ Gọn
+## [04/11/2026] - Tối Ưu Hóa Số Liệu Dashboard, Tự Động Kích Hoạt Lộ Trình DAG & Phân Tách Hội Thoại Chào Hỏi Tự Do Khỏi Luồng Đề Bài Thi Của Gia Sư AI Socratic
+
+- **Tách Biệt Hội Thoại Tự Do / Lời Chào Khỏi Luồng Đề Bài Thi & Triệt Tiêu Dummy Options A/B ([`AISocraticTutorModal.jsx`](../src/components/modals/AISocraticTutorModal.jsx), [`practiceService.js`](../src/services/practiceService.js))**:
+  - Khắc phục triệt để hiện tượng học sinh vừa nhắn "hi" hoặc chào hỏi thì AI lập tức lôi một đề toán tam thức bậc hai/bất phương trình ra giảng và phê bình học sinh chọn sai phương án A.
+  - Phân định rõ ràng 2 trạng thái: *In-Exam Question Mode* (`initialContext?.question` có thực) vs *General Freeform Mode* (`initialContext === null`).
+  - Trong chế độ hội thoại tự do, thiết lập `options = null`, `studentWrongOption = null`, `correctOption = null`, và đưa trực tiếp lời thoại của học sinh vào `studentQuery`.
+  - Trong `practiceService.js`: Sửa đổi `normalizeOptions` trả về `null` thay vì tự tạo phương án giả lập `{ A: 'Phương án A', B: 'Phương án B' }`; bổ sung bộ nhận diện lời chào trong `buildRichSocraticFallback` để phản hồi thân thiện, ấm áp và hướng dẫn học sinh đặt câu hỏi học tập cụ thể.
+  - Cập nhật payload gửi sang Backend gửi `studentWrongOption: resolvedWrongOpt || 'NONE'` và `correctOption: resolvedCorrectOpt || 'NONE'` tuân thủ schema Pydantic/ASP.NET Core.
 
 - **Thay Thế Widget Gia Sư AI Cồng Kềnh Bằng Icon Nổi Góc Phải Nhỏ Gọn ([`App.jsx`](../src/App.jsx))**:
   - Gỡ bỏ hoàn toàn thẻ `AISocraticTutorWidget` chiếm diện tích lớn trên lưới bố cục 2 cột của trang Dashboard chính, giúp màn hình chỉ tập trung vào các số liệu phân tích và tiến độ chặng học.

@@ -111,13 +111,14 @@ export default function AISocraticTutorModal({ isOpen, onClose, initialContext =
     abortControllerRef.current = controller;
 
     try {
+      const isQuestionMode = Boolean(initialContext?.question);
       await practiceService.askAiTutorStream({
-        questionLatex: initialContext?.question || query,
-        studentQuery: initialContext?.question ? query : null,
+        questionLatex: isQuestionMode ? initialContext.question : query,
+        studentQuery: query,
         questionId: initialContext?.questionId || newInteractionId,
-        options: initialContext?.options || null,
-        studentWrongOption: initialContext?.selectedWrong || 'A',
-        correctOption: initialContext?.correctOption || 'B',
+        options: isQuestionMode ? initialContext?.options : null,
+        studentWrongOption: isQuestionMode ? (initialContext?.selectedWrong || null) : null,
+        correctOption: isQuestionMode ? (initialContext?.correctOption || null) : null,
         skillId: initialContext?.skillId || null,
         signal: controller.signal,
         onInteractionId: (id) => {

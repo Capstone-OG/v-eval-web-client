@@ -41,7 +41,7 @@ const cleanOptionKey = (opt, fallback = 'A') => {
 };
 
 const normalizeOptions = (opts) => {
-  if (!opts) return { A: 'Phương án A', B: 'Phương án B' };
+  if (!opts) return null;
   if (Array.isArray(opts)) {
     const dict = {};
     opts.forEach((opt, idx) => {
@@ -51,7 +51,7 @@ const normalizeOptions = (opts) => {
     return dict;
   }
   if (typeof opts === 'object') return opts;
-  return { A: 'Phương án A', B: 'Phương án B' };
+  return null;
 };
 
 const normalizeCanonicalDomain = (domainId, domainName) => {
@@ -103,9 +103,13 @@ const buildRichSocraticFallback = ({ questionLatex, options, studentWrongOption,
       .replace(/\[Ngữ cảnh câu hỏi:[\s\S]*?\]/g, '')
       .trim() || String(questionLatex || '');
   const opts = normalizeOptions(options);
-  const wrongKey = cleanOptionKey(studentWrongOption, 'A');
-  const wrongVal = opts[wrongKey] && !opts[wrongKey].startsWith('Phương án ') ? ` (${opts[wrongKey]})` : '';
-  const qLower = cleanQ.toLowerCase();
+  const wrongKey = studentWrongOption ? cleanOptionKey(studentWrongOption, 'A') : '';
+  const wrongVal = opts && wrongKey && opts[wrongKey] && !opts[wrongKey].startsWith('Phương án ') ? ` (${opts[wrongKey]})` : '';
+  const qLower = cleanQ.toLowerCase().replace(/[!.,?~^:;]/g, '').trim();
+
+  if (['hi', 'hello', 'chao', 'chào', 'chào bạn', 'chào thầy', 'chào cô', 'alo', 'hey', 'xin chào', 'helo'].includes(qLower)) {
+    return 'Chào em! Thầy là **Gia Sư AI Socratic**. Rất vui được đồng hành cùng em ôn luyện ĐGNL. Em đang gặp khó khăn ở dạng bài tập nào hay chuyên đề nào (Toán học, Tư duy Logic, Tiếng Việt, KHTN/KHXH) cần thầy cùng gợi mở không? Em cứ gửi đề bài hoặc thắc mắc cho thầy nhé!';
+  }
 
   if (qLower.includes('p \\Rightarrow q') || qLower.includes('p \Rightarrow q') || qLower.includes('kéo theo') || qLower.includes('mệnh đề') || qLower.includes('bảng chân trị')) {
     return (
@@ -1319,19 +1323,19 @@ export const practiceService = {
     const resolvedStudentId = ensureGuid(studentId || currentUser?.id, FLOW5_DEFAULTS.STUDENT_ID);
     const resolvedQuestionId = ensureGuid(questionId, '11111111-1111-1111-1111-111111111111');
     const resolvedSkillId = skillId ? ensureGuid(skillId, null) : null;
-    const resolvedWrongOpt = cleanOptionKey(studentWrongOption, 'A');
-    const resolvedCorrectOpt = cleanOptionKey(correctOption, 'B');
-    const resolvedOptions = normalizeOptions(options);
+    const resolvedWrongOpt = studentWrongOption ? cleanOptionKey(studentWrongOption, null) : null;
+    const resolvedCorrectOpt = correctOption ? cleanOptionKey(correctOption, null) : null;
+    const resolvedOptions = options ? normalizeOptions(options) : null;
 
     const body = {
       studentId: resolvedStudentId,
       questionId: resolvedQuestionId,
-      questionLatex: questionLatex || 'Đề bài chưa cung cấp nội dung',
+      questionLatex: questionLatex || studentQuery || 'Câu hỏi của học sinh',
       options: resolvedOptions,
       studentWrongOption: resolvedWrongOpt,
       correctOption: resolvedCorrectOpt,
       skillId: resolvedSkillId,
-      studentQuery: studentQuery || null
+      studentQuery: studentQuery || questionLatex || null
     };
 
     let fullAnswer = '';
