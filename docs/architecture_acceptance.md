@@ -953,3 +953,17 @@ V-Eval-Web_Client/
   - Showcases 3 standard competency-based packages: Fast-Track Sprint (8 weeks), Standard Adaptive (12 weeks), and Intensive Plus (16 weeks).
   - Integrates an audit log history table displaying past transactions, payment methods, and clearance states.
   - Directly binds into the Parent Companion Portal (`ParentDashboardView.jsx`) and Main Navigation (`Sidebar.jsx`).
+
+
+### 4.51. Account Activation & Forgot Password Flow Architecture (`ForgotPasswordModal.jsx`, `WebLoginPage.jsx`, `apiClient.js`)
+- **Elimination of Auto-Prefilled OTP & UI Standardization**:
+  - Deprecated and removed test auto-fill badges and prefilled OTP values (`Mã OTP kích hoạt hệ thống: [code]`).
+  - Standardized the OTP input as a blank 6-digit numeric field with `inputMode="numeric"`, `pattern="[0-9]*"`, strict non-digit regex filtering, and centered letter-spacing layout (`tracking-[0.35em]`).
+  - Separated modal behavior into dual modes: `activation` (Account Verification) vs `forgot` (Password Recovery).
+- **End-to-End Forgot Password Architecture (UC 05 / UC 06)**:
+  - Step 1 (Email Validation): Integrates live verification via `POST /api/auth/forgot-password`. Non-existent emails trigger HTTP 404 (`Auth.UserNotFound`) displaying descriptive localized error feedback without progressing to subsequent steps.
+  - Step 2 (OTP Verification): Collects the 6-digit OTP dispatched via Brevo SMTP Relay (`smtp-relay.brevo.com:587`). Includes an `ArrowLeft` back-navigation control to return to Step 1.
+  - Step 3 (Password Reset): Validates password strength policy (minimum 8 characters, uppercase, lowercase, numeric) and confirms match before dispatching `POST /api/auth/reset-password`.
+  - Step 4 (Success): Confirms password reset and routes user directly back to login.
+- **Defensive Error Unwrapping (`apiClient.js`)**:
+  - Implemented automatic unwrapping of RFC 7807 and Clean Architecture structured errors (`data.error.description`), preventing generic `[object Object]` error strings across all authentication flows.

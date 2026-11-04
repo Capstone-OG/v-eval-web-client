@@ -1,26 +1,22 @@
 # NHẬT KÝ CẬP NHẬT (UPDATE LOG) - WEB CLIENT
 
-## [03/11/2026] - Triển Khai Giao Diện Thanh Toán Học Phí PayOS (VietQR) & Kích Hoạt Lộ Trình Thích Ứng PLAR
+## [04/11/2026] - Nâng Cấp Giao Diện Fintech Hiện Đại Cho Modal OTP & Hoàn Thiện Luồng Quên Mật Khẩu (UC 05 / UC 06)
 
-- **Triển Khai Dịch Vụ Thanh Toán (`src/services/paymentService.js`)**:
-  - Tích hợp giao tiếp API Gateway (`:5212`) ➔ Practice Service (`:5261`) tại đường dẫn `/api/practice/payments`:
-    - `createPaymentLink`: Tạo link thanh toán PayOS VietQR với cơ chế fallback giả lập an toàn khi chạy offline.
-    - `getPaymentStatus`: Thăm dò (polling) tự động trạng thái thanh toán từ PayOS qua `orderCode`.
-    - `getPaymentTransactions`: Tra cứu nhật ký kiểm toán giao dịch (Audit Logs).
-  - Đăng ký và xuất khẩu đồng bộ qua `src/services/index.js`.
+- **Nâng Cấp Giao Diện Nhập Mã OTP Chuẩn Fintech Cao Cấp (`ForgotPasswordModal.jsx`)**:
+  - **Lưới 6 ô vuông nhập số độc lập (6-Digit PIN Grid)**: Thay thế ô nhập đơn điệu bằng 6 ô vuông bo tròn hiện đại (`w-12 h-14`), cỡ chữ số lớn nổi bật (`text-2xl font-black`), viền xanh neon và hiệu ứng phóng to vi mô (`scale-102`) khi nhập.
+  - **Tương tác bàn phím & dán mã thông minh (Smart Paste & Key Navigation)**: Tự động nhảy con trỏ sang ô tiếp theo khi nhập số, lùi ô khi nhấn Backspace, điều hướng phím mũi tên trái/phải, và tự động bóc tách 6 chữ số khi dán (`Ctrl + V`) mã OTP từ email.
+  - **Đồng hồ đếm ngược & Nút gửi lại mã (Resend Countdown Timer)**: Tích hợp đếm ngược 60 giây và nút `Gửi lại mã OTP` có hiệu ứng icon xoay tròn `RefreshCw`.
+  - **Huy hiệu thông tin email tinh tế**: Hiển thị chip email người nhận `✉️ thaithinh03456@gmail.com` trang nhã thay vì khối cảnh báo xanh cồng kềnh.
+  - **Thanh chỉ báo tiến trình 3 bước (Step Progress Indicator)**: Trực quan hóa tiến trình thực hiện: `[1. Email] ── [2. Mã OTP] ── [3. Mật khẩu mới]`.
 
-- **Xây Dựng Modal Thanh Toán PayOS VietQR (`src/components/modals/PayOsCheckoutModal.jsx`)**:
-  - Giao diện thanh toán hiện đại chuẩn ngân hàng, hiển thị thông tin gói học, mã đơn hàng, số tiền học phí và nút chuyển hướng sang cổng thanh toán chính thức của PayOS.
-  - Cơ chế tự động lắng nghe (polling mỗi 3 giây) kết quả Webhook IPN từ cổng PayOS.
-  - Hiệu ứng pháo hoa (`canvas-confetti`) và màn hình chúc mừng khi thanh toán thành công, thông báo kích hoạt lộ trình thích ứng PLAR tức thì kèm nút điều hướng trực tiếp vào chặng học đầu tiên.
-  - Hỗ trợ chế độ giả lập xác nhận tức thì (Instant Verify) phục vụ kiểm thử và demo.
+- **Hoàn Thiện Bước 3 (Thiết Lập Mật Khẩu Mới)**:
+  - Bổ sung nút bật/tắt ẩn hiện mật khẩu (`Eye` / `EyeOff`) cho cả 2 ô `Mật khẩu mới` và `Xác nhận mật khẩu`.
+  - Bảng đối soát chính sách bảo mật thời gian thực (Real-time Checklist) với 4 tích xanh: Tối thiểu 8 ký tự, Chữ in hoa (A-Z), Chữ thường (a-z), Chữ số (0-9) và trạng thái trùng khớp mật khẩu.
 
-- **Xây Dựng Màn Hình Quản Lý Học Phí & Đăng Ký Khóa Học (`src/components/payment/TuitionPaymentView.jsx`)**:
-  - Giới thiệu 3 gói đào tạo chuẩn ĐGNL: Gói Cấp Tốc (Fast-Track - 8 tuần), Gói Chuẩn (Standard Adaptive - 12 tuần) và Gói Bứt Phá (Intensive Plus - 16 tuần).
-  - Bảng tra cứu lịch sử giao dịch và đối soát học phí chi tiết.
-  - Tích hợp trực tiếp vào Cổng Phụ Huynh (`ParentDashboardView.jsx`) với banner nhắc nộp học phí và nút hành động nhanh qua VietQR PayOS.
-  - Bổ sung tab điều hướng `Học phí & Gói học` (`tuition`) trên `Sidebar.jsx` và cập nhật định tuyến trong `App.jsx`.
+- **Kiểm Tra Email Tồn Tại Khi Quên Mật Khẩu & Bóc Tách Lỗi Tường Minh**:
+  - Tinh chỉnh `apiClient.js` tự động bóc tách `data.error.description` triệt tiêu lỗi `Error: [object Object]`.
+  - Nếu email không tồn tại trong hệ thống (HTTP 404): Báo lỗi chuẩn xác *"Không tìm thấy tài khoản với email này. Vui lòng kiểm tra lại."* và giữ nguyên ở Bước 1.
 
 - **Kiểm Thử & Đóng Gói (Build & Test)**:
-  - Bổ sung bài kiểm thử `tests/paymentService.test.js`: **6/6 tests PASS 100%**.
-  - `npm run build` thành công trong 1.40s với 0 lỗi cú pháp.
+  - Kiểm thử `npm test`: **6/6 tests PASS 100%**.
+  - `npm run build` hoàn thành trong 1.12s, 0 lỗi cú pháp.

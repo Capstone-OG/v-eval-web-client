@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Sparkles,
@@ -65,10 +65,12 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
 
   // Forgot Password Modal state
   const [isForgotModalOpen, setIsForgotModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState('forgot'); // 'activation' | 'forgot'
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotStep, setForgotStep] = useState(1);
   const [otpCode, setOtpCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [modalError, setModalError] = useState(null);
   const [modalSuccess, setModalSuccess] = useState(null);
 
@@ -183,7 +185,11 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
 
       // Account not yet activated with OTP
       if (err.data?.error?.code === 'Auth.AccountNotActivated' || err.message?.includes('chưa được kích hoạt')) {
+        setModalMode('activation');
         setForgotEmail(email);
+        setOtpCode('');
+        setModalError(null);
+        setModalSuccess('Tài khoản chưa được kích hoạt. Vui lòng kiểm tra email và nhập mã OTP 6 số để kích hoạt.');
         setForgotStep(2);
         setIsForgotModalOpen(true);
         setFormError('Tài khoản chưa được kích hoạt OTP. Vui lòng nhập mã OTP 6 số để kích hoạt.');
@@ -265,14 +271,12 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
       const regRes = await authService.register(payload);
       setIsSubmitting(false);
 
-      // Open OTP verification step in modal
+      // Open OTP verification step in modal without auto-filling OTP
+      setModalMode('activation');
       setForgotEmail(regEmail.trim());
-      if (regRes?.otpCode) {
-        setOtpCode(regRes.otpCode);
-        setModalSuccess(`Đăng ký thành công! Mã OTP kích hoạt của bạn là: ${regRes.otpCode} (Đã tự động điền sẵn).`);
-      } else {
-        setSubmitSuccessMsg("Đăng ký thành công! Vui lòng nhập mã OTP để kích hoạt tài khoản.");
-      }
+      setOtpCode(''); // Empty input field so user must enter OTP from email
+      setModalError(null);
+      setModalSuccess("Đăng ký thành công! Mã xác thực OTP đã được gửi về email của bạn. Vui lòng kiểm tra hộp thư và nhập mã xác thực.");
       setForgotStep(2);
       setIsForgotModalOpen(true);
     } catch (err) {
@@ -356,7 +360,7 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
   };
   const passStrength = getPasswordStrength(regPassword);
 
-  // Forgot password submit handler with Real API Integration
+  // Forgot password & Account activation submit handler with Real API Integration
   const handleForgotSubmit = async (e) => {
     if (e) e.preventDefault();
     setModalError(null);
@@ -365,48 +369,87 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
 
     try {
       if (forgotStep === 1) {
-        if (!forgotEmail) {
+        const cleanEmail = (forgotEmail || '').trim();
+        if (!cleanEmail) {
           setIsSubmitting(false);
-          setModalError("Vui lòng nhập Email.");
+          setModalError("Vui lòng nhập địa chỉ Email tài khoản.");
           return;
         }
-        await authService.forgotPassword(forgotEmail);
+        // Gọi API forgot-password để kiểm tra email tồn tại và gửi mã OTP
+        await authService.forgotPassword(cleanEmail);
         setIsSubmitting(false);
-        setModalSuccess("Mã OTP đã được gửi đến email/SĐT của bạn!");
+        setOtpCode('');
+        setModalSuccess(`Đã kiểm tra tài khoản thành công! Mã OTP xác thực đặt lại mật khẩu đã được gửi đến email ${cleanEmail}. Vui lòng kiểm tra hộp thư.`);
         setForgotStep(2);
       } else if (forgotStep === 2) {
-        if (!otpCode) {
+        if (!otpCode || otpCode.trim().length !== 6) {
           setIsSubmitting(false);
-          setModalError("Vui lòng nhập mã OTP 6 số.");
+          setModalError("Vui lòng nhập đầy đủ mã xác thực OTP gồm 6 chữ số.");
           return;
         }
-        // Try verifying account OTP if user is in activation flow
-        try {
-          await authService.verifyOtp(forgotEmail, otpCode);
+        if (modalMode === 'activation') {
+          // Activation flow for registration
+          await authService.verifyOtp(forgotEmail.trim(), otpCode.trim());
           setIsSubmitting(false);
-          setModalSuccess("Xác thực kích hoạt tài khoản thành công!");
+          setModalSuccess("Xác thực và kích hoạt tài khoản thành công! Bạn có thể đăng nhập ngay.");
           setForgotStep(4);
-          return;
-        } catch {
-          // If not activation flow, proceed to reset password step
+        } else {
+          // Forgot password flow: BẮT BUỘC KIỂM TRA MÃ OTP VỚI BACKEND TRƯỚC KHI CHO QUA BƯỚC 3!
+          await authService.verifyResetOtp(forgotEmail.trim(), otpCode.trim());
           setIsSubmitting(false);
+          setModalError(null);
+          setModalSuccess(null);
+          setNewPassword('');
+          setConfirmPassword('');
           setForgotStep(3);
         }
       } else if (forgotStep === 3) {
-        if (!newPassword) {
+        if (!newPassword || newPassword.length < 8) {
           setIsSubmitting(false);
-          setModalError("Vui lòng nhập mật khẩu mới.");
+          setModalError("Mật khẩu mới phải có tối thiểu 8 ký tự.");
           return;
         }
-        await authService.resetPassword({ email: forgotEmail, otpCode, newPassword });
+        if (!/[A-Z]/.test(newPassword) || !/[a-z]/.test(newPassword) || !/[0-9]/.test(newPassword)) {
+          setIsSubmitting(false);
+          setModalError("Mật khẩu phải chứa ít nhất 1 chữ hoa, 1 chữ thường và 1 chữ số (VD: Password123@).");
+          return;
+        }
+        if (newPassword !== confirmPassword) {
+          setIsSubmitting(false);
+          setModalError("Mật khẩu xác nhận không khớp. Vui lòng kiểm tra lại.");
+          return;
+        }
+        await authService.resetPassword({
+          email: forgotEmail.trim(),
+          otpCode: otpCode.trim(),
+          newPassword,
+          confirmPassword
+        });
         setIsSubmitting(false);
-        setModalSuccess("Đặt lại mật khẩu thành công!");
+        setModalSuccess("Đặt lại mật khẩu thành công! Bạn có thể sử dụng mật khẩu mới để đăng nhập ngay bây giờ.");
         setForgotStep(4);
       }
     } catch (err) {
       setIsSubmitting(false);
-      const msg = err.data?.error?.description || err.data?.message || err.message || 'Thao tác không thành công. Vui lòng thử lại.';
+      const msg = err.data?.error?.description || err.message || 'Thao tác không thành công. Vui lòng kiểm tra lại.';
       setModalError(msg);
+    }
+  };
+
+  // Resend OTP Handler
+  const handleResendOtp = async () => {
+    setModalError(null);
+    try {
+      if (modalMode === 'activation') {
+        setModalSuccess('Đã gửi lại mã OTP kích hoạt đến email ' + forgotEmail);
+      } else {
+        await authService.forgotPassword(forgotEmail.trim());
+        setModalSuccess('Đã gửi lại mã OTP đặt lại mật khẩu mới đến email ' + forgotEmail);
+      }
+    } catch (err) {
+      const msg = err.data?.error?.description || err.message || 'Không thể gửi lại mã OTP. Vui lòng thử lại sau.';
+      setModalError(msg);
+      throw err;
     }
   };
 
@@ -694,7 +737,17 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
                   setFieldErrors={setFieldErrors}
                   handleLoginSubmit={handleLoginSubmit}
                   handleQuickDemo={handleQuickDemo}
-                  onOpenForgotPassword={() => { setIsForgotModalOpen(true); setForgotStep(1); }}
+                  onOpenForgotPassword={() => {
+                    setModalMode('forgot');
+                    setForgotEmail('');
+                    setOtpCode('');
+                    setNewPassword('');
+                    setConfirmPassword('');
+                    setModalError(null);
+                    setModalSuccess(null);
+                    setForgotStep(1);
+                    setIsForgotModalOpen(true);
+                  }}
                 />
               ) : (
                 <RegisterForm
@@ -759,6 +812,7 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
           setModalError(null);
           setModalSuccess(null);
         }}
+        modalMode={modalMode}
         forgotStep={forgotStep}
         setForgotStep={setForgotStep}
         forgotEmail={forgotEmail}
@@ -767,10 +821,13 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
         setOtpCode={setOtpCode}
         newPassword={newPassword}
         setNewPassword={setNewPassword}
+        confirmPassword={confirmPassword}
+        setConfirmPassword={setConfirmPassword}
         handleForgotSubmit={handleForgotSubmit}
         isSubmitting={isSubmitting}
         modalError={modalError}
         modalSuccess={modalSuccess}
+        onResendOtp={handleResendOtp}
       />
 
     </div>

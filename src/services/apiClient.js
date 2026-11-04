@@ -166,9 +166,14 @@ async function request(endpoint, options = {}, isRetry = false) {
     }
 
     if (!response.ok) {
-      const errorMessage = (typeof data === 'object' && data !== null)
-        ? data.message || data.title || data.error || `HTTP Error ${response.status}`
-        : data || `HTTP Error ${response.status}`;
+      let errorMessage = `HTTP Error ${response.status}`;
+      if (typeof data === "object" && data !== null) {
+        const rawErr = data.error;
+        const errDesc = typeof rawErr === "object" && rawErr !== null ? (rawErr.description || rawErr.message) : rawErr;
+        errorMessage = errDesc || data.message || data.title || (data.errors && data.errors[0]?.description) || errorMessage;
+      } else if (typeof data === "string" && data.trim()) {
+        errorMessage = data.trim();
+      }
 
       const error = new Error(errorMessage);
       error.status = response.status;

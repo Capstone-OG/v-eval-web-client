@@ -1,4 +1,4 @@
-import apiClient, { tokenStorage } from './apiClient';
+﻿import apiClient, { tokenStorage } from './apiClient';
 
 /**
  * Authentication and User Identity Service
@@ -103,6 +103,19 @@ export const authService = {
    */
   async forgotPassword(email) {
     return (await apiClient.post('/api/auth/forgot-password', { email })).data;
+  },
+
+  /**
+   * Xác thực mã OTP đặt lại mật khẩu trước khi qua bước đổi mật khẩu (UC 05b)
+   * @param {string} email
+   * @param {string} otpCode
+   */
+  async verifyResetOtp(email, otpCode) {
+    const payload = {
+      email: (email || '').trim().toLowerCase(),
+      otpCode: (otpCode || '').trim()
+    };
+    return (await apiClient.post('/api/auth/verify-reset-otp', payload)).data;
   },
 
   /**
