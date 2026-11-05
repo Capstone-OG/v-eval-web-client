@@ -741,6 +741,30 @@ V-Eval-Web_Client/
 
 ---
 
+### 4.20. Diagnostic Exam History Retention & Socratic Stream Error Resilience
+- **Holistic Exam History Detection (`MilestoneCard.jsx`)**:
+  - Implemented `checkExamHistory` inspecting `studentDashboard.recentMockExams`, `streakAnalytics`, historical submissions in `practiceService`, and client-side flags in `localStorage`.
+  - Added `studentDashboard` into the `useEffect` dependency array, ensuring instant re-evaluation upon analytics hydration.
+  - Automatically unblocks students who have already completed assessments, rendering adaptive learning stages (`mockMilestone`) rather than repeating the introductory 30-question diagnostic CTA.
+- **Socratic Stream Hanging Elimination (`AISocraticTutorModal.jsx`, `practiceService.js`)**:
+  - Cleaned up `isTyping = false` and aborted `AbortController` in `onError` callbacks, preventing infinite three-dot `...` animations when upstream network cuts out or Gateway timeouts occur.
+  - Removed artificial parameter defaults `studentWrongOption = 'A'` and `correctOption = 'B'` from `practiceService.askAiTutorStream`.
+
+---
+
+
+### 4.21. Resilient Roadmap Auto-Generation & Floating Socratic FAB Integration
+- **Autonomous Roadmap Generation Fallback (MilestoneCard.jsx)**:
+  - Decoupled !studentDashboard.needsOnboarding check so that completed onboarding or non-empty 
+ecentMockExams immediately certifies exam completion, regardless of initial estimated score zero state.
+  - Added utoGenRoadmap invoking practiceService.generateRoadmap with the student\'s completed diagnostic submission ID when a roadmap has not yet been persisted in PostgreSQL, permanently eliminating the re-diagnostic prompt.
+- **Sleek Floating Action Button Integration (App.jsx)**:
+  - Replaced the central dashboard inline AI Tutor box with a non-intrusive floating action button in the bottom-right corner, freeing the dashboard exclusively for core metrics and active milestone progress.
+- **Verification**:
+  - 
+pm run build completes in 905ms (3,013 modules transformed, 0 errors).
+
+---
 
 ## 5. Verification & Acceptance Criteria
 

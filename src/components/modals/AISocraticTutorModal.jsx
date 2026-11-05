@@ -148,6 +148,8 @@ export default function AISocraticTutorModal({ isOpen, onClose, initialContext =
           });
         },
         onError: (err) => {
+          setIsTyping(false);
+          abortControllerRef.current = null;
           if (err.status === 429) {
             setRateLimitWarning(err.message);
           } else if (err.name !== 'AbortError') {
@@ -158,7 +160,7 @@ export default function AISocraticTutorModal({ isOpen, onClose, initialContext =
                 if (!next[lastIdx].text) {
                   next[lastIdx] = {
                     ...next[lastIdx],
-                    text: 'Thầy gặp chút gián đoạn khi kết nối. Em hãy xem lại dữ kiện đề bài hoặc viết công thức liên quan để thử giải nhé!'
+                    text: 'Thầy gặp chút gián đoạn khi kết nối máy chủ AI. Em hãy bấm thử lại hoặc kiểm tra kết nối mạng nhé!'
                   };
                 }
               }
