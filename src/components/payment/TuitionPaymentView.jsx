@@ -83,18 +83,8 @@ export default function TuitionPaymentView({ currentUser, onNavigateRoadmap, sho
     }
   ];
 
-  // Lịch sử giao dịch giả lập
-  const [transactionHistory, setTransactionHistory] = useState([
-    {
-      id: 'TX-9872',
-      orderCode: 9872615243,
-      courseName: 'Khảo Sát Đầu Vào & Đánh Giá Năng Lực',
-      amount: 0,
-      paidAt: '25/10/2026',
-      method: 'MIỄN PHÍ',
-      status: 'SUCCESS'
-    }
-  ]);
+  // Lịch sử giao dịch thực tế từ cổng PayOS Backend
+  const [transactionHistory, setTransactionHistory] = useState([]);
 
   const handleCreatePayment = async (pkg) => {
     setIsLoading(true);
@@ -302,31 +292,39 @@ export default function TuitionPaymentView({ currentUser, onNavigateRoadmap, sho
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {transactionHistory.map((tx) => (
-                <tr key={tx.id} className="hover:bg-slate-50/70 transition-colors">
-                  <td className="py-3.5 px-4 font-mono font-bold text-slate-800">
-                    #{tx.orderCode}
-                  </td>
-                  <td className="py-3.5 px-4 font-semibold text-slate-900">
-                    {tx.courseName}
-                  </td>
-                  <td className="py-3.5 px-4 font-extrabold text-slate-900">
-                    {tx.amount === 0 ? 'Miễn phí' : new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(tx.amount)}
-                  </td>
-                  <td className="py-3.5 px-4 text-slate-600 font-medium">
-                    {tx.method}
-                  </td>
-                  <td className="py-3.5 px-4 text-slate-500">
-                    {tx.paidAt}
-                  </td>
-                  <td className="py-3.5 px-4 text-center">
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                      <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                      <span>ĐÃ HOÀN TẤT</span>
-                    </span>
+              {transactionHistory.length > 0 ? (
+                transactionHistory.map((tx) => (
+                  <tr key={tx.id} className="hover:bg-slate-50/70 transition-colors">
+                    <td className="py-3.5 px-4 font-mono font-bold text-slate-800">
+                      #{tx.orderCode}
+                    </td>
+                    <td className="py-3.5 px-4 font-semibold text-slate-900">
+                      {tx.courseName}
+                    </td>
+                    <td className="py-3.5 px-4 font-extrabold text-slate-900">
+                      {tx.amount === 0 ? 'Miễn phí' : new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(tx.amount)}
+                    </td>
+                    <td className="py-3.5 px-4 text-slate-600 font-medium">
+                      {tx.method}
+                    </td>
+                    <td className="py-3.5 px-4 text-slate-500">
+                      {tx.paidAt}
+                    </td>
+                    <td className="py-3.5 px-4 text-center">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                        <span>ĐÃ HOÀN TẤT</span>
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={6} className="py-8 px-4 text-center text-xs text-slate-500 font-medium">
+                    Chưa có giao dịch học phí nào được ghi nhận trên hệ thống PayOS cho tài khoản này.
                   </td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
         </div>

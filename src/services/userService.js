@@ -64,14 +64,62 @@ export const userService = {
   async getCampuses() {
     try {
       const res = await apiClient.get('/api/v1/campuses');
-      return res.data;
+      return Array.isArray(res.data) ? res.data : (res.data?.items || res.data?.data || []);
     } catch (err) {
-      console.warn('[userService] getCampuses error, using fallback:', err);
-      return [
-        { campusId: '3fa85f64-5717-4562-b3fc-2c963f66afa6', code: 'CS_THU_DUC', name: 'Cơ sở 1 - Khu đô thị ĐHQG-HCM, TP. Thủ Đức' },
-        { campusId: '4ba85f64-5717-4562-b3fc-2c963f66afa7', code: 'CS_QUAN_10', name: 'Cơ sở 2 - Quận 10, TP.HCM' }
-      ];
+      if (err.status === 404) {
+        const res = await apiClient.get('/api/v1/identity/campuses');
+        return Array.isArray(res.data) ? res.data : (res.data?.items || res.data?.data || []);
+      }
+      throw err;
     }
+  },
+
+  /**
+   * Lấy thông tin Mã Liên Kết Học Sinh (VE-XXXXXX), Mã PIN 6 số, QR Link & Danh sách Yêu cầu liên kết từ Phụ huynh (UC 41a)
+   */
+  async getStudentParentLinkOverview({ studentId, regeneratePin = false } = {}) {
+    const params = {};
+    if (studentId) params.studentId = studentId;
+    if (regeneratePin) params.regeneratePin = true;
+    const res = await apiClient.get('/api/v1/users/me/parent-link-overview', { params });
+    return res.data?.value || res.data;
+  },
+
+  /**
+   * Phụ huynh liên kết tài khoản học sinh bằng Mã Tài Khoản (VE-XXXXXX), Mã PIN 6 số hoặc Đường Liên Kết / QR (UC 41b)
+   */
+  async connectParentByCode({ codeOrLink, parentId }) {
+    const res = await apiClient.post('/api/v1/users/parent-link/connect', {
+      codeOrLink: (codeOrLink || '').trim(),
+      parentId: parentId || undefined
+    });
+    return res.data?.value || res.data;
+  },
+
+  /**
+   * Phụ huynh gửi yêu cầu liên kết 2 chiều theo Email / SĐT của học sinh (UC 41c)
+   */
+  async requestParentLink({ studentIdentifier, parentId }) {
+    const res = await apiClient.post('/api/v1/users/parent-link/request', {
+      studentIdentifier: (studentIdentifier || '').trim(),
+      parentId: parentId || undefined
+    });
+    return res.data?.value || res.data;
+  },
+
+  /**
+   * Học sinh xác nhận (Chấp nhận / Từ chối) yêu cầu liên kết từ Phụ huynh ngay trên Web (UC 41d)
+   */
+  async respondParentLinkRequest({ requestId, approve, studentId }) {
+    const res = await apiClient.post(
+      `/api/v1/users/me/parent-link-requests/${requestId}/respond`,
+      {
+        requestId,
+        approve: Boolean(approve),
+        studentId: studentId || undefined
+      }
+    );
+    return res.data?.value || res.data;
   }
 };
 

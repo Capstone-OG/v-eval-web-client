@@ -681,39 +681,39 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
   const currentQ = questions[currentIndex];
 
   return (
-    <div className={`flex flex-col font-sans selection:bg-cyan-500 selection:text-slate-950 ${
-      embedded ? 'w-full space-y-6 animate-fade pb-12' : 'min-h-screen bg-slate-950 text-slate-100'
+    <div className={`flex flex-col font-sans selection:bg-[#FACC15] selection:text-slate-950 ${
+      embedded ? 'w-full space-y-6 animate-fade pb-12' : 'min-h-screen bg-[#FDFBF7] text-slate-900'
     }`}>
       
       {/* Top Header Navigation */}
       {!embedded ? (
-        <header className="border-b border-slate-800 bg-slate-900/80 backdrop-blur-md sticky top-0 z-40 px-4 sm:px-8 py-3.5 flex items-center justify-between shadow-md">
+        <header className="border-b border-slate-200/80 bg-white/95 backdrop-blur-md sticky top-0 z-40 px-4 sm:px-8 py-3.5 flex items-center justify-between shadow-xs">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 via-cyan-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
-              <Brain className="w-5 h-5 text-slate-950 stroke-[2.5]" />
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-cyan-500 flex items-center justify-center shadow-md shadow-blue-500/20">
+              <Brain className="w-5 h-5 text-white stroke-[2.5]" />
             </div>
             <div>
-              <div className="text-sm font-black tracking-wide text-white flex items-center gap-2">
+              <div className="text-sm font-black tracking-wide text-slate-900 flex items-center gap-2">
                 <span>V-EVAL DIAGNOSTIC</span>
-                <span className="text-[10px] uppercase font-extrabold px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                <span className="text-[10px] uppercase font-extrabold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
                   Core Flow 1
                 </span>
               </div>
-              <div className="text-xs text-slate-400 font-medium">Khảo Thí Năng Lực Đầu Vào 30 Câu & IRT 2PL</div>
+              <div className="text-xs text-slate-500 font-medium">Khảo Thí Năng Lực Đầu Vào 30 Câu & IRT 2PL</div>
             </div>
           </div>
 
           {stage === 'testing' && (
             <div className="flex items-center gap-3">
-              <div className="px-3.5 py-1.5 rounded-xl bg-slate-950 border border-slate-800 flex items-center gap-2 font-mono text-sm font-black text-amber-400 shadow-inner">
-                <Clock className="w-4 h-4 animate-pulse text-amber-400" />
+              <div className="px-3.5 py-1.5 rounded-xl bg-amber-50 border border-amber-200 flex items-center gap-2 font-mono text-sm font-black text-amber-700 shadow-2xs">
+                <Clock className="w-4 h-4 animate-pulse text-amber-600" />
                 <span>{formatTime(timeRemaining)}</span>
               </div>
 
               <button
                 type="button"
                 onClick={handleSubmitExam}
-                className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-950 font-black text-xs hover:opacity-90 active:scale-95 transition-all shadow-md shadow-emerald-500/20"
+                className="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 text-white font-black text-xs hover:opacity-95 active:scale-95 transition-all shadow-md shadow-blue-500/20"
               >
                 Nộp Bài
               </button>
@@ -724,7 +724,7 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
             <button
               type="button"
               onClick={onNavigateDashboard}
-              className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition-all border border-slate-700"
+              className="px-4 py-2 rounded-xl bg-[#FDFBF7] hover:bg-blue-50 text-slate-700 hover:text-blue-700 text-xs font-bold transition-all border border-slate-200"
             >
               Quay lại Dashboard
             </button>
@@ -732,28 +732,28 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
         </header>
       ) : stage === 'testing' ? (
         /* Embedded In-Exam Header Strip */
-        <div className="bg-slate-900 text-white p-4 rounded-2xl border border-slate-800 flex items-center justify-between shadow-lg">
+        <div className="bg-gradient-to-r from-blue-700 via-indigo-700 to-blue-900 text-white p-4 rounded-2xl border border-blue-600/30 flex items-center justify-between shadow-lg">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center font-bold text-white shadow-md shadow-blue-500/30">
-              <Brain className="w-5 h-5 text-white" />
+            <div className="w-10 h-10 rounded-xl bg-white/15 border border-white/20 flex items-center justify-center font-bold text-[#FACC15] shadow-xs">
+              <Brain className="w-5 h-5 text-[#FACC15]" />
             </div>
             <div>
-              <div className="text-xs font-bold text-slate-200 flex items-center gap-2">
+              <div className="text-xs font-bold text-white flex items-center gap-2">
                 <span>Khảo Thí Năng Lực Đầu Vào 30 Câu</span>
-                <span className="text-[10px] bg-blue-500/20 text-cyan-300 px-2 py-0.5 rounded-full border border-cyan-500/30 font-extrabold">Core Flow 1</span>
+                <span className="text-[10px] bg-white/15 text-[#FACC15] px-2 py-0.5 rounded-full border border-white/20 font-extrabold">Core Flow 1</span>
               </div>
-              <div className="text-[11px] text-slate-400">Động cơ Psychometrics IRT 2PL & BKT ước lượng theta_0</div>
+              <div className="text-[11px] text-blue-100">Động cơ Psychometrics IRT 2PL & BKT ước lượng theta_0</div>
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <div className="px-3.5 py-1.5 rounded-xl bg-slate-950 border border-slate-800 flex items-center gap-2 font-mono text-xs font-black text-amber-400 shadow-inner">
-              <Clock className="w-4 h-4 animate-pulse text-amber-400" />
+            <div className="px-3.5 py-1.5 rounded-xl bg-white/15 border border-white/20 flex items-center gap-2 font-mono text-xs font-black text-[#FACC15] shadow-inner">
+              <Clock className="w-4 h-4 animate-pulse text-[#FACC15]" />
               <span>{formatTime(timeRemaining)}</span>
             </div>
             <button
               type="button"
               onClick={handleSubmitExam}
-              className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-950 font-black text-xs hover:opacity-90 active:scale-95 transition-all shadow-md shadow-emerald-500/20"
+              className="px-4 py-2 rounded-xl bg-[#FACC15] hover:bg-yellow-300 text-slate-950 font-black text-xs active:scale-95 transition-all shadow-md shadow-yellow-500/20 cursor-pointer"
             >
               Nộp Bài
             </button>
@@ -765,37 +765,37 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
       {/* 1. SETUP / CONFIG SCREEN                                              */}
       {/* ===================================================================== */}
       {stage === 'setup' && (
-        <div className="flex-1 max-w-4xl w-full mx-auto p-4 sm:p-8 flex flex-col justify-center animate-fade-in">
-          <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 sm:p-10 shadow-2xl backdrop-blur-xl space-y-8">
+        <div className="flex-1 max-w-4xl w-full mx-auto p-2 sm:p-4 flex flex-col justify-center animate-fade-in">
+          <div className="bg-white border border-slate-200/90 rounded-3xl p-6 sm:p-10 shadow-xl space-y-8">
             
             {/* Title & Description */}
             <div className="space-y-3 text-center sm:text-left">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 text-cyan-400 border border-blue-500/20 text-xs font-bold">
-                <Sparkles className="w-3.5 h-3.5" />
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200 text-xs font-bold">
+                <Sparkles className="w-3.5 h-3.5 text-[#FACC15] fill-[#FACC15]" />
                 <span>Hệ Thống Đánh Giá Năng Lực Chuẩn Hóa V-ACT 2026</span>
               </div>
-              <h1 className="text-2xl sm:text-4xl font-black text-white tracking-tight">
+              <h1 className="text-2xl sm:text-4xl font-black text-slate-900 tracking-tight">
                 Khảo Sát Năng Lực Đầu Vào (30 Câu)
               </h1>
-              <p className="text-sm text-slate-400 leading-relaxed max-w-2xl">
-                Bài kiểm tra chuẩn hóa đo lường năng lực học sinh qua 5 lĩnh vực then chốt. Động cơ Psychometrics tự động ước lượng tham số năng lực <span className="text-cyan-300 font-bold">IRT 2PL $\theta_0$</span>, xác suất làm chủ kỹ năng BKT và gợi ý lớp học phù hợp.
+              <p className="text-sm text-slate-600 leading-relaxed max-w-2xl font-medium">
+                Bài kiểm tra chuẩn hóa đo lường năng lực học sinh qua 5 lĩnh vực then chốt. Động cơ Psychometrics tự động ước lượng tham số năng lực <span className="text-blue-700 font-bold">IRT 2PL $\theta_0$</span>, xác suất làm chủ kỹ năng BKT và gợi ý lớp học phù hợp.
               </p>
             </div>
 
             {/* Matrix Breakdown Preview */}
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
               {Object.keys(DOMAINS).map((k) => (
-                <div key={k} className="p-3 rounded-2xl bg-slate-950/60 border border-slate-800/80 text-center space-y-1">
-                  <div className="text-[11px] font-bold text-slate-400 line-clamp-1">{DOMAINS[k].name}</div>
-                  <div className="text-sm font-black text-white">6 câu</div>
-                  <div className="text-[10px] text-cyan-400 font-semibold">Bloom 1-4</div>
+                <div key={k} className="p-3 rounded-2xl bg-[#FDFBF7] border border-slate-200/80 text-center space-y-1 shadow-2xs">
+                  <div className="text-[11px] font-bold text-slate-600 line-clamp-1">{DOMAINS[k].name}</div>
+                  <div className="text-sm font-black text-slate-900">6 câu</div>
+                  <div className="text-[10px] text-blue-600 font-bold">Bloom 1-4</div>
                 </div>
               ))}
             </div>
 
             {/* Generator Mode Selector (2 Authentic Options) */}
             <div className="space-y-3 pt-2">
-              <div className="text-xs font-black uppercase text-slate-400 tracking-wider">
+              <div className="text-xs font-black uppercase text-slate-500 tracking-wider">
                 Chọn Nguồn Đề Thi Khảo Sát
               </div>
 
@@ -805,21 +805,21 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
                 <button
                   type="button"
                   onClick={() => setGeneratorMode('content_service')}
-                  className={`p-5 rounded-2xl text-left border transition-all flex flex-col justify-between gap-3 ${
+                  className={`p-5 rounded-2xl text-left border transition-all flex flex-col justify-between gap-3 cursor-pointer ${
                     generatorMode === 'content_service'
-                      ? 'bg-blue-600/15 border-blue-500 text-white shadow-lg shadow-blue-500/10'
-                      : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
+                      ? 'bg-blue-50/80 border-blue-500 text-slate-900 shadow-md shadow-blue-500/10'
+                      : 'bg-[#FDFBF7] border-slate-200/90 text-slate-600 hover:border-blue-300'
                   }`}
                 >
                   <div className="flex items-center justify-between w-full">
-                    <div className="p-2.5 rounded-xl bg-blue-500/20 text-blue-400">
+                    <div className="p-2.5 rounded-xl bg-blue-100 text-blue-700">
                       <Building2 className="w-5 h-5" />
                     </div>
-                    <span className="px-2 py-0.5 rounded text-[10px] bg-blue-500/20 text-blue-300 font-black">Ngân Hàng Đề Trường</span>
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] bg-blue-100 text-blue-700 border border-blue-200 font-black">Ngân Hàng Đề Trường</span>
                   </div>
                   <div>
-                    <div className="text-sm font-black text-white">Đề Có Sẵn (Content Service)</div>
-                    <div className="text-xs text-slate-400 mt-1 leading-relaxed">
+                    <div className="text-sm font-black text-slate-900">Đề Có Sẵn (Content Service)</div>
+                    <div className="text-xs text-slate-600 mt-1 leading-relaxed font-medium">
                       Lấy trực tiếp 30 câu hỏi chuẩn hóa từ Ngân hàng Đề thi Content Service của trường (bao gồm đầy đủ các bài đọc hiểu và đáp án chuẩn).
                     </div>
                   </div>
@@ -829,21 +829,21 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
                 <button
                   type="button"
                   onClick={() => setGeneratorMode('gemini')}
-                  className={`p-5 rounded-2xl text-left border transition-all flex flex-col justify-between gap-3 ${
+                  className={`p-5 rounded-2xl text-left border transition-all flex flex-col justify-between gap-3 cursor-pointer ${
                     generatorMode === 'gemini'
-                      ? 'bg-purple-600/15 border-purple-500 text-white shadow-lg shadow-purple-500/10'
-                      : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
+                      ? 'bg-indigo-50/80 border-indigo-500 text-slate-900 shadow-md shadow-indigo-500/10'
+                      : 'bg-[#FDFBF7] border-slate-200/90 text-slate-600 hover:border-indigo-300'
                   }`}
                 >
                   <div className="flex items-center justify-between w-full">
-                    <div className="p-2.5 rounded-xl bg-purple-500/20 text-purple-400">
+                    <div className="p-2.5 rounded-xl bg-indigo-100 text-indigo-700">
                       <Brain className="w-5 h-5" />
                     </div>
-                    <span className="px-2 py-0.5 rounded text-[10px] bg-cyan-400/20 text-cyan-300 font-black">Gemini AI Live</span>
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] bg-amber-100 text-amber-800 border border-amber-200 font-black">Gemini AI Live</span>
                   </div>
                   <div>
-                    <div className="text-sm font-black text-white">Sinh Đề AI Cloud (Google Gemini)</div>
-                    <div className="text-xs text-slate-400 mt-1 leading-relaxed">
+                    <div className="text-sm font-black text-slate-900">Sinh Đề AI Cloud (Google Gemini)</div>
+                    <div className="text-xs text-slate-600 mt-1 leading-relaxed font-medium">
                       Mô hình Gemini 3.6 Flash phân tích và sinh 30 câu hỏi mới 100%, chuẩn ma trận Bloom 6 cấp độ và công thức Toán KaTeX.
                     </div>
                   </div>
@@ -852,8 +852,8 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
 
               {/* Target score input */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3">
-                <label className="text-xs font-bold text-slate-300 flex items-center gap-2">
-                  <Target className="w-4 h-4 text-cyan-400" />
+                <label className="text-xs font-bold text-slate-700 flex items-center gap-2">
+                  <Target className="w-4 h-4 text-blue-600" />
                   Điểm mục tiêu của thí sinh (thang 1200):
                 </label>
                 <div className="flex items-center gap-2">
@@ -862,10 +862,10 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
                       key={score}
                       type="button"
                       onClick={() => setTargetScore(score)}
-                      className={`px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition-all border ${
+                      className={`px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition-all border cursor-pointer ${
                         targetScore === score
-                          ? 'bg-cyan-500 text-slate-950 border-cyan-400 font-black shadow-md'
-                          : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
+                          ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white border-blue-600 font-black shadow-sm'
+                          : 'bg-[#FDFBF7] text-slate-600 border-slate-200 hover:border-blue-300'
                       }`}
                     >
                       {score}+
@@ -881,7 +881,7 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
                 type="button"
                 disabled={isLoading}
                 onClick={handleStartAssessment}
-                className="w-full sm:flex-1 py-4 px-6 rounded-2xl bg-gradient-to-r from-blue-600 via-cyan-500 to-indigo-600 text-slate-950 font-black text-base shadow-xl shadow-cyan-500/20 hover:opacity-95 active:scale-[0.99] transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                className="w-full sm:flex-1 py-4 px-6 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 text-white font-black text-base shadow-xl shadow-blue-500/20 hover:opacity-95 active:scale-[0.99] transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
               >
                 {isLoading ? (
                   <>
@@ -890,7 +890,7 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
                   </>
                 ) : (
                   <>
-                    <Play className="w-5 h-5 fill-slate-950" />
+                    <Play className="w-5 h-5 fill-white" />
                     <span>Bắt Đầu Khảo Sát 30 Câu (45 Phút)</span>
                   </>
                 )}
@@ -899,7 +899,7 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
               <button
                 type="button"
                 onClick={onNavigateDashboard}
-                className="w-full sm:w-auto py-4 px-6 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-sm transition-all"
+                className="w-full sm:w-auto py-4 px-6 rounded-2xl bg-[#FDFBF7] hover:bg-slate-100 border border-slate-200 text-slate-700 font-bold text-sm transition-all cursor-pointer"
               >
                 Hủy bỏ
               </button>
@@ -907,13 +907,13 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
 
             {/* Lịch Sử Làm Bài Gần Đây (Xem lại đáp án & hỏi AI Socratic) */}
             {submissionHistory.length > 0 && (
-              <div className="pt-6 border-t border-slate-800 space-y-3">
+              <div className="pt-6 border-t border-slate-200/80 space-y-3">
                 <div className="flex items-center justify-between">
-                  <div className="text-xs font-black uppercase tracking-wider text-cyan-400 flex items-center gap-2">
+                  <div className="text-xs font-black uppercase tracking-wider text-blue-700 flex items-center gap-2">
                     <FileText className="w-4 h-4" />
                     <span>Lịch Sử Làm Bài Đã Hoàn Thành ({submissionHistory.length})</span>
                   </div>
-                  <span className="text-[11px] text-slate-400">
+                  <span className="text-[11px] text-slate-500 font-medium">
                     Bấm chọn để xem lại bảng đáp án và hỏi Gia sư AI Socratic
                   </span>
                 </div>
@@ -931,23 +931,23 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
                       <div
                         key={item.id}
                         onClick={() => handleOpenPastSubmission(item)}
-                        className="p-4 rounded-2xl bg-slate-950/80 hover:bg-slate-950 border border-slate-800 hover:border-cyan-500/40 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 cursor-pointer group"
+                        className="p-4 rounded-2xl bg-[#FDFBF7] hover:bg-blue-50/40 border border-slate-200/90 hover:border-blue-300 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 cursor-pointer group"
                       >
                         <div className="space-y-1">
-                          <div className="text-sm font-extrabold text-white group-hover:text-cyan-300 transition-colors">
+                          <div className="text-sm font-extrabold text-slate-900 group-hover:text-blue-700 transition-colors">
                             {item.title}
                           </div>
-                          <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400">
+                          <div className="flex flex-wrap items-center gap-3 text-xs text-slate-600 font-medium">
                             <span>
                               Kết quả:{' '}
-                              <strong className="text-emerald-400">
+                              <strong className="text-emerald-600">
                                 {correctCount}/{totalQ} câu ({accPct}%)
                               </strong>
                             </span>
                             {item.theta_0 !== undefined && (
                               <span>
                                 Theta IRT:{' '}
-                                <strong className="text-cyan-300">
+                                <strong className="text-blue-700">
                                   {item.theta_0 > 0 ? `+${item.theta_0}` : item.theta_0}
                                 </strong>
                               </span>
@@ -973,9 +973,9 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
                             e.stopPropagation();
                             handleOpenPastSubmission(item);
                           }}
-                          className="px-3.5 py-2 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/40 text-purple-300 font-extrabold text-xs flex items-center gap-1.5 shrink-0 cursor-pointer transition-all"
+                          className="px-3.5 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 font-extrabold text-xs flex items-center gap-1.5 shrink-0 cursor-pointer transition-all"
                         >
-                          <Eye className="w-3.5 h-3.5 text-purple-400" />
+                          <Eye className="w-3.5 h-3.5 text-blue-600" />
                           <span>Xem Lại Đáp Án & Hỏi AI</span>
                         </button>
                       </div>
@@ -992,23 +992,23 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
       {/* 2. IN-EXAM TESTING SCREEN (30 Questions Flow)                         */}
       {/* ===================================================================== */}
       {stage === 'testing' && currentQ && (
-        <div className="flex-1 max-w-6xl w-full mx-auto p-4 sm:p-6 lg:p-8 flex flex-col lg:flex-row gap-6">
+        <div className="flex-1 max-w-6xl w-full mx-auto p-2 sm:p-4 flex flex-col lg:flex-row gap-6">
           
           {/* Main Question Card */}
-          <div className="flex-1 flex flex-col justify-between bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden">
+          <div className="flex-1 flex flex-col justify-between bg-white border border-slate-200/90 rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden">
             
             <div className="space-y-5">
               
               {/* Question metadata badge bar */}
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-4">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200/80 pb-4">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className={`px-3 py-1 rounded-xl text-xs font-black border ${DOMAINS[currentQ.domain_id]?.badge || 'bg-blue-500/10 text-blue-400 border-blue-500/20'}`}>
+                  <span className="px-3 py-1 rounded-xl text-xs font-black border bg-blue-50 text-blue-700 border-blue-200">
                     {currentQ.domain_name || DOMAINS[currentQ.domain_id]?.name || 'Toán học & Phân tích'}
                   </span>
-                  <span className="text-xs text-slate-400 font-medium">
-                    Kỹ năng: <strong className="text-slate-200">{currentQ.skill_name}</strong>
+                  <span className="text-xs text-slate-600 font-medium">
+                    Kỹ năng: <strong className="text-slate-900">{currentQ.skill_name}</strong>
                   </span>
-                  <span className="px-2 py-0.5 rounded-md bg-slate-800 text-[10px] font-bold text-slate-300">
+                  <span className="px-2 py-0.5 rounded-md bg-slate-100 text-[10px] font-bold text-slate-700 border border-slate-200">
                     Bloom {currentQ.bloom}/6
                   </span>
                 </div>
@@ -1016,33 +1016,33 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
                 <button
                   type="button"
                   onClick={() => handleToggleFlag(currentQ.id)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all border ${
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all border cursor-pointer ${
                     flagged[currentQ.id]
-                      ? 'bg-amber-500/20 text-amber-400 border-amber-500/40'
-                      : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-white'
+                      ? 'bg-amber-50 text-amber-800 border-amber-300'
+                      : 'bg-[#FDFBF7] text-slate-600 border-slate-200 hover:border-amber-300'
                   }`}
                 >
-                  <Flag className={`w-3.5 h-3.5 ${flagged[currentQ.id] ? 'fill-amber-400' : ''}`} />
+                  <Flag className={`w-3.5 h-3.5 ${flagged[currentQ.id] ? 'fill-amber-500 text-amber-600' : ''}`} />
                   <span>{flagged[currentQ.id] ? 'Đã Gắn Cờ' : 'Đánh Dấu Phân Vân'}</span>
                 </button>
               </div>
 
               {/* Reading Passage Context (nếu là bài đọc hiểu từ Content Service) */}
               {currentQ.passage_content && (
-                <div className="p-4 sm:p-5 rounded-2xl bg-slate-950/80 border border-slate-800 text-xs sm:text-sm text-slate-300 leading-relaxed max-h-48 overflow-y-auto space-y-2">
-                  <div className="flex items-center gap-2 text-cyan-400 font-black text-xs uppercase tracking-wider">
+                <div className="p-4 sm:p-5 rounded-2xl bg-[#FDFBF7] border border-slate-200/90 text-xs sm:text-sm text-slate-800 leading-relaxed max-h-48 overflow-y-auto space-y-2">
+                  <div className="flex items-center gap-2 text-blue-700 font-black text-xs uppercase tracking-wider">
                     <BookOpen className="w-3.5 h-3.5" />
                     <span>{currentQ.passage_title || 'Ngữ Liệu Đọc Hiểu'}:</span>
                   </div>
-                  <div className="whitespace-pre-wrap leading-relaxed text-slate-200 font-serif">
+                  <div className="whitespace-pre-wrap leading-relaxed text-slate-800 font-serif">
                     {currentQ.passage_content}
                   </div>
                 </div>
               )}
 
               {/* Question statement */}
-              <div className="text-base sm:text-lg font-bold text-slate-100 leading-relaxed">
-                <span className="text-cyan-400 font-black mr-2">Câu {currentIndex + 1}:</span>
+              <div className="text-base sm:text-lg font-bold text-slate-900 leading-relaxed">
+                <span className="text-blue-700 font-black mr-2">Câu {currentIndex + 1}:</span>
                 <MathText text={currentQ.content} />
               </div>
 
@@ -1057,17 +1057,17 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
                       key={optChar}
                       type="button"
                       onClick={() => handleSelectOption(currentQ.id, optChar)}
-                      className={`w-full p-4 rounded-2xl text-left transition-all border flex items-start gap-4 ${
+                      className={`w-full p-4 rounded-2xl text-left transition-all border flex items-start gap-4 cursor-pointer ${
                         isSelected
-                          ? 'bg-blue-600/20 border-blue-500 text-white shadow-lg shadow-blue-500/10'
-                          : 'bg-slate-950/70 border-slate-800/80 text-slate-300 hover:bg-slate-800/60 hover:border-slate-700'
+                          ? 'bg-blue-50/90 border-blue-500 text-slate-900 shadow-md shadow-blue-500/10'
+                          : 'bg-[#FDFBF7] border-slate-200/90 text-slate-800 hover:bg-white hover:border-blue-300'
                       }`}
                     >
                       <div
                         className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-sm flex-shrink-0 transition-all ${
                           isSelected
-                            ? 'bg-blue-500 text-slate-950 shadow-md'
-                            : 'bg-slate-800 text-slate-400'
+                            ? 'bg-gradient-to-tr from-blue-600 to-indigo-600 text-white shadow-sm'
+                            : 'bg-white border border-slate-200 text-slate-600'
                         }`}
                       >
                         {optChar}
@@ -1076,7 +1076,7 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
                         <MathText text={optText} />
                       </div>
                       {isSelected && (
-                        <div className="w-6 h-6 rounded-full bg-blue-500 text-slate-950 flex items-center justify-center flex-shrink-0 mt-1">
+                        <div className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center flex-shrink-0 mt-1">
                           <Check className="w-4 h-4 stroke-[3]" />
                         </div>
                       )}
@@ -1086,34 +1086,34 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
               </div>
 
               {/* Time spent on current question */}
-              <div className="pt-2 flex items-center justify-end border-t border-slate-800/80">
+              <div className="pt-2 flex items-center justify-end border-t border-slate-100">
                 <div className="text-xs text-slate-500 font-medium">
-                  Thời gian trên câu này: <span className="font-mono text-cyan-400 font-bold">{timeSpentPerQ[currentQ.id] || 0}s</span>
+                  Thời gian trên câu này: <span className="font-mono text-blue-700 font-bold">{timeSpentPerQ[currentQ.id] || 0}s</span>
                 </div>
               </div>
             </div>
 
             {/* Bottom Question Step Navigator */}
-            <div className="flex items-center justify-between pt-6 border-t border-slate-800 mt-6">
+            <div className="flex items-center justify-between pt-6 border-t border-slate-200/80 mt-6">
               <button
                 type="button"
                 disabled={currentIndex === 0}
                 onClick={() => setCurrentIndex((prev) => Math.max(prev - 1, 0))}
-                className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-30 text-slate-300 font-bold text-xs flex items-center gap-1.5 transition-all"
+                className="px-4 py-2.5 rounded-xl bg-[#FDFBF7] hover:bg-slate-100 border border-slate-200 disabled:opacity-30 text-slate-700 font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
               >
                 <ChevronLeft className="w-4 h-4" />
                 <span>Câu Trước</span>
               </button>
 
-              <div className="text-xs font-black text-slate-400">
-                <span className="text-cyan-400">{currentIndex + 1}</span> / {questions.length}
+              <div className="text-xs font-black text-slate-500">
+                <span className="text-blue-700">{currentIndex + 1}</span> / {questions.length}
               </div>
 
               {currentIndex < questions.length - 1 ? (
                 <button
                   type="button"
                   onClick={() => setCurrentIndex((prev) => Math.min(prev + 1, questions.length - 1))}
-                  className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-xs flex items-center gap-1.5 shadow-md shadow-blue-500/20 transition-all"
+                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:opacity-95 text-white font-extrabold text-xs flex items-center gap-1.5 shadow-md shadow-blue-500/20 transition-all cursor-pointer"
                 >
                   <span>Câu Kế Tiếp</span>
                   <ChevronRight className="w-4 h-4" />
@@ -1122,7 +1122,7 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
                 <button
                   type="button"
                   onClick={handleSubmitExam}
-                  className="px-6 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs flex items-center gap-1.5 shadow-md shadow-emerald-500/20 transition-all"
+                  className="px-6 py-2.5 rounded-xl bg-[#FACC15] hover:bg-yellow-300 text-slate-950 font-black text-xs flex items-center gap-1.5 shadow-md shadow-yellow-500/20 transition-all cursor-pointer"
                 >
                   <span>Hoàn Tất & Nộp Bài</span>
                   <CheckCircle2 className="w-4 h-4" />
@@ -1132,14 +1132,14 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
           </div>
 
           {/* Right Sidebar: 30 Question Grid Navigator */}
-          <div className="w-full lg:w-72 bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-xl flex flex-col justify-between gap-6 flex-shrink-0">
+          <div className="w-full lg:w-72 bg-white border border-slate-200/90 rounded-3xl p-5 shadow-xl flex flex-col justify-between gap-6 flex-shrink-0">
             <div className="space-y-4">
-              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                <div className="text-xs font-black uppercase text-slate-300 flex items-center gap-1.5">
-                  <Layers className="w-4 h-4 text-cyan-400" />
+              <div className="flex items-center justify-between border-b border-slate-200/80 pb-3">
+                <div className="text-xs font-black uppercase text-slate-800 flex items-center gap-1.5">
+                  <Layers className="w-4 h-4 text-blue-600" />
                   <span>Danh Sách 30 Câu</span>
                 </div>
-                <div className="text-xs text-slate-400 font-bold">
+                <div className="text-xs text-blue-700 font-bold">
                   {Object.keys(answers).length}/{questions.length} đã chọn
                 </div>
               </div>
@@ -1151,13 +1151,13 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
                   const isAnswered = !!answers[q.id];
                   const isFlag = !!flagged[q.id];
 
-                  let btnBg = 'bg-slate-950 text-slate-400 border-slate-800 hover:border-slate-700';
+                  let btnBg = 'bg-[#FDFBF7] text-slate-600 border-slate-200 hover:border-blue-300';
                   if (isCurrent) {
-                    btnBg = 'bg-cyan-500 text-slate-950 border-cyan-400 font-black shadow-md shadow-cyan-500/20';
+                    btnBg = 'bg-gradient-to-tr from-blue-600 to-indigo-600 text-white border-blue-600 font-black shadow-sm';
                   } else if (isFlag) {
-                    btnBg = 'bg-amber-500/20 text-amber-400 border-amber-500/40 font-bold';
+                    btnBg = 'bg-amber-50 text-amber-800 border-amber-300 font-bold';
                   } else if (isAnswered) {
-                    btnBg = 'bg-blue-600/30 text-blue-300 border-blue-500/40 font-bold';
+                    btnBg = 'bg-blue-50 text-blue-700 border-blue-300 font-bold';
                   }
 
                   return (
@@ -1165,11 +1165,11 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
                       key={q.id}
                       type="button"
                       onClick={() => setCurrentIndex(idx)}
-                      className={`h-9 rounded-xl text-xs font-extrabold transition-all border relative flex items-center justify-center ${btnBg}`}
+                      className={`h-9 rounded-xl text-xs font-extrabold transition-all border relative flex items-center justify-center cursor-pointer ${btnBg}`}
                     >
                       <span>{idx + 1}</span>
                       {isFlag && (
-                        <span className="w-1.5 h-1.5 rounded-full bg-amber-400 absolute top-1 right-1"></span>
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 absolute top-1 right-1"></span>
                       )}
                     </button>
                   );
@@ -1177,13 +1177,13 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
               </div>
 
               {/* Status Legend */}
-              <div className="pt-2 text-[11px] font-bold text-slate-400 space-y-1.5">
+              <div className="pt-2 text-[11px] font-bold text-slate-600 space-y-1.5">
                 <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-cyan-400"></span>
+                  <span className="w-2.5 h-2.5 rounded-full bg-blue-600"></span>
                   <span>Đang làm</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
+                  <span className="w-2.5 h-2.5 rounded-full bg-blue-200 border border-blue-400"></span>
                   <span>Đã chọn đáp án</span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -1201,18 +1201,18 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
       {/* ===================================================================== */}
       {stage === 'analyzing' && (
         <div className="flex-1 flex items-center justify-center p-6">
-          <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-3xl p-8 text-center space-y-6 shadow-2xl animate-fade-in">
-            <div className="w-16 h-16 rounded-2xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center mx-auto border border-cyan-500/30">
+          <div className="max-w-md w-full bg-white border border-slate-200/90 rounded-3xl p-8 text-center space-y-6 shadow-xl animate-fade-in">
+            <div className="w-16 h-16 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto border border-blue-200">
               <Brain className="w-8 h-8 animate-pulse" />
             </div>
             <div className="space-y-2">
-              <h2 className="text-xl font-extrabold text-white">Đang Phân Tích Năng Lực...</h2>
-              <p className="text-xs text-slate-400 leading-relaxed">
+              <h2 className="text-xl font-extrabold text-slate-900">Đang Phân Tích Năng Lực...</h2>
+              <p className="text-xs text-slate-600 leading-relaxed font-medium">
                 Động cơ Psychometrics đang chạy giải thuật Ước lượng hợp lý cực đại (MLE) 2PL IRT và tính toán xác suất làm chủ BKT 5 miền năng lực.
               </p>
             </div>
-            <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
-              <div className="bg-gradient-to-r from-blue-600 via-cyan-400 to-indigo-600 h-full w-2/3 rounded-full animate-pulse"></div>
+            <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+              <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 h-full w-2/3 rounded-full animate-pulse"></div>
             </div>
           </div>
         </div>
@@ -1222,42 +1222,42 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
       {/* 4. COMPREHENSIVE RESULT, PACING ANALYSIS & ANSWER REVIEW TABLE        */}
       {/* ===================================================================== */}
       {stage === 'result' && resultData && (
-        <div className="flex-1 max-w-6xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-8 animate-fade-in">
+        <div className="flex-1 max-w-6xl w-full mx-auto p-2 sm:p-4 space-y-8 animate-fade-in">
           
           {/* Top Result Banner */}
-          <div className="p-6 sm:p-8 bg-gradient-to-r from-blue-900/60 via-indigo-900/50 to-slate-900 border border-blue-500/30 rounded-3xl shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-6">
+          <div className="p-6 sm:p-8 bg-gradient-to-r from-blue-700 via-indigo-700 to-blue-900 border border-blue-600/30 rounded-3xl shadow-xl flex flex-col sm:flex-row items-center justify-between gap-6 text-white">
             <div className="space-y-2 text-center sm:text-left">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-black">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 text-[#FACC15] border border-white/25 text-xs font-black">
                 <CheckCircle2 className="w-3.5 h-3.5" />
                 ĐÃ HOÀN THÀNH BÀI KHẢO SÁT CHẨN ĐOÁN
               </div>
               <h1 className="text-2xl sm:text-3xl font-black text-white">
                 Báo Cáo Năng Lực Đầu Vào Thí Sinh
               </h1>
-              <p className="text-xs sm:text-sm text-slate-300 max-w-xl">
+              <p className="text-xs sm:text-sm text-blue-100 max-w-xl">
                 Dữ liệu được chuẩn hóa theo mô hình đánh giá năng lực V-ACT 2026 và phân tích tốc độ phản xạ thực tế.
               </p>
             </div>
 
             {/* Score & Class Badge */}
-            <div className="flex items-center gap-4 bg-slate-950/80 p-4 sm:p-5 rounded-2xl border border-slate-800 text-center flex-shrink-0">
+            <div className="flex items-center gap-4 bg-white/15 backdrop-blur-md p-4 sm:p-5 rounded-2xl border border-white/20 text-center flex-shrink-0">
               <div className="space-y-1">
-                <div className="text-[11px] font-bold text-slate-400 uppercase">Điểm Thô</div>
+                <div className="text-[11px] font-bold text-blue-100 uppercase">Điểm Thô</div>
                 <div className="text-2xl sm:text-3xl font-black text-white">
-                  {resultData.pacing?.totalCorrect || 0}<span className="text-sm font-semibold text-slate-400">/30</span>
+                  {resultData.pacing?.totalCorrect || 0}<span className="text-sm font-semibold text-blue-200">/30</span>
                 </div>
               </div>
-              <div className="w-px h-10 bg-slate-800"></div>
+              <div className="w-px h-10 bg-white/20"></div>
               <div className="space-y-1">
-                <div className="text-[11px] font-bold text-slate-400 uppercase">Năng Lực IRT θ₀</div>
-                <div className="text-2xl sm:text-3xl font-black text-cyan-400">
+                <div className="text-[11px] font-bold text-blue-100 uppercase">Năng Lực IRT θ₀</div>
+                <div className="text-2xl sm:text-3xl font-black text-[#FACC15]">
                   {resultData.theta_0 > 0 ? `+${resultData.theta_0.toFixed(2)}` : resultData.theta_0.toFixed(2)}
                 </div>
               </div>
-              <div className="w-px h-10 bg-slate-800"></div>
+              <div className="w-px h-10 bg-white/20"></div>
               <div className="space-y-1">
-                <div className="text-[11px] font-bold text-slate-400 uppercase">Phân Lớp Đề Xuất</div>
-                <div className="text-xs sm:text-sm font-black px-3 py-1 rounded-lg bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                <div className="text-[11px] font-bold text-blue-100 uppercase">Phân Lớp Đề Xuất</div>
+                <div className="text-xs sm:text-sm font-black px-3 py-1 rounded-lg bg-[#FACC15] text-slate-950">
                   {resultData.placement_class === 'BREAKTHROUGH'
                     ? 'Lớp Bứt Phá (900+)'
                     : resultData.placement_class === 'ACCELERATION'
@@ -1271,14 +1271,14 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
           {/* ===================================================================== */}
           {/* PHÂN TÍCH TỐC ĐỘ & CHIẾN THUẬT LÀM BÀI (PACING ANALYSIS)              */}
           {/* ===================================================================== */}
-          <div className="p-6 bg-slate-900 border border-slate-800 rounded-3xl shadow-xl space-y-5">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800/80 pb-4">
-              <div className="flex items-center gap-2.5 text-base font-black text-white">
-                <Gauge className="w-5 h-5 text-amber-400" />
+          <div className="p-6 bg-white border border-slate-200/90 rounded-3xl shadow-sm space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200/80 pb-4">
+              <div className="flex items-center gap-2.5 text-base font-black text-slate-900">
+                <Gauge className="w-5 h-5 text-blue-600" />
                 <span>Phân Tích Tốc Độ & Chiến Thuật Làm Bài (Pacing Analysis)</span>
               </div>
-              <div className="text-xs text-slate-400">
-                Tổng thời gian làm bài: <strong className="text-slate-200">{formatTime(resultData.pacing?.totalTimeSpent || 0)}</strong>
+              <div className="text-xs text-slate-600 font-medium">
+                Tổng thời gian làm bài: <strong className="text-slate-900">{formatTime(resultData.pacing?.totalTimeSpent || 0)}</strong>
               </div>
             </div>
 
@@ -1286,51 +1286,51 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               
               {/* Average Time */}
-              <div className="p-4 rounded-2xl bg-slate-950/70 border border-slate-800/80 space-y-1.5">
-                <div className="flex items-center justify-between text-xs text-slate-400 font-bold">
+              <div className="p-4 rounded-2xl bg-[#FDFBF7] border border-slate-200/90 space-y-1.5">
+                <div className="flex items-center justify-between text-xs text-slate-600 font-bold">
                   <span>Thời Gian Trung Bình</span>
-                  <Clock className="w-4 h-4 text-cyan-400" />
+                  <Clock className="w-4 h-4 text-blue-600" />
                 </div>
-                <div className="text-2xl font-black text-white">
-                  {resultData.pacing?.avgTimePerQ || 0}<span className="text-xs font-semibold text-slate-400">s / câu</span>
+                <div className="text-2xl font-black text-slate-900">
+                  {resultData.pacing?.avgTimePerQ || 0}<span className="text-xs font-semibold text-slate-500">s / câu</span>
                 </div>
-                <div className="text-[11px] text-cyan-300 font-medium">Nhịp độ tiêu chuẩn V-ACT</div>
+                <div className="text-[11px] text-blue-700 font-semibold">Nhịp độ tiêu chuẩn V-ACT</div>
               </div>
 
               {/* Fast (<25s) */}
-              <div className="p-4 rounded-2xl bg-slate-950/70 border border-emerald-500/20 space-y-1.5">
-                <div className="flex items-center justify-between text-xs text-emerald-400 font-bold">
+              <div className="p-4 rounded-2xl bg-emerald-50/60 border border-emerald-200 space-y-1.5">
+                <div className="flex items-center justify-between text-xs text-emerald-700 font-bold">
                   <span>Làm Nhanh (&lt;25s)</span>
-                  <Zap className="w-4 h-4 text-emerald-400" />
+                  <Zap className="w-4 h-4 text-emerald-600" />
                 </div>
-                <div className="text-2xl font-black text-emerald-300">
-                  {resultData.pacing?.fastCount || 0}<span className="text-xs font-semibold text-slate-400"> câu</span>
+                <div className="text-2xl font-black text-emerald-700">
+                  {resultData.pacing?.fastCount || 0}<span className="text-xs font-semibold text-slate-500"> câu</span>
                 </div>
-                <div className="text-[11px] text-emerald-400 font-medium">Phản xạ nhạy bén ở câu quen thuộc</div>
+                <div className="text-[11px] text-emerald-700 font-medium">Phản xạ nhạy bén ở câu quen thuộc</div>
               </div>
 
               {/* Normal (25-90s) */}
-              <div className="p-4 rounded-2xl bg-slate-950/70 border border-blue-500/20 space-y-1.5">
-                <div className="flex items-center justify-between text-xs text-blue-400 font-bold">
+              <div className="p-4 rounded-2xl bg-blue-50/60 border border-blue-200 space-y-1.5">
+                <div className="flex items-center justify-between text-xs text-blue-700 font-bold">
                   <span>Chuẩn Nhịp Độ (25-90s)</span>
-                  <CheckSquare className="w-4 h-4 text-blue-400" />
+                  <CheckSquare className="w-4 h-4 text-blue-600" />
                 </div>
-                <div className="text-2xl font-black text-blue-300">
-                  {resultData.pacing?.normalCount || 0}<span className="text-xs font-semibold text-slate-400"> câu</span>
+                <div className="text-2xl font-black text-blue-700">
+                  {resultData.pacing?.normalCount || 0}<span className="text-xs font-semibold text-slate-500"> câu</span>
                 </div>
-                <div className="text-[11px] text-blue-400 font-medium">Kiểm soát tiến độ 45 phút tối ưu</div>
+                <div className="text-[11px] text-blue-700 font-medium">Kiểm soát tiến độ 45 phút tối ưu</div>
               </div>
 
               {/* Slow (>90s) */}
-              <div className="p-4 rounded-2xl bg-slate-950/70 border border-amber-500/20 space-y-1.5">
-                <div className="flex items-center justify-between text-xs text-amber-400 font-bold">
+              <div className="p-4 rounded-2xl bg-amber-50/60 border border-amber-200 space-y-1.5">
+                <div className="flex items-center justify-between text-xs text-amber-800 font-bold">
                   <span>Tốn Nhiều Thời Gian (&gt;90s)</span>
-                  <AlertTriangle className="w-4 h-4 text-amber-400" />
+                  <AlertTriangle className="w-4 h-4 text-amber-600" />
                 </div>
-                <div className="text-2xl font-black text-amber-300">
-                  {resultData.pacing?.slowCount || 0}<span className="text-xs font-semibold text-slate-400"> câu</span>
+                <div className="text-2xl font-black text-amber-700">
+                  {resultData.pacing?.slowCount || 0}<span className="text-xs font-semibold text-slate-500"> câu</span>
                 </div>
-                <div className="text-[11px] text-amber-400 font-medium">
+                <div className="text-[11px] text-amber-800 font-medium">
                   {resultData.pacing?.slowCount > 4 ? 'Cần tránh sa lầy ở câu khó' : 'Phân bổ an toàn'}
                 </div>
               </div>
@@ -1341,34 +1341,34 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             
             {/* Left: Recharts 5-Axis Radar Chart */}
-            <div className="lg:col-span-6 p-6 bg-slate-900 border border-slate-800 rounded-3xl shadow-xl space-y-4">
-              <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
-                <div className="flex items-center gap-2 text-sm font-black text-white">
-                  <BarChart3 className="w-4 h-4 text-cyan-400" />
+            <div className="lg:col-span-6 p-6 bg-white border border-slate-200/90 rounded-3xl shadow-sm space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-200/80 pb-3">
+                <div className="flex items-center gap-2 text-sm font-black text-slate-900">
+                  <BarChart3 className="w-4 h-4 text-blue-600" />
                   <span>Biểu Đồ Radar Năng Lực 5 Lĩnh Vực</span>
                 </div>
-                <div className="text-xs text-slate-400 font-bold">Thang đo %</div>
+                <div className="text-xs text-slate-500 font-bold">Thang đo %</div>
               </div>
 
               <div className="h-72 w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <RadarChart data={resultData.radar_chart || []}>
-                    <PolarGrid stroke="#334155" />
-                    <PolarAngleAxis dataKey="domain_name" tick={{ fill: '#94a3b8', fontSize: 11, fontWeight: 700 }} />
-                    <PolarRadiusAxis angle={30} domain={[0, 100]} stroke="#475569" />
-                    <Radar name="Điểm Thí Sinh" dataKey="student_pct" stroke="#06b6d4" fill="#06b6d4" fillOpacity={0.45} />
-                    <Radar name="Chuẩn Mục Tiêu" dataKey="benchmark_pct" stroke="#6366f1" fill="#6366f1" fillOpacity={0.15} />
-                    <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '12px' }} />
+                    <PolarGrid stroke="#cbd5e1" />
+                    <PolarAngleAxis dataKey="domain_name" tick={{ fill: '#334155', fontSize: 11, fontWeight: 700 }} />
+                    <PolarRadiusAxis angle={30} domain={[0, 100]} stroke="#94a3b8" />
+                    <Radar name="Điểm Thí Sinh" dataKey="student_pct" stroke="#2563eb" fill="#3b82f6" fillOpacity={0.35} />
+                    <Radar name="Chuẩn Mục Tiêu" dataKey="benchmark_pct" stroke="#6366f1" fill="#6366f1" fillOpacity={0.12} />
+                    <Tooltip contentStyle={{ backgroundColor: '#ffffff', borderColor: '#e2e8f0', borderRadius: '12px', color: '#0f172a' }} />
                   </RadarChart>
                 </ResponsiveContainer>
               </div>
 
               <div className="flex items-center justify-center gap-6 text-xs font-bold pt-2">
-                <div className="flex items-center gap-2 text-cyan-400">
-                  <span className="w-3 h-3 rounded-full bg-cyan-400"></span>
+                <div className="flex items-center gap-2 text-blue-700">
+                  <span className="w-3 h-3 rounded-full bg-blue-600"></span>
                   <span>Kết quả của bạn</span>
                 </div>
-                <div className="flex items-center gap-2 text-indigo-400">
+                <div className="flex items-center gap-2 text-indigo-600">
                   <span className="w-3 h-3 rounded-full bg-indigo-500"></span>
                   <span>Chuẩn đầu vào 900+</span>
                 </div>
@@ -1379,31 +1379,31 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
             <div className="lg:col-span-6 flex flex-col space-y-5">
               
               {/* AI Socratic Commentary Box */}
-              <div className="p-6 bg-gradient-to-br from-slate-900 to-purple-950/30 border border-purple-500/30 rounded-3xl shadow-xl space-y-3">
-                <div className="flex items-center gap-2 text-sm font-black text-purple-300">
-                  <Bot className="w-4 h-4 text-purple-400" />
+              <div className="p-6 bg-gradient-to-br from-blue-50 via-indigo-50/70 to-amber-50/40 border border-blue-200/80 rounded-3xl shadow-sm space-y-3">
+                <div className="flex items-center gap-2 text-sm font-black text-blue-900">
+                  <Bot className="w-4 h-4 text-blue-600" />
                   <span>Lời Khuyên Sư Phạm Từ Cố Vấn AI (Gemini Commentary)</span>
                 </div>
-                <p className="text-xs sm:text-sm text-slate-200 leading-relaxed italic bg-slate-950/60 p-4 rounded-2xl border border-purple-500/20">
+                <p className="text-xs sm:text-sm text-slate-800 leading-relaxed italic bg-white p-4 rounded-2xl border border-blue-200/60 font-medium">
                   "{resultData.ai_commentary || 'Thí sinh thể hiện năng lực đồng đều ở các lĩnh vực. Hãy tập trung củng cố các kỹ năng vận dụng cao để bứt phá mục tiêu điểm số.'}"
                 </p>
               </div>
 
               {/* 5 Domains Accuracy Progress */}
-              <div className="p-6 bg-slate-900 border border-slate-800 rounded-3xl shadow-xl space-y-3.5 flex-1">
-                <div className="text-xs font-black uppercase text-slate-400 tracking-wider">
+              <div className="p-6 bg-white border border-slate-200/90 rounded-3xl shadow-sm space-y-3.5 flex-1">
+                <div className="text-xs font-black uppercase text-slate-500 tracking-wider">
                   Chi Tiết Từng Lĩnh Vực ĐGNL
                 </div>
                 <div className="space-y-3">
                   {(resultData.domain_scores || []).map((ds) => (
                     <div key={ds.domain_id} className="space-y-1">
                       <div className="flex items-center justify-between text-xs font-bold">
-                        <span className="text-slate-300">{ds.domain_name}</span>
-                        <span className="text-cyan-400">{ds.accuracy_pct}% ({ds.correct_count || 0}/{ds.total_questions || 6} câu)</span>
+                        <span className="text-slate-800">{ds.domain_name}</span>
+                        <span className="text-blue-700">{ds.accuracy_pct}% ({ds.correct_count || 0}/{ds.total_questions || 6} câu)</span>
                       </div>
-                      <div className="w-full bg-slate-950 h-2 rounded-full overflow-hidden border border-slate-800">
+                      <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden border border-slate-200/80">
                         <div
-                          className="bg-gradient-to-r from-blue-600 to-cyan-400 h-full rounded-full transition-all"
+                          className="bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 h-full rounded-full transition-all"
                           style={{ width: `${Math.min(ds.accuracy_pct, 100)}%` }}
                         ></div>
                       </div>
@@ -1417,29 +1417,29 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
           {/* ===================================================================== */}
           {/* BẢNG ĐÁNH GIÁ CHI TIẾT & ĐÁP ÁN 30 CÂU (ANSWER KEY & EXPLANATIONS)    */}
           {/* ===================================================================== */}
-          <div className="p-6 sm:p-8 bg-slate-900 border border-slate-800 rounded-3xl shadow-xl space-y-6">
+          <div className="p-6 sm:p-8 bg-white border border-slate-200/90 rounded-3xl shadow-sm space-y-6">
             
             {/* Header & Filter Tabs */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800/80 pb-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/80 pb-5">
               <div>
-                <h3 className="text-lg font-black text-white flex items-center gap-2">
-                  <FileText className="w-5 h-5 text-cyan-400" />
+                <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-blue-600" />
                   <span>Bảng Đánh Giá Chi Tiết & Đáp Án 30 Câu Hỏi</span>
                 </h3>
-                <p className="text-xs text-slate-400 mt-1">
+                <p className="text-xs text-slate-500 mt-1 font-medium">
                   Đối chiếu câu trả lời của thí sinh với đáp án chính xác, lời giải chi tiết và thời gian làm bài.
                 </p>
               </div>
 
               {/* Filters */}
-              <div className="flex items-center gap-1.5 bg-slate-950 p-1.5 rounded-2xl border border-slate-800 flex-shrink-0">
+              <div className="flex items-center gap-1.5 bg-[#FDFBF7] p-1.5 rounded-2xl border border-slate-200/80 flex-shrink-0">
                 <button
                   type="button"
                   onClick={() => setReviewFilter('ALL')}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                     reviewFilter === 'ALL'
-                      ? 'bg-blue-600 text-white shadow-md'
-                      : 'text-slate-400 hover:text-white'
+                      ? 'bg-blue-600 text-white shadow-sm'
+                      : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
                   Tất Cả ({resultData.reviewedQuestions?.length || 30})
@@ -1447,10 +1447,10 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
                 <button
                   type="button"
                   onClick={() => setReviewFilter('CORRECT')}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                     reviewFilter === 'CORRECT'
-                      ? 'bg-emerald-600 text-white shadow-md'
-                      : 'text-slate-400 hover:text-white'
+                      ? 'bg-emerald-600 text-white shadow-sm'
+                      : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
                   Đúng ({resultData.pacing?.totalCorrect || 0})
@@ -1458,10 +1458,10 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
                 <button
                   type="button"
                   onClick={() => setReviewFilter('WRONG')}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                     reviewFilter === 'WRONG'
-                      ? 'bg-rose-600 text-white shadow-md'
-                      : 'text-slate-400 hover:text-white'
+                      ? 'bg-rose-600 text-white shadow-sm'
+                      : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
                   Sai ({(resultData.pacing?.totalQuestions || 30) - (resultData.pacing?.totalCorrect || 0)})
@@ -1469,10 +1469,10 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
                 <button
                   type="button"
                   onClick={() => setReviewFilter('FLAGGED')}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                     reviewFilter === 'FLAGGED'
-                      ? 'bg-amber-600 text-white shadow-md'
-                      : 'text-slate-400 hover:text-white'
+                      ? 'bg-amber-500 text-slate-950 shadow-sm'
+                      : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
                   Phân Vân ({resultData.pacing?.flaggedCount || 0})
@@ -1490,30 +1490,30 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
                     key={q.id}
                     className={`p-5 sm:p-6 rounded-2xl border transition-all space-y-4 ${
                       q.isCorrect
-                        ? 'bg-slate-950/60 border-emerald-500/30'
+                        ? 'bg-[#FDFBF7] border-emerald-300/80'
                         : isSelected
-                        ? 'bg-slate-950/60 border-rose-500/30'
-                        : 'bg-slate-950/60 border-slate-800'
+                        ? 'bg-[#FDFBF7] border-rose-300/80'
+                        : 'bg-[#FDFBF7] border-slate-200/90'
                     }`}
                   >
                     {/* Question Card Header */}
-                    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800/80 pb-3">
+                    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200/80 pb-3">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-sm font-black text-cyan-400">
+                        <span className="text-sm font-black text-blue-700">
                           Câu {q.question_number}:
                         </span>
-                        <span className={`px-2.5 py-0.5 rounded-lg text-xs font-bold border ${DOMAINS[q.domain_id]?.badge || 'bg-slate-800 text-slate-300 border-slate-700'}`}>
+                        <span className="px-2.5 py-0.5 rounded-lg text-xs font-bold border bg-blue-50 text-blue-700 border-blue-200">
                           {q.domain_name}
                         </span>
-                        <span className="text-xs text-slate-400">
+                        <span className="text-xs text-slate-600 font-medium">
                           {q.skill_name}
                         </span>
-                        <span className="px-2 py-0.5 rounded bg-slate-800 text-[10px] font-bold text-slate-300">
+                        <span className="px-2 py-0.5 rounded bg-slate-100 text-[10px] font-bold text-slate-700 border border-slate-200">
                           Bloom {q.bloom}/6
                         </span>
                         {q.isFlagged && (
-                          <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 text-[10px] font-black border border-amber-500/30 flex items-center gap-1">
-                            <Flag className="w-3 h-3 fill-amber-400" />
+                          <span className="px-2 py-0.5 rounded bg-amber-50 text-amber-800 text-[10px] font-black border border-amber-300 flex items-center gap-1">
+                            <Flag className="w-3 h-3 fill-amber-500 text-amber-600" />
                             <span>Phân vân</span>
                           </span>
                         )}
@@ -1523,10 +1523,10 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
                       <div className="flex items-center gap-2">
                         <span className={`px-2.5 py-1 rounded-xl text-xs font-bold flex items-center gap-1 ${
                           q.speedCategory === 'fast'
-                            ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                             : q.speedCategory === 'slow'
-                            ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                            : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+                            ? 'bg-amber-50 text-amber-800 border border-amber-200'
+                            : 'bg-blue-50 text-blue-700 border border-blue-200'
                         }`}>
                           <Clock className="w-3.5 h-3.5" />
                           <span>{q.timeSpent}s</span>
@@ -1537,10 +1537,10 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
 
                         <span className={`px-3 py-1 rounded-xl text-xs font-black ${
                           q.isCorrect
-                            ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                             : isSelected
-                            ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
-                            : 'bg-slate-800 text-slate-400 border border-slate-700'
+                            ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                            : 'bg-slate-100 text-slate-600 border border-slate-200'
                         }`}>
                           {q.isCorrect ? '✅ Chính xác' : isSelected ? '❌ Chưa đúng' : '⚪ Chưa trả lời'}
                         </span>
@@ -1549,8 +1549,8 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
 
                     {/* Passage text if any */}
                     {q.passage_content && (
-                      <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-300 font-serif leading-relaxed">
-                        <div className="text-[10px] font-bold text-cyan-400 uppercase mb-1">
+                      <div className="p-3.5 rounded-xl bg-white border border-slate-200/90 text-xs text-slate-700 font-serif leading-relaxed">
+                        <div className="text-[10px] font-bold text-blue-700 uppercase mb-1">
                           {q.passage_title || 'Ngữ liệu đọc hiểu'}:
                         </div>
                         <div className="line-clamp-3 hover:line-clamp-none transition-all cursor-pointer">
@@ -1560,7 +1560,7 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
                     )}
 
                     {/* Question Content */}
-                    <div className="text-sm sm:text-base font-bold text-slate-100 leading-relaxed">
+                    <div className="text-sm sm:text-base font-bold text-slate-900 leading-relaxed">
                       <MathText text={q.content} />
                     </div>
 
@@ -1571,11 +1571,11 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
                         const isStudentChoice = q.studentChoice === optChar;
                         const isCorrectChoice = q.correctChoice === optChar;
 
-                        let cardStyle = 'bg-slate-900/60 border-slate-800 text-slate-300';
+                        let cardStyle = 'bg-white border-slate-200/90 text-slate-700';
                         if (isCorrectChoice) {
-                          cardStyle = 'bg-emerald-500/15 border-emerald-500 text-white font-bold shadow-sm';
+                          cardStyle = 'bg-emerald-50/90 border-emerald-400 text-emerald-950 font-bold shadow-2xs';
                         } else if (isStudentChoice && !q.isCorrect) {
-                          cardStyle = 'bg-rose-500/15 border-rose-500 text-rose-200 font-bold';
+                          cardStyle = 'bg-rose-50/90 border-rose-400 text-rose-900 font-bold';
                         }
 
                         return (
@@ -1585,10 +1585,10 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
                           >
                             <div className={`w-6 h-6 rounded-lg flex items-center justify-center font-black text-xs flex-shrink-0 ${
                               isCorrectChoice
-                                ? 'bg-emerald-500 text-slate-950 font-black'
+                                ? 'bg-emerald-600 text-white font-black'
                                 : isStudentChoice
-                                ? 'bg-rose-500 text-white font-black'
-                                : 'bg-slate-800 text-slate-400'
+                                ? 'bg-rose-600 text-white font-black'
+                                : 'bg-slate-100 text-slate-600'
                             }`}>
                               {optChar}
                             </div>
@@ -1596,12 +1596,12 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
                               <MathText text={optText} />
                             </div>
                             {isCorrectChoice && (
-                              <span className="px-2 py-0.5 rounded text-[10px] bg-emerald-500/20 text-emerald-300 font-black border border-emerald-500/30 flex-shrink-0">
+                              <span className="px-2 py-0.5 rounded text-[10px] bg-emerald-100 text-emerald-800 font-black border border-emerald-300 flex-shrink-0">
                                 Đáp án đúng
                               </span>
                             )}
                             {isStudentChoice && !isCorrectChoice && (
-                              <span className="px-2 py-0.5 rounded text-[10px] bg-rose-500/20 text-rose-300 font-black border border-rose-500/30 flex-shrink-0">
+                              <span className="px-2 py-0.5 rounded text-[10px] bg-rose-100 text-rose-800 font-black border border-rose-300 flex-shrink-0">
                                 Bạn đã chọn
                               </span>
                             )}
@@ -1611,10 +1611,10 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
                     </div>
 
                     {/* Detailed Explanation & Post-Exam Socratic AI Tutor */}
-                    <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800/90 text-xs sm:text-sm space-y-3">
+                    <div className="p-4 rounded-xl bg-white border border-slate-200/90 text-xs sm:text-sm space-y-3">
                       <div className="flex flex-wrap items-center justify-between gap-2">
-                        <div className="text-xs font-black text-purple-400 flex items-center gap-1.5">
-                          <Sparkles className="w-3.5 h-3.5" />
+                        <div className="text-xs font-black text-indigo-700 flex items-center gap-1.5">
+                          <Sparkles className="w-3.5 h-3.5 text-blue-600" />
                           <span>Lời Giải & Hướng Dẫn Tư Duy Chi Tiết:</span>
                         </div>
 
@@ -1622,9 +1622,9 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
                           <button
                             type="button"
                             onClick={() => handleAskSocraticTutor(q)}
-                            className="px-3.5 py-1.5 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/40 text-purple-300 font-extrabold text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
+                            className="px-3.5 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 font-extrabold text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs"
                           >
-                            <Bot className="w-3.5 h-3.5 text-purple-400" />
+                            <Bot className="w-3.5 h-3.5 text-blue-600" />
                             <span>💡 Hỏi Gia Sư AI Socratic Về Câu Này</span>
                           </button>
 
@@ -1632,31 +1632,31 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
                             <button
                               type="button"
                               onClick={() => handleOpenFullSocraticModal(q)}
-                              className="px-3.5 py-1.5 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/40 text-indigo-300 font-extrabold text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
+                              className="px-3.5 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 font-extrabold text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs"
                             >
-                              <MessageSquare className="w-3.5 h-3.5 text-indigo-400" />
+                              <MessageSquare className="w-3.5 h-3.5 text-indigo-600" />
                               <span>Chat Socratic Chuyên Sâu</span>
                             </button>
                           )}
                         </div>
                       </div>
 
-                      <div className="text-slate-300 leading-relaxed">
+                      <div className="text-slate-700 font-medium leading-relaxed">
                         <MathText text={q.explanation} />
                       </div>
 
                       {/* Inline Socratic Tutor Stream for this Question */}
                       {activeTutorQuestionId === q.id && (
-                        <div className="mt-3 p-5 rounded-2xl bg-gradient-to-br from-indigo-950/90 via-slate-900 to-purple-950/90 border border-indigo-400/40 shadow-lg space-y-3 animate-fade-in">
-                          <div className="flex items-center justify-between border-b border-indigo-400/20 pb-2.5">
-                            <div className="flex items-center gap-2 text-xs sm:text-sm font-extrabold text-cyan-300">
-                              <Bot className="w-4 h-4 text-cyan-400" />
+                        <div className="mt-3 p-5 rounded-2xl bg-gradient-to-br from-blue-900 via-indigo-950 to-slate-900 border border-blue-500/40 shadow-lg space-y-3 animate-fade-in">
+                          <div className="flex items-center justify-between border-b border-white/15 pb-2.5">
+                            <div className="flex items-center gap-2 text-xs sm:text-sm font-extrabold text-[#FACC15]">
+                              <Bot className="w-4 h-4 text-[#FACC15]" />
                               <span>Gia Sư AI Socratic Phân Tích Tư Duy Câu {q.question_number}:</span>
                             </div>
                             <button
                               type="button"
                               onClick={() => setActiveTutorQuestionId(null)}
-                              className="px-2.5 py-1 rounded-lg bg-slate-800/80 text-[11px] font-bold text-slate-300 hover:text-white hover:bg-slate-700 cursor-pointer transition-all"
+                              className="px-2.5 py-1 rounded-lg bg-white/10 text-[11px] font-bold text-slate-200 hover:text-white hover:bg-white/20 cursor-pointer transition-all"
                             >
                               Đóng
                             </button>
@@ -1666,7 +1666,7 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
                             {tutorResponse ? (
                               <MathText text={tutorResponse} className="text-white" />
                             ) : (
-                              <div className="flex items-center gap-2 text-cyan-300 animate-pulse py-2">
+                              <div className="flex items-center gap-2 text-[#FACC15] animate-pulse py-2">
                                 <Sparkles className="w-4 h-4 animate-spin" />
                                 <span>Gia sư Socratic đang phân tích lỗi sai và gợi mở hướng tư duy...</span>
                               </div>
@@ -1682,20 +1682,20 @@ export default function DiagnosticAssessmentPage({ onNavigateDashboard, onNaviga
           </div>
 
           {/* Action buttons */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-slate-800">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-slate-200/80">
             <button
               type="button"
               onClick={() => setStage('setup')}
-              className="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 font-extrabold text-xs flex items-center justify-center gap-2 transition-all"
+              className="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-white hover:bg-[#FDFBF7] border border-slate-200 text-slate-700 font-extrabold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-2xs"
             >
-              <RefreshCw className="w-4 h-4" />
+              <RefreshCw className="w-4 h-4 text-blue-600" />
               <span>Khảo Sát Đề Mới Khác</span>
             </button>
 
             <button
               type="button"
               onClick={onNavigateDashboard}
-              className="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-500 hover:opacity-90 text-slate-950 font-black text-xs flex items-center justify-center gap-2 shadow-lg shadow-cyan-500/20 transition-all"
+              className="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 hover:opacity-95 text-white font-black text-xs flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20 transition-all cursor-pointer"
             >
               <span>Vào Lộ Trình Học Tập Cá Nhân Hóa (Dashboard)</span>
               <ArrowRight className="w-4 h-4" />

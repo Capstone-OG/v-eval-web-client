@@ -341,7 +341,7 @@ export default function ForgotPasswordModal(props) {
         ) : null}
 
         {/* SUCCESS NOTIFICATION */}
-        {modalSuccess && forgotStep !== 2 ? (
+        {modalSuccess ? (
           <div className="p-3.5 mb-4 bg-emerald-50/90 border border-emerald-200 text-emerald-700 text-xs font-bold rounded-2xl flex items-start gap-2.5 shadow-2xs animate-fade">
             <CheckCircle className="w-4 h-4 shrink-0 text-emerald-600 mt-0.5" />
             <span className="leading-relaxed">{modalSuccess}</span>

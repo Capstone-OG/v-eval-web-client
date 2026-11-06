@@ -1,17 +1,18 @@
 # NHẬT KÝ CẬP NHẬT (UPDATE LOG) - WEB CLIENT
 
-## [06/11/2026] - Hợp Nhất Nhánh `ThinhTT/feature-curriculum-studio-formula-editor` Vào `develop`, Khắc Phục Triệt Để Lỗi Nuốt Exception SSE & Tự Động Điền Lời Dẫn Sư Phạm
+## [06/11/2026] - Phân Chia Cổng Giao Diện 5 Vai Trò, Đồng Bộ Template Màu Sắc Chuẩn Trang Chủ (`#FDFBF7`), Kiểm Tra Đa Tầng Email Đăng Ký (DNS MX), Liên Kết Phụ Huynh - Học Sinh 3 Phương Thức & Đấu Nối 100% Dữ Liệu Thực Từ Backend API
 
-- **Hợp Nhất Tự Động Nhánh `ThinhTT/feature-curriculum-studio-formula-editor` Vào `develop` ([`App.jsx`](./src/App.jsx), [`ParentDashboardView.jsx`](./src/components/dashboard/ParentDashboardView.jsx), [`Sidebar.jsx`](./src/components/layout/Sidebar.jsx), [`modals/index.js`](./src/components/modals/index.js))**:
-  - Hợp nhất toàn diện phân hệ **Curriculum Studio & Word-Style Formula Editor (JSXGraph 2D/3D, Bảng Biến Thiên Vector `2N-1`, AI Sinh Câu Hỏi)**, **Thanh toán học phí PayOS VietQR (`TuitionPaymentView.jsx`, `PayOsCheckoutModal.jsx`, `paymentService.js`)**, và **Xác thực OTP 6 chữ số chuẩn Fintech (`ForgotPasswordModal.jsx`, `WebLoginPage.jsx`)** cùng với **Gia sư AI Socratic (Core Flow 4)** và **Trung tâm Phân tích Học tập Đa tác nhân & Ma trận Nhiệt (Core Flow 5)** trên nhánh `develop`.
-  - Tại `ParentDashboardView.jsx`: Kết hợp trọn vẹn dữ liệu Cổng Phụ Huynh Đồng Hành Core Flow 5 (`R_exam` 3 trụ cột, tiến độ kỷ luật 12h/tuần, cảnh báo AI) với Banner đóng học phí nhanh qua VietQR PayOS và `PayOsCheckoutModal`.
-  - Tại `Sidebar.jsx`, `App.jsx` và `src/components/modals/index.js`: Giữ đầy đủ cả `AISocraticTutorModal` lẫn `PayOsCheckoutModal`, tab `Lịch sử & Sổ tay lỗi sai` (`history`) và tab `Học phí & Gói học` (`tuition`).
-- **Khắc Phục Lỗi Nuốt Exception Trong Trình Đọc Stream SSE ([`practiceService.js`](./src/services/practiceService.js))**:
-  - Tách bạch hoàn toàn khối `try...catch` của `JSON.parse` khỏi logic xử lý nghiệp vụ: Khi nhận sự kiện lỗi từ máy chủ (`parsed.error`), lập tức kích hoạt `onError(new Error(parsed.error))` và ném lỗi ra ngoài thay vì bị khối `catch` con nuốt mất.
-  - Xử lý các dòng dữ liệu raw không phải JSON một cách mượt mà và an toàn.
-- **Triệt Tiêu Hoàn Toàn Hiện Tượng Treo Dấu Ba Chấm `...` Vĩnh Viễn ([`AISocraticTutorModal.jsx`](./src/components/modals/AISocraticTutorModal.jsx))**:
-  - Tại sự kiện hoàn tất luồng stream `onComplete`: Nếu nội dung phản hồi `finalAnswer` hoặc tin nhắn cuối của AI bị rỗng, hệ thống tự động điền thông điệp gợi mở sư phạm thân thiện: *"Chào em! Thầy đang lắng nghe thắc mắc của em. Em hãy chia sẻ cụ thể hơn về bài tập hoặc hướng suy luận em muốn thầy gợi mở nhé!"* thay vì hiển thị ba dấu chấm `...`.
-  - Tại sự kiện lỗi `onError`: Nếu gặp mã lỗi 429, ngoài việc hiển thị banner cảnh báo hạn mức, hệ thống đồng thời cập nhật bong bóng tin nhắn giải thích rõ ràng lý do hạn mức gọi câu hỏi để học sinh nắm bắt.
-- **Kiểm Thử & Đóng Gói**:
-  - `npm test` đạt **9/9 tests PASS (100%)** (`paymentService.test.js`, `practiceService.flow5.test.js`, `tokenStorage.test.js`).
-  - `npm run build` hoàn thành sạch sẽ 100% (`3017 modules transformed`, **0 Error**).
+- **Triển Khai Hệ Thống Liên Kết Phụ Huynh - Học Sinh 3 Phương Thức Trực Tiếp Trên Web ([`StudentParentLinkCard.jsx`](./src/components/dashboard/StudentParentLinkCard.jsx), [`ParentDashboardView.jsx`](./src/components/dashboard/ParentDashboardView.jsx), [`userService.js`](./src/services/userService.js), [`App.jsx`](./src/App.jsx))**:
+  - **Cổng Học Viên (`StudentParentLinkCard.jsx`)**:
+    - Cung cấp **Mã học sinh cố định (`VE-XXXXXX`)**, **Mã PIN 6 số động (30 phút)**, **Đường liên kết mời 1-Click** và **Mã QR trực quan** ngay trên Dashboard Học sinh.
+    - Hiển thị banner thông báo nổi bật khi có Phụ huynh gửi yêu cầu liên kết kèm nút **`✓ Chấp Nhận Liên Kết`** / **`Từ chối`** trực tiếp trên Web.
+  - **Cổng Phụ Huynh Đồng Hành (`ParentDashboardView.jsx`)**:
+    - Tích hợp **Trung Tâm Liên Kết Tài Khoản Học Sinh** với 3 Tab: (1) Nhập Mã Code `VE-XXXXXX` / Mã PIN 6 số / Dán đường liên kết mời; (2) Tìm theo Email hoặc SĐT của con để gửi yêu cầu xác nhận 2 chiều; (3) Hướng dẫn quét Mã QR từ màn hình của con.
+    - Tự động nhận diện tham số `?parentLinkCode=...` trên URL khi Phụ huynh bấm đường liên kết mời hoặc quét QR để kết nối tức thì.
+    - Xóa bỏ hoàn toàn chuỗi văn bản mẫu `'Phạm Minh Hoàng'`, hiển thị 100% danh sách học sinh thật từ cơ sở dữ liệu.
+- **Triển Khai Kiểm Tra Tính Hợp Lệ Đa Tầng & Bản Ghi DNS MX Cho Email Đăng Ký ([`emailValidator.js`](./src/utils/emailValidator.js), [`RegisterForm.jsx`](./src/components/auth/RegisterForm.jsx), [`WebLoginPage.jsx`](./src/components/auth/WebLoginPage.jsx), [`ForgotPasswordModal.jsx`](./src/components/auth/ForgotPasswordModal.jsx), [`authService.js`](./src/services/authService.js), [`App.jsx`](./src/App.jsx))**:
+  - Đấu nối chuẩn xác `onOpenLogin`, `onOpenRegister`, `onOpenDashboard`, `onOpenDiagnostic`, `onOpenArchModal` từ `App.jsx` xuống `PublicLandingPage.jsx`.
+  - Xây dựng bộ kiểm tra email đa tầng `emailValidator.js` kết hợp gọi `GET /api/auth/validate-email` và đối soát bản ghi DNS `MX`.
+- **Loại Bỏ 100% Chế Độ Demo / Hardcode / Mock Fallback & Phân Chia 5 Cổng Vai Trò Độc Lập (`student`, `parent`, `teacher`, `manager`, `admin`)**:
+  - Xóa bỏ toàn bộ nút 1-Click Demo Login, thanh chuyển role thủ công, các hàm dữ liệu giả `buildSeed*`, `mockData.js` và thư mục `tests/`.
+  - `npm run build` hoàn thành sạch sẽ 100% (`3008 modules transformed`, **0 Error**).

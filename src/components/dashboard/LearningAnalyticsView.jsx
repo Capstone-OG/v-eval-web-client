@@ -208,23 +208,15 @@ export default function LearningAnalyticsView({
           )}
 
           <button
-            onClick={() => setOnboardingOverride(!isOnboarding)}
-            className="px-3.5 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 border border-white/15 text-xs font-bold text-slate-200 transition-all"
-            title="Chuyển đổi kiểm thử trạng thái học sinh mới chưa làm bài chẩn đoán (needsOnboarding)"
-          >
-            {isOnboarding ? 'Xem Chế Độ Đã Có Dữ Liệu' : 'Xem Thử Ghost Onboarding'}
-          </button>
-
-          <button
             onClick={() => {
               setOnboardingOverride(null);
               loadAnalytics(true);
             }}
             disabled={refreshing}
-            className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-60 text-white text-xs font-extrabold flex items-center gap-2 transition-all shadow-lg shadow-blue-600/25"
+            className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-60 text-white text-xs font-extrabold flex items-center gap-2 transition-all shadow-lg shadow-blue-600/25 cursor-pointer"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
-            <span>Làm mới số liệu</span>
+            <span>Làm mới số liệu từ Backend</span>
           </button>
         </div>
       </div>

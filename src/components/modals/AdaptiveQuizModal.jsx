@@ -1,47 +1,78 @@
-import React, { useState } from 'react';
-import { Zap, CheckCircle2, XCircle, ArrowRight, X, AlertCircle, Bot, FileText } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Zap, CheckCircle2, XCircle, ArrowRight, X, AlertCircle, Bot, FileText, RefreshCw } from 'lucide-react';
 import MathText from '../common/MathText';
 import { practiceService } from '../../services/practiceService';
+import { contentService } from '../../services/contentService';
 
 export default function AdaptiveQuizModal({ isOpen, onClose, onOpenAiTutorWithContext }) {
-  const [bktMastery, setBktMastery] = useState(0.72);
-  const [consecutiveCorrect, setConsecutiveCorrect] = useState(1);
+  const [bktMastery, setBktMastery] = useState(0.5);
+  const [consecutiveCorrect, setConsecutiveCorrect] = useState(0);
   const [consecutiveWrong, setConsecutiveWrong] = useState(0);
   const [remedialNodeActive, setRemedialNodeActive] = useState(false);
   const [quizFinished, setQuizFinished] = useState(false);
 
-  // Sample ZPD Item
+  const [quizItems, setQuizItems] = useState([]);
+  const [loadingItems, setLoadingItems] = useState(false);
   const [itemIndex, setItemIndex] = useState(0);
   const [selectedOpt, setSelectedOpt] = useState(null);
   const [feedback, setFeedback] = useState(null);
   const [answerHistory, setAnswerHistory] = useState({}); // { [questionId]: selectedOptIndex }
 
-  const sampleItems = [
-    {
-      id: "a1b2c3d4-0001-4000-8000-000000000001",
-      skill: "Toán logic mệnh đề & suy luận kéo theo",
-      question: "Nếu mệnh đề kéo theo $P \\Rightarrow Q$ là đúng, và $Q$ là sai, thì ta có thể kết luận chắc chắn gì về $P$?",
-      options: ["A. P có thể đúng hoặc sai", "B. P bắt buộc phải sai", "C. P bắt buộc phải đúng", "D. Không đủ dữ kiện"],
-      correct: 1,
-      difficultyB: 0.15,
-      predictedProb: 0.68,
-      explanation: "Trong bảng chân trị của mệnh đề kéo theo $P \\Rightarrow Q$, mệnh đề chỉ sai khi $P$ đúng và $Q$ sai. Vì $P \\Rightarrow Q$ đúng và $Q$ sai, nên $P$ bắt buộc phải sai."
-    },
-    {
-      id: "a1b2c3d4-0002-4000-8000-000000000002",
-      skill: "Toán logic mệnh đề & suy luận kéo theo",
-      question: "Cho hệ 3 phát biểu $P, Q, R$. Nếu $P \\Rightarrow Q$, $Q \\Rightarrow R$ và $R$ sai. Phát biểu nào chắc chắn ĐÚNG?",
-      options: ["A. P đúng", "B. P sai", "C. Q đúng", "D. Cả P và Q đều đúng"],
-      correct: 1,
-      difficultyB: 0.52, // Application level (b >= 0.50)
-      predictedProb: 0.64,
-      explanation: "Theo quy tắc Modus Tollens (phản đảo): Vì $Q \\Rightarrow R$ đúng mà $R$ sai nên $Q$ sai. Tiếp tục vì $P \\Rightarrow Q$ đúng mà $Q$ sai nên $P$ bắt buộc phải sai."
-    }
-  ];
+  useEffect(() => {
+    if (!isOpen) return;
+    let isMounted = true;
+    setLoadingItems(true);
+    setItemIndex(0);
+    setSelectedOpt(null);
+    setFeedback(null);
+    setAnswerHistory({});
+    setQuizFinished(false);
+
+    contentService
+      .getExamDetail('11111111-1111-1111-1111-111111111111')
+      .then((res) => {
+        if (!isMounted) return;
+        const single = Array.isArray(res?.single_questions) ? res.single_questions : [];
+        const mapped = single.slice(0, 5).map((q, idx) => {
+          const rawOpts =
+            q.options && typeof q.options === 'object' && !Array.isArray(q.options)
+              ? [q.options.A || '', q.options.B || '', q.options.C || '', q.options.D || '']
+              : q.options || [];
+          const formattedOpts = rawOpts.map((opt, oIdx) => {
+            const prefix = ['A', 'B', 'C', 'D'][oIdx] || 'A';
+            return String(opt).match(/^[A-D]\.\s*/) ? opt : `${prefix}. ${opt}`;
+          });
+          const correctLetter = (q.correct_option || q.correctOption || 'A').trim().toUpperCase();
+          const correctIdx = Math.max(0, ['A', 'B', 'C', 'D'].indexOf(correctLetter));
+          return {
+            id: String(q.question_id || q.questionId || `zpd_q_${idx + 1}`),
+            skill: q.suggested_skill_name || q.suggestedSkillName || 'Kỹ năng ZPD ĐGNL',
+            question: q.content || q.text || '',
+            options: formattedOpts,
+            correct: correctIdx,
+            difficultyB: Number(((Number(q.difficulty_level || 2) - 2) * 0.45).toFixed(2)),
+            predictedProb: 0.68,
+            explanation: q.explanation || `Đáp án chính xác là phương án ${correctLetter}.`
+          };
+        });
+        setQuizItems(mapped);
+      })
+      .catch(() => {
+        if (isMounted) setQuizItems([]);
+      })
+      .finally(() => {
+        if (isMounted) setLoadingItems(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
-  const currentItem = sampleItems[itemIndex] || sampleItems[0];
+  const sampleItems = quizItems;
+  const currentItem = sampleItems[itemIndex] || null;
 
   const handleAnswerSubmit = (optIdx) => {
     setSelectedOpt(optIdx);
@@ -191,7 +222,26 @@ export default function AdaptiveQuizModal({ isOpen, onClose, onOpenAiTutorWithCo
 
         {/* Content Body */}
         <div className="p-6 space-y-4 overflow-y-auto">
-          {!quizFinished ? (
+          {loadingItems ? (
+            <div className="py-12 text-center space-y-3">
+              <RefreshCw className="w-6 h-6 text-amber-600 animate-spin mx-auto" />
+              <div className="text-xs font-bold text-slate-600">
+                Đang nạp câu hỏi thích ứng ZPD từ Content Service Backend...
+              </div>
+            </div>
+          ) : !currentItem ? (
+            <div className="py-10 text-center space-y-3">
+              <div className="text-xs font-bold text-slate-600">
+                Chưa có câu hỏi ZPD từ Backend Content Service. Vui lòng kiểm tra kết nối Gateway (:5212).
+              </div>
+              <button
+                onClick={onClose}
+                className="px-4 py-2 bg-amber-600 text-white text-xs font-bold rounded-xl"
+              >
+                Đóng
+              </button>
+            </div>
+          ) : !quizFinished ? (
             <div className="space-y-4">
               
               {/* Question progress */}

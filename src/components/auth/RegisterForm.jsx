@@ -13,7 +13,8 @@ import {
   EyeOff, 
   Sparkles, 
   AlertCircle,
-  Building2 
+  Building2,
+  Loader2
 } from 'lucide-react';
 
 export default function RegisterForm({
@@ -53,7 +54,12 @@ export default function RegisterForm({
   isSubmitting,
   fieldErrors,
   setFieldErrors,
-  handleRegisterSubmit
+  handleRegisterSubmit,
+  emailValidationStatus = 'idle',
+  emailValidationMessage = '',
+  emailSuggestedFix = null,
+  onEmailBlur = null,
+  onApplySuggestedEmail = null
 }) {
   return (
     <form onSubmit={handleRegisterSubmit} className="space-y-3" noValidate>
@@ -102,21 +108,60 @@ export default function RegisterForm({
                 setRegEmail(e.target.value);
                 if (fieldErrors.regEmail) setFieldErrors(prev => ({ ...prev, regEmail: null }));
               }}
+              onBlur={() => {
+                if (typeof onEmailBlur === 'function') {
+                  onEmailBlur(regEmail);
+                }
+              }}
               placeholder="name@gmail.com"
-              className={`w-full pl-9 pr-3 py-2.5 text-xs rounded-xl focus:outline-none transition-all font-semibold ${
-                fieldErrors.regEmail
+              className={`w-full pl-9 pr-8 py-2.5 text-xs rounded-xl focus:outline-none transition-all font-semibold ${
+                fieldErrors.regEmail || emailValidationStatus === 'invalid'
                   ? 'bg-rose-50/50 border border-rose-400 text-rose-900 focus:ring-2 focus:ring-rose-400/30'
-                  : 'bg-slate-50 border border-slate-200 text-slate-800 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600'
+                  : emailValidationStatus === 'valid'
+                    ? 'bg-emerald-50/40 border border-emerald-500 text-slate-900 focus:ring-2 focus:ring-emerald-500/20'
+                    : 'bg-slate-50 border border-slate-200 text-slate-800 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600'
               }`}
             />
             <Mail className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            {emailValidationStatus === 'checking' && (
+              <Loader2 className="w-3.5 h-3.5 text-blue-600 animate-spin absolute right-2.5 top-1/2 -translate-y-1/2" />
+            )}
+            {emailValidationStatus === 'valid' && !fieldErrors.regEmail && (
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 absolute right-2.5 top-1/2 -translate-y-1/2" />
+            )}
+            {(fieldErrors.regEmail || emailValidationStatus === 'invalid') && emailValidationStatus !== 'checking' && (
+              <AlertCircle className="w-4 h-4 text-rose-600 absolute right-2.5 top-1/2 -translate-y-1/2" />
+            )}
           </div>
-          {fieldErrors.regEmail && (
-            <p className="text-[11px] font-bold text-rose-600 mt-1 flex items-center gap-1 animate-fade">
-              <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-              <span>{fieldErrors.regEmail}</span>
+
+          {/* Hiển thị trạng thái kiểm tra Email trực tiếp */}
+          {fieldErrors.regEmail ? (
+            <div className="mt-1 space-y-1 animate-fade">
+              <p className="text-[11px] font-bold text-rose-600 flex items-start gap-1 leading-tight">
+                <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                <span>{fieldErrors.regEmail}</span>
+              </p>
+              {emailSuggestedFix && typeof onApplySuggestedEmail === 'function' && (
+                <button
+                  type="button"
+                  onClick={() => onApplySuggestedEmail(emailSuggestedFix)}
+                  className="text-[11px] font-extrabold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-2 py-0.5 rounded-lg transition-colors cursor-pointer"
+                >
+                  Sửa thành: {emailSuggestedFix}
+                </button>
+              )}
+            </div>
+          ) : emailValidationStatus === 'checking' ? (
+            <p className="text-[10px] font-bold text-blue-600 mt-1 flex items-center gap-1 animate-fade">
+              <Loader2 className="w-3 h-3 animate-spin shrink-0" />
+              <span>Đang kiểm tra tính hợp lệ & máy chủ mail (MX)...</span>
             </p>
-          )}
+          ) : emailValidationStatus === 'valid' ? (
+            <p className="text-[10px] font-bold text-emerald-600 mt-1 flex items-center gap-1 animate-fade">
+              <CheckCircle2 className="w-3 h-3 shrink-0" />
+              <span>{emailValidationMessage || 'Email hợp lệ (Máy chủ mail MX hoạt động)'}</span>
+            </p>
+          ) : null}
         </div>
 
         <div>
@@ -416,18 +461,18 @@ export default function RegisterForm({
       {/* Submit Register Button */}
       <button
         type="submit"
-        disabled={isSubmitting}
-        className="w-full py-3 px-6 bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 hover:from-emerald-700 hover:to-teal-700 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2 transition-all active:scale-[0.99] disabled:opacity-70 mt-1"
+        disabled={isSubmitting || emailValidationStatus === 'checking'}
+        className="w-full py-3 px-6 bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 hover:from-emerald-700 hover:to-teal-700 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2 transition-all active:scale-[0.99] disabled:opacity-70 mt-1 cursor-pointer"
       >
-        {isSubmitting ? (
+        {isSubmitting || emailValidationStatus === 'checking' ? (
           <span className="flex items-center gap-2">
             <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-            <span>Đang kiểm tra & khởi tạo...</span>
+            <span>{emailValidationStatus === 'checking' ? 'Đang kiểm tra email...' : 'Đang xác minh & khởi tạo...'}</span>
           </span>
         ) : (
           <>
             <Sparkles className="w-4 h-4 text-amber-300" />
-            <span>Tạo Tài Khoản & Mở Lộ Trình ZPD</span>
+            <span>Kiểm Tra Email & Nhận Mã OTP Kích Hoạt</span>
           </>
         )}
       </button>

@@ -12,7 +12,6 @@ import {
   RefreshCw,
   AlertCircle
 } from 'lucide-react';
-import { mockMilestone } from '../../data/mockData';
 import { practiceService } from '../../services/practiceService';
 
 export default function MilestoneCard({ currentUser, studentDashboard, onStartTask, onContinueMilestone, onStartDiagnostic }) {
@@ -122,8 +121,8 @@ export default function MilestoneCard({ currentUser, studentDashboard, onStartTa
     );
   }
 
-  // Case: User is logged in but hasn't generated a roadmap yet
-  if (hasNoRoadmap) {
+  // Case: User is logged in but hasn't generated a roadmap yet (or roadmapData is empty)
+  if (hasNoRoadmap || !roadmapData || !Array.isArray(roadmapData.stages) || roadmapData.stages.length === 0) {
     return (
       <div className="bg-gradient-to-br from-blue-50/80 via-white to-indigo-50/50 rounded-3xl p-6 sm:p-8 border-2 border-dashed border-blue-300 card-shadow space-y-5 text-center sm:text-left">
         <div className="flex flex-col sm:flex-row items-center gap-5">
@@ -134,7 +133,7 @@ export default function MilestoneCard({ currentUser, studentDashboard, onStartTa
           <div className="space-y-1.5 flex-1">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-100/80 text-blue-800 text-xs font-bold">
               <Sparkles className="w-3.5 h-3.5 text-blue-600" />
-              <span>Chưa có Lộ trình Cá nhân hóa</span>
+              <span>Chưa có Lộ trình Cá nhân hóa trên Backend</span>
             </div>
             <h3 className="text-xl font-extrabold text-slate-900 tracking-tight">
               Khởi tạo Lộ trình Ôn luyện Thích ứng 120 câu
@@ -163,28 +162,28 @@ export default function MilestoneCard({ currentUser, studentDashboard, onStartTa
     );
   }
 
-  // If real roadmap data exists, map it; otherwise fallback to mockMilestone
-  const stageNodes = (roadmapData?.stages?.[0]?.nodes || []).slice(0, 3);
-  const activeMilestone = roadmapData ? {
+  // Map 100% real roadmap data from Backend
+  const stageNodes = (roadmapData.stages[0]?.nodes || []).slice(0, 3);
+  const activeMilestone = {
     currentMilestoneIndex: 1,
-    totalMilestones: roadmapData.totalStages || roadmapData.stages?.length || 4,
+    totalMilestones: roadmapData.totalStages || roadmapData.stages.length || 4,
     estimatedTime: `${roadmapData.targetWeeklyHours || 6} giờ/tuần`,
-    title: roadmapData.stages?.[0]?.domainName
+    title: roadmapData.stages[0]?.domainName
       ? `Chặng 01 (${roadmapData.stages[0].domainName}): Luyện tập chuyên đề thích ứng`
-      : (roadmapData.stages?.[0]?.stageName || mockMilestone.title),
+      : (roadmapData.stages[0]?.stageName || 'Chặng 01: Lộ trình học thích ứng'),
     progressPercent: Math.round(roadmapData.progressPercentage || roadmapData.overallProgressPercent || 0),
-    nextMilestoneTitle: roadmapData.stages?.[1]?.domainName
+    nextMilestoneTitle: roadmapData.stages[1]?.domainName
       ? `Chặng 02 (${roadmapData.stages[1].domainName})`
-      : (roadmapData.stages?.[1]?.stageName || mockMilestone.nextMilestoneTitle),
-    tasks: stageNodes.length > 0 ? stageNodes.map((n, idx) => ({
+      : (roadmapData.stages[1]?.stageName || 'Chặng tiếp theo trên đồ thị DAG'),
+    tasks: stageNodes.map((n, idx) => ({
       id: n.nodeId || `task_${idx}`,
       title: n.skillName || `Chuyên đề #${n.stepOrder}`,
       meta: `Kỹ năng #${n.stepOrder} • Miền: ${n.domainName || 'Tổng hợp'}`,
       badge: n.status === 'COMPLETED' ? 'Đã hoàn thành' : n.status === 'IN_PROGRESS' ? 'Đang học' : 'Kế tiếp',
       type: idx % 2 === 0 ? 'video' : 'quiz',
       status: n.status === 'COMPLETED' ? 'completed' : n.status === 'IN_PROGRESS' ? 'in_progress' : 'pending'
-    })) : mockMilestone.tasks
-  } : mockMilestone;
+    }))
+  };
 
   return (
     <div className="bg-white rounded-3xl p-6 border border-slate-200/80 card-shadow space-y-6">

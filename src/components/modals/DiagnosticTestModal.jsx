@@ -1,34 +1,95 @@
-import React, { useState } from 'react';
-import { Target, CheckCircle2, ArrowRight, X, Sparkles, Award } from 'lucide-react';
-import { sampleQuestionsForDiagnostic, mockUser } from '../../data/mockData';
+import React, { useState, useEffect } from 'react';
+import { Target, CheckCircle2, ArrowRight, X, Sparkles, Award, RefreshCw } from 'lucide-react';
 import MathText from '../common/MathText';
+import { contentService } from '../../services/contentService';
+import { tokenStorage } from '../../services/apiClient';
 
 export default function DiagnosticTestModal({ isOpen, onClose, onCompleteTest }) {
+  const [questions, setQuestions] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState({});
   const [isCalculated, setIsCalculated] = useState(false);
-  const [calculatedTheta, setCalculatedTheta] = useState(0.65);
-  const [calculatedClass, setCalculatedClass] = useState("Lớp Bứt Phá (Theta 0 > +0.5)");
+  const [calculatedTheta, setCalculatedTheta] = useState(0);
+  const [calculatedClass, setCalculatedClass] = useState('Lớp Tăng Tốc (Acceleration)');
+
+  useEffect(() => {
+    if (!isOpen) return;
+    let isMounted = true;
+    setLoading(true);
+    setCurrentStep(0);
+    setSelectedAnswers({});
+    setIsCalculated(false);
+
+    contentService
+      .getExamDetail('11111111-1111-1111-1111-111111111111')
+      .then((res) => {
+        if (!isMounted) return;
+        const single = Array.isArray(res?.single_questions) ? res.single_questions : [];
+        const mapped = single.slice(0, 10).map((q, idx) => {
+          const opts =
+            q.options && typeof q.options === 'object' && !Array.isArray(q.options)
+              ? [q.options.A || '', q.options.B || '', q.options.C || '', q.options.D || '']
+              : q.options || [];
+          return {
+            id: q.question_id || q.questionId || `q_${idx + 1}`,
+            domain: q.domain_name || 'Khảo thí ĐGNL',
+            skill: q.suggested_skill_name || q.suggestedSkillName || 'Kỹ năng chuẩn hóa',
+            difficulty: q.difficulty_level || q.difficultyLevel || 2,
+            question: q.content || q.text || '',
+            options: opts,
+            correctOption: (q.correct_option || q.correctOption || 'A').trim().toUpperCase()
+          };
+        });
+        setQuestions(mapped);
+      })
+      .catch(() => {
+        if (isMounted) setQuestions([]);
+      })
+      .finally(() => {
+        if (isMounted) setLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
-  const currentQ = sampleQuestionsForDiagnostic[currentStep];
+  const currentUser = tokenStorage.getUser();
+  const currentQ = questions[currentStep];
 
   const handleSelectOption = (optIdx) => {
-    setSelectedAnswers(prev => ({ ...prev, [currentQ.id]: optIdx }));
+    if (!currentQ) return;
+    setSelectedAnswers((prev) => ({ ...prev, [currentQ.id]: optIdx }));
   };
 
   const handleNext = () => {
-    if (currentStep < sampleQuestionsForDiagnostic.length - 1) {
+    if (currentStep < questions.length - 1) {
       setCurrentStep(currentStep + 1);
     } else {
-      // Calculate IRT Theta_0 live
+      const correctCount = questions.filter((q) => {
+        const chosenIdx = selectedAnswers[q.id];
+        const chosenLetter = ['A', 'B', 'C', 'D'][chosenIdx] || '';
+        return chosenLetter === q.correctOption;
+      }).length;
+      const ratio = questions.length > 0 ? correctCount / questions.length : 0;
+      const theta = Number(((ratio - 0.5) * 4).toFixed(2));
+      setCalculatedTheta(theta);
+      setCalculatedClass(
+        theta >= 0.5
+          ? 'Lớp Bứt Phá (Theta 0 >= +0.5)'
+          : theta <= -0.5
+            ? 'Lớp Nền Tảng (Theta 0 <= -0.5)'
+            : 'Lớp Tăng Tốc (-0.5 < Theta 0 < +0.5)'
+      );
       setIsCalculated(true);
     }
   };
 
   const handleFinish = () => {
-    onCompleteTest();
+    if (onCompleteTest) onCompleteTest();
     onClose();
   };
 
@@ -62,12 +123,31 @@ export default function DiagnosticTestModal({ isOpen, onClose, onCompleteTest })
 
         {/* Body */}
         <div className="p-6 space-y-5 overflow-y-auto">
-          {!isCalculated ? (
+          {loading ? (
+            <div className="py-12 text-center space-y-3">
+              <RefreshCw className="w-6 h-6 text-blue-600 animate-spin mx-auto" />
+              <div className="text-xs font-bold text-slate-600">
+                Đang tải câu hỏi khảo sát từ Content Service Backend...
+              </div>
+            </div>
+          ) : questions.length === 0 ? (
+            <div className="py-10 text-center space-y-3">
+              <div className="text-xs font-bold text-slate-600">
+                Chưa tải được câu hỏi từ Content Service. Vui lòng mở tab "Khảo thí 30 câu" để làm đề đầy đủ.
+              </div>
+              <button
+                onClick={onClose}
+                className="px-4 py-2 bg-blue-600 text-white text-xs font-bold rounded-xl"
+              >
+                Đóng
+              </button>
+            </div>
+          ) : !isCalculated ? (
             <div className="space-y-4">
               
               {/* Question progress */}
               <div className="flex items-center justify-between text-xs font-bold text-slate-500">
-                <span>Câu hỏi {currentStep + 1} / {sampleQuestionsForDiagnostic.length}</span>
+                <span>Câu hỏi {currentStep + 1} / {questions.length}</span>
                 <span className="text-blue-600 font-extrabold">{currentQ.domain}</span>
               </div>
 
@@ -75,7 +155,7 @@ export default function DiagnosticTestModal({ isOpen, onClose, onCompleteTest })
               <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
                 <div 
                   className="bg-blue-600 h-full rounded-full transition-all"
-                  style={{ width: `${((currentStep + 1) / sampleQuestionsForDiagnostic.length) * 100}%` }}
+                  style={{ width: `${((currentStep + 1) / questions.length) * 100}%` }}
                 ></div>
               </div>
 
@@ -116,7 +196,7 @@ export default function DiagnosticTestModal({ isOpen, onClose, onCompleteTest })
                 onClick={handleNext}
                 className="w-full py-3 px-4 bg-blue-600 disabled:opacity-50 hover:bg-blue-700 text-white font-extrabold text-xs rounded-2xl shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2 transition-all mt-4"
               >
-                <span>{currentStep < sampleQuestionsForDiagnostic.length - 1 ? 'Câu tiếp theo' : 'Chấm điểm & Ước lượng Theta 0'}</span>
+                <span>{currentStep < questions.length - 1 ? 'Câu tiếp theo' : 'Chấm điểm & Ước lượng Theta 0'}</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
 
@@ -133,10 +213,10 @@ export default function DiagnosticTestModal({ isOpen, onClose, onCompleteTest })
                   Hoàn thành Chẩn đoán thành công!
                 </span>
                 <h3 className="text-2xl font-extrabold text-slate-900 mt-2">
-                  Vector Theta 0 = +{calculatedTheta}
+                  Vector Theta 0 = {calculatedTheta >= 0 ? `+${calculatedTheta}` : calculatedTheta}
                 </h3>
                 <p className="text-xs text-slate-500 mt-1">
-                  Giá trị tiên nghiệm P(L0) = 0.657 được lưu vào bảng StudentMasteryStates.
+                  Giá trị tiên nghiệm P(L0) được đồng bộ vào bảng StudentMasteryStates.
                 </p>
               </div>
 
@@ -149,10 +229,7 @@ export default function DiagnosticTestModal({ isOpen, onClose, onCompleteTest })
                   • Lớp được gán: <strong className="text-blue-700">{calculatedClass}</strong>
                 </div>
                 <div className="text-slate-700">
-                  • Cơ sở đăng ký: <strong className="text-slate-900">{mockUser.campusName}</strong>
-                </div>
-                <div className="text-slate-700">
-                  • Lộ trình DAG đã sinh: <strong>28 mốc học tự động (Sắp xếp Topo)</strong>
+                  • Cơ sở đăng ký: <strong className="text-slate-900">{currentUser?.campusName || 'Hệ thống V-Eval'}</strong>
                 </div>
               </div>
 

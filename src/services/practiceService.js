@@ -171,487 +171,68 @@ export const FLOW5_DEFAULTS = {
   CAMPUS_ID: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
 };
 
-const buildSeedStudentDashboard = (studentId) => ({
-  studentId: ensureGuid(studentId, FLOW5_DEFAULTS.STUDENT_ID),
-  fullName: 'Phạm Minh Hoàng',
-  currentEstimatedScore: 845,
-  targetScore: 920,
-  confidenceInterval: '820 - 870',
-  theta0: 0.65,
-  radarCompetency: [
-    { domainCode: 'DOM_LANG', domainName: 'Sử dụng Ngôn ngữ (Việt - Anh)', studentScore: 82.0, targetScore: 85.0 },
-    { domainCode: 'DOM_MATH', domainName: 'Toán học, Tư duy Logic & Phân tích số liệu', studentScore: 68.5, targetScore: 85.0 },
-    { domainCode: 'DOM_NAT_SCI', domainName: 'Giải quyết vấn đề - Khoa học Tự nhiên', studentScore: 76.0, targetScore: 82.0 },
-    { domainCode: 'DOM_SOC_SCI', domainName: 'Giải quyết vấn đề - Khoa học Xã hội', studentScore: 79.5, targetScore: 80.0 }
-  ],
-  roadmapProgress: {
-    totalMilestones: 12,
-    completedMilestones: 7,
-    progressPercentage: 58.3,
-    currentMilestoneTitle: 'Chặng 08: Toán logic mệnh đề & suy luận kéo theo'
-  },
-  streakAnalytics: {
-    currentStreak: 12,
-    longestStreak: 16,
-    hasStreakFreeze: true,
-    isTodayCompleted: true,
-    weeklyActivityDays: [true, true, true, true, true, true, true]
-  },
-  recentMockExams: [
-    {
-      submissionId: 'e1111111-2222-3333-4444-555555555501',
-      examTitle: 'Đề Thi Thử ĐGNL ĐHQG TP.HCM Chuẩn Hóa Đợt 2 (120 Câu)',
-      score: 845,
-      totalCorrect: 86,
-      totalQuestions: 120,
-      completedAt: new Date(Date.now() - 2 * 86400000).toISOString()
-    },
-    {
-      submissionId: 'e1111111-2222-3333-4444-555555555502',
-      examTitle: 'Đề Thi Thử ĐGNL ĐHQG TP.HCM Chuẩn Hóa Đợt 1 (120 Câu)',
-      score: 790,
-      totalCorrect: 79,
-      totalQuestions: 120,
-      completedAt: new Date(Date.now() - 9 * 86400000).toISOString()
-    }
-  ],
-  needsOnboarding: false,
-  _source: 'seed_fallback'
-});
-
-const buildSeedClassHeatmap = (classId, { domainCode = '', minMastery = null } = {}) => {
-  const isSecondary = classId === FLOW5_DEFAULTS.SECONDARY_CLASS_ID;
-  const resolvedClassId = ensureGuid(classId, FLOW5_DEFAULTS.CLASS_ID);
-  const nowIso = new Date().toISOString();
-
-  const allColumns = [
-    {
-      skillId: '88888888-9999-aaaa-bbbb-cccccccccccc',
-      skillName: 'Toán logic mệnh đề & suy luận kéo theo',
-      domainCode: 'DOM_MATH',
-      classAveragePlt: isSecondary ? 0.56 : 0.44,
-      alertStatus: 'CRITICAL_RED',
-      isBimodal: true
-    },
-    {
-      skillId: '88888888-9999-aaaa-bbbb-dddddddddddd',
-      skillName: 'Đạo hàm hàm hợp & cực trị chứa tham số',
-      domainCode: 'DOM_MATH',
-      classAveragePlt: isSecondary ? 0.61 : 0.52,
-      alertStatus: 'WARNING_AMBER',
-      isBimodal: false
-    },
-    {
-      skillId: '88888888-9999-aaaa-bbbb-eeeeeeeeeeee',
-      skillName: 'Đọc hiểu văn bản khoa học & suy luận ngữ nghĩa',
-      domainCode: 'DOM_LANG',
-      classAveragePlt: isSecondary ? 0.81 : 0.78,
-      alertStatus: 'SAFE_GREEN',
-      isBimodal: false
-    },
-    {
-      skillId: '88888888-9999-aaaa-bbbb-ffffffffffff',
-      skillName: 'Cân bằng phản ứng oxi hóa khử & bảo toàn electron',
-      domainCode: 'DOM_NAT_SCI',
-      classAveragePlt: isSecondary ? 0.69 : 0.63,
-      alertStatus: 'SAFE_GREEN',
-      isBimodal: true
-    },
-    {
-      skillId: '88888888-9999-aaaa-bbbb-111111111111',
-      skillName: 'Phân tích bảng số liệu kinh tế - địa lý vùng',
-      domainCode: 'DOM_SOC_SCI',
-      classAveragePlt: isSecondary ? 0.75 : 0.72,
-      alertStatus: 'SAFE_GREEN',
-      isBimodal: false
-    }
-  ];
-
-  const filteredColumns = allColumns.filter((col) => {
-    if (domainCode && domainCode !== 'ALL' && col.domainCode !== domainCode) return false;
-    if (
-      minMastery !== null &&
-      minMastery !== undefined &&
-      minMastery !== '' &&
-      col.classAveragePlt > Number(minMastery)
-    ) {
-      return false;
-    }
-    return true;
-  });
-
-  const activeSkillIds = new Set(filteredColumns.map((c) => c.skillId));
-
-  const rawStudents = [
-    {
-      studentId: '3fa85f64-5717-4562-b3fc-2c963f66afa6',
-      studentName: 'Phạm Minh Hoàng',
-      avatarUrl: null,
-      thetaScore: 0.72,
-      plts: [0.82, 0.68, 0.86, 0.79, 0.8]
-    },
-    {
-      studentId: '4fa85f64-5717-4562-b3fc-2c963f66afa6',
-      studentName: 'Nguyễn Ngọc Bảo Trâm',
-      avatarUrl: null,
-      thetaScore: -0.35,
-      plts: [0.28, 0.41, 0.74, 0.36, 0.68]
-    },
-    {
-      studentId: '5fa85f64-5717-4562-b3fc-2c963f66afa6',
-      studentName: 'Trần Tuấn Kiệt',
-      avatarUrl: null,
-      thetaScore: -0.48,
-      plts: [0.24, 0.35, 0.69, 0.44, 0.65]
-    },
-    {
-      studentId: '6fa85f64-5717-4562-b3fc-2c963f66afa6',
-      studentName: 'Lê Hà Thảo My',
-      avatarUrl: null,
-      thetaScore: 0.15,
-      plts: [0.39, 0.56, 0.82, 0.72, 0.74]
-    },
-    {
-      studentId: '7fa85f64-5717-4562-b3fc-2c963f66afa6',
-      studentName: 'Võ Hoàng Long',
-      avatarUrl: null,
-      thetaScore: 0.94,
-      plts: [0.89, 0.78, 0.88, 0.86, 0.84]
-    }
-  ];
-
-  const rows = rawStudents.map((stu) => {
-    const cells = allColumns
-      .map((col, idx) => {
-        const plt = stu.plts[idx];
-        const masteryLevel = plt >= 0.75 ? 'MASTERED' : plt >= 0.5 ? 'LEARNING' : 'STRUGGLING';
-        return {
-          skillId: col.skillId,
-          plt,
-          masteryLevel,
-          lastUpdated: nowIso
-        };
-      })
-      .filter((cell) => activeSkillIds.has(cell.skillId));
-
-    const weakCount = cells.filter((c) => c.plt < 0.5).length;
-    const riskStatus = weakCount >= 2 ? 'HIGH_RISK' : weakCount === 1 ? 'MEDIUM_RISK' : 'SAFE';
-
-    return {
-      studentId: stu.studentId,
-      studentName: stu.studentName,
-      avatarUrl: stu.avatarUrl,
-      thetaScore: stu.thetaScore,
-      riskStatus,
-      skillCells: cells
-    };
-  });
-
-  const pedagogicalAlerts = [
-    {
-      skillId: '88888888-9999-aaaa-bbbb-cccccccccccc',
-      skillName: 'Toán logic mệnh đề & suy luận kéo theo',
-      domainCode: 'DOM_MATH',
-      strugglingRate: 0.6,
-      strugglingCount: 3,
-      averagePlt: 0.44,
-      alertLevel: 'CRITICAL_RED',
-      suggestedAction:
-        '60% học sinh trong lớp có P(Lt) < 0.50 và phân hóa 2 cực rõ rệt (σ ≥ 0.28). Khuyến nghị chia nhóm vi mô 3–5 học sinh tại lớp và phát phiếu bài tập thích ứng ngay!'
-    },
-    {
-      skillId: '88888888-9999-aaaa-bbbb-dddddddddddd',
-      skillName: 'Đạo hàm hàm hợp & cực trị chứa tham số',
-      domainCode: 'DOM_MATH',
-      strugglingRate: 0.4,
-      strugglingCount: 2,
-      averagePlt: 0.52,
-      alertLevel: 'WARNING_AMBER',
-      suggestedAction:
-        '40% học sinh đang lúng túng bước xét dấu đạo hàm hợp. Nên gom bàn vi mô ôn tập chuyên đề 15 phút đầu giờ.'
-    }
-  ].filter((a) => !domainCode || domainCode === 'ALL' || a.domainCode === domainCode);
-
+const buildEmptyStudentDashboard = (studentId) => {
+  const currentUser = tokenStorage.getUser();
   return {
-    classId: resolvedClassId,
-    className: isSecondary ? 'Lớp Chuyên Đề ĐGNL Tăng Tốc 01' : 'Lớp ĐGNL Cơ sở 1 - ĐHQG TP.HCM',
-    totalStudents: rows.length,
-    lastAggregatedAt: nowIso,
-    pedagogicalAlerts,
-    columns: filteredColumns,
-    rows,
-    _source: 'seed_fallback'
+    studentId: ensureGuid(studentId, FLOW5_DEFAULTS.STUDENT_ID),
+    fullName: currentUser?.fullName || '',
+    currentEstimatedScore: 0,
+    targetScore: Number(currentUser?.targetScore || 900),
+    confidenceInterval: 'Chưa có dữ liệu',
+    theta0: 0,
+    radarCompetency: CANONICAL_DOMAIN_META.map((meta) => ({
+      domainCode: meta.domainCode,
+      domainName: meta.domainName,
+      studentScore: 0,
+      targetScore: 80
+    })),
+    roadmapProgress: {
+      totalMilestones: 0,
+      completedMilestones: 0,
+      progressPercentage: 0,
+      currentMilestoneTitle: 'Chưa khởi tạo lộ trình'
+    },
+    streakAnalytics: {
+      currentStreak: 0,
+      longestStreak: 0,
+      hasStreakFreeze: false,
+      isTodayCompleted: false,
+      weeklyActivityDays: [false, false, false, false, false, false, false]
+    },
+    recentMockExams: [],
+    needsOnboarding: true,
+    _source: 'backend_empty'
   };
 };
 
-const buildSeedParentDashboard = (parentId) => ({
+const buildEmptyClassHeatmap = (classId) => ({
+  classId: ensureGuid(classId, FLOW5_DEFAULTS.CLASS_ID),
+  className: '',
+  totalStudents: 0,
+  lastAggregatedAt: null,
+  pedagogicalAlerts: [],
+  columns: [],
+  rows: [],
+  _source: 'backend_empty'
+});
+
+const buildEmptyParentDashboard = (parentId) => ({
   parentId: ensureGuid(parentId, FLOW5_DEFAULTS.PARENT_ID),
-  children: [
-    {
-      studentId: FLOW5_DEFAULTS.STUDENT_ID,
-      studentName: 'Phạm Minh Hoàng',
-      grade: 'Lớp 12A1',
-      school: 'THPT Chuyên Lê Hồng Phong - TP.HCM',
-      targetMajor: 'Khoa học Máy tính - ĐH Bách Khoa (ĐHQG TP.HCM)',
-      assignedTeacherName: 'ThS. Nguyễn Minh Triết',
-      teacherContactPhone: '0908 246 357',
-      examReadiness: {
-        readinessIndex: 82.4,
-        readinessTier: 'READY',
-        normalizedThetaScore: 81.2,
-        skillCoverageScore: 79.5,
-        consistencyScore: 95.0
-      },
-      weeklyDisciplines: {
-        studyHoursThisWeek: 13.5,
-        recommendedHours: 12.0,
-        currentStreak: 12,
-        completionStatus: 'EXCEEDED_GOAL'
-      },
-      aiParentAlerts: [
-        {
-          type: 'SUCCESS',
-          title: 'Duy trì chuỗi 12 ngày tự học liên tiếp vượt chuẩn 12 giờ/tuần',
-          description:
-            'Hoàng đã hoàn thành 13.5 giờ tự học có xác thực trong 7 ngày qua (đạt 112.5% định mức khuyến nghị) và hoàn thành Chặng 07 đúng tiến độ.'
-        },
-        {
-          type: 'WARNING',
-          title: 'Cần củng cố thêm mảng Toán Logic Mệnh Đề & Suy Luận',
-          description:
-            'Độ thành thạo chuyên đề suy luận kéo theo hiện ở mức khá nhưng tốc độ xử lý câu hỏi vận dụng cao còn chậm. Giáo viên trên lớp đã xếp Hoàng vào nhóm bàn hỗ trợ chéo.'
-        }
-      ]
-    }
-  ],
-  _source: 'seed_fallback'
+  children: [],
+  _source: 'backend_empty'
 });
 
-const buildSeedCampusComparativeHeatmap = (campusId) => ({
+const buildEmptyCampusComparativeHeatmap = (campusId) => ({
   campusId: ensureGuid(campusId, FLOW5_DEFAULTS.CAMPUS_ID),
-  campusName: 'Cơ sở Quận 10 - TP.HCM (Trung tâm ĐGNL Trọng điểm)',
-  totalClasses: 4,
-  lastUpdated: new Date().toISOString(),
-  domainAverages: [
-    { domainCode: 'DOM_LANG', domainName: 'Sử dụng Ngôn ngữ', averageMastery: 0.77 },
-    { domainCode: 'DOM_MATH', domainName: 'Toán & Tư duy Logic', averageMastery: 0.58 },
-    { domainCode: 'DOM_NAT_SCI', domainName: 'Khoa học Tự nhiên', averageMastery: 0.66 },
-    { domainCode: 'DOM_SOC_SCI', domainName: 'Khoa học Xã hội', averageMastery: 0.73 }
-  ],
-  classComparisons: [
-    {
-      classId: FLOW5_DEFAULTS.CLASS_ID,
-      className: 'Lớp ĐGNL Cơ sở 1 - ĐHQG TP.HCM (01)',
-      teacherName: 'ThS. Nguyễn Minh Triết',
-      totalStudents: 20,
-      overallRiskLevel: 'HIGH_RISK',
-      domainMasteries: [
-        { domainCode: 'DOM_LANG', averagePlt: 0.78, strugglingRate: 0.1 },
-        { domainCode: 'DOM_MATH', averagePlt: 0.46, strugglingRate: 0.55 },
-        { domainCode: 'DOM_NAT_SCI', averagePlt: 0.63, strugglingRate: 0.25 },
-        { domainCode: 'DOM_SOC_SCI', averagePlt: 0.72, strugglingRate: 0.15 }
-      ]
-    },
-    {
-      classId: FLOW5_DEFAULTS.SECONDARY_CLASS_ID,
-      className: 'Lớp Chuyên Đề ĐGNL Tăng Tốc (02)',
-      teacherName: 'ThS. Lê Hoàng Nam',
-      totalStudents: 19,
-      overallRiskLevel: 'MEDIUM_RISK',
-      domainMasteries: [
-        { domainCode: 'DOM_LANG', averagePlt: 0.75, strugglingRate: 0.16 },
-        { domainCode: 'DOM_MATH', averagePlt: 0.54, strugglingRate: 0.37 },
-        { domainCode: 'DOM_NAT_SCI', averagePlt: 0.65, strugglingRate: 0.21 },
-        { domainCode: 'DOM_SOC_SCI', averagePlt: 0.71, strugglingRate: 0.16 }
-      ]
-    },
-    {
-      classId: 'c0000000-0000-0000-0000-000000000002',
-      className: 'Lớp Nền Tảng Toán & Logic V-ACT (03)',
-      teacherName: 'Cô Trần Thu Hà',
-      totalStudents: 18,
-      overallRiskLevel: 'HIGH_RISK',
-      domainMasteries: [
-        { domainCode: 'DOM_LANG', averagePlt: 0.72, strugglingRate: 0.22 },
-        { domainCode: 'DOM_MATH', averagePlt: 0.44, strugglingRate: 0.61 },
-        { domainCode: 'DOM_NAT_SCI', averagePlt: 0.59, strugglingRate: 0.33 },
-        { domainCode: 'DOM_SOC_SCI', averagePlt: 0.7, strugglingRate: 0.17 }
-      ]
-    },
-    {
-      classId: 'c0000000-0000-0000-0000-000000000003',
-      className: 'Lớp Mũi Nhọn Săn Điểm 950+ (04)',
-      teacherName: 'TS. Vũ Quốc Khánh',
-      totalStudents: 20,
-      overallRiskLevel: 'SAFE',
-      domainMasteries: [
-        { domainCode: 'DOM_LANG', averagePlt: 0.84, strugglingRate: 0.05 },
-        { domainCode: 'DOM_MATH', averagePlt: 0.86, strugglingRate: 0.05 },
-        { domainCode: 'DOM_NAT_SCI', averagePlt: 0.78, strugglingRate: 0.1 },
-        { domainCode: 'DOM_SOC_SCI', averagePlt: 0.8, strugglingRate: 0.05 }
-      ]
-    }
-  ],
-  _source: 'seed_fallback'
+  campusName: '',
+  totalClasses: 0,
+  lastUpdated: null,
+  domainAverages: [],
+  classComparisons: [],
+  _source: 'backend_empty'
 });
 
-const getDefaultSeedHistory = () => [
-  {
-    id: 'sub_seed_vact_01',
-    title: 'Đề Khảo Sát Năng Lực Đầu Vào Chuẩn V-ACT 2026 (Đề số 01)',
-    examType: 'DIAGNOSTIC',
-    engineUsed: 'content_service',
-    completedAt: new Date(Date.now() - 86400000).toISOString(),
-    theta_0: 0.42,
-    placement_class: 'ACCELERATION',
-    ai_commentary:
-      'Bạn đạt độ chính xác 67% trên bài khảo sát mẫu. Năng lực Tư duy Logic và Toán học ở mức khá, tuy nhiên cần củng cố kỹ việc xét dấu đạo hàm trên toàn miền xác định và đọc kỹ mệnh đề phủ định.',
-    pacing: {
-      totalCorrect: 4,
-      totalQuestions: 6,
-      totalTimeSpent: 215,
-      avgTimePerQ: 36,
-      fastCount: 2,
-      normalCount: 3,
-      slowCount: 1,
-      flaggedCount: 1
-    },
-    domain_scores: [
-      { domain_id: 'dom_math', domain_name: 'Toán học & Phân tích số liệu', total_questions: 3, correct_count: 2, accuracy_pct: 67 },
-      { domain_id: 'dom_logic', domain_name: 'Tư duy Logic & Suy luận', total_questions: 2, correct_count: 1, accuracy_pct: 50 },
-      { domain_id: 'dom_lang', domain_name: 'Sử dụng Ngôn ngữ & Văn học', total_questions: 1, correct_count: 1, accuracy_pct: 100 }
-    ],
-    radar_chart: [
-      { domain_id: 'dom_math', domain_name: 'Toán học & Phân tích số liệu', student_pct: 67, benchmark_pct: 85 },
-      { domain_id: 'dom_logic', domain_name: 'Tư duy Logic & Suy luận', student_pct: 50, benchmark_pct: 80 },
-      { domain_id: 'dom_lang', domain_name: 'Sử dụng Ngôn ngữ & Văn học', student_pct: 100, benchmark_pct: 75 }
-    ],
-    reviewedQuestions: [
-      {
-        id: 'seed_q_1',
-        question_number: 1,
-        content: 'Hàm số nào sau đây đồng biến trên khoảng $(-\\infty; +\\infty)$?',
-        options: ['$y = x^4 + 2x^2$', '$y = \\frac{2x-1}{x+1}$', '$y = x^3 + 3x - 1$', '$y = -x^3 + x$'],
-        skill_id: 'sk_dom_math_1',
-        skill_name: 'Tính đơn điệu của hàm số',
-        domain_id: 'dom_math',
-        domain_name: 'Toán học & Phân tích số liệu',
-        bloom: 2,
-        studentChoice: 'A',
-        correctChoice: 'C',
-        correct: 'C',
-        isCorrect: false,
-        timeSpent: 42,
-        isFlagged: true,
-        speedCategory: 'normal',
-        explanation:
-          "Ta có $y' = 3x^2 + 3 > 0, \\forall x \\in \\mathbb{R}$, do đó hàm số $y = x^3 + 3x - 1$ luôn đồng biến trên $\\mathbb{R}$."
-      },
-      {
-        id: 'seed_q_2',
-        question_number: 2,
-        content: 'Cho cấp số cộng $(u_n)$ có $u_1 = 3$ và công sai $d = 4$. Giá trị của $u_5$ bằng:',
-        options: ['$19$', '$15$', '$23$', '$16$'],
-        skill_id: 'sk_dom_math_2',
-        skill_name: 'Dãy số & Cấp số cộng',
-        domain_id: 'dom_math',
-        domain_name: 'Toán học & Phân tích số liệu',
-        bloom: 1,
-        studentChoice: 'A',
-        correctChoice: 'A',
-        correct: 'A',
-        isCorrect: true,
-        timeSpent: 20,
-        isFlagged: false,
-        speedCategory: 'fast',
-        explanation: 'Áp dụng công thức số hạng tổng quát $u_n = u_1 + (n-1)d$, ta có $u_5 = 3 + 4 \\times 4 = 19$.'
-      },
-      {
-        id: 'seed_q_3',
-        question_number: 3,
-        content: 'Tìm tập xác định $D$ của hàm số $y = \\log_2(x^2 - 4x + 3)$:',
-        options: ['$D = (1; 3)$', '$D = (-\\infty; 1) \\cup (3; +\\infty)$', '$D = [1; 3]$', '$D = (3; +\\infty)$'],
-        skill_id: 'sk_dom_math_3',
-        skill_name: 'Hàm số Mũ & Logarit',
-        domain_id: 'dom_math',
-        domain_name: 'Toán học & Phân tích số liệu',
-        bloom: 2,
-        studentChoice: 'B',
-        correctChoice: 'B',
-        correct: 'B',
-        isCorrect: true,
-        timeSpent: 35,
-        isFlagged: false,
-        speedCategory: 'normal',
-        explanation: 'Điều kiện xác định: $x^2 - 4x + 3 > 0 \\iff x < 1$ hoặc $x > 3$. Vậy $D = (-\\infty; 1) \\cup (3; +\\infty)$.'
-      },
-      {
-        id: 'seed_q_4',
-        question_number: 4,
-        content: 'Cho mệnh đề: "Nếu trời mưa thì đường ướt". Mệnh đề nào sau đây tương đương logic (contrapositive) với mệnh đề đã cho?',
-        options: [
-          'Nếu trời không mưa thì đường không ướt.',
-          'Nếu đường ướt thì trời mưa.',
-          'Nếu đường không ướt thì trời không mưa.',
-          'Trời mưa hoặc đường ướt.'
-        ],
-        skill_id: 'sk_dom_logic_1',
-        skill_name: 'Mệnh đề & Suy luận Logic',
-        domain_id: 'dom_logic',
-        domain_name: 'Tư duy Logic & Suy luận',
-        bloom: 2,
-        studentChoice: 'A',
-        correctChoice: 'C',
-        correct: 'C',
-        isCorrect: false,
-        timeSpent: 55,
-        isFlagged: false,
-        speedCategory: 'normal',
-        explanation:
-          'Mệnh đề kéo theo $P \\Rightarrow Q$ chỉ tương đương logic với mệnh đề phản đảo $\\neg Q \\Rightarrow \\neg P$ ("Nếu đường không ướt thì trời không mưa").'
-      },
-      {
-        id: 'seed_q_5',
-        question_number: 5,
-        content:
-          'Năm bạn A, B, C, D, E xếp thành một hàng dọc. Biết A đứng trước B, C đứng ngay sau B, và D đứng đầu hàng. Nếu E đứng cuối hàng thì ai đứng ở vị trí thứ 3?',
-        options: ['A', 'B', 'C', 'D'],
-        skill_id: 'sk_dom_logic_2',
-        skill_name: 'Phân tích Sắp xếp & Ràng buộc',
-        domain_id: 'dom_logic',
-        domain_name: 'Tư duy Logic & Suy luận',
-        bloom: 3,
-        studentChoice: 'B',
-        correctChoice: 'B',
-        correct: 'B',
-        isCorrect: true,
-        timeSpent: 45,
-        isFlagged: false,
-        speedCategory: 'normal',
-        explanation: 'Thứ tự từ 1 đến 5 là: D (1) - A (2) - B (3) - C (4) - E (5). Vậy vị trí thứ 3 là B.'
-      },
-      {
-        id: 'seed_q_6',
-        question_number: 6,
-        content: 'Chọn từ viết đúng chính tả tiếng Việt chuẩn trong các phương án sau:',
-        options: ['Sáng lạng', 'Xán lạn', 'Sáng lạn', 'Xáng lạn'],
-        skill_id: 'sk_dom_lang_1',
-        skill_name: 'Chính tả & Ngữ nghĩa Tiếng Việt',
-        domain_id: 'dom_lang',
-        domain_name: 'Sử dụng Ngôn ngữ & Văn học',
-        bloom: 1,
-        studentChoice: 'B',
-        correctChoice: 'B',
-        correct: 'B',
-        isCorrect: true,
-        timeSpent: 18,
-        isFlagged: false,
-        speedCategory: 'fast',
-        explanation: '"Xán lạn" (gốc Hán Việt: rực rỡ, tươi sáng) là từ đúng chính tả.'
-      }
-    ]
-  }
-];
+const getDefaultSeedHistory = () => [];
 
 let isBackgroundSyncRunning = false;
 
@@ -885,8 +466,12 @@ export const practiceService = {
       const raw = localStorage.getItem(HISTORY_STORAGE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
+        if (Array.isArray(parsed)) {
+          const cleaned = parsed.filter((item) => item && item.id !== 'sub_seed_vact_01');
+          if (cleaned.length !== parsed.length) {
+            localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(cleaned));
+          }
+          return cleaned;
         }
       }
 
@@ -902,20 +487,17 @@ export const practiceService = {
               engineUsed: lastResult.engineUsed || 'content_service',
               completedAt: lastResult.completedAt || new Date().toISOString(),
               ...lastResult
-            },
-            ...getDefaultSeedHistory()
+            }
           ];
           localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(migrated));
           return migrated;
         }
       }
 
-      const seeded = getDefaultSeedHistory();
-      localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(seeded));
-      return seeded;
+      return [];
     } catch (e) {
       console.warn('Could not load submission history:', e);
-      return getDefaultSeedHistory();
+      return [];
     }
   },
 
@@ -1494,11 +1076,11 @@ export const practiceService = {
       }
       return hydrated;
     } catch (err) {
-      console.warn('[Core Flow 5] getStudentDashboard fallback activated:', err?.message);
+      console.warn('[Core Flow 5] getStudentDashboard backend error:', err?.message);
       if (realSubs.length > 0) {
         return this.hydrateStudentDashboardWithLocalHistory(null, resolvedStudentId);
       }
-      return buildSeedStudentDashboard(resolvedStudentId);
+      return buildEmptyStudentDashboard(resolvedStudentId);
     }
   },
 
@@ -1514,26 +1096,15 @@ export const practiceService = {
       const data = (await apiClient.get(`/api/practice/classes/${resolvedClassId}/heatmap${qs}`)).data;
       return { ...data, _source: 'backend' };
     } catch (err) {
-      console.warn('[Core Flow 5] getClassHeatmap fallback activated:', err?.message);
-      return buildSeedClassHeatmap(resolvedClassId, { domainCode, minMastery });
+      console.warn('[Core Flow 5] getClassHeatmap backend error:', err?.message);
+      return buildEmptyClassHeatmap(resolvedClassId);
     }
   },
 
   async forceAggregateClassHeatmap(classId) {
     const resolvedClassId = ensureGuid(classId, FLOW5_DEFAULTS.CLASS_ID);
-    try {
-      const data = (await apiClient.post(`/api/practice/classes/${resolvedClassId}/heatmap/force-aggregate`, {})).data;
-      return { ...data, _source: 'backend' };
-    } catch (err) {
-      console.warn('[Core Flow 5] forceAggregateClassHeatmap fallback activated:', err?.message);
-      return {
-        classId: resolvedClassId,
-        aggregatedAt: new Date().toISOString(),
-        totalSkillsCalculated: 5,
-        message: 'Đã tái tổng hợp ma trận nhiệt lớp học và cập nhật ngưỡng cảnh báo sư phạm thành công.',
-        _source: 'seed_fallback'
-      };
-    }
+    const data = (await apiClient.post(`/api/practice/classes/${resolvedClassId}/heatmap/force-aggregate`, {})).data;
+    return { ...data, _source: 'backend' };
   },
 
   async getParentDashboard(parentId) {
@@ -1542,8 +1113,8 @@ export const practiceService = {
       const data = (await apiClient.get(`/api/practice/analytics/parent/${resolvedParentId}/children`)).data;
       return { ...data, _source: 'backend' };
     } catch (err) {
-      console.warn('[Core Flow 5] getParentDashboard fallback activated:', err?.message);
-      return buildSeedParentDashboard(resolvedParentId);
+      console.warn('[Core Flow 5] getParentDashboard backend error:', err?.message);
+      return buildEmptyParentDashboard(resolvedParentId);
     }
   },
 
@@ -1555,8 +1126,8 @@ export const practiceService = {
       ).data;
       return { ...data, _source: 'backend' };
     } catch (err) {
-      console.warn('[Core Flow 5] getCampusComparativeHeatmap fallback activated:', err?.message);
-      return buildSeedCampusComparativeHeatmap(resolvedCampusId);
+      console.warn('[Core Flow 5] getCampusComparativeHeatmap backend error:', err?.message);
+      return buildEmptyCampusComparativeHeatmap(resolvedCampusId);
     }
   }
 };

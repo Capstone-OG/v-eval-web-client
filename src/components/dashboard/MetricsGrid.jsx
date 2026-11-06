@@ -6,7 +6,6 @@ import {
   AlertTriangle,
   ChevronRight
 } from 'lucide-react';
-import { mockUser, mockWeakSkills } from '../../data/mockData';
 
 export default function MetricsGrid({
   studentDashboard,
@@ -15,32 +14,29 @@ export default function MetricsGrid({
   onOpenZPD,
   onOpenAnalytics
 }) {
-  const estimatedScore = studentDashboard?.currentEstimatedScore ?? mockUser.currentScore;
-  const confidenceInterval = studentDashboard?.confidenceInterval || mockUser.scoreRange;
+  const estimatedScore = Number(studentDashboard?.currentEstimatedScore ?? 0);
+  const confidenceInterval = studentDashboard?.confidenceInterval || 'Chưa có dữ liệu';
   const roadmap = studentDashboard?.roadmapProgress || {
-    completedMilestones: mockUser.masteredSkillsCount,
-    totalMilestones: mockUser.totalSkillsCount,
-    progressPercentage: mockUser.roadmapProgress,
-    currentMilestoneTitle: 'Chặng 3/8'
+    completedMilestones: 0,
+    totalMilestones: 0,
+    progressPercentage: 0,
+    currentMilestoneTitle: 'Chưa khởi tạo lộ trình'
   };
   const streak = studentDashboard?.streakAnalytics || {
-    currentStreak: 12,
-    longestStreak: 16,
-    hasStreakFreeze: true,
-    weeklyActivityDays: [true, true, true, true, true, true, true]
+    currentStreak: 0,
+    longestStreak: 0,
+    hasStreakFreeze: false,
+    weeklyActivityDays: [false, false, false, false, false, false, false]
   };
 
   const weakDomains = (studentDashboard?.radarCompetency || [])
     .filter((d) => Number(d.studentScore) < Number(d.targetScore))
     .sort((a, b) => a.studentScore - b.studentScore);
 
-  const displayedGaps =
-    weakDomains.length > 0
-      ? weakDomains.slice(0, 2).map((d) => ({
-          id: d.domainCode,
-          name: `${d.domainName} (${d.studentScore}% / ${d.targetScore}%)`
-        }))
-      : mockWeakSkills;
+  const displayedGaps = weakDomains.slice(0, 2).map((d) => ({
+    id: d.domainCode,
+    name: `${d.domainName} (${d.studentScore}% / ${d.targetScore}%)`
+  }));
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-5 my-6">
@@ -191,15 +187,21 @@ export default function MetricsGrid({
           </div>
 
           <div className="space-y-1 mb-4 text-xs font-semibold text-slate-700">
-            {displayedGaps.map((sk) => (
-              <div
-                key={sk.id}
-                className="flex items-center gap-2 p-1.5 rounded-lg bg-amber-50/60 border border-amber-100 text-[11px] truncate"
-              >
-                <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
-                <span className="truncate">{sk.name}</span>
+            {displayedGaps.length > 0 ? (
+              displayedGaps.map((sk) => (
+                <div
+                  key={sk.id}
+                  className="flex items-center gap-2 p-1.5 rounded-lg bg-amber-50/60 border border-amber-100 text-[11px] truncate"
+                >
+                  <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
+                  <span className="truncate">{sk.name}</span>
+                </div>
+              ))
+            ) : (
+              <div className="p-2 rounded-lg bg-slate-50 border border-slate-100 text-[11px] text-slate-500">
+                Làm bài khảo sát 30 câu để xác định miền năng lực cần bù đắp
               </div>
-            ))}
+            )}
           </div>
         </div>
 

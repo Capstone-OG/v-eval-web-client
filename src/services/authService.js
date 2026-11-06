@@ -1,4 +1,4 @@
-﻿import apiClient, { tokenStorage } from './apiClient';
+import apiClient, { tokenStorage } from './apiClient';
 
 /**
  * Authentication and User Identity Service
@@ -15,35 +15,83 @@ export const authService = {
       password: password || ''
     };
 
-    const extractAndSaveUser = (data) => {
+    const extractAndSaveUser = async (data) => {
       const u = data.user || data;
       const roles = u.roles || data.roles || [];
-      const rawRole = (roles[0] || 'student').toLowerCase();
-      const primaryRole = rawRole === 'administrator' ? 'admin' : rawRole;
       const userObj = {
         id: u.userId || u.id || data.userId || data.id,
+        userId: u.userId || u.id || data.userId || data.id,
         email: u.email || data.email || payload.email,
-        fullName: u.fullName || data.fullName || 'Người dùng V-Eval',
+        fullName: u.fullName || data.fullName || payload.email,
+        phone: u.phone || data.phone || '',
+        campusId: u.campusId || data.campusId || null,
+        campusName: u.campusName || data.campusName || null,
         roles: roles,
-        role: primaryRole
+        role: this.resolveAppRole({ roles })
       };
       tokenStorage.setTokens(data.accessToken, data.refreshToken, userObj);
+
+      try {
+        const me = await this.fetchCurrentUserProfile();
+        if (me && (me.id || me.userId || me.email)) {
+          const mergedRoles = Array.isArray(me.roles) && me.roles.length > 0 ? me.roles : roles;
+          const enrichedUser = {
+            ...userObj,
+            id: me.userId || me.id || userObj.id,
+            userId: me.userId || me.id || userObj.userId,
+            email: me.email || userObj.email,
+            fullName: me.fullName || userObj.fullName,
+            phone: me.phone || userObj.phone,
+            campusId: me.campusId || userObj.campusId,
+            campusName: me.campusName || userObj.campusName,
+            roles: mergedRoles,
+            role: this.resolveAppRole({ roles: mergedRoles, role: me.role })
+          };
+          tokenStorage.setTokens(data.accessToken, data.refreshToken, enrichedUser);
+          return { ...data, user: enrichedUser };
+        }
+      } catch {
+        // Keep token payload user if /users/me is not reachable immediately
+      }
+
       return { ...data, user: userObj };
     };
 
     try {
       const res = await apiClient.post('/api/auth/login', payload);
       if (res.data?.accessToken) {
-        return extractAndSaveUser(res.data);
+        return await extractAndSaveUser(res.data);
       }
       return res.data;
     } catch (err) {
       if (err.status === 404) {
         const res = await apiClient.post('/api/v1/identity/auth/login', payload);
         if (res.data?.accessToken) {
-          return extractAndSaveUser(res.data);
+          return await extractAndSaveUser(res.data);
         }
         return res.data;
+      }
+      throw err;
+    }
+  },
+
+  /**
+   * Kiểm tra tính hợp lệ, máy chủ nhận thư DNS MX và trạng thái tồn tại của Email trước khi đăng ký (UC 01a)
+   * @param {string} email
+   */
+  async validateEmail(email) {
+    const cleanEmail = (email || '').trim().toLowerCase();
+    try {
+      const res = await apiClient.get(
+        `/api/auth/validate-email?email=${encodeURIComponent(cleanEmail)}`
+      );
+      return res.data?.value || res.data;
+    } catch (err) {
+      if (err.status === 404) {
+        const res = await apiClient.get(
+          `/api/v1/identity/auth/validate-email?email=${encodeURIComponent(cleanEmail)}`
+        );
+        return res.data?.value || res.data;
       }
       throw err;
     }
@@ -143,9 +191,16 @@ export const authService = {
   },
 
   /**
-   * Lấy thông tin hồ sơ người dùng hiện tại (UC 04)
+   * Lấy thông tin người dùng lưu trong localStorage (đồng bộ cho khởi tạo React state)
    */
-  async getCurrentUser() {
+  getCurrentUser() {
+    return tokenStorage.getUser();
+  },
+
+  /**
+   * Gọi API lấy thông tin hồ sơ người dùng hiện tại từ Backend (UC 04)
+   */
+  async fetchCurrentUserProfile() {
     try {
       const res = await apiClient.get('/api/v1/users/me');
       return res.data;
@@ -156,6 +211,35 @@ export const authService = {
       }
       throw err;
     }
+  },
+
+  /**
+   * Phân giải Role chuẩn của ứng dụng ('student' | 'parent' | 'teacher' | 'manager' | 'admin')
+   */
+  resolveAppRole(user) {
+    if (!user) return 'student';
+    if (user.role && ['student', 'parent', 'teacher', 'manager', 'admin'].includes(user.role)) {
+      return user.role;
+    }
+    const roles = Array.isArray(user.roles) ? user.roles : [];
+    const normalized = roles.map((r) => String(r).toLowerCase());
+    if (normalized.some((r) => r.includes('admin') || r.includes('administrator'))) {
+      return 'admin';
+    }
+    if (
+      normalized.some(
+        (r) => r.includes('manager') || r.includes('director') || r.includes('quanly')
+      )
+    ) {
+      return 'manager';
+    }
+    if (normalized.some((r) => r.includes('teacher') || r.includes('giaovien'))) {
+      return 'teacher';
+    }
+    if (normalized.some((r) => r.includes('parent') || r.includes('phuhuynh'))) {
+      return 'parent';
+    }
+    return 'student';
   },
 
   /**
@@ -189,20 +273,13 @@ export const authService = {
   async getCampuses() {
     try {
       const res = await apiClient.get('/api/v1/campuses');
-      return res.data;
+      return Array.isArray(res.data) ? res.data : (res.data?.items || res.data?.data || []);
     } catch (err) {
       if (err.status === 404) {
-        try {
-          const res = await apiClient.get('/api/v1/identity/campuses');
-          return res.data;
-        } catch {
-          // Fall through to fallback
-        }
+        const res = await apiClient.get('/api/v1/identity/campuses');
+        return Array.isArray(res.data) ? res.data : (res.data?.items || res.data?.data || []);
       }
-      return [
-        { campusId: '3fa85f64-5717-4562-b3fc-2c963f66afa6', code: 'CS_THU_DUC', name: 'Cơ sở 1 - Khu đô thị ĐHQG-HCM, TP. Thủ Đức', address: 'Khu phố 6, Phường Linh Trung, TP. Thủ Đức, TP.HCM' },
-        { campusId: '4ba85f64-5717-4562-b3fc-2c963f66afa7', code: 'CS_QUAN_10', name: 'Cơ sở 2 - Quận 10, TP.HCM', address: '268 Lý Thường Kiệt, Phường 14, Quận 10, TP.HCM' }
-      ];
+      throw err;
     }
   },
 

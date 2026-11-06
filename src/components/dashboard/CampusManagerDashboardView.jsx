@@ -17,7 +17,6 @@ import {
   RefreshCw,
   AlertTriangle
 } from 'lucide-react';
-import { campusesList } from '../../data/mockData';
 import { userService } from '../../services/userService';
 import { practiceService, FLOW5_DEFAULTS } from '../../services/practiceService';
 import { toast } from '../../context/ToastContext';
@@ -30,14 +29,12 @@ const DOMAIN_ORDER = [
   { code: 'DOM_SOC_SCI', short: 'KH Xã hội' }
 ];
 
-const CAMPUS_GUID_MAP = {
-  'campus-1': FLOW5_DEFAULTS.CAMPUS_ID,
-  'campus-2': 'bbbbbbbb-cccc-dddd-eeee-ffffffffffff',
-  'campus-3': 'cccccccc-dddd-eeee-ffff-111111111111'
-};
-
-export default function CampusManagerDashboardView({ currentUser, onOpenProvisionPage }) {
-  const [selectedCampus, setSelectedCampus] = useState('campus-1');
+export default function CampusManagerDashboardView({ currentUser, onOpenProvisioning, onOpenProvisionPage }) {
+  const handleOpenProvision = onOpenProvisioning || onOpenProvisionPage;
+  const [campusesList, setCampusesList] = useState([]);
+  const [selectedCampus, setSelectedCampus] = useState(
+    currentUser?.campusId || FLOW5_DEFAULTS.CAMPUS_ID
+  );
   const [showCreateStaffModal, setShowCreateStaffModal] = useState(false);
   const [selectedClassForGroups, setSelectedClassForGroups] = useState(null);
   const [clusteringLoading, setClusteringLoading] = useState(false);
@@ -52,11 +49,53 @@ export default function CampusManagerDashboardView({ currentUser, onOpenProvisio
   const [campusHeatmap, setCampusHeatmap] = useState(null);
   const [heatmapLoading, setHeatmapLoading] = useState(true);
 
+  // Real teachers from Backend User Service
+  const [teachers, setTeachers] = useState([]);
+
+  const loadCampusesAndTeachers = useCallback(async () => {
+    try {
+      const [campusesData, usersRes] = await Promise.all([
+        userService.getCampuses().catch(() => []),
+        userService.getUsers({ role: 'TEACHER', page: 1, pageSize: 50 }).catch(() => ({ items: [] }))
+      ]);
+
+      if (Array.isArray(campusesData) && campusesData.length > 0) {
+        const mappedCampuses = campusesData.map((c) => ({
+          id: c.campusId || c.id,
+          name: c.name,
+          code: c.code
+        }));
+        setCampusesList(mappedCampuses);
+        setSelectedCampus((prev) =>
+          mappedCampuses.some((mc) => mc.id === prev) ? prev : mappedCampuses[0].id
+        );
+      }
+
+      const rawTeachers = Array.isArray(usersRes?.items) ? usersRes.items : [];
+      setTeachers(
+        rawTeachers.map((u) => ({
+          id: u.userId || u.id,
+          name: u.fullName || u.email,
+          email: u.email,
+          phone: u.phone || '',
+          subject: u.specialty || 'Giảng viên ĐGNL',
+          activeClasses: 1,
+          status: u.isActive !== false ? 'Active' : 'Locked'
+        }))
+      );
+    } catch (err) {
+      console.warn('[CampusManagerDashboardView] Error loading campuses/teachers:', err?.message);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadCampusesAndTeachers();
+  }, [loadCampusesAndTeachers]);
+
   const loadCampusHeatmap = useCallback(async () => {
     setHeatmapLoading(true);
     try {
-      const resolvedGuid =
-        CAMPUS_GUID_MAP[selectedCampus] || currentUser?.campusId || FLOW5_DEFAULTS.CAMPUS_ID;
+      const resolvedGuid = selectedCampus || currentUser?.campusId || FLOW5_DEFAULTS.CAMPUS_ID;
       const data = await practiceService.getCampusComparativeHeatmap(resolvedGuid);
       setCampusHeatmap(data);
     } finally {
@@ -68,110 +107,56 @@ export default function CampusManagerDashboardView({ currentUser, onOpenProvisio
     loadCampusHeatmap();
   }, [loadCampusHeatmap]);
 
-  // Danh sách các Lớp học Offline chuẩn (Trần sĩ số tối đa 20 học sinh, đánh số thứ tự tăng dần 01, 02...)
-  const [classesList] = useState([
-    {
-      id: FLOW5_DEFAULTS.CLASS_ID,
-      name: 'Lớp Nền tảng (Foundation) 01 - Cơ sở Quận 10',
-      tier: 'FOUNDATION',
-      cluster: 'Cụm Nền tảng: Khắc phục Lỗ hổng Socratic',
-      studentCount: 20,
+  // Derive real classes list directly from Backend campusHeatmap.classComparisons
+  const classesList = (campusHeatmap?.classComparisons || []).map((cls, idx) => {
+    const avgMastery =
+      (cls.domainMasteries || []).reduce((acc, m) => acc + Number(m.averagePlt || 0), 0) /
+      Math.max(1, (cls.domainMasteries || []).length);
+    return {
+      id: cls.classId,
+      classId: cls.classId,
+      name: cls.className || `Lớp ĐGNL #${idx + 1}`,
+      tier: cls.overallRiskLevel === 'SAFE' ? 'BREAKTHROUGH' : 'ACCELERATION',
+      cluster:
+        cls.overallRiskLevel === 'HIGH_RISK'
+          ? 'Cần tăng cường phụ đạo vi mô (High Risk)'
+          : cls.overallRiskLevel === 'MEDIUM_RISK'
+            ? 'Nhóm học tập ổn định (Medium Risk)'
+            : 'Nhóm làm chủ tốt (Safe)',
+      studentCount: Number(cls.totalStudents ?? 0),
       maxCapacity: 20,
-      assignedTeacher: 'ThS. Nguyễn Minh Triết',
-      progress: 88,
+      assignedTeacher: cls.teacherName || 'Chưa phân công',
+      progress: Math.round(avgMastery * 100),
       status: 'active',
-      schedule: 'Tối Thứ 3, 5 (19:30 - 21:00)'
-    },
-    {
-      id: FLOW5_DEFAULTS.SECONDARY_CLASS_ID,
-      name: 'Lớp Tăng tốc (Acceleration) 02 - Cơ sở Quận 10',
-      tier: 'ACCELERATION',
-      cluster: 'Cụm Tăng tốc: Tối ưu hoá ZPD & Vận dụng',
-      studentCount: 19,
-      maxCapacity: 20,
-      assignedTeacher: 'ThS. Lê Hoàng Nam',
-      progress: 74,
-      status: 'active',
-      schedule: 'Tối Thứ 4, 7 (19:30 - 21:00)'
-    },
-    {
-      id: 'c0000000-0000-0000-0000-000000000002',
-      name: 'Lớp Nền tảng Toán & Logic V-ACT 03',
-      tier: 'FOUNDATION',
-      cluster: 'Cụm Nền tảng: Bù hổng Mệnh đề & Số liệu',
-      studentCount: 18,
-      maxCapacity: 20,
-      assignedTeacher: 'Cô Trần Thu Hà',
-      progress: 68,
-      status: 'active',
-      schedule: 'Tối Thứ 2, 6 (19:30 - 21:00)'
-    },
-    {
-      id: 'c0000000-0000-0000-0000-000000000003',
-      name: 'Lớp Bứt phá (Breakthrough) 04 - Săn Điểm 950+',
-      tier: 'BREAKTHROUGH',
-      cluster: 'Cụm Bứt phá: Luyện đề Chuyên sâu 950+ (Theta > +0.5)',
-      studentCount: 20,
-      maxCapacity: 20,
-      assignedTeacher: 'TS. Vũ Quốc Khánh',
-      progress: 85,
-      status: 'active',
-      schedule: 'Sáng Chủ Nhật (08:30 - 11:30)'
-    }
-  ]);
+      schedule: 'Lịch học theo cơ sở'
+    };
+  });
+
+  const totalCampusStudents = classesList.reduce((acc, c) => acc + c.studentCount, 0);
+  const overallCampusMasteryPct =
+    (campusHeatmap?.domainAverages || []).length > 0
+      ? Math.round(
+          ((campusHeatmap.domainAverages.reduce((acc, d) => acc + Number(d.averageMastery || 0), 0) /
+            campusHeatmap.domainAverages.length) *
+            100)
+        )
+      : 0;
 
   const handleAutoClusterThematic = async () => {
     try {
       setClusteringLoading(true);
-      await practiceService.autoClusterClasses(CAMPUS_GUID_MAP[selectedCampus], 6);
+      await practiceService.autoClusterClasses(selectedCampus, 6);
+      await loadCampusHeatmap();
       setCreatedNotice(
-        'Đã chạy thuật toán Elbow Method + K-Means thành công: Tự động gom cụm và đồng bộ các Lớp Chuyên Đề theo 4 miền năng lực!'
+        'Đã chạy thuật toán Elbow Method + K-Means trên Backend: Tự động gom cụm và đồng bộ các Lớp Chuyên Đề theo 4 miền năng lực!'
       );
       setTimeout(() => setCreatedNotice(''), 6000);
     } catch (err) {
-      console.warn('Auto cluster fallback:', err.message);
-      setCreatedNotice(
-        'Đã kích hoạt thuật toán Elbow Method & K-Means++ phân cụm tối ưu 4 miền năng lực cho cơ sở!'
-      );
-      setTimeout(() => setCreatedNotice(''), 6000);
+      toast.error('Không thể chạy gom cụm lớp học: ' + (err?.message || 'Lỗi kết nối Backend'));
     } finally {
       setClusteringLoading(false);
     }
   };
-
-  // Teachers of this campus
-  const [teachers, setTeachers] = useState([
-    {
-      id: 'TEA-01',
-      name: 'ThS. Nguyễn Minh Triết',
-      email: 'minhtriet.dgnl@veval.edu.vn',
-      phone: '0908246357',
-      subject: 'Toán & Tư duy Logic',
-      activeClasses: 2,
-      rating: 4.9,
-      status: 'Active'
-    },
-    {
-      id: 'TEA-02',
-      name: 'Cô Trần Thu Hà',
-      email: 'thuha.dgnl@vnu.edu.vn',
-      phone: '0918765432',
-      subject: 'Ngôn ngữ Tiếng Việt & Đọc hiểu',
-      activeClasses: 1,
-      rating: 4.85,
-      status: 'Active'
-    },
-    {
-      id: 'TEA-03',
-      name: 'TS. Vũ Quốc Khánh',
-      email: 'quockhanh.stem@vnu.edu.vn',
-      phone: '0988112233',
-      subject: 'Khoa học Tự nhiên & Số liệu',
-      activeClasses: 1,
-      rating: 4.92,
-      status: 'Active'
-    }
-  ]);
 
   const handleCreateStaff = async (e) => {
     e.preventDefault();
@@ -183,21 +168,11 @@ export default function CampusManagerDashboardView({ currentUser, onOpenProvisio
         email: staffEmail,
         phone: staffPhone || '0900000000',
         roleName: staffRole,
+        campusId: selectedCampus,
         specialty: staffSubject
       });
 
-      const newStaff = {
-        id: `TEA-0${teachers.length + 1}`,
-        name: staffName,
-        email: staffEmail,
-        phone: staffPhone || '0900000000',
-        subject: staffSubject,
-        activeClasses: 0,
-        rating: 5.0,
-        status: 'Active'
-      };
-
-      setTeachers([newStaff, ...teachers]);
+      await loadCampusesAndTeachers();
       setCreatedNotice(
         `Đã cấp tài khoản nội bộ thành công cho ${staffName} (${staffRole}) vào CSDL PostgreSQL! Mật khẩu khởi tạo: Password123@`
       );
@@ -270,10 +245,10 @@ export default function CampusManagerDashboardView({ currentUser, onOpenProvisio
         <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
           <div>
             <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">Tổng học viên cơ sở</div>
-            <div className="text-2xl font-black text-slate-900 mt-1">119 Học viên</div>
+            <div className="text-2xl font-black text-slate-900 mt-1">{totalCampusStudents} Học viên</div>
             <div className="text-[11px] font-semibold text-emerald-600 flex items-center gap-1 mt-1">
               <TrendingUp className="w-3.5 h-3.5" />
-              <span>+18 học viên tuần này</span>
+              <span>Đồng bộ thực tế từ các lớp</span>
             </div>
           </div>
           <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
@@ -287,7 +262,7 @@ export default function CampusManagerDashboardView({ currentUser, onOpenProvisio
             <div className="text-2xl font-black text-slate-900 mt-1">{teachers.length} Giảng viên</div>
             <div className="text-[11px] font-semibold text-indigo-600 flex items-center gap-1 mt-1">
               <ShieldCheck className="w-3.5 h-3.5" />
-              <span>100% Đã xác thực bảo mật</span>
+              <span>Tài khoản PostgreSQL IAM</span>
             </div>
           </div>
           <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
@@ -313,11 +288,11 @@ export default function CampusManagerDashboardView({ currentUser, onOpenProvisio
 
         <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
           <div>
-            <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">Điểm IRT trung bình</div>
-            <div className="text-2xl font-black text-slate-900 mt-1">+0.58 Theta</div>
+            <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">Độ làm chủ TB 4 miền</div>
+            <div className="text-2xl font-black text-slate-900 mt-1">{overallCampusMasteryPct}% BKT</div>
             <div className="text-[11px] font-semibold text-cyan-600 flex items-center gap-1 mt-1">
               <Award className="w-3.5 h-3.5" />
-              <span>Dự báo 795/1200 ĐGNL</span>
+              <span>Trung bình toàn cơ sở</span>
             </div>
           </div>
           <div className="w-12 h-12 rounded-2xl bg-cyan-50 text-cyan-600 flex items-center justify-center font-bold">
@@ -574,10 +549,10 @@ export default function CampusManagerDashboardView({ currentUser, onOpenProvisio
               </p>
             </div>
             <div className="flex items-center gap-3">
-              {onOpenProvisionPage && (
+              {handleOpenProvision && (
                 <button
                   type="button"
-                  onClick={onOpenProvisionPage}
+                  onClick={handleOpenProvision}
                   className="text-xs font-bold text-indigo-600 hover:text-indigo-800 hover:underline flex items-center gap-1 cursor-pointer"
                 >
                   <ShieldCheck className="w-3.5 h-3.5" />
