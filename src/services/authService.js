@@ -1,4 +1,4 @@
-import apiClient, { tokenStorage } from './apiClient';
+﻿import apiClient, { tokenStorage } from './apiClient';
 
 /**
  * Authentication and User Identity Service
@@ -59,7 +59,8 @@ export const authService = {
       password: userData.password || '',
       fullName: (userData.fullName || '').trim(),
       phone: (userData.phone || '').trim(),
-      roleName: userData.roleName || 'STUDENT'
+      roleName: userData.roleName || 'STUDENT',
+      campusId: userData.campusId || undefined
     };
 
     try {
@@ -102,6 +103,19 @@ export const authService = {
    */
   async forgotPassword(email) {
     return (await apiClient.post('/api/auth/forgot-password', { email })).data;
+  },
+
+  /**
+   * Xác thực mã OTP đặt lại mật khẩu trước khi qua bước đổi mật khẩu (UC 05b)
+   * @param {string} email
+   * @param {string} otpCode
+   */
+  async verifyResetOtp(email, otpCode) {
+    const payload = {
+      email: (email || '').trim().toLowerCase(),
+      otpCode: (otpCode || '').trim()
+    };
+    return (await apiClient.post('/api/auth/verify-reset-otp', payload)).data;
   },
 
   /**
@@ -186,9 +200,8 @@ export const authService = {
         }
       }
       return [
-        { campusId: '11111111-1111-1111-1111-111111111111', code: 'CS_THUDUC', name: 'Cơ sở Thủ Đức (Khu ĐHQG)', address: 'Khu phố 6, Linh Trung, TP. Thủ Đức' },
-        { campusId: '22222222-2222-2222-2222-222222222222', code: 'CS_Q10', name: 'Cơ sở Quận 10 (Lý Thường Kiệt)', address: '268 Lý Thường Kiệt, Quận 10, TP.HCM' },
-        { campusId: '33333333-3333-3333-3333-333333333333', code: 'CS_BINHTHANH', name: 'Cơ sở Bình Thạnh (Điện Biên Phủ)', address: '475A Điện Biên Phủ, P.25, Bình Thạnh' }
+        { campusId: '3fa85f64-5717-4562-b3fc-2c963f66afa6', code: 'CS_THU_DUC', name: 'Cơ sở 1 - Khu đô thị ĐHQG-HCM, TP. Thủ Đức', address: 'Khu phố 6, Phường Linh Trung, TP. Thủ Đức, TP.HCM' },
+        { campusId: '4ba85f64-5717-4562-b3fc-2c963f66afa7', code: 'CS_QUAN_10', name: 'Cơ sở 2 - Quận 10, TP.HCM', address: '268 Lý Thường Kiệt, Phường 14, Quận 10, TP.HCM' }
       ];
     }
   },

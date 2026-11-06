@@ -35,7 +35,12 @@ import {
   ListOrdered,
   FileEdit,
   Calculator,
-  FlaskConical
+  FlaskConical,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Table2,
+  Search,
 } from 'lucide-react';
 import MathText, { unescapeLiteralNewlines } from '../common/MathText';
 import InteractiveFormulaBuilderModal from './InteractiveFormulaBuilderModal';
@@ -562,6 +567,25 @@ export function MathFormulaPalette({
   );
 }
 
+function normalizeBloomLevel(rawLevel) {
+  if (!rawLevel) return 'Vận dụng (L3)';
+  const s = String(rawLevel).trim().toLowerCase();
+  if (s.includes('l1') || s.includes('nhận biết')) return 'Nhận biết (L1)';
+  if (s.includes('l2') || s.includes('thông hiểu')) return 'Thông hiểu (L2)';
+  if (s.includes('l4') || s.includes('vận dụng cao')) return 'Vận dụng cao (L4)';
+  if (s.includes('l3') || s.includes('vận dụng')) return 'Vận dụng (L3)';
+  return 'Vận dụng (L3)';
+}
+
+function cleanOptionOrText(str) {
+  if (!str) return '';
+  let s = unescapeLiteralNewlines(String(str)).replace(/\\+\s*$/gm, '').trim();
+  if (s.length >= 2 && s.startsWith("'") && s.endsWith("'") && !s.slice(1, -1).includes("'")) {
+    s = s.slice(1, -1).trim();
+  }
+  return s;
+}
+
 export default function CurriculumStudioEditor({ pattern, domain, chapter, lesson, onClose, onSaveSuccess }) {
   const isStem = isMathOrStemDomain(domain);
 
@@ -571,20 +595,21 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
   const [mathCategory, setMathCategory] = useState('algebra');
   const [activeFormulaTarget, setActiveFormulaTarget] = useState('theoryRecap'); // 'theoryRecap' | 'solutionMethod' | 'examTraps' | 'casioTricks' | 'sampleQuestion' | 'sampleExplanation'
   const [isPaletteCollapsed, setIsPaletteCollapsed] = useState(false);
+  const [isStemDrawerOpen, setIsStemDrawerOpen] = useState(false);
 
   const parsedInitial = parseSolutionMethodSections(pattern?.solutionMethod || '');
 
   // Form State for Pattern Content
   const [form, setForm] = useState({
     patternId: pattern?.patternId || '',
-    name: pattern?.name || pattern?.patternName || '',
+    name: cleanOptionOrText(pattern?.name || pattern?.patternName || ''),
     weight: pattern?.weight ? String(pattern.weight).replace('%', '').trim() : '5',
-    level: pattern?.level || pattern?.classification || 'Vận dụng',
+    level: normalizeBloomLevel(pattern?.level || pattern?.classification || 'Vận dụng (L3)'),
     theoryRecap: unescapeLiteralNewlines(pattern?.theoryRecap || ''),
     solutionMethod: unescapeLiteralNewlines(parsedInitial.method),
     sampleProblem: unescapeLiteralNewlines(parsedInitial.sampleProblem || ''),
-    examTraps: unescapeLiteralNewlines(pattern?.examTraps || parsedInitial.traps || ''),
-    casioTricks: unescapeLiteralNewlines(pattern?.casioTricks || parsedInitial.casio || ''),
+    examTraps: cleanOptionOrText(pattern?.examTraps || parsedInitial.traps || ''),
+    casioTricks: cleanOptionOrText(pattern?.casioTricks || parsedInitial.casio || ''),
     videoUrl: pattern?.videoLesson?.videoUrl || '',
     durationSeconds: pattern?.videoLesson?.durationSeconds || 600,
     videoTimestamps: [
@@ -595,13 +620,13 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
     sampleQuestion: {
       questionId: pattern?.sampleQuestion?.questionId || null,
       difficultyLevel: 2,
-      contentLatex: pattern?.sampleQuestion?.content || '',
-      optionA: pattern?.sampleQuestion?.options?.[0]?.replace(/^A\.\s*/, '') || '',
-      optionB: pattern?.sampleQuestion?.options?.[1]?.replace(/^B\.\s*/, '') || '',
-      optionC: pattern?.sampleQuestion?.options?.[2]?.replace(/^C\.\s*/, '') || '',
-      optionD: pattern?.sampleQuestion?.options?.[3]?.replace(/^D\.\s*/, '') || '',
+      contentLatex: cleanOptionOrText(pattern?.sampleQuestion?.content || ''),
+      optionA: cleanOptionOrText(pattern?.sampleQuestion?.options?.[0]?.replace(/^A\.\s*/, '') || ''),
+      optionB: cleanOptionOrText(pattern?.sampleQuestion?.options?.[1]?.replace(/^B\.\s*/, '') || ''),
+      optionC: cleanOptionOrText(pattern?.sampleQuestion?.options?.[2]?.replace(/^C\.\s*/, '') || ''),
+      optionD: cleanOptionOrText(pattern?.sampleQuestion?.options?.[3]?.replace(/^D\.\s*/, '') || ''),
       correctOption: pattern?.sampleQuestion?.correct !== undefined ? String.fromCharCode(65 + pattern.sampleQuestion.correct) : 'A',
-      explanation: pattern?.sampleQuestion?.explanation || ''
+      explanation: cleanOptionOrText(pattern?.sampleQuestion?.explanation || '')
     }
   });
 
@@ -621,6 +646,10 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
   const textareaRefs = useRef({});
   const theoryCanvasRef = useRef(null);
   const methodCanvasRef = useRef(null);
+  const examTrapsCanvasRef = useRef(null);
+  const casioTricksCanvasRef = useRef(null);
+  const sampleQuestionCanvasRef = useRef(null);
+  const sampleExplanationCanvasRef = useRef(null);
 
   // Handle Word-like text formatting (Bold, Italic, Headings, Lists, Callouts)
   const handleFormatText = (targetField, prefix = '', suffix = '') => {
@@ -657,6 +686,7 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
   const [deletingQId, setDeletingQId] = useState(null);
   const [editingQuestionIndex, setEditingQuestionIndex] = useState(null);
   const [newQuestionModalOpen, setNewQuestionModalOpen] = useState(false);
+  const [aiQuestionModalOpen, setAiQuestionModalOpen] = useState(false);
   const [customImageUrl, setCustomImageUrl] = useState('');
   const [imageModalTarget, setImageModalTarget] = useState(null); // 'theory' | 'method' | 'question'
 
@@ -792,6 +822,26 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
       return;
     }
 
+    if (field === 'examTraps' && methodMode !== 'markdown' && examTrapsCanvasRef.current) {
+      examTrapsCanvasRef.current.insertSnippet(snippet);
+      return;
+    }
+
+    if (field === 'casioTricks' && methodMode !== 'markdown' && casioTricksCanvasRef.current) {
+      casioTricksCanvasRef.current.insertSnippet(snippet);
+      return;
+    }
+
+    if (field === 'sampleQuestion' && sampleQuestionCanvasRef.current) {
+      sampleQuestionCanvasRef.current.insertSnippet(snippet);
+      return;
+    }
+
+    if (field === 'sampleExplanation' && sampleExplanationCanvasRef.current) {
+      sampleExplanationCanvasRef.current.insertSnippet(snippet);
+      return;
+    }
+
     const insertText = isRaw ? snippet : `$${snippet}$`;
 
     const el = textareaRefs.current[field];
@@ -824,8 +874,8 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
 
     // Helper to replace or append graph tag cleanly
     const updateTextWithGraph = (oldText) => {
-      const graphRegex = /(\[MATH_GRAPH_3D\][\s\S]*?\[\/MATH_GRAPH_3D\]|\[MATH_GRAPH\][\s\S]*?\[\/MATH_GRAPH\])/i;
-      const isNewGraph = /(\[MATH_GRAPH_3D\]|\[MATH_GRAPH\])/i.test(insertText);
+      const graphRegex = /(\[MATH_GRAPH_3D\][\s\S]*?\[\/MATH_GRAPH_3D\]|\[MATH_GEOMETRY_2D\][\s\S]*?\[\/MATH_GEOMETRY_2D\]|\[MATH_GRAPH\][\s\S]*?\[\/MATH_GRAPH\])/i;
+      const isNewGraph = /(\[MATH_GRAPH_3D\]|\[MATH_GEOMETRY_2D\]|\[MATH_GRAPH\])/i.test(insertText);
       if (isNewGraph && graphRegex.test(oldText || '')) {
         return (oldText || '').replace(graphRegex, insertText.trim());
       }
@@ -871,7 +921,29 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
       const end = el.selectionEnd;
       const val = el.value || '';
       const nextVal = val.slice(0, start) + imgMarkdown + val.slice(end);
-      setForm(prev => ({ ...prev, [field]: nextVal }));
+      if (field === 'sampleQuestion') {
+        setForm(prev => ({ ...prev, sampleQuestion: { ...prev.sampleQuestion, contentLatex: nextVal } }));
+      } else if (field === 'sampleExplanation') {
+        setForm(prev => ({ ...prev, sampleQuestion: { ...prev.sampleQuestion, explanation: nextVal } }));
+      } else {
+        setForm(prev => ({ ...prev, [field]: nextVal }));
+      }
+    } else if (field === 'sampleQuestion') {
+      setForm(prev => ({
+        ...prev,
+        sampleQuestion: {
+          ...prev.sampleQuestion,
+          contentLatex: `${prev.sampleQuestion?.contentLatex || ''}${imgMarkdown}`
+        }
+      }));
+    } else if (field === 'sampleExplanation') {
+      setForm(prev => ({
+        ...prev,
+        sampleQuestion: {
+          ...prev.sampleQuestion,
+          explanation: `${prev.sampleQuestion?.explanation || ''}${imgMarkdown}`
+        }
+      }));
     } else {
       setForm(prev => ({
         ...prev,
@@ -1131,17 +1203,6 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
           </button>
 
           <button
-            type="button"
-            onClick={() => handleOpenMathWorkbench('jsxgraph', 'sampleQuestion')}
-            className="px-3.5 py-1.5 rounded-xl bg-linear-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white text-xs font-black shadow-sm flex items-center gap-1.5 transition-all cursor-pointer"
-            title="Phòng thí nghiệm MathLab 2D & Hình học không gian 3D (JSXGraph Engine)"
-          >
-            <Compass className="w-4 h-4 text-amber-300" />
-            <span className="hidden lg:inline">⚡ MathLab 2D/3D (JSXGraph)</span>
-            <span className="lg:hidden">⚡ MathLab 3D</span>
-          </button>
-
-          <button
             disabled={saving}
             onClick={handleSaveAll}
             className="px-4 py-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white text-xs font-black shadow-sm flex items-center gap-1.5 transition-all disabled:opacity-50 cursor-pointer"
@@ -1239,7 +1300,12 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
                 return (
                   <button
                     key={tab.id}
-                    onClick={() => setActiveSection(tab.id)}
+                    onClick={() => {
+                      setActiveSection(tab.id);
+                      if (tab.id === 'theory') setActiveFormulaTarget('theoryRecap');
+                      else if (tab.id === 'method') setActiveFormulaTarget('solutionMethod');
+                      else if (tab.id === 'questions') setActiveFormulaTarget('sampleQuestion');
+                    }}
                     className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all shrink-0 ${
                       isActive 
                         ? 'bg-slate-900 text-white shadow-sm' 
@@ -1256,32 +1322,77 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
             {/* ================= SECTION: KHỐI 1 - NỀN TẢNG SGK & HÌNH ẢNH ================= */}
             {activeSection === 'theory' && (
               <div className="bg-white rounded-3xl border border-slate-200 p-6 space-y-5 shadow-sm">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-                  <div>
-                    <h3 className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
-                      <span className="w-6 h-6 rounded-lg bg-cyan-100 text-cyan-700 flex items-center justify-center text-xs font-black">1</span>
-                      <span>Khối 1: Kiến Thức Nền Tảng & Hình Ảnh Minh Họa SGK</span>
-                    </h3>
-                    <p className="text-xs text-slate-500 font-medium mt-0.5">
-                      Định nghĩa, định lý, điều kiện xác định, đồ thị hàm số và hình học không gian chuẩn GDPT 2018
-                    </p>
-                  </div>
-                  
-                  <button
-                    onClick={() => setImageModalTarget('theoryRecap')}
-                    className="px-3 py-1.5 rounded-xl bg-cyan-50 hover:bg-cyan-100 text-cyan-800 text-xs font-bold flex items-center gap-1.5 border border-cyan-200 transition-colors"
-                  >
-                    <ImageIcon className="w-3.5 h-3.5 text-cyan-600" />
-                    <span>+ Đính kèm Hình ảnh</span>
-                  </button>
+                <div className="border-b border-slate-100 pb-4">
+                  <h3 className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
+                    <span className="w-6 h-6 rounded-lg bg-cyan-100 text-cyan-700 flex items-center justify-center text-xs font-black">1</span>
+                    <span>Khối 1: Kiến Thức Nền Tảng & Hình Ảnh Minh Họa SGK</span>
+                  </h3>
+                  <p className="text-xs text-slate-500 font-medium mt-0.5">
+                    Định nghĩa, định lý, điều kiện xác định, đồ thị hàm số và hình học không gian chuẩn GDPT 2018
+                  </p>
                 </div>
 
                 {/* UNIFIED WORKSPACE: WORD CANVAS (FULL WIDTH) */}
                 <div className="flex flex-col rounded-2xl border border-slate-200 overflow-hidden bg-white shadow-sm min-h-[580px] p-4 sm:p-5 space-y-3">
                   
-                  {/* THANH CÔNG CỤ ĐỊNH DẠNG PHONG CÁCH MICROSOFT WORD (WORD RIBBON TOOLBAR) */}
-                    <div className="p-2 sm:p-2.5 rounded-2xl bg-white border border-slate-200 shadow-2xs flex flex-wrap items-center justify-between gap-2">
-                      {/* Nhóm định dạng chữ & danh sách */}
+                  {/* THANH CÔNG CỤ 2 DÒNG TRONG VĂN BẢN: DÒNG 1 (VÍ DỤ SGK, CHẾ ĐỘ XEM) - DÒNG 2 (ĐỊNH DẠNG VĂN BẢN) */}
+                    <div className="p-2 sm:p-2.5 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-2">
+                      {/* Dòng 1: Nằm trên văn bản - Ví dụ SGK & Chuyển đổi chế độ xem */}
+                      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => handleFormatText('theoryRecap', '\n\n### 📌 Ví dụ minh họa SGK:\n- Ví dụ: ', '\n- Lời giải & Phân tích: ')}
+                            className="px-2.5 py-1 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-800 text-[11px] font-bold border border-teal-200 transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                            title="Chèn khối thẻ Ví dụ minh họa SGK"
+                          >
+                            <BookOpen className="w-3.5 h-3.5 text-teal-600" />
+                            <span>+ Ví Dụ SGK</span>
+                          </button>
+                        </div>
+
+                        {/* Chuyển đổi chế độ: Sửa Trực Tiếp vs Xem Trang In vs Mã Nguồn LaTeX Raw */}
+                        <div className="p-0.5 rounded-xl bg-slate-200/80 border border-slate-300 flex items-center gap-0.5 text-[11px] font-bold">
+                          <button
+                            type="button"
+                            onClick={() => { setTheoryMode('visual'); setTheoryCanvasView('edit'); }}
+                            className={`px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
+                              theoryMode === 'visual' && theoryCanvasView === 'edit'
+                                ? 'bg-white text-cyan-900 shadow-2xs font-extrabold'
+                                : 'text-slate-600 hover:text-slate-900'
+                            }`}
+                          >
+                            <Edit3 className="w-3 h-3 text-cyan-600" />
+                            <span>✍️ Sửa Trực Tiếp</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => { setTheoryMode('visual'); setTheoryCanvasView('preview'); }}
+                            className={`px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
+                              theoryMode === 'visual' && theoryCanvasView === 'preview'
+                                ? 'bg-white text-emerald-800 shadow-2xs font-extrabold'
+                                : 'text-slate-600 hover:text-slate-900'
+                            }`}
+                          >
+                            <Eye className="w-3 h-3 text-emerald-600" />
+                            <span>👁️ Trang In</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setTheoryMode('markdown')}
+                            className={`px-2 py-1 rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
+                              theoryMode === 'markdown'
+                                ? 'bg-slate-900 text-white shadow-2xs font-mono font-bold'
+                                : 'text-slate-600 hover:text-slate-900 font-mono'
+                            }`}
+                          >
+                            <Code2 className="w-3 h-3 text-slate-400" />
+                            <span>Raw</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Dòng 2: Văn bản và những thứ thuộc về văn bản */}
                       <div className="flex flex-wrap items-center gap-1">
                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider px-1">Văn bản:</span>
                         <button
@@ -1324,118 +1435,6 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
                           title="Đánh số (Numbered list)"
                         >
                           <ListOrdered className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-
-                      {/* Nhóm công cụ Sư phạm STEM */}
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => handleOpenFormulaBuilder('chemistry', 'theoryRecap')}
-                          className="px-2.5 py-1 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-800 text-[11px] font-bold border border-teal-200 transition-colors flex items-center gap-1 cursor-pointer shadow-2xs"
-                          title="Chèn công thức hóa học (CM, C%, m, Hiệu suất H%) có thể chèn số và tự động tính toán"
-                        >
-                          <FlaskConical className="w-3.5 h-3.5 text-teal-600" />
-                          <span>🧪 Hóa Học & Nồng Độ</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleOpenFormulaBuilder('fraction', 'theoryRecap')}
-                          className="px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[11px] font-bold border border-indigo-200 transition-colors flex items-center gap-1 cursor-pointer shadow-2xs"
-                          title="Chèn phân số A/B có thể chèn số vào tử/mẫu và tự tính kết quả"
-                        >
-                          <Calculator className="w-3.5 h-3.5 text-indigo-500" />
-                          <span>➗ Phân Số & Tính Toán</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleOpenFormulaBuilder('limit', 'theoryRecap')}
-                          className="px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 text-[11px] font-bold border border-rose-200 transition-colors flex items-center gap-1 cursor-pointer shadow-2xs"
-                          title="Chèn đạo hàm số gia f'(x0) hoặc giới hạn"
-                        >
-                          <span>🎯 Đạo Hàm Số Gia</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleOpenFormulaBuilder('variation_table', 'theoryRecap')}
-                          className="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-[11px] font-bold border border-emerald-200 transition-colors flex items-center gap-1 cursor-pointer shadow-2xs"
-                          title="Chèn bảng biến thiên SGK chuẩn 3 dòng vector"
-                        >
-                          <span>📊 Bảng Biến Thiên</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleOpenFormulaBuilder('math_graph', 'theoryRecap')}
-                          className="px-2.5 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 text-[11px] font-bold border border-amber-200 transition-colors flex items-center gap-1 cursor-pointer shadow-2xs"
-                          title="Chèn đồ thị Oxy / Desmos Calculator"
-                        >
-                          <span>📈 Đồ Thị Hàm Số</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleOpenMathWorkbench('jsxgraph', 'theoryRecap')}
-                          className="px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[11px] font-bold border border-indigo-200 transition-colors flex items-center gap-1 cursor-pointer shadow-2xs"
-                          title="Dựng đồ thị hàm số hoặc hình học không gian 3D (JSXGraph Engine)"
-                        >
-                          <span>🧊 MathLab 3D/2D</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleTriggerUpload('theoryRecap')}
-                          className="px-2.5 py-1 rounded-lg bg-cyan-50 hover:bg-cyan-100 text-cyan-800 text-[11px] font-bold border border-cyan-200 transition-colors flex items-center gap-1 cursor-pointer shadow-2xs"
-                          title="Tải ảnh minh họa hoặc bấm Ctrl+V để dán trực tiếp ảnh chụp màn hình"
-                        >
-                          <ImageIcon className="w-3 h-3 text-cyan-600" />
-                          <span>🖼️ Dán (Ctrl+V) / Tải Ảnh</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleFormatText('theoryRecap', '\n\n### 📌 Ví dụ minh họa SGK:\n- Ví dụ: ', '\n- Lời giải & Phân tích: ')}
-                          className="px-2 py-1 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-800 text-[11px] font-bold border border-teal-200 transition-colors flex items-center gap-1"
-                          title="Chèn khối thẻ Ví dụ minh họa SGK"
-                        >
-                          <BookOpen className="w-3 h-3 text-teal-600" />
-                          <span>+ Ví Dụ SGK</span>
-                        </button>
-                      </div>
-
-                      {/* Chuyển đổi chế độ: Sửa Trực Tiếp vs Xem Trang In vs Mã Nguồn LaTeX Raw */}
-                      <div className="p-0.5 rounded-xl bg-slate-200/80 border border-slate-300 flex items-center gap-0.5 text-[11px] font-bold">
-                        <button
-                          type="button"
-                          onClick={() => { setTheoryMode('visual'); setTheoryCanvasView('edit'); }}
-                          className={`px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
-                            theoryMode === 'visual' && theoryCanvasView === 'edit'
-                              ? 'bg-white text-cyan-900 shadow-2xs font-extrabold'
-                              : 'text-slate-600 hover:text-slate-900'
-                          }`}
-                        >
-                          <Edit3 className="w-3 h-3 text-cyan-600" />
-                          <span>✍️ Sửa Trực Tiếp</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => { setTheoryMode('visual'); setTheoryCanvasView('preview'); }}
-                          className={`px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
-                            theoryMode === 'visual' && theoryCanvasView === 'preview'
-                              ? 'bg-white text-emerald-800 shadow-2xs font-extrabold'
-                              : 'text-slate-600 hover:text-slate-900'
-                          }`}
-                        >
-                          <Eye className="w-3 h-3 text-emerald-600" />
-                          <span>👁️ Trang In</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setTheoryMode('markdown')}
-                          className={`px-2 py-1 rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
-                            theoryMode === 'markdown'
-                              ? 'bg-slate-900 text-white shadow-2xs font-mono font-bold'
-                              : 'text-slate-600 hover:text-slate-900 font-mono'
-                          }`}
-                        >
-                          <Code2 className="w-3 h-3 text-slate-400" />
-                          <span>Raw</span>
                         </button>
                       </div>
                     </div>
@@ -1482,6 +1481,7 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
                         onChange={(val) => setForm(prev => ({ ...prev, theoryRecap: val }))}
                         isStem={isStem}
                         accentColor="cyan"
+                        onOpenAdvancedModal={() => handleOpenFormulaBuilder('fraction', 'theoryRecap')}
                         placeholder="Gõ lý thuyết nền tảng SGK tại đây. Nhấp các ký hiệu ở thanh công cụ bên trái để chèn công thức, nhấp vào công thức để sửa số trực tiếp..."
                       />
                     )}
@@ -1498,36 +1498,101 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
             {/* ================= SECTION: KHỐI 2 - PHƯƠNG PHÁP GIẢI & BẪY ĐỀ THI ================= */}
             {activeSection === 'method' && (
               <div className="bg-white rounded-3xl border border-slate-200 p-6 space-y-5 shadow-sm">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-                  <div>
-                    <h3 className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
-                      <span className="w-6 h-6 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center text-xs font-black">2</span>
-                      <span>Khối 2: Phương Pháp Giải Chuyên Biệt, Bẫy Đề Thi & {isStem ? 'Mẹo Casio' : 'Mẹo Tư Duy & Chiến Thuật'}</span>
-                    </h3>
-                    <p className="text-xs text-slate-500 font-medium mt-0.5">
-                      Giúp học sinh định hình thuật toán giải từng bước và khắc phục các sai lầm kinh điển
-                    </p>
-                  </div>
-
-                  <button
-                    onClick={handleAIApplyStandardMethod}
-                    className="px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-bold flex items-center gap-1.5 border border-amber-200 transition-colors"
-                  >
-                    <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-                    <span>Nạp mẫu chuẩn 4 bước</span>
-                  </button>
+                <div className="border-b border-slate-100 pb-4">
+                  <h3 className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
+                    <span className="w-6 h-6 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center text-xs font-black">2</span>
+                    <span>Khối 2: Phương Pháp Giải Chuyên Biệt, Bẫy Đề Thi & {isStem ? 'Mẹo Casio' : 'Mẹo Tư Duy & Chiến Thuật'}</span>
+                  </h3>
+                  <p className="text-xs text-slate-500 font-medium mt-0.5">
+                    Giúp học sinh định hình thuật toán giải từng bước và khắc phục các sai lầm kinh điển
+                  </p>
                 </div>
 
                 {/* UNIFIED WORKSPACE: WORD CANVAS (FULL WIDTH) */}
                 <div className="flex flex-col rounded-2xl border border-slate-200 overflow-hidden bg-white shadow-sm min-h-[580px] p-4 sm:p-5 space-y-4">
-                  {/* THANH CÔNG CỤ WORD RIBBON TOOLBAR CHO QUY TRÌNH GIẢI */}
-                    <div className="bg-gradient-to-r from-slate-50 via-white to-slate-50 border border-slate-200 rounded-2xl p-2.5 flex flex-wrap items-center justify-between gap-2 shadow-2xs">
-                        {/* Nhóm 1: Định dạng chữ & Tiêu đề như Word */}
-                        <div className="flex items-center gap-1 border-r border-slate-200 pr-2">
+                  {/* THANH CÔNG CỤ 2 DÒNG TRONG VĂN BẢN: DÒNG 1 (BƯỚC GIẢI, CHẾ ĐỘ XEM) - DÒNG 2 (ĐỊNH DẠNG VĂN BẢN) */}
+                    <div className="bg-gradient-to-r from-slate-50 via-white to-slate-50 border border-slate-200 rounded-2xl p-2.5 shadow-2xs space-y-2">
+                        {/* Dòng 1: Nằm trên văn bản - Bước mới, Nạp mẫu 4 bước & Chuyển đổi chế độ xem */}
+                        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const stepCount = (form.solutionMethod?.match(/\*\*Bước \d+:/g) || []).length + 1;
+                                const insertText = `\n\n**Bước ${stepCount}:** `;
+                                const el = textareaRefs.current['solutionMethod'];
+                                if (el && typeof el.selectionStart === 'number') {
+                                  const start = el.selectionStart;
+                                  const val = el.value || '';
+                                  setForm(prev => ({ ...prev, solutionMethod: val.slice(0, start) + insertText + val.slice(el.selectionEnd) }));
+                                } else {
+                                  setForm(prev => ({ ...prev, solutionMethod: (prev.solutionMethod || '') + insertText }));
+                                }
+                              }}
+                              className="px-2.5 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 text-[11px] font-bold border border-amber-200 transition-colors cursor-pointer shadow-2xs"
+                              title="Chèn thêm một bước giải mới vào quy trình"
+                            >
+                              + Thêm Bước mới
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={handleAIApplyStandardMethod}
+                              className="px-2.5 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 text-[11px] font-bold border border-amber-200 transition-colors cursor-pointer shadow-2xs flex items-center gap-1"
+                            >
+                              <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                              <span>Nạp mẫu chuẩn 4 bước</span>
+                            </button>
+                          </div>
+
+                          {/* Chuyển đổi chế độ: Sửa Trực Tiếp vs Xem Trang In vs Mã Nguồn LaTeX Raw */}
+                          <div className="p-0.5 rounded-xl bg-slate-200/80 border border-slate-300 flex items-center gap-0.5 text-[11px] font-bold">
+                            <button
+                              type="button"
+                              onClick={() => { setMethodMode('visual'); setMethodCanvasView('edit'); }}
+                              className={`px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
+                                methodMode === 'visual' && methodCanvasView === 'edit'
+                                  ? 'bg-white text-amber-900 shadow-2xs font-extrabold'
+                                  : 'text-slate-600 hover:text-slate-900'
+                              }`}
+                            >
+                              <Edit3 className="w-3 h-3 text-amber-600" />
+                              <span>✍️ Sửa Trực Tiếp</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => { setMethodMode('visual'); setMethodCanvasView('preview'); }}
+                              className={`px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
+                                methodMode === 'visual' && methodCanvasView === 'preview'
+                                  ? 'bg-white text-emerald-800 shadow-2xs font-extrabold'
+                                  : 'text-slate-600 hover:text-slate-900'
+                              }`}
+                            >
+                              <Eye className="w-3 h-3 text-emerald-600" />
+                              <span>👁️ Trang In</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setMethodMode('markdown')}
+                              className={`px-2 py-1 rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
+                                methodMode === 'markdown'
+                                  ? 'bg-slate-900 text-white shadow-2xs font-mono font-bold'
+                                  : 'text-slate-600 hover:text-slate-900 font-mono'
+                              }`}
+                            >
+                              <Code2 className="w-3 h-3 text-slate-400" />
+                              <span>Raw</span>
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Dòng 2: Văn bản và những thứ thuộc về văn bản */}
+                        <div className="flex flex-wrap items-center gap-1">
+                          <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider px-1">Văn bản:</span>
                           <button
                             type="button"
                             onClick={() => handleFormatText('solutionMethod', '**', '**')}
-                            className="p-1.5 rounded-lg hover:bg-slate-200/70 text-slate-700 transition-colors"
+                            className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 flex items-center justify-center font-black text-xs transition-colors"
                             title="In đậm (Bold - **chữ**)"
                           >
                             <Bold className="w-3.5 h-3.5" />
@@ -1535,7 +1600,7 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
                           <button
                             type="button"
                             onClick={() => handleFormatText('solutionMethod', '*', '*')}
-                            className="p-1.5 rounded-lg hover:bg-slate-200/70 text-slate-700 transition-colors"
+                            className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 flex items-center justify-center font-serif italic text-xs transition-colors"
                             title="In nghiêng (Italic - *chữ*)"
                           >
                             <Italic className="w-3.5 h-3.5" />
@@ -1546,16 +1611,16 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
                               const stepCount = (form.solutionMethod?.match(/\*\*Bước \d+:/g) || []).length + 1;
                               handleFormatText('solutionMethod', `\n\n**Bước ${stepCount}:** `, '');
                             }}
-                            className="px-2 py-1 rounded-lg hover:bg-slate-200/70 text-slate-700 text-xs font-bold transition-colors flex items-center gap-1"
+                            className="px-2 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition-colors flex items-center gap-1"
                             title="Chèn tiêu đề Bước giải"
                           >
                             <Heading className="w-3.5 h-3.5 text-amber-600" />
-                            <span>Bước</span>
+                            <span className="text-[10px]">Bước</span>
                           </button>
                           <button
                             type="button"
                             onClick={() => handleFormatText('solutionMethod', '\n- ', '')}
-                            className="p-1.5 rounded-lg hover:bg-slate-200/70 text-slate-700 transition-colors"
+                            className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 flex items-center justify-center font-bold text-xs transition-colors"
                             title="Danh sách gạch đầu dòng"
                           >
                             <List className="w-3.5 h-3.5" />
@@ -1563,95 +1628,14 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
                           <button
                             type="button"
                             onClick={() => handleFormatText('solutionMethod', '\n1. ', '')}
-                            className="p-1.5 rounded-lg hover:bg-slate-200/70 text-slate-700 transition-colors"
+                            className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 flex items-center justify-center font-bold text-xs transition-colors"
                             title="Danh sách đánh số thứ tự"
                           >
                             <ListOrdered className="w-3.5 h-3.5" />
                           </button>
                         </div>
 
-                        {/* Nhóm 2: Chèn công cụ Toán STEM, Hóa Học & Minh họa */}
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          <button
-                            type="button"
-                            onClick={() => handleOpenFormulaBuilder('chemistry', 'solutionMethod')}
-                            className="px-2.5 py-1 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-800 text-[11px] font-bold border border-teal-200 transition-colors flex items-center gap-1 cursor-pointer shadow-2xs"
-                            title="Chèn công thức hóa học (CM, C%, m, Hiệu suất H%) có thể chèn số và tự động tính toán"
-                          >
-                            <FlaskConical className="w-3.5 h-3.5 text-teal-600" />
-                            <span>🧪 Hóa Học & Nồng Độ</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleOpenFormulaBuilder('fraction', 'solutionMethod')}
-                            className="px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[11px] font-bold border border-indigo-200 transition-colors flex items-center gap-1 cursor-pointer shadow-2xs"
-                            title="Mở bảng điền công thức phân số, tích phân, căn, mũ... có thể tính toán tự động"
-                          >
-                            <Calculator className="w-3.5 h-3.5 text-indigo-500" />
-                            <span>➗ Phân Số & Tính Toán</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleOpenFormulaBuilder('limit', 'solutionMethod')}
-                            className="px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 text-[11px] font-bold border border-rose-200 transition-colors flex items-center gap-1 cursor-pointer shadow-2xs"
-                            title="Chèn đạo hàm số gia f'(x0) hoặc giới hạn"
-                          >
-                            <span>🎯 Đạo Hàm Số Gia</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleOpenFormulaBuilder('variation_table', 'solutionMethod')}
-                            className="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-[11px] font-bold border border-emerald-200 transition-colors flex items-center gap-1 cursor-pointer shadow-2xs"
-                            title="Chèn bảng biến thiên SGK chuẩn 3 dòng vector"
-                          >
-                            <span>📊 Bảng Biến Thiên</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleOpenFormulaBuilder('math_graph', 'solutionMethod')}
-                            className="px-2.5 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 text-[11px] font-bold border border-amber-200 transition-colors flex items-center gap-1 cursor-pointer shadow-2xs"
-                            title="Chèn đồ thị Oxy / Desmos Calculator"
-                          >
-                            <span>📈 Đồ Thị Hàm Số</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleOpenMathWorkbench('jsxgraph', 'solutionMethod')}
-                            className="px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[11px] font-bold border border-indigo-200 transition-colors flex items-center gap-1 cursor-pointer shadow-2xs"
-                            title="Dựng đồ thị hàm số hoặc hình học không gian 3D (JSXGraph Engine)"
-                          >
-                            <span>🧊 MathLab 3D/2D</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleTriggerUpload('solutionMethod')}
-                            className="px-2.5 py-1 rounded-lg bg-cyan-50 hover:bg-cyan-100 text-cyan-800 text-[11px] font-bold border border-cyan-200 transition-colors flex items-center gap-1 cursor-pointer shadow-2xs"
-                            title="Tải ảnh minh họa hoặc bấm Ctrl+V để dán trực tiếp ảnh chụp màn hình"
-                          >
-                            <ImageIcon className="w-3 h-3 text-cyan-600" />
-                            <span>🖼️ Dán (Ctrl+V) / Tải Ảnh</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const stepCount = (form.solutionMethod?.match(/\*\*Bước \d+:/g) || []).length + 1;
-                              const insertText = `\n\n**Bước ${stepCount}:** `;
-                              const el = textareaRefs.current['solutionMethod'];
-                              if (el && typeof el.selectionStart === 'number') {
-                                const start = el.selectionStart;
-                                const val = el.value || '';
-                                setForm(prev => ({ ...prev, solutionMethod: val.slice(0, start) + insertText + val.slice(el.selectionEnd) }));
-                              } else {
-                                setForm(prev => ({ ...prev, solutionMethod: (prev.solutionMethod || '') + insertText }));
-                              }
-                            }}
-                            className="px-2.5 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 text-[11px] font-bold border border-amber-200 transition-colors"
-                          >
-                            + Thêm Bước mới
-                          </button>
-                        </div>
-
-                        {/* Nhóm 3: Chuyển đổi chế độ: Sửa Trực Tiếp vs Xem Trang In vs Mã Nguồn LaTeX Raw */}
+                        {/* Nhóm 2: Chuyển đổi chế độ: Sửa Trực Tiếp vs Xem Trang In vs Mã Nguồn LaTeX Raw */}
                         <div className="p-0.5 rounded-xl bg-slate-200/80 border border-slate-300 flex items-center gap-0.5 text-[11px] font-bold">
                           <button
                             type="button"
@@ -1721,6 +1705,7 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
                           onChange={(val) => setForm(prev => ({ ...prev, solutionMethod: val }))}
                           isStem={isStem}
                           accentColor="amber"
+                          onOpenAdvancedModal={() => handleOpenFormulaBuilder('fraction', 'solutionMethod')}
                           placeholder="Gõ quy trình giải và các bước thuật toán tại đây. Nhấp các ký hiệu ở thanh công cụ bên trái để chèn công thức, nhấp vào công thức để sửa số trực tiếp..."
                         />
                       )}
@@ -1752,17 +1737,20 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
                         </div>
                       </div>
 
-                      {/* Soạn thảo trực tiếp trong thẻ cảnh báo */}
-                      <textarea
-                        ref={el => (textareaRefs.current['examTraps'] = el)}
-                        rows={3}
-                        value={form.examTraps}
-                        onFocus={() => setActiveFormulaTarget('examTraps')}
+                      {/* Soạn thảo trực tiếp công thức hiển thị chuẩn trong thẻ cảnh báo */}
+                      <div
+                        onClick={() => setActiveFormulaTarget('examTraps')}
                         onPaste={(e) => handlePasteEvent(e, 'examTraps')}
-                        onChange={(e) => setForm(prev => ({ ...prev, examTraps: e.target.value }))}
-                        placeholder="Gõ trực tiếp các bẫy đề thi cần cảnh báo cho học sinh tại đây:&#10;- Quên xét điều kiện xác định khi rút gọn biểu thức...&#10;- Nhầm lẫn giữa cực trị của hàm số y và điểm cực trị x..."
-                        className="w-full p-3.5 rounded-xl border border-rose-200 font-sans text-xs leading-relaxed focus:outline-none focus:ring-2 focus:ring-rose-400 bg-white text-rose-950 shadow-2xs placeholder:text-rose-300 resize-y"
-                      />
+                      >
+                        <WordStyleFormulaCanvas
+                          ref={examTrapsCanvasRef}
+                          compact
+                          content={form.examTraps}
+                          onChange={(val) => setForm(prev => ({ ...prev, examTraps: val }))}
+                          onOpenAdvancedModal={() => handleOpenFormulaBuilder('fraction', 'examTraps')}
+                          placeholder="Gõ trực tiếp các bẫy đề thi cần cảnh báo cho học sinh tại đây (công thức tự động hiển thị chuẩn)..."
+                        />
+                      </div>
                     </div>
 
                     {/* 3. Mẹo Casio / Mẹo tư duy nhanh - Thẻ Mẹo Trực Tiếp */}
@@ -1791,17 +1779,20 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
                         </div>
                       </div>
 
-                      {/* Soạn thảo trực tiếp trong thẻ mẹo Casio */}
-                      <textarea
-                        ref={el => (textareaRefs.current['casioTricks'] = el)}
-                        rows={3}
-                        value={form.casioTricks}
-                        onFocus={() => setActiveFormulaTarget('casioTricks')}
+                      {/* Soạn thảo trực tiếp công thức hiển thị chuẩn trong thẻ mẹo Casio */}
+                      <div
+                        onClick={() => setActiveFormulaTarget('casioTricks')}
                         onPaste={(e) => handlePasteEvent(e, 'casioTricks')}
-                        onChange={(e) => setForm(prev => ({ ...prev, casioTricks: e.target.value }))}
-                        placeholder={isStem ? "Gõ trực tiếp các kỹ thuật bấm máy tính Casio & công thức giải nhanh tại đây:\n- Bấm [Menu 8] nhập f(x) để dò dấu và cực trị nhanh trong 15s...\n- Kỹ thuật Cal x = 1000..." : "Gõ trực tiếp các mẹo làm bài & chiến thuật tư duy nhanh tại đây:\n- Kỹ thuật gạch chân từ khóa đề bài trong 30s...\n- Công thức phân bổ thời gian và mẹo liên hệ thực tế ghi điểm tối đa..."}
-                        className="w-full p-3.5 rounded-xl border border-indigo-200 font-sans text-xs leading-relaxed focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white text-indigo-950 shadow-2xs placeholder:text-indigo-300 resize-y"
-                      />
+                      >
+                        <WordStyleFormulaCanvas
+                          ref={casioTricksCanvasRef}
+                          compact
+                          content={form.casioTricks}
+                          onChange={(val) => setForm(prev => ({ ...prev, casioTricks: val }))}
+                          onOpenAdvancedModal={() => handleOpenFormulaBuilder('fraction', 'casioTricks')}
+                          placeholder={isStem ? "Gõ trực tiếp các kỹ thuật bấm máy tính Casio & công thức giải nhanh tại đây..." : "Gõ trực tiếp các mẹo làm bài & chiến thuật tư duy nhanh tại đây..."}
+                        />
+                      </div>
                     </div>
                   </div>
                 )}
@@ -2014,26 +2005,46 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
             {/* ================= SECTION: KHỐI 4 - NGÂN HÀNG CÂU HỎI DẠNG BÀI ================= */}
             {activeSection === 'questions' && (
               <div className="bg-white rounded-3xl border border-slate-200 p-6 space-y-5 shadow-sm">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-                  <div>
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+                  <div className="min-w-0">
                     <h3 className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
-                      <span className="w-6 h-6 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs font-black">4</span>
+                      <span className="w-6 h-6 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs font-black shrink-0">4</span>
                       <span>Khối 4: Ngân Hàng Câu Hỏi Dạng Bài & Bài Toán Mẫu</span>
                     </h3>
                     <p className="text-xs text-slate-500 font-medium mt-0.5">
-                      Quản lý ngân hàng câu hỏi thích ứng (API 16-18) bốc tự động cho học sinh luyện tập vi mô
+                      Quản lý ngân hàng câu hỏi thích ứng (API 16–18) bốc tự động cho học sinh luyện tập vi mô
                     </p>
                   </div>
 
-                  <button
-                    onClick={() => {
-                      setNewQuestionModalOpen(true);
-                    }}
-                    className="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>+ Thêm Câu Hỏi Mới</span>
-                  </button>
+                  <div className="flex items-center gap-2.5 shrink-0 self-start md:self-auto">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const effectiveSkillId = form.patternId || pattern?.patternId;
+                        if (!effectiveSkillId) {
+                          toast.warning("Dạng bài này chưa có trong cơ sở dữ liệu. Vui lòng bấm 'Lưu Dạng Bài' ở góc trên trước, sau đó AI sẽ sinh câu hỏi và lưu tự động vào ngân hàng đề!");
+                          return;
+                        }
+                        setAiQuestionModalOpen(true);
+                      }}
+                      className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-700 hover:to-indigo-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer hover:shadow-md active:scale-98 whitespace-nowrap"
+                      title="Sử dụng Gemini AI để sinh các câu hỏi trắc nghiệm rèn luyện bám sát 100% vào Dạng bài này và lưu vào database"
+                    >
+                      <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                      <span>AI Sinh Câu Hỏi</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setNewQuestionModalOpen(true);
+                      }}
+                      className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer hover:shadow-md active:scale-98 whitespace-nowrap"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Thêm Câu Hỏi Mới</span>
+                    </button>
+                  </div>
                 </div>
 
                 {/* Flagship Sample Question of Pattern */}
@@ -2051,62 +2062,24 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
                   {/* STEM Helpers are embedded directly on question & explanation headers */}
 
                   <div className="space-y-1.5">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                      <label className="text-xs font-bold text-slate-700">Đề bài (KaTeX, Markdown & Ctrl+V dán ảnh):</label>
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => handleOpenFormulaBuilder('fraction', 'sampleQuestion')}
-                          className="px-2 py-0.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[10px] font-bold border border-indigo-200 transition-colors flex items-center gap-1 cursor-pointer"
-                        >
-                          <Sparkles className="w-3 h-3 text-indigo-500" />
-                          <span>✨ Điền Công Thức</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleOpenFormulaBuilder('variation_table', 'sampleQuestion')}
-                          className="px-2 py-0.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-[10px] font-bold border border-emerald-200 transition-colors flex items-center gap-1 cursor-pointer"
-                        >
-                          <span>📊 Bảng Biến Thiên</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleOpenFormulaBuilder('math_graph', 'sampleQuestion')}
-                          className="px-2 py-0.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 text-[10px] font-bold border border-amber-200 transition-colors flex items-center gap-1 cursor-pointer"
-                        >
-                          <span>📈 Đồ Thị Hàm Số</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleOpenMathWorkbench('jsxgraph', 'sampleQuestion')}
-                          className="px-2 py-0.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[10px] font-bold border border-indigo-200 transition-colors flex items-center gap-1 cursor-pointer"
-                          title="Chèn đồ thị hoặc hình học không gian 3D vào đề bài"
-                        >
-                          <span>🧊 MathLab 3D/2D</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleTriggerUpload('sampleQuestion')}
-                          className="px-2 py-0.5 rounded-lg bg-cyan-50 hover:bg-cyan-100 text-cyan-800 text-[10px] font-bold border border-cyan-200 transition-colors flex items-center gap-1 cursor-pointer"
-                        >
-                          <ImageIcon className="w-3 h-3 text-cyan-600" />
-                          <span>🖼️ Dán/Tải Ảnh</span>
-                        </button>
-                      </div>
-                    </div>
-                    <textarea
-                      ref={el => (textareaRefs.current['sampleQuestion'] = el)}
-                      rows={3}
-                      value={form.sampleQuestion?.contentLatex || ''}
-                      onFocus={() => setActiveFormulaTarget('sampleQuestion')}
+                    <label className="text-xs font-bold text-slate-700 block">Đề bài câu hỏi mẫu (KaTeX, Markdown & dán ảnh bằng Ctrl+V):</label>
+                    <div
+                      onClick={() => setActiveFormulaTarget('sampleQuestion')}
                       onPaste={(e) => handlePasteEvent(e, 'sampleQuestion')}
-                      onChange={(e) => setForm(prev => ({
-                        ...prev,
-                        sampleQuestion: { ...prev.sampleQuestion, contentLatex: e.target.value }
-                      }))}
-                      placeholder="Cho hàm số y = f(x)... Hỗ trợ gõ text, bấm 'Điền Công Thức' hoặc bấm Ctrl+V để dán ảnh đề bài."
-                      className="w-full p-3 rounded-xl border border-slate-300 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-slate-900 placeholder:text-slate-400 shadow-2xs"
-                    />
+                    >
+                      <WordStyleFormulaCanvas
+                        ref={sampleQuestionCanvasRef}
+                        compact
+                        content={form.sampleQuestion?.contentLatex || ''}
+                        onChange={(val) => setForm(prev => ({
+                          ...prev,
+                          sampleQuestion: { ...prev.sampleQuestion, contentLatex: val }
+                        }))}
+                        onEditMathGraph={(tag) => handleOpenMathWorkbench('jsxgraph', 'sampleQuestion', tag)}
+                        onOpenAdvancedModal={() => handleOpenFormulaBuilder('fraction', 'sampleQuestion')}
+                        placeholder="Cho hàm số y = f(x)... Hỗ trợ hiển thị trực tiếp công thức, bảng biến thiên, đồ thị và dán ảnh (Ctrl+V)."
+                      />
+                    </div>
                   </div>
 
                   {/* 4 Options Grid */}
@@ -2132,18 +2105,16 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
                             className="w-4 h-4 text-emerald-600 focus:ring-emerald-500 cursor-pointer shrink-0"
                           />
                           <span className="font-bold text-xs text-slate-800 shrink-0">{optKey}.</span>
-                          <input
-                            type="text"
-                            value={form.sampleQuestion?.[fieldName] || ''}
-                            onChange={(e) => {
-                              const val = e.target.value;
+                          <WordStyleFormulaCanvas
+                            singleLine
+                            content={form.sampleQuestion?.[fieldName] || ''}
+                            onChange={(val) => {
                               setForm(prev => ({
                                 ...prev,
                                 sampleQuestion: { ...prev.sampleQuestion, [fieldName]: val }
                               }));
                             }}
                             placeholder={`Phương án ${optKey}...`}
-                            className="w-full text-xs font-semibold focus:outline-none bg-transparent text-slate-900 placeholder:text-slate-400"
                           />
                         </div>
                       );
@@ -2151,54 +2122,24 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
                   </div>
 
                   <div className="space-y-1.5">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                      <label className="text-xs font-bold text-slate-700">Lời giải chi tiết từng bước (Hỗ trợ text thường & Ctrl+V dán ảnh):</label>
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => handleOpenFormulaBuilder('fraction', 'sampleExplanation')}
-                          className="px-2 py-0.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[10px] font-bold border border-indigo-200 transition-colors flex items-center gap-1 cursor-pointer"
-                        >
-                          <Sparkles className="w-3 h-3 text-indigo-500" />
-                          <span>✨ Điền Công Thức</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleOpenFormulaBuilder('variation_table', 'sampleExplanation')}
-                          className="px-2 py-0.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-[10px] font-bold border border-emerald-200 transition-colors flex items-center gap-1 cursor-pointer"
-                        >
-                          <span>📊 Bảng Biến Thiên</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleOpenFormulaBuilder('math_graph', 'sampleExplanation')}
-                          className="px-2 py-0.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 text-[10px] font-bold border border-amber-200 transition-colors flex items-center gap-1 cursor-pointer"
-                        >
-                          <span>📈 Đồ Thị Hàm Số</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleTriggerUpload('sampleExplanation')}
-                          className="px-2 py-0.5 rounded-lg bg-cyan-50 hover:bg-cyan-100 text-cyan-800 text-[10px] font-bold border border-cyan-200 transition-colors flex items-center gap-1 cursor-pointer"
-                        >
-                          <ImageIcon className="w-3 h-3 text-cyan-600" />
-                          <span>🖼️ Dán/Tải Ảnh</span>
-                        </button>
-                      </div>
-                    </div>
-                    <textarea
-                      ref={el => (textareaRefs.current['sampleExplanation'] = el)}
-                      rows={3}
-                      value={form.sampleQuestion?.explanation || ''}
-                      onFocus={() => setActiveFormulaTarget('sampleExplanation')}
+                    <label className="text-xs font-bold text-slate-700 block">Lời giải chi tiết từng bước (Hỗ trợ text thường & dán ảnh bằng Ctrl+V):</label>
+                    <div
+                      onClick={() => setActiveFormulaTarget('sampleExplanation')}
                       onPaste={(e) => handlePasteEvent(e, 'sampleExplanation')}
-                      onChange={(e) => setForm(prev => ({
-                        ...prev,
-                        sampleQuestion: { ...prev.sampleQuestion, explanation: e.target.value }
-                      }))}
-                      placeholder="Lời giải chi tiết theo các bước của Dạng bài... Hỗ trợ gõ text, bấm 'Điền Công Thức' hoặc bấm Ctrl+V để dán ảnh giải thích."
-                      className="w-full p-3 rounded-xl border border-slate-300 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-slate-900 placeholder:text-slate-400 shadow-2xs"
-                    />
+                    >
+                      <WordStyleFormulaCanvas
+                        ref={sampleExplanationCanvasRef}
+                        compact
+                        content={form.sampleQuestion?.explanation || ''}
+                        onChange={(val) => setForm(prev => ({
+                          ...prev,
+                          sampleQuestion: { ...prev.sampleQuestion, explanation: val }
+                        }))}
+                        onEditMathGraph={(tag) => handleOpenMathWorkbench('jsxgraph', 'sampleExplanation', tag)}
+                        onOpenAdvancedModal={() => handleOpenFormulaBuilder('fraction', 'sampleExplanation')}
+                        placeholder="Lời giải chi tiết theo các bước của Dạng bài (công thức hiển thị trực quan)..."
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -2210,56 +2151,149 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
                   </div>
 
                   {questionsList.length === 0 ? (
-                    <div className="p-6 border-2 border-dashed border-slate-200 rounded-2xl text-center text-slate-400 text-xs">
-                      Chưa có câu hỏi bổ sung nào. Bấm <strong>"+ Thêm Câu Hỏi Mới"</strong> để làm phong phú ngân hàng đề.
+                    <div className="p-6 border-2 border-dashed border-slate-200 rounded-2xl text-center text-slate-500 text-xs space-y-3">
+                      <div>Chưa có câu hỏi bổ sung nào trong cơ sở dữ liệu. Bạn có thể nhờ AI sinh tự động hoặc tự thêm câu hỏi thủ công.</div>
+                      <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const effectiveSkillId = form.patternId || pattern?.patternId;
+                            if (!effectiveSkillId) {
+                              toast.warning("Dạng bài này chưa có trong cơ sở dữ liệu. Vui lòng bấm 'Lưu Dạng Bài' ở góc trên trước, sau đó AI sẽ sinh câu hỏi và lưu tự động vào ngân hàng đề!");
+                              return;
+                            }
+                            setAiQuestionModalOpen(true);
+                          }}
+                          className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-700 hover:to-indigo-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer hover:shadow-md active:scale-98 whitespace-nowrap"
+                        >
+                          <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                          <span>AI Sinh Câu Hỏi Tự Động</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setNewQuestionModalOpen(true)}
+                          className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors whitespace-nowrap"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>Tự Thêm Câu Hỏi Thủ Công</span>
+                        </button>
+                      </div>
                     </div>
                   ) : (
-                    <div className="space-y-2.5 max-h-80 overflow-y-auto">
-                      {questionsList.map((q, idx) => (
-                        <div key={q.questionId || idx} className="p-3.5 rounded-xl border border-slate-200 bg-slate-50 flex items-start justify-between gap-3 text-xs">
-                          <div className="space-y-1 flex-1">
-                            <div className="flex items-center gap-2">
-                              <span className="font-bold text-blue-700">Câu #{idx + 1}</span>
-                              <span className="px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 text-[10px] font-bold">
-                                Bloom L{q.difficultyLevel || 2}
-                              </span>
-                              <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">
-                                Đáp án: {q.correctOption}
-                              </span>
+                    <div className="space-y-4">
+                      {questionsList.map((q, idx) => {
+                        const optA = q.optionA || q.options?.find(o => (o.key || o.optionKey) === 'A')?.content || '';
+                        const optB = q.optionB || q.options?.find(o => (o.key || o.optionKey) === 'B')?.content || '';
+                        const optC = q.optionC || q.options?.find(o => (o.key || o.optionKey) === 'C')?.content || '';
+                        const optD = q.optionD || q.options?.find(o => (o.key || o.optionKey) === 'D')?.content || '';
+                        const hasOptions = Boolean(optA || optB || optC || optD);
+
+                        return (
+                          <div 
+                            key={q.questionId || idx} 
+                            className="p-5 rounded-2xl border border-slate-200 bg-white shadow-xs hover:border-slate-300 hover:shadow-sm transition-all space-y-3.5"
+                          >
+                            {/* Card Header */}
+                            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="font-extrabold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-lg text-xs">
+                                  Câu #{idx + 1}
+                                </span>
+                                <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[10.5px] font-bold">
+                                  Bloom L{q.difficultyLevel || 2}
+                                </span>
+                                <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10.5px] font-extrabold">
+                                  Đáp án: {q.correctOption || 'A'}
+                                </span>
+                              </div>
+                              
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  if (deletingQId !== q.questionId) {
+                                    setDeletingQId(q.questionId);
+                                    toast.warning("Bấm nút Thùng rác một lần nữa để xác nhận xóa vĩnh viễn câu hỏi này!");
+                                    setTimeout(() => setDeletingQId(null), 5000);
+                                    return;
+                                  }
+                                  try {
+                                    await contentService.deleteQuestion(q.questionId);
+                                    setQuestionsList(prev => prev.filter(item => item.questionId !== q.questionId));
+                                    setDeletingQId(null);
+                                    toast.success("Đã xóa câu hỏi thành công khỏi ngân hàng đề!");
+                                  } catch (e) {
+                                    toast.error("Không thể xóa câu hỏi: " + e.message);
+                                  }
+                                }}
+                                className={`p-1.5 rounded-lg transition-all cursor-pointer ${
+                                  deletingQId === q.questionId
+                                    ? 'bg-rose-600 text-white shadow-xs animate-pulse'
+                                    : 'text-slate-400 hover:text-rose-600 hover:bg-rose-50'
+                                }`}
+                                title={deletingQId === q.questionId ? "Bấm để xác nhận xóa vĩnh viễn!" : "Xóa câu hỏi"}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
                             </div>
-                            <div className="text-slate-800 font-medium">
+
+                            {/* Question Content */}
+                            <div className="text-xs text-slate-800 font-medium leading-relaxed overflow-x-auto">
                               <MathText text={q.contentLatex} />
                             </div>
+
+                            {/* 4 Options Grid */}
+                            {hasOptions && (
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                                {[
+                                  { key: 'A', text: optA },
+                                  { key: 'B', text: optB },
+                                  { key: 'C', text: optC },
+                                  { key: 'D', text: optD }
+                                ].map((opt) => {
+                                  if (!opt.text) return null;
+                                  const isCorrect = (q.correctOption || '').toUpperCase() === opt.key;
+                                  return (
+                                    <div
+                                      key={opt.key}
+                                      className={`p-2.5 rounded-xl border text-xs flex items-start gap-2 transition-all ${
+                                        isCorrect
+                                          ? 'bg-emerald-50/80 border-emerald-300 text-emerald-950 font-bold shadow-2xs ring-1 ring-emerald-200'
+                                          : 'bg-slate-50/60 border-slate-200 text-slate-700'
+                                      }`}
+                                    >
+                                      <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 ${
+                                        isCorrect ? 'bg-emerald-600 text-white shadow-2xs' : 'bg-slate-200 text-slate-700'
+                                      }`}>
+                                        {opt.key}
+                                      </span>
+                                      <div className="flex-1 break-words overflow-x-auto">
+                                        <MathText text={opt.text} />
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+
+                            {/* Detailed Explanation: Auto-expanding clean rectangle */}
+                            {q.explanation && (
+                              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-700 space-y-2 w-full shadow-2xs mt-2">
+                                <div className="flex items-center justify-between border-b border-slate-200/80 pb-1.5">
+                                  <span className="font-extrabold text-slate-900 text-xs flex items-center gap-1.5">
+                                    <span>💡 Lời giải chi tiết từng bước:</span>
+                                  </span>
+                                  <span className="text-[10px] font-bold text-slate-500 bg-white border border-slate-200 px-2 py-0.5 rounded-full">
+                                    Lời giải chuẩn
+                                  </span>
+                                </div>
+                                <div className="text-xs leading-relaxed text-slate-800 break-words whitespace-pre-line overflow-x-auto">
+                                  <MathText text={q.explanation} />
+                                </div>
+                              </div>
+                            )}
                           </div>
-                          
-                          <button
-                            onClick={async () => {
-                              if (deletingQId !== q.questionId) {
-                                setDeletingQId(q.questionId);
-                                toast.warning("Bấm nút Thùng rác một lần nữa để xác nhận xóa vĩnh viễn câu hỏi này!");
-                                setTimeout(() => setDeletingQId(null), 5000);
-                                return;
-                              }
-                              try {
-                                await contentService.deleteQuestion(q.questionId);
-                                setQuestionsList(prev => prev.filter(item => item.questionId !== q.questionId));
-                                setDeletingQId(null);
-                                toast.success("Đã xóa câu hỏi thành công khỏi ngân hàng đề!");
-                              } catch (e) {
-                                toast.error("Không thể xóa câu hỏi: " + e.message);
-                              }
-                            }}
-                            className={`p-1.5 rounded-lg transition-all ${
-                              deletingQId === q.questionId
-                                ? 'bg-rose-600 text-white shadow-xs animate-pulse'
-                                : 'text-slate-400 hover:text-rose-600 hover:bg-rose-50'
-                            }`}
-                            title={deletingQId === q.questionId ? "Bấm để xác nhận xóa vĩnh viễn!" : "Xóa câu hỏi"}
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>
@@ -2303,20 +2337,23 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-slate-700">Mức độ nhận thức chuẩn Bloom:</label>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                    {['Nhận biết (L1)', 'Thông hiểu (L2)', 'Vận dụng (L3)', 'Vận dụng cao (L4)'].map((lvl) => (
-                      <button
-                        key={lvl}
-                        type="button"
-                        onClick={() => setForm(prev => ({ ...prev, level: lvl }))}
-                        className={`p-2.5 rounded-xl border text-xs font-bold transition-all ${
-                          form.level === lvl 
-                            ? 'bg-blue-600 text-white border-blue-600 shadow-sm' 
-                            : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
-                        }`}
-                      >
-                        {lvl}
-                      </button>
-                    ))}
+                    {['Nhận biết (L1)', 'Thông hiểu (L2)', 'Vận dụng (L3)', 'Vận dụng cao (L4)'].map((lvl) => {
+                      const isSelected = normalizeBloomLevel(form.level) === lvl;
+                      return (
+                        <button
+                          key={lvl}
+                          type="button"
+                          onClick={() => setForm(prev => ({ ...prev, level: lvl }))}
+                          className={`p-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                            isSelected
+                              ? 'bg-blue-600 text-white border-blue-600 shadow-sm ring-2 ring-blue-100' 
+                              : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+                          }`}
+                        >
+                          {lvl}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
@@ -2328,20 +2365,6 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
         {/* ================= RIGHT: HIGH-FIDELITY LIVE STUDENT PREVIEW (5 Cols in Split, Full in Preview) ================= */}
         {(viewMode === 'preview' || viewMode === 'split') && (
           <div className={`${viewMode === 'split' ? 'lg:col-span-5' : 'w-full'} space-y-4`}>
-            
-            {/* Preview Banner Header */}
-            <div className="p-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white flex items-center justify-between shadow-sm">
-              <div className="flex items-center gap-2">
-                <Eye className="w-4 h-4 text-emerald-200" />
-                <span className="text-xs font-extrabold uppercase tracking-wide">
-                  Giao Diện Trực Quan Học Sinh Nhìn Thấy (Live Preview)
-                </span>
-              </div>
-              <span className="px-2 py-0.5 rounded-full bg-white/20 text-white text-[10px] font-bold">
-                Thời gian thực
-              </span>
-            </div>
-
             {/* The Actual Simulated Student Container */}
             <div className="bg-white rounded-3xl border border-slate-200/90 shadow-md p-6 space-y-6">
               
@@ -2554,6 +2577,18 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
       {newQuestionModalOpen && (
         <NewQuestionDialog
           skillId={form.patternId || pattern?.patternId}
+          patternInfo={{
+            patternName: form.name || pattern?.name || pattern?.patternName || '',
+            lessonName: lesson?.name || '',
+            domainName: domain?.name || '',
+            theoryRecap: form.theoryRecap || '',
+            solutionMethod: form.solutionMethod || '',
+            difficultyLevel: form.level?.includes('L1') ? 1 : form.level?.includes('L3') ? 3 : form.level?.includes('L4') ? 4 : 2,
+            existingQuestions: [
+              form.sampleQuestion?.contentLatex,
+              ...questionsList.map(q => q.contentLatex)
+            ].filter(Boolean)
+          }}
           onClose={() => setNewQuestionModalOpen(false)}
           onCreated={(newQ) => {
             setQuestionsList(prev => [newQ, ...prev]);
@@ -2568,6 +2603,30 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
             setWorkbenchInitialTag(initialTag);
             setCustomWorkbenchCallback(() => cb);
             setMathWorkbenchOpen(true);
+          }}
+        />
+      )}
+
+      {/* 4.5. MODAL AI SINH CÂU HỎI TỰ ĐỘNG BÁM SÁT DẠNG BÀI */}
+      {aiQuestionModalOpen && (
+        <AiQuestionGeneratorModal
+          skillId={form.patternId || pattern?.patternId}
+          patternInfo={{
+            patternName: form.name || pattern?.name || pattern?.patternName || '',
+            lessonName: lesson?.name || '',
+            domainName: domain?.name || '',
+            theoryRecap: form.theoryRecap || '',
+            solutionMethod: form.solutionMethod || '',
+            difficultyLevel: form.level?.includes('L1') ? 1 : form.level?.includes('L3') ? 3 : form.level?.includes('L4') ? 4 : 2,
+            existingQuestions: [
+              form.sampleQuestion?.contentLatex,
+              ...questionsList.map(q => q.contentLatex)
+            ].filter(Boolean)
+          }}
+          onClose={() => setAiQuestionModalOpen(false)}
+          onSuccessBatch={(createdQuestions) => {
+            setQuestionsList(prev => [...createdQuestions, ...prev]);
+            setAiQuestionModalOpen(false);
           }}
         />
       )}
@@ -2615,21 +2674,289 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
         className="hidden"
       />
 
+      {/* 6. FLOATING STEM TOOLS TOGGLE (COMPACT SLEEK TAB) */}
+      {!isStemDrawerOpen && (
+        <button
+          type="button"
+          onClick={() => setIsStemDrawerOpen(true)}
+          className="fixed right-0 top-1/2 -translate-y-1/2 z-40 bg-gradient-to-b from-indigo-600 to-purple-700 text-white pl-1.5 pr-1 py-2 rounded-l-xl shadow-md hover:shadow-lg hover:pl-2.5 transition-all flex flex-col items-center gap-1 group cursor-pointer border-y border-l border-indigo-300/40 opacity-90 hover:opacity-100"
+          title="Mở Bộ Công Cụ STEM (<)"
+        >
+          <ChevronLeft className="w-3.5 h-3.5 stroke-[2.5] text-amber-300 group-hover:-translate-x-0.5 transition-transform" />
+          <span className="text-[8.5px] text-amber-300 leading-none">✨</span>
+          <span className="[writing-mode:vertical-rl] text-[9.5px] font-extrabold tracking-wider uppercase select-none text-indigo-50">
+            STEM
+          </span>
+        </button>
+      )}
+
+      {/* 6.5. FLOATING STEM TOOLS DRAWER (RIGHT SLIDE-OVER PANEL) */}
+      <FloatingStemDrawer
+        isOpen={isStemDrawerOpen}
+        onClose={() => setIsStemDrawerOpen(false)}
+        targetField={activeFormulaTarget || (activeSection === 'theory' ? 'theoryRecap' : activeSection === 'method' ? 'solutionMethod' : 'sampleQuestion')}
+        
+        onOpenFormulaBuilder={handleOpenFormulaBuilder}
+        onOpenMathWorkbench={handleOpenMathWorkbench}
+        onOpenSymbolPalette={() => setIsPaletteCollapsed(false)}
+      />
+
+    </div>
+  );
+}
+
+// Subcomponent: Bảng công cụ STEM trôi nổi cạnh phải màn hình (Siêu gọn, có search, không icon)
+function FloatingStemDrawer({ 
+  isOpen, 
+  onClose, 
+  targetField, 
+  onOpenFormulaBuilder, 
+  onOpenMathWorkbench,
+  onOpenSymbolPalette 
+}) {
+  const drawerRef = useRef(null);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  useEffect(() => {
+    const handleOutsideClick = (e) => {
+      if (drawerRef.current && !drawerRef.current.contains(e.target)) {
+        onClose();
+      }
+    };
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') onClose();
+    };
+    if (isOpen) {
+      document.addEventListener('mousedown', handleOutsideClick);
+      document.addEventListener('keydown', handleKeyDown);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, onClose]);
+
+  if (!isOpen) return null;
+
+  const stemTools = [
+    {
+      id: 'mathlab',
+      title: 'Phòng Thí Nghiệm MathLab 2D & 3D',
+      desc: 'Đồ thị Oxy, hình không gian 3D xoay 360°, hình học phẳng chuẩn SGK',
+      keywords: 'mathlab do thi oxy hinh khong gian 3d phang jsxgraph',
+      action: () => {
+        if (onOpenMathWorkbench) onOpenMathWorkbench('jsxgraph', targetField);
+        onClose();
+      }
+    },
+    {
+      id: 'variation_table',
+      title: 'Bảng Biến Thiên Động (3 Dòng Vector)',
+      desc: 'Lưới 2N-1 cột, cực trị, tiệm cận đứng kép (||), tự động suy luận hướng biến thiên',
+      keywords: 'bang bien thien bbt cuc tri tiem can vector 2n-1',
+      action: () => {
+        if (onOpenFormulaBuilder) onOpenFormulaBuilder('variation_table', targetField);
+        onClose();
+      }
+    },
+    {
+      id: 'fraction',
+      title: 'Phân Số, Căn Thức & Lũy Thừa',
+      desc: 'Phân số 2 tầng, căn bậc n, số mũ & tự động tính đáp số',
+      keywords: 'phan so can thuc luy thua mu tinh toan',
+      action: () => {
+        if (onOpenFormulaBuilder) onOpenFormulaBuilder('fraction', targetField);
+        onClose();
+      }
+    },
+    {
+      id: 'limit',
+      title: 'Đạo Hàm Số Gia & Giới Hạn SGK',
+      desc: 'Định nghĩa f\'(x₀) = lim Δy/Δx, khử vô định 0/0, tích phân',
+      keywords: 'dao ham so gia gioi han lim tich phan',
+      action: () => {
+        if (onOpenFormulaBuilder) onOpenFormulaBuilder('limit', targetField);
+        onClose();
+      }
+    },
+    {
+      id: 'integral',
+      title: 'Tích Phân & Vi Phân Hàm Số',
+      desc: 'Tích phân xác định cận từ a đến b, nguyên hàm f(x)dx',
+      keywords: 'tich phan vi phan nguyen ham can a b dx',
+      action: () => {
+        if (onOpenFormulaBuilder) onOpenFormulaBuilder('integral', targetField);
+        onClose();
+      }
+    },
+    {
+      id: 'system',
+      title: 'Hệ Phương Trình & Tuyển Nghiệm',
+      desc: 'Hệ phương trình 2-3 ẩn, dấu ngoặc nhọn hệ và ngoặc vuông tuyển',
+      keywords: 'he phuong trinh tuyen nghiem ngoac nhon he 2 an 3 an',
+      action: () => {
+        if (onOpenFormulaBuilder) onOpenFormulaBuilder('system', targetField);
+        onClose();
+      }
+    },
+    {
+      id: 'chemistry',
+      title: 'Hóa Học & Nồng Độ Mol Thực Nghiệm',
+      desc: 'CM = n/V, C%, m = n*M, hiệu suất H% tự động tính toán',
+      keywords: 'hoa hoc nong do mol cm c% khoi luong hieu suat thuc nghiem',
+      action: () => {
+        if (onOpenFormulaBuilder) onOpenFormulaBuilder('chemistry', targetField);
+        onClose();
+      }
+    },
+    {
+      id: 'symbols',
+      title: 'Thư Viện Ký Hiệu & 7 Môn Học',
+      desc: 'Mở toàn bộ danh mục ký hiệu Toán, Hóa, Lý, Sinh, Văn, Sử, Địa bên trái',
+      keywords: 'thu vien ky hieu 7 mon hoc toan hoa ly sinh van su dia',
+      action: () => {
+        if (onOpenSymbolPalette) onOpenSymbolPalette();
+        onClose();
+      }
+    }
+  ];
+
+  const filteredTools = stemTools.filter(tool => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase().trim();
+    return (
+      tool.title.toLowerCase().includes(q) ||
+      tool.desc.toLowerCase().includes(q) ||
+      tool.keywords.toLowerCase().includes(q)
+    );
+  });
+
+  return (
+    <div 
+      ref={drawerRef}
+      className="fixed right-0 top-1/2 -translate-y-1/2 z-50 w-80 sm:w-[380px] max-h-[86vh] bg-white rounded-l-2xl shadow-2xl border-l-2 border-y-2 border-indigo-500/80 flex flex-col overflow-hidden animate-in slide-in-from-right duration-200"
+    >
+      {/* Drawer Header (Không còn chữ GDPT 2018) */}
+      <div className="p-3.5 bg-gradient-to-r from-slate-950 via-indigo-950 to-purple-950 text-white flex items-center justify-between shrink-0 shadow-xs border-b border-indigo-900/60">
+        <div>
+          <div className="text-xs font-black tracking-wide text-white">
+            BỘ CÔNG CỤ TOÁN & STEM
+          </div>
+          <div className="text-[10px] text-slate-300 font-medium mt-0.5">
+            Chèn công thức & đồ thị trực tiếp tại vị trí con trỏ
+          </div>
+        </div>
+        <button 
+          type="button" 
+          onClick={onClose}
+          className="w-7 h-7 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center text-slate-300 hover:text-white transition-colors cursor-pointer group"
+          title="Thu gọn bảng công cụ (Esc)"
+        >
+          <ChevronRight className="w-5 h-5 group-hover:translate-x-0.5 transition-transform" />
+        </button>
+      </div>
+
+      {/* Ở trên là Search */}
+      <div className="p-3 bg-slate-50 border-b border-slate-200 shrink-0">
+        <div className="relative">
+          <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Tìm kiếm công cụ (MathLab, bảng biến thiên, phân số...)"
+            className="w-full pl-8 pr-7 py-1.5 text-xs bg-white border border-slate-300 rounded-xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 shadow-2xs"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery('')}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs font-bold"
+            >
+              ×
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Drawer Body: Ghi tiêu đề công cụ, mô tả và không thêm icon gì cả */}
+      <div className="p-3 space-y-2 overflow-y-auto flex-1 max-h-[calc(86vh-115px)]">
+        {filteredTools.length === 0 ? (
+          <div className="py-8 text-center text-xs text-slate-400 italic">
+            Không tìm thấy công cụ nào phù hợp với từ khóa "{searchQuery}"
+          </div>
+        ) : (
+          filteredTools.map((tool) => (
+            <button
+              key={tool.id}
+              type="button"
+              onClick={tool.action}
+              className="w-full text-left p-3 rounded-xl border border-slate-200 bg-white hover:bg-indigo-50/60 hover:border-indigo-300 transition-all cursor-pointer group shadow-2xs hover:shadow-xs block"
+            >
+              <div className="font-bold text-xs text-slate-900 group-hover:text-indigo-900 transition-colors">
+                {tool.title}
+              </div>
+              <div className="text-[11px] text-slate-500 mt-1 leading-relaxed">
+                {tool.desc}
+              </div>
+            </button>
+          ))
+        )}
+      </div>
     </div>
   );
 }
 
 // Subcomponent: New Question Modal
-function NewQuestionDialog({ skillId, onClose, onCreated, onOpenWorkbench }) {
+function NewQuestionDialog({ skillId, patternInfo, onClose, onCreated, onOpenWorkbench }) {
   const [contentLatex, setContentLatex] = useState('');
   const [optionA, setOptionA] = useState('');
   const [optionB, setOptionB] = useState('');
   const [optionC, setOptionC] = useState('');
   const [optionD, setOptionD] = useState('');
   const [correctOption, setCorrectOption] = useState('A');
-  const [difficultyLevel, setDifficultyLevel] = useState(2);
+  const [difficultyLevel, setDifficultyLevel] = useState(patternInfo?.difficultyLevel || 2);
   const [explanation, setExplanation] = useState('');
   const [saving, setSaving] = useState(false);
+  const [aiGenerating, setAiGenerating] = useState(false);
+
+  const handleAiPrefillQuestion = async () => {
+    if (!patternInfo?.patternName) {
+      toast.warning("Chưa có thông tin tên Dạng bài để AI tạo câu hỏi.");
+      return;
+    }
+    setAiGenerating(true);
+    try {
+      const res = await aiService.generatePatternQuestions({
+        patternName: patternInfo.patternName,
+        lessonName: patternInfo.lessonName || '',
+        domainName: patternInfo.domainName || '',
+        theoryRecap: patternInfo.theoryRecap || '',
+        solutionMethod: patternInfo.solutionMethod || '',
+        count: 1,
+        existingQuestions: patternInfo.existingQuestions || []
+      });
+
+      const q = res?.questions?.[0];
+      if (q) {
+        setContentLatex(q.contentLatex || '');
+        setOptionA(q.optionA || '');
+        setOptionB(q.optionB || '');
+        setOptionC(q.optionC || '');
+        setOptionD(q.optionD || '');
+        setCorrectOption(q.correctOption || 'A');
+        setDifficultyLevel(q.difficultyLevel || patternInfo.difficultyLevel || 2);
+        setExplanation(q.explanation || '');
+        toast.success("AI đã tự động sinh nội dung câu hỏi hoàn chỉnh bám sát dạng bài!");
+      } else {
+        toast.warning("AI không trả về câu hỏi nào. Vui lòng bấm thử lại!");
+      }
+    } catch (err) {
+      toast.error("Lỗi khi AI sinh câu hỏi: " + (err?.response?.data?.message || err.message));
+    } finally {
+      setAiGenerating(false);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -2677,24 +3004,36 @@ function NewQuestionDialog({ skillId, onClose, onCreated, onOpenWorkbench }) {
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
               <label className="text-xs font-bold text-slate-700">Đề bài (KaTeX / Markdown):</label>
-              {onOpenWorkbench && (
+              <div className="flex items-center gap-1.5">
                 <button
                   type="button"
-                  onClick={() => {
-                    onOpenWorkbench((snippet) => {
-                      setContentLatex(prev => {
-                        const graphRegex = /(\[MATH_GRAPH_3D\][\s\S]*?\[\/MATH_GRAPH_3D\]|\[MATH_GRAPH\][\s\S]*?\[\/MATH_GRAPH\])/i;
-                        if (graphRegex.test(prev)) return prev.replace(graphRegex, snippet.trim());
-                        return prev ? `${prev} ${snippet}` : snippet;
-                      });
-                    }, contentLatex);
-                  }}
-                  className="px-2 py-0.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[10px] font-bold border border-indigo-200 flex items-center gap-1 transition-all"
+                  disabled={aiGenerating}
+                  onClick={handleAiPrefillQuestion}
+                  className="px-2.5 py-1 rounded-lg bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-700 hover:to-indigo-700 text-white text-[11px] font-bold border border-indigo-200 flex items-center gap-1.5 shadow-sm transition-all cursor-pointer disabled:opacity-50"
+                  title="Nhờ Gemini AI tự động điền đầy đủ đề bài, 4 phương án, đáp án đúng và lời giải chi tiết theo đúng dạng bài này"
                 >
-                  <Sparkles className="w-3 h-3 text-indigo-600" />
-                  <span>📐 Chèn/Sửa MathLab 2D/3D</span>
+                  <Sparkles className={`w-3.5 h-3.5 text-amber-300 ${aiGenerating ? 'animate-spin' : ''}`} />
+                  <span>{aiGenerating ? 'AI đang soạn...' : '✨ AI Tự Điền Câu Hỏi'}</span>
                 </button>
-              )}
+                {onOpenWorkbench && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onOpenWorkbench((snippet) => {
+                        setContentLatex(prev => {
+                          const graphRegex = /(\[MATH_GRAPH_3D\][\s\S]*?\[\/MATH_GRAPH_3D\]|\[MATH_GRAPH\][\s\S]*?\[\/MATH_GRAPH\])/i;
+                          if (graphRegex.test(prev)) return prev.replace(graphRegex, snippet.trim());
+                          return prev ? `${prev} ${snippet}` : snippet;
+                        });
+                      }, contentLatex);
+                    }}
+                    className="px-2 py-0.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[10px] font-bold border border-indigo-200 flex items-center gap-1 transition-all"
+                  >
+                    <Sparkles className="w-3 h-3 text-indigo-600" />
+                    <span>📐 Chèn/Sửa MathLab 2D/3D</span>
+                  </button>
+                )}
+              </div>
             </div>
             <textarea
               rows={3}
@@ -2802,6 +3141,376 @@ function NewQuestionDialog({ skillId, onClose, onCreated, onOpenWorkbench }) {
             </button>
           </div>
         </form>
+      </div>
+    </div>
+  );
+}
+
+// Subcomponent: AI Pattern Question Generator Modal
+function AiQuestionGeneratorModal({ skillId, patternInfo, onClose, onSuccessBatch }) {
+  const [count, setCount] = useState(2);
+  const [level, setLevel] = useState(patternInfo?.difficultyLevel || 2);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [generatedQuestions, setGeneratedQuestions] = useState([]);
+  const [selectedIndices, setSelectedIndices] = useState([]);
+  const [processingTime, setProcessingTime] = useState(0);
+
+  const handleGenerate = async () => {
+    setIsGenerating(true);
+    setGeneratedQuestions([]);
+    setSelectedIndices([]);
+    try {
+      const res = await aiService.generatePatternQuestions({
+        patternName: patternInfo?.patternName || '',
+        lessonName: patternInfo?.lessonName || '',
+        domainName: patternInfo?.domainName || '',
+        theoryRecap: patternInfo?.theoryRecap || '',
+        solutionMethod: patternInfo?.solutionMethod || '',
+        count: count,
+        existingQuestions: patternInfo?.existingQuestions || []
+      });
+
+      const questions = res?.questions || [];
+      if (questions.length === 0) {
+        toast.warning("AI không trả về câu hỏi nào. Vui lòng bấm thử lại!");
+      } else {
+        const mapped = questions.map(q => ({
+          ...q,
+          difficultyLevel: q.difficultyLevel || level
+        }));
+        setGeneratedQuestions(mapped);
+        setSelectedIndices(mapped.map((_, idx) => idx));
+        setProcessingTime(res?.processing_time_seconds || 0);
+        toast.success(`Gemini AI đã sinh thành công ${questions.length} câu hỏi rèn luyện bám sát dạng bài!`);
+      }
+    } catch (err) {
+      toast.error("Lỗi khi AI sinh câu hỏi: " + (err?.response?.data?.message || err.message));
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleToggleSelect = (idx) => {
+    setSelectedIndices(prev => 
+      prev.includes(idx) ? prev.filter(i => i !== idx) : [...prev, idx]
+    );
+  };
+
+  const handleToggleSelectAll = () => {
+    if (selectedIndices.length === generatedQuestions.length) {
+      setSelectedIndices([]);
+    } else {
+      setSelectedIndices(generatedQuestions.map((_, i) => i));
+    }
+  };
+
+  const handleSaveToDb = async () => {
+    const toSave = generatedQuestions.filter((_, idx) => selectedIndices.includes(idx));
+    if (toSave.length === 0) {
+      toast.warning("Vui lòng tích chọn ít nhất 1 câu hỏi để lưu vào cơ sở dữ liệu!");
+      return;
+    }
+    setIsSaving(true);
+    const createdResults = [];
+    let failureCount = 0;
+
+    for (let i = 0; i < toSave.length; i++) {
+      const q = toSave[i];
+      try {
+        const payload = {
+          skillId: skillId,
+          difficultyLevel: parseInt(q.difficultyLevel, 10) || 2,
+          contentLatex: q.contentLatex,
+          optionA: q.optionA,
+          optionB: q.optionB,
+          optionC: q.optionC,
+          optionD: q.optionD,
+          correctOption: q.correctOption,
+          explanation: q.explanation || ''
+        };
+        const created = await contentService.createQuestion(payload);
+        createdResults.push(created || payload);
+      } catch (err) {
+        failureCount++;
+      }
+    }
+
+    setIsSaving(false);
+    if (createdResults.length > 0) {
+      toast.success(`Đã lưu thành công ${createdResults.length} câu hỏi vào ngân hàng đề!`);
+      if (onSuccessBatch) onSuccessBatch(createdResults);
+    }
+    if (failureCount > 0) {
+      toast.error(`Có ${failureCount} câu hỏi bị lỗi khi lưu vào cơ sở dữ liệu.`);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md animate-fade-in">
+      <div className="relative w-full max-w-3xl bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col my-auto max-h-[92vh]">
+        {/* Header */}
+        <div className="p-5 border-b border-slate-200 bg-gradient-to-r from-purple-700 via-indigo-700 to-blue-700 text-white flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center shadow-inner">
+              <Sparkles className="w-5 h-5 text-amber-300" />
+            </div>
+            <div>
+              <h3 className="text-base font-extrabold flex items-center gap-2">
+                <span>AI Sinh Câu Hỏi Thích Ứng Bám Sát Dạng Bài</span>
+                <span className="px-2 py-0.5 rounded-full bg-amber-400 text-slate-950 text-[10px] font-black uppercase tracking-wider">
+                  Gemini AI
+                </span>
+              </h3>
+              <p className="text-xs text-indigo-100 font-medium">
+                Dạng bài: <strong className="text-white">{patternInfo?.patternName || 'Chưa đặt tên'}</strong>
+              </p>
+            </div>
+          </div>
+          <button 
+            onClick={onClose} 
+            className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors cursor-pointer"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="p-6 space-y-5 overflow-y-auto flex-1">
+          {/* Controls Bar */}
+          <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1.5">
+                  Số lượng câu hỏi cần sinh:
+                </label>
+                <div className="flex items-center gap-1.5">
+                  {[1, 2, 3, 5].map((cnt) => (
+                    <button
+                      key={cnt}
+                      type="button"
+                      onClick={() => setCount(cnt)}
+                      className={`flex-1 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
+                        count === cnt
+                          ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
+                          : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                      }`}
+                    >
+                      {cnt} câu
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1.5">
+                  Mức độ tư duy mục tiêu (Bloom):
+                </label>
+                <select
+                  value={level}
+                  onChange={(e) => setLevel(parseInt(e.target.value, 10))}
+                  className="w-full p-2 rounded-xl border border-slate-300 text-xs font-semibold bg-white text-slate-900"
+                >
+                  <option value={1}>Bloom L1: Nhận biết</option>
+                  <option value={2}>Bloom L2: Thông hiểu</option>
+                  <option value={3}>Bloom L3: Vận dụng</option>
+                  <option value={4}>Bloom L4: Vận dụng cao</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="pt-1 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <span className="text-[11px] text-slate-500 italic">
+                * AI phân tích lý thuyết, phương pháp giải và các câu hỏi hiện có để tạo câu hỏi mới tránh trùng lặp.
+              </span>
+              <button
+                type="button"
+                disabled={isGenerating || isSaving}
+                onClick={handleGenerate}
+                className="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer disabled:opacity-50 shrink-0"
+              >
+                <Sparkles className={`w-4 h-4 text-amber-300 ${isGenerating ? 'animate-spin' : ''}`} />
+                <span>{isGenerating ? 'Đang phân tích & sinh câu hỏi...' : generatedQuestions.length > 0 ? '🔄 Sinh lại bộ khác' : '🚀 Bắt Đầu Sinh Câu Hỏi'}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Loading Animation State */}
+          {isGenerating && (
+            <div className="p-8 border-2 border-dashed border-indigo-200 rounded-3xl text-center space-y-3 bg-indigo-50/30 animate-pulse">
+              <div className="w-12 h-12 rounded-2xl bg-indigo-600 text-white mx-auto flex items-center justify-center shadow-lg shadow-indigo-200">
+                <Sparkles className="w-6 h-6 animate-spin text-amber-300" />
+              </div>
+              <div className="space-y-1">
+                <h4 className="text-sm font-extrabold text-indigo-950">
+                  Gemini AI đang kiến tạo các câu hỏi rèn luyện thích ứng...
+                </h4>
+                <p className="text-xs text-indigo-700 max-w-md mx-auto leading-relaxed">
+                  Hệ thống đang trích xuất bản đồ tri thức dạng bài, bám sát cấu trúc ra đề ĐGNL/TN THPT và tự động biên soạn phương án gây nhiễu cùng lời giải từng bước.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Generated Questions List */}
+          {!isGenerating && generatedQuestions.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between px-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-extrabold text-slate-800">
+                    Kết quả ({generatedQuestions.length} câu hỏi mới):
+                  </span>
+                  {processingTime > 0 && (
+                    <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[10px] font-mono">
+                      {processingTime}s
+                    </span>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={handleToggleSelectAll}
+                  className="text-xs font-bold text-indigo-600 hover:text-indigo-800 cursor-pointer"
+                >
+                  {selectedIndices.length === generatedQuestions.length ? 'Bỏ chọn tất cả' : 'Chọn tất cả'}
+                </button>
+              </div>
+
+              <div className="space-y-3 max-h-[46vh] overflow-y-auto pr-1">
+                {generatedQuestions.map((q, idx) => {
+                  const isSelected = selectedIndices.includes(idx);
+                  return (
+                    <div
+                      key={idx}
+                      className={`p-4 rounded-2xl border transition-all ${
+                        isSelected 
+                          ? 'border-indigo-300 bg-white shadow-sm ring-1 ring-indigo-200' 
+                          : 'border-slate-200 bg-slate-50/70 opacity-75'
+                      }`}
+                    >
+                      {/* Card Header */}
+                      <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-100">
+                        <label className="flex items-center gap-2 cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => handleToggleSelect(idx)}
+                            className="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 cursor-pointer"
+                          />
+                          <span className="text-xs font-black text-indigo-900">
+                            Câu hỏi #{idx + 1}
+                          </span>
+                        </label>
+                        <div className="flex items-center gap-1.5">
+                          <span className="px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 text-[10px] font-bold">
+                            Bloom L{q.difficultyLevel || level}
+                          </span>
+                          <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black">
+                            Đáp án: {q.correctOption}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Question Content */}
+                      <div className="text-xs text-slate-800 font-medium leading-relaxed mb-3">
+                        <MathText text={q.contentLatex} />
+                      </div>
+
+                      {/* 4 Options Grid */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2.5">
+                        {['A', 'B', 'C', 'D'].map((optKey) => {
+                          const isCorrect = (q.correctOption || '').toUpperCase() === optKey;
+                          const optText = q[`option${optKey}`] || '';
+                          return (
+                            <div
+                              key={optKey}
+                              className={`p-2 rounded-xl border text-xs flex items-start gap-1.5 ${
+                                isCorrect
+                                  ? 'bg-emerald-50 border-emerald-300 text-emerald-950 font-bold'
+                                  : 'bg-white border-slate-200 text-slate-700'
+                              }`}
+                            >
+                              <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 ${
+                                isCorrect ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-700'
+                              }`}>
+                                {optKey}
+                              </span>
+                              <div className="flex-1 break-words">
+                                <MathText text={optText} />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Explanation */}
+                      {q.explanation && (
+                        <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600 space-y-1">
+                          <span className="font-bold text-slate-800 block text-[11px]">
+                            💡 Lời giải chi tiết:
+                          </span>
+                          <div className="text-[11px] leading-relaxed">
+                            <MathText text={q.explanation} />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Empty initial state before click */}
+          {!isGenerating && generatedQuestions.length === 0 && (
+            <div className="p-8 border-2 border-dashed border-slate-200 rounded-3xl text-center space-y-2">
+              <div className="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 mx-auto flex items-center justify-center">
+                <Sparkles className="w-5 h-5" />
+              </div>
+              <h4 className="text-xs font-bold text-slate-700">Chưa sinh câu hỏi nào</h4>
+              <p className="text-xs text-slate-400 max-w-sm mx-auto">
+                Chọn số lượng và mức độ nhận thức ở trên, sau đó bấm nút "Bắt Đầu Sinh Câu Hỏi" để AI tự động thiết kế đề bài.
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="p-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between">
+          <div className="text-xs text-slate-600 font-semibold">
+            {generatedQuestions.length > 0 ? (
+              <span>Đã chọn <strong className="text-indigo-600">{selectedIndices.length}</strong>/{generatedQuestions.length} câu để lưu</span>
+            ) : (
+              <span>Sẵn sàng sinh đề thích ứng</span>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 rounded-xl border border-slate-300 text-xs font-bold text-slate-700 hover:bg-white cursor-pointer"
+            >
+              Đóng
+            </button>
+            <button
+              type="button"
+              disabled={isGenerating || isSaving || selectedIndices.length === 0}
+              onClick={handleSaveToDb}
+              className="px-5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-bold shadow-sm transition-all cursor-pointer disabled:opacity-50 flex items-center gap-2"
+            >
+              {isSaving ? (
+                <>
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  <span>Đang lưu vào Database...</span>
+                </>
+              ) : (
+                <>
+                  <Save className="w-3.5 h-3.5" />
+                  <span>Lưu {selectedIndices.length > 0 ? `(${selectedIndices.length})` : ''} Câu Vào Database (API 16)</span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

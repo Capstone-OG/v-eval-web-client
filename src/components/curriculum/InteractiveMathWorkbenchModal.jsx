@@ -1,6 +1,16 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import JXG from 'jsxgraph';
-import { formatMathGraphTag, formatMathGraph3DTag, parseMathGraphTag, parseMathGraph3DTag } from '../../utils/mathGraphUtils';
+import {
+  formatMathGraphTag,
+  formatMathGraph3DTag,
+  formatMathGeometry2DTag,
+  parseMathGraphTag,
+  parseMathGraph3DTag,
+  parseMathGeometry2DTag,
+  getDefault2DGeometryPoints,
+  mount2DGeometryBoard,
+  SHAPES_2D_META
+} from '../../utils/mathGraphUtils';
 import { 
   X, 
   Sparkles, 
@@ -339,6 +349,98 @@ export default function InteractiveMathWorkbenchModal({
   const [newLineDash, setNewLineDash] = useState(2); // 2 = dashed (nét đứt SGK), 0 = solid (nét liền)
   const [newLineColor, setNewLineColor] = useState('#ef4444');
 
+  // =============================================================
+  // 4. STATE FOR 2D PLANE GEOMETRY (HÌNH HỌC PHẲNG 2D TƯƠNG TÁC)
+  // =============================================================
+  const [shape2DType, setShape2DType] = useState('right_triangle');
+  const [custom2DPoints, setCustom2DPoints] = useState(() => getDefault2DGeometryPoints('right_triangle'));
+  const [show2DCircumcircle, setShow2DCircumcircle] = useState(true);
+  const [show2DAltitude, setShow2DAltitude] = useState(true);
+  const [show2DMedian, setShow2DMedian] = useState(true);
+  const [show2DAxes, setShow2DAxes] = useState(false);
+  const [extra2DPoints, setExtra2DPoints] = useState([]);
+  const [custom2DAuxLines, setCustom2DAuxLines] = useState([]);
+  const [new2DPtName, setNew2DPtName] = useState('E');
+  const [new2DPtParentA, setNew2DPtParentA] = useState('A');
+  const [new2DPtParentB, setNew2DPtParentB] = useState('B');
+  const [new2DPtRatio, setNew2DPtRatio] = useState(0.5);
+  const [new2DLineFrom, setNew2DLineFrom] = useState('A');
+  const [new2DLineTo, setNew2DLineTo] = useState('C');
+  const [new2DLineStyle, setNew2DLineStyle] = useState('dashed');
+  const [new2DLineColor, setNew2DLineColor] = useState('#f97316');
+
+  const handleSelectShape2D = (newShape) => {
+    setShape2DType(newShape);
+    const defaults = getDefault2DGeometryPoints(newShape);
+    setCustom2DPoints(defaults);
+    const keys = Object.keys(defaults);
+    if (keys.length >= 2) {
+      setNew2DPtParentA(keys[0]);
+      setNew2DPtParentB(keys[1]);
+      setNew2DLineFrom(keys[0]);
+      setNew2DLineTo(keys[keys.length - 1]);
+    }
+  };
+
+  const handleUpdate2DPoint = (key, field, value) => {
+    setCustom2DPoints(prev => ({
+      ...prev,
+      [key]: {
+        ...prev[key],
+        [field]: field === 'name' ? value : (parseFloat(value) || 0)
+      }
+    }));
+  };
+
+  const handleAdd2DExtraPoint = () => {
+    const clean = new2DPtName.trim().toUpperCase();
+    if (!clean || new2DPtParentA === new2DPtParentB) return;
+    if (extra2DPoints.some(p => p.id === clean)) return;
+    setExtra2DPoints(prev => [
+      ...prev,
+      {
+        id: clean,
+        name: clean,
+        parentA: new2DPtParentA,
+        parentB: new2DPtParentB,
+        ratio: Number(new2DPtRatio ?? 0.5)
+      }
+    ]);
+    const nextChars = ['E', 'F', 'N', 'P', 'Q', 'K', 'T'];
+    const avail = nextChars.find(c => c !== clean && !extra2DPoints.some(p => p.id === c));
+    if (avail) setNew2DPtName(avail);
+  };
+
+  const handleRemove2DExtraPoint = (id) => {
+    setExtra2DPoints(prev => prev.filter(p => p.id !== id));
+    setCustom2DAuxLines(prev => prev.filter(l => l.from !== id && l.to !== id));
+  };
+
+  const handleAdd2DAuxLine = () => {
+    if (!new2DLineFrom || !new2DLineTo || new2DLineFrom === new2DLineTo) return;
+    setCustom2DAuxLines(prev => [
+      ...prev,
+      {
+        from: new2DLineFrom,
+        to: new2DLineTo,
+        style: new2DLineStyle,
+        color: new2DLineColor,
+        label: ''
+      }
+    ]);
+  };
+
+  const handleRemove2DAuxLine = (idx) => {
+    setCustom2DAuxLines(prev => prev.filter((_, i) => i !== idx));
+  };
+
+  const available2DPointKeys = useMemo(() => {
+    const baseKeys = Object.keys(custom2DPoints || {});
+    const derivedKeys = ['H', 'M', 'O', 'G', 'I'];
+    const extraKeys = extra2DPoints.map(p => p.id);
+    return Array.from(new Set([...baseKeys, ...derivedKeys, ...extraKeys]));
+  }, [custom2DPoints, extra2DPoints]);
+
   // Parse initialTag if provided to hydrate edit mode
   useEffect(() => {
     if (!initialTag || typeof initialTag !== 'string') return;
@@ -398,6 +500,19 @@ export default function InteractiveMathWorkbenchModal({
         if (parsed.integralUpper) setIntegralUpperExpr(parsed.integralUpper);
         if (parsed.integralLower) setIntegralLowerExpr(parsed.integralLower);
         if (parsed.hideCurveLabels !== undefined) setHideCurveLabels(parsed.hideCurveLabels);
+      }
+    } else if (tag.toUpperCase().startsWith('[MATH_GEOMETRY_2D]')) {
+      const parsed = parseMathGeometry2DTag(tag);
+      if (parsed) {
+        setJsxSubTab('2d_geometry');
+        if (parsed.shapeType) setShape2DType(parsed.shapeType);
+        if (parsed.vertices) setCustom2DPoints(parsed.vertices);
+        if (parsed.showCircumcircle !== undefined) setShow2DCircumcircle(parsed.showCircumcircle);
+        if (parsed.showAltitude !== undefined) setShow2DAltitude(parsed.showAltitude);
+        if (parsed.showMedian !== undefined) setShow2DMedian(parsed.showMedian);
+        if (parsed.showAxes !== undefined) setShow2DAxes(parsed.showAxes);
+        if (parsed.extraPoints) setExtra2DPoints(parsed.extraPoints);
+        if (parsed.auxLines) setCustom2DAuxLines(parsed.auxLines);
       }
     }
   }, [initialTag]);
@@ -541,14 +656,22 @@ export default function InteractiveMathWorkbenchModal({
     if (jsxSubTab === '3d_space') {
       const topLabel = customBasePoints['S']?.label || 'S';
       const baseLabels = ['A', 'B', 'C', 'D'].map(k => customBasePoints[k]?.label || k).join('');
-      if (exam3DConstructionPreset === 'distance_model') return `Khoảng\\ cách\\ d(${customBasePoints['A']?.label || 'A'},\\ (${topLabel}BC)) = AK = \\frac{SA \\cdot AB}{\\sqrt{SA^2 + AB^2}}`;
-      if (exam3DConstructionPreset === 'angle_line_plane') return `Góc\\ giữa\\ ${topLabel}C\\ và\\ (${baseLabels}):\\ \\widehat{${topLabel}CA}`;
-      if (exam3DConstructionPreset === 'cross_section_mid') return `Thiết\\ diện\\ qua\\ các\\ trung\\ điểm\\ (MNPQ)`;
-      if (shape3DType === 'solid_revolution') return `Khối\\ nón\\ tròn\\ xoay\\ (S,\\ R=${shape3dRadius},\\ h=${shape3dHeight})`;
-      if (shape3DType === 'sphere_plane') return `Mặt\\ cầu\\ cắt\\ mặt\\ phẳng\\ theo\\ đường\\ tròn\\ r = \\sqrt{R^2 - d^2}`;
-      return `Mô\\ hình\\ không\\ gian\\ đa\\ diện\\ ${topLabel}.${baseLabels}`;
+      if (exam3DConstructionPreset === 'distance_model') return `Khoảng cách $d(${customBasePoints['A']?.label || 'A'}, (${topLabel}BC)) = AK = \\frac{SA \\cdot AB}{\\sqrt{SA^2 + AB^2}}$`;
+      if (exam3DConstructionPreset === 'angle_line_plane') return `Góc giữa $${topLabel}C$ và $(${baseLabels})$: $\\widehat{${topLabel}CA}$`;
+      if (exam3DConstructionPreset === 'cross_section_mid') return `Thiết diện qua các trung điểm $(MNPQ)$`;
+      if (shape3DType === 'solid_revolution') return `Khối nón tròn xoay $(S, R=${shape3dRadius}, h=${shape3dHeight})$`;
+      if (shape3DType === 'sphere_plane') return `Mặt cầu cắt mặt phẳng theo đường tròn $r = \\sqrt{R^2 - d^2}$`;
+      return `Mô hình không gian đa diện $${topLabel}.${baseLabels}$`;
     }
-    return `Tam\\ giác\\ vuông\\ ABC\\ tại\\ A`;
+    if (jsxSubTab === '2d_geometry') {
+      if (shape2DType === 'acute_triangle') return 'Tam giác nhọn $ABC$ nội tiếp $(O)$ (Trực tâm $H$, Trọng tâm $G$)';
+      if (shape2DType === 'circle_tangent') return 'Đường tròn $(O; R)$ & Hai tiếp tuyến cắt nhau $MA, MB$';
+      if (shape2DType === 'quadrilateral_cyclic') return 'Tứ giác $ABCD$ nội tiếp đường tròn $(O)$';
+      if (shape2DType === 'parallelogram_rhombus') return 'Hình bình hành $ABCD$ (Tâm đối xứng $O$, đường cao $DH$)';
+      if (shape2DType === 'trapezoid_right') return 'Hình thang vuông $ABCD$ (vuông tại $A, D$, đường cao $BH$)';
+      return 'Tam giác vuông $ABC$ tại $A$ ($AH \\perp BC$, trung tuyến $AM$)';
+    }
+    return 'Tam giác vuông $ABC$ tại $A$';
   };
 
   // -------------------------------------------------------------
@@ -1246,25 +1369,28 @@ export default function InteractiveMathWorkbenchModal({
     // ---------------------------------------------------------
     else if (jsxSubTab === '2d_geometry') {
       const board = JXG.JSXGraph.initBoard(containerId, {
-        boundingbox: [-5, 6, 7, -4],
-        axis: false,
+        boundingbox: [-6, 6, 8, -4.5],
+        axis: Boolean(show2DAxes),
         showNavigation: true,
-        showCopyright: false
+        showCopyright: false,
+        pan: { enabled: true },
+        zoom: { factorX: 1.25, factorY: 1.25, wheel: true, needOption: false }
       });
 
-      const pA = board.create('point', [0, 0], { name: 'A (Góc vuông)', size: 4, color: '#ef4444', fixed: true });
-      const pB = board.create('point', [5, 0], { name: 'B', size: 4, color: '#2563eb' });
-      const pC = board.create('point', [0, 4], { name: 'C', size: 4, color: '#10b981' });
-
-      board.create('segment', [pA, pB], { strokeColor: '#0f172a', strokeWidth: 2.5 });
-      board.create('segment', [pA, pC], { strokeColor: '#0f172a', strokeWidth: 2.5 });
-      const hyp = board.create('segment', [pB, pC], { strokeColor: '#0f172a', strokeWidth: 2.5 });
-
-      const pH = board.create('glider', [2, 1.5, hyp], { name: 'H (Đường cao)', size: 3.5, color: '#f59e0b' });
-      board.create('segment', [pA, pH], { strokeColor: '#f59e0b', strokeWidth: 2, dash: 2 });
-
-      const pM = board.create('midpoint', [pB, pC], { name: 'M (Tâm ngoại tiếp)', size: 3, color: '#8b5cf6' });
-      board.create('circle', [pM, pB], { strokeColor: '#8b5cf6', strokeWidth: 1.5, dash: 3 });
+      mount2DGeometryBoard(
+        board,
+        {
+          shapeType: shape2DType,
+          vertices: custom2DPoints,
+          showCircumcircle: show2DCircumcircle,
+          showAltitude: show2DAltitude,
+          showMedian: show2DMedian,
+          showAxes: show2DAxes,
+          extraPoints: extra2DPoints,
+          auxLines: custom2DAuxLines
+        },
+        true
+      );
 
       boardInstanceRef.current = board;
     }
@@ -1321,7 +1447,15 @@ export default function InteractiveMathWorkbenchModal({
     customAuxLines,
     azimuthAngle,
     elevationAngle,
-    show3DAxes
+    show3DAxes,
+    shape2DType,
+    custom2DPoints,
+    show2DCircumcircle,
+    show2DAltitude,
+    show2DMedian,
+    show2DAxes,
+    extra2DPoints,
+    custom2DAuxLines
   ]);
 
   // Compute the current canonical snippet tag for insert & simulation preview
@@ -1350,7 +1484,7 @@ export default function InteractiveMathWorkbenchModal({
         title: 'Mô hình không gian tùy biến đỉnh & kẻ đường phụ',
         shapeType: shape3DType,
         preset: exam3DConstructionPreset,
-        formula: `$${getCurrentFormulaString()}$`,
+        formula: getCurrentFormulaString(),
         dimensions: { h: shape3dHeight, w: shape3dWidth, d: shape3dDepth, r: shape3dRadius, planeD },
         vertices: customBasePoints,
         extraPoints,
@@ -1359,14 +1493,27 @@ export default function InteractiveMathWorkbenchModal({
         elevation: elevationAngle
       });
     } else {
-      return `\n\n[MATH_GEOMETRY_2D]\ntitle: Hình học phẳng 2D\nformula: $Tam\\ giác\\ vuông\\ ABC\\ tại\\ A$\n[/MATH_GEOMETRY_2D]\n\n`;
+      const meta = SHAPES_2D_META[shape2DType] || SHAPES_2D_META.right_triangle;
+      return formatMathGeometry2DTag({
+        shapeType: shape2DType,
+        title: meta.title,
+        formula: meta.formula,
+        vertices: custom2DPoints,
+        extraPoints: extra2DPoints,
+        auxLines: custom2DAuxLines,
+        showCircumcircle: show2DCircumcircle,
+        showAltitude: show2DAltitude,
+        showMedian: show2DMedian,
+        showAxes: show2DAxes
+      });
     }
   }, [
     jsxSubTab, funcInputMode, funcType, paramA, paramB, paramC, paramD, paramE, customExpr,
     exam2DMode, auxiliaryExpr, slopeM, paramM, absTransformType, paramShiftM, tangentX0, showTangent,
     integralUpperExpr, integralLowerExpr, hideCurveLabels, shape3DType, exam3DConstructionPreset,
     shape3dHeight, shape3dWidth, shape3dDepth, shape3dRadius, planeD, customBasePoints, extraPoints,
-    customAuxLines, azimuthAngle, elevationAngle
+    customAuxLines, azimuthAngle, elevationAngle, shape2DType, custom2DPoints, extra2DPoints,
+    custom2DAuxLines, show2DCircumcircle, show2DAltitude, show2DMedian, show2DAxes
   ]);
 
   // Handle Insert into Current Authoring Studio (Flow 2)
@@ -1485,7 +1632,13 @@ export default function InteractiveMathWorkbenchModal({
               <div className="flex items-center gap-2 bg-slate-50 px-3 py-1 rounded-xl border border-slate-200">
                 <span className="text-[11px] font-bold text-slate-500">Mô hình:</span>
                 <span className="text-xs font-extrabold text-indigo-700">
-                  <MathText text={`$${getCurrentFormulaString()}$`} />
+                  <MathText
+                    text={
+                      getCurrentFormulaString().includes('$')
+                        ? getCurrentFormulaString()
+                        : `$${getCurrentFormulaString()}$`
+                    }
+                  />
                 </span>
               </div>
             </div>
@@ -2260,9 +2413,270 @@ export default function InteractiveMathWorkbenchModal({
                 {/* C. 2D PLANE GEOMETRY */}
                 {/* ================================================= */}
                 {jsxSubTab === '2d_geometry' && (
-                  <div className="flex flex-col gap-2 p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-700">
-                    <span className="font-bold text-slate-900">Hình học phẳng 2D:</span>
-                    <p>Tam giác vuông $ABC$ tại $A$, đường cao $AH$, đường tròn ngoại tiếp tâm $M$. Dùng chuột kéo các đỉnh để quan sát.</p>
+                  <div className="flex flex-col gap-3">
+                    {/* 1. Mô tả sư phạm hiển thị chuẩn KaTeX */}
+                    <div className="flex flex-col gap-1.5 p-3 bg-indigo-50/60 rounded-xl border border-indigo-100 text-xs text-slate-700">
+                      <span className="font-extrabold text-indigo-900 flex items-center gap-1.5">
+                        <Triangle className="w-3.5 h-3.5 text-indigo-600" />
+                        <span>Mô hình Hình học phẳng 2D tương tác:</span>
+                      </span>
+                      <div className="leading-relaxed text-slate-700">
+                        <MathText
+                          text={
+                            SHAPES_2D_META[shape2DType]?.desc ||
+                            'Tam giác vuông $ABC$ tại $A$, đường cao $AH \\perp BC$, trung tuyến $AM$ và đường tròn ngoại tiếp tâm $M$. Dùng chuột kéo các đỉnh để quan sát.'
+                          }
+                        />
+                      </div>
+                    </div>
+
+                    {/* 2. Chọn mô hình hình học phẳng chuẩn SGK */}
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-bold text-slate-700">
+                        1. Chọn Mô Hình Hình Học Phẳng Chuẩn Đề Thi:
+                      </label>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        {Object.values(SHAPES_2D_META).map((item) => (
+                          <button
+                            key={item.id}
+                            type="button"
+                            onClick={() => handleSelectShape2D(item.id)}
+                            className={`px-2.5 py-2 rounded-xl border text-left text-[11px] font-bold transition-all cursor-pointer ${
+                              shape2DType === item.id
+                                ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
+                                : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-indigo-50/50 hover:border-indigo-200'
+                            }`}
+                          >
+                            {item.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* 3. Bật / Tắt các yếu tố hình học */}
+                    <div className="flex flex-col gap-1.5 p-3 bg-slate-50 rounded-xl border border-slate-200">
+                      <span className="text-xs font-bold text-slate-800">
+                        2. Hiển Thị Yếu Tố Hình Học & Đường Phụ Chuẩn:
+                      </span>
+                      <div className="grid grid-cols-2 gap-2 pt-1">
+                        <label className="flex items-center gap-2 text-xs text-slate-700 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={show2DAltitude}
+                            onChange={(e) => setShow2DAltitude(e.target.checked)}
+                            className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                          />
+                          <span>Đường cao / Giao điểm ($H$)</span>
+                        </label>
+                        <label className="flex items-center gap-2 text-xs text-slate-700 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={show2DMedian}
+                            onChange={(e) => setShow2DMedian(e.target.checked)}
+                            className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                          />
+                          <span>Trung tuyến / Tâm ($M, G, O$)</span>
+                        </label>
+                        <label className="flex items-center gap-2 text-xs text-slate-700 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={show2DCircumcircle}
+                            onChange={(e) => setShow2DCircumcircle(e.target.checked)}
+                            className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                          />
+                          <span>Đường tròn ngoại tiếp</span>
+                        </label>
+                        <label className="flex items-center gap-2 text-xs text-slate-700 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={show2DAxes}
+                            onChange={(e) => setShow2DAxes(e.target.checked)}
+                            className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                          />
+                          <span>Hệ trục tọa độ $Oxy$</span>
+                        </label>
+                      </div>
+                    </div>
+
+                    {/* 4. Chỉnh sửa tên và tọa độ các đỉnh (X, Y) */}
+                    <div className="flex flex-col gap-2 p-3 bg-slate-50 rounded-xl border border-slate-200">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-slate-800">
+                          3. Tùy Chỉnh Nhãn & Tọa Độ Đỉnh $(x; y)$:
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setCustom2DPoints(getDefault2DGeometryPoints(shape2DType))}
+                          className="text-[11px] font-bold text-indigo-600 hover:underline flex items-center gap-1 cursor-pointer"
+                        >
+                          <RotateCcw className="w-3 h-3" />
+                          <span>Mặc định</span>
+                        </button>
+                      </div>
+                      <div className="space-y-1.5">
+                        {Object.entries(custom2DPoints || {}).map(([key, pt]) => (
+                          <div key={key} className="grid grid-cols-12 gap-1.5 items-center text-xs">
+                            <span className="col-span-2 font-extrabold text-indigo-700 bg-indigo-50 px-2 py-1 rounded-lg text-center border border-indigo-100">
+                              {key}
+                            </span>
+                            <input
+                              type="text"
+                              value={pt.name ?? key}
+                              onChange={(e) => handleUpdate2DPoint(key, 'name', e.target.value)}
+                              className="col-span-4 px-2 py-1 rounded-lg border border-slate-200 bg-white text-xs font-bold text-slate-800"
+                              placeholder="Tên đỉnh"
+                            />
+                            <div className="col-span-3 flex items-center gap-1">
+                              <span className="text-[10px] text-slate-400 font-bold">X:</span>
+                              <input
+                                type="number"
+                                step="0.5"
+                                value={pt.x ?? 0}
+                                onChange={(e) => handleUpdate2DPoint(key, 'x', e.target.value)}
+                                className="w-full px-1.5 py-1 rounded-lg border border-slate-200 bg-white text-xs text-slate-800"
+                              />
+                            </div>
+                            <div className="col-span-3 flex items-center gap-1">
+                              <span className="text-[10px] text-slate-400 font-bold">Y:</span>
+                              <input
+                                type="number"
+                                step="0.5"
+                                value={pt.y ?? 0}
+                                onChange={(e) => handleUpdate2DPoint(key, 'y', e.target.value)}
+                                className="w-full px-1.5 py-1 rounded-lg border border-slate-200 bg-white text-xs text-slate-800"
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* 5. Thêm điểm phụ & Kẻ đoạn thẳng phụ */}
+                    <div className="flex flex-col gap-2 p-3 bg-slate-50 rounded-xl border border-slate-200">
+                      <span className="text-xs font-bold text-slate-800">
+                        4. Thêm Điểm Phụ & Kẻ Đoạn Thẳng Phụ:
+                      </span>
+                      <div className="grid grid-cols-12 gap-1.5 items-center text-xs">
+                        <input
+                          type="text"
+                          value={new2DPtName}
+                          onChange={(e) => setNew2DPtName(e.target.value)}
+                          placeholder="Tên (E)"
+                          className="col-span-2 px-2 py-1 rounded-lg border border-slate-200 bg-white text-xs font-bold"
+                        />
+                        <select
+                          value={new2DPtParentA}
+                          onChange={(e) => setNew2DPtParentA(e.target.value)}
+                          className="col-span-3 px-1.5 py-1 rounded-lg border border-slate-200 bg-white text-xs"
+                        >
+                          {Object.keys(custom2DPoints || {}).map((k) => (
+                            <option key={k} value={k}>Từ {k}</option>
+                          ))}
+                        </select>
+                        <select
+                          value={new2DPtParentB}
+                          onChange={(e) => setNew2DPtParentB(e.target.value)}
+                          className="col-span-3 px-1.5 py-1 rounded-lg border border-slate-200 bg-white text-xs"
+                        >
+                          {Object.keys(custom2DPoints || {}).map((k) => (
+                            <option key={k} value={k}>Đến {k}</option>
+                          ))}
+                        </select>
+                        <input
+                          type="number"
+                          step="0.1"
+                          min="0.1"
+                          max="0.9"
+                          value={new2DPtRatio}
+                          onChange={(e) => setNew2DPtRatio(parseFloat(e.target.value) || 0.5)}
+                          className="col-span-2 px-1.5 py-1 rounded-lg border border-slate-200 bg-white text-xs"
+                          title="Tỉ số chia đoạn (0.5 = Trung điểm)"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleAdd2DExtraPoint}
+                          className="col-span-2 px-2 py-1 rounded-lg bg-indigo-600 text-white font-bold text-[11px] hover:bg-indigo-700 cursor-pointer"
+                        >
+                          + Điểm
+                        </button>
+                      </div>
+
+                      {extra2DPoints.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 pt-1">
+                          {extra2DPoints.map((ep) => (
+                            <span
+                              key={ep.id}
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-pink-50 border border-pink-200 text-pink-700 text-[11px] font-bold"
+                            >
+                              <span>{ep.name} ({ep.parentA}{ep.parentB}, k={ep.ratio})</span>
+                              <button
+                                type="button"
+                                onClick={() => handleRemove2DExtraPoint(ep.id)}
+                                className="text-pink-400 hover:text-pink-700 cursor-pointer"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="grid grid-cols-12 gap-1.5 items-center text-xs pt-1 border-t border-slate-200/70">
+                        <select
+                          value={new2DLineFrom}
+                          onChange={(e) => setNew2DLineFrom(e.target.value)}
+                          className="col-span-3 px-1.5 py-1 rounded-lg border border-slate-200 bg-white text-xs"
+                        >
+                          {available2DPointKeys.map((k) => (
+                            <option key={k} value={k}>Nối {k}</option>
+                          ))}
+                        </select>
+                        <select
+                          value={new2DLineTo}
+                          onChange={(e) => setNew2DLineTo(e.target.value)}
+                          className="col-span-3 px-1.5 py-1 rounded-lg border border-slate-200 bg-white text-xs"
+                        >
+                          {available2DPointKeys.map((k) => (
+                            <option key={k} value={k}>Tới {k}</option>
+                          ))}
+                        </select>
+                        <select
+                          value={new2DLineStyle}
+                          onChange={(e) => setNew2DLineStyle(e.target.value)}
+                          className="col-span-3 px-1.5 py-1 rounded-lg border border-slate-200 bg-white text-xs"
+                        >
+                          <option value="dashed">Nét đứt</option>
+                          <option value="solid">Nét liền</option>
+                        </select>
+                        <button
+                          type="button"
+                          onClick={handleAdd2DAuxLine}
+                          className="col-span-3 px-2 py-1 rounded-lg bg-amber-500 text-white font-bold text-[11px] hover:bg-amber-600 cursor-pointer"
+                        >
+                          + Kẻ đoạn
+                        </button>
+                      </div>
+
+                      {custom2DAuxLines.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 pt-1">
+                          {custom2DAuxLines.map((line, idx) => (
+                            <span
+                              key={`${line.from}-${line.to}-${idx}`}
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-[11px] font-bold"
+                            >
+                              <span>Đoạn {line.from}{line.to} ({line.style === 'solid' ? 'liền' : 'đứt'})</span>
+                              <button
+                                type="button"
+                                onClick={() => handleRemove2DAuxLine(idx)}
+                                className="text-amber-500 hover:text-amber-800 cursor-pointer"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
 

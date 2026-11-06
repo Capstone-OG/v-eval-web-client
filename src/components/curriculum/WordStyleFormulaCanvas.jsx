@@ -1,19 +1,17 @@
-import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
+import React, { useState, useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
 import { flushSync } from 'react-dom';
 import { 
-  Calculator, 
-  FlaskConical, 
   Sparkles, 
   Check, 
-  X, 
   Trash2, 
   Zap, 
-  BookOpen,
-  FileEdit,
-  AlertTriangle,
-  Lightbulb
+  BookOpen, 
+  FileEdit, 
+  AlertTriangle 
 } from 'lucide-react';
-import { renderKatexHtml, unescapeLiteralNewlines } from '../common/MathText';
+import { renderKatexHtml, normalizeMathString, unescapeLiteralNewlines } from '../common/MathText';
+import VariationTable, { parseVariationTableString } from '../common/VariationTable';
+import InteractiveMathRenderer from '../common/InteractiveMathRenderer';
 
 /**
  * Helper to safely evaluate simple arithmetic strings (e.g. "12/4", "0.2/0.5")
@@ -29,12 +27,116 @@ function safeCalcDivision(numStr, denStr) {
 }
 
 /**
+ * Automatically calculates and evaluates arithmetic or fractions in any math equation
+ * Examples:
+ * - "\frac{12}{4}" -> "\frac{12}{4} = 3"
+ * - "\frac{12}{4} = 5" -> "\frac{12}{4} = 3" (updates wrong result)
+ * - "C_M = \frac{0.2}{0.5}" -> "C_M = \frac{0.2}{0.5} = 0.4\text{ M}"
+ * - "C\% = \frac{20}{200} \times 100\%" -> "C\% = \frac{20}{200} \times 100\% = 10\%"
+ * - "\sqrt{16}" -> "\sqrt{16} = 4"
+ * - "12/4" -> "12/4 = 3"
+ * - "10 + 2 * 5" -> "10 + 2 * 5 = 20"
+ */
+export function autoCalculateEquation(latex) {
+  if (!latex || typeof latex !== 'string') return latex;
+  const str = latex.trim();
+
+  // 1. Chemistry CM: C_M = \frac{n}{V} = \frac{0.2}{0.5} = 0.4\text{ M}
+  const chemCmMatch = str.match(/C_M\s*=\s*(?:\\frac\{n\}\{V\}\s*=\s*)?\\frac\{([^}]+)\}\{([^}]+)\}(?:\s*=\s*[^\\$]+)?/);
+  if (chemCmMatch) {
+    const num = parseFloat(chemCmMatch[1]);
+    const den = parseFloat(chemCmMatch[2]);
+    if (!isNaN(num) && !isNaN(den) && den !== 0) {
+      const val = num / den;
+      const formatted = Number.isInteger(val) ? `${val}` : val.toFixed(2).replace(/\.00$/, '');
+      return `C_M = \\frac{n}{V} = \\frac{${chemCmMatch[1]}}{${chemCmMatch[2]}} = ${formatted}\\text{ M}`;
+    }
+  }
+
+  // 2. Chemistry C%: C\% = \frac{m_{ct}}{m_{dd}} \times 100\% = \frac{20}{200} \times 100\% = 10\%
+  const chemCpMatch = str.match(/C\\%\s*=\s*(?:\\frac\{m_\{ct\}\}\{m_\{dd\}\}\s*\\times\s*100\\%\s*=\s*)?\\frac\{([^}]+)\}\{([^}]+)\}\s*\\times\s*100\\%(?:\s*=\s*[^%\\$]+\\%)?/);
+  if (chemCpMatch) {
+    const num = parseFloat(chemCpMatch[1]);
+    const den = parseFloat(chemCpMatch[2]);
+    if (!isNaN(num) && !isNaN(den) && den !== 0) {
+      const val = (num / den) * 100;
+      const formatted = Number.isInteger(val) ? `${val}` : val.toFixed(1).replace(/\.0$/, '');
+      return `C\\% = \\frac{m_{ct}}{m_{dd}} \\times 100\\% = \\frac{${chemCpMatch[1]}}{${chemCpMatch[2]}} \\times 100\\% = ${formatted}\\%`;
+    }
+  }
+
+  // 3. Fraction: \frac{A}{B} or prefix \frac{A}{B}
+  const fracMatch = str.match(/^([\s\S]*?)\\frac\{([0-9.]+)\}\{([0-9.]+)\}(?:\s*=\s*([0-9.]+))?$/);
+  if (fracMatch) {
+    const prefix = fracMatch[1] || '';
+    const num = parseFloat(fracMatch[2]);
+    const den = parseFloat(fracMatch[3]);
+    if (!isNaN(num) && !isNaN(den) && den !== 0) {
+      const val = num / den;
+      const formatted = Number.isInteger(val) ? `${val}` : val.toFixed(2).replace(/\.00$/, '');
+      return `${prefix}\\frac{${fracMatch[2]}}{${fracMatch[3]}} = ${formatted}`;
+    }
+  }
+
+  // 4. Square root: \sqrt{16} or \sqrt[3]{27}
+  const sqrtMatch = str.match(/^([\s\S]*?)\\sqrt(?:\[([0-9.]+)\])?\{([0-9.]+)\}(?:\s*=\s*([0-9.]+))?$/);
+  if (sqrtMatch) {
+    const prefix = sqrtMatch[1] || '';
+    const deg = parseFloat(sqrtMatch[2]) || 2;
+    const val = parseFloat(sqrtMatch[3]);
+    if (!isNaN(val) && val >= 0) {
+      const res = deg === 2 ? Math.sqrt(val) : Math.pow(val, 1 / deg);
+      const formatted = Number.isInteger(res) ? `${res}` : res.toFixed(2).replace(/\.00$/, '');
+      return deg === 2
+        ? `${prefix}\\sqrt{${sqrtMatch[3]}} = ${formatted}`
+        : `${prefix}\\sqrt[${deg}]{${sqrtMatch[3]}} = ${formatted}`;
+    }
+  }
+
+  // 5. General Arithmetic or division: "12/4", "10 + 2*5", "25 - 5", etc.
+  let exprToEval = str;
+  let prefix = '';
+  if (str.includes('=')) {
+    const lastEqIdx = str.lastIndexOf('=');
+    prefix = str.substring(0, lastEqIdx).trim();
+    exprToEval = prefix;
+  }
+
+  const sanitized = exprToEval
+    .replace(/\\times/g, '*')
+    .replace(/\\cdot/g, '*')
+    .replace(/\\div/g, '/')
+    .replace(/:/g, '/')
+    .replace(/\^\{?([0-9]+)\}?/g, '**$1')
+    .trim();
+
+  if (/^[0-9\.\s\+\-\*\/\(\)]+$/.test(sanitized)) {
+    try {
+      const res = Function(`"use strict"; return (${sanitized})`)();
+      if (typeof res === 'number' && !isNaN(res) && isFinite(res)) {
+        const formatted = Number.isInteger(res) ? `${res}` : res.toFixed(2).replace(/\.00$/, '');
+        return `${prefix || exprToEval} = ${formatted}`;
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  return str;
+}
+
+/**
  * Sanitize a single line of text by stripping any accidental trailing backslashes
  * (e.g. text\ or text\\ or text\ ) that cause ugly '\' or '/' at the line ends
  */
 export function sanitizeLineText(text) {
   if (!text) return '';
-  return String(text).replace(/\\+\s*$/, '').trimEnd();
+  let s = String(text).replace(/\\+\s*$/, '').trimEnd();
+  // Strip stray outer single quotes around a sentence e.g. 'Hàm số đồng biến trên $(0; 2)$.'
+  if (s.length >= 2 && s.startsWith("'") && s.endsWith("'") && !s.slice(1, -1).includes("'")) {
+    s = s.slice(1, -1).trim();
+  }
+  return s;
 }
 
 /**
@@ -72,36 +174,38 @@ export function parseEquationStructure(latex) {
   }
 
   // 3. Fraction: \frac{A}{B} = C or \frac{A}{B}
-  const fracMatch = str.match(/^\\frac\{([^}]+)\}\{([^}]+)\}(?:\s*=\s*([^\s$]+))?$/);
+  const fracMatch = str.match(/^\\frac\{([^}]*)\}\{([^}]*)\}(?:\s*=\s*([^\s$]*))?$/);
   if (fracMatch) {
     return {
       type: 'FRACTION',
-      num: fracMatch[1],
-      den: fracMatch[2],
-      hasEqual: !!fracMatch[3],
+      num: fracMatch[1] ?? '',
+      den: fracMatch[2] ?? '',
+      hasEqual: fracMatch[3] !== undefined,
       result: fracMatch[3] || '',
       raw: str
     };
   }
 
   // 4. Power: A^{B} or A^B
-  const powMatch = str.match(/^([a-zA-Z0-9\(\)]+)\^\{?([a-zA-Z0-9+-]+)\}?$/);
+  const powMatch = str.match(/^([a-zA-Z0-9\(\)]*)\^\{?([a-zA-Z0-9+-]*)\}?$/);
   if (powMatch) {
     return {
       type: 'POWER',
-      base: powMatch[1],
-      exp: powMatch[2],
+      base: powMatch[1] ?? '',
+      exp: powMatch[2] ?? '',
       raw: str
     };
   }
 
-  // 5. Square Root: \sqrt{A} or \sqrt[n]{A}
-  const sqrtMatch = str.match(/^\\sqrt(?:\[([^\]]+)\])?\{([^}]+)\}$/);
+  // 5. Square Root: \sqrt{A} = B or \sqrt[n]{A} = B or \sqrt{A}
+  const sqrtMatch = str.match(/^\\sqrt(?:\[([^\]]*)\])?\{([^}]*)\}(?:\s*=\s*([^\s$]*))?$/);
   if (sqrtMatch) {
     return {
       type: 'SQRT',
       deg: sqrtMatch[1] || '2',
-      expr: sqrtMatch[2],
+      expr: sqrtMatch[2] ?? '',
+      hasEqual: sqrtMatch[3] !== undefined,
+      result: sqrtMatch[3] || '',
       raw: str
     };
   }
@@ -116,34 +220,38 @@ export function buildLatexFromStructure(struct) {
   if (!struct) return '';
   switch (struct.type) {
     case 'CHEM_CM': {
-      const num = struct.num || '0';
-      const den = struct.den || '1';
+      const num = struct.num ?? '0';
+      const den = struct.den ?? '1';
       const res = struct.result || safeCalcDivision(num, den);
       return `C_M = \\frac{n}{V} = \\frac{${num}}{${den}} = ${res}\\text{ M}`;
     }
     case 'CHEM_CPERCENT': {
-      const mct = struct.mct || '0';
-      const mdd = struct.mdd || '1';
+      const mct = struct.mct ?? '0';
+      const mdd = struct.mdd ?? '1';
       const res = struct.result || '0';
       return `C\\% = \\frac{m_{ct}}{m_{dd}} \\times 100\\% = \\frac{${mct}}{${mdd}} \\times 100\\% = ${res}\\%`;
     }
     case 'FRACTION': {
-      const num = struct.num || '1';
-      const den = struct.den || '1';
-      if (struct.hasEqual && struct.result) {
-        return `\\frac{${num}}{${den}} = ${struct.result}`;
+      const num = struct.num ?? '';
+      const den = struct.den ?? '';
+      if (struct.hasEqual || struct.result) {
+        return `\\frac{${num}}{${den}} = ${struct.result ?? ''}`;
       }
       return `\\frac{${num}}{${den}}`;
     }
     case 'POWER': {
-      const b = struct.base || 'x';
-      const e = struct.exp || '2';
+      const b = struct.base ?? '';
+      const e = struct.exp ?? '';
       return `${b}^{${e}}`;
     }
     case 'SQRT': {
-      const expr = struct.expr || 'x';
+      const expr = struct.expr ?? '';
       const deg = struct.deg?.trim();
-      return deg && deg !== '2' ? `\\sqrt[${deg}]{${expr}}` : `\\sqrt{${expr}}`;
+      const rootStr = deg && deg !== '2' ? `\\sqrt[${deg}]{${expr}}` : `\\sqrt{${expr}}`;
+      if (struct.hasEqual || struct.result) {
+        return `${rootStr} = ${struct.result ?? ''}`;
+      }
+      return rootStr;
     }
     default:
       return struct.raw || '';
@@ -151,17 +259,158 @@ export function buildLatexFromStructure(struct) {
 }
 
 /**
+ * Convert any LaTeX formula into human-readable Natural Math notation
+ * (NEVER exposes \frac, \sqrt, \cdot, etc. to teachers / end-users)
+ */
+export function latexToNaturalMath(latex) {
+  if (!latex) return '';
+  let s = String(latex).trim();
+  s = s.replace(/^\$+|\$+$/g, '').trim();
+
+  // Balanced-brace replacer for \frac{a}{b}
+  while (s.includes('\\frac{')) {
+    const idx = s.indexOf('\\frac{');
+    let depth = 0;
+    let numEnd = -1;
+    let denStart = -1;
+    let denEnd = -1;
+    for (let i = idx + 5; i < s.length; i++) {
+      if (s[i] === '{') depth++;
+      else if (s[i] === '}') {
+        depth--;
+        if (depth === 0) {
+          numEnd = i;
+          break;
+        }
+      }
+    }
+    if (numEnd !== -1 && s[numEnd + 1] === '{') {
+      denStart = numEnd + 1;
+      depth = 0;
+      for (let i = denStart; i < s.length; i++) {
+        if (s[i] === '{') depth++;
+        else if (s[i] === '}') {
+          depth--;
+          if (depth === 0) {
+            denEnd = i;
+            break;
+          }
+        }
+      }
+    }
+    if (numEnd !== -1 && denEnd !== -1) {
+      const num = s.substring(idx + 6, numEnd);
+      const den = s.substring(denStart + 1, denEnd);
+      const isSimpleNum = /^[a-zA-Z0-9.]+$/.test(num.trim());
+      const isSimpleDen = /^[a-zA-Z0-9.]+$/.test(den.trim());
+      const fracStr = (isSimpleNum && isSimpleDen) ? `${num.trim()}/${den.trim()}` : `(${num.trim()})/(${den.trim()})`;
+      s = s.substring(0, idx) + fracStr + s.substring(denEnd + 1);
+    } else {
+      break;
+    }
+  }
+
+  // Sqrt
+  s = s.replace(/\\sqrt\[([^\]]+)\]\{([^}]+)\}/g, '$1√($2)');
+  s = s.replace(/\\sqrt\{([^}]+)\}/g, '√($1)');
+
+  // Text
+  s = s.replace(/\\text\{\s*([^}]+)\s*\}/g, ' $1');
+
+  // Math symbols
+  s = s.replace(/\\cdot/g, '*');
+  s = s.replace(/\\times/g, '×');
+  s = s.replace(/\\div/g, '÷');
+  s = s.replace(/\\pm/g, '±');
+  s = s.replace(/\\le/g, '≤');
+  s = s.replace(/\\ge/g, '≥');
+  s = s.replace(/\\ne/g, '≠');
+  s = s.replace(/\\approx/g, '≈');
+  s = s.replace(/\\to/g, '→');
+  s = s.replace(/\\rightarrow/g, '→');
+  s = s.replace(/\\Delta/g, 'Δ');
+  s = s.replace(/\\pi/g, 'π');
+  s = s.replace(/\\alpha/g, 'α');
+  s = s.replace(/\\beta/g, 'β');
+  s = s.replace(/\\theta/g, 'θ');
+  s = s.replace(/\\lambda/g, 'λ');
+  s = s.replace(/\\Omega/g, 'Ω');
+  s = s.replace(/\\infty/g, '∞');
+  s = s.replace(/x_0/g, 'x₀');
+  s = s.replace(/x_1/g, 'x₁');
+  s = s.replace(/x_2/g, 'x₂');
+  s = s.replace(/y_0/g, 'y₀');
+  s = s.replace(/\\lim_\{([^}]+)\s*\\to\s*([^}]+)\}/g, 'lim($1 → $2)');
+  s = s.replace(/\\lim/g, 'lim');
+  s = s.replace(/\\int_\{([^}]+)\}\^\{([^}]+)\}/g, '∫($1 → $2)');
+  s = s.replace(/\\int/g, '∫');
+  s = s.replace(/\\sum/g, '∑');
+  s = s.replace(/\\vec\{([^}]+)\}/g, '$1⃗');
+
+  return s.trim();
+}
+
+/**
+ * Convert Natural Math back to clean LaTeX
+ */
+export function naturalMathToLatex(natural) {
+  if (!natural) return '';
+  let s = String(natural).trim();
+
+  // lim
+  s = s.replace(/lim\s*\(\s*([^→\-]+)\s*(?:→|->)\s*([^)]+)\)/gi, '\\lim_{$1 \\to $2}');
+  s = s.replace(/\\?lim\s*_\s*\{([^}]+)\}/gi, '\\lim_{$1}');
+  s = s.replace(/\\?lim\b/gi, '\\lim');
+
+  // Sqrt
+  s = s.replace(/(?:√|sqrt)\s*\(([^)]+)\)/gi, '\\sqrt{$1}');
+
+  // Fractions: (expr1)/(expr2)
+  s = s.replace(/\(([^)]+)\)\/\(([^)]+)\)/g, '\\frac{$1}{$2}');
+  // Simple fractions: 12/4
+  s = s.replace(/\b([a-zA-Z0-9.]+)\/([a-zA-Z0-9.]+)\b/g, '\\frac{$1}{$2}');
+
+  // Symbols
+  s = s.replace(/x₀/g, 'x_0');
+  s = s.replace(/x₁/g, 'x_1');
+  s = s.replace(/x₂/g, 'x_2');
+  s = s.replace(/y₀/g, 'y_0');
+  s = s.replace(/→/g, '\\to');
+  s = s.replace(/∞/g, '\\infty');
+  s = s.replace(/Δ/g, '\\Delta');
+  s = s.replace(/π/g, '\\pi');
+  s = s.replace(/α/g, '\\alpha');
+  s = s.replace(/β/g, '\\beta');
+  s = s.replace(/θ/g, '\\theta');
+  s = s.replace(/λ/g, '\\lambda');
+  s = s.replace(/Ω/g, '\\Omega');
+  s = s.replace(/≤/g, '\\le');
+  s = s.replace(/≥/g, '\\ge');
+  s = s.replace(/≠/g, '\\ne');
+  s = s.replace(/≈/g, '\\approx');
+  s = s.replace(/±/g, '\\pm');
+  s = s.replace(/×/g, '\\times');
+  s = s.replace(/·/g, '\\cdot');
+
+  // Chemistry unit: e.g. "0.4 M" -> "0.4\text{ M}"
+  s = s.replace(/(\d+(?:\.\d+)?)\s*M\b/g, '$1\\text{ M}');
+
+  return s.trim();
+}
+
+/**
  * Tokenize a single line of text into plain text chunks and explicit $...$ / $$...$$ formula tokens
  */
 function tokenizeLine(lineText, lineIdx) {
-  const cleanLine = sanitizeLineText(lineText);
-  if (cleanLine === '' || cleanLine === undefined) {
+  const rawClean = sanitizeLineText(lineText);
+  if (rawClean === '' || rawClean === undefined) {
     return [{
       id: `line-${lineIdx}-tok-0`,
       isFormula: false,
       text: ''
     }];
   }
+  const cleanLine = normalizeMathString(rawClean);
   const regex = /(\$\$[\s\S]*?\$\$|\$[^\$\n]+?\$)/g;
   const parts = cleanLine.split(regex);
   const tokens = [];
@@ -200,26 +449,76 @@ function tokenizeLine(lineText, lineIdx) {
 }
 
 /**
- * Parse full document into Lines, each containing its tokens
+ * Parse full document into Lines, each containing its tokens or visual block tags
  */
 function parseDocumentLines(rawText) {
   if (!rawText) return [];
-  const normalized = unescapeLiteralNewlines(String(rawText));
-  const rawLines = normalized.split('\n');
+  const normalized = unescapeLiteralNewlines(String(rawText))
+    .replace(/\\+\s*$/gm, '');
 
-  return rawLines.map((line, lineIdx) => {
-    const clean = sanitizeLineText(line);
-    const isHeading = clean.trim().startsWith('###') || clean.trim().startsWith('##') || clean.trim().startsWith('#');
-    const isBullet = clean.trim().startsWith('- ') || clean.trim().startsWith('* ') || clean.trim().startsWith('• ');
-    return {
-      id: `line-${lineIdx}`,
-      lineIdx,
-      raw: clean,
-      isHeading,
-      isBullet,
-      tokens: tokenizeLine(clean, lineIdx)
-    };
+  const blockRegex = /(\[VARIATION_TABLE\][\s\S]*?\[\/VARIATION_TABLE\]|\[MATH_GRAPH_3D\][\s\S]*?\[\/MATH_GRAPH_3D\]|\[MATH_GEOMETRY_2D\][\s\S]*?\[\/MATH_GEOMETRY_2D\]|\[MATH_GRAPH\][\s\S]*?\[\/MATH_GRAPH\]|!\[[^\]]*\]\([^\)]+\))/gi;
+  const segments = normalized.split(blockRegex);
+  const resultLines = [];
+  let lineIdx = 0;
+
+  segments.forEach((segment) => {
+    if (!segment) return;
+    const trimmed = segment.trim();
+    const upper = trimmed.toUpperCase();
+
+    if (
+      (upper.startsWith('[VARIATION_TABLE]') && upper.endsWith('[/VARIATION_TABLE]')) ||
+      (upper.startsWith('[MATH_GRAPH_3D]') && upper.endsWith('[/MATH_GRAPH_3D]')) ||
+      (upper.startsWith('[MATH_GEOMETRY_2D]') && upper.endsWith('[/MATH_GEOMETRY_2D]')) ||
+      (upper.startsWith('[MATH_GRAPH]') && upper.endsWith('[/MATH_GRAPH]')) ||
+      /^!\[[^\]]*\]\([^\)]+\)$/.test(trimmed)
+    ) {
+      const blockType = upper.startsWith('[VARIATION_TABLE]')
+        ? 'VARIATION_TABLE'
+        : upper.startsWith('[MATH_GRAPH_3D]')
+        ? 'MATH_GRAPH_3D'
+        : upper.startsWith('[MATH_GEOMETRY_2D]')
+        ? 'MATH_GEOMETRY_2D'
+        : upper.startsWith('[MATH_GRAPH]')
+        ? 'MATH_GRAPH'
+        : 'IMAGE';
+
+      resultLines.push({
+        id: `line-block-${lineIdx}`,
+        lineIdx,
+        isBlock: true,
+        blockType,
+        rawBlock: trimmed,
+        raw: trimmed,
+        tokens: []
+      });
+      lineIdx++;
+      return;
+    }
+
+    const subLines = segment.split('\n');
+    subLines.forEach((line, subIdx) => {
+      // Skip leading/trailing empty newline right around a block tag to avoid extra blank gaps
+      if ((subIdx === 0 || subIdx === subLines.length - 1) && line.trim() === '' && segments.length > 1) {
+        return;
+      }
+      const clean = sanitizeLineText(line);
+      const isHeading = clean.trim().startsWith('###') || clean.trim().startsWith('##') || clean.trim().startsWith('#');
+      const isBullet = clean.trim().startsWith('- ') || clean.trim().startsWith('* ') || clean.trim().startsWith('• ');
+      resultLines.push({
+        id: `line-${lineIdx}`,
+        lineIdx,
+        isBlock: false,
+        raw: clean,
+        isHeading,
+        isBullet,
+        tokens: tokenizeLine(clean, lineIdx)
+      });
+      lineIdx++;
+    });
   });
+
+  return resultLines;
 }
 
 /**
@@ -227,10 +526,13 @@ function parseDocumentLines(rawText) {
  */
 function serializeDocumentLines(lines) {
   return lines.map(line => {
-    const assembled = line.tokens.map(t => {
+    if (line.isBlock) {
+      return line.rawBlock || line.raw || '';
+    }
+    const assembled = (line.tokens || []).map(t => {
       if (!t.isFormula) return t.text;
       const latex = t.structure ? buildLatexFromStructure(t.structure) : t.latex;
-      return t.displayMode ? `$$${latex}$$` : `$${latex}$`;
+      return t.displayMode ? `$$${(latex || '').trim() || '\\square'}$$` : `$${(latex || '').trim() || '\\square'}$`;
     }).join('');
     return sanitizeLineText(assembled);
   }).join('\n');
@@ -393,16 +695,25 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
   content,
   onChange,
   placeholder = "Nhập nội dung bài giảng tại đây...",
-  accentColor = "cyan"
+  accentColor: _accentColor = "cyan",
+  compact = false,
+  singleLine = false,
+  isStem: _isStem = false,
+  onEditMathGraph = null,
+  onOpenAdvancedModal = null
 }, ref) {
   const [docLines, setDocLines] = useState(() => parseDocumentLines(content || ''));
+  const docLinesRef = useRef(docLines);
+  docLinesRef.current = docLines;
   const [activeFormulaId, setActiveFormulaId] = useState(null);
   const [bubblePos, setBubblePos] = useState({ top: 0, left: 0 });
   const [bubbleTab, setBubbleTab] = useState('structures');
   
   const activeFormulaRef = useRef(null);
+  const activeInputRef = useRef(null);
   const containerRef = useRef(null);
   const lineRefs = useRef({});
+  const lastCommittedContentRef = useRef(content || '');
 
   // Active cursor tracking for precise insertion at cursor location
   const activePositionRef = useRef({
@@ -411,30 +722,44 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
     offset: 0
   });
 
-  // Sync incoming content if changed externally
+  // Sync incoming content only if changed externally (never wipe active editing state on internal keystrokes)
   useEffect(() => {
+    if (content === lastCommittedContentRef.current) return;
     const currentSerialized = serializeDocumentLines(docLines);
     if (content !== currentSerialized) {
+      lastCommittedContentRef.current = content || '';
       setDocLines(parseDocumentLines(content || ''));
     }
   }, [content]);
 
-  // Update floating bubble position relative to active formula element
+  // Update floating bubble position relative to active formula element (never obscure the formula)
   useEffect(() => {
     if (activeFormulaId && activeFormulaRef.current && containerRef.current) {
       const formulaRect = activeFormulaRef.current.getBoundingClientRect();
       const containerRect = containerRef.current.getBoundingClientRect();
+      const bubbleHeight = 200;
+      const spaceAbove = formulaRect.top - containerRect.top;
+
+      let topPos;
+      if (spaceAbove > bubbleHeight + 15) {
+        topPos = formulaRect.top - containerRect.top - bubbleHeight - 12;
+      } else {
+        topPos = formulaRect.bottom - containerRect.top + 8;
+      }
+
       setBubblePos({
-        top: formulaRect.top - containerRect.top - 42,
-        left: Math.max(8, formulaRect.left - containerRect.left + (formulaRect.width / 2) - 130)
+        top: Math.max(6, topPos),
+        left: Math.max(8, formulaRect.left - containerRect.left + (formulaRect.width / 2) - 170)
       });
     }
   }, [activeFormulaId]);
 
   // Propagate changes upstream
   const commitDocLines = (newLines) => {
+    docLinesRef.current = newLines;
     setDocLines(newLines);
     const serialized = serializeDocumentLines(newLines);
+    lastCommittedContentRef.current = serialized;
     if (onChange) onChange(serialized);
   };
 
@@ -509,7 +834,59 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
   useImperativeHandle(ref, () => ({
     insertSnippet: (latexSnippet) => {
       if (!latexSnippet) return;
-      const formulaLatex = latexSnippet.trim();
+      const currentLines = docLinesRef.current || docLines;
+      const trimmedSnippet = latexSnippet.trim();
+
+      // If inserting a full visual block ([VARIATION_TABLE], [MATH_GRAPH], [MATH_GRAPH_3D], [MATH_GEOMETRY_2D], or image ![...](...) or multi-line)
+      if (
+        /\[(VARIATION_TABLE|MATH_GRAPH|MATH_GRAPH_3D|MATH_GEOMETRY_2D)\]/i.test(trimmedSnippet) ||
+        /^!\[[^\]]*\]\([^\)]+\)$/.test(trimmedSnippet) ||
+        trimmedSnippet.includes('\n')
+      ) {
+        const targetLineId = activePositionRef.current?.lineId;
+        const targetIdx = targetLineId ? currentLines.findIndex(l => l.id === targetLineId) : -1;
+        const blockLines = parseDocumentLines(trimmedSnippet);
+
+        if (targetIdx !== -1) {
+          const targetLine = currentLines[targetIdx];
+          const isTargetEmpty = (!targetLine.tokens || targetLine.tokens.length === 0 || 
+            (targetLine.tokens.length === 1 && !targetLine.tokens[0].isFormula && !(targetLine.tokens[0].text || '').trim()));
+
+          let nextLines;
+          if (isTargetEmpty) {
+            nextLines = [
+              ...currentLines.slice(0, targetIdx),
+              ...blockLines,
+              ...currentLines.slice(targetIdx + 1)
+            ];
+          } else {
+            nextLines = [
+              ...currentLines.slice(0, targetIdx + 1),
+              ...blockLines,
+              ...currentLines.slice(targetIdx + 1)
+            ];
+          }
+          commitDocLines(nextLines);
+          if (blockLines.length > 0) {
+            const lastBlockLine = blockLines[blockLines.length - 1];
+            activePositionRef.current = {
+              lineId: lastBlockLine.id,
+              tokenId: lastBlockLine.tokens?.[lastBlockLine.tokens.length - 1]?.id,
+              offset: (lastBlockLine.tokens?.[lastBlockLine.tokens.length - 1]?.text || '').length
+            };
+          }
+          return;
+        }
+
+        // Fallback: append at end if no active cursor line
+        const currentRaw = serializeDocumentLines(currentLines);
+        const combined = currentRaw ? `${currentRaw}\n${trimmedSnippet}` : trimmedSnippet;
+        const nextLines = parseDocumentLines(combined);
+        commitDocLines(nextLines);
+        return;
+      }
+
+      const formulaLatex = trimmedSnippet.replace(/^\$+|\$+$/g, '').trim();
       const formulaStructure = parseEquationStructure(formulaLatex);
 
       let targetLineId = activePositionRef.current?.lineId;
@@ -517,7 +894,7 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
       let caretOffset = activePositionRef.current?.offset ?? 0;
 
       // If document is empty, initialize first line
-      if (docLines.length === 0) {
+      if (currentLines.length === 0) {
         const newLId = `line-${Date.now()}`;
         const fId = `tok-f-${Date.now()}`;
         const afterId = `tok-t-${Date.now() + 1}`;
@@ -539,10 +916,10 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
       }
 
       // If no active line or active line not found in doc, target the last line
-      if (!targetLineId || !docLines.some(l => l.id === targetLineId)) {
-        const lastLine = docLines[docLines.length - 1];
-        targetLineId = lastLine.id;
-        const lastTok = lastLine.tokens[lastLine.tokens.length - 1];
+      if (!targetLineId || !currentLines.some(l => l.id === targetLineId)) {
+        const lastLine = currentLines[currentLines.length - 1];
+        targetLineId = lastLine?.id;
+        const lastTok = lastLine?.tokens?.[lastLine.tokens.length - 1];
         targetTokenId = lastTok?.id;
         caretOffset = (lastTok?.text || '').length;
       }
@@ -556,7 +933,7 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
         structure: formulaStructure
       };
 
-      const updatedLines = docLines.map(line => {
+      const updatedLines = currentLines.map(line => {
         if (line.id !== targetLineId) return line;
 
         // Find token index
@@ -608,7 +985,15 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
 
   // Modify text token on line
   const handleTextChange = (lineId, tokenId, newText) => {
-    const updated = docLines.map(line => {
+    const currentLines = docLinesRef.current || docLines;
+    const targetLine = currentLines.find(l => l.id === lineId);
+    if (!targetLine) return;
+    const targetTok = targetLine.tokens?.find(t => t.id === tokenId);
+    if (targetTok && targetTok.text === newText) {
+      // Content did not change - avoid stomping on newly created lines or snippets
+      return;
+    }
+    const updated = currentLines.map(line => {
       if (line.id !== lineId) return line;
       const nextTokens = line.tokens.map(t => t.id === tokenId ? { ...t, text: newText } : t);
       return { ...line, tokens: nextTokens };
@@ -618,25 +1003,37 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
 
   // Insert new line after target line (triggered by Enter key)
   const handleInsertNewLineAfter = (targetLineId) => {
-    const idx = docLines.findIndex(l => l.id === targetLineId);
-    const newLId = `line-${Date.now()}`;
-    const newTokId = `tok-${Date.now()}`;
+    const currentLines = docLinesRef.current || docLines;
+    const idx = currentLines.findIndex(l => l.id === targetLineId);
+    const newLId = `line-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
+    const newTokId = `tok-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
 
     let currLineTokens = null;
     let nextLineTokens = [{ id: newTokId, isFormula: false, text: '' }];
 
-    if (idx !== -1 && activePositionRef.current?.lineId === targetLineId) {
-      const currLine = docLines[idx];
-      const targetTokenId = activePositionRef.current.tokenId;
-      const caretOffset = activePositionRef.current.offset ?? 0;
-      const tokIdx = currLine.tokens.findIndex(t => t.id === targetTokenId);
+    if (idx !== -1) {
+      const currLine = currentLines[idx];
+      let targetTokenId = activePositionRef.current?.tokenId;
+      let caretOffset = activePositionRef.current?.offset ?? 0;
 
-      if (tokIdx !== -1) {
+      if (activePositionRef.current?.lineId !== targetLineId || !currLine.tokens?.some(t => t.id === targetTokenId)) {
+        const lastTok = currLine.tokens?.[currLine.tokens.length - 1];
+        targetTokenId = lastTok?.id;
+        caretOffset = (lastTok?.text || '').length;
+      }
+
+      const tokIdx = currLine.tokens?.findIndex(t => t.id === targetTokenId);
+
+      if (tokIdx !== undefined && tokIdx !== -1) {
         const currTok = currLine.tokens[tokIdx];
         if (!currTok.isFormula) {
-          const fullText = currTok.text || '';
-          const before = fullText.slice(0, caretOffset);
-          const after = fullText.slice(caretOffset);
+          const lineEl = lineRefs.current[targetLineId];
+          const spanEl = lineEl?.querySelector(`[data-token-id="${targetTokenId}"]`);
+          const liveText = spanEl ? (spanEl.textContent || '') : (currTok.text || '');
+
+          const safeOffset = Math.min(caretOffset, liveText.length);
+          const before = liveText.slice(0, safeOffset);
+          const after = liveText.slice(safeOffset);
 
           currLineTokens = [
             ...currLine.tokens.slice(0, tokIdx),
@@ -662,70 +1059,108 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
 
     let nextLines;
     if (idx === -1) {
-      nextLines = [...docLines, newLine];
+      nextLines = [...currentLines, newLine];
     } else {
-      const updatedCurr = currLineTokens ? { ...docLines[idx], tokens: currLineTokens } : docLines[idx];
+      const updatedCurr = currLineTokens ? { ...currentLines[idx], tokens: currLineTokens } : currentLines[idx];
       nextLines = [
-        ...docLines.slice(0, idx),
+        ...currentLines.slice(0, idx),
         updatedCurr,
         newLine,
-        ...docLines.slice(idx + 1)
+        ...currentLines.slice(idx + 1)
       ];
     }
 
-    flushSync(() => {
-      commitDocLines(nextLines);
-    });
+    commitDocLines(nextLines);
 
     // Auto-focus the newly created line immediately
-    const lineEl = lineRefs.current[newLId];
-    if (lineEl) {
-      const span = lineEl.querySelector('[contenteditable="true"]');
-      if (span) {
-        span.focus();
-        activePositionRef.current = { lineId: newLId, tokenId: newTokId, offset: 0 };
-        const sel = window.getSelection();
-        if (sel) {
-          const range = document.createRange();
-          range.selectNodeContents(span);
-          range.collapse(true);
-          sel.removeAllRanges();
-          sel.addRange(range);
+    setTimeout(() => {
+      const lineEl = lineRefs.current[newLId];
+      if (lineEl) {
+        const span = lineEl.querySelector('[contenteditable="true"]');
+        if (span) {
+          span.focus();
+          activePositionRef.current = { lineId: newLId, tokenId: newTokId, offset: 0 };
+          const sel = window.getSelection();
+          if (sel) {
+            const range = document.createRange();
+            range.selectNodeContents(span);
+            range.collapse(true);
+            sel.removeAllRanges();
+            sel.addRange(range);
+          }
         }
       }
-    }
+    }, 15);
   };
 
   // Delete empty line or merge line with previous line (triggered by Backspace)
   const handleDeleteOrMergeLine = (targetLineId) => {
-    if (docLines.length <= 1) return; // Keep at least 1 line
-    const idx = docLines.findIndex(l => l.id === targetLineId);
-    if (idx <= 0) return; // Cannot delete/merge line 0 upward
+    const currentLines = docLinesRef.current || docLines;
+    if (currentLines.length <= 1) return; // Keep at least 1 line
+    const idx = currentLines.findIndex(l => l.id === targetLineId);
+    if (idx === -1) return;
 
-    const prevLine = docLines[idx - 1];
-    const currLine = docLines[idx];
+    const currLine = currentLines[idx];
+    const currLineEl = lineRefs.current[targetLineId];
+    const hasFormulas = currLine.tokens ? currLine.tokens.some(t => t.isFormula) : false;
 
     // Check if current line is completely empty in DOM and state
-    const currLineEl = lineRefs.current[targetLineId];
-    const hasFormulas = currLine.tokens.some(t => t.isFormula);
-    const domLineText = currLineEl ? (currLineEl.innerText || '').replace(/\r?\n/g, '').trim() : '';
-    const isLineEmpty = !hasFormulas && (domLineText === '' || currLine.tokens.every(t => !t.isFormula && (!t.text || t.text.trim() === '')));
+    const rawDomText = currLineEl ? (currLineEl.innerText || '') : '';
+    const cleanDomText = rawDomText.replace(/[\s\u00A0\r\n\u200B]+/g, '');
+    const tokensEmpty = !hasFormulas && (!currLine.tokens || currLine.tokens.every(t => !t.isFormula && (!t.text || !t.text.trim())));
+    const isLineEmpty = !hasFormulas && (cleanDomText === '' || tokensEmpty);
 
+    // If target line is line 0 (top line) and is empty, discard it and focus line 1
+    if (idx === 0) {
+      if (isLineEmpty && currentLines.length > 1) {
+        const nextLines = currentLines.slice(1);
+        try {
+          flushSync(() => {
+            commitDocLines(nextLines);
+          });
+        } catch (err) {
+          commitDocLines(nextLines);
+        }
+        const firstLine = nextLines[0];
+        if (firstLine) {
+          setTimeout(() => {
+            const firstLineEl = lineRefs.current[firstLine.id];
+            if (firstLineEl) {
+              const span = firstLineEl.querySelector('[contenteditable="true"]');
+              if (span) {
+                span.focus();
+                const sel = window.getSelection();
+                if (sel) {
+                  const range = document.createRange();
+                  range.selectNodeContents(span);
+                  range.collapse(true);
+                  sel.removeAllRanges();
+                  sel.addRange(range);
+                }
+              }
+            }
+          }, 10);
+        }
+      }
+      return;
+    }
+
+    const prevLine = currentLines[idx - 1];
     let nextLines;
     let targetFocusTokenId = null;
     let targetFocusOffset = null;
 
     if (isLineEmpty) {
       // CASE 1: Line is completely empty -> DISCARD line completely without leaving any ghost tokens!
-      nextLines = docLines.filter(l => l.id !== targetLineId);
+      nextLines = currentLines.filter(l => l.id !== targetLineId);
 
-      const prevTextTokens = prevLine.tokens.filter(t => !t.isFormula);
+      const prevTextTokens = (prevLine.tokens || []).filter(t => !t.isFormula);
       const lastPrevTok = prevTextTokens[prevTextTokens.length - 1];
       targetFocusTokenId = lastPrevTok?.id;
       targetFocusOffset = (lastPrevTok?.text || '').length;
     } else {
       // CASE 2: Line has content and cursor is at start of line -> Merge with previous line
-      const updatedCurrTokens = currLine.tokens.map(t => {
+      const updatedCurrTokens = (currLine.tokens || []).map(t => {
         if (!t.isFormula && currLineEl) {
           const span = currLineEl.querySelector(`[data-token-id="${t.id}"]`);
           if (span) return { ...t, text: span.textContent || '' };
@@ -733,89 +1168,92 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
         return t;
       });
 
-      const prevTextTokens = prevLine.tokens.filter(t => !t.isFormula);
+      const prevTextTokens = (prevLine.tokens || []).filter(t => !t.isFormula);
       const lastPrevTok = prevTextTokens[prevTextTokens.length - 1];
       targetFocusTokenId = lastPrevTok?.id;
       targetFocusOffset = (lastPrevTok?.text || '').length;
 
-      const mergedTokens = [...prevLine.tokens, ...updatedCurrTokens];
+      // Combine adjacent plain text tokens so text flows naturally in a single span
+      const mergedTokens = [];
+      const combined = [...(prevLine.tokens || []), ...updatedCurrTokens];
+      for (const tok of combined) {
+        const last = mergedTokens[mergedTokens.length - 1];
+        if (last && !last.isFormula && !tok.isFormula) {
+          last.text = (last.text || '') + (tok.text || '');
+        } else {
+          mergedTokens.push({ ...tok });
+        }
+      }
+
       const updatedPrevLine = {
         ...prevLine,
         tokens: mergedTokens
       };
 
       nextLines = [
-        ...docLines.slice(0, idx - 1),
+        ...currentLines.slice(0, idx - 1),
         updatedPrevLine,
-        ...docLines.slice(idx + 1)
+        ...currentLines.slice(idx + 1)
       ];
     }
 
-    flushSync(() => {
+    try {
+      flushSync(() => {
+        commitDocLines(nextLines);
+      });
+    } catch (err) {
       commitDocLines(nextLines);
-    });
+    }
 
     // Auto-focus previous line immediately so repeat Backspace deletes seamlessly
-    const prevLineEl = lineRefs.current[prevLine.id];
-    if (prevLineEl) {
-      const spans = prevLineEl.querySelectorAll('[contenteditable="true"]');
-      if (spans.length > 0) {
-        let targetSpan = targetFocusTokenId
-          ? prevLineEl.querySelector(`[data-token-id="${targetFocusTokenId}"]`)
-          : spans[spans.length - 1];
-        if (!targetSpan) targetSpan = spans[spans.length - 1];
+    const focusPrevLine = () => {
+      const prevLineEl = lineRefs.current[prevLine.id];
+      if (prevLineEl) {
+        const spans = prevLineEl.querySelectorAll('[contenteditable="true"]');
+        if (spans.length > 0) {
+          let targetSpan = targetFocusTokenId
+            ? prevLineEl.querySelector(`[data-token-id="${targetFocusTokenId}"]`)
+            : spans[spans.length - 1];
+          if (!targetSpan) targetSpan = spans[spans.length - 1];
 
-        targetSpan.focus();
-        const sel = window.getSelection();
-        if (sel) {
-          const range = document.createRange();
-          range.selectNodeContents(targetSpan);
-          if (targetFocusOffset !== null && targetSpan.firstChild) {
-            try {
-              const maxOff = targetSpan.firstChild.textContent?.length || 0;
-              const off = Math.min(targetFocusOffset, maxOff);
-              range.setStart(targetSpan.firstChild, off);
-              range.setEnd(targetSpan.firstChild, off);
-            } catch (err) {
+          targetSpan.focus();
+          const sel = window.getSelection();
+          if (sel) {
+            const range = document.createRange();
+            range.selectNodeContents(targetSpan);
+            if (targetFocusOffset !== null && targetSpan.firstChild) {
+              try {
+                const maxOff = targetSpan.firstChild.textContent?.length || 0;
+                const off = Math.min(targetFocusOffset, maxOff);
+                range.setStart(targetSpan.firstChild, off);
+                range.setEnd(targetSpan.firstChild, off);
+              } catch (err) {
+                range.collapse(false);
+              }
+            } else {
               range.collapse(false);
             }
-          } else {
-            range.collapse(false);
+            sel.removeAllRanges();
+            sel.addRange(range);
           }
-          sel.removeAllRanges();
-          sel.addRange(range);
+
+          activePositionRef.current = {
+            lineId: prevLine.id,
+            tokenId: targetFocusTokenId || prevLine.tokens?.[prevLine.tokens?.length - 1]?.id,
+            offset: targetFocusOffset ?? (targetSpan.textContent?.length || 0)
+          };
         }
-
-        activePositionRef.current = {
-          lineId: prevLine.id,
-          tokenId: targetFocusTokenId || prevLine.tokens[prevLine.tokens.length - 1]?.id,
-          offset: targetFocusOffset ?? 0
-        };
       }
-    }
-  };
+    };
 
-  // Modify formula slot value
-  const handleSlotChange = (lineId, tokenId, field, val) => {
-    const updated = docLines.map(line => {
-      if (line.id !== lineId) return line;
-      const nextTokens = line.tokens.map(t => {
-        if (t.id !== tokenId) return t;
-        const nextStruct = { ...t.structure, [field]: val };
-        return {
-          ...t,
-          structure: nextStruct,
-          latex: buildLatexFromStructure(nextStruct)
-        };
-      });
-      return { ...line, tokens: nextTokens };
-    });
-    commitDocLines(updated);
+    focusPrevLine();
+    setTimeout(focusPrevLine, 20);
   };
 
   // Modify generic formula latex
   const handleGenericLatexChange = (lineId, tokenId, newLatex) => {
-    const updated = docLines.map(line => {
+    const currentLines = docLinesRef.current || docLines;
+    const updated = currentLines.map(line => {
       if (line.id !== lineId) return line;
       const nextTokens = line.tokens.map(t => {
         if (t.id !== tokenId) return t;
@@ -830,63 +1268,316 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
     commitDocLines(updated);
   };
 
-  // Auto-calculate formula numbers
-  const handleAutoCalc = (lineId, tokenId) => {
-    const updated = docLines.map(line => {
-      if (line.id !== lineId) return line;
+  // Update specific slot of structured equation (Fraction num/den, Sqrt expr, Power base/exp, Chem)
+  const handleSlotUpdate = (field, val) => {
+    if (!activeFormulaId || !activeTokenInfo) return;
+    const targetTokenInfo = activeTokenInfo;
+    const currentStruct = targetTokenInfo.token.structure || parseEquationStructure(targetTokenInfo.token.latex);
+    const nextStruct = { ...currentStruct, [field]: val };
+    if (field === 'result' && val) {
+      nextStruct.hasEqual = true;
+    }
+    const nextLatex = buildLatexFromStructure(nextStruct);
+
+    const currentLines = docLinesRef.current || docLines;
+    const updated = currentLines.map(line => {
+      if (line.id !== targetTokenInfo.lineId) return line;
       const nextTokens = line.tokens.map(t => {
-        if (t.id !== tokenId) return t;
-        if (t.structure.type === 'FRACTION') {
-          const res = safeCalcDivision(t.structure.num, t.structure.den);
-          const nextStruct = { ...t.structure, hasEqual: true, result: res };
-          return { ...t, structure: nextStruct, latex: buildLatexFromStructure(nextStruct) };
-        } else if (t.structure.type === 'CHEM_CM') {
-          const res = safeCalcDivision(t.structure.num, t.structure.den);
-          const nextStruct = { ...t.structure, result: res };
-          return { ...t, structure: nextStruct, latex: buildLatexFromStructure(nextStruct) };
-        } else if (t.structure.type === 'SQRT') {
-          const val = parseFloat(t.structure.expr);
-          if (!isNaN(val) && val >= 0) {
-            const res = Math.sqrt(val);
-            const formatted = Number.isInteger(res) ? `${res}` : `${res.toFixed(2)}`;
-            const nextLatex = `\\sqrt{${t.structure.expr}} = ${formatted}`;
-            return { ...t, latex: nextLatex, structure: { type: 'GENERIC', raw: nextLatex } };
-          }
-        }
-        return t;
+        if (t.id !== targetTokenInfo.token.id) return t;
+        return {
+          ...t,
+          latex: nextLatex,
+          structure: nextStruct
+        };
       });
       return { ...line, tokens: nextTokens };
     });
     commitDocLines(updated);
   };
 
-  // Delete active formula
-  const handleDeleteActiveFormula = (lineId, tokenId) => {
-    const updated = docLines.map(line => {
+  // Modify formula via Natural Math (0% LaTeX, automatically converts to clean KaTeX)
+  const handleNaturalMathChange = (lineId, tokenId, naturalVal) => {
+    const convertedLatex = naturalMathToLatex(naturalVal);
+    const nextStruct = parseEquationStructure(convertedLatex);
+
+    const currentLines = docLinesRef.current || docLines;
+    const updated = currentLines.map(line => {
       if (line.id !== lineId) return line;
-      return { ...line, tokens: line.tokens.filter(t => t.id !== tokenId) };
+      const nextTokens = line.tokens.map(t => {
+        if (t.id !== tokenId) return t;
+        return {
+          ...t,
+          latex: convertedLatex,
+          structure: nextStruct
+        };
+      });
+      return { ...line, tokens: nextTokens };
+    });
+    commitDocLines(updated);
+  };
+
+  // Auto-calculate formula numbers
+  const handleAutoCalc = (lineId, tokenId) => {
+    const currentLines = docLinesRef.current || docLines;
+    const updated = currentLines.map(line => {
+      if (line.id !== lineId) return line;
+      const nextTokens = line.tokens.map(t => {
+        if (t.id !== tokenId) return t;
+        const struct = t.structure || parseEquationStructure(t.latex || '');
+
+        if (struct.type === 'FRACTION') {
+          const res = safeCalcDivision(struct.num, struct.den);
+          const nextStruct = { ...struct, hasEqual: true, result: res };
+          const nextLatex = buildLatexFromStructure(nextStruct);
+          return { ...t, latex: nextLatex, structure: nextStruct };
+        } else if (struct.type === 'SQRT') {
+          const val = parseFloat(struct.expr);
+          if (!isNaN(val) && val >= 0) {
+            const res = Math.sqrt(val);
+            const formatted = Number.isInteger(res) ? `${res}` : res.toFixed(2).replace(/\.00$/, '');
+            const nextStruct = { ...struct, hasEqual: true, result: formatted };
+            const nextLatex = buildLatexFromStructure(nextStruct);
+            return { ...t, latex: nextLatex, structure: nextStruct };
+          }
+        } else if (struct.type === 'CHEM_CM') {
+          const res = safeCalcDivision(struct.num, struct.den);
+          const nextStruct = { ...struct, result: res };
+          const nextLatex = buildLatexFromStructure(nextStruct);
+          return { ...t, latex: nextLatex, structure: nextStruct };
+        }
+
+        const calculatedLatex = autoCalculateEquation(t.latex || '');
+        return {
+          ...t,
+          latex: calculatedLatex,
+          structure: parseEquationStructure(calculatedLatex)
+        };
+      });
+      return { ...line, tokens: nextTokens };
+    });
+    commitDocLines(updated);
+  };
+
+  // Delete active formula (Ensure line still has at least 1 text token so user can always type or drag back into it)
+  const handleDeleteActiveFormula = (lineId, tokenId) => {
+    const currentLines = docLinesRef.current || docLines;
+    const updated = currentLines.map(line => {
+      if (line.id !== lineId) return line;
+      const remaining = line.tokens.filter(t => t.id !== tokenId);
+      if (remaining.length === 0 || !remaining.some(t => !t.isFormula)) {
+        remaining.push({ id: `tok-t-${Date.now()}`, isFormula: false, text: '' });
+      }
+      return { ...line, tokens: remaining };
     });
     setActiveFormulaId(null);
     commitDocLines(updated);
   };
 
-  // Insert quick symbol into active formula
-  const handleInsertSymbolIntoActive = (symbolCode) => {
-    if (!activeFormulaId) return;
-    const updated = docLines.map(line => {
-      const targetToken = line.tokens.find(t => t.id === activeFormulaId);
-      if (!targetToken) return line;
+  // Insert quick symbol into active formula (Cursor-aware insertion and text wrapping)
+  const handleInsertSymbolIntoActive = (symbolItem) => {
+    if (!activeFormulaId || !activeTokenInfo) return;
 
-      const nextTokens = line.tokens.map(t => {
-        if (t.id !== activeFormulaId) return t;
-        const nextLatex = (t.latex || '') + symbolCode;
-        return {
-          ...t,
-          latex: nextLatex,
-          structure: parseEquationStructure(nextLatex)
-        };
+    const lineId = activeTokenInfo.lineId;
+    const tokenId = activeTokenInfo.token.id;
+    const currentLatex = activeTokenInfo.token.latex || '';
+
+    // Switch to FRACTION slots if user clicked fraction button
+    if (symbolItem.code === '\\frac{a}{b}') {
+      const curNat = latexToNaturalMath(currentLatex);
+      const nextStruct = {
+        type: 'FRACTION',
+        num: curNat || '12',
+        den: '4',
+        hasEqual: false,
+        result: ''
+      };
+      const nextLatex = buildLatexFromStructure(nextStruct);
+      const updated = docLines.map(line => {
+        if (line.id !== lineId) return line;
+        const nextTokens = line.tokens.map(t => {
+          if (t.id !== tokenId) return t;
+          return { ...t, latex: nextLatex, structure: nextStruct };
+        });
+        return { ...line, tokens: nextTokens };
       });
-      return { ...line, tokens: nextTokens };
+      commitDocLines(updated);
+      return;
+    }
+
+    // Switch to SQRT slots if user clicked sqrt button
+    if (symbolItem.code === '\\sqrt{x}') {
+      const curNat = latexToNaturalMath(currentLatex);
+      const nextStruct = {
+        type: 'SQRT',
+        deg: '2',
+        expr: curNat || '16',
+        hasEqual: false,
+        result: ''
+      };
+      const nextLatex = buildLatexFromStructure(nextStruct);
+      const updated = docLines.map(line => {
+        if (line.id !== lineId) return line;
+        const nextTokens = line.tokens.map(t => {
+          if (t.id !== tokenId) return t;
+          return { ...t, latex: nextLatex, structure: nextStruct };
+        });
+        return { ...line, tokens: nextTokens };
+      });
+      commitDocLines(updated);
+      return;
+    }
+
+    // Insert natural symbol into active natural math input
+    const inputEl = activeInputRef.current;
+    let cursorStart = inputEl ? inputEl.selectionStart : null;
+    let cursorEnd = inputEl ? inputEl.selectionEnd : null;
+
+    const naturalSymbol = latexToNaturalMath(symbolItem.code);
+    const currentNatural = latexToNaturalMath(currentLatex);
+
+    let nextNatural = '';
+    let newCursorPos = 0;
+    if (cursorStart !== null && cursorEnd !== null && cursorStart <= currentNatural.length) {
+      const before = currentNatural.substring(0, cursorStart);
+      const selected = currentNatural.substring(cursorStart, cursorEnd);
+      const after = currentNatural.substring(cursorEnd);
+
+      if (selected && symbolItem.code.includes('^2')) {
+        const ins = `(${selected})^2`;
+        nextNatural = before + ins + after;
+        newCursorPos = before.length + ins.length;
+      } else if (selected && naturalSymbol.includes('√')) {
+        const ins = `√(${selected})`;
+        nextNatural = before + ins + after;
+        newCursorPos = before.length + ins.length;
+      } else {
+        nextNatural = before + naturalSymbol + after;
+        newCursorPos = before.length + naturalSymbol.length;
+      }
+    } else {
+      nextNatural = currentNatural + (currentNatural && !currentNatural.endsWith(' ') ? ' ' : '') + naturalSymbol;
+      newCursorPos = nextNatural.length;
+    }
+
+    handleNaturalMathChange(lineId, tokenId, nextNatural);
+
+    setTimeout(() => {
+      if (activeInputRef.current) {
+        activeInputRef.current.focus();
+        try {
+          activeInputRef.current.setSelectionRange(newCursorPos, newCursorPos);
+        } catch {
+          // ignore
+        }
+      }
+    }, 10);
+  };
+
+  // Handle Drag-and-Drop of formula/compound/block chips from HierarchicalMathPalette
+  const handleDropSnippetOnCanvas = (e, targetLineId = null) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const currentLines = docLinesRef.current || docLines;
+    const blockCode = e.dataTransfer?.getData('text/veval-block');
+    const mathCode = e.dataTransfer?.getData('text/veval-math') || e.dataTransfer?.getData('text/veval-bbt');
+    const plainText = e.dataTransfer?.getData('text/plain') || e.dataTransfer?.getData('Text');
+    const rawSnippet = (blockCode || mathCode || plainText || '').trim();
+    if (!rawSnippet) return;
+
+    // Case 1: Block tag (e.g. [VARIATION_TABLE]...[/VARIATION_TABLE])
+    if (
+      rawSnippet.includes('[VARIATION_TABLE]') ||
+      rawSnippet.includes('[MATH_GRAPH]') ||
+      rawSnippet.includes('[MATH_GRAPH_3D]') ||
+      rawSnippet.includes('[MATH_GEOMETRY_2D]')
+    ) {
+      const bType = rawSnippet.includes('[VARIATION_TABLE]')
+        ? 'VARIATION_TABLE'
+        : rawSnippet.includes('[MATH_GRAPH_3D]')
+        ? 'MATH_GRAPH_3D'
+        : rawSnippet.includes('[MATH_GEOMETRY_2D]')
+        ? 'MATH_GEOMETRY_2D'
+        : 'MATH_GRAPH';
+      const newBlockLine = {
+        id: `block-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+        lineIdx: currentLines.length,
+        raw: rawSnippet,
+        isBlock: true,
+        blockType: bType,
+        rawBlock: rawSnippet,
+        tokens: []
+      };
+      if (targetLineId) {
+        const idx = currentLines.findIndex((l) => l.id === targetLineId);
+        if (idx !== -1) {
+          const next = [...currentLines];
+          next.splice(idx + 1, 0, newBlockLine);
+          commitDocLines(next);
+          return;
+        }
+      }
+      commitDocLines([...currentLines, newBlockLine]);
+      return;
+    }
+
+    // Case 2: Formula or chemical compound token
+    const cleanLatex = rawSnippet.replace(/^\$+|\$+$/g, '').trim();
+    const formulaStructure = parseEquationStructure(cleanLatex);
+    const newFormulaId = `tok-f-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
+    const formulaToken = {
+      id: newFormulaId,
+      isFormula: true,
+      displayMode: false,
+      latex: cleanLatex,
+      structure: formulaStructure
+    };
+
+    if (currentLines.length === 0) {
+      const newLId = `line-${Date.now()}`;
+      const afterId = `tok-t-${Date.now() + 1}`;
+      commitDocLines([
+        {
+          id: newLId,
+          lineIdx: 0,
+          raw: '',
+          isHeading: false,
+          isBullet: false,
+          tokens: [formulaToken, { id: afterId, isFormula: false, text: ' ' }]
+        }
+      ]);
+      return;
+    }
+
+    const resolvedLineId =
+      targetLineId && currentLines.some((l) => l.id === targetLineId && !l.isBlock)
+        ? targetLineId
+        : [...currentLines].reverse().find((l) => !l.isBlock)?.id;
+
+    if (!resolvedLineId) {
+      const newLId = `line-${Date.now()}`;
+      const afterId = `tok-t-${Date.now() + 1}`;
+      commitDocLines([
+        ...currentLines,
+        {
+          id: newLId,
+          lineIdx: currentLines.length,
+          raw: '',
+          isHeading: false,
+          isBullet: false,
+          tokens: [formulaToken, { id: afterId, isFormula: false, text: ' ' }]
+        }
+      ]);
+      return;
+    }
+
+    const updated = currentLines.map((line) => {
+      if (line.id !== resolvedLineId) return line;
+      const afterId = `tok-t-${Date.now()}`;
+      return {
+        ...line,
+        tokens: [...line.tokens, formulaToken, { id: afterId, isFormula: false, text: ' ' }]
+      };
     });
     commitDocLines(updated);
   };
@@ -903,132 +1594,447 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
   return (
     <div className="relative font-sans text-slate-800" ref={containerRef}>
       
-      {/* HIERARCHICAL FORMULA QUICK INSPECTOR & INSERTER */}
-      {activeFormulaId && activeTokenInfo && (
-        <div
-          style={{
-            position: 'absolute',
-            top: `${Math.max(6, bubblePos.top)}px`,
-            left: `${Math.max(8, bubblePos.left)}px`,
-            zIndex: 50
-          }}
-          className="bg-white/98 text-slate-900 backdrop-blur-md rounded-2xl shadow-2xl border-2 border-cyan-500/80 p-2.5 flex flex-col gap-2 min-w-[340px] max-w-[540px] animate-in fade-in zoom-in-95 duration-100"
-        >
-          {/* Row 1: Header with Live KaTeX Preview & Actions */}
-          <div className="flex items-center justify-between gap-2 pb-1.5 border-b border-slate-200">
-            <div className="flex items-center gap-1.5 overflow-hidden flex-1 min-w-0">
-              <span className="px-2 py-0.5 rounded-full bg-cyan-100 text-cyan-800 border border-cyan-300 text-[10px] font-bold shrink-0">
-                {activeTokenInfo.token.structure?.type === 'FRACTION' ? 'Phân Số' :
-                 activeTokenInfo.token.structure?.type === 'CHEM_CM' ? 'Nồng Độ CM' :
-                 activeTokenInfo.token.structure?.type === 'CHEM_CPERCENT' ? 'Nồng Độ C%' :
-                 activeTokenInfo.token.structure?.type === 'POWER' ? 'Số Mũ' :
-                 activeTokenInfo.token.structure?.type === 'SQRT' ? 'Căn Thức' : 'Công Thức'}
-              </span>
-              <div 
-                className="text-xs text-cyan-950 font-serif max-w-[280px] overflow-x-auto scrollbar-none whitespace-nowrap px-1 py-0.5"
-                dangerouslySetInnerHTML={{ __html: renderKatexHtml(activeTokenInfo.token.latex || 'x', false) }}
-              />
-            </div>
+      {/* UNIVERSAL FORMULA FLOATING STUDIO & CURSOR-AWARE INSERTER */}
+      {activeFormulaId && activeTokenInfo && (() => {
+        const token = activeTokenInfo.token;
+        const struct = token.structure || parseEquationStructure(token.latex);
+        const naturalMath = latexToNaturalMath(token.latex);
+        const structType = struct.type;
 
-            <div className="flex items-center gap-1 shrink-0">
-              {(activeTokenInfo.token.structure?.type === 'FRACTION' || activeTokenInfo.token.structure?.type === 'CHEM_CM' || activeTokenInfo.token.structure?.type === 'SQRT') && (
+        return (
+          <div
+            style={{
+              position: 'absolute',
+              top: `${Math.max(6, bubblePos.top)}px`,
+              left: `${Math.max(8, bubblePos.left)}px`,
+              zIndex: 50
+            }}
+            className="bg-white/98 text-slate-900 backdrop-blur-md rounded-2xl shadow-2xl border-2 border-indigo-500/80 p-3.5 flex flex-col gap-3 min-w-[380px] max-w-[620px] animate-in fade-in zoom-in-95 duration-100"
+          >
+            {/* Row 1: Header Bar with Structure Badge & Quick Action Buttons */}
+            <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-200">
+              <div className="flex items-center gap-2">
+                <span className="px-2.5 py-1 rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white text-[10px] font-black shrink-0 uppercase tracking-wider shadow-2xs flex items-center gap-1">
+                  <Sparkles className="w-3 h-3 text-amber-300" />
+                  <span>
+                    {structType === 'FRACTION' ? 'Phân Số' :
+                     structType === 'SQRT' ? 'Căn Thức' :
+                     structType === 'POWER' ? 'Lũy Thừa' :
+                     structType === 'CHEM_CM' ? 'Nồng Độ C_M' :
+                     structType === 'CHEM_CPERCENT' ? 'Nồng Độ C%' :
+                     'Soạn Công Thức'}
+                  </span>
+                </span>
+                <span className="text-[11px] font-bold text-slate-500 hidden sm:inline">
+                  (Điền số trực tiếp vào ô bên dưới)
+                </span>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center gap-1.5 shrink-0">
                 <button
                   type="button"
                   onClick={() => handleAutoCalc(activeTokenInfo.lineId, activeTokenInfo.token.id)}
-                  className="px-2 py-0.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-[10.5px] flex items-center gap-0.5 shadow-2xs cursor-pointer"
-                  title="Tự tính kết quả số"
+                  className="px-2.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs flex items-center gap-1 shadow-xs cursor-pointer transition-transform hover:scale-102"
+                  title="Tự tính đáp số tự động cho mọi phép toán (12/4 = 3, căn bậc 2, nồng độ...)"
                 >
-                  <Zap className="w-2.5 h-2.5 fill-slate-950" />
+                  <Zap className="w-3.5 h-3.5 fill-slate-950 text-slate-950" />
                   <span>Tính</span>
                 </button>
+                <button
+                  type="button"
+                  onClick={() => handleDeleteActiveFormula(activeTokenInfo.lineId, activeTokenInfo.token.id)}
+                  className="px-2 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs flex items-center gap-1 transition-colors cursor-pointer"
+                  title="Xóa công thức này khỏi bài giảng (Delete / Backspace)"
+                >
+                  <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                  <span>Xóa</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveFormulaId(null)}
+                  className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs flex items-center gap-1 cursor-pointer shadow-xs transition-transform hover:scale-102"
+                  title="Hoàn tất soạn thảo (Enter / Esc)"
+                >
+                  <Check className="w-3.5 h-3.5 stroke-[3]" />
+                  <span>Xong</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Row 2: INTERACTIVE VISUAL SLOTS (CHỈNH SỬA SỐ & BIỂU THỨC TRỰC TIẾP TRÊN Ô MẪU SGK) */}
+            {structType === 'FRACTION' && (
+              <div className="p-2.5 rounded-xl bg-gradient-to-r from-indigo-50/90 to-purple-50/90 border border-indigo-200/90 flex items-center justify-between gap-3 shadow-inner">
+                <span className="text-[11px] font-extrabold text-indigo-900 shrink-0">
+                  Ô điền phân số:
+                </span>
+                <div className="flex items-center gap-2.5">
+                  {/* Vertical Fraction */}
+                  <div className="flex flex-col items-center">
+                    <input
+                      type="text"
+                      value={struct.num ?? ''}
+                      onChange={(e) => handleSlotUpdate('num', e.target.value)}
+                      placeholder="Tử số"
+                      className="w-16 px-2 py-0.5 text-center font-bold text-xs bg-white rounded-lg border border-indigo-300 focus:ring-2 focus:ring-indigo-500 shadow-2xs"
+                      title="Tử số (Nhập số hoặc biểu thức phía trên)"
+                    />
+                    <div className="w-full h-0.5 bg-indigo-900 my-1 rounded-full"></div>
+                    <input
+                      type="text"
+                      value={struct.den ?? ''}
+                      onChange={(e) => handleSlotUpdate('den', e.target.value)}
+                      placeholder="Mẫu số"
+                      className="w-16 px-2 py-0.5 text-center font-bold text-xs bg-white rounded-lg border border-indigo-300 focus:ring-2 focus:ring-indigo-500 shadow-2xs"
+                      title="Mẫu số (Nhập số hoặc biểu thức phía dưới)"
+                    />
+                  </div>
+
+                  <span className="text-base font-black text-slate-700">=</span>
+
+                  {/* Result */}
+                  <input
+                    type="text"
+                    value={struct.result ?? ''}
+                    onChange={(e) => handleSlotUpdate('result', e.target.value)}
+                    placeholder="Đáp số"
+                    className="w-16 px-2 py-1 text-center font-black text-xs bg-white rounded-lg border border-emerald-300 text-emerald-800 focus:ring-2 focus:ring-emerald-500 shadow-2xs"
+                    title="Đáp số (Nhấp nút Tính để tự động tính)"
+                  />
+                </div>
+              </div>
+            )}
+
+            {structType === 'SQRT' && (
+              <div className="p-2.5 rounded-xl bg-gradient-to-r from-indigo-50/90 to-purple-50/90 border border-indigo-200/90 flex items-center justify-between gap-3 shadow-inner">
+                <span className="text-[11px] font-extrabold text-indigo-900 shrink-0">
+                  Ô điền căn thức:
+                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xl font-serif font-black text-indigo-950">√</span>
+                  <input
+                    type="text"
+                    value={struct.expr ?? ''}
+                    onChange={(e) => handleSlotUpdate('expr', e.target.value)}
+                    placeholder="Số trong căn"
+                    className="w-20 px-2 py-1 text-center font-bold text-xs bg-white rounded-lg border border-indigo-300 focus:ring-2 focus:ring-indigo-500 shadow-2xs"
+                  />
+                  <span className="text-base font-black text-slate-700">=</span>
+                  <input
+                    type="text"
+                    value={struct.result ?? ''}
+                    onChange={(e) => handleSlotUpdate('result', e.target.value)}
+                    placeholder="Đáp số"
+                    className="w-16 px-2 py-1 text-center font-black text-xs bg-white rounded-lg border border-emerald-300 text-emerald-800 shadow-2xs"
+                  />
+                </div>
+              </div>
+            )}
+
+            {structType === 'POWER' && (
+              <div className="p-2.5 rounded-xl bg-gradient-to-r from-indigo-50/90 to-purple-50/90 border border-indigo-200/90 flex items-center justify-between gap-3 shadow-inner">
+                <span className="text-[11px] font-extrabold text-indigo-900 shrink-0">
+                  Ô điền lũy thừa:
+                </span>
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="text"
+                    value={struct.base ?? ''}
+                    onChange={(e) => handleSlotUpdate('base', e.target.value)}
+                    placeholder="Cơ số (x)"
+                    className="w-16 px-2 py-1 text-center font-bold text-xs bg-white rounded-lg border border-indigo-300 focus:ring-2 focus:ring-indigo-500 shadow-2xs"
+                  />
+                  <span className="text-xs font-bold text-slate-400">^</span>
+                  <input
+                    type="text"
+                    value={struct.exp ?? ''}
+                    onChange={(e) => handleSlotUpdate('exp', e.target.value)}
+                    placeholder="Số mũ"
+                    className="w-14 px-2 py-1 text-center font-bold text-xs bg-white rounded-lg border border-indigo-300 focus:ring-2 focus:ring-indigo-500 shadow-2xs"
+                  />
+                </div>
+              </div>
+            )}
+
+            {structType === 'CHEM_CM' && (
+              <div className="p-2.5 rounded-xl bg-gradient-to-r from-teal-50/90 to-emerald-50/90 border border-teal-200/90 flex items-center justify-between gap-3 shadow-inner">
+                <span className="text-[11px] font-extrabold text-teal-950 font-serif">
+                  C_M = n / V =
+                </span>
+                <div className="flex items-center gap-1.5">
+                  <div className="flex flex-col items-center">
+                    <input
+                      type="text"
+                      value={struct.num ?? ''}
+                      onChange={(e) => handleSlotUpdate('num', e.target.value)}
+                      placeholder="n (mol)"
+                      className="w-14 px-1 py-0.5 text-center font-bold text-xs bg-white rounded border border-teal-300"
+                    />
+                    <div className="w-full h-0.5 bg-teal-800 my-0.5"></div>
+                    <input
+                      type="text"
+                      value={struct.den ?? ''}
+                      onChange={(e) => handleSlotUpdate('den', e.target.value)}
+                      placeholder="V (lít)"
+                      className="w-14 px-1 py-0.5 text-center font-bold text-xs bg-white rounded border border-teal-300"
+                    />
+                  </div>
+                  <span className="text-xs font-bold text-slate-700">=</span>
+                  <input
+                    type="text"
+                    value={struct.result ?? ''}
+                    onChange={(e) => handleSlotUpdate('result', e.target.value)}
+                    placeholder="Đáp số"
+                    className="w-14 px-1 py-0.5 text-center font-black text-xs bg-white rounded border border-emerald-300 text-emerald-800"
+                  />
+                  <span className="text-xs font-bold text-teal-900 font-serif">M</span>
+                </div>
+              </div>
+            )}
+
+            {/* Row 3: UNIVERSAL NATURAL MATH BAR (SOẠN NHANH TOÀN NĂNG - 0% LATEX) */}
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-extrabold text-slate-700 shrink-0">
+                Toán tự nhiên:
+              </span>
+              <input
+                ref={activeInputRef}
+                type="text"
+                value={naturalMath}
+                onChange={(e) => handleNaturalMathChange(activeTokenInfo.lineId, activeTokenInfo.token.id, e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Backspace' && !naturalMath) {
+                    e.preventDefault();
+                    handleDeleteActiveFormula(activeTokenInfo.lineId, activeTokenInfo.token.id);
+                  }
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    setActiveFormulaId(null);
+                  }
+                  if (e.key === 'Escape') {
+                    e.preventDefault();
+                    setActiveFormulaId(null);
+                  }
+                }}
+                placeholder="Gõ hoặc dán mọi biểu thức tự nhiên: 12/4 = 3, căn(16) = 4, (x+1)/(x-1)..."
+                className="flex-1 bg-slate-50 hover:bg-white focus:bg-white border-2 border-indigo-300 focus:border-indigo-600 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-900 outline-none shadow-inner transition-colors"
+                title="Gõ công thức theo dạng toán tự nhiên thông thường (không cần gõ mã LaTeX)"
+              />
+            </div>
+
+            {/* Row 4: LIVE KATEX TYPOGRAPHY PREVIEW DOCK (CHUẨN SGK TRỰC QUAN 100%) */}
+            <div 
+              onClick={() => {
+                if (activeInputRef.current) activeInputRef.current.focus();
+              }}
+              className="px-3 py-2 rounded-xl bg-indigo-50/70 border border-indigo-200/90 flex items-center justify-between gap-3 shadow-inner cursor-pointer hover:bg-indigo-50 transition-colors"
+              title="Nhấp vào đây để tiếp tục nhập chỉnh sửa biểu thức"
+            >
+              <div className="flex items-center gap-2 overflow-x-auto scrollbar-none flex-1 min-w-0">
+                <span className="text-[10px] font-extrabold text-indigo-700 uppercase tracking-wider shrink-0 flex items-center gap-1">
+                  <Sparkles className="w-3 h-3 text-amber-500" />
+                  <span>Học sinh thấy:</span>
+                </span>
+                <div 
+                  className="text-sm sm:text-base text-indigo-950 font-serif whitespace-nowrap overflow-x-auto py-0.5"
+                  dangerouslySetInnerHTML={{ 
+                    __html: renderKatexHtml(token.latex || '\\text{(Trống)}', false) 
+                  }}
+                />
+              </div>
+              {onOpenAdvancedModal && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveFormulaId(null);
+                    onOpenAdvancedModal();
+                  }}
+                  className="text-[10.5px] font-bold text-indigo-700 hover:text-indigo-900 bg-white hover:bg-indigo-100 px-2.5 py-1 rounded-lg border border-indigo-300 shadow-2xs whitespace-nowrap cursor-pointer transition-colors shrink-0"
+                  title="Mở Studio đầy đủ để vẽ đồ thị hàm số hoặc bảng biến thiên"
+                >
+                  🚀 Mở Studio
+                </button>
               )}
-              <button
-                type="button"
-                onClick={() => handleDeleteActiveFormula(activeTokenInfo.lineId, activeTokenInfo.token.id)}
-                className="p-1 rounded-lg hover:bg-rose-100 text-rose-600 transition-colors cursor-pointer"
-                title="Xóa công thức"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveFormulaId(null)}
-                className="px-2.5 py-0.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-[11px] flex items-center gap-0.5 cursor-pointer shadow-2xs"
-              >
-                <Check className="w-3 h-3" />
-                <span>Xong</span>
-              </button>
+            </div>
+
+            {/* Row 5: Quick Symbol Inserter Tabs */}
+            <div className="flex items-center gap-1 overflow-x-auto scrollbar-none pb-0.5 border-t border-slate-100 pt-1.5">
+              {Object.keys(HIERARCHICAL_BUBBLE_INSERTER).map((tabKey) => {
+                const tab = HIERARCHICAL_BUBBLE_INSERTER[tabKey];
+                const isAct = bubbleTab === tabKey;
+                return (
+                  <button
+                    key={tabKey}
+                    type="button"
+                    onClick={() => setBubbleTab(tabKey)}
+                    className={`px-2 py-1 rounded-lg text-[10.5px] font-bold transition-all whitespace-nowrap cursor-pointer shrink-0 ${
+                      isAct 
+                        ? 'bg-indigo-600 text-white shadow-2xs font-extrabold' 
+                        : 'bg-slate-100/90 text-slate-700 hover:bg-slate-200/90'
+                    }`}
+                  >
+                    {tab.name}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Row 6: Quick Symbol Inserter Buttons */}
+            <div className="flex flex-wrap items-center gap-1 max-h-[68px] overflow-y-auto scrollbar-none p-1 bg-slate-50/80 rounded-xl border border-slate-200/80">
+              {HIERARCHICAL_BUBBLE_INSERTER[bubbleTab]?.items?.map((item) => (
+                <button
+                  key={item.label}
+                  type="button"
+                  onClick={() => handleInsertSymbolIntoActive(item)}
+                  title={item.title || item.label}
+                  className="px-2 py-1 bg-white hover:bg-indigo-50 text-indigo-950 font-serif font-bold text-xs rounded-lg border border-slate-200 hover:border-indigo-400 shadow-2xs transition-all active:scale-95 cursor-pointer shrink-0"
+                >
+                  {item.label}
+                </button>
+              ))}
             </div>
           </div>
-
-          {/* Row 2: Hierarchical Category Tabs */}
-          <div className="flex items-center gap-1 overflow-x-auto scrollbar-none pb-0.5">
-            {Object.keys(HIERARCHICAL_BUBBLE_INSERTER).map((tabKey) => {
-              const tab = HIERARCHICAL_BUBBLE_INSERTER[tabKey];
-              const isAct = bubbleTab === tabKey;
-              return (
-                <button
-                  key={tabKey}
-                  type="button"
-                  onClick={() => setBubbleTab(tabKey)}
-                  className={`px-2 py-0.5 rounded-md text-[10px] font-bold whitespace-nowrap transition-colors cursor-pointer ${
-                    isAct 
-                      ? 'bg-cyan-600 text-white shadow-2xs' 
-                      : 'bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200'
-                  }`}
-                >
-                  {tab.name}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Row 3: Quick Insertion Chips of Active Tab */}
-          <div className="flex flex-wrap items-center gap-1 max-h-[85px] overflow-y-auto scrollbar-thin p-1 rounded-lg bg-slate-50 border border-slate-200">
-            {HIERARCHICAL_BUBBLE_INSERTER[bubbleTab]?.items?.map((item, idx) => (
-              <button
-                key={idx}
-                type="button"
-                onClick={() => handleInsertSymbolIntoActive(item.code)}
-                className="px-1.5 py-0.5 rounded bg-white hover:bg-cyan-100 hover:text-cyan-800 border border-slate-200 text-slate-700 text-[10.5px] font-mono cursor-pointer transition-colors shadow-2xs"
-                title={`${item.title} (Nhấp để chèn)`}
-              >
-                {item.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Row 4: Direct LaTeX Input Line for Ultimate Flexibility */}
-          <div className="flex items-center gap-1.5 pt-1 border-t border-slate-200">
-            <span className="text-[10px] font-bold text-cyan-700 font-mono shrink-0">LaTeX:</span>
-            <input
-              type="text"
-              value={activeTokenInfo.token.latex}
-              onChange={(e) => handleGenericLatexChange(activeTokenInfo.lineId, activeTokenInfo.token.id, e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  setActiveFormulaId(null);
-                }
-              }}
-              className="flex-1 bg-slate-50 border border-slate-300 focus:border-cyan-500 rounded px-2 py-0.5 text-[11px] font-mono text-cyan-900 outline-none transition-colors"
-              placeholder="Gõ hoặc dán mã LaTeX..."
-            />
-          </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* THE ACTUAL DOCUMENT CANVAS */}
-      <div className="bg-white rounded-2xl border border-slate-300 shadow-sm p-6 sm:p-8 min-h-[380px] text-[14px] leading-relaxed select-text space-y-2 cursor-text">
+      <div
+        onDragOver={(e) => {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'copy';
+        }}
+        onDrop={(e) => handleDropSnippetOnCanvas(e, null)}
+        className={
+          singleLine
+            ? 'bg-transparent border-0 shadow-none px-1 py-0.5 min-h-[26px] text-[13.5px] leading-snug select-text cursor-text flex-1'
+            : compact
+            ? 'bg-white rounded-xl border border-slate-200/90 shadow-2xs p-3 sm:p-3.5 min-h-[84px] text-[13.5px] leading-relaxed select-text space-y-1.5 cursor-text focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-100/70 transition-all'
+            : 'bg-white rounded-2xl border border-slate-300 shadow-sm p-6 sm:p-8 min-h-[380px] text-[14px] leading-relaxed select-text space-y-2 cursor-text'
+        }
+      >
         {docLines.length === 0 ? (
           <div 
             onClick={() => handleInsertNewLineAfter(null)}
-            className="py-12 text-center text-slate-400 text-xs italic cursor-pointer hover:text-slate-600"
+            onDragOver={(e) => {
+              e.preventDefault();
+              e.dataTransfer.dropEffect = 'copy';
+            }}
+            onDrop={(e) => handleDropSnippetOnCanvas(e, null)}
+            className={`${singleLine ? 'py-0.5 text-left' : compact ? 'py-3 text-left px-1' : 'py-12 text-center'} text-slate-400 text-xs italic cursor-pointer hover:text-slate-600`}
           >
-            {placeholder} (Nhấp vào đây để bắt đầu soạn bài giảng)
+            {placeholder} {!singleLine && !compact && '(Nhấp vào đây hoặc kéo thả công thức vào để bắt đầu soạn bài giảng)'}
           </div>
         ) : (
           docLines.map((line) => {
+            if (line.isBlock) {
+              const handleDeleteBlock = (e) => {
+                e.stopPropagation();
+                const currentLines = docLinesRef.current || docLines;
+                const filtered = currentLines.filter((l) => l.id !== line.id);
+                if (filtered.length === 0) {
+                  const newLId = `line-${Date.now()}`;
+                  const newTokId = `tok-${Date.now()}`;
+                  commitDocLines([
+                    {
+                      id: newLId,
+                      lineIdx: 0,
+                      isBlock: false,
+                      raw: '',
+                      isHeading: false,
+                      isBullet: false,
+                      tokens: [{ id: newTokId, isFormula: false, text: '' }]
+                    }
+                  ]);
+                  return;
+                }
+                commitDocLines(filtered);
+              };
+
+              if (line.blockType === 'VARIATION_TABLE') {
+                const tableData = parseVariationTableString(line.rawBlock);
+                const handleUpdateVariationBlock = (newRawBlock) => {
+                  const currentLines = docLinesRef.current || docLines;
+                  const updated = currentLines.map((l) =>
+                    l.id === line.id ? { ...l, rawBlock: newRawBlock, raw: newRawBlock } : l
+                  );
+                  commitDocLines(updated);
+                };
+                return (
+                  <div key={line.id} className="relative group my-2">
+                    <button
+                      type="button"
+                      onClick={handleDeleteBlock}
+                      title="Xóa bảng biến thiên này"
+                      className="absolute top-3 right-3 z-20 px-2 py-1 rounded-lg bg-rose-50 border border-rose-200 text-rose-600 hover:bg-rose-100 text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer shadow-2xs"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                      <span>Xóa</span>
+                    </button>
+                    {tableData ? (
+                      <VariationTable
+                        data={tableData}
+                        onChange={handleUpdateVariationBlock}
+                      />
+                    ) : (
+                      <pre className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs font-mono text-slate-700 overflow-x-auto">
+                        {line.rawBlock}
+                      </pre>
+                    )}
+                  </div>
+                );
+              }
+
+              if (
+                line.blockType === 'MATH_GRAPH' ||
+                line.blockType === 'MATH_GRAPH_3D' ||
+                line.blockType === 'MATH_GEOMETRY_2D'
+              ) {
+                return (
+                  <div key={line.id} className="relative group my-2">
+                    <button
+                      type="button"
+                      onClick={handleDeleteBlock}
+                      title="Xóa đồ thị / mô hình này"
+                      className="absolute top-2.5 right-24 z-20 opacity-0 group-hover:opacity-100 px-2 py-1 rounded-lg bg-rose-50 border border-rose-200 text-rose-600 hover:bg-rose-100 text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer shadow-xs"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                      <span>Xóa mô hình</span>
+                    </button>
+                    <InteractiveMathRenderer
+                      rawTag={line.rawBlock}
+                      height={compact ? 250 : 300}
+                      onEdit={onEditMathGraph ? () => onEditMathGraph(line.rawBlock) : null}
+                    />
+                  </div>
+                );
+              }
+
+              if (line.blockType === 'IMAGE') {
+                const imgMatch = line.rawBlock.match(/^!\[([^\]]*)\]\(([^\)]+)\)$/);
+                const altText = imgMatch ? imgMatch[1] : 'Hình minh họa';
+                const imgUrl = imgMatch ? imgMatch[2] : '';
+                return (
+                  <div key={line.id} className="relative group my-2 inline-block max-w-full">
+                    <button
+                      type="button"
+                      onClick={handleDeleteBlock}
+                      title="Xóa ảnh minh họa"
+                      className="absolute top-2 right-2 z-20 opacity-0 group-hover:opacity-100 px-2 py-1 rounded-lg bg-rose-600 text-white text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer shadow-md"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                      <span>Xóa ảnh</span>
+                    </button>
+                    <img
+                      src={imgUrl}
+                      alt={altText}
+                      className="max-h-64 rounded-xl border border-slate-200 shadow-xs object-contain bg-white p-1"
+                    />
+                  </div>
+                );
+              }
+            }
+
             const isHeading = line.isHeading;
             const isBullet = line.isBullet;
 
@@ -1043,6 +2049,11 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
                 key={line.id}
                 ref={(el) => { lineRefs.current[line.id] = el; }}
                 onClick={(e) => handleLineRowClick(e, line.id)}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.dataTransfer.dropEffect = 'copy';
+                }}
+                onDrop={(e) => handleDropSnippetOnCanvas(e, line.id)}
                 className={`transition-colors rounded px-1.5 py-0.5 cursor-text ${
                   isHeading
                     ? isPin
@@ -1085,35 +2096,69 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
                         onKeyUp={() => updateActiveCaret(line.id, token.id)}
                         onMouseUp={() => updateActiveCaret(line.id, token.id)}
                         onFocus={() => updateActiveCaret(line.id, token.id)}
-                        onInput={() => updateActiveCaret(line.id, token.id)}
+                        onInput={(e) => {
+                          const currentText = e.currentTarget.textContent || '';
+                          const currentLines = docLinesRef.current;
+                          if (currentLines) {
+                            const l = currentLines.find((x) => x.id === line.id);
+                            if (l) {
+                              const tok = l.tokens?.find((t) => t.id === token.id);
+                              if (tok) tok.text = currentText;
+                            }
+                          }
+                          updateActiveCaret(line.id, token.id);
+                        }}
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          e.dataTransfer.dropEffect = 'copy';
+                        }}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleDropSnippetOnCanvas(e, line.id);
+                        }}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') {
                             e.preventDefault();
-                            handleInsertNewLineAfter(line.id);
-                          } else if (e.key === 'Backspace') {
+                            if (!singleLine) handleInsertNewLineAfter(line.id);
+                          } else if (e.key === 'Backspace' || e.key === 'Delete') {
                             const sel = window.getSelection();
-                            const spanText = e.currentTarget.textContent || '';
-                            const isAtStart = sel && (sel.anchorOffset === 0 && sel.focusOffset === 0);
+                            const rawSpan = e.currentTarget.textContent || '';
+                            const cleanSpanText = rawSpan.replace(/[\s\u00A0\r\n\u200B]+/g, '');
+                            const range = sel && sel.rangeCount > 0 ? sel.getRangeAt(0) : null;
+                            const isAtStart = (sel && (sel.anchorOffset === 0 && sel.focusOffset === 0)) || (range && range.collapsed && range.startOffset === 0);
                             const isFirstToken = line.tokens[0]?.id === token.id;
 
+                            // If at start of text span immediately after a formula, Backspace deletes the formula!
+                            if (e.key === 'Backspace' && isAtStart && !isFirstToken) {
+                              const tokenIdx = line.tokens.findIndex((t) => t.id === token.id);
+                              if (tokenIdx > 0 && line.tokens[tokenIdx - 1]?.isFormula) {
+                                e.preventDefault();
+                                handleDeleteActiveFormula(line.id, line.tokens[tokenIdx - 1].id);
+                                return;
+                              }
+                            }
+
+                            const currentLines = docLinesRef.current || docLines;
+                            const lineIdx = currentLines.findIndex((l) => l.id === line.id);
                             const lineEl = lineRefs.current[line.id];
-                            const domLineText = lineEl ? (lineEl.innerText || '').replace(/\r?\n/g, '').trim() : '';
-                            const isLineEmpty = !line.tokens.some(t => t.isFormula) && (domLineText === '' || spanText === '');
+                            const rawDomText = lineEl ? (lineEl.innerText || '') : '';
+                            const cleanDomText = rawDomText.replace(/[\s\u00A0\r\n\u200B]+/g, '');
+                            const hasFormulas = line.tokens.some((t) => t.isFormula);
+                            const isLineEmpty = !hasFormulas && (cleanDomText === '' || cleanSpanText === '');
 
-                            if (docLines.length > 1) {
-                              const lineIdx = docLines.findIndex(l => l.id === line.id);
-                              if (lineIdx > 0) {
-                                if (isLineEmpty) {
-                                  e.preventDefault();
-                                  handleDeleteOrMergeLine(line.id);
-                                  return;
-                                }
+                            if (currentLines.length > 1 && lineIdx >= 0) {
+                              if (isLineEmpty) {
+                                e.preventDefault();
+                                handleDeleteOrMergeLine(line.id);
+                                return;
+                              }
 
-                                if (isAtStart && isFirstToken) {
-                                  e.preventDefault();
-                                  handleDeleteOrMergeLine(line.id);
-                                  return;
-                                }
+                              if (e.key === 'Backspace' && isAtStart && isFirstToken && lineIdx > 0) {
+                                e.preventDefault();
+                                handleDeleteOrMergeLine(line.id);
+                                return;
                               }
                             }
                           }
@@ -1127,89 +2172,39 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas({
 
                   // CASE 2: FORMULA TOKEN (COMPACT INLINE FOOTPRINT)
                   const isActive = token.id === activeFormulaId;
-                  const struct = token.structure;
 
-                  // ACTIVE EDITING STATE: MINIMALIST SLOT BOX
+                  // ACTIVE EDITING STATE: CLEAN VISUAL HIGHLIGHT IN PLACE
                   if (isActive) {
+                    const handleDropOnFormulaInput = (e) => {
+                      const dropped =
+                        e.dataTransfer?.getData('text/veval-math') ||
+                        e.dataTransfer?.getData('text/veval-bbt') ||
+                        e.dataTransfer?.getData('text/plain');
+                      if (!dropped) return;
+                      e.preventDefault();
+                      e.stopPropagation();
+                      const cleanDrop = String(dropped).trim().replace(/^\$+|\$+$/g, '');
+                      if (!cleanDrop) return;
+                      handleGenericLatexChange(line.id, token.id, cleanDrop);
+                    };
+
                     return (
                       <span
                         key={token.id}
                         ref={activeFormulaRef}
-                        className="inline-flex items-center align-middle mx-0.5 px-1 py-0.5 bg-amber-50/90 ring-1 ring-amber-400 rounded-lg shadow-2xs z-30"
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          e.dataTransfer.dropEffect = 'copy';
+                        }}
+                        onDrop={handleDropOnFormulaInput}
+                        className="inline-flex items-center align-baseline mx-0.5 px-1.5 py-0.5 bg-indigo-50/90 border-2 border-indigo-500 rounded-lg shadow-sm z-30 transition-all cursor-pointer"
+                        title="Đang sửa công thức trong khung Studio nổi phía trên"
                       >
-                        {struct?.type === 'FRACTION' ? (
-                          /* COMPACT FRACTION SLOTS */
-                          <span className="inline-flex items-center gap-0.5 text-xs">
-                            <span className="inline-flex flex-col items-center justify-center">
-                              <input
-                                type="text"
-                                value={struct.num}
-                                onChange={(e) => handleSlotChange(line.id, token.id, 'num', e.target.value)}
-                                className="text-center font-bold text-amber-950 bg-white border border-amber-300 rounded px-1 py-0 text-[11px] font-mono outline-none"
-                                style={{ width: `${Math.max(20, (struct.num || '').length * 8 + 8)}px` }}
-                              />
-                              <span className="w-full h-[1px] bg-slate-700 my-0.5"></span>
-                              <input
-                                type="text"
-                                value={struct.den}
-                                onChange={(e) => handleSlotChange(line.id, token.id, 'den', e.target.value)}
-                                className="text-center font-bold text-cyan-950 bg-white border border-cyan-300 rounded px-1 py-0 text-[11px] font-mono outline-none"
-                                style={{ width: `${Math.max(20, (struct.den || '').length * 8 + 8)}px` }}
-                              />
-                            </span>
-                            {(struct.hasEqual || struct.result) && (
-                              <span className="inline-flex items-center gap-0.5 font-bold text-slate-700 ml-0.5 text-xs">
-                                <span>=</span>
-                                <input
-                                  type="text"
-                                  value={struct.result}
-                                  onChange={(e) => handleSlotChange(line.id, token.id, 'result', e.target.value)}
-                                  className="text-center font-extrabold text-emerald-900 bg-white border border-emerald-300 rounded px-1 py-0 text-[11px] font-mono outline-none"
-                                  style={{ width: `${Math.max(22, (struct.result || '').length * 8 + 8)}px` }}
-                                />
-                              </span>
-                            )}
-                          </span>
-                        ) : struct?.type === 'POWER' ? (
-                          /* COMPACT POWER SLOTS */
-                          <span className="inline-flex items-baseline gap-0.5 text-xs">
-                            <input
-                              type="text"
-                              value={struct.base}
-                              onChange={(e) => handleSlotChange(line.id, token.id, 'base', e.target.value)}
-                              className="text-center font-bold text-indigo-950 bg-white border border-indigo-300 rounded px-1 py-0 text-[11px] font-mono outline-none"
-                              style={{ width: `${Math.max(16, (struct.base || '').length * 8 + 6)}px` }}
-                            />
-                            <input
-                              type="text"
-                              value={struct.exp}
-                              onChange={(e) => handleSlotChange(line.id, token.id, 'exp', e.target.value)}
-                              className="text-center font-extrabold text-rose-950 bg-white border border-rose-300 rounded px-0.5 py-0 text-[10px] font-mono -translate-y-1 outline-none"
-                              style={{ width: `${Math.max(14, (struct.exp || '').length * 7 + 6)}px` }}
-                            />
-                          </span>
-                        ) : struct?.type === 'SQRT' ? (
-                          /* COMPACT SQRT SLOT */
-                          <span className="inline-flex items-center gap-0.5 text-xs font-mono">
-                            <span className="text-sm font-serif">√</span>
-                            <input
-                              type="text"
-                              value={struct.expr}
-                              onChange={(e) => handleSlotChange(line.id, token.id, 'expr', e.target.value)}
-                              className="text-center font-bold text-emerald-950 bg-white border-b border-emerald-500 rounded-t px-1 py-0 text-[11px] outline-none"
-                              style={{ width: `${Math.max(20, (struct.expr || '').length * 8 + 8)}px` }}
-                            />
-                          </span>
-                        ) : (
-                          /* GENERIC SHORT INLINE INPUT */
-                          <input
-                            type="text"
-                            value={token.latex}
-                            onChange={(e) => handleGenericLatexChange(line.id, token.id, e.target.value)}
-                            className="font-mono text-center text-xs font-bold bg-white text-slate-900 border border-amber-400 rounded px-1.5 py-0 outline-none shadow-2xs"
-                            style={{ width: `${Math.max(32, token.latex.length * 8 + 14)}px` }}
-                          />
-                        )}
+                        <span 
+                          className="text-[13.5px] text-indigo-950 font-serif select-none"
+                          dangerouslySetInnerHTML={{ __html: renderKatexHtml(token.latex || '\\text{(Trống)}', false) }}
+                        />
+                        <span className="w-1.5 h-1.5 rounded-full bg-indigo-600 animate-pulse ml-1.5 shrink-0"></span>
                       </span>
                     );
                   }

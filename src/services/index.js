@@ -7,5 +7,6 @@ export { apiClient, tokenStorage } from './apiClient';
 export { authService } from './authService';
 export { contentService } from './contentService';
 export { practiceService } from './practiceService';
+export { paymentService } from './paymentService';
 export { aiService } from './aiService';
 export { userService } from './userService';

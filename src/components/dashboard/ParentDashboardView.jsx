@@ -11,10 +11,14 @@ import {
   RefreshCw,
   Flame,
   ShieldCheck,
-  Target
+  Target,
+  ChevronRight,
+  QrCode
 } from 'lucide-react';
 import { practiceService } from '../../services/practiceService';
 import { toast } from '../../context/ToastContext';
+import PayOsCheckoutModal from '../modals/PayOsCheckoutModal';
+import paymentService from '../../services/paymentService';
 
 const TIER_MAP = {
   READY: {
@@ -49,11 +53,14 @@ const DISCIPLINE_MAP = {
   }
 };
 
-export default function ParentDashboardView({ currentUser }) {
+export default function ParentDashboardView({ currentUser, onNavigateTuition }) {
   const [portalData, setPortalData] = useState(null);
   const [selectedChildIdx, setSelectedChildIdx] = useState(0);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [activePaymentData, setActivePaymentData] = useState(null);
+  const [paymentStatus, setPaymentStatus] = useState('UNPAID'); // UNPAID | ACTIVE
 
   const loadParentPortal = useCallback(
     async (isRefresh = false) => {
@@ -117,6 +124,30 @@ export default function ParentDashboardView({ currentUser }) {
   const recommendedHours = Number(discipline.recommendedHours || 12);
   const studyHours = Number(discipline.studyHoursThisWeek || 0);
   const disciplinePct = Math.min(100, Math.round((studyHours / recommendedHours) * 100));
+
+  const handleQuickPay = async () => {
+    try {
+      const payload = {
+        studentId: 's1111111-1111-1111-1111-111111111111',
+        parentId: 'p1111111-1111-1111-1111-111111111111',
+        courseId: 'c2222222-2222-2222-2222-222222222222',
+        returnUrl: window.location.origin + '/payment/success',
+        cancelUrl: window.location.origin + '/payment/cancel'
+      };
+      const result = await paymentService.createPaymentLink(payload);
+      setActivePaymentData({
+        orderCode: result.orderCode,
+        checkoutUrl: result.checkoutUrl,
+        amount: result.amount || 5000,
+        courseName: 'Khóa Luyện Thi Chuẩn (Standard Adaptive 12 Tuần)',
+        studentName: child.studentName || 'Phạm Minh Hoàng',
+        durationWeeks: 12
+      });
+      setIsModalOpen(true);
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   return (
     <div className="space-y-6 animate-fade max-w-7xl mx-auto">
@@ -183,6 +214,56 @@ export default function ParentDashboardView({ currentUser }) {
             <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
             <span>Cập nhật báo cáo mới nhất</span>
           </button>
+        </div>
+      </div>
+
+      {/* Tuition Fee & Course Activation Banner for Parents */}
+      <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-indigo-700 rounded-3xl p-6 text-white shadow-lg border border-blue-400/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <span className="px-2.5 py-0.5 rounded-full bg-white/20 text-white text-[10px] font-black uppercase tracking-wider flex items-center gap-1">
+              <ShieldCheck className="w-3 h-3 text-cyan-300" />
+              <span>Cổng PayOS VietQR</span>
+            </span>
+            <span className="text-xs font-bold text-blue-100">Khóa Học: Standard Adaptive (12 Tuần)</span>
+          </div>
+          <h2 className="text-lg sm:text-xl font-extrabold text-white">
+            {paymentStatus === 'ACTIVE' 
+              ? 'Học Phí Khóa Học: ĐÃ THANH TOÁN (Lộ Trình Đang Kích Hoạt)' 
+              : 'Nộp Học Phí Để Mở Khóa Chu Trình Học Thích Ứng PLAR Cho Con'}
+          </h2>
+          <p className="text-xs text-blue-100/90 max-w-xl">
+            {paymentStatus === 'ACTIVE'
+              ? 'Con bạn đã được cấp quyền truy cập toàn bộ 4 chặng học PLAR, làm bài Quiz và nhận gia sư AI kèm 24/7.'
+              : 'Học phí: 5.000 ₫ (Giá thử nghiệm PayOS) • Hỗ trợ quét mã VietQR tự động kích hoạt tức thì sau 3 giây.'}
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2.5 shrink-0 w-full sm:w-auto">
+          {paymentStatus !== 'ACTIVE' ? (
+            <button
+              onClick={handleQuickPay}
+              className="w-full sm:w-auto py-2.5 px-5 bg-white text-blue-700 hover:bg-blue-50 font-extrabold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <QrCode className="w-4 h-4 text-blue-600" />
+              <span>Nộp Học Phí Ngay (PayOS)</span>
+            </button>
+          ) : (
+            <span className="inline-flex items-center gap-1 px-4 py-2 rounded-xl text-xs font-extrabold bg-emerald-500 text-white shadow-sm">
+              <CheckCircle2 className="w-4 h-4" />
+              <span>Đã Kích Hoạt Thành Công</span>
+            </span>
+          )}
+
+          {onNavigateTuition && (
+            <button
+              onClick={onNavigateTuition}
+              className="w-full sm:w-auto py-2.5 px-4 bg-white/10 hover:bg-white/20 text-white font-bold text-xs rounded-xl border border-white/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+            >
+              <span>Xem Các Gói Học</span>
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          )}
         </div>
       </div>
 
@@ -421,6 +502,15 @@ export default function ParentDashboardView({ currentUser }) {
           </div>
         </div>
       </div>
+      {/* PayOS Modal */}
+      <PayOsCheckoutModal 
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        paymentData={activePaymentData}
+        onPaymentSuccess={() => {
+          setPaymentStatus('ACTIVE');
+        }}
+      />
     </div>
   );
 }
