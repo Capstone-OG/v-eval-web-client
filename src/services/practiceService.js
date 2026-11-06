@@ -1388,29 +1388,36 @@ export const practiceService = {
             return fullAnswer;
           }
 
+          let parsed = null;
           try {
-            const parsed = JSON.parse(dataStr);
-            if (parsed.error) {
-              throw new Error(parsed.error);
-            }
-            if (parsed.interaction_id || parsed.interactionId) {
-              const id = parsed.interaction_id || parsed.interactionId;
-              if (onInteractionId) onInteractionId(id);
-            }
-            if (parsed.token) {
-              const incomingToken = parsed.token.includes('Bước nào trong quá trình biến đổi khiến em chọn phương án này')
-                ? buildRichSocraticFallback({
-                    questionLatex,
-                    options: resolvedOptions,
-                    studentWrongOption: resolvedWrongOpt,
-                    correctOption: resolvedCorrectOpt
-                  })
-                : parsed.token;
-              fullAnswer += incomingToken;
-              if (onToken) onToken(incomingToken);
-            }
+            parsed = JSON.parse(dataStr);
           } catch {
-            // Bỏ qua các dòng không phải JSON chuẩn
+            // Chuỗi dữ liệu raw không phải JSON chuẩn
+            parsed = { token: dataStr };
+          }
+
+          if (parsed?.error) {
+            const streamErr = new Error(parsed.error);
+            if (onError) onError(streamErr);
+            throw streamErr;
+          }
+
+          if (parsed?.interaction_id || parsed?.interactionId) {
+            const id = parsed.interaction_id || parsed.interactionId;
+            if (onInteractionId) onInteractionId(id);
+          }
+
+          if (parsed?.token) {
+            const incomingToken = parsed.token.includes('Bước nào trong quá trình biến đổi khiến em chọn phương án này')
+              ? buildRichSocraticFallback({
+                  questionLatex,
+                  options: resolvedOptions,
+                  studentWrongOption: resolvedWrongOpt,
+                  correctOption: resolvedCorrectOpt
+                })
+              : parsed.token;
+            fullAnswer += incomingToken;
+            if (onToken) onToken(incomingToken);
           }
         }
       }

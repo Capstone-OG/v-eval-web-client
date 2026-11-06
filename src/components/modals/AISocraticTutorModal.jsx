@@ -152,6 +152,17 @@ export default function AISocraticTutorModal({ isOpen, onClose, initialContext =
           abortControllerRef.current = null;
           if (err.status === 429) {
             setRateLimitWarning(err.message);
+            setMessages(prev => {
+              const next = [...prev];
+              const lastIdx = next.length - 1;
+              if (lastIdx >= 0 && next[lastIdx].sender === 'ai' && !next[lastIdx].text) {
+                next[lastIdx] = {
+                  ...next[lastIdx],
+                  text: 'Hạn mức kết nối hiện tại đang tạm thời đạt giới hạn (Tối đa 10 câu/phút). Em hãy dành chút thời gian suy ngẫm câu hỏi trước khi gửi tiếp nhé!'
+                };
+              }
+              return next;
+            });
           } else if (err.name !== 'AbortError') {
             setMessages(prev => {
               const next = [...prev];
@@ -171,6 +182,17 @@ export default function AISocraticTutorModal({ isOpen, onClose, initialContext =
         onComplete: () => {
           setIsTyping(false);
           abortControllerRef.current = null;
+          setMessages(prev => {
+            const next = [...prev];
+            const lastIdx = next.length - 1;
+            if (lastIdx >= 0 && next[lastIdx].sender === 'ai' && (!next[lastIdx].text || !next[lastIdx].text.trim())) {
+              next[lastIdx] = {
+                ...next[lastIdx],
+                text: 'Chào em! Thầy đang lắng nghe thắc mắc của em. Em hãy chia sẻ cụ thể hơn về bài tập hoặc hướng suy luận em muốn thầy gợi mở nhé!'
+              };
+            }
+            return next;
+          });
         }
       });
     } catch {

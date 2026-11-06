@@ -766,6 +766,18 @@ pm run build completes in 905ms (3,013 modules transformed, 0 errors).
 
 ---
 
+### 4.22. SSE Error Swallowing Elimination & Persistent Three-Dot `...` Mitigation
+- **Decoupled Stream Parsing & Exception Dispatch (`practiceService.js`)**:
+  - Isolated `JSON.parse` into its own localized try-catch scope, preventing unhandled format errors from suppressing genuine business exceptions (`parsed.error`).
+  - Explicitly forwarded upstream error objects to `onError(streamErr)` before propagating.
+- **Zero-Blank-Content Guardrail (`AISocraticTutorModal.jsx`)**:
+  - Injected an automatic pedagogical greeting when `onComplete` resolves with empty accumulated tokens, ensuring the message bubble is never populated by raw empty string `""` which previously manifested as stalled `...`.
+  - Linked HTTP 429 rate limit errors to user-facing conversational bubbles advising students to take time to reflect before posting subsequent inquiries.
+- **Verification**:
+  - `npm run build` completes cleanly with 0 errors.
+
+---
+
 ## 5. Verification & Acceptance Criteria
 
 1. **Clean Production Build**: Executed `npm run build` with 0 syntax or bundle errors; production artifacts outputted to `dist/` within 763ms on Vite 8 and React 19.
