@@ -9,6 +9,10 @@
     + **Cảnh báo sớm BR-04 3 tầng**: `getMyAlerts`, `markAlertAsRead`, `getEarlyWarningsDashboard`, `resolveEarlyWarningAlert`, `scheduleAlertCounseling`.
     + **Sổ tay lỗi sai & Ôn tập ngắt quãng SM-2**: `getMistakeNotebook`, `getDailyMistakeReview`, `tagMistakeCognitiveError`, `submitDailyMistakeReview`.
   - Tích hợp bộ lưu trữ trạng thái ngoại tuyến bền vững (`veval_flow6_state_v1`) và sự kiện đồng bộ thời gian thực `veval:flow6-updated`; bổ sung unit test `practiceService.flow6.test.js` (`8/8 tests pass`, `oxlint 0 warnings/0 errors`, `vite build` sạch 100%).
+- **Giai Đoạn 2 — Giao Diện Dự Báo Điểm SEM 95%, Toa Thuốc Bù Điểm Knapsack ROI & Modal Luyện Biến Thể ([`ScorePredictionPanel.jsx`](../src/components/dashboard/ScorePredictionPanel.jsx), [`PrescriptionPracticeModal.jsx`](../src/components/modals/PrescriptionPracticeModal.jsx), [`LearningAnalyticsView.jsx`](../src/components/dashboard/LearningAnalyticsView.jsx), [`App.jsx`](../src/App.jsx))**:
+  - Xây dựng `ScorePredictionPanel.jsx` hiển thị thang trực quan 1200 điểm kèm khoảng tin cậy 95% (`Predicted ± 1.96 × SEM`), bảng cân đối thiếu hụt mục tiêu (`ON_TRACK` / `AT_RISK` / `CRITICAL`), nút tái tính toán dự báo SEM (`recalculatePrediction`), và lưới xếp hạng Toa thuốc bù điểm theo `ROI = ΔScore / Số giờ ôn`.
+  - Xây dựng `PrescriptionPracticeModal.jsx` cho phép làm 3-5 câu hỏi biến thể đồng cấu (render KaTeX qua `MathText`), nộp bài chấm điểm tức thì, cập nhật xác suất làm chủ BKT `P(L_t)`, gạch nợ điểm thiếu hụt khi đạt `>= 67%` và tích hợp nút **Hỏi Gia sư AI Socratic** cho từng câu ở màn hình kết quả.
+  - Tích hợp chế độ `compact` ngay trên trang Dashboard Học sinh (`App.jsx`) và chế độ `full` kèm bộ lọc tab con (`Flow 5 & 6`) trong `LearningAnalyticsView.jsx`.
 
 ---
 

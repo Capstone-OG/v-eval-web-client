@@ -11,7 +11,8 @@ import {
   TeacherDashboardView,
   CampusManagerDashboardView,
   ParentDashboardView,
-  LearningAnalyticsView
+  LearningAnalyticsView,
+  ScorePredictionPanel
 } from './components/dashboard';
 import { PublicLandingPage } from './components/landing';
 import { WebLoginPage } from './components/auth';
@@ -276,6 +277,12 @@ export default function App() {
                         </div>
 
                         <div className="lg:col-span-1 space-y-6">
+                          <ScorePredictionPanel
+                            studentId={currentUser?.id}
+                            mode="compact"
+                            onOpenFullForecast={() => setActiveTab('analytics')}
+                            onOpenAiTutorWithContext={(ctx) => handleOpenAiTutor(ctx)}
+                          />
                           <LiveQnACard />
                         </div>
                       </div>

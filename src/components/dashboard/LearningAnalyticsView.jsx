@@ -29,6 +29,7 @@ import {
   BarChart3
 } from 'lucide-react';
 import { practiceService } from '../../services/practiceService';
+import ScorePredictionPanel from './ScorePredictionPanel';
 
 const SHORT_DOMAIN_LABELS = {
   DOM_LANG: 'Ngôn ngữ (Việt - Anh)',
@@ -54,6 +55,7 @@ export default function LearningAnalyticsView({
   const [loading, setLoading] = useState(!initialData);
   const [refreshing, setRefreshing] = useState(false);
   const [onboardingOverride, setOnboardingOverride] = useState(null);
+  const [analyticsSubTab, setAnalyticsSubTab] = useState('all'); // 'all' | 'flow6' | 'flow5'
 
   const loadAnalytics = useCallback(
     async (isRefresh = false) => {
@@ -169,7 +171,7 @@ export default function LearningAnalyticsView({
           <div className="flex flex-wrap items-center gap-2">
             <span className="px-3 py-1 rounded-full bg-cyan-500/20 border border-cyan-400/30 text-cyan-300 text-[11px] font-extrabold uppercase tracking-wider flex items-center gap-1.5">
               <BarChart3 className="w-3.5 h-3.5" />
-              Core Flow 5 • Learning Analytics Engine
+              Core Flow 5 & 6 • Analytics, SEM Forecast & Knapsack ROI
             </span>
             <span
               className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
@@ -261,6 +263,38 @@ export default function LearningAnalyticsView({
         </div>
       ) : (
         <>
+          {/* Sub-Navigation Pills for Flow 5 & Flow 6 */}
+          <div className="flex flex-wrap items-center gap-2 bg-white p-2 rounded-2xl border border-slate-200/80 shadow-xs">
+            {[
+              { id: 'all', label: 'Tổng Hợp Toàn Diện (Flow 5 & 6)' },
+              { id: 'flow6', label: 'Dự Báo Điểm SEM & Toa Thuốc ROI (Flow 6)' },
+              { id: 'flow5', label: 'Đa Giác Năng Lực & Chuỗi Chuyên Cần (Flow 5)' }
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setAnalyticsSubTab(tab.id)}
+                className={`px-4 py-2 rounded-xl text-xs font-extrabold transition-all ${
+                  analyticsSubTab === tab.id
+                    ? 'bg-slate-900 text-white shadow-xs'
+                    : 'text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {analyticsSubTab !== 'flow5' && (
+            <ScorePredictionPanel
+              studentId={currentUser?.id}
+              mode="full"
+              onOpenAiTutorWithContext={onOpenAiTutor}
+            />
+          )}
+
+          {analyticsSubTab !== 'flow6' && (
+            <>
           {/* TOP 4 SUMMARY CARDS */}
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
             {/* 1. Estimated Score */}
@@ -639,6 +673,8 @@ export default function LearningAnalyticsView({
               </div>
             </div>
           </div>
+            </>
+          )}
         </>
       )}
     </div>

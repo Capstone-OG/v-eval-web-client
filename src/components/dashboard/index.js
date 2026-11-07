@@ -7,3 +7,4 @@ export { default as TeacherDashboardView } from './TeacherDashboardView';
 export { default as CampusManagerDashboardView } from './CampusManagerDashboardView';
 export { default as ParentDashboardView } from './ParentDashboardView';
 export { default as LearningAnalyticsView } from './LearningAnalyticsView';
+export { default as ScorePredictionPanel } from './ScorePredictionPanel';

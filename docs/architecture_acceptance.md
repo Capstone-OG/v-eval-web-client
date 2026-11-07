@@ -788,6 +788,15 @@ pm run build completes in 905ms (3,013 modules transformed, 0 errors).
 
 ---
 
+### 4.24. Student SEM 95% Score Forecast & Greedy Knapsack ROI Prescription UI (`ScorePredictionPanel.jsx`, `PrescriptionPracticeModal.jsx`)
+- **95% Confidence Interval & Deficit Balance Sheet (`ScorePredictionPanel.jsx`)**:
+  - Visualizes the student's predicted V-ACT score (`0..1200`), 95% confidence band `[Min, Max]` (`Predicted ± 1.96 × SEM`), target score marker, deficit balance sheet (`ON_TRACK`, `AT_RISK`, `CRITICAL`), and manual `recalculatePrediction` trigger.
+  - Supports both `compact` mode on the primary student dashboard (`App.jsx`) and `full` mode with Flow 5 & 6 sub-tab switching inside `LearningAnalyticsView.jsx`.
+- **Interactive Isomorphic Remediation Runner (`PrescriptionPracticeModal.jsx`)**:
+  - Launches 3–5 calibrated isomorphic variant questions rendered via `MathText` (KaTeX), tracks per-item response latency, evaluates mastery against the `>= 67%` pass threshold, displays Bayesian Knowledge Tracing `P(L_t)` gains and recovered deficit points, and provides post-submission Socratic AI Tutor deep-links per question.
+
+---
+
 ## 5. Verification & Acceptance Criteria
 
 1. **Clean Production Build**: Executed `npm run build` with 0 syntax or bundle errors; production artifacts outputted to `dist/` within 763ms on Vite 8 and React 19.
