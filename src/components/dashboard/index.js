@@ -9,3 +9,4 @@ export { default as ParentDashboardView } from './ParentDashboardView';
 export { default as LearningAnalyticsView } from './LearningAnalyticsView';
 export { default as ScorePredictionPanel } from './ScorePredictionPanel';
 export { default as StudentEarlyWarningsCard } from './StudentEarlyWarningsCard';
+export { default as EarlyWarningsMentorPanel } from './EarlyWarningsMentorPanel';

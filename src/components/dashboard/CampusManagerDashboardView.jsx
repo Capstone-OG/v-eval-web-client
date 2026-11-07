@@ -22,6 +22,7 @@ import { userService } from '../../services/userService';
 import { practiceService, FLOW5_DEFAULTS } from '../../services/practiceService';
 import { toast } from '../../context/ToastContext';
 import { ClassMicroGroupsModal } from '../modals';
+import EarlyWarningsMentorPanel from './EarlyWarningsMentorPanel';
 
 const DOMAIN_ORDER = [
   { code: 'DOM_LANG', short: 'Ngôn ngữ' },
@@ -630,6 +631,13 @@ export default function CampusManagerDashboardView({ currentUser, onOpenProvisio
           </div>
         </div>
       </div>
+
+      {/* Core Flow 6: Campus-Wide Early Warnings & Tripartite Goal Counseling Hub */}
+      <EarlyWarningsMentorPanel
+        currentUser={currentUser}
+        defaultClassId="ALL"
+        roleLabel="Trưởng Ban Học Thuật & Quản Lý Cơ Sở"
+      />
 
       {/* CREATE STAFF MODAL */}
       {showCreateStaffModal && (

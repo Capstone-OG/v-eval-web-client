@@ -805,6 +805,15 @@ pm run build completes in 905ms (3,013 modules transformed, 0 errors).
 
 ---
 
+### 4.26. Mentor & Campus Manager Pedagogical Intervention Hub (`EarlyWarningsMentorPanel.jsx`)
+- **Enriched Cohort Warning Governance (`TeacherDashboardView.jsx`, `CampusManagerDashboardView.jsx`)**:
+  - Aggregates 6 real-time KPI counters (`TotalAlerts`, `ActiveAlertsCount`, `RedAlertsCount`, `YellowAlertsCount`, `UnrealisticGoalCount`, `ResolvedAlertsCount`) with multi-axis filtering across class cohorts, BR-04 alert tiers, and resolution states.
+- **Dual Intervention Workflows**:
+  - *Resolve Intervention Modal*: Submits structured `resolution_notes` and `mentor_id` via `POST /api/practice/early-warnings/{alertId}/resolve`, propagating feedback directly to student and parent views.
+  - *Tripartite Goal Counseling Scheduler*: Tailored for `UNREALISTIC_GOAL` and `RED` alerts, validating future appointment timestamps and `0..1200` proposed target scores before dispatching `POST /api/practice/early-warnings/{alertId}/schedule-counseling`.
+
+---
+
 ## 5. Verification & Acceptance Criteria
 
 1. **Clean Production Build**: Executed `npm run build` with 0 syntax or bundle errors; production artifacts outputted to `dist/` within 763ms on Vite 8 and React 19.
