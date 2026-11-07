@@ -14,6 +14,7 @@ import {
   Target
 } from 'lucide-react';
 import { practiceService } from '../../services/practiceService';
+import StudentEarlyWarningsCard from './StudentEarlyWarningsCard';
 import { toast } from '../../context/ToastContext';
 
 const TIER_MAP = {
@@ -421,6 +422,9 @@ export default function ParentDashboardView({ currentUser }) {
           </div>
         </div>
       </div>
+
+      {/* Core Flow 6: Real-time BR-04 Early Warnings & Tripartite Counseling Feed for Guardian */}
+      <StudentEarlyWarningsCard studentId={child?.studentId} />
     </div>
   );
 }

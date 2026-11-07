@@ -12,7 +12,8 @@ import {
   CampusManagerDashboardView,
   ParentDashboardView,
   LearningAnalyticsView,
-  ScorePredictionPanel
+  ScorePredictionPanel,
+  MistakeNotebookSM2View
 } from './components/dashboard';
 import { PublicLandingPage } from './components/landing';
 import { WebLoginPage } from './components/auth';
@@ -26,7 +27,7 @@ import {
 import { DiagnosticAssessmentPage, SubmissionHistoryView } from './components/diagnostic';
 import { AccountProvisioningView } from './components/admin';
 import { CurriculumExplorerView } from './components/curriculum';
-import { CheckCircle2, Bot, Sparkles } from 'lucide-react';
+import { CheckCircle2, Bot } from 'lucide-react';
 import authService from './services/authService';
 import { practiceService } from './services/practiceService';
 
@@ -232,6 +233,11 @@ export default function App() {
                   onStartNewDiagnostic={() => setActiveTab('diagnostic')}
                   onOpenAiTutorWithContext={(ctx) => handleOpenAiTutor(ctx)}
                 />
+              ) : activeTab === 'mistakes_sm2' ? (
+                <MistakeNotebookSM2View
+                  currentUser={currentUser}
+                  onOpenAiTutorWithContext={(ctx) => handleOpenAiTutor(ctx)}
+                />
               ) : activeTab === 'analytics' ? (
                 <LearningAnalyticsView
                   currentUser={currentUser}
@@ -241,6 +247,7 @@ export default function App() {
                   onOpenRoadmap={() => setActiveTab('roadmap')}
                   onOpenZPD={() => setIsZpdModalOpen(true)}
                   onOpenHistory={() => setActiveTab('history')}
+                  onOpenMistakesSM2={() => setActiveTab('mistakes_sm2')}
                   onOpenAiTutor={(ctx) => handleOpenAiTutor(ctx)}
                   onNavigateRoleDashboard={() => setActiveTab('dashboard')}
                 />

@@ -20,6 +20,12 @@
   - Xây dựng `EarlyWarningsMentorPanel.jsx` tích hợp đồng thời vào không gian làm việc của Giáo viên (`TeacherDashboardView.jsx`) và Quản lý học thuật cơ sở (`CampusManagerDashboardView.jsx`).
   - Hiển thị dải 6 chỉ số KPI (`TotalAlerts`, `ActiveAlertsCount`, `RedAlertsCount`, `YellowAlertsCount`, `UnrealisticGoalCount`, `ResolvedAlertsCount`), bộ lọc theo lớp phụ trách, phân tầng cảnh báo và trạng thái xử lý, kèm số liệu đối chiếu điểm dự báo SEM / mục tiêu / thiếu hụt của từng học sinh.
   - Tích hợp 2 Modal nghiệp vụ chuyên biệt: **Modal Ghi nhận Can thiệp Sư phạm** (`POST /api/practice/early-warnings/{alertId}/resolve` kèm mẫu ghi chú nhanh) và **Modal Đặt lịch Tư vấn 3 bên** (`POST /api/practice/early-warnings/{alertId}/schedule-counseling`, kiểm tra ngày giờ tương lai và thang điểm đề xuất `0 — 1200`).
+- **Giai Đoạn 5 — Sổ Tay Lỗi Sai Phản Tư, Ôn Tập Ngắt Quãng SuperMemo-2 (SM-2) & Đấu Nối Toàn Tuyến 4 Vai Trò ([`MistakeNotebookSM2View.jsx`](../src/components/dashboard/MistakeNotebookSM2View.jsx), [`Sidebar.jsx`](../src/components/layout/Sidebar.jsx), [`ParentDashboardView.jsx`](../src/components/dashboard/ParentDashboardView.jsx), [`App.jsx`](../src/App.jsx))**:
+  - Xây dựng `MistakeNotebookSM2View.jsx` cho phép Học sinh duyệt kho lỗi sai cá nhân theo trạng thái thành thạo & nhãn nhận thức (`MISSING_CONCEPT`, `CARELESS`, `MISREAD_QUESTION`), gắn nhãn siêu nhận thức (`POST /api/practice/mistakes/{id}/tag-error`), và chạy trực tiếp phiên ôn tập biến thể đồng cấu đến hạn (`GET /api/practice/mistakes/daily-review` & `POST /api/practice/mistakes/{id}/review-submit`).
+  - Hiển thị minh bạch chỉ số `EaseFactor (EF >= 1.3)`, khoảng cách ngày `IntervalDays`, tiến độ `3/3 chu kỳ đúng liên tiếp -> Thành thạo` và nút hỏi Gia sư AI Socratic ngay trên câu vừa ôn.
+  - Bổ sung mục điều hướng `Sổ tay Lỗi sai SM-2 (Flow 6)` trên `Sidebar.jsx`, nút chuyển nhanh từ `LearningAnalyticsView.jsx` và đồng bộ luồng cảnh báo sớm sang Cổng Phụ huynh (`ParentDashboardView.jsx`).
+- **Kiểm Thử & Đóng Gói Vận Hành**:
+  - `npm test` đạt `8/8 tests pass` (`3 suites`), `vite build` đóng gói sạch 100% trong `951ms` (`0 errors`).
 
 ---
 

@@ -49,6 +49,7 @@ export default function LearningAnalyticsView({
   onOpenRoadmap,
   onOpenZPD,
   onOpenHistory,
+  onOpenMistakesSM2,
   onOpenAiTutor,
   onNavigateRoleDashboard
 }) {
@@ -265,25 +266,38 @@ export default function LearningAnalyticsView({
       ) : (
         <>
           {/* Sub-Navigation Pills for Flow 5 & Flow 6 */}
-          <div className="flex flex-wrap items-center gap-2 bg-white p-2 rounded-2xl border border-slate-200/80 shadow-xs">
-            {[
-              { id: 'all', label: 'Tổng Hợp Toàn Diện (Flow 5 & 6)' },
-              { id: 'flow6', label: 'Dự Báo Điểm SEM & Toa Thuốc ROI (Flow 6)' },
-              { id: 'flow5', label: 'Đa Giác Năng Lực & Chuỗi Chuyên Cần (Flow 5)' }
-            ].map((tab) => (
+          <div className="flex flex-wrap items-center justify-between gap-2 bg-white p-2 rounded-2xl border border-slate-200/80 shadow-xs">
+            <div className="flex flex-wrap items-center gap-2">
+              {[
+                { id: 'all', label: 'Tổng Hợp Toàn Diện (Flow 5 & 6)' },
+                { id: 'flow6', label: 'Dự Báo Điểm SEM & Toa Thuốc ROI (Flow 6)' },
+                { id: 'flow5', label: 'Đa Giác Năng Lực & Chuỗi Chuyên Cần (Flow 5)' }
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setAnalyticsSubTab(tab.id)}
+                  className={`px-4 py-2 rounded-xl text-xs font-extrabold transition-all ${
+                    analyticsSubTab === tab.id
+                      ? 'bg-slate-900 text-white shadow-xs'
+                      : 'text-slate-600 hover:bg-slate-100'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {onOpenMistakesSM2 && (
               <button
-                key={tab.id}
                 type="button"
-                onClick={() => setAnalyticsSubTab(tab.id)}
-                className={`px-4 py-2 rounded-xl text-xs font-extrabold transition-all ${
-                  analyticsSubTab === tab.id
-                    ? 'bg-slate-900 text-white shadow-xs'
-                    : 'text-slate-600 hover:bg-slate-100'
-                }`}
+                onClick={onOpenMistakesSM2}
+                className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-extrabold flex items-center gap-1.5 transition-all"
               >
-                {tab.label}
+                <span>Mở Sổ Tay Lỗi Sai SM-2</span>
+                <ArrowRight className="w-3.5 h-3.5" />
               </button>
-            ))}
+            )}
           </div>
 
           {analyticsSubTab !== 'flow5' && (

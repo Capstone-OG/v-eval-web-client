@@ -814,6 +814,15 @@ pm run build completes in 905ms (3,013 modules transformed, 0 errors).
 
 ---
 
+### 4.27. SuperMemo-2 (SM-2) Mistake Notebook & Multi-Persona Navigation Wiring (`MistakeNotebookSM2View.jsx`, `Sidebar.jsx`, `ParentDashboardView.jsx`)
+- **Spaced Repetition & Metacognition Workspace (`MistakeNotebookSM2View.jsx`)**:
+  - Consumes `GET /api/practice/mistakes` and `GET /api/practice/mistakes/daily-review` to surface due isomorphic review variants alongside long-term memory metrics (`EaseFactor >= 1.3`, `IntervalDays`, `ConsecutiveCorrectReviews / 3`, `NextReviewDate`).
+  - Supports metacognitive root-cause tagging (`CARELESS`, `MISREAD_QUESTION`, `MISSING_CONCEPT`) via `POST /api/practice/mistakes/{id}/tag-error` and evaluates daily review submissions via `POST /api/practice/mistakes/{id}/review-submit` with Socratic AI Tutor deep-linking.
+- **Unified Multi-Role Flow 6 Coverage**:
+  - Wired dedicated `mistakes_sm2` navigation in `Sidebar.jsx` and `App.jsx`, cross-linked `LearningAnalyticsView.jsx`, and embedded real-time BR-04 early warnings into `ParentDashboardView.jsx` for full 4-persona visibility.
+
+---
+
 ## 5. Verification & Acceptance Criteria
 
 1. **Clean Production Build**: Executed `npm run build` with 0 syntax or bundle errors; production artifacts outputted to `dist/` within 763ms on Vite 8 and React 19.

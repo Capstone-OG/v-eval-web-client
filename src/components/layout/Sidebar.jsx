@@ -1,46 +1,53 @@
 import React from 'react';
-import { 
-  LayoutDashboard, 
-  Target, 
-  GitFork, 
-  Zap, 
-  BookOpenCheck, 
-  Bot, 
-  Video, 
-  BarChart3, 
+import {
+  LayoutDashboard,
+  Target,
+  GitFork,
+  Zap,
+  BookOpenCheck,
+  Bot,
+  Video,
+  BarChart3,
   Settings,
   Sparkles,
-  HelpCircle,
   Award,
   ShieldCheck,
-  History
+  History,
+  Brain
 } from 'lucide-react';
 
-export default function Sidebar({ activeTab, setActiveTab, activeRole, studentDashboard, onOpenDiagnostic, onOpenZPD, onOpenAiTutor, onOpenProvision }) {
-  
+export default function Sidebar({
+  activeTab,
+  setActiveTab,
+  activeRole,
+  studentDashboard,
+  onOpenZPD,
+  onOpenAiTutor,
+  onOpenProvision
+}) {
   const navItemsSection1 = [
     { id: 'dashboard', label: 'Dashboard (Tổng quan)', icon: LayoutDashboard },
     { id: 'diagnostic', label: 'Khảo thí & Chẩn đoán', icon: Target, badge: 'Flow 1' },
     { id: 'history', label: 'Lịch sử làm bài', icon: History, badge: 'Xem lại & AI' },
+    { id: 'mistakes_sm2', label: 'Sổ tay Lỗi sai SM-2', icon: Brain, badge: 'Flow 6' },
     { id: 'roadmap', label: 'Dàn kiến thức & Lộ trình', icon: GitFork, badge: 'Flow 2' },
     { id: 'adaptive', label: 'Luyện tập ZPD', icon: Zap, badge: 'Flow 3', onClick: onOpenZPD },
-    { id: 'question_bank', label: 'Ngân hàng đề & Thi thử', icon: BookOpenCheck },
+    { id: 'question_bank', label: 'Ngân hàng đề & Thi thử', icon: BookOpenCheck }
   ];
 
   const navItemsSection2 = [
     { id: 'ai_tutor', label: 'AI Socratic Tutor', icon: Bot, badge: 'Flow 4', highlight: true, onClick: onOpenAiTutor },
     { id: 'live_qa', label: 'Lớp học & Live Q&A', icon: Video, badge: 'Realtime' },
     { id: 'analytics', label: 'Báo cáo & Dự báo', icon: BarChart3, badge: 'Flow 5 & 6' },
-    ...((activeRole === 'manager' || activeRole === 'admin') ? [
-      { id: 'provision', label: 'Cấp tài khoản (IAM)', icon: ShieldCheck, badge: 'Postgres', onClick: onOpenProvision }
-    ] : []),
-    { id: 'settings', label: 'Cài đặt tài khoản', icon: Settings },
+    ...((activeRole === 'manager' || activeRole === 'admin')
+      ? [{ id: 'provision', label: 'Cấp tài khoản (IAM)', icon: ShieldCheck, badge: 'Postgres', onClick: onOpenProvision }]
+      : []),
+    { id: 'settings', label: 'Cài đặt tài khoản', icon: Settings }
   ];
 
   return (
     <aside className="w-64 bg-white border-r border-slate-200/80 flex flex-col justify-between shrink-0 select-none min-h-[calc(100vh-65px)]">
       <div>
-        
         {/* Brand Logo Header */}
         <div className="p-5 border-b border-slate-100 flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-extrabold shadow-md shadow-blue-500/30">
@@ -73,19 +80,25 @@ export default function Sidebar({ activeTab, setActiveTab, activeRole, studentDa
                     if (item.onClick) item.onClick();
                   }}
                   className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all group ${
-                    isActive 
-                      ? 'bg-blue-600 text-white shadow-md shadow-blue-600/25 font-bold' 
+                    isActive
+                      ? 'bg-blue-600 text-white shadow-md shadow-blue-600/25 font-bold'
                       : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <Icon className={`w-4 h-4 transition-transform group-hover:scale-110 ${isActive ? 'text-white' : 'text-slate-400 group-hover:text-blue-600'}`} />
+                    <Icon
+                      className={`w-4 h-4 transition-transform group-hover:scale-110 ${
+                        isActive ? 'text-white' : 'text-slate-400 group-hover:text-blue-600'
+                      }`}
+                    />
                     <span>{item.label}</span>
                   </div>
                   {item.badge && (
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-bold ${
-                      isActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'
-                    }`}>
+                    <span
+                      className={`text-[10px] px-1.5 py-0.5 rounded-md font-bold ${
+                        isActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'
+                      }`}
+                    >
                       {item.badge}
                     </span>
                   )}
@@ -112,21 +125,27 @@ export default function Sidebar({ activeTab, setActiveTab, activeRole, studentDa
                     if (item.onClick) item.onClick();
                   }}
                   className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all group ${
-                    isActive 
-                      ? 'bg-blue-600 text-white shadow-md shadow-blue-600/25 font-bold' 
-                      : item.highlight 
-                        ? 'bg-blue-50/80 text-blue-700 hover:bg-blue-100/80 border border-blue-200/50' 
+                    isActive
+                      ? 'bg-blue-600 text-white shadow-md shadow-blue-600/25 font-bold'
+                      : item.highlight
+                        ? 'bg-blue-50/80 text-blue-700 hover:bg-blue-100/80 border border-blue-200/50'
                         : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <Icon className={`w-4 h-4 transition-transform group-hover:scale-110 ${isActive ? 'text-white' : item.highlight ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-600'}`} />
+                    <Icon
+                      className={`w-4 h-4 transition-transform group-hover:scale-110 ${
+                        isActive ? 'text-white' : item.highlight ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-600'
+                      }`}
+                    />
                     <span>{item.label}</span>
                   </div>
                   {item.badge && (
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-bold ${
-                      isActive ? 'bg-white/20 text-white' : item.highlight ? 'bg-blue-200/60 text-blue-800' : 'bg-slate-100 text-slate-500'
-                    }`}>
+                    <span
+                      className={`text-[10px] px-1.5 py-0.5 rounded-md font-bold ${
+                        isActive ? 'bg-white/20 text-white' : item.highlight ? 'bg-blue-200/60 text-blue-800' : 'bg-slate-100 text-slate-500'
+                      }`}
+                    >
                       {item.badge}
                     </span>
                   )}
@@ -135,7 +154,6 @@ export default function Sidebar({ activeTab, setActiveTab, activeRole, studentDa
             })}
           </nav>
         </div>
-
       </div>
 
       {/* Sidebar Footer Widget: Adaptive Status */}
@@ -145,7 +163,7 @@ export default function Sidebar({ activeTab, setActiveTab, activeRole, studentDa
             <Award className="w-4 h-4" />
             <span>Khảo thí IRT & BKT</span>
           </div>
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
         </div>
         <div className="text-[11px] text-slate-300 leading-snug mb-3">
           Mô hình đo lường năng lực chuẩn ĐHQG-HCM đang chạy định kỳ.
@@ -168,7 +186,7 @@ export default function Sidebar({ activeTab, setActiveTab, activeRole, studentDa
                 )
               )}%`
             }}
-          ></div>
+          />
         </div>
         <div className="flex justify-between text-[10px] text-slate-400 font-semibold">
           <span>
@@ -195,7 +213,6 @@ export default function Sidebar({ activeTab, setActiveTab, activeRole, studentDa
           </span>
         </div>
       </div>
-
     </aside>
   );
 }

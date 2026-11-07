@@ -10,3 +10,4 @@ export { default as LearningAnalyticsView } from './LearningAnalyticsView';
 export { default as ScorePredictionPanel } from './ScorePredictionPanel';
 export { default as StudentEarlyWarningsCard } from './StudentEarlyWarningsCard';
 export { default as EarlyWarningsMentorPanel } from './EarlyWarningsMentorPanel';
+export { default as MistakeNotebookSM2View } from './MistakeNotebookSM2View';
