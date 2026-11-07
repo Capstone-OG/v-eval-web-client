@@ -778,6 +778,16 @@ pm run build completes in 905ms (3,013 modules transformed, 0 errors).
 
 ---
 
+### 4.23. Core Flow 6 Service Layer & Contract Normalization (`apiClient.js`, `practiceService.js`)
+- **HTTP Verb & Structured Error Support (`apiClient.js`)**: Added native `apiClient.patch` support for alert read-state transitions and enhanced error message extraction to unwrap nested ASP.NET Core `Result<T>` error objects (`data.error.description`).
+- **Complete 13-Endpoint Core Flow 6 Client Suite (`practiceService.js`)**:
+  - *SEM 95% Score Prediction & Greedy Knapsack ROI Prescriptions*: `getMyForecast` (with automatic `recalculatePrediction` recovery on initial `404`), `getPrescriptionPracticeSession`, `submitPrescriptionPracticeSession`, and `recalculatePrediction` with dual `snake_case`/`camelCase` property normalization.
+  - *BR-04 3-Tier Early Warnings & Pedagogical Interventions*: `getMyAlerts`, `markAlertAsRead`, `getEarlyWarningsDashboard`, `resolveEarlyWarningAlert`, and `scheduleAlertCounseling`.
+  - *SuperMemo-2 (SM-2) Mistake Notebook & Spaced Repetition*: `getMistakeNotebook`, `getDailyMistakeReview`, `tagMistakeCognitiveError`, and `submitDailyMistakeReview` implementing exact `EF >= 1.3` and 3-cycle mastery progression.
+- **Reactive Cross-View State Bus & Unit Tests**: Emits `CustomEvent('veval:flow6-updated')` across UI components and validates all 13 endpoint contracts in `tests/practiceService.flow6.test.js` (`8/8` passing tests).
+
+---
+
 ## 5. Verification & Acceptance Criteria
 
 1. **Clean Production Build**: Executed `npm run build` with 0 syntax or bundle errors; production artifacts outputted to `dist/` within 763ms on Vite 8 and React 19.

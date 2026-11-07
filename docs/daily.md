@@ -1,5 +1,17 @@
 # NHẬT KÝ KIỂM TRA TIẾN ĐỘ VẬN HÀNH (DAILY CHECK LOG) - WEB CLIENT
 
+## [07/11/2026] - Triển Khai Toàn Diện Core Flow 6 Trên Frontend: Dự Báo Điểm SEM 95%, Toa Thuốc Bù Điểm Knapsack ROI, Cảnh Báo Sớm BR-04 & Sổ Tay Lỗi Sai SM-2
+
+- **Giai Đoạn 1 — Chuẩn Hóa Tầng Dịch Vụ API Client Core Flow 6 ([`apiClient.js`](../src/services/apiClient.js), [`practiceService.js`](../src/services/practiceService.js), [`practiceService.flow6.test.js`](../tests/practiceService.flow6.test.js))**:
+  - Bổ sung phương thức HTTP `patch` và bộ trích xuất thông báo lỗi từ cấu trúc `Result<T>` (`data.error.description`) trong `apiClient.js`.
+  - Đấu nối trọn bộ 13 phương thức Core Flow 6 qua YARP Gateway (`:5212`), chuẩn hóa song ngữ `snake_case` / `camelCase` cho `PrescriptionItemDto` và các request DTO của ASP.NET Core:
+    + **Dự báo SEM & Toa thuốc ROI**: `getMyForecast` (tự động gọi `recalculatePrediction` khi gặp `404`), `getPrescriptionPracticeSession`, `submitPrescriptionPracticeSession`, `recalculatePrediction`.
+    + **Cảnh báo sớm BR-04 3 tầng**: `getMyAlerts`, `markAlertAsRead`, `getEarlyWarningsDashboard`, `resolveEarlyWarningAlert`, `scheduleAlertCounseling`.
+    + **Sổ tay lỗi sai & Ôn tập ngắt quãng SM-2**: `getMistakeNotebook`, `getDailyMistakeReview`, `tagMistakeCognitiveError`, `submitDailyMistakeReview`.
+  - Tích hợp bộ lưu trữ trạng thái ngoại tuyến bền vững (`veval_flow6_state_v1`) và sự kiện đồng bộ thời gian thực `veval:flow6-updated`; bổ sung unit test `practiceService.flow6.test.js` (`8/8 tests pass`, `oxlint 0 warnings/0 errors`, `vite build` sạch 100%).
+
+---
+
 ## [06/11/2026] - Khắc Phục Triệt Để Lỗi Nuốt Exception SSE, Tự Động Điền Lời Dẫn Sư Phạm Khi Nội Dung Rỗng & Cảnh Báo Rate Limit Thân Thiện
 
 - **Khắc Phục Lỗi Nuốt Exception Trong Trình Đọc Stream SSE ([`practiceService.js`](../src/services/practiceService.js))**:

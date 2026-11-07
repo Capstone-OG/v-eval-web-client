@@ -1,12 +1,8 @@
 # NHẬT KÝ CẬP NHẬT (UPDATE LOG) - WEB CLIENT
 
-## [06/11/2026] - Khắc Phục Triệt Để Lỗi Nuốt Exception SSE, Tự Động Điền Lời Dẫn Sư Phạm Khi Nội Dung Rỗng & Cảnh Báo Rate Limit Thân Thiện
+## [07/11/2026] - Triển Khai Toàn Diện Core Flow 6 Trên Frontend: Dự Báo Điểm SEM 95%, Toa Thuốc Bù Điểm Knapsack ROI, Cảnh Báo Sớm BR-04 & Sổ Tay Lỗi Sai SM-2
 
-- **Khắc Phục Lỗi Nuốt Exception Trong Trình Đọc Stream SSE ([`practiceService.js`](./src/services/practiceService.js))**:
-  - Tách bạch hoàn toàn khối `try...catch` của `JSON.parse` khỏi logic xử lý nghiệp vụ: Khi nhận sự kiện lỗi từ máy chủ (`parsed.error`), lập tức kích hoạt `onError(new Error(parsed.error))` và ném lỗi ra ngoài thay vì bị khối `catch` con nuốt mất.
-  - Xử lý các dòng dữ liệu raw không phải JSON một cách mượt mà và an toàn.
-- **Triệt Tiêu Hoàn Toàn Hiện Tượng Treo Dấu Ba Chấm `...` Vĩnh Viễn ([`AISocraticTutorModal.jsx`](./src/components/modals/AISocraticTutorModal.jsx))**:
-  - Tại sự kiện hoàn tất luồng stream `onComplete`: Nếu nội dung phản hồi `finalAnswer` hoặc tin nhắn cuối của AI bị rỗng, hệ thống tự động điền thông điệp gợi mở sư phạm thân thiện: *"Chào em! Thầy đang lắng nghe thắc mắc của em. Em hãy chia sẻ cụ thể hơn về bài tập hoặc hướng suy luận em muốn thầy gợi mở nhé!"* thay vì hiển thị ba dấu chấm `...`.
-  - Tại sự kiện lỗi `onError`: Nếu gặp mã lỗi 429, ngoài việc hiển thị banner cảnh báo hạn mức, hệ thống đồng thời cập nhật bong bóng tin nhắn giải thích rõ ràng lý do hạn mức gọi câu hỏi để học sinh nắm bắt.
-- **Kiểm Thử & Đóng Gói**:
-  - `npm run build` hoàn thành sạch sẽ 100% không có lỗi.
+- **Tầng Dịch Vụ API Client Core Flow 6 ([`apiClient.js`](./src/services/apiClient.js), [`practiceService.js`](./src/services/practiceService.js), [`practiceService.flow6.test.js`](./tests/practiceService.flow6.test.js))**:
+  - Bổ sung `apiClient.patch` và trích xuất thông điệp lỗi chi tiết từ cấu trúc `Result<T>` của ASP.NET Core.
+  - Triển khai trọn bộ 13 API Core Flow 6 qua YARP Gateway (`:5212`): Dự báo điểm khoảng tin cậy 95% SEM & Toa thuốc bù điểm Knapsack ROI (`getMyForecast`, `getPrescriptionPracticeSession`, `submitPrescriptionPracticeSession`, `recalculatePrediction`), Cảnh báo sớm 3 tầng BR-04 (`getMyAlerts`, `markAlertAsRead`, `getEarlyWarningsDashboard`, `resolveEarlyWarningAlert`, `scheduleAlertCounseling`), và Sổ tay lỗi sai lặp lại ngắt quãng SM-2 (`getMistakeNotebook`, `getDailyMistakeReview`, `tagMistakeCognitiveError`, `submitDailyMistakeReview`).
+  - Tích hợp chuẩn hóa song ngữ `snake_case` / `camelCase`, lưu trữ trạng thái fallback bền vững và unit test (`8/8 tests pass`, `vite build` sạch 100%).

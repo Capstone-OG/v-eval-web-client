@@ -166,8 +166,12 @@ async function request(endpoint, options = {}, isRetry = false) {
     }
 
     if (!response.ok) {
+      const nestedError =
+        typeof data?.error === 'object' && data?.error !== null
+          ? data.error.description || data.error.message || data.error.code
+          : data?.error;
       const errorMessage = (typeof data === 'object' && data !== null)
-        ? data.message || data.title || data.error || `HTTP Error ${response.status}`
+        ? data.message || data.title || nestedError || `HTTP Error ${response.status}`
         : data || `HTTP Error ${response.status}`;
 
       const error = new Error(errorMessage);
@@ -215,6 +219,13 @@ export const apiClient = {
   put: (endpoint, body = {}, options = {}) => 
     request(endpoint, {
       method: 'PUT',
+      body: body instanceof FormData ? body : JSON.stringify(body),
+      ...options
+    }),
+
+  patch: (endpoint, body = {}, options = {}) =>
+    request(endpoint, {
+      method: 'PATCH',
       body: body instanceof FormData ? body : JSON.stringify(body),
       ...options
     }),
