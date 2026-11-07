@@ -1097,3 +1097,18 @@ pm run build completes in 905ms (3,013 modules transformed, 0 errors).
   - Added support for detecting common domain typos (such as `@mail.com` typo for `@gmail.com`), RFC 5322 syntax validation, repetitive character blocking (`22222`), disposable email blocking, and Google DNS-over-HTTPS MX verification.
   - Visual feedback includes an inline loading spinner during DNS resolution, green success badge upon validation, and an actionable amber/red suggestion banner with a 1-click apply button (`"Sửa thành: ...@gmail.com"`).
   - Prevents accidental provisioning of phantom or invalid accounts and provides clear, human-friendly error messages matching Clean Architecture domain responses.
+
+### 4.55. Soft Delete / Inactive Account Lifecycle Architecture & Dual-View Management (`AccountProvisioningView.jsx`, `userService.js`)
+- **Strict Prohibition of Hard Deletion & Full Pedagogical Data Preservation**:
+  - Eliminates hard deletion (`DELETE FROM "Users"`) across all client flows to safeguard referential integrity across psychometric examination submissions (`ExamSubmissions`), adaptive practice session records (`PracticeSessions`), VietQR tuition logs (`PaymentOrders`), and parent-student linkages (`ParentStudentRelations`).
+  - Adopts the industry-standard Soft Delete model utilizing the existing `is_active` database flag (`v_eval_identity."Users"`).
+- **Dual-View Segmented Architecture (Active vs. Inactive Accounts)**:
+  - **"Tài Khoản Đang Hoạt Động" (Default View)**: Queries `GET /api/v1/users?isActive=true`. Inactive accounts are automatically hidden from view, keeping operational lists focused solely on active faculty, staff, and learners.
+  - **"Tài Khoản Đã Ngừng Hoạt Động (Ẩn)" (Archive View)**: Queries `GET /api/v1/users?isActive=false`. Provides an isolated archive repository showcasing all deactivated accounts with structured audit indicators and status badges.
+  - **"Tất Cả"**: Queries `GET /api/v1/users` with no `isActive` filter for comprehensive administrative audits.
+- **Confirmation Modals & Lifecycle Transitions**:
+  - **Deactivation Confirmation**: Features a dedicated `UserX` modal detailing the target user's identity and displaying explicit data preservation assurances before triggering `PATCH /api/v1/users/{id}/toggle-status?targetStatus=false`.
+  - **Reactivation Confirmation**: Features a dedicated `RotateCcw` modal allowing instant restoration of login privileges and immediate relocation back to the active user list via `PATCH /api/v1/users/{id}/toggle-status?targetStatus=true`.
+- **Real-Time Interactive Metric Synchronization**:
+  - Live counts (`activeCount` and `inactiveCount`) are derived dynamically from Backend SQL aggregates.
+  - Stat cards on the dashboard are wired with 1-click filters enabling rapid toggling between active and archived views.

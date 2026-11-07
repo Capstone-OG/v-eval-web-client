@@ -2,6 +2,19 @@
 
 ## [07/11/2026] - Tái Cấu Trúc Toàn Diện Thanh Điều Hướng Subpage Chuẩn Segmented Control Hiện Đại, Hỗ Trợ Động Giám Đốc Học Thuật (Academic Director) & Tích Hợp Kiểm Tra Email Đa Tầng DNS MX Vào Cấp Phát Tài Khoản
 
+- **Triển Khai Giao Diện Phân Hệ Quản Lý Tài Khoản Ngừng Hoạt Động (Soft Delete / Inactive) & Thùng Rác Lưu Trữ ([`AccountProvisioningView.jsx`](../src/components/admin/AccountProvisioningView.jsx), [`userService.js`](../src/services/userService.js))**:
+  - **Tách Biệt Rạch Ròi Hai Chế Độ Xem (Segmented Navigation)**:
+    - Tab 1: **"Tài Khoản Đang Hoạt Động"** (kèm badge số lượng `activeCount` xanh lá): Mặc định chỉ hiển thị tài khoản đang hoạt động, các tài khoản bị vô hiệu hóa sẽ **tự động bị ẩn (hidden)** hoàn toàn khỏi danh sách chính.
+    - Tab 2: **"Tài Khoản Đã Ngừng Hoạt Động (Ẩn)"** (kèm badge số lượng `inactiveCount` đỏ): Quản lý tập trung toàn bộ các tài khoản bị vô hiệu hóa kèm banner giải thích cơ chế bảo toàn dữ liệu điểm thi và lịch sử học tập 100%.
+    - Tab 3: **"Tất cả"**: Hiển thị toàn bộ danh sách khi cần tra cứu tổng thể.
+  - **Modal Xác Nhận Ngừng Hoạt Động (Deactivate Confirmation Modal)**:
+    - Cột thao tác hiển thị nút đỏ *"Ngừng hoạt động"* (icon `UserX`).
+    - Khi bấm mở modal xác nhận hiển thị thông tin cán bộ/học sinh, cảnh báo Soft Delete không làm mất dữ liệu học tập và nút bấm *"Xác Nhận Ngừng"*.
+  - **Modal Xác Nhận Khôi Phục Hoạt Động (Reactivate Confirmation Modal)**:
+    - Tại tab *"Đã ngừng hoạt động"*, cột thao tác hiển thị nút xanh *"Khôi phục"* (icon `RotateCcw`).
+    - Khi xác nhận khôi phục, tài khoản chuyển `isActive = true`, mở khóa đăng nhập và lập tức quay trở lại danh sách *"Tài Khoản Đang Hoạt Động"*.
+  - **Liên Kết Tương Tác Thẻ Thống Kê (Stat Cards)**:
+    - Thẻ 1 (*"Đang hoạt động"*) và Thẻ 4 (*"Đã ngừng hoạt động"*) hỗ trợ bấm trực tiếp để chuyển nhanh chế độ xem tương ứng.
 - **Tái Cấu Trúc Thanh Điều Hướng Subpage Hiện Đại Chuẩn Segmented Control ([`App.jsx`](../src/App.jsx))**:
   - Khắc phục triệt để lỗi giao diện hàng nút điều hướng bị xuống dòng 2 tầng lộn xộn (4 nút trên, 1 nút trơ trọi dưới) trên Cổng Quản Lý Học Thuật Cơ Sở.
   - Tái thiết kế toàn bộ thanh điều hướng theo phong cách Segmented Control (Apple / Linear / Stripe dashboard): thanh nền `bg-slate-100/90`, nút active dạng thẻ nổi `bg-white text-blue-700 shadow-sm font-extrabold ring-1 ring-slate-200/80` tinh tế thay cho dải gradient cầu vồng cũ.

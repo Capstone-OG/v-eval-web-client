@@ -45,12 +45,16 @@ export const userService = {
   },
 
   /**
-   * Khóa hoặc mở khóa trạng thái tài khoản
+   * Khóa, mở khóa hoặc đặt trạng thái kích hoạt tài khoản
    * @param {string} userId
+   * @param {boolean|null} targetStatus - true (Kích hoạt), false (Ngừng hoạt động / Ẩn), null (Đảo trạng thái)
    */
-  async toggleUserStatus(userId) {
+  async toggleUserStatus(userId, targetStatus = null) {
     try {
-      const res = await apiClient.patch(`/api/v1/users/${userId}/toggle-status`);
+      const url = targetStatus !== null
+        ? `/api/v1/users/${userId}/toggle-status?targetStatus=${targetStatus}`
+        : `/api/v1/users/${userId}/toggle-status`;
+      const res = await apiClient.patch(url);
       return res.data;
     } catch (err) {
       console.warn('[userService] toggleUserStatus API error:', err);

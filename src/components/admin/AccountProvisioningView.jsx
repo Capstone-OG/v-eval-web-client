@@ -24,7 +24,11 @@ import {
   Crown, 
   X,
   Check,
-  Loader2
+  Loader2,
+  Archive,
+  RotateCcw,
+  UserX,
+  AlertTriangle
 } from 'lucide-react';
 import { userService } from '../../services/userService';
 import { authService } from '../../services/authService';
@@ -82,9 +86,17 @@ export default function AccountProvisioningView({ onBackToDashboard }) {
   const [isLoading, setIsLoading] = useState(true);
   const [campuses, setCampuses] = useState([]);
 
-  // Filters
+  // Status & Role Filters
   const [selectedRole, setSelectedRole] = useState('ALL');
+  const [statusTab, setStatusTab] = useState('ACTIVE'); // 'ACTIVE' | 'INACTIVE' | 'ALL'
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeCount, setActiveCount] = useState(0);
+  const [inactiveCount, setInactiveCount] = useState(0);
+
+  // Status Action Modals (Soft Delete / Reactivate)
+  const [deactivateModalUser, setDeactivateModalUser] = useState(null);
+  const [reactivateModalUser, setReactivateModalUser] = useState(null);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
   // Modal State
   const [showModal, setShowModal] = useState(false);
@@ -149,7 +161,7 @@ export default function AccountProvisioningView({ onBackToDashboard }) {
 
   useEffect(() => {
     loadUsers();
-  }, [selectedRole]);
+  }, [selectedRole, statusTab]);
 
   const loadCampuses = async () => {
     try {
@@ -169,12 +181,15 @@ export default function AccountProvisioningView({ onBackToDashboard }) {
       const params = {
         role: selectedRole === 'ALL' ? undefined : selectedRole,
         search: searchQuery.trim() || undefined,
+        isActive: statusTab === 'ALL' ? undefined : (statusTab === 'ACTIVE'),
         page: 1,
         pageSize: 50
       };
       const res = await userService.getUsers(params);
       setUsers(res.items || []);
       setTotalCount(res.totalCount || 0);
+      if (typeof res.activeCount === 'number') setActiveCount(res.activeCount);
+      if (typeof res.inactiveCount === 'number') setInactiveCount(res.inactiveCount);
     } catch (err) {
       console.warn('Lỗi tải danh sách người dùng:', err);
     } finally {
@@ -196,13 +211,35 @@ export default function AccountProvisioningView({ onBackToDashboard }) {
     setFormData(prev => ({ ...prev, password: pass }));
   };
 
-  const handleToggleStatus = async (user) => {
+  const handleConfirmDeactivate = async () => {
+    if (!deactivateModalUser) return;
+    setIsUpdatingStatus(true);
     try {
-      const updatedActive = await userService.toggleUserStatus(user.userId);
-      setUsers(prev => prev.map(u => u.userId === user.userId ? { ...u, isActive: updatedActive } : u));
-      toast.success(updatedActive ? 'Đã kích hoạt tài khoản thành công!' : 'Đã tạm khóa tài khoản!');
+      await userService.toggleUserStatus(deactivateModalUser.userId, false);
+      toast.success(`Đã ngừng hoạt động và ẩn tài khoản ${deactivateModalUser.fullName || deactivateModalUser.email} khỏi danh sách chính!`);
+      setDeactivateModalUser(null);
+      await loadUsers();
     } catch (err) {
-      toast.error('Không thể đổi trạng thái tài khoản: ' + err.message);
+      const msg = err.response?.data?.error?.description || err.message || 'Lỗi khi ngừng hoạt động tài khoản';
+      toast.error(msg);
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  };
+
+  const handleConfirmReactivate = async () => {
+    if (!reactivateModalUser) return;
+    setIsUpdatingStatus(true);
+    try {
+      await userService.toggleUserStatus(reactivateModalUser.userId, true);
+      toast.success(`Đã khôi phục tài khoản ${reactivateModalUser.fullName || reactivateModalUser.email} thành công!`);
+      setReactivateModalUser(null);
+      await loadUsers();
+    } catch (err) {
+      const msg = err.response?.data?.error?.description || err.message || 'Lỗi khi khôi phục tài khoản';
+      toast.error(msg);
+    } finally {
+      setIsUpdatingStatus(false);
     }
   };
 
@@ -340,16 +377,22 @@ export default function AccountProvisioningView({ onBackToDashboard }) {
 
       {/* Real-time Stat Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-            <Users className="w-6 h-6" />
+        <div 
+          onClick={() => setStatusTab('ACTIVE')}
+          className={`bg-white rounded-2xl p-5 border shadow-xs flex items-center gap-4 cursor-pointer transition-all ${
+            statusTab === 'ACTIVE' ? 'ring-2 ring-emerald-500 border-emerald-300' : 'border-slate-200/80 hover:border-emerald-300'
+          }`}
+          title="Bấm để lọc danh sách tài khoản đang hoạt động"
+        >
+          <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+            <CheckCircle2 className="w-6 h-6" />
           </div>
           <div>
-            <div className="text-xs font-bold text-slate-500">Tổng tài khoản CSDL</div>
-            <div className="text-2xl font-black text-slate-900 mt-0.5">{totalCount}</div>
+            <div className="text-xs font-bold text-slate-500">Đang hoạt động</div>
+            <div className="text-2xl font-black text-slate-900 mt-0.5">{activeCount}</div>
             <div className="text-[11px] text-emerald-600 font-semibold flex items-center gap-1 mt-0.5">
-              <CheckCircle2 className="w-3 h-3" />
-              <span>Đã nạp qua Gateway :5212</span>
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span>Sẵn sàng truy cập</span>
             </div>
           </div>
         </div>
@@ -380,18 +423,86 @@ export default function AccountProvisioningView({ onBackToDashboard }) {
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-            <ShieldCheck className="w-6 h-6" />
+        <div 
+          onClick={() => setStatusTab('INACTIVE')}
+          className={`bg-white rounded-2xl p-5 border shadow-xs flex items-center gap-4 cursor-pointer transition-all ${
+            statusTab === 'INACTIVE' ? 'ring-2 ring-rose-500 border-rose-300' : 'border-slate-200/80 hover:border-rose-300'
+          }`}
+          title="Bấm để xem danh sách tài khoản đã ngừng hoạt động (đã ẩn)"
+        >
+          <div className="w-12 h-12 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
+            <Archive className="w-6 h-6" />
           </div>
           <div>
-            <div className="text-xs font-bold text-slate-500">Tỷ lệ kích hoạt</div>
-            <div className="text-2xl font-black text-slate-900 mt-0.5">{activeRate}%</div>
-            <div className="text-[11px] text-emerald-600 font-semibold mt-0.5">
-              Trạng thái Active sẵn sàng
+            <div className="text-xs font-bold text-slate-500">Đã ngừng hoạt động</div>
+            <div className="text-2xl font-black text-rose-700 mt-0.5">{inactiveCount}</div>
+            <div className="text-[11px] text-rose-600 font-semibold mt-0.5 flex items-center gap-1">
+              <span>Bị ẩn khỏi danh sách</span>
+              <span className="underline text-[10px]">(Bấm để xem)</span>
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Status Mode Segmented Navigation: Đang hoạt động vs Đã ngừng hoạt động (Ẩn) */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-white p-3 rounded-3xl border border-slate-200/80 shadow-xs">
+        <div className="inline-flex p-1 bg-slate-100/90 rounded-2xl border border-slate-200/70 max-w-full overflow-x-auto scrollbar-none">
+          <button
+            type="button"
+            onClick={() => setStatusTab('ACTIVE')}
+            className={`px-4 py-2 rounded-xl text-xs font-extrabold flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+              statusTab === 'ACTIVE'
+                ? 'bg-white text-emerald-700 shadow-sm ring-1 ring-slate-200/80'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+            <span>Tài Khoản Đang Hoạt Động</span>
+            <span className="px-2 py-0.5 rounded-full text-[10px] bg-emerald-100 text-emerald-800 font-black">
+              {activeCount}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setStatusTab('INACTIVE')}
+            className={`px-4 py-2 rounded-xl text-xs font-extrabold flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+              statusTab === 'INACTIVE'
+                ? 'bg-white text-rose-700 shadow-sm ring-1 ring-slate-200/80'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <Archive className="w-4 h-4 text-rose-500" />
+            <span>Tài Khoản Đã Ngừng Hoạt Động (Ẩn)</span>
+            <span className="px-2 py-0.5 rounded-full text-[10px] bg-rose-100 text-rose-800 font-black">
+              {inactiveCount}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setStatusTab('ALL')}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+              statusTab === 'ALL'
+                ? 'bg-white text-slate-800 shadow-sm ring-1 ring-slate-200/80'
+                : 'text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            Tất cả ({activeCount + inactiveCount})
+          </button>
+        </div>
+
+        {statusTab === 'INACTIVE' ? (
+          <div className="text-[11px] text-rose-700 font-medium flex items-center gap-1.5 px-3.5 py-1.5 bg-rose-50/90 rounded-2xl border border-rose-200/70">
+            <ShieldAlert className="w-3.5 h-3.5 shrink-0 text-rose-500" />
+            <span>Tài khoản tại đây đang bị vô hiệu hóa & ẩn khỏi giao diện chính. Điểm số và dữ liệu bài thi được bảo toàn 100%.</span>
+          </div>
+        ) : (
+          <div className="text-[11px] text-slate-500 font-medium flex items-center gap-1.5">
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+            <span>Đang hiển thị danh sách các tài khoản có quyền đăng nhập và tham gia học tập.</span>
+          </div>
+        )}
       </div>
 
       {/* Success Notification Banner after provision */}
@@ -511,7 +622,7 @@ export default function AccountProvisioningView({ onBackToDashboard }) {
                 <th className="py-4 px-4">Cơ Sở / Chuyên Môn</th>
                 <th className="py-4 px-4">Trạng Thái</th>
                 <th className="py-4 px-4">Ngày Tạo</th>
-                <th className="py-4 px-6 text-right">Khóa / Mở</th>
+                <th className="py-4 px-6 text-right">Thao Tác</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-xs font-medium text-slate-700">
@@ -525,8 +636,19 @@ export default function AccountProvisioningView({ onBackToDashboard }) {
               ) : users.length === 0 ? (
                 <tr>
                   <td colSpan="6" className="py-12 text-center text-slate-400">
-                    <Users className="w-8 h-8 mx-auto text-slate-300 mb-2" />
-                    <span>Không tìm thấy tài khoản nào phù hợp bộ lọc.</span>
+                    {statusTab === 'INACTIVE' ? (
+                      <div className="space-y-1.5 py-4">
+                        <Archive className="w-9 h-9 mx-auto text-slate-300 stroke-[1.5]" />
+                        <div className="font-bold text-slate-700 text-sm">Không có tài khoản nào trong danh mục đã ngừng hoạt động.</div>
+                        <div className="text-xs text-slate-400">Tất cả tài khoản hệ thống hiện đang ở trạng thái hoạt động bình thường.</div>
+                      </div>
+                    ) : (
+                      <div className="space-y-1.5 py-4">
+                        <Users className="w-9 h-9 mx-auto text-slate-300 stroke-[1.5]" />
+                        <div className="font-bold text-slate-700 text-sm">Không tìm thấy tài khoản nào phù hợp bộ lọc.</div>
+                        <div className="text-xs text-slate-400">Thử thay đổi từ khóa tìm kiếm hoặc vai trò.</div>
+                      </div>
+                    )}
                   </td>
                 </tr>
               ) : (
@@ -607,19 +729,29 @@ export default function AccountProvisioningView({ onBackToDashboard }) {
                         {new Date(user.createdAt).toLocaleDateString('vi-VN')}
                       </td>
 
-                      {/* Action Toggle */}
+                      {/* Action Cell */}
                       <td className="py-3.5 px-6 text-right">
-                        <button
-                          onClick={() => handleToggleStatus(user)}
-                          className={`p-1.5 rounded-xl border transition-all cursor-pointer ${
-                            user.isActive
-                              ? 'bg-rose-50 hover:bg-rose-100 text-rose-600 border-rose-200'
-                              : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-600 border-emerald-200'
-                          }`}
-                          title={user.isActive ? 'Khóa tài khoản' : 'Mở khóa tài khoản'}
-                        >
-                          {user.isActive ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
-                        </button>
+                        {user.isActive ? (
+                          <button
+                            type="button"
+                            onClick={() => setDeactivateModalUser(user)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs transition-all cursor-pointer shadow-2xs hover:shadow-xs"
+                            title="Ngừng hoạt động (Ẩn tài khoản khỏi hệ thống)"
+                          >
+                            <UserX className="w-3.5 h-3.5 text-rose-600" />
+                            <span>Ngừng hoạt động</span>
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setReactivateModalUser(user)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold text-xs transition-all cursor-pointer shadow-2xs hover:shadow-xs"
+                            title="Khôi phục tài khoản về trạng thái hoạt động"
+                          >
+                            <RotateCcw className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>Khôi phục</span>
+                          </button>
+                        )}
                       </td>
                     </tr>
                   );
@@ -900,6 +1032,141 @@ export default function AccountProvisioningView({ onBackToDashboard }) {
               </div>
 
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal xác nhận Ngừng hoạt động (Soft Delete / Inactive) */}
+      {deactivateModalUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4">
+            <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center mx-auto shadow-inner">
+              <UserX className="w-6 h-6 stroke-[2.5]" />
+            </div>
+
+            <div className="text-center space-y-1.5">
+              <h3 className="text-lg font-black text-slate-900">
+                Xác Nhận Ngừng Hoạt Động Tài Khoản
+              </h3>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                Tài khoản sẽ bị vô hiệu hóa đăng nhập và tự động ẩn khỏi danh sách hoạt động chính.
+              </p>
+            </div>
+
+            {/* User summary card */}
+            <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/80 space-y-1.5 text-left">
+              <div className="font-extrabold text-sm text-slate-900">{deactivateModalUser.fullName}</div>
+              <div className="text-xs text-slate-600 font-mono flex items-center gap-1.5">
+                <Mail className="w-3.5 h-3.5 text-slate-400" />
+                <span>{deactivateModalUser.email}</span>
+              </div>
+              <div className="text-[11px] text-slate-500">
+                Vai trò: <span className="font-bold text-slate-700">{deactivateModalUser.roles?.join(', ')}</span>
+              </div>
+            </div>
+
+            <div className="p-3 bg-amber-50 rounded-2xl border border-amber-200/80 text-[11px] text-amber-800 leading-relaxed flex items-start gap-2.5 text-left">
+              <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+              <span>
+                <strong>Bảo toàn dữ liệu 100%:</strong> Không có dữ liệu nào bị xóa vĩnh viễn. Toàn bộ điểm thi, bài làm và lịch sử học tập được giữ nguyên. Bạn có thể khôi phục tài khoản bất kỳ lúc nào tại tab <em>"Đã ngừng hoạt động"</em>.
+              </span>
+            </div>
+
+            <div className="flex items-center gap-3 pt-2">
+              <button
+                type="button"
+                disabled={isUpdatingStatus}
+                onClick={() => setDeactivateModalUser(null)}
+                className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-all cursor-pointer"
+              >
+                Hủy Bỏ
+              </button>
+              <button
+                type="button"
+                disabled={isUpdatingStatus}
+                onClick={handleConfirmDeactivate}
+                className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs rounded-xl shadow-md shadow-rose-600/30 transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+              >
+                {isUpdatingStatus ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Đang cập nhật...</span>
+                  </>
+                ) : (
+                  <>
+                    <UserX className="w-4 h-4" />
+                    <span>Xác Nhận Ngừng</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal xác nhận Khôi phục hoạt động */}
+      {reactivateModalUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto shadow-inner">
+              <RotateCcw className="w-6 h-6 stroke-[2.5]" />
+            </div>
+
+            <div className="text-center space-y-1.5">
+              <h3 className="text-lg font-black text-slate-900">
+                Khôi Phục Trạng Thái Hoạt Động
+              </h3>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                Kích hoạt lại tài khoản và đưa người dùng trở về danh sách hoạt động chính.
+              </p>
+            </div>
+
+            <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/80 space-y-1.5 text-left">
+              <div className="font-extrabold text-sm text-slate-900">{reactivateModalUser.fullName}</div>
+              <div className="text-xs text-slate-600 font-mono flex items-center gap-1.5">
+                <Mail className="w-3.5 h-3.5 text-slate-400" />
+                <span>{reactivateModalUser.email}</span>
+              </div>
+              <div className="text-[11px] text-slate-500">
+                Vai trò: <span className="font-bold text-slate-700">{reactivateModalUser.roles?.join(', ')}</span>
+              </div>
+            </div>
+
+            <div className="p-3 bg-emerald-50 rounded-2xl border border-emerald-200/80 text-[11px] text-emerald-800 leading-relaxed flex items-start gap-2.5 text-left">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+              <span>
+                Sau khi khôi phục, tài khoản có thể đăng nhập lại ngay lập tức và hiển thị trong danh sách <em>"Tài Khoản Đang Hoạt Động"</em>.
+              </span>
+            </div>
+
+            <div className="flex items-center gap-3 pt-2">
+              <button
+                type="button"
+                disabled={isUpdatingStatus}
+                onClick={() => setReactivateModalUser(null)}
+                className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-all cursor-pointer"
+              >
+                Hủy Bỏ
+              </button>
+              <button
+                type="button"
+                disabled={isUpdatingStatus}
+                onClick={handleConfirmReactivate}
+                className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-md shadow-emerald-600/30 transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+              >
+                {isUpdatingStatus ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Đang khôi phục...</span>
+                  </>
+                ) : (
+                  <>
+                    <RotateCcw className="w-4 h-4" />
+                    <span>Khôi Phục Ngay</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}
