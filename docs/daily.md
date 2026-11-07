@@ -1,7 +1,18 @@
 # NHẬT KÝ KIỂM TRA TIẾN ĐỘ VẬN HÀNH (DAILY CHECK LOG) - WEB CLIENT
 
-## [07/11/2026] - Tái Cấu Trúc Toàn Diện Thanh Điều Hướng Subpage Chuẩn Segmented Control Hiện Đại, Hỗ Trợ Động Giám Đốc Học Thuật (Academic Director) & Tích Hợp Kiểm Tra Email Đa Tầng DNS MX Vào Cấp Phát Tài Khoản
+## [07/11/2026] - Tái Cấu Trúc Toàn Diện Thanh Điều Hướng Subpage Chuẩn Segmented Control Hiện Đại, Hỗ Trợ Động Giám Đốc Học Thuật (Academic Director), Mở Rộng Không Gian Làm Việc Toàn Màn Hình (`w-full`) & Hoàn Thiện Giao Diện Quản Lý Tài Khoản Ngừng Hoạt Động (Soft Delete / Inactive)
 
+- **Mở Rộng Không Gian Làm Việc Cổng Vai Trò Toàn Chiều Ngang (`w-full`) Sát Sidebar & Tinh Chỉnh Giao Diện Bảng Tài Khoản Không Rớt Dòng ([`App.jsx`](../src/App.jsx), [`AccountProvisioningView.jsx`](../src/components/admin/AccountProvisioningView.jsx), [`CampusManagerDashboardView.jsx`](../src/components/dashboard/CampusManagerDashboardView.jsx), [`ParentDashboardView.jsx`](../src/components/dashboard/ParentDashboardView.jsx), [`TuitionPaymentView.jsx`](../src/components/payment/TuitionPaymentView.jsx), [`apiClient.js`](../src/services/apiClient.js))**:
+  - **Loại Bỏ Giới Hạn `max-w-7xl mx-auto`, Mở Rộng `w-full` Thẳng Hàng Với `Navbar` & `Sidebar`**:
+    - Thay thế `max-w-7xl mx-auto` bằng `w-full` kèm `px-4 sm:px-6` đồng bộ trên thanh Role Portal Context Strip, vùng `<main>` và `<footer>` trong `App.jsx` cũng như các màn hình `AccountProvisioningView.jsx`, `CampusManagerDashboardView.jsx`, `ParentDashboardView.jsx`, `TuitionPaymentView.jsx`.
+    - Xóa bỏ hoàn toàn khoảng trống thừa hai bên cạnh `Sidebar`, giúp bảng danh sách tài khoản 6 cột hiển thị trọn vẹn 100% chiều ngang mà không cần thanh cuộn ngang.
+  - **Chuẩn Hóa Bảng Tài Khoản 1 Dòng Duy Nhất (`whitespace-nowrap`) & Bộ Công Cụ Hợp Nhất (`AccountProvisioningView.jsx`)**:
+    - Thiết kế lại thanh công cụ hợp nhất (Command Toolbar): Gộp bộ chuyển đổi trạng thái Segmented Switcher (*"Đang hoạt động"*, *"Đã ngừng hoạt động (Ẩn)"*, *"Tất cả"*), thanh tìm kiếm nhanh và hàng pill lọc vai trò vào cùng một khung thẻ trắng tinh gọn.
+    - Bổ sung `whitespace-nowrap shrink-0` cho toàn bộ huy hiệu Vai trò (`ROLE_CONFIG`), huy hiệu Trạng thái (*"Hoạt động"* / *"Đã ngừng"*) và nút hành động (*"Ngừng hoạt động"* / *"Khôi phục"*), chấm dứt triệt để tình trạng rớt chữ thành 2 dòng.
+    - Bổ sung avatar chữ cái viết tắt 2 ký tự (`getInitials`) phối màu gradient theo từng vai trò và hàm hiển thị đơn vị/chuyên môn thông minh (`getUnitDisplay`) phù hợp cho Giám đốc Học thuật, Phụ huynh, Giảng viên và Học viên.
+  - **Nâng Cấp `apiClient.js` Hỗ Trợ Query Parameters (`options.params`) & Phương Thức `PATCH`**:
+    - Bổ sung bộ tuần tự hóa `options.params` qua `URLSearchParams` trong `apiClient.js` để mọi truy vấn `GET /api/v1/users?isActive=true&role=...` truyền chính xác tham số lọc xuống Backend, đảm bảo tài khoản `Đã khóa` tự động ẩn 100% khỏi tab *"Đang hoạt động"*.
+    - Bổ sung phương thức `apiClient.patch(endpoint, body, options)` phục vụ các API cập nhật trạng thái phần tử.
 - **Triển Khai Giao Diện Phân Hệ Quản Lý Tài Khoản Ngừng Hoạt Động (Soft Delete / Inactive) & Thùng Rác Lưu Trữ ([`AccountProvisioningView.jsx`](../src/components/admin/AccountProvisioningView.jsx), [`userService.js`](../src/services/userService.js))**:
   - **Tách Biệt Rạch Ròi Hai Chế Độ Xem (Segmented Navigation)**:
     - Tab 1: **"Tài Khoản Đang Hoạt Động"** (kèm badge số lượng `activeCount` xanh lá): Mặc định chỉ hiển thị tài khoản đang hoạt động, các tài khoản bị vô hiệu hóa sẽ **tự động bị ẩn (hidden)** hoàn toàn khỏi danh sách chính.

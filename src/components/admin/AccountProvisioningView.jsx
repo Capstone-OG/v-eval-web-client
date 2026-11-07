@@ -39,45 +39,106 @@ const ROLE_CONFIG = {
   TEACHER: {
     label: 'Giảng viên Cơ sở',
     code: 'TEACHER',
-    badgeClass: 'bg-blue-50 text-blue-700 border-blue-200',
+    badgeClass: 'bg-blue-50 text-blue-700 border-blue-200/80',
+    avatarClass: 'from-blue-600 to-indigo-600 shadow-blue-500/20',
     icon: GraduationCap,
     desc: 'Giảng dạy, luyện thi chuyên sâu, chấm bài & hướng dẫn Socratic Live'
   },
   ACADEMIC_MANAGER: {
     label: 'Quản lý Học thuật Cơ sở',
     code: 'ACADEMIC_MANAGER',
-    badgeClass: 'bg-amber-50 text-amber-700 border-amber-200',
+    badgeClass: 'bg-amber-50 text-amber-700 border-amber-200/80',
+    avatarClass: 'from-amber-500 to-orange-600 shadow-amber-500/20',
     icon: Briefcase,
     desc: 'Điều phối lớp học, phân cụm học viên AI Clustering & quản trị cơ sở'
   },
   ACADEMIC_DIRECTOR: {
     label: 'Giám đốc Học thuật',
     code: 'ACADEMIC_DIRECTOR',
-    badgeClass: 'bg-purple-50 text-purple-700 border-purple-200',
+    badgeClass: 'bg-purple-50 text-purple-700 border-purple-200/80',
+    avatarClass: 'from-purple-600 to-indigo-700 shadow-purple-500/20',
     icon: Crown,
     desc: 'Toàn quyền học thuật liên cơ sở, phê duyệt ngân hàng câu hỏi & lộ trình'
   },
   ADMINISTRATOR: {
     label: 'Quản trị viên Hệ thống',
     code: 'ADMINISTRATOR',
-    badgeClass: 'bg-rose-50 text-rose-700 border-rose-200',
+    badgeClass: 'bg-slate-900 text-white border-slate-800',
+    avatarClass: 'from-slate-700 to-slate-900 shadow-slate-500/20',
     icon: ShieldCheck,
     desc: 'Quản trị hệ thống, cấp phát tài khoản toàn quyền & bảo mật IAM'
   },
   PARENT: {
     label: 'Phụ huynh Học sinh',
     code: 'PARENT',
-    badgeClass: 'bg-pink-50 text-pink-700 border-pink-200',
+    badgeClass: 'bg-pink-50 text-pink-700 border-pink-200/80',
+    avatarClass: 'from-pink-500 to-rose-600 shadow-pink-500/20',
     icon: UserCheck,
     desc: 'Cổng theo dõi điểm ước lượng ĐGNL, tiến độ & cảnh báo AI'
   },
   STUDENT: {
     label: 'Học viên ĐGNL',
     code: 'STUDENT',
-    badgeClass: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    badgeClass: 'bg-emerald-50 text-emerald-700 border-emerald-200/80',
+    avatarClass: 'from-emerald-500 to-teal-600 shadow-emerald-500/20',
     icon: BookOpen,
     desc: 'Luyện thi thích ứng ZPD, đề thi chẩn đoán & Socratic AI Tutor'
   }
+};
+
+const getInitials = (name) => {
+  if (!name) return 'U';
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+  return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+};
+
+const getUnitDisplay = (user, primaryRole) => {
+  const rawCampus = user.campusName || '';
+  const shortCampus = rawCampus
+    .replace('Cơ sở 1 - Khu đô thị ĐHQG-HCM, TP. Thủ Đức', 'Cơ sở 1 — ĐHQG TP. Thủ Đức')
+    .replace('Cơ sở 2 - Quận 10, TP.HCM', 'Cơ sở 2 — Quận 10, TP.HCM');
+
+  if (primaryRole === 'ACADEMIC_DIRECTOR') {
+    return {
+      title: 'Hội đồng Học thuật Toàn trường',
+      subtitle: 'Điều phối đào tạo liên cơ sở',
+      subtitleColor: 'text-purple-600'
+    };
+  }
+  if (primaryRole === 'ADMINISTRATOR') {
+    return {
+      title: 'Trung tâm Quản trị Hệ thống (IAM)',
+      subtitle: 'Toàn quyền cấu hình & bảo mật',
+      subtitleColor: 'text-slate-500'
+    };
+  }
+  if (primaryRole === 'PARENT') {
+    return {
+      title: 'Cổng Phụ huynh Đồng hành',
+      subtitle: 'Theo dõi lộ trình & điểm số học viên',
+      subtitleColor: 'text-pink-600'
+    };
+  }
+  if (primaryRole === 'TEACHER') {
+    return {
+      title: shortCampus || 'Cơ sở 1 — ĐHQG TP. Thủ Đức',
+      subtitle: user.specialty ? `Chuyên môn: ${user.specialty}` : 'Giảng viên luyện thi ĐGNL',
+      subtitleColor: 'text-indigo-600'
+    };
+  }
+  if (primaryRole === 'ACADEMIC_MANAGER') {
+    return {
+      title: shortCampus || 'Cơ sở 1 — ĐHQG TP. Thủ Đức',
+      subtitle: 'Quản lý vận hành & ma trận lớp học',
+      subtitleColor: 'text-amber-600'
+    };
+  }
+  return {
+    title: shortCampus || 'Cơ sở 1 — ĐHQG TP. Thủ Đức',
+    subtitle: 'Học viên luyện thi V-ACT 2026',
+    subtitleColor: 'text-emerald-600'
+  };
 };
 
 export default function AccountProvisioningView({ onBackToDashboard }) {
@@ -333,7 +394,7 @@ export default function AccountProvisioningView({ onBackToDashboard }) {
   const activeRate = users.length > 0 ? Math.round((users.filter(u => u.isActive).length / users.length) * 100) : 100;
 
   return (
-    <div className="space-y-6 animate-fade-in max-w-7xl mx-auto pb-12">
+    <div className="space-y-6 animate-fade-in w-full pb-12">
       
       {/* Top Banner Header */}
       <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-3xl p-6 lg:p-8 text-white border border-indigo-900/60 shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
@@ -444,67 +505,6 @@ export default function AccountProvisioningView({ onBackToDashboard }) {
         </div>
       </div>
 
-      {/* Status Mode Segmented Navigation: Đang hoạt động vs Đã ngừng hoạt động (Ẩn) */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-white p-3 rounded-3xl border border-slate-200/80 shadow-xs">
-        <div className="inline-flex p-1 bg-slate-100/90 rounded-2xl border border-slate-200/70 max-w-full overflow-x-auto scrollbar-none">
-          <button
-            type="button"
-            onClick={() => setStatusTab('ACTIVE')}
-            className={`px-4 py-2 rounded-xl text-xs font-extrabold flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap shrink-0 ${
-              statusTab === 'ACTIVE'
-                ? 'bg-white text-emerald-700 shadow-sm ring-1 ring-slate-200/80'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-            <span>Tài Khoản Đang Hoạt Động</span>
-            <span className="px-2 py-0.5 rounded-full text-[10px] bg-emerald-100 text-emerald-800 font-black">
-              {activeCount}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setStatusTab('INACTIVE')}
-            className={`px-4 py-2 rounded-xl text-xs font-extrabold flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap shrink-0 ${
-              statusTab === 'INACTIVE'
-                ? 'bg-white text-rose-700 shadow-sm ring-1 ring-slate-200/80'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <Archive className="w-4 h-4 text-rose-500" />
-            <span>Tài Khoản Đã Ngừng Hoạt Động (Ẩn)</span>
-            <span className="px-2 py-0.5 rounded-full text-[10px] bg-rose-100 text-rose-800 font-black">
-              {inactiveCount}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setStatusTab('ALL')}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
-              statusTab === 'ALL'
-                ? 'bg-white text-slate-800 shadow-sm ring-1 ring-slate-200/80'
-                : 'text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            Tất cả ({activeCount + inactiveCount})
-          </button>
-        </div>
-
-        {statusTab === 'INACTIVE' ? (
-          <div className="text-[11px] text-rose-700 font-medium flex items-center gap-1.5 px-3.5 py-1.5 bg-rose-50/90 rounded-2xl border border-rose-200/70">
-            <ShieldAlert className="w-3.5 h-3.5 shrink-0 text-rose-500" />
-            <span>Tài khoản tại đây đang bị vô hiệu hóa & ẩn khỏi giao diện chính. Điểm số và dữ liệu bài thi được bảo toàn 100%.</span>
-          </div>
-        ) : (
-          <div className="text-[11px] text-slate-500 font-medium flex items-center gap-1.5">
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-            <span>Đang hiển thị danh sách các tài khoản có quyền đăng nhập và tham gia học tập.</span>
-          </div>
-        )}
-      </div>
-
       {/* Success Notification Banner after provision */}
       {successInfo && (
         <div className="bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 border border-emerald-200 rounded-3xl p-5 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4 animate-fade-in">
@@ -544,71 +544,129 @@ export default function AccountProvisioningView({ onBackToDashboard }) {
         </div>
       )}
 
-      {/* Filter and Search Bar */}
+      {/* Unified Command Toolbar: Status Switcher + Search + Role Filter Pills */}
       <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs space-y-4">
         
-        {/* Role Pills */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
-          <button
-            onClick={() => setSelectedRole('ALL')}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
-              selectedRole === 'ALL'
-                ? 'bg-slate-900 text-white shadow-xs'
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-            }`}
-          >
-            Tất cả ({totalCount})
-          </button>
-          {Object.entries(ROLE_CONFIG).map(([roleKey, conf]) => {
-            const Icon = conf.icon;
-            const isSelected = selectedRole === roleKey;
-            return (
-              <button
-                key={roleKey}
-                onClick={() => setSelectedRole(roleKey)}
-                className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shrink-0 ${
-                  isSelected
-                    ? 'bg-blue-600 text-white shadow-xs'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                }`}
-              >
-                <Icon className="w-3.5 h-3.5" />
-                <span>{conf.label}</span>
-              </button>
-            );
-          })}
-        </div>
+        {/* Top Row: Segmented Status Switcher & Search Box */}
+        <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
+          <div className="inline-flex p-1 bg-slate-100/90 rounded-2xl border border-slate-200/70 max-w-full overflow-x-auto scrollbar-none">
+            <button
+              type="button"
+              onClick={() => setStatusTab('ACTIVE')}
+              className={`px-3.5 py-2 rounded-xl text-xs font-extrabold flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+                statusTab === 'ACTIVE'
+                  ? 'bg-white text-emerald-700 shadow-xs ring-1 ring-slate-200/80'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+              <span>Đang hoạt động</span>
+              <span className="px-2 py-0.5 rounded-full text-[10px] bg-emerald-100 text-emerald-800 font-black">
+                {activeCount}
+              </span>
+            </button>
 
-        {/* Search & Actions */}
-        <form onSubmit={handleSearchSubmit} className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 border-t border-slate-100">
-          <div className="relative w-full sm:w-96">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Tìm theo Tên, Email, Số điện thoại..."
-              className="w-full pl-9 pr-4 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+            <button
+              type="button"
+              onClick={() => setStatusTab('INACTIVE')}
+              className={`px-3.5 py-2 rounded-xl text-xs font-extrabold flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+                statusTab === 'INACTIVE'
+                  ? 'bg-white text-rose-700 shadow-xs ring-1 ring-slate-200/80'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Archive className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+              <span>Đã ngừng hoạt động (Ẩn)</span>
+              <span className="px-2 py-0.5 rounded-full text-[10px] bg-rose-100 text-rose-800 font-black">
+                {inactiveCount}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setStatusTab('ALL')}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+                statusTab === 'ALL'
+                  ? 'bg-white text-slate-800 shadow-xs ring-1 ring-slate-200/80'
+                  : 'text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              Tất cả ({activeCount + inactiveCount})
+            </button>
           </div>
 
-          <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+          {/* Search & Refresh Actions */}
+          <form onSubmit={handleSearchSubmit} className="flex items-center gap-2">
+            <div className="relative flex-1 sm:w-80">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Tìm theo Tên, Email, Số điện thoại..."
+                className="w-full pl-9 pr-4 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+              />
+            </div>
+
             <button
               type="submit"
-              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-all cursor-pointer"
+              className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition-all cursor-pointer whitespace-nowrap shrink-0"
             >
               Tìm kiếm
             </button>
             <button
               type="button"
               onClick={loadUsers}
-              className="p-2 text-slate-500 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all cursor-pointer"
+              className="p-2 text-slate-500 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all cursor-pointer shrink-0"
               title="Làm mới danh sách"
             >
               <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
             </button>
+          </form>
+        </div>
+
+        {/* Bottom Row: Role Filter Pills */}
+        <div className="flex items-center gap-2 overflow-x-auto pt-3 border-t border-slate-100 scrollbar-none">
+          <button
+            type="button"
+            onClick={() => setSelectedRole('ALL')}
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+              selectedRole === 'ALL'
+                ? 'bg-blue-600 text-white shadow-xs'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            }`}
+          >
+            Tất cả vai trò ({totalCount})
+          </button>
+          {Object.entries(ROLE_CONFIG).map(([roleKey, conf]) => {
+            const Icon = conf.icon;
+            const isSelected = selectedRole === roleKey;
+            return (
+              <button
+                type="button"
+                key={roleKey}
+                onClick={() => setSelectedRole(roleKey)}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+                  isSelected
+                    ? 'bg-blue-600 text-white shadow-xs'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                <Icon className="w-3.5 h-3.5 shrink-0" />
+                <span>{conf.label}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {statusTab === 'INACTIVE' && (
+          <div className="text-[11px] text-rose-700 font-medium flex items-center gap-2 px-3.5 py-2 bg-rose-50/80 rounded-xl border border-rose-200/70">
+            <ShieldAlert className="w-4 h-4 shrink-0 text-rose-500" />
+            <span>
+              <strong>Kho lưu trữ tài khoản đã ngừng hoạt động:</strong> Các tài khoản tại đây đang bị vô hiệu hóa đăng nhập và tự động ẩn khỏi danh sách chính. Toàn bộ lịch sử bài thi và dữ liệu học tập được bảo toàn 100%.
+            </span>
           </div>
-        </form>
+        )}
       </div>
 
       {/* Main Users Data Table */}
@@ -616,13 +674,13 @@ export default function AccountProvisioningView({ onBackToDashboard }) {
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-slate-50/80 border-b border-slate-200 text-[11px] font-extrabold uppercase tracking-wider text-slate-500">
-                <th className="py-4 px-6">Tài Khoản / Cán Bộ</th>
-                <th className="py-4 px-4">Vai Trò (RBAC)</th>
-                <th className="py-4 px-4">Cơ Sở / Chuyên Môn</th>
-                <th className="py-4 px-4">Trạng Thái</th>
-                <th className="py-4 px-4">Ngày Tạo</th>
-                <th className="py-4 px-6 text-right">Thao Tác</th>
+              <tr className="bg-slate-50/90 border-b border-slate-200/90 text-[11px] font-extrabold uppercase tracking-wider text-slate-500">
+                <th className="py-4 px-6 whitespace-nowrap">Tài Khoản / Họ Tên</th>
+                <th className="py-4 px-4 whitespace-nowrap">Vai Trò (RBAC)</th>
+                <th className="py-4 px-4 whitespace-nowrap">Đơn Vị / Chuyên Môn</th>
+                <th className="py-4 px-4 whitespace-nowrap">Trạng Thái</th>
+                <th className="py-4 px-4 whitespace-nowrap">Ngày Tạo</th>
+                <th className="py-4 px-6 text-right whitespace-nowrap">Thao Tác</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-xs font-medium text-slate-700">
@@ -657,27 +715,38 @@ export default function AccountProvisioningView({ onBackToDashboard }) {
                   const roleConf = ROLE_CONFIG[primaryRole] || {
                     label: primaryRole,
                     badgeClass: 'bg-slate-100 text-slate-700 border-slate-200',
+                    avatarClass: 'from-slate-600 to-slate-800',
                     icon: Users
                   };
                   const RoleIcon = roleConf.icon;
+                  const unitInfo = getUnitDisplay(user, primaryRole);
 
                   return (
-                    <tr key={user.userId} className="hover:bg-slate-50/80 transition-colors">
-                      {/* Name & Email */}
-                      <td className="py-3.5 px-6">
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-blue-600 text-white font-black text-xs flex items-center justify-center shadow-xs">
-                            {(user.fullName || 'U').charAt(0).toUpperCase()}
+                    <tr key={user.userId} className="hover:bg-slate-50/80 transition-colors group">
+                      {/* Column 1: Name, Avatar & Contact */}
+                      <td className="py-4 px-6 whitespace-nowrap">
+                        <div className="flex items-center gap-3.5">
+                          <div className="relative shrink-0">
+                            <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${roleConf.avatarClass || 'from-blue-600 to-indigo-600'} text-white font-black text-xs flex items-center justify-center shadow-xs`}>
+                              {getInitials(user.fullName)}
+                            </div>
+                            <span
+                              className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${
+                                user.isActive ? 'bg-emerald-500' : 'bg-rose-500'
+                              }`}
+                            />
                           </div>
                           <div>
-                            <div className="font-extrabold text-slate-900">{user.fullName}</div>
-                            <div className="text-[11px] text-slate-500 flex items-center gap-2 mt-0.5">
-                              <span className="flex items-center gap-1 font-mono">
-                                <Mail className="w-3 h-3 text-slate-400" />
-                                {user.email}
+                            <div className="font-extrabold text-slate-900 text-[13px] leading-snug">
+                              {user.fullName}
+                            </div>
+                            <div className="text-[11px] text-slate-500 flex items-center gap-2 mt-0.5 font-mono">
+                              <span className="flex items-center gap-1">
+                                <Mail className="w-3 h-3 text-slate-400 shrink-0" />
+                                <span>{user.email}</span>
                               </span>
                               {user.phone && user.phone !== '0900000000' && (
-                                <span className="flex items-center gap-1 font-mono text-slate-400">
+                                <span className="text-slate-400">
                                   • {user.phone}
                                 </span>
                               )}
@@ -686,69 +755,71 @@ export default function AccountProvisioningView({ onBackToDashboard }) {
                         </div>
                       </td>
 
-                      {/* Role Pill */}
-                      <td className="py-3.5 px-4">
-                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold border ${roleConf.badgeClass}`}>
-                          <RoleIcon className="w-3 h-3" />
+                      {/* Column 2: Role Pill (Single-line strict) */}
+                      <td className="py-4 px-4 whitespace-nowrap">
+                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold border whitespace-nowrap shrink-0 ${roleConf.badgeClass}`}>
+                          <RoleIcon className="w-3.5 h-3.5 shrink-0" />
                           <span>{roleConf.label}</span>
                         </span>
                       </td>
 
-                      {/* Campus & Specialty */}
-                      <td className="py-3.5 px-4">
+                      {/* Column 3: Unit / Campus & Specialty (Single-line strict) */}
+                      <td className="py-4 px-4 whitespace-nowrap">
                         <div>
-                          <div className="font-semibold text-slate-800 flex items-center gap-1 text-[11px]">
-                            <Building2 className="w-3 h-3 text-slate-400" />
-                            <span>{user.campusName || 'Cơ sở chính (ĐHQG Thủ Đức)'}</span>
+                          <div className="font-bold text-slate-800 flex items-center gap-1.5 text-xs whitespace-nowrap" title={user.campusName || unitInfo.title}>
+                            <Building2 className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                            <span>{unitInfo.title}</span>
                           </div>
-                          {user.specialty && (
-                            <div className="text-[10px] font-bold text-indigo-600 mt-0.5">
-                              Chuyên môn: {user.specialty}
-                            </div>
-                          )}
+                          <div className={`text-[11px] font-semibold mt-0.5 pl-5 whitespace-nowrap ${unitInfo.subtitleColor}`}>
+                            {unitInfo.subtitle}
+                          </div>
                         </div>
                       </td>
 
-                      {/* Active Status Badge */}
-                      <td className="py-3.5 px-4">
+                      {/* Column 4: Active Status Badge (Single-line strict) */}
+                      <td className="py-4 px-4 whitespace-nowrap">
                         {user.isActive ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-700">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                            Hoạt động
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/80 whitespace-nowrap shrink-0">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
+                            <span>Hoạt động</span>
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-rose-100 text-rose-700">
-                            <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
-                            Đã khóa
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-rose-50 text-rose-700 border border-rose-200/80 whitespace-nowrap shrink-0">
+                            <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0"></span>
+                            <span>Ngừng hoạt động</span>
                           </span>
                         )}
                       </td>
 
-                      {/* Created Date */}
-                      <td className="py-3.5 px-4 text-[11px] text-slate-500 font-mono">
-                        {new Date(user.createdAt).toLocaleDateString('vi-VN')}
+                      {/* Column 5: Created Date */}
+                      <td className="py-4 px-4 text-xs text-slate-500 font-mono whitespace-nowrap">
+                        {new Date(user.createdAt).toLocaleDateString('vi-VN', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric'
+                        })}
                       </td>
 
-                      {/* Action Cell */}
-                      <td className="py-3.5 px-6 text-right">
+                      {/* Column 6: Action Button (Single-line strict) */}
+                      <td className="py-4 px-6 text-right whitespace-nowrap">
                         {user.isActive ? (
                           <button
                             type="button"
                             onClick={() => setDeactivateModalUser(user)}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs transition-all cursor-pointer shadow-2xs hover:shadow-xs"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-rose-50 hover:border-rose-200 text-slate-600 hover:text-rose-600 font-bold text-xs transition-all cursor-pointer whitespace-nowrap shrink-0 shadow-2xs"
                             title="Ngừng hoạt động (Ẩn tài khoản khỏi hệ thống)"
                           >
-                            <UserX className="w-3.5 h-3.5 text-rose-600" />
+                            <UserX className="w-3.5 h-3.5 shrink-0" />
                             <span>Ngừng hoạt động</span>
                           </button>
                         ) : (
                           <button
                             type="button"
                             onClick={() => setReactivateModalUser(user)}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold text-xs transition-all cursor-pointer shadow-2xs hover:shadow-xs"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-emerald-200 bg-emerald-50/80 hover:bg-emerald-100 text-emerald-700 font-bold text-xs transition-all cursor-pointer whitespace-nowrap shrink-0 shadow-2xs"
                             title="Khôi phục tài khoản về trạng thái hoạt động"
                           >
-                            <RotateCcw className="w-3.5 h-3.5 text-emerald-600" />
+                            <RotateCcw className="w-3.5 h-3.5 shrink-0" />
                             <span>Khôi phục</span>
                           </button>
                         )}

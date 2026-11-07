@@ -570,8 +570,8 @@ export default function App() {
           />
 
           {/* Role Portal Context Strip & Subpage Navigation Bar (Segmented Control Single-Row) */}
-          <div className="bg-white/90 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-6 lg:px-8 py-3.5 sticky top-[65px] z-20 shadow-2xs">
-            <div className="max-w-7xl mx-auto flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3.5">
+          <div className="bg-white/90 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-6 py-3.5 sticky top-[65px] z-20 shadow-2xs">
+            <div className="w-full flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3.5">
               
               {/* Left: Role Identity & Title */}
               <div className="flex items-center gap-3.5 min-w-0">
@@ -626,13 +626,13 @@ export default function App() {
           </div>
 
           {/* Main Workspace Container */}
-          <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
+          <main className="flex-1 p-4 sm:p-6 w-full">
             {renderRolePortalContent()}
           </main>
 
           {/* Unified Home-Style Footer Strip */}
-          <footer className="border-t border-slate-200/80 bg-white/90 px-4 sm:px-6 lg:px-8 py-4 mt-auto">
-            <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-500 font-medium">
+          <footer className="border-t border-slate-200/80 bg-white/90 px-4 sm:px-6 py-4 mt-auto">
+            <div className="w-full flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-500 font-medium">
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-[#FACC15]"></span>
                 <span className="font-extrabold text-slate-800">ĐGNL AI Platform</span>

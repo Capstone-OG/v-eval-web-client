@@ -1112,3 +1112,7 @@ pm run build completes in 905ms (3,013 modules transformed, 0 errors).
 - **Real-Time Interactive Metric Synchronization**:
   - Live counts (`activeCount` and `inactiveCount`) are derived dynamically from Backend SQL aggregates.
   - Stat cards on the dashboard are wired with 1-click filters enabling rapid toggling between active and archived views.
+- **Full-Width Portal Workspace Alignment (`w-full`), Single-Line Zero-Wrap Table Redesign & `apiClient.js` Query Parameter Serialization (`App.jsx`, `AccountProvisioningView.jsx`, `apiClient.js`)**:
+  - Added automatic `options.params` query-string serialization (`URLSearchParams`) and a dedicated `patch()` method in `src/services/apiClient.js`, ensuring `GET /api/v1/users?isActive=true` accurately filters active vs. inactive records at the Backend database layer.
+  - Removed `max-w-7xl mx-auto` constraints across `App.jsx`, `AccountProvisioningView.jsx`, `CampusManagerDashboardView.jsx`, `ParentDashboardView.jsx`, and `TuitionPaymentView.jsx`, expanding the portal workspace to `w-full` flush with the `Sidebar` and `Navbar` and eliminating horizontal table scrollbars.
+  - Redesigned the IAM accounts table with a unified Command Toolbar, two-letter role-tinted gradient avatars, intelligent role-specific unit/campus labels, and strict `whitespace-nowrap` single-line badges and action buttons.

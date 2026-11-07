@@ -120,7 +120,21 @@ async function silentRefreshToken() {
  * Core HTTP Request Dispatcher
  */
 async function request(endpoint, options = {}, isRetry = false) {
-  const url = endpoint.startsWith('http') ? endpoint : `${BASE_URL}${endpoint}`;
+  let url = endpoint.startsWith('http') ? endpoint : `${BASE_URL}${endpoint}`;
+
+  if (options.params && typeof options.params === 'object') {
+    const searchParams = new URLSearchParams();
+    Object.entries(options.params).forEach(([key, val]) => {
+      if (val !== undefined && val !== null && val !== '') {
+        searchParams.append(key, String(val));
+      }
+    });
+    const qs = searchParams.toString();
+    if (qs) {
+      url += (url.includes('?') ? '&' : '?') + qs;
+    }
+  }
+
   const token = tokenStorage.getAccessToken();
 
   const headers = {
@@ -221,6 +235,15 @@ export const apiClient = {
     request(endpoint, {
       method: 'PUT',
       body: body instanceof FormData ? body : JSON.stringify(body),
+      ...options
+    }),
+
+  patch: (endpoint, body = null, options = {}) => 
+    request(endpoint, {
+      method: 'PATCH',
+      ...(body !== null && body !== undefined
+        ? { body: body instanceof FormData ? body : JSON.stringify(body) }
+        : {}),
       ...options
     }),
 

@@ -140,7 +140,7 @@ export default function TuitionPaymentView({ currentUser, onNavigateRoadmap, sho
   };
 
   return (
-    <div className="space-y-8 animate-fade-in max-w-7xl mx-auto pb-12">
+    <div className="space-y-8 animate-fade-in w-full pb-12">
       
       {/* Top Banner */}
       <div className="bg-gradient-to-r from-blue-900 via-indigo-950 to-slate-900 rounded-3xl p-6 lg:p-8 text-white border border-blue-800/60 shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6">

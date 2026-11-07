@@ -425,7 +425,7 @@ export default function ParentDashboardView({ currentUser, onNavigateTuition }) 
 
   if (!child) {
     return (
-      <div className="space-y-6 animate-fade max-w-7xl mx-auto">
+      <div className="space-y-6 animate-fade w-full">
         <div className="bg-gradient-to-r from-blue-700 via-indigo-700 to-blue-900 rounded-3xl p-6 lg:p-8 text-white border border-blue-600/30 shadow-xl flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
           <div className="space-y-2.5">
             <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#FACC15]/20 border border-[#FACC15]/40 text-[#FACC15] text-xs font-extrabold uppercase tracking-wider">
@@ -498,7 +498,7 @@ export default function ParentDashboardView({ currentUser, onNavigateTuition }) 
   };
 
   return (
-    <div className="space-y-6 animate-fade max-w-7xl mx-auto">
+    <div className="space-y-6 animate-fade w-full">
       {/* Top Banner */}
       <div className="bg-gradient-to-r from-blue-900 via-indigo-950 to-slate-900 rounded-3xl p-6 lg:p-8 text-white border border-blue-800/60 shadow-xl flex flex-col lg:flex-row lg:items-center justify-between gap-6">
         <div className="space-y-2.5">
