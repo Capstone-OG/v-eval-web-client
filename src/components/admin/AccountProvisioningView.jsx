@@ -23,9 +23,12 @@ import {
   Briefcase, 
   Crown, 
   X,
-  Check
+  Check,
+  Loader2
 } from 'lucide-react';
 import { userService } from '../../services/userService';
+import { authService } from '../../services/authService';
+import { validateEmailComprehensive } from '../../utils/emailValidator';
 import { toast } from '../../context/ToastContext';
 
 const ROLE_CONFIG = {
@@ -99,6 +102,45 @@ export default function AccountProvisioningView({ onBackToDashboard }) {
   const [successInfo, setSuccessInfo] = useState(null);
   const [copiedKey, setCopiedKey] = useState(false);
 
+  // Multi-layer Email Validation State
+  const [emailValidationStatus, setEmailValidationStatus] = useState('idle'); // 'idle' | 'checking' | 'valid' | 'invalid'
+  const [emailValidationMsg, setEmailValidationMsg] = useState('');
+  const [emailSuggestedFix, setEmailSuggestedFix] = useState(null);
+
+  const handleEmailBlur = async (rawEmail) => {
+    const trimmed = (rawEmail || '').trim().toLowerCase();
+    if (!trimmed) {
+      setEmailValidationStatus('idle');
+      setEmailValidationMsg('');
+      setEmailSuggestedFix(null);
+      return;
+    }
+
+    setEmailValidationStatus('checking');
+    setEmailValidationMsg('');
+    setEmailSuggestedFix(null);
+
+    try {
+      const res = await validateEmailComprehensive(trimmed, (em) =>
+        authService.validateEmail(em)
+      );
+
+      if (res.isValid) {
+        setEmailValidationStatus('valid');
+        setEmailValidationMsg(res.message || 'Email hợp lệ (Máy chủ thư MX hoạt động).');
+        setEmailSuggestedFix(null);
+        setErrorMsg('');
+      } else {
+        setEmailValidationStatus('invalid');
+        setEmailValidationMsg(res.message || 'Email không hợp lệ.');
+        setEmailSuggestedFix(res.suggestedEmail || null);
+        setErrorMsg(res.message || 'Email không hợp lệ.');
+      }
+    } catch {
+      setEmailValidationStatus('idle');
+    }
+  };
+
   // Load Campuses & Users
   useEffect(() => {
     loadCampuses();
@@ -167,17 +209,52 @@ export default function AccountProvisioningView({ onBackToDashboard }) {
   const handleSubmitProvision = async (e) => {
     e.preventDefault();
     setErrorMsg('');
+
+    const trimmedEmail = (formData.email || '').trim().toLowerCase();
+    if (!trimmedEmail) {
+      const err = 'Vui lòng nhập Email công tác.';
+      setErrorMsg(err);
+      toast.error(err);
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
-      const created = await userService.provisionUser(formData);
+      // 1. Kiểm tra toàn diện tính hợp lệ của Email trước khi cấp
+      const emailCheck = await validateEmailComprehensive(trimmedEmail, (em) =>
+        authService.validateEmail(em)
+      );
+
+      if (!emailCheck.isValid) {
+        setEmailValidationStatus('invalid');
+        setEmailValidationMsg(emailCheck.message || 'Email không hợp lệ.');
+        setEmailSuggestedFix(emailCheck.suggestedEmail || null);
+        setErrorMsg(emailCheck.message || 'Email không hợp lệ.');
+        toast.error(emailCheck.message || 'Email không hợp lệ.');
+        setIsSubmitting(false);
+        return;
+      }
+
+      setEmailValidationStatus('valid');
+      setEmailValidationMsg(emailCheck.message || 'Email hợp lệ.');
+
+      // 2. Thực hiện gọi API cấp tài khoản
+      const created = await userService.provisionUser({
+        ...formData,
+        email: trimmedEmail
+      });
+
       setSuccessInfo({
         ...created,
         tempPassword: formData.password
       });
+
       // Refresh list
       loadUsers();
       setShowModal(false);
+      toast.success(`Cấp phát tài khoản thành công cho ${created.fullName || trimmedEmail}!`);
+
       // Reset form
       setFormData({
         roleName: 'TEACHER',
@@ -188,9 +265,17 @@ export default function AccountProvisioningView({ onBackToDashboard }) {
         specialty: 'Toán & Tư duy Logic',
         password: 'Password123@'
       });
+      setEmailValidationStatus('idle');
+      setEmailValidationMsg('');
+      setEmailSuggestedFix(null);
     } catch (err) {
-      const msg = err.response?.data?.error?.message || err.message || 'Lỗi cấp tài khoản';
+      const msg =
+        err.response?.data?.error?.description ||
+        err.response?.data?.error?.message ||
+        err.message ||
+        'Lỗi cấp tài khoản';
       setErrorMsg(msg);
+      toast.error(msg);
     } finally {
       setIsSubmitting(false);
     }
@@ -650,14 +735,74 @@ export default function AccountProvisioningView({ onBackToDashboard }) {
                   <label className="block text-xs font-extrabold text-slate-700 mb-1">
                     Email công tác <span className="text-rose-500">*</span>
                   </label>
-                  <input
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                    placeholder="canbo@veval.edu.vn"
-                    className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    required
-                  />
+                  <div className="relative">
+                    <input
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) => {
+                        setFormData(prev => ({ ...prev, email: e.target.value }));
+                        if (emailValidationStatus !== 'idle') setEmailValidationStatus('idle');
+                        setEmailValidationMsg('');
+                        setEmailSuggestedFix(null);
+                        setErrorMsg('');
+                      }}
+                      onBlur={() => handleEmailBlur(formData.email)}
+                      placeholder="canbo@veval.edu.vn hoặc hoten@gmail.com"
+                      className={`w-full pl-3 pr-8 py-2 text-xs bg-slate-50 border rounded-xl font-semibold text-slate-800 focus:outline-none transition-all ${
+                        emailValidationStatus === 'invalid'
+                          ? 'border-rose-400 bg-rose-50/50 text-rose-900 focus:ring-2 focus:ring-rose-400/30'
+                          : emailValidationStatus === 'valid'
+                          ? 'border-emerald-500 bg-emerald-50/40 text-slate-900 focus:ring-2 focus:ring-emerald-500/20'
+                          : 'border-slate-200 focus:ring-2 focus:ring-blue-500'
+                      }`}
+                      required
+                    />
+                    <div className="absolute right-2.5 top-1/2 -translate-y-1/2">
+                      {emailValidationStatus === 'checking' && (
+                        <Loader2 className="w-3.5 h-3.5 text-blue-600 animate-spin" />
+                      )}
+                      {emailValidationStatus === 'valid' && (
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                      )}
+                      {emailValidationStatus === 'invalid' && (
+                        <AlertCircle className="w-4 h-4 text-rose-600" />
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Realtime Email Validation Feedback */}
+                  {emailValidationStatus === 'checking' && (
+                    <p className="text-[10.5px] font-bold text-blue-600 mt-1 flex items-center gap-1 animate-fade">
+                      <Loader2 className="w-3 h-3 animate-spin shrink-0" />
+                      <span>Đang kiểm tra tính hợp lệ & máy chủ thư (DNS MX)...</span>
+                    </p>
+                  )}
+                  {emailValidationStatus === 'valid' && (
+                    <p className="text-[10.5px] font-bold text-emerald-600 mt-1 flex items-center gap-1 animate-fade">
+                      <CheckCircle2 className="w-3 h-3 shrink-0" />
+                      <span>{emailValidationMsg || 'Email hợp lệ (Máy chủ thư MX hoạt động)'}</span>
+                    </p>
+                  )}
+                  {emailValidationStatus === 'invalid' && (
+                    <div className="mt-1 space-y-1 animate-fade">
+                      <p className="text-[10.5px] font-bold text-rose-600 flex items-start gap-1 leading-tight">
+                        <AlertCircle className="w-3 h-3 shrink-0 mt-0.5" />
+                        <span>{emailValidationMsg}</span>
+                      </p>
+                      {emailSuggestedFix && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFormData(prev => ({ ...prev, email: emailSuggestedFix }));
+                            handleEmailBlur(emailSuggestedFix);
+                          }}
+                          className="text-[10.5px] font-extrabold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-2 py-0.5 rounded-lg transition-colors cursor-pointer inline-flex items-center gap-1"
+                        >
+                          <span>Sửa thành: <strong>{emailSuggestedFix}</strong></span>
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 

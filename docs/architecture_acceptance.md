@@ -1082,3 +1082,18 @@ pm run build completes in 905ms (3,013 modules transformed, 0 errors).
   - Implemented real-time debounced and pre-submit email verification (`emailValidator.js` + `GET /api/auth/validate-email` + Google DNS-over-HTTPS `MX` record lookup), enforcing strict RFC 5322 syntax, Gmail local-part rules (6–30 chars), repetitive fake pattern blocking (`22222`), disposable email domain blocking, and 1-click domain typo correction (`@gmial.com` -> `@gmail.com`).
 - **3-in-1 Parent-Student Linking System (`StudentParentLinkCard.jsx`, `ParentDashboardView.jsx`, `userService.js`)**:
   - Enabled 100% database-backed Parent-Student account linking without SMTP dependency via three integrated workflows: (1) Student Account Code (`VE-XXXXXX`) & 6-digit dynamic PIN (`POST /api/v1/users/parent-link/connect`), (2) 1-Click Shareable URL (`?parentLinkCode=...`) & QR Code, and (3) Two-way in-app request/approval by Student Email or Phone (`POST /api/v1/users/parent-link/request` & `POST /api/v1/users/me/parent-link-requests/{id}/respond`).
+
+### 4.54. Campus Manager Segmented Navigation Redesign, Dynamic Academic Director Recognition & IAM Provisioning Multi-Layer Email Validation (`App.jsx`, `AccountProvisioningView.jsx`, `emailValidator.js`)
+- **Modern Segmented Control Navigation Redesign (`src/App.jsx`)**:
+  - Eliminated the wrapping, multi-line navigation layout on the Campus Manager Portal by refactoring subpage navigation into a streamlined Segmented Control.
+  - Employed a unified track wrapper (`bg-slate-100/90 p-1.5 rounded-2xl border border-slate-200/80 inline-flex items-center gap-1.5 overflow-x-auto scrollbar-none max-w-full`) preventing clumsy two-row button drops on constrained viewports.
+  - Active segment tabs feature a crisp card aesthetic (`bg-white text-blue-700 shadow-sm font-extrabold ring-1 ring-slate-200/80`) while inactive tabs use smooth hover transitions (`text-slate-600 hover:text-slate-900 hover:bg-slate-200/60 font-semibold`).
+  - Streamlined tab labels for clarity and conciseness: *"So sánh Cơ sở"*, *"Ma trận Lớp học"*, *"Khung Chương trình"*, *"Cấp phát Tài khoản"*, *"Báo cáo Chất lượng"*.
+- **Dynamic Academic Director vs. Campus Manager Portal Differentiation (`src/App.jsx`)**:
+  - Implemented dynamic role recognition differentiating `ACADEMIC_DIRECTOR` from standard `ACADEMIC_MANAGER` accounts.
+  - For Academic Directors, the header elevates to *"Cổng Giám Đốc Học Thuật Toàn Trường"* with a `Crown` icon and gold-accented badge (`ACADEMIC DIRECTOR PORTAL`), while Campus Managers retain the localized operational banner.
+- **Multi-Layer Defensive Email Validation in IAM Account Provisioning Modal (`src/components/admin/AccountProvisioningView.jsx`, `src/utils/emailValidator.js`)**:
+  - Integrated `validateEmailComprehensive` on the Account Provisioning modal's email input with real-time `onBlur` checks and pre-submit validation.
+  - Added support for detecting common domain typos (such as `@mail.com` typo for `@gmail.com`), RFC 5322 syntax validation, repetitive character blocking (`22222`), disposable email blocking, and Google DNS-over-HTTPS MX verification.
+  - Visual feedback includes an inline loading spinner during DNS resolution, green success badge upon validation, and an actionable amber/red suggestion banner with a 1-click apply button (`"Sửa thành: ...@gmail.com"`).
+  - Prevents accidental provisioning of phantom or invalid accounts and provides clear, human-friendly error messages matching Clean Architecture domain responses.

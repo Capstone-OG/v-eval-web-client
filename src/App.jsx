@@ -6,6 +6,7 @@ import {
   Building2,
   ClipboardCheck,
   CreditCard,
+  Crown,
   GraduationCap,
   HeartHandshake,
   History,
@@ -101,10 +102,10 @@ const ROLE_PORTAL_DEFINITIONS = {
     icon: Briefcase,
     accentBadge: 'bg-cyan-50 text-cyan-800 border-cyan-200',
     tabs: [
-      { id: 'dashboard', label: 'Điều phối Cơ sở & AI', icon: Building2 },
-      { id: 'teacher_heatmap', label: 'Giám sát Ma trận Lớp học', icon: LayoutGrid },
-      { id: 'roadmap', label: 'Quản lý Khung Chương trình', icon: Network },
-      { id: 'provision', label: 'Cấp phát Tài khoản Cơ sở', icon: UserPlus },
+      { id: 'dashboard', label: 'So sánh Cơ sở', icon: Building2 },
+      { id: 'teacher_heatmap', label: 'Ma trận Lớp học', icon: LayoutGrid },
+      { id: 'roadmap', label: 'Khung Chương trình', icon: Network },
+      { id: 'provision', label: 'Cấp phát Tài khoản', icon: UserPlus },
       { id: 'analytics', label: 'Báo cáo Chất lượng', icon: BarChart3 }
     ]
   },
@@ -360,7 +361,22 @@ export default function App() {
   }
 
   // 3. DEDICATED ROLE PORTALS (Synchronized with Home Page Color Palette #FDFBF7)
-  const currentPortal = ROLE_PORTAL_DEFINITIONS[role] || ROLE_PORTAL_DEFINITIONS.student;
+  const isDirector = (currentUser?.roles || []).some(
+    (r) => String(r).toUpperCase().includes('DIRECTOR')
+  );
+  const basePortal = ROLE_PORTAL_DEFINITIONS[role] || ROLE_PORTAL_DEFINITIONS.student;
+  const currentPortal =
+    role === 'manager' && isDirector
+      ? {
+          ...basePortal,
+          code: 'ACADEMIC DIRECTOR PORTAL',
+          title: 'Cổng Giám Đốc Học Thuật Toàn Trường',
+          subtitle:
+            'Toàn quyền học thuật liên cơ sở, Giám sát chất lượng & Khung chương trình chuẩn V-ACT 2026',
+          icon: Crown,
+          accentBadge: 'bg-purple-50 text-purple-700 border-purple-200'
+        }
+      : basePortal;
   const PortalIcon = currentPortal.icon;
 
   const renderRolePortalContent = () => {
@@ -553,36 +569,35 @@ export default function App() {
             onOpenLandingPage={() => setAppView('landing')}
           />
 
-          {/* Role Portal Context Strip & Subpage Navigation Bar (Synchronized with Home Template) */}
-          <div className="bg-gradient-to-b from-white via-[#FDFBF7] to-[#FDFBF7] border-b border-slate-200/80 px-4 sm:px-6 lg:px-8 py-4">
-            <div className="max-w-7xl mx-auto flex flex-col xl:flex-row xl:items-center justify-between gap-4">
-              <div className="flex items-start sm:items-center gap-3.5">
-                <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-cyan-500 text-white flex items-center justify-center shadow-md shadow-blue-500/20 shrink-0">
-                  <PortalIcon className="w-5 h-5" />
+          {/* Role Portal Context Strip & Subpage Navigation Bar (Segmented Control Single-Row) */}
+          <div className="bg-white/90 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-6 lg:px-8 py-3.5 sticky top-[65px] z-20 shadow-2xs">
+            <div className="max-w-7xl mx-auto flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3.5">
+              
+              {/* Left: Role Identity & Title */}
+              <div className="flex items-center gap-3.5 min-w-0">
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center shadow-md shadow-blue-500/20 shrink-0">
+                  <PortalIcon className="w-5 h-5 text-white" />
                 </div>
-                <div>
-                  <div className="flex flex-wrap items-center gap-2">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
                     <span
-                      className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full border ${currentPortal.accentBadge}`}
+                      className={`text-[9.5px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md border ${currentPortal.accentBadge}`}
                     >
                       {currentPortal.code}
                     </span>
-                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-700">
+                    <span className="hidden sm:inline-flex items-center gap-1 text-[10.5px] font-bold text-slate-500">
                       <Sparkles className="w-3 h-3 text-[#FACC15] fill-[#FACC15]" />
-                      <span>Đồng bộ chuẩn V-ACT 2026</span>
+                      <span>Chuẩn V-ACT 2026</span>
                     </span>
                   </div>
-                  <h1 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight mt-0.5">
+                  <h1 className="text-base sm:text-lg font-black text-slate-900 tracking-tight leading-snug truncate">
                     {currentPortal.title}
                   </h1>
-                  <p className="text-xs text-slate-500 font-medium">
-                    {currentPortal.subtitle}
-                  </p>
                 </div>
               </div>
 
-              {/* Dedicated Subpage Pills for the Current Role */}
-              <div className="flex flex-wrap items-center gap-1.5 bg-white p-1.5 rounded-2xl border border-slate-200/90 shadow-2xs">
+              {/* Right: Modern Single-Row Segmented Tab Bar (Zero Clumsy Wrapping) */}
+              <nav className="flex items-center gap-1 bg-slate-100/90 p-1.5 rounded-2xl border border-slate-200/80 overflow-x-auto scrollbar-none shrink-0 max-w-full shadow-2xs">
                 {currentPortal.tabs.map((tab) => {
                   const TabIcon = tab.icon;
                   const isTabActive = activeTab === tab.id;
@@ -591,22 +606,22 @@ export default function App() {
                       key={tab.id}
                       type="button"
                       onClick={() => setActiveTab(tab.id)}
-                      className={`px-3 py-2 rounded-xl text-xs font-extrabold transition-all flex items-center gap-1.5 cursor-pointer ${
+                      className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer ${
                         isTabActive
-                          ? 'bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 text-white shadow-sm shadow-blue-500/20'
-                          : 'text-slate-600 hover:text-blue-700 hover:bg-[#FDFBF7]'
+                          ? 'bg-white text-blue-700 shadow-sm font-extrabold ring-1 ring-slate-200/80'
+                          : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
                       }`}
                     >
                       <TabIcon
-                        className={`w-3.5 h-3.5 ${
-                          isTabActive ? 'text-[#FACC15]' : 'text-slate-400'
+                        className={`w-3.5 h-3.5 shrink-0 ${
+                          isTabActive ? 'text-blue-600' : 'text-slate-400'
                         }`}
                       />
                       <span>{tab.label}</span>
                     </button>
                   );
                 })}
-              </div>
+              </nav>
             </div>
           </div>
 

@@ -16,6 +16,7 @@ const REPETITIVE_CHARS_REGEX = /(.)\1{3,}/i;
 const ONLY_DIGITS_REGEX = /^\d+$/;
 
 const COMMON_DOMAIN_TYPOS = {
+  'mail.com': 'gmail.com',
   'gmial.com': 'gmail.com',
   'gamil.com': 'gmail.com',
   'gmai.com': 'gmail.com',

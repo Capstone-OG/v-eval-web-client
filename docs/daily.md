@@ -1,6 +1,20 @@
 # NHẬT KÝ KIỂM TRA TIẾN ĐỘ VẬN HÀNH (DAILY CHECK LOG) - WEB CLIENT
 
-## [06/11/2026] - Loại Bỏ 100% Chế Độ Demo / Hardcode / Mock Fallback & Đấu Nối Trực Tiếp 100% Dữ Liệu Thực Từ Backend API Cho Đủ 5 Cổng Vai Trò (`student`, `parent`, `teacher`, `manager`, `admin`)
+## [07/11/2026] - Tái Cấu Trúc Toàn Diện Thanh Điều Hướng Subpage Chuẩn Segmented Control Hiện Đại, Hỗ Trợ Động Giám Đốc Học Thuật (Academic Director) & Tích Hợp Kiểm Tra Email Đa Tầng DNS MX Vào Cấp Phát Tài Khoản
+
+- **Tái Cấu Trúc Thanh Điều Hướng Subpage Hiện Đại Chuẩn Segmented Control ([`App.jsx`](../src/App.jsx))**:
+  - Khắc phục triệt để lỗi giao diện hàng nút điều hướng bị xuống dòng 2 tầng lộn xộn (4 nút trên, 1 nút trơ trọi dưới) trên Cổng Quản Lý Học Thuật Cơ Sở.
+  - Tái thiết kế toàn bộ thanh điều hướng theo phong cách Segmented Control (Apple / Linear / Stripe dashboard): thanh nền `bg-slate-100/90`, nút active dạng thẻ nổi `bg-white text-blue-700 shadow-sm font-extrabold ring-1 ring-slate-200/80` tinh tế thay cho dải gradient cầu vồng cũ.
+  - Ngăn chặn hoàn toàn hiện tượng ngắt dòng trên các nút bằng `whitespace-nowrap shrink-0`, tích hợp cuộn ngang mượt mà `overflow-x-auto scrollbar-none` bảo đảm giao diện luôn nằm gọn gàng trên 1 hàng ngang duy nhất trên mọi kích thước màn hình.
+  - Bổ sung cơ chế nhận diện động vai trò Giám đốc Học thuật (`ACADEMIC_DIRECTOR`): Hiển thị đúng danh xưng **"Cổng Giám Đốc Học Thuật Toàn Trường"** (ACADEMIC DIRECTOR PORTAL) với icon Vương miện `Crown` và badge tím sang trọng `bg-purple-50 text-purple-700`.
+- **Tích Hợp Kiểm Tra Email Đa Tầng DNS MX & Gợi Ý Sửa Lỗi Tên Miền Vào Cấp Phát Tài Khoản ([`AccountProvisioningView.jsx`](../src/components/admin/AccountProvisioningView.jsx), [`emailValidator.js`](../src/utils/emailValidator.js))**:
+  - Bổ sung ánh xạ sửa lỗi gõ nhầm tên miền `mail.com` thành `gmail.com` trong `COMMON_DOMAIN_TYPOS`.
+  - Tích hợp `validateEmailComprehensive` trực tiếp vào ô nhập Email công tác trong modal cấp phát: Kiểm tra cú pháp RFC 5322, kiểm tra lỗi chính tả tên miền, kiểm tra DNS MX trực tuyến, hiển thị spinner kiểm tra, dấu tích xanh khi hợp lệ và nút gợi ý 1-Click *"Sửa thành: ...@gmail.com"*.
+  - Chặn đứng thao tác submit form khi email không hợp lệ, đồng thời bật Toast thông báo màu đỏ nổi bật khi có lỗi phát sinh.
+- **Kiểm Thử & Biên Dịch**:
+  - `npm run build` (`vite build`) hoàn thành sạch sẽ 100% (`3008 modules transformed`, **0 Error**).
+
+---
 
 - **Loại Bỏ Triệt Để Nút Đăng Nhập Demo, Thanh Chuyển Vai Trò Thủ Công & Token Giả Lập ([`LoginForm.jsx`](../src/components/auth/LoginForm.jsx), [`WebLoginPage.jsx`](../src/components/auth/WebLoginPage.jsx), [`Navbar.jsx`](../src/components/layout/Navbar.jsx), [`Sidebar.jsx`](../src/components/layout/Sidebar.jsx), [`App.jsx`](../src/App.jsx))**:
   - Xóa sạch bộ nút đăng nhập nhanh 1-Click Demo 5 vai trò, nút Google/Zalo giả lập, thông tin tài khoản điền sẵn (`email`, `password`) và token giả `eyDemoAccessToken123456` trong `LoginForm.jsx` và `WebLoginPage.jsx`.
