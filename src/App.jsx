@@ -183,6 +183,9 @@ export default function App() {
             onOpenAuthModal={() => setCurrentPage('login')}
             onOpenArchModal={() => setIsArchModalOpen(true)}
             onOpenProvision={() => setCurrentPage('provision')}
+            onNavigateAlerts={() =>
+              setActiveTab(activeRole === 'student' ? 'analytics' : 'dashboard')
+            }
           />
 
           {/* Main Dashboard Container */}
@@ -334,6 +337,9 @@ export default function App() {
             onOpenAuthModal={() => setCurrentPage('login')}
             onOpenArchModal={() => setIsArchModalOpen(true)}
             onOpenProvision={() => setCurrentPage('provision')}
+            onNavigateAlerts={() =>
+              setActiveTab(activeRole === 'student' ? 'analytics' : 'dashboard')
+            }
           />
           <main className="flex-1 p-4 lg:p-8 max-w-7xl mx-auto w-full">
             <AccountProvisioningView onBackToDashboard={() => setCurrentPage('dashboard')} />

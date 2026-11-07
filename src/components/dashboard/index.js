@@ -8,3 +8,4 @@ export { default as CampusManagerDashboardView } from './CampusManagerDashboardV
 export { default as ParentDashboardView } from './ParentDashboardView';
 export { default as LearningAnalyticsView } from './LearningAnalyticsView';
 export { default as ScorePredictionPanel } from './ScorePredictionPanel';
+export { default as StudentEarlyWarningsCard } from './StudentEarlyWarningsCard';

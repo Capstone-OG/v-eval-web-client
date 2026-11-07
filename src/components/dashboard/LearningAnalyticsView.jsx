@@ -30,6 +30,7 @@ import {
 } from 'lucide-react';
 import { practiceService } from '../../services/practiceService';
 import ScorePredictionPanel from './ScorePredictionPanel';
+import StudentEarlyWarningsCard from './StudentEarlyWarningsCard';
 
 const SHORT_DOMAIN_LABELS = {
   DOM_LANG: 'Ngôn ngữ (Việt - Anh)',
@@ -286,11 +287,14 @@ export default function LearningAnalyticsView({
           </div>
 
           {analyticsSubTab !== 'flow5' && (
-            <ScorePredictionPanel
-              studentId={currentUser?.id}
-              mode="full"
-              onOpenAiTutorWithContext={onOpenAiTutor}
-            />
+            <div className="space-y-6">
+              <ScorePredictionPanel
+                studentId={currentUser?.id}
+                mode="full"
+                onOpenAiTutorWithContext={onOpenAiTutor}
+              />
+              <StudentEarlyWarningsCard studentId={currentUser?.id} />
+            </div>
           )}
 
           {analyticsSubTab !== 'flow6' && (

@@ -797,6 +797,14 @@ pm run build completes in 905ms (3,013 modules transformed, 0 errors).
 
 ---
 
+### 4.25. BR-04 3-Tier Personal Early Warnings & Role-Aware Navbar Notification Center (`NotificationBellPopover.jsx`, `StudentEarlyWarningsCard.jsx`)
+- **Live Navbar Notification Popover (`NotificationBellPopover.jsx`, `Navbar.jsx`)**:
+  - Replaces static header notification placeholders with a reactive popover switching automatically between student personal alerts (`getMyAlerts`, unread count badge) and staff unresolved cohort alerts (`getEarlyWarningsDashboard`, active intervention count badge).
+- **Personal Early Warnings Inbox (`StudentEarlyWarningsCard.jsx`)**:
+  - Renders 3-tier BR-04 signals (`RED`, `YELLOW`, `UNREALISTIC_GOAL`, `GREEN`) with unread/severity filtering, advisor intervention feedback (`resolutionNotes`), and one-click `markAlertAsRead` (`PATCH /api/practice/early-warnings/{alertId}/read`).
+
+---
+
 ## 5. Verification & Acceptance Criteria
 
 1. **Clean Production Build**: Executed `npm run build` with 0 syntax or bundle errors; production artifacts outputted to `dist/` within 763ms on Vite 8 and React 19.

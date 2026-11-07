@@ -13,6 +13,9 @@
   - Xây dựng `ScorePredictionPanel.jsx` hiển thị thang trực quan 1200 điểm kèm khoảng tin cậy 95% (`Predicted ± 1.96 × SEM`), bảng cân đối thiếu hụt mục tiêu (`ON_TRACK` / `AT_RISK` / `CRITICAL`), nút tái tính toán dự báo SEM (`recalculatePrediction`), và lưới xếp hạng Toa thuốc bù điểm theo `ROI = ΔScore / Số giờ ôn`.
   - Xây dựng `PrescriptionPracticeModal.jsx` cho phép làm 3-5 câu hỏi biến thể đồng cấu (render KaTeX qua `MathText`), nộp bài chấm điểm tức thì, cập nhật xác suất làm chủ BKT `P(L_t)`, gạch nợ điểm thiếu hụt khi đạt `>= 67%` và tích hợp nút **Hỏi Gia sư AI Socratic** cho từng câu ở màn hình kết quả.
   - Tích hợp chế độ `compact` ngay trên trang Dashboard Học sinh (`App.jsx`) và chế độ `full` kèm bộ lọc tab con (`Flow 5 & 6`) trong `LearningAnalyticsView.jsx`.
+- **Giai Đoạn 3 — Trung Tâm Thông Báo Quả Chuông Navbar & Cảnh Báo Sớm Cá Nhân BR-04 3 Tầng ([`NotificationBellPopover.jsx`](../src/components/layout/NotificationBellPopover.jsx), [`Navbar.jsx`](../src/components/layout/Navbar.jsx), [`StudentEarlyWarningsCard.jsx`](../src/components/dashboard/StudentEarlyWarningsCard.jsx))**:
+  - Thay thế chấm đỏ tĩnh trên `Navbar.jsx` bằng `NotificationBellPopover.jsx` thời gian thực: tự động hiển thị huy hiệu số lượng thông báo chưa đọc (`unreadCount`) cho Học sinh hoặc số lượng cảnh báo chờ can thiệp (`activeAlertsCount`) cho Giáo viên/Quản lý.
+  - Xây dựng `StudentEarlyWarningsCard.jsx` tích hợp trong Trung tâm Phân tích & Dự báo (`LearningAnalyticsView.jsx`), hỗ trợ lọc theo mức độ (`RED`, `YELLOW`, `UNREALISTIC_GOAL`, `GREEN`), lọc `unreadOnly`, xem phản hồi can thiệp của Cố vấn (`resolutionNotes`) và đánh dấu đã đọc (`PATCH /api/practice/early-warnings/{alertId}/read`) đồng bộ tức thì qua `veval:flow6-updated`.
 
 ---
 
