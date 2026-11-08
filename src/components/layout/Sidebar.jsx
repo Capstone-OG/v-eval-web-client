@@ -13,7 +13,8 @@ import {
   Award,
   ShieldCheck,
   History,
-  Brain
+  Brain,
+  CreditCard
 } from 'lucide-react';
 
 export default function Sidebar({
@@ -21,13 +22,15 @@ export default function Sidebar({
   setActiveTab,
   activeRole,
   studentDashboard,
+  onOpenDiagnostic,
   onOpenZPD,
   onOpenAiTutor,
-  onOpenProvision
+  onOpenProvision,
+  onOpenTuition
 }) {
   const navItemsSection1 = [
     { id: 'dashboard', label: 'Trang chủ học tập', icon: LayoutDashboard },
-    { id: 'diagnostic', label: 'Kiểm tra đánh giá năng lực', icon: Target },
+    { id: 'diagnostic', label: 'Kiểm tra đánh giá năng lực', icon: Target, onClick: onOpenDiagnostic },
     { id: 'history', label: 'Lịch sử làm bài', icon: History, badge: 'Xem lại' },
     { id: 'mistakes_sm2', label: 'Sổ tay câu làm sai', icon: Brain, badge: 'Ôn lại' },
     { id: 'roadmap', label: 'Dàn kiến thức & Lộ trình', icon: GitFork },
@@ -39,6 +42,7 @@ export default function Sidebar({
     { id: 'ai_tutor', label: 'Hỏi Gia sư AI', icon: Bot, badge: '24/7', highlight: true, onClick: onOpenAiTutor },
     { id: 'live_qa', label: 'Lớp học & Hỏi đáp trực tiếp', icon: Video, badge: 'Trực tiếp' },
     { id: 'analytics', label: 'Kết quả & Dự báo điểm', icon: BarChart3 },
+    { id: 'tuition', label: 'Học phí & Gói học', icon: CreditCard, badge: 'PayOS', highlight: activeRole === 'parent', onClick: onOpenTuition },
     ...((activeRole === 'manager' || activeRole === 'admin')
       ? [{ id: 'provision', label: 'Quản lý tài khoản', icon: ShieldCheck, onClick: onOpenProvision }]
       : []),

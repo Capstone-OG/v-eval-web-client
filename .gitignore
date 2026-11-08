@@ -26,3 +26,8 @@ dist-ssr
 # Local script files
 run_backend.bat
 
+
+# Test results and Coverage reports
+TestResults/
+[Tt]est[Rr]esults/
+*.cobertura.xml

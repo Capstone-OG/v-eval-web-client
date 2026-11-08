@@ -27,6 +27,7 @@ import {
 import { DiagnosticAssessmentPage, SubmissionHistoryView } from './components/diagnostic';
 import { AccountProvisioningView } from './components/admin';
 import { CurriculumExplorerView } from './components/curriculum';
+import { TuitionPaymentView } from './components/payment';
 import { CheckCircle2, Bot } from 'lucide-react';
 import authService from './services/authService';
 import { practiceService } from './services/practiceService';
@@ -201,6 +202,7 @@ export default function App() {
               onOpenZPD={() => setIsZpdModalOpen(true)}
               onOpenAiTutor={() => handleOpenAiTutor(null)}
               onOpenProvision={() => setCurrentPage('provision')}
+              onOpenTuition={() => setActiveTab('tuition')}
             />
 
             {/* Main Content Area */}
@@ -213,7 +215,7 @@ export default function App() {
                 </div>
               )}
 
-              {/* Tab Dàn Kiến Thức & Lộ Trình (Curriculum Explorer) */}
+              {/* Tab Dàn Kiến Thức & Lộ Trình (Curriculum Explorer) / Tab Routing */}
               {activeTab === 'roadmap' ? (
                 <CurriculumExplorerView
                   onStartQuizModal={() => setIsZpdModalOpen(true)}
@@ -250,6 +252,12 @@ export default function App() {
                   onOpenMistakesSM2={() => setActiveTab('mistakes_sm2')}
                   onOpenAiTutor={(ctx) => handleOpenAiTutor(ctx)}
                   onNavigateRoleDashboard={() => setActiveTab('dashboard')}
+                />
+              ) : activeTab === 'tuition' ? (
+                <TuitionPaymentView 
+                  currentUser={currentUser}
+                  onNavigateRoadmap={() => setActiveTab('roadmap')}
+                  showToast={showToast}
                 />
               ) : (
                 <>
@@ -311,7 +319,12 @@ export default function App() {
                   )}
 
                   {/* Parent View */}
-                  {activeRole === 'parent' && <ParentDashboardView currentUser={currentUser} />}
+                  {activeRole === 'parent' && (
+                    <ParentDashboardView
+                      currentUser={currentUser}
+                      onNavigateTuition={() => setActiveTab('tuition')}
+                    />
+                  )}
                 </>
               )}
             </main>
