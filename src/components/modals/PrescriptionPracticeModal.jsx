@@ -18,6 +18,13 @@ import MathText from '../common/MathText';
 import { practiceService } from '../../services/practiceService';
 import { toast } from '../../context/ToastContext';
 
+function formatDifficultyLabel(difficultyB) {
+  const b = Number(difficultyB ?? 0.35);
+  if (b < 0.25) return 'Mức độ: Cơ bản';
+  if (b <= 0.6) return 'Mức độ: Vận dụng';
+  return 'Mức độ: Nâng cao';
+}
+
 export default function PrescriptionPracticeModal({
   isOpen,
   onClose,
@@ -38,7 +45,7 @@ export default function PrescriptionPracticeModal({
 
   const patternId = prescription?.patternId || prescription?.pattern_id || 'PAT_TOAN_LOGIC_01';
   const patternName =
-    prescription?.patternName || prescription?.pattern_name || 'Dạng bài trọng tâm bù điểm V-ACT';
+    prescription?.patternName || prescription?.pattern_name || 'Chuyên đề ôn tập trọng tâm';
   const deltaScore = Number(prescription?.deltaScore ?? prescription?.delta_score ?? 25);
 
   const loadSession = async () => {
@@ -52,7 +59,7 @@ export default function PrescriptionPracticeModal({
       const data = await practiceService.getPrescriptionPracticeSession(patternId, studentId);
       setSession(data);
     } catch (err) {
-      toast.error(err?.message || 'Không thể tải phiên luyện tập bù điểm lúc này.');
+      toast.error(err?.message || 'Không thể tải bài luyện tập lúc này.');
     } finally {
       setLoading(false);
     }
@@ -134,22 +141,22 @@ export default function PrescriptionPracticeModal({
           // Ignore canvas-confetti errors in headless environments
         }
         toast.success(
-          res?.message || `Đã gạch nợ dạng bài ${patternId} và thu hồi +${res?.pointsRecovered || deltaScore} điểm!`
+          `Tuyệt vời! Bạn đã hoàn thành chủ đề này và tích lũy thêm +${res?.pointsRecovered || deltaScore} điểm dự kiến!`
         );
         if (onRemedySuccess) onRemedySuccess(res);
       } else {
         toast.warning(
-          res?.message || 'Chưa đạt ngưỡng 67% để gạch nợ dạng bài. Hãy xem lại câu sai cùng Gia sư AI nhé!'
+          'Bạn cần làm đúng ít nhất 2/3 số câu để hoàn thành chủ đề. Hãy xem lại câu sai cùng Gia sư AI nhé!'
         );
       }
     } catch (err) {
-      toast.error(err?.message || 'Lỗi khi nộp bài luyện tập toa thuốc bù điểm.');
+      toast.error(err?.message || 'Lỗi khi nộp bài luyện tập.');
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleAskSocraticOnQuestion = (q) => {
+  const handleAskTutorOnQuestion = (q) => {
     if (!onOpenAiTutorWithContext) return;
     const chosen = answersMap[q.questionId] || 'A';
     const correctKey = result?.questionKeyMap?.[q.questionId] || null;
@@ -178,10 +185,10 @@ export default function PrescriptionPracticeModal({
             <div className="flex flex-wrap items-center gap-2 mb-1">
               <span className="px-2.5 py-0.5 rounded-full bg-amber-400/20 border border-amber-300/40 text-amber-200 text-[10px] font-extrabold uppercase tracking-wider flex items-center gap-1">
                 <Zap className="w-3 h-3" />
-                Toa Thuốc Bù Điểm Knapsack ROI
+                Bài luyện tập tăng điểm nhanh
               </span>
               <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-200 text-[10px] font-bold">
-                Mục tiêu thu hồi: +{session?.targetDeltaScore ?? deltaScore}đ
+                Mục tiêu tăng thêm: +{session?.targetDeltaScore ?? deltaScore}đ
               </span>
             </div>
             <h3 className="text-base lg:text-lg font-extrabold truncate">{patternName}</h3>
@@ -202,14 +209,14 @@ export default function PrescriptionPracticeModal({
             <div className="py-16 text-center space-y-3">
               <RefreshCw className="w-8 h-8 text-indigo-600 animate-spin mx-auto" />
               <div className="text-sm font-extrabold text-slate-800">
-                Đang trích xuất bộ câu hỏi đồng cấu (Isomorphic Variants)...
+                Đang chuẩn bị bộ câu hỏi ôn tập...
               </div>
               <p className="text-xs text-slate-500">
-                Cân chỉnh độ khó IRT xoay quanh vùng phát triển gần nhất cho mã dạng {patternId}
+                Hệ thống đang chọn các câu hỏi vừa sức giúp bạn nắm chắc chủ đề này
               </p>
             </div>
           ) : result ? (
-            /* POST-SUBMISSION RESULT & SOCRATIC REVIEW */
+            /* POST-SUBMISSION RESULT */
             <div className="space-y-5">
               <div
                 className={`p-5 rounded-2xl border-2 ${
@@ -236,20 +243,24 @@ export default function PrescriptionPracticeModal({
                         }`}
                       >
                         {result.isMastered
-                          ? 'Đạt ngưỡng làm chủ (>= 67%) • Đã gạch nợ Toa thuốc'
-                          : 'Chưa đạt ngưỡng 67% • Cần củng cố Socratic'}
+                          ? 'Đã nắm vững chủ đề • Hoàn thành mục tiêu'
+                          : 'Cần ôn thêm để nắm chắc chủ đề'}
                       </span>
                       <h4 className="text-lg font-black text-slate-900 mt-0.5">
                         Đúng {result.correctCount}/{result.totalQuestions} câu (
                         {Math.round((result.accuracy || 0) * 100)}%)
                       </h4>
-                      <p className="text-xs text-slate-700 mt-1 leading-relaxed">{result.message}</p>
+                      <p className="text-xs text-slate-700 mt-1 leading-relaxed">
+                        {result.isMastered
+                          ? 'Chúc mừng bạn đã vượt qua bài luyện tập và cải thiện điểm dự kiến!'
+                          : 'Đừng lo lắng, hãy xem lại các câu chưa đúng bên dưới hoặc hỏi Gia sư AI để hiểu rõ cách giải nhé.'}
+                      </p>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-2.5 shrink-0">
                     <div className="p-3 rounded-xl bg-white border border-slate-200 text-center">
-                      <div className="text-[10px] font-bold text-slate-400 uppercase">Xác suất BKT P(Lt)</div>
+                      <div className="text-[10px] font-bold text-slate-400 uppercase">Độ nắm vững</div>
                       <div className="text-sm font-black text-indigo-700 mt-0.5 flex items-center justify-center gap-1">
                         <span>{Math.round((result.previousMasteryPlt || 0.42) * 100)}%</span>
                         <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />
@@ -259,19 +270,19 @@ export default function PrescriptionPracticeModal({
                       </div>
                     </div>
                     <div className="p-3 rounded-xl bg-white border border-slate-200 text-center">
-                      <div className="text-[10px] font-bold text-slate-400 uppercase">Điểm bù thu hồi</div>
+                      <div className="text-[10px] font-bold text-slate-400 uppercase">Điểm cộng thêm</div>
                       <div className="text-sm font-black text-emerald-600 mt-0.5">
-                        +{result.pointsRecovered || 0}đ (Còn thiếu {result.remainingDeficit ?? 0}đ)
+                        +{result.pointsRecovered || 0}đ
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Question-by-Question Review with Socratic AI Tutor CTA */}
+              {/* Question-by-Question Review */}
               <div className="space-y-3">
                 <div className="text-xs font-extrabold text-slate-700 uppercase tracking-wider">
-                  Bảng đối chiếu bài làm & Hỏi Gia sư AI Socratic từng câu
+                  Xem lại chi tiết từng câu
                 </div>
 
                 {questions.map((q, idx) => {
@@ -290,11 +301,11 @@ export default function PrescriptionPracticeModal({
                             Câu {idx + 1}
                           </span>
                           <span className="text-xs font-bold text-slate-700">
-                            Em chọn: <strong className="text-indigo-700">{chosen}</strong>
+                            Bạn chọn: <strong className="text-indigo-700">{chosen}</strong>
                             {knownCorrect ? (
                               <>
                                 {' '}
-                                • Đáp án chuẩn: <strong className="text-emerald-700">{knownCorrect}</strong>
+                                • Đáp án đúng: <strong className="text-emerald-700">{knownCorrect}</strong>
                               </>
                             ) : null}
                           </span>
@@ -312,11 +323,11 @@ export default function PrescriptionPracticeModal({
 
                         {onOpenAiTutorWithContext && (
                           <button
-                            onClick={() => handleAskSocraticOnQuestion(q)}
+                            onClick={() => handleAskTutorOnQuestion(q)}
                             className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-extrabold flex items-center gap-1.5 transition-all shadow-xs"
                           >
                             <Bot className="w-3.5 h-3.5 text-amber-300" />
-                            <span>Hỏi Gia Sư AI Socratic</span>
+                            <span>Hỏi Gia sư AI câu này</span>
                           </button>
                         )}
                       </div>
@@ -330,7 +341,7 @@ export default function PrescriptionPracticeModal({
               </div>
             </div>
           ) : activeQuestion ? (
-            /* ACTIVE MICRO-PRACTICE RUNNER */
+            /* ACTIVE PRACTICE RUNNER */
             <div className="space-y-5">
               {/* Question Navigator Bar */}
               <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-100">
@@ -359,7 +370,7 @@ export default function PrescriptionPracticeModal({
                 <div className="flex items-center gap-3 text-xs text-slate-500 font-semibold">
                   <span className="flex items-center gap-1">
                     <Clock className="w-3.5 h-3.5 text-indigo-600" />
-                    Thời lượng gợi ý: {session?.suggestedDurationMinutes || 12} phút
+                    Thời gian gợi ý: {session?.suggestedDurationMinutes || 12} phút
                   </span>
                   <span className="px-2 py-0.5 rounded-lg bg-slate-100 text-slate-700 font-bold">
                     Đã chọn {answeredCount}/{questions.length} câu
@@ -371,10 +382,10 @@ export default function PrescriptionPracticeModal({
               <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200/90 space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-[11px] font-extrabold uppercase tracking-wider text-indigo-600">
-                    Câu hỏi biến thể #{currentIdx + 1} / {questions.length}
+                    Câu {currentIdx + 1} / {questions.length}
                   </span>
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200">
-                    Độ khó IRT b = {Number(activeQuestion.difficultyB ?? 0.35).toFixed(2)}
+                    {formatDifficultyLabel(activeQuestion.difficultyB)}
                   </span>
                 </div>
                 <div className="text-sm text-slate-900 font-medium leading-relaxed">
@@ -416,7 +427,7 @@ export default function PrescriptionPracticeModal({
             </div>
           ) : (
             <div className="py-10 text-center text-xs text-slate-500">
-              Không tìm thấy câu hỏi cho dạng bài này.
+              Không tìm thấy câu hỏi cho chủ đề này.
             </div>
           )}
         </div>
@@ -431,12 +442,12 @@ export default function PrescriptionPracticeModal({
                   className="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-extrabold flex items-center gap-2 transition-all"
                 >
                   <RefreshCw className="w-3.5 h-3.5" />
-                  <span>Làm Lại Bộ Biến Thể Khác</span>
+                  <span>Làm bộ câu hỏi khác</span>
                 </button>
               ) : (
                 <span className="text-xs font-bold text-emerald-700 flex items-center gap-1.5">
                   <CheckCircle2 className="w-4 h-4" />
-                  Đã cập nhật trực tiếp vào Bảng Cân Đối Điểm Dự Báo SEM!
+                  Đã cập nhật trực tiếp vào điểm dự kiến của bạn!
                 </span>
               )}
 
@@ -444,7 +455,7 @@ export default function PrescriptionPracticeModal({
                 onClick={onClose}
                 className="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-extrabold transition-all ml-auto"
               >
-                Hoàn tất & Quay lại Dự báo
+                Hoàn tất & Quay lại
               </button>
             </>
           ) : (
@@ -479,12 +490,12 @@ export default function PrescriptionPracticeModal({
                 {submitting ? (
                   <>
                     <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                    <span>Đang chấm & cập nhật BKT...</span>
+                    <span>Đang chấm bài...</span>
                   </>
                 ) : (
                   <>
                     <CheckCircle2 className="w-4 h-4" />
-                    <span>Nộp Bài & Bù Điểm ({answeredCount}/{questions.length})</span>
+                    <span>Nộp bài ({answeredCount}/{questions.length})</span>
                   </>
                 )}
               </button>

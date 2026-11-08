@@ -18,21 +18,43 @@ import { toast } from '../../context/ToastContext';
 
 const STATUS_META = {
   ON_TRACK: {
-    label: 'Đúng quỹ đạo mục tiêu (ON_TRACK)',
+    label: 'Đang bám sát mục tiêu',
     badgeCls: 'bg-emerald-50 text-emerald-700 border-emerald-200',
     dotCls: 'bg-emerald-500'
   },
   AT_RISK: {
-    label: 'Cần tăng tốc bù điểm (AT_RISK)',
+    label: 'Cần tăng tốc ôn luyện',
     badgeCls: 'bg-amber-50 text-amber-800 border-amber-200',
     dotCls: 'bg-amber-500'
   },
   CRITICAL: {
-    label: 'Cảnh báo thiếu hụt lớn (CRITICAL)',
+    label: 'Cần tập trung bù điểm',
     badgeCls: 'bg-rose-50 text-rose-700 border-rose-200',
     dotCls: 'bg-rose-600'
   }
 };
+
+const GENERIC_TOPIC_FALLBACKS = [
+  'Chuyên đề Toán & Tư duy Logic trọng tâm',
+  'Chuyên đề Đọc hiểu & Sử dụng Ngôn ngữ',
+  'Chuyên đề Giải quyết vấn đề KHTN - KHXH'
+];
+
+function formatCalculationSource(source) {
+  const code = String(source || '').toUpperCase();
+  if (code === 'AUTO_INIT') return 'Tổng hợp từ lịch sử làm bài';
+  if (code === 'MANUAL') return 'Vừa cập nhật mới nhất';
+  if (code.includes('DIAGNOSTIC')) return 'Từ bài kiểm tra đầu vào';
+  return 'Từ bài thi thử gần nhất';
+}
+
+function formatPrescriptionTitle(item, idx = 0) {
+  const raw = String(item?.patternName || '').trim();
+  if (!raw || /Chuyên đề trọng tâm|Kỹ năng cần bổ trợ/i.test(raw)) {
+    return GENERIC_TOPIC_FALLBACKS[idx % GENERIC_TOPIC_FALLBACKS.length];
+  }
+  return raw;
+}
 
 export default function ScorePredictionPanel({
   studentId,
@@ -82,10 +104,10 @@ export default function ScorePredictionPanel({
       });
       await loadForecast(true);
       toast.success(
-        `Đã tái tính toán dự báo điểm chuẩn SEM 95%: ${res?.predictedScore ?? forecastData?.forecast?.predictedScore}đ!`
+        `Đã cập nhật điểm dự kiến mới nhất: ${res?.predictedScore ?? forecastData?.forecast?.predictedScore} điểm!`
       );
     } catch (err) {
-      toast.error(err?.message || 'Không thể tái tính toán dự báo điểm lúc này.');
+      toast.error(err?.message || 'Không thể cập nhật điểm dự kiến lúc này.');
     } finally {
       setRecalculating(false);
     }
@@ -103,7 +125,10 @@ export default function ScorePredictionPanel({
 
   const forecast = forecastData?.forecast || {};
   const balance = forecastData?.balanceSheet || {};
-  const prescriptions = forecastData?.prescriptions || [];
+  const prescriptions = (forecastData?.prescriptions || []).map((item, idx) => ({
+    ...item,
+    displayTitle: formatPrescriptionTitle(item, idx)
+  }));
 
   const predictedScore = Number(forecast.predictedScore ?? 845);
   const sem = Number(forecast.sem ?? 24.5);
@@ -133,12 +158,12 @@ export default function ScorePredictionPanel({
                 <Gauge className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-sm font-extrabold text-slate-900">Dự Báo Điểm SEM 95%</h3>
-                <p className="text-[11px] text-slate-500">Core Flow 6 • Toa thuốc Knapsack ROI</p>
+                <h3 className="text-sm font-extrabold text-slate-900">Dự Báo Điểm Thi ĐGNL</h3>
+                <p className="text-[11px] text-slate-500">Gợi ý chủ đề giúp tăng điểm nhanh</p>
               </div>
             </div>
             <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${statusInfo.badgeCls}`}>
-              {deficitScore <= 0 ? 'Đạt đích' : `Thiếu ${deficitScore}đ`}
+              {deficitScore <= 0 ? 'Đạt mục tiêu' : `Cần thêm ${deficitScore}đ`}
             </span>
           </div>
 
@@ -146,7 +171,7 @@ export default function ScorePredictionPanel({
             <div className="flex items-baseline justify-between">
               <div>
                 <div className="text-[10px] font-bold uppercase tracking-wider text-cyan-300">
-                  Điểm dự báo thực chiến
+                  Điểm dự kiến hiện tại
                 </div>
                 <div className="flex items-baseline gap-1.5 mt-0.5">
                   <span className="text-2xl font-black">{predictedScore}</span>
@@ -154,9 +179,9 @@ export default function ScorePredictionPanel({
                 </div>
               </div>
               <div className="text-right">
-                <div className="text-[10px] text-slate-300 font-semibold">Khoảng 95% (±1.96 SEM)</div>
+                <div className="text-[10px] text-slate-300 font-semibold">Khoảng điểm dự kiến</div>
                 <div className="text-xs font-extrabold text-amber-300">
-                  [{minScore} — {maxScore}đ]
+                  {minScore} — {maxScore}đ
                 </div>
               </div>
             </div>
@@ -176,8 +201,8 @@ export default function ScorePredictionPanel({
               />
             </div>
             <div className="flex items-center justify-between text-[10px] text-slate-300">
-              <span>SEM: ±{sem}</span>
-              <span>Đích: {targetScore}đ</span>
+              <span>Dao động: ±{Math.round(sem)}đ</span>
+              <span>Mục tiêu: {targetScore}đ</span>
             </div>
           </div>
 
@@ -186,18 +211,18 @@ export default function ScorePredictionPanel({
               <div className="flex items-center justify-between gap-2">
                 <span className="text-[10px] font-extrabold uppercase tracking-wider text-indigo-700 flex items-center gap-1">
                   <Zap className="w-3 h-3 text-amber-500" />
-                  Ưu tiên ROI #{topPrescription.priorityRank} ({topPrescription.roiScore}đ/giờ)
+                  Ưu tiên ôn #{topPrescription.priorityRank}
                 </span>
                 <span className="text-[11px] font-black text-emerald-700">+{topPrescription.deltaScore}đ</span>
               </div>
-              <div className="text-xs font-bold text-slate-900 line-clamp-2">{topPrescription.patternName}</div>
+              <div className="text-xs font-bold text-slate-900 line-clamp-2">{topPrescription.displayTitle}</div>
               <div className="flex items-center gap-2 pt-1">
                 <button
-                  onClick={() => setActivePrescription(topPrescription)}
+                  onClick={() => setActivePrescription({ ...topPrescription, patternName: topPrescription.displayTitle })}
                   className="flex-1 py-2 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-extrabold flex items-center justify-center gap-1.5 transition-all"
                 >
                   <Zap className="w-3.5 h-3.5" />
-                  <span>{topPrescription.isRemedied ? 'Ôn lại dạng này' : 'Làm bài bù điểm'}</span>
+                  <span>{topPrescription.isRemedied ? 'Ôn lại chủ đề này' : 'Luyện tập tăng điểm'}</span>
                 </button>
                 {onOpenFullForecast && (
                   <button
@@ -234,7 +259,7 @@ export default function ScorePredictionPanel({
             <div className="flex flex-wrap items-center gap-2">
               <span className="px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 text-[11px] font-extrabold uppercase tracking-wider flex items-center gap-1.5">
                 <Sparkles className="w-3.5 h-3.5" />
-                Core Flow 6 • SEM 95% Score Forecast & Knapsack ROI
+                Dự báo điểm thi & Lộ trình bù điểm
               </span>
               <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-extrabold border flex items-center gap-1.5 ${statusInfo.badgeCls}`}>
                 <span className={`w-2 h-2 rounded-full ${statusInfo.dotCls}`} />
@@ -242,10 +267,10 @@ export default function ScorePredictionPanel({
               </span>
             </div>
             <h2 className="text-lg lg:text-xl font-extrabold text-slate-900">
-              Dự Báo Điểm Thi Chuẩn Sai Số Đo Lường SEM & Toa Thuốc Bù Điểm Tối Ưu ROI
+              Dự Báo Điểm Thi ĐGNL & Gợi Ý Bài Tập Tăng Điểm Nhanh
             </h2>
             <p className="text-xs text-slate-500">
-              Ước lượng khoảng điểm tin cậy 95% (`Predicted ± 1.96 × SEM`) và quy hoạch Greedy Knapsack chọn các dạng bài mang lại nhiều điểm số nhất trên mỗi giờ tự học.
+              Ước tính khoảng điểm bạn có thể đạt nếu đi thi hiện tại và chọn sẵn các chủ đề dễ gỡ điểm nhất khi tự ôn luyện.
             </p>
           </div>
 
@@ -255,19 +280,19 @@ export default function ScorePredictionPanel({
             className="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 disabled:opacity-60 text-white text-xs font-extrabold flex items-center gap-2 self-start lg:self-auto transition-all shadow-sm"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${recalculating ? 'animate-spin' : ''}`} />
-            <span>{recalculating ? 'Đang tính lại SEM...' : 'Tính Lại Dự Báo SEM'}</span>
+            <span>{recalculating ? 'Đang cập nhật...' : 'Cập nhật dự báo điểm'}</span>
           </button>
         </div>
 
-        {/* Top Grid: 95% SEM Confidence Band + Deficit Balance Sheet */}
+        {/* Top Grid: Confidence Band + Target Balance Sheet */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-          {/* Left 7 cols: 1200-Point SEM Scale */}
+          {/* Left 7 cols: 1200-Point Scale */}
           <div className="lg:col-span-7 p-5 rounded-2xl bg-gradient-to-br from-slate-900 via-indigo-950 to-blue-950 text-white flex flex-col justify-between space-y-5">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <span className="text-[11px] font-bold uppercase tracking-wider text-cyan-300 flex items-center gap-1.5">
                   <TrendingUp className="w-3.5 h-3.5" />
-                  Điểm Dự Báo Trung Tâm (Thang V-ACT 1200)
+                  Điểm dự kiến hiện tại (Thang 1200)
                 </span>
                 <div className="flex items-baseline gap-2 mt-1">
                   <span className="text-4xl font-black tracking-tight">{predictedScore}</span>
@@ -277,13 +302,13 @@ export default function ScorePredictionPanel({
 
               <div className="p-3 rounded-2xl bg-white/10 border border-white/15 text-right">
                 <div className="text-[10px] font-bold uppercase tracking-wider text-slate-300">
-                  Khoảng tin cậy {Math.round(Number(forecast.confidenceRate ?? 0.95) * 100)}%
+                  Khoảng điểm dự kiến
                 </div>
                 <div className="text-base font-black text-amber-300 mt-0.5">
                   {minScore}đ — {maxScore}đ
                 </div>
                 <div className="text-[10px] text-cyan-200 font-semibold">
-                  Sai số chuẩn SEM = ±{sem}đ
+                  Biên độ dao động khoảng ±{Math.round(sem)}đ
                 </div>
               </div>
             </div>
@@ -292,24 +317,21 @@ export default function ScorePredictionPanel({
             <div className="space-y-2">
               <div className="flex items-center justify-between text-[11px] text-slate-300 font-semibold">
                 <span>0đ</span>
-                <span className="text-cyan-300">Dải dao động 95%: [{minScore} — {maxScore}]</span>
+                <span className="text-cyan-300">Khoảng điểm có thể đạt: {minScore} — {maxScore} điểm</span>
                 <span>1200đ</span>
               </div>
 
               <div className="relative h-4 rounded-full bg-white/10 border border-white/15 overflow-hidden">
-                {/* 95% Confidence Band */}
                 <div
                   className="absolute top-0 bottom-0 bg-gradient-to-r from-cyan-400/40 via-blue-400/60 to-cyan-400/40 rounded-full"
                   style={{ left: `${minPct}%`, width: `${Math.max(3, maxPct - minPct)}%` }}
-                  title={`Khoảng tin cậy 95%: ${minScore} - ${maxScore} điểm`}
+                  title={`Khoảng điểm dự kiến: ${minScore} - ${maxScore} điểm`}
                 />
-                {/* Predicted Center Pin */}
                 <div
                   className="absolute top-0 bottom-0 w-2 bg-white rounded-full shadow"
                   style={{ left: `calc(${predPct}% - 4px)` }}
-                  title={`Điểm dự báo: ${predictedScore} điểm`}
+                  title={`Điểm dự kiến: ${predictedScore} điểm`}
                 />
-                {/* Target Flag */}
                 <div
                   className="absolute top-0 bottom-0 w-1 bg-amber-400"
                   style={{ left: `calc(${targetPct}% - 2px)` }}
@@ -320,25 +342,25 @@ export default function ScorePredictionPanel({
               <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-300 pt-1">
                 <span className="flex items-center gap-1.5">
                   <span className="w-2.5 h-2.5 rounded-full bg-white inline-block" />
-                  Dự báo hiện tại: <strong className="text-white">{predictedScore}đ</strong>
+                  Dự kiến hiện tại: <strong className="text-white">{predictedScore}đ</strong>
                 </span>
                 <span className="flex items-center gap-1.5">
                   <span className="w-2.5 h-2.5 rounded-xs bg-amber-400 inline-block" />
-                  Đích đăng ký: <strong className="text-amber-300">{targetScore}đ</strong>
+                  Mục tiêu đăng ký: <strong className="text-amber-300">{targetScore}đ</strong>
                 </span>
-                <span className="text-slate-400">
-                  Nguồn: <strong className="text-slate-200">{forecast.calculationSource || 'MOCK_EXAM'}</strong>
+                <span className="text-slate-300">
+                  Cơ sở tính: <strong className="text-white">{formatCalculationSource(forecast.calculationSource)}</strong>
                 </span>
               </div>
             </div>
           </div>
 
-          {/* Right 5 cols: Deficit Balance Sheet */}
+          {/* Right 5 cols: Target Comparison */}
           <div className="lg:col-span-5 p-5 rounded-2xl bg-slate-50 border border-slate-200/90 flex flex-col justify-between space-y-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-extrabold text-slate-800 flex items-center gap-2">
                 <Scale className="w-4 h-4 text-indigo-600" />
-                Bảng Cân Đối Thiếu Hụt Điểm Mục Tiêu
+                So Sánh Với Mục Tiêu Nguyện Vọng
               </span>
               <span className="text-[11px] font-bold text-slate-400">
                 {forecast.lastUpdated
@@ -357,7 +379,7 @@ export default function ScorePredictionPanel({
               </div>
 
               <div className="p-3.5 rounded-2xl bg-white border border-slate-200">
-                <div className="text-[10px] font-bold uppercase text-slate-400">Điểm thiếu hụt cần bù</div>
+                <div className="text-[10px] font-bold uppercase text-slate-400">Số điểm cần cải thiện</div>
                 <div
                   className={`text-2xl font-black mt-0.5 ${
                     deficitScore <= 0
@@ -367,7 +389,7 @@ export default function ScorePredictionPanel({
                         : 'text-rose-600'
                   }`}
                 >
-                  {deficitScore <= 0 ? '0đ (Đạt)' : `-${deficitScore}đ`}
+                  {deficitScore <= 0 ? 'Đã đạt' : `-${deficitScore}đ`}
                 </div>
               </div>
             </div>
@@ -377,12 +399,12 @@ export default function ScorePredictionPanel({
               <div>
                 {deficitScore <= 0 ? (
                   <span>
-                    Điểm dự báo của em đã <strong className="text-emerald-700">tiệm cận/vượt mục tiêu</strong>. Tiếp tục duy trì ôn tập SM-2 để giữ biên sai số SEM thấp!
+                    Điểm dự kiến của bạn đã <strong className="text-emerald-700">đạt hoặc vượt mục tiêu</strong>. Hãy duy trì ôn tập đều đặn để giữ vững phong độ nhé!
                   </span>
                 ) : (
                   <span>
-                    Hoàn thành <strong className="text-indigo-800">{unRemediedList.length} dạng bài</strong> trong Toa thuốc Knapsack bên dưới giúp em thu hồi ngay{' '}
-                    <strong className="text-emerald-700">+{potentialRecovery} điểm</strong> với quỹ thời gian ngắn nhất.
+                    Hoàn thành <strong className="text-indigo-800">{unRemediedList.length} chủ đề gợi ý</strong> bên dưới sẽ giúp bạn tăng thêm khoảng{' '}
+                    <strong className="text-emerald-700">+{potentialRecovery} điểm</strong> trong thời gian ôn tập ngắn nhất.
                   </span>
                 )}
               </div>
@@ -390,26 +412,26 @@ export default function ScorePredictionPanel({
           </div>
         </div>
 
-        {/* Greedy Knapsack ROI Prescriptions List */}
+        {/* Recommended Topics List */}
         <div className="space-y-3.5">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
               <h3 className="text-sm lg:text-base font-extrabold text-slate-900 flex items-center gap-2">
                 <Zap className="w-4 h-4 text-amber-500 fill-amber-500" />
-                <span>Toa Thuốc Bù Điểm Cá Nhân Hóa (Thuật Toán Quy Hoạch Greedy Knapsack ROI)</span>
+                <span>Chủ Đề Cần Ôn Ngay Để Tăng Điểm Nhanh</span>
               </h3>
               <p className="text-xs text-slate-500">
-                Xếp hạng theo chỉ số sinh lời điểm số `ROI = ΔScore / Số giờ ôn` — đạt tối thiểu 67% câu hỏi biến thể để gạch nợ ngay lập tức
+                Được sắp xếp theo những phần dễ gỡ điểm nhất trong thời gian ngắn — làm đúng từ 2/3 số câu để hoàn thành chủ đề
               </p>
             </div>
             <span className="px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-extrabold">
-              Đã gạch nợ {prescriptions.filter((p) => p.isRemedied).length}/{prescriptions.length} dạng bài
+              Đã hoàn thành {prescriptions.filter((p) => p.isRemedied).length}/{prescriptions.length} chủ đề
             </span>
           </div>
 
           {prescriptions.length === 0 ? (
             <div className="p-6 rounded-2xl bg-slate-50 border border-slate-200 text-center text-xs text-slate-500 font-semibold">
-              Hiện chưa có dạng bài thiếu hụt nào trong Toa thuốc bù điểm. Bấm &quot;Tính Lại Dự Báo SEM&quot; để cập nhật từ bài làm mới nhất.
+              Chưa có gợi ý bài tập bù điểm nào. Bạn hãy bấm &quot;Cập nhật dự báo điểm&quot; để hệ thống tổng hợp từ bài làm mới nhất nhé.
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -437,27 +459,26 @@ export default function ScorePredictionPanel({
                                 : 'bg-indigo-600 text-white'
                           }`}
                         >
-                          {isDone ? 'Đã bù điểm' : `Ưu tiên ROI #${item.priorityRank}`}
+                          {isDone ? 'Đã hoàn thành' : `Ưu tiên #${item.priorityRank}`}
                         </span>
                         <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[11px] font-extrabold border border-slate-200">
-                          ROI: {item.roiScore} đ/giờ
+                          ~+{Math.round(Number(item.roiScore || 14))}đ / giờ học
                         </span>
                       </div>
 
                       <div>
-                        <div className="text-[10px] font-mono font-bold text-slate-400">{item.patternId}</div>
-                        <h4 className="text-sm font-extrabold text-slate-900 leading-snug mt-0.5">
-                          {item.patternName}
+                        <h4 className="text-sm font-extrabold text-slate-900 leading-snug">
+                          {item.displayTitle}
                         </h4>
                       </div>
 
                       <div className="grid grid-cols-2 gap-2 pt-1">
                         <div className="p-2.5 rounded-xl bg-white border border-slate-200/90">
-                          <div className="text-[10px] font-bold text-slate-400">Điểm bù tiềm năng</div>
+                          <div className="text-[10px] font-bold text-slate-400">Điểm có thể tăng</div>
                           <div className="text-sm font-black text-emerald-600">+{item.deltaScore} điểm</div>
                         </div>
                         <div className="p-2.5 rounded-xl bg-white border border-slate-200/90">
-                          <div className="text-[10px] font-bold text-slate-400">Thời lượng cần ôn</div>
+                          <div className="text-[10px] font-bold text-slate-400">Thời gian ôn dự kiến</div>
                           <div className="text-sm font-black text-slate-800 flex items-center gap-1">
                             <Clock className="w-3.5 h-3.5 text-indigo-500" />
                             <span>{item.studyHoursNeeded} giờ</span>
@@ -468,7 +489,7 @@ export default function ScorePredictionPanel({
 
                     <button
                       type="button"
-                      onClick={() => setActivePrescription(item)}
+                      onClick={() => setActivePrescription({ ...item, patternName: item.displayTitle })}
                       className={`w-full py-2.5 px-4 rounded-xl text-xs font-extrabold flex items-center justify-center gap-2 transition-all ${
                         isDone
                           ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
@@ -478,12 +499,12 @@ export default function ScorePredictionPanel({
                       {isDone ? (
                         <>
                           <CheckCircle2 className="w-4 h-4" />
-                          <span>Đã Gạch Nợ • Luyện Lại</span>
+                          <span>Đã hoàn thành • Ôn lại</span>
                         </>
                       ) : (
                         <>
                           <Zap className="w-4 h-4 text-amber-300" />
-                          <span>Luyện Bù +{item.deltaScore}đ Ngay (3-5 Câu)</span>
+                          <span>Luyện tập ngay (+{item.deltaScore}đ)</span>
                         </>
                       )}
                     </button>

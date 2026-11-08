@@ -21,18 +21,18 @@ import { toast } from '../../context/ToastContext';
 
 const COGNITIVE_TAG_META = {
   CARELESS: {
-    label: 'Tính ẩu / Sai biến đổi số học (CARELESS)',
+    label: 'Tính nhẩm sai / Biến đổi nhầm dấu',
     shortLabel: 'Tính ẩu',
     cls: 'bg-amber-100 text-amber-800 border-amber-200'
   },
   MISREAD_QUESTION: {
-    label: 'Đọc sót giả thiết / Nhầm câu hỏi (MISREAD)',
+    label: 'Đọc thiếu dữ kiện / Nhầm yêu cầu đề bài',
     shortLabel: 'Đọc sót đề',
     cls: 'bg-purple-100 text-purple-800 border-purple-200'
   },
   MISSING_CONCEPT: {
-    label: 'Hổng định lý / Bản chất gốc (MISSING_CONCEPT)',
-    shortLabel: 'Hổng lý thuyết',
+    label: 'Chưa nắm vững công thức / Lý thuyết gốc',
+    shortLabel: 'Chưa vững lý thuyết',
     cls: 'bg-rose-100 text-rose-700 border-rose-200'
   }
 };
@@ -108,7 +108,7 @@ export default function MistakeNotebookSM2View({
 
   const handleStartReviewSession = () => {
     if (dueQuestions.length === 0) {
-      toast.info('Hôm nay không còn câu hỏi nào đến hạn ôn tập SM-2! Em có thể xem lại các câu trong Sổ tay bên dưới.');
+      toast.info('Hôm nay chưa có câu hỏi nào đến lịch ôn lại! Em có thể xem lại các câu đã lưu bên dưới.');
       return;
     }
     setReviewIdx(0);
@@ -136,14 +136,14 @@ export default function MistakeNotebookSM2View({
         } catch {
           // Ignore confetti errors in headless mode
         }
-        toast.success(res.message || 'Tuyệt vời! Lỗi sai này đã đạt chuẩn Thành Thạo sau 3 chu kỳ SM-2!');
+        toast.success('Tuyệt vời! Em đã làm đúng 3 lần liên tiếp và nắm vững dạng bài này!');
       } else if (res?.isCorrect) {
-        toast.success(res.message || 'Chính xác! Đã giãn lịch ôn tập SM-2 tiếp theo.');
+        toast.success('Chính xác! Đã cập nhật lịch hẹn ôn lại tiếp theo.');
       } else {
-        toast.warning(res?.message || 'Chưa chính xác! Chu kỳ SM-2 đã đặt lại về 1 ngày.');
+        toast.warning('Chưa chính xác! Hệ thống sẽ nhắc em ôn lại câu này vào ngày mai.');
       }
     } catch (err) {
-      toast.error(err?.message || 'Không thể nộp câu trả lời ôn tập SM-2.');
+      toast.error(err?.message || 'Không thể nộp câu trả lời ôn tập.');
     } finally {
       setSubmittingReview(false);
     }
@@ -160,7 +160,7 @@ export default function MistakeNotebookSM2View({
       setReviewFeedback(null);
       setSelectedOption(null);
       await loadNotebookAndDue(true);
-      toast.success('Đã hoàn thành trọn vẹn hàng đợi ôn tập ngắt quãng SM-2 hôm nay!');
+      toast.success('Đã hoàn thành toàn bộ bài ôn tập đến hạn hôm nay!');
     }
   };
 
@@ -175,15 +175,15 @@ export default function MistakeNotebookSM2View({
     if (!tagModalItem || savingTag) return;
     setSavingTag(true);
     try {
-      const res = await practiceService.tagMistakeCognitiveError(tagModalItem.id, {
+      await practiceService.tagMistakeCognitiveError(tagModalItem.id, {
         cognitiveErrorTag: editTag,
         studentNotes: editNotes
       });
-      toast.success(res?.message || 'Đã cập nhật nhãn nhận thức nguyên nhân sai!');
+      toast.success('Đã lưu ghi chú lý do làm sai!');
       setTagModalItem(null);
       await loadNotebookAndDue(true);
     } catch (err) {
-      toast.error(err?.message || 'Không thể cập nhật nhãn nhận thức.');
+      toast.error(err?.message || 'Không thể lưu ghi chú.');
     } finally {
       setSavingTag(false);
     }
@@ -214,18 +214,18 @@ export default function MistakeNotebookSM2View({
           <div className="flex flex-wrap items-center gap-2">
             <span className="px-3 py-1 rounded-full bg-purple-500/20 border border-purple-400/35 text-purple-200 text-[11px] font-extrabold uppercase tracking-wider flex items-center gap-1.5">
               <Brain className="w-3.5 h-3.5" />
-              Core Flow 6 • SuperMemo-2 (SM-2) Spaced Repetition
+              Sổ tay ôn tập thông minh
             </span>
             <span className="px-2.5 py-0.5 rounded-full bg-amber-400/20 border border-amber-300/35 text-amber-200 text-[10px] font-extrabold">
-              Quy tắc: 3 lần đúng liên tiếp = Thành thạo triệt để
+              Làm đúng 3 lần liên tiếp = Nắm vững hoàn toàn
             </span>
           </div>
 
           <h1 className="text-2xl lg:text-3xl font-extrabold tracking-tight">
-            Sổ Tay Lỗi Sai Phản Tư & Ôn Tập Ngắt Quãng SM-2
+            Sổ Tay Câu Làm Sai & Lịch Nhắc Ôn Tập Định Kỳ
           </h1>
           <p className="text-xs lg:text-sm text-slate-300 max-w-3xl leading-relaxed">
-            Gắn nhãn siêu nhận thức nguyên nhân sai (`Tính ẩu`, `Đọc sót đề`, `Hổng lý thuyết`) và tự động bốc câu hỏi biến thể đồng cấu theo đường cong quên lãng Ebbinghaus (`EF &gt;= 1.3`, chu kỳ `1d -&gt; 6d -&gt; I×EF`).
+            Ghi chú lại nguyên nhân làm sai (tính ẩu, đọc sót đề hay chưa vững lý thuyết) và luyện lại các câu hỏi tương tự đúng thời điểm để nhớ lâu trước kỳ thi.
           </p>
         </div>
 
@@ -236,7 +236,7 @@ export default function MistakeNotebookSM2View({
             className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 border border-white/15 text-xs font-bold text-slate-200 flex items-center gap-2 transition-all"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-            <span>Đồng bộ lịch SM-2</span>
+            <span>Làm mới danh sách</span>
           </button>
 
           <button
@@ -245,7 +245,7 @@ export default function MistakeNotebookSM2View({
             className="px-5 py-3 rounded-2xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black flex items-center gap-2 shadow-lg shadow-amber-400/20 transition-all"
           >
             <Play className="w-4 h-4 fill-slate-950" />
-            <span>Ôn Tập Đến Hạn Hôm Nay ({dailyReviewData?.totalDueQuestions ?? dueQuestions.length} câu)</span>
+            <span>Ôn Lại Hôm Nay ({dailyReviewData?.totalDueQuestions ?? dueQuestions.length} câu)</span>
           </button>
         </div>
       </div>
@@ -253,36 +253,36 @@ export default function MistakeNotebookSM2View({
       {/* 4 KPI Strip */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs">
-          <div className="text-[11px] font-bold uppercase text-slate-400">Đến hạn ôn tập hôm nay</div>
+          <div className="text-[11px] font-bold uppercase text-slate-400">Cần ôn lại hôm nay</div>
           <div className="text-3xl font-black text-amber-600 mt-1 flex items-center gap-2">
             <Flame className="w-6 h-6 text-amber-500 fill-amber-500" />
             <span>{dailyReviewData?.totalDueQuestions ?? dueQuestions.length}</span>
-            <span className="text-xs font-bold text-slate-400">câu đồng cấu</span>
+            <span className="text-xs font-bold text-slate-400">câu hỏi</span>
           </div>
         </div>
 
         <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs">
-          <div className="text-[11px] font-bold uppercase text-slate-400">Đang nuôi trí nhớ dài hạn</div>
+          <div className="text-[11px] font-bold uppercase text-slate-400">Đang theo dõi ôn lại</div>
           <div className="text-3xl font-black text-indigo-600 mt-1">
             {notebookData?.unmasteredCount ?? 0}
-            <span className="text-xs font-bold text-slate-400 ml-1.5">bản ghi</span>
+            <span className="text-xs font-bold text-slate-400 ml-1.5">câu hỏi</span>
           </div>
         </div>
 
         <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs">
-          <div className="text-[11px] font-bold uppercase text-slate-400">Đã thành thạo (3x SM-2)</div>
+          <div className="text-[11px] font-bold uppercase text-slate-400">Đã nắm vững (đúng 3 lần)</div>
           <div className="text-3xl font-black text-emerald-600 mt-1 flex items-center gap-2">
             <Award className="w-6 h-6 text-emerald-500" />
             <span>{notebookData?.masteredCount ?? 0}</span>
-            <span className="text-xs font-bold text-slate-400">lỗi đã triệt tiêu</span>
+            <span className="text-xs font-bold text-slate-400">dạng bài</span>
           </div>
         </div>
 
         <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs">
-          <div className="text-[11px] font-bold uppercase text-slate-400">Tổng kho Sổ tay cá nhân</div>
+          <div className="text-[11px] font-bold uppercase text-slate-400">Tổng số câu trong sổ tay</div>
           <div className="text-3xl font-black text-slate-900 mt-1">
             {(notebookData?.masteredCount ?? 0) + (notebookData?.unmasteredCount ?? 0)}
-            <span className="text-xs font-bold text-slate-400 ml-1.5">mục</span>
+            <span className="text-xs font-bold text-slate-400 ml-1.5">câu hỏi</span>
           </div>
         </div>
       </div>
@@ -298,7 +298,7 @@ export default function MistakeNotebookSM2View({
               <span className="text-sm font-extrabold">{activeReviewQ.skillName}</span>
               {activeReviewQ.isIsomorphicVariant && (
                 <span className="px-2 py-0.5 rounded-md bg-cyan-500/20 border border-cyan-400/40 text-cyan-200 text-[10px] font-bold">
-                  Biến thể đồng cấu (Isomorphic Variant)
+                  Câu hỏi tương tự cùng dạng
                 </span>
               )}
             </div>
@@ -394,17 +394,17 @@ export default function MistakeNotebookSM2View({
 
                   <div className="flex flex-wrap items-center gap-2 text-[11px] font-extrabold">
                     <span className="px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-indigo-700">
-                      Chuỗi đúng: {reviewFeedback.consecutiveCorrectReviews}/3
+                      Số lần đúng liên tiếp: {reviewFeedback.consecutiveCorrectReviews}/3
                     </span>
                     <span className="px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-slate-700">
-                      Chu kỳ mới: +{reviewFeedback.intervalDays} ngày (EF {reviewFeedback.easeFactor})
+                      Hẹn ôn lại sau: {reviewFeedback.intervalDays} ngày
                     </span>
                   </div>
                 </div>
 
                 {reviewFeedback.explanation && (
                   <div className="p-3.5 rounded-xl bg-white border border-slate-200 text-xs text-slate-800 leading-relaxed">
-                    <strong className="text-indigo-700 block mb-1">Giải thích bản chất chuẩn SGK:</strong>
+                    <strong className="text-indigo-700 block mb-1">Lời giải chi tiết:</strong>
                     <MathText text={reviewFeedback.explanation} />
                   </div>
                 )}
@@ -417,7 +417,7 @@ export default function MistakeNotebookSM2View({
                       className="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-extrabold flex items-center gap-1.5"
                     >
                       <Bot className="w-4 h-4 text-amber-300" />
-                      <span>Hỏi Gia Sư AI Socratic Sâu Hơn</span>
+                      <span>Hỏi Gia sư AI giải thích thêm</span>
                     </button>
                   )}
 
@@ -427,7 +427,7 @@ export default function MistakeNotebookSM2View({
                     className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-extrabold flex items-center gap-1.5 ml-auto"
                   >
                     <span>
-                      {reviewIdx + 1 < dueQuestions.length ? 'Sang Câu Biến Thể Tiếp Theo' : 'Hoàn Tất Phiên Ôn SM-2'}
+                      {reviewIdx + 1 < dueQuestions.length ? 'Sang Câu Tiếp Theo' : 'Hoàn Tất Bài Ôn Hôm Nay'}
                     </span>
                     <ArrowRight className="w-4 h-4" />
                   </button>
@@ -444,7 +444,7 @@ export default function MistakeNotebookSM2View({
                   className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-extrabold flex items-center gap-2 shadow-md"
                 >
                   <CheckCircle2 className="w-4 h-4" />
-                  <span>{submittingReview ? 'Đang tính lịch SM-2...' : 'Chốt Đáp Án & Cập Nhật SM-2'}</span>
+                  <span>{submittingReview ? 'Đang chấm bài...' : 'Kiểm Tra Đáp Án'}</span>
                 </button>
               </div>
             )}
@@ -452,23 +452,23 @@ export default function MistakeNotebookSM2View({
         </div>
       )}
 
-      {/* MISTAKE NOTEBOOK LIST & METACOGNITIVE FILTERS */}
+      {/* MISTAKE NOTEBOOK LIST & FILTERS */}
       <div className="bg-white rounded-3xl p-6 lg:p-7 border border-slate-200/80 shadow-xs space-y-5">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 pb-4 border-b border-slate-100">
           <div>
             <h2 className="text-base lg:text-lg font-extrabold text-slate-900">
-              Danh Mục Lỗi Sai Cá Nhân & Lịch Hẹn Lặp Lại Ngắt Quãng
+              Danh Sách Các Câu Từng Làm Sai & Lịch Ôn Lại
             </h2>
             <p className="text-xs text-slate-500">
-              Mỗi lỗi sai được theo dõi hệ số dễ nhớ `EaseFactor` và tự động đóng dấu Thành thạo khi vượt qua 3 kỳ kiểm tra biến thể liên tiếp.
+              Khi em làm đúng lại cùng một dạng bài 3 lần liên tiếp, hệ thống sẽ tự động đánh dấu Đã nắm vững.
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
             {[
-              { id: 'ALL', label: 'Mọi trạng thái' },
-              { id: 'UNMASTERED', label: 'Đang ôn SM-2' },
-              { id: 'MASTERED', label: 'Đã thành thạo' }
+              { id: 'ALL', label: 'Tất cả' },
+              { id: 'UNMASTERED', label: 'Đang cần ôn lại' },
+              { id: 'MASTERED', label: 'Đã nắm vững' }
             ].map((st) => (
               <button
                 key={st.id}
@@ -489,19 +489,19 @@ export default function MistakeNotebookSM2View({
               onChange={(e) => setTagFilter(e.target.value)}
               className="px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-700"
             >
-              <option value="ALL">Tất cả nhãn nhận thức</option>
-              <option value="MISSING_CONCEPT">Hổng lý thuyết (MISSING_CONCEPT)</option>
-              <option value="CARELESS">Tính ẩu (CARELESS)</option>
-              <option value="MISREAD_QUESTION">Đọc sót đề (MISREAD_QUESTION)</option>
+              <option value="ALL">Mọi lý do làm sai</option>
+              <option value="MISSING_CONCEPT">Chưa vững lý thuyết</option>
+              <option value="CARELESS">Tính ẩu / Nhầm dấu</option>
+              <option value="MISREAD_QUESTION">Đọc sót đề</option>
             </select>
           </div>
         </div>
 
         {loading && !notebookData ? (
-          <div className="py-10 text-center text-xs text-slate-500">Đang tải Sổ tay lỗi sai SM-2...</div>
+          <div className="py-10 text-center text-xs text-slate-500">Đang tải sổ tay câu làm sai...</div>
         ) : items.length === 0 ? (
           <div className="p-8 rounded-2xl bg-slate-50 border border-slate-200 text-center text-xs text-slate-500 font-semibold">
-            Không có bản ghi lỗi sai nào khớp với bộ lọc hiện tại.
+            Chưa có câu làm sai nào trong mục lọc này.
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -524,27 +524,24 @@ export default function MistakeNotebookSM2View({
                   <div className="space-y-3">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="flex flex-wrap items-center gap-1.5">
-                        <span className="px-2 py-0.5 rounded-md bg-slate-900 text-white text-[10px] font-mono font-bold">
-                          {item.patternId || 'PAT_VACT'}
-                        </span>
                         {tagMeta ? (
                           <span className={`px-2 py-0.5 rounded-md text-[10px] font-extrabold border ${tagMeta.cls}`}>
                             {tagMeta.shortLabel}
                           </span>
                         ) : (
                           <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-500">
-                            Chưa gắn nhãn
+                            Chưa ghi lý do sai
                           </span>
                         )}
                       </div>
 
                       {item.isMastered ? (
                         <span className="px-2.5 py-0.5 rounded-full bg-emerald-600 text-white text-[10px] font-extrabold">
-                          Đã Thành Thạo (3/3)
+                          Đã nắm vững (3/3)
                         </span>
                       ) : isDueNow ? (
                         <span className="px-2.5 py-0.5 rounded-full bg-amber-500 text-white text-[10px] font-extrabold">
-                          Đến hạn ôn hôm nay
+                          Cần ôn lại hôm nay
                         </span>
                       ) : (
                         <span className="text-[11px] font-bold text-slate-500 flex items-center gap-1">
@@ -564,14 +561,14 @@ export default function MistakeNotebookSM2View({
 
                     {item.studentNotes && (
                       <div className="p-2.5 rounded-xl bg-indigo-50/60 border border-indigo-100 text-[11px] text-indigo-950 font-medium">
-                        <strong>Bài học rút ra:</strong> {item.studentNotes}
+                        <strong>Ghi chú tự nhắc:</strong> {item.studentNotes}
                       </div>
                     )}
                   </div>
 
                   <div className="pt-3 border-t border-slate-200/70 flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-3 text-[11px] font-bold text-slate-600">
-                      <span className="flex items-center gap-1" title="Tiến độ 3 chu kỳ đúng liên tiếp">
+                      <span className="flex items-center gap-1" title="Số lần làm đúng lại liên tiếp">
                         {[0, 1, 2].map((step) => (
                           <span
                             key={step}
@@ -580,10 +577,9 @@ export default function MistakeNotebookSM2View({
                             }`}
                           />
                         ))}
-                        <span className="ml-1">{streakCount}/3 chu kỳ</span>
+                        <span className="ml-1">Đúng {streakCount}/3 lần</span>
                       </span>
-                      <span>EF: {Number(item.easeFactor || 2.5).toFixed(2)}</span>
-                      <span>Giãn cách: {item.intervalDays || 1}d</span>
+                      <span>Nhắc lại mỗi {item.intervalDays || 1} ngày</span>
                     </div>
 
                     <button
@@ -592,7 +588,7 @@ export default function MistakeNotebookSM2View({
                       className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-indigo-50 hover:text-indigo-700 text-slate-700 text-[11px] font-extrabold flex items-center gap-1.5 transition-all"
                     >
                       <Tag className="w-3.5 h-3.5" />
-                      <span>Gắn nhãn phản tư</span>
+                      <span>Ghi chú lý do sai</span>
                     </button>
                   </div>
                 </div>
@@ -602,14 +598,14 @@ export default function MistakeNotebookSM2View({
         )}
       </div>
 
-      {/* METACOGNITION TAGGING MODAL */}
+      {/* NOTE / TAG MODAL */}
       {tagModalItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/65 backdrop-blur-xs animate-fade">
           <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-md w-full p-6 space-y-4">
             <div className="flex items-start justify-between gap-3 pb-3 border-b border-slate-100">
               <div>
                 <span className="text-[10px] font-extrabold uppercase tracking-wider text-indigo-600">
-                  Phản tư Siêu nhận thức (Metacognition Tagging)
+                  Ghi chú rút kinh nghiệm
                 </span>
                 <h3 className="text-base font-extrabold text-slate-900 mt-0.5">{tagModalItem.skillName}</h3>
               </div>
@@ -625,7 +621,7 @@ export default function MistakeNotebookSM2View({
             <form onSubmit={handleSaveCognitiveTag} className="space-y-3.5">
               <div className="space-y-2">
                 <label className="block text-xs font-extrabold text-slate-700">
-                  Nguyên nhân cốt lõi khiến em làm sai:
+                  Vì sao em làm sai câu này?
                 </label>
                 {Object.entries(COGNITIVE_TAG_META).map(([key, meta]) => (
                   <button
@@ -645,13 +641,13 @@ export default function MistakeNotebookSM2View({
 
               <div>
                 <label className="block text-xs font-extrabold text-slate-700 mb-1">
-                  Ghi chú bài học tự nhắc bản thân:
+                  Ghi chú nhắc bản thân cho lần sau:
                 </label>
                 <textarea
                   value={editNotes}
                   onChange={(e) => setEditNotes(e.target.value)}
                   rows={3}
-                  placeholder="Ví dụ: Luôn đặt điều kiện cơ số logarit và kiểm tra tổng thể tích sau khi trộn dung dịch..."
+                  placeholder="Ví dụ: Nhớ đặt điều kiện cơ số logarit và kiểm tra tổng thể tích sau khi trộn dung dịch..."
                   className="w-full p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/25"
                 />
               </div>
@@ -669,7 +665,7 @@ export default function MistakeNotebookSM2View({
                   disabled={savingTag}
                   className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-extrabold"
                 >
-                  {savingTag ? 'Đang lưu...' : 'Lưu Phản Tư SM-2'}
+                  {savingTag ? 'Đang lưu...' : 'Lưu Ghi Chú'}
                 </button>
               </div>
             </form>
@@ -679,3 +675,4 @@ export default function MistakeNotebookSM2View({
     </div>
   );
 }
+

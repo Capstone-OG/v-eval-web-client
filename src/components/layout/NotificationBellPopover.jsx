@@ -39,6 +39,15 @@ const ALERT_TIER_META = {
   }
 };
 
+function cleanAlertMessage(msg) {
+  if (!msg) return '';
+  return String(msg)
+    .replace(/\s*\(BR-\d+[^)]*\)/gi, '')
+    .replace(/SM-2/g, 'ôn tập định kỳ')
+    .replace(/P\(Lt\)/g, 'mức độ nắm vững')
+    .trim();
+}
+
 export default function NotificationBellPopover({
   currentUser,
   activeRole = 'student',
@@ -134,7 +143,7 @@ export default function NotificationBellPopover({
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
         className="relative p-2 text-slate-600 hover:text-slate-900 rounded-xl hover:bg-slate-100 transition-all"
-        title="Trung tâm Cảnh báo sớm 3 tầng BR-04 (Core Flow 6)"
+        title="Thông báo & nhắc nhở học tập"
       >
         <Bell className="w-5 h-5" />
         {badgeCount > 0 && (
@@ -151,14 +160,14 @@ export default function NotificationBellPopover({
             <div>
               <div className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-300 flex items-center gap-1">
                 <Sparkles className="w-3 h-3" />
-                Core Flow 6 • Early Warning BR-04
+                Đồng hành học tập
               </div>
               <h4 className="text-sm font-extrabold">
-                {isStaffView ? 'Cảnh Báo Học Sinh Cần Can Thiệp' : 'Thông Báo & Cảnh Báo Sớm Cá Nhân'}
+                {isStaffView ? 'Danh Sách Học Sinh Cần Hỗ Trợ' : 'Thông Báo & Nhắc Nhở Học Tập'}
               </h4>
             </div>
             <span className="px-2.5 py-0.5 rounded-full bg-rose-500/25 border border-rose-400/40 text-rose-200 text-[10px] font-extrabold">
-              {badgeCount} {isStaffView ? 'chờ xử lý' : 'chưa đọc'}
+              {badgeCount} {isStaffView ? 'chờ hỗ trợ' : 'chưa xem'}
             </span>
           </div>
 
@@ -229,11 +238,13 @@ export default function NotificationBellPopover({
                           </div>
                         )}
 
-                        <p className="text-xs text-slate-700 leading-relaxed line-clamp-3">{alert.message}</p>
+                        <p className="text-xs text-slate-700 leading-relaxed line-clamp-3">
+                          {cleanAlertMessage(alert.message)}
+                        </p>
 
                         {alert.resolutionNotes && (
                           <div className="p-2 rounded-xl bg-emerald-50 border border-emerald-200 text-[11px] text-emerald-800 font-medium">
-                            <strong>Phản hồi Cố vấn:</strong> {alert.resolutionNotes}
+                            <strong>Lời nhắn từ giáo viên:</strong> {alert.resolutionNotes}
                           </div>
                         )}
 
@@ -269,8 +280,8 @@ export default function NotificationBellPopover({
               >
                 <span>
                   {isStaffView
-                    ? 'Mở Bảng Điều Khiển Can Thiệp Sư Phạm'
-                    : 'Xem Chi Tiết Cảnh Báo & Toa Thuốc Bù Điểm'}
+                    ? 'Mở Bảng Theo Dõi & Hỗ Trợ Học Sinh'
+                    : 'Xem Chi Tiết Điểm Dự Kiến & Bài Tập Tăng Điểm'}
                 </span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
@@ -281,3 +292,4 @@ export default function NotificationBellPopover({
     </div>
   );
 }
+

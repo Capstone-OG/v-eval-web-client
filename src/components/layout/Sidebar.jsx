@@ -26,21 +26,21 @@ export default function Sidebar({
   onOpenProvision
 }) {
   const navItemsSection1 = [
-    { id: 'dashboard', label: 'Dashboard (Tổng quan)', icon: LayoutDashboard },
-    { id: 'diagnostic', label: 'Khảo thí & Chẩn đoán', icon: Target, badge: 'Flow 1' },
-    { id: 'history', label: 'Lịch sử làm bài', icon: History, badge: 'Xem lại & AI' },
-    { id: 'mistakes_sm2', label: 'Sổ tay Lỗi sai SM-2', icon: Brain, badge: 'Flow 6' },
-    { id: 'roadmap', label: 'Dàn kiến thức & Lộ trình', icon: GitFork, badge: 'Flow 2' },
-    { id: 'adaptive', label: 'Luyện tập ZPD', icon: Zap, badge: 'Flow 3', onClick: onOpenZPD },
+    { id: 'dashboard', label: 'Trang chủ học tập', icon: LayoutDashboard },
+    { id: 'diagnostic', label: 'Kiểm tra đánh giá năng lực', icon: Target },
+    { id: 'history', label: 'Lịch sử làm bài', icon: History, badge: 'Xem lại' },
+    { id: 'mistakes_sm2', label: 'Sổ tay câu làm sai', icon: Brain, badge: 'Ôn lại' },
+    { id: 'roadmap', label: 'Dàn kiến thức & Lộ trình', icon: GitFork },
+    { id: 'adaptive', label: 'Luyện tập theo chủ đề', icon: Zap, onClick: onOpenZPD },
     { id: 'question_bank', label: 'Ngân hàng đề & Thi thử', icon: BookOpenCheck }
   ];
 
   const navItemsSection2 = [
-    { id: 'ai_tutor', label: 'AI Socratic Tutor', icon: Bot, badge: 'Flow 4', highlight: true, onClick: onOpenAiTutor },
-    { id: 'live_qa', label: 'Lớp học & Live Q&A', icon: Video, badge: 'Realtime' },
-    { id: 'analytics', label: 'Báo cáo & Dự báo', icon: BarChart3, badge: 'Flow 5 & 6' },
+    { id: 'ai_tutor', label: 'Hỏi Gia sư AI', icon: Bot, badge: '24/7', highlight: true, onClick: onOpenAiTutor },
+    { id: 'live_qa', label: 'Lớp học & Hỏi đáp trực tiếp', icon: Video, badge: 'Trực tiếp' },
+    { id: 'analytics', label: 'Kết quả & Dự báo điểm', icon: BarChart3 },
     ...((activeRole === 'manager' || activeRole === 'admin')
-      ? [{ id: 'provision', label: 'Cấp tài khoản (IAM)', icon: ShieldCheck, badge: 'Postgres', onClick: onOpenProvision }]
+      ? [{ id: 'provision', label: 'Quản lý tài khoản', icon: ShieldCheck, onClick: onOpenProvision }]
       : []),
     { id: 'settings', label: 'Cài đặt tài khoản', icon: Settings }
   ];
@@ -161,12 +161,12 @@ export default function Sidebar({
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-1.5 text-xs font-bold text-blue-400">
             <Award className="w-4 h-4" />
-            <span>Khảo thí IRT & BKT</span>
+            <span>Tiến độ điểm mục tiêu</span>
           </div>
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
         </div>
         <div className="text-[11px] text-slate-300 leading-snug mb-3">
-          Mô hình đo lường năng lực chuẩn ĐHQG-HCM đang chạy định kỳ.
+          Cập nhật tự động sau mỗi bài luyện tập và thi thử ĐGNL.
         </div>
         <div className="w-full bg-slate-700 h-1.5 rounded-full overflow-hidden mb-1">
           <div
@@ -190,18 +190,14 @@ export default function Sidebar({
         </div>
         <div className="flex justify-between text-[10px] text-slate-400 font-semibold">
           <span>
-            Theta 0:{' '}
+            Hiện tại:{' '}
             {studentDashboard?.needsOnboarding
-              ? 'Chưa đo'
-              : studentDashboard?.theta0 !== undefined && studentDashboard?.theta0 !== null
-                ? studentDashboard.theta0 > 0
-                  ? `+${studentDashboard.theta0}`
-                  : studentDashboard.theta0
-                : '+0.65'}
+              ? 'Chưa có bài thi'
+              : `${studentDashboard?.currentEstimatedScore ?? 820}đ`}
           </span>
           <span className="text-emerald-400 font-bold">
             {studentDashboard?.needsOnboarding
-              ? '0% Đích'
+              ? '0% mục tiêu'
               : `${Math.min(
                   100,
                   Math.round(
@@ -209,7 +205,7 @@ export default function Sidebar({
                       (studentDashboard?.targetScore || 1000)) *
                       100
                   )
-                )}% Đích`}
+                )}% mục tiêu`}
           </span>
         </div>
       </div>
