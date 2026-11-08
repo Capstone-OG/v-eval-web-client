@@ -38,7 +38,7 @@ export default function AISocraticTutorModal({ isOpen, onClose, initialContext =
         const wrongText = initialContext.selectedWrong ? `\n> **Phương án em vừa chọn:** ${initialContext.selectedWrong}` : '';
         const contextGreeting = {
           sender: 'ai',
-          text: `Chào em! Thầy nhận thấy em đang xem lại câu hỏi thuộc chủ đề: **${initialContext.skill || 'Ôn tập ĐGNL'}**.\n\n> **Câu hỏi:** ${initialContext.question || ''}${wrongText}\n\nThầy là **Gia Sư AI Socratic**. Thầy sẽ không giải bài thay em hay đưa ra đáp án sẵn. Em hãy cho thầy biết: **Theo đề bài, dữ kiện nào là quan trọng nhất và vì sao em lại chọn phương án trên?**`,
+          text: `Chào em! Thầy thấy em đang xem lại câu hỏi thuộc chủ đề: **${initialContext.skill || 'Ôn tập ĐGNL'}**.\n\n> **Câu hỏi:** ${initialContext.question || ''}${wrongText}\n\nThầy là **Gia Sư AI Đồng Hành**. Để giúp em nhớ bài thật kỹ, thầy sẽ gợi ý từng bước thay vì đưa đáp án sẵn. Em hãy chia sẻ với thầy: **Theo đề bài, dữ kiện nào là quan trọng nhất và vì sao em lại chọn phương án trên?**`,
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           topicLabel: initialContext.skill || null,
           interactionId: null
@@ -48,7 +48,7 @@ export default function AISocraticTutorModal({ isOpen, onClose, initialContext =
         setMessages([
           {
             sender: 'ai',
-            text: 'Chào em! Thầy là **Gia Sư AI Socratic**. Thầy sẽ không giải bài thay em hay đưa ra đáp án sẵn, mà sẽ đặt câu hỏi gợi mở từng bước để em tự tìm ra hướng giải đúng.\n\nEm đang gặp khó khăn ở bài tập hay chuyên đề nào?',
+            text: 'Chào em! Thầy là **Gia Sư AI Đồng Hành**. Thầy sẽ gợi mở từng bước dễ hiểu để em tự tìm ra cách giải và nắm chắc kiến thức.\n\nEm đang gặp khó khăn ở câu hỏi hay chủ đề nào?',
             timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
             topicLabel: null,
             interactionId: null
@@ -252,7 +252,7 @@ export default function AISocraticTutorModal({ isOpen, onClose, initialContext =
             <div>
               <div className="flex flex-wrap items-center gap-2">
                 <h2 className="text-base sm:text-lg font-extrabold tracking-tight text-white">
-                  Gia Sư AI Socratic Tutor
+                  Gia Sư AI Đồng Hành
                 </h2>
                 {initialContext?.skill ? (
                   <span className="px-2.5 py-0.5 rounded-full bg-indigo-500/30 text-cyan-300 border border-cyan-400/30 text-[10px] font-bold">
@@ -346,17 +346,17 @@ export default function AISocraticTutorModal({ isOpen, onClose, initialContext =
                             ) : (
                               <span className="flex items-center gap-1 text-slate-400">
                                 <HelpCircle className="w-3 h-3 text-slate-400" />
-                                <span>Gợi mở tư duy Socratic</span>
+                                <span>Hướng dẫn giải bài từng bước</span>
                               </span>
                             )}
 
                             <button
                               onClick={() => setReportingInteraction(m)}
                               className="flex items-center gap-1 text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
-                              title="Báo cáo câu trả lời vi phạm quy tắc Socratic hoặc sai lệch"
+                              title="Góp ý nếu câu trả lời của AI chưa chính xác hoặc khó hiểu"
                             >
                               <Flag className="w-3 h-3" />
-                              <span>Báo cáo</span>
+                              <span>Góp ý</span>
                             </button>
                           </div>
                         </div>
@@ -449,7 +449,7 @@ export default function AISocraticTutorModal({ isOpen, onClose, initialContext =
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-rose-600 font-extrabold text-sm">
                 <Flag className="w-4 h-4" />
-                <span>Báo Cáo Vi Phạm Quy Tắc Socratic</span>
+                <span>Góp Ý Chất Lượng Câu Trả Lời Của AI</span>
               </div>
               <button
                 onClick={() => setReportingInteraction(null)}

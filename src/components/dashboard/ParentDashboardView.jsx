@@ -16,6 +16,7 @@ import {
   QrCode
 } from 'lucide-react';
 import { practiceService } from '../../services/practiceService';
+import StudentEarlyWarningsCard from './StudentEarlyWarningsCard';
 import { toast } from '../../context/ToastContext';
 import PayOsCheckoutModal from '../modals/PayOsCheckoutModal';
 import paymentService from '../../services/paymentService';
@@ -502,8 +503,11 @@ export default function ParentDashboardView({ currentUser, onNavigateTuition }) 
           </div>
         </div>
       </div>
+      {/* Early Warnings & Counseling Feed for Guardian */}
+      <StudentEarlyWarningsCard studentId={child?.studentId} />
+
       {/* PayOS Modal */}
-      <PayOsCheckoutModal 
+      <PayOsCheckoutModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         paymentData={activePaymentData}

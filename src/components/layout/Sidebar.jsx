@@ -1,48 +1,57 @@
 import React from 'react';
-import { 
-  LayoutDashboard, 
-  Target, 
-  GitFork, 
-  Zap, 
-  BookOpenCheck, 
-  Bot, 
-  Video, 
-  BarChart3, 
+import {
+  LayoutDashboard,
+  Target,
+  GitFork,
+  Zap,
+  BookOpenCheck,
+  Bot,
+  Video,
+  BarChart3,
   Settings,
   Sparkles,
-  HelpCircle,
   Award,
   ShieldCheck,
   History,
+  Brain,
   CreditCard
 } from 'lucide-react';
 
-export default function Sidebar({ activeTab, setActiveTab, activeRole, studentDashboard, onOpenDiagnostic, onOpenZPD, onOpenAiTutor, onOpenProvision, onOpenTuition }) {
-  
+export default function Sidebar({
+  activeTab,
+  setActiveTab,
+  activeRole,
+  studentDashboard,
+  onOpenDiagnostic,
+  onOpenZPD,
+  onOpenAiTutor,
+  onOpenProvision,
+  onOpenTuition
+}) {
   const navItemsSection1 = [
-    { id: 'dashboard', label: 'Dashboard (Tổng quan)', icon: LayoutDashboard },
-    { id: 'diagnostic', label: 'Khảo thí & Chẩn đoán', icon: Target, badge: 'Flow 1' },
-    { id: 'history', label: 'Lịch sử làm bài', icon: History, badge: 'Xem lại & AI' },
-    { id: 'roadmap', label: 'Dàn kiến thức & Lộ trình', icon: GitFork, badge: 'Flow 2' },
-    { id: 'adaptive', label: 'Luyện tập ZPD', icon: Zap, badge: 'Flow 3', onClick: onOpenZPD },
-    { id: 'question_bank', label: 'Ngân hàng đề & Thi thử', icon: BookOpenCheck },
+    { id: 'dashboard', label: 'Trang chủ học tập', icon: LayoutDashboard },
+    { id: 'diagnostic', label: 'Kiểm tra đánh giá năng lực', icon: Target, onClick: onOpenDiagnostic },
+    { id: 'history', label: 'Lịch sử làm bài', icon: History, badge: 'Xem lại' },
+    { id: 'mistakes_sm2', label: 'Sổ tay câu làm sai', icon: Brain, badge: 'Ôn lại' },
+    { id: 'roadmap', label: 'Dàn kiến thức & Lộ trình', icon: GitFork },
+    { id: 'adaptive', label: 'Luyện tập theo chủ đề', icon: Zap, onClick: onOpenZPD },
+    { id: 'question_bank', label: 'Ngân hàng đề & Thi thử', icon: BookOpenCheck }
   ];
 
   const navItemsSection2 = [
-    { id: 'ai_tutor', label: 'AI Socratic Tutor', icon: Bot, badge: 'Flow 4', highlight: true, onClick: onOpenAiTutor },
-    { id: 'live_qa', label: 'Lớp học & Live Q&A', icon: Video, badge: 'Realtime' },
-    { id: 'analytics', label: 'Báo cáo & Dự báo', icon: BarChart3, badge: 'Flow 5 & 6' },
+    { id: 'ai_tutor', label: 'Hỏi Gia sư AI', icon: Bot, badge: '24/7', highlight: true, onClick: onOpenAiTutor },
+    { id: 'live_qa', label: 'Lớp học & Hỏi đáp trực tiếp', icon: Video, badge: 'Trực tiếp' },
+    { id: 'analytics', label: 'Kết quả & Dự báo điểm', icon: BarChart3 },
     { id: 'tuition', label: 'Học phí & Gói học', icon: CreditCard, badge: 'PayOS', highlight: activeRole === 'parent', onClick: onOpenTuition },
-    ...((activeRole === 'manager' || activeRole === 'admin') ? [
-      { id: 'provision', label: 'Cấp tài khoản (IAM)', icon: ShieldCheck, badge: 'Postgres', onClick: onOpenProvision }
-    ] : []),
-    { id: 'settings', label: 'Cài đặt tài khoản', icon: Settings },
+    ...((activeRole === 'manager' || activeRole === 'admin')
+      ? [{ id: 'provision', label: 'Quản lý tài khoản', icon: ShieldCheck, onClick: onOpenProvision }]
+      : []),
+    { id: 'settings', label: 'Cài đặt tài khoản', icon: Settings }
   ];
 
   return (
     <aside className="w-64 bg-white border-r border-slate-200/80 flex flex-col justify-between shrink-0 select-none min-h-[calc(100vh-65px)]">
       <div>
-        
         {/* Brand Logo Header */}
         <div className="p-5 border-b border-slate-100 flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-extrabold shadow-md shadow-blue-500/30">
@@ -75,19 +84,25 @@ export default function Sidebar({ activeTab, setActiveTab, activeRole, studentDa
                     if (item.onClick) item.onClick();
                   }}
                   className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all group ${
-                    isActive 
-                      ? 'bg-blue-600 text-white shadow-md shadow-blue-600/25 font-bold' 
+                    isActive
+                      ? 'bg-blue-600 text-white shadow-md shadow-blue-600/25 font-bold'
                       : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <Icon className={`w-4 h-4 transition-transform group-hover:scale-110 ${isActive ? 'text-white' : 'text-slate-400 group-hover:text-blue-600'}`} />
+                    <Icon
+                      className={`w-4 h-4 transition-transform group-hover:scale-110 ${
+                        isActive ? 'text-white' : 'text-slate-400 group-hover:text-blue-600'
+                      }`}
+                    />
                     <span>{item.label}</span>
                   </div>
                   {item.badge && (
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-bold ${
-                      isActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'
-                    }`}>
+                    <span
+                      className={`text-[10px] px-1.5 py-0.5 rounded-md font-bold ${
+                        isActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'
+                      }`}
+                    >
                       {item.badge}
                     </span>
                   )}
@@ -114,21 +129,27 @@ export default function Sidebar({ activeTab, setActiveTab, activeRole, studentDa
                     if (item.onClick) item.onClick();
                   }}
                   className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all group ${
-                    isActive 
-                      ? 'bg-blue-600 text-white shadow-md shadow-blue-600/25 font-bold' 
-                      : item.highlight 
-                        ? 'bg-blue-50/80 text-blue-700 hover:bg-blue-100/80 border border-blue-200/50' 
+                    isActive
+                      ? 'bg-blue-600 text-white shadow-md shadow-blue-600/25 font-bold'
+                      : item.highlight
+                        ? 'bg-blue-50/80 text-blue-700 hover:bg-blue-100/80 border border-blue-200/50'
                         : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <Icon className={`w-4 h-4 transition-transform group-hover:scale-110 ${isActive ? 'text-white' : item.highlight ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-600'}`} />
+                    <Icon
+                      className={`w-4 h-4 transition-transform group-hover:scale-110 ${
+                        isActive ? 'text-white' : item.highlight ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-600'
+                      }`}
+                    />
                     <span>{item.label}</span>
                   </div>
                   {item.badge && (
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-bold ${
-                      isActive ? 'bg-white/20 text-white' : item.highlight ? 'bg-blue-200/60 text-blue-800' : 'bg-slate-100 text-slate-500'
-                    }`}>
+                    <span
+                      className={`text-[10px] px-1.5 py-0.5 rounded-md font-bold ${
+                        isActive ? 'bg-white/20 text-white' : item.highlight ? 'bg-blue-200/60 text-blue-800' : 'bg-slate-100 text-slate-500'
+                      }`}
+                    >
                       {item.badge}
                     </span>
                   )}
@@ -137,7 +158,6 @@ export default function Sidebar({ activeTab, setActiveTab, activeRole, studentDa
             })}
           </nav>
         </div>
-
       </div>
 
       {/* Sidebar Footer Widget: Adaptive Status */}
@@ -145,12 +165,12 @@ export default function Sidebar({ activeTab, setActiveTab, activeRole, studentDa
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-1.5 text-xs font-bold text-blue-400">
             <Award className="w-4 h-4" />
-            <span>Khảo thí IRT & BKT</span>
+            <span>Tiến độ điểm mục tiêu</span>
           </div>
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
         </div>
         <div className="text-[11px] text-slate-300 leading-snug mb-3">
-          Mô hình đo lường năng lực chuẩn ĐHQG-HCM đang chạy định kỳ.
+          Cập nhật tự động sau mỗi bài luyện tập và thi thử ĐGNL.
         </div>
         <div className="w-full bg-slate-700 h-1.5 rounded-full overflow-hidden mb-1">
           <div
@@ -170,22 +190,18 @@ export default function Sidebar({ activeTab, setActiveTab, activeRole, studentDa
                 )
               )}%`
             }}
-          ></div>
+          />
         </div>
         <div className="flex justify-between text-[10px] text-slate-400 font-semibold">
           <span>
-            Theta 0:{' '}
+            Hiện tại:{' '}
             {studentDashboard?.needsOnboarding
-              ? 'Chưa đo'
-              : studentDashboard?.theta0 !== undefined && studentDashboard?.theta0 !== null
-                ? studentDashboard.theta0 > 0
-                  ? `+${studentDashboard.theta0}`
-                  : studentDashboard.theta0
-                : '+0.65'}
+              ? 'Chưa có bài thi'
+              : `${studentDashboard?.currentEstimatedScore ?? 820}đ`}
           </span>
           <span className="text-emerald-400 font-bold">
             {studentDashboard?.needsOnboarding
-              ? '0% Đích'
+              ? '0% mục tiêu'
               : `${Math.min(
                   100,
                   Math.round(
@@ -193,11 +209,10 @@ export default function Sidebar({ activeTab, setActiveTab, activeRole, studentDa
                       (studentDashboard?.targetScore || 1000)) *
                       100
                   )
-                )}% Đích`}
+                )}% mục tiêu`}
           </span>
         </div>
       </div>
-
     </aside>
   );
 }

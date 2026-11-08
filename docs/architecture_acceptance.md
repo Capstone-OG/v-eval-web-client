@@ -917,6 +917,15 @@ pm run build completes in 905ms (3,013 modules transformed, 0 errors).
 
 ---
 
+### 4.64. Core Flow 6 Service Layer, Score Forecast, Early Warnings, Mistake Notebook & Student-Friendly UX Normalization (`practiceService.js`, `ScorePredictionPanel.jsx`, `StudentEarlyWarningsCard.jsx`, `EarlyWarningsMentorPanel.jsx`, `MistakeNotebookSM2View.jsx`, `LearningAnalyticsView.jsx`)
+- **13-Endpoint Core Flow 6 Client Integration (`apiClient.js`, `practiceService.js`, `tests/practiceService.flow6.test.js`)**:
+  - Added `apiClient.patch`, structured `Result<T>` error unwrapping, and complete Gateway (`:5212`) client methods for SEM score predictions, Knapsack ROI remediation sessions, BR-04 3-tier early warnings, mentor intervention resolution & tripartite counseling scheduling, and SM-2 spaced-repetition mistake reviews.
+- **Multi-Role UI Suite & Learner-Centric Copy Abstraction**:
+  - Implemented `ScorePredictionPanel.jsx`, `PrescriptionPracticeModal.jsx`, `NotificationBellPopover.jsx`, `StudentEarlyWarningsCard.jsx`, `EarlyWarningsMentorPanel.jsx`, and `MistakeNotebookSM2View.jsx` seamlessly coexisting with PayOS VietQR (`TuitionPaymentView.jsx`, `PayOsCheckoutModal.jsx`).
+  - Abstracted all internal psychometric/algorithmic labels (`Core Flow 1..6`, `Socratic`, `IRT 2PL`, `BKT P(Lt)`, `SEM 95%`, `Knapsack ROI`, `SM-2`, `BR-04`, `PAT_SKILL_*`, `AUTO_INIT`) into clear, study-focused Vietnamese copy across student-facing views and modals.
+
+---
+
 ## 5. Verification & Acceptance Criteria
 
 1. **Clean Production Build**: Executed `npm run build` with 0 syntax or bundle errors; production artifacts outputted to `dist/` within 763ms on Vite 8 and React 19.

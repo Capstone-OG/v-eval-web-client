@@ -111,7 +111,7 @@ const buildRichSocraticFallback = ({ questionLatex, options, studentWrongOption,
     return 'Chào em! Thầy là **Gia Sư AI Socratic**. Rất vui được đồng hành cùng em ôn luyện ĐGNL. Em đang gặp khó khăn ở dạng bài tập nào hay chuyên đề nào (Toán học, Tư duy Logic, Tiếng Việt, KHTN/KHXH) cần thầy cùng gợi mở không? Em cứ gửi đề bài hoặc thắc mắc cho thầy nhé!';
   }
 
-  if (qLower.includes('p \\Rightarrow q') || qLower.includes('p \Rightarrow q') || qLower.includes('kéo theo') || qLower.includes('mệnh đề') || qLower.includes('bảng chân trị')) {
+  if (qLower.includes('p \\Rightarrow q') || qLower.includes('p rightarrow q') || qLower.includes('kéo theo') || qLower.includes('mệnh đề') || qLower.includes('bảng chân trị')) {
     return (
       `💡 **Gợi ý phương pháp giải Socratic (Toán logic mệnh đề & suy luận kéo theo):**\n\n` +
       `- **Phân tích lựa chọn:** Với câu hỏi *"${cleanQ}"*, em đang chọn phương án **${wrongKey}${wrongVal}**.\n` +
@@ -169,6 +169,553 @@ export const FLOW5_DEFAULTS = {
   CLASS_ID: '11111111-2222-3333-4444-555555555555',
   SECONDARY_CLASS_ID: 'c0000000-0000-0000-0000-000000000001',
   CAMPUS_ID: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
+};
+
+export const FLOW6_DEFAULTS = {
+  STUDENT_ID: FLOW5_DEFAULTS.STUDENT_ID,
+  MENTOR_ID: 'd0000000-0000-0000-0000-000000000001',
+  CLASS_ID: FLOW5_DEFAULTS.CLASS_ID,
+  ALERT_RED_ID: 'f6000000-0000-4000-8000-000000000001',
+  ALERT_YELLOW_ID: 'f6000000-0000-4000-8000-000000000002',
+  ALERT_UNREALISTIC_ID: 'f6000000-0000-4000-8000-000000000003',
+  ALERT_GREEN_ID: 'f6000000-0000-4000-8000-000000000004',
+  MISTAKE_1_ID: 'f6100000-0000-4000-8000-000000000001',
+  MISTAKE_2_ID: 'f6100000-0000-4000-8000-000000000002',
+  MISTAKE_3_ID: 'f6100000-0000-4000-8000-000000000003'
+};
+
+const FLOW6_STORAGE_KEY = 'veval_flow6_state_v1';
+
+const emitFlow6Updated = (detail = {}) => {
+  if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function' && typeof CustomEvent === 'function') {
+    window.dispatchEvent(new CustomEvent('veval:flow6-updated', { detail }));
+  }
+};
+
+const readFlow6LocalState = () => {
+  try {
+    const raw = localStorage.getItem(FLOW6_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+};
+
+const writeFlow6LocalState = (nextState) => {
+  try {
+    localStorage.setItem(FLOW6_STORAGE_KEY, JSON.stringify(nextState));
+  } catch {
+    // Ignore storage quota errors in restricted environments
+  }
+};
+
+const normalizePrescriptionItem = (item, idx = 0) => {
+  const patternId = item?.patternId || item?.pattern_id || `PAT_CORE6_0${idx + 1}`;
+  const patternName = item?.patternName || item?.pattern_name || 'Dạng bài trọng tâm bù điểm V-ACT';
+  const skillId = ensureGuid(item?.skillId || item?.skill_id, '88888888-9999-aaaa-bbbb-cccccccccccc');
+  const deltaScore = Number(item?.deltaScore ?? item?.delta_score ?? 25);
+  const studyHoursNeeded = Number(item?.studyHoursNeeded ?? item?.study_hours_needed ?? 2.5);
+  const roiScore = Number(
+    item?.roiScore ?? item?.roi_score ?? Number((deltaScore / Math.max(0.5, studyHoursNeeded)).toFixed(2))
+  );
+  const priorityRank = Number(item?.priorityRank ?? item?.priority_rank ?? idx + 1);
+  const isRemedied = Boolean(item?.isRemedied ?? item?.is_remedied ?? false);
+
+  return {
+    patternId,
+    patternName,
+    skillId,
+    deltaScore,
+    studyHoursNeeded,
+    roiScore,
+    priorityRank,
+    isRemedied,
+    pattern_id: patternId,
+    pattern_name: patternName,
+    skill_id: skillId,
+    delta_score: deltaScore,
+    study_hours_needed: studyHoursNeeded,
+    roi_score: roiScore,
+    priority_rank: priorityRank,
+    is_remedied: isRemedied
+  };
+};
+
+const normalizeForecastResponse = (raw, fallbackStudentId) => {
+  const studentId = ensureGuid(raw?.studentId, fallbackStudentId);
+  const predictedScore = Number(raw?.forecast?.predictedScore ?? raw?.predictedScore ?? 845);
+  const sem = Number(raw?.forecast?.sem ?? raw?.semScore ?? 24.5);
+  const margin = Math.round(1.96 * sem);
+  const minScore = Number(raw?.forecast?.scoreRange?.min ?? Math.max(0, predictedScore - margin));
+  const maxScore = Number(raw?.forecast?.scoreRange?.max ?? Math.min(1200, predictedScore + margin));
+  const targetScore = Number(raw?.balanceSheet?.targetScore ?? raw?.targetScore ?? 920);
+  const deficitScore = Number(
+    raw?.balanceSheet?.deficitScore ?? raw?.deficitScore ?? Math.max(0, targetScore - predictedScore)
+  );
+  const status =
+    raw?.balanceSheet?.status ||
+    raw?.status ||
+    (deficitScore <= 0 ? 'ON_TRACK' : deficitScore <= 80 ? 'AT_RISK' : 'CRITICAL');
+
+  const prescriptions = Array.isArray(raw?.prescriptions)
+    ? raw.prescriptions.map((p, i) => normalizePrescriptionItem(p, i))
+    : [];
+
+  return {
+    studentId,
+    forecast: {
+      predictedScore,
+      scoreRange: { min: minScore, max: maxScore },
+      sem,
+      confidenceRate: Number(raw?.forecast?.confidenceRate ?? raw?.confidenceRate ?? 0.95),
+      lastUpdated: raw?.forecast?.lastUpdated || raw?.createdAt || new Date().toISOString(),
+      calculationSource: raw?.forecast?.calculationSource || raw?.calculationSource || 'MOCK_EXAM'
+    },
+    balanceSheet: {
+      targetScore,
+      deficitScore,
+      status
+    },
+    prescriptions
+  };
+};
+
+const PRESCRIPTION_QUESTION_BANK = {
+  PAT_TOAN_LOGIC_01: {
+    patternName: 'Mệnh đề kéo theo, phản đảo & bảng chân trị suy luận V-ACT',
+    targetDeltaScore: 30,
+    questions: [
+      {
+        questionId: 'f6200001-0000-4000-8000-000000000001',
+        questionOrder: 1,
+        difficultyB: 0.25,
+        correctOption: 'C',
+        content:
+          'Cho mệnh đề kéo theo $P \\Rightarrow Q$: *"Nếu tứ giác $ABCD$ là hình thoi thì hai đường chéo $AC$ và $BD$ vuông góc với nhau"*. Mệnh đề nào dưới đây **tương đương logic** với mệnh đề đã cho?',
+        options: [
+          { optionId: 'A', content: 'Nếu $AC \\perp BD$ thì tứ giác $ABCD$ là hình thoi.' },
+          { optionId: 'B', content: 'Nếu tứ giác $ABCD$ không là hình thoi thì $AC$ không vuông góc với $BD$.' },
+          { optionId: 'C', content: 'Nếu $AC$ không vuông góc với $BD$ thì tứ giác $ABCD$ không là hình thoi.' },
+          { optionId: 'D', content: 'Tứ giác $ABCD$ là hình thoi khi và chỉ khi $AC \\perp BD$.' }
+        ]
+      },
+      {
+        questionId: 'f6200001-0000-4000-8000-000000000002',
+        questionOrder: 2,
+        difficultyB: 0.45,
+        correctOption: 'B',
+        content:
+          'Trong đội tuyển học sinh giỏi gồm 4 bạn An, Bình, Chi, Dũng có đúng 1 bạn đạt giải Nhất. Biết cả 3 mệnh đề sau đều đúng: (1) *"Nếu An đạt giải Nhất thì Bình cũng đạt giải Nhất"*; (2) *"An hoặc Bình hoặc Chi đạt giải Nhất"*; (3) *"Chi không đạt giải Nhất"*. Hỏi ai là người đạt giải Nhất?',
+        options: [
+          { optionId: 'A', content: 'An đạt giải Nhất' },
+          { optionId: 'B', content: 'Bình đạt giải Nhất' },
+          { optionId: 'C', content: 'Chi đạt giải Nhất' },
+          { optionId: 'D', content: 'Dũng đạt giải Nhất' }
+        ]
+      },
+      {
+        questionId: 'f6200001-0000-4000-8000-000000000003',
+        questionOrder: 3,
+        difficultyB: 0.5,
+        correctOption: 'A',
+        content:
+          'Phủ định của mệnh đề $\\forall x \\in \\mathbb{R},\\; x^2 - 4x + 5 > 0$ là mệnh đề nào sau đây?',
+        options: [
+          { optionId: 'A', content: '$\\exists x \\in \\mathbb{R},\\; x^2 - 4x + 5 \\le 0$' },
+          { optionId: 'B', content: '$\\exists x \\in \\mathbb{R},\\; x^2 - 4x + 5 < 0$' },
+          { optionId: 'C', content: '$\\forall x \\in \\mathbb{R},\\; x^2 - 4x + 5 \\le 0$' },
+          { optionId: 'D', content: '$\\nexists x \\in \\mathbb{R},\\; x^2 - 4x + 5 > 0$' }
+        ]
+      }
+    ]
+  },
+  PAT_HOA_PH_03: {
+    patternName: 'Tính pH dung dịch hỗn hợp axit - bazơ mạnh & bảo toàn điện tích',
+    targetDeltaScore: 25,
+    questions: [
+      {
+        questionId: 'f6200002-0000-4000-8000-000000000001',
+        questionOrder: 1,
+        difficultyB: 0.3,
+        correctOption: 'B',
+        content:
+          'Trộn $100\\text{ ml}$ dung dịch $HCl\\; 0,1\\text{ M}$ với $100\\text{ ml}$ dung dịch $NaOH\\; 0,3\\text{ M}$. Giá trị $pH$ của dung dịch thu được ở $25^\\circ C$ là bao nhiêu?',
+        options: [
+          { optionId: 'A', content: '$pH = 12$' },
+          { optionId: 'B', content: '$pH = 13$' },
+          { optionId: 'C', content: '$pH = 1$' },
+          { optionId: 'D', content: '$pH = 12,3$' }
+        ]
+      },
+      {
+        questionId: 'f6200002-0000-4000-8000-000000000002',
+        questionOrder: 2,
+        difficultyB: 0.45,
+        correctOption: 'C',
+        content:
+          'Dung dịch $X$ chứa $H_2SO_4\\; 0,005\\text{ M}$. Giá trị $pH$ của dung dịch $X$ (coi $H_2SO_4$ điện li hoàn toàn cả 2 nấc ở nồng độ loãng) là:',
+        options: [
+          { optionId: 'A', content: '$pH = 2,3$' },
+          { optionId: 'B', content: '$pH = 3,0$' },
+          { optionId: 'C', content: '$pH = 2,0$' },
+          { optionId: 'D', content: '$pH = 1,7$' }
+        ]
+      },
+      {
+        questionId: 'f6200002-0000-4000-8000-000000000003',
+        questionOrder: 3,
+        difficultyB: 0.55,
+        correctOption: 'D',
+        content:
+          'Cần pha loãng dung dịch $HCl$ có $pH = 2$ bằng nước cất gấp bao nhiêu lần về thể tích để thu được dung dịch mới có $pH = 4$?',
+        options: [
+          { optionId: 'A', content: '2 lần' },
+          { optionId: 'B', content: '10 lần' },
+          { optionId: 'C', content: '50 lần' },
+          { optionId: 'D', content: '100 lần' }
+        ]
+      }
+    ]
+  },
+  PAT_TOAN_HAMSO_02: {
+    patternName: 'Cực trị hàm hợp & tương giao đồ thị đạo hàm chứa tham số',
+    targetDeltaScore: 20,
+    questions: [
+      {
+        questionId: 'f6200003-0000-4000-8000-000000000001',
+        questionOrder: 1,
+        difficultyB: 0.4,
+        correctOption: 'B',
+        content:
+          'Cho hàm số $y = f(x)$ có đạo hàm $f\'(x) = x^2(x - 1)(x + 2)^3$. Số điểm cực trị của hàm số $y = f(x)$ là:',
+        options: [
+          { optionId: 'A', content: '3 điểm cực trị' },
+          { optionId: 'B', content: '2 điểm cực trị' },
+          { optionId: 'C', content: '1 điểm cực trị' },
+          { optionId: 'D', content: '4 điểm cực trị' }
+        ]
+      },
+      {
+        questionId: 'f6200003-0000-4000-8000-000000000002',
+        questionOrder: 2,
+        difficultyB: 0.55,
+        correctOption: 'A',
+        content:
+          'Hàm số $y = \\frac{2x - 3}{x + 1}$ có đường tiệm cận ngang và tiệm cận đứng lần lượt là:',
+        options: [
+          { optionId: 'A', content: '$y = 2$ và $x = -1$' },
+          { optionId: 'B', content: '$y = -3$ và $x = -1$' },
+          { optionId: 'C', content: '$y = 2$ và $x = 1$' },
+          { optionId: 'D', content: '$y = -1$ và $x = 2$' }
+        ]
+      },
+      {
+        questionId: 'f6200003-0000-4000-8000-000000000003',
+        questionOrder: 3,
+        difficultyB: 0.6,
+        correctOption: 'C',
+        content:
+          'Giá trị lớn nhất của hàm số $f(x) = -x^2 + 6x - 5$ trên đoạn $[0; 4]$ bằng:',
+        options: [
+          { optionId: 'A', content: '$-5$' },
+          { optionId: 'B', content: '$3$' },
+          { optionId: 'C', content: '$4$' },
+          { optionId: 'D', content: '$6$' }
+        ]
+      }
+    ]
+  }
+};
+
+const buildSeedForecast = (studentId, realSubmissions = []) => {
+  const resolvedStudentId = ensureGuid(studentId, FLOW6_DEFAULTS.STUDENT_ID);
+  const localState = readFlow6LocalState();
+  const studentPatch = localState.forecasts?.[resolvedStudentId] || {};
+  const remediedMap = studentPatch.remediedPatterns || {};
+
+  const latestSub = realSubmissions[0] || null;
+  const basePredicted =
+    studentPatch.predictedScore ??
+    (latestSub ? Math.max(420, scaleLocalSubmissionScore(latestSub)) : 845);
+  const targetScore = studentPatch.targetScore ?? (Number(latestSub?.targetScore) > 0 ? Number(latestSub.targetScore) : 920);
+  const sem = studentPatch.sem ?? 24.5;
+
+  const basePrescriptions = [
+    {
+      patternId: 'PAT_TOAN_LOGIC_01',
+      patternName: 'Mệnh đề kéo theo, phản đảo & bảng chân trị suy luận V-ACT',
+      skillId: '88888888-9999-aaaa-bbbb-cccccccccccc',
+      deltaScore: 30,
+      studyHoursNeeded: 2.0,
+      roiScore: 15.0,
+      priorityRank: 1,
+      isRemedied: Boolean(remediedMap.PAT_TOAN_LOGIC_01)
+    },
+    {
+      patternId: 'PAT_HOA_PH_03',
+      patternName: 'Tính pH dung dịch hỗn hợp axit - bazơ mạnh & bảo toàn điện tích',
+      skillId: '88888888-9999-aaaa-bbbb-ffffffffffff',
+      deltaScore: 25,
+      studyHoursNeeded: 2.0,
+      roiScore: 12.5,
+      priorityRank: 2,
+      isRemedied: Boolean(remediedMap.PAT_HOA_PH_03)
+    },
+    {
+      patternId: 'PAT_TOAN_HAMSO_02',
+      patternName: 'Cực trị hàm hợp & tương giao đồ thị đạo hàm chứa tham số',
+      skillId: '88888888-9999-aaaa-bbbb-dddddddddddd',
+      deltaScore: 20,
+      studyHoursNeeded: 2.5,
+      roiScore: 8.0,
+      priorityRank: 3,
+      isRemedied: Boolean(remediedMap.PAT_TOAN_HAMSO_02)
+    }
+  ];
+
+  const recoveredTotal = basePrescriptions
+    .filter((p) => p.isRemedied)
+    .reduce((acc, p) => acc + p.deltaScore, 0);
+
+  const effectivePredicted = Math.min(1200, Math.round(basePredicted + recoveredTotal));
+  const margin = Math.round(1.96 * sem);
+  const deficitScore = Math.max(0, targetScore - effectivePredicted);
+  const status = deficitScore <= 0 ? 'ON_TRACK' : deficitScore <= 80 ? 'AT_RISK' : 'CRITICAL';
+
+  return {
+    ...normalizeForecastResponse(
+      {
+        studentId: resolvedStudentId,
+        forecast: {
+          predictedScore: effectivePredicted,
+          scoreRange: {
+            min: Math.max(0, effectivePredicted - margin),
+            max: Math.min(1200, effectivePredicted + margin)
+          },
+          sem,
+          confidenceRate: 0.95,
+          lastUpdated: studentPatch.lastUpdated || new Date().toISOString(),
+          calculationSource: studentPatch.calculationSource || (latestSub ? 'DIAGNOSTIC_HYDRATED' : 'MOCK_EXAM')
+        },
+        balanceSheet: {
+          targetScore,
+          deficitScore,
+          status
+        },
+        prescriptions: basePrescriptions
+      },
+      resolvedStudentId
+    ),
+    _source: 'seed_fallback'
+  };
+};
+
+const buildSeedAlertsPool = (studentId) => {
+  const resolvedStudentId = ensureGuid(studentId, FLOW6_DEFAULTS.STUDENT_ID);
+  const localState = readFlow6LocalState();
+  const alertPatches = localState.alerts || {};
+  const now = Date.now();
+
+  const rawPool = [
+    {
+      alertId: FLOW6_DEFAULTS.ALERT_RED_ID,
+      studentId: resolvedStudentId,
+      studentName: 'Phạm Minh Hoàng',
+      classId: FLOW5_DEFAULTS.CLASS_ID,
+      alertType: 'RED',
+      message:
+        'Cảnh báo Đỏ (BR-04): Tốc độ tích lũy điểm tuần qua chậm hơn 38% quỹ đạo mục tiêu 920đ và hổng liên tiếp dạng Mệnh đề kéo theo (P(Lt) = 0.42). Khuyến nghị làm ngay Toa thuốc bù điểm ROI #1 (+30đ).',
+      isRead: false,
+      currentPredictedScore: 845,
+      targetScore: 920,
+      deficitScore: 75,
+      handledBy: null,
+      resolutionNotes: null,
+      resolvedAt: null,
+      createdAt: new Date(now - 2 * 3600000).toISOString()
+    },
+    {
+      alertId: FLOW6_DEFAULTS.ALERT_YELLOW_ID,
+      studentId: resolvedStudentId,
+      studentName: 'Phạm Minh Hoàng',
+      classId: FLOW5_DEFAULTS.CLASS_ID,
+      alertType: 'YELLOW',
+      message:
+        'Nhắc nhở Vàng (BR-04): Em có 3 câu hỏi trong Sổ tay lỗi sai SM-2 đã đến hạn ôn tập ngắt quãng hôm nay (Tính pH dung dịch & Đạo hàm hàm hợp).',
+      isRead: false,
+      currentPredictedScore: 845,
+      targetScore: 920,
+      deficitScore: 75,
+      handledBy: null,
+      resolutionNotes: null,
+      resolvedAt: null,
+      createdAt: new Date(now - 14 * 3600000).toISOString()
+    },
+    {
+      alertId: FLOW6_DEFAULTS.ALERT_UNREALISTIC_ID,
+      studentId: '3fa85f64-5717-4562-b3fc-2c963f66af99',
+      studentName: 'Lê Ngọc Bảo Trân',
+      classId: FLOW5_DEFAULTS.CLASS_ID,
+      alertType: 'UNREALISTIC_GOAL',
+      message:
+        'Cảnh báo Mục tiêu Vượt ngưỡng (BR-04 Tier 3): Điểm dự báo hiện tại 610đ (±48đ) cách mục tiêu 980đ tới 370 điểm trong khi quỹ thời gian ôn thi còn 6 tuần. Cần đặt lịch tư vấn 3 bên (Giáo viên - Học sinh - Phụ huynh) hiệu chỉnh lộ trình.',
+      isRead: false,
+      currentPredictedScore: 610,
+      targetScore: 980,
+      deficitScore: 370,
+      handledBy: null,
+      resolutionNotes: null,
+      resolvedAt: null,
+      createdAt: new Date(now - 5 * 3600000).toISOString()
+    },
+    {
+      alertId: 'f6000000-0000-4000-8000-000000000005',
+      studentId: '3fa85f64-5717-4562-b3fc-2c963f66af88',
+      studentName: 'Trần Quốc Tuấn',
+      classId: FLOW5_DEFAULTS.SECONDARY_CLASS_ID,
+      alertType: 'RED',
+      message:
+        'Cảnh báo Đỏ (BR-04): Gián đoạn chuỗi chuyên cần 5 ngày liên tiếp và tụt 45 điểm ở bài thi thử Đợt 2 miền Khoa học Tự nhiên.',
+      isRead: true,
+      currentPredictedScore: 735,
+      targetScore: 860,
+      deficitScore: 125,
+      handledBy: null,
+      resolutionNotes: null,
+      resolvedAt: null,
+      createdAt: new Date(now - 26 * 3600000).toISOString()
+    },
+    {
+      alertId: FLOW6_DEFAULTS.ALERT_GREEN_ID,
+      studentId: resolvedStudentId,
+      studentName: 'Phạm Minh Hoàng',
+      classId: FLOW5_DEFAULTS.CLASS_ID,
+      alertType: 'GREEN',
+      message:
+        'Tín hiệu Xanh: Miền Sử dụng Ngôn ngữ đạt độ vững vàng 82% và duy trì chuỗi chuyên cần ổn định.',
+      isRead: true,
+      currentPredictedScore: 845,
+      targetScore: 920,
+      deficitScore: 75,
+      handledBy: FLOW6_DEFAULTS.MENTOR_ID,
+      resolutionNotes: 'Đã biểu dương học sinh trên lớp và giao thêm đề đọc hiểu nâng cao.',
+      resolvedAt: new Date(now - 48 * 3600000).toISOString(),
+      createdAt: new Date(now - 72 * 3600000).toISOString()
+    }
+  ];
+
+  return rawPool.map((item) => {
+    const patch = alertPatches[item.alertId] || {};
+    return {
+      ...item,
+      ...patch
+    };
+  });
+};
+
+const buildSeedMistakeItems = (studentId) => {
+  const resolvedStudentId = ensureGuid(studentId, FLOW6_DEFAULTS.STUDENT_ID);
+  const localState = readFlow6LocalState();
+  const mistakePatches = localState.mistakes || {};
+  const now = Date.now();
+
+  const defaults = [
+    {
+      id: FLOW6_DEFAULTS.MISTAKE_1_ID,
+      studentId: resolvedStudentId,
+      questionId: 'f6200001-0000-4000-8000-000000000001',
+      skillId: '88888888-9999-aaaa-bbbb-cccccccccccc',
+      skillName: 'Toán logic mệnh đề & suy luận kéo theo',
+      patternId: 'PAT_TOAN_LOGIC_01',
+      cognitiveErrorTag: 'MISSING_CONCEPT',
+      studentNotes: 'Hay nhầm mệnh đề đảo Q => P với mệnh đề phản đảo ~Q => ~P.',
+      nextReviewDate: new Date(now - 3600000).toISOString(),
+      reviewCount: 2,
+      consecutiveCorrectReviews: 1,
+      intervalDays: 1,
+      easeFactor: 2.5,
+      isMastered: false,
+      lastReviewedAt: new Date(now - 86400000).toISOString(),
+      createdAt: new Date(now - 4 * 86400000).toISOString(),
+      updatedAt: new Date(now - 86400000).toISOString(),
+      questionContent:
+        'Cho mệnh đề $P \\Rightarrow Q$: *"Nếu số tự nhiên $n$ tận cùng bằng $0$ thì $n$ chia hết cho $5$"*. Mệnh đề phản đảo của mệnh đề trên là:',
+      options: [
+        { key: 'A', text: 'Nếu $n$ chia hết cho $5$ thì $n$ tận cùng bằng $0$.' },
+        { key: 'B', text: 'Nếu $n$ không chia hết cho $5$ thì $n$ không tận cùng bằng $0$.' },
+        { key: 'C', text: 'Nếu $n$ không tận cùng bằng $0$ thì $n$ không chia hết cho $5$.' },
+        { key: 'D', text: 'Số tự nhiên $n$ chia hết cho $5$ khi và chỉ khi $n$ tận cùng bằng $0$.' }
+      ],
+      correctOption: 'B',
+      explanation:
+        'Mệnh đề phản đảo của $P \\Rightarrow Q$ là $\\overline{Q} \\Rightarrow \\overline{P}$ (tương đương logic với mệnh đề gốc): *"Nếu $n$ không chia hết cho $5$ thì $n$ không tận cùng bằng $0$"*.'
+    },
+    {
+      id: FLOW6_DEFAULTS.MISTAKE_2_ID,
+      studentId: resolvedStudentId,
+      questionId: 'f6200002-0000-4000-8000-000000000001',
+      skillId: '88888888-9999-aaaa-bbbb-ffffffffffff',
+      skillName: 'Cân bằng phản ứng & pH dung dịch điện li',
+      patternId: 'PAT_HOA_PH_03',
+      cognitiveErrorTag: 'CARELESS',
+      studentNotes: 'Quên cộng tổng thể tích V1 + V2 = 200ml khi tính nồng độ [OH-] dư.',
+      nextReviewDate: new Date(now - 1800000).toISOString(),
+      reviewCount: 3,
+      consecutiveCorrectReviews: 2,
+      intervalDays: 6,
+      easeFactor: 2.6,
+      isMastered: false,
+      lastReviewedAt: new Date(now - 6 * 86400000).toISOString(),
+      createdAt: new Date(now - 10 * 86400000).toISOString(),
+      updatedAt: new Date(now - 6 * 86400000).toISOString(),
+      questionContent:
+        'Trộn $200\\text{ ml}$ dung dịch $HNO_3\\; 0,1\\text{ M}$ với $300\\text{ ml}$ dung dịch $KOH\\; 0,1\\text{ M}$. Dung dịch sau phản ứng có giá trị $pH$ ở $25^\\circ C$ bằng:',
+      options: [
+        { key: 'A', text: '$pH = 12,3$' },
+        { key: 'B', text: '$pH = 13,0$' },
+        { key: 'C', text: '$pH = 1,7$' },
+        { key: 'D', text: '$pH = 12,0$' }
+      ],
+      correctOption: 'A',
+      explanation:
+        'Ta có $n_{H^+} = 0,02\\text{ mol}$, $n_{OH^-} = 0,03\\text{ mol} \\Rightarrow n_{OH^-\\text{ dư}} = 0,01\\text{ mol}$. Tổng thể tích $V = 0,5\\text{ L} \\Rightarrow [OH^-] = \\frac{0,01}{0,5} = 0,02\\text{ M} \\Rightarrow pOH = -\\log(0,02) \\approx 1,7 \\Rightarrow pH = 12,3$.'
+    },
+    {
+      id: FLOW6_DEFAULTS.MISTAKE_3_ID,
+      studentId: resolvedStudentId,
+      questionId: 'f6200003-0000-4000-8000-000000000001',
+      skillId: '88888888-9999-aaaa-bbbb-dddddddddddd',
+      skillName: 'Đạo hàm hàm hợp & cực trị chứa tham số',
+      patternId: 'PAT_TOAN_HAMSO_02',
+      cognitiveErrorTag: 'MISREAD_QUESTION',
+      studentNotes: 'Đếm luôn nghiệm bội chẵn x^2 = 0 làm cực trị dù đạo hàm không đổi dấu.',
+      nextReviewDate: new Date(now + 12 * 86400000).toISOString(),
+      reviewCount: 4,
+      consecutiveCorrectReviews: 3,
+      intervalDays: 15,
+      easeFactor: 2.7,
+      isMastered: true,
+      lastReviewedAt: new Date(now - 2 * 86400000).toISOString(),
+      createdAt: new Date(now - 18 * 86400000).toISOString(),
+      updatedAt: new Date(now - 2 * 86400000).toISOString(),
+      questionContent:
+        'Cho hàm số $y = f(x)$ liên tục trên $\\mathbb{R}$ có đạo hàm $f\'(x) = (x - 2)^4(x + 1)(3 - x)$. Số điểm cực đại của hàm số là:',
+      options: [
+        { key: 'A', text: '2 điểm cực đại' },
+        { key: 'B', text: '1 điểm cực đại' },
+        { key: 'C', text: '3 điểm cực đại' },
+        { key: 'D', text: '0 điểm cực đại' }
+      ],
+      correctOption: 'B',
+      explanation:
+        'Nghiệm $x = 2$ là bội chẵn nên $f\'(x)$ không đổi dấu. Xét dấu $(x+1)(3-x)$: đổi dấu từ âm sang dương qua $x = -1$ (cực tiểu) và từ dương sang âm qua $x = 3$ (cực đại). Vậy có đúng $1$ điểm cực đại.'
+    }
+  ];
+
+  return defaults.map((item) => ({
+    ...item,
+    ...(mistakePatches[item.id] || {})
+  }));
 };
 
 const buildSeedStudentDashboard = (studentId) => ({
@@ -675,26 +1222,6 @@ export const practiceService = {
 
   async getDiagnosticSubmissionById(submissionId) {
     return (await apiClient.get(`/api/practice/diagnostic-submissions/${submissionId}`)).data;
-  },
-
-  async getMistakeNotebook({
-    studentId,
-    skillId = null,
-    cognitiveErrorTag = null,
-    isMastered = null,
-    pageIndex = 1,
-    pageSize = 20
-  } = {}) {
-    const resolvedId = ensureGuid(studentId || tokenStorage.getUser()?.id, FLOW5_DEFAULTS.STUDENT_ID);
-    const params = new URLSearchParams({
-      studentId: resolvedId,
-      pageIndex: String(pageIndex),
-      pageSize: String(pageSize)
-    });
-    if (skillId) params.set('skillId', skillId);
-    if (cognitiveErrorTag) params.set('cognitiveErrorTag', cognitiveErrorTag);
-    if (isMastered !== null && isMastered !== undefined) params.set('isMastered', String(isMastered));
-    return (await apiClient.get(`/api/practice/mistakes?${params.toString()}`)).data;
   },
 
   saveSubmissionToHistory(record) {
@@ -1557,6 +2084,760 @@ export const practiceService = {
     } catch (err) {
       console.warn('[Core Flow 5] getCampusComparativeHeatmap fallback activated:', err?.message);
       return buildSeedCampusComparativeHeatmap(resolvedCampusId);
+    }
+  },
+
+  // =========================================================================
+  // Core Flow 6: Dự Báo Điểm SEM 95%, Toa Thuốc Bù Điểm Knapsack ROI,
+  // Cảnh Báo Sớm BR-04 3 Tầng & Sổ Tay Lỗi Sai SM-2 (APIs 1 - 13)
+  // =========================================================================
+
+  async getMyForecast(studentId = null, { autoRecalculateOnMissing = true } = {}) {
+    const currentUser = tokenStorage.getUser();
+    const resolvedStudentId = ensureGuid(
+      studentId || currentUser?.id || currentUser?.userId,
+      FLOW6_DEFAULTS.STUDENT_ID
+    );
+    const headers = { 'X-User-Id': resolvedStudentId };
+
+    try {
+      const data = (
+        await apiClient.get(`/api/practice/predictions/my-forecast?studentId=${resolvedStudentId}`, {
+          headers
+        })
+      ).data;
+      return {
+        ...normalizeForecastResponse(data, resolvedStudentId),
+        _source: 'backend'
+      };
+    } catch (err) {
+      if (err?.status === 404 && autoRecalculateOnMissing) {
+        try {
+          await this.recalculatePrediction({
+            studentId: resolvedStudentId,
+            triggerSource: 'MANUAL'
+          });
+          const retried = (
+            await apiClient.get(`/api/practice/predictions/my-forecast?studentId=${resolvedStudentId}`, {
+              headers
+            })
+          ).data;
+          return {
+            ...normalizeForecastResponse(retried, resolvedStudentId),
+            _source: 'backend'
+          };
+        } catch (retryErr) {
+          console.warn('[Core Flow 6] autoRecalculateOnMissing fallback:', retryErr?.message);
+        }
+      }
+      console.warn('[Core Flow 6] getMyForecast fallback activated:', err?.message);
+      const realSubs = this.getRealUserSubmissions(resolvedStudentId);
+      return buildSeedForecast(resolvedStudentId, realSubs);
+    }
+  },
+
+  async getPrescriptionPracticeSession(patternId, studentId = null) {
+    const currentUser = tokenStorage.getUser();
+    const resolvedStudentId = ensureGuid(
+      studentId || currentUser?.id || currentUser?.userId,
+      FLOW6_DEFAULTS.STUDENT_ID
+    );
+    const safePatternId = String(patternId || 'PAT_TOAN_LOGIC_01').trim();
+    const headers = { 'X-User-Id': resolvedStudentId };
+
+    try {
+      const data = (
+        await apiClient.get(
+          `/api/practice/predictions/prescriptions/${encodeURIComponent(safePatternId)}/practice-session?studentId=${resolvedStudentId}`,
+          { headers }
+        )
+      ).data;
+      return { ...data, _source: 'backend' };
+    } catch (err) {
+      console.warn('[Core Flow 6] getPrescriptionPracticeSession fallback activated:', err?.message);
+      const bank = PRESCRIPTION_QUESTION_BANK[safePatternId] || PRESCRIPTION_QUESTION_BANK.PAT_TOAN_LOGIC_01;
+      return {
+        sessionId: deterministicUuidFromText(`session_${resolvedStudentId}_${safePatternId}`),
+        patternId: safePatternId,
+        patternName: bank.patternName,
+        targetDeltaScore: bank.targetDeltaScore,
+        suggestedDurationMinutes: 12,
+        totalQuestions: bank.questions.length,
+        questions: bank.questions.map(({ correctOption: _c, ...q }) => q),
+        _source: 'seed_fallback'
+      };
+    }
+  },
+
+  async submitPrescriptionPracticeSession(patternId, { sessionId, answers = [] } = {}, studentId = null) {
+    const currentUser = tokenStorage.getUser();
+    const resolvedStudentId = ensureGuid(
+      studentId || currentUser?.id || currentUser?.userId,
+      FLOW6_DEFAULTS.STUDENT_ID
+    );
+    const safePatternId = String(patternId || 'PAT_TOAN_LOGIC_01').trim();
+    const resolvedSessionId = ensureGuid(
+      sessionId,
+      deterministicUuidFromText(`session_${resolvedStudentId}_${safePatternId}`)
+    );
+    const sanitizedAnswers = (Array.isArray(answers) ? answers : []).map((ans, idx) => ({
+      questionId: ensureGuid(ans?.questionId, `f6200001-0000-4000-8000-00000000000${idx + 1}`),
+      selectedOption: cleanOptionKey(ans?.selectedOption, 'A'),
+      timeSpentSeconds: Math.max(1, Number(ans?.timeSpentSeconds || 25))
+    }));
+    const headers = { 'X-User-Id': resolvedStudentId };
+
+    try {
+      const data = (
+        await apiClient.post(
+          `/api/practice/predictions/prescriptions/${encodeURIComponent(safePatternId)}/submit-session?studentId=${resolvedStudentId}`,
+          {
+            sessionId: resolvedSessionId,
+            answers: sanitizedAnswers
+          },
+          { headers }
+        )
+      ).data;
+      emitFlow6Updated({ type: 'prescription_submitted', patternId: safePatternId });
+      return { ...data, _source: 'backend' };
+    } catch (err) {
+      console.warn('[Core Flow 6] submitPrescriptionPracticeSession fallback activated:', err?.message);
+      const bank = PRESCRIPTION_QUESTION_BANK[safePatternId] || PRESCRIPTION_QUESTION_BANK.PAT_TOAN_LOGIC_01;
+      const keyMap = new Map(bank.questions.map((q) => [q.questionId, q.correctOption]));
+      const totalQuestions = Math.max(1, bank.questions.length);
+      let correctCount = 0;
+
+      sanitizedAnswers.forEach((ans) => {
+        const expected = keyMap.get(ans.questionId) || 'B';
+        if (ans.selectedOption === expected) correctCount += 1;
+      });
+
+      const accuracy = Number((correctCount / totalQuestions).toFixed(2));
+      const isMastered = accuracy >= 0.67;
+      const previousMasteryPlt = 0.42;
+      const newMasteryPlt = isMastered ? 0.81 : Number((0.42 + accuracy * 0.25).toFixed(2));
+
+      const currentForecast = buildSeedForecast(resolvedStudentId, this.getRealUserSubmissions(resolvedStudentId));
+      const matchedPrescription = currentForecast.prescriptions.find((p) => p.patternId === safePatternId);
+      const deltaScore = matchedPrescription?.deltaScore ?? bank.targetDeltaScore ?? 25;
+      const alreadyRemedied = Boolean(matchedPrescription?.isRemedied);
+      const pointsRecovered = isMastered && !alreadyRemedied ? deltaScore : 0;
+
+      const localState = readFlow6LocalState();
+      const prevForecastState = localState.forecasts?.[resolvedStudentId] || {};
+      const nextRemedied = {
+        ...(prevForecastState.remediedPatterns || {}),
+        ...(isMastered ? { [safePatternId]: true } : {})
+      };
+
+      writeFlow6LocalState({
+        ...localState,
+        forecasts: {
+          ...(localState.forecasts || {}),
+          [resolvedStudentId]: {
+            ...prevForecastState,
+            remediedPatterns: nextRemedied,
+            lastUpdated: new Date().toISOString()
+          }
+        }
+      });
+
+      const updatedForecast = buildSeedForecast(resolvedStudentId, this.getRealUserSubmissions(resolvedStudentId));
+      emitFlow6Updated({ type: 'prescription_submitted', patternId: safePatternId });
+
+      return {
+        patternId: safePatternId,
+        totalQuestions,
+        correctCount,
+        accuracy,
+        previousMasteryPlt,
+        newMasteryPlt,
+        isMastered,
+        pointsRecovered,
+        remainingDeficit: updatedForecast.balanceSheet.deficitScore,
+        questionKeyMap: Object.fromEntries(keyMap),
+        message: isMastered
+          ? `Xuất sắc! Em đạt ${Math.round(accuracy * 100)}% độ chính xác, làm chủ dạng bài ${safePatternId} và thu hồi +${pointsRecovered} điểm bù đắp mục tiêu.`
+          : `Em làm đúng ${correctCount}/${totalQuestions} câu (${Math.round(accuracy * 100)}%). Cần đạt tối thiểu 67% để gạch nợ dạng bài này — hãy hỏi Gia sư AI Socratic ở câu sai rồi thử lại nhé!`,
+        _source: 'seed_fallback'
+      };
+    }
+  },
+
+  async recalculatePrediction({
+    studentId = null,
+    triggerSource = 'MANUAL',
+    referenceSubmissionId = null
+  } = {}) {
+    const currentUser = tokenStorage.getUser();
+    const resolvedStudentId = ensureGuid(
+      studentId || currentUser?.id || currentUser?.userId,
+      FLOW6_DEFAULTS.STUDENT_ID
+    );
+    const resolvedRefId = referenceSubmissionId ? ensureGuid(referenceSubmissionId, null) : null;
+    const headers = { 'X-User-Id': resolvedStudentId };
+
+    try {
+      const data = (
+        await apiClient.post(
+          '/api/practice/predictions/recalculate',
+          {
+            student_id: resolvedStudentId,
+            trigger_source: triggerSource || 'MANUAL',
+            reference_submission_id: resolvedRefId
+          },
+          { headers }
+        )
+      ).data;
+      emitFlow6Updated({ type: 'prediction_recalculated', studentId: resolvedStudentId });
+      return { ...data, _source: 'backend' };
+    } catch (err) {
+      console.warn('[Core Flow 6] recalculatePrediction fallback activated:', err?.message);
+      const localState = readFlow6LocalState();
+      const prevForecastState = localState.forecasts?.[resolvedStudentId] || {};
+      const nextSem = Math.max(18.0, Number(((prevForecastState.sem ?? 24.5) - 0.8).toFixed(1)));
+
+      writeFlow6LocalState({
+        ...localState,
+        forecasts: {
+          ...(localState.forecasts || {}),
+          [resolvedStudentId]: {
+            ...prevForecastState,
+            sem: nextSem,
+            calculationSource: triggerSource || 'MANUAL',
+            lastUpdated: new Date().toISOString()
+          }
+        }
+      });
+
+      const refreshed = buildSeedForecast(resolvedStudentId, this.getRealUserSubmissions(resolvedStudentId));
+      emitFlow6Updated({ type: 'prediction_recalculated', studentId: resolvedStudentId });
+
+      return {
+        predictionId: deterministicUuidFromText(`pred_${resolvedStudentId}_${Date.now()}`),
+        studentId: resolvedStudentId,
+        predictedScore: refreshed.forecast.predictedScore,
+        scoreRange: refreshed.forecast.scoreRange,
+        semScore: refreshed.forecast.sem,
+        confidenceRate: refreshed.forecast.confidenceRate,
+        targetScore: refreshed.balanceSheet.targetScore,
+        deficitScore: refreshed.balanceSheet.deficitScore,
+        status: refreshed.balanceSheet.status,
+        calculationSource: refreshed.forecast.calculationSource,
+        prescriptionItemsCount: refreshed.prescriptions.length,
+        createdAt: refreshed.forecast.lastUpdated,
+        _source: 'seed_fallback'
+      };
+    }
+  },
+
+  async getMyAlerts({ unreadOnly = false, alertType = null, studentId = null } = {}) {
+    const currentUser = tokenStorage.getUser();
+    const resolvedStudentId = ensureGuid(
+      studentId || currentUser?.id || currentUser?.userId,
+      FLOW6_DEFAULTS.STUDENT_ID
+    );
+    const params = new URLSearchParams();
+    params.set('studentId', resolvedStudentId);
+    if (unreadOnly) params.set('unreadOnly', 'true');
+    if (alertType && alertType !== 'ALL') params.set('alertType', String(alertType).toUpperCase());
+    const headers = { 'X-User-Id': resolvedStudentId };
+
+    try {
+      const data = (
+        await apiClient.get(`/api/practice/early-warnings/my-alerts?${params.toString()}`, { headers })
+      ).data;
+      return { ...data, _source: 'backend' };
+    } catch (err) {
+      console.warn('[Core Flow 6] getMyAlerts fallback activated:', err?.message);
+      const studentAlerts = buildSeedAlertsPool(resolvedStudentId).filter(
+        (a) => a.studentId === resolvedStudentId
+      );
+      const unreadCount = studentAlerts.filter((a) => !a.isRead).length;
+      const redAlertsCount = studentAlerts.filter((a) => a.alertType === 'RED').length;
+      const yellowAlertsCount = studentAlerts.filter((a) => a.alertType === 'YELLOW').length;
+
+      const filtered = studentAlerts.filter((a) => {
+        if (unreadOnly && a.isRead) return false;
+        if (alertType && alertType !== 'ALL' && a.alertType !== String(alertType).toUpperCase()) return false;
+        return true;
+      });
+
+      return {
+        studentId: resolvedStudentId,
+        totalAlerts: studentAlerts.length,
+        unreadCount,
+        redAlertsCount,
+        yellowAlertsCount,
+        alerts: filtered,
+        _source: 'seed_fallback'
+      };
+    }
+  },
+
+  async markAlertAsRead(alertId, studentId = null) {
+    const currentUser = tokenStorage.getUser();
+    const resolvedStudentId = ensureGuid(
+      studentId || currentUser?.id || currentUser?.userId,
+      FLOW6_DEFAULTS.STUDENT_ID
+    );
+    const resolvedAlertId = ensureGuid(alertId, FLOW6_DEFAULTS.ALERT_RED_ID);
+    const headers = { 'X-User-Id': resolvedStudentId };
+
+    try {
+      const data = (
+        await apiClient.patch(
+          `/api/practice/early-warnings/${resolvedAlertId}/read?studentId=${resolvedStudentId}`,
+          {},
+          { headers }
+        )
+      ).data;
+      emitFlow6Updated({ type: 'alert_read', alertId: resolvedAlertId });
+      return { ...data, _source: 'backend' };
+    } catch (err) {
+      console.warn('[Core Flow 6] markAlertAsRead fallback activated:', err?.message);
+      const nowIso = new Date().toISOString();
+      const localState = readFlow6LocalState();
+      writeFlow6LocalState({
+        ...localState,
+        alerts: {
+          ...(localState.alerts || {}),
+          [resolvedAlertId]: {
+            ...(localState.alerts?.[resolvedAlertId] || {}),
+            isRead: true,
+            readAt: nowIso
+          }
+        }
+      });
+      emitFlow6Updated({ type: 'alert_read', alertId: resolvedAlertId });
+      return {
+        alertId: resolvedAlertId,
+        studentId: resolvedStudentId,
+        isRead: true,
+        readAt: nowIso,
+        message: 'Đã đánh dấu đã đọc thông báo cảnh báo sớm.',
+        _source: 'seed_fallback'
+      };
+    }
+  },
+
+  async getEarlyWarningsDashboard({
+    classId = null,
+    alertType = null,
+    isResolved = null,
+    mentorId = null
+  } = {}) {
+    const currentUser = tokenStorage.getUser();
+    const resolvedMentorId = ensureGuid(
+      mentorId || currentUser?.id || currentUser?.userId,
+      FLOW6_DEFAULTS.MENTOR_ID
+    );
+    const resolvedClassId = classId && classId !== 'ALL' ? ensureGuid(classId, FLOW5_DEFAULTS.CLASS_ID) : null;
+    const params = new URLSearchParams();
+    if (resolvedClassId) params.set('classId', resolvedClassId);
+    if (alertType && alertType !== 'ALL') params.set('alertType', String(alertType).toUpperCase());
+    if (typeof isResolved === 'boolean') params.set('isResolved', String(isResolved));
+    if (resolvedMentorId) params.set('mentorId', resolvedMentorId);
+    const qs = params.toString() ? `?${params.toString()}` : '';
+    const headers = { 'X-User-Id': resolvedMentorId };
+
+    try {
+      const data = (
+        await apiClient.get(`/api/practice/early-warnings/dashboard${qs}`, { headers })
+      ).data;
+      return { ...data, _source: 'backend' };
+    } catch (err) {
+      console.warn('[Core Flow 6] getEarlyWarningsDashboard fallback activated:', err?.message);
+      const pool = buildSeedAlertsPool(FLOW6_DEFAULTS.STUDENT_ID).filter((a) => a.alertType !== 'GREEN');
+      const scopedByClass = resolvedClassId ? pool.filter((a) => a.classId === resolvedClassId) : pool;
+
+      const totalAlerts = scopedByClass.length;
+      const resolvedAlertsCount = scopedByClass.filter((a) => Boolean(a.resolvedAt)).length;
+      const activeAlertsCount = totalAlerts - resolvedAlertsCount;
+      const redAlertsCount = scopedByClass.filter((a) => a.alertType === 'RED' && !a.resolvedAt).length;
+      const yellowAlertsCount = scopedByClass.filter((a) => a.alertType === 'YELLOW' && !a.resolvedAt).length;
+      const unrealisticGoalCount = scopedByClass.filter(
+        (a) => a.alertType === 'UNREALISTIC_GOAL' && !a.resolvedAt
+      ).length;
+
+      const filtered = scopedByClass.filter((a) => {
+        if (alertType && alertType !== 'ALL' && a.alertType !== String(alertType).toUpperCase()) return false;
+        if (typeof isResolved === 'boolean' && Boolean(a.resolvedAt) !== isResolved) return false;
+        return true;
+      });
+
+      return {
+        classId: resolvedClassId,
+        className:
+          resolvedClassId === FLOW5_DEFAULTS.SECONDARY_CLASS_ID
+            ? 'Lớp Chuyên Đề ĐGNL Tăng Tốc 01 (Mã: 02)'
+            : resolvedClassId
+              ? 'Lớp ĐGNL Cơ sở 1 - ĐHQG TP.HCM (Mã: 01)'
+              : 'Toàn bộ các lớp phụ trách',
+        totalAlerts,
+        activeAlertsCount,
+        redAlertsCount,
+        yellowAlertsCount,
+        unrealisticGoalCount,
+        resolvedAlertsCount,
+        alerts: filtered,
+        _source: 'seed_fallback'
+      };
+    }
+  },
+
+  async resolveEarlyWarningAlert(alertId, { mentorId = null, resolutionNotes = '' } = {}) {
+    const currentUser = tokenStorage.getUser();
+    const resolvedMentorId = ensureGuid(
+      mentorId || currentUser?.id || currentUser?.userId,
+      FLOW6_DEFAULTS.MENTOR_ID
+    );
+    const resolvedAlertId = ensureGuid(alertId, FLOW6_DEFAULTS.ALERT_RED_ID);
+    const cleanNotes = String(resolutionNotes || '').trim();
+    const headers = { 'X-User-Id': resolvedMentorId };
+
+    try {
+      const data = (
+        await apiClient.post(
+          `/api/practice/early-warnings/${resolvedAlertId}/resolve`,
+          {
+            mentor_id: resolvedMentorId,
+            resolution_notes: cleanNotes
+          },
+          { headers }
+        )
+      ).data;
+      emitFlow6Updated({ type: 'alert_resolved', alertId: resolvedAlertId });
+      return { ...data, _source: 'backend' };
+    } catch (err) {
+      console.warn('[Core Flow 6] resolveEarlyWarningAlert fallback activated:', err?.message);
+      const nowIso = new Date().toISOString();
+      const localState = readFlow6LocalState();
+      writeFlow6LocalState({
+        ...localState,
+        alerts: {
+          ...(localState.alerts || {}),
+          [resolvedAlertId]: {
+            ...(localState.alerts?.[resolvedAlertId] || {}),
+            isRead: true,
+            handledBy: resolvedMentorId,
+            resolutionNotes: cleanNotes,
+            resolvedAt: nowIso
+          }
+        }
+      });
+      emitFlow6Updated({ type: 'alert_resolved', alertId: resolvedAlertId });
+      return {
+        alertId: resolvedAlertId,
+        studentId: FLOW6_DEFAULTS.STUDENT_ID,
+        alertType: 'RED',
+        isResolved: true,
+        handledBy: resolvedMentorId,
+        resolutionNotes: cleanNotes,
+        resolvedAt: nowIso,
+        message: 'Đã ghi nhận biên bản can thiệp sư phạm và đóng cảnh báo thành công.',
+        _source: 'seed_fallback'
+      };
+    }
+  },
+
+  async scheduleAlertCounseling(
+    alertId,
+    {
+      mentorId = null,
+      counselingDate,
+      counselingLocation = 'Phòng Tư Vấn Học Đường - Cơ sở chính',
+      proposedTargetScore = 850,
+      mentorNotes = ''
+    } = {}
+  ) {
+    const currentUser = tokenStorage.getUser();
+    const resolvedMentorId = ensureGuid(
+      mentorId || currentUser?.id || currentUser?.userId,
+      FLOW6_DEFAULTS.MENTOR_ID
+    );
+    const resolvedAlertId = ensureGuid(alertId, FLOW6_DEFAULTS.ALERT_UNREALISTIC_ID);
+    const isoDate = counselingDate
+      ? new Date(counselingDate).toISOString()
+      : new Date(Date.now() + 2 * 86400000).toISOString();
+    const numericTarget = Math.min(1200, Math.max(0, Math.round(Number(proposedTargetScore || 850))));
+    const headers = { 'X-User-Id': resolvedMentorId };
+
+    try {
+      const data = (
+        await apiClient.post(
+          `/api/practice/early-warnings/${resolvedAlertId}/schedule-counseling`,
+          {
+            mentor_id: resolvedMentorId,
+            counseling_date: isoDate,
+            counseling_location: String(counselingLocation || 'Phòng Tư Vấn Học Đường - Cơ sở chính').trim(),
+            proposed_target_score: numericTarget,
+            mentor_notes: String(mentorNotes || '').trim()
+          },
+          { headers }
+        )
+      ).data;
+      emitFlow6Updated({ type: 'counseling_scheduled', alertId: resolvedAlertId });
+      return { ...data, _source: 'backend' };
+    } catch (err) {
+      console.warn('[Core Flow 6] scheduleAlertCounseling fallback activated:', err?.message);
+      const formattedNote = `[Lịch hẹn Tư vấn 3 bên: ${new Date(isoDate).toLocaleString('vi-VN')} tại ${counselingLocation} • Đề xuất điều chỉnh đích: ${numericTarget}đ] ${mentorNotes || ''}`.trim();
+      const nowIso = new Date().toISOString();
+      const localState = readFlow6LocalState();
+      writeFlow6LocalState({
+        ...localState,
+        alerts: {
+          ...(localState.alerts || {}),
+          [resolvedAlertId]: {
+            ...(localState.alerts?.[resolvedAlertId] || {}),
+            isRead: true,
+            handledBy: resolvedMentorId,
+            resolutionNotes: formattedNote,
+            resolvedAt: nowIso
+          }
+        }
+      });
+      emitFlow6Updated({ type: 'counseling_scheduled', alertId: resolvedAlertId });
+      return {
+        alertId: resolvedAlertId,
+        studentId: '3fa85f64-5717-4562-b3fc-2c963f66af99',
+        counselingDate: isoDate,
+        counselingLocation,
+        proposedTargetScore: numericTarget,
+        mentorId: resolvedMentorId,
+        status: 'SCHEDULED',
+        message: `Đã xếp lịch tư vấn 3 bên (Giáo viên - Học sinh - Phụ huynh) với mục tiêu đề xuất ${numericTarget}/1200 điểm.`,
+        _source: 'seed_fallback'
+      };
+    }
+  },
+
+  async getMistakeNotebook({
+    studentId = null,
+    skillId = null,
+    cognitiveErrorTag = null,
+    isMastered = null,
+    pageIndex = 1,
+    pageSize = 10
+  } = {}) {
+    const currentUser = tokenStorage.getUser();
+    const resolvedStudentId = ensureGuid(
+      studentId || currentUser?.id || currentUser?.userId,
+      FLOW6_DEFAULTS.STUDENT_ID
+    );
+    const params = new URLSearchParams();
+    params.set('studentId', resolvedStudentId);
+    params.set('pageIndex', String(Math.max(1, Number(pageIndex || 1))));
+    params.set('pageSize', String(Math.max(1, Number(pageSize || 10))));
+    if (skillId && skillId !== 'ALL') {
+      const safeSkill = ensureGuid(skillId, null);
+      if (safeSkill) params.set('skillId', safeSkill);
+    }
+    if (cognitiveErrorTag && cognitiveErrorTag !== 'ALL') {
+      params.set('cognitiveErrorTag', String(cognitiveErrorTag).toUpperCase());
+    }
+    if (typeof isMastered === 'boolean') {
+      params.set('isMastered', String(isMastered));
+    }
+
+    try {
+      const data = (await apiClient.get(`/api/practice/mistakes?${params.toString()}`)).data;
+      return { ...data, _source: 'backend' };
+    } catch (err) {
+      console.warn('[Core Flow 6] getMistakeNotebook fallback activated:', err?.message);
+      const allItems = buildSeedMistakeItems(resolvedStudentId);
+      const masteredCount = allItems.filter((i) => i.isMastered).length;
+      const unmasteredCount = allItems.length - masteredCount;
+
+      const filtered = allItems.filter((item) => {
+        if (skillId && skillId !== 'ALL' && item.skillId !== skillId) return false;
+        if (
+          cognitiveErrorTag &&
+          cognitiveErrorTag !== 'ALL' &&
+          item.cognitiveErrorTag !== String(cognitiveErrorTag).toUpperCase()
+        ) {
+          return false;
+        }
+        if (typeof isMastered === 'boolean' && Boolean(item.isMastered) !== isMastered) return false;
+        return true;
+      });
+
+      const safePage = Math.max(1, Number(pageIndex || 1));
+      const safeSize = Math.max(1, Number(pageSize || 10));
+      const paged = filtered.slice((safePage - 1) * safeSize, safePage * safeSize);
+
+      return {
+        items: paged,
+        totalCount: filtered.length,
+        pageIndex: safePage,
+        pageSize: safeSize,
+        masteredCount,
+        unmasteredCount,
+        _source: 'seed_fallback'
+      };
+    }
+  },
+
+  async getDailyMistakeReview({ studentId = null, targetDate = null } = {}) {
+    const currentUser = tokenStorage.getUser();
+    const resolvedStudentId = ensureGuid(
+      studentId || currentUser?.id || currentUser?.userId,
+      FLOW6_DEFAULTS.STUDENT_ID
+    );
+    const params = new URLSearchParams();
+    params.set('studentId', resolvedStudentId);
+    if (targetDate) params.set('targetDate', new Date(targetDate).toISOString());
+
+    try {
+      const data = (await apiClient.get(`/api/practice/mistakes/daily-review?${params.toString()}`)).data;
+      return { ...data, _source: 'backend' };
+    } catch (err) {
+      console.warn('[Core Flow 6] getDailyMistakeReview fallback activated:', err?.message);
+      const refTime = targetDate ? new Date(targetDate).getTime() : Date.now();
+      const dueItems = buildSeedMistakeItems(resolvedStudentId).filter(
+        (m) => !m.isMastered && new Date(m.nextReviewDate).getTime() <= refTime
+      );
+
+      const questions = dueItems.map((m) => ({
+        mistakeNotebookId: m.id,
+        originalQuestionId: m.questionId,
+        reviewQuestionId: deterministicUuidFromText(`iso_${m.id}_${m.reviewCount}`),
+        skillId: m.skillId,
+        skillName: m.skillName,
+        patternId: m.patternId,
+        content: m.questionContent,
+        options: m.options,
+        difficultyLevel: 2,
+        reviewCount: m.reviewCount,
+        consecutiveCorrect: m.consecutiveCorrectReviews,
+        cognitiveErrorTag: m.cognitiveErrorTag,
+        studentNotes: m.studentNotes,
+        isIsomorphicVariant: true
+      }));
+
+      return {
+        studentId: resolvedStudentId,
+        reviewDate: new Date(refTime).toISOString(),
+        totalDueQuestions: questions.length,
+        questions,
+        _source: 'seed_fallback'
+      };
+    }
+  },
+
+  async tagMistakeCognitiveError(mistakeId, { cognitiveErrorTag = 'MISSING_CONCEPT', studentNotes = '' } = {}) {
+    const resolvedId = ensureGuid(mistakeId, FLOW6_DEFAULTS.MISTAKE_1_ID);
+    const normalizedTag = String(cognitiveErrorTag || 'MISSING_CONCEPT').toUpperCase();
+    const cleanNotes = String(studentNotes || '').trim();
+
+    try {
+      const data = (
+        await apiClient.post(`/api/practice/mistakes/${resolvedId}/tag-error`, {
+          cognitiveErrorTag: normalizedTag,
+          studentNotes: cleanNotes
+        })
+      ).data;
+      emitFlow6Updated({ type: 'mistake_tagged', id: resolvedId });
+      return { ...data, _source: 'backend' };
+    } catch (err) {
+      console.warn('[Core Flow 6] tagMistakeCognitiveError fallback activated:', err?.message);
+      const localState = readFlow6LocalState();
+      writeFlow6LocalState({
+        ...localState,
+        mistakes: {
+          ...(localState.mistakes || {}),
+          [resolvedId]: {
+            ...(localState.mistakes?.[resolvedId] || {}),
+            cognitiveErrorTag: normalizedTag,
+            studentNotes: cleanNotes,
+            updatedAt: new Date().toISOString()
+          }
+        }
+      });
+      emitFlow6Updated({ type: 'mistake_tagged', id: resolvedId });
+      return {
+        id: resolvedId,
+        cognitiveErrorTag: normalizedTag,
+        studentNotes: cleanNotes,
+        message: 'Đã lưu nhãn nhận thức nguyên nhân sai và bài học rút ra vào Sổ tay SM-2.',
+        _source: 'seed_fallback'
+      };
+    }
+  },
+
+  async submitDailyMistakeReview(mistakeId, { selectedOption, timeSpentSeconds = 30 } = {}) {
+    const resolvedId = ensureGuid(mistakeId, FLOW6_DEFAULTS.MISTAKE_1_ID);
+    const cleanOpt = cleanOptionKey(selectedOption, 'A');
+    const cleanTime = Math.max(1, Math.round(Number(timeSpentSeconds || 30)));
+
+    try {
+      const data = (
+        await apiClient.post(`/api/practice/mistakes/${resolvedId}/review-submit`, {
+          selectedOption: cleanOpt,
+          timeSpentSeconds: cleanTime
+        })
+      ).data;
+      emitFlow6Updated({ type: 'mistake_reviewed', id: resolvedId });
+      return { ...data, _source: 'backend' };
+    } catch (err) {
+      console.warn('[Core Flow 6] submitDailyMistakeReview fallback activated:', err?.message);
+      const currentItems = buildSeedMistakeItems(FLOW6_DEFAULTS.STUDENT_ID);
+      const target = currentItems.find((m) => m.id === resolvedId) || currentItems[0];
+      const isCorrect = cleanOpt === target.correctOption;
+
+      // Exact SuperMemo-2 (SM-2) schedule matching SpacedRepetitionCalculator.cs
+      const quality = !isCorrect ? 1 : cleanTime <= 35 ? 5 : 4;
+      let nextConsecutive = isCorrect ? (target.consecutiveCorrectReviews || 0) + 1 : 0;
+      let nextInterval = 1;
+      if (isCorrect) {
+        if (nextConsecutive === 1) nextInterval = 1;
+        else if (nextConsecutive === 2) nextInterval = 6;
+        else nextInterval = Math.max(6, Math.round((target.intervalDays || 6) * (target.easeFactor || 2.5)));
+      }
+      const rawEf =
+        (target.easeFactor || 2.5) + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02));
+      const nextEaseFactor = Number(Math.max(1.3, rawEf).toFixed(2));
+      const isMastered = nextConsecutive >= 3;
+      const nextReviewDate = new Date(Date.now() + nextInterval * 86400000).toISOString();
+
+      const localState = readFlow6LocalState();
+      writeFlow6LocalState({
+        ...localState,
+        mistakes: {
+          ...(localState.mistakes || {}),
+          [resolvedId]: {
+            ...(localState.mistakes?.[resolvedId] || {}),
+            reviewCount: (target.reviewCount || 0) + 1,
+            consecutiveCorrectReviews: nextConsecutive,
+            intervalDays: nextInterval,
+            easeFactor: nextEaseFactor,
+            isMastered,
+            lastReviewedAt: new Date().toISOString(),
+            nextReviewDate,
+            updatedAt: new Date().toISOString()
+          }
+        }
+      });
+
+      emitFlow6Updated({ type: 'mistake_reviewed', id: resolvedId });
+
+      return {
+        mistakeNotebookId: resolvedId,
+        isCorrect,
+        correctOption: target.correctOption,
+        explanation: target.explanation,
+        consecutiveCorrectReviews: nextConsecutive,
+        intervalDays: nextInterval,
+        easeFactor: nextEaseFactor,
+        isMastered,
+        nextReviewDate,
+        message: isMastered
+          ? 'Tuyệt vời! Em đã vượt qua 3 chu kỳ SM-2 liên tiếp — lỗi sai này chính thức được công nhận Đã Thành Thạo!'
+          : isCorrect
+            ? `Chính xác! Lịch ôn tập ngắt quãng SM-2 tiếp theo được giãn lên ${nextInterval} ngày (EF = ${nextEaseFactor}).`
+            : 'Chưa chính xác! Chu kỳ SM-2 được đặt lại về 1 ngày để em củng cố lại gốc kiến thức.',
+        _source: 'seed_fallback'
+      };
     }
   }
 };

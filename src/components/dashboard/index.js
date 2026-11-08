@@ -7,3 +7,7 @@ export { default as TeacherDashboardView } from './TeacherDashboardView';
 export { default as CampusManagerDashboardView } from './CampusManagerDashboardView';
 export { default as ParentDashboardView } from './ParentDashboardView';
 export { default as LearningAnalyticsView } from './LearningAnalyticsView';
+export { default as ScorePredictionPanel } from './ScorePredictionPanel';
+export { default as StudentEarlyWarningsCard } from './StudentEarlyWarningsCard';
+export { default as EarlyWarningsMentorPanel } from './EarlyWarningsMentorPanel';
+export { default as MistakeNotebookSM2View } from './MistakeNotebookSM2View';

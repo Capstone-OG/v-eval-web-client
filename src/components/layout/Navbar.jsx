@@ -1,21 +1,29 @@
 import React, { useState } from 'react';
-import { Search, MapPin, Flame, Bell, User, LogOut, ChevronDown, BookOpen, Layers, ShieldCheck } from 'lucide-react';
+import { Search, MapPin, Flame, User, LogOut, ChevronDown, BookOpen, ShieldCheck } from 'lucide-react';
 import { mockUser, campusesList } from '../../data/mockData';
+import NotificationBellPopover from './NotificationBellPopover';
 
-export default function Navbar({ currentUser, studentDashboard, activeRole, setActiveRole, onLogout, onOpenAuthModal, onOpenArchModal, onOpenProvision }) {
+export default function Navbar({
+  currentUser,
+  studentDashboard,
+  activeRole,
+  setActiveRole,
+  onLogout,
+  onOpenAuthModal,
+  onOpenArchModal,
+  onOpenProvision,
+  onNavigateAlerts
+}) {
   const [selectedCampus, setSelectedCampus] = useState(mockUser.campusId);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
 
   const displayName = currentUser?.fullName || mockUser.name;
   const displayEmail = currentUser?.email || mockUser.email;
-  const isSuperAdmin = currentUser?.roles?.includes('ADMINISTRATOR') || activeRole === 'admin';
   const displayRole = currentUser?.role ? currentUser.role.toUpperCase() : (
     activeRole === 'student' ? 'Học sinh • Lớp 12' : 
     activeRole === 'parent' ? 'Phụ huynh học sinh' : 
     activeRole === 'teacher' ? 'Giáo viên cơ sở' : 'Trưởng ban Học thuật Cơ sở'
   );
-
-  const currentCampusObj = campusesList.find(c => c.id === selectedCampus) || campusesList[0];
 
 
   return (
@@ -95,11 +103,12 @@ export default function Navbar({ currentUser, studentDashboard, activeRole, setA
             </button>
           </div>
 
-          {/* Notifications Icon */}
-          <button className="relative p-2 text-slate-500 hover:text-slate-800 rounded-xl hover:bg-slate-100 transition-all">
-            <Bell className="w-5 h-5" />
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full ring-2 ring-white"></span>
-          </button>
+          {/* Notifications Icon (Core Flow 6 BR-04 Early Warnings) */}
+          <NotificationBellPopover
+            currentUser={currentUser}
+            activeRole={activeRole}
+            onNavigateTarget={onNavigateAlerts}
+          />
 
           {/* User Profile / Auth State */}
           <div className="relative">

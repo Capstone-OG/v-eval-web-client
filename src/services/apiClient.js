@@ -167,11 +167,19 @@ async function request(endpoint, options = {}, isRetry = false) {
 
     if (!response.ok) {
       let errorMessage = `HTTP Error ${response.status}`;
-      if (typeof data === "object" && data !== null) {
+      if (typeof data === 'object' && data !== null) {
         const rawErr = data.error;
-        const errDesc = typeof rawErr === "object" && rawErr !== null ? (rawErr.description || rawErr.message) : rawErr;
-        errorMessage = errDesc || data.message || data.title || (data.errors && data.errors[0]?.description) || errorMessage;
-      } else if (typeof data === "string" && data.trim()) {
+        const errDesc =
+          typeof rawErr === 'object' && rawErr !== null
+            ? rawErr.description || rawErr.message || rawErr.code
+            : rawErr;
+        errorMessage =
+          errDesc ||
+          data.message ||
+          data.title ||
+          (data.errors && data.errors[0]?.description) ||
+          errorMessage;
+      } else if (typeof data === 'string' && data.trim()) {
         errorMessage = data.trim();
       }
 
@@ -220,6 +228,13 @@ export const apiClient = {
   put: (endpoint, body = {}, options = {}) => 
     request(endpoint, {
       method: 'PUT',
+      body: body instanceof FormData ? body : JSON.stringify(body),
+      ...options
+    }),
+
+  patch: (endpoint, body = {}, options = {}) =>
+    request(endpoint, {
+      method: 'PATCH',
       body: body instanceof FormData ? body : JSON.stringify(body),
       ...options
     }),

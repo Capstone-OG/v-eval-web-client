@@ -11,7 +11,9 @@ import {
   TeacherDashboardView,
   CampusManagerDashboardView,
   ParentDashboardView,
-  LearningAnalyticsView
+  LearningAnalyticsView,
+  ScorePredictionPanel,
+  MistakeNotebookSM2View
 } from './components/dashboard';
 import { PublicLandingPage } from './components/landing';
 import { WebLoginPage } from './components/auth';
@@ -26,7 +28,7 @@ import { DiagnosticAssessmentPage, SubmissionHistoryView } from './components/di
 import { AccountProvisioningView } from './components/admin';
 import { CurriculumExplorerView } from './components/curriculum';
 import { TuitionPaymentView } from './components/payment';
-import { CheckCircle2, Bot, Sparkles } from 'lucide-react';
+import { CheckCircle2, Bot } from 'lucide-react';
 import authService from './services/authService';
 import { practiceService } from './services/practiceService';
 
@@ -183,6 +185,9 @@ export default function App() {
             onOpenAuthModal={() => setCurrentPage('login')}
             onOpenArchModal={() => setIsArchModalOpen(true)}
             onOpenProvision={() => setCurrentPage('provision')}
+            onNavigateAlerts={() =>
+              setActiveTab(activeRole === 'student' ? 'analytics' : 'dashboard')
+            }
           />
 
           {/* Main Dashboard Container */}
@@ -230,6 +235,11 @@ export default function App() {
                   onStartNewDiagnostic={() => setActiveTab('diagnostic')}
                   onOpenAiTutorWithContext={(ctx) => handleOpenAiTutor(ctx)}
                 />
+              ) : activeTab === 'mistakes_sm2' ? (
+                <MistakeNotebookSM2View
+                  currentUser={currentUser}
+                  onOpenAiTutorWithContext={(ctx) => handleOpenAiTutor(ctx)}
+                />
               ) : activeTab === 'analytics' ? (
                 <LearningAnalyticsView
                   currentUser={currentUser}
@@ -239,6 +249,7 @@ export default function App() {
                   onOpenRoadmap={() => setActiveTab('roadmap')}
                   onOpenZPD={() => setIsZpdModalOpen(true)}
                   onOpenHistory={() => setActiveTab('history')}
+                  onOpenMistakesSM2={() => setActiveTab('mistakes_sm2')}
                   onOpenAiTutor={(ctx) => handleOpenAiTutor(ctx)}
                   onNavigateRoleDashboard={() => setActiveTab('dashboard')}
                 />
@@ -284,6 +295,12 @@ export default function App() {
                         </div>
 
                         <div className="lg:col-span-1 space-y-6">
+                          <ScorePredictionPanel
+                            studentId={currentUser?.id}
+                            mode="compact"
+                            onOpenFullForecast={() => setActiveTab('analytics')}
+                            onOpenAiTutorWithContext={(ctx) => handleOpenAiTutor(ctx)}
+                          />
                           <LiveQnACard />
                         </div>
                       </div>
@@ -316,13 +333,13 @@ export default function App() {
           {/* Footer */}
           <footer className="bg-white border-t border-slate-200/80 px-4 py-3 text-center text-xs text-slate-500 font-medium flex flex-col sm:flex-row items-center justify-between max-w-[1700px] w-full mx-auto">
             <div>
-              <strong className="text-slate-700">ĐGNL AI Portal</strong> • Phân hệ v2.4 (Build IRT-Adaptive) • ĐGNL ĐHQG TP.HCM
+              <strong className="text-slate-700">ĐGNL AI Portal</strong> • Hệ thống ôn luyện & dự báo điểm thi ĐGNL ĐHQG TP.HCM
             </div>
             <div className="flex items-center gap-4 mt-2 sm:mt-0 text-[11px]">
               <span>
-                Ban Học thuật: <strong className="text-blue-600">academic@dgnl.edu.vn</strong>
+                Hỗ trợ học tập: <strong className="text-blue-600">academic@dgnl.edu.vn</strong>
               </span>
-              <span>© 2026 Trung tâm Đào tạo & Khoa học Thi Thích ứng</span>
+              <span>© 2026 Trung tâm Luyện thi Đánh giá Năng lực</span>
             </div>
           </footer>
         </div>
@@ -340,6 +357,9 @@ export default function App() {
             onOpenAuthModal={() => setCurrentPage('login')}
             onOpenArchModal={() => setIsArchModalOpen(true)}
             onOpenProvision={() => setCurrentPage('provision')}
+            onNavigateAlerts={() =>
+              setActiveTab(activeRole === 'student' ? 'analytics' : 'dashboard')
+            }
           />
           <main className="flex-1 p-4 lg:p-8 max-w-7xl mx-auto w-full">
             <AccountProvisioningView onBackToDashboard={() => setCurrentPage('dashboard')} />
@@ -365,7 +385,7 @@ export default function App() {
         isOpen={isDiagnosticModalOpen}
         onClose={() => setIsDiagnosticModalOpen(false)}
         onCompleteTest={() => {
-          showToast('Đã cập nhật vector Theta 0 và mở khóa lộ trình!');
+          showToast('Đã lưu kết quả bài kiểm tra và cập nhật lộ trình học!');
           refreshStudentAnalytics();
         }}
       />
@@ -395,19 +415,19 @@ export default function App() {
         initialContext={tutorContext}
       />
 
-      {/* Sleek Floating AI Socratic Tutor FAB (Bottom-Right Corner) */}
+      {/* Sleek Floating AI Tutor FAB (Bottom-Right Corner) */}
       {currentPage === 'dashboard' && activeRole === 'student' && (
         <div className="fixed bottom-6 right-6 z-40 flex items-center gap-3">
           <div className="hidden sm:flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-slate-900/90 text-white text-xs font-bold shadow-xl border border-slate-700/80 backdrop-blur-md pointer-events-none">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-            <span>Gia sư AI Socratic</span>
+            <span>Hỏi Gia sư AI</span>
           </div>
 
           <button
             onClick={() => handleOpenAiTutor(null)}
             className="relative group p-4 rounded-full bg-gradient-to-tr from-blue-600 via-indigo-600 to-violet-600 text-white shadow-2xl shadow-blue-500/40 hover:shadow-indigo-500/60 hover:scale-110 active:scale-95 transition-all duration-300 cursor-pointer border-2 border-white/20 flex items-center justify-center focus:outline-none focus:ring-4 focus:ring-blue-400/40"
-            title="Mở Gia sư AI Socratic & GraphRAG"
-            aria-label="Mở Gia sư AI Socratic"
+            title="Hỏi Gia sư AI giải đáp bài tập 24/7"
+            aria-label="Hỏi Gia sư AI"
           >
             <span className="absolute -inset-1 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 opacity-40 blur-sm group-hover:opacity-80 transition duration-300 animate-pulse pointer-events-none" />
             <Bot className="w-7 h-7 relative z-10 text-white group-hover:rotate-6 transition-transform" />
