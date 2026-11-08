@@ -1,6 +1,6 @@
 # NHẬT KÝ CẬP NHẬT (UPDATE LOG) - WEB CLIENT
 
-## [07/11/2026] - Mở Rộng Không Gian Làm Việc Toàn Màn Hình (`w-full`), Tinh Chỉnh Giao Diện Bảng Tài Khoản IAM 1 Dòng Không Cuộn Ngang & Hoàn Thiện Phân Hệ Tài Khoản Ngừng Hoạt Động (Soft Delete / Inactive)
+## [08/11/2026] - Mở Rộng Không Gian Làm Việc Toàn Màn Hình (`w-full`), Tinh Chỉnh Giao Diện Bảng Tài Khoản IAM 1 Dòng Không Cuộn Ngang & Hoàn Thiện Phân Hệ Tài Khoản Ngừng Hoạt Động (Soft Delete / Inactive)
 
 - **Mở Rộng Không Gian Làm Việc Cổng Vai Trò Toàn Chiều Ngang (`w-full`) Sát Sidebar ([`App.jsx`](./src/App.jsx), [`AccountProvisioningView.jsx`](./src/components/admin/AccountProvisioningView.jsx), [`CampusManagerDashboardView.jsx`](./src/components/dashboard/CampusManagerDashboardView.jsx), [`ParentDashboardView.jsx`](./src/components/dashboard/ParentDashboardView.jsx), [`TuitionPaymentView.jsx`](./src/components/payment/TuitionPaymentView.jsx))**:
   - Thay thế giới hạn `max-w-7xl mx-auto` bằng `w-full` kèm `px-4 sm:px-6` đồng bộ thẳng hàng với `Navbar` và `Sidebar`.
@@ -17,3 +17,13 @@
 
 - **Kiểm Thử & Biên Dịch**:
   - `npm run build` hoàn thành sạch sẽ 100% (`3008 modules transformed`, 0 Error).
+
+## [08/11/2026] - Triển Khai Toàn Diện Core Flow 6, Chuẩn Hóa Ngôn Ngữ Học Tập Thân Thiện Cho Học Sinh & Hợp Nhất Đồng Bộ Nhánh `develop`
+
+- **Trung Tâm Kết Quả Học Tập, Dự Báo Điểm & Bài Tập Tăng Điểm Nhanh ([`LearningAnalyticsView.jsx`](./src/components/dashboard/LearningAnalyticsView.jsx), [`ScorePredictionPanel.jsx`](./src/components/dashboard/ScorePredictionPanel.jsx), [`PrescriptionPracticeModal.jsx`](./src/components/modals/PrescriptionPracticeModal.jsx), [`practiceService.js`](./src/services/practiceService.js), [`practiceService.flow6.test.js`](./tests/practiceService.flow6.test.js))**:
+  - Đấu nối trọn bộ 13 API Core Flow 6 qua YARP Gateway (`:5212`): dự báo khoảng điểm dự kiến thang 1200, danh sách chủ đề cần ôn ngay để tăng điểm nhanh, modal làm bài luyện tập gạch nợ điểm thiếu hụt khi đạt `>= 67%` và tự động cập nhật khi nộp bài.
+  - Lược bỏ toàn bộ nhãn thuật toán/kỹ thuật nội bộ (`Core Flow 1..6`, `Live Gateway API (:5212)`, `Ghost Onboarding`, `IRT 2PL`, `Theta`, `SEM 95%`, `Knapsack ROI`, `AUTO_INIT`, `PAT_SKILL_*`), chuyển sang ngôn ngữ tự học gần gũi cho học sinh.
+- **Nhắc Nhở Học Tập, Sổ Tay Câu Sai, Điều Hướng Đa Vai Trò & Gia Sư AI Đồng Hành ([`StudentEarlyWarningsCard.jsx`](./src/components/dashboard/StudentEarlyWarningsCard.jsx), [`EarlyWarningsMentorPanel.jsx`](./src/components/dashboard/EarlyWarningsMentorPanel.jsx), [`MistakeNotebookSM2View.jsx`](./src/components/dashboard/MistakeNotebookSM2View.jsx), [`NotificationBellPopover.jsx`](./src/components/layout/NotificationBellPopover.jsx), [`Sidebar.jsx`](./src/components/layout/Sidebar.jsx), [`AISocraticTutorModal.jsx`](./src/components/modals/AISocraticTutorModal.jsx), [`ParentDashboardView.jsx`](./src/components/dashboard/ParentDashboardView.jsx), [`App.jsx`](./src/App.jsx))**:
+  - Đổi toàn bộ nhãn `Gia sư AI Socratic` sang **Gia sư AI** / **Gia sư AI Đồng Hành**; tích hợp chuông thông báo động trên Navbar, bảng theo dõi hỗ trợ học sinh cho Giáo viên/Quản lý cơ sở, Sổ tay câu làm sai kèm lịch nhắc ôn định kỳ, đồng thời hợp nhất liền mạch với cổng thanh toán học phí PayOS VietQR (`TuitionPaymentView.jsx`, `PayOsCheckoutModal.jsx`).
+- **Kiểm Thử & Đóng Gói**:
+  - Toàn bộ unit test (`practiceService.flow5.test.js`, `practiceService.flow6.test.js`, `paymentService.test.js`, `tokenStorage.test.js`) PASS 100%, `npm run build` (`vite build`) đóng gói sạch 100% (`0 errors`).

@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { practiceService, FLOW5_DEFAULTS } from '../../services/practiceService';
 import ClassMicroGroupsModal from '../modals/ClassMicroGroupsModal';
+import EarlyWarningsMentorPanel from './EarlyWarningsMentorPanel';
 import { toast } from '../../context/ToastContext';
 
 const CLASS_OPTIONS = [
@@ -42,7 +43,7 @@ const RISK_BADGE_MAP = {
   SAFE: { label: 'An toàn', cls: 'bg-emerald-100 text-emerald-800 border border-emerald-200' }
 };
 
-export default function TeacherDashboardView() {
+export default function TeacherDashboardView({ currentUser }) {
   const [selectedClassId, setSelectedClassId] = useState(FLOW5_DEFAULTS.CLASS_ID);
   const [domainFilter, setDomainFilter] = useState('ALL');
   const [minMasteryFilter, setMinMasteryFilter] = useState('');
@@ -560,6 +561,13 @@ export default function TeacherDashboardView() {
           </div>
         )}
       </div>
+
+      {/* Core Flow 6: Early Warnings & Pedagogical Intervention Hub (BR-04) */}
+      <EarlyWarningsMentorPanel
+        currentUser={currentUser}
+        defaultClassId={selectedClassId}
+        roleLabel="Giáo Viên Phụ Trách Lớp"
+      />
 
       {/* Offline Micro-Groups Station Modal (Core Flow 5 API 3) */}
       <ClassMicroGroupsModal

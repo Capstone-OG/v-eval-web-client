@@ -85,7 +85,7 @@ export default function AdaptiveQuizModal({ isOpen, onClose, onOpenAiTutorWithCo
       const newConsec = consecutiveCorrect + 1;
       setConsecutiveCorrect(newConsec);
       setConsecutiveWrong(0);
-      setFeedback({ type: 'correct', msg: `Đã ghi nhận câu trả lời! Mô hình BKT cập nhật P(Lt) lên ${(newMastery * 100).toFixed(0)}%.` });
+      setFeedback({ type: 'correct', msg: `Chính xác! Độ nắm vững chủ đề tăng lên ${(newMastery * 100).toFixed(0)}%.` });
     } else {
       const newMastery = Math.max(0.05, bktMastery - 0.15);
       setBktMastery(newMastery);
@@ -95,9 +95,9 @@ export default function AdaptiveQuizModal({ isOpen, onClose, onOpenAiTutorWithCo
       
       if (newWrong >= 3) {
         setRemedialNodeActive(true);
-        setFeedback({ type: 'remedial', msg: 'Quy tắc BR-03 kích hoạt: Bạn đã sai 3 câu liên tiếp. Hệ thống tự động chèn Remedial Node củng cố kiến thức!' });
+        setFeedback({ type: 'remedial', msg: 'Em vừa làm sai 3 câu liên tiếp. Hệ thống đã gợi ý thêm bài ôn nền tảng để củng cố kiến thức!' });
       } else {
-        setFeedback({ type: 'wrong', msg: `Đã ghi nhận câu trả lời. BKT cập nhật P(Lt) còn ${(newMastery * 100).toFixed(0)}%.` });
+        setFeedback({ type: 'wrong', msg: `Đã ghi nhận câu trả lời. Độ nắm vững hiện tại là ${(newMastery * 100).toFixed(0)}%.` });
       }
     }
   };
@@ -118,7 +118,7 @@ export default function AdaptiveQuizModal({ isOpen, onClose, onOpenAiTutorWithCo
           content: item.question,
           options: item.options.map((o) => o.replace(/^[A-D]\.\s*/, '')),
           skill_name: item.skill,
-          domain_name: 'Luyện tập Thích ứng ZPD',
+          domain_name: 'Luyện tập theo chủ đề',
           bloom: 2,
           studentChoice: chosenChar,
           correctChoice: correctChar,
@@ -131,12 +131,12 @@ export default function AdaptiveQuizModal({ isOpen, onClose, onOpenAiTutorWithCo
       const correctCount = reviewedQuestions.filter((q) => q.isCorrect).length;
       practiceService.saveSubmissionToHistory({
         id: `zpd_${Date.now()}`,
-        title: 'Phiếu Luyện Tập Thích Ứng ZPD & BKT (Flow 3)',
+        title: 'Bài luyện tập chuyên đề',
         examType: 'ZPD_QUIZ',
         completedAt: new Date().toISOString(),
         theta_0: Number((bktMastery - 0.25).toFixed(2)),
         placement_class: bktMastery >= 0.85 ? 'BREAKTHROUGH' : 'ACCELERATION',
-        ai_commentary: `Hoàn thành phiên luyện tập ZPD với xác suất làm chủ BKT P(Lt) = ${(bktMastery * 100).toFixed(0)}%.`,
+        ai_commentary: `Hoàn thành bài luyện tập chuyên đề với độ nắm vững đạt ${(bktMastery * 100).toFixed(0)}%.`,
         reviewedQuestions,
         pacing: {
           totalCorrect: correctCount,
@@ -187,10 +187,10 @@ export default function AdaptiveQuizModal({ isOpen, onClose, onOpenAiTutorWithCo
             </div>
             <div>
               <h2 className="text-lg font-extrabold tracking-tight">
-                Luyện Tập Thích Ứng ZPD & BKT (Flow 3)
+                Bài Luyện Tập Theo Chủ Đề
               </h2>
               <p className="text-xs text-amber-100 font-medium">
-                Quy tắc BR-02: Chọn câu có P(Correct) từ 0.60 đến 0.75
+                Câu hỏi được chọn vừa sức với mức độ nắm vững hiện tại của em
               </p>
             </div>
           </div>
@@ -203,19 +203,19 @@ export default function AdaptiveQuizModal({ isOpen, onClose, onOpenAiTutorWithCo
           </button>
         </div>
 
-        {/* Dynamic BKT Gauge */}
+        {/* Mastery Gauge */}
         <div className="bg-slate-900 p-4 text-white flex items-center justify-between gap-4 text-xs font-semibold">
           <div className="flex items-center gap-2">
-            <span className="text-amber-400 font-bold">Xác suất làm chủ BKT P(Lt):</span>
+            <span className="text-amber-400 font-bold">Độ nắm vững chủ đề:</span>
             <span className="text-lg font-extrabold text-white">{(bktMastery * 100).toFixed(0)}%</span>
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="text-slate-400">Điều kiện mở khóa BR-01:</span>
+            <span className="text-slate-400">Mục tiêu qua bài:</span>
             <span className={`px-2 py-0.5 rounded-md font-bold text-[10px] ${
               bktMastery >= 0.85 ? 'bg-emerald-500 text-white' : 'bg-slate-700 text-slate-300'
             }`}>
-              {bktMastery >= 0.85 ? 'Đạt ≥ 85%' : 'Chưa đạt (<85%)'}
+              {bktMastery >= 0.85 ? 'Đạt ≥ 85%' : 'Cần đạt 85%'}
             </span>
           </div>
         </div>
@@ -247,15 +247,17 @@ export default function AdaptiveQuizModal({ isOpen, onClose, onOpenAiTutorWithCo
               {/* Question progress */}
               <div className="flex items-center justify-between text-xs font-bold text-slate-500">
                 <span>Câu hỏi {itemIndex + 1} / {sampleItems.length}</span>
-                <span className="text-[11px] text-slate-400">Độ khó IRT: b = {currentItem.difficultyB}</span>
+                <span className="text-[11px] text-slate-400">
+                  Mức độ: {currentItem.difficultyB >= 0.5 ? 'Vận dụng' : 'Thông hiểu'}
+                </span>
               </div>
 
               {/* Question card */}
               <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
                 <div className="flex items-center justify-between text-[11px] font-bold text-slate-500">
-                  <span>Kỹ năng: {currentItem.skill}</span>
+                  <span>Chủ đề: {currentItem.skill}</span>
                   <span className="text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
-                    P(Correct) dự đoán = {currentItem.predictedProb}
+                    Phù hợp sức học
                   </span>
                 </div>
                 <div className="text-sm font-extrabold text-slate-900 leading-snug">
@@ -287,14 +289,14 @@ export default function AdaptiveQuizModal({ isOpen, onClose, onOpenAiTutorWithCo
                   onClick={handleNextItem}
                   className="w-full py-3 bg-amber-600 hover:bg-amber-700 text-white font-extrabold text-xs rounded-2xl shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2 transition-all cursor-pointer"
                 >
-                  <span>{itemIndex < sampleItems.length - 1 ? 'Câu tiếp theo trong dải ZPD' : 'Nộp bài & Xem kết quả đáp án'}</span>
+                  <span>{itemIndex < sampleItems.length - 1 ? 'Sang câu tiếp theo' : 'Nộp bài & Xem đáp án'}</span>
                   <ArrowRight className="w-4 h-4" />
                 </button>
               )}
 
             </div>
           ) : (
-            /* Quiz completed view: Result Summary + Answer Review + Ask AI Socratic Tutor */
+            /* Quiz completed view: Result Summary + Answer Review + Ask AI Tutor */
             <div className="space-y-5 py-2 animate-fade-in">
               
               {/* Top Result Banner */}
@@ -304,11 +306,11 @@ export default function AdaptiveQuizModal({ isOpen, onClose, onOpenAiTutorWithCo
                 </div>
                 
                 <h3 className="text-lg font-extrabold text-slate-900">
-                  Hoàn Thành Phiên Luyện Tập ZPD!
+                  Hoàn Thành Bài Luyện Tập!
                 </h3>
 
                 <p className="text-xs text-slate-600">
-                  Kết quả: Đúng <strong>{totalCorrectCount}/{sampleItems.length}</strong> câu • Xác suất làm chủ BKT P(Lt) đạt <strong>{(bktMastery * 100).toFixed(0)}%</strong>
+                  Kết quả: Đúng <strong>{totalCorrectCount}/{sampleItems.length}</strong> câu • Độ nắm vững chủ đề đạt <strong>{(bktMastery * 100).toFixed(0)}%</strong>
                 </p>
               </div>
 
@@ -317,10 +319,10 @@ export default function AdaptiveQuizModal({ isOpen, onClose, onOpenAiTutorWithCo
                 <div className="flex items-center justify-between">
                   <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
                     <FileText className="w-4 h-4 text-amber-600" />
-                    <span>Xem Lại Đáp Án & Hỏi Gia Sư AI Socratic</span>
+                    <span>Xem Lại Đáp Án & Hỏi Gia Sư AI</span>
                   </h4>
                   <span className="text-[11px] text-slate-500 font-medium">
-                    Bấm hỏi AI ở bất kỳ câu nào bạn cần giải thích sâu
+                    Bấm hỏi AI ở bất kỳ câu nào em cần giải thích thêm
                   </span>
                 </div>
 
@@ -394,14 +396,14 @@ export default function AdaptiveQuizModal({ isOpen, onClose, onOpenAiTutorWithCo
                         </div>
                       )}
 
-                      {/* Ask AI Socratic Tutor Button (Only in Post-Quiz Answer Review) */}
+                      {/* Ask AI Tutor Button */}
                       <button
                         type="button"
                         onClick={() => handleAskSocraticForQuestion(item)}
                         className="w-full py-2.5 px-4 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-extrabold text-xs rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm"
                       >
                         <Bot className="w-4 h-4 text-cyan-200" />
-                        <span>💡 Chưa hiểu bản chất câu {idx + 1}? Hỏi Gia sư AI Socratic bẻ khóa tư duy</span>
+                        <span>💡 Chưa hiểu rõ câu {idx + 1}? Nhờ Gia sư AI hướng dẫn từng bước</span>
                       </button>
                     </div>
                   );

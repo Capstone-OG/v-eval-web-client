@@ -96,6 +96,46 @@
   - `npm test` đạt **9/9 tests PASS (100%)**.
   - `npm run build` (`vite build`) hoàn thành sạch sẽ 100% (`3006 modules transformed`, **0 Error**).
 
+## [08/11/2026] - Chuẩn Hóa Ngôn Ngữ Học Tập Thân Thiện Cho Học Sinh: Lược Bỏ Toàn Bộ Thuật Ngữ Kỹ Thuật Nội Bộ Trên Trang Kết Quả, Dự Báo Điểm, Sổ Tay Câu Sai & Gia Sư AI
+
+- **Chuẩn Hóa Trung Tâm Kết Quả Học Tập & Dự Báo Điểm Thi ([`LearningAnalyticsView.jsx`](../src/components/dashboard/LearningAnalyticsView.jsx), [`ScorePredictionPanel.jsx`](../src/components/dashboard/ScorePredictionPanel.jsx), [`PrescriptionPracticeModal.jsx`](../src/components/modals/PrescriptionPracticeModal.jsx))**:
+  - Loại bỏ toàn bộ nhãn kỹ thuật/thuật toán nội bộ gây khó hiểu cho học sinh (`Core Flow 5 & 6`, `Live Gateway API (:5212)`, nút debug `Xem Thử Ghost Onboarding`, `IRT 2PL`, `BKT P(Lt)`, `Theta +0.17`, `SEM 95%`, `Predicted ± 1.96 × SEM`, `Greedy Knapsack ROI`, `ROI = ΔScore / Số giờ ôn`, `AUTO_INIT`, `CRITICAL`, mã thô `PAT_SKILL_*`, `Isomorphic Variants`).
+  - Thay thế bằng ngôn ngữ tự học gần gũi, dễ hiểu: **Kết quả học tập & Dự báo điểm thi**, **Khoảng điểm có thể đạt**, **Chủ đề cần ôn ngay để tăng điểm nhanh**, **Tiến độ lộ trình học**, **Thói quen tự học 7 ngày qua**, **Lịch sử làm bài gần đây**, và bộ chuẩn hóa tên bài `formatFriendlyExamTitle` / `formatPrescriptionTitle` / `formatCalculationSource`.
+- **Đồng Bộ Hộp Thư Nhắc Nhở, Sổ Tay Câu Làm Sai, Điều Hướng Sidebar & Gia Sư AI Đồng Hành ([`StudentEarlyWarningsCard.jsx`](../src/components/dashboard/StudentEarlyWarningsCard.jsx), [`MistakeNotebookSM2View.jsx`](../src/components/dashboard/MistakeNotebookSM2View.jsx), [`NotificationBellPopover.jsx`](../src/components/layout/NotificationBellPopover.jsx), [`Sidebar.jsx`](../src/components/layout/Sidebar.jsx), [`AdaptiveQuizModal.jsx`](../src/components/modals/AdaptiveQuizModal.jsx), [`AISocraticTutorModal.jsx`](../src/components/modals/AISocraticTutorModal.jsx), [`App.jsx`](../src/App.jsx))**:
+  - Chuyển đổi toàn bộ nhãn `Gia sư AI Socratic` / `AI Socratic Tutor` / `Báo cáo vi phạm quy tắc Socratic` sang **Gia sư AI** / **Gia sư AI Đồng Hành** / **Hỏi Gia sư AI**, đồng thời hợp nhất liền mạch với cổng thanh toán học phí PayOS VietQR (`TuitionPaymentView.jsx`, `PayOsCheckoutModal.jsx`) trên `origin/develop`.
+  - Lược bỏ các mã quy tắc nội bộ (`BR-01`, `BR-02`, `BR-04`, `Flow 1..6`, `SM-2`, `EaseFactor`, `Metacognition Tagging`, `CARELESS`, `MISSING_CONCEPT`) trên thanh điều hướng trái `Sidebar.jsx`, chuông thông báo `NotificationBellPopover.jsx`, hộp thư nhắc nhở `StudentEarlyWarningsCard.jsx` (bổ sung bộ lọc `Định hướng mục tiêu` và sửa reset `setMarkingId(null)`) cùng `MistakeNotebookSM2View.jsx`.
+- **Kiểm Thử & Đóng Gói Vận Hành**:
+  - Toàn bộ bộ kiểm thử `npm test` (`11/11 tests pass` trên `4 suites`) và `npm run build` (`vite build`) đóng gói sạch 100% (`0 errors`).
+
+---
+
+## [07/11/2026] - Triển Khai Toàn Diện Core Flow 6 Trên Frontend: Dự Báo Điểm SEM 95%, Toa Thuốc Bù Điểm Knapsack ROI, Cảnh Báo Sớm BR-04 & Sổ Tay Lỗi Sai SM-2
+
+- **Giai Đoạn 1 — Chuẩn Hóa Tầng Dịch Vụ API Client Core Flow 6 ([`apiClient.js`](../src/services/apiClient.js), [`practiceService.js`](../src/services/practiceService.js), [`practiceService.flow6.test.js`](../tests/practiceService.flow6.test.js))**:
+  - Bổ sung phương thức HTTP `patch` và bộ trích xuất thông báo lỗi từ cấu trúc `Result<T>` (`data.error.description`) trong `apiClient.js`.
+  - Đấu nối trọn bộ 13 phương thức Core Flow 6 qua YARP Gateway (`:5212`), chuẩn hóa song ngữ `snake_case` / `camelCase` cho `PrescriptionItemDto` và các request DTO của ASP.NET Core:
+    + **Dự báo SEM & Toa thuốc ROI**: `getMyForecast` (tự động gọi `recalculatePrediction` khi gặp `404`), `getPrescriptionPracticeSession`, `submitPrescriptionPracticeSession`, `recalculatePrediction`.
+    + **Cảnh báo sớm BR-04 3 tầng**: `getMyAlerts`, `markAlertAsRead`, `getEarlyWarningsDashboard`, `resolveEarlyWarningAlert`, `scheduleAlertCounseling`.
+    + **Sổ tay lỗi sai & Ôn tập ngắt quãng SM-2**: `getMistakeNotebook`, `getDailyMistakeReview`, `tagMistakeCognitiveError`, `submitDailyMistakeReview`.
+  - Tích hợp bộ lưu trữ trạng thái ngoại tuyến bền vững (`veval_flow6_state_v1`) và sự kiện đồng bộ thời gian thực `veval:flow6-updated`; bổ sung unit test `practiceService.flow6.test.js` (`8/8 tests pass`, `oxlint 0 warnings/0 errors`, `vite build` sạch 100%).
+- **Giai Đoạn 2 — Giao Diện Dự Báo Điểm SEM 95%, Toa Thuốc Bù Điểm Knapsack ROI & Modal Luyện Biến Thể ([`ScorePredictionPanel.jsx`](../src/components/dashboard/ScorePredictionPanel.jsx), [`PrescriptionPracticeModal.jsx`](../src/components/modals/PrescriptionPracticeModal.jsx), [`LearningAnalyticsView.jsx`](../src/components/dashboard/LearningAnalyticsView.jsx), [`App.jsx`](../src/App.jsx))**:
+  - Xây dựng `ScorePredictionPanel.jsx` hiển thị thang trực quan 1200 điểm kèm khoảng tin cậy 95% (`Predicted ± 1.96 × SEM`), bảng cân đối thiếu hụt mục tiêu (`ON_TRACK` / `AT_RISK` / `CRITICAL`), nút tái tính toán dự báo SEM (`recalculatePrediction`), và lưới xếp hạng Toa thuốc bù điểm theo `ROI = ΔScore / Số giờ ôn`.
+  - Xây dựng `PrescriptionPracticeModal.jsx` cho phép làm 3-5 câu hỏi biến thể đồng cấu (render KaTeX qua `MathText`), nộp bài chấm điểm tức thì, cập nhật xác suất làm chủ BKT `P(L_t)`, gạch nợ điểm thiếu hụt khi đạt `>= 67%` và tích hợp nút **Hỏi Gia sư AI Socratic** cho từng câu ở màn hình kết quả.
+  - Tích hợp chế độ `compact` ngay trên trang Dashboard Học sinh (`App.jsx`) và chế độ `full` kèm bộ lọc tab con (`Flow 5 & 6`) trong `LearningAnalyticsView.jsx`.
+- **Giai Đoạn 3 — Trung Tâm Thông Báo Quả Chuông Navbar & Cảnh Báo Sớm Cá Nhân BR-04 3 Tầng ([`NotificationBellPopover.jsx`](../src/components/layout/NotificationBellPopover.jsx), [`Navbar.jsx`](../src/components/layout/Navbar.jsx), [`StudentEarlyWarningsCard.jsx`](../src/components/dashboard/StudentEarlyWarningsCard.jsx))**:
+  - Thay thế chấm đỏ tĩnh trên `Navbar.jsx` bằng `NotificationBellPopover.jsx` thời gian thực: tự động hiển thị huy hiệu số lượng thông báo chưa đọc (`unreadCount`) cho Học sinh hoặc số lượng cảnh báo chờ can thiệp (`activeAlertsCount`) cho Giáo viên/Quản lý.
+  - Xây dựng `StudentEarlyWarningsCard.jsx` tích hợp trong Trung tâm Phân tích & Dự báo (`LearningAnalyticsView.jsx`), hỗ trợ lọc theo mức độ (`RED`, `YELLOW`, `UNREALISTIC_GOAL`, `GREEN`), lọc `unreadOnly`, xem phản hồi can thiệp của Cố vấn (`resolutionNotes`) và đánh dấu đã đọc (`PATCH /api/practice/early-warnings/{alertId}/read`) đồng bộ tức thì qua `veval:flow6-updated`.
+- **Giai Đoạn 4 — Bảng Điều Khiển Cảnh Báo Sớm Cố Vấn, Biên Bản Can Thiệp Sư Phạm & Đặt Lịch Tư Vấn 3 Bên ([`EarlyWarningsMentorPanel.jsx`](../src/components/dashboard/EarlyWarningsMentorPanel.jsx), [`TeacherDashboardView.jsx`](../src/components/dashboard/TeacherDashboardView.jsx), [`CampusManagerDashboardView.jsx`](../src/components/dashboard/CampusManagerDashboardView.jsx))**:
+  - Xây dựng `EarlyWarningsMentorPanel.jsx` tích hợp đồng thời vào không gian làm việc của Giáo viên (`TeacherDashboardView.jsx`) và Quản lý học thuật cơ sở (`CampusManagerDashboardView.jsx`).
+  - Hiển thị dải 6 chỉ số KPI (`TotalAlerts`, `ActiveAlertsCount`, `RedAlertsCount`, `YellowAlertsCount`, `UnrealisticGoalCount`, `ResolvedAlertsCount`), bộ lọc theo lớp phụ trách, phân tầng cảnh báo và trạng thái xử lý, kèm số liệu đối chiếu điểm dự báo SEM / mục tiêu / thiếu hụt của từng học sinh.
+  - Tích hợp 2 Modal nghiệp vụ chuyên biệt: **Modal Ghi nhận Can thiệp Sư phạm** (`POST /api/practice/early-warnings/{alertId}/resolve` kèm mẫu ghi chú nhanh) và **Modal Đặt lịch Tư vấn 3 bên** (`POST /api/practice/early-warnings/{alertId}/schedule-counseling`, kiểm tra ngày giờ tương lai và thang điểm đề xuất `0 — 1200`).
+- **Giai Đoạn 5 — Sổ Tay Lỗi Sai Phản Tư, Ôn Tập Ngắt Quãng SuperMemo-2 (SM-2) & Đấu Nối Toàn Tuyến 4 Vai Trò ([`MistakeNotebookSM2View.jsx`](../src/components/dashboard/MistakeNotebookSM2View.jsx), [`Sidebar.jsx`](../src/components/layout/Sidebar.jsx), [`ParentDashboardView.jsx`](../src/components/dashboard/ParentDashboardView.jsx), [`App.jsx`](../src/App.jsx))**:
+  - Xây dựng `MistakeNotebookSM2View.jsx` cho phép Học sinh duyệt kho lỗi sai cá nhân theo trạng thái thành thạo & nhãn nhận thức (`MISSING_CONCEPT`, `CARELESS`, `MISREAD_QUESTION`), gắn nhãn siêu nhận thức (`POST /api/practice/mistakes/{id}/tag-error`), và chạy trực tiếp phiên ôn tập biến thể đồng cấu đến hạn (`GET /api/practice/mistakes/daily-review` & `POST /api/practice/mistakes/{id}/review-submit`).
+  - Hiển thị minh bạch chỉ số `EaseFactor (EF >= 1.3)`, khoảng cách ngày `IntervalDays`, tiến độ `3/3 chu kỳ đúng liên tiếp -> Thành thạo` và nút hỏi Gia sư AI Socratic ngay trên câu vừa ôn.
+  - Bổ sung mục điều hướng `Sổ tay Lỗi sai SM-2 (Flow 6)` trên `Sidebar.jsx`, nút chuyển nhanh từ `LearningAnalyticsView.jsx` và đồng bộ luồng cảnh báo sớm sang Cổng Phụ huynh (`ParentDashboardView.jsx`).
+- **Kiểm Thử & Đóng Gói Vận Hành**:
+  - `npm test` đạt `8/8 tests pass` (`3 suites`), `vite build` đóng gói sạch 100% trong `951ms` (`0 errors`).
+
 ---
 
 ## [06/11/2026] - Hợp Nhất Nhánh `ThinhTT/feature-curriculum-studio-formula-editor` Vào `develop` & Đồng Bộ Toàn Diện Core Flow 2, 4, 5, PayOS VietQR & OTP Auth

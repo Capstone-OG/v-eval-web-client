@@ -43,6 +43,8 @@ import {
   AISocraticTutorModal
 } from './components/modals';
 import { authService } from './services/authService';
+import { Bot, CheckCircle2 } from 'lucide-react';
+import { ScorePredictionPanel, MistakeNotebookSM2View } from './components/dashboard';
 import { practiceService } from './services/practiceService';
 import { userService } from './services/userService';
 import { tokenStorage } from './services/apiClient';
@@ -682,6 +684,27 @@ export default function App() {
         isOpen={activeModal === 'arch'}
         onClose={() => setActiveModal(null)}
       />
+
+      {/* Sleek Floating AI Tutor FAB (Bottom-Right Corner) */}
+      {role === 'student' && (
+        <div className="fixed bottom-6 right-6 z-40 flex items-center gap-3">
+          <div className="hidden sm:flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-slate-900/90 text-white text-xs font-bold shadow-xl border border-slate-700/80 backdrop-blur-md pointer-events-none">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+            <span>Hỏi Gia sư AI</span>
+          </div>
+
+          <button
+            onClick={() => setActiveModal('ai')}
+            className="relative group p-4 rounded-full bg-gradient-to-tr from-blue-600 via-indigo-600 to-violet-600 text-white shadow-2xl shadow-blue-500/40 hover:shadow-indigo-500/60 hover:scale-110 active:scale-95 transition-all duration-300 cursor-pointer border-2 border-white/20 flex items-center justify-center focus:outline-none focus:ring-4 focus:ring-blue-400/40"
+            title="Hỏi Gia sư AI giải đáp bài tập 24/7"
+            aria-label="Hỏi Gia sư AI"
+          >
+            <span className="absolute -inset-1 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 opacity-40 blur-sm group-hover:opacity-80 transition duration-300 animate-pulse pointer-events-none" />
+            <Bot className="w-7 h-7 relative z-10 text-white group-hover:rotate-6 transition-transform" />
+            <span className="absolute top-0 right-0 w-3.5 h-3.5 bg-emerald-400 border-2 border-white rounded-full z-20 shadow-xs" />
+          </button>
+        </div>
+      )}
     </div>
   );
 }
