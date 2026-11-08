@@ -1,5 +1,18 @@
 # NHẬT KÝ KIỂM TRA TIẾN ĐỘ VẬN HÀNH (DAILY CHECK LOG) - WEB CLIENT
 
+## [08/11/2026] - Chuẩn Hóa Ngôn Ngữ Học Tập Thân Thiện Cho Học Sinh: Lược Bỏ Toàn Bộ Thuật Ngữ Kỹ Thuật Nội Bộ Trên Trang Kết Quả, Dự Báo Điểm, Sổ Tay Câu Sai & Gia Sư AI
+
+- **Chuẩn Hóa Trung Tâm Kết Quả Học Tập & Dự Báo Điểm Thi ([`LearningAnalyticsView.jsx`](../src/components/dashboard/LearningAnalyticsView.jsx), [`ScorePredictionPanel.jsx`](../src/components/dashboard/ScorePredictionPanel.jsx), [`PrescriptionPracticeModal.jsx`](../src/components/modals/PrescriptionPracticeModal.jsx))**:
+  - Loại bỏ toàn bộ nhãn kỹ thuật/thuật toán nội bộ gây khó hiểu cho học sinh (`Core Flow 5 & 6`, `Live Gateway API (:5212)`, nút debug `Xem Thử Ghost Onboarding`, `IRT 2PL`, `BKT P(Lt)`, `Theta +0.17`, `SEM 95%`, `Predicted ± 1.96 × SEM`, `Greedy Knapsack ROI`, `ROI = ΔScore / Số giờ ôn`, `AUTO_INIT`, `CRITICAL`, mã thô `PAT_SKILL_*`, `Isomorphic Variants`).
+  - Thay thế bằng ngôn ngữ tự học gần gũi, dễ hiểu: **Kết quả học tập & Dự báo điểm thi**, **Khoảng điểm có thể đạt**, **Chủ đề cần ôn ngay để tăng điểm nhanh**, **Tiến độ lộ trình học**, **Thói quen tự học 7 ngày qua**, **Lịch sử làm bài gần đây**, và bộ chuẩn hóa tên bài `formatFriendlyExamTitle` / `formatPrescriptionTitle` / `formatCalculationSource`.
+- **Đồng Bộ Hộp Thư Nhắc Nhở, Sổ Tay Câu Làm Sai, Điều Hướng Sidebar & Gia Sư AI Đồng Hành ([`StudentEarlyWarningsCard.jsx`](../src/components/dashboard/StudentEarlyWarningsCard.jsx), [`MistakeNotebookSM2View.jsx`](../src/components/dashboard/MistakeNotebookSM2View.jsx), [`NotificationBellPopover.jsx`](../src/components/layout/NotificationBellPopover.jsx), [`Sidebar.jsx`](../src/components/layout/Sidebar.jsx), [`AdaptiveQuizModal.jsx`](../src/components/modals/AdaptiveQuizModal.jsx), [`AISocraticTutorModal.jsx`](../src/components/modals/AISocraticTutorModal.jsx), [`App.jsx`](../src/App.jsx))**:
+  - Chuyển đổi toàn bộ nhãn `Gia sư AI Socratic` / `AI Socratic Tutor` / `Báo cáo vi phạm quy tắc Socratic` sang **Gia sư AI** / **Gia sư AI Đồng Hành** / **Hỏi Gia sư AI**.
+  - Lược bỏ các mã quy tắc nội bộ (`BR-01`, `BR-02`, `BR-04`, `Flow 1..6`, `SM-2`, `EaseFactor`, `Metacognition Tagging`, `CARELESS`, `MISSING_CONCEPT`) trên thanh điều hướng trái `Sidebar.jsx`, chuông thông báo `NotificationBellPopover.jsx`, hộp thư nhắc nhở `StudentEarlyWarningsCard.jsx` (bổ sung bộ lọc `Định hướng mục tiêu` và sửa reset `setMarkingId(null)`) cùng `MistakeNotebookSM2View.jsx`.
+- **Kiểm Thử & Đóng Gói Vận Hành**:
+  - `npm test` đạt `8/8 tests pass` (`3 suites`), `oxlint` trên toàn bộ 10 file chỉnh sửa đạt `0 errors`, và `npm run build` (`vite build`) đóng gói sạch 100% (`0 errors`).
+
+---
+
 ## [07/11/2026] - Triển Khai Toàn Diện Core Flow 6 Trên Frontend: Dự Báo Điểm SEM 95%, Toa Thuốc Bù Điểm Knapsack ROI, Cảnh Báo Sớm BR-04 & Sổ Tay Lỗi Sai SM-2
 
 - **Giai Đoạn 1 — Chuẩn Hóa Tầng Dịch Vụ API Client Core Flow 6 ([`apiClient.js`](../src/services/apiClient.js), [`practiceService.js`](../src/services/practiceService.js), [`practiceService.flow6.test.js`](../tests/practiceService.flow6.test.js))**:

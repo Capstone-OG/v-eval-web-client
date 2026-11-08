@@ -823,6 +823,15 @@ pm run build completes in 905ms (3,013 modules transformed, 0 errors).
 
 ---
 
+### 4.28. Student-Friendly Pedagogical UX Copy & Technical Jargon Abstraction (`LearningAnalyticsView.jsx`, `ScorePredictionPanel.jsx`, `MistakeNotebookSM2View.jsx`, `Sidebar.jsx`)
+- **Learner-Centric Terminology Normalization**:
+  - Abstracted all internal engineering, psychometric, and thesis-specification labels (`Core Flow 1..6`, `Live Gateway API (:5212)`, `Ghost Onboarding` debug trigger, `IRT 2PL`, `Theta`, `BKT P(Lt)`, `SEM 95%`, `Greedy Knapsack ROI`, `SM-2`, `EaseFactor`, `BR-01..BR-04`, `Isomorphic Variant`, and `Socratic Tutor`) out of student-facing surfaces while keeping all underlying algorithms and backend API contracts 100% intact.
+  - Added display normalizers (`formatFriendlyExamTitle`, `formatPrescriptionTitle`, `formatCalculationSource`, `cleanAlertMessage`) to translate raw backend codes (`AUTO_INIT`, `PAT_SKILL_*`, `(BR-04...)`, legacy stored exam titles) into natural Vietnamese study guidance.
+- **Cohesive Multi-Surface Experience**:
+  - Unified copy across `LearningAnalyticsView.jsx`, `ScorePredictionPanel.jsx`, `PrescriptionPracticeModal.jsx`, `StudentEarlyWarningsCard.jsx`, `MistakeNotebookSM2View.jsx`, `NotificationBellPopover.jsx`, `AdaptiveQuizModal.jsx`, `AISocraticTutorModal.jsx`, `Sidebar.jsx`, and `App.jsx` (`8/8` unit tests passing, `0` oxlint errors on modified components, clean Vite production bundle).
+
+---
+
 ## 5. Verification & Acceptance Criteria
 
 1. **Clean Production Build**: Executed `npm run build` with 0 syntax or bundle errors; production artifacts outputted to `dist/` within 763ms on Vite 8 and React 19.
