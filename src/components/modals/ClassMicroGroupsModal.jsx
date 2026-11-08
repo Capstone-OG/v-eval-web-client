@@ -110,7 +110,7 @@ export default function ClassMicroGroupsModal({ isOpen, onClose, classData }) {
     }
   ];
 
-  // Nạp danh sách nhóm khi mở modal
+  // Nạp danh sách nhóm thực tế từ Backend khi mở modal
   useEffect(() => {
     if (!isOpen || !classData) return;
 
@@ -118,15 +118,16 @@ export default function ClassMicroGroupsModal({ isOpen, onClose, classData }) {
       try {
         setLoading(true);
         const data = await practiceService.getClassMicroGroups(classData.id);
-        if (data && Array.isArray(data) && data.length > 0) {
+        if (data && Array.isArray(data)) {
           setGroups(data);
+        } else if (data && Array.isArray(data.groups)) {
+          setGroups(data.groups);
         } else {
-          setGroups(defaultSampleGroups);
+          setGroups([]);
         }
       } catch (err) {
-        // Fallback dùng dữ liệu mẫu chuẩn nếu backend chưa có nhóm thực tế của classId này
-        console.warn('API getClassMicroGroups fallback sang dữ liệu sư phạm chuẩn:', err.message);
-        setGroups(defaultSampleGroups);
+        console.warn('[ClassMicroGroupsModal] Error fetching micro groups from backend:', err.message);
+        setGroups([]);
       } finally {
         setLoading(false);
       }
@@ -135,28 +136,20 @@ export default function ClassMicroGroupsModal({ isOpen, onClose, classData }) {
     fetchGroups();
   }, [isOpen, classData]);
 
-  // Xử lý tự động chia nhóm vi mô
+  // Xử lý tự động chia nhóm vi mô trên Backend
   const handleAutoPartition = async () => {
     if (!classData) return;
     try {
       setLoading(true);
       const res = await practiceService.autoPartitionMicroGroups(classData.id, preferredGroupSize);
-      if (res && res.groups && res.groups.length > 0) {
-        setGroups(res.groups);
-        setSuccessNotice(`Thuật toán đã gom cụm thành công ${res.totalGroups} bàn học vi mô (${preferredGroupSize} bạn/bàn) theo độ tương đồng lỗ hổng kiến thức!`);
-      } else {
-        // Mô phỏng tính toán phân cụm nếu API trả về rỗng
-        setTimeout(() => {
-          setGroups(defaultSampleGroups);
-          setSuccessNotice(`Đã chạy thuật toán Homogeneous Constrained Clustering: Phân bổ 20 học sinh thành 5 bàn học vi mô (3 - 5 em/bàn) chuẩn sư phạm!`);
-        }, 600);
-      }
+      const nextGroups = Array.isArray(res?.groups) ? res.groups : Array.isArray(res) ? res : [];
+      setGroups(nextGroups);
+      setSuccessNotice(
+        `Thuật toán Backend đã gom cụm thành công ${res?.totalGroups ?? nextGroups.length} bàn học vi mô (${preferredGroupSize} bạn/bàn) theo độ tương đồng lỗ hổng kiến thức!`
+      );
       setTimeout(() => setSuccessNotice(''), 6000);
     } catch (err) {
-      console.warn('Fallback auto partition:', err.message);
-      setGroups(defaultSampleGroups);
-      setSuccessNotice(`Đã tự động tối ưu hóa 20 học sinh thành 5 bàn học vi mô (3 - 5 em/bàn) đồng nhất về vùng trũng kiến thức!`);
-      setTimeout(() => setSuccessNotice(''), 6000);
+      toast.error('Không thể phân nhóm vi mô: ' + (err?.message || 'Lỗi kết nối Backend'));
     } finally {
       setLoading(false);
     }

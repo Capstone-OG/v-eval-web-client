@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Sparkles,
@@ -23,6 +23,10 @@ import LoginForm from './LoginForm';
 import RegisterForm from './RegisterForm';
 import ForgotPasswordModal from './ForgotPasswordModal';
 import authService from '../../services/authService';
+import {
+  validateEmailSyntaxAndRules,
+  validateEmailComprehensive
+} from '../../utils/emailValidator';
 
 export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, onNavigateHome }) {
   const [role, setRole] = useState('student'); // student | parent (for registration)
@@ -35,8 +39,8 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
   }, [initialMode]);
 
   // Login form state
-  const [email, setEmail] = useState('minhhoang.vnu@gmail.com');
-  const [password, setPassword] = useState('Password123@');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
 
@@ -80,6 +84,71 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
   const [formError, setFormError] = useState(null);
   const [fieldErrors, setFieldErrors] = useState({});
 
+  // Real-time Email Validation state for Registration
+  const [emailValidationStatus, setEmailValidationStatus] = useState('idle'); // 'idle' | 'checking' | 'valid' | 'invalid'
+  const [emailValidationMessage, setEmailValidationMessage] = useState('');
+  const [emailSuggestedFix, setEmailSuggestedFix] = useState(null);
+
+  // Run live email check (syntax + Gmail rules + fake pattern + DNS MX + DB availability)
+  const runLiveEmailValidation = async (rawEmailValue) => {
+    const trimmed = (rawEmailValue || '').trim();
+    if (!trimmed) {
+      setEmailValidationStatus('idle');
+      setEmailValidationMessage('');
+      setEmailSuggestedFix(null);
+      return;
+    }
+
+    const syncCheck = validateEmailSyntaxAndRules(trimmed);
+    if (!syncCheck.isValid) {
+      setEmailValidationStatus('invalid');
+      setEmailValidationMessage(syncCheck.message);
+      setEmailSuggestedFix(syncCheck.suggestedEmail || null);
+      setFieldErrors((prev) => ({ ...prev, regEmail: syncCheck.message }));
+      return;
+    }
+
+    setEmailValidationStatus('checking');
+    setEmailSuggestedFix(null);
+
+    const asyncCheck = await validateEmailComprehensive(trimmed, (em) =>
+      authService.validateEmail(em)
+    );
+
+    if (!asyncCheck.isValid) {
+      setEmailValidationStatus('invalid');
+      setEmailValidationMessage(asyncCheck.message);
+      setEmailSuggestedFix(asyncCheck.suggestedEmail || null);
+      setFieldErrors((prev) => ({ ...prev, regEmail: asyncCheck.message }));
+    } else {
+      setEmailValidationStatus('valid');
+      setEmailValidationMessage(
+        asyncCheck.message || 'Email hợp lệ (Máy chủ mail MX hoạt động)'
+      );
+      setEmailSuggestedFix(null);
+      setFieldErrors((prev) => ({ ...prev, regEmail: null }));
+    }
+  };
+
+  // Debounced live validation while typing registration email
+  useEffect(() => {
+    if (mode !== 'register') return;
+    const trimmed = regEmail.trim();
+    if (!trimmed) {
+      setEmailValidationStatus('idle');
+      setEmailValidationMessage('');
+      setEmailSuggestedFix(null);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      runLiveEmailValidation(trimmed);
+    }, 550);
+
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [regEmail, mode]);
+
   // Fetch Campuses on Mount
   useEffect(() => {
     let isMounted = true;
@@ -105,13 +174,14 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
     { value: '700', label: '700+ (Tiêu chuẩn)' }
   ];
 
-  // Live Activity Ticker on Left Panel
-  const liveActivities = [
-    "🔥 Bạn Nguyễn Hoàng A. vừa làm bài test chẩn đoán: 945 / 1200 điểm!",
-    "⚡ 84 học sinh 2k8 vừa đăng ký khóa Luyện thi ĐGNL ĐHQG TP.HCM.",
-    "🤖 AI Socratic Tutor vừa tự động sửa bài tập Logic cho 12 bạn.",
-    "🎯 94% học sinh sau khi đăng ký đạt tăng trung bình +75 điểm."
-  ];
+  // Dynamic System & Campus Status Ticker on Left Panel
+  const liveActivities = campuses.length > 0
+    ? campuses.map((c) => `🏫 Đang kết nối trực tuyến: ${c.name} (${c.code || 'ACTIVE'})`)
+    : [
+        "🔗 Cổng xác thực tập trung V-Eval IAM Gateway (:5212) đang hoạt động.",
+        "📐 Hệ thống chấm điểm tâm trắc học IRT 2PL & BKT thời gian thực.",
+        "🤖 Gia sư AI Socratic & Đồ thị tri thức tiền đề DAG 4 miền V-ACT."
+      ];
   const [actIdx, setActIdx] = useState(0);
 
   useEffect(() => {
@@ -135,8 +205,9 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
   // Determine App Role from BE roles array response
   const determineRoleFromResponse = (res) => {
     const roles = res?.user?.roles || res?.roles || [];
+    if (roles.some(r => r.toLowerCase().includes('admin') || r.toLowerCase().includes('administrator'))) return 'admin';
     if (roles.some(r => r.toLowerCase().includes('teacher') || r.toLowerCase().includes('giaovien'))) return 'teacher';
-    if (roles.some(r => r.toLowerCase().includes('manager') || r.toLowerCase().includes('admin') || r.toLowerCase().includes('quanly') || r.toLowerCase().includes('administrator'))) return 'manager';
+    if (roles.some(r => r.toLowerCase().includes('manager') || r.toLowerCase().includes('director') || r.toLowerCase().includes('quanly'))) return 'manager';
     if (roles.some(r => r.toLowerCase().includes('parent') || r.toLowerCase().includes('phuhuynh'))) return 'parent';
     return 'student';
   };
@@ -168,13 +239,13 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
       setIsSubmitting(false);
 
       const loggedUser = response.user || {
+        id: response.userId || response.id,
         email: response.email || email,
-        fullName: response.fullName || 'Người dùng V-Eval',
-        role: role
+        fullName: response.fullName || email,
+        roles: response.roles || []
       };
 
-      const isUserAdmin = loggedUser.role === 'administrator' || loggedUser.roles?.some(r => (typeof r === 'string' ? r.toUpperCase() : '') === 'ADMINISTRATOR') || role === 'admin';
-      const resolvedRole = isUserAdmin ? 'admin' : (loggedUser.role || determineRoleFromResponse(response));
+      const resolvedRole = authService.resolveAppRole(loggedUser);
 
       if (onLoginSuccess) {
         onLoginSuccess(resolvedRole, loggedUser);
@@ -213,13 +284,12 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
       errs.regFullName = "Vui lòng nhập Họ và tên.";
     }
 
-    if (!regEmail.trim()) {
-      errs.regEmail = "Vui lòng nhập địa chỉ Email.";
-    } else {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(regEmail.trim())) {
-        errs.regEmail = "Email không đúng định dạng (ví dụ: name@gmail.com).";
-      }
+    const syncEmailCheck = validateEmailSyntaxAndRules(regEmail);
+    if (!syncEmailCheck.isValid) {
+      errs.regEmail = syncEmailCheck.message;
+      setEmailValidationStatus('invalid');
+      setEmailValidationMessage(syncEmailCheck.message);
+      setEmailSuggestedFix(syncEmailCheck.suggestedEmail || null);
     }
 
     if (!regPhone.trim()) {
@@ -252,13 +322,32 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
 
     if (Object.keys(errs).length > 0) {
       setFieldErrors(errs);
-      setFormError("Vui lòng hoàn thiện các trường thông tin bị thiếu bên dưới.");
+      setFormError(errs.regEmail || "Vui lòng kiểm tra và hoàn thiện chính xác các trường thông tin bên dưới.");
       return;
     }
     setFieldErrors({});
 
     setIsSubmitting(true);
     try {
+      // BẮT BUỘC kiểm tra toàn diện Email (DNS MX + Chống email ảo + Kiểm tra tồn tại CSDL) trước khi gọi API đăng ký
+      setEmailValidationStatus('checking');
+      const liveEmailCheck = await validateEmailComprehensive(regEmail.trim(), (em) =>
+        authService.validateEmail(em)
+      );
+
+      if (!liveEmailCheck.isValid) {
+        setIsSubmitting(false);
+        setEmailValidationStatus('invalid');
+        setEmailValidationMessage(liveEmailCheck.message);
+        setEmailSuggestedFix(liveEmailCheck.suggestedEmail || null);
+        setFieldErrors({ regEmail: liveEmailCheck.message });
+        setFormError(liveEmailCheck.message);
+        return;
+      }
+
+      setEmailValidationStatus('valid');
+      setEmailValidationMessage(liveEmailCheck.message);
+
       const payload = {
         fullName: regFullName.trim(),
         email: regEmail.trim(),
@@ -268,7 +357,7 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
         campusId: selectedCampusId || (campuses[0]?.campusId || campuses[0]?.id)
       };
 
-      const regRes = await authService.register(payload);
+      await authService.register(payload);
       setIsSubmitting(false);
 
       // Open OTP verification step in modal without auto-filling OTP
@@ -276,77 +365,24 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
       setForgotEmail(regEmail.trim());
       setOtpCode(''); // Empty input field so user must enter OTP from email
       setModalError(null);
-      setModalSuccess("Đăng ký thành công! Mã xác thực OTP đã được gửi về email của bạn. Vui lòng kiểm tra hộp thư và nhập mã xác thực.");
+      setModalSuccess(
+        "Đã kiểm tra email hợp lệ! Mã xác thực OTP 6 chữ số đã được gửi về email của bạn. Vui lòng kiểm tra hộp thư và nhập mã OTP để xác minh tài khoản."
+      );
       setForgotStep(2);
       setIsForgotModalOpen(true);
     } catch (err) {
       setIsSubmitting(false);
       console.warn('[WebLoginPage] Register error:', err);
-      const msg = err.data?.error?.description || err.data?.message || err.message || 'Đăng ký không thành công. Vui lòng kiểm tra lại thông tin.';
+      const msg =
+        err.data?.error?.description ||
+        err.data?.errors?.[0]?.description ||
+        err.data?.message ||
+        err.message ||
+        'Đăng ký không thành công. Vui lòng kiểm tra lại thông tin.';
       setFormError(msg);
-    }
-  };
-
-  // Quick Demo Login Handler (1-Click Switcher)
-  const handleQuickDemo = async (demoRole) => {
-    let demoEmail = 'minhhoang.vnu@gmail.com';
-    let demoPass = 'Password123@';
-    let demoName = 'Minh Hoàng';
-    let demoRoleArray = ['Student'];
-
-    if (demoRole === 'student') {
-      demoEmail = 'minhhoang.vnu@gmail.com';
-      demoName = 'Minh Hoàng';
-      demoRoleArray = ['Student'];
-    } else if (demoRole === 'teacher') {
-      demoEmail = 'thayphamduy.dgnl@gmail.com';
-      demoName = 'Thầy Phạm Duy';
-      demoRoleArray = ['Teacher'];
-    } else if (demoRole === 'manager') {
-      demoEmail = 'manager.thuduc@dgnl.edu.vn';
-      demoName = 'Cô Hà Quản Lý';
-      demoRoleArray = ['Manager'];
-    } else if (demoRole === 'parent') {
-      demoEmail = 'phuhuynh.minhhoang@gmail.com';
-      demoName = 'Phụ Huynh Minh';
-      demoRoleArray = ['Parent'];
-    }
-
-    setEmail(demoEmail);
-    setPassword(demoPass);
-    setIsSubmitting(true);
-    setFormError(null);
-
-    try {
-      const res = await authService.login({ email: demoEmail, password: demoPass });
-      setIsSubmitting(false);
-      const loggedUser = res.user || {
-        email: demoEmail,
-        fullName: demoName,
-        roles: demoRoleArray,
-        role: demoRole
-      };
-      if (onLoginSuccess) {
-        onLoginSuccess(demoRole, loggedUser);
-      }
-    } catch {
-      // Fallback for offline demo mode
-      setIsSubmitting(false);
-      const demoResponse = {
-        accessToken: "eyDemoAccessToken123456",
-        refreshToken: "eyDemoRefreshToken123456",
-        user: {
-          userId: "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-          email: demoEmail,
-          fullName: demoName,
-          phone: "0912345678",
-          avatarUrl: studentAvatar,
-          roles: demoRoleArray,
-          role: demoRole
-        }
-      };
-      if (onLoginSuccess) {
-        onLoginSuccess(demoRole, demoResponse.user);
+      if (msg.toLowerCase().includes('email') || msg.toLowerCase().includes('tên miền') || msg.toLowerCase().includes('gmail')) {
+        setEmailValidationStatus('invalid');
+        setFieldErrors((prev) => ({ ...prev, regEmail: msg }));
       }
     }
   };
@@ -454,7 +490,7 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
   };
 
   return (
-    <div className="min-h-screen w-full bg-[#F8FAFC] text-slate-900 flex flex-col font-sans selection:bg-blue-600 selection:text-white">
+    <div className="min-h-screen w-full bg-[#FDFBF7] text-slate-900 flex flex-col font-sans selection:bg-[#FACC15] selection:text-slate-950">
 
       {/* 1. TOP HEADER NAVIGATION */}
       <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-6 lg:px-8 py-3 transition-all shadow-xs">
@@ -471,7 +507,7 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
             <div>
               <div className="font-black text-xl tracking-tight text-slate-950 flex items-center gap-1.5">
                 <span>ĐGNL AI</span>
-                <span className="w-2.5 h-2.5 rounded-full bg-blue-600 animate-pulse"></span>
+                <span className="w-2 h-2 rounded-full bg-[#FACC15] ring-4 ring-yellow-400/20 animate-pulse"></span>
               </div>
               <div className="text-[10px] text-blue-600 font-extrabold uppercase tracking-wider">
                 Khảo thí & Luyện thi ĐGNL ĐHQG-HCM 4.0
@@ -736,7 +772,6 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
                   fieldErrors={fieldErrors}
                   setFieldErrors={setFieldErrors}
                   handleLoginSubmit={handleLoginSubmit}
-                  handleQuickDemo={handleQuickDemo}
                   onOpenForgotPassword={() => {
                     setModalMode('forgot');
                     setForgotEmail('');
@@ -788,6 +823,16 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
                   fieldErrors={fieldErrors}
                   setFieldErrors={setFieldErrors}
                   handleRegisterSubmit={handleRegisterSubmit}
+                  emailValidationStatus={emailValidationStatus}
+                  emailValidationMessage={emailValidationMessage}
+                  emailSuggestedFix={emailSuggestedFix}
+                  onEmailBlur={(val) => runLiveEmailValidation(val)}
+                  onApplySuggestedEmail={(suggested) => {
+                    setRegEmail(suggested);
+                    setEmailSuggestedFix(null);
+                    setFieldErrors((prev) => ({ ...prev, regEmail: null }));
+                    runLiveEmailValidation(suggested);
+                  }}
                 />
               )}
 

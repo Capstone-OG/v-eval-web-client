@@ -360,13 +360,13 @@ export default function SubmissionHistoryView({
 
     return (
       <div className="space-y-6 animate-fade pb-12">
-        {/* Top Back Navigation Bar */}
-        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xl">
+        {/* Top Back Navigation Bar (Synchronized with Home Page Royal Blue-Indigo Theme) */}
+        <div className="bg-gradient-to-r from-blue-700 via-indigo-700 to-blue-900 border border-blue-600/30 rounded-3xl p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xl text-white">
           <div className="space-y-1">
             <button
               type="button"
               onClick={() => setSelectedSubmission(null)}
-              className="inline-flex items-center gap-1.5 text-xs font-extrabold text-cyan-400 hover:text-cyan-300 mb-1 cursor-pointer"
+              className="inline-flex items-center gap-1.5 text-xs font-extrabold text-[#FACC15] hover:text-yellow-300 mb-1 cursor-pointer"
             >
               <ChevronLeft className="w-4 h-4" />
               <span>Quay lại Danh sách Lịch sử làm bài</span>
@@ -374,29 +374,26 @@ export default function SubmissionHistoryView({
             <h2 className="text-lg sm:text-xl font-black text-white flex flex-wrap items-center gap-2.5">
               <span>{selectedSubmission.title}</span>
               <span
-                className={`text-[11px] px-2.5 py-0.5 rounded-full border font-bold ${
-                  EXAM_TYPE_LABELS[selectedSubmission.examType]?.badge ||
-                  EXAM_TYPE_LABELS.DIAGNOSTIC.badge
-                }`}
+                className="text-[11px] px-2.5 py-0.5 rounded-full border font-bold bg-white/15 text-[#FACC15] border-white/25"
               >
                 {EXAM_TYPE_LABELS[selectedSubmission.examType]?.label || 'Khảo sát ĐGNL'}
               </span>
             </h2>
-            <p className="text-xs text-slate-400">
-              Hoàn thành lúc: <strong className="text-slate-200">{formatDate(selectedSubmission.completedAt)}</strong> • Bấm vào bất kỳ câu hỏi nào bên dưới để xem đáp án giải chi tiết và hỏi Gia sư AI Socratic.
+            <p className="text-xs text-blue-100">
+              Hoàn thành lúc: <strong className="text-white">{formatDate(selectedSubmission.completedAt)}</strong> • Bấm vào bất kỳ câu hỏi nào bên dưới để xem đáp án giải chi tiết và hỏi Gia sư AI Socratic.
             </p>
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="px-4 py-2.5 rounded-2xl bg-slate-950 border border-slate-800 text-center">
-              <div className="text-[10px] font-bold uppercase text-slate-400">Kết quả</div>
-              <div className="text-base font-black text-emerald-400">
+            <div className="px-4 py-2.5 rounded-2xl bg-white/15 backdrop-blur-md border border-white/20 text-center">
+              <div className="text-[10px] font-bold uppercase text-blue-100">Kết quả</div>
+              <div className="text-base font-black text-[#FACC15]">
                 {totalCorrect}/{totalQuestions} câu ({accPct}%)
               </div>
             </div>
-            <div className="px-4 py-2.5 rounded-2xl bg-slate-950 border border-slate-800 text-center">
-              <div className="text-[10px] font-bold uppercase text-slate-400">Chỉ số IRT</div>
-              <div className="text-base font-black text-cyan-400">
+            <div className="px-4 py-2.5 rounded-2xl bg-white/15 backdrop-blur-md border border-white/20 text-center">
+              <div className="text-[10px] font-bold uppercase text-blue-100">Chỉ số IRT</div>
+              <div className="text-base font-black text-cyan-200">
                 {selectedSubmission.theta_0 > 0 ? `+${selectedSubmission.theta_0}` : selectedSubmission.theta_0 ?? '+0.42'}
               </div>
             </div>
@@ -405,40 +402,40 @@ export default function SubmissionHistoryView({
 
         {/* AI Commentary Banner */}
         {selectedSubmission.ai_commentary && (
-          <div className="bg-gradient-to-r from-indigo-950/90 via-slate-900 to-purple-950/90 border border-indigo-500/30 rounded-2xl p-5 text-xs sm:text-sm text-slate-200 flex items-start gap-3.5 shadow-lg">
-            <div className="p-2.5 rounded-xl bg-indigo-500/20 text-cyan-300 shrink-0">
+          <div className="bg-gradient-to-r from-blue-50 via-indigo-50/70 to-amber-50/50 border border-blue-200/80 rounded-2xl p-5 text-xs sm:text-sm text-slate-800 flex items-start gap-3.5 shadow-sm">
+            <div className="p-2.5 rounded-xl bg-blue-600 text-[#FACC15] shrink-0 shadow-xs">
               <Sparkles className="w-5 h-5" />
             </div>
             <div className="space-y-1">
-              <div className="font-black text-cyan-300 text-xs uppercase tracking-wider">
+              <div className="font-black text-blue-800 text-xs uppercase tracking-wider">
                 Nhận Xét Chiến Thuật Từ AI Psychometrics:
               </div>
-              <div className="leading-relaxed text-slate-200">{selectedSubmission.ai_commentary}</div>
+              <div className="leading-relaxed text-slate-700 font-medium">{selectedSubmission.ai_commentary}</div>
             </div>
           </div>
         )}
 
         {/* Question Review List + Filter */}
-        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-8 space-y-6 shadow-xl">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+        <div className="bg-white border border-slate-200/80 rounded-3xl p-5 sm:p-8 space-y-6 shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/80 pb-4">
             <div>
-              <h3 className="text-base font-black text-white flex items-center gap-2">
-                <BookOpen className="w-5 h-5 text-cyan-400" />
+              <h3 className="text-base font-black text-slate-900 flex items-center gap-2">
+                <BookOpen className="w-5 h-5 text-blue-600" />
                 <span>Bảng Đáp Án Chi Tiết & Hỏi Gia Sư AI Socratic</span>
               </h3>
-              <p className="text-xs text-slate-400 mt-0.5">
+              <p className="text-xs text-slate-500 mt-0.5">
                 Xem lại phương án bạn đã chọn, đối chiếu lời giải gốc và hỏi AI Socratic từng bước tư duy
               </p>
             </div>
 
-            <div className="flex flex-wrap items-center gap-1.5 bg-slate-950 p-1.5 rounded-2xl border border-slate-800">
+            <div className="flex flex-wrap items-center gap-1.5 bg-[#FDFBF7] p-1.5 rounded-2xl border border-slate-200/80">
               <button
                 type="button"
                 onClick={() => setReviewFilter('ALL')}
                 className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                   reviewFilter === 'ALL'
-                    ? 'bg-blue-600 text-white shadow-md'
-                    : 'text-slate-400 hover:text-white'
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
                 Tất cả ({totalQuestions})
@@ -448,8 +445,8 @@ export default function SubmissionHistoryView({
                 onClick={() => setReviewFilter('CORRECT')}
                 className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                   reviewFilter === 'CORRECT'
-                    ? 'bg-emerald-600 text-white shadow-md'
-                    : 'text-slate-400 hover:text-white'
+                    ? 'bg-emerald-600 text-white shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
                 Đúng ({totalCorrect})
@@ -459,8 +456,8 @@ export default function SubmissionHistoryView({
                 onClick={() => setReviewFilter('WRONG')}
                 className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                   reviewFilter === 'WRONG'
-                    ? 'bg-rose-600 text-white shadow-md'
-                    : 'text-slate-400 hover:text-white'
+                    ? 'bg-rose-600 text-white shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
                 Sai ({totalQuestions - totalCorrect})
@@ -476,40 +473,40 @@ export default function SubmissionHistoryView({
                   key={q.id || idx}
                   className={`p-5 sm:p-6 rounded-2xl border transition-all space-y-4 ${
                     q.isCorrect
-                      ? 'bg-slate-950/70 border-emerald-500/30'
-                      : 'bg-slate-950/70 border-rose-500/30'
+                      ? 'bg-[#FDFBF7] border-emerald-300/80'
+                      : 'bg-[#FDFBF7] border-rose-300/80'
                   }`}
                 >
                   {/* Question Header */}
-                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200/80 pb-3">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-sm font-black text-cyan-400">
+                      <span className="text-sm font-black text-blue-700">
                         Câu {q.question_number || idx + 1}:
                       </span>
                       {q.domain_name && (
-                        <span className="px-2.5 py-0.5 rounded-lg text-xs font-bold bg-blue-500/10 text-blue-300 border border-blue-500/20">
+                        <span className="px-2.5 py-0.5 rounded-lg text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
                           {q.domain_name}
                         </span>
                       )}
                       {q.skill_name && (
-                        <span className="text-xs text-slate-400 font-medium">{q.skill_name}</span>
+                        <span className="text-xs text-slate-500 font-semibold">{q.skill_name}</span>
                       )}
                     </div>
 
                     <div className="flex items-center gap-2">
                       {q.timeSpent && (
-                        <span className="px-2.5 py-1 rounded-xl text-xs font-bold bg-slate-900 text-slate-300 border border-slate-800 flex items-center gap-1">
-                          <Clock className="w-3.5 h-3.5 text-cyan-400" />
+                        <span className="px-2.5 py-1 rounded-xl text-xs font-bold bg-white text-slate-700 border border-slate-200 flex items-center gap-1">
+                          <Clock className="w-3.5 h-3.5 text-blue-600" />
                           <span>{q.timeSpent}s</span>
                         </span>
                       )}
                       <span
                         className={`px-3 py-1 rounded-xl text-xs font-black ${
                           q.isCorrect
-                            ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                             : isSelected
-                            ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
-                            : 'bg-slate-800 text-slate-400 border border-slate-700'
+                            ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                            : 'bg-slate-100 text-slate-600 border border-slate-200'
                         }`}
                       >
                         {q.isCorrect ? '✅ Chính xác' : isSelected ? '❌ Chưa đúng' : '⚪ Bỏ trống'}
@@ -518,7 +515,7 @@ export default function SubmissionHistoryView({
                   </div>
 
                   {/* Question Stem */}
-                  <div className="text-sm sm:text-base font-bold text-slate-100 leading-relaxed">
+                  <div className="text-sm sm:text-base font-bold text-slate-900 leading-relaxed">
                     <MathText text={q.content} />
                   </div>
 
@@ -529,11 +526,11 @@ export default function SubmissionHistoryView({
                       const isStudentChoice = q.studentChoice === optChar;
                       const isCorrectChoice = (q.correctChoice || q.correct) === optChar;
 
-                      let cardStyle = 'bg-slate-900/60 border-slate-800 text-slate-300';
+                      let cardStyle = 'bg-white border-slate-200/90 text-slate-700';
                       if (isCorrectChoice) {
-                        cardStyle = 'bg-emerald-500/15 border-emerald-500 text-white font-bold shadow-sm';
+                        cardStyle = 'bg-emerald-50/90 border-emerald-400 text-emerald-950 font-bold shadow-xs';
                       } else if (isStudentChoice && !q.isCorrect) {
-                        cardStyle = 'bg-rose-500/15 border-rose-500 text-rose-200 font-bold';
+                        cardStyle = 'bg-rose-50/90 border-rose-400 text-rose-900 font-bold';
                       }
 
                       return (
@@ -544,10 +541,10 @@ export default function SubmissionHistoryView({
                           <div
                             className={`w-6 h-6 rounded-lg flex items-center justify-center font-black text-xs shrink-0 ${
                               isCorrectChoice
-                                ? 'bg-emerald-500 text-slate-950'
+                                ? 'bg-emerald-600 text-white'
                                 : isStudentChoice
-                                ? 'bg-rose-500 text-white'
-                                : 'bg-slate-800 text-slate-400'
+                                ? 'bg-rose-600 text-white'
+                                : 'bg-slate-100 text-slate-600'
                             }`}
                           >
                             {optChar}
@@ -556,12 +553,12 @@ export default function SubmissionHistoryView({
                             <MathText text={optText} />
                           </div>
                           {isCorrectChoice && (
-                            <span className="px-2 py-0.5 rounded text-[10px] bg-emerald-500/20 text-emerald-300 font-black border border-emerald-500/30 shrink-0">
+                            <span className="px-2 py-0.5 rounded text-[10px] bg-emerald-100 text-emerald-800 font-black border border-emerald-300 shrink-0">
                               Đáp án đúng
                             </span>
                           )}
                           {isStudentChoice && !isCorrectChoice && (
-                            <span className="px-2 py-0.5 rounded text-[10px] bg-rose-500/20 text-rose-300 font-black border border-rose-500/30 shrink-0">
+                            <span className="px-2 py-0.5 rounded text-[10px] bg-rose-100 text-rose-800 font-black border border-rose-300 shrink-0">
                               Bạn đã chọn
                             </span>
                           )}
@@ -571,10 +568,10 @@ export default function SubmissionHistoryView({
                   </div>
 
                   {/* Explanation & Socratic AI Tutor Action Bar */}
-                  <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800/90 text-xs sm:text-sm space-y-3">
+                  <div className="p-4 rounded-xl bg-white border border-slate-200/90 text-xs sm:text-sm space-y-3">
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="text-xs font-black text-purple-400 flex items-center gap-1.5">
-                        <Sparkles className="w-3.5 h-3.5" />
+                      <div className="text-xs font-black text-indigo-700 flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5 text-blue-600" />
                         <span>Lời Giải & Hướng Dẫn Tư Duy Chi Tiết:</span>
                       </div>
 
@@ -582,9 +579,9 @@ export default function SubmissionHistoryView({
                         <button
                           type="button"
                           onClick={() => handleAskSocraticTutor(q)}
-                          className="px-3.5 py-1.5 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/40 text-purple-300 font-extrabold text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
+                          className="px-3.5 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 font-extrabold text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs"
                         >
-                          <Bot className="w-3.5 h-3.5 text-purple-400" />
+                          <Bot className="w-3.5 h-3.5 text-blue-600" />
                           <span>💡 Hỏi Gia Sư AI Socratic Về Câu Này</span>
                         </button>
 
@@ -592,25 +589,25 @@ export default function SubmissionHistoryView({
                           <button
                             type="button"
                             onClick={() => handleOpenFullSocraticModal(q)}
-                            className="px-3.5 py-1.5 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/40 text-indigo-300 font-extrabold text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
+                            className="px-3.5 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 font-extrabold text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs"
                           >
-                            <MessageSquare className="w-3.5 h-3.5 text-indigo-400" />
+                            <MessageSquare className="w-3.5 h-3.5 text-indigo-600" />
                             <span>Chat Socratic Chuyên Sâu</span>
                           </button>
                         )}
                       </div>
                     </div>
 
-                    <div className="text-slate-300 leading-relaxed">
+                    <div className="text-slate-700 leading-relaxed font-medium">
                       <MathText text={q.explanation} />
                     </div>
 
                     {/* Inline Socratic Tutor Stream */}
                     {activeTutorQuestionId === q.id && (
-                      <div className="mt-3 p-5 rounded-2xl bg-gradient-to-br from-indigo-950/90 via-slate-900 to-purple-950/90 border border-indigo-400/40 shadow-lg space-y-3 animate-fade-in">
-                        <div className="flex items-center justify-between border-b border-indigo-400/20 pb-2.5">
-                          <div className="flex items-center gap-2 text-xs sm:text-sm font-extrabold text-cyan-300">
-                            <Bot className="w-4 h-4 text-cyan-400" />
+                      <div className="mt-3 p-5 rounded-2xl bg-gradient-to-br from-blue-900 via-indigo-950 to-slate-900 border border-blue-500/40 shadow-lg space-y-3 animate-fade-in">
+                        <div className="flex items-center justify-between border-b border-white/15 pb-2.5">
+                          <div className="flex items-center gap-2 text-xs sm:text-sm font-extrabold text-[#FACC15]">
+                            <Bot className="w-4 h-4 text-[#FACC15]" />
                             <span>
                               Gia Sư AI Socratic Phân Tích Tư Duy Câu {q.question_number || idx + 1}:
                             </span>
@@ -618,7 +615,7 @@ export default function SubmissionHistoryView({
                           <button
                             type="button"
                             onClick={() => setActiveTutorQuestionId(null)}
-                            className="px-2.5 py-1 rounded-lg bg-slate-800/80 text-[11px] font-bold text-slate-300 hover:text-white hover:bg-slate-700 cursor-pointer transition-all"
+                            className="px-2.5 py-1 rounded-lg bg-white/10 text-[11px] font-bold text-slate-200 hover:text-white hover:bg-white/20 cursor-pointer transition-all"
                           >
                             Đóng
                           </button>
@@ -628,7 +625,7 @@ export default function SubmissionHistoryView({
                           {tutorResponse ? (
                             <MathText text={tutorResponse} className="text-white" />
                           ) : (
-                            <div className="flex items-center gap-2 text-cyan-300 animate-pulse py-2">
+                            <div className="flex items-center gap-2 text-[#FACC15] animate-pulse py-2">
                               <Sparkles className="w-4 h-4 animate-spin" />
                               <span>Gia sư Socratic đang phân tích lỗi sai và gợi mở hướng tư duy...</span>
                             </div>
@@ -651,17 +648,17 @@ export default function SubmissionHistoryView({
   // ============================================================================
   return (
     <div className="space-y-6 animate-fade pb-12">
-      {/* Header Banner */}
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 text-white shadow-xl flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+      {/* Header Banner (Synchronized with Home Page Royal Blue-Indigo & Gold #FACC15) */}
+      <div className="bg-gradient-to-r from-blue-700 via-indigo-700 to-blue-900 border border-blue-600/30 rounded-3xl p-6 sm:p-8 text-white shadow-xl flex flex-col lg:flex-row lg:items-center justify-between gap-6">
         <div className="space-y-2">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 text-xs font-bold">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 text-[#FACC15] border border-white/20 text-xs font-bold">
             <History className="w-3.5 h-3.5" />
             <span>Hồ Sơ Học Thuật & Lịch Sử Khảo Thí</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
             Lịch Sử Làm Bài & Sổ Tay Lỗi Sai Socratic
           </h1>
-          <p className="text-xs sm:text-sm text-slate-400 max-w-2xl leading-relaxed">
+          <p className="text-xs sm:text-sm text-blue-100 max-w-2xl leading-relaxed">
             Lưu trữ toàn bộ các bài khảo sát ĐGNL, phiếu luyện tập thích ứng ZPD và bài kiểm tra chuyên đề đã hoàn thành. Bấm vào bất kỳ bài làm nào để xem lại đáp án chi tiết và hỏi Gia sư AI Socratic.
           </p>
         </div>
@@ -670,7 +667,7 @@ export default function SubmissionHistoryView({
           <button
             type="button"
             onClick={onStartNewDiagnostic}
-            className="px-5 py-3.5 rounded-2xl bg-gradient-to-r from-blue-600 via-cyan-500 to-indigo-600 text-slate-950 font-black text-xs sm:text-sm shadow-lg shadow-cyan-500/20 hover:opacity-95 transition-all flex items-center justify-center gap-2 shrink-0 cursor-pointer"
+            className="px-5 py-3.5 rounded-2xl bg-[#FACC15] hover:bg-yellow-300 text-slate-950 font-black text-xs sm:text-sm shadow-lg shadow-yellow-500/20 transition-all flex items-center justify-center gap-2 shrink-0 cursor-pointer"
           >
             <Play className="w-4 h-4 fill-slate-950" />
             <span>Làm Đề Khảo Sát Mới</span>
@@ -883,20 +880,20 @@ export default function SubmissionHistoryView({
               allWrongQuestions.map((q, idx) => (
                 <div
                   key={q.id || idx}
-                  className="p-5 rounded-2xl bg-slate-900 border border-slate-800 text-white space-y-4 shadow-md"
+                  className="p-5 rounded-2xl bg-[#FDFBF7] border border-rose-200/90 text-slate-900 space-y-4 shadow-xs"
                 >
-                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200/80 pb-3">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="px-2.5 py-0.5 rounded-lg bg-rose-500/20 text-rose-300 border border-rose-500/30 text-xs font-black">
+                      <span className="px-2.5 py-0.5 rounded-lg bg-rose-50 text-rose-700 border border-rose-200 text-xs font-black">
                         Câu sai #{idx + 1}
                       </span>
-                      <span className="text-xs font-bold text-cyan-400">{q.skill_name || 'Chuyên đề ĐGNL'}</span>
-                      <span className="text-xs text-slate-400">• Từ đề: {q.submissionTitle}</span>
+                      <span className="text-xs font-bold text-blue-700">{q.skill_name || 'Chuyên đề ĐGNL'}</span>
+                      <span className="text-xs text-slate-500">• Từ đề: {q.submissionTitle}</span>
                     </div>
-                    <span className="text-xs text-slate-400">{formatDate(q.completedAt)}</span>
+                    <span className="text-xs text-slate-500">{formatDate(q.completedAt)}</span>
                   </div>
 
-                  <div className="text-sm sm:text-base font-bold text-slate-100 leading-relaxed">
+                  <div className="text-sm sm:text-base font-bold text-slate-900 leading-relaxed">
                     <MathText text={q.content} />
                   </div>
 
@@ -906,11 +903,11 @@ export default function SubmissionHistoryView({
                       const isStudentChoice = q.studentChoice === optChar;
                       const isCorrectChoice = (q.correctChoice || q.correct) === optChar;
 
-                      let cardStyle = 'bg-slate-950/60 border-slate-800 text-slate-300';
+                      let cardStyle = 'bg-white border-slate-200/90 text-slate-700';
                       if (isCorrectChoice) {
-                        cardStyle = 'bg-emerald-500/15 border-emerald-500 text-white font-bold';
+                        cardStyle = 'bg-emerald-50/90 border-emerald-400 text-emerald-950 font-bold';
                       } else if (isStudentChoice) {
-                        cardStyle = 'bg-rose-500/15 border-rose-500 text-rose-200 font-bold';
+                        cardStyle = 'bg-rose-50/90 border-rose-400 text-rose-900 font-bold';
                       }
 
                       return (
@@ -918,10 +915,10 @@ export default function SubmissionHistoryView({
                           <div
                             className={`w-6 h-6 rounded-lg flex items-center justify-center font-black text-xs shrink-0 ${
                               isCorrectChoice
-                                ? 'bg-emerald-500 text-slate-950'
+                                ? 'bg-emerald-600 text-white'
                                 : isStudentChoice
-                                ? 'bg-rose-500 text-white'
-                                : 'bg-slate-800 text-slate-400'
+                                ? 'bg-rose-600 text-white'
+                                : 'bg-slate-100 text-slate-600'
                             }`}
                           >
                             {optChar}
@@ -930,12 +927,12 @@ export default function SubmissionHistoryView({
                             <MathText text={optText} />
                           </div>
                           {isCorrectChoice && (
-                            <span className="px-2 py-0.5 rounded text-[10px] bg-emerald-500/20 text-emerald-300 font-black border border-emerald-500/30 shrink-0">
+                            <span className="px-2 py-0.5 rounded text-[10px] bg-emerald-100 text-emerald-800 font-black border border-emerald-300 shrink-0">
                               Đáp án đúng
                             </span>
                           )}
                           {isStudentChoice && !isCorrectChoice && (
-                            <span className="px-2 py-0.5 rounded text-[10px] bg-rose-500/20 text-rose-300 font-black border border-rose-500/30 shrink-0">
+                            <span className="px-2 py-0.5 rounded text-[10px] bg-rose-100 text-rose-800 font-black border border-rose-300 shrink-0">
                               Bạn đã chọn
                             </span>
                           )}
@@ -944,49 +941,49 @@ export default function SubmissionHistoryView({
                     })}
                   </div>
 
-                  <div className="p-4 rounded-xl bg-slate-950/90 border border-slate-800 space-y-3">
+                  <div className="p-4 rounded-xl bg-white border border-slate-200/90 space-y-3">
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="text-xs font-black text-purple-400 flex items-center gap-1.5">
-                        <Sparkles className="w-3.5 h-3.5" />
+                      <div className="text-xs font-black text-indigo-700 flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5 text-blue-600" />
                         <span>Giải thích & Phân tích Socratic:</span>
                       </div>
                       <div className="flex flex-wrap items-center gap-2">
                         <button
                           type="button"
                           onClick={() => handleAskSocraticTutor(q)}
-                          className="px-3.5 py-1.5 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/40 text-purple-300 font-extrabold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
+                          className="px-3.5 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 font-extrabold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
                         >
-                          <Bot className="w-3.5 h-3.5 text-purple-400" />
+                          <Bot className="w-3.5 h-3.5 text-blue-600" />
                           <span>💡 Hỏi Gia Sư AI Socratic Về Câu Này</span>
                         </button>
                         {onOpenAiTutorWithContext && (
                           <button
                             type="button"
                             onClick={() => handleOpenFullSocraticModal(q)}
-                            className="px-3.5 py-1.5 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/40 text-indigo-300 font-extrabold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
+                            className="px-3.5 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 font-extrabold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
                           >
-                            <MessageSquare className="w-3.5 h-3.5 text-indigo-400" />
+                            <MessageSquare className="w-3.5 h-3.5 text-indigo-600" />
                             <span>Chat Socratic Chuyên Sâu</span>
                           </button>
                         )}
                       </div>
                     </div>
 
-                    <div className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                    <div className="text-xs sm:text-sm text-slate-700 font-medium leading-relaxed">
                       <MathText text={q.explanation} />
                     </div>
 
                     {activeTutorQuestionId === q.id && (
-                      <div className="mt-3 p-5 rounded-2xl bg-gradient-to-br from-indigo-950/90 via-slate-900 to-purple-950/90 border border-indigo-400/40 shadow-lg space-y-3">
-                        <div className="flex items-center justify-between border-b border-indigo-400/20 pb-2">
-                          <div className="flex items-center gap-2 text-xs sm:text-sm font-extrabold text-cyan-300">
-                            <Bot className="w-4 h-4 text-cyan-400" />
+                      <div className="mt-3 p-5 rounded-2xl bg-gradient-to-br from-blue-900 via-indigo-950 to-slate-900 border border-blue-500/40 shadow-lg space-y-3">
+                        <div className="flex items-center justify-between border-b border-white/15 pb-2">
+                          <div className="flex items-center gap-2 text-xs sm:text-sm font-extrabold text-[#FACC15]">
+                            <Bot className="w-4 h-4 text-[#FACC15]" />
                             <span>Gia Sư AI Socratic Phân Tích Tư Duy:</span>
                           </div>
                           <button
                             type="button"
                             onClick={() => setActiveTutorQuestionId(null)}
-                            className="px-2.5 py-1 rounded-lg bg-slate-800 text-[11px] font-bold text-slate-300 hover:text-white cursor-pointer"
+                            className="px-2.5 py-1 rounded-lg bg-white/10 text-[11px] font-bold text-slate-200 hover:text-white cursor-pointer"
                           >
                             Đóng
                           </button>
@@ -995,7 +992,7 @@ export default function SubmissionHistoryView({
                           {tutorResponse ? (
                             <MathText text={tutorResponse} className="text-white" />
                           ) : (
-                            <div className="flex items-center gap-2 text-cyan-300 animate-pulse py-2">
+                            <div className="flex items-center gap-2 text-[#FACC15] animate-pulse py-2">
                               <Sparkles className="w-4 h-4 animate-spin" />
                               <span>Gia sư Socratic đang phân tích lỗi sai...</span>
                             </div>

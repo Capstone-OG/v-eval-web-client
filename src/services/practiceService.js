@@ -1206,6 +1206,45 @@ let isBackgroundSyncRunning = false;
  * Practice & Adaptive Learning Roadmap Service
  * Routed through V-Eval API Gateway (:5212) -> Practice Service (:5261)
  */
+const buildEmptyStudentDashboard = (studentId) => {
+  const currentUser = tokenStorage.getUser();
+  const studentName =
+    currentUser?.fullName ||
+    currentUser?.name ||
+    currentUser?.email?.split('@')[0] ||
+    'Học viên V-Eval';
+
+  return {
+    studentId,
+    studentName,
+    currentEstimatedScore: 0,
+    confidenceInterval: [0, 0],
+    domainScores: [
+      { domainCode: 'DOM_MATH', domainName: 'Toán học & Tư duy Logic', score: 0, maxScore: 300, theta: 0 },
+      { domainCode: 'DOM_LIT', domainName: 'Sử dụng Ngôn ngữ Tiếng Việt', score: 0, maxScore: 300, theta: 0 },
+      { domainCode: 'DOM_SCI', domainName: 'Khoa học Tự nhiên & STEM', score: 0, maxScore: 300, theta: 0 },
+      { domainCode: 'DOM_SOC', domainName: 'Khoa học Xã hội & Đọc hiểu', score: 0, maxScore: 300, theta: 0 }
+    ],
+    skillProficiencies: [],
+    streakAnalytics: {
+      currentStreak: 0,
+      targetHoursPerWeek: 12,
+      studyHoursThisWeek: 0,
+      activeDaysThisWeek: 0,
+      streakHistory: [false, false, false, false, false, false, false]
+    },
+    examReadiness: {
+      readinessIndex: 0,
+      targetScore: 900,
+      projectedExamScore: 0,
+      daysRemaining: 45,
+      urgencyLevel: 'LOW'
+    },
+    needsOnboarding: true,
+    _source: 'empty_fallback'
+  };
+};
+
 export const practiceService = {
   // =========================================================================
   // Core Flow 1: Khảo Thí & Chẩn Đoán Ban Đầu (IRT 2PL) & Lịch Sử Làm Bài
@@ -2025,7 +2064,7 @@ export const practiceService = {
       if (realSubs.length > 0) {
         return this.hydrateStudentDashboardWithLocalHistory(null, resolvedStudentId);
       }
-      return buildSeedStudentDashboard(resolvedStudentId);
+      return buildEmptyStudentDashboard(resolvedStudentId);
     }
   },
 

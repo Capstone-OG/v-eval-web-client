@@ -1,5 +1,101 @@
 # NHẬT KÝ KIỂM TRA TIẾN ĐỘ VẬN HÀNH (DAILY CHECK LOG) - WEB CLIENT
 
+## [07/11/2026] - Tái Cấu Trúc Toàn Diện Thanh Điều Hướng Subpage Chuẩn Segmented Control Hiện Đại, Hỗ Trợ Động Giám Đốc Học Thuật (Academic Director), Mở Rộng Không Gian Làm Việc Toàn Màn Hình (`w-full`) & Hoàn Thiện Giao Diện Quản Lý Tài Khoản Ngừng Hoạt Động (Soft Delete / Inactive)
+
+- **Mở Rộng Không Gian Làm Việc Cổng Vai Trò Toàn Chiều Ngang (`w-full`) Sát Sidebar & Tinh Chỉnh Giao Diện Bảng Tài Khoản Không Rớt Dòng ([`App.jsx`](../src/App.jsx), [`AccountProvisioningView.jsx`](../src/components/admin/AccountProvisioningView.jsx), [`CampusManagerDashboardView.jsx`](../src/components/dashboard/CampusManagerDashboardView.jsx), [`ParentDashboardView.jsx`](../src/components/dashboard/ParentDashboardView.jsx), [`TuitionPaymentView.jsx`](../src/components/payment/TuitionPaymentView.jsx), [`apiClient.js`](../src/services/apiClient.js))**:
+  - **Loại Bỏ Giới Hạn `max-w-7xl mx-auto`, Mở Rộng `w-full` Thẳng Hàng Với `Navbar` & `Sidebar`**:
+    - Thay thế `max-w-7xl mx-auto` bằng `w-full` kèm `px-4 sm:px-6` đồng bộ trên thanh Role Portal Context Strip, vùng `<main>` và `<footer>` trong `App.jsx` cũng như các màn hình `AccountProvisioningView.jsx`, `CampusManagerDashboardView.jsx`, `ParentDashboardView.jsx`, `TuitionPaymentView.jsx`.
+    - Xóa bỏ hoàn toàn khoảng trống thừa hai bên cạnh `Sidebar`, giúp bảng danh sách tài khoản 6 cột hiển thị trọn vẹn 100% chiều ngang mà không cần thanh cuộn ngang.
+  - **Chuẩn Hóa Bảng Tài Khoản 1 Dòng Duy Nhất (`whitespace-nowrap`) & Bộ Công Cụ Hợp Nhất (`AccountProvisioningView.jsx`)**:
+    - Thiết kế lại thanh công cụ hợp nhất (Command Toolbar): Gộp bộ chuyển đổi trạng thái Segmented Switcher (*"Đang hoạt động"*, *"Đã ngừng hoạt động (Ẩn)"*, *"Tất cả"*), thanh tìm kiếm nhanh và hàng pill lọc vai trò vào cùng một khung thẻ trắng tinh gọn.
+    - Bổ sung `whitespace-nowrap shrink-0` cho toàn bộ huy hiệu Vai trò (`ROLE_CONFIG`), huy hiệu Trạng thái (*"Hoạt động"* / *"Đã ngừng"*) và nút hành động (*"Ngừng hoạt động"* / *"Khôi phục"*), chấm dứt triệt để tình trạng rớt chữ thành 2 dòng.
+    - Bổ sung avatar chữ cái viết tắt 2 ký tự (`getInitials`) phối màu gradient theo từng vai trò và hàm hiển thị đơn vị/chuyên môn thông minh (`getUnitDisplay`) phù hợp cho Giám đốc Học thuật, Phụ huynh, Giảng viên và Học viên.
+  - **Nâng Cấp `apiClient.js` Hỗ Trợ Query Parameters (`options.params`) & Phương Thức `PATCH`**:
+    - Bổ sung bộ tuần tự hóa `options.params` qua `URLSearchParams` trong `apiClient.js` để mọi truy vấn `GET /api/v1/users?isActive=true&role=...` truyền chính xác tham số lọc xuống Backend, đảm bảo tài khoản `Đã khóa` tự động ẩn 100% khỏi tab *"Đang hoạt động"*.
+    - Bổ sung phương thức `apiClient.patch(endpoint, body, options)` phục vụ các API cập nhật trạng thái phần tử.
+- **Triển Khai Giao Diện Phân Hệ Quản Lý Tài Khoản Ngừng Hoạt Động (Soft Delete / Inactive) & Thùng Rác Lưu Trữ ([`AccountProvisioningView.jsx`](../src/components/admin/AccountProvisioningView.jsx), [`userService.js`](../src/services/userService.js))**:
+  - **Tách Biệt Rạch Ròi Hai Chế Độ Xem (Segmented Navigation)**:
+    - Tab 1: **"Tài Khoản Đang Hoạt Động"** (kèm badge số lượng `activeCount` xanh lá): Mặc định chỉ hiển thị tài khoản đang hoạt động, các tài khoản bị vô hiệu hóa sẽ **tự động bị ẩn (hidden)** hoàn toàn khỏi danh sách chính.
+    - Tab 2: **"Tài Khoản Đã Ngừng Hoạt Động (Ẩn)"** (kèm badge số lượng `inactiveCount` đỏ): Quản lý tập trung toàn bộ các tài khoản bị vô hiệu hóa kèm banner giải thích cơ chế bảo toàn dữ liệu điểm thi và lịch sử học tập 100%.
+    - Tab 3: **"Tất cả"**: Hiển thị toàn bộ danh sách khi cần tra cứu tổng thể.
+  - **Modal Xác Nhận Ngừng Hoạt Động (Deactivate Confirmation Modal)**:
+    - Cột thao tác hiển thị nút đỏ *"Ngừng hoạt động"* (icon `UserX`).
+    - Khi bấm mở modal xác nhận hiển thị thông tin cán bộ/học sinh, cảnh báo Soft Delete không làm mất dữ liệu học tập và nút bấm *"Xác Nhận Ngừng"*.
+  - **Modal Xác Nhận Khôi Phục Hoạt Động (Reactivate Confirmation Modal)**:
+    - Tại tab *"Đã ngừng hoạt động"*, cột thao tác hiển thị nút xanh *"Khôi phục"* (icon `RotateCcw`).
+    - Khi xác nhận khôi phục, tài khoản chuyển `isActive = true`, mở khóa đăng nhập và lập tức quay trở lại danh sách *"Tài Khoản Đang Hoạt Động"*.
+  - **Liên Kết Tương Tác Thẻ Thống Kê (Stat Cards)**:
+    - Thẻ 1 (*"Đang hoạt động"*) và Thẻ 4 (*"Đã ngừng hoạt động"*) hỗ trợ bấm trực tiếp để chuyển nhanh chế độ xem tương ứng.
+- **Tái Cấu Trúc Thanh Điều Hướng Subpage Hiện Đại Chuẩn Segmented Control ([`App.jsx`](../src/App.jsx))**:
+  - Khắc phục triệt để lỗi giao diện hàng nút điều hướng bị xuống dòng 2 tầng lộn xộn (4 nút trên, 1 nút trơ trọi dưới) trên Cổng Quản Lý Học Thuật Cơ Sở.
+  - Tái thiết kế toàn bộ thanh điều hướng theo phong cách Segmented Control (Apple / Linear / Stripe dashboard): thanh nền `bg-slate-100/90`, nút active dạng thẻ nổi `bg-white text-blue-700 shadow-sm font-extrabold ring-1 ring-slate-200/80` tinh tế thay cho dải gradient cầu vồng cũ.
+  - Ngăn chặn hoàn toàn hiện tượng ngắt dòng trên các nút bằng `whitespace-nowrap shrink-0`, tích hợp cuộn ngang mượt mà `overflow-x-auto scrollbar-none` bảo đảm giao diện luôn nằm gọn gàng trên 1 hàng ngang duy nhất trên mọi kích thước màn hình.
+  - Bổ sung cơ chế nhận diện động vai trò Giám đốc Học thuật (`ACADEMIC_DIRECTOR`): Hiển thị đúng danh xưng **"Cổng Giám Đốc Học Thuật Toàn Trường"** (ACADEMIC DIRECTOR PORTAL) với icon Vương miện `Crown` và badge tím sang trọng `bg-purple-50 text-purple-700`.
+- **Tích Hợp Kiểm Tra Email Đa Tầng DNS MX & Gợi Ý Sửa Lỗi Tên Miền Vào Cấp Phát Tài Khoản ([`AccountProvisioningView.jsx`](../src/components/admin/AccountProvisioningView.jsx), [`emailValidator.js`](../src/utils/emailValidator.js))**:
+  - Bổ sung ánh xạ sửa lỗi gõ nhầm tên miền `mail.com` thành `gmail.com` trong `COMMON_DOMAIN_TYPOS`.
+  - Tích hợp `validateEmailComprehensive` trực tiếp vào ô nhập Email công tác trong modal cấp phát: Kiểm tra cú pháp RFC 5322, kiểm tra lỗi chính tả tên miền, kiểm tra DNS MX trực tuyến, hiển thị spinner kiểm tra, dấu tích xanh khi hợp lệ và nút gợi ý 1-Click *"Sửa thành: ...@gmail.com"*.
+  - Chặn đứng thao tác submit form khi email không hợp lệ, đồng thời bật Toast thông báo màu đỏ nổi bật khi có lỗi phát sinh.
+- **Kiểm Thử & Biên Dịch**:
+  - `npm run build` (`vite build`) hoàn thành sạch sẽ 100% (`3008 modules transformed`, **0 Error**).
+
+---
+
+- **Loại Bỏ Triệt Để Nút Đăng Nhập Demo, Thanh Chuyển Vai Trò Thủ Công & Token Giả Lập ([`LoginForm.jsx`](../src/components/auth/LoginForm.jsx), [`WebLoginPage.jsx`](../src/components/auth/WebLoginPage.jsx), [`Navbar.jsx`](../src/components/layout/Navbar.jsx), [`Sidebar.jsx`](../src/components/layout/Sidebar.jsx), [`App.jsx`](../src/App.jsx))**:
+  - Xóa sạch bộ nút đăng nhập nhanh 1-Click Demo 5 vai trò, nút Google/Zalo giả lập, thông tin tài khoản điền sẵn (`email`, `password`) và token giả `eyDemoAccessToken123456` trong `LoginForm.jsx` và `WebLoginPage.jsx`.
+  - Xóa bỏ thanh chuyển đổi vai trò thủ công (`Role Switcher`) trên `Navbar.jsx`, khóa chặt phiên làm việc theo đúng vai trò thực tế trả về từ JWT/Profile của Backend (`authService.resolveAppRole(currentUser)`).
+  - Bổ sung cơ chế bảo vệ xác thực (`authService.isAuthenticated()`) tại `App.jsx`: Tự động định tuyến về trang đăng nhập `WebLoginPage` nếu chưa có phiên JWT hợp lệ; nạp đồng bộ hồ sơ thực tế (`authService.fetchCurrentUserProfile()`) và số liệu vận hành thực tế (`portalMetrics`) từ Backend cho `Navbar`, `Sidebar` và từng cổng vai trò.
+- **Xóa Sạch 100% Dữ Liệu Mock / Seed Giả Lập Trong Tầng Services ([`authService.js`](../src/services/authService.js), [`userService.js`](../src/services/userService.js), [`paymentService.js`](../src/services/paymentService.js), [`practiceService.js`](../src/services/practiceService.js))**:
+  - `authService.js` & `userService.js`: Sau khi đăng nhập tự động gọi `GET /api/v1/users/me` để đồng bộ `id`, `fullName`, `email`, `phone`, `campusId`, `campusName`, `roles` trực tiếp từ PostgreSQL IAM; xóa bỏ hoàn toàn danh sách cơ sở hardcode dự phòng trong `getCampuses()`.
+  - `paymentService.js`: Xóa bỏ hoàn toàn nhánh tạo link giả `mock-payment-` và trạng thái thanh toán offline giả lập; mọi giao dịch tạo mã VietQR, kiểm tra trạng thái đơn hàng và đối soát giao dịch đều gọi trực tiếp `/api/practice/payments/...` của Practice Service.
+  - `practiceService.js`: Thay thế toàn bộ các hàm sinh dữ liệu mẫu giả lập (`buildSeedStudentDashboard`, `buildSeedClassHeatmap`, `buildSeedParentDashboard`, `buildSeedCampusComparativeHeatmap`, `getDefaultSeedHistory` chứa tên giả `Phạm Minh Hoàng`, `sub_seed_vact_01`...) bằng trạng thái rỗng chuẩn mực (`buildEmptyStudentDashboard`, `buildEmptyClassHeatmap`, `buildEmptyParentDashboard`, `buildEmptyCampusComparativeHeatmap`, `[]`), đảm bảo hệ thống chỉ hiển thị 100% dữ liệu thực từ Backend Database.
+- **Loại Bỏ `mockData.js` & Số Liệu Cứng Khỏi Toàn Bộ Các Màn Hình Dashboard, Thanh Toán & Modal ([`HeroBanner.jsx`](../src/components/dashboard/HeroBanner.jsx), [`MetricsGrid.jsx`](../src/components/dashboard/MetricsGrid.jsx), [`MilestoneCard.jsx`](../src/components/dashboard/MilestoneCard.jsx), [`LiveQnACard.jsx`](../src/components/dashboard/LiveQnACard.jsx), [`ParentDashboardView.jsx`](../src/components/dashboard/ParentDashboardView.jsx), [`CampusManagerDashboardView.jsx`](../src/components/dashboard/CampusManagerDashboardView.jsx), [`LearningAnalyticsView.jsx`](../src/components/dashboard/LearningAnalyticsView.jsx), [`TuitionPaymentView.jsx`](../src/components/payment/TuitionPaymentView.jsx), [`RadarChartModal.jsx`](../src/components/modals/RadarChartModal.jsx), [`DiagnosticTestModal.jsx`](../src/components/modals/DiagnosticTestModal.jsx), [`AdaptiveQuizModal.jsx`](../src/components/modals/AdaptiveQuizModal.jsx), [`ClassMicroGroupsModal.jsx`](../src/components/modals/ClassMicroGroupsModal.jsx))**:
+  - Ngắt toàn bộ kết nối tới `src/data/mockData.js` trên các component giao diện:
+    - `HeroBanner.jsx`, `MetricsGrid.jsx`, `RadarChartModal.jsx`: Hiển thị trực tiếp từ `currentUser` và `studentDashboard` của Backend.
+    - `MilestoneCard.jsx`: Hiển thị trực tiếp từ `practiceService.getMyRoadmap()` và `practiceService.generateRoadmap()`.
+    - `LiveQnACard.jsx`: Truy vấn danh sách giảng viên thực tế từ `userService.getUsers({ role: 'TEACHER' })`.
+    - `ParentDashboardView.jsx`: Xóa bỏ hồ sơ con mặc định `'Phạm Minh Hoàng'`; hiển thị danh sách con thực tế từ `practiceService.getParentDashboard()` hoặc trạng thái trống khi tài khoản phụ huynh chưa liên kết học sinh.
+    - `CampusManagerDashboardView.jsx`: Nạp danh sách cơ sở thực từ `userService.getCampuses()`, danh sách giảng viên thực từ `userService.getUsers({ role: 'TEACHER' })`, và danh sách lớp học / sĩ số thực từ `practiceService.getCampusComparativeHeatmap()`.
+    - `TuitionPaymentView.jsx`: Xóa bỏ giao dịch mẫu `TX-9872`, khởi tạo danh sách giao dịch thực tế từ cổng thanh toán PayOS.
+    - `DiagnosticTestModal.jsx`, `AdaptiveQuizModal.jsx`, `ClassMicroGroupsModal.jsx`: Nạp câu hỏi thực tế từ `contentService.getExamDetail()` và nhóm bàn học vi mô thực tế từ `practiceService.getClassMicroGroups()`.
+- **Khắc Phục Điều Hướng Nút Đăng Nhập / Đăng Ký Trên Trang Chủ & Triển Khai Kiểm Tra Tính Hợp Lệ Đa Tầng Cho Email Đăng Ký ([`App.jsx`](../src/App.jsx), [`emailValidator.js`](../src/utils/emailValidator.js), [`authService.js`](../src/services/authService.js), [`RegisterForm.jsx`](../src/components/auth/RegisterForm.jsx), [`WebLoginPage.jsx`](../src/components/auth/WebLoginPage.jsx), [`ForgotPasswordModal.jsx`](../src/components/auth/ForgotPasswordModal.jsx))**:
+  - Đấu nối chuẩn xác các prop `onOpenLogin`, `onOpenRegister`, `onOpenDashboard`, `onOpenDiagnostic`, `onOpenArchModal` từ `App.jsx` xuống `PublicLandingPage.jsx` và truyền `initialMode={authInitialMode}` vào `WebLoginPage.jsx` để mở đúng tab Đăng nhập hoặc Đăng ký mới.
+  - Xây dựng bộ kiểm tra email đa tầng `src/utils/emailValidator.js` kết hợp gọi trực tiếp `GET /api/auth/validate-email` và Google DNS-over-HTTPS (`https://dns.google/resolve?name={domain}&type=MX`):
+    - Kiểm tra cú pháp chuẩn RFC 5322, quy tắc tài khoản Gmail (6–30 ký tự, chỉ chữ/số/dấu chấm, không toàn chữ số).
+    - Tự động phát hiện lỗi gõ sai tên miền phổ biến (`gmial.com`, `gamil.com`, `gmail.con`, `yaho.com`, `hotmial.com`, `outlok.com`, `fpt.edu.v`...) kèm nút gợi ý sửa 1-Click.
+    - Chặn dịch vụ email ảo 10 phút (`yopmail.com`, `mailinator.com`, `tempmail.com`...) và chặn chuỗi ký tự lặp bất thường (`22222`, `1111`, `aaaa`...) khi người dùng nhập email giả lập.
+    - Kiểm tra thời gian thực (`debounce` & `onBlur`) bản ghi máy chủ nhận thư DNS MX và độ khả dụng của email trong CSDL trước khi cho phép gửi mã OTP.
+- **Triển Khai Hệ Thống Liên Kết Phụ Huynh - Học Sinh 3 Phương Thức Trực Tiếp Trên Web ([`StudentParentLinkCard.jsx`](../src/components/dashboard/StudentParentLinkCard.jsx), [`ParentDashboardView.jsx`](../src/components/dashboard/ParentDashboardView.jsx), [`userService.js`](../src/services/userService.js), [`App.jsx`](../src/App.jsx))**:
+  - **Cổng Học Viên (`StudentParentLinkCard.jsx`)**:
+    - Hiển thị **Mã học sinh cố định (`VE-XXXXXX`)**, **Mã PIN 6 số động (30 phút)**, **Đường liên kết mời 1-Click** và **Mã QR trực quan** ngay trên Dashboard Học sinh.
+    - Tự động hiển thị banner thông báo nổi bật khi có Phụ huynh gửi yêu cầu liên kết kèm nút **`✓ Chấp Nhận Liên Kết`** / **`Từ chối`** trực tiếp trên Web.
+  - **Cổng Phụ Huynh Đồng Hành (`ParentDashboardView.jsx`)**:
+    - Tích hợp **Trung Tâm Liên Kết Tài Khoản Học Sinh** với 3 Tab: (1) Nhập Mã Code `VE-XXXXXX` / Mã PIN 6 số / Dán đường liên kết mời; (2) Tìm theo Email hoặc SĐT của con để gửi yêu cầu xác nhận 2 chiều; (3) Hướng dẫn quét Mã QR từ màn hình của con.
+    - Tự động nhận diện tham số `?parentLinkCode=...` trên URL khi Phụ huynh bấm đường liên kết mời hoặc quét QR để kết nối tức thì và tải ngay báo cáo học tập của con.
+- **Gỡ Bỏ Thư Mục Unit Test (`tests/`) & Kiểm Thử Build ([`package.json`](../package.json), [`ci.yml`](../.github/workflows/ci.yml))**:
+  - Xóa bỏ toàn bộ thư mục `tests/` (`paymentService.test.js`, `practiceService.flow5.test.js`, `tokenStorage.test.js`) và script `npm test` theo yêu cầu.
+  - `npm run build` (`vite build`) hoàn thành sạch sẽ 100% (`3008 modules transformed`, **0 Error**).
+
+---
+
+## [06/11/2026] - Phân Chia Cổng Giao Diện Riêng Cho 5 Vai Trò (`student`, `parent`, `teacher`, `manager`, `admin`) & Đồng Bộ Toàn Diện Template Màu Sắc Chuẩn Trang Chủ (`#FDFBF7`)
+
+- **Phân Chia Cổng Làm Việc Độc Lập & Điều Hướng Chuyên Biệt Cho Đủ 5 Vai Trò ([`App.jsx`](../src/App.jsx), [`Sidebar.jsx`](../src/components/layout/Sidebar.jsx), [`Navbar.jsx`](../src/components/layout/Navbar.jsx), [`WebLoginPage.jsx`](../src/components/auth/WebLoginPage.jsx), [`LoginForm.jsx`](../src/components/auth/LoginForm.jsx), [`authService.js`](../src/services/authService.js))**:
+  - Thiết kế cấu hình cổng độc lập `ROLE_PORTAL_DEFINITIONS` cho toàn bộ **5 vai trò hệ thống**, đảm bảo mỗi vai trò khi đăng nhập đều được định tuyến trực tiếp vào không gian riêng với bộ menu Sidebar, thanh Subpage Tab, huy hiệu trạng thái Navbar và thẻ tổng kết chân Sidebar chuyên biệt:
+    1. **Cổng Học Viên (`student` - Student Portal)**: Mặc định vào `dashboard` (`HeroBanner`, `MetricsGrid`, `MilestoneCard`, `LiveQnACard`), kèm các trang riêng `diagnostic` (Khảo thí 30 câu), `history` (Lịch sử & Sổ tay lỗi sai), `roadmap` (Cây tri thức & Lộ trình), `analytics` (Báo cáo & Dự báo IRT), `tuition` (Học phí & Gói học) và các modal luyện tập ZPD, Thi thử, Gia sư AI Socratic.
+    2. **Cổng Phụ Huynh Đồng Hành (`parent` - Parent Companion Portal)**: Mặc định vào `dashboard` (`ParentDashboardView` - Chỉ số sẵn sàng thi `R_exam`, Kỷ luật 12h/tuần, Cảnh báo AI), kèm các trang riêng `analytics` (Năng lực 4 miền của con), `history` (Lịch sử bài thi của con), `roadmap` (Tiến độ chuyên đề của con) và `tuition` (Đóng học phí VietQR PayOS).
+    3. **Cổng Giảng Viên & Sư Phạm (`teacher` - Teacher Pedagogical Portal)**: Mặc định vào `dashboard` (`TeacherDashboardView` - Ma trận nhiệt lớp học 2D & Xếp nhóm vi mô), kèm `roadmap` (Studio biên soạn học liệu & công thức LaTeX), `diagnostic` (Ngân hàng đề 30 câu), `history` (Nhật ký bài làm học viên) và `analytics` (Phân tích tâm trắc học IRT/BKT).
+    4. **Cổng Quản Lý Học Thuật Cơ Sở (`manager` - Campus Manager Portal)**: Mặc định vào `dashboard` (`CampusManagerDashboardView` - Điều phối cơ sở & AI Clustering), kèm `teacher_heatmap` (Giám sát ma trận nhiệt lớp học), `roadmap` (Quản lý khung chương trình), `provision` (Cấp phát tài khoản cơ sở) và `analytics` (Báo cáo chất lượng đào tạo).
+    5. **Cổng Quản Trị Viên Hệ Thống (`admin` - System IAM Admin Portal)**: Mặc định vào `provision` (`AccountProvisioningView` - Quản trị định danh & cấp phát tài khoản đa vai trò PostgreSQL Direct), kèm `dashboard` (Giám sát đa cơ sở), `teacher_heatmap` (Ma trận nhiệt toàn hệ thống), `roadmap` (Cây tri thức quốc gia) và `tuition` (Đối soát cổng thanh toán PayOS).
+- **Đồng Bộ Toàn Diện Template Màu Sắc Theo Chuẩn Trang Chủ ([`PublicLandingPage.jsx`](../src/components/landing/PublicLandingPage.jsx), [`App.jsx`](../src/App.jsx), [`HeroBanner.jsx`](../src/components/dashboard/HeroBanner.jsx), [`DiagnosticAssessmentPage.jsx`](../src/components/diagnostic/DiagnosticAssessmentPage.jsx), [`SubmissionHistoryView.jsx`](../src/components/diagnostic/SubmissionHistoryView.jsx))**:
+  - Lấy bảng màu và ngôn ngữ thiết kế của Trang chủ (`PublicLandingPage.jsx`) làm chuẩn mực thống nhất cho toàn bộ các trang:
+    - Nền tảng kem sáng học thuật ấm áp (`bg-[#FDFBF7] text-slate-900 selection:bg-[#FACC15] selection:text-slate-950`) kết hợp quầng sáng xanh/vàng tinh tế.
+    - Bề mặt thẻ trắng sắc nét (`bg-white border border-slate-200/80 rounded-3xl shadow-sm`).
+    - Dải màu thương hiệu Xanh Hoàng Gia - Indigo - Cyan (`from-blue-600 via-indigo-600 to-cyan-500` và `from-blue-700 via-indigo-700 to-blue-900`) kết hợp điểm nhấn Vàng kim (`#FACC15`).
+  - Chuyển đổi hoàn toàn các màn hình nền tối cũ (`bg-slate-950` / `bg-slate-900` tại `DiagnosticAssessmentPage.jsx` và `SubmissionHistoryView.jsx`) sang template sáng `#FDFBF7` / `bg-white` đồng bộ 100% với Trang chủ.
+- **Kiểm Thử & Đóng Gói Vận Hành**:
+  - `npm test` đạt **9/9 tests PASS (100%)**.
+  - `npm run build` (`vite build`) hoàn thành sạch sẽ 100% (`3006 modules transformed`, **0 Error**).
+
 ## [08/11/2026] - Chuẩn Hóa Ngôn Ngữ Học Tập Thân Thiện Cho Học Sinh: Lược Bỏ Toàn Bộ Thuật Ngữ Kỹ Thuật Nội Bộ Trên Trang Kết Quả, Dự Báo Điểm, Sổ Tay Câu Sai & Gia Sư AI
 
 - **Chuẩn Hóa Trung Tâm Kết Quả Học Tập & Dự Báo Điểm Thi ([`LearningAnalyticsView.jsx`](../src/components/dashboard/LearningAnalyticsView.jsx), [`ScorePredictionPanel.jsx`](../src/components/dashboard/ScorePredictionPanel.jsx), [`PrescriptionPracticeModal.jsx`](../src/components/modals/PrescriptionPracticeModal.jsx))**:

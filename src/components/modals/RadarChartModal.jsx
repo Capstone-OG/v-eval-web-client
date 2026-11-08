@@ -10,7 +10,6 @@ import {
   Tooltip
 } from 'recharts';
 import { X, Award, GitFork, Sparkles, ArrowRight } from 'lucide-react';
-import { mockRadarData } from '../../data/mockData';
 
 const SHORT_DOMAIN_LABELS = {
   DOM_LANG: 'Ngôn ngữ',
@@ -29,13 +28,18 @@ export default function RadarChartModal({ isOpen, onClose, studentDashboard, onO
           score: Number(item.studentScore || 0),
           target: Number(item.targetScore || 80)
         }))
-      : mockRadarData.map((d) => ({ ...d, target: 85 }));
+      : [
+          { subject: 'Ngôn ngữ', score: 0, target: 80 },
+          { subject: 'Toán & Logic', score: 0, target: 80 },
+          { subject: 'KH Tự nhiên', score: 0, target: 80 },
+          { subject: 'KH Xã hội', score: 0, target: 80 }
+        ];
 
   const roadmap = studentDashboard?.roadmapProgress || {
-    completedMilestones: 7,
-    totalMilestones: 12,
-    progressPercentage: 58.3,
-    currentMilestoneTitle: 'Chặng 08: Toán logic mệnh đề & suy luận kéo theo'
+    completedMilestones: 0,
+    totalMilestones: 0,
+    progressPercentage: 0,
+    currentMilestoneTitle: 'Chưa khởi tạo lộ trình'
   };
 
   return (

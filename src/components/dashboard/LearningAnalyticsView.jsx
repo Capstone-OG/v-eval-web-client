@@ -221,12 +221,15 @@ export default function LearningAnalyticsView({
           )}
 
           <button
-            onClick={() => loadAnalytics(true)}
+            onClick={() => {
+              setOnboardingOverride(null);
+              loadAnalytics(true);
+            }}
             disabled={refreshing}
-            className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-60 text-white text-xs font-extrabold flex items-center gap-2 transition-all shadow-lg shadow-blue-600/25"
+            className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-60 text-white text-xs font-extrabold flex items-center gap-2 transition-all shadow-lg shadow-blue-600/25 cursor-pointer"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
-            <span>Làm mới kết quả</span>
+            <span>Làm mới số liệu từ Backend</span>
           </button>
         </div>
       </div>

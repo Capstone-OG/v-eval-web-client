@@ -1065,3 +1065,63 @@ pm run build completes in 905ms (3,013 modules transformed, 0 errors).
   - Step 4 (Success): Confirms password reset and routes user directly back to login.
 - **Defensive Error Unwrapping (`apiClient.js`)**:
   - Implemented automatic unwrapping of RFC 7807 and Clean Architecture structured errors (`data.error.description`), preventing generic `[object Object]` error strings across all authentication flows.
+
+### 4.52. Five-Role Dedicated Portal Architecture & Home Page Design System Synchronization (`App.jsx`, `Sidebar.jsx`, `Navbar.jsx`, `DiagnosticAssessmentPage.jsx`, `SubmissionHistoryView.jsx`)
+- **Dedicated Role Portals & Isolated Navigation Trees**:
+  - Engineered `ROLE_PORTAL_DEFINITIONS` in `src/App.jsx` and role-specific navigation matrices in `src/components/layout/Sidebar.jsx` and `src/components/layout/Navbar.jsx` covering all 5 system roles:
+    1. **Student Portal (`student`)**: Personal overview (`dashboard`), 30-question IRT diagnostic assessment (`diagnostic`), submission history & mistake notebook (`history`), DAG knowledge tree (`roadmap`), BKT/IRT learning analytics (`analytics`), and tuition packages (`tuition`).
+    2. **Parent Companion Portal (`parent`)**: Child readiness & discipline overview (`dashboard`), 4-domain competency analytics (`analytics`), child exam history (`history`), curriculum progress (`roadmap`), and instant VietQR PayOS tuition checkout (`tuition`).
+    3. **Teacher Pedagogical Portal (`teacher`)**: 2D class mastery heatmap & micro-grouping (`dashboard`), curriculum & LaTeX formula studio (`roadmap`), 30-question exam bank (`diagnostic`), student submission logs (`history`), and psychometric analytics (`analytics`).
+    4. **Campus Academic Manager Portal (`manager`)**: Multi-class coordination & AI K-Means clustering (`dashboard`), class heatmap supervision (`teacher_heatmap`), curriculum governance (`roadmap`), campus staff/student provisioning (`provision`), and quality analytics (`analytics`).
+    5. **System IAM Administrator Portal (`admin`)**: Direct PostgreSQL multi-role IAM account provisioning (`provision`), multi-campus comparative operations (`dashboard`), system-wide class heatmaps (`teacher_heatmap`), national curriculum tree (`roadmap`), and PayOS transaction reconciliation (`tuition`).
+- **Unified Home Page Color Palette & Template (`#FDFBF7` / Royal Blue-Indigo / Gold `#FACC15`)**:
+  - Standardized all application views around the reference design system of `PublicLandingPage.jsx`: warm academic ivory background (`bg-[#FDFBF7]`), elevated white surface cards (`bg-white border-slate-200/80 rounded-3xl`), royal blue-indigo-cyan brand gradients (`from-blue-600 via-indigo-600 to-cyan-500` and `from-blue-700 via-indigo-700 to-blue-900`), and `#FACC15` gold accents.
+  - Converted previously dark-only views (`DiagnosticAssessmentPage.jsx` and `SubmissionHistoryView.jsx`) to the unified `#FDFBF7` / white academic theme.
+
+### 4.53. Strict Zero-Mock / 100% Real Backend API Enforcement Across All 5 Role Portals (`authService.js`, `userService.js`, `paymentService.js`, `practiceService.js`, `App.jsx`, `Navbar.jsx`, `Sidebar.jsx`, `dashboard/*`, `modals/*`)
+- **Complete Removal of Demo Login Presets & Manual Role Switchers**:
+  - Purged all 1-click demo login buttons, pre-filled demo credentials, fake social login triggers, and synthetic JWT fallback tokens (`eyDemoAccessToken123456`) from `LoginForm.jsx` and `WebLoginPage.jsx`.
+  - Removed the manual Role Switcher bar from `Navbar.jsx` and enforced an authentication guard in `App.jsx` so users only access the portal corresponding to their authenticated Backend role (`authService.resolveAppRole(currentUser)`), enriched via `GET /api/v1/users/me`.
+- **Elimination of Seed / Mock Fallbacks in Service & View Layers**:
+  - Replaced all synthetic seed generators in `practiceService.js` (`buildSeedStudentDashboard`, `buildSeedClassHeatmap`, `buildSeedParentDashboard`, `buildSeedCampusComparativeHeatmap`, `getDefaultSeedHistory`) with clean empty/onboarding states (`buildEmptyStudentDashboard`, `buildEmptyClassHeatmap`, `buildEmptyParentDashboard`, `buildEmptyCampusComparativeHeatmap`, `[]`).
+  - Removed `mock-payment-` fallback links and offline transaction simulators in `paymentService.js`, and removed hardcoded campus fallbacks in `authService.js` and `userService.js`.
+  - Disconnected `src/data/mockData.js` from all active views and modals (`HeroBanner.jsx`, `MetricsGrid.jsx`, `MilestoneCard.jsx`, `LiveQnACard.jsx`, `ParentDashboardView.jsx`, `CampusManagerDashboardView.jsx`, `LearningAnalyticsView.jsx`, `TuitionPaymentView.jsx`, `RadarChartModal.jsx`, `DiagnosticTestModal.jsx`, `AdaptiveQuizModal.jsx`, `ClassMicroGroupsModal.jsx`), binding 100% of UI state to live Backend endpoints via the API Gateway (`http://localhost:5212`).
+- **Multi-Layer Live Email Validation & Landing Navigation (`src/utils/emailValidator.js`, `RegisterForm.jsx`, `WebLoginPage.jsx`, `App.jsx`)**:
+  - Wired `onOpenLogin`, `onOpenRegister`, `onOpenDashboard`, `onOpenDiagnostic`, and `onOpenArchModal` between `App.jsx` and `PublicLandingPage.jsx`.
+  - Implemented real-time debounced and pre-submit email verification (`emailValidator.js` + `GET /api/auth/validate-email` + Google DNS-over-HTTPS `MX` record lookup), enforcing strict RFC 5322 syntax, Gmail local-part rules (6–30 chars), repetitive fake pattern blocking (`22222`), disposable email domain blocking, and 1-click domain typo correction (`@gmial.com` -> `@gmail.com`).
+- **3-in-1 Parent-Student Linking System (`StudentParentLinkCard.jsx`, `ParentDashboardView.jsx`, `userService.js`)**:
+  - Enabled 100% database-backed Parent-Student account linking without SMTP dependency via three integrated workflows: (1) Student Account Code (`VE-XXXXXX`) & 6-digit dynamic PIN (`POST /api/v1/users/parent-link/connect`), (2) 1-Click Shareable URL (`?parentLinkCode=...`) & QR Code, and (3) Two-way in-app request/approval by Student Email or Phone (`POST /api/v1/users/parent-link/request` & `POST /api/v1/users/me/parent-link-requests/{id}/respond`).
+
+### 4.54. Campus Manager Segmented Navigation Redesign, Dynamic Academic Director Recognition & IAM Provisioning Multi-Layer Email Validation (`App.jsx`, `AccountProvisioningView.jsx`, `emailValidator.js`)
+- **Modern Segmented Control Navigation Redesign (`src/App.jsx`)**:
+  - Eliminated the wrapping, multi-line navigation layout on the Campus Manager Portal by refactoring subpage navigation into a streamlined Segmented Control.
+  - Employed a unified track wrapper (`bg-slate-100/90 p-1.5 rounded-2xl border border-slate-200/80 inline-flex items-center gap-1.5 overflow-x-auto scrollbar-none max-w-full`) preventing clumsy two-row button drops on constrained viewports.
+  - Active segment tabs feature a crisp card aesthetic (`bg-white text-blue-700 shadow-sm font-extrabold ring-1 ring-slate-200/80`) while inactive tabs use smooth hover transitions (`text-slate-600 hover:text-slate-900 hover:bg-slate-200/60 font-semibold`).
+  - Streamlined tab labels for clarity and conciseness: *"So sánh Cơ sở"*, *"Ma trận Lớp học"*, *"Khung Chương trình"*, *"Cấp phát Tài khoản"*, *"Báo cáo Chất lượng"*.
+- **Dynamic Academic Director vs. Campus Manager Portal Differentiation (`src/App.jsx`)**:
+  - Implemented dynamic role recognition differentiating `ACADEMIC_DIRECTOR` from standard `ACADEMIC_MANAGER` accounts.
+  - For Academic Directors, the header elevates to *"Cổng Giám Đốc Học Thuật Toàn Trường"* with a `Crown` icon and gold-accented badge (`ACADEMIC DIRECTOR PORTAL`), while Campus Managers retain the localized operational banner.
+- **Multi-Layer Defensive Email Validation in IAM Account Provisioning Modal (`src/components/admin/AccountProvisioningView.jsx`, `src/utils/emailValidator.js`)**:
+  - Integrated `validateEmailComprehensive` on the Account Provisioning modal's email input with real-time `onBlur` checks and pre-submit validation.
+  - Added support for detecting common domain typos (such as `@mail.com` typo for `@gmail.com`), RFC 5322 syntax validation, repetitive character blocking (`22222`), disposable email blocking, and Google DNS-over-HTTPS MX verification.
+  - Visual feedback includes an inline loading spinner during DNS resolution, green success badge upon validation, and an actionable amber/red suggestion banner with a 1-click apply button (`"Sửa thành: ...@gmail.com"`).
+  - Prevents accidental provisioning of phantom or invalid accounts and provides clear, human-friendly error messages matching Clean Architecture domain responses.
+
+### 4.55. Soft Delete / Inactive Account Lifecycle Architecture & Dual-View Management (`AccountProvisioningView.jsx`, `userService.js`)
+- **Strict Prohibition of Hard Deletion & Full Pedagogical Data Preservation**:
+  - Eliminates hard deletion (`DELETE FROM "Users"`) across all client flows to safeguard referential integrity across psychometric examination submissions (`ExamSubmissions`), adaptive practice session records (`PracticeSessions`), VietQR tuition logs (`PaymentOrders`), and parent-student linkages (`ParentStudentRelations`).
+  - Adopts the industry-standard Soft Delete model utilizing the existing `is_active` database flag (`v_eval_identity."Users"`).
+- **Dual-View Segmented Architecture (Active vs. Inactive Accounts)**:
+  - **"Tài Khoản Đang Hoạt Động" (Default View)**: Queries `GET /api/v1/users?isActive=true`. Inactive accounts are automatically hidden from view, keeping operational lists focused solely on active faculty, staff, and learners.
+  - **"Tài Khoản Đã Ngừng Hoạt Động (Ẩn)" (Archive View)**: Queries `GET /api/v1/users?isActive=false`. Provides an isolated archive repository showcasing all deactivated accounts with structured audit indicators and status badges.
+  - **"Tất Cả"**: Queries `GET /api/v1/users` with no `isActive` filter for comprehensive administrative audits.
+- **Confirmation Modals & Lifecycle Transitions**:
+  - **Deactivation Confirmation**: Features a dedicated `UserX` modal detailing the target user's identity and displaying explicit data preservation assurances before triggering `PATCH /api/v1/users/{id}/toggle-status?targetStatus=false`.
+  - **Reactivation Confirmation**: Features a dedicated `RotateCcw` modal allowing instant restoration of login privileges and immediate relocation back to the active user list via `PATCH /api/v1/users/{id}/toggle-status?targetStatus=true`.
+- **Real-Time Interactive Metric Synchronization**:
+  - Live counts (`activeCount` and `inactiveCount`) are derived dynamically from Backend SQL aggregates.
+  - Stat cards on the dashboard are wired with 1-click filters enabling rapid toggling between active and archived views.
+- **Full-Width Portal Workspace Alignment (`w-full`), Single-Line Zero-Wrap Table Redesign & `apiClient.js` Query Parameter Serialization (`App.jsx`, `AccountProvisioningView.jsx`, `apiClient.js`)**:
+  - Added automatic `options.params` query-string serialization (`URLSearchParams`) and a dedicated `patch()` method in `src/services/apiClient.js`, ensuring `GET /api/v1/users?isActive=true` accurately filters active vs. inactive records at the Backend database layer.
+  - Removed `max-w-7xl mx-auto` constraints across `App.jsx`, `AccountProvisioningView.jsx`, `CampusManagerDashboardView.jsx`, `ParentDashboardView.jsx`, and `TuitionPaymentView.jsx`, expanding the portal workspace to `w-full` flush with the `Sidebar` and `Navbar` and eliminating horizontal table scrollbars.
+  - Redesigned the IAM accounts table with a unified Command Toolbar, two-letter role-tinted gradient avatars, intelligent role-specific unit/campus labels, and strict `whitespace-nowrap` single-line badges and action buttons.
