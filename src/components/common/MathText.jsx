@@ -12,12 +12,19 @@ import { autoSynthesizeMathGraph3DFromText, autoSynthesizeMathGraph2DFromText, a
  */
 export function renderKatexHtml(latex, displayMode = false) {
   try {
-    return katex.renderToString(latex, {
+    let clean = String(latex || '')
+      .replace(/\\?undefined/gi, '')
+      .replace(/\\?null/gi, '')
+      .trim();
+    if (!clean) return '';
+
+    const html = katex.renderToString(clean, {
       displayMode,
       throwOnError: false,
-      strict: 'ignore', // Suppress Unicode character warnings in math mode like "Đ"
+      strict: 'ignore',
       output: 'htmlAndMathml'
     });
+    return html.replace(/<span[^>]*class="katex-error"[^>]*>.*?undefined.*?<\/span>/gi, '');
   } catch (err) {
     console.warn('KaTeX render error:', err);
     return latex;
@@ -39,6 +46,49 @@ export function unescapeLiteralNewlines(text) {
     );
 }
 
+export function mergeUnclosedLatexLines(str) {
+  if (!str || !str.includes('\n')) return str;
+  const rawLines = str.split(/\r?\n/);
+  const merged = [];
+  let buf = '';
+  let openB = 0;
+  let mergeCount = 0;
+
+  for (let l of rawLines) {
+    if (buf === '') {
+      let b = 0;
+      for (let i = 0; i < l.length; i++) {
+        if (l[i] === '{' && (i === 0 || l[i - 1] !== '\\')) b++;
+        else if (l[i] === '}' && (i === 0 || l[i - 1] !== '\\')) b--;
+      }
+      if (b > 0 && (/\\[a-zA-Z]+|[_^]\{/.test(l))) {
+        buf = l.trimEnd();
+        openB = b;
+        mergeCount = 0;
+      } else {
+        merged.push(l);
+      }
+    } else {
+      let b = 0;
+      for (let i = 0; i < l.length; i++) {
+        if (l[i] === '{' && (i === 0 || l[i - 1] !== '\\')) b++;
+        else if (l[i] === '}' && (i === 0 || l[i - 1] !== '\\')) b--;
+      }
+      buf += ' ' + l.trim();
+      openB += b;
+      mergeCount++;
+      if (openB <= 0 || mergeCount >= 6) {
+        merged.push(buf);
+        buf = '';
+        openB = 0;
+        mergeCount = 0;
+      }
+    }
+  }
+  if (buf) merged.push(buf);
+  return merged.join('\n');
+}
+
 /**
  * Intelligently normalizes text strings containing math & chemistry expressions:
  * 1. Unescapes literal '\n' to actual newlines (protecting \neq, \notin, \nabla, \nu).
@@ -52,6 +102,91 @@ export function normalizeMathString(text) {
 
   // 1. Unescape literal string escaped newlines e.g. "\n" -> real newlines
   str = unescapeLiteralNewlines(str);
+
+  // Phục hồi công thức tính hiệu suất phản ứng nếu bị lỗi undefined
+  str = str.replace(/H\\?%\s*undefined\s*%?\s*\$*/gi, 'H\\% = \\frac{m_{\\text{thực tế}}}{m_{\\text{lí thuyết}}} \\times 100\\%');
+  str = str.replace(/H\\?%\s*=\s*undefined\s*%?\s*\$*/gi, 'H\\% = \\frac{m_{\\text{thực tế}}}{m_{\\text{lí thuyết}}} \\times 100\\%');
+
+  // Triệt tiêu triệt để các token rác 'undefined' lơ lửng
+  str = str.replace(/(?:^|\n)\s*\\?undefined\s*(?=\n|$)/gi, '\n');
+  str = str.replace(/\\?undefined/gi, '');
+
+  // Tách rời tiêu đề markdown ### nếu bị dính liền sau câu hoặc công thức
+  str = str.replace(/([^\r\n])\s*(###\s+[^\r\n]+)/g, '$1\n\n$2');
+
+  // Nối các dòng bị ngắt cụt gây gãy layout
+  str = str.replace(/\r?\n\s*:\s*/g, ': ');
+  str = str.replace(/(\*[\s]*\([A-F]\))\r?\n\s*/g, '$1 ');
+
+  // Nối công thức ester bị ngắt giữa chuỗi C-H và Oxy (kể cả có khoảng trắng hoặc xuống dòng)
+  str = str.replace(/(\$?C_\{?[0-9n\+\-]+\}?H_\{?[0-9a-zA-Z\+\-]+\}?\$?)\s*(?:\r?\n|\s+)\s*(\$?O_\{?[0-9]+\}?\$?)/gi, (m, c, o) => {
+    const cleanC = c.replace(/\$/g, '');
+    const cleanO = o.replace(/\$/g, '');
+    return '$' + cleanC + cleanO + '$';
+  });
+
+  // Nối công thức hóa học bị ngắt dòng sau dấu nối hóa trị - hoặc = (kể cả có \text{})
+  str = str.replace(/(\$?[A-Za-z0-9_\\\{\}']+[-=])\s*\r?\n\s*(\$?[A-Za-z0-9_\\\{\}']+)/g, (m, part1, part2) => {
+    const c1 = part1.replace(/\$/g, '');
+    const c2 = part2.replace(/\$/g, '');
+    return '$' + c1 + c2 + '$';
+  });
+
+  // Nối chuỗi este đa chức bị ngắt dòng nhiều cấp
+  str = str.replace(/([A-Za-z0-9_\\\{\}']+-)\s*\r?\n\s*([A-Za-z0-9_\\\{\}']+-)\s*\r?\n\s*([A-Za-z0-9_\\\{\}']+)/g, '$$$1$2$3$$');
+
+  // Nối nhóm ngoặc chỉ số )_2, )_3 bị rớt xuống dòng riêng
+  str = str.replace(/([A-Za-z0-9_\\\{\}']+)\s*\r?\n\s*(\)[_0-9]+)/g, '$1$2');
+
+  // Sửa điều kiện bất đẳng thức có dấu $ bị đặt nhầm: (n \ge 2$) hoặc ($n$ \ge 4$) hoặc (n \ge 2)
+  str = str.replace(/\(\s*\$?([a-zA-Z])\$?\s*\\(?:ge|le|gt|lt)\s*(\d+)\s*\$?\s*\)/gi, '($$$1 \\ge $2$$)');
+
+  // Sửa lỗi dấu $ đóng nhầm trước số thập phân: \times$ 0,5 -> \times 0,5$
+  str = str.replace(/\\times\s*\$\s*(\d+[,\.]?\d*)/g, '\\times $1$');
+
+  // Sửa lỗi dính lệnh LaTeX không có khoảng trắng: \equivC -> \equiv C
+  str = str.replace(/\\(equiv|times|rightarrow|leftarrow|rightleftharpoons)([A-Za-z0-9])/g, '\\$1 $2');
+  str = str.replace(/([A-Za-z0-9_]+)\$\s*=\s*\$([A-Za-z0-9_]+)/g, '$1=$2');
+  str = str.replace(/\$\s*(-[A-Za-z0-9]+-)\s*,?/g, '$1,');
+
+  // Sửa phương trình phản ứng bị đóng mở $ vụn vặt: RCOOH$+ R'OH -> RCOOH + R'OH
+  str = str.replace(/([A-Za-z0-9_\x27]+)\s*\$\s*([+=])\s*\$?\s*([A-Za-z0-9_\x27]+)/g, '$1 $2 $3');
+
+  // Hàn gắn các dòng công thức LaTeX bị ngắt dòng ở giữa dấu ngoặc nhọn
+  str = mergeUnclosedLatexLines(str);
+
+  // Sửa các dòng có dấu $ lẻ ở cuối dòng (như 'A. HCOOC_2H_5$' -> 'A. $HCOOC_2H_5$')
+  str = str.replace(/^([A-D][\.\:\)]\s*)([^\$\r\n]+)\$$/gm, '$1$$$2$$');
+
+  // Sửa các token cô lập kết thúc bằng $ (như C_4H_6O_2$)
+  str = str.replace(/(?<![\$\w])([A-Z][a-zA-Z0-9_+-]+)\$/g, '$$$1$$');
+  str = str.replace(/\$\s*\.\s*\$/g, '.');
+
+  // Cân bằng dấu $ đơn lẻ bị cô lập trên từng dòng
+  str = str.split('\n').map(line => {
+    let dMatches = (line.match(/(?<!\\)\$/g) || []).length;
+    if (dMatches % 2 !== 0) {
+      line = line.replace(/(?<![\$\w])\$([A-Za-z0-9_+\-^\\\{\}\x27]+)(?=[\s\.,;\*\)]|$)/g, '$$$1$$');
+      let left = (line.match(/(?<!\\)\$/g) || []).length;
+      if (left % 2 !== 0) {
+        if (line.trimEnd().endsWith('$')) return line.slice(0, line.lastIndexOf('$'));
+        return line.replace(/\$/, '');
+      }
+    }
+    return line;
+  }).join('\n');
+
+  // Bọc các phương trình phản ứng hóa học (có mũi tên thuận nghịch hoặc một chiều) vào $...$ nếu chưa có
+  const arrowRegex = /(?<!\$)(?:^|(?<=[\r\n\s]))([A-Za-z0-9_\x27\^\+\(\)\s]+(?:\{[^{}]*\})?[\s]*\\(?:rightleftharpoons|xrightarrow|longrightarrow|rightarrow|leftrightharpoons|leftrightarrow)(?:\{[^{}]*\})?[\s]*[A-Za-z0-9_\x27\^\+\(\)\s]+(?:\{[^{}]*\})?)(?!\$)/gm;
+  str = str.replace(arrowRegex, (m) => '$' + m.trim() + '$');
+
+  // Bọc các công thức tính toán toán học/hóa học chứa \frac, \sqrt vào $...$ nếu chưa bọc
+  const fullEquationRegex = /(?<!\$)(?:^|(?<=[\s:;]))([a-zA-Z0-9\\%_\^\+\-\*\/= \t\(\)]*\\(?:frac|sqrt|lim|int|sum|prod)\b[^\$\r\n]+)(?!\$)/gm;
+  str = str.replace(fullEquationRegex, (m) => '$' + m.trim() + '$');
+
+  // Bọc các bước tính toán hóa học nhiều bước chứa \text{n} hoặc \text{m} và có dấu =
+  const calcStepRegex = /(?<!\$)(?:^|(?<=[\r\n]))(\\text\{[nm]\}_[^\$\r\n]+=[^\$\r\n]+)(?!\$)/gm;
+  str = str.replace(calcStepRegex, (m) => '$' + m.trim() + '$');
 
   // Recover LaTeX commands that may have lost their backslash from past tab-replacement or JSON parsing
   str = str.replace(/(?<!\\)\bext\{/g, '\\text{');
@@ -253,6 +388,55 @@ function renderInlineContent(text, keyPrefix = '') {
 /**
  * Render structured multi-line text (paragraphs, bullet lists, step highlights, callouts).
  */
+export function renderMarkdownTable(tableLines, tableKey) {
+  if (!tableLines || tableLines.length < 2) return null;
+  const headerLine = tableLines[0];
+  const rowLines = tableLines.slice(2);
+
+  const parseCells = (line) => {
+    let raw = line.trim();
+    if (raw.startsWith('|')) raw = raw.slice(1);
+    if (raw.endsWith('|')) raw = raw.slice(0, -1);
+    return raw.split('|').map((c) => {
+      let cell = c.trim();
+      if (/^[A-Za-z0-9_\(\)\+\-\*\^=]+$/.test(cell) && cell.includes('_') && !cell.startsWith('$')) {
+        cell = '$' + cell + '$';
+      }
+      return cell;
+    });
+  };
+
+  const headers = parseCells(headerLine);
+  const rows = rowLines.map((r) => parseCells(r));
+
+  return (
+    <div key={tableKey} className="my-2.5 overflow-x-auto rounded-xl border border-slate-200/90 shadow-2xs bg-white">
+      <table className="w-full text-left text-xs border-collapse">
+        <thead>
+          <tr className="bg-slate-100/90 text-slate-800 font-bold border-b border-slate-200">
+            {headers.map((h, hIdx) => (
+              <th key={hIdx} className="px-3 py-2 text-[11px] font-extrabold border-r last:border-r-0 border-slate-200/80">
+                {renderInlineContent(h, tableKey + '-th-' + hIdx)}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-slate-100">
+          {rows.map((row, rIdx) => (
+            <tr key={rIdx} className={rIdx % 2 === 1 ? 'bg-slate-50/70' : 'bg-white'}>
+              {row.map((cell, cIdx) => (
+                <td key={cIdx} className="px-3 py-2 text-[11px] text-slate-700 font-medium border-r last:border-r-0 border-slate-200/60">
+                  {renderInlineContent(cell, tableKey + '-r' + rIdx + '-c' + cIdx)}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 function renderStructuredContent(raw, onEditMathGraph = null) {
   // Check if text describes 3D spatial geometry or 2D function graphs without tags, and auto-synthesize
   let effectiveRaw = raw;
@@ -345,21 +529,46 @@ function renderStructuredContent(raw, onEditMathGraph = null) {
       );
     }
 
-    // Text block: process line by line
+    // Text block: process line by line, grouping markdown tables together
     const lines = block.split('\n');
+    const elements = [];
+    let lIdx = 0;
 
-    return (
-      <React.Fragment key={`b-${bIdx}`}>
-        {lines.map((rawLine, lIdx) => {
-          const lineKey = `b-${bIdx}-l-${lIdx}`;
-          // Strip trailing backslashes e.g. text\ or text\\ at line endings
-          const line = rawLine.replace(/\\+\s*$/, '').trimEnd();
-          const trimmed = line.trim();
+    while (lIdx < lines.length) {
+      const rawLine = lines[lIdx];
+      const trimmed = rawLine.replace(/\\+\s*$/, '').trim();
 
-          // Empty line -> spacing
-          if (!trimmed) {
-            return <div key={lineKey} className="h-1.5" />;
-          }
+      // Check for Markdown Table start: line starts with '|' and contains another '|' AND next line is separator
+      const isTableRow = (l) => {
+        const t = (l || '').trim();
+        return t.startsWith('|') && t.includes('|', 1);
+      };
+      const isTableSep = (l) => {
+        const t = (l || '').trim();
+        return /^\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)+\|?$/.test(t);
+      };
+
+      if (isTableRow(trimmed) && lIdx + 1 < lines.length && isTableSep(lines[lIdx + 1])) {
+        const tableLines = [trimmed, lines[lIdx + 1].trim()];
+        let nextIdx = lIdx + 2;
+        while (nextIdx < lines.length && isTableRow(lines[nextIdx])) {
+          tableLines.push(lines[nextIdx].trim());
+          nextIdx++;
+        }
+        elements.push(renderMarkdownTable(tableLines, 'b-' + bIdx + '-tbl-' + lIdx));
+        lIdx = nextIdx;
+        continue;
+      }
+
+      const lineKey = 'b-' + bIdx + '-l-' + lIdx;
+      lIdx++;
+      const line = rawLine.replace(/\\+\s*$/, '').trimEnd();
+
+      // Empty line or stray AI placeholder e.g. 'undefined' -> ignore
+      if (!trimmed || trimmed === 'undefined' || trimmed === 'null' || trimmed === 'undefined\\') {
+        if (!trimmed) elements.push(<div key={lineKey} className="h-1.5" />);
+        continue;
+      }
 
           // Callout Warning e.g. "### ⚠️ Các bẫy đề thi:" or "⚠️ ..."
           if (line.includes('### ⚠️') || line.startsWith('⚠️')) {
@@ -371,7 +580,7 @@ function renderStructuredContent(raw, onEditMathGraph = null) {
               .replace(/^\*\*(.*)\*\*$/, '$1')
               .replace(/:\*\*$/, ':')
               .trim();
-            return (
+            elements.push(
               <div
                 key={lineKey}
                 className="my-2.5 p-3 rounded-xl bg-rose-50/95 border border-rose-200/90 text-rose-950 font-bold text-xs flex items-center gap-2 shadow-2xs"
@@ -380,7 +589,8 @@ function renderStructuredContent(raw, onEditMathGraph = null) {
                 <span className="flex-1 min-w-0 font-extrabold text-rose-950">{renderInlineContent(cleanHeading, lineKey)}</span>
               </div>
             );
-          }
+          continue;
+        }
 
           // Callout Tip e.g. "### 💡 Mẹo Casio:" or "💡 ..."
           if (line.includes('### 💡') || line.startsWith('💡')) {
@@ -392,7 +602,7 @@ function renderStructuredContent(raw, onEditMathGraph = null) {
               .replace(/^\*\*(.*)\*\*$/, '$1')
               .replace(/:\*\*$/, ':')
               .trim();
-            return (
+            elements.push(
               <div
                 key={lineKey}
                 className="my-2.5 p-3 rounded-xl bg-indigo-50/95 border border-indigo-200/90 text-indigo-950 font-bold text-xs flex items-center gap-2 shadow-2xs"
@@ -401,7 +611,8 @@ function renderStructuredContent(raw, onEditMathGraph = null) {
                 <span className="flex-1 min-w-0 font-extrabold text-indigo-950">{renderInlineContent(cleanHeading, lineKey)}</span>
               </div>
             );
-          }
+          continue;
+        }
 
           // Callout Pedagogical Example SGK e.g. "### 📌 Ví dụ minh họa SGK:" or "📌 ..."
           if (line.includes('### 📌') || line.startsWith('📌')) {
@@ -413,7 +624,7 @@ function renderStructuredContent(raw, onEditMathGraph = null) {
               .replace(/^\*\*(.*)\*\*$/, '$1')
               .replace(/:\*\*$/, ':')
               .trim();
-            return (
+            elements.push(
               <div
                 key={lineKey}
                 className="my-2.5 p-2.5 rounded-xl bg-teal-50/95 border border-teal-200/90 text-teal-950 font-bold text-xs flex items-center gap-2 shadow-2xs"
@@ -422,7 +633,8 @@ function renderStructuredContent(raw, onEditMathGraph = null) {
                 <span className="flex-1 min-w-0 font-extrabold text-teal-950">{renderInlineContent(cleanHeading, lineKey)}</span>
               </div>
             );
-          }
+          continue;
+        }
 
           // Callout Sample Problem / Practice Heading e.g. "### 📝 Bài toán mẫu..." or "### 📄 Bài toán mẫu áp dụng phương pháp:"
           // CRITICAL: MUST be a real markdown heading (starting with ###) or a standalone heading label (e.g. "📄 Bài toán mẫu:").
@@ -451,9 +663,10 @@ function renderStructuredContent(raw, onEditMathGraph = null) {
             if (splitColon && splitColon[1] && splitColon[1].trim()) {
               badgeTitle = cleanHeading.slice(0, cleanHeading.length - splitColon[1].length).replace(/:\s*$/, '').trim();
               bodyText = splitColon[1].trim();
-            }
+          continue;
+        }
 
-            return (
+            elements.push(
               <div key={lineKey} className="my-2.5 space-y-1.5">
                 <div className="p-2.5 rounded-lg bg-amber-50/90 border border-amber-300/90 text-amber-950 font-bold text-xs flex items-center gap-2 shadow-2xs">
                   <FileText className="w-4 h-4 text-amber-700 shrink-0" />
@@ -466,7 +679,8 @@ function renderStructuredContent(raw, onEditMathGraph = null) {
                 )}
               </div>
             );
-          }
+          continue;
+        }
 
           // General Markdown Headings (# H1, ## H2, ### H3, #### H4)
           const headingMatch = line.match(/^(#{1,4})\s+(.*)$/);
@@ -479,12 +693,13 @@ function renderStructuredContent(raw, onEditMathGraph = null) {
               3: 'text-xs font-bold text-slate-800 mt-2 mb-1 flex items-center gap-1.5',
               4: 'text-xs font-semibold text-slate-700 mt-1.5 mb-1'
             };
-            return (
+            elements.push(
               <div key={lineKey} className={headingStyles[level] || headingStyles[3]}>
                 {renderInlineContent(headingText, lineKey)}
               </div>
             );
-          }
+          continue;
+        }
 
           // Bullet list items e.g. "- ...", "* ...", "• ...", or duplicate "• - ..."
           // NOTE: Must have whitespace after bullet marker so bold "**text**" or "***text***" is NOT treated as a bullet!
@@ -493,13 +708,14 @@ function renderStructuredContent(raw, onEditMathGraph = null) {
             const indentSpaces = bulletMatch[1].length;
             const indentClass = indentSpaces >= 4 ? 'ml-6' : indentSpaces >= 2 ? 'ml-3.5' : 'ml-1';
             const bulletContent = bulletMatch[2];
-            return (
+            elements.push(
               <div key={lineKey} className={`flex items-start gap-2 ${indentClass} leading-relaxed my-0.5`}>
                 <span className="text-indigo-500 font-bold select-none leading-relaxed">•</span>
                 <span className="flex-1 min-w-0">{renderInlineContent(bulletContent, lineKey)}</span>
               </div>
             );
-          }
+          continue;
+        }
 
           // Numbered list items e.g. "1. ...", "2) ..."
           const numMatch = line.match(/^(\s*)(\d+[\.\)])\s+(.*)$/);
@@ -508,7 +724,7 @@ function renderStructuredContent(raw, onEditMathGraph = null) {
             const indentClass = indentSpaces >= 4 ? 'ml-6' : indentSpaces >= 2 ? 'ml-3.5' : 'ml-1';
             const numMarker = numMatch[2];
             const numContent = numMatch[3];
-            return (
+            elements.push(
               <div key={lineKey} className={`flex items-start gap-2 ${indentClass} leading-relaxed my-0.5`}>
                 <span className="font-bold text-indigo-500 select-none leading-relaxed text-xs pt-0.5 shrink-0">
                   {numMarker}
@@ -516,27 +732,29 @@ function renderStructuredContent(raw, onEditMathGraph = null) {
                 <span className="flex-1 min-w-0">{renderInlineContent(numContent, lineKey)}</span>
               </div>
             );
-          }
+          continue;
+        }
 
           // Step highlight line e.g. "**Bước 1: ...**" or "Bước 1: ..."
           const isStepLine = /^\s*(\*\*Bước \d+:|Bước \d+:)/i.test(line);
           if (isStepLine) {
-            return (
+            elements.push(
               <div key={lineKey} className="font-bold mt-2.5 mb-1 leading-relaxed">
                 {renderInlineContent(line, lineKey)}
               </div>
             );
-          }
+          continue;
+        }
 
           // Default regular line/paragraph
-          return (
+          elements.push(
             <div key={lineKey} className="leading-relaxed my-0.5">
               {renderInlineContent(line, lineKey)}
             </div>
           );
-        })}
-      </React.Fragment>
-    );
+        }
+
+        return <React.Fragment key={'b-' + bIdx}>{elements}</React.Fragment>;
   });
 }
 

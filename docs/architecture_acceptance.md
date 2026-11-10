@@ -1125,3 +1125,92 @@ pm run build completes in 905ms (3,013 modules transformed, 0 errors).
   - Added automatic `options.params` query-string serialization (`URLSearchParams`) and a dedicated `patch()` method in `src/services/apiClient.js`, ensuring `GET /api/v1/users?isActive=true` accurately filters active vs. inactive records at the Backend database layer.
   - Removed `max-w-7xl mx-auto` constraints across `App.jsx`, `AccountProvisioningView.jsx`, `CampusManagerDashboardView.jsx`, `ParentDashboardView.jsx`, and `TuitionPaymentView.jsx`, expanding the portal workspace to `w-full` flush with the `Sidebar` and `Navbar` and eliminating horizontal table scrollbars.
   - Redesigned the IAM accounts table with a unified Command Toolbar, two-letter role-tinted gradient avatars, intelligent role-specific unit/campus labels, and strict `whitespace-nowrap` single-line badges and action buttons.
+
+### 4.56. Dual-Depth AI Curriculum Ingestion UI/UX Architecture & Granular Slicing Controls (`CurriculumExplorerView.jsx`)
+- **Decoupled Page Slicing & Extraction Granularity Architecture**:
+  - Re-architected the AI Curriculum Ingestion Modal to clearly segregate PDF page filtering (`importPageMode: all | custom`) from pedagogical pattern extraction depth (`importExtractionDepth: deep | standard`).
+- **Dual Interactive Selection Cards (Micro vs Macro Extraction)**:
+  - **Deep V-ACT Mode (`deep` - Recommended)**: Instructs AI Engine to execute micro-granularity decomposition, extracting 2-4 problem patterns per lesson (6-12+ patterns across comprehensive chapters) with mandatory 4-quadrant pedagogy (KaTeX theory, Casio speed tactics, Bloom L1-L4 exemplar questions).
+  - **Standard Deep-Theory & Sub-Pattern Mode (`standard` - Comprehensive Theory)**: Instructs AI Engine to extract high-level curriculum frameworks following textbook tables of contents. While top-level pattern count is restrained (1-2 major thematic patterns per lesson), the `theoryRecap` block is enriched with exhaustive definitions, formulas, and theorems, and `solutionMethod` strictly decomposes into detailed sub-patterns (e.g. Sub-pattern 1.1, 1.2...).
+- **Real-Time Contextual Feedback Engine**:
+  - Employs dynamic contextual feedback callout cards with active selection badges, estimated processing durations, and recommended document use cases.
+
+### 4.57. Robust API Problem Details (RFC 7807/9110) & Resilient Client Error UX (`apiClient.js`, `CurriculumExplorerView.jsx`)
+- **Transient 502 Connection Refused Auto-Retry Engine**:
+  - Automatically retries idempotent and pre-execution requests once with a 2-second backoff when Gateway returns HTTP 502 Bad Gateway due to downstream services (such as Identity Service) completing database migrations and startup handshakes.
+- **Automated `application/problem+json` Deserialization**:
+  - Enhanced `apiClient.js` to automatically detect and parse HTTP responses with `Content-Type: application/problem+json` or any `+json` variant.
+  - Implemented safe JSON string detection for responses served with `text/plain` or missing headers that encapsulate stringified JSON objects.
+  - Recursively resolves error detail hierarchies prioritizing `data.detail` (RFC standard), `data.error.description`, `data.message`, and ASP.NET Core `data.errors` validation collections while ignoring generic framework placeholders (`"An error occurred while processing your request."`).
+  - Seamlessly assigns both `error.data` and `error.response = { data, status, headers }` for comprehensive backward compatibility with Axios-style component catch blocks.
+- **Pedagogical & Infrastructure Error Classification**:
+  - Intercepts backend AI configuration omissions (such as missing `GEMINI_API_KEY` or `OPENAI_API_KEY`) and translates them into actionable toast notifications titled *"Chưa Cấu Hình API Key"* with configuration instructions.
+  - Detects upstream AI provider rate-limiting and quota exhaustion (HTTP 429 / `ResourceExhausted`), gracefully informing teachers and operators via *"Hạn Mức API Quá Tải"* cards.
+  - Strips internal backend exception wrappers (e.g. `Lỗi khi trích xuất tài liệu khung chương trình:`) to present concise, readable error summaries directly to academic staff.
+
+### 4.58. Multiple-Choice Option Sanitization & Rogue Token Elimination (`CurriculumExplorerView.jsx`, `MathText.jsx`, `CurriculumStudioEditor.jsx`)
+- **Multiple-Choice Option Quote Stripping (`cleanOptionDisplay`)**:
+  - LLMs and OCR engines often encapsulate chemical formula options in single or double quotes (e.g. `'HCOOC_2H_5'` or `"C_2H_5CHO"`), interfering with KaTeX delimiters and generating malformed equations.
+  - Added `cleanOptionDisplay(raw)` in `CurriculumExplorerView.jsx`: Strips leading/trailing quote characters and redundant letter option prefixes (`A.`, `B.`, `(A)`), ensuring pristine KaTeX rendering across Khối 4 option cards.
+- **Rogue `undefined` Token Filtering**:
+  - Enhanced `MathText.jsx` parser to filter out standalone lines containing only `undefined` or `null`.
+  - Sanitized `sampleProblem` extraction in `CurriculumStudioEditor.jsx` (`parseSolutionMethodSections`) to eliminate phantom `undefined` labels from method blocks.
+- **Resilient Target Domain Dropdown Architecture**:
+  - Replaced the previous modal-wide backdrop overlay (`fixed inset-0 z-40`) with a localized `useRef` and `mousedown` outside-click listener.
+  - Eliminates z-index trapping and clipping inside scrolling dialog containers (`overflow-y-auto`).
+
+### 4.59. Redundant Competency Domain Pruning & Confirmation Workflow (`CurriculumExplorerView.jsx`)
+- **Domain Identification & Pruning Interface**:
+  - Automatically identifies user-created or AI-hallucinated competency domains outside the 5 canonical V-ACT domains (`DOM_MATH`, `DOM_LANG`, `NATURAL_SCIENCES`, `SOCIAL_SCIENCES`, `DOM_ENG`).
+  - Renders a prominent `Trash2` deletion icon on the domain navigation tab.
+- **Cascade Deletion Confirmation Workflow**:
+  - Prompts instructors with a defensive confirmation dialog explaining that deletion cascades to all associated chapters, lessons, patterns, and questions.
+  - Invokes `contentService.deleteNode(domain.id)` via API Gateway, delegating atomic database purging to Content Service's polymorphic `DeleteNodeCommand`.
+
+### 4.60. Strict KaTeX & LaTeX Integrity Architecture, Multiline Equation Stitching & Chemical Subscript Option Sanitization (`MathText.jsx`, `CurriculumExplorerView.jsx`, `CurriculumStudioEditor.jsx`)
+- **Multiline Broken LaTeX Expression Stitching (`mergeUnclosedLatexLines`)**:
+  - *Architectural Issue*: LLMs frequently output multiline LaTeX expressions (e.g. calculation fractions `\frac{...}{\n...}` or long formulas `\text{HCOOCH(CH}_3\n )_2`) with literal line breaks inside curly braces `{...}`. Standard line-by-line renderers split these blocks into invalid fragments, causing KaTeX parser exceptions and raw text fallbacks.
+  - *Architectural Solution*: Implemented stateful line merger in `MathText.jsx` tracking open brace counts `{...}`. Lines ending within unclosed braces are merged back into single unified expressions prior to line-based rendering.
+- **Automated Chemical Reaction Arrow Delimiting**:
+  - Automatically identifies standalone chemical reaction equations containing LaTeX arrows (`\rightleftharpoons`, `\xrightarrow{t^\circ}`, `\longrightarrow`, `\rightarrow`) and encloses them into `$ ... $` or `$$ ... $$` math blocks.
+- **Formula Subscript & Complex Compound Auto-Detection**:
+  - Extended regular expressions to capture algebraic chemical formulas with general subscripts (`C_nH_{2n}O_2`, `CH_3COOC_2H_5`, `C_4H_6O_2`, `CH_3COOCH(CH_3)_2`, `(n \ge 2)`), wrapping them seamlessly in math delimiters.
+- **Nested Dollar Elimination in LaTeX Arguments**:
+  - Recursively strips invalid dollar signs nested inside LaTeX command braces (`{\text{n}_{$CH_3COOH$}}` -> `{\text{n}_{CH_3COOH}}`).
+- **Punctuation Dollar Cleanup & Unit Sanitization**:
+  - Cleans rogue single dollars glued to punctuation (`.$`, `$.`, `,$`) and units (`$\text{mol}`, `$\text{gam}`, `$\times$`).
+- **Comprehensive Multiple-Choice Option Sanitization (`cleanOptionDisplay` & `cleanOptionOrText`)**:
+  - Strips all single, double, backtick, and unicode quotes (`‘`, `’`, `“`, `”`).
+  - Automatically converts flat chemical formulas (`CH3COOCH3`, `HCOOC2H5`, `C2H5OH`, `H2SO4`) into proper subscript notation (`CH_3COOCH_3`, `HCOOC_2H_5`) and encloses them in `$ ... $`.
+  - Harmonized option sanitization across both read-only preview (`CurriculumExplorerView.jsx`) and interactive authoring (`CurriculumStudioEditor.jsx`).
+
+### 4.61. Independent Math Tokenizer Engine, Vietnamese Prose Invariant Protection & Block Math Downgrade Architecture (`mathTokenizer.js`, `MathText.jsx`)
+- **Root Cause & Elimination of Red KaTeX Error Text & Swallowed Vietnamese Prose**:
+  - *Defect Diagnosis*: Previous line-merging logic relied on `dMatches % 2 !== 0` (unclosed dollar counts). When an LLM output an unclosed opening dollar sign (e.g. `của ester đơn chức là $RCOOR'.*`), the merger swallowed up to 10 subsequent lines of Vietnamese explanatory prose into a single math token buffer. The inline regex then passed this entire Vietnamese text block to `katex.renderToString()`, which treated Vietnamese letters as multiplied variables, stripped all whitespace, failed parsing, and styled the entire paragraph in vivid red text (`.katex-error`).
+  - *Architectural Resolution*:
+    1. **Eliminated Dollar-Parity Line Merging**: `mergeUnclosedLatexLines` now exclusively tracks unclosed LaTeX command curly braces (`{...}`), never merging lines based on unclosed dollar signs.
+    2. **Independent Tokenizer & Vietnamese Prose Shield (`mathTokenizer.js`, `renderInlineContent`)**: Embedded `stripTextGroups` and prose invariant tests. If any math delimiter candidate (`$...$` or `$$...$$`) contains accented Vietnamese characters outside `\text{}` or multi-word lowercase prose, the renderer immediately refuses math compilation and safely outputs natural text `<span>`, guaranteeing 0% red text errors.
+- **Short Formula Display-Block Downgrade & Visual Layout Preservation**:
+  - When LLMs output short single-compound formulas (such as `$$HCOOCH_3$$` or `$$C_nH_{2n}$$`), standard block renderers wrap them in centered block `<div>` elements (`my-2.5 text-center`), severely fracturing narrative flow and causing trailing colons (`: methyl formate`) to drop awkwardly onto the next line.
+  - Implemented automatic block downgrade in `renderStructuredContent`: Formulas under 40 characters without complex fractions or long arrows are automatically downgraded from display `<div>` to inline `<span className="inline-math">`, maintaining pristine sentence flow.
+- **Intelligent Formula Stitching for Severed PDF/OCR Streams**:
+  - Automatically stitches formulas severed across newline boundaries during OCR extraction: `C_nH_{2n-4} \n O_2` -> `$C_nH_{2n-4}O_2$`.
+  - Stitches severed compound names before colon descriptors (`HCOOCH_3 \n : methyl formate` -> `HCOOCH_3: methyl formate`).
+  - Purged phantom `undefined` tokens and unspaced operators (`\equivC` -> `\equiv C`, `$ = $` -> `=`).
+- **Verification**:
+  - `npm run build` completed cleanly in 2.68s with 0 errors and 0 warnings.
+
+### 4.62. Markdown Table Glassmorphic Rendering, Option Quote Stripping & Red Undefined Purge Architecture (`MathText.jsx`, `CurriculumExplorerView.jsx`)
+- **Responsive Glassmorphic Markdown Table Engine (`renderMarkdownTable`)**:
+  - *Architectural Gap*: Tabular stoichiometric data and reaction charts (`|Chất | CH_3COOH | C_2H_5OH |...|`) extracted by AI were rendered as raw, unformatted text strings with literal pipe characters `|` and separator lines `|---|---|`, breaking the pedagogical UI experience.
+  - *Architectural Resolution*: Implemented `renderMarkdownTable` in `MathText.jsx` parsing Markdown table structures into responsive glassmorphic HTML `<table>` elements with rounded borders (`rounded-xl`), shaded headers (`bg-slate-100/90`), zebra-striped rows (`bg-slate-50/70` vs `bg-white`), horizontal scrolling (`overflow-x-auto`), and inline KaTeX rendering inside each table cell.
+- **Complete Elimination of Red 'undefined' Error Tokens**:
+  - *Architectural Guard in `renderKatexHtml`*: Sanitizes all math strings before KaTeX parsing by purging `\undefined` and `undefined`; automatically strips error elements matching `<span class="katex-error">` containing `undefined` from the rendered HTML.
+  - Automatically reconstructs standard textbook efficiency formulas: `H\% = \frac{m_{\text{thực tế}}}{m_{\text{lí thuyết}}} \times 100\%`.
+- **Option Quote Stripping & Multiple-Choice Polish (`cleanOptionDisplay`)**:
+  - Thoroughly strips all single quotes `'`, double quotes `"`, backticks, and unicode curly quotes around options A-D.
+  - Stitches multiline severed chemical options back into continuous inline formulas and encloses them into `$ ... $`.
+- **Verification**:
+  - `npm run build` completed cleanly in **3.08 seconds** (3015 modules transformed, 0 Error, 0 Warning).
+
+

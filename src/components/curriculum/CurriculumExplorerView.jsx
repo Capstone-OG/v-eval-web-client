@@ -295,6 +295,36 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
   const [importEndPage, setImportEndPage] = useState(35);
   const [importExtractionDepth, setImportExtractionDepth] = useState('deep'); // 'deep' | 'standard'
 
+  const cleanOptionDisplay = (raw) => {
+    if (!raw) return '';
+    let str = String(raw).trim();
+
+    // Strip all leading and trailing quotes (single, double, curly, backticks)
+    while (str.length > 0 && /^['"`‘’“”\s]/.test(str)) str = str.slice(1).trim();
+    while (str.length > 0 && /['"`‘’“”\s]$/.test(str)) str = str.slice(0, -1).trim();
+
+    // Strip prefix label like "(A) " or "A. " or "A: "
+    str = str.replace(/^(?:\([A-D]\)|[A-D][\.\:\)])\s*/i, '').trim();
+
+    while (str.length > 0 && /^['"`‘’“”\s]/.test(str)) str = str.slice(1).trim();
+    while (str.length > 0 && /['"`‘’“”\s]$/.test(str)) str = str.slice(0, -1).trim();
+
+    // Merge broken newlines in options
+    str = str.replace(/\r?\n\s*/g, '');
+
+    // Nếu là công thức hóa học dạng phẳng không có chỉ số dưới (CH3COOCH3, HCOOC2H5, C2H5OH, H2SO4)
+    if (/^[A-Z][a-zA-Z0-9\(\)\-+]*$/.test(str) && /\d/.test(str)) {
+      str = str.replace(/([A-Z][a-z]?|\))(\d+)/g, '$1_$2');
+    }
+
+    // Nếu là công thức chứa chỉ số dưới chưa bọc KaTeX, tự động bọc trong $...$
+    if (/^[A-Za-z0-9_\(\)\+\-\*\^=]+$/.test(str) && /_/.test(str) && !str.startsWith('$')) {
+      str = `$${str}$`;
+    }
+
+    return str;
+  };
+
   // Panoramic Verification Workspace State
   const [previewSelectedLessonKey, setPreviewSelectedLessonKey] = useState('0-0'); // 'cIdx-lIdx'
   const [previewSelectedPattern, setPreviewSelectedPattern] = useState(null);
@@ -3777,7 +3807,7 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
                                             {optKey}
                                           </span>
                                           <div className="flex-1 min-w-0 leading-snug">
-                                            <MathText text={optText || ''} />
+                                            <MathText text={cleanOptionDisplay(optText)} />
                                           </div>
                                           {isCorrect && (
                                             <span className="text-emerald-700 text-[9.5px] font-extrabold shrink-0">

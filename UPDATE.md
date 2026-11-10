@@ -1,29 +1,27 @@
-# NHẬT KÝ CẬP NHẬT (UPDATE LOG) - WEB CLIENT
+# NHẬT KÝ CẬP NHẬT (UPDATE LOG) - WEB CLIENT SERVICE
 
-## [08/11/2026] - Mở Rộng Không Gian Làm Việc Toàn Màn Hình (`w-full`), Tinh Chỉnh Giao Diện Bảng Tài Khoản IAM 1 Dòng Không Cuộn Ngang & Hoàn Thiện Phân Hệ Tài Khoản Ngừng Hoạt Động (Soft Delete / Inactive)
+## [11/11/2026] - Khắc Phục Triệt Để Lỗi KaTeX, Bảng Markdown Table, Dấu Nháy Đơn Trắc Nghiệm & Triệt Tiêu Token 'undefined'
 
-- **Mở Rộng Không Gian Làm Việc Cổng Vai Trò Toàn Chiều Ngang (`w-full`) Sát Sidebar ([`App.jsx`](./src/App.jsx), [`AccountProvisioningView.jsx`](./src/components/admin/AccountProvisioningView.jsx), [`CampusManagerDashboardView.jsx`](./src/components/dashboard/CampusManagerDashboardView.jsx), [`ParentDashboardView.jsx`](./src/components/dashboard/ParentDashboardView.jsx), [`TuitionPaymentView.jsx`](./src/components/payment/TuitionPaymentView.jsx))**:
-  - Thay thế giới hạn `max-w-7xl mx-auto` bằng `w-full` kèm `px-4 sm:px-6` đồng bộ thẳng hàng với `Navbar` và `Sidebar`.
-  - Xóa bỏ hoàn toàn khoảng trống thừa hai bên cạnh `Sidebar`, giải phóng 100% chiều ngang màn hình giúp bảng danh sách tài khoản hiển thị trọn vẹn 6 cột mà không cần thanh cuộn ngang.
+- **Tích Hợp Bộ Render Bảng Markdown Sang Bảng Glassmorphic HTML ([`MathText.jsx`](./src/components/common/MathText.jsx))**:
+  - **Triển khai hàm `renderMarkdownTable`**: Tự động chuyển đổi các khối dữ liệu bảng phản ứng/số mol Markdown (`|Chất | CH_3COOH | C_2H_5OH |...|`) thành thẻ `<table>` HTML responsive đẹp mắt, có viền bo `rounded-xl`, nền `bg-slate-100/90` cho header, các dòng xen kẽ zebra striping `bg-white` / `bg-slate-50/70`, có thanh cuộn ngang `overflow-x-auto`.
+  - **Hỗ trợ KaTeX inline bên trong từng ô bảng**: Tự động nhận diện công thức hóa học có chỉ số dưới (`CH_3COOH`, `C_2H_5OH`, `CH_3COOC_2H_5`, `H_2O`) trong từng ô bảng và bọc KaTeX chuẩn xác, chấm dứt hoàn toàn tình trạng bảng hiển thị text thô với các ký tự `|` và `|---|---|`.
+  - **Cơ chế nhận diện linh hoạt**: Nhận diện bảng bắt đầu bằng ký tự `|` kèm dòng phân cách `|---|---|` mà không bắt buộc ô cuối cùng phải có `|`, tương thích hoàn hảo với mọi định dạng trích xuất từ AI.
 
-- **Tái Thiết Kế Bảng Quản Trị Tài Khoản IAM Sắc Nét Trên 1 Dòng & Nâng Cấp `apiClient.js` ([`AccountProvisioningView.jsx`](./src/components/admin/AccountProvisioningView.jsx), [`apiClient.js`](./src/services/apiClient.js))**:
-  - **Hỗ Trợ Query Params (`options.params`) & `PATCH` Trong `apiClient.js`**: Bổ sung tuần tự hóa `URLSearchParams` cho `options.params` và phương thức `apiClient.patch()`, đảm bảo tham số lọc `isActive=true/false` được gửi chính xác xuống Backend để ẩn hoàn toàn tài khoản đã khóa khỏi danh sách đang hoạt động.
-  - **Thanh Công Cụ Hợp Nhất (Unified Command Toolbar)**: Gộp bộ chuyển đổi trạng thái (*"Đang hoạt động"*, *"Đã ngừng hoạt động (Ẩn)"*, *"Tất cả"*), ô tìm kiếm và hàng nút lọc vai trò vào một khung điều khiển đồng nhất.
-  - **Chống Rớt Dòng Tuyệt Đối (`whitespace-nowrap`)**: Chuẩn hóa toàn bộ huy hiệu Vai trò, huy hiệu Trạng thái và nút thao tác (*"Ngừng hoạt động"* / *"Khôi phục"*) nằm gọn trên 1 dòng duy nhất, kết hợp avatar chữ cái viết tắt 2 ký tự theo màu vai trò và nhãn đơn vị/chuyên môn thông minh.
+- **Nâng Cấp Hàm `cleanOptionDisplay` & Xử Lý Triệt Để Dấu Nháy Đơn Trắc Nghiệm ([`CurriculumExplorerView.jsx`](./src/components/curriculum/CurriculumExplorerView.jsx))**:
+  - **Bóc sạch 100% dấu nháy đơn `'` và nháy kép `"`**: Loại bỏ triệt để các dấu nháy `'`, `"`, backtick, dấu nháy cong `‘ ’ “ ”` bao quanh phương án trắc nghiệm ở Khối 4 (như `'HCOOC_2H_5'`, `'C_2H_5CHO'`, `'25,00%'`).
+  - **Hàn gắn phương án hóa học bị ngắt dòng do PDF**: Xóa bỏ các ký tự xuống dòng `\r?\n` kẹt giữa công thức este đa chức (như `\text{-OOC-CH}_2` rớt dòng `-CH_2`).
+  - **Chuẩn hóa công thức hóa học & tự động bọc KaTeX**: Tự động nhận diện và bọc các công thức este, aldehyde, acid vào cặp dấu `$ ... $`.
 
-- **Phân Hệ Quản Lý Tài Khoản Ngừng Hoạt Động (Soft Delete / Inactive) & Kiểm Tra Email Đa Tầng ([`AccountProvisioningView.jsx`](./src/components/admin/AccountProvisioningView.jsx), [`userService.js`](./src/services/userService.js), [`emailValidator.js`](./src/utils/emailValidator.js))**:
-  - Tách biệt 2 chế độ xem *"Tài Khoản Đang Hoạt Động"* và *"Tài Khoản Đã Ngừng Hoạt Động (Ẩn)"* kèm Modal xác nhận Ngừng hoạt động / Khôi phục bảo toàn 100% dữ liệu học tập.
-  - Tích hợp thanh điều hướng Subpage chuẩn Segmented Control hiện đại, nhận diện động Cổng Giám Đốc Học Thuật (`ACADEMIC_DIRECTOR`) và kiểm tra email đa tầng DNS MX kèm gợi ý sửa lỗi tên miền 1-Click (`@mail.com` -> `@gmail.com`).
+- **Triệt Tiêu Hoàn Toàn Token Lỗi Màu Đỏ `'undefined'` ([`MathText.jsx`](./src/components/common/MathText.jsx))**:
+  - **Bảo vệ an toàn trong `renderKatexHtml`**: Làm sạch triệt để mọi chuỗi `\undefined`, `undefined`, `null` trước khi đưa vào thư viện KaTeX; tự động bóc bỏ thẻ lỗi `<span class="katex-error">` nếu phát hiện có chứa token `undefined`, ngăn chặn hoàn toàn chữ `undefined` màu đỏ `#cc0000` hiển thị trên giao diện người dùng.
+  - **Phục hồi công thức hiệu suất chuẩn SGK**: Tự động thay thế `H\% undefined %` và `H\% = undefined` bằng công thức chuẩn `` `H\% = \frac{m_{\text{thực tế}}}{m_{\text{lí thuyết}}} \times 100\%` ``.
 
-- **Kiểm Thử & Biên Dịch**:
-  - `npm run build` hoàn thành sạch sẽ 100% (`3008 modules transformed`, 0 Error).
+- **Hàn Gắn Công Thức Hóa Học & Toán Học Bị Vỡ Vụn Do PDF ([`MathText.jsx`](./src/components/common/MathText.jsx))**:
+  - **Nối công thức ester bị ngắt giữa chuỗi C-H và Oxy**: Ghép `` `C_nH_{2n} \n O_2` `` hoặc `` `C_nH_{2n} O_2` `` thành một khối duy nhất `` `$C_nH_{2n}O_2$` ``.
+  - **Nối chuỗi công thức sau dấu nối hóa trị `-` hoặc `=`**: Ghép các chuỗi este có liên kết đôi hoặc este đa chức (kể cả chứa thẻ `\text{}`).
+  - **Nối nhóm chỉ số ngoặc `)_2`, `)_3`**: Ghép các nhánh este (như `` `\text{HCOOCH(CH}_3 \n )_2` `` $\rightarrow$ `` `$HCOOCH(CH_3)_2$` ``).
+  - **Sửa điều kiện bất đẳng thức có dấu `$` bị lệch**: Chuẩn hóa `` `(n \ge 2$)` ``, `` `(n \ge 3$)` ``, `` `($n$ \ge 4$)` `` thành `` `($n \ge 2$)` ``.
+  - **Tự động bọc phương trình phản ứng hóa học vào `$...$`**: Bất kỳ phản ứng nào chứa `\rightleftharpoons`, `\xrightarrow` đều được tự động bọc trong `$ ... $`.
 
-## [08/11/2026] - Triển Khai Toàn Diện Core Flow 6, Chuẩn Hóa Ngôn Ngữ Học Tập Thân Thiện Cho Học Sinh & Hợp Nhất Đồng Bộ Nhánh `develop`
-
-- **Trung Tâm Kết Quả Học Tập, Dự Báo Điểm & Bài Tập Tăng Điểm Nhanh ([`LearningAnalyticsView.jsx`](./src/components/dashboard/LearningAnalyticsView.jsx), [`ScorePredictionPanel.jsx`](./src/components/dashboard/ScorePredictionPanel.jsx), [`PrescriptionPracticeModal.jsx`](./src/components/modals/PrescriptionPracticeModal.jsx), [`practiceService.js`](./src/services/practiceService.js), [`practiceService.flow6.test.js`](./tests/practiceService.flow6.test.js))**:
-  - Đấu nối trọn bộ 13 API Core Flow 6 qua YARP Gateway (`:5212`): dự báo khoảng điểm dự kiến thang 1200, danh sách chủ đề cần ôn ngay để tăng điểm nhanh, modal làm bài luyện tập gạch nợ điểm thiếu hụt khi đạt `>= 67%` và tự động cập nhật khi nộp bài.
-  - Lược bỏ toàn bộ nhãn thuật toán/kỹ thuật nội bộ (`Core Flow 1..6`, `Live Gateway API (:5212)`, `Ghost Onboarding`, `IRT 2PL`, `Theta`, `SEM 95%`, `Knapsack ROI`, `AUTO_INIT`, `PAT_SKILL_*`), chuyển sang ngôn ngữ tự học gần gũi cho học sinh.
-- **Nhắc Nhở Học Tập, Sổ Tay Câu Sai, Điều Hướng Đa Vai Trò & Gia Sư AI Đồng Hành ([`StudentEarlyWarningsCard.jsx`](./src/components/dashboard/StudentEarlyWarningsCard.jsx), [`EarlyWarningsMentorPanel.jsx`](./src/components/dashboard/EarlyWarningsMentorPanel.jsx), [`MistakeNotebookSM2View.jsx`](./src/components/dashboard/MistakeNotebookSM2View.jsx), [`NotificationBellPopover.jsx`](./src/components/layout/NotificationBellPopover.jsx), [`Sidebar.jsx`](./src/components/layout/Sidebar.jsx), [`AISocraticTutorModal.jsx`](./src/components/modals/AISocraticTutorModal.jsx), [`ParentDashboardView.jsx`](./src/components/dashboard/ParentDashboardView.jsx), [`App.jsx`](./src/App.jsx))**:
-  - Đổi toàn bộ nhãn `Gia sư AI Socratic` sang **Gia sư AI** / **Gia sư AI Đồng Hành**; tích hợp chuông thông báo động trên Navbar, bảng theo dõi hỗ trợ học sinh cho Giáo viên/Quản lý cơ sở, Sổ tay câu làm sai kèm lịch nhắc ôn định kỳ, đồng thời hợp nhất liền mạch với cổng thanh toán học phí PayOS VietQR (`TuitionPaymentView.jsx`, `PayOsCheckoutModal.jsx`).
-- **Kiểm Thử & Đóng Gói**:
-  - Toàn bộ unit test (`practiceService.flow5.test.js`, `practiceService.flow6.test.js`, `paymentService.test.js`, `tokenStorage.test.js`) PASS 100%, `npm run build` (`vite build`) đóng gói sạch 100% (`0 errors`).
+- **Kiểm Thử & Build Sản Phẩm**:
+  - `npm run build` hoàn thành trong **3.08 giây** (3015 modules transformed, 0 Error, 0 Warning).

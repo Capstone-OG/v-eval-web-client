@@ -1,5 +1,79 @@
 # NHẬT KÝ KIỂM TRA TIẾN ĐỘ VẬN HÀNH (DAILY CHECK LOG) - WEB CLIENT
 
+## [11/11/2026] - Khắc Phục Triệt Để Toàn Bộ Lỗi Hiển Thị LaTeX & KaTeX (Render Bảng Markdown Table, Chống Nuốt Dấu Nháy Đơn Options, Triệt Tiêu Token Đỏ 'undefined', Nối Dòng Công Thức Hóa Học Gãy)
+
+- **Tích Hợp Bộ Phân Giải & Render Bảng Markdown Sư Phạm ([`MathText.jsx`](../src/components/common/MathText.jsx))**:
+  - **Triển khai hàm `renderMarkdownTable` chuẩn mực**:
+    + *Hiện tượng*: Các bảng phản ứng hóa học hoặc bảng số mol (ví dụ: `|Chất | CH_3COOH | C_2H_5OH |...|`) hiển thị thô sơ dưới dạng các dòng text ký tự `|` và `|---|---|` gây mất thẩm mỹ và vỡ layout sư phạm.
+    + *Khắc phục*: Tự động nhận diện cú pháp Markdown Table trong khối văn bản, gom toàn bộ các dòng `|...|` lại và render thành thẻ HTML `<table>` responsive: có viền bo tròn (`rounded-xl`), bóng đổ mờ (`shadow-2xs`), header xám sáng (`bg-slate-100/90 text-slate-800 font-bold`), các dòng dữ liệu xen kẽ (zebra striping `bg-white` / `bg-slate-50/70`), cuộn ngang an toàn (`overflow-x-auto`), và đặc biệt là hỗ trợ render công thức KaTeX inline mượt mà (`renderInlineContent`) bên trong từng ô dữ liệu.
+    + *Nhận diện linh hoạt*: Không bắt buộc ô cuối cùng phải có ký tự `|`, chấp nhận mọi định dạng phân cách bảng Markdown.
+
+- **Nâng Cấp Hàm `cleanOptionDisplay` & Xử Lý Triệt Để Dấu Nháy Đơn Trắc Nghiệm ([`CurriculumExplorerView.jsx`](../src/components/curriculum/CurriculumExplorerView.jsx))**:
+  - **Lột sạch 100% dấu nháy đơn `'` và nháy kép `"`**: Loại bỏ triệt để các dấu nháy `'`, `"`, backtick, dấu nháy cong `‘ ’ “ ”` bao quanh phương án trắc nghiệm ở Khối 4 (như `'HCOOC_2H_5'`, `'C_2H_5CHO'`, `'25,00%'`).
+  - **Hàn gắn phương án hóa học bị ngắt dòng do PDF**: Xóa bỏ các ký tự xuống dòng `\r?\n` kẹt giữa công thức este đa chức (như `\text{-OOC-CH}_2` rớt dòng `-CH_2`).
+  - **Chuẩn hóa công thức hóa học & tự động bọc KaTeX**: Tự động nhận diện và bọc các công thức este, aldehyde, acid vào cặp dấu `$ ... $`.
+
+- **Triệt Tiêu Hoàn Toàn Token Lỗi Màu Đỏ `'undefined'` ([`MathText.jsx`](../src/components/common/MathText.jsx))**:
+  - **Bảo vệ an toàn trong `renderKatexHtml`**: Làm sạch triệt để mọi chuỗi `\undefined`, `undefined`, `null` trước khi đưa vào thư viện KaTeX; tự động bóc bỏ thẻ lỗi `<span class="katex-error">` nếu phát hiện có chứa token `undefined`, ngăn chặn hoàn toàn chữ `undefined` màu đỏ `#cc0000` hiển thị trên giao diện người dùng.
+  - **Phục hồi công thức hiệu suất chuẩn SGK**: Tự động thay thế `H\% undefined %` và `H\% = undefined` bằng công thức chuẩn `` `H\% = \frac{m_{\text{thực tế}}}{m_{\text{lí thuyết}}} \times 100\%` ``.
+
+- **Hàn Gắn Công Thức Hóa Học & Toán Học Bị Vỡ Vụn Do PDF ([`MathText.jsx`](../src/components/common/MathText.jsx))**:
+  - **Nối công thức ester bị ngắt giữa chuỗi C-H và Oxy**: Ghép `` `C_nH_{2n} \n O_2` `` hoặc `` `C_nH_{2n} O_2` `` thành một khối duy nhất `` `$C_nH_{2n}O_2$` ``.
+  - **Nối chuỗi công thức sau dấu nối hóa trị `-` hoặc `=`**: Ghép các chuỗi este có liên kết đôi hoặc este đa chức (kể cả chứa thẻ `\text{}`).
+  - **Nối nhóm chỉ số ngoặc `)_2`, `)_3`**: Ghép các nhánh este (như `` `\text{HCOOCH(CH}_3 \n )_2` `` $\rightarrow$ `` `$HCOOCH(CH_3)_2$` ``).
+  - **Sửa điều kiện bất đẳng thức có dấu `$` bị lệch**: Chuẩn hóa `` `(n \ge 2$)` ``, `` `(n \ge 3$)` ``, `` `($n$ \ge 4$)` `` thành `` `($n \ge 2$)` ``.
+  - **Tự động bọc phương trình phản ứng hóa học vào `$...$`**: Bất kỳ phản ứng nào chứa `\rightleftharpoons`, `\xrightarrow` đều được tự động bọc trong `$ ... $`.
+
+- **Đóng Gói & Nghiệm Thu Sản Phẩm**:
+  - `npm run build` hoàn thành sạch sẽ 100% trong **3.08 giây** (`3015 modules transformed`, 0 Error, 0 Warning).
+
+## [10/11/2026] - Nâng Cấp Toàn Diện UI/UX Modal Bóc Tách Khung Tri Thức Chuyên Đề & Xử Lý Chuẩn Hóa Lỗi API Problem Details Thân Thiện Người Dùng
+
+- **Tái Thiết Kế & Nâng Cấp UI/UX Modal Nạp Cây Tri Thức Bằng AI ([`CurriculumExplorerView.jsx`](../src/components/curriculum/CurriculumExplorerView.jsx))**:
+  - **Tách Biệt Khối Cấu Hình Độc Lập**:
+    - Phân tách cấu hình cắt lát trang PDF (`Phạm vi trang cần bóc tách`) ra khỏi cấu hình độ sâu dạng bài, bổ sung thanh chuyển đổi linh hoạt giữa *"Toàn bộ tài liệu"* và *"Khoảng trang cụ thể"* (Từ trang - Đến trang) trực quan, có viền bo tròn và nền tương phản.
+  - **Thiết Kế Cặp Card Tương Tác Chọn Độ Sâu Nhận Diện (Interactive Selection Cards)**:
+    - Thay thế hàng nút bấm nhỏ hẹp, chữ mờ cũ bằng 2 thẻ Card tương tác 2 cột lớn, hiển thị đầy đủ chỉ báo Radio checkmark động, viền nổi bật khi active (`ring-1 ring-purple-400 bg-gradient-to-br from-purple-50/90 to-indigo-50/60 border-purple-600`):
+      1. **Chuyên sâu ĐGNL (`deep`)** - Badge *`Khuyên dùng`*:
+         - Chỉ số: `⚡ 2–4 dạng bài / bài học • Chuẩn 4 khối KaTeX & Bloom`.
+         - Diễn giải: Giải phẫu vi mô chuyên đề thành các dạng bài toán thực chiến, kèm công thức KaTeX, kỹ thuật Casio và trắc nghiệm L1–L4 để học sinh luyện đề ngay.
+         - Nhãn định hướng: `📌 Phù hợp: Tài liệu chuyên đề, bộ đề ôn thi (10–50+ trang)`.
+      2. **Tiêu chuẩn (Lý thuyết & Dạng con) (`standard`)** - Badge *`Chuyên sâu lý thuyết`*:
+         - Chỉ số: `📖 Ít dạng lớn • Đầy đủ lý thuyết chi tiết & Nhiều dạng con`.
+         - Diễn giải: Bóc tách các chủ đề lớn theo mục lục SGK. Phần lý thuyết được trình bày trọn vẹn, sâu sắc và toàn diện nhất (định nghĩa, định lý, công thức KaTeX tổng quát); bên trong mỗi dạng bài lớn được phân rã chi tiết thành nhiều dạng con (sub-patterns 1.1, 1.2...) kèm phương pháp giải cụ thể.
+         - Nhãn định hướng: `📌 Phù hợp: Sách giáo khoa, chuyên đề lý thuyết chuyên sâu, giáo trình chuẩn hóa kiến thức nền`.
+  - **Hộp Gợi Ý Ngữ Cảnh Trực Quan Phản Hồi Tức Thì (Contextual Feedback Box)**:
+    - Bổ sung banner động đổi màu và nội dung theo lựa chọn thời gian thực: giải thích rõ ràng mục tiêu bóc tách, số lượng dạng bài dự kiến (6–12+ dạng cho `deep` vs 1–2 dạng cho `standard`) và thời gian xử lý ước tính giúp Thầy/Cô đưa ra quyết định chính xác ngay lập tức.
+- **Chuẩn Hóa Xử Lý Lỗi API, Tự Động Thử Lại Lỗi 502 & Bóc Tách RFC 7807/9110 Problem Details Thân Thiện ([`apiClient.js`](../src/services/apiClient.js) & [`CurriculumExplorerView.jsx`](../src/components/curriculum/CurriculumExplorerView.jsx))**:
+  - **Cơ Chế Tự Động Thử Lại Lỗi Kết Nối Khởi Động 502**: Tự động trì hoãn 2 giây và thử lại 1 lần (`!isRetry`) khi Gateway trả về 502 do microservice backend (Identity Service) đang khởi tạo CSDL, giúp các luồng đăng nhập và tải trang tự động hoàn tất trơn tru.
+  - **Phân Giải Thông Minh Header `Content-Type: application/problem+json`**:
+    - Nâng cấp `apiClient.js` tự động nhận diện và deserialize định dạng chuẩn `application/problem+json` hoặc chuỗi JSON trả về từ backend, ngăn chặn việc đổ chuỗi JSON thô kỹ thuật (RFC link, status code 500) lên màn hình người dùng.
+    - Trích xuất tự động các trường `data.detail`, `data.error`, `data.message`, `data.errors`, gán tương thích ngược cả `error.data` và `error.response.data`.
+  - **Thông Báo Trực Quan Từng Tình Huống Ngoại Lệ AI**:
+    - Khi hệ thống thiếu API Key: Toast hiển thị tiêu đề *"Chưa Cấu Hình API Key"* kèm hướng dẫn cấu hình trong `.env` hoặc `appsettings.json`.
+    - Khi cổng Gateway không kết nối được tới Backend (HTTP 502 Bad Gateway): Toast hiển thị tiêu đề *"Không Thể Kết Nối AI Engine (502)"* giải thích rõ dịch vụ có thể đang trong quá trình khởi động hoặc bị chặn cổng, hướng dẫn kiểm tra terminal service.
+    - Khi chạm ngưỡng giới hạn (Rate Limit / Quota 429): Toast hiển thị *"Hạn Mức API Quá Tải"* thay vì mã lỗi kỹ thuật vô nghĩa.
+    - Loại bỏ hoàn toàn các tiền tố kỹ thuật backend như `Lỗi khi trích xuất tài liệu khung chương trình:` giúp thông điệp ngắn gọn, dễ hiểu.
+- **Nâng Cấp Bộ Chọn Miền Năng Lực V-ACT Chuẩn Cao Cấp ([`CurriculumExplorerView.jsx`](../src/components/curriculum/CurriculumExplorerView.jsx))**:
+  - Tích hợp mảng hằng số dự phòng `STANDARD_VACT_DOMAINS` và cơ chế fallback `effectiveDomains` đảm bảo không bao giờ bị rỗng hay vỡ dropdown khi CSDL đang tải.
+  - Thay thế select thô bằng Trigger Card có avatar biểu tượng gradient, nhãn mã miền, phụ đề phân môn và menu popup thả nổi mượt mà.
+  - Khắc phục lỗi backdrop menu bị kẹt trong vùng cuộn `overflow-y-auto` bằng `useRef` và sự kiện `mousedown` đóng mở mượt mà.
+
+- **Triệt Tiêu Lỗi `undefined` Khối 2 & Chuẩn Hóa Phương Án Trắc Nghiệm Khối 4 ([`CurriculumExplorerView.jsx`](../src/components/curriculum/CurriculumExplorerView.jsx), [`CurriculumStudioEditor.jsx`](../src/components/curriculum/CurriculumStudioEditor.jsx), [`MathText.jsx`](../src/components/common/MathText.jsx))**:
+  - **Khử Triệt Để `undefined` Trong Khối 2**:
+    - Nâng cấp `MathText.jsx` tự động bỏ qua các dòng rác chỉ chứa từ khóa `undefined` hoặc `null`.
+    - Làm sạch chuỗi `sampleProblem` trong `CurriculumStudioEditor.jsx` và tiền xử lý tại `CurriculumExplorerView.jsx`.
+  - **Làm Sạch Phương Án Trắc Nghiệm Khối 4 (`cleanOptionDisplay`)**:
+    - Tự động bóc tách các dấu nháy đơn `'...'` hoặc nháy kép `"` bao quanh công thức hóa học do AI sinh ra (như `'HCOOC_2H_5'` thành `HCOOC_2H_5`).
+    - Lược bỏ tiền tố trùng lặp `A.`, `B.`, `(A)`, giúp KaTeX hiển thị công thức hóa học đẹp mắt, không bị lỗi cú pháp bao bọc.
+
+- **Bổ Sung Thao Tác Xóa Miền Năng Lực Dư Thừa Trực Tiếp Trên Tab Bar ([`CurriculumExplorerView.jsx`](../src/components/curriculum/CurriculumExplorerView.jsx))**:
+  - Tự động nhận diện các miền tùy chỉnh hoặc miền dư thừa phát sinh ngoài 5 miền chuẩn hóa V-ACT (như miền "Quan hệ song song trong không gian").
+  - Hiển thị nút xóa `Trash2` màu đỏ trên thẻ miền kèm hộp thoại xác nhận cảnh báo an toàn sư phạm, cho phép giảng viên xóa sạch miền dư thừa cùng toàn bộ dữ liệu trực thuộc.
+
+- **Kiểm Thử & Đóng Gói Sản Phẩm**:
+  - `npm run build` hoàn thành sạch sẽ 100% trong 2.44 giây (`3015 modules transformed`, 0 Error).
+
 ## [07/11/2026] - Tái Cấu Trúc Toàn Diện Thanh Điều Hướng Subpage Chuẩn Segmented Control Hiện Đại, Hỗ Trợ Động Giám Đốc Học Thuật (Academic Director), Mở Rộng Không Gian Làm Việc Toàn Màn Hình (`w-full`) & Hoàn Thiện Giao Diện Quản Lý Tài Khoản Ngừng Hoạt Động (Soft Delete / Inactive)
 
 - **Mở Rộng Không Gian Làm Việc Cổng Vai Trò Toàn Chiều Ngang (`w-full`) Sát Sidebar & Tinh Chỉnh Giao Diện Bảng Tài Khoản Không Rớt Dòng ([`App.jsx`](../src/App.jsx), [`AccountProvisioningView.jsx`](../src/components/admin/AccountProvisioningView.jsx), [`CampusManagerDashboardView.jsx`](../src/components/dashboard/CampusManagerDashboardView.jsx), [`ParentDashboardView.jsx`](../src/components/dashboard/ParentDashboardView.jsx), [`TuitionPaymentView.jsx`](../src/components/payment/TuitionPaymentView.jsx), [`apiClient.js`](../src/services/apiClient.js))**:

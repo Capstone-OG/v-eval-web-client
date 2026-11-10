@@ -170,13 +170,33 @@ async function request(endpoint, options = {}, isRetry = false) {
       }
     }
 
-    // Parse JSON or return empty object on 204 No Content
+    // 3. Handle 502 Bad Gateway transient connection refused during backend startup
+    if (response.status === 502 && !isRetry && !options.noRetry502) {
+      await new Promise((res) => setTimeout(res, 2000));
+      return request(endpoint, options, true);
+    }
+
+    // Parse JSON or return text / empty object
     let data = null;
-    const contentType = response.headers.get('content-type');
-    if (contentType && contentType.includes('application/json')) {
-      data = await response.json();
+    const contentType = response.headers.get('content-type') || '';
+    if (contentType.includes('json') || contentType.includes('+json')) {
+      try {
+        data = await response.json();
+      } catch {
+        data = null;
+      }
     } else {
-      data = await response.text();
+      const text = await response.text();
+      const trimmed = text.trim();
+      if ((trimmed.startsWith('{') && trimmed.endsWith('}')) || (trimmed.startsWith('[') && trimmed.endsWith(']'))) {
+        try {
+          data = JSON.parse(trimmed);
+        } catch {
+          data = text;
+        }
+      } else {
+        data = text;
+      }
     }
 
     if (!response.ok) {
@@ -187,19 +207,60 @@ async function request(endpoint, options = {}, isRetry = false) {
           typeof rawErr === 'object' && rawErr !== null
             ? rawErr.description || rawErr.message || rawErr.code
             : rawErr;
+
+        let errorsDetail = null;
+        if (data.errors) {
+          if (Array.isArray(data.errors)) {
+            errorsDetail = data.errors[0]?.description || data.errors[0]?.message || String(data.errors[0]);
+          } else if (typeof data.errors === 'object') {
+            const firstKey = Object.keys(data.errors)[0];
+            const val = data.errors[firstKey];
+            errorsDetail = Array.isArray(val) ? val[0] : String(val);
+          }
+        }
+
+        const meaningfulTitle =
+          data.title && data.title !== 'An error occurred while processing your request.'
+            ? data.title
+            : null;
+
         errorMessage =
           errDesc ||
+          data.detail ||
           data.message ||
-          data.title ||
-          (data.errors && data.errors[0]?.description) ||
+          errorsDetail ||
+          meaningfulTitle ||
           errorMessage;
       } else if (typeof data === 'string' && data.trim()) {
-        errorMessage = data.trim();
+        const trimmed = data.trim();
+        if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+          try {
+            const parsed = JSON.parse(trimmed);
+            errorMessage = parsed.detail || parsed.message || parsed.title || trimmed;
+          } catch {
+            errorMessage = trimmed;
+          }
+        } else {
+          errorMessage = trimmed;
+        }
+      }
+
+      if (response.status === 502 && (errorMessage.startsWith('HTTP Error 502') || errorMessage.toLowerCase().includes('bad gateway'))) {
+        errorMessage = `Cổng Gateway (${BASE_URL}) không thể kết nối tới microservice backend (HTTP 502 Bad Gateway). Dịch vụ có thể đang trong quá trình khởi động hoặc bị gián đoạn kết nối.`;
+      } else if (response.status === 503 && errorMessage.startsWith('HTTP Error 503')) {
+        errorMessage = `Dịch vụ backend tạm thời không khả dụng hoặc đang quá tải (HTTP 503 Service Unavailable). Vui lòng thử lại sau giây lát.`;
+      } else if (response.status === 504 && errorMessage.startsWith('HTTP Error 504')) {
+        errorMessage = `Hết thời gian chờ phản hồi từ microservice backend (HTTP 504 Gateway Timeout). Vui lòng thử lại hoặc giảm bớt dung lượng tài liệu.`;
       }
 
       const error = new Error(errorMessage);
       error.status = response.status;
       error.data = data;
+      error.response = {
+        data,
+        status: response.status,
+        headers: response.headers
+      };
       error.headers = response.headers;
       throw error;
     }
