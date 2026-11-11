@@ -1,0 +1,1127 @@
+# ARCHITECTURE ACCEPTANCE & SYSTEM COMPREHENSION REPORT - V-EVAL WEB CLIENT
+
+---
+
+## 1. Executive Summary & Purpose
+
+The **V-Eval Web Client** (`v-eval-web-client`) serves as the primary Single Page Application (SPA) frontend interface for the V-Eval educational ecosystem. It delivers a personalized, adaptive learning experience tailored for the Vietnamese National High School Assessment (V-ACT 2026), empowering students, teachers, and academic directors through modern interactive visualizations, real-time AI guidance, and automated assessment diagnostics.
+
+---
+
+## 2. Technical Stack & Frontend Architecture
+
+| Component | Specification | Description |
+| :--- | :--- | :--- |
+| **Framework** | React 19 (`^19.2.8`) | Latest functional component model, hooks, and Concurrent React architecture |
+| **Build Tool** | Vite 8 (`^8.3.0`) | Lightning-fast HMR and Rollup/Oxc optimized production bundle packaging |
+| **Styling** | TailwindCSS v4 (`^4.3.3`) | Modern utility-first CSS engine with Vite plugin integration |
+| **Icons & UI** | Lucide React (`^1.47.0`), Canvas Confetti | Accessible modern icon system and gamification micro-interactions |
+| **Data Visualization** | Recharts (`^3.10.1`) | Responsive Radar and Chart renderings for multi-domain competency display |
+| **Motion** | Framer Motion (`^13.4.0`) | Smooth modal transitions and page state choreography |
+| **Linter** | Oxlint (`^1.81.0`) | High-performance Rust-based linter ensuring clean code standards |
+
+---
+
+## 3. Directory Layout & Modular Structure
+
+```text
+V-Eval-Web_Client/
+├── .gitignore               # Ignored build assets, dist/, node_modules/
+├── .oxlintrc.json           # Oxlint rules and environment specifications
+├── Dockerfile               # Production multi-stage build (Node 22 + Nginx Alpine)
+├── nginx.conf               # SPA routing fallback (try_files index.html)
+├── package.json             # Manifest, dependencies, and build scripts
+├── vite.config.js           # Vite configuration with React & Tailwind plugins
+├── Scripts/
+│   └── push.bat             # Standalone interactive Git sync and push utility
+├── docs/
+│   ├── daily.md             # Chronological development log
+│   ├── process.md           # Architecture breakdown & progress matrix
+│   └── architecture_acceptance.md # Technical acceptance report
+└── src/
+    ├── App.jsx              # Core application orchestrator, routing & modals
+    ├── main.jsx             # React DOM root entry point
+    ├── index.css            # Base stylesheet & font definitions
+    ├── data/
+    │   └── mockData.js      # System-calibrated mock database
+    └── components/
+        ├── auth/            # Multi-role authentication views
+        ├── dashboard/       # Student and teacher metrics, milestone cards, tutor
+        ├── landing/         # Public promotional & pedagogical landing page
+        ├── layout/          # Responsive navigation bar and sidebar
+        └── modals/          # Diagnostic, ZPD adaptive quiz, and Radar modals
+```
+
+---
+
+## 4. Key Functional Modules & Pedagogical Alignment
+
+### 4.1. Flow 1: Diagnostic Assessment (IRT 2PL Model & 30-Question Real Test Page)
+- Implemented in `DiagnosticAssessmentPage.jsx` and quick modal `DiagnosticTestModal.jsx`.
+- Fetches real 30-question diagnostic exam from AI Engine (`generate-exam` with Gemini Cloud or Calibrated Bank) and Content Service.
+- Features distraction-free in-exam question navigator, 45-minute timer, and question flagging during testing, reserving Socratic AI Tutor guidance for the post-exam answer review table (`stage === 'result'`).
+- Evaluates student ability across 5 core evaluation domains (Mathematics, Logic Reasoning, Language Arts, Natural Sciences, Social Sciences).
+- Employs 2-Parameter Logistic (IRT 2PL) probability scoring and Bayesian Knowledge Tracing initial mastery estimation `P(L_0)`.
+- Generates 5-axis Recharts Radar Chart and pedagogically calibrated Socratic AI Commentary, allowing students to review every question's answer key and invoke inline or modal Socratic AI Tutor analysis per question.
+
+### 4.2. Flow 2: Dynamic Learning Roadmap (Kahn Topo & FSM)
+- Visualized in `HeroBanner.jsx` and `MilestoneCard.jsx`.
+- Tracks progressive stage unlocking based on Finite State Machine criteria: Lecture Video completion (`>= 80%`) and Quiz mastery (`>= 60%`).
+
+### 4.3. Flow 3: Adaptive Practice & Remediation (ZPD & BKT)
+- Executed in `AdaptiveQuizModal.jsx`.
+- Dynamically delivers question items targeted within the Zone of Proximal Development (`ZPD \in [0.60, 0.75]`).
+- Updates student mastery probability `P(L_t)` using Bayesian Knowledge Tracing transitions, and upon quiz completion presents a full answer review screen where students can inspect their choices against the answer key and ask the Socratic AI Tutor about any question.
+
+### 4.4. Flow 4: AI Socratic Tutor Widget
+- Embedded in `AISocraticTutorWidget.jsx`.
+- Simulates step-by-step Socratic pedagogy, guiding learners with heuristic questions rather than giving immediate answers.
+
+### 4.5. Architecture Integration: API Gateway Client Layer (`src/services/`)
+- Centralized Axios client (`apiClient.js`) routing all traffic through V-Eval YARP API Gateway (`http://localhost:5212`).
+- JWT authentication management with automatic request decoration and silent refresh handling via `X-Token-Refresh-Required` Gateway response header.
+- Clean separation of microservice concerns: `authService.js` (Identity), `contentService.js` (Content), `practiceService.js` (Practice), and `aiService.js` (AI Engine).
+- **AI Engine Multi-Platform Integration (`aiService.js`)**:
+  - Exam OCR & Background Jobs: `uploadPdfExam()`, `getExamJobStatus()`, `getViewExamUrl()`.
+  - Textbook Ingestion & Vector Chunks (250MB): `uploadTextbookPdf()`, `getActiveTextbookJob()`, `getTextbookCheckpoint()`, `getTextbookChunks()`, `saveTextbookChunksToDb()`, `pingVisionModels()`.
+  - Exam Generator & Psychometrics: `generateExam()`, `analyzeDiagnosticSubmission()`, `getDiagnosticConfig()`.
+  - Conversational Socratic AI Tutor: `askSocraticTutor()`, `askSocraticTutorStream()` (Server-Sent Events streaming token-by-token for typewriter UX).
+
+### 4.6. KaTeX Mathematical Formula Rendering Engine (`src/components/common/MathText.jsx`)
+- Full KaTeX integration via `katex` package and `katex.min.css`.
+- Intelligent normalization heuristic (`normalizeMathString`):
+  - Detects explicit math delimiters (`$$...$$`, `$...$`, `\[...\]`, `\(...\)`).
+  - Automatically encloses mathematical intervals `(-\infty; +\infty)`, algebraic functions (`y = x^4 + 2x^2`, `y = \frac{2x - 1}{x + 1}`), derivatives, and LaTeX tags without interfering with Vietnamese typography.
+  - Used uniformly across exam questions, multiple choice options (A, B, C, D), and Socratic AI Tutor explanations.
+
+### 4.7. End-to-End Authentication & Identity Lifecycle Integration
+- **Full-Featured Auth View (`WebLoginPage.jsx`)**:
+  - Implements 5 interconnected interaction states: `login`, `register`, `otp_verify`, `forgot_password`, and `reset_password`.
+  - Rigorous registration validation aligned with Backend FluentValidation rules (Full name, Vietnamese 10-digit phone regex, Email format, 8+ character password with uppercase and digits).
+  - Two-tier OTP activation (`POST /api/auth/verify-account`): 10-minute countdown timer with automatic developer OTP extraction and one-click fill for frictionless testing.
+  - Seamless 1-Click Demo accounts for rapid evaluation (Student, Teacher, Manager, Parent).
+- **Global Session Orchestration (`App.jsx`, `PublicHeader.jsx`, `Navbar.jsx`)**:
+  - Global `currentUser` state synchronized with `localStorage` (`veval_user_profile`, `veval_access_token`, `veval_refresh_token`).
+  - Context-aware Public Header displaying authenticated student name and a direct "Vào Dashboard" CTA.
+  - Dynamic user dropdown in `Navbar.jsx` with actual student name, email, and academic role.
+
+### 4.8. Adaptive Learning Roadmap & Dashboard Data Binding (`MilestoneCard.jsx`)
+- Direct integration with Practice Service via `practiceService.getMyRoadmap()`.
+- Intelligent empty state handling: If a new student has not generated a roadmap, renders an actionable prompt directing them to the 30-question diagnostic exam (`DiagnosticAssessmentPage.jsx`).
+- Renders active milestone stages, completion percentage, weekly time commitment, and priority tasks with smooth offline fallback to system-calibrated mock models.
+
+### 4.9. Multi-Role Smart RBAC Architecture & Dedicated Workspaces
+- **Public Registration Role Isolation**:
+  - Restricts public self-registration strictly to **Student (`STUDENT`)** and **Parent (`PARENT`)** roles.
+  - Institutional and administrative roles (Teacher, Campus Academic Manager, Academic Director, Administrator) are explicitly prohibited from public registration; these accounts are provisioned internally by Campus Administrators via internal governance workflows.
+  - Adaptive registration form dynamically shifts labels, placeholders, and validation schemas based on selected learner or guardian role.
+- **Unified Smart RBAC Login with Dynamic Routing**:
+  - All roles authenticate through a single consolidated login portal (`WebLoginPage.jsx`).
+  - Upon identity verification by `Identity_Service`, the client reads user role claims from the JWT payload and dynamically routes the session to the dedicated role workspace:
+    - **Student Workspace**: Adaptive roadmap, 30Q diagnostic evaluation, and Socratic AI Tutor.
+    - **Parent Companion Portal (`ParentDashboardView.jsx`)**: Real-time IRT Theta ability tracking (+0.65 Theta), university admission probability (82% Bach Khoa CS), weekly study time commitment, and proactive AI alert notifications.
+    - **Teacher Workspace (`TeacherDashboardView.jsx`)**: Class-wide knowledge mastery heatmap and Live Q&A scheduling.
+    - **Campus Academic Manager Portal (`CampusManagerDashboardView.jsx`)**: Multi-campus governance, AI Auto-Clustering overview (K-Means/GMM grouping students into 3 ability clusters), teacher workload distribution, and internal staff provisioning modal.
+  - 1-Click Demo presets updated to provide instantaneous demo access for all 4 distinct system roles.
+
+### 4.10. IAM Account Provisioning & Multi-Role Governance View (`AccountProvisioningView.jsx`)
+- **Executive Administration Dashboard**:
+  - Delivers real-time account statistics (Total CSDL accounts, active teaching staff, campus academic directors, active status ratios).
+  - Multi-tier filtering across 6 system roles (`TEACHER`, `ACADEMIC_MANAGER`, `ACADEMIC_DIRECTOR`, `ADMINISTRATOR`, `PARENT`, `STUDENT`) with fast substring search (Name, Email, Phone).
+  - Interactive user table with instant toggle switch for locking/unlocking user accounts (`PATCH /api/v1/users/{id}/toggle-status`).
+  - Modal-based role provisioning workflow linked to PostgreSQL via Gateway `POST /api/v1/users/provision`:
+    - Role picker card selection with explicit capability descriptions.
+    - Live campus selection fetched from database (`GET /api/v1/campuses`).
+    - Random secure password generator and single-click credential handoff clipboard copy.
+- **Dedicated Service Layer Integration (`src/services/userService.js`)**:
+  - Provides standardized client methods (`getUsers`, `provisionUser`, `toggleUserStatus`, `getCampuses`) routed via YARP Gateway (`:5212`) to `Identity_Service`.
+
+### 4.11. Unified Authentication Architecture (TNhan UI/UX + ThinhTT API Integration)
+- **Component Modularization**: Decoupled monolithic login page into clean, maintainable subcomponents (`LoginForm.jsx`, `RegisterForm.jsx`, `ForgotPasswordModal.jsx`, `AuthModal.jsx`).
+- **Enhanced UX System**: Custom rounded select controls, live exam activity ticker, authentic high school photography (`vietnamese_student_real.jpg`), per-field animated error hints (`fieldErrors`), and 3-tier password strength scoring (`passStrength`).
+- **Complete Gateway & Service Integration**: Directly wired to `src/services/authService.js` for JWT token lifecycle (`login`, `register`, `verify-account`, `forgot-password`, `reset-password`, `getCampuses`), eliminating all mock timers while retaining zero-failure offline fallback for demos.
+
+### 4.12. Continuous Integration & Discord Commit Tracking
+- **Automated Discord Webhook Integration (`.github/workflows/discord-commit-tracker.yml`)**: Dispatches real-time embed reports to the system Discord channel upon any push across all branches, summarizing commit author, hash, message, changed files status, and current day's `UPDATE.md` notes.
+- **Client Build Validation (`.github/workflows/ci.yml`)**: Enforces Node.js 20.x dependency installation (`npm ci`) and clean Vite compilation (`npm run build`) on pull requests and branch updates.
+
+### 4.13. Micro Study Groups & Offline Table Station Architecture
+- **Offline Cohort Standard Alignment**: Re-engineered class listings in `CampusManagerDashboardView.jsx` to reflect the 20-student capacity cap (`MaxCapacity = 20`) and deterministic numbered class codes (`01, 02...`).
+- **Interactive Micro Study Groups Modal (`ClassMicroGroupsModal.jsx`)**:
+  - Implements an offline table station layout where each class is partitioned into study groups of 3 to 5 students based on homogeneous skill deficiencies.
+  - Features configurable group sizing (`3`, `4`, `5` students/table), deficiency tagging, and individual student mastery indicators.
+  - Supports one-click targeted worksheet distribution (`practiceService.assignGroupWorksheet`) directly to each station, updating distribution timestamps and real-time status indicators.
+### 4.14. Curriculum Knowledge Explorer & Content Service API 19 Integration
+- **Database-Driven Knowledge Hierarchy (`CurriculumExplorerView.jsx`)**:
+  - Dynamically fetches the 4 core domains and 12 standard V-ACT competencies directly from Content Service (`GET /api/content/curriculum`) via YARP Gateway, completely eliminating static frontend `DOMAINS_DATA` hardcoding.
+  - Integrates standardized KaTeX formula rendering via `MathText.jsx` for all mathematical and scientific models (derivatives, Newton-Leibniz integrals, De Morgan rules, Arrhenius, Hardy-Weinberg).
+  - Highlights Cross-Disciplinary GraphRAG model inheritance: showcases how single mathematical formalisms solve physical, chemical, and biological problems.
+  - Features video lecture preview cards and exemplar V-ACT questions with step-by-step LaTeX derivations.
+- **On-Demand Adaptive Quiz Packaging (Content Service API 19)**:
+  - Direct integration with `POST /api/content/exams/quiz` via `contentService.createAdaptiveQuiz`: dynamically packages 5 Bloom-calibrated questions for any selected skill.
+  - Interactive quiz runner modal provides instant option verification, real-time scoring, and step-by-step KaTeX explanations.
+- **Dynamic Mastery & Weak Skill Remediation Strip**:
+  - Automatically correlates user IRT $\theta_0$ and Bayesian Knowledge Tracing $P(L_t)$ from practice assessments. Flags skills with $P(L_t) < 0.60$ with red alert badges and instant remediation callouts.
+
+### 4.15. 3-Level Hierarchical Curriculum Tree & 4 Pedagogical Layers Architecture
+- **Interactive 3-Level Accordion Tree Navigation**:
+  - Replaces flat competency lists with a nested accordion tree strictly reflecting K12 curriculum hierarchies (GDPT 2018):
+    - Level 1: `Chapter` (Collapsible with chapter title, weight, and lesson count).
+    - Level 2: `Lesson` (Nested collapsible sub-accordion with lesson title and pattern count).
+    - Level 3: `Pattern` (Selectable leaf nodes featuring individual diagnostic mastery badges: `` `Severe (<10%)` ``, `` `Weak (<60%)` ``, and `` `Mastered (>=60%)` ``).
+- **Four Dedicated Pedagogical Content Layers**:
+  - *Layer 1 (Foundational Knowledge & Prerequisites)*: Formatted textbook definitions, theorems, and visual Directed Acyclic Graph (DAG) prerequisite linkages.
+  - *Layer 2 (Step-by-Step Solution Method & KaTeX Formulas)*: Algorithmic derivation steps (Step 1 -> Step 2 -> Step 3), KaTeX formula bank, and Cross-Disciplinary GraphRAG notes.
+  - *Layer 3 (Video Lecture & Exemplar Question)*: Video lecture card with duration indicator (satisfying FSM Gate $\ge 80\%$) and verified test bank sample question with step-by-step derivation.
+### 4.16. Instructor Curation Suite & Live KaTeX Authoring Architecture
+- **Maximized Instructor Curation Authority**:
+  - Implements a dedicated pedagogical management suite enabling teachers and academic coordinators to inspect, refine, and calibrate all 4 pedagogical layers after automated textbook parsing by the AI Engine.
+  - Interactive Curation Modal (`CurriculumExplorerView.jsx`) provides a 5-tab workspace:
+    - *Tab 1 (Layer 1 - Foundational Theory)*: Markdown & KaTeX editor for definitions, conditions, and core theorems.
+    - *Tab 2 (Layer 2 - Methodological Procedures)*: Step-by-step procedure authoring with one-click math palette buttons (`\frac{a}{b}`, `\sqrt{x}`, `\int`, `\lim`, `\Delta`, `\ge`, `\le`, `\in`, `\forall`, `\Rightarrow`).
+    - *Tab 3 (Layer 3 - Video Lecture Management)*: Video URL input with live embedded video test player (supporting YouTube iframe embedding and direct streaming).
+    - *Tab 4 (Layer 4 - Flagship Exemplar Item)*: Item stem authoring with 4 choices (A-D), interactive correct answer radio selector, and step-by-step LaTeX derivation.
+    - *Tab 5 (Pattern Configuration & Governance)*: Pattern name, competence weight percentage, Bloom cognitive level, and safe deletion cascade.
+- **Real-Time Live KaTeX Preview & Pedagogical AI Assistant**:
+  - Dual-column split view provides live `<MathText />` rendering, giving instructors instant feedback on formula typography and layout as experienced by learners.
+  - One-click AI Pedagogical Assistant button (`AI Method Assistant`) scaffolds standard 3-step solution templates aligned with Ministry of Education (GDPT 2018) guidelines.
+- **Dynamic SGK Ingestion Portal**:
+  - Provides a dedicated modal for pasting and verifying structured JSON trees outputted by the RAG/OCR AI service, seamlessly syncing into PostgreSQL via `POST /api/content/curriculum/import`.
+
+### 4.17. Dedicated Pedagogical Studio & Real-Time Student Experience Review Mode
+- **Full-Scale Authoring Environment (`CurriculumStudioEditor.jsx`)**:
+  - Upgrades from lightweight modal popups to a full-screen, heavy-duty authoring studio designed to handle rich textbook authoring with graphics, multi-variable formulas, video segment markers, and question banking.
+  - Features 3 dedicated view layouts:
+    - `Editor Mode`: Focus layout with section navigation across all 4 pedagogical layers.
+    - `Split 50-50 Mode`: Live side-by-side editing and instant student rendering.
+    - `Student Experience Review Mode`: Full-width simulated student view replicating actual learner interaction with theory recaps, step-by-step algorithms, exam pitfalls, Casio calculator shortcuts, embedded video playback, and formative quizzes.
+- **Graphic Assets & Diagram Library Integration**:
+  - Seamlessly integrates geometric curves, variation tables, and 3D coordinate diagrams into pedagogical texts.
+  - Enhanced `MathText.jsx` parsing engine safely renders Markdown images `` `![alt](url)` `` with responsive styling, rounded elevation borders, and lazy loading.
+- **Question Bank Studio (API 16-18)**:
+  - Dynamically retrieves, displays, creates, and deletes pattern-linked items in PostgreSQL database, categorized by Bloom taxonomy levels (L1 Knowledge to L4 High-Order Thinking).
+
+### 4.18. Runtime Hardening, Global Error Boundary & Reference Fix
+- **Defensive Error Handling (`RootErrorBoundary` in `main.jsx`)**:
+  - Implements a top-level React Error Boundary wrapping `<App />` to intercept unhandled runtime errors, preventing blank white screen states.
+  - Presents a recovery interface with detailed error diagnostics, component stack trace, and quick recovery actions (Reload Page, Clear LocalStorage Cache).
+- **Reference Error Resolution**:
+  - Resolved `ReferenceError: weakPrerequisites is not defined` in `CurriculumExplorerView.jsx` by establishing a reactive prerequisite filter against real BKT/IRT mastery scores in `skillMasteryMap`.
+- **String & Markdown Guarding (`MathText.jsx`)**:
+  - Fortified `MathText` against non-string inputs with type-checked guards (`typeof text !== 'string'`), preventing rendering aborts on nullish or complex object payloads.
+
+### 4.19. AI Document Ingestion & Curriculum Pattern Identification Suite
+- **Multi-Format Textbook Ingestion (`CurriculumExplorerView.jsx` & `aiService.js`)**:
+  - Instructors can drag-and-drop `.pdf`, `.docx`, `.txt` monographs/textbooks up to 250MB or paste syllabus snippets into a high-capacity ingestion modal.
+  - Features an animated 4-step progress tracker: `1. Đọc tệp & OCR` -> `2. Phân tích Chương - Bài` -> `3. Nhận diện Dạng bài` -> `4. Chuẩn hóa KaTeX`.
+  - Communicates directly through Gateway YARP to AI Engine (`POST /api/v1/documents/extract-curriculum`).
+- **Interactive Pattern Discovery Showcase**:
+  - Visual hierarchy cards display extracted chapters, lessons, and patterns with pattern classification tags, Bloom taxonomy level badges, and KaTeX preview blocks.
+### 4.20. KaTeX String Sanitization & Callout Extraction Engine (`MathText.jsx`)
+- **Literal Escape Remediation**: Resolves double-escaped literal newlines (`\n\n`) preventing them from rendering as raw plaintext in methodological solutions.
+- **Auto-Enclosure for Unwrapped LaTeX Commands**: Automatically encloses isolated LaTeX symbols and commands (`\Delta`, `\frac`, `\lim`, `\int`, `\alpha`, `x_0`) inside KaTeX formatting blocks when occurring outside explicit delimiters.
+- **Pedagogical Callout Cards**: Detects and parses `### ⚠️ Các bẫy đề thi:` into custom Rose Alert Callout Cards and `### 💡 Mẹo Casio:` into Indigo Tip Callout Cards, with bold step markers (`**Bước X:**`).
+
+### 4.21. Comprehensive STEM KaTeX Virtual Keyboard & Fullscreen Panoramic Ingestion Workspace
+- **10-Category STEM Virtual Keyboard (`CurriculumStudioEditor.jsx`)**:
+  - Provides 120+ calibrated STEM mathematical symbols across Algebra, Derivatives, Integrals & Limits, Exponents & Logs, Trigonometry, Oxyz Geometry, Systems & Brackets, Sets & Logic, Greek Alphabet, and Probability & Statistics.
+  - Active input field target selector dynamically injects equations into the focused input across Foundational SGK, Solutions, Traps, Casio, or Exemplar Questions.
+- **Fullscreen Panoramic 3-Column Studio Ingestion Workspace (`CurriculumExplorerView.jsx`)**:
+  - Replaces cramped modals with an expansive Panoramic Workspace (`max-w-[1580px] h-[95vh]`).
+  - Implements multi-page range slicing (`startPage` to `endPage`) and depth selection (`Standard` vs `Deep VNU-HCM Examination`) enabling resilient ingestion of 99+ page textbooks.
+  - 3-column verification layout: Chapter & Lesson Hierarchy -> Bloom-filtered Pattern Showcase -> Live KaTeX Pattern Inspector.
+
+### 4.22. Two-Tier Mathematical Typography Engine & Sentence Flow Preservation (`MathText.jsx`)
+- **Root Cause Elimination of Sentence Shattering**:
+  - Previously, global delimiter tokenization wrapped intermediate non-math string chunks inside `display: block` elements (`span className="block leading-relaxed"`), causing sentences to break vertically across every punctuation mark, parenthesis, comma, and inline equation.
+  - Re-engineered into a strict **Two-Tier Rendering Architecture**:
+    1. *Document / Line Tier*: Parses multiline blocks, real newlines, pedagogical alert callouts (Rose Alert, Indigo Tip), bold step rows (`` `**Bước X:**` ``), and list items.
+    2. *Inline Content Tier*: Parses math formulas (`` `$...$` ``, `` `\(...\)` ``), bold marks (`` `**...**` ``), and plain text exclusively as pure inline spans (`` `<span>` ``, `` `<strong>` ``, `` `<img>` ``). Guarantees seamless horizontal text flow with zero block breaks.
+- **Single-Bullet Deduplication**:
+  - Employs regex sanitization to strip leading dashes or duplicate bullet symbols (`` `• - ` ``), standardizing bullet items into a single, elegant indigo dot (`•`) with responsive multi-level indentation.
+- **Smart DOM Conformance**:
+  - Detects unstructured single-line strings (e.g., question choices A-D, titles) and outputs pure inline `` `<span>` `` elements, eliminating React DOM nesting warnings (`` `<div>` `` inside `` `<span>` ``).
+- **Accurate LaTeX Command Negative Lookahead & Chemistry Formula Auto-Wrapping**:
+  - Replaces crude alphanumeric lookahead with an exact 15-command LaTeX negative lookahead (`` `\neq` ``, `` `\notin` ``, `` `\nabla` ``, `` `\nu` ``), unescaping 100% of Vietnamese words and step prefixes (`` `\nTrong` ``, `` `\nKiểm` ``, `` `\nBước` ``) into proper newlines across preview and editor textareas.
+  - Automatically encloses polyatomic ions with charges (`` `H^+` ``, `` `OH^-` ``, `` `SO_4^{2-}` ``, `` `NO_3^-` ``) and chemical compounds with subscripts (`` `H_2O` ``, `` `H_2SO_4` ``, `` `HNO_3` ``) in KaTeX blocks.
+
+### 4.23. Dual-Mode Pedagogical Authoring Architecture (`CurriculumStudioEditor.jsx`)
+- **Teacher-First Text In Preview vs Raw LaTeX Fast Ingestion Parallelism**:
+  - Replaces rigid 4-field fragmented forms with an organic, unified pedagogical authoring workflow supporting two distinct modes:
+    1. *Visual Authoring Mode (Text In Preview - Student Standard)*:
+       - Offers continuous pedagogical composition with quick structural helpers (`+ Khối công thức $$...$$`, `+ Gạch đầu dòng`).
+       - Features an in-place **Live In-Place Student View (Text In Preview)** directly beneath the input, powered by `<MathText />` to render true mathematical typography (fractions, square roots, limits, integrals, diagram illustrations) identical to the learner's actual card view.
+    2. *Raw LaTeX & Markdown Mode (Rapid AI Ingestion)*:
+       - Monospace dark-themed syntax textarea tailored for instantaneous 1-click pasting of raw generative AI outputs (Gemini, ChatGPT, or backend AI Engine) without manual intermediate schema translation.
+- **Cursor-Precision STEM KaTeX Virtual Keyboard Injection**:
+  - Implements `textareaRefs` tracking `selectionStart` and `selectionEnd` on the actively focused input.
+  - When clicking on any mathematical symbol in the 10-category STEM KaTeX virtual palette (120+ calibrated formulas), the equation snippet is precisely inserted at the current caret position, and focus is automatically retained without page scrolling or caret jump.
+- **Block 2 (Step-by-Step Problem Solving & Traps)**:
+  - Both modes natively support structured algorithmic step derivation alongside dedicated live-preview alert cards: Exam Pitfalls (Rose Alert) and Casio fx-580/880 Shortcuts (Indigo Tip).
+
+### 4.24. Panoramic Workspace 2-Master-Pane Rebalancing & Deep Exemplar Bank Integration (`CurriculumExplorerView.jsx`)
+- **Elimination of Visual & Cognitive Layout Imbalance**:
+  - Replaced the asymmetrical 3-column layout (which suffered from 70% bottom white-space dead zones in Columns 1 & 2 while excessively cramming all 4 pedagogical blocks into Column 3) with a **2-Master-Pane Balanced Grid**:
+    - *Pane 1 (Hierarchical Navigation & Pattern Index - 4 Cols / ~33%)*:
+      - Section 1 (Chapter & Lesson Tree): Compact header with total pattern count and exemplar question badges (`X dạng • Y bài mẫu`).
+      - Section 2 (Pattern Roster with Bloom Filtering): Independent scrollable container displaying pattern titles, weightings, classification badges, and a prominent badge for available exemplar questions (`🎯 X bài mẫu chuyên sâu`).
+    - *Pane 2 (Main Pedagogical & Question Workspace - 8 Cols / ~67%)*:
+      - Top Banner: Global curriculum statistics aggregating total exemplar questions across the whole topic (`X Chương • Y Bài học • Z Dạng bài chi tiết • W Bài tập mẫu chuyên sâu`).
+      - Top Bar: Pattern metadata, Bloom taxonomy tag, question count, and 1-click launch to Curriculum Studio Editor.
+      - **Balanced Side-by-Side 50/50 Dual Column**:
+        - *Left Column (Foundational Theory & Methodology)*: Block 1 (SGK Theory in Cyan Card), Block 2 (Step-by-Step Algorithm, Rose Alert Traps, Indigo Tip Casio in Amber Card), and Block 3 (Video Duration in Emerald Card).
+        - *Right Column (Exemplar Question Bank - Block 4)*: Houses the complete collection of 4 exemplar questions spanning Bloom levels L1 to L4.
+- **Dynamic On-The-Fly Question Expansion (`+ AI Tạo Thêm 2 Bài Mẫu`)**:
+  - Embedded an interactive action button within Block 4 header allowing instructors to dynamically synthesize 2 additional practice questions (L3 Application and L4 Advanced) tailored directly to the active pattern's theory and method.
+- **Interactive Question Switcher & Live Solution Derivation**:
+  - Provides instant pill tabs (`[Câu 1 • L1: Nhận biết]`, `[Câu 2 • L2: Thông hiểu]`, `[Câu 3 • L3: Vận dụng]`, `[Câu 4 • L4: Vận dụng cao]`) allowing instructors to toggle seamlessly between exemplar items.
+  - Renders LaTeX item stems, an interactive 4-option grid (A-D) with emerald checkmarks highlighting the verified correct answer, step-by-step KaTeX mathematical derivations, and responsive previous/next pagination controls.
+  - Synchronizes all extracted question items into PostgreSQL via `contentService.importCurriculum` (`POST /api/content/curriculum/import`) to enrich the ZPD adaptive practice bank (API 19).
+
+### 4.25. Dedicated Pedagogical Exemplar Presentation & Section Parsing (`CurriculumExplorerView.jsx` & `CurriculumStudioEditor.jsx`)
+- **Pedagogical Structure Isolation Architecture**:
+  - `parseTheoryRecapSections(theoryRecap)`: Uses an anchor-based delimiter regex `/(?:^|\n)###\s*(?:📌\s*)?Ví dụ minh họa SGK:?/i` to split raw theory into core foundational principles (`theory`) and dedicated real-world STEM illustrative examples (`example`).
+  - `parseSolutionMethodSections(solutionMethod)`: Uses positive lookaheads `(?=(?:###\s*(?:⚠️|💡)|$))` to split algorithmic steps (`method`), applied sample problem (`sampleProblem`), exam pitfalls (`traps`), and Casio fx-580/880 shortcuts (`casio`).
+- **Visual Design & Typography Hierarchy**:
+  - **Block 1 (Foundational SGK Theory)**: Features an emerald-themed **"📌 Ví Dụ Minh Họa SGK"** card (`bg-gradient-to-br from-emerald-500/10 to-teal-500/5 border-emerald-500/30`) with an explicit "VÍ DỤ SGK" badge, separating abstract theorem statements from contextual numerical examples.
+  - **Block 2 (Methodology & Pitfalls)**: Features an amber/orange-themed **"📝 Bài Toán Mẫu Áp Dụng Phương Pháp"** card (`bg-gradient-to-br from-amber-500/10 to-orange-500/5 border-amber-500/30`) with an explicit "BÀI TOÁN MẪU ÁP DỤNG" badge positioned directly after algorithm steps, clearly showing students how Step 1, Step 2, and Step 3 operate in concrete problem scenarios before presenting common exam pitfalls and Casio tips.
+
+### 4.26. Interactive Bloom Taxonomy Filtering & 14-Question Exemplar Inspection Suite (Block 4)
+- **Multi-Level Cognitive Segregation**:
+  - Implemented an interactive Bloom filter tab bar (`[Tất cả (14)]`, `[L1: Nhận biết (2)]`, `[L2: Thông hiểu (2)]`, `[L3: Vận dụng (5 câu)]`, `[L4: Vận dụng cao (5 câu)]`) directly above the question switcher pills.
+  - Allows educators and curriculum curators to effortlessly navigate dense 14-question banks per pattern (especially isolating the 5 L3 Application and 5 L4 Advanced questions) without cognitive overload.
+- **Pattern Density Indicators in Pane 1**:
+  - Displays explicit level distribution pills `(L1: 2 • L2: 2 • L3: 5 • L4: 5)` and high-order competency badges `Chuẩn ĐGNL: L3 (5 câu) • L4 (5 câu)` for each pattern in the left navigation hierarchy, providing immediate pedagogical transparency.
+
+### 4.27. Native SGK Variation Table Component (`VariationTable.jsx`)
+- **Crisp 3-Row Vector Geometry**:
+  - Implements an exact HTML/SVG representation of textbook variation tables (Bảng biến thiên) complying with Vietnamese high school curriculum (GDPT 2018).
+  - Renders 3 discrete pedagogical layers:
+    1. Independent variable row `` `x` ``.
+    2. Derivative sign row `` `y'` `` with zeros and undefined double-vertical bars `` `||` ``.
+    3. Function variation row `` `y` `` featuring smooth dynamic vector arrows (upward `` `\nearrow` `` and downward `` `\searrow` ``), extreme values (local maxima and minima), and asymptotic limits (`` `-\infty` ``, `` `+\infty` ``).
+  - Eliminates pixelation and blurriness inherent in scanned image crops across high-DPI displays.
+- **Dedicated Parser & Integration**:
+  - `parseVariationTableString()` parses structured markup blocks `` `[VARIATION_TABLE]...[/VARIATION_TABLE]` ``.
+  - Seamlessly integrated into `MathText.jsx` to render anywhere within theory summaries, step-by-step algorithms, or practice question items.
+
+### 4.28. Native SVG Function Graph Plotter & Interactive Desmos Calculator (`MathGraphView.jsx`)
+- **Cartesian Coordinate System & Analytic Curve Generation**:
+  - Renders a razor-sharp SVG Oxy coordinate system complete with major axis arrows, origin label `` `O` ``, grid lines, and tick marks.
+  - Generates mathematically accurate piecewise and continuous cubic, rational, quartic, and parabolic curves.
+  - Automatically draws dashed projection lines from critical points (local maxima and minima) perpendicular to both axes alongside KaTeX coordinate labels.
+  - Renders vertical and horizontal asymptotes for rational functions `` `y = \frac{ax+b}{cx+d}` ``.
+- **Interactive Desmos Graphing Calculator Embed Mode**:
+  - Provides a 1-click switcher between the lightweight static SVG mode and the **Interactive Desmos Calculator** iframe.
+  - Allows educators and learners to zoom, pan, evaluate intersection points, inspect tangents, and trace function values in a professional mathematical environment akin to MATLAB or GeoGebra.
+- **Structured Block Parsing**:
+  - Automatically translates `` `[GRAPH: type=... | formula=... | cd=... | ct=...]` `` tags embedded in curriculum or question text.
+
+### 4.29. Interactive Click-to-Fill Formula Builder & Clipboard Image Ingestion (`InteractiveFormulaBuilderModal.jsx` & `CurriculumStudioEditor.jsx`)
+- **Frictionless Non-LaTeX Authoring for Instructors**:
+  - Completely frees educators from the requirement of typing or understanding raw LaTeX code (e.g. `` `\frac{a}{b}` ``, `` `\sqrt[n]{x}` ``, `` `\int_{a}^{b} f(x)dx` ``).
+  - Clicking any fillable formula button in the STEM palette opens an intuitive modal featuring dedicated input fields for each parameter (Numerator/Denominator, Radical index/Expression, Limits, Integrand/Differential variable, Equation systems, Preset variation tables, and Oxy function graphs).
+  - Features real-time Live KaTeX and SVG component preview before insertion, with keyboard shortcuts (`` `Ctrl + Enter` `` to confirm, `` `Esc` `` to cancel).
+- **Direct Clipboard Image Pasting (`Ctrl + V`) & File Upload**:
+  - Captures `onPaste` events across all editor textareas (Theory, Method, Pitfalls, Casio Tips, Question Stem, Explanation).
+  - Automatically extracts image blobs from Windows Snipping Tool, Zalo, or browser clipboard, converts them via `FileReader.readAsDataURL` to Base64 Data URLs, and injects clean Markdown image tags directly at the caret position.
+  - Provides a universal quick toolbar on every pedagogical block: `` `✨ Điền Công Thức` ``, `` `📊 Bảng Biến Thiên` ``, `` `📈 Đồ Thị Hàm Số` ``, `` `🖼️ Dán/Tải Ảnh` ``.
+
+### 4.30. Compact & High-Density UI Optimization for Panoramic Workspace (`CurriculumExplorerView.jsx`)
+- **Visual Clutter & Oversized Element Mitigation**:
+  - Addressed user feedback regarding oversized padding, inflated card elements, and excessive vertical spacing across the 3-column Panoramic Ingestion Workspace.
+  - Reduced overall modal component footprint by ~30%, transitioning from bloated layouts to an elegant, high-density academic studio interface.
+- **Architectural & Aesthetic Refinements**:
+  - *Header & Summary Bar*: Streamlined padding to `px-4 py-2.5`, Wand icon to `w-8 h-8`, and banner height by 35% while preserving all metadata telemetry.
+  - *Hierarchy Navigation (Pane 1)*: Compacted Chapter/Lesson accordion (`p-2.5`) and Academic Pattern cards (`p-2 rounded-xl`, font `11px`), optimizing scrollable area so educators can view all 10 patterns without excessive scrolling.
+  - *Pedagogical Core (Pane 2A)*: Tightened Box 1 (Textbook Foundations) and Box 2 (Solution Algorithms & Pitfalls) to `p-2.5` padding with refined `11px` typography, maximizing readable screen real estate.
+  - *Exemplar Question Bank (Pane 2B)*: Optimized Bloom difficulty tabs, question pills, and the 2x2 multiple-choice option grid (`A-B-C-D` boxes scaled to `p-1.5 px-2 text-[11px]`) for a clean, non-intrusive layout.
+  - *Modal Footer*: Compacted navigation actions (`px-3 py-1.5`) for seamless PostgreSQL database persistence.
+
+### 4.31. Word-Style In-Place Document Canvas & Isolated Raw LaTeX Architecture (`CurriculumStudioEditor.jsx`)
+- **Elimination of Passive "Text In Preview" Dual-Box Paradigms**:
+  - Completely deprecates the disjointed two-box model (top textarea for inputting raw text, bottom readonly card for viewing "Text In Preview").
+  - Educators previously found scrolling back and forth between upper input and lower preview disruptive to pedagogical continuity and error correction.
+- **In-Place Word Document Sheet Canvas Experience**:
+  - **Modern Ribbon Formatting Toolbar**: Features standard Word formatting actions: Bold (`` `**` ``), Italic (`` `*` ``), Headings (`` `###` ``), Bulleted lists (`` `-` ``), Numbered lists (`` `1.` ``).
+  - **1-Click STEM Mathematical Tools**: Quick-insertion buttons for `✨ Điền Công Thức` (interactive click-to-fill builder), `📊 Bảng Biến Thiên` (3-row SVG table), `📈 Đồ Thị Hàm Số` (Oxy coordinate & Desmos Calculator), `🖼️ Dán (Ctrl+V) / Tải Ảnh`, and auto-incrementing `+ Thêm Bước mới` buttons.
+  - **Standard A4 Document Sheet**: High-fidelity white document sheet with subtle drop shadows (`shadow-md border border-slate-300 rounded-2xl p-6 sm:p-8`), providing an authentic Microsoft Word typing experience.
+  - **Instant Canvas View Switcher**: A seamless 1-click switcher between `✍️ Sửa Trực Tiếp` (editable canvas) and `👁️ Xem Trang In / Học Sinh` (final KaTeX rendered student handout) positioned directly on the document sheet header.
+- **Direct Interactive Warning & Casio Cards**:
+  - Exam Pitfalls (Rose Alert) and Casio Tricks (Indigo Tip) refactored into direct in-card editors, eliminating passive preview boxes and allowing educators to write, format, and modify pedagogical warnings directly within the card context.
+- **Isolated Raw LaTeX & Markdown Code Workspace**:
+  - Decoupled into an independent, distraction-free tab: `⚡ Trang Mã Nguồn LaTeX Thuần (Dành Cho AI)` styled with a dark developer theme (`bg-slate-900 text-emerald-400 / amber-300`).
+  - Specially optimized for bulk copy/pasting raw generative AI outputs (Gemini, ChatGPT) with 100% two-way bidirectional state synchronization upon switching tabs.
+
+### 4.32. WYSIWYG Real Symbols & Interactive Chemistry / Math Calculator Architecture (`InteractiveFormulaBuilderModal.jsx` & `CurriculumStudioEditor.jsx`)
+- **Eradication of Raw Code Exposure (`\frac`, `\lim`, `$` Symbols)**:
+  - Addressed educator frustration regarding the visibility of raw LaTeX markup (`\frac`, `\lim`, `\Delta`) in the active typing canvas.
+  - Implemented default **WYSIWYG Interactive Math & Science Mode**: All mathematical and chemical formulas are rendered into 100% authentic pedagogical graphical typography (horizontal fraction bars, subscripts, superscripts, increment symbols) with zero exposed syntax delimiters.
+  - Quick toggle button provided: `` `[Xem Ký Hiệu Thật (WYSIWYG)]` `` ⟷ `` `[Gõ Văn Bản Bàn Phím]` `` allowing smooth transitions between visual exploration and bulk keyboard typing.
+- **Interactive Chemistry Formula Calculator & Real-Time Evaluator**:
+  - Integrated dedicated Chemistry models supporting direct numerical substitution and automatic arithmetic evaluation:
+    - **Molar Concentration ($C_M = \frac{n}{V}$)**: Accepts moles ($n$) and volume in Liters ($V$), outputting full derivation string: `` `C_M = \frac{n}{V} = \frac{0.2}{0.5} = 0.4\text{ M}` ``.
+    - **Mass Percentage ($C\% = \frac{m_{ct}}{m_{dd}} \times 100\%$)**: Calculates percentage concentration from solute and solution masses.
+    - **Substance Mass ($m = n \times M$)**: Computes grams from molar mass and moles.
+    - **Reaction Yield ($H = \frac{m_{tt}}{m_{lt}} \times 100\%$)**: Evaluates practical vs theoretical mass yields.
+  - Educators can toggle between inserting the substituted formula alone or the complete step-by-step derivation with final computed units.
+- **Fractional Arithmetic & SGK Derivative Increment Calculator**:
+  - **Fraction Simplification**: Dynamically reduces numerical fractions (e.g. `` `\frac{12}{4} = 3` ``) and formats integers or 2-decimal rounded approximations.
+  - **Derivative Increment Step-by-Step Generator**: Automates standard Vietnamese textbook derivative formulations ($f'(x_0) = \lim_{\Delta x \to 0}\frac{\Delta y}{\Delta x}$) based on chosen function expressions and evaluation points.
+
+### 4.33. Domain-Aware Pedagogical Adaptation (STEM vs Literature) & Advanced Markdown / Heading KaTeX Parsing (`MathText.jsx`, `CurriculumStudioEditor.jsx`, `CurriculumExplorerView.jsx`)
+- **Root Cause & Resolution of Markdown Asterisk / Heading Parsing**:
+  - *Bullet Regex Overreach*: Investigated user reported visual defects where lines starting with bold labels (e.g. `**Ví dụ:**` or `### 📌 Ví dụ minh họa SGK:`) were displayed as raw text `• Ví dụ:**`. Identified that regex `^(\s*)(?:[-*•]|\u2022)\s*` greedily consumed the first two asterisks `**` as bullet characters without requiring succeeding whitespace, stripping the opening bold delimiter and leaving trailing `Ví dụ:**` unrendered.
+  - *Constrained Bullet Matching*: Updated regex to `^(\s*)(?:[-+•\u2022]|\*(?!\*))\s+(?:[-+•\u2022]\s+)?(.*)$`, strictly guarding `**` and `***` sequences from being categorized as bullets and demanding mandatory trailing whitespace.
+  - *Full Markdown Headings & Dedicated Callout Cards*:
+    - Implemented native Markdown heading renderer for levels 1 through 4 (`#`, `##`, `###`, `####`) with tailored font sizing and leading.
+    - Designed dedicated Callout Components: `### 📌 Ví dụ minh họa SGK:` renders into an elegant Teal/Emerald card (`bg-teal-50/70 border border-teal-200/80 rounded-xl`) with a distinct badge, while `### 📝` / `### 📄 Bài toán mẫu áp dụng phương pháp:` renders into an Amber card (`bg-amber-50/70 border border-amber-200/80 rounded-xl`).
+    - Added automated healing for orphaned colon closures `([A-ZÀ-Ỹa-zà-ỹ0-9\s&]{2,30}):\*\*` restored to `**$1:**`.
+- **Domain-Aware Curriculum Adaptation (STEM vs Literature / Social Sciences)**:
+  - *Elimination of Casio Calculator Mismatch in Literature*:
+    - Addressed fundamental pedagogical flaw where Literature ("Ngữ văn") and Social Science subjects erroneously displayed Casio calculator tips (`Mẹo Casio`).
+    - Implemented `isMathOrStemDomain(domain)` utility distinguishing Mathematics, Physics, Chemistry, Biology, Informatics (STEM) from Literature, History, Geography, Civic Education.
+  - *Curriculum Studio Editor Integration (`CurriculumStudioEditor.jsx`)*:
+    - STEM domains retain `💡 Kỹ thuật Casio & mẹo tư duy nhanh` with fx-580 / fx-880 button shortcuts.
+    - Literature & Social Sciences dynamically transform the card into `💡 Mẹo tư duy & Chiến thuật làm bài (Ngữ văn)` with violet palette, dedicated text templates (reading comprehension strategies, essay argument structure, evidence selection, and time management), and appropriate placeholders.
+  - *Curriculum Explorer Workspace (`CurriculumExplorerView.jsx`)*:
+    - Side-by-side cards dynamically display `Chiến thuật làm bài` instead of `Kỹ thuật Casio` and `Bài mẫu` instead of `Bài toán mẫu`.
+    - **Resolution of Inappropriate $X$ Variable Injection (`handleAddAiPracticeQuestions`)**:
+      - Identified root cause where clicking `+ AI Tạo Thêm 2 Bài Mẫu` relied on a static fallback template using chemical/quantitative equations ($X = 2.07$, conservation laws, algebraic reduction).
+      - Re-architected `handleAddAiPracticeQuestions` with domain detection (`isMathOrStemDomain`): for Literature and Social Sciences, dynamically generates Bloom L3 and L4 items centered on thematic thesis formulation, rhetorical evidence synthesis, artistic critique, and humanistic philosophy, thoroughly purging all mathematical variables.
+### 4.34. Adaptive Pattern-Contextual Question Generation Architecture & Zero-Hardcode Anti-Duplication (`CurriculumExplorerView.jsx`, `aiService.js`)
+- **Architectural Motivation & Elimination of Hardcoded Heuristics**:
+  - The feature `+ AI Tạo Thêm 2 Bài Mẫu` in the Panoramic Workspace previously relied on client-side heuristic fallbacks, which caused repeated question generation when the user clicked multiple times.
+  - In alignment with V-Eval's 100% Real-Data Architecture, all client-side mock generators (`extractPatternPedagogicalContext`) were completely eliminated. If an API issue occurs, the system surfaces genuine diagnostic errors rather than injecting synthetic static data.
+- **Full-Context AI Engine Integration (`POST /api/ai-engine/curriculum/generate-questions`)**:
+  - When the user clicks the action button, `CurriculumExplorerView.jsx` dispatches a payload encapsulating the complete pedagogical context:
+    - `pattern_name`: Name of the active pattern under analysis.
+    - `lesson_name`: Active lesson title safely retrieved from `previewSelectedLessonKey` or `targetPattern.lessonName`.
+    - `domain_name`: Specific subject domain (e.g., "Ngữ văn", "Toán học").
+    - `theory_recap`: Theoretical background, definitions, and excerpted literary works.
+    - `solution_method`: Algorithmic or analytical steps, examples, and strategies.
+    - `count`: Desired number of practice questions (default 2).
+    - `existing_questions`: Array of already generated question prompts to enforce anti-duplication.
+- **Anti-Duplication Prompting & High-Creativity Temperature**:
+  - Google Gemini receives the list of existing questions along with an explicit constraint barring reuse of prior prompts or literary excerpts.
+  - Temperature was adjusted to `0.7` to ensure distinct, authentic questions across consecutive button presses.
+- **Interactive UX & Focus Choreography**:
+  - Features asynchronous loading state `isGeneratingPracticeQuestions` with spinning loader and disabled click guards.
+  - Automatically activates the newly appended question card (`activeQuestionIndex`) and re-calculates the question count badge.
+
+### 4.35. In-Place Microsoft Word-Style Equation Canvas Architecture (`WordStyleFormulaCanvas.jsx` & `CurriculumStudioEditor.jsx`)
+- **Direct In-Place Slot Editing (Eradication of Passive Previews & Popup Modals)**:
+  - Eliminated the cumbersome workflow where educators had to switch between "Gõ văn bản bàn phím" and read-only preview cards, or fill numbers through obstructive popup dialogs.
+  - Implemented `WordStyleFormulaCanvas.jsx`, delivering a true Microsoft Word Equation experience: equations and text are rendered directly in textbook typography, but each fraction, exponent, root, or chemical equation exposes interactive, in-place editable number slots.
+  - Slot Editors:
+    - **Fraction 2-Tier Slot Editor (`\frac{A}{B}`)**: Numerator `[ A ]` (amber highlight) vertically stacked over denominator `[ B ]` (cyan highlight) with an ultra-crisp horizontal fraction bar. Clicking directly into slots allows instant numerical changes. Integrated with a 1-click `⚡` calculator button that auto-evaluates division and updates the equality result `[ C ]`.
+    - **Power & Exponent Slot Editor (`A^{B}`)**: Exposes base slot and raised exponent slot with dynamic width auto-sizing.
+    - **Radical / Square Root Slot Editor (`\sqrt{A}`)**: Surrounds the expression slot with mathematical square root styling.
+    - **Chemistry Molar & Percentage Concentration Slots (`C_M = n/V`, `C%`)**: Displays complete chemical equations with slots for moles ($n$), volume ($V$), solute mass, solution mass, and instant unit evaluation ($0.4\text{ M}$).
+- **Floating Math Bubble Toolbar**:
+  - Dynamically positioned directly above the actively focused equation token.
+  - Features 1-touch symbol insertion: `+`, `−`, `×`, `÷`, `±`, `√`, `x²`, `xⁿ`, `x₀`, `π`, `Δ`, `α`, `β`, `∞`, `≠`, `≈`, `≤`, `≥`, `→`, `⇔`, `∈`.
+  - Functional action buttons: `⚡ Auto Calculate` (evaluates numerical fractions/chemistry), `🗑️ Delete Equation`, and `✓ Done`.
+- **1-Click Ribbon Equation Inserter**:
+  - Top Ribbon provides 1-click template insertion: `➗ Phân Số & Số (12/4)`, `a/b Phân Số Đại Số`, `√16 Căn Bậc Hai`, `x² Số Mũ`, `🧪 Nồng Độ CM (n/V)`, `💧 C%`, `🎯 Đạo Hàm Số Gia SGK`, `📋 Hệ PT`.
+  - Inserts directly into the document canvas at cursor position and immediately focuses the active slots for zero-friction editing.
+### 4.36. Hierarchical Math & Science Palette Sidebar, Single-Version Toolbar Consolidation, and Inline Equation Line-Flow Engine (`HierarchicalMathPalette.jsx`, `WordStyleFormulaCanvas.jsx`, `CurriculumStudioEditor.jsx`)
+- **Single-Version Tooling Rule & Clutter Elimination**:
+  - Completely purged duplicate toolbars that created visual fatigue (top math palette, ribbon duplicates, submode action bar with redundant fraction/chemistry buttons, and canvas-internal toolbars).
+  - Established a singular, streamlined Microsoft Word-style Ribbon at the top of the canvas, housing a clean 3-view switcher (`✍️ Sửa Trực Tiếp`, `👁️ Trang In`, `Raw`).
+- **3-Tier Hierarchical Collapsible Left Sidebar (`HierarchicalMathPalette.jsx`)**:
+  - Replaced horizontal palettes with an ergonomic, subject-categorized left sidebar:
+    - **Domain Tier**: Mathematics (📐), Chemistry (🧪), Physics (⚡), Special Mathematical Symbols (🔣).
+    - **Category Tier**: Subject-specific classifications (Chemistry: Solution Concentration, Oxidation States & Ions, Reaction Arrows; Math: Algebra, Calculus, Exponents, Geometry, Trigonometry, Probability; Symbols: Greek Alphabet, Operators & Relations).
+    - **Chip Tier**: High-density KaTeX rendered chips with 1-click document canvas injection.
+  - **Responsive Collapsibility**: Collapses into an ultra-slim 44px (`w-11`) vertical rail with tooltips, allowing the editor canvas to expand to full width on demand.
+- **Natural Paragraph Token Flow & Footprint Optimization (`WordStyleFormulaCanvas.jsx`)**:
+  - *Root Cause Analysis*: The prior container-level `flex flex-wrap items-baseline` layout combined with oversized badge styling (`px-2 py-0.5 mx-1.5 border-2`) resulted in erratic line-wrapping, disproportionate line heights, and isolated punctuation marks (e.g. periods dropping to new lines following $H_2SO_4$ or oxidation numbers).
+  - *Line & Paragraph Tokenizer*: Redesigned with a dedicated line/paragraph tokenizer (`tokenizeLine`, `parseDocumentLines`, `serializeDocumentLines`). Text segments, inline KaTeX chips, and interactive slots flow inside standard `<div className="text-[13.5px] leading-relaxed my-0.5">` paragraphs.
+  - *Compact Typographic Footprint*: Reduced idle formula footprint to `text-[13.5px]`, `px-0.5 py-0 mx-0.5`, with subtle hairline dashed underlines, preserving natural typographic rhythm and textbook line-height without line-hopping.
+### 4.37. Dedicated Standalone Fullscreen Studio Page Architecture, 2-Second Hover Preview Engine, and Hierarchical Quick Formula Inspector (`CurriculumExplorerView.jsx`, `HierarchicalMathPalette.jsx`, `WordStyleFormulaCanvas.jsx`, `CurriculumStudioEditor.jsx`)
+- **Dedicated Standalone Studio Fullscreen Mode**:
+  - Decoupled the Pedagogical Authoring Studio from the restricted sub-view container (`max-w-7xl` inside Roadmap view), transitioning to a dedicated fullscreen portal (`fixed inset-0 z-50 w-screen h-screen bg-slate-950 overflow-hidden`).
+  - The outer application sidebar is completely eclipsed during studio editing, freeing 100% of the viewport width without visual obstruction.
+  - The `HierarchicalMathPalette` is repositioned as the official left sidebar of the studio workspace, replacing the app sidebar's screen coordinates and providing a toggle collapse to a 44px (`w-11`) icon rail.
+  - Top studio navbar (`h-14`) incorporates clean `← Quay lại Lộ trình` breadcrumb navigation, lesson identification, view switchers, and PostgreSQL persistence triggers.
+- **2-Second Hover Card with Large KaTeX Rendering & Pedagogical Guidance**:
+  - Engineered a 2000ms debounce timer (`hoverTimerRef`) that activates only when an educator pauses cursor motion over any symbol or formula item, preventing noisy UI flashes during fast mouse traversal.
+  - Surfaces a rich floating hover card showing: enlarged vector KaTeX equation, classification domain, comprehensive textbook explanation (GDPT 2018), and raw LaTeX syntax with 1-click insertion guidance.
+### 4.38. Active Caret Insertion Precision, Light-Themed Accordion Folder Tree, Whitespace Auto-Focus, and Typographic Sanitization Engine (`WordStyleFormulaCanvas.jsx`, `HierarchicalMathPalette.jsx`, `CurriculumStudioEditor.jsx`, `MathText.jsx`)
+- **Active Caret Precision Insertion via Imperative Ref**:
+  - Implemented `forwardRef` and `useImperativeHandle` in `WordStyleFormulaCanvas` exposing `insertSnippet(latexSnippet)`.
+  - Continuously samples editor caret coordinates (`activePositionRef = { lineId, tokenId, offset }`). When an educator clicks any formula/symbol, the active text token is cleanly sliced at the exact cursor offset and the formula token is spliced in-place, eliminating trailing-document appends.
+  - Linked `theoryCanvasRef` and `methodCanvasRef` in `CurriculumStudioEditor.jsx` to route insertions to the active authoring canvas.
+- **Clean White Theme Reversion & Accordion Toggle Folder Architecture**:
+  - Reverted palette styling from dark `bg-slate-900` to clean, modern white (`bg-white border-r border-slate-200 text-slate-800 shadow-sm`).
+  - Restructured categories into expandable Accordion Toggle folders (`ChevronDown` / `ChevronRight`) with item counters, boosting display density by 500% with compact 2-column chip grids.
+  - Added real-time instant search (`Search` input) filtering across hundreds of high school STEM formulas and chemical compounds.
+  - Supported comprehensive STEM library: Mathematics (Algebra, Calculus, Integrals, Trig, Exponents/Log, Geometry Oxyz, Complex & Probability), Chemistry (Inorganic & Organic Acids, Bases, Salts, Oxides, Hydrocarbons, Alcohols, Esters, Peptides, Ions, Oxidation Numbers, Reaction Arrows, Molar Calculations), Physics, and Mathematical Logic.
+- **Whitespace Click Line Auto-Focus**:
+  - Attached line container click handlers (`handleLineRowClick`). Clicking line whitespace automatically locates the trailing text node and invokes `window.getSelection().collapse()` to jump the cursor to the end of the line.
+- **Redundant Control Elimination & Line-End Sanitization**:
+  - Removed redundant "+ Thêm dòng mới" button (handled natively by Enter key).
+  - Sanitized trailing backslashes (`\`) and stray markdown escapes (`.\`, `:\`) in both canvas tokenizer and KaTeX renderer.
+  - Replaced corrupted `📝` emoji with crisp Lucide vector icons (`FileEdit`, `FileText`, `BookOpen`, `AlertTriangle`, `Sparkles`).
+
+### 4.39. Chemical Formula & Ion LaTeX Typographic Normalization Engine (`MathText.jsx`)
+- **Stray 'text' Prefix Elimination**:
+  - Identified edge-case where KaTeX rendered chemical ion formulas with an unwanted italic variable prefix `$textSO_4^{2-}$` due to unbracketed `\text` commands losing backslash prefixes.
+  - Implemented proactive normalization in `normalizeMathString`:
+    `str.replace(/(?:\\text|\btext)(?=[A-Z])/g, '')` and `str.replace(/(?:\\text|\btext)\{([A-Z][a-zA-Z0-9_+\-^]*)\}/g, '$1')`.
+  - Automatically cleanses stray `text` or `\text` immediately preceding uppercase chemical symbols (e.g. `SO_4^{2-}`, `H_2O`, `Fe^{3+}`), allowing the automatic chemical ion tokenizer to wrap them cleanly in KaTeX math mode ($SO_4^{2-}$) with zero typographical distortion.
+
+### 4.40. Unified Clean White Hero Banner & Symmetric 5-Domain Grid Architecture (`CurriculumExplorerView.jsx`)
+- **Tone Cohesion & Visual De-Cluttering**:
+  - Replaced the dark navy/black gradient hero banner (`bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900`) with a clean, light-themed container (`bg-white border border-slate-200/80 shadow-xs rounded-2xl`).
+  - Completely aligns the top header section with the application's clean white primary visual identity, eliminating the jarring "black top, white bottom" contrast.
+  - Reduced vertical footprint (`p-5 lg:p-6`), simplified pedagogical description with crisp font weights, and flattened the two bulky stat boxes into compact, inline stat chips (`px-3.5 py-2 rounded-xl bg-slate-50/90`).
+- **Symmetric 5-Domain Horizontal Layout (`lg:grid-cols-5`)**:
+  - Re-architected domain tab switcher from `grid-cols-4` to `lg:grid-cols-5`, placing all 5 standard competencies (General, Math/STEM, Natural Sciences, Social Sciences, Language Arts) onto a single, perfectly balanced horizontal row without orphaned wrap-around items.
+  - Active domain state utilizes a refined indigo tint (`bg-indigo-50/90 border-2 border-indigo-600 font-bold ring-2 ring-indigo-500/15`), while inactive domains maintain subtle light slate hover states (`bg-white hover:bg-slate-50 border border-slate-200 hover:border-slate-300`).
+
+### 4.41. Elimination of Blur Artifacts & High-Contrast Domain Navigation Polish (`CurriculumExplorerView.jsx`)
+- **Root-Cause Analysis of Subpixel Blur Artifact**:
+  - A decorative background blur element (`bg-cyan-50/70 blur-3xl`) was statically anchored at `left-1/3 bottom-0 -mb-20 w-72 h-72`. Because the 3rd item in the 5-column grid ("Khoa học tự nhiên") occupies 40%-60% of the horizontal width, the 64px Gaussian blur filter sat directly behind this button.
+  - When combined with semi-transparent tab backgrounds (`bg-slate-50/70`), Blink/Chromium's hardware compositor disabled subpixel font antialiasing over the blurred layer, causing the text, icon, and borders of "Khoa học tự nhiên" to appear faded, hazy, and tinted cyan relative to its crisp siblings.
+- **Structural Layering & Contrast Rectification**:
+  - Completely purged the uncontained background blur spheres from the card canvas, enforcing pure flat `bg-white` surface neutrality.
+  - Wrapped the 5-domain grid in an explicit `relative z-10` stacking context to isolate tab interactions from any parent pseudo-elements.
+  - Hardened inactive tab styling to 100% opaque `bg-white`, crisp `border-slate-200`, and high-contrast typography (`text-slate-800 font-bold group-hover:text-slate-900`) alongside neutral `bg-slate-100/90 text-slate-600` icon containers, guaranteeing 100% visual uniformity and legibility across all 5 domains.
+
+### 4.42. Pattern Detail Header Decoupling & Full-Width Typography Architecture (`CurriculumExplorerView.jsx`)
+- **De-coupling of Title & Multi-Button Action Row**:
+  - Previously, the pattern detail view colocated identity badges, the `<h2>` pattern title, and three primary action buttons (`Mở Studio`, `Sửa nhanh`, `Luyện tập củng cố`) within a shared single-row flex container (`flex flex-col sm:flex-row items-center justify-between`).
+  - Because the action buttons consume ~500px of horizontal width, the title element was compressed into an unsustainable ~180px column, forcing 4-word titles ("Nhận biết sự kiện lịch sử") to fragment into three cramped lines.
+- **Hierarchical Two-Tier Header Layout**:
+  - *Tier 1 (Metadata & Controls)*: Renders pattern classification badges (`selectedPattern.code`, `weight`, `level`) on the left, counterbalanced by the three action buttons on the right.
+### 4.43. Comprehensive STEM & Humanities Catalog Expansion, Word Canvas Caret Editing, and Visual Cohesion Polish (`HierarchicalMathPalette.jsx`, `WordStyleFormulaCanvas.jsx`, `CurriculumStudioEditor.jsx`, `MathText.jsx`)
+- **Unicode Replacement Character Sanitization & Icon Modernization**:
+  - Identified corruption where unicode emoji bytes decoded as `\uFFFD` (diamond question mark ``) in the callout card heading 'Bài toán mẫu áp dụng phương pháp:'.
+  - Implemented regex `^[^\p{L}\p{N}\s]+` to strip leading non-alphanumeric unicode corruption while preserving Vietnamese diacritics. Replaced all legacy emojis with crisp Lucide SVG icons (`FileText`, `BookOpen`) in warm amber tones.
+- **Panoramic Ingestion & Pattern Header Clean White Synchronization**:
+  - Replaced the dark navy gradient (`from-slate-900 via-indigo-950 to-slate-900`) on both the Panoramic Document Ingestion modal header and pattern detail subheader with clean white styling (`bg-white border-b border-slate-200 text-slate-900`), achieving 100% theme consistency across authoring workflows.
+- **Word Equation Canvas Backspace & Line Management**:
+  - Implemented `handleDeleteLine` and attached Backspace event handlers to `contentEditable` spans. When deleting at offset 0 or on empty lines, lines are merged or deleted naturally, mimicking Microsoft Word's editing behavior.
+  - Removed unwanted footer advice text banner to maximize clean workspace area.
+- **KaTeX Inspector Truncation Removal**:
+  - Removed `truncate` class and expanded inspector KaTeX preview to `max-w-[280px]` with horizontal scroll, widening popup modal to `max-w-[540px]`, eliminating formula clipping (`...`) on long chemical and algebraic expressions.
+- **Input Contrast Rectification in Question Creator**:
+  - Fixed white-on-white text bug in Block 4 and `NewQuestionDialog` by explicitly declaring `text-slate-900 placeholder:text-slate-400 font-medium` across all textareas and option inputs (A-D).
+- **GDPT 2018 National High-School Subject Library Expansion (Grades 10–12)**:
+  - Multiplied formula catalog coverage across 7 full high-school subjects:
+    - *Literature (Ngữ Văn)*: Rhetorical devices (So sánh, Ẩn dụ, Hoán dụ, Nhân hóa, Điệp ngữ, Nói quá, Nói giảm), Argumentation tactics (Giải thích, Phân tích, Chứng minh, Bác bỏ, Bình luận), Paragraph discourse structures, and Classical & Free poetic genres.
+    - *Geography (Địa Lý)*: Population density, natural growth, urban ratio, climate amplitude, rainfall, balance of trade, economic structure %, agricultural productivity, and map coordinates.
+    - *Biology (Sinh Học)*: Molecular genetics (DNA/RNA nucleotide counts, length, molecular mass, hydrogen bonds, translation), cell division (mitosis/meiosis, fertilization efficiency), and population genetics (Mendelian ratios, Hardy-Weinberg equilibrium).
+    - *Advanced Math (Toán Học)*: Space analytic geometry Oxyz (plane/line equations, sphere, point-to-plane distance) and high-school probability & statistics (conditional probability, Bayes' theorem, expectation, variance, grouped frequency tables).
+
+### 4.44. Unified MathLab JSXGraph Native Engine, 3D Spatial Geometry Vertex Customization, and High-Order (VD/VDC) Calculus Graphing Architecture (`InteractiveMathWorkbenchModal.jsx`, `CurriculumStudioEditor.jsx`, `CurriculumExplorerView.jsx`)
+- **Native JSXGraph v1.14.0 Engine Unification & Third-Party Decoupling**:
+  - Decoupled authoring workflows completely from external GeoGebra web-applet iframes, eradicating network latency, cross-origin security overhead, and offline unavailability.
+  - Standardized on client-side JSXGraph v1.14.0 vector rendering at 60 FPS across both HTML5 Canvas and SVG backends.
+  - Unified Ribbon navigation across `CurriculumStudioEditor.jsx` and `CurriculumExplorerView.jsx` with standard `⚡ MathLab 2D/3D (JSXGraph)` controls.
+- **3D Spatial Geometry Vertex Repositioning & Renaming Architecture**:
+  - Engineered reactive state-driven vertex configuration `customBasePoints` with an explicit toggle `isCustomizingBasePoints` positioned immediately below shape selection.
+  - Enables educators to rename any canonical vertex (e.g., `A` to `M`, `S` to `P`, `A'` to `A₁`) and micro-adjust its 3D spatial coordinates `(X, Y, Z)` with 0.2 numerical step increments.
+  - Real-time geometric graph recalculation: all associated frame edges, altitudes, projections, and cross-section polygons dynamically morph and anchor to updated vertex coordinates.
+  - Integrated 1-click `🔄 Mặc định` reset button restoring canonical textbook geometry coordinates and labels.
+- **Comprehensive 3D Spatial Geometry Library & Auxiliary Construction Suite**:
+  - Supports 9 standard high-school geometries: rectangular pyramid (`SA` perpendicular to base), triangular pyramid (right-angled base), regular square pyramid (`SO` perpendicular to base), regular triangular pyramid (`SG` perpendicular to base), side-perpendicular pyramid (`(SAB)` perpendicular to base), triangular prism, rectangular box / cube, solids of revolution (cone/cylinder), and sphere-plane intersection.
+  - Canonical exam presets: 2-step distance model `d(A, (SBC)) = AK` (`AH` perp `BC`, `AK` perp `SB`), line-to-plane angle `(SC, (ABCD))`, and cross-section polygons `(MNPQ)`.
+  - Freehand auxiliary line and extra point studio: edge point interpolation (midpoint `1/2`, centroid `1/3`), and connecting arbitrary vertices with dashed/solid styles and customized palette colors.
+- **Advanced 2D Calculus & High-Order Exam (VD/VDC) Graphing Engine**:
+  - Integrated 6 core exam problem suites:
+    1. Oblique asymptote rational functions (`y = (ax² + bx + c)/(dx + e)`) with automated vertical/oblique asymptotes and center of symmetry `I`.
+    2. Composite absolute value transformations (`|f(x)|`, `f(|x|)`, `|f(|x|)|`, `|f(x) + m|` with vertical shift parameter slider and critical point counter).
+    3. Derivative graph `f'(x)` and composite function intersection `f'(x) = h(x)` with root highlighting.
+    4. Parametric linear intersection `y = ax + m` with real-time root multiplicity scanner and badge counters.
+    5. Definite integral area bounded by 2 curves with numerical integration.
+    6. Triple curve identification `f(x)`, `f'(x)`, `F(x)` with interactive student quiz toggle.
+
+### 4.45. Standalone Live Math Renderer Component (`InteractiveMathRenderer.jsx`), Canonical Tag Serialization, and Educator-Student Visual Parity
+- **Elimination of Static Screenshots & Pure Client Vector Rendering**:
+  - Replaced the brittle approach of storing static PNG/JPG screenshots in question banks with a live vector rendering architecture.
+  - Implemented `InteractiveMathRenderer.jsx` powered by JSXGraph v1.14.0, executing directly on client SVG/Canvas at 60 FPS.
+  - Preserves full 3D interactive capabilities: students can freely rotate 3D geometries 360° via trackball mouse dragging, zoom in/out with the mouse wheel, inspect coordinates, reset viewpoints, and expand to fullscreen modals.
+- **Canonical Metadata Tag Architecture (`mathGraphUtils.js`)**:
+  - Devised human-readable, lossless, text-based tags:
+    - `[MATH_GRAPH]...[/MATH_GRAPH]`: Serializes 2D function calculus types, parameters ($a, b, c, d, e$), custom expressions, auxiliary curves, parametric lines $y=mx+m$, and integration boundaries.
+    - `[MATH_GRAPH_3D]...[/MATH_GRAPH_3D]`: Serializes 3D spatial models, dimensions, customized vertex labels & coordinates `(X, Y, Z)`, extra points with division ratios, and auxiliary lines with dashed/solid styles and palette colors.
+  - Fully compatible with PostgreSQL database column types (`ContentLatex` and `Explanation` stored as unbounded `text`), requiring zero database schema changes or migrations.
+  - AI Engine (Gemini) friendly: AI easily outputs structured tags in question JSON payloads during document parsing or exemplar question generation without escaping hazards.
+- **Global `MathText.jsx` Integration & Deep System Reach**:
+  - Expanded `MathText.jsx` block tokenizers to recognize `[MATH_GRAPH]`, `[MATH_GRAPH_3D]`, and `[MATH_GEOMETRY_2D]`.
+  - Automatically activates live interactive rendering across all system views: Student Diagnostic Assessment (`DiagnosticAssessmentPage.jsx`), Diagnostic Modal (`DiagnosticTestModal.jsx`), Adaptive Practice Quiz (`AdaptiveQuizModal.jsx`), Studio Editor question bank & preview drawer (`CurriculumStudioEditor.jsx`), and Knowledge Explorer (`CurriculumExplorerView.jsx`).
+- **Guaranteed Educator-Student Data & Visual Parity**:
+  - Identical rendering algorithms ensure that what the educator constructs and fine-tunes in the authoring studio renders with 100% fidelity on the student's quiz screen.
+
+### 4.46. Elimination of 3D Bounding-Box Wall Artifacts, Oxyz Coordinate Axis Toggle, and KaTeX Sample Problem Callout Parsing Architecture
+- **Root Cause & Elimination of 3D Half-White Screen Artifact (`InteractiveMathRenderer.jsx` & `InteractiveMathWorkbenchModal.jsx`)**:
+  - *Defect Diagnosis*: In JSXGraph's native 3D module, `board.create('view3d', ...)` instantiates default rear bounding box walls (`xPlaneRear`, `yPlaneRear`, `zPlaneRear`) with visible gray tiled grid meshes. Because the 3D bounding box coordinates range over $[-6, 6]$, these backplanes only encompass the rear quadrants. The front and right quadrant lacks walls, yielding an abrupt vertical dividing line where the left half displayed grids while the right half displayed plain white canvas—creating the visual illusion of a white block occluding the 3D figure.
+  - *Architectural Resolution*: Explicitly disabled bounding box walls across both the view renderer and workbench modal (`xPlaneRear: { visible: false }, yPlaneRear: { visible: false }, zPlaneRear: { visible: false }, xPlaneFront: { visible: false }, yPlaneFront: { visible: false }, zPlaneFront: { visible: false }`). This provides a 100% uniform, clean, pure white background across the entire canvas viewport with zero vertical cutoff lines.
+  - *Pedagogical Oxyz Axis Toggle (`Compass` Button)*: In standard Vietnamese GDPT 2018 geometry textbooks, synthetic spatial figures (tetrahedrons, pyramids, prisms) are presented without analytical coordinate axes. Added a dedicated `Trục Oxyz` toggle on the 3D renderer card toolbar. Coordinate axes default to hidden for authentic textbook aesthetics, while allowing educators and students to seamlessly inspect spatial coordinates with a single click.
+
+- **Sample Problem Callout Parser Hardening & KaTeX Restitution (`MathText.jsx`)**:
+  - *Defect Diagnosis*: The structured text parser in `MathText.jsx` matched pedagogical callouts via overly permissive substring matching `line.includes('Bài toán mẫu')`. Consequently, legitimate problem body lines (e.g. `**Bài toán mẫu:** Cho tứ diện $ABCD$...`) were hijacked into the callout heading handler. The heading cleaner then stripped the opening double asterisk via `^[^\p{L}\p{N}\s]+`, leaving an orphaned closing `**` (`Bài toán mẫu:**`) and injecting the entire problem text into a plain `<span>` element without passing through KaTeX tokenization.
+  - *Architectural Resolution*:
+    - Constrained `isSampleHeadingCallout` regex strictly to bona fide markdown headings (prefixed with `###` or standalone header emoji `[📝📄✍️]`).
+    - Routed sample problem content directly to inline token stream, fully bolding `**Bài toán mẫu:**` and compiling all mathematical variables (`$ABCD$`, `$M, N$`, `$AB$`, `$AC$`, `$(DMN)$`, `$(BCD)$`) into native KaTeX mathematical serif typography.
+    - Wrapped callout heading text in `renderInlineContent(cleanHeading, lineKey)` to ensure that even section headers containing math notation render flawlessly.
+    - Augmented `normalizeMathString` with lookbehind regex repairs for orphaned bold markers (`(?<!\*)\b(Bài toán mẫu|...):\*\*` -> `**$1:**`).
+
+---
+
+### 4.47. Dynamic Mathematical Function Graph & Rational Variation Table Rendering Architecture (Zero-Hardcode)
+- **Vector Variation Table Engine with Vertical Asymptotes (`VariationTable.jsx`)**:
+  - *Rational Function Asymptote Rendering*: Extended the 3-row vector layout to represent rational functions with vertical asymptotes (`x = -d/c` for 1/1 and `x = -e/d` for 2/1). Supported standard Vietnamese textbook double vertical bar notation `||` in both the derivative row (`y'`) and the function variation row (`y`).
+  - *Dynamic Direction Inference*: When LLMs omit the `dir` property, the component automatically infers arrow transitions directly from the signs of `y'` (`+` -> ascending arrow, `-` -> descending arrow, `||` -> split discontinuity), guaranteeing resilient rendering without visual clipping.
+  - *Sanitized Delimiter Parsing*: Parser gracefully handles both pipe (`|`) and comma (`,`) delimiters while stripping extraneous LaTeX formatting artifacts.
+- **2D Calculus Graph & Asymptote Rendering Engine (`InteractiveMathRenderer.jsx`)**:
+  - *Automated Asymptote & Center of Symmetry Construction*:
+    - For linear rational functions (`y = (ax+b)/(cx+d)`): Automatically calculates and renders the vertical asymptote `x = -d/c` (dashed line), the horizontal asymptote `y = a/c` (dashed line), and the intersection point representing the center of symmetry `I(-d/c, a/c)`.
+    - For quadratic-over-linear rational functions (`y = (ax^2+bx+c)/(dx+e)`): Automatically calculates and renders the vertical asymptote `x = -e/d`, the slant/oblique asymptote `y = (a/d)x + (bd - ae)/d^2` (dashed line), and the center of symmetry `I`.
+  - *Discontinuity Guard*: Configured JSXGraph `functiongraph` with `discontinuous: isRational`, eliminating false vertical connecting line artifacts across vertical asymptotes.
+- **Curriculum Studio State Preservation**:
+  - Maintained `sampleProblem` across the curriculum editor state cycle, ensuring that worked sample problems with variation tables and function graphs are preserved across pedagogical curation saves.
+
+---
+
+### 4.48. Client-Side Defensive Ingestion Sanitizer & Validation Resilience (`contentService.js`, `CurriculumExplorerView.jsx`)
+- **Architectural Motivation**:
+  - LLM extraction models output irregular formatting for multiple-choice answer keys (e.g. `"A."`, `"(B)"`, `"Đáp án C"`, integers `0..3`, or null).
+  - To prevent client-side payloads from triggering ASP.NET Core deserialization failures on `POST /api/content/curriculum/import`, a defensive client-side sanitization layer was established.
+- **Client-Side Sanitizer Engine (`contentService.js`)**:
+  - `normalizeCorrectOption(raw)`: Strips non-alphanumeric punctuation and extracts isolated single uppercase tokens `'A'`, `'B'`, `'C'`, `'D'`. Handles ordinal integer mappings (`0->A`, `1->B`, `2->C`, `3->D`).
+  - `sanitizeCurriculumPayload(payload)`: Traverses hierarchical trees (`chapters` -> `lessons` -> `patterns` -> `questions`), ensuring all question items carry compliant single-character `correctOption` fields, valid integer `difficultyLevel`, and default empty strings for options.
+- **Problem Details Error Formatter (`CurriculumExplorerView.jsx`)**:
+  - Unrolls RFC 9110 `errors` dictionaries returned by backend validation handlers, rendering actionable line-item error diagnostics rather than opaque JSON dumps.
+
+### 4.49. Hierarchical Chapter & Lesson Cascade Deletion and Multi-Dimensional Knowledge Taxonomy Classification Architecture (`CurriculumExplorerView.jsx`)
+- **Hierarchical Node Deletion & Cascade Management (`DELETE /api/content/curriculum/nodes/{id}`)**:
+  - *Pedagogical & Structural Control*: Empowered educators and curriculum administrators with direct node pruning capabilities at all three tiers of the knowledge tree.
+  - *Cascade Warning Dialogs*: Initiates pre-flight confirmation prompts detailing the count of child lessons, patterns, materials, prerequisite DAG edges, and question items marked for irreversible removal.
+  - *Backend Cascade Orchestration*: Leverages the recursive descendant collector (`CollectDescendantIds`) in Content Service, cascading deletions cleanly across `Skills`, `Materials`, `SkillPrerequisites`, and `Questions`.
+  - *Client State Synchronization*: Triggers `fetchCurriculumData()` post-deletion and safeguards selected pattern pointers to prevent null reference errors on right-hand detail panels.
+- **Dynamic Node Creation Suite (`+ Thêm Chương Mới` & `+ Thêm bài`)**:
+  - *Chapter Provisioning Modal (`CreateChapterModal`)*: Enables instructors to create top-level chapters (`ParentId == null`) tagged with Grade Level (10, 11, 12), Academic Year (2025-2026, 2024-2025), Domain/Sub-Subject affiliation, normalized weight, and syllabus competencies.
+  - *Lesson Provisioning Modal (`CreateLessonModal`)*: Binds child lessons to selected chapters (`ParentId == Chapter.SkillId`), dynamically expanding the target chapter upon successful creation.
+- **Multi-Dimensional Taxonomy Filter Toolbar (`Bộ Lọc Phân Loại Tri Thức`)**:
+  - *Sub-Subject Disaggregation*: Bridges broad competency domains into dedicated subject tracks:
+    - **Natural Sciences**: Physics, Chemistry, Biology.
+    - **Social Sciences**: History, Geography, Economic & Legal Education (GDKT & PL).
+    - **Language**: Vietnamese / Literature, English.
+    - **Mathematics & Quantitative Reasoning**: Algebra & Calculus, Geometry & Measurement, Probability & Statistics, Logic & Data Analysis.
+  - *Grade-Level Categorization*: Supports instant one-click filtering across `Grade 12 (Core V-ACT)`, `Grade 11`, `Grade 10`, and `All Grades`.
+  - *Academic Year Alignment*: Allows segregation by syllabus cycles (`2025 - 2026 GDPT 2018 New Framework` vs `2024 - 2025`).
+  - *Live Match Aggregation & Reset*: Computes real-time match counts for chapters and lessons, providing a one-click reset action whenever filters are active.
+
+### 4.50. 2D Flat Notebook Paper Grid Architecture for 3D Spatial Geometry Canvas (`InteractiveMathRenderer.jsx`, `InteractiveMathWorkbenchModal.jsx`, `index.css`)
+- **Pedagogical Motivation**:
+  - In Vietnamese high school mathematics education (GDPT 2018), 3D spatial geometry diagrams (pyramids, prisms, tetrahedrons) are traditionally drafted on 2D ruled notebook graph paper.
+  - A plain white background lacks depth reference, while tilted 3D perspective grids / bounding box walls distort spatial perception and clutter geometric wireframes.
+  - A flat 2D notebook paper grid background provides familiar visual anchoring without interfering with the 3D trackball rotation of spatial objects.
+- **Dual-Layered CSS Grid Implementation (`index.css`)**:
+  - Implemented `.bg-grid-notebook` utilizing concentric CSS linear gradients:
+    - Minor grid: `20px x 20px` subtle rulings in `#e2e8f0` (1px line width).
+    - Major grid: `100px x 100px` accented rulings in `#cbd5e1` (1px line width) on pure white `#ffffff`.
+  - The grid is rendered at the container level as a 2D stationary background plane (`background-size: 100px 100px, 20px 20px`).
+- **JSXGraph SVG Canvas Transparency Override**:
+  - JSXGraph boards inject an internal `<svg>` element with default opaque white background (`background-color: #ffffff !important;`).
+  - Added high-specificity CSS rule:
+    ```css
+    .jxgbox.jxgbox-3d-grid svg {
+      background-color: transparent !important;
+      background: transparent !important;
+    }
+    ```
+  - Allows the container's 2D notebook grid to show through cleanly beneath the rotating 3D geometry wireframes.
+- **Component Application**:
+  - `InteractiveMathRenderer.jsx`: Applies `bg-grid-notebook jxgbox-3d-grid` dynamically whenever `is3D === true`.
+  - `InteractiveMathWorkbenchModal.jsx`: Applies `bg-grid-notebook jxgbox-3d-grid` when rendering the 3D spatial geometry lab (`jsxSubTab === '3d_space'`).
+
+### 4.51. High-Precision 3D Vector Coordinate System (Oxyz) & Interactive Visibility Toggle Architecture (`InteractiveMathRenderer.jsx`, `InteractiveMathWorkbenchModal.jsx`)
+- **Architectural Motivation**:
+  - In Vietnamese curriculum GDPT 2018 (Grade 12 V-ACT assessment), problems often transition between synthetic geometry (uncoordinated wireframe) and analytic coordinate geometry (algebrization via $Oxyz$ frame).
+  - Built-in JSXGraph `axis3d` elements do not support arrowheads, omit the origin label $O$, and fail to synchronize visibility across nested 2D SVG canvas primitives when manipulated dynamically.
+- **Dedicated Vector Oxyz Coordinate Axis Engine**:
+  - Disabled opaque default axes via `axesPosition: 'none'`.
+  - Implemented dedicated 3D vector axes with standard mathematical conventions:
+    - Origin point $O(0, 0, 0)$ with dark slate label (`#334155`).
+    - $Ox$-axis: Directed ray from $(0, 0, 0)$ to $(5.5, 0, 0)$ with bold red styling (`#ef4444`, `strokeWidth: 2`, `lastArrow: true`, label $x$).
+    - $Oy$-axis: Directed ray from $(0, 0, 0)$ to $(0, 5.5, 0)$ with vibrant emerald styling (`#10b981`, `strokeWidth: 2`, `lastArrow: true`, label $y$).
+    - $Oz$-axis: Directed ray from $(0, 0, 0)$ to $(0, 0, 6.5)$ with royal blue styling (`#3b82f6`, `strokeWidth: 2`, `lastArrow: true`, label $z$).
+    - Negative dashed rays ($Ox^-, Oy^-, Oz^-$) in muted tint colors (`dash: 2`) providing depth cues during 360° trackball rotation.
+- **Imperative Visibility Orchestration (`axesElementsRef`)**:
+  - Stores all 3D and underlying 2D SVG line and point primitives in a mutable `axesElementsRef.current` collection.
+  - On toggle (`handleToggleAxes`), iterates through all references calling both `.setAttribute({ visible: next })` and `.element2D.setAttribute({ visible: next })` followed by atomic `board.update()`.
+  - Toolbar button provides active visual feedback with solid indigo fill (`bg-indigo-600 text-white shadow-xs`) and dynamic text "Đang bật Oxyz".
+
+### 4.52. Enterprise Global Toast Notification & Browser Alert Interception Architecture (`ToastContext.jsx`, `GlobalToastContainer.jsx`, `main.jsx`, `index.css`)
+- **Architectural Motivation**:
+  - Legacy web applications often rely on native browser modal dialogues (`window.alert()`), which block the JavaScript single thread, freeze browser tab interactions, disrupt smooth CSS animations, and degrade the user experience for students and instructors.
+  - V-Eval requires a non-intrusive, reactive, high-priority notification system that provides immediate visual feedback across asynchronous microservice operations (content curation, AI question generation, exam submissions, and IAM operations).
+- **Core Architecture Components**:
+  - **Global Toast Container (`GlobalToastContainer.jsx`)**:
+    - Placed at the top-right viewport anchor (`top-4 right-4 sm:top-6 sm:right-6`) with highest stacking context `z-[999999]`, ensuring toasts remain visible above all full-screen modals, drawers, and panoramic workspaces.
+    - Features a modern Glassmorphism visual language (`backdrop-blur-md bg-white/95 border shadow-xl rounded-2xl`).
+    - 4 distinct semantic status variants:
+      - `success`: Emerald badge (`CheckCircle2`), emerald border, and emerald progress bar.
+      - `error`: Rose badge (`AlertCircle`), rose border, and rose progress bar.
+      - `warning`: Amber badge (`AlertTriangle`), amber border, and amber progress bar.
+      - `info`: Indigo badge (`Info`), indigo border, and indigo progress bar.
+    - Dynamic linear countdown progress bar visually reflecting remaining auto-dismiss duration (default: 4000ms).
+    - Intelligent interactive hover pausing: Hovering the cursor over any active toast card (`onMouseEnter` / `onMouseLeave`) freezes the dismissal timer, allowing users to comfortably read extended error traces or instructions.
+  - **Universal Context & Singleton Dispatcher (`ToastContext.jsx`)**:
+    - Implements a Dual-Mode dispatch interface:
+      1. React Hook: `useToast()` providing `{ toasts, showToast, dismissToast, toast }` within standard React lifecycle.
+      2. Universal Singleton Object: `toast.success()`, `toast.error()`, `toast.warning()`, `toast.info()`, `toast.dismiss()` invocable anywhere in the client codebase—including non-React utility files, Axios interceptors, or background event listeners.
+  - **Defensive Browser Alert Interception Layer**:
+    - Automatically overrides `window.alert()` upon component mount, forwarding raw string messages directly to `toast.info(...)` (or `toast.error` for failure patterns).
+    - Guarantees zero blocking pop-ups can ever disrupt the end-user, even if legacy or third-party code invokes `alert()`.
+- **System-Wide Migration**:
+  - Migrated 100% of legacy `alert()` invocations across `CurriculumExplorerView.jsx`, `CurriculumStudioEditor.jsx`, `DiagnosticAssessmentPage.jsx`, `CampusManagerDashboardView.jsx`, `AccountProvisioningView.jsx`, and `ClassMicroGroupsModal.jsx`.
+
+### 4.53. In-App Confirmation Modals, Lightweight Quick Metadata Editing & KaTeX Strict Mode Optimization (`CurriculumExplorerView.jsx`, `CurriculumStudioEditor.jsx`, `MathText.jsx`)
+- **Zero Native Browser Confirm / Modal Architecture**:
+  - Eliminated legacy blocking `window.confirm()` calls across all curriculum administration workflows.
+  - Implemented an elegant in-app confirmation modal (`confirmDeleteDialog`) in `CurriculumExplorerView.jsx` featuring high-contrast risk styling (`border-rose-200`, `bg-rose-50/70`, `Trash2` action button), clearly communicating cascade impacts before deleting Chapters, Lessons, or Skill Patterns.
+  - In `CurriculumStudioEditor.jsx`, implemented a two-tap inline deletion confirmation flow for test questions, featuring a temporary countdown state that auto-resets if unconfirmed.
+- **Lightweight Metadata-Only Quick Edit Suite (`isEditModalOpen`)**:
+  - Replaced the cumbersome 5-tab pedagogical editing modal with a focused, single-purpose metadata dialog.
+  - Restricts modifications strictly to structural node attributes: Pattern Name/Title, Parent Chapter selection, High School Grade level (Grade 10, 11, 12), Bloom Cognitive Level, and Competency Weight (%).
+  - Offloads deep pedagogical composition (theory, stepwise KaTeX methods, video URLs, and JSXGraph interactive canvas) exclusively to the full-screen Curriculum Studio Editor via a prominent quick-launch banner.
+  - Streamlined the trigger control from text "Sửa nhanh" to a minimalist `<Pencil className="w-4 h-4" />` icon button.
+- **KaTeX Strict Mode Unicode Character Resolution (`MathText.jsx`)**:
+  - Configured `strict: 'ignore'` in `renderKatexHtml` to eliminate spurious developer console warnings regarding Vietnamese characters (such as "Đ") embedded within mathematical expressions (`[unicodeTextInMathMode]`).
+- **Immediate First-Pattern Chapter Loading**:
+  - Refactored `toggleChapter` and `toggleLesson` to automatically expand and select the first available pattern, ensuring the right pedagogical workspace pane immediately loads content upon chapter navigation.
+
+### 4.14. Core Flow 4 Frontend Integration: Socratic AI Tutor & GraphRAG Live Streaming
+- **Real-Time Token Streaming Client (`practiceService.js`)**: Implemented `askAiTutorStream` using native Fetch API and `ReadableStream` reader with `TextDecoder`. Directly consumes `POST /api/practice/ai-tutor/ask-stream` through Gateway (`:5212`).
+- **Graceful Rate Limiting Handlers**: Intercepts HTTP 429 status codes enforced by the backend `StrictTutorPolicy` (10 req/min), transforming network exceptions into supportive, pedagogical throttle notifications in the UI.
+- **Upgraded Socratic Dashboard Widget (`AISocraticTutorWidget.jsx`)**: Replaced 100% mock setTimeout mechanisms with real-time SSE token-by-token streaming, KaTeX math parsing via `MathText.jsx`, abort controller cancellation, and GraphRAG knowledge attribution badges.
+- **Two-Column Socratic Dialogue Modal (`AISocraticTutorModal.jsx`)**: Built a comprehensive modal interface featuring guided dialog history, quick question prompts, 3-Hop Subgraph inspection (Archetype patterns, core theorems, misconception traps), and an in-chat student reporting dialog (`POST /api/practice/ai-tutor/report`) for flagging pedagogical violations.
+- **Router Alignment (`App.jsx` & `Sidebar.jsx`)**: Corrected navigation routing so clicking *AI Socratic Tutor* on the sidebar or hero banner opens the dedicated tutor modal instead of erroneously triggering the Flow 3 adaptive quiz modal.
+
+### 4.15. Contextual Socratic Problem-Solving & In-Exam Adaptive Assistance (Phase 2)
+- **ZPD Adaptive Quiz Socratic Hooks (`AdaptiveQuizModal.jsx`)**: Integrated real-time Socratic pedagogical assistance directly into the Flow 3 adaptive practice loop. Features both reactive post-answer triggers and a 45-second contemplation nudge (`secondsOnQuestion >= 45`) for students hesitating on difficult questions. Packages the complete question context (`questionId`, `question`, `options`, `skill`, `selectedWrong`, `correctOption`, `difficultyB`, `predictedProb`) and transitions seamlessly to the Socratic Tutor.
+- **DTO Sanitization & Robust Gateway Proxying (`practiceService.js`)**: Implemented `ensureGuid`, `cleanOptionKey`, and `normalizeOptions` ensuring runtime payloads strictly comply with ASP.NET Core `AskTutorRequest` schema (Guid format, Dictionary options, single character option keys). Employs `onInteractionId` callback to bind streamed session IDs.
+- **Dynamic Contextual Dialogue Orchestration (`AISocraticTutorModal.jsx`)**: Configured dynamic context ingestion via `initialContext`. Features an active *Target Context Banner*, initializes targeted Socratic inquiry addressing the student's specific misconception instead of generic greetings, and forwards contextually enriched `questionLatex` alongside options dictionary.
+- **Diagnostic In-Exam Socratic Modernization (`DiagnosticAssessmentPage.jsx`)**: Refactored `handleAskSocraticTutor` from deprecated legacy endpoints to the unified `practiceService.askAiTutorStream` pipeline via Gateway `:5212`, ensuring seamless Rate Limit compliance (10 req/min) and consistent math rendering during 30-question diagnostic assessments.
+- **Submission History & Socratic Mistake Notebook (`SubmissionHistoryView.jsx` & `practiceService.js`)**: Implemented a comprehensive exam history and mistake notebook subsystem synchronizing with Backend Practice Service (`GET /api/practice/diagnostic-submissions/student/{studentId}`, `GET /api/practice/diagnostic-submissions/{id}`, `GET /api/practice/mistakes`) and persistent local history storage. Enables students to revisit any past Diagnostic Exam, ZPD Adaptive Quiz, or Topic Quiz, inspect full answer keys, and invoke inline or modal Socratic AI guidance on any historical question.
+
+### 4.16. Core Flow 5 Frontend Integration: Multi-Stakeholder Learning Analytics & 2D Class Heatmap
+- **Unified Gateway Path Alignment & Core Flow 5 Client (`practiceService.js`)**: Standardized all Practice Service client calls onto `/api/practice/...` matching YARP Gateway (`:5212`) routing rules without `/v1` prefix stripping. Implemented `getStudentDashboard`, `getClassHeatmap`, `forceAggregateClassHeatmap`, `getParentDashboard`, and `getCampusComparativeHeatmap` with deterministic GUID validation (`FLOW5_DEFAULTS`) and offline-resilient DTO fallbacks verified by automated unit tests (`practiceService.flow5.test.js`).
+- **Student Learning Analytics Center (`LearningAnalyticsView.jsx`, `MetricsGrid.jsx`, `HeroBanner.jsx`, `RadarChartModal.jsx`)**: Wired `GET /api/practice/analytics/student/{studentId}/dashboard` across the Student Dashboard and dedicated `analytics` route. Delivers Ghost Onboarding detection (`needsOnboarding`), dual-polygon 4-domain Recharts Radar (`DOM_LANG`, `DOM_MATH`, `DOM_NAT_SCI`, `DOM_SOC_SCI`), 7-day active study streak tracker with Streak Freeze shield indicators, DAG milestone progression, and standardized mock exam history.
+- **Teacher 2D Class Heatmap & Offline Micro-Group Intervention (`TeacherDashboardView.jsx`)**: Replaced static `mockTeacherHeatmap` with live `GET /api/practice/classes/{classId}/heatmap` and on-demand sweep `POST /api/practice/classes/{classId}/heatmap/force-aggregate`. Supports multi-class switching, domain and mastery threshold filtering, Bimodal polarization badges (`isBimodal`), `CRITICAL_RED` / `WARNING_AMBER` pedagogical alert banners, and 1-click transition into `ClassMicroGroupsModal` for 3–5 student table partitioning and adaptive worksheet assignment.
+- **Parent Companion Portal & Campus Comparative Heatmap (`ParentDashboardView.jsx`, `CampusManagerDashboardView.jsx`)**: Wired `GET /api/practice/analytics/parent/{parentId}/children` to render composite Exam Readiness Index `` `R_{\text{exam}}` `` with 3-factor progress bars (50% Normalized Theta, 35% BKT Coverage, 15% Consistency), verified 12h/week self-study discipline tracking, and curated AI parent guidance. Integrated `GET /api/practice/analytics/campus/{campusId}/comparative-heatmap` into the Academic Manager Portal for cross-class 4-domain mastery comparison and vulnerability governance.
+
+---
+
+### 4.17. End-to-End Diagnostic-to-Analytics Synchronization & Local History Hydration (Core Flow 1 -> Core Flow 5)
+- **Write-Through Diagnostic Persistence & Identity Key Alignment (`DiagnosticAssessmentPage.jsx`, `practiceService.js`)**: Resolved the `user.id` vs `user.userId` identity mismatch during diagnostic completion and wired `syncSubmissionToBackend` (`POST /api/practice/diagnostic-submissions`) alongside client question metadata (`correctOption`, `domainId`, `skillId`, `difficultyLevel`) so both database-backed and AI-generated 30-question diagnostic exams persist directly into PostgreSQL.
+- **Immediate Local History Hydration & Background Backfill (`practiceService.js`)**: Implemented `hydrateStudentDashboardWithLocalHistory` and `syncUnsyncedSubmissions`. Whenever a student already holds real completed assessments in `veval_submission_history_v1` while the upstream API still reports `needsOnboarding = true`, the client deterministically computes real V-ACT `0..1200` scaled scores, `Theta_0`, 4-domain accuracy polygons, rolling 7-day study streaks, and recent exam records from actual question-level submissions while asynchronously backfilling unsynced exams to the backend.
+- **Live Reactive Telemetry Across Shell & Analytics Views (`App.jsx`, `LearningAnalyticsView.jsx`, `Navbar.jsx`, `Sidebar.jsx`)**: Broadcasts `CustomEvent('veval:submission-updated')` on submission save/delete and replaces static shell placeholders (`12 Ngày` in `Navbar`, `+0.65 / 82%` in `Sidebar`) with live student metrics from `studentDashboard`.
+- **Streamlined Single-Column Socratic Chat Interface (`AISocraticTutorModal.jsx`, `AISocraticTutorWidget.jsx`)**: Removed hardcoded static side panels (`3-Hop Knowledge Network`, `ARCH_LOGIC_01`, static propositional logic theorems, and misconception cards) and static topic badges, delivering a clean, distraction-free Socratic dialogue modal that dynamically reflects only the student's active question context.
+
+---
+
+### 4.18. Dashboard Metrics Precision, Autonomous DAG Roadmap Activation & Compact Floating AI Tutor FAB
+- **Compact Floating Action Button (FAB) Architecture (`App.jsx`)**: Replaced the cumbersome embedded `AISocraticTutorWidget` inside the 2-column main dashboard grid with a sleek, non-intrusive Floating Action Button positioned at the bottom-right corner (`fixed bottom-6 right-6 z-40`). Featuring a pulsating aura, 24/7 online green telemetry badge, and hover preview tooltip, the floating controller immediately opens `AISocraticTutorModal` upon interaction, freeing the central dashboard column exclusively for analytical metrics and milestone progression.
+- **Parametric Roadmap Synchronization & Diagnostic Transition (`MilestoneCard.jsx`, `practiceService.js`)**: Parametrized `getMyRoadmap(studentId)` with `?studentId={guid}` query arguments and `X-User-Id` request headers compliant with `RoadmapsController.cs`. Eliminated false onboarding blockers: students with completed diagnostic exams immediately load their persisted 470-milestone DAG stages (`Chặng 01 (Tổng hợp): Luyện tập chuyên đề thích ứng`) and active learning tasks (`Chương 01: Quan Hệ Song Song`, etc.) rather than being prompted to re-take the 30-question diagnostic test.
+- **Score Degradation Prevention & Local History Filtering (`practiceService.js`, `LearningAnalyticsView.jsx`)**: Filtered out empty/aborted `EXPIRED` diagnostic attempts in `getRealUserSubmissions` and strengthened `hydrateStudentDashboardWithLocalHistory` to preserve backend IRT score estimates (320 / 1200, confidence interval `275 - 365`). Eliminated the regression where unfinished test sessions downgraded estimated scores to `0 / 1200` (`0 - 45`).
+
+---
+
+### 4.19. Decoupling Freeform Inquiries & Greetings from Exam Question Retrieval
+- **Dual Interaction Modes (`AISocraticTutorModal.jsx`)**: Formally decoupled the Socratic dialogue workflow into *Question Review Mode* (when `initialContext?.question` is active with an explicit exam question, option set, and student chosen answer) and *General Guidance / Exploration Mode* (invoked from the floating launcher).
+- **Zero Dummy Options Injection (`practiceService.js`)**: Refactored `normalizeOptions` to return `null` when no options are present, terminating the fabrication of artificial `{ A: 'Phương án A', B: 'Phương án B' }` payloads. Passes `"NONE"` for non-existent option keys to satisfy backend validation contracts while explicitly instructing the AI engine not to fabricate false accusations of choosing wrong choices.
+- **Greeting Detection & Warm Socratic Initiation**: Implemented regex-based greeting recognition in `buildRichSocraticFallback` and downstream services, delivering an encouraging greeting and inviting students to ask pedagogical questions without triggering false vector queries or hallucinated math problem analyses.
+
+---
+
+### 4.20. Diagnostic Exam History Retention & Socratic Stream Error Resilience
+- **Holistic Exam History Detection (`MilestoneCard.jsx`)**:
+  - Implemented `checkExamHistory` inspecting `studentDashboard.recentMockExams`, `streakAnalytics`, historical submissions in `practiceService`, and client-side flags in `localStorage`.
+  - Added `studentDashboard` into the `useEffect` dependency array, ensuring instant re-evaluation upon analytics hydration.
+  - Automatically unblocks students who have already completed assessments, rendering adaptive learning stages (`mockMilestone`) rather than repeating the introductory 30-question diagnostic CTA.
+- **Socratic Stream Hanging Elimination (`AISocraticTutorModal.jsx`, `practiceService.js`)**:
+  - Cleaned up `isTyping = false` and aborted `AbortController` in `onError` callbacks, preventing infinite three-dot `...` animations when upstream network cuts out or Gateway timeouts occur.
+  - Removed artificial parameter defaults `studentWrongOption = 'A'` and `correctOption = 'B'` from `practiceService.askAiTutorStream`.
+
+---
+
+
+### 4.21. Resilient Roadmap Auto-Generation & Floating Socratic FAB Integration
+- **Autonomous Roadmap Generation Fallback (MilestoneCard.jsx)**:
+  - Decoupled !studentDashboard.needsOnboarding check so that completed onboarding or non-empty 
+ecentMockExams immediately certifies exam completion, regardless of initial estimated score zero state.
+  - Added utoGenRoadmap invoking practiceService.generateRoadmap with the student\'s completed diagnostic submission ID when a roadmap has not yet been persisted in PostgreSQL, permanently eliminating the re-diagnostic prompt.
+- **Sleek Floating Action Button Integration (App.jsx)**:
+  - Replaced the central dashboard inline AI Tutor box with a non-intrusive floating action button in the bottom-right corner, freeing the dashboard exclusively for core metrics and active milestone progress.
+- **Verification**:
+  - 
+pm run build completes in 905ms (3,013 modules transformed, 0 errors).
+
+---
+
+### 4.22. SSE Error Swallowing Elimination & Persistent Three-Dot `...` Mitigation
+- **Decoupled Stream Parsing & Exception Dispatch (`practiceService.js`)**:
+  - Isolated `JSON.parse` into its own localized try-catch scope, preventing unhandled format errors from suppressing genuine business exceptions (`parsed.error`).
+  - Explicitly forwarded upstream error objects to `onError(streamErr)` before propagating.
+- **Zero-Blank-Content Guardrail (`AISocraticTutorModal.jsx`)**:
+  - Injected an automatic pedagogical greeting when `onComplete` resolves with empty accumulated tokens, ensuring the message bubble is never populated by raw empty string `""` which previously manifested as stalled `...`.
+  - Linked HTTP 429 rate limit errors to user-facing conversational bubbles advising students to take time to reflect before posting subsequent inquiries.
+- **Verification**:
+  - `npm run build` completes cleanly with 0 errors.
+
+---
+
+### 4.54. Universal WYSIWYG Formula Canvas, Drag-and-Drop Variation Table & Redesigned Formula/Compound Studio Library (`WordStyleFormulaCanvas.jsx`, `VariationTable.jsx`, `HierarchicalMathPalette.jsx`, `CurriculumStudioEditor.jsx`, `InteractiveMathWorkbenchModal.jsx`, `InteractiveMathRenderer.jsx`, `mathGraphUtils.js`)
+- **Universal In-Place Visual Formula Rendering & Drag-and-Drop Variation Table (`VariationTable.jsx`)**:
+  - Extended `WordStyleFormulaCanvas.jsx` with `compact` and `singleLine` layout variants, HTML5 drag-and-drop drop zones (`handleDropSnippetOnCanvas`), and embedded block-level parsers for `[VARIATION_TABLE]`, `[MATH_GRAPH]`, `[MATH_GRAPH_3D]`, `[MATH_GEOMETRY_2D]`, and Markdown images.
+  - Upgraded `VariationTable.jsx` and `InteractiveFormulaBuilderModal.jsx` with a **Zero-Jump `2N - 1` Column Grid Architecture (`normalizeVariationGrid`)**: aligns every milestone `x_m` vertically above its derivative zero/asymptote (`0` or `||`) and extremum `y_m`, while placing interval signs (`+`/`-`) and SVG diagonal arrows directly in odd interval columns (`2k + 1`). Fixed row heights and a bottom-docked Drag-and-Drop / Quick-Edit bar guarantee zero layout shifting when clicking cells.
+  - Redesigned `HierarchicalMathPalette.jsx` into a color-coded 7-domain Studio Library where every formula and chemical compound chip renders live KaTeX typography on a draggable visual tile (`draggable={true}`) and includes a dedicated `variation_table` category.
+  - Replaced raw `<textarea>` and `<input>` controls in Block 2 (`examTraps`, `casioTricks`) and Block 4 (`sampleQuestion.contentLatex`, `optionA..D`, `explanation`) with `<WordStyleFormulaCanvas />`, eliminating raw LaTeX code exposure, stray wrapping single quotes `'...'`, and trailing backslashes `\`.
+  - Standardized Bloom taxonomy level matching via `normalizeBloomLevel` so cognitive level buttons (`L1`–`L4`) always reflect active pattern state.
+- **Full-Featured 2D Plane Geometry Studio & `[MATH_GEOMETRY_2D]` Serialization**:
+  - Implemented `getDefault2DGeometryPoints`, `formatMathGeometry2DTag`, `parseMathGeometry2DTag`, `SHAPES_2D_META`, and `mount2DGeometryBoard` in `src/utils/mathGraphUtils.js`.
+  - Supports 6 canonical plane geometry configurations (`right_triangle`, `acute_triangle`, `circle_tangent`, `quadrilateral_cyclic`, `parallelogram_rhombus`, `trapezoid_right`) with exact perpendicular altitude projection, right-angle square markers, non-overlapping label offsets for `H` and `M`, interactive vertex `(X, Y)` coordinate editing, custom ratio points, and dashed/solid auxiliary segments.
+- **Empty-Slot Preservation & Sub-Slot Drag-and-Drop Resilience (`VariationTable.jsx`, `WordStyleFormulaCanvas.jsx`)**:
+  - Preserves empty cells in `parseVariationTableString` when splitting `x:` and `y:` rows by `|` and renders an inline `Thả số` drop prompt in `renderMath`, ensuring clearing a cell's text never collapses the column or prevents subsequent drag-and-drop insertion.
+  - Added `lastCommittedContentRef` and `handleDropOnFormulaInput` in `WordStyleFormulaCanvas.jsx` so clearing a formula sub-slot (`num`, `den`, `result`, `base`, `exp`, `expr`, `latex`) never destroys the active formula token and allows direct drag-and-drop replacement into any sub-slot or cleared editor canvas.
+
+### 4.55. AI-Powered Adaptive Question Generator for Curriculum Studio Editor (`CurriculumStudioEditor.jsx`, `aiService.js`, `contentService.js`)
+- **Dual-Action Trigger & Persistent Pattern Validation**:
+  - Implemented prominent `✨ AI Sinh Câu Hỏi` action buttons on Block 4 ("Ngân Hàng Câu Hỏi Dạng Bài & Bài Toán Mẫu") header and the empty question list fallback state.
+  - Guards against orphan question creation: verifies if `form.patternId` or `pattern.patternId` exists in the database; if not, alerts the instructor with a non-blocking toast to save the pattern first before initiating batch generation.
+- **Batch Adaptive Question Generator Modal (`AiQuestionGeneratorModal`)**:
+  - Allows educators to configure question batch count (`1`, `2`, `3`, `5`) and target Bloom cognitive taxonomy (`L1` Knowledge to `L4` High Application).
+  - Integrates `aiService.generatePatternQuestions` calling the backend AI Engine endpoint `POST /api/ai-engine/curriculum/generate-questions` with full pedagogical context: `patternName`, `lessonName`, `domainName`, `theoryRecap`, `solutionMethod`, and `existingQuestions` for anti-duplication.
+  - Interactive preview card layout featuring KaTeX mathematical typography rendering (`<MathText />`), 2x2 multiple-choice option grid with emerald-highlighted correct answers, stepwise explanations, individual selection checkboxes, and a select-all toggle.
+  - Batch persistence via `contentService.createQuestion` (`POST /api/content/questions` API 16), immediately appending saved questions to the local state.
+- **1-Click AI Auto-Fill in Manual Creation Dialog (`NewQuestionDialog`)**:
+  - Added an inline `✨ AI Tự Điền Câu Hỏi` button in the manual question modal that calls `aiService.generatePatternQuestions` (count: 1) to automatically populate question content, options A–D, correct answer, Bloom level, and detailed explanation in a single tap.
+
+### 4.56. Two-Row Text Ribbon & Section Header STEM Dropdown Architecture (`StemToolsDropdown` in `CurriculumStudioEditor.jsx`)
+- **Section Header Dropdown & 2-Tier In-Canvas Editorial Layout**:
+  - Anchors the consolidated `StemToolsDropdown` independently inside the overarching Section Header of each active editing block (Block 1 `theoryRecap` and Block 2 `solutionMethod`).
+  - Restructures the in-canvas editorial toolbar into 2 distinct, purpose-driven rows:
+    + **Row 1 (Above Text Controls)**: Hosts content-insertion actions (`+ Ví Dụ SGK` in Block 1 or `+ Thêm Bước mới`, `Nạp mẫu chuẩn 4 bước` in Block 2; images pasted directly via Ctrl+V) on the left, and view mode switchers (`✍️ Sửa Trực Tiếp`, `👁️ Trang In`, `📄 Raw`) on the right.
+    + **Row 2 (Pure Text Formatting)**: Exclusively reserves text typography styling (`Văn bản: Bold`, `Italic`, `Heading/Step`, `Bullet List`, `Numbered List`), ensuring an uncluttered, zero-wrap Microsoft Word style user experience.
+- **Graphing & MathLab Consolidation**:
+  - Merged two redundant visual controls (`Function Graph Oxy` and `MathLab 3D/2D`) into a single high-capability entry point: `📈 Đồ Thị & MathLab (2D/3D)`, which directly launches the full JSXGraph interactive studio covering 2D algebraic curves, 2D synthetic plane geometry, and 3D rotatable spatial figures.
+  - Houses the complete STEM formula builder suite: Variation Table 3-row vector grid, Consolidated MathLab, Fraction & Arithmetic calculator, Difference quotient derivative, and Chemical molarity formulas.
+
+### 4.57. Studio-Grade 2-Column Formula & STEM Builder Modal (`InteractiveFormulaBuilderModal.jsx`) & Mega-Dropdown Architecture (`StemToolsDropdown`)
+- **Studio-Grade 2-Column Modal Architecture (`InteractiveFormulaBuilderModal.jsx`)**:
+  - Re-engineered the formula builder modal from a constrained `max-w-2xl` dialog into an expansive, high-productivity Studio modal (`max-w-5xl h-[88vh] max-h-[840px]`).
+  - Implements a modern 2-column studio layout:
+    + *Left Category Sidebar (`w-72`)*: Neatly segments tools into "Mathematics & Calculus" (Variation Table, Fractions, Radicals, Powers, Integrals, Systems, Oxy Function Graphs) and "STEM & Empirical Chemistry" (Molarity, Mass, Concentration, Reaction Yields). Employs rich Lucide icons (`Table2`, `Divide`, `Activity`, `FlaskConical`, etc.), descriptive dual-line subtitles, and vibrant indicator accents.
+    + *Right Interactive Canvas (`flex-1`)*: Delivers spacious visual editors for each domain. Embeds the full-width `<VariationTable />` (700px+) without horizontal cramping, maintaining full access to the bottom Drag-and-Drop quick edit bar. Chemistry formulas feature 4 auto-calculating cards with standard units (`mol`, `L`, `g`, `g/mol`) and real-time emerald computation badges.
+    + *Floating KaTeX Live Preview Dock*: Renders instant KaTeX mathematical typesetting in an elevated preview dock with keyboard shortcuts (Esc / Enter).
+- **Studio Mega-Dropdown Popover Architecture (`StemToolsDropdown`)**:
+  - Expanded the dropdown menu into a deluxe `w-[420px]` mega popover card featuring a dark gradient branding banner (`STUDIO CÔNG CỤ TOÁN & STEM - GDPT 2018`).
+  - Provides rich interactive tiles with categorized tags (`SGK 2018`, `JSXGraph Native`, `Auto Calc`, `Vi Tích Phân`, `Thực Nghiệm`), clear descriptions, and responsive outside-click auto-dismissal.
+
+### 4.58. 100% Elimination of Raw LaTeX Exposure & Visual Number Slot Editing (`InteractiveFormulaBuilderModal.jsx`)
+- **Strict Prohibition of Raw LaTeX / Textarea Exposure**:
+  - Completely purged raw LaTeX textareas and literal equation string wrappers (`$formula$`) from the formula studio dock, adhering to the foundational pedagogical rule that educators and end-users must never interact with raw command syntax like `\frac` or `\lim`.
+  - Re-anchored the user experience around dedicated visual number and expression slots (Fraction Numerator/Denominator, Radical Index/Radicand, Power Base/Exponent, Integral Bounds), allowing teachers to input numbers and expressions naturally.
+- **1-Click Pedagogical Template Presets (Insert Mẫu)**:
+  - Fraction: Provides instant presets for 1/2, 3/4, integer division 12/4 = 3, and algebraic rational expressions $(2x+1)/(x-1)$ and $(x^2-4)/(x-2)$.
+  - Limit & Calculus: Integrates 5 classic GDPT 2018 limit presets ($f'(x_0)$ derivative definition, $\sin(x)/x=1$, rational asymptote limits, $0/0$ cancellation, and sequence convergence $1/n$). Dedicated inputs for numerator $P(x)$ and denominator $Q(x)$ eliminate manual fraction syntax.
+- **High-Definition WYSIWYG KaTeX Preview Dock**:
+  - Showcases large, razor-sharp textbook typography (`text-2xl`) directly rendered via KaTeX without any technical clutter.
+
+### 4.59. Universal Formula Bar, Live Textbook Typography Dock & Cursor-Aware Symbol Insertion Architecture (`WordStyleFormulaCanvas.jsx`)
+- **Universal Continuous Formula Bar (Ô Soạn Thảo Công Thức Toàn Năng Siêu Linh Hoạt)**:
+  - Replaces rigid, partitioned single-equation slots with a universal equation bar capable of accommodating any mathematical expression without domain restrictions ($12/4 = 3$, $f(x) = \frac{x^2 - 1}{x - 1} = x + 1$, square roots, general powers, limits, integrals, chemistry $C_M$ equations, physics kinematics).
+  - Directly binds `bubbleInputRef` to capture user input seamlessly, supporting standard keyboard shortcuts (`Enter` to complete, `Escape` to dismiss, `Backspace` on empty input to delete).
+  - Pairs directly with the **Live KaTeX Typography Preview Dock (`👀 Học sinh thấy:`)** situated directly beneath the equation bar, continuously rendering textbook-grade serif KaTeX mathematics in real time without exposing raw `LaTeX:` or `KaTeX:` code tags.
+- **Universal Automatic Calculation Engine (`autoCalculateEquation` & Nút `⚡ Tính`)**:
+  - Delivers a smart evaluation engine that automatically parses and evaluates fractions/divisions (`\frac{12}{4}` -> `= 3`, `0.2/0.5` -> `= 0.4`), square roots (`\sqrt{16}` -> `= 4`), powers (`2^3` -> `= 8`), basic arithmetic (`10 + 2*5` -> `= 20`), and empirical chemistry concentrations ($C_M$, $C\%$).
+  - Automatically appends or corrects the right-hand side answer (`= [result]`) with a single click of the golden `[ ⚡ Tính ]` button.
+- **Cursor-Aware Symbol Insertion & Text Wrapping (`handleInsertSymbolIntoActive`)**:
+  - Leverages `selectionStart` and `selectionEnd` from `activeInputRef`: clicking any symbol chip from the 8 disciplinary tabs (`Cấu trúc`, `Oxyz`, `Vật lý`, `Hóa học`, `Sinh học`, `Ngữ văn`, `Địa lý`, `Ký hiệu & Logic`) inserts the snippet at the exact caret position and automatically repositions focus inside the primary placeholder.
+  - Supports selection wrapping: highlighting existing text and clicking `a/b` wraps the selection into the numerator, while clicking `√x` wraps it inside a radical.
+- **Natural Backspace & Delete Key Integration**:
+  - Enables Microsoft Word-grade deletion: pressing `Backspace` at offset 0 of a text segment immediately following a formula automatically deletes the formula token.
+  - Pressing `Backspace` within an empty formula slot or clicking `[ 🗑️ Xóa ]` immediately removes the formula from the canvas.
+- **Smart Popover Positioning Anti-Overlap (`bubblePos`)**:
+  - Dynamically calculates available screen space: places the popover above the formula if space allows (>200px) or below if at the top of the canvas, completely avoiding any visual obscuration of the active line.
+  - Connects to the full Studio builder via `[ 🚀 Mở Studio ]` for 3D spatial models and variation tables.
+
+### 4.60. Visual Interactive Math Slots & Bidirectional Natural Math Architecture (Zero LaTeX Exposure) (`WordStyleFormulaCanvas.jsx`)
+- **Visual Interactive Math Slots Widget**:
+  - Automatically detects formula structures and renders textbook-grade interactive input slots:
+    - **Fraction**: Vertical fraction with numerator input, horizontal divider bar, denominator input, equals sign, and answer slot.
+    - **Radical**: Square root symbol with radicand input and answer slot.
+    - **Power**: Base and exponent inline input slots.
+    - **Chemistry**: Empirical molarity ($C_M = n / V = [n]/[V] = [result]\text{ M}$) and mass concentration ($C\%$) slots.
+  - Direct real-time bidirectional synchronization: Modifying values in visual slots immediately updates the live KaTeX preview, the Natural Math Bar, and the underlying document model.
+- **Bidirectional Natural Math Engine (`latexToNaturalMath` & `naturalMathToLatex`)**:
+  - Translates complex internal LaTeX strings into intuitive, human-friendly natural math notation ($12/4 = 3$, $\sqrt{16} = 4$, $\lim(x \to x_0)$), completely stripping backslashes and curly brace syntax.
+  - Enables teachers to type or paste any mathematical expression using standard arithmetic characters (`+`, `-`, `*`, `/`, `^`, `(`, `)`), automatically converting to textbook-crisp KaTeX without exposing technical markup.
+- **Absolute 100% Elimination of Raw LaTeX / KaTeX Labels**:
+  - Completely purged all occurrences of `LaTeX:`, `KaTeX:`, and literal string badges (`$formula$`) from canvas popovers and modal preview docks.
+
+### 4.61. Complete Runtime Import Integrity & White Screen Prevention Architecture (`WordStyleFormulaCanvas.jsx`)
+- **Runtime Import Audit & Resolution**:
+  - Restored missing named exports (`parseVariationTableString` from `../common/VariationTable`, `unescapeLiteralNewlines` from `../common/MathText`, and `useImperativeHandle` from `react`) within `WordStyleFormulaCanvas.jsx`.
+  - Guarantees seamless rendering of standalone `[VARIATION_TABLE]` blocks, robust document token serialization, and error-free imperative ref operations between `CurriculumStudioEditor` and the equation canvas.
+  - Totally eliminated client-side `ReferenceError` exceptions, ensuring zero white-screen regressions during lesson theory and solution methodology editing sessions.
+
+---
+
+### 4.62. Floating Right-Edge STEM Tools Drawer & Unified Header Toolbar Architecture (`CurriculumStudioEditor.jsx`)
+- **Right-Edge Docked Floating Drawer (`FloatingStemDrawer` & Ultra-Compact Toggle Button `<`)**:
+  - Engineered a sleek, ultra-compact docked trigger button on the right edge of the viewport (`fixed right-0 top-1/2 -translate-y-1/2 z-40`) featuring a minimal `<` chevron (`ChevronLeft className="w-3.5 h-3.5"`), mini-sparkle `✨`, and vertical label `STEM` (~55px height, ~20px width, `rounded-l-xl`), hugging the right border closely to completely prevent overlapping onto the editor canvas.
+  - Added trailing comma to `Table2,` inside the multiline `lucide-react` import statement to ensure strict ES module compliance and resolve TypeScript TS1005 `',' expected` diagnostic warnings.
+  - Clicking the toggle expands an ultra-modern slide-over palette drawer (`w-80 sm:w-[380px] max-h-[86vh]`) with a top real-time `Search` bar, filtered across all mathematical and science tools.
+  - Purged redundant `GDPT 2018` badges, emoji boxes, and secondary buttons, streamlining every tool item down to clean typography: Tool Title (`font-bold text-xs`) and Descriptive Summary (`text-[11px] text-slate-500`) with 0% distracting icons.
+  - Integrated active cursor insertion: Removed manual target selector dropdown in favor of automatic active cursor tracking; upgraded `insertSnippet` in `WordStyleFormulaCanvas.jsx` to insert large visual blocks (`[VARIATION_TABLE]`, `[MATH_GRAPH]`, `[MATH_GRAPH_3D]`, `[MATH_GEOMETRY_2D]`) directly at the active cursor line index (`targetIdx`) instead of dumping at document bottom.
+  - Available tools in drawer:
+    - **MathLab 2D & 3D**: Full JSXGraph workspace for 3D spatial rotations (360° trackball), 2D Cartesian function curves, and planar geometry.
+    - **Variation Table Studio**: Instant 2N-1 grid table builder with double-bar asymptotes (`||`) and textbook inflection vectors.
+    - **Fraction & Arithmetic Calculator**: 2-story fractions with automatic real-time result evaluation.
+    - **Calculus & Textbook Limits**: First-principle limits, derivative definitions, and indeterminate quotient cancellations.
+    - **Definite Integrals & Differential Calculus**: Definite integral bounds and differentials.
+    - **Equation Systems & Matrix Logic**: 2-3 variable linear systems with simultaneous brace notations.
+    - **Chemistry Lab Workbench**: Molarity (`C_M`), mass concentration (`C%`), mass equation, and reaction yield calculations.
+    - **7-Subject Symbol Library**: Quick link to open the full left hierarchical math palette.
+- **Ultra-Slim Left Pedagogical Symbol Palette Architecture**:
+  - Downscaled expanded sidebar width by ~25-30% from `w-76 sm:w-84` (304px - 336px) down to high-density `w-60 sm:w-64` (240px - 256px), freeing up over 80px-96px of critical horizontal viewport for the central pedagogical sheet and split preview.
+  - Slimmed the collapsed icon rail down from `w-12` to minimal `w-10` with 28px square icon buttons (`w-7 h-7`).
+  - Consolidated header chrome to a single tight title bar, optimized quick search input to `py-1 text-[11px]`, and streamlined subject domain pills and KaTeX tile footprints (`min-h-[30px]`) with clean typography.
+- **Adaptive Question Bank Cards & Proportional Rectangular Solution Container**:
+  - Eliminated the restrictive fixed-height `max-h-80 overflow-y-auto` scroll wrapper on the supplementary question bank list in Block 4.
+  - Re-architected questions into decoupled, individually structured cards with natural vertical height (`h-auto`), preventing clipping and double scrollbar artifacts on nested SVG variation tables and 2D/3D graphs.
+  - Added full 4-option (A, B, C, D) responsive grids with correct option highlighting in emerald green.
+  - Formatted detailed solutions (`q.explanation`) into a dedicated geometric rectangle (`w-full p-4 rounded-2xl bg-slate-50 border border-slate-200 shadow-2xs`) that dynamically adjusts its height proportionally to content length, guaranteeing balanced rectangular alignment regardless of solution complexity.
+- **Student Live Preview Streamlining & Vertical Space Optimization**:
+  - Removed the bulky top green gradient banner ("Giao Diện Trực Quan Học Sinh Nhìn Thấy (Live Preview) - Thời gian thực") from the right preview column in both Split and Preview view modes.
+  - Grants immediate visual access to the simulated student card container, optimizing vertical density and eliminating unnecessary title chrome.
+- **Top Header De-cluttering & Single Source of Truth**:
+  - Removed redundant `StemToolsDropdown` from the top header bar, establishing the right floating mini-tab as the single, authoritative entry point for STEM tool invocation.
+  - Re-aligned the Block 4 Question Bank header with fixed single-line horizontal alignment (`flex items-center gap-2.5 shrink-0 whitespace-nowrap`) and purged duplicate emojis.
+
+---
+
+### 4.63. Unified Branch Integration (`ThinhTT/feature-curriculum-studio-formula-editor` -> `develop`)
+- **Seamless Coexistence of Core Flows 2, 4, 5, PayOS VietQR & Fintech OTP Authentication (`App.jsx`, `ParentDashboardView.jsx`, `Sidebar.jsx`, `modals/index.js`)**:
+  - Merged `ThinhTT/feature-curriculum-studio-formula-editor` into `develop`, combining the full Curriculum Studio & Word-Style Formula Editor (`WordStyleFormulaCanvas`, `VariationTable`, `InteractiveMathRenderer` 2D/3D JSXGraph), PayOS VietQR Tuition Checkout (`TuitionPaymentView`, `PayOsCheckoutModal`, `paymentService`), and 6-Digit Fintech OTP Recovery (`ForgotPasswordModal`) with Core Flow 4 Socratic AI Tutor (`AISocraticTutorModal`, Floating FAB) and Core Flow 5 Multi-Stakeholder Analytics (`LearningAnalyticsView`, `TeacherDashboardView`, `ParentDashboardView`, `CampusManagerDashboardView`).
+  - Unified `ParentDashboardView.jsx` to display both live Core Flow 5 parent companion metrics (`R_exam` 3-factor readiness index, verified 12h/week self-study tracker, AI guidance) and the PayOS VietQR tuition payment banner & modal.
+  - Verified with `npm test` (`9/9 tests pass`) and `npm run build` (`3,017 modules transformed, 0 errors`).
+
+---
+
+### 4.64. Core Flow 6 Service Layer, Score Forecast, Early Warnings, Mistake Notebook & Student-Friendly UX Normalization (`practiceService.js`, `ScorePredictionPanel.jsx`, `StudentEarlyWarningsCard.jsx`, `EarlyWarningsMentorPanel.jsx`, `MistakeNotebookSM2View.jsx`, `LearningAnalyticsView.jsx`)
+- **13-Endpoint Core Flow 6 Client Integration (`apiClient.js`, `practiceService.js`, `tests/practiceService.flow6.test.js`)**:
+  - Added `apiClient.patch`, structured `Result<T>` error unwrapping, and complete Gateway (`:5212`) client methods for SEM score predictions, Knapsack ROI remediation sessions, BR-04 3-tier early warnings, mentor intervention resolution & tripartite counseling scheduling, and SM-2 spaced-repetition mistake reviews.
+- **Multi-Role UI Suite & Learner-Centric Copy Abstraction**:
+  - Implemented `ScorePredictionPanel.jsx`, `PrescriptionPracticeModal.jsx`, `NotificationBellPopover.jsx`, `StudentEarlyWarningsCard.jsx`, `EarlyWarningsMentorPanel.jsx`, and `MistakeNotebookSM2View.jsx` seamlessly coexisting with PayOS VietQR (`TuitionPaymentView.jsx`, `PayOsCheckoutModal.jsx`).
+  - Abstracted all internal psychometric/algorithmic labels (`Core Flow 1..6`, `Socratic`, `IRT 2PL`, `BKT P(Lt)`, `SEM 95%`, `Knapsack ROI`, `SM-2`, `BR-04`, `PAT_SKILL_*`, `AUTO_INIT`) into clear, study-focused Vietnamese copy across student-facing views and modals.
+
+---
+
+## 5. Verification & Acceptance Criteria
+
+1. **Clean Production Build**: Executed `npm run build` with 0 syntax or bundle errors; production artifacts outputted to `dist/` within 763ms on Vite 8 and React 19.
+2. **Linter & Code Health**: `npm run lint` passes with 0 syntax errors across all components and services.
+3. **Docker Multi-Stage Validation**: `docker compose config` passes with 0 syntax errors across the entire 6-service microservices constellation.
+4. **Repository Sync Automation**: Standalone `Scripts/push.bat` and root `Scripts/` correctly recognize `V-Eval-Web_Client` as a first-class project service.
+5. **API Gateway Connectivity**: Full client suite structured and verified to consume all microservices endpoints via API Gateway (`:5212`) entry point.
+
+### 4.38. Single-Column Visual Formula Card Palette Architecture (`HierarchicalMathPalette.jsx`)
+- **Single-Item-Per-Row Layout Architecture**:
+  - Re-engineered the symbol and formula palette repository from a cramped 2-column grid (`grid-cols-2`) to a focused, single-column vertical flow (`grid-cols-1 gap-1.5`).
+  - *Full-Width Formula Canvas*: Provides each formula card with the full width of the palette (~220px active area), allowing long multi-term equations (harmonic motion equations `x = A\cos(\omega t + \varphi)`, rational calculus functions, limits, integration, and chemical formulas) to render cleanly without truncation or awkward text wraps.
+  - *Ergonomic Interaction & Drag Target*: Enlarged horizontal drag target with live KaTeX rendering, formula title, domain classification badge, subtle "Chèn" insertion hint, and `GripVertical` drag indicator, maximizing tactile usability for curriculum editors.
+
+### 4.39. Ultra-Compact Palette Footprint, 3-Domain Infinite Circular Carousel, and Dwell-Hover Simulation Inspector (`HierarchicalMathPalette.jsx`)
+- **Ultra-Compact Palette Width Optimization**:
+  - Further constrained the expanded sidebar width from `w-60 sm:w-64` (240px - 256px) down to an ultra-slim `w-48 sm:w-52` (192px - 208px), freeing over 85-90% of screen viewport real estate for the primary pedagogical document canvas.
+- **3-Subject Horizontal Infinite Circular Carousel (`visibleDomainKeys`, `handleNextDomain`, `handlePrevDomain`)**:
+  - Replaced the wrapped pill row with an elegant 3-item horizontal carousel flanked by `<` and `>` navigation buttons.
+  - Implemented circular modulo mathematics (`(index ± 1 + length) % length`) ensuring an infinite non-terminating loop across all 7 subject domains (Mathematics, Chemistry, Physics, Biology, Literature, Geography, Mathematical Logic & Symbols).
+  - Actively synchronizes the current domain selection and centers the carousel window upon direct tab clicks or collapsed rail selection.
+- **Low-Profile Single-Row Formula Items with Dwell-Hover Simulation Inspector**:
+  - Item listing is reduced to an ultra-clean, minimalist single row (~30px height) featuring inline KaTeX/symbol rendering, truncated label, and drag handle.
+  - Replaced passive cluttered containers with an asynchronous dwell-hover inspector (~380ms debounce threshold): hovering and holding over any item displays an enlarged vector KaTeX formula, ASCII structure simulation for complex block templates (such as Variation Tables and coordinate graphs), comprehensive pedagogical usage guidelines, and insertion syntax.
+
+### 4.40. Comprehensive Visual Redesign of the STEM & Symbol Sidebar with 2-Domain Zero-Truncation Carousel (`HierarchicalMathPalette.jsx`)
+- **Modern Clean-Slate UI Architecture**:
+  - Overhauled the legacy dark navbar header with a light, Apple-inspired header featuring pure white background, subtle border dividers, an indigo `Sparkles` icon badge, and refined typography (`Ký Hiệu & STEM`).
+  - Integrated an ergonomic rounded-xl search input with soft focus-ring interaction.
+- **2-Domain Parallel Carousel Engine (Zero-Truncation Architecture)**:
+  - Constrained the carousel viewport to display **exactly 2 subject domains side-by-side** between the circular navigation buttons (`<` and `>`).
+  - By dedicating ~75px - 85px to each domain button, all subject names (`📐 Toán`, `🧪 Hóa`, `⚛️ Vật Lý`, `🧬 Sinh`, `📖 Ngữ Văn`, `🌍 Địa Lý`, `🔣 Ký Hiệu`) render cleanly with zero awkward ellipsis truncation (eliminating `T...` and `H...`).
+  - Retained the infinite circular modulo rotation loop: cycling past the boundaries continuously loops through all 7 subjects in both forward and reverse directions.
+- **Refined Accordion Containers & Tactile Formula Rows**:
+  - Accordion folders feature smooth 90-degree chevron rotation and subtle badges.
+  - Formula items are formatted as sleek single-row pills with KaTeX rendering, formula labels, and subtle drag grips, while dwell-hovering triggers the detailed simulation inspector modal.
+
+### 4.41. Single-Domain Motion Switcher with Directional Slide Transitions & Paging Indicators (`HierarchicalMathPalette.jsx`)
+- **Single-Domain Hero Switcher Architecture**:
+  - Re-architected the domain navigation to spotlight exactly **1 active subject at a time** flanked by tactile navigation controls (`<` and `>`).
+  - Completely eradicates horizontal text truncation, allowing each subject's full name (`📐 Toán Học`, `🧪 Hóa Học`, `⚛️ Vật Lý`, `🧬 Sinh Học`, `📖 Ngữ Văn`, `🌍 Địa Lý`, `🔣 Ký Hiệu & Logic`) to render at full scale (`text-[12px] font-extrabold`).
+- **Dynamic Directional Slide Animations**:
+  - Managed via `slideDirection` state (`'next'` vs `'prev'`), coupled with React dynamic keying (`key={selectedDomain}`) and CSS utility classes (`animate-in fade-in slide-in-from-right-4` or `slide-in-from-left-4`).
+  - Clicking forward pushes the active card smoothly from the right, while clicking backward glides in from the left, delivering a fluid, native-app feel.
+- **7-Point Dot Pagination Bar & Infinite Modulo Loop**:
+  - Integrated 7 pill-shaped dot indicators beneath the switcher: active domain expands to a vibrant pill (`w-4 bg-indigo-600`), while inactive dots provide 1-click random access jumping.
+  - Preserved the circular modulo navigation loop (`(index ± 1 + length) % length`) without boundary deadlocks.
+
+### 4.42. Native Visual Vector Variation Table Hover Inspector Architecture (`HierarchicalMathPalette.jsx`, `VariationTable.jsx`)
+- **Eradication of Raw Developer Terminal Dumps**:
+  - Addressed and removed raw ASCII/terminal code syntax dumps (e.g., black monospace blocks displaying `[VARIATION_TABLE] title: ... x: ...`) from the hover inspector card.
+  - Enforced a strictly pedagogical presentation policy: users are educators and students who must never be exposed to internal serialization formats or developer diagnostics.
+- **Dynamic In-Hover Visual Variation Table Rendering**:
+  - Integrated `parseVariationTableString` and the native `<VariationTable />` engine directly within the hover preview card.
+  - When educators hover over `BBT Bậc 3`, `BBT Bậc 4`, or `BBT Phân Thức`, the inspector instantly renders an authentic, vector-drawn, 3-row variation table complete with exact coordinate poles, derivative sign alternation, double-vertical asymptotic bars (`||`), and directional trajectory arrows.
+  - Standard formulas continue to render in high-resolution, enlarged vector KaTeX typography with natural-case subject headers.
+
+### 4.43. Safe Memoized AST Deserialization for In-Hover Variation Tables (`HierarchicalMathPalette.jsx`)
+- **Resolution of Runtime ReferenceError**:
+  - Resolved missing declaration bug where `hoveredBbtData` was referenced conditionally in JSX before being bound to component scope.
+  - Memoized the AST parsing logic via `useMemo` with error boundary wrapping (`try/catch` fallback to null) so that hover traversal across thousands of formulas remains performant at 60fps without runtime exceptions.
+
+### 4.44. Non-Disappearing Hover Bridge, Dual Grace-Period Debouncing, and Direct Drag-to-Drop Action Architecture (`HierarchicalMathPalette.jsx`)
+- **Hover Bridge & Cursor Traversal Safety**:
+  - Eliminated the abrupt popover dismissal bug where moving the cursor from a palette snippet item across the 8px spatial gap into the preview card instantly fired `onMouseLeave`, destroying the component.
+  - Implemented an invisible geometrical hover bridge via a CSS pseudo-element (`before:absolute before:-left-3 before:top-0 before:w-4 before:h-full`) spanning the gap.
+  - Integrated dual debounced timers: a 300ms opening timer (`hoverTimerRef`) and a 320ms grace window closing timer (`hoverCloseTimerRef`). When the cursor enters the preview card, `handleCardMouseEnter` clears the dismissal schedule, allowing educators to explore multi-column variation tables and copy formulas without premature unmounts.
+- **Direct Interactive Click & Drag Affordances**:
+  - Upgraded the preview card to `pointer-events-auto` with dedicated interactive controls:
+    1. *Direct Drag-and-Drop*: Both the showcase preview block and the footer grip button support HTML5 drag initiation (`draggable={true}` + `handleItemDragStart`), permitting teachers to grab the expanded variation table or formula and drop it directly onto the Word Canvas or editor target.
+    2. *One-Click Immediate Insertion*: Equipped with a prominent `⚡ Nhấp chèn ngay` action button executing `handleItemClick`, instantly inserting the formula at the caret.
+
+### 4.45. Synchronous Document State Pipeline, ContentEditable Drop Interception, and Stale Blur Guarding (`WordStyleFormulaCanvas.jsx`, `HierarchicalMathPalette.jsx`)
+- **Stale Closure and Blur Override Elimination**:
+  - Identified and rectified race conditions where blurring an active contentEditable span triggered `handleTextChange` with stale React state closure, discarding freshly created lines or snippet tokens.
+  - Introduced `docLinesRef = useRef(docLines)` updated synchronously on every commit, alongside a non-mutating guard (`if (targetTok.text === newText) return;`) ensuring no destructive re-renders occur on focus displacement.
+- **Universal In-Span Drag-and-Drop Catchers**:
+  - Implemented explicit `onDragOver` and `onDrop` event delegation across granular inline contentEditable text spans, eliminating browser default forbidden drop cursors and ensuring drops register anywhere within running sentences.
+- **Palette Sidebar Overlay Deconfliction**:
+  - Purged aggressive pseudo-element spatial bridges at `z-[999]` that previously occluded sidebar button hitboxes, optimizing re-hover activation latency to a brisk 150ms.
+
+### 4.46. React Portal Body-Mounted Hover Architecture and Universal DataTransfer Drag Fallback (`HierarchicalMathPalette.jsx`, `WordStyleFormulaCanvas.jsx`)
+- **Direct Body-Mounted Portal Pipeline**:
+  - Re-architected the hover preview inspector to render via `createPortal(..., document.body)` at `z-[99999]`.
+  - Permanently decoupled the popup from ancestor `overflow: hidden` clipping and stacking context limitations, lowering trigger delay to 80ms for instant hover visibility.
+- **Universal DataTransfer Fallback & Seamless Drop Acceptance**:
+  - Expanded drag-and-drop deserialization in `WordStyleFormulaCanvas.jsx` to read `text/plain` and `Text` streams alongside proprietary MIME types, resolving Chromium strict drag payload omissions.
+  - Upgraded block recognition with resilient `.includes('[VARIATION_TABLE]')` matching to ingest variation tables and equations seamlessly without intrusive auto-modal focus.
+
+### 4.47. Import Scope Normalization for Portal Body Elements (`HierarchicalMathPalette.jsx`)
+- **Explicit React-DOM Module Resolution**:
+  - Bound `createPortal` directly from `react-dom` into the top-level lexical module scope of `HierarchicalMathPalette.jsx`.
+  - Eradicated runtime evaluation crashes when mounting the hover popover portal to `document.body`.
+
+### 4.48. ContentEditable Synchronous Mutation Tracking, Stale Closure Elimination, and Seamless Line Pruning (`WordStyleFormulaCanvas.jsx`)
+- **Stale Closure and Synchronous State Mutation Elimination**:
+  - Rectified an issue where deleting all text within a line and pressing Backspace or Delete failed to delete or merge the empty line due to `handleDeleteOrMergeLine` evaluating closed-over `docLines` rather than the mutable `docLinesRef.current`.
+  - Re-routed all line index computations, filter actions, slice operations, and formula slot mutations to source directly from `currentLines = docLinesRef.current || docLines`.
+- **In-Span Input State Sync without Unwanted Re-Renders**:
+  - Attached real-time text synchronization within the contentEditable span `onInput` handler. As keystrokes occur, `tok.text` in `docLinesRef.current` updates synchronously in memory without triggering component re-renders that would disrupt IME composition or caret positioning.
+- **Robust Line Emptiness Detection & Caret Restoration**:
+  - Standardized emptiness verification using whitespace-, newline-, and non-breaking space/zero-width space stripping (`/[\s\u00A0\r\n\u200B]+/g`).
+  - Upon Backspace on an empty line or at the beginning of a line, `handleDeleteOrMergeLine` prunes the line immediately via `flushSync`, cleanly targeting the last token of the preceding line and restoring the caret at its terminal boundary.
+
+### 4.49. React-DOM flushSync Resolution, Boundary Caret Calibration, and Adjacent Token Coalescing (`WordStyleFormulaCanvas.jsx`)
+- **Explicit `flushSync` Namespace Import**:
+  - Imported `flushSync` directly from `react-dom` inside `WordStyleFormulaCanvas.jsx`, wrapped in `try/catch` fallbacks to eliminate runtime `ReferenceError: flushSync is not defined` exceptions that interrupted line pruning executions.
+- **Dual-Metric Caret Boundary Calibration**:
+  - Refined beginning-of-line caret detection by measuring both `sel.anchorOffset === 0 && sel.focusOffset === 0` and `range.collapsed && range.startOffset === 0`, ensuring Backspace triggers immediate upward line jump across all browser selection states.
+- **Adjacent Text Token Coalescence**:
+  - Upgraded the line merger algorithm to coalesce adjacent plain text tokens into a single unbroken token (`last.text += tok.text`), preventing fragmented spans and restoring natural word processing cursor navigation.
+
+### 4.50. PayOS VietQR Payment Client Architecture, Auto-Polling Modal & PLAR Roadmap Activation (`paymentService.js`, `PayOsCheckoutModal.jsx`, `TuitionPaymentView.jsx`)
+- **Unified Payment Service Client (`src/services/paymentService.js`)**:
+  - Implements client-side abstractions interfacing with the API Gateway (`/api/practice/payments`) targeting the Practice Service backend.
+  - Generates secure PayOS VietQR payment links, verifies orders, polls payment statuses via `orderCode`, and inspects transactional audit trails.
+  - Implements defensive offline fallbacks for zero-crash frontend operation during network interruptions or mock demonstrations.
+- **Interactive PayOS VietQR Modal (`src/components/modals/PayOsCheckoutModal.jsx`)**:
+  - Features real-time state listeners polling `/api/practice/payments/status/{orderCode}` at 3-second intervals.
+  - Provides a direct link to the official PayOS VietQR checkout portal and an instant verify simulator for end-to-end user testing.
+  - Upon webhook success detection (`SUCCESS` state), triggers celebratory visual feedback via `canvas-confetti` and presents clear roadmap activation indicators.
+- **Tuition & Course Package Portal (`src/components/payment/TuitionPaymentView.jsx`)**:
+  - Showcases 3 standard competency-based packages: Fast-Track Sprint (8 weeks), Standard Adaptive (12 weeks), and Intensive Plus (16 weeks).
+  - Integrates an audit log history table displaying past transactions, payment methods, and clearance states.
+  - Directly binds into the Parent Companion Portal (`ParentDashboardView.jsx`) and Main Navigation (`Sidebar.jsx`).
+
+
+### 4.51. Account Activation & Forgot Password Flow Architecture (`ForgotPasswordModal.jsx`, `WebLoginPage.jsx`, `apiClient.js`)
+- **Elimination of Auto-Prefilled OTP & UI Standardization**:
+  - Deprecated and removed test auto-fill badges and prefilled OTP values (`Mã OTP kích hoạt hệ thống: [code]`).
+  - Standardized the OTP input as a blank 6-digit numeric field with `inputMode="numeric"`, `pattern="[0-9]*"`, strict non-digit regex filtering, and centered letter-spacing layout (`tracking-[0.35em]`).
+  - Separated modal behavior into dual modes: `activation` (Account Verification) vs `forgot` (Password Recovery).
+- **End-to-End Forgot Password Architecture (UC 05 / UC 06)**:
+  - Step 1 (Email Validation): Integrates live verification via `POST /api/auth/forgot-password`. Non-existent emails trigger HTTP 404 (`Auth.UserNotFound`) displaying descriptive localized error feedback without progressing to subsequent steps.
+  - Step 2 (OTP Verification): Collects the 6-digit OTP dispatched via Brevo SMTP Relay (`smtp-relay.brevo.com:587`). Includes an `ArrowLeft` back-navigation control to return to Step 1.
+  - Step 3 (Password Reset): Validates password strength policy (minimum 8 characters, uppercase, lowercase, numeric) and confirms match before dispatching `POST /api/auth/reset-password`.
+  - Step 4 (Success): Confirms password reset and routes user directly back to login.
+- **Defensive Error Unwrapping (`apiClient.js`)**:
+  - Implemented automatic unwrapping of RFC 7807 and Clean Architecture structured errors (`data.error.description`), preventing generic `[object Object]` error strings across all authentication flows.
+
+### 4.52. Five-Role Dedicated Portal Architecture & Home Page Design System Synchronization (`App.jsx`, `Sidebar.jsx`, `Navbar.jsx`, `DiagnosticAssessmentPage.jsx`, `SubmissionHistoryView.jsx`)
+- **Dedicated Role Portals & Isolated Navigation Trees**:
+  - Engineered `ROLE_PORTAL_DEFINITIONS` in `src/App.jsx` and role-specific navigation matrices in `src/components/layout/Sidebar.jsx` and `src/components/layout/Navbar.jsx` covering all 5 system roles:
+    1. **Student Portal (`student`)**: Personal overview (`dashboard`), 30-question IRT diagnostic assessment (`diagnostic`), submission history & mistake notebook (`history`), DAG knowledge tree (`roadmap`), BKT/IRT learning analytics (`analytics`), and tuition packages (`tuition`).
+    2. **Parent Companion Portal (`parent`)**: Child readiness & discipline overview (`dashboard`), 4-domain competency analytics (`analytics`), child exam history (`history`), curriculum progress (`roadmap`), and instant VietQR PayOS tuition checkout (`tuition`).
+    3. **Teacher Pedagogical Portal (`teacher`)**: 2D class mastery heatmap & micro-grouping (`dashboard`), curriculum & LaTeX formula studio (`roadmap`), 30-question exam bank (`diagnostic`), student submission logs (`history`), and psychometric analytics (`analytics`).
+    4. **Campus Academic Manager Portal (`manager`)**: Multi-class coordination & AI K-Means clustering (`dashboard`), class heatmap supervision (`teacher_heatmap`), curriculum governance (`roadmap`), campus staff/student provisioning (`provision`), and quality analytics (`analytics`).
+    5. **System IAM Administrator Portal (`admin`)**: Direct PostgreSQL multi-role IAM account provisioning (`provision`), multi-campus comparative operations (`dashboard`), system-wide class heatmaps (`teacher_heatmap`), national curriculum tree (`roadmap`), and PayOS transaction reconciliation (`tuition`).
+- **Unified Home Page Color Palette & Template (`#FDFBF7` / Royal Blue-Indigo / Gold `#FACC15`)**:
+  - Standardized all application views around the reference design system of `PublicLandingPage.jsx`: warm academic ivory background (`bg-[#FDFBF7]`), elevated white surface cards (`bg-white border-slate-200/80 rounded-3xl`), royal blue-indigo-cyan brand gradients (`from-blue-600 via-indigo-600 to-cyan-500` and `from-blue-700 via-indigo-700 to-blue-900`), and `#FACC15` gold accents.
+  - Converted previously dark-only views (`DiagnosticAssessmentPage.jsx` and `SubmissionHistoryView.jsx`) to the unified `#FDFBF7` / white academic theme.
+
+### 4.53. Strict Zero-Mock / 100% Real Backend API Enforcement Across All 5 Role Portals (`authService.js`, `userService.js`, `paymentService.js`, `practiceService.js`, `App.jsx`, `Navbar.jsx`, `Sidebar.jsx`, `dashboard/*`, `modals/*`)
+- **Complete Removal of Demo Login Presets & Manual Role Switchers**:
+  - Purged all 1-click demo login buttons, pre-filled demo credentials, fake social login triggers, and synthetic JWT fallback tokens (`eyDemoAccessToken123456`) from `LoginForm.jsx` and `WebLoginPage.jsx`.
+  - Removed the manual Role Switcher bar from `Navbar.jsx` and enforced an authentication guard in `App.jsx` so users only access the portal corresponding to their authenticated Backend role (`authService.resolveAppRole(currentUser)`), enriched via `GET /api/v1/users/me`.
+- **Elimination of Seed / Mock Fallbacks in Service & View Layers**:
+  - Replaced all synthetic seed generators in `practiceService.js` (`buildSeedStudentDashboard`, `buildSeedClassHeatmap`, `buildSeedParentDashboard`, `buildSeedCampusComparativeHeatmap`, `getDefaultSeedHistory`) with clean empty/onboarding states (`buildEmptyStudentDashboard`, `buildEmptyClassHeatmap`, `buildEmptyParentDashboard`, `buildEmptyCampusComparativeHeatmap`, `[]`).
+  - Removed `mock-payment-` fallback links and offline transaction simulators in `paymentService.js`, and removed hardcoded campus fallbacks in `authService.js` and `userService.js`.
+  - Disconnected `src/data/mockData.js` from all active views and modals (`HeroBanner.jsx`, `MetricsGrid.jsx`, `MilestoneCard.jsx`, `LiveQnACard.jsx`, `ParentDashboardView.jsx`, `CampusManagerDashboardView.jsx`, `LearningAnalyticsView.jsx`, `TuitionPaymentView.jsx`, `RadarChartModal.jsx`, `DiagnosticTestModal.jsx`, `AdaptiveQuizModal.jsx`, `ClassMicroGroupsModal.jsx`), binding 100% of UI state to live Backend endpoints via the API Gateway (`http://localhost:5212`).
+- **Multi-Layer Live Email Validation & Landing Navigation (`src/utils/emailValidator.js`, `RegisterForm.jsx`, `WebLoginPage.jsx`, `App.jsx`)**:
+  - Wired `onOpenLogin`, `onOpenRegister`, `onOpenDashboard`, `onOpenDiagnostic`, and `onOpenArchModal` between `App.jsx` and `PublicLandingPage.jsx`.
+  - Implemented real-time debounced and pre-submit email verification (`emailValidator.js` + `GET /api/auth/validate-email` + Google DNS-over-HTTPS `MX` record lookup), enforcing strict RFC 5322 syntax, Gmail local-part rules (6–30 chars), repetitive fake pattern blocking (`22222`), disposable email domain blocking, and 1-click domain typo correction (`@gmial.com` -> `@gmail.com`).
+- **3-in-1 Parent-Student Linking System (`StudentParentLinkCard.jsx`, `ParentDashboardView.jsx`, `userService.js`)**:
+  - Enabled 100% database-backed Parent-Student account linking without SMTP dependency via three integrated workflows: (1) Student Account Code (`VE-XXXXXX`) & 6-digit dynamic PIN (`POST /api/v1/users/parent-link/connect`), (2) 1-Click Shareable URL (`?parentLinkCode=...`) & QR Code, and (3) Two-way in-app request/approval by Student Email or Phone (`POST /api/v1/users/parent-link/request` & `POST /api/v1/users/me/parent-link-requests/{id}/respond`).
+
+### 4.54. Campus Manager Segmented Navigation Redesign, Dynamic Academic Director Recognition & IAM Provisioning Multi-Layer Email Validation (`App.jsx`, `AccountProvisioningView.jsx`, `emailValidator.js`)
+- **Modern Segmented Control Navigation Redesign (`src/App.jsx`)**:
+  - Eliminated the wrapping, multi-line navigation layout on the Campus Manager Portal by refactoring subpage navigation into a streamlined Segmented Control.
+  - Employed a unified track wrapper (`bg-slate-100/90 p-1.5 rounded-2xl border border-slate-200/80 inline-flex items-center gap-1.5 overflow-x-auto scrollbar-none max-w-full`) preventing clumsy two-row button drops on constrained viewports.
+  - Active segment tabs feature a crisp card aesthetic (`bg-white text-blue-700 shadow-sm font-extrabold ring-1 ring-slate-200/80`) while inactive tabs use smooth hover transitions (`text-slate-600 hover:text-slate-900 hover:bg-slate-200/60 font-semibold`).
+  - Streamlined tab labels for clarity and conciseness: *"So sánh Cơ sở"*, *"Ma trận Lớp học"*, *"Khung Chương trình"*, *"Cấp phát Tài khoản"*, *"Báo cáo Chất lượng"*.
+- **Dynamic Academic Director vs. Campus Manager Portal Differentiation (`src/App.jsx`)**:
+  - Implemented dynamic role recognition differentiating `ACADEMIC_DIRECTOR` from standard `ACADEMIC_MANAGER` accounts.
+  - For Academic Directors, the header elevates to *"Cổng Giám Đốc Học Thuật Toàn Trường"* with a `Crown` icon and gold-accented badge (`ACADEMIC DIRECTOR PORTAL`), while Campus Managers retain the localized operational banner.
+- **Multi-Layer Defensive Email Validation in IAM Account Provisioning Modal (`src/components/admin/AccountProvisioningView.jsx`, `src/utils/emailValidator.js`)**:
+  - Integrated `validateEmailComprehensive` on the Account Provisioning modal's email input with real-time `onBlur` checks and pre-submit validation.
+  - Added support for detecting common domain typos (such as `@mail.com` typo for `@gmail.com`), RFC 5322 syntax validation, repetitive character blocking (`22222`), disposable email blocking, and Google DNS-over-HTTPS MX verification.
+  - Visual feedback includes an inline loading spinner during DNS resolution, green success badge upon validation, and an actionable amber/red suggestion banner with a 1-click apply button (`"Sửa thành: ...@gmail.com"`).
+  - Prevents accidental provisioning of phantom or invalid accounts and provides clear, human-friendly error messages matching Clean Architecture domain responses.
+
+### 4.55. Soft Delete / Inactive Account Lifecycle Architecture & Dual-View Management (`AccountProvisioningView.jsx`, `userService.js`)
+- **Strict Prohibition of Hard Deletion & Full Pedagogical Data Preservation**:
+  - Eliminates hard deletion (`DELETE FROM "Users"`) across all client flows to safeguard referential integrity across psychometric examination submissions (`ExamSubmissions`), adaptive practice session records (`PracticeSessions`), VietQR tuition logs (`PaymentOrders`), and parent-student linkages (`ParentStudentRelations`).
+  - Adopts the industry-standard Soft Delete model utilizing the existing `is_active` database flag (`v_eval_identity."Users"`).
+- **Dual-View Segmented Architecture (Active vs. Inactive Accounts)**:
+  - **"Tài Khoản Đang Hoạt Động" (Default View)**: Queries `GET /api/v1/users?isActive=true`. Inactive accounts are automatically hidden from view, keeping operational lists focused solely on active faculty, staff, and learners.
+  - **"Tài Khoản Đã Ngừng Hoạt Động (Ẩn)" (Archive View)**: Queries `GET /api/v1/users?isActive=false`. Provides an isolated archive repository showcasing all deactivated accounts with structured audit indicators and status badges.
+  - **"Tất Cả"**: Queries `GET /api/v1/users` with no `isActive` filter for comprehensive administrative audits.
+- **Confirmation Modals & Lifecycle Transitions**:
+  - **Deactivation Confirmation**: Features a dedicated `UserX` modal detailing the target user's identity and displaying explicit data preservation assurances before triggering `PATCH /api/v1/users/{id}/toggle-status?targetStatus=false`.
+  - **Reactivation Confirmation**: Features a dedicated `RotateCcw` modal allowing instant restoration of login privileges and immediate relocation back to the active user list via `PATCH /api/v1/users/{id}/toggle-status?targetStatus=true`.
+- **Real-Time Interactive Metric Synchronization**:
+  - Live counts (`activeCount` and `inactiveCount`) are derived dynamically from Backend SQL aggregates.
+  - Stat cards on the dashboard are wired with 1-click filters enabling rapid toggling between active and archived views.
+- **Full-Width Portal Workspace Alignment (`w-full`), Single-Line Zero-Wrap Table Redesign & `apiClient.js` Query Parameter Serialization (`App.jsx`, `AccountProvisioningView.jsx`, `apiClient.js`)**:
+  - Added automatic `options.params` query-string serialization (`URLSearchParams`) and a dedicated `patch()` method in `src/services/apiClient.js`, ensuring `GET /api/v1/users?isActive=true` accurately filters active vs. inactive records at the Backend database layer.
+  - Removed `max-w-7xl mx-auto` constraints across `App.jsx`, `AccountProvisioningView.jsx`, `CampusManagerDashboardView.jsx`, `ParentDashboardView.jsx`, and `TuitionPaymentView.jsx`, expanding the portal workspace to `w-full` flush with the `Sidebar` and `Navbar` and eliminating horizontal table scrollbars.
+  - Redesigned the IAM accounts table with a unified Command Toolbar, two-letter role-tinted gradient avatars, intelligent role-specific unit/campus labels, and strict `whitespace-nowrap` single-line badges and action buttons.

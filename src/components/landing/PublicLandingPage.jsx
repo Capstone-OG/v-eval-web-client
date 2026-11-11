@@ -11,7 +11,8 @@ import {
   Award,
   PlayCircle,
   Lock,
-  Star
+  Star,
+  UserPlus
 } from 'lucide-react';
 import PublicHeader from './PublicHeader';
 import PublicFooter from './PublicFooter';
@@ -19,7 +20,7 @@ import studentsBadge from '../../assets/students_cutout_badge.jpg';
 import studentsClean from '../../assets/students_cutout_clean.jpg';
 import studentsOriginal from '../../assets/students_original.png';
 
-export default function PublicLandingPage({ onOpenLogin, onOpenDiagnostic, onOpenDashboard, onOpenArchModal }) {
+export default function PublicLandingPage({ currentUser, onOpenLogin, onOpenRegister, onOpenDiagnostic, onOpenDashboard, onOpenArchModal }) {
   const [showStickyBar, setShowStickyBar] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeSection, setActiveSection] = useState('hero');
@@ -187,7 +188,10 @@ export default function PublicLandingPage({ onOpenLogin, onOpenDiagnostic, onOpe
 
       {/* 1. MODULAR TOP HEADER */}
       <PublicHeader
+        currentUser={currentUser}
         onOpenLogin={onOpenLogin}
+        onOpenRegister={onOpenRegister}
+        onOpenDashboard={onOpenDashboard}
         onOpenDiagnostic={onOpenDiagnostic}
         onOpenArchModal={onOpenArchModal}
         searchQuery={searchQuery}
@@ -260,8 +264,18 @@ export default function PublicLandingPage({ onOpenLogin, onOpenDiagnostic, onOpe
               <motion.button
                 whileHover={{ scale: 1.02, y: -2 }}
                 whileTap={{ scale: 0.98 }}
+                onClick={() => (onOpenRegister ? onOpenRegister() : onOpenLogin && onOpenLogin('register'))}
+                className="flex items-center gap-2 px-6 py-4 rounded-full bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 font-extrabold text-sm transition-all shadow-sm cursor-pointer"
+              >
+                <UserPlus className="w-4.5 h-4.5 text-blue-600" />
+                <span>Đăng ký học viên</span>
+              </motion.button>
+
+              <motion.button
+                whileHover={{ scale: 1.02, y: -2 }}
+                whileTap={{ scale: 0.98 }}
                 onClick={onOpenDashboard}
-                className="flex items-center gap-2 px-6 py-4 rounded-full bg-white/90 hover:bg-white border border-slate-300 backdrop-blur-md text-slate-800 font-extrabold text-sm transition-all shadow-sm"
+                className="flex items-center gap-2 px-6 py-4 rounded-full bg-white/90 hover:bg-white border border-slate-300 backdrop-blur-md text-slate-800 font-extrabold text-sm transition-all shadow-sm cursor-pointer"
               >
                 <PlayCircle className="w-4.5 h-4.5 text-blue-600" />
                 <span>Phòng thi thử 120 câu</span>

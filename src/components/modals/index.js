@@ -2,3 +2,7 @@ export { default as AcademicArchitectureModal } from './AcademicArchitectureModa
 export { default as AdaptiveQuizModal } from './AdaptiveQuizModal';
 export { default as DiagnosticTestModal } from './DiagnosticTestModal';
 export { default as RadarChartModal } from './RadarChartModal';
+export { default as ClassMicroGroupsModal } from './ClassMicroGroupsModal';
+export { default as AISocraticTutorModal } from './AISocraticTutorModal';
+export { default as PrescriptionPracticeModal } from './PrescriptionPracticeModal';
+export { default as PayOsCheckoutModal } from './PayOsCheckoutModal';

@@ -1,9 +1,12 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Search, Zap } from 'lucide-react';
+import { Search, Zap, ArrowRight, User } from 'lucide-react';
 
 export default function PublicHeader({ 
+  currentUser,
   onOpenLogin, 
+  onOpenRegister,
+  onOpenDashboard,
   onOpenDiagnostic, 
   onOpenArchModal, 
   searchQuery, 
@@ -100,20 +103,50 @@ export default function PublicHeader({
 
         {/* Action Buttons */}
         <div className="flex items-center gap-2.5 shrink-0 pl-1">
-          <button 
-            onClick={onOpenLogin}
-            className="hidden sm:inline-block px-4 py-2 rounded-full border-2 border-slate-900 text-slate-900 font-extrabold text-xs hover:bg-slate-900 hover:text-white transition-all duration-200"
-          >
-            Sign In
-          </button>
+          {currentUser ? (
+            <div className="flex items-center gap-2.5">
+              <div className="hidden sm:block text-right">
+                <div className="text-xs font-black text-slate-900 leading-tight">
+                  {currentUser.fullName || 'Học viên'}
+                </div>
+                <div className="text-[10px] text-blue-600 font-bold uppercase tracking-wider">
+                  {currentUser.role || 'Student'}
+                </div>
+              </div>
 
-          <button 
-            onClick={onOpenDiagnostic}
-            className="flex items-center gap-1.5 px-5 py-2.5 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-extrabold text-xs shadow-lg shadow-blue-500/20 hover:scale-105 active:scale-95 transition-all duration-200 shrink-0"
-          >
-            <span>Thi thử ngay</span>
-            <Zap className="w-3.5 h-3.5 text-[#FACC15] fill-[#FACC15]" />
-          </button>
+              <button 
+                onClick={onOpenDashboard}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-extrabold text-xs shadow-md shadow-blue-500/20 hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer"
+              >
+                <span>Vào Dashboard</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ) : (
+            <>
+              <button 
+                onClick={() => onOpenLogin && onOpenLogin('login')}
+                className="hidden sm:inline-block px-3.5 sm:px-4 py-2 rounded-full border border-slate-300 text-slate-800 font-extrabold text-xs hover:bg-slate-100 hover:text-slate-950 transition-all duration-200 cursor-pointer"
+              >
+                Đăng nhập
+              </button>
+
+              <button 
+                onClick={() => (onOpenRegister ? onOpenRegister() : onOpenLogin && onOpenLogin('register'))}
+                className="inline-block px-4 py-2 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs shadow-md shadow-blue-500/20 hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer"
+              >
+                Đăng ký
+              </button>
+
+              <button 
+                onClick={onOpenDiagnostic}
+                className="flex items-center gap-1.5 px-4 sm:px-5 py-2 sm:py-2.5 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-extrabold text-xs shadow-lg shadow-blue-500/20 hover:scale-105 active:scale-95 transition-all duration-200 shrink-0 cursor-pointer"
+              >
+                <span>Thi thử 30 câu</span>
+                <Zap className="w-3.5 h-3.5 text-[#FACC15] fill-[#FACC15]" />
+              </button>
+            </>
+          )}
         </div>
 
       </div>
