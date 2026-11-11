@@ -6,7 +6,14 @@
  * token refresh on 401, and standardized response formatting.
  */
 
-const BASE_URL = import.meta.env?.VITE_API_GATEWAY_URL || 'http://localhost:5212';
+export const getGatewayBaseUrl = () => {
+  if (typeof window !== 'undefined' && window.location.hostname.includes('pickic.io.vn')) {
+    return 'https://api.pickic.io.vn';
+  }
+  return import.meta.env?.VITE_API_GATEWAY_URL || 'http://localhost:5212';
+};
+
+const BASE_URL = getGatewayBaseUrl();
 
 const TOKEN_KEY = 'veval_access_token';
 const REFRESH_TOKEN_KEY = 'veval_refresh_token';
@@ -120,7 +127,8 @@ async function silentRefreshToken() {
  * Core HTTP Request Dispatcher
  */
 async function request(endpoint, options = {}, isRetry = false) {
-  let url = endpoint.startsWith('http') ? endpoint : `${BASE_URL}${endpoint}`;
+  const currentBaseUrl = getGatewayBaseUrl();
+  let url = endpoint.startsWith('http') ? endpoint : `${currentBaseUrl}${endpoint}`;
 
   if (options.params && typeof options.params === 'object') {
     const searchParams = new URLSearchParams();
@@ -288,7 +296,7 @@ async function request(endpoint, options = {}, isRetry = false) {
 }
 
 export const apiClient = {
-  getBaseUrl: () => BASE_URL,
+  getBaseUrl: () => getGatewayBaseUrl(),
 
   get: (endpoint, options = {}) => 
     request(endpoint, { method: 'GET', ...options }),

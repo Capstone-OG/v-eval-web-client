@@ -1213,4 +1213,22 @@ pm run build completes in 905ms (3,013 modules transformed, 0 errors).
 - **Verification**:
   - `npm run build` completed cleanly in **3.08 seconds** (3015 modules transformed, 0 Error, 0 Warning).
 
+### 4.63. Production Docker Deployment & Multi-Environment Domain Routing Architecture (`apiClient.js`, `nginx.conf`, `docker-compose.yml`)
+- **Multi-Environment Gateway Base URL Resolution (`apiClient.js`)**:
+  - *Architectural Problem*: In cloud or domain deployments (e.g. `pickic.io.vn`), hardcoded `http://localhost:5212` causes client-side browsers to make cross-origin calls to the user's local machine, triggering mixed-content security blocks and connection failures.
+  - *Architectural Solution*: Implemented dynamic `getGatewayBaseUrl()` in `src/services/apiClient.js`:
+    - When `window.location.hostname` ends with `pickic.io.vn`, dynamically binds to `https://api.pickic.io.vn` with full end-to-end SSL/TLS encryption.
+    - When executing on local developer machines (`localhost`), defaults to `http://localhost:5212`.
+    - Integrated with all `request()` invocations and `apiClient.getBaseUrl()` for Server-Sent Events (SSE) AI Tutor streaming.
+- **High-Performance Nginx Alpine Reverse Proxy & Static Asset Caching (`nginx.conf`)**:
+  - Enabled level 6 Gzip compression for all text/css/js/json/svg mime types.
+  - Added SPA fallback `try_files $uri $uri/ /index.html` preventing 404s on browser reloads.
+  - Embedded `location /api/` reverse proxy pass to `http://v-eval-gateway:5212/api/` with HTTP/1.1 WebSocket Upgrade support and 600-second timeouts for AI streams.
+- **Verification & Acceptance**:
+  - Local Vite production build: `npm run build` completed in **2.36 seconds** (3015 modules transformed, 0 Error, 0 Warning).
+  - Public Cloudflare Tunnel verification:
+    - `https://pickic.io.vn` -> HTTP/2 200 OK
+    - `https://app.pickic.io.vn` -> HTTP/2 200 OK
+
+
 

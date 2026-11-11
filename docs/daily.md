@@ -1,5 +1,28 @@
 # NHẬT KÝ KIỂM TRA TIẾN ĐỘ VẬN HÀNH (DAILY CHECK LOG) - WEB CLIENT
 
+## [11/11/2026] - Chuyển Toàn Bộ Nhánh Làm Việc Sang Main & Triển Khai SPA Lên Docker Nginx Reverse Proxy Qua Domain pickic.io.vn
+
+- **Tự Động Phân Giải Domain API Gateway Đa Môi Trường ([`apiClient.js`](../src/services/apiClient.js))**:
+  - Triển khai hàm `getGatewayBaseUrl()`:
+    - Khi truy cập từ domain triển khai `pickic.io.vn` hoặc `app.pickic.io.vn`: Tự động trỏ toàn bộ API về `https://api.pickic.io.vn` với kết nối mã hóa SSL/TLS 100%, bảo đảm không gặp lỗi Mixed Content.
+    - Khi chạy môi trường local (`localhost:5173`): Giữ nguyên fallback trỏ về cổng phát triển nội bộ `http://localhost:5212` (`VITE_API_GATEWAY_URL`).
+  - Cập nhật toàn bộ các phương thức `request()` và `apiClient.getBaseUrl()` (dùng cho Server-Sent Events SSE Socratic Tutor) tự động gọi `getGatewayBaseUrl()`.
+
+- **Cấu Hình Nginx Alpine Đóng Gói Production ([`nginx.conf`](../nginx.conf))**:
+  - Kích hoạt nén **Gzip** (`gzip on`, level 6) cho toàn bộ file tĩnh (JS, CSS, JSON, SVG, XML).
+  - Cấu hình điều hướng SPA `try_files $uri $uri/ /index.html` đảm bảo định tuyến client-side router hoạt động chuẩn xác khi refresh trang.
+  - Bổ sung cấu hình Reverse Proxy `location /api/` trỏ trực tiếp tới `http://v-eval-gateway:5212/api/` bên trong Docker Network với các thiết lập WebSocket Upgrade và timeout 600s phục vụ xử lý luồng AI.
+
+- **Đóng Gói & Tối Ưu Hóa Docker Volume ([`docker-compose.yml`](../../docker-compose.yml))**:
+  - Ánh xạ trực tiếp thư mục `dist/` đã build vào Nginx `/usr/share/nginx/html:ro` và `nginx.conf` vào `/etc/nginx/conf.d/default.conf:ro`.
+  - Giúp việc cập nhật frontend diễn ra tức thì sau `npm run build` mà không cần rebuild toàn bộ Docker Image.
+
+- **Kiểm Thử & Nghiệm Thu Trực Tuyến**:
+  - `npm run build` hoàn thành trong **2.36 giây** (3015 modules transformed, 0 Error, 0 Warning).
+  - Kiểm thử truy cập công khai qua Cloudflare Tunnel:
+    - `https://pickic.io.vn` ➔ HTTP/2 200 OK.
+    - `https://app.pickic.io.vn` ➔ HTTP/2 200 OK.
+
 ## [11/11/2026] - Khắc Phục Triệt Để Toàn Bộ Lỗi Hiển Thị LaTeX & KaTeX (Render Bảng Markdown Table, Chống Nuốt Dấu Nháy Đơn Options, Triệt Tiêu Token Đỏ 'undefined', Nối Dòng Công Thức Hóa Học Gãy)
 
 - **Tích Hợp Bộ Phân Giải & Render Bảng Markdown Sư Phạm ([`MathText.jsx`](../src/components/common/MathText.jsx))**:
