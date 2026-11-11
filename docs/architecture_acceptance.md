@@ -1248,6 +1248,28 @@ pm run build completes in 905ms (3,013 modules transformed, 0 errors).
 - **Verification**:
   - `npm run build` passed in 3.06s with 3015 modules transformed, 0 errors and 0 warnings.
 
+---
+
+### 4.65. Multi-Line Math Leakage Prevention, Labeled Reaction Separation & Formula Boundary Normalization (`MathText.jsx`)
+- **Single-Dollar Inline Math Boundary Hardening**:
+  - *Identified Vulnerability*: Greedy multi-line matching `\$[^\$]+?\$` in `renderInlineContent` allowed an unclosed dollar sign on one line to bridge across multiple paragraphs and lines to a closing dollar sign several lines below, swallowing explanatory Vietnamese prose into KaTeX math mode (e.g. `suyragốcacidlà`).
+  - *Architectural Solution*:
+    - Hardened inline math delimiter regex to `\$[^\$\r\n]+?\$`, strictly preventing single-dollar math expressions from spanning across newline boundaries.
+    - Added an extra safety guard in `renderInlineContent`: Any inline math block containing Vietnamese accented characters without `\text{}` is immediately unpacked and rendered as normal text spans.
+- **Labeled Reaction Equation Disambiguation**:
+  - *Identified Vulnerability*: Lines beginning with labels such as `Phương trình: (RCOO)_3C_3H_5 + 3NaOH \xrightarrow{t^\circ} 3RCOONa + C_3H_5(OH)_3` failed the Vietnamese exclusion filter and remained unrendered raw LaTeX text.
+  - *Architectural Solution*:
+    - Implemented colon-split logic: When a reaction arrow (`\xrightarrow`, `\rightleftharpoons`, `\longrightarrow`) is detected on a line with a prefix label, the label is cleanly separated and the reaction equation is wrapped in display math `$$ ... $$` on its own line.
+- **Subscript Spacing & Formula Fragment Coalescing**:
+  - Automatically corrects OCR/LLM spacing faults like `(OH)_ 3` -> `(OH)_3`.
+  - Coalesces spaced chemical formulas `C_{15}H_{31} COOH` into `$C_{15}H_{31}COOH$`.
+  - Joins split multiline ester formulas like `$C_nH_{2n}\nO_2` into `$C_nH_{2n}O_2$`.
+  - Standardizes inequality constraints with misplaced delimiters: `(n \ge 2$)` -> `($n \ge 2$)`.
+- **Verification**:
+  - `npm run build` completed in **2.82s** with 3015 modules transformed, 0 errors, 0 warnings.
+  - Hot-reloaded live Nginx service inside `v_eval_web_client` container.
+
+
 
 
 

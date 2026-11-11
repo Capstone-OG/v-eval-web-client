@@ -25,8 +25,16 @@
   - Tự động bọc `$$ ... $$` hiển thị nổi bật ở giữa dòng cho các phương trình hóa học và công thức toán học đứng riêng dòng.
 
 - **Kiểm Thử & Đảm Bảo Vận Hành**:
-  - Chạy `npm run build` thành công 100% trong **3.06 giây** (3015 modules transformed, 0 Error, 0 Warning).
+  - Chạy `npm run build` thành công 100% trong **2.82 giây** (3015 modules transformed, 0 Error, 0 Warning).
   - Nạp lại bundle mới vào Nginx container `v_eval_web_client` phục vụ giao diện tức thì.
+
+- **Nâng Cấp Toàn Diện Regex Khử 100% Lỗi Rò Rỉ Math Đa Dòng & Tách Nhãn Phương Trình Hóa Học**:
+  - **Giới hạn phạm vi Inline Math không vượt qua dòng mới**: Tinh chỉnh regex phân tách `\$[^\$\r\n]+?\$` trong `renderInlineContent` và `normalizeMathString`, bảo đảm math mode đơn `$...$` tuyệt đối không bao giờ nuốt văn bản qua dấu xuống dòng `\n`. Triệt tiêu hoàn toàn lỗi `suyragốcacidlà`.
+  - **Khắc phục lỗi khoảng trắng sau dấu gạch dưới chỉ số**: Chuẩn hóa regex `_\s+(\d+|[a-zA-Z]|\{[^}]+\})` chuyển đổi `(OH)_ 3` -> `(OH)_3`.
+  - **Chuẩn hóa công thức hóa học có dấu cách trước nhóm chức**: Regex `([A-Z]..._\{\d+\})\s+(COOH|OH...)` chuyển `C_{15}H_{31} COOH` thành `$C_{15}H_{31}COOH$`.
+  - **Tách nhãn mở đầu cho phương trình phản ứng**: Tự động nhận diện các nhãn `Phương trình: ...` hoặc `PTHH: ...` có chứa mũi tên phản ứng, tách nhãn mở đầu sang dòng trên và bọc phương trình thành khối display math `$$ ... $$` căn giữa đẹp mắt.
+  - **Hàn gắn công thức ester bị ngắt dòng**: Tự động ghép nối chuỗi `$C_nH_{2n}\nO_2` thành công thức hoàn chỉnh `$C_nH_{2n}O_2$`.
+
 
 - **Tự Động Phân Giải Domain API Gateway Đa Môi Trường ([`apiClient.js`](../src/services/apiClient.js))**:
   - Triển khai hàm `getGatewayBaseUrl()`:

@@ -115,6 +115,12 @@ export function normalizeMathString(text) {
   // 1. Unescape literal string escaped newlines e.g. "\n" -> real newlines
   str = unescapeLiteralNewlines(str);
 
+  // Khắc phục khoảng trắng sai vị trí sau dấu gạch dưới chỉ số e.g. (OH)_ 3 -> (OH)_3, C_ 2 -> C_2
+  str = str.replace(/_\s+(\d+|[a-zA-Z]|\{[^}]+\})/g, '_$1');
+
+  // Chuẩn hóa khoảng trắng giữa gốc hydrocarbon và nhóm chức hữu cơ e.g. C_{15}H_{31} COOH -> C_{15}H_{31}COOH
+  str = str.replace(/([A-Z][a-zA-Z0-9_\\\{\}\^]*_\{\d+\})\s+(COOH|OH|CHO|COONa|NH_2|COOCH_3)\b/g, '$1$2');
+
   // Phục hồi công thức tính hiệu suất phản ứng nếu bị lỗi undefined
   str = str.replace(/H\\?%\s*undefined\s*%?\s*\$*/gi, 'H\\% = \\frac{m_{\\text{thực tế}}}{m_{\\text{lí thuyết}}} \\times 100\\%');
   str = str.replace(/H\\?%\s*=\s*undefined\s*%?\s*\$*/gi, 'H\\% = \\frac{m_{\\text{thực tế}}}{m_{\\text{lí thuyết}}} \\times 100\\%');
@@ -152,6 +158,7 @@ export function normalizeMathString(text) {
 
   // Sửa điều kiện bất đẳng thức có dấu $ bị đặt nhầm: (n \ge 2$) hoặc ($n$ \ge 4$) hoặc (n \ge 2)
   str = str.replace(/\(\s*\$?([a-zA-Z])\$?\s*\\(?:ge|le|gt|lt)\s*(\d+)\s*\$?\s*\)/gi, '($$$1 \\ge $2$$)');
+  str = str.replace(/\(\s*([a-zA-Z])\s*\\(?:ge|le|gt|lt)\s*(\d+)\s*\$\s*\)/gi, '($$$1 \\ge $2$$)');
 
   // Sửa lỗi dấu $ đóng nhầm trước số thập phân: \times$ 0,5 -> \times 0,5$
   str = str.replace(/\\times\s*\$\s*(\d+[,\.]?\d*)/g, '\\times $1$');
@@ -172,15 +179,25 @@ export function normalizeMathString(text) {
   str = str.replace(/\$\s*\.\s*\$/g, '.');
 
   // Xử lý các phương trình hóa học và công thức toán đứng riêng dòng (Xử lý theo từng dòng, KHÔNG ghép qua dòng mới)
+  const arrowRegex = /\\(?:rightleftharpoons|xrightarrow|longrightarrow|rightarrow|leftrightharpoons|leftrightarrow)\b/;
   str = str.split('\n').map(line => {
     let trimmed = line.trim();
-    if (!trimmed.includes('$')) {
-      // 1. Phương trình phản ứng hóa học (có mũi tên phản ứng và không chứa từ tiếng Việt)
-      if (/\\(?:rightleftharpoons|xrightarrow|longrightarrow|rightarrow|leftrightharpoons|leftrightarrow)\b/.test(trimmed) &&
-          !/[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(trimmed)) {
-        return '$$' + trimmed + '$$';
+    if (arrowRegex.test(trimmed)) {
+      // Tách nhãn mở đầu như "Phương trình: ..." hoặc "PTHH: ..."
+      const colonIdx = trimmed.indexOf(':');
+      if (colonIdx > 0 && colonIdx < 30) {
+        const label = trimmed.slice(0, colonIdx + 1).trim();
+        let eq = trimmed.slice(colonIdx + 1).trim().replace(/\.$/, '').trim();
+        if (!eq.startsWith('$$')) {
+          eq = eq.replace(/(?<!\\)\$/g, '');
+          return `${label}\n$$${eq}$$`;
+        }
+      } else if (!trimmed.includes('$') && !/[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(trimmed)) {
+        let eq = trimmed.replace(/\.$/, '').trim();
+        return '$$' + eq + '$$';
       }
-      // 2. Công thức toán/hóa chứa dấu = và \frac hoặc \sqrt (không chứa từ tiếng Việt)
+    } else if (!trimmed.includes('$')) {
+      // Công thức toán/hóa chứa dấu = và \frac hoặc \sqrt (không chứa từ tiếng Việt)
       if (trimmed.includes('=') && /\\(?:frac|sqrt|lim|sum|prod|int)\b/.test(trimmed) &&
           !/[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(trimmed)) {
         return '$$' + trimmed + '$$';
@@ -189,11 +206,11 @@ export function normalizeMathString(text) {
     return line;
   }).join('\n');
 
-  // Cân bằng dấu $ đơn lẻ bị cô lập trên từng dòng
+  // Cân bằng dấu $ đơn lẻ bị cô lập trên từng dòng để triệt tiêu việc rò rỉ math mode sang dòng tiếp theo
   str = str.split('\n').map(line => {
     let dMatches = (line.match(/(?<!\\)\$/g) || []).length;
     if (dMatches % 2 !== 0) {
-      if (line.trimEnd().endsWith('$')) {
+      if (line.trimEnd().endsWith('$.') || line.trimEnd().endsWith('$')) {
         let lastIdx = line.lastIndexOf('$');
         line = line.slice(0, lastIdx) + line.slice(lastIdx + 1);
       } else {
@@ -221,8 +238,8 @@ export function normalizeMathString(text) {
   str = str.replace(/\*\*(Bài toán mẫu|Bài mẫu|Ví dụ minh họa|Ví dụ|Hướng dẫn giải|Lời giải|Phương pháp giải|Phương pháp|Gợi ý phương pháp giải|Bước \d+):(?!\*)/gi, '**$1:**');
 
   // 2. Tokenize by existing explicit math delimiters AND special tags ([VARIATION_TABLE], [MATH_GRAPH], etc.)
-  // This guarantees tag contents are NEVER corrupted by auto-wrap math/chemistry regexes!
-  const specialBlockAndMathDelimiterRegex = /(\[MATH_GRAPH_3D\][\s\S]*?\[\/MATH_GRAPH_3D\]|\[MATH_GRAPH\][\s\S]*?\[\/MATH_GRAPH\]|\[MATH_GEOMETRY_2D\][\s\S]*?\[\/MATH_GEOMETRY_2D\]|\[VARIATION_TABLE\][\s\S]*?\[\/VARIATION_TABLE\]|\[GRAPH:[\s\S]*?\]|\$\$[\s\S]*?\$\$|\$[^\$\n]+?\$|\\\[[\s\S]*?\\\]|\\\([\s\S]*?\\\))/gi;
+  // Inline math is strictly matched without newline ($[^$\r\n]+?$) so math mode NEVER spans multiple lines!
+  const specialBlockAndMathDelimiterRegex = /(\[MATH_GRAPH_3D\][\s\S]*?\[\/MATH_GRAPH_3D\]|\[MATH_GRAPH\][\s\S]*?\[\/MATH_GRAPH\]|\[MATH_GEOMETRY_2D\][\s\S]*?\[\/MATH_GEOMETRY_2D\]|\[VARIATION_TABLE\][\s\S]*?\[\/VARIATION_TABLE\]|\[GRAPH:[\s\S]*?\]|\$\$[\s\S]*?\$\$|\$[^\$\r\n]+?\$|\\\[[\s\S]*?\\\]|\\\([\s\S]*?\\\))/gi;
   const parts = str.split(specialBlockAndMathDelimiterRegex);
 
   const processed = parts.map((part) => {
@@ -253,9 +270,15 @@ export function normalizeMathString(text) {
 
     let textChunk = part;
 
-    // Wrap LaTeX commands with curly braces or sub/superscripts e.g. \frac{a}{b}, \sqrt{x}, \lim_{x \to 0}, \Delta
+    // Wrap LaTeX commands with curly braces or sub/superscripts e.g. \frac{a}{b}, \sqrt{x}, \lim_{x \to 0}, \Delta, \xrightarrow
     textChunk = textChunk.replace(
-      /(\\(?:text|mathrm|mathbf|Delta|frac|sqrt|lim|int|sum|prod|alpha|beta|gamma|delta|epsilon|theta|lambda|mu|pi|rho|sigma|tau|phi|omega|Omega|left|right|partial|infty|vec|le|ge|neq|approx|equiv|pm|times|div|cdot|in|notin|subset|cap|cup|forall|exists|mathbb)\b(?:\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}|_[a-zA-Z0-9{}]*(?:\{[^{}]*\})?|\^[a-zA-Z0-9{}]*(?:\{[^{}]*\})?)*)/g,
+      /(\\(?:text|mathrm|mathbf|Delta|frac|sqrt|lim|int|sum|prod|alpha|beta|gamma|delta|epsilon|theta|lambda|mu|pi|rho|sigma|tau|phi|omega|Omega|left|right|partial|infty|vec|le|ge|neq|approx|equiv|pm|times|div|cdot|in|notin|subset|cap|cup|forall|exists|mathbb|xrightarrow|rightleftharpoons|longrightarrow|leftarrow|longleftarrow|implies|iff)\b(?:\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}|_[a-zA-Z0-9{}]*(?:\{[^{}]*\})?|\^[a-zA-Z0-9{}]*(?:\{[^{}]*\})?)*)/g,
+      '$$$1$$'
+    );
+
+    // Wrap chemical formulas containing subscript braces like C_{15}H_{31}COOH or C_nH_{2n}
+    textChunk = textChunk.replace(
+      /(?<![\$\\\w])([A-Z][a-zA-Z0-9]*_\{[0-9a-zA-Z\+\-]+\}[A-Za-z0-9_\{\}\(\)]*)(?![\$\w])/g,
       '$$$1$$'
     );
 
@@ -292,8 +315,8 @@ function renderInlineContent(text, keyPrefix = '') {
   if (!text) return null;
   if (typeof text !== 'string') return text;
 
-  // Split by explicit math delimiters
-  const mathRegex = /(\$\$[\s\S]*?\$\$|\$[^\$]+?\$|\\\[[\s\S]*?\\\]|\\\([\s\S]*?\\\))/g;
+  // Split by explicit math delimiters (inline math $[^$\r\n]+?$ never spans across newlines)
+  const mathRegex = /(\$\$[\s\S]*?\$\$|\$[^\$\r\n]+?\$|\\\[[\s\S]*?\\\]|\\\([\s\S]*?\\\))/g;
   const parts = text.split(mathRegex);
 
   return parts.map((part, idx) => {
@@ -315,6 +338,10 @@ function renderInlineContent(text, keyPrefix = '') {
     // Inline math $...$
     if (part.startsWith('$') && part.endsWith('$')) {
       const math = part.slice(1, -1).trim();
+      // Nếu chứa tiếng Việt có dấu mà không nằm trong \text{}, hiển thị thành văn bản thuần
+      if (/[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(math) && !math.includes('\\text{')) {
+        return <span key={partKey} className="mx-0.5">{math}</span>;
+      }
       return (
         <span
           key={partKey}
