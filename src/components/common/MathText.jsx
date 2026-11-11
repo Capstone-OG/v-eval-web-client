@@ -18,6 +18,18 @@ export function renderKatexHtml(latex, displayMode = false) {
       .trim();
     if (!clean) return '';
 
+    // Strip unescaped $ inside math mode to prevent syntax errors
+    clean = clean.replace(/(?<!\\)\$/g, '');
+
+    // Balance braces { and } to prevent KaTeX parse errors
+    let openB = 0;
+    for (let i = 0; i < clean.length; i++) {
+      if (clean[i] === '{' && (i === 0 || clean[i - 1] !== '\\')) openB++;
+      else if (clean[i] === '}' && (i === 0 || clean[i - 1] !== '\\')) openB--;
+    }
+    while (openB > 0) { clean += '}'; openB--; }
+    while (openB < 0) { clean = '{' + clean; openB++; }
+
     const html = katex.renderToString(clean, {
       displayMode,
       throwOnError: false,
@@ -157,36 +169,43 @@ export function normalizeMathString(text) {
 
   // Sửa các dòng có dấu $ lẻ ở cuối dòng (như 'A. HCOOC_2H_5$' -> 'A. $HCOOC_2H_5$')
   str = str.replace(/^([A-D][\.\:\)]\s*)([^\$\r\n]+)\$$/gm, '$1$$$2$$');
-
-  // Sửa các token cô lập kết thúc bằng $ (như C_4H_6O_2$)
-  str = str.replace(/(?<![\$\w])([A-Z][a-zA-Z0-9_+-]+)\$/g, '$$$1$$');
   str = str.replace(/\$\s*\.\s*\$/g, '.');
 
-  // Cân bằng dấu $ đơn lẻ bị cô lập trên từng dòng
+  // Xử lý các phương trình hóa học và công thức toán đứng riêng dòng (Xử lý theo từng dòng, KHÔNG ghép qua dòng mới)
   str = str.split('\n').map(line => {
-    let dMatches = (line.match(/(?<!\\)\$/g) || []).length;
-    if (dMatches % 2 !== 0) {
-      line = line.replace(/(?<![\$\w])\$([A-Za-z0-9_+\-^\\\{\}\x27]+)(?=[\s\.,;\*\)]|$)/g, '$$$1$$');
-      let left = (line.match(/(?<!\\)\$/g) || []).length;
-      if (left % 2 !== 0) {
-        if (line.trimEnd().endsWith('$')) return line.slice(0, line.lastIndexOf('$'));
-        return line.replace(/\$/, '');
+    let trimmed = line.trim();
+    if (!trimmed.includes('$')) {
+      // 1. Phương trình phản ứng hóa học (có mũi tên phản ứng và không chứa từ tiếng Việt)
+      if (/\\(?:rightleftharpoons|xrightarrow|longrightarrow|rightarrow|leftrightharpoons|leftrightarrow)\b/.test(trimmed) &&
+          !/[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(trimmed)) {
+        return '$$' + trimmed + '$$';
+      }
+      // 2. Công thức toán/hóa chứa dấu = và \frac hoặc \sqrt (không chứa từ tiếng Việt)
+      if (trimmed.includes('=') && /\\(?:frac|sqrt|lim|sum|prod|int)\b/.test(trimmed) &&
+          !/[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(trimmed)) {
+        return '$$' + trimmed + '$$';
       }
     }
     return line;
   }).join('\n');
 
-  // Bọc các phương trình phản ứng hóa học (có mũi tên thuận nghịch hoặc một chiều) vào $...$ nếu chưa có
-  const arrowRegex = /(?<!\$)(?:^|(?<=[\r\n\s]))([A-Za-z0-9_\x27\^\+\(\)\s]+(?:\{[^{}]*\})?[\s]*\\(?:rightleftharpoons|xrightarrow|longrightarrow|rightarrow|leftrightharpoons|leftrightarrow)(?:\{[^{}]*\})?[\s]*[A-Za-z0-9_\x27\^\+\(\)\s]+(?:\{[^{}]*\})?)(?!\$)/gm;
-  str = str.replace(arrowRegex, (m) => '$' + m.trim() + '$');
-
-  // Bọc các công thức tính toán toán học/hóa học chứa \frac, \sqrt vào $...$ nếu chưa bọc
-  const fullEquationRegex = /(?<!\$)(?:^|(?<=[\s:;]))([a-zA-Z0-9\\%_\^\+\-\*\/= \t\(\)]*\\(?:frac|sqrt|lim|int|sum|prod)\b[^\$\r\n]+)(?!\$)/gm;
-  str = str.replace(fullEquationRegex, (m) => '$' + m.trim() + '$');
-
-  // Bọc các bước tính toán hóa học nhiều bước chứa \text{n} hoặc \text{m} và có dấu =
-  const calcStepRegex = /(?<!\$)(?:^|(?<=[\r\n]))(\\text\{[nm]\}_[^\$\r\n]+=[^\$\r\n]+)(?!\$)/gm;
-  str = str.replace(calcStepRegex, (m) => '$' + m.trim() + '$');
+  // Cân bằng dấu $ đơn lẻ bị cô lập trên từng dòng
+  str = str.split('\n').map(line => {
+    let dMatches = (line.match(/(?<!\\)\$/g) || []).length;
+    if (dMatches % 2 !== 0) {
+      if (line.trimEnd().endsWith('$')) {
+        let lastIdx = line.lastIndexOf('$');
+        line = line.slice(0, lastIdx) + line.slice(lastIdx + 1);
+      } else {
+        line = line.replace(/(?<![\$\w])\$([A-Za-z0-9_+\-^\\\{\}\x27]+)(?=[\s\.,;\*\)]|$)/g, '$$$1$$');
+        let left = (line.match(/(?<!\\)\$/g) || []).length;
+        if (left % 2 !== 0) {
+          line = line.replace(/\$/, '');
+        }
+      }
+    }
+    return line;
+  }).join('\n');
 
   // Recover LaTeX commands that may have lost their backslash from past tab-replacement or JSON parsing
   str = str.replace(/(?<!\\)\bext\{/g, '\\text{');
@@ -221,6 +240,14 @@ export function normalizeMathString(text) {
       (trimmedPart.startsWith('[MATH_GEOMETRY_2D]') && trimmedPart.endsWith('[/MATH_GEOMETRY_2D]')) ||
       (trimmedPart.startsWith('[GRAPH:') && trimmedPart.endsWith(']'))
     ) {
+      // Phục hồi an toàn nếu văn bản tiếng Việt bị nuốt nhầm vào trong $...$
+      if (part.startsWith('$') && part.endsWith('$') && !part.startsWith('$$')) {
+        const inner = part.slice(1, -1);
+        if (/[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(inner) && !inner.includes('\\text{')) {
+          // Bóc trả lại văn bản gốc để hiển thị tự nhiên
+          return inner;
+        }
+      }
       return part;
     }
 

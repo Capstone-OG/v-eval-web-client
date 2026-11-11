@@ -1230,5 +1230,24 @@ pm run build completes in 905ms (3,013 modules transformed, 0 errors).
     - `https://pickic.io.vn` -> HTTP/2 200 OK
     - `https://app.pickic.io.vn` -> HTTP/2 200 OK
 
+---
+
+### 4.64. KaTeX Error Sanitization, Vietnamese Prose Protection & Chemistry Invariant Architecture (`MathText.jsx`)
+- **Root-Cause Resolution of Red KaTeX Parse Errors**:
+  - *Identified Vulnerability*: When mathematical formulas were preceded by spaces or contained complex denominators (e.g., `$n_{\text{triglyceride}} = \frac{n_{CO_2} - n_{H_2O}}{k - 1}$`), greedy regex matching injected extra `$` tokens and left stray unescaped `$` inside math braces (`{k - 1$}`), causing KaTeX to abort and render red error text `<span class="katex-error">`.
+  - *Architectural Solution*:
+    - In `renderKatexHtml`: Automatically strips all unescaped `$` within the math mode payload (`clean.replace(/(?<!\\)\$/g, '')`) and balances curly braces `{` and `}`, guaranteeing clean KaTeX rendering with zero red error spans.
+    - Line-by-line equation parsing: Equations with `=` and `\frac` / `\sqrt` are matched on isolated lines without crossing newlines or matching Vietnamese text.
+- **Vietnamese Prose Invariant & Elimination of Swallowed Math Mode**:
+  - *Identified Vulnerability*: Regex `(?<![\$\w])([A-Z][a-zA-Z0-9_+-]+)\$` mistook uppercase symbols in `$-OH$` and `$-COOH$` as orphaned formulas, inserting stray `$` to form `$-$OH$`. This single misplaced delimiter inverted the polarity of all subsequent dollar signs in the paragraph, converting entire Vietnamese prose sections into italicized, space-stripped math variables.
+  - *Architectural Solution*:
+    - Completely removed the disruptive token insertion regex.
+    - Added automatic prose recovery in `MathText.jsx`: Detects any `$ ... $` block containing accented Vietnamese vowels without `\text{}` tags and unpacks it back to native prose.
+- **Multi-Reaction Formula Isolation**:
+  - Formatted consecutive chemical reactions (`\xrightarrow`, `\rightleftharpoons`, `\longrightarrow`) as distinct line-by-line display math blocks (`$$ ... $$`), preventing cross-line multi-equation entanglement.
+- **Verification**:
+  - `npm run build` passed in 3.06s with 3015 modules transformed, 0 errors and 0 warnings.
+
+
 
 

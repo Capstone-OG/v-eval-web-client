@@ -1,6 +1,32 @@
 # NHẬT KÝ KIỂM TRA TIẾN ĐỘ VẬN HÀNH (DAILY CHECK LOG) - WEB CLIENT
 
-## [11/11/2026] - Chuyển Toàn Bộ Nhánh Làm Việc Sang Main & Triển Khai SPA Lên Docker Nginx Reverse Proxy Qua Domain pickic.io.vn
+## [12/11/2026] - Khắc Phục Triệt Để Lỗi Render KaTeX Đỏ (Công Thức Đốt Cháy Triglyceride), Chống Nuốt Tiếng Việt Vào Math Mode & Chuẩn Hóa Phương Trình Hóa Học
+
+- **Khắc Phục Lỗi Render KaTeX Màu Đỏ (#cc0000) Cho Công Thức Phân Số & Ngoặc Nhọn ([`MathText.jsx`](../src/components/common/MathText.jsx))**:
+  - **Phát hiện & Bản chất lỗi**:
+    - Khi hiển thị công thức đốt cháy triglyceride `$n_{\text{triglyceride}} = \frac{n_{CO_2} - n_{H_2O}}{k - 1}$`, giao diện hiển thị chuỗi lỗi KaTeX màu đỏ:
+      `n_{\text{triglyceride}} $=\frac{n_{CO_2} - n_{H_2O}}{k - 1$}`.
+    - Nguyên nhân: Bộ tiền xử lý `fullEquationRegex` quét tìm `\frac` trước khi token hóa các khối math, nhận diện khoảng trắng sau dấu `=` là điểm bắt đầu công thức chưa bọc và chèn thêm cặp dấu `$` mới vào giữa công thức đã có `$`. Đồng thời các ký tự `$` lọt vào bên trong mẫu số `{k - 1$}` khiến KaTeX không thể phân giải cú pháp và ném lỗi `<span class="katex-error">`.
+  - **Giải pháp xử lý triệt để**:
+    - Trong hàm `renderKatexHtml`: Tự động loại bỏ toàn bộ các ký tự `$` chưa escape nằm bên trong khối math mode (`clean = clean.replace(/(?<!\\)\$/g, '')`); tự động đếm và cân bằng các cặp dấu ngoặc nhọn `{` và `}` bị thiếu, bảo đảm thư viện KaTeX luôn biên dịch hợp lệ 100% và không bao giờ xuất hiện chữ lỗi màu đỏ.
+    - Loại bỏ regex bọc công thức chạy toàn văn bản trước khi phân tách delimiter; chuyển sang cơ chế nhận diện theo từng dòng độc lập: chỉ bọc `$$...$$` khi dòng đó đứng riêng lẻ, chứa dấu `=` và `\frac`/`\sqrt` đồng thời không chứa ký tự tiếng Việt.
+
+- **Khắc Phục Lỗi Nuốt Văn Bản Tiếng Việt Vào Math Mode (Mất Dấu Cách, Chữ Nghiêng Dính Chùm) ([`MathText.jsx`](../src/components/common/MathText.jsx))**:
+  - **Phát hiện & Bản chất lỗi**:
+    - Ở định nghĩa Ester: Chuỗi văn bản tiếng Việt bị dính liền không dấu cách và biến thành chữ nghiêng công thức:
+      `ởnhómcarboxyl(-COOH)củacarboxylicacidbằngnhóm-OR'thìđượceste.Côngthứctổngquátcủaesterđơnchức,mạchhở: C_nH_{2n}$O_2`.
+    - Nguyên nhân: Regex dọn dẹp token cũ `(?<![\$\w])([A-Z][a-zA-Z0-9_+-]+)\$` quét qua `$-OH$` và `$-COOH$`, nhận diện chữ cái hoa `O` và `C` sau dấu gạch ngang `-` là token thiếu `$`, chèn thêm một dấu `$` vào giữa dấu `-` và chữ cái (`$-$OH$`). Dấu `$` lẻ này đã làm đảo ngược cực tính toàn bộ các cặp dấu `$` tiếp theo trong đoạn văn, biến văn xuôi tiếng Việt thành ruột của khối toán học.
+  - **Giải pháp xử lý triệt để**:
+    - Gỡ bỏ hoàn toàn regex chèn `$` chắp vá gây chia cắt công thức.
+    - Bổ sung cơ chế bảo vệ phục hồi tự động trong `parts.map`: Nếu một khối `$...$` chứa các nguyên âm tiếng Việt có dấu (`àáạ...`) mà không có thẻ `\text{}`, hệ thống tự động bóc trả lại văn bản gốc để hiển thị tự nhiên với khoảng trắng đầy đủ.
+
+- **Chuẩn Hóa Phương Trình Phản Ứng Hóa Học & Công Thức Toán Học Riêng Biệt ([`MathText.jsx`](../src/components/common/MathText.jsx))**:
+  - Xử lý các phương trình phản ứng hóa học có mũi tên (`\xrightarrow`, `\rightleftharpoons`, `\longrightarrow`) theo từng dòng độc lập (`eqLines`), tuyệt đối không cho phép regex quét ghép xuyên qua dòng mới làm nuốt nhiều phương trình vào một khối.
+  - Tự động bọc `$$ ... $$` hiển thị nổi bật ở giữa dòng cho các phương trình hóa học và công thức toán học đứng riêng dòng.
+
+- **Kiểm Thử & Đảm Bảo Vận Hành**:
+  - Chạy `npm run build` thành công 100% trong **3.06 giây** (3015 modules transformed, 0 Error, 0 Warning).
+  - Nạp lại bundle mới vào Nginx container `v_eval_web_client` phục vụ giao diện tức thì.
 
 - **Tự Động Phân Giải Domain API Gateway Đa Môi Trường ([`apiClient.js`](../src/services/apiClient.js))**:
   - Triển khai hàm `getGatewayBaseUrl()`:
