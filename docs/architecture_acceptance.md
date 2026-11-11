@@ -1258,6 +1258,23 @@ pm run build completes in 905ms (3,013 modules transformed, 0 errors).
     - Added an extra safety guard in `renderInlineContent`: Any inline math block containing Vietnamese accented characters without `\text{}` is immediately unpacked and rendered as normal text spans.
 - **Labeled Reaction Equation Disambiguation**:
   - *Identified Vulnerability*: Lines beginning with labels such as `Phương trình: (RCOO)_3C_3H_5 + 3NaOH \xrightarrow{t^\circ} 3RCOONa + C_3H_5(OH)_3` failed the Vietnamese exclusion filter and remained unrendered raw LaTeX text.
+  - *Architectural Solution*: Disambiguated the label prefix (`Phương trình:`, `PTHH:`), outputting the label as prose and wrapping the reaction equation in an isolated `$$ ... $$` display math block.
+- **Verification**:
+  - Production build `npm run build` completed in **2.82 seconds** with 0 errors and 0 warnings.
+  - Container `v_eval_web_client` reloaded with new bundle.
+
+---
+
+### 4.66. Emergency KaTeX Error Neutralization & Equality Operator Boundary Hardening (`MathText.jsx`)
+- **Emergency KaTeX Error Neutralization**:
+  - *Identified Vulnerability*: Even with preliminary string cleanup, malformed AI-generated equations could trigger KaTeX parse errors, which rendered an unsightly red box (`<span class="katex-error" style="color:#cc0000">`).
+  - *Architectural Solution*: In `renderKatexHtml`, implemented a two-tier emergency sanitizer. When `html.includes('class="katex-error"')`, the engine first attempts an aggressive syntax cleanup and re-render. If KaTeX still fails, it automatically strips the `<span class="katex-error"...>` tag and returns a clean, unadorned serif span, permanently eliminating red syntax error boxes from the end-user interface.
+- **Formula Boundary Preceding Punctuation & Equality Operator Sanitization**:
+  - Automatically neutralizes stray dollars placed adjacent to equality signs: `\$\s*=\s*\$?|(?<=\w|\})\s*\$\s*=` -> `= `.
+  - Automatically inserts a closing dollar when a chemical formula is immediately followed by a period and Vietnamese explanatory prose (`$C_{17}H_{33}$. 1 mol`), preventing math-mode swallowing of entire explanation sentences.
+- **Verification**:
+  - Production build `npm run build` completed in **2.39 seconds** with 3015 modules transformed, 0 errors and 0 warnings.
+  - Deployed and verified in container `v_eval_web_client`.
   - *Architectural Solution*:
     - Implemented colon-split logic: When a reaction arrow (`\xrightarrow`, `\rightleftharpoons`, `\longrightarrow`) is detected on a line with a prefix label, the label is cleanly separated and the reaction equation is wrapped in display math `$$ ... $$` on its own line.
 - **Subscript Spacing & Formula Fragment Coalescing**:

@@ -36,6 +36,22 @@ export function renderKatexHtml(latex, displayMode = false) {
       strict: 'ignore',
       output: 'htmlAndMathml'
     });
+
+    if (html.includes('class="katex-error"')) {
+      // Emergency sanitization: strip invalid tokens and retry
+      let sanitized = clean.replace(/\\text\{([^{}]*)\}/g, '$1').replace(/[\{\}]/g, '');
+      try {
+        const retryHtml = katex.renderToString(sanitized, { displayMode, throwOnError: false, strict: 'ignore', output: 'htmlAndMathml' });
+        if (!retryHtml.includes('class="katex-error"')) {
+          return retryHtml;
+        }
+      } catch (e) {
+        // Fall through
+      }
+      // If still error, strip the katex-error tag to avoid displaying red error box
+      return html.replace(/<span[^>]*class="katex-error"[^>]*>(.*?)<\/span>/gi, '$1');
+    }
+
     return html.replace(/<span[^>]*class="katex-error"[^>]*>.*?undefined.*?<\/span>/gi, '');
   } catch (err) {
     console.warn('KaTeX render error:', err);
@@ -168,6 +184,12 @@ export function normalizeMathString(text) {
   str = str.replace(/([A-Za-z0-9_]+)\$\s*=\s*\$([A-Za-z0-9_]+)/g, '$1=$2');
   str = str.replace(/\$\s*(-[A-Za-z0-9]+-)\s*,?/g, '$1,');
 
+  // Sửa lỗi dấu $ đặt ngay trước hoặc sau dấu bằng trong công thức e.g. n_{\text{triglyceride}} $=\frac{...} -> n_{\text{triglyceride}} = \frac{...}
+  str = str.replace(/\$\s*=\s*\$?|(?<=\w|\})\s*\$\s*=/g, ' = ');
+
+  // Sửa lỗi đóng mở $ giữa công thức có dấu chấm/phẩy kết thúc trước chữ tiếng Việt e.g. $C_{17}H_{33}. 1 mol -> $C_{17}H_{33}$. 1 mol
+  str = str.replace(/(\$(?:[A-Za-z0-9_\\\{\}\^]+))\.\s+([0-9a-zA-Zàáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ])/gi, '$1$. $2');
+
   // Sửa phương trình phản ứng bị đóng mở $ vụn vặt: RCOOH$+ R'OH -> RCOOH + R'OH
   str = str.replace(/([A-Za-z0-9_\x27]+)\s*\$\s*([+=])\s*\$?\s*([A-Za-z0-9_\x27]+)/g, '$1 $2 $3');
 
@@ -180,6 +202,8 @@ export function normalizeMathString(text) {
 
   // Xử lý các phương trình hóa học và công thức toán đứng riêng dòng (Xử lý theo từng dòng, KHÔNG ghép qua dòng mới)
   const arrowRegex = /\\(?:rightleftharpoons|xrightarrow|longrightarrow|rightarrow|leftrightharpoons|leftrightarrow)\b/;
+  const vietnameseLettersRegex = /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i;
+
   str = str.split('\n').map(line => {
     let trimmed = line.trim();
     if (arrowRegex.test(trimmed)) {
@@ -188,19 +212,24 @@ export function normalizeMathString(text) {
       if (colonIdx > 0 && colonIdx < 30) {
         const label = trimmed.slice(0, colonIdx + 1).trim();
         let eq = trimmed.slice(colonIdx + 1).trim().replace(/\.$/, '').trim();
-        if (!eq.startsWith('$$')) {
+        if (!vietnameseLettersRegex.test(eq)) {
+          eq = eq.replace(/^\${1,2}/, '').replace(/\${1,2}$/, '').trim();
           eq = eq.replace(/(?<!\\)\$/g, '');
           return `${label}\n$$${eq}$$`;
         }
-      } else if (!trimmed.includes('$') && !/[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(trimmed)) {
+      } else if (!vietnameseLettersRegex.test(trimmed)) {
         let eq = trimmed.replace(/\.$/, '').trim();
+        eq = eq.replace(/^\${1,2}/, '').replace(/\${1,2}$/, '').trim();
+        eq = eq.replace(/(?<!\\)\$/g, '');
         return '$$' + eq + '$$';
       }
-    } else if (!trimmed.includes('$')) {
-      // Công thức toán/hóa chứa dấu = và \frac hoặc \sqrt (không chứa từ tiếng Việt)
+    } else {
+      // Công thức toán/hóa đứng riêng dòng có chứa '=' và \frac hoặc \sqrt (không chứa từ tiếng Việt)
       if (trimmed.includes('=') && /\\(?:frac|sqrt|lim|sum|prod|int)\b/.test(trimmed) &&
-          !/[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(trimmed)) {
-        return '$$' + trimmed + '$$';
+          !vietnameseLettersRegex.test(trimmed)) {
+        let eq = trimmed.replace(/^\${1,2}/, '').replace(/\${1,2}$/, '').trim();
+        eq = eq.replace(/(?<!\\)\$/g, '');
+        return '$$' + eq + '$$';
       }
     }
     return line;

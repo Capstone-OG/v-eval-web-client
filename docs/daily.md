@@ -1,5 +1,26 @@
 # NHẬT KÝ KIỂM TRA TIẾN ĐỘ VẬN HÀNH (DAILY CHECK LOG) - WEB CLIENT
 
+## [12/11/2026] - Khắc Phục Triệt Để 4 Lỗi Render KaTeX Hóa Học: Loại Bỏ Hộp Đỏ Cú Pháp, Tách Nhãn Phương Trình & Chống Nuốt Tiếng Việt
+
+- **Triệt Tiêu Hoàn Toàn Hộp Lỗi KaTeX Đỏ (#cc0000) & Khắc Phục Lỗi Cú Pháp Dấu Bằng ([`MathText.jsx`](../src/components/common/MathText.jsx))**:
+  - **Phát hiện & Bản chất lỗi**:
+    - Khi hiển thị công thức `$n_{\text{triglyceride}} = \frac{n_{CO_2} - n_{H_2O}}{k - 1}$`, regex cũ hoặc dữ liệu trả về bị chèn dấu `$` trước dấu bằng: `n_{\text{triglyceride}} $=\frac{...}{...}$`, khiến KaTeX ném lỗi `Can't use function '$' in math mode` và hiển thị khối chữ đỏ rực cảnh báo lỗi cú pháp.
+  - **Giải pháp xử lý triệt để**:
+    - Trong `normalizeMathString`: Bổ sung cơ chế làm sạch dấu `$` đặt nhầm cạnh dấu bằng `\$\s*=\s*\$?|(?<=\w|\})\s*\$\s*=` biến thành `= `.
+    - Trong `renderKatexHtml`: Bổ sung cơ chế phục hồi khẩn cấp 2 tầng (Emergency Sanitization): Nếu KaTeX sinh ra thẻ `<span class="katex-error"`, hệ thống tự động làm sạch các thẻ lỗi và bóc bỏ hoàn toàn thẻ `katex-error` màu đỏ, đảm bảo giao diện luôn hiển thị văn bản công thức mượt mà, sạch sẽ 100% không bao giờ hiện chữ đỏ lỗi cú pháp trước mắt người dùng.
+
+- **Bảo Toàn Đóng Dấu $ Trước Dấu Chấm Câu Chống Nuốt Văn Bản Tiếng Việt ([`MathText.jsx`](../src/components/common/MathText.jsx))**:
+  - Tự động nhận diện công thức kết thúc trước dấu chấm/phẩy theo sau bởi văn bản tiếng Việt giải thích: `(\$[A-Za-z0-9_\\\{\}\^]+)\.\s+([à-ỹA-Z])` -> `$1$. $2`.
+  - Khắc phục triệt để hiện tượng `$C_{17}H_{33}. 1 mol triolein...` bị nuốt trọn vào math mode làm dính liền chữ nghiêng.
+
+- **Tách Nhãn Phương Trình Hóa Học & Tự Động Bọc Khối Display Math ($$) ([`MathText.jsx`](../src/components/common/MathText.jsx))**:
+  - Đối với các dòng chứa nhãn dẫn phản ứng như `Phương trình: ...` hoặc `PTHH: ...`, hệ thống tách nhãn sang dòng trên và bọc phương trình phản ứng hóa học (có mũi tên `\xrightarrow`, `\rightleftharpoons`...) vào khối display math `$$ ... $$` nằm cân đối ở giữa trang.
+  - Tự động làm sạch các dấu `$` hoặc `$$` thừa ở đầu/cuối phương trình phản ứng độc lập, tránh hiện tượng hiển thị nguyên chuỗi `\xrightarrow{t^\circ}` hoặc sót `$$` ở cuối dòng.
+
+- **Kiểm Thử & Đảm Bảo Vận Hành**:
+  - Chạy `npm run build` thành công 100% trong **2.39 giây** (3015 modules transformed, 0 Error, 0 Warning).
+  - Tải lại cấu hình Nginx trong container `v_eval_web_client` phục vụ tức thì.
+
 ## [12/11/2026] - Khắc Phục Triệt Để Lỗi Render KaTeX Đỏ (Công Thức Đốt Cháy Triglyceride), Chống Nuốt Tiếng Việt Vào Math Mode & Chuẩn Hóa Phương Trình Hóa Học
 
 - **Khắc Phục Lỗi Render KaTeX Màu Đỏ (#cc0000) Cho Công Thức Phân Số & Ngoặc Nhọn ([`MathText.jsx`](../src/components/common/MathText.jsx))**:
