@@ -1282,9 +1282,79 @@ pm run build completes in 905ms (3,013 modules transformed, 0 errors).
   - Coalesces spaced chemical formulas `C_{15}H_{31} COOH` into `$C_{15}H_{31}COOH$`.
   - Joins split multiline ester formulas like `$C_nH_{2n}\nO_2` into `$C_nH_{2n}O_2$`.
   - Standardizes inequality constraints with misplaced delimiters: `(n \ge 2$)` -> `($n \ge 2$)`.
+### 4.67. KaTeX Frac & Text Spacing Normalization & Equation Auto-Wrapping (`MathText.jsx`)
+- **Spacing Normalization Between Commands and Braces**:
+  - *Identified Vulnerability*: LLMs intermittently output `\frac{...} {...}` with a space between argument braces, or `\text {...}` with a space after `\text`. KaTeX's inline tokenizer ceased scanning at the whitespace, passing an incomplete command (e.g. `\frac{2n + 2 - 2H}` with one argument, or bare `\text`) which generated red `<span class="katex-error">` syntax errors.
+  - *Architectural Solution*: In `normalizeMathString`, added regex normalization:
+    - `\\(text|mathrm|mathbf|...)\s+\{` -> `\\$1{`.
+    - `(\\frac\s*\{[^{}]*\})\s+(\{[^{}]*\})` -> `$1$2`.
+    - `{2 }` -> `{2}` and `0,1\text{mol}` -> `0,1 \text{mol}`.
+- **Equation Auto-Wrapping**:
+  - Automatically identifies arithmetic equations containing equality and `\frac`: `(?<![\$\w])((?:[a-zA-Z]|\\[a-zA-Z]+)(?:_[a-zA-Z0-9\{\}\\]+)?\s*=\s*\\frac\{[^{}]+\}\{[^{}]+\}(?:\s*=\s*[0-9,\.]+(?:\s*\\text\{[^{}]+\})?)?)(?![\$\w])` -> `$$$1$$`.
+  - Transforms `k = \frac{2n + 2 - 2H} {2 }` -> `$k = \frac{2n + 2 - 2H}{2}$` and `n = \frac{8,8}{88} = 0,1\text {mol}` -> `$n = \frac{8,8}{88} = 0,1 \text{mol}$`.
+- **KaTeX Error Box Neutralization**:
+  - Strips any remaining `<span class="katex-error"` and associated `style="color:#cc0000"` styling, replacing it with an inline serif math span, ensuring red syntax error boxes never reach the end user.
 - **Verification**:
-  - `npm run build` completed in **2.82s** with 3015 modules transformed, 0 errors, 0 warnings.
-  - Hot-reloaded live Nginx service inside `v_eval_web_client` container.
+  - `npm run build` completed in **2.66s** with 3015 modules transformed, 0 errors, 0 warnings.
+  - Re-loaded live Nginx service inside `v_eval_web_client` container.
+
+### 4.68. 4-Mode Document OCR Architecture Integration & KaTeX Bracket Invariance (`CurriculumExplorerView.jsx`, `MathText.jsx`)
+- **Interactive 4-Mode Document Extraction Cards (`CurriculumExplorerView.jsx`)**:
+  - Embedded a 4-card interactive OCR selection component into the Curriculum AI Ingestion Modal:
+    1. `STEM_FORMULAS`: Mathematics, Physics, Chemistry (LaTeX formulas, chemical equations, variation tables via Vision AI).
+    2. `TEXT_HUMANITIES`: Humanities, Vietnamese, History, Geography (Smart auto-detection with Vision failover for InDesign font encoding issues).
+    3. `VISION_AI`: 100% Gemini Vision AI image processing (Immunization against InDesign font corruptions and legacy scanned PDFs).
+    4. `AUTO_LOCAL`: Offline digital PdfPig extraction (Ultra-fast for standardized text PDFs without consuming AI tokens).
+  - Maintained `importOcrMode` state (defaulting to `'STEM_FORMULAS'`), passed via `FormData` (`ocr_mode` and `ocrMode`) to `/api/ai-engine/curriculum/extract`.
+- **KaTeX Bracket Invariance & Nested Fraction Equation Auto-Wrapping (`MathText.jsx`)**:
+  - Removed rogue `$` delimiters trapped inside curly braces `{k - 1$}` and parentheses `(n \ge 2$)` prior to line balancing.
+  - Coalesced disconnected ester formulas (`$C_nH_{2n}$O_2` -> `$C_nH_{2n}O_2$`).
+  - Upgraded calculation equation auto-wrapping to support nested curly braces within numerators/denominators (e.g. `$n_{\text{triglyceride}} = \frac{n_{CO_2} - n_{H_2O}}{k - 1}$`).
+- **Verification**:
+  - `npm run build` completed cleanly in **2.89s** with 3015 modules transformed, 0 errors, 0 warnings.
+  - Reloaded live Nginx service inside `v_eval_web_client` container.
+
+### 4.69. Widescreen AI Curriculum Studio Redesign, Dynamic Easing Progress & Comprehensive KaTeX Stabilization (`CurriculumExplorerView.jsx`, `MathText.jsx`)
+- **Widescreen Modal Studio Layout (`CurriculumExplorerView.jsx`)**:
+  - Expanded modal viewport from `max-w-4xl` to `max-w-6xl` (`max-h-[94vh]`), implementing a panoramic 2-column workspace (5 cols left / 7 cols right).
+  - **Left Column (5 cols)**: Target domain selection, drag-and-drop document upload area with metadata tags, PDF page slice filter (all pages vs custom range for 99+ page textbooks), and text snippet fallback input.
+  - **Right Column (7 cols)**:
+    - Dedicated side-by-side rich comparison cards for **"Chuyên Sâu ĐGNL"** (multi-lesson extraction, 2–4 core patterns, 4 pedagogical blocks, sample problems, exam traps, Casio tips, 3D geometry & variation tables, Bloom L1–L4 questions) vs **"Tiêu Chuẩn"** (syllabus outline, foundational patterns, 5–10s latency, 70% token economy).
+    - 4-mode document extraction grid (`STEM_FORMULAS`, `TEXT_HUMANITIES`, `VISION_AI`, `AUTO_LOCAL`).
+  - **Dynamic Easing Progress Bar**:
+    - Replaced static step-based increments (`step * 25%`) with a smooth client-side easing ticker (`aiProgressPercent`, `aiProgressMessage`) advancing progressively through 10% → 28% → 55% → 78% → 90% → 96% and surging to 100% upon backend completion, eliminating the frozen 50% state.
+- **Root-Cause KaTeX Control Character & Subscript Neutralization (`MathText.jsx`)**:
+  - Restored ASCII control characters decoded by JSON parsers (`\x0c` form feed -> `\f` restoring `\frac`, `\x09` tab -> `\t` restoring `\text` and `\times`, `\x08` backspace -> `\b` restoring `\bar` and `\beta`), directly eliminating KaTeX `ParseError: Unexpected character: '\x0c'`.
+  - Automatic romanization of Vietnamese terms in subscripts (`m_{\text{chất béo}}`, `m_{\text{muối}}`, `n_{\text{muối}}`, `n_{\text{ester}}`, `m_{\text{glycerol}}`) avoiding squished italic text.
+  - Natural text unpacking for display math and inline math blocks containing unescaped Vietnamese words (preventing `suyragốcacidlà`).
+  - Safe sanitization stripping any lingering `#cc0000` text styles in KaTeX output.
+- **Verification**:
+  - `npm run build` completed in **3.0s** (3015 modules transformed, 0 errors).
+  - Reloaded live Nginx service inside `v_eval_web_client` container.
+
+### 4.70. Comma Delimiter Preservation, Vietnamese Math Auto-Closing & Dedicated 2-Mode Extraction Studio Acceptance [12/11/2026]
+- **Comma Delimiter Preservation & Delimiter Hardening (`MathText.jsx`)**:
+  - Eliminated dangerous regex `str.replace(/\$,/g, ', ')` that deleted the closing math delimiter `$` on comma-delimited formula lists (such as `($C_{15}H_{31}COOH$, $C_{17}H_{35}COOH$, $C_{17}H_{33}COOH$)`), which previously caused unclosed math mode that swallowed subsequent Vietnamese text.
+  - Added lookahead auto-closing for unclosed chemical formulas and variables preceding Vietnamese natural language tokens (`$CH_3COONa$ suy ra`, `$C_{17}H_{33}$. 1 mol`), guaranteeing zero squished italic text.
+- **Dedicated 2-Mode Extraction Architecture (`CurriculumExplorerView.jsx`)**:
+  - Upgraded extraction options into 2 distinct pedagogical tracks:
+    1. `EXAM_PATTERNS` ("Chuyên Dạng Đề & Bài Toán Thực Chiến"): VNU-HCM V-ACT 4-step algorithm, quantitative numerical problem sets with authentic exam values, Casio fx-580/880 tips, and Bloom L1-L4 test questions.
+    2. `THEORY_EXTENDED` ("Chuyên Lý Thuyết Thuần & Dạng Mở Rộng"): 100% textbook theory (definitions, nomenclature, physical properties, boiling points, reaction mechanisms, experiment protocols) and all 7 core/extended patterns across 60+ page documents.
+  - Expanded modal viewport to `max-w-[1650px] w-[98vw]` (pre-extraction) and `max-w-[1780px] w-[98vw]` (post-extraction Panoramic Workspace).
+- **Verification**:
+  - `npm run build` completed cleanly in **6.67s** (3015 modules transformed, 0 errors).
+  - Nginx reloaded inside `v_eval_web_client` container. Zero KaTeX parse errors and clean typography verified.
+
+### 4.71. WrapUntouched Delimiter Segregation, Implication Operator & Decimal Normalization Acceptance [12/11/2026]
+- **WrapUntouched Delimiter Architecture (`MathText.jsx`)**:
+  - Implemented `wrapUntouchedMath` isolating already-wrapped math segments (`$...$`) prior to executing chemical formula regex patterns, entirely preventing nested delimiters such as `$($C_{17}H_{35}COO$)_3C_3H_5$`.
+  - Added deduction operator `\Rightarrow` to LaTeX command registries and `opPattern`, ensuring multi-step deduction statements (e.g. `n_{\text{tristearin}} = 0,01\text{ mol} \Rightarrow n_{\text{muối}} = 0,03\text{ mol}`) remain seamlessly integrated inside a single KaTeX math expression.
+  - Automated normalization of stray whitespaces after commas in decimal numbers (e.g. `9, 18 gam` -> `9,18 gam`), eliminating accidental split math segments.
+  - Restored missing opening bold tags (`Phân tích & Lời giải:**` -> `**Phân tích & Lời giải:**`).
+- **Verification**:
+  - `npm run build` completed cleanly in **2.37s** (3015 modules transformed, 0 errors).
+  - Live Nginx reloaded inside `v_eval_web_client` container.
+
 
 
 

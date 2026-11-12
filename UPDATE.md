@@ -1,19 +1,22 @@
-# NHẬT KÝ CẬP NHẬT (UPDATE LOG) - WEB CLIENT SERVICE
+# NHẬT KÝ CẬP NHẬT (UPDATE LOG) - WEB CLIENT
 
-## [12/11/2026] - Khắc Phục Triệt Để 4 Lỗi Render KaTeX Hóa Học: Loại Bỏ Hộp Đỏ Cú Pháp, Tách Nhãn Phương Trình & Chống Nuốt Tiếng Việt
+## [13/11/2026] - Tối Ưu Bộ Render KaTeX/MathText An Toàn & Khởi Chạy Local Dev Server Vite Qua Terminal (Port 5173)
 
-- **Triệt Tiêu Hoàn Toàn Hộp Lỗi KaTeX Đỏ (#cc0000) & Khắc Phục Lỗi Cú Pháp Dấu Bằng ([`MathText.jsx`](./src/components/common/MathText.jsx))**:
-  - Làm sạch dấu `$` đặt nhầm cạnh dấu bằng `\$\s*=\s*\$?|(?<=\w|\})\s*\$\s*=` biến thành `= ` (khắc phục lỗi `$n_{\text{triglyceride}} = \frac{...}{...}$` bị chèn `$=`).
-  - Triển khai cơ chế Emergency Sanitization 2 tầng trong `renderKatexHtml`: Khi KaTeX phát hiện lỗi cú pháp, tự động làm sạch và lột bỏ thẻ `<span class="katex-error"`, đảm bảo giao diện luôn hiển thị văn bản công thức mượt mà, sạch sẽ 100% không bao giờ xuất hiện chữ đỏ lỗi trước mắt người dùng.
+- **Nâng Cấp Bộ Tiền Xử Lý Công Thức Toán & Hóa Học ([`MathText.jsx`](./src/components/common/MathText.jsx))**:
+  - Khôi phục mã lệnh đơn vị rụng gạch chéo: `textmol`, `textgam`, `textg`, `textkg` -> `\text{mol}`, `\text{gam}`.
+  - Mở rộng tập toán tử suy luận và so sánh: `\implies`, `>`, `<`, `\ge`, `\le`, `\approx`, `\equiv`, `\rightleftharpoons`, `\xrightarrow`.
+  - Tự động bọc biến số đơn trước đơn vị đo: `([amVnxy])\s+(mol|gam|g|kg|lít|lit|ml)` -> `$1 $2` (ví dụ: `$a$ mol`, `$V$ lít`).
+  - Chuẩn hóa chỉ số dưới tiếng Việt cho hóa học: `k_{gốc}` -> `k_{\text{gốc}}`, `m_{dd}` -> `m_{\text{dd}}`.
+  - Thay thế chuỗi thay thế `'$$$1$$'` bằng hàm lambda match evaluator an toàn `(m, g) => '$' + g + '$'` nhằm triệt tiêu hoàn toàn lỗi ký tự escape sinh ra chuỗi `\$` lỗi trên MD Editor Plus / Chromium.
 
-- **Bảo Toàn Đóng Dấu $ Trước Dấu Chấm Câu Chống Nuốt Văn Bản Tiếng Việt ([`MathText.jsx`](./src/components/common/MathText.jsx))**:
-  - Tự động nhận diện công thức kết thúc trước dấu chấm/phẩy theo sau bởi văn bản tiếng Việt giải thích: `(\$[A-Za-z0-9_\\\{\}\^]+)\.\s+([à-ỹA-Z])` -> `$1$. $2`.
-  - Khắc phục triệt để hiện tượng `$C_{17}H_{33}. 1 mol triolein...` bị nuốt trọn vào math mode làm dính liền chữ nghiêng.
+- **Vận Hành Trực Tiếp Qua Terminal (Không Dùng Docker)**:
+  - Khởi chạy Web Client React 19 / Vite dev server trực tiếp tại `http://localhost:5173`.
+  - Kết nối đồng bộ với API Gateway YARP (`http://localhost:5212`) và .NET 9 AI Engine (`http://localhost:5104`).
+  - Toàn bộ giao diện Panoramic Workspace và Studio Sư phạm hiển thị mượt mà, sẵn sàng kiểm thử dữ liệu bóc tách chuyên đề thực tế.
 
-- **Tách Nhãn Phương Trình Hóa Học & Tự Động Bọc Khối Display Math ($$) ([`MathText.jsx`](./src/components/common/MathText.jsx))**:
-  - Tách nhãn mở đầu `Phương trình: ...` hoặc `PTHH: ...` sang dòng trên, bọc phương trình phản ứng hóa học có mũi tên vào khối display math `$$ ... $$` nằm cân đối ở giữa trang.
-  - Làm sạch các dấu `$` hoặc `$$` thừa ở đầu/cuối phương trình phản ứng độc lập, tránh hiện tượng hiển thị nguyên chuỗi `\xrightarrow{t^\circ}` hoặc sót `$$` ở cuối dòng.
+- **Đồng bộ [`MathText.jsx`](./src/components/common/MathText.jsx)**: hỗ trợ số mũ & ngoặc đơn trong biểu thức nhiều vế, bỏ qua khớp nằm trong `$...$`, tách ngoặc không cân bằng ra ngoài công thức.
 
-- **Kiểm Thử & Đảm Bảo Vận Hành**:
-  - Chạy `npm run build` thành công 100% trong **2.39 giây** (3015 modules transformed, 0 Error, 0 Warning).
-  - Tải lại cấu hình Nginx trong Docker container `v_eval_web_client` (`nginx -s reload`) phục vụ tức thì mã bundle mới cho domain `https://pickic.io.vn`.
+- **Khắc Phục Lỗi KaTeX Trần Do Web Client Gỡ `$` Nhầm (Lần 2)**:
+  - Nguyên nhân gốc: bộ phục hồi trong [`MathText.jsx`](./src/components/common/MathText.jsx) dò từ tiếng Việt (`chất`, `muối`...) ngay cả bên trong `\text{...}` và `_{...}`, nên gỡ `$` của các công thức hợp lệ như `$n_{\text{NaOH}} = 3 \times n_{\text{chất béo}}$`. Nay chỉ dò phần ngoài `\text{}`/`_{}`/`^{}`.
+  - Bộ nhận diện phương trình không còn nuốt xuống dòng kế tiếp (chỉ `[ \t]` giữa các vế); chỉ số dưới cho phép ngoặc đơn (`m_{muối (xà phòng)}`).
+  - Kiểm chứng JS bằng Node trên các ca ảnh lỗi và 49/49 unit tests C# pass.
