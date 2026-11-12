@@ -1205,16 +1205,19 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
 
   if (loadingCurriculum) {
     return (
-      <div className="py-24 text-center space-y-4 animate-fade bg-white rounded-3xl border border-slate-200/80 p-8 shadow-sm">
-        <div className="w-14 h-14 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto shadow-inner">
-          <RefreshCw className="w-7 h-7 animate-spin" />
+      <div className="w-full min-w-0 max-w-full space-y-6 pb-12" role="status" aria-label="Đang tải lộ trình học tập">
+        <div className="min-h-52 space-y-5 rounded-2xl border border-slate-200 bg-white p-6">
+          <p className="flex items-center gap-2 text-sm font-semibold text-blue-600"><RefreshCw className="h-4 w-4 animate-spin" />Đang tải lộ trình học tập…</p>
+          <div aria-hidden="true" className="space-y-3 animate-pulse">
+            <div className="h-6 w-2/3 rounded-lg bg-slate-100" /><div className="h-4 w-1/2 rounded bg-slate-100" />
+            <div className="grid grid-cols-2 gap-3 pt-4 lg:grid-cols-5">{[1,2,3,4,5].map((item) => <div key={item} className="h-14 rounded-xl bg-slate-100" />)}</div>
+          </div>
         </div>
-        <h3 className="text-base font-extrabold text-slate-800">
-          Đang Nạp Cây Tri Thức 3 Tầng Từ Database...
-        </h3>
-        <p className="text-xs text-slate-500 max-w-lg mx-auto leading-relaxed">
-          Đang truy vấn API <code className="bg-slate-100 text-blue-600 px-1.5 py-0.5 rounded font-mono font-bold text-[11px]">GET /api/content/curriculum</code> để tải toàn bộ cấu trúc: <strong className="text-slate-700">Môn học → Chương → Bài học → Dạng bài</strong> cùng 4 khối sư phạm từ cơ sở dữ liệu PostgreSQL.
-        </p>
+        <div aria-hidden="true" className="h-28 rounded-3xl bg-amber-50" />
+        <div aria-hidden="true" className="grid min-h-96 grid-cols-1 gap-6 lg:grid-cols-12">
+          <div className="rounded-2xl border border-slate-200 bg-white lg:col-span-5" />
+          <div className="rounded-2xl border border-slate-200 bg-white lg:col-span-7" />
+        </div>
       </div>
     );
   }
@@ -1285,12 +1288,12 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
   }
 
   return (
-    <div className="space-y-6 animate-fade pb-12">
+    <div className="@container w-full min-w-0 max-w-full space-y-6 pb-12">
       
       {/* 1. HERO BANNER: LỘ TRÌNH PHỔ THÔNG PHÂN CẤP (CLEAN LIGHT THEME) */}
-      <div className="relative overflow-hidden rounded-2xl bg-white border border-slate-200/80 shadow-xs p-5 lg:p-6 transition-all">
-        <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
-          <div className="space-y-2 max-w-3xl">
+      <div className="relative min-w-0 overflow-hidden rounded-2xl bg-white border border-slate-200/80 shadow-xs p-5 lg:p-6">
+        <div className="relative z-10 flex flex-col @[70rem]:flex-row items-start @[70rem]:items-center justify-between gap-4">
+          <div className="min-w-0 flex-1 space-y-2 max-w-3xl">
             <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-indigo-50 border border-indigo-200/70 text-indigo-700 text-[11px] font-bold tracking-wide">
               <Sparkles className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
               <span>LỘ TRÌNH HỌC PHỔ THÔNG PHÂN CẤP: CHƯƠNG → BÀI → DẠNG BÀI</span>
@@ -1309,7 +1312,7 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
             </p>
           </div>
 
-          <div className="flex items-center gap-2.5 shrink-0 self-start lg:self-center">
+          <div className="flex max-w-full flex-wrap items-center gap-2.5 self-start @[70rem]:self-center">
             <button
               type="button"
               onClick={() => {
@@ -1348,7 +1351,7 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
               <button
                 key={domain.id}
                 onClick={() => setActiveDomainId(domain.id)}
-                className={`flex items-center gap-2.5 p-2.5 px-3 rounded-xl text-left transition-all group ${
+                className={`flex min-w-0 items-center gap-2.5 p-2.5 px-3 rounded-xl text-left transition-all group ${
                   isActive 
                     ? 'bg-indigo-50/90 border-2 border-indigo-600 text-slate-900 shadow-sm font-bold ring-2 ring-indigo-500/15' 
                     : 'bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 hover:border-slate-300 shadow-2xs hover:shadow-xs'
@@ -1634,7 +1637,7 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
         {/* Left Column: 3-Level Hierarchical Accordion (5 Cols) */}
-        <div className="lg:col-span-5 space-y-4">
+        <div className="min-w-0 lg:col-span-5 space-y-4">
           <div className="flex items-center justify-between text-xs font-bold text-slate-600 px-1">
             <div className="flex items-center gap-2">
               <Layers className="w-3.5 h-3.5 text-blue-600" />
@@ -1903,7 +1906,7 @@ export default function CurriculumExplorerView({ onStartQuizModal, onNavigateDia
         </div>
 
         {/* Right Column: 4 Pedagogical Layers for the Selected Pattern (7 Cols) */}
-        <div className="lg:col-span-7">
+        <div className="min-w-0 lg:col-span-7">
           {selectedPattern ? (
             <div className="bg-white rounded-3xl border border-slate-200/90 shadow-md p-6 lg:p-8 space-y-6">
               

@@ -1530,3 +1530,75 @@ pm run build completes in 905ms (3,013 modules transformed, 0 errors).
 - Include approved transparent V-Eval logo and shared BrandLogo integration in public/login headers, sidebar, mobile navbar and dark footer.
 - Validation before commit: all 21 node tests passed; lint exited zero with warnings; production build passed with existing bundle-size and jsxgraph eval warnings. Live browser/API behavior not verified.
 - Commit scope is the frontend repository only. The root repository's separate pending merge, backend repositories, uppercase frontend and configuration backups remain untouched by this commit. No push performed.
+
+### [12/11/2026] - Compact portal navigation and account menu
+
+- Keep the sidebar as primary navigation and remove the duplicated role/context/segmented tab strip. Remove the redundant role badge below the sidebar logo.
+- Compact top bar shows current page title, student-only streak chip, notification placeholder and avatar/name menu. Settings, home and logout now live in the account dropdown, with outside-click/Escape dismissal, arrow navigation and accessible labels. Removed static notification unread dot; notification button remains unavailable rather than claiming unread data.
+- On mobile/tablet, a hamburger opens the shared role sidebar in a drawer with focus containment, Escape/backdrop dismissal, scroll locking and close-on-navigation/desktop resize. Desktop retains the sidebar.
+- Greeting text uses role and profile full name; student/parent banners are updated and other role landing pages show a role-aware greeting. Removed the student campaign label; detailed dashboard streak remains.
+- Repository diagnosis before edits: lowercase frontend was clean; System-Repo had 99 pending changes in a separate merge, uppercase frontend had 9 changes including 4 conflicts, and other service repositories had their own pre-existing edits/backups. No reset, commit, push or backend edits performed.
+- Validation: production build passed with existing bundle-size/jsxgraph eval warnings; lint exited zero with warnings; all 21 existing tests passed. Browser visual, keyboard and mobile interactions were not manually verified.
+
+### [12/11/2026] - Refine compact header visual hierarchy
+
+- Add a V-Eval/role breadcrumb and page icon above/beside the stronger page title. Use a subtle tinted background and balanced 72/80px header height without restoring duplicate tab navigation.
+- Show a compact local-date label on wide screens, refine the student streak as a small two-line chip, and restore role context below the account name with a gradient avatar and clear expanded-state styling.
+- Mobile retains compact labels and hamburger navigation. Existing account dropdown and dashboard streak detail are unchanged.
+- Validation: production build passed with existing bundle-size/jsxgraph eval warnings. Browser visual verification not performed; no backend edits, commit or push.
+
+### [12/11/2026] - Student sidebar organization preview
+
+- Reorganize student-only sidebar into Overview, Learning, Assessment and Student Services. Group existing diagnostic and mock-exam actions under an expandable Tests & Mock Exams menu; retain history and analytics as sibling entries.
+- Preserve every existing tab ID, callback, API and assessment behavior. Existing practice action remains Practice rather than claiming a new mistake-notebook workflow. Other roles are unchanged.
+- Submenu opens on the diagnostic tab; child actions retain active highlighting and close the shared mobile drawer after navigation. Expanding the parent does not navigate.
+- Validation: production build passed with existing warnings. No new business logic or tests; browser visual/interaction verification pending. No commit or push.
+
+### [12/11/2026] - Dashboard entry guidance for diagnostic onboarding
+
+- Add an inline first-position student dashboard card above parent linking and the greeting banner. Read completed distinct diagnostic exams from the existing history API and validated local draft for the current student.
+- Show first-assessment, partial-progress, saved-draft, locked-submission, completed and loading/error states. Buttons navigate to existing diagnostic/roadmap screens; no exam is started automatically and no assessment handlers or APIs changed.
+- Partial progress uses Check next assessment rather than claiming a new exam is available. The existing diagnostic entry validates actual availability. No extra Content request is made on dashboard load.
+- Show accurate /3 progress and a retry action on history failure; no demo progress. User/account changes discard obsolete requests. Existing page remains usable; no modal or screen dimming.
+- Validation: production build and lint exited zero with existing warnings. Browser visual/interaction verification not performed. No backend edits, commit or push.
+
+### [12/11/2026] - Colorful diagnostic onboarding card
+
+- Restyle the existing dashboard card with a light blue/indigo/violet gradient, decorative background rings, gradient assessment icon, concise badge and stronger heading hierarchy.
+- Add a white inset progress/action panel with three numbered/checkmarked milestones and gradient CTA. Completed state uses emerald/teal; responsive stacking and all existing state/API/navigation behavior remain unchanged.
+- Validation: production build passed with existing warnings. No browser visual verification, backend edits, commit or push.
+
+### [12/11/2026] - Parent-link card readability
+
+- Increase parent-link heading to 16/18px and description to 14px with comfortable line height. Separate account code into a larger monospace badge and allow heading/badges to wrap.
+- Refine the card with a subtle indigo tint, larger family icon and responsive action area. Shorten duplicate copy, use clear copy confirmation and keep all handlers/API/modal behavior unchanged.
+- Validation: production build passed with existing warnings; browser visual verification not performed. UI only; no commit/push.
+
+### [13/11/2026] - Dashboard setup cards in 7:3 columns
+
+- Place diagnostic onboarding and parent linking in a shared 7fr/3fr grid at xl widths, with equal-height stretching and minimum-width safeguards. Smaller screens stack diagnostic first, parent linking second.
+- Compact diagnostic heading/icon/action panel and use container-width breakpoints so its internal layout responds to available card width, not full viewport width.
+- Parent link card stays vertical with its code and description above two compact action buttons. Pending-parent requests and modal/API handlers are preserved.
+- Validation: production build passed with existing bundle-size/jsxgraph eval warnings. No live browser visual verification. Presentation only; no backend edits, commit or push.
+
+### [13/11/2026] - Account dropdown visual polish
+
+- Refine account menu with a blue/indigo-tinted identity panel, avatar, role badge, improved spacing and icon containers for settings/home.
+- Make logout an explicit solid red full-width action with white icon/text, darker hover and visible keyboard focus. Preserve all existing actions, menu dismissal and navigation behavior.
+- Validation: production build passed with existing bundle-size/jsxgraph eval warnings. No browser visual verification, backend edits, commit or push.
+
+### [13/11/2026] - Separate student history and stabilize curriculum layout
+
+- Student History now has separate Diagnostic, Practice and Mock Exam categories. Diagnostic history reuses the server-backed result view in read-only history mode: no new-exam action, auto-start or draft recovery. Diagnostic entry retains start/resume/progress and links to history instead of duplicating the history table.
+- Practice history displays only current-student ZPD/TOPIC records actually stored by the existing practice UI and labels them browser-local, with answer review. No seeded history or fabricated remote results. Mock history has an explicit unavailable state.
+- Read-only backend inspection found diagnostic list/detail endpoints, but no per-student practice-attempt or mock-exam list endpoint in the current Stages/MockExams controllers. Mock detail exists by submission ID only. Backend list endpoints are needed for complete cross-device practice/mock history; no backend edits.
+- Curriculum loading now reserves a comparable page structure with skeletons; remove the content entrance animation/broad header transition, constrain width/min-width, wrap header actions by available container width, and stabilize scrollbar space. This addresses identified layout-shift/overflow risks; reported browser zoom appearance has not been reproduced directly.
+- Validation: production build and lint exited zero with existing warnings; 21 existing node tests passed. Browser visual, slow-network and category interactions remain unverified. No commit/push.
+
+### [13/11/2026] - Student portal UI and history checkpoint
+
+- Checkpoint pending frontend presentation work: compact account header/menu with red logout, role-aware greetings, shared mobile sidebar and grouped student navigation.
+- Include API-backed diagnostic entry guidance, colorful progress card, 7:3 setup-card layout and readable parent-link controls.
+- Separate diagnostic entry from categorized history. Diagnostic history is server-backed; practice history is explicitly browser-local; mock history awaits a BE list API. Stabilize curriculum loading and width behavior without backend changes.
+- Final validation before commit: all 21 existing tests passed, lint exited zero with warnings, production build passed with existing bundle-size/jsxgraph eval warnings, and git diff whitespace check passed. Browser/live API and reported layout issue remain unverified directly.
+- Commit scope is lowercase frontend only. Root repository pending merge, uppercase frontend and backend service changes are excluded. No push performed.

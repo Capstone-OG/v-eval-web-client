@@ -243,11 +243,13 @@ function mapSkillToDomain(skillName, index) {
 export default function DiagnosticAssessmentPage({
   onCompleteDiagnostic,
   onNavigateDashboard,
+  onNavigateHistory,
   onNavigateHome,
   onNavigateLogin,
   onNavigateQuestionBank,
   currentUser = null,
   isEmbedded = false,
+  historyOnly = false,
   onExamStateChange,
   autoStart = false,
   examCode = 'VACT2026'
@@ -275,7 +277,7 @@ export default function DiagnosticAssessmentPage({
   // Ignore legacy browser caches: they can contain sample submissions.
   const studentId = currentUser?.userId || currentUser?.id || currentUser?.studentId;
   const [examHistory, setExamHistory] = useState([]);
-  const [recovering, setRecovering] = useState(() => Boolean(readDraft(localStorage, currentUser?.userId || currentUser?.id || currentUser?.studentId)));
+  const [recovering, setRecovering] = useState(() => !historyOnly && Boolean(readDraft(localStorage, currentUser?.userId || currentUser?.id || currentUser?.studentId)));
   const [recoveryError, setRecoveryError] = useState('');
   const [recoveryRetry, setRecoveryRetry] = useState(0);
   const recoveryBlocked = useRef(false);
@@ -391,7 +393,7 @@ export default function DiagnosticAssessmentPage({
 
   // Auto start diagnostic assessment directly ONLY IF autoStart is true
   useEffect(() => {
-    if (autoStart && !autoStartedRef.current && !readDraft(localStorage, studentId)) {
+    if (!historyOnly && autoStart && !autoStartedRef.current && !readDraft(localStorage, studentId)) {
       autoStartedRef.current = true;
       handleStartAssessment();
     }
@@ -730,6 +732,7 @@ export default function DiagnosticAssessmentPage({
 
   // 1. Tải đề thi thật từ Backend Content Service (Port 5249 qua API Gateway :5212)
   const handleStartAssessment = async () => {
+    if (historyOnly) return;
     if (recovering || recoveryBlocked.current || submittingRef.current) return;
     setStage('setup');
     setIsLoading(true);
@@ -1117,6 +1120,7 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
 
   useEffect(() => {
     let active = true;
+    if (historyOnly) { setRecovering(false); return; }
     const draft = studentId && readDraft(localStorage, studentId);
     if (!draft) { setRecovering(false); return; }
     recoveryBlocked.current = true;
@@ -1168,12 +1172,12 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
       }
     })();
     return () => { active = false; };
-  }, [studentId, recoveryRetry]);
+  }, [studentId, recoveryRetry, historyOnly]);
 
   const isTakingExam = stage === 'testing' || stage === 'analyzing';
 
   return (
-    <div className={`min-h-screen text-slate-900 flex flex-col font-sans selection:bg-blue-600 selection:text-white bg-[#F4F7FC] ${isTakingExam ? 'fixed inset-0 z-50 overflow-y-auto w-full h-full' : ''}`}>
+    <div className={`${historyOnly ? 'min-w-0' : 'min-h-screen'} text-slate-900 flex flex-col font-sans selection:bg-blue-600 selection:text-white bg-[#F4F7FC] ${isTakingExam ? 'fixed inset-0 z-50 overflow-y-auto w-full h-full' : ''}`}>
       {showCampusSetup && <div className="fixed inset-0 z-100 flex items-center justify-center bg-slate-950/70 p-4">
         <div role="dialog" aria-modal="true" aria-labelledby="campus-title" className="w-full max-w-lg rounded-2xl bg-white p-6 space-y-4">
           <h2 id="campus-title" className="text-xl font-bold">Đăng ký cơ sở trước khi làm bài</h2>
@@ -1278,7 +1282,7 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className={historyOnly ? 'hidden' : 'flex items-center gap-2'}>
                   <button
                     type="button"
                     onClick={() => onNavigateQuestionBank ? onNavigateQuestionBank() : handleRetakeExam()}
@@ -1703,7 +1707,7 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
                   <span>← Quay Lại Danh Sách Lần Thi</span>
                 </button>
 
-                <div className="flex items-center gap-3 w-full sm:w-auto">
+                <div className={historyOnly ? 'hidden' : 'flex items-center gap-3 w-full sm:w-auto'}>
                   <button
                     type="button"
                     onClick={() => onNavigateQuestionBank ? onNavigateQuestionBank() : handleRetakeExam()}
@@ -1728,7 +1732,7 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
                   </div>
                   <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2.5 pt-1">
                     <History className="w-6 h-6 text-blue-600" />
-                    <span>Lịch Sử Các Lần Làm Bài Kiểm Tra</span>
+                    <span>{historyOnly ? 'Kết quả đánh giá đầu vào' : 'Đánh giá năng lực đầu vào'}</span>
                   </h1>
                   {!historyLoading && !historyError && studentId && (
                     <p className="text-sm font-bold text-blue-700" role="status">
@@ -1737,11 +1741,11 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
                     </p>
                   )}
                   <p className="text-xs sm:text-sm text-slate-500 font-medium">
-                    Hệ thống lưu vết toàn bộ kết quả các đợt làm bài. Nhấp vào bất kỳ lần thi nào bên dưới hoặc bấm nút <strong>"Xem báo cáo"</strong> để mở trang phân tích chi tiết.
+                    {historyOnly ? 'Xem các bài đã hoàn thành và báo cáo năng lực từng lần đánh giá.' : 'Hoàn thành các bài đầu vào để đánh giá năng lực và chuẩn bị lộ trình học phù hợp.'}
                   </p>
                 </div>
 
-                <div className="flex items-center gap-2 shrink-0">
+                <div className={historyOnly ? 'hidden' : 'flex items-center gap-2 shrink-0'}>
                   <button
                     type="button"
                     onClick={handleRetakeExam}
@@ -1756,10 +1760,15 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
 
               {historyLoading ? <p role="status">Đang tải lịch sử...</p>
                 : historyError ? <div role="alert"><p>Không tải được lịch sử: {historyError}</p><button type="button" onClick={() => setHistoryReload((v) => v + 1)}>Thử lại</button></div>
-                : examHistory.length === 0 ? <p>{studentId ? 'Bạn chưa làm bài chẩn đoán. Bấm Làm Bài Kiểm Tra Mới để bắt đầu.' : 'Vui lòng đăng nhập để xem lịch sử.'}</p>
+                : examHistory.length === 0 ? <p>{studentId ? (historyOnly ? 'Chưa có bài đánh giá đầu vào hoàn thành.' : 'Bạn chưa làm bài chẩn đoán. Bấm Làm Bài Kiểm Tra Mới để bắt đầu.') : 'Vui lòng đăng nhập để xem lịch sử.'}</p>
                 : <>
               {detailLoading && <p role="status">Đang tải báo cáo...</p>}
               {detailError && <p role="alert">Không tải được báo cáo: {detailError}. Bấm Xem báo cáo để thử lại.</p>}
+              {!historyOnly && <div className="rounded-2xl border border-blue-100 bg-blue-50 p-5 text-sm text-blue-900">
+                Kết quả các bài đã hoàn thành được lưu trong Lịch sử làm bài.
+                {onNavigateHistory && <button type="button" onClick={onNavigateHistory} className="ml-2 font-bold underline underline-offset-4">Xem lịch sử đầu vào →</button>}
+              </div>}
+              {historyOnly && <>
               {/* 4 Overview Statistics KPI Cards */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="p-5 bg-white rounded-3xl border border-slate-200 shadow-sm space-y-2">
@@ -1973,6 +1982,7 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
                 </div>
               </div>
 
+              </>}
               </>}
             </div>
           )}
