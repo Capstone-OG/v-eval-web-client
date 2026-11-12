@@ -22,6 +22,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import authService from '../../services/authService';
+import { formatApiError } from '../../utils/apiErrorHandler';
 
 export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
   const [role, setRole] = useState('student'); // student | parent (for registration)
@@ -133,8 +134,9 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
         onClose();
       } catch (err) {
         setIsSubmitting(false);
-        const msg = err.data?.error?.description || err.data?.message || err.message || 'Đăng nhập không thành công. Vui lòng kiểm tra lại email hoặc mật khẩu.';
-        setFormError(msg);
+        setFormError(
+          formatApiError(err, 'Đăng nhập không thành công. Vui lòng kiểm tra lại email hoặc mật khẩu.')
+        );
       }
     } else {
       if (!regFullName.trim()) {
@@ -203,8 +205,9 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
         }, 1200);
       } catch (err) {
         setIsSubmitting(false);
-        const msg = err.data?.error?.description || err.data?.message || err.message || 'Đăng ký không thành công. Vui lòng kiểm tra lại thông tin.';
-        setFormError(msg);
+        setFormError(
+          formatApiError(err, 'Đăng ký không thành công. Vui lòng kiểm tra lại thông tin.')
+        );
       }
     }
   };
@@ -277,11 +280,10 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
             <Sparkles className="w-6 h-6 text-cyan-300" />
           </div>
           <h2 className="text-xl font-black tracking-tight text-white flex items-center justify-center gap-1.5">
-            <span>ĐGNL AI Portal</span>
-            <span className="px-2 py-0.5 bg-cyan-400/20 text-cyan-300 text-[10px] rounded-full border border-cyan-400/30">v2.4</span>
+            <span>Cổng Học Tập ĐGNL</span>
           </h2>
           <p className="text-xs text-slate-300 font-medium mt-0.5">
-            Khảo thí & Luyện thi Thích ứng 4.0
+            Nền tảng ôn luyện ĐGNL ĐHQG TP.HCM
           </p>
 
           {/* Role selector tabbar shown ONLY IN REGISTER MODE */}

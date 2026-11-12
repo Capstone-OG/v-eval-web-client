@@ -1,4 +1,5 @@
 import { clearLegacyDiagnosticData } from './diagnosticPrivacy.js';
+import { formatApiError } from '../utils/apiErrorHandler.js';
 /**
  * V-Eval API Gateway Client
  *
@@ -217,30 +218,34 @@ async function request(endpoint, options = {}, isRetry = false) {
       }
     }
 
-    // Parse JSON or return empty object on 204 No Content
+    // Parse JSON or text safely; support fetch mocks that only implement response.json()
     let data = null;
-    const contentType = response.headers.get('content-type');
-    if (contentType && contentType.includes('application/json')) {
+    const contentType = response.headers?.get?.('content-type') || '';
+    if (typeof response.text === 'function') {
+      const rawBody = await response.text();
+      if (rawBody) {
+        try {
+          data = JSON.parse(rawBody);
+        } catch {
+          data = rawBody;
+        }
+      }
+    } else if (typeof response.json === 'function' && contentType.includes('application/json')) {
       data = await response.json();
-    } else {
-      data = await response.text();
+    } else if (typeof response.json === 'function') {
+      try {
+        data = await response.json();
+      } catch {
+        data = null;
+      }
     }
 
     if (!response.ok) {
-      let errorMessage = `HTTP Error ${response.status}`;
-      if (typeof data === 'object' && data !== null) {
-        if (data.error && typeof data.error === 'object') {
-          errorMessage = data.error.description || data.error.message || JSON.stringify(data.error);
-        } else if (Array.isArray(data.errors) && data.errors.length > 0) {
-          errorMessage = data.errors.map(e => (typeof e === 'object' ? e.description || e.message : e)).join('; ');
-        } else if (data.message || data.title) {
-          errorMessage = data.message || data.title;
-        } else if (typeof data.error === 'string') {
-          errorMessage = data.error;
-        }
-      } else if (typeof data === 'string' && data.trim()) {
-        errorMessage = data;
-      }
+      const errorMessage = formatApiError(
+        data,
+        'Không thể xử lý yêu cầu lúc này. Vui lòng thử lại sau.',
+        response.status
+      );
 
       const error = new Error(errorMessage);
       error.status = response.status;
@@ -256,14 +261,11 @@ async function request(endpoint, options = {}, isRetry = false) {
       headers: response.headers
     };
   } catch (error) {
-    if (error.status) {
+    if (typeof error?.status === 'number') {
       throw error;
     }
-    // Network / CORS Error
     const networkError = new Error(
-      error.message === 'Failed to fetch'
-        ? `Không thể kết nối đến API Gateway (${BASE_URL}). Vui lòng kiểm tra xem Gateway đang chạy tại cổng 5212.`
-        : error.message
+      formatApiError(error, 'Không thể kết nối tới máy chủ. Vui lòng thử lại sau.', 0)
     );
     networkError.status = 0;
     networkError.originalError = error;

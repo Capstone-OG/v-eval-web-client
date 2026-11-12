@@ -24,6 +24,7 @@ import LoginForm from './LoginForm';
 import RegisterForm from './RegisterForm';
 import ForgotPasswordModal from './ForgotPasswordModal';
 import authService from '../../services/authService';
+import { formatApiError } from '../../utils/apiErrorHandler';
 import {
   validateEmailSyntaxAndRules,
   validateEmailComprehensive
@@ -124,7 +125,7 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
     } else {
       setEmailValidationStatus('valid');
       setEmailValidationMessage(
-        asyncCheck.message || 'Email hợp lệ (Máy chủ mail MX hoạt động)'
+        asyncCheck.message || 'Email hợp lệ, sẵn sàng đăng ký'
       );
       setEmailSuggestedFix(null);
       setFieldErrors((prev) => ({ ...prev, regEmail: null }));
@@ -175,13 +176,13 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
     { value: '700', label: '700+ (Tiêu chuẩn)' }
   ];
 
-  // Dynamic System & Campus Status Ticker on Left Panel
+  // Dynamic Campus & Highlight Ticker on Left Panel
   const liveActivities = campuses.length > 0
-    ? campuses.map((c) => `🏫 Đang kết nối trực tuyến: ${c.name} (${c.code || 'ACTIVE'})`)
+    ? campuses.map((c) => `🏫 Cơ sở đang hoạt động: ${c.name}`)
     : [
-        "🔗 Cổng xác thực tập trung V-Eval IAM Gateway (:5212) đang hoạt động.",
-        "📐 Hệ thống chấm điểm tâm trắc học IRT 2PL & BKT thời gian thực.",
-        "🤖 Gia sư AI Socratic & Đồ thị tri thức tiền đề DAG 4 miền V-ACT."
+        "📚 Hệ thống bài thi thử ĐGNL bám sát cấu trúc đề ĐHQG TP.HCM.",
+        "🎯 Chấm điểm tức thì và phân tích chi tiết 4 phần thi năng lực.",
+        "👩‍🏫 Đồng hành giải đáp thắc mắc và luyện đề hiệu quả mỗi ngày."
       ];
   const [actIdx, setActIdx] = useState(0);
 
@@ -268,7 +269,10 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
         return;
       }
 
-      const msg = err.data?.error?.description || err.data?.message || err.message || 'Đăng nhập không thành công. Vui lòng kiểm tra lại email hoặc mật khẩu.';
+      const msg = formatApiError(
+        err,
+        'Đăng nhập không thành công. Vui lòng kiểm tra lại email hoặc mật khẩu.'
+      );
       setFormError(msg);
     }
   };
@@ -374,12 +378,10 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
     } catch (err) {
       setIsSubmitting(false);
       console.warn('[WebLoginPage] Register error:', err);
-      const msg =
-        err.data?.error?.description ||
-        err.data?.errors?.[0]?.description ||
-        err.data?.message ||
-        err.message ||
-        'Đăng ký không thành công. Vui lòng kiểm tra lại thông tin.';
+      const msg = formatApiError(
+        err,
+        'Đăng ký không thành công. Vui lòng kiểm tra lại thông tin.'
+      );
       setFormError(msg);
       if (msg.toLowerCase().includes('email') || msg.toLowerCase().includes('tên miền') || msg.toLowerCase().includes('gmail')) {
         setEmailValidationStatus('invalid');
@@ -468,8 +470,9 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
       }
     } catch (err) {
       setIsSubmitting(false);
-      const msg = err.data?.error?.description || err.message || 'Thao tác không thành công. Vui lòng kiểm tra lại.';
-      setModalError(msg);
+      setModalError(
+        formatApiError(err, 'Thao tác không thành công. Vui lòng kiểm tra lại.')
+      );
     }
   };
 
@@ -484,8 +487,9 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
         setModalSuccess('Đã gửi lại mã OTP đặt lại mật khẩu mới đến email ' + forgotEmail);
       }
     } catch (err) {
-      const msg = err.data?.error?.description || err.message || 'Không thể gửi lại mã OTP. Vui lòng thử lại sau.';
-      setModalError(msg);
+      setModalError(
+        formatApiError(err, 'Không thể gửi lại mã OTP. Vui lòng thử lại sau.')
+      );
       throw err;
     }
   };
@@ -494,7 +498,7 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
     <div className="min-h-screen w-full bg-[#FDFBF7] text-slate-900 flex flex-col font-sans selection:bg-[#FACC15] selection:text-slate-950">
 
       {/* 1. TOP HEADER NAVIGATION */}
-      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-6 lg:px-8 py-3 transition-all shadow-xs">
+      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-6 lg:px-8 py-1.5 transition-all shadow-xs">
         <div className="w-full max-w-7xl mx-auto flex items-center justify-between gap-4">
 
           {/* Logo & Brand Name */}
@@ -502,19 +506,19 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
             onClick={onNavigateHome}
             className="flex items-center gap-2.5 cursor-pointer select-none group"
           >
-            <BrandLogo className="w-36 sm:w-44" />
+            <BrandLogo className="w-28 sm:w-32" />
           </div>
 
           {/* Quick Header Actions */}
           <div className="flex items-center gap-3">
-            <div className="hidden sm:flex items-center gap-2 text-xs font-semibold text-slate-700 bg-slate-100 px-3.5 py-1.5 rounded-full border border-slate-200">
+            <div className="hidden sm:flex items-center gap-2 text-xs font-semibold text-slate-700 bg-slate-100 px-3 py-1.5 rounded-full border border-slate-200">
               <PhoneCall className="w-3.5 h-3.5 text-blue-600" />
               <span>Hotline Tư Vấn: <strong className="text-blue-900">1900 8889</strong></span>
             </div>
 
             <button
               onClick={onNavigateHome}
-              className="flex items-center gap-2 text-xs font-bold text-slate-700 hover:text-blue-700 bg-slate-100 hover:bg-slate-200 px-4 py-2 rounded-xl border border-slate-200/80 transition-all active:scale-95 shadow-2xs"
+              className="flex items-center gap-2 text-xs font-bold text-slate-700 hover:text-blue-700 bg-slate-100 hover:bg-slate-200 px-3.5 py-1.5 rounded-xl border border-slate-200/80 transition-all active:scale-95 shadow-2xs"
             >
               <ArrowLeft className="w-4 h-4 text-blue-600" />
               <span>Quay lại Trang Chủ</span>
@@ -525,16 +529,16 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
       </header>
 
       {/* 2. MAIN CENTER CONTENT CONTAINER */}
-      <main className="flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-10 relative overflow-hidden">
+      <main className="flex-1 flex items-center justify-center p-2.5 sm:p-4 lg:py-3 lg:px-8 relative overflow-hidden">
 
         {/* Soft Ambient Background Glows */}
         <div className="absolute top-1/4 left-10 w-96 h-96 rounded-full bg-blue-400/10 blur-[120px] pointer-events-none"></div>
         <div className="absolute bottom-10 right-10 w-96 h-96 rounded-full bg-indigo-400/10 blur-[120px] pointer-events-none"></div>
 
-        <div className="w-full max-w-6xl bg-white rounded-[32px] shadow-2xl overflow-hidden grid grid-cols-1 lg:grid-cols-12 min-h-[720px] border border-slate-200/90 text-slate-900 z-10">
+        <div className="w-full max-w-6xl bg-white rounded-[28px] shadow-2xl overflow-hidden grid grid-cols-1 lg:grid-cols-12 border border-slate-200/90 text-slate-900 z-10">
 
           {/* LEFT COLUMN (7 Spans): Light Academic Showcase & Real Authentic Student Photo */}
-          <div className="lg:col-span-7 bg-gradient-to-br from-blue-50/90 via-indigo-50/60 to-cyan-50/40 p-8 lg:p-12 text-slate-900 flex flex-col justify-between relative overflow-hidden border-r border-slate-200/80">
+          <div className="lg:col-span-7 bg-gradient-to-br from-blue-50/90 via-indigo-50/60 to-cyan-50/40 p-5 sm:p-6 lg:px-8 lg:py-5 text-slate-900 flex flex-col justify-between gap-3 relative overflow-hidden border-r border-slate-200/80">
 
             {/* Ambient inner highlights */}
             <div className="absolute -top-24 -left-24 w-96 h-96 rounded-full bg-blue-300/20 blur-3xl pointer-events-none"></div>
@@ -542,50 +546,50 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
 
             {/* Top Brand Tag */}
             <div className="relative z-10 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-11 h-11 rounded-2xl bg-white border border-blue-200/80 shadow-sm flex items-center justify-center text-blue-600">
-                  <Sparkles className="w-5 h-5" />
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-white border border-blue-200/80 shadow-sm flex items-center justify-center text-blue-600">
+                  <Sparkles className="w-4 h-4" />
                 </div>
                 <div>
-                  <div className="font-extrabold text-lg text-slate-900 tracking-tight flex items-center gap-2">
-                    Cổng Khảo Thí ĐGNL <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-[10px] rounded-full border border-blue-200 font-bold">v2.4 Live</span>
+                  <div className="font-extrabold text-base text-slate-900 tracking-tight flex items-center gap-2">
+                    Cổng Khảo Thí ĐGNL
                   </div>
-                  <div className="text-xs text-slate-600 font-medium">
-                    Mô hình Khảo thí IRT 3PL & Thuật toán DAG Topo
+                  <div className="text-[11px] text-slate-600 font-medium">
+                    Nền tảng ôn luyện ĐGNL ĐHQG TP.HCM chuẩn cấu trúc
                   </div>
                 </div>
               </div>
             </div>
 
             {/* Middle Section: Title & Authentic Student Photo Showcase */}
-            <div className="relative z-10 my-auto py-6 space-y-6">
+            <div className="relative z-10 my-auto space-y-2.5">
 
-              <div className="space-y-3">
-                <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white border border-blue-200/80 text-xs font-bold text-blue-700 shadow-2xs">
-                  <Flame className="w-4 h-4 text-amber-500 fill-amber-500" />
+              <div className="space-y-1.5">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white border border-blue-200/80 text-[11px] font-bold text-blue-700 shadow-2xs">
+                  <Flame className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
                   <span>Chiến dịch Ôn thi ĐGNL ĐHQG TP.HCM 2026</span>
                 </span>
 
-                <h1 className="text-3xl lg:text-4xl font-black leading-tight tracking-tight text-slate-900">
+                <h1 className="text-2xl lg:text-[26px] font-black leading-snug tracking-tight text-slate-900">
                   Khám phá Năng lực & <span className="bg-gradient-to-r from-blue-700 via-indigo-700 to-cyan-600 bg-clip-text text-transparent">Bứt phá 900+ Điểm</span>
                 </h1>
 
-                <p className="text-xs sm:text-sm text-slate-600 font-medium leading-relaxed max-w-xl">
-                  Đo lường chính xác ma trận 120 câu hỏi ĐGNL bằng thuật toán khảo thí thích ứng CAT, lấp lỗ hổng tức thì cùng AI Socratic Tutor.
+                <p className="text-xs text-slate-600 font-medium leading-relaxed max-w-xl">
+                  Đánh giá năng lực toàn diện theo cấu trúc 120 câu hỏi ĐGNL, phát hiện lỗ hổng kiến thức và xây dựng lộ trình ôn tập phù hợp với mục tiêu của bạn.
                 </p>
               </div>
 
               {/* REAL AUTHENTIC STUDENT PHOTO CONTAINER */}
-              <div className="relative max-w-md mx-auto group">
+              <div className="relative max-w-sm mx-auto group">
 
                 {/* Outer Glow */}
-                <div className="absolute inset-0 rounded-3xl bg-gradient-to-r from-blue-400 to-cyan-400 blur-xl opacity-20 group-hover:opacity-40 transition-opacity"></div>
+                <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-blue-400 to-cyan-400 blur-xl opacity-20 group-hover:opacity-40 transition-opacity"></div>
 
                 {/* Card Container */}
-                <div className="relative bg-white border border-slate-200/90 rounded-3xl p-3 shadow-xl transition-all duration-500 transform group-hover:scale-[1.01]">
+                <div className="relative bg-white border border-slate-200/90 rounded-2xl p-1.5 shadow-xl transition-all duration-500 transform group-hover:scale-[1.01]">
 
                   {/* Real Student Photograph */}
-                  <div className="relative overflow-hidden rounded-2xl h-60 sm:h-64 w-full">
+                  <div className="relative overflow-hidden rounded-xl h-36 sm:h-40 lg:h-40 w-full">
                     <img
                       src={studentAvatar}
                       alt="Học sinh THPT Việt Nam ôn thi ĐGNL"
@@ -595,14 +599,14 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-transparent to-transparent opacity-80"></div>
 
                     {/* FLOATING STATS BADGES */}
-                    <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between gap-2">
-                      <div className="px-3 py-1.5 bg-white/95 border border-slate-200 backdrop-blur-md rounded-xl text-slate-900 text-xs font-black shadow-lg flex items-center gap-1.5">
-                        <Award className="w-4 h-4 text-blue-600" />
-                        <span>IRT Theta: +0.65</span>
+                    <div className="absolute bottom-2.5 left-2.5 right-2.5 flex items-center justify-between gap-2">
+                      <div className="px-2.5 py-1 bg-white/95 border border-slate-200 backdrop-blur-md rounded-lg text-slate-900 text-[11px] font-black shadow-lg flex items-center gap-1.5">
+                        <Award className="w-3.5 h-3.5 text-blue-600" />
+                        <span>Mục tiêu: 950+ điểm</span>
                       </div>
 
-                      <div className="px-3 py-1.5 bg-emerald-600 text-white rounded-xl text-xs font-black shadow-lg flex items-center gap-1.5">
-                        <CheckCircle2 className="w-4 h-4 text-white" />
+                      <div className="px-2.5 py-1 bg-emerald-600 text-white rounded-lg text-[11px] font-black shadow-lg flex items-center gap-1.5">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-white" />
                         <span>82% Bách Khoa HCM</span>
                       </div>
                     </div>
@@ -613,10 +617,10 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
               </div>
 
               {/* Real-time Ticker */}
-              <div className="bg-white border border-blue-200/80 rounded-2xl px-4 py-2.5 flex items-center gap-3 text-xs font-semibold text-slate-800 shadow-2xs">
-                <span className="relative flex h-2.5 w-2.5 shrink-0">
+              <div className="bg-white border border-blue-200/80 rounded-xl px-3.5 py-2 flex items-center gap-2.5 text-xs font-semibold text-slate-800 shadow-2xs">
+                <span className="relative flex h-2 w-2 shrink-0">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-500 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-blue-600"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-600"></span>
                 </span>
                 <AnimatePresence mode="wait">
                   <motion.span
@@ -632,22 +636,22 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
               </div>
 
               {/* Feature Bullet List */}
-              <div className="grid grid-cols-2 gap-3 text-xs font-semibold text-slate-700 pt-1">
+              <div className="grid grid-cols-2 gap-2 text-xs font-semibold text-slate-700 pt-0.5">
                 <div className="flex items-center gap-2">
                   <BookOpenCheck className="w-4 h-4 text-blue-600 shrink-0" />
-                  <span>Test chẩn đoán 15 phút</span>
+                  <span>Đánh giá năng lực 15 phút</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Zap className="w-4 h-4 text-amber-500 shrink-0" />
-                  <span>Lộ trình ZPD cá nhân hoá</span>
+                  <span>Lộ trình học tập cá nhân hóa</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Bot className="w-4 h-4 text-blue-600 shrink-0" />
-                  <span>AI Socratic gợi mở 24/7</span>
+                  <span>Hỗ trợ giải đáp 24/7</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Users className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>Live Q&A giải đề trực tuyến</span>
+                  <span>Lớp học & giải đề trực tuyến</span>
                 </div>
               </div>
 
@@ -656,12 +660,12 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
           </div>
 
           {/* RIGHT COLUMN (5 Spans): Form Column */}
-          <div className="lg:col-span-5 p-6 sm:p-8 lg:p-10 flex flex-col justify-between bg-white relative">
+          <div className="lg:col-span-5 p-5 sm:p-6 lg:px-8 lg:py-5 flex flex-col justify-between gap-3 bg-white relative lg:max-h-[calc(100vh-5.5rem)] lg:overflow-y-auto">
 
-            <div className="space-y-5">
+            <div className="space-y-4">
 
               {/* Header Mode Switcher: Login / Register */}
-              <div className="space-y-4">
+              <div className="space-y-3">
                 <div className="p-1 bg-slate-100 rounded-2xl flex items-center border border-slate-200">
                   <button
                     onClick={() => handleModeSwitch('login')}
@@ -829,7 +833,7 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
             </div>
 
             {/* Bottom Footer Note */}
-            <div className="pt-4 border-t border-slate-100 text-center text-[11px] text-slate-400 font-medium">
+            <div className="pt-2.5 border-t border-slate-100 text-center text-[11px] text-slate-400 font-medium">
               Hệ thống Bảo mật 256-bit • Hỗ trợ học viên 24/7
             </div>
 

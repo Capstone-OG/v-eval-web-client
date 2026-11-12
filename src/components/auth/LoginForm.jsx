@@ -125,7 +125,7 @@ export default function LoginForm({
           {isSubmitting ? (
             <span className="flex items-center gap-2">
               <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-              <span>Đang xác thực tài khoản từ Backend...</span>
+              <span>Đang đăng nhập...</span>
             </span>
           ) : (
             <>
@@ -136,14 +136,14 @@ export default function LoginForm({
         </button>
       </form>
 
-      {/* Authentic Role Routing Notice */}
-      <div className="p-3.5 rounded-2xl bg-[#FDFBF7] border border-slate-200/80 space-y-1.5 text-[11px] text-slate-600">
+      {/* Role Routing Notice */}
+      <div className="p-3 rounded-2xl bg-[#FDFBF7] border border-slate-200/80 space-y-1 text-[11px] text-slate-600">
         <div className="font-extrabold text-slate-800 flex items-center gap-1.5">
           <ShieldCheck className="w-4 h-4 text-blue-600 shrink-0" />
-          <span>Phân luồng tự động theo phân quyền IAM Backend</span>
+          <span>Đăng nhập một tài khoản cho mọi vai trò</span>
         </div>
         <p className="leading-relaxed">
-          Sau khi xác thực JWT qua API Gateway, hệ thống tự động điều hướng tài khoản vào đúng cổng chức năng riêng biệt: <strong>Học viên</strong>, <strong>Phụ huynh</strong>, <strong>Giảng viên</strong>, <strong>Quản lý Học thuật</strong> hoặc <strong>Quản trị viên IAM</strong>.
+          Hệ thống tự động nhận diện tài khoản để đưa bạn vào đúng không gian học tập và làm việc dành cho <strong>Học viên</strong>, <strong>Phụ huynh</strong>, <strong>Giảng viên</strong> hoặc <strong>Quản lý</strong>.
         </p>
       </div>
     </div>

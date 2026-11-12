@@ -1530,3 +1530,14 @@ pm run build completes in 905ms (3,013 modules transformed, 0 errors).
 - Include approved transparent V-Eval logo and shared BrandLogo integration in public/login headers, sidebar, mobile navbar and dark footer.
 - Validation before commit: all 21 node tests passed; lint exited zero with warnings; production build passed with existing bundle-size and jsxgraph eval warnings. Live browser/API behavior not verified.
 - Commit scope is the frontend repository only. The root repository's separate pending merge, backend repositories, uppercase frontend and configuration backups remain untouched by this commit. No push performed.
+
+### [12/11/2026] - End-User Login Copy Cleanup & Backend-First Error Passthrough
+
+- **End-User Authentication Copy Hygiene & Single-Viewport Layout (`src/components/auth/WebLoginPage.jsx`, `LoginForm.jsx`, `RegisterForm.jsx`, `AuthModal.jsx`, `src/utils/emailValidator.js`)**:
+  - Removed internal algorithmic, pedagogical, and infrastructure terminology (`v2.4 Live`, `IRT 3PL`, `IRT Theta`, `IRT 2PL`, `DAG Topo`, `CAT`, `AI Socratic Tutor`, `ZPD`, `BKT`, `IAM Gateway (:5212)`, `IAM Backend`, `JWT`, `API Gateway`, internal campus codes, and `MX` / `DNS NXDOMAIN` labels) from user-facing login and registration screens, replacing them with learner-friendly copy.
+  - Compacted header, card paddings, and showcase image height while isolating scroll inside the right form column (`lg:max-h-[calc(100vh-5.5rem)] lg:overflow-y-auto`) so the login screen fits within a standard desktop viewport without outer page scrolling.
+- **Backend-Driven Error Extraction & Clean Proxy Outage Handling (`src/utils/apiErrorHandler.js`, `src/services/apiClient.js`, `src/services/authService.js`)**:
+  - Added shared `extractBackendErrorMessage` and `formatApiError` helpers that prioritize passing through the exact error message returned by Backend services across Clean Architecture `Result` objects (`error.description`, `errors[]`), ASP.NET `ValidationProblemDetails` dictionaries (`errors`), `message`/`detail`/`title` fields, and plain-text payloads without duplicating or overriding backend wording in the frontend.
+  - Safely parses response bodies in `apiClient.js` (supporting both real `fetch` and `response.json()` mocks) and substitutes concise Vietnamese fallback messages only when upstream proxies or network outages return empty/HTML responses (such as raw `HTTP Error 502` or offline `Failed to fetch`).
+  - Added `404` Gateway route fallback (`/api/v1/identity/auth/...`) to `forgotPassword`, `verifyResetOtp`, and `resetPassword` in `authService.js`.
+- **Verification**: `node --test tests/*.test.js src/**/*.test.js` passed all 25 test cases (including 4 new cases in `tests/apiErrorHandler.test.js`), `npm run lint` exited 0 with zero errors, and `npm run build` succeeded cleanly.

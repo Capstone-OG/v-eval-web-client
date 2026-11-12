@@ -2206,3 +2206,18 @@ pm run build hoàn thành trong 1.12s, 0 lỗi cú pháp.
 - Include approved transparent V-Eval logo and shared BrandLogo integration in public/login headers, sidebar, mobile navbar and dark footer.
 - Validation before commit: all 21 node tests passed; lint exited zero with warnings; production build passed with existing bundle-size and jsxgraph eval warnings. Live browser/API behavior not verified.
 - Commit scope is the frontend repository only. The root repository's separate pending merge, backend repositories, uppercase frontend and configuration backups remain untouched by this commit. No push performed.
+
+---
+
+## [12/11/2026] - Tinh Gọn Giao Diện Đăng Nhập Thân Thiện Với Người Dùng & Chuẩn Hóa Truyền Tải Lỗi Từ Backend
+
+- **Tinh gọn nội dung & bố cục màn hình Đăng nhập / Đăng ký (`src/components/auth/WebLoginPage.jsx`, `LoginForm.jsx`, `RegisterForm.jsx`, `AuthModal.jsx`, `src/utils/emailValidator.js`)**:
+  - Loại bỏ toàn bộ thuật ngữ kỹ thuật, kiến trúc và học thuật nội bộ không phù hợp với học sinh/phụ huynh như `v2.4 Live`, `IRT 3PL`, `IRT Theta`, `IRT 2PL`, `DAG Topo`, `CAT`, `AI Socratic Tutor`, `ZPD`, `BKT`, `IAM Gateway (:5212)`, `IAM Backend`, `JWT`, `API Gateway`, mã cơ sở nội bộ `(${c.code || 'ACTIVE'})` và chi tiết kỹ thuật email (`MX`, `DNS NXDOMAIN`).
+  - Thay thế bằng thông điệp học tập tự nhiên, dễ hiểu (ví dụ: *Đánh giá năng lực 15 phút*, *Lộ trình học tập cá nhân hóa*, *Hỗ trợ giải đáp 24/7*, *Đăng nhập một tài khoản cho mọi vai trò*).
+  - Tối ưu chiều cao tổng thể màn hình đăng nhập (bỏ `min-h-[720px]`, thu gọn header, padding và khung ảnh học sinh, thêm cuộn độc lập trong cột form khi mở tab Đăng ký) để hiển thị trọn vẹn trong một khung nhìn desktop mà không bị cuộn trang xuống.
+- **Chuẩn hóa cơ chế trích xuất và hiển thị lỗi trực tiếp từ Backend (`src/utils/apiErrorHandler.js`, `src/services/apiClient.js`, `src/services/authService.js`)**:
+  - Bổ sung bộ trích xuất dùng chung `extractBackendErrorMessage` & `formatApiError` ưu tiên lấy trực tiếp thông báo lỗi trả về từ Backend across mọi định dạng (`error.description`, `errors[]`, ASP.NET `ValidationProblemDetails`, `message`, `detail`, `title`, plain text) thay vì tạo từ điển thông báo riêng ở FE.
+  - Đọc body an toàn trong `apiClient.js` và chỉ dùng thông điệp dự phòng thân thiện khi Backend/Proxy không trả về nội dung đọc được (như phản hồi rỗng `502`/`503`/`504`, HTML hoặc mất kết nối mạng), chấm dứt hiển thị thô `HTTP Error 502` trên màn hình đăng nhập.
+  - Bổ sung fallback `/api/v1/identity/auth/...` khi gặp `404` cho `forgotPassword`, `verifyResetOtp`, `resetPassword` trong `authService.js`.
+- **Kiểm thử & Biên dịch**:
+  - Thêm bộ test `tests/apiErrorHandler.test.js` (4 test cases); chạy `node --test tests/*.test.js src/**/*.test.js` đạt **25/25 pass**, `npm run lint` đạt 0 errors, `npm run build` thành công 100%.

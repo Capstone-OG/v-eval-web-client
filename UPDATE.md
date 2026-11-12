@@ -1,14 +1,13 @@
-﻿# UPDATE
+# UPDATE
 
-### [12/11/2026] - Merge develop into diagnostic frontend branch
+## [12/11/2026] - Tinh Gọn Giao Diện Đăng Nhập & Chuẩn Hóa Xử Lý Lỗi Lấy Trực Tiếp Từ Backend
 
-- Resolve 24 conflicted frontend files from develop 115eace. Integrate incoming role portals, curriculum/authoring, payment, notifications, expanded API services and structured math rendering; preserve the local diagnostic assessment lifecycle, profile helpers, account settings and remember-me behavior.
-- Wire the retained diagnostic page into the new portal with the signed-in user and account-specific component key. Student history uses the owned server-backed diagnostic view. Remove incoming shared latest-result loading and prevent seeded/unowned local submission history from reappearing.
-- Combine API query params and PATCH support with proactive token refresh, session-only login, session generation guards and diagnostic privacy cleanup. Refresh preserves the user and selected storage without creating a new login session. Add diagnostic API aliases required by the retained assessment.
-- Fix conditional React hooks in incoming MathGraphView and math-workbench modal. Install the declared jsxgraph dependency; retain its incoming package/lock contract.
-- Validation: production build passed; npm run lint exited zero with warnings; all 21 tests passed (17 diagnostic/privacy, 2 Flow 6 and 2 merge integration cases). Build warns about bundle size and direct eval inside jsxgraph. Browser/live API/visual behavior was not verified.
-- Scope: frontend and progress documentation only. No backend code or configuration backups changed. System-Repo and uppercase frontend have separate merge state; their service code is outside this resolution.
-
-- V-Eval approved transparent logo integrated into the public/login headers, sidebar, mobile navbar and dark footer through a shared responsive component. Build passed; browser appearance not verified.
-
-- Frontend merge/branding checkpoint ready for commit: 21 tests passed, lint exited zero, production build passed. Includes resolved develop integration and approved V-Eval logo. Root merge and backend excluded; no push.
+- **Tinh gọn nội dung màn hình Đăng nhập / Đăng ký ([`WebLoginPage.jsx`](./src/components/auth/WebLoginPage.jsx), [`LoginForm.jsx`](./src/components/auth/LoginForm.jsx), [`RegisterForm.jsx`](./src/components/auth/RegisterForm.jsx), [`AuthModal.jsx`](./src/components/auth/AuthModal.jsx), [`emailValidator.js`](./src/utils/emailValidator.js))**:
+  - Gỡ bỏ các thuật ngữ kỹ thuật, mô hình toán và hạ tầng nội bộ (`ZPD`, `IRT 3PL`/`2PL`, `IRT Theta`, `DAG Topo`, `CAT`, `BKT`, `AI Socratic Tutor`, `IAM Backend`, `JWT`, `API Gateway (:5212)`, `v2.4 Live`, mã cơ sở và chuỗi kỹ thuật `MX`/`DNS NXDOMAIN`), thay bằng ngôn ngữ tự nhiên, thân thiện với học viên và phụ huynh.
+  - Thu gọn khoảng cách header, khung ảnh và cột trái/phải để màn hình đăng nhập hiển thị trọn vẹn trong một khung nhìn desktop mà không cần cuộn trang xuống.
+- **Truyền tải trực tiếp thông báo lỗi từ Backend ([`apiErrorHandler.js`](./src/utils/apiErrorHandler.js), [`apiClient.js`](./src/services/apiClient.js), [`authService.js`](./src/services/authService.js))**:
+  - Bổ sung helper `extractBackendErrorMessage` & `formatApiError` ưu tiên trích xuất nguyên văn thông báo lỗi từ Backend (`error.description`, `errors[]`, ASP.NET `ValidationProblemDetails`, `message`, `detail`, `title`, plain text) thay vì tự định nghĩa lại ở FE.
+  - Chỉ hiển thị thông báo dự phòng dễ hiểu khi proxy/mạng không trả về nội dung đọc được (ví dụ phản hồi `502`/`503`/`504` rỗng, trang HTML lỗi hoặc rớt mạng), loại bỏ tình trạng hiển thị thô `HTTP Error 502`.
+  - Đồng bộ route fallback `/api/v1/identity/auth/...` cho `forgotPassword`, `verifyResetOtp`, `resetPassword` trong `authService.js`.
+- **Kiểm thử & Biên dịch**:
+  - Thêm unit test [`tests/apiErrorHandler.test.js`](./tests/apiErrorHandler.test.js); chạy `node --test tests/*.test.js src/**/*.test.js` đạt **25/25 pass**, `npm run lint` đạt 0 errors, `npm run build` thành công 100%.
