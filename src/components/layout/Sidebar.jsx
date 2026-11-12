@@ -134,11 +134,19 @@ export default function Sidebar({
             items: [
               {
                 id: 'dashboard',
-                label: 'Ma trận Nhiệt Lớp học 2D',
-                sublabel: 'Xếp nhóm vi mô & Giao bài ZPD',
+                label: 'Tổng quan giảng dạy',
+                sublabel: 'Công việc & công cụ giáo viên',
                 icon: LayoutGrid,
                 active: activeTab === 'dashboard',
                 onClick: () => setActiveTab('dashboard')
+              },
+              {
+                id: 'teacher_heatmap',
+                label: 'Lớp học & năng lực',
+                sublabel: 'Học sinh và bản đồ kỹ năng',
+                icon: Users,
+                active: activeTab === 'teacher_heatmap',
+                onClick: () => setActiveTab('teacher_heatmap')
               },
               {
                 id: 'roadmap',
@@ -152,7 +160,7 @@ export default function Sidebar({
               {
                 id: 'diagnostic',
                 label: 'Ngân hàng Đề Khảo thí',
-                sublabel: 'Kiểm thử đề 30 câu & Ma trận',
+                sublabel: 'Danh sách đề & trạng thái xuất bản',
                 icon: ClipboardCheck,
                 active: activeTab === 'diagnostic',
                 onClick: () => setActiveTab('diagnostic')
@@ -160,31 +168,18 @@ export default function Sidebar({
               {
                 id: 'history',
                 label: 'Nhật ký Bài làm Học viên',
-                sublabel: 'Phân tích lỗi sai & Socratic AI',
+                sublabel: 'Tra cứu bài chẩn đoán theo lớp',
                 icon: History,
                 active: activeTab === 'history',
                 onClick: () => setActiveTab('history')
               },
               {
                 id: 'analytics',
-                label: 'Phân tích Tâm trắc học',
-                sublabel: 'Thống kê IRT 2PL & BKT lớp',
+                label: 'Cảnh báo & hỗ trợ',
+                sublabel: 'Theo dõi và ghi nhận can thiệp',
                 icon: BarChart3,
                 active: activeTab === 'analytics',
                 onClick: () => setActiveTab('analytics')
-              }
-            ]
-          },
-          {
-            sectionTitle: 'Tương Tác Trực Tuyến',
-            items: [
-              {
-                id: 'live',
-                label: 'Phòng Live Q&A Socratic',
-                sublabel: 'Giải đáp chuyên đề trực tuyến',
-                icon: Video,
-                active: false,
-                onClick: onOpenLiveClass
               }
             ]
           }
@@ -597,16 +592,16 @@ export default function Sidebar({
                 <span>Trạng Thái Giảng Dạy</span>
               </span>
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-200 font-bold">
-                Live BKT
+                Giáo viên
               </span>
             </div>
             <div className="text-xs font-extrabold text-white truncate">
-              {teacherHeatmap?.className || 'Lớp phụ trách'} • {teacherHeatmap?.totalStudents ?? 0} Học viên
+              {teacherHeatmap?.className || 'Không gian giảng dạy của bạn'}
             </div>
             <div className="text-[11px] text-blue-100 flex items-center justify-between">
-              <span>Kỹ năng theo dõi:</span>
+              <span>{teacherHeatmap ? 'Kỹ năng theo dõi:' : 'Học liệu · Đề thi · Học sinh'}</span>
               <strong className="text-[#FACC15] font-black">
-                {teacherHeatmap?.columns?.length ?? 0} chuyên đề
+                {teacherHeatmap ? `${teacherHeatmap.columns?.length ?? 0} chuyên đề` : 'Studio'}
               </strong>
             </div>
           </>

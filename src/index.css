@@ -82,6 +82,22 @@ body {
   line-height: 1.2;
 }
 
+/* Comfortable reading size in the student learning workspace. */
+.student-study-content {
+  font-size: 1.0625rem;
+  line-height: 1.9;
+  overflow-wrap: anywhere;
+}
+.student-study-content :is(.text-xs, .text-sm) {
+  font-size: 1rem;
+  line-height: 1.8;
+}
+.student-study-content .katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-block: 0.4rem;
+}
+
 /* =========================================================================
    JSXGraph High-Contrast Board & Geometry Styles
    ========================================================================= */

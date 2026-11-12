@@ -15,7 +15,8 @@ import {
   ShieldCheck,
   Sparkles,
   TrendingUp,
-  UserPlus
+  UserPlus,
+  Users
 } from 'lucide-react';
 import Sidebar from './components/layout/Sidebar';
 import MobileSidebar from './components/layout/MobileSidebar';
@@ -29,6 +30,7 @@ import LiveQnACard from './components/dashboard/LiveQnACard';
 import StudentParentLinkCard from './components/dashboard/StudentParentLinkCard';
 import ParentDashboardView from './components/dashboard/ParentDashboardView';
 import TeacherDashboardView from './components/dashboard/TeacherDashboardView';
+import TeacherPortalView from './components/dashboard/TeacherPortalView';
 import CampusManagerDashboardView from './components/dashboard/CampusManagerDashboardView';
 import LearningAnalyticsView from './components/dashboard/LearningAnalyticsView';
 import PublicLandingPage from './components/landing/PublicLandingPage';
@@ -94,11 +96,12 @@ const ROLE_PORTAL_DEFINITIONS = {
     icon: BookOpen,
     accentBadge: 'bg-indigo-50 text-indigo-700 border-indigo-200',
     tabs: [
-      { id: 'dashboard', label: 'Ma trận Nhiệt Lớp học 2D', icon: LayoutGrid },
+      { id: 'dashboard', label: 'Tổng quan giảng dạy', icon: LayoutGrid },
+      { id: 'teacher_heatmap', label: 'Lớp học & bản đồ năng lực', icon: Users },
       { id: 'roadmap', label: 'Studio Biên soạn Học liệu', icon: BookOpen },
-      { id: 'diagnostic', label: 'Ngân hàng Đề 30 Câu', icon: ClipboardCheck },
+      { id: 'diagnostic', label: 'Ngân hàng đề thi', icon: ClipboardCheck },
       { id: 'history', label: 'Nhật ký Bài làm Học viên', icon: History },
-      { id: 'analytics', label: 'Phân tích Tâm trắc học', icon: BarChart3 }
+      { id: 'analytics', label: 'Cảnh báo & hỗ trợ', icon: BarChart3 }
     ]
   },
   manager: {
@@ -186,8 +189,8 @@ export default function App() {
         const pData = await practiceService.getParentDashboard(uid);
         setParentPortalData(pData);
       } else if (activeRole === 'teacher') {
-        const hm = await practiceService.getClassHeatmap(userObj?.classId);
-        setTeacherHeatmapData(hm);
+        // TeacherPortalView loads scoped live data; do not substitute a default class.
+        setTeacherHeatmapData(null);
       } else if (activeRole === 'manager' || activeRole === 'admin') {
         const [campusesRes, campusHm, usersRes] = await Promise.all([
           userService.getCampuses().catch(() => []),
@@ -390,6 +393,10 @@ export default function App() {
       return <AccountSettingsPage currentUser={currentUser} onUpdateUser={setCurrentUser}
         activeRole={role} onNavigateTab={setActiveTab} onLogout={handleLogout} />;
     }
+    if (role === 'teacher' && activeTab !== 'roadmap') {
+      return <TeacherPortalView key={`${currentUser?.userId || currentUser?.id}:${currentUser?.classId || ''}:${activeTab}`}
+        currentUser={currentUser} section={activeTab} onNavigate={setActiveTab} />;
+    }
     if (activeTab === 'diagnostic' && role !== 'student') {
       return <CurriculumExplorerView role={role} onStartTopicQuiz={handleOpenAdaptiveQuiz} />;
     }
@@ -427,6 +434,7 @@ export default function App() {
         <CurriculumExplorerView
           role={role === 'parent' ? 'student' : role}
           onStartTopicQuiz={handleOpenAdaptiveQuiz}
+          onOpenAiTutorWithContext={handleOpenAiTutorWithQuestion}
         />
       );
     }
