@@ -1,3 +1,4 @@
+import BrandLogo from '../common/BrandLogo';
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -235,7 +236,7 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
 
     setIsSubmitting(true);
     try {
-      const response = await authService.login({ email, password });
+      const response = await authService.login({ email, password, rememberMe });
       setIsSubmitting(false);
 
       const loggedUser = response.user || {
@@ -501,18 +502,7 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
             onClick={onNavigateHome}
             className="flex items-center gap-2.5 cursor-pointer select-none group"
           >
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-cyan-500 flex items-center justify-center text-white shadow-md shadow-blue-500/20 font-black text-sm group-hover:scale-105 transition-transform">
-              ĐG
-            </div>
-            <div>
-              <div className="font-black text-xl tracking-tight text-slate-950 flex items-center gap-1.5">
-                <span>ĐGNL AI</span>
-                <span className="w-2 h-2 rounded-full bg-[#FACC15] ring-4 ring-yellow-400/20 animate-pulse"></span>
-              </div>
-              <div className="text-[10px] text-blue-600 font-extrabold uppercase tracking-wider">
-                Khảo thí & Luyện thi ĐGNL ĐHQG-HCM 4.0
-              </div>
-            </div>
+            <BrandLogo className="w-36 sm:w-44" />
           </div>
 
           {/* Quick Header Actions */}

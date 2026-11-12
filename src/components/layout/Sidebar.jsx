@@ -1,3 +1,4 @@
+import BrandLogo from '../common/BrandLogo';
 import React from 'react';
 import {
   Activity,
@@ -442,20 +443,7 @@ export default function Sidebar({
       <div className="space-y-6">
         {/* Brand Identity Header - Synchronized with Home Page (PublicHeader.jsx) */}
         <div className="space-y-3 px-1">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-cyan-500 flex items-center justify-center text-white font-black text-base shadow-md shadow-blue-500/20">
-              ĐG
-            </div>
-            <div>
-              <div className="font-extrabold text-base tracking-tight text-slate-900 flex items-center gap-1.5">
-                <span>ĐGNL AI</span>
-                <span className="w-2 h-2 rounded-full bg-[#FACC15] ring-4 ring-yellow-400/20 inline-block"></span>
-              </div>
-              <div className="text-[11px] text-slate-500 font-semibold">
-                Adaptive Assessment Platform
-              </div>
-            </div>
-          </div>
+          <BrandLogo className="w-44" />
 
           {/* Dedicated Role Portal Badge */}
           <div

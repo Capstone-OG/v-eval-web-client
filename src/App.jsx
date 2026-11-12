@@ -33,6 +33,7 @@ import WebLoginPage from './components/auth/WebLoginPage';
 import AccountProvisioningView from './components/admin/AccountProvisioningView';
 import DiagnosticAssessmentPage from './components/diagnostic/DiagnosticAssessmentPage';
 import SubmissionHistoryView from './components/diagnostic/SubmissionHistoryView';
+import AccountSettingsPage from './components/settings/AccountSettingsPage';
 import CurriculumExplorerView from './components/curriculum/CurriculumExplorerView';
 import TuitionPaymentView from './components/payment/TuitionPaymentView';
 import {
@@ -152,14 +153,7 @@ export default function App() {
   });
 
   // Latest diagnostic assessment result
-  const [latestDiagnosticResult, setLatestDiagnosticResult] = useState(() => {
-    try {
-      const saved = localStorage.getItem('veval_latest_diagnostic');
-      return saved ? JSON.parse(saved) : null;
-    } catch {
-      return null;
-    }
-  });
+  const [latestDiagnosticResult, setLatestDiagnosticResult] = useState(null);
 
   // Interactive Modal States: 'adaptive' | 'mock' | 'ai' | 'radar' | null
   const [activeModal, setActiveModal] = useState(null);
@@ -284,6 +278,7 @@ export default function App() {
 
     const finalUser = loggedUser || authService.getCurrentUser();
     setRole(validRole);
+    setLatestDiagnosticResult(null);
     setCurrentUser(finalUser);
     setActiveTab(ROLE_PORTAL_DEFINITIONS[validRole].defaultTab);
     setAppView('dashboard');
@@ -293,6 +288,7 @@ export default function App() {
   // Logout Handler
   const handleLogout = async () => {
     await authService.logout();
+    setLatestDiagnosticResult(null);
     setCurrentUser(null);
     setStudentDashboard(null);
     setParentPortalData(null);
@@ -382,10 +378,19 @@ export default function App() {
   const PortalIcon = currentPortal.icon;
 
   const renderRolePortalContent = () => {
+    if (activeTab === 'settings') {
+      return <AccountSettingsPage currentUser={currentUser} onUpdateUser={setCurrentUser}
+        activeRole={role} onNavigateTab={setActiveTab} onLogout={handleLogout} />;
+    }
+    if (activeTab === 'diagnostic' && role !== 'student') {
+      return <CurriculumExplorerView role={role} onStartTopicQuiz={handleOpenAdaptiveQuiz} />;
+    }
     if (activeTab === 'diagnostic') {
       return (
         <DiagnosticAssessmentPage
-          embedded={true}
+          key={currentUser?.userId || currentUser?.id || 'guest'}
+          currentUser={currentUser}
+          isEmbedded={true}
           onNavigateDashboard={() => setActiveTab('dashboard')}
           onCompleteDiagnostic={(res) => {
             setLatestDiagnosticResult(res);
@@ -395,6 +400,11 @@ export default function App() {
       );
     }
 
+    if (activeTab === 'history' && role === 'student') {
+      return <DiagnosticAssessmentPage key={currentUser?.userId || currentUser?.id || 'guest'}
+        currentUser={currentUser} isEmbedded={true}
+        onNavigateDashboard={() => setActiveTab('dashboard')} />;
+    }
     if (activeTab === 'history') {
       return (
         <SubmissionHistoryView
@@ -569,12 +579,13 @@ export default function App() {
             portalMetrics={portalMetrics}
             onLogout={handleLogout}
             onOpenLandingPage={() => setAppView('landing')}
+              onOpenSettings={() => setActiveTab('settings')}
           />
 
           {/* Role Portal Context Strip & Subpage Navigation Bar (Segmented Control Single-Row) */}
           <div className="bg-white/90 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-6 py-3.5 sticky top-[65px] z-20 shadow-2xs">
             <div className="w-full flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3.5">
-              
+
               {/* Left: Role Identity & Title */}
               <div className="flex items-center gap-3.5 min-w-0">
                 <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center shadow-md shadow-blue-500/20 shrink-0">

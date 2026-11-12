@@ -3,3 +3,6 @@ export * from './auth';
 export * from './dashboard';
 export * from './modals';
 export * from './layout';
+export * from './roadmap';
+export * from './question_bank';
+export * from './settings';

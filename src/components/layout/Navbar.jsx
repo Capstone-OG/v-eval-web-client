@@ -1,3 +1,4 @@
+import BrandLogo from '../common/BrandLogo';
 import React from 'react';
 import {
   Bell,
@@ -15,6 +16,7 @@ import {
   LogOut,
   Network,
   ShieldCheck,
+  Settings,
   Sparkles,
   TrendingUp,
   UserPlus
@@ -104,7 +106,8 @@ export default function Navbar({
   currentUser,
   portalMetrics = {},
   onLogout,
-  onOpenLandingPage
+  onOpenLandingPage,
+  onOpenSettings
 }) {
   const info = ROLE_HEADER_INFO[role] || ROLE_HEADER_INFO.student;
   const StatusIcon = info.statusIcon;
@@ -159,15 +162,7 @@ export default function Navbar({
         {/* Left: Authenticated Role Portal Badge */}
         <div className="flex items-center gap-3 flex-wrap">
           {/* Mobile Brand Logo */}
-          <div className="flex lg:hidden items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-cyan-500 flex items-center justify-center text-white font-black text-xs shadow-sm">
-              ĐG
-            </div>
-            <span className="font-extrabold text-sm text-slate-900 flex items-center gap-1">
-              <span>ĐGNL AI</span>
-              <span className="w-1.5 h-1.5 rounded-full bg-[#FACC15]"></span>
-            </span>
-          </div>
+          <div className="lg:hidden"><BrandLogo className="w-28 sm:w-32" /></div>
 
           {/* Authenticated Role Portal Indicator */}
           <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 text-white text-xs font-extrabold shadow-sm shadow-blue-500/20">
@@ -228,6 +223,11 @@ export default function Navbar({
               </div>
             </div>
 
+            {onOpenSettings && <button type="button" onClick={onOpenSettings}
+              title="Cài đặt tài khoản" aria-label="Cài đặt tài khoản"
+              className="rounded-xl border border-slate-200 p-2 text-slate-600 hover:bg-slate-50">
+              <Settings className="h-4 w-4" />
+            </button>}
             {onLogout && (
               <button
                 type="button"
