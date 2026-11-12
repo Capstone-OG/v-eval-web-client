@@ -53,11 +53,6 @@ export default function Navbar({ activeRole, currentUser, onLogout, onOpenAuthMo
 
   const [showUserDropdown, setShowUserDropdown] = useState(false);
 
-  const savedTheta = localStorage.getItem('veval_theta_0');
-  const thetaDisplay = savedTheta
-    ? (parseFloat(savedTheta) > 0 ? `+${parseFloat(savedTheta).toFixed(2)}` : parseFloat(savedTheta).toFixed(2))
-    : '+0.65';
-
   const displayName = currentUser?.fullName || mockUser.name;
   const displayEmail = currentUser?.email || mockUser.email;
   const displayAvatar = currentUser?.avatarUrl || mockUser.avatar;
@@ -109,14 +104,6 @@ export default function Navbar({ activeRole, currentUser, onLogout, onOpenAuthMo
         {/* Center / Right controls */}
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
 
-          {activeRole === 'student' && <>
-          {/* IRT Psychometrics Live Status Badge (>= 1536px 2xl) */}
-          <div className="hidden 2xl:flex items-center gap-2 px-3 py-1.5 bg-slate-900 border border-slate-800 rounded-xl text-white font-mono text-xs font-bold shadow-sm shrink-0">
-            <Award className="w-3.5 h-3.5 text-blue-400 shrink-0" />
-            <span>Theta 0: <strong className="text-emerald-400">{thetaDisplay}</strong> <span className="text-slate-400 font-sans font-normal">(82% Bách Khoa)</span></span>
-          </div>
-
-          </>}
           {/* Campus Selector (>= 1280px xl only, prevents colliding on tablet) */}
           <div className="hidden xl:flex flex-col gap-1 px-3 py-1.5 bg-blue-50 border border-blue-200/60 rounded-xl text-xs font-semibold text-blue-700 shrink-0 max-w-[260px] min-w-0">
             <div className="flex items-center gap-1.5 min-w-0">

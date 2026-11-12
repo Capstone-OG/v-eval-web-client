@@ -1,3 +1,4 @@
+import { clearLegacyDiagnosticData } from './diagnosticPrivacy';
 /**
  * V-Eval API Gateway Client
  * 
@@ -12,7 +13,11 @@ const TOKEN_KEY = 'veval_access_token';
 const REFRESH_TOKEN_KEY = 'veval_refresh_token';
 const USER_KEY = 'veval_user_profile';
 
+clearLegacyDiagnosticData(localStorage, sessionStorage);
+let sessionVersion = 0;
+
 export const tokenStorage = {
+  getSessionVersion: () => sessionVersion,
   getAccessToken: () => localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(TOKEN_KEY),
   getRefreshToken: () => localStorage.getItem(REFRESH_TOKEN_KEY) || sessionStorage.getItem(REFRESH_TOKEN_KEY),
   getUser: () => {
@@ -24,6 +29,8 @@ export const tokenStorage = {
     }
   },
   setTokens: (accessToken, refreshToken, user = null, rememberMe = true) => {
+    if (user) ++sessionVersion;
+    clearLegacyDiagnosticData(localStorage, sessionStorage);
     const storage = rememberMe ? localStorage : sessionStorage;
     // Clear opposite storage to avoid stale tokens
     const altStorage = rememberMe ? sessionStorage : localStorage;
@@ -36,6 +43,8 @@ export const tokenStorage = {
     if (user) storage.setItem(USER_KEY, JSON.stringify(user));
   },
   clearTokens: () => {
+    ++sessionVersion;
+    clearLegacyDiagnosticData(localStorage, sessionStorage);
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(REFRESH_TOKEN_KEY);
     localStorage.removeItem(USER_KEY);

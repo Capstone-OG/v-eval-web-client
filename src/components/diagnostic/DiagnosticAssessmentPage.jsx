@@ -71,7 +71,12 @@ import { practiceService } from '../../services/practiceService';
 import apiClient, { tokenStorage } from '../../services/apiClient';
 import MathText from '../common/MathText';
 import DiagnosticResultSummary from './DiagnosticResultSummary';
-import { DOMAINS, getFallbackDiagnosticResult, getDefaultExamHistory, SAMPLE_30_QUESTIONS } from './diagnosticData';
+import { createExamClock } from './examClock';
+import { createSubmissionSnapshot } from './submissionSnapshot';
+import { draftKey, readDraft, findSavedDiagnostic, domainScoresFromQuestions, removeDiagnosticDraft } from './diagnosticRecovery';
+import WeakSkills from './WeakSkills';
+import { completedDiagnosticExamIds, DIAGNOSTIC_TARGET } from './diagnosticEligibility';
+import { DOMAINS } from './diagnosticData';
 
 // Danh mục bài kiểm tra khảo thí chuẩn hóa V-ACT
 const EXAM_LIST = [
@@ -142,7 +147,7 @@ function transformBackendExamToQuestions(examDto) {
         const optDict = q.options || {};
         const optionsList = ['A', 'B', 'C', 'D'].map((k) => optDict[k] || '');
         const skillName = q.suggestedSkillName || q.skillName || 'Tư duy logic & Phân tích';
-        const domainInfo = mapSkillToDomain(skillName, (q.questionNumber || 1) - 1);
+        const domainInfo = { id: q.domainId || 'unknown', name: q.domainName || 'Chưa xác định miền' };
 
         const startQ = passage.startQuestion ?? passage.start_question ?? passage.StartQuestion;
         const endQ = passage.endQuestion ?? passage.end_question ?? passage.EndQuestion;
@@ -173,7 +178,7 @@ function transformBackendExamToQuestions(examDto) {
       const optDict = q.options || {};
       const optionsList = ['A', 'B', 'C', 'D'].map((k) => optDict[k] || '');
       const skillName = q.suggestedSkillName || q.skillName || 'Toán học & Giải quyết vấn đề';
-      const domainInfo = mapSkillToDomain(skillName, (q.questionNumber || 1) - 1);
+      const domainInfo = { id: q.domainId || 'unknown', name: q.domainName || 'Chưa xác định miền' };
 
       allQuestions.push({
         id: q.questionId,
@@ -266,46 +271,103 @@ export default function DiagnosticAssessmentPage({
   // Selected attempt from history to view in detail (null = show history overview list)
   const [selectedHistoryExam, setSelectedHistoryExam] = useState(null);
 
-  // Exam History persistence
-  const [examHistory, setExamHistory] = useState(() => {
-    try {
-      const raw = localStorage.getItem('veval_exam_history');
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-    } catch (e) {
-      console.warn('Lỗi đọc exam history:', e);
-    }
-    const savedTheta = localStorage.getItem('veval_theta_0');
-    return getDefaultExamHistory(savedTheta ? parseFloat(savedTheta) : null);
-  });
-
-  // Latest saved diagnostic result persistence
-  const [savedLatestResult, setSavedLatestResult] = useState(() => {
-    try {
-      const raw = localStorage.getItem('veval_latest_diagnostic_result');
-      if (raw) return JSON.parse(raw);
-    } catch (e) {
-      console.warn('Lỗi đọc latest diagnostic result:', e);
-    }
-    const savedTheta = localStorage.getItem('veval_theta_0');
-    return getFallbackDiagnosticResult(savedTheta ? parseFloat(savedTheta) : null);
-  });
-
-  // Live in-exam result state
+  // Ignore legacy browser caches: they can contain sample submissions.
+  const studentId = currentUser?.userId || currentUser?.id || currentUser?.studentId;
+  const [examHistory, setExamHistory] = useState([]);
+  const [recovering, setRecovering] = useState(() => Boolean(readDraft(localStorage, currentUser?.userId || currentUser?.id || currentUser?.studentId)));
+  const [recoveryError, setRecoveryError] = useState('');
+  const [recoveryRetry, setRecoveryRetry] = useState(0);
+  const recoveryBlocked = useRef(false);
+  const [historyLoading, setHistoryLoading] = useState(true);
+  const [historyError, setHistoryError] = useState('');
+  const [historyReload, setHistoryReload] = useState(0);
+  const completedExamCount = new Set(examHistory.map((item) => item.examId)).size;
+  const [detailError, setDetailError] = useState('');
+  const [detailLoading, setDetailLoading] = useState(false);
+  const detailRef = useRef(0);
   const [resultData, setResultData] = useState(null);
-  const [reviewFilter, setReviewFilter] = useState('ALL'); // 'ALL' | 'CORRECT' | 'WRONG' | 'FLAGGED'
+  const [reviewFilter, setReviewFilter] = useState('ALL');
+  const currentDisplayResult = selectedHistoryExam?.resultData || resultData;
 
-  // Lấy dữ liệu bài kiểm tra chẩn đoán để hiển thị (từ bài vừa nộp, hoặc bài chọn từ lịch sử, hoặc bài đã lưu, hoặc fallback mẫu)
-  const currentDisplayResult = useMemo(() => {
-    if (selectedHistoryExam?.resultData) return selectedHistoryExam.resultData;
-    if (resultData) return resultData;
-    if (savedLatestResult) return savedLatestResult;
-    if (examHistory && examHistory.length > 0 && examHistory[0]?.resultData) return examHistory[0].resultData;
-    const savedTheta = localStorage.getItem('veval_theta_0');
-    return getFallbackDiagnosticResult(savedTheta ? parseFloat(savedTheta) : null);
-  }, [selectedHistoryExam, resultData, savedLatestResult, examHistory]);
+  useEffect(() => {
+    setSelectedHistoryExam(null);
+    setResultData(null);
+    setExamHistory([]);
+    setDetailError('');
+    setDetailLoading(false);
+    ++detailRef.current;
+    return () => { ++detailRef.current; };
+  }, [studentId]);
+
+  useEffect(() => {
+    let active = true;
+    setHistoryError('');
+    setHistoryLoading(true);
+    if (!studentId || !tokenStorage.getAccessToken()) {
+      setHistoryLoading(false);
+      return;
+    }
+    practiceService.getDiagnosticHistory(studentId).then(async (items) => {
+      if (!active) return;
+      if (!Array.isArray(items) || items.some((item) => item.studentId !== studentId)) {
+        throw new Error('Dữ liệu lịch sử không hợp lệ.');
+      }
+      // Summary DTO omits theta; fetch confirmed details for the trend chart.
+      const completed = items.filter((item) => item.status === 'COMPLETED' && item.examType === 'DIAGNOSTIC');
+      const details = await Promise.all(completed.map((item) => practiceService.getDiagnosticResult(item.submissionId)));
+      if (!active) return;
+      if (details.some((item, index) => item.studentId !== studentId
+        || item.submissionId !== completed[index].submissionId || !Number.isFinite(item.theta0))) {
+        throw new Error('Kết quả lịch sử không hợp lệ.');
+      }
+      setExamHistory(details.map((item) => ({
+        id: item.submissionId, examId: item.examId, examTitle: 'Khảo sát năng lực đầu vào',
+        completedAt: item.completedAt, totalCorrect: item.totalCorrect,
+        totalQuestions: item.totalQuestions, theta: item.theta0,
+        timeSpentSeconds: item.totalTimeSpentSeconds
+      })).sort((a,b) => new Date(b.completedAt) - new Date(a.completedAt)));
+    }).catch((err) => { if (active) setHistoryError(err.message); })
+      .finally(() => { if (active) setHistoryLoading(false); });
+    return () => { active = false; };
+  }, [studentId, historyReload]);
+
+  const openHistoryExam = async (attempt, cachedData = null) => {
+    const request = ++detailRef.current;
+    setDetailError('');
+    setDetailLoading(true);
+    try {
+      const data = cachedData || await practiceService.getDiagnosticResult(attempt.id);
+      if (request !== detailRef.current) return;
+      if (data.studentId !== studentId || data.submissionId !== attempt.id || !Number.isFinite(data.theta0)) {
+        throw new Error('Kết quả bài kiểm tra không hợp lệ.');
+      }
+      const reviewed = (data.questions || []).map((q) => ({
+        id: q.questionId, question_number: q.questionOrder,
+        content: 'API lịch sử không cung cấp nội dung câu hỏi.', options: [],
+        skill_name: q.skillName, domain_name: q.domainName, bloom: q.difficultyLevel,
+        studentChoice: q.selectedOption, correctChoice: q.correctOption,
+        isCorrect: q.isCorrect, timeSpent: q.timeSpentSeconds, isFlagged: false,
+        speedCategory: q.timeSpentSeconds < 25 ? 'fast' : q.timeSpentSeconds > 90 ? 'slow' : 'normal'
+      }));
+      setSelectedHistoryExam({ ...attempt, resultData: {
+        theta_0: data.theta0, placement_class: data.placementClass,
+        ai_commentary: data.aiCommentary, reviewedQuestions: reviewed, domain_scores: domainScoresFromQuestions(data.questions),
+        weakSkills: data.weakSkills, skillBreakdowns: data.skillBreakdowns,
+        radar_chart: (data.radarChart || []).map((r) => ({ domain_id: r.domainId,
+          domain_name: r.domainName, student_pct: r.studentPct, benchmark_pct: r.benchmarkPct })),
+        pacing: { totalCorrect: data.totalCorrect, totalQuestions: data.totalQuestions,
+          totalTimeSpent: data.totalTimeSpentSeconds,
+          avgTimePerQ: data.totalQuestions ? Math.round(data.totalTimeSpentSeconds / data.totalQuestions) : 0,
+          fastCount: reviewed.filter((q) => q.speedCategory === 'fast').length,
+          normalCount: reviewed.filter((q) => q.speedCategory === 'normal').length,
+          slowCount: reviewed.filter((q) => q.speedCategory === 'slow').length, flaggedCount: 0 }
+      }});
+    } catch (err) {
+      if (request === detailRef.current) setDetailError(err.message);
+    } finally {
+      if (request === detailRef.current) setDetailLoading(false);
+    }
+  };
 
   // Dữ liệu biểu đồ xu hướng năng lực IRT theta qua các đợt thi (sắp xếp theo thời gian tăng dần)
   const trendChartData = useMemo(() => {
@@ -328,7 +390,7 @@ export default function DiagnosticAssessmentPage({
 
   // Auto start diagnostic assessment directly ONLY IF autoStart is true
   useEffect(() => {
-    if (autoStart && !autoStartedRef.current) {
+    if (autoStart && !autoStartedRef.current && !readDraft(localStorage, studentId)) {
       autoStartedRef.current = true;
       handleStartAssessment();
     }
@@ -616,16 +678,9 @@ export default function DiagnosticAssessmentPage({
     };
   }, [stage]);
 
-  // Proctoring 3-violation rule: auto-lock and force submit when tabSwitchCount reaches 3
+  // Reaching the threshold commits the attempt immediately.
   useEffect(() => {
-    if (stage === 'testing' && tabSwitchCount >= 3) {
-      setShowViolationModal(true);
-      // Automatically force submit after 3.5 seconds if user does not click immediately
-      const autoSubmitTimer = setTimeout(() => {
-        executeSubmitExam();
-      }, 3500);
-      return () => clearTimeout(autoSubmitTimer);
-    }
+    if (stage === 'testing' && tabSwitchCount >= 3) submitTimerRef.current?.();
   }, [tabSwitchCount, stage]);
 
   // AI Tutor Drawer
@@ -637,32 +692,33 @@ export default function DiagnosticAssessmentPage({
 
   // (Result state is declared at top of component)
 
-  // Timer interval
+  const examClockRef = useRef(null);
+  const submitTimerRef = useRef(null);
   useEffect(() => {
-    let timer;
-    if (stage === 'testing' && timeRemaining > 0) {
-      timer = setInterval(() => {
-        setTimeRemaining((prev) => {
-          if (prev <= 1) {
-            clearInterval(timer);
-            executeSubmitExam();
-            return 0;
-          }
-          return prev - 1;
-        });
-
-        // Track time spent on current question
-        const currentQ = questions[currentIndex];
-        if (currentQ) {
-          setTimeSpentPerQ((prev) => ({
-            ...prev,
-            [currentQ.id]: (prev[currentQ.id] || 0) + 1
-          }));
-        }
-      }, 1000);
-    }
-    return () => clearInterval(timer);
-  }, [stage, timeRemaining, currentIndex, questions]);
+    const clock = examClockRef.current;
+    if (stage !== 'testing' || !clock) return;
+    clock.visit(questions[currentIndex]?.id, Date.now());
+    let expired = false;
+    const tick = () => {
+      const now = Date.now();
+      const remaining = clock.remaining(now);
+      setTimeRemaining(remaining);
+      setTimeSpentPerQ(clock.snapshot(now));
+      if (remaining === 0 && !expired) {
+        expired = true;
+        submitTimerRef.current?.();
+      }
+    };
+    const timer = setInterval(tick, 250);
+    window.addEventListener('focus', tick);
+    document.addEventListener('visibilitychange', tick);
+    return () => {
+      clearInterval(timer);
+      clock.stop(Date.now());
+      window.removeEventListener('focus', tick);
+      document.removeEventListener('visibilitychange', tick);
+    };
+  }, [stage, currentIndex, questions]);
 
   // Format timer MM:SS
   const formatTime = (secs) => {
@@ -673,12 +729,23 @@ export default function DiagnosticAssessmentPage({
 
   // 1. Tải đề thi thật từ Backend Content Service (Port 5249 qua API Gateway :5212)
   const handleStartAssessment = async () => {
+    if (recovering || recoveryBlocked.current || submittingRef.current) return;
     setStage('setup');
     setIsLoading(true);
     setLoadingMsg('Đang kiểm tra cơ sở theo học trước khi vào thi...');
 
     try {
       if (!tokenStorage.getAccessToken()) throw new Error('Vui lòng đăng nhập trước khi làm bài kiểm tra đầu vào.');
+      const owner = tokenStorage.getUser();
+      const ownerId = owner?.userId || owner?.id || owner?.studentId;
+      if (!ownerId || ownerId !== studentId) throw new Error('Vui lòng đăng nhập lại.');
+      const history = await practiceService.getDiagnosticHistory(ownerId);
+      const completedIds = completedDiagnosticExamIds(history, ownerId);
+      if (completedIds.size >= DIAGNOSTIC_TARGET) {
+        showPopupAlert('Bạn đã hoàn thành đủ 3/3 bài chẩn đoán khác nhau. Hãy xem lại kết quả trong lịch sử.', 'Đã hoàn thành chẩn đoán');
+        setHistoryReload((value) => value + 1);
+        return;
+      }
       let profile = null;
       try {
         profile = (await apiClient.get('/api/v1/students/me/profile')).data;
@@ -698,16 +765,33 @@ export default function DiagnosticAssessmentPage({
       setLoadingMsg('Đang nạp đề kiểm tra đầu vào...');
       const rawExamDto = await contentService.getDiagnosticTest();
       const transformed = transformBackendExamToQuestions(rawExamDto);
+      if (!transformed.id) throw new Error('Máy chủ chưa cung cấp mã đề thi.');
+      if (completedIds.has(transformed.id)) {
+        setSelectedHistoryExam(null);
+        setResultData(null);
+        setCustomAlert({
+          title: 'Bạn đã hoàn thành đề này',
+          message: 'Đề tiếp theo hiện chưa có. Bạn quay lại sau nhé!',
+          type: 'diagnostic-progress',
+          completedCount: completedIds.size
+        });
+        setHistoryReload((value) => value + 1);
+        return;
+      }
       if (!transformed.questions || transformed.questions.length === 0) {
         throw new Error('Đề thi trả về từ máy chủ không chứa câu hỏi nào. Vui lòng kiểm tra lại Content Service!');
       }
 
+      submissionRef.current = null;
+      needsReconcileRef.current = false;
+      setSubmissionError('');
       setExamData(transformed);
       setQuestions(transformed.questions);
       setCurrentIndex(0);
       setAnswers({});
       setFlagged({});
       setTimeSpentPerQ({});
+      examClockRef.current = createExamClock(Date.now(), (transformed.durationMinutes || 45) * 60000, transformed.questions[0].id);
       setTimeRemaining((transformed.durationMinutes || 45) * 60);
       setTabSwitchCount(0);
       setShowViolationModal(false);
@@ -752,6 +836,7 @@ export default function DiagnosticAssessmentPage({
 
   // 2. Select Option
   const handleSelectOption = (qId, optionChar) => {
+    if (submissionRef.current || stage !== 'testing' || tabSwitchCount >= 3 || examClockRef.current?.remaining(Date.now()) === 0) return;
     setAnswers((prev) => ({
       ...prev,
       [qId]: optionChar
@@ -760,6 +845,7 @@ export default function DiagnosticAssessmentPage({
 
   // 3. Toggle Flag
   const handleToggleFlag = (qId) => {
+    if (submissionRef.current || tabSwitchCount >= 3 || stage !== 'testing') return;
     setFlagged((prev) => ({
       ...prev,
       [qId]: !prev[qId]
@@ -771,38 +857,64 @@ export default function DiagnosticAssessmentPage({
     setShowSubmitModal(true);
   };
 
+  const submissionRef = useRef(null);
+  const needsReconcileRef = useRef(false);
+  const submittingRef = useRef(false);
+  const [submissionError, setSubmissionError] = useState('');
+  const aliveRef = useRef(false);
+  useEffect(() => {
+    aliveRef.current = true;
+    return () => { aliveRef.current = false; };
+  }, []);
+
   const executeSubmitExam = async () => {
+    if (submittingRef.current) return;
+    const sessionVersion = tokenStorage.getSessionVersion();
+    const owner = studentId;
+    const isCurrentSession = () => aliveRef.current
+      && tokenStorage.getSessionVersion() === sessionVersion
+      && (tokenStorage.getUser()?.userId || tokenStorage.getUser()?.id || tokenStorage.getUser()?.studentId) === owner;
+    const clock = examClockRef.current;
+    if (!clock) return;
+    clock.stop(Date.now());
+    const measuredTimes = clock.snapshot(Date.now());
+    setTimeSpentPerQ(measuredTimes);
     setShowSubmitModal(false);
     setShowViolationModal(false);
-    setTabSwitchCount(0);
+    submittingRef.current = true;
+    setSubmissionError('');
     setStage('analyzing');
     setIsLoading(true);
     setLoadingMsg('Đang gửi bài nộp đến Practice Service (Port 5261) để chấm điểm IRT 2PL Theta_0 & xếp lớp...');
 
     try {
       const user = tokenStorage.getUser();
-      const studentId = user?.userId || user?.id || user?.studentId || '00000000-0000-0000-0000-000000000001';
+      const studentId = user?.userId || user?.id || user?.studentId;
+      if (!studentId || studentId !== owner) throw new Error('Please sign in again before submitting.');
 
 
-      let totalTimeSpent = 0;
-      const answersPayload = questions.map((q) => {
-        const timeSpent = Math.max(1, parseInt(timeSpentPerQ[q.id], 10) || 25);
-        totalTimeSpent += timeSpent;
-        return {
-          questionId: q.id,
-          selectedOption: answers[q.id] ? answers[q.id].trim().toUpperCase() : null,
-          timeSpentSeconds: timeSpent
-        };
-      });
+      if (!submissionRef.current) {
+        submissionRef.current = createSubmissionSnapshot(studentId, examData?.id,
+          clock.startedAt, questions, answers, measuredTimes);
+      }
+      const submissionPayload = submissionRef.current;
+      if (submissionPayload.studentId !== owner) throw new Error('Please sign in again.');
+      const totalTimeSpent = submissionPayload.answers.reduce((total, q) => total + q.timeSpentSeconds, 0);
 
-      const submissionPayload = {
-        studentId,
-        examId: examData?.id || '11111111-1111-1111-1111-111111111111',
-        startedAt: new Date(Date.now() - totalTimeSpent * 1000).toISOString(),
-        answers: answersPayload
-      };
-
-      const apiResponse = await practiceService.submitDiagnosticTest(submissionPayload);
+      persistDraft();
+      let apiResponse = null;
+      if (needsReconcileRef.current) {
+        setLoadingMsg('Đang kiểm tra bài đã được lưu chưa...');
+        apiResponse = await findSavedDiagnostic(practiceService, submissionPayload);
+        if (!isCurrentSession()) return;
+      }
+      if (!apiResponse) {
+        needsReconcileRef.current = true;
+        apiResponse = await practiceService.submitDiagnosticTest(submissionPayload);
+      }
+      if (!isCurrentSession()) return;
+      if (apiResponse?.studentId !== owner) throw new Error('Result does not belong to this student.');
+      if (apiResponse.examId !== submissionPayload.examId) throw new Error('Kết quả không thuộc đề đã nộp.');
       if (!apiResponse?.submissionId || !Number.isFinite(apiResponse.theta0)
         || !apiResponse.placementClass || !Array.isArray(apiResponse.questions)
         || apiResponse.questions.length !== questions.length
@@ -822,14 +934,15 @@ export default function DiagnosticAssessmentPage({
 
       const reviewedQuestionsList = questions.map((q, idx) => {
         const backendQ = apiResponse.questions.find((bq) => bq.questionId === q.id);
-        const studentChoice = answers[q.id] ? answers[q.id].trim().toUpperCase() : (backendQ?.selectedOption || '');
+        const studentChoice = backendQ.selectedOption || '';
         const correctChoice = backendQ.correctOption.trim().toUpperCase();
         const isCorrect = backendQ.isCorrect;
-        const timeSpent = Math.max(1, parseInt(timeSpentPerQ[q.id], 10) || 25);
+        const timeSpent = backendQ.timeSpentSeconds ?? 0;
 
         if (isCorrect) totalCorrect += 1;
 
-        const dId = q.domain_id && domainStats[q.domain_id] ? q.domain_id : 'dom_math';
+        const dId = backendQ.domainId || 'unknown';
+        if (!domainStats[dId]) domainStats[dId] = { domain_id: dId, domain_name: backendQ.domainName || 'Chưa xác định miền', total: 0, correct: 0 };
         domainStats[dId].total += 1;
         if (isCorrect) domainStats[dId].correct += 1;
 
@@ -839,6 +952,8 @@ export default function DiagnosticAssessmentPage({
 
         return {
           ...q,
+          domain_id: backendQ.domainId || 'unknown',
+          domain_name: backendQ.domainName || 'Chưa xác định miền',
           question_number: idx + 1,
           studentChoice,
           correctChoice,
@@ -850,7 +965,7 @@ export default function DiagnosticAssessmentPage({
       });
 
       // 2. Tính toán điểm phần trăm 5 lĩnh vực thực tế
-      const domainScoresCalculated = Object.values(domainStats).map((d) => ({
+      const domainScoresCalculated = Object.values(domainStats).filter((d) => d.total > 0).map((d) => ({
         domain_id: d.domain_id,
         domain_name: d.domain_name,
         total_questions: d.total,
@@ -861,25 +976,6 @@ export default function DiagnosticAssessmentPage({
       const finalTheta = apiResponse.theta0;
       const finalPlacement = apiResponse.placementClass;
       const finalSubmissionId = apiResponse.submissionId;
-
-      localStorage.setItem('veval_diagnostic_submission_id', String(finalSubmissionId));
-      sessionStorage.setItem('veval_diagnostic_submission_id', String(finalSubmissionId));
-      localStorage.setItem('veval_theta_0', String(finalTheta));
-      localStorage.setItem('veval_placement_class', finalPlacement);
-
-      // Save complete guest exam result so user can link after login/register
-      try {
-        sessionStorage.setItem('veval_pending_exam_result', JSON.stringify({
-          submissionId: finalSubmissionId,
-          theta0: finalTheta,
-          placementClass: finalPlacement,
-          totalCorrect,
-          totalQuestions: questions.length,
-          timestamp: Date.now()
-        }));
-      } catch (saveErr) {
-        console.warn('Cannot save exam result to session', saveErr);
-      }
 
       const finalResult = {
         submission_id: finalSubmissionId,
@@ -903,7 +999,7 @@ export default function DiagnosticAssessmentPage({
         pacing: {
           totalCorrect: apiResponse?.totalCorrect ?? totalCorrect,
           totalQuestions: apiResponse?.totalQuestions ?? questions.length,
-          totalTimeSpent,
+          totalTimeSpent: apiResponse.totalTimeSpentSeconds ?? totalTimeSpent,
           avgTimePerQ: Math.round(totalTimeSpent / (questions.length || 1)),
           fastCount: reviewedQuestionsList.filter((q) => q.speedCategory === 'fast').length,
           normalCount: reviewedQuestionsList.filter((q) => q.speedCategory === 'normal').length,
@@ -912,13 +1008,9 @@ export default function DiagnosticAssessmentPage({
         }
       };
 
+      removeDiagnosticDraft(localStorage, owner);
+      needsReconcileRef.current = false;
       setResultData(finalResult);
-      setSavedLatestResult(finalResult);
-      try {
-        localStorage.setItem('veval_latest_diagnostic_result', JSON.stringify(finalResult));
-      } catch (saveErr) {
-        console.warn('Lỗi lưu latest result:', saveErr);
-      }
 
       // Thêm bài thi vừa nộp vào đầu lịch sử các lần thi
       const newAttempt = {
@@ -935,15 +1027,7 @@ export default function DiagnosticAssessmentPage({
         resultData: finalResult
       };
 
-      setExamHistory((prevHistory) => {
-        const nextHistory = [newAttempt, ...(prevHistory || []).filter((h) => h.id !== finalSubmissionId)];
-        try {
-          localStorage.setItem('veval_exam_history', JSON.stringify(nextHistory));
-        } catch (e) {
-          console.warn('Lỗi lưu exam history:', e);
-        }
-        return nextHistory;
-      });
+      setHistoryReload((value) => value + 1);
 
       setShowViolationModal(false);
       setShowSubmitModal(false);
@@ -958,12 +1042,15 @@ export default function DiagnosticAssessmentPage({
         origin: { y: 0.6 }
       });
     } catch (err) {
-      console.error('Submit exam error:', err);
-      showPopupAlert(`Chưa xác nhận được kết quả nộp bài: ${err.message}\nBài làm vẫn được giữ trên màn hình hiện tại.`, 'Nộp bài chưa thành công', 'error');
-      setStage('testing');
+      if (!isCurrentSession()) return;
+      setSubmissionError(err.message);
+      setStage('analyzing');
     } finally {
-      setIsLoading(false);
-      setLoadingMsg('');
+      submittingRef.current = false;
+      if (isCurrentSession()) {
+        setIsLoading(false);
+        setLoadingMsg('');
+      }
     }
   };
 
@@ -990,6 +1077,8 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
   };
 
   // Lọc danh sách câu hỏi trong bảng đánh giá chi tiết
+  submitTimerRef.current = executeSubmitExam;
+
   const filteredReviewQuestions = useMemo(() => {
     const list = currentDisplayResult?.reviewedQuestions || [];
     if (reviewFilter === 'CORRECT') return list.filter((q) => q.isCorrect);
@@ -999,6 +1088,84 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
   }, [currentDisplayResult, reviewFilter]);
 
   const currentQ = questions[currentIndex];
+
+  const persistDraft = () => {
+    if (!studentId || !examData?.id || !examClockRef.current) return;
+    const user = tokenStorage.getUser();
+    if ((user?.userId || user?.id || user?.studentId) !== studentId) return;
+    const draft = { studentId, exam: { ...examData, questions }, answers, flagged,
+      currentIndex, warnings: tabSwitchCount, clock: examClockRef.current.serialize(Date.now()),
+      payload: submissionRef.current, needsReconcile: needsReconcileRef.current };
+    try {
+      localStorage.setItem(draftKey(studentId), JSON.stringify(draft));
+    } catch {
+      setRecoveryError('Trình duyệt không lưu được bản nháp. Đừng tải lại hoặc đóng trang.');
+    }
+  };
+
+  useEffect(() => {
+    if (stage !== 'testing' && stage !== 'analyzing') return;
+    persistDraft();
+    const save = () => persistDraft();
+    window.addEventListener('pagehide', save);
+    const interval = setInterval(save, 1000);
+    return () => { clearInterval(interval); window.removeEventListener('pagehide', save); };
+  }, [stage, answers, flagged, currentIndex, tabSwitchCount, examData, studentId]);
+
+  useEffect(() => {
+    let active = true;
+    const draft = studentId && readDraft(localStorage, studentId);
+    if (!draft) { setRecovering(false); return; }
+    recoveryBlocked.current = true;
+    setRecovering(true);
+    setRecoveryError('');
+    const sessionVersion = tokenStorage.getSessionVersion();
+    const stillCurrent = () => active && tokenStorage.getSessionVersion() === sessionVersion
+      && (tokenStorage.getUser()?.userId || tokenStorage.getUser()?.id || tokenStorage.getUser()?.studentId) === studentId;
+    (async () => {
+      try {
+        const identity = draft.payload || { studentId, examId: draft.exam.id };
+        const saved = await findSavedDiagnostic(practiceService, identity);
+        if (!stillCurrent()) return;
+        if (saved) {
+          removeDiagnosticDraft(localStorage, studentId);
+          await openHistoryExam({ id: saved.submissionId, examId: saved.examId,
+            completedAt: saved.completedAt, examTitle: draft.exam.title }, saved);
+          if (!stillCurrent()) return;
+          setStage('setup');
+          setHistoryReload((value) => value + 1);
+        } else {
+          const clock = createExamClock(draft.clock.startedAt, draft.clock.durationMs,
+            null, draft.clock.elapsed, Date.now());
+          examClockRef.current = clock;
+          setExamData(draft.exam);
+          setQuestions(draft.exam.questions);
+          setAnswers(draft.answers);
+          setFlagged(draft.flagged || {});
+          setCurrentIndex(draft.currentIndex);
+          setTabSwitchCount(draft.warnings || 0);
+          setTimeSpentPerQ(clock.snapshot(Date.now()));
+          setTimeRemaining(clock.remaining(Date.now()));
+          const locked = draft.payload || clock.remaining(Date.now()) === 0 || draft.warnings >= 3;
+          if (locked) {
+            submissionRef.current = draft.payload || createSubmissionSnapshot(studentId,
+              draft.exam.id, clock.startedAt, draft.exam.questions, draft.answers, clock.snapshot(Date.now()));
+            needsReconcileRef.current = true;
+            setSubmissionError('Đã khôi phục bài đã chốt. Bấm thử gửi lại để kiểm tra và gửi bài.');
+            setStage('analyzing');
+          } else {
+            submissionRef.current = null;
+            setStage('testing');
+          }
+        }
+        recoveryBlocked.current = false;
+        setRecovering(false);
+      } catch (err) {
+        if (stillCurrent()) { setRecoveryError(err.message); setRecovering(false); }
+      }
+    })();
+    return () => { active = false; };
+  }, [studentId, recoveryRetry]);
 
   const isTakingExam = stage === 'testing' || stage === 'analyzing';
 
@@ -1121,6 +1288,7 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
               </div>
 
               <DiagnosticResultSummary result={currentDisplayResult} />
+              <WeakSkills result={currentDisplayResult} />
 
               {/* ================================================================= */}
               {/* PACING ANALYSIS SPEEDOMETERS                                      */}
@@ -1238,7 +1406,7 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
                       <span>Lời Khuyên Sư Phạm Từ Cố Vấn AI (Gemini Commentary)</span>
                     </div>
                     <p className="text-xs sm:text-sm text-slate-800 leading-relaxed italic bg-white p-4 rounded-2xl border border-purple-200 shadow-xs whitespace-pre-line">
-                      "{currentDisplayResult.ai_commentary || 'Thí sinh thể hiện tư duy nhạy bén và phân bổ thời gian hợp lý. Hãy tiếp tục củng cố các kỹ năng vận dụng cao để bứt phá mục tiêu điểm số 900+.'}"
+                      "{currentDisplayResult.ai_commentary || 'Chưa có nhận xét AI cho bài kiểm tra này.'}"
                     </p>
                   </div>
 
@@ -1559,6 +1727,12 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
                     <History className="w-6 h-6 text-blue-600" />
                     <span>Lịch Sử Các Lần Làm Bài Kiểm Tra</span>
                   </h1>
+                  {!historyLoading && !historyError && studentId && (
+                    <p className="text-sm font-bold text-blue-700" role="status">
+                      Đã hoàn thành {completedExamCount}/{DIAGNOSTIC_TARGET} bài chẩn đoán khác nhau
+                      {completedExamCount >= DIAGNOSTIC_TARGET ? ' — Đã hoàn thành bộ chẩn đoán.' : ''}
+                    </p>
+                  )}
                   <p className="text-xs sm:text-sm text-slate-500 font-medium">
                     Hệ thống lưu vết toàn bộ kết quả các đợt làm bài. Nhấp vào bất kỳ lần thi nào bên dưới hoặc bấm nút <strong>"Xem báo cáo"</strong> để mở trang phân tích chi tiết.
                   </p>
@@ -1567,8 +1741,9 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
                 <div className="flex items-center gap-2 shrink-0">
                   <button
                     type="button"
-                    onClick={() => onNavigateQuestionBank ? onNavigateQuestionBank() : handleRetakeExam()}
-                    className="px-5 py-3.5 rounded-2xl bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-black text-xs sm:text-sm shadow-md shadow-blue-500/25 transition-all flex items-center gap-2 cursor-pointer active:scale-95"
+                    onClick={handleRetakeExam}
+                    disabled={isLoading || historyLoading || recovering || recoveryBlocked.current || completedExamCount >= DIAGNOSTIC_TARGET}
+                    className="px-5 py-3.5 rounded-2xl bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-black text-xs sm:text-sm shadow-md shadow-blue-500/25 transition-all flex items-center gap-2 cursor-pointer active:scale-95 disabled:opacity-50"
                   >
                     <Play className="w-4 h-4 fill-white" />
                     <span>🚀 Làm Bài Kiểm Tra Mới</span>
@@ -1576,6 +1751,12 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
                 </div>
               </div>
 
+              {historyLoading ? <p role="status">Đang tải lịch sử...</p>
+                : historyError ? <div role="alert"><p>Không tải được lịch sử: {historyError}</p><button type="button" onClick={() => setHistoryReload((v) => v + 1)}>Thử lại</button></div>
+                : examHistory.length === 0 ? <p>{studentId ? 'Bạn chưa làm bài chẩn đoán. Bấm Làm Bài Kiểm Tra Mới để bắt đầu.' : 'Vui lòng đăng nhập để xem lịch sử.'}</p>
+                : <>
+              {detailLoading && <p role="status">Đang tải báo cáo...</p>}
+              {detailError && <p role="alert">Không tải được báo cáo: {detailError}. Bấm Xem báo cáo để thử lại.</p>}
               {/* 4 Overview Statistics KPI Cards */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="p-5 bg-white rounded-3xl border border-slate-200 shadow-sm space-y-2">
@@ -1606,9 +1787,9 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
                     <Brain className="w-4 h-4 text-amber-500" />
                   </div>
                   <div className="text-2xl sm:text-3xl font-black text-amber-500 font-mono">
-                    +{Math.max(...examHistory.map(h => Number(h.theta) || 0)).toFixed(2)}
+                    {Math.max(...examHistory.map(h => Number(h.theta) || 0)).toFixed(2)}
                   </div>
-                  <div className="text-[11px] text-blue-600 font-bold">Thuộc phân lớp Bứt Phá (900+)</div>
+                  <div className="text-[11px] text-blue-600 font-bold">Năng lực cao nhất trong các lần khảo sát</div>
                 </div>
 
                 <div className="p-5 bg-white rounded-3xl border border-slate-200 shadow-sm space-y-2">
@@ -1702,7 +1883,7 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
                         return (
                           <tr 
                             key={attempt.id} 
-                            onClick={() => setSelectedHistoryExam(attempt)}
+                            onClick={() => openHistoryExam(attempt)}
                             className="hover:bg-blue-50/40 transition-colors cursor-pointer group even:bg-slate-50/40"
                           >
                             {/* Exam Title & Badge */}
@@ -1770,7 +1951,7 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
                               <div className="flex items-center justify-end gap-2">
                                 <button
                                   type="button"
-                                  onClick={() => setSelectedHistoryExam(attempt)}
+                                  onClick={() => openHistoryExam(attempt)}
                                   className="px-4 py-2.5 rounded-xl bg-white text-blue-700 hover:bg-blue-600 hover:text-white border border-blue-200 font-bold transition-all flex items-center gap-2 cursor-pointer shadow-sm"
                                   title="Xem báo cáo và biểu đồ bài thi này"
                                 >
@@ -1789,6 +1970,7 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
                 </div>
               </div>
 
+              </>}
             </div>
           )}
 
@@ -2101,14 +2283,19 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
               <Brain className="w-8 h-8 animate-pulse text-blue-600" />
             </div>
             <div className="space-y-2">
-              <h2 className="text-xl font-extrabold text-slate-900">Đang Phân Tích Năng Lực IRT 2PL...</h2>
+              <h2 className="text-xl font-extrabold text-slate-900">{submissionError ? 'Chưa xác nhận được bài nộp' : 'Đang nộp bài'}</h2>
               <p className="text-xs text-slate-600 leading-relaxed">
-                Động cơ Psychometrics đang chạy giải thuật Ước lượng hợp lý cực đại (MLE) 2PL IRT và tính toán xác suất làm chủ BKT 5 miền năng lực.
+                Bài làm đã được chốt và không thể chỉnh sửa. Giữ trang này mở cho đến khi có kết quả.
               </p>
             </div>
-            <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden border border-slate-200">
+            {submissionError && <div className="space-y-3">
+              <p role="alert" className="text-sm text-rose-700">{submissionError}</p>
+              <button type="button" disabled={isLoading} onClick={executeSubmitExam} className="w-full rounded-xl bg-blue-600 py-3 text-sm font-bold text-white disabled:opacity-50">Thử gửi lại</button>
+              <p className="text-xs text-slate-500">Gửi lại nguyên đáp án và thời gian đã chốt.</p>
+            </div>}
+            {!submissionError && <div role="status" aria-label="Đang gửi bài" className="w-full bg-slate-100 h-2 rounded-full overflow-hidden border border-slate-200">
               <div className="bg-linear-to-r from-blue-600 via-indigo-600 to-cyan-500 h-full w-2/3 rounded-full animate-pulse"></div>
-            </div>
+            </div>}
           </div>
         </div>
       )}
@@ -2228,6 +2415,7 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
           )}
 
           <DiagnosticResultSummary result={resultData} />
+          <WeakSkills result={resultData} />
 
               {/* ===================================================================== */}
           {/* PHÂN TÍCH TỐC ĐỘ & CHIẾN THUẬT LÀM BÀI (PACING ANALYSIS)              */}
@@ -2347,7 +2535,7 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
                   <span>Lời Khuyên Sư Phạm Từ Cố Vấn AI (Gemini Commentary)</span>
                 </div>
                 <p className="text-xs sm:text-sm text-slate-800 leading-relaxed italic bg-white p-4 rounded-2xl border border-purple-200 shadow-xs">
-                  "{resultData.ai_commentary || 'Thí sinh thể hiện tư duy nhạy bén và phân bổ thời gian hợp lý. Hãy tiếp tục củng cố các kỹ năng vận dụng cao để bứt phá mục tiêu điểm số 900+.'}"
+                  "{resultData.ai_commentary || 'Chưa có nhận xét AI cho bài kiểm tra này.'}"
                 </p>
               </div>
 
@@ -2677,7 +2865,7 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
       {/* Custom System Alert Popup Modal (React Overlay - Replaces raw window.alert) */}
       {customAlert && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in">
-          <div className="max-w-md w-full bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 space-y-5 text-center shadow-2xl relative overflow-hidden text-slate-900">
+          <div role="dialog" aria-modal="true" aria-labelledby="diagnostic-alert-title" className="max-w-md w-full bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 space-y-5 text-center shadow-2xl relative overflow-hidden text-slate-900">
             <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mx-auto border ${customAlert.type === 'error'
                 ? 'bg-rose-100 text-rose-600 border-rose-200'
                 : customAlert.type === 'warning'
@@ -2688,19 +2876,35 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
                 <AlertCircle className="w-8 h-8 stroke-[2.5]" />
               ) : customAlert.type === 'warning' ? (
                 <AlertTriangle className="w-8 h-8 stroke-[2.5]" />
+              ) : customAlert.type === 'diagnostic-progress' ? (
+                <CheckCircle2 className="w-8 h-8 stroke-[2.5]" />
               ) : (
                 <Sparkles className="w-8 h-8 stroke-[2.5]" />
               )}
             </div>
 
             <div className="space-y-2">
-              <h2 className="text-xl font-black text-slate-900">
+              <h2 id="diagnostic-alert-title" className="text-xl font-black text-slate-900">
                 {customAlert.title}
               </h2>
               <p className="text-xs text-slate-600 leading-relaxed whitespace-pre-line">
                 {customAlert.message}
               </p>
             </div>
+
+            {customAlert.type === 'diagnostic-progress' && (
+              <div className="rounded-2xl border border-blue-100 bg-blue-50/70 p-4 text-left">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-sm font-medium text-slate-600">Tiến độ chẩn đoán</span>
+                  <span className="text-sm font-bold text-blue-700">{customAlert.completedCount}/3 bài</span>
+                </div>
+                <div className="mt-3 flex gap-2" aria-label={`Đã hoàn thành ${customAlert.completedCount} trên 3 bài`}>
+                  {[1, 2, 3].map((step) => (
+                    <span key={step} className={`h-2 flex-1 rounded-full ${step <= customAlert.completedCount ? 'bg-blue-600' : 'bg-blue-100'}`} />
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="pt-2">
               <button
@@ -2712,7 +2916,7 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
                 }}
                 className="w-full py-3.5 px-6 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-black text-xs shadow-lg shadow-blue-500/25 transition-all cursor-pointer"
               >
-                Đã Hiểu & Đóng
+                {customAlert.type === 'diagnostic-progress' ? 'Về lịch sử' : 'Đã Hiểu & Đóng'}
               </button>
             </div>
           </div>
@@ -2926,6 +3130,11 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
         </div>
       )}
 
+      {recoveryError && <div className="fixed bottom-5 left-4 right-4 z-[60] mx-auto max-w-lg rounded-2xl border border-amber-200 bg-white p-4 shadow-xl" role="alert">
+        <p className="text-sm text-amber-900">{recoveryError}</p>
+        {recoveryBlocked.current && <button type="button" onClick={() => setRecoveryRetry((v) => v + 1)} className="mt-3 font-bold text-blue-600">Thử khôi phục lại</button>}
+      </div>}
+      {recovering && <div role="status" className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60"><p className="rounded-2xl bg-white p-6">Đang kiểm tra và khôi phục bài...</p></div>}
       {/* Fullscreen Loading Overlay */}
       {isLoading && (
         <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-4">

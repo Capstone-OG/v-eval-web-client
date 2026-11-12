@@ -130,21 +130,6 @@ export default function App() {
       return;
     }
 
-    // 1. Check if user completed an exam as guest and just logged in
-    try {
-      const rawResult = sessionStorage.getItem('veval_pending_exam_result');
-      if (rawResult) {
-        const parsed = JSON.parse(rawResult);
-        sessionStorage.removeItem('veval_pending_exam_result');
-        sessionStorage.removeItem('veval_pending_exam_intent');
-        const thetaStr = parsed.theta0 != null ? ` (Theta = ${parsed.theta0 > 0 ? '+' : ''}${Number(parsed.theta0).toFixed(2)})` : '';
-        showToast(`🎉 Đã liên kết kết quả bài khảo sát${thetaStr} vào học bạ cá nhân của bạn!`);
-        return;
-      }
-    } catch (err) {
-      console.warn('Error reading exam result from session', err);
-    }
-
     // 2. Check if user came from Exam entry popup intent (has not taken exam yet)
     try {
       const rawIntent = sessionStorage.getItem('veval_pending_exam_intent');
@@ -248,6 +233,7 @@ export default function App() {
 
       {currentPage === 'diagnostic' && (
         <DiagnosticAssessmentPage
+          key={currentUser?.userId || currentUser?.id || currentUser?.studentId || 'guest'}
           isEmbedded={false}
           autoStart={diagnosticAutoStart}
           currentUser={currentUser}
@@ -367,6 +353,7 @@ export default function App() {
               {/* Student Diagnostic Exam List View (Rendered full-screen during exam, or inside lobby) */}
               {activeRole === 'student' && activeTab === 'diagnostic' && (
                 <DiagnosticAssessmentPage
+          key={currentUser?.userId || currentUser?.id || currentUser?.studentId || 'guest'}
                   isEmbedded={!isExamActive}
                   autoStart={diagnosticAutoStart}
                   examCode={diagnosticExamCode}
