@@ -1,3 +1,4 @@
+import BrandLogo from '../common/BrandLogo';
 import React from 'react';
 import { Sparkles, ShieldCheck, Mail, Phone, MapPin, Globe, ArrowRight, Lock, Award, Heart } from 'lucide-react';
 
@@ -37,14 +38,7 @@ export default function PublicFooter({ onOpenLogin, onOpenDiagnostic }) {
           
           {/* Column 1: Brand Info */}
           <div className="space-y-4 md:col-span-1">
-            <div className="flex items-center gap-2">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-cyan-500 flex items-center justify-center text-white font-black shadow-md shadow-blue-500/30">
-                <Sparkles className="w-4.5 h-4.5" />
-              </div>
-              <div className="text-xl font-black text-white tracking-tight">
-                ĐGNL AI <span className="text-[10px] bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full border border-blue-500/30 font-bold ml-1">v2.4</span>
-              </div>
-            </div>
+            <BrandLogo className="w-44" inverted />
 
             <p className="text-slate-400 leading-relaxed font-medium">
               Hệ thống khảo thí & luyện thi thích ứng ĐGNL ĐHQG TP.HCM hàng đầu Việt Nam. Tự động hóa lộ trình cá nhân hóa bằng thuật toán <strong className="text-white">IRT 3PL</strong>, cây tri thức <strong className="text-white">DAG Topo</strong> và trợ lý <strong className="text-[#FACC15]">AI Socratic 24/7</strong>.

@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Sparkles, 
-  Eye, 
-  EyeOff, 
-  ArrowRight, 
-  PhoneCall, 
-  UserCheck, 
-  GraduationCap, 
-  Users, 
-  User, 
+import {
+  Sparkles,
+  Eye,
+  EyeOff,
+  ArrowRight,
+  PhoneCall,
+  UserCheck,
+  GraduationCap,
+  Users,
+  User,
   X,
   Lock,
   Mail,
@@ -21,14 +21,13 @@ import {
   CheckCircle2,
   AlertCircle
 } from 'lucide-react';
-
 import authService from '../../services/authService';
 
 export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
   const [role, setRole] = useState('student'); // student | parent (for registration)
   const [mode, setMode] = useState('login'); // login | register
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState('minhhoang.vnu@gmail.com');
+  const [password, setPassword] = useState('Password123@');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
 
@@ -63,15 +62,9 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
 
   const getPasswordStrength = (pass) => {
     if (!pass) return { score: 0, label: '', color: 'bg-slate-200' };
-    const hasLen = pass.length >= 8;
-    const hasUpper = /[A-Z]/.test(pass);
-    const hasLower = /[a-z]/.test(pass);
-    const hasDigit = /[0-9]/.test(pass);
-    const score = [hasLen, hasUpper, hasLower, hasDigit].filter(Boolean).length;
-
-    if (score <= 1) return { score: 1, label: 'Yếu (Cần ≥8 ký tự)', color: 'bg-rose-500' };
-    if (score < 4) return { score: 2, label: 'Ká (Cần 1 chữ hoa, 1 chữ thường, 1 chữ số)', color: 'bg-amber-500' };
-    return { score: 3, label: 'Mạnh (Thỏa mãn yêu cầu bảo mật)', color: 'bg-emerald-500' };
+    if (pass.length < 6) return { score: 1, label: 'Yếu', color: 'bg-rose-500' };
+    if (pass.length < 10 || !/\d/.test(pass)) return { score: 2, label: 'Trung bình', color: 'bg-amber-500' };
+    return { score: 3, label: 'Mạnh (Tối ưu)', color: 'bg-emerald-500' };
   };
   const passStrength = getPasswordStrength(regPassword);
 
@@ -93,9 +86,9 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
   };
 
   const determineRoleFromResponse = (res) => {
-    const roles = res?.user?.roles || [];
+    const roles = res?.user?.roles || res?.roles || [];
     if (roles.some(r => r.toLowerCase().includes('teacher') || r.toLowerCase().includes('giaovien'))) return 'teacher';
-    if (roles.some(r => r.toLowerCase().includes('manager') || r.toLowerCase().includes('admin') || r.toLowerCase().includes('quanly'))) return 'manager';
+    if (roles.some(r => r.toLowerCase().includes('manager') || r.toLowerCase().includes('admin') || r.toLowerCase().includes('quanly') || r.toLowerCase().includes('administrator'))) return 'manager';
     if (roles.some(r => r.toLowerCase().includes('parent') || r.toLowerCase().includes('phuhuynh'))) return 'parent';
     return 'student';
   };
@@ -108,13 +101,10 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
     const errs = {};
 
     if (mode === 'login') {
-      const cleanEmail = email.trim();
-      const cleanPassword = password.trim();
-
-      if (!cleanEmail) {
+      if (!email.trim()) {
         errs.email = "Vui lòng nhập Email hoặc Số điện thoại.";
       }
-      if (!cleanPassword) {
+      if (!password) {
         errs.password = "Vui lòng nhập Mật khẩu.";
       }
 
@@ -124,64 +114,62 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
         return;
       }
       setFieldErrors({});
-      setIsSubmitting(true);
 
+      setIsSubmitting(true);
       try {
-        const resData = await authService.login({ email: cleanEmail, password: cleanPassword });
+        const response = await authService.login({ email, password });
         setIsSubmitting(false);
-        const targetRole = determineRoleFromResponse(resData);
-        onLoginSuccess(targetRole, resData);
+
+        const loggedUser = response.user || {
+          email: response.email || email,
+          fullName: response.fullName || 'Người dùng V-Eval',
+          role: role
+        };
+
+        const isUserAdmin = loggedUser.role === 'administrator' || loggedUser.roles?.some(r => (typeof r === 'string' ? r.toUpperCase() : '') === 'ADMINISTRATOR') || role === 'admin';
+        const resolvedRole = isUserAdmin ? 'admin' : (loggedUser.role || determineRoleFromResponse(response));
+
+        onLoginSuccess(resolvedRole, loggedUser);
         onClose();
       } catch (err) {
         setIsSubmitting(false);
-        const errorMsg = err.message || err.data?.message || "Đăng nhập thất bại. Vui lòng kiểm tra lại.";
-        setFormError(errorMsg);
+        const msg = err.data?.error?.description || err.data?.message || err.message || 'Đăng nhập không thành công. Vui lòng kiểm tra lại email hoặc mật khẩu.';
+        setFormError(msg);
       }
     } else {
-      const cleanFullName = regFullName.trim();
-      const cleanEmail = regEmail.trim();
-      const cleanPhone = regPhone.trim().replace(/\s/g, '');
-      const cleanPassword = regPassword.trim();
-      const cleanConfirmPassword = regConfirmPassword.trim();
-
-      if (!cleanFullName) {
+      if (!regFullName.trim()) {
         errs.regFullName = "Vui lòng nhập Họ và tên.";
       }
 
-      if (!cleanEmail) {
+      if (!regEmail.trim()) {
         errs.regEmail = "Vui lòng nhập địa chỉ Email.";
       } else {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(cleanEmail)) {
+        if (!emailRegex.test(regEmail.trim())) {
           errs.regEmail = "Email không đúng định dạng.";
         }
       }
 
-      if (!cleanPhone) {
+      if (!regPhone.trim()) {
         errs.regPhone = "Vui lòng nhập Số điện thoại.";
       } else {
         const phoneRegex = /^(0[3|5|7|8|9])[0-9]{8}$/;
-        if (!phoneRegex.test(cleanPhone)) {
+        if (!phoneRegex.test(regPhone.trim().replace(/\s/g, ''))) {
           errs.regPhone = "SĐT không hợp lệ (10 chữ số).";
         }
       }
 
-      if (!cleanPassword) {
+      if (!regPassword) {
         errs.regPassword = "Vui lòng nhập Mật khẩu.";
-      } else {
-        const pwdErrs = [];
-        if (cleanPassword.length < 8) pwdErrs.push("ít nhất 8 ký tự");
-        if (!/[A-Z]/.test(cleanPassword)) pwdErrs.push("1 chữ hoa");
-        if (!/[a-z]/.test(cleanPassword)) pwdErrs.push("1 chữ thường");
-        if (!/[0-9]/.test(cleanPassword)) pwdErrs.push("1 chữ số");
-        if (pwdErrs.length > 0) {
-          errs.regPassword = `Mật khẩu yêu cầu: ${pwdErrs.join(', ')}.`;
-        }
+      } else if (regPassword.length < 8) {
+        errs.regPassword = "Mật khẩu tối thiểu 8 ký tự.";
+      } else if (!/[A-Z]/.test(regPassword) || !/[0-9]/.test(regPassword)) {
+        errs.regPassword = "Mật khẩu cần ít nhất 1 chữ hoa và 1 chữ số.";
       }
 
-      if (!cleanConfirmPassword) {
+      if (!regConfirmPassword) {
         errs.regConfirmPassword = "Vui lòng nhập lại mật khẩu.";
-      } else if (cleanPassword && cleanPassword !== cleanConfirmPassword) {
+      } else if (regPassword && regPassword !== regConfirmPassword) {
         errs.regConfirmPassword = "Mật khẩu xác nhận không khớp.";
       }
 
@@ -195,78 +183,77 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
         return;
       }
       setFieldErrors({});
+
       setIsSubmitting(true);
-
-      const targetRoleName = role === 'parent' ? 'PARENT' : 'STUDENT';
-
       try {
-        const resData = await authService.register({
-          email: cleanEmail,
-          password: cleanPassword,
-          fullName: cleanFullName,
-          phone: cleanPhone,
-          roleName: targetRoleName
-        });
+        const payload = {
+          fullName: regFullName.trim(),
+          email: regEmail.trim(),
+          phone: regPhone.trim(),
+          password: regPassword,
+          roleName: role === 'parent' ? 'PARENT' : 'STUDENT'
+        };
+
+        await authService.register(payload);
         setIsSubmitting(false);
-        setSubmitSuccessMsg("Tạo tài khoản thành công!");
+        setSubmitSuccessMsg("Tạo tài khoản thành công! Vui lòng đăng nhập.");
         setTimeout(() => {
-          onLoginSuccess(role, resData);
-          onClose();
-        }, 600);
+          setMode('login');
+          setSubmitSuccessMsg(null);
+        }, 1200);
       } catch (err) {
         setIsSubmitting(false);
-        let errorMsg = err.message || err.data?.message;
-        if (Array.isArray(err.data?.errors) && err.data.errors.length > 0) {
-          errorMsg = err.data.errors.map(e => e.description || e.message).join(' ');
-        }
-        if (!errorMsg) errorMsg = "Đăng ký không thành công. Vui lòng kiểm tra lại thông tin.";
-        setFormError(errorMsg);
+        const msg = err.data?.error?.description || err.data?.message || err.message || 'Đăng ký không thành công. Vui lòng kiểm tra lại thông tin.';
+        setFormError(msg);
       }
     }
   };
 
   const handleQuickDemo = async (demoRole) => {
-    let dEmail = 'student@veval.edu.vn';
-    let dPass = 'Student@123';
+    let dEmail = 'minhhoang.vnu@gmail.com';
+    let dPass = 'Password123@';
     let dName = 'Minh Hoàng';
     let dRoles = ['Student'];
 
     if (demoRole === 'teacher') {
-      dEmail = 'teacher@veval.edu.vn';
-      dPass = 'Teacher@123';
+      dEmail = 'thayphamduy.dgnl@gmail.com';
       dName = 'Thầy Phạm Duy';
       dRoles = ['Teacher'];
     } else if (demoRole === 'manager') {
-      dEmail = 'manager@veval.edu.vn';
-      dPass = 'Manager@123';
+      dEmail = 'manager.thuduc@dgnl.edu.vn';
       dName = 'Cô Hà Quản Lý';
       dRoles = ['Manager'];
     } else if (demoRole === 'parent') {
-      dEmail = 'parent@veval.edu.vn';
-      dPass = 'Parent@123';
+      dEmail = 'phuhuynh.minhhoang@gmail.com';
       dName = 'Phụ Huynh Minh';
       dRoles = ['Parent'];
     }
 
+    setEmail(dEmail);
+    setPassword(dPass);
+    setIsSubmitting(true);
+    setFormError(null);
+
     try {
-      const resData = await authService.login({ email: dEmail, password: dPass });
-      const targetRole = determineRoleFromResponse(resData);
-      onLoginSuccess(targetRole, resData);
+      const res = await authService.login({ email: dEmail, password: dPass });
+      setIsSubmitting(false);
+      const loggedUser = res.user || {
+        email: dEmail,
+        fullName: dName,
+        roles: dRoles,
+        role: demoRole
+      };
+      onLoginSuccess(demoRole, loggedUser);
       onClose();
     } catch {
-      const demoPayload = {
-        accessToken: "eyDemoToken",
-        refreshToken: "eyDemoRefresh",
-        user: {
-          userId: "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-          email: dEmail,
-          fullName: dName,
-          phone: "0912345678",
-          avatarUrl: "",
-          roles: dRoles
-        }
+      setIsSubmitting(false);
+      const demoUser = {
+        email: dEmail,
+        fullName: dName,
+        roles: dRoles,
+        role: demoRole
       };
-      onLoginSuccess(demoRole, demoPayload);
+      onLoginSuccess(demoRole, demoUser);
       onClose();
     }
   };
@@ -274,9 +261,9 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md animate-fade">
       <div className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden flex flex-col my-auto max-h-[95vh] overflow-y-auto">
-        
+
         {/* Close button */}
-        <button 
+        <button
           onClick={onClose}
           className="absolute top-3.5 right-3.5 p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-all z-10"
         >
@@ -285,7 +272,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
 
         {/* Top Header Branding */}
         <div className="p-5 pb-3 text-center border-b border-slate-100 bg-gradient-to-b from-slate-900 to-indigo-950 text-white relative">
-          
+
           <div className="w-12 h-12 mx-auto mb-2 rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-cyan-500 flex items-center justify-center text-white shadow-lg shadow-blue-500/30">
             <Sparkles className="w-6 h-6 text-cyan-300" />
           </div>
@@ -325,14 +312,14 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
 
         {/* Body Content */}
         <div className="p-5 space-y-4 text-slate-900">
-          
+
           {/* Mode Tabs: Login / Register */}
           <div className="p-1 bg-slate-100 rounded-2xl flex items-center border border-slate-200">
             <button
               onClick={() => handleModeSwitch('login')}
               className={`flex-1 py-2 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 ${
-                mode === 'login' 
-                  ? 'bg-blue-600 text-white shadow-sm' 
+                mode === 'login'
+                  ? 'bg-blue-600 text-white shadow-sm'
                   : 'text-slate-500 hover:text-slate-900'
               }`}
             >
@@ -342,8 +329,8 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
             <button
               onClick={() => handleModeSwitch('register')}
               className={`flex-1 py-2 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 ${
-                mode === 'register' 
-                  ? 'bg-blue-600 text-white shadow-sm' 
+                mode === 'register'
+                  ? 'bg-blue-600 text-white shadow-sm'
                   : 'text-slate-500 hover:text-slate-900'
               }`}
             >
@@ -368,7 +355,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-3" noValidate>
-            
+
             {/* LOGIN MODE */}
             {mode === 'login' ? (
               <>
@@ -439,11 +426,11 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
 
                 <div className="flex items-center justify-between text-xs pt-0.5">
                   <label className="flex items-center gap-2 text-slate-600 cursor-pointer font-medium">
-                    <input 
-                      type="checkbox" 
+                    <input
+                      type="checkbox"
                       checked={rememberMe}
                       onChange={(e) => setRememberMe(e.target.checked)}
-                      className="rounded border-slate-300 text-blue-600 focus:ring-blue-500" 
+                      className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                     />
                     <span>Ghi nhớ</span>
                   </label>
@@ -724,14 +711,14 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
 
                 <div className="pt-0.5">
                   <label className="flex items-center gap-1.5 text-[11px] text-slate-600 cursor-pointer font-medium">
-                    <input 
-                      type="checkbox" 
+                    <input
+                      type="checkbox"
                       checked={regAgreeTerms}
                       onChange={(e) => {
                         setRegAgreeTerms(e.target.checked);
                         if (fieldErrors.regAgreeTerms) setFieldErrors(prev => ({ ...prev, regAgreeTerms: null }));
                       }}
-                      className="rounded border-slate-300 text-blue-600 focus:ring-blue-500" 
+                      className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                     />
                     <span>Tôi đồng ý với Điều khoản sử dụng.</span>
                   </label>
@@ -765,6 +752,31 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
             </button>
 
           </form>
+
+          {/* Quick Demo Login Presets */}
+          <div className="pt-2 border-t border-slate-100">
+            <div className="text-[10px] font-bold text-slate-400 mb-1.5 text-center uppercase tracking-wider">
+              1-Click Đăng nhập thử nghiệm:
+            </div>
+            <div className="grid grid-cols-2 gap-1.5">
+              <button
+                type="button"
+                onClick={() => handleQuickDemo('student')}
+                className="p-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-[11px] font-extrabold border border-blue-200 transition-all text-left flex items-center gap-1.5"
+              >
+                <GraduationCap className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                <span className="truncate">Học sinh Minh Hoàng</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleQuickDemo('teacher')}
+                className="p-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg text-[11px] font-extrabold border border-emerald-200 transition-all text-left flex items-center gap-1.5"
+              >
+                <UserCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                <span className="truncate">Thầy Phạm Duy</span>
+              </button>
+            </div>
+          </div>
 
           {/* Support Hotline Footer */}
           <div className="text-center pt-1 border-t border-slate-100 text-[11px] text-slate-500 font-semibold flex items-center justify-center gap-1.5">

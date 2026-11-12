@@ -1,19 +1,19 @@
-import { clearLegacyDiagnosticData } from './diagnosticPrivacy';
+import { clearLegacyDiagnosticData } from './diagnosticPrivacy.js';
 /**
  * V-Eval API Gateway Client
- * 
+ *
  * Provides unified HTTP communication connecting the Web Client to the V-Eval YARP API Gateway (Port 5212).
  * Supports automatic JWT injection, Gateway header handling (e.g. X-Token-Refresh-Required),
  * token refresh on 401, and standardized response formatting.
  */
 
-const BASE_URL = import.meta.env.VITE_API_GATEWAY_URL || 'http://localhost:5212';
+const BASE_URL = import.meta.env?.VITE_API_GATEWAY_URL || 'http://localhost:5212';
 
 const TOKEN_KEY = 'veval_access_token';
 const REFRESH_TOKEN_KEY = 'veval_refresh_token';
 const USER_KEY = 'veval_user_profile';
 
-clearLegacyDiagnosticData(localStorage, sessionStorage);
+clearLegacyDiagnosticData(globalThis.localStorage, globalThis.sessionStorage);
 let sessionVersion = 0;
 
 export const tokenStorage = {
@@ -28,12 +28,14 @@ export const tokenStorage = {
       return null;
     }
   },
-  setTokens: (accessToken, refreshToken, user = null, rememberMe = true) => {
+  setTokens: (accessToken, refreshToken, user = null, rememberMe) => {
     if (user) ++sessionVersion;
     clearLegacyDiagnosticData(localStorage, sessionStorage);
-    const storage = rememberMe ? localStorage : sessionStorage;
+    const persist = rememberMe ?? !sessionStorage.getItem(TOKEN_KEY);
+    if (!user) user = tokenStorage.getUser();
+    const storage = persist ? localStorage : sessionStorage;
     // Clear opposite storage to avoid stale tokens
-    const altStorage = rememberMe ? sessionStorage : localStorage;
+    const altStorage = persist ? sessionStorage : localStorage;
     altStorage.removeItem(TOKEN_KEY);
     altStorage.removeItem(REFRESH_TOKEN_KEY);
     altStorage.removeItem(USER_KEY);
@@ -158,7 +160,21 @@ async function silentRefreshToken() {
  * Core HTTP Request Dispatcher
  */
 async function request(endpoint, options = {}, isRetry = false) {
-  const url = endpoint.startsWith('http') ? endpoint : `${BASE_URL}${endpoint}`;
+  let url = endpoint.startsWith('http') ? endpoint : `${BASE_URL}${endpoint}`;
+
+  if (options.params && typeof options.params === 'object') {
+    const searchParams = new URLSearchParams();
+    Object.entries(options.params).forEach(([key, val]) => {
+      if (val !== undefined && val !== null && val !== '') {
+        searchParams.append(key, String(val));
+      }
+    });
+    const qs = searchParams.toString();
+    if (qs) {
+      url += (url.includes('?') ? '&' : '?') + qs;
+    }
+  }
+
   let token = tokenStorage.getAccessToken();
 
   // Proactively check if token is nearing expiry (< 5 mins) before request
@@ -166,6 +182,7 @@ async function request(endpoint, options = {}, isRetry = false) {
     const refreshedToken = await silentRefreshToken().catch(() => null);
     if (refreshedToken) token = refreshedToken;
   }
+
 
   const headers = {
     Accept: 'application/json',
@@ -271,6 +288,15 @@ export const apiClient = {
     request(endpoint, {
       method: 'PUT',
       body: body instanceof FormData ? body : JSON.stringify(body),
+      ...options
+    }),
+
+  patch: (endpoint, body = null, options = {}) =>
+    request(endpoint, {
+      method: 'PATCH',
+      ...(body !== null && body !== undefined
+        ? { body: body instanceof FormData ? body : JSON.stringify(body) }
+        : {}),
       ...options
     }),
 

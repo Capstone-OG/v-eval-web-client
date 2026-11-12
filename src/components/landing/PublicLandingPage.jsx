@@ -12,43 +12,18 @@ import {
   PlayCircle,
   Lock,
   Star,
-  Clock,
-  FileText,
-  Layers,
-  CheckCircle2,
-  X,
-  LogIn,
-  KeyRound,
-  Copy,
-  Check
+  UserPlus
 } from 'lucide-react';
 import PublicHeader from './PublicHeader';
 import PublicFooter from './PublicFooter';
-import { DiagnosticExamModal } from '../modals';
-import { tokenStorage } from '../../services/apiClient';
 import studentsBadge from '../../assets/students_cutout_badge.jpg';
 import studentsClean from '../../assets/students_cutout_clean.jpg';
 import studentsOriginal from '../../assets/students_original.png';
 
-export default function PublicLandingPage({
-  onOpenLogin,
-  onOpenDiagnostic,
-  onOpenDashboard,
-  onOpenArchModal,
-  onStartGuestExam,
-  currentUser
-}) {
+export default function PublicLandingPage({ currentUser, onOpenLogin, onOpenRegister, onOpenDiagnostic, onOpenDashboard, onOpenArchModal }) {
   const [showStickyBar, setShowStickyBar] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeSection, setActiveSection] = useState('hero');
-  const [showGuestModal, setShowGuestModal] = useState(false);
-
-  // Xác định chính xác trạng thái người dùng có phiên đăng nhập hợp lệ không
-  const isUserLoggedIn = Boolean(currentUser && tokenStorage.getAccessToken());
-
-  const handleOpenDiagnosticConfirm = () => {
-    setShowGuestModal(true);
-  };
 
   // ScrollSpy listener to detect current active section when scrolling
   useEffect(() => {
@@ -213,11 +188,12 @@ export default function PublicLandingPage({
 
       {/* 1. MODULAR TOP HEADER */}
       <PublicHeader
-        onOpenLogin={onOpenLogin}
-        onOpenDiagnostic={handleOpenDiagnosticConfirm}
-        onOpenArchModal={onOpenArchModal}
-        onOpenDashboard={onOpenDashboard}
         currentUser={currentUser}
+        onOpenLogin={onOpenLogin}
+        onOpenRegister={onOpenRegister}
+        onOpenDashboard={onOpenDashboard}
+        onOpenDiagnostic={onOpenDiagnostic}
+        onOpenArchModal={onOpenArchModal}
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
         activeSection={activeSection}
@@ -278,18 +254,28 @@ export default function PublicLandingPage({
               <motion.button
                 whileHover={{ scale: 1.04, y: -2 }}
                 whileTap={{ scale: 0.96 }}
-                onClick={handleOpenDiagnosticConfirm}
+                onClick={onOpenDiagnostic}
                 className="flex items-center gap-2.5 px-8 py-4 rounded-full bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 hover:from-blue-700 hover:to-cyan-600 text-white font-extrabold text-sm shadow-xl shadow-blue-500/25 transition-all cursor-pointer"
               >
                 <Zap className="w-4.5 h-4.5 text-[#FACC15] fill-[#FACC15]" />
-                <span>Khảo sát chẩn đoán 45 phút (Miễn phí)</span>
+                <span>Khảo sát chẩn đoán 15 phút (Miễn phí)</span>
+              </motion.button>
+
+              <motion.button
+                whileHover={{ scale: 1.02, y: -2 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => (onOpenRegister ? onOpenRegister() : onOpenLogin && onOpenLogin('register'))}
+                className="flex items-center gap-2 px-6 py-4 rounded-full bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 font-extrabold text-sm transition-all shadow-sm cursor-pointer"
+              >
+                <UserPlus className="w-4.5 h-4.5 text-blue-600" />
+                <span>Đăng ký học viên</span>
               </motion.button>
 
               <motion.button
                 whileHover={{ scale: 1.02, y: -2 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={onOpenDashboard}
-                className="flex items-center gap-2 px-6 py-4 rounded-full bg-white/90 hover:bg-white border border-slate-300 backdrop-blur-md text-slate-800 font-extrabold text-sm transition-all shadow-sm"
+                className="flex items-center gap-2 px-6 py-4 rounded-full bg-white/90 hover:bg-white border border-slate-300 backdrop-blur-md text-slate-800 font-extrabold text-sm transition-all shadow-sm cursor-pointer"
               >
                 <PlayCircle className="w-4.5 h-4.5 text-blue-600" />
                 <span>Phòng thi thử 120 câu</span>
@@ -585,7 +571,7 @@ export default function PublicLandingPage({
                 </div>
 
                 <button
-                  onClick={handleOpenDiagnosticConfirm}
+                  onClick={onOpenDiagnostic}
                   className="text-xs font-extrabold text-blue-600 hover:text-blue-800 flex items-center gap-1 transition-colors pt-2 border-t border-slate-200/60"
                 >
                   <span>{st.linkText}</span>
@@ -599,7 +585,7 @@ export default function PublicLandingPage({
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              onClick={handleOpenDiagnosticConfirm}
+              onClick={onOpenDiagnostic}
               className="px-8 py-4 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-sm shadow-xl shadow-blue-600/25 transition-all inline-flex items-center gap-2"
             >
               <span>🚀 4 Bước Bắt Đầu Ngay Bây Giờ</span>
@@ -697,15 +683,15 @@ export default function PublicLandingPage({
 
               <div className="flex flex-wrap items-center justify-center gap-4 pt-4">
                 <button
-                  onClick={handleOpenDiagnosticConfirm}
-                  className="px-8 py-4 rounded-full bg-white text-blue-800 font-black text-xs sm:text-sm hover:bg-blue-50 transition-all shadow-xl hover:scale-105 cursor-pointer"
+                  onClick={onOpenDiagnostic}
+                  className="px-8 py-4 rounded-full bg-white text-blue-800 font-black text-xs sm:text-sm hover:bg-blue-50 transition-all shadow-xl hover:scale-105"
                 >
                   🚀 Bắt đầu khảo sát chẩn đoán miễn phí
                 </button>
 
                 <button
                   onClick={onOpenArchModal}
-                  className="px-6 py-4 rounded-full bg-white/15 hover:bg-white/25 border border-white/25 backdrop-blur-md text-white font-extrabold text-xs sm:text-sm transition-all cursor-pointer"
+                  className="px-6 py-4 rounded-full bg-white/15 hover:bg-white/25 border border-white/25 backdrop-blur-md text-white font-extrabold text-xs sm:text-sm transition-all"
                 >
                   🎬 Xem video hướng dẫn 3 phút
                 </button>
@@ -723,30 +709,7 @@ export default function PublicLandingPage({
       {/* 8. MODULAR FOOTER */}
       <PublicFooter
         onOpenLogin={onOpenLogin}
-        onOpenDiagnostic={handleOpenDiagnosticConfirm}
-      />
-
-      {/* ===================================================================== */}
-      {/* 9. MODULAR DIAGNOSTIC EXAM ENTRY MODAL                                */}
-      {/* ===================================================================== */}
-      <DiagnosticExamModal 
-        isOpen={showGuestModal}
-        onClose={() => setShowGuestModal(false)}
-        currentUser={currentUser}
-        isLoggedIn={isUserLoggedIn}
-        onStartExam={(code) => {
-          setShowGuestModal(false);
-          if (onStartGuestExam) {
-            onStartGuestExam({ examCode: code, autoStart: true });
-          } else {
-            onOpenDiagnostic?.();
-          }
-        }}
-        onNavigateAuth={({ mode, notice }) => {
-          setShowGuestModal(false);
-          onOpenLogin?.({ mode, notice });
-        }}
-        cancelLabel="Hủy / Ở Lại Trang Chủ"
+        onOpenDiagnostic={onOpenDiagnostic}
       />
 
     </div>

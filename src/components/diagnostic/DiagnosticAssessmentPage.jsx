@@ -241,6 +241,7 @@ function mapSkillToDomain(skillName, index) {
 }
 
 export default function DiagnosticAssessmentPage({
+  onCompleteDiagnostic,
   onNavigateDashboard,
   onNavigateHome,
   onNavigateLogin,
@@ -1011,6 +1012,8 @@ export default function DiagnosticAssessmentPage({
       removeDiagnosticDraft(localStorage, owner);
       needsReconcileRef.current = false;
       setResultData(finalResult);
+      onCompleteDiagnostic?.(finalResult);
+      window.dispatchEvent(new CustomEvent('veval:submission-updated'));
 
       // Thêm bài thi vừa nộp vào đầu lịch sử các lần thi
       const newAttempt = {
@@ -1881,8 +1884,8 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
                         const durationS = (attempt.timeSpentSeconds ?? 0) % 60;
 
                         return (
-                          <tr 
-                            key={attempt.id} 
+                          <tr
+                            key={attempt.id}
                             onClick={() => openHistoryExam(attempt)}
                             className="hover:bg-blue-50/40 transition-colors cursor-pointer group even:bg-slate-50/40"
                           >

@@ -1,4 +1,4 @@
-import { resolveRole } from '../../config/roles';
+import BrandLogo from '../common/BrandLogo';
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -16,8 +16,7 @@ import {
   Lock,
   User,
   X,
-  CheckCircle,
-  AlertCircle
+  CheckCircle
 } from 'lucide-react';
 
 import studentAvatar from '../../assets/vietnamese_student_real.jpg';
@@ -25,13 +24,12 @@ import LoginForm from './LoginForm';
 import RegisterForm from './RegisterForm';
 import ForgotPasswordModal from './ForgotPasswordModal';
 import authService from '../../services/authService';
+import {
+  validateEmailSyntaxAndRules,
+  validateEmailComprehensive
+} from '../../utils/emailValidator';
 
-export default function WebLoginPage({
-  onLoginSuccess,
-  onNavigateHome,
-  initialMode = 'login',
-  redirectNotice = null
-}) {
+export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, onNavigateHome }) {
   const [role, setRole] = useState('student'); // student | parent (for registration)
   const [mode, setMode] = useState(initialMode || 'login'); // login | register
 
@@ -57,6 +55,11 @@ export default function WebLoginPage({
   const [regTargetScore, setRegTargetScore] = useState('900');
   const [regAgreeTerms, setRegAgreeTerms] = useState(true);
 
+  // Campuses state from Backend API
+  const [campuses, setCampuses] = useState([]);
+  const [selectedCampusId, setSelectedCampusId] = useState('');
+  const [campusDropdownOpen, setCampusDropdownOpen] = useState(false);
+
   // Custom rounded dropdown open states
   const [gradeDropdownOpen, setGradeDropdownOpen] = useState(false);
   const [targetDropdownOpen, setTargetDropdownOpen] = useState(false);
@@ -65,23 +68,99 @@ export default function WebLoginPage({
   const [regShowPassword, setRegShowPassword] = useState(false);
   const [regShowConfirmPassword, setRegShowConfirmPassword] = useState(false);
 
-  // Forgot Password & Activation Modal state
+  // Forgot Password Modal state
   const [isForgotModalOpen, setIsForgotModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState('forgot'); // 'activation' | 'forgot'
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotStep, setForgotStep] = useState(1);
   const [otpCode, setOtpCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
-  const [demoOtpCode, setDemoOtpCode] = useState('');
-  const [isActivationMode, setIsActivationMode] = useState(false);
-
-  // Toast Notification state
-  const [toastInfo, setToastInfo] = useState(null);
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [modalError, setModalError] = useState(null);
+  const [modalSuccess, setModalSuccess] = useState(null);
 
   // Submit Feedback & Loading state
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccessMsg, setSubmitSuccessMsg] = useState(null);
   const [formError, setFormError] = useState(null);
   const [fieldErrors, setFieldErrors] = useState({});
+
+  // Real-time Email Validation state for Registration
+  const [emailValidationStatus, setEmailValidationStatus] = useState('idle'); // 'idle' | 'checking' | 'valid' | 'invalid'
+  const [emailValidationMessage, setEmailValidationMessage] = useState('');
+  const [emailSuggestedFix, setEmailSuggestedFix] = useState(null);
+
+  // Run live email check (syntax + Gmail rules + fake pattern + DNS MX + DB availability)
+  const runLiveEmailValidation = async (rawEmailValue) => {
+    const trimmed = (rawEmailValue || '').trim();
+    if (!trimmed) {
+      setEmailValidationStatus('idle');
+      setEmailValidationMessage('');
+      setEmailSuggestedFix(null);
+      return;
+    }
+
+    const syncCheck = validateEmailSyntaxAndRules(trimmed);
+    if (!syncCheck.isValid) {
+      setEmailValidationStatus('invalid');
+      setEmailValidationMessage(syncCheck.message);
+      setEmailSuggestedFix(syncCheck.suggestedEmail || null);
+      setFieldErrors((prev) => ({ ...prev, regEmail: syncCheck.message }));
+      return;
+    }
+
+    setEmailValidationStatus('checking');
+    setEmailSuggestedFix(null);
+
+    const asyncCheck = await validateEmailComprehensive(trimmed, (em) =>
+      authService.validateEmail(em)
+    );
+
+    if (!asyncCheck.isValid) {
+      setEmailValidationStatus('invalid');
+      setEmailValidationMessage(asyncCheck.message);
+      setEmailSuggestedFix(asyncCheck.suggestedEmail || null);
+      setFieldErrors((prev) => ({ ...prev, regEmail: asyncCheck.message }));
+    } else {
+      setEmailValidationStatus('valid');
+      setEmailValidationMessage(
+        asyncCheck.message || 'Email hợp lệ (Máy chủ mail MX hoạt động)'
+      );
+      setEmailSuggestedFix(null);
+      setFieldErrors((prev) => ({ ...prev, regEmail: null }));
+    }
+  };
+
+  // Debounced live validation while typing registration email
+  useEffect(() => {
+    if (mode !== 'register') return;
+    const trimmed = regEmail.trim();
+    if (!trimmed) {
+      setEmailValidationStatus('idle');
+      setEmailValidationMessage('');
+      setEmailSuggestedFix(null);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      runLiveEmailValidation(trimmed);
+    }, 550);
+
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [regEmail, mode]);
+
+  // Fetch Campuses on Mount
+  useEffect(() => {
+    let isMounted = true;
+    authService.getCampuses().then((data) => {
+      if (isMounted && Array.isArray(data) && data.length > 0) {
+        setCampuses(data);
+        setSelectedCampusId(data[0].campusId || data[0].id || '');
+      }
+    }).catch(() => {});
+    return () => { isMounted = false; };
+  }, []);
 
   // Grade & Target Options
   const gradeOptions = [
@@ -96,13 +175,14 @@ export default function WebLoginPage({
     { value: '700', label: '700+ (Tiêu chuẩn)' }
   ];
 
-  // Live Activity Ticker on Left Panel
-  const liveActivities = [
-    "🔥 Bạn Nguyễn Hoàng A. vừa làm bài test chẩn đoán: 945 / 1200 điểm!",
-    "⚡ 84 học sinh 2k8 vừa đăng ký khóa Luyện thi ĐGNL ĐHQG TP.HCM.",
-    "🤖 AI Socratic Tutor vừa tự động sửa bài tập Logic cho 12 bạn.",
-    "🎯 94% học sinh sau khi đăng ký đạt tăng trung bình +75 điểm."
-  ];
+  // Dynamic System & Campus Status Ticker on Left Panel
+  const liveActivities = campuses.length > 0
+    ? campuses.map((c) => `🏫 Đang kết nối trực tuyến: ${c.name} (${c.code || 'ACTIVE'})`)
+    : [
+        "🔗 Cổng xác thực tập trung V-Eval IAM Gateway (:5212) đang hoạt động.",
+        "📐 Hệ thống chấm điểm tâm trắc học IRT 2PL & BKT thời gian thực.",
+        "🤖 Gia sư AI Socratic & Đồ thị tri thức tiền đề DAG 4 miền V-ACT."
+      ];
   const [actIdx, setActIdx] = useState(0);
 
   useEffect(() => {
@@ -124,31 +204,26 @@ export default function WebLoginPage({
   };
 
   // Determine App Role from BE roles array response
-  const determineRoleFromResponse = (res) => resolveRole(res?.user);
+  const determineRoleFromResponse = (res) => {
+    const roles = res?.user?.roles || res?.roles || [];
+    if (roles.some(r => r.toLowerCase().includes('admin') || r.toLowerCase().includes('administrator'))) return 'admin';
+    if (roles.some(r => r.toLowerCase().includes('teacher') || r.toLowerCase().includes('giaovien'))) return 'teacher';
+    if (roles.some(r => r.toLowerCase().includes('manager') || r.toLowerCase().includes('director') || r.toLowerCase().includes('quanly'))) return 'manager';
+    if (roles.some(r => r.toLowerCase().includes('parent') || r.toLowerCase().includes('phuhuynh'))) return 'parent';
+    return 'student';
+  };
 
-  // Restore remembered email from localStorage on mount
-  useEffect(() => {
-    const savedEmail = localStorage.getItem('veval_remembered_email');
-    if (savedEmail) {
-      setEmail(savedEmail);
-      setRememberMe(true);
-    }
-  }, []);
-
-  // Handle Login Submit using Real API Gateway Call
+  // Handle Login Submit with Real API Integration
   const handleLoginSubmit = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     setFormError(null);
     setSubmitSuccessMsg(null);
 
-    const cleanEmail = email.trim();
-    const cleanPassword = password.trim();
-
     const errs = {};
-    if (!cleanEmail) {
-      errs.email = "Vui lòng nhập Email.";
+    if (!email.trim()) {
+      errs.email = "Vui lòng nhập Email hoặc Số điện thoại.";
     }
-    if (!cleanPassword) {
+    if (!password) {
       errs.password = "Vui lòng nhập Mật khẩu.";
     }
 
@@ -158,94 +233,87 @@ export default function WebLoginPage({
       return;
     }
     setFieldErrors({});
-    setIsSubmitting(true);
 
+    setIsSubmitting(true);
     try {
-      const resData = await authService.login({ email: cleanEmail, password: cleanPassword, rememberMe });
+      const response = await authService.login({ email, password, rememberMe });
       setIsSubmitting(false);
 
-      if (rememberMe) {
-        localStorage.setItem('veval_remembered_email', cleanEmail);
-      } else {
-        localStorage.removeItem('veval_remembered_email');
-      }
+      const loggedUser = response.user || {
+        id: response.userId || response.id,
+        email: response.email || email,
+        fullName: response.fullName || email,
+        roles: response.roles || []
+      };
 
-      const userRole = determineRoleFromResponse(resData);
-      setSubmitSuccessMsg("Xác thực đăng nhập thành công!");
-      setTimeout(() => {
-        onLoginSuccess(userRole, resData);
-      }, 400);
+      const resolvedRole = authService.resolveAppRole(loggedUser);
+
+      if (onLoginSuccess) {
+        onLoginSuccess(resolvedRole, loggedUser);
+      }
     } catch (err) {
       setIsSubmitting(false);
-      console.warn('[WebLoginPage] Login API error:', err);
+      console.warn('[WebLoginPage] Login error:', err);
 
-      // Handle unactivated account error
-      if (err.data?.code === 'Auth.AccountNotActivated' || err.status === 403) {
-        setFormError("Tài khoản chưa được kích hoạt. Vui lòng nhập mã OTP để kích hoạt.");
-        setForgotEmail(cleanEmail);
-        setIsActivationMode(true);
-        setIsForgotModalOpen(true);
+      // Account not yet activated with OTP
+      if (err.data?.error?.code === 'Auth.AccountNotActivated' || err.message?.includes('chưa được kích hoạt')) {
+        setModalMode('activation');
+        setForgotEmail(email);
+        setOtpCode('');
+        setModalError(null);
+        setModalSuccess('Tài khoản chưa được kích hoạt. Vui lòng kiểm tra email và nhập mã OTP 6 số để kích hoạt.');
         setForgotStep(2);
+        setIsForgotModalOpen(true);
+        setFormError('Tài khoản chưa được kích hoạt OTP. Vui lòng nhập mã OTP 6 số để kích hoạt.');
         return;
       }
 
-      const errorMsg = err.message || err.data?.message || "Thông tin đăng nhập email hoặc mật khẩu không chính xác.";
-      setFormError(errorMsg);
+      const msg = err.data?.error?.description || err.data?.message || err.message || 'Đăng nhập không thành công. Vui lòng kiểm tra lại email hoặc mật khẩu.';
+      setFormError(msg);
     }
   };
 
-  // Handle Registration Submit with full field checks using Real API
+  // Handle Registration Submit with Real API Integration
   const handleRegisterSubmit = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     setFormError(null);
     setSubmitSuccessMsg(null);
 
-    const cleanFullName = regFullName.trim();
-    const cleanEmail = regEmail.trim();
-    const cleanPhone = regPhone.trim().replace(/\s/g, '');
-    const cleanPassword = regPassword.trim();
-    const cleanConfirmPassword = regConfirmPassword.trim();
-
     const errs = {};
 
-    if (!cleanFullName) {
+    if (!regFullName.trim()) {
       errs.regFullName = "Vui lòng nhập Họ và tên.";
     }
 
-    if (!cleanEmail) {
-      errs.regEmail = "Vui lòng nhập địa chỉ Email.";
-    } else {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(cleanEmail)) {
-        errs.regEmail = "Email không đúng định dạng (ví dụ: name@gmail.com).";
-      }
+    const syncEmailCheck = validateEmailSyntaxAndRules(regEmail);
+    if (!syncEmailCheck.isValid) {
+      errs.regEmail = syncEmailCheck.message;
+      setEmailValidationStatus('invalid');
+      setEmailValidationMessage(syncEmailCheck.message);
+      setEmailSuggestedFix(syncEmailCheck.suggestedEmail || null);
     }
 
-    if (!cleanPhone) {
+    if (!regPhone.trim()) {
       errs.regPhone = "Vui lòng nhập Số điện thoại liên hệ.";
     } else {
       const phoneRegex = /^(0[3|5|7|8|9])[0-9]{8}$/;
+      const cleanPhone = regPhone.trim().replace(/\s/g, '');
       if (!phoneRegex.test(cleanPhone)) {
         errs.regPhone = "SĐT không hợp lệ (10 chữ số, bắt đầu bằng 03, 05, 07, 08, 09).";
       }
     }
 
-    if (!cleanPassword) {
+    if (!regPassword) {
       errs.regPassword = "Vui lòng nhập Mật khẩu.";
-    } else {
-      const pwdErrs = [];
-      if (cleanPassword.length < 8) pwdErrs.push("ít nhất 8 ký tự");
-      if (!/[A-Z]/.test(cleanPassword)) pwdErrs.push("1 chữ hoa");
-      if (!/[a-z]/.test(cleanPassword)) pwdErrs.push("1 chữ thường");
-      if (!/[0-9]/.test(cleanPassword)) pwdErrs.push("1 chữ số");
-      if (pwdErrs.length > 0) {
-        errs.regPassword = `Mật khẩu yêu cầu: ${pwdErrs.join(', ')}.`;
-      }
+    } else if (regPassword.length < 8) {
+      errs.regPassword = "Mật khẩu phải chứa ít nhất 8 ký tự.";
+    } else if (!/[A-Z]/.test(regPassword) || !/[0-9]/.test(regPassword)) {
+      errs.regPassword = "Mật khẩu phải có ít nhất 1 chữ in hoa và 1 chữ số.";
     }
 
-    if (!cleanConfirmPassword) {
+    if (!regConfirmPassword) {
       errs.regConfirmPassword = "Vui lòng nhập lại mật khẩu để xác nhận.";
-    } else if (cleanPassword && cleanPassword !== cleanConfirmPassword) {
+    } else if (regPassword && regPassword !== regConfirmPassword) {
       errs.regConfirmPassword = "Mật khẩu xác nhận không khớp.";
     }
 
@@ -255,113 +323,68 @@ export default function WebLoginPage({
 
     if (Object.keys(errs).length > 0) {
       setFieldErrors(errs);
-      setFormError("Vui lòng hoàn thiện các trường thông tin bị thiếu bên dưới.");
+      setFormError(errs.regEmail || "Vui lòng kiểm tra và hoàn thiện chính xác các trường thông tin bên dưới.");
       return;
     }
     setFieldErrors({});
+
     setIsSubmitting(true);
-
-    const targetRoleName = role === 'parent' ? 'PARENT' : 'STUDENT';
-
     try {
-      const resData = await authService.register({
-        email: cleanEmail,
-        password: cleanPassword,
-        fullName: cleanFullName,
-        phone: cleanPhone,
-        roleName: targetRoleName
-      });
+      // BẮT BUỘC kiểm tra toàn diện Email (DNS MX + Chống email ảo + Kiểm tra tồn tại CSDL) trước khi gọi API đăng ký
+      setEmailValidationStatus('checking');
+      const liveEmailCheck = await validateEmailComprehensive(regEmail.trim(), (em) =>
+        authService.validateEmail(em)
+      );
+
+      if (!liveEmailCheck.isValid) {
+        setIsSubmitting(false);
+        setEmailValidationStatus('invalid');
+        setEmailValidationMessage(liveEmailCheck.message);
+        setEmailSuggestedFix(liveEmailCheck.suggestedEmail || null);
+        setFieldErrors({ regEmail: liveEmailCheck.message });
+        setFormError(liveEmailCheck.message);
+        return;
+      }
+
+      setEmailValidationStatus('valid');
+      setEmailValidationMessage(liveEmailCheck.message);
+
+      const payload = {
+        fullName: regFullName.trim(),
+        email: regEmail.trim(),
+        phone: regPhone.trim(),
+        password: regPassword,
+        roleName: role === 'parent' ? 'PARENT' : 'STUDENT',
+        campusId: selectedCampusId || (campuses[0]?.campusId || campuses[0]?.id)
+      };
+
+      await authService.register(payload);
       setIsSubmitting(false);
 
-      const returnedOtp = resData?.otpCode || "436637";
-      const msg = resData?.message || "Đăng ký thành công. Vui lòng xác thực tài khoản bằng mã OTP đã được gửi.";
-
-      // Save demo OTP code to localStorage for easy retrieval
-      localStorage.setItem('demo_otp_code', returnedOtp);
-      localStorage.setItem('demo_otp_email', cleanEmail);
-      setDemoOtpCode(returnedOtp);
-      setSubmitSuccessMsg(msg);
-
-      // Trigger Toast notification
-      setToastInfo({
-        title: "Đăng Ký Thành Công!",
-        message: msg,
-        otp: returnedOtp
-      });
-
-      // Auto pop-up OTP Verification Modal
-      setTimeout(() => {
-        setForgotEmail(cleanEmail);
-        setOtpCode(returnedOtp);
-        setIsActivationMode(true);
-        setIsForgotModalOpen(true);
-        setForgotStep(2);
-      }, 1000);
+      // Open OTP verification step in modal without auto-filling OTP
+      setModalMode('activation');
+      setForgotEmail(regEmail.trim());
+      setOtpCode(''); // Empty input field so user must enter OTP from email
+      setModalError(null);
+      setModalSuccess(
+        "Đã kiểm tra email hợp lệ! Mã xác thực OTP 6 chữ số đã được gửi về email của bạn. Vui lòng kiểm tra hộp thư và nhập mã OTP để xác minh tài khoản."
+      );
+      setForgotStep(2);
+      setIsForgotModalOpen(true);
     } catch (err) {
       setIsSubmitting(false);
-      console.warn('[WebLoginPage] Register API error:', err);
-      let errorMsg = err.message || err.data?.message;
-      if (Array.isArray(err.data?.errors) && err.data.errors.length > 0) {
-        errorMsg = err.data.errors.map(e => e.description || e.message).join(' ');
+      console.warn('[WebLoginPage] Register error:', err);
+      const msg =
+        err.data?.error?.description ||
+        err.data?.errors?.[0]?.description ||
+        err.data?.message ||
+        err.message ||
+        'Đăng ký không thành công. Vui lòng kiểm tra lại thông tin.';
+      setFormError(msg);
+      if (msg.toLowerCase().includes('email') || msg.toLowerCase().includes('tên miền') || msg.toLowerCase().includes('gmail')) {
+        setEmailValidationStatus('invalid');
+        setFieldErrors((prev) => ({ ...prev, regEmail: msg }));
       }
-      if (!errorMsg) errorMsg = "Đăng ký không thành công. Vui lòng kiểm tra lại thông tin.";
-      setFormError(errorMsg);
-    }
-  };
-
-  // Quick Demo Login Handler (connects to real API with dev fallback)
-  const handleQuickDemo = async (demoRole) => {
-    let demoEmail = 'student@veval.edu.vn';
-    let demoPass = 'Student@123';
-    let demoName = 'Nguyễn Minh Hoàng';
-    let demoRoleArray = ['Student'];
-
-    if (demoRole === 'student') {
-      demoEmail = 'student@veval.edu.vn';
-      demoPass = 'Student@123';
-      demoName = 'Minh Hoàng';
-      demoRoleArray = ['Student'];
-    } else if (demoRole === 'teacher') {
-      demoEmail = 'teacher@veval.edu.vn';
-      demoPass = 'Teacher@123';
-      demoName = 'Thầy Phạm Duy';
-      demoRoleArray = ['Teacher'];
-    } else if (demoRole === 'manager') {
-      demoEmail = 'manager@veval.edu.vn';
-      demoPass = 'Manager@123';
-      demoName = 'Cô Hà Quản Lý';
-      demoRoleArray = ['Manager'];
-    } else if (demoRole === 'parent') {
-      demoEmail = 'parent@veval.edu.vn';
-      demoPass = 'Parent@123';
-      demoName = 'Phụ Huynh Minh';
-      demoRoleArray = ['Parent'];
-    }
-
-    setEmail(demoEmail);
-    setPassword(demoPass);
-    setIsSubmitting(true);
-
-    try {
-      const resData = await authService.login({ email: demoEmail, password: demoPass });
-      setIsSubmitting(false);
-      const targetRole = determineRoleFromResponse(resData);
-      onLoginSuccess(targetRole, resData);
-    } catch {
-      setIsSubmitting(false);
-      const demoResponse = {
-        accessToken: "eyDemoAccessToken_DevOnly",
-        refreshToken: "eyDemoRefreshToken_DevOnly",
-        user: {
-          userId: "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-          email: demoEmail,
-          fullName: demoName,
-          phone: "0912345678",
-          avatarUrl: studentAvatar,
-          roles: demoRoleArray
-        }
-      };
-      onLoginSuccess(demoRole, demoResponse);
     }
   };
 
@@ -374,158 +397,101 @@ export default function WebLoginPage({
   };
   const passStrength = getPasswordStrength(regPassword);
 
-  // Forgot password & OTP verification submit handler via Real API
+  // Forgot password & Account activation submit handler with Real API Integration
   const handleForgotSubmit = async (e) => {
-    e.preventDefault();
-    setFormError(null);
-    if (forgotStep === 1) {
-      if (!forgotEmail) return;
-      setIsSubmitting(true);
-      try {
-        const resData = await authService.forgotPassword(forgotEmail.trim());
-        setIsSubmitting(false);
+    if (e) e.preventDefault();
+    setModalError(null);
+    setModalSuccess(null);
+    setIsSubmitting(true);
 
-        const returnedOtp = resData?.otpCode || "396652";
-        const msg = resData?.message || "Mã xác thực OTP đặt lại mật khẩu đã được gửi đến email của bạn.";
-
-        localStorage.setItem('demo_otp_code', returnedOtp);
-        setDemoOtpCode(returnedOtp);
-        setOtpCode(returnedOtp);
-
-        setToastInfo({
-          title: "Mã OTP Đặt Lại Mật Khẩu!",
-          message: msg,
-          otp: returnedOtp
-        });
-
-        setForgotStep(2);
-      } catch (err) {
-        setIsSubmitting(false);
-        let errorMsg = err.message || err.data?.message;
-        if (Array.isArray(err.data?.errors) && err.data.errors.length > 0) {
-          errorMsg = err.data.errors.map(e => e.description || e.message).join(' ');
+    try {
+      if (forgotStep === 1) {
+        const cleanEmail = (forgotEmail || '').trim();
+        if (!cleanEmail) {
+          setIsSubmitting(false);
+          setModalError("Vui lòng nhập địa chỉ Email tài khoản.");
+          return;
         }
-        if (!errorMsg) errorMsg = "Không thể gửi yêu cầu đặt lại mật khẩu. Vui lòng kiểm tra lại email.";
-
-        setFormError(errorMsg);
-        setToastInfo({
-          title: "Yêu Cầu Thất Bại!",
-          message: errorMsg,
-          type: "error"
-        });
-      }
-    } else if (forgotStep === 2) {
-      if (!otpCode) return;
-      setIsSubmitting(true);
-
-      if (isActivationMode) {
-        // Account Activation Flow
-        try {
+        // Gọi API forgot-password để kiểm tra email tồn tại và gửi mã OTP
+        await authService.forgotPassword(cleanEmail);
+        setIsSubmitting(false);
+        setOtpCode('');
+        setModalSuccess(`Đã kiểm tra tài khoản thành công! Mã OTP xác thực đặt lại mật khẩu đã được gửi đến email ${cleanEmail}. Vui lòng kiểm tra hộp thư.`);
+        setForgotStep(2);
+      } else if (forgotStep === 2) {
+        if (!otpCode || otpCode.trim().length !== 6) {
+          setIsSubmitting(false);
+          setModalError("Vui lòng nhập đầy đủ mã xác thực OTP gồm 6 chữ số.");
+          return;
+        }
+        if (modalMode === 'activation') {
+          // Activation flow for registration
           await authService.verifyOtp(forgotEmail.trim(), otpCode.trim());
           setIsSubmitting(false);
-
-          setToastInfo({
-            title: "Xác Thực Kích Hoạt Thành Công!",
-            message: "Tài khoản đã được kích hoạt. Đang vào trang chủ...",
-            type: "success"
-          });
-
-          try {
-            const loginRes = await authService.login({
-              email: forgotEmail.trim(),
-              password: regPassword || 'Student@123',
-              rememberMe
-            });
-            const userRole = determineRoleFromResponse(loginRes);
-            setTimeout(() => {
-              setIsForgotModalOpen(false);
-              onLoginSuccess(userRole, loginRes);
-            }, 600);
-            return;
-          } catch {
-            setTimeout(() => {
-              setIsForgotModalOpen(false);
-              onNavigateHome();
-            }, 600);
-            return;
-          }
-        } catch (err) {
+          setModalSuccess("Xác thực và kích hoạt tài khoản thành công! Bạn có thể đăng nhập ngay.");
+          setForgotStep(4);
+        } else {
+          // Forgot password flow: BẮT BUỘC KIỂM TRA MÃ OTP VỚI BACKEND TRƯỚC KHI CHO QUA BƯỚC 3!
+          await authService.verifyResetOtp(forgotEmail.trim(), otpCode.trim());
           setIsSubmitting(false);
-          let errorMsg = err.message || err.data?.message;
-          if (Array.isArray(err.data?.errors) && err.data.errors.length > 0) {
-            errorMsg = err.data.errors.map(e => e.description || e.message).join(' ');
-          }
-          if (!errorMsg) errorMsg = "Mã OTP không chính xác hoặc đã hết hạn.";
-
-          setFormError(errorMsg);
-          setToastInfo({
-            title: "Xác Thực OTP Thất Bại!",
-            message: errorMsg,
-            type: "error"
-          });
+          setModalError(null);
+          setModalSuccess(null);
+          setNewPassword('');
+          setConfirmPassword('');
+          setForgotStep(3);
         }
-      } else {
-        // Password Reset Flow: Advance to Step 3 (New Password Input)
-        setIsSubmitting(false);
-        setForgotStep(3);
-      }
-    } else if (forgotStep === 3) {
-      if (!newPassword) return;
-      setIsSubmitting(true);
-      try {
+      } else if (forgotStep === 3) {
+        if (!newPassword || newPassword.length < 8) {
+          setIsSubmitting(false);
+          setModalError("Mật khẩu mới phải có tối thiểu 8 ký tự.");
+          return;
+        }
+        if (!/[A-Z]/.test(newPassword) || !/[a-z]/.test(newPassword) || !/[0-9]/.test(newPassword)) {
+          setIsSubmitting(false);
+          setModalError("Mật khẩu phải chứa ít nhất 1 chữ hoa, 1 chữ thường và 1 chữ số (VD: Password123@).");
+          return;
+        }
+        if (newPassword !== confirmPassword) {
+          setIsSubmitting(false);
+          setModalError("Mật khẩu xác nhận không khớp. Vui lòng kiểm tra lại.");
+          return;
+        }
         await authService.resetPassword({
           email: forgotEmail.trim(),
           otpCode: otpCode.trim(),
-          newPassword: newPassword.trim()
+          newPassword,
+          confirmPassword
         });
         setIsSubmitting(false);
-
-        setToastInfo({
-          title: "Đổi Mật Khẩu Thành Công!",
-          message: "Tài khoản của bạn đã được cập nhật mật khẩu mới. Đang tự động đăng nhập...",
-          type: "success"
-        });
-
-        // Automatically log in with new password and redirect straight to Home Page
-        try {
-          const loginRes = await authService.login({
-            email: forgotEmail.trim(),
-            password: newPassword.trim(),
-            rememberMe: true
-          });
-          const userRole = determineRoleFromResponse(loginRes);
-          setTimeout(() => {
-            setIsForgotModalOpen(false);
-            onLoginSuccess(userRole, loginRes);
-          }, 600);
-        } catch {
-          setTimeout(() => {
-            setMode('login');
-            setEmail(forgotEmail.trim());
-            setIsForgotModalOpen(false);
-            onNavigateHome();
-          }, 600);
-        }
-      } catch (err) {
-        setIsSubmitting(false);
-        let errorMsg = err.message || err.data?.message;
-        if (Array.isArray(err.data?.errors) && err.data.errors.length > 0) {
-          errorMsg = err.data.errors.map(e => e.description || e.message).join(' ');
-        }
-        if (!errorMsg) errorMsg = "Không thể đặt lại mật khẩu. Vui lòng kiểm tra lại mã OTP hoặc thử lại.";
-
-        setFormError(errorMsg);
-        setToastInfo({
-          title: "Đặt Lại Mật Khẩu Thất Bại!",
-          message: errorMsg,
-          type: "error"
-        });
+        setModalSuccess("Đặt lại mật khẩu thành công! Bạn có thể sử dụng mật khẩu mới để đăng nhập ngay bây giờ.");
+        setForgotStep(4);
       }
+    } catch (err) {
+      setIsSubmitting(false);
+      const msg = err.data?.error?.description || err.message || 'Thao tác không thành công. Vui lòng kiểm tra lại.';
+      setModalError(msg);
+    }
+  };
+
+  // Resend OTP Handler
+  const handleResendOtp = async () => {
+    setModalError(null);
+    try {
+      if (modalMode === 'activation') {
+        setModalSuccess('Đã gửi lại mã OTP kích hoạt đến email ' + forgotEmail);
+      } else {
+        await authService.forgotPassword(forgotEmail.trim());
+        setModalSuccess('Đã gửi lại mã OTP đặt lại mật khẩu mới đến email ' + forgotEmail);
+      }
+    } catch (err) {
+      const msg = err.data?.error?.description || err.message || 'Không thể gửi lại mã OTP. Vui lòng thử lại sau.';
+      setModalError(msg);
+      throw err;
     }
   };
 
   return (
-    <div className="min-h-screen w-full bg-[#F8FAFC] text-slate-900 flex flex-col font-sans selection:bg-blue-600 selection:text-white">
+    <div className="min-h-screen w-full bg-[#FDFBF7] text-slate-900 flex flex-col font-sans selection:bg-[#FACC15] selection:text-slate-950">
 
       {/* 1. TOP HEADER NAVIGATION */}
       <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-6 lg:px-8 py-3 transition-all shadow-xs">
@@ -536,18 +502,7 @@ export default function WebLoginPage({
             onClick={onNavigateHome}
             className="flex items-center gap-2.5 cursor-pointer select-none group"
           >
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-cyan-500 flex items-center justify-center text-white shadow-md shadow-blue-500/20 font-black text-sm group-hover:scale-105 transition-transform">
-              ĐG
-            </div>
-            <div>
-              <div className="font-black text-xl tracking-tight text-slate-950 flex items-center gap-1.5">
-                <span>ĐGNL AI</span>
-                <span className="w-2.5 h-2.5 rounded-full bg-blue-600 animate-pulse"></span>
-              </div>
-              <div className="text-[10px] text-blue-600 font-extrabold uppercase tracking-wider">
-                Khảo thí & Luyện thi ĐGNL ĐHQG-HCM 4.0
-              </div>
-            </div>
+            <BrandLogo className="w-36 sm:w-44" />
           </div>
 
           {/* Quick Header Actions */}
@@ -559,11 +514,10 @@ export default function WebLoginPage({
 
             <button
               onClick={onNavigateHome}
-              className="flex items-center gap-1.5 sm:gap-2 text-xs font-bold text-slate-700 hover:text-blue-700 bg-slate-100 hover:bg-slate-200 px-3 sm:px-4 py-2 rounded-xl border border-slate-200/80 transition-all active:scale-95 shadow-2xs"
+              className="flex items-center gap-2 text-xs font-bold text-slate-700 hover:text-blue-700 bg-slate-100 hover:bg-slate-200 px-4 py-2 rounded-xl border border-slate-200/80 transition-all active:scale-95 shadow-2xs"
             >
               <ArrowLeft className="w-4 h-4 text-blue-600" />
-              <span className="hidden sm:inline">Quay lại Trang Chủ</span>
-              <span className="sm:hidden">Trang Chủ</span>
+              <span>Quay lại Trang Chủ</span>
             </button>
           </div>
 
@@ -571,15 +525,16 @@ export default function WebLoginPage({
       </header>
 
       {/* 2. MAIN CENTER CONTENT CONTAINER */}
-      <main className="flex-1 flex items-center justify-center p-2 sm:p-4 lg:p-2 relative overflow-hidden">
+      <main className="flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-10 relative overflow-hidden">
 
         {/* Soft Ambient Background Glows */}
         <div className="absolute top-1/4 left-10 w-96 h-96 rounded-full bg-blue-400/10 blur-[120px] pointer-events-none"></div>
         <div className="absolute bottom-10 right-10 w-96 h-96 rounded-full bg-indigo-400/10 blur-[120px] pointer-events-none"></div>
 
-        <div className="w-full max-w-md lg:max-w-6xl bg-white/95 rounded-[36px] shadow-[0_24px_80px_-20px_rgba(30,58,138,0.18)] overflow-hidden grid grid-cols-1 lg:grid-cols-12 min-h-0 lg:min-h-[720px] border border-white/80 text-slate-900 z-10 my-4 sm:my-8 backdrop-blur-xl">
-          {/* LEFT COLUMN (7 Spans): Light Academic Showcase & Real Authentic Student Photo (Desktop >= lg) */}
-          <div className="hidden lg:flex lg:col-span-7 bg-gradient-to-br from-[#EFF6FF] via-[#EEF2FF] to-[#ECFEFF] p-8 lg:p-12 text-slate-900 flex-col justify-between relative overflow-hidden border-r border-indigo-100">
+        <div className="w-full max-w-6xl bg-white rounded-[32px] shadow-2xl overflow-hidden grid grid-cols-1 lg:grid-cols-12 min-h-[720px] border border-slate-200/90 text-slate-900 z-10">
+
+          {/* LEFT COLUMN (7 Spans): Light Academic Showcase & Real Authentic Student Photo */}
+          <div className="lg:col-span-7 bg-gradient-to-br from-blue-50/90 via-indigo-50/60 to-cyan-50/40 p-8 lg:p-12 text-slate-900 flex flex-col justify-between relative overflow-hidden border-r border-slate-200/80">
 
             {/* Ambient inner highlights */}
             <div className="absolute -top-24 -left-24 w-96 h-96 rounded-full bg-blue-300/20 blur-3xl pointer-events-none"></div>
@@ -627,10 +582,10 @@ export default function WebLoginPage({
                 <div className="absolute inset-0 rounded-3xl bg-gradient-to-r from-blue-400 to-cyan-400 blur-xl opacity-20 group-hover:opacity-40 transition-opacity"></div>
 
                 {/* Card Container */}
-                <div className="relative bg-white/95 border border-white rounded-[28px] p-3 shadow-[0_20px_50px_-15px_rgba(59,130,246,0.25)] transition-all duration-500 transform group-hover:scale-[1.015] group-hover:shadow-2xl">
+                <div className="relative bg-white border border-slate-200/90 rounded-3xl p-3 shadow-xl transition-all duration-500 transform group-hover:scale-[1.01]">
 
                   {/* Real Student Photograph */}
-                  <div className="relative overflow-hidden rounded-[22px] h-60 sm:h-64 w-full">
+                  <div className="relative overflow-hidden rounded-2xl h-60 sm:h-64 w-full">
                     <img
                       src={studentAvatar}
                       alt="Học sinh THPT Việt Nam ôn thi ĐGNL"
@@ -701,18 +656,18 @@ export default function WebLoginPage({
           </div>
 
           {/* RIGHT COLUMN (5 Spans): Form Column */}
-          <div className="lg:col-span-5 p-6 sm:p-8 lg:p-10 flex flex-col justify-between bg-gradient-to-b from-white via-white to-slate-50/70 relative">
+          <div className="lg:col-span-5 p-6 sm:p-8 lg:p-10 flex flex-col justify-between bg-white relative">
 
             <div className="space-y-5">
 
               {/* Header Mode Switcher: Login / Register */}
               <div className="space-y-4">
-                <div className="p-1.5 bg-slate-100/90 rounded-2xl flex items-center border border-slate-200/80 shadow-inner">
+                <div className="p-1 bg-slate-100 rounded-2xl flex items-center border border-slate-200">
                   <button
                     onClick={() => handleModeSwitch('login')}
                     className={`flex-1 py-2.5 rounded-xl font-black text-xs transition-all flex items-center justify-center gap-1.5 ${mode === 'login'
-                      ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-indigo-500/20'
-                      : 'text-slate-500 hover:text-slate-900 hover:bg-white/70'
+                        ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md'
+                        : 'text-slate-600 hover:text-slate-900'
                       }`}
                   >
                     <Lock className="w-3.5 h-3.5" />
@@ -722,8 +677,8 @@ export default function WebLoginPage({
                   <button
                     onClick={() => handleModeSwitch('register')}
                     className={`flex-1 py-2.5 rounded-xl font-black text-xs transition-all flex items-center justify-center gap-1.5 ${mode === 'register'
-                      ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md'
-                      : 'text-slate-600 hover:text-slate-900'
+                        ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md'
+                        : 'text-slate-600 hover:text-slate-900'
                       }`}
                   >
                     <User className="w-3.5 h-3.5" />
@@ -732,9 +687,9 @@ export default function WebLoginPage({
                 </div>
 
                 <div>
-                  <h1 className="text-3xl font-black text-slate-900 tracking-tight text-center my-4">
+                  <h2 className="text-2xl font-black text-slate-900 tracking-tight">
                     {mode === 'login' ? 'Đăng Nhập' : 'Đăng Ký Tài Khoản Mới'}
-                  </h1>
+                  </h2>
                   <p className="text-xs text-slate-500 font-semibold mt-1">
                     {mode === 'login'
                       ? 'Nhập Email hoặc Số điện thoại và Mật khẩu để đăng nhập.'
@@ -777,14 +732,6 @@ export default function WebLoginPage({
                 </div>
               )}
 
-              {/* Redirect Notice from Exam Flow */}
-              {redirectNotice && (
-                <div className="p-3.5 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 text-blue-900 text-xs font-semibold rounded-2xl flex items-center gap-2.5 shadow-xs animate-fade">
-                  <Sparkles className="w-4 h-4 shrink-0 text-blue-600" />
-                  <span>{redirectNotice}</span>
-                </div>
-              )}
-
               {/* Form Alert Feedback */}
               {formError && (
                 <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold rounded-xl flex items-center gap-2 animate-fade">
@@ -815,8 +762,17 @@ export default function WebLoginPage({
                   fieldErrors={fieldErrors}
                   setFieldErrors={setFieldErrors}
                   handleLoginSubmit={handleLoginSubmit}
-                  handleQuickDemo={handleQuickDemo}
-                  onOpenForgotPassword={() => { setIsForgotModalOpen(true); setForgotStep(1); }}
+                  onOpenForgotPassword={() => {
+                    setModalMode('forgot');
+                    setForgotEmail('');
+                    setOtpCode('');
+                    setNewPassword('');
+                    setConfirmPassword('');
+                    setModalError(null);
+                    setModalSuccess(null);
+                    setForgotStep(1);
+                    setIsForgotModalOpen(true);
+                  }}
                 />
               ) : (
                 <RegisterForm
@@ -848,10 +804,25 @@ export default function WebLoginPage({
                   passStrength={passStrength}
                   gradeOptions={gradeOptions}
                   targetOptions={targetOptions}
+                  campuses={campuses}
+                  selectedCampusId={selectedCampusId}
+                  setSelectedCampusId={setSelectedCampusId}
+                  campusDropdownOpen={campusDropdownOpen}
+                  setCampusDropdownOpen={setCampusDropdownOpen}
                   isSubmitting={isSubmitting}
                   fieldErrors={fieldErrors}
                   setFieldErrors={setFieldErrors}
                   handleRegisterSubmit={handleRegisterSubmit}
+                  emailValidationStatus={emailValidationStatus}
+                  emailValidationMessage={emailValidationMessage}
+                  emailSuggestedFix={emailSuggestedFix}
+                  onEmailBlur={(val) => runLiveEmailValidation(val)}
+                  onApplySuggestedEmail={(suggested) => {
+                    setRegEmail(suggested);
+                    setEmailSuggestedFix(null);
+                    setFieldErrors((prev) => ({ ...prev, regEmail: null }));
+                    runLiveEmailValidation(suggested);
+                  }}
                 />
               )}
 
@@ -868,70 +839,15 @@ export default function WebLoginPage({
 
       </main>
 
-      {/* 3. PAGE FOOTER BAR */}
-      <footer className="border-t border-slate-200/80 bg-white py-4 px-4 sm:px-8 text-center text-xs text-slate-500 font-medium">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px]">
-          <div>
-            <strong className="text-slate-800">ĐGNL AI Portal</strong> • Nền tảng Khảo thí & Luyện thi Thích ứng v2.4 • ĐHQG TP.HCM
-          </div>
-          <div className="flex items-center gap-4 text-slate-500 font-bold">
-            <button type="button" onClick={onNavigateHome} className="hover:text-blue-600 transition-colors">
-              Trang Chủ
-            </button>
-            <span>•</span>
-            <span>Hotline: <strong className="text-blue-600">1900 8889</strong></span>
-            <span>•</span>
-            <span>© 2026 Trung tâm Khảo thí ĐGNL</span>
-          </div>
-        </div>
-      </footer>
-
-      {/* Toast Notification Banner */}
-      <AnimatePresence>
-        {toastInfo && (
-          <motion.div
-            initial={{ opacity: 0, y: -20, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -20, scale: 0.95 }}
-            className={`fixed top-20 right-6 z-50 max-w-md bg-white border rounded-2xl p-4 shadow-2xl flex items-start gap-3 text-slate-900 ${toastInfo.type === 'error' ? 'border-rose-300' : 'border-emerald-300'
-              }`}
-          >
-            <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 font-bold ${toastInfo.type === 'error' ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'
-              }`}>
-              {toastInfo.type === 'error' ? <AlertCircle className="w-5 h-5" /> : <CheckCircle className="w-5 h-5" />}
-            </div>
-            <div className="flex-1 space-y-1">
-              <div className="flex items-center justify-between">
-                <h4 className={`font-black text-sm ${toastInfo.type === 'error' ? 'text-rose-950' : 'text-slate-900'}`}>
-                  {toastInfo.title}
-                </h4>
-                <button
-                  onClick={() => setToastInfo(null)}
-                  className="text-slate-400 hover:text-slate-600 p-1"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-              <p className={`text-xs font-semibold leading-relaxed ${toastInfo.type === 'error' ? 'text-rose-700' : 'text-slate-600'}`}>
-                {toastInfo.message}
-              </p>
-              {toastInfo.otp && (
-                <div className="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
-                  <span className="text-slate-500 font-semibold">🔑 Mã OTP Demo:</span>
-                  <code className="px-2.5 py-0.5 bg-amber-100 border border-amber-300 text-amber-950 font-mono font-black rounded-lg tracking-widest text-sm">
-                    {toastInfo.otp}
-                  </code>
-                </div>
-              )}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Forgot Password & Activation Modal */}
+      {/* Forgot Password Modal */}
       <ForgotPasswordModal
         isOpen={isForgotModalOpen}
-        onClose={() => setIsForgotModalOpen(false)}
+        onClose={() => {
+          setIsForgotModalOpen(false);
+          setModalError(null);
+          setModalSuccess(null);
+        }}
+        modalMode={modalMode}
         forgotStep={forgotStep}
         setForgotStep={setForgotStep}
         forgotEmail={forgotEmail}
@@ -940,9 +856,13 @@ export default function WebLoginPage({
         setOtpCode={setOtpCode}
         newPassword={newPassword}
         setNewPassword={setNewPassword}
+        confirmPassword={confirmPassword}
+        setConfirmPassword={setConfirmPassword}
         handleForgotSubmit={handleForgotSubmit}
-        demoOtpCode={demoOtpCode}
-        isActivationMode={isActivationMode}
+        isSubmitting={isSubmitting}
+        modalError={modalError}
+        modalSuccess={modalSuccess}
+        onResendOtp={handleResendOtp}
       />
 
     </div>

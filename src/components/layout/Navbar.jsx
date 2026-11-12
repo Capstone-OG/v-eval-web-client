@@ -1,206 +1,269 @@
-import { ROLE_LABELS } from '../../config/roles';
-import React, { useState, useEffect } from 'react';
-import { Search, MapPin, Flame, Bell, User, LogOut, ChevronDown, BookOpen, Layers, ShieldCheck, Award, Sparkles, Menu, Zap, Settings } from 'lucide-react';
-import { mockUser } from '../../data/mockData';
-import apiClient from '../../services/apiClient';
-import { authService } from '../../services/authService';
+import BrandLogo from '../common/BrandLogo';
+import React from 'react';
+import {
+  Bell,
+  BookOpen,
+  Briefcase,
+  Building2,
+  ClipboardCheck,
+  CreditCard,
+  Flame,
+  GraduationCap,
+  HeartHandshake,
+  History,
+  Home,
+  LayoutGrid,
+  LogOut,
+  Network,
+  ShieldCheck,
+  Settings,
+  Sparkles,
+  TrendingUp,
+  UserPlus
+} from 'lucide-react';
 
-export default function Navbar({ activeRole, currentUser, onLogout, onOpenAuthModal, onOpenArchModal, onToggleMobileMenu, onOpenDiagnostic, onOpenSettings }) {
-  const [selectedCampus, setSelectedCampus] = useState('');
-  const [campuses, setCampuses] = useState([]);
-  const [campusLoading, setCampusLoading] = useState(true);
-  const [campusError, setCampusError] = useState('');
+const ROLE_HEADER_INFO = {
+  student: {
+    portalTitle: 'Cổng Học Viên ĐGNL',
+    statusIcon: Flame,
+    statusClass: 'bg-amber-50 border-amber-200 text-amber-800',
+    iconColor: 'text-amber-500 fill-amber-500',
+    roleBadge: 'Học Viên ĐGNL'
+  },
+  parent: {
+    portalTitle: 'Cổng Phụ Huynh Đồng Hành',
+    statusIcon: HeartHandshake,
+    statusClass: 'bg-emerald-50 border-emerald-200 text-emerald-800',
+    iconColor: 'text-emerald-600',
+    roleBadge: 'Phụ Huynh Học Sinh'
+  },
+  teacher: {
+    portalTitle: 'Cổng Giảng Viên Sư Phạm',
+    statusIcon: BookOpen,
+    statusClass: 'bg-indigo-50 border-indigo-200 text-indigo-800',
+    iconColor: 'text-indigo-600',
+    roleBadge: 'Giảng Viên Chuyên Môn'
+  },
+  manager: {
+    portalTitle: 'Cổng Quản Lý Học Thuật Cơ Sở',
+    statusIcon: Building2,
+    statusClass: 'bg-blue-50 border-blue-200 text-blue-800',
+    iconColor: 'text-blue-600',
+    roleBadge: 'Quản Lý Học Thuật Cơ Sở'
+  },
+  admin: {
+    portalTitle: 'Cổng Quản Trị Viên Hệ Thống IAM',
+    statusIcon: ShieldCheck,
+    statusClass: 'bg-rose-50 border-rose-200 text-rose-800',
+    iconColor: 'text-rose-600',
+    roleBadge: 'Quản Trị Hệ Thống Toàn Quyền'
+  }
+};
 
-  useEffect(() => {
-    let active = true;
-    const load = async () => {
-      setCampusLoading(true);
-      setCampusError('');
-      setSelectedCampus('');
-      try {
-        const list = await authService.getCampuses();
-        if (!Array.isArray(list) || !list.length) throw new Error('Không tải được danh sách cơ sở.');
-        let campusId = '';
-        if (activeRole === 'student' && currentUser) {
-          try {
-            campusId = (await apiClient.get('/api/v1/students/me/profile')).data?.campusId || '';
-          } catch (err) {
-            if (err.status !== 404) throw err;
-          }
-        } else {
-          campusId = currentUser?.campusId || '';
-        }
-        if (active) {
-          setCampuses(list);
-          setSelectedCampus(list.some((c) => c.campusId === campusId) ? campusId : '');
-        }
-      } catch (err) {
-        if (active) setCampusError(err.message);
-      } finally {
-        if (active) setCampusLoading(false);
+const MOBILE_ROLE_TABS = {
+  student: [
+    { id: 'dashboard', label: 'Tổng quan', icon: LayoutGrid },
+    { id: 'diagnostic', label: 'Khảo thí 30 câu', icon: ClipboardCheck },
+    { id: 'history', label: 'Lịch sử', icon: History },
+    { id: 'roadmap', label: 'Lộ trình', icon: Network },
+    { id: 'analytics', label: 'Dự báo', icon: TrendingUp },
+    { id: 'tuition', label: 'Học phí', icon: CreditCard }
+  ],
+  parent: [
+    { id: 'dashboard', label: 'Đồng hành', icon: HeartHandshake },
+    { id: 'analytics', label: 'Năng lực con', icon: TrendingUp },
+    { id: 'history', label: 'Bài thi con', icon: History },
+    { id: 'roadmap', label: 'Chuyên đề', icon: Network },
+    { id: 'tuition', label: 'Đóng học phí', icon: CreditCard }
+  ],
+  teacher: [
+    { id: 'dashboard', label: 'Heatmap 2D', icon: LayoutGrid },
+    { id: 'roadmap', label: 'Studio Học liệu', icon: BookOpen },
+    { id: 'diagnostic', label: 'Đề khảo thí', icon: ClipboardCheck },
+    { id: 'history', label: 'Bài làm HV', icon: History },
+    { id: 'analytics', label: 'Thống kê IRT', icon: TrendingUp }
+  ],
+  manager: [
+    { id: 'dashboard', label: 'Điều phối Cơ sở', icon: Building2 },
+    { id: 'teacher_heatmap', label: 'Heatmap Lớp', icon: LayoutGrid },
+    { id: 'roadmap', label: 'Khung CT', icon: Network },
+    { id: 'provision', label: 'Cấp tài khoản', icon: UserPlus },
+    { id: 'analytics', label: 'Chất lượng', icon: TrendingUp }
+  ],
+  admin: [
+    { id: 'provision', label: 'Quản trị IAM', icon: ShieldCheck },
+    { id: 'dashboard', label: 'Đa Cơ sở', icon: Building2 },
+    { id: 'teacher_heatmap', label: 'Heatmap Hệ thống', icon: LayoutGrid },
+    { id: 'roadmap', label: 'Cây Tri thức', icon: Network },
+    { id: 'tuition', label: 'Đối soát PayOS', icon: CreditCard }
+  ]
+};
+
+export default function Navbar({
+  role = 'student',
+  activeTab,
+  setActiveTab,
+  currentUser,
+  portalMetrics = {},
+  onLogout,
+  onOpenLandingPage,
+  onOpenSettings
+}) {
+  const info = ROLE_HEADER_INFO[role] || ROLE_HEADER_INFO.student;
+  const StatusIcon = info.statusIcon;
+  const displayName = currentUser?.fullName || currentUser?.email || info.roleBadge;
+  const avatarText = displayName
+    .split(' ')
+    .filter(Boolean)
+    .slice(-2)
+    .map((n) => n[0])
+    .join('')
+    .toUpperCase() || 'VE';
+
+  const mobileTabs = MOBILE_ROLE_TABS[role] || MOBILE_ROLE_TABS.student;
+
+  const getDynamicStatusText = () => {
+    if (role === 'student') {
+      const streak = Number(portalMetrics.studentDashboard?.streakAnalytics?.currentStreak ?? 0);
+      const score = Number(portalMetrics.studentDashboard?.currentEstimatedScore ?? 0);
+      return score > 0
+        ? `Streak: ${streak} ngày • Ước tính: ${score}/1200đ`
+        : `Streak: ${streak} ngày • Chưa làm bài khảo sát`;
+    }
+    if (role === 'parent') {
+      const firstChild = portalMetrics.parentPortalData?.children?.[0];
+      if (firstChild) {
+        const rIdx = Number(firstChild.examReadiness?.readinessIndex ?? 0).toFixed(1);
+        return `${firstChild.studentName} • R_exam: ${rIdx}%`;
       }
-    };
-    load();
-    const syncCampus = (event) => {
-      if (active) setSelectedCampus(event.detail.campusId);
-    };
-    window.addEventListener('veval-campus-updated', syncCampus);
-    return () => {
-      active = false;
-      window.removeEventListener('veval-campus-updated', syncCampus);
-    };
-  }, [currentUser?.id, currentUser?.userId, activeRole]);
-
-  const [showUserDropdown, setShowUserDropdown] = useState(false);
-
-  const displayName = currentUser?.fullName || mockUser.name;
-  const displayEmail = currentUser?.email || mockUser.email;
-  const displayAvatar = currentUser?.avatarUrl || mockUser.avatar;
+      return 'Chưa liên kết hồ sơ học sinh';
+    }
+    if (role === 'teacher') {
+      const totalStudents = Number(portalMetrics.teacherHeatmapData?.totalStudents ?? 0);
+      const className = portalMetrics.teacherHeatmapData?.className;
+      return className
+        ? `${className} • ${totalStudents} học sinh`
+        : `Theo dõi ${totalStudents} học sinh`;
+    }
+    if (role === 'manager') {
+      const totalClasses = Number(portalMetrics.managerPortalData?.totalClasses ?? 0);
+      const campusCount = Number(portalMetrics.campusesCount ?? 0);
+      return `${campusCount} Cơ sở • ${totalClasses} Lớp đang vận hành`;
+    }
+    const totalUsers = Number(portalMetrics.totalUsersCount ?? 0);
+    return totalUsers > 0
+      ? `PostgreSQL IAM • ${totalUsers} tài khoản thực tế`
+      : 'PostgreSQL IAM • Gateway :5212';
+  };
 
   return (
-    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-3 sm:px-6 lg:px-8 py-2.5 sm:py-3 transition-all shadow-xs">
-      <div className="max-w-[1700px] mx-auto flex items-center justify-between gap-3 sm:gap-4">
+    <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-xs">
+      <div className="px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-3">
+        {/* Left: Authenticated Role Portal Badge */}
+        <div className="flex items-center gap-3 flex-wrap">
+          {/* Mobile Brand Logo */}
+          <div className="lg:hidden"><BrandLogo className="w-28 sm:w-32" /></div>
 
-        {/* Left Section: Mobile Menu Toggle + Brand Logo + Search Bar */}
-        <div className="flex items-center gap-2.5 sm:gap-4 lg:gap-6 flex-1 min-w-0 max-w-2xl">
-
-          {/* Mobile Sidebar Hamburger Button (< 1024px lg) */}
-          <button
-            type="button"
-            onClick={onToggleMobileMenu}
-            className="lg:hidden p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors border border-slate-200 flex items-center justify-center shrink-0 cursor-pointer"
-            aria-label="Mở menu điều hướng"
-          >
-            <Menu className="w-5 h-5 text-slate-800" />
-          </button>
-
-          {/* Brand Logo */}
-          <div className="flex items-center gap-2.5 sm:gap-3 shrink-0 cursor-pointer">
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-purple-600 flex items-center justify-center text-white font-extrabold shadow-md shadow-blue-500/25">
-              <Sparkles className="w-4.5 h-4.5 sm:w-5 sm:h-5" />
-            </div>
-            <div>
-              <div className="font-extrabold text-sm sm:text-base tracking-tight text-slate-900 flex items-center gap-1.5 leading-none">
-                <span>ĐGNL AI</span> <span className="hidden xs:inline-block px-1.5 py-0.5 bg-blue-100 text-blue-700 text-[10px] font-bold rounded-full">v2.4</span>
-              </div>
-              <div className="hidden sm:block text-[11px] text-slate-500 font-medium leading-tight mt-0.5">
-                Khảo thí & Luyện thi Thích ứng 4.0
-              </div>
-            </div>
+          {/* Authenticated Role Portal Indicator */}
+          <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 text-white text-xs font-extrabold shadow-sm shadow-blue-500/20">
+            <Sparkles className="w-3.5 h-3.5 text-[#FACC15]" />
+            <span>{info.portalTitle}</span>
           </div>
 
-          {/* Search Bar */}
-          <div className="relative w-full hidden sm:block max-w-md">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Tìm kiếm bài học, chuyên đề, mã đề..."
-              className="w-full pl-10 pr-4 py-2 text-sm bg-slate-100/80 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all text-slate-800 placeholder-slate-400"
-            />
-          </div>
-
+          {currentUser?.email && (
+            <span className="hidden md:inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-[#FDFBF7] border border-slate-200/80 text-[11px] font-bold text-slate-600">
+              <span>Tài khoản xác thực:</span>
+              <strong className="text-slate-900">{currentUser.email}</strong>
+            </span>
+          )}
         </div>
 
-        {/* Center / Right controls */}
-        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-
-          {/* Campus Selector (>= 1280px xl only, prevents colliding on tablet) */}
-          <div className="hidden xl:flex flex-col gap-1 px-3 py-1.5 bg-blue-50 border border-blue-200/60 rounded-xl text-xs font-semibold text-blue-700 shrink-0 max-w-[260px] min-w-0">
-            <div className="flex items-center gap-1.5 min-w-0">
-            <MapPin className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-            <span aria-label="Cơ sở theo học" className="truncate" title={campuses.find((c) => c.campusId === selectedCampus)?.name}>
-              {campusLoading ? 'Đang tải cơ sở...' : campusError ? 'Không tải được cơ sở' : campuses.find((c) => c.campusId === selectedCampus)?.name || 'Chưa cập nhật cơ sở'}
-            </span>
-            </div>
-            {campusError && <span role="alert" className="text-red-600 whitespace-normal">{campusError}</span>}
+        {/* Right: Role Status Pill + Home Button + Profile + Logout */}
+        <div className="flex items-center gap-2.5 sm:gap-3">
+          {/* Role-Specific Live Status Pill from Backend */}
+          <div
+            className={`hidden md:flex items-center gap-2 px-3.5 py-1.5 rounded-full border text-xs font-bold ${info.statusClass}`}
+          >
+            <StatusIcon className={`w-3.5 h-3.5 ${info.iconColor}`} />
+            <span>{getDynamicStatusText()}</span>
           </div>
 
-          {activeRole === 'student' && <>
-          {/* Streak Counter Badge */}
-          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 border border-amber-200/80 rounded-xl text-amber-700 font-bold text-xs shadow-xs shrink-0 whitespace-nowrap">
-            <Flame className="w-4 h-4 text-amber-500 fill-amber-500 animate-pulse shrink-0" />
-            <span>{mockUser.streakDays} Ngày</span>
-          </div>
+          {/* Home Landing Page Button */}
+          {onOpenLandingPage && (
+            <button
+              type="button"
+              onClick={onOpenLandingPage}
+              title="Xem Trang chủ giới thiệu (Home Template)"
+              className="px-3 py-1.5 rounded-xl bg-[#FDFBF7] hover:bg-blue-50 border border-slate-200/80 hover:border-blue-200 text-slate-700 hover:text-blue-700 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+            >
+              <Home className="w-3.5 h-3.5 text-blue-600" />
+              <span className="hidden sm:inline">Trang chủ</span>
+            </button>
+          )}
 
-          {/* Direct Diagnostic Exam Trigger Button */}
+          {/* Notifications */}
           <button
             type="button"
-            onClick={onOpenDiagnostic}
-            className="flex items-center gap-1.5 px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-extrabold text-xs shadow-md shadow-blue-500/20 hover:scale-102 active:scale-95 transition-all duration-200 shrink-0 cursor-pointer"
-            title="Kiểm tra năng lực đầu vào chuẩn hóa V-ACT 2026"
+            className="relative p-2 rounded-xl bg-[#FDFBF7] border border-slate-200/80 text-slate-600 hover:text-blue-600 hover:border-blue-200 transition-colors cursor-pointer"
+            title="Thông báo hệ thống"
           >
-            <span className="hidden xs:inline sm:inline">Kiểm tra năng lực đầu vào</span>
-            <span className="xs:hidden sm:hidden">KT Năng Lực</span>
-            <Zap className="w-3.5 h-3.5 text-[#FACC15] fill-[#FACC15]" />
+            <Bell className="w-4 h-4" />
+            <span className="w-2 h-2 rounded-full bg-rose-500 absolute top-1.5 right-1.5"></span>
           </button>
 
-          </>}
-          {/* Notifications Icon */}
-          <button className="relative p-2 text-slate-500 hover:text-slate-800 rounded-xl hover:bg-slate-100 transition-all shrink-0 cursor-pointer">
-            <Bell className="w-5 h-5" />
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full ring-2 ring-white"></span>
-          </button>
-
-          {/* User Profile / Auth State */}
-          <div className="relative">
-            <button
-              onClick={() => setShowUserDropdown(!showUserDropdown)}
-              className="flex items-center gap-2.5 p-1.5 pl-2 rounded-xl hover:bg-slate-100 transition-all text-left"
-            >
-              <img
-                src={displayAvatar}
-                alt={displayName}
-                className="w-9 h-9 rounded-xl object-cover ring-2 ring-blue-500/30"
-              />
-              <div className="hidden md:block">
-                <div className="text-xs font-bold text-slate-800 leading-tight">{displayName}</div>
-                <div className="text-[11px] font-medium text-slate-500 capitalize">{ROLE_LABELS[activeRole]}</div>
+          {/* Profile Info + Logout */}
+          <div className="flex items-center gap-2.5 pl-2.5 border-l border-slate-200">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-cyan-500 text-white font-black flex items-center justify-center text-xs shadow-sm shadow-blue-500/20">
+              {avatarText}
+            </div>
+            <div className="hidden sm:block text-xs leading-tight">
+              <div className="font-extrabold text-slate-900">{displayName}</div>
+              <div className="text-slate-500 text-[11px] font-medium">
+                {currentUser?.campusName || info.roleBadge}
               </div>
-              <ChevronDown className="w-4 h-4 text-slate-400 hidden md:block" />
-            </button>
+            </div>
 
-            {/* User Dropdown Menu */}
-            {showUserDropdown && (
-              <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-slate-100 p-2 z-50 animate-fade-in">
-                <div className="px-3 py-2 border-b border-slate-100 mb-1">
-                  <div className="text-sm font-bold text-slate-800">{displayName}</div>
-                  <div className="text-xs text-slate-500 truncate">{displayEmail}</div>
-                  <div className="mt-1 inline-block px-2 py-0.5 bg-blue-50 text-blue-700 text-[10px] font-bold rounded-md">
-                    {mockUser.classLevel}
-                  </div>
-                </div>
-
-                <button
-                  onClick={() => { setShowUserDropdown(false); if (onOpenSettings) onOpenSettings(); }}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 rounded-xl transition-all cursor-pointer"
-                >
-                  <Settings className="w-4 h-4 text-slate-400" />
-                  Cài đặt tài khoản
-                </button>
-
-                <button
-                  onClick={() => { setShowUserDropdown(false); onOpenAuthModal(); }}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 rounded-xl transition-all cursor-pointer"
-                >
-                  <User className="w-4 h-4 text-slate-400" />
-                  Đổi tài khoản / Màn Đăng nhập
-                </button>
-
-                <div className="my-1 border-t border-slate-100"></div>
-
-                <button
-                  onClick={() => { setShowUserDropdown(false); onLogout(); }}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-bold text-red-600 hover:bg-red-50 rounded-xl transition-all"
-                >
-                  <LogOut className="w-4 h-4 text-red-500" />
-                  Đăng xuất (Logout)
-                </button>
-              </div>
+            {onOpenSettings && <button type="button" onClick={onOpenSettings}
+              title="Cài đặt tài khoản" aria-label="Cài đặt tài khoản"
+              className="rounded-xl border border-slate-200 p-2 text-slate-600 hover:bg-slate-50">
+              <Settings className="h-4 w-4" />
+            </button>}
+            {onLogout && (
+              <button
+                type="button"
+                onClick={onLogout}
+                title="Đăng xuất khỏi hệ thống"
+                className="ml-1 p-2 rounded-xl bg-rose-50 text-rose-600 border border-rose-200/80 hover:bg-rose-100 transition-colors cursor-pointer flex items-center gap-1 text-xs font-bold"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span className="hidden xl:inline">Đăng xuất</span>
+              </button>
             )}
           </div>
-
         </div>
+      </div>
 
+      {/* Mobile / Tablet Role Tab Strip (Visible when Sidebar is hidden on < lg screens) */}
+      <div className="flex lg:hidden items-center gap-1.5 overflow-x-auto px-4 py-2 bg-[#FDFBF7] border-t border-slate-200/70">
+        {mobileTabs.map((t) => {
+          const Icon = t.icon;
+          const isTabActive = activeTab === t.id;
+          return (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => setActiveTab && setActiveTab(t.id)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-extrabold whitespace-nowrap flex items-center gap-1.5 transition-all cursor-pointer ${
+                isTabActive
+                  ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-xs'
+                  : 'bg-white text-slate-600 border border-slate-200/80'
+              }`}
+            >
+              <Icon className="w-3.5 h-3.5" />
+              <span>{t.label}</span>
+            </button>
+          );
+        })}
       </div>
     </header>
   );
