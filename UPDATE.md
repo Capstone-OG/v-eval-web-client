@@ -1,14 +1,21 @@
 ﻿# UPDATE
 
-### [12/11/2026] - Merge develop into diagnostic frontend branch
+### [13/11/2026] - Student portal UI and history checkpoint
 
-- Resolve 24 conflicted frontend files from develop 115eace. Integrate incoming role portals, curriculum/authoring, payment, notifications, expanded API services and structured math rendering; preserve the local diagnostic assessment lifecycle, profile helpers, account settings and remember-me behavior.
-- Wire the retained diagnostic page into the new portal with the signed-in user and account-specific component key. Student history uses the owned server-backed diagnostic view. Remove incoming shared latest-result loading and prevent seeded/unowned local submission history from reappearing.
-- Combine API query params and PATCH support with proactive token refresh, session-only login, session generation guards and diagnostic privacy cleanup. Refresh preserves the user and selected storage without creating a new login session. Add diagnostic API aliases required by the retained assessment.
-- Fix conditional React hooks in incoming MathGraphView and math-workbench modal. Install the declared jsxgraph dependency; retain its incoming package/lock contract.
-- Validation: production build passed; npm run lint exited zero with warnings; all 21 tests passed (17 diagnostic/privacy, 2 Flow 6 and 2 merge integration cases). Build warns about bundle size and direct eval inside jsxgraph. Browser/live API/visual behavior was not verified.
-- Scope: frontend and progress documentation only. No backend code or configuration backups changed. System-Repo and uppercase frontend have separate merge state; their service code is outside this resolution.
+- Checkpoint pending frontend presentation work: compact account header/menu with red logout, role-aware greetings, shared mobile sidebar and grouped student navigation.
+- Include API-backed diagnostic entry guidance, colorful progress card, 7:3 setup-card layout and readable parent-link controls.
+- Separate diagnostic entry from categorized history. Diagnostic history is server-backed; practice history is explicitly browser-local; mock history awaits a BE list API. Stabilize curriculum loading and width behavior without backend changes.
+- Final validation before commit: all 21 existing tests passed, lint exited zero with warnings, production build passed with existing bundle-size/jsxgraph eval warnings, and git diff whitespace check passed. Browser/live API and reported layout issue remain unverified directly.
+- Commit scope is lowercase frontend only. Root repository pending merge, uppercase frontend and backend service changes are excluded. No push performed.
 
-- V-Eval approved transparent logo integrated into the public/login headers, sidebar, mobile navbar and dark footer through a shared responsive component. Build passed; browser appearance not verified.
+- Student curriculum now opens from catalog into a spacious lesson workspace with larger text, content tabs, outline, existing practice/AI actions. Staff two-column editing retained; build/lint and 21 tests passed. Browser verification pending; no commit/push.
 
-- Frontend merge/branding checkpoint ready for commit: 21 tests passed, lint exited zero, production build passed. Includes resolved develop integration and approved V-Eval logo. Root merge and backend excluded; no push.
+- Student catalog defaults to first chapter/lesson open, others collapsed; sibling expansion is exclusive. Staff add/edit controls remain separate. Build passed.
+
+- Corrected catalog expansion: opened chapters/lessons stay open independently; only their own heading toggles them. Supersedes previous exclusive accordion. Build passed.
+
+- Reading outline now lists only current-chapter lessons/patterns with clear grouping and current-item highlight; other chapters are chosen from the catalog. Build passed.
+
+- Teacher portal: dedicated overview/navigation; retained staff curriculum tools; live exam bank, class mastery/history and warning resolution with explicit unavailable/error states. No sample classes/global alerts; BE assigned-class discovery and mentor scoping remain dependencies. 24 tests, lint and build passed; browser/API checks pending. FE-only, no commit/push.
+
+- Commit checkpoint: student curriculum workspace and teacher portal changes with documentation and 24 passing tests; frontend repository only. Root pending merge and backend changes excluded. User will push.

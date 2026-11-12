@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, FileText, Bot, Clock, Sparkles, Award, Flame, TrendingUp } from 'lucide-react';
 import studentAvatar from '../../assets/students_cutout_badge.jpg';
+import { accountGreeting } from '../../utils/accountPresentation';
 
 export default function HeroBanner({
   currentUser,
@@ -41,12 +42,6 @@ export default function HeroBanner({
   ];
   const [tipIdx, setTipIdx] = useState(0);
 
-  const studentName =
-    currentUser?.fullName ||
-    studentDashboard?.fullName ||
-    currentUser?.email ||
-    'Học viên V-Eval';
-
   useEffect(() => {
     const timer = setInterval(() => {
       setTipIdx((prev) => (prev + 1) % tips.length);
@@ -63,13 +58,8 @@ export default function HeroBanner({
       <div className="relative z-10 flex flex-col lg:flex-row items-center justify-between gap-8">
         {/* Left Column: Greeting & Info */}
         <div className="space-y-4 max-w-2xl flex-1">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-white/10 border border-white/20 backdrop-blur-md text-xs font-bold tracking-wide uppercase text-[#FACC15]">
-            <Sparkles className="w-4 h-4 text-[#FACC15] animate-spin" style={{ animationDuration: '6s' }} />
-            <span>Chiến dịch ĐGNL ĐHQG TP.HCM 2026</span>
-          </div>
-
           <h1 className="text-3xl lg:text-4xl font-extrabold tracking-tight text-white leading-tight font-sans">
-            Chào {studentName}!
+            {accountGreeting('student', { fullName: currentUser?.fullName || studentDashboard?.fullName })}
           </h1>
 
           {/* Dynamic Animated Sliding Text */}
