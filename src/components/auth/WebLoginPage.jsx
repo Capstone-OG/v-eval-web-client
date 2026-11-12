@@ -2,7 +2,6 @@ import BrandLogo from '../common/BrandLogo';
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Sparkles,
   PhoneCall,
   GraduationCap,
   Users,
@@ -529,143 +528,119 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
       </header>
 
       {/* 2. MAIN CENTER CONTENT CONTAINER */}
-      <main className="flex-1 flex items-center justify-center p-2.5 sm:p-4 lg:py-3 lg:px-8 relative overflow-hidden">
+      <main className="flex-1 flex items-center justify-center p-3 sm:p-5 lg:px-8 lg:py-4 relative overflow-hidden">
 
         {/* Soft Ambient Background Glows */}
         <div className="absolute top-1/4 left-10 w-96 h-96 rounded-full bg-blue-400/10 blur-[120px] pointer-events-none"></div>
         <div className="absolute bottom-10 right-10 w-96 h-96 rounded-full bg-indigo-400/10 blur-[120px] pointer-events-none"></div>
 
-        <div className="w-full max-w-6xl bg-white rounded-[28px] shadow-2xl overflow-hidden grid grid-cols-1 lg:grid-cols-12 border border-slate-200/90 text-slate-900 z-10">
+        <div className="w-full max-w-[1060px] bg-white rounded-[28px] shadow-[0_20px_60px_-15px_rgba(15,23,42,0.12)] overflow-hidden grid grid-cols-1 lg:grid-cols-12 border border-slate-200/80 text-slate-900 z-10">
 
-          {/* LEFT COLUMN (7 Spans): Light Academic Showcase & Real Authentic Student Photo */}
-          <div className="lg:col-span-7 bg-gradient-to-br from-blue-50/90 via-indigo-50/60 to-cyan-50/40 p-5 sm:p-6 lg:px-8 lg:py-5 text-slate-900 flex flex-col justify-between gap-3 relative overflow-hidden border-r border-slate-200/80">
+          {/* LEFT COLUMN (6 Spans): Balanced Editorial Showcase */}
+          <div className="lg:col-span-6 bg-gradient-to-br from-[#F0F6FF] via-[#F5F7FF] to-[#ECFEFF] p-6 sm:p-7 lg:p-8 text-slate-900 flex flex-col justify-between gap-5 relative overflow-hidden border-b lg:border-b-0 lg:border-r border-slate-200/70">
 
             {/* Ambient inner highlights */}
-            <div className="absolute -top-24 -left-24 w-96 h-96 rounded-full bg-blue-300/20 blur-3xl pointer-events-none"></div>
-            <div className="absolute -bottom-24 -right-24 w-96 h-96 rounded-full bg-cyan-300/20 blur-3xl pointer-events-none"></div>
+            <div className="absolute -top-24 -left-24 w-80 h-80 rounded-full bg-blue-300/20 blur-3xl pointer-events-none"></div>
+            <div className="absolute -bottom-24 -right-24 w-80 h-80 rounded-full bg-cyan-300/20 blur-3xl pointer-events-none"></div>
 
-            {/* Top Brand Tag */}
-            <div className="relative z-10 flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-white border border-blue-200/80 shadow-sm flex items-center justify-center text-blue-600">
-                  <Sparkles className="w-4 h-4" />
-                </div>
-                <div>
-                  <div className="font-extrabold text-base text-slate-900 tracking-tight flex items-center gap-2">
-                    Cổng Khảo Thí ĐGNL
-                  </div>
-                  <div className="text-[11px] text-slate-600 font-medium">
-                    Nền tảng ôn luyện ĐGNL ĐHQG TP.HCM chuẩn cấu trúc
-                  </div>
-                </div>
-              </div>
-            </div>
+            {/* Hero Copy + Full-Bleed Aligned Image */}
+            <div className="relative z-10 space-y-4">
 
-            {/* Middle Section: Title & Authentic Student Photo Showcase */}
-            <div className="relative z-10 my-auto space-y-2.5">
-
-              <div className="space-y-1.5">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white border border-blue-200/80 text-[11px] font-bold text-blue-700 shadow-2xs">
+              <div className="space-y-2">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/95 border border-blue-200/80 text-[11px] font-bold text-blue-700 shadow-2xs">
                   <Flame className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
-                  <span>Chiến dịch Ôn thi ĐGNL ĐHQG TP.HCM 2026</span>
+                  <span>Ôn thi ĐGNL ĐHQG TP.HCM 2026</span>
                 </span>
 
-                <h1 className="text-2xl lg:text-[26px] font-black leading-snug tracking-tight text-slate-900">
-                  Khám phá Năng lực & <span className="bg-gradient-to-r from-blue-700 via-indigo-700 to-cyan-600 bg-clip-text text-transparent">Bứt phá 900+ Điểm</span>
+                <h1 className="text-2xl sm:text-[27px] font-black leading-tight tracking-tight text-slate-900">
+                  Khám phá Năng lực &{' '}
+                  <span className="bg-gradient-to-r from-blue-700 via-indigo-700 to-cyan-600 bg-clip-text text-transparent">
+                    Bứt phá 900+ Điểm
+                  </span>
                 </h1>
 
-                <p className="text-xs text-slate-600 font-medium leading-relaxed max-w-xl">
-                  Đánh giá năng lực toàn diện theo cấu trúc 120 câu hỏi ĐGNL, phát hiện lỗ hổng kiến thức và xây dựng lộ trình ôn tập phù hợp với mục tiêu của bạn.
+                <p className="text-xs sm:text-[13px] text-slate-600 font-medium leading-relaxed">
+                  Đánh giá năng lực chuẩn cấu trúc 120 câu hỏi, nhận diện điểm yếu và xây dựng lộ trình ôn tập hiệu quả mỗi ngày.
                 </p>
               </div>
 
-              {/* REAL AUTHENTIC STUDENT PHOTO CONTAINER */}
-              <div className="relative max-w-sm mx-auto group">
+              {/* Full-Width Flush Photo Frame */}
+              <div className="relative group">
+                <div className="relative overflow-hidden rounded-2xl h-44 sm:h-48 lg:h-[196px] w-full shadow-md ring-1 ring-slate-900/10 bg-white">
+                  <img
+                    src={studentAvatar}
+                    alt="Học sinh THPT Việt Nam ôn thi ĐGNL"
+                    className="w-full h-full object-cover object-top transition-transform duration-700 group-hover:scale-105"
+                  />
 
-                {/* Outer Glow */}
-                <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-blue-400 to-cyan-400 blur-xl opacity-20 group-hover:opacity-40 transition-opacity"></div>
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/75 via-slate-950/15 to-transparent"></div>
 
-                {/* Card Container */}
-                <div className="relative bg-white border border-slate-200/90 rounded-2xl p-1.5 shadow-xl transition-all duration-500 transform group-hover:scale-[1.01]">
+                  {/* Floating Goal Badges */}
+                  <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between gap-2">
+                    <div className="px-2.5 py-1 bg-white/95 backdrop-blur-md rounded-lg text-slate-900 text-[11px] font-extrabold shadow-sm flex items-center gap-1.5">
+                      <Award className="w-3.5 h-3.5 text-blue-600" />
+                      <span>Mục tiêu: 950+ điểm</span>
+                    </div>
 
-                  {/* Real Student Photograph */}
-                  <div className="relative overflow-hidden rounded-xl h-36 sm:h-40 lg:h-40 w-full">
-                    <img
-                      src={studentAvatar}
-                      alt="Học sinh THPT Việt Nam ôn thi ĐGNL"
-                      className="w-full h-full object-cover object-center filter drop-shadow-md transition-transform duration-700 group-hover:scale-105"
-                    />
-
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-transparent to-transparent opacity-80"></div>
-
-                    {/* FLOATING STATS BADGES */}
-                    <div className="absolute bottom-2.5 left-2.5 right-2.5 flex items-center justify-between gap-2">
-                      <div className="px-2.5 py-1 bg-white/95 border border-slate-200 backdrop-blur-md rounded-lg text-slate-900 text-[11px] font-black shadow-lg flex items-center gap-1.5">
-                        <Award className="w-3.5 h-3.5 text-blue-600" />
-                        <span>Mục tiêu: 950+ điểm</span>
-                      </div>
-
-                      <div className="px-2.5 py-1 bg-emerald-600 text-white rounded-lg text-[11px] font-black shadow-lg flex items-center gap-1.5">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-white" />
-                        <span>82% Bách Khoa HCM</span>
-                      </div>
+                    <div className="px-2.5 py-1 bg-emerald-600/95 backdrop-blur-md text-white rounded-lg text-[11px] font-extrabold shadow-sm flex items-center gap-1.5">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-white" />
+                      <span>82% Bách Khoa HCM</span>
                     </div>
                   </div>
-
                 </div>
-
               </div>
 
-              {/* Real-time Ticker */}
-              <div className="bg-white border border-blue-200/80 rounded-xl px-3.5 py-2 flex items-center gap-2.5 text-xs font-semibold text-slate-800 shadow-2xs">
+            </div>
+
+            {/* Bottom Highlights: Feature Grid + Subtle Live Status */}
+            <div className="relative z-10 space-y-3">
+              <div className="grid grid-cols-2 gap-2.5 text-xs font-semibold text-slate-700">
+                <div className="flex items-center gap-2 bg-white/80 backdrop-blur-xs border border-slate-200/70 rounded-xl px-3 py-2">
+                  <BookOpenCheck className="w-4 h-4 text-blue-600 shrink-0" />
+                  <span className="truncate">Đánh giá năng lực 15p</span>
+                </div>
+                <div className="flex items-center gap-2 bg-white/80 backdrop-blur-xs border border-slate-200/70 rounded-xl px-3 py-2">
+                  <Zap className="w-4 h-4 text-amber-500 shrink-0" />
+                  <span className="truncate">Lộ trình cá nhân hóa</span>
+                </div>
+                <div className="flex items-center gap-2 bg-white/80 backdrop-blur-xs border border-slate-200/70 rounded-xl px-3 py-2">
+                  <Bot className="w-4 h-4 text-indigo-600 shrink-0" />
+                  <span className="truncate">Hỗ trợ giải đáp 24/7</span>
+                </div>
+                <div className="flex items-center gap-2 bg-white/80 backdrop-blur-xs border border-slate-200/70 rounded-xl px-3 py-2">
+                  <Users className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span className="truncate">Lớp học trực tuyến</span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-white/75 border border-blue-100 text-[11px] font-semibold text-slate-700">
                 <span className="relative flex h-2 w-2 shrink-0">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-500 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-600"></span>
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-600"></span>
                 </span>
                 <AnimatePresence mode="wait">
                   <motion.span
                     key={actIdx}
-                    initial={{ opacity: 0, y: 10 }}
+                    initial={{ opacity: 0, y: 6 }}
                     animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    className="truncate text-slate-800 font-bold"
+                    exit={{ opacity: 0, y: -6 }}
+                    className="truncate text-slate-700 font-bold"
                   >
                     {liveActivities[actIdx]}
                   </motion.span>
                 </AnimatePresence>
               </div>
-
-              {/* Feature Bullet List */}
-              <div className="grid grid-cols-2 gap-2 text-xs font-semibold text-slate-700 pt-0.5">
-                <div className="flex items-center gap-2">
-                  <BookOpenCheck className="w-4 h-4 text-blue-600 shrink-0" />
-                  <span>Đánh giá năng lực 15 phút</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Zap className="w-4 h-4 text-amber-500 shrink-0" />
-                  <span>Lộ trình học tập cá nhân hóa</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Bot className="w-4 h-4 text-blue-600 shrink-0" />
-                  <span>Hỗ trợ giải đáp 24/7</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Users className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>Lớp học & giải đề trực tuyến</span>
-                </div>
-              </div>
-
             </div>
 
           </div>
 
-          {/* RIGHT COLUMN (5 Spans): Form Column */}
-          <div className="lg:col-span-5 p-5 sm:p-6 lg:px-8 lg:py-5 flex flex-col justify-between gap-3 bg-white relative lg:max-h-[calc(100vh-5.5rem)] lg:overflow-y-auto">
+          {/* RIGHT COLUMN (6 Spans): Centered & Clean Auth Form Column */}
+          <div className="lg:col-span-6 p-6 sm:p-8 lg:px-10 lg:py-7 flex flex-col justify-between gap-4 bg-white relative lg:max-h-[calc(100vh-5.5rem)] lg:overflow-y-auto">
 
-            <div className="space-y-4">
+            <div className="my-auto space-y-5">
 
               {/* Header Mode Switcher: Login / Register */}
-              <div className="space-y-3">
+              <div className="space-y-3.5">
                 <div className="p-1 bg-slate-100 rounded-2xl flex items-center border border-slate-200">
                   <button
                     onClick={() => handleModeSwitch('login')}
