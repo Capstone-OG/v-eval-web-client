@@ -622,3 +622,5 @@
 ### [13/11/2026] - Curriculum and teacher portal commit checkpoint
 
 - Prepare the lowercase frontend checkpoint containing the student catalog/reading workspace, chapter-scoped outline, teacher overview/navigation, scoped API requests and tests. Validation: 24 tests passed, lint and build passed with warnings, whitespace check passed. Live browser/API verification remains pending. Backend repositories and root pending merge are excluded; push is left to the user.
+
+| 146 | **Khắc Phục Lỗi Lịch Sử Làm Bài & Bóc Tách Đề Thi Luyện Tập Thích Ứng ZPD** | `src/services/practiceService.js`, `src/components/modals/AdaptiveQuizModal.jsx` | 🟢 Hoàn thành | 100% | Bỏ tiền tố thừa `/v1/` trong `getDiagnosticHistory` & `getDiagnosticResult` khớp route Controller Practice Service; bóc tách câu hỏi ZPD từ cả `passages[].questions` và `single_questions`; 28/28 tests pass |

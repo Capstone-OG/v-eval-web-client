@@ -1654,3 +1654,12 @@ pm run build completes in 905ms (3,013 modules transformed, 0 errors).
 ### [13/11/2026] - Curriculum and teacher portal commit checkpoint
 
 - Prepare the lowercase frontend checkpoint containing the student catalog/reading workspace, chapter-scoped outline, teacher overview/navigation, scoped API requests and tests. Validation: 24 tests passed, lint and build passed with warnings, whitespace check passed. Live browser/API verification remains pending. Backend repositories and root pending merge are excluded; push is left to the user.
+
+### [13/11/2026] - Diagnostic Submission Route Alignment & Multi-Layer ZPD Question Extraction
+
+- **Diagnostic Submission Route Correction (`src/services/practiceService.js`)**:
+  - Removed erroneous `/v1/` route prefixes in `getDiagnosticHistory` and `getDiagnosticResult`, standardizing endpoints to `/api/practice/diagnostic-submissions/student/{id}` and `/api/practice/diagnostic-submissions/{id}` to strictly align with `DiagnosticSubmissionsController` in `Practice Service`.
+  - Resolves HTTP 404 `"Not Found"` errors on both the diagnostic history view and the new exam initialization flow.
+- **Passage-Inclusive ZPD Quiz Extraction (`src/components/modals/AdaptiveQuizModal.jsx`)**:
+  - Expanded question extraction logic to parse both `single_questions` and `passages[].questions` from Content Service exam payloads, preventing empty item sets when exams store questions within reading passages.
+- **Verification**: All 28 test cases passed; lint completed with zero errors; production build succeeded.

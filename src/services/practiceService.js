@@ -1248,10 +1248,10 @@ const buildEmptyStudentDashboard = (studentId) => {
 export const practiceService = {
   async getDiagnosticHistory(studentId) {
     if (!studentId) throw new Error('Student ID is required.');
-    return (await apiClient.get('/api/v1/practice/diagnostic-submissions/student/' + encodeURIComponent(studentId))).data;
+    return (await apiClient.get('/api/practice/diagnostic-submissions/student/' + encodeURIComponent(studentId))).data;
   },
   async getDiagnosticResult(submissionId) {
-    return (await apiClient.get('/api/v1/practice/diagnostic-submissions/' + encodeURIComponent(submissionId))).data;
+    return (await apiClient.get('/api/practice/diagnostic-submissions/' + encodeURIComponent(submissionId))).data;
   },
   // =========================================================================
   // Core Flow 1: Khảo Thí & Chẩn Đoán Ban Đầu (IRT 2PL) & Lịch Sử Làm Bài

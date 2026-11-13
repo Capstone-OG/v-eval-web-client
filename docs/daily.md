@@ -2334,3 +2334,17 @@ pm run build hoàn thành trong 1.12s, 0 lỗi cú pháp.
 ### [13/11/2026] - Curriculum and teacher portal commit checkpoint
 
 - Prepare the lowercase frontend checkpoint containing the student catalog/reading workspace, chapter-scoped outline, teacher overview/navigation, scoped API requests and tests. Validation: 24 tests passed, lint and build passed with warnings, whitespace check passed. Live browser/API verification remains pending. Backend repositories and root pending merge are excluded; push is left to the user.
+
+---
+
+## [13/11/2026] - Khắc Phục Lỗi Lịch Sử Làm Bài & Bóc Tách Câu Hỏi Luyện Tập Thích Ứng ZPD
+
+- **Khắc phục lỗi Lịch sử làm bài & Tạo bài kiểm tra đầu vào (`src/services/practiceService.js`)**:
+  - Loại bỏ tiền tố thừa `/v1/` trong hai phương thức `getDiagnosticHistory` và `getDiagnosticResult`: chuyển đổi từ `/api/v1/practice/diagnostic-submissions/...` sang `/api/practice/diagnostic-submissions/...` khớp đúng với route của Controller `DiagnosticSubmissionsController.cs` trong Practice Service.
+  - Xử lý triệt để lỗi HTTP 404 *"Không tìm thấy dữ liệu hoặc đường dẫn yêu cầu"* trên cả trang Lịch sử làm bài lẫn sự kiện khởi tạo bài thi mới khi học sinh bấm "Làm Bài Kiểm Tra Mới".
+- **Khắc phục lỗi nạp câu hỏi Luyện tập thích ứng ZPD (`src/components/modals/AdaptiveQuizModal.jsx`)**:
+  - Bổ sung cơ chế bóc tách câu hỏi đa tầng: gom câu hỏi từ `single_questions` (hoặc `singleQuestions`), và nếu rỗng thì trích xuất danh sách câu hỏi phân bổ trong các bài đọc ngữ cảnh `passages.flatMap(p => p.questions || [])` của Content Service.
+  - Loại bỏ tình trạng mảng câu hỏi rỗng và cảnh báo *"Chưa có câu hỏi ZPD từ Backend Content Service. Vui lòng kiểm tra kết nối Gateway (:5212)"*.
+- **Kiểm thử & Biên dịch**:
+  - Chạy `node --test tests/*.test.js src/**/*.test.js`: **28/28 tests pass**.
+  - `npm run lint` đạt 0 errors, `npm run build` thành công xuất bản bundle sạch.
