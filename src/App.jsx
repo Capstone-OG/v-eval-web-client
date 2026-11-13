@@ -518,12 +518,6 @@ export default function App() {
       default:
         return (
           <div className="space-y-6 animate-fade">
-            <div className="grid grid-cols-1 items-stretch gap-5 xl:grid-cols-[minmax(0,7fr)_minmax(0,3fr)]">
-              <DiagnosticOnboardingCard key={currentUser?.userId || currentUser?.id || currentUser?.studentId}
-                currentUser={currentUser} onOpenDiagnostic={() => setActiveTab('diagnostic')}
-                onOpenRoadmap={() => setActiveTab('roadmap')} />
-              <StudentParentLinkCard currentUser={currentUser} />
-            </div>
             <HeroBanner
               currentUser={currentUser}
               studentDashboard={studentDashboard}
@@ -542,6 +536,12 @@ export default function App() {
               onOpenZPD={handleOpenAdaptiveQuiz}
               onOpenAnalytics={() => setActiveTab('analytics')}
             />
+            <div className="grid grid-cols-1 items-stretch gap-5 xl:grid-cols-[minmax(0,7fr)_minmax(0,3fr)]">
+              <DiagnosticOnboardingCard key={currentUser?.userId || currentUser?.id || currentUser?.studentId}
+                currentUser={currentUser} onOpenDiagnostic={() => setActiveTab('diagnostic')}
+                onOpenRoadmap={() => setActiveTab('roadmap')} />
+              <StudentParentLinkCard currentUser={currentUser} />
+            </div>
           </div>
         );
     }

@@ -2399,3 +2399,18 @@ pm run build hoàn thành trong 1.12s, 0 lỗi cú pháp.
 - **Kiểm Thử & Biên Dịch**:
   - Toàn bộ 31/31 unit tests đạt pass 100%.
   - `npm run lint` đạt 0 lỗi, `npm run build` thành công trong 1.17s (giảm kích thước bundle sạch sẽ).
+
+---
+
+## [13/11/2026] - Tái Cấu Trúc Bố Cục Trang Tổng Quan Học Tập Hài Hòa & Nâng Cấp Nhận Diện Ảnh Học Sinh
+
+- **Tái Cấu Trúc Thứ Tự Thị Giác (Dashboard Layout Hierarchy Optimization - `src/App.jsx`)**:
+  - Đưa `HeroBanner` lên vị trí đầu trang làm khối chào đón và truyền cảm hứng chủ đạo, loại bỏ tình trạng hai thẻ thông báo đầu vào và liên kết phụ huynh đè lên trên lời chào.
+  - Sắp xếp lưới 4 chỉ số `MetricsGrid` ở vị trí trung tâm, giúp học sinh nắm bắt ngay 4 KPI cốt lõi (Điểm dự báo 1200, Streak chuyên cần, Tiến độ lộ trình, Trọng tâm cần ôn tập).
+  - Đặt khối hành động kép (`DiagnosticOnboardingCard` 70% + `StudentParentLinkCard` 30%) ở phần dưới trang, tạo điểm tựa thị giác vững chắc, cân đối và liền mạch trước footer thay vì để trang bị cụt đột ngột.
+- **Nâng Cấp Thẻ Ảnh Học Sinh Thực Tế (`src/components/dashboard/HeroBanner.jsx`)**:
+  - Chuyển đổi từ ảnh mẫu ghép gỗ (`students_cutout_badge.jpg`) sang ảnh chân dung học sinh THPT Việt Nam ôn tập thực tế (`vietnamese_student_real.jpg`).
+  - Thiết kế khung thẻ kính Glassmorphism bán trong suốt (`bg-white/10 backdrop-blur-md border border-white/20`) hài hòa với nền chuyển sắc xanh hoàng gia của HeroBanner.
+- **Kiểm Thử & Biên Dịch**:
+  - Toàn bộ 31/31 unit tests đạt pass 100%.
+  - `npm run lint` 0 lỗi, `npm run build` thành công trong 1.05s.

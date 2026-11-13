@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, FileText, Bot, Clock, Sparkles, Award, Flame, TrendingUp } from 'lucide-react';
-import studentAvatar from '../../assets/students_cutout_badge.jpg';
+import studentAvatar from '../../assets/vietnamese_student_real.jpg';
 import { accountGreeting } from '../../utils/accountPresentation';
 
 export default function HeroBanner({
@@ -126,30 +126,30 @@ export default function HeroBanner({
           </div>
         </div>
 
-        {/* Right Column: 3D POP-OUT STUDENT AVATAR */}
+        {/* Right Column: STUDENT PROFILE HIGHLIGHT CARD */}
         <div className="relative shrink-0 w-full sm:w-72 lg:w-80 group">
-          <div className="absolute -inset-1 rounded-3xl bg-gradient-to-r from-[#FACC15] via-amber-500 to-indigo-500 blur-lg opacity-40 group-hover:opacity-70 transition-opacity" />
+          <div className="absolute -inset-1 rounded-3xl bg-gradient-to-r from-[#FACC15]/30 to-cyan-400/30 blur-lg opacity-40 group-hover:opacity-70 transition-opacity pointer-events-none" />
 
-          <div className="relative bg-slate-950/80 border border-slate-700 rounded-3xl p-2.5 backdrop-blur-md shadow-2xl transition-all duration-500 transform group-hover:scale-[1.03]">
-            <div className="relative overflow-hidden rounded-2xl h-56 sm:h-64 w-full bg-slate-900">
+          <div className="relative bg-white/10 backdrop-blur-md border border-white/20 rounded-3xl p-2.5 shadow-2xl transition-all duration-500 transform group-hover:scale-[1.02]">
+            <div className="relative overflow-hidden rounded-2xl h-48 sm:h-52 w-full bg-slate-900/40">
               <img
                 src={studentAvatar}
-                alt="Học sinh ĐGNL"
-                className="w-full h-full object-cover object-center filter drop-shadow-2xl transition-transform duration-700 group-hover:scale-105"
+                alt="Học sinh THPT ôn thi ĐGNL"
+                className="w-full h-full object-cover object-top filter transition-transform duration-700 group-hover:scale-105"
               />
 
-              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-transparent to-transparent pointer-events-none" />
 
               {/* Floating Badge overlays */}
-              <div className="absolute bottom-2.5 left-2.5 right-2.5 flex items-center justify-between gap-1 text-[11px] font-extrabold">
-                <div className="px-2.5 py-1 bg-white/95 backdrop-blur-md rounded-xl text-slate-950 shadow-md flex items-center gap-1">
+              <div className="absolute bottom-2.5 left-2.5 right-2.5 flex items-center justify-between gap-2 text-xs font-bold">
+                <div className="px-2.5 py-1 bg-white/95 backdrop-blur-md rounded-xl text-slate-900 shadow-md flex items-center gap-1.5 font-bold">
                   <Award className="w-3.5 h-3.5 text-indigo-600" />
                   <span>Ước tính: {estimatedScore}đ</span>
                 </div>
 
-                <div className="px-2.5 py-1 bg-[#FACC15] text-slate-950 rounded-xl shadow-md flex items-center gap-1 animate-pulse">
+                <div className="px-2.5 py-1 bg-[#FACC15] text-slate-950 rounded-xl shadow-md flex items-center gap-1.5 font-extrabold">
                   <TrendingUp className="w-3.5 h-3.5" />
-                  <span>Đích: {targetScore}đ</span>
+                  <span>Mục tiêu: {targetScore}đ</span>
                 </div>
               </div>
             </div>

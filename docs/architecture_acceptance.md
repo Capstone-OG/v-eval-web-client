@@ -1699,3 +1699,13 @@ pm run build completes in 905ms (3,013 modules transformed, 0 errors).
   - Replaced internal engineering acronyms (`ZPD`, `DAG`, `IRT 2PL`, `Core Flow 5`) with transparent, student-accessible terminology.
   - Re-anchored primary CTA buttons directly to verified learning flows: *Curriculum Roadmap*, *Diagnostic Assessment*, and *AI Tutor*.
 - **Verification**: All 31 automated test cases passed; bundle footprint reduced cleanly; production build verified in 1.17s.
+
+### [13/11/2026] - Dashboard Visual Hierarchy Optimization & Student Portrait Refinement
+
+- **Golden Ratio Dashboard Restructuring (`src/App.jsx`)**:
+  - Re-anchored `HeroBanner` as the primary greeting header at the apex of the viewport, eliminating visual clutter from pre-banner alerts.
+  - Positioned `MetricsGrid` as the central performance belt, providing immediate horizontal scanability across the 4 key learning KPIs.
+  - Anchored the dual action zone (`DiagnosticOnboardingCard` 70% + `StudentParentLinkCard` 30%) at the base of the page, establishing an intuitive progression: Welcome -> Performance Snapshot -> Next Steps.
+- **Authentic Student Visual Asset Refresh (`src/components/dashboard/HeroBanner.jsx`)**:
+  - Replaced legacy badge asset with high-resolution authentic Vietnamese student photography (`vietnamese_student_real.jpg`) in a glassmorphic frame (`bg-white/10 backdrop-blur-md border-white/20`).
+- **Verification**: 31/31 unit tests passed; bundle verification passed in 1.05s.
