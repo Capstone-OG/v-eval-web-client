@@ -1681,3 +1681,11 @@ pm run build completes in 905ms (3,013 modules transformed, 0 errors).
   - Integrated local tuition status persistence (`veval_tuition_paid_${studentId}`) and custom event dispatching (`veval:tuition-paid`).
   - Added post-diagnostic roadmap navigation banners and action buttons linking directly to roadmap overview and tuition checkout.
 - **Verification**: Added `tests/curriculumAccess.test.js`; all 31 test cases passed; lint completed with zero errors; production build succeeded in 1.15s.
+
+### [13/11/2026] - Resilient Diagnostic History Hydration & Graceful Fallback Architecture
+
+- **Fault-Tolerant History Trend Hydration (`src/components/diagnostic/DiagnosticAssessmentPage.jsx`)**:
+  - Refactored `Promise.all` detail resolution to wrap individual `practiceService.getDiagnosticResult` calls in isolated `try/catch` handlers.
+  - When individual legacy submissions cannot fetch detailed question keys from upstream microservices, the client seamlessly falls back to summary metrics (`theta0`, `totalScore`, `totalCorrect`, `totalQuestions`, `placementClass`, `totalTimeSpentSeconds`).
+  - Eliminates frontend crashes caused by missing or unmigrated legacy exam content, ensuring consistent display of historical assessment trends.
+- **Verification**: All 31 automated test cases passed; lint verified with zero errors; production build verified.

@@ -95,3 +95,4 @@ test('buildPersonalizedStages handles empty input gracefully', () => {
   assert.deepEqual(buildPersonalizedStages([], null), []);
   assert.deepEqual(buildPersonalizedStages(null, null), []);
 });
+

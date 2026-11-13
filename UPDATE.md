@@ -1,7 +1,10 @@
 # UPDATE
 
-## [13/11/2026] - Triển Khai Ràng Buộc Xem Lộ Trình Sau Thi (Lớp Học Chung & Cá Nhân Riêng) Và Cơ Chế Kích Hoạt Học Phí
+## [13/11/2026] - Triển Khai Ràng Buộc Xem Lộ Trình Sau Thi, Cơ Chế Kích Hoạt Học Phí & Khắc Phục Lỗi Lịch Sử Làm Bài
 
+- **Gia cố cơ chế tự hồi phục (Graceful Fallback) nạp lịch sử thi ([`DiagnosticAssessmentPage.jsx`](./src/components/diagnostic/DiagnosticAssessmentPage.jsx))**:
+  - Bọc từng lời gọi lấy chi tiết bài nộp trong `try/catch` độc lập, tự động fallback về dữ liệu tóm tắt (`theta0`, `placementClass`, điểm số) khi gặp bài thi cũ không còn câu hỏi trên Backend Content Service.
+  - Xóa bỏ triệt để lỗi crash 500 hiển thị *"Không tải được lịch sử: Đã xảy ra lỗi nội bộ trên hệ thống máy chủ Practice Service"*.
 - **Phân tách 2 chế độ Lộ trình học tập ([`StudentCurriculumView.jsx`](./src/components/curriculum/StudentCurriculumView.jsx), [`curriculumAccess.js`](./src/components/curriculum/curriculumAccess.js))**:
   - Hỗ trợ chuyển đổi linh hoạt giữa:
     - *🏫 Lớp Học Chung*: Toàn bộ cây tri thức chuẩn hóa 5 miền ĐGNL V-ACT theo cấu trúc Chương -> Bài học -> Dạng bài.

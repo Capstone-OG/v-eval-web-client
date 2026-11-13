@@ -143,3 +143,4 @@ export function buildPersonalizedStages(chapters = [], diagnosticResult = null) 
     }
   ];
 }
+

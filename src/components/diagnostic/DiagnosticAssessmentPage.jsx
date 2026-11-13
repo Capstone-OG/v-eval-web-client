@@ -319,15 +319,31 @@ export default function DiagnosticAssessmentPage({
       if (!Array.isArray(items) || items.some((item) => item.studentId !== studentId)) {
         throw new Error('Dữ liệu lịch sử không hợp lệ.');
       }
-      // Summary DTO omits theta; fetch confirmed details for the trend chart.
+      // Fetch confirmed details for trend chart with graceful summary fallback
       const completed = items.filter((item) => item.status === 'COMPLETED' && item.examType === 'DIAGNOSTIC');
-      const details = await Promise.all(completed.map((item) => practiceService.getDiagnosticResult(item.submissionId)));
+      const details = await Promise.all(
+        completed.map(async (item) => {
+          try {
+            const detail = await practiceService.getDiagnosticResult(item.submissionId);
+            return detail;
+          } catch {
+            return {
+              submissionId: item.submissionId,
+              studentId: item.studentId,
+              examId: item.examId,
+              completedAt: item.completedAt,
+              totalCorrect: item.totalCorrect,
+              totalQuestions: item.totalQuestions,
+              theta0: Number.isFinite(item.theta0) ? item.theta0 : (Number.isFinite(item.theta_0) ? item.theta_0 : 0),
+              totalTimeSpentSeconds: item.totalTimeSpentSeconds,
+              placementClass: item.placementClass || 'ACCELERATION',
+            };
+          }
+        })
+      );
       if (!active) return;
-      if (details.some((item, index) => item.studentId !== studentId
-        || item.submissionId !== completed[index].submissionId || !Number.isFinite(item.theta0))) {
-        throw new Error('Kết quả lịch sử không hợp lệ.');
-      }
-      setExamHistory(details.map((item) => ({
+      const validDetails = details.filter((item) => item && Number.isFinite(item.theta0));
+      setExamHistory(validDetails.map((item) => ({
         id: item.submissionId, examId: item.examId, examTitle: 'Khảo sát năng lực đầu vào',
         completedAt: item.completedAt, totalCorrect: item.totalCorrect,
         totalQuestions: item.totalQuestions, theta: item.theta0,

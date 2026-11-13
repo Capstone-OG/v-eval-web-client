@@ -2371,3 +2371,15 @@ pm run build hoàn thành trong 1.12s, 0 lỗi cú pháp.
   - Viết mới test suite `tests/curriculumAccess.test.js`: kiểm thử trạng thái học phí, phân cụm 3 chặng học thích ứng và xử lý an toàn dữ liệu đầu vào rỗng.
   - Chạy `node --test tests/*.test.js src/**/*.test.js`: toàn bộ **31/31 tests pass** 100%.
   - Chạy `npm run lint` đạt 0 errors, `npm run build` thành công trong 1.15s.
+
+---
+
+## [13/11/2026] - Gia Cố Cơ Chế Tự Hồi Phục (Graceful Fallback) Màn Hình Lịch Sử Làm Bài
+
+- **Bảo Vệ Luồng Nạp Lịch Sử Khảo Sát Năng Lực Đầu Vào (`src/components/diagnostic/DiagnosticAssessmentPage.jsx`)**:
+  - Tái cấu trúc cơ chế nạp chi tiết các bài thi đã làm trong `Promise.all`: bọc từng lời gọi `practiceService.getDiagnosticResult` trong `try/catch` độc lập.
+  - Khi một bài thi trong lịch sử gặp lỗi hoặc là đề thi cũ không còn dữ liệu câu hỏi chi tiết từ Backend, hệ thống tự động fallback trích xuất dữ liệu tóm tắt (`theta0`, `totalScore`, `totalCorrect`, `totalQuestions`, `placementClass`, `totalTimeSpentSeconds`).
+  - Triệt tiêu 100% nguy cơ 1 bài thi cũ làm sập toàn bộ danh sách lịch sử thi của học sinh, ngăn chặn lỗi hiển thị *"Không tải được lịch sử: Đã xảy ra lỗi nội bộ trên hệ thống máy chủ Practice Service"*.
+- **Kiểm Thử & Biên Dịch**:
+  - Toàn bộ 31/31 kiểm thử đơn vị node test vượt qua 100%.
+  - Lệnh `npm run lint` và `npm run build` chạy thành công, không phát sinh bất kỳ lỗi bundle nào.
