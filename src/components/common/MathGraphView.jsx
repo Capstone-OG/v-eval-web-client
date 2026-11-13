@@ -24,9 +24,8 @@ function renderMath(latex) {
  *   }
  */
 export default function MathGraphView({ data, className = '' }) {
+  const [interactiveMode, setInteractiveMode] = useState(data?.type === 'desmos');
   if (!data) return null;
-
-  const [interactiveMode, setInteractiveMode] = useState(data.type === 'desmos');
 
   const {
     type = 'cubic',

@@ -1246,6 +1246,13 @@ const buildEmptyStudentDashboard = (studentId) => {
 };
 
 export const practiceService = {
+  async getDiagnosticHistory(studentId) {
+    if (!studentId) throw new Error('Student ID is required.');
+    return (await apiClient.get('/api/practice/diagnostic-submissions/student/' + encodeURIComponent(studentId))).data;
+  },
+  async getDiagnosticResult(submissionId) {
+    return (await apiClient.get('/api/practice/diagnostic-submissions/' + encodeURIComponent(submissionId))).data;
+  },
   // =========================================================================
   // Core Flow 1: Khảo Thí & Chẩn Đoán Ban Đầu (IRT 2PL) & Lịch Sử Làm Bài
   // =========================================================================
@@ -1448,41 +1455,12 @@ export const practiceService = {
 
   getSubmissionHistory() {
     try {
-      const raw = localStorage.getItem(HISTORY_STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
-        }
-      }
-
-      const lastRaw = localStorage.getItem('veval_last_diagnostic_result');
-      if (lastRaw) {
-        const lastResult = JSON.parse(lastRaw);
-        if (lastResult && Array.isArray(lastResult.reviewedQuestions)) {
-          const migrated = [
-            {
-              id: lastResult.id || `sub_migrated_${Date.now()}`,
-              title: lastResult.title || 'Bài Khảo Sát Đánh Giá Năng Lực Đầu Vào (30 Câu)',
-              examType: lastResult.examType || 'DIAGNOSTIC',
-              engineUsed: lastResult.engineUsed || 'content_service',
-              completedAt: lastResult.completedAt || new Date().toISOString(),
-              ...lastResult
-            },
-            ...getDefaultSeedHistory()
-          ];
-          localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(migrated));
-          return migrated;
-        }
-      }
-
-      const seeded = getDefaultSeedHistory();
-      localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(seeded));
-      return seeded;
-    } catch (e) {
-      console.warn('Could not load submission history:', e);
-      return getDefaultSeedHistory();
-    }
+      const user = tokenStorage.getUser();
+      const owner = user?.userId || user?.id;
+      if (!owner) return [];
+      const parsed = JSON.parse(localStorage.getItem(HISTORY_STORAGE_KEY) || '[]');
+      return Array.isArray(parsed) ? parsed.filter((item) => item.studentId === owner) : [];
+    } catch { return []; }
   },
 
   deleteSubmissionFromHistory(submissionId) {

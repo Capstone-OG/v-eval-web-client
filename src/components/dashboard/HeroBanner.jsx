@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, FileText, Bot, Clock, Sparkles, Award, Flame, TrendingUp } from 'lucide-react';
-import studentAvatar from '../../assets/students_cutout_badge.jpg';
+import studentAvatar from '../../assets/vietnamese_student_real.jpg';
+import { accountGreeting } from '../../utils/accountPresentation';
 
 export default function HeroBanner({
   currentUser,
@@ -32,20 +33,16 @@ export default function HeroBanner({
   const daysLeft = Math.max(1, Math.ceil((examDate.getTime() - Date.now()) / 86400000));
 
   const tips = [
-    `Hệ thống đang điều phối lộ trình ZPD cá nhân hóa: ${currentMilestone}.`,
     estimatedScore > 0
-      ? `Điểm ước tính hiện tại đạt ${estimatedScore}/1200 (Dải tin cậy: ${confidenceInterval}).`
-      : 'Hoàn thành bài Khảo sát 30 câu đầu vào để hệ thống ước lượng điểm IRT 2PL thực tế.',
-    'Gia sư AI Socratic 24/7 sẵn sàng bẻ khóa tư duy từng câu hỏi sau khi hoàn thành bài làm.',
-    `Bạn đang duy trì chuỗi ${currentStreak} ngày tự học liên tiếp chuẩn Core Flow 5!`
+      ? `Điểm dự báo hiện tại: ${estimatedScore}/1200 điểm (Dải dự báo: ${confidenceInterval}).`
+      : 'Hoàn thành bài đánh giá 30 câu đầu vào để nhận dự báo điểm thi và lộ trình ôn tập phù hợp.',
+    'Lộ trình ôn luyện được cá nhân hóa theo điểm mạnh và vùng kiến thức cần bổ trợ.',
+    'Trợ lý Gia sư AI sẵn sàng gợi mở phương pháp tư duy và hướng dẫn giải chi tiết 24/7.',
+    currentStreak > 0
+      ? `Bạn đang duy trì chuỗi ${currentStreak} ngày học liên tục. Hãy tiếp tục giữ vững phong độ!`
+      : 'Học tập đều đặn mỗi ngày để xây dựng phản xạ làm bài thi nhanh và chuẩn xác!'
   ];
   const [tipIdx, setTipIdx] = useState(0);
-
-  const studentName =
-    currentUser?.fullName ||
-    studentDashboard?.fullName ||
-    currentUser?.email ||
-    'Học viên V-Eval';
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -63,13 +60,8 @@ export default function HeroBanner({
       <div className="relative z-10 flex flex-col lg:flex-row items-center justify-between gap-8">
         {/* Left Column: Greeting & Info */}
         <div className="space-y-4 max-w-2xl flex-1">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-white/10 border border-white/20 backdrop-blur-md text-xs font-bold tracking-wide uppercase text-[#FACC15]">
-            <Sparkles className="w-4 h-4 text-[#FACC15] animate-spin" style={{ animationDuration: '6s' }} />
-            <span>Chiến dịch ĐGNL ĐHQG TP.HCM 2026</span>
-          </div>
-
           <h1 className="text-3xl lg:text-4xl font-extrabold tracking-tight text-white leading-tight font-sans">
-            Chào {studentName}!
+            {accountGreeting('student', { fullName: currentUser?.fullName || studentDashboard?.fullName })}
           </h1>
 
           {/* Dynamic Animated Sliding Text */}
@@ -110,7 +102,7 @@ export default function HeroBanner({
               onClick={handleMilestoneClick}
               className="flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl bg-[#FACC15] text-slate-950 font-black text-sm hover:bg-[#eab308] transition-all shadow-xl shadow-yellow-500/10 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
             >
-              <span>Vào học chặng hôm nay</span>
+              <span>Vào học theo lộ trình</span>
               <ArrowRight className="w-4.5 h-4.5" />
             </button>
 
@@ -120,7 +112,7 @@ export default function HeroBanner({
               className="flex items-center justify-center gap-2 px-5 py-3.5 rounded-2xl bg-white/15 hover:bg-white/25 border border-white/25 backdrop-blur-md text-white font-bold text-sm transition-all hover:scale-[1.02] cursor-pointer"
             >
               <FileText className="w-4 h-4 text-[#FACC15]" />
-              <span>Làm đề khảo sát 30 câu</span>
+              <span>Đánh giá năng lực đầu vào</span>
             </button>
 
             <button
@@ -129,35 +121,35 @@ export default function HeroBanner({
               className="flex items-center justify-center gap-2 px-5 py-3.5 rounded-2xl bg-blue-950/60 hover:bg-blue-950/80 border border-blue-400/30 backdrop-blur-md text-white font-bold text-sm transition-all hover:scale-[1.02] cursor-pointer"
             >
               <Bot className="w-4 h-4 text-[#FACC15]" />
-              <span>Hỏi AI Tutor</span>
+              <span>Hỏi Gia sư AI 24/7</span>
             </button>
           </div>
         </div>
 
-        {/* Right Column: 3D POP-OUT STUDENT AVATAR */}
+        {/* Right Column: STUDENT PROFILE HIGHLIGHT CARD */}
         <div className="relative shrink-0 w-full sm:w-72 lg:w-80 group">
-          <div className="absolute -inset-1 rounded-3xl bg-gradient-to-r from-[#FACC15] via-amber-500 to-indigo-500 blur-lg opacity-40 group-hover:opacity-70 transition-opacity" />
+          <div className="absolute -inset-1 rounded-3xl bg-gradient-to-r from-[#FACC15]/30 to-cyan-400/30 blur-lg opacity-40 group-hover:opacity-70 transition-opacity pointer-events-none" />
 
-          <div className="relative bg-slate-950/80 border border-slate-700 rounded-3xl p-2.5 backdrop-blur-md shadow-2xl transition-all duration-500 transform group-hover:scale-[1.03]">
-            <div className="relative overflow-hidden rounded-2xl h-56 sm:h-64 w-full bg-slate-900">
+          <div className="relative bg-white/10 backdrop-blur-md border border-white/20 rounded-3xl p-2.5 shadow-2xl transition-all duration-500 transform group-hover:scale-[1.02]">
+            <div className="relative overflow-hidden rounded-2xl h-48 sm:h-52 w-full bg-slate-900/40">
               <img
                 src={studentAvatar}
-                alt="Học sinh ĐGNL"
-                className="w-full h-full object-cover object-center filter drop-shadow-2xl transition-transform duration-700 group-hover:scale-105"
+                alt="Học sinh THPT ôn thi ĐGNL"
+                className="w-full h-full object-cover object-top filter transition-transform duration-700 group-hover:scale-105"
               />
 
-              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-transparent to-transparent pointer-events-none" />
 
               {/* Floating Badge overlays */}
-              <div className="absolute bottom-2.5 left-2.5 right-2.5 flex items-center justify-between gap-1 text-[11px] font-extrabold">
-                <div className="px-2.5 py-1 bg-white/95 backdrop-blur-md rounded-xl text-slate-950 shadow-md flex items-center gap-1">
+              <div className="absolute bottom-2.5 left-2.5 right-2.5 flex items-center justify-between gap-2 text-xs font-bold">
+                <div className="px-2.5 py-1 bg-white/95 backdrop-blur-md rounded-xl text-slate-900 shadow-md flex items-center gap-1.5 font-bold">
                   <Award className="w-3.5 h-3.5 text-indigo-600" />
                   <span>Ước tính: {estimatedScore}đ</span>
                 </div>
 
-                <div className="px-2.5 py-1 bg-[#FACC15] text-slate-950 rounded-xl shadow-md flex items-center gap-1 animate-pulse">
+                <div className="px-2.5 py-1 bg-[#FACC15] text-slate-950 rounded-xl shadow-md flex items-center gap-1.5 font-extrabold">
                   <TrendingUp className="w-3.5 h-3.5" />
-                  <span>Đích: {targetScore}đ</span>
+                  <span>Mục tiêu: {targetScore}đ</span>
                 </div>
               </div>
             </div>

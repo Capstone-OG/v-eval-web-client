@@ -32,8 +32,16 @@ export default function AdaptiveQuizModal({ isOpen, onClose, onOpenAiTutorWithCo
       .getExamDetail('11111111-1111-1111-1111-111111111111')
       .then((res) => {
         if (!isMounted) return;
-        const single = Array.isArray(res?.single_questions) ? res.single_questions : [];
-        const mapped = single.slice(0, 5).map((q, idx) => {
+        const single = Array.isArray(res?.single_questions)
+          ? res.single_questions
+          : Array.isArray(res?.singleQuestions)
+            ? res.singleQuestions
+            : [];
+        const passageQuestions = Array.isArray(res?.passages)
+          ? res.passages.flatMap((p) => (Array.isArray(p.questions) ? p.questions : []))
+          : [];
+        const rawPool = single.length > 0 ? single : passageQuestions;
+        const mapped = rawPool.slice(0, 5).map((q, idx) => {
           const rawOpts =
             q.options && typeof q.options === 'object' && !Array.isArray(q.options)
               ? [q.options.A || '', q.options.B || '', q.options.C || '', q.options.D || '']
@@ -78,7 +86,7 @@ export default function AdaptiveQuizModal({ isOpen, onClose, onOpenAiTutorWithCo
     setSelectedOpt(optIdx);
     setAnswerHistory((prev) => ({ ...prev, [currentItem.id]: optIdx }));
     const isCorrect = optIdx === currentItem.correct;
-    
+
     if (isCorrect) {
       const newMastery = Math.min(0.95, bktMastery + 0.12);
       setBktMastery(newMastery);
@@ -92,7 +100,7 @@ export default function AdaptiveQuizModal({ isOpen, onClose, onOpenAiTutorWithCo
       const newWrong = consecutiveWrong + 1;
       setConsecutiveWrong(newWrong);
       setConsecutiveCorrect(0);
-      
+
       if (newWrong >= 3) {
         setRemedialNodeActive(true);
         setFeedback({ type: 'remedial', msg: 'Em vừa làm sai 3 câu liên tiếp. Hệ thống đã gợi ý thêm bài ôn nền tảng để củng cố kiến thức!' });
@@ -178,7 +186,7 @@ export default function AdaptiveQuizModal({ isOpen, onClose, onOpenAiTutorWithCo
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-fade-in">
       <div className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col my-auto max-h-[90vh]">
-        
+
         {/* Header */}
         <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-amber-600 via-amber-500 to-orange-600 text-white flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -195,7 +203,7 @@ export default function AdaptiveQuizModal({ isOpen, onClose, onOpenAiTutorWithCo
             </div>
           </div>
 
-          <button 
+          <button
             onClick={onClose}
             className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-full transition-all cursor-pointer"
           >
@@ -243,7 +251,7 @@ export default function AdaptiveQuizModal({ isOpen, onClose, onOpenAiTutorWithCo
             </div>
           ) : !quizFinished ? (
             <div className="space-y-4">
-              
+
               {/* Question progress */}
               <div className="flex items-center justify-between text-xs font-bold text-slate-500">
                 <span>Câu hỏi {itemIndex + 1} / {sampleItems.length}</span>
@@ -273,7 +281,7 @@ export default function AdaptiveQuizModal({ isOpen, onClose, onOpenAiTutorWithCo
                     disabled={feedback !== null}
                     onClick={() => handleAnswerSubmit(idx)}
                     className={`w-full p-3.5 rounded-2xl text-left text-xs font-bold transition-all flex items-center justify-between border cursor-pointer ${
-                      selectedOpt === idx 
+                      selectedOpt === idx
                         ? 'bg-amber-50 border-amber-500 text-amber-900 ring-2 ring-amber-500/20'
                         : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50'
                     }`}
@@ -298,13 +306,13 @@ export default function AdaptiveQuizModal({ isOpen, onClose, onOpenAiTutorWithCo
           ) : (
             /* Quiz completed view: Result Summary + Answer Review + Ask AI Tutor */
             <div className="space-y-5 py-2 animate-fade-in">
-              
+
               {/* Top Result Banner */}
               <div className="text-center space-y-2 pb-4 border-b border-slate-200">
                 <div className="w-14 h-14 mx-auto rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center">
                   <CheckCircle2 className="w-7 h-7" />
                 </div>
-                
+
                 <h3 className="text-lg font-extrabold text-slate-900">
                   Hoàn Thành Bài Luyện Tập!
                 </h3>

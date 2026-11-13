@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Sparkles, 
-  Eye, 
-  EyeOff, 
-  ArrowRight, 
-  PhoneCall, 
-  UserCheck, 
-  GraduationCap, 
-  Users, 
-  User, 
+import {
+  Sparkles,
+  Eye,
+  EyeOff,
+  ArrowRight,
+  PhoneCall,
+  UserCheck,
+  GraduationCap,
+  Users,
+  User,
   X,
   Lock,
   Mail,
@@ -22,6 +22,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import authService from '../../services/authService';
+import { formatApiError } from '../../utils/apiErrorHandler';
 
 export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
   const [role, setRole] = useState('student'); // student | parent (for registration)
@@ -133,8 +134,9 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
         onClose();
       } catch (err) {
         setIsSubmitting(false);
-        const msg = err.data?.error?.description || err.data?.message || err.message || 'Đăng nhập không thành công. Vui lòng kiểm tra lại email hoặc mật khẩu.';
-        setFormError(msg);
+        setFormError(
+          formatApiError(err, 'Đăng nhập không thành công. Vui lòng kiểm tra lại email hoặc mật khẩu.')
+        );
       }
     } else {
       if (!regFullName.trim()) {
@@ -203,8 +205,9 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
         }, 1200);
       } catch (err) {
         setIsSubmitting(false);
-        const msg = err.data?.error?.description || err.data?.message || err.message || 'Đăng ký không thành công. Vui lòng kiểm tra lại thông tin.';
-        setFormError(msg);
+        setFormError(
+          formatApiError(err, 'Đăng ký không thành công. Vui lòng kiểm tra lại thông tin.')
+        );
       }
     }
   };
@@ -261,9 +264,9 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md animate-fade">
       <div className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden flex flex-col my-auto max-h-[95vh] overflow-y-auto">
-        
+
         {/* Close button */}
-        <button 
+        <button
           onClick={onClose}
           className="absolute top-3.5 right-3.5 p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-all z-10"
         >
@@ -272,16 +275,15 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
 
         {/* Top Header Branding */}
         <div className="p-5 pb-3 text-center border-b border-slate-100 bg-gradient-to-b from-slate-900 to-indigo-950 text-white relative">
-          
+
           <div className="w-12 h-12 mx-auto mb-2 rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-cyan-500 flex items-center justify-center text-white shadow-lg shadow-blue-500/30">
             <Sparkles className="w-6 h-6 text-cyan-300" />
           </div>
           <h2 className="text-xl font-black tracking-tight text-white flex items-center justify-center gap-1.5">
-            <span>ĐGNL AI Portal</span>
-            <span className="px-2 py-0.5 bg-cyan-400/20 text-cyan-300 text-[10px] rounded-full border border-cyan-400/30">v2.4</span>
+            <span>Cổng Học Tập ĐGNL</span>
           </h2>
           <p className="text-xs text-slate-300 font-medium mt-0.5">
-            Khảo thí & Luyện thi Thích ứng 4.0
+            Nền tảng ôn luyện ĐGNL ĐHQG TP.HCM
           </p>
 
           {/* Role selector tabbar shown ONLY IN REGISTER MODE */}
@@ -312,14 +314,14 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
 
         {/* Body Content */}
         <div className="p-5 space-y-4 text-slate-900">
-          
+
           {/* Mode Tabs: Login / Register */}
           <div className="p-1 bg-slate-100 rounded-2xl flex items-center border border-slate-200">
             <button
               onClick={() => handleModeSwitch('login')}
               className={`flex-1 py-2 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 ${
-                mode === 'login' 
-                  ? 'bg-blue-600 text-white shadow-sm' 
+                mode === 'login'
+                  ? 'bg-blue-600 text-white shadow-sm'
                   : 'text-slate-500 hover:text-slate-900'
               }`}
             >
@@ -329,8 +331,8 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
             <button
               onClick={() => handleModeSwitch('register')}
               className={`flex-1 py-2 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 ${
-                mode === 'register' 
-                  ? 'bg-blue-600 text-white shadow-sm' 
+                mode === 'register'
+                  ? 'bg-blue-600 text-white shadow-sm'
                   : 'text-slate-500 hover:text-slate-900'
               }`}
             >
@@ -355,7 +357,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-3" noValidate>
-            
+
             {/* LOGIN MODE */}
             {mode === 'login' ? (
               <>
@@ -426,11 +428,11 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
 
                 <div className="flex items-center justify-between text-xs pt-0.5">
                   <label className="flex items-center gap-2 text-slate-600 cursor-pointer font-medium">
-                    <input 
-                      type="checkbox" 
+                    <input
+                      type="checkbox"
                       checked={rememberMe}
                       onChange={(e) => setRememberMe(e.target.checked)}
-                      className="rounded border-slate-300 text-blue-600 focus:ring-blue-500" 
+                      className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                     />
                     <span>Ghi nhớ</span>
                   </label>
@@ -711,14 +713,14 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
 
                 <div className="pt-0.5">
                   <label className="flex items-center gap-1.5 text-[11px] text-slate-600 cursor-pointer font-medium">
-                    <input 
-                      type="checkbox" 
+                    <input
+                      type="checkbox"
                       checked={regAgreeTerms}
                       onChange={(e) => {
                         setRegAgreeTerms(e.target.checked);
                         if (fieldErrors.regAgreeTerms) setFieldErrors(prev => ({ ...prev, regAgreeTerms: null }));
                       }}
-                      className="rounded border-slate-300 text-blue-600 focus:ring-blue-500" 
+                      className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                     />
                     <span>Tôi đồng ý với Điều khoản sử dụng.</span>
                   </label>
@@ -759,7 +761,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
               1-Click Đăng nhập thử nghiệm:
             </div>
             <div className="grid grid-cols-2 gap-1.5">
-              <button 
+              <button
                 type="button"
                 onClick={() => handleQuickDemo('student')}
                 className="p-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-[11px] font-extrabold border border-blue-200 transition-all text-left flex items-center gap-1.5"
@@ -767,7 +769,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
                 <GraduationCap className="w-3.5 h-3.5 text-blue-600 shrink-0" />
                 <span className="truncate">Học sinh Minh Hoàng</span>
               </button>
-              <button 
+              <button
                 type="button"
                 onClick={() => handleQuickDemo('teacher')}
                 className="p-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg text-[11px] font-extrabold border border-emerald-200 transition-all text-left flex items-center gap-1.5"
