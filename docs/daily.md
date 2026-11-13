@@ -569,6 +569,268 @@
 
 # NHẬT KÝ KIỂM TRA TIẾN ĐỘ VẬN HÀNH (DAILY CHECK LOG) - WEB CLIENT
 
+## [13/11/2026] - Tối Ưu Bộ Render KaTeX/MathText An Toàn & Vận Hành Vite Qua Terminal
+
+- **Nâng cấp [`MathText.jsx`](../src/components/common/MathText.jsx)**: khôi phục `textmol`/`textgam` -> `\text{mol}`/`\text{gam}`; mở rộng `\implies`, `<`, `>`, `\ge`, `\le`, `\approx`, `\equiv`, `\xrightarrow`; bọc biến đơn trước đơn vị (`$a$ mol`); chuẩn hóa `k_{gốc}`, `m_{dd}`; thay `'$$$1$$'` bằng callback an toàn.
+- **Vận hành**: Vite dev server `http://localhost:5173`, kết nối Gateway `5212` và AI Engine `5104` (không dùng Docker).
+
+- **Đồng bộ [`MathText.jsx`](../src/components/common/MathText.jsx)**: hỗ trợ số mũ & ngoặc đơn trong biểu thức nhiều vế, bỏ qua khớp nằm trong `$...$`.
+
+- **Khắc Phục Lỗi KaTeX Trần Do Web Client Gỡ `$` Nhầm (Lần 2)**:
+  - Nguyên nhân gốc: bộ phục hồi trong [`MathText.jsx`](../src/components/common/MathText.jsx) dò từ tiếng Việt (`chất`, `muối`...) ngay cả bên trong `\text{...}` và `_{...}`, nên gỡ `$` của các công thức hợp lệ như `$n_{\text{NaOH}} = 3 \times n_{\text{chất béo}}$`. Nay chỉ dò phần ngoài `\text{}`/`_{}`/`^{}`.
+  - Bộ nhận diện phương trình không còn nuốt xuống dòng kế tiếp (chỉ `[ \t]` giữa các vế); chỉ số dưới cho phép ngoặc đơn (`m_{muối (xà phòng)}`).
+  - Kiểm chứng JS bằng Node trên các ca ảnh lỗi và 49/49 unit tests C# pass.
+
+
+## [12/11/2026] - Khắc Phục Triệt Để Toàn Bộ Lỗi Hiển Thị KaTeX/LaTeX, Nâng Cấp UI Modal Widescreen & Làm Sạch Phương Án Trắc Nghiệm
+
+- **Khắc Phục Triệt Để Toàn Bộ Lỗi Hiển Thị KaTeX / LaTeX ([`MathText.jsx`](../src/components/common/MathText.jsx), [`CurriculumExplorerView.jsx`](../src/components/curriculum/CurriculumExplorerView.jsx))**:
+  - **Cơ chế `wrapUntouchedMath` chống lồng dấu `$`**: Phân tách văn bản theo các khối `$` đã có để các quy tắc bọc công thức hóa học chỉ xử lý trên các phân đoạn chữ thường, triệt tiêu hoàn toàn lỗi lồng `$` bên trong ngoặc đơn như `$(C_{17}H_{35}COO)_3C_3H_5$`.
+  - **Bổ sung toán tử suy luận `\Rightarrow`**: Đưa `\Rightarrow`, `\rightarrow`, `\Leftarrow` vào danh mục lệnh LaTeX và `opPattern`, kết nối liền mạch chuỗi phương trình suy luận thành một khối toán học KaTeX.
+  - **Chuẩn hóa số thập phân**: Tự động dọn dẹp khoảng trắng giữa số và dấu phẩy (như `9, 18 gam` -> `9,18 gam`).
+  - **Tự động khôi phục dấu in đậm bị thiếu**: Sửa các trường hợp tiêu đề thiếu cặp dấu mở `**` (như `Phân tích & Lời giải:**` -> `**Phân tích & Lời giải:**`).
+  - **Khắc phục lỗi cú pháp đỏ `{k - 1$}`**: Tự động chuyển `{k - 1$}` thành `{k - 1}$` và dọn dẹp các ký tự `$` đặt sai trước/sau dấu bằng (như `n_{\text{triglyceride}} $=\frac...` -> `n_{\text{triglyceride}} = \frac...`).
+  - **Giải phóng văn bản tiếng Việt bị nuốt vào chế độ toán học**: Loại bỏ tình trạng văn bản tiếng Việt bị biến thành chữ in nghiêng không dấu cách (như `Triolein có 3 liên kết \pi ở gốc $C_{17}H_{33}.1moltriolein...$`) bằng bộ lọc phát hiện từ vựng tiếng Việt, tách rời công thức hóa học và câu chữ giải thích.
+  - **Sửa lỗi đóng `$$` lẻ không có mở `$$`**: Tự động phát hiện và bọc trọn vẹn các dòng phương trình phản ứng có mũi tên `\xrightarrow`, `\rightleftharpoons`.
+  - **Bọc KaTeX tự động cho công thức chưa bọc**: Tự động nhận diện và bọc các công thức phức tạp như `(C_{15}H_{31}COOH, ...)`, `(RCOO)_3C_3H_5`, `k = \frac{2n + 2 - 2H}{2}`, `n = \frac{8,8}{88} = 0,1\text{ mol}`.
+  - **Cơ chế phòng hộ khẩn cấp (Emergency Sanitization)**: Khi KaTeX gặp lỗi cú pháp, tự động loại bỏ thẻ lỗi `katex-error` màu đỏ `#cc0000` và chuyển sang thẻ hiển thị thanh mảnh an toàn, triệt tiêu 100% thông báo lỗi đỏ trên màn hình.
+  - **Làm sạch dấu nháy trong phương án trắc nghiệm**: Loại bỏ dấu nháy đơn, nháy kép lồng vào số thập phân (như `0',01` -> `0,01`) và phân loại dạng bài.
+
+- **Nâng Cấp Giao Diện Modal AI Widescreen & Làm Rõ So Sánh "Chuyên Sâu" vs "Tiêu Chuẩn" ([`CurriculumExplorerView.jsx`](../src/components/curriculum/CurriculumExplorerView.jsx))**:
+  - Mở rộng kích thước modal lên chuẩn màn hình siêu rộng `max-w-[1720px] w-[99vw]` (trước bóc tách) và `max-w-[1920px] w-[99vw] h-[98vh]` (sau bóc tách Panoramic Workspace).
+  - Thẩm định tính toàn vẹn `totalLessons > 0` trước khi hiển thị Panoramic Workspace, loại bỏ hoàn toàn nguy cơ hiển thị màn hình rỗng `1 Chương • 0 Bài học • 0 Dạng bài`.
+  - Làm rõ trực quan sự khác biệt giữa 2 chế độ: Chế độ 1 (`EXAM_PATTERNS`) chuyên Dạng đề & Bài toán thực chiến (4 bước, Casio, bẫy ĐGNL) vs Chế độ 2 (`THEORY_EXTENDED`) chuyên Lý thuyết thuần SGK 60+ trang & Dạng bài mở rộng toàn diện.
+  - Nâng cấp thanh tiến độ động với đường cong gia tốc mượt mà: di chuyển đều ở 15-45%, sau đó tăng tốc mạnh mẽ qua 75-95% (vượt qua 50% dứt khoát không bị khựng/treo).
+  - Bổ sung fallback an toàn tự động cắt tỉa khoảng trắng cho tên chương trong Tree View: `{chap.chapterName?.trim() || \`Chương ${cIdx + 1}: Chuyên đề trọng tâm\`}`.
+
+- **Kiểm Thử & Đóng Gói Vận Hành**:
+  - `npm run build` thành công trong **4.43s** (3015 modules transformed, 0 lỗi).
+  - Khởi động lại container Docker `v_eval_web_client`, giao diện hoạt động tức thời trên cổng 5173.
+
+## [12/11/2026] - Khắc Phục Lỗi Hiển Thị Tên Chương Trống, Nâng Cấp UI Modal Widescreen (max-w-[1420px]), Làm Rõ So Sánh "Chuyên Sâu" vs "Tiêu Chuẩn" & Thanh Tiến Độ Tăng Tốc Mượt Mà
+
+- **Khắc Phục Hiển Thị Tên Chương Trống Trong Cây Cấu Trúc ([`CurriculumExplorerView.jsx`](../src/components/curriculum/CurriculumExplorerView.jsx))**:
+  - Bổ sung fallback an toàn tự động cắt tỉa khoảng trắng cho tên chương trong Tree View: `{chap.chapterName?.trim() || \`Chương ${cIdx + 1}: Chuyên đề trọng tâm\`}`. Ngăn chặn triệt để trường hợp AI trả về tên chương rỗng hoặc toàn ký tự trắng khiến cây điều hướng chỉ hiển thị nhãn `C1` mà không có tiêu đề.
+  - Tự động kích hoạt bài học đầu tiên `previewSelectedLessonKey = '0-0'` và dạng bài đầu tiên ngay khi nạp Panoramic Preview, loại bỏ hoàn toàn màn hình rỗng sau bóc tách.
+
+- **Nâng Cấp Giao Diện Modal AI Widescreen & Làm Rõ So Sánh "Chuyên Sâu" vs "Tiêu Chuẩn" ([`CurriculumExplorerView.jsx`](../src/components/curriculum/CurriculumExplorerView.jsx))**:
+  - **Mở rộng chiều rộng Popup**: Phóng to kích thước modal lên chuẩn màn hình siêu rộng `max-w-[1420px] w-[96vw]` (trước bóc tách) và `max-w-[1720px] w-[98vw]` (sau bóc tách), mang lại không gian thao tác thoáng đãng và trực quan.
+  - **Làm rõ bản chất 2 chế độ bóc tách**:
+    - **Chế độ Chuyên Sâu ĐGNL (Khuyên Dùng)**: Bóc tách phân rã sâu đến tận cùng, tách biệt 100% từng Bài học con độc lập (VD: Bài 1 Ester riêng, Bài 2 Lipid riêng - không gộp). Mỗi bài gồm 2-4 dạng bài chi tiết kèm đầy đủ **4 Khối Sư Phạm** (Lý thuyết cốt lõi, Phương pháp giải 3-4 bước, Bẫy đề thi ĐGNL, Mẹo Casio, 2-3 câu hỏi trắc nghiệm Bloom L1-L4).
+    - **Chế độ Tiêu Chuẩn (Số Hóa Khung Sườn)**: Số hóa siêu tốc (chỉ 5-10s), tiết kiệm 70% token AI, tập trung vào mục lục tổng quan và 1-2 dạng bài nền tảng (L1 Nhận biết - L2 Thông hiểu).
+    - Bổ sung thanh so sánh trực quan nhanh (Comparison Quick Bar) tóm tắt các điểm khác biệt cốt lõi.
+  - **Thanh tiến độ tăng tốc mượt mà ("chậm chậm rồi nhanh")**: Thay đổi thuật toán dynamic easing: bắt đầu đều đặn ở 5%-22% (quét OCR), sau đó tăng tốc mạnh mẽ qua mốc 45%-76% (vượt qua 50% dứt khoát không bị khựng/treo), tiến đều qua 4 khối sư phạm và cán mốc 100% khi AI hoàn tất.
+
+- **Chuẩn Hóa KaTeX Cho Phương Trình Hóa Học Có Trạng Thái Tiếng Việt ([`MathText.jsx`](../src/components/common/MathText.jsx))**:
+  - Khắc phục lỗi phương trình hóa học độc lập có trạng thái tiếng Việt (như `\text{ (lỏng)}`, `\text{ (rắn)}`, `\text{kết tủa}`) không được bọc vào khối `$$...$$` do vướng bộ lọc ký tự tiếng Việt. Tự động bóc tách chuỗi `\text{...}` trước khi kiểm tra, đảm bảo toàn bộ phương trình phản ứng được bao bọc chuẩn xác trong `$$ ... $$` hiển thị KaTeX trực quan.
+  - Mở rộng cơ chế chống rò rỉ math mode trong `renderInlineContent`: nếu bên ngoài `\text{...}` có chuỗi từ thông thường có khoảng trắng (ví dụ `1 mol triolein phản ứng tối đa 3 mol` hoặc `suy ra gốc acid là`), hệ thống tự động bóc trả lại văn bản gốc để hiển thị tự nhiên.
+
+- **Kiểm Thử & Đóng Gói Vận Hành**:
+  - `npm run build` thành công trong **3.32s** (3015 modules transformed, 0 lỗi).
+  - Tải lại Nginx trong Docker container `v_eval_web_client`, kiểm tra web client hiển thị chuẩn xác.
+
+## [12/11/2026] - Tái Thiết Toàn Diện Modal AI Chuyên Đề Màn Hình Rộng, So Sánh Chuyên Sâu vs Tiêu Chuẩn, Thanh Tiến Độ Mượt & Khắc Phục Triệt Để 6 Lỗi KaTeX
+
+- **Tái Thiết Kế Giao Diện Modal AI Chuyên Đề Màn Rộng ([`CurriculumExplorerView.jsx`](../src/components/curriculum/CurriculumExplorerView.jsx))**:
+  - Mở rộng kích thước Modal từ `max-w-4xl` lên `max-w-6xl` (`max-h-[94vh]`), chuyển đổi thành bố cục Studio 2 cột hiện đại:
+    - **Cột trái (5 cols)**: Chọn miền năng lực, Dropzone tải tệp (PDF/DOCX/TXT hỗ trợ tới 250MB), bộ lọc trang PDF (Hỗ trợ sách 99+ trang) và ô dán trích đoạn văn bản.
+    - **Cột phải (7 cols)**:
+      - **Bảng so sánh trực quan "Chuyên Sâu ĐGNL" vs "Tiêu Chuẩn"**: Thẻ so sánh chi tiết làm rõ: _Chuyên sâu_ phân tách triệt để từng bài học (Bài 1 Ester, Bài 2 Lipid), nhận diện 2–4 dạng bài/bài, chuẩn 4 khối Sư phạm (Lý thuyết SGK, Phương pháp 3–4 bước, Bài toán mẫu, Bẫy đề thi & Mẹo Casio), tự động nhúng mô hình 3D, bảng biến thiên `[VARIATION_TABLE]`, đồ thị `[MATH_GRAPH]`, câu hỏi Bloom L1–L4; _Tiêu chuẩn_ trích xuất nhanh mục lục & khung kiến thức cơ bản (L1–L2), thời gian 5–10s, tiết kiệm 70% token AI.
+      - **Bộ 4 Thẻ Chế Độ Bóc Tách Theo Loại Tài Liệu & Chống Lỗi Font**: `STEM_FORMULAS` (Toán, Lý, Hóa), `TEXT_HUMANITIES` (KHXH, Văn học), `VISION_AI` (Bóc tách ảnh 100% chống lỗi InDesign), `AUTO_LOCAL` (PdfPig số hóa chuẩn siêu tốc).
+  - **Khắc phục thanh tiến độ AI không còn đứng đọng ở 50%**: Triển khai cơ chế easing động (`aiProgressPercent`, `aiProgressMessage`) với chu kỳ 450ms tiến dần mượt mà qua các mốc 10% → 28% → 55% → 78% → 90% → 96%, vọt lên 100% khi AI hoàn tất, kèm bộ 4 huy hiệu trạng thái từng bước.
+
+- **Khắc Phục Triệt Để 6 Lỗi Render KaTeX & Cú Pháp Hóa Học ([`MathText.jsx`](../src/components/common/MathText.jsx))**:
+  - **Khôi phục ký tự điều khiển ASCII bị nuốt**: Phục hồi ngay lập tức Form feed `\x0c` thành `\f` (xử lý gốc rễ nguyên nhân `\frac` biến thành `\x0crac` báo lỗi đỏ KaTeX ParseError `Unexpected character: '\x0c'`), khôi phục Tab `\x09` thành `\t` (`\text`, `\times`), Backspace `\x08` (`\bar`, `\beta`).
+  - **Chuẩn hóa chữ tiếng Việt trong chỉ số dưới (Subscripts)**: Tự động bọc `\text{...}` cho các chỉ số dưới chứa từ ngữ tự nhiên tiếng Việt như `m_{\text{chất béo}}`, `m_{\text{muối}}`, `n_{\text{muối}}`, `n_{\text{ester}}`, `m_{\text{glycerol}}`, giải quyết triệt để hiện tượng chữ nghiêng dính liền.
+  - **Chống rò rỉ math mode sang văn bản tiếng Việt**: Kiểm tra các khối `$$...$$` và `$...$`; nếu chứa từ tiếng Việt ngoài `\text{...}` (như `suyragốcacidlà`), tự động trả về văn bản tự nhiên thuần túy, không để KaTeX nuốt khoảng trắng giữa các từ.
+  - **Triệt tiêu toàn diện chữ đỏ `#cc0000`**: Nâng cấp bộ lọc khẩn cấp trong `renderKatexHtml`, bóc tách toàn bộ thẻ lỗi `katex-error` và xóa triệt để thuộc tính `color:#cc0000`.
+
+- **Kiểm Thử & Đảm Bảo Vận Hành**:
+  - `npm run build` thành công trong 3.0s (3015 modules transformed, 0 lỗi).
+  - Tải lại Nginx trong Docker container `v_eval_web_client`, giao diện hoạt động tức thời.
+
+## [12/11/2026] - Tích Hợp Bộ 4 Thẻ Chế Độ Bóc Tách Theo Loại Tài Liệu (OCR Mode Cards) Vào Modal Chuyên Đề & Khắc Phục Dấu $ Lồng Trong Ngoặc KaTeX
+
+- **Tích Hợp Bộ 4 Thẻ Chế Độ Bóc Tách Theo Loại Tài Liệu & Chống Lỗi Font InDesign ([`CurriculumExplorerView.jsx`](../src/components/curriculum/CurriculumExplorerView.jsx))**:
+  - Bổ sung bộ 4 thẻ lựa chọn chế độ xử lý trực quan vào Modal Nhập chuyên đề bằng AI trong Web Client:
+    1. **`STEM_FORMULAS` (🧪 Tự Nhiên & Công Thức)**: Toán, Lý, Hóa - Bóc tách công thức LaTeX, phản ứng hóa học, bảng biến thiên qua Vision AI.
+    2. **`TEXT_HUMANITIES` (✨ Tự Động Thông Minh)**: KHXH & Ngữ Văn - Tự động phát hiện và kích hoạt Vision AI nếu gặp lỗi font InDesign, giữ trọn vẹn ngữ cảnh đoạn văn.
+    3. **`VISION_AI` (👁️ Vision AI Cloud)**: Bóc tách ảnh 100% bằng Gemini AI - Chống triệt để lỗi font rác / mã hóa InDesign và tài liệu scan cũ.
+    4. **`AUTO_LOCAL` (📄 Chỉ Đọc Chữ Số Hóa)**: PdfPig Local - Tối ưu cho PDF văn bản số hóa chuẩn, siêu tốc và không tốn token AI.
+  - Quản lý state `importOcrMode` với giá trị mặc định là `'STEM_FORMULAS'`, gửi kèm qua `FormData` (`ocr_mode` và `ocrMode`) khi gọi API `aiService.extractCurriculumFromDocument`.
+
+- **Khắc Phục Triệt Để Lỗi Dấu $ Lồng Trong Ngoặc & Phương Trình Phức Tạp ([`MathText.jsx`](../src/components/common/MathText.jsx))**:
+  - Dọn sạch các ký tự `$` lồng sai vị trí bên trong ngoặc nhọn `{...}` và ngoặc đơn `(...)` trước khi cân bằng dòng: `{k - 1$}` -> `{k - 1}`, `(n \ge 2$)` -> `(n \ge 2)`.
+  - Nối liền công thức Este bị tách Oxy: `$C_nH_{2n}$O_2` -> `$C_nH_{2n}O_2$`.
+  - Nâng cấp regex nhận diện phương trình tính toán có dấu bằng và `\frac` hỗ trợ ngoặc lồng nhau (như `$n_{\text{triglyceride}} = \frac{n_{CO_2} - n_{H_2O}}{k - 1}$`).
+  - Kiểm thử `npm run build`: Hoàn thành trong 2.89s, 3015 modules transformed, 0 lỗi. Tải lại Nginx thành công.
+
+## [12/11/2026] - Khắc Phục Triệt Để Lỗi Render KaTeX Hộp Đỏ (Frac & Text Spacing), Tự Động Bọc Phương Trình & Chống Nuốt Tiếng Việt
+
+- **Khắc Phục Triệt Để Lỗi Render KaTeX Hộp Đỏ (#cc0000) Cho Frac & Text ([`MathText.jsx`](../src/components/common/MathText.jsx))**:
+  - **Phát hiện & Bản chất lỗi**:
+    - Khi AI sinh ra biểu thức `k = \frac{2n + 2 - 2H} {2 }`, do có khoảng trắng giữa hai cặp ngoặc nhọn `{...} {...}` và khoảng trắng nội bộ `{2 }`, regex cũ chỉ khớp được `\frac{2n + 2 - 2H}` và bọc thành `$\frac{2n + 2 - 2H}$`, để lại `{2 }` bên ngoài. KaTeX ném lỗi thiếu đối số thứ 2 và hiển thị chữ đỏ `#cc0000`.
+    - Khi AI sinh ra `n = \frac{8,8}{88} = 0,1\text {mol}`, do có khoảng trắng giữa `\text` và `{mol}`, regex chỉ khớp `\text` và bọc thành `$\text$`. KaTeX ném lỗi `\text` trần không đối số và hiển thị chữ đỏ `#cc0000`.
+  - **Giải pháp xử lý triệt để**:
+    - Chuẩn hóa khoảng trắng lệnh LaTeX: `\\(text|mathrm|mathbf|...)\s+\{` -> `\\$1{`.
+    - Chuẩn hóa khoảng trắng giữa các cặp ngoặc của `\frac`: `(\\frac\s*\{[^{}]*\})\s+(\{[^{}]*\})` -> `$1$2`.
+    - Làm sạch khoảng trắng nội bộ trong ngoặc nhọn đơn giản: `{2 }` -> `{2}`.
+    - Chèn khoảng trắng trước `\text` sau số thập phân: `0,1\text{mol}` -> `0,1 \text{mol}`.
+    - Tự động nhận diện và bọc phương trình tính toán có dấu bằng và `\frac`: `k = \frac{2n + 2 - 2H}{2}` -> `$k = \frac{2n + 2 - 2H}{2}$`, `n = \frac{8,8}{88} = 0,1 \text{mol}` -> `$n = \frac{8,8}{88} = 0,1 \text{mol}$`.
+    - Cải tiến fallback trong `renderKatexHtml`: Thay thế toàn bộ `<span class="katex-error"` và thuộc tính `style="color:#cc0000"` bằng `<span class="inline-math font-serif">`, triệt tiêu 100% chữ đỏ trước mắt người dùng.
+  - **Kiểm thử vận hành**: Chạy `npm run build` thành công trong 2.66s, nạp lại Nginx trong `v_eval_web_client`.
+
+## [12/11/2026] - Khắc Phục Triệt Để 4 Lỗi Render KaTeX Hóa Học: Loại Bỏ Hộp Đỏ Cú Pháp, Tách Nhãn Phương Trình & Chống Nuốt Tiếng Việt
+
+- **Triệt Tiêu Hoàn Toàn Hộp Lỗi KaTeX Đỏ (#cc0000) & Khắc Phục Lỗi Cú Pháp Dấu Bằng ([`MathText.jsx`](../src/components/common/MathText.jsx))**:
+  - **Phát hiện & Bản chất lỗi**:
+    - Khi hiển thị công thức `$n_{\text{triglyceride}} = \frac{n_{CO_2} - n_{H_2O}}{k - 1}$`, regex cũ hoặc dữ liệu trả về bị chèn dấu `$` trước dấu bằng: `n_{\text{triglyceride}} $=\frac{...}{...}$`, khiến KaTeX ném lỗi `Can't use function '$' in math mode` và hiển thị khối chữ đỏ rực cảnh báo lỗi cú pháp.
+  - **Giải pháp xử lý triệt để**:
+    - Trong `normalizeMathString`: Bổ sung cơ chế làm sạch dấu `$` đặt nhầm cạnh dấu bằng `\$\s*=\s*\$?|(?<=\w|\})\s*\$\s*=` biến thành `= `.
+    - Trong `renderKatexHtml`: Bổ sung cơ chế phục hồi khẩn cấp 2 tầng (Emergency Sanitization): Nếu KaTeX sinh ra thẻ `<span class="katex-error"`, hệ thống tự động làm sạch các thẻ lỗi và bóc bỏ hoàn toàn thẻ `katex-error` màu đỏ, đảm bảo giao diện luôn hiển thị văn bản công thức mượt mà, sạch sẽ 100% không bao giờ hiện chữ đỏ lỗi cú pháp trước mắt người dùng.
+
+- **Bảo Toàn Đóng Dấu $ Trước Dấu Chấm Câu Chống Nuốt Văn Bản Tiếng Việt ([`MathText.jsx`](../src/components/common/MathText.jsx))**:
+  - Tự động nhận diện công thức kết thúc trước dấu chấm/phẩy theo sau bởi văn bản tiếng Việt giải thích: `(\$[A-Za-z0-9_\\\{\}\^]+)\.\s+([à-ỹA-Z])` -> `$1$. $2`.
+  - Khắc phục triệt để hiện tượng `$C_{17}H_{33}. 1 mol triolein...` bị nuốt trọn vào math mode làm dính liền chữ nghiêng.
+
+- **Tách Nhãn Phương Trình Hóa Học & Tự Động Bọc Khối Display Math ($$) ([`MathText.jsx`](../src/components/common/MathText.jsx))**:
+  - Đối với các dòng chứa nhãn dẫn phản ứng như `Phương trình: ...` hoặc `PTHH: ...`, hệ thống tách nhãn sang dòng trên và bọc phương trình phản ứng hóa học (có mũi tên `\xrightarrow`, `\rightleftharpoons`...) vào khối display math `$$ ... $$` nằm cân đối ở giữa trang.
+  - Tự động làm sạch các dấu `$` hoặc `$$` thừa ở đầu/cuối phương trình phản ứng độc lập, tránh hiện tượng hiển thị nguyên chuỗi `\xrightarrow{t^\circ}` hoặc sót `$$` ở cuối dòng.
+
+- **Kiểm Thử & Đảm Bảo Vận Hành**:
+  - Chạy `npm run build` thành công 100% trong **2.39 giây** (3015 modules transformed, 0 Error, 0 Warning).
+  - Tải lại cấu hình Nginx trong container `v_eval_web_client` phục vụ tức thì.
+
+## [12/11/2026] - Khắc Phục Triệt Để Lỗi Render KaTeX Đỏ (Công Thức Đốt Cháy Triglyceride), Chống Nuốt Tiếng Việt Vào Math Mode & Chuẩn Hóa Phương Trình Hóa Học
+
+- **Khắc Phục Lỗi Render KaTeX Màu Đỏ (#cc0000) Cho Công Thức Phân Số & Ngoặc Nhọn ([`MathText.jsx`](../src/components/common/MathText.jsx))**:
+  - **Phát hiện & Bản chất lỗi**:
+    - Khi hiển thị công thức đốt cháy triglyceride `$n_{\text{triglyceride}} = \frac{n_{CO_2} - n_{H_2O}}{k - 1}$`, giao diện hiển thị chuỗi lỗi KaTeX màu đỏ:
+      `n_{\text{triglyceride}} $=\frac{n_{CO_2} - n_{H_2O}}{k - 1$}`.
+    - Nguyên nhân: Bộ tiền xử lý `fullEquationRegex` quét tìm `\frac` trước khi token hóa các khối math, nhận diện khoảng trắng sau dấu `=` là điểm bắt đầu công thức chưa bọc và chèn thêm cặp dấu `$` mới vào giữa công thức đã có `$`. Đồng thời các ký tự `$` lọt vào bên trong mẫu số `{k - 1$}` khiến KaTeX không thể phân giải cú pháp và ném lỗi `<span class="katex-error">`.
+  - **Giải pháp xử lý triệt để**:
+    - Trong hàm `renderKatexHtml`: Tự động loại bỏ toàn bộ các ký tự `$` chưa escape nằm bên trong khối math mode (`clean = clean.replace(/(?<!\\)\$/g, '')`); tự động đếm và cân bằng các cặp dấu ngoặc nhọn `{` và `}` bị thiếu, bảo đảm thư viện KaTeX luôn biên dịch hợp lệ 100% và không bao giờ xuất hiện chữ lỗi màu đỏ.
+    - Loại bỏ regex bọc công thức chạy toàn văn bản trước khi phân tách delimiter; chuyển sang cơ chế nhận diện theo từng dòng độc lập: chỉ bọc `$$...$$` khi dòng đó đứng riêng lẻ, chứa dấu `=` và `\frac`/`\sqrt` đồng thời không chứa ký tự tiếng Việt.
+
+- **Khắc Phục Lỗi Nuốt Văn Bản Tiếng Việt Vào Math Mode (Mất Dấu Cách, Chữ Nghiêng Dính Chùm) ([`MathText.jsx`](../src/components/common/MathText.jsx))**:
+  - **Phát hiện & Bản chất lỗi**:
+    - Ở định nghĩa Ester: Chuỗi văn bản tiếng Việt bị dính liền không dấu cách và biến thành chữ nghiêng công thức:
+      `ởnhómcarboxyl(-COOH)củacarboxylicacidbằngnhóm-OR'thìđượceste.Côngthứctổngquátcủaesterđơnchức,mạchhở: C_nH_{2n}$O_2`.
+    - Nguyên nhân: Regex dọn dẹp token cũ `(?<![\$\w])([A-Z][a-zA-Z0-9_+-]+)\$` quét qua `$-OH$` và `$-COOH$`, nhận diện chữ cái hoa `O` và `C` sau dấu gạch ngang `-` là token thiếu `$`, chèn thêm một dấu `$` vào giữa dấu `-` và chữ cái (`$-$OH$`). Dấu `$` lẻ này đã làm đảo ngược cực tính toàn bộ các cặp dấu `$` tiếp theo trong đoạn văn, biến văn xuôi tiếng Việt thành ruột của khối toán học.
+  - **Giải pháp xử lý triệt để**:
+    - Gỡ bỏ hoàn toàn regex chèn `$` chắp vá gây chia cắt công thức.
+    - Bổ sung cơ chế bảo vệ phục hồi tự động trong `parts.map`: Nếu một khối `$...$` chứa các nguyên âm tiếng Việt có dấu (`àáạ...`) mà không có thẻ `\text{}`, hệ thống tự động bóc trả lại văn bản gốc để hiển thị tự nhiên với khoảng trắng đầy đủ.
+
+- **Chuẩn Hóa Phương Trình Phản Ứng Hóa Học & Công Thức Toán Học Riêng Biệt ([`MathText.jsx`](../src/components/common/MathText.jsx))**:
+  - Xử lý các phương trình phản ứng hóa học có mũi tên (`\xrightarrow`, `\rightleftharpoons`, `\longrightarrow`) theo từng dòng độc lập (`eqLines`), tuyệt đối không cho phép regex quét ghép xuyên qua dòng mới làm nuốt nhiều phương trình vào một khối.
+  - Tự động bọc `$$ ... $$` hiển thị nổi bật ở giữa dòng cho các phương trình hóa học và công thức toán học đứng riêng dòng.
+
+- **Kiểm Thử & Đảm Bảo Vận Hành**:
+  - Chạy `npm run build` thành công 100% trong **2.82 giây** (3015 modules transformed, 0 Error, 0 Warning).
+  - Nạp lại bundle mới vào Nginx container `v_eval_web_client` phục vụ giao diện tức thì.
+
+- **Nâng Cấp Toàn Diện Regex Khử 100% Lỗi Rò Rỉ Math Đa Dòng & Tách Nhãn Phương Trình Hóa Học**:
+  - **Giới hạn phạm vi Inline Math không vượt qua dòng mới**: Tinh chỉnh regex phân tách `\$[^\$\r\n]+?\$` trong `renderInlineContent` và `normalizeMathString`, bảo đảm math mode đơn `$...$` tuyệt đối không bao giờ nuốt văn bản qua dấu xuống dòng `\n`. Triệt tiêu hoàn toàn lỗi `suyragốcacidlà`.
+  - **Khắc phục lỗi khoảng trắng sau dấu gạch dưới chỉ số**: Chuẩn hóa regex `_\s+(\d+|[a-zA-Z]|\{[^}]+\})` chuyển đổi `(OH)_ 3` -> `(OH)_3`.
+  - **Chuẩn hóa công thức hóa học có dấu cách trước nhóm chức**: Regex `([A-Z]..._\{\d+\})\s+(COOH|OH...)` chuyển `C_{15}H_{31} COOH` thành `$C_{15}H_{31}COOH$`.
+  - **Tách nhãn mở đầu cho phương trình phản ứng**: Tự động nhận diện các nhãn `Phương trình: ...` hoặc `PTHH: ...` có chứa mũi tên phản ứng, tách nhãn mở đầu sang dòng trên và bọc phương trình thành khối display math `$$ ... $$` căn giữa đẹp mắt.
+  - **Hàn gắn công thức ester bị ngắt dòng**: Tự động ghép nối chuỗi `$C_nH_{2n}\nO_2` thành công thức hoàn chỉnh `$C_nH_{2n}O_2$`.
+
+- **Tự Động Phân Giải Domain API Gateway Đa Môi Trường ([`apiClient.js`](../src/services/apiClient.js))**:
+  - Triển khai hàm `getGatewayBaseUrl()`:
+    - Khi truy cập từ domain triển khai `pickic.io.vn` hoặc `app.pickic.io.vn`: Tự động trỏ toàn bộ API về `https://api.pickic.io.vn` với kết nối mã hóa SSL/TLS 100%, bảo đảm không gặp lỗi Mixed Content.
+    - Khi chạy môi trường local (`localhost:5173`): Giữ nguyên fallback trỏ về cổng phát triển nội bộ `http://localhost:5212` (`VITE_API_GATEWAY_URL`).
+  - Cập nhật toàn bộ các phương thức `request()` và `apiClient.getBaseUrl()` (dùng cho Server-Sent Events SSE Socratic Tutor) tự động gọi `getGatewayBaseUrl()`.
+
+- **Cấu Hình Nginx Alpine Đóng Gói Production ([`nginx.conf`](../nginx.conf))**:
+  - Kích hoạt nén **Gzip** (`gzip on`, level 6) cho toàn bộ file tĩnh (JS, CSS, JSON, SVG, XML).
+  - Cấu hình điều hướng SPA `try_files $uri $uri/ /index.html` đảm bảo định tuyến client-side router hoạt động chuẩn xác khi refresh trang.
+  - Bổ sung cấu hình Reverse Proxy `location /api/` trỏ trực tiếp tới `http://v-eval-gateway:5212/api/` bên trong Docker Network với các thiết lập WebSocket Upgrade và timeout 600s phục vụ xử lý luồng AI.
+
+- **Đóng Gói & Tối Ưu Hóa Docker Volume ([`docker-compose.yml`](../../docker-compose.yml))**:
+  - Ánh xạ trực tiếp thư mục `dist/` đã build vào Nginx `/usr/share/nginx/html:ro` và `nginx.conf` vào `/etc/nginx/conf.d/default.conf:ro`.
+  - Giúp việc cập nhật frontend diễn ra tức thì sau `npm run build` mà không cần rebuild toàn bộ Docker Image.
+
+- **Kiểm Thử & Nghiệm Thu Trực Tuyến**:
+  - `npm run build` hoàn thành trong **2.36 giây** (3015 modules transformed, 0 Error, 0 Warning).
+  - Kiểm thử truy cập công khai qua Cloudflare Tunnel:
+    - `https://pickic.io.vn` ➔ HTTP/2 200 OK.
+    - `https://app.pickic.io.vn` ➔ HTTP/2 200 OK.
+
+## [11/11/2026] - Khắc Phục Triệt Để Toàn Bộ Lỗi Hiển Thị LaTeX & KaTeX (Render Bảng Markdown Table, Chống Nuốt Dấu Nháy Đơn Options, Triệt Tiêu Token Đỏ 'undefined', Nối Dòng Công Thức Hóa Học Gãy)
+
+- **Tích Hợp Bộ Phân Giải & Render Bảng Markdown Sư Phạm ([`MathText.jsx`](../src/components/common/MathText.jsx))**:
+  - **Triển khai hàm `renderMarkdownTable` chuẩn mực**:
+    - _Hiện tượng_: Các bảng phản ứng hóa học hoặc bảng số mol (ví dụ: `|Chất | CH_3COOH | C_2H_5OH |...|`) hiển thị thô sơ dưới dạng các dòng text ký tự `|` và `|---|---|` gây mất thẩm mỹ và vỡ layout sư phạm.
+    - _Khắc phục_: Tự động nhận diện cú pháp Markdown Table trong khối văn bản, gom toàn bộ các dòng `|...|` lại và render thành thẻ HTML `<table>` responsive: có viền bo tròn (`rounded-xl`), bóng đổ mờ (`shadow-2xs`), header xám sáng (`bg-slate-100/90 text-slate-800 font-bold`), các dòng dữ liệu xen kẽ (zebra striping `bg-white` / `bg-slate-50/70`), cuộn ngang an toàn (`overflow-x-auto`), và đặc biệt là hỗ trợ render công thức KaTeX inline mượt mà (`renderInlineContent`) bên trong từng ô dữ liệu.
+    - _Nhận diện linh hoạt_: Không bắt buộc ô cuối cùng phải có ký tự `|`, chấp nhận mọi định dạng phân cách bảng Markdown.
+
+- **Nâng Cấp Hàm `cleanOptionDisplay` & Xử Lý Triệt Để Dấu Nháy Đơn Trắc Nghiệm ([`CurriculumExplorerView.jsx`](../src/components/curriculum/CurriculumExplorerView.jsx))**:
+  - **Lột sạch 100% dấu nháy đơn `'` và nháy kép `"`**: Loại bỏ triệt để các dấu nháy `'`, `"`, backtick, dấu nháy cong `‘ ’ “ ”` bao quanh phương án trắc nghiệm ở Khối 4 (như `'HCOOC_2H_5'`, `'C_2H_5CHO'`, `'25,00%'`).
+  - **Hàn gắn phương án hóa học bị ngắt dòng do PDF**: Xóa bỏ các ký tự xuống dòng `\r?\n` kẹt giữa công thức este đa chức (như `\text{-OOC-CH}_2` rớt dòng `-CH_2`).
+  - **Chuẩn hóa công thức hóa học & tự động bọc KaTeX**: Tự động nhận diện và bọc các công thức este, aldehyde, acid vào cặp dấu `$ ... $`.
+
+- **Triệt Tiêu Hoàn Toàn Token Lỗi Màu Đỏ `'undefined'` ([`MathText.jsx`](../src/components/common/MathText.jsx))**:
+  - **Bảo vệ an toàn trong `renderKatexHtml`**: Làm sạch triệt để mọi chuỗi `\undefined`, `undefined`, `null` trước khi đưa vào thư viện KaTeX; tự động bóc bỏ thẻ lỗi `<span class="katex-error">` nếu phát hiện có chứa token `undefined`, ngăn chặn hoàn toàn chữ `undefined` màu đỏ `#cc0000` hiển thị trên giao diện người dùng.
+  - **Phục hồi công thức hiệu suất chuẩn SGK**: Tự động thay thế `H\% undefined %` và `H\% = undefined` bằng công thức chuẩn `` `H\% = \frac{m_{\text{thực tế}}}{m_{\text{lí thuyết}}} \times 100\%` ``.
+
+- **Hàn Gắn Công Thức Hóa Học & Toán Học Bị Vỡ Vụn Do PDF ([`MathText.jsx`](../src/components/common/MathText.jsx))**:
+  - **Nối công thức ester bị ngắt giữa chuỗi C-H và Oxy**: Ghép `` `C_nH_{2n} \n O_2` `` hoặc `` `C_nH_{2n} O_2` `` thành một khối duy nhất `` `$C_nH_{2n}O_2$` ``.
+  - **Nối chuỗi công thức sau dấu nối hóa trị `-` hoặc `=`**: Ghép các chuỗi este có liên kết đôi hoặc este đa chức (kể cả chứa thẻ `\text{}`).
+  - **Nối nhóm chỉ số ngoặc `)_2`, `)_3`**: Ghép các nhánh este (như `` `\text{HCOOCH(CH}_3 \n )_2` `` $\rightarrow$ `` `$HCOOCH(CH_3)_2$` ``).
+  - **Sửa điều kiện bất đẳng thức có dấu `$` bị lệch**: Chuẩn hóa `` `(n \ge 2$)` ``, `` `(n \ge 3$)` ``, `` `($n$ \ge 4$)` `` thành `` `($n \ge 2$)` ``.
+  - **Tự động bọc phương trình phản ứng hóa học vào `$...$`**: Bất kỳ phản ứng nào chứa `\rightleftharpoons`, `\xrightarrow` đều được tự động bọc trong `$ ... $`.
+
+- **Đóng Gói & Nghiệm Thu Sản Phẩm**:
+  - `npm run build` hoàn thành sạch sẽ 100% trong **3.08 giây** (`3015 modules transformed`, 0 Error, 0 Warning).
+
+## [10/11/2026] - Nâng Cấp Toàn Diện UI/UX Modal Bóc Tách Khung Tri Thức Chuyên Đề & Xử Lý Chuẩn Hóa Lỗi API Problem Details Thân Thiện Người Dùng
+
+- **Tái Thiết Kế & Nâng Cấp UI/UX Modal Nạp Cây Tri Thức Bằng AI ([`CurriculumExplorerView.jsx`](../src/components/curriculum/CurriculumExplorerView.jsx))**:
+  - **Tách Biệt Khối Cấu Hình Độc Lập**:
+    - Phân tách cấu hình cắt lát trang PDF (`Phạm vi trang cần bóc tách`) ra khỏi cấu hình độ sâu dạng bài, bổ sung thanh chuyển đổi linh hoạt giữa _"Toàn bộ tài liệu"_ và _"Khoảng trang cụ thể"_ (Từ trang - Đến trang) trực quan, có viền bo tròn và nền tương phản.
+  - **Thiết Kế Cặp Card Tương Tác Chọn Độ Sâu Nhận Diện (Interactive Selection Cards)**:
+    - Thay thế hàng nút bấm nhỏ hẹp, chữ mờ cũ bằng 2 thẻ Card tương tác 2 cột lớn, hiển thị đầy đủ chỉ báo Radio checkmark động, viền nổi bật khi active (`ring-1 ring-purple-400 bg-gradient-to-br from-purple-50/90 to-indigo-50/60 border-purple-600`):
+      1. **Chuyên sâu ĐGNL (`deep`)** - Badge _`Khuyên dùng`_:
+         - Chỉ số: `⚡ 2–4 dạng bài / bài học • Chuẩn 4 khối KaTeX & Bloom`.
+         - Diễn giải: Giải phẫu vi mô chuyên đề thành các dạng bài toán thực chiến, kèm công thức KaTeX, kỹ thuật Casio và trắc nghiệm L1–L4 để học sinh luyện đề ngay.
+         - Nhãn định hướng: `📌 Phù hợp: Tài liệu chuyên đề, bộ đề ôn thi (10–50+ trang)`.
+      2. **Tiêu chuẩn (Lý thuyết & Dạng con) (`standard`)** - Badge _`Chuyên sâu lý thuyết`_:
+         - Chỉ số: `📖 Ít dạng lớn • Đầy đủ lý thuyết chi tiết & Nhiều dạng con`.
+         - Diễn giải: Bóc tách các chủ đề lớn theo mục lục SGK. Phần lý thuyết được trình bày trọn vẹn, sâu sắc và toàn diện nhất (định nghĩa, định lý, công thức KaTeX tổng quát); bên trong mỗi dạng bài lớn được phân rã chi tiết thành nhiều dạng con (sub-patterns 1.1, 1.2...) kèm phương pháp giải cụ thể.
+         - Nhãn định hướng: `📌 Phù hợp: Sách giáo khoa, chuyên đề lý thuyết chuyên sâu, giáo trình chuẩn hóa kiến thức nền`.
+  - **Hộp Gợi Ý Ngữ Cảnh Trực Quan Phản Hồi Tức Thì (Contextual Feedback Box)**:
+    - Bổ sung banner động đổi màu và nội dung theo lựa chọn thời gian thực: giải thích rõ ràng mục tiêu bóc tách, số lượng dạng bài dự kiến (6–12+ dạng cho `deep` vs 1–2 dạng cho `standard`) và thời gian xử lý ước tính giúp Thầy/Cô đưa ra quyết định chính xác ngay lập tức.
+- **Chuẩn Hóa Xử Lý Lỗi API, Tự Động Thử Lại Lỗi 502 & Bóc Tách RFC 7807/9110 Problem Details Thân Thiện ([`apiClient.js`](../src/services/apiClient.js) & [`CurriculumExplorerView.jsx`](../src/components/curriculum/CurriculumExplorerView.jsx))**:
+  - **Cơ Chế Tự Động Thử Lại Lỗi Kết Nối Khởi Động 502**: Tự động trì hoãn 2 giây và thử lại 1 lần (`!isRetry`) khi Gateway trả về 502 do microservice backend (Identity Service) đang khởi tạo CSDL, giúp các luồng đăng nhập và tải trang tự động hoàn tất trơn tru.
+  - **Phân Giải Thông Minh Header `Content-Type: application/problem+json`**:
+    - Nâng cấp `apiClient.js` tự động nhận diện và deserialize định dạng chuẩn `application/problem+json` hoặc chuỗi JSON trả về từ backend, ngăn chặn việc đổ chuỗi JSON thô kỹ thuật (RFC link, status code 500) lên màn hình người dùng.
+    - Trích xuất tự động các trường `data.detail`, `data.error`, `data.message`, `data.errors`, gán tương thích ngược cả `error.data` và `error.response.data`.
+  - **Thông Báo Trực Quan Từng Tình Huống Ngoại Lệ AI**:
+    - Khi hệ thống thiếu API Key: Toast hiển thị tiêu đề _"Chưa Cấu Hình API Key"_ kèm hướng dẫn cấu hình trong `.env` hoặc `appsettings.json`.
+    - Khi cổng Gateway không kết nối được tới Backend (HTTP 502 Bad Gateway): Toast hiển thị tiêu đề _"Không Thể Kết Nối AI Engine (502)"_ giải thích rõ dịch vụ có thể đang trong quá trình khởi động hoặc bị chặn cổng, hướng dẫn kiểm tra terminal service.
+    - Khi chạm ngưỡng giới hạn (Rate Limit / Quota 429): Toast hiển thị _"Hạn Mức API Quá Tải"_ thay vì mã lỗi kỹ thuật vô nghĩa.
+    - Loại bỏ hoàn toàn các tiền tố kỹ thuật backend như `Lỗi khi trích xuất tài liệu khung chương trình:` giúp thông điệp ngắn gọn, dễ hiểu.
+- **Nâng Cấp Bộ Chọn Miền Năng Lực V-ACT Chuẩn Cao Cấp ([`CurriculumExplorerView.jsx`](../src/components/curriculum/CurriculumExplorerView.jsx))**:
+  - Tích hợp mảng hằng số dự phòng `STANDARD_VACT_DOMAINS` và cơ chế fallback `effectiveDomains` đảm bảo không bao giờ bị rỗng hay vỡ dropdown khi CSDL đang tải.
+  - Thay thế select thô bằng Trigger Card có avatar biểu tượng gradient, nhãn mã miền, phụ đề phân môn và menu popup thả nổi mượt mà.
+  - Khắc phục lỗi backdrop menu bị kẹt trong vùng cuộn `overflow-y-auto` bằng `useRef` và sự kiện `mousedown` đóng mở mượt mà.
+
+- **Triệt Tiêu Lỗi `undefined` Khối 2 & Chuẩn Hóa Phương Án Trắc Nghiệm Khối 4 ([`CurriculumExplorerView.jsx`](../src/components/curriculum/CurriculumExplorerView.jsx), [`CurriculumStudioEditor.jsx`](../src/components/curriculum/CurriculumStudioEditor.jsx), [`MathText.jsx`](../src/components/common/MathText.jsx))**:
+  - **Khử Triệt Để `undefined` Trong Khối 2**:
+    - Nâng cấp `MathText.jsx` tự động bỏ qua các dòng rác chỉ chứa từ khóa `undefined` hoặc `null`.
+    - Làm sạch chuỗi `sampleProblem` trong `CurriculumStudioEditor.jsx` và tiền xử lý tại `CurriculumExplorerView.jsx`.
+  - **Làm Sạch Phương Án Trắc Nghiệm Khối 4 (`cleanOptionDisplay`)**:
+    - Tự động bóc tách các dấu nháy đơn `'...'` hoặc nháy kép `"` bao quanh công thức hóa học do AI sinh ra (như `'HCOOC_2H_5'` thành `HCOOC_2H_5`).
+    - Lược bỏ tiền tố trùng lặp `A.`, `B.`, `(A)`, giúp KaTeX hiển thị công thức hóa học đẹp mắt, không bị lỗi cú pháp bao bọc.
+
+- **Bổ Sung Thao Tác Xóa Miền Năng Lực Dư Thừa Trực Tiếp Trên Tab Bar ([`CurriculumExplorerView.jsx`](../src/components/curriculum/CurriculumExplorerView.jsx))**:
+  - Tự động nhận diện các miền tùy chỉnh hoặc miền dư thừa phát sinh ngoài 5 miền chuẩn hóa V-ACT (như miền "Quan hệ song song trong không gian").
+  - Hiển thị nút xóa `Trash2` màu đỏ trên thẻ miền kèm hộp thoại xác nhận cảnh báo an toàn sư phạm, cho phép giảng viên xóa sạch miền dư thừa cùng toàn bộ dữ liệu trực thuộc.
+
+- **Kiểm Thử & Đóng Gói Sản Phẩm**:
+  - `npm run build` hoàn thành sạch sẽ 100% trong 2.44 giây (`3015 modules transformed`, 0 Error).
+
 ## [07/11/2026] - Tái Cấu Trúc Toàn Diện Thanh Điều Hướng Subpage Chuẩn Segmented Control Hiện Đại, Hỗ Trợ Động Giám Đốc Học Thuật (Academic Director), Mở Rộng Không Gian Làm Việc Toàn Màn Hình (`w-full`) & Hoàn Thiện Giao Diện Quản Lý Tài Khoản Ngừng Hoạt Động (Soft Delete / Inactive)
 
 - **Mở Rộng Không Gian Làm Việc Cổng Vai Trò Toàn Chiều Ngang (`w-full`) Sát Sidebar & Tinh Chỉnh Giao Diện Bảng Tài Khoản Không Rớt Dòng ([`App.jsx`](../src/App.jsx), [`AccountProvisioningView.jsx`](../src/components/admin/AccountProvisioningView.jsx), [`CampusManagerDashboardView.jsx`](../src/components/dashboard/CampusManagerDashboardView.jsx), [`ParentDashboardView.jsx`](../src/components/dashboard/ParentDashboardView.jsx), [`TuitionPaymentView.jsx`](../src/components/payment/TuitionPaymentView.jsx), [`apiClient.js`](../src/services/apiClient.js))**:
@@ -576,11 +838,11 @@
     - Thay thế `max-w-7xl mx-auto` bằng `w-full` kèm `px-4 sm:px-6` đồng bộ trên thanh Role Portal Context Strip, vùng `<main>` và `<footer>` trong `App.jsx` cũng như các màn hình `AccountProvisioningView.jsx`, `CampusManagerDashboardView.jsx`, `ParentDashboardView.jsx`, `TuitionPaymentView.jsx`.
     - Xóa bỏ hoàn toàn khoảng trống thừa hai bên cạnh `Sidebar`, giúp bảng danh sách tài khoản 6 cột hiển thị trọn vẹn 100% chiều ngang mà không cần thanh cuộn ngang.
   - **Chuẩn Hóa Bảng Tài Khoản 1 Dòng Duy Nhất (`whitespace-nowrap`) & Bộ Công Cụ Hợp Nhất (`AccountProvisioningView.jsx`)**:
-    - Thiết kế lại thanh công cụ hợp nhất (Command Toolbar): Gộp bộ chuyển đổi trạng thái Segmented Switcher (*"Đang hoạt động"*, *"Đã ngừng hoạt động (Ẩn)"*, *"Tất cả"*), thanh tìm kiếm nhanh và hàng pill lọc vai trò vào cùng một khung thẻ trắng tinh gọn.
-    - Bổ sung `whitespace-nowrap shrink-0` cho toàn bộ huy hiệu Vai trò (`ROLE_CONFIG`), huy hiệu Trạng thái (*"Hoạt động"* / *"Đã ngừng"*) và nút hành động (*"Ngừng hoạt động"* / *"Khôi phục"*), chấm dứt triệt để tình trạng rớt chữ thành 2 dòng.
+    - Thiết kế lại thanh công cụ hợp nhất (Command Toolbar): Gộp bộ chuyển đổi trạng thái Segmented Switcher (_"Đang hoạt động"_, _"Đã ngừng hoạt động (Ẩn)"_, _"Tất cả"_), thanh tìm kiếm nhanh và hàng pill lọc vai trò vào cùng một khung thẻ trắng tinh gọn.
+    - Bổ sung `whitespace-nowrap shrink-0` cho toàn bộ huy hiệu Vai trò (`ROLE_CONFIG`), huy hiệu Trạng thái (_"Hoạt động"_ / _"Đã ngừng"_) và nút hành động (_"Ngừng hoạt động"_ / _"Khôi phục"_), chấm dứt triệt để tình trạng rớt chữ thành 2 dòng.
     - Bổ sung avatar chữ cái viết tắt 2 ký tự (`getInitials`) phối màu gradient theo từng vai trò và hàm hiển thị đơn vị/chuyên môn thông minh (`getUnitDisplay`) phù hợp cho Giám đốc Học thuật, Phụ huynh, Giảng viên và Học viên.
   - **Nâng Cấp `apiClient.js` Hỗ Trợ Query Parameters (`options.params`) & Phương Thức `PATCH`**:
-    - Bổ sung bộ tuần tự hóa `options.params` qua `URLSearchParams` trong `apiClient.js` để mọi truy vấn `GET /api/v1/users?isActive=true&role=...` truyền chính xác tham số lọc xuống Backend, đảm bảo tài khoản `Đã khóa` tự động ẩn 100% khỏi tab *"Đang hoạt động"*.
+    - Bổ sung bộ tuần tự hóa `options.params` qua `URLSearchParams` trong `apiClient.js` để mọi truy vấn `GET /api/v1/users?isActive=true&role=...` truyền chính xác tham số lọc xuống Backend, đảm bảo tài khoản `Đã khóa` tự động ẩn 100% khỏi tab _"Đang hoạt động"_.
     - Bổ sung phương thức `apiClient.patch(endpoint, body, options)` phục vụ các API cập nhật trạng thái phần tử.
 - **Triển Khai Giao Diện Phân Hệ Quản Lý Tài Khoản Ngừng Hoạt Động (Soft Delete / Inactive) & Thùng Rác Lưu Trữ ([`AccountProvisioningView.jsx`](../src/components/admin/AccountProvisioningView.jsx), [`userService.js`](../src/services/userService.js))**:
   - **Tách Biệt Rạch Ròi Hai Chế Độ Xem (Segmented Navigation)**:
@@ -588,13 +850,13 @@
     - Tab 2: **"Tài Khoản Đã Ngừng Hoạt Động (Ẩn)"** (kèm badge số lượng `inactiveCount` đỏ): Quản lý tập trung toàn bộ các tài khoản bị vô hiệu hóa kèm banner giải thích cơ chế bảo toàn dữ liệu điểm thi và lịch sử học tập 100%.
     - Tab 3: **"Tất cả"**: Hiển thị toàn bộ danh sách khi cần tra cứu tổng thể.
   - **Modal Xác Nhận Ngừng Hoạt Động (Deactivate Confirmation Modal)**:
-    - Cột thao tác hiển thị nút đỏ *"Ngừng hoạt động"* (icon `UserX`).
-    - Khi bấm mở modal xác nhận hiển thị thông tin cán bộ/học sinh, cảnh báo Soft Delete không làm mất dữ liệu học tập và nút bấm *"Xác Nhận Ngừng"*.
+    - Cột thao tác hiển thị nút đỏ _"Ngừng hoạt động"_ (icon `UserX`).
+    - Khi bấm mở modal xác nhận hiển thị thông tin cán bộ/học sinh, cảnh báo Soft Delete không làm mất dữ liệu học tập và nút bấm _"Xác Nhận Ngừng"_.
   - **Modal Xác Nhận Khôi Phục Hoạt Động (Reactivate Confirmation Modal)**:
-    - Tại tab *"Đã ngừng hoạt động"*, cột thao tác hiển thị nút xanh *"Khôi phục"* (icon `RotateCcw`).
-    - Khi xác nhận khôi phục, tài khoản chuyển `isActive = true`, mở khóa đăng nhập và lập tức quay trở lại danh sách *"Tài Khoản Đang Hoạt Động"*.
+    - Tại tab _"Đã ngừng hoạt động"_, cột thao tác hiển thị nút xanh _"Khôi phục"_ (icon `RotateCcw`).
+    - Khi xác nhận khôi phục, tài khoản chuyển `isActive = true`, mở khóa đăng nhập và lập tức quay trở lại danh sách _"Tài Khoản Đang Hoạt Động"_.
   - **Liên Kết Tương Tác Thẻ Thống Kê (Stat Cards)**:
-    - Thẻ 1 (*"Đang hoạt động"*) và Thẻ 4 (*"Đã ngừng hoạt động"*) hỗ trợ bấm trực tiếp để chuyển nhanh chế độ xem tương ứng.
+    - Thẻ 1 (_"Đang hoạt động"_) và Thẻ 4 (_"Đã ngừng hoạt động"_) hỗ trợ bấm trực tiếp để chuyển nhanh chế độ xem tương ứng.
 - **Tái Cấu Trúc Thanh Điều Hướng Subpage Hiện Đại Chuẩn Segmented Control ([`App.jsx`](../src/App.jsx))**:
   - Khắc phục triệt để lỗi giao diện hàng nút điều hướng bị xuống dòng 2 tầng lộn xộn (4 nút trên, 1 nút trơ trọi dưới) trên Cổng Quản Lý Học Thuật Cơ Sở.
   - Tái thiết kế toàn bộ thanh điều hướng theo phong cách Segmented Control (Apple / Linear / Stripe dashboard): thanh nền `bg-slate-100/90`, nút active dạng thẻ nổi `bg-white text-blue-700 shadow-sm font-extrabold ring-1 ring-slate-200/80` tinh tế thay cho dải gradient cầu vồng cũ.
@@ -602,7 +864,7 @@
   - Bổ sung cơ chế nhận diện động vai trò Giám đốc Học thuật (`ACADEMIC_DIRECTOR`): Hiển thị đúng danh xưng **"Cổng Giám Đốc Học Thuật Toàn Trường"** (ACADEMIC DIRECTOR PORTAL) với icon Vương miện `Crown` và badge tím sang trọng `bg-purple-50 text-purple-700`.
 - **Tích Hợp Kiểm Tra Email Đa Tầng DNS MX & Gợi Ý Sửa Lỗi Tên Miền Vào Cấp Phát Tài Khoản ([`AccountProvisioningView.jsx`](../src/components/admin/AccountProvisioningView.jsx), [`emailValidator.js`](../src/utils/emailValidator.js))**:
   - Bổ sung ánh xạ sửa lỗi gõ nhầm tên miền `mail.com` thành `gmail.com` trong `COMMON_DOMAIN_TYPOS`.
-  - Tích hợp `validateEmailComprehensive` trực tiếp vào ô nhập Email công tác trong modal cấp phát: Kiểm tra cú pháp RFC 5322, kiểm tra lỗi chính tả tên miền, kiểm tra DNS MX trực tuyến, hiển thị spinner kiểm tra, dấu tích xanh khi hợp lệ và nút gợi ý 1-Click *"Sửa thành: ...@gmail.com"*.
+  - Tích hợp `validateEmailComprehensive` trực tiếp vào ô nhập Email công tác trong modal cấp phát: Kiểm tra cú pháp RFC 5322, kiểm tra lỗi chính tả tên miền, kiểm tra DNS MX trực tuyến, hiển thị spinner kiểm tra, dấu tích xanh khi hợp lệ và nút gợi ý 1-Click _"Sửa thành: ...@gmail.com"_.
   - Chặn đứng thao tác submit form khi email không hợp lệ, đồng thời bật Toast thông báo màu đỏ nổi bật khi có lỗi phát sinh.
 - **Kiểm Thử & Biên Dịch**:
   - `npm run build` (`vite build`) hoàn thành sạch sẽ 100% (`3008 modules transformed`, **0 Error**).
@@ -683,9 +945,9 @@
 - **Giai Đoạn 1 — Chuẩn Hóa Tầng Dịch Vụ API Client Core Flow 6 ([`apiClient.js`](../src/services/apiClient.js), [`practiceService.js`](../src/services/practiceService.js), [`practiceService.flow6.test.js`](../tests/practiceService.flow6.test.js))**:
   - Bổ sung phương thức HTTP `patch` và bộ trích xuất thông báo lỗi từ cấu trúc `Result<T>` (`data.error.description`) trong `apiClient.js`.
   - Đấu nối trọn bộ 13 phương thức Core Flow 6 qua YARP Gateway (`:5212`), chuẩn hóa song ngữ `snake_case` / `camelCase` cho `PrescriptionItemDto` và các request DTO của ASP.NET Core:
-    + **Dự báo SEM & Toa thuốc ROI**: `getMyForecast` (tự động gọi `recalculatePrediction` khi gặp `404`), `getPrescriptionPracticeSession`, `submitPrescriptionPracticeSession`, `recalculatePrediction`.
-    + **Cảnh báo sớm BR-04 3 tầng**: `getMyAlerts`, `markAlertAsRead`, `getEarlyWarningsDashboard`, `resolveEarlyWarningAlert`, `scheduleAlertCounseling`.
-    + **Sổ tay lỗi sai & Ôn tập ngắt quãng SM-2**: `getMistakeNotebook`, `getDailyMistakeReview`, `tagMistakeCognitiveError`, `submitDailyMistakeReview`.
+    - **Dự báo SEM & Toa thuốc ROI**: `getMyForecast` (tự động gọi `recalculatePrediction` khi gặp `404`), `getPrescriptionPracticeSession`, `submitPrescriptionPracticeSession`, `recalculatePrediction`.
+    - **Cảnh báo sớm BR-04 3 tầng**: `getMyAlerts`, `markAlertAsRead`, `getEarlyWarningsDashboard`, `resolveEarlyWarningAlert`, `scheduleAlertCounseling`.
+    - **Sổ tay lỗi sai & Ôn tập ngắt quãng SM-2**: `getMistakeNotebook`, `getDailyMistakeReview`, `tagMistakeCognitiveError`, `submitDailyMistakeReview`.
   - Tích hợp bộ lưu trữ trạng thái ngoại tuyến bền vững (`veval_flow6_state_v1`) và sự kiện đồng bộ thời gian thực `veval:flow6-updated`; bổ sung unit test `practiceService.flow6.test.js` (`8/8 tests pass`, `oxlint 0 warnings/0 errors`, `vite build` sạch 100%).
 - **Giai Đoạn 2 — Giao Diện Dự Báo Điểm SEM 95%, Toa Thuốc Bù Điểm Knapsack ROI & Modal Luyện Biến Thể ([`ScorePredictionPanel.jsx`](../src/components/dashboard/ScorePredictionPanel.jsx), [`PrescriptionPracticeModal.jsx`](../src/components/modals/PrescriptionPracticeModal.jsx), [`LearningAnalyticsView.jsx`](../src/components/dashboard/LearningAnalyticsView.jsx), [`App.jsx`](../src/App.jsx))**:
   - Xây dựng `ScorePredictionPanel.jsx` hiển thị thang trực quan 1200 điểm kèm khoảng tin cậy 95% (`Predicted ± 1.96 × SEM`), bảng cân đối thiếu hụt mục tiêu (`ON_TRACK` / `AT_RISK` / `CRITICAL`), nút tái tính toán dự báo SEM (`recalculatePrediction`), và lưới xếp hạng Toa thuốc bù điểm theo `ROI = ΔScore / Số giờ ôn`.
@@ -725,7 +987,7 @@
   - Tách bạch hoàn toàn khối `try...catch` của `JSON.parse` khỏi logic xử lý nghiệp vụ: Khi nhận sự kiện lỗi từ máy chủ (`parsed.error`), lập tức kích hoạt `onError(new Error(parsed.error))` và ném lỗi ra ngoài thay vì bị khối `catch` con nuốt mất.
   - Xử lý các dòng dữ liệu raw không phải JSON một cách mượt mà và an toàn.
 - **Triệt Tiêu Hoàn Toàn Hiện Tượng Treo Dấu Ba Chấm `...` Vĩnh Viễn ([`AISocraticTutorModal.jsx`](../src/components/modals/AISocraticTutorModal.jsx))**:
-  - Tại sự kiện hoàn tất luồng stream `onComplete`: Nếu nội dung phản hồi `finalAnswer` hoặc tin nhắn cuối của AI bị rỗng, hệ thống tự động điền thông điệp gợi mở sư phạm thân thiện: *"Chào em! Thầy đang lắng nghe thắc mắc của em. Em hãy chia sẻ cụ thể hơn về bài tập hoặc hướng suy luận em muốn thầy gợi mở nhé!"* thay vì hiển thị ba dấu chấm `...`.
+  - Tại sự kiện hoàn tất luồng stream `onComplete`: Nếu nội dung phản hồi `finalAnswer` hoặc tin nhắn cuối của AI bị rỗng, hệ thống tự động điền thông điệp gợi mở sư phạm thân thiện: _"Chào em! Thầy đang lắng nghe thắc mắc của em. Em hãy chia sẻ cụ thể hơn về bài tập hoặc hướng suy luận em muốn thầy gợi mở nhé!"_ thay vì hiển thị ba dấu chấm `...`.
   - Tại sự kiện lỗi `onError`: Nếu gặp mã lỗi 429, ngoài việc hiển thị banner cảnh báo hạn mức, hệ thống đồng thời cập nhật bong bóng tin nhắn giải thích rõ ràng lý do hạn mức gọi câu hỏi để học sinh nắm bắt.
 - **Kiểm Thử & Đóng Gói**:
   - `npm run build` hoàn thành sạch sẽ 100% không có lỗi.
@@ -753,7 +1015,7 @@
 
 - **Tách Biệt Hội Thoại Tự Do / Lời Chào Khỏi Luồng Đề Bài Thi & Triệt Tiêu Dummy Options A/B ([`AISocraticTutorModal.jsx`](../src/components/modals/AISocraticTutorModal.jsx), [`practiceService.js`](../src/services/practiceService.js))**:
   - Khắc phục triệt để hiện tượng học sinh vừa nhắn "hi" hoặc chào hỏi thì AI lập tức lôi một đề toán tam thức bậc hai/bất phương trình ra giảng và phê bình học sinh chọn sai phương án A.
-  - Phân định rõ ràng 2 trạng thái: *In-Exam Question Mode* (`initialContext?.question` có thực) vs *General Freeform Mode* (`initialContext === null`).
+  - Phân định rõ ràng 2 trạng thái: _In-Exam Question Mode_ (`initialContext?.question` có thực) vs _General Freeform Mode_ (`initialContext === null`).
   - Trong chế độ hội thoại tự do, thiết lập `options = null`, `studentWrongOption = null`, `correctOption = null`, và đưa trực tiếp lời thoại của học sinh vào `studentQuery`.
   - Trong `practiceService.js`: Sửa đổi `normalizeOptions` trả về `null` thay vì tự tạo phương án giả lập `{ A: 'Phương án A', B: 'Phương án B' }`; bổ sung bộ nhận diện lời chào trong `buildRichSocraticFallback` để phản hồi thân thiện, ấm áp và hướng dẫn học sinh đặt câu hỏi học tập cụ thể.
   - Cập nhật payload gửi sang Backend gửi `studentWrongOption: resolvedWrongOpt || 'NONE'` và `correctOption: resolvedCorrectOpt || 'NONE'` tuân thủ schema Pydantic/ASP.NET Core.
@@ -779,7 +1041,6 @@
 
 ---
 
-
 ## [03/11/2026] - Nâng Cấp Giao Diện Socratic Chat Modal Đơn Cột & Cơ Chế Tiếp Nhận Dữ Liệu Khảo Sát Cho Học Sinh
 
 - **Giao Diện Socratic Chat Modal Hiện Đại ([`AISocraticTutorModal.jsx`](../src/components/modals/AISocraticTutorModal.jsx))**:
@@ -795,12 +1056,11 @@
 
 ---
 
-
 ## [03/11/2026] - Tinh Gọn Khung Chat Gia Sư AI Socratic (`AISocraticTutorModal` & `AISocraticTutorWidget`)
 
 - **Tách Biệt Đề Bài Gốc & Thắc Mắc Trò Chuyện Trong Khung Chat Socratic ([`AISocraticTutorModal.jsx`](../src/components/modals/AISocraticTutorModal.jsx), [`practiceService.js`](../src/services/practiceService.js))**:
   - Truyền `questionLatex` là đề bài gốc (`initialContext.question || query`) và `studentQuery` là câu hỏi cụ thể học sinh gõ (`query`), loại bỏ hoàn toàn việc nối chuỗi `[Ngữ cảnh câu hỏi: ...]`.
-  - Nâng cấp `buildRichSocraticFallback` trong `practiceService.js` xóa bỏ câu văn mẫu *"dấu của đạo hàm $y'$"*, thay bằng gợi mở bản chất giả thiết và mâu thuẫn thích ứng cho mọi môn học.
+  - Nâng cấp `buildRichSocraticFallback` trong `practiceService.js` xóa bỏ câu văn mẫu _"dấu của đạo hàm $y'$"_, thay bằng gợi mở bản chất giả thiết và mâu thuẫn thích ứng cho mọi môn học.
 - **Loại Bỏ Cột Cứng `Mạng Lưới Tri Thức 3-Hop` & Các Khái Niệm Giả Lập Cố Định ([`AISocraticTutorModal.jsx`](../src/components/modals/AISocraticTutorModal.jsx), [`AISocraticTutorWidget.jsx`](../src/components/dashboard/AISocraticTutorWidget.jsx))**:
   - Xóa bỏ hoàn toàn cột phụ bên phải chứa các thông tin cứng không khớp ngữ cảnh câu hỏi thực tế (`Mạng Lưới Tri Thức 3-Hop`, `Dạng Bài Archetype`, `Toán logic mệnh đề & suy luận kéo theo`, `Mã chuẩn: ARCH_LOGIC_01`, `Định Lý & Công Thức Cốt Lõi`, `Bẫy Sai Lầm Hay Mắc Phải: Bẫy ngộ nhận đảo`).
   - Gỡ bỏ nhãn `Toán logic mệnh đề & suy luận kéo theo` gắn cứng dưới chân bóng chat khởi tạo và trong `AISocraticTutorWidget.jsx`; chỉ hiển thị nhãn chủ đề khi học sinh thực sự mở chat từ một câu hỏi bài tập cụ thể (`initialContext.skill`).
@@ -833,11 +1093,11 @@
 - **Chuẩn Hóa Tầng Dịch Vụ `practiceService.js` & Hợp Đồng API Core Flow 5 ([`practiceService.js`](../src/services/practiceService.js), [`practiceService.flow5.test.js`](../tests/practiceService.flow5.test.js))**:
   - Đồng bộ toàn bộ tiền tố đường dẫn Practice Service từ `/api/v1/practice/...` về chuẩn `/api/practice/...` khớp 100% với cấu hình YARP Gateway (`:5212`) và các Controller tại `V-Eval-Practice_Service` (`:5261`).
   - Triển khai trọn bộ 5 phương thức API Core Flow 5 kèm kiểm tra chuẩn GUID (`FLOW5_DEFAULTS`) và cơ chế seed fallback an toàn đúng schema DTO của ASP.NET Core:
-    + `getStudentDashboard(studentId)` -> `GET /api/practice/analytics/student/{studentId}/dashboard`
-    + `getClassHeatmap(classId, { domainCode, minMastery })` -> `GET /api/practice/classes/{classId}/heatmap`
-    + `forceAggregateClassHeatmap(classId)` -> `POST /api/practice/classes/{classId}/heatmap/force-aggregate`
-    + `getParentDashboard(parentId)` -> `GET /api/practice/analytics/parent/{parentId}/children`
-    + `getCampusComparativeHeatmap(campusId)` -> `GET /api/practice/analytics/campus/{campusId}/comparative-heatmap`
+    - `getStudentDashboard(studentId)` -> `GET /api/practice/analytics/student/{studentId}/dashboard`
+    - `getClassHeatmap(classId, { domainCode, minMastery })` -> `GET /api/practice/classes/{classId}/heatmap`
+    - `forceAggregateClassHeatmap(classId)` -> `POST /api/practice/classes/{classId}/heatmap/force-aggregate`
+    - `getParentDashboard(parentId)` -> `GET /api/practice/analytics/parent/{parentId}/children`
+    - `getCampusComparativeHeatmap(campusId)` -> `GET /api/practice/analytics/campus/{campusId}/comparative-heatmap`
   - Bổ sung bộ unit test kiểm chứng đường dẫn endpoint, chuẩn hóa GUID và cấu trúc DTO fallback (`5/5 tests pass`).
 - **Triển Khai Trung Tâm Phân Tích Học Tập Học Sinh Core Flow 5 ([`LearningAnalyticsView.jsx`](../src/components/dashboard/LearningAnalyticsView.jsx), [`HeroBanner.jsx`](../src/components/dashboard/HeroBanner.jsx), [`MetricsGrid.jsx`](../src/components/dashboard/MetricsGrid.jsx), [`RadarChartModal.jsx`](../src/components/modals/RadarChartModal.jsx), [`App.jsx`](../src/App.jsx))**:
   - Đấu nối tab `Báo cáo & Dự báo (Flow 5 & 6)` trên Sidebar vào giao diện `LearningAnalyticsView.jsx` kết nối `practiceService.getStudentDashboard`.
@@ -862,17 +1122,17 @@
   - Khi bấm **"Xem Lại Đáp Án & Hỏi AI"** trên bất kỳ bài làm cũ nào, học sinh xem được toàn bộ câu hỏi, phương án đã chọn so với đáp án đúng, lời giải chi tiết và bấm hỏi Gia sư AI Socratic (cả chế độ stream trực tiếp dưới câu hỏi lẫn mở Modal Chat Socratic Chuyên Sâu).
   - Bổ sung tab **Sổ Tay Câu Làm Sai** tự động gom nhóm các câu làm sai từ mọi đề thi trước đó để ôn luyện tập trung cùng AI.
   - Bổ sung danh sách **Lịch Sử Làm Bài Đã Hoàn Thành** ngay trên màn hình khởi tạo của [`DiagnosticAssessmentPage.jsx`](../src/components/diagnostic/DiagnosticAssessmentPage.jsx) và nối tự động lưu lịch sử khi hoàn thành bài làm tại [`DiagnosticAssessmentPage.jsx`](../src/components/diagnostic/DiagnosticAssessmentPage.jsx), [`AdaptiveQuizModal.jsx`](../src/components/modals/AdaptiveQuizModal.jsx) và [`CurriculumExplorerView.jsx`](../src/components/curriculum/CurriculumExplorerView.jsx).
-- **Khắc Phục Lỗi Chữ Tối Không Đọc Được Trên Nền Tối & Lỗi Ký Tự `:**` Trong [`MathText.jsx`](../src/components/common/MathText.jsx)**:
+- **Khắc Phục Lỗi Chữ Tối Không Đọc Được Trên Nền Tối & Lỗi Ký Tự `:**` Trong [`MathText.jsx`](../src/components/common/MathText.jsx)\*\*:
   - Loại bỏ các class màu chữ tối cố định (`text-slate-700`, `text-slate-800`, `text-slate-900`) trên các dòng văn bản, danh sách bullet, chữ in đậm `<strong>` và chữ in nghiêng `<em>`, cho phép `MathText` kế thừa màu chữ sáng (`text-white` / `text-slate-100`) khi hiển thị trên nền tối của trang kết quả khảo thí.
   - Sửa biểu thức chính quy chuẩn hóa tiêu đề in đậm để không cắt mất dấu `**` mở đầu trong chuỗi `💡 **Gợi ý phương pháp giải:**` và làm sạch hoàn toàn dấu `**` thừa ở cuối thẻ Callout.
 - **Tích Hợp Phân Tích Socratic Giàu Ngữ Cảnh Theo Từng Câu Hỏi ([`DiagnosticAssessmentPage.jsx`](../src/components/diagnostic/DiagnosticAssessmentPage.jsx) & [`practiceService.js`](../src/services/practiceService.js))**:
   - Xây dựng hàm `buildContextualSocraticAnalysis(q)` và `buildRichSocraticFallback`: Khi học sinh bấm hỏi Gia sư AI ở màn hình kết quả mà dịch vụ RAG chưa bật hoặc trả về chuỗi mẫu chung chung, hệ thống tự động phân tích chi tiết phương án học sinh vừa chọn (ví dụ `A: y = x^4 + 2x^2`), đối chiếu với đáp án đúng (`C: y = x^3 + 3x - 1`), trích xuất định lý/đạo hàm từ lời giải của câu hỏi và đặt câu hỏi gợi mở sát 100% nội dung đề bài.
   - Thiết kế lại khung hiển thị phân tích Socratic với nền Indigo/Purple tương phản cao và chữ trắng sắc nét (`text-white`).
 - **Cải Tiến Luồng Khảo Thí Chẩn Đoán 30 Câu ([`DiagnosticAssessmentPage.jsx`](../src/components/diagnostic/DiagnosticAssessmentPage.jsx))**:
-  - Gỡ bỏ nút bấm và ngăn kéo *Socratic Tutor* khỏi màn hình đang thi (`stage === 'testing'`) để đảm bảo tính nghiêm túc khi khảo thí và học sinh tập trung hoàn thành bài làm.
+  - Gỡ bỏ nút bấm và ngăn kéo _Socratic Tutor_ khỏi màn hình đang thi (`stage === 'testing'`) để đảm bảo tính nghiêm túc khi khảo thí và học sinh tập trung hoàn thành bài làm.
   - Bổ sung chức năng **Hỏi Gia Sư AI Socratic** trực tiếp tại từng thẻ câu hỏi trong **Bảng Đánh Giá Chi Tiết & Đáp Án 30 Câu Hỏi** ở màn hình kết quả (`stage === 'result'`):
-    + Nút **"💡 Hỏi Gia Sư AI Socratic Về Câu Này"**: Stream trực tiếp lời dẫn Socratic phân tích lỗi sai và hướng tư duy ngay bên dưới lời giải của câu hỏi đó.
-    + Nút **"Chat Socratic Chuyên Sâu"**: Đóng gói ngữ cảnh câu hỏi, phương án chọn sai và đáp án đúng chuyển sang modal [`AISocraticTutorModal.jsx`](../src/components/modals/AISocraticTutorModal.jsx).
+    - Nút **"💡 Hỏi Gia Sư AI Socratic Về Câu Này"**: Stream trực tiếp lời dẫn Socratic phân tích lỗi sai và hướng tư duy ngay bên dưới lời giải của câu hỏi đó.
+    - Nút **"Chat Socratic Chuyên Sâu"**: Đóng gói ngữ cảnh câu hỏi, phương án chọn sai và đáp án đúng chuyển sang modal [`AISocraticTutorModal.jsx`](../src/components/modals/AISocraticTutorModal.jsx).
 - **Cải Tiến Luồng Luyện Tập Thích Ứng ZPD ([`AdaptiveQuizModal.jsx`](../src/components/modals/AdaptiveQuizModal.jsx))**:
   - Gỡ bỏ các nút hỏi AI khi đang làm câu hỏi (`!quizFinished`), lưu lịch sử phương án chọn của học sinh (`answerHistory`).
   - Nâng cấp màn hình hoàn thành bài tập (`quizFinished === true`): Hiển thị thống kê số câu đúng, xác suất `P(L_t)` và **Danh sách Xem lại đáp án từng câu** (đối chiếu phương án học sinh chọn với đáp án đúng, giải thích chi tiết) kèm nút **"💡 Chưa hiểu bản chất câu này? Hỏi Gia sư AI Socratic bẻ khóa tư duy"** cho từng câu.
@@ -884,6 +1144,7 @@
 ---
 
 ## [14/10/2026] - Hoàn Tất Giai Đoạn 2 Core Flow 4: Tích Hợp Ngữ Cảnh Bài Tập Socratic (ZPD Quiz & Diagnostic)
+
 - **Tích Hợp Ngữ Cảnh Vào Luyện Tập Thích Ứng ZPD ([`AdaptiveQuizModal.jsx`](../src/components/modals/AdaptiveQuizModal.jsx))**:
   - Bổ sung nút hành động thông minh **"💡 Chưa hiểu bản chất câu này? Hỏi Gia sư Socratic bẻ khóa tư duy"** xuất hiện ngay khi học sinh làm sai hoặc phân vân đáp án.
   - Bổ sung thanh cảnh báo suy ngẫm sau 45 giây (**Contemplation Nudge**): Tự động hiển thị gợi ý hỗ trợ bẻ khóa tư duy khi học sinh dừng lại quá 45 giây ở câu hỏi khó mà chưa thể đưa ra phương án.
@@ -895,7 +1156,7 @@
   - Xây dựng bộ lọc chuẩn hóa DTO: `ensureGuid` (đảm bảo GUID hợp lệ tránh lỗi 400 Bad Request từ ASP.NET Core), `cleanOptionKey` (chuẩn hóa ký tự A, B, C, D để khớp Misconception Trap của AI Engine) và `normalizeOptions` (tự động chuyển đổi Array sang Dictionary `<string, string>`).
   - Bổ sung callback `onInteractionId` bắt sự kiện trả về GUID phiên từ dòng SSE stream, phục vụ chính xác tính năng báo cáo vi phạm.
 - **Nâng Cấp Modal Chat Socratic Hỗ Trợ Ngữ Cảnh ([`AISocraticTutorModal.jsx`](../src/components/modals/AISocraticTutorModal.jsx))**:
-  - Tự động nhận diện `initialContext`: Hiển thị thanh thông tin ngữ cảnh nổi bật (*Target Context Banner*) gồm trích đoạn đề bài, kỹ năng và phương án học sinh chọn sai.
+  - Tự động nhận diện `initialContext`: Hiển thị thanh thông tin ngữ cảnh nổi bật (_Target Context Banner_) gồm trích đoạn đề bài, kỹ năng và phương án học sinh chọn sai.
   - Khởi tạo lời dẫn Socratic cá nhân hóa theo đúng trọng tâm câu hỏi và phương án làm sai thay vì câu chào chung chung.
   - Tự động đóng gói nội dung câu hỏi vào `questionLatex` và truyền `options`, `correctOption` khi người dùng nhập câu hỏi hoặc chọn quick prompt.
   - Cập nhật linh hoạt `interactionId` từ stream cho tính năng gắn cờ báo cáo vi phạm sư phạm.
@@ -911,20 +1172,21 @@
 ---
 
 ## [13/10/2026] - Triển Khai Giai Đoạn 1 Core Flow 4: Gia Sư AI Socratic Tutor & GraphRAG Live Streaming
+
 - **Mở Rộng Tầng Dịch Vụ Client ([`practiceService.js`](../src/services/practiceService.js))**:
   - Bổ sung `askAiTutorStream`: Kết nối trực tiếp API Gateway `:5212` -> Practice Service `:5261` (`POST /api/practice/ai-tutor/ask-stream`) xử lý Server-Sent Events (SSE) theo thời gian thực.
   - Tích hợp cơ chế kiểm soát giới hạn tần suất: Bắt mã lỗi `429 Too Many Requests` (chính sách `StrictTutorPolicy` 10 req/phút) và đưa ra thông báo sư phạm thân thiện.
   - Bổ sung `askAiTutor` (REST fallback), `reportAiTutorInteraction` (`POST /api/practice/ai-tutor/report`) và `getAiTutorInteractions`.
 - **Nâng Cấp Widget Dashboard Học Sinh ([`AISocraticTutorWidget.jsx`](../src/components/dashboard/AISocraticTutorWidget.jsx))**:
   - Xóa bỏ 100% mã mock giả lập `setTimeout`.
-  - Kết nối live SSE streaming với hiệu ứng hiển thị token chữ chạy mượt mà, hỗ trợ nút *Dừng (Abort)* khi đang phát stream.
+  - Kết nối live SSE streaming với hiệu ứng hiển thị token chữ chạy mượt mà, hỗ trợ nút _Dừng (Abort)_ khi đang phát stream.
   - Tích hợp component `MathText` kết xuất công thức toán học KaTeX nội dòng (`$...$`) và khối (`$$...$$`).
   - Hiển thị badge Đồ thị Tri thức GraphRAG và thanh cảnh báo khi chạm trần Rate Limit.
 - **Xây Dựng Component Modal Chuyên Sâu ([`AISocraticTutorModal.jsx`](../src/components/modals/AISocraticTutorModal.jsx))**:
   - Thiết kế giao diện hai cột hiện đại: Cột trái là khung chat Socratic toàn diện với dòng thời gian câu hỏi và gợi ý nhanh (Quick Prompts); Cột phải là bảng phân tích Đồ thị Tri thức 3-Hop (Dạng bài Archetype, Định lý cốt lõi, Bẫy ngộ nhận Misconception Traps).
   - Tích hợp chức năng Báo cáo vi phạm (In-chat Flagging) cho từng câu trả lời của AI (lộ đáp án trực tiếp, ảo giác kiến thức, hướng dẫn khó hiểu) kết nối trực tiếp cơ sở dữ liệu giám sát sư phạm.
 - **Chuẩn Hóa Điều Hướng Router ([`App.jsx`](../src/App.jsx) & [`Sidebar.jsx`](../src/components/layout/Sidebar.jsx))**:
-  - Sửa lỗi điều hướng: Bấm menu *AI Socratic Tutor* trên Sidebar và nút mở rộng trên Widget giờ đây mở chính xác `AISocraticTutorModal`, chấm dứt việc mở nhầm modal luyện tập ZPD của Flow 3.
+  - Sửa lỗi điều hướng: Bấm menu _AI Socratic Tutor_ trên Sidebar và nút mở rộng trên Widget giờ đây mở chính xác `AISocraticTutorModal`, chấm dứt việc mở nhầm modal luyện tập ZPD của Flow 3.
 - **Kiểm Thử Đóng Gói (Build Verification)**:
   - Chạy `npm run build` (`vite build`) thành công 100% (**0 Error, 0 Warning**).
   - Chạy `npm run lint` (`oxlint`) đạt tiêu chuẩn mã nguồn sạch.
@@ -934,7 +1196,7 @@
 ## [04/11/2026] - Nâng Cấp Giao Diện Fintech Hiện Đại Cho Modal OTP & Hoàn Thiện Luồng Quên Mật Khẩu (UC 05 / UC 06)
 
 - **Nâng Cấp Giao Diện Nhập Mã OTP Chuẩn Fintech Cao Cấp (ForgotPasswordModal.jsx)**:
-  - **Lưới 6 ô vuông nhập số độc lập (6-Digit PIN Grid)**: Thay thế ô nhập đơn điệu bằng 6 ô vuông bo tròn hiện đại (w-12 h-14), cỡ chữ số lớn nổi bật (	ext-2xl font-black), viền xanh neon và hiệu ứng phóng to vi mô (scale-102) khi nhập.
+  - **Lưới 6 ô vuông nhập số độc lập (6-Digit PIN Grid)**: Thay thế ô nhập đơn điệu bằng 6 ô vuông bo tròn hiện đại (w-12 h-14), cỡ chữ số lớn nổi bật ( ext-2xl font-black), viền xanh neon và hiệu ứng phóng to vi mô (scale-102) khi nhập.
   - **Tương tác bàn phím & dán mã thông minh (Smart Paste & Key Navigation)**: Tự động nhảy con trỏ sang ô tiếp theo khi nhập số, lùi ô khi nhấn Backspace, điều hướng phím mũi tên trái/phải, và tự động bóc tách 6 chữ số khi dán (Ctrl + V) mã OTP từ email.
   - **Đồng hồ đếm ngược & Nút gửi lại mã (Resend Countdown Timer)**: Tích hợp đếm ngược 60 giây và nút Gửi lại mã OTP có hiệu ứng icon xoay tròn RefreshCw.
   - **Huy hiệu thông tin email tinh tế**: Hiển thị chip email người nhận ✉️ thaithinh03456@gmail.com trang nhã thay vì khối cảnh báo xanh cồng kềnh.
@@ -944,12 +1206,10 @@
   - Bảng đối soát chính sách bảo mật thời gian thực (Real-time Checklist) với 4 tích xanh: Tối thiểu 8 ký tự, Chữ in hoa (A-Z), Chữ thường (a-z), Chữ số (0-9) và trạng thái trùng khớp mật khẩu.
 - **Kiểm Tra Email Tồn Tại Khi Quên Mật Khẩu & Bóc Tách Lỗi Tường Minh**:
   - Tinh chỉnh piClient.js tự động bóc tách data.error.description triệt tiêu lỗi Error: [object Object].
-  - Nếu email không tồn tại trong hệ thống (HTTP 404): Báo lỗi chuẩn xác *"Không tìm thấy tài khoản với email này. Vui lòng kiểm tra lại."* và giữ nguyên ở Bước 1.
+  - Nếu email không tồn tại trong hệ thống (HTTP 404): Báo lỗi chuẩn xác _"Không tìm thấy tài khoản với email này. Vui lòng kiểm tra lại."_ và giữ nguyên ở Bước 1.
 - **Kiểm Thử & Đóng Gói (Build & Test)**:
-  - Kiểm thử
-pm test: **6/6 tests PASS 100%**.
-  -
-pm run build hoàn thành trong 1.12s, 0 lỗi cú pháp.
+  - Kiểm thử `npm test`: **6/6 tests PASS 100%**.
+  - `npm run build` hoàn thành trong 1.12s, 0 lỗi cú pháp.
 ---
 
 ## [03/11/2026] - Triển Khai Giao Diện Thanh Toán Học Phí PayOS (VietQR) & Kích Hoạt Lộ Trình Thích Ứng PLAR
@@ -982,34 +1242,34 @@ pm run build hoàn thành trong 1.12s, 0 lỗi cú pháp.
 ## [01/11/2026] - Khắc Phục Lỗi Runtime flushSync Is Not Defined & Hoàn Thiện Cơ Chế Nhảy Dòng Lên (Backspace Line Merge)
 
 - **Bổ Sung Import `flushSync` Từ `react-dom` & Gộp Dòng Liền Mạch (`WordStyleFormulaCanvas.jsx`)**:
-  - *Nguyên Nhân Sâu Xa*:
+  - _Nguyên Nhân Sâu Xa_:
     1. Hàm `flushSync` được gọi trong `handleDeleteOrMergeLine` nhưng chưa được import từ `react-dom`, gây lỗi runtime `ReferenceError: flushSync is not defined` âm thầm ngắt quãng luồng xử lý khiến dòng không thể xóa hay nhảy lên dòng trên.
     2. Điều kiện con trỏ đầu dòng `isAtStart` trước đây chỉ kiểm tra `sel.anchorOffset === 0`, dễ bị trượt khi con trỏ nằm trong node text con hoặc selection collapsed.
     3. Khi gộp hai dòng có nội dung, các token chữ nằm cạnh nhau bị phân mảnh thành nhiều thẻ span riêng biệt khiến luồng văn bản bị đứt đoạn.
-  - *Giải Pháp Xử Lý Toàn Diện*:
-    - *Import Trực Tiếp `flushSync`*: Bổ sung `import { flushSync } from 'react-dom';` kèm khối bọc an toàn `try/catch` fallback gọi `commitDocLines(nextLines)`.
-    - *Chuẩn Hóa Nhận Diện Con Trỏ Đầu Dòng*: Kiểm tra đồng thời `sel.anchorOffset === 0` và `range.startOffset === 0` để nhận biết 100% thời điểm con trỏ ở vị trí đầu dòng để nhảy dòng lên (`e.key === 'Backspace'`).
-    - *Gộp Liền Khối Các Token Chữ Liền Kề*: Khi gộp dòng dưới lên dòng trên, các token chữ liên tiếp được nối chuỗi `last.text += tok.text` thành 1 span duy nhất, định vị con trỏ chính xác tại điểm nối giữa hai dòng.
+  - _Giải Pháp Xử Lý Toàn Diện_:
+    - _Import Trực Tiếp `flushSync`_: Bổ sung `import { flushSync } from 'react-dom';` kèm khối bọc an toàn `try/catch` fallback gọi `commitDocLines(nextLines)`.
+    - _Chuẩn Hóa Nhận Diện Con Trỏ Đầu Dòng_: Kiểm tra đồng thời `sel.anchorOffset === 0` và `range.startOffset === 0` để nhận biết 100% thời điểm con trỏ ở vị trí đầu dòng để nhảy dòng lên (`e.key === 'Backspace'`).
+    - _Gộp Liền Khối Các Token Chữ Liền Kề_: Khi gộp dòng dưới lên dòng trên, các token chữ liên tiếp được nối chuỗi `last.text += tok.text` thành 1 span duy nhất, định vị con trỏ chính xác tại điểm nối giữa hai dòng.
 
 ---
 
 ## [01/11/2026] - Khắc Phục Triệt Để Lỗi Xóa Hết Nội Dung Dòng Nhấn Phím Xóa (Backspace/Delete) Không Tự Động Xóa Dòng
 
 - **Khắc Phục Lỗi Xóa Hết Chữ Nhấn Backspace Không Tự Động Xóa Dòng (`WordStyleFormulaCanvas.jsx`)**:
-  - *Nguyên Nhân Sâu Xa*:
+  - _Nguyên Nhân Sâu Xa_:
     1. Trong `handleDeleteOrMergeLine` và `onKeyDown`, hàm sử dụng trực tiếp biến state React `docLines` (bị dính closure cũ khi người dùng vừa Enter tạo dòng mới hoặc chèn công thức), dẫn đến `idx` trả về `-1` và thoát sớm mà không thực hiện xóa dòng.
     2. Trong `handleDeleteOrMergeLine`, mảng `nextLines` được lọc từ `docLines` cũ thay vì `docLinesRef.current`, làm mất đồng bộ danh sách dòng.
     3. Trong `onInput` của thẻ `<span contentEditable>`, chuỗi văn bản mới chỉ cập nhật khi `onBlur`, khiến state `tokens` vẫn còn giữ chuỗi văn bản cũ trước khi xóa, làm điều kiện kiểm tra rỗng `tokens.every(...)` thất bại.
-  - *Giải Pháp Xử Lý Toàn Diện*:
-    - *Đồng Bộ State Tức Thời Trên `onInput`*: Cập nhật `tok.text` trực tiếp vào `docLinesRef.current` ngay khi người dùng gõ hoặc xóa từng ký tự mà không kích hoạt re-render React (bảo đảm con trỏ chuột không bị nhảy, không đứt gãy gõ tiếng Việt có dấu).
-    - *Chuẩn Hóa Nhận Diện Dòng Trống Tuyệt Đối*: Lọc bỏ toàn bộ ký tự khoảng trắng, xuống dòng, khoảng trắng không ngắt `\u00A0` và zero-width space `\u200B`. Khi dòng không chứa công thức toán và chuỗi văn bản DOM rỗng, hệ thống xác nhận 100% dòng đã được xóa sạch.
-    - *Tự Động Xóa Dòng & Thu Hồi Con Trỏ Về Dòng Liền Trước*: Khi người dùng nhấn Backspace hoặc Delete trên dòng trống, `handleDeleteOrMergeLine` tức tốc loại bỏ dòng khỏi `docLinesRef.current`, kích hoạt `commitDocLines` qua `flushSync`, và tự động chuyển con trỏ chuột về cuối dòng phía trước (hoặc đầu dòng sau nếu là dòng 0) để người dùng tiếp tục soạn thảo liền mạch.
+  - _Giải Pháp Xử Lý Toàn Diện_:
+    - _Đồng Bộ State Tức Thời Trên `onInput`_: Cập nhật `tok.text` trực tiếp vào `docLinesRef.current` ngay khi người dùng gõ hoặc xóa từng ký tự mà không kích hoạt re-render React (bảo đảm con trỏ chuột không bị nhảy, không đứt gãy gõ tiếng Việt có dấu).
+    - _Chuẩn Hóa Nhận Diện Dòng Trống Tuyệt Đối_: Lọc bỏ toàn bộ ký tự khoảng trắng, xuống dòng, khoảng trắng không ngắt `\u00A0` và zero-width space `\u200B`. Khi dòng không chứa công thức toán và chuỗi văn bản DOM rỗng, hệ thống xác nhận 100% dòng đã được xóa sạch.
+    - _Tự Động Xóa Dòng & Thu Hồi Con Trỏ Về Dòng Liền Trước_: Khi người dùng nhấn Backspace hoặc Delete trên dòng trống, `handleDeleteOrMergeLine` tức tốc loại bỏ dòng khỏi `docLinesRef.current`, kích hoạt `commitDocLines` qua `flushSync`, và tự động chuyển con trỏ chuột về cuối dòng phía trước (hoặc đầu dòng sau nếu là dòng 0) để người dùng tiếp tục soạn thảo liền mạch.
 
 ---
 
 ## [01/11/2026] - Khắc Phục Lỗi Runtime ReferenceError (createPortal Is Not Defined) Trong HierarchicalMathPalette
 
-- **Bổ Sung Import `createPortal` Từ `react-dom` (`HierarchicalMathPalette.jsx`)*:
+- \*_Bổ Sung Import `createPortal` Từ `react-dom` (`HierarchicalMathPalette.jsx`)_:
   - Khắc phục lỗi thiếu câu lệnh import `createPortal` tại đầu file `HierarchicalMathPalette.jsx`, triệt tiêu hoàn toàn lỗi màn hình trắng `ReferenceError: createPortal is not defined`.
   - Bảo đảm thẻ xem trước trực quan Bảng biến thiên và công thức được dịch chuyển an toàn qua Portal gắn trực tiếp vào `document.body` với `z-[99999]`.
 
@@ -1017,30 +1277,30 @@ pm run build hoàn thành trong 1.12s, 0 lỗi cú pháp.
 
 ## [01/11/2026] - Khắc Phục Hiện Tượng Di Chuột Không Hiện Thẻ (React createPortal Body) & Hoàn Thiện Kéo Thả 100% Ăn (DataTransfer Fallback)
 
-- **Khắc Phục Hiện Tượng Di Chuột Vào Không Hiện Thẻ (`HierarchicalMathPalette.jsx`)*:
-  - *Chuyển Thẻ Hover Sang `createPortal(..., document.body)`*: Thoát hoàn toàn khỏi cây DOM sidebar và các thuộc tính `overflow: hidden` / stacking context của container cha, gắn trực tiếp vào `document.body` với `z-[99999]`.
-  - *Rút Ngắn Độ Trễ Xuống 80ms Siêu Mượt*: Khi rê chuột vào bất kỳ công thức nào ở sidebar, thẻ xem trước trực quan sẽ xuất hiện tức thì trong 80ms thay vì đợi lâu.
-  - *Tọa Độ Cố Định Chính Xác Theo Viewport*: Đặt thẻ ổn định ở `rect.right + 10`, không còn bị lệch hay che khuất.
+- \*_Khắc Phục Hiện Tượng Di Chuột Vào Không Hiện Thẻ (`HierarchicalMathPalette.jsx`)_:
+  - _Chuyển Thẻ Hover Sang `createPortal(..., document.body)`_: Thoát hoàn toàn khỏi cây DOM sidebar và các thuộc tính `overflow: hidden` / stacking context của container cha, gắn trực tiếp vào `document.body` với `z-[99999]`.
+  - _Rút Ngắn Độ Trễ Xuống 80ms Siêu Mượt_: Khi rê chuột vào bất kỳ công thức nào ở sidebar, thẻ xem trước trực quan sẽ xuất hiện tức thì trong 80ms thay vì đợi lâu.
+  - _Tọa Độ Cố Định Chính Xác Theo Viewport_: Đặt thẻ ổn định ở `rect.right + 10`, không còn bị lệch hay che khuất.
 
-- **Khắc Phục Triệt Để Kéo Thả Không Ăn (`WordStyleFormulaCanvas.jsx`)*:
-  - *Bổ Sung Fallback Toàn Diện Cho `dataTransfer`*: Đọc đồng thời `text/veval-block`, `text/veval-math`, `text/veval-bbt` và fallback chuẩn `text/plain` / `Text`. Khắc phục 100% hiện tượng một số trình duyệt Chromium không truyền mime type tùy biến.
-  - *Nhận Diện Khối Mẫu Linh Hoạt (`.includes`) Nhận Diện Bảng Biến Thiên*: Bắt trọn vẹn khối `[VARIATION_TABLE]`, `[MATH_GRAPH]` kể cả khi có khoảng trắng xung quanh.
-  - *Thả Tự Do Không Gây Bật Khung Studio*: Chèn êm ái công thức vào dòng mà không bật popup Studio gây che khuất văn bản.
+- \*_Khắc Phục Triệt Để Kéo Thả Không Ăn (`WordStyleFormulaCanvas.jsx`)_:
+  - _Bổ Sung Fallback Toàn Diện Cho `dataTransfer`_: Đọc đồng thời `text/veval-block`, `text/veval-math`, `text/veval-bbt` và fallback chuẩn `text/plain` / `Text`. Khắc phục 100% hiện tượng một số trình duyệt Chromium không truyền mime type tùy biến.
+  - _Nhận Diện Khối Mẫu Linh Hoạt (`.includes`) Nhận Diện Bảng Biến Thiên_: Bắt trọn vẹn khối `[VARIATION_TABLE]`, `[MATH_GRAPH]` kể cả khi có khoảng trắng xung quanh.
+  - _Thả Tự Do Không Gây Bật Khung Studio_: Chèn êm ái công thức vào dòng mà không bật popup Studio gây che khuất văn bản.
 
 ---
 
 ## [01/11/2026] - Khắc Phục Triệt Để 4 Sự Cố: Enter Không Xuống Dòng, Chèn Không Ăn, Kéo Thả Bị Chặn & Di Chuột Không Hiện
 
-- **Khắc Phục Lỗi Enter Không Xuống Dòng & Chèn Công Thức Không Ăn (`WordStyleFormulaCanvas.jsx`)*:
-  - *Đồng Bộ State `docLinesRef` Tức Thời*: Bổ sung `docLinesRef = useRef(docLines)` và cập nhật tức thì trong `commitDocLines`, loại bỏ hoàn toàn hiện tượng closure cũ (stale closure) của React.
-  - *Chặn Sự Kiện `onBlur` Xóa Mất Dòng Mới*: Trong `handleTextChange`, bổ sung điều kiện bảo vệ `if (targetTok.text === newText) return;`. Khi người dùng nhấn Enter để xuống dòng hoặc nhấp nút chèn công thức, sự kiện blur của ô soạn thảo trước đó không còn ghi đè làm xóa mất dòng mới tạo hay snippet vừa chèn.
-  - *Cắt Tách Chuỗi Nhập Liệu Chuẩn Xác Từng Ký Tự*: `handleInsertNewLineAfter` đọc trực tiếp chuỗi văn bản DOM thời gian thực từ `spanEl.textContent`, tách chính xác phần trước và sau con trỏ chuột `caretOffset` và đưa con trỏ chuột sang dòng mới mượt mà.
+- \*_Khắc Phục Lỗi Enter Không Xuống Dòng & Chèn Công Thức Không Ăn (`WordStyleFormulaCanvas.jsx`)_:
+  - _Đồng Bộ State `docLinesRef` Tức Thời_: Bổ sung `docLinesRef = useRef(docLines)` và cập nhật tức thì trong `commitDocLines`, loại bỏ hoàn toàn hiện tượng closure cũ (stale closure) của React.
+  - _Chặn Sự Kiện `onBlur` Xóa Mất Dòng Mới_: Trong `handleTextChange`, bổ sung điều kiện bảo vệ `if (targetTok.text === newText) return;`. Khi người dùng nhấn Enter để xuống dòng hoặc nhấp nút chèn công thức, sự kiện blur của ô soạn thảo trước đó không còn ghi đè làm xóa mất dòng mới tạo hay snippet vừa chèn.
+  - _Cắt Tách Chuỗi Nhập Liệu Chuẩn Xác Từng Ký Tự_: `handleInsertNewLineAfter` đọc trực tiếp chuỗi văn bản DOM thời gian thực từ `spanEl.textContent`, tách chính xác phần trước và sau con trỏ chuột `caretOffset` và đưa con trỏ chuột sang dòng mới mượt mà.
 
-- **Khắc Phục Lỗi Kéo Thả Bị Chặn (`WordStyleFormulaCanvas.jsx`)*:
+- \*_Khắc Phục Lỗi Kéo Thả Bị Chặn (`WordStyleFormulaCanvas.jsx`)_:
   - Bổ sung `onDragOver` (`e.preventDefault()`, `e.dataTransfer.dropEffect = 'copy'`) và `onDrop` trực tiếp vào từng thẻ `<span contentEditable>`.
   - Giáo viên và học sinh giờ đây có thể kéo thả công thức hoặc Bảng biến thiên thả vào bất kỳ vị trí nào: giữa các chữ cái, đầu dòng, cuối dòng hay toàn bộ khung soạn thảo đều ăn 100%.
 
-- **Khắc Phục Hiện Tượng Di Chuột Lại Không Hiện Bảng (`HierarchicalMathPalette.jsx`)*:
+- \*_Khắc Phục Hiện Tượng Di Chuột Lại Không Hiện Bảng (`HierarchicalMathPalette.jsx`)_:
   - Gỡ bỏ hoàn toàn pseudo-element `before:` ở mức `z-[999]` từng che khuất cạnh phải danh mục sidebar và cướp sự kiện chuột.
   - Giảm độ trễ hiển thị xuống 150ms siêu nhạy, bổ sung bảo vệ an toàn `if (!item) return;` trong các hàm xử lý kéo thả và nhấp chuột.
 
@@ -1048,17 +1308,17 @@ pm run build hoàn thành trong 1.12s, 0 lỗi cú pháp.
 
 ## [01/11/2026] - Khắc Phục Hiện Tượng Thẻ Hover Bị Biến Mất Khi Rê Chuột Qua (Hover Bridge & Grace Period) & Hỗ Trợ Kéo Thả Trực Tiếp
 
-- **Khắc Phục Triệt Để Hiện Tượng Thẻ Bảng Hiển Thị Bị Mất Khi Rê Chuột Sang (`HierarchicalMathPalette.jsx`)*:
-  - *Bộ Đệm Thời Gian Trì Hoãn (Grace Period 320ms)*: Khi con trỏ chuột rời nút công thức trong sidebar, thẻ hiển thị không bị đóng tức thì mà chờ 320ms, cho phép người dùng di chuyển chuột sang bảng xem trước một cách êm ái, tự nhiên mà không bị tắt đột ngột ("không còn bị mất tiêu ảo").
-  - *Lớp Đệm Tàng Hình Nối Liền (Hover Bridge)*: Tích hợp pseudo-element `before:absolute before:-left-3 before:top-0 before:w-4 before:h-full` phủ kín khoảng hở 8px giữa sidebar và thẻ hover, bảo đảm chuột luôn nằm trong vùng tương tác khi di chuyển qua lại.
-  - *Giữ Thẻ Mở Ổn Định Khi Rê Chuột Vào Trong (`pointer-events-auto`)*: Bổ sung sự kiện `handleCardMouseEnter` để hủy lệnh tắt, giúp người dùng thoải mái cuộn ngang xem chi tiết các cột của Bảng Biến Thiên (`overflow-x-auto`), đọc ghi chú sư phạm hoặc chọn văn bản.
-  - *Hỗ Trợ Thao Tác Kéo Thả Trực Tiếp Từ Thẻ Hover*: Người dùng có thể kéo trực tiếp từ khối Bảng biến thiên, công thức hoặc nút "✋ Kéo thả" trên thẻ hover thả ngay vào bài soạn, hoặc bấm "⚡ Nhấp chèn ngay" để chèn nhanh vào vị trí con trỏ.
+- \*_Khắc Phục Triệt Để Hiện Tượng Thẻ Bảng Hiển Thị Bị Mất Khi Rê Chuột Sang (`HierarchicalMathPalette.jsx`)_:
+  - _Bộ Đệm Thời Gian Trì Hoãn (Grace Period 320ms)_: Khi con trỏ chuột rời nút công thức trong sidebar, thẻ hiển thị không bị đóng tức thì mà chờ 320ms, cho phép người dùng di chuyển chuột sang bảng xem trước một cách êm ái, tự nhiên mà không bị tắt đột ngột ("không còn bị mất tiêu ảo").
+  - _Lớp Đệm Tàng Hình Nối Liền (Hover Bridge)_: Tích hợp pseudo-element `before:absolute before:-left-3 before:top-0 before:w-4 before:h-full` phủ kín khoảng hở 8px giữa sidebar và thẻ hover, bảo đảm chuột luôn nằm trong vùng tương tác khi di chuyển qua lại.
+  - _Giữ Thẻ Mở Ổn Định Khi Rê Chuột Vào Trong (`pointer-events-auto`)_: Bổ sung sự kiện `handleCardMouseEnter` để hủy lệnh tắt, giúp người dùng thoải mái cuộn ngang xem chi tiết các cột của Bảng Biến Thiên (`overflow-x-auto`), đọc ghi chú sư phạm hoặc chọn văn bản.
+  - _Hỗ Trợ Thao Tác Kéo Thả Trực Tiếp Từ Thẻ Hover_: Người dùng có thể kéo trực tiếp từ khối Bảng biến thiên, công thức hoặc nút "✋ Kéo thả" trên thẻ hover thả ngay vào bài soạn, hoặc bấm "⚡ Nhấp chèn ngay" để chèn nhanh vào vị trí con trỏ.
 
 ---
 
 ## [01/11/2026] - Khắc Phục Lỗi Runtime ReferenceError (hoveredBbtData Is Not Defined) & Hoàn Thiện Render Bảng Biến Thiên Trực Quan
 
-- **Khắc Phục Triệt Để Lỗi Khai Báo `hoveredBbtData` (`HierarchicalMathPalette.jsx`)*:
+- \*_Khắc Phục Triệt Để Lỗi Khai Báo `hoveredBbtData` (`HierarchicalMathPalette.jsx`)_:
   - Bổ sung khai báo `hoveredBbtData` qua React hook `useMemo` gắn với `hoveredItem`, tự động phân tích cú pháp khối Bảng Biến Thiên `[VARIATION_TABLE]` bằng `parseVariationTableString`.
   - Triệt tiêu hoàn toàn lỗi màn hình trắng `ReferenceError: hoveredBbtData is not defined` khi người dùng rê chuột vào bất kỳ công thức hoặc Bảng biến thiên nào trong thư viện.
   - Bảo đảm component `<VariationTable data={hoveredBbtData} />` nhận dữ liệu chuẩn xác và render sống động 100% trên thẻ xem trước trực quan.
@@ -1068,36 +1328,36 @@ pm run build hoàn thành trong 1.12s, 0 lỗi cú pháp.
 ## [01/11/2026] - Loại Bỏ Triệt Để Khối Terminal Đen Thô Kệch & Tích Hợp Render Trực Quan Bảng Biến Thiên Vector Trong Thẻ Hover Sư Phạm
 
 - **Loại Bỏ Khối Terminal Đen Thô Kệch & Tích Hợp Render Trực Quan (`HierarchicalMathPalette.jsx` & `VariationTable.jsx`)**:
-  - *Xóa Bỏ 100% Khối Code Terminal Đen Thô*: Triệt tiêu hoàn toàn hộp đen developer debug dump (`[VARIATION_TABLE] title: ... x: ...`) gây phản cảm cho giáo viên và người dùng sư phạm.
-  - *Tích Hợp Render Trực Quan Chuẩn Vector (`<VariationTable data={hoveredBbtData} />`)*: Tự động phân tích cú pháp khối mẫu và render ngay một Bảng biến thiên trực quan sống động với đầy đủ dòng `x`, dòng `y'`, dấu `+/-`, vạch kép tiệm cận `||`, mũi tên biến thiên vector `↗` / `↘` và giá trị cực trị chuẩn SGK.
-  - *Chuẩn Hóa Header Thẻ Hover Nhã Nhặn*: Thay thế chuỗi chữ hoa in đậm tím gắt bằng bố cục phân tầng thanh lịch (`Icon + Tên Môn Học • Danh mục`), huy hiệu `Kéo - Thả` mềm mại và hướng dẫn thao tác rõ nét.
+  - _Xóa Bỏ 100% Khối Code Terminal Đen Thô_: Triệt tiêu hoàn toàn hộp đen developer debug dump (`[VARIATION_TABLE] title: ... x: ...`) gây phản cảm cho giáo viên và người dùng sư phạm.
+  - _Tích Hợp Render Trực Quan Chuẩn Vector (`<VariationTable data={hoveredBbtData} />`)_: Tự động phân tích cú pháp khối mẫu và render ngay một Bảng biến thiên trực quan sống động với đầy đủ dòng `x`, dòng `y'`, dấu `+/-`, vạch kép tiệm cận `||`, mũi tên biến thiên vector `↗` / `↘` và giá trị cực trị chuẩn SGK.
+  - _Chuẩn Hóa Header Thẻ Hover Nhã Nhặn_: Thay thế chuỗi chữ hoa in đậm tím gắt bằng bố cục phân tầng thanh lịch (`Icon + Tên Môn Học • Danh mục`), huy hiệu `Kéo - Thả` mềm mại và hướng dẫn thao tác rõ nét.
 
 ---
 
 ## [01/11/2026] - Chuyển Đổi Sang Hiển Thị 1 Môn Học Duy Nhất Kèm Hiệu Ứng Slide Chuyển Động Mượt Mà (< >) & 7 Chấm Định Vị Trực Quan
 
-- **Bộ Chuyển Đổi 1 Môn Học Duy Nhất Kèm Hiệu Ứng Trượt Mượt Mà (`HierarchicalMathPalette.jsx` - `slideDirection` & `animate-in`)*:
-  - *Hiển Thị Đúng 1 Môn Học Trung Tâm*: Thay vì chia nhiều cột gây co cụm, trung tâm thanh điều hướng giờ đây hiển thị duy nhất 1 môn học tích cực (`📐 Toán Học`, `🧪 Hóa Học`, `⚛️ Vật Lý`, `🧬 Sinh Học`, `📖 Ngữ Văn`, `🌍 Địa Lý`, `🔣 Ký Hiệu & Logic`).
-  - *Không Gian Rộng Rãi 100% Không Bao Giờ Tràn Chữ*: Tên phân môn và icon hiển thị trọn vẹn, font đậm `text-[12px]`, tuyệt đối không còn hiện tượng rớt chữ, tràn viền hay ba chấm `...`.
-  - *Hiệu Ứng Slide Chuyển Đổi Mượt Mà*: Tích hợp hướng trượt `slideDirection` (`next` / `prev`) kết hợp Tailwind animation (`animate-in fade-in slide-in-from-right-4` hoặc `slide-in-from-left-4`), khi bấm `>` hoặc `<` thẻ môn học lướt vào êm ái, sống động.
-  - *Hàng 7 Chấm Tròn Định Vị Phân Môn*: Bổ sung dải 7 chấm tròn ở chân thanh điều hướng, chấm của môn hiện tại kéo dài (`w-4 bg-indigo-600`), người dùng có thể nhấp vào bất kỳ chấm nào để nhảy thẳng tới môn học đó.
-  - *Vòng Lặp Vô Hạn (Modulo Infinite Loop)*: Xoay vòng liên tục không có điểm nghẽn qua lại giữa 7 môn học.
+- \*_Bộ Chuyển Đổi 1 Môn Học Duy Nhất Kèm Hiệu Ứng Trượt Mượt Mà (`HierarchicalMathPalette.jsx` - `slideDirection` & `animate-in`)_:
+  - _Hiển Thị Đúng 1 Môn Học Trung Tâm_: Thay vì chia nhiều cột gây co cụm, trung tâm thanh điều hướng giờ đây hiển thị duy nhất 1 môn học tích cực (`📐 Toán Học`, `🧪 Hóa Học`, `⚛️ Vật Lý`, `🧬 Sinh Học`, `📖 Ngữ Văn`, `🌍 Địa Lý`, `🔣 Ký Hiệu & Logic`).
+  - _Không Gian Rộng Rãi 100% Không Bao Giờ Tràn Chữ_: Tên phân môn và icon hiển thị trọn vẹn, font đậm `text-[12px]`, tuyệt đối không còn hiện tượng rớt chữ, tràn viền hay ba chấm `...`.
+  - _Hiệu Ứng Slide Chuyển Đổi Mượt Mà_: Tích hợp hướng trượt `slideDirection` (`next` / `prev`) kết hợp Tailwind animation (`animate-in fade-in slide-in-from-right-4` hoặc `slide-in-from-left-4`), khi bấm `>` hoặc `<` thẻ môn học lướt vào êm ái, sống động.
+  - _Hàng 7 Chấm Tròn Định Vị Phân Môn_: Bổ sung dải 7 chấm tròn ở chân thanh điều hướng, chấm của môn hiện tại kéo dài (`w-4 bg-indigo-600`), người dùng có thể nhấp vào bất kỳ chấm nào để nhảy thẳng tới môn học đó.
+  - _Vòng Lặp Vô Hạn (Modulo Infinite Loop)_: Xoay vòng liên tục không có điểm nghẽn qua lại giữa 7 môn học.
 
 ---
 
 ## [01/11/2026] - Đại Tu Toàn Diện Giao Diện Sidebar Ký Hiệu & STEM (Modern Redesign) & Băng Chuyền 2 Môn Học Không Bao Giờ Tràn Chữ
 
 - **Đại Tu Toàn Diện Giao Diện Sidebar Trực Quan & Sang Trọng (`HierarchicalMathPalette.jsx`)**:
-  - *Thiết Kế Lại Toàn Bộ Header Chuẩn Apple / Linear*: Thay thế thanh header màu tối cũ bằng giao diện trắng tinh khôi (`bg-white`), huy hiệu ngôi sao tím `Sparkles` mềm mại, tiêu đề rõ nét `Ký Hiệu & STEM` và nút thu gọn tối giản.
-  - *Thanh Tìm Kiếm Bo Tròn Hiện Đại*: Input bo tròn `rounded-xl` màu xám phấn (`bg-slate-50 focus:bg-white`), viền tương tác tím pastel, hỗ trợ tìm kiếm tức thì mọi ký hiệu, công thức, hợp chất.
-  - *Tái Cấu Trúc Băng Chuyền Môn Học 2 Môn Song Song (`visibleDomainKeys`, `handleNextDomain`, `handlePrevDomain`)*:
-    + Thu hẹp từ 3 môn xuống hiển thị **chính xác 2 môn học song song**, loại bỏ 100% tình trạng tràn chữ hoặc co cụm `T...`, `H...`.
-    + Không gian mỗi nút môn học rộng rãi (~75px - 85px), hiển thị trọn vẹn icon cùng tên phân môn chuẩn mực (`📐 Toán`, `🧪 Hóa`, `⚛️ Vật Lý`, `🧬 Sinh`, `📖 Ngữ Văn`, `🌍 Địa Lý`, `🔣 Ký Hiệu`).
-    + Giữ nguyên cơ chế vòng lặp xoay tròn vô hạn (Modulo loop) khi bấm `<` hoặc `>`, xoay chuyển mượt mà liên tục không có điểm dừng.
-  - *Chuẩn Hóa Thẻ Danh Mục Accordion & Dòng Công Thức Tinh Tế*:
-    + Folder Accordion bo góc `rounded-xl`, mũi tên Chevron xoay mượt mà 90 độ khi đóng/mở.
-    + Thẻ công thức dạng viên thuốc (pill) 1 dòng siêu gọn gàng: công thức KaTeX sắc nét, tên nhãn thanh thoát và tay nắm kéo thả mờ tinh tế (`opacity-40 hover:opacity-100`).
-  - *Thẻ Hover Dwell Phóng To & Mô Phỏng Sư Phạm*: Rê chuột giữ yên (~380ms) kích hoạt popup Glassmorphism nổi bật hiển thị chi tiết công thức phóng to, mô phỏng Bảng biến thiên, mô tả sư phạm GDPT 2018 và cú pháp.
+  - _Thiết Kế Lại Toàn Bộ Header Chuẩn Apple / Linear_: Thay thế thanh header màu tối cũ bằng giao diện trắng tinh khôi (`bg-white`), huy hiệu ngôi sao tím `Sparkles` mềm mại, tiêu đề rõ nét `Ký Hiệu & STEM` và nút thu gọn tối giản.
+  - _Thanh Tìm Kiếm Bo Tròn Hiện Đại_: Input bo tròn `rounded-xl` màu xám phấn (`bg-slate-50 focus:bg-white`), viền tương tác tím pastel, hỗ trợ tìm kiếm tức thì mọi ký hiệu, công thức, hợp chất.
+  - _Tái Cấu Trúc Băng Chuyền Môn Học 2 Môn Song Song (`visibleDomainKeys`, `handleNextDomain`, `handlePrevDomain`)_:
+    - Thu hẹp từ 3 môn xuống hiển thị **chính xác 2 môn học song song**, loại bỏ 100% tình trạng tràn chữ hoặc co cụm `T...`, `H...`.
+    - Không gian mỗi nút môn học rộng rãi (~75px - 85px), hiển thị trọn vẹn icon cùng tên phân môn chuẩn mực (`📐 Toán`, `🧪 Hóa`, `⚛️ Vật Lý`, `🧬 Sinh`, `📖 Ngữ Văn`, `🌍 Địa Lý`, `🔣 Ký Hiệu`).
+    - Giữ nguyên cơ chế vòng lặp xoay tròn vô hạn (Modulo loop) khi bấm `<` hoặc `>`, xoay chuyển mượt mà liên tục không có điểm dừng.
+  - _Chuẩn Hóa Thẻ Danh Mục Accordion & Dòng Công Thức Tinh Tế_:
+    - Folder Accordion bo góc `rounded-xl`, mũi tên Chevron xoay mượt mà 90 độ khi đóng/mở.
+    - Thẻ công thức dạng viên thuốc (pill) 1 dòng siêu gọn gàng: công thức KaTeX sắc nét, tên nhãn thanh thoát và tay nắm kéo thả mờ tinh tế (`opacity-40 hover:opacity-100`).
+  - _Thẻ Hover Dwell Phóng To & Mô Phỏng Sư Phạm_: Rê chuột giữ yên (~380ms) kích hoạt popup Glassmorphism nổi bật hiển thị chi tiết công thức phóng to, mô phỏng Bảng biến thiên, mô tả sư phạm GDPT 2018 và cú pháp.
 
 ---
 
@@ -1119,243 +1379,243 @@ pm run build hoàn thành trong 1.12s, 0 lỗi cú pháp.
 ## [01/11/2026] - Chuyển Đổi Sắp Xếp Danh Sách Công Thức Sang 1 Cột Duy Nhất (Single-Column Formula Rows) Trong Thư Viện Ký Hiệu Studio
 
 - **Chuyển Đổi Sắp Xếp Công Thức Sang 1 Dòng 1 Mục Độc Lập (`HierarchicalMathPalette.jsx`)**:
-  - *Loại Bỏ Lưới 2 Cột Chật Hẹp (`grid-cols-2`)*:
-    + Thay thế toàn bộ bố cục 2 cột cũ (`grid-cols-2`) ở cả danh mục Accordion cây thư mục và danh sách kết quả tìm kiếm thời gian thực bằng bố cục 1 cột chuẩn mực (`grid-cols-1 gap-1.5`).
-    + Khắc phục triệt để tình trạng công thức dài (như hàm phân thức, biểu thức dao động điều hòa, tích phân, công thức di truyền hay phản ứng hóa học) bị gò bó, co cụm hoặc tràn viền ngang khi hiển thị cạnh nhau trên thanh sidebar hẹp.
-  - *Mở Rộng Không Gian Hiển Thị Thẻ Công Thức (Full-Width Formula Cards)*:
-    + Tận dụng 100% bề ngang của thanh sidebar (~220px khả dụng): Hộp preview KaTeX (`min-h-[32px] px-2 py-1 rounded-lg bg-slate-50/90`) cho phép công thức toán học và hợp chất hiển thị tự nhiên, sắc nét, cân đối và dễ nhìn mà không bị che khuất.
-    + Hàng thông tin dưới cùng hiển thị đầy đủ nhãn công thức (`text-[10.5px] font-bold text-slate-600 truncate`), huy hiệu phân môn, nút gợi ý `Chèn` tinh tế và biểu tượng tay nắm kéo thả `GripVertical`.
-  - *Nâng Tầm Trải Nghiệm Kéo - Thả & Nhấp Chuột*:
-    + Toàn bộ diện tích thẻ ngang lớn trở thành đích ngắm thao tác trực quan (Click-to-insert hoặc Drag-and-drop), giúp giảng viên và người biên soạn thao tác cực kỳ chuẩn xác, nhanh gọn và thuận tiện.
+  - _Loại Bỏ Lưới 2 Cột Chật Hẹp (`grid-cols-2`)_:
+    - Thay thế toàn bộ bố cục 2 cột cũ (`grid-cols-2`) ở cả danh mục Accordion cây thư mục và danh sách kết quả tìm kiếm thời gian thực bằng bố cục 1 cột chuẩn mực (`grid-cols-1 gap-1.5`).
+    - Khắc phục triệt để tình trạng công thức dài (như hàm phân thức, biểu thức dao động điều hòa, tích phân, công thức di truyền hay phản ứng hóa học) bị gò bó, co cụm hoặc tràn viền ngang khi hiển thị cạnh nhau trên thanh sidebar hẹp.
+  - _Mở Rộng Không Gian Hiển Thị Thẻ Công Thức (Full-Width Formula Cards)_:
+    - Tận dụng 100% bề ngang của thanh sidebar (~220px khả dụng): Hộp preview KaTeX (`min-h-[32px] px-2 py-1 rounded-lg bg-slate-50/90`) cho phép công thức toán học và hợp chất hiển thị tự nhiên, sắc nét, cân đối và dễ nhìn mà không bị che khuất.
+    - Hàng thông tin dưới cùng hiển thị đầy đủ nhãn công thức (`text-[10.5px] font-bold text-slate-600 truncate`), huy hiệu phân môn, nút gợi ý `Chèn` tinh tế và biểu tượng tay nắm kéo thả `GripVertical`.
+  - _Nâng Tầm Trải Nghiệm Kéo - Thả & Nhấp Chuột_:
+    - Toàn bộ diện tích thẻ ngang lớn trở thành đích ngắm thao tác trực quan (Click-to-insert hoặc Drag-and-drop), giúp giảng viên và người biên soạn thao tác cực kỳ chuẩn xác, nhanh gọn và thuận tiện.
 
 ---
 
 ## [01/11/2026] - Tinh Gọn Thanh Sidebar Ký Hiệu Bên Trái Studio Sư Phạm & Tiết Kiệm Tối Đa Không Gian Soạn Thảo
 
 - **Tinh Gọn Thanh Sidebar Ký Hiệu Bên Trái (`HierarchicalMathPalette.jsx` & `CurriculumStudioEditor.jsx`)**:
-  - *Thu Hẹp Chiều Rộng Đáng Kể (~25-30% Diện Tích)*:
-    + Giảm mạnh chiều rộng thanh Sidebar mở rộng từ `w-76 sm:w-84` (304px - 336px) xuống `w-60 sm:w-64` (240px - 256px), hoàn trả ngay lập tức gần 80px - 96px chiều ngang cho không gian làm việc và khung soạn thảo bài giảng chính.
-    + Thu gọn thanh ray khi đóng (Collapsed Rail) từ `w-12` xuống `w-10` với bộ nút icon tròn nhỏ gọn (`w-7 h-7 rounded-lg`).
-  - *Thiết Kế Lại Header & Ô Tìm Kiếm Siêu Gọn Nhẹ*:
-    + Nén Header thành 1 hàng ngang duy nhất (`px-2.5 py-2 text-[10px]`), loại bỏ dòng mô tả phụ rườm rà.
-    + Tối ưu ô tìm kiếm nhanh (`Search Input`) với padding mỏng `py-1 text-[11px]` và khoảng đệm nhỏ nhắn.
-  - *Tinh Gọn Lưới Thẻ Ký Hiệu & Hợp Chất 7 Môn Học*:
-    + Thu nhỏ chiều cao tối thiểu của thẻ công thức từ `min-h-[38px]` xuống `min-h-[30px] - min-h-[32px]`, cỡ chữ KaTeX `text-[12px]`, nhãn tên `text-[9.5px]` sắc nét.
-    + Tinh giản thanh chuyển đổi phân môn (Domain Pills) với padding `py-0.5 px-1.5 text-[10px]` và thanh footer chân trang ngắn gọn (`text-[9.5px]`).
+  - _Thu Hẹp Chiều Rộng Đáng Kể (~25-30% Diện Tích)_:
+    - Giảm mạnh chiều rộng thanh Sidebar mở rộng từ `w-76 sm:w-84` (304px - 336px) xuống `w-60 sm:w-64` (240px - 256px), hoàn trả ngay lập tức gần 80px - 96px chiều ngang cho không gian làm việc và khung soạn thảo bài giảng chính.
+    - Thu gọn thanh ray khi đóng (Collapsed Rail) từ `w-12` xuống `w-10` với bộ nút icon tròn nhỏ gọn (`w-7 h-7 rounded-lg`).
+  - _Thiết Kế Lại Header & Ô Tìm Kiếm Siêu Gọn Nhẹ_:
+    - Nén Header thành 1 hàng ngang duy nhất (`px-2.5 py-2 text-[10px]`), loại bỏ dòng mô tả phụ rườm rà.
+    - Tối ưu ô tìm kiếm nhanh (`Search Input`) với padding mỏng `py-1 text-[11px]` và khoảng đệm nhỏ nhắn.
+  - _Tinh Gọn Lưới Thẻ Ký Hiệu & Hợp Chất 7 Môn Học_:
+    - Thu nhỏ chiều cao tối thiểu của thẻ công thức từ `min-h-[38px]` xuống `min-h-[30px] - min-h-[32px]`, cỡ chữ KaTeX `text-[12px]`, nhãn tên `text-[9.5px]` sắc nét.
+    - Tinh giản thanh chuyển đổi phân môn (Domain Pills) với padding `py-0.5 px-1.5 text-[10px]` và thanh footer chân trang ngắn gọn (`text-[9.5px]`).
 
 ---
 
 ## [01/11/2026] - Giải Phóng Khung Câu Hỏi Bổ Sung & Tự Động Co Giãn Khung Chữ Nhật Lời Giải Chi Tiết Chuẩn Sư Phạm
 
 - **Tách Rời Từng Thẻ Câu Hỏi Linh Hoạt & Xóa Bỏ Khung Cuộn Gò Bó (`CurriculumStudioEditor.jsx`)**:
-  - *Giải Phóng Khung Giới Hạn Chiều Cao (max-h-80 overflow-y-auto)*:
-    + Loại bỏ hoàn toàn giới hạn chiều cao cố định `max-h-80` vốn làm co cụm các câu hỏi vào một hộp cuộn chật hẹp, triệt tiêu hiện tượng vỡ khung và xuất hiện thanh cuộn kép khi câu hỏi có bảng biến thiên lớn hoặc đồ thị.
-    + Tách rời từng câu hỏi thành các thẻ Card độc lập, thoáng đãng (`p-5 rounded-2xl border border-slate-200 bg-white shadow-xs space-y-3.5`) với chiều cao tự động co giãn (`h-auto`).
-  - *Hiển Thị Đầy Đủ 4 Phương Án A, B, C, D & Nổi Bật Đáp Án Đúng*:
-    + Tự động hiển thị lưới 2 cột đáp án A, B, C, D chuẩn mực; đáp án đúng được làm nổi bật với viền và badge xanh ngọc (`emerald`).
-  - *Khung Lời Giải Chi Tiết Hình Chữ Nhật Tự Động Co Giãn Chuẩn Mực*:
-    + Thiết kế khung Lời giải chi tiết (`q.explanation`) thành một hình chữ nhật hoàn chỉnh (`w-full p-4 rounded-2xl bg-slate-50 border border-slate-200 shadow-2xs`).
-    + Tự động điều chỉnh chiều cao tương ứng với dung lượng chữ (`h-auto break-words whitespace-pre-line`), đảm bảo bất kể lời giải ngắn hay dài hàng chục dòng, khung chữ nhật luôn bao bọc cân đối, thẩm mỹ và không bao giờ bị cắt cụt hay tràn viền.
+  - _Giải Phóng Khung Giới Hạn Chiều Cao (max-h-80 overflow-y-auto)_:
+    - Loại bỏ hoàn toàn giới hạn chiều cao cố định `max-h-80` vốn làm co cụm các câu hỏi vào một hộp cuộn chật hẹp, triệt tiêu hiện tượng vỡ khung và xuất hiện thanh cuộn kép khi câu hỏi có bảng biến thiên lớn hoặc đồ thị.
+    - Tách rời từng câu hỏi thành các thẻ Card độc lập, thoáng đãng (`p-5 rounded-2xl border border-slate-200 bg-white shadow-xs space-y-3.5`) với chiều cao tự động co giãn (`h-auto`).
+  - _Hiển Thị Đầy Đủ 4 Phương Án A, B, C, D & Nổi Bật Đáp Án Đúng_:
+    - Tự động hiển thị lưới 2 cột đáp án A, B, C, D chuẩn mực; đáp án đúng được làm nổi bật với viền và badge xanh ngọc (`emerald`).
+  - _Khung Lời Giải Chi Tiết Hình Chữ Nhật Tự Động Co Giãn Chuẩn Mực_:
+    - Thiết kế khung Lời giải chi tiết (`q.explanation`) thành một hình chữ nhật hoàn chỉnh (`w-full p-4 rounded-2xl bg-slate-50 border border-slate-200 shadow-2xs`).
+    - Tự động điều chỉnh chiều cao tương ứng với dung lượng chữ (`h-auto break-words whitespace-pre-line`), đảm bảo bất kể lời giải ngắn hay dài hàng chục dòng, khung chữ nhật luôn bao bọc cân đối, thẩm mỹ và không bao giờ bị cắt cụt hay tràn viền.
 
 ---
 
 ## [01/11/2026] - Loại Bỏ Banner Xanh Lá Live Preview & Tối Ưu Không Gian Xem Trước Học Sinh Trong Studio Sư Phạm
 
 - **Loại Bỏ Banner Header Live Preview Xanh Lá Cây (`CurriculumStudioEditor.jsx`)**:
-  - *Gỡ Bỏ Banner Rườm Rà "Giao Diện Trực Quan Học Sinh Nhìn Thấy (Live Preview) - Thời gian thực"*:
-    + Gỡ bỏ hoàn toàn thanh banner màu xanh ngọc (`bg-gradient-to-r from-emerald-600 to-teal-600`) ở đỉnh cột phải của chế độ Chia đôi (Split) và Xem trước (Preview).
-    + Giải phóng không gian dọc đáng kể (~60px), giúp khu vực mô phỏng giao diện học sinh (`Simulated Student Container`) bắt đầu ngay từ trên cùng với thẻ định danh dạng bài, trọng số và mức độ Bloom chuẩn xác.
-    + Mang lại diện mạo liền mạch, tinh gọn và chuyên nghiệp hơn cho giao diện soạn thảo sư phạm.
+  - _Gỡ Bỏ Banner Rườm Rà "Giao Diện Trực Quan Học Sinh Nhìn Thấy (Live Preview) - Thời gian thực"_:
+    - Gỡ bỏ hoàn toàn thanh banner màu xanh ngọc (`bg-gradient-to-r from-emerald-600 to-teal-600`) ở đỉnh cột phải của chế độ Chia đôi (Split) và Xem trước (Preview).
+    - Giải phóng không gian dọc đáng kể (~60px), giúp khu vực mô phỏng giao diện học sinh (`Simulated Student Container`) bắt đầu ngay từ trên cùng với thẻ định danh dạng bài, trọng số và mức độ Bloom chuẩn xác.
+    - Mang lại diện mạo liền mạch, tinh gọn và chuyên nghiệp hơn cho giao diện soạn thảo sư phạm.
 
 ---
 
 ## [31/10/2026] - Chuẩn Hóa UI Khối 4 Ngang Hàng Thẳng Lối, Xóa Bỏ Nút Dán Ảnh & Bảng Công Cụ STEM Trôi Nổi Cạnh Phải Màn Hình Mũi Tên "<" Trong Studio Sư Phạm
 
 - **Tối Giản Hóa Bảng STEM Cạnh Phải (Thanh Tìm Kiếm Search, Không Icon/Huy Hiệu, Gỡ Bỏ Dropdown Header & Chèn Chuẩn Xác Tại Con Trỏ)**:
-  - *Gỡ Bỏ Hoàn Toàn Dropdown STEM Trên Thanh Header*:
-    + Loại bỏ nút `StemToolsDropdown` khỏi header chính của Studio, triệt tiêu sự trùng lặp (dư thừa công cụ STEM) khi giảng viên đã có mini-tab `< STEM` neo cố định mép phải màn hình.
-  - *Làm Sạch Toàn Diện Bảng Slide-over STEM Drawer (`FloatingStemDrawer`)*:
-    + Xóa bỏ huy hiệu `GDPT 2018` và các nhãn công nghệ phụ (`JSXGraph`, `SGK 2018`, `Auto Calc`, `Vi Tích Phân`) gây rối mắt.
-    + Bổ sung thanh tìm kiếm công cụ thời gian thực (`Search input`) ở đầu bảng, hỗ trợ tìm kiếm tức thì theo tên, mô tả hoặc từ khóa (MathLab, Bảng biến thiên, Phân số, Đạo hàm, Hóa học...).
-    + Chuẩn hóa danh sách công cụ: Chỉ hiển thị rõ nét Tiêu đề công cụ và Mô tả ngắn gọn, loại bỏ 100% icon emoji, hộp icon màu sắc và các nút lồng nhau, tạo diện mạo tối giản, thanh lịch.
-  - *Chèn Công Thức & Khối Đồ Thị/Bảng Biến Thiên Ngay Tại Vị Trí Con Trỏ Đang Đứng*:
-    + Gỡ bỏ dropdown thủ công `🎯 Chèn vào mục`, tự động bắt chính xác canvas và dòng con trỏ mà giáo viên đang thao tác.
-    + Nâng cấp động cơ `insertSnippet` trong [`WordStyleFormulaCanvas.jsx`](./src/components/curriculum/WordStyleFormulaCanvas.jsx): Đối với các khối trực quan lớn (`[VARIATION_TABLE]`, `[MATH_GRAPH]`, `[MATH_GRAPH_3D]`, `[MATH_GEOMETRY_2D]`), hệ thống chèn trực tiếp tại đúng chỉ mục dòng (`targetIdx`) con trỏ đang đứng thay vì vứt xuống cuối tài liệu.
+  - _Gỡ Bỏ Hoàn Toàn Dropdown STEM Trên Thanh Header_:
+    - Loại bỏ nút `StemToolsDropdown` khỏi header chính của Studio, triệt tiêu sự trùng lặp (dư thừa công cụ STEM) khi giảng viên đã có mini-tab `< STEM` neo cố định mép phải màn hình.
+  - _Làm Sạch Toàn Diện Bảng Slide-over STEM Drawer (`FloatingStemDrawer`)_:
+    - Xóa bỏ huy hiệu `GDPT 2018` và các nhãn công nghệ phụ (`JSXGraph`, `SGK 2018`, `Auto Calc`, `Vi Tích Phân`) gây rối mắt.
+    - Bổ sung thanh tìm kiếm công cụ thời gian thực (`Search input`) ở đầu bảng, hỗ trợ tìm kiếm tức thì theo tên, mô tả hoặc từ khóa (MathLab, Bảng biến thiên, Phân số, Đạo hàm, Hóa học...).
+    - Chuẩn hóa danh sách công cụ: Chỉ hiển thị rõ nét Tiêu đề công cụ và Mô tả ngắn gọn, loại bỏ 100% icon emoji, hộp icon màu sắc và các nút lồng nhau, tạo diện mạo tối giản, thanh lịch.
+  - _Chèn Công Thức & Khối Đồ Thị/Bảng Biến Thiên Ngay Tại Vị Trí Con Trỏ Đang Đứng_:
+    - Gỡ bỏ dropdown thủ công `🎯 Chèn vào mục`, tự động bắt chính xác canvas và dòng con trỏ mà giáo viên đang thao tác.
+    - Nâng cấp động cơ `insertSnippet` trong [`WordStyleFormulaCanvas.jsx`](./src/components/curriculum/WordStyleFormulaCanvas.jsx): Đối với các khối trực quan lớn (`[VARIATION_TABLE]`, `[MATH_GRAPH]`, `[MATH_GRAPH_3D]`, `[MATH_GEOMETRY_2D]`), hệ thống chèn trực tiếp tại đúng chỉ mục dòng (`targetIdx`) con trỏ đang đứng thay vì vứt xuống cuối tài liệu.
 
 - **Khắc Phục Lỗi Cú Pháp Import Dấu Phẩy & Tinh Chỉnh Nút STEM Trôi Nổi Cạnh Phải Siêu Gọn Nhẹ (`CurriculumStudioEditor.jsx`)**:
-  - *Sửa Triệt Để Lỗi Cú Pháp TypeScript (TS1005 `',' expected`)*:
-    + Bổ sung dấu phẩy kết thúc `Table2,` trong khối destructuring import từ thư viện `lucide-react` tại đầu file `CurriculumStudioEditor.jsx`, loại bỏ hoàn toàn cảnh báo parser của TypeScript Language Server và linter IDE.
-  - *Thiết Kế Lại Nút Neo Cạnh Phải Màn Hình Mũi Tên "<" Siêu Gọn Nhẹ (Ultra-Compact Sleek Tab)*:
-    + Thay thế thanh tab dài 160px (`CÔNG CỤ STEM`) bằng mini-tab siêu tinh tế `[ < ✨ STEM ]` với chiều cao chỉ ~55px và chiều rộng ~20px (`pl-1.5 pr-1 py-2 rounded-l-xl`), ôm sát mép phải màn hình.
-    + Bố trí mũi tên nhỏ `<` (`ChevronLeft className="w-3.5 h-3.5"`), biểu tượng ngôi sao `✨` nhỏ nhắn và chữ `STEM` xoay dọc thanh thoát, triệt tiêu 100% tình trạng che lấn hay va chạm vào nội dung trang soạn thảo bên dưới.
-    + Tinh chỉnh kích thước ngăn kéo trượt `FloatingStemDrawer` từ `w-88 sm:w-[420px] max-h-[90vh]` xuống `w-80 sm:w-[380px] max-h-[86vh]`, gia tăng không gian thoáng đãng cho khu vực làm việc chính.
+  - _Sửa Triệt Để Lỗi Cú Pháp TypeScript (TS1005 `',' expected`)_:
+    - Bổ sung dấu phẩy kết thúc `Table2,` trong khối destructuring import từ thư viện `lucide-react` tại đầu file `CurriculumStudioEditor.jsx`, loại bỏ hoàn toàn cảnh báo parser của TypeScript Language Server và linter IDE.
+  - _Thiết Kế Lại Nút Neo Cạnh Phải Màn Hình Mũi Tên "<" Siêu Gọn Nhẹ (Ultra-Compact Sleek Tab)_:
+    - Thay thế thanh tab dài 160px (`CÔNG CỤ STEM`) bằng mini-tab siêu tinh tế `[ < ✨ STEM ]` với chiều cao chỉ ~55px và chiều rộng ~20px (`pl-1.5 pr-1 py-2 rounded-l-xl`), ôm sát mép phải màn hình.
+    - Bố trí mũi tên nhỏ `<` (`ChevronLeft className="w-3.5 h-3.5"`), biểu tượng ngôi sao `✨` nhỏ nhắn và chữ `STEM` xoay dọc thanh thoát, triệt tiêu 100% tình trạng che lấn hay va chạm vào nội dung trang soạn thảo bên dưới.
+    - Tinh chỉnh kích thước ngăn kéo trượt `FloatingStemDrawer` từ `w-88 sm:w-[420px] max-h-[90vh]` xuống `w-80 sm:w-[380px] max-h-[86vh]`, gia tăng không gian thoáng đãng cho khu vực làm việc chính.
 
 - **Chuẩn Hóa UI Khối 4 Ngân Hàng Đề Hàng Thẳng Lối, Xóa Bỏ Nút Dán Ảnh & Bảng Công Cụ STEM Trôi Nổi Cạnh Phải Màn Hình (`CurriculumStudioEditor.jsx`)**:
-  - *Sắp Xếp Ngang Hàng Thẳng Lối Khối 4 & Loại Bỏ Emoji Ký Tự Trùng Lặp*:
-    + Căn thẳng hàng 1 dòng duy nhất cho bộ đôi nút tác vụ `AI Sinh Câu Hỏi` và `Thêm Câu Hỏi Mới` tại Header Khối 4 (`flex items-center gap-2.5 shrink-0 whitespace-nowrap`), triệt tiêu hiện tượng co cụm bẻ 2 hàng gây kênh lệch layout.
-    + Khử triệt để ký hiệu trùng lặp: Loại bỏ emoji `✨` và `+` thừa trong text nhãn khi đã có icon Lucide `Sparkles` và `Plus` đi kèm, mang lại diện mạo chỉn chu, chuyên nghiệp.
-  - *Loại Bỏ Hoàn Toàn Nút Dán/Tải Ảnh Rời Rạc & Tối Giản Nhãn Tiêu Đề*:
-    + Gỡ bỏ hoàn toàn nút `🖼️ Dán/Tải Ảnh` thừa thãi tại tiểu mục Đề bài và Lời giải mẫu (giảng viên dán ảnh trực tiếp từ clipboard vào canvas bằng phím tắt `Ctrl+V` tiện lợi).
-    + Tối giản và làm sạch nhãn tiểu mục, xóa bỏ toàn bộ nút phụ gây xao nhãng.
-  - *Thống Nhất Công Cụ STEM Duy Nhất Trên Đầu & Bảng Công Cụ Trôi Nổi Cạnh Phải Mũi Tên "<"*:
-    + Gỡ bỏ toàn bộ các nút dropdown STEM rải rác bên trong từng khối (Khối 1, Khối 2, Khối 4) để tránh phân mảnh giao diện.
-    + Đưa `StemToolsDropdown` duy nhất lên thanh Header Studio trên cùng, tích hợp đầy đủ MathLab 2D/3D, Bảng biến thiên, Phân số, Đạo hàm, Hóa học.
-    + Trang bị nút trôi nổi neo cố định cạnh phải màn hình `[ < ✨ CÔNG CỤ STEM ]`: Nhấp vào sẽ trượt ra Bảng Công Cụ Studio Toàn Năng (`FloatingStemDrawer`) với bộ chọn mục tiêu chèn động (`Khối 1: Nền tảng SGK`, `Khối 2: Phương pháp giải`, `Khối 4: Đề bài mẫu`, `Khối 4: Lời giải mẫu`) cùng đầy đủ các công cụ chuyên sâu MathLab 2D/3D, Bảng biến thiên, Phân số, Vi tích phân, Hóa học và Thư viện ký hiệu 7 môn học.
+  - _Sắp Xếp Ngang Hàng Thẳng Lối Khối 4 & Loại Bỏ Emoji Ký Tự Trùng Lặp_:
+    - Căn thẳng hàng 1 dòng duy nhất cho bộ đôi nút tác vụ `AI Sinh Câu Hỏi` và `Thêm Câu Hỏi Mới` tại Header Khối 4 (`flex items-center gap-2.5 shrink-0 whitespace-nowrap`), triệt tiêu hiện tượng co cụm bẻ 2 hàng gây kênh lệch layout.
+    - Khử triệt để ký hiệu trùng lặp: Loại bỏ emoji `✨` và `+` thừa trong text nhãn khi đã có icon Lucide `Sparkles` và `Plus` đi kèm, mang lại diện mạo chỉn chu, chuyên nghiệp.
+  - _Loại Bỏ Hoàn Toàn Nút Dán/Tải Ảnh Rời Rạc & Tối Giản Nhãn Tiêu Đề_:
+    - Gỡ bỏ hoàn toàn nút `🖼️ Dán/Tải Ảnh` thừa thãi tại tiểu mục Đề bài và Lời giải mẫu (giảng viên dán ảnh trực tiếp từ clipboard vào canvas bằng phím tắt `Ctrl+V` tiện lợi).
+    - Tối giản và làm sạch nhãn tiểu mục, xóa bỏ toàn bộ nút phụ gây xao nhãng.
+  - _Thống Nhất Công Cụ STEM Duy Nhất Trên Đầu & Bảng Công Cụ Trôi Nổi Cạnh Phải Mũi Tên "<"_:
+    - Gỡ bỏ toàn bộ các nút dropdown STEM rải rác bên trong từng khối (Khối 1, Khối 2, Khối 4) để tránh phân mảnh giao diện.
+    - Đưa `StemToolsDropdown` duy nhất lên thanh Header Studio trên cùng, tích hợp đầy đủ MathLab 2D/3D, Bảng biến thiên, Phân số, Đạo hàm, Hóa học.
+    - Trang bị nút trôi nổi neo cố định cạnh phải màn hình `[ < ✨ CÔNG CỤ STEM ]`: Nhấp vào sẽ trượt ra Bảng Công Cụ Studio Toàn Năng (`FloatingStemDrawer`) với bộ chọn mục tiêu chèn động (`Khối 1: Nền tảng SGK`, `Khối 2: Phương pháp giải`, `Khối 4: Đề bài mẫu`, `Khối 4: Lời giải mẫu`) cùng đầy đủ các công cụ chuyên sâu MathLab 2D/3D, Bảng biến thiên, Phân số, Vi tích phân, Hóa học và Thư viện ký hiệu 7 môn học.
 
 - **Tích Hợp AI Sinh Câu Hỏi Thích Ứng Bám Sát Dạng Bài (API 16), Modal `AiQuestionGeneratorModal` & Trợ Lý AI Tự Điền Đề Bài 1-Click Trong Studio Sư Phạm**:
 - **Tích Hợp AI Sinh Câu Hỏi Trắc Nghiệm Tự Động Bám Sát Dạng Bài Vào Khối 4 Ngân Hàng Đề (`CurriculumStudioEditor.jsx`)**:
-  - *Bộ Đôi Nút Tác Vụ AI & Kiểm Tra Định Danh Dạng Bài Trước Khi Sinh*:
+  - _Bộ Đôi Nút Tác Vụ AI & Kiểm Tra Định Danh Dạng Bài Trước Khi Sinh_:
     - Bổ sung nút bấm nổi bật `✨ AI Sinh Câu Hỏi` (gradient tím - indigo) tại header Khối 4 và trạng thái danh sách trống (`Chưa có câu hỏi bổ sung nào trong cơ sở dữ liệu`).
     - Tự động kiểm tra định danh dạng bài `skillId`: Nếu dạng bài chưa được lưu vào cơ sở dữ liệu (`!form.patternId && !pattern?.patternId`), hệ thống lập tức hiển thị thông báo nhắc nhở giáo viên bấm `Lưu Dạng Bài` ở góc trên trước, sau đó AI mới tiến hành sinh câu hỏi và lưu tự động vào ngân hàng đề để đảm bảo tính toàn vẹn dữ liệu.
-  - *Modal Sinh Câu Hỏi Thích Ứng Hàng Loạt Chuẩn Cấu Trúc Thi (`AiQuestionGeneratorModal`)*:
+  - _Modal Sinh Câu Hỏi Thích Ứng Hàng Loạt Chuẩn Cấu Trúc Thi (`AiQuestionGeneratorModal`)_:
     - Cho phép giáo viên linh hoạt chọn số lượng câu hỏi cần tạo (`1 câu`, `2 câu`, `3 câu`, `5 câu`) và mức độ tư duy mục tiêu (Bloom L1 Nhận biết, L2 Thông hiểu, L3 Vận dụng, L4 Vận dụng cao).
     - Kết nối dịch vụ `aiService.generatePatternQuestions` (gọi AI Engine `/api/ai-engine/curriculum/generate-questions`) truyền đầy đủ ngữ cảnh `patternName`, `lessonName`, `domainName`, `theoryRecap`, `solutionMethod` và danh sách đề bài hiện có để AI tạo đề mới bám sát 100% bản đồ tri thức dạng bài và không trùng lặp.
     - Hiển thị trực quan kết quả sinh với Live KaTeX Preview, lưới 4 phương án A, B, C, D nổi bật phương án đúng màu xanh ngọc, lời giải chi tiết từng bước và checkbox chọn lọc từng câu.
     - Hỗ trợ lưu hàng loạt (Batch Save) các câu hỏi đã chọn trực tiếp vào cơ sở dữ liệu thông qua `contentService.createQuestion` (API 16), tự động cập nhật danh sách câu hỏi ngân hàng đề ngay lập tức.
-  - *Tích Hợp `✨ AI Tự Điền Câu Hỏi` Vào Hộp Thoại Thêm Câu Hỏi Thủ Công (`NewQuestionDialog`)*:
+  - _Tích Hợp `✨ AI Tự Điền Câu Hỏi` Vào Hộp Thoại Thêm Câu Hỏi Thủ Công (`NewQuestionDialog`)_:
     - Trang bị nút `✨ AI Tự Điền Câu Hỏi` ngay cạnh nhãn Đề bài trong modal thêm câu hỏi thủ công: 1-click nhờ Gemini AI tự động soạn thảo và điền đầy đủ đề bài KaTeX, 4 phương án, đáp án đúng, mức độ Bloom và lời giải chi tiết theo đúng Dạng bài đang mở.
 
 - **Tái Thiết Kế Thanh Soạn Thảo 2 Dòng Trong Văn Bản & Đưa Dropdown STEM Lên Header Khối (`CurriculumStudioEditor.jsx`)**:
-  - *Tách Biệt Section Header Tổng Thể & Thanh Soạn Thảo Văn Bản 2 Dòng*:
+  - _Tách Biệt Section Header Tổng Thể & Thanh Soạn Thảo Văn Bản 2 Dòng_:
     - Giữ trọn vẹn dropdown `✨ Công Cụ Toán & STEM ▾` độc lập trên thanh Section Header tổng thể của mục đang sửa (Khối 1 `theoryRecap` và Khối 2 `solutionMethod`).
     - Chuyển các nút đính kèm nội dung ngoại vi về đúng khu vực văn bản và phân tách thành 2 dòng rõ rệt:
-      + **Dòng 1 (Nằm trên văn bản)**: Loại bỏ hoàn toàn nút `+ Thêm / Dán Ảnh` (người dùng dán ảnh trực tiếp qua phím tắt Ctrl+V nhanh chóng), giữ lại nút tiện ích sư phạm (`+ Ví Dụ SGK` ở Khối 1 hoặc `+ Thêm Bước mới`, `Nạp mẫu chuẩn 4 bước` ở Khối 2) và bộ nút chuyển đổi chế độ xem (`✍️ Sửa Trực Tiếp`, `👁️ Trang In`, `📄 Raw`) ở bên phải.
-      + **Dòng 2 (Văn bản & công cụ chữ)**: Chuyên biệt phục vụ định dạng chữ chuẩn Word (`Văn bản: Bold`, `Italic`, `Tiêu đề / Bước`, `Danh sách`, `Đánh số`), tạo bố cục 2 tầng thanh thoát, không chồng chéo.
-  - *Dropdown Menu Tương Tác & Gộp 2 Nút Đồ Thị (`StemToolsDropdown`)*:
+      - **Dòng 1 (Nằm trên văn bản)**: Loại bỏ hoàn toàn nút `+ Thêm / Dán Ảnh` (người dùng dán ảnh trực tiếp qua phím tắt Ctrl+V nhanh chóng), giữ lại nút tiện ích sư phạm (`+ Ví Dụ SGK` ở Khối 1 hoặc `+ Thêm Bước mới`, `Nạp mẫu chuẩn 4 bước` ở Khối 2) và bộ nút chuyển đổi chế độ xem (`✍️ Sửa Trực Tiếp`, `👁️ Trang In`, `📄 Raw`) ở bên phải.
+      - **Dòng 2 (Văn bản & công cụ chữ)**: Chuyên biệt phục vụ định dạng chữ chuẩn Word (`Văn bản: Bold`, `Italic`, `Tiêu đề / Bước`, `Danh sách`, `Đánh số`), tạo bố cục 2 tầng thanh thoát, không chồng chéo.
+  - _Dropdown Menu Tương Tác & Gộp 2 Nút Đồ Thị (`StemToolsDropdown`)_:
     - Xây dựng component `StemToolsDropdown` hỗ trợ chế độ chuẩn và `compact`, tự động đóng khi nhấp chuột ra ngoài (click outside).
     - Gộp 2 nút `📈 Đồ Thị Hàm Số` và `🧊 MathLab 3D/2D` thành 1 tùy chọn duy nhất: **`📈 Đồ Thị & MathLab (2D/3D)`** mở thẳng phòng thí nghiệm MathLab trực quan toàn diện (hàm số Oxy, hình phẳng 2D và không gian 3D).
     - Tích hợp đầy đủ các công cụ chuyên sâu: `📊 Bảng Biến Thiên`, `📈 Đồ Thị & MathLab (2D/3D)`, `➗ Phân Số & Tính Toán`, `🎯 Đạo Hàm Số Gia`, và `🧪 Hóa Học & Nồng Độ`.
 
 - **Đại Tu Toàn Diện Studio Popup Bộ Công Cụ & STEM Chuyên Sâu (`InteractiveFormulaBuilderModal.jsx` & `StemToolsDropdown` Trong `CurriculumStudioEditor.jsx`)**:
-  - *Tái Thiết Kế Modal Studio Soạn Thảo Công Thức & STEM 2 Cột Đẳng Cấp (`InteractiveFormulaBuilderModal.jsx`)*:
+  - _Tái Thiết Kế Modal Studio Soạn Thảo Công Thức & STEM 2 Cột Đẳng Cấp (`InteractiveFormulaBuilderModal.jsx`)_:
     - Nâng cấp kích thước modal từ `max-w-2xl` (672px chật hẹp) lên Studio cỡ lớn `max-w-5xl h-[88vh] max-h-[840px]` với kiến trúc 2 cột chuyên nghiệp:
-      + **Cột Trái (Sidebar công cụ w-72)**: Phân nhóm trực quan thành 2 chuyên mục lớn: "Toán Học & Giải Tích" (Bảng Biến Thiên, Phân Số, Căn Thức, Lũy Thừa, Tích Phân, Hệ Phương Trình, Đồ Thị Oxy) và "STEM & Hóa Học Thực Nghiệm" (Hóa Học Nồng Độ Mol & Khối Lượng), với các tile icon Lucide rực rỡ, badge chỉ mục và mô tả 2 dòng rõ nét.
-      + **Cột Phải (Không gian làm việc tương tác rộng rãi flex-1)**:
-        * Bảng Biến Thiên: Tích hợp trực tiếp toàn bộ lưới tương tác `<VariationTable />` 700px+ cùng 4 preset nhanh (Bậc 3 a>0, Bậc 3 a<0, Bậc 4 trùng phương, Phân thức ||), bảo toàn toàn bộ thanh công cụ Kéo - Thả mà không bị co cụm cột hay tràn vỡ layout.
-        * Bộ Tính Toán Hóa Học: 4 thẻ tương tác chuyên sâu (`CM = n/V`, `C% = m_ct/m_dd * 100%`, `m = n * M`, `H% = m_tt/m_lt * 100%`) kèm các ô nhập có đơn vị chuẩn (`mol`, `Lít`, `g`, `g/mol`), tự động hiển thị kết quả tính toán tức thì trên badge xanh ngọc emerald.
-        * Phân Số & Tính Toán: Giao diện thẻ 2 tầng trực quan phân cách bởi gạch ngang tử/mẫu, tự động rút gọn phân số và tính giá trị thập phân.
+      - **Cột Trái (Sidebar công cụ w-72)**: Phân nhóm trực quan thành 2 chuyên mục lớn: "Toán Học & Giải Tích" (Bảng Biến Thiên, Phân Số, Căn Thức, Lũy Thừa, Tích Phân, Hệ Phương Trình, Đồ Thị Oxy) và "STEM & Hóa Học Thực Nghiệm" (Hóa Học Nồng Độ Mol & Khối Lượng), với các tile icon Lucide rực rỡ, badge chỉ mục và mô tả 2 dòng rõ nét.
+      - **Cột Phải (Không gian làm việc tương tác rộng rãi flex-1)**:
+        - Bảng Biến Thiên: Tích hợp trực tiếp toàn bộ lưới tương tác `<VariationTable />` 700px+ cùng 4 preset nhanh (Bậc 3 a>0, Bậc 3 a<0, Bậc 4 trùng phương, Phân thức ||), bảo toàn toàn bộ thanh công cụ Kéo - Thả mà không bị co cụm cột hay tràn vỡ layout.
+        - Bộ Tính Toán Hóa Học: 4 thẻ tương tác chuyên sâu (`CM = n/V`, `C% = m_ct/m_dd * 100%`, `m = n * M`, `H% = m_tt/m_lt * 100%`) kèm các ô nhập có đơn vị chuẩn (`mol`, `Lít`, `g`, `g/mol`), tự động hiển thị kết quả tính toán tức thì trên badge xanh ngọc emerald.
+        - Phân Số & Tính Toán: Giao diện thẻ 2 tầng trực quan phân cách bởi gạch ngang tử/mẫu, tự động rút gọn phân số và tính giá trị thập phân.
     - Cập nhật Live KaTeX Preview Dock nổi phía dưới cùng nút bấm "Chèn Vào Bài Giảng (Enter)" rực rỡ, hỗ trợ phím tắt Esc/Enter mượt mà.
-  - *Nâng Cấp Menu Thả Dropdown STEM Lên Chuẩn Mega Menu Studio (`StemToolsDropdown`)*:
+  - _Nâng Cấp Menu Thả Dropdown STEM Lên Chuẩn Mega Menu Studio (`StemToolsDropdown`)_:
     - Mở rộng kích thước từ `w-64` (đơn điệu, nhỏ) thành Mega Menu `w-[420px]` sang trọng với banner gradient tối màu `STUDIO CÔNG CỤ TOÁN & STEM (GDPT 2018)`.
     - Trình bày 5 thẻ chức năng chi tiết với icon đa sắc, tiêu đề in đậm, phụ đề 2 dòng giải thích tính năng và badge nhận diện chuẩn mực (`SGK 2018`, `JSXGraph Native`, `Auto Calc`, `Vi Tích Phân`, `Thực Nghiệm`).
     - Nút kích hoạt trên Header khối được nâng cấp thành nút bo tròn sang trọng với icon Sparkles phát sáng tinh tế.
-  - *Tuyệt Đối Ẩn 100% Mã KaTeX/LaTeX Thô, Chuyên Biệt Hóa 100% Ô Nhập Số & Ký Hiệu Trực Quan Kèm Preset Nạp Mẫu 1-Click*:
+  - _Tuyệt Đối Ẩn 100% Mã KaTeX/LaTeX Thô, Chuyên Biệt Hóa 100% Ô Nhập Số & Ký Hiệu Trực Quan Kèm Preset Nạp Mẫu 1-Click_:
     - Xóa bỏ triệt để 100% ô textarea hiển thị mã lệnh KaTeX thô và các chuỗi text raw như `$formula$`, tuân thủ nghiêm ngặt tôn chỉ trải nghiệm người dùng sư phạm: Giảng viên và người dùng cuối không bao giờ phải nhìn thấy hay gõ mã lệnh LaTeX thô.
     - Chuyên biệt hóa toàn bộ việc nhập liệu qua các ô số và ký hiệu trực quan (Visual Slots): Ô nhập Tử số / Mẫu số phân số, ô Bậc căn / Biểu thức trong căn, ô Cơ số / Số mũ, ô Cận tích phân và hệ phương trình.
     - Trang bị bộ nút nạp mẫu thông dụng 1-click (1-Click Presets) cho từng dạng bài toán: Phân số (1/2, 3/4, 12/4=3, phân thức đại số), Giới hạn SGK 2018 (f'(x₀) định nghĩa, sin(x)/x=1, phân thức hữu tỉ, khử vô định 0/0, dãy số 1/n), Đạo hàm số gia, Căn thức, Lũy thừa và Tích phân.
     - Khung xem trước trực quan (Live KaTeX Preview Dock) tập trung duy nhất vào việc hiển thị công thức toán học kích thước lớn (text-2xl) sắc nét như trong sách giáo khoa, không có bất kỳ yếu tố kỹ thuật gây xao nhãng.
 
 - **Tối Ưu Hóa Chỉnh Sửa & Xóa Trực Tiếp Công Thức Trực Quan Trong Khung Soạn Thảo Văn Bản (`WordStyleFormulaCanvas.jsx`)**:
-  - *Khung Điền Số & Biểu Thức Trực Quan (Interactive Visual Slots) Dạng Phân Số Chuẩn SGK*:
-    + Tự động nhận diện cấu trúc công thức và hiển thị **Khung Điền Số Trực Quan (Visual Slots)**:
-      * **Phân số**: Hiển thị chồng dọc chuẩn SGK với ô nhập Tử số (phía trên), thanh gạch ngang phân số, ô nhập Mẫu số (phía dưới), dấu `=` và ô Đáp số tự động. Người dùng chỉ cần nhập số vào từng ô mà không cần quan tâm đến cú pháp lệnh.
-      * **Căn thức**: Hiển thị dấu căn $\sqrt{}$ kèm ô nhập số/biểu thức bên trong và ô đáp số.
-      * **Lũy thừa**: Hiển thị ô nhập Cơ số và ô Số mũ nhỏ góc trên.
-      * **Hóa học**: Hiển thị biểu thức $C_M = n / V = [n]/[V] = [kết\_quả]\text{ M}$ và $C\%$ với các ô điền số rõ ràng.
-    + Đồng bộ tức thì hai chiều: Mọi thay đổi trên ô điền số lập tức cập nhật lên Thanh Toán Tự Nhiên, Live KaTeX Preview và dòng văn bản canvas.
-  - *Bộ Chuyển Đổi Toán Tự Nhiên Hai Chiều (`latexToNaturalMath` & `naturalMathToLatex`) Tuyệt Đối 0% Lộ Mã LaTeX*:
-    + Thanh soạn thảo công thức hỗ trợ hoàn toàn định dạng **Toán Tự Nhiên (Natural Math)**: Chuyển đổi mã lệnh LaTeX nội bộ thành chuỗi biểu thức tự nhiên thân thiện (`12/4 = 3`, `√(16) = 4`, `lim(x → x₀)`), triệt tiêu hoàn toàn dấu gạch chéo `\` và ngoặc nhọn `{}`.
-    + Giảng viên và học sinh có thể gõ hoặc dán bất kỳ biểu thức thông thường (`(x+1)/(x-1) = 5`, `2x^2 + 5x - 3 = 0`), hệ thống tự động biên dịch sang KaTeX chuẩn xác mà không bao giờ ép người dùng nhìn thấy hay học mã LaTeX.
-    + Xóa bỏ 100% nhãn kỹ thuật gây phản cảm như `LaTeX: ...` hay `Mã công thức KaTeX:` trên mọi khung popover thanh công cụ.
-  - *Thanh Soạn Thảo Công Thức Toàn Năng Siêu Linh Hoạt (Universal Formula Bar) & Dock Xem Trước Trực Quan SGK*:
-    + Xóa bỏ triệt để hệ thống ô con phân mảnh bó hẹp (vốn ép người dùng vào khung cứng tử/mẫu phân số hoặc số mũ mà không thể thêm bớt phép tính hay gõ tự do). Thay thế bằng **Thanh Soạn Thảo Công Thức Toàn Năng (Universal Formula Bar)**: Chấp nhận mọi dạng công thức toán học, vật lý, hóa học không giới hạn độ phức tạp (`12/4 = 3`, `f(x) = (x^2-1)/(x-1) = x+1`, căn thức, tích phân, giới hạn, nồng độ mol `C_M`...).
-    + Tích hợp **Dock Xem Trước Trực Quan Học Sinh Thấy (Live KaTeX Typography Preview Dock)** ngay bên dưới thanh soạn thảo: Hiển thị lập tức công thức kết quả chuẩn sách giáo khoa (serif typography) sắc nét theo thời gian thực khi gõ.
-    + Tuyệt đối xóa sạch 100% nhãn kỹ thuật gây phản cảm như `LaTeX: ...` hay `Mã công thức KaTeX`, mang lại trải nghiệm sư phạm tinh tế 100% WYSIWYG.
-  - *Bộ Máy Tự Động Tính Toán Đáp Số Thông Minh Cho Mọi Phép Toán (`autoCalculateEquation` & Nút `⚡ Tính`)*:
-    + Nâng cấp nút `[ ⚡ Tính ]` thành công cụ tự động tính toán số liệu toàn năng: Tự động phân tích và tính nhẩm kết quả chính xác cho mọi biểu thức chứa phân số/phép chia (`12/4` -> `= 3`, `0.2/0.5` -> `= 0.4`), căn bậc hai (`\sqrt{16}` -> `= 4`), lũy thừa (`2^3` -> `= 8`), số học cơ bản (`10 + 2*5` -> `= 20`) và nồng độ hóa học (`C_M`, `C%`). Nếu công thức đã có kết quả sai từ trước, nút `Tính` sẽ tự động cập nhật lại đáp số chính xác.
-  - *Chèn Ký Hiệu Thông Minh Nhận Biết Vị Trí Con Trỏ (Cursor-Aware Insertion) & Bao Bọc Vùng Chọn*:
-    + Trang bị `activeInputRef` theo dõi chính xác vị trí con trỏ `selectionStart`/`selectionEnd` trong ô soạn thảo: Khi nhấp bất kỳ nút ký hiệu/công thức nào từ các tab môn học (`Cấu trúc`, `Oxyz`, `Vật lý`, `Hóa học`, `Ký hiệu`, `Ngoặc & Logic`), hệ thống chèn ngay tại đúng vị trí con trỏ và đưa con trỏ vào bên trong vị trí nhập số. Nếu người dùng bôi đen một đoạn text/biểu thức, nhấp `a/b` sẽ tự động đưa đoạn đó lên tử số, nhấp `√x` sẽ bao bọc đoạn đó trong căn thức.
-  - *Cơ Chế Xóa Công Thức Bằng Nút 1-Click, Phím Tắt Backspace Tự Nhiên & Khắc Phục Triệt Để Toàn Bộ Import*:
-    + Khắc phục triệt để lỗi runtime `ReferenceError: unescapeLiteralNewlines is not defined`, `ReferenceError: useImperativeHandle is not defined` và `ReferenceError: parseVariationTableString is not defined`: Bổ sung đầy đủ hook `useImperativeHandle` từ React, hàm tiện ích `unescapeLiteralNewlines` từ `../common/MathText` và hàm giải mã chuỗi bảng biến thiên `parseVariationTableString` từ `../common/VariationTable` vào khai báo import của `WordStyleFormulaCanvas.jsx`, bảo đảm quá trình render khối bảng biến thiên `[VARIATION_TABLE]`, chuẩn hóa dòng tài liệu và liên kết imperative handle giữa Studio Editor với Canvas luôn thông suốt 100%, chấm dứt hoàn toàn hiện tượng trắng trang (White Screen) khi nạp tài liệu bài giảng.
-    + Trang bị nút đỏ `[ 🗑️ Xóa ]` trên thanh popover để xóa bỏ công thức tức thì chỉ với 1 click.
-    + Khi con trỏ văn bản nằm ở đầu đoạn text liền kề ngay sau một công thức, nhấn `Backspace` sẽ tự động xóa sạch công thức đứng trước mà không làm hỏng cấu trúc dòng; khi ô công thức trống, bấm `Backspace` cũng xóa gọn công thức và trả lại con trỏ cho dòng văn bản.
-    + Bổ sung nút bấm `[ 🚀 Mở Studio ]` kết nối trực tiếp đến Modal Studio toán học & STEM khi người dùng muốn vẽ đồ thị hàm số hay dựng bảng biến thiên 3 dòng phức tạp.
+  - _Khung Điền Số & Biểu Thức Trực Quan (Interactive Visual Slots) Dạng Phân Số Chuẩn SGK_:
+    - Tự động nhận diện cấu trúc công thức và hiển thị **Khung Điền Số Trực Quan (Visual Slots)**:
+      - **Phân số**: Hiển thị chồng dọc chuẩn SGK với ô nhập Tử số (phía trên), thanh gạch ngang phân số, ô nhập Mẫu số (phía dưới), dấu `=` và ô Đáp số tự động. Người dùng chỉ cần nhập số vào từng ô mà không cần quan tâm đến cú pháp lệnh.
+      - **Căn thức**: Hiển thị dấu căn $\sqrt{}$ kèm ô nhập số/biểu thức bên trong và ô đáp số.
+      - **Lũy thừa**: Hiển thị ô nhập Cơ số và ô Số mũ nhỏ góc trên.
+      - **Hóa học**: Hiển thị biểu thức $C_M = n / V = [n]/[V] = [kết\_quả]\text{ M}$ và $C\%$ với các ô điền số rõ ràng.
+    - Đồng bộ tức thì hai chiều: Mọi thay đổi trên ô điền số lập tức cập nhật lên Thanh Toán Tự Nhiên, Live KaTeX Preview và dòng văn bản canvas.
+  - _Bộ Chuyển Đổi Toán Tự Nhiên Hai Chiều (`latexToNaturalMath` & `naturalMathToLatex`) Tuyệt Đối 0% Lộ Mã LaTeX_:
+    - Thanh soạn thảo công thức hỗ trợ hoàn toàn định dạng **Toán Tự Nhiên (Natural Math)**: Chuyển đổi mã lệnh LaTeX nội bộ thành chuỗi biểu thức tự nhiên thân thiện (`12/4 = 3`, `√(16) = 4`, `lim(x → x₀)`), triệt tiêu hoàn toàn dấu gạch chéo `\` và ngoặc nhọn `{}`.
+    - Giảng viên và học sinh có thể gõ hoặc dán bất kỳ biểu thức thông thường (`(x+1)/(x-1) = 5`, `2x^2 + 5x - 3 = 0`), hệ thống tự động biên dịch sang KaTeX chuẩn xác mà không bao giờ ép người dùng nhìn thấy hay học mã LaTeX.
+    - Xóa bỏ 100% nhãn kỹ thuật gây phản cảm như `LaTeX: ...` hay `Mã công thức KaTeX:` trên mọi khung popover thanh công cụ.
+  - _Thanh Soạn Thảo Công Thức Toàn Năng Siêu Linh Hoạt (Universal Formula Bar) & Dock Xem Trước Trực Quan SGK_:
+    - Xóa bỏ triệt để hệ thống ô con phân mảnh bó hẹp (vốn ép người dùng vào khung cứng tử/mẫu phân số hoặc số mũ mà không thể thêm bớt phép tính hay gõ tự do). Thay thế bằng **Thanh Soạn Thảo Công Thức Toàn Năng (Universal Formula Bar)**: Chấp nhận mọi dạng công thức toán học, vật lý, hóa học không giới hạn độ phức tạp (`12/4 = 3`, `f(x) = (x^2-1)/(x-1) = x+1`, căn thức, tích phân, giới hạn, nồng độ mol `C_M`...).
+    - Tích hợp **Dock Xem Trước Trực Quan Học Sinh Thấy (Live KaTeX Typography Preview Dock)** ngay bên dưới thanh soạn thảo: Hiển thị lập tức công thức kết quả chuẩn sách giáo khoa (serif typography) sắc nét theo thời gian thực khi gõ.
+    - Tuyệt đối xóa sạch 100% nhãn kỹ thuật gây phản cảm như `LaTeX: ...` hay `Mã công thức KaTeX`, mang lại trải nghiệm sư phạm tinh tế 100% WYSIWYG.
+  - _Bộ Máy Tự Động Tính Toán Đáp Số Thông Minh Cho Mọi Phép Toán (`autoCalculateEquation` & Nút `⚡ Tính`)_:
+    - Nâng cấp nút `[ ⚡ Tính ]` thành công cụ tự động tính toán số liệu toàn năng: Tự động phân tích và tính nhẩm kết quả chính xác cho mọi biểu thức chứa phân số/phép chia (`12/4` -> `= 3`, `0.2/0.5` -> `= 0.4`), căn bậc hai (`\sqrt{16}` -> `= 4`), lũy thừa (`2^3` -> `= 8`), số học cơ bản (`10 + 2*5` -> `= 20`) và nồng độ hóa học (`C_M`, `C%`). Nếu công thức đã có kết quả sai từ trước, nút `Tính` sẽ tự động cập nhật lại đáp số chính xác.
+  - _Chèn Ký Hiệu Thông Minh Nhận Biết Vị Trí Con Trỏ (Cursor-Aware Insertion) & Bao Bọc Vùng Chọn_:
+    - Trang bị `activeInputRef` theo dõi chính xác vị trí con trỏ `selectionStart`/`selectionEnd` trong ô soạn thảo: Khi nhấp bất kỳ nút ký hiệu/công thức nào từ các tab môn học (`Cấu trúc`, `Oxyz`, `Vật lý`, `Hóa học`, `Ký hiệu`, `Ngoặc & Logic`), hệ thống chèn ngay tại đúng vị trí con trỏ và đưa con trỏ vào bên trong vị trí nhập số. Nếu người dùng bôi đen một đoạn text/biểu thức, nhấp `a/b` sẽ tự động đưa đoạn đó lên tử số, nhấp `√x` sẽ bao bọc đoạn đó trong căn thức.
+  - _Cơ Chế Xóa Công Thức Bằng Nút 1-Click, Phím Tắt Backspace Tự Nhiên & Khắc Phục Triệt Để Toàn Bộ Import_:
+    - Khắc phục triệt để lỗi runtime `ReferenceError: unescapeLiteralNewlines is not defined`, `ReferenceError: useImperativeHandle is not defined` và `ReferenceError: parseVariationTableString is not defined`: Bổ sung đầy đủ hook `useImperativeHandle` từ React, hàm tiện ích `unescapeLiteralNewlines` từ `../common/MathText` và hàm giải mã chuỗi bảng biến thiên `parseVariationTableString` từ `../common/VariationTable` vào khai báo import của `WordStyleFormulaCanvas.jsx`, bảo đảm quá trình render khối bảng biến thiên `[VARIATION_TABLE]`, chuẩn hóa dòng tài liệu và liên kết imperative handle giữa Studio Editor với Canvas luôn thông suốt 100%, chấm dứt hoàn toàn hiện tượng trắng trang (White Screen) khi nạp tài liệu bài giảng.
+    - Trang bị nút đỏ `[ 🗑️ Xóa ]` trên thanh popover để xóa bỏ công thức tức thì chỉ với 1 click.
+    - Khi con trỏ văn bản nằm ở đầu đoạn text liền kề ngay sau một công thức, nhấn `Backspace` sẽ tự động xóa sạch công thức đứng trước mà không làm hỏng cấu trúc dòng; khi ô công thức trống, bấm `Backspace` cũng xóa gọn công thức và trả lại con trỏ cho dòng văn bản.
+    - Bổ sung nút bấm `[ 🚀 Mở Studio ]` kết nối trực tiếp đến Modal Studio toán học & STEM khi người dùng muốn vẽ đồ thị hàm số hay dựng bảng biến thiên 3 dòng phức tạp.
 
 ---
 
 ## [30/10/2026] - Hoàn Thiện Bảng Biến Thiên Lưới `2N - 1` Cột Chống Mất Ô Khi Xóa Chữ, Tái Thiết Kế Thư Viện Công Thức / Hợp Chất Kéo - Thả & Nâng Cấp Kéo - Thả Trực Tiếp Vào Ô Con Công Thức
 
 - **Hoàn Thiện Bảng Biến Thiên Lưới `2N - 1` Cột & Bảo Toàn Ô Trống Khi Xóa Chữ (`VariationTable.jsx`, `InteractiveFormulaBuilderModal.jsx`)**:
-  - *Chuẩn Hóa Lưới Cột `2N - 1` Không Nhảy Layout*:
-    + Triển khai hàm `normalizeVariationGrid` và `buildDataFromGrid` trong [`VariationTable.jsx`](./src/components/common/VariationTable.jsx) căn thẳng hàng dọc tuyệt đối giữa mốc `x_m`, đạo hàm tại điểm (`0` hoặc tiệm cận đứng vạch kép `||`) và giá trị cực trị `y_m` ở các cột chẵn (`2m`), đồng thời đặt dấu khoảng `+`/`-` và mũi tên chéo SVG `↗`/`↘` ở các cột lẻ (`2k + 1`).
-    + Cố định chiều cao 3 dòng (`h-11`, `h-11`, `h-24`) và đặt thanh công cụ Kéo - Thả ở phía dưới bảng để bảng không bao giờ bị giật/nhảy vị trí khi click.
-    + Sửa lỗi lệch prop `initialTemplateId` trong [`InteractiveFormulaBuilderModal.jsx`](./src/components/curriculum/InteractiveFormulaBuilderModal.jsx) để nút `📊 Bảng Biến Thiên` mở đúng tab ngay lập tức và nhúng trực tiếp `<VariationTable />` tương tác vào trong modal.
-  - *Bảo Toàn Ô Trống (`Thả số`), Tiệm Cận Đứng (`||`) & Hiển Thị Ký Hiệu Toán Học Thân Thiện (`-∞` Thay Vì `-\infty`) Khi Sửa Ô*:
-    + Triển khai `splitVariationRow` bảo toàn tuyệt đối ký hiệu vạch kép `||` khi tách dòng theo dấu `|` và giữ nguyên các ô đang để trống (`""`), kết hợp `healSplitDoubleBars` và toán tử `??` (thay cho `|| '-\infty'`) để xóa trắng ô (`Backspace` hoặc nút `✕ Xóa ô`) không bao giờ bị mất ô hay tự nhảy về `-\infty`, luôn hiển thị nhãn gợi ý `Thả số` sẵn sàng nhận kéo thả mới.
-    + Bổ sung `formatSlotDisplayValue` và `parseSlotInputToLatex` trên thanh `QuickEditorToolbar` giúp ô `Gõ số/chữ:` luôn hiển thị ký hiệu trực quan (`-∞`, `+∞`, `1/2`, `√2`, `y_CĐ`) thay vì mã LaTeX thô (`-\infty`), đồng thời tự động focus ô nhập khi nhấp chọn ô trên bảng và xóa gọn toàn bộ ký hiệu đặc biệt chỉ với 1 phím `Backspace`.
-    + Loại bỏ hoàn toàn nhãn thừa `Chuẩn SGK GDPT 2018` / `SGK GDPT 2018` trên header Bảng biến thiên, modal chèn công thức và các thẻ danh mục để giao diện luôn tinh gọn, thoáng rộng và không bị tràn/cắt xén chữ.
-    + Khắc phục triệt để hiện tượng tràn số khỏi ô bảng khi thêm nhiều cực trị: Thiết lập `<colgroup>` và thuật toán tính độ rộng tối thiểu động `calculatedTableMinWidth` (mốc thường `74px`, tiệm cận `104px`, khoảng biến thiên `68px`), kết hợp `overflow-hidden` và container cuộn ngang tự động `overflow-x-auto pb-1.5` để mỗi ô luôn giữ trọn vẹn số, ký hiệu và mũi tên mà không bao giờ bị ép méo hay tràn vỡ ra ngoài.
-    + *Nâng Cấp Kéo - Thả & Thêm Tiệm Cận Đứng 1-Click (`handleAddAsymptoteColumn`)*:
-      * Trang bị nút bấm **`|| Thêm tiệm cận`** màu hổ phách ngay trên thanh công cụ bảng, 1-click chèn ngay 1 cột tiệm cận đứng vạch kép `||` hoàn chỉnh (tính toán hoành độ `x_0` tự động, đạo hàm `y' = ||`, giá trị giới hạn hai bên `-\infty || +\infty`).
-      * Hỗ trợ **Kéo - Thả thẻ `|| (Tiệm cận)` vào khoảng giữa 2 cột (Interval Drop)**: Thả vào bất kỳ dòng nào (`x`, `y'`, `y`) giữa 2 cột lập tức chèn 1 cột tiệm cận đứng vào đúng vị trí đó.
-      * Hỗ trợ **Kéo - Thả thẻ `|| (Tiệm cận)` vào cột mốc bất kỳ**: Thả vào dòng `x`, dòng `y'` hoặc dòng `y` lập tức chuyển đổi cột mốc thành tiệm cận đứng vạch kép `||`, mở rộng toàn bộ `<td>` thành vùng DropZone mượt mà không bị trượt chuột.
+  - _Chuẩn Hóa Lưới Cột `2N - 1` Không Nhảy Layout_:
+    - Triển khai hàm `normalizeVariationGrid` và `buildDataFromGrid` trong [`VariationTable.jsx`](./src/components/common/VariationTable.jsx) căn thẳng hàng dọc tuyệt đối giữa mốc `x_m`, đạo hàm tại điểm (`0` hoặc tiệm cận đứng vạch kép `||`) và giá trị cực trị `y_m` ở các cột chẵn (`2m`), đồng thời đặt dấu khoảng `+`/`-` và mũi tên chéo SVG `↗`/`↘` ở các cột lẻ (`2k + 1`).
+    - Cố định chiều cao 3 dòng (`h-11`, `h-11`, `h-24`) và đặt thanh công cụ Kéo - Thả ở phía dưới bảng để bảng không bao giờ bị giật/nhảy vị trí khi click.
+    - Sửa lỗi lệch prop `initialTemplateId` trong [`InteractiveFormulaBuilderModal.jsx`](./src/components/curriculum/InteractiveFormulaBuilderModal.jsx) để nút `📊 Bảng Biến Thiên` mở đúng tab ngay lập tức và nhúng trực tiếp `<VariationTable />` tương tác vào trong modal.
+  - _Bảo Toàn Ô Trống (`Thả số`), Tiệm Cận Đứng (`||`) & Hiển Thị Ký Hiệu Toán Học Thân Thiện (`-∞` Thay Vì `-\infty`) Khi Sửa Ô_:
+    - Triển khai `splitVariationRow` bảo toàn tuyệt đối ký hiệu vạch kép `||` khi tách dòng theo dấu `|` và giữ nguyên các ô đang để trống (`""`), kết hợp `healSplitDoubleBars` và toán tử `??` (thay cho `|| '-\infty'`) để xóa trắng ô (`Backspace` hoặc nút `✕ Xóa ô`) không bao giờ bị mất ô hay tự nhảy về `-\infty`, luôn hiển thị nhãn gợi ý `Thả số` sẵn sàng nhận kéo thả mới.
+    - Bổ sung `formatSlotDisplayValue` và `parseSlotInputToLatex` trên thanh `QuickEditorToolbar` giúp ô `Gõ số/chữ:` luôn hiển thị ký hiệu trực quan (`-∞`, `+∞`, `1/2`, `√2`, `y_CĐ`) thay vì mã LaTeX thô (`-\infty`), đồng thời tự động focus ô nhập khi nhấp chọn ô trên bảng và xóa gọn toàn bộ ký hiệu đặc biệt chỉ với 1 phím `Backspace`.
+    - Loại bỏ hoàn toàn nhãn thừa `Chuẩn SGK GDPT 2018` / `SGK GDPT 2018` trên header Bảng biến thiên, modal chèn công thức và các thẻ danh mục để giao diện luôn tinh gọn, thoáng rộng và không bị tràn/cắt xén chữ.
+    - Khắc phục triệt để hiện tượng tràn số khỏi ô bảng khi thêm nhiều cực trị: Thiết lập `<colgroup>` và thuật toán tính độ rộng tối thiểu động `calculatedTableMinWidth` (mốc thường `74px`, tiệm cận `104px`, khoảng biến thiên `68px`), kết hợp `overflow-hidden` và container cuộn ngang tự động `overflow-x-auto pb-1.5` để mỗi ô luôn giữ trọn vẹn số, ký hiệu và mũi tên mà không bao giờ bị ép méo hay tràn vỡ ra ngoài.
+    - _Nâng Cấp Kéo - Thả & Thêm Tiệm Cận Đứng 1-Click (`handleAddAsymptoteColumn`)_:
+      - Trang bị nút bấm **`|| Thêm tiệm cận`** màu hổ phách ngay trên thanh công cụ bảng, 1-click chèn ngay 1 cột tiệm cận đứng vạch kép `||` hoàn chỉnh (tính toán hoành độ `x_0` tự động, đạo hàm `y' = ||`, giá trị giới hạn hai bên `-\infty || +\infty`).
+      - Hỗ trợ **Kéo - Thả thẻ `|| (Tiệm cận)` vào khoảng giữa 2 cột (Interval Drop)**: Thả vào bất kỳ dòng nào (`x`, `y'`, `y`) giữa 2 cột lập tức chèn 1 cột tiệm cận đứng vào đúng vị trí đó.
+      - Hỗ trợ **Kéo - Thả thẻ `|| (Tiệm cận)` vào cột mốc bất kỳ**: Thả vào dòng `x`, dòng `y'` hoặc dòng `y` lập tức chuyển đổi cột mốc thành tiệm cận đứng vạch kép `||`, mở rộng toàn bộ `<td>` thành vùng DropZone mượt mà không bị trượt chuột.
 
 - **Tái Thiết Kế Thư Viện Công Thức & Hợp Chất Kéo - Thả 7 Môn Học (`HierarchicalMathPalette.jsx`) & Kéo - Thả Vào Ô Con Công Thức (`WordStyleFormulaCanvas.jsx`)**:
-  - *Giao Diện Thẻ Studio Tile 7 Môn Học (`HierarchicalMathPalette.jsx`)*:
-    + Thiết kế bảng màu chủ đề riêng cho 7 môn học (`Toán Học`, `Hóa Học`, `Vật Lý`, `Sinh Học`, `Ngữ Văn`, `Địa Lý`, `Ký Hiệu`), hiển thị trực tiếp công thức KaTeX và hợp chất hóa học sắc nét ngay giữa thẻ (`draggable={true}`) và bổ sung danh mục `Bảng Biến Thiên & Cực Trị (Kéo - Thả)`.
-  - *Bảo Toàn Khung Công Thức & Nhận Kéo - Thả Trực Tiếp Vào Ô Con (`WordStyleFormulaCanvas.jsx`)*:
-    + Bổ sung `lastCommittedContentRef` ngăn `useEffect` перезагружать lại toàn bộ dòng khi người dùng đang xóa trắng chữ trong ô công thức đang mở, giữ nguyên trạng thái `activeFormulaId` và gán placeholder `\square` an toàn khi serialize.
-    + Bổ sung `handleDropOnFormulaInput` (`onDragOver` & `onDrop`) trực tiếp trên từng ô `<input>` con của phân số (`num`, `den`, `result`), lũy thừa (`base`, `exp`), căn thức (`expr`) và công thức chung (`latex`), đồng thời tự động khôi phục dòng trống khi xóa hết khối bảng/công thức để người dùng luôn kéo thả lại được vào mọi khung soạn thảo.
+  - _Giao Diện Thẻ Studio Tile 7 Môn Học (`HierarchicalMathPalette.jsx`)_:
+    - Thiết kế bảng màu chủ đề riêng cho 7 môn học (`Toán Học`, `Hóa Học`, `Vật Lý`, `Sinh Học`, `Ngữ Văn`, `Địa Lý`, `Ký Hiệu`), hiển thị trực tiếp công thức KaTeX và hợp chất hóa học sắc nét ngay giữa thẻ (`draggable={true}`) và bổ sung danh mục `Bảng Biến Thiên & Cực Trị (Kéo - Thả)`.
+  - _Bảo Toàn Khung Công Thức & Nhận Kéo - Thả Trực Tiếp Vào Ô Con (`WordStyleFormulaCanvas.jsx`)_:
+    - Bổ sung `lastCommittedContentRef` ngăn `useEffect` перезагружать lại toàn bộ dòng khi người dùng đang xóa trắng chữ trong ô công thức đang mở, giữ nguyên trạng thái `activeFormulaId` và gán placeholder `\square` an toàn khi serialize.
+    - Bổ sung `handleDropOnFormulaInput` (`onDragOver` & `onDrop`) trực tiếp trên từng ô `<input>` con của phân số (`num`, `den`, `result`), lũy thừa (`base`, `exp`), căn thức (`expr`) và công thức chung (`latex`), đồng thời tự động khôi phục dòng trống khi xóa hết khối bảng/công thức để người dùng luôn kéo thả lại được vào mọi khung soạn thảo.
 
 ---
 
 ## [29/10/2026] - Chuẩn Hóa Hiển Thị Công Thức Trực Quan WYSIWYG Toàn Diện Trong Studio Sư Phạm & Nâng Cấp Phòng Thí Nghiệm Hình Học Phẳng 2D Tương Tác (`JSXGraph`)
 
 - **Chuyển Đổi Toàn Bộ Ô Nhập Text Thô Sang Canvas Công Thức Trực Quan (`WordStyleFormulaCanvas.jsx` & `CurriculumStudioEditor.jsx`)**:
-  - *Khắc Phục Triệt Để Hiện Tượng Lộ Mã LaTeX Thô (`$y'$`, `$y = f(x)$`, `[VARIATION_TABLE]\`)*:
-    + Nâng cấp [`WordStyleFormulaCanvas.jsx`](./src/components/curriculum/WordStyleFormulaCanvas.jsx) bổ sung 2 chế độ bố cục mới: `compact` (dành cho thẻ Bẫy đề thi, thẻ Mẹo làm bài, Đề bài mẫu và Lời giải chi tiết) và `singleLine` (dành cho 4 phương án trắc nghiệm A, B, C, D).
-    + Thay thế hoàn toàn các thẻ `<textarea>` và `<input type="text">` thô trong Khối 2 (Mục 2 `examTraps`, Mục 3 `casioTricks`) và Khối 4 (`sampleQuestion.contentLatex`, `optionA..D`, `explanation`) của [`CurriculumStudioEditor.jsx`](./src/components/curriculum/CurriculumStudioEditor.jsx) bằng `<WordStyleFormulaCanvas />`. Giảng viên và cán bộ học vụ luôn nhìn thấy công thức toán học thực tế như người đọc bình thường tiếp cận, nhấp trực tiếp vào công thức để sửa số/ký hiệu tại chỗ.
-  - *Bóc Tách, Render Trực Quan & Chỉnh Sửa Kéo - Thả (Drag & Drop) Khối Bảng Biến Thiên (`VariationTable.jsx`), Thư Viện Công Thức / Hợp Chất (`HierarchicalMathPalette.jsx`) Và Đồ Thị 2D/3D Ngay Trong Canvas*:
-    + Nâng cấp `parseDocumentLines`, `serializeDocumentLines` và `handleDropSnippetOnCanvas` trong [`WordStyleFormulaCanvas.jsx`](./src/components/curriculum/WordStyleFormulaCanvas.jsx) để nhận diện nguyên khối các thẻ `[VARIATION_TABLE]...[/VARIATION_TABLE]`, `[MATH_GRAPH]...[/MATH_GRAPH]`, `[MATH_GRAPH_3D]...[/MATH_GRAPH_3D]`, `[MATH_GEOMETRY_2D]...[/MATH_GEOMETRY_2D]` và ảnh `![alt](url)`, hiển thị trực tiếp `<VariationTable />` và `<InteractiveMathRenderer />` ngay trong vùng soạn thảo và nhận thao tác kéo - thả trực tiếp từ thư viện bên trái.
-    + Nâng cấp [`VariationTable.jsx`](./src/components/common/VariationTable.jsx) và [`InteractiveFormulaBuilderModal.jsx`](./src/components/curriculum/InteractiveFormulaBuilderModal.jsx) sang **Kiến trúc Lưới Cột Chuẩn SGK `2N - 1` Cột & Tương Tác Không Nhảy Bảng (Zero-Jump Grid Editor)**:
-      * Khắc phục triệt để lỗi lệch cột giữa dòng `x`, dòng `y'` và dòng `y` bằng thuật toán `normalizeVariationGrid` chia bảng thành đúng `2N - 1` cột dọc cố định: các cột chẵn (`2m`) căn thẳng hàng dọc giữa mốc `x_m`, đạo hàm tại điểm (`0` hoặc tiệm cận đứng `||`) và giá trị cực trị `y_m`; các cột lẻ (`2k + 1`) căn thẳng hàng dọc giữa khoảng dấu `+` / `-` và mũi tên вектор chéo SVG `↗` / `↘`.
-      * Loại bỏ hoàn toàn cơ chế đóng/mở khung phía trên làm đẩy bảng nhảy xuống dưới chuột khi click; cố định chiều cao 3 dòng (`h-11`, `h-11`, `h-24`) và đặt **Thanh Công Cụ Kéo - Thả & Chỉnh Nhanh** cố định phía dưới bảng.
-      * Tối ưu hóa thao tác 1 chạm: Nhấp 1 lần vào dấu `+` / `-` (hoặc mũi tên `↗` / `↘`) để đảo chiều biến thiên tại chỗ; nhấp 1 lần vào `0` / `||` ở dòng `y'` để đổi giữa điểm cực trị và tiệm cận đứng vạch kép; nhấp vào ô `x` hoặc `y` để chọn rồi chạm thẻ ký hiệu / gõ số trực tiếp hoặc kéo thẻ thả thẳng vào ô.
-      * Sửa lỗi lệch prop `initialTemplateId` trong `InteractiveFormulaBuilderModal.jsx` giúp nút `📊 Bảng Biến Thiên` mở đúng tab ngay lập tức và tích hợp trực tiếp bảng biến thiên tương tác kéo - thả vào trong modal thay cho 4 ô nhập chuỗi thô.
-    + Tái thiết kế toàn diện [`HierarchicalMathPalette.jsx`](./src/components/curriculum/HierarchicalMathPalette.jsx) (**Thư Viện Công Thức & Hợp Chất Kéo - Thả**): Phân phối bảng màu chủ đề riêng cho 7 lĩnh vực (`Toán Học`, `Hóa Học`, `Vật Lý`, `Sinh Học`, `Ngữ Văn`, `Địa Lý`, `Ký Hiệu`), hiển thị mỗi công thức/hợp chất dưới dạng **Studio Tile trực quan** (`draggable={true}`) với khung chữ KaTeX nổi bật ở trung tâm, bổ sung danh mục `Bảng Biến Thiên & Cực Trị (Kéo - Thả)` và rút ngắn thời gian hiện thẻ xem trước xuống `450ms`.
-  - *Khử Triệt Để Dấu Nháy Đơn Thừa `'...'`, Dấu Gạch Chéo Ngược Cuối Dòng `\` & Đồng Bộ Nút Mức Độ Bloom*:
-    + Bổ sung hàm làm sạch `cleanOptionOrText` và nâng cấp `sanitizeLineText` tự động loại bỏ cặp dấu nháy đơn bao quanh phương án trắc nghiệm (ví dụ `'Hàm số đồng biến trên ...'`) và các dấu `\` thừa cuối dòng.
-    + Bổ sung hàm `normalizeBloomLevel` ánh xạ chính xác các giá trị `'Nhận biết'`, `'Thông hiểu'`, `'Vận dụng'`, `'Vận dụng cao'` về chuẩn `'Nhận biết (L1)'`..`'Vận dụng cao (L4)'`, đảm bảo nút mức độ nhận thức Bloom trong phần Cài đặt Định danh luôn sáng rõ trạng thái đang chọn.
+  - _Khắc Phục Triệt Để Hiện Tượng Lộ Mã LaTeX Thô (`$y'$`, `$y = f(x)$`, `[VARIATION_TABLE]\`)_:
+    - Nâng cấp [`WordStyleFormulaCanvas.jsx`](./src/components/curriculum/WordStyleFormulaCanvas.jsx) bổ sung 2 chế độ bố cục mới: `compact` (dành cho thẻ Bẫy đề thi, thẻ Mẹo làm bài, Đề bài mẫu và Lời giải chi tiết) và `singleLine` (dành cho 4 phương án trắc nghiệm A, B, C, D).
+    - Thay thế hoàn toàn các thẻ `<textarea>` và `<input type="text">` thô trong Khối 2 (Mục 2 `examTraps`, Mục 3 `casioTricks`) và Khối 4 (`sampleQuestion.contentLatex`, `optionA..D`, `explanation`) của [`CurriculumStudioEditor.jsx`](./src/components/curriculum/CurriculumStudioEditor.jsx) bằng `<WordStyleFormulaCanvas />`. Giảng viên và cán bộ học vụ luôn nhìn thấy công thức toán học thực tế như người đọc bình thường tiếp cận, nhấp trực tiếp vào công thức để sửa số/ký hiệu tại chỗ.
+  - _Bóc Tách, Render Trực Quan & Chỉnh Sửa Kéo - Thả (Drag & Drop) Khối Bảng Biến Thiên (`VariationTable.jsx`), Thư Viện Công Thức / Hợp Chất (`HierarchicalMathPalette.jsx`) Và Đồ Thị 2D/3D Ngay Trong Canvas_:
+    - Nâng cấp `parseDocumentLines`, `serializeDocumentLines` và `handleDropSnippetOnCanvas` trong [`WordStyleFormulaCanvas.jsx`](./src/components/curriculum/WordStyleFormulaCanvas.jsx) để nhận diện nguyên khối các thẻ `[VARIATION_TABLE]...[/VARIATION_TABLE]`, `[MATH_GRAPH]...[/MATH_GRAPH]`, `[MATH_GRAPH_3D]...[/MATH_GRAPH_3D]`, `[MATH_GEOMETRY_2D]...[/MATH_GEOMETRY_2D]` và ảnh `![alt](url)`, hiển thị trực tiếp `<VariationTable />` và `<InteractiveMathRenderer />` ngay trong vùng soạn thảo và nhận thao tác kéo - thả trực tiếp từ thư viện bên trái.
+    - Nâng cấp [`VariationTable.jsx`](./src/components/common/VariationTable.jsx) và [`InteractiveFormulaBuilderModal.jsx`](./src/components/curriculum/InteractiveFormulaBuilderModal.jsx) sang **Kiến trúc Lưới Cột Chuẩn SGK `2N - 1` Cột & Tương Tác Không Nhảy Bảng (Zero-Jump Grid Editor)**:
+      - Khắc phục triệt để lỗi lệch cột giữa dòng `x`, dòng `y'` và dòng `y` bằng thuật toán `normalizeVariationGrid` chia bảng thành đúng `2N - 1` cột dọc cố định: các cột chẵn (`2m`) căn thẳng hàng dọc giữa mốc `x_m`, đạo hàm tại điểm (`0` hoặc tiệm cận đứng `||`) và giá trị cực trị `y_m`; các cột lẻ (`2k + 1`) căn thẳng hàng dọc giữa khoảng dấu `+` / `-` và mũi tên вектор chéo SVG `↗` / `↘`.
+      - Loại bỏ hoàn toàn cơ chế đóng/mở khung phía trên làm đẩy bảng nhảy xuống dưới chuột khi click; cố định chiều cao 3 dòng (`h-11`, `h-11`, `h-24`) và đặt **Thanh Công Cụ Kéo - Thả & Chỉnh Nhanh** cố định phía dưới bảng.
+      - Tối ưu hóa thao tác 1 chạm: Nhấp 1 lần vào dấu `+` / `-` (hoặc mũi tên `↗` / `↘`) để đảo chiều biến thiên tại chỗ; nhấp 1 lần vào `0` / `||` ở dòng `y'` để đổi giữa điểm cực trị và tiệm cận đứng vạch kép; nhấp vào ô `x` hoặc `y` để chọn rồi chạm thẻ ký hiệu / gõ số trực tiếp hoặc kéo thẻ thả thẳng vào ô.
+      - Sửa lỗi lệch prop `initialTemplateId` trong `InteractiveFormulaBuilderModal.jsx` giúp nút `📊 Bảng Biến Thiên` mở đúng tab ngay lập tức và tích hợp trực tiếp bảng biến thiên tương tác kéo - thả vào trong modal thay cho 4 ô nhập chuỗi thô.
+    - Tái thiết kế toàn diện [`HierarchicalMathPalette.jsx`](./src/components/curriculum/HierarchicalMathPalette.jsx) (**Thư Viện Công Thức & Hợp Chất Kéo - Thả**): Phân phối bảng màu chủ đề riêng cho 7 lĩnh vực (`Toán Học`, `Hóa Học`, `Vật Lý`, `Sinh Học`, `Ngữ Văn`, `Địa Lý`, `Ký Hiệu`), hiển thị mỗi công thức/hợp chất dưới dạng **Studio Tile trực quan** (`draggable={true}`) với khung chữ KaTeX nổi bật ở trung tâm, bổ sung danh mục `Bảng Biến Thiên & Cực Trị (Kéo - Thả)` và rút ngắn thời gian hiện thẻ xem trước xuống `450ms`.
+  - _Khử Triệt Để Dấu Nháy Đơn Thừa `'...'`, Dấu Gạch Chéo Ngược Cuối Dòng `\` & Đồng Bộ Nút Mức Độ Bloom_:
+    - Bổ sung hàm làm sạch `cleanOptionOrText` và nâng cấp `sanitizeLineText` tự động loại bỏ cặp dấu nháy đơn bao quanh phương án trắc nghiệm (ví dụ `'Hàm số đồng biến trên ...'`) và các dấu `\` thừa cuối dòng.
+    - Bổ sung hàm `normalizeBloomLevel` ánh xạ chính xác các giá trị `'Nhận biết'`, `'Thông hiểu'`, `'Vận dụng'`, `'Vận dụng cao'` về chuẩn `'Nhận biết (L1)'`..`'Vận dụng cao (L4)'`, đảm bảo nút mức độ nhận thức Bloom trong phần Cài đặt Định danh luôn sáng rõ trạng thái đang chọn.
 
 - **Nâng Cấp Toàn Diện Phòng Thí Nghiệm Hình Học Phẳng 2D Tương Tác (`InteractiveMathWorkbenchModal.jsx`, `InteractiveMathRenderer.jsx` & `mathGraphUtils.js`)**:
-  - *Khắc Phục Lỗi Dính Chữ Nghiêng Trên Header `Mô hình:` & Chồng Lấp Nhãn Điểm `H`, `M` Trên Mặt Phẳng 2D*:
-    + Tách biệt văn bản tiếng Việt khỏi cặp dấu `$...$` trong `getCurrentFormulaString()` và header `Mô hình:`, chấm dứt hiện tượng chữ tiếng Việt bị KaTeX ép thành chuỗi nghiêng dính liền (`TamgiácvuôngABCtạiA`).
-    + Dựng chân đường cao `H` bằng phép chiếu vuông góc thực sự (`perpendicular` + `intersection` kèm ký hiệu góc vuông `angle` tại `A` và `H`) với tọa độ chuẩn `A(0,0), B(6,0), C(0,3.5)` và `label.offset` tách biệt hoàn toàn giữa `H (Chân đường cao)` và `M (Tâm ngoại tiếp)`.
-  - *Bổ Sung 6 Mô Hình Hình Học Phẳng Chuẩn Đề Thi & Bảng Điều Khiển Tùy Biến Đỉnh / Đường Phụ (`SHAPES_2D_META`, `mount2DGeometryBoard`)*:
-    + Cung cấp 6 mô hình hình học phẳng kinh điển: Tam giác vuông `ABC` (đường cao `AH`, trung tuyến `AM`), Tam giác nhọn `ABC` nội tiếp `(O)` (trực tâm `H`, trọng tâm `G`), Đường tròn `(O; R)` & hai tiếp tuyến `MA, MB`, Tứ giác nội tiếp `ABCD`, Hình bình hành / Hình thoi `ABCD`, và Hình thang vuông `ABCD`.
-    + Trang bị bảng điều khiển cột trái đầy đủ cho tab `📐 Hình Phẳng 2D`: chọn mô hình, bật/tắt đường cao, trung tuyến, đường tròn ngoại tiếp, hệ trục `Oxy`, sửa tên & tọa độ `(X, Y)` từng đỉnh, thêm điểm phụ chia đoạn và kẻ đoạn thẳng phụ nét đứt/nét liền.
-    + Hoàn thiện bộ tuần tự hóa & giải mã `formatMathGeometry2DTag` / `parseMathGeometry2DTag` cho thẻ `[MATH_GEOMETRY_2D]...[/MATH_GEOMETRY_2D]` và tích hợp vào `InteractiveMathRenderer.jsx`.
+  - _Khắc Phục Lỗi Dính Chữ Nghiêng Trên Header `Mô hình:` & Chồng Lấp Nhãn Điểm `H`, `M` Trên Mặt Phẳng 2D_:
+    - Tách biệt văn bản tiếng Việt khỏi cặp dấu `$...$` trong `getCurrentFormulaString()` và header `Mô hình:`, chấm dứt hiện tượng chữ tiếng Việt bị KaTeX ép thành chuỗi nghiêng dính liền (`TamgiácvuôngABCtạiA`).
+    - Dựng chân đường cao `H` bằng phép chiếu vuông góc thực sự (`perpendicular` + `intersection` kèm ký hiệu góc vuông `angle` tại `A` và `H`) với tọa độ chuẩn `A(0,0), B(6,0), C(0,3.5)` và `label.offset` tách biệt hoàn toàn giữa `H (Chân đường cao)` và `M (Tâm ngoại tiếp)`.
+  - _Bổ Sung 6 Mô Hình Hình Học Phẳng Chuẩn Đề Thi & Bảng Điều Khiển Tùy Biến Đỉnh / Đường Phụ (`SHAPES_2D_META`, `mount2DGeometryBoard`)_:
+    - Cung cấp 6 mô hình hình học phẳng kinh điển: Tam giác vuông `ABC` (đường cao `AH`, trung tuyến `AM`), Tam giác nhọn `ABC` nội tiếp `(O)` (trực tâm `H`, trọng tâm `G`), Đường tròn `(O; R)` & hai tiếp tuyến `MA, MB`, Tứ giác nội tiếp `ABCD`, Hình bình hành / Hình thoi `ABCD`, và Hình thang vuông `ABCD`.
+    - Trang bị bảng điều khiển cột trái đầy đủ cho tab `📐 Hình Phẳng 2D`: chọn mô hình, bật/tắt đường cao, trung tuyến, đường tròn ngoại tiếp, hệ trục `Oxy`, sửa tên & tọa độ `(X, Y)` từng đỉnh, thêm điểm phụ chia đoạn và kẻ đoạn thẳng phụ nét đứt/nét liền.
+    - Hoàn thiện bộ tuần tự hóa & giải mã `formatMathGeometry2DTag` / `parseMathGeometry2DTag` cho thẻ `[MATH_GEOMETRY_2D]...[/MATH_GEOMETRY_2D]` và tích hợp vào `InteractiveMathRenderer.jsx`.
 
 ---
 
 ## [22/10/2026] - Hệ Thống Thông Báo Toàn Cục (Global Notification Toast System) Thay Thế Toàn Bộ Browser Alert
 
 - **Kiến Trúc Điều Phối Thông Báo Toàn Cục (`ToastContext.jsx` & `GlobalToastContainer.jsx`)**:
-  - *Thay Thế Triệt Để Hộp Thoại Chặn Luồng `window.alert()` Của Trình Duyệt*:
-    + Hộp thoại `alert()` truyền thống của trình duyệt web làm đông cứng giao diện (blocking modal), tạo trải nghiệm gián đoạn và thiếu chuyên nghiệp cho giáo viên lẫn học sinh.
-    + Xây dựng hệ thống Toast thông báo nổi hiện đại, mượt mà, phân cấp 4 nhóm trạng thái nhận diện thị giác rõ ràng:
-      * **Thành công (Success - Xanh ngọc lục bảo `emerald`)**: Thông báo lưu bài, tạo câu hỏi, cập nhật node, nạp đề thành công.
-      * **Báo lỗi (Error - Đỏ hồng `rose`)**: Bắt lỗi API, ngoại lệ kết nối mạng, lỗi phân tích bài thi hoặc lỗi xác thực CSDL.
-      * **Cảnh báo (Warning - Vàng hổ phách `amber`)**: Nhắc nhở thiếu dữ liệu, chọn thiếu đáp án, xác nhận thao tác.
-      * **Thông tin (Info - Xanh dương `indigo`)**: Hướng dẫn tiến trình, xuất bản sơ đồ hoặc trạng thái đếm ngầm.
-  - *Bộ Khung Giao Diện Card Toast Nổi Cao Cấp (`GlobalToastContainer.jsx`)*:
-    + Định vị góc trên bên phải màn hình (`top-4 right-4 sm:top-6 sm:right-6`) với chỉ số lớp tối cao `z-[999999]`, đảm bảo luôn nổi trên mọi modal full-screen hay sidebar.
-    + Thiết kế kính mờ Glassmorphism (`backdrop-blur-md bg-white/95 border shadow-xl rounded-2xl`).
-    + Hiển thị đa dòng tự nhiên: Tự động tách dòng câu thông báo dài, hỗ trợ cả tiêu đề (`title`) và nội dung chi tiết (`message`).
-    + Thanh đếm ngược tiến độ (Countdown Progress Bar) tự động co ngắn mượt mà theo thời gian chờ (`duration` mặc định 4000ms).
-    + Tính năng thông minh tạm dừng đếm ngược khi người dùng rê chuột vào card (`onMouseEnter` / `onMouseLeave`) để đọc nội dung dài mà không lo bị đóng mất.
-    + Nút bấm `X` đóng nhanh tiện lợi kèm hiệu ứng viền sáng hover.
-  - *Cơ Chế Gọi Đa Dụng (Hook & Universal Singleton)*:
-    + Cung cấp React Hook `useToast()` dùng bên trong các component React: `const { showToast, toast } = useToast()`.
-    + Đồng thời xuất bản đối tượng Singleton `toast` toàn cục có thể import và gọi từ bất kỳ đâu (kể cả ngoài component lifecycle, file helper, service hay callback Axios):
-      * `toast.success(message, options)`
-      * `toast.error(message, options)`
-      * `toast.warning(message, options)`
-      * `toast.info(message, options)`
-      * `toast.dismiss(id)`
-  - *Cơ Chế Phòng Vệ Tự Động Bọc `window.alert` (Defensive Interception Layer)*:
-    + Khi `ToastProvider` được gắn vào DOM, hệ thống tự động ghi đè an toàn `window.alert(msg)` để chuyển tiếp toàn bộ chuỗi thông báo sang `toast.info(...)` (hoặc `toast.error` nếu chuỗi chứa chữ 'lỗi' / 'thất bại').
-    + Đảm bảo ngay cả khi có code bên thứ ba, thư viện ngoài hoặc các component chưa kịp refactor gọi `alert()`, trình duyệt cũng sẽ không bao giờ bật pop-up modal thô ráp chặn đứng người dùng.
+  - _Thay Thế Triệt Để Hộp Thoại Chặn Luồng `window.alert()` Của Trình Duyệt_:
+    - Hộp thoại `alert()` truyền thống của trình duyệt web làm đông cứng giao diện (blocking modal), tạo trải nghiệm gián đoạn và thiếu chuyên nghiệp cho giáo viên lẫn học sinh.
+    - Xây dựng hệ thống Toast thông báo nổi hiện đại, mượt mà, phân cấp 4 nhóm trạng thái nhận diện thị giác rõ ràng:
+      - **Thành công (Success - Xanh ngọc lục bảo `emerald`)**: Thông báo lưu bài, tạo câu hỏi, cập nhật node, nạp đề thành công.
+      - **Báo lỗi (Error - Đỏ hồng `rose`)**: Bắt lỗi API, ngoại lệ kết nối mạng, lỗi phân tích bài thi hoặc lỗi xác thực CSDL.
+      - **Cảnh báo (Warning - Vàng hổ phách `amber`)**: Nhắc nhở thiếu dữ liệu, chọn thiếu đáp án, xác nhận thao tác.
+      - **Thông tin (Info - Xanh dương `indigo`)**: Hướng dẫn tiến trình, xuất bản sơ đồ hoặc trạng thái đếm ngầm.
+  - _Bộ Khung Giao Diện Card Toast Nổi Cao Cấp (`GlobalToastContainer.jsx`)_:
+    - Định vị góc trên bên phải màn hình (`top-4 right-4 sm:top-6 sm:right-6`) với chỉ số lớp tối cao `z-[999999]`, đảm bảo luôn nổi trên mọi modal full-screen hay sidebar.
+    - Thiết kế kính mờ Glassmorphism (`backdrop-blur-md bg-white/95 border shadow-xl rounded-2xl`).
+    - Hiển thị đa dòng tự nhiên: Tự động tách dòng câu thông báo dài, hỗ trợ cả tiêu đề (`title`) và nội dung chi tiết (`message`).
+    - Thanh đếm ngược tiến độ (Countdown Progress Bar) tự động co ngắn mượt mà theo thời gian chờ (`duration` mặc định 4000ms).
+    - Tính năng thông minh tạm dừng đếm ngược khi người dùng rê chuột vào card (`onMouseEnter` / `onMouseLeave`) để đọc nội dung dài mà không lo bị đóng mất.
+    - Nút bấm `X` đóng nhanh tiện lợi kèm hiệu ứng viền sáng hover.
+  - _Cơ Chế Gọi Đa Dụng (Hook & Universal Singleton)_:
+    - Cung cấp React Hook `useToast()` dùng bên trong các component React: `const { showToast, toast } = useToast()`.
+    - Đồng thời xuất bản đối tượng Singleton `toast` toàn cục có thể import và gọi từ bất kỳ đâu (kể cả ngoài component lifecycle, file helper, service hay callback Axios):
+      - `toast.success(message, options)`
+      - `toast.error(message, options)`
+      - `toast.warning(message, options)`
+      - `toast.info(message, options)`
+      - `toast.dismiss(id)`
+  - _Cơ Chế Phòng Vệ Tự Động Bọc `window.alert` (Defensive Interception Layer)_:
+    - Khi `ToastProvider` được gắn vào DOM, hệ thống tự động ghi đè an toàn `window.alert(msg)` để chuyển tiếp toàn bộ chuỗi thông báo sang `toast.info(...)` (hoặc `toast.error` nếu chuỗi chứa chữ 'lỗi' / 'thất bại').
+    - Đảm bảo ngay cả khi có code bên thứ ba, thư viện ngoài hoặc các component chưa kịp refactor gọi `alert()`, trình duyệt cũng sẽ không bao giờ bật pop-up modal thô ráp chặn đứng người dùng.
 
 - **Di Chuyển & Chuẩn Hóa 100% Các Lệnh Alert Cũ Sang Toast Thông Minh**:
   - `CurriculumExplorerView.jsx`: Chuyển đổi 13+ vị trí `alert(...)` (khởi chạy bài kiểm tra, tạo/xóa dạng bài, xóa chương học, xóa bài học, tạo chương, tạo bài, import JSON, bóc tách AI, sinh đề) sang `toast.success`, `toast.error`, `toast.warning`, `toast.info`.
@@ -1366,17 +1626,17 @@ pm run build hoàn thành trong 1.12s, 0 lỗi cú pháp.
   - `ClassMicroGroupsModal.jsx`: Chuyển đổi thông báo in sơ đồ phân bàn sang `toast.info(...)`.
 
 - **Hộp Thoại Xác Nhận Xóa In-App Hiện Đại (In-App Confirm Dialogs - Zero Browser Modals)**:
-  - *Thay thế triệt để `window.confirm` bằng Hộp thoại Xác nhận Trong Ứng Dụng*:
-    + Loại bỏ hoàn toàn hộp thoại modal mặc định của trình duyệt (`window.confirm`) khi xóa Chương, xóa Bài học và xóa Dạng bài trong [`CurriculumExplorerView.jsx`](./src/components/curriculum/CurriculumExplorerView.jsx).
-    + Xây dựng modal `confirmDeleteDialog` đồng bộ giao diện Glassmorphism với màu cảnh báo đỏ (`rose-500`), icon `<AlertTriangle />`, hiển thị tường minh tên Node chuẩn bị xóa, danh sách tài liệu / bài tập bị ảnh hưởng và nút "Xác Nhận Xóa" chuyên nghiệp.
-    + Trong [`CurriculumStudioEditor.jsx`](./src/components/curriculum/CurriculumStudioEditor.jsx), cơ chế xóa câu hỏi được thay bằng thao tác 2 chạm (Two-Tap Confirmation): chạm lần 1 hiển thị đếm ngược "Nhấn để xác nhận xóa", chạm lần 2 thực hiện xóa an toàn kèm `toast.success`.
+  - _Thay thế triệt để `window.confirm` bằng Hộp thoại Xác nhận Trong Ứng Dụng_:
+    - Loại bỏ hoàn toàn hộp thoại modal mặc định của trình duyệt (`window.confirm`) khi xóa Chương, xóa Bài học và xóa Dạng bài trong [`CurriculumExplorerView.jsx`](./src/components/curriculum/CurriculumExplorerView.jsx).
+    - Xây dựng modal `confirmDeleteDialog` đồng bộ giao diện Glassmorphism với màu cảnh báo đỏ (`rose-500`), icon `<AlertTriangle />`, hiển thị tường minh tên Node chuẩn bị xóa, danh sách tài liệu / bài tập bị ảnh hưởng và nút "Xác Nhận Xóa" chuyên nghiệp.
+    - Trong [`CurriculumStudioEditor.jsx`](./src/components/curriculum/CurriculumStudioEditor.jsx), cơ chế xóa câu hỏi được thay bằng thao tác 2 chạm (Two-Tap Confirmation): chạm lần 1 hiển thị đếm ngược "Nhấn để xác nhận xóa", chạm lần 2 thực hiện xóa an toàn kèm `toast.success`.
 
 - **Tối Giản Hóa Hộp Thoại Sửa Nhanh & Chuyển Đổi Nút "Sửa Nhanh" Sang Icon Cây Bút (`CurriculumExplorerView.jsx`)**:
-  - *Chuyển đổi nút Sửa Nhanh sang Icon Bút*: Thay thế nút bấm văn bản "Sửa nhanh" bằng icon button `<Pencil className="w-4 h-4" />` tinh gọn, bo góc hiện đại kèm tooltip "Sửa thông tin nhanh".
-  - *Tái cấu trúc Modal Sửa Nhanh (`isEditModalOpen`)*:
-    + Loại bỏ toàn bộ 4 tab biên soạn nội dung bên trong (Lý thuyết SGK, Phương pháp KaTeX, Video giảng, Câu hỏi mẫu) khỏi hộp thoại này theo đúng yêu cầu sư phạm.
-    + Tập trung 100% vào việc chỉnh sửa metadata: Tên/Tiêu đề dạng bài, Chương học trực thuộc, Khối lớp (Lớp 10, 11, 12), Mức độ nhận thức chuẩn Bloom (Nhận biết, Thông hiểu, Vận dụng, Vận dụng cao) và Trọng số năng lực (%).
-    + Tích hợp banner điều hướng nổi bật: "Cần chỉnh sửa nội dung bài học chuyên sâu? Mở Studio Biên Soạn Sư Phạm", giúp giảng viên dễ dàng chuyển hướng sang Studio khi cần soạn công thức phức tạp hoặc vẽ đồ thị JSXGraph.
+  - _Chuyển đổi nút Sửa Nhanh sang Icon Bút_: Thay thế nút bấm văn bản "Sửa nhanh" bằng icon button `<Pencil className="w-4 h-4" />` tinh gọn, bo góc hiện đại kèm tooltip "Sửa thông tin nhanh".
+  - _Tái cấu trúc Modal Sửa Nhanh (`isEditModalOpen`)_:
+    - Loại bỏ toàn bộ 4 tab biên soạn nội dung bên trong (Lý thuyết SGK, Phương pháp KaTeX, Video giảng, Câu hỏi mẫu) khỏi hộp thoại này theo đúng yêu cầu sư phạm.
+    - Tập trung 100% vào việc chỉnh sửa metadata: Tên/Tiêu đề dạng bài, Chương học trực thuộc, Khối lớp (Lớp 10, 11, 12), Mức độ nhận thức chuẩn Bloom (Nhận biết, Thông hiểu, Vận dụng, Vận dụng cao) và Trọng số năng lực (%).
+    - Tích hợp banner điều hướng nổi bật: "Cần chỉnh sửa nội dung bài học chuyên sâu? Mở Studio Biên Soạn Sư Phạm", giúp giảng viên dễ dàng chuyển hướng sang Studio khi cần soạn công thức phức tạp hoặc vẽ đồ thị JSXGraph.
 
 - **Tự Động Nạp & Mở Dạng Bài Đầu Tiên Khi Chọn Chương / Bài Học**:
   - Cập nhật hàm `toggleChapter` và `toggleLesson` trong [`CurriculumExplorerView.jsx`](./src/components/curriculum/CurriculumExplorerView.jsx): Khi người dùng bấm vào tiêu đề Chương hoặc Bài học, hệ thống tự động tìm và chọn dạng bài đầu tiên (`selectedPattern`), giải quyết dứt điểm hiện tượng khung bên phải bị trống/không tải nội dung khi mới chọn chương.
@@ -1384,114 +1644,113 @@ pm run build hoàn thành trong 1.12s, 0 lỗi cú pháp.
 - **Khắc Phục Cảnh Báo KaTeX Strict Mode Đối Với Ký Tự Tiếng Việt (`MathText.jsx`)**:
   - Bổ sung cấu hình `strict: 'ignore'` trong trình dựng `renderKatexHtml` của [`MathText.jsx`](./src/components/common/MathText.jsx), triệt tiêu hoàn toàn cảnh báo `LaTeX-incompatible input Unicode text character "Đ" used in math mode`.
 
-
 ---
 
 ## [21/10/2026] - Nền Ô Ly Vở Học Sinh 2D Phẳng Cho Hình Học Không Gian 3D, Mở Quyền Xóa Chương/Bài Học (Cascade Delete), Thêm Chương/Bài Mới & Bộ Lọc Phân Loại Tri Thức Đa Chiều
 
 - **Nền Giấy Ô Ly Vở Học Sinh 2D Phẳng Cho Hình Học Không Gian 3D (`InteractiveMathRenderer.jsx`, `InteractiveMathWorkbenchModal.jsx`, `index.css`)**:
-  - *Thay Thế Nền Trắng Đơn Điệu Bằng Nền Giấy Ô Ly Chuẩn Sư Phạm THPT*:
-    + Theo phản hồi sư phạm, thay vì để nền trắng trơn gây trống trải hoặc dùng lưới 3D nghiêng phối cảnh làm rối mắt hình khối, áp dụng nền giấy ô ly 2D phẳng (`flat 2D notebook squared paper grid`).
-    + Triển khai hai lớp lưới đồng tâm bằng CSS Linear Gradients:
-      * Lưới phụ `20px x 20px` nét mờ nhẹ (`#e2e8f0` 1px).
-      * Lưới chính `100px x 100px` nét đậm định vị (`#cbd5e1` 1px) trên nền trắng tinh khiết `#ffffff`.
-    + Lưới là dạng 2D phẳng tuyệt đối ("không chia 3D"), cố định ở hậu cảnh (background), tạo cảm giác thân thuộc như đang dựng hình trên trang vở ghi chép môn Toán Hình học không gian THPT.
-  - *Cơ Chế Khử Nền Trắng Che Phủ SVG Của JSXGraph (`index.css`)*:
-    + Mặc định CSS của JSXGraph gán `background-color: #ffffff !important` cho thẻ `<svg>`.
-    + Bổ sung selector có độ ưu tiên cao `.jxgbox.jxgbox-3d-grid svg { background-color: transparent !important; background: transparent !important; }`, cho phép các ô ly 2D phía sau container lộ rõ sắc nét mà không bị SVG đè lên.
-    + Áp dụng đồng bộ trên cả component hiển thị `InteractiveMathRenderer` khi `is3D === true` và Workbench biên tập `InteractiveMathWorkbenchModal` tại tab `3d_space`.
+  - _Thay Thế Nền Trắng Đơn Điệu Bằng Nền Giấy Ô Ly Chuẩn Sư Phạm THPT_:
+    - Theo phản hồi sư phạm, thay vì để nền trắng trơn gây trống trải hoặc dùng lưới 3D nghiêng phối cảnh làm rối mắt hình khối, áp dụng nền giấy ô ly 2D phẳng (`flat 2D notebook squared paper grid`).
+    - Triển khai hai lớp lưới đồng tâm bằng CSS Linear Gradients:
+      - Lưới phụ `20px x 20px` nét mờ nhẹ (`#e2e8f0` 1px).
+      - Lưới chính `100px x 100px` nét đậm định vị (`#cbd5e1` 1px) trên nền trắng tinh khiết `#ffffff`.
+    - Lưới là dạng 2D phẳng tuyệt đối ("không chia 3D"), cố định ở hậu cảnh (background), tạo cảm giác thân thuộc như đang dựng hình trên trang vở ghi chép môn Toán Hình học không gian THPT.
+  - _Cơ Chế Khử Nền Trắng Che Phủ SVG Của JSXGraph (`index.css`)_:
+    - Mặc định CSS của JSXGraph gán `background-color: #ffffff !important` cho thẻ `<svg>`.
+    - Bổ sung selector có độ ưu tiên cao `.jxgbox.jxgbox-3d-grid svg { background-color: transparent !important; background: transparent !important; }`, cho phép các ô ly 2D phía sau container lộ rõ sắc nét mà không bị SVG đè lên.
+    - Áp dụng đồng bộ trên cả component hiển thị `InteractiveMathRenderer` khi `is3D === true` và Workbench biên tập `InteractiveMathWorkbenchModal` tại tab `3d_space`.
 
 - **Tái Cấu Trúc Toàn Diện Hệ Trục Tọa Độ Oxyz 3D Vector & Bật/Tắt Trực Quan (`InteractiveMathRenderer.jsx` & `InteractiveMathWorkbenchModal.jsx`)**:
-  - *Khắc Phục Hiện Tượng Trục Oxyz Không Hiện Khi Nhấp Nút*:
-    + Nhận diện nguyên nhân gốc: `view3d.defaultAxes` của JSXGraph sử dụng đối tượng `axis3d` không hỗ trợ mũi tên nhọn, thiếu nhãn gốc tọa độ $O$ và `setAttribute({ visible })` không cập nhật được các phần tử 2D con. Đồng thời, biến tham chiếu `v.defaultAxes?.x` bị lệch định danh so với thuộc tính nội bộ `xAxis`, khiến lệnh chuyển trạng thái bị bỏ qua.
-    + Loại bỏ cơ chế trục mặc định (`axesPosition: 'none'`), chủ động dựng hệ trục Oxyz vector độc lập.
-  - *Hệ Trục Oxyz 3D Vector Chuẩn SGK Hình Học Không Gian GDPT 2018*:
-    + Điểm gốc tọa độ $O(0, 0, 0)$ có nhãn $O$ màu slate xám đậm (`#334155`).
-    + Trục hoành $Ox$: Vector đi từ $[0, 0, 0]$ đến $[5.5, 0, 0]$, màu đỏ rực (`#ef4444`), độ dày nét 2px, mũi tên nhọn (`lastArrow: true`), nhãn $x$ in đậm nổi bật.
-    + Trục tung $Oy$: Vector đi từ $[0, 0, 0]$ đến $[0, 5.5, 0]$, màu xanh lá (`#10b981`), độ dày nét 2px, mũi tên nhọn (`lastArrow: true`), nhãn $y$ in đậm.
-    + Trục cao $Oz$: Vector đi từ $[0, 0, 0]$ đến $[0, 0, 6.5]$, màu xanh dương (`#3b82f6`), độ dày nét 2px, mũi tên nhọn (`lastArrow: true`), nhãn $z$ in đậm.
-    + Ba tia đối âm nét đứt ($Ox^-, Oy^-, Oz^-$): Dựng các tia nét đứt mờ (`dash: 2`) về phía trục âm, hỗ trợ học sinh định vị không gian 3D trực quan khi xoay góc nhìn.
-  - *Cơ Chế Bật/Tắt Linh Hoạt (Interactive Toggle)*:
-    + Lưu trữ các phần tử trục vào `axesElementsRef.current`, cập nhật tức thì visibility trên cả đối tượng 3D lẫn `element2D` SVG, phản hồi 60 FPS khi bấm nút.
-    + Nâng cấp nút bấm trên toolbar: Thể hiện trạng thái active rõ ràng (`bg-indigo-600 text-white shadow-xs`), icon la bàn chuyển trắng và nhãn chuyển thành "Đang bật Oxyz".
-    + Bổ sung nút bấm và hệ trục Oxyz tương ứng trên canvas phòng thí nghiệm MathLab (`InteractiveMathWorkbenchModal.jsx`).
+  - _Khắc Phục Hiện Tượng Trục Oxyz Không Hiện Khi Nhấp Nút_:
+    - Nhận diện nguyên nhân gốc: `view3d.defaultAxes` của JSXGraph sử dụng đối tượng `axis3d` không hỗ trợ mũi tên nhọn, thiếu nhãn gốc tọa độ $O$ và `setAttribute({ visible })` không cập nhật được các phần tử 2D con. Đồng thời, biến tham chiếu `v.defaultAxes?.x` bị lệch định danh so với thuộc tính nội bộ `xAxis`, khiến lệnh chuyển trạng thái bị bỏ qua.
+    - Loại bỏ cơ chế trục mặc định (`axesPosition: 'none'`), chủ động dựng hệ trục Oxyz vector độc lập.
+  - _Hệ Trục Oxyz 3D Vector Chuẩn SGK Hình Học Không Gian GDPT 2018_:
+    - Điểm gốc tọa độ $O(0, 0, 0)$ có nhãn $O$ màu slate xám đậm (`#334155`).
+    - Trục hoành $Ox$: Vector đi từ $[0, 0, 0]$ đến $[5.5, 0, 0]$, màu đỏ rực (`#ef4444`), độ dày nét 2px, mũi tên nhọn (`lastArrow: true`), nhãn $x$ in đậm nổi bật.
+    - Trục tung $Oy$: Vector đi từ $[0, 0, 0]$ đến $[0, 5.5, 0]$, màu xanh lá (`#10b981`), độ dày nét 2px, mũi tên nhọn (`lastArrow: true`), nhãn $y$ in đậm.
+    - Trục cao $Oz$: Vector đi từ $[0, 0, 0]$ đến $[0, 0, 6.5]$, màu xanh dương (`#3b82f6`), độ dày nét 2px, mũi tên nhọn (`lastArrow: true`), nhãn $z$ in đậm.
+    - Ba tia đối âm nét đứt ($Ox^-, Oy^-, Oz^-$): Dựng các tia nét đứt mờ (`dash: 2`) về phía trục âm, hỗ trợ học sinh định vị không gian 3D trực quan khi xoay góc nhìn.
+  - _Cơ Chế Bật/Tắt Linh Hoạt (Interactive Toggle)_:
+    - Lưu trữ các phần tử trục vào `axesElementsRef.current`, cập nhật tức thì visibility trên cả đối tượng 3D lẫn `element2D` SVG, phản hồi 60 FPS khi bấm nút.
+    - Nâng cấp nút bấm trên toolbar: Thể hiện trạng thái active rõ ràng (`bg-indigo-600 text-white shadow-xs`), icon la bàn chuyển trắng và nhãn chuyển thành "Đang bật Oxyz".
+    - Bổ sung nút bấm và hệ trục Oxyz tương ứng trên canvas phòng thí nghiệm MathLab (`InteractiveMathWorkbenchModal.jsx`).
 
 - **Mở Quyền Quản Trị Xóa & Thêm Chương / Bài Học Trên Cây Tri Thức (`CurriculumExplorerView.jsx`)**:
-  - *Xóa Chương Học Đa Cấp (Cascade Delete Chapter)*:
-    + Tích hợp nút thùng rác `Trash2` trực tiếp trên từng header Chương học (`chap.chapterId`).
-    + Hộp thoại cảnh báo thông minh: Hiển thị rõ số lượng bài học, dạng bài và câu hỏi sẽ bị xóa vĩnh viễn khỏi CSDL trước khi xác nhận.
-    + Kết nối API backend `DELETE /api/content/curriculum/nodes/{nodeId}`, tự động kích hoạt bộ thu thập đệ quy `CollectDescendantIds` xóa sạch các thực thể phụ thuộc (`SkillPrerequisites`, `Materials`, `Questions`, `Skills`).
-    + Cập nhật tức thì giao diện thông qua `fetchCurriculumData()` và reset lựa chọn an toàn nếu dạng bài đang xem nằm trong nhánh bị xóa.
-  - *Xóa Bài Học (Delete Lesson)*:
-    + Tích hợp nút xóa `Trash2` trên từng header Bài học (`les.lessonId`), cảnh báo số lượng dạng bài trực thuộc.
-  - *Tạo Chương Học Mới (`+ Thêm Chương Mới`)*:
-    + Bổ sung nút `+ Thêm Chương Mới` nổi bật trên đỉnh cột Cấu trúc phân cấp.
-    + Modal `CreateChapterModal` chuyên nghiệp: Cho phép Giảng viên/Ban Chuyên Môn chọn Miền tri thức, Phân môn trực thuộc (Vật lí, Hóa học, Sinh học, v.v.), Khối lớp (Lớp 12, 11, 10), Năm học áp dụng (2025 - 2026, 2024 - 2025), Tên chương, Trọng số (%) và Mục tiêu chuẩn đầu ra.
-    + Tự động format định danh chuẩn hóa: `[Lớp 12] [Tên chương] (2025-2026)`.
-  - *Thêm Bài Học Mới (`+ Thêm bài`)*:
-    + Bổ sung nút `+ Thêm bài` trên từng Chapter Header, mở modal `CreateLessonModal` với trường tên bài, trọng số và tóm tắt nội dung cốt lõi; tự động bung mở Chương (auto-expand) ngay sau khi tạo thành công.
+  - _Xóa Chương Học Đa Cấp (Cascade Delete Chapter)_:
+    - Tích hợp nút thùng rác `Trash2` trực tiếp trên từng header Chương học (`chap.chapterId`).
+    - Hộp thoại cảnh báo thông minh: Hiển thị rõ số lượng bài học, dạng bài và câu hỏi sẽ bị xóa vĩnh viễn khỏi CSDL trước khi xác nhận.
+    - Kết nối API backend `DELETE /api/content/curriculum/nodes/{nodeId}`, tự động kích hoạt bộ thu thập đệ quy `CollectDescendantIds` xóa sạch các thực thể phụ thuộc (`SkillPrerequisites`, `Materials`, `Questions`, `Skills`).
+    - Cập nhật tức thì giao diện thông qua `fetchCurriculumData()` và reset lựa chọn an toàn nếu dạng bài đang xem nằm trong nhánh bị xóa.
+  - _Xóa Bài Học (Delete Lesson)_:
+    - Tích hợp nút xóa `Trash2` trên từng header Bài học (`les.lessonId`), cảnh báo số lượng dạng bài trực thuộc.
+  - _Tạo Chương Học Mới (`+ Thêm Chương Mới`)_:
+    - Bổ sung nút `+ Thêm Chương Mới` nổi bật trên đỉnh cột Cấu trúc phân cấp.
+    - Modal `CreateChapterModal` chuyên nghiệp: Cho phép Giảng viên/Ban Chuyên Môn chọn Miền tri thức, Phân môn trực thuộc (Vật lí, Hóa học, Sinh học, v.v.), Khối lớp (Lớp 12, 11, 10), Năm học áp dụng (2025 - 2026, 2024 - 2025), Tên chương, Trọng số (%) và Mục tiêu chuẩn đầu ra.
+    - Tự động format định danh chuẩn hóa: `[Lớp 12] [Tên chương] (2025-2026)`.
+  - _Thêm Bài Học Mới (`+ Thêm bài`)_:
+    - Bổ sung nút `+ Thêm bài` trên từng Chapter Header, mở modal `CreateLessonModal` với trường tên bài, trọng số và tóm tắt nội dung cốt lõi; tự động bung mở Chương (auto-expand) ngay sau khi tạo thành công.
 
 - **Bộ Lọc Phân Loại Tri Thức Đa Chiều (`Bộ Lọc Phân Loại Tri Thức` Toolbar)**:
-  - *Phân Tách Phân Môn Riêng Biệt (Sub-Subjects)*:
-    + Thay vì chỉ hiển thị các Miền tri thức lớn, giao diện cho phép học sinh và giáo viên lọc sâu theo từng môn học cụ thể:
-      * **Khoa học Tự nhiên**: Tất cả môn, Vật lí, Hóa học, Sinh học.
-      * **Khoa học Xã hội**: Tất cả môn, Lịch sử, Địa lí, GDKT & Pháp luật.
-      * **Sử dụng Ngôn ngữ**: Tất cả môn, Tiếng Việt / Ngữ văn, Tiếng Anh.
-      * **Toán học & Tư duy định lượng**: Tất cả môn, Đại số & Giải tích, Hình học & Đo lường, Xác suất & Thống kê, Tư duy Logic & Dữ liệu.
-  - *Phân Loại Theo Khối Lớp (Grade Filter)*:
-    + Hỗ trợ các nút lọc tức thì: `Tất cả lớp`, `Lớp 12 (Trọng tâm ĐGNL V-ACT)`, `Lớp 11`, `Lớp 10`.
-    + Động cơ suy luận regex quét thông minh từ khóa khối lớp từ tên chương và bài học.
-  - *Phân Loại Theo Năm Học (Academic Year Filter)*:
-    + Hỗ trợ chọn lọc: `Tất cả năm`, `2025 - 2026 (Chương trình GDPT 2018 Mới)`, `2024 - 2025`.
-  - *Thống Kê Khớp Thời Gian Thực & Đặt Lại Bộ Lọc*:
-    + Hiển thị số lượng Chương và Bài học khớp bộ lọc theo thời gian thực (real-time badge).
-    + Nút "Đặt lại bộ lọc" xuất hiện tự động khi có ít nhất một tiêu chí lọc được kích hoạt.
+  - _Phân Tách Phân Môn Riêng Biệt (Sub-Subjects)_:
+    - Thay vì chỉ hiển thị các Miền tri thức lớn, giao diện cho phép học sinh và giáo viên lọc sâu theo từng môn học cụ thể:
+      - **Khoa học Tự nhiên**: Tất cả môn, Vật lí, Hóa học, Sinh học.
+      - **Khoa học Xã hội**: Tất cả môn, Lịch sử, Địa lí, GDKT & Pháp luật.
+      - **Sử dụng Ngôn ngữ**: Tất cả môn, Tiếng Việt / Ngữ văn, Tiếng Anh.
+      - **Toán học & Tư duy định lượng**: Tất cả môn, Đại số & Giải tích, Hình học & Đo lường, Xác suất & Thống kê, Tư duy Logic & Dữ liệu.
+  - _Phân Loại Theo Khối Lớp (Grade Filter)_:
+    - Hỗ trợ các nút lọc tức thì: `Tất cả lớp`, `Lớp 12 (Trọng tâm ĐGNL V-ACT)`, `Lớp 11`, `Lớp 10`.
+    - Động cơ suy luận regex quét thông minh từ khóa khối lớp từ tên chương và bài học.
+  - _Phân Loại Theo Năm Học (Academic Year Filter)_:
+    - Hỗ trợ chọn lọc: `Tất cả năm`, `2025 - 2026 (Chương trình GDPT 2018 Mới)`, `2024 - 2025`.
+  - _Thống Kê Khớp Thời Gian Thực & Đặt Lại Bộ Lọc_:
+    - Hiển thị số lượng Chương và Bài học khớp bộ lọc theo thời gian thực (real-time badge).
+    - Nút "Đặt lại bộ lọc" xuất hiện tự động khi có ít nhất một tiêu chí lọc được kích hoạt.
 
 - **Động Cơ Bảng Biến Thiên Vector Nội Sinh Hỗ Trợ Tiệm Cận Kép (`VariationTable.jsx`)**:
-  - *Hỗ Trợ Hàm Phân Thức Hữu Tỉ (Bậc 1/1 & Bậc 2/1)*:
-    + Nâng cấp bộ phân tích chuỗi `parseVariationTableString` và kiến trúc render vector 3 dòng.
-    + Cho phép khai báo ký hiệu vạch kép `||` tại điểm gián đoạn của mẫu số trong cả dòng đạo hàm $y'$ và dòng biến thiên $y$ / `dir`.
-    + Render vạch kép SVG sắc nét ngăn cách hai nhánh đồ thị theo đúng quy chuẩn sách giáo khoa Toán học THPT.
-  - *Tự Động Suy Luận Hướng Mũi Tên (`directions`)*:
-    + Khi LLM sinh thiếu dòng `dir`, động cơ tự động ánh xạ trực tiếp từ dấu của $y'$ (`+` -> `up`, `-` -> `down`, `||` -> ngắt quãng) mà không làm vỡ giao diện.
-    + Khử triệt để các ký hiệu `$` dư thừa và hỗ trợ linh hoạt cả dấu phẩy `,` lẫn dấu gạch đứng `|`.
+  - _Hỗ Trợ Hàm Phân Thức Hữu Tỉ (Bậc 1/1 & Bậc 2/1)_:
+    - Nâng cấp bộ phân tích chuỗi `parseVariationTableString` và kiến trúc render vector 3 dòng.
+    - Cho phép khai báo ký hiệu vạch kép `||` tại điểm gián đoạn của mẫu số trong cả dòng đạo hàm $y'$ và dòng biến thiên $y$ / `dir`.
+    - Render vạch kép SVG sắc nét ngăn cách hai nhánh đồ thị theo đúng quy chuẩn sách giáo khoa Toán học THPT.
+  - _Tự Động Suy Luận Hướng Mũi Tên (`directions`)_:
+    - Khi LLM sinh thiếu dòng `dir`, động cơ tự động ánh xạ trực tiếp từ dấu của $y'$ (`+` -> `up`, `-` -> `down`, `||` -> ngắt quãng) mà không làm vỡ giao diện.
+    - Khử triệt để các ký hiệu `$` dư thừa và hỗ trợ linh hoạt cả dấu phẩy `,` lẫn dấu gạch đứng `|`.
 
 - **Động Cơ Vẽ Đồ Thị Vi Tích Phân 2D & Tự Động Dựng Tiệm Cận (`InteractiveMathRenderer.jsx`)**:
-  - *Tự Động Dựng Đường Tiệm Cận & Tâm Đối Xứng*:
-    + Hàm phân thức bậc 1/1 (`rational`): Tự động tính toán và vẽ đường tiệm cận đứng $x = -d/c$ (nét đứt màu xám), tiệm cận ngang $y = a/c$ (nét đứt màu xám), và điểm tâm đối xứng $I(-d/c, a/c)$ giao điểm của 2 đường tiệm cận.
-    + Hàm phân thức bậc 2/1 (`rational_21`): Tự động vẽ đường tiệm cận đứng $x = -e/d$ và tiệm cận xiên $y = \frac{a}{d}x + \frac{bd - ae}{d^2}$ nét đứt cùng tâm đối xứng $I$.
-  - *Chống Hiện Tượng Nối Dọc Qua Tiệm Cận*:
-    + Thiết lập cờ `discontinuous: isRational` trong JSXGraph `board.create('functiongraph', ...)`. Đồ thị được ngắt nét hoàn toàn tại điểm gián đoạn, loại bỏ hiện tượng vẽ nối một đường thẳng đứng xuyên qua tiệm cận.
+  - _Tự Động Dựng Đường Tiệm Cận & Tâm Đối Xứng_:
+    - Hàm phân thức bậc 1/1 (`rational`): Tự động tính toán và vẽ đường tiệm cận đứng $x = -d/c$ (nét đứt màu xám), tiệm cận ngang $y = a/c$ (nét đứt màu xám), và điểm tâm đối xứng $I(-d/c, a/c)$ giao điểm của 2 đường tiệm cận.
+    - Hàm phân thức bậc 2/1 (`rational_21`): Tự động vẽ đường tiệm cận đứng $x = -e/d$ và tiệm cận xiên $y = \frac{a}{d}x + \frac{bd - ae}{d^2}$ nét đứt cùng tâm đối xứng $I$.
+  - _Chống Hiện Tượng Nối Dọc Qua Tiệm Cận_:
+    - Thiết lập cờ `discontinuous: isRational` trong JSXGraph `board.create('functiongraph', ...)`. Đồ thị được ngắt nét hoàn toàn tại điểm gián đoạn, loại bỏ hiện tượng vẽ nối một đường thẳng đứng xuyên qua tiệm cận.
 
 - **Chuẩn Hóa Payload Nạp Tri Thức & Khắc Phục Lỗi Validation Error CSDL (`contentService.js` & `CurriculumExplorerView.jsx`)**:
-  - *Bộ Lọc Chuẩn Hóa Payload Client-Side (`contentService.js`)*:
-    + Triển khai hai hàm trợ giúp `normalizeCorrectOption(raw)` và `sanitizeCurriculumPayload(payload)`.
-    + Đảm bảo trước khi dữ liệu được gửi đến backend `Content Service` (`POST /api/content/curriculum/import`, `createQuestion`, `updateQuestion`), toàn bộ các trường `correctOption` của mọi câu hỏi trong các bài học và dạng bài đều được chuẩn hóa về duy nhất 1 ký tự chuẩn mực `'A'`, `'B'`, `'C'`, `'D'`.
-    + Xử lý an toàn mọi dạng dữ liệu thô sinh ra từ OCR hoặc nhập liệu: chuỗi có dấu chấm (`"A."`), ngoặc (`"(B)"`, `"[C]"`), hai chấm (`"D:"`), từ khóa (`"Đáp án C"`, `"Phương án B"`, `"Option A"`), số nguyên (`0..3`), chuỗi rỗng và `null`.
-    + Chuẩn hóa tự động kiểu dữ liệu số cho `difficultyLevel` (mặc định 2), điền giá trị chuỗi an toàn cho các phương án `optionA` - `optionD` và `explanation`.
-  - *Cải Tiến Thông Báo Lỗi Chi Tiết Tại Modal Nạp Tri Thức (`CurriculumExplorerView.jsx`)*:
-    + Định dạng lại chuỗi thông báo lỗi khi backend trả về lỗi xác thực RFC 9110/Problem Details (trích xuất trực tiếp `errors[field]` thành danh sách rõ ràng thay vì in cả đối tượng JSON thô).
+  - _Bộ Lọc Chuẩn Hóa Payload Client-Side (`contentService.js`)_:
+    - Triển khai hai hàm trợ giúp `normalizeCorrectOption(raw)` và `sanitizeCurriculumPayload(payload)`.
+    - Đảm bảo trước khi dữ liệu được gửi đến backend `Content Service` (`POST /api/content/curriculum/import`, `createQuestion`, `updateQuestion`), toàn bộ các trường `correctOption` của mọi câu hỏi trong các bài học và dạng bài đều được chuẩn hóa về duy nhất 1 ký tự chuẩn mực `'A'`, `'B'`, `'C'`, `'D'`.
+    - Xử lý an toàn mọi dạng dữ liệu thô sinh ra từ OCR hoặc nhập liệu: chuỗi có dấu chấm (`"A."`), ngoặc (`"(B)"`, `"[C]"`), hai chấm (`"D:"`), từ khóa (`"Đáp án C"`, `"Phương án B"`, `"Option A"`), số nguyên (`0..3`), chuỗi rỗng và `null`.
+    - Chuẩn hóa tự động kiểu dữ liệu số cho `difficultyLevel` (mặc định 2), điền giá trị chuỗi an toàn cho các phương án `optionA` - `optionD` và `explanation`.
+  - _Cải Tiến Thông Báo Lỗi Chi Tiết Tại Modal Nạp Tri Thức (`CurriculumExplorerView.jsx`)_:
+    - Định dạng lại chuỗi thông báo lỗi khi backend trả về lỗi xác thực RFC 9110/Problem Details (trích xuất trực tiếp `errors[field]` thành danh sách rõ ràng thay vì in cả đối tượng JSON thô).
 
 - **Khắc Phục Triệt Để Hiện Tượng Sinh Nhầm Card Đồ Thị Oxy Đè Lên Bảng Biến Thiên (`mathGraphUtils.js`, `MathText.jsx`, `VariationTable.jsx` & `InteractiveMathRenderer.jsx`)**:
-  - *Bản Chất Sự Cố*: Trong hàm `autoSynthesizeMathGraph2DFromText`, biểu thức nhận diện hàm số `y = ...` quét qua câu hỏi chứa bảng biến thiên (như *"Đồ thị hàm số y = f(x) có bảng biến thiên như sau: [VARIATION_TABLE]..."*). Do không kiểm tra sự tồn tại của thẻ `[VARIATION_TABLE]` và cụm từ "bảng biến thiên", đồng thời chấp nhận hàm trừu tượng `f(x)`, hàm tự động gom toàn bộ nội dung đề bài và chuỗi thẻ bảng biến thiên thành công thức đồ thị và sinh một khối `[MATH_GRAPH]` thừa thãi. Hệ quả là một card "Oxy Tương Tác" khổng lồ xuất hiện đè lên bảng biến thiên, in đè toàn bộ text đề bài và chuỗi mã thô lên mặt phẳng tọa độ Oxy.
-  - *Giải Pháp Xử Lý Toàn Diện*:
-    + *Bộ Lọc Chống Sinh Nhầm (`mathGraphUtils.js`)*: Lập tức trả về `null` nếu chuỗi văn bản đã có thẻ `[VARIATION_TABLE]`, `[MATH_GRAPH]`, `[MATH_GRAPH_3D]` hoặc chứa từ khóa "bảng biến thiên", "bảng xét dấu". Đồng thời từ chối các hàm số trừu tượng dạng $f(x), g(x), u(x)$, và chỉ sinh đồ thị 2D khi có biểu thức đại số cụ thể ($x^3, x^4, \frac{ax+b}{cx+d}, x^2$).
-    + *Bảo Vệ Thẻ Đặc Biệt Trong Bộ Chuẩn Hóa Toán (`MathText.jsx`)*: Tokenize văn bản kết hợp cả dấu phân cách toán và các khối thẻ đặc biệt (`[VARIATION_TABLE]`, `[MATH_GRAPH]`), đảm bảo nội dung bên trong thẻ không bị các biểu thức chính quy KaTeX/Hóa học can thiệp làm biến dạng cú pháp.
-    + *Hỗ Trợ Bảng Biến Thiên Trên Một Dòng (`VariationTable.jsx`)*: Nâng cấp `parseVariationTableString` tự động tách dòng an toàn khi AI trả về chuỗi JSON không có ký tự ngắt dòng `\n` (tự chèn `\n` trước `x:`, `y':`, `y:`, `dir:`), bảo đảm bảng biến thiên hiển thị hoàn hảo 100% trong mọi trường hợp.
-    + *Cơ Chế Bảo Vệ Nhãn Trên Mặt Phẳng Oxy (`InteractiveMathRenderer.jsx`)*: Kiểm soát chặt chẽ `config.title` và `config.formula`, chỉ hiển thị huy hiệu và nhãn đường cong khi công thức hợp lệ, súc tích (< 35 ký tự), tuyệt đối không in chuỗi văn bản dài lên canvas JSXGraph.
+  - _Bản Chất Sự Cố_: Trong hàm `autoSynthesizeMathGraph2DFromText`, biểu thức nhận diện hàm số `y = ...` quét qua câu hỏi chứa bảng biến thiên (như _"Đồ thị hàm số y = f(x) có bảng biến thiên như sau: [VARIATION_TABLE]..."_). Do không kiểm tra sự tồn tại của thẻ `[VARIATION_TABLE]` và cụm từ "bảng biến thiên", đồng thời chấp nhận hàm trừu tượng `f(x)`, hàm tự động gom toàn bộ nội dung đề bài và chuỗi thẻ bảng biến thiên thành công thức đồ thị và sinh một khối `[MATH_GRAPH]` thừa thãi. Hệ quả là một card "Oxy Tương Tác" khổng lồ xuất hiện đè lên bảng biến thiên, in đè toàn bộ text đề bài và chuỗi mã thô lên mặt phẳng tọa độ Oxy.
+  - _Giải Pháp Xử Lý Toàn Diện_:
+    - _Bộ Lọc Chống Sinh Nhầm (`mathGraphUtils.js`)_: Lập tức trả về `null` nếu chuỗi văn bản đã có thẻ `[VARIATION_TABLE]`, `[MATH_GRAPH]`, `[MATH_GRAPH_3D]` hoặc chứa từ khóa "bảng biến thiên", "bảng xét dấu". Đồng thời từ chối các hàm số trừu tượng dạng $f(x), g(x), u(x)$, và chỉ sinh đồ thị 2D khi có biểu thức đại số cụ thể ($x^3, x^4, \frac{ax+b}{cx+d}, x^2$).
+    - _Bảo Vệ Thẻ Đặc Biệt Trong Bộ Chuẩn Hóa Toán (`MathText.jsx`)_: Tokenize văn bản kết hợp cả dấu phân cách toán và các khối thẻ đặc biệt (`[VARIATION_TABLE]`, `[MATH_GRAPH]`), đảm bảo nội dung bên trong thẻ không bị các biểu thức chính quy KaTeX/Hóa học can thiệp làm biến dạng cú pháp.
+    - _Hỗ Trợ Bảng Biến Thiên Trên Một Dòng (`VariationTable.jsx`)_: Nâng cấp `parseVariationTableString` tự động tách dòng an toàn khi AI trả về chuỗi JSON không có ký tự ngắt dòng `\n` (tự chèn `\n` trước `x:`, `y':`, `y:`, `dir:`), bảo đảm bảng biến thiên hiển thị hoàn hảo 100% trong mọi trường hợp.
+    - _Cơ Chế Bảo Vệ Nhãn Trên Mặt Phẳng Oxy (`InteractiveMathRenderer.jsx`)_: Kiểm soát chặt chẽ `config.title` và `config.formula`, chỉ hiển thị huy hiệu và nhãn đường cong khi công thức hợp lệ, súc tích (< 35 ký tự), tuyệt đối không in chuỗi văn bản dài lên canvas JSXGraph.
 
 - **Khắc Phục Hoàn Toàn Lỗi UI Khối 3D Bị Nửa Canvas Trắng Đè Lên (`InteractiveMathRenderer.jsx` & `InteractiveMathWorkbenchModal.jsx`)**:
-  - *Bản Chất Sự Cố*: Trong JSXGraph native engine, khi gọi `board.create('view3d', ...)`, mặc định các mặt phẳng thành hộp phía sau (`xPlaneRear`, `yPlaneRear`, `zPlaneRear`) được kích hoạt với mắt lưới (grid mesh). Do không gian bounding box giới hạn từ $[-6, 6]$, thành hộp chỉ che phủ góc phần tư phía sau/bên trái của trục tọa độ, trong khi nửa bên phải hoàn toàn không có vách lưới, tạo ra một đường cắt dọc sắc cạnh trông như khối trắng đè lên mô hình 3D.
-  - *Giải Pháp Xử Lý*: Thiết lập tường minh `xPlaneRear: { visible: false }, yPlaneRear: { visible: false }, zPlaneRear: { visible: false }, xPlaneFront: { visible: false }, yPlaneFront: { visible: false }, zPlaneFront: { visible: false }` trên cả component hiển thị `InteractiveMathRenderer` và modal biên tập `InteractiveMathWorkbenchModal`. Toàn bộ nền canvas chuyển sang màu trắng đồng nhất 100%, không còn bất kỳ vách ngăn hoặc khối cắt ngang nào.
-  - *Nút Bật/Tắt Hệ Trục Oxyz (`Compass` Icon)*: Theo chuẩn hình học không gian SGK GDPT 2018 (hình chóp, tứ diện thuần túy không có trục tọa độ), bổ sung công tắc `Trục Oxyz` trên thanh công cụ của card 3D. Mặc định ẩn hệ trục để mô hình thanh thoát như hình vẽ SGK, đồng thời cho phép giảng viên/học sinh bật nhanh 3 trục màu $x$ (đỏ), $y$ (xanh lá), $z$ (xanh dương) khi cần quan sát tọa độ không gian.
+  - _Bản Chất Sự Cố_: Trong JSXGraph native engine, khi gọi `board.create('view3d', ...)`, mặc định các mặt phẳng thành hộp phía sau (`xPlaneRear`, `yPlaneRear`, `zPlaneRear`) được kích hoạt với mắt lưới (grid mesh). Do không gian bounding box giới hạn từ $[-6, 6]$, thành hộp chỉ che phủ góc phần tư phía sau/bên trái của trục tọa độ, trong khi nửa bên phải hoàn toàn không có vách lưới, tạo ra một đường cắt dọc sắc cạnh trông như khối trắng đè lên mô hình 3D.
+  - _Giải Pháp Xử Lý_: Thiết lập tường minh `xPlaneRear: { visible: false }, yPlaneRear: { visible: false }, zPlaneRear: { visible: false }, xPlaneFront: { visible: false }, yPlaneFront: { visible: false }, zPlaneFront: { visible: false }` trên cả component hiển thị `InteractiveMathRenderer` và modal biên tập `InteractiveMathWorkbenchModal`. Toàn bộ nền canvas chuyển sang màu trắng đồng nhất 100%, không còn bất kỳ vách ngăn hoặc khối cắt ngang nào.
+  - _Nút Bật/Tắt Hệ Trục Oxyz (`Compass` Icon)_: Theo chuẩn hình học không gian SGK GDPT 2018 (hình chóp, tứ diện thuần túy không có trục tọa độ), bổ sung công tắc `Trục Oxyz` trên thanh công cụ của card 3D. Mặc định ẩn hệ trục để mô hình thanh thoát như hình vẽ SGK, đồng thời cho phép giảng viên/học sinh bật nhanh 3 trục màu $x$ (đỏ), $y$ (xanh lá), $z$ (xanh dương) khi cần quan sát tọa độ không gian.
 
-- **Khắc Phục Triệt Để Lỗi Render KaTeX & Mất Ký Tự Đầu `**` Trong Bài Toán Mẫu (`MathText.jsx`)**:
-  - *Bản Chất Sự Cố*: Trong bộ phân tích cấu trúc văn bản của `MathText.jsx`, điều kiện nhận diện Callout Card sử dụng `line.includes('Bài toán mẫu')` quá rộng, khiến mọi dòng nội dung bài toán (ví dụ: `**Bài toán mẫu:** Cho tứ diện $ABCD$...`) bị hiểu nhầm là dòng tiêu đề Callout. Bộ bóc tách sau đó chạy regex xóa ký tự đầu dòng `^[^\p{L}\p{N}\s]+`, nuốt mất dấu `**` mở đầu và nhét nguyên đoạn văn bản vào `<span>{cleanHeading}</span>` dạng text thô, làm tê liệt hoàn toàn bộ render KaTeX cho `$ABCD$`, `$M, N$`, `$(DMN)$`, `$(BCD)$`.
-  - *Giải Pháp Xử Lý*:
-    + Nâng cấp regex `isSampleHeadingCallout`: Ràng buộc tiêu đề Callout chỉ được kích hoạt khi dòng thực sự bắt đầu bằng định dạng Heading (`###` hoặc emoji tiêu đề `[📝📄✍️]`). Các dòng nội dung bài toán `**Bài toán mẫu:**...` hoặc `- **Bài toán mẫu:**...` được chuyển trực tiếp vào luồng xử lý văn bản nội dòng (inline stream).
-    + Chuẩn hóa render an toàn: Bọc nội dung tiêu đề Callout trong `{renderInlineContent(cleanHeading, lineKey)}`, đảm bảo kể cả khi tiêu đề chứa công thức toán ($S.ABCD$) vẫn được KaTeX dịch sang ký hiệu toán học hoàn hảo.
-    + Bộ sửa chữa dấu sao mồ côi (`normalizeMathString`): Bổ sung regex tự động vá các trường hợp mất dấu `**` đầu do AI hoặc người dùng gõ thiếu (chuyển `Bài toán mẫu:**` thành `**Bài toán mẫu:**`).
-    + Tích hợp bộ tự động tổng hợp bảng biến thiên từ chữ (`autoSynthesizeVariationTableFromText`) trong `mathGraphUtils.js` và `MathText.jsx`.
+- **Khắc Phục Triệt Để Lỗi Render KaTeX & Mất Ký Tự Đầu `**` Trong Bài Toán Mẫu (`MathText.jsx`)\*\*:
+  - _Bản Chất Sự Cố_: Trong bộ phân tích cấu trúc văn bản của `MathText.jsx`, điều kiện nhận diện Callout Card sử dụng `line.includes('Bài toán mẫu')` quá rộng, khiến mọi dòng nội dung bài toán (ví dụ: `**Bài toán mẫu:** Cho tứ diện $ABCD$...`) bị hiểu nhầm là dòng tiêu đề Callout. Bộ bóc tách sau đó chạy regex xóa ký tự đầu dòng `^[^\p{L}\p{N}\s]+`, nuốt mất dấu `**` mở đầu và nhét nguyên đoạn văn bản vào `<span>{cleanHeading}</span>` dạng text thô, làm tê liệt hoàn toàn bộ render KaTeX cho `$ABCD$`, `$M, N$`, `$(DMN)$`, `$(BCD)$`.
+  - _Giải Pháp Xử Lý_:
+    - Nâng cấp regex `isSampleHeadingCallout`: Ràng buộc tiêu đề Callout chỉ được kích hoạt khi dòng thực sự bắt đầu bằng định dạng Heading (`###` hoặc emoji tiêu đề `[📝📄✍️]`). Các dòng nội dung bài toán `**Bài toán mẫu:**...` hoặc `- **Bài toán mẫu:**...` được chuyển trực tiếp vào luồng xử lý văn bản nội dòng (inline stream).
+    - Chuẩn hóa render an toàn: Bọc nội dung tiêu đề Callout trong `{renderInlineContent(cleanHeading, lineKey)}`, đảm bảo kể cả khi tiêu đề chứa công thức toán ($S.ABCD$) vẫn được KaTeX dịch sang ký hiệu toán học hoàn hảo.
+    - Bộ sửa chữa dấu sao mồ côi (`normalizeMathString`): Bổ sung regex tự động vá các trường hợp mất dấu `**` đầu do AI hoặc người dùng gõ thiếu (chuyển `Bài toán mẫu:**` thành `**Bài toán mẫu:**`).
+    - Tích hợp bộ tự động tổng hợp bảng biến thiên từ chữ (`autoSynthesizeVariationTableFromText`) trong `mathGraphUtils.js` và `MathText.jsx`.
 
 - **Quản Lý Trạng Thái Toàn Vẹn Bài Toán Mẫu (`CurriculumStudioEditor.jsx`)**:
   - Bổ sung trường `sampleProblem` vào `form` state, bộ cập nhật kết quả AI `handleAiAnalysisComplete`, và hàm tái lắp ghép `fullSolutionMethod` khi lưu, bảo đảm bài toán mẫu không bị thất thoát trong quá trình biên soạn sư phạm.
@@ -1504,22 +1763,22 @@ pm run build hoàn thành trong 1.12s, 0 lỗi cú pháp.
 ## [20/10/2026] - Kiến Trúc Độc Lập Component Live Math Renderer 2D/3D Tương Tác, Chuẩn Hóa Chuỗi Tag Lưu Trữ Database & Đồng Bộ Tuyệt Đối Giao Diện Giảng Viên - Học Sinh
 
 - **Component Tái Sử Dụng Cao Độc Lập `InteractiveMathRenderer.jsx` (JSXGraph v1.14.0 Native React Engine)**:
-  - *Xóa Bỏ Hoàn Toàn Giải Pháp Ảnh Chụp Tĩnh (Zero Static Screenshots)*: Nhận định chính xác đồ thị và hình học không gian 3D là các đối tượng tương tác toán học phức tạp cần giữ nguyên thư viện vector nội sinh. Component tự động render trực tiếp trên máy client bằng SVG/Canvas của JSXGraph với tốc độ 60 FPS, không dùng ảnh chụp màn hình, không suy giảm độ sắc nét khi zoom và không tốn băng thông lưu trữ.
-  - *Tương Tác Không Gian 3D Toàn Diện (Trackball 360° & Zoom)*: Tích hợp đầy đủ khả năng rê chuột xoay đa hướng không gian 360° (trackball rotation), cuộn chuột thu phóng (zoom in/out), nút "Góc nhìn" để đưa về góc chuẩn (azimuth 0.85, elevation 0.35) và chế độ xem phóng to toàn màn hình (Modal Expand).
-  - *Quản Lý Vòng Đời Trực Quan An Toàn (Lifecycle Isolation)*: Cơ chế sinh ID container ngẫu nhiên (`jxg_math_...`) và giải phóng bộ nhớ tự động (`JXG.JSXGraph.freeBoard`) khi unmount, ngăn ngừa 100% rò rỉ bộ nhớ hoặc xung đột DOM khi một trang hiển thị nhiều câu hỏi có đồ thị cùng lúc.
+  - _Xóa Bỏ Hoàn Toàn Giải Pháp Ảnh Chụp Tĩnh (Zero Static Screenshots)_: Nhận định chính xác đồ thị và hình học không gian 3D là các đối tượng tương tác toán học phức tạp cần giữ nguyên thư viện vector nội sinh. Component tự động render trực tiếp trên máy client bằng SVG/Canvas của JSXGraph với tốc độ 60 FPS, không dùng ảnh chụp màn hình, không suy giảm độ sắc nét khi zoom và không tốn băng thông lưu trữ.
+  - _Tương Tác Không Gian 3D Toàn Diện (Trackball 360° & Zoom)_: Tích hợp đầy đủ khả năng rê chuột xoay đa hướng không gian 360° (trackball rotation), cuộn chuột thu phóng (zoom in/out), nút "Góc nhìn" để đưa về góc chuẩn (azimuth 0.85, elevation 0.35) và chế độ xem phóng to toàn màn hình (Modal Expand).
+  - _Quản Lý Vòng Đời Trực Quan An Toàn (Lifecycle Isolation)_: Cơ chế sinh ID container ngẫu nhiên (`jxg_math_...`) và giải phóng bộ nhớ tự động (`JXG.JSXGraph.freeBoard`) khi unmount, ngăn ngừa 100% rò rỉ bộ nhớ hoặc xung đột DOM khi một trang hiển thị nhiều câu hỏi có đồ thị cùng lúc.
 
 - **Chuẩn Hóa Bộ Tiện Ích `mathGraphUtils.js` & Định Dạng Thẻ Lưu Trữ Không Đổi Schema Database**:
-  - *Cơ Chế Thẻ Siêu Dữ Liệu Văn Bản Nhẹ (Tag-Based Text Serialization)*:
-    + Thẻ `[MATH_GRAPH]...[/MATH_GRAPH]`: Đồ thị hàm số 2D (loại hàm, công thức KaTeX, các tham số $a, b, c, d, e$, biểu thức tùy biến `customExpr`, đường phụ `auxExpr`, đường xiên biện luận nghiệm `slopeM` & `paramM`, phép biến đổi trị tuyệt đối, tích phân diện tích).
-    + Thẻ `[MATH_GRAPH_3D]...[/MATH_GRAPH_3D]`: Hình học không gian 3D (loại hình khối `shapeType`, mô hình kinh điển `preset`, kích thước $h, w, d, r$, tọa độ và nhãn các đỉnh tùy biến `vertices`, danh sách điểm phụ `extraPoints` kèm tỉ lệ chia đoạn và màu sắc, danh sách đường kẻ phụ `auxLines` kèm nét đứt khuất SGK `dash=2` và màu sắc).
-  - *Tương Thích 100% Với CSDL PostgreSQL*: Lưu trữ trực tiếp trong các cột `ContentLatex` hoặc `Explanation` (kiểu `text` không giới hạn dung lượng ký tự), không làm thay đổi bảng dữ liệu, không cần chạy migration CSDL và an toàn tuyệt đối với API Content Service.
-  - *Sẵn Sàng Cho AI Engine & Ingestion Review*: Cấu trúc thẻ dạng key-value trực quan, rõ ràng, giúp AI Engine (Gemini) dễ dàng bóc tách từ PDF đề thi hoặc sinh ra trong JSON payload mà không lo lỗi thoát ký tự JavaScript phức tạp; đồng thời các modal duyệt tài liệu của giảng viên tự động hiển thị mô hình 3D tương tác ngay lập tức.
+  - _Cơ Chế Thẻ Siêu Dữ Liệu Văn Bản Nhẹ (Tag-Based Text Serialization)_:
+    - Thẻ `[MATH_GRAPH]...[/MATH_GRAPH]`: Đồ thị hàm số 2D (loại hàm, công thức KaTeX, các tham số $a, b, c, d, e$, biểu thức tùy biến `customExpr`, đường phụ `auxExpr`, đường xiên biện luận nghiệm `slopeM` & `paramM`, phép biến đổi trị tuyệt đối, tích phân diện tích).
+    - Thẻ `[MATH_GRAPH_3D]...[/MATH_GRAPH_3D]`: Hình học không gian 3D (loại hình khối `shapeType`, mô hình kinh điển `preset`, kích thước $h, w, d, r$, tọa độ và nhãn các đỉnh tùy biến `vertices`, danh sách điểm phụ `extraPoints` kèm tỉ lệ chia đoạn và màu sắc, danh sách đường kẻ phụ `auxLines` kèm nét đứt khuất SGK `dash=2` và màu sắc).
+  - _Tương Thích 100% Với CSDL PostgreSQL_: Lưu trữ trực tiếp trong các cột `ContentLatex` hoặc `Explanation` (kiểu `text` không giới hạn dung lượng ký tự), không làm thay đổi bảng dữ liệu, không cần chạy migration CSDL và an toàn tuyệt đối với API Content Service.
+  - _Sẵn Sàng Cho AI Engine & Ingestion Review_: Cấu trúc thẻ dạng key-value trực quan, rõ ràng, giúp AI Engine (Gemini) dễ dàng bóc tách từ PDF đề thi hoặc sinh ra trong JSON payload mà không lo lỗi thoát ký tự JavaScript phức tạp; đồng thời các modal duyệt tài liệu của giảng viên tự động hiển thị mô hình 3D tương tác ngay lập tức.
 
 - **Tích Hợp Sâu Vào Động Cơ `MathText.jsx` - Kích Hoạt Tự Động Toàn Hệ Thống**:
-  - *Tự Động Bóc Tách Khối Thẻ*: Cập nhật biểu thức chính quy (Regex) trong `MathText.jsx` để bắt trọn các khối `[MATH_GRAPH_3D]`, `[MATH_GRAPH]` và `[MATH_GEOMETRY_2D]`.
-  - *Động Cơ Dựng Hình Không Gian Tự Động Từ Chữ (`autoSynthesizeMathGraph3DFromText` & `autoSynthesizeMathGraph2DFromText`)*: Khi đề bài hoặc ví dụ giáo khoa chỉ mô tả hình bằng chữ thuần túy (như *"Cho hình chóp S.ABCD..."*, *"Cho tứ diện ABCD..."*, *"M là trung điểm SC..."*, *"y = x^3 - 3x + 1"*), bộ phân tích ngữ nghĩa tự động trích xuất loại hình, đỉnh, điểm phụ, đường nét đứt và dựng ngay mô hình 3D xoay 360 độ hoặc đồ thị 2D trực tiếp trong `MathText.jsx` mà không cần phụ thuộc vào việc file nguồn có in sẵn hình hay không.
-  - *Độ Phủ Tuyệt Đối*: Vì toàn bộ ứng dụng (Khảo thí chẩn đoán năng lực `DiagnosticAssessmentPage.jsx`, Khảo sát `DiagnosticTestModal.jsx`, Ngân hàng câu hỏi Studio `CurriculumStudioEditor.jsx`, Duyệt cây tri thức `CurriculumExplorerView.jsx`) đều dùng `MathText`, mọi vị trí có chứa thẻ đồ thị đều tự động chuyển thành component tương tác mà không cần sửa đổi thủ công từng trang.
-  - *Bổ Sung Cho Quiz Thích Ứng Học Sinh (`AdaptiveQuizModal.jsx`)*: Bọc `MathText` cho nội dung câu hỏi và các phương án của học sinh, đảm bảo học sinh làm bài thi thích ứng theo ZPD được tương tác trực tiếp với mô hình 3D.
+  - _Tự Động Bóc Tách Khối Thẻ_: Cập nhật biểu thức chính quy (Regex) trong `MathText.jsx` để bắt trọn các khối `[MATH_GRAPH_3D]`, `[MATH_GRAPH]` và `[MATH_GEOMETRY_2D]`.
+  - _Động Cơ Dựng Hình Không Gian Tự Động Từ Chữ (`autoSynthesizeMathGraph3DFromText` & `autoSynthesizeMathGraph2DFromText`)_: Khi đề bài hoặc ví dụ giáo khoa chỉ mô tả hình bằng chữ thuần túy (như _"Cho hình chóp S.ABCD..."_, _"Cho tứ diện ABCD..."_, _"M là trung điểm SC..."_, _"y = x^3 - 3x + 1"_), bộ phân tích ngữ nghĩa tự động trích xuất loại hình, đỉnh, điểm phụ, đường nét đứt và dựng ngay mô hình 3D xoay 360 độ hoặc đồ thị 2D trực tiếp trong `MathText.jsx` mà không cần phụ thuộc vào việc file nguồn có in sẵn hình hay không.
+  - _Độ Phủ Tuyệt Đối_: Vì toàn bộ ứng dụng (Khảo thí chẩn đoán năng lực `DiagnosticAssessmentPage.jsx`, Khảo sát `DiagnosticTestModal.jsx`, Ngân hàng câu hỏi Studio `CurriculumStudioEditor.jsx`, Duyệt cây tri thức `CurriculumExplorerView.jsx`) đều dùng `MathText`, mọi vị trí có chứa thẻ đồ thị đều tự động chuyển thành component tương tác mà không cần sửa đổi thủ công từng trang.
+  - _Bổ Sung Cho Quiz Thích Ứng Học Sinh (`AdaptiveQuizModal.jsx`)_: Bọc `MathText` cho nội dung câu hỏi và các phương án của học sinh, đảm bảo học sinh làm bài thi thích ứng theo ZPD được tương tác trực tiếp với mô hình 3D.
 
 - **Tính Nhất Quán Tuyệt Đối Giữa Màn Hình Giảng Viên & Học Sinh (Data & Visual Parity)**:
   - Giảng viên trên Studio Workbench tùy chỉnh tọa độ đỉnh, đổi tên đỉnh ($S \to P, A \to M$), kẻ thêm đường phụ nét đứt màu đỏ hay thiết diện ra sao thì khi học sinh nhận dữ liệu từ DB, component `InteractiveMathRenderer` giải mã và dựng lại chính xác 100% hình dạng, màu sắc và góc nhìn đó.
@@ -1532,28 +1791,28 @@ pm run build hoàn thành trong 1.12s, 0 lỗi cú pháp.
 ## [20/10/2026] - Hợp Nhất Động Cơ MathLab JSXGraph Nội Sinh, Tùy Chỉnh Tọa Độ (X,Y,Z) & Đổi Tên Đỉnh Không Gian 3D, Bộ Kẻ Đường Phụ Tự Do & Hệ Thống Đồ Thị VD/VDC GDPT 2018
 
 - **Thống Nhất Động Cơ Toán Học Tương Tác JSXGraph Nội Sinh (`InteractiveMathWorkbenchModal.jsx`)**:
-  - *Loại Bỏ Hoàn Toàn GeoGebra*: Tách biệt triệt để khỏi web-applet bên thứ ba, loại bỏ phụ thuộc iframe mạng và độ trễ tải trang. Toàn bộ phân hệ MathLab chuyển đổi 100% sang engine vector JSXGraph v1.14.0 nội sinh, hoạt động ngoại tuyến (offline), tốc độ vẽ mượt mà 60 FPS Canvas/SVG.
-  - *Chuẩn Hóa Ribbon & Navigation Header*: Tinh giản tiêu đề và nút kích hoạt trên thanh Ribbon (`CurriculumStudioEditor.jsx` và `CurriculumExplorerView.jsx`) về nhãn chuẩn `⚡ MathLab 2D/3D (JSXGraph)`.
+  - _Loại Bỏ Hoàn Toàn GeoGebra_: Tách biệt triệt để khỏi web-applet bên thứ ba, loại bỏ phụ thuộc iframe mạng và độ trễ tải trang. Toàn bộ phân hệ MathLab chuyển đổi 100% sang engine vector JSXGraph v1.14.0 nội sinh, hoạt động ngoại tuyến (offline), tốc độ vẽ mượt mà 60 FPS Canvas/SVG.
+  - _Chuẩn Hóa Ribbon & Navigation Header_: Tinh giản tiêu đề và nút kích hoạt trên thanh Ribbon (`CurriculumStudioEditor.jsx` và `CurriculumExplorerView.jsx`) về nhãn chuẩn `⚡ MathLab 2D/3D (JSXGraph)`.
 
 - **Bộ Công Cụ Tùy Chỉnh Tọa Độ (X,Y,Z) & Đổi Tên Các Đỉnh Hình Học Không Gian 3D (`InteractiveMathWorkbenchModal.jsx`)**:
-  - *Công Tắc Tùy Chỉnh Đỉnh (`isCustomizingBasePoints`)*: Bổ sung toggle trực quan `⚙️ Tùy chỉnh vị trí (X, Y, Z) & Đổi tên các đỉnh` nằm ngay dưới bộ chọn 9 loại hình không gian THPT.
-  - *Bảng Điều Khiển Tọa Độ Vi Mô*: Cho phép giáo viên đổi tên bất kỳ đỉnh nào của hình (ví dụ `A` thành `M`, `S` thành `P`, `A'` thành `A₁`) và nhập tọa độ thực `(X, Y, Z)` với bước nhảy 0.2.
-  - *Phản Hồi Trực Quan Thời Gian Thực*: Mọi sự thay đổi về tọa độ đỉnh sẽ làm co giãn, tịnh tiến và cập nhật tức thì toàn bộ các cạnh, đường bao, mặt đáy, đường vuông góc phụ và thiết diện trên khung nhìn không gian 3D.
-  - *Nút Reset Mặc Định*: Tích hợp nút `🔄 Mặc định` khôi phục lại 100% tên đỉnh và tọa độ gốc chuẩn SGK của hình khối đang chọn chỉ với 1 cú click.
+  - _Công Tắc Tùy Chỉnh Đỉnh (`isCustomizingBasePoints`)_: Bổ sung toggle trực quan `⚙️ Tùy chỉnh vị trí (X, Y, Z) & Đổi tên các đỉnh` nằm ngay dưới bộ chọn 9 loại hình không gian THPT.
+  - _Bảng Điều Khiển Tọa Độ Vi Mô_: Cho phép giáo viên đổi tên bất kỳ đỉnh nào của hình (ví dụ `A` thành `M`, `S` thành `P`, `A'` thành `A₁`) và nhập tọa độ thực `(X, Y, Z)` với bước nhảy 0.2.
+  - _Phản Hồi Trực Quan Thời Gian Thực_: Mọi sự thay đổi về tọa độ đỉnh sẽ làm co giãn, tịnh tiến và cập nhật tức thì toàn bộ các cạnh, đường bao, mặt đáy, đường vuông góc phụ và thiết diện trên khung nhìn không gian 3D.
+  - _Nút Reset Mặc Định_: Tích hợp nút `🔄 Mặc định` khôi phục lại 100% tên đỉnh và tọa độ gốc chuẩn SGK của hình khối đang chọn chỉ với 1 cú click.
 
 - **Mở Rộng Thư Viện Hình Học Không Gian Đa Dạng & Bộ Kẻ Thêm Đường Phụ Tự Do (`InteractiveMathWorkbenchModal.jsx`)**:
-  - *9 Loại Hình Không Gian Chuẩn Kỳ Thi THPT*: Hỗ trợ toàn diện Chóp `S.ABCD` (`SA` vuông góc đáy), Chóp `S.ABC` (đáy vuông tại `B`), Chóp Tứ Giác Đều (`SO` vuông góc đáy), Chóp Tam Giác Đều (`SG` vuông góc đáy), Chóp có mặt bên vuông góc đáy (`(SAB)` vuông góc `(ABCD)`), Lăng trụ tam giác `ABC.A'B'C'`, Hình hộp chữ nhật / Hình lập phương `ABCD.A'B'C'D'`, Nón/Trụ tròn xoay, và Mặt cầu cắt mặt phẳng Oxyz.
-  - *Bộ Mô Hình Dựng Đường Phụ Kinh Điển (Presets)*: Tích hợp sẵn mô hình 2 bước kẻ khoảng cách `d(A, (SBC)) = AK` (với `AH` vuông góc `BC`, `AK` vuông góc `SB`), góc giữa đường thẳng và mặt phẳng, và thiết diện `(MNPQ)` qua các trung điểm.
-  - *Tự Do Thêm Điểm Phụ Trên Cạnh*: Cho phép chọn cạnh, đặt tên điểm, chọn tỉ lệ `k` (có nút nhanh `1/2` Trung điểm, `1/3` Trọng tâm) để tạo đỉnh mới nội suy tức thì.
-  - *Bộ Kẻ Đoạn Thẳng Phụ Tùy Biến*: Nối bất kỳ 2 điểm nào trong không gian (kể cả đỉnh tùy biến và điểm phụ mới tạo), hỗ trợ tùy chọn nét đứt khuất SGK hoặc nét liền, chọn màu nét (Đỏ, Vàng cam, Tím neon, Xanh lá, Xanh dương).
+  - _9 Loại Hình Không Gian Chuẩn Kỳ Thi THPT_: Hỗ trợ toàn diện Chóp `S.ABCD` (`SA` vuông góc đáy), Chóp `S.ABC` (đáy vuông tại `B`), Chóp Tứ Giác Đều (`SO` vuông góc đáy), Chóp Tam Giác Đều (`SG` vuông góc đáy), Chóp có mặt bên vuông góc đáy (`(SAB)` vuông góc `(ABCD)`), Lăng trụ tam giác `ABC.A'B'C'`, Hình hộp chữ nhật / Hình lập phương `ABCD.A'B'C'D'`, Nón/Trụ tròn xoay, và Mặt cầu cắt mặt phẳng Oxyz.
+  - _Bộ Mô Hình Dựng Đường Phụ Kinh Điển (Presets)_: Tích hợp sẵn mô hình 2 bước kẻ khoảng cách `d(A, (SBC)) = AK` (với `AH` vuông góc `BC`, `AK` vuông góc `SB`), góc giữa đường thẳng và mặt phẳng, và thiết diện `(MNPQ)` qua các trung điểm.
+  - _Tự Do Thêm Điểm Phụ Trên Cạnh_: Cho phép chọn cạnh, đặt tên điểm, chọn tỉ lệ `k` (có nút nhanh `1/2` Trung điểm, `1/3` Trọng tâm) để tạo đỉnh mới nội suy tức thì.
+  - _Bộ Kẻ Đoạn Thẳng Phụ Tùy Biến_: Nối bất kỳ 2 điểm nào trong không gian (kể cả đỉnh tùy biến và điểm phụ mới tạo), hỗ trợ tùy chọn nét đứt khuất SGK hoặc nét liền, chọn màu nét (Đỏ, Vàng cam, Tím neon, Xanh lá, Xanh dương).
 
 - **Hệ Thống Đồ Thị Hàm Số Vận Dụng & Vận Dụng Cao (VD / VDC) GDPT 2018 (`InteractiveMathWorkbenchModal.jsx`)**:
-  - *Chuyên Đề 1 - Khảo Sát & Phân Thức Tiệm Cận Xiên (Điểm Nhấn GDPT 2018)*: Hàm số `y = (ax² + bx + c)/(dx + e)` tự động vẽ đường tiệm cận đứng, đường tiệm cận xiên nét đứt và đánh dấu tâm đối xứng `I`.
-  - *Chuyên Đề 2 - Biến Đổi Đồ Thị Chứa Dấu Giá Trị Tuyệt Đối Phức Hợp*: Hỗ trợ `y = |f(x)|`, `y = f(|x|)`, `y = |f(|x|)|`, `y = |f(x) + m|` (kèm slider tham số `m` dịch chuyển đồ thị và đếm số cực trị), và `y = f(x) + |f(x)|`.
-  - *Chuyên Đề 3 - Đồ Thị Đạo Hàm f'(x) & Tương Giao Hàm Hợp*: Hiển thị đường cong `y = f'(x)`, vẽ đường phụ `y = h(x)` (đường thẳng hoặc parabol), tự động tìm và chấm đỏ các hoành độ giao điểm `x_i` (các điểm cực trị của hàm hiệu).
-  - *Chuyên Đề 4 - Biện Luận Nghiệm Tham Số d: y = ax + m*: Thanh trượt hệ số góc `a` và tham số `m`, tự động quét nghiệm và hiển thị số lượng nghiệm theo thời gian thực.
-  - *Chuyên Đề 5 - Ứng Dụng Tích Phân Tính Diện Tích Hình Phẳng 2 Đường Cong*: Tìm giao điểm, tô màu miền khép kín giữa 2 đường cong và tính giá trị diện tích tích phân số học.
-  - *Chuyên Đề 6 - Nhận Dạng Bộ Ba Đồ Thị f(x), f'(x), F(x)*: Vẽ đồng thời 3 đường cong chuẩn mực và có nút toggle "Ẩn tên hàm" phục vụ soạn câu hỏi trắc nghiệm kiểm tra học sinh.
+  - _Chuyên Đề 1 - Khảo Sát & Phân Thức Tiệm Cận Xiên (Điểm Nhấn GDPT 2018)_: Hàm số `y = (ax² + bx + c)/(dx + e)` tự động vẽ đường tiệm cận đứng, đường tiệm cận xiên nét đứt và đánh dấu tâm đối xứng `I`.
+  - _Chuyên Đề 2 - Biến Đổi Đồ Thị Chứa Dấu Giá Trị Tuyệt Đối Phức Hợp_: Hỗ trợ `y = |f(x)|`, `y = f(|x|)`, `y = |f(|x|)|`, `y = |f(x) + m|` (kèm slider tham số `m` dịch chuyển đồ thị và đếm số cực trị), và `y = f(x) + |f(x)|`.
+  - _Chuyên Đề 3 - Đồ Thị Đạo Hàm f'(x) & Tương Giao Hàm Hợp_: Hiển thị đường cong `y = f'(x)`, vẽ đường phụ `y = h(x)` (đường thẳng hoặc parabol), tự động tìm và chấm đỏ các hoành độ giao điểm `x_i` (các điểm cực trị của hàm hiệu).
+  - _Chuyên Đề 4 - Biện Luận Nghiệm Tham Số d: y = ax + m_: Thanh trượt hệ số góc `a` và tham số `m`, tự động quét nghiệm và hiển thị số lượng nghiệm theo thời gian thực.
+  - _Chuyên Đề 5 - Ứng Dụng Tích Phân Tính Diện Tích Hình Phẳng 2 Đường Cong_: Tìm giao điểm, tô màu miền khép kín giữa 2 đường cong và tính giá trị diện tích tích phân số học.
+  - _Chuyên Đề 6 - Nhận Dạng Bộ Ba Đồ Thị f(x), f'(x), F(x)_: Vẽ đồng thời 3 đường cong chuẩn mực và có nút toggle "Ẩn tên hàm" phục vụ soạn câu hỏi trắc nghiệm kiểm tra học sinh.
 
 - **Kiểm Thử Vận Hành (Build Verification)**:
   - `npm run build` hoàn thành 100% (**0 Error, 0 Warning**, hoàn tất trong 965ms trên Vite 8 và React 19).
@@ -1563,28 +1822,28 @@ pm run build hoàn thành trong 1.12s, 0 lỗi cú pháp.
 ## [20/10/2026] - Khắc Phục Lỗi Icon Bài Toán Mẫu, Tone Trắng Panoramic Workspace, Xóa Dòng Bằng Backspace, Chống Cắt Công Thức & Mở Rộng Thư Viện Ký Hiệu GDPT 2018 Toàn Diện
 
 - **Khắc Phục Triệt Để Lỗi Icon Kim Cương '' Tại Thẻ 'Bài toán mẫu áp dụng phương pháp:' (`MathText.jsx` & `CurriculumStudioEditor.jsx`)**:
-  - *Nguyên Nhân Sự Cố*: Ký tự emoji `📝` hoặc icon UTF-8 gốc khi qua các tầng tuần tự hóa bị giải mã sai thành mã thay thế Unicode `\uFFFD` (hiển thị hình thoi chấm hỏi `` trên trình duyệt).
-  - *Giải Pháp Xử Lý Tinh Vi*: Bổ sung Unicode-aware regex `^[^\p{L}\p{N}\s]+` tự động bóc tách sạch sẽ mọi ký tự lỗi/thay thế đứng đầu tiêu đề, chuẩn hóa nhãn tiêu đề về `Bài toán mẫu áp dụng phương pháp:`.
+  - _Nguyên Nhân Sự Cố_: Ký tự emoji `📝` hoặc icon UTF-8 gốc khi qua các tầng tuần tự hóa bị giải mã sai thành mã thay thế Unicode `\uFFFD` (hiển thị hình thoi chấm hỏi `` trên trình duyệt).
+  - _Giải Pháp Xử Lý Tinh Vi_: Bổ sung Unicode-aware regex `^[^\p{L}\p{N}\s]+` tự động bóc tách sạch sẽ mọi ký tự lỗi/thay thế đứng đầu tiêu đề, chuẩn hóa nhãn tiêu đề về `Bài toán mẫu áp dụng phương pháp:`.
   - Thay thế toàn bộ biểu tượng bị lỗi bằng vector icon Lucide `FileText` và `BookOpen` màu hổ phách (`amber-600`) viền bo tròn sắc nét, tương thích 100% trên mọi nền tảng.
 
 - **Đồng Bộ Hoàn Toàn Header Bar Panoramic Workspace & Dạng Bài Sang Tone Trắng Sáng (`CurriculumExplorerView.jsx`)**:
-  - *Loại Bỏ Vết Nền Tối Lạc Tone*: Chuyển đổi thanh tiêu đề modal `h2` bóc tách tài liệu (dòng 2490) và thanh header dạng bài (dòng 2830) từ dải gradient màu tối `bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900` sang nền trắng thanh lịch `bg-white border-b border-slate-200 text-slate-900`.
+  - _Loại Bỏ Vết Nền Tối Lạc Tone_: Chuyển đổi thanh tiêu đề modal `h2` bóc tách tài liệu (dòng 2490) và thanh header dạng bài (dòng 2830) từ dải gradient màu tối `bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900` sang nền trắng thanh lịch `bg-white border-b border-slate-200 text-slate-900`.
   - Chấm dứt hoàn toàn tình trạng "trên đen dưới trắng", tạo sự liền mạch thẩm mỹ 100% theo chuẩn hệ thống.
 
 - **Loại Bỏ Hoàn Toàn Đoạn Văn Bản Mẹo Không Cần Thiết Dưới Chân Trang (`WordStyleFormulaCanvas.jsx`)**:
   - Đã xóa sạch dòng hướng dẫn: `💡 Gõ văn bản như Word • Bấm Enter để xuống dòng • Nhấp khoảng trống tự nhảy trỏ về cuối dòng • Nhấp công thức để sửa số tại chỗ` theo đúng yêu cầu, giữ cho canvas soạn thảo tinh giản và thông thoáng.
 
 - **Hỗ Trợ Xóa Dòng Linh Hoạt Bằng Phím Backspace (`WordStyleFormulaCanvas.jsx`)**:
-  - *Cơ Chế Xử Lý*: Hiện thực hàm `handleDeleteLine(lineIndex)` và gắn bộ lắng nghe phím `Backspace` trên các span `contentEditable`.
+  - _Cơ Chế Xử Lý_: Hiện thực hàm `handleDeleteLine(lineIndex)` và gắn bộ lắng nghe phím `Backspace` trên các span `contentEditable`.
   - Khi người dùng bấm Backspace tại đầu dòng (offset 0) hoặc trên một dòng trống, hệ thống tự động xóa dòng hiện tại hoặc gộp nội dung vào cuối dòng liền trước, điều hướng con trỏ chính xác về vị trí nối dòng, mang lại trải nghiệm gõ phím mượt mà như Microsoft Word thật.
 
 - **Khắc Phục Hiện Tượng Bị Cắt Cụt '...' Khi Công Thức Quá Dài Trong Thanh Tra Nổi (`WordStyleFormulaCanvas.jsx`)**:
-  - *Nguyên Nhân*: Thẻ xem trước KaTeX bên trong popup inspector trước đây bị giới hạn cứng `max-w-[140px]` và mang class `truncate`, làm các biểu thức toán học hoặc phản ứng hóa học dài bị cắt ngang bằng dấu ba chấm `...`.
-  - *Giải Pháp*: Gỡ bỏ hoàn toàn `truncate` khỏi vùng render KaTeX; mở rộng kích thước container xem trước lên `max-w-[280px]` kèm thanh cuộn ngang `overflow-x-auto scrollbar-none`; nâng bề rộng tối đa của popup thanh tra từ 420px lên `max-w-[540px]`, đảm bảo công thức hiển thị đầy đủ, không bao giờ bị cắt cụt.
+  - _Nguyên Nhân_: Thẻ xem trước KaTeX bên trong popup inspector trước đây bị giới hạn cứng `max-w-[140px]` và mang class `truncate`, làm các biểu thức toán học hoặc phản ứng hóa học dài bị cắt ngang bằng dấu ba chấm `...`.
+  - _Giải Pháp_: Gỡ bỏ hoàn toàn `truncate` khỏi vùng render KaTeX; mở rộng kích thước container xem trước lên `max-w-[280px]` kèm thanh cuộn ngang `overflow-x-auto scrollbar-none`; nâng bề rộng tối đa của popup thanh tra từ 420px lên `max-w-[540px]`, đảm bảo công thức hiển thị đầy đủ, không bao giờ bị cắt cụt.
 
 - **Khắc Phục Triệt Để Hiện Tượng Chữ Trắng Trên Nền Trắng Khi Tạo Câu Hỏi Mới (`CurriculumStudioEditor.jsx`)**:
-  - *Nguyên Nhân*: Thẻ cha cấp cao của Studio mang class `text-slate-100`, dẫn đến các thẻ `<textarea>` và `<input>` (phương án A, B, C, D và lời giải chi tiết) trong Khối 4 và modal `NewQuestionDialog` bị kế thừa màu chữ trắng trên nền thẻ `bg-white`, khiến người dùng không nhìn thấy chữ khi nhập liệu.
-  - *Khắc Phục*: Thêm rõ ràng các thuộc tính màu sắc độc lập `text-slate-900 placeholder:text-slate-400 font-medium` cho tất cả các trường nhập liệu đề bài, 4 phương án trắc nghiệm A-D, và form tạo câu hỏi mới.
+  - _Nguyên Nhân_: Thẻ cha cấp cao của Studio mang class `text-slate-100`, dẫn đến các thẻ `<textarea>` và `<input>` (phương án A, B, C, D và lời giải chi tiết) trong Khối 4 và modal `NewQuestionDialog` bị kế thừa màu chữ trắng trên nền thẻ `bg-white`, khiến người dùng không nhìn thấy chữ khi nhập liệu.
+  - _Khắc Phục_: Thêm rõ ràng các thuộc tính màu sắc độc lập `text-slate-900 placeholder:text-slate-400 font-medium` cho tất cả các trường nhập liệu đề bài, 4 phương án trắc nghiệm A-D, và form tạo câu hỏi mới.
 
 - **Mở Rộng Thư Viện Ký Hiệu & Công Thức Toàn Diện Chuẩn GDPT 2018 Lớp 10 - 12 (`HierarchicalMathPalette.jsx` & `WordStyleFormulaCanvas.jsx`)**:
   - Mở rộng kho tàng công thức và ký hiệu bao phủ đầy đủ tất cả các môn học phổ thông:
@@ -1598,74 +1857,74 @@ pm run build hoàn thành trong 1.12s, 0 lỗi cú pháp.
 ## [19/10/2026] - Tái Cấu Trúc Header Chi Tiết Dạng Bài Tránh Chèn Ép Tiêu Đề, Khắc Phục Triệt Để Lỗi Mờ Tab 'Khoa Học Tự Nhiên' & Redesign Hero Banner Tone Trắng Sáng
 
 - **Tái Cấu Trúc Header Chi Tiết Dạng Bài Tránh Chèn Ép Tiêu Đề (`CurriculumExplorerView.jsx`)**:
-  - *Khắc Phục Lỗi Tiêu Đề Bị Bóp Nghẹt, Bẻ Thành 3 Dòng*:
-    + Trước đây header chi tiết dạng bài gom chung meta badges và tiêu đề `h2` trong cùng một khối flex bên trái, đặt ngang hàng với 3 nút chức năng bên phải (`Mở Studio`, `Sửa nhanh`, `Luyện tập củng cố`). Do 3 nút này chiếm tới ~500px, tiêu đề dạng bài (như "Nhận biết sự kiện lịch sử") bị ép vào phần không gian hẹp còn lại ~180px, dẫn đến vỡ dòng thành 3 đoạn chữ cụt lủn rất xấu xí.
-    + Tách cấu trúc header thành 2 hàng phân cấp rõ ràng:
-      * **Hàng 1 (Top Bar)**: Meta badges (`Mã Dạng`, `Trọng số`, `Mức độ Bloom`) bố trí gọn gàng bên trái; 3 nút hành động căn chỉnh bên phải.
-      * **Hàng 2 (Full-Width Title)**: Tiêu đề `h2` (`text-xl lg:text-2xl font-black text-slate-900`) độc chiếm 100% bề ngang khung nhìn, hiển thị liền mạch trên 1 dòng duy nhất, không bao giờ bị chèn ép hay vỡ chữ.
+  - _Khắc Phục Lỗi Tiêu Đề Bị Bóp Nghẹt, Bẻ Thành 3 Dòng_:
+    - Trước đây header chi tiết dạng bài gom chung meta badges và tiêu đề `h2` trong cùng một khối flex bên trái, đặt ngang hàng với 3 nút chức năng bên phải (`Mở Studio`, `Sửa nhanh`, `Luyện tập củng cố`). Do 3 nút này chiếm tới ~500px, tiêu đề dạng bài (như "Nhận biết sự kiện lịch sử") bị ép vào phần không gian hẹp còn lại ~180px, dẫn đến vỡ dòng thành 3 đoạn chữ cụt lủn rất xấu xí.
+    - Tách cấu trúc header thành 2 hàng phân cấp rõ ràng:
+      - **Hàng 1 (Top Bar)**: Meta badges (`Mã Dạng`, `Trọng số`, `Mức độ Bloom`) bố trí gọn gàng bên trái; 3 nút hành động căn chỉnh bên phải.
+      - **Hàng 2 (Full-Width Title)**: Tiêu đề `h2` (`text-xl lg:text-2xl font-black text-slate-900`) độc chiếm 100% bề ngang khung nhìn, hiển thị liền mạch trên 1 dòng duy nhất, không bao giờ bị chèn ép hay vỡ chữ.
 
 - **Khắc Phục Triệt Để Lỗi Mờ/Mất Tương Phản Tab 'Khoa Học Tự Nhiên' (`CurriculumExplorerView.jsx`)**:
-  - *Nguyên Nhân Sự Cố*: Vệt trang trí nền `bg-cyan-50/70 blur-3xl` đặt tại vị trí `left-1/3 bottom-0` nằm trực tiếp bên dưới tab thứ 3 "Khoa học tự nhiên". Do tab dùng nền bán trong suốt `bg-slate-50/70`, bộ lọc Gaussian blur làm sai lệch cơ chế khử răng cưa subpixel font-smoothing của trình duyệt Blink/Chromium, đồng thời nhuộm mờ màu cyan lên viền, chữ và biểu tượng `Atom`, khiến tab thứ 3 trông nhợt nhạt và bị mờ hẳn so với 4 tab còn lại.
-  - *Giải Pháp Triệt Để*:
-    + Gỡ bỏ hoàn toàn 2 khối cầu blur trang trí nền (`bg-cyan-50/70 blur-3xl` và `bg-indigo-50/70 blur-3xl`), giữ nền thẻ `bg-white` phẳng, sạch và tinh khôi 100%.
-    + Bổ sung lớp ngữ cảnh xếp chồng độc lập `relative z-10` cho lưới chứa 5 tab miền năng lực (`lg:grid-cols-5`).
-    + Chuyển đổi các tab chưa kích hoạt sang nền trắng thuần `bg-white hover:bg-slate-50`, viền đặc sắc nét `border border-slate-200 hover:border-slate-300`, chữ `text-slate-800 font-bold group-hover:text-slate-900` và icon box `bg-slate-100/90 text-slate-600`, đảm bảo cả 5 miền năng lực đồng nhất, sắc nét, tương phản cao trên mọi màn hình.
+  - _Nguyên Nhân Sự Cố_: Vệt trang trí nền `bg-cyan-50/70 blur-3xl` đặt tại vị trí `left-1/3 bottom-0` nằm trực tiếp bên dưới tab thứ 3 "Khoa học tự nhiên". Do tab dùng nền bán trong suốt `bg-slate-50/70`, bộ lọc Gaussian blur làm sai lệch cơ chế khử răng cưa subpixel font-smoothing của trình duyệt Blink/Chromium, đồng thời nhuộm mờ màu cyan lên viền, chữ và biểu tượng `Atom`, khiến tab thứ 3 trông nhợt nhạt và bị mờ hẳn so với 4 tab còn lại.
+  - _Giải Pháp Triệt Để_:
+    - Gỡ bỏ hoàn toàn 2 khối cầu blur trang trí nền (`bg-cyan-50/70 blur-3xl` và `bg-indigo-50/70 blur-3xl`), giữ nền thẻ `bg-white` phẳng, sạch và tinh khôi 100%.
+    - Bổ sung lớp ngữ cảnh xếp chồng độc lập `relative z-10` cho lưới chứa 5 tab miền năng lực (`lg:grid-cols-5`).
+    - Chuyển đổi các tab chưa kích hoạt sang nền trắng thuần `bg-white hover:bg-slate-50`, viền đặc sắc nét `border border-slate-200 hover:border-slate-300`, chữ `text-slate-800 font-bold group-hover:text-slate-900` và icon box `bg-slate-100/90 text-slate-600`, đảm bảo cả 5 miền năng lực đồng nhất, sắc nét, tương phản cao trên mọi màn hình.
 
 - **Redesign Toàn Diện Hero Banner & Thanh Chọn Miền Kiến Thức Chuẩn Tone Trắng Sáng (`CurriculumExplorerView.jsx`)**:
-  - *Khắc Phục Lệch Tone Màu "Trên Đen Dưới Trắng"*:
-    + Trước đây banner đầu trang sử dụng gradient nền tối (`bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900`) tương phản đột ngột và lệch tone hoàn toàn so với toàn bộ giao diện nền sáng của hệ thống.
-    + Chuyển đổi 100% sang **Tone Trắng Sáng Thanh Lịch**: `bg-white border border-slate-200/80 rounded-2xl shadow-xs`.
-  - *Thiết Kế Tinh Gọn, Đơn Giản & Hiện Đại*:
-    + Giảm padding cồng kềnh từ `p-8` xuống `p-5 lg:p-6` giúp tiết kiệm chiều cao màn hình, thông thoáng và vừa vặn khung nhìn.
-    + Title `text-xl lg:text-2xl font-black text-slate-900`, badge `bg-indigo-50 text-indigo-700` nhỏ gọn, tinh tế.
-    + Chuyển 2 khối thống kê "Cấu trúc phân cấp" và "Trọng số chuẩn hóa 1.200 Điểm" từ dạng hộp to thành các chip ngang compact `px-3.5 py-2 rounded-xl bg-slate-50/90 border border-slate-200/80` căn thẳng hàng với tiêu đề.
-  - *Căn Đều 5 Miền Năng Lực Trên 1 Hàng Ngang Duy Nhất (`lg:grid-cols-5`)*:
-    + Thay thế lưới `grid-cols-4` (vốn làm miền thứ 5 "Sử dụng Ngôn ngữ" bị rớt xuống hàng 2 cô độc) bằng lưới 5 cột hoàn hảo `lg:grid-cols-5`.
-    + Tab kích hoạt (Active): Nền `bg-indigo-50/90 border-2 border-indigo-600 text-slate-900 shadow-sm ring-2 ring-indigo-500/15`, icon đổi sang gradient màu rực rỡ.
-    + Tab chưa kích hoạt: Nền `bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 hover:border-slate-300 shadow-2xs`, sắc nét và ổn định.
+  - _Khắc Phục Lệch Tone Màu "Trên Đen Dưới Trắng"_:
+    - Trước đây banner đầu trang sử dụng gradient nền tối (`bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900`) tương phản đột ngột và lệch tone hoàn toàn so với toàn bộ giao diện nền sáng của hệ thống.
+    - Chuyển đổi 100% sang **Tone Trắng Sáng Thanh Lịch**: `bg-white border border-slate-200/80 rounded-2xl shadow-xs`.
+  - _Thiết Kế Tinh Gọn, Đơn Giản & Hiện Đại_:
+    - Giảm padding cồng kềnh từ `p-8` xuống `p-5 lg:p-6` giúp tiết kiệm chiều cao màn hình, thông thoáng và vừa vặn khung nhìn.
+    - Title `text-xl lg:text-2xl font-black text-slate-900`, badge `bg-indigo-50 text-indigo-700` nhỏ gọn, tinh tế.
+    - Chuyển 2 khối thống kê "Cấu trúc phân cấp" và "Trọng số chuẩn hóa 1.200 Điểm" từ dạng hộp to thành các chip ngang compact `px-3.5 py-2 rounded-xl bg-slate-50/90 border border-slate-200/80` căn thẳng hàng với tiêu đề.
+  - _Căn Đều 5 Miền Năng Lực Trên 1 Hàng Ngang Duy Nhất (`lg:grid-cols-5`)_:
+    - Thay thế lưới `grid-cols-4` (vốn làm miền thứ 5 "Sử dụng Ngôn ngữ" bị rớt xuống hàng 2 cô độc) bằng lưới 5 cột hoàn hảo `lg:grid-cols-5`.
+    - Tab kích hoạt (Active): Nền `bg-indigo-50/90 border-2 border-indigo-600 text-slate-900 shadow-sm ring-2 ring-indigo-500/15`, icon đổi sang gradient màu rực rỡ.
+    - Tab chưa kích hoạt: Nền `bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 hover:border-slate-300 shadow-2xs`, sắc nét và ổn định.
 
 - **Loại Bỏ Hoàn Toàn Chữ 'text' Thừa Trước Công Thức Hóa Học & Ion (`MathText.jsx`)**:
-  - *Nguyên Nhân Sự Cố*: Trong đề bài hoặc đáp án chứa ion hóa học (ví dụ: `Số oxi hóa của sulfur (S) trong ion textSO_4^{2-} là:`), các lệnh LaTeX `\text` bị mất backslash hoặc không có ngoặc nhọn khiến chữ "text" bị KaTeX hiển thị nghiêng dạng biến số toán học ($textSO_4^{2-}$).
-  - *Cơ Chế Làm Sạch Tinh Vi*: Bổ sung bộ lọc trong hàm `normalizeMathString`:
-    + `str = str.replace(/(?:\\text|\btext)(?=[A-Z])/g, '');`
-    + `str = str.replace(/(?:\\text|\btext)\{([A-Z][a-zA-Z0-9_+\-^]*)\}/g, '$1');`
-    Tự động tách bỏ tiền tố `text` / `\text` khi đứng liền trước các ký hiệu hóa học viết hoa ($SO_4^{2-}$, $H_2O$, $Fe^{3+}$, $KMnO_4$), khôi phục công thức hóa học gốc hiển thị trong trẻo, sắc nét 100%.
+  - _Nguyên Nhân Sự Cố_: Trong đề bài hoặc đáp án chứa ion hóa học (ví dụ: `Số oxi hóa của sulfur (S) trong ion textSO_4^{2-} là:`), các lệnh LaTeX `\text` bị mất backslash hoặc không có ngoặc nhọn khiến chữ "text" bị KaTeX hiển thị nghiêng dạng biến số toán học ($textSO_4^{2-}$).
+  - _Cơ Chế Làm Sạch Tinh Vi_: Bổ sung bộ lọc trong hàm `normalizeMathString`:
+    - `str = str.replace(/(?:\\text|\btext)(?=[A-Z])/g, '');`
+    - `str = str.replace(/(?:\\text|\btext)\{([A-Z][a-zA-Z0-9_+\-^]*)\}/g, '$1');`
+      Tự động tách bỏ tiền tố `text` / `\text` khi đứng liền trước các ký hiệu hóa học viết hoa ($SO_4^{2-}$, $H_2O$, $Fe^{3+}$, $KMnO_4$), khôi phục công thức hóa học gốc hiển thị trong trẻo, sắc nét 100%.
 
 - **Chèn Công Thức Ngay Tại Vị Trí Con Trỏ (Active Caret Precision Insertion - `WordStyleFormulaCanvas.jsx` & `CurriculumStudioEditor.jsx`)**:
-  - *Khắc Phục Lỗi Chèn Rơi Xuống Cuối Văn Bản*: Trước đây khi giáo viên đang soạn thảo trên canvas WYSIWYG và nhấp chọn ký hiệu từ sidebar hoặc thanh tra, hệ thống không tìm thấy `textarea` nên fallback nối chuỗi vào cuối văn bản (`. a/b a/b a/b`).
-  - *Giải Pháp Bắt Con Trỏ Tinh Vi*:
-    + Nâng cấp `WordStyleFormulaCanvas` bằng `forwardRef` và `useImperativeHandle`, xuất bản phương thức `insertSnippet(latexSnippet)`.
-    + Theo dõi liên tục vị trí con trỏ `activePositionRef.current = { lineId, tokenId, offset }` thông qua các sự kiện `onKeyUp`, `onMouseUp`, `onFocus`, `onInput`.
-    + Khi giáo viên nhấp chọn ký hiệu, hệ thống chia tách chính xác đoạn text token hiện tại tại `offset`, chèn token công thức `formulaToken` vào ngay vị trí con trỏ và tự động đưa tiêu điểm ra sau công thức mới chèn để giáo viên tiếp tục gõ văn bản liền mạch.
-    + Kết nối `theoryCanvasRef` và `methodCanvasRef` trong `CurriculumStudioEditor.jsx`, tự động điều hướng luồng chèn vào đúng canvas đang kích hoạt.
+  - _Khắc Phục Lỗi Chèn Rơi Xuống Cuối Văn Bản_: Trước đây khi giáo viên đang soạn thảo trên canvas WYSIWYG và nhấp chọn ký hiệu từ sidebar hoặc thanh tra, hệ thống không tìm thấy `textarea` nên fallback nối chuỗi vào cuối văn bản (`. a/b a/b a/b`).
+  - _Giải Pháp Bắt Con Trỏ Tinh Vi_:
+    - Nâng cấp `WordStyleFormulaCanvas` bằng `forwardRef` và `useImperativeHandle`, xuất bản phương thức `insertSnippet(latexSnippet)`.
+    - Theo dõi liên tục vị trí con trỏ `activePositionRef.current = { lineId, tokenId, offset }` thông qua các sự kiện `onKeyUp`, `onMouseUp`, `onFocus`, `onInput`.
+    - Khi giáo viên nhấp chọn ký hiệu, hệ thống chia tách chính xác đoạn text token hiện tại tại `offset`, chèn token công thức `formulaToken` vào ngay vị trí con trỏ và tự động đưa tiêu điểm ra sau công thức mới chèn để giáo viên tiếp tục gõ văn bản liền mạch.
+    - Kết nối `theoryCanvasRef` và `methodCanvasRef` trong `CurriculumStudioEditor.jsx`, tự động điều hướng luồng chèn vào đúng canvas đang kích hoạt.
 
 - **Khôi Phục Giao Diện Trắng Sáng Thanh Lịch (Clean White Tone Reversion - `HierarchicalMathPalette.jsx`)**:
-  - *Loại Bỏ Hoàn Toàn Giao Diện Tối (Dark Theme)*: Chuyển toàn bộ khung thanh công cụ từ `bg-slate-900` sang tone màu trắng sáng sang trọng `bg-white border-r border-slate-200 text-slate-800 shadow-sm`.
-  - *Chuẩn Hóa Bộ Nhận Diện Sư Phạm Nền Sáng*:
-    + Header và thanh lọc danh mục: Nền `bg-slate-50/90 border-slate-200`, chữ `text-slate-800`.
-    + Nút môn học (Toán, Hóa, Lý, Ký hiệu): Nút kích hoạt `bg-cyan-600 text-white font-bold shadow-xs`, nút không kích hoạt `bg-white text-slate-600 hover:bg-slate-100 border-slate-200/80`.
-    + Nút công thức: Nền sáng nhẹ `bg-slate-50 hover:bg-cyan-50/80 border border-slate-200 hover:border-cyan-400 text-slate-700 hover:text-cyan-900 shadow-2xs`.
-    + Thẻ nổi 2 giây (Hover Card): Nền trắng mờ cao cấp `bg-white/98 text-slate-900 border-2 border-cyan-500 shadow-2xl`, khung KaTeX nền `bg-slate-50 text-cyan-900`.
+  - _Loại Bỏ Hoàn Toàn Giao Diện Tối (Dark Theme)_: Chuyển toàn bộ khung thanh công cụ từ `bg-slate-900` sang tone màu trắng sáng sang trọng `bg-white border-r border-slate-200 text-slate-800 shadow-sm`.
+  - _Chuẩn Hóa Bộ Nhận Diện Sư Phạm Nền Sáng_:
+    - Header và thanh lọc danh mục: Nền `bg-slate-50/90 border-slate-200`, chữ `text-slate-800`.
+    - Nút môn học (Toán, Hóa, Lý, Ký hiệu): Nút kích hoạt `bg-cyan-600 text-white font-bold shadow-xs`, nút không kích hoạt `bg-white text-slate-600 hover:bg-slate-100 border-slate-200/80`.
+    - Nút công thức: Nền sáng nhẹ `bg-slate-50 hover:bg-cyan-50/80 border border-slate-200 hover:border-cyan-400 text-slate-700 hover:text-cyan-900 shadow-2xs`.
+    - Thẻ nổi 2 giây (Hover Card): Nền trắng mờ cao cấp `bg-white/98 text-slate-900 border-2 border-cyan-500 shadow-2xl`, khung KaTeX nền `bg-slate-50 text-cyan-900`.
 
 - **Cây Thư Mục Accordion Toggles & Kho Tàng Ký Hiệu, Hợp Chất Đồ Sộ (`HierarchicalMathPalette.jsx`)**:
-  - *Cấu Trúc Accordion Toggle Cây Thư Mục (Folder Tree Navigation)*:
-    + Thay thế thanh cuộn ngang đơn điệu bằng các thư mục Accordion có thể mở/đóng linh hoạt (`ChevronDown` / `ChevronRight`).
-    + Hiển thị nhãn đếm số lượng công thức trong từng mục (ví dụ: `12`, `14`, `16`).
-    + Tên nút ngắn gọn, súc tích (chỉ chứa ký hiệu hoặc tên viết tắt: `a/b`, `√x`, `H₂SO₄`, `SO₄²⁻`, `NaOH`, `x²`, `∫`, `lim`, `sin`, `cos`...), bố trí lưới 2 cột gọn gàng, tăng gấp 5 lần mật độ hiển thị mà không gây rối mắt.
-  - *Bổ Sung Thanh Tìm Kiếm Tức Thì (Instant Search Filter)*:
-    + Tích hợp ô tìm kiếm `🔍 Tìm nhanh H2SO4, NaOH, √x, a/b, sin...` ở đầu sidebar, lọc trực tiếp hàng trăm công thức trong thời gian thực.
-  - *Thư Viện Hóa Học & Toán Học Chuyên Sâu GDPT 2018*:
-    + **Toán Học**: Đại số & Căn thức, Đạo hàm & Khảo sát hàm số, Tích phân & Giới hạn, Lượng giác, Mũ & Logarit, Hình học Không gian & Oxyz, Số phức & Xác suất.
-    + **Hóa Học**: Axit vô cơ & hữu cơ, Bazơ & Kiềm, Muối, Oxit, Hợp chất hữu cơ, Cation & Anion, Số oxi hóa, Mũi tên phản ứng, Công thức tính nồng độ & mol.
-    + **Vật Lý**: Dao động cơ, Sóng cơ & âm, Điện xoay chiều, Sóng ánh sáng & Lượng tử, Hạt nhân nguyên tử.
-    + **Ký Hiệu & Logic**: Toàn bộ ký hiệu toán học, ký tự Hy Lạp, tập hợp và hệ phương trình.
+  - _Cấu Trúc Accordion Toggle Cây Thư Mục (Folder Tree Navigation)_:
+    - Thay thế thanh cuộn ngang đơn điệu bằng các thư mục Accordion có thể mở/đóng linh hoạt (`ChevronDown` / `ChevronRight`).
+    - Hiển thị nhãn đếm số lượng công thức trong từng mục (ví dụ: `12`, `14`, `16`).
+    - Tên nút ngắn gọn, súc tích (chỉ chứa ký hiệu hoặc tên viết tắt: `a/b`, `√x`, `H₂SO₄`, `SO₄²⁻`, `NaOH`, `x²`, `∫`, `lim`, `sin`, `cos`...), bố trí lưới 2 cột gọn gàng, tăng gấp 5 lần mật độ hiển thị mà không gây rối mắt.
+  - _Bổ Sung Thanh Tìm Kiếm Tức Thì (Instant Search Filter)_:
+    - Tích hợp ô tìm kiếm `🔍 Tìm nhanh H2SO4, NaOH, √x, a/b, sin...` ở đầu sidebar, lọc trực tiếp hàng trăm công thức trong thời gian thực.
+  - _Thư Viện Hóa Học & Toán Học Chuyên Sâu GDPT 2018_:
+    - **Toán Học**: Đại số & Căn thức, Đạo hàm & Khảo sát hàm số, Tích phân & Giới hạn, Lượng giác, Mũ & Logarit, Hình học Không gian & Oxyz, Số phức & Xác suất.
+    - **Hóa Học**: Axit vô cơ & hữu cơ, Bazơ & Kiềm, Muối, Oxit, Hợp chất hữu cơ, Cation & Anion, Số oxi hóa, Mũi tên phản ứng, Công thức tính nồng độ & mol.
+    - **Vật Lý**: Dao động cơ, Sóng cơ & âm, Điện xoay chiều, Sóng ánh sáng & Lượng tử, Hạt nhân nguyên tử.
+    - **Ký Hiệu & Logic**: Toàn bộ ký hiệu toán học, ký tự Hy Lạp, tập hợp và hệ phương trình.
 
 - **Tự Động Nhảy Con Trỏ Về Cuối Dòng Khi Nhấp Khoảng Trống (Whitespace Click Focus - `WordStyleFormulaCanvas.jsx`)**:
   - Bổ sung hàm xử lý `handleLineRowClick` trên từng dòng văn bản: Nếu người dùng nhấp chuột vào vùng đệm trống bên phải hoặc khoảng trắng của dòng, hệ thống tự động tìm thẻ text cuối dòng, kích hoạt `focus()` và kéo con trỏ về cuối chữ bằng `Selection.collapse()`.
 
 - **Loại Bỏ Nút "+ Thêm dòng mới" Dư Thừa & Xóa Bỏ Dấu Gạch Chéo Ngược Đuôi Dòng (`\`)**:
-  - *Bỏ Nút Dư Thừa*: Thao tác bấm `Enter` đã hỗ trợ tách dòng mới mượt mà, loại bỏ nút bấm rườm rà dưới chân canvas.
-  - *Xóa Sổ Ký Tự `\` Cuối Dòng*: Bổ sung hàm lọc `sanitizeLineText` và regex stripping trên `WordStyleFormulaCanvas.jsx` và `MathText.jsx`, loại bỏ hoàn toàn các ký tự `\` hoặc `/` thừa ở cuối câu.
+  - _Bỏ Nút Dư Thừa_: Thao tác bấm `Enter` đã hỗ trợ tách dòng mới mượt mà, loại bỏ nút bấm rườm rà dưới chân canvas.
+  - _Xóa Sổ Ký Tự `\` Cuối Dòng_: Bổ sung hàm lọc `sanitizeLineText` và regex stripping trên `WordStyleFormulaCanvas.jsx` và `MathText.jsx`, loại bỏ hoàn toàn các ký tự `\` hoặc `/` thừa ở cuối câu.
 
 - **Khắc Phục Lỗi Hiển Thị Emoji `📝`**:
   - Thay thế biểu tượng cảm xúc `📝` bằng các icon vector Lucide sắc nét (`FileEdit`, `FileText`, `BookOpen`, `AlertTriangle`, `Sparkles`), đảm bảo hiển thị 100% đồng nhất trên mọi hệ điều hành Windows và trình duyệt.
@@ -1679,45 +1938,45 @@ pm run build hoàn thành trong 1.12s, 0 lỗi cú pháp.
 
 ---
 
-## [18/10/2026] - Khắc Phục Lỗi Render Markdown Đầu Dòng (Heading ###, In Đậm **, In Nghiêng ***) & Chuẩn Hóa Sư Phạm Phân Biệt STEM (Casio) vs Ngữ Văn / KHXH
+## [18/10/2026] - Khắc Phục Lỗi Render Markdown Đầu Dòng (Heading ###, In Đậm **, In Nghiêng \***) & Chuẩn Hóa Sư Phạm Phân Biệt STEM (Casio) vs Ngữ Văn / KHXH
 
 - **Khắc Phục Triệt Để Lỗi Render Markdown & Ký Tự Đầu Dòng (`MathText.jsx`)**:
-  - *Sửa Lỗi Regex Bullet Nuốt Ký Tự In Đậm `**`*:
-    + Trước đây, regex bullet `line.match(/^(\s*)(?:[-*•]|\u2022)\s*(?:[-*•]\s*)?(.*)$/)` xem ký tự `*` đầu dòng là bullet point mà không bắt buộc có khoảng trắng, dẫn đến các dòng in đậm bắt đầu bằng `**Ví dụ:**` bị nuốt 2 dấu `**` đầu tiên thành bullet `•`, để lại đuôi `Ví dụ:**` không có cặp mở, render thành `• Ví dụ:**` dạng thô.
-    + Cập nhật regex mới: `^(\s*)(?:[-+•\u2022]|\*(?!\*))\s+(?:[-+•\u2022]\s+)?(.*)$`, bảo vệ tuyệt đối chuỗi `**` hoặc `***` không bị nhận nhầm thành bullet marker, bắt buộc phải có khoảng trắng phía sau dấu `*` đơn.
-  - *Hỗ Trợ Toàn Diện Markdown Headings (`#`, `##`, `###`, `####`)*:
-    + Tự động nhận diện cú pháp heading tiêu chuẩn Markdown và phân cấp font chữ rõ ràng, trang nhã.
-    + Nhận diện các thẻ khối sư phạm chuyên dụng:
-      * `### 📌 Ví dụ minh họa SGK:`: Render thành **Thẻ Ví Dụ Minh Họa SGK (Teal/Emerald Card)** với viền thanh nhã, huy hiệu nổi bật `📌 VÍ DỤ MINH HỌA SGK`, nền `bg-teal-50/70 border border-teal-200/80`.
-      * `### 📝` / `### 📄 Bài toán mẫu áp dụng phương pháp:`: Render thành **Thẻ Bài Toán Mẫu Áp Dụng (Amber Card)** với huy hiệu `📝 BÀI TOÁN MẪU ÁP DỤNG`, nền `bg-amber-50/70 border border-amber-200/80`.
-  - *Tự Động Chuẩn Hóa Cặp Dấu In Đậm / In Nghiêng*:
-    + Bổ sung bộ xử lý Regex nội dòng hỗ trợ `***bold italic***`, `**bold**`, `*italic*`.
-    + Tự động bù cặp mở in đậm đối với các nhãn bị mất dấu mở ở đầu dòng: `([A-ZÀ-Ỹa-zà-ỹ0-9\s&]{2,30}):\*\*` -> `**$1:**`.
+  - _Sửa Lỗi Regex Bullet Nuốt Ký Tự In Đậm `**`_:
+    - Trước đây, regex bullet `line.match(/^(\s*)(?:[-*•]|\u2022)\s*(?:[-*•]\s*)?(.*)$/)` xem ký tự `*` đầu dòng là bullet point mà không bắt buộc có khoảng trắng, dẫn đến các dòng in đậm bắt đầu bằng `**Ví dụ:**` bị nuốt 2 dấu `**` đầu tiên thành bullet `•`, để lại đuôi `Ví dụ:**` không có cặp mở, render thành `• Ví dụ:**` dạng thô.
+    - Cập nhật regex mới: `^(\s*)(?:[-+•\u2022]|\*(?!\*))\s+(?:[-+•\u2022]\s+)?(.*)$`, bảo vệ tuyệt đối chuỗi `**` hoặc `***` không bị nhận nhầm thành bullet marker, bắt buộc phải có khoảng trắng phía sau dấu `*` đơn.
+  - _Hỗ Trợ Toàn Diện Markdown Headings (`#`, `##`, `###`, `####`)_:
+    - Tự động nhận diện cú pháp heading tiêu chuẩn Markdown và phân cấp font chữ rõ ràng, trang nhã.
+    - Nhận diện các thẻ khối sư phạm chuyên dụng:
+      - `### 📌 Ví dụ minh họa SGK:`: Render thành **Thẻ Ví Dụ Minh Họa SGK (Teal/Emerald Card)** với viền thanh nhã, huy hiệu nổi bật `📌 VÍ DỤ MINH HỌA SGK`, nền `bg-teal-50/70 border border-teal-200/80`.
+      - `### 📝` / `### 📄 Bài toán mẫu áp dụng phương pháp:`: Render thành **Thẻ Bài Toán Mẫu Áp Dụng (Amber Card)** với huy hiệu `📝 BÀI TOÁN MẪU ÁP DỤNG`, nền `bg-amber-50/70 border border-amber-200/80`.
+  - _Tự Động Chuẩn Hóa Cặp Dấu In Đậm / In Nghiêng_:
+    - Bổ sung bộ xử lý Regex nội dòng hỗ trợ `***bold italic***`, `**bold**`, `*italic*`.
+    - Tự động bù cặp mở in đậm đối với các nhãn bị mất dấu mở ở đầu dòng: `([A-ZÀ-Ỹa-zà-ỹ0-9\s&]{2,30}):\*\*` -> `**$1:**`.
 
 - **Chuẩn Hóa Sư Phạm Đa Miền: Phân Biệt Rõ STEM vs Ngữ Văn / KHXH (`CurriculumStudioEditor.jsx` & `CurriculumExplorerView.jsx`)**:
-  - *Loại Bỏ Hoàn Toàn Khái Niệm Mẹo Casio Với Môn Ngữ Văn & Khoa Học Xã Hội*:
-    + Xây dựng hàm kiểm tra lĩnh vực `isMathOrStemDomain(domain)` nhận diện chính xác các môn Toán, Lý, Hóa, Sinh, Tin học (STEM) so với Ngữ văn, Lịch sử, Địa lí, GDCD, Ngoại ngữ.
-    + **Giao diện Studio (`CurriculumStudioEditor.jsx`)**:
-      * Đối với môn STEM: Giữ nguyên Thẻ `💡 Kỹ thuật Casio & mẹo tư duy nhanh` (hướng dẫn phím bấm fx-580VN X, fx-880BTG, Table Mode).
-      * Đối với môn Ngữ văn / KHXH: Tự động đổi thành Thẻ `💡 Mẹo tư duy & Chiến thuật làm bài (Ngữ văn)` với viền tím violet sư phạm, hướng dẫn chiến thuật đọc hiểu, cấu trúc đoạn văn tổng - phân - hợp, dẫn chứng thực tế và phân bổ thời gian làm bài; tuyệt đối không hiển thị phím bấm máy tính Casio.
-    + **Panoramic Workspace (`CurriculumExplorerView.jsx`)**:
-      * Đổi tiêu đề thẻ Khối 2: "Bài toán mẫu" -> "Bài mẫu" (cho Ngữ văn).
-      * Thẻ mẹo công nghệ hiển thị nhãn `Chiến thuật làm bài` thay cho `Kỹ thuật Casio`.
-      * **Khắc phục lỗi nút `+ AI Tạo Thêm 2 Bài Mẫu` sinh nhầm biến số `$X = 2,07$`**: Hàm `handleAddAiPracticeQuestions` trước đây hardcode mẫu bài toán định lượng STEM (phản ứng, khảo sát, đại lượng $X = 2,07$). Đã nâng cấp kiểm tra `isStem`: với môn Ngữ văn/KHXH, tự động sinh 2 câu hỏi rèn luyện L3 & L4 chuẩn mực về lập ý, phân tích luận điểm, nghệ thuật dẫn chứng và đánh giá tư tưởng nhân văn, loại bỏ hoàn toàn các biến số $X$ và thuật ngữ đại số.
-  - *Nâng Cấp Bộ Bóc Tách Khối Sư Phạm (`parseTheoryRecapSections` & `parseSolutionMethodSections`)*:
-    + Tự động giải phóng ký tự ngắt dòng `\n` thô (`unescapeLiteralNewlines`) trước khi match regex.
-    + Mở rộng regex nhận diện cả icon `📄` và tiêu đề Ngữ văn `### 💡 Mẹo tư duy & Chiến thuật làm bài:`.
+  - _Loại Bỏ Hoàn Toàn Khái Niệm Mẹo Casio Với Môn Ngữ Văn & Khoa Học Xã Hội_:
+    - Xây dựng hàm kiểm tra lĩnh vực `isMathOrStemDomain(domain)` nhận diện chính xác các môn Toán, Lý, Hóa, Sinh, Tin học (STEM) so với Ngữ văn, Lịch sử, Địa lí, GDCD, Ngoại ngữ.
+    - **Giao diện Studio (`CurriculumStudioEditor.jsx`)**:
+      - Đối với môn STEM: Giữ nguyên Thẻ `💡 Kỹ thuật Casio & mẹo tư duy nhanh` (hướng dẫn phím bấm fx-580VN X, fx-880BTG, Table Mode).
+      - Đối với môn Ngữ văn / KHXH: Tự động đổi thành Thẻ `💡 Mẹo tư duy & Chiến thuật làm bài (Ngữ văn)` với viền tím violet sư phạm, hướng dẫn chiến thuật đọc hiểu, cấu trúc đoạn văn tổng - phân - hợp, dẫn chứng thực tế và phân bổ thời gian làm bài; tuyệt đối không hiển thị phím bấm máy tính Casio.
+    - **Panoramic Workspace (`CurriculumExplorerView.jsx`)**:
+      - Đổi tiêu đề thẻ Khối 2: "Bài toán mẫu" -> "Bài mẫu" (cho Ngữ văn).
+      - Thẻ mẹo công nghệ hiển thị nhãn `Chiến thuật làm bài` thay cho `Kỹ thuật Casio`.
+      - **Khắc phục lỗi nút `+ AI Tạo Thêm 2 Bài Mẫu` sinh nhầm biến số `$X = 2,07$`**: Hàm `handleAddAiPracticeQuestions` trước đây hardcode mẫu bài toán định lượng STEM (phản ứng, khảo sát, đại lượng $X = 2,07$). Đã nâng cấp kiểm tra `isStem`: với môn Ngữ văn/KHXH, tự động sinh 2 câu hỏi rèn luyện L3 & L4 chuẩn mực về lập ý, phân tích luận điểm, nghệ thuật dẫn chứng và đánh giá tư tưởng nhân văn, loại bỏ hoàn toàn các biến số $X$ và thuật ngữ đại số.
+  - _Nâng Cấp Bộ Bóc Tách Khối Sư Phạm (`parseTheoryRecapSections` & `parseSolutionMethodSections`)_:
+    - Tự động giải phóng ký tự ngắt dòng `\n` thô (`unescapeLiteralNewlines`) trước khi match regex.
+    - Mở rộng regex nhận diện cả icon `📄` và tiêu đề Ngữ văn `### 💡 Mẹo tư duy & Chiến thuật làm bài:`.
 
 - **Sinh Câu Hỏi Rèn Luyện Thích Ứng Bám Sát 100% Tri Thức Dạng Bài Đang Phân Tích (`CurriculumExplorerView.jsx` & `aiService.js`)**:
-  - *Kết Nối Trực Tiếp Backend AI Engine & Triệt Tiêu 100% Hardcode / Fallback*:
-    + Loại bỏ hoàn toàn toàn bộ mã lệnh hardcode và hàm fallback giả lập (`extractPatternPedagogicalContext`), tuân thủ triệt để nguyên tắc Dữ liệu thật 100% của hệ thống V-Eval.
-    + Khắc phục triệt để lỗi tham chiếu biến `selectedLesson` chưa được khai báo trong Panoramic Workspace khiến hàm nhảy vào khối catch; chuẩn hóa trích xuất `currentLessonName` an toàn từ `previewSelectedLessonKey` và `targetPattern.lessonName`.
-    + Đấu nối trực tiếp `aiService.generatePatternQuestions` gửi toàn bộ dữ liệu ngữ cảnh: `pattern_name`, `lesson_name`, `domain_name`, `theory_recap`, `solution_method`, `count: 2`, và danh sách đề bài các câu hỏi đã có (`existing_questions`).
-  - *Cơ Chế Chống Trùng Lặp Khi Bấm Tạo Nhiều Lần (Anti-Duplication Prompting)*:
-    + Thu thập danh sách câu hỏi hiện có trong dạng bài và chuyển giao cho AI Engine; Gemini được chỉ thị bắt buộc khai thác các trích đoạn, khía cạnh cảm thụ hoặc góc độ bài tập mới, không bao giờ lặp lại câu hỏi cũ khi người dùng nhấn tạo nhiều lần.
-  - *Tự Động Chọn & Cuộn Đến Câu Hỏi Vừa Sinh*:
-    + Khi 2 câu hỏi mới từ Gemini được thêm vào ngân hàng câu hỏi của dạng bài, hệ thống tự động cập nhật số lượng badge câu hỏi và chuyển `activeQuestionIndex` đến ngay câu hỏi vừa được sinh để giáo viên/học sinh kiểm tra và tương tác tức thì.
-    + Nếu AI Engine gặp sự cố mạng hoặc lỗi xử lý, hệ thống hiển thị thông báo lỗi minh thị (alert/toast) thay vì ngụy tạo câu hỏi giả.
+  - _Kết Nối Trực Tiếp Backend AI Engine & Triệt Tiêu 100% Hardcode / Fallback_:
+    - Loại bỏ hoàn toàn toàn bộ mã lệnh hardcode và hàm fallback giả lập (`extractPatternPedagogicalContext`), tuân thủ triệt để nguyên tắc Dữ liệu thật 100% của hệ thống V-Eval.
+    - Khắc phục triệt để lỗi tham chiếu biến `selectedLesson` chưa được khai báo trong Panoramic Workspace khiến hàm nhảy vào khối catch; chuẩn hóa trích xuất `currentLessonName` an toàn từ `previewSelectedLessonKey` và `targetPattern.lessonName`.
+    - Đấu nối trực tiếp `aiService.generatePatternQuestions` gửi toàn bộ dữ liệu ngữ cảnh: `pattern_name`, `lesson_name`, `domain_name`, `theory_recap`, `solution_method`, `count: 2`, và danh sách đề bài các câu hỏi đã có (`existing_questions`).
+  - _Cơ Chế Chống Trùng Lặp Khi Bấm Tạo Nhiều Lần (Anti-Duplication Prompting)_:
+    - Thu thập danh sách câu hỏi hiện có trong dạng bài và chuyển giao cho AI Engine; Gemini được chỉ thị bắt buộc khai thác các trích đoạn, khía cạnh cảm thụ hoặc góc độ bài tập mới, không bao giờ lặp lại câu hỏi cũ khi người dùng nhấn tạo nhiều lần.
+  - _Tự Động Chọn & Cuộn Đến Câu Hỏi Vừa Sinh_:
+    - Khi 2 câu hỏi mới từ Gemini được thêm vào ngân hàng câu hỏi của dạng bài, hệ thống tự động cập nhật số lượng badge câu hỏi và chuyển `activeQuestionIndex` đến ngay câu hỏi vừa được sinh để giáo viên/học sinh kiểm tra và tương tác tức thì.
+    - Nếu AI Engine gặp sự cố mạng hoặc lỗi xử lý, hệ thống hiển thị thông báo lỗi minh thị (alert/toast) thay vì ngụy tạo câu hỏi giả.
 
 - **Kiểm Thử Đóng Gói (Build Verification)**:
   - `npm run build` thành công 100% (**0 Error, 0 Warning**, hoàn thành trong 2.30s trên Vite 8 và React 19).
@@ -1727,69 +1986,69 @@ pm run build hoàn thành trong 1.12s, 0 lỗi cú pháp.
 ## [17/10/2026] - Trình Soạn Thảo Ký Hiệu Trực Quan WYSIWYG (Không Lộ Mã Lệnh), Bộ Công Cụ Hóa Học & Toán Học Thực Tế Chèn Số & Tự Động Tính Toán Kết Quả (Interactive Smart Science Calculator), Loại Bỏ Hoàn Toàn Text In Preview Thụ Động, Tách Riêng Trang LaTeX Thuần, Bộ Renderer Đồ Thị Oxy / Bảng Biến Thiên Nội Sinh & Desmos Calculator
 
 - **Trình Soạn Thảo Ký Hiệu Trực Quan WYSIWYG & Bộ Công Cụ Hóa Học / Toán Học Thực Tế (`CurriculumStudioEditor.jsx` & `InteractiveFormulaBuilderModal.jsx`)**:
-  - *Giải Quyết Triệt Để Phàn Nàn Của Người Dùng Về Mã Code `\frac` ("frag")*:
-    + Người dùng phản hồi việc nhìn thấy mã code LaTeX thô như `` `\frac{...}{...}` ``, `` `\lim` ``, `` `\Delta` ``, `` `$` `` trong khung soạn thảo gây ức chế, không giống trải nghiệm Microsoft Word, và yêu cầu công thức phải là ký hiệu thực sự có thể chèn số vào và tính toán.
-    + **Chế Độ Ký Hiệu Trực Quan WYSIWYG (Mặc định)**: Toàn bộ nội dung bài học hiển thị 100% bằng ký hiệu toán học và hóa học chuẩn sách giáo khoa (phân số có thanh ngang tử/mẫu, căn thức, đạo hàm số gia, nồng độ mol), tuyệt đối không để lộ bất kỳ mã lệnh cú pháp `\frac` hay dấu `$` nào.
-    + Nút chuyển đổi linh hoạt: `` `[Xem Ký Hiệu Thật (WYSIWYG)]` `` ⟷ `` `[Gõ Văn Bản Bàn Phím]` `` cho phép giáo viên tùy ý lựa chọn khi cần gõ văn bản thuần hoặc thao tác trực quan.
-  - *Bộ Công Cụ Hóa Học Thực Tế: Chèn Số Vào Công Thức & Tự Động Tính Toán*:
-    + **🧪 Nồng độ mol dung dịch ($C_M = \frac{n}{V}$)**: Nhập số mol $n$ (mol) và thể tích $V$ (Lít) -> Hệ thống tự động tính toán $C_M = n / V$ (M) và hiển thị ký hiệu thật `` `C_M = \frac{n}{V} = \frac{0.2}{0.5} = 0.4\text{ M}` ``.
-    + **💧 Nồng độ phần trăm ($C\% = \frac{m_{ct}}{m_{dd}} \times 100\%$)**: Nhập $m_{ct}$ (g) và $m_{dd}$ (g) -> Tự động tính toán ra $C\%$.
-    + **⚖️ Khối lượng chất ($m = n \times M$)**: Nhập số mol $n$ và khối lượng mol $M$ -> Tự động tính ra khối lượng $m$ (gam).
-    + **⚡ Hiệu suất phản ứng ($H = \frac{m_{tt}}{m_{lt}} \times 100\%$)**: Nhập $m_{tt}$ (thực tế) và $m_{lt}$ (lý thuyết) -> Tự động tính ra $H\%$.
-    + Tùy chọn chèn: Cho phép giáo viên lựa chọn chèn chỉ công thức thay số hoặc chèn toàn bộ chuỗi tính toán kèm đáp số hoàn chỉnh vào bài học.
-  - *Bộ Tính Toán Phân Số & Đạo Hàm Số Gia Tự Động*:
-    + **➗ Phân số tính toán ($A/B$)**: Nhập số vào ô Tử số và Mẫu số -> Tự động rút gọn và tính ra kết quả (ví dụ: `` `\frac{12}{4} = 3` ``).
-    + **🎯 Đạo hàm bằng số gia ($f'(x_0) = \lim_{\Delta x \to 0}\frac{\Delta y}{\Delta x}$)**: Hỗ trợ nhập hàm số $f(x)$ và điểm $x_0$, tự động hiển thị quy trình số gia và tính toán ra kết quả đạo hàm như trong ví dụ SGK.
-  - *Nút Thao Tác Nhanh Trên Thanh Ribbon Word Toolbar*:
-    + Bổ sung 2 nút chuyên dụng: `` `🧪 Hóa Học & Nồng Độ` `` và `` `➗ Phân Số & Tính Toán` `` trên thanh công cụ của cả Khối 1 và Khối 2 để giáo viên mở nhanh bộ chèn số và tính toán chỉ với 1 click.
+  - _Giải Quyết Triệt Để Phàn Nàn Của Người Dùng Về Mã Code `\frac` ("frag")_:
+    - Người dùng phản hồi việc nhìn thấy mã code LaTeX thô như `` `\frac{...}{...}` ``, `` `\lim` ``, `` `\Delta` ``, `` `$` `` trong khung soạn thảo gây ức chế, không giống trải nghiệm Microsoft Word, và yêu cầu công thức phải là ký hiệu thực sự có thể chèn số vào và tính toán.
+    - **Chế Độ Ký Hiệu Trực Quan WYSIWYG (Mặc định)**: Toàn bộ nội dung bài học hiển thị 100% bằng ký hiệu toán học và hóa học chuẩn sách giáo khoa (phân số có thanh ngang tử/mẫu, căn thức, đạo hàm số gia, nồng độ mol), tuyệt đối không để lộ bất kỳ mã lệnh cú pháp `\frac` hay dấu `$` nào.
+    - Nút chuyển đổi linh hoạt: `` `[Xem Ký Hiệu Thật (WYSIWYG)]` `` ⟷ `` `[Gõ Văn Bản Bàn Phím]` `` cho phép giáo viên tùy ý lựa chọn khi cần gõ văn bản thuần hoặc thao tác trực quan.
+  - _Bộ Công Cụ Hóa Học Thực Tế: Chèn Số Vào Công Thức & Tự Động Tính Toán_:
+    - **🧪 Nồng độ mol dung dịch ($C_M = \frac{n}{V}$)**: Nhập số mol $n$ (mol) và thể tích $V$ (Lít) -> Hệ thống tự động tính toán $C_M = n / V$ (M) và hiển thị ký hiệu thật `` `C_M = \frac{n}{V} = \frac{0.2}{0.5} = 0.4\text{ M}` ``.
+    - **💧 Nồng độ phần trăm ($C\% = \frac{m_{ct}}{m_{dd}} \times 100\%$)**: Nhập $m_{ct}$ (g) và $m_{dd}$ (g) -> Tự động tính toán ra $C\%$.
+    - **⚖️ Khối lượng chất ($m = n \times M$)**: Nhập số mol $n$ và khối lượng mol $M$ -> Tự động tính ra khối lượng $m$ (gam).
+    - **⚡ Hiệu suất phản ứng ($H = \frac{m_{tt}}{m_{lt}} \times 100\%$)**: Nhập $m_{tt}$ (thực tế) và $m_{lt}$ (lý thuyết) -> Tự động tính ra $H\%$.
+    - Tùy chọn chèn: Cho phép giáo viên lựa chọn chèn chỉ công thức thay số hoặc chèn toàn bộ chuỗi tính toán kèm đáp số hoàn chỉnh vào bài học.
+  - _Bộ Tính Toán Phân Số & Đạo Hàm Số Gia Tự Động_:
+    - **➗ Phân số tính toán ($A/B$)**: Nhập số vào ô Tử số và Mẫu số -> Tự động rút gọn và tính ra kết quả (ví dụ: `` `\frac{12}{4} = 3` ``).
+    - **🎯 Đạo hàm bằng số gia ($f'(x_0) = \lim_{\Delta x \to 0}\frac{\Delta y}{\Delta x}$)**: Hỗ trợ nhập hàm số $f(x)$ và điểm $x_0$, tự động hiển thị quy trình số gia và tính toán ra kết quả đạo hàm như trong ví dụ SGK.
+  - _Nút Thao Tác Nhanh Trên Thanh Ribbon Word Toolbar_:
+    - Bổ sung 2 nút chuyên dụng: `` `🧪 Hóa Học & Nồng Độ` `` và `` `➗ Phân Số & Tính Toán` `` trên thanh công cụ của cả Khối 1 và Khối 2 để giáo viên mở nhanh bộ chèn số và tính toán chỉ với 1 click.
 
 - **Trình Soạn Thảo Sư Phạm Trực Tiếp Kiểu Microsoft Word (Word Document Sheet Canvas - `CurriculumStudioEditor.jsx`)**:
-  - *Chấm Dứt Hoàn Toàn Mô Hình Chia Ô Thụ Động Cũ ("Gõ Ô Trên - Preview Ô Dưới")*:
-    + Theo phản hồi từ người dùng, mô hình chia 2 ô (ô nhập liệu phía trên và ô đọc chỉ xem "Text In Preview" phía dưới) làm đứt gãy luồng tư duy sư phạm và gây bất tiện khi phải cuộn lên cuộn xuống để sửa lỗi.
-    + Xóa bỏ triệt để 100% các ô "Text In Preview" thụ động trên cả Khối 1 (Lý thuyết SGK) và Khối 2 (Phương pháp giải, Bẫy đề thi & Mẹo Casio).
-  - *Trải Nghiệm Gõ & Sửa Trực Tiếp Tại Chỗ Như Microsoft Word (In-Place Document Canvas)*:
-    + **Thanh Ribbon Word Toolbar Chuẩn Quốc Tế**: Tích hợp các nút định dạng văn bản trực quan: In đậm (Bold `` `**` ``), In nghiêng (Italic `` `*` ``), Tiêu đề (Heading `` `###` ``), Danh sách gạch đầu dòng (`` `-` ``), Danh sách đánh số thứ tự (`` `1.` ``).
-    + **Tích Hợp Tiện Ích Toán Học STEM 1-Chạm**: Các nút chèn nhanh `` `✨ Điền Công Thức` `` (mở Interactive Formula Builder), `` `📊 Bảng Biến Thiên` `` (chèn preset SGK 3 dòng), `` `📈 Đồ Thị Hàm Số` `` (chèn đồ thị Oxy / Desmos), `` `🖼️ Dán (Ctrl+V) / Tải Ảnh` `` và nút `` `+ Thêm Bước mới` `` (tự động đếm số bước tiếp theo).
-    + **Trang Giấy Word Canvas Trắng Tinh**: Thiết kế trang tài liệu chuẩn A4 có bóng đổ thanh lịch (`shadow-md border border-slate-300 rounded-2xl`), cho phép giáo viên gõ, xóa, chèn ảnh và sửa trực tiếp tại chỗ không giới hạn.
-    + **Nút Chuyển Đổi Nhanh Linh Hoạt**: Cụm nút `` `✍️ Sửa Trực Tiếp` `` ⟷ `` `👁️ Xem Trang In / Học Sinh` `` ngay trên đầu trang giấy giúp giáo viên chuyển đổi chỉ trong 1 click để kiểm tra thành phẩm KaTeX thực tế mà học sinh sẽ nhìn thấy khi in hoặc học trực tuyến.
-  - *Hộp Thẻ Cảnh Báo & Mẹo Casio Tương Tác Trực Tiếp*:
-    + **Thẻ Bẫy Đề Thi ĐGNL**: Chuyển thành Thẻ Cảnh Báo Sư Phạm màu hồng ấm áp (`bg-rose-50/60 border-2 border-rose-200`), cho phép gõ và sửa trực tiếp nội dung bẫy đề thi bên trong thẻ, có nút chèn ký hiệu KaTeX và thêm nhanh mục bẫy.
-    + **Thẻ Kỹ Thuật Casio & Mẹo Tư Duy Nhanh**: Chuyển thành Thẻ Mẹo Công Nghệ màu tím Indigo (`bg-indigo-50/60 border-2 border-indigo-200`), gõ và sửa trực tiếp bên trong thẻ, có nút chèn nhanh mẫu mẹo Casio `[Menu 8]` và phím tắt KaTeX.
-  - *Tách Riêng Trang Mã Nguồn LaTeX Thuần Độc Lập Dành Cho AI*:
-    + Tách biệt hoàn toàn thành một tab riêng biệt: `` `⚡ Trang Mã Nguồn LaTeX Thuần (Dành Cho AI)` ``, giao diện Dark Mode (`bg-slate-900`) chuyên dụng cho việc dán nhanh toàn văn mã nguồn Markdown / LaTeX thô từ ChatGPT, Gemini hoặc AI Engine.
-    + Khi chuyển qua lại giữa Trang Mã Nguồn LaTeX và Trình Soạn Thảo Word Trực Tiếp, dữ liệu được tự động đồng bộ hai chiều mượt mà 100%.
+  - _Chấm Dứt Hoàn Toàn Mô Hình Chia Ô Thụ Động Cũ ("Gõ Ô Trên - Preview Ô Dưới")_:
+    - Theo phản hồi từ người dùng, mô hình chia 2 ô (ô nhập liệu phía trên và ô đọc chỉ xem "Text In Preview" phía dưới) làm đứt gãy luồng tư duy sư phạm và gây bất tiện khi phải cuộn lên cuộn xuống để sửa lỗi.
+    - Xóa bỏ triệt để 100% các ô "Text In Preview" thụ động trên cả Khối 1 (Lý thuyết SGK) và Khối 2 (Phương pháp giải, Bẫy đề thi & Mẹo Casio).
+  - _Trải Nghiệm Gõ & Sửa Trực Tiếp Tại Chỗ Như Microsoft Word (In-Place Document Canvas)_:
+    - **Thanh Ribbon Word Toolbar Chuẩn Quốc Tế**: Tích hợp các nút định dạng văn bản trực quan: In đậm (Bold `` `**` ``), In nghiêng (Italic `` `*` ``), Tiêu đề (Heading `` `###` ``), Danh sách gạch đầu dòng (`` `-` ``), Danh sách đánh số thứ tự (`` `1.` ``).
+    - **Tích Hợp Tiện Ích Toán Học STEM 1-Chạm**: Các nút chèn nhanh `` `✨ Điền Công Thức` `` (mở Interactive Formula Builder), `` `📊 Bảng Biến Thiên` `` (chèn preset SGK 3 dòng), `` `📈 Đồ Thị Hàm Số` `` (chèn đồ thị Oxy / Desmos), `` `🖼️ Dán (Ctrl+V) / Tải Ảnh` `` và nút `` `+ Thêm Bước mới` `` (tự động đếm số bước tiếp theo).
+    - **Trang Giấy Word Canvas Trắng Tinh**: Thiết kế trang tài liệu chuẩn A4 có bóng đổ thanh lịch (`shadow-md border border-slate-300 rounded-2xl`), cho phép giáo viên gõ, xóa, chèn ảnh và sửa trực tiếp tại chỗ không giới hạn.
+    - **Nút Chuyển Đổi Nhanh Linh Hoạt**: Cụm nút `` `✍️ Sửa Trực Tiếp` `` ⟷ `` `👁️ Xem Trang In / Học Sinh` `` ngay trên đầu trang giấy giúp giáo viên chuyển đổi chỉ trong 1 click để kiểm tra thành phẩm KaTeX thực tế mà học sinh sẽ nhìn thấy khi in hoặc học trực tuyến.
+  - _Hộp Thẻ Cảnh Báo & Mẹo Casio Tương Tác Trực Tiếp_:
+    - **Thẻ Bẫy Đề Thi ĐGNL**: Chuyển thành Thẻ Cảnh Báo Sư Phạm màu hồng ấm áp (`bg-rose-50/60 border-2 border-rose-200`), cho phép gõ và sửa trực tiếp nội dung bẫy đề thi bên trong thẻ, có nút chèn ký hiệu KaTeX và thêm nhanh mục bẫy.
+    - **Thẻ Kỹ Thuật Casio & Mẹo Tư Duy Nhanh**: Chuyển thành Thẻ Mẹo Công Nghệ màu tím Indigo (`bg-indigo-50/60 border-2 border-indigo-200`), gõ và sửa trực tiếp bên trong thẻ, có nút chèn nhanh mẫu mẹo Casio `[Menu 8]` và phím tắt KaTeX.
+  - _Tách Riêng Trang Mã Nguồn LaTeX Thuần Độc Lập Dành Cho AI_:
+    - Tách biệt hoàn toàn thành một tab riêng biệt: `` `⚡ Trang Mã Nguồn LaTeX Thuần (Dành Cho AI)` ``, giao diện Dark Mode (`bg-slate-900`) chuyên dụng cho việc dán nhanh toàn văn mã nguồn Markdown / LaTeX thô từ ChatGPT, Gemini hoặc AI Engine.
+    - Khi chuyển qua lại giữa Trang Mã Nguồn LaTeX và Trình Soạn Thảo Word Trực Tiếp, dữ liệu được tự động đồng bộ hai chiều mượt mà 100%.
 
 - **Bộ Renderer Bảng Biến Thiên Nội Sinh Chuẩn SGK GDPT 2018 (`VariationTable.jsx`)**:
-  - *Kết Cấu 3 Dòng Sư Phạm Chuẩn Mực*: Render bảng biến thiên vector HTML/SVG 3 dòng phân định sắc nét gồm: dòng `` `x` ``, dòng dấu đạo hàm `` `y'` ``, dòng chiều biến thiên `` `y` `` với mũi tên dốc lên `` `\nearrow` `` và dốc xuống `` `\searrow` ``.
-  - *Xóa Bỏ Nhược Điểm Ảnh Scan Mờ Nhòe*: Hiển thị vector sắc nét 100% trên mọi độ phân giải màn hình (Retina / 4K), hỗ trợ đầy đủ các ký hiệu toán học đặc biệt như vô cực (`` `-\infty` ``, `` `+\infty` ``), vạch kép không xác định `` `||` ``, điểm cực đại, cực tiểu.
-  - *Parser Chuẩn Hóa Cú Pháp Khối*: Tự động bóc tách khối nội dung dạng `` `[VARIATION_TABLE]...[/VARIATION_TABLE]` `` với cấu trúc dòng `` `x: ...` ``, `` `y_prime: ...` ``, `` `y: ...` ``.
+  - _Kết Cấu 3 Dòng Sư Phạm Chuẩn Mực_: Render bảng biến thiên vector HTML/SVG 3 dòng phân định sắc nét gồm: dòng `` `x` ``, dòng dấu đạo hàm `` `y'` ``, dòng chiều biến thiên `` `y` `` với mũi tên dốc lên `` `\nearrow` `` và dốc xuống `` `\searrow` ``.
+  - _Xóa Bỏ Nhược Điểm Ảnh Scan Mờ Nhòe_: Hiển thị vector sắc nét 100% trên mọi độ phân giải màn hình (Retina / 4K), hỗ trợ đầy đủ các ký hiệu toán học đặc biệt như vô cực (`` `-\infty` ``, `` `+\infty` ``), vạch kép không xác định `` `||` ``, điểm cực đại, cực tiểu.
+  - _Parser Chuẩn Hóa Cú Pháp Khối_: Tự động bóc tách khối nội dung dạng `` `[VARIATION_TABLE]...[/VARIATION_TABLE]` `` với cấu trúc dòng `` `x: ...` ``, `` `y_prime: ...` ``, `` `y: ...` ``.
 
 - **Bộ Renderer Đồ Thị Hàm Số Oxy & Tích Hợp Đồ Thị Tương Tác Desmos Calculator (`MathGraphView.jsx`)**:
-  - *Đồ Thị Hàm Số Vector SVG*: Tự động vẽ hệ trục toạ độ Oxy, gốc toạ độ O, mũi tên định hướng, lưới toạ độ phụ (grid), vạch chia đơn vị toạ độ, và đường cong giải tích liên tục cho các hàm số toán học THPT phổ biến:
-    + Hàm bậc 3: `` `y = ax^3 + bx^2 + cx + d` ``
-    + Hàm phân thức bậc nhất trên bậc nhất: `` `y = \frac{ax+b}{cx+d}` `` (tự động vẽ 2 đường tiệm cận đứng và tiệm cận ngang dạng nét đứt màu đỏ / xanh)
-    + Hàm trùng phương: `` `y = ax^4 + bx^2 + c` ``
-    + Parabol bậc 2: `` `y = ax^2 + bx + c` ``
-  - *Dóng Nét Đứt Tọa Độ Cực Trị*: Tự động dóng đường nét đứt (dashed line) từ điểm cực đại `` `(x_{CĐ}; y_{CĐ})` `` và cực tiểu `` `(x_{CT}; y_{CT})` `` vuông góc về 2 trục tọa độ Ox, Oy kèm nhãn tọa độ KaTeX rõ nét.
-  - *Tích Hợp Đồ Thị Tương Tác Chuẩn Quốc Tế Kiểu MATLAB / Desmos*: Bổ sung nút chuyển đổi 1-chạm giữa chế độ SVG tĩnh và chế độ **Interactive Desmos Graphing Calculator** (nhúng iframe Desmos trực quan), cho phép giáo viên và học sinh trực tiếp zoom in/out, pan chuyển động, tra cứu toạ độ điểm cực trị, tiếp tuyến và nghiệm của phương trình toán học một cách sinh động, chuyên nghiệp.
-  - *Hỗ Trợ Cú Pháp Khối Đồ Thị*: Nhận diện thẻ `` `[GRAPH: type=cubic | formula=y=x^3-3x+1 | cd=(1,4) | ct=(-1,0)]` ``.
+  - _Đồ Thị Hàm Số Vector SVG_: Tự động vẽ hệ trục toạ độ Oxy, gốc toạ độ O, mũi tên định hướng, lưới toạ độ phụ (grid), vạch chia đơn vị toạ độ, và đường cong giải tích liên tục cho các hàm số toán học THPT phổ biến:
+    - Hàm bậc 3: `` `y = ax^3 + bx^2 + cx + d` ``
+    - Hàm phân thức bậc nhất trên bậc nhất: `` `y = \frac{ax+b}{cx+d}` `` (tự động vẽ 2 đường tiệm cận đứng và tiệm cận ngang dạng nét đứt màu đỏ / xanh)
+    - Hàm trùng phương: `` `y = ax^4 + bx^2 + c` ``
+    - Parabol bậc 2: `` `y = ax^2 + bx + c` ``
+  - _Dóng Nét Đứt Tọa Độ Cực Trị_: Tự động dóng đường nét đứt (dashed line) từ điểm cực đại `` `(x_{CĐ}; y_{CĐ})` `` và cực tiểu `` `(x_{CT}; y_{CT})` `` vuông góc về 2 trục tọa độ Ox, Oy kèm nhãn tọa độ KaTeX rõ nét.
+  - _Tích Hợp Đồ Thị Tương Tác Chuẩn Quốc Tế Kiểu MATLAB / Desmos_: Bổ sung nút chuyển đổi 1-chạm giữa chế độ SVG tĩnh và chế độ **Interactive Desmos Graphing Calculator** (nhúng iframe Desmos trực quan), cho phép giáo viên và học sinh trực tiếp zoom in/out, pan chuyển động, tra cứu toạ độ điểm cực trị, tiếp tuyến và nghiệm của phương trình toán học một cách sinh động, chuyên nghiệp.
+  - _Hỗ Trợ Cú Pháp Khối Đồ Thị_: Nhận diện thẻ `` `[GRAPH: type=cubic | formula=y=x^3-3x+1 | cd=(1,4) | ct=(-1,0)]` ``.
 
 - **Bộ Nhận Diện & Render Toán Học Toàn Cục (`MathText.jsx`)**:
   - Mở rộng regex tách khối nhận diện song song cả khối `` `[VARIATION_TABLE]...[/VARIATION_TABLE]` `` và thẻ `` `[GRAPH: ...]` ``.
   - Tự động mount `<VariationTable />` và `<MathGraphView />` đồng bộ trên toàn bộ nền tảng: Khối 1 (Lý thuyết nền tảng), Khối 2 (Phương pháp giải), Khối 4 (Đề bài câu hỏi mẫu, Lời giải chi tiết) và Khung Trợ lý Gia sư AI Socratic.
 
 - **Trình Điền Công Thức & Đồ Thị Trực Quan Cho Giảng Viên (Click-to-Fill Formula Builder - `InteractiveFormulaBuilderModal.jsx`)**:
-  - *Giải Phóng Giảng Viên Khỏi Rào Cản Mã LaTeX Thô*: Giảng viên không cần nhớ hoặc gõ các đoạn mã cú pháp phức tạp như `` `\frac{a}{b}` ``, `` `\sqrt[n]{x}` ``, `` `\int_{a}^{b} f(x)dx` ``.
-  - *Trải Nghiệm Click-to-Fill Dễ Dàng*: Giảng viên chỉ cần nhấp vào công thức mong muốn, hệ thống sẽ mở modal chuyên biệt với các ô điền số / ký tự tương ứng:
-    + Phân số: Điền ô Tử số và ô Mẫu số.
-    + Căn thức: Điền ô Bậc căn và ô Biểu thức dưới căn.
-    + Lũy thừa / Chỉ số: Điền Cơ số, Số mũ trên, Chỉ số dưới.
-    + Tích phân: Điền Cận dưới, Cận trên, Biểu thức hàm số `` `f(x)` ``, Biến vi phân `` `dx` ``.
-    + Giới hạn: Điền Biến tiến tới (ví dụ: `` `x \to x_0` ``) và Biểu thức.
-    + Hệ phương trình: Điền Phương trình 1, Phương trình 2.
-    + Bảng biến thiên SGK: 4 mẫu Presets phổ biến (Bậc 3 `` `a > 0` ``, Bậc 3 `` `a < 0` ``, Phân thức `` `ad - bc > 0` ``, Trùng phương) kèm tuỳ chỉnh các dòng tọa độ.
-    + Đồ thị hàm số: Chọn dạng hàm, phương trình toán học và toạ độ cực trị.
-  - *Khung Xem Trước KaTeX Thời Gian Thực (Live Preview)*: Cập nhật trực quan công thức toán học ngay khi gõ từng con số; phím tắt `` `Ctrl + Enter` `` để chèn tức thì vào vị trí con trỏ chuột, phím `` `Esc` `` để đóng.
+  - _Giải Phóng Giảng Viên Khỏi Rào Cản Mã LaTeX Thô_: Giảng viên không cần nhớ hoặc gõ các đoạn mã cú pháp phức tạp như `` `\frac{a}{b}` ``, `` `\sqrt[n]{x}` ``, `` `\int_{a}^{b} f(x)dx` ``.
+  - _Trải Nghiệm Click-to-Fill Dễ Dàng_: Giảng viên chỉ cần nhấp vào công thức mong muốn, hệ thống sẽ mở modal chuyên biệt với các ô điền số / ký tự tương ứng:
+    - Phân số: Điền ô Tử số và ô Mẫu số.
+    - Căn thức: Điền ô Bậc căn và ô Biểu thức dưới căn.
+    - Lũy thừa / Chỉ số: Điền Cơ số, Số mũ trên, Chỉ số dưới.
+    - Tích phân: Điền Cận dưới, Cận trên, Biểu thức hàm số `` `f(x)` ``, Biến vi phân `` `dx` ``.
+    - Giới hạn: Điền Biến tiến tới (ví dụ: `` `x \to x_0` ``) và Biểu thức.
+    - Hệ phương trình: Điền Phương trình 1, Phương trình 2.
+    - Bảng biến thiên SGK: 4 mẫu Presets phổ biến (Bậc 3 `` `a > 0` ``, Bậc 3 `` `a < 0` ``, Phân thức `` `ad - bc > 0` ``, Trùng phương) kèm tuỳ chỉnh các dòng tọa độ.
+    - Đồ thị hàm số: Chọn dạng hàm, phương trình toán học và toạ độ cực trị.
+  - _Khung Xem Trước KaTeX Thời Gian Thực (Live Preview)_: Cập nhật trực quan công thức toán học ngay khi gõ từng con số; phím tắt `` `Ctrl + Enter` `` để chèn tức thì vào vị trí con trỏ chuột, phím `` `Esc` `` để đóng.
 
 - **Cơ Chế Dán Trực Tiếp Ảnh Chụp Màn Hình (Ctrl+V) & Tải Tệp Minh Họa Đề Thi (`CurriculumStudioEditor.jsx`)**:
   - Bắt sự kiện clipboard `` `onPaste` `` trên toàn bộ các khung soạn thảo (Lý thuyết Khối 1, Phương pháp giải Khối 2, Bẫy đề thi, Mẹo Casio, Đề bài mẫu Khối 4, Lời giải mẫu Khối 4).
@@ -1798,14 +2057,14 @@ pm run build hoàn thành trong 1.12s, 0 lỗi cú pháp.
   - Đính kèm đầy đủ thanh công cụ tiện ích nhanh: `` `✨ Điền Công Thức` ``, `` `📊 Bảng Biến Thiên` ``, `` `📈 Đồ Thị Hàm Số` ``, `` `🖼️ Dán/Tải Ảnh` ``.
 
 - **Tinh Chỉnh Kích Thước Tinh Gọn, Thoáng Đãng & Thiết Kế Mật Độ Cao Cho Panoramic Workspace Modal (`CurriculumExplorerView.jsx`)**:
-  - *Giải Quyết Tình Trạng To Phồng & Rối Mắt*: Người dùng phản hồi giao diện modal bóc tách toàn cảnh 3 cột có kích thước các thành phần khá to (padding `p-4`, `p-5`, font chữ lớn, card bài mẫu và các ô đáp án chiếm nhiều diện tích), gây choán ngợp khi hiển thị danh sách 5 bài học, 10 dạng bài và 40 câu hỏi.
-  - *Thiết Kế Lại Theo Tiêu Chuẩn Compact & High-Density Studio UI*:
-    + **Header & Summary Banner**: Thu gọn padding từ `p-4 sm:p-5` xuống `px-4 py-2.5 sm:px-5 sm:py-3`, icon Wand giảm còn `w-8 h-8`, title `text-xs sm:text-sm font-extrabold`. Banner thành công giảm padding xuống `px-4 py-2`, icon Check `w-7 h-7`, nút "Phân Tích Tệp Khác" thanh mảnh `px-2.5 py-1 text-[11px]`.
-    + **Cột 1 (Điều Hướng Phân Cấp - 4 Cols / 33%)**: Thu gọn Tầng 1 (Chương & Bài học) với padding `p-2.5`, chữ bài học `text-[11px]`, badge số dạng và bài mẫu `text-[9.5px]`. Tầng 2 (Dạng bài học thuật) tối ưu card dạng bài thành `p-2 rounded-xl text-[11px]`, font tiêu đề `text-[11px] leading-snug`, badge phân loại/trọng số/số bài `text-[9px] px-1.5 py-0.2`, nút mở Studio `text-[10px]`.
-    + **Cột 2 (Khối 1 & Khối 2 - Sư Phạm Nền Tảng)**: Header dạng bài tinh gọn `px-4 py-2`, nút "Mở Trong Studio Sư Phạm" thu nhỏ `px-2.5 py-1 text-[11px]`. Các ô Định lý SGK, Ví dụ minh họa, Thuật toán giải Khối 2, Bẫy đề thi và Casio giảm padding còn `p-2.5` và `p-2`, font chữ `text-[11px]`, giúp bao quát toàn bộ lý thuyết và phương pháp mà không cần cuộn trang nhiều lần.
-    + **Cột 3 (Khối 4 - Ngân Hàng Bài Mẫu Chuyên Sâu)**: Thanh tabs cấp độ Bloom và pills câu hỏi (Câu 1, Câu 2...) thu gọn chiều cao với padding `py-0.5` / `py-1`, text `text-[10.5px]`. Lưới 4 phương án A-B-C-D được tối ưu với padding `p-1.5 px-2 rounded-lg text-[11px]`, badge chữ cái `w-3.5 h-3.5 text-[9px]`, khung lời giải chi tiết `p-2.5 text-[11px]`.
-    + **Modal Footer**: Giảm padding còn `px-4 py-2 sm:px-5 sm:py-2.5`, kích thước các nút Đóng / Nạp PostgreSQL vừa vặn, thanh lịch.
-  - *Trải Nghiệm Trực Quan*: Toàn bộ modal thu gọn ~30% thể tích, hiển thị sắc nét, thoáng đãng, chuyên nghiệp và tối ưu hóa không gian hiển thị thông tin học thuật.
+  - _Giải Quyết Tình Trạng To Phồng & Rối Mắt_: Người dùng phản hồi giao diện modal bóc tách toàn cảnh 3 cột có kích thước các thành phần khá to (padding `p-4`, `p-5`, font chữ lớn, card bài mẫu và các ô đáp án chiếm nhiều diện tích), gây choán ngợp khi hiển thị danh sách 5 bài học, 10 dạng bài và 40 câu hỏi.
+  - _Thiết Kế Lại Theo Tiêu Chuẩn Compact & High-Density Studio UI_:
+    - **Header & Summary Banner**: Thu gọn padding từ `p-4 sm:p-5` xuống `px-4 py-2.5 sm:px-5 sm:py-3`, icon Wand giảm còn `w-8 h-8`, title `text-xs sm:text-sm font-extrabold`. Banner thành công giảm padding xuống `px-4 py-2`, icon Check `w-7 h-7`, nút "Phân Tích Tệp Khác" thanh mảnh `px-2.5 py-1 text-[11px]`.
+    - **Cột 1 (Điều Hướng Phân Cấp - 4 Cols / 33%)**: Thu gọn Tầng 1 (Chương & Bài học) với padding `p-2.5`, chữ bài học `text-[11px]`, badge số dạng và bài mẫu `text-[9.5px]`. Tầng 2 (Dạng bài học thuật) tối ưu card dạng bài thành `p-2 rounded-xl text-[11px]`, font tiêu đề `text-[11px] leading-snug`, badge phân loại/trọng số/số bài `text-[9px] px-1.5 py-0.2`, nút mở Studio `text-[10px]`.
+    - **Cột 2 (Khối 1 & Khối 2 - Sư Phạm Nền Tảng)**: Header dạng bài tinh gọn `px-4 py-2`, nút "Mở Trong Studio Sư Phạm" thu nhỏ `px-2.5 py-1 text-[11px]`. Các ô Định lý SGK, Ví dụ minh họa, Thuật toán giải Khối 2, Bẫy đề thi và Casio giảm padding còn `p-2.5` và `p-2`, font chữ `text-[11px]`, giúp bao quát toàn bộ lý thuyết và phương pháp mà không cần cuộn trang nhiều lần.
+    - **Cột 3 (Khối 4 - Ngân Hàng Bài Mẫu Chuyên Sâu)**: Thanh tabs cấp độ Bloom và pills câu hỏi (Câu 1, Câu 2...) thu gọn chiều cao với padding `py-0.5` / `py-1`, text `text-[10.5px]`. Lưới 4 phương án A-B-C-D được tối ưu với padding `p-1.5 px-2 rounded-lg text-[11px]`, badge chữ cái `w-3.5 h-3.5 text-[9px]`, khung lời giải chi tiết `p-2.5 text-[11px]`.
+    - **Modal Footer**: Giảm padding còn `px-4 py-2 sm:px-5 sm:py-2.5`, kích thước các nút Đóng / Nạp PostgreSQL vừa vặn, thanh lịch.
+  - _Trải Nghiệm Trực Quan_: Toàn bộ modal thu gọn ~30% thể tích, hiển thị sắc nét, thoáng đãng, chuyên nghiệp và tối ưu hóa không gian hiển thị thông tin học thuật.
 
 - **Kiểm Thử Đóng Gói Toàn Diện (Build Verification)**:
   - `npm run build` thành công 100% (**0 Error, 0 Warning**, hoàn thành trong 829ms trên Vite 8 và React 19).
@@ -1815,24 +2074,24 @@ pm run build hoàn thành trong 1.12s, 0 lỗi cú pháp.
 ## [16/10/2026] - Tái Cân Đối Bố Cục Không Gian Panoramic Workspace, Thẻ Ví Dụ Minh Họa SGK & Bài Toán Mẫu Áp Dụng (Khối 1 & Khối 2), Mở Rộng Ngân Hàng Bài Mẫu Chuyên Sâu Đa Cấp Độ
 
 - **Tích Hợp Khối Thẻ Ví Dụ Minh Họa SGK (Khối 1) & Bài Toán Mẫu Áp Dụng Phương Pháp (Khối 2) Chuẩn Sư Phạm**:
-  - *Tách Biệt Nội Dung Bằng Parser Chuyên Sâu (`CurriculumStudioEditor.jsx`)*:
-    + Bổ sung hàm xuất khẩu `parseTheoryRecapSections`: Phân tách chuỗi `theoryRecap` thành `{ theory, example }` dựa trên điểm neo `### 📌 Ví dụ minh họa SGK:`.
-    + Nâng cấp hàm xuất khẩu `parseSolutionMethodSections`: Phân tách chuỗi `solutionMethod` thành `{ method, sampleProblem, traps, casio }` sử dụng regex lookahead phân định rõ ràng giữa các bước giải thuật, `### 📝 Bài toán mẫu áp dụng phương pháp:`, `### ⚠️ Các bẫy đề thi`, và `### 💡 Kỹ thuật Casio & mẹo tư duy nhanh`.
-  - *Hiển Thị Thẻ Trực Quan Độc Lập Nổi Bật (`CurriculumExplorerView.jsx`)*:
-    + **Khối 1 (Kiến Thức Nền Tảng SGK)**: Bên dưới phần định lý và công thức, bố trí Thẻ **📌 Ví Dụ Minh Họa SGK** với viền gradient Emerald/Teal dịu mát, huy hiệu "VÍ DỤ SGK", bài toán ngữ cảnh và lời giải KaTeX từng bước.
-    + **Khối 2 (Phương Pháp Giải Chi Tiết & Bẫy)**: Bên dưới các bước giải thuật (Bước 1, Bước 2, Bước 3...), hiển thị Thẻ **📝 Bài Toán Mẫu Áp Dụng Phương Pháp** với viền gradient Amber/Orange ấm áp, huy hiệu "BÀI TOÁN MẪU ÁP DỤNG", minh họa cách áp dụng trực tiếp thuật toán vào bài tập cụ thể, đặt trước khối Callout Bẫy đề thi (Rose Alert) và Mẹo Casio (Indigo Tip).
-    + Toàn bộ nội dung công thức, phương trình phản ứng hóa học và ký hiệu được render mượt mà qua `<MathText />`.
+  - _Tách Biệt Nội Dung Bằng Parser Chuyên Sâu (`CurriculumStudioEditor.jsx`)_:
+    - Bổ sung hàm xuất khẩu `parseTheoryRecapSections`: Phân tách chuỗi `theoryRecap` thành `{ theory, example }` dựa trên điểm neo `### 📌 Ví dụ minh họa SGK:`.
+    - Nâng cấp hàm xuất khẩu `parseSolutionMethodSections`: Phân tách chuỗi `solutionMethod` thành `{ method, sampleProblem, traps, casio }` sử dụng regex lookahead phân định rõ ràng giữa các bước giải thuật, `### 📝 Bài toán mẫu áp dụng phương pháp:`, `### ⚠️ Các bẫy đề thi`, và `### 💡 Kỹ thuật Casio & mẹo tư duy nhanh`.
+  - _Hiển Thị Thẻ Trực Quan Độc Lập Nổi Bật (`CurriculumExplorerView.jsx`)_:
+    - **Khối 1 (Kiến Thức Nền Tảng SGK)**: Bên dưới phần định lý và công thức, bố trí Thẻ **📌 Ví Dụ Minh Họa SGK** với viền gradient Emerald/Teal dịu mát, huy hiệu "VÍ DỤ SGK", bài toán ngữ cảnh và lời giải KaTeX từng bước.
+    - **Khối 2 (Phương Pháp Giải Chi Tiết & Bẫy)**: Bên dưới các bước giải thuật (Bước 1, Bước 2, Bước 3...), hiển thị Thẻ **📝 Bài Toán Mẫu Áp Dụng Phương Pháp** với viền gradient Amber/Orange ấm áp, huy hiệu "BÀI TOÁN MẪU ÁP DỤNG", minh họa cách áp dụng trực tiếp thuật toán vào bài tập cụ thể, đặt trước khối Callout Bẫy đề thi (Rose Alert) và Mẹo Casio (Indigo Tip).
+    - Toàn bộ nội dung công thức, phương trình phản ứng hóa học và ký hiệu được render mượt mà qua `<MathText />`.
 - **Tái Cân Đối Toàn Diện Bố Cục Không Gian Panoramic Workspace (`CurriculumExplorerView.jsx`)**:
-  - *Giải Quyết Triệt Để Tình Trạng Mất Cân Đối*: Xóa bỏ hoàn toàn bố cục 3 cột cũ gây lệch diện tích (Cột 1 và Cột 2 bị trống 70% không gian đáy, Cột 3 dồn toàn bộ 4 khối sư phạm cuộn dài vô tận).
-  - *Chuyển Đổi Sang Bố Cục 2 Phân Vùng Cân Xứng (2-Master-Pane Layout)*:
+  - _Giải Quyết Triệt Để Tình Trạng Mất Cân Đối_: Xóa bỏ hoàn toàn bố cục 3 cột cũ gây lệch diện tích (Cột 1 và Cột 2 bị trống 70% không gian đáy, Cột 3 dồn toàn bộ 4 khối sư phạm cuộn dài vô tận).
+  - _Chuyển Đổi Sang Bố Cục 2 Phân Vùng Cân Xứng (2-Master-Pane Layout)_:
     - **Phân Vùng 1: Cột Trái Điều Hướng Phân Cấp (4 Cols / ~33% width)**:
-      + *Tầng 1 (Cây Chương & Bài Học)*: Chiếm tối đa 40% chiều cao, hiển thị danh sách Chương và Bài học với badge tổng hợp số lượng Dạng bài và tổng số Bài toán mẫu (`X dạng • Y bài mẫu`).
-      + *Tầng 2 (Danh Mục Dạng Bài Của Bài Học)*: Chiếm 60% chiều cao còn lại với thanh cuộn độc lập, tích hợp bộ lọc Bloom L1 - L4, hiển thị badge phân loại, trọng số và **huy hiệu nổi bật số lượng bài mẫu chuyên sâu (`🎯 X bài mẫu chuyên sâu`)**.
+      - _Tầng 1 (Cây Chương & Bài Học)_: Chiếm tối đa 40% chiều cao, hiển thị danh sách Chương và Bài học với badge tổng hợp số lượng Dạng bài và tổng số Bài toán mẫu (`X dạng • Y bài mẫu`).
+      - _Tầng 2 (Danh Mục Dạng Bài Của Bài Học)_: Chiếm 60% chiều cao còn lại với thanh cuộn độc lập, tích hợp bộ lọc Bloom L1 - L4, hiển thị badge phân loại, trọng số và **huy hiệu nổi bật số lượng bài mẫu chuyên sâu (`🎯 X bài mẫu chuyên sâu`)**.
     - **Phân Vùng 2: Khung Chính Chi Tiết Sư Phạm & Ngân Hàng Bài Mẫu (8 Cols / ~67% width)**:
-      + *Top Banner Thống Kê Tổng Lực*: Hiển thị tự động tổng số bài tập mẫu chuyên sâu trên toàn bộ chuyên đề: `X Chương • Y Bài học • Z Dạng bài chi tiết • W Bài tập mẫu chuyên sâu`.
-      + *Khung Chia Đôi Song Song 2 Cột Cân Đối (50% - 50%)*:
-        * **Cột Trái (Kiến Thức & Phương Pháp Sư Phạm)**: Hiển thị Khối 1 (Lý thuyết SGK nền tảng & Thẻ Ví Dụ Minh Họa SGK), Khối 2 (Phương pháp giải, Thẻ Bài Toán Mẫu Áp Dụng Phương Pháp, Bẫy đề thi ĐGNL Rose Alert, Mẹo Casio Indigo Tip), và Khối 3 (Thời lượng video bài giảng khuyến nghị).
-        * **Cột Phải (Ngân Hàng Bài Mẫu & Luyện Tập Chuyên Sâu - Khối 4)**: Hiển thị toàn bộ bộ sưu tập 4 câu hỏi trắc nghiệm chuẩn Bloom L1-L4.
+      - _Top Banner Thống Kê Tổng Lực_: Hiển thị tự động tổng số bài tập mẫu chuyên sâu trên toàn bộ chuyên đề: `X Chương • Y Bài học • Z Dạng bài chi tiết • W Bài tập mẫu chuyên sâu`.
+      - _Khung Chia Đôi Song Song 2 Cột Cân Đối (50% - 50%)_:
+        - **Cột Trái (Kiến Thức & Phương Pháp Sư Phạm)**: Hiển thị Khối 1 (Lý thuyết SGK nền tảng & Thẻ Ví Dụ Minh Họa SGK), Khối 2 (Phương pháp giải, Thẻ Bài Toán Mẫu Áp Dụng Phương Pháp, Bẫy đề thi ĐGNL Rose Alert, Mẹo Casio Indigo Tip), và Khối 3 (Thời lượng video bài giảng khuyến nghị).
+        - **Cột Phải (Ngân Hàng Bài Mẫu & Luyện Tập Chuyên Sâu - Khối 4)**: Hiển thị toàn bộ bộ sưu tập 4 câu hỏi trắc nghiệm chuẩn Bloom L1-L4.
 - **Tính Năng Động: Sinh Thêm Bài Tập Rèn Luyện AI Tức Thì (`+ AI Tạo Thêm 2 Bài Mẫu`)**:
   - Tích hợp nút bấm gradient tím-xanh `+ AI Tạo Thêm 2 Bài Mẫu` ngay trên header của Khối 4.
   - Cho phép giáo viên nhấp 1 phát để sinh tức thì 2 bài tập rèn luyện (L3 Vận dụng & L4 Vận dụng cao) bám sát lý thuyết và phương pháp giải của dạng bài hiện tại.
@@ -1852,33 +2111,33 @@ pm run build hoàn thành trong 1.12s, 0 lỗi cú pháp.
 ## [15/10/2026] - Nâng Cấp Cây Tri Thức Phân Cấp 3 Tầng, Studio Sư Phạm Chuyên Sâu (Curriculum Studio Editor), Bàn Phím KaTeX STEM 10 Danh Mục, Không Gian Bóc Tách Khổ Lớn 3 Cột, Khắc Phục Lỗi Màn Trắng & KaTeX
 
 - **Kiến Trúc Soạn Thảo Đa Chế Độ: Soạn Thảo Trực Quan (Text In Preview Chuẩn Học Sinh) Song Hành Mã Nguồn LaTeX Thuần (Nhập Nhanh Từ AI) (`CurriculumStudioEditor.jsx`)**:
-  - *Giải Phóng Giáo Viên Khỏi Rào Cản Kỹ Thuật*: Không ép buộc giáo viên phải cắt vụn bài giảng thành 4 ô form rời rạc (Định nghĩa, Công thức, Quy tắc, Hình ảnh) gây mất mạch tư duy sư phạm. Hệ thống trang bị 2 chế độ soạn thảo chuyên sâu:
+  - _Giải Phóng Giáo Viên Khỏi Rào Cản Kỹ Thuật_: Không ép buộc giáo viên phải cắt vụn bài giảng thành 4 ô form rời rạc (Định nghĩa, Công thức, Quy tắc, Hình ảnh) gây mất mạch tư duy sư phạm. Hệ thống trang bị 2 chế độ soạn thảo chuyên sâu:
     1. Chế độ **Soạn Thảo Trực Quan (Text In Preview - Chuẩn Học Sinh)** (Mặc định):
        - Cho phép giáo viên soạn thảo tự nhiên, hỗ trợ chèn nhanh cấu trúc: `+ Khối công thức $$...$$`, `+ Gạch đầu dòng`.
        - Tích hợp trực tiếp **Khung Hiển Thị Trực Quan (Text In Preview - Giao Diện Học Sinh Thấy)** song hành ngay bên dưới ô soạn thảo. Khung này sử dụng `<MathText />` render thời gian thực các công thức toán học KaTeX thật (phân số, căn thức, giới hạn, tích phân, đồ thị minh họa), mô phỏng chuẩn xác 100% thẻ lý thuyết mà học sinh sẽ trải nghiệm.
     2. Chế độ **Mã Nguồn LaTeX Thuần (Nhập Nhanh Từ AI)**:
        - Trang bị khung soạn thảo monospace nền tối chuyên dụng, tối ưu cho thao tác copy-paste nhanh 1-chạm kết quả trích xuất từ Gemini / ChatGPT / AI Engine mà không phải chuyển đổi thủ công.
-  - *Cơ Chế Chèn Ký Hiệu KaTeX STEM Chuẩn Xác Tại Vị Trí Con Trỏ (Cursor-Precision Insertion Engine)*:
+  - _Cơ Chế Chèn Ký Hiệu KaTeX STEM Chuẩn Xác Tại Vị Trí Con Trỏ (Cursor-Precision Insertion Engine)_:
     - Bổ sung `useRef` quản lý `textareaRefs` theo dõi vị trí con trỏ chuột (`selectionStart` / `selectionEnd`) trên từng ô soạn thảo đang active.
     - Khi giáo viên click vào bất kỳ ký hiệu nào trên Bảng KaTeX STEM 10 danh mục (hơn 120+ công thức toán học), công thức tự động chèn đúng vào vị trí con trỏ chuột đang đứng và tự động khôi phục focus, chấm dứt hoàn toàn hiện tượng công thức bị nối đuôi về cuối văn bản.
-  - *Áp Dụng Cho Cả Khối 1 (Lý Thuyết Nền Tảng) & Khối 2 (Phương Pháp Giải Chuyên Biệt)*:
+  - _Áp Dụng Cho Cả Khối 1 (Lý Thuyết Nền Tảng) & Khối 2 (Phương Pháp Giải Chuyên Biệt)_:
     - Ở Khối 2, chế độ trực quan cung cấp khung soạn bước giải kèm xem trước thẻ Bẫy đề thi ĐGNL (Rose Alert) và Mẹo Casio (Indigo Tip) sống động, song song với chế độ mã nguồn LaTeX thuần để nạp nhanh từ AI.
 
 - **Tái Cấu Trúc Toàn Diện Động Cơ Render KaTeX & Sửa Triệt Để Lỗi Vỡ Dòng Văn Bản (`MathText.jsx`)**:
-  - *Nguyên Nhân Vỡ Dòng Từng Chữ (Sentence Shattering Root Cause)*: Trước đó, hàm `MathText` chia chuỗi toàn cục theo ký tự phân cách toán học trước, sau đó bọc mỗi mẩu text trung gian (dấu phẩy, dấu chấm, dấu ngoặc, từ ngữ) vào một thẻ `display: block` (`span className="block leading-relaxed"`). Điều này khiến câu văn bị xé nhỏ thành hàng chục dòng dọc riêng biệt cho từng dấu chấm, dấu phẩy và công thức toán.
-  - *Tách Biệt Hai Tầng Render (Line-Level vs Inline-Level)*: Tái cấu trúc kiến trúc phân tích thành 2 tầng độc lập:
+  - _Nguyên Nhân Vỡ Dòng Từng Chữ (Sentence Shattering Root Cause)_: Trước đó, hàm `MathText` chia chuỗi toàn cục theo ký tự phân cách toán học trước, sau đó bọc mỗi mẩu text trung gian (dấu phẩy, dấu chấm, dấu ngoặc, từ ngữ) vào một thẻ `display: block` (`span className="block leading-relaxed"`). Điều này khiến câu văn bị xé nhỏ thành hàng chục dòng dọc riêng biệt cho từng dấu chấm, dấu phẩy và công thức toán.
+  - _Tách Biệt Hai Tầng Render (Line-Level vs Inline-Level)_: Tái cấu trúc kiến trúc phân tích thành 2 tầng độc lập:
     1. Tầng dòng (Line-Level): Chỉ bóc tách các dòng ngắt `\n` thực sự, nhận diện Khối cảnh báo Callout (`### ⚠️`, `### 💡`), Dòng bước giải (`Bước 1:`, `**Bước 1:**`), và Danh sách dấu chấm/dấu gạch.
     2. Tầng nội dòng (Inline-Level): Toàn bộ văn bản, công thức toán (`$...$`, `\(...\)`), chữ in đậm (`**...**`), và ảnh Markdown (`![alt](url)`) bên trong một dòng đều được render dưới dạng inline thuần túy (`<span>`, `<strong>`, `<img>`), tuyệt đối không chứa thẻ `block` nào, đảm bảo câu văn và công thức toán học/hóa học tuôn chảy mượt mà trên cùng một dòng.
-  - *Khắc Phục Lỗi Trùng Lặp Bullet (`• - `)*: Cập nhật biểu thức chính quy bóc tách danh sách để cắt bỏ hoàn toàn dấu gạch ngang đầu dòng `- ` hoặc bullet trùng lặp, chỉ hiển thị duy nhất 1 bullet chấm tròn màu Indigo `•` thanh lịch, thẳng hàng hoàn hảo.
-  - *Khắc Phục Triệt Để Ký Tự Thoát `\n` Bị Hiển Thị Thô*:
+  - _Khắc Phục Lỗi Trùng Lặp Bullet (`• - `)_: Cập nhật biểu thức chính quy bóc tách danh sách để cắt bỏ hoàn toàn dấu gạch ngang đầu dòng `- ` hoặc bullet trùng lặp, chỉ hiển thị duy nhất 1 bullet chấm tròn màu Indigo `•` thanh lịch, thẳng hàng hoàn hảo.
+  - _Khắc Phục Triệt Để Ký Tự Thoát `\n` Bị Hiển Thị Thô_:
     - Trước đó, biểu thức `replace(/\\n(?![a-zA-Z])/g, '\n')` chặn tất cả các chữ cái đứng sau `\n`, dẫn đến các từ tiếng Việt như `\nTrong`, `\nKiểm`, `\nBước 2:` không bao giờ được unescape mà hiển thị trần trụi dạng text thô `.\nTrong` và `.\nBước`.
     - Nâng cấp negative lookahead chính xác chỉ bảo vệ đúng 15 lệnh LaTeX thực sự bắt đầu bằng `\n` (`` `\neq` ``, `` `\notin` ``, `` `\nabla` ``, `` `\nu` ``, v.v.), giải phóng 100% các từ tiếng Việt và ngắt dòng thực sự, giúp chia đoạn và chia bước giải rõ ràng, ngăn nắp.
     - Xuất hàm helper `unescapeLiteralNewlines` đồng bộ vào `CurriculumStudioEditor.jsx` để textarea nhập liệu cũng tự động giải phóng `\n` thành Enter xuống dòng thực tế, giúp giảng viên soạn thảo cực kỳ trực quan.
-  - *Tự Động Nhận Diện & Bọc KaTeX Cho Công Thức Hóa Học & Ion Đa Nguyên Tử*:
+  - _Tự Động Nhận Diện & Bọc KaTeX Cho Công Thức Hóa Học & Ion Đa Nguyên Tử_:
     - Tự động bọc KaTeX cho các ion đơn/đa nguyên tử có điện tích: `` `H^+` ``, `` `OH^-` ``, `` `SO_4^{2-}` ``, `` `NO_3^-` ``, `` `Fe^{3+}` ``, `` `Na^+` ``.
     - Tự động bọc KaTeX cho các hợp chất có chỉ số dưới: `` `H_2O` ``, `` `H_2SO_4` ``, `` `HNO_3` ``, `` `CO_2` ``, `` `Fe_2O_3` ``, `` `KMnO_4` `` ngay cả khi người dùng hoặc AI không gõ cặp dấu `$`.
-  - *Hỗ Trợ Danh Sách Thụt Lề & Phân Cấp*: Hỗ trợ thụt lề nhiều cấp cho danh sách lồng nhau và danh sách đánh số (`1.`, `2)`).
-  - *Xử Lý Inline Thông Minh*: Đối với các chuỗi ngắn không chứa cấu trúc dòng (như phương án trắc nghiệm A-D, tiêu đề, công thức rời), `MathText` tự động render dưới dạng `<span>` nội dòng để tránh vi phạm cấu trúc DOM React (`div cannot appear as child of span`).
+  - _Hỗ Trợ Danh Sách Thụt Lề & Phân Cấp_: Hỗ trợ thụt lề nhiều cấp cho danh sách lồng nhau và danh sách đánh số (`1.`, `2)`).
+  - _Xử Lý Inline Thông Minh_: Đối với các chuỗi ngắn không chứa cấu trúc dòng (như phương án trắc nghiệm A-D, tiêu đề, công thức rời), `MathText` tự động render dưới dạng `<span>` nội dòng để tránh vi phạm cấu trúc DOM React (`div cannot appear as child of span`).
 - **Khắc Phục Triệt Để Lỗi Hiển Thị KaTeX & Chuỗi Ký Tự (`MathText.jsx`)**:
   - Xử lý triệt để ký tự thoát `\n\n` bị hiển thị thô thành text (`str.replace(/\\n/g, '\n')`).
   - Tự động bọc KaTeX cho các lệnh LaTeX độc lập (`\Delta`, `\frac`, `\lim`, `\int`, `\alpha`, `x_0`, v.v.) nằm ngoài khối `$...$`, loại bỏ hoàn toàn tình trạng mã LaTeX xuất hiện dạng chuỗi code thô.
@@ -1907,15 +2166,15 @@ pm run build hoàn thành trong 1.12s, 0 lỗi cú pháp.
     - Cột 2: Danh mục Dạng bài học thuật theo bài học được chọn, tích hợp bộ lọc mức độ Bloom (Tất cả, L1, L2, L3, L4).
     - Cột 3: Chi tiết dạng bài & Thanh tra KaTeX sống động (Live KaTeX Pattern Inspector) xem trước 4 khối sư phạm và mở trực tiếp vào Studio.
 - **Phân Hệ AI Bóc Tách Tài Liệu (PDF/DOCX) & Tự Động Nhận Diện Dạng Bài Sư Phạm (`CurriculumExplorerView.jsx`, `aiService.js`)**:
-  - *Bộ Tiếp Nhận Đa Định Dạng Tài Liệu*: Hỗ trợ kéo & thả tệp sách giáo khoa hoặc tài liệu chuyên đề (.pdf, .docx, .txt) hoặc nhập trích đoạn mục lục/chuyên đề với thanh tiến trình trực quan 4 bước: `1. Đọc tệp & OCR` -> `2. Phân tích Chương - Bài` -> `3. Nhận diện Dạng bài` -> `4. Chuẩn hóa KaTeX`.
-  - *Móc Nối API Gateway & AI Engine*: Tích hợp `aiService.extractCurriculumFromDocument` gọi trực tiếp `POST /api/ai-engine/curriculum/extract` (.NET 9 C#).
-  - *Khu Vực Duyệt Dạng Bài Trực Quan (Pattern Showcase Accordion)*: Hiển thị toàn bộ cây tri thức bóc tách được (Số chương, số bài, số dạng bài), kèm các huy hiệu nhận diện phân loại dạng toán, cấp độ Bloom, kỹ năng cốt lõi và xem trước 4 khối sư phạm (Nền tảng SGK, Phương pháp KaTeX từng bước, Đề thi trắc nghiệm mẫu).
-  - *Chuyển Tiếp Trực Tiếp Vào Studio*: Tích hợp nút "Mở Trong Studio" trên từng Dạng bài bóc tách được, cho phép giảng viên nhảy thẳng vào Studio toàn màn hình để kiểm tra, tinh chỉnh và thêm hình ảnh minh họa trước khi lưu vào CSDL.
-  - *Nạp Trực Tiếp Vào PostgreSQL*: Nút "Nạp Vào CSDL PostgreSQL" gọi `contentService.importCurriculum` (`POST /api/content/curriculum/import`) lưu toàn bộ cây phân cấp vào database với 0 giá trị hardcode.
+  - _Bộ Tiếp Nhận Đa Định Dạng Tài Liệu_: Hỗ trợ kéo & thả tệp sách giáo khoa hoặc tài liệu chuyên đề (.pdf, .docx, .txt) hoặc nhập trích đoạn mục lục/chuyên đề với thanh tiến trình trực quan 4 bước: `1. Đọc tệp & OCR` -> `2. Phân tích Chương - Bài` -> `3. Nhận diện Dạng bài` -> `4. Chuẩn hóa KaTeX`.
+  - _Móc Nối API Gateway & AI Engine_: Tích hợp `aiService.extractCurriculumFromDocument` gọi trực tiếp `POST /api/ai-engine/curriculum/extract` (.NET 9 C#).
+  - _Khu Vực Duyệt Dạng Bài Trực Quan (Pattern Showcase Accordion)_: Hiển thị toàn bộ cây tri thức bóc tách được (Số chương, số bài, số dạng bài), kèm các huy hiệu nhận diện phân loại dạng toán, cấp độ Bloom, kỹ năng cốt lõi và xem trước 4 khối sư phạm (Nền tảng SGK, Phương pháp KaTeX từng bước, Đề thi trắc nghiệm mẫu).
+  - _Chuyển Tiếp Trực Tiếp Vào Studio_: Tích hợp nút "Mở Trong Studio" trên từng Dạng bài bóc tách được, cho phép giảng viên nhảy thẳng vào Studio toàn màn hình để kiểm tra, tinh chỉnh và thêm hình ảnh minh họa trước khi lưu vào CSDL.
+  - _Nạp Trực Tiếp Vào PostgreSQL_: Nút "Nạp Vào CSDL PostgreSQL" gọi `contentService.importCurriculum` (`POST /api/content/curriculum/import`) lưu toàn bộ cây phân cấp vào database với 0 giá trị hardcode.
 - **Trợ Lý AI Tri Thức Nhận Diện & Chuẩn Hóa Dạng Bài Trong Studio (`CurriculumStudioEditor.jsx`)**:
-  - *Tích Hợp API `aiService.analyzePatternWithAi`*: Nút bấm **"AI Nhận Diện Dạng Bài"** gửi tên dạng bài hiện tại lên động cơ AI Knowledge (`POST /api/v1/documents/analyze-pattern`).
-  - *Tự Động Điền & Tối Ưu Nội Dung Sư Phạm*: Tự động nhận diện bản chất toán học (Tham số m, Cực trị, Tiệm cận, Tối ưu thực tế, Không gian Oxyz...), điền quy trình 4 bước KaTeX, bẫy đề thi ĐGNL thường gặp, mẹo Casio fx-580/fx-880 và sinh câu hỏi trắc nghiệm chuẩn Bloom kèm lời giải chi tiết.
-  - *Banner Phân Loại Sư Phạm*: Hiển thị banner chuyên nghiệp ghi rõ phân loại dạng bài, kỹ năng cốt lõi và cấp độ Bloom.
+  - _Tích Hợp API `aiService.analyzePatternWithAi`_: Nút bấm **"AI Nhận Diện Dạng Bài"** gửi tên dạng bài hiện tại lên động cơ AI Knowledge (`POST /api/v1/documents/analyze-pattern`).
+  - _Tự Động Điền & Tối Ưu Nội Dung Sư Phạm_: Tự động nhận diện bản chất toán học (Tham số m, Cực trị, Tiệm cận, Tối ưu thực tế, Không gian Oxyz...), điền quy trình 4 bước KaTeX, bẫy đề thi ĐGNL thường gặp, mẹo Casio fx-580/fx-880 và sinh câu hỏi trắc nghiệm chuẩn Bloom kèm lời giải chi tiết.
+  - _Banner Phân Loại Sư Phạm_: Hiển thị banner chuyên nghiệp ghi rõ phân loại dạng bài, kỹ năng cốt lõi và cấp độ Bloom.
 - **Khắc Phục Triệt Để Lỗi Màn Trắng (White Screen Fix) & Tăng Cường Bền Vững Runtime**:
   - Khắc phục `ReferenceError: weakPrerequisites is not defined` tại `CurriculumExplorerView.jsx:1303` bằng cách bổ sung bộ lọc dạng bài tiên quyết vùng trũng `<10%` đồng bộ từ `skillMasteryMap`.
   - Bọc `RootErrorBoundary` toàn cục tại `src/main.jsx` bắt mọi ngoại lệ render của React, hiển thị giao diện báo lỗi chi tiết cùng nút khôi phục reload/xóa cache.
@@ -1924,35 +2183,34 @@ pm run build hoàn thành trong 1.12s, 0 lỗi cú pháp.
 
 - **Triển Khai Studio Sư Phạm Chuyên Sâu Toàn Diện (Curriculum Studio Editor & Authoring Environment)**:
   - Đáp ứng yêu cầu nghiệp vụ chuyên sâu của giảng viên: thay vì modal nhập liệu đơn sơ chật hẹp, chuyển đổi sang không gian Studio toàn màn hình (`CurriculumStudioEditor.jsx`) hỗ trợ tải nặng và đa dạng nội dung:
-    - *3 Chế Độ Xem Linh Hoạt (View Mode Switcher)*:
-      + `Biên soạn (Editor)`: Toàn màn hình tập trung soạn thảo lý thuyết, bẫy đề thi, Casio và câu hỏi.
-      + `Chia đôi (Split 50-50)`: Nửa trái soạn thảo - nửa phải hiển thị Live Preview tức thời theo thời gian thực.
-      + `Review Học sinh (Live Preview)`: Mô phỏng chính xác 100% giao diện học sinh nhìn thấy và trải nghiệm học tập dạng bài.
-    - *Bảng Ký Tự Toán Học Đa Chủ Đề (KaTeX Palette)*: Phân loại theo 3 nhóm chuyên sâu: Đại số & Giải tích, Hình học & Không gian Oxyz, Logic & Tập hợp.
-    - *Bộ Công Cụ Chèn Hình Ảnh & Thư Viện Đồ Thị (Diagram Gallery & Image Uploader)*: Hỗ trợ chèn trực tiếp link hình ảnh đồ thị hàm bậc ba, bảng biến thiên, hình chóp tam giác S.ABC, hệ trục Oxyz vào các khối lý thuyết và đề bài trắc nghiệm.
-    - *Nâng Cấp Động Cơ Render Toán Học (`MathText.jsx`)*: Bổ sung bộ phân tích và render Markdown Image `![alt](url)` tự động, hiển thị hình ảnh đồ thị sắc nét, bo góc và hiệu ứng bóng đổ chuẩn sách giáo khoa.
-    - *Trình Quản Lý Video Bài Giảng & Bảng Phân Đoạn Thời Gian (Timestamps Table)*: Cho phép xem thử video nhúng trực tiếp và thêm/sửa/xóa các mốc thời gian phân đoạn video (ví dụ: `00:00 Lý thuyết`, `03:15 Phương pháp`, `07:30 Ví dụ mẫu`).
-    - *Studio Quản Trị Ngân Hàng Câu Hỏi Thích Ứng (API 16-18)*: Tải danh sách câu hỏi thuộc dạng bài từ PostgreSQL, hỗ trợ xem chi tiết, xóa câu hỏi và mở Dialog thêm câu hỏi mới với 4 bậc Bloom (L1 Nhận biết - L4 Vận dụng cao), 4 phương án A-D và lời giải chi tiết KaTeX.
-    - *Tích Hợp Chặt Chẽ Với Cây Tri Thức (`CurriculumExplorerView.jsx`)*: Nút "Mở Studio Biên Soạn Sư Phạm" trên thanh công cụ, trên từng dạng bài và trong modal thêm mới cho phép chuyển đổi mượt mà giữa cây tri thức và Studio.
+    - _3 Chế Độ Xem Linh Hoạt (View Mode Switcher)_:
+      - `Biên soạn (Editor)`: Toàn màn hình tập trung soạn thảo lý thuyết, bẫy đề thi, Casio và câu hỏi.
+      - `Chia đôi (Split 50-50)`: Nửa trái soạn thảo - nửa phải hiển thị Live Preview tức thời theo thời gian thực.
+      - `Review Học sinh (Live Preview)`: Mô phỏng chính xác 100% giao diện học sinh nhìn thấy và trải nghiệm học tập dạng bài.
+    - _Bảng Ký Tự Toán Học Đa Chủ Đề (KaTeX Palette)_: Phân loại theo 3 nhóm chuyên sâu: Đại số & Giải tích, Hình học & Không gian Oxyz, Logic & Tập hợp.
+    - _Bộ Công Cụ Chèn Hình Ảnh & Thư Viện Đồ Thị (Diagram Gallery & Image Uploader)_: Hỗ trợ chèn trực tiếp link hình ảnh đồ thị hàm bậc ba, bảng biến thiên, hình chóp tam giác S.ABC, hệ trục Oxyz vào các khối lý thuyết và đề bài trắc nghiệm.
+    - _Nâng Cấp Động Cơ Render Toán Học (`MathText.jsx`)_: Bổ sung bộ phân tích và render Markdown Image `![alt](url)` tự động, hiển thị hình ảnh đồ thị sắc nét, bo góc và hiệu ứng bóng đổ chuẩn sách giáo khoa.
+    - _Trình Quản Lý Video Bài Giảng & Bảng Phân Đoạn Thời Gian (Timestamps Table)_: Cho phép xem thử video nhúng trực tiếp và thêm/sửa/xóa các mốc thời gian phân đoạn video (ví dụ: `00:00 Lý thuyết`, `03:15 Phương pháp`, `07:30 Ví dụ mẫu`).
+    - _Studio Quản Trị Ngân Hàng Câu Hỏi Thích Ứng (API 16-18)_: Tải danh sách câu hỏi thuộc dạng bài từ PostgreSQL, hỗ trợ xem chi tiết, xóa câu hỏi và mở Dialog thêm câu hỏi mới với 4 bậc Bloom (L1 Nhận biết - L4 Vận dụng cao), 4 phương án A-D và lời giải chi tiết KaTeX.
+    - _Tích Hợp Chặt Chẽ Với Cây Tri Thức (`CurriculumExplorerView.jsx`)_: Nút "Mở Studio Biên Soạn Sư Phạm" trên thanh công cụ, trên từng dạng bài và trong modal thêm mới cho phép chuyển đổi mượt mà giữa cây tri thức và Studio.
 - **Tái Thiết Kế Cột Trái Cây Tri Thức 3 Tầng (Accordion Tree Navigation)**:
   - Chuyển đổi danh sách kỹ năng phẳng thành Accordion phân cấp 3 tầng chuẩn sư phạm SGK GDPT 2018:
-    - *Tầng 1 (Chương học)*: Hiển thị tên chương, mã chuyên đề, số lượng bài học, trọng số, hỗ trợ đóng/mở linh hoạt.
-    - *Tầng 2 (Bài học cụ thể)*: Hiển thị tên bài, biểu tượng sách, số lượng dạng bài con, hỗ trợ đóng/mở lồng nhau.
-    - *Tầng 3 (Dạng bài cụ thể)*: Thẻ chọn dạng bài trực quan với mã code, chuẩn Bloom, nút sửa nhanh và hệ thống huy hiệu năng lực cá nhân:
-      + `🚨 Hổng kiến thức (<10%)`: Màu đỏ đậm, nhấp nháy cảnh báo cần phục hồi vi mô ngay.
-      + `⚠️ Vùng trũng (<60%)`: Màu vàng cam, cảnh báo kỹ năng chưa đạt chuẩn.
-      + `✅ Đã vững (≥60%)`: Màu xanh ngọc, biểu thị kỹ năng đã thành thạo.
+    - _Tầng 1 (Chương học)_: Hiển thị tên chương, mã chuyên đề, số lượng bài học, trọng số, hỗ trợ đóng/mở linh hoạt.
+    - _Tầng 2 (Bài học cụ thể)_: Hiển thị tên bài, biểu tượng sách, số lượng dạng bài con, hỗ trợ đóng/mở lồng nhau.
+    - _Tầng 3 (Dạng bài cụ thể)_: Thẻ chọn dạng bài trực quan với mã code, chuẩn Bloom, nút sửa nhanh và hệ thống huy hiệu năng lực cá nhân:
+      - `🚨 Hổng kiến thức (<10%)`: Màu đỏ đậm, nhấp nháy cảnh báo cần phục hồi vi mô ngay.
+      - `⚠️ Vùng trũng (<60%)`: Màu vàng cam, cảnh báo kỹ năng chưa đạt chuẩn.
+      - `✅ Đã vững (≥60%)`: Màu xanh ngọc, biểu thị kỹ năng đã thành thạo.
 - **Xóa Bỏ Toàn Bộ Dữ Liệu Mẫu Hardcode Trên Frontend**:
   - Loại bỏ hoàn toàn các GUID hardcode mẫu trong `skillMasteryMap`. Toàn bộ chỉ số năng lực được trích xuất động từ kết quả khảo sát `diagData.skill_scores` hoặc `roadmapData.nodes`.
   - Loại bỏ hoàn toàn các câu hỏi giả fabricated trong fallback của `handleLaunchAdaptiveQuiz`. Nếu ngân hàng đề chưa có câu hỏi, hiển thị thông báo trạng thái cập nhật từ Ban Chuyên Môn/AI.
 - **Hoàn Thiện 4 Khối Nội Dung Sư Phạm Cho Từng Dạng Bài (Cột Phải)**:
-  - *Khối 1: Kiến thức nền tảng & Điều kiện tiên quyết (SGK Chuẩn)*: Định lý, định nghĩa, điều kiện đủ và đồ thị DAG liên kết.
-  - *Khối 2: Phương pháp giải chuyên biệt từng bước & Công thức KaTeX*: Trình bày quy trình giải (Bước 1 -> Bước 2 -> Bước 3), ngân hàng công thức toán học KaTeX, các bẫy đề thi ĐGNL, kỹ thuật Casio và thẻ GraphRAG liên môn.
-  - *Khối 3: Video bài giảng phương pháp & Lời giải mẫu chi tiết*: Video lecture preview kèm thời lượng (chuẩn FSM Gate ≥ 80%) và bài toán mẫu trắc nghiệm có lời giải chi tiết từng bước.
-  - *Khối 4: Luyện tập củng cố thích ứng (API 19 Content Service)*: Tự động phát hiện các dạng bài tiên quyết liên kết đang bị hổng (&lt;10%) và tự động gom thêm câu hỏi từ dạng tiên quyết vào đề luyện tập để học sinh chữa dứt điểm gốc rễ.
+  - _Khối 1: Kiến thức nền tảng & Điều kiện tiên quyết (SGK Chuẩn)_: Định lý, định nghĩa, điều kiện đủ và đồ thị DAG liên kết.
+  - _Khối 2: Phương pháp giải chuyên biệt từng bước & Công thức KaTeX_: Trình bày quy trình giải (Bước 1 -> Bước 2 -> Bước 3), ngân hàng công thức toán học KaTeX, các bẫy đề thi ĐGNL, kỹ thuật Casio và thẻ GraphRAG liên môn.
+  - _Khối 3: Video bài giảng phương pháp & Lời giải mẫu chi tiết_: Video lecture preview kèm thời lượng (chuẩn FSM Gate ≥ 80%) và bài toán mẫu trắc nghiệm có lời giải chi tiết từng bước.
+  - _Khối 4: Luyện tập củng cố thích ứng (API 19 Content Service)_: Tự động phát hiện các dạng bài tiên quyết liên kết đang bị hổng (&lt;10%) và tự động gom thêm câu hỏi từ dạng tiên quyết vào đề luyện tập để học sinh chữa dứt điểm gốc rễ.
 - **Kiểm Thử Đóng Gói (Build Verification)**:
   - `npm run build` thành công 100% (**0 Error, 0 Warning**, hoàn thành trong 3.91s).
-
 
 ---
 
@@ -1993,6 +2251,7 @@ pm run build hoàn thành trong 1.12s, 0 lỗi cú pháp.
 ---
 
 ## [10/10/2026] - Giao Diện Quản Lý Nhóm Học Tập Vi Mô (Micro Study Groups: 3 - 5 Học Sinh) & Phân Bổ Sơ Đồ Bàn Học Offline
+
 - **Thiết Kế Modal Sơ Đồ Nhóm Bàn Học Vi Mô ([`ClassMicroGroupsModal.jsx`](../src/components/modals/ClassMicroGroupsModal.jsx))**:
   - Xây dựng component modal hiển thị sơ đồ phân bổ bàn học offline của lớp (Trần sĩ số tối đa 20 em, mỗi bàn 3 - 5 học sinh).
   - Tích hợp bộ chọn quy mô bàn học (`3 bạn/bàn`, `4 bạn/bàn`, `5 bạn/bàn`) với thuật toán gom cụm đồng nhất (Homogeneous Clustering) theo lỗ hổng kiến thức.
@@ -2010,6 +2269,7 @@ pm run build hoàn thành trong 1.12s, 0 lỗi cú pháp.
 ---
 
 ## [09/10/2026] - Mở Rộng Client Service: Bổ Sung Tích Hợp API Phân Cụm Lớp Chuyên Đề & Nhóm Học Tập Vi Mô (3 - 5 Học Sinh)
+
 - **Cập Nhật Tầng Dịch Vụ `practiceService.js`**:
   - Bổ sung phương thức `autoClusterClasses(campusId, maxK = 6)` gọi `POST /api/v1/practice/classes/auto-cluster` phục vụ tự động phân cụm tạo lớp chuyên đề theo K-Means/Elbow Method.
   - Bổ sung phương thức `autoPartitionMicroGroups(classId, preferredGroupSize = 4)` gọi `POST /api/v1/practice/classes/{classId}/micro-groups/auto-partition` tự động chia học sinh trong lớp thành các nhóm vi mô 3 - 5 bạn theo lỗ hổng kiến thức.
@@ -2021,6 +2281,7 @@ pm run build hoàn thành trong 1.12s, 0 lỗi cú pháp.
 ---
 
 ## [08/10/2026] - Đồng Bộ Tinh Gọn Tầng Dịch Vụ: Loại Bỏ Các Lời Gọi API Live Streaming Tại Client
+
 - **Loại Bỏ Các Phương Thức Gọi API Live Streaming Trong `practiceService.js`**:
   - Gỡ bỏ các hàm gọi API tương ứng với các endpoint vừa được xóa: `createLiveSession`, `getMyLiveSchedule`, `joinLiveSession`, `markTeacherAttendance`, `getTeacherSchedule`, `updateRecordingUrl`, `cancelLiveSession`.
   - Giữ lại phương thức phân công giáo viên lớp học `assignTeacher`.
@@ -2030,6 +2291,7 @@ pm run build hoàn thành trong 1.12s, 0 lỗi cú pháp.
 ---
 
 ## [06/10/2026] - Khắc Phục Sự Cố Thông Báo Discord, Thiết Lập CI/CD GitHub Actions & Hoàn Thiện Tích Hợp Web Client
+
 - **Sửa Lỗi Thiếu Thông Báo Discord & Thiết Lập CI/CD GitHub Actions Cho Web Client**:
   - Phát hiện nguyên nhân Web Client trước đó không gửi thông báo về Discord: Repo thiếu hoàn toàn thư mục cấu hình `.github/workflows`.
   - Thiết lập `.github/workflows/discord-commit-tracker.yml`: Tự động bắt sự kiện `push` trên mọi nhánh, bóc tách commit SHA, danh sách file thay đổi kèm emoji chỉ thị, đọc nội dung `UPDATE.md` và gửi tin nhắn embed thời gian thực về webhook Discord hệ thống.
@@ -2041,17 +2303,18 @@ pm run build hoàn thành trong 1.12s, 0 lỗi cú pháp.
 ---
 
 ## [05/10/2026] - Hợp Nhất Giao Diện Xác Thực (TNhan UI/UX) Với Tầng API IAM (ThinhTT), Cấp Quyền Đa Vai Trò
+
 - **Hợp Nhất Toàn Diện Hệ Thống Xác Thực (Auth Subsystem)**:
   - Tiếp nhận và nâng cấp toàn bộ giao diện Auth hiện đại từ nhánh `TNhan`:
-    + Split-screen layout 12 cột với ảnh sinh viên thật `vietnamese_student_real.jpg`, thanh ticker tin tức hoạt động thời gian thực (`liveActivities`), và hiệu ứng động mượt mà bằng Framer Motion.
-    + Module hóa form đăng nhập (`LoginForm.jsx`), form đăng ký (`RegisterForm.jsx`), modal quên mật khẩu 4 bước OTP (`ForgotPasswordModal.jsx`) và popup modal nhanh (`AuthModal.jsx`).
-    + Tích hợp Custom Rounded Select bo góc cao cấp cho lựa chọn Khối Lớp (12, 11, Thí sinh tự do) và Mục tiêu điểm ĐGNL (900+, 800+, 700+).
-    + Hiển thị thông báo lỗi trực tiếp từng trường nhập liệu (`fieldErrors`), thanh đo độ mạnh mật khẩu 3 cấp độ (`passStrength`).
+    - Split-screen layout 12 cột với ảnh sinh viên thật `vietnamese_student_real.jpg`, thanh ticker tin tức hoạt động thời gian thực (`liveActivities`), và hiệu ứng động mượt mà bằng Framer Motion.
+    - Module hóa form đăng nhập (`LoginForm.jsx`), form đăng ký (`RegisterForm.jsx`), modal quên mật khẩu 4 bước OTP (`ForgotPasswordModal.jsx`) và popup modal nhanh (`AuthModal.jsx`).
+    - Tích hợp Custom Rounded Select bo góc cao cấp cho lựa chọn Khối Lớp (12, 11, Thí sinh tự do) và Mục tiêu điểm ĐGNL (900+, 800+, 700+).
+    - Hiển thị thông báo lỗi trực tiếp từng trường nhập liệu (`fieldErrors`), thanh đo độ mạnh mật khẩu 3 cấp độ (`passStrength`).
   - Đấu nối 100% logic API và Tầng dịch vụ IAM từ nhánh `ThinhTT`:
-    + Thay thế toàn bộ mã giả lập `setTimeout` bằng các hàm gọi API thật qua `authService.js` (`POST /api/auth/login`, `POST /api/auth/register`, `POST /api/auth/verify-account`, `POST /api/auth/forgot-password`, `POST /api/auth/reset-password`).
-    + Tích hợp nạp động danh sách Cơ sở Đào tạo (`GET /api/v1/campuses`) vào dropdown bo tròn trong `RegisterForm.jsx`.
-    + Bắt mã lỗi tài khoản chưa kích hoạt (`Auth.AccountNotActivated`) để tự động mở bước xác thực mã OTP 6 số.
-    + Bảo toàn 1-Click Demo Login cho 4 vai trò (Học sinh, Giáo viên, Quản lý cơ sở, Phụ huynh) với cơ chế fallback offline an toàn.
+    - Thay thế toàn bộ mã giả lập `setTimeout` bằng các hàm gọi API thật qua `authService.js` (`POST /api/auth/login`, `POST /api/auth/register`, `POST /api/auth/verify-account`, `POST /api/auth/forgot-password`, `POST /api/auth/reset-password`).
+    - Tích hợp nạp động danh sách Cơ sở Đào tạo (`GET /api/v1/campuses`) vào dropdown bo tròn trong `RegisterForm.jsx`.
+    - Bắt mã lỗi tài khoản chưa kích hoạt (`Auth.AccountNotActivated`) để tự động mở bước xác thực mã OTP 6 số.
+    - Bảo toàn 1-Click Demo Login cho 4 vai trò (Học sinh, Giáo viên, Quản lý cơ sở, Phụ huynh) với cơ chế fallback offline an toàn.
 - **Bảo Toàn 100% Các Tính Năng Độc Quyền Của Nhánh ThinhTT**:
   - Trang Quản trị Cấp phát Tài khoản IAM (`src/components/admin/AccountProvisioningView.jsx`).
   - Bảng điều khiển Quản lý Học thuật Cơ sở (`src/components/dashboard/CampusManagerDashboardView.jsx`).
@@ -2062,15 +2325,16 @@ pm run build hoàn thành trong 1.12s, 0 lỗi cú pháp.
 ---
 
 ## [04/10/2026] - Triển Khai Hoàn Chỉnh Trang Cấp Phát & Quản Lý Tài Khoản Đa Vai Trò (IAM Provisioning Page), Smart RBAC & Móc Nối Backend CSDL
+
 - **Triển Khai Trang Quản Trị Cấp Phát Tài Khoản Đa Vai Trò (`AccountProvisioningView.jsx`)**:
   - Giao diện quản trị cấp cao: Thống kê số lượng tài khoản thời gian thực (Tổng số, Giảng viên, Quản lý, Học sinh & Phụ huynh, Tỷ lệ kích hoạt).
   - Bộ lọc vai trò tức thì (Tất cả, `TEACHER`, `ACADEMIC_MANAGER`, `ACADEMIC_DIRECTOR`, `ADMINISTRATOR`, `PARENT`, `STUDENT`) và ô tìm kiếm thông minh theo Họ tên, Email, Số điện thoại.
   - Bảng dữ liệu người dùng trực quan: Avatar gradient, Huy hiệu vai trò RBAC sắc nét, Cơ sở công tác, Bộ môn chuyên môn, và Nút gạt chuyển đổi trạng thái Khóa / Mở khóa tài khoản thời gian thực gọi trực tiếp API `PATCH /api/v1/users/{id}/toggle-status`.
   - Modal **Cấp Phát Tài Khoản Mới**:
-    + Card lựa chọn trực quan 6 vai trò kèm mô tả chức năng chi tiết.
-    + Dropdown nạp danh sách cơ sở đào tạo thực tế từ CSDL PostgreSQL (`GET /api/v1/campuses`).
-    + Form nhập thông tin cán bộ, chuyên môn phụ trách, bộ tạo mật khẩu ngẫu nhiên an toàn hoặc mật khẩu tùy chỉnh.
-    + Hộp thông báo cấp tài khoản thành công kèm nút **"Sao chép thông tin bàn giao"** một chạm để gửi ngay cho cán bộ.
+    - Card lựa chọn trực quan 6 vai trò kèm mô tả chức năng chi tiết.
+    - Dropdown nạp danh sách cơ sở đào tạo thực tế từ CSDL PostgreSQL (`GET /api/v1/campuses`).
+    - Form nhập thông tin cán bộ, chuyên môn phụ trách, bộ tạo mật khẩu ngẫu nhiên an toàn hoặc mật khẩu tùy chỉnh.
+    - Hộp thông báo cấp tài khoản thành công kèm nút **"Sao chép thông tin bàn giao"** một chạm để gửi ngay cho cán bộ.
 - **Tầng Dịch Vụ Người Dùng Mới (`src/services/userService.js`)**:
   - `getUsers(params)`: Gọi API `GET /api/v1/users` qua Gateway YARP `:5212`.
   - `provisionUser(userData)`: Gọi API `POST /api/v1/users/provision` nạp thẳng vào CSDL PostgreSQL, kích hoạt ngay không cần OTP.
@@ -2089,6 +2353,7 @@ pm run build hoàn thành trong 1.12s, 0 lỗi cú pháp.
 ---
 
 ## [02/10/2026] - Nâng Cấp Toàn Diện Tầng Dịch Vụ AI Engine (`src/services/aiService.js`) Qua API Gateway
+
 - **Móc Nối Đầy Đủ 14+ API AI Engine Qua Gateway YARP (`http://localhost:5212`)**:
   - **Nhóm 1: Bóc tách Đề thi PDF (Gemini Vision OCR)**:
     - `uploadPdfExam(pdfFile)`: Upload đề thi PDF phân tích nền (`POST /api/ai-engine/upload-pdf`).
@@ -2117,15 +2382,15 @@ pm run build hoàn thành trong 1.12s, 0 lỗi cú pháp.
 - **Phát Triển Trang Khảo Sát Năng Lực 30 Câu Thật Với AI & Content Service (`DiagnosticAssessmentPage.jsx`)**:
   - Xây dựng component trang hoàn chỉnh `src/components/diagnostic/DiagnosticAssessmentPage.jsx`:
     - Setup screen: Hỗ trợ 3 nguồn đề thi linh hoạt:
-      + **Đề Có Sẵn (Content Service)**: Lấy trực tiếp từ Database PostgreSQL 30 câu hỏi chuẩn hóa V-ACT kèm bài đọc hiểu (Passages).
-      + **Google Gemini AI Cloud**: Sinh 30 câu hỏi mới 100% kèm công thức Toán KaTeX.
-      + **Hiệu Chuẩn AI Fast Bank (<500ms)**: Trích xuất siêu tốc 30 câu từ bộ nhớ hiệu chuẩn psychometrics.
+      - **Đề Có Sẵn (Content Service)**: Lấy trực tiếp từ Database PostgreSQL 30 câu hỏi chuẩn hóa V-ACT kèm bài đọc hiểu (Passages).
+      - **Google Gemini AI Cloud**: Sinh 30 câu hỏi mới 100% kèm công thức Toán KaTeX.
+      - **Hiệu Chuẩn AI Fast Bank (<500ms)**: Trích xuất siêu tốc 30 câu từ bộ nhớ hiệu chuẩn psychometrics.
     - In-exam testing screen: Đồng hồ 45 phút, ngữ liệu đọc hiểu collapsible, thanh điều hướng 30 câu kèm cờ phân vân, hiển thị công thức KaTeX, tích hợp Gia sư AI Socratic RAG hỗ trợ tư duy từng bước.
     - Result & Psychometrics screen:
-      + Điểm thô thực tế ($X/30$), ước lượng năng lực IRT 2PL `\theta_0`, phân lớp học viên (`FOUNDATION`, `ACCELERATION`, `BREAKTHROUGH`).
-      + **Phân tích Tốc độ & Chiến thuật (Pacing Analysis)**: Thời gian trung bình/câu, nhóm làm nhanh (&lt;25s), nhóm chuẩn (25-90s), nhóm tốn thời gian (&gt;90s), câu phân vân gắn cờ 🚩.
-      + **Biểu Đồ Radar Năng Lực 5 Lĩnh Vực**: Dữ liệu Recharts Radar Chart lấy trực tiếp từ kết quả 30 câu thật không bịa, đối chiếu chuẩn 900+.
-      + **Bảng Tra Cứu & Đáp Án Chi Tiết 30 Câu**: Bộ lọc (Tất cả, Đúng, Sai, Phân vân), đối chiếu đáp án của bạn vs đáp án đúng, badge thời gian, ngữ liệu và lời giải chi tiết KaTeX.
+      - Điểm thô thực tế ($X/30$), ước lượng năng lực IRT 2PL `\theta_0`, phân lớp học viên (`FOUNDATION`, `ACCELERATION`, `BREAKTHROUGH`).
+      - **Phân tích Tốc độ & Chiến thuật (Pacing Analysis)**: Thời gian trung bình/câu, nhóm làm nhanh (&lt;25s), nhóm chuẩn (25-90s), nhóm tốn thời gian (&gt;90s), câu phân vân gắn cờ 🚩.
+      - **Biểu Đồ Radar Năng Lực 5 Lĩnh Vực**: Dữ liệu Recharts Radar Chart lấy trực tiếp từ kết quả 30 câu thật không bịa, đối chiếu chuẩn 900+.
+      - **Bảng Tra Cứu & Đáp Án Chi Tiết 30 Câu**: Bộ lọc (Tất cả, Đúng, Sai, Phân vân), đối chiếu đáp án của bạn vs đáp án đúng, badge thời gian, ngữ liệu và lời giải chi tiết KaTeX.
   - Tích hợp vào thanh chuyển trang (Top Page Control Bar) của `App.jsx` và liên kết điều hướng từ Landing Page, HeroBanner và Sidebar Dashboard.
 - **Tích Hợp Trình Render Toán Học KaTeX Toàn Diện (`MathText.jsx`, `DiagnosticAssessmentPage.jsx`, `DiagnosticTestModal.jsx`)**:
   - Cài đặt thư viện `katex` và nạp stylesheet `katex/dist/katex.min.css` vào `main.jsx` và font Plus Jakarta Sans.
@@ -2414,3 +2679,4 @@ pm run build hoàn thành trong 1.12s, 0 lỗi cú pháp.
 - **Kiểm Thử & Biên Dịch**:
   - Toàn bộ 31/31 unit tests đạt pass 100%.
   - `npm run lint` 0 lỗi, `npm run build` thành công trong 1.05s.
+

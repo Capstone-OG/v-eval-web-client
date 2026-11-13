@@ -42,6 +42,7 @@ import {
   FileUp,
   FileType,
   CheckCheck,
+  FileCheck2,
   Upload,
   Filter,
   Calendar,
@@ -294,6 +295,8 @@ export default function CurriculumExplorerView({
   const [importTargetDomainId, setImportTargetDomainId] = useState('');
   const [isExtractingAi, setIsExtractingAi] = useState(false);
   const [aiExtractStep, setAiExtractStep] = useState(0); // 0: Idle, 1: Reading, 2: Structure, 3: Patterns, 4: Done
+  const [aiProgressPercent, setAiProgressPercent] = useState(0);
+  const [aiProgressMessage, setAiProgressMessage] = useState('');
   const [extractedCurriculum, setExtractedCurriculum] = useState(null);
   const [importJsonText, setImportJsonText] = useState('');
   const [importingCurriculum, setImportingCurriculum] = useState(false);
@@ -303,6 +306,40 @@ export default function CurriculumExplorerView({
   const [importStartPage, setImportStartPage] = useState(1);
   const [importEndPage, setImportEndPage] = useState(35);
   const [importExtractionDepth, setImportExtractionDepth] = useState('deep'); // 'deep' | 'standard'
+  const [importOcrMode, setImportOcrMode] = useState('STEM_FORMULAS'); // 'STEM_FORMULAS' | 'TEXT_HUMANITIES' | 'VISION_AI' | 'AUTO_LOCAL'
+
+  const cleanOptionDisplay = (raw) => {
+    if (!raw) return '';
+    let str = String(raw).trim();
+
+    // Strip all leading and trailing quotes (single, double, curly, backticks)
+    while (str.length > 0 && /^['"`‘’“”\s]/.test(str)) str = str.slice(1).trim();
+    while (str.length > 0 && /['"`‘’“”\s]$/.test(str)) str = str.slice(0, -1).trim();
+
+    // Strip prefix label like "(A) " or "A. " or "A: "
+    str = str.replace(/^(?:\([A-D]\)|[A-D][\.\:\)])\s*/i, '').trim();
+
+    while (str.length > 0 && /^['"`‘’“”\s]/.test(str)) str = str.slice(1).trim();
+    while (str.length > 0 && /['"`‘’“”\s]$/.test(str)) str = str.slice(0, -1).trim();
+
+    // Merge broken newlines in options
+    str = str.replace(/\r?\n\s*/g, '');
+
+    // Sửa dấu nháy đơn dính vào số thập phân: 0',01 -> 0,01 hoặc 0,'01 -> 0,01
+    str = str.replace(/(?<=\d)['’](?=,\d)/g, '').replace(/(?<=\d,)['’](?=\d)/g, '').replace(/(?<=\d)['’](?=\d)/g, '.');
+
+    // Nếu là công thức hóa học dạng phẳng không có chỉ số dưới (CH3COOCH3, HCOOC2H5, C2H5OH, H2SO4)
+    if (/^[A-Z][a-zA-Z0-9\(\)\-+]*$/.test(str) && /\d/.test(str)) {
+      str = str.replace(/([A-Z][a-z]?|\))(\d+)/g, '$1_$2');
+    }
+
+    // Nếu là công thức chứa chỉ số dưới chưa bọc KaTeX, tự động bọc trong $...$
+    if (/^[A-Za-z0-9_\(\)\+\-\*\^=]+$/.test(str) && /_/.test(str) && !str.startsWith('$')) {
+      str = `$${str}$`;
+    }
+
+    return str;
+  };
 
   // Panoramic Verification Workspace State
   const [previewSelectedLessonKey, setPreviewSelectedLessonKey] = useState('0-0'); // 'cIdx-lIdx'
@@ -1078,7 +1115,37 @@ export default function CurriculumExplorerView({
 
     setIsExtractingAi(true);
     setAiExtractStep(1);
+    setAiProgressPercent(5);
+    setAiProgressMessage("Đang khởi tạo kết nối & đọc tệp...");
     setExtractedCurriculum(null);
+
+    let currentP = 5;
+    const progressTimer = setInterval(() => {
+      // Dynamic accelerating easing curve:
+      // Bắt đầu chắc chắn & điềm tĩnh ("chậm chậm" 5% -> 25%), sau đó tăng tốc đột phá qua 45% -> 80% ("rồi nhanh" - tuyệt đối không kẹt ở 50%)
+      if (currentP < 25) {
+        currentP += 0.9;
+        setAiProgressMessage("Đang quét nội dung & tiền xử lý OCR tài liệu...");
+        setAiExtractStep(1);
+      } else if (currentP < 45) {
+        currentP += 1.8;
+        setAiProgressMessage("Đang phân tích cấu trúc Chương - Bài học & mục lục SGK...");
+        setAiExtractStep(2);
+      } else if (currentP < 82) {
+        currentP += 3.8; // TĂNG TỐC VƯỢT QUA 50% MẠNH MẼ KHÔNG BAO GIỜ BỊ TREO
+        setAiProgressMessage("Đang kích hoạt AI Engine nhận diện Dạng bài & phân loại mức độ Bloom L1-L4...");
+        setAiExtractStep(3);
+      } else if (currentP < 93) {
+        currentP += 1.8; // Tiếp tục tiến nhanh qua 4 khối sư phạm
+        setAiProgressMessage("Đang định hình 4 Khối Sư phạm & chuẩn hóa biểu thức KaTeX...");
+        setAiExtractStep(3);
+      } else if (currentP < 98) {
+        currentP += 0.3; // Giữ nhẹ ở 96-98% chờ phản hồi hoàn tất
+        setAiProgressMessage("Đang thẩm định tính toàn vẹn cấu trúc & hoàn tất cây tri thức...");
+        setAiExtractStep(4);
+      }
+      setAiProgressPercent(Math.min(98, Math.round(currentP)));
+    }, 250);
 
     try {
       const currentD = domains.find(d => d.id === (importTargetDomainId || activeDomainId)) || domains[0];
@@ -1100,25 +1167,33 @@ export default function CurriculumExplorerView({
         if (importEndPage) formData.append('end_page', importEndPage.toString());
       }
       formData.append('extraction_depth', importExtractionDepth);
-
-      setAiExtractStep(2);
+      formData.append('extractionDepth', importExtractionDepth);
+      formData.append('ocr_mode', importOcrMode);
+      formData.append('ocrMode', importOcrMode);
 
       const result = await aiService.extractCurriculumFromDocument(formData);
-      setAiExtractStep(3);
+      clearInterval(progressTimer);
 
-      if (result && result.chapters && result.chapters.length > 0) {
-        setExtractedCurriculum(result);
+      const totalLessons = result?.chapters?.reduce((acc, c) => acc + (c.lessons?.length || 0), 0) || 0;
+      if (result && result.chapters && result.chapters.length > 0 && totalLessons > 0) {
+        setAiProgressPercent(100);
+        setAiProgressMessage("Hoàn tất bóc tách & nạp thành công cây tri thức!");
         setAiExtractStep(4);
+        await new Promise(r => setTimeout(r, 400));
+        setExtractedCurriculum(result);
         setPreviewSelectedLessonKey('0-0');
         const firstPat = result.chapters[0]?.lessons?.[0]?.patterns?.[0] || null;
         setPreviewSelectedPattern(firstPat);
       } else {
-        throw new Error("AI không trích xuất được dạng bài từ tài liệu đã cung cấp.");
+        throw new Error("AI không trích xuất được bài học hoặc dạng bài từ tài liệu đã cung cấp. Vui lòng kiểm tra lại tài liệu.");
       }
     } catch (err) {
+      clearInterval(progressTimer);
+      setAiProgressPercent(0);
       toast.error("Lỗi bóc tách tài liệu bằng AI: " + (err?.response?.data?.detail || err.message));
       setAiExtractStep(0);
     } finally {
+      clearInterval(progressTimer);
       setIsExtractingAi(false);
     }
   };
@@ -3134,8 +3209,7 @@ export default function CurriculumExplorerView({
       {/* 7. PHÂN HỆ AI TRI THỨC BÓC TÁCH TÀI LIỆU & TỰ ĐỘNG NHẬN DIỆN DẠNG BÀI */}
       {isImportModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
-          <div className={`relative w-full ${extractedCurriculum ? 'max-w-[1580px] h-[95vh]' : 'max-w-4xl max-h-[92vh]'} bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col transition-all duration-300`}>
-
+          <div className={`relative w-full ${extractedCurriculum ? 'max-w-[1920px] w-[99vw] h-[98vh]' : 'max-w-[1720px] w-[99vw] max-h-[97vh]'} bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col transition-all duration-300`}>
             {/* Header (Clean White Theme) */}
             <div className="px-4 py-2.5 sm:px-5 sm:py-3 border-b border-slate-200 bg-white text-slate-900 flex items-center justify-between shrink-0 shadow-2xs">
               <div className="flex items-center gap-2.5">
@@ -3161,6 +3235,8 @@ export default function CurriculumExplorerView({
                   setIsImportModalOpen(false);
                   setExtractedCurriculum(null);
                   setAiExtractStep(0);
+                  setAiProgressPercent(0);
+                  setAiProgressMessage('');
                   setPreviewSelectedPattern(null);
                 }}
                 className="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 hover:text-slate-900 transition-colors cursor-pointer"
@@ -3260,7 +3336,7 @@ export default function CurriculumExplorerView({
                             <div className="text-[10.5px] font-extrabold text-slate-900 flex items-center justify-between gap-1.5 px-2 py-0.5 bg-slate-100/80 rounded-md">
                               <div className="flex items-center gap-1.5 truncate">
                                 <span className="w-3.5 h-3.5 rounded bg-indigo-600 text-white flex items-center justify-center text-[8.5px] font-black shrink-0">C{cIdx+1}</span>
-                                <span className="truncate">{chap.chapterName}</span>
+                                <span className="truncate">{chap.chapterName?.trim() || `Chương ${cIdx + 1}: Chuyên đề trọng tâm`}</span>
                               </div>
                               <span className="text-[9.5px] text-slate-500 font-mono shrink-0">
                                 {chap.lessons?.length || 0} bài
@@ -3814,7 +3890,7 @@ export default function CurriculumExplorerView({
                                             {optKey}
                                           </span>
                                           <div className="flex-1 min-w-0 leading-snug">
-                                            <MathText text={optText || ''} />
+                                            <MathText text={cleanOptionDisplay(optText)} />
                                           </div>
                                           {isCorrect && (
                                             <span className="text-emerald-700 text-[9.5px] font-extrabold shrink-0">
@@ -3892,223 +3968,450 @@ export default function CurriculumExplorerView({
                 </div>
               </div>
             ) : (
-              <div className="p-6 overflow-y-auto space-y-5 flex-1">
+              <div className="p-5 sm:p-6 overflow-y-auto space-y-5 flex-1 bg-slate-50/40">
                 {/* TAB 1: NẠP FILE TÀI LIỆU BẰNG AI */}
                 {importTab === 'document' && (
                   <div className="space-y-5">
-                    {/* Chọn Miền Năng Lực Mục Tiêu */}
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-extrabold text-slate-700 flex items-center gap-2">
-                        <span>1. Chọn Miền Năng Lực Mục Tiêu Của Tài Liệu:</span>
-                      </label>
-                      <select
-                        value={importTargetDomainId || activeDomainId}
-                        onChange={(e) => setImportTargetDomainId(e.target.value)}
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                      >
-                        {domains.map((d) => (
-                          <option key={d.id} value={d.id}>
-                            {d.title} {d.subtitle ? `(${d.subtitle})` : ''}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
+                    {/* WIDESCREEN 2-COLUMN LAYOUT (5 COLS / 7 COLS) */}
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+                      
+                      {/* CỘT TRÁI (5 COLS): NGUỒN TÀI LIỆU & PHẠM VI TRANG */}
+                      <div className="lg:col-span-5 space-y-4">
+                        {/* 1. Chọn Miền Năng Lực Mục Tiêu */}
+                        <div className="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-2xs space-y-2">
+                          <label className="text-xs font-extrabold text-slate-800 flex items-center gap-1.5">
+                            <span className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-[11px] font-black">1</span>
+                            <span>Miền Năng Lực Mục Tiêu:</span>
+                          </label>
+                          <select
+                            value={importTargetDomainId || activeDomainId}
+                            onChange={(e) => setImportTargetDomainId(e.target.value)}
+                            className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-2xs"
+                          >
+                            {domains.map((d) => (
+                              <option key={d.id} value={d.id}>
+                                {d.title} {d.subtitle ? `(${d.subtitle})` : ''}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
 
-                    {/* Dropzone Tải Tệp Tài Liệu */}
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-extrabold text-slate-700 flex items-center justify-between">
-                        <span>2. Tải Lên Tệp Sách Giáo Khoa / Tài Liệu Chuyên Đề:</span>
-                        <span className="text-[11px] text-slate-400 font-normal">Hỗ trợ: .pdf, .docx, .txt (Tối đa 250MB)</span>
-                      </label>
+                        {/* 2. Dropzone Tải Tệp Tài Liệu */}
+                        <div className="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-2xs space-y-2">
+                          <label className="text-xs font-extrabold text-slate-800 flex items-center justify-between">
+                            <span className="flex items-center gap-1.5">
+                              <span className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-[11px] font-black">2</span>
+                              <span>Tệp Sách SGK / Chuyên Đề:</span>
+                            </span>
+                            <span className="text-[10px] text-slate-400 font-medium">Hỗ trợ .pdf, .docx, .txt (tối đa 250MB)</span>
+                          </label>
 
-                      {!importFile ? (
-                        <label className="relative flex flex-col items-center justify-center p-8 border-2 border-dashed border-indigo-200 hover:border-indigo-500 rounded-3xl bg-indigo-50/30 hover:bg-indigo-50/60 cursor-pointer transition-all group text-center space-y-3">
-                          <input
-                            type="file"
-                            accept=".pdf,.docx,.txt,.md"
-                            onChange={(e) => {
-                              if (e.target.files && e.target.files[0]) {
-                                setImportFile(e.target.files[0]);
-                              }
-                            }}
-                            className="hidden"
+                          {!importFile ? (
+                            <label className="relative flex flex-col items-center justify-center p-6 border-2 border-dashed border-indigo-200 hover:border-indigo-500 rounded-2xl bg-indigo-50/20 hover:bg-indigo-50/50 cursor-pointer transition-all group text-center space-y-2.5">
+                              <input
+                                type="file"
+                                accept=".pdf,.docx,.txt,.md"
+                                onChange={(e) => {
+                                  if (e.target.files && e.target.files[0]) {
+                                    setImportFile(e.target.files[0]);
+                                  }
+                                }}
+                                className="hidden"
+                              />
+                              <div className="w-12 h-12 rounded-2xl bg-indigo-100/70 text-indigo-600 flex items-center justify-center group-hover:scale-105 transition-transform shadow-2xs">
+                                <UploadCloud className="w-6 h-6 text-indigo-600" />
+                              </div>
+                              <div>
+                                <div className="text-xs font-bold text-slate-800">
+                                  Kéo & thả tệp vào đây hoặc <span className="text-indigo-600 underline">bấm chọn tệp</span>
+                                </div>
+                                <div className="text-[10.5px] text-slate-400 mt-1">
+                                  Ví dụ: <em>SGK_Toan_12.pdf</em>, <em>Chuyen_de_Ester_Lipid.pdf</em>
+                                </div>
+                              </div>
+                            </label>
+                          ) : (
+                            <div className="p-3.5 rounded-xl bg-indigo-50/70 border border-indigo-200 flex items-center justify-between gap-3">
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <div className="w-9 h-9 rounded-lg bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
+                                  <FileType className="w-5 h-5" />
+                                </div>
+                                <div className="min-w-0">
+                                  <div className="text-xs font-extrabold text-slate-900 truncate">{importFile.name}</div>
+                                  <div className="text-[10.5px] text-slate-500 font-medium">
+                                    {(importFile.size / 1024 / 1024).toFixed(2)} MB • Sẵn sàng phân tích
+                                  </div>
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => setImportFile(null)}
+                                className="p-1.5 rounded-lg bg-white hover:bg-rose-50 text-slate-400 hover:text-rose-600 border border-slate-200 transition-colors shrink-0 cursor-pointer"
+                                title="Xóa tệp chọn lại"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* 3. Phạm vi trang PDF */}
+                        <div className="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-2xs space-y-2">
+                          <label className="text-xs font-extrabold text-slate-800 flex items-center justify-between">
+                            <span className="flex items-center gap-1.5">
+                              <span className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-[11px] font-black">3</span>
+                              <span>Phạm Vi Trang (Sách 99+ trang):</span>
+                            </span>
+                            <span className="text-[9.5px] text-indigo-700 font-bold bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-200">
+                              PDF Filter
+                            </span>
+                          </label>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setImportPageMode('all')}
+                              className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-bold transition-all ${
+                                importPageMode === 'all'
+                                  ? 'bg-indigo-600 text-white shadow-xs'
+                                  : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
+                              }`}
+                            >
+                              Toàn bộ tài liệu
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setImportPageMode('custom')}
+                              className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-bold transition-all ${
+                                importPageMode === 'custom'
+                                  ? 'bg-indigo-600 text-white shadow-xs'
+                                  : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
+                              }`}
+                            >
+                              Khoảng trang
+                            </button>
+                          </div>
+
+                          {importPageMode === 'custom' && (
+                            <div className="flex items-center gap-2 pt-1 animate-fade">
+                              <div className="flex-1">
+                                <span className="text-[10px] text-slate-500 font-bold">Từ trang:</span>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  value={importStartPage}
+                                  onChange={(e) => setImportStartPage(parseInt(e.target.value, 10) || 1)}
+                                  className="w-full mt-0.5 px-2.5 py-1.5 rounded-xl border border-slate-300 text-xs font-bold text-slate-900 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                                />
+                              </div>
+                              <div className="flex-1">
+                                <span className="text-[10px] text-slate-500 font-bold">Đến trang:</span>
+                                <input
+                                  type="number"
+                                  min={importStartPage}
+                                  value={importEndPage}
+                                  onChange={(e) => setImportEndPage(parseInt(e.target.value, 10) || importStartPage)}
+                                  className="w-full mt-0.5 px-2.5 py-1.5 rounded-xl border border-slate-300 text-xs font-bold text-slate-900 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* 4. Trích đoạn văn bản / Mục lục */}
+                        <div className="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-2xs space-y-1.5">
+                          <label className="text-xs font-bold text-slate-700 flex items-center justify-between">
+                            <span>Hoặc dán trích đoạn văn bản / mục lục:</span>
+                            <span className="text-[10px] text-slate-400">Tùy chọn</span>
+                          </label>
+                          <textarea
+                            rows={2}
+                            value={importTextSnippet}
+                            onChange={(e) => setImportTextSnippet(e.target.value)}
+                            placeholder="Dán nội dung lý thuyết, mục lục hoặc các dạng bài tập tại đây..."
+                            className="w-full p-2.5 rounded-xl border border-slate-300 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50 text-slate-800"
                           />
-                          <div className="w-14 h-14 rounded-2xl bg-white shadow-md text-indigo-600 flex items-center justify-center group-hover:scale-110 transition-transform">
-                            <UploadCloud className="w-7 h-7 text-indigo-600" />
+                        </div>
+                      </div>
+
+                      {/* CỘT PHẢI (7 COLS): SO SÁNH ĐỘ SÂU & 4 CHẾ ĐỘ BÓC TÁCH */}
+                      <div className="lg:col-span-7 space-y-4">
+                        {/* MỤC A: LỰA CHỌN ĐỘ SÂU BÓC TÁCH DẠNG BÀI */}
+                        <div className="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-2xs space-y-3">
+                          <div className="flex items-center justify-between">
+                            <label className="text-xs font-extrabold text-slate-900 flex items-center gap-1.5">
+                              <Sparkles className="w-4 h-4 text-purple-600" />
+                              <span>Độ Sâu Bóc Tách Dạng Bài & Kiến Trúc Sư Phạm:</span>
+                            </label>
+                            <span className="text-[10px] text-purple-700 font-bold bg-purple-50 border border-purple-200 px-2 py-0.5 rounded-full">
+                              Kiến trúc 4 Khối Sư Phạm Chuẩn
+                            </span>
                           </div>
-                          <div>
-                            <div className="text-xs font-bold text-slate-800">
-                              Kéo & thả tệp tài liệu vào đây hoặc <span className="text-indigo-600 underline">bấm để chọn từ máy tính</span>
+
+                          {/* 2 RICH COMPARISON CARDS */}
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                            {/* Card 1: Chuyên Dạng Đề & Bài Toán Thực Chiến (EXAM_PATTERNS) */}
+                            <div
+                              onClick={() => setImportExtractionDepth('EXAM_PATTERNS')}
+                              className={`relative p-4 rounded-2xl border-2 cursor-pointer transition-all text-left flex flex-col justify-between ${
+                                (importExtractionDepth === 'EXAM_PATTERNS' || importExtractionDepth === 'deep')
+                                  ? 'border-purple-600 bg-gradient-to-b from-purple-50/90 via-white to-purple-50/30 shadow-md ring-2 ring-purple-600/20'
+                                  : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/60'
+                              }`}
+                            >
+                              <div className="space-y-2.5">
+                                <div className="flex items-center justify-between">
+                                  <span className="px-2.5 py-0.5 rounded-full bg-purple-600 text-white text-[9.5px] font-black uppercase tracking-wider flex items-center gap-1 shadow-2xs">
+                                    <span>🎯</span> Khuyên dùng luyện thi 8+ • ĐGNL V-ACT
+                                  </span>
+                                  <div className={`w-4 h-4 rounded-full flex items-center justify-center ${(importExtractionDepth === 'EXAM_PATTERNS' || importExtractionDepth === 'deep') ? 'bg-purple-600 text-white' : 'border border-slate-300'}`}>
+                                    {(importExtractionDepth === 'EXAM_PATTERNS' || importExtractionDepth === 'deep') && <CheckCircle2 className="w-3.5 h-3.5" />}
+                                  </div>
+                                </div>
+
+                                <div>
+                                  <h4 className="text-xs sm:text-[13px] font-black text-purple-950 flex items-center gap-1.5">
+                                    <span>Chuyên Dạng Đề & Bài Toán Thực Chiến</span>
+                                    <span className="text-[9.5px] font-bold text-purple-600 bg-purple-100 px-1.5 py-0.2 rounded">V-ACT 4 Bước</span>
+                                  </h4>
+                                  <p className="text-[10px] text-purple-800 font-semibold mt-0.5">
+                                    Tối ưu cho tài liệu chuyên đề phương pháp, đề luyện thi & câu hỏi trắc nghiệm
+                                  </p>
+                                </div>
+
+                                <ul className="text-[10.5px] text-slate-700 space-y-1.5 font-medium pt-2 border-t border-purple-100">
+                                  <li className="flex items-start gap-1.5">
+                                    <span className="text-purple-600 font-black shrink-0">✓</span>
+                                    <span><strong>Tách riêng 100% từng Bài học con</strong>: Phân tách rõ ràng Bài 1 Ester (4 dạng) & Bài 2 Lipid (3 dạng) - không gộp.</span>
+                                  </li>
+                                  <li className="flex items-start gap-1.5">
+                                    <span className="text-purple-600 font-black shrink-0">✓</span>
+                                    <span><strong>Thuật toán giải 4 bước chi tiết</strong>: Xác định công thức/số mol $\rightarrow$ Biện luận $\rightarrow$ Bảo toàn nguyên tố/khối lượng $\rightarrow$ Kết luận.</span>
+                                  </li>
+                                  <li className="flex items-start gap-1.5">
+                                    <span className="text-purple-600 font-black shrink-0">✓</span>
+                                    <span><strong>Bẫy đề thi ĐGNL & Mẹo Casio fx-580/880</strong>: Điểm mặt các bẫy hay gài bẫy thí sinh (quên bảo toàn O, quên tỉ lệ 1:3) và mẹo bấm máy giải nhanh.</span>
+                                  </li>
+                                  <li className="flex items-start gap-1.5">
+                                    <span className="text-purple-600 font-black shrink-0">✓</span>
+                                    <span><strong>Ngân hàng câu hỏi phân tầng Bloom L1-L4</strong>: 2-3 câu trắc nghiệm rèn luyện có lời giải từng bước chuẩn KaTeX.</span>
+                                  </li>
+                                </ul>
+                              </div>
+
+                              <div className="mt-3 pt-2 border-t border-purple-100/80 flex items-center justify-between text-[9.5px] text-purple-900 font-bold">
+                                <span>Thời gian xử lý: ~15-25s</span>
+                                <span className="bg-purple-100/80 px-2 py-0.5 rounded-full text-purple-800">4 Khối Sư Phạm Thực Chiến</span>
+                              </div>
                             </div>
-                            <div className="text-[11px] text-slate-500 mt-1">
-                              Ví dụ: <em>SGK_Toan_12_Tap_1.pdf</em>, <em>Chuyen_de_Khao_sat_Ham_so.pdf</em>, <em>Tai_lieu_Cuc_tri.docx</em>
-                            </div>
-                          </div>
-                        </label>
-                      ) : (
-                        <div className="p-4 rounded-2xl bg-indigo-50/60 border border-indigo-200 flex items-center justify-between gap-3">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-xs">
-                              <FileType className="w-5 h-5" />
-                            </div>
-                            <div>
-                              <div className="text-xs font-extrabold text-slate-900">{importFile.name}</div>
-                              <div className="text-[11px] text-slate-500 font-medium">
-                                Dung lượng: {(importFile.size / 1024 / 1024).toFixed(2)} MB • Sẵn sàng để AI phân tích
+
+                            {/* Card 2: Chuyên Lý Thuyết Thuần & Dạng Bài Mở Rộng (THEORY_EXTENDED) */}
+                            <div
+                              onClick={() => setImportExtractionDepth('THEORY_EXTENDED')}
+                              className={`relative p-4 rounded-2xl border-2 cursor-pointer transition-all text-left flex flex-col justify-between ${
+                                (importExtractionDepth === 'THEORY_EXTENDED' || importExtractionDepth === 'standard')
+                                  ? 'border-indigo-600 bg-gradient-to-b from-indigo-50/90 via-white to-indigo-50/30 shadow-md ring-2 ring-indigo-600/20'
+                                  : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/60'
+                              }`}
+                            >
+                              <div className="space-y-2.5">
+                                <div className="flex items-center justify-between">
+                                  <span className="px-2.5 py-0.5 rounded-full bg-indigo-600 text-white text-[9.5px] font-black uppercase tracking-wider flex items-center gap-1 shadow-2xs">
+                                    <span>📚</span> Khuyên dùng SGK & Tài liệu 60+ trang
+                                  </span>
+                                  <div className={`w-4 h-4 rounded-full flex items-center justify-center ${(importExtractionDepth === 'THEORY_EXTENDED' || importExtractionDepth === 'standard') ? 'bg-indigo-600 text-white' : 'border border-slate-300'}`}>
+                                    {(importExtractionDepth === 'THEORY_EXTENDED' || importExtractionDepth === 'standard') && <CheckCircle2 className="w-3.5 h-3.5" />}
+                                  </div>
+                                </div>
+
+                                <div>
+                                  <h4 className="text-xs sm:text-[13px] font-black text-indigo-950 flex items-center gap-1.5">
+                                    <span>Chuyên Lý Thuyết Thuần & Dạng Mở Rộng</span>
+                                    <span className="text-[9.5px] font-bold text-indigo-600 bg-indigo-100 px-1.5 py-0.2 rounded">Toàn diện 60+ trang</span>
+                                  </h4>
+                                  <p className="text-[10px] text-indigo-800 font-semibold mt-0.5">
+                                    Quét toàn diện SGK GDPT 2018 & giáo trình dày, nhiều lý thuyết và bài tập mở rộng
+                                  </p>
+                                </div>
+
+                                <ul className="text-[10.5px] text-slate-700 space-y-1.5 font-medium pt-2 border-t border-indigo-100">
+                                  <li className="flex items-start gap-1.5">
+                                    <span className="text-indigo-600 font-black shrink-0">✓</span>
+                                    <span><strong>Đầy đủ 100% lý thuyết nền tảng SGK</strong>: Khái niệm, danh pháp IUPAC/thông thường, tính chất vật lý (mùi thơm hoa quả, so sánh nhiệt độ sôi), cơ chế phản ứng và hiện tượng thí nghiệm.</span>
+                                  </li>
+                                  <li className="flex items-start gap-1.5">
+                                    <span className="text-indigo-600 font-black shrink-0">✓</span>
+                                    <span><strong>Đủ 7 Dạng bài toàn diện không thiếu sót</strong>: Bóc tách trọn vẹn 4 dạng Ester + 3 dạng Lipid chuẩn khung SGK 2018.</span>
+                                  </li>
+                                  <li className="flex items-start gap-1.5">
+                                    <span className="text-indigo-600 font-black shrink-0">✓</span>
+                                    <span><strong>Mở rộng các trường hợp đặc biệt</strong>: Ester của phenol, ester vinyl sinh aldehyde, chất béo không no, phản ứng hydro hóa và bài toán hỗn hợp.</span>
+                                  </li>
+                                  <li className="flex items-start gap-1.5">
+                                    <span className="text-indigo-600 font-black shrink-0">✓</span>
+                                    <span><strong>Ví dụ SGK & Bài toán mẫu đầy đủ số liệu</strong>: Kèm ngân hàng câu hỏi củng cố lý thuyết và nâng cao tư duy.</span>
+                                  </li>
+                                </ul>
+                              </div>
+
+                              <div className="mt-3 pt-2 border-t border-indigo-100/80 flex items-center justify-between text-[9.5px] text-indigo-900 font-bold">
+                                <span>Thời gian xử lý: ~20-35s</span>
+                                <span className="bg-indigo-100/80 px-2 py-0.5 rounded-full text-indigo-800">Toàn Bộ Lý Thuyết + 7 Dạng Bài</span>
                               </div>
                             </div>
                           </div>
-                          <button
-                            type="button"
-                            onClick={() => setImportFile(null)}
-                            className="p-2 rounded-xl bg-white hover:bg-rose-50 text-slate-400 hover:text-rose-600 border border-slate-200 transition-colors"
-                            title="Xóa tệp chọn lại"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      )}
-                    </div>
 
-                    {/* Cấu Hình Tài Liệu Nhiều Trang (VD: Sách 99 trang) & Độ Sâu Trích Xuất */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 rounded-2xl bg-indigo-50/40 border border-indigo-100">
-                      {/* 1. Phạm vi trang */}
-                      <div className="space-y-2">
-                        <label className="text-xs font-extrabold text-slate-800 flex items-center justify-between">
-                          <span>Phạm vi trang (Hỗ trợ sách 99+ trang):</span>
-                          <span className="text-[10px] text-indigo-700 font-bold bg-indigo-100 px-2 py-0.5 rounded-full">PDF Page Filter</span>
-                        </label>
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => setImportPageMode('all')}
-                            className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-bold transition-all ${
-                              importPageMode === 'all'
-                                ? 'bg-indigo-600 text-white shadow-xs'
-                                : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
-                            }`}
-                          >
-                            Toàn bộ tài liệu
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setImportPageMode('custom')}
-                            className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-bold transition-all ${
-                              importPageMode === 'custom'
-                                ? 'bg-indigo-600 text-white shadow-xs'
-                                : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
-                            }`}
-                          >
-                            Khoảng trang
-                          </button>
-                        </div>
-
-                        {importPageMode === 'custom' && (
-                          <div className="flex items-center gap-2 pt-1 animate-fade">
-                            <div className="flex-1">
-                              <span className="text-[10px] text-slate-500 font-bold">Từ trang:</span>
-                              <input
-                                type="number"
-                                min="1"
-                                value={importStartPage}
-                                onChange={(e) => setImportStartPage(parseInt(e.target.value, 10) || 1)}
-                                className="w-full mt-0.5 px-2.5 py-1.5 rounded-xl border border-slate-300 text-xs font-bold text-slate-900 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                              />
-                            </div>
-                            <div className="flex-1">
-                              <span className="text-[10px] text-slate-500 font-bold">Đến trang:</span>
-                              <input
-                                type="number"
-                                min={importStartPage}
-                                value={importEndPage}
-                                onChange={(e) => setImportEndPage(parseInt(e.target.value, 10) || importStartPage)}
-                                className="w-full mt-0.5 px-2.5 py-1.5 rounded-xl border border-slate-300 text-xs font-bold text-slate-900 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                              />
+                          {/* Quick Comparison Bar */}
+                          <div className="p-2 px-3 rounded-xl bg-slate-50 border border-slate-200/80 text-[10.5px] text-slate-600 flex items-center justify-between gap-2 flex-wrap">
+                            <span className="font-bold text-slate-700 flex items-center gap-1.5">
+                              <Target className="w-3.5 h-3.5 text-indigo-600" />
+                              <span>So sánh nhanh:</span>
+                            </span>
+                            <div className="flex items-center gap-2 font-medium flex-wrap">
+                              <span className="px-2 py-0.5 rounded-md bg-purple-100 text-purple-900 font-bold text-[10px]">🎯 Dạng Đề & Thực Chiến: Bẫy ĐGNL + Casio + Thuật toán 4 bước</span>
+                              <span className="text-slate-400">vs</span>
+                              <span className="px-2 py-0.5 rounded-md bg-indigo-100 text-indigo-900 font-bold text-[10px]">📚 Lý Thuyết Mở Rộng: SGK 60+ trang + Đủ 100% Lý thuyết + Đủ 7 Dạng bài</span>
                             </div>
                           </div>
-                        )}
-                      </div>
+                        </div>
 
-                      {/* 2. Chế độ phân tích chuyên sâu */}
-                      <div className="space-y-2">
-                        <label className="text-xs font-extrabold text-slate-800 flex items-center justify-between">
-                          <span>Độ sâu nhận diện dạng bài:</span>
-                          <span className="text-[10px] text-purple-700 font-bold bg-purple-100 px-2 py-0.5 rounded-full">Bloom L1-L4</span>
-                        </label>
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => setImportExtractionDepth('deep')}
-                            className={`flex-1 p-2 rounded-xl text-xs font-bold transition-all text-left ${
-                              importExtractionDepth === 'deep'
-                                ? 'bg-purple-600 text-white shadow-xs'
-                                : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
-                            }`}
-                          >
-                            <div className="font-extrabold">Chuyên sâu ĐGNL</div>
-                            <div className="text-[10px] opacity-80">2-4 dạng/bài, chuẩn 4 khối KaTeX</div>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setImportExtractionDepth('standard')}
-                            className={`flex-1 p-2 rounded-xl text-xs font-bold transition-all text-left ${
-                              importExtractionDepth === 'standard'
-                                ? 'bg-purple-600 text-white shadow-xs'
-                                : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
-                            }`}
-                          >
-                            <div className="font-extrabold">Tiêu chuẩn</div>
-                            <div className="text-[10px] opacity-80">Trọng tâm cốt lõi mục lục</div>
-                          </button>
+                        {/* MỤC B: CHẾ ĐỘ BÓC TÁCH THEO LOẠI TÀI LIỆU & CHỐNG LỖI FONT */}
+                        <div className="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-2xs space-y-2.5">
+                          <div className="flex items-center justify-between">
+                            <label className="text-xs font-extrabold text-slate-900 flex items-center gap-1.5">
+                              <FileCheck2 className="w-4 h-4 text-sky-600" />
+                              <span>Chế Độ Bóc Tách Theo Loại Tài Liệu & Chống Lỗi Font:</span>
+                            </label>
+                            <span className="text-[10px] text-sky-700 font-bold bg-sky-50 border border-sky-200 px-2 py-0.5 rounded-full">
+                              AI Multimodal
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                            {/* Card 1: STEM_FORMULAS */}
+                            <button
+                              type="button"
+                              onClick={() => setImportOcrMode('STEM_FORMULAS')}
+                              className={`p-3 rounded-xl text-left border-2 transition-all cursor-pointer ${
+                                importOcrMode === 'STEM_FORMULAS'
+                                  ? 'bg-sky-50/80 border-sky-500 shadow-xs ring-1 ring-sky-500/30'
+                                  : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/60'
+                              }`}
+                            >
+                              <div className="text-xs font-black text-sky-950 flex items-center justify-between">
+                                <span className="flex items-center gap-1.5">
+                                  <span>🧪</span> Tự Nhiên & Công Thức
+                                </span>
+                                {importOcrMode === 'STEM_FORMULAS' && <CheckCircle2 className="w-3.5 h-3.5 text-sky-600" />}
+                              </div>
+                              <p className="text-[10.5px] text-slate-500 mt-1 leading-snug">
+                                Toán, Lý, Hóa - Bóc tách công thức LaTeX, phản ứng hóa học, bảng biến thiên qua Vision AI.
+                              </p>
+                            </button>
+
+                            {/* Card 2: TEXT_HUMANITIES */}
+                            <button
+                              type="button"
+                              onClick={() => setImportOcrMode('TEXT_HUMANITIES')}
+                              className={`p-3 rounded-xl text-left border-2 transition-all cursor-pointer ${
+                                importOcrMode === 'TEXT_HUMANITIES'
+                                  ? 'bg-purple-50/80 border-purple-500 shadow-xs ring-1 ring-purple-500/30'
+                                  : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/60'
+                              }`}
+                            >
+                              <div className="text-xs font-black text-purple-950 flex items-center justify-between">
+                                <span className="flex items-center gap-1.5">
+                                  <span>✨</span> Tự Động Thông Minh
+                                </span>
+                                {importOcrMode === 'TEXT_HUMANITIES' && <CheckCircle2 className="w-3.5 h-3.5 text-purple-600" />}
+                              </div>
+                              <p className="text-[10.5px] text-slate-500 mt-1 leading-snug">
+                                KHXH & Ngữ Văn - Khuyên dùng: tự phát hiện và kích hoạt Vision nếu lỗi font InDesign.
+                              </p>
+                            </button>
+
+                            {/* Card 3: VISION_AI */}
+                            <button
+                              type="button"
+                              onClick={() => setImportOcrMode('VISION_AI')}
+                              className={`p-3 rounded-xl text-left border-2 transition-all cursor-pointer ${
+                                importOcrMode === 'VISION_AI'
+                                  ? 'bg-rose-50/80 border-rose-500 shadow-xs ring-1 ring-rose-500/30'
+                                  : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/60'
+                              }`}
+                            >
+                              <div className="text-xs font-black text-rose-950 flex items-center justify-between">
+                                <span className="flex items-center gap-1.5">
+                                  <span>👁️</span> Vision AI Cloud
+                                </span>
+                                {importOcrMode === 'VISION_AI' && <CheckCircle2 className="w-3.5 h-3.5 text-rose-600" />}
+                              </div>
+                              <p className="text-[10.5px] text-slate-500 mt-1 leading-snug">
+                                Bóc tách ảnh 100% bằng Gemini AI - Chống triệt để lỗi font rác / mã hóa InDesign và bản scan.
+                              </p>
+                            </button>
+
+                            {/* Card 4: AUTO_LOCAL */}
+                            <button
+                              type="button"
+                              onClick={() => setImportOcrMode('AUTO_LOCAL')}
+                              className={`p-3 rounded-xl text-left border-2 transition-all cursor-pointer ${
+                                importOcrMode === 'AUTO_LOCAL'
+                                  ? 'bg-emerald-50/80 border-emerald-500 shadow-xs ring-1 ring-emerald-500/30'
+                                  : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/60'
+                              }`}
+                            >
+                              <div className="text-xs font-black text-emerald-950 flex items-center justify-between">
+                                <span className="flex items-center gap-1.5">
+                                  <span>📄</span> Chỉ Đọc Chữ Số Hóa
+                                </span>
+                                {importOcrMode === 'AUTO_LOCAL' && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />}
+                              </div>
+                              <p className="text-[10.5px] text-slate-500 mt-1 leading-snug">
+                                PdfPig Local - Tối ưu cho PDF văn bản số hóa chuẩn, siêu tốc và không tốn token AI.
+                              </p>
+                            </button>
+                          </div>
                         </div>
                       </div>
+
                     </div>
 
-                    {/* Hoặc Nhập Trích Đoạn Văn Bản / Mục Lục */}
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-slate-600 flex items-center justify-between">
-                        <span>Hoặc dán trực tiếp trích đoạn văn bản chuyên đề (tùy chọn):</span>
-                        <span className="text-[11px] text-slate-400">Nếu không muốn tải file</span>
-                      </label>
-                      <textarea
-                        rows={3}
-                        value={importTextSnippet}
-                        onChange={(e) => setImportTextSnippet(e.target.value)}
-                        placeholder="Dán nội dung lý thuyết, mục lục hoặc các dạng bài tập tại đây..."
-                        className="w-full p-3 rounded-2xl border border-slate-300 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50 text-slate-800"
-                      />
-                    </div>
-
-                    {/* Tiến Trình Phân Tích AI (Nếu đang chạy) */}
+                    {/* TIẾN TRÌNH PHÂN TÍCH AI ĐỘNG (DYNAMIC EASING PROGRESS BAR) */}
                     {isExtractingAi && (
-                      <div className="p-5 rounded-2xl bg-gradient-to-r from-purple-50 via-indigo-50 to-blue-50 border border-purple-200 space-y-3 animate-fade">
+                      <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-purple-50 via-indigo-50 to-blue-50 border border-purple-200 shadow-sm space-y-3 animate-fade">
                         <div className="flex items-center justify-between text-xs font-extrabold text-purple-900">
                           <span className="flex items-center gap-2">
                             <RefreshCw className="w-4 h-4 animate-spin text-purple-600" />
-                            <span>AI Tri Thức Đang Bóc Tách & Nhận Diện Dạng Bài...</span>
+                            <span>{aiProgressMessage || "AI Tri Thức Đang Bóc Tách & Nhận Diện Dạng Bài..."}</span>
                           </span>
-                          <span>{aiExtractStep * 25}%</span>
+                          <span className="font-mono text-sm font-black text-purple-700 bg-white px-2.5 py-0.5 rounded-lg border border-purple-200 shadow-2xs">
+                            {aiProgressPercent}%
+                          </span>
                         </div>
 
-                        <div className="w-full h-2 rounded-full bg-purple-100 overflow-hidden">
+                        <div className="w-full h-2.5 rounded-full bg-purple-100 overflow-hidden relative shadow-inner">
                           <div
-                            className="h-full bg-gradient-to-r from-purple-600 to-indigo-600 transition-all duration-500 rounded-full"
-                            style={{ width: `${aiExtractStep * 25}%` }}
+                            className="h-full bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 transition-all duration-300 rounded-full"
+                            style={{ width: `${aiProgressPercent}%` }}
                           ></div>
                         </div>
 
-                        <div className="grid grid-cols-4 gap-2 text-[10px] font-bold text-slate-600">
-                          <div className={aiExtractStep >= 1 ? "text-purple-700 font-black" : "text-slate-400"}>
-                            1. Đọc tệp & OCR
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[10.5px] font-bold">
+                          <div className={`p-2 rounded-xl border flex items-center gap-1.5 transition-colors ${aiProgressPercent >= 15 ? "bg-purple-100/90 border-purple-300 text-purple-900 font-black" : "bg-white/60 border-slate-200 text-slate-400"}`}>
+                            <CheckCircle2 className={`w-3.5 h-3.5 shrink-0 ${aiProgressPercent >= 15 ? "text-purple-600" : "text-slate-300"}`} />
+                            <span>1. Đọc tệp & OCR</span>
                           </div>
-                          <div className={aiExtractStep >= 2 ? "text-purple-700 font-black" : "text-slate-400"}>
-                            2. Phân tích Chương - Bài
+                          <div className={`p-2 rounded-xl border flex items-center gap-1.5 transition-colors ${aiProgressPercent >= 45 ? "bg-purple-100/90 border-purple-300 text-purple-900 font-black" : "bg-white/60 border-slate-200 text-slate-400"}`}>
+                            <CheckCircle2 className={`w-3.5 h-3.5 shrink-0 ${aiProgressPercent >= 45 ? "text-purple-600" : "text-slate-300"}`} />
+                            <span>2. Phân tích Chương - Bài</span>
                           </div>
-                          <div className={aiExtractStep >= 3 ? "text-purple-700 font-black" : "text-slate-400"}>
-                            3. Nhận diện Dạng bài
+                          <div className={`p-2 rounded-xl border flex items-center gap-1.5 transition-colors ${aiProgressPercent >= 75 ? "bg-purple-100/90 border-purple-300 text-purple-900 font-black" : "bg-white/60 border-slate-200 text-slate-400"}`}>
+                            <CheckCircle2 className={`w-3.5 h-3.5 shrink-0 ${aiProgressPercent >= 75 ? "text-purple-600" : "text-slate-300"}`} />
+                            <span>3. Nhận diện Dạng bài & 4 Khối</span>
                           </div>
-                          <div className={aiExtractStep >= 4 ? "text-purple-700 font-black" : "text-slate-400"}>
-                            4. Chuẩn hóa KaTeX
+                          <div className={`p-2 rounded-xl border flex items-center gap-1.5 transition-colors ${aiProgressPercent >= 95 ? "bg-purple-100/90 border-purple-300 text-purple-900 font-black" : "bg-white/60 border-slate-200 text-slate-400"}`}>
+                            <CheckCircle2 className={`w-3.5 h-3.5 shrink-0 ${aiProgressPercent >= 95 ? "text-purple-600" : "text-slate-300"}`} />
+                            <span>4. Chuẩn hóa KaTeX</span>
                           </div>
                         </div>
                       </div>
@@ -4186,6 +4489,8 @@ export default function CurriculumExplorerView({
                     setIsImportModalOpen(false);
                     setExtractedCurriculum(null);
                     setAiExtractStep(0);
+                    setAiProgressPercent(0);
+                    setAiProgressMessage('');
                     setPreviewSelectedPattern(null);
                   }}
                   className="px-3 py-1.5 rounded-lg border border-slate-300 text-xs font-bold text-slate-700 hover:bg-white"
