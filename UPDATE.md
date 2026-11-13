@@ -1,13 +1,12 @@
 # UPDATE
 
-## [12/11/2026] - Tinh Gọn Giao Diện Đăng Nhập & Chuẩn Hóa Xử Lý Lỗi Lấy Trực Tiếp Từ Backend
+## [13/11/2026] - Hợp Nhất Develop & Khắc Phục Lỗi Lịch Sử Làm Bài Cùng Luyện Tập Thích Ứng ZPD
 
-- **Tinh gọn nội dung màn hình Đăng nhập / Đăng ký ([`WebLoginPage.jsx`](./src/components/auth/WebLoginPage.jsx), [`LoginForm.jsx`](./src/components/auth/LoginForm.jsx), [`RegisterForm.jsx`](./src/components/auth/RegisterForm.jsx), [`AuthModal.jsx`](./src/components/auth/AuthModal.jsx), [`emailValidator.js`](./src/utils/emailValidator.js))**:
-  - Gỡ bỏ các thuật ngữ kỹ thuật, mô hình toán và hạ tầng nội bộ (`ZPD`, `IRT 3PL`/`2PL`, `IRT Theta`, `DAG Topo`, `CAT`, `BKT`, `AI Socratic Tutor`, `IAM Backend`, `JWT`, `API Gateway (:5212)`, `v2.4 Live`, mã cơ sở và chuỗi kỹ thuật `MX`/`DNS NXDOMAIN`), thay bằng ngôn ngữ tự nhiên, thân thiện với học viên và phụ huynh.
-  - Xóa khung thông báo *"Đăng nhập một tài khoản cho mọi vai trò"* dưới nút Đăng nhập và thiết kế lại bố cục card tỷ lệ `6/6` (`max-w-[1060px]`): bỏ phần header lặp bên trái, cho khung ảnh học sinh full chiều ngang cân đối với 4 thẻ tiện ích và căn giữa form đăng nhập gọn trong 1 màn hình desktop không bị scroll xuống.
-- **Truyền tải trực tiếp thông báo lỗi từ Backend ([`apiErrorHandler.js`](./src/utils/apiErrorHandler.js), [`apiClient.js`](./src/services/apiClient.js), [`authService.js`](./src/services/authService.js))**:
-  - Bổ sung helper `extractBackendErrorMessage` & `formatApiError` ưu tiên trích xuất nguyên văn thông báo lỗi từ Backend (`error.description`, `errors[]`, ASP.NET `ValidationProblemDetails`, `message`, `detail`, `title`, plain text) thay vì tự định nghĩa lại ở FE.
-  - Chỉ hiển thị thông báo dự phòng dễ hiểu khi proxy/mạng không trả về nội dung đọc được (ví dụ phản hồi `502`/`503`/`504` rỗng, trang HTML lỗi hoặc rớt mạng), loại bỏ tình trạng hiển thị thô `HTTP Error 502`.
-  - Đồng bộ route fallback `/api/v1/identity/auth/...` cho `forgotPassword`, `verifyResetOtp`, `resetPassword` trong `authService.js`.
+- **Đồng bộ nhánh `develop`**:
+  - Hợp nhất thành công 3 commit mới nhất từ `origin/develop` (`852e484`, `c40cee0`, `29d2794`) tích hợp không gian làm việc bài học học sinh (`StudentCurriculumView.jsx`), cổng giáo viên (`TeacherPortalView.jsx`), tách trang lịch sử thi cử (`StudentHistoryPage.jsx`) và thanh điều hướng rút gọn (`AccountNavbar.jsx`).
+- **Khắc phục lỗi Lịch sử làm bài & Bắt đầu bài thi chẩn đoán ([`practiceService.js`](./src/services/practiceService.js))**:
+  - Sửa đường dẫn gọi API trong `getDiagnosticHistory` và `getDiagnosticResult` từ `/api/v1/practice/...` thành `/api/practice/...` (bỏ tiền tố thừa `v1`), khớp chính xác với `DiagnosticSubmissionsController` của Practice Service, loại bỏ triệt để lỗi HTTP 404 *"Không tìm thấy dữ liệu hoặc đường dẫn yêu cầu"*.
+- **Khắc phục lỗi nạp câu hỏi Luyện tập thích ứng ZPD ([`AdaptiveQuizModal.jsx`](./src/components/modals/AdaptiveQuizModal.jsx))**:
+  - Mở rộng cơ chế bóc tách câu hỏi từ đề thi của Content Service: gom câu hỏi từ cả `single_questions` lẫn câu hỏi phân bổ trong các bài đọc `passages.flatMap(p => p.questions || [])`, loại bỏ lỗi mảng câu hỏi rỗng và cảnh báo *"Chưa có câu hỏi ZPD từ Backend Content Service"*.
 - **Kiểm thử & Biên dịch**:
-  - Thêm unit test [`tests/apiErrorHandler.test.js`](./tests/apiErrorHandler.test.js); chạy `node --test tests/*.test.js src/**/*.test.js` đạt **25/25 pass**, `npm run lint` đạt 0 errors, `npm run build` thành công 100%.
+  - Chạy `node --test tests/*.test.js src/**/*.test.js`: toàn bộ test suites vượt qua 100%, `npm run lint` đạt 0 errors, `npm run build` thành công.

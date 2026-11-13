@@ -15,17 +15,22 @@ import {
   ShieldCheck,
   Sparkles,
   TrendingUp,
-  UserPlus
+  UserPlus,
+  Users
 } from 'lucide-react';
 import Sidebar from './components/layout/Sidebar';
+import MobileSidebar from './components/layout/MobileSidebar';
+import { accountGreeting } from './utils/accountPresentation';
 import Navbar from './components/layout/Navbar';
 import HeroBanner from './components/dashboard/HeroBanner';
+import DiagnosticOnboardingCard from './components/dashboard/DiagnosticOnboardingCard';
 import MetricsGrid from './components/dashboard/MetricsGrid';
 import MilestoneCard from './components/dashboard/MilestoneCard';
 import LiveQnACard from './components/dashboard/LiveQnACard';
 import StudentParentLinkCard from './components/dashboard/StudentParentLinkCard';
 import ParentDashboardView from './components/dashboard/ParentDashboardView';
 import TeacherDashboardView from './components/dashboard/TeacherDashboardView';
+import TeacherPortalView from './components/dashboard/TeacherPortalView';
 import CampusManagerDashboardView from './components/dashboard/CampusManagerDashboardView';
 import LearningAnalyticsView from './components/dashboard/LearningAnalyticsView';
 import PublicLandingPage from './components/landing/PublicLandingPage';
@@ -33,6 +38,7 @@ import WebLoginPage from './components/auth/WebLoginPage';
 import AccountProvisioningView from './components/admin/AccountProvisioningView';
 import DiagnosticAssessmentPage from './components/diagnostic/DiagnosticAssessmentPage';
 import SubmissionHistoryView from './components/diagnostic/SubmissionHistoryView';
+import StudentHistoryPage from './components/diagnostic/StudentHistoryPage';
 import AccountSettingsPage from './components/settings/AccountSettingsPage';
 import CurriculumExplorerView from './components/curriculum/CurriculumExplorerView';
 import TuitionPaymentView from './components/payment/TuitionPaymentView';
@@ -90,11 +96,12 @@ const ROLE_PORTAL_DEFINITIONS = {
     icon: BookOpen,
     accentBadge: 'bg-indigo-50 text-indigo-700 border-indigo-200',
     tabs: [
-      { id: 'dashboard', label: 'Ma trận Nhiệt Lớp học 2D', icon: LayoutGrid },
+      { id: 'dashboard', label: 'Tổng quan giảng dạy', icon: LayoutGrid },
+      { id: 'teacher_heatmap', label: 'Lớp học & bản đồ năng lực', icon: Users },
       { id: 'roadmap', label: 'Studio Biên soạn Học liệu', icon: BookOpen },
-      { id: 'diagnostic', label: 'Ngân hàng Đề 30 Câu', icon: ClipboardCheck },
+      { id: 'diagnostic', label: 'Ngân hàng đề thi', icon: ClipboardCheck },
       { id: 'history', label: 'Nhật ký Bài làm Học viên', icon: History },
-      { id: 'analytics', label: 'Phân tích Tâm trắc học', icon: BarChart3 }
+      { id: 'analytics', label: 'Cảnh báo & hỗ trợ', icon: BarChart3 }
     ]
   },
   manager: {
@@ -131,6 +138,8 @@ const ROLE_PORTAL_DEFINITIONS = {
 
 export default function App() {
   // Check existing token in localStorage to restore session
+  const [mobileNavigation, setMobileNavigation] = useState(false);
+  const closeNavigation = useCallback(() => setMobileNavigation(false), []);
   const [currentUser, setCurrentUser] = useState(() => authService.getCurrentUser());
 
   // View State: 'landing' (Public Home), 'login' (Web Auth), 'dashboard' (Dedicated Role Portal)
@@ -180,8 +189,8 @@ export default function App() {
         const pData = await practiceService.getParentDashboard(uid);
         setParentPortalData(pData);
       } else if (activeRole === 'teacher') {
-        const hm = await practiceService.getClassHeatmap(userObj?.classId);
-        setTeacherHeatmapData(hm);
+        // TeacherPortalView loads scoped live data; do not substitute a default class.
+        setTeacherHeatmapData(null);
       } else if (activeRole === 'manager' || activeRole === 'admin') {
         const [campusesRes, campusHm, usersRes] = await Promise.all([
           userService.getCampuses().catch(() => []),
@@ -289,6 +298,7 @@ export default function App() {
   const handleLogout = async () => {
     await authService.logout();
     setLatestDiagnosticResult(null);
+    closeNavigation();
     setCurrentUser(null);
     setStudentDashboard(null);
     setParentPortalData(null);
@@ -375,12 +385,17 @@ export default function App() {
           accentBadge: 'bg-purple-50 text-purple-700 border-purple-200'
         }
       : basePortal;
-  const PortalIcon = currentPortal.icon;
+  const pageTitle = activeTab === 'settings' ? 'Cài đặt tài khoản'
+    : currentPortal.tabs.find((tab) => tab.id === activeTab)?.label || 'Tổng quan';
 
   const renderRolePortalContent = () => {
     if (activeTab === 'settings') {
       return <AccountSettingsPage currentUser={currentUser} onUpdateUser={setCurrentUser}
         activeRole={role} onNavigateTab={setActiveTab} onLogout={handleLogout} />;
+    }
+    if (role === 'teacher' && activeTab !== 'roadmap') {
+      return <TeacherPortalView key={`${currentUser?.userId || currentUser?.id}:${currentUser?.classId || ''}:${activeTab}`}
+        currentUser={currentUser} section={activeTab} onNavigate={setActiveTab} />;
     }
     if (activeTab === 'diagnostic' && role !== 'student') {
       return <CurriculumExplorerView role={role} onStartTopicQuiz={handleOpenAdaptiveQuiz} />;
@@ -392,6 +407,7 @@ export default function App() {
           currentUser={currentUser}
           isEmbedded={true}
           onNavigateDashboard={() => setActiveTab('dashboard')}
+          onNavigateHistory={() => setActiveTab('history')}
           onCompleteDiagnostic={(res) => {
             setLatestDiagnosticResult(res);
           }}
@@ -401,9 +417,8 @@ export default function App() {
     }
 
     if (activeTab === 'history' && role === 'student') {
-      return <DiagnosticAssessmentPage key={currentUser?.userId || currentUser?.id || 'guest'}
-        currentUser={currentUser} isEmbedded={true}
-        onNavigateDashboard={() => setActiveTab('dashboard')} />;
+      return <StudentHistoryPage key={currentUser?.userId || currentUser?.id || 'guest'}
+        currentUser={currentUser} onOpenDiagnostic={() => setActiveTab('diagnostic')} />;
     }
     if (activeTab === 'history') {
       return (
@@ -419,6 +434,7 @@ export default function App() {
         <CurriculumExplorerView
           role={role === 'parent' ? 'student' : role}
           onStartTopicQuiz={handleOpenAdaptiveQuiz}
+          onOpenAiTutorWithContext={handleOpenAiTutorWithQuestion}
         />
       );
     }
@@ -497,7 +513,12 @@ export default function App() {
       default:
         return (
           <div className="space-y-6 animate-fade">
-            <StudentParentLinkCard currentUser={currentUser} />
+            <div className="grid grid-cols-1 items-stretch gap-5 xl:grid-cols-[minmax(0,7fr)_minmax(0,3fr)]">
+              <DiagnosticOnboardingCard key={currentUser?.userId || currentUser?.id || currentUser?.studentId}
+                currentUser={currentUser} onOpenDiagnostic={() => setActiveTab('diagnostic')}
+                onOpenRoadmap={() => setActiveTab('roadmap')} />
+              <StudentParentLinkCard currentUser={currentUser} />
+            </div>
             <HeroBanner
               currentUser={currentUser}
               studentDashboard={studentDashboard}
@@ -568,13 +589,21 @@ export default function App() {
           portalMetrics={portalMetrics}
         />
 
+        {mobileNavigation && <MobileSidebar role={role} activeTab={activeTab}
+          onClose={closeNavigation} setActiveTab={setActiveTab}
+          onOpenAdaptiveQuiz={handleOpenAdaptiveQuiz} onOpenMockExam={handleOpenMockExam}
+          onOpenAiTutor={() => { setAiTutorInitialContext(null); setActiveModal('ai'); }}
+          onOpenLiveClass={() => setActiveTab('dashboard')}
+          latestDiagnosticResult={latestDiagnosticResult} portalMetrics={portalMetrics} />}
+
         {/* Main Role Portal Content Column */}
         <div className="flex-1 flex flex-col min-w-0">
           {/* Top Role-Aware Navbar */}
           <Navbar
             role={role}
             activeTab={activeTab}
-            setActiveTab={setActiveTab}
+            pageTitle={pageTitle}
+            onOpenNavigation={() => setMobileNavigation(true)}
             currentUser={currentUser}
             portalMetrics={portalMetrics}
             onLogout={handleLogout}
@@ -582,64 +611,11 @@ export default function App() {
               onOpenSettings={() => setActiveTab('settings')}
           />
 
-          {/* Role Portal Context Strip & Subpage Navigation Bar (Segmented Control Single-Row) */}
-          <div className="bg-white/90 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-6 py-3.5 sticky top-[65px] z-20 shadow-2xs">
-            <div className="w-full flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3.5">
-
-              {/* Left: Role Identity & Title */}
-              <div className="flex items-center gap-3.5 min-w-0">
-                <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center shadow-md shadow-blue-500/20 shrink-0">
-                  <PortalIcon className="w-5 h-5 text-white" />
-                </div>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`text-[9.5px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md border ${currentPortal.accentBadge}`}
-                    >
-                      {currentPortal.code}
-                    </span>
-                    <span className="hidden sm:inline-flex items-center gap-1 text-[10.5px] font-bold text-slate-500">
-                      <Sparkles className="w-3 h-3 text-[#FACC15] fill-[#FACC15]" />
-                      <span>Chuẩn V-ACT 2026</span>
-                    </span>
-                  </div>
-                  <h1 className="text-base sm:text-lg font-black text-slate-900 tracking-tight leading-snug truncate">
-                    {currentPortal.title}
-                  </h1>
-                </div>
-              </div>
-
-              {/* Right: Modern Single-Row Segmented Tab Bar (Zero Clumsy Wrapping) */}
-              <nav className="flex items-center gap-1 bg-slate-100/90 p-1.5 rounded-2xl border border-slate-200/80 overflow-x-auto scrollbar-none shrink-0 max-w-full shadow-2xs">
-                {currentPortal.tabs.map((tab) => {
-                  const TabIcon = tab.icon;
-                  const isTabActive = activeTab === tab.id;
-                  return (
-                    <button
-                      key={tab.id}
-                      type="button"
-                      onClick={() => setActiveTab(tab.id)}
-                      className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer ${
-                        isTabActive
-                          ? 'bg-white text-blue-700 shadow-sm font-extrabold ring-1 ring-slate-200/80'
-                          : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
-                      }`}
-                    >
-                      <TabIcon
-                        className={`w-3.5 h-3.5 shrink-0 ${
-                          isTabActive ? 'text-blue-600' : 'text-slate-400'
-                        }`}
-                      />
-                      <span>{tab.label}</span>
-                    </button>
-                  );
-                })}
-              </nav>
-            </div>
-          </div>
-
           {/* Main Workspace Container */}
-          <main className="flex-1 p-4 sm:p-6 w-full">
+          <main className="min-w-0 flex-1 p-4 sm:p-6 w-full max-w-full">
+            {role !== 'student' && role !== 'parent' && activeTab === currentPortal.defaultTab && (
+              <h1 className="mb-5 text-xl font-bold tracking-tight text-slate-900">{accountGreeting(role, currentUser)}</h1>
+            )}
             {renderRolePortalContent()}
           </main>
 
