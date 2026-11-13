@@ -1663,3 +1663,21 @@ pm run build completes in 905ms (3,013 modules transformed, 0 errors).
 - **Passage-Inclusive ZPD Quiz Extraction (`src/components/modals/AdaptiveQuizModal.jsx`)**:
   - Expanded question extraction logic to parse both `single_questions` and `passages[].questions` from Content Service exam payloads, preventing empty item sets when exams store questions within reading passages.
 - **Verification**: All 28 test cases passed; lint completed with zero errors; production build succeeded.
+
+### [13/11/2026] - Post-Exam Dual Roadmap Architecture (General vs. Personalized) & Tuition Paywall Enforcement
+
+- **Dual-Mode Roadmap Segmentation (`StudentCurriculumView.jsx`, `curriculumAccess.js`)**:
+  - Structured the student curriculum experience into two explicit learning modes:
+    1. *General Cohort Curriculum (`general`)*: Full national standard GDPT 2018 & V-ACT 2026 domain-based knowledge graph (Chapters -> Lessons -> Patterns).
+    2. *Personalized Adaptive Roadmap (`personalized`)*: Algorithmic clustering of patterns into 3 adaptive stages based on IRT Theta and diagnostic domain scores (`buildPersonalizedStages`):
+       - *Stage 1 (ZPD Priority)*: Urgent gap recovery and prerequisite skills (`+75 - +110` points potential).
+       - *Stage 2 (Application & Logic)*: Core cognitive consolidation (`+50 - +70` points potential).
+       - *Stage 3 (Speed & Mastery)*: Timed test execution and speed optimization (`+35 - +50` points potential).
+- **Post-Assessment Overview Mode & Tuition Paywall Enforcement**:
+  - Implemented business constraint: post-assessment students have read-only access to the high-level roadmap structure (overview mode).
+  - Unpaid students (`!isPaid`) are blocked from accessing full lesson readers, proprietary video lectures, detailed step-by-step methods, and adaptive quizzes.
+  - Intercepting unauthorized study attempts triggers `TuitionRequiredModal`, directing users to the PayOS VietQR payment flow with an option to preview high-level pattern metadata.
+- **Payment Lifecycle & Cross-Component Synchronization (`TuitionPaymentView.jsx`, `DiagnosticAssessmentPage.jsx`, `App.jsx`)**:
+  - Integrated local tuition status persistence (`veval_tuition_paid_${studentId}`) and custom event dispatching (`veval:tuition-paid`).
+  - Added post-diagnostic roadmap navigation banners and action buttons linking directly to roadmap overview and tuition checkout.
+- **Verification**: Added `tests/curriculumAccess.test.js`; all 31 test cases passed; lint completed with zero errors; production build succeeded in 1.15s.

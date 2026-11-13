@@ -11,16 +11,40 @@ import {
   Award,
   Zap,
   Users,
-  AlertCircle
+  AlertCircle,
+  Network
 } from 'lucide-react';
 import PayOsCheckoutModal from '../modals/PayOsCheckoutModal';
 import paymentService from '../../services/paymentService';
+import { isTuitionPaid, setTuitionPaid } from '../curriculum/curriculumAccess';
 
 export default function TuitionPaymentView({ currentUser, onNavigateRoadmap, showToast }) {
+  const studentId = currentUser?.userId || currentUser?.id || currentUser?.studentId || 's1111111-1111-1111-1111-111111111111';
   const [selectedPlan, setSelectedPlan] = useState('STANDARD');
   const [isLoading, setIsLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [activePaymentData, setActivePaymentData] = useState(null);
+  const [isPaid, setIsPaid] = useState(() => isTuitionPaid(studentId));
+
+  React.useEffect(() => {
+    setIsPaid(isTuitionPaid(studentId));
+    const handleTuitionPaid = (event) => {
+      if (!studentId || event.detail?.studentId === studentId) {
+        setIsPaid(isTuitionPaid(studentId));
+      }
+    };
+    window.addEventListener('veval:tuition-paid', handleTuitionPaid);
+    return () => window.removeEventListener('veval:tuition-paid', handleTuitionPaid);
+  }, [studentId]);
+
+  const handleToggleTestPayment = () => {
+    const nextState = !isPaid;
+    setTuitionPaid(studentId, nextState);
+    setIsPaid(nextState);
+    if (showToast) {
+      showToast(nextState ? 'Đã kích hoạt học phí (Môi trường Test)!' : 'Đã hoàn tác trạng thái học phí.');
+    }
+  };
 
   // Danh mục 3 gói đào tạo thích ứng ĐGNL
   const coursePackages = [
@@ -121,6 +145,9 @@ export default function TuitionPaymentView({ currentUser, onNavigateRoadmap, sho
   };
 
   const handlePaymentSuccess = (paymentInfo) => {
+    setTuitionPaid(studentId, true);
+    setIsPaid(true);
+
     setTransactionHistory(prev => [
       {
         id: `TX-${Date.now().toString().slice(-4)}`,
@@ -165,6 +192,61 @@ export default function TuitionPaymentView({ currentUser, onNavigateRoadmap, sho
           <div className="text-blue-100/90 text-[11px]">
             Tự động kích hoạt sau 1-3 giây quét mã
           </div>
+        </div>
+      </div>
+
+      {/* Tuition Active Status Card & Quick Navigation */}
+      <div className={`p-5 rounded-3xl border shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4 ${
+        isPaid 
+          ? 'bg-linear-to-r from-emerald-50 via-teal-50 to-white border-emerald-200 text-emerald-950' 
+          : 'bg-linear-to-r from-amber-50 via-orange-50 to-white border-amber-200 text-amber-950'
+      }`}>
+        <div className="flex items-start gap-3.5">
+          <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 shadow-sm ${
+            isPaid ? 'bg-emerald-600 text-white' : 'bg-amber-500 text-white'
+          }`}>
+            {isPaid ? <CheckCircle2 className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
+          </div>
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs font-black uppercase">
+                {isPaid ? 'Trạng Thái Khóa Học: Đã Kích Hoạt (Đã Đóng Học Phí)' : 'Trạng Thái Khóa Học: Chế Độ Xem Lộ Trình Tổng Quát'}
+              </span>
+              <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase border ${
+                isPaid ? 'bg-emerald-200 text-emerald-900 border-emerald-300' : 'bg-amber-200 text-amber-900 border-amber-300'
+              }`}>
+                {isPaid ? 'Toàn Quyền Truy Cập' : 'Cần Kích Hoạt'}
+              </span>
+            </div>
+            <p className="text-xs text-slate-600 mt-1 leading-relaxed max-w-2xl font-medium">
+              {isPaid 
+                ? 'Tài khoản của bạn đã được mở khóa toàn bộ bài giảng chi tiết, video lý thuyết và bài tập củng cố của Lớp học chung & Lộ trình cá nhân.' 
+                : 'Bạn đang xem lộ trình dạng tổng quát sau khi hoàn thành bài thi. Hãy chọn gói học bên dưới và thanh toán để vào học ngay.'}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2.5 shrink-0 w-full md:w-auto">
+          {onNavigateRoadmap && (
+            <button
+              type="button"
+              onClick={onNavigateRoadmap}
+              className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all cursor-pointer"
+            >
+              <Network className="w-4 h-4" />
+              <span>Đến Lộ Trình Học Tập</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={handleToggleTestPayment}
+            title="Chuyển đổi trạng thái đóng học phí để kiểm thử nghiệm thu"
+            className="px-3.5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs border border-slate-200 transition-all cursor-pointer"
+          >
+            {isPaid ? 'Hủy kích hoạt (Test)' : '⚡ Kích hoạt nhanh (Test)'}
+          </button>
         </div>
       </div>
 

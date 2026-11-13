@@ -408,6 +408,8 @@ export default function App() {
           isEmbedded={true}
           onNavigateDashboard={() => setActiveTab('dashboard')}
           onNavigateHistory={() => setActiveTab('history')}
+          onNavigateRoadmap={() => setActiveTab('roadmap')}
+          onNavigateTuition={() => setActiveTab('tuition')}
           onCompleteDiagnostic={(res) => {
             setLatestDiagnosticResult(res);
           }}
@@ -433,6 +435,10 @@ export default function App() {
       return (
         <CurriculumExplorerView
           role={role === 'parent' ? 'student' : role}
+          currentUser={currentUser}
+          latestDiagnosticResult={latestDiagnosticResult}
+          onNavigateTuition={() => setActiveTab('tuition')}
+          onNavigateDiagnostic={() => setActiveTab('diagnostic')}
           onStartTopicQuiz={handleOpenAdaptiveQuiz}
           onOpenAiTutorWithContext={handleOpenAiTutorWithQuestion}
         />
@@ -444,6 +450,7 @@ export default function App() {
         <TuitionPaymentView
           currentUser={currentUser}
           onBackToDashboard={() => setActiveTab('dashboard')}
+          onNavigateRoadmap={() => setActiveTab('roadmap')}
         />
       );
     }

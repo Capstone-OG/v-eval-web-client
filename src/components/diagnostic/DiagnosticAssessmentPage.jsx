@@ -42,7 +42,9 @@ import {
   ChevronDown,
   ChevronUp,
   Download,
-  ExternalLink
+  ExternalLink,
+  CreditCard,
+  Network
 } from 'lucide-react';
 import {
   Radar,
@@ -244,6 +246,8 @@ export default function DiagnosticAssessmentPage({
   onCompleteDiagnostic,
   onNavigateDashboard,
   onNavigateHistory,
+  onNavigateRoadmap,
+  onNavigateTuition,
   onNavigateHome,
   onNavigateLogin,
   onNavigateQuestionBank,
@@ -2360,14 +2364,26 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
               </button>
 
               {currentUser ? (
-                <button
-                  type="button"
-                  onClick={handleReturnDashboard}
-                  className="px-4 py-2 rounded-xl bg-linear-to-r from-blue-600 to-indigo-600 hover:opacity-95 text-white text-xs font-black shadow-md shadow-blue-500/20 flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
-                >
-                  <span>Vào Dashboard Cá Nhân Hóa</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={onNavigateRoadmap ? onNavigateRoadmap : handleReturnDashboard}
+                    className="px-4 py-2 rounded-xl bg-linear-to-r from-blue-600 to-indigo-600 hover:opacity-95 text-white text-xs font-black shadow-md shadow-blue-500/20 flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
+                  >
+                    <Network className="w-3.5 h-3.5" />
+                    <span>Xem Lộ Trình (Lớp Chung & Cá Nhân)</span>
+                  </button>
+                  {onNavigateTuition && (
+                    <button
+                      type="button"
+                      onClick={onNavigateTuition}
+                      className="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold shadow-xs flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
+                    >
+                      <CreditCard className="w-3.5 h-3.5" />
+                      <span>Đóng Học Phí</span>
+                    </button>
+                  )}
+                </div>
               ) : (
                 <div className="flex items-center gap-2">
                   {onNavigateHome && (
@@ -2393,6 +2409,50 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
               )}
             </div>
           </div>
+
+          {/* Post-Exam Roadmap & Tuition Notice Banner */}
+          {currentUser && (
+            <div className="p-5 rounded-3xl bg-linear-to-r from-blue-50 via-indigo-50 to-amber-50/70 border border-indigo-200/90 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div className="flex items-start gap-3.5">
+                <div className="w-10 h-10 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-indigo-600/25">
+                  <Target className="w-5 h-5" />
+                </div>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs font-black uppercase text-indigo-950">
+                      Lộ Trình Học Tập Đã Khởi Tạo (Lớp Học Chung & Cá Nhân Riêng)
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 text-[10px] font-black border border-blue-200">
+                      Chế độ xem tổng quát
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-600 leading-relaxed font-medium">
+                    Kết quả bài thi đã được ánh xạ vào khung chương trình: bạn có thể xem tổng quát các chuyên đề của <strong>Lớp học chung</strong> và <strong>Lộ trình cá nhân</strong> để nắm bắt các dạng bài cần bù điểm. Để bắt đầu học chi tiết, làm bài tập và mở khóa video bài giảng, vui lòng hoàn tất học phí.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0 w-full md:w-auto">
+                <button
+                  type="button"
+                  onClick={onNavigateRoadmap ? onNavigateRoadmap : handleReturnDashboard}
+                  className="w-full md:w-auto px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                >
+                  <span>Xem Lộ Trình Tổng Quát</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+                {onNavigateTuition && (
+                  <button
+                    type="button"
+                    onClick={onNavigateTuition}
+                    className="w-full md:w-auto px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                  >
+                    <CreditCard className="w-4 h-4" />
+                    <span>Kích Hoạt Học Phí</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Guest Notice Call-to-Action Banner */}
           {!currentUser && (
@@ -2795,14 +2855,26 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
             </button>
 
             {currentUser ? (
-              <button
-                type="button"
-                onClick={handleReturnDashboard}
-                className="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-linear-to-r from-blue-600 to-indigo-600 hover:opacity-90 text-white font-black text-xs flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20 transition-all active:scale-95"
-              >
-                <span>Vào Lộ Trình Học Tập Cá Nhân Hóa (Dashboard)</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
+              <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+                <button
+                  type="button"
+                  onClick={onNavigateRoadmap ? onNavigateRoadmap : handleReturnDashboard}
+                  className="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-linear-to-r from-blue-600 to-indigo-600 hover:opacity-90 text-white font-black text-xs flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20 transition-all active:scale-95 cursor-pointer"
+                >
+                  <span>Xem Lộ Trình Học Tập (Lớp Chung & Cá Nhân)</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+                {onNavigateTuition && (
+                  <button
+                    type="button"
+                    onClick={onNavigateTuition}
+                    className="w-full sm:w-auto px-5 py-3.5 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white font-black text-xs flex items-center justify-center gap-2 shadow-md transition-all active:scale-95 cursor-pointer"
+                  >
+                    <CreditCard className="w-4 h-4" />
+                    <span>Đóng Học Phí Để Vào Học</span>
+                  </button>
+                )}
+              </div>
             ) : (
               <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
                 {onNavigateHome && (

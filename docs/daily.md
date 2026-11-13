@@ -2348,3 +2348,26 @@ pm run build hoàn thành trong 1.12s, 0 lỗi cú pháp.
 - **Kiểm thử & Biên dịch**:
   - Chạy `node --test tests/*.test.js src/**/*.test.js`: **28/28 tests pass**.
   - `npm run lint` đạt 0 errors, `npm run build` thành công xuất bản bundle sạch.
+
+---
+
+## [13/11/2026] - Triển Khai Ràng Buộc Xem Lộ Trình Sau Thi (Lớp Học Chung & Cá Nhân Riêng) Và Cơ Chế Kích Hoạt Học Phí
+
+- **Phân tách và trực quan hóa 2 chế độ Lộ trình học tập (`StudentCurriculumView.jsx`, `curriculumAccess.js`)**:
+  - **Lớp Học Chung (Chương trình đào tạo chuẩn)**: Cung cấp cây tri thức chuẩn hóa 5 miền ĐGNL V-ACT theo cấu trúc Chương -> Bài học -> Dạng bài (patterns).
+  - **Lộ Trình Cá Nhân Riêng (Theo kết quả khảo sát)**: Tự động phân cụm dạng bài học dựa trên kết quả thi chẩn đoán (IRT Theta & điểm 4 miền) thành 3 chặng thích ứng:
+    - *Chặng 1*: Bù lỗ hổng kiến thức & Trọng tâm bứt phá (ZPD Priority - ưu tiên cao nhất, tiềm năng hồi phục `+75 - +110` điểm).
+    - *Chặng 2*: Nâng cao năng lực vận dụng & logic ĐGNL (`+50 - +70` điểm).
+    - *Chặng 3*: Thực chiến bấm giờ & Chinh phục điểm 900+ (`+35 - +50` điểm).
+  - Tích hợp bộ chuyển tab trực quan giữa *🏫 Lớp Học Chung* và *🎯 Lộ Trình Cá Nhân Riêng*.
+- **Thiết lập Ràng buộc Học phí & Chế độ Xem Tổng Quát (Paywall & Overview Mode)**:
+  - Học sinh sau khi hoàn thành bài thi khảo sát năng lực được **xem toàn bộ khung cấu trúc tổng quát** của cả 2 lộ trình (mục tiêu đầu ra, độ khó, dạng bài cần bù điểm, thời lượng ôn tập dự kiến).
+  - **Ràng buộc vào học**: Nếu chưa đóng học phí (`!isPaid`), các bài học chi tiết, phương pháp giải từng bước, video bài giảng độc quyền và bài tập luyện tập thích ứng củng cố sẽ ở trạng thái khóa.
+  - Khi học sinh bấm "Vào học" hoặc "Luyện tập củng cố", hệ thống hiển thị `TuitionRequiredModal` nhắc nhở hoàn tất học phí, kèm nút dẫn trực tiếp sang màn hình thanh toán PayOS VietQR (`onNavigateTuition`) và nút xem trước tóm tắt tổng quát.
+- **Tích hợp liên kết sau thi & thanh toán (`DiagnosticAssessmentPage.jsx`, `TuitionPaymentView.jsx`, `App.jsx`)**:
+  - Tại màn hình kết quả sau khi thi (`stage === 'result'`), bổ sung banner thông báo và các nút hành động trực tiếp: "Xem Lộ Trình (Lớp Chung & Cá Nhân)" và "Kích Hoạt Học Phí".
+  - Trong `TuitionPaymentView.jsx`, tích hợp lưu vết trạng thái đóng tiền (`veval_tuition_paid_${studentId}`), phát sự kiện `veval:tuition-paid`, và cung cấp nút kích hoạt test nhanh phục vụ nghiệm thu.
+- **Kiểm thử & Đảm bảo chất lượng**:
+  - Viết mới test suite `tests/curriculumAccess.test.js`: kiểm thử trạng thái học phí, phân cụm 3 chặng học thích ứng và xử lý an toàn dữ liệu đầu vào rỗng.
+  - Chạy `node --test tests/*.test.js src/**/*.test.js`: toàn bộ **31/31 tests pass** 100%.
+  - Chạy `npm run lint` đạt 0 errors, `npm run build` thành công trong 1.15s.

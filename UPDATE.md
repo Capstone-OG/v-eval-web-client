@@ -1,12 +1,16 @@
 # UPDATE
 
-## [13/11/2026] - Hợp Nhất Develop & Khắc Phục Lỗi Lịch Sử Làm Bài Cùng Luyện Tập Thích Ứng ZPD
+## [13/11/2026] - Triển Khai Ràng Buộc Xem Lộ Trình Sau Thi (Lớp Học Chung & Cá Nhân Riêng) Và Cơ Chế Kích Hoạt Học Phí
 
-- **Đồng bộ nhánh `develop`**:
-  - Hợp nhất thành công 3 commit mới nhất từ `origin/develop` (`852e484`, `c40cee0`, `29d2794`) tích hợp không gian làm việc bài học học sinh (`StudentCurriculumView.jsx`), cổng giáo viên (`TeacherPortalView.jsx`), tách trang lịch sử thi cử (`StudentHistoryPage.jsx`) và thanh điều hướng rút gọn (`AccountNavbar.jsx`).
-- **Khắc phục lỗi Lịch sử làm bài & Bắt đầu bài thi chẩn đoán ([`practiceService.js`](./src/services/practiceService.js))**:
-  - Sửa đường dẫn gọi API trong `getDiagnosticHistory` và `getDiagnosticResult` từ `/api/v1/practice/...` thành `/api/practice/...` (bỏ tiền tố thừa `v1`), khớp chính xác với `DiagnosticSubmissionsController` của Practice Service, loại bỏ triệt để lỗi HTTP 404 *"Không tìm thấy dữ liệu hoặc đường dẫn yêu cầu"*.
-- **Khắc phục lỗi nạp câu hỏi Luyện tập thích ứng ZPD ([`AdaptiveQuizModal.jsx`](./src/components/modals/AdaptiveQuizModal.jsx))**:
-  - Mở rộng cơ chế bóc tách câu hỏi từ đề thi của Content Service: gom câu hỏi từ cả `single_questions` lẫn câu hỏi phân bổ trong các bài đọc `passages.flatMap(p => p.questions || [])`, loại bỏ lỗi mảng câu hỏi rỗng và cảnh báo *"Chưa có câu hỏi ZPD từ Backend Content Service"*.
+- **Phân tách 2 chế độ Lộ trình học tập ([`StudentCurriculumView.jsx`](./src/components/curriculum/StudentCurriculumView.jsx), [`curriculumAccess.js`](./src/components/curriculum/curriculumAccess.js))**:
+  - Hỗ trợ chuyển đổi linh hoạt giữa:
+    - *🏫 Lớp Học Chung*: Toàn bộ cây tri thức chuẩn hóa 5 miền ĐGNL V-ACT theo cấu trúc Chương -> Bài học -> Dạng bài.
+    - *🎯 Lộ Trình Cá Nhân Riêng*: Tự động phân cụm 3 chặng học thích ứng dựa trên kết quả thi chẩn đoán (Chặng 1: Bù lỗ hổng ZPD `+75 - +110đ`, Chặng 2: Nâng cao vận dụng `+50 - +70đ`, Chặng 3: Thực chiến 900+ `+35 - +50đ`).
+- **Thiết lập ràng buộc học phí & Chế độ xem tổng quát ([`TuitionRequiredModal.jsx`](./src/components/modals/TuitionRequiredModal.jsx))**:
+  - Học sinh sau khi thi chỉ được xem cấu trúc tổng quát của lộ trình.
+  - Chặn mở bài học chi tiết, video bài giảng, phương pháp giải và luyện tập củng cố khi chưa hoàn tất học phí (`!isPaid`), tự động mở modal điều hướng đến trang thanh toán VietQR PayOS.
+- **Đồng bộ hóa luồng sau thi & Học phí ([`DiagnosticAssessmentPage.jsx`](./src/components/diagnostic/DiagnosticAssessmentPage.jsx), [`TuitionPaymentView.jsx`](./src/components/payment/TuitionPaymentView.jsx), [`App.jsx`](./src/App.jsx))**:
+  - Bổ sung banner thông báo và nút chuyển tiếp trực tiếp sang Lộ trình và Học phí ngay tại màn hình kết quả sau thi.
+  - Tích hợp lưu vết trạng thái đóng tiền (`veval_tuition_paid_${studentId}`) và nút kích hoạt nhanh phục vụ kiểm thử nghiệm thu.
 - **Kiểm thử & Biên dịch**:
-  - Chạy `node --test tests/*.test.js src/**/*.test.js`: toàn bộ test suites vượt qua 100%, `npm run lint` đạt 0 errors, `npm run build` thành công.
+  - Viết mới test suite [`tests/curriculumAccess.test.js`](./tests/curriculumAccess.test.js), toàn bộ 31/31 unit tests vượt qua 100%, `npm run lint` đạt 0 lỗi, `npm run build` thành công.

@@ -175,7 +175,15 @@ const getEmbedVideoUrl = (url) => {
   }
 };
 
-export default function CurriculumExplorerView({ role = 'student', onStartQuizModal, onNavigateDiagnostic, onOpenAiTutorWithContext }) {
+export default function CurriculumExplorerView({ 
+  role = 'student', 
+  currentUser = null,
+  latestDiagnosticResult = null,
+  onNavigateTuition,
+  onStartQuizModal, 
+  onNavigateDiagnostic, 
+  onOpenAiTutorWithContext 
+}) {
   const [domains, setDomains] = useState([]);
   const [loadingCurriculum, setLoadingCurriculum] = useState(true);
   const [activeDomainId, setActiveDomainId] = useState("");
@@ -1449,10 +1457,20 @@ export default function CurriculumExplorerView({ role = 'student', onStartQuizMo
 
   if (role === 'student') {
     return <>
-      <StudentCurriculumView domains={domains} activeDomainId={activeDomainId}
-        onSelectDomain={setActiveDomainId} chapters={chapters}
-        onSelectPattern={setSelectedPattern} onPractice={handleLaunchAdaptiveQuiz}
-        onAskAi={onOpenAiTutorWithContext} quizOpen={isQuizModalOpen} />
+      <StudentCurriculumView 
+        domains={domains} 
+        activeDomainId={activeDomainId}
+        onSelectDomain={setActiveDomainId} 
+        chapters={chapters}
+        onSelectPattern={setSelectedPattern} 
+        onPractice={handleLaunchAdaptiveQuiz}
+        onAskAi={onOpenAiTutorWithContext} 
+        quizOpen={isQuizModalOpen}
+        currentUser={currentUser}
+        latestDiagnosticResult={latestDiagnosticResult}
+        onNavigateTuition={onNavigateTuition}
+        onNavigateDiagnostic={onNavigateDiagnostic}
+      />
       {quizModal}
     </>;
   }
