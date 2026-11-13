@@ -1,7 +1,10 @@
 # UPDATE
 
-## [13/11/2026] - Triển Khai Ràng Buộc Xem Lộ Trình Sau Thi, Cơ Chế Kích Hoạt Học Phí & Khắc Phục Lỗi Lịch Sử Làm Bài
+## [13/11/2026] - Tối Giản Màn Hình Tổng Quan Học Tập, Bỏ Khối Chặng Học Giả Lập & Khắc Phục Lỗi Lịch Sử Làm Bài
 
+- **Tối giản hóa màn hình Tổng quan học tập & Bỏ khối chặng học giả lập ([`App.jsx`](./src/App.jsx))**:
+  - Gỡ bỏ hoàn toàn khối `MilestoneCard` và `LiveQnACard` tại trang tổng quan (chặng học giả lập, phòng phụ đạo mock), tập trung hoàn toàn vào các nội dung thiết thực cho học sinh.
+  - Tinh chỉnh `HeroBanner.jsx` và `MetricsGrid.jsx`: thay thế các từ ngữ kỹ thuật nội bộ ("ZPD", "DAG", "Flow 5", "IRT 2PL") bằng thông tin trực quan: Điểm năng lực ước tính, Chuỗi chuyên cần, Tiến độ lộ trình, và Trọng tâm cần cải thiện.
 - **Gia cố cơ chế tự hồi phục (Graceful Fallback) nạp lịch sử thi ([`DiagnosticAssessmentPage.jsx`](./src/components/diagnostic/DiagnosticAssessmentPage.jsx))**:
   - Bọc từng lời gọi lấy chi tiết bài nộp trong `try/catch` độc lập, tự động fallback về dữ liệu tóm tắt (`theta0`, `placementClass`, điểm số) khi gặp bài thi cũ không còn câu hỏi trên Backend Content Service.
   - Xóa bỏ triệt để lỗi crash 500 hiển thị *"Không tải được lịch sử: Đã xảy ra lỗi nội bộ trên hệ thống máy chủ Practice Service"*.
@@ -16,4 +19,4 @@
   - Bổ sung banner thông báo và nút chuyển tiếp trực tiếp sang Lộ trình và Học phí ngay tại màn hình kết quả sau thi.
   - Tích hợp lưu vết trạng thái đóng tiền (`veval_tuition_paid_${studentId}`) và nút kích hoạt nhanh phục vụ kiểm thử nghiệm thu.
 - **Kiểm thử & Biên dịch**:
-  - Viết mới test suite [`tests/curriculumAccess.test.js`](./tests/curriculumAccess.test.js), toàn bộ 31/31 unit tests vượt qua 100%, `npm run lint` đạt 0 lỗi, `npm run build` thành công.
+  - Toàn bộ 31/31 unit tests vượt qua 100%, `npm run lint` đạt 0 lỗi, `npm run build` thành công trong 1.17s.

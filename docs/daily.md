@@ -2383,3 +2383,19 @@ pm run build hoàn thành trong 1.12s, 0 lỗi cú pháp.
 - **Kiểm Thử & Biên Dịch**:
   - Toàn bộ 31/31 kiểm thử đơn vị node test vượt qua 100%.
   - Lệnh `npm run lint` và `npm run build` chạy thành công, không phát sinh bất kỳ lỗi bundle nào.
+
+---
+
+## [13/11/2026] - Tối Giản Hóa Màn Hình Tổng Quan Học Tập (Dashboard UX Clean-up) & Loại Bỏ Khối Chặng Học Giả Lập
+
+- **Loại Bỏ Khối Chặng Học & Lịch Phụ Đạo Giả Lập (`src/App.jsx`)**:
+  - Gỡ bỏ hoàn toàn cụm `MilestoneCard` ("Chặng 01 (Tổng hợp) : Luyện tập chuyên đề thích ứng...") và `LiveQnACard` ("Phòng Giải Đáp Chuyên Đề ĐGNL & Sửa Bài Socratic...").
+  - Xóa bỏ tình trạng hiển thị dữ liệu giả lập chặng học và buổi học không có thực, ngăn chặn xung đột thông tin với tính năng Lộ trình học tập (`StudentCurriculumView`) vừa xây dựng.
+- **Tinh Chỉnh HeroBanner & Bỏ Thuật Ngữ Kỹ Thuật (`src/components/dashboard/HeroBanner.jsx`)**:
+  - Tinh gọn các thông điệp truyền cảm hứng học tập: thay thế toàn bộ từ ngữ nội bộ ("ZPD", "DAG", "IRT 2PL", "Core Flow 5") bằng ngôn ngữ sư phạm dễ hiểu, tự nhiên cho học sinh và phụ huynh.
+  - Chuẩn hóa 3 nút hành động chính: *Vào học theo lộ trình* (điều hướng thẳng vào cây bài học chuẩn hoặc lộ trình thích ứng), *Đánh giá năng lực đầu vào*, *Hỏi Gia sư AI 24/7*.
+- **Chuẩn Hóa Lưới Chỉ Số Năng Lực Trọng Tâm (`src/components/dashboard/MetricsGrid.jsx`)**:
+  - Thay thế các nhãn hệ thống ("Flow 5", "Flow 2", "Flow 3", "Lộ trình DAG") bằng các chỉ số thiết thực: *Điểm năng lực ước tính (Thang 1200)*, *Kỷ luật chuyên cần*, *Tiến độ lộ trình học*, *Trọng tâm cần cải thiện*.
+- **Kiểm Thử & Biên Dịch**:
+  - Toàn bộ 31/31 unit tests đạt pass 100%.
+  - `npm run lint` đạt 0 lỗi, `npm run build` thành công trong 1.17s (giảm kích thước bundle sạch sẽ).

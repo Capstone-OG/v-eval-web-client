@@ -33,12 +33,14 @@ export default function HeroBanner({
   const daysLeft = Math.max(1, Math.ceil((examDate.getTime() - Date.now()) / 86400000));
 
   const tips = [
-    `Hệ thống đang điều phối lộ trình ZPD cá nhân hóa: ${currentMilestone}.`,
     estimatedScore > 0
-      ? `Điểm ước tính hiện tại đạt ${estimatedScore}/1200 (Dải tin cậy: ${confidenceInterval}).`
-      : 'Hoàn thành bài Khảo sát 30 câu đầu vào để hệ thống ước lượng điểm IRT 2PL thực tế.',
-    'Gia sư AI Socratic 24/7 sẵn sàng bẻ khóa tư duy từng câu hỏi sau khi hoàn thành bài làm.',
-    `Bạn đang duy trì chuỗi ${currentStreak} ngày tự học liên tiếp chuẩn Core Flow 5!`
+      ? `Điểm dự báo hiện tại: ${estimatedScore}/1200 điểm (Dải dự báo: ${confidenceInterval}).`
+      : 'Hoàn thành bài đánh giá 30 câu đầu vào để nhận dự báo điểm thi và lộ trình ôn tập phù hợp.',
+    'Lộ trình ôn luyện được cá nhân hóa theo điểm mạnh và vùng kiến thức cần bổ trợ.',
+    'Trợ lý Gia sư AI sẵn sàng gợi mở phương pháp tư duy và hướng dẫn giải chi tiết 24/7.',
+    currentStreak > 0
+      ? `Bạn đang duy trì chuỗi ${currentStreak} ngày học liên tục. Hãy tiếp tục giữ vững phong độ!`
+      : 'Học tập đều đặn mỗi ngày để xây dựng phản xạ làm bài thi nhanh và chuẩn xác!'
   ];
   const [tipIdx, setTipIdx] = useState(0);
 
@@ -100,7 +102,7 @@ export default function HeroBanner({
               onClick={handleMilestoneClick}
               className="flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl bg-[#FACC15] text-slate-950 font-black text-sm hover:bg-[#eab308] transition-all shadow-xl shadow-yellow-500/10 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
             >
-              <span>Vào học chặng hôm nay</span>
+              <span>Vào học theo lộ trình</span>
               <ArrowRight className="w-4.5 h-4.5" />
             </button>
 
@@ -110,7 +112,7 @@ export default function HeroBanner({
               className="flex items-center justify-center gap-2 px-5 py-3.5 rounded-2xl bg-white/15 hover:bg-white/25 border border-white/25 backdrop-blur-md text-white font-bold text-sm transition-all hover:scale-[1.02] cursor-pointer"
             >
               <FileText className="w-4 h-4 text-[#FACC15]" />
-              <span>Làm đề khảo sát 30 câu</span>
+              <span>Đánh giá năng lực đầu vào</span>
             </button>
 
             <button
@@ -119,7 +121,7 @@ export default function HeroBanner({
               className="flex items-center justify-center gap-2 px-5 py-3.5 rounded-2xl bg-blue-950/60 hover:bg-blue-950/80 border border-blue-400/30 backdrop-blur-md text-white font-bold text-sm transition-all hover:scale-[1.02] cursor-pointer"
             >
               <Bot className="w-4 h-4 text-[#FACC15]" />
-              <span>Hỏi AI Tutor</span>
+              <span>Hỏi Gia sư AI 24/7</span>
             </button>
           </div>
         </div>

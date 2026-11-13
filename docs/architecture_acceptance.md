@@ -1689,3 +1689,13 @@ pm run build completes in 905ms (3,013 modules transformed, 0 errors).
   - When individual legacy submissions cannot fetch detailed question keys from upstream microservices, the client seamlessly falls back to summary metrics (`theta0`, `totalScore`, `totalCorrect`, `totalQuestions`, `placementClass`, `totalTimeSpentSeconds`).
   - Eliminates frontend crashes caused by missing or unmigrated legacy exam content, ensuring consistent display of historical assessment trends.
 - **Verification**: All 31 automated test cases passed; lint verified with zero errors; production build verified.
+
+### [13/11/2026] - Student Dashboard UX Simplification & Mock Milestone Removal
+
+- **Removal of Legacy Mock Widgets (`src/App.jsx`)**:
+  - Deprecated and removed `<MilestoneCard>` and `<LiveQnACard>` from the default student dashboard layout, eliminating hardcoded mock chapters and dummy Q&A schedules.
+  - Prevents UX divergence and data conflict with the verified `StudentCurriculumView` micro-learning modules.
+- **Human-Centric Dashboard KPI Architecture (`HeroBanner.jsx`, `MetricsGrid.jsx`)**:
+  - Replaced internal engineering acronyms (`ZPD`, `DAG`, `IRT 2PL`, `Core Flow 5`) with transparent, student-accessible terminology.
+  - Re-anchored primary CTA buttons directly to verified learning flows: *Curriculum Roadmap*, *Diagnostic Assessment*, and *AI Tutor*.
+- **Verification**: All 31 automated test cases passed; bundle footprint reduced cleanly; production build verified in 1.17s.

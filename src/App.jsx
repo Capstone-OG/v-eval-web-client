@@ -25,8 +25,6 @@ import Navbar from './components/layout/Navbar';
 import HeroBanner from './components/dashboard/HeroBanner';
 import DiagnosticOnboardingCard from './components/dashboard/DiagnosticOnboardingCard';
 import MetricsGrid from './components/dashboard/MetricsGrid';
-import MilestoneCard from './components/dashboard/MilestoneCard';
-import LiveQnACard from './components/dashboard/LiveQnACard';
 import StudentParentLinkCard from './components/dashboard/StudentParentLinkCard';
 import ParentDashboardView from './components/dashboard/ParentDashboardView';
 import TeacherDashboardView from './components/dashboard/TeacherDashboardView';
@@ -529,7 +527,7 @@ export default function App() {
             <HeroBanner
               currentUser={currentUser}
               studentDashboard={studentDashboard}
-              onOpenAdaptiveQuiz={handleOpenAdaptiveQuiz}
+              onOpenAdaptiveQuiz={() => setActiveTab('roadmap')}
               onOpenDiagnostic={() => setActiveTab('diagnostic')}
               onOpenAiTutor={() => {
                 setAiTutorInitialContext(null);
@@ -544,20 +542,6 @@ export default function App() {
               onOpenZPD={handleOpenAdaptiveQuiz}
               onOpenAnalytics={() => setActiveTab('analytics')}
             />
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2">
-                <MilestoneCard
-                  currentUser={currentUser}
-                  studentDashboard={studentDashboard}
-                  onStartTask={handleOpenAdaptiveQuiz}
-                  onContinueMilestone={handleOpenAdaptiveQuiz}
-                  onStartDiagnostic={() => setActiveTab('diagnostic')}
-                />
-              </div>
-              <div className="lg:col-span-1">
-                <LiveQnACard currentUser={currentUser} />
-              </div>
-            </div>
           </div>
         );
     }
