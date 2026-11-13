@@ -2680,3 +2680,20 @@
   - Toàn bộ 31/31 unit tests đạt pass 100%.
   - `npm run lint` 0 lỗi, `npm run build` thành công trong 1.05s.
 
+---
+
+## [14/11/2026] - Bảo Vệ Tuyệt Đối Khối Hình Học 3D (`[MATH_GRAPH_3D]`), Bảng Biến Thiên (`[VARIATION_TABLE]`) & Đồ Thị 2D (`[MATH_GRAPH]`), Sửa Lỗi Tiêu Đề `**Phân tích & Lời giải:**` & Chuẩn Hóa Thẻ Chọn Chế Độ Bóc Tách AI Không Hardcode
+
+- **Chuẩn Hóa Giao Diện Thẻ Chọn Độ Sâu Bóc Tách AI (`src/components/curriculum/CurriculumExplorerView.jsx`)**:
+  - Loại bỏ hoàn toàn văn bản hardcode chuyên đề Hóa học ("Bài 1 Ester (4 dạng) & Bài 2 Lipid (3 dạng)", "quên bảo toàn O, quên tỉ lệ 1:3", "mùi thơm hoa quả, Ester của phenol...") trên cả 2 thẻ chế độ `Chuyên Dạng Đề & Bài Toán Thực Chiến` và `Chuyên Lý Thuyết Thuần & Dạng Mở Rộng`.
+  - Thay thế ký hiệu LaTeX trần `$\rightarrow$` (bị hiển thị thô trong thẻ JSX) bằng mũi tên Unicode chuẩn `→`, đồng bộ mô tả tổng quát cho mọi môn học (Toán, Lý, Hóa, Sinh, Văn, Anh...).
+
+- **Khắc Phục Lỗi `[ $MATH_GRAPH_3D$ ]` Bị Biến Thành Chuỗi KaTeX & Lỗi Dư `**` Ở `Phân tích & Lời giải:**` (`src/components/common/MathText.jsx`)**:
+  - **Giải pháp Lá Chắn Sớm (`@@mathlabblocka@@`) & Tự Chữa Lành (Auto-Heal)**:
+    + Ngay đầu hàm `normalizeMathString(text)`, tự động sửa các thẻ bị biến dạng (`[\s*\$?(\/?)\s*\$?(MATH_GRAPH_3D|MATH_GRAPH|VARIATION_TABLE|MATH_GEOMETRY_2D)\$?\s*]` -> `[$1$2]`).
+    + Trích xuất toàn bộ các khối `[MATH_GRAPH_3D]...[/MATH_GRAPH_3D]`, `[MATH_GRAPH]...[/MATH_GRAPH]`, `[VARIATION_TABLE]...[/VARIATION_TABLE]`, `[MATH_GEOMETRY_2D]...[/MATH_GEOMETRY_2D]`, `[GRAPH:...]` ra khỏi chuỗi, dọn sạch mọi dấu `$` bên trong khối, thay thế bằng placeholder chữ thường `@@mathlabblocka@@` trước mọi regex toán/hóa, và khôi phục nguyên vẹn ở cuối hàm `normalizeMathString`.
+  - **Khắc phục lỗi `Phân tích & Lời giải:**`**: Neo regex sửa nhãn `: **` vào đầu dòng/bullet `(^|[\r\n•\-]\s*)(?!\*)` và tự phục hồi chuỗi bị lồng `**Phân tích & **Lời giải:****` về `**Phân tích & Lời giải:**`.
+- **Kiểm Thử & Biên Dịch**:
+  - Chạy `npm run build` thành công 100% trong 1.41s, 0 lỗi biên dịch.
+
+

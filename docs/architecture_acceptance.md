@@ -1939,3 +1939,14 @@ pm run build completes in 905ms (3,013 modules transformed, 0 errors).
   - Replaced legacy badge asset with high-resolution authentic Vietnamese student photography (`vietnamese_student_real.jpg`) in a glassmorphic frame (`bg-white/10 backdrop-blur-md border-white/20`).
 - **Verification**: 31/31 unit tests passed; bundle verification passed in 1.05s.
 
+### [14/11/2026] - Early MathLab Block Shielding, Bold Heading Repair & Zero-Hardcode Extraction Cards
+
+- **Early Placeholder Isolation & Bold Heading Normalization (`src/components/common/MathText.jsx`)**:
+  - Added pre-repair for corrupted MathLab tags (`[\s*\$?(\/?)\s*\$?(MATH_GRAPH_3D|MATH_GRAPH|VARIATION_TABLE|MATH_GEOMETRY_2D)\$?\s*]` -> `[$1$2]`) and extracted all `[MATH_GRAPH_3D]`, `[MATH_GRAPH]`, `[VARIATION_TABLE]`, `[MATH_GEOMETRY_2D]`, and `[GRAPH:...]` blocks at the very start of `normalizeMathString(text)` using lowercase-only placeholders (`@@mathlabblocka@@`).
+  - Prevents early regex passes (`fullEqRegex`, colon-newline collapsing, chemical formula wrappers) from mutating coordinates, dimensions (`h=4,w=4`), or auxiliary lines (`A-C`, `S-O`) inside 3D/2D geometry specifications.
+  - Fixed nested bold corruption on `**Phân tích & Lời giải:**` by anchoring orphaned trailing `:**` repair to line/bullet starts.
+- **Subject-Agnostic Extraction Depth Cards (`src/components/curriculum/CurriculumExplorerView.jsx`)**:
+  - Replaced raw `$\rightarrow$` strings with clean Unicode arrows (`→`) and removed all hardcoded Ester-Lipid references from both `EXAM_PATTERNS` and `THEORY_EXTENDED` comparison cards.
+- **Verification**: Vite production build succeeded in 1.41s with zero compilation errors.
+
+
