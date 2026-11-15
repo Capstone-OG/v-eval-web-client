@@ -1777,6 +1777,14 @@ export const practiceService = {
     return (await apiClient.get(`/api/practice/roadmaps/nodes/${nodeId}`)).data;
   },
 
+  async startRoadmapStage(nodeId, studentId) {
+    return (await apiClient.post(`/api/practice/stages/${nodeId}/start`, { studentId })).data;
+  },
+
+  async submitRoadmapPreview(stageProgressId, answers) {
+    return (await apiClient.post(`/api/practice/stages/${stageProgressId}/preview-submit`, { answers })).data;
+  },
+
   async trackVideoProgress(nodeId, watchSeconds) {
     return (await apiClient.post(`/api/practice/roadmaps/nodes/${nodeId}/track-video`, { watchSeconds })).data;
   },

@@ -40,6 +40,7 @@ import SubmissionHistoryView from './components/diagnostic/SubmissionHistoryView
 import StudentHistoryPage from './components/diagnostic/StudentHistoryPage';
 import AccountSettingsPage from './components/settings/AccountSettingsPage';
 import CurriculumExplorerView from './components/curriculum/CurriculumExplorerView';
+import StudentRoadmapWorkspace from './components/roadmap/StudentRoadmapWorkspace';
 import TuitionPaymentView from './components/payment/TuitionPaymentView';
 import {
   AdaptiveQuizModal,
@@ -438,7 +439,7 @@ export default function App() {
     }
 
     if (activeTab === 'roadmap') {
-      return (
+      const curriculum = (
         <CurriculumExplorerView
           role={role === 'parent' ? 'student' : role}
           currentUser={currentUser}
@@ -449,6 +450,16 @@ export default function App() {
           onOpenAiTutorWithContext={handleOpenAiTutorWithQuestion}
         />
       );
+      if (role === 'student') {
+        return (
+          <StudentRoadmapWorkspace
+            curriculum={curriculum}
+            onNavigateDiagnostic={() => setActiveTab('diagnostic')}
+            onNavigateDashboard={() => setActiveTab('dashboard')}
+          />
+        );
+      }
+      return curriculum;
     }
 
     if (activeTab === 'tuition') {

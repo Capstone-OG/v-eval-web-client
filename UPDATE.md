@@ -1,7 +1,7 @@
 # UPDATE
 
-## [15/11/2026] - Merge develop v? t?ch h?p frontend
+## [15/11/2026] - CF2 roadmap video and quiz integration
 
-- ?? x? l? conflict gi?a nh?nh x?c th?c v? develop ? lu?ng ??ng nh?p/??ng k?, trang ??ng nh?p, curriculum, c?ng b? t?i li?u ti?n ??.
-- Gi? th?ng b?o toast c?a nh?nh hi?n t?i, ??ng th?i d?ng b? ??nh d?ng l?i API th?ng nh?t; t?ch h?p curriculum c? ph?n lu?ng h?c ph? t? develop.
-- C?c thay ??i kh?ng conflict t? c? hai nh?nh v?n ???c gi? trong index. Ch?a t?o commit.
+- Connected Content materials and video by roadmap SkillId and the Practice Stage preview quiz to each roadmap node.
+- Added a student entry point for the backend generated roadmap while preserving the existing curriculum view.
+- Production build and lint pass with existing warnings; live API behavior remains unverified.

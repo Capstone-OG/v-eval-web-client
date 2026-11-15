@@ -1995,3 +1995,8 @@ Backend follow-up: Practice sends an empty AllSkillIds mapping to AI, preventing
   - Replaced legacy badge asset with high-resolution authentic Vietnamese student photography (`vietnamese_student_real.jpg`) in a glassmorphic frame (`bg-white/10 backdrop-blur-md border-white/20`).
 - **Verification**: 31/31 unit tests passed; bundle verification passed in 1.05s.
 
+## [15/11/2026] - CF2 roadmap resources connected
+
+The backend connected roadmap is now reachable from the student workspace. Selecting a RoadmapNode fetches lesson materials and videos from Content Service by SkillId. The node also exposes the Practice Stage preview quiz, whose options omit answer keys. The existing curriculum experience remains available through the workspace switch.
+
+The frontend build and lint passed with existing warnings. Live service data, quiz availability, and video playback require runtime verification.

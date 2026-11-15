@@ -2734,3 +2734,8 @@
   - Toàn bộ 31/31 unit tests đạt pass 100%.
   - `npm run lint` 0 lỗi, `npm run build` thành công trong 1.05s.
 
+## [15/11/2026] - CF2 roadmap video and quiz wiring
+
+- Connected Content materials/video lookup by roadmap SkillId and the Practice preview quiz flow to roadmap nodes.
+- Added a student workspace switch to open the backend connected roadmap beside the existing curriculum experience.
+- Validation: production build and lint exit 0 with existing warnings. Live API and playback remain unverified.

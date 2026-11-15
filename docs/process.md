@@ -734,3 +734,13 @@ Architecture: existing curriculum, sidebar and roadmap components retain their r
 | 149 | **Tối Giản Hóa Màn Hình Tổng Quan Học Tập (Dashboard UX Clean-up)** | `src/App.jsx`, `src/components/dashboard/HeroBanner.jsx`, `src/components/dashboard/MetricsGrid.jsx` | 🟢 Hoàn thành | 100% | Loại bỏ cụm thẻ chặng học và lịch phụ đạo giả lập (`MilestoneCard`, `LiveQnACard`); tinh gọn HeroBanner và chuẩn hóa 4 thẻ KPI năng lực thân thiện với học sinh, loại bỏ toàn bộ thuật ngữ kỹ thuật ZPD, DAG, IRT |
 | 150 | **Tái Cấu Trúc Bố Cục Trang Tổng Quan Hài Hòa & Nâng Cấp Ảnh Học Sinh** | `src/App.jsx`, `src/components/dashboard/HeroBanner.jsx` | 🟢 Hoàn thành | 100% | Đưa HeroBanner lên đầu trang làm điểm nhấn chào đón; MetricsGrid ở giữa; khối hành động kép Onboarding + Phụ huynh ở chân trang; đổi ảnh gỗ sang ảnh học sinh THPT thực tế kính mờ |
 
+## [15/11/2026] - CF2 per-skill resources
+
+| Item | Status | Detail |
+| --- | --- | --- |
+| Roadmap video and materials | Connected in frontend | Calls Content Service by each RoadmapNode SkillId and renders available video, lesson text, or attachments. |
+| Roadmap preview quiz | Connected in frontend | Starts Practice Stage for the selected node; questions come through Content gRPC and responses use preview-submit. |
+| Student roadmap entry point | Connected in frontend | Students can switch between the curriculum view and backend generated roadmap. |
+| Content availability | Runtime verification pending | Skills without configured materials may return an empty list. |
+
+Validation: build and lint pass with existing warnings; live API integration remains unverified.
