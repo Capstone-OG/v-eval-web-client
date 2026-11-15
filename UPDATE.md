@@ -1,20 +1,16 @@
-# UPDATE
+# NHẬT KÝ CẬP NHẬT (UPDATE LOG) - V-EVAL WEB CLIENT
 
-## [13/11/2026] - Tối Ưu Bộ Render KaTeX/MathText, Tối Giản Bố Cục Trang Tổng Quan, Nâng Cấp Ảnh Học Sinh & Khắc Phục Lỗi Lịch Sử Làm Bài
+## [15/11/2026] - Tách Riêng Trang Thời Khóa Biểu & Điểm Danh (`StudentScheduleView` - `schedule`) Khỏi Trang Lớp Học & Live Q&A (`LiveClassQnAView` - `live`), Loại Bỏ 100% Mock Data & Hardcode Và Hiển Thị Đầy Đủ `radarChart` + `skillPriors` Trong Lịch Sử Bài Làm
 
-- **Nâng Cấp Bộ Tiền Xử Lý Công Thức Toán & Hóa Học ([`MathText.jsx`](./src/components/common/MathText.jsx))**:
-  - Khôi phục mã lệnh đơn vị rụng gạch chéo: `textmol`, `textgam`, `textg`, `textkg` -> `\text{mol}`, `\text{gam}`.
-  - Mở rộng tập toán tử suy luận và so sánh: `\implies`, `>`, `<`, `\ge`, `\le`, `\approx`, `\equiv`, `\rightleftharpoons`, `\xrightarrow`.
-  - Tự động bọc biến số đơn trước đơn vị đo: `([amVnxy])\s+(mol|gam|g|kg|lít|lit|ml)` -> `$1 $2` (ví dụ: `$a$ mol`, `$V$ lít`).
-  - Chuẩn hóa chỉ số dưới tiếng Việt cho hóa học: `k_{gốc}` -> `k_{\text{gốc}}`, `m_{dd}` -> `m_{\text{dd}}`.
-  - Thay thế chuỗi thay thế `'$$$1$$'` bằng hàm lambda match evaluator an toàn `(m, g) => '$' + g + '$'` nhằm triệt tiêu hoàn toàn lỗi ký tự escape sinh ra chuỗi `\$` lỗi trên MD Editor Plus / Chromium.
-  - Hỗ trợ số mũ & ngoặc đơn trong biểu thức nhiều vế, bỏ qua khớp nằm trong `$...$`, tách ngoặc không cân bằng ra ngoài công thức; chỉ dò từ tiếng Việt bên ngoài `\text{}`/`_{}`/`^{}` để không gỡ `$` nhầm.
-- **Tái cấu trúc bố cục trang Tổng quan theo thứ tự thị giác chuẩn mực ([`App.jsx`](./src/App.jsx), [`HeroBanner.jsx`](./src/components/dashboard/HeroBanner.jsx))**:
-  - Đưa `HeroBanner` lên vị trí đầu trang, đặt `MetricsGrid` 4 chỉ số KPI ngay phía dưới banner, bố trí khối hành động kép (`DiagnosticOnboardingCard` 70% + `StudentParentLinkCard` 30%) ở phía chân trang.
-  - Gỡ bỏ hoàn toàn khối `MilestoneCard` và `LiveQnACard` giả lập; chuyển đổi ảnh học sinh sang chân dung học sinh THPT Việt Nam thực tế (`vietnamese_student_real.jpg`).
-- **Gia cố cơ chế tự hồi phục (Graceful Fallback) nạp lịch sử thi ([`DiagnosticAssessmentPage.jsx`](./src/components/diagnostic/DiagnosticAssessmentPage.jsx))**:
-  - Bọc từng lời gọi lấy chi tiết bài nộp trong `try/catch` độc lập, tự động fallback về dữ liệu tóm tắt (`theta0`, `placementClass`, điểm số) khi gặp bài thi cũ không còn câu hỏi trên Backend Content Service.
-- **Phân tách 2 chế độ Lộ trình học tập & Ràng buộc học phí ([`StudentCurriculumView.jsx`](./src/components/curriculum/StudentCurriculumView.jsx), [`TuitionRequiredModal.jsx`](./src/components/modals/TuitionRequiredModal.jsx))**:
-  - Hỗ trợ chuyển đổi linh hoạt giữa *🏫 Lớp Học Chung* và *🎯 Lộ Trình Cá Nhân Riêng* 3 chặng thích ứng; chặn mở bài học chi tiết và luyện tập củng cố khi chưa hoàn tất học phí qua PayOS VietQR.
-- **Kiểm thử & Biên dịch**:
-  - Toàn bộ 31/31 unit tests vượt qua 100%, `npm run lint` đạt 0 lỗi, `npm run build` thành công.
+- **Tách Biệt Rạch Ròi Trang "Thời Khóa Biểu & Điểm Danh" (`schedule`) Và Trang "Lớp Học & Live Q&A" (`live`) ([`Sidebar.jsx`](./src/components/layout/Sidebar.jsx), [`App.jsx`](./src/App.jsx), [`StudentScheduleView.jsx`](./src/components/dashboard/StudentScheduleView.jsx), [`LiveClassQnAView.jsx`](./src/components/dashboard/LiveClassQnAView.jsx), [`practiceService.js`](./src/services/practiceService.js))**:
+  - Bổ sung mục menu độc lập **`id: 'schedule'` ("Thời khóa biểu & Điểm danh")** trong nhóm *Không Gian Học Viên* của `Sidebar.jsx` và `App.jsx`, tách biệt hoàn toàn với mục **`id: 'live'` ("Lớp học & Live Q&A")** trong nhóm *Luyện Tập & Gia Sư AI*.
+  - **`StudentScheduleView.jsx` (`activeTab === 'schedule'`)**: Chuyên biệt 100% cho tra cứu Thời khóa biểu theo Học kỳ (`AcademicTerms`) & Khóa học (`Courses`), Khung lịch định kỳ tuần (`ClassSchedules`), danh sách Buổi học (`ClassSessions` kèm nhãn Giảng viên dạy thay & Buổi học bù) và thống kê Điểm danh chuyên cần cá nhân thực tế (`PRESENT`, `LATE`, `EXCUSED`, `ABSENT`, `UNRECORDED`).
+  - **`LiveClassQnAView.jsx` (`activeTab === 'live'`)**: Không gian chuyên biệt cho Lớp học phần đang tham gia, Nhóm vi mô tại bàn, lịch Phụ đạo trực tuyến (`LiveQnACard`), danh sách Giảng viên hỗ trợ từ `userService` và kết nối nhanh Gia sư AI Socratic 24/7.
+  - **Loại Bỏ 100% Mock Data & Hardcode**: Xóa toàn bộ dữ liệu giả lập và giá trị gán cứng trên cả tầng Service lẫn Component; hiển thị Empty State trung thực khi dữ liệu chưa được khởi tạo từ Backend.
+
+- **Đồng Bộ & Hiển Thị Đầy Đủ `radarChart` Và `skillPriors` Khi Thi Xong Lẫn Khi Xem Lại Lịch Sử Bài Làm ([`DiagnosticAssessmentPage.jsx`](./src/components/diagnostic/DiagnosticAssessmentPage.jsx), [`SubmissionHistoryView.jsx`](./src/components/diagnostic/SubmissionHistoryView.jsx), [`practiceService.js`](./src/services/practiceService.js))**:
+  - Chuẩn hóa `normalizeRadarChart` và `normalizeSkillPriors` thuần túy từ dữ liệu API thực cho cả luồng nộp bài (`executeSubmitExam`) lẫn luồng mở lại lịch sử (`openHistoryExam`, `handleSelectSubmission`).
+  - Hiển thị đầy đủ **Biểu Đồ Radar Năng Lực (`radarChart`)** cùng **Ma Trận Tiên Nghiệm Kỹ Năng BKT `` `P(L_0)` `` & Tham Số `` `\theta_{\text{skill}}` `` (`skillPriors`)** cả ngay sau khi thi xong lẫn khi bấm vào xem lại bất kỳ bài thi nào trong Lịch sử làm bài.
+
+- **Kiểm Thử & Biên Dịch**:
+  - Vượt qua 17/17 unit tests (`node --test`), `npm run build` (`vite v8.3.0`) thành công 100% với 0 lỗi.

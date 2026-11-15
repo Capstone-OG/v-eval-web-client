@@ -8,6 +8,7 @@ import {
   Bot,
   Briefcase,
   Building2,
+  Calendar,
   ClipboardCheck,
   ChevronDown,
   CreditCard,
@@ -330,6 +331,14 @@ export default function Sidebar({
                 onClick: () => setActiveTab('roadmap')
               },
               {
+                id: 'schedule',
+                label: 'Thời khóa biểu & Điểm danh',
+                sublabel: 'Lịch học theo kỳ, khóa & chuyên cần',
+                icon: Calendar,
+                active: activeTab === 'schedule',
+                onClick: () => setActiveTab('schedule')
+              },
+              {
                 id: 'analytics',
                 label: 'Báo cáo & Dự báo Điểm',
                 sublabel: 'Phân tích BKT & Điểm mục tiêu',
@@ -370,10 +379,10 @@ export default function Sidebar({
               {
                 id: 'live',
                 label: 'Lớp học & Live Q&A',
-                sublabel: 'Tương tác trực tiếp cùng GV',
+                sublabel: 'Phụ đạo trực tuyến & Nhóm vi mô',
                 icon: Video,
-                active: false,
-                onClick: onOpenLiveClass
+                active: activeTab === 'live',
+                onClick: () => (onOpenLiveClass ? onOpenLiveClass() : setActiveTab('live'))
               }
             ]
           },
@@ -407,6 +416,7 @@ export default function Sidebar({
       { sectionTitle: 'Tổng quan', items: [entries.dashboard] },
       { sectionTitle: 'Học tập', items: [
         { ...entries.roadmap, label: 'Lộ trình của tôi' },
+        { ...entries.schedule, label: 'Thời khóa biểu & Điểm danh' },
         { ...entries.adaptive, label: 'Luyện tập' },
         { ...entries.ai, label: 'Gia sư AI' }
       ] },

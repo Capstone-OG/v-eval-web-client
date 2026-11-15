@@ -2,6 +2,23 @@
 
 ---
 
+## [15/11/2026] - Tách Riêng Trang Thời Khóa Biểu & Điểm Danh (`StudentScheduleView` - `schedule`) Khỏi Trang Lớp Học & Live Q&A (`LiveClassQnAView` - `live`), Loại Bỏ 100% Mock Data & Hardcode Và Hiển Thị Đầy Đủ `radarChart` + `skillPriors` Trong Lịch Sử Bài Làm
+
+- **Tách Biệt Rạch Ròi Trang "Thời Khóa Biểu & Điểm Danh" (`schedule`) Và Trang "Lớp Học & Live Q&A" (`live`) ([`Sidebar.jsx`](../src/components/layout/Sidebar.jsx), [`App.jsx`](../src/App.jsx), [`StudentScheduleView.jsx`](../src/components/dashboard/StudentScheduleView.jsx), [`LiveClassQnAView.jsx`](../src/components/dashboard/LiveClassQnAView.jsx), [`practiceService.js`](../src/services/practiceService.js))**:
+  - Bổ sung mục điều hướng độc lập **`id: 'schedule'` ("Thời khóa biểu & Điểm danh")** trong nhóm *Không Gian Học Viên* của `Sidebar.jsx` và `ROLE_PORTAL_DEFINITIONS.student.tabs` của `App.jsx`, tách biệt hoàn toàn với mục **`id: 'live'` ("Lớp học & Live Q&A")** trong nhóm *Luyện Tập & Gia Sư AI*.
+  - **`StudentScheduleView.jsx` (`activeTab === 'schedule'`)**: Chuyên biệt 100% cho nghiệp vụ Học vụ, Thời khóa biểu theo Học kỳ (`AcademicTerms`) & Khóa học (`Courses`), Khung lịch định kỳ tuần (`ClassSchedules`), danh sách Buổi học (`ClassSessions` kèm nhãn Học bù / Dạy thay) và Điểm danh chuyên cần cá nhân (`SessionAttendances`: `PRESENT`, `LATE`, `EXCUSED`, `ABSENT`, `UNRECORDED`).
+  - **`LiveClassQnAView.jsx` (`activeTab === 'live'`)**: Không gian chuyên biệt cho Lớp học phần đang tham gia, Nhóm vi mô tại bàn, lịch Phụ đạo trực tuyến (`LiveQnACard`), danh sách Giảng viên cơ sở từ `userService` và kết nối nhanh với Gia sư AI Socratic 24/7.
+  - **Loại Bỏ 100% Mock Data & Hardcode**: Xóa bỏ hoàn toàn hàm `buildSeedScheduleData` trong `practiceService.js` và mọi giá trị hardcode trong `StudentScheduleView.jsx`, `DiagnosticAssessmentPage.jsx`, `SubmissionHistoryView.jsx`; hiển thị Empty State trung thực khi dữ liệu chưa được tạo trên hệ thống.
+
+- **Đồng Bộ & Hiển Thị Đầy Đủ `radarChart` Và `skillPriors` Khi Thi Xong Lẫn Khi Xem Lại Lịch Sử Bài Làm ([`DiagnosticAssessmentPage.jsx`](../src/components/diagnostic/DiagnosticAssessmentPage.jsx), [`SubmissionHistoryView.jsx`](../src/components/diagnostic/SubmissionHistoryView.jsx), [`practiceService.js`](../src/services/practiceService.js))**:
+  - Bổ sung hàm chuẩn hóa `normalizeRadarChart` cùng `normalizeSkillPriors` (chỉ đọc dữ liệu thực từ API Backend, không tự suy diễn hay gán cứng fallback) trong `DiagnosticAssessmentPage.jsx` và `SubmissionHistoryView.jsx`.
+  - Render trực quan khối **Ma Trận Tiên Nghiệm Kỹ Năng BKT `` `P(L_0)` `` & Tham Số Năng Lực `` `\theta_{\text{skill}}` `` (`skillPriors`)** song hành cùng **Biểu Đồ Radar Năng Lực (`radarChart`)** trên cả màn hình Kết quả sau thi lẫn màn hình Chi tiết lịch sử bài làm.
+
+- **Kiểm Thử Vận Hành & Biên Dịch**:
+  - Toàn bộ 17/17 unit tests (`node --test`) vượt qua 100%, `npm run build` (`vite v8.3.0`) thành công với 0 lỗi.
+
+---
+
 ## [20/10/2026] - Triển Khai Hoàn Thiện Màn Hình Cài Đặt Tài Khoản, Tích Hợp Thông Tin Đại Diện Phụ Huynh (Cha HOẶC Mẹ), Mã Kết Nối Học Sinh & Học Bạ Điện Tử ĐGNL VNU-HCM 2026
 
 - **Mở Rộng Màn Hình Cài Đặt Tài Khoản (`src/components/settings/AccountSettingsPage.jsx`)**:

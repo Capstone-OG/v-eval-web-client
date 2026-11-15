@@ -242,6 +242,109 @@ function mapSkillToDomain(skillName, index) {
   return { id: 'dom_nat_sci', name: DOMAINS.dom_nat_sci.name };
 }
 
+function normalizeRadarChart(rawRadarChart, domainScores = []) {
+  if (Array.isArray(rawRadarChart) && rawRadarChart.length > 0) {
+    return rawRadarChart.map((r) => ({
+      domain_id: r.domainId || r.domain_id || '',
+      domain_name: r.domainName || r.domain_name || '',
+      student_pct: Number(r.studentPct ?? r.student_pct ?? 0),
+      benchmark_pct: Number(r.benchmarkPct ?? r.benchmark_pct ?? 80)
+    }));
+  }
+
+  const validDomains = Array.isArray(domainScores)
+    ? domainScores.filter((d) => d && d.domain_id !== 'unknown')
+    : [];
+  if (validDomains.length > 0) {
+    return validDomains.map((d) => ({
+      domain_id: d.domain_id,
+      domain_name: d.domain_name || '',
+      student_pct: Number(d.accuracy_pct ?? 0),
+      benchmark_pct: 80
+    }));
+  }
+
+  return [];
+}
+
+function normalizeSkillPriors(rawSkillPriors, skillBreakdowns = [], questions = []) {
+  if (Array.isArray(rawSkillPriors) && rawSkillPriors.length > 0) {
+    return rawSkillPriors.map((sp, idx) => {
+      const pL0 = Number(sp.pL0 ?? sp.pl0 ?? sp.p_l0 ?? 0.5);
+      const thetaSkill = Number(
+        sp.thetaSkill ??
+          sp.theta_skill ??
+          Math.log(Math.max(0.05, Math.min(0.98, pL0)) / (1 - Math.max(0.05, Math.min(0.98, pL0))))
+      );
+      return {
+        skill_id: sp.skillId || sp.skill_id || `sk_${idx + 1}`,
+        skill_name: sp.skillName || sp.skill_name || '',
+        domain_id: sp.domainId || sp.domain_id || '',
+        domain_name: sp.domainName || sp.domain_name || '',
+        theta_skill: Math.round(thetaSkill * 100) / 100,
+        p_l0: Math.round(pL0 * 10000) / 10000,
+        source: sp.source || 'measured'
+      };
+    });
+  }
+
+  if (Array.isArray(skillBreakdowns) && skillBreakdowns.length > 0) {
+    return skillBreakdowns.map((sb, idx) => {
+      const acc = Number(sb.accuracyPercentage ?? sb.accuracy_pct ?? 50);
+      const pL0 = Math.min(0.98, Math.max(0.05, Math.round((acc / 100) * 10000) / 10000));
+      const thetaSkill = Math.round(Math.log(pL0 / (1 - pL0)) * 100) / 100;
+      return {
+        skill_id: sb.skillId || sb.skill_id || `sk_${idx + 1}`,
+        skill_name: sb.skillName || sb.skill_name || '',
+        domain_id: sb.domainId || sb.domain_id || '',
+        domain_name: sb.domainName || sb.domain_name || '',
+        theta_skill: thetaSkill,
+        p_l0: pL0,
+        source: 'measured'
+      };
+    });
+  }
+
+  if (Array.isArray(questions) && questions.length > 0) {
+    const grouped = {};
+    questions.forEach((q) => {
+      const key = q.skillId || q.skill_id || q.skillName || q.skill_name;
+      if (!key) return;
+      if (!grouped[key]) {
+        grouped[key] = {
+          skill_id: String(key),
+          skill_name: q.skillName || q.skill_name || String(key),
+          domain_id: q.domainId || q.domain_id || '',
+          domain_name: q.domainName || q.domain_name || '',
+          total: 0,
+          correct: 0
+        };
+      }
+      grouped[key].total += 1;
+      if (q.isCorrect) grouped[key].correct += 1;
+    });
+
+    const entries = Object.values(grouped);
+    if (entries.length > 0) {
+      return entries.map((g) => {
+        const pL0 = Math.min(0.98, Math.max(0.05, Math.round((g.correct / Math.max(1, g.total)) * 10000) / 10000));
+        const thetaSkill = Math.round(Math.log(pL0 / (1 - pL0)) * 100) / 100;
+        return {
+          skill_id: g.skill_id,
+          skill_name: g.skill_name,
+          domain_id: g.domain_id,
+          domain_name: g.domain_name,
+          theta_skill: thetaSkill,
+          p_l0: pL0,
+          source: 'measured'
+        };
+      });
+    }
+  }
+
+  return [];
+}
+
 export default function DiagnosticAssessmentPage({
   onCompleteDiagnostic,
   onNavigateDashboard,
@@ -372,12 +475,27 @@ export default function DiagnosticAssessmentPage({
         isCorrect: q.isCorrect, timeSpent: q.timeSpentSeconds, isFlagged: false,
         speedCategory: q.timeSpentSeconds < 25 ? 'fast' : q.timeSpentSeconds > 90 ? 'slow' : 'normal'
       }));
+      const computedDomainScores = domainScoresFromQuestions(data.questions);
+      const normalizedRadar = normalizeRadarChart(
+        data.radarChart || data.radar_chart,
+        computedDomainScores,
+        data.totalCorrect,
+        data.totalQuestions
+      );
+      const normalizedPriors = normalizeSkillPriors(
+        data.skillPriors || data.skill_priors,
+        data.skillBreakdowns,
+        data.questions,
+        data.theta0
+      );
       setSelectedHistoryExam({ ...attempt, resultData: {
         theta_0: data.theta0, placement_class: data.placementClass,
-        ai_commentary: data.aiCommentary, reviewedQuestions: reviewed, domain_scores: domainScoresFromQuestions(data.questions),
+        ai_commentary: data.aiCommentary, reviewedQuestions: reviewed, domain_scores: computedDomainScores,
         weakSkills: data.weakSkills, skillBreakdowns: data.skillBreakdowns,
-        radar_chart: (data.radarChart || []).map((r) => ({ domain_id: r.domainId,
-          domain_name: r.domainName, student_pct: r.studentPct, benchmark_pct: r.benchmarkPct })),
+        radar_chart: normalizedRadar,
+        radarChart: normalizedRadar,
+        skill_priors: normalizedPriors,
+        skillPriors: normalizedPriors,
         pacing: { totalCorrect: data.totalCorrect, totalQuestions: data.totalQuestions,
           totalTimeSpent: data.totalTimeSpentSeconds,
           avgTimePerQ: data.totalQuestions ? Math.round(data.totalTimeSpentSeconds / data.totalQuestions) : 0,
@@ -1000,6 +1118,18 @@ export default function DiagnosticAssessmentPage({
       const finalTheta = apiResponse.theta0;
       const finalPlacement = apiResponse.placementClass;
       const finalSubmissionId = apiResponse.submissionId;
+      const normalizedRadar = normalizeRadarChart(
+        apiResponse.radarChart || apiResponse.radar_chart,
+        domainScoresCalculated,
+        apiResponse?.totalCorrect ?? totalCorrect,
+        apiResponse?.totalQuestions ?? questions.length
+      );
+      const normalizedPriors = normalizeSkillPriors(
+        apiResponse.skillPriors || apiResponse.skill_priors,
+        apiResponse?.skillBreakdowns,
+        apiResponse?.questions,
+        finalTheta
+      );
 
       const finalResult = {
         submission_id: finalSubmissionId,
@@ -1010,12 +1140,10 @@ export default function DiagnosticAssessmentPage({
         class_id: apiResponse?.classId || null,
         enrollment_id: apiResponse?.enrollmentId || null,
         domain_scores: domainScoresCalculated,
-        radar_chart: (apiResponse.radarChart || []).map((r) => ({
-          domain_id: r.domainId,
-          domain_name: r.domainName,
-          student_pct: r.studentPct,
-          benchmark_pct: r.benchmarkPct
-        })),
+        radar_chart: normalizedRadar,
+        radarChart: normalizedRadar,
+        skill_priors: normalizedPriors,
+        skillPriors: normalizedPriors,
         ai_commentary: apiResponse.aiCommentary || '',
         reviewedQuestions: reviewedQuestionsList,
         weakSkills: apiResponse?.weakSkills || [],
@@ -1457,6 +1585,88 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
                 </div>
 
               </div>
+
+              {/* ================================================================= */}
+              {/* BẢNG TIÊN NGHIỆM KỸ NĂNG BKT P(L0) & THAM SỐ THETA_SKILL          */}
+              {/* ================================================================= */}
+              {Array.isArray(currentDisplayResult.skill_priors) && currentDisplayResult.skill_priors.length > 0 && (
+                <div className="p-6 sm:p-7 bg-white border border-slate-200/90 rounded-3xl shadow-xl space-y-4 text-slate-900">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                    <div className="flex items-center gap-2">
+                      <Brain className="w-5 h-5 text-indigo-600" />
+                      <h3 className="text-base font-black text-slate-900">
+                        Ma Trận Tiên Nghiệm Kỹ Năng BKT P(L₀) &amp; Tham Số Năng Lực θ_skill ({currentDisplayResult.skill_priors.length} kỹ năng)
+                      </h3>
+                    </div>
+                    <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-200">
+                      Bayesian Knowledge Tracing Prior • Đồng bộ Lịch sử &amp; Kết quả Thi
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+                    {currentDisplayResult.skill_priors.map((sp, idx) => {
+                      const pl0Pct = Math.round((Number(sp.p_l0 ?? sp.pL0 ?? 0.5)) * 100);
+                      const thetaVal = Number(sp.theta_skill ?? sp.thetaSkill ?? 0);
+                      const isMastered = pl0Pct >= 75;
+                      const isWeak = pl0Pct < 55;
+
+                      return (
+                        <div
+                          key={`${sp.skill_id || idx}`}
+                          className={`p-4 rounded-2xl border space-y-2.5 transition-all ${
+                            isMastered
+                              ? 'bg-emerald-50/40 border-emerald-200'
+                              : isWeak
+                              ? 'bg-amber-50/50 border-amber-200'
+                              : 'bg-slate-50/70 border-slate-200'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <div className="text-xs sm:text-sm font-black text-slate-900 truncate">
+                                {sp.skill_name || sp.skillName}
+                              </div>
+                              <div className="text-[11px] font-semibold text-slate-500 truncate">
+                                {sp.domain_name || sp.domainName}
+                              </div>
+                            </div>
+                            <span
+                              className={`px-2 py-0.5 rounded-md text-[10px] font-black shrink-0 ${
+                                sp.source === 'measured'
+                                  ? 'bg-blue-100 text-blue-800 border border-blue-200'
+                                  : 'bg-purple-100 text-purple-800 border border-purple-200'
+                              }`}
+                            >
+                              {sp.source === 'measured' ? 'Đo trực tiếp' : 'Suy diễn DAG'}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center justify-between text-xs font-bold pt-1">
+                            <span className="text-slate-600">
+                              Xác suất làm chủ P(L₀):{' '}
+                              <strong className={isMastered ? 'text-emerald-700' : isWeak ? 'text-amber-800' : 'text-blue-700'}>
+                                {pl0Pct}% ({Number(sp.p_l0 ?? sp.pL0 ?? 0.5).toFixed(2)})
+                              </strong>
+                            </span>
+                            <span className="font-mono text-xs font-black text-indigo-700">
+                              θ = {thetaVal > 0 ? `+${thetaVal.toFixed(2)}` : thetaVal.toFixed(2)}
+                            </span>
+                          </div>
+
+                          <div className="w-full bg-slate-200/80 h-2 rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full ${
+                                isMastered ? 'bg-emerald-500' : isWeak ? 'bg-amber-500' : 'bg-blue-600'
+                              }`}
+                              style={{ width: `${Math.min(100, Math.max(5, pl0Pct))}%` }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               {/* ================================================================= */}
               {/* PERFORMANCE GROWTH TREND GRAPH OVER ATTEMPTS (Area Chart)         */}
@@ -2652,6 +2862,88 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
               </div>
             </div>
           </div>
+
+          {/* ===================================================================== */}
+          {/* BẢNG TIÊN NGHIỆM KỸ NĂNG BKT P(L0) & THAM SỐ THETA_SKILL              */}
+          {/* ===================================================================== */}
+          {Array.isArray(resultData.skill_priors) && resultData.skill_priors.length > 0 && (
+            <div className="p-6 sm:p-7 bg-white border border-slate-200/90 rounded-3xl shadow-xl space-y-4 text-slate-900">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                <div className="flex items-center gap-2">
+                  <Brain className="w-5 h-5 text-indigo-600" />
+                  <h3 className="text-base font-black text-slate-900">
+                    Ma Trận Tiên Nghiệm Kỹ Năng BKT P(L₀) &amp; Tham Số Năng Lực θ_skill ({resultData.skill_priors.length} kỹ năng)
+                  </h3>
+                </div>
+                <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-200">
+                  Bayesian Knowledge Tracing Prior • Khởi tạo Đồ thị Lộ trình Học tập
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+                {resultData.skill_priors.map((sp, idx) => {
+                  const pl0Pct = Math.round((Number(sp.p_l0 ?? sp.pL0 ?? 0.5)) * 100);
+                  const thetaVal = Number(sp.theta_skill ?? sp.thetaSkill ?? 0);
+                  const isMastered = pl0Pct >= 75;
+                  const isWeak = pl0Pct < 55;
+
+                  return (
+                    <div
+                      key={`${sp.skill_id || idx}`}
+                      className={`p-4 rounded-2xl border space-y-2.5 transition-all ${
+                        isMastered
+                          ? 'bg-emerald-50/40 border-emerald-200'
+                          : isWeak
+                          ? 'bg-amber-50/50 border-amber-200'
+                          : 'bg-slate-50/70 border-slate-200'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <div className="text-xs sm:text-sm font-black text-slate-900 truncate">
+                            {sp.skill_name || sp.skillName}
+                          </div>
+                          <div className="text-[11px] font-semibold text-slate-500 truncate">
+                            {sp.domain_name || sp.domainName}
+                          </div>
+                        </div>
+                        <span
+                          className={`px-2 py-0.5 rounded-md text-[10px] font-black shrink-0 ${
+                            sp.source === 'measured'
+                              ? 'bg-blue-100 text-blue-800 border border-blue-200'
+                              : 'bg-purple-100 text-purple-800 border border-purple-200'
+                          }`}
+                        >
+                          {sp.source === 'measured' ? 'Đo trực tiếp' : 'Suy diễn DAG'}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between text-xs font-bold pt-1">
+                        <span className="text-slate-600">
+                          Xác suất làm chủ P(L₀):{' '}
+                          <strong className={isMastered ? 'text-emerald-700' : isWeak ? 'text-amber-800' : 'text-blue-700'}>
+                            {pl0Pct}% ({Number(sp.p_l0 ?? sp.pL0 ?? 0.5).toFixed(2)})
+                          </strong>
+                        </span>
+                        <span className="font-mono text-xs font-black text-indigo-700">
+                          θ = {thetaVal > 0 ? `+${thetaVal.toFixed(2)}` : thetaVal.toFixed(2)}
+                        </span>
+                      </div>
+
+                      <div className="w-full bg-slate-200/80 h-2 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full ${
+                            isMastered ? 'bg-emerald-500' : isWeak ? 'bg-amber-500' : 'bg-blue-600'
+                          }`}
+                          style={{ width: `${Math.min(100, Math.max(5, pl0Pct))}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* ===================================================================== */}
           {/* BẢNG ĐÁNH GIÁ CHI TIẾT & ĐÁP ÁN 30 CÂU (ANSWER KEY & EXPLANATIONS)    */}
