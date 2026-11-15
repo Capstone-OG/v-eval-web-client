@@ -2031,3 +2031,18 @@ Backend follow-up: Practice sends an empty AllSkillIds mapping to AI, preventing
 - **Database Seed Alignment & Verification**:
   - Seeded 3 representative interaction logs in PostgreSQL Supabase (`v_eval_ai.ai_tutor_interaction_logs`) to ensure real-time queue hydration on initial mount.
   - All 31 automated tests passed; Vite production build verified in 1.09s with zero linter errors.
+
+### [15/11/2026] - Campus Manager Flagship Dashboard Overhaul & Percentage Scaling Normalization
+
+- **Defensive Percentage Scaling Architecture (`normalizeMasteryPct`)**:
+  - Identified and resolved a critical decimal-scaling regression where backend pre-multiplied percentages (`76.0`, `52.5`, `68.0`, `71.0`) were multiplied by 100 on the client, resulting in anomalous values (`7600%` and `6688% BKT`).
+  - Implemented `normalizeMasteryPct(val)` to dynamically detect input scale (treating `val > 1` as percentage and `val <= 1` as decimal fraction), guaranteeing 0-100% integer clamping across all four domains (`76%`, `53%`, `68%`, `71%`) and whole-campus mastery (`67% BKT`).
+- **Greeting & Hero Banner Integration (`CampusManagerDashboardView.jsx`, `App.jsx`)**:
+  - Eliminated the isolated raw `h1` greeting header above the viewport container, integrating official managerial greetings directly into the flagship royal blue-indigo `HeroBanner`.
+  - Added dynamic pedagogical message rotation (`Sparkles`) powered by Framer Motion, gold status chips (`#FACC15`), and a glassmorphic right-hand Campus Allocation Monitor card.
+- **Enterprise Comparative Heatmap Table & Micro-Group Orchestration**:
+  - Modernized the Flow 5 class comparison table with progress bars, dual-metric domain badges (`% Làm chủ` & `% Học sinh yếu`), and enhanced action triggers for micro-group seating arrangements (`ClassMicroGroupsModal`).
+  - Refined teaching faculty list with initials avatar badges, accurate status badges (Green for `Active`, Rose for `Locked`), and IAM policy notices.
+- **Early Warning Hub Visual Polish (`EarlyWarningsMentorPanel.jsx`)**:
+  - Re-architected the 6 BR-04 early-warning tier cards with modern card-shadows, responsive grid symmetry, and intuitive action buttons for tripartite parent-student counseling.
+- **Verification**: Production build verified in 1.10s; 31/31 unit tests pass; zero lint errors.

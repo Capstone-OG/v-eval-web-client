@@ -522,6 +522,7 @@ export default function App() {
       case 'manager':
         return (
           <CampusManagerDashboardView
+            currentUser={currentUser}
             onOpenProvisioning={() => setActiveTab('provision')}
           />
         );
@@ -529,6 +530,7 @@ export default function App() {
       case 'admin':
         return (
           <CampusManagerDashboardView
+            currentUser={currentUser}
             onOpenProvisioning={() => setActiveTab('provision')}
           />
         );
@@ -623,7 +625,7 @@ export default function App() {
 
           {/* Main Workspace Container */}
           <main className="min-w-0 flex-1 p-4 sm:p-6 w-full max-w-full">
-            {role !== 'student' && role !== 'parent' && activeTab === currentPortal.defaultTab && (
+            {role !== 'student' && role !== 'parent' && role !== 'manager' && activeTab === currentPortal.defaultTab && (
               <h1 className="mb-5 text-xl font-bold tracking-tight text-slate-900">{accountGreeting(role, currentUser)}</h1>
             )}
             {renderRolePortalContent()}
