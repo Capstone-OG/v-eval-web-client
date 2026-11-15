@@ -1,4 +1,5 @@
 import { clearLegacyDiagnosticData } from './diagnosticPrivacy.js';
+import { formatApiError } from '../utils/apiErrorHandler.js';
 /**
  * V-Eval API Gateway Client
  *
@@ -7,7 +8,14 @@ import { clearLegacyDiagnosticData } from './diagnosticPrivacy.js';
  * token refresh on 401, and standardized response formatting.
  */
 
-const BASE_URL = import.meta.env?.VITE_API_GATEWAY_URL || 'http://localhost:5212';
+export const getGatewayBaseUrl = () => {
+  if (typeof window !== 'undefined' && window.location.hostname.includes('pickic.io.vn')) {
+    return 'https://api.pickic.io.vn';
+  }
+  return import.meta.env?.VITE_API_GATEWAY_URL || 'http://localhost:5212';
+};
+
+const BASE_URL = getGatewayBaseUrl();
 
 const TOKEN_KEY = 'veval_access_token';
 const REFRESH_TOKEN_KEY = 'veval_refresh_token';
@@ -160,7 +168,8 @@ async function silentRefreshToken() {
  * Core HTTP Request Dispatcher
  */
 async function request(endpoint, options = {}, isRetry = false) {
-  let url = endpoint.startsWith('http') ? endpoint : `${BASE_URL}${endpoint}`;
+  const currentBaseUrl = getGatewayBaseUrl();
+  let url = endpoint.startsWith('http') ? endpoint : `${currentBaseUrl}${endpoint}`;
 
   if (options.params && typeof options.params === 'object') {
     const searchParams = new URLSearchParams();
@@ -217,34 +226,49 @@ async function request(endpoint, options = {}, isRetry = false) {
       }
     }
 
-    // Parse JSON or return empty object on 204 No Content
+    // 3. Handle 502 Bad Gateway transient connection refused during backend startup
+    if (response.status === 502 && !isRetry && !options.noRetry502) {
+      await new Promise((res) => setTimeout(res, 2000));
+      return request(endpoint, options, true);
+    }
+
+    // Parse JSON or text safely; support fetch mocks that only implement response.json()
     let data = null;
-    const contentType = response.headers.get('content-type');
-    if (contentType && contentType.includes('application/json')) {
+    const contentType = response.headers?.get?.('content-type') || '';
+    if (typeof response.text === 'function') {
+      const rawBody = await response.text();
+      if (rawBody) {
+        try {
+          data = JSON.parse(rawBody);
+        } catch {
+          data = rawBody;
+        }
+      }
+    } else if (typeof response.json === 'function' && contentType.includes('application/json')) {
       data = await response.json();
-    } else {
-      data = await response.text();
+    } else if (typeof response.json === 'function') {
+      try {
+        data = await response.json();
+      } catch {
+        data = null;
+      }
     }
 
     if (!response.ok) {
-      let errorMessage = `HTTP Error ${response.status}`;
-      if (typeof data === 'object' && data !== null) {
-        if (data.error && typeof data.error === 'object') {
-          errorMessage = data.error.description || data.error.message || JSON.stringify(data.error);
-        } else if (Array.isArray(data.errors) && data.errors.length > 0) {
-          errorMessage = data.errors.map(e => (typeof e === 'object' ? e.description || e.message : e)).join('; ');
-        } else if (data.message || data.title) {
-          errorMessage = data.message || data.title;
-        } else if (typeof data.error === 'string') {
-          errorMessage = data.error;
-        }
-      } else if (typeof data === 'string' && data.trim()) {
-        errorMessage = data;
-      }
+      const errorMessage = formatApiError(
+        data,
+        'Không thể xử lý yêu cầu lúc này. Vui lòng thử lại sau.',
+        response.status
+      );
 
       const error = new Error(errorMessage);
       error.status = response.status;
       error.data = data;
+      error.response = {
+        data,
+        status: response.status,
+        headers: response.headers
+      };
       error.headers = response.headers;
       throw error;
     }
@@ -256,14 +280,11 @@ async function request(endpoint, options = {}, isRetry = false) {
       headers: response.headers
     };
   } catch (error) {
-    if (error.status) {
+    if (typeof error?.status === 'number') {
       throw error;
     }
-    // Network / CORS Error
     const networkError = new Error(
-      error.message === 'Failed to fetch'
-        ? `Không thể kết nối đến API Gateway (${BASE_URL}). Vui lòng kiểm tra xem Gateway đang chạy tại cổng 5212.`
-        : error.message
+      formatApiError(error, 'Không thể kết nối tới máy chủ. Vui lòng thử lại sau.', 0)
     );
     networkError.status = 0;
     networkError.originalError = error;
@@ -272,7 +293,7 @@ async function request(endpoint, options = {}, isRetry = false) {
 }
 
 export const apiClient = {
-  getBaseUrl: () => BASE_URL,
+  getBaseUrl: () => getGatewayBaseUrl(),
 
   get: (endpoint, options = {}) =>
     request(endpoint, { method: 'GET', ...options }),

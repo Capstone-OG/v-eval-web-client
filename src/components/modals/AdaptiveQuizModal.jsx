@@ -32,8 +32,16 @@ export default function AdaptiveQuizModal({ isOpen, onClose, onOpenAiTutorWithCo
       .getExamDetail('11111111-1111-1111-1111-111111111111')
       .then((res) => {
         if (!isMounted) return;
-        const single = Array.isArray(res?.single_questions) ? res.single_questions : [];
-        const mapped = single.slice(0, 5).map((q, idx) => {
+        const single = Array.isArray(res?.single_questions)
+          ? res.single_questions
+          : Array.isArray(res?.singleQuestions)
+            ? res.singleQuestions
+            : [];
+        const passageQuestions = Array.isArray(res?.passages)
+          ? res.passages.flatMap((p) => (Array.isArray(p.questions) ? p.questions : []))
+          : [];
+        const rawPool = single.length > 0 ? single : passageQuestions;
+        const mapped = rawPool.slice(0, 5).map((q, idx) => {
           const rawOpts =
             q.options && typeof q.options === 'object' && !Array.isArray(q.options)
               ? [q.options.A || '', q.options.B || '', q.options.C || '', q.options.D || '']

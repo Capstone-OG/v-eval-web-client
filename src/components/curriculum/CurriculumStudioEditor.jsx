@@ -309,7 +309,10 @@ export function parseSolutionMethodSections(rawMethod) {
     /(?:^|\n)###\s*(?:[^\p{L}\p{N}\s#]+\s*)?(?:Bài toán mẫu áp dụng|Bài toán mẫu|Ví dụ áp dụng|Bài toán minh họa|Đoạn trích \/ Bài mẫu minh họa|Bài mẫu áp dụng phương pháp|Bài mẫu áp dụng|Bài mẫu minh họa|Bài mẫu)[^\n]*(?:\r?\n)([\s\S]*?)(?=(?:(?:^|\n)###\s*(?:[^\p{L}\p{N}\s#]+\s*)?(?:Các bẫy|Bẫy đề thi|Kỹ thuật Casio|Mẹo Casio|Mẹo tư duy)|$))/iu
   );
   if (sampleMatch) {
-    sampleProblem = sampleMatch[1].trim();
+    sampleProblem = sampleMatch[1]
+      .replace(/(?:^|\n)\s*undefined\s*(?=\n|$)/gi, '\n')
+      .replace(/\bundefined\b/gi, '')
+      .trim();
   }
 
   const trapsMatch = method.match(
@@ -580,9 +583,21 @@ function normalizeBloomLevel(rawLevel) {
 function cleanOptionOrText(str) {
   if (!str) return '';
   let s = unescapeLiteralNewlines(String(str)).replace(/\\+\s*$/gm, '').trim();
-  if (s.length >= 2 && s.startsWith("'") && s.endsWith("'") && !s.slice(1, -1).includes("'")) {
-    s = s.slice(1, -1).trim();
+  // Strip leading/trailing single quotes, double quotes, backticks, unicode quotes
+  s = s.replace(/^['"`‘’“”\s]+|['"`‘’“”\s]+$/g, '');
+  s = s.replace(/^(?:\([A-D]\)|[A-D][\.\:\)])\s*/i, '').trim();
+  s = s.replace(/^['"`‘’“”\s]+|['"`‘’“”\s]+$/g, '');
+
+  // Nếu là công thức hóa học dạng phẳng không có chỉ số dưới (CH3COOCH3, HCOOC2H5, C2H5OH, H2SO4)
+  if (/^[A-Z][a-zA-Z0-9\(\)\-+]*$/.test(s) && /\d/.test(s)) {
+    s = s.replace(/([A-Z][a-z]?|\))(\d+)/g, '$1_$2');
   }
+
+  // Nếu là công thức chứa chỉ số dưới chưa bọc KaTeX, tự động bọc trong $...$
+  if (/^[A-Za-z0-9_\(\)\+\-\*\^]+$/.test(s) && /_/.test(s) && !s.startsWith('$')) {
+    s = `$${s}$`;
+  }
+
   return s;
 }
 
@@ -2267,7 +2282,7 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
                                         {opt.key}
                                       </span>
                                       <div className="flex-1 break-words overflow-x-auto">
-                                        <MathText text={opt.text} />
+                                        <MathText text={cleanOptionOrText(opt.text)} />
                                       </div>
                                     </div>
                                   );

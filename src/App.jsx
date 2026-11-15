@@ -26,8 +26,6 @@ import Navbar from './components/layout/Navbar';
 import HeroBanner from './components/dashboard/HeroBanner';
 import DiagnosticOnboardingCard from './components/dashboard/DiagnosticOnboardingCard';
 import MetricsGrid from './components/dashboard/MetricsGrid';
-import MilestoneCard from './components/dashboard/MilestoneCard';
-import LiveQnACard from './components/dashboard/LiveQnACard';
 import StudentParentLinkCard from './components/dashboard/StudentParentLinkCard';
 import ParentDashboardView from './components/dashboard/ParentDashboardView';
 import TeacherDashboardView from './components/dashboard/TeacherDashboardView';
@@ -416,6 +414,8 @@ export default function App() {
           isEmbedded={true}
           onNavigateDashboard={() => setActiveTab('dashboard')}
           onNavigateHistory={() => setActiveTab('history')}
+          onNavigateRoadmap={() => setActiveTab('roadmap')}
+          onNavigateTuition={() => setActiveTab('tuition')}
           onCompleteDiagnostic={(res) => {
             setLatestDiagnosticResult(res);
           }}
@@ -441,6 +441,10 @@ export default function App() {
       return (
         <CurriculumExplorerView
           role={role === 'parent' ? 'student' : role}
+          currentUser={currentUser}
+          latestDiagnosticResult={latestDiagnosticResult}
+          onNavigateTuition={() => setActiveTab('tuition')}
+          onNavigateDiagnostic={() => setActiveTab('diagnostic')}
           onStartTopicQuiz={handleOpenAdaptiveQuiz}
           onOpenAiTutorWithContext={handleOpenAiTutorWithQuestion}
         />
@@ -452,6 +456,7 @@ export default function App() {
         <TuitionPaymentView
           currentUser={currentUser}
           onBackToDashboard={() => setActiveTab('dashboard')}
+          onNavigateRoadmap={() => setActiveTab('roadmap')}
         />
       );
     }
@@ -521,16 +526,10 @@ export default function App() {
       default:
         return (
           <div className="space-y-6 animate-fade">
-            <div className="grid grid-cols-1 items-stretch gap-5 xl:grid-cols-[minmax(0,7fr)_minmax(0,3fr)]">
-              <DiagnosticOnboardingCard key={currentUser?.userId || currentUser?.id || currentUser?.studentId}
-                currentUser={currentUser} onOpenDiagnostic={() => setActiveTab('diagnostic')}
-                onOpenRoadmap={() => setActiveTab('roadmap')} />
-              <StudentParentLinkCard currentUser={currentUser} />
-            </div>
             <HeroBanner
               currentUser={currentUser}
               studentDashboard={studentDashboard}
-              onOpenAdaptiveQuiz={handleOpenAdaptiveQuiz}
+              onOpenAdaptiveQuiz={() => setActiveTab('roadmap')}
               onOpenDiagnostic={() => setActiveTab('diagnostic')}
               onOpenAiTutor={() => {
                 setAiTutorInitialContext(null);
@@ -545,19 +544,11 @@ export default function App() {
               onOpenZPD={handleOpenAdaptiveQuiz}
               onOpenAnalytics={() => setActiveTab('analytics')}
             />
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2">
-                <MilestoneCard
-                  currentUser={currentUser}
-                  studentDashboard={studentDashboard}
-                  onStartTask={handleOpenAdaptiveQuiz}
-                  onContinueMilestone={handleOpenAdaptiveQuiz}
-                  onStartDiagnostic={() => setActiveTab('diagnostic')}
-                />
-              </div>
-              <div className="lg:col-span-1">
-                <LiveQnACard currentUser={currentUser} />
-              </div>
+            <div className="grid grid-cols-1 items-stretch gap-5 xl:grid-cols-[minmax(0,7fr)_minmax(0,3fr)]">
+              <DiagnosticOnboardingCard key={currentUser?.userId || currentUser?.id || currentUser?.studentId}
+                currentUser={currentUser} onOpenDiagnostic={() => setActiveTab('diagnostic')}
+                onOpenRoadmap={() => setActiveTab('roadmap')} />
+              <StudentParentLinkCard currentUser={currentUser} />
             </div>
           </div>
         );

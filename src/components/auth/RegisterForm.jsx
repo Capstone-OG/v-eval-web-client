@@ -157,12 +157,12 @@ export default function RegisterForm({
           ) : emailValidationStatus === 'checking' ? (
             <p className="text-[10px] font-bold text-blue-600 mt-1 flex items-center gap-1 animate-fade">
               <Loader2 className="w-3 h-3 animate-spin shrink-0" />
-              <span>Đang kiểm tra tính hợp lệ & máy chủ mail (MX)...</span>
+              <span>Đang kiểm tra địa chỉ email...</span>
             </p>
           ) : emailValidationStatus === 'valid' ? (
             <p className="text-[10px] font-bold text-emerald-600 mt-1 flex items-center gap-1 animate-fade">
               <CheckCircle2 className="w-3 h-3 shrink-0" />
-              <span>{emailValidationMessage || 'Email hợp lệ (Máy chủ mail MX hoạt động)'}</span>
+              <span>{emailValidationMessage || 'Email hợp lệ, sẵn sàng đăng ký'}</span>
             </p>
           ) : null}
         </div>

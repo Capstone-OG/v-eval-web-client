@@ -200,7 +200,15 @@ export const authService = {
    * @param {string} email
    */
   async forgotPassword(email) {
-    return (await apiClient.post('/api/auth/forgot-password', { email })).data;
+    const cleanEmail = (email || '').trim().toLowerCase();
+    try {
+      return (await apiClient.post('/api/auth/forgot-password', { email: cleanEmail })).data;
+    } catch (err) {
+      if (err.status === 404) {
+        return (await apiClient.post('/api/v1/identity/auth/forgot-password', { email: cleanEmail })).data;
+      }
+      throw err;
+    }
   },
 
   /**
@@ -213,7 +221,14 @@ export const authService = {
       email: (email || '').trim().toLowerCase(),
       otpCode: (otpCode || '').trim()
     };
-    return (await apiClient.post('/api/auth/verify-reset-otp', payload)).data;
+    try {
+      return (await apiClient.post('/api/auth/verify-reset-otp', payload)).data;
+    } catch (err) {
+      if (err.status === 404) {
+        return (await apiClient.post('/api/v1/identity/auth/verify-reset-otp', payload)).data;
+      }
+      throw err;
+    }
   },
 
   /**
@@ -221,7 +236,19 @@ export const authService = {
    * @param {Object} data - { email, otpCode, newPassword }
    */
   async resetPassword(data) {
-    return (await apiClient.post('/api/auth/reset-password', data)).data;
+    const payload = {
+      ...data,
+      email: (data?.email || '').trim().toLowerCase(),
+      otpCode: (data?.otpCode || '').trim()
+    };
+    try {
+      return (await apiClient.post('/api/auth/reset-password', payload)).data;
+    } catch (err) {
+      if (err.status === 404) {
+        return (await apiClient.post('/api/v1/identity/auth/reset-password', payload)).data;
+      }
+      throw err;
+    }
   },
 
   /**

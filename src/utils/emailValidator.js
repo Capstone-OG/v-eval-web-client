@@ -262,13 +262,13 @@ export async function verifyEmailDnsMxAsync(domain) {
     if (data.Status === 3) {
       return {
         hasMx: false,
-        message: `Tên miền email "@${domain}" không tồn tại trên hệ thống tên miền quốc tế (DNS NXDOMAIN).`
+        message: `Tên miền email "@${domain}" không tồn tại hoặc không thể nhận thư.`
       };
     }
     if (data.Status !== 0) {
       return {
         hasMx: false,
-        message: `Không thể xác minh máy chủ nhận thư của tên miền "@${domain}".`
+        message: `Không thể xác minh địa chỉ email với tên miền "@${domain}".`
       };
     }
 
@@ -280,7 +280,7 @@ export async function verifyEmailDnsMxAsync(domain) {
     if (!validMx) {
       return {
         hasMx: false,
-        message: `Tên miền "@${domain}" không có máy chủ nhận thư (MX Record). Vui lòng nhập email thật có thể nhận mã OTP.`
+        message: `Tên miền "@${domain}" không thể nhận email. Vui lòng nhập email thật có thể nhận mã OTP.`
       };
     }
 
@@ -290,37 +290,48 @@ export async function verifyEmailDnsMxAsync(domain) {
   }
 }
 
+function sanitizeEmailMessage(message) {
+  if (typeof message !== 'string') return '';
+  if (/máy chủ (nhận )?thư|MX\b|DNS\b|NXDOMAIN/i.test(message)) {
+    return /hợp lệ/i.test(message)
+      ? 'Email hợp lệ, sẵn sàng đăng ký.'
+      : 'Địa chỉ email hoặc tên miền không thể nhận thư. Vui lòng kiểm tra lại.';
+  }
+  return message;
+}
+
 export async function validateEmailComprehensive(rawEmail, backendValidateFn) {
   const syncResult = validateEmailSyntaxAndRules(rawEmail);
   if (!syncResult.isValid) {
     return syncResult;
   }
 
-  // 1. Ưu tiên gọi Backend API (/api/auth/validate-email) để kiểm tra cả DNS MX và trùng lặp tài khoản trong DB
+  // 1. Ưu tiên gọi Backend API (/api/auth/validate-email) để kiểm tra tên miền & trùng lặp tài khoản
   if (typeof backendValidateFn === 'function') {
     try {
       const beRes = await backendValidateFn(syncResult.email);
       if (beRes && typeof beRes.isValid === 'boolean') {
+        const isOk = beRes.isValid && beRes.isAvailable !== false;
         return {
-          isValid: beRes.isValid && beRes.isAvailable !== false,
+          isValid: isOk,
           hasMxRecord: Boolean(beRes.hasMxRecord),
           isAvailable: beRes.isAvailable !== false,
           email: beRes.email || syncResult.email,
           domain: beRes.domain || syncResult.domain,
           message:
-            beRes.message ||
-            (beRes.isValid
-              ? 'Email hợp lệ (Đã xác minh máy chủ nhận thư MX & sẵn sàng đăng ký).'
+            sanitizeEmailMessage(beRes.message) ||
+            (isOk
+              ? 'Email hợp lệ, sẵn sàng đăng ký.'
               : 'Email không hợp lệ.'),
           suggestedEmail: beRes.suggestedEmail || null
         };
       }
     } catch {
-      // Nếu gọi BE gặp lỗi tạm thời, tiếp tục kiểm tra DNS MX trực tiếp qua Google DoH
+      // Nếu gọi BE gặp lỗi tạm thời, tiếp tục kiểm tra DNS qua Google DoH
     }
   }
 
-  // 2. Dự phòng kiểm tra trực tiếp bản ghi DNS MX qua Google DNS-over-HTTPS
+  // 2. Dự phòng kiểm tra trực tiếp bản ghi DNS qua Google DNS-over-HTTPS
   const mxCheck = await verifyEmailDnsMxAsync(syncResult.domain);
   if (!mxCheck.hasMx) {
     return {
@@ -338,7 +349,7 @@ export async function validateEmailComprehensive(rawEmail, backendValidateFn) {
     isAvailable: true,
     email: syncResult.email,
     domain: syncResult.domain,
-    message: 'Email hợp lệ (Đã xác minh máy chủ nhận thư MX).'
+    message: 'Email hợp lệ, sẵn sàng đăng ký.'
   };
 }
 
