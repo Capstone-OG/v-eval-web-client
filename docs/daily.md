@@ -4,10 +4,14 @@
 
 ## [15/11/2026] - Triển Khai Cơ Chế Lưu Phiên Hội Thoại Đa Lượt & Thanh Điều Hướng Lịch Sử Gia Sư AI Socratic (Hybrid Client Storage & Supabase Cloud Sync)
 
-- **Khắc Phục Lỗi Hiển Thị Chi Tiết Lịch Sử Làm Bài Khảo Thí ĐGNL (`src/components/diagnostic/DiagnosticAssessmentPage.jsx`)**:
+- **Tối Ưu Hóa Giao Diện Hiển Thị Lịch Sử Làm Bài & Chuẩn Hóa Typography Ngữ Liệu (`src/components/diagnostic/DiagnosticAssessmentPage.jsx`)**:
+  - **Chuẩn hóa Huy hiệu Miền Năng lực**: Ánh xạ chuẩn xác kỹ năng Đọc hiểu sang miền `Sử dụng Ngôn ngữ & Văn học` (`dom_lang`) với badge màu xanh lục (`bg-emerald-50 text-emerald-700 border-emerald-200`), xóa bỏ hoàn toàn lỗi hiển thị nhầm thành *"Toán học & Tư duy định lượng"*.
+  - **Khắc phục triệt để lỗi Font chữ & Dấu tiếng Việt**: Loại bỏ thuộc tính `font-serif` gây xung đột font dự phòng KaTeX trên Windows (lỗi hiển thị dấu sắc trôi nổi như `số´ng`, `quố´c`, `biê´n`), chuyển sang font chuẩn hệ thống `font-sans` (`Plus Jakarta Sans`) sắc nét, mượt mà.
+  - **Nâng cấp Khung Ngữ liệu Đọc hiểu**: Thay thế bộ cắt dòng 3 dòng (`line-clamp-3`) bằng container bài đọc ngữ cảnh chuyên nghiệp (`max-h-72 overflow-y-auto whitespace-pre-line`), bổ sung tiêu đề ngữ liệu kèm icon `BookOpen` và nhãn `Bài đọc ngữ cảnh`.
+  - **Tối ưu hóa Lưới Phương án Trắc nghiệm**: Mở rộng padding thẻ lựa chọn (`p-3.5 sm:p-4`), tích hợp viền bo tròn, hiệu ứng ring tinh tế cho đáp án đúng (`ring-1 ring-emerald-500/30`) và đáp án học sinh chọn sai (`ring-1 ring-rose-500/30`) kèm icon `Check` và `X` trực quan.
+  - **Trau chuốt Lời giải Chi tiết**: Tinh chỉnh văn phong lời giải fallback phù hợp cho mọi phân môn ("nắm vững kiến thức trọng tâm và kỹ năng tư duy"), loại bỏ từ ngữ toán học "định lý" khi áp dụng cho môn Ngữ văn/Khoa học.
   - **Khắc phục triệt để thông báo placeholder `"API lịch sử không cung cấp nội dung câu hỏi."`**: Nâng cấp hàm `openHistoryExam` trực tiếp tiêu thụ DTO giàu dữ liệu (`data.questions`) được làm giàu tự động từ backend Practice Service thông qua pipeline gRPC với Content Service (`q.content`, `q.options`, `q.explanation`, `q.passageContent`, `q.passageTitle`), kết hợp cơ chế lập chỉ mục linh hoạt.
   - **Khử bỏ hoàn toàn lỗi `"Câu 0:"` và `"Bloom 0/6"`**: Tự động kế thừa thứ tự câu và độ khó Bloom chuẩn hóa từ backend (`q.questionOrder` và `q.difficultyLevel`), kết hợp bộ đệm an toàn theo chỉ mục (`idx + 1`) không phụ thuộc vào chuỗi hardcode.
-  - **Hiển thị đầy đủ lưới 4 phương án A/B/C/D, ngữ cảnh bài đọc & Lời giải chi tiết**: Tái tạo trọn vẹn danh sách phương án trắc nghiệm với công thức KaTeX, đánh dấu nổi bật phương án đúng (xanh lục), phương án học sinh chọn sai (đỏ), và hiển thị trọn vẹn ngữ cảnh bài đọc hiểu.
 - **Triển Khai Phân Hệ Quản Lý Phiên Hội Thoại Gia Sư AI Socratic (`src/utils/aiSessionManager.js`, `tests/aiSessionManager.test.js`)**:
   - **Kiến trúc Lai Tiến Tiến (Hybrid Progressive Session Management)**: Xây dựng module quản lý phiên hội thoại đa lượt độc lập cách ly theo định danh học sinh (`veval_socratic_sessions_${userId}`).
   - **Lưu trữ Cục bộ Tức thì (Zero Latency Persistence)**: Tự động lưu trữ và đồng bộ hóa toàn bộ chuỗi tin nhắn hỏi - đáp, câu hỏi đang xét, phương án học sinh chọn sai và bối cảnh đề thi ngay trong thời gian thực khi AI stream phản hồi, chấm dứt hoàn toàn hiện tượng mất dữ liệu khi đóng modal hoặc tải lại trang.
