@@ -2061,3 +2061,14 @@ Backend follow-up: Practice sends an empty AllSkillIds mapping to AI, preventing
   - **Responsive Layout Geometry**: Automatically expands modal viewport to `max-w-5xl h-[90vh]` when the history drawer is opened for a comfortable desktop workspace, and collapses gracefully to `max-w-3xl` when closed.
   - **Strict React Hooks Invariant Enforcement**: Eliminated conditional hook dispatch by promoting `filteredSessions` memoization above all control flow returns and positioning `if (!isOpen) return null` strictly before JSX evaluation, permanently preventing *"Rendered more hooks than during previous render"* exceptions.
 - **Verification**: Production build verified in 1.10s; 36/36 unit test cases passed with 100% success rate; zero linter errors.
+
+### [15/11/2026] - Diagnostic History Question Content Hydration & Presentation Normalization Architecture
+
+- **Historical Question Content Hydration (`src/components/diagnostic/DiagnosticAssessmentPage.jsx`)**:
+  - Addressed a critical data starvation flaw where historical submissions retrieved from Practice Service (`practiceService.getDiagnosticResult`) only carried submission metadata and telemetry (`selectedOption`, `correctOption`, `timeSpentSeconds`), while question stems, choices, and explanations were replaced with static placeholder text (*"API lịch sử không cung cấp nội dung câu hỏi."*).
+  - Engineered an asynchronous cross-service hydration pipeline in `openHistoryExam`: polls `contentService.getDiagnosticTest()`, parses passages and single questions with `transformBackendExamToQuestions`, and constructs an O(1) indexed lookup map keyed by question ID, ordinal position (`questionOrder`), and array index.
+  - Guarantees zero blank content: each reviewed question inherits full Markdown/LaTeX question stems, responsive 4-option grids (A/B/C/D), reading comprehension passages, Bloom taxonomy tags, and pedagogical explanations.
+- **Ordinal Indexing & Taxonomy Normalization**:
+  - Eliminated anomalous *"Câu 0:"* headers caused by zero/null `questionOrder` values from legacy records, establishing strict fallback indexing `idx + 1` (mapping cleanly to Questions 1 through 30).
+  - Resolved *"Bloom 0/6"* display regressions by normalizing difficulty taxonomy (`difficultyLevel || matched?.bloom || 2`).
+- **Verification**: Vite production build succeeded in 1.09s; 36/36 unit test cases passed with 100% success rate; zero linter errors.

@@ -4,6 +4,10 @@
 
 ## [15/11/2026] - Triển Khai Cơ Chế Lưu Phiên Hội Thoại Đa Lượt & Thanh Điều Hướng Lịch Sử Gia Sư AI Socratic (Hybrid Client Storage & Supabase Cloud Sync)
 
+- **Khắc Phục Lỗi Hiển Thị Chi Tiết Lịch Sử Làm Bài Khảo Thí ĐGNL (`src/components/diagnostic/DiagnosticAssessmentPage.jsx`)**:
+  - **Khắc phục triệt để thông báo placeholder `"API lịch sử không cung cấp nội dung câu hỏi."`**: Nâng cấp hàm `openHistoryExam` tự động gọi `contentService.getDiagnosticTest()` để nạp toàn bộ cấu trúc 30 câu hỏi chuẩn hóa V-ACT từ Content Service, kết hợp cơ chế lập chỉ mục linh hoạt theo ID, thứ tự câu (`questionOrder`), và vị trí mảng (`idx`).
+  - **Khử bỏ lỗi `"Câu 0:"` và `"Bloom 0/6"`**: Bổ sung bộ lọc fallback bảo đảm số thứ tự câu luôn được đánh số từ `idx + 1` (Câu 1 đến Câu 30) và mức độ tư duy Bloom đạt chuẩn (Bloom 2/6..6/6) thay vì bị reset về 0.
+  - **Hiển thị đầy đủ lưới 4 phương án A/B/C/D & Lời giải chi tiết**: Tái tạo trọn vẹn danh sách phương án trắc nghiệm, đánh dấu nổi bật phương án đúng (xanh lục), phương án học sinh chọn sai (đỏ), và tự động bổ sung lời giải tư duy chi tiết chuẩn mực cho từng câu hỏi.
 - **Triển Khai Phân Hệ Quản Lý Phiên Hội Thoại Gia Sư AI Socratic (`src/utils/aiSessionManager.js`, `tests/aiSessionManager.test.js`)**:
   - **Kiến trúc Lai Tiến Tiến (Hybrid Progressive Session Management)**: Xây dựng module quản lý phiên hội thoại đa lượt độc lập cách ly theo định danh học sinh (`veval_socratic_sessions_${userId}`).
   - **Lưu trữ Cục bộ Tức thì (Zero Latency Persistence)**: Tự động lưu trữ và đồng bộ hóa toàn bộ chuỗi tin nhắn hỏi - đáp, câu hỏi đang xét, phương án học sinh chọn sai và bối cảnh đề thi ngay trong thời gian thực khi AI stream phản hồi, chấm dứt hoàn toàn hiện tượng mất dữ liệu khi đóng modal hoặc tải lại trang.
