@@ -733,4 +733,46 @@ Architecture: existing curriculum, sidebar and roadmap components retain their r
 | 148 | **Gia Cố Cơ Chế Tự Hồi Phục Fallback Khi Nạp Lịch Sử Làm Bài** | `src/components/diagnostic/DiagnosticAssessmentPage.jsx` | 🟢 Hoàn thành | 100% | Bọc từng lời gọi `getDiagnosticResult` trong try/catch độc lập, tự động fallback lấy `theta0` từ summary DTO nếu bài cũ bị lỗi backend; triệt tiêu 100% nguy cơ crash màn hình lịch sử |
 | 149 | **Tối Giản Hóa Màn Hình Tổng Quan Học Tập (Dashboard UX Clean-up)** | `src/App.jsx`, `src/components/dashboard/HeroBanner.jsx`, `src/components/dashboard/MetricsGrid.jsx` | 🟢 Hoàn thành | 100% | Loại bỏ cụm thẻ chặng học và lịch phụ đạo giả lập (`MilestoneCard`, `LiveQnACard`); tinh gọn HeroBanner và chuẩn hóa 4 thẻ KPI năng lực thân thiện với học sinh, loại bỏ toàn bộ thuật ngữ kỹ thuật ZPD, DAG, IRT |
 | 150 | **Tái Cấu Trúc Bố Cục Trang Tổng Quan Hài Hòa & Nâng Cấp Ảnh Học Sinh** | `src/App.jsx`, `src/components/dashboard/HeroBanner.jsx` | 🟢 Hoàn thành | 100% | Đưa HeroBanner lên đầu trang làm điểm nhấn chào đón; MetricsGrid ở giữa; khối hành động kép Onboarding + Phụ huynh ở chân trang; đổi ảnh gỗ sang ảnh học sinh THPT thực tế kính mờ |
+| 151 | **Bảo Vệ Khối Hình Học 3D (`[MATH_GRAPH_3D]`), BBT (`[VARIATION_TABLE]`) & Đồ Thị 2D (`[MATH_GRAPH]`), Sửa Lỗi `Phân tích & Lời giải:**` & Chuẩn Hóa UI Card Bóc Tách AI** | `src/components/common/MathText.jsx`, `src/components/curriculum/CurriculumExplorerView.jsx` | 🟢 Hoàn thành | 100% | Cô lập sớm toàn bộ khối đồ thị bằng placeholder `@@mathlabblocka@@` và tự chữa lành thẻ hỏng `[$MATH_GRAPH_3D$]`; sửa lỗi lồng `**Phân tích & **Lời giải:****`; thay `$\rightarrow$` bằng `→` và xóa toàn bộ mô tả hardcode Ester-Lipid trên 2 thẻ chọn chế độ bóc tách AI |
+| 152 | **Tách Riêng Trang Thời Khóa Biểu & Điểm Danh (`StudentScheduleView` - `schedule`) Và Trang Lớp Học & Live Q&A (`LiveClassQnAView` - `live`), Loại Bỏ 100% Mock Data & Hardcode** | `src/components/dashboard/StudentScheduleView.jsx`, `src/components/dashboard/LiveClassQnAView.jsx`, `src/components/layout/Sidebar.jsx`, `src/App.jsx`, `src/services/practiceService.js` | 🟢 Hoàn thành | 100% | Tách `schedule` (`StudentScheduleView`) thành trang Thời khóa biểu & Điểm danh độc lập và `live` (`LiveClassQnAView`) thành trang Lớp học & Live Q&A riêng biệt; xóa 100% mock/seed fallback và hardcode |
+| 153 | **Hiển Thị Đầy Đủ `radarChart` & `skillPriors` Khi Thi Xong Và Khi Xem Lại Lịch Sử Bài Làm** | `src/components/diagnostic/DiagnosticAssessmentPage.jsx`, `src/components/diagnostic/SubmissionHistoryView.jsx`, `src/services/practiceService.js` | 🟢 Hoàn thành | 100% | Ánh xạ và hiển thị đồng nhất Biểu đồ Radar năng lực (`radarChart`) cùng Ma trận tiên nghiệm kỹ năng BKT `` `P(L_0)` `` & `` `\theta_{\text{skill}}` `` (`skillPriors`) từ API thực cả lúc vừa thi xong lẫn khi mở lại lịch sử bài làm |
+| 154 | **Đồng Bộ Học Phí Thực Tế Từ DB, Khối Gói Học Kích Hoạt, 6 Quyền Lợi Mở Khóa & Hóa Đơn PayOS** | `src/components/payment/TuitionPaymentView.jsx`, `src/components/curriculum/curriculumAccess.js`, `src/components/curriculum/StudentCurriculumView.jsx`, `src/services/paymentService.js` | 🟢 Hoàn thành | 100% | Đồng bộ trạng thái học phí `isPaid` tự động từ DB PostgreSQL qua `syncTuitionStatusFromServer`, hiển thị thẻ gói học đang hoạt động (`courseName`, `courseCode`, thời hạn, lớp phân bổ), lưới 6 phân hệ đã mở khóa (PLAR, Bài giảng, ZPD, Socratic, Thời khóa biểu, Live Q&A), bảng lịch sử giao dịch PayOS thực tế và modal kiểm toán biên lai |
 
+
+## [15/11/2026] - CF2 per-skill resources
+
+| Item | Status | Detail |
+| --- | --- | --- |
+| Roadmap video and materials | Connected in frontend | Calls Content Service by each RoadmapNode SkillId and renders available video, lesson text, or attachments. |
+| Roadmap preview quiz | Connected in frontend | Starts Practice Stage for the selected node; questions come through Content gRPC and responses use preview-submit. |
+| Student roadmap entry point | Connected in frontend | Students can switch between the curriculum view and backend generated roadmap. |
+| Content availability | Runtime verification pending | Skills without configured materials may return an empty list. |
+
+Validation: build and lint pass with existing warnings; live API integration remains unverified.
+
+## [16/11/2026] - Diagnostic API result normalization
+
+| Item | Status | Detail |
+| --- | --- | --- |
+| Existing diagnostic report tabs and sidebar | Preserved | No layout or navigation changes from the TNhan branch. |
+| Radar chart API payload | Frontend normalized | Accepts camelCase and snake_case fields; if the API omits the radar array, groups API-returned question results by domain for student percentages. Benchmark values are rendered only when returned by API. |
+| Skill mastery priors | Frontend normalized and displayed | Overview matrix and analysis profile accept API `skillPriors`/`skill_priors` and field aliases; values remain sourced from the response. |
+| Historical API population | Backend follow-up | The history endpoint must return per-submission radar and skill-prior data for these panels to show it. |
+| Runtime verification | Pending | Live API data was not checked. |
+
+
+## Progress update ? 16/11/2026
+
+| Work item | Status | Detail |
+| --- | --- | --- |
+| Student curriculum and math rendering | Integrated | Synced the pulled access and KaTeX-safe rendering changes. |
+| Tuition and payment | Integrated | Synced database-backed tuition status, course entitlement, payment list, and receipt UI. |
+| Diagnostic results and history | Integrated | Synced API result/history presentation while retaining TNhan-specific diagnostic work. |
+| Live classroom and schedule | Integrated | Synced student Live Q&A, schedule, and attendance views with sidebar routing. |
+| Practice service helper | Corrected | Added the missing GUID matcher referenced by the incoming helpers. |
+| Build/runtime verification | Pending | Not run during this integration. |
+
+| Diagnostic JSX parse error | Fixed | Removed the incomplete duplicate trend-chart wrapper; Vite production build succeeds. |
+
+| API-only radar and prior values | Corrected | No synthetic benchmark or default mastery values are displayed when omitted by API. |
+| Diagnostic report runtime references | Corrected | Reused normalized skill priors and removed a dangling component reference. |

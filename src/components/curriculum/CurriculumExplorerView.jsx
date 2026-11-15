@@ -4181,19 +4181,19 @@ export default function CurriculumExplorerView({
                                 <ul className="text-[10.5px] text-slate-700 space-y-1.5 font-medium pt-2 border-t border-purple-100">
                                   <li className="flex items-start gap-1.5">
                                     <span className="text-purple-600 font-black shrink-0">✓</span>
-                                    <span><strong>Tách riêng 100% từng Bài học con</strong>: Phân tách rõ ràng Bài 1 Ester (4 dạng) & Bài 2 Lipid (3 dạng) - không gộp.</span>
+                                    <span><strong>Tách riêng 100% từng Bài học & Dạng bài</strong>: Tự động nhận diện đầy đủ các Bài học và phân rã chi tiết 4–6+ dạng bài trọng tâm mỗi bài – không gộp chung.</span>
                                   </li>
                                   <li className="flex items-start gap-1.5">
                                     <span className="text-purple-600 font-black shrink-0">✓</span>
-                                    <span><strong>Thuật toán giải 4 bước chi tiết</strong>: Xác định công thức/số mol $\rightarrow$ Biện luận $\rightarrow$ Bảo toàn nguyên tố/khối lượng $\rightarrow$ Kết luận.</span>
+                                    <span><strong>Thuật toán giải 4 bước chi tiết</strong>: Phân tích giả thiết & nhận diện dạng bài → Thiết lập hệ thức / định lý → Biến đổi suy luận từng bước → Kết luận đáp án.</span>
                                   </li>
                                   <li className="flex items-start gap-1.5">
                                     <span className="text-purple-600 font-black shrink-0">✓</span>
-                                    <span><strong>Bẫy đề thi ĐGNL & Mẹo Casio fx-580/880</strong>: Điểm mặt các bẫy hay gài bẫy thí sinh (quên bảo toàn O, quên tỉ lệ 1:3) và mẹo bấm máy giải nhanh.</span>
+                                    <span><strong>Bẫy đề thi ĐGNL & Mẹo Casio fx-580/880</strong>: Điểm mặt các bẫy sai lầm thường gặp trong phòng thi, kỹ thuật bấm máy giải nhanh và chiến thuật loại trừ.</span>
                                   </li>
                                   <li className="flex items-start gap-1.5">
                                     <span className="text-purple-600 font-black shrink-0">✓</span>
-                                    <span><strong>Ngân hàng câu hỏi phân tầng Bloom L1-L4</strong>: 2-3 câu trắc nghiệm rèn luyện có lời giải từng bước chuẩn KaTeX.</span>
+                                    <span><strong>Ngân hàng câu hỏi phân tầng Bloom L1–L4</strong>: 3–4 câu trắc nghiệm rèn luyện mỗi dạng kèm mô hình 3D / đồ thị tương tác và lời giải chuẩn KaTeX.</span>
                                   </li>
                                 </ul>
                               </div>
@@ -4236,15 +4236,15 @@ export default function CurriculumExplorerView({
                                 <ul className="text-[10.5px] text-slate-700 space-y-1.5 font-medium pt-2 border-t border-indigo-100">
                                   <li className="flex items-start gap-1.5">
                                     <span className="text-indigo-600 font-black shrink-0">✓</span>
-                                    <span><strong>Đầy đủ 100% lý thuyết nền tảng SGK</strong>: Khái niệm, danh pháp IUPAC/thông thường, tính chất vật lý (mùi thơm hoa quả, so sánh nhiệt độ sôi), cơ chế phản ứng và hiện tượng thí nghiệm.</span>
+                                    <span><strong>Đầy đủ 100% lý thuyết nền tảng SGK</strong>: Định nghĩa, định lý, hệ quả, công thức tổng quát, phân loại và tính chất đặc trưng từ tài liệu.</span>
                                   </li>
                                   <li className="flex items-start gap-1.5">
                                     <span className="text-indigo-600 font-black shrink-0">✓</span>
-                                    <span><strong>Đủ 7 Dạng bài toàn diện không thiếu sót</strong>: Bóc tách trọn vẹn 4 dạng Ester + 3 dạng Lipid chuẩn khung SGK 2018.</span>
+                                    <span><strong>Phân rã toàn diện mọi Dạng bài trong chương</strong>: Bóc tách trọn vẹn tất cả các dạng bài từ cơ bản đến vận dụng cao chuẩn khung SGK 2018.</span>
                                   </li>
                                   <li className="flex items-start gap-1.5">
                                     <span className="text-indigo-600 font-black shrink-0">✓</span>
-                                    <span><strong>Mở rộng các trường hợp đặc biệt</strong>: Ester của phenol, ester vinyl sinh aldehyde, chất béo không no, phản ứng hydro hóa và bài toán hỗn hợp.</span>
+                                    <span><strong>Mở rộng các trường hợp đặc biệt & nâng cao</strong>: Phân tích sâu các điều kiện biên, bài toán tổng hợp, thiết diện 3D, đồ thị và câu hỏi phân loại.</span>
                                   </li>
                                   <li className="flex items-start gap-1.5">
                                     <span className="text-indigo-600 font-black shrink-0">✓</span>
@@ -4255,7 +4255,7 @@ export default function CurriculumExplorerView({
 
                               <div className="mt-3 pt-2 border-t border-indigo-100/80 flex items-center justify-between text-[9.5px] text-indigo-900 font-bold">
                                 <span>Thời gian xử lý: ~20-35s</span>
-                                <span className="bg-indigo-100/80 px-2 py-0.5 rounded-full text-indigo-800">Toàn Bộ Lý Thuyết + 7 Dạng Bài</span>
+                                <span className="bg-indigo-100/80 px-2 py-0.5 rounded-full text-indigo-800">Toàn Bộ Lý Thuyết & Đa Dạng Bài</span>
                               </div>
                             </div>
                           </div>

@@ -173,6 +173,20 @@ export function normalizeMathString(text) {
   // 1. Unescape literal string escaped newlines e.g. "\n" -> real newlines
   str = unescapeLiteralNewlines(str);
 
+  // 1.1. BẢO VỆ TUYỆT ĐỐI CÁC KHỐI ĐỒ THỊ & BẢNG BIẾN THIÊN ([MATH_GRAPH_3D], [MATH_GRAPH], [VARIATION_TABLE], [MATH_GEOMETRY_2D])
+  // Khôi phục cả trường hợp thẻ đã bị dính dấu $ từ CSDL cũ (như [$MATH_GRAPH_3D$])
+  str = str.replace(/\[\s*\$?(\/?)\s*\$?(MATH_GRAPH_3D|MATH_GRAPH|VARIATION_TABLE|MATH_GEOMETRY_2D)\$?\s*\]/gi, '[$1$2]');
+  const preservedSpecialBlocks = [];
+  str = str.replace(
+    /(\[(?:MATH_GRAPH_3D|MATH_GRAPH|VARIATION_TABLE|MATH_GEOMETRY_2D)\][\s\S]*?\[\/(?:MATH_GRAPH_3D|MATH_GRAPH|VARIATION_TABLE|MATH_GEOMETRY_2D)\]|\[GRAPH:[\s\S]*?\])/gi,
+    (match) => {
+      const cleanedBlock = match.replace(/\$/g, '');
+      const idxCode = String(preservedSpecialBlocks.length).split('').map(d => String.fromCharCode(97 + Number(d))).join('');
+      preservedSpecialBlocks.push(cleanedBlock);
+      return `@@mathlabblock${idxCode}@@`;
+    }
+  );
+
   // Dọn dẹp lỗi cú pháp đặt dấu $ lẫn lộn
   // Sửa lỗi dấu $ đặt sai vị trí bên trong ngoặc nhọn: {k - 1$} -> {k - 1}$
   str = str.replace(/\{([^{}\$]+)\$\}/g, '{$1}$');
@@ -362,9 +376,10 @@ export function normalizeMathString(text) {
   str = str.replace(/^([A-D][\.\:\)]\s*)([^\$\r\n]+)\$$/gm, '$1$$$2$$');
   str = str.replace(/\$\s*\.\s*\$/g, '.');
 
-  // Chuẩn hóa tiêu đề mục phân tích & lời giải chuẩn:
+  // Chuẩn hóa tiêu đề mục phân tích & lời giải chuẩn (sửa cả trường hợp bị lồng **Phân tích & **Lời giải:****):
+  str = str.replace(/\*\*(?:Phân tích|Hướng dẫn)\s*&\s*\*+Lời giải:\*+/gi, '**Phân tích & Lời giải:**');
   str = str.replace(/\*\*(?:Phân tích|Hướng dẫn)\s*&?\s*Lời giải:\*\*/gi, '**Phân tích & Lời giải:**');
-  str = str.replace(/(?<!\*)\b((?:Phân tích\s*&\s*Lời giải|Hướng dẫn giải|Lời giải|Phương pháp giải|Bài toán mẫu|Ví dụ minh họa|Ví dụ)):\*\*/gi, '**$1:**');
+  str = str.replace(/(^|[\r\n•\-]\s*)(?!\*)((?:Phân tích\s*&\s*Lời giải|Hướng dẫn giải|Lời giải|Phương pháp giải|Bài toán mẫu|Bài mẫu|Ví dụ minh họa|Ví dụ)):\*\*/gi, '$1**$2:**');
 
   // Xử lý các phương trình hóa học và công thức toán đứng riêng dòng (Xử lý theo từng dòng, KHÔNG ghép qua dòng mới)
   const arrowRegex = /\\(?:rightleftharpoons|xrightarrow|longrightarrow|rightarrow|leftrightharpoons|leftrightarrow)\b/;
@@ -548,7 +563,12 @@ export function normalizeMathString(text) {
     return textChunk;
   });
 
-  return processed.join('');
+  let finalResult = processed.join('');
+  for (let bi = 0; bi < preservedSpecialBlocks.length; bi++) {
+    const idxCode = String(bi).split('').map(d => String.fromCharCode(97 + Number(d))).join('');
+    finalResult = finalResult.replace(`@@mathlabblock${idxCode}@@`, preservedSpecialBlocks[bi]);
+  }
+  return finalResult;
 }
 
 /**

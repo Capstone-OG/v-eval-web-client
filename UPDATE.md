@@ -1,7 +1,8 @@
-# UPDATE
+# V-Eval Web Client Update
 
-## [15/11/2026] - Merge develop v? t?ch h?p frontend
+## [16/11/2026] - Sync pulled student features and repair diagnostic JSX
 
-- ?? x? l? conflict gi?a nh?nh x?c th?c v? develop ? lu?ng ??ng nh?p/??ng k?, trang ??ng nh?p, curriculum, c?ng b? t?i li?u ti?n ??.
-- Gi? th?ng b?o toast c?a nh?nh hi?n t?i, ??ng th?i d?ng b? ??nh d?ng l?i API th?ng nh?t; t?ch h?p curriculum c? ph?n lu?ng h?c ph? t? develop.
-- C?c thay ??i kh?ng conflict t? c? hai nh?nh v?n ???c gi? trong index. Ch?a t?o commit.
+- Integrated the incoming curriculum/math rendering, tuition and PayOS payment views, diagnostic submission history, and student live classroom/schedule features.
+- Preserved TNhan branch changes and added the missing GUID matcher required by practice service helpers.
+- Removed an incomplete duplicate trend-chart wrapper that broke JSX parsing in the diagnostic history view.
+- Excluded .env.bak from the merge. Vite production build succeeds; only existing chunk-size and dependency eval warnings remain.

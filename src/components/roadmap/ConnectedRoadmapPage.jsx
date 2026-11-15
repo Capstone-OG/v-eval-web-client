@@ -1,7 +1,24 @@
 import { useEffect, useRef, useState } from 'react';
 import { practiceService } from '../../services/practiceService';
+import contentService from '../../services/contentService';
 import { authService } from '../../services/authService';
 import { tokenStorage } from '../../services/apiClient';
+import MathText from '../common/MathText';
+
+const getVideoEmbedUrl = (rawUrl) => {
+  if (!rawUrl) return null;
+  try {
+    const url = new URL(rawUrl);
+    if (url.hostname === 'youtu.be') return `https://www.youtube.com/embed/${url.pathname.slice(1)}`;
+    if (url.hostname.endsWith('youtube.com')) {
+      const videoId = url.searchParams.get('v') || url.pathname.split('/embed/')[1];
+      return videoId ? `https://www.youtube.com/embed/${encodeURIComponent(videoId)}` : null;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+};
 
 const validateRoadmap = (value, studentId) => {
   if (!value?.roadmapId || value.studentId !== studentId || !Array.isArray(value.stages) || !Array.isArray(value.nodes)) {
@@ -21,8 +38,14 @@ export default function ConnectedRoadmapPage({ onNavigateDiagnostic, onNavigateD
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState('');
   const [detail, setDetail] = useState(null);
+  const [materials, setMaterials] = useState([]);
+  const [materialsError, setMaterialsError] = useState('');
   const [detailError, setDetailError] = useState('');
   const [detailLoading, setDetailLoading] = useState(false);
+  const [stage, setStage] = useState(null);
+  const [stageAnswers, setStageAnswers] = useState({});
+  const [stageBusy, setStageBusy] = useState(false);
+  const [stageMessage, setStageMessage] = useState('');
   const detailRequest = useRef(0);
   const creatingRef = useRef(false);
   const user = tokenStorage.getUser();
@@ -100,16 +123,65 @@ export default function ConnectedRoadmapPage({ onNavigateDiagnostic, onNavigateD
   const openNode = async (node) => {
     const request = ++detailRequest.current;
     setDetail(null);
+    setMaterials([]);
+    setMaterialsError('');
     setDetailError('');
+    setStage(null);
+    setStageAnswers({});
+    setStageMessage('');
     setDetailLoading(true);
     try {
-      const result = await practiceService.getRoadmapNodeDetail(node.nodeId);
+      const [result, materialResponse] = await Promise.all([
+        practiceService.getRoadmapNodeDetail(node.nodeId),
+        contentService.getMaterialsBySkill(node.skillId).catch((err) => {
+          if (request === detailRequest.current) setMaterialsError(err.message || 'Không tải được học liệu cho kỹ năng này.');
+          return null;
+        })
+      ]);
       if (result.nodeId !== node.nodeId || result.studentId !== studentId) throw new Error('Chi tiết chặng không hợp lệ.');
-      if (request === detailRequest.current) setDetail(result);
+      if (request === detailRequest.current) {
+        setDetail(result);
+        setMaterials(materialResponse?.materials || materialResponse?.data?.materials || []);
+      }
     } catch (err) {
       if (request === detailRequest.current) setDetailError(err.message);
     } finally {
       if (request === detailRequest.current) setDetailLoading(false);
+    }
+  };
+
+  const startStageQuiz = async () => {
+    if (!detail || stageBusy) return;
+    setStageBusy(true);
+    setStageMessage('');
+    try {
+      const started = await practiceService.startRoadmapStage(detail.nodeId, studentId);
+      setStage(started);
+      setStageAnswers({});
+    } catch (err) {
+      setStageMessage(err.message || 'Không tải được quiz của chặng này.');
+    } finally {
+      setStageBusy(false);
+    }
+  };
+
+  const submitStageQuiz = async () => {
+    if (!stage || stageBusy) return;
+    setStageBusy(true);
+    setStageMessage('');
+    try {
+      const answers = (stage.previewQuestions || []).map((question) => ({
+        questionId: question.questionId,
+        selectedOption: stageAnswers[question.questionId] || '',
+        timeSpentSeconds: 0
+      }));
+      const submitted = await practiceService.submitRoadmapPreview(stage.stageProgressId, answers);
+      setStage((current) => ({ ...current, submitted }));
+      setStageMessage('Đã ghi nhận quiz khởi động. Bạn có thể xem học liệu của kỹ năng này bên dưới.');
+    } catch (err) {
+      setStageMessage(err.message || 'Không gửi được câu trả lời. Vui lòng thử lại.');
+    } finally {
+      setStageBusy(false);
     }
   };
 
@@ -149,6 +221,55 @@ export default function ConnectedRoadmapPage({ onNavigateDiagnostic, onNavigateD
     </section>}
     {detailLoading && <p role="status">Đang tải chi tiết chặng...</p>}
     {detailError && <p role="alert" className="text-red-600">{detailError}</p>}
-    {detail && <section className="rounded-2xl border bg-white p-6 space-y-3"><h2 className="font-bold">{detail.skillName}</h2><p className="text-sm">Trạng thái: {detail.status} · Video: {detail.videoWatchedSeconds}/{detail.videoTotalSeconds} giây</p><p className="text-sm text-slate-500">{detail.materialId ? 'Chặng đã có mã học liệu; API chi tiết hiện chưa trả nội dung hoặc URL video để phát.' : 'Chặng chưa có học liệu.'} {detail.quizExamId ? 'Chặng đã có mã quiz; chưa tích hợp làm quiz ở bước nối lộ trình này.' : 'Chặng chưa có quiz.'}</p>{detail.liveSession && <div className="text-sm"><p>{detail.liveSession.title} · {new Date(detail.liveSession.scheduledAt).toLocaleString('vi-VN')}</p><p>Lịch học: {detail.liveSession.status}</p></div>}</section>}
+    {detail && <section className="rounded-2xl border bg-white p-6 space-y-5">
+      <div>
+        <h2 className="font-bold">{detail.skillName}</h2>
+        <p className="text-sm text-slate-500">{detail.domainName} · Trạng thái chặng: {detail.status}</p>
+      </div>
+
+      <div className="rounded-xl border border-indigo-100 bg-indigo-50/50 p-4 space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h3 className="font-bold">Quiz khởi động theo kỹ năng</h3>
+            <p className="text-xs text-slate-500">Câu hỏi được Practice Service lấy an toàn từ Content Service theo Skill ID của chặng.</p>
+          </div>
+          {!stage && <button type="button" onClick={startStageQuiz} disabled={stageBusy} className="rounded-lg bg-indigo-600 px-3 py-2 text-sm font-bold text-white disabled:opacity-50">{stageBusy ? 'Đang tải…' : 'Tải quiz'}</button>}
+        </div>
+        {stage?.previewQuestions?.map((question) => (
+          <fieldset key={question.questionId} className="rounded-lg border bg-white p-3 space-y-2">
+            <legend className="px-1 text-sm font-semibold"><MathText text={`${question.questionOrder}. ${question.content}`} /></legend>
+            {question.options?.map((option) => (
+              <label key={option.optionId} className="flex cursor-pointer items-start gap-2 text-sm">
+                <input type="radio" name={`question-${question.questionId}`} value={option.optionId} checked={stageAnswers[question.questionId] === option.optionId} onChange={() => setStageAnswers((current) => ({ ...current, [question.questionId]: option.optionId }))} />
+                <MathText text={option.content} />
+              </label>
+            ))}
+          </fieldset>
+        ))}
+        {stage?.previewQuestions?.length > 0 && !stage.submitted && <button type="button" onClick={submitStageQuiz} disabled={stageBusy || stage.previewQuestions.some((question) => !stageAnswers[question.questionId])} className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-bold text-white disabled:opacity-50">{stageBusy ? 'Đang gửi…' : 'Gửi quiz khởi động'}</button>}
+        {stageMessage && <p role="status" className="text-sm text-slate-600">{stageMessage}</p>}
+        {stage && !stage.previewQuestions?.length && <p className="text-sm text-amber-700">Chưa có câu hỏi quiz cho kỹ năng này.</p>}
+      </div>
+
+      <div className="space-y-3">
+        <div>
+          <h3 className="font-bold">Video và học liệu theo kỹ năng</h3>
+          <p className="text-xs text-slate-500">Tải từ Content Service bằng Skill ID của chặng; mỗi chương/miền hiển thị bên trên nhóm các kỹ năng.</p>
+        </div>
+        {materialsError && <p role="alert" className="text-sm text-amber-700">{materialsError}</p>}
+        {!materials.length && !materialsError && <p className="rounded-lg border border-dashed p-4 text-sm text-slate-500">Content Service chưa có học liệu cho kỹ năng này.</p>}
+        {materials.map((material) => {
+          const embedUrl = getVideoEmbedUrl(material.videoUrl);
+          return <article key={material.materialId} className="rounded-xl border p-4 space-y-3">
+            <h4 className="font-semibold">{material.title || 'Học liệu kỹ năng'}</h4>
+            {material.content && <p className="whitespace-pre-wrap text-sm text-slate-600">{material.content}</p>}
+            {embedUrl && <div className="aspect-video overflow-hidden rounded-lg bg-slate-950"><iframe className="h-full w-full" src={embedUrl} title={material.title || detail.skillName} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen /></div>}
+            {material.videoUrl && !embedUrl && <video className="w-full rounded-lg bg-black" controls preload="metadata" src={material.videoUrl} />}
+            {material.fileUrl && <a className="text-sm font-semibold text-blue-700 underline" href={material.fileUrl} target="_blank" rel="noreferrer">Mở tài liệu đính kèm</a>}
+            {!material.videoUrl && !material.content && !material.fileUrl && <p className="text-sm text-slate-500">Học liệu này chưa có nội dung, video hoặc tệp đính kèm.</p>}
+          </article>;
+        })}
+      </div>
+    </section>}
   </div>;
 }
