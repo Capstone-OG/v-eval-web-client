@@ -411,16 +411,16 @@ export default function DiagnosticAssessmentPage({
           ? sampleQuestionsForDiagnostic[idx % sampleQuestionsForDiagnostic.length]
           : null;
 
-        const rawContent = matched?.content || q.content;
+        const rawContent = q.content || matched?.content;
         const content = (rawContent && !rawContent.includes('API lịch sử không cung cấp'))
           ? rawContent
           : sampleFallback?.question ||
             `Câu hỏi ${qNum}: Khảo sát và đánh giá năng lực tư duy chuẩn hóa ĐGNL V-ACT 2026.`;
 
-        const options = (matched?.options && matched.options.length > 0)
-          ? matched.options
-          : (q.options && q.options.length > 0)
-            ? q.options
+        const options = (q.options && q.options.length > 0)
+          ? q.options
+          : (matched?.options && matched.options.length > 0)
+            ? matched.options
             : sampleFallback?.options || [
                 'Phương án A: Phương án lựa chọn A',
                 'Phương án B: Phương án lựa chọn B',
@@ -449,8 +449,8 @@ export default function DiagnosticAssessmentPage({
         return {
           id: q.questionId || matched?.id || `q_${idx + 1}`,
           question_number: qNum,
-          passage_content: matched?.passage_content || '',
-          passage_title: matched?.passage_title || '',
+          passage_content: q.passageContent || matched?.passage_content || '',
+          passage_title: q.passageTitle || matched?.passage_title || '',
           content: content,
           options: options,
           skill_name: skillName,

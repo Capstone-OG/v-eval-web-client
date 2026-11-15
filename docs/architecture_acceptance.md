@@ -2065,10 +2065,10 @@ Backend follow-up: Practice sends an empty AllSkillIds mapping to AI, preventing
 ### [15/11/2026] - Diagnostic History Question Content Hydration & Presentation Normalization Architecture
 
 - **Historical Question Content Hydration (`src/components/diagnostic/DiagnosticAssessmentPage.jsx`)**:
-  - Addressed a critical data starvation flaw where historical submissions retrieved from Practice Service (`practiceService.getDiagnosticResult`) only carried submission metadata and telemetry (`selectedOption`, `correctOption`, `timeSpentSeconds`), while question stems, choices, and explanations were replaced with static placeholder text (*"API lịch sử không cung cấp nội dung câu hỏi."*).
-  - Engineered an asynchronous cross-service hydration pipeline in `openHistoryExam`: polls `contentService.getDiagnosticTest()`, parses passages and single questions with `transformBackendExamToQuestions`, and constructs an O(1) indexed lookup map keyed by question ID, ordinal position (`questionOrder`), and array index.
+  - Addressed a critical data starvation flaw where historical submissions retrieved from Practice Service (`practiceService.getDiagnosticResult`) previously only carried submission metadata and telemetry without question content, options, or explanations.
+  - Upgraded `DiagnosticAssessmentPage.jsx` to directly consume the enriched DTO returned by Practice Service's gRPC pipeline with Content Service (`q.content`, `q.options`, `q.explanation`, `q.passageContent`, `q.passageTitle`), with graceful client hydration fallback through `contentService.getDiagnosticTest()`.
   - Guarantees zero blank content: each reviewed question inherits full Markdown/LaTeX question stems, responsive 4-option grids (A/B/C/D), reading comprehension passages, Bloom taxonomy tags, and pedagogical explanations.
 - **Ordinal Indexing & Taxonomy Normalization**:
   - Eliminated anomalous *"Câu 0:"* headers caused by zero/null `questionOrder` values from legacy records, establishing strict fallback indexing `idx + 1` (mapping cleanly to Questions 1 through 30).
   - Resolved *"Bloom 0/6"* display regressions by normalizing difficulty taxonomy (`difficultyLevel || matched?.bloom || 2`).
-- **Verification**: Vite production build succeeded in 1.09s; 36/36 unit test cases passed with 100% success rate; zero linter errors.
+- **Verification**: Vite production build succeeded in 1.08s; 36/36 unit test cases passed with 100% success rate; zero linter errors.
