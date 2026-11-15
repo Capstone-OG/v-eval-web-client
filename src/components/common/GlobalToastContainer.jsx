@@ -53,9 +53,9 @@ function ToastItem({ toast, onDismiss }) {
   // Color schemes and icons based on notification type
   const config = {
     success: {
-      border: 'border-emerald-300/80',
-      bg: 'bg-white/95 backdrop-blur-md',
-      shadow: 'shadow-lg shadow-emerald-500/10',
+      border: 'border-emerald-200/70',
+      bg: 'bg-white/98 backdrop-blur-md',
+      shadow: 'shadow-[0_8px_30px_-10px_rgba(15,23,42,0.18)]',
       iconBg: 'bg-emerald-100 text-emerald-600',
       titleColor: 'text-emerald-950',
       msgColor: 'text-emerald-800/90',
@@ -63,9 +63,9 @@ function ToastItem({ toast, onDismiss }) {
       icon: CheckCircle2
     },
     error: {
-      border: 'border-rose-300/80',
-      bg: 'bg-white/95 backdrop-blur-md',
-      shadow: 'shadow-lg shadow-rose-500/10',
+      border: 'border-rose-200/70',
+      bg: 'bg-white/98 backdrop-blur-md',
+      shadow: 'shadow-[0_8px_30px_-10px_rgba(15,23,42,0.18)]',
       iconBg: 'bg-rose-100 text-rose-600',
       titleColor: 'text-rose-950',
       msgColor: 'text-rose-800/90',
@@ -73,9 +73,9 @@ function ToastItem({ toast, onDismiss }) {
       icon: AlertCircle
     },
     warning: {
-      border: 'border-amber-300/80',
-      bg: 'bg-white/95 backdrop-blur-md',
-      shadow: 'shadow-lg shadow-amber-500/10',
+      border: 'border-amber-200/70',
+      bg: 'bg-white/98 backdrop-blur-md',
+      shadow: 'shadow-[0_8px_30px_-10px_rgba(15,23,42,0.18)]',
       iconBg: 'bg-amber-100 text-amber-600',
       titleColor: 'text-amber-950',
       msgColor: 'text-amber-800/90',
@@ -83,9 +83,9 @@ function ToastItem({ toast, onDismiss }) {
       icon: AlertTriangle
     },
     info: {
-      border: 'border-indigo-300/80',
-      bg: 'bg-white/95 backdrop-blur-md',
-      shadow: 'shadow-lg shadow-indigo-500/10',
+      border: 'border-indigo-200/70',
+      bg: 'bg-white/98 backdrop-blur-md',
+      shadow: 'shadow-[0_8px_30px_-10px_rgba(15,23,42,0.18)]',
       iconBg: 'bg-indigo-100 text-indigo-600',
       titleColor: 'text-indigo-950',
       msgColor: 'text-indigo-800/90',
@@ -95,7 +95,7 @@ function ToastItem({ toast, onDismiss }) {
   }[type] || {
     border: 'border-slate-300',
     bg: 'bg-white/95',
-    shadow: 'shadow-lg shadow-slate-500/10',
+    shadow: 'shadow-[0_8px_30px_-10px_rgba(15,23,42,0.18)]',
     iconBg: 'bg-slate-100 text-slate-600',
     titleColor: 'text-slate-900',
     msgColor: 'text-slate-700',
@@ -110,25 +110,26 @@ function ToastItem({ toast, onDismiss }) {
 
   return (
     <div
+      role={type === 'error' ? 'alert' : 'status'}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
-      className={`pointer-events-auto relative overflow-hidden rounded-2xl border ${config.border} ${config.bg} ${config.shadow} p-4 transition-all duration-300 hover:shadow-xl hover:scale-[1.01]`}
+      className={`pointer-events-auto relative w-fit max-w-full overflow-hidden rounded-xl border ${config.border} ${config.bg} ${config.shadow} px-3.5 py-3 transition-shadow duration-200`}
       style={{ animation: 'slideInRight 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards' }}
     >
-      <div className="flex items-start gap-3">
+      <div className="flex items-start gap-2.5">
         {/* Type Icon Badge */}
         <div className={`shrink-0 w-8 h-8 rounded-xl ${config.iconBg} flex items-center justify-center shadow-2xs mt-0.5`}>
           <IconComponent className="w-4.5 h-4.5" />
         </div>
 
         {/* Content Body */}
-        <div className="flex-1 min-w-0 pr-2">
+        <div className="min-w-0 flex-1">
           {title && (
-            <h4 className={`text-xs font-black tracking-tight ${config.titleColor} mb-0.5`}>
+            <h4 className={`text-[13px] font-bold tracking-tight ${config.titleColor} mb-0.5`}>
               {title}
             </h4>
           )}
-          <div className={`text-xs ${config.msgColor} leading-relaxed break-words font-medium`}>
+          <div className={`text-[12px] ${config.msgColor} leading-5 break-words font-medium`}>
             {lines.length > 1 ? (
               <div className="space-y-1 mt-1">
                 {lines.map((line, idx) => (
@@ -147,8 +148,9 @@ function ToastItem({ toast, onDismiss }) {
         <button
           type="button"
           onClick={() => onDismiss(id)}
-          className="shrink-0 text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100/80 transition-colors cursor-pointer"
+          className="shrink-0 text-slate-400 hover:text-slate-700 -mr-1 -mt-1 p-1.5 rounded-full hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-400 transition-colors cursor-pointer"
           title="Đóng thông báo"
+          aria-label="Đóng thông báo"
         >
           <X className="w-3.5 h-3.5" />
         </button>
@@ -156,7 +158,7 @@ function ToastItem({ toast, onDismiss }) {
 
       {/* Countdown Progress Bar */}
       {duration > 0 && (
-        <div className="absolute bottom-0 left-0 right-0 h-1 bg-slate-100/60 overflow-hidden">
+        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-slate-100/60 overflow-hidden">
           <div
             className={`h-full ${config.barBg} transition-all duration-75`}
             style={{ width: `${progress}%` }}
@@ -175,8 +177,8 @@ export default function GlobalToastContainer({ toasts, onDismiss }) {
 
   return (
     <div
-      aria-live="polite"
-      className="fixed top-4 right-4 sm:top-6 sm:right-6 z-[999999] flex flex-col gap-2.5 max-w-sm sm:max-w-md w-full pointer-events-none px-3 sm:px-0"
+      className="fixed top-4 right-4 sm:top-5 sm:right-5 z-[999999] flex flex-col items-end gap-2 pointer-events-none"
+      style={{ width: 'min(340px, calc(100vw - 32px))' }}
     >
       {toasts.map(t => (
         <ToastItem key={t.id} toast={t} onDismiss={onDismiss} />

@@ -1884,6 +1884,62 @@ pm run build completes in 905ms (3,013 modules transformed, 0 errors).
 
 - Prepare the lowercase frontend checkpoint containing the student catalog/reading workspace, chapter-scoped outline, teacher overview/navigation, scoped API requests and tests. Validation: 24 tests passed, lint and build passed with warnings, whitespace check passed. Live browser/API verification remains pending. Backend repositories and root pending merge are excluded; push is left to the user.
 
+
+## [14/11/2026] - Authentication toast feedback
+
+- Reused the existing root ToastProvider for login and local logout success, authentication validation/API errors, registration and OTP/password recovery feedback. Inline form feedback remains available; activation prompts emit one warning.
+- Added error toasts for failed account/campus list loading. Toast cards expose alert/status roles, an accessible close label and a viewport-constrained width.
+- Validation: frontend production build and lint exited 0 with existing warnings; targeted whitespace checks passed. Browser appearance and live authentication APIs were not verified. No backend edits, staging, commit or push; the System-Repo merge remains pending.
+
+### [14/11/2026] - Compact notification layout
+
+Presentation-only refinement of the existing toast container: content-sized cards, maximum width 340px with viewport constraint, softer decoration and compact spacing. Notification lifecycle and API behavior are unchanged. Production build and whitespace checks passed; browser appearance has not been directly verified. No backend changes or Git merge operations.
+
+### [14/11/2026] - Diagnostic skill mastery report
+
+- Added DiagnosticSkillProfile to fresh and historical diagnostic results. Preserved skillPriors from API responses; show all assessed skills, answer accuracy and valid pL0 estimates separately. Inferred/unknown sources are explicitly grouped only when supplied. Missing estimates are not replaced with zero or current LearningProfiles data.
+- Validation: frontend build and lint exited 0 with existing warnings; whitespace check passed. Browser and a real submission response were not verified. Backend source was inspected only; no backend edits or Git operations.
+
+Backend follow-up: Practice sends an empty AllSkillIds mapping to AI, preventing the inferred-skill branch. Historical GetDiagnosticSubmissionById does not populate SkillPriors or RadarChart. Preserve per-submission estimates and source for historical reporting instead of reading mutable current LearningProfiles. Inferred skill labels also need metadata because current response name lookup uses only questions in the test.
+
+### [14/11/2026] - Tabbed diagnostic report
+
+- Kept the score/IRT/time summary above three report tabs: overview, answer review and competency analysis. Applied the same layout to freshly submitted and historical results, with overview and answer filters reset for each opened result. Answer review retains its existing filters and question content.
+- Overview initially shows four priority weak skills with expand/collapse. Skill analysis groups assessed skills into collapsed domain sections. Tabs support arrow/Home/End keyboard navigation and linked tab panels; inactive panels are unmounted.
+- Validation: frontend production build and lint exited 0 with existing warnings; whitespace check passed. Browser appearance/live API behavior have not been directly verified. Backend unchanged; no staging, commit, push or merge completion.
+
+### [14/11/2026] - Compact categorized history
+
+- Moved diagnostic/practice/mock selectors into a compact top toolbar, alongside the history title on desktop and below it on mobile. Kept separate category render branches and keyed content by account/category so selected details cannot carry across categories. Practice remains browser-local; mock history remains explicitly unavailable.
+- Removed the repeated dark report banner in historical result details using a compact summary variant. Reduced history statistic sizes and embedded horizontal padding, preserving the report tabs and data.
+- Validation: frontend build and lint exited 0 with existing warnings; whitespace checks passed. No direct browser verification. Backend unchanged; no staging, commit, push or merge operations.
+
+### [14/11/2026] - Focused history detail view
+
+- Hide the history title/category toolbar while a diagnostic or practice result is open; restore it when returning to the list. DiagnosticAssessmentPage reports its selected-detail state to StudentHistoryPage. Hide the diagnostic entry shortcut in detail view and preserve an accessible region label when category tabs are absent.
+- Validation: frontend build and lint exited 0 with existing warnings; whitespace check passed. Browser interaction not directly verified. Backend and pending merge unchanged; no staging, commit or push.
+
+### [14/11/2026] - History report visual polish
+
+- Refined the compact report summary into three responsive tinted metric cards with colored icon badges, clearer typography and a subtle score progress accent. Updated report tabs to a light segmented control with an elevated active state, and softened the detail header with an indigo tint. Existing compact layout and hidden category toolbar behavior remain intact.
+- Validation: production build and lint exited 0 with existing warnings; whitespace check passed. Browser visual verification pending. No backend changes or staging/commit/push/merge operations.
+
+### [14/11/2026] - Stronger report contrast
+
+- Responded to screenshot feedback: historical detail heading now uses a dark navy/indigo background with white title and back control. The selected report tab uses a saturated blue/indigo fill with white text/icons. Metric cards have stronger tints, colored top borders and darker labels.
+- Validation: frontend build/lint exited 0 with existing warnings; whitespace checks passed. The revised UI has not been visually verified in a browser. Backend unchanged; no Git staging, commit, push or merge operations.
+
+## [15/11/2026] - CF1 frontend checkpoint
+
+- Checkpoint the implemented CF1 diagnostic result/history UI: report tabs, skill accuracy and available mastery estimates, compact category navigation and focused detail view. Include the authentication/account toast feedback implemented in the same work session.
+- Backend follow-up remains: persist per-submission skill priors/source, populate historical SkillPriors and RadarChart, verify complete historical question content and domain labels, and finalize the three-exam aggregation rule. This is a frontend milestone, not full backend/runtime acceptance.
+- Validation on the current frontend working tree: production build and lint exited 0 with existing warnings; all 24 existing Node tests passed. Browser/live API flow not verified. Unrelated curriculum, sidebar and roadmap edits remain outside this checkpoint; backend and root pending merge are untouched by Git operations.
+
+## [15/11/2026] - Remaining frontend presentation checkpoint
+
+- Checkpoint the remaining user-authorized frontend changes in StudentCurriculumView, Sidebar and RoadmapLearningPage: curriculum chapter/lesson styling, colored student navigation icons and roadmap presentation refinements. Preserve the earlier CF1 checkpoint.
+- Validation: frontend production build and lint exited 0 with existing warnings; whitespace check passed. All 24 existing tests passed on this same source tree during the preceding checkpoint. Browser appearance and live API behavior remain unverified. No backend changes, push or root merge completion.
+
 ### [13/11/2026] - Diagnostic Submission Route Alignment & Multi-Layer ZPD Question Extraction
 
 - **Diagnostic Submission Route Correction (`src/services/practiceService.js`)**:
