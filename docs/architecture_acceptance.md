@@ -2034,3 +2034,9 @@ Backend follow-up: Practice sends an empty AllSkillIds mapping to AI, preventing
 ## 12. Feature Sync Acceptance ? 16 November 2026
 
 The TNhan branch now includes the pulled student curriculum and math rendering updates, database-backed tuition/payment interface, diagnostic result and history presentation, and student classroom/schedule/attendance views. Existing TNhan-specific changes were retained. The practice service GUID matcher referenced by the synced helpers is defined locally. The potentially sensitive `.env.bak` file was excluded. No build or live API verification was performed as part of this sync, so runtime acceptance remains pending.
+
+
+The diagnostic report JSX parse failure from an incomplete duplicate trend-chart wrapper was corrected. A Vite production build succeeds; the build still reports a large-chunk advisory and a dependency direct-eval warning.
+
+
+Radar and skill-prior displays consume API response fields; the benchmark overlay and prior values are omitted when absent instead of being filled with synthetic defaults. The result page now uses normalized API-derived prior data without unresolved component/helper references.

@@ -34,6 +34,8 @@ import { practiceService } from '../../services/practiceService';
 import { tokenStorage } from '../../services/apiClient';
 import MathText from '../common/MathText';
 
+const optionalNumber = (value) => value == null || value === '' ? undefined : Number(value);
+
 const EXAM_TYPE_LABELS = {
   DIAGNOSTIC: {
     label: 'Khảo sát ĐGNL (30 câu)',
@@ -105,16 +107,16 @@ export default function SubmissionHistoryView({
               radar_chart: (remoteItem.radarChart || remoteItem.radar_chart || []).map((r) => ({
                 domain_id: r.domainId || r.domain_id,
                 domain_name: r.domainName || r.domain_name,
-                student_pct: Number(r.studentPct ?? r.student_pct ?? 0),
-                benchmark_pct: Number(r.benchmarkPct ?? r.benchmark_pct ?? 80)
-              })),
+                student_pct: optionalNumber(r.studentPct ?? r.student_pct),
+                benchmark_pct: optionalNumber(r.benchmarkPct ?? r.benchmark_pct)
+              })).filter((r) => Number.isFinite(r.student_pct)),
               skill_priors: (remoteItem.skillPriors || remoteItem.skill_priors || []).map((sp) => ({
                 skill_id: sp.skillId || sp.skill_id,
                 skill_name: sp.skillName || sp.skill_name,
                 domain_id: sp.domainId || sp.domain_id,
                 domain_name: sp.domainName || sp.domain_name,
-                theta_skill: Number(sp.thetaSkill ?? sp.theta_skill ?? 0),
-                p_l0: Number(sp.pL0 ?? sp.pl0 ?? sp.p_l0 ?? 0),
+                theta_skill: optionalNumber(sp.thetaSkill ?? sp.theta_skill),
+                p_l0: optionalNumber(sp.pL0 ?? sp.pl0 ?? sp.p_l0),
                 source: sp.source || 'measured'
               })),
               pacing: {
@@ -179,16 +181,16 @@ export default function SubmissionHistoryView({
           const mappedRadar = (dto.radarChart || dto.radar_chart || sub.radar_chart || []).map((r) => ({
             domain_id: r.domainId || r.domain_id,
             domain_name: r.domainName || r.domain_name,
-            student_pct: Number(r.studentPct ?? r.student_pct ?? 0),
-            benchmark_pct: Number(r.benchmarkPct ?? r.benchmark_pct ?? 80)
-          }));
+            student_pct: optionalNumber(r.studentPct ?? r.student_pct),
+            benchmark_pct: optionalNumber(r.benchmarkPct ?? r.benchmark_pct)
+          })).filter((r) => Number.isFinite(r.student_pct));
           const mappedPriors = (dto.skillPriors || dto.skill_priors || sub.skill_priors || []).map((sp) => ({
             skill_id: sp.skillId || sp.skill_id,
             skill_name: sp.skillName || sp.skill_name,
             domain_id: sp.domainId || sp.domain_id,
             domain_name: sp.domainName || sp.domain_name,
-            theta_skill: Number(sp.thetaSkill ?? sp.theta_skill ?? 0),
-            p_l0: Number(sp.pL0 ?? sp.pl0 ?? sp.p_l0 ?? 0.5),
+            theta_skill: optionalNumber(sp.thetaSkill ?? sp.theta_skill),
+            p_l0: optionalNumber(sp.pL0 ?? sp.pl0 ?? sp.p_l0),
             source: sp.source || 'measured'
           }));
           const enriched = {
@@ -480,7 +482,9 @@ export default function SubmissionHistoryView({
                       <PolarAngleAxis dataKey="domain_name" tick={{ fill: '#334155', fontSize: 11, fontWeight: 700 }} />
                       <PolarRadiusAxis angle={30} domain={[0, 100]} stroke="#94a3b8" />
                       <Radar name="Điểm Thí Sinh" dataKey="student_pct" stroke="#2563eb" fill="#2563eb" fillOpacity={0.45} />
-                      <Radar name="Chuẩn Mục Tiêu" dataKey="benchmark_pct" stroke="#6366f1" fill="#6366f1" fillOpacity={0.15} />
+                      {selectedSubmission.radar_chart.some((item) => Number.isFinite(item.benchmark_pct)) && (
+                        <Radar name="Chuẩn Mục Tiêu" dataKey="benchmark_pct" stroke="#6366f1" fill="#6366f1" fillOpacity={0.15} />
+                      )}
                       <Tooltip contentStyle={{ backgroundColor: '#ffffff', borderColor: '#e2e8f0', borderRadius: '12px', color: '#0f172a' }} />
                     </RadarChart>
                   </ResponsiveContainer>
@@ -502,8 +506,9 @@ export default function SubmissionHistoryView({
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-64 overflow-y-auto pr-1">
                   {selectedSubmission.skill_priors.map((sp, idx) => {
-                    const pl0Pct = Math.round(Number(sp.p_l0 ?? sp.pL0 ?? 0.5) * 100);
-                    const thetaVal = Number(sp.theta_skill ?? sp.thetaSkill ?? 0);
+                    const rawPL0 = optionalNumber(sp.p_l0 ?? sp.pL0);
+                    const pl0Pct = Number.isFinite(rawPL0) ? Math.round(rawPL0 * 100) : undefined;
+                    const thetaVal = optionalNumber(sp.theta_skill ?? sp.thetaSkill);
                     return (
                       <div
                         key={sp.skill_id || idx}
@@ -514,19 +519,19 @@ export default function SubmissionHistoryView({
                             {sp.skill_name || sp.skillName}
                           </div>
                           <span className="font-mono text-[11px] font-black text-indigo-700 shrink-0">
-                            θ={thetaVal > 0 ? `+${thetaVal.toFixed(2)}` : thetaVal.toFixed(2)}
+                            &#952;={Number.isFinite(thetaVal) ? `${thetaVal > 0 ? `+${thetaVal.toFixed(2)}` : thetaVal.toFixed(2)}` : "?"}
                           </span>
                         </div>
                         <div className="flex items-center justify-between text-[11px] font-bold text-slate-600">
                           <span>{sp.domain_name || sp.domainName}</span>
-                          <span className="text-blue-700">P(L₀) = {pl0Pct}%</span>
+                          <span className="text-blue-700">P(L₀) = {Number.isFinite(pl0Pct) ? `${pl0Pct}%` : '?'}</span>
                         </div>
-                        <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
+                        {Number.isFinite(pl0Pct) && <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
                           <div
                             className="bg-blue-600 h-full rounded-full"
                             style={{ width: `${Math.min(100, Math.max(5, pl0Pct))}%` }}
                           />
-                        </div>
+                        </div>}
                       </div>
                     );
                   })}

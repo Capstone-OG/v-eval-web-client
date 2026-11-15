@@ -246,12 +246,16 @@ function mapSkillToDomain(skillName, index) {
 
 function normalizeRadarChart(rawRadarChart, domainScores = []) {
   if (Array.isArray(rawRadarChart) && rawRadarChart.length > 0) {
-    return rawRadarChart.map((r) => ({
-      domain_id: r.domainId || r.domain_id || '',
-      domain_name: r.domainName || r.domain_name || '',
-      student_pct: Number(r.studentPct ?? r.student_pct ?? 0),
-      benchmark_pct: Number(r.benchmarkPct ?? r.benchmark_pct ?? 80)
-    }));
+    return rawRadarChart.map((r) => {
+      const studentPct = r.studentPct ?? r.student_pct;
+      const benchmarkPct = r.benchmarkPct ?? r.benchmark_pct;
+      return {
+        domain_id: r.domainId || r.domain_id || '',
+        domain_name: r.domainName || r.domain_name || '',
+        student_pct: studentPct == null ? undefined : Number(studentPct),
+        benchmark_pct: benchmarkPct == null ? undefined : Number(benchmarkPct)
+      };
+    }).filter((r) => Number.isFinite(r.student_pct));
   }
 
   const validDomains = Array.isArray(domainScores)
@@ -261,9 +265,9 @@ function normalizeRadarChart(rawRadarChart, domainScores = []) {
     return validDomains.map((d) => ({
       domain_id: d.domain_id,
       domain_name: d.domain_name || '',
-      student_pct: Number(d.accuracy_pct ?? 0),
-      benchmark_pct: 80
-    }));
+      student_pct: Number(d.accuracy_pct),
+      benchmark_pct: undefined
+    })).filter((r) => Number.isFinite(r.student_pct));
   }
 
   return [];
@@ -272,39 +276,59 @@ function normalizeRadarChart(rawRadarChart, domainScores = []) {
 function normalizeSkillPriors(rawSkillPriors, skillBreakdowns = [], questions = []) {
   if (Array.isArray(rawSkillPriors) && rawSkillPriors.length > 0) {
     return rawSkillPriors.map((sp, idx) => {
-      const pL0 = Number(sp.pL0 ?? sp.pl0 ?? sp.p_l0 ?? 0.5);
-      const thetaSkill = Number(
-        sp.thetaSkill ??
-          sp.theta_skill ??
-          Math.log(Math.max(0.05, Math.min(0.98, pL0)) / (1 - Math.max(0.05, Math.min(0.98, pL0))))
-      );
+      const rawPL0 = sp.pL0 ?? sp.pl0 ?? sp.p_l0;
+      const rawTheta = sp.thetaSkill ?? sp.theta_skill;
+      const parsedPL0 = rawPL0 == null ? undefined : Number(rawPL0);
+      const parsedTheta = rawTheta == null ? undefined : Number(rawTheta);
+      const pL0 = Number.isFinite(parsedPL0)
+        ? parsedPL0
+        : Number.isFinite(parsedTheta) ? 1 / (1 + Math.exp(-parsedTheta)) : undefined;
+      const thetaSkill = Number.isFinite(parsedTheta)
+        ? parsedTheta
+        : Number.isFinite(pL0) ? Math.log(Math.max(0.05, Math.min(0.98, pL0)) / (1 - Math.max(0.05, Math.min(0.98, pL0)))) : undefined;
+      if (!Number.isFinite(pL0) && !Number.isFinite(thetaSkill)) return null;
       return {
         skill_id: sp.skillId || sp.skill_id || `sk_${idx + 1}`,
+        skillId: sp.skillId || sp.skill_id || `sk_${idx + 1}`,
         skill_name: sp.skillName || sp.skill_name || '',
+        skillName: sp.skillName || sp.skill_name || '',
         domain_id: sp.domainId || sp.domain_id || '',
         domain_name: sp.domainName || sp.domain_name || '',
-        theta_skill: Math.round(thetaSkill * 100) / 100,
-        p_l0: Math.round(pL0 * 10000) / 10000,
+        domainName: sp.domainName || sp.domain_name || '',
+        theta_skill: Number.isFinite(thetaSkill) ? Math.round(thetaSkill * 100) / 100 : undefined,
+        thetaSkill: Number.isFinite(thetaSkill) ? Math.round(thetaSkill * 100) / 100 : undefined,
+        p_l0: Number.isFinite(pL0) ? Math.round(pL0 * 10000) / 10000 : undefined,
+        pL0: Number.isFinite(pL0) ? Math.round(pL0 * 10000) / 10000 : undefined,
         source: sp.source || 'measured'
       };
-    });
+    }).filter(Boolean);
   }
 
   if (Array.isArray(skillBreakdowns) && skillBreakdowns.length > 0) {
     return skillBreakdowns.map((sb, idx) => {
-      const acc = Number(sb.accuracyPercentage ?? sb.accuracy_pct ?? 50);
+      const rawAccuracy = sb.accuracyPercentage ?? sb.accuracy_pct;
+      const acc = rawAccuracy == null ? NaN : Number(rawAccuracy);
+      if (!Number.isFinite(acc)) return null;
       const pL0 = Math.min(0.98, Math.max(0.05, Math.round((acc / 100) * 10000) / 10000));
       const thetaSkill = Math.round(Math.log(pL0 / (1 - pL0)) * 100) / 100;
+      const skillId = sb.skillId || sb.skill_id || `sk_${idx + 1}`;
+      const skillName = sb.skillName || sb.skill_name || '';
+      const domainName = sb.domainName || sb.domain_name || '';
       return {
-        skill_id: sb.skillId || sb.skill_id || `sk_${idx + 1}`,
-        skill_name: sb.skillName || sb.skill_name || '',
+        skill_id: skillId,
+        skillId,
+        skill_name: skillName,
+        skillName,
         domain_id: sb.domainId || sb.domain_id || '',
-        domain_name: sb.domainName || sb.domain_name || '',
+        domain_name: domainName,
+        domainName,
         theta_skill: thetaSkill,
+        thetaSkill,
         p_l0: pL0,
+        pL0,
         source: 'measured'
       };
-    });
+    }).filter(Boolean);
   }
 
   if (Array.isArray(questions) && questions.length > 0) {
@@ -331,13 +355,21 @@ function normalizeSkillPriors(rawSkillPriors, skillBreakdowns = [], questions = 
       return entries.map((g) => {
         const pL0 = Math.min(0.98, Math.max(0.05, Math.round((g.correct / Math.max(1, g.total)) * 10000) / 10000));
         const thetaSkill = Math.round(Math.log(pL0 / (1 - pL0)) * 100) / 100;
+        const skillId = g.skill_id;
+        const skillName = g.skill_name;
+        const domainName = g.domain_name;
         return {
-          skill_id: g.skill_id,
-          skill_name: g.skill_name,
+          skill_id: skillId,
+          skillId,
+          skill_name: skillName,
+          skillName,
           domain_id: g.domain_id,
-          domain_name: g.domain_name,
+          domain_name: domainName,
+          domainName,
           theta_skill: thetaSkill,
+          thetaSkill,
           p_l0: pL0,
+          pL0,
           source: 'measured'
         };
       });
@@ -1155,7 +1187,7 @@ export default function DiagnosticAssessmentPage({
         reviewedQuestions: reviewedQuestionsList,
         weakSkills: apiResponse?.weakSkills || [],
         skillBreakdowns: apiResponse?.skillBreakdowns || [],
-        skillPriors: normalizeDiagnosticSkillPriors(apiResponse.skillPriors ?? apiResponse.skill_priors),
+        skillPriors: normalizedPriors,
         pacing: {
           totalCorrect: apiResponse?.totalCorrect ?? totalCorrect,
           totalQuestions: apiResponse?.totalQuestions ?? questions.length,
@@ -1623,22 +1655,6 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
                   </div>
                 </div>
               )}
-
-              {/* ================================================================= */}
-              {/* PERFORMANCE GROWTH TREND GRAPH OVER ATTEMPTS (Area Chart)         */}
-              {/* ================================================================= */}
-              <div className="p-6 sm:p-7 bg-white border border-slate-200/90 rounded-3xl shadow-xl space-y-4 text-slate-900">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
-                  <div className="flex items-center gap-2">
-                    <TrendingUp className="w-5 h-5 text-blue-600" />
-                    <h3 className="text-base font-black text-slate-900">
-                      Đồ Thị Tăng Trưởng Năng Lực IRT θ Qua Các Đợt Khảo Thí
-                    </h3>
-                  </div>
-                  <span className="text-xs text-slate-500 font-medium">
-                    Theo dõi tiến trình bứt phá năng lực từ bài khảo sát đầu vào đến hiện tại
-                  </span>
-                </div>
 
 </DiagnosticReportPanel>
 <DiagnosticReportPanel id="answers" active={reportTab}>
@@ -3065,7 +3081,6 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
           {/* BẢNG ĐÁNH GIÁ CHI TIẾT & ĐÁP ÁN 30 CÂU (ANSWER KEY & EXPLANATIONS)    */}
           {/* ===================================================================== */}
 
-<DiagnosticSkillPriorMatrix priors={resultData.skillPriors} />
 </DiagnosticReportPanel>
 <DiagnosticReportPanel id="answers" active={reportTab}>
 

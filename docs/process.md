@@ -771,3 +771,8 @@ Validation: build and lint pass with existing warnings; live API integration rem
 | Live classroom and schedule | Integrated | Synced student Live Q&A, schedule, and attendance views with sidebar routing. |
 | Practice service helper | Corrected | Added the missing GUID matcher referenced by the incoming helpers. |
 | Build/runtime verification | Pending | Not run during this integration. |
+
+| Diagnostic JSX parse error | Fixed | Removed the incomplete duplicate trend-chart wrapper; Vite production build succeeds. |
+
+| API-only radar and prior values | Corrected | No synthetic benchmark or default mastery values are displayed when omitted by API. |
+| Diagnostic report runtime references | Corrected | Reused normalized skill priors and removed a dangling component reference. |

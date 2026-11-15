@@ -2804,3 +2804,7 @@
 - Integrated the incoming curriculum access and MathText updates, database-backed tuition/payment views, diagnostic result/history rendering, and Live Q&A plus schedule/attendance pages into the TNhan branch.
 - Preserved branch-specific work and fixed the missing `GUID_REGEX` declaration used by practice service normalization.
 - Kept `.env.bak` out of the merge; build and runtime behavior were not verified.
+
+- Follow-up repair: removed an incomplete duplicate trend-chart wrapper in DiagnosticAssessmentPage.jsx that caused Vite JSX parse errors. Vite production build now succeeds (existing bundle-size and dependency eval warnings only).
+
+- API-only result handling: stopped supplying an 80% benchmark or default prior values when the API omits them; the benchmark series and mastery values now appear only when the response includes those values. Also removed two unresolved runtime references in the diagnostic report.
