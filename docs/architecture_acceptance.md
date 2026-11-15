@@ -2016,3 +2016,18 @@ Backend follow-up: Practice sends an empty AllSkillIds mapping to AI, preventing
   - Added dedicated API client methods: `overrideTutorExemplar`, `addTutorNovelTrap`, and `resolveTutorReport` with graceful local storage fallback.
   - Integrated `ai_moderation` into the Academic Management portal navigation with the `Bot` icon and `Core Flow 4` indicator.
 - **Verification**: Production build succeeded with zero errors (`1.29s`); all 31 automated test cases passed; zero linter errors.
+
+### [15/11/2026] - Academic Portal Layout Redesign & Student Design System Harmonization
+
+- **Visual Architecture & Design Harmonization (`AiTutorModerationView.jsx`, `CampusManagerDashboardView.jsx`, `Sidebar.jsx`)**:
+  - Overhauled the Academic Management UI to align completely with the verified Student Portal visual design system (`#FDFBF7` ambient glow palette).
+  - Replaced the dark, heavy slate header banners with the flagship royal blue-indigo gradient (`from-blue-700 via-indigo-700 to-blue-900`) complemented by radiant gold (`#FACC15`) and cyan (`cyan-400`) ambient blur orbs.
+  - Introduced the glassmorphic **GraphRAG Monitor Card** (`bg-white/10 backdrop-blur-md border border-white/20 rounded-3xl`) tracking real-time Socratic fidelity (97.6%), active Knowledge Graph nodes (142 Exemplars, 68 Traps), and operational health.
+- **Symmetrical 4-Card KPI Grid Architecture (`MetricsGrid` Pattern)**:
+  - Re-architected all stat containers into high-contrast, interactive metric cards featuring uppercase micro-tags, semantic status chips (`Cần can thiệp`, `Đã lưu Graph`, `Gắn cờ AI`, `Supabase Pooler`), and a bottom action bar with dividers enabling instant 1-click list filtering.
+- **Interactive Queue & Inspection Workspace Refinement**:
+  - Integrated student avatar initials badges, dynamic status-colored left border accents (Rose for pending, Emerald for resolved, Slate for baseline), and KaTeX-rendered formula previews.
+  - Streamlined sidebar badge to `Flow 4`, completely resolving label truncation in narrow sidebar viewports.
+- **Database Seed Alignment & Verification**:
+  - Seeded 3 representative interaction logs in PostgreSQL Supabase (`v_eval_ai.ai_tutor_interaction_logs`) to ensure real-time queue hydration on initial mount.
+  - All 31 automated tests passed; Vite production build verified in 1.09s with zero linter errors.

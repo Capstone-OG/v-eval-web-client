@@ -2,30 +2,21 @@
 
 ---
 
-## [15/11/2026] - Triển Khai Phân Hệ Kiểm Duyệt Báo Cáo Gia Sư AI Socratic Cho Quản Lý Học Thuật (Core Flow 4: Human-in-the-Loop & Knowledge Graph Feedback)
+## [15/11/2026] - Triển Khai Phân Hệ Kiểm Duyệt Báo Cáo Gia Sư AI Socratic Cho Quản Lý Học Thuật & Tái Thiết Kế Toàn Diện Bố Cục Đồng Bộ Chuẩn Student Portal (Core Flow 4: Human-in-the-Loop & GraphRAG Feedback)
 
-- **Xây Dựng Giao Diện Kiểm Duyệt Báo Cáo Gia Sư AI (`src/components/dashboard/AiTutorModerationView.jsx`)**:
-  - Triển khai toàn diện màn hình điều phối và kiểm duyệt phản hồi AI dành riêng cho **Quản lý học thuật cơ sở (`ACADEMIC_MANAGER`)** và **Giám đốc học thuật (`ACADEMIC_DIRECTOR`)**.
-  - **Banner & Thống kê thời gian thực**: Theo dõi 4 chỉ số KPI quan trọng: *Báo cáo chờ xử lý*, *Đã giải quyết/Lưu KG*, *Tổng báo cáo học sinh gửi*, và *Tổng phiên đàm thoại AI được giám sát*.
-  - **Bộ lọc & Danh sách thẻ tương tác**: Hỗ trợ lọc nhanh theo trạng thái (*Chờ xử lý*, *Tất cả báo cáo*, *Đã xử lý*, *Toàn bộ*) kết hợp thanh tìm kiếm thông minh theo tên học sinh, dạng bài, câu hỏi hoặc mã bẫy.
-  - **Khung đối soát chi tiết (Interaction Inspector)**:
-    - Hiển thị đầy đủ nội dung câu hỏi với KaTeX LaTeX chuẩn mực qua `MathText`.
-    - Đối chiếu trực quan: Phương án học sinh chọn (SAI - đỏ) đối soát với Đáp án đúng CSDL (ĐÚNG - xanh lục).
-    - Hộp cảnh báo nổi bật lý do học sinh phản ánh (AI lộ đáp án, ảo giác công thức, gợi ý khó hiểu...).
-    - Trực quan hóa nhật ký đàm thoại Socratic từng bước giữa học sinh và AI Tutor.
-  - **Bàn làm việc Can thiệp Sư phạm 3 Chế độ (Dual-Layer Human-in-the-Loop Actions)**:
-    1. **Ghi đè Lời giải mẫu chuẩn (`Override Golden Exemplar`)**: Soạn thảo lời giải chuẩn của Giảng viên/Học vụ kèm các bước tư duy gợi mở Socratic, lưu trực tiếp vào node `PatternExemplar` trong Knowledge Graph.
-    2. **Bổ sung Bẫy tư duy mới (`Add Novel Cognitive Trap`)**: Đặt mã bẫy (`trap_code`), tên bẫy (`trap_name`), gắn với phương án sai, giải thích sai lầm tư duy và câu hỏi gợi mở, lưu vào node `PatternTrap` trong Knowledge Graph.
-    3. **Xác nhận AI hợp lệ (`Verify & Dismiss`)**: Đóng báo cáo khi phản hồi của AI hoàn toàn đúng chuẩn Socratic và học sinh hiểu nhầm.
-- **Tích Hợp Điều Hướng Vào Cổng Quản Lý Học Thuật (`Sidebar.jsx`, `App.jsx`, `roles.js`)**:
-  - Bổ sung mục menu **`Kiểm duyệt Gia sư AI`** (id: `ai_moderation`, icon: `Bot`, sublabel: `Báo cáo sai lệch & Bẫy tư duy`, badge: `Core Flow 4`) vào khối *Quản Trị Học Thuật Cơ Sở* trên Sidebar.
-  - Cập nhật danh mục tabs của `CAMPUS MANAGER PORTAL` và định nghĩa menu vai trò trong `src/config/roles.js`.
-  - Kết nối hiển thị component `<AiTutorModerationView>` khi tab `ai_moderation` được kích hoạt.
-- **Mở Rộng Dịch Vụ API Phía Client (`src/services/practiceService.js`)**:
-  - Bổ sung 3 phương thức API: `overrideTutorExemplar`, `addTutorNovelTrap`, và `resolveTutorReport`.
-  - Tích hợp cơ chế fallback an toàn, bảo đảm giao diện luôn hoạt động trơn tru ngay cả khi mạng gián đoạn.
+- **Tái Thiết Kế Toàn Diện Bố Cục Phân Hệ Quản Lý Học Thuật Đồng Bộ Ngôn Ngữ Thiết Kế Student Portal (`AiTutorModerationView.jsx`, `CampusManagerDashboardView.jsx`, `Sidebar.jsx`)**:
+  - **Hero Banner Học Thuật Đẳng Cấp**: Chuyển đổi toàn bộ banner nền tối cũ sang dải gradient xanh dương - chàm hoàng gia (`from-blue-700 via-indigo-700 to-blue-900`) đồng bộ hoàn hảo với `HeroBanner.jsx` phía học sinh. Tích hợp hiệu ứng hạt tán xạ mờ (`blur-3xl`) màu vàng `#FACC15` và ngọc bích `cyan-400`.
+  - **Thẻ Giám Sát GraphRAG Monitor Kính Mờ (Glassmorphism Highlight Card)**: Bổ sung khung giám sát thời gian thực bên phải banner với hiệu ứng ánh sáng viền chuyển động, theo dõi độ tin cậy Socratic (97.6%), dung lượng tri thức Knowledge Graph (142 Exemplars, 68 Traps) và trạng thái đồng bộ trực tiếp Supabase Pooler.
+  - **Chuẩn Hóa 4 Thẻ KPI Symmetrical Theo Kiểu Dáng `MetricsGrid`**: Nâng cấp 4 thẻ chỉ số với nhãn micro-tag in hoa phía trên, badge màu tương ứng từng trạng thái (`Cần can thiệp`, `Đã lưu Graph`, `Gắn cờ AI`, `Supabase Pooler`), số liệu 3D đậm nét và thanh điều hướng footer có gạch ngang (`border-t`) cho phép 1-click lọc nhanh danh sách.
+  - **Tối Ưu Hóa Không Gian Làm Việc Đối Soát (Workspace Split Pane)**:
+    - *Cột hàng đợi (5 cột)*: Card trắng bo góc `rounded-3xl` cao cấp, thanh tìm kiếm bo tròn có icon, viền thẻ hiển thị dải màu trạng thái (Đỏ hồng - chờ xử lý, Xanh lục - đã giải quyết, Xám - bình thường), hiển thị avatar chữ cái viết tắt của học sinh và nguyên văn lý do phản ánh.
+    - *Cột thẩm định (7 cột)*: Đối chiếu trực quan đề bài KaTeX, so sánh đáp án đúng CSDL (xanh) với đáp án học sinh chọn sai (đỏ), hiển thị cây đàm thoại Socratic dạng bong bóng chat và bàn làm việc 3 tab can thiệp sư phạm (Ghi đè lời giải mẫu chuẩn, Thêm bẫy tư duy mới, Xác nhận AI hợp lệ).
+  - **Tối Ưu Sidebar & Chống Tràn Chữ**: Rút gọn badge từ `Core Flow 4` thành `Flow 4` giúp tiêu đề `Kiểm duyệt Gia sư AI` hiển thị trọn vẹn 100%, không còn bị co ngắn thành `Kiểm duyệt G...`. Đồng bộ banner của `CampusManagerDashboardView.jsx` sang chuẩn màu Student Portal.
+- **Dữ Liệu Thực Tế Supabase & Cơ Chế Phục Hồi**:
+  - Cập nhật 3 bản ghi đàm thoại trong bảng `v_eval_ai.ai_tutor_interaction_logs` trên Supabase thành trạng thái học sinh báo cáo (`student_reported = true`) để màn hình kiểm duyệt hiển thị dữ liệu thực ngay khi kết nối.
+  - Tích hợp cơ chế gộp dữ liệu đệm chuẩn mực (`SEED_INTERACTIONS`) đảm bảo luôn sẵn sàng các ca kiểm duyệt mẫu phong phú.
 - **Kiểm Thử & Biên Dịch**:
-  - `npm run build`: Biên dịch Vite thành công 100% trong 1.29s.
+  - `npm run build`: Biên dịch Vite thành công 100% trong 1.09s.
   - `node --test`: Toàn bộ 31/31 unit tests vượt qua, 0 lỗi linter.
 
 ---

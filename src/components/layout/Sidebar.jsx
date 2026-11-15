@@ -213,7 +213,7 @@ export default function Sidebar({
                 icon: Bot,
                 active: activeTab === 'ai_moderation',
                 onClick: () => setActiveTab('ai_moderation'),
-                badge: 'Core Flow 4'
+                badge: 'Flow 4'
               },
               {
                 id: 'roadmap',

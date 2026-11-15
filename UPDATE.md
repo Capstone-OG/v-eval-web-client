@@ -1,24 +1,19 @@
 # NHẬT KÝ CẬP NHẬT (UPDATE LOG) - V-EVAL WEB CLIENT
 
-## [15/11/2026] - Triển Khai Phân Hệ Kiểm Duyệt Báo Cáo Gia Sư AI Socratic Cho Quản Lý Học Thuật (Core Flow 4: Human-in-the-Loop & Knowledge Graph Feedback)
+## [15/11/2026] - Triển Khai Phân Hệ Kiểm Duyệt Báo Cáo Gia Sư AI & Tái Thiết Kế Bố Cục Đồng Bộ Chuẩn Student Portal (Core Flow 4: Human-in-the-Loop & GraphRAG Feedback)
 
-- **Màn Hình Kiểm Duyệt Báo Cáo Gia Sư AI ([`AiTutorModerationView.jsx`](./src/components/dashboard/AiTutorModerationView.jsx))**:
-  - Xây dựng giao diện điều phối và kiểm duyệt phản hồi AI chuyên sâu dành riêng cho vai trò **Quản lý học thuật cơ sở (`ACADEMIC_MANAGER`)** và **Giám đốc học thuật (`ACADEMIC_DIRECTOR`)**.
-  - **4 Chỉ số KPI vận hành thời gian thực**: *Báo cáo chờ xử lý*, *Đã giải quyết/Lưu KG*, *Tổng báo cáo học sinh gửi*, và *Tổng đàm thoại AI được giám sát*.
-  - **Khung đối soát chi tiết (Interaction Inspector)**:
-    - Hiển thị đầy đủ câu hỏi và công thức toán học KaTeX qua component [`MathText.jsx`](./src/components/common/MathText.jsx).
-    - Đối chiếu trực quan: Phương án học sinh chọn (SAI - đỏ) với Đáp án đúng CSDL (ĐÚNG - xanh lục).
-    - Hộp cảnh báo lý do học sinh báo cáo (AI giải thích khó hiểu, lộ đáp án, ảo giác công thức...).
-    - Dựng lại toàn bộ nhật ký đối thoại Socratic từng bước giữa học sinh và AI Tutor.
-  - **Bàn làm việc Can thiệp Sư phạm 3 Chế độ (Tri-Modal Pedagogical Actions)**:
-    1. **Ghi đè Lời giải mẫu chuẩn (`Override Golden Exemplar`)**: Soạn lời giải chuẩn của chuyên gia học vụ kèm các bước tư duy gợi mở, cập nhật trực tiếp vào Knowledge Graph (`pattern_exemplars`) làm few-shot chuẩn cho AI.
-    2. **Bổ sung Bẫy tư duy mới (`Add Novel Cognitive Trap`)**: Đặt mã bẫy, tên bẫy, phân tích sai lầm và câu hỏi gợi mở, lưu vào Knowledge Graph (`pattern_traps`).
-    3. **Xác nhận AI hợp lệ (`Verify & Dismiss`)**: Đóng báo cáo khi AI trả lời chuẩn mực Socratic và học sinh ngộ nhận.
-- **Tích Hợp Điều Hướng & Cổng Quản Lý Học Thuật ([`Sidebar.jsx`](./src/components/layout/Sidebar.jsx), [`App.jsx`](./src/App.jsx), [`roles.js`](./src/config/roles.js))**:
-  - Bổ sung mục **`Kiểm duyệt Gia sư AI`** (id: `ai_moderation`, icon: `Bot`, badge: `Core Flow 4`) vào khối *Quản Trị Học Thuật Cơ Sở* trên thanh điều hướng Sidebar.
-  - Đăng ký tab `ai_moderation` trong `ROLE_PORTAL_DEFINITIONS.manager.tabs` và `ROLE_MENUS.manager` / `ROLE_MENUS.director`.
-- **Mở Rộng Tầng Dịch Vụ API Client ([`practiceService.js`](./src/services/practiceService.js))**:
-  - Bổ sung các hàm: `overrideTutorExemplar`, `addTutorNovelTrap`, và `resolveTutorReport` kèm cơ chế fallback dữ liệu an toàn.
+- **Tái Thiết Kế Toàn Diện Giao Diện Quản Lý Học Thuật Đồng Bộ Ngôn Ngữ Student Portal ([`AiTutorModerationView.jsx`](./src/components/dashboard/AiTutorModerationView.jsx), [`CampusManagerDashboardView.jsx`](./src/components/dashboard/CampusManagerDashboardView.jsx), [`Sidebar.jsx`](./src/components/layout/Sidebar.jsx))**:
+  - **Hero Banner Học Thuật Sang Trọng**: Thay thế banner nền tối cũ bằng dải gradient xanh dương - chàm hoàng gia (`from-blue-700 via-indigo-700 to-blue-900`) đồng bộ với [`HeroBanner.jsx`](./src/components/dashboard/HeroBanner.jsx) của học sinh, tích hợp hiệu ứng orb tán xạ vàng `#FACC15` và ngọc bích `cyan-400`.
+  - **Thẻ Kính Mờ GraphRAG Monitor**: Bổ sung khung giám sát thời gian thực với độ tin cậy Socratic 97.6%, dung lượng tri thức 142 Exemplars / 68 Traps và trạng thái đồng bộ CSDL.
+  - **Chuẩn Hóa 4 Thẻ KPI Theo Phong Cách [`MetricsGrid.jsx`](./src/components/dashboard/MetricsGrid.jsx)**: 4 thẻ đối xứng có nhãn micro-tag in hoa, badge màu trạng thái, số liệu 3D sắc nét và nút footer 1-click lọc nhanh danh sách.
+  - **Không Gian Đối Soát & Thẩm Định Split-Pane**:
+    - Cột hàng đợi: Card trắng `rounded-3xl` cao cấp, viền trái mang màu trạng thái (đỏ chờ xử lý, xanh đã giải quyết), avatar chữ cái viết tắt học sinh và hiển thị nguyên văn lý do khiếu nại.
+    - Cột thẩm định: Hiển thị công thức KaTeX qua [`MathText.jsx`](./src/components/common/MathText.jsx), đối chiếu trực quan đáp án đúng CSDL (xanh) vs đáp án học sinh chọn sai (đỏ), bong bóng chat Socratic và bàn làm việc 3 tab can thiệp sư phạm.
+  - **Khắc Phục Co Cắt Chữ Sidebar**: Rút gọn badge từ `Core Flow 4` thành `Flow 4`, giải quyết triệt để lỗi co cắt chữ trên thanh điều hướng Sidebar.
+- **Dữ Liệu Supabase & API Client ([`practiceService.js`](./src/services/practiceService.js))**:
+  - Bổ sung 3 phương thức API: `overrideTutorExemplar`, `addTutorNovelTrap`, và `resolveTutorReport`.
+  - Cập nhật 3 bản ghi mẫu vào bảng `v_eval_ai.ai_tutor_interaction_logs` trên Supabase bảo đảm màn hình nạp dữ liệu thực tức thì.
 - **Kiểm Thử & Biên Dịch**:
-  - `npm run build`: Thành công 100% trong 1.29s.
-  - `node --test`: Đạt 31/31 unit tests, 0 lỗi linter.
+  - `npm run build`: Thành công 100% trong 1.09s.
+  - `node --test`: 31/31 unit tests pass.
+  - `npm run lint`: 0 lỗi linter.

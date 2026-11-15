@@ -192,44 +192,50 @@ export default function CampusManagerDashboardView({ currentUser, onOpenProvisio
 
   return (
     <div className="space-y-6 animate-fade w-full">
-      {/* Top Banner */}
-      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-3xl p-6 lg:p-8 text-white border border-indigo-900/60 shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-        <div>
-          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-indigo-500/20 border border-indigo-400/30 text-indigo-300 text-xs font-bold uppercase tracking-wider mb-2.5">
-            <Building2 className="w-3.5 h-3.5 text-indigo-400" />
-            <span>Phân hệ Quản lý Học thuật Cơ sở • Core Flow 2 & Flow 5</span>
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-            Cổng Điều Hành Học Thuật & Bản Đồ Nhiệt So Sánh Cơ Sở
-          </h1>
-          <p className="text-xs sm:text-sm text-indigo-200/80 mt-1.5 max-w-2xl leading-relaxed">
-            Đối sánh hiệu năng đào tạo 4 miền ĐGNL giữa các lớp trong cùng cơ sở, điều phối phân cụm AI K-Means và cấp phát tài khoản giảng viên nội bộ.
-          </p>
-        </div>
+      {/* Top Banner - Styled in High-End Student Portal Theme */}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-blue-700 via-indigo-700 to-blue-900 text-white p-6 lg:p-8 shadow-xl border border-blue-600/30">
+        {/* Background Decorative Blur Orbs */}
+        <div className="absolute top-0 right-0 -mr-16 -mt-16 w-80 h-80 rounded-full bg-[#FACC15]/15 blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 left-1/3 -mb-16 w-60 h-60 rounded-full bg-cyan-400/15 blur-2xl pointer-events-none" />
 
-        <div className="flex flex-wrap items-center gap-3 shrink-0">
-          <div className="bg-white/10 backdrop-blur-md px-3.5 py-2 rounded-2xl border border-white/20 text-xs font-bold text-white flex items-center gap-2">
-            <Building2 className="w-4 h-4 text-cyan-300" />
-            <select
-              value={selectedCampus}
-              onChange={(e) => setSelectedCampus(e.target.value)}
-              className="bg-transparent text-white font-bold focus:outline-none cursor-pointer"
+        <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+          <div>
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 text-[#FACC15] text-xs font-bold uppercase tracking-wider mb-2.5">
+              <Building2 className="w-3.5 h-3.5 text-[#FACC15]" />
+              <span>Phân hệ Quản lý Học thuật Cơ sở • Core Flow 2 & Flow 5</span>
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight leading-tight">
+              Cổng Điều Hành Học Thuật & Bản Đồ Nhiệt So Sánh Cơ Sở
+            </h1>
+            <p className="text-xs sm:text-sm text-slate-200 font-medium mt-1.5 max-w-2xl leading-relaxed">
+              Đối sánh hiệu năng đào tạo 4 miền ĐGNL giữa các lớp trong cùng cơ sở, điều phối phân cụm AI K-Means và cấp phát tài khoản giảng viên nội bộ.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3 shrink-0">
+            <div className="bg-white/10 backdrop-blur-md px-3.5 py-2 rounded-2xl border border-white/20 text-xs font-bold text-white flex items-center gap-2">
+              <Building2 className="w-4 h-4 text-cyan-300" />
+              <select
+                value={selectedCampus}
+                onChange={(e) => setSelectedCampus(e.target.value)}
+                className="bg-transparent text-white font-bold focus:outline-none cursor-pointer"
+              >
+                {campusesList.map((c) => (
+                  <option key={c.id} value={c.id} className="text-slate-900 font-semibold">
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <button
+              onClick={() => setShowCreateStaffModal(true)}
+              className="flex items-center gap-2 px-4 py-2.5 bg-[#FACC15] hover:bg-[#eab308] text-slate-950 font-black text-xs rounded-2xl shadow-xl shadow-yellow-500/10 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
             >
-              {campusesList.map((c) => (
-                <option key={c.id} value={c.id} className="text-slate-900 font-semibold">
-                  {c.name}
-                </option>
-              ))}
-            </select>
+              <Plus className="w-4 h-4" />
+              <span>Cấp tài khoản Cán bộ / GV mới</span>
+            </button>
           </div>
-
-          <button
-            onClick={() => setShowCreateStaffModal(true)}
-            className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-extrabold text-xs rounded-2xl shadow-lg shadow-blue-600/30 transition-all cursor-pointer"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Cấp tài khoản Cán bộ / GV mới</span>
-          </button>
         </div>
       </div>
 
