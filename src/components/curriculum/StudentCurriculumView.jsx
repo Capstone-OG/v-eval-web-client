@@ -159,22 +159,62 @@ export default function StudentCurriculumView({ domains, activeDomainId, onSelec
       <div className="mt-6 flex flex-wrap gap-2">{domains.map((domain) => <button key={domain.id} type="button" onClick={() => { onSelectDomain(domain.id); setQuery(''); }}
         className={`rounded-xl border px-4 py-3 text-sm font-semibold transition-colors ${currentDomain?.id === domain.id ? 'border-blue-600 bg-blue-600 text-white shadow-sm' : 'border-slate-200 bg-white text-slate-600 hover:border-blue-200'}`}>{domain.title}</button>)}</div>
     </section>
-    <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-      <div><h2 className="text-xl font-bold text-slate-900">{currentDomain?.title || 'Danh sách bài học'}</h2><p className="mt-1 text-sm text-slate-500">{chapters.length} chương · {entries.length} dạng bài</p></div>
-      <label className="relative block sm:w-80"><Search className="absolute left-4 top-3.5 h-4 w-4 text-slate-400" /><input value={query} onChange={(event) => setQuery(event.target.value)} aria-label="Tìm chương, bài học hoặc dạng bài" placeholder="Tìm bài học, dạng bài…" className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100" /></label>
+    {/* ── Sub-header: Title + Search ── */}
+    <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center rounded-2xl bg-white border border-slate-200/80 shadow-sm px-5 py-4">
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shrink-0 shadow-sm">
+          <Layers className="h-5 w-5 text-white" />
+        </div>
+        <div>
+          <h2 className="text-base font-black text-slate-900 tracking-tight">{currentDomain?.title || 'Danh sách bài học'}</h2>
+          <p className="text-xs text-slate-500 font-medium mt-0.5">
+            <span className="font-black text-blue-600">{chapters.length}</span> chương &nbsp;·&nbsp;
+            <span className="font-black text-indigo-600">{entries.length}</span> dạng bài
+          </p>
+        </div>
+      </div>
+      <label className="relative block sm:w-80">
+        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+        <input
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          aria-label="Tìm chương, bài học hoặc dạng bài"
+          placeholder="Tìm bài học, dạng bài…"
+          className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-11 pr-4 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 focus:bg-white transition-colors"
+        />
+      </label>
     </div>
     {filtered.length ? filtered.map((chapter, ci) => {
       const chapterKey = currentDomain?.id || 'default';
       const lessonKey = `${chapterKey}:${chapter.chapterId}`;
       const chapterOpen = expandedChapter[lessonKey] ?? (chapter.chapterId === chapters[0]?.chapterId);
-      return <details key={chapter.chapterId} open={Boolean(needle) || chapterOpen} className="group/chapter rounded-3xl border border-slate-200 bg-white shadow-sm">
-      <summary onClick={(event) => { event.preventDefault(); setExpandedChapter((previous) => ({ ...previous, [lessonKey]: !(previous[lessonKey] ?? (chapter.chapterId === chapters[0]?.chapterId)) })); }} className="flex cursor-pointer list-none items-center gap-4 p-5 sm:p-6 [&::-webkit-details-marker]:hidden"><span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-sm font-bold text-blue-600">{String(ci + 1).padStart(2, '0')}</span>
-        <div className="min-w-0 flex-1"><h3 className="text-base font-bold text-slate-900 sm:text-lg">{chapter.name}</h3><p className="mt-1 text-sm text-slate-500">{chapter.lessons.length} bài học</p></div><ChevronDown className="h-5 w-5 shrink-0 text-slate-400 transition-transform group-open/chapter:rotate-180" /></summary>
-      <div className="space-y-3 border-t border-slate-100 p-5 sm:p-6">{chapter.lessons.map((item) => <details key={item.lessonId} open={Boolean(needle) || (expandedLesson[`${lessonKey}:${item.lessonId}`] ?? (item.lessonId === chapter.lessons[0]?.lessonId))} className="group/lesson rounded-2xl border border-slate-100">
-        <summary onClick={(event) => { event.preventDefault(); setExpandedLesson((previous) => ({ ...previous, [`${lessonKey}:${item.lessonId}`]: !(previous[`${lessonKey}:${item.lessonId}`] ?? (item.lessonId === chapter.lessons[0]?.lessonId)) })); }} className="flex cursor-pointer list-none items-center gap-3 p-4 text-base font-bold text-slate-800 [&::-webkit-details-marker]:hidden"><BookOpen className="h-4 w-4 shrink-0 text-indigo-500" /><span className="flex-1">{item.name}</span><span className="text-xs font-medium text-slate-400">{item.patterns.length} dạng</span><ChevronDown className="h-4 w-4 shrink-0 text-slate-400 transition-transform group-open/lesson:rotate-180" /></summary>
-        <div className="grid gap-3 border-t border-slate-100 p-4 xl:grid-cols-2">{item.patterns.map((pattern) => <button key={pattern.patternId} type="button" onClick={() => open({ chapter, item, pattern })}
-          className="group/item flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-slate-50/40 p-4 text-left transition-colors hover:border-blue-300 hover:bg-blue-50/50 focus-visible:outline-2 focus-visible:outline-blue-500">
-          <span className="text-base font-medium leading-7 text-slate-700">{pattern.name}</span><span className="flex shrink-0 items-center gap-1 text-xs font-bold text-blue-600">Vào học<ArrowRight className="h-4 w-4" /></span>
+      return <details key={chapter.chapterId} open={Boolean(needle) || chapterOpen} className="group/chapter rounded-3xl border border-slate-200 bg-white shadow-sm overflow-hidden transition-all hover:shadow-md">
+      <summary onClick={(event) => { event.preventDefault(); setExpandedChapter((previous) => ({ ...previous, [lessonKey]: !(previous[lessonKey] ?? (chapter.chapterId === chapters[0]?.chapterId)) })); }}
+        className="flex cursor-pointer list-none items-center gap-4 p-5 sm:p-6 [&::-webkit-details-marker]:hidden bg-gradient-to-r from-slate-50 to-white hover:from-blue-50/60 hover:to-white transition-colors border-l-4 border-l-blue-500">
+        {/* Chapter number circle */}
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 text-sm font-black text-white shadow-sm shadow-blue-500/30">{String(ci + 1).padStart(2, '0')}</span>
+        <div className="min-w-0 flex-1">
+          <h3 className="text-base font-black text-slate-900 sm:text-lg leading-snug">{chapter.name}</h3>
+          <p className="mt-0.5 text-xs text-slate-500 font-semibold">
+            <span className="text-blue-600 font-black">{chapter.lessons.length}</span> bài học
+          </p>
+        </div>
+        <ChevronDown className="h-5 w-5 shrink-0 text-blue-500 transition-transform group-open/chapter:rotate-180" />
+      </summary>
+      <div className="space-y-2.5 border-t border-slate-100 p-4 sm:p-5">{chapter.lessons.map((item) => <details key={item.lessonId} open={Boolean(needle) || (expandedLesson[`${lessonKey}:${item.lessonId}`] ?? (item.lessonId === chapter.lessons[0]?.lessonId))} className="group/lesson rounded-2xl border border-slate-100 overflow-hidden bg-slate-50/50 hover:border-indigo-200 transition-colors">
+        <summary onClick={(event) => { event.preventDefault(); setExpandedLesson((previous) => ({ ...previous, [`${lessonKey}:${item.lessonId}`]: !(previous[`${lessonKey}:${item.lessonId}`] ?? (item.lessonId === chapter.lessons[0]?.lessonId)) })); }}
+          className="flex cursor-pointer list-none items-center gap-3 p-4 [&::-webkit-details-marker]:hidden hover:bg-indigo-50/50 transition-colors">
+          <div className="w-7 h-7 rounded-lg bg-indigo-100 flex items-center justify-center shrink-0">
+            <BookOpen className="h-4 w-4 text-indigo-600" />
+          </div>
+          <span className="flex-1 text-sm font-black text-slate-800">{item.name}</span>
+          <span className="text-[11px] font-black text-indigo-600 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-full">{item.patterns.length} dạng</span>
+          <ChevronDown className="h-4 w-4 shrink-0 text-slate-400 transition-transform group-open/lesson:rotate-180" />
+        </summary>
+        <div className="grid gap-2.5 border-t border-slate-100 p-4 xl:grid-cols-2">{item.patterns.map((pattern) => <button key={pattern.patternId} type="button" onClick={() => open({ chapter, item, pattern })}
+          className="group/item flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-4 text-left transition-all hover:border-blue-400 hover:bg-blue-50/60 hover:shadow-sm focus-visible:outline-2 focus-visible:outline-blue-500">
+          <span className="text-sm font-semibold leading-6 text-slate-700 group-hover/item:text-blue-800 transition-colors">{pattern.name}</span>
+          <span className="flex shrink-0 items-center gap-1 text-xs font-black text-blue-600 bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-xl group-hover/item:bg-blue-600 group-hover/item:text-white group-hover/item:border-transparent transition-all">Vào học<ArrowRight className="h-3.5 w-3.5" /></span>
         </button>)}</div>
       </details>)}</div>
     </details>; }) : <p className="rounded-2xl border border-dashed border-slate-200 bg-white p-8 text-center text-base text-slate-500">{query ? 'Không tìm thấy bài học phù hợp.' : 'Nội dung môn học đang được cập nhật.'}</p>}

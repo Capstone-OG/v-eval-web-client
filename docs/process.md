@@ -699,3 +699,12 @@ Architecture: diagnostic submission/history results share tabbed report navigati
 | Verification | Passed | Current working-tree build/lint exit 0 with warnings; 24 existing tests passed; browser/live APIs unverified. |
 | Backend completion | Follow-up | Historical priors/Radar, question content, domain labels and three-exam aggregation require follow-up. |
 | Root merge | Pending | Root documentation updated as required; no root staging/commit/push. |
+
+## [15/11/2026] - Remaining frontend changes
+
+Architecture: existing curriculum, sidebar and roadmap components retain their responsibilities; this checkpoint records pending frontend presentation changes at user request.
+
+| Item | Status | Validation |
+| --- | --- | --- |
+| Curriculum, sidebar and roadmap presentation checkpoint | Ready to commit | Production build/lint exit 0 with existing warnings; whitespace check passed; browser verification pending. |
+| Backend and root merge | Unchanged by Git operations | Frontend repository only; no push. |

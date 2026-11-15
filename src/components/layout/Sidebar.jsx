@@ -301,6 +301,8 @@ export default function Sidebar({
                 label: 'Tổng quan Học tập',
                 sublabel: 'Tiến độ cá nhân & Lộ trình hôm nay',
                 icon: LayoutGrid,
+                iconColor: 'from-slate-500 to-slate-700',
+                activeGlow: 'shadow-slate-500/30',
                 active: activeTab === 'dashboard',
                 onClick: () => setActiveTab('dashboard')
               },
@@ -309,6 +311,8 @@ export default function Sidebar({
                 label: 'Khảo thí & Chẩn đoán',
                 sublabel: 'Đề chuẩn hóa 30 câu & IRT 2PL',
                 icon: ClipboardCheck,
+                iconColor: 'from-orange-400 to-rose-500',
+                activeGlow: 'shadow-rose-500/30',
                 active: activeTab === 'diagnostic',
                 onClick: () => setActiveTab('diagnostic'),
                 badge: '30 câu'
@@ -318,6 +322,8 @@ export default function Sidebar({
                 label: 'Lịch sử làm bài',
                 sublabel: 'Đáp án chi tiết & Sổ tay lỗi sai',
                 icon: History,
+                iconColor: 'from-amber-400 to-orange-500',
+                activeGlow: 'shadow-amber-500/30',
                 active: activeTab === 'history',
                 onClick: () => setActiveTab('history')
               },
@@ -326,6 +332,8 @@ export default function Sidebar({
                 label: 'Dàn kiến thức & Lộ trình',
                 sublabel: 'Cây tri thức DAG & Học liệu',
                 icon: Network,
+                iconColor: 'from-blue-500 to-indigo-600',
+                activeGlow: 'shadow-blue-500/30',
                 active: activeTab === 'roadmap',
                 onClick: () => setActiveTab('roadmap')
               },
@@ -334,6 +342,8 @@ export default function Sidebar({
                 label: 'Báo cáo & Dự báo Điểm',
                 sublabel: 'Phân tích BKT & Điểm mục tiêu',
                 icon: BarChart3,
+                iconColor: 'from-emerald-400 to-teal-600',
+                activeGlow: 'shadow-emerald-500/30',
                 active: activeTab === 'analytics',
                 onClick: () => setActiveTab('analytics')
               }
@@ -347,6 +357,8 @@ export default function Sidebar({
                 label: 'Luyện tập Thích ứng ZPD',
                 sublabel: 'Sinh câu hỏi sát vùng năng lực',
                 icon: Zap,
+                iconColor: 'from-yellow-400 to-amber-500',
+                activeGlow: 'shadow-yellow-500/30',
                 active: false,
                 onClick: onOpenAdaptiveQuiz
               },
@@ -355,6 +367,8 @@ export default function Sidebar({
                 label: 'Phòng Thi thử V-ACT',
                 sublabel: 'Mô phỏng áp lực thời gian thực',
                 icon: FileCheck2,
+                iconColor: 'from-cyan-400 to-blue-500',
+                activeGlow: 'shadow-cyan-500/30',
                 active: false,
                 onClick: onOpenMockExam
               },
@@ -363,6 +377,8 @@ export default function Sidebar({
                 label: 'AI Socratic Tutor 24/7',
                 sublabel: 'Gợi mở tư duy & Không giải hộ',
                 icon: Bot,
+                iconColor: 'from-violet-500 to-purple-600',
+                activeGlow: 'shadow-purple-500/30',
                 active: false,
                 onClick: onOpenAiTutor,
                 badge: 'AI'
@@ -372,6 +388,8 @@ export default function Sidebar({
                 label: 'Lớp học & Live Q&A',
                 sublabel: 'Tương tác trực tiếp cùng GV',
                 icon: Video,
+                iconColor: 'from-pink-400 to-rose-500',
+                activeGlow: 'shadow-pink-500/30',
                 active: false,
                 onClick: onOpenLiveClass
               }
@@ -385,6 +403,8 @@ export default function Sidebar({
                 label: 'Học phí & Gói học',
                 sublabel: 'Nâng cấp gói luyện thi PayOS',
                 icon: CreditCard,
+                iconColor: 'from-indigo-400 to-blue-600',
+                activeGlow: 'shadow-indigo-500/30',
                 active: activeTab === 'tuition',
                 onClick: () => setActiveTab('tuition')
               }
@@ -411,7 +431,7 @@ export default function Sidebar({
         { ...entries.ai, label: 'Gia sư AI' }
       ] },
       { sectionTitle: 'Đánh giá', items: [
-        { id: 'exams', label: 'Kiểm tra & Thi thử', icon: ClipboardCheck,
+        { id: 'exams', label: 'Kiểm tra & Thi thử', icon: ClipboardCheck, iconColor: 'from-orange-400 to-rose-500',
           children: [{ ...entries.diagnostic, label: 'Đánh giá đầu vào' },
             { ...entries.mock, label: 'Thi thử V-ACT' }] },
         entries.history,
@@ -422,7 +442,7 @@ export default function Sidebar({
   }
 
   return (
-    <aside className={`${mobile ? 'flex w-full min-h-full' : 'hidden lg:flex w-72'} flex-col justify-between border-r border-slate-200/80 bg-white p-5 select-none shrink-0`}>
+    <aside className={`${mobile ? 'flex w-full min-h-full' : 'hidden lg:flex w-72'} flex-col justify-between border-r border-slate-200/80 bg-gradient-to-b from-slate-50/80 to-white p-5 select-none shrink-0`}>
       <div className="space-y-6">
         {/* Brand Identity Header - Synchronized with Home Page (PublicHeader.jsx) */}
         <div className="space-y-3 px-1">
@@ -435,30 +455,34 @@ export default function Sidebar({
         <nav className="space-y-5">
           {navSections.map((section) => (
             <div key={section.sectionTitle} className="space-y-1.5">
-              <div className="px-3 text-[10px] font-black uppercase tracking-wider text-slate-400">
-                {section.sectionTitle}
+              <div className="px-3 text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                <span className="flex-1">{section.sectionTitle}</span>
+                <span className="h-px flex-1 bg-slate-100" />
               </div>
               <div className="space-y-1">
                 {section.items.map((item) => {
                   const Icon = item.icon;
+                  const iconGradient = item.iconColor || 'from-slate-400 to-slate-600';
+                  const glowClass = item.activeGlow || 'shadow-blue-500/30';
                   if (item.children) {
                     const activeGroup = item.children.some((child) => child.active);
+                    const groupIconGradient = item.iconColor || 'from-orange-400 to-rose-500';
                     return <div key={item.id}>
                       <button type="button" aria-expanded={examsExpanded} aria-controls={`exam-navigation-${mobile ? 'mobile' : 'desktop'}`}
                         onClick={() => setExamsExpanded((value) => !value)}
-                        className={`flex w-full items-center gap-3 rounded-2xl border px-3.5 py-2.5 text-left transition-colors ${activeGroup ? 'border-blue-100 bg-blue-50 text-blue-700' : 'border-transparent text-slate-700 hover:border-slate-200 hover:bg-slate-50'}`}>
-                        <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border ${activeGroup ? 'border-blue-100 bg-white text-blue-600' : 'border-slate-200 bg-white text-slate-500'}`}><Icon className="h-4 w-4" /></span>
+                        className={`flex w-full items-center gap-3 rounded-2xl border px-3.5 py-2.5 text-left transition-all ${activeGroup ? 'border-orange-100 bg-orange-50 text-orange-700' : 'border-transparent text-slate-700 hover:border-slate-200 hover:bg-slate-50'}`}>
+                        <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${groupIconGradient} text-white shadow-sm`}><Icon className="h-4 w-4" /></span>
                         <span className="flex-1 text-xs font-extrabold">{item.label}</span>
-                        <ChevronDown className={`h-3.5 w-3.5 shrink-0 transition-transform ${examsExpanded ? 'rotate-180' : ''}`} />
+                        <ChevronDown className={`h-3.5 w-3.5 shrink-0 transition-transform ${examsExpanded ? 'rotate-180' : ''} ${activeGroup ? 'text-orange-500' : 'text-slate-400'}`} />
                       </button>
                       <div id={`exam-navigation-${mobile ? 'mobile' : 'desktop'}`} hidden={!examsExpanded}>
-                        <div className="mb-2 ml-7 mt-1 space-y-1 border-l border-slate-200 pl-3">
+                        <div className="mb-2 ml-7 mt-1 space-y-1 border-l-2 border-orange-100 pl-3">
                           {item.children.map((child) => <button key={child.id} type="button"
                             aria-current={child.active ? 'page' : undefined}
                             onClick={() => { child.onClick?.(); onNavigate?.(); }}
-                            className={`flex w-full items-center justify-between gap-2 rounded-xl px-3 py-2.5 text-left text-xs transition-colors ${child.active ? 'bg-blue-600 font-bold text-white shadow-sm' : 'font-medium text-slate-600 hover:bg-slate-50 hover:text-blue-700'}`}>
+                            className={`flex w-full items-center justify-between gap-2 rounded-xl px-3 py-2.5 text-left text-xs transition-colors ${child.active ? 'bg-gradient-to-r from-orange-500 to-rose-500 font-bold text-white shadow-sm shadow-orange-500/25' : 'font-medium text-slate-600 hover:bg-orange-50 hover:text-orange-700'}`}>
                             <span>{child.label}</span>
-                            {child.badge && <span className={`shrink-0 rounded-md px-1.5 py-0.5 text-[9px] font-bold ${child.active ? 'bg-white/20 text-white' : 'bg-blue-50 text-blue-600'}`}>{child.badge}</span>}
+                            {child.badge && <span className={`shrink-0 rounded-md px-1.5 py-0.5 text-[9px] font-bold ${child.active ? 'bg-white/20 text-white' : 'bg-orange-50 text-orange-600'}`}>{child.badge}</span>}
                           </button>)}
                         </div>
                       </div>
@@ -472,16 +496,16 @@ export default function Sidebar({
                       onClick={() => { item.onClick?.(); onNavigate?.(); }}
                       className={`w-full flex items-center justify-between gap-2.5 px-3.5 py-2.5 rounded-2xl text-left transition-all cursor-pointer group ${
                         item.active
-                          ? 'bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 text-white shadow-md shadow-blue-500/20'
-                          : 'text-slate-700 hover:bg-white hover:shadow-xs border border-transparent hover:border-slate-200/80'
+                          ? `bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 text-white shadow-md ${glowClass}`
+                          : 'text-slate-700 hover:bg-white hover:shadow-sm border border-transparent hover:border-slate-200/80'
                       }`}
                     >
                       <div className="flex items-center gap-3 min-w-0">
                         <div
-                          className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
+                          className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-all ${
                             item.active
-                              ? 'bg-white/20 text-[#FACC15]'
-                              : 'bg-white border border-slate-200/80 text-slate-500 group-hover:text-blue-600 group-hover:border-blue-200'
+                              ? 'bg-white/20 text-white'
+                              : `bg-gradient-to-br ${iconGradient} text-white shadow-sm group-hover:scale-110`
                           }`}
                         >
                           <Icon className="w-4 h-4" />

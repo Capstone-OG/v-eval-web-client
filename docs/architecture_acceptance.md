@@ -1694,3 +1694,8 @@ Backend follow-up: Practice sends an empty AllSkillIds mapping to AI, preventing
 - Checkpoint the implemented CF1 diagnostic result/history UI: report tabs, skill accuracy and available mastery estimates, compact category navigation and focused detail view. Include the authentication/account toast feedback implemented in the same work session.
 - Backend follow-up remains: persist per-submission skill priors/source, populate historical SkillPriors and RadarChart, verify complete historical question content and domain labels, and finalize the three-exam aggregation rule. This is a frontend milestone, not full backend/runtime acceptance.
 - Validation on the current frontend working tree: production build and lint exited 0 with existing warnings; all 24 existing Node tests passed. Browser/live API flow not verified. Unrelated curriculum, sidebar and roadmap edits remain outside this checkpoint; backend and root pending merge are untouched by Git operations.
+
+## [15/11/2026] - Remaining frontend presentation checkpoint
+
+- Checkpoint the remaining user-authorized frontend changes in StudentCurriculumView, Sidebar and RoadmapLearningPage: curriculum chapter/lesson styling, colored student navigation icons and roadmap presentation refinements. Preserve the earlier CF1 checkpoint.
+- Validation: frontend production build and lint exited 0 with existing warnings; whitespace check passed. All 24 existing tests passed on this same source tree during the preceding checkpoint. Browser appearance and live API behavior remain unverified. No backend changes, push or root merge completion.
