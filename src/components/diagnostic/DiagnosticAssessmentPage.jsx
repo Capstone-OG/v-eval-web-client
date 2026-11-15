@@ -244,6 +244,79 @@ function mapSkillToDomain(skillName, index) {
   return { id: 'dom_nat_sci', name: DOMAINS.dom_nat_sci.name };
 }
 
+function normalizeDiagnosticRadar(rawRadar, apiDomainScores = []) {
+  const radarItems = Array.isArray(rawRadar) && rawRadar.length > 0
+    ? rawRadar
+    : (Array.isArray(apiDomainScores) ? apiDomainScores : []).map((domain) => ({
+      ...domain,
+      studentPct: domain.accuracy_pct ?? domain.accuracyPct
+    }));
+  return radarItems.filter((item) => item && typeof item === 'object').map((item) => {
+    const studentRaw = item.studentPct ?? item.student_pct;
+    const benchmarkRaw = item.benchmarkPct ?? item.benchmark_pct;
+    const studentPct = studentRaw == null || studentRaw === '' ? NaN : Number(studentRaw);
+    const benchmarkPct = benchmarkRaw == null || benchmarkRaw === '' ? NaN : Number(benchmarkRaw);
+    return {
+      domain_id: item.domainId ?? item.domain_id ?? '',
+      domain_name: item.domainName ?? item.domain_name ?? '',
+      ...(Number.isFinite(studentPct) ? { student_pct: studentPct } : {}),
+      ...(Number.isFinite(benchmarkPct) ? { benchmark_pct: benchmarkPct } : {})
+    };
+  });
+}
+
+function normalizeDiagnosticSkillPriors(rawPriors) {
+  if (!Array.isArray(rawPriors)) return [];
+  return rawPriors.filter((item) => item && typeof item === 'object').map((item) => {
+    const pL0Raw = item.pL0 ?? item.p_l0 ?? item.pl0;
+    const thetaRaw = item.thetaSkill ?? item.theta_skill;
+    const pL0 = pL0Raw === '' || pL0Raw == null ? NaN : Number(pL0Raw);
+    const thetaSkill = thetaRaw === '' || thetaRaw == null ? NaN : Number(thetaRaw);
+    return {
+      ...item,
+      skillId: item.skillId ?? item.skill_id,
+      skillName: item.skillName ?? item.skill_name ?? '',
+      domainId: item.domainId ?? item.domain_id ?? '',
+      domainName: item.domainName ?? item.domain_name ?? '',
+      pL0: Number.isFinite(pL0) ? pL0 : undefined,
+      thetaSkill: Number.isFinite(thetaSkill) ? thetaSkill : undefined,
+      source: item.source
+    };
+  });
+}
+
+function DiagnosticSkillPriorMatrix({ priors }) {
+  if (!Array.isArray(priors) || priors.length === 0) return null;
+  return (
+    <section className="mt-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-xl">
+      <div className="mb-4 flex items-center gap-2 border-b border-slate-100 pb-3">
+        <Brain className="h-5 w-5 text-indigo-600" />
+        <h3 className="text-base font-black text-slate-900">Tiên nghiệm kỹ năng từ API ({priors.length})</h3>
+      </div>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {priors.map((skill, index) => {
+          const pL0 = Number.isFinite(skill.pL0) && skill.pL0 >= 0 && skill.pL0 <= 1 ? skill.pL0 : null;
+          const theta = Number.isFinite(skill.thetaSkill) ? skill.thetaSkill : null;
+          return (
+            <div key={skill.skillId || index} className="space-y-2 rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+              <div className="text-sm font-bold text-slate-900">{skill.skillName || 'Kỹ năng'}</div>
+              {skill.domainName && <div className="text-xs text-slate-500">{skill.domainName}</div>}
+              {pL0 !== null && <div className="text-xs font-semibold text-indigo-700">P(L₀): {Math.round(pL0 * 100)}%</div>}
+              {theta !== null && <div className="text-xs font-semibold text-slate-600">θ_skill: {theta.toFixed(2)}</div>}
+              {skill.source && <div className="text-[11px] text-slate-500">Nguồn: {skill.source}</div>}
+              {pL0 !== null && (
+                <div className="h-2 overflow-hidden rounded-full bg-slate-200">
+                  <div className="h-full rounded-full bg-indigo-600" style={{ width: `${pL0 * 100}%` }} />
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 export default function DiagnosticAssessmentPage({
   onCompleteDiagnostic,
   onNavigateDashboard,
@@ -379,15 +452,15 @@ export default function DiagnosticAssessmentPage({
         isCorrect: q.isCorrect, timeSpent: q.timeSpentSeconds, isFlagged: false,
         speedCategory: q.timeSpentSeconds < 25 ? 'fast' : q.timeSpentSeconds > 90 ? 'slow' : 'normal'
       }));
+      const historyDomainScores = domainScoresFromQuestions(data.questions);
       setReportTab('overview');
       setReviewFilter('ALL');
       setSelectedHistoryExam({ ...attempt, resultData: {
         theta_0: data.theta0, placement_class: data.placementClass,
-        ai_commentary: data.aiCommentary, reviewedQuestions: reviewed, domain_scores: domainScoresFromQuestions(data.questions),
+        ai_commentary: data.aiCommentary, reviewedQuestions: reviewed, domain_scores: historyDomainScores,
         weakSkills: data.weakSkills, skillBreakdowns: data.skillBreakdowns,
-        skillPriors: Array.isArray(data.skillPriors) ? data.skillPriors : [],
-        radar_chart: (data.radarChart || []).map((r) => ({ domain_id: r.domainId,
-          domain_name: r.domainName, student_pct: r.studentPct, benchmark_pct: r.benchmarkPct })),
+        skillPriors: normalizeDiagnosticSkillPriors(data.skillPriors ?? data.skill_priors),
+        radar_chart: normalizeDiagnosticRadar(data.radarChart ?? data.radar_chart, historyDomainScores),
         pacing: { totalCorrect: data.totalCorrect, totalQuestions: data.totalQuestions,
           totalTimeSpent: data.totalTimeSpentSeconds,
           avgTimePerQ: data.totalQuestions ? Math.round(data.totalTimeSpentSeconds / data.totalQuestions) : 0,
@@ -1020,17 +1093,12 @@ export default function DiagnosticAssessmentPage({
         class_id: apiResponse?.classId || null,
         enrollment_id: apiResponse?.enrollmentId || null,
         domain_scores: domainScoresCalculated,
-        radar_chart: (apiResponse.radarChart || []).map((r) => ({
-          domain_id: r.domainId,
-          domain_name: r.domainName,
-          student_pct: r.studentPct,
-          benchmark_pct: r.benchmarkPct
-        })),
+        radar_chart: normalizeDiagnosticRadar(apiResponse.radarChart ?? apiResponse.radar_chart, domainScoresCalculated),
         ai_commentary: apiResponse.aiCommentary || '',
         reviewedQuestions: reviewedQuestionsList,
         weakSkills: apiResponse?.weakSkills || [],
         skillBreakdowns: apiResponse?.skillBreakdowns || [],
-        skillPriors: Array.isArray(apiResponse.skillPriors) ? apiResponse.skillPriors : [],
+        skillPriors: normalizeDiagnosticSkillPriors(apiResponse.skillPriors ?? apiResponse.skill_priors),
         pacing: {
           totalCorrect: apiResponse?.totalCorrect ?? totalCorrect,
           totalQuestions: apiResponse?.totalQuestions ?? questions.length,
@@ -1349,16 +1417,26 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
                   </div>
 
                   <div className="h-72 w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <RadarChart data={currentDisplayResult.radar_chart || []}>
-                        <PolarGrid stroke="#cbd5e1" />
-                        <PolarAngleAxis dataKey="domain_name" tick={{ fill: '#334155', fontSize: 11, fontWeight: 700 }} />
-                        <PolarRadiusAxis angle={30} domain={[0, 100]} stroke="#94a3b8" />
-                        <Radar name="Điểm Thí Sinh" dataKey="student_pct" stroke="#2563eb" fill="#2563eb" fillOpacity={0.45} />
-                        <Radar name="Chuẩn Mục Tiêu" dataKey="benchmark_pct" stroke="#6366f1" fill="#6366f1" fillOpacity={0.15} />
-                        <Tooltip contentStyle={{ backgroundColor: '#ffffff', borderColor: '#e2e8f0', borderRadius: '12px', color: '#0f172a' }} />
-                      </RadarChart>
-                    </ResponsiveContainer>
+                    {currentDisplayResult.radar_chart?.length ? (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <RadarChart data={currentDisplayResult.radar_chart}>
+                          <PolarGrid stroke="#cbd5e1" />
+                          <PolarAngleAxis dataKey="domain_name" tick={{ fill: '#334155', fontSize: 11, fontWeight: 700 }} />
+                          <PolarRadiusAxis angle={30} domain={[0, 100]} stroke="#94a3b8" />
+                          {currentDisplayResult.radar_chart.some((item) => Number.isFinite(item.student_pct)) && (
+                            <Radar name="Điểm Thí Sinh" dataKey="student_pct" stroke="#2563eb" fill="#2563eb" fillOpacity={0.45} />
+                          )}
+                          {currentDisplayResult.radar_chart.some((item) => Number.isFinite(item.benchmark_pct)) && (
+                            <Radar name="Chuẩn Mục Tiêu" dataKey="benchmark_pct" stroke="#6366f1" fill="#6366f1" fillOpacity={0.15} />
+                          )}
+                          <Tooltip contentStyle={{ backgroundColor: '#ffffff', borderColor: '#e2e8f0', borderRadius: '12px', color: '#0f172a' }} />
+                        </RadarChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <div className="flex h-full items-center justify-center text-center text-sm text-slate-500">
+                        API chưa trả dữ liệu radar cho lần thi này.
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex items-center justify-center gap-6 text-xs font-bold pt-2">
@@ -1366,7 +1444,7 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
                       <span className="w-3 h-3 rounded-full bg-blue-600"></span>
                       <span>Kết quả của bạn</span>
                     </div>
-                    <div className="flex items-center gap-2 text-indigo-600">
+                    <div className={`flex items-center gap-2 text-indigo-600 ${currentDisplayResult.radar_chart?.some((item) => Number.isFinite(item.benchmark_pct)) ? '' : 'hidden'}`}>
                       <span className="w-3 h-3 rounded-full bg-indigo-500"></span>
                       <span>Chuẩn đầu vào 900+</span>
                     </div>
@@ -1408,6 +1486,7 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
               </div>
 
               {/* ================================================================= */}
+              <DiagnosticSkillPriorMatrix priors={currentDisplayResult.skillPriors} />
 
 </DiagnosticReportPanel>
 <DiagnosticReportPanel id="answers" active={reportTab}>
@@ -2675,16 +2754,26 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
               </div>
 
               <div className="h-72 w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <RadarChart data={resultData.radar_chart || []}>
-                    <PolarGrid stroke="#cbd5e1" />
-                    <PolarAngleAxis dataKey="domain_name" tick={{ fill: '#334155', fontSize: 11, fontWeight: 700 }} />
-                    <PolarRadiusAxis angle={30} domain={[0, 100]} stroke="#94a3b8" />
-                    <Radar name="Điểm Thí Sinh" dataKey="student_pct" stroke="#2563eb" fill="#2563eb" fillOpacity={0.45} />
-                    <Radar name="Chuẩn Mục Tiêu" dataKey="benchmark_pct" stroke="#6366f1" fill="#6366f1" fillOpacity={0.15} />
-                    <Tooltip contentStyle={{ backgroundColor: '#ffffff', borderColor: '#e2e8f0', borderRadius: '12px', color: '#0f172a' }} />
-                  </RadarChart>
-                </ResponsiveContainer>
+                  {resultData.radar_chart?.length ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <RadarChart data={resultData.radar_chart}>
+                        <PolarGrid stroke="#cbd5e1" />
+                        <PolarAngleAxis dataKey="domain_name" tick={{ fill: '#334155', fontSize: 11, fontWeight: 700 }} />
+                        <PolarRadiusAxis angle={30} domain={[0, 100]} stroke="#94a3b8" />
+                        {resultData.radar_chart.some((item) => Number.isFinite(item.student_pct)) && (
+                          <Radar name="Điểm Thí Sinh" dataKey="student_pct" stroke="#2563eb" fill="#2563eb" fillOpacity={0.45} />
+                        )}
+                        {resultData.radar_chart.some((item) => Number.isFinite(item.benchmark_pct)) && (
+                          <Radar name="Chuẩn Mục Tiêu" dataKey="benchmark_pct" stroke="#6366f1" fill="#6366f1" fillOpacity={0.15} />
+                        )}
+                        <Tooltip contentStyle={{ backgroundColor: '#ffffff', borderColor: '#e2e8f0', borderRadius: '12px', color: '#0f172a' }} />
+                      </RadarChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="flex h-full items-center justify-center text-center text-sm text-slate-500">
+                      API chưa trả dữ liệu radar cho lần thi này.
+                    </div>
+                  )}
               </div>
 
               <div className="flex items-center justify-center gap-6 text-xs font-bold pt-2">
@@ -2692,7 +2781,7 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
                   <span className="w-3 h-3 rounded-full bg-blue-600"></span>
                   <span>Kết quả của bạn</span>
                 </div>
-                <div className="flex items-center gap-2 text-indigo-600">
+                <div className={`flex items-center gap-2 text-indigo-600 ${resultData.radar_chart?.some((item) => Number.isFinite(item.benchmark_pct)) ? '' : 'hidden'}`}>
                   <span className="w-3 h-3 rounded-full bg-indigo-500"></span>
                   <span>Chuẩn đầu vào 900+</span>
                 </div>
@@ -2742,6 +2831,7 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
           {/* BẢNG ĐÁNH GIÁ CHI TIẾT & ĐÁP ÁN 30 CÂU (ANSWER KEY & EXPLANATIONS)    */}
           {/* ===================================================================== */}
 
+<DiagnosticSkillPriorMatrix priors={resultData.skillPriors} />
 </DiagnosticReportPanel>
 <DiagnosticReportPanel id="answers" active={reportTab}>
 

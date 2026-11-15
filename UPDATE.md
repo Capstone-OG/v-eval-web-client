@@ -1,7 +1,7 @@
 # UPDATE
 
-## [15/11/2026] - CF2 roadmap video and quiz integration
+## [16/11/2026] - Diagnostic radar and skill prior API compatibility
 
-- Connected Content materials and video by roadmap SkillId and the Practice Stage preview quiz to each roadmap node.
-- Added a student entry point for the backend generated roadmap while preserving the existing curriculum view.
-- Production build and lint pass with existing warnings; live API behavior remains unverified.
+- Kept the TNhan branch's sidebar and diagnostic report tab layout.
+- Normalized API radar and `skillPriors` for fresh and historical results. If no radar array is returned, student domain percentages use API-returned question results; benchmark values are shown only when returned.
+- Runtime API verification remains pending.

@@ -744,3 +744,13 @@ Architecture: existing curriculum, sidebar and roadmap components retain their r
 | Content availability | Runtime verification pending | Skills without configured materials may return an empty list. |
 
 Validation: build and lint pass with existing warnings; live API integration remains unverified.
+
+## [16/11/2026] - Diagnostic API result normalization
+
+| Item | Status | Detail |
+| --- | --- | --- |
+| Existing diagnostic report tabs and sidebar | Preserved | No layout or navigation changes from the TNhan branch. |
+| Radar chart API payload | Frontend normalized | Accepts camelCase and snake_case fields; if the API omits the radar array, groups API-returned question results by domain for student percentages. Benchmark values are rendered only when returned by API. |
+| Skill mastery priors | Frontend normalized and displayed | Overview matrix and analysis profile accept API `skillPriors`/`skill_priors` and field aliases; values remain sourced from the response. |
+| Historical API population | Backend follow-up | The history endpoint must return per-submission radar and skill-prior data for these panels to show it. |
+| Runtime verification | Pending | Live API data was not checked. |

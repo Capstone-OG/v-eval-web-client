@@ -2,6 +2,13 @@
 
 ---
 
+## [16/11/2026] - Diagnostic radar and skill prior API compatibility
+
+- Preserved the existing report tabs, sidebar, and radar visualization on the TNhan branch.
+- Normalized radar chart and `skillPriors` payloads from camelCase or snake_case API responses for both fresh submissions and historical results.
+- Added the API-backed skill prior matrix to the existing overview tab. If the API omits its radar array, student percentages are grouped from API-returned question/domain/correctness fields; benchmark values appear only when returned by API.
+- Runtime API behavior was not tested in this change.
+
 ## [20/10/2026] - Triển Khai Hoàn Thiện Màn Hình Cài Đặt Tài Khoản, Tích Hợp Thông Tin Đại Diện Phụ Huynh (Cha HOẶC Mẹ), Mã Kết Nối Học Sinh & Học Bạ Điện Tử ĐGNL VNU-HCM 2026
 
 - **Mở Rộng Màn Hình Cài Đặt Tài Khoản (`src/components/settings/AccountSettingsPage.jsx`)**:

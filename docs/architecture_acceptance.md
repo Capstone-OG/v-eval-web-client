@@ -2000,3 +2000,11 @@ Backend follow-up: Practice sends an empty AllSkillIds mapping to AI, preventing
 The backend connected roadmap is now reachable from the student workspace. Selecting a RoadmapNode fetches lesson materials and videos from Content Service by SkillId. The node also exposes the Practice Stage preview quiz, whose options omit answer keys. The existing curriculum experience remains available through the workspace switch.
 
 The frontend build and lint passed with existing warnings. Live service data, quiz availability, and video playback require runtime verification.
+
+### [16/11/2026] - Diagnostic report API field compatibility
+
+- Preserved the TNhan branch's diagnostic report tabs, sidebar presentation, and existing radar chart UI.
+- Normalized radar and skill-prior responses in both fresh submission and history flows, accepting camelCase and snake_case API field names. When the radar array is absent, student percentages are grouped from API-returned question results; benchmark values are shown only if the API returns them.
+- Added the API-provided skill-prior matrix to the overview tab while retaining the existing detailed skill analysis tab.
+- Skill-prior values are taken from the API response; the frontend does not synthesize mastery estimates when the API omits them.
+- Historical panels still depend on the backend history endpoint returning these per-submission fields. Runtime verification remains pending.
