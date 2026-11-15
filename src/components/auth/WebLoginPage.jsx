@@ -1,3 +1,4 @@
+import { toast } from '../../context/ToastContext';
 import BrandLogo from '../common/BrandLogo';
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -83,6 +84,27 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccessMsg, setSubmitSuccessMsg] = useState(null);
   const [formError, setFormError] = useState(null);
+
+  const notifyFormError = (message) => {
+    setFormError(message);
+    if (message) toast.error(message);
+  };
+
+  const notifyModalError = (message) => {
+    setModalError(message);
+    if (message) toast.error(message);
+  };
+
+  const notifySubmitSuccessMsg = (message) => {
+    setSubmitSuccessMsg(message);
+    if (message) toast.success(message);
+  };
+
+  const notifyModalSuccess = (message) => {
+    setModalSuccess(message);
+    if (message) toast.success(message);
+  };
+
   const [fieldErrors, setFieldErrors] = useState({});
 
   // Real-time Email Validation state for Registration
@@ -195,8 +217,8 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
   // Mode Switch Handler
   const handleModeSwitch = (newMode) => {
     setMode(newMode);
-    setFormError(null);
-    setSubmitSuccessMsg(null);
+    notifyFormError(null);
+    notifySubmitSuccessMsg(null);
     setFieldErrors({});
     if (newMode === 'register' && (role === 'teacher' || role === 'manager')) {
       setRole('student');
@@ -216,8 +238,8 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
   // Handle Login Submit with Real API Integration
   const handleLoginSubmit = async (e) => {
     if (e) e.preventDefault();
-    setFormError(null);
-    setSubmitSuccessMsg(null);
+    notifyFormError(null);
+    notifySubmitSuccessMsg(null);
 
     const errs = {};
     if (!email.trim()) {
@@ -229,7 +251,7 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
 
     if (Object.keys(errs).length > 0) {
       setFieldErrors(errs);
-      setFormError("Vui lòng nhập đầy đủ thông tin bên dưới.");
+      notifyFormError("Vui lòng nhập đầy đủ thông tin bên dưới.");
       return;
     }
     setFieldErrors({});
@@ -260,24 +282,25 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
         setModalMode('activation');
         setForgotEmail(email);
         setOtpCode('');
-        setModalError(null);
+        notifyModalError(null);
         setModalSuccess('Tài khoản chưa được kích hoạt. Vui lòng kiểm tra email và nhập mã OTP 6 số để kích hoạt.');
         setForgotStep(2);
         setIsForgotModalOpen(true);
         setFormError('Tài khoản chưa được kích hoạt OTP. Vui lòng nhập mã OTP 6 số để kích hoạt.');
+        toast.warning('Vui lòng nhập mã OTP trong email để kích hoạt tài khoản.');
         return;
       }
 
       const msg = err.data?.error?.description || err.data?.message || err.message || 'Đăng nhập không thành công. Vui lòng kiểm tra lại email hoặc mật khẩu.';
-      setFormError(msg);
+      notifyFormError(msg);
     }
   };
 
   // Handle Registration Submit with Real API Integration
   const handleRegisterSubmit = async (e) => {
     if (e) e.preventDefault();
-    setFormError(null);
-    setSubmitSuccessMsg(null);
+    notifyFormError(null);
+    notifySubmitSuccessMsg(null);
 
     const errs = {};
 
@@ -323,7 +346,7 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
 
     if (Object.keys(errs).length > 0) {
       setFieldErrors(errs);
-      setFormError(errs.regEmail || "Vui lòng kiểm tra và hoàn thiện chính xác các trường thông tin bên dưới.");
+      notifyFormError(errs.regEmail || "Vui lòng kiểm tra và hoàn thiện chính xác các trường thông tin bên dưới.");
       return;
     }
     setFieldErrors({});
@@ -342,7 +365,7 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
         setEmailValidationMessage(liveEmailCheck.message);
         setEmailSuggestedFix(liveEmailCheck.suggestedEmail || null);
         setFieldErrors({ regEmail: liveEmailCheck.message });
-        setFormError(liveEmailCheck.message);
+        notifyFormError(liveEmailCheck.message);
         return;
       }
 
@@ -365,8 +388,8 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
       setModalMode('activation');
       setForgotEmail(regEmail.trim());
       setOtpCode(''); // Empty input field so user must enter OTP from email
-      setModalError(null);
-      setModalSuccess(
+      notifyModalError(null);
+      notifyModalSuccess(
         "Đã kiểm tra email hợp lệ! Mã xác thực OTP 6 chữ số đã được gửi về email của bạn. Vui lòng kiểm tra hộp thư và nhập mã OTP để xác minh tài khoản."
       );
       setForgotStep(2);
@@ -380,7 +403,7 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
         err.data?.message ||
         err.message ||
         'Đăng ký không thành công. Vui lòng kiểm tra lại thông tin.';
-      setFormError(msg);
+      notifyFormError(msg);
       if (msg.toLowerCase().includes('email') || msg.toLowerCase().includes('tên miền') || msg.toLowerCase().includes('gmail')) {
         setEmailValidationStatus('invalid');
         setFieldErrors((prev) => ({ ...prev, regEmail: msg }));
@@ -400,8 +423,8 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
   // Forgot password & Account activation submit handler with Real API Integration
   const handleForgotSubmit = async (e) => {
     if (e) e.preventDefault();
-    setModalError(null);
-    setModalSuccess(null);
+    notifyModalError(null);
+    notifyModalSuccess(null);
     setIsSubmitting(true);
 
     try {
@@ -409,33 +432,33 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
         const cleanEmail = (forgotEmail || '').trim();
         if (!cleanEmail) {
           setIsSubmitting(false);
-          setModalError("Vui lòng nhập địa chỉ Email tài khoản.");
+          notifyModalError("Vui lòng nhập địa chỉ Email tài khoản.");
           return;
         }
         // Gọi API forgot-password để kiểm tra email tồn tại và gửi mã OTP
         await authService.forgotPassword(cleanEmail);
         setIsSubmitting(false);
         setOtpCode('');
-        setModalSuccess(`Đã kiểm tra tài khoản thành công! Mã OTP xác thực đặt lại mật khẩu đã được gửi đến email ${cleanEmail}. Vui lòng kiểm tra hộp thư.`);
+        notifyModalSuccess(`Đã kiểm tra tài khoản thành công! Mã OTP xác thực đặt lại mật khẩu đã được gửi đến email ${cleanEmail}. Vui lòng kiểm tra hộp thư.`);
         setForgotStep(2);
       } else if (forgotStep === 2) {
         if (!otpCode || otpCode.trim().length !== 6) {
           setIsSubmitting(false);
-          setModalError("Vui lòng nhập đầy đủ mã xác thực OTP gồm 6 chữ số.");
+          notifyModalError("Vui lòng nhập đầy đủ mã xác thực OTP gồm 6 chữ số.");
           return;
         }
         if (modalMode === 'activation') {
           // Activation flow for registration
           await authService.verifyOtp(forgotEmail.trim(), otpCode.trim());
           setIsSubmitting(false);
-          setModalSuccess("Xác thực và kích hoạt tài khoản thành công! Bạn có thể đăng nhập ngay.");
+          notifyModalSuccess("Xác thực và kích hoạt tài khoản thành công! Bạn có thể đăng nhập ngay.");
           setForgotStep(4);
         } else {
           // Forgot password flow: BẮT BUỘC KIỂM TRA MÃ OTP VỚI BACKEND TRƯỚC KHI CHO QUA BƯỚC 3!
           await authService.verifyResetOtp(forgotEmail.trim(), otpCode.trim());
           setIsSubmitting(false);
-          setModalError(null);
-          setModalSuccess(null);
+          notifyModalError(null);
+          notifyModalSuccess(null);
           setNewPassword('');
           setConfirmPassword('');
           setForgotStep(3);
@@ -443,17 +466,17 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
       } else if (forgotStep === 3) {
         if (!newPassword || newPassword.length < 8) {
           setIsSubmitting(false);
-          setModalError("Mật khẩu mới phải có tối thiểu 8 ký tự.");
+          notifyModalError("Mật khẩu mới phải có tối thiểu 8 ký tự.");
           return;
         }
         if (!/[A-Z]/.test(newPassword) || !/[a-z]/.test(newPassword) || !/[0-9]/.test(newPassword)) {
           setIsSubmitting(false);
-          setModalError("Mật khẩu phải chứa ít nhất 1 chữ hoa, 1 chữ thường và 1 chữ số (VD: Password123@).");
+          notifyModalError("Mật khẩu phải chứa ít nhất 1 chữ hoa, 1 chữ thường và 1 chữ số (VD: Password123@).");
           return;
         }
         if (newPassword !== confirmPassword) {
           setIsSubmitting(false);
-          setModalError("Mật khẩu xác nhận không khớp. Vui lòng kiểm tra lại.");
+          notifyModalError("Mật khẩu xác nhận không khớp. Vui lòng kiểm tra lại.");
           return;
         }
         await authService.resetPassword({
@@ -463,29 +486,29 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
           confirmPassword
         });
         setIsSubmitting(false);
-        setModalSuccess("Đặt lại mật khẩu thành công! Bạn có thể sử dụng mật khẩu mới để đăng nhập ngay bây giờ.");
+        notifyModalSuccess("Đặt lại mật khẩu thành công! Bạn có thể sử dụng mật khẩu mới để đăng nhập ngay bây giờ.");
         setForgotStep(4);
       }
     } catch (err) {
       setIsSubmitting(false);
       const msg = err.data?.error?.description || err.message || 'Thao tác không thành công. Vui lòng kiểm tra lại.';
-      setModalError(msg);
+      notifyModalError(msg);
     }
   };
 
   // Resend OTP Handler
   const handleResendOtp = async () => {
-    setModalError(null);
+    notifyModalError(null);
     try {
       if (modalMode === 'activation') {
-        setModalSuccess('Đã gửi lại mã OTP kích hoạt đến email ' + forgotEmail);
+        notifyModalSuccess('Đã gửi lại mã OTP kích hoạt đến email ' + forgotEmail);
       } else {
         await authService.forgotPassword(forgotEmail.trim());
-        setModalSuccess('Đã gửi lại mã OTP đặt lại mật khẩu mới đến email ' + forgotEmail);
+        notifyModalSuccess('Đã gửi lại mã OTP đặt lại mật khẩu mới đến email ' + forgotEmail);
       }
     } catch (err) {
       const msg = err.data?.error?.description || err.message || 'Không thể gửi lại mã OTP. Vui lòng thử lại sau.';
-      setModalError(msg);
+      notifyModalError(msg);
       throw err;
     }
   };
@@ -768,8 +791,8 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
                     setOtpCode('');
                     setNewPassword('');
                     setConfirmPassword('');
-                    setModalError(null);
-                    setModalSuccess(null);
+                    notifyModalError(null);
+                    notifyModalSuccess(null);
                     setForgotStep(1);
                     setIsForgotModalOpen(true);
                   }}
@@ -844,8 +867,8 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
         isOpen={isForgotModalOpen}
         onClose={() => {
           setIsForgotModalOpen(false);
-          setModalError(null);
-          setModalSuccess(null);
+          notifyModalError(null);
+          notifyModalSuccess(null);
         }}
         modalMode={modalMode}
         forgotStep={forgotStep}

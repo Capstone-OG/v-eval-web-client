@@ -75,6 +75,8 @@ import { createExamClock } from './examClock';
 import { createSubmissionSnapshot } from './submissionSnapshot';
 import { draftKey, readDraft, findSavedDiagnostic, domainScoresFromQuestions, removeDiagnosticDraft } from './diagnosticRecovery';
 import WeakSkills from './WeakSkills';
+import DiagnosticReportTabs, { DiagnosticReportPanel } from './DiagnosticReportTabs';
+import DiagnosticSkillProfile from './DiagnosticSkillProfile';
 import { completedDiagnosticExamIds, DIAGNOSTIC_TARGET } from './diagnosticEligibility';
 import { DOMAINS } from './diagnosticData';
 
@@ -251,6 +253,7 @@ export default function DiagnosticAssessmentPage({
   isEmbedded = false,
   historyOnly = false,
   onExamStateChange,
+  onHistoryDetailChange,
   autoStart = false,
   examCode = 'VACT2026'
 }) {
@@ -273,6 +276,9 @@ export default function DiagnosticAssessmentPage({
 
   // Selected attempt from history to view in detail (null = show history overview list)
   const [selectedHistoryExam, setSelectedHistoryExam] = useState(null);
+  useEffect(() => {
+    onHistoryDetailChange?.(Boolean(selectedHistoryExam));
+  }, [selectedHistoryExam, onHistoryDetailChange]);
 
   // Ignore legacy browser caches: they can contain sample submissions.
   const studentId = currentUser?.userId || currentUser?.id || currentUser?.studentId;
@@ -290,6 +296,7 @@ export default function DiagnosticAssessmentPage({
   const detailRef = useRef(0);
   const [resultData, setResultData] = useState(null);
   const [reviewFilter, setReviewFilter] = useState('ALL');
+  const [reportTab, setReportTab] = useState('overview');
   const currentDisplayResult = selectedHistoryExam?.resultData || resultData;
 
   useEffect(() => {
@@ -352,10 +359,13 @@ export default function DiagnosticAssessmentPage({
         isCorrect: q.isCorrect, timeSpent: q.timeSpentSeconds, isFlagged: false,
         speedCategory: q.timeSpentSeconds < 25 ? 'fast' : q.timeSpentSeconds > 90 ? 'slow' : 'normal'
       }));
+      setReportTab('overview');
+      setReviewFilter('ALL');
       setSelectedHistoryExam({ ...attempt, resultData: {
         theta_0: data.theta0, placement_class: data.placementClass,
         ai_commentary: data.aiCommentary, reviewedQuestions: reviewed, domain_scores: domainScoresFromQuestions(data.questions),
         weakSkills: data.weakSkills, skillBreakdowns: data.skillBreakdowns,
+        skillPriors: Array.isArray(data.skillPriors) ? data.skillPriors : [],
         radar_chart: (data.radarChart || []).map((r) => ({ domain_id: r.domainId,
           domain_name: r.domainName, student_pct: r.studentPct, benchmark_pct: r.benchmarkPct })),
         pacing: { totalCorrect: data.totalCorrect, totalQuestions: data.totalQuestions,
@@ -1000,6 +1010,7 @@ export default function DiagnosticAssessmentPage({
         reviewedQuestions: reviewedQuestionsList,
         weakSkills: apiResponse?.weakSkills || [],
         skillBreakdowns: apiResponse?.skillBreakdowns || [],
+        skillPriors: Array.isArray(apiResponse.skillPriors) ? apiResponse.skillPriors : [],
         pacing: {
           totalCorrect: apiResponse?.totalCorrect ?? totalCorrect,
           totalQuestions: apiResponse?.totalQuestions ?? questions.length,
@@ -1037,6 +1048,8 @@ export default function DiagnosticAssessmentPage({
 
       setShowViolationModal(false);
       setShowSubmitModal(false);
+      setReportTab('overview');
+      setReviewFilter('ALL');
       setSelectedHistoryExam(newAttempt);
       setStage('setup');
       exitFullScreenMode();
@@ -1177,7 +1190,7 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
   const isTakingExam = stage === 'testing' || stage === 'analyzing';
 
   return (
-    <div className={`${historyOnly ? 'min-w-0' : 'min-h-screen'} text-slate-900 flex flex-col font-sans selection:bg-blue-600 selection:text-white bg-[#F4F7FC] ${isTakingExam ? 'fixed inset-0 z-50 overflow-y-auto w-full h-full' : ''}`}>
+    <div className={`${historyOnly ? 'min-w-0' : 'min-h-screen'} text-slate-900 flex flex-col font-sans selection:bg-blue-600 selection:text-white ${isEmbedded ? 'bg-transparent' : 'bg-[#F4F7FC]'} ${isTakingExam ? 'fixed inset-0 z-50 overflow-y-auto w-full h-full' : ''}`}>
       {showCampusSetup && <div className="fixed inset-0 z-100 flex items-center justify-center bg-slate-950/70 p-4">
         <div role="dialog" aria-modal="true" aria-labelledby="campus-title" className="w-full max-w-lg rounded-2xl bg-white p-6 space-y-4">
           <h2 id="campus-title" className="text-xl font-bold">Đăng ký cơ sở trước khi làm bài</h2>
@@ -1253,13 +1266,13 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
       {/* 1. SETUP / EXAM LOBBY & CATALOG SCREEN (Flow 1: Khảo Thí & Chẩn Đoán) */}
       {/* ===================================================================== */}
       {stage === 'setup' && (
-        <div className="flex-1 w-full max-w-[1700px] mx-auto px-4 sm:px-6 lg:px-8 pt-1 sm:pt-2 pb-8 space-y-5 animate-fade-in">
+        <div className={`flex-1 w-full mx-auto space-y-5 animate-fade-in ${isEmbedded ? 'min-w-0 pb-3' : 'max-w-[1700px] px-4 sm:px-6 lg:px-8 pt-1 sm:pt-2 pb-8'}`}>
 
           {selectedHistoryExam ? (
             <div className="space-y-4 sm:space-y-5 animate-fade-in">
 
               {/* Top Navigation Bar with Back Button */}
-              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 px-4 sm:px-5 py-4 rounded-2xl bg-white border border-slate-200/80 shadow-sm">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 px-5 py-4 rounded-2xl bg-gradient-to-r from-slate-900 via-blue-950 to-indigo-900 border border-indigo-800 shadow-lg shadow-indigo-950/10">
                 <div className="flex items-start sm:items-center gap-4 min-w-0">
                   <button
                     type="button"
@@ -1267,16 +1280,16 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
                       setSelectedHistoryExam(null);
                       setResultData(null);
                     }}
-                    className="p-2.5 rounded-xl bg-slate-50 hover:bg-blue-50 text-slate-600 hover:text-blue-700 border border-slate-200 text-xs flex items-center gap-2 transition-colors cursor-pointer shrink-0"
+                    className="p-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/20 shadow-sm text-xs flex items-center gap-2 transition-colors cursor-pointer shrink-0 focus-visible:outline-2 focus-visible:outline-white"
                     aria-label="Quay lại danh sách lần thi"
                     title="Quay lại danh sách lần thi"
                   >
                     <ChevronLeft className="w-4 h-4" />
                   </button>
                   <div className="min-w-0 space-y-1">
-                    <span className="block text-[10px] font-bold uppercase tracking-widest text-blue-600">Chi tiết lần thi</span>
-                    <h1 className="text-sm sm:text-base font-bold text-slate-900 leading-snug">{selectedHistoryExam.examTitle || 'Bài Khảo Sát Năng Lực'}</h1>
-                    <span className="block text-xs text-slate-500">
+                    <span className="block text-[10px] font-bold uppercase tracking-widest text-blue-300">Chi tiết lần thi</span>
+                    <h1 className="text-base sm:text-lg font-bold text-white leading-snug">{selectedHistoryExam.examTitle || 'Bài Khảo Sát Năng Lực'}</h1>
+                    <span className="block text-xs text-blue-100/80">
                       Nộp lúc {new Date(selectedHistoryExam.completedAt).toLocaleString('vi-VN')}
                     </span>
                   </div>
@@ -1294,78 +1307,14 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
                 </div>
               </div>
 
-              <DiagnosticResultSummary result={currentDisplayResult} />
+              <DiagnosticResultSummary result={currentDisplayResult} compact={historyOnly} />
+<DiagnosticReportTabs value={reportTab} onChange={setReportTab} />
+<DiagnosticReportPanel id="overview" active={reportTab}>
+
               <WeakSkills result={currentDisplayResult} />
 
-              {/* ================================================================= */}
-              {/* PACING ANALYSIS SPEEDOMETERS                                      */}
-              {/* ================================================================= */}
-              <div className="p-6 sm:p-7 bg-white border border-slate-200/90 rounded-3xl shadow-xl space-y-5 text-slate-900">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
-                  <div className="flex items-center gap-2.5 text-base font-black text-slate-900">
-                    <Gauge className="w-5 h-5 text-amber-500" />
-                    <span>Phân Tích Tốc Độ & Chiến Thuật Làm Bài (Pacing Analysis)</span>
-                  </div>
-                  <div className="text-xs text-slate-500 font-medium">
-                    Tổng thời gian làm bài: <strong className="text-slate-900 font-mono font-bold">{formatTime(currentDisplayResult.pacing?.totalTimeSpent || 0)}</strong> / 45:00
-                  </div>
-                </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                  {/* Average Time */}
-                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-1.5 hover:shadow-sm transition-all">
-                    <div className="flex items-center justify-between text-xs text-slate-600 font-bold">
-                      <span>Thời Gian Trung Bình</span>
-                      <Clock className="w-4 h-4 text-blue-600" />
-                    </div>
-                    <div className="text-2xl font-black text-slate-900 font-mono">
-                      {currentDisplayResult.pacing?.avgTimePerQ || 0}<span className="text-xs font-semibold text-slate-500">s / câu</span>
-                    </div>
-                    <div className="text-[11px] text-blue-700 font-semibold">Nhịp độ tiêu chuẩn V-ACT (90s)</div>
-                  </div>
-
-                  {/* Fast (<25s) */}
-                  <div className="p-4 rounded-2xl bg-emerald-50/60 border border-emerald-200 space-y-1.5 hover:shadow-sm transition-all">
-                    <div className="flex items-center justify-between text-xs text-emerald-700 font-bold">
-                      <span>Phản Xạ Nhanh (&lt;25s)</span>
-                      <Zap className="w-4 h-4 text-emerald-600" />
-                    </div>
-                    <div className="text-2xl font-black text-emerald-900 font-mono">
-                      {currentDisplayResult.pacing?.fastCount || 0}<span className="text-xs font-semibold text-slate-500"> câu</span>
-                    </div>
-                    <div className="text-[11px] text-emerald-700 font-semibold">Phản xạ nhạy bén ở câu quen thuộc</div>
-                  </div>
-
-                  {/* Normal (25-90s) */}
-                  <div className="p-4 rounded-2xl bg-blue-50/60 border border-blue-200 space-y-1.5 hover:shadow-sm transition-all">
-                    <div className="flex items-center justify-between text-xs text-blue-700 font-bold">
-                      <span>Chuẩn Nhịp Độ (25-90s)</span>
-                      <CheckSquare className="w-4 h-4 text-blue-600" />
-                    </div>
-                    <div className="text-2xl font-black text-blue-900 font-mono">
-                      {currentDisplayResult.pacing?.normalCount || 0}<span className="text-xs font-semibold text-slate-500"> câu</span>
-                    </div>
-                    <div className="text-[11px] text-blue-700 font-semibold">Kiểm soát tiến độ 45 phút tối ưu</div>
-                  </div>
-
-                  {/* Slow (>90s) */}
-                  <div className="p-4 rounded-2xl bg-amber-50/60 border border-amber-200 space-y-1.5 hover:shadow-sm transition-all">
-                    <div className="flex items-center justify-between text-xs text-amber-800 font-bold">
-                      <span>Tốn Thời Gian (&gt;90s)</span>
-                      <AlertTriangle className="w-4 h-4 text-amber-600" />
-                    </div>
-                    <div className="text-2xl font-black text-amber-900 font-mono">
-                      {currentDisplayResult.pacing?.slowCount || 0}<span className="text-xs font-semibold text-slate-500"> câu</span>
-                    </div>
-                    <div className="text-[11px] text-amber-800 font-semibold">
-                      {(currentDisplayResult.pacing?.slowCount || 0) > 4 ? 'Cần cải thiện tốc độ câu khó' : 'Phân bổ thời gian an toàn'}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* ================================================================= */}
-              {/* 2 COLUMN GRAPHS: RADAR CHART & ACCURACY BAR CHART                 */}
+{/* 2 COLUMN GRAPHS: RADAR CHART & ACCURACY BAR CHART                 */}
               {/* ================================================================= */}
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
@@ -1439,60 +1388,11 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
               </div>
 
               {/* ================================================================= */}
-              {/* PERFORMANCE GROWTH TREND GRAPH OVER ATTEMPTS (Area Chart)         */}
-              {/* ================================================================= */}
-              <div className="p-6 sm:p-7 bg-white border border-slate-200/90 rounded-3xl shadow-xl space-y-4 text-slate-900">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
-                  <div className="flex items-center gap-2">
-                    <TrendingUp className="w-5 h-5 text-blue-600" />
-                    <h3 className="text-base font-black text-slate-900">
-                      Đồ Thị Tăng Trưởng Năng Lực IRT θ Qua Các Đợt Khảo Thí
-                    </h3>
-                  </div>
-                  <span className="text-xs text-slate-500 font-medium">
-                    Theo dõi tiến trình bứt phá năng lực từ bài khảo sát đầu vào đến hiện tại
-                  </span>
-                </div>
 
-                <div className="h-64 sm:h-72 w-full pt-2">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={trendChartData} margin={{ top: 15, right: 20, left: -10, bottom: 10 }}>
-                      <defs>
-                        <linearGradient id="colorThetaLobby" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#2563eb" stopOpacity={0.35}/>
-                          <stop offset="95%" stopColor="#2563eb" stopOpacity={0.0}/>
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                      <XAxis dataKey="displayLabel" tick={{ fontSize: 11, fill: '#475569', fontWeight: 600 }} />
-                      <YAxis domain={[-3.5, 2.0]} tick={{ fontSize: 11, fill: '#475569' }} tickFormatter={(v) => (v > 0 ? `+${v}` : v)} />
-                      <Tooltip
-                        contentStyle={{ backgroundColor: '#ffffff', borderColor: '#cbd5e1', borderRadius: '12px', color: '#0f172a' }}
-                        formatter={(val, name) => [name === 'theta' ? (val > 0 ? `+${val}` : val) : `${val}%`, name === 'theta' ? 'Tham số IRT θ' : 'Chuẩn 900+']}
-                        labelFormatter={(label) => `Đợt thi: ${label}`}
-                      />
-                      <ReferenceLine y={0.80} stroke="#10b981" strokeDasharray="4 4" label={{ value: "Chuẩn 900+ (θ = +0.80)", fill: "#059669", fontSize: 11, fontWeight: "bold" }} />
-                      <Area type="monotone" dataKey="theta" name="theta" stroke="#2563eb" strokeWidth={3} fillOpacity={1} fill="url(#colorThetaLobby)" dot={{ r: 5, fill: '#2563eb', strokeWidth: 2, stroke: '#ffffff' }} activeDot={{ r: 7 }} />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
+</DiagnosticReportPanel>
+<DiagnosticReportPanel id="answers" active={reportTab}>
 
-                <div className="flex flex-wrap items-center justify-between gap-4 text-xs font-semibold text-slate-600 bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
-                  <div className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-full bg-blue-600"></span>
-                    <span>Đường tham số năng lực IRT &theta; thực tế của thí sinh</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="w-4 h-0.5 bg-emerald-500 border-t-2 border-dashed border-emerald-500"></span>
-                    <span>Ngưỡng chuẩn ĐHQG-HCM 900+ (&theta; &ge; +0.80)</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* ================================================================= */}
-              {/* BẢNG ĐÁNH GIÁ CHI TIẾT & ĐÁP ÁN 30 CÂU HỎI                        */}
-              {/* ================================================================= */}
-              <div className="p-6 sm:p-8 bg-white border border-slate-200/90 rounded-3xl shadow-xl space-y-6 text-slate-900">
+<div className="p-6 sm:p-8 bg-white border border-slate-200/90 rounded-3xl shadow-xl space-y-6 text-slate-900">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-5">
                   <div>
                     <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
@@ -1693,7 +1593,138 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
                 </div>
               </div>
 
-              {/* Bottom Action buttons */}
+
+</DiagnosticReportPanel>
+<DiagnosticReportPanel id="analysis" active={reportTab}>
+
+<DiagnosticSkillProfile result={currentDisplayResult} />
+
+              {/* ================================================================= */}
+              {/* PACING ANALYSIS SPEEDOMETERS                                      */}
+              {/* ================================================================= */}
+              <div className="p-6 sm:p-7 bg-white border border-slate-200/90 rounded-3xl shadow-xl space-y-5 text-slate-900">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+                  <div className="flex items-center gap-2.5 text-base font-black text-slate-900">
+                    <Gauge className="w-5 h-5 text-amber-500" />
+                    <span>Phân Tích Tốc Độ & Chiến Thuật Làm Bài (Pacing Analysis)</span>
+                  </div>
+                  <div className="text-xs text-slate-500 font-medium">
+                    Tổng thời gian làm bài: <strong className="text-slate-900 font-mono font-bold">{formatTime(currentDisplayResult.pacing?.totalTimeSpent || 0)}</strong> / 45:00
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  {/* Average Time */}
+                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-1.5 hover:shadow-sm transition-all">
+                    <div className="flex items-center justify-between text-xs text-slate-600 font-bold">
+                      <span>Thời Gian Trung Bình</span>
+                      <Clock className="w-4 h-4 text-blue-600" />
+                    </div>
+                    <div className="text-2xl font-black text-slate-900 font-mono">
+                      {currentDisplayResult.pacing?.avgTimePerQ || 0}<span className="text-xs font-semibold text-slate-500">s / câu</span>
+                    </div>
+                    <div className="text-[11px] text-blue-700 font-semibold">Nhịp độ tiêu chuẩn V-ACT (90s)</div>
+                  </div>
+
+                  {/* Fast (<25s) */}
+                  <div className="p-4 rounded-2xl bg-emerald-50/60 border border-emerald-200 space-y-1.5 hover:shadow-sm transition-all">
+                    <div className="flex items-center justify-between text-xs text-emerald-700 font-bold">
+                      <span>Phản Xạ Nhanh (&lt;25s)</span>
+                      <Zap className="w-4 h-4 text-emerald-600" />
+                    </div>
+                    <div className="text-2xl font-black text-emerald-900 font-mono">
+                      {currentDisplayResult.pacing?.fastCount || 0}<span className="text-xs font-semibold text-slate-500"> câu</span>
+                    </div>
+                    <div className="text-[11px] text-emerald-700 font-semibold">Phản xạ nhạy bén ở câu quen thuộc</div>
+                  </div>
+
+                  {/* Normal (25-90s) */}
+                  <div className="p-4 rounded-2xl bg-blue-50/60 border border-blue-200 space-y-1.5 hover:shadow-sm transition-all">
+                    <div className="flex items-center justify-between text-xs text-blue-700 font-bold">
+                      <span>Chuẩn Nhịp Độ (25-90s)</span>
+                      <CheckSquare className="w-4 h-4 text-blue-600" />
+                    </div>
+                    <div className="text-2xl font-black text-blue-900 font-mono">
+                      {currentDisplayResult.pacing?.normalCount || 0}<span className="text-xs font-semibold text-slate-500"> câu</span>
+                    </div>
+                    <div className="text-[11px] text-blue-700 font-semibold">Kiểm soát tiến độ 45 phút tối ưu</div>
+                  </div>
+
+                  {/* Slow (>90s) */}
+                  <div className="p-4 rounded-2xl bg-amber-50/60 border border-amber-200 space-y-1.5 hover:shadow-sm transition-all">
+                    <div className="flex items-center justify-between text-xs text-amber-800 font-bold">
+                      <span>Tốn Thời Gian (&gt;90s)</span>
+                      <AlertTriangle className="w-4 h-4 text-amber-600" />
+                    </div>
+                    <div className="text-2xl font-black text-amber-900 font-mono">
+                      {currentDisplayResult.pacing?.slowCount || 0}<span className="text-xs font-semibold text-slate-500"> câu</span>
+                    </div>
+                    <div className="text-[11px] text-amber-800 font-semibold">
+                      {(currentDisplayResult.pacing?.slowCount || 0) > 4 ? 'Cần cải thiện tốc độ câu khó' : 'Phân bổ thời gian an toàn'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* ================================================================= */}
+
+
+{/* PERFORMANCE GROWTH TREND GRAPH OVER ATTEMPTS (Area Chart)         */}
+              {/* ================================================================= */}
+              <div className="p-6 sm:p-7 bg-white border border-slate-200/90 rounded-3xl shadow-xl space-y-4 text-slate-900">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                  <div className="flex items-center gap-2">
+                    <TrendingUp className="w-5 h-5 text-blue-600" />
+                    <h3 className="text-base font-black text-slate-900">
+                      Đồ Thị Tăng Trưởng Năng Lực IRT θ Qua Các Đợt Khảo Thí
+                    </h3>
+                  </div>
+                  <span className="text-xs text-slate-500 font-medium">
+                    Theo dõi tiến trình bứt phá năng lực từ bài khảo sát đầu vào đến hiện tại
+                  </span>
+                </div>
+
+                <div className="h-64 sm:h-72 w-full pt-2">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={trendChartData} margin={{ top: 15, right: 20, left: -10, bottom: 10 }}>
+                      <defs>
+                        <linearGradient id="colorThetaLobby" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#2563eb" stopOpacity={0.35}/>
+                          <stop offset="95%" stopColor="#2563eb" stopOpacity={0.0}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                      <XAxis dataKey="displayLabel" tick={{ fontSize: 11, fill: '#475569', fontWeight: 600 }} />
+                      <YAxis domain={[-3.5, 2.0]} tick={{ fontSize: 11, fill: '#475569' }} tickFormatter={(v) => (v > 0 ? `+${v}` : v)} />
+                      <Tooltip
+                        contentStyle={{ backgroundColor: '#ffffff', borderColor: '#cbd5e1', borderRadius: '12px', color: '#0f172a' }}
+                        formatter={(val, name) => [name === 'theta' ? (val > 0 ? `+${val}` : val) : `${val}%`, name === 'theta' ? 'Tham số IRT θ' : 'Chuẩn 900+']}
+                        labelFormatter={(label) => `Đợt thi: ${label}`}
+                      />
+                      <ReferenceLine y={0.80} stroke="#10b981" strokeDasharray="4 4" label={{ value: "Chuẩn 900+ (θ = +0.80)", fill: "#059669", fontSize: 11, fontWeight: "bold" }} />
+                      <Area type="monotone" dataKey="theta" name="theta" stroke="#2563eb" strokeWidth={3} fillOpacity={1} fill="url(#colorThetaLobby)" dot={{ r: 5, fill: '#2563eb', strokeWidth: 2, stroke: '#ffffff' }} activeDot={{ r: 7 }} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+
+                <div className="flex flex-wrap items-center justify-between gap-4 text-xs font-semibold text-slate-600 bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
+                  <div className="flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-full bg-blue-600"></span>
+                    <span>Đường tham số năng lực IRT &theta; thực tế của thí sinh</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-4 h-0.5 bg-emerald-500 border-t-2 border-dashed border-emerald-500"></span>
+                    <span>Ngưỡng chuẩn ĐHQG-HCM 900+ (&theta; &ge; +0.80)</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* ================================================================= */}
+              {/* BẢNG ĐÁNH GIÁ CHI TIẾT & ĐÁP ÁN 30 CÂU HỎI                        */}
+              {/* ================================================================= */}
+
+</DiagnosticReportPanel>
+{/* Bottom Action buttons */}
               <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-slate-200">
                 <button
                   type="button"
@@ -1723,40 +1754,206 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
           ) : (
             <div className="space-y-8 animate-fade-in">
 
-              {/* Top Title & Header */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-sm">
-                <div className="space-y-1">
-                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-xs font-black text-blue-700">
-                    <Target className="w-4 h-4 text-blue-600" />
-                    <span>FLOW 1 • KHẢO THÍ & CHẨN ĐOÁN NĂNG LỰC</span>
-                  </div>
-                  <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2.5 pt-1">
-                    <History className="w-6 h-6 text-blue-600" />
-                    <span>{historyOnly ? 'Kết quả đánh giá đầu vào' : 'Đánh giá năng lực đầu vào'}</span>
-                  </h1>
-                  {!historyLoading && !historyError && studentId && (
-                    <p className="text-sm font-bold text-blue-700" role="status">
-                      Đã hoàn thành {completedExamCount}/{DIAGNOSTIC_TARGET} bài chẩn đoán khác nhau
-                      {completedExamCount >= DIAGNOSTIC_TARGET ? ' — Đã hoàn thành bộ chẩn đoán.' : ''}
-                    </p>
-                  )}
-                  <p className="text-xs sm:text-sm text-slate-500 font-medium">
-                    {historyOnly ? 'Xem các bài đã hoàn thành và báo cáo năng lực từng lần đánh giá.' : 'Hoàn thành các bài đầu vào để đánh giá năng lực và chuẩn bị lộ trình học phù hợp.'}
-                  </p>
-                </div>
+              {/* Top Title & Header – Hero Banner (with embedded KPI stats) */}
+              <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-blue-950 to-indigo-900 p-6 sm:p-8 shadow-2xl shadow-blue-900/30">
+                {/* Decorative background blobs */}
+                <div className="pointer-events-none absolute -top-16 -right-16 w-64 h-64 rounded-full bg-blue-500/15 blur-3xl" />
+                <div className="pointer-events-none absolute -bottom-12 -left-12 w-48 h-48 rounded-full bg-indigo-500/20 blur-3xl" />
+                <div className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 h-32 rounded-full bg-blue-400/5 blur-2xl" />
 
-                <div className={historyOnly ? 'hidden' : 'flex items-center gap-2 shrink-0'}>
-                  <button
-                    type="button"
-                    onClick={handleRetakeExam}
-                    disabled={isLoading || historyLoading || recovering || recoveryBlocked.current || completedExamCount >= DIAGNOSTIC_TARGET}
-                    className="px-5 py-3.5 rounded-2xl bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-black text-xs sm:text-sm shadow-md shadow-blue-500/25 transition-all flex items-center gap-2 cursor-pointer active:scale-95 disabled:opacity-50"
-                  >
-                    <Play className="w-4 h-4 fill-white" />
-                    <span>🚀 Làm Bài Kiểm Tra Mới</span>
-                  </button>
+                <div className="relative space-y-6">
+                  {/* Top row: title + ring */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5">
+                    {/* Left: Text content */}
+                    <div className="space-y-3 flex-1 min-w-0">
+                      {/* Badge */}
+                      <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/20 border border-blue-400/30 backdrop-blur-sm">
+                        <div className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
+                        <Target className="w-3.5 h-3.5 text-blue-300" />
+                        <span className="text-[11px] font-black uppercase tracking-widest text-blue-300">Flow 1 • Khảo Thí & Chẩn Đoán Năng Lực</span>
+                      </div>
+
+                      {/* Title */}
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-2xl bg-blue-500/25 border border-blue-400/25 flex items-center justify-center shrink-0 backdrop-blur-sm">
+                          <History className="w-5 h-5 text-blue-300" />
+                        </div>
+                        <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight leading-tight">
+                          {historyOnly ? 'Kết Quả Đánh Giá Đầu Vào' : 'Đánh Giá Năng Lực Đầu Vào'}
+                        </h1>
+                      </div>
+
+                      {/* Progress status */}
+                      {!historyLoading && !historyError && studentId && (
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-1.5">
+                            {[...Array(DIAGNOSTIC_TARGET)].map((_, i) => (
+                              <div key={i} className={`h-2 rounded-full transition-all ${i < completedExamCount ? 'w-6 bg-emerald-400 shadow-sm shadow-emerald-400/50' : 'w-2 bg-white/20'}`} />
+                            ))}
+                          </div>
+                          <span className="text-sm font-bold text-emerald-400" role="status">
+                            {completedExamCount >= DIAGNOSTIC_TARGET ? '✓ Hoàn thành bộ chẩn đoán' : `${completedExamCount}/${DIAGNOSTIC_TARGET} bài chẩn đoán`}
+                          </span>
+                        </div>
+                      )}
+
+                      <p className="text-sm text-blue-200/70 font-medium max-w-lg">
+                        {historyOnly ? 'Xem các bài đã hoàn thành và báo cáo năng lực từng lần đánh giá.' : 'Hoàn thành các bài đầu vào để đánh giá năng lực và chuẩn bị lộ trình học phù hợp.'}
+                      </p>
+                    </div>
+
+                    {/* Right: CTA button or progress ring */}
+                    {historyOnly ? (
+                      <div className="shrink-0 hidden sm:flex items-center justify-center">
+                        <div className="relative w-24 h-24">
+                          <svg className="w-24 h-24 -rotate-90" viewBox="0 0 96 96">
+                            <circle cx="48" cy="48" r="38" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="8" />
+                            <circle cx="48" cy="48" r="38" fill="none" stroke="url(#progressGrad)" strokeWidth="8"
+                              strokeLinecap="round"
+                              strokeDasharray={`${2 * Math.PI * 38}`}
+                              strokeDashoffset={`${2 * Math.PI * 38 * (1 - completedExamCount / DIAGNOSTIC_TARGET)}`}
+                              className="transition-all duration-700"
+                            />
+                            <defs>
+                              <linearGradient id="progressGrad" x1="0" y1="0" x2="1" y2="0">
+                                <stop offset="0%" stopColor="#34d399" />
+                                <stop offset="100%" stopColor="#60a5fa" />
+                              </linearGradient>
+                            </defs>
+                          </svg>
+                          {/* Fix: flex-row + items-baseline để "1/3" nằm ngang */}
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <span className="text-2xl font-black text-white leading-none">{completedExamCount}</span>
+                            <span className="text-sm font-bold text-blue-300 leading-none">/{DIAGNOSTIC_TARGET}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="shrink-0">
+                        <button
+                          type="button"
+                          onClick={handleRetakeExam}
+                          disabled={isLoading || historyLoading || recovering || recoveryBlocked.current || completedExamCount >= DIAGNOSTIC_TARGET}
+                          className="px-6 py-3.5 rounded-2xl bg-white hover:bg-blue-50 text-blue-700 font-black text-sm shadow-lg shadow-black/20 transition-all flex items-center gap-2.5 cursor-pointer active:scale-95 disabled:opacity-50 border border-white/80"
+                        >
+                          <Play className="w-4 h-4 fill-blue-600 text-blue-600" />
+                          <span>🚀 Làm Bài Kiểm Tra Mới</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
                 </div>
               </div>
+
+              {/* 4 KPI Cards — nền trắng, màu sắc riêng từng card */}
+              {historyOnly && examHistory.length > 0 && (() => {
+                const best = Math.max(...examHistory.map(h => h.totalCorrect || 0));
+                const pct = Math.round((best / 30) * 100);
+                const peakTheta = Math.max(...examHistory.map(h => Number(h.theta) || 0));
+                const thetaDisplay = (peakTheta > 0 ? '+' : '') + peakTheta.toFixed(2);
+                const avgMin = Math.round(examHistory.reduce((acc, h) => acc + (h.timeSpentSeconds || 0), 0) / (examHistory.length || 1) / 60);
+                const speedLabel = avgMin <= 10 ? '⚡ Rất nhanh' : avgMin <= 20 ? '✓ Nhịp chuẩn' : '⏳ Hơi chậm';
+
+                return (
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    {/* Card 1 – Tổng đợt thi */}
+                    <div className="relative overflow-hidden rounded-3xl bg-white border border-blue-100 shadow-sm shadow-blue-100 p-5 group hover:shadow-md hover:shadow-blue-100 transition-all">
+                      <div className="absolute inset-x-0 top-0 h-1 rounded-t-3xl bg-gradient-to-r from-blue-500 to-indigo-500" />
+                      <div className="absolute -right-6 -bottom-6 w-24 h-24 rounded-full bg-blue-50 group-hover:bg-blue-100 transition-colors" />
+                      <div className="relative space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-extrabold uppercase tracking-widest text-blue-400">Tổng Đợt Thi</span>
+                          <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-md shadow-blue-200">
+                            <Layers className="w-4 h-4 text-white" />
+                          </div>
+                        </div>
+                        <div className="flex items-end gap-1.5">
+                          <span className="text-4xl font-black text-blue-700 font-mono leading-none">{examHistory.length}</span>
+                          <span className="text-sm font-semibold text-slate-400 pb-0.5">lần làm bài</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <div className="flex gap-1">
+                            {[...Array(3)].map((_, i) => (
+                              <div key={i} className={`h-1.5 rounded-full transition-all ${i < examHistory.length ? 'w-6 bg-gradient-to-r from-blue-400 to-indigo-500' : 'w-2 bg-slate-200'}`} />
+                            ))}
+                          </div>
+                          <span className="text-[10px] text-blue-400 font-bold">{examHistory.length}/3 bài</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Card 2 – Điểm cao nhất */}
+                    <div className="relative overflow-hidden rounded-3xl bg-white border border-emerald-100 shadow-sm shadow-emerald-100 p-5 group hover:shadow-md hover:shadow-emerald-100 transition-all">
+                      <div className="absolute inset-x-0 top-0 h-1 rounded-t-3xl bg-gradient-to-r from-emerald-400 to-teal-500" />
+                      <div className="absolute -right-6 -bottom-6 w-24 h-24 rounded-full bg-emerald-50 group-hover:bg-emerald-100 transition-colors" />
+                      <div className="relative space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-extrabold uppercase tracking-widest text-emerald-500">Điểm Cao Nhất</span>
+                          <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-600 flex items-center justify-center shadow-md shadow-emerald-200">
+                            <Award className="w-4 h-4 text-white" />
+                          </div>
+                        </div>
+                        <div className="flex items-end gap-1.5">
+                          <span className="text-4xl font-black text-emerald-600 font-mono leading-none">{best}</span>
+                          <span className="text-sm font-semibold text-slate-400 pb-0.5">/ 30 câu</span>
+                        </div>
+                        <div className="space-y-1">
+                          <div className="w-full h-1.5 rounded-full bg-slate-100">
+                            <div className="h-1.5 rounded-full bg-gradient-to-r from-emerald-400 to-teal-500 transition-all" style={{ width: `${pct}%` }} />
+                          </div>
+                          <span className="text-[10px] text-emerald-500 font-bold">{pct}% chính xác</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Card 3 – Năng lực đỉnh θ */}
+                    <div className="relative overflow-hidden rounded-3xl bg-white border border-amber-100 shadow-sm shadow-amber-100 p-5 group hover:shadow-md hover:shadow-amber-100 transition-all">
+                      <div className="absolute inset-x-0 top-0 h-1 rounded-t-3xl bg-gradient-to-r from-amber-400 to-orange-500" />
+                      <div className="absolute -right-6 -bottom-6 w-24 h-24 rounded-full bg-amber-50 group-hover:bg-amber-100 transition-colors" />
+                      <div className="relative space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-extrabold uppercase tracking-widest text-amber-500">Năng Lực Đỉnh θ</span>
+                          <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-md shadow-amber-200">
+                            <Brain className="w-4 h-4 text-white" />
+                          </div>
+                        </div>
+                        <div className="flex items-end gap-1.5">
+                          <span className="text-4xl font-black text-amber-600 font-mono leading-none">{thetaDisplay}</span>
+                        </div>
+                        <div>
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black ${peakTheta >= 0 ? 'bg-amber-50 text-amber-600 border border-amber-200' : 'bg-slate-50 text-slate-500 border border-slate-200'}`}>
+                            {peakTheta >= 0 ? '▲ Trên trung bình' : '▼ Đang cải thiện'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Card 4 – Thời gian TB */}
+                    <div className="relative overflow-hidden rounded-3xl bg-white border border-violet-100 shadow-sm shadow-violet-100 p-5 group hover:shadow-md hover:shadow-violet-100 transition-all">
+                      <div className="absolute inset-x-0 top-0 h-1 rounded-t-3xl bg-gradient-to-r from-violet-500 to-purple-600" />
+                      <div className="absolute -right-6 -bottom-6 w-24 h-24 rounded-full bg-violet-50 group-hover:bg-violet-100 transition-colors" />
+                      <div className="relative space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-extrabold uppercase tracking-widest text-violet-500">Thời Gian TB</span>
+                          <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-md shadow-violet-200">
+                            <Clock className="w-4 h-4 text-white" />
+                          </div>
+                        </div>
+                        <div className="flex items-end gap-1.5">
+                          <span className="text-4xl font-black text-violet-700 font-mono leading-none">{avgMin}</span>
+                          <span className="text-sm font-semibold text-slate-400 pb-0.5">phút / bài</span>
+                        </div>
+                        <div>
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black bg-violet-50 text-violet-600 border border-violet-200">
+                            {speedLabel}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
 
               {historyLoading ? <p role="status">Đang tải lịch sử...</p>
                 : historyError ? <div role="alert"><p>Không tải được lịch sử: {historyError}</p><button type="button" onClick={() => setHistoryReload((v) => v + 1)}>Thử lại</button></div>
@@ -1769,52 +1966,6 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
                 {onNavigateHistory && <button type="button" onClick={onNavigateHistory} className="ml-2 font-bold underline underline-offset-4">Xem lịch sử đầu vào →</button>}
               </div>}
               {historyOnly && <>
-              {/* 4 Overview Statistics KPI Cards */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="p-5 bg-white rounded-3xl border border-slate-200 shadow-sm space-y-2">
-                  <div className="flex items-center justify-between text-xs font-bold text-slate-500 uppercase">
-                    <span>Tổng Số Đợt Thi</span>
-                    <Layers className="w-4 h-4 text-blue-600" />
-                  </div>
-                  <div className="text-2xl sm:text-3xl font-black text-slate-900 font-mono">
-                    {examHistory.length} <span className="text-xs font-semibold text-slate-500">lần làm bài</span>
-                  </div>
-                  <div className="text-[11px] text-emerald-600 font-bold">Khảo sát & thi thử chuẩn hóa</div>
-                </div>
-
-                <div className="p-5 bg-white rounded-3xl border border-slate-200 shadow-sm space-y-2">
-                  <div className="flex items-center justify-between text-xs font-bold text-slate-500 uppercase">
-                    <span>Điểm Số Cao Nhất</span>
-                    <Award className="w-4 h-4 text-emerald-600" />
-                  </div>
-                  <div className="text-2xl sm:text-3xl font-black text-emerald-600 font-mono">
-                    {Math.max(...examHistory.map(h => h.totalCorrect || 0))} <span className="text-xs font-semibold text-slate-500">/ 30 câu</span>
-                  </div>
-                  <div className="text-[11px] text-emerald-700 font-bold">Đạt tỷ lệ {Math.round((Math.max(...examHistory.map(h => h.totalCorrect || 0)) / 30) * 100)}% chính xác</div>
-                </div>
-
-                <div className="p-5 bg-white rounded-3xl border border-slate-200 shadow-sm space-y-2">
-                  <div className="flex items-center justify-between text-xs font-bold text-slate-500 uppercase">
-                    <span>Năng Lực Đỉnh (θ)</span>
-                    <Brain className="w-4 h-4 text-amber-500" />
-                  </div>
-                  <div className="text-2xl sm:text-3xl font-black text-amber-500 font-mono">
-                    {Math.max(...examHistory.map(h => Number(h.theta) || 0)).toFixed(2)}
-                  </div>
-                  <div className="text-[11px] text-blue-600 font-bold">Năng lực cao nhất trong các lần khảo sát</div>
-                </div>
-
-                <div className="p-5 bg-white rounded-3xl border border-slate-200 shadow-sm space-y-2">
-                  <div className="flex items-center justify-between text-xs font-bold text-slate-500 uppercase">
-                    <span>Thời Gian Trung Bình</span>
-                    <Clock className="w-4 h-4 text-purple-600" />
-                  </div>
-                  <div className="text-2xl sm:text-3xl font-black text-slate-900 font-mono">
-                    {Math.round(examHistory.reduce((acc, h) => acc + (h.timeSpentSeconds || 0), 0) / (examHistory.length || 1) / 60)} <span className="text-xs font-semibold text-slate-500">phút / bài</span>
-                  </div>
-                  <div className="text-[11px] text-purple-700 font-bold">Tốc độ làm bài chuẩn nhịp độ</div>
-                </div>
-              </div>
 
               {/* Performance Trend Area Chart Card */}
               <div className="p-6 sm:p-7 bg-white border border-slate-200/90 rounded-3xl shadow-xl space-y-4 text-slate-900">
@@ -2428,79 +2579,13 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
           )}
 
           <DiagnosticResultSummary result={resultData} />
+<DiagnosticReportTabs value={reportTab} onChange={setReportTab} />
+<DiagnosticReportPanel id="overview" active={reportTab}>
+
           <WeakSkills result={resultData} />
 
-              {/* ===================================================================== */}
-          {/* PHÂN TÍCH TỐC ĐỘ & CHIẾN THUẬT LÀM BÀI (PACING ANALYSIS)              */}
-          {/* ===================================================================== */}
-          <div className="p-6 sm:p-7 bg-white border border-slate-200/90 rounded-3xl shadow-xl space-y-5 text-slate-900">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
-              <div className="flex items-center gap-2.5 text-base font-black text-slate-900">
-                <Gauge className="w-5 h-5 text-amber-500" />
-                <span>Phân Tích Tốc Độ & Chiến Thuật Làm Bài (Pacing Analysis)</span>
-              </div>
-              <div className="text-xs text-slate-500 font-medium">
-                Tổng thời gian làm bài: <strong className="text-slate-900 font-mono font-bold">{formatTime(resultData.pacing?.totalTimeSpent || 0)}</strong> / 45:00
-              </div>
-            </div>
 
-            {/* 4 Speedometer Cards: Fast / Normal / Slow / Average */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-
-              {/* Average Time */}
-              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-1.5 hover:shadow-sm transition-all">
-                <div className="flex items-center justify-between text-xs text-slate-600 font-bold">
-                  <span>Thời Gian Trung Bình</span>
-                  <Clock className="w-4 h-4 text-blue-600" />
-                </div>
-                <div className="text-2xl font-black text-slate-900 font-mono">
-                  {resultData.pacing?.avgTimePerQ || 0}<span className="text-xs font-semibold text-slate-500">s / câu</span>
-                </div>
-                <div className="text-[11px] text-blue-700 font-semibold">Nhịp độ tiêu chuẩn V-ACT (90s)</div>
-              </div>
-
-              {/* Fast (<25s) */}
-              <div className="p-4 rounded-2xl bg-emerald-50/60 border border-emerald-200 space-y-1.5 hover:shadow-sm transition-all">
-                <div className="flex items-center justify-between text-xs text-emerald-700 font-bold">
-                  <span>Phản Xạ Nhanh (&lt;25s)</span>
-                  <Zap className="w-4 h-4 text-emerald-600" />
-                </div>
-                <div className="text-2xl font-black text-emerald-900 font-mono">
-                  {resultData.pacing?.fastCount || 0}<span className="text-xs font-semibold text-slate-500"> câu</span>
-                </div>
-                <div className="text-[11px] text-emerald-700 font-semibold">Phản xạ nhạy bén ở câu quen thuộc</div>
-              </div>
-
-              {/* Normal (25-90s) */}
-              <div className="p-4 rounded-2xl bg-blue-50/60 border border-blue-200 space-y-1.5 hover:shadow-sm transition-all">
-                <div className="flex items-center justify-between text-xs text-blue-700 font-bold">
-                  <span>Chuẩn Nhịp Độ (25-90s)</span>
-                  <CheckSquare className="w-4 h-4 text-blue-600" />
-                </div>
-                <div className="text-2xl font-black text-blue-900 font-mono">
-                  {resultData.pacing?.normalCount || 0}<span className="text-xs font-semibold text-slate-500"> câu</span>
-                </div>
-                <div className="text-[11px] text-blue-700 font-semibold">Kiểm soát tiến độ 45 phút tối ưu</div>
-              </div>
-
-              {/* Slow (>90s) */}
-              <div className="p-4 rounded-2xl bg-amber-50/60 border border-amber-200 space-y-1.5 hover:shadow-sm transition-all">
-                <div className="flex items-center justify-between text-xs text-amber-800 font-bold">
-                  <span>Tốn Nhiều Thời Gian (&gt;90s)</span>
-                  <AlertTriangle className="w-4 h-4 text-amber-600" />
-                </div>
-                <div className="text-2xl font-black text-amber-900 font-mono">
-                  {resultData.pacing?.slowCount || 0}<span className="text-xs font-semibold text-slate-500"> câu</span>
-                </div>
-                <div className="text-[11px] text-amber-800 font-semibold">
-                  {resultData.pacing?.slowCount > 4 ? 'Cần cải thiện tốc độ câu khó' : 'Phân bổ thời gian an toàn'}
-                </div>
-              </div>
-
-            </div>
-          </div>
-
-          {/* Radar Chart & AI Commentary Grid */}
+{/* Radar Chart & AI Commentary Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
             {/* Left: Recharts 5-Axis Radar Chart */}
@@ -2580,7 +2665,11 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
           {/* ===================================================================== */}
           {/* BẢNG ĐÁNH GIÁ CHI TIẾT & ĐÁP ÁN 30 CÂU (ANSWER KEY & EXPLANATIONS)    */}
           {/* ===================================================================== */}
-          <div className="p-6 sm:p-8 bg-white border border-slate-200/90 rounded-3xl shadow-xl space-y-6 text-slate-900">
+
+</DiagnosticReportPanel>
+<DiagnosticReportPanel id="answers" active={reportTab}>
+
+<div className="p-6 sm:p-8 bg-white border border-slate-200/90 rounded-3xl shadow-xl space-y-6 text-slate-900">
 
             {/* Header & Filter Tabs */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-5">
@@ -2783,7 +2872,85 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
             </div>
           </div>
 
-          {/* Bottom Action buttons */}
+
+</DiagnosticReportPanel>
+<DiagnosticReportPanel id="analysis" active={reportTab}>
+
+<DiagnosticSkillProfile result={resultData} />
+
+              {/* ===================================================================== */}
+          {/* PHÂN TÍCH TỐC ĐỘ & CHIẾN THUẬT LÀM BÀI (PACING ANALYSIS)              */}
+          {/* ===================================================================== */}
+          <div className="p-6 sm:p-7 bg-white border border-slate-200/90 rounded-3xl shadow-xl space-y-5 text-slate-900">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+              <div className="flex items-center gap-2.5 text-base font-black text-slate-900">
+                <Gauge className="w-5 h-5 text-amber-500" />
+                <span>Phân Tích Tốc Độ & Chiến Thuật Làm Bài (Pacing Analysis)</span>
+              </div>
+              <div className="text-xs text-slate-500 font-medium">
+                Tổng thời gian làm bài: <strong className="text-slate-900 font-mono font-bold">{formatTime(resultData.pacing?.totalTimeSpent || 0)}</strong> / 45:00
+              </div>
+            </div>
+
+            {/* 4 Speedometer Cards: Fast / Normal / Slow / Average */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+
+              {/* Average Time */}
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-1.5 hover:shadow-sm transition-all">
+                <div className="flex items-center justify-between text-xs text-slate-600 font-bold">
+                  <span>Thời Gian Trung Bình</span>
+                  <Clock className="w-4 h-4 text-blue-600" />
+                </div>
+                <div className="text-2xl font-black text-slate-900 font-mono">
+                  {resultData.pacing?.avgTimePerQ || 0}<span className="text-xs font-semibold text-slate-500">s / câu</span>
+                </div>
+                <div className="text-[11px] text-blue-700 font-semibold">Nhịp độ tiêu chuẩn V-ACT (90s)</div>
+              </div>
+
+              {/* Fast (<25s) */}
+              <div className="p-4 rounded-2xl bg-emerald-50/60 border border-emerald-200 space-y-1.5 hover:shadow-sm transition-all">
+                <div className="flex items-center justify-between text-xs text-emerald-700 font-bold">
+                  <span>Phản Xạ Nhanh (&lt;25s)</span>
+                  <Zap className="w-4 h-4 text-emerald-600" />
+                </div>
+                <div className="text-2xl font-black text-emerald-900 font-mono">
+                  {resultData.pacing?.fastCount || 0}<span className="text-xs font-semibold text-slate-500"> câu</span>
+                </div>
+                <div className="text-[11px] text-emerald-700 font-semibold">Phản xạ nhạy bén ở câu quen thuộc</div>
+              </div>
+
+              {/* Normal (25-90s) */}
+              <div className="p-4 rounded-2xl bg-blue-50/60 border border-blue-200 space-y-1.5 hover:shadow-sm transition-all">
+                <div className="flex items-center justify-between text-xs text-blue-700 font-bold">
+                  <span>Chuẩn Nhịp Độ (25-90s)</span>
+                  <CheckSquare className="w-4 h-4 text-blue-600" />
+                </div>
+                <div className="text-2xl font-black text-blue-900 font-mono">
+                  {resultData.pacing?.normalCount || 0}<span className="text-xs font-semibold text-slate-500"> câu</span>
+                </div>
+                <div className="text-[11px] text-blue-700 font-semibold">Kiểm soát tiến độ 45 phút tối ưu</div>
+              </div>
+
+              {/* Slow (>90s) */}
+              <div className="p-4 rounded-2xl bg-amber-50/60 border border-amber-200 space-y-1.5 hover:shadow-sm transition-all">
+                <div className="flex items-center justify-between text-xs text-amber-800 font-bold">
+                  <span>Tốn Nhiều Thời Gian (&gt;90s)</span>
+                  <AlertTriangle className="w-4 h-4 text-amber-600" />
+                </div>
+                <div className="text-2xl font-black text-amber-900 font-mono">
+                  {resultData.pacing?.slowCount || 0}<span className="text-xs font-semibold text-slate-500"> câu</span>
+                </div>
+                <div className="text-[11px] text-amber-800 font-semibold">
+                  {resultData.pacing?.slowCount > 4 ? 'Cần cải thiện tốc độ câu khó' : 'Phân bổ thời gian an toàn'}
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+
+</DiagnosticReportPanel>
+{/* Bottom Action buttons */}
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-slate-200">
             <button
               type="button"

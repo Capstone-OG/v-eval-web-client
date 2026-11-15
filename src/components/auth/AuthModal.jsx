@@ -1,3 +1,4 @@
+import { toast } from '../../context/ToastContext';
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -71,14 +72,25 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState(null);
   const [submitSuccessMsg, setSubmitSuccessMsg] = useState(null);
+
+  const notifyFormError = (message) => {
+    setFormError(message);
+    if (message) toast.error(message);
+  };
+
+  const notifySubmitSuccessMsg = (message) => {
+    setSubmitSuccessMsg(message);
+    if (message) toast.success(message);
+  };
+
   const [fieldErrors, setFieldErrors] = useState({});
 
   if (!isOpen) return null;
 
   const handleModeSwitch = (newMode) => {
     setMode(newMode);
-    setFormError(null);
-    setSubmitSuccessMsg(null);
+    notifyFormError(null);
+    notifySubmitSuccessMsg(null);
     setFieldErrors({});
     if (newMode === 'register' && (role === 'teacher' || role === 'manager')) {
       setRole('student');
@@ -95,8 +107,8 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setFormError(null);
-    setSubmitSuccessMsg(null);
+    notifyFormError(null);
+    notifySubmitSuccessMsg(null);
 
     const errs = {};
 
@@ -110,7 +122,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
 
       if (Object.keys(errs).length > 0) {
         setFieldErrors(errs);
-        setFormError("Vui lòng hoàn thiện các thông tin bên dưới.");
+        notifyFormError("Vui lòng hoàn thiện các thông tin bên dưới.");
         return;
       }
       setFieldErrors({});
@@ -134,7 +146,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
       } catch (err) {
         setIsSubmitting(false);
         const msg = err.data?.error?.description || err.data?.message || err.message || 'Đăng nhập không thành công. Vui lòng kiểm tra lại email hoặc mật khẩu.';
-        setFormError(msg);
+        notifyFormError(msg);
       }
     } else {
       if (!regFullName.trim()) {
@@ -179,7 +191,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
 
       if (Object.keys(errs).length > 0) {
         setFieldErrors(errs);
-        setFormError("Vui lòng hoàn thiện các trường thông tin bị lỗi bên dưới.");
+        notifyFormError("Vui lòng hoàn thiện các trường thông tin bị lỗi bên dưới.");
         return;
       }
       setFieldErrors({});
@@ -196,15 +208,15 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
 
         await authService.register(payload);
         setIsSubmitting(false);
-        setSubmitSuccessMsg("Tạo tài khoản thành công! Vui lòng đăng nhập.");
+        notifySubmitSuccessMsg("Tạo tài khoản thành công! Vui lòng đăng nhập.");
         setTimeout(() => {
           setMode('login');
-          setSubmitSuccessMsg(null);
+          notifySubmitSuccessMsg(null);
         }, 1200);
       } catch (err) {
         setIsSubmitting(false);
         const msg = err.data?.error?.description || err.data?.message || err.message || 'Đăng ký không thành công. Vui lòng kiểm tra lại thông tin.';
-        setFormError(msg);
+        notifyFormError(msg);
       }
     }
   };
@@ -232,7 +244,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
     setEmail(dEmail);
     setPassword(dPass);
     setIsSubmitting(true);
-    setFormError(null);
+    notifyFormError(null);
 
     try {
       const res = await authService.login({ email: dEmail, password: dPass });

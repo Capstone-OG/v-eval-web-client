@@ -1,3 +1,4 @@
+import { toast } from './context/ToastContext';
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   BarChart3,
@@ -291,12 +292,18 @@ export default function App() {
     setCurrentUser(finalUser);
     setActiveTab(ROLE_PORTAL_DEFINITIONS[validRole].defaultTab);
     setAppView('dashboard');
+    toast.success('Đăng nhập thành công.');
     loadRolePortalBackendMetrics(validRole, finalUser);
   };
 
   // Logout Handler
   const handleLogout = async () => {
-    await authService.logout();
+    try {
+      await authService.logout();
+    } catch (err) {
+      toast.error(err.message || 'Không thể đăng xuất. Vui lòng thử lại.');
+      return;
+    }
     setLatestDiagnosticResult(null);
     closeNavigation();
     setCurrentUser(null);
@@ -307,6 +314,7 @@ export default function App() {
     setRole('student');
     setActiveTab('dashboard');
     setAppView('landing');
+    toast.success('Đã đăng xuất khỏi tài khoản.');
   };
 
   // 1. PUBLIC LANDING PAGE (Reference Home Template)

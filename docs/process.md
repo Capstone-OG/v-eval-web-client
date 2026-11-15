@@ -620,3 +620,82 @@
 ### [13/11/2026] - Curriculum and teacher portal commit checkpoint
 
 - Prepare the lowercase frontend checkpoint containing the student catalog/reading workspace, chapter-scoped outline, teacher overview/navigation, scoped API requests and tests. Validation: 24 tests passed, lint and build passed with warnings, whitespace check passed. Live browser/API verification remains pending. Backend repositories and root pending merge are excluded; push is left to the user.
+
+
+## [14/11/2026] - Authentication notification integration
+
+Architecture: the existing ToastProvider remains above App, so feedback persists across login/logout navigation. Authentication handlers send toast messages while preserving inline validation. API background requests are not globally intercepted.
+
+| Item | Location | Status | Detail |
+| --- | --- | --- | --- |
+| Auth success and error feedback | Frontend App and authentication forms | Complete | Login/logout, registration, OTP and recovery use the existing toast system. |
+| Account loading errors and toast accessibility | Frontend account provisioning and toast container | Complete | List failures are visible; cards have status/alert roles and an accessible dismiss button. |
+| Verification | Frontend | Build/lint passed | Existing warnings remain; browser/live API checks pending. |
+| Git merge | System-Repo | Pending | No staging, commit or push performed for this task. |
+
+### [14/11/2026] - Toast visual refinement
+
+| Item | Location | Status | Validation |
+| --- | --- | --- | --- |
+| Compact responsive toast cards | Frontend GlobalToastContainer.jsx | Complete | Build and whitespace checks passed; browser visual check pending. |
+
+### [14/11/2026] - Diagnostic skill report integration
+
+Architecture: DiagnosticAssessmentPage retains skillPriors in result models and delegates skill reporting to DiagnosticSkillProfile. Historical results use only data from that submission response.
+
+| Item | Location | Status | Detail |
+| --- | --- | --- | --- |
+| Skill assessment and mastery display | Frontend diagnostic report | Complete | Fresh/history views; assessed, inferred and unknown sources; honest empty states. |
+| Verification | Frontend | Passed | Build/lint exit 0 with existing warnings; browser verification pending. |
+| Complete historical and inferred data | Backend diagnostic APIs | Pending | See architecture acceptance notes; backend unchanged. |
+
+Backend follow-up: Practice sends an empty AllSkillIds mapping to AI, preventing the inferred-skill branch. Historical GetDiagnosticSubmissionById does not populate SkillPriors or RadarChart. Preserve per-submission estimates and source for historical reporting instead of reading mutable current LearningProfiles. Inferred skill labels also need metadata because current response name lookup uses only questions in the test.
+
+### [14/11/2026] - Diagnostic report navigation
+
+Architecture: shared DiagnosticReportTabs and DiagnosticReportPanel organize both result render paths while retaining the shared score summary and existing review filters. WeakSkills and DiagnosticSkillProfile provide progressive disclosure.
+
+| Item | Status | Detail |
+| --- | --- | --- |
+| Three report tabs | Complete | Overview, answer review, competency analysis; keyboard navigation and matching panel labels. |
+| Compact report content | Complete | Four initial weak skills; mastery grouped by collapsible domain. |
+| Verification | Build/lint passed | Existing warnings; browser verification pending. |
+
+### [14/11/2026] - History layout simplification
+
+Architecture: StudentHistoryPage owns category selection; DiagnosticAssessmentPage renders embedded history details and requests the compact DiagnosticResultSummary variant.
+
+| Item | Status | Detail |
+| --- | --- | --- |
+| Compact category toolbar | Complete | Distinct category panels keyed by user/category. |
+| Remove repeated report headings | Complete | Historical summary hides the dark banner and reduces metric spacing. |
+| Validation | Passed | Build/lint exit 0 with existing warnings; browser verification pending. |
+
+### [14/11/2026] - History toolbar visibility
+
+| Item | Location | Status | Detail |
+| --- | --- | --- | --- |
+| Hide category toolbar in detail | StudentHistoryPage / DiagnosticAssessmentPage | Complete | Child detail-state callback controls the toolbar; back restores list navigation. Practice detail uses its existing selected state. Build/lint passed; browser verification pending. |
+
+### [14/11/2026] - Report visual refinement
+
+| Item | Location | Status | Validation |
+| --- | --- | --- | --- |
+| Metric cards, segmented tabs and detail header | Frontend diagnostic report components | Complete | Build/lint passed with existing warnings; browser appearance not directly verified. |
+
+### [14/11/2026] - Report contrast adjustment
+
+| Item | Status | Detail |
+| --- | --- | --- |
+| Distinct header, active tab and metric cards | Complete | Dark detail header, saturated active tab, stronger metric borders/tints; build/lint passed; browser verification pending. |
+
+## [15/11/2026] - CF1 frontend milestone
+
+Architecture: diagnostic submission/history results share tabbed report navigation and skill reporting; current LearningProfiles are not substituted for historical per-submission estimates. Root ToastProvider supplies authentication/account feedback.
+
+| Item | Status | Detail |
+| --- | --- | --- |
+| CF1 frontend report/history and toast checkpoint | Ready to commit | Selected frontend files and docs only; unrelated curriculum/sidebar/roadmap edits excluded. |
+| Verification | Passed | Current working-tree build/lint exit 0 with warnings; 24 existing tests passed; browser/live APIs unverified. |
+| Backend completion | Follow-up | Historical priors/Radar, question content, domain labels and three-exam aggregation require follow-up. |
+| Root merge | Pending | Root documentation updated as required; no root staging/commit/push. |
