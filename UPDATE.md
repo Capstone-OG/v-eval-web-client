@@ -1,33 +1,22 @@
 # NHẬT KÝ CẬP NHẬT (UPDATE LOG) - V-EVAL WEB CLIENT
 
-## [15/11/2026] - Triển Khai Quản Lý Phiên Hội Thoại Đa Lượt Cho Gia Sư AI Socratic & Tái Thiết Kế Toàn Diện Bố Cục Trang Chủ Quản Lý Học Thuật Đồng Bộ Ngôn Ngữ Student Portal
+## [15/11/2026] - Triển Khai Bộ Tiện Ích Chuẩn Hóa Dấu Tiếng Việt Toàn Diện, Đồng Bộ Giao Diện Bảng Đánh Giá Chi Tiết & Tối Ưu Hóa Ngữ Liệu Khảo Sát Năng Lực
 
-- **Tối Ưu Hóa Giao Diện Hiển Thị Lịch Sử Làm Bài & Chuẩn Hóa Typography Ngữ Liệu ([`DiagnosticAssessmentPage.jsx`](./src/components/diagnostic/DiagnosticAssessmentPage.jsx))**:
-  - **Chuẩn hóa Huy hiệu Miền Năng lực**: Ánh xạ chuẩn xác kỹ năng Đọc hiểu sang miền `Sử dụng Ngôn ngữ & Văn học` (`dom_lang`) với badge màu xanh lục (`bg-emerald-50 text-emerald-700 border-emerald-200`), xóa bỏ hoàn toàn lỗi hiển thị nhầm thành *"Toán học & Tư duy định lượng"*.
-  - **Khắc phục triệt để lỗi Font chữ & Dấu tiếng Việt**: Loại bỏ thuộc tính `font-serif` gây xung đột font dự phòng KaTeX trên Windows (lỗi hiển thị dấu sắc trôi nổi như `số´ng`, `quố´c`, `biê´n`), chuyển sang font chuẩn hệ thống `font-sans` (`Plus Jakarta Sans`) sắc nét, mượt mà.
-  - **Nâng cấp Khung Ngữ liệu Đọc hiểu**: Thay thế bộ cắt dòng 3 dòng (`line-clamp-3`) bằng container bài đọc ngữ cảnh chuyên nghiệp (`max-h-72 overflow-y-auto whitespace-pre-line`), bổ sung tiêu đề ngữ liệu kèm icon `BookOpen` và nhãn `Bài đọc ngữ cảnh`.
-  - **Tối ưu hóa Lưới Phương án Trắc nghiệm**: Mở rộng padding thẻ lựa chọn (`p-3.5 sm:p-4`), tích hợp viền bo tròn, hiệu ứng ring tinh tế cho đáp án đúng (`ring-1 ring-emerald-500/30`) và đáp án học sinh chọn sai (`ring-1 ring-rose-500/30`) kèm icon `Check` và `X` trực quan.
-  - **Trau chuốt Lời giải Chi tiết**: Tinh chỉnh văn phong lời giải fallback phù hợp cho mọi phân môn ("nắm vững kiến thức trọng tâm và kỹ năng tư duy"), loại bỏ từ ngữ toán học "định lý" khi áp dụng cho môn Ngữ văn/Khoa học.
-  - **Khắc phục triệt để placeholder `"API lịch sử không cung cấp nội dung câu hỏi."`**: Nâng cấp hàm `openHistoryExam` trực tiếp tiêu thụ DTO giàu dữ liệu (`data.questions`) được làm giàu tự động từ backend Practice Service thông qua pipeline gRPC với Content Service (`q.content`, `q.options`, `q.explanation`, `q.passageContent`, `q.passageTitle`).
-  - **Khử bỏ hoàn toàn lỗi `"Câu 0:"` và `"Bloom 0/6"`**: Tự động kế thừa thứ tự câu và độ khó Bloom chuẩn hóa từ backend (`q.questionOrder` và `q.difficultyLevel`), kết hợp bộ đệm an toàn theo chỉ mục (`idx + 1`) không phụ thuộc vào chuỗi hardcode.
-- **Quản Lý Phiên Hội Thoại Đa Lượt Gia Sư AI Socratic ([`aiSessionManager.js`](./src/utils/aiSessionManager.js), [`AISocraticTutorModal.jsx`](./src/components/modals/AISocraticTutorModal.jsx), [`aiSessionManager.test.js`](./tests/aiSessionManager.test.js))**:
-  - **Kiến Trúc Lưu Trữ Lai Đa Tầng (Hybrid Progressive Persistence)**: Xây dựng module `aiSessionManager` lưu trữ phiên cục bộ theo từng định danh học sinh (`veval_socratic_sessions_${userId}`), bảo toàn 100% dòng suy nghĩ và chuỗi tin nhắn khi học sinh đóng modal, tải lại trang hay đổi câu hỏi.
-  - **Thanh Lịch Sử Trượt Mở (Collapsible Session History Drawer)**: Thiết kế cột lịch sử phiên hỏi đáp bên trái (`w-72 sm:w-80`) với nút bật/tắt linh hoạt (`PanelLeftClose`/`PanelLeftOpen`), đếm tổng số phiên, nút tạo mới `+ Bắt đầu phiên hỏi mới` và thanh tìm kiếm nhanh theo câu hỏi/chuyên đề.
-  - **Gộp & Đồng Bộ Ngầm Đám Mây Supabase**: Tự động kết nối `practiceService.getAiTutorInteractions()` tải các tương tác lịch sử từ bảng `v_eval_ai.ai_tutor_interaction_logs` trên Supabase, gộp vào danh sách phiên mà không làm gián đoạn hội thoại hiện hành.
-  - **Tự Động Kế Thừa Bối Cảnh Câu Hỏi**: Khi mở từ câu trắc nghiệm làm sai (`initialContext`), tự động nạp phiên cũ nếu đã từng hỏi hoặc khởi tạo phiên mới gắn chặt đề bài KaTeX và phương án chọn sai.
-  - **Không Gian Đối Thoại Đa Nhiệm Mở Rộng**: Tự động co giãn kích thước modal lên `max-w-5xl h-[90vh]` khi mở thanh lịch sử và `max-w-3xl` khi thu gọn.
-  - **Khắc Phục Lỗi Vi Phạm React Rules of Hooks**: Tái cấu trúc toàn bộ khai báo hooks lên đầu component `AISocraticTutorModal.jsx`, di chuyển `if (!isOpen) return null` xuống ngay trước `return JSX`, chấm dứt triệt để lỗi *"Rendered more hooks than during the previous render"* khi mở modal.
-- **Tái Thiết Kế Toàn Diện Bố Cục Trang Chủ Quản Lý Học Thuật ([`CampusManagerDashboardView.jsx`](./src/components/dashboard/CampusManagerDashboardView.jsx), [`EarlyWarningsMentorPanel.jsx`](./src/components/dashboard/EarlyWarningsMentorPanel.jsx), [`App.jsx`](./src/App.jsx))**:
-  - **Khắc Phục Triệt Để Lỗi Phần Trăm (6688% BKT & 7600%)**: Xây dựng hàm chuẩn hóa `normalizeMasteryPct` tự động nhận diện thang đo thập phân (0-1) hoặc phần trăm (0-100), đưa mức làm chủ 4 miền về đúng `76%`, `53%`, `68%`, `71%` và chỉ số toàn cơ sở về đúng **`67% BKT`** (chấm dứt hoàn toàn lỗi hiển thị `6688%` và `7600%`).
-  - **Tích Hợp Lời Chào Vào Flagship HeroBanner**: Loại bỏ dòng chữ thô bên ngoài, tích hợp lời chào trang trọng *"Chào mừng Quản lý Học thuật, Nguyễn Duy Khôi!"* cùng dải chuyển động luân phiên 4 thông điệp sư phạm (`Sparkles`), chip năng lực vàng `#FACC15` và thẻ kính mờ điều phối cơ sở.
-  - **Chuẩn Hóa 4 Thẻ KPI Symmetrical Theo Phong Cách [`MetricsGrid.jsx`](./src/components/dashboard/MetricsGrid.jsx)**: 4 thẻ đối xứng (Học viên hoạt động, Giảng viên cơ sở, Quy mô lớp học, Năng lực toàn cơ sở) có micro-tags, badge trạng thái và footer điều hướng.
-  - **Nâng Cấp Bảng Ma Trận Nhiệt Đối Sánh 4 Miền Cấp Cơ Sở (Flow 5)**: Bảng dữ liệu Enterprise SaaS với thanh đo sĩ số lớp trực quan, ô năng lực bo góc hiển thị rõ % làm chủ và % học sinh yếu, nhãn rủi ro sư phạm và nút hành động *"Sơ Đồ Bàn Vi Mô"* hiệu ứng chuyển màu cao cấp.
-  - **Tối Ưu Hóa 2 Cột Lớp Học Offline & Đội Ngũ Giảng Viên**: Thẻ lớp học hiển thị tiến độ ZPD chuẩn hóa, danh sách giảng viên bổ sung avatar chữ cái viết tắt, badge trạng thái tài khoản màu chuẩn (`Active` xanh lục, `Locked` đỏ nhạt) và khung thông tin quy trình bảo mật IAM.
-  - **Nâng Cấp Bảng Điều Phối Cảnh Báo Sớm 3 Tầng**: Tinh chỉnh 6 thẻ thống kê phân tầng cảnh báo BR-04 với phong cách `card-shadow` hiện đại và bộ lọc danh sách mượt mà.
-- **Phân Hệ Kiểm Duyệt Báo Cáo Gia Sư AI Socratic ([`AiTutorModerationView.jsx`](./src/components/dashboard/AiTutorModerationView.jsx), [`Sidebar.jsx`](./src/components/layout/Sidebar.jsx))**:
-  - Giao diện kiểm duyệt đàm thoại AI dành riêng cho Quản lý học thuật với 4 KPI thời gian thực, hàng đợi split-pane, đối soát đáp án KaTeX, chat Socratic và 3 hành động sư phạm can thiệp Knowledge Graph.
-  - Rút gọn badge Sidebar thành `Flow 4` giải quyết triệt để lỗi co cắt chữ trên thanh điều hướng Sidebar.
+- **Chuẩn Hóa Triệt Để Dấu Tiếng Việt & Typography Hệ Thống ([`vietnameseUtils.js`](./src/utils/vietnameseUtils.js), [`DiagnosticAssessmentPage.jsx`](./src/components/diagnostic/DiagnosticAssessmentPage.jsx), [`vietnameseDiacritics.test.js`](./tests/vietnameseDiacritics.test.js))**:
+  - **Module Tiện Ích `cleanVietnameseDiacritics`**: Xây dựng thuật toán chuẩn hóa dấu tiếng Việt chuyên sâu, xử lý triệt để các ký tự dấu thanh lơ lửng bị phân rã (decomposed/floating diacritics như `´` `\u00B4`, ``` ` ``` `\u0060`, `\u0301`, `\u0300`, `\u0309`, `\u0303`, `\u0323`) thường gặp từ nguồn OCR hoặc PDF scan (ví dụ `số´ng` -> `sống`, `đế´n` -> `đến`, `nhiê`u` -> `nhiều`, `quố´c biê´n` -> `quốc biến`, `thơ â´u` -> `thơ ấu`, `mẹ hiê`n` -> `mẹ hiền`, `nê` nê´p` -> `nề nếp`).
+  - **Bảo Toàn 100% Công Thức Toán & KaTeX**: Thuật toán chỉ tác động chính xác lên cụm nguyên âm tiếng Việt, hoàn toàn không chạm vào cú pháp LaTeX (`\frac`, `\text`, `^`, `$`), đảm bảo các ký hiệu hóa học và toán học hiển thị nguyên vẹn.
+  - **Khử Bỏ Hoàn Toàn `font-serif`**: Loại bỏ dứt điểm font serif gây xung đột render glyph tiếng Việt trên Chromium Windows, chuyển toàn bộ container ngữ liệu sang `font-sans` (`Plus Jakarta Sans`) sắc nét và hiện đại.
+- **Đồng Bộ Toàn Diện Giao Diện Xem Lại Bài Làm (2 Render Loops)**:
+  - **Đồng bộ Bảng Đánh Giá Chi Tiết Tại Trang Kết Quả (`DiagnosticReportPanel id="review"`)**: Nâng cấp toàn bộ khối hiển thị câu hỏi và ngữ liệu tại trang kết quả sau nộp bài tương đương 100% với modal lịch sử, xóa bỏ bộ cắt dòng cũ (`line-clamp-3`), chuyển sang thẻ bài đọc ngữ cảnh bo cong cao cấp (`p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-blue-50/90 to-indigo-50/50`) với thanh cuộn tự nhiên (`max-h-72 overflow-y-auto whitespace-pre-line`).
+  - **Lưới Phương Án Trắc Nghiệm Chuẩn SaaS**: Áp dụng thẻ lựa chọn phân màu ngữ nghĩa cao cấp với hiệu ứng ring (`ring-1 ring-emerald-500/30` cho đáp án đúng, `ring-1 ring-rose-500/30` cho lựa chọn sai của thí sinh), icon `Check` và `X` sắc nét cùng nhãn trạng thái rõ ràng.
+  - **Thẻ Lời Giải Tư Duy Chi Tiết**: Nền tím nhạt thanh lịch (`bg-purple-50/70 border-purple-200`) kèm icon `Sparkles`, thụt lề chuẩn mực và văn phong sư phạm tích cực cho mọi phân môn.
+  - **Ánh Xạ Đúng Miền Năng Lực**: Kỹ năng đọc hiểu Tiếng Việt hiển thị chuẩn miền `Sử dụng Ngôn ngữ & Văn học` với badge xanh lục dịu mắt.
+- **Quản Lý Phiên Hội Thoại Đa Lượt Gia Sư AI Socratic ([`aiSessionManager.js`](./src/utils/aiSessionManager.js), [`AISocraticTutorModal.jsx`](./src/components/modals/AISocraticTutorModal.jsx))**:
+  - Khắc phục lỗi React Rules of Hooks (*"Rendered more hooks than during the previous render"*).
+  - Tích hợp thanh trượt lịch sử phiên hội thoại đa lượt, lưu trữ cục bộ kết hợp đồng bộ tương tác Supabase.
+- **Tái Thiết Kế Toàn Diện Bố Cục Trang Chủ Quản Lý Học Thuật ([`CampusManagerDashboardView.jsx`](./src/components/dashboard/CampusManagerDashboardView.jsx))**:
+  - Khắc phục triệt để lỗi phần trăm (`6688%` và `7600%`) bằng bộ chuẩn hóa `normalizeMasteryPct`.
+  - HeroBanner tích hợp chào mừng Quản lý học thuật, 4 thẻ KPI đối xứng, ma trận nhiệt đối sánh 4 miền cấp cơ sở.
 - **Kiểm Thử & Biên Dịch**:
-  - `npm run build`: Thành công 100% trong 1.19s.
-  - `node --test`: Đạt 36/36 unit tests pass (bao gồm 5 bài test chuyên sâu cho `aiSessionManager`).
-  - `npm run lint`: 0 lỗi linter.
+  - `npm run build`: Thành công 100% trong 1.08s.
+  - `node --test`: Đạt **38/38 unit tests pass 100%** (bao gồm 2 bài test tự động cho `cleanVietnameseDiacritics`).

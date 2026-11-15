@@ -2072,3 +2072,16 @@ Backend follow-up: Practice sends an empty AllSkillIds mapping to AI, preventing
   - Eliminated anomalous *"Câu 0:"* headers caused by zero/null `questionOrder` values from legacy records, establishing strict fallback indexing `idx + 1` (mapping cleanly to Questions 1 through 30).
   - Resolved *"Bloom 0/6"* display regressions by normalizing difficulty taxonomy (`difficultyLevel || matched?.bloom || 2`).
 - **Verification**: Vite production build succeeded in 1.08s; 36/36 unit test cases passed with 100% success rate; zero linter errors.
+
+### [15/11/2026] - Comprehensive Vietnamese Diacritic Normalization & Dual Review Render Loop Synchronization Architecture
+
+- **Vietnamese Diacritic Normalization Engine (`src/utils/vietnameseUtils.js`, `tests/vietnameseDiacritics.test.js`)**:
+  - Implemented `cleanVietnameseDiacritics` to resolve OCR / PDF encoding artifacts characterized by detached or decomposed floating diacritics (`´` `\u00B4`, ``` ` ``` `\u0060`, `\u0301`, `\u0300`, `\u0309`, `\u0303`, `\u0323`).
+  - Automatically merges floating tone marks into precomposed Vietnamese characters (e.g. `số´ng` -> `sống`, `đế´n` -> `đến`, `nhiê`u` -> `nhiều`, `quố´c biê´n` -> `quốc biến`, `thơ â´u` -> `thơ ấu`, `mẹ hiê`n` -> `mẹ hiền`, `nê` nê´p` -> `nề nếp`), eliminating visual character glitches across all browser platforms.
+  - Carefully engineered regex tokenizers preserve LaTeX mathematical notation (`\frac`, `\text`, `^`, `$`), ensuring chemistry equations and mathematics symbols are entirely unaffected.
+  - Completely purged `font-serif` across all reading passage containers to prevent font fallback and glyph rendering bugs on Windows Chromium, migrating to standard modern `font-sans` (`Plus Jakarta Sans`).
+- **Dual Review Render Loop Synchronization (`DiagnosticAssessmentPage.jsx`)**:
+  - Identified and synchronized two independent question review render loops: (1) In-place post-submission review panel (`DiagnosticReportPanel id="review"`), and (2) History review modal dialog (`selectedHistoryExam`).
+  - Modernized the in-place report view to match the modal dialog: replaced legacy `line-clamp-3` truncated containers with modern `p-4 sm:p-5 rounded-2xl` reading passage cards featuring `max-h-72 overflow-y-auto whitespace-pre-line`, `BookOpen` icon, and a `Bài đọc ngữ cảnh` badge.
+  - Standardized options grid styling with semantic ring boundaries (`ring-1 ring-emerald-500/30` for correct options, `ring-1 ring-rose-500/30` for incorrect student choices) alongside crisp `Check` and `X` indicators and soft purple explanation cards (`bg-purple-50/70 border-purple-200`).
+- **Verification**: Production build verified in 1.08s; 38/38 unit tests pass (100% success rate); zero linter errors.
