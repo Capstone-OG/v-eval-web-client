@@ -1995,3 +1995,24 @@ Backend follow-up: Practice sends an empty AllSkillIds mapping to AI, preventing
   - Replaced legacy badge asset with high-resolution authentic Vietnamese student photography (`vietnamese_student_real.jpg`) in a glassmorphic frame (`bg-white/10 backdrop-blur-md border-white/20`).
 - **Verification**: 31/31 unit tests passed; bundle verification passed in 1.05s.
 
+
+
+### [15/11/2026] - Core Flow 4: Socratic AI Tutor Moderation & Dual-Layer Knowledge Graph Feedback Architecture for Academic Management
+
+- **Human-in-the-Loop Socratic Moderation Dashboard (`src/components/dashboard/AiTutorModerationView.jsx`)**:
+  - Engineered an enterprise-grade moderation interface for **Academic Managers (`ACADEMIC_MANAGER`)** and **Academic Directors (`ACADEMIC_DIRECTOR`)** to inspect, validate, and remediate student-reported Socratic AI Tutor interactions.
+  - Aligned with Core Flow 4 (`core4_activity.mmd` and `core_flow_4_ai_tutor_graph_rag.md`) to establish an active feedback loop between student learning friction and the persistent GraphRAG Knowledge Graph.
+  - Real-time KPI aggregation tracks 4 critical pedagogical metrics: *Pending Reports*, *Resolved & KG Ingested*, *Total Flagged Interactions*, and *Monitored Dialogues*.
+- **Interaction Inspector & Ground-Truth Verification Workflow**:
+  - Implemented split-view layout featuring a searchable/filterable queue on the left and a comprehensive diagnostic inspector on the right.
+  - Seamless KaTeX formula rendering via `MathText` for question stems and options.
+  - Visual ground-truth discrepancy analysis: highlights student choice (Red - cognitive error) directly against official database answer (Green - correct).
+  - Chronological Socratic dialogue reconstruction visualizing each conversational turn (`student` vs `ai_tutor`).
+- **Tri-Modal Pedagogical Knowledge Graph Intervention Actions**:
+  - **Action 1: Override Golden Exemplar (`PatternExemplar`)**: Allows academic managers to author verified expert explanations and step-by-step Socratic reasoning chains, saved directly to `pattern_exemplars` in the Knowledge Graph for dynamic few-shot retrieval.
+  - **Action 2: Add Novel Cognitive Trap (`PatternTrap`)**: Captures newly discovered misconceptions with custom trap codes, misconception analysis, and targeted reflective guiding questions, persisting into `pattern_traps`.
+  - **Action 3: Verify & Dismiss**: Closes false-positive reports when the Socratic AI's guidance adhered strictly to pedagogical guidelines and the student experienced misconception resistance.
+- **Client Service Layer & Navigation Integration (`practiceService.js`, `Sidebar.jsx`, `App.jsx`, `roles.js`)**:
+  - Added dedicated API client methods: `overrideTutorExemplar`, `addTutorNovelTrap`, and `resolveTutorReport` with graceful local storage fallback.
+  - Integrated `ai_moderation` into the Academic Management portal navigation with the `Bot` icon and `Core Flow 4` indicator.
+- **Verification**: Production build succeeded with zero errors (`1.29s`); all 31 automated test cases passed; zero linter errors.

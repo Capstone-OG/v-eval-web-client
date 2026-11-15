@@ -29,14 +29,16 @@ export const ROLE_MENUS = {
     ['teaching_materials', 'Bài giảng & Học liệu'], ['student_progress', 'Tiến độ học sinh'],
   ],
   manager: [
-    ['dashboard', 'Tổng quan đào tạo'], ['class_management', 'Quản lý lớp học'],
+    ['dashboard', 'Tổng quan đào tạo'], ['teacher_heatmap', 'Ma trận Lớp học'],
+    ['ai_moderation', 'Kiểm duyệt Gia sư AI'], ['class_management', 'Quản lý lớp học'],
     ['teacher_assignment', 'Phân công giáo viên'], ['live_management', 'Xếp lịch Live Q&A'],
     ['clustering', 'Phân lớp chuyên đề'], ['training_reports', 'Báo cáo đào tạo'],
   ],
   director: [
-    ['dashboard', 'Tổng quan chuyên môn'], ['curriculum', 'Khung chương trình'],
-    ['materials', 'Bài giảng & Học liệu'], ['content_questions', 'Ngân hàng câu hỏi'],
-    ['content_exams', 'Đề thi & Quiz'], ['content_review', 'Rà soát nội dung'],
+    ['dashboard', 'Tổng quan chuyên môn'], ['ai_moderation', 'Kiểm duyệt Gia sư AI'],
+    ['curriculum', 'Khung chương trình'], ['materials', 'Bài giảng & Học liệu'],
+    ['content_questions', 'Ngân hàng câu hỏi'], ['content_exams', 'Đề thi & Quiz'],
+    ['content_review', 'Rà soát nội dung'],
   ],
   administrator: [
     ['dashboard', 'Tổng quan hệ thống'], ['users', 'Quản lý tài khoản'],

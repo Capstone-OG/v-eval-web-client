@@ -31,6 +31,7 @@ import ParentDashboardView from './components/dashboard/ParentDashboardView';
 import TeacherDashboardView from './components/dashboard/TeacherDashboardView';
 import TeacherPortalView from './components/dashboard/TeacherPortalView';
 import CampusManagerDashboardView from './components/dashboard/CampusManagerDashboardView';
+import AiTutorModerationView from './components/dashboard/AiTutorModerationView';
 import LearningAnalyticsView from './components/dashboard/LearningAnalyticsView';
 import PublicLandingPage from './components/landing/PublicLandingPage';
 import WebLoginPage from './components/auth/WebLoginPage';
@@ -113,6 +114,7 @@ const ROLE_PORTAL_DEFINITIONS = {
     tabs: [
       { id: 'dashboard', label: 'So sánh Cơ sở', icon: Building2 },
       { id: 'teacher_heatmap', label: 'Ma trận Lớp học', icon: LayoutGrid },
+      { id: 'ai_moderation', label: 'Kiểm duyệt Gia sư AI', icon: Bot },
       { id: 'roadmap', label: 'Khung Chương trình', icon: Network },
       { id: 'provision', label: 'Cấp phát Tài khoản', icon: UserPlus },
       { id: 'analytics', label: 'Báo cáo Chất lượng', icon: BarChart3 }
@@ -478,6 +480,15 @@ export default function App() {
     if (activeTab === 'provision') {
       return (
         <AccountProvisioningView
+          onBackToDashboard={() => setActiveTab('dashboard')}
+        />
+      );
+    }
+
+    if (activeTab === 'ai_moderation') {
+      return (
+        <AiTutorModerationView
+          currentUser={currentUser}
           onBackToDashboard={() => setActiveTab('dashboard')}
         />
       );

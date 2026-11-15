@@ -2,6 +2,34 @@
 
 ---
 
+## [15/11/2026] - Triển Khai Phân Hệ Kiểm Duyệt Báo Cáo Gia Sư AI Socratic Cho Quản Lý Học Thuật (Core Flow 4: Human-in-the-Loop & Knowledge Graph Feedback)
+
+- **Xây Dựng Giao Diện Kiểm Duyệt Báo Cáo Gia Sư AI (`src/components/dashboard/AiTutorModerationView.jsx`)**:
+  - Triển khai toàn diện màn hình điều phối và kiểm duyệt phản hồi AI dành riêng cho **Quản lý học thuật cơ sở (`ACADEMIC_MANAGER`)** và **Giám đốc học thuật (`ACADEMIC_DIRECTOR`)**.
+  - **Banner & Thống kê thời gian thực**: Theo dõi 4 chỉ số KPI quan trọng: *Báo cáo chờ xử lý*, *Đã giải quyết/Lưu KG*, *Tổng báo cáo học sinh gửi*, và *Tổng phiên đàm thoại AI được giám sát*.
+  - **Bộ lọc & Danh sách thẻ tương tác**: Hỗ trợ lọc nhanh theo trạng thái (*Chờ xử lý*, *Tất cả báo cáo*, *Đã xử lý*, *Toàn bộ*) kết hợp thanh tìm kiếm thông minh theo tên học sinh, dạng bài, câu hỏi hoặc mã bẫy.
+  - **Khung đối soát chi tiết (Interaction Inspector)**:
+    - Hiển thị đầy đủ nội dung câu hỏi với KaTeX LaTeX chuẩn mực qua `MathText`.
+    - Đối chiếu trực quan: Phương án học sinh chọn (SAI - đỏ) đối soát với Đáp án đúng CSDL (ĐÚNG - xanh lục).
+    - Hộp cảnh báo nổi bật lý do học sinh phản ánh (AI lộ đáp án, ảo giác công thức, gợi ý khó hiểu...).
+    - Trực quan hóa nhật ký đàm thoại Socratic từng bước giữa học sinh và AI Tutor.
+  - **Bàn làm việc Can thiệp Sư phạm 3 Chế độ (Dual-Layer Human-in-the-Loop Actions)**:
+    1. **Ghi đè Lời giải mẫu chuẩn (`Override Golden Exemplar`)**: Soạn thảo lời giải chuẩn của Giảng viên/Học vụ kèm các bước tư duy gợi mở Socratic, lưu trực tiếp vào node `PatternExemplar` trong Knowledge Graph.
+    2. **Bổ sung Bẫy tư duy mới (`Add Novel Cognitive Trap`)**: Đặt mã bẫy (`trap_code`), tên bẫy (`trap_name`), gắn với phương án sai, giải thích sai lầm tư duy và câu hỏi gợi mở, lưu vào node `PatternTrap` trong Knowledge Graph.
+    3. **Xác nhận AI hợp lệ (`Verify & Dismiss`)**: Đóng báo cáo khi phản hồi của AI hoàn toàn đúng chuẩn Socratic và học sinh hiểu nhầm.
+- **Tích Hợp Điều Hướng Vào Cổng Quản Lý Học Thuật (`Sidebar.jsx`, `App.jsx`, `roles.js`)**:
+  - Bổ sung mục menu **`Kiểm duyệt Gia sư AI`** (id: `ai_moderation`, icon: `Bot`, sublabel: `Báo cáo sai lệch & Bẫy tư duy`, badge: `Core Flow 4`) vào khối *Quản Trị Học Thuật Cơ Sở* trên Sidebar.
+  - Cập nhật danh mục tabs của `CAMPUS MANAGER PORTAL` và định nghĩa menu vai trò trong `src/config/roles.js`.
+  - Kết nối hiển thị component `<AiTutorModerationView>` khi tab `ai_moderation` được kích hoạt.
+- **Mở Rộng Dịch Vụ API Phía Client (`src/services/practiceService.js`)**:
+  - Bổ sung 3 phương thức API: `overrideTutorExemplar`, `addTutorNovelTrap`, và `resolveTutorReport`.
+  - Tích hợp cơ chế fallback an toàn, bảo đảm giao diện luôn hoạt động trơn tru ngay cả khi mạng gián đoạn.
+- **Kiểm Thử & Biên Dịch**:
+  - `npm run build`: Biên dịch Vite thành công 100% trong 1.29s.
+  - `node --test`: Toàn bộ 31/31 unit tests vượt qua, 0 lỗi linter.
+
+---
+
 ## [20/10/2026] - Triển Khai Hoàn Thiện Màn Hình Cài Đặt Tài Khoản, Tích Hợp Thông Tin Đại Diện Phụ Huynh (Cha HOẶC Mẹ), Mã Kết Nối Học Sinh & Học Bạ Điện Tử ĐGNL VNU-HCM 2026
 
 - **Mở Rộng Màn Hình Cài Đặt Tài Khoản (`src/components/settings/AccountSettingsPage.jsx`)**:
