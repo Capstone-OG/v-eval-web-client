@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   Bot,
   Send,
@@ -10,13 +10,36 @@ import {
   Layers,
   HelpCircle,
   Check,
-  Target
+  Target,
+  MessageSquare,
+  Clock,
+  Plus,
+  Search,
+  Trash2,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Cloud
 } from 'lucide-react';
 import { practiceService } from '../../services/practiceService';
+import { tokenStorage } from '../../services/apiClient';
+import {
+  aiSessionManager,
+  formatSessionTime
+} from '../../utils/aiSessionManager';
 import MathText from '../common/MathText';
 
 export default function AISocraticTutorModal({ isOpen, onClose, initialContext = null }) {
-  const [messages, setMessages] = useState([]);
+  const currentUserId = useMemo(() => {
+    const user = tokenStorage.getUser();
+    return user?.id || user?.userId || 'guest_student';
+  }, []);
+
+  const [sessions, setSessions] = useState([]);
+  const [activeSessionId, setActiveSessionId] = useState(null);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(true);
+  const [historySearchTerm, setHistorySearchTerm] = useState('');
+  const [isSyncingCloud, setIsSyncingCloud] = useState(false);
+
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [rateLimitWarning, setRateLimitWarning] = useState(null);
@@ -31,10 +54,20 @@ export default function AISocraticTutorModal({ isOpen, onClose, initialContext =
   const abortControllerRef = useRef(null);
   const chatBottomRef = useRef(null);
 
-  // Initialize or reset chat based on initialContext when modal opens
+  // Load or initialize sessions when modal opens or initialContext changes
   useEffect(() => {
-    if (isOpen) {
-      if (initialContext) {
+    if (!isOpen) return;
+
+    let loaded = aiSessionManager.getSessions(currentUserId);
+
+    // Initial context from quiz question review
+    if (initialContext?.question) {
+      const targetQuestionId = initialContext.questionId ? String(initialContext.questionId) : null;
+      let existingSession = targetQuestionId
+        ? loaded.find(s => s.questionId === targetQuestionId)
+        : null;
+
+      if (!existingSession) {
         const wrongText = initialContext.selectedWrong ? `\n> **Phương án em vừa chọn:** ${initialContext.selectedWrong}` : '';
         const contextGreeting = {
           sender: 'ai',
@@ -43,34 +76,95 @@ export default function AISocraticTutorModal({ isOpen, onClose, initialContext =
           topicLabel: initialContext.skill || null,
           interactionId: null
         };
-        setMessages([contextGreeting]);
+
+        const newSess = aiSessionManager.createSession(currentUserId, {
+          questionId: targetQuestionId,
+          questionLatex: initialContext.question,
+          skill: initialContext.skill,
+          selectedWrong: initialContext.selectedWrong,
+          correctOption: initialContext.correctOption,
+          options: initialContext.options,
+          initialMessages: [contextGreeting]
+        });
+
+        loaded = [newSess, ...loaded];
+        setActiveSessionId(newSess.id);
       } else {
-        setMessages([
-          {
-            sender: 'ai',
-            text: 'Chào em! Thầy là **Gia Sư AI Đồng Hành**. Thầy sẽ gợi mở từng bước dễ hiểu để em tự tìm ra cách giải và nắm chắc kiến thức.\n\nEm đang gặp khó khăn ở câu hỏi hay chủ đề nào?',
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            topicLabel: null,
-            interactionId: null
-          }
-        ]);
+        setActiveSessionId(existingSession.id);
+      }
+    } else {
+      // General exploration mode
+      if (loaded.length === 0) {
+        const defaultGreeting = {
+          sender: 'ai',
+          text: 'Chào em! Thầy là **Gia Sư AI Đồng Hành**. Thầy sẽ gợi mở từng bước dễ hiểu để em tự tìm ra cách giải và nắm chắc kiến thức.\n\nEm đang gặp khó khăn ở câu hỏi hay chủ đề nào?',
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          topicLabel: null,
+          interactionId: null
+        };
+
+        const freshSess = aiSessionManager.createSession(currentUserId, {
+          title: 'Hỏi đáp chung với Gia sư AI',
+          skill: null,
+          initialMessages: [defaultGreeting]
+        });
+        loaded = [freshSess];
+        setActiveSessionId(freshSess.id);
+      } else if (!activeSessionId || !loaded.some(s => s.id === activeSessionId)) {
+        setActiveSessionId(loaded[0].id);
       }
     }
-  }, [isOpen, initialContext]);
+
+    setSessions(loaded);
+
+    // Sync cloud interactions in background without blocking UI
+    const syncCloud = async () => {
+      try {
+        setIsSyncingCloud(true);
+        const cloudData = await practiceService.getAiTutorInteractions({ reportedOnly: false, limit: 30 });
+        if (Array.isArray(cloudData) && cloudData.length > 0) {
+          const merged = aiSessionManager.mergeCloudInteractions(currentUserId, cloudData);
+          setSessions(merged);
+        }
+      } catch {
+        // Silently tolerate network/cloud sync errors
+      } finally {
+        setIsSyncingCloud(false);
+      }
+    };
+
+    syncCloud();
+  }, [isOpen, initialContext, currentUserId]);
+
+  // Active session object
+  const activeSession = useMemo(() => {
+    return sessions.find(s => s.id === activeSessionId) || sessions[0] || null;
+  }, [sessions, activeSessionId]);
+
+  const messages = useMemo(() => {
+    return activeSession?.messages || [];
+  }, [activeSession]);
+
+  const filteredSessions = useMemo(() => {
+    if (!historySearchTerm.trim()) return sessions;
+    const term = historySearchTerm.toLowerCase();
+    return sessions.filter(s =>
+      (s.title && s.title.toLowerCase().includes(term)) ||
+      (s.skill && s.skill.toLowerCase().includes(term))
+    );
+  }, [sessions, historySearchTerm]);
 
   useEffect(() => {
     if (isOpen) {
       chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [messages, isTyping, isOpen]);
+  }, [messages, isTyping, isOpen, activeSessionId]);
 
   useEffect(() => {
     return () => {
       abortControllerRef.current?.abort();
     };
   }, []);
-
-  if (!isOpen) return null;
 
   const handleStopStream = () => {
     if (abortControllerRef.current) {
@@ -80,9 +174,44 @@ export default function AISocraticTutorModal({ isOpen, onClose, initialContext =
     }
   };
 
+  const handleCreateNewSession = () => {
+    const defaultGreeting = {
+      sender: 'ai',
+      text: 'Chào em! Thầy là **Gia Sư AI Đồng Hành**. Thầy sẽ gợi mở từng bước dễ hiểu để em tự tìm ra cách giải và nắm chắc kiến thức.\n\nEm đang gặp khó khăn ở câu hỏi hay chủ đề nào?',
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      topicLabel: null,
+      interactionId: null
+    };
+
+    const newSess = aiSessionManager.createSession(currentUserId, {
+      title: 'Phiên hỏi đáp mới',
+      skill: null,
+      initialMessages: [defaultGreeting]
+    });
+
+    const updated = [newSess, ...sessions];
+    setSessions(updated);
+    setActiveSessionId(newSess.id);
+  };
+
+  const handleDeleteSession = (e, sessionId) => {
+    e.stopPropagation();
+    aiSessionManager.deleteSession(currentUserId, sessionId);
+    const remaining = sessions.filter(s => s.id !== sessionId);
+    setSessions(remaining);
+
+    if (activeSessionId === sessionId) {
+      if (remaining.length > 0) {
+        setActiveSessionId(remaining[0].id);
+      } else {
+        handleCreateNewSession();
+      }
+    }
+  };
+
   const handleSendMessage = async (textToSend = null) => {
     const query = (textToSend || inputText).trim();
-    if (!query || isTyping) return;
+    if (!query || isTyping || !activeSession) return;
 
     setRateLimitWarning(null);
 
@@ -92,7 +221,9 @@ export default function AISocraticTutorModal({ isOpen, onClose, initialContext =
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
 
-    setMessages(prev => [...prev, userMsg]);
+    const updatedWithUser = [...messages, userMsg];
+    aiSessionManager.updateSessionMessages(currentUserId, activeSession.id, updatedWithUser);
+    setSessions(aiSessionManager.getSessions(currentUserId));
     setInputText('');
     setIsTyping(true);
 
@@ -102,49 +233,54 @@ export default function AISocraticTutorModal({ isOpen, onClose, initialContext =
       sender: 'ai',
       text: '',
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      topicLabel: initialContext?.skill || null,
+      topicLabel: activeSession.skill || null,
       interactionId: newInteractionId
     };
-    setMessages(prev => [...prev, aiMsgPlaceholder]);
+
+    const updatedWithPlaceholder = [...updatedWithUser, aiMsgPlaceholder];
+    aiSessionManager.updateSessionMessages(currentUserId, activeSession.id, updatedWithPlaceholder);
+    setSessions(aiSessionManager.getSessions(currentUserId));
 
     const controller = new AbortController();
     abortControllerRef.current = controller;
 
     try {
-      const isQuestionMode = Boolean(initialContext?.question);
+      const isQuestionMode = Boolean(activeSession.questionLatex);
       await practiceService.askAiTutorStream({
-        questionLatex: isQuestionMode ? initialContext.question : query,
+        questionLatex: isQuestionMode ? activeSession.questionLatex : query,
         studentQuery: query,
-        questionId: initialContext?.questionId || newInteractionId,
-        options: isQuestionMode ? initialContext?.options : null,
-        studentWrongOption: isQuestionMode ? (initialContext?.selectedWrong || null) : null,
-        correctOption: isQuestionMode ? (initialContext?.correctOption || null) : null,
-        skillId: initialContext?.skillId || null,
+        questionId: activeSession.questionId || newInteractionId,
+        options: isQuestionMode ? activeSession.options : null,
+        studentWrongOption: isQuestionMode ? (activeSession.selectedWrong || null) : null,
+        correctOption: isQuestionMode ? (activeSession.correctOption || null) : null,
+        skillId: null,
         signal: controller.signal,
         onInteractionId: (id) => {
-          setMessages(prev => {
-            const next = [...prev];
-            const lastIdx = next.length - 1;
-            if (lastIdx >= 0 && next[lastIdx].sender === 'ai') {
-              next[lastIdx] = {
-                ...next[lastIdx],
-                interactionId: id
-              };
+          setSessions(prev => {
+            const list = [...prev];
+            const target = list.find(s => s.id === activeSession.id);
+            if (target && target.messages.length > 0) {
+              const last = target.messages[target.messages.length - 1];
+              if (last.sender === 'ai') {
+                last.interactionId = id;
+              }
+              aiSessionManager.saveSessions(currentUserId, list);
             }
-            return next;
+            return list;
           });
         },
         onToken: (token) => {
-          setMessages(prev => {
-            const next = [...prev];
-            const lastIdx = next.length - 1;
-            if (lastIdx >= 0 && next[lastIdx].sender === 'ai') {
-              next[lastIdx] = {
-                ...next[lastIdx],
-                text: next[lastIdx].text + token
-              };
+          setSessions(prev => {
+            const list = [...prev];
+            const target = list.find(s => s.id === activeSession.id);
+            if (target && target.messages.length > 0) {
+              const last = target.messages[target.messages.length - 1];
+              if (last.sender === 'ai') {
+                last.text = (last.text || '') + token;
+              }
+              aiSessionManager.saveSessions(currentUserId, list);
             }
-            return next;
+            return list;
           });
         },
         onError: (err) => {
@@ -152,46 +288,47 @@ export default function AISocraticTutorModal({ isOpen, onClose, initialContext =
           abortControllerRef.current = null;
           if (err.status === 429) {
             setRateLimitWarning(err.message);
-            setMessages(prev => {
-              const next = [...prev];
-              const lastIdx = next.length - 1;
-              if (lastIdx >= 0 && next[lastIdx].sender === 'ai' && !next[lastIdx].text) {
-                next[lastIdx] = {
-                  ...next[lastIdx],
-                  text: 'Hạn mức kết nối hiện tại đang tạm thời đạt giới hạn (Tối đa 10 câu/phút). Em hãy dành chút thời gian suy ngẫm câu hỏi trước khi gửi tiếp nhé!'
-                };
+            setSessions(prev => {
+              const list = [...prev];
+              const target = list.find(s => s.id === activeSession.id);
+              if (target && target.messages.length > 0) {
+                const last = target.messages[target.messages.length - 1];
+                if (last.sender === 'ai' && !last.text) {
+                  last.text = 'Hạn mức kết nối hiện tại đang tạm thời đạt giới hạn (Tối đa 10 câu/phút). Em hãy dành chút thời gian suy ngẫm câu hỏi trước khi gửi tiếp nhé!';
+                }
+                aiSessionManager.saveSessions(currentUserId, list);
               }
-              return next;
+              return list;
             });
           } else if (err.name !== 'AbortError') {
-            setMessages(prev => {
-              const next = [...prev];
-              const lastIdx = next.length - 1;
-              if (lastIdx >= 0 && next[lastIdx].sender === 'ai') {
-                if (!next[lastIdx].text) {
-                  next[lastIdx] = {
-                    ...next[lastIdx],
-                    text: 'Thầy gặp chút gián đoạn khi kết nối máy chủ AI. Em hãy bấm thử lại hoặc kiểm tra kết nối mạng nhé!'
-                  };
+            setSessions(prev => {
+              const list = [...prev];
+              const target = list.find(s => s.id === activeSession.id);
+              if (target && target.messages.length > 0) {
+                const last = target.messages[target.messages.length - 1];
+                if (last.sender === 'ai' && !last.text) {
+                  last.text = 'Thầy gặp chút gián đoạn khi kết nối máy chủ AI. Em hãy bấm thử lại hoặc kiểm tra kết nối mạng nhé!';
                 }
+                aiSessionManager.saveSessions(currentUserId, list);
               }
-              return next;
+              return list;
             });
           }
         },
         onComplete: () => {
           setIsTyping(false);
           abortControllerRef.current = null;
-          setMessages(prev => {
-            const next = [...prev];
-            const lastIdx = next.length - 1;
-            if (lastIdx >= 0 && next[lastIdx].sender === 'ai' && (!next[lastIdx].text || !next[lastIdx].text.trim())) {
-              next[lastIdx] = {
-                ...next[lastIdx],
-                text: 'Chào em! Thầy đang lắng nghe thắc mắc của em. Em hãy chia sẻ cụ thể hơn về bài tập hoặc hướng suy luận em muốn thầy gợi mở nhé!'
-              };
+          setSessions(prev => {
+            const list = [...prev];
+            const target = list.find(s => s.id === activeSession.id);
+            if (target && target.messages.length > 0) {
+              const last = target.messages[target.messages.length - 1];
+              if (last.sender === 'ai' && (!last.text || !last.text.trim())) {
+                last.text = 'Chào em! Thầy đang lắng nghe thắc mắc của em. Em hãy chia sẻ cụ thể hơn về bài tập hoặc hướng suy luận em muốn thầy gợi mở nhé!';
+              }
+              aiSessionManager.saveSessions(currentUserId, list);
             }
-            return next;
+            return list;
           });
         }
       });
@@ -229,7 +366,7 @@ export default function AISocraticTutorModal({ isOpen, onClose, initialContext =
     }
   };
 
-  const quickPrompts = initialContext ? [
+  const quickPrompts = activeSession?.questionLatex ? [
     'Vì sao phương án em chọn lại chưa chính xác?',
     'Gợi ý giúp em bước lập luận đầu tiên',
     'Em chưa hiểu công thức áp dụng cho câu này'
@@ -239,204 +376,328 @@ export default function AISocraticTutorModal({ isOpen, onClose, initialContext =
     'Em chưa biết bắt đầu từ dữ kiện nào của đề bài'
   ];
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-slate-950/70 backdrop-blur-md animate-fade-in">
-      <div className="relative w-full max-w-3xl bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col my-auto max-h-[90vh]">
+  if (!isOpen) return null;
 
-        {/* Modal Header */}
-        <div className="p-4 sm:p-5 border-b border-slate-100 bg-gradient-to-r from-slate-900 via-blue-950 to-slate-900 text-white flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-blue-500/30 shrink-0">
-              <Bot className="w-6 h-6 text-cyan-200" />
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/75 backdrop-blur-md animate-fade-in">
+      <div className={`relative w-full ${isHistoryOpen ? 'max-w-5xl' : 'max-w-3xl'} bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col my-auto h-[90vh] max-h-[860px] transition-all duration-300`}>
+
+        {/* Modal Top Header */}
+        <div className="p-3.5 sm:p-4 border-b border-slate-800 bg-gradient-to-r from-slate-950 via-blue-950 to-slate-900 text-white flex items-center justify-between gap-3 shrink-0">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            {/* Toggle History Drawer Button */}
+            <button
+              onClick={() => setIsHistoryOpen(!isHistoryOpen)}
+              className="p-2 bg-white/10 hover:bg-white/20 text-cyan-200 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 text-xs font-semibold shrink-0"
+              title={isHistoryOpen ? 'Thu gọn lịch sử' : 'Mở lịch sử phiên hỏi'}
+            >
+              {isHistoryOpen ? <PanelLeftClose className="w-4 h-4" /> : <PanelLeftOpen className="w-4 h-4" />}
+              <span className="hidden sm:inline">Lịch Sử</span>
+              <span className="px-1.5 py-0.2 bg-blue-500/30 text-[10px] rounded-full border border-blue-400/30 font-bold">
+                {sessions.length}
+              </span>
+            </button>
+
+            <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-blue-500/30 shrink-0">
+              <Bot className="w-5 h-5 text-cyan-200" />
             </div>
-            <div>
-              <div className="flex flex-wrap items-center gap-2">
-                <h2 className="text-base sm:text-lg font-extrabold tracking-tight text-white">
+
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="text-sm sm:text-base font-extrabold tracking-tight text-white truncate">
                   Gia Sư AI Đồng Hành
                 </h2>
-                {initialContext?.skill ? (
-                  <span className="px-2.5 py-0.5 rounded-full bg-indigo-500/30 text-cyan-300 border border-cyan-400/30 text-[10px] font-bold">
-                    Chủ đề: {initialContext.skill}
+                {activeSession?.skill ? (
+                  <span className="px-2.5 py-0.5 rounded-full bg-indigo-500/30 text-cyan-300 border border-cyan-400/30 text-[10px] font-bold truncate max-w-[160px]">
+                    {activeSession.skill}
                   </span>
                 ) : (
                   <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-[10px] font-bold">
                     Trực tuyến 24/7
                   </span>
                 )}
-                <span className="hidden sm:inline-block px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-400/30 text-[10px] font-bold">
-                  10 lượt hỏi / phút
+                <span className="hidden md:inline-block px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-400/30 text-[10px] font-bold">
+                  10 lượt/phút
                 </span>
               </div>
-              <p className="text-xs text-slate-300 font-medium">
-                Hướng dẫn tư duy phản biện từng bước • Không đưa sẵn đáp án
+              <p className="text-[11px] text-slate-300 font-medium truncate">
+                {activeSession?.title || 'Hướng dẫn tư duy phản biện từng bước • Không đưa sẵn đáp án'}
               </p>
             </div>
           </div>
 
-          <button
-            onClick={onClose}
-            className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-full transition-all cursor-pointer shrink-0"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            <button
+              onClick={handleCreateNewSession}
+              className="hidden sm:flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl text-xs font-bold shadow-xs transition-all cursor-pointer"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Phiên Mới</span>
+            </button>
+            <button
+              onClick={onClose}
+              className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-full transition-all cursor-pointer"
+              title="Đóng khung chat"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
-        {/* Modal Body: Focused Single-Column Chat Window */}
-        <div className="flex-1 flex flex-col justify-between bg-slate-50/30 overflow-hidden min-h-0">
+        {/* Modal Main Area: Left Sidebar (History) + Right Workspace (Chat) */}
+        <div className="flex-1 flex overflow-hidden min-h-0">
 
-          {/* Context Sticky Banner if opened from a specific question */}
-          {initialContext && (
-            <div className="mx-4 mt-4 p-3.5 bg-indigo-50/80 border border-indigo-200 rounded-2xl flex items-start justify-between gap-3 shadow-2xs">
-              <div className="space-y-1 text-xs min-w-0">
-                <div className="flex items-center gap-1.5 font-extrabold text-indigo-950">
-                  <Target className="w-4 h-4 text-indigo-600 shrink-0" />
-                  <span>Đang hỗ trợ câu hỏi bài tập:</span>
+          {/* Left History Drawer */}
+          {isHistoryOpen && (
+            <aside className="w-64 sm:w-72 md:w-80 bg-slate-50 border-r border-slate-200/90 flex flex-col shrink-0 animate-fade-in">
+              {/* Top Drawer Controls */}
+              <div className="p-3 border-b border-slate-200/80 space-y-2">
+                <button
+                  onClick={handleCreateNewSession}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 px-3 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-2xl shadow-xs transition-all cursor-pointer"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>+ Bắt đầu phiên hỏi mới</span>
+                </button>
+
+                <div className="relative">
+                  <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="text"
+                    value={historySearchTerm}
+                    onChange={(e) => setHistorySearchTerm(e.target.value)}
+                    placeholder="Tìm theo chủ đề, câu hỏi..."
+                    className="w-full pl-8 pr-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
                 </div>
-                <div className="text-slate-700 line-clamp-2 font-medium">
-                  <MathText text={initialContext.question || ''} />
-                </div>
-                {initialContext.selectedWrong && (
-                  <div className="text-[11px] text-rose-700 font-bold flex items-center gap-1.5 pt-0.5">
-                    <span>Phương án em đã chọn:</span>
-                    <span className="bg-white px-2 py-0.5 rounded-md border border-rose-200 text-rose-800 font-bold">
-                      <MathText text={String(initialContext.selectedWrong)} />
-                    </span>
-                  </div>
-                )}
               </div>
-            </div>
-          )}
 
-          {/* Rate Limit Warning Banner */}
-          {rateLimitWarning && (
-            <div className="m-4 p-3 bg-amber-50 border border-amber-200 rounded-2xl text-amber-800 text-xs font-semibold flex items-start gap-2.5 shadow-2xs">
-              <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-              <div className="flex-1">{rateLimitWarning}</div>
-            </div>
-          )}
+              {/* Sessions List */}
+              <div className="flex-1 overflow-y-auto p-2 space-y-1.5">
+                {filteredSessions.length === 0 ? (
+                  <div className="p-6 text-center text-slate-400 space-y-2">
+                    <MessageSquare className="w-8 h-8 mx-auto opacity-40 text-slate-400" />
+                    <p className="text-xs">Không tìm thấy phiên hỏi nào.</p>
+                  </div>
+                ) : (
+                  filteredSessions.map((s) => {
+                    const isActive = s.id === activeSession?.id;
+                    const msgCount = s.messages?.length || 0;
+                    return (
+                      <div
+                        key={s.id}
+                        onClick={() => setActiveSessionId(s.id)}
+                        className={`group relative p-2.5 rounded-2xl transition-all cursor-pointer border ${
+                          isActive
+                            ? 'bg-white border-blue-500 shadow-xs ring-1 ring-blue-500/20'
+                            : 'bg-white/60 hover:bg-white border-slate-200/70 hover:border-slate-300'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-1.5">
+                          <h4 className={`text-xs font-bold truncate flex-1 ${isActive ? 'text-blue-900' : 'text-slate-700'}`}>
+                            {s.title}
+                          </h4>
+                          <button
+                            onClick={(e) => handleDeleteSession(e, s.id)}
+                            className="opacity-0 group-hover:opacity-100 p-1 hover:text-rose-600 text-slate-400 rounded-md transition-all cursor-pointer shrink-0"
+                            title="Xóa phiên hỏi này"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
 
-          {/* Chat Stream Messages */}
-          <div className="flex-1 p-4 sm:p-6 overflow-y-auto space-y-4">
-            {messages.map((m, idx) => {
-              const isAI = m.sender === 'ai';
-              return (
-                <div key={idx} className={`flex flex-col ${isAI ? 'items-start' : 'items-end'}`}>
-                  <div className="flex items-start gap-2.5 max-w-[92%] sm:max-w-[85%]">
-                    {isAI && (
-                      <div className="w-7 h-7 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center shrink-0 mt-1 shadow-2xs">
-                        <Bot className="w-4 h-4" />
-                      </div>
-                    )}
-
-                    <div className={`p-4 rounded-2xl text-xs sm:text-sm font-medium leading-relaxed ${
-                      isAI
-                        ? 'bg-white text-slate-800 border border-slate-200/90 rounded-tl-none shadow-xs'
-                        : 'bg-blue-600 text-white rounded-tr-none shadow-xs'
-                    }`}>
-                      {isAI ? (
-                        <div className="space-y-2">
-                          <MathText text={m.text || '...'} />
-
-                          <div className="pt-2 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 text-[10px] text-slate-500">
-                            {m.topicLabel ? (
-                              <span className="flex items-center gap-1 font-bold text-blue-600">
-                                <Layers className="w-3 h-3 text-blue-500" />
-                                <span>{m.topicLabel}</span>
-                              </span>
-                            ) : (
-                              <span className="flex items-center gap-1 text-slate-400">
-                                <HelpCircle className="w-3 h-3 text-slate-400" />
-                                <span>Hướng dẫn giải bài từng bước</span>
+                        <div className="mt-1 flex items-center justify-between text-[10px] text-slate-400 gap-1">
+                          <span className="truncate max-w-[120px] font-semibold text-slate-500">
+                            {s.skill || 'Tự do'}
+                          </span>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            {s.isSynced && (
+                              <span title="Đã đồng bộ máy chủ">
+                                <Cloud className="w-3 h-3 text-emerald-500" />
                               </span>
                             )}
-
-                            <button
-                              onClick={() => setReportingInteraction(m)}
-                              className="flex items-center gap-1 text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
-                              title="Góp ý nếu câu trả lời của AI chưa chính xác hoặc khó hiểu"
-                            >
-                              <Flag className="w-3 h-3" />
-                              <span>Góp ý</span>
-                            </button>
+                            <span className="bg-slate-100 text-slate-600 px-1.5 py-0.2 rounded-md font-bold">
+                              {msgCount} tin
+                            </span>
+                            <span>{formatSessionTime(s.updatedAt || s.createdAt)}</span>
                           </div>
                         </div>
-                      ) : (
-                        <div>{m.text}</div>
-                      )}
-                    </div>
-                  </div>
-                  <span className="text-[10px] text-slate-400 mt-1 px-9">{m.timestamp}</span>
-                </div>
-              );
-            })}
+                      </div>
+                    );
+                  })
+                )}
+              </div>
 
-            {isTyping && (
-              <div className="flex items-center justify-between p-3 rounded-2xl bg-white border border-blue-200 text-xs font-semibold shadow-xs max-w-md">
-                <div className="flex items-center gap-2 text-blue-600">
-                  <RefreshCw className="w-4 h-4 animate-spin text-blue-600" />
-                  <span>Gia sư AI đang phân tích & soạn câu hỏi gợi mở...</span>
+              {/* Bottom Drawer Telemetry / Cloud Sync Indicator */}
+              <div className="p-2.5 border-t border-slate-200/80 bg-white/50 px-3 flex items-center justify-between text-[11px] text-slate-500">
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                  <span className="font-semibold text-slate-600">Lưu phiên tự động</span>
                 </div>
-                <button
-                  onClick={handleStopStream}
-                  className="flex items-center gap-1 px-2.5 py-1 text-[11px] bg-red-50 text-red-600 rounded-lg hover:bg-red-100 font-bold transition-all cursor-pointer"
-                >
-                  <Square className="w-3 h-3 fill-red-600" />
-                  <span>Dừng</span>
-                </button>
+                {isSyncingCloud && (
+                  <RefreshCw className="w-3 h-3 animate-spin text-blue-500" title="Đang đồng bộ..." />
+                )}
+              </div>
+            </aside>
+          )}
+
+          {/* Right Main Chat Panel */}
+          <main className="flex-1 flex flex-col justify-between bg-slate-50/30 overflow-hidden min-h-0">
+
+            {/* Context Sticky Banner if active session is linked to an exam question */}
+            {activeSession?.questionLatex && (
+              <div className="mx-3 sm:mx-4 mt-3 sm:mt-4 p-3 bg-indigo-50/80 border border-indigo-200 rounded-2xl flex items-start justify-between gap-3 shadow-2xs shrink-0">
+                <div className="space-y-1 text-xs min-w-0">
+                  <div className="flex items-center gap-1.5 font-extrabold text-indigo-950">
+                    <Target className="w-4 h-4 text-indigo-600 shrink-0" />
+                    <span>Đang hỗ trợ câu hỏi bài tập:</span>
+                  </div>
+                  <div className="text-slate-700 line-clamp-2 font-medium">
+                    <MathText text={activeSession.questionLatex} />
+                  </div>
+                  {activeSession.selectedWrong && (
+                    <div className="text-[11px] text-rose-700 font-bold flex items-center gap-1.5 pt-0.5">
+                      <span>Phương án em đã chọn:</span>
+                      <span className="bg-white px-2 py-0.5 rounded-md border border-rose-200 text-rose-800 font-bold">
+                        <MathText text={String(activeSession.selectedWrong)} />
+                      </span>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
-            <div ref={chatBottomRef} />
-          </div>
+            {/* Rate Limit Warning Banner */}
+            {rateLimitWarning && (
+              <div className="m-3 sm:m-4 p-3 bg-amber-50 border border-amber-200 rounded-2xl text-amber-800 text-xs font-semibold flex items-start gap-2.5 shadow-2xs shrink-0">
+                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <div className="flex-1">{rateLimitWarning}</div>
+              </div>
+            )}
 
-          {/* Quick Prompts */}
-          <div className="px-4 py-2 border-t border-slate-100 bg-white flex flex-wrap gap-1.5">
-            {quickPrompts.map((p, idx) => (
-              <button
-                key={idx}
-                onClick={() => handleSendMessage(p)}
-                disabled={isTyping}
-                className="px-2.5 py-1 rounded-xl bg-slate-100 hover:bg-blue-50 hover:text-blue-700 text-slate-600 text-[11px] font-medium transition-all cursor-pointer disabled:opacity-50 truncate"
-              >
-                {p}
-              </button>
-            ))}
-          </div>
+            {/* Chat Stream Messages */}
+            <div className="flex-1 p-3 sm:p-5 overflow-y-auto space-y-4">
+              {messages.map((m, idx) => {
+                const isAI = m.sender === 'ai';
+                return (
+                  <div key={idx} className={`flex flex-col ${isAI ? 'items-start' : 'items-end'}`}>
+                    <div className="flex items-start gap-2.5 max-w-[94%] sm:max-w-[85%]">
+                      {isAI && (
+                        <div className="w-7 h-7 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center shrink-0 mt-1 shadow-2xs">
+                          <Bot className="w-4 h-4" />
+                        </div>
+                      )}
 
-          {/* Input Box */}
-          <form onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }} className="p-4 bg-white border-t border-slate-200/80">
-            <div className="relative">
-              <input
-                type="text"
-                value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
-                placeholder="Nhập thắc mắc hoặc hướng giải của bạn (hỗ trợ công thức: $x^2 + 2x = 0$)..."
-                disabled={isTyping}
-                className="w-full pl-4 pr-12 py-3 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-slate-800 disabled:opacity-60"
-              />
-              <button
-                type="submit"
-                disabled={isTyping || !inputText.trim()}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-xs transition-all disabled:opacity-50 cursor-pointer"
-              >
-                <Send className="w-4 h-4" />
-              </button>
+                      <div className={`p-3.5 sm:p-4 rounded-2xl text-xs sm:text-sm font-medium leading-relaxed ${
+                        isAI
+                          ? 'bg-white text-slate-800 border border-slate-200/90 rounded-tl-none shadow-xs'
+                          : 'bg-blue-600 text-white rounded-tr-none shadow-xs'
+                      }`}>
+                        {isAI ? (
+                          <div className="space-y-2">
+                            <MathText text={m.text || '...'} />
+
+                            <div className="pt-2 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 text-[10px] text-slate-500">
+                              {m.topicLabel ? (
+                                <span className="flex items-center gap-1 font-bold text-blue-600">
+                                  <Layers className="w-3 h-3 text-blue-500" />
+                                  <span>{m.topicLabel}</span>
+                                </span>
+                              ) : (
+                                <span className="flex items-center gap-1 text-slate-400">
+                                  <HelpCircle className="w-3 h-3 text-slate-400" />
+                                  <span>Hướng dẫn giải bài từng bước</span>
+                                </span>
+                              )}
+
+                              <button
+                                onClick={() => setReportingInteraction(m)}
+                                className="flex items-center gap-1 text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
+                                title="Góp ý nếu câu trả lời của AI chưa chính xác hoặc khó hiểu"
+                              >
+                                <Flag className="w-3 h-3" />
+                                <span>Góp ý</span>
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div>{m.text}</div>
+                        )}
+                      </div>
+                    </div>
+                    <span className="text-[10px] text-slate-400 mt-1 px-9">{m.timestamp}</span>
+                  </div>
+                );
+              })}
+
+              {isTyping && (
+                <div className="flex items-center justify-between p-3 rounded-2xl bg-white border border-blue-200 text-xs font-semibold shadow-xs max-w-md">
+                  <div className="flex items-center gap-2 text-blue-600">
+                    <RefreshCw className="w-4 h-4 animate-spin text-blue-600" />
+                    <span>Gia sư AI đang phân tích & gợi mở từng bước...</span>
+                  </div>
+                  <button
+                    onClick={handleStopStream}
+                    className="flex items-center gap-1 px-2.5 py-1 text-[11px] bg-red-50 text-red-600 rounded-lg hover:bg-red-100 font-bold transition-all cursor-pointer"
+                  >
+                    <Square className="w-3 h-3 fill-red-600" />
+                    <span>Dừng</span>
+                  </button>
+                </div>
+              )}
+
+              <div ref={chatBottomRef} />
             </div>
-          </form>
 
+            {/* Quick Prompts */}
+            <div className="px-3 sm:px-4 py-2 border-t border-slate-100 bg-white flex flex-wrap gap-1.5 shrink-0">
+              {quickPrompts.map((p, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => handleSendMessage(p)}
+                  disabled={isTyping}
+                  className="px-2.5 py-1 rounded-xl bg-slate-100 hover:bg-blue-50 hover:text-blue-700 text-slate-600 text-[11px] font-medium transition-all cursor-pointer disabled:opacity-50 truncate"
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
+
+            {/* Input Form */}
+            <form onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }} className="p-3 sm:p-4 bg-white border-t border-slate-200/80 shrink-0">
+              <div className="relative">
+                <input
+                  type="text"
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                  placeholder="Nhập thắc mắc hoặc hướng giải của bạn (hỗ trợ công thức: $x^2 + 2x = 0$)..."
+                  disabled={isTyping}
+                  className="w-full pl-4 pr-12 py-3 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-slate-800 disabled:opacity-60"
+                />
+                <button
+                  type="submit"
+                  disabled={isTyping || !inputText.trim()}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-xs transition-all disabled:opacity-50 cursor-pointer"
+                >
+                  <Send className="w-4 h-4" />
+                </button>
+              </div>
+            </form>
+
+          </main>
         </div>
 
         {/* Modal Footer */}
-        <div className="p-3.5 bg-slate-50 border-t border-slate-200/80 px-6 flex items-center justify-between gap-3 text-xs text-slate-500">
-          <div className="flex items-center gap-2">
+        <div className="p-3 bg-slate-50 border-t border-slate-200/80 px-4 sm:px-6 flex items-center justify-between gap-3 text-xs text-slate-500 shrink-0">
+          <div className="flex items-center gap-2 truncate">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping shrink-0"></span>
-            <span>Nếu AI đưa sẵn đáp án thay vì gợi mở tư duy, hãy bấm nút <strong>Báo cáo</strong> trên tin nhắn.</span>
+            <span className="truncate">Nếu AI đưa sẵn đáp án thay vì gợi mở tư duy, hãy bấm nút <strong>Góp ý</strong> trên tin nhắn.</span>
           </div>
           <button
             onClick={onClose}
             className="px-4 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl transition-all cursor-pointer shrink-0"
           >
-            Đóng Khung Chat
+            Đóng
           </button>
         </div>
 

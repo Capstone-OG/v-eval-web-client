@@ -2046,3 +2046,18 @@ Backend follow-up: Practice sends an empty AllSkillIds mapping to AI, preventing
 - **Early Warning Hub Visual Polish (`EarlyWarningsMentorPanel.jsx`)**:
   - Re-architected the 6 BR-04 early-warning tier cards with modern card-shadows, responsive grid symmetry, and intuitive action buttons for tripartite parent-student counseling.
 - **Verification**: Production build verified in 1.10s; 31/31 unit tests pass; zero lint errors.
+
+### [15/11/2026] - Socratic AI Tutor Multi-Turn Session Persistence & Interactive History Navigation Architecture
+
+- **Hybrid Progressive Session Management Architecture (`src/utils/aiSessionManager.js`, `tests/aiSessionManager.test.js`)**:
+  - Architected an offline-first, client-synchronized session manager isolating conversation threads per authenticated student (`veval_socratic_sessions_${userId}`).
+  - **Zero-Latency Persistence**: Intercepts SSE streaming tokens in real time, automatically flushing user questions, Socratic guiding hints, LaTeX formulas, and student misconception choices into local storage. Ensures students can close the modal, reload the browser, or switch questions without losing their line of reasoning.
+  - **Background Cloud Synchronization (`practiceService.getAiTutorInteractions`)**: Seamlessly polls historical Socratic interactions from PostgreSQL Supabase (`v_eval_ai.ai_tutor_interaction_logs`) in the background, executing deduplicated hydration (`mergeCloudInteractions`) so historical interactions appear alongside local threads without overwriting in-flight discussions.
+  - **Automated Test Coverage (36/36 Tests Pass)**: Developed comprehensive unit tests in `tests/aiSessionManager.test.js` validating title generation, multi-user storage key isolation, message thread extension, cloud interaction ingestion, and session deletion.
+- **Two-Column Socratic Workspace & History Drawer (`src/components/modals/AISocraticTutorModal.jsx`)**:
+  - **Collapsible History Drawer**: Integrated a sliding left sidebar (`w-72 sm:w-80`) with one-click toggle (`PanelLeftClose`/`PanelLeftOpen`), session count badge, and a high-contrast `+ Bắt đầu phiên hỏi mới` action trigger.
+  - **Intelligent Thread Indexing**: Provides instant keyword search across questions and skills, active session highlight (blue border + shadow), message count pills (`n tin`), timestamp badges (`Hôm nay`, `Hôm qua`, formatted dates), cloud synchronization indicator (`Cloud` icon), and hover delete actions (`Trash2`).
+  - **Dynamic Multi-Mode Context Transition**: When launched from an incorrect exam question review (`initialContext`), the system automatically discovers if a session already exists for that `questionId` to resume the thread, or initializes a new Socratic greeting targeted precisely at the student's selected wrong option.
+  - **Responsive Layout Geometry**: Automatically expands modal viewport to `max-w-5xl h-[90vh]` when the history drawer is opened for a comfortable desktop workspace, and collapses gracefully to `max-w-3xl` when closed.
+  - **Strict React Hooks Invariant Enforcement**: Eliminated conditional hook dispatch by promoting `filteredSessions` memoization above all control flow returns and positioning `if (!isOpen) return null` strictly before JSX evaluation, permanently preventing *"Rendered more hooks than during previous render"* exceptions.
+- **Verification**: Production build verified in 1.10s; 36/36 unit test cases passed with 100% success rate; zero linter errors.

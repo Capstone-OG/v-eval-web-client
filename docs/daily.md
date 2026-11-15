@@ -2,6 +2,22 @@
 
 ---
 
+## [15/11/2026] - Triển Khai Cơ Chế Lưu Phiên Hội Thoại Đa Lượt & Thanh Điều Hướng Lịch Sử Gia Sư AI Socratic (Hybrid Client Storage & Supabase Cloud Sync)
+
+- **Triển Khai Phân Hệ Quản Lý Phiên Hội Thoại Gia Sư AI Socratic (`src/utils/aiSessionManager.js`, `tests/aiSessionManager.test.js`)**:
+  - **Kiến trúc Lai Tiến Tiến (Hybrid Progressive Session Management)**: Xây dựng module quản lý phiên hội thoại đa lượt độc lập cách ly theo định danh học sinh (`veval_socratic_sessions_${userId}`).
+  - **Lưu trữ Cục bộ Tức thì (Zero Latency Persistence)**: Tự động lưu trữ và đồng bộ hóa toàn bộ chuỗi tin nhắn hỏi - đáp, câu hỏi đang xét, phương án học sinh chọn sai và bối cảnh đề thi ngay trong thời gian thực khi AI stream phản hồi, chấm dứt hoàn toàn hiện tượng mất dữ liệu khi đóng modal hoặc tải lại trang.
+  - **Đồng bộ Đám mây Supabase Nền (Background Cloud Sync)**: Tích hợp hàm `mergeCloudInteractions(userId, cloudInteractions)` tự động đối soát và tải về các phiên tương tác lịch sử từ bảng `v_eval_ai.ai_tutor_interaction_logs` thông qua `practiceService.getAiTutorInteractions()`, chuyển đổi thành các phiên hội thoại hoàn chỉnh mà không ghi đè hoặc trùng lặp với phiên hiện tại.
+  - **Khắc Phục Lỗi Vi Phạm React Rules of Hooks (`Rendered more hooks than during previous render`)**: Tái cấu trúc vị trí khai báo `useMemo(filteredSessions)` lên đầu component cùng toàn bộ hooks, di chuyển `if (!isOpen) return null` xuống ngay trước khối return JSX; đảm bảo số lượng hooks render luôn nhất quán 100% trong mọi trạng thái đóng/mở modal.
+  - **Kiểm thử Đơn vị Đạt 100% (36/36 Tests Pass)**: Bổ sung bộ kiểm thử `tests/aiSessionManager.test.js` kiểm tra toàn diện việc khởi tạo phiên, phân lập dữ liệu giữa nhiều học sinh, cập nhật tin nhắn đa lượt, đối soát gộp đám mây và xóa phiên an toàn.
+- **Tái Cấu Trúc Toàn Diện Modal Gia Sư AI Thành Không Gian Làm Việc 2 Cột Đẳng Cấp (`src/components/modals/AISocraticTutorModal.jsx`)**:
+  - **Thanh Điều Hướng Lịch Sử Trượt Mở (Collapsible Session History Drawer)**: Thiết kế cột lịch sử phiên hỏi đáp trượt mở linh hoạt (`w-72 sm:w-80`), hỗ trợ nút thu gọn/mở rộng (`PanelLeftClose` / `PanelLeftOpen`), đếm số lượng phiên theo thời gian thực và nút nổi bật `+ Bắt đầu phiên hỏi mới`.
+  - **Tìm kiếm & Phân loại Phiên Thông Minh**: Tích hợp ô tìm kiếm lọc nhanh theo tiêu đề hoặc chủ đề kiến thức, thẻ phiên có viền xanh dương nổi bật khi đang hoạt động, hiển thị số lượng tin nhắn (`n tin`), nhãn chủ đề năng lực, huy hiệu đám mây (`Cloud`) cho phiên đã đồng bộ và nút xóa phiên nhanh (`Trash2`).
+  - **Mở Rộng Không Gian Đối Thoại Đa Nhiệm**: Nâng cấp độ rộng modal lên `max-w-5xl h-[90vh]` khi mở thanh lịch sử, đồng thời tự động co gọn `max-w-3xl` khi thu nhỏ thanh lịch sử để học sinh tập trung tối đa vào bài giải.
+  - **Chuyển Đổi & Kế Thừa Bối Cảnh Liền Mạch**: Khi học sinh bấm mở gia sư từ một câu hỏi trắc nghiệm làm sai (`initialContext`), hệ thống kiểm tra nếu câu hỏi đã từng hỏi sẽ nạp ngay phiên trước đó, nếu chưa sẽ tạo mới phiên kèm bối cảnh đề thi, phương án sai và lời gợi mở chuẩn sư phạm Socratic.
+
+---
+
 ## [15/11/2026] - Triển Khai Phân Hệ Kiểm Duyệt Báo Cáo Gia Sư AI Socratic Cho Quản Lý Học Thuật & Tái Thiết Kế Toàn Diện Bố Cục Đồng Bộ Chuẩn Student Portal (Core Flow 4: Human-in-the-Loop & GraphRAG Feedback)
 
 - **Tái Thiết Kế Toàn Diện Bố Cục Trang Chủ Quản Lý Học Thuật (Academic Dashboard - `CampusManagerDashboardView.jsx`, `EarlyWarningsMentorPanel.jsx`, `App.jsx`)**:
