@@ -1,16 +1,24 @@
 # NHẬT KÝ CẬP NHẬT (UPDATE LOG) - V-EVAL WEB CLIENT
 
-## [15/11/2026] - Tách Riêng Trang Thời Khóa Biểu & Điểm Danh (`StudentScheduleView` - `schedule`) Khỏi Trang Lớp Học & Live Q&A (`LiveClassQnAView` - `live`), Loại Bỏ 100% Mock Data & Hardcode Và Hiển Thị Đầy Đủ `radarChart` + `skillPriors` Trong Lịch Sử Bài Làm
+## [15/11/2026] - Tích Hợp Đồng Bộ Học Phí Thực Tế Từ Database, Khối Chi Tiết Gói Đào Tạo Đang Kích Hoạt, 6 Phân Hệ Đã Mở Khóa, Bảng Hóa Đơn Điện Tử PayOS & Modal Kiểm Toán Biên Lai Giao Dịch
 
-- **Tách Biệt Rạch Ròi Trang "Thời Khóa Biểu & Điểm Danh" (`schedule`) Và Trang "Lớp Học & Live Q&A" (`live`) ([`Sidebar.jsx`](./src/components/layout/Sidebar.jsx), [`App.jsx`](./src/App.jsx), [`StudentScheduleView.jsx`](./src/components/dashboard/StudentScheduleView.jsx), [`LiveClassQnAView.jsx`](./src/components/dashboard/LiveClassQnAView.jsx), [`practiceService.js`](./src/services/practiceService.js))**:
-  - Bổ sung mục menu độc lập **`id: 'schedule'` ("Thời khóa biểu & Điểm danh")** trong nhóm *Không Gian Học Viên* của `Sidebar.jsx` và `App.jsx`, tách biệt hoàn toàn với mục **`id: 'live'` ("Lớp học & Live Q&A")** trong nhóm *Luyện Tập & Gia Sư AI*.
-  - **`StudentScheduleView.jsx` (`activeTab === 'schedule'`)**: Chuyên biệt 100% cho tra cứu Thời khóa biểu theo Học kỳ (`AcademicTerms`) & Khóa học (`Courses`), Khung lịch định kỳ tuần (`ClassSchedules`), danh sách Buổi học (`ClassSessions` kèm nhãn Giảng viên dạy thay & Buổi học bù) và thống kê Điểm danh chuyên cần cá nhân thực tế (`PRESENT`, `LATE`, `EXCUSED`, `ABSENT`, `UNRECORDED`).
-  - **`LiveClassQnAView.jsx` (`activeTab === 'live'`)**: Không gian chuyên biệt cho Lớp học phần đang tham gia, Nhóm vi mô tại bàn, lịch Phụ đạo trực tuyến (`LiveQnACard`), danh sách Giảng viên hỗ trợ từ `userService` và kết nối nhanh Gia sư AI Socratic 24/7.
-  - **Loại Bỏ 100% Mock Data & Hardcode**: Xóa toàn bộ dữ liệu giả lập và giá trị gán cứng trên cả tầng Service lẫn Component; hiển thị Empty State trung thực khi dữ liệu chưa được khởi tạo từ Backend.
+- **Đồng Bộ Trạng Thái Học Phí Thực Tế & Mở Khóa Khóa Học Tự Động Từ Database ([`curriculumAccess.js`](./src/components/curriculum/curriculumAccess.js), [`StudentCurriculumView.jsx`](./src/components/curriculum/StudentCurriculumView.jsx), [`paymentService.js`](./src/services/paymentService.js))**:
+  - Mở rộng `paymentService.getStudentTuitionStatus(studentId)` và `paymentService.getStudentPayments(studentId)` kết nối API Gateway (`:5212`) truy vấn trực tiếp cơ sở dữ liệu Practice Service (`:5261`).
+  - Hiện thực hóa hàm `syncTuitionStatusFromServer(studentId)` trong `curriculumAccess.js`: tự động đồng bộ trạng thái thanh toán từ PostgreSQL, ghi nhận vào `localStorage` và bắn sự kiện `veval:tuition-paid`.
+  - Trong `StudentCurriculumView.jsx`, tự động kích hoạt `syncTuitionStatusFromServer` khi mở trang, giúp học sinh đã chuyển khoản thành công vào học ngay lập tức mà không bị chặn bởi `TuitionRequiredModal`.
 
-- **Đồng Bộ & Hiển Thị Đầy Đủ `radarChart` Và `skillPriors` Khi Thi Xong Lẫn Khi Xem Lại Lịch Sử Bài Làm ([`DiagnosticAssessmentPage.jsx`](./src/components/diagnostic/DiagnosticAssessmentPage.jsx), [`SubmissionHistoryView.jsx`](./src/components/diagnostic/SubmissionHistoryView.jsx), [`practiceService.js`](./src/services/practiceService.js))**:
-  - Chuẩn hóa `normalizeRadarChart` và `normalizeSkillPriors` thuần túy từ dữ liệu API thực cho cả luồng nộp bài (`executeSubmitExam`) lẫn luồng mở lại lịch sử (`openHistoryExam`, `handleSelectSubmission`).
-  - Hiển thị đầy đủ **Biểu Đồ Radar Năng Lực (`radarChart`)** cùng **Ma Trận Tiên Nghiệm Kỹ Năng BKT `` `P(L_0)` `` & Tham Số `` `\theta_{\text{skill}}` `` (`skillPriors`)** cả ngay sau khi thi xong lẫn khi bấm vào xem lại bất kỳ bài thi nào trong Lịch sử làm bài.
+- **Nâng Cấp Toàn Diện Phân Hệ Quản Lý Học Phí & Hóa Đơn ([`TuitionPaymentView.jsx`](./src/components/payment/TuitionPaymentView.jsx), [`App.jsx`](./src/App.jsx))**:
+  - **Khối Gói Đào Tạo Đang Kích Hoạt (Active Course Package Card)**: Hiển thị tên khóa học thực tế (`courseName`), mã khóa (`courseCode`), trạng thái `ĐANG HOẠT ĐỘNG (ACTIVE)`, thời hạn hiệu lực (từ ngày - đến ngày, số tuần học) và lớp học phần chuyên đề được xếp (`assignedClassName`).
+  - **Danh Mục 6 Phân Hệ & Quyền Lợi Đã Mở Khóa 100%**:
+    1. *Lộ Trình Cá Nhân Thích Ứng (PLAR)*: 4 bước P-L-A-R phân bổ theo kết quả bài thi.
+    2. *Bài Giảng Chuyên Đề & Video Độc Quyền*: Xem video lý thuyết và phương pháp giải V-ACT.
+    3. *Kho Luyện Tập Thích Ứng ZPD*: Sinh câu hỏi phân tầng theo năng lực thực tế.
+    4. *Gia Sư AI Socratic Kèm 24/7*: Hướng dẫn tư duy logic đa bước không làm lộ đáp án.
+    5. *Thời Khóa Biểu & Điểm Danh Cá Nhân*: Lịch học định kỳ, buổi học bù và điểm danh tại cơ sở.
+    6. *Lớp Học Phần & Diễn Đàn Live Q&A*: Nhóm học tập vi mô 3-5 bạn cùng giảng viên.
+  - **Bảng Lịch Sử Thanh Toán & Hóa Đơn Điện Tử Thực Tế**: Hiển thị bảng giao dịch đối soát từ DB gồm Mã đơn hàng PayOS (`#orderCode`), Khóa học, Số tiền (VNĐ), Ngân hàng đối ứng (`counterAccountBankName`), Thời gian nộp, Mã giao dịch ngân hàng (`transactionRef`), Trạng thái `ĐÃ HOÀN TẤT` và nút "Xem chi tiết".
+  - **Modal Biên Lai Thu Học Phí Điện Tử & Kiểm Toán Bảo Mật**: Hiển thị chi tiết hóa đơn, người nộp, ngân hàng, mã tham chiếu ngân hàng, kiểm toán chữ ký số `HMAC-SHA512 Verified` và nút in biên lai (`window.print()`).
 
 - **Kiểm Thử & Biên Dịch**:
-  - Vượt qua 17/17 unit tests (`node --test`), `npm run build` (`vite v8.3.0`) thành công 100% với 0 lỗi.
+  - Toàn bộ **31/31 unit tests (`node --test`)** đạt pass 100%.
+  - `npm run build` (`vite v8.3.0`) hoàn thành trong 1.09s với **0 lỗi cú pháp**.

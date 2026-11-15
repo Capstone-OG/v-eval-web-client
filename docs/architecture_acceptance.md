@@ -1960,4 +1960,16 @@ pm run build completes in 905ms (3,013 modules transformed, 0 errors).
   - Added pure API-backed `normalizeRadarChart` and `normalizeSkillPriors` normalizers across `executeSubmitExam`, `openHistoryExam`, and `SubmissionHistoryView`, rendering both the **Competency Radar Chart (`radarChart`)** and the **Bayesian Knowledge Tracing Skill Priors Matrix `` `P(L_0)` `` & `` `\theta_{\text{skill}}` `` (`skillPriors`)** when completing an assessment and when reviewing historical submissions.
 - **Verification**: 17/17 unit tests passed (`node --test`); production bundle verified (`vite build` succeeded in 4.39s with 0 errors).
 
+### [15/11/2026] - Server-Backed Tuition Synchronization, Active Course Entitlement Panel, 6 Unlocked Subsystem Perimeters & Electronic Invoice Audit Modal
+
+- **Database-Driven Tuition Entitlement & Auto-Unlocking (`src/components/curriculum/curriculumAccess.js`, `src/components/curriculum/StudentCurriculumView.jsx`, `src/services/paymentService.js`)**:
+  - Replaced isolated `localStorage` tuition gating with server-backed `syncTuitionStatusFromServer(studentId)`, consuming `/api/practice/payments/status-by-student/{studentId}` via API Gateway.
+  - Automatically dispatches `veval:tuition-paid` upon confirmed backend payment or active registration, preventing spurious `TuitionRequiredModal` popups for students who have completed payment.
+- **Tuition & Invoice Dashboard Architecture (`src/components/payment/TuitionPaymentView.jsx`, `src/App.jsx`)**:
+  - **Active Course Banner**: Displays real-time enrolled course (`courseName`, `courseCode`, `planType`), validity dates (`startDate` -> `endDate`), and auto-assigned cohort (`assignedClassName`).
+  - **6 Unlocked Subsystem Perimeters**: Provides one-click jump routes to PLAR Personalized Roadmap, Exclusive Theory Lessons & Videos, ZPD Adaptive Quiz, 24/7 Socratic AI Tutor, Student Timetable & Attendance, and Live Classroom Micro-groups.
+  - **Real Database Invoice Table**: Renders official PayOS transaction records directly from PostgreSQL (`orderCode`, `amount`, `paidAt`, `counterAccountBankName`, `transactionRef`, `status`).
+  - **Electronic Invoice Audit Modal**: Enables on-demand modal inspection of transaction metadata, bank reference codes, HMAC-SHA512 cryptographic verification, and browser print (`window.print()`).
+- **Verification**: 31/31 unit tests passed (`node --test`); Vite production build verified in 1.09s with 0 errors.
+
 

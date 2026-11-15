@@ -484,6 +484,13 @@ export default function App() {
           currentUser={currentUser}
           onBackToDashboard={() => setActiveTab('dashboard')}
           onNavigateRoadmap={() => setActiveTab('roadmap')}
+          onNavigateAdaptive={() => setActiveTab('adaptive')}
+          onNavigateSchedule={() => setActiveTab('schedule')}
+          onNavigateLive={() => setActiveTab('live')}
+          onNavigateAiTutor={() => {
+            setAiTutorInitialContext(null);
+            setActiveModal('ai');
+          }}
         />
       );
     }

@@ -2727,8 +2727,19 @@
   - Chuẩn hóa `normalizeRadarChart` và `normalizeSkillPriors` thuần túy từ dữ liệu API thực cho cả luồng nộp bài (`executeSubmitExam`) lẫn luồng mở lại lịch sử (`openHistoryExam`, `handleSelectSubmission`).
   - Hiển thị đầy đủ **Biểu Đồ Radar Năng Lực (`radarChart`)** cùng **Ma Trận Tiên Nghiệm Kỹ Năng BKT `` `P(L_0)` `` & Tham Số `` `\theta_{\text{skill}}` `` (`skillPriors`)** cả ngay sau khi thi xong lẫn khi bấm vào xem lại bất kỳ bài thi nào trong Lịch sử làm bài.
 
+- **Đồng Bộ Trạng Thái Học Phí Thực Tế & Mở Khóa Khóa Học Tự Động Từ Database ([`curriculumAccess.js`](./src/components/curriculum/curriculumAccess.js), [`StudentCurriculumView.jsx`](./src/components/curriculum/StudentCurriculumView.jsx), [`paymentService.js`](./src/services/paymentService.js))**:
+  - Mở rộng `paymentService.getStudentTuitionStatus(studentId)` và `paymentService.getStudentPayments(studentId)` kết nối API Gateway (`:5212`) truy vấn trực tiếp cơ sở dữ liệu Practice Service (`:5261`).
+  - Hiện thực hóa hàm `syncTuitionStatusFromServer(studentId)` trong `curriculumAccess.js`: tự động đồng bộ trạng thái thanh toán từ PostgreSQL, ghi nhận vào `localStorage` và bắn sự kiện `veval:tuition-paid`.
+  - Trong `StudentCurriculumView.jsx`, tự động kích hoạt `syncTuitionStatusFromServer` khi mở trang, giúp học sinh đã chuyển khoản thành công vào học ngay lập tức mà không bị chặn bởi `TuitionRequiredModal`.
+
+- **Nâng Cấp Toàn Diện Phân Hệ Quản Lý Học Phí & Hóa Đơn ([`TuitionPaymentView.jsx`](./src/components/payment/TuitionPaymentView.jsx), [`App.jsx`](./src/App.jsx))**:
+  - **Khối Gói Đào Tạo Đang Kích Hoạt (Active Course Package Card)**: Hiển thị tên khóa học thực tế (`courseName`), mã khóa (`courseCode`), trạng thái `ĐANG HOẠT ĐỘNG (ACTIVE)`, thời hạn hiệu lực (từ ngày - đến ngày, số tuần học) và lớp học phần chuyên đề được xếp (`assignedClassName`).
+  - **Danh Mục 6 Phân Hệ & Quyền Lợi Đã Mở Khóa 100%**: Lộ trình cá nhân PLAR, Bài giảng & video, Kho luyện tập thích ứng ZPD, Gia sư AI Socratic 24/7, Thời khóa biểu & Điểm danh, Lớp học phần & Live Q&A.
+  - **Bảng Lịch Sử Thanh Toán & Hóa Đơn Điện Tử Thực Tế**: Hiển thị bảng giao dịch đối soát từ DB gồm Mã đơn hàng PayOS (`#orderCode`), Khóa học, Số tiền (VNĐ), Ngân hàng đối ứng (`counterAccountBankName`), Thời gian nộp, Mã giao dịch ngân hàng (`transactionRef`), Trạng thái `ĐÃ HOÀN TẤT` và nút "Xem chi tiết".
+  - **Modal Biên Lai Thu Học Phí Điện Tử & Kiểm Toán Bảo Mật**: Hiển thị chi tiết hóa đơn, người nộp, ngân hàng, mã tham chiếu ngân hàng, kiểm toán chữ ký số `HMAC-SHA512 Verified` và nút in biên lai (`window.print()`).
+
 - **Kiểm Thử & Biên Dịch**:
-  - Vượt qua 17/17 unit tests (`node --test`), `npm run build` (`vite v8.3.0`) thành công 100% với 0 lỗi.
+  - Vượt qua 31/31 unit tests (`node --test`), `npm run build` (`vite v8.3.0`) thành công 100% với 0 lỗi.
 
 
 
