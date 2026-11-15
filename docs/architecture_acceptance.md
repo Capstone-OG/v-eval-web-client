@@ -1949,4 +1949,15 @@ pm run build completes in 905ms (3,013 modules transformed, 0 errors).
   - Replaced raw `$\rightarrow$` strings with clean Unicode arrows (`→`) and removed all hardcoded Ester-Lipid references from both `EXAM_PATTERNS` and `THEORY_EXTENDED` comparison cards.
 - **Verification**: Vite production build succeeded in 1.41s with zero compilation errors.
 
+### [15/11/2026] - Dedicated Student Timetable Page (`StudentScheduleView` - `schedule`), Separated Live Q&A Workspace (`LiveClassQnAView` - `live`), Zero-Mock Enforcement, and Historical `radarChart` + `skillPriors` Parity
+
+- **Dedicated Separation Between Timetable (`schedule`) and Live Classroom (`live`) (`src/components/dashboard/StudentScheduleView.jsx`, `src/components/dashboard/LiveClassQnAView.jsx`, `src/components/layout/Sidebar.jsx`, `src/App.jsx`, `src/services/practiceService.js`)**:
+  - Separated the Student Timetable into its own first-class navigation item (`id: 'schedule'`, `"Thời khóa biểu & Điểm danh"`) under *Không Gian Học Viên*, distinct from `"Lớp học & Live Q&A"` (`id: 'live'`) under *Luyện Tập & Gia Sư AI*.
+  - `StudentScheduleView.jsx` (`activeTab === 'schedule'`) exclusively handles academic terms (`/api/practice/academic-terms`), courses (`/api/practice/courses`), weekly schedule slots (`ClassSchedules`), dated sessions (`ClassSessions`) with substitute/makeup tracking, and attendance records (`SessionAttendances`).
+  - `LiveClassQnAView.jsx` (`activeTab === 'live'`) provides a dedicated Live Q&A and micro-group workspace connected to `LiveQnACard`, enrolled class rosters, and active faculty listings from `userService`.
+  - Removed all mock data, seed fallbacks, and hardcoded UI numbers/strings across `practiceService.js`, `StudentScheduleView.jsx`, `DiagnosticAssessmentPage.jsx`, and `SubmissionHistoryView.jsx`.
+- **Full `radarChart` & `skillPriors` Parity Across Post-Exam and Historical Submission Review (`src/components/diagnostic/DiagnosticAssessmentPage.jsx`, `src/components/diagnostic/SubmissionHistoryView.jsx`)**:
+  - Added pure API-backed `normalizeRadarChart` and `normalizeSkillPriors` normalizers across `executeSubmitExam`, `openHistoryExam`, and `SubmissionHistoryView`, rendering both the **Competency Radar Chart (`radarChart`)** and the **Bayesian Knowledge Tracing Skill Priors Matrix `` `P(L_0)` `` & `` `\theta_{\text{skill}}` `` (`skillPriors`)** when completing an assessment and when reviewing historical submissions.
+- **Verification**: 17/17 unit tests passed (`node --test`); production bundle verified (`vite build` succeeded in 4.39s with 0 errors).
+
 

@@ -1,11 +1,16 @@
-# UPDATE
+# NHẬT KÝ CẬP NHẬT (UPDATE LOG) - V-EVAL WEB CLIENT
 
-## [14/11/2026] - Bảo Vệ Tuyệt Đối Khối Hình Học 3D (`[MATH_GRAPH_3D]`), Bảng Biến Thiên (`[VARIATION_TABLE]`) & Đồ Thị 2D (`[MATH_GRAPH]`), Sửa Lỗi `Phân tích & Lời giải:**` & Chuẩn Hóa Thẻ Chọn Độ Sâu Bóc Tách AI
+## [15/11/2026] - Tách Riêng Trang Thời Khóa Biểu & Điểm Danh (`StudentScheduleView` - `schedule`) Khỏi Trang Lớp Học & Live Q&A (`LiveClassQnAView` - `live`), Loại Bỏ 100% Mock Data & Hardcode Và Hiển Thị Đầy Đủ `radarChart` + `skillPriors` Trong Lịch Sử Bài Làm
 
-- **Chuẩn Hóa Giao Diện Thẻ Chọn Chế Độ Bóc Tách AI ([`CurriculumExplorerView.jsx`](./src/components/curriculum/CurriculumExplorerView.jsx))**:
-  - Thay thế ký hiệu LaTeX thô `$\rightarrow$` bằng mũi tên Unicode `→` và xóa bỏ hoàn toàn các mô tả hardcode chuyên đề Ester - Lipid trên cả 2 thẻ `Chuyên Dạng Đề & Bài Toán Thực Chiến` và `Chuyên Lý Thuyết Thuần & Dạng Mở Rộng`.
-- **Cô Lập Sớm Khối Hình Học 3D/2D & Sửa Lỗi Tiêu Đề `Phân tích & Lời giải:**` ([`MathText.jsx`](./src/components/common/MathText.jsx))**:
-  - Tự động phục hồi các thẻ bị bọc nhầm dấu `$` (`[ $MATH_GRAPH_3D$ ]` -> `[MATH_GRAPH_3D]`) và cô lập toàn bộ các khối `[MATH_GRAPH_3D]`, `[MATH_GRAPH]`, `[VARIATION_TABLE]`, `[MATH_GEOMETRY_2D]` bằng placeholder chữ thường `@@mathlabblocka@@` ngay ở đầu hàm `normalizeMathString(text)`.
-  - Khắc phục lỗi regex tiêu đề làm biến dạng `**Phân tích & Lời giải:**` thành `**Phân tích & **Lời giải:****` (hiển thị dư `**` trên UI).
+- **Tách Biệt Rạch Ròi Trang "Thời Khóa Biểu & Điểm Danh" (`schedule`) Và Trang "Lớp Học & Live Q&A" (`live`) ([`Sidebar.jsx`](./src/components/layout/Sidebar.jsx), [`App.jsx`](./src/App.jsx), [`StudentScheduleView.jsx`](./src/components/dashboard/StudentScheduleView.jsx), [`LiveClassQnAView.jsx`](./src/components/dashboard/LiveClassQnAView.jsx), [`practiceService.js`](./src/services/practiceService.js))**:
+  - Bổ sung mục menu độc lập **`id: 'schedule'` ("Thời khóa biểu & Điểm danh")** trong nhóm *Không Gian Học Viên* của `Sidebar.jsx` và `App.jsx`, tách biệt hoàn toàn với mục **`id: 'live'` ("Lớp học & Live Q&A")** trong nhóm *Luyện Tập & Gia Sư AI*.
+  - **`StudentScheduleView.jsx` (`activeTab === 'schedule'`)**: Chuyên biệt 100% cho tra cứu Thời khóa biểu theo Học kỳ (`AcademicTerms`) & Khóa học (`Courses`), Khung lịch định kỳ tuần (`ClassSchedules`), danh sách Buổi học (`ClassSessions` kèm nhãn Giảng viên dạy thay & Buổi học bù) và thống kê Điểm danh chuyên cần cá nhân thực tế (`PRESENT`, `LATE`, `EXCUSED`, `ABSENT`, `UNRECORDED`).
+  - **`LiveClassQnAView.jsx` (`activeTab === 'live'`)**: Không gian chuyên biệt cho Lớp học phần đang tham gia, Nhóm vi mô tại bàn, lịch Phụ đạo trực tuyến (`LiveQnACard`), danh sách Giảng viên hỗ trợ từ `userService` và kết nối nhanh Gia sư AI Socratic 24/7.
+  - **Loại Bỏ 100% Mock Data & Hardcode**: Xóa toàn bộ dữ liệu giả lập và giá trị gán cứng trên cả tầng Service lẫn Component; hiển thị Empty State trung thực khi dữ liệu chưa được khởi tạo từ Backend.
+
+- **Đồng Bộ & Hiển Thị Đầy Đủ `radarChart` Và `skillPriors` Khi Thi Xong Lẫn Khi Xem Lại Lịch Sử Bài Làm ([`DiagnosticAssessmentPage.jsx`](./src/components/diagnostic/DiagnosticAssessmentPage.jsx), [`SubmissionHistoryView.jsx`](./src/components/diagnostic/SubmissionHistoryView.jsx), [`practiceService.js`](./src/services/practiceService.js))**:
+  - Chuẩn hóa `normalizeRadarChart` và `normalizeSkillPriors` thuần túy từ dữ liệu API thực cho cả luồng nộp bài (`executeSubmitExam`) lẫn luồng mở lại lịch sử (`openHistoryExam`, `handleSelectSubmission`).
+  - Hiển thị đầy đủ **Biểu Đồ Radar Năng Lực (`radarChart`)** cùng **Ma Trận Tiên Nghiệm Kỹ Năng BKT `` `P(L_0)` `` & Tham Số `` `\theta_{\text{skill}}` `` (`skillPriors`)** cả ngay sau khi thi xong lẫn khi bấm vào xem lại bất kỳ bài thi nào trong Lịch sử làm bài.
+
 - **Kiểm Thử & Biên Dịch**:
-  - Chạy `npm run build` thành công 100% trong 1.41s, 0 lỗi cú pháp.
+  - Vượt qua 17/17 unit tests (`node --test`), `npm run build` (`vite v8.3.0`) thành công 100% với 0 lỗi.
