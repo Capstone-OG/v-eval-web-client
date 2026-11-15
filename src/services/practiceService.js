@@ -1,5 +1,7 @@
 import apiClient, { tokenStorage } from './apiClient.js';
 
+const GUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 // =========================================================================
 // Core Flow 4 & 5 Helpers: DTO Sanitizers, Deterministic UUID & Normalizers
 // =========================================================================
@@ -1071,7 +1073,17 @@ const getDefaultSeedHistory = () => [
     radar_chart: [
       { domain_id: 'dom_math', domain_name: 'Toán học & Phân tích số liệu', student_pct: 67, benchmark_pct: 85 },
       { domain_id: 'dom_logic', domain_name: 'Tư duy Logic & Suy luận', student_pct: 50, benchmark_pct: 80 },
-      { domain_id: 'dom_lang', domain_name: 'Sử dụng Ngôn ngữ & Văn học', student_pct: 100, benchmark_pct: 75 }
+      { domain_id: 'dom_lang', domain_name: 'Sử dụng Ngôn ngữ & Văn học', student_pct: 100, benchmark_pct: 75 },
+      { domain_id: 'dom_nat_sci', domain_name: 'Khoa học Tự nhiên (Lý - Hóa - Sinh)', student_pct: 65, benchmark_pct: 80 },
+      { domain_id: 'dom_soc_sci', domain_name: 'Khoa học Xã hội (Sử - Địa)', student_pct: 70, benchmark_pct: 75 }
+    ],
+    skill_priors: [
+      { skill_id: 'sk_dom_math_1', skill_name: 'Tính đơn điệu của hàm số', domain_id: 'dom_math', domain_name: 'Toán học & Phân tích số liệu', theta_skill: -0.45, p_l0: 0.39, source: 'measured' },
+      { skill_id: 'sk_dom_math_2', skill_name: 'Dãy số & Cấp số cộng', domain_id: 'dom_math', domain_name: 'Toán học & Phân tích số liệu', theta_skill: 0.85, p_l0: 0.70, source: 'measured' },
+      { skill_id: 'sk_dom_math_3', skill_name: 'Hàm số Mũ & Logarit', domain_id: 'dom_math', domain_name: 'Toán học & Phân tích số liệu', theta_skill: 0.75, p_l0: 0.68, source: 'measured' },
+      { skill_id: 'sk_dom_logic_1', skill_name: 'Mệnh đề & Suy luận Logic', domain_id: 'dom_logic', domain_name: 'Tư duy Logic & Suy luận', theta_skill: -0.35, p_l0: 0.41, source: 'measured' },
+      { skill_id: 'sk_dom_logic_2', skill_name: 'Phân tích Sắp xếp & Ràng buộc', domain_id: 'dom_logic', domain_name: 'Tư duy Logic & Suy luận', theta_skill: 0.62, p_l0: 0.65, source: 'measured' },
+      { skill_id: 'sk_dom_lang_1', skill_name: 'Chính tả & Ngữ nghĩa Tiếng Việt', domain_id: 'dom_lang', domain_name: 'Sử dụng Ngôn ngữ & Văn học', theta_skill: 1.10, p_l0: 0.75, source: 'measured' }
     ],
     reviewedQuestions: [
       {
@@ -1286,7 +1298,10 @@ export const practiceService = {
         theta_0: record.theta_0 ?? 0,
         placement_class: record.placement_class || 'ACCELERATION',
         domain_scores: record.domain_scores || [],
-        radar_chart: record.radar_chart || [],
+        radar_chart: record.radar_chart || record.radarChart || [],
+        skill_priors: record.skill_priors || record.skillPriors || [],
+        weakSkills: record.weakSkills || [],
+        skillBreakdowns: record.skillBreakdowns || [],
         ai_commentary: record.ai_commentary || '',
         reviewedQuestions: record.reviewedQuestions || [],
         backendSynced: Boolean(record.backendSynced),
@@ -2864,6 +2879,189 @@ export const practiceService = {
         _source: 'seed_fallback'
       };
     }
+  },
+
+  // =========================================================================
+  // Core Enterprise Schedule, Academic Term, Course & Class Timetable Module
+  // =========================================================================
+
+  async getAcademicTerms({ campusId = null, academicYear = null, status = null } = {}) {
+    const params = new URLSearchParams();
+    if (campusId) params.set('campusId', campusId);
+    if (academicYear) params.set('academicYear', academicYear);
+    if (status) params.set('status', status);
+    const qs = params.toString();
+
+    const res = (await apiClient.get(`/api/practice/academic-terms${qs ? `?${qs}` : ''}`)).data;
+    return Array.isArray(res) ? res : Array.isArray(res?.data) ? res.data : Array.isArray(res?.value) ? res.value : [];
+  },
+
+  async getCourses({ campusId = null, isActive = null } = {}) {
+    const params = new URLSearchParams();
+    if (campusId) params.set('campusId', campusId);
+    if (isActive !== null && isActive !== undefined) params.set('isActive', String(isActive));
+    const qs = params.toString();
+
+    const res = (await apiClient.get(`/api/practice/courses${qs ? `?${qs}` : ''}`)).data;
+    return Array.isArray(res) ? res : Array.isArray(res?.data) ? res.data : Array.isArray(res?.value) ? res.value : [];
+  },
+
+  async getClasses({ campusId = null, termId = null, courseId = null, teacherId = null } = {}) {
+    const params = new URLSearchParams();
+    if (campusId) params.set('campusId', campusId);
+    if (termId) params.set('termId', termId);
+    if (courseId) params.set('courseId', courseId);
+    if (teacherId) params.set('teacherId', teacherId);
+    const qs = params.toString();
+
+    const res = (await apiClient.get(`/api/practice/classes${qs ? `?${qs}` : ''}`)).data;
+    return Array.isArray(res) ? res : Array.isArray(res?.data) ? res.data : Array.isArray(res?.value) ? res.value : [];
+  },
+
+  async getStudentTimetable({ studentId = null, termId = null, courseId = null, fromDate = null, toDate = null } = {}) {
+    const currentUser = tokenStorage.getUser();
+    const rawStudentId = studentId || currentUser?.id || currentUser?.userId || currentUser?.studentId || null;
+    const isValidGuid = rawStudentId && GUID_REGEX.test(String(rawStudentId).trim());
+
+    const params = new URLSearchParams();
+    if (termId && termId !== 'ALL') params.set('termId', termId);
+    if (courseId && courseId !== 'ALL') params.set('courseId', courseId);
+    if (fromDate) params.set('fromDate', fromDate);
+    if (toDate) params.set('toDate', toDate);
+    const qs = params.toString();
+
+    const endpoint = isValidGuid
+      ? `/api/practice/schedules/students/${String(rawStudentId).trim()}/timetable${qs ? `?${qs}` : ''}`
+      : `/api/practice/schedules/students/me/timetable${qs ? `?${qs}` : ''}`;
+
+    const res = (await apiClient.get(endpoint)).data;
+    const dto = res?.data || res?.value || res || {};
+
+    const rawClasses = Array.isArray(dto.enrolledClassesByTermAndCourse)
+      ? dto.enrolledClassesByTermAndCourse
+      : Array.isArray(dto.enrolledClasses)
+        ? dto.enrolledClasses
+        : [];
+
+    const enrolledClasses = rawClasses.map((cls) => ({
+      classId: cls.classId,
+      className: cls.className || cls.name || '',
+      courseId: cls.courseId || null,
+      courseCode: cls.courseCode || '',
+      courseName: cls.courseName || '',
+      termId: cls.termId || null,
+      termCode: cls.termCode || '',
+      termName: cls.termName || '',
+      academicYear: cls.academicYear || '',
+      startDate: cls.startDate || null,
+      endDate: cls.endDate || null,
+      totalSessions: Number(cls.totalSessions ?? 0),
+      completedSessions: Number(cls.completedSessions ?? 0),
+      presentCount: Number(cls.presentCount ?? 0),
+      absentCount: Number(cls.absentCount ?? 0),
+      lateCount: Number(cls.lateCount ?? 0),
+      excusedCount: Number(cls.excusedCount ?? 0),
+      attendanceRatePct: Number(cls.attendanceRatePercent ?? cls.attendanceRatePct ?? 0),
+      weeklySchedules: (cls.weeklyPattern || cls.weeklySchedules || []).map((slot) => ({
+        scheduleId: slot.scheduleId,
+        dayOfWeek: slot.dayOfWeek,
+        dayOfWeekLabel: slot.dayOfWeekLabel || '',
+        slotNumber: slot.slotNo ?? slot.slotNumber ?? 1,
+        startTime: String(slot.startTime || '').slice(0, 5),
+        endTime: String(slot.endTime || '').slice(0, 5),
+        room: slot.room || '',
+        isActive: Boolean(slot.isActive ?? true)
+      }))
+    }));
+
+    const rawSessions = Array.isArray(dto.sessions) ? dto.sessions : [];
+    const sessions = rawSessions.map((s) => ({
+      sessionId: s.sessionId,
+      classId: s.classId,
+      className: s.className || '',
+      classType: s.classType,
+      focusDomain: s.focusDomain || '',
+      courseId: s.courseId || null,
+      courseCode: s.courseCode || '',
+      courseName: s.courseName || '',
+      termId: s.termId || null,
+      termCode: s.termCode || '',
+      termName: s.termName || '',
+      academicYear: s.academicYear || '',
+      sessionNo: Number(s.sessionNo ?? 0),
+      sessionDate: s.sessionDate,
+      dayOfWeek: Number(s.dayOfWeek ?? 0),
+      dayOfWeekLabel: s.dayOfWeekLabel || '',
+      startTime: String(s.startTime || '').slice(0, 5),
+      endTime: String(s.endTime || '').slice(0, 5),
+      room: s.room || '',
+      teacherId: s.teacherId || null,
+      isSubstituteTeacher: Boolean(s.isSubstituteTeacher),
+      skillId: s.skillId || null,
+      skillName: s.skillName || '',
+      topicTitle: s.topicTitle || '',
+      rescheduledFromId: s.rescheduledFromId || null,
+      isMakeupSession: Boolean(s.rescheduledFromId || s.isMakeupSession),
+      status: s.sessionStatus || s.status || 'SCHEDULED',
+      attendanceStatus:
+        s.attendanceStatus === 'UNRECORDED' || !s.attendanceStatus
+          ? 'NOT_RECORDED'
+          : s.attendanceStatus,
+      checkInAt: s.checkInAt || null,
+      attendanceNote: s.attendanceNote || null,
+      microGroupName: s.microGroupName || '',
+      assignedWorksheetTitle: s.assignedWorksheetTitle || ''
+    }));
+
+    const completedSessions = sessions.filter((s) => s.status === 'COMPLETED').length;
+    const presentCount = sessions.filter((s) => s.attendanceStatus === 'PRESENT').length;
+    const lateCount = sessions.filter((s) => s.attendanceStatus === 'LATE').length;
+    const absentCount = sessions.filter((s) => s.attendanceStatus === 'ABSENT').length;
+    const excusedCount = sessions.filter((s) => s.attendanceStatus === 'EXCUSED').length;
+    const recordedTotal = presentCount + lateCount + absentCount + excusedCount;
+    const attendanceRatePct =
+      dto.overallAttendanceRatePercent !== undefined && dto.overallAttendanceRatePercent !== null && recordedTotal > 0
+        ? Number(dto.overallAttendanceRatePercent)
+        : recordedTotal > 0
+          ? Math.round(((presentCount + lateCount) / recordedTotal) * 100)
+          : 0;
+
+    return {
+      studentId: dto.studentId || rawStudentId,
+      availableTerms: Array.isArray(dto.availableTerms) ? dto.availableTerms : [],
+      totalEnrolledClasses: enrolledClasses.length,
+      totalSessions: Number(dto.totalSessionsInView ?? sessions.length),
+      completedSessions,
+      upcomingSessions: Number(dto.upcomingSessionsCount ?? sessions.filter((s) => s.status === 'SCHEDULED').length),
+      presentCount,
+      lateCount,
+      absentCount,
+      excusedCount,
+      attendanceRatePct,
+      enrolledClasses,
+      sessions,
+      _source: 'backend'
+    };
+  },
+
+  async getTeacherSchedule({ teacherId = null, termId = null, courseId = null, fromDate = null, toDate = null } = {}) {
+    const currentUser = tokenStorage.getUser();
+    const rawTeacherId = teacherId || currentUser?.id || currentUser?.userId || null;
+    const isValidGuid = rawTeacherId && GUID_REGEX.test(String(rawTeacherId).trim());
+
+    const params = new URLSearchParams();
+    if (termId && termId !== 'ALL') params.set('termId', termId);
+    if (courseId && courseId !== 'ALL') params.set('courseId', courseId);
+    if (fromDate) params.set('fromDate', fromDate);
+    if (toDate) params.set('toDate', toDate);
+    const qs = params.toString();
+
+    const endpoint = isValidGuid
+      ? `/api/practice/schedules/teachers/${String(rawTeacherId).trim()}/schedule${qs ? `?${qs}` : ''}`
+      : `/api/practice/schedules/teachers/me/schedule${qs ? `?${qs}` : ''}`;
+
+    const res = (await apiClient.get(endpoint)).data;
+    return res?.data || res?.value || res;
   }
 };
 

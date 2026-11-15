@@ -5,6 +5,7 @@ import {
   BookOpen,
   Briefcase,
   Building2,
+  Calendar,
   ClipboardCheck,
   CreditCard,
   Crown,
@@ -32,6 +33,8 @@ import TeacherDashboardView from './components/dashboard/TeacherDashboardView';
 import TeacherPortalView from './components/dashboard/TeacherPortalView';
 import CampusManagerDashboardView from './components/dashboard/CampusManagerDashboardView';
 import LearningAnalyticsView from './components/dashboard/LearningAnalyticsView';
+import StudentScheduleView from './components/dashboard/StudentScheduleView';
+import LiveClassQnAView from './components/dashboard/LiveClassQnAView';
 import PublicLandingPage from './components/landing/PublicLandingPage';
 import WebLoginPage from './components/auth/WebLoginPage';
 import AccountProvisioningView from './components/admin/AccountProvisioningView';
@@ -69,7 +72,9 @@ const ROLE_PORTAL_DEFINITIONS = {
       { id: 'diagnostic', label: 'Khảo thí 30 câu', icon: ClipboardCheck },
       { id: 'history', label: 'Lịch sử & Lỗi sai', icon: History },
       { id: 'roadmap', label: 'Cây tri thức & Lộ trình', icon: Network },
+      { id: 'schedule', label: 'Thời khóa biểu & Điểm danh', icon: Calendar },
       { id: 'analytics', label: 'Báo cáo & Dự báo', icon: BarChart3 },
+      { id: 'live', label: 'Lớp học & Live Q&A', icon: Users },
       { id: 'tuition', label: 'Học phí & Gói học', icon: CreditCard }
     ]
   },
@@ -462,12 +467,49 @@ export default function App() {
       return curriculum;
     }
 
+    if (activeTab === 'schedule') {
+      return (
+        <StudentScheduleView
+          studentId={currentUser?.userId || currentUser?.id || currentUser?.studentId}
+          onOpenPracticeModal={handleOpenAdaptiveQuiz}
+          onOpenAiTutor={() => {
+            setAiTutorInitialContext(null);
+            setActiveModal('ai');
+          }}
+          onNavigateRoadmap={() => setActiveTab('roadmap')}
+        />
+      );
+    }
+
+    if (activeTab === 'live') {
+      return (
+        <LiveClassQnAView
+          currentUser={currentUser}
+          studentId={currentUser?.userId || currentUser?.id || currentUser?.studentId}
+          onOpenPracticeModal={handleOpenAdaptiveQuiz}
+          onOpenAiTutor={() => {
+            setAiTutorInitialContext(null);
+            setActiveModal('ai');
+          }}
+          onNavigateSchedule={() => setActiveTab('schedule')}
+          onNavigateRoadmap={() => setActiveTab('roadmap')}
+        />
+      );
+    }
+
     if (activeTab === 'tuition') {
       return (
         <TuitionPaymentView
           currentUser={currentUser}
           onBackToDashboard={() => setActiveTab('dashboard')}
           onNavigateRoadmap={() => setActiveTab('roadmap')}
+          onNavigateAdaptive={() => setActiveTab('adaptive')}
+          onNavigateSchedule={() => setActiveTab('schedule')}
+          onNavigateLive={() => setActiveTab('live')}
+          onNavigateAiTutor={() => {
+            setAiTutorInitialContext(null);
+            setActiveModal('ai');
+          }}
         />
       );
     }
@@ -594,7 +636,7 @@ export default function App() {
             setAiTutorInitialContext(null);
             setActiveModal('ai');
           }}
-          onOpenLiveClass={() => setActiveTab('dashboard')}
+          onOpenLiveClass={() => setActiveTab('live')}
           latestDiagnosticResult={latestDiagnosticResult}
           portalMetrics={portalMetrics}
         />
@@ -603,7 +645,7 @@ export default function App() {
           onClose={closeNavigation} setActiveTab={setActiveTab}
           onOpenAdaptiveQuiz={handleOpenAdaptiveQuiz} onOpenMockExam={handleOpenMockExam}
           onOpenAiTutor={() => { setAiTutorInitialContext(null); setActiveModal('ai'); }}
-          onOpenLiveClass={() => setActiveTab('dashboard')}
+          onOpenLiveClass={() => setActiveTab('live')}
           latestDiagnosticResult={latestDiagnosticResult} portalMetrics={portalMetrics} />}
 
         {/* Main Role Portal Content Column */}

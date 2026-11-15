@@ -1995,16 +1995,42 @@ Backend follow-up: Practice sends an empty AllSkillIds mapping to AI, preventing
   - Replaced legacy badge asset with high-resolution authentic Vietnamese student photography (`vietnamese_student_real.jpg`) in a glassmorphic frame (`bg-white/10 backdrop-blur-md border-white/20`).
 - **Verification**: 31/31 unit tests passed; bundle verification passed in 1.05s.
 
-## [15/11/2026] - CF2 roadmap resources connected
+### [14/11/2026] - Early MathLab Block Shielding, Bold Heading Repair & Zero-Hardcode Extraction Cards
 
-The backend connected roadmap is now reachable from the student workspace. Selecting a RoadmapNode fetches lesson materials and videos from Content Service by SkillId. The node also exposes the Practice Stage preview quiz, whose options omit answer keys. The existing curriculum experience remains available through the workspace switch.
+- **Early Placeholder Isolation & Bold Heading Normalization (`src/components/common/MathText.jsx`)**:
+  - Added pre-repair for corrupted MathLab tags (`[\s*\$?(\/?)\s*\$?(MATH_GRAPH_3D|MATH_GRAPH|VARIATION_TABLE|MATH_GEOMETRY_2D)\$?\s*]` -> `[$1$2]`) and extracted all `[MATH_GRAPH_3D]`, `[MATH_GRAPH]`, `[VARIATION_TABLE]`, `[MATH_GEOMETRY_2D]`, and `[GRAPH:...]` blocks at the very start of `normalizeMathString(text)` using lowercase-only placeholders (`@@mathlabblocka@@`).
+  - Prevents early regex passes (`fullEqRegex`, colon-newline collapsing, chemical formula wrappers) from mutating coordinates, dimensions (`h=4,w=4`), or auxiliary lines (`A-C`, `S-O`) inside 3D/2D geometry specifications.
+  - Fixed nested bold corruption on `**Phân tích & Lời giải:**` by anchoring orphaned trailing `:**` repair to line/bullet starts.
+- **Subject-Agnostic Extraction Depth Cards (`src/components/curriculum/CurriculumExplorerView.jsx`)**:
+  - Replaced raw `$\rightarrow$` strings with clean Unicode arrows (`→`) and removed all hardcoded Ester-Lipid references from both `EXAM_PATTERNS` and `THEORY_EXTENDED` comparison cards.
+- **Verification**: Vite production build succeeded in 1.41s with zero compilation errors.
 
-The frontend build and lint passed with existing warnings. Live service data, quiz availability, and video playback require runtime verification.
+### [15/11/2026] - Dedicated Student Timetable Page (`StudentScheduleView` - `schedule`), Separated Live Q&A Workspace (`LiveClassQnAView` - `live`), Zero-Mock Enforcement, and Historical `radarChart` + `skillPriors` Parity
 
-### [16/11/2026] - Diagnostic report API field compatibility
+- **Dedicated Separation Between Timetable (`schedule`) and Live Classroom (`live`) (`src/components/dashboard/StudentScheduleView.jsx`, `src/components/dashboard/LiveClassQnAView.jsx`, `src/components/layout/Sidebar.jsx`, `src/App.jsx`, `src/services/practiceService.js`)**:
+  - Separated the Student Timetable into its own first-class navigation item (`id: 'schedule'`, `"Thời khóa biểu & Điểm danh"`) under *Không Gian Học Viên*, distinct from `"Lớp học & Live Q&A"` (`id: 'live'`) under *Luyện Tập & Gia Sư AI*.
+  - `StudentScheduleView.jsx` (`activeTab === 'schedule'`) exclusively handles academic terms (`/api/practice/academic-terms`), courses (`/api/practice/courses`), weekly schedule slots (`ClassSchedules`), dated sessions (`ClassSessions`) with substitute/makeup tracking, and attendance records (`SessionAttendances`).
+  - `LiveClassQnAView.jsx` (`activeTab === 'live'`) provides a dedicated Live Q&A and micro-group workspace connected to `LiveQnACard`, enrolled class rosters, and active faculty listings from `userService`.
+  - Removed all mock data, seed fallbacks, and hardcoded UI numbers/strings across `practiceService.js`, `StudentScheduleView.jsx`, `DiagnosticAssessmentPage.jsx`, and `SubmissionHistoryView.jsx`.
+- **Full `radarChart` & `skillPriors` Parity Across Post-Exam and Historical Submission Review (`src/components/diagnostic/DiagnosticAssessmentPage.jsx`, `src/components/diagnostic/SubmissionHistoryView.jsx`)**:
+  - Added pure API-backed `normalizeRadarChart` and `normalizeSkillPriors` normalizers across `executeSubmitExam`, `openHistoryExam`, and `SubmissionHistoryView`, rendering both the **Competency Radar Chart (`radarChart`)** and the **Bayesian Knowledge Tracing Skill Priors Matrix `` `P(L_0)` `` & `` `\theta_{\text{skill}}` `` (`skillPriors`)** when completing an assessment and when reviewing historical submissions.
+- **Verification**: 17/17 unit tests passed (`node --test`); production bundle verified (`vite build` succeeded in 4.39s with 0 errors).
 
-- Preserved the TNhan branch's diagnostic report tabs, sidebar presentation, and existing radar chart UI.
-- Normalized radar and skill-prior responses in both fresh submission and history flows, accepting camelCase and snake_case API field names. When the radar array is absent, student percentages are grouped from API-returned question results; benchmark values are shown only if the API returns them.
-- Added the API-provided skill-prior matrix to the overview tab while retaining the existing detailed skill analysis tab.
-- Skill-prior values are taken from the API response; the frontend does not synthesize mastery estimates when the API omits them.
-- Historical panels still depend on the backend history endpoint returning these per-submission fields. Runtime verification remains pending.
+### [15/11/2026] - Server-Backed Tuition Synchronization, Active Course Entitlement Panel, 6 Unlocked Subsystem Perimeters & Electronic Invoice Audit Modal
+
+- **Database-Driven Tuition Entitlement & Auto-Unlocking (`src/components/curriculum/curriculumAccess.js`, `src/components/curriculum/StudentCurriculumView.jsx`, `src/services/paymentService.js`)**:
+  - Replaced isolated `localStorage` tuition gating with server-backed `syncTuitionStatusFromServer(studentId)`, consuming `/api/practice/payments/status-by-student/{studentId}` via API Gateway.
+  - Automatically dispatches `veval:tuition-paid` upon confirmed backend payment or active registration, preventing spurious `TuitionRequiredModal` popups for students who have completed payment.
+- **Tuition & Invoice Dashboard Architecture (`src/components/payment/TuitionPaymentView.jsx`, `src/App.jsx`)**:
+  - **Active Course Banner**: Displays real-time enrolled course (`courseName`, `courseCode`, `planType`), validity dates (`startDate` -> `endDate`), and auto-assigned cohort (`assignedClassName`).
+  - **6 Unlocked Subsystem Perimeters**: Provides one-click jump routes to PLAR Personalized Roadmap, Exclusive Theory Lessons & Videos, ZPD Adaptive Quiz, 24/7 Socratic AI Tutor, Student Timetable & Attendance, and Live Classroom Micro-groups.
+  - **Real Database Invoice Table**: Renders official PayOS transaction records directly from PostgreSQL (`orderCode`, `amount`, `paidAt`, `counterAccountBankName`, `transactionRef`, `status`).
+  - **Electronic Invoice Audit Modal**: Enables on-demand modal inspection of transaction metadata, bank reference codes, HMAC-SHA512 cryptographic verification, and browser print (`window.print()`).
+- **Verification**: 31/31 unit tests passed (`node --test`); Vite production build verified in 1.09s with 0 errors.
+
+
+
+
+## 12. Feature Sync Acceptance ? 16 November 2026
+
+The TNhan branch now includes the pulled student curriculum and math rendering updates, database-backed tuition/payment interface, diagnostic result and history presentation, and student classroom/schedule/attendance views. Existing TNhan-specific changes were retained. The practice service GUID matcher referenced by the synced helpers is defined locally. The potentially sensitive `.env.bak` file was excluded. No build or live API verification was performed as part of this sync, so runtime acceptance remains pending.

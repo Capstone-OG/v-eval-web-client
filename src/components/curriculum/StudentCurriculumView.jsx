@@ -22,7 +22,11 @@ import {
   AlertCircle
 } from 'lucide-react';
 import MathText from '../common/MathText';
-import { isTuitionPaid, buildPersonalizedStages } from './curriculumAccess';
+import { 
+  isTuitionPaid, 
+  buildPersonalizedStages,
+  syncTuitionStatusFromServer 
+} from './curriculumAccess';
 import TuitionRequiredModal from '../modals/TuitionRequiredModal';
 
 const sections = [
@@ -72,9 +76,16 @@ export default function StudentCurriculumView({
   const studentId = currentUser?.userId || currentUser?.id || currentUser?.studentId;
   const [isPaid, setIsPaid] = useState(() => isTuitionPaid(studentId));
 
-  // Sync tuition paid status on custom events
+  // Sync tuition paid status on custom events and check with backend
   useEffect(() => {
     setIsPaid(isTuitionPaid(studentId));
+    if (studentId) {
+      syncTuitionStatusFromServer(studentId)
+        .then((res) => {
+          if (res?.isPaid) setIsPaid(true);
+        })
+        .catch(() => {});
+    }
     const handleTuitionPaid = (event) => {
       if (!studentId || event.detail?.studentId === studentId) {
         setIsPaid(isTuitionPaid(studentId));
