@@ -32,6 +32,47 @@ export const paymentService = {
   async getPaymentTransactions(paymentId) {
     const response = await apiClient.get(`/api/practice/payments/transactions/${paymentId}`);
     return Array.isArray(response.data) ? response.data : (response.data?.items || response.data?.data || []);
+  },
+
+  /**
+   * Lấy toàn bộ danh sách lịch sử thanh toán thực tế của học sinh từ Database
+   * @param {string} studentId
+   * @returns {Promise<Array>}
+   */
+  async getStudentPayments(studentId) {
+    if (!studentId) return [];
+    try {
+      const response = await apiClient.get(`/api/practice/payments/student/${studentId}`);
+      return Array.isArray(response.data) ? response.data : (response.data?.items || response.data?.data || []);
+    } catch (err) {
+      // Fallback query query-string nếu gateway rewrite
+      try {
+        const fallbackRes = await apiClient.get(`/api/practice/payments/my-payments?studentId=${studentId}`);
+        return Array.isArray(fallbackRes.data) ? fallbackRes.data : (fallbackRes.data?.items || fallbackRes.data?.data || []);
+      } catch {
+        return [];
+      }
+    }
+  },
+
+  /**
+   * Tra cứu trạng thái học phí tổng thể, khóa học đang kích hoạt và các phân hệ đã mở khóa từ Database
+   * @param {string} studentId
+   * @returns {Promise<{ isPaid: boolean, activeCourseId, courseName, planType, durationWeeks, startDate, endDate, assignedClassName, unlockedFeatures: string[], payments: Array }>}
+   */
+  async getStudentTuitionStatus(studentId) {
+    if (!studentId) return { isPaid: false, unlockedFeatures: [], payments: [] };
+    try {
+      const response = await apiClient.get(`/api/practice/payments/status-by-student/${studentId}`);
+      return response.data;
+    } catch (err) {
+      try {
+        const fallbackRes = await apiClient.get(`/api/practice/payments/my-status?studentId=${studentId}`);
+        return fallbackRes.data;
+      } catch {
+        return { isPaid: false, unlockedFeatures: [], payments: [] };
+      }
+    }
   }
 };
 

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Calendar, Users, ChevronRight, Check, GraduationCap } from 'lucide-react';
 import { userService } from '../../services/userService';
 
-export default function LiveQnACard({ currentUser }) {
+export default function LiveQnACard({ currentUser, onOpenLiveClass }) {
   const [isReminderSet, setIsReminderSet] = useState(false);
   const [teacherInfo, setTeacherInfo] = useState(null);
 
@@ -95,10 +95,14 @@ export default function LiveQnACard({ currentUser }) {
           )}
         </button>
 
-        <span className="text-xs font-bold text-slate-400 flex items-center gap-1 shrink-0">
+        <button
+          type="button"
+          onClick={() => (onOpenLiveClass ? onOpenLiveClass() : setIsReminderSet(true))}
+          className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 shrink-0 cursor-pointer"
+        >
           <span>Trực tuyến</span>
           <ChevronRight className="w-4 h-4" />
-        </span>
+        </button>
       </div>
     </div>
   );

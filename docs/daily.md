@@ -29,6 +29,23 @@
 
 ---
 
+## [15/11/2026] - Tách Riêng Trang Thời Khóa Biểu & Điểm Danh (`StudentScheduleView` - `schedule`) Khỏi Trang Lớp Học & Live Q&A (`LiveClassQnAView` - `live`), Loại Bỏ 100% Mock Data & Hardcode Và Hiển Thị Đầy Đủ `radarChart` + `skillPriors` Trong Lịch Sử Bài Làm
+
+- **Tách Biệt Rạch Ròi Trang "Thời Khóa Biểu & Điểm Danh" (`schedule`) Và Trang "Lớp Học & Live Q&A" (`live`) ([`Sidebar.jsx`](../src/components/layout/Sidebar.jsx), [`App.jsx`](../src/App.jsx), [`StudentScheduleView.jsx`](../src/components/dashboard/StudentScheduleView.jsx), [`LiveClassQnAView.jsx`](../src/components/dashboard/LiveClassQnAView.jsx), [`practiceService.js`](../src/services/practiceService.js))**:
+  - Bổ sung mục điều hướng độc lập **`id: 'schedule'` ("Thời khóa biểu & Điểm danh")** trong nhóm *Không Gian Học Viên* của `Sidebar.jsx` và `ROLE_PORTAL_DEFINITIONS.student.tabs` của `App.jsx`, tách biệt hoàn toàn với mục **`id: 'live'` ("Lớp học & Live Q&A")** trong nhóm *Luyện Tập & Gia Sư AI*.
+  - **`StudentScheduleView.jsx` (`activeTab === 'schedule'`)**: Chuyên biệt 100% cho nghiệp vụ Học vụ, Thời khóa biểu theo Học kỳ (`AcademicTerms`) & Khóa học (`Courses`), Khung lịch định kỳ tuần (`ClassSchedules`), danh sách Buổi học (`ClassSessions` kèm nhãn Học bù / Dạy thay) và Điểm danh chuyên cần cá nhân (`SessionAttendances`: `PRESENT`, `LATE`, `EXCUSED`, `ABSENT`, `UNRECORDED`).
+  - **`LiveClassQnAView.jsx` (`activeTab === 'live'`)**: Không gian chuyên biệt cho Lớp học phần đang tham gia, Nhóm vi mô tại bàn, lịch Phụ đạo trực tuyến (`LiveQnACard`), danh sách Giảng viên cơ sở từ `userService` và kết nối nhanh với Gia sư AI Socratic 24/7.
+  - **Loại Bỏ 100% Mock Data & Hardcode**: Xóa bỏ hoàn toàn hàm `buildSeedScheduleData` trong `practiceService.js` và mọi giá trị hardcode trong `StudentScheduleView.jsx`, `DiagnosticAssessmentPage.jsx`, `SubmissionHistoryView.jsx`; hiển thị Empty State trung thực khi dữ liệu chưa được tạo trên hệ thống.
+
+- **Đồng Bộ & Hiển Thị Đầy Đủ `radarChart` Và `skillPriors` Khi Thi Xong Lẫn Khi Xem Lại Lịch Sử Bài Làm ([`DiagnosticAssessmentPage.jsx`](../src/components/diagnostic/DiagnosticAssessmentPage.jsx), [`SubmissionHistoryView.jsx`](../src/components/diagnostic/SubmissionHistoryView.jsx), [`practiceService.js`](../src/services/practiceService.js))**:
+  - Bổ sung hàm chuẩn hóa `normalizeRadarChart` cùng `normalizeSkillPriors` (chỉ đọc dữ liệu thực từ API Backend, không tự suy diễn hay gán cứng fallback) trong `DiagnosticAssessmentPage.jsx` và `SubmissionHistoryView.jsx`.
+  - Render trực quan khối **Ma Trận Tiên Nghiệm Kỹ Năng BKT `` `P(L_0)` `` & Tham Số Năng Lực `` `\theta_{\text{skill}}` `` (`skillPriors`)** song hành cùng **Biểu Đồ Radar Năng Lực (`radarChart`)** trên cả màn hình Kết quả sau thi lẫn màn hình Chi tiết lịch sử bài làm.
+
+- **Kiểm Thử Vận Hành & Biên Dịch**:
+  - Toàn bộ 17/17 unit tests (`node --test`) vượt qua 100%, `npm run build` (`vite v8.3.0`) thành công với 0 lỗi.
+
+---
+
 ## [15/11/2026] - Triển Khai Module Tiện Ích Chuẩn Hóa Dấu Tiếng Việt Toàn Diện & Đồng Bộ Giao Diện Bảng Đánh Giá Chi Tiết 30 Câu Khảo Sát Năng Lực
 
 - **Chuẩn Hóa Triệt Để Dấu Tiếng Việt & Typography Hệ Thống (`src/utils/vietnameseUtils.js`, `src/components/diagnostic/DiagnosticAssessmentPage.jsx`, `tests/vietnameseDiacritics.test.js`)**:
@@ -93,6 +110,23 @@
 - **Kiểm Thử & Biên Dịch**:
   - `npm run build`: Biên dịch Vite thành công 100% trong 1.09s.
   - `node --test`: Toàn bộ 31/31 unit tests vượt qua, 0 lỗi linter.
+
+---
+
+## [15/11/2026] - Tách Riêng Trang Thời Khóa Biểu & Điểm Danh (`StudentScheduleView` - `schedule`) Khỏi Trang Lớp Học & Live Q&A (`LiveClassQnAView` - `live`), Loại Bỏ 100% Mock Data & Hardcode Và Hiển Thị Đầy Đủ `radarChart` + `skillPriors` Trong Lịch Sử Bài Làm
+
+- **Tách Biệt Rạch Ròi Trang "Thời Khóa Biểu & Điểm Danh" (`schedule`) Và Trang "Lớp Học & Live Q&A" (`live`) ([`Sidebar.jsx`](../src/components/layout/Sidebar.jsx), [`App.jsx`](../src/App.jsx), [`StudentScheduleView.jsx`](../src/components/dashboard/StudentScheduleView.jsx), [`LiveClassQnAView.jsx`](../src/components/dashboard/LiveClassQnAView.jsx), [`practiceService.js`](../src/services/practiceService.js))**:
+  - Bổ sung mục điều hướng độc lập **`id: 'schedule'` ("Thời khóa biểu & Điểm danh")** trong nhóm *Không Gian Học Viên* của `Sidebar.jsx` và `ROLE_PORTAL_DEFINITIONS.student.tabs` của `App.jsx`, tách biệt hoàn toàn với mục **`id: 'live'` ("Lớp học & Live Q&A")** trong nhóm *Luyện Tập & Gia Sư AI*.
+  - **`StudentScheduleView.jsx` (`activeTab === 'schedule'`)**: Chuyên biệt 100% cho nghiệp vụ Học vụ, Thời khóa biểu theo Học kỳ (`AcademicTerms`) & Khóa học (`Courses`), Khung lịch định kỳ tuần (`ClassSchedules`), danh sách Buổi học (`ClassSessions` kèm nhãn Học bù / Dạy thay) và Điểm danh chuyên cần cá nhân (`SessionAttendances`: `PRESENT`, `LATE`, `EXCUSED`, `ABSENT`, `UNRECORDED`).
+  - **`LiveClassQnAView.jsx` (`activeTab === 'live'`)**: Không gian chuyên biệt cho Lớp học phần đang tham gia, Nhóm vi mô tại bàn, lịch Phụ đạo trực tuyến (`LiveQnACard`), danh sách Giảng viên cơ sở từ `userService` và kết nối nhanh với Gia sư AI Socratic 24/7.
+  - **Loại Bỏ 100% Mock Data & Hardcode**: Xóa bỏ hoàn toàn hàm `buildSeedScheduleData` trong `practiceService.js` và mọi giá trị hardcode trong `StudentScheduleView.jsx`, `DiagnosticAssessmentPage.jsx`, `SubmissionHistoryView.jsx`; hiển thị Empty State trung thực khi dữ liệu chưa được tạo trên hệ thống.
+
+- **Đồng Bộ & Hiển Thị Đầy Đủ `radarChart` Và `skillPriors` Khi Thi Xong Lẫn Khi Xem Lại Lịch Sử Bài Làm ([`DiagnosticAssessmentPage.jsx`](../src/components/diagnostic/DiagnosticAssessmentPage.jsx), [`SubmissionHistoryView.jsx`](../src/components/diagnostic/SubmissionHistoryView.jsx), [`practiceService.js`](../src/services/practiceService.js))**:
+  - Bổ sung hàm chuẩn hóa `normalizeRadarChart` cùng `normalizeSkillPriors` (chỉ đọc dữ liệu thực từ API Backend, không tự suy diễn hay gán cứng fallback) trong `DiagnosticAssessmentPage.jsx` và `SubmissionHistoryView.jsx`.
+  - Render trực quan khối **Ma Trận Tiên Nghiệm Kỹ Năng BKT `` `P(L_0)` `` & Tham Số Năng Lực `` `\theta_{\text{skill}}` `` (`skillPriors`)** song hành cùng **Biểu Đồ Radar Năng Lực (`radarChart`)** trên cả màn hình Kết quả sau thi lẫn màn hình Chi tiết lịch sử bài làm.
+
+- **Kiểm Thử Vận Hành & Biên Dịch**:
+  - Toàn bộ 17/17 unit tests (`node --test`) vượt qua 100%, `npm run build` (`vite v8.3.0`) thành công với 0 lỗi.
 
 ---
 
@@ -2828,3 +2862,60 @@
   - Toàn bộ 31/31 unit tests đạt pass 100%.
   - `npm run lint` 0 lỗi, `npm run build` thành công trong 1.05s.
 
+---
+
+## [14/11/2026] - Bảo Vệ Tuyệt Đối Khối Hình Học 3D (`[MATH_GRAPH_3D]`), Bảng Biến Thiên (`[VARIATION_TABLE]`) & Đồ Thị 2D (`[MATH_GRAPH]`), Sửa Lỗi Tiêu Đề `**Phân tích & Lời giải:**` & Chuẩn Hóa Thẻ Chọn Chế Độ Bóc Tách AI Không Hardcode
+
+- **Chuẩn Hóa Giao Diện Thẻ Chọn Độ Sâu Bóc Tách AI (`src/components/curriculum/CurriculumExplorerView.jsx`)**:
+  - Loại bỏ hoàn toàn văn bản hardcode chuyên đề Hóa học ("Bài 1 Ester (4 dạng) & Bài 2 Lipid (3 dạng)", "quên bảo toàn O, quên tỉ lệ 1:3", "mùi thơm hoa quả, Ester của phenol...") trên cả 2 thẻ chế độ `Chuyên Dạng Đề & Bài Toán Thực Chiến` và `Chuyên Lý Thuyết Thuần & Dạng Mở Rộng`.
+  - Thay thế ký hiệu LaTeX trần `$\rightarrow$` (bị hiển thị thô trong thẻ JSX) bằng mũi tên Unicode chuẩn `→`, đồng bộ mô tả tổng quát cho mọi môn học (Toán, Lý, Hóa, Sinh, Văn, Anh...).
+
+- **Khắc Phục Lỗi `[ $MATH_GRAPH_3D$ ]` Bị Biến Thành Chuỗi KaTeX & Lỗi Dư `**` Ở `Phân tích & Lời giải:**` (`src/components/common/MathText.jsx`)**:
+  - **Giải pháp Lá Chắn Sớm (`@@mathlabblocka@@`) & Tự Chữa Lành (Auto-Heal)**:
+    + Ngay đầu hàm `normalizeMathString(text)`, tự động sửa các thẻ bị biến dạng (`[\s*\$?(\/?)\s*\$?(MATH_GRAPH_3D|MATH_GRAPH|VARIATION_TABLE|MATH_GEOMETRY_2D)\$?\s*]` -> `[$1$2]`).
+    + Trích xuất toàn bộ các khối `[MATH_GRAPH_3D]...[/MATH_GRAPH_3D]`, `[MATH_GRAPH]...[/MATH_GRAPH]`, `[VARIATION_TABLE]...[/VARIATION_TABLE]`, `[MATH_GEOMETRY_2D]...[/MATH_GEOMETRY_2D]`, `[GRAPH:...]` ra khỏi chuỗi, dọn sạch mọi dấu `$` bên trong khối, thay thế bằng placeholder chữ thường `@@mathlabblocka@@` trước mọi regex toán/hóa, và khôi phục nguyên vẹn ở cuối hàm `normalizeMathString`.
+  - **Khắc phục lỗi `Phân tích & Lời giải:**`**: Neo regex sửa nhãn `: **` vào đầu dòng/bullet `(^|[\r\n•\-]\s*)(?!\*)` và tự phục hồi chuỗi bị lồng `**Phân tích & **Lời giải:****` về `**Phân tích & Lời giải:**`.
+- **Kiểm Thử & Biên Dịch**:
+  - Chạy `npm run build` thành công 100% trong 1.41s, 0 lỗi biên dịch.
+
+---
+
+## [15/11/2026] - Tách Riêng Trang Thời Khóa Biểu & Điểm Danh (`StudentScheduleView` - `schedule`) Khỏi Trang Lớp Học & Live Q&A (`LiveClassQnAView` - `live`), Loại Bỏ 100% Mock Data & Hardcode Và Hiển Thị Đầy Đủ `radarChart` + `skillPriors` Trong Lịch Sử Bài Làm
+
+- **Tách Biệt Rạch Ròi Trang "Thời Khóa Biểu & Điểm Danh" (`schedule`) Và Trang "Lớp Học & Live Q&A" (`live`) ([`Sidebar.jsx`](./src/components/layout/Sidebar.jsx), [`App.jsx`](./src/App.jsx), [`StudentScheduleView.jsx`](./src/components/dashboard/StudentScheduleView.jsx), [`LiveClassQnAView.jsx`](./src/components/dashboard/LiveClassQnAView.jsx), [`practiceService.js`](./src/services/practiceService.js))**:
+  - Bổ sung mục menu độc lập **`id: 'schedule'` ("Thời khóa biểu & Điểm danh")** trong nhóm *Không Gian Học Viên* của `Sidebar.jsx` và `App.jsx`, tách biệt hoàn toàn với mục **`id: 'live'` ("Lớp học & Live Q&A")** trong nhóm *Luyện Tập & Gia Sư AI*.
+  - **`StudentScheduleView.jsx` (`activeTab === 'schedule'`)**: Chuyên biệt 100% cho tra cứu Thời khóa biểu theo Học kỳ (`AcademicTerms`) & Khóa học (`Courses`), Khung lịch định kỳ tuần (`ClassSchedules`), danh sách Buổi học (`ClassSessions` kèm nhãn Giảng viên dạy thay & Buổi học bù) và thống kê Điểm danh chuyên cần cá nhân thực tế (`PRESENT`, `LATE`, `EXCUSED`, `ABSENT`, `UNRECORDED`).
+  - **`LiveClassQnAView.jsx` (`activeTab === 'live'`)**: Không gian chuyên biệt cho Lớp học phần đang tham gia, Nhóm vi mô tại bàn, lịch Phụ đạo trực tuyến (`LiveQnACard`), danh sách Giảng viên hỗ trợ từ `userService` và kết nối nhanh Gia sư AI Socratic 24/7.
+  - **Loại Bỏ 100% Mock Data & Hardcode**: Xóa toàn bộ dữ liệu giả lập và giá trị gán cứng trên cả tầng Service lẫn Component; hiển thị Empty State trung thực khi dữ liệu chưa được khởi tạo từ Backend.
+
+- **Đồng Bộ & Hiển Thị Đầy Đủ `radarChart` Và `skillPriors` Khi Thi Xong Lẫn Khi Xem Lại Lịch Sử Bài Làm ([`DiagnosticAssessmentPage.jsx`](./src/components/diagnostic/DiagnosticAssessmentPage.jsx), [`SubmissionHistoryView.jsx`](./src/components/diagnostic/SubmissionHistoryView.jsx), [`practiceService.js`](./src/services/practiceService.js))**:
+  - Chuẩn hóa `normalizeRadarChart` và `normalizeSkillPriors` thuần túy từ dữ liệu API thực cho cả luồng nộp bài (`executeSubmitExam`) lẫn luồng mở lại lịch sử (`openHistoryExam`, `handleSelectSubmission`).
+  - Hiển thị đầy đủ **Biểu Đồ Radar Năng Lực (`radarChart`)** cùng **Ma Trận Tiên Nghiệm Kỹ Năng BKT `` `P(L_0)` `` & Tham Số `` `\theta_{\text{skill}}` `` (`skillPriors`)** cả ngay sau khi thi xong lẫn khi bấm vào xem lại bất kỳ bài thi nào trong Lịch sử làm bài.
+
+- **Đồng Bộ Trạng Thái Học Phí Thực Tế & Mở Khóa Khóa Học Tự Động Từ Database ([`curriculumAccess.js`](./src/components/curriculum/curriculumAccess.js), [`StudentCurriculumView.jsx`](./src/components/curriculum/StudentCurriculumView.jsx), [`paymentService.js`](./src/services/paymentService.js))**:
+  - Mở rộng `paymentService.getStudentTuitionStatus(studentId)` và `paymentService.getStudentPayments(studentId)` kết nối API Gateway (`:5212`) truy vấn trực tiếp cơ sở dữ liệu Practice Service (`:5261`).
+  - Hiện thực hóa hàm `syncTuitionStatusFromServer(studentId)` trong `curriculumAccess.js`: tự động đồng bộ trạng thái thanh toán từ PostgreSQL, ghi nhận vào `localStorage` và bắn sự kiện `veval:tuition-paid`.
+  - Trong `StudentCurriculumView.jsx`, tự động kích hoạt `syncTuitionStatusFromServer` khi mở trang, giúp học sinh đã chuyển khoản thành công vào học ngay lập tức mà không bị chặn bởi `TuitionRequiredModal`.
+
+- **Nâng Cấp Toàn Diện Phân Hệ Quản Lý Học Phí & Hóa Đơn ([`TuitionPaymentView.jsx`](./src/components/payment/TuitionPaymentView.jsx), [`App.jsx`](./src/App.jsx))**:
+  - **Khối Gói Đào Tạo Đang Kích Hoạt (Active Course Package Card)**: Hiển thị tên khóa học thực tế (`courseName`), mã khóa (`courseCode`), trạng thái `ĐANG HOẠT ĐỘNG (ACTIVE)`, thời hạn hiệu lực (từ ngày - đến ngày, số tuần học) và lớp học phần chuyên đề được xếp (`assignedClassName`).
+  - **Danh Mục 6 Phân Hệ & Quyền Lợi Đã Mở Khóa 100%**: Lộ trình cá nhân PLAR, Bài giảng & video, Kho luyện tập thích ứng ZPD, Gia sư AI Socratic 24/7, Thời khóa biểu & Điểm danh, Lớp học phần & Live Q&A.
+  - **Bảng Lịch Sử Thanh Toán & Hóa Đơn Điện Tử Thực Tế**: Hiển thị bảng giao dịch đối soát từ DB gồm Mã đơn hàng PayOS (`#orderCode`), Khóa học, Số tiền (VNĐ), Ngân hàng đối ứng (`counterAccountBankName`), Thời gian nộp, Mã giao dịch ngân hàng (`transactionRef`), Trạng thái `ĐÃ HOÀN TẤT` và nút "Xem chi tiết".
+  - **Modal Biên Lai Thu Học Phí Điện Tử & Kiểm Toán Bảo Mật**: Hiển thị chi tiết hóa đơn, người nộp, ngân hàng, mã tham chiếu ngân hàng, kiểm toán chữ ký số `HMAC-SHA512 Verified` và nút in biên lai (`window.print()`).
+
+- **Kiểm Thử & Biên Dịch**:
+  - Vượt qua 31/31 unit tests (`node --test`), `npm run build` (`vite v8.3.0`) thành công 100% với 0 lỗi.
+
+
+
+
+
+## [16/11/2026] - Synced student curriculum, payment, diagnostic, and classroom features
+
+- Integrated the incoming curriculum access and MathText updates, database-backed tuition/payment views, diagnostic result/history rendering, and Live Q&A plus schedule/attendance pages into the TNhan branch.
+- Preserved branch-specific work and fixed the missing `GUID_REGEX` declaration used by practice service normalization.
+- Kept `.env.bak` out of the merge; build and runtime behavior were not verified.
+
+- Follow-up repair: removed an incomplete duplicate trend-chart wrapper in DiagnosticAssessmentPage.jsx that caused Vite JSX parse errors. Vite production build now succeeds (existing bundle-size and dependency eval warnings only).
+
+- API-only result handling: stopped supplying an 80% benchmark or default prior values when the API omits them; the benchmark series and mastery values now appear only when the response includes those values. Also removed two unresolved runtime references in the diagnostic report.

@@ -19,6 +19,9 @@
   - Tách biệt nguồn dữ liệu tích lũy SSE bằng `useRef` (`streamedTextRef`), xóa bỏ biến đổi state in-place, giúp giao diện miễn nhiễm 100% trước cơ chế chạy lặp 2 lần của React StrictMode.
   - Loại bỏ 200+ lần gọi `saveSessions` dư thừa mỗi turn; chỉ lưu phiên 1 lần khi kết thúc stream (`onComplete`).
   - Tự động chữa lành các phiên cũ bị lặp từ trong `localStorage` bằng hàm `cleanDoubledWords`.
+- **Đồng Bộ Phân Hệ Sinh Viên & Chuẩn Hóa Hiển Thị Điểm Đánh Giá**:
+  - Đồng bộ các phân hệ Thời khóa biểu & Điểm danh (`StudentScheduleView`), Lớp học & Live Q&A (`LiveClassQnAView`), và học phí thực tế qua PayOS.
+  - Chuẩn hóa hiển thị Ma trận năng lực Radar Chart và Tiên nghiệm kỹ năng BKT không dùng mock data giả.
 - **Kiểm Thử & Biên Dịch Toàn Diện**:
   - `npm run build`: Thành công 100% trong 1.06s.
   - `node --test`: Đạt **22/22 unit tests pass 100%**.

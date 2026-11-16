@@ -24,6 +24,14 @@ export const contentService = {
   },
 
   /**
+   * Core Flow 2 - Lấy học liệu và video của một kỹ năng trong roadmap.
+   * @param {string} skillId
+   */
+  async getMaterialsBySkill(skillId) {
+    return (await apiClient.get(`/api/content/materials/by-skill/${encodeURIComponent(skillId)}`)).data;
+  },
+
+  /**
    * Lấy danh sách đề thi luyện tập / thi thử
    * @param {Object} [params] - { domainId, difficulty, page, limit }
    */

@@ -3,6 +3,8 @@
  * Quản lý trạng thái học phí và phân chia lộ trình (Lớp học chung & Lộ trình cá nhân riêng)
  */
 
+import paymentService from '../../services/paymentService.js';
+
 export const TUITION_STORAGE_PREFIX = 'veval_tuition_paid_';
 
 /**
@@ -31,6 +33,32 @@ export function setTuitionPaid(studentId, paid = true, storage = typeof localSto
   }
   if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
     window.dispatchEvent(new CustomEvent('veval:tuition-paid', { detail: { studentId, paid } }));
+  }
+}
+
+/**
+ * Đồng bộ trạng thái học phí từ Database Backend qua Payment Service
+ * Nếu server xác nhận đã thanh toán hoặc có đăng ký ACTIVE, tự động cập nhật storage
+ * @param {string} studentId
+ * @param {Object} [service=null]
+ * @param {Storage} [storage=localStorage]
+ * @returns {Promise<Object>}
+ */
+export async function syncTuitionStatusFromServer(studentId, service = null, storage = typeof localStorage !== 'undefined' ? localStorage : null) {
+  if (!studentId) return { isPaid: false, unlockedFeatures: [], payments: [] };
+  try {
+    const s = service || paymentService;
+    const status = await s.getStudentTuitionStatus(studentId);
+    if (status?.isPaid) {
+      setTuitionPaid(studentId, true, storage);
+    }
+    return status;
+  } catch {
+    return {
+      isPaid: isTuitionPaid(studentId, storage),
+      unlockedFeatures: [],
+      payments: []
+    };
   }
 }
 
