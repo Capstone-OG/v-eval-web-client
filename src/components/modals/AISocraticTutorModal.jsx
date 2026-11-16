@@ -244,9 +244,18 @@ export default function AISocraticTutorModal({ isOpen, onClose, initialContext =
 
     try {
       const isQuestionMode = Boolean(activeSession.questionLatex);
+      const conversationHistory = (messages || [])
+        .filter(m => m.text && m.text.trim())
+        .slice(-6)
+        .map(m => ({
+          role: m.sender === 'user' ? 'student' : 'tutor',
+          text: m.text.trim()
+        }));
+
       await practiceService.askAiTutorStream({
         questionLatex: isQuestionMode ? activeSession.questionLatex : query,
         studentQuery: query,
+        conversationHistory,
         questionId: activeSession.questionId || newInteractionId,
         options: isQuestionMode ? activeSession.options : null,
         studentWrongOption: isQuestionMode ? (activeSession.selectedWrong || null) : null,

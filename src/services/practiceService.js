@@ -1846,6 +1846,7 @@ export const practiceService = {
     correctOption = null,
     skillId = null,
     studentQuery = null,
+    conversationHistory = null,
     onToken,
     onInteractionId,
     onError,
@@ -1879,7 +1880,8 @@ export const practiceService = {
       studentWrongOption: resolvedWrongOpt,
       correctOption: resolvedCorrectOpt,
       skillId: resolvedSkillId,
-      studentQuery: studentQuery || questionLatex || null
+      studentQuery: studentQuery || questionLatex || null,
+      conversationHistory: Array.isArray(conversationHistory) ? conversationHistory : null
     };
 
     let fullAnswer = '';

@@ -2111,3 +2111,14 @@ Backend follow-up: Practice sends an empty AllSkillIds mapping to AI, preventing
   - When a student deletes a session, its ID, corresponding question identifier (`q_${questionId}`), and interaction logs are recorded in the tombstone registry.
   - Any subsequent synchronization or merge operation strictly filters against this registry, permanently preventing resurrection of deleted sessions.
 - **Verification**: Vite production build succeeded in 1.08s; 22/22 unit tests pass (100% success rate); zero linter errors.
+
+
+### [16/11/2026] - Socratic AI Tutor Multi-Turn Conversation History Forwarding Architecture
+
+- **Client Multi-Turn History Forwarding (`src/components/modals/AISocraticTutorModal.jsx`, `src/services/practiceService.js`)**:
+  - Enhanced `practiceService.askAiTutorStream` to accept `conversationHistory = null` and serialize it into the streaming request payload.
+  - In `handleSendMessage`, mapped the last 6 message turns (`messages.slice(-6).map(m => ({ role: m.sender === 'user' ? 'student' : 'tutor', text: m.text }))`) and forwarded them as conversation history.
+  - Guarantees seamless multi-turn context retention: subsequent follow-up queries (e.g. asking for an illustrative example or method clarification) maintain the specific question, figure, and pedagogical direction already established in prior conversation turns.
+- **Verification**:
+  - Vite production build succeeded in 1.15s with 0 errors.
+  - `node --test` passed 22/22 unit tests with 100% success rate.
