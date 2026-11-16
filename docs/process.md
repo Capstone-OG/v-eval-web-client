@@ -1,3 +1,288 @@
+<!-- Navbar campus data: active campus API + authenticated student profile; confirmed profile PUT on selection. -->
+<!-- Submission architecture update: POST results must be validated before result/history writes. Failure returns to the exam with in-memory answers intact. -->
+# KIẾN TRÚC & BẢNG THEO DÕI TIẾN ĐỘ CHỦ THỂ (PROCESS & PLANNING) - V-EVAL WEB CLIENT
+
+---
+
+## PHẦN 1: KIẾN TRÚC DỊCH VỤ & CÁC THÀNH PHẦN CẦN TRIỂN KHAI
+
+### 1. Tổng Quan Kiến Trúc Web Client (V-Eval Frontend SPA)
+- **Công Nghệ**: React 19 (`react: ^19.2.8`), Vite 8 (`vite: ^8.3.0`), TailwindCSS v4 (`@tailwindcss/vite: ^4.3.3`), Lucide React, Recharts 3, Framer Motion, Canvas Confetti, Oxlint.
+- **Cổng Dịch Vụ**: `5173` (Vite Dev Server) / Container `v_eval_web_client` (Nginx Alpine reverse proxy cổng 80 ánh xạ ra 5173).
+- **Phân Khối Cấu Trúc Mã Nguồn**:
+  - `src/components/layout/`: `Navbar`, `Sidebar` hỗ trợ responsive mobile/desktop và navigation các vai trò.
+  - `src/components/landing/`: `PublicLandingPage` giới thiệu nền tảng V-Eval, mô hình đánh giá năng lực V-ACT 2026.
+  - `src/components/auth/`: `WebLoginPage` hỗ trợ đăng nhập đa vai trò (Học sinh, Giáo viên, Quản trị viên).
+  - `src/components/dashboard/`:
+    + `HeroBanner`: Chào mừng học sinh, hiển thị điểm mục tiêu (thang 1200) và chuỗi học tập hàng ngày (streak).
+    + `MetricsGrid`: Thẻ chỉ số năng lực, đồ thị mạng nhện Radar V-ACT, ước lượng năng lực IRT theta, và tỷ lệ làm chủ kỹ năng.
+    + `MilestoneCard`: Thẻ chặng học tập theo FSM, mở khóa chặng dựa trên điều kiện bài giảng (>= 80%) và bài tập (>= 60%).
+    + `AISocraticTutorWidget`: Khung chat trợ lý AI gia sư Socratic tương tác hướng dẫn giải thích câu hỏi.
+    + `LiveQnACard`: Phiên hỏi đáp trực tuyến và kết nối cố vấn học tập.
+    + `TeacherDashboardView`: Góc nhìn dành riêng cho giáo viên theo dõi tiến độ của học sinh.
+  - `src/components/modals/`:
+    + `DiagnosticTestModal`: Luồng khảo thí chẩn đoán năng lực ban đầu (Flow 1) tích hợp logic IRT 2PL.
+    + `AdaptiveQuizModal`: Luồng luyện tập thích ứng theo Vùng phát triển gần nhất ZPD (Flow 3) và chuỗi Markov ẩn BKT.
+    + `RadarChartModal`: Phóng to biểu đồ Radar năng lực chi tiết 3 miền Toán - Văn - Khoa học tự nhiên/xã hội.
+    + `AcademicArchitectureModal`: Bảng đối chiếu kiến trúc học thuật và 22 công thức hệ thống V-Eval.
+  - `src/data/mockData.js`: Dữ liệu mô phỏng đồng bộ chuẩn hóa theo đặc tả toán học hệ thống V-Eval.
+- **Tích Hợp Hệ Thống**:
+  - Tích hợp cổng Gateway YARP (`http://localhost:5212`) cho các luồng API Auth, Content, Practice và AI Ingestion/Tutor.
+  - Script điều khiển độc lập `Scripts/push.bat` hỗ trợ commit & push trực tiếp từ thư mục Web Client.
+  - Cấu hình Docker đa tầng (Multi-stage Build: Node 22 Alpine + Nginx Alpine) tích hợp vào `docker-compose.yml` gốc.
+
+---
+
+## PHẦN 2: BẢNG THEO DÕI TIẾN ĐỘ CHI TIẾT THEO TỪNG MỤC (PROGRESS MATRIX)
+
+| STT | Hạng Mục / Chức Năng | Vị Trí Triển Khai trong Code | Trạng Thái | Tiến Độ (%) | Ghi Chú Chi Tiết |
+| :---: | :--- | :--- | :---: | :---: | :--- |
+| 1 | **Khởi Tạo Cấu Trúc React 19 & Vite 8** | `package.json`, `vite.config.js` | 🟢 Hoàn thành | 100% | Tích hợp TailwindCSS v4, Oxlint, Lucide Icons |
+| 2 | **Hệ Thống Layout & Điều Hướng** | `src/components/layout/` | 🟢 Hoàn thành | 100% | `Navbar`, `Sidebar` với trạng thái active role linh hoạt, chống đè lấn badge và selector |
+| 3 | **Trang Chủ Công Khai (Landing Page)** | `src/components/landing/` | 🟢 Hoàn thành | 100% | Hero section, tính năng nổi bật, lộ trình cá nhân hóa |
+| 4 | **Xác Thực Đăng Nhập (Web Login)** | `src/components/auth/` | 🟢 Hoàn thành | 100% | Chọn vai trò Học sinh, Giáo viên, Điều phối học vụ |
+| 5 | **Bảng Điều Khiển Học Sinh (Dashboard)** | `src/components/dashboard/` | 🟢 Hoàn thành | 100% | `HeroBanner`, `MetricsGrid`, `MilestoneCard` |
+| 6 | **Bảng Điều Khiển Giáo Viên** | `TeacherDashboardView.jsx` | 🟢 Hoàn thành | 100% | Danh sách học sinh, phân phối điểm, cảnh báo nguy cơ |
+| 7 | **Gia Sư AI Socratic Widget** | `AISocraticTutorWidget.jsx` | 🟢 Hoàn thành | 100% | Giao diện chat gợi mở phương pháp tư duy theo RAG |
+| 8 | **Modal Khảo Thí Chẩn Đoán (Flow 1)** | `DiagnosticTestModal.jsx` | 🟢 Hoàn thành | 100% | Giao diện làm bài thi chẩn đoán theo mô hình IRT 2PL |
+| 9 | **Modal Luyện Tập Thích Ứng ZPD (Flow 3)** | `AdaptiveQuizModal.jsx` | 🟢 Hoàn thành | 100% | Đề xuất bài tập theo vùng phát triển gần nhất `[0.60, 0.75]` |
+| 10 | **Đồ Thị Radar Năng Lực V-ACT** | `RadarChartModal.jsx` | 🟢 Hoàn thành | 100% | Biểu đồ Recharts Radar thang chuẩn hóa 1200 điểm |
+| 11 | **Bảng Đối Chiếu Kiến Trúc Học Thuật** | `AcademicArchitectureModal.jsx` | 🟢 Hoàn thành | 100% | Hiển thị 22 công thức toán học và thông số hệ thống |
+| 12 | **Dữ Liệu Mô Phỏng Chuẩn Hóa** | `src/data/mockData.js` | 🟢 Hoàn thành | 100% | Mock dữ liệu câu hỏi, chỉ số năng lực, chặng học tập |
+| 13 | **Script Push Độc Lập Service** | `Scripts/push.bat` | 🟢 Hoàn thành | 100% | Đồng bộ lịch sử git, chọn nhánh và commit tự động |
+| 14 | **Đóng Gói Dockerfile & Nginx** | `Dockerfile`, `nginx.conf` | 🟢 Hoàn thành | 100% | Multi-stage build Node 22 + Nginx SPA routing |
+| 15 | **Tích Hợp System-Repo & Runner** | `docker-compose.yml`, `run_local.bat` | 🟢 Hoàn thành | 100% | Đồng bộ khởi chạy local cổng 5173 và Docker compose |
+| 16 | **Kết Nối Real API Gateway YARP** | `src/services/` | 🟢 Hoàn thành | 100% | Hoàn thành `apiClient.js`, `authService.js`, `contentService.js`, `practiceService.js` |
+| 17 | **Móc Nối Đầy Đủ 14+ API AI Engine** | `src/services/aiService.js` | 🟢 Hoàn thành | 100% | Tích hợp OCR đề thi, nạp SGK 250MB, sinh đề AI Bloom, chẩn đoán IRT/BKT, SSE Streaming |
+| 18 | **Trang Khảo Sát 30 Câu Thật Với AI** | `src/components/diagnostic/DiagnosticAssessmentPage.jsx` | 🟢 Hoàn thành | 100% | Trang làm bài 30 câu fetch từ AI Engine/Content Service, đồng hồ, điều hướng, Radar Chart, AI Tutor Drawer |
+| 19 | **Động Cơ Render Toán Học KaTeX** | `src/components/common/MathText.jsx` | 🟢 Hoàn thành | 100% | Phân tích và render công thức LaTeX, phân số, số mũ, căn thức, khoảng vô cực cho câu hỏi, đáp án, gia sư AI |
+| 20 | **Chế Độ Thi Giám Sát Azota Proctored** | `DiagnosticAssessmentPage.jsx` | 🟢 Hoàn thành | 100% | Fullscreen API, phát hiện rời tab/mất focus, tô đậm câu đã làm bên phải, modal cảnh báo vi phạm |
+| 21 | **Trợ Thủ Nhập Mã Phòng Thi Demo & Tự Điền** | `DiagnosticAssessmentPage.jsx` | 🟢 Hoàn thành | 100% | Hiển thị mã phòng thi demo trên card, hỗ trợ 1-click Auto-fill & Copy trong Modal và Banner |
+| 22 | **Chuẩn Hóa Sảnh Chẩn Đoán Flow 1 & Phân Định 3-Flow** | `DiagnosticAssessmentPage.jsx` | 🟢 Hoàn thành | 100% | Lọc chỉ giữ đề DIAGNOSTIC 30 câu, loại bỏ quiz củng cố (Flow 2) và đề thi thử 120 câu (Flow 3) khỏi Flow 1 |
+| 23 | **Modal Xác Nhận Thi Thử Vãng Lai (Guest Mode Popup)** | `PublicLandingPage.jsx`, `App.jsx` | 🟢 Hoàn thành | 100% | Popup xác nhận vào thi thử 30 câu miễn phí không cần đăng nhập, điều hướng trực tiếp sang phòng thi độc lập |
+| 24 | **Khảo Thí Cho Tài Khoản Đã Đăng Nhập (Flow 1 Logged-in Mode)** | `DiagnosticAssessmentPage.jsx`, `App.jsx` | 🟢 Hoàn thành | 100% | Tích hợp Sảnh Khảo Thí (Hero Banner, 5 miền năng lực, thẻ đề thi) và Modal xác nhận passcode `VACT2026` |
+| 25 | **Nút Thi Thử Ngay Top Header & Modal Xác Thực Passcode** | `Navbar.jsx`, `ExamPasscodeModal.jsx`, `App.jsx` | 🟢 Hoàn thành | 100% | Tích hợp nút Thi Thử Ngay trên Top Header cạnh Đặc tả Kiến trúc, bật modal thông số 30 câu và xác thực passcode vào thi trực tiếp |
+| 26 | **Hệ Thống 3 Sub-Tabs, Biểu Đồ Năng Lực Đa Chiều & Lịch Sử Khảo Thí** | `DiagnosticAssessmentPage.jsx`, `diagnosticData.js` | 🟢 Hoàn thành | 100% | 3 sub-tabs Sảnh Khảo thí, 4 biểu đồ trực quan (Radar 5 miền, Cột độ chính xác, Vùng tiến trình Theta, Đo nhịp độ câu hỏi), bảng lịch sử bài thi và xem lại lời giải chi tiết |
+| 27 | **Tách Bạch Ngân Hàng Đề Thi & Tinh Gọn Flow 1 Chỉ Lưu Vết Lịch Sử & Chi Tiết Lần Thi** | `QuestionBankPage.jsx`, `DiagnosticAssessmentPage.jsx`, `App.jsx` | 🟢 Hoàn thành | 100% | Di chuyển toàn bộ danh mục đề thi & phòng thi xuống sidebar 'Ngân hàng đề & Thi thử'; tinh gọn Flow 1 chỉ tập trung danh sách các lần kiểm tra, click vào 1 lần thi sẽ mở trang phân tích đồ thị chi tiết kèm nút quay lại mượt mà |
+| 28 | **Nâng Cấp Lộ Trình Học Cá Nhân Hóa (Flow 2) 9 Môn Thi, Phân Cấp 3 Giai Đoạn & Cây Chương - Bài** | `RoadmapLearningPage.jsx`, `roadmapSubjectsData.js` | 🟢 Hoàn thành | 100% | Phân lớp 9 môn thi vào 3 GĐ dựa vào điểm thi đầu vào; Cây Chương - Bài học; 4 tab học liệu (Video YouTube, Tri thức Panorama SGK & Bẫy ĐGNL, Lịch Live Google Meet, Quiz củng cố) |
+| 29 | **Chuẩn Hóa Tên Gọi Menu Sidebar & Nhãn Chức Năng Sang Ngôn Ngữ Người Dùng Trực Quan** | `Sidebar.jsx`, `MetricsGrid.jsx`, `DiagnosticAssessmentPage.jsx`, `AdaptiveQuizModal.jsx` | 🟢 Hoàn thành | 100% | Loại bỏ thuật ngữ kỹ thuật/sư phạm khó hiểu (DAG, ZPD, Socratic, BKT); đổi tên: Tổng quan học tập, Thi đánh giá đầu vào, Lộ trình học cá nhân, Luyện tập thích ứng, Gia sư AI gợi mở; phân nhóm Học tập & Luyện thi, Hỗ trợ & Phân tích |
+| 30 | **Màn Hình Cài Đặt Tài Khoản & Hồ Sơ Năng Lực (Account Settings)** | `AccountSettingsPage.jsx`, `authService.js`, `App.jsx`, `Navbar.jsx` | 🟢 Hoàn thành | 100% | Triển khai màn hình Cài đặt tài khoản 5 tabs (Hồ sơ cá nhân, Mục tiêu 1200 điểm, Liên kết phụ huynh Cha/Mẹ & Học bạ điện tử ĐGNL, Đổi mật khẩu, Tùy chọn AI); tích hợp mã kết nối VIP card, bộ chọn avatar 3D và nút in/xuất học bạ PDF |
+
+
+
+
+
+
+## [22/10/2026] - Submission progress
+
+| Component | Status | Detail |
+|---|---|---|
+| Diagnostic submission FE | Completed | Require backend submission ID, theta, placement and per-question grading; no local result fallback. Build passed; targeted lint has warnings only. |
+
+
+### Campus prerequisite correction [22/10/2026]
+
+- Apply changes to the lowercase v-eval-web-client project. Before loading any diagnostic exam, require authentication and fetch student profile plus active campuses.
+- Missing/inactive campus opens a selection dialog. Confirm campus through PUT /api/v1/students/me/profile before continuing; failed reads/writes do not enter the exam. Existing valid campus requires no new selection.
+- Auto-start begins in setup until prerequisites and exam loading succeed. No mock campus list. Backend unchanged.
+- Production build passed; authenticated end-to-end writes not tested.
+
+
+### Real campus selector [22/10/2026]
+
+- Navbar reads active campuses from GET /api/v1/campuses and the student campus from GET /api/v1/students/me/profile. Removed mock campus list and default campus.
+- Student selection is saved through PUT /api/v1/students/me/profile; update selection only after server confirmation. Errors appear beside the selector. Diagnostic setup dispatches a campus update to synchronize Navbar.
+- Non-student campus selection is read-only. Backend registration does not accept CampusId; campus remains a profile setup step before the diagnostic exam.
+- Live read-only campus API returned CS_THU_DUC and CS_QUAN_10. Vite build passed; targeted lint has warnings and no errors. Authenticated writes were not exercised. Backend unchanged.
+
+| Item | Status | Validation |
+|---|---|---|
+| Real Navbar campus selector | Implemented | Build passed; authenticated save requires account validation. |
+
+
+### Read-only campus badge [22/10/2026]
+
+- Navbar displays the saved campus name from live API data as plain text. Removed selection control and profile write handler. Missing campus shows an unset state; loading and API errors remain explicit.
+- Production build passed. Backend unchanged.
+
+
+### Mandatory campus prerequisite before all exam entry paths [22/10/2026]
+
+- Removed premature testing transitions from passcode confirmation and retake entry; auto-start no longer requests fullscreen before prerequisite checks.
+- Exam loading and timer start happen only after the saved campus is verified against live active campuses. Missing campus requires registration in the pre-exam dialog and confirmed profile save.
+- Updated Vietnamese prerequisite messaging. Account registration remains separate; backend unchanged.
+- Validation: production build passed. Isolated handler checks passed for missing campus, valid campus, profile API failure and campus API failure; only valid campus loads the exam and enters testing. No authenticated live writes.
+
+
+### Exam exit control [22/10/2026]
+
+- Removed the in-exam Exit button and its exit confirmation modal/navigation path. Submit remains the normal completion action.
+- Added beforeunload warning during testing and submission analysis, cleaned up when leaving those states. Browsers retain control over closing/reloading tabs; no absolute browser exit lock is claimed.
+- Production build passed. Backend unchanged.
+
+
+### Diagnostic report visual refresh [22/10/2026]
+
+- Shared DiagnosticResultSummary renders a dark introductory panel and responsive score, IRT and duration metrics for both historical and newly submitted results. Removed overall placement and hardcoded national percentile claims from these summaries.
+- History table removes the overall placement column and play/retry action; keeps the explicit report action. Refined spacing, alternating rows and report button styling.
+- History accuracy is derived from correct/total counts, preserving zero; duration no longer defaults to a fabricated 30 minutes. No subject placement is invented and backend placement processing is unchanged.
+- Validation: production build and targeted lint passed (existing warnings remain). Visual browser verification not performed.
+
+| Component | Status | Detail |
+|---|---|---|
+| Shared diagnostic summary and history presentation | Implemented | Build passed; responsive CSS implemented; browser visual review pending. |
+
+
+### Compact report header [22/10/2026]
+
+- Confirmed the shared report summary contains no exam ID label. Redesigned historical report navigation with an accessible compact back button, title and separate submission date.
+- Reduced setup top padding, report section gaps and summary hero height; refined gradient and concise report heading. No scoring or API changes.
+- Validation: production build passed. Browser visual review not performed.
+
+
+### Account settings banner redesign [22/10/2026]
+
+- Replaced only the account settings header with AccountSettingsBanner: light blue/white split layout, compact navigation, profile card and existing target score. Removed hardcoded theta and technical JWT badge from this banner.
+- Settings tabs, lower cards/forms and save handlers remain unchanged. Responsive single-column layout on small screens.
+- Validation: production build and targeted banner lint passed. Browser visual verification not performed.
+
+
+### Repair incomplete banner undo [22/10/2026]
+
+- Removed the dangling AccountSettingsBanner import and component call after its file was undone. Restored the previous inline header only; lower settings content unchanged.
+- Validation: reproduced unresolved import before the fix; production build passed after restoration. Banner redesign reverted.
+
+
+### Academic save and security accuracy [22/10/2026]
+
+- Academic save requires confirmed targetScore/campusId from the profile API. Errors show failure without local success/cache writes; browser cache failure after confirmed server save does not misreport server failure. Campus changes notify Navbar. Zero target scores load correctly.
+- Disabled unsupported university aspiration input and removed its mock default; explicitly marked unavailable for persistence.
+- Removed fabricated Chrome/IP/session status and fixed-refresh claims. Logout copy now describes only the current browser session. Real password API flow unchanged; backend token revocation behavior unchanged.
+- Validation: production build passed; isolated save checks passed for success, API failure, incomplete response and browser-cache failure. No live profile/password writes.
+
+
+### Academic save and security accuracy [22/10/2026]
+
+- Include the existing account settings page, Navbar/App entry and authentication service integration required to expose these fixes.
+- Academic saves require confirmed target score/campus response; API failures show errors without local success. Unsupported aspirations are disabled.
+- Removed mock Chrome/IP/session information; logout describes only the current browser session. Password changes use the existing backend API.
+- Build passed; four isolated academic-save checks passed. No live profile/password writes. Backend unchanged; other existing family/preferences demo behavior is outside this fix.
+
+
+### Tailwind canonical class cleanup [22/10/2026]
+
+- Normalized DiagnosticAssessmentPage classes using the installed Tailwind design system: gradient aliases, flex-shrink alias, z-index and stroke arbitrary values now use canonical utility names. No application logic changes.
+- Production build passed. IDE diagnostics cannot be read directly; editor may need to refresh diagnostics.
+
+
+### Flow 1 to Flow 2 API integration [22/10/2026]
+
+- Main roadmap export now uses ConnectedRoadmapPage with backend diagnostic history/results, existing roadmap retrieval, explicit creation and node detail. No mock imports in the active page. Existing demo source is preserved.
+- Request generation uses diagnosticSubmissionId, examDate and studyHoursPerDay; reads actual student identity and completed server submissions. No automatic class clustering or bulk enrollment.
+- Contract audit: stages group domains, not per-subject learning phases. Backend does not return subject learningPhase; generation targetScore is fixed at 800. Documented roadmap/class request and response fields in flow_2_api_contract.md.
+- Video/quiz execution and individual-subject phase analysis remain pending backend contract/integration; no fabricated results. Backend unchanged.
+- Validation: production build passed; targeted lint has warnings only. No authenticated live writes; full browser integration not verified.
+
+
+### Frontend checkpoint before upstream review [22/10/2026]
+
+- Checkpoint remaining lowercase frontend work: Flow 1 Tailwind aliases, existing roadmap demo/content and menu naming, and real diagnostic-to-roadmap API integration. Main roadmap export uses the connected page; demo source remains preserved.
+- Known gaps: no backend per-subject phase response; video/quiz execution not integrated; target score in BE generation fixed at 800. No claim of full Flow 2 completion.
+- Validation: latest production build passed; targeted connected-roadmap lint exits successfully with warnings. No authenticated writes or end-to-end browser verification.
+- Excludes backend controller edits, uppercase frontend and configuration backups.
+
+
+### [22/10/2026] - Restore previous roadmap interface
+
+- Restored the roadmap export to the preserved RoadmapLearningPage component at the user's request. The connected API form is no longer the active roadmap screen; its source remains available.
+- The restored page uses its existing demo data and interactions. This does not establish a live backend roadmap integration.
+- Validation: npm run build passed with a bundle-size warning. Browser appearance has not been visually verified. No commit or push performed for this restoration.
+
+
+### Role workspaces [22/10/2026]
+
+- Centralized exact Identity role mapping for STUDENT, TEACHER, ACADEMIC_MANAGER, ACADEMIC_DIRECTOR, ADMINISTRATOR and PARENT. Unknown roles have a restricted workspace; multiple roles use administrator/director/manager/teacher/parent/student priority.
+- Login and session restoration enter the matching dashboard. Desktop/mobile sidebars share role-specific menus and the existing layout. Student-only dashboard tabs and exam prompts are guarded; role labels are shared across navbar/settings.
+- Non-student workspaces have navigation cards and explicit unfinished-feature screens. No operational CRUD or backend authorization was added; existing TeacherDashboardView source remains preserved. Student roadmap restoration remains in place.
+- Validation: production build passed with bundle-size warning; targeted lint passed with warnings; isolated role/access matrix passed for six roles, multiple roles, unknown roles and cross-role denial. No browser or live-login verification.
+
+### [02/11/2026] - Frontend role workspace checkpoint
+
+- Checkpoint existing role-specific navigation, login/session routing, shared role labels and student-tab guards for six Identity roles.
+- Restore the preserved demo roadmap as the active roadmap screen. Non-student business screens remain placeholders pending API integration.
+- Validation on 02/11/2026: npm run build passed with a bundle-size warning; npm run lint exited successfully with warnings. Browser and live-login behavior were not verified in this checkpoint.
+### [08/11/2026] - CF1 diagnostic history from server
+
+- Diagnostic history now loads completed submissions for the signed-in student from Practice API; legacy localStorage history/results and sample factories are ignored.
+- Added loading, empty, API error/retry and report-loading states. Server ownership and submission IDs are checked; stale responses are discarded.
+- Successful submission refreshes server history while showing its confirmed result immediately. Historical reports use the result endpoint; question text/options are unavailable in its DTO and explicitly identified as unavailable.
+- Summary DTO lacks theta, so completed result details are fetched for the trend chart. This adds one detail request per completed submission.
+- Validation: production build passed with bundle-size warning; targeted oxlint passed with warnings. Browser/live API behavior has not been verified. Timer, submission retry and proctoring fixes remain outside this change.
+
+### [09/11/2026] - CF1 direct diagnostic entry
+
+- The history header New Test button now starts the diagnostic assessment instead of navigating to the question bank; disabled during loading.
+- Existing flow checks login and Campus, requests GET /api/content/diagnostic-test, then enters testing after a nonempty exam response. Missing Campus prompts registration before continuing; API failure remains on the error flow.
+- Validation: npm run build passed with bundle-size warning. No live API/browser verification. Frontend-only implementation; no backend edits.
+
+### [09/11/2026] - CF1 timestamp-based exam timing
+
+- Added a frontend exam clock retaining milliseconds across question revisits and rounding to integer seconds only for display/payload. Unseen questions send zero instead of the previous fabricated 25-second default.
+- Submission sends the actual assessment start timestamp. Countdown derives from an absolute deadline, refreshes on focus/visibility changes, and caps measured question time at the deadline. Timing pauses while submitting; failed submissions retain the original deadline.
+- Read-only contract check: existing BE validator accepts TimeSpentSeconds >= 0 and StartedAt is already supported; no backend edits required.
+- Validation: npm run build passed with bundle-size warning; three node:test cases passed for revisits/subsecond time, delayed callbacks/deadline, and submission pause/resume. Live browser/API behavior remains unverified. Submission locking, idempotency and reload recovery remain separate work.
+
+### [09/11/2026] - CF1 account isolation
+
+- Removed shared diagnostic-result writes and obsolete guest-result linking on login. Clear legacy diagnostic keys from both browser storages on API client initialization, token updates and logout; preserve unrelated storage.
+- Remount diagnostic assessment by user ID so in-progress answers/results do not carry across accounts. Submission responses must match the current owner and login session; ignore late success/error/UI updates after logout, account change or unmount.
+- Removed Navbar theta badge reading shared cache and its fabricated default score/admission percentage. Diagnostic history remains server-backed with ownership checks.
+- Validation: production build passed with bundle-size warning; five node tests passed (two privacy cleanup tests and three timing regressions). Browser account-switch and live API tests remain unverified. No backend edits; server authorization remains outside this frontend fix.
+
+### [09/11/2026] - CF1 three distinct diagnostic exams
+
+- Show completed distinct diagnostic exam count out of three. Only COMPLETED DIAGNOSTIC submissions contribute; duplicate submissions of one exam do not increase progress.
+- Every diagnostic entry reloads owned server history. Block entry at three completed exams or when Content returns an already completed exam; allow a new exam below the limit. Missing exam ID or invalid history blocks entry.
+- Existing BE may return the same sole exam; FE reports that no new exam was received rather than allowing a repeat. BE selection of an uncompleted exam and multi-exam theta aggregation remain backend responsibilities, not implemented here.
+- Validation: production build passed with bundle-size warning; three eligibility tests passed for new student, distinct count/type/status/limit and invalid ownership/history. Live browser/API not tested. No backend edits.
+
+### [09/11/2026] - CF1 completed-exam dialog polish
+
+- Shortened completed-exam notice to a title and one waiting sentence. Added a three-segment progress indicator with completed count, success icon and explicit return-to-history action.
+- Clear selected report before this dialog so closing it returns to the history overview. Added dialog role and accessible title/progress labels.
+- Validation: npm run build passed with bundle-size warning. No browser visual verification; frontend only.
+
+### [09/11/2026] - CF1 freeze submission before sending
+
+- Create one immutable submission payload before POST. Retries reuse the original student/exam IDs, start timestamp, answers and per-question durations. Removed fallback exam ID.
+- Submission failures stay in the analyzing/submission screen with an explicit retry action; answer changes are guarded once a snapshot exists. Added synchronous in-flight guard against overlapping submission calls; warning count no longer resets on submission.
+- Report review uses frozen submitted choices/times. Snapshot resets only when a valid new assessment starts. Payload remains in memory; reload recovery, backend duplicate handling and ambiguous-success reconciliation are separate work. Three-warning pre-submit delay is unchanged.
+- Validation: production build passed with bundle-size warning; two snapshot tests passed for immutable retry data and missing IDs. Live browser/network-failure scenarios not verified. No backend changes or new API fields.
+
+### [11/11/2026] - CF1 retry reconciliation, recovery and weak skills
+
+- Before retrying a frozen submission, inspect the owned completed diagnostic history by exam ID and fetch any saved result. A failed history check blocks another POST. Render confirmed server choices/timing when recovering an already saved result.
+- Three violations now trigger submission immediately instead of the former 3.5-second delay. Input guards block changes after the threshold or deadline. Warning count remains FE-only because the current API contract has no warning/reason fields.
+- Save a versioned draft per student in localStorage, including exam, answers, flags, warning count, original deadline, millisecond timing and frozen payload. On re-entry, check server history before restoring; completed results open their report, expired/violation/frozen drafts stay locked, and active drafts resume with the original deadline. Remove draft after confirmed completion. Storage failure displays a warning; recovery network failure blocks starting another exam until retry.
+- Added weak-skill cards with skill/domain, correct count and percentage for both historical and new reports. Question domains now use server domain IDs/names; unavailable domains are explicitly unknown rather than inferred from wording or question order. Existing Campus requirement is preserved.
+- Validation: production build passed with bundle-size warning; all 15 node tests passed, including draft ownership/corruption, deadline restoration, saved-result reconciliation, network failures and domain grouping. Targeted oxlint exited successfully with warnings. No live browser/API or visual verification.
+- Limits: local drafts apply only to the same browser and can be lost if storage is cleared/disabled; closed-page time reduces remaining time but is not attributed to a question. History lookup is not backend idempotency; an in-flight server request can still race a retry. No backend edits; reliable cross-device drafts, warning persistence and multi-exam aggregation need BE support.
+
+### [12/11/2026] - CF1 confirmed result survives draft cleanup failure
+
+- Added best-effort diagnostic draft removal. Storage deletion exceptions cannot interrupt a confirmed submission result or the recovery path opening an already saved result.
+- Cleanup targets only the current student draft. If deletion fails, the next recovery still checks server history before permitting resumed editing or sending.
+- Validation: all 7 recovery tests passed, including blocked storage and owner-specific deletion; npm run build passed with bundle-size warning. Browser storage-failure behavior not manually verified. Frontend only; no backend changes.
+
+### [12/11/2026] - CF1 frontend checkpoint before synchronization
+
+- Checkpoint all pending lowercase frontend work: server-backed diagnostic history, account isolation, timestamp timing, three-distinct-exam eligibility, concise progress dialog, frozen submission/retry reconciliation, immediate three-warning submission, per-student draft recovery and weak-skill reporting.
+- Confirmed server results remain successful even when draft cleanup fails. Backend source and configuration backups are excluded. Uppercase frontend has pre-existing unresolved conflicts and is not part of this checkpoint.
+- Validation: production build passed with bundle-size warning; all 17 node tests passed. Live browser/API and visual behavior not verified. Remaining limits include multi-tab coordination, backend idempotency, warning persistence, and server selection/aggregation of multiple diagnostic exams.
+
+
+<!-- Imported develop documentation; retained for merge traceability. -->
+
 # KIẾN TRÚC & BẢNG THEO DÕI TIẾN ĐỘ CHỦ THỂ (PROCESS & PLANNING) - V-EVAL WEB CLIENT
 
 ---
@@ -146,6 +431,7 @@
 | 92 | **Ma Trận Nhiệt Lớp Học 2D Thời Gian Thực & Can Thiệp Nhóm Bàn Vi Mô 1-Click (`TeacherDashboardView`)** | `src/components/dashboard/TeacherDashboardView.jsx` | 🟢 Hoàn thành | 100% | Đấu nối `getClassHeatmap` & `forceAggregateClassHeatmap`, lọc Domain/Mastery/Risk, cảnh báo `CRITICAL_RED`, nhãn phân cực `isBimodal` và CTA 1-Click mở `ClassMicroGroupsModal` |
 | 93 | **Cổng Phụ Huynh Đồng Hành (`R_exam` Readiness) & Bản Đồ Nhiệt So Sánh Cơ Sở (`ParentDashboardView`, `CampusManagerDashboardView`)** | `ParentDashboardView.jsx`, `CampusManagerDashboardView.jsx` | 🟢 Hoàn thành | 100% | Đấu nối `getParentDashboard` (chỉ số `R_exam` 3 trụ cột, kỷ luật 12h/tuần, AI Parent Alerts) và `getCampusComparativeHeatmap` (đối sánh 4 miền năng lực giữa các lớp cơ sở) |
 | 94 | **Đồng Bộ Hai Chiều Bài Làm Chẩn Đoán Thực Tế Sang Phân Tích Học Tập Core Flow 5, Navbar & Sidebar (`Local History Hydration & Background Sync`)** | `practiceService.js`, `DiagnosticAssessmentPage.jsx`, `LearningAnalyticsView.jsx`, `App.jsx`, `Navbar.jsx`, `Sidebar.jsx`, `tests/practiceService.flow5.test.js` | 🟢 Hoàn thành | 100% | Sửa định danh `user.id`, tự động POST kết quả khảo thí 30 câu lên `Practice Service`, bù đắp tức thì điểm V-ACT thực, `Theta_0`, Radar 4 miền, chuỗi tự học và tên học sinh từ lịch sử bài làm thật khi `needsOnboarding = true`, xóa bỏ số liệu cứng trên Navbar & Sidebar (`6/6 tests pass`) |
+| 95 | **Nâng Cấp UI/UX Modal Nạp Cây Tri Thức & Làm Rõ 2 Tùy Chọn Độ Sâu Bóc Tách AI** | `src/components/curriculum/CurriculumExplorerView.jsx` | 🟢 Hoàn thành | 100% | Phân tách khối Slicing trang PDF, thiết kế 2 card tương tác chọn độ sâu (Chuyên sâu ĐGNL 2-4 dạng Bloom L1-L4 vs Tiêu chuẩn mục lục cốt lõi) kèm hộp thông báo ngữ cảnh động |
 | 95 | **Tinh Gọn Khung Chat Gia Sư AI Socratic & Xóa Bỏ Các Thẻ Khái Niệm Cứng (`Mạng Lưới Tri Thức 3-Hop`, `Dạng Bài Archetype`, `ARCH_LOGIC_01`)** | `src/components/modals/AISocraticTutorModal.jsx`, `src/components/dashboard/AISocraticTutorWidget.jsx` | 🟢 Hoàn thành | 100% | Loại bỏ hoàn toàn cột cứng `Mạng Lưới Tri Thức 3-Hop`, `Dạng Bài Archetype`, `Toán logic mệnh đề & suy luận kéo theo`, `ARCH_LOGIC_01`, định lý & bẫy ngộ nhận đảo cố định; chuyển sang giao diện khung chat 1 cột tập trung hiển thị đúng ngữ cảnh câu hỏi thực tế |
 | 96 | **Tối Ưu Hóa Số Liệu Dashboard, Tự Động Kích Hoạt Lộ Trình DAG Sau Khảo Sát & Icon Nổi Floating AI Socratic Tutor** | `src/App.jsx`, `MilestoneCard.jsx`, `LearningAnalyticsView.jsx`, `practiceService.js` | 🟢 Hoàn thành | 100% | Thay thế AISocraticTutorWidget cồng kềnh trên dashboard bằng nút nổi FAB góc phải tinh gọn; chuẩn hóa getMyRoadmap kèm studentId và tự động mở khóa chặng học DAG thực tế từ bài thi chẩn đoán đã hoàn thành; ngăn chặn điểm ước tính IRT bị ghi đè về 0; khóa vĩnh viễn màn hình onboarding lặp lại khi đã có lịch sử thi |
 | 97 | **Tách Bạch Hội Thoại Tự Do Khỏi Ngữ Cảnh Đề Thi & Khử Bỏ Dummy Options A/B** | `src/components/modals/AISocraticTutorModal.jsx`, `src/services/practiceService.js` | 🟢 Hoàn thành | 100% | Nhận diện chế độ chào hỏi/hỏi tự do; khử triệt để việc tự ý tiêm phương án A/B giả lập; phản hồi sư phạm tự nhiên, không quy chụp học sinh chọn sai khi chỉ nhắn 'hi' |
@@ -200,3 +486,293 @@
 | 144 | **Tái Cấu Trúc Toàn Diện Thanh Điều Hướng Subpage Segmented Control Hiện Đại, Hỗ Trợ Động Giám Đốc Học Thuật (Director) & Kiểm Tra Email Đa Tầng Cấp Phát Tài Khoản** | `src/App.jsx`, `src/components/admin/AccountProvisioningView.jsx`, `src/utils/emailValidator.js` | 🟢 Hoàn thành | 100% | Tái thiết kế thanh điều hướng theo chuẩn Segmented Control hiện đại (`bg-slate-100/90`, tab active thẻ nổi trắng `bg-white text-blue-700 shadow-sm`), triệt tiêu 100% lỗi ngắt dòng 2 hàng lộn xộn; nhận diện động Cổng Giám Đốc Học Thuật (`ACADEMIC_DIRECTOR`); tích hợp bộ kiểm tra email đa tầng DNS MX và gợi ý sửa lỗi typo `mail.com` -> `gmail.com` trực tiếp vào ô cấp tài khoản; `npm run build` đạt 0 Error |
 | 143 | **Phân Hệ Quản Lý Tài Khoản Ngừng Hoạt Động (Soft Delete / Inactive) & Thùng Rác Lưu Trữ** | `src/components/admin/AccountProvisioningView.jsx`, `src/services/userService.js` | 🟢 Hoàn thành | 100% | Tách biệt 2 chế độ xem: "Tài Khoản Đang Hoạt Động" (chỉ hiện active, ẩn tài khoản vô hiệu hóa) vs "Tài Khoản Đã Ngừng Hoạt Động (Ẩn)" (kèm badge đếm realtime); tích hợp 2 Modal xác nhận Ngừng hoạt động (icon UserX, cảnh báo bảo toàn dữ liệu) và Khôi phục hoạt động (icon RotateCcw); hỗ trợ click thẻ thống kê chuyển tab tức thì; `npm run build` đạt 0 Error |
 | 144 | **Mở Rộng Không Gian Làm Việc Toàn Màn Hình (`w-full`) Sát Sidebar, Tinh Chỉnh Bảng Tài Khoản 1 Dòng & Hỗ Trợ Query Params Trong `apiClient.js`** | `src/App.jsx`, `src/components/admin/AccountProvisioningView.jsx`, `src/components/dashboard/CampusManagerDashboardView.jsx`, `src/components/dashboard/ParentDashboardView.jsx`, `src/components/payment/TuitionPaymentView.jsx`, `src/services/apiClient.js` | 🟢 Hoàn thành | 100% | Thay thế `max-w-7xl mx-auto` bằng `w-full` đồng bộ với `Navbar` & `Sidebar` triệt tiêu khoảng trống thừa và thanh cuộn ngang; chuẩn hóa `whitespace-nowrap` cho toàn bộ badge vai trò, trạng thái và nút thao tác trên 1 dòng; bổ sung serialize `options.params` (`URLSearchParams`) và `apiClient.patch` trong `apiClient.js`; `npm run build` (`3008 modules`, 0 errors) |
+| 145 | **Nâng Cấp Toàn Diện UI/UX Modal Bóc Tách Khung Tri Thức Chuyên Đề & Làm Rõ 2 Tùy Chọn Độ Sâu Nhận Diện AI** | `src/components/curriculum/CurriculumExplorerView.jsx` | 🟢 Hoàn thành | 100% | Tách biệt thanh cấu hình cắt lát trang PDF độc lập; thiết kế 2 Card tương tác lớn chọn độ sâu bóc tách (`deep` vs `standard`); bổ sung badge Khuyên dùng / Chuyên sâu lý thuyết và hộp giải thích ngữ cảnh động tức thời |
+| 146 | **Chuẩn Hóa Xử Lý Lỗi API & Bóc Tách RFC 7807/9110 Problem Details Thân Thiện Người Dùng** | `src/services/apiClient.js`, `src/components/curriculum/CurriculumExplorerView.jsx` | 🟢 Hoàn thành | 100% | Tự động phân giải `application/problem+json`, trích xuất `data.detail`/`message`/`errors` thay vì hiển thị raw JSON string; phân loại Toast thông minh cho tình huống thiếu API Key, Rate Limit / Quota 429 và bóc tách ngoại lệ thân thiện |
+| 147 | **Làm Sạch Option Hóa Học Khối 4, Khử Triệt Để `undefined` Khối 2 & Sửa Dropdown Miền Năng Lực (`useRef`)** | `MathText.jsx`, `CurriculumStudioEditor.jsx`, `CurriculumExplorerView.jsx` | 🟢 Hoàn thành | 100% | Bổ sung `cleanOptionDisplay` lột bỏ nháy bọc `'...'` và tiền tố `A.`; lọc bỏ dòng `undefined` trong `MathText.jsx` và `sampleProblem`; thay thế backdrop fixed bằng `useRef` + `mousedown` ngoài chống kẹt thanh cuộn |
+| 148 | **Nút Xóa Nhanh Miền Năng Lực Dư Thừa Trực Tiếp Trên Tab Bar Kèm Xác Nhận An Toàn Sư Phạm** | `CurriculumExplorerView.jsx`, `contentService.js` | 🟢 Hoàn thành | 100% | Hiển thị nút xóa `Trash2` trên thẻ miền tùy chỉnh/dư thừa ngoài 5 miền chuẩn V-ACT; xác nhận xóa an toàn và gọi `contentService.deleteNode(domain.id)` xóa cascade |
+| 149 | **Khắc Phục Triệt Để Lỗi Hiển Thị LaTeX & KaTeX (Phương Trình Hóa Học, Phân Số Gãy Dòng, Chỉ Số Dưới & Tùy Chọn Trắc Nghiệm)** | `src/components/common/MathText.jsx`, `src/components/curriculum/CurriculumExplorerView.jsx`, `src/components/curriculum/CurriculumStudioEditor.jsx` | 🟢 Hoàn thành | 100% | Hàn gắn công thức phân số bị ngắt dòng giữa chừng `mergeUnclosedLatexLines`, tự bọc phương trình phản ứng hóa học có mũi tên vào khối math, tự nhận diện chỉ số dưới biến số `C_nH_{2n}O_2`, khử triệt để nested dollars trong `{...}`, lột sạch nháy đơn option trắc nghiệm và chuyển đổi công thức phẳng sang chỉ số dưới hóa học; `npm run build` thành công 100% |
+| 150 | **Bộ Tokenizer Độc Lập An Toàn, Chống Nuốt Tiếng Việt, Triệt Tiêu Lỗi Chữ Đỏ KaTeX & Hạ Cấp Block Math Ngắn** | `src/utils/mathTokenizer.js`, `src/components/common/MathText.jsx` | 🟢 Hoàn thành | 100% | Triển khai `mathTokenizer.js`, bảo vệ văn xuôi tiếng Việt chống nuốt dấu cách, hạ cấp `$$...$$` ngắn (<40 ký tự) thành inline math chống vỡ dòng văn bản, nối dòng thông minh cho công thức gãy (`C_nH_{2n}` & `O_2`) và dấu hai chấm rớt dòng; `npm run build` hoàn thành trong 2.68s |
+| 151 | **Render Bảng Markdown Table Sư Phạm, Bóc Dấu Nháy Đơn Options & Triệt Tiêu Token Đỏ 'undefined'** | `src/components/common/MathText.jsx`, `src/components/curriculum/CurriculumExplorerView.jsx` | 🟢 Hoàn thành | 100% | Triển khai `renderMarkdownTable` chuyển bảng Markdown sang `<table>` glassmorphic, hỗ trợ KaTeX inline từng ô, bóc sạch nháy đơn `'...'` quanh phương án trắc nghiệm ở Khối 4, nối dòng phương án gãy và triệt tiêu chữ undefined màu đỏ |
+| 152 | **Chuyển Nhánh Main, Đóng Gói Docker SPA Với Nginx Reverse Proxy & Tự Động Định Tuyến Domain pickic.io.vn** | `src/services/apiClient.js`, `nginx.conf`, `docker-compose.yml` | 🟢 Hoàn thành | 100% | Chuyển toàn bộ repo sang nhánh `main`; triển khai `getGatewayBaseUrl()` tự động nhận diện domain `pickic.io.vn` / `app.pickic.io.vn` trỏ về Gateway SSL `https://api.pickic.io.vn`; đóng gói SPA với Nginx Alpine nén Gzip, SPA fallback và proxy `/api/`; volume mapping `dist/` vào container `v_eval_web_client` phục vụ tức thời |
+| 153 | **Khắc Phục Lỗi Render KaTeX Đỏ (Công Thức Đốt Cháy Triglyceride), Chống Nuốt Tiếng Việt Vào Math Mode & Chuẩn Hóa Phương Trình Hóa Học** | `src/components/common/MathText.jsx` | 🟢 Hoàn thành | 100% | Lọc unescaped $ bên trong KaTeX và tự động cân bằng ngoặc nhọn { } trong renderKatexHtml triệt tiêu chữ đỏ katex-error; bóc tách token theo dòng tránh match regex mũi tên xuyên dòng; loại bỏ regex chèn $ tách -OH / -COOH thành $-$OH$; tự động phục hồi văn bản tiếng Việt bị kẹt trong $...$; npm run build sạch 100% |
+| 154 | **Khử Lỗi Math Rò Rỉ Đa Dòng (suyragốcacidlà), Tách Nhãn Phương Trình Hóa Học & Chuẩn Hóa Khoảng Trắng Chỉ Số Dưới** | `src/components/common/MathText.jsx` | 🟢 Hoàn thành | 100% | Giới hạn inline math $[^$\r\n]+?$ không quét qua dấu xuống dòng; tự động tách nhãn 'Phương trình:' bọc phương trình thành display math $$...$$; sửa lỗi (OH)_ 3 thành (OH)_3; bọc công thức C_{15}H_{31}COOH; ghép nối ester gãy dòng $C_nH_{2n}\nO_2$; npm run build 2.82s |
+| 155 | **Khắc Phục Triệt Để Lỗi Render KaTeX Hộp Đỏ (Frac & Text Spacing), Tự Động Bọc Phương Trình & Triệt Tiêu #cc0000** | `src/components/common/MathText.jsx` | 🟢 Hoàn thành | 100% | Chuẩn hóa khoảng trắng `\frac{...} {...}` và `\text {mol}`; làm sạch `{2 }` -> `{2}`; tự động nhận diện và bọc phương trình toán tính toán có `\frac` (`k = \frac{2n + 2 - 2H}{2}` -> `$k = \frac{2n + 2 - 2H}{2}$`, `n = \frac{8,8}{88} = 0,1 \text{mol}`); thay thế thẻ lỗi katex-error bằng font-serif math loại bỏ hoàn toàn chữ đỏ #cc0000; npm run build hoàn thành trong 2.66s |
+| 156 | **Tích Hợp Bộ 4 Thẻ Chế Độ Bóc Tách Theo Loại Tài Liệu Vào Modal Chuyên Đề & Khắc Phục Dấu $ Lồng Trong Ngoặc KaTeX** | `src/components/curriculum/CurriculumExplorerView.jsx`, `src/components/common/MathText.jsx` | 🟢 Hoàn thành | 100% | Bổ sung 4 thẻ chọn chế độ bóc tách (`STEM_FORMULAS`, `TEXT_HUMANITIES`, `VISION_AI`, `AUTO_LOCAL`) vào Modal Nhập chuyên đề AI; truyền `ocr_mode` qua FormData; dọn sạch dấu `$` lồng trong ngoặc `{k - 1$}` và `(n \ge 2$)`; nối `$C_nH_{2n}$O_2`; hỗ trợ ngoặc lồng nhau trong `\frac`; npm run build hoàn thành trong 2.89s |
+| 157 | **Tái Thiết Toàn Diện Modal AI Chuyên Đề Màn Rộng, So Sánh Chuyên Sâu vs Tiêu Chuẩn, Thanh Tiến Độ Mượt & Khắc Phục Triệt Để 6 Lỗi KaTeX** | `src/components/curriculum/CurriculumExplorerView.jsx`, `src/components/common/MathText.jsx` | 🟢 Hoàn thành | 100% | Mở rộng Modal lên `max-w-6xl` (`max-h-[94vh]`), bố cục Studio 2 cột hiện đại (5 cols / 7 cols); bảng so sánh trực quan thẻ lớn Chuyên Sâu ĐGNL (chuẩn 4 khối sư phạm, Bloom L1-L4, [MATH_GRAPH], [VARIATION_TABLE]) vs Tiêu Chuẩn; bộ 4 thẻ OCR mode; thanh tiến độ easing động không đọng 50%; khôi phục ký tự điều khiển ASCII `\x0c` -> `\f` giải quyết triệt để lỗi đỏ `\frac` KaTeX ParseError; chuẩn hóa chỉ số dưới tiếng Việt `m_{\text{chất béo}}`; chống rò rỉ math mode nuốt khoảng trắng; npm run build 3.0s |
+| 158 | **Bảo Toàn Dấu `$` Đóng Trước Dấu Phẩy, Tự Động Đóng Công Thức Trước Tiếng Việt & Thiết Kế 2 Chế Độ Bóc Tách Chuyên Biệt** | `src/components/common/MathText.jsx`, `src/components/curriculum/CurriculumExplorerView.jsx` | 🟢 Hoàn thành | 100% | Loại bỏ regex `\$,` bảo vệ dấu `$` đóng của danh sách công thức hóa học; tự động đóng `$` trước từ tiếng Việt; thiết kế rõ ràng 2 chế độ `EXAM_PATTERNS` vs `THEORY_EXTENDED`; modal widescreen 1650px; `npm run build` hoàn thành trong 6.67s |
+| 159 | **Cơ Chế `wrapUntouchedMath` Chống Lồng Dấu `$`, Toán Tử `\Rightarrow` KaTeX & Chuẩn Hóa Số Thập Phân** | `src/components/common/MathText.jsx` | 🟢 Hoàn thành | 100% | Bổ sung hàm `wrapUntouchedMath` bọc an toàn từng phân đoạn phi-math, triệt tiêu hoàn toàn lỗi lồng dấu `$` bên trong ngoặc đơn như `$(C_{17}H_{35}COO)_3C_3H_5$`; thêm toán tử `\Rightarrow` vào `opPattern` liên kết biểu thức suy luận; tự động dọn khoảng trắng số thập phân `9, 18` -> `9,18`; `npm run build` hoàn thành trong 2.37s |
+
+
+### [12/11/2026] - Merge develop into diagnostic frontend branch
+
+- Resolve 24 conflicted frontend files from develop 115eace. Integrate incoming role portals, curriculum/authoring, payment, notifications, expanded API services and structured math rendering; preserve the local diagnostic assessment lifecycle, profile helpers, account settings and remember-me behavior.
+- Wire the retained diagnostic page into the new portal with the signed-in user and account-specific component key. Student history uses the owned server-backed diagnostic view. Remove incoming shared latest-result loading and prevent seeded/unowned local submission history from reappearing.
+- Combine API query params and PATCH support with proactive token refresh, session-only login, session generation guards and diagnostic privacy cleanup. Refresh preserves the user and selected storage without creating a new login session. Add diagnostic API aliases required by the retained assessment.
+- Fix conditional React hooks in incoming MathGraphView and math-workbench modal. Install the declared jsxgraph dependency; retain its incoming package/lock contract.
+- Validation: production build passed; npm run lint exited zero with warnings; all 21 tests passed (17 diagnostic/privacy, 2 Flow 6 and 2 merge integration cases). Build warns about bundle size and direct eval inside jsxgraph. Browser/live API/visual behavior was not verified.
+- Scope: frontend and progress documentation only. No backend code or configuration backups changed. System-Repo and uppercase frontend have separate merge state; their service code is outside this resolution.
+
+### [12/11/2026] - V-Eval logo integration
+
+- Added the approved generated transparent PNG as src/assets/v-eval-logo-v2.png, keeping its original resolution and alpha. Verified dimensions 1877 x 838 and transparent corner pixel.
+- Added shared BrandLogo component with intrinsic dimensions, responsive width and preserved aspect ratio. Replaced placeholder brand marks in public header, login header, sidebar and mobile portal navbar. Dark public footer uses a white silhouette through CSS filtering.
+- Validation: npm run build passed with existing bundle-size and jsxgraph eval warnings. Browser visual verification not performed. No backend edits; existing staged merge state preserved.
+
+### [12/11/2026] - Frontend merge and branding checkpoint
+
+- Complete the lowercase frontend merge of develop 115eace into TNhan/auth-custom-select-validation, retaining diagnostic lifecycle fixes and integrating incoming portals/services/math tooling.
+- Include approved transparent V-Eval logo and shared BrandLogo integration in public/login headers, sidebar, mobile navbar and dark footer.
+- Validation before commit: all 21 node tests passed; lint exited zero with warnings; production build passed with existing bundle-size and jsxgraph eval warnings. Live browser/API behavior not verified.
+- Commit scope is the frontend repository only. The root repository's separate pending merge, backend repositories, uppercase frontend and configuration backups remain untouched by this commit. No push performed.
+
+| 145 | **Tinh Gọn & Thiết Kế Lại Bố Cục Màn Hình Đăng Nhập (6/6 Cân Xứng, Không Cuộn Trang) + Chuẩn Hóa Lỗi Từ Backend** | `src/utils/apiErrorHandler.js`, `src/services/apiClient.js`, `src/services/authService.js`, `src/utils/emailValidator.js`, `src/components/auth/` | 🟢 Hoàn thành | 100% | Gỡ bỏ thuật ngữ nội bộ (`ZPD`, `IRT`, `DAG`, `CAT`, `Socratic`, `IAM`, `JWT`, `Gateway`, `MX`, `v2.4`) và khung *"Đăng nhập một tài khoản cho mọi vai trò"*; thiết kế lại bố cục `6/6` cân xứng vừa 1 màn hình không scroll; truyền thẳng thông báo lỗi từ BE và fallback sạch khi phản hồi rỗng (`502`/`503`/`504`/offline); `25/25` unit tests pass, `npm run build` sạch |
+
+### [12/11/2026] - Compact portal navigation and account menu
+
+- Keep the sidebar as primary navigation and remove the duplicated role/context/segmented tab strip. Remove the redundant role badge below the sidebar logo.
+- Compact top bar shows current page title, student-only streak chip, notification placeholder and avatar/name menu. Settings, home and logout now live in the account dropdown, with outside-click/Escape dismissal, arrow navigation and accessible labels. Removed static notification unread dot; notification button remains unavailable rather than claiming unread data.
+- On mobile/tablet, a hamburger opens the shared role sidebar in a drawer with focus containment, Escape/backdrop dismissal, scroll locking and close-on-navigation/desktop resize. Desktop retains the sidebar.
+- Greeting text uses role and profile full name; student/parent banners are updated and other role landing pages show a role-aware greeting. Removed the student campaign label; detailed dashboard streak remains.
+- Repository diagnosis before edits: lowercase frontend was clean; System-Repo had 99 pending changes in a separate merge, uppercase frontend had 9 changes including 4 conflicts, and other service repositories had their own pre-existing edits/backups. No reset, commit, push or backend edits performed.
+- Validation: production build passed with existing bundle-size/jsxgraph eval warnings; lint exited zero with warnings; all 21 existing tests passed. Browser visual, keyboard and mobile interactions were not manually verified.
+
+### [12/11/2026] - Refine compact header visual hierarchy
+
+- Add a V-Eval/role breadcrumb and page icon above/beside the stronger page title. Use a subtle tinted background and balanced 72/80px header height without restoring duplicate tab navigation.
+- Show a compact local-date label on wide screens, refine the student streak as a small two-line chip, and restore role context below the account name with a gradient avatar and clear expanded-state styling.
+- Mobile retains compact labels and hamburger navigation. Existing account dropdown and dashboard streak detail are unchanged.
+- Validation: production build passed with existing bundle-size/jsxgraph eval warnings. Browser visual verification not performed; no backend edits, commit or push.
+
+### [12/11/2026] - Student sidebar organization preview
+
+- Reorganize student-only sidebar into Overview, Learning, Assessment and Student Services. Group existing diagnostic and mock-exam actions under an expandable Tests & Mock Exams menu; retain history and analytics as sibling entries.
+- Preserve every existing tab ID, callback, API and assessment behavior. Existing practice action remains Practice rather than claiming a new mistake-notebook workflow. Other roles are unchanged.
+- Submenu opens on the diagnostic tab; child actions retain active highlighting and close the shared mobile drawer after navigation. Expanding the parent does not navigate.
+- Validation: production build passed with existing warnings. No new business logic or tests; browser visual/interaction verification pending. No commit or push.
+
+### [12/11/2026] - Dashboard entry guidance for diagnostic onboarding
+
+- Add an inline first-position student dashboard card above parent linking and the greeting banner. Read completed distinct diagnostic exams from the existing history API and validated local draft for the current student.
+- Show first-assessment, partial-progress, saved-draft, locked-submission, completed and loading/error states. Buttons navigate to existing diagnostic/roadmap screens; no exam is started automatically and no assessment handlers or APIs changed.
+- Partial progress uses Check next assessment rather than claiming a new exam is available. The existing diagnostic entry validates actual availability. No extra Content request is made on dashboard load.
+- Show accurate /3 progress and a retry action on history failure; no demo progress. User/account changes discard obsolete requests. Existing page remains usable; no modal or screen dimming.
+- Validation: production build and lint exited zero with existing warnings. Browser visual/interaction verification not performed. No backend edits, commit or push.
+
+### [12/11/2026] - Colorful diagnostic onboarding card
+
+- Restyle the existing dashboard card with a light blue/indigo/violet gradient, decorative background rings, gradient assessment icon, concise badge and stronger heading hierarchy.
+- Add a white inset progress/action panel with three numbered/checkmarked milestones and gradient CTA. Completed state uses emerald/teal; responsive stacking and all existing state/API/navigation behavior remain unchanged.
+- Validation: production build passed with existing warnings. No browser visual verification, backend edits, commit or push.
+
+### [12/11/2026] - Parent-link card readability
+
+- Increase parent-link heading to 16/18px and description to 14px with comfortable line height. Separate account code into a larger monospace badge and allow heading/badges to wrap.
+- Refine the card with a subtle indigo tint, larger family icon and responsive action area. Shorten duplicate copy, use clear copy confirmation and keep all handlers/API/modal behavior unchanged.
+- Validation: production build passed with existing warnings; browser visual verification not performed. UI only; no commit/push.
+
+### [13/11/2026] - Dashboard setup cards in 7:3 columns
+
+- Place diagnostic onboarding and parent linking in a shared 7fr/3fr grid at xl widths, with equal-height stretching and minimum-width safeguards. Smaller screens stack diagnostic first, parent linking second.
+- Compact diagnostic heading/icon/action panel and use container-width breakpoints so its internal layout responds to available card width, not full viewport width.
+- Parent link card stays vertical with its code and description above two compact action buttons. Pending-parent requests and modal/API handlers are preserved.
+- Validation: production build passed with existing bundle-size/jsxgraph eval warnings. No live browser visual verification. Presentation only; no backend edits, commit or push.
+
+### [13/11/2026] - Account dropdown visual polish
+
+- Refine account menu with a blue/indigo-tinted identity panel, avatar, role badge, improved spacing and icon containers for settings/home.
+- Make logout an explicit solid red full-width action with white icon/text, darker hover and visible keyboard focus. Preserve all existing actions, menu dismissal and navigation behavior.
+- Validation: production build passed with existing bundle-size/jsxgraph eval warnings. No browser visual verification, backend edits, commit or push.
+
+### [13/11/2026] - Separate student history and stabilize curriculum layout
+
+- Student History now has separate Diagnostic, Practice and Mock Exam categories. Diagnostic history reuses the server-backed result view in read-only history mode: no new-exam action, auto-start or draft recovery. Diagnostic entry retains start/resume/progress and links to history instead of duplicating the history table.
+- Practice history displays only current-student ZPD/TOPIC records actually stored by the existing practice UI and labels them browser-local, with answer review. No seeded history or fabricated remote results. Mock history has an explicit unavailable state.
+- Read-only backend inspection found diagnostic list/detail endpoints, but no per-student practice-attempt or mock-exam list endpoint in the current Stages/MockExams controllers. Mock detail exists by submission ID only. Backend list endpoints are needed for complete cross-device practice/mock history; no backend edits.
+- Curriculum loading now reserves a comparable page structure with skeletons; remove the content entrance animation/broad header transition, constrain width/min-width, wrap header actions by available container width, and stabilize scrollbar space. This addresses identified layout-shift/overflow risks; reported browser zoom appearance has not been reproduced directly.
+- Validation: production build and lint exited zero with existing warnings; 21 existing node tests passed. Browser visual, slow-network and category interactions remain unverified. No commit/push.
+
+### [13/11/2026] - Student portal UI and history checkpoint
+
+- Checkpoint pending frontend presentation work: compact account header/menu with red logout, role-aware greetings, shared mobile sidebar and grouped student navigation.
+- Include API-backed diagnostic entry guidance, colorful progress card, 7:3 setup-card layout and readable parent-link controls.
+- Separate diagnostic entry from categorized history. Diagnostic history is server-backed; practice history is explicitly browser-local; mock history awaits a BE list API. Stabilize curriculum loading and width behavior without backend changes.
+- Final validation before commit: all 21 existing tests passed, lint exited zero with warnings, production build passed with existing bundle-size/jsxgraph eval warnings, and git diff whitespace check passed. Browser/live API and reported layout issue remain unverified directly.
+- Commit scope is lowercase frontend only. Root repository pending merge, uppercase frontend and backend service changes are excluded. No push performed.
+
+### [13/11/2026] - Student curriculum catalog and spacious learning workspace
+
+- Add a student-only catalog: subject selection, search and Chapter/Lesson/Pattern accordion with explicit Enter lesson actions. Do not auto-open a lesson or show authoring controls to students.
+- Open selected patterns in a full-application reading workspace with breadcrumb/back navigation, optional outline, Knowledge/Method/Video & Examples tabs, larger reading text and preserved MathText graph/formula rendering. Sidebar is covered while studying; restore catalog focus/scroll on return.
+- Reuse existing curriculum data, quiz generation/submission handlers and quiz modal; extract modal JSX for reuse without changing scoring or API payloads. Existing AI context callback is wired from App. Staff retain the original two-column authoring interface.
+- Video controls use provided safe HTTP(S) source URLs; unsupported sources open in a new tab. Missing content is labelled as being updated. No completion/mastery state or prerequisites are invented, and existing quiz fallback behavior is unchanged.
+- Validation: production build and lint passed with existing warnings; all 21 existing tests passed. Browser visual/media/keyboard flows have not been manually verified. No backend edits, commit or push.
+
+### [13/11/2026] - Student chapter/lesson accordion defaults
+
+- Open only the first chapter and first lesson by default for each subject. Opening another chapter/lesson collapses its sibling; show patterns only after lesson expansion. Search temporarily expands matching results.
+- This changes catalog disclosure state only; lesson content, quiz handlers and APIs are unchanged. Confirmed existing add/edit chapter, lesson and pattern controls remain in the staff authoring view, not the student view.
+- Validation: production build passed with existing warnings. Browser interaction not manually verified. No backend edits, commit or push.
+
+### [13/11/2026] - Preserve independently expanded chapters and lessons
+
+- Correct the previous exclusive accordion behavior at the user's request. Each chapter and lesson now has its own expansion flag; opening a new item does not collapse existing items.
+- Retain first-chapter/first-lesson defaults, per-subject expansion memory while mounted, and search expansion. Only clicking an already expanded item's own heading collapses it. This supersedes the earlier sibling-exclusive behavior.
+- Validation: production build passed with existing warnings. No business logic/API changes, commit or push.
+
+### [13/11/2026] - Chapter-scoped reading outline
+
+- Restrict reading-workspace outline to the current chapter. Show chapter name, flat lesson section headings and their pattern links; no extra nested disclosure controls.
+- Mark current lesson/pattern with highlight, current-page semantics and Studying label. Selecting a link stays within the chapter; a separate action returns to the catalog to choose another chapter.
+- Validation: production build passed with existing warnings. No quiz/API changes, browser visual verification, commit or push.
+
+
+### [13/11/2026] - Dedicated teacher portal and scoped live data
+
+- Added teacher teaching overview with quick links to curriculum authoring, class mastery, exam bank, student diagnostic history and early-warning support. Existing staff chapter/lesson/pattern editing stays in CurriculumExplorerView; student reading workspace remains separate.
+- Teacher navigation no longer routes history/analytics to student screens or exam bank back to curriculum. Removed obsolete teacher Live Q&A shortcut and misleading sidebar zero counts.
+- New portal uses direct API requests without seeded fallback. Exam list/detail use Content endpoints. Heatmap and diagnostic history use the assigned class and its roster. Alert resolution sends mentor_id and resolution_notes and refreshes only after API success. Account/tab remounts and effect cleanup discard obsolete read responses.
+- BE dependencies: no teacher assigned-class list endpoint found in ClassesController, and UserProfileDto has no class assignment. Class-dependent screens show unavailable state until currentUser.classId is supplied. No default/sample class or all-system alert request is issued.
+- BE gap verified read-only: GetAlertsDashboardQueryHandler does not apply MentorId; absent ClassId calls GetAllAlertsAsync. FE always includes a class for teacher alerts, but server-side assignment authorization still requires BE review. Teacher-wide practice/mock submission lists were not found; history is explicitly diagnostic-only.
+- Validation: 24 tests passed including missing-assignment/global-alert guards; lint exited zero with warnings and production build passed with existing JSXGraph eval/bundle warnings. Live teacher login, visual browser review and API authorization not verified. Backend files unchanged; no commit/push.
+
+
+### [13/11/2026] - Curriculum and teacher portal commit checkpoint
+
+- Prepare the lowercase frontend checkpoint containing the student catalog/reading workspace, chapter-scoped outline, teacher overview/navigation, scoped API requests and tests. Validation: 24 tests passed, lint and build passed with warnings, whitespace check passed. Live browser/API verification remains pending. Backend repositories and root pending merge are excluded; push is left to the user.
+
+
+## [14/11/2026] - Authentication notification integration
+
+Architecture: the existing ToastProvider remains above App, so feedback persists across login/logout navigation. Authentication handlers send toast messages while preserving inline validation. API background requests are not globally intercepted.
+
+| Item | Location | Status | Detail |
+| --- | --- | --- | --- |
+| Auth success and error feedback | Frontend App and authentication forms | Complete | Login/logout, registration, OTP and recovery use the existing toast system. |
+| Account loading errors and toast accessibility | Frontend account provisioning and toast container | Complete | List failures are visible; cards have status/alert roles and an accessible dismiss button. |
+| Verification | Frontend | Build/lint passed | Existing warnings remain; browser/live API checks pending. |
+| Git merge | System-Repo | Pending | No staging, commit or push performed for this task. |
+
+### [14/11/2026] - Toast visual refinement
+
+| Item | Location | Status | Validation |
+| --- | --- | --- | --- |
+| Compact responsive toast cards | Frontend GlobalToastContainer.jsx | Complete | Build and whitespace checks passed; browser visual check pending. |
+
+### [14/11/2026] - Diagnostic skill report integration
+
+Architecture: DiagnosticAssessmentPage retains skillPriors in result models and delegates skill reporting to DiagnosticSkillProfile. Historical results use only data from that submission response.
+
+| Item | Location | Status | Detail |
+| --- | --- | --- | --- |
+| Skill assessment and mastery display | Frontend diagnostic report | Complete | Fresh/history views; assessed, inferred and unknown sources; honest empty states. |
+| Verification | Frontend | Passed | Build/lint exit 0 with existing warnings; browser verification pending. |
+| Complete historical and inferred data | Backend diagnostic APIs | Pending | See architecture acceptance notes; backend unchanged. |
+
+Backend follow-up: Practice sends an empty AllSkillIds mapping to AI, preventing the inferred-skill branch. Historical GetDiagnosticSubmissionById does not populate SkillPriors or RadarChart. Preserve per-submission estimates and source for historical reporting instead of reading mutable current LearningProfiles. Inferred skill labels also need metadata because current response name lookup uses only questions in the test.
+
+### [14/11/2026] - Diagnostic report navigation
+
+Architecture: shared DiagnosticReportTabs and DiagnosticReportPanel organize both result render paths while retaining the shared score summary and existing review filters. WeakSkills and DiagnosticSkillProfile provide progressive disclosure.
+
+| Item | Status | Detail |
+| --- | --- | --- |
+| Three report tabs | Complete | Overview, answer review, competency analysis; keyboard navigation and matching panel labels. |
+| Compact report content | Complete | Four initial weak skills; mastery grouped by collapsible domain. |
+| Verification | Build/lint passed | Existing warnings; browser verification pending. |
+
+### [14/11/2026] - History layout simplification
+
+Architecture: StudentHistoryPage owns category selection; DiagnosticAssessmentPage renders embedded history details and requests the compact DiagnosticResultSummary variant.
+
+| Item | Status | Detail |
+| --- | --- | --- |
+| Compact category toolbar | Complete | Distinct category panels keyed by user/category. |
+| Remove repeated report headings | Complete | Historical summary hides the dark banner and reduces metric spacing. |
+| Validation | Passed | Build/lint exit 0 with existing warnings; browser verification pending. |
+
+### [14/11/2026] - History toolbar visibility
+
+| Item | Location | Status | Detail |
+| --- | --- | --- | --- |
+| Hide category toolbar in detail | StudentHistoryPage / DiagnosticAssessmentPage | Complete | Child detail-state callback controls the toolbar; back restores list navigation. Practice detail uses its existing selected state. Build/lint passed; browser verification pending. |
+
+### [14/11/2026] - Report visual refinement
+
+| Item | Location | Status | Validation |
+| --- | --- | --- | --- |
+| Metric cards, segmented tabs and detail header | Frontend diagnostic report components | Complete | Build/lint passed with existing warnings; browser appearance not directly verified. |
+
+### [14/11/2026] - Report contrast adjustment
+
+| Item | Status | Detail |
+| --- | --- | --- |
+| Distinct header, active tab and metric cards | Complete | Dark detail header, saturated active tab, stronger metric borders/tints; build/lint passed; browser verification pending. |
+
+## [15/11/2026] - CF1 frontend milestone
+
+Architecture: diagnostic submission/history results share tabbed report navigation and skill reporting; current LearningProfiles are not substituted for historical per-submission estimates. Root ToastProvider supplies authentication/account feedback.
+
+| Item | Status | Detail |
+| --- | --- | --- |
+| CF1 frontend report/history and toast checkpoint | Ready to commit | Selected frontend files and docs only; unrelated curriculum/sidebar/roadmap edits excluded. |
+| Verification | Passed | Current working-tree build/lint exit 0 with warnings; 24 existing tests passed; browser/live APIs unverified. |
+| Backend completion | Follow-up | Historical priors/Radar, question content, domain labels and three-exam aggregation require follow-up. |
+| Root merge | Pending | Root documentation updated as required; no root staging/commit/push. |
+
+## [15/11/2026] - Remaining frontend changes
+
+Architecture: existing curriculum, sidebar and roadmap components retain their responsibilities; this checkpoint records pending frontend presentation changes at user request.
+
+| Item | Status | Validation |
+| --- | --- | --- |
+| Curriculum, sidebar and roadmap presentation checkpoint | Ready to commit | Production build/lint exit 0 with existing warnings; whitespace check passed; browser verification pending. |
+| Backend and root merge | Unchanged by Git operations | Frontend repository only; no push. |
+
+| 146 | **Khắc Phục Lỗi Lịch Sử Làm Bài & Bóc Tách Đề Thi Luyện Tập Thích Ứng ZPD** | `src/services/practiceService.js`, `src/components/modals/AdaptiveQuizModal.jsx` | 🟢 Hoàn thành | 100% | Bỏ tiền tố thừa `/v1/` trong `getDiagnosticHistory` & `getDiagnosticResult` khớp route Controller Practice Service; bóc tách câu hỏi ZPD từ cả `passages[].questions` và `single_questions`; 28/28 tests pass |
+| 147 | **Triển Khai Ràng Buộc Xem Lộ Trình Sau Thi (Lớp Học Chung & Cá Nhân Riêng) Và Cơ Chế Kích Hoạt Học Phí** | `src/components/curriculum/StudentCurriculumView.jsx`, `src/components/curriculum/curriculumAccess.js`, `src/components/modals/TuitionRequiredModal.jsx`, `src/components/diagnostic/DiagnosticAssessmentPage.jsx`, `src/components/payment/TuitionPaymentView.jsx`, `src/App.jsx` | 🟢 Hoàn thành | 100% | Phân tách 2 chế độ Lộ trình (Lớp học chung & Lộ trình cá nhân riêng); thiết lập ràng buộc học sinh sau thi chỉ được xem tổng quát cấu trúc lộ trình; chặn vào học và luyện tập nếu chưa đóng học phí bằng `TuitionRequiredModal`; tích hợp lưu vết học phí qua PayOS VietQR; 31/31 unit tests pass |
+| 148 | **Gia Cố Cơ Chế Tự Hồi Phục Fallback Khi Nạp Lịch Sử Làm Bài** | `src/components/diagnostic/DiagnosticAssessmentPage.jsx` | 🟢 Hoàn thành | 100% | Bọc từng lời gọi `getDiagnosticResult` trong try/catch độc lập, tự động fallback lấy `theta0` từ summary DTO nếu bài cũ bị lỗi backend; triệt tiêu 100% nguy cơ crash màn hình lịch sử |
+| 149 | **Tối Giản Hóa Màn Hình Tổng Quan Học Tập (Dashboard UX Clean-up)** | `src/App.jsx`, `src/components/dashboard/HeroBanner.jsx`, `src/components/dashboard/MetricsGrid.jsx` | 🟢 Hoàn thành | 100% | Loại bỏ cụm thẻ chặng học và lịch phụ đạo giả lập (`MilestoneCard`, `LiveQnACard`); tinh gọn HeroBanner và chuẩn hóa 4 thẻ KPI năng lực thân thiện với học sinh, loại bỏ toàn bộ thuật ngữ kỹ thuật ZPD, DAG, IRT |
+| 150 | **Tái Cấu Trúc Bố Cục Trang Tổng Quan Hài Hòa & Nâng Cấp Ảnh Học Sinh** | `src/App.jsx`, `src/components/dashboard/HeroBanner.jsx` | 🟢 Hoàn thành | 100% | Đưa HeroBanner lên đầu trang làm điểm nhấn chào đón; MetricsGrid ở giữa; khối hành động kép Onboarding + Phụ huynh ở chân trang; đổi ảnh gỗ sang ảnh học sinh THPT thực tế kính mờ |
+| 151 | **Bảo Vệ Khối Hình Học 3D (`[MATH_GRAPH_3D]`), BBT (`[VARIATION_TABLE]`) & Đồ Thị 2D (`[MATH_GRAPH]`), Sửa Lỗi `Phân tích & Lời giải:**` & Chuẩn Hóa UI Card Bóc Tách AI** | `src/components/common/MathText.jsx`, `src/components/curriculum/CurriculumExplorerView.jsx` | 🟢 Hoàn thành | 100% | Cô lập sớm toàn bộ khối đồ thị bằng placeholder `@@mathlabblocka@@` và tự chữa lành thẻ hỏng `[$MATH_GRAPH_3D$]`; sửa lỗi lồng `**Phân tích & **Lời giải:****`; thay `$\rightarrow$` bằng `→` và xóa toàn bộ mô tả hardcode Ester-Lipid trên 2 thẻ chọn chế độ bóc tách AI |
+| 152 | **Tách Riêng Trang Thời Khóa Biểu & Điểm Danh (`StudentScheduleView` - `schedule`) Và Trang Lớp Học & Live Q&A (`LiveClassQnAView` - `live`), Loại Bỏ 100% Mock Data & Hardcode** | `src/components/dashboard/StudentScheduleView.jsx`, `src/components/dashboard/LiveClassQnAView.jsx`, `src/components/layout/Sidebar.jsx`, `src/App.jsx`, `src/services/practiceService.js` | 🟢 Hoàn thành | 100% | Tách `schedule` (`StudentScheduleView`) thành trang Thời khóa biểu & Điểm danh độc lập và `live` (`LiveClassQnAView`) thành trang Lớp học & Live Q&A riêng biệt; xóa 100% mock/seed fallback và hardcode |
+| 153 | **Hiển Thị Đầy Đủ `radarChart` & `skillPriors` Khi Thi Xong Và Khi Xem Lại Lịch Sử Bài Làm** | `src/components/diagnostic/DiagnosticAssessmentPage.jsx`, `src/components/diagnostic/SubmissionHistoryView.jsx`, `src/services/practiceService.js` | 🟢 Hoàn thành | 100% | Ánh xạ và hiển thị đồng nhất Biểu đồ Radar năng lực (`radarChart`) cùng Ma trận tiên nghiệm kỹ năng BKT `` `P(L_0)` `` & `` `\theta_{\text{skill}}` `` (`skillPriors`) từ API thực cả lúc vừa thi xong lẫn khi mở lại lịch sử bài làm |
+| 154 | **Đồng Bộ Học Phí Thực Tế Từ DB, Khối Gói Học Kích Hoạt, 6 Quyền Lợi Mở Khóa & Hóa Đơn PayOS** | `src/components/payment/TuitionPaymentView.jsx`, `src/components/curriculum/curriculumAccess.js`, `src/components/curriculum/StudentCurriculumView.jsx`, `src/services/paymentService.js` | 🟢 Hoàn thành | 100% | Đồng bộ trạng thái học phí `isPaid` tự động từ DB PostgreSQL qua `syncTuitionStatusFromServer`, hiển thị thẻ gói học đang hoạt động (`courseName`, `courseCode`, thời hạn, lớp phân bổ), lưới 6 phân hệ đã mở khóa (PLAR, Bài giảng, ZPD, Socratic, Thời khóa biểu, Live Q&A), bảng lịch sử giao dịch PayOS thực tế và modal kiểm toán biên lai |
+
+
+## [15/11/2026] - CF2 per-skill resources
+
+| Item | Status | Detail |
+| --- | --- | --- |
+| Roadmap video and materials | Connected in frontend | Calls Content Service by each RoadmapNode SkillId and renders available video, lesson text, or attachments. |
+| Roadmap preview quiz | Connected in frontend | Starts Practice Stage for the selected node; questions come through Content gRPC and responses use preview-submit. |
+| Student roadmap entry point | Connected in frontend | Students can switch between the curriculum view and backend generated roadmap. |
+| Content availability | Runtime verification pending | Skills without configured materials may return an empty list. |
+
+Validation: build and lint pass with existing warnings; live API integration remains unverified.
+
+## [16/11/2026] - Diagnostic API result normalization
+
+| Item | Status | Detail |
+| --- | --- | --- |
+| Existing diagnostic report tabs and sidebar | Preserved | No layout or navigation changes from the TNhan branch. |
+| Radar chart API payload | Frontend normalized | Accepts camelCase and snake_case fields; if the API omits the radar array, groups API-returned question results by domain for student percentages. Benchmark values are rendered only when returned by API. |
+| Skill mastery priors | Frontend normalized and displayed | Overview matrix and analysis profile accept API `skillPriors`/`skill_priors` and field aliases; values remain sourced from the response. |
+| Historical API population | Backend follow-up | The history endpoint must return per-submission radar and skill-prior data for these panels to show it. |
+| Runtime verification | Pending | Live API data was not checked. |
+
+
+## Progress update ? 16/11/2026
+
+| Work item | Status | Detail |
+| --- | --- | --- |
+| Student curriculum and math rendering | Integrated | Synced the pulled access and KaTeX-safe rendering changes. |
+| Tuition and payment | Integrated | Synced database-backed tuition status, course entitlement, payment list, and receipt UI. |
+| Diagnostic results and history | Integrated | Synced API result/history presentation while retaining TNhan-specific diagnostic work. |
+| Live classroom and schedule | Integrated | Synced student Live Q&A, schedule, and attendance views with sidebar routing. |
+| Practice service helper | Corrected | Added the missing GUID matcher referenced by the incoming helpers. |
+| Build/runtime verification | Pending | Not run during this integration. |
+
+| Diagnostic JSX parse error | Fixed | Removed the incomplete duplicate trend-chart wrapper; Vite production build succeeds. |
+
+| API-only radar and prior values | Corrected | No synthetic benchmark or default mastery values are displayed when omitted by API. |
+| Diagnostic report runtime references | Corrected | Reused normalized skill priors and removed a dangling component reference. |

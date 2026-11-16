@@ -1,7 +1,8 @@
+import { toast } from '../../context/ToastContext';
+import BrandLogo from '../common/BrandLogo';
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Sparkles,
   PhoneCall,
   GraduationCap,
   Users,
@@ -23,6 +24,7 @@ import LoginForm from './LoginForm';
 import RegisterForm from './RegisterForm';
 import ForgotPasswordModal from './ForgotPasswordModal';
 import authService from '../../services/authService';
+import { formatApiError } from '../../utils/apiErrorHandler';
 import {
   validateEmailSyntaxAndRules,
   validateEmailComprehensive
@@ -82,6 +84,27 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccessMsg, setSubmitSuccessMsg] = useState(null);
   const [formError, setFormError] = useState(null);
+
+  const notifyFormError = (message) => {
+    setFormError(message);
+    if (message) toast.error(message);
+  };
+
+  const notifyModalError = (message) => {
+    setModalError(message);
+    if (message) toast.error(message);
+  };
+
+  const notifySubmitSuccessMsg = (message) => {
+    setSubmitSuccessMsg(message);
+    if (message) toast.success(message);
+  };
+
+  const notifyModalSuccess = (message) => {
+    setModalSuccess(message);
+    if (message) toast.success(message);
+  };
+
   const [fieldErrors, setFieldErrors] = useState({});
 
   // Real-time Email Validation state for Registration
@@ -123,7 +146,7 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
     } else {
       setEmailValidationStatus('valid');
       setEmailValidationMessage(
-        asyncCheck.message || 'Email hợp lệ (Máy chủ mail MX hoạt động)'
+        asyncCheck.message || 'Email hợp lệ, sẵn sàng đăng ký'
       );
       setEmailSuggestedFix(null);
       setFieldErrors((prev) => ({ ...prev, regEmail: null }));
@@ -174,13 +197,13 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
     { value: '700', label: '700+ (Tiêu chuẩn)' }
   ];
 
-  // Dynamic System & Campus Status Ticker on Left Panel
+  // Dynamic Campus & Highlight Ticker on Left Panel
   const liveActivities = campuses.length > 0
-    ? campuses.map((c) => `🏫 Đang kết nối trực tuyến: ${c.name} (${c.code || 'ACTIVE'})`)
+    ? campuses.map((c) => `🏫 Cơ sở đang hoạt động: ${c.name}`)
     : [
-        "🔗 Cổng xác thực tập trung V-Eval IAM Gateway (:5212) đang hoạt động.",
-        "📐 Hệ thống chấm điểm tâm trắc học IRT 2PL & BKT thời gian thực.",
-        "🤖 Gia sư AI Socratic & Đồ thị tri thức tiền đề DAG 4 miền V-ACT."
+        "📚 Hệ thống bài thi thử ĐGNL bám sát cấu trúc đề ĐHQG TP.HCM.",
+        "🎯 Chấm điểm tức thì và phân tích chi tiết 4 phần thi năng lực.",
+        "👩‍🏫 Đồng hành giải đáp thắc mắc và luyện đề hiệu quả mỗi ngày."
       ];
   const [actIdx, setActIdx] = useState(0);
 
@@ -194,8 +217,8 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
   // Mode Switch Handler
   const handleModeSwitch = (newMode) => {
     setMode(newMode);
-    setFormError(null);
-    setSubmitSuccessMsg(null);
+    notifyFormError(null);
+    notifySubmitSuccessMsg(null);
     setFieldErrors({});
     if (newMode === 'register' && (role === 'teacher' || role === 'manager')) {
       setRole('student');
@@ -215,8 +238,8 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
   // Handle Login Submit with Real API Integration
   const handleLoginSubmit = async (e) => {
     if (e) e.preventDefault();
-    setFormError(null);
-    setSubmitSuccessMsg(null);
+    notifyFormError(null);
+    notifySubmitSuccessMsg(null);
 
     const errs = {};
     if (!email.trim()) {
@@ -228,14 +251,14 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
 
     if (Object.keys(errs).length > 0) {
       setFieldErrors(errs);
-      setFormError("Vui lòng nhập đầy đủ thông tin bên dưới.");
+      notifyFormError("Vui lòng nhập đầy đủ thông tin bên dưới.");
       return;
     }
     setFieldErrors({});
 
     setIsSubmitting(true);
     try {
-      const response = await authService.login({ email, password });
+      const response = await authService.login({ email, password, rememberMe });
       setIsSubmitting(false);
 
       const loggedUser = response.user || {
@@ -259,24 +282,25 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
         setModalMode('activation');
         setForgotEmail(email);
         setOtpCode('');
-        setModalError(null);
+        notifyModalError(null);
         setModalSuccess('Tài khoản chưa được kích hoạt. Vui lòng kiểm tra email và nhập mã OTP 6 số để kích hoạt.');
         setForgotStep(2);
         setIsForgotModalOpen(true);
         setFormError('Tài khoản chưa được kích hoạt OTP. Vui lòng nhập mã OTP 6 số để kích hoạt.');
+        toast.warning('Vui lòng nhập mã OTP trong email để kích hoạt tài khoản.');
         return;
       }
 
-      const msg = err.data?.error?.description || err.data?.message || err.message || 'Đăng nhập không thành công. Vui lòng kiểm tra lại email hoặc mật khẩu.';
-      setFormError(msg);
+      const msg = formatApiError(err, 'Đăng nhập không thành công. Vui lòng kiểm tra lại email hoặc mật khẩu.');
+      notifyFormError(msg);
     }
   };
 
   // Handle Registration Submit with Real API Integration
   const handleRegisterSubmit = async (e) => {
     if (e) e.preventDefault();
-    setFormError(null);
-    setSubmitSuccessMsg(null);
+    notifyFormError(null);
+    notifySubmitSuccessMsg(null);
 
     const errs = {};
 
@@ -322,7 +346,7 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
 
     if (Object.keys(errs).length > 0) {
       setFieldErrors(errs);
-      setFormError(errs.regEmail || "Vui lòng kiểm tra và hoàn thiện chính xác các trường thông tin bên dưới.");
+      notifyFormError(errs.regEmail || "Vui lòng kiểm tra và hoàn thiện chính xác các trường thông tin bên dưới.");
       return;
     }
     setFieldErrors({});
@@ -341,7 +365,7 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
         setEmailValidationMessage(liveEmailCheck.message);
         setEmailSuggestedFix(liveEmailCheck.suggestedEmail || null);
         setFieldErrors({ regEmail: liveEmailCheck.message });
-        setFormError(liveEmailCheck.message);
+        notifyFormError(liveEmailCheck.message);
         return;
       }
 
@@ -364,8 +388,8 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
       setModalMode('activation');
       setForgotEmail(regEmail.trim());
       setOtpCode(''); // Empty input field so user must enter OTP from email
-      setModalError(null);
-      setModalSuccess(
+      notifyModalError(null);
+      notifyModalSuccess(
         "Đã kiểm tra email hợp lệ! Mã xác thực OTP 6 chữ số đã được gửi về email của bạn. Vui lòng kiểm tra hộp thư và nhập mã OTP để xác minh tài khoản."
       );
       setForgotStep(2);
@@ -379,7 +403,7 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
         err.data?.message ||
         err.message ||
         'Đăng ký không thành công. Vui lòng kiểm tra lại thông tin.';
-      setFormError(msg);
+      notifyFormError(msg);
       if (msg.toLowerCase().includes('email') || msg.toLowerCase().includes('tên miền') || msg.toLowerCase().includes('gmail')) {
         setEmailValidationStatus('invalid');
         setFieldErrors((prev) => ({ ...prev, regEmail: msg }));
@@ -399,8 +423,8 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
   // Forgot password & Account activation submit handler with Real API Integration
   const handleForgotSubmit = async (e) => {
     if (e) e.preventDefault();
-    setModalError(null);
-    setModalSuccess(null);
+    notifyModalError(null);
+    notifyModalSuccess(null);
     setIsSubmitting(true);
 
     try {
@@ -408,33 +432,33 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
         const cleanEmail = (forgotEmail || '').trim();
         if (!cleanEmail) {
           setIsSubmitting(false);
-          setModalError("Vui lòng nhập địa chỉ Email tài khoản.");
+          notifyModalError("Vui lòng nhập địa chỉ Email tài khoản.");
           return;
         }
         // Gọi API forgot-password để kiểm tra email tồn tại và gửi mã OTP
         await authService.forgotPassword(cleanEmail);
         setIsSubmitting(false);
         setOtpCode('');
-        setModalSuccess(`Đã kiểm tra tài khoản thành công! Mã OTP xác thực đặt lại mật khẩu đã được gửi đến email ${cleanEmail}. Vui lòng kiểm tra hộp thư.`);
+        notifyModalSuccess(`Đã kiểm tra tài khoản thành công! Mã OTP xác thực đặt lại mật khẩu đã được gửi đến email ${cleanEmail}. Vui lòng kiểm tra hộp thư.`);
         setForgotStep(2);
       } else if (forgotStep === 2) {
         if (!otpCode || otpCode.trim().length !== 6) {
           setIsSubmitting(false);
-          setModalError("Vui lòng nhập đầy đủ mã xác thực OTP gồm 6 chữ số.");
+          notifyModalError("Vui lòng nhập đầy đủ mã xác thực OTP gồm 6 chữ số.");
           return;
         }
         if (modalMode === 'activation') {
           // Activation flow for registration
           await authService.verifyOtp(forgotEmail.trim(), otpCode.trim());
           setIsSubmitting(false);
-          setModalSuccess("Xác thực và kích hoạt tài khoản thành công! Bạn có thể đăng nhập ngay.");
+          notifyModalSuccess("Xác thực và kích hoạt tài khoản thành công! Bạn có thể đăng nhập ngay.");
           setForgotStep(4);
         } else {
           // Forgot password flow: BẮT BUỘC KIỂM TRA MÃ OTP VỚI BACKEND TRƯỚC KHI CHO QUA BƯỚC 3!
           await authService.verifyResetOtp(forgotEmail.trim(), otpCode.trim());
           setIsSubmitting(false);
-          setModalError(null);
-          setModalSuccess(null);
+          notifyModalError(null);
+          notifyModalSuccess(null);
           setNewPassword('');
           setConfirmPassword('');
           setForgotStep(3);
@@ -442,17 +466,17 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
       } else if (forgotStep === 3) {
         if (!newPassword || newPassword.length < 8) {
           setIsSubmitting(false);
-          setModalError("Mật khẩu mới phải có tối thiểu 8 ký tự.");
+          notifyModalError("Mật khẩu mới phải có tối thiểu 8 ký tự.");
           return;
         }
         if (!/[A-Z]/.test(newPassword) || !/[a-z]/.test(newPassword) || !/[0-9]/.test(newPassword)) {
           setIsSubmitting(false);
-          setModalError("Mật khẩu phải chứa ít nhất 1 chữ hoa, 1 chữ thường và 1 chữ số (VD: Password123@).");
+          notifyModalError("Mật khẩu phải chứa ít nhất 1 chữ hoa, 1 chữ thường và 1 chữ số (VD: Password123@).");
           return;
         }
         if (newPassword !== confirmPassword) {
           setIsSubmitting(false);
-          setModalError("Mật khẩu xác nhận không khớp. Vui lòng kiểm tra lại.");
+          notifyModalError("Mật khẩu xác nhận không khớp. Vui lòng kiểm tra lại.");
           return;
         }
         await authService.resetPassword({
@@ -462,29 +486,29 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
           confirmPassword
         });
         setIsSubmitting(false);
-        setModalSuccess("Đặt lại mật khẩu thành công! Bạn có thể sử dụng mật khẩu mới để đăng nhập ngay bây giờ.");
+        notifyModalSuccess("Đặt lại mật khẩu thành công! Bạn có thể sử dụng mật khẩu mới để đăng nhập ngay bây giờ.");
         setForgotStep(4);
       }
     } catch (err) {
       setIsSubmitting(false);
-      const msg = err.data?.error?.description || err.message || 'Thao tác không thành công. Vui lòng kiểm tra lại.';
-      setModalError(msg);
+      const msg = formatApiError(err, 'Thao tác không thành công. Vui lòng kiểm tra lại.');
+      notifyModalError(msg);
     }
   };
 
   // Resend OTP Handler
   const handleResendOtp = async () => {
-    setModalError(null);
+    notifyModalError(null);
     try {
       if (modalMode === 'activation') {
-        setModalSuccess('Đã gửi lại mã OTP kích hoạt đến email ' + forgotEmail);
+        notifyModalSuccess('Đã gửi lại mã OTP kích hoạt đến email ' + forgotEmail);
       } else {
         await authService.forgotPassword(forgotEmail.trim());
-        setModalSuccess('Đã gửi lại mã OTP đặt lại mật khẩu mới đến email ' + forgotEmail);
+        notifyModalSuccess('Đã gửi lại mã OTP đặt lại mật khẩu mới đến email ' + forgotEmail);
       }
     } catch (err) {
-      const msg = err.data?.error?.description || err.message || 'Không thể gửi lại mã OTP. Vui lòng thử lại sau.';
-      setModalError(msg);
+      const msg = formatApiError(err, 'Không thể gửi lại mã OTP. Vui lòng thử lại sau.');
+      notifyModalError(msg);
       throw err;
     }
   };
@@ -493,7 +517,7 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
     <div className="min-h-screen w-full bg-[#FDFBF7] text-slate-900 flex flex-col font-sans selection:bg-[#FACC15] selection:text-slate-950">
 
       {/* 1. TOP HEADER NAVIGATION */}
-      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-6 lg:px-8 py-3 transition-all shadow-xs">
+      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-6 lg:px-8 py-1.5 transition-all shadow-xs">
         <div className="w-full max-w-7xl mx-auto flex items-center justify-between gap-4">
 
           {/* Logo & Brand Name */}
@@ -501,30 +525,19 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
             onClick={onNavigateHome}
             className="flex items-center gap-2.5 cursor-pointer select-none group"
           >
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-cyan-500 flex items-center justify-center text-white shadow-md shadow-blue-500/20 font-black text-sm group-hover:scale-105 transition-transform">
-              ĐG
-            </div>
-            <div>
-              <div className="font-black text-xl tracking-tight text-slate-950 flex items-center gap-1.5">
-                <span>ĐGNL AI</span>
-                <span className="w-2 h-2 rounded-full bg-[#FACC15] ring-4 ring-yellow-400/20 animate-pulse"></span>
-              </div>
-              <div className="text-[10px] text-blue-600 font-extrabold uppercase tracking-wider">
-                Khảo thí & Luyện thi ĐGNL ĐHQG-HCM 4.0
-              </div>
-            </div>
+            <BrandLogo className="w-28 sm:w-32" />
           </div>
 
           {/* Quick Header Actions */}
           <div className="flex items-center gap-3">
-            <div className="hidden sm:flex items-center gap-2 text-xs font-semibold text-slate-700 bg-slate-100 px-3.5 py-1.5 rounded-full border border-slate-200">
+            <div className="hidden sm:flex items-center gap-2 text-xs font-semibold text-slate-700 bg-slate-100 px-3 py-1.5 rounded-full border border-slate-200">
               <PhoneCall className="w-3.5 h-3.5 text-blue-600" />
               <span>Hotline Tư Vấn: <strong className="text-blue-900">1900 8889</strong></span>
             </div>
 
             <button
               onClick={onNavigateHome}
-              className="flex items-center gap-2 text-xs font-bold text-slate-700 hover:text-blue-700 bg-slate-100 hover:bg-slate-200 px-4 py-2 rounded-xl border border-slate-200/80 transition-all active:scale-95 shadow-2xs"
+              className="flex items-center gap-2 text-xs font-bold text-slate-700 hover:text-blue-700 bg-slate-100 hover:bg-slate-200 px-3.5 py-1.5 rounded-xl border border-slate-200/80 transition-all active:scale-95 shadow-2xs"
             >
               <ArrowLeft className="w-4 h-4 text-blue-600" />
               <span>Quay lại Trang Chủ</span>
@@ -535,143 +548,119 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
       </header>
 
       {/* 2. MAIN CENTER CONTENT CONTAINER */}
-      <main className="flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-10 relative overflow-hidden">
+      <main className="flex-1 flex items-center justify-center p-3 sm:p-5 lg:px-8 lg:py-4 relative overflow-hidden">
 
         {/* Soft Ambient Background Glows */}
         <div className="absolute top-1/4 left-10 w-96 h-96 rounded-full bg-blue-400/10 blur-[120px] pointer-events-none"></div>
         <div className="absolute bottom-10 right-10 w-96 h-96 rounded-full bg-indigo-400/10 blur-[120px] pointer-events-none"></div>
 
-        <div className="w-full max-w-6xl bg-white rounded-[32px] shadow-2xl overflow-hidden grid grid-cols-1 lg:grid-cols-12 min-h-[720px] border border-slate-200/90 text-slate-900 z-10">
+        <div className="w-full max-w-[1060px] bg-white rounded-[28px] shadow-[0_20px_60px_-15px_rgba(15,23,42,0.12)] overflow-hidden grid grid-cols-1 lg:grid-cols-12 border border-slate-200/80 text-slate-900 z-10">
 
-          {/* LEFT COLUMN (7 Spans): Light Academic Showcase & Real Authentic Student Photo */}
-          <div className="lg:col-span-7 bg-gradient-to-br from-blue-50/90 via-indigo-50/60 to-cyan-50/40 p-8 lg:p-12 text-slate-900 flex flex-col justify-between relative overflow-hidden border-r border-slate-200/80">
+          {/* LEFT COLUMN (6 Spans): Balanced Editorial Showcase */}
+          <div className="lg:col-span-6 bg-gradient-to-br from-[#F0F6FF] via-[#F5F7FF] to-[#ECFEFF] p-6 sm:p-7 lg:p-8 text-slate-900 flex flex-col justify-between gap-5 relative overflow-hidden border-b lg:border-b-0 lg:border-r border-slate-200/70">
 
             {/* Ambient inner highlights */}
-            <div className="absolute -top-24 -left-24 w-96 h-96 rounded-full bg-blue-300/20 blur-3xl pointer-events-none"></div>
-            <div className="absolute -bottom-24 -right-24 w-96 h-96 rounded-full bg-cyan-300/20 blur-3xl pointer-events-none"></div>
+            <div className="absolute -top-24 -left-24 w-80 h-80 rounded-full bg-blue-300/20 blur-3xl pointer-events-none"></div>
+            <div className="absolute -bottom-24 -right-24 w-80 h-80 rounded-full bg-cyan-300/20 blur-3xl pointer-events-none"></div>
 
-            {/* Top Brand Tag */}
-            <div className="relative z-10 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-11 h-11 rounded-2xl bg-white border border-blue-200/80 shadow-sm flex items-center justify-center text-blue-600">
-                  <Sparkles className="w-5 h-5" />
-                </div>
-                <div>
-                  <div className="font-extrabold text-lg text-slate-900 tracking-tight flex items-center gap-2">
-                    Cổng Khảo Thí ĐGNL <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-[10px] rounded-full border border-blue-200 font-bold">v2.4 Live</span>
-                  </div>
-                  <div className="text-xs text-slate-600 font-medium">
-                    Mô hình Khảo thí IRT 3PL & Thuật toán DAG Topo
-                  </div>
-                </div>
-              </div>
-            </div>
+            {/* Hero Copy + Full-Bleed Aligned Image */}
+            <div className="relative z-10 space-y-4">
 
-            {/* Middle Section: Title & Authentic Student Photo Showcase */}
-            <div className="relative z-10 my-auto py-6 space-y-6">
-
-              <div className="space-y-3">
-                <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white border border-blue-200/80 text-xs font-bold text-blue-700 shadow-2xs">
-                  <Flame className="w-4 h-4 text-amber-500 fill-amber-500" />
-                  <span>Chiến dịch Ôn thi ĐGNL ĐHQG TP.HCM 2026</span>
+              <div className="space-y-2">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/95 border border-blue-200/80 text-[11px] font-bold text-blue-700 shadow-2xs">
+                  <Flame className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
+                  <span>Ôn thi ĐGNL ĐHQG TP.HCM 2026</span>
                 </span>
 
-                <h1 className="text-3xl lg:text-4xl font-black leading-tight tracking-tight text-slate-900">
-                  Khám phá Năng lực & <span className="bg-gradient-to-r from-blue-700 via-indigo-700 to-cyan-600 bg-clip-text text-transparent">Bứt phá 900+ Điểm</span>
+                <h1 className="text-2xl sm:text-[27px] font-black leading-tight tracking-tight text-slate-900">
+                  Khám phá Năng lực &{' '}
+                  <span className="bg-gradient-to-r from-blue-700 via-indigo-700 to-cyan-600 bg-clip-text text-transparent">
+                    Bứt phá 900+ Điểm
+                  </span>
                 </h1>
 
-                <p className="text-xs sm:text-sm text-slate-600 font-medium leading-relaxed max-w-xl">
-                  Đo lường chính xác ma trận 120 câu hỏi ĐGNL bằng thuật toán khảo thí thích ứng CAT, lấp lỗ hổng tức thì cùng AI Socratic Tutor.
+                <p className="text-xs sm:text-[13px] text-slate-600 font-medium leading-relaxed">
+                  Đánh giá năng lực chuẩn cấu trúc 120 câu hỏi, nhận diện điểm yếu và xây dựng lộ trình ôn tập hiệu quả mỗi ngày.
                 </p>
               </div>
 
-              {/* REAL AUTHENTIC STUDENT PHOTO CONTAINER */}
-              <div className="relative max-w-md mx-auto group">
+              {/* Full-Width Flush Photo Frame */}
+              <div className="relative group">
+                <div className="relative overflow-hidden rounded-2xl h-44 sm:h-48 lg:h-[196px] w-full shadow-md ring-1 ring-slate-900/10 bg-white">
+                  <img
+                    src={studentAvatar}
+                    alt="Học sinh THPT Việt Nam ôn thi ĐGNL"
+                    className="w-full h-full object-cover object-top transition-transform duration-700 group-hover:scale-105"
+                  />
 
-                {/* Outer Glow */}
-                <div className="absolute inset-0 rounded-3xl bg-gradient-to-r from-blue-400 to-cyan-400 blur-xl opacity-20 group-hover:opacity-40 transition-opacity"></div>
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/75 via-slate-950/15 to-transparent"></div>
 
-                {/* Card Container */}
-                <div className="relative bg-white border border-slate-200/90 rounded-3xl p-3 shadow-xl transition-all duration-500 transform group-hover:scale-[1.01]">
+                  {/* Floating Goal Badges */}
+                  <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between gap-2">
+                    <div className="px-2.5 py-1 bg-white/95 backdrop-blur-md rounded-lg text-slate-900 text-[11px] font-extrabold shadow-sm flex items-center gap-1.5">
+                      <Award className="w-3.5 h-3.5 text-blue-600" />
+                      <span>Mục tiêu: 950+ điểm</span>
+                    </div>
 
-                  {/* Real Student Photograph */}
-                  <div className="relative overflow-hidden rounded-2xl h-60 sm:h-64 w-full">
-                    <img
-                      src={studentAvatar}
-                      alt="Học sinh THPT Việt Nam ôn thi ĐGNL"
-                      className="w-full h-full object-cover object-center filter drop-shadow-md transition-transform duration-700 group-hover:scale-105"
-                    />
-
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-transparent to-transparent opacity-80"></div>
-
-                    {/* FLOATING STATS BADGES */}
-                    <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between gap-2">
-                      <div className="px-3 py-1.5 bg-white/95 border border-slate-200 backdrop-blur-md rounded-xl text-slate-900 text-xs font-black shadow-lg flex items-center gap-1.5">
-                        <Award className="w-4 h-4 text-blue-600" />
-                        <span>IRT Theta: +0.65</span>
-                      </div>
-
-                      <div className="px-3 py-1.5 bg-emerald-600 text-white rounded-xl text-xs font-black shadow-lg flex items-center gap-1.5">
-                        <CheckCircle2 className="w-4 h-4 text-white" />
-                        <span>82% Bách Khoa HCM</span>
-                      </div>
+                    <div className="px-2.5 py-1 bg-emerald-600/95 backdrop-blur-md text-white rounded-lg text-[11px] font-extrabold shadow-sm flex items-center gap-1.5">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-white" />
+                      <span>82% Bách Khoa HCM</span>
                     </div>
                   </div>
-
                 </div>
-
               </div>
 
-              {/* Real-time Ticker */}
-              <div className="bg-white border border-blue-200/80 rounded-2xl px-4 py-2.5 flex items-center gap-3 text-xs font-semibold text-slate-800 shadow-2xs">
-                <span className="relative flex h-2.5 w-2.5 shrink-0">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-500 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-blue-600"></span>
+            </div>
+
+            {/* Bottom Highlights: Feature Grid + Subtle Live Status */}
+            <div className="relative z-10 space-y-3">
+              <div className="grid grid-cols-2 gap-2.5 text-xs font-semibold text-slate-700">
+                <div className="flex items-center gap-2 bg-white/80 backdrop-blur-xs border border-slate-200/70 rounded-xl px-3 py-2">
+                  <BookOpenCheck className="w-4 h-4 text-blue-600 shrink-0" />
+                  <span className="truncate">Đánh giá năng lực 15p</span>
+                </div>
+                <div className="flex items-center gap-2 bg-white/80 backdrop-blur-xs border border-slate-200/70 rounded-xl px-3 py-2">
+                  <Zap className="w-4 h-4 text-amber-500 shrink-0" />
+                  <span className="truncate">Lộ trình cá nhân hóa</span>
+                </div>
+                <div className="flex items-center gap-2 bg-white/80 backdrop-blur-xs border border-slate-200/70 rounded-xl px-3 py-2">
+                  <Bot className="w-4 h-4 text-indigo-600 shrink-0" />
+                  <span className="truncate">Hỗ trợ giải đáp 24/7</span>
+                </div>
+                <div className="flex items-center gap-2 bg-white/80 backdrop-blur-xs border border-slate-200/70 rounded-xl px-3 py-2">
+                  <Users className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span className="truncate">Lớp học trực tuyến</span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-white/75 border border-blue-100 text-[11px] font-semibold text-slate-700">
+                <span className="relative flex h-2 w-2 shrink-0">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-600"></span>
                 </span>
                 <AnimatePresence mode="wait">
                   <motion.span
                     key={actIdx}
-                    initial={{ opacity: 0, y: 10 }}
+                    initial={{ opacity: 0, y: 6 }}
                     animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    className="truncate text-slate-800 font-bold"
+                    exit={{ opacity: 0, y: -6 }}
+                    className="truncate text-slate-700 font-bold"
                   >
                     {liveActivities[actIdx]}
                   </motion.span>
                 </AnimatePresence>
               </div>
-
-              {/* Feature Bullet List */}
-              <div className="grid grid-cols-2 gap-3 text-xs font-semibold text-slate-700 pt-1">
-                <div className="flex items-center gap-2">
-                  <BookOpenCheck className="w-4 h-4 text-blue-600 shrink-0" />
-                  <span>Test chẩn đoán 15 phút</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Zap className="w-4 h-4 text-amber-500 shrink-0" />
-                  <span>Lộ trình ZPD cá nhân hoá</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Bot className="w-4 h-4 text-blue-600 shrink-0" />
-                  <span>AI Socratic gợi mở 24/7</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Users className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>Live Q&A giải đề trực tuyến</span>
-                </div>
-              </div>
-
             </div>
 
           </div>
 
-          {/* RIGHT COLUMN (5 Spans): Form Column */}
-          <div className="lg:col-span-5 p-6 sm:p-8 lg:p-10 flex flex-col justify-between bg-white relative">
+          {/* RIGHT COLUMN (6 Spans): Centered & Clean Auth Form Column */}
+          <div className="lg:col-span-6 p-6 sm:p-8 lg:px-10 lg:py-7 flex flex-col justify-between gap-4 bg-white relative lg:max-h-[calc(100vh-5.5rem)] lg:overflow-y-auto">
 
-            <div className="space-y-5">
+            <div className="my-auto space-y-5">
 
               {/* Header Mode Switcher: Login / Register */}
-              <div className="space-y-4">
+              <div className="space-y-3.5">
                 <div className="p-1 bg-slate-100 rounded-2xl flex items-center border border-slate-200">
                   <button
                     onClick={() => handleModeSwitch('login')}
@@ -778,8 +767,8 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
                     setOtpCode('');
                     setNewPassword('');
                     setConfirmPassword('');
-                    setModalError(null);
-                    setModalSuccess(null);
+                    notifyModalError(null);
+                    notifyModalSuccess(null);
                     setForgotStep(1);
                     setIsForgotModalOpen(true);
                   }}
@@ -839,7 +828,7 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
             </div>
 
             {/* Bottom Footer Note */}
-            <div className="pt-4 border-t border-slate-100 text-center text-[11px] text-slate-400 font-medium">
+            <div className="pt-2.5 border-t border-slate-100 text-center text-[11px] text-slate-400 font-medium">
               Hệ thống Bảo mật 256-bit • Hỗ trợ học viên 24/7
             </div>
 
@@ -854,8 +843,8 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
         isOpen={isForgotModalOpen}
         onClose={() => {
           setIsForgotModalOpen(false);
-          setModalError(null);
-          setModalSuccess(null);
+          notifyModalError(null);
+          notifyModalSuccess(null);
         }}
         modalMode={modalMode}
         forgotStep={forgotStep}

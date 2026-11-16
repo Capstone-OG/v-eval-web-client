@@ -8,6 +8,13 @@ globalThis.localStorage = {
   removeItem: (k) => mockStorage.delete(k),
   clear: () => mockStorage.clear()
 };
+const mockSessionStorage = new Map();
+globalThis.sessionStorage = {
+  getItem: (k) => mockSessionStorage.get(k) ?? null,
+  setItem: (k, v) => mockSessionStorage.set(k, String(v)),
+  removeItem: (k) => mockSessionStorage.delete(k),
+  clear: () => mockSessionStorage.clear()
+};
 
 import { practiceService, FLOW6_DEFAULTS } from '../src/services/practiceService.js';
 
@@ -18,6 +25,7 @@ describe('practiceService Core Flow 6 APIs', () => {
   beforeEach(() => {
     capturedCalls = [];
     globalThis.localStorage.clear();
+    globalThis.sessionStorage.clear();
   });
 
   afterEach(() => {

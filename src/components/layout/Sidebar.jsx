@@ -1,4 +1,5 @@
-import React from 'react';
+import BrandLogo from '../common/BrandLogo';
+import React, { useEffect, useState } from 'react';
 import {
   Activity,
   Award,
@@ -7,7 +8,9 @@ import {
   Bot,
   Briefcase,
   Building2,
+  Calendar,
   ClipboardCheck,
+  ChevronDown,
   CreditCard,
   FileCheck2,
   GraduationCap,
@@ -24,44 +27,6 @@ import {
   Zap
 } from 'lucide-react';
 
-const ROLE_PORTAL_META = {
-  student: {
-    badge: 'Cổng Học Viên ĐGNL',
-    subtitle: 'Adaptive Learning & IRT 2PL',
-    badgeClass: 'bg-blue-50 text-blue-700 border-blue-200',
-    dotClass: 'bg-[#FACC15]',
-    icon: GraduationCap
-  },
-  parent: {
-    badge: 'Cổng Phụ Huynh Đồng Hành',
-    subtitle: 'Theo dõi Tiến độ & Cảnh báo Sớm',
-    badgeClass: 'bg-amber-50 text-amber-800 border-amber-200',
-    dotClass: 'bg-emerald-500',
-    icon: HeartHandshake
-  },
-  teacher: {
-    badge: 'Cổng Giảng Viên Sư Phạm',
-    subtitle: 'Heatmap 2D & Studio Học Liệu',
-    badgeClass: 'bg-indigo-50 text-indigo-700 border-indigo-200',
-    dotClass: 'bg-cyan-400',
-    icon: BookOpen
-  },
-  manager: {
-    badge: 'Cổng Quản Lý Cơ Sở',
-    subtitle: 'Điều Phối Học Thuật & AI Clustering',
-    badgeClass: 'bg-cyan-50 text-cyan-800 border-cyan-200',
-    dotClass: 'bg-blue-600',
-    icon: Briefcase
-  },
-  admin: {
-    badge: 'Cổng Quản Trị Hệ Thống IAM',
-    subtitle: 'Phân Quyền & Vận Hành Liên Cơ Sở',
-    badgeClass: 'bg-rose-50 text-rose-700 border-rose-200',
-    dotClass: 'bg-rose-500',
-    icon: ShieldCheck
-  }
-};
-
 export default function Sidebar({
   role = 'student',
   activeTab,
@@ -71,6 +36,8 @@ export default function Sidebar({
   onOpenAiTutor,
   onOpenLiveClass,
   latestDiagnosticResult,
+  mobile = false,
+  onNavigate,
   portalMetrics = {}
 }) {
   const studentDashboard = portalMetrics.studentDashboard;
@@ -102,8 +69,6 @@ export default function Sidebar({
   const teacherHeatmap = portalMetrics.teacherHeatmapData || null;
   const managerPortal = portalMetrics.managerPortalData || null;
 
-  const portalMeta = ROLE_PORTAL_META[role] || ROLE_PORTAL_META.student;
-  const PortalIcon = portalMeta.icon;
 
   // Role-specific menu configurations so each role has its own dedicated pages
   const getRoleNavigation = () => {
@@ -170,11 +135,19 @@ export default function Sidebar({
             items: [
               {
                 id: 'dashboard',
-                label: 'Ma trận Nhiệt Lớp học 2D',
-                sublabel: 'Xếp nhóm vi mô & Giao bài ZPD',
+                label: 'Tổng quan giảng dạy',
+                sublabel: 'Công việc & công cụ giáo viên',
                 icon: LayoutGrid,
                 active: activeTab === 'dashboard',
                 onClick: () => setActiveTab('dashboard')
+              },
+              {
+                id: 'teacher_heatmap',
+                label: 'Lớp học & năng lực',
+                sublabel: 'Học sinh và bản đồ kỹ năng',
+                icon: Users,
+                active: activeTab === 'teacher_heatmap',
+                onClick: () => setActiveTab('teacher_heatmap')
               },
               {
                 id: 'roadmap',
@@ -188,7 +161,7 @@ export default function Sidebar({
               {
                 id: 'diagnostic',
                 label: 'Ngân hàng Đề Khảo thí',
-                sublabel: 'Kiểm thử đề 30 câu & Ma trận',
+                sublabel: 'Danh sách đề & trạng thái xuất bản',
                 icon: ClipboardCheck,
                 active: activeTab === 'diagnostic',
                 onClick: () => setActiveTab('diagnostic')
@@ -196,31 +169,18 @@ export default function Sidebar({
               {
                 id: 'history',
                 label: 'Nhật ký Bài làm Học viên',
-                sublabel: 'Phân tích lỗi sai & Socratic AI',
+                sublabel: 'Tra cứu bài chẩn đoán theo lớp',
                 icon: History,
                 active: activeTab === 'history',
                 onClick: () => setActiveTab('history')
               },
               {
                 id: 'analytics',
-                label: 'Phân tích Tâm trắc học',
-                sublabel: 'Thống kê IRT 2PL & BKT lớp',
+                label: 'Cảnh báo & hỗ trợ',
+                sublabel: 'Theo dõi và ghi nhận can thiệp',
                 icon: BarChart3,
                 active: activeTab === 'analytics',
                 onClick: () => setActiveTab('analytics')
-              }
-            ]
-          },
-          {
-            sectionTitle: 'Tương Tác Trực Tuyến',
-            items: [
-              {
-                id: 'live',
-                label: 'Phòng Live Q&A Socratic',
-                sublabel: 'Giải đáp chuyên đề trực tuyến',
-                icon: Video,
-                active: false,
-                onClick: onOpenLiveClass
               }
             ]
           }
@@ -342,6 +302,8 @@ export default function Sidebar({
                 label: 'Tổng quan Học tập',
                 sublabel: 'Tiến độ cá nhân & Lộ trình hôm nay',
                 icon: LayoutGrid,
+                iconColor: 'from-slate-500 to-slate-700',
+                activeGlow: 'shadow-slate-500/30',
                 active: activeTab === 'dashboard',
                 onClick: () => setActiveTab('dashboard')
               },
@@ -350,6 +312,8 @@ export default function Sidebar({
                 label: 'Khảo thí & Chẩn đoán',
                 sublabel: 'Đề chuẩn hóa 30 câu & IRT 2PL',
                 icon: ClipboardCheck,
+                iconColor: 'from-orange-400 to-rose-500',
+                activeGlow: 'shadow-rose-500/30',
                 active: activeTab === 'diagnostic',
                 onClick: () => setActiveTab('diagnostic'),
                 badge: '30 câu'
@@ -359,6 +323,8 @@ export default function Sidebar({
                 label: 'Lịch sử làm bài',
                 sublabel: 'Đáp án chi tiết & Sổ tay lỗi sai',
                 icon: History,
+                iconColor: 'from-amber-400 to-orange-500',
+                activeGlow: 'shadow-amber-500/30',
                 active: activeTab === 'history',
                 onClick: () => setActiveTab('history')
               },
@@ -367,14 +333,26 @@ export default function Sidebar({
                 label: 'Dàn kiến thức & Lộ trình',
                 sublabel: 'Cây tri thức DAG & Học liệu',
                 icon: Network,
+                iconColor: 'from-blue-500 to-indigo-600',
+                activeGlow: 'shadow-blue-500/30',
                 active: activeTab === 'roadmap',
                 onClick: () => setActiveTab('roadmap')
+              },
+              {
+                id: 'schedule',
+                label: 'Thời khóa biểu & Điểm danh',
+                sublabel: 'Lịch học theo kỳ, khóa & chuyên cần',
+                icon: Calendar,
+                active: activeTab === 'schedule',
+                onClick: () => setActiveTab('schedule')
               },
               {
                 id: 'analytics',
                 label: 'Báo cáo & Dự báo Điểm',
                 sublabel: 'Phân tích BKT & Điểm mục tiêu',
                 icon: BarChart3,
+                iconColor: 'from-emerald-400 to-teal-600',
+                activeGlow: 'shadow-emerald-500/30',
                 active: activeTab === 'analytics',
                 onClick: () => setActiveTab('analytics')
               }
@@ -388,6 +366,8 @@ export default function Sidebar({
                 label: 'Luyện tập Thích ứng ZPD',
                 sublabel: 'Sinh câu hỏi sát vùng năng lực',
                 icon: Zap,
+                iconColor: 'from-yellow-400 to-amber-500',
+                activeGlow: 'shadow-yellow-500/30',
                 active: false,
                 onClick: onOpenAdaptiveQuiz
               },
@@ -396,6 +376,8 @@ export default function Sidebar({
                 label: 'Phòng Thi thử V-ACT',
                 sublabel: 'Mô phỏng áp lực thời gian thực',
                 icon: FileCheck2,
+                iconColor: 'from-cyan-400 to-blue-500',
+                activeGlow: 'shadow-cyan-500/30',
                 active: false,
                 onClick: onOpenMockExam
               },
@@ -404,6 +386,8 @@ export default function Sidebar({
                 label: 'AI Socratic Tutor 24/7',
                 sublabel: 'Gợi mở tư duy & Không giải hộ',
                 icon: Bot,
+                iconColor: 'from-violet-500 to-purple-600',
+                activeGlow: 'shadow-purple-500/30',
                 active: false,
                 onClick: onOpenAiTutor,
                 badge: 'AI'
@@ -411,10 +395,10 @@ export default function Sidebar({
               {
                 id: 'live',
                 label: 'Lớp học & Live Q&A',
-                sublabel: 'Tương tác trực tiếp cùng GV',
+                sublabel: 'Phụ đạo trực tuyến & Nhóm vi mô',
                 icon: Video,
-                active: false,
-                onClick: onOpenLiveClass
+                active: activeTab === 'live',
+                onClick: () => (onOpenLiveClass ? onOpenLiveClass() : setActiveTab('live'))
               }
             ]
           },
@@ -426,6 +410,8 @@ export default function Sidebar({
                 label: 'Học phí & Gói học',
                 sublabel: 'Nâng cấp gói luyện thi PayOS',
                 icon: CreditCard,
+                iconColor: 'from-indigo-400 to-blue-600',
+                activeGlow: 'shadow-indigo-500/30',
                 active: activeTab === 'tuition',
                 onClick: () => setActiveTab('tuition')
               }
@@ -435,74 +421,99 @@ export default function Sidebar({
     }
   };
 
-  const navSections = getRoleNavigation();
+  const [examsExpanded, setExamsExpanded] = useState(activeTab === 'diagnostic');
+  useEffect(() => {
+    if (activeTab === 'diagnostic') setExamsExpanded(true);
+  }, [activeTab]);
+
+  let navSections = getRoleNavigation();
+  if (role === 'student') {
+    // Rearrange existing actions only; all tab IDs and handlers stay unchanged.
+    const entries = Object.fromEntries(navSections.flatMap((section) => section.items).map((item) => [item.id, item]));
+    navSections = [
+      { sectionTitle: 'Tổng quan', items: [entries.dashboard] },
+      { sectionTitle: 'Học tập', items: [
+        { ...entries.roadmap, label: 'Lộ trình của tôi' },
+        { ...entries.schedule, label: 'Thời khóa biểu & Điểm danh' },
+        { ...entries.adaptive, label: 'Luyện tập' },
+        { ...entries.ai, label: 'Gia sư AI' }
+      ] },
+      { sectionTitle: 'Đánh giá', items: [
+        { id: 'exams', label: 'Kiểm tra & Thi thử', icon: ClipboardCheck, iconColor: 'from-orange-400 to-rose-500',
+          children: [{ ...entries.diagnostic, label: 'Đánh giá đầu vào' },
+            { ...entries.mock, label: 'Thi thử V-ACT' }] },
+        entries.history,
+        { ...entries.analytics, label: 'Báo cáo học tập' }
+      ] },
+      { sectionTitle: 'Dịch vụ học viên', items: [entries.live, entries.tuition] }
+    ];
+  }
 
   return (
-    <aside className="hidden lg:flex w-72 flex-col justify-between border-r border-slate-200/80 bg-[#FDFBF7]/95 backdrop-blur-xl p-5 select-none shrink-0">
+    <aside className={`${mobile ? 'flex w-full min-h-full' : 'hidden lg:flex w-72'} flex-col justify-between border-r border-slate-200/80 bg-gradient-to-b from-slate-50/80 to-white p-5 select-none shrink-0`}>
       <div className="space-y-6">
         {/* Brand Identity Header - Synchronized with Home Page (PublicHeader.jsx) */}
         <div className="space-y-3 px-1">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-cyan-500 flex items-center justify-center text-white font-black text-base shadow-md shadow-blue-500/20">
-              ĐG
-            </div>
-            <div>
-              <div className="font-extrabold text-base tracking-tight text-slate-900 flex items-center gap-1.5">
-                <span>ĐGNL AI</span>
-                <span className="w-2 h-2 rounded-full bg-[#FACC15] ring-4 ring-yellow-400/20 inline-block"></span>
-              </div>
-              <div className="text-[11px] text-slate-500 font-semibold">
-                Adaptive Assessment Platform
-              </div>
-            </div>
-          </div>
+          <BrandLogo className="w-44" />
 
-          {/* Dedicated Role Portal Badge */}
-          <div
-            className={`p-3 rounded-2xl border ${portalMeta.badgeClass} flex items-center gap-2.5 shadow-2xs`}
-          >
-            <div className="w-8 h-8 rounded-xl bg-white/90 border border-slate-200/60 flex items-center justify-center shrink-0 shadow-2xs">
-              <PortalIcon className="w-4 h-4" />
-            </div>
-            <div className="min-w-0">
-              <div className="text-xs font-black tracking-tight truncate flex items-center gap-1.5">
-                <span className={`w-1.5 h-1.5 rounded-full ${portalMeta.dotClass}`}></span>
-                <span>{portalMeta.badge}</span>
-              </div>
-              <div className="text-[10px] font-semibold opacity-80 truncate">
-                {portalMeta.subtitle}
-              </div>
-            </div>
-          </div>
+
         </div>
 
         {/* Role-Specific Navigation Sections */}
         <nav className="space-y-5">
           {navSections.map((section) => (
             <div key={section.sectionTitle} className="space-y-1.5">
-              <div className="px-3 text-[10px] font-black uppercase tracking-wider text-slate-400">
-                {section.sectionTitle}
+              <div className="px-3 text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                <span className="flex-1">{section.sectionTitle}</span>
+                <span className="h-px flex-1 bg-slate-100" />
               </div>
               <div className="space-y-1">
                 {section.items.map((item) => {
                   const Icon = item.icon;
+                  const iconGradient = item.iconColor || 'from-slate-400 to-slate-600';
+                  const glowClass = item.activeGlow || 'shadow-blue-500/30';
+                  if (item.children) {
+                    const activeGroup = item.children.some((child) => child.active);
+                    const groupIconGradient = item.iconColor || 'from-orange-400 to-rose-500';
+                    return <div key={item.id}>
+                      <button type="button" aria-expanded={examsExpanded} aria-controls={`exam-navigation-${mobile ? 'mobile' : 'desktop'}`}
+                        onClick={() => setExamsExpanded((value) => !value)}
+                        className={`flex w-full items-center gap-3 rounded-2xl border px-3.5 py-2.5 text-left transition-all ${activeGroup ? 'border-orange-100 bg-orange-50 text-orange-700' : 'border-transparent text-slate-700 hover:border-slate-200 hover:bg-slate-50'}`}>
+                        <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${groupIconGradient} text-white shadow-sm`}><Icon className="h-4 w-4" /></span>
+                        <span className="flex-1 text-xs font-extrabold">{item.label}</span>
+                        <ChevronDown className={`h-3.5 w-3.5 shrink-0 transition-transform ${examsExpanded ? 'rotate-180' : ''} ${activeGroup ? 'text-orange-500' : 'text-slate-400'}`} />
+                      </button>
+                      <div id={`exam-navigation-${mobile ? 'mobile' : 'desktop'}`} hidden={!examsExpanded}>
+                        <div className="mb-2 ml-7 mt-1 space-y-1 border-l-2 border-orange-100 pl-3">
+                          {item.children.map((child) => <button key={child.id} type="button"
+                            aria-current={child.active ? 'page' : undefined}
+                            onClick={() => { child.onClick?.(); onNavigate?.(); }}
+                            className={`flex w-full items-center justify-between gap-2 rounded-xl px-3 py-2.5 text-left text-xs transition-colors ${child.active ? 'bg-gradient-to-r from-orange-500 to-rose-500 font-bold text-white shadow-sm shadow-orange-500/25' : 'font-medium text-slate-600 hover:bg-orange-50 hover:text-orange-700'}`}>
+                            <span>{child.label}</span>
+                            {child.badge && <span className={`shrink-0 rounded-md px-1.5 py-0.5 text-[9px] font-bold ${child.active ? 'bg-white/20 text-white' : 'bg-orange-50 text-orange-600'}`}>{child.badge}</span>}
+                          </button>)}
+                        </div>
+                      </div>
+                    </div>;
+                  }
                   return (
                     <button
                       key={item.id}
                       type="button"
-                      onClick={item.onClick}
+                      aria-current={item.active ? 'page' : undefined}
+                      onClick={() => { item.onClick?.(); onNavigate?.(); }}
                       className={`w-full flex items-center justify-between gap-2.5 px-3.5 py-2.5 rounded-2xl text-left transition-all cursor-pointer group ${
                         item.active
-                          ? 'bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 text-white shadow-md shadow-blue-500/20'
-                          : 'text-slate-700 hover:bg-white hover:shadow-xs border border-transparent hover:border-slate-200/80'
+                          ? `bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 text-white shadow-md ${glowClass}`
+                          : 'text-slate-700 hover:bg-white hover:shadow-sm border border-transparent hover:border-slate-200/80'
                       }`}
                     >
                       <div className="flex items-center gap-3 min-w-0">
                         <div
-                          className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
+                          className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-all ${
                             item.active
-                              ? 'bg-white/20 text-[#FACC15]'
-                              : 'bg-white border border-slate-200/80 text-slate-500 group-hover:text-blue-600 group-hover:border-blue-200'
+                              ? 'bg-white/20 text-white'
+                              : `bg-gradient-to-br ${iconGradient} text-white shadow-sm group-hover:scale-110`
                           }`}
                         >
                           <Icon className="w-4 h-4" />
@@ -613,16 +624,16 @@ export default function Sidebar({
                 <span>Trạng Thái Giảng Dạy</span>
               </span>
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-200 font-bold">
-                Live BKT
+                Giáo viên
               </span>
             </div>
             <div className="text-xs font-extrabold text-white truncate">
-              {teacherHeatmap?.className || 'Lớp phụ trách'} • {teacherHeatmap?.totalStudents ?? 0} Học viên
+              {teacherHeatmap?.className || 'Không gian giảng dạy của bạn'}
             </div>
             <div className="text-[11px] text-blue-100 flex items-center justify-between">
-              <span>Kỹ năng theo dõi:</span>
+              <span>{teacherHeatmap ? 'Kỹ năng theo dõi:' : 'Học liệu · Đề thi · Học sinh'}</span>
               <strong className="text-[#FACC15] font-black">
-                {teacherHeatmap?.columns?.length ?? 0} chuyên đề
+                {teacherHeatmap ? `${teacherHeatmap.columns?.length ?? 0} chuyên đề` : 'Studio'}
               </strong>
             </div>
           </>

@@ -233,6 +233,7 @@ export default function AccountProvisioningView({ onBackToDashboard }) {
       }
     } catch (err) {
       console.warn('Lỗi tải cơ sở:', err);
+      toast.error('Không tải được danh sách cơ sở. Vui lòng thử lại.');
     }
   };
 
@@ -253,6 +254,7 @@ export default function AccountProvisioningView({ onBackToDashboard }) {
       if (typeof res.inactiveCount === 'number') setInactiveCount(res.inactiveCount);
     } catch (err) {
       console.warn('Lỗi tải danh sách người dùng:', err);
+      toast.error('Không tải được danh sách tài khoản. Vui lòng thử lại.');
     } finally {
       setIsLoading(false);
     }

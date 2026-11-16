@@ -19,7 +19,13 @@ export const mockUser = {
   totalSkillsCount: 28,
   weakSkillsCount: 2,
   classLevel: "Lớp Bứt Phá (Theta > +0.5)",
-  assignedTeacher: "Thầy Phạm Duy"
+  assignedTeacher: "Thầy Phạm Duy",
+  parentName: "Phạm Văn Minh",
+  parentRelation: "father",
+  parentPhone: "0903123456",
+  parentEmail: "minh.pham.ph@veval.edu.vn",
+  parentConnectCode: "VEVAL-STU-88902",
+  isParentLinked: true
 };
 
 export const campusesList = [

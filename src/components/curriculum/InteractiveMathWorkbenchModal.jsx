@@ -170,7 +170,12 @@ function getDefaultBasePoints(shapeType, a, b, h) {
  * Advanced Interactive MathLab Modal (JSXGraph Native Engine)
  * 2D Calculus VD/VDC & 3D Spatial Geometry with Vertex Repositioning/Renaming & Auxiliary Suite
  */
-export default function InteractiveMathWorkbenchModal({
+export default function InteractiveMathWorkbenchModal(props) {
+  if (!props.isOpen) return null;
+  return <OpenMathWorkbench {...props} />;
+}
+
+function OpenMathWorkbench({
   isOpen,
   onClose,
   onInsert,
@@ -178,7 +183,6 @@ export default function InteractiveMathWorkbenchModal({
   initialTab = '2d_function',
   initialTag = ''
 }) {
-  if (!isOpen) return null;
 
   // JSXGraph Primary Sub-Modes: '2d_function' | '3d_space' | '2d_geometry'
   const [jsxSubTab, setJsxSubTab] = useState(

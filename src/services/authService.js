@@ -1,15 +1,65 @@
-import apiClient, { tokenStorage } from './apiClient';
+import apiClient, { tokenStorage } from './apiClient.js';
 
 /**
  * Authentication and User Identity Service
  * Routed through V-Eval API Gateway (:5212) -> Identity Service (:5155)
  */
 export const authService = {
+  async updateParentInfo(parentData) {
+    try {
+      const res = await apiClient.put('/api/v1/students/me/parent', parentData);
+      localStorage.setItem('veval_parent_info', JSON.stringify(parentData));
+      return res.data;
+    } catch (err) {
+      localStorage.setItem('veval_parent_info', JSON.stringify(parentData));
+      return parentData;
+    }
+  },
+
+  async getParentInfo() {
+    try {
+      const res = await apiClient.get('/api/v1/students/me/parent');
+      return res.data;
+    } catch (err) {
+      const cached = localStorage.getItem('veval_parent_info');
+      if (cached) {
+        try { return JSON.parse(cached); } catch { return null; }
+      }
+      return null;
+    }
+  },
+
+  async updateStudentProfile(studentData) {
+    try {
+      const res = await apiClient.put('/api/v1/students/me/profile', studentData);
+      return res.data;
+    } catch (err) {
+      if (err.status === 404) {
+        const res = await apiClient.put('/api/v1/students/profile', studentData);
+        return res.data;
+      }
+      throw err;
+    }
+  },
+
+  async getStudentProfile() {
+    try {
+      const res = await apiClient.get('/api/v1/students/me/profile');
+      return res.data;
+    } catch (err) {
+      if (err.status === 404) {
+        const res = await apiClient.get('/api/v1/students/profile');
+        return res.data;
+      }
+      throw err;
+    }
+  },
+
   /**
    * Đăng nhập tài khoản (UC 03)
    * @param {Object} credentials - { email, password }
    */
-  async login({ email, password }) {
+  async login({ email, password, rememberMe = true }) {
     const payload = {
       email: (email || '').trim().toLowerCase(),
       password: password || ''
@@ -29,7 +79,7 @@ export const authService = {
         roles: roles,
         role: this.resolveAppRole({ roles })
       };
-      tokenStorage.setTokens(data.accessToken, data.refreshToken, userObj);
+      tokenStorage.setTokens(data.accessToken, data.refreshToken, userObj, rememberMe);
 
       try {
         const me = await this.fetchCurrentUserProfile();
@@ -47,7 +97,7 @@ export const authService = {
             roles: mergedRoles,
             role: this.resolveAppRole({ roles: mergedRoles, role: me.role })
           };
-          tokenStorage.setTokens(data.accessToken, data.refreshToken, enrichedUser);
+          tokenStorage.setTokens(data.accessToken, data.refreshToken, enrichedUser, rememberMe);
           return { ...data, user: enrichedUser };
         }
       } catch {
@@ -129,9 +179,9 @@ export const authService = {
    * @param {string} otpCode
    */
   async verifyOtp(email, otpCode) {
-    const payload = { 
-      email: (email || '').trim().toLowerCase(), 
-      otpCode: (otpCode || '').trim() 
+    const payload = {
+      email: (email || '').trim().toLowerCase(),
+      otpCode: (otpCode || '').trim()
     };
     try {
       const res = await apiClient.post('/api/auth/verify-account', payload);
@@ -150,7 +200,15 @@ export const authService = {
    * @param {string} email
    */
   async forgotPassword(email) {
-    return (await apiClient.post('/api/auth/forgot-password', { email })).data;
+    const cleanEmail = (email || '').trim().toLowerCase();
+    try {
+      return (await apiClient.post('/api/auth/forgot-password', { email: cleanEmail })).data;
+    } catch (err) {
+      if (err.status === 404) {
+        return (await apiClient.post('/api/v1/identity/auth/forgot-password', { email: cleanEmail })).data;
+      }
+      throw err;
+    }
   },
 
   /**
@@ -163,7 +221,14 @@ export const authService = {
       email: (email || '').trim().toLowerCase(),
       otpCode: (otpCode || '').trim()
     };
-    return (await apiClient.post('/api/auth/verify-reset-otp', payload)).data;
+    try {
+      return (await apiClient.post('/api/auth/verify-reset-otp', payload)).data;
+    } catch (err) {
+      if (err.status === 404) {
+        return (await apiClient.post('/api/v1/identity/auth/verify-reset-otp', payload)).data;
+      }
+      throw err;
+    }
   },
 
   /**
@@ -171,7 +236,19 @@ export const authService = {
    * @param {Object} data - { email, otpCode, newPassword }
    */
   async resetPassword(data) {
-    return (await apiClient.post('/api/auth/reset-password', data)).data;
+    const payload = {
+      ...data,
+      email: (data?.email || '').trim().toLowerCase(),
+      otpCode: (data?.otpCode || '').trim()
+    };
+    try {
+      return (await apiClient.post('/api/auth/reset-password', payload)).data;
+    } catch (err) {
+      if (err.status === 404) {
+        return (await apiClient.post('/api/v1/identity/auth/reset-password', payload)).data;
+      }
+      throw err;
+    }
   },
 
   /**
@@ -299,4 +376,3 @@ export const authService = {
 };
 
 export default authService;
-

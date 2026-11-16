@@ -17,11 +17,24 @@ import {
   AlertTriangle,
   Filter,
   TrendingUp,
-  Target
+  Target,
+  Brain,
+  BarChart3
 } from 'lucide-react';
+import {
+  Radar,
+  RadarChart,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+  ResponsiveContainer,
+  Tooltip
+} from 'recharts';
 import { practiceService } from '../../services/practiceService';
 import { tokenStorage } from '../../services/apiClient';
 import MathText from '../common/MathText';
+
+const optionalNumber = (value) => value == null || value === '' ? undefined : Number(value);
 
 const EXAM_TYPE_LABELS = {
   DIAGNOSTIC: {
@@ -89,11 +102,26 @@ export default function SubmissionHistoryView({
               title: `Bài Khảo Sát ĐGNL (${remoteItem.examType || 'DIAGNOSTIC'})`,
               examType: remoteItem.examType || 'DIAGNOSTIC',
               completedAt: remoteItem.completedAt || new Date().toISOString(),
-              theta_0: remoteItem.theta0 ?? 0.35,
-              placement_class: remoteItem.placementClass || 'ACCELERATION',
+              theta_0: remoteItem.theta0 ?? 0,
+              placement_class: remoteItem.placementClass || '',
+              radar_chart: (remoteItem.radarChart || remoteItem.radar_chart || []).map((r) => ({
+                domain_id: r.domainId || r.domain_id,
+                domain_name: r.domainName || r.domain_name,
+                student_pct: optionalNumber(r.studentPct ?? r.student_pct),
+                benchmark_pct: optionalNumber(r.benchmarkPct ?? r.benchmark_pct)
+              })).filter((r) => Number.isFinite(r.student_pct)),
+              skill_priors: (remoteItem.skillPriors || remoteItem.skill_priors || []).map((sp) => ({
+                skill_id: sp.skillId || sp.skill_id,
+                skill_name: sp.skillName || sp.skill_name,
+                domain_id: sp.domainId || sp.domain_id,
+                domain_name: sp.domainName || sp.domain_name,
+                theta_skill: optionalNumber(sp.thetaSkill ?? sp.theta_skill),
+                p_l0: optionalNumber(sp.pL0 ?? sp.pl0 ?? sp.p_l0),
+                source: sp.source || 'measured'
+              })),
               pacing: {
                 totalCorrect: remoteItem.totalCorrect ?? 0,
-                totalQuestions: remoteItem.totalQuestions ?? 30,
+                totalQuestions: remoteItem.totalQuestions ?? 0,
                 totalTimeSpent: remoteItem.totalTimeSpentSeconds ?? 0,
                 avgTimePerQ:
                   remoteItem.totalQuestions > 0
@@ -136,23 +164,42 @@ export default function SubmissionHistoryView({
           const mappedQuestions = dto.questions.map((q, idx) => ({
             id: String(q.questionId || `q_${idx + 1}`),
             question_number: q.questionOrder || idx + 1,
-            content: q.content || `Câu hỏi số ${q.questionOrder || idx + 1} (${q.skillName || 'Kỹ năng ĐGNL'})`,
-            options: q.options || ['Phương án A', 'Phương án B', 'Phương án C', 'Phương án D'],
+            content: q.content || '',
+            options: Array.isArray(q.options) ? q.options : [],
             skill_id: q.skillId,
-            skill_name: q.skillName || 'Kỹ năng ĐGNL',
+            skill_name: q.skillName || '',
             domain_id: q.domainId,
-            domain_name: q.domainName || 'Toán học & Tư duy Logic',
-            bloom: q.difficultyLevel || 2,
+            domain_name: q.domainName || '',
+            bloom: q.difficultyLevel || 0,
             studentChoice: q.selectedOption || '',
-            correctChoice: q.correctOption || 'A',
-            correct: q.correctOption || 'A',
+            correctChoice: q.correctOption || '',
+            correct: q.correctOption || '',
             isCorrect: Boolean(q.isCorrect),
-            timeSpent: q.timeSpentSeconds || 30,
-            explanation:
-              q.explanation ||
-              `Đáp án đúng là ${q.correctOption || 'A'} thuộc chuyên đề ${q.skillName || 'ĐGNL'}.`
+            timeSpent: q.timeSpentSeconds ?? 0,
+            explanation: q.explanation || ''
           }));
-          const enriched = { ...sub, reviewedQuestions: mappedQuestions };
+          const mappedRadar = (dto.radarChart || dto.radar_chart || sub.radar_chart || []).map((r) => ({
+            domain_id: r.domainId || r.domain_id,
+            domain_name: r.domainName || r.domain_name,
+            student_pct: optionalNumber(r.studentPct ?? r.student_pct),
+            benchmark_pct: optionalNumber(r.benchmarkPct ?? r.benchmark_pct)
+          })).filter((r) => Number.isFinite(r.student_pct));
+          const mappedPriors = (dto.skillPriors || dto.skill_priors || sub.skill_priors || []).map((sp) => ({
+            skill_id: sp.skillId || sp.skill_id,
+            skill_name: sp.skillName || sp.skill_name,
+            domain_id: sp.domainId || sp.domain_id,
+            domain_name: sp.domainName || sp.domain_name,
+            theta_skill: optionalNumber(sp.thetaSkill ?? sp.theta_skill),
+            p_l0: optionalNumber(sp.pL0 ?? sp.pl0 ?? sp.p_l0),
+            source: sp.source || 'measured'
+          }));
+          const enriched = {
+            ...sub,
+            ai_commentary: dto.aiCommentary || sub.ai_commentary || '',
+            radar_chart: mappedRadar,
+            skill_priors: mappedPriors,
+            reviewedQuestions: mappedQuestions
+          };
           setSelectedSubmission(enriched);
           return;
         }
@@ -326,7 +373,7 @@ export default function SubmissionHistoryView({
       totalRight += s.pacing?.totalCorrect || (s.reviewedQuestions || []).filter((q) => q.isCorrect).length;
     });
     const avgAcc = totalQ > 0 ? Math.round((totalRight / totalQ) * 100) : 0;
-    const latestTheta = historyList[0]?.theta_0 ?? 0.42;
+    const latestTheta = historyList[0]?.theta_0 ?? 0;
     return { totalAttempts, totalQ, totalRight, avgAcc, latestTheta };
   }, [historyList]);
 
@@ -394,7 +441,7 @@ export default function SubmissionHistoryView({
             <div className="px-4 py-2.5 rounded-2xl bg-white/15 backdrop-blur-md border border-white/20 text-center">
               <div className="text-[10px] font-bold uppercase text-blue-100">Chỉ số IRT</div>
               <div className="text-base font-black text-cyan-200">
-                {selectedSubmission.theta_0 > 0 ? `+${selectedSubmission.theta_0}` : selectedSubmission.theta_0 ?? '+0.42'}
+                {selectedSubmission.theta_0 > 0 ? `+${selectedSubmission.theta_0}` : selectedSubmission.theta_0 ?? 0}
               </div>
             </div>
           </div>
@@ -412,6 +459,85 @@ export default function SubmissionHistoryView({
               </div>
               <div className="leading-relaxed text-slate-700 font-medium">{selectedSubmission.ai_commentary}</div>
             </div>
+          </div>
+        )}
+
+        {/* Radar Chart & Skill Priors P(L0) in History Detail */}
+        {((Array.isArray(selectedSubmission.radar_chart) && selectedSubmission.radar_chart.length > 0) ||
+          (Array.isArray(selectedSubmission.skill_priors) && selectedSubmission.skill_priors.length > 0)) && (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            {Array.isArray(selectedSubmission.radar_chart) && selectedSubmission.radar_chart.length > 0 && (
+              <div className="lg:col-span-5 bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                  <div className="flex items-center gap-2 text-sm font-black text-slate-900">
+                    <BarChart3 className="w-4 h-4 text-blue-600" />
+                    <span>Biểu Đồ Radar Năng Lực ĐGNL</span>
+                  </div>
+                  <span className="text-xs font-bold text-slate-500">Thang đo %</span>
+                </div>
+                <div className="h-64 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RadarChart data={selectedSubmission.radar_chart}>
+                      <PolarGrid stroke="#cbd5e1" />
+                      <PolarAngleAxis dataKey="domain_name" tick={{ fill: '#334155', fontSize: 11, fontWeight: 700 }} />
+                      <PolarRadiusAxis angle={30} domain={[0, 100]} stroke="#94a3b8" />
+                      <Radar name="Điểm Thí Sinh" dataKey="student_pct" stroke="#2563eb" fill="#2563eb" fillOpacity={0.45} />
+                      {selectedSubmission.radar_chart.some((item) => Number.isFinite(item.benchmark_pct)) && (
+                        <Radar name="Chuẩn Mục Tiêu" dataKey="benchmark_pct" stroke="#6366f1" fill="#6366f1" fillOpacity={0.15} />
+                      )}
+                      <Tooltip contentStyle={{ backgroundColor: '#ffffff', borderColor: '#e2e8f0', borderRadius: '12px', color: '#0f172a' }} />
+                    </RadarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            )}
+
+            {Array.isArray(selectedSubmission.skill_priors) && selectedSubmission.skill_priors.length > 0 && (
+              <div className="lg:col-span-7 bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                  <div className="flex items-center gap-2 text-sm font-black text-slate-900">
+                    <Brain className="w-4 h-4 text-indigo-600" />
+                    <span>Ma Trận Tiên Nghiệm Kỹ Năng BKT P(L₀) &amp; θ_skill</span>
+                  </div>
+                  <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2.5 py-0.5 rounded-full border border-indigo-200">
+                    {selectedSubmission.skill_priors.length} kỹ năng
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-64 overflow-y-auto pr-1">
+                  {selectedSubmission.skill_priors.map((sp, idx) => {
+                    const rawPL0 = optionalNumber(sp.p_l0 ?? sp.pL0);
+                    const pl0Pct = Number.isFinite(rawPL0) ? Math.round(rawPL0 * 100) : undefined;
+                    const thetaVal = optionalNumber(sp.theta_skill ?? sp.thetaSkill);
+                    return (
+                      <div
+                        key={sp.skill_id || idx}
+                        className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="text-xs font-black text-slate-900 line-clamp-1">
+                            {sp.skill_name || sp.skillName}
+                          </div>
+                          <span className="font-mono text-[11px] font-black text-indigo-700 shrink-0">
+                            &#952;={Number.isFinite(thetaVal) ? `${thetaVal > 0 ? `+${thetaVal.toFixed(2)}` : thetaVal.toFixed(2)}` : "?"}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between text-[11px] font-bold text-slate-600">
+                          <span>{sp.domain_name || sp.domainName}</span>
+                          <span className="text-blue-700">P(L₀) = {Number.isFinite(pl0Pct) ? `${pl0Pct}%` : '?'}</span>
+                        </div>
+                        {Number.isFinite(pl0Pct) && <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
+                          <div
+                            className="bg-blue-600 h-full rounded-full"
+                            style={{ width: `${Math.min(100, Math.max(5, pl0Pct))}%` }}
+                          />
+                        </div>}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         )}
 

@@ -434,7 +434,7 @@ export default function ParentDashboardView({ currentUser, onNavigateTuition }) 
               <span>Cổng Phụ Huynh Đồng Hành • Core Flow 5</span>
             </span>
             <h1 className="text-2xl lg:text-3xl font-extrabold tracking-tight">
-              Xin chào {currentUser?.fullName || currentUser?.email || 'Quý Phụ huynh'}
+              Chào phụ huynh{currentUser?.fullName ? ` ${currentUser.fullName}` : ''}!
             </h1>
             <p className="text-xs lg:text-sm text-blue-100 max-w-2xl leading-relaxed">
               Tài khoản phụ huynh của bạn đã được kích hoạt. Hãy liên kết với tài khoản của con bằng <strong>Mã Code Tài Khoản (VE-XXXXXX / Mã PIN 6 số)</strong>, <strong>Đường Liên Kết / Mã QR</strong> hoặc <strong>Gửi Yêu Cầu Xác Nhận 2 Chiều</strong> bên dưới để bắt đầu theo dõi lộ trình học tập.

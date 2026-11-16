@@ -45,11 +45,11 @@ export default function MetricsGrid({
         <div>
           <div className="flex items-center justify-between mb-2">
             <span className="text-[11px] font-bold tracking-wider uppercase text-slate-400">
-              Năng lực ước tính (IRT)
+              Điểm năng lực ước tính
             </span>
             <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 text-xs font-bold border border-emerald-200 flex items-center gap-1">
               <TrendingUp className="w-3 h-3 text-emerald-600" />
-              Flow 5
+              Thang 1200
             </span>
           </div>
 
@@ -59,31 +59,31 @@ export default function MetricsGrid({
           </div>
 
           <div className="text-xs font-semibold text-slate-600 bg-slate-50 p-2 rounded-xl border border-slate-100 mb-4 flex items-center justify-between">
-            <span>Dải dự báo tự tin:</span>
+            <span>Dải điểm dự báo:</span>
             <strong className="text-blue-700 font-bold">{confidenceInterval}</strong>
           </div>
         </div>
 
         <button
           onClick={onOpenRadar}
-          className="w-full flex items-center justify-between text-xs font-bold text-blue-600 group-hover:text-blue-700 pt-2 border-t border-slate-100"
+          className="w-full flex items-center justify-between text-xs font-bold text-blue-600 group-hover:text-blue-700 pt-2 border-t border-slate-100 cursor-pointer"
         >
-          <span>Xem biểu đồ Radar 4 miền</span>
+          <span>Xem biểu đồ năng lực</span>
           <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
         </button>
       </div>
 
-      {/* CARD 2: 7-Day Study Streak & Discipline (Core Flow 5) */}
+      {/* CARD 2: 7-Day Study Streak & Discipline */}
       <div className="bg-white rounded-2xl p-5 border border-slate-200/80 card-shadow flex flex-col justify-between hover:border-orange-300 transition-all group">
         <div>
           <div className="flex items-center justify-between mb-2">
             <span className="text-[11px] font-bold tracking-wider uppercase text-slate-400">
-              Chuỗi chuyên cần 7 ngày
+              Kỷ luật chuyên cần
             </span>
             {streak.hasStreakFreeze && (
               <span className="px-2 py-0.5 rounded-md bg-cyan-50 text-cyan-700 text-[11px] font-bold border border-cyan-200 flex items-center gap-1">
                 <ShieldCheck className="w-3 h-3" />
-                Freeze
+                Đóng băng
               </span>
             )}
           </div>
@@ -118,22 +118,22 @@ export default function MetricsGrid({
 
         <button
           onClick={onOpenAnalytics}
-          className="w-full flex items-center justify-between text-xs font-bold text-orange-600 group-hover:text-orange-700 pt-2 border-t border-slate-100"
+          className="w-full flex items-center justify-between text-xs font-bold text-orange-600 group-hover:text-orange-700 pt-2 border-t border-slate-100 cursor-pointer"
         >
-          <span>Mở Trung tâm Phân tích Flow 5</span>
+          <span>Xem chi tiết học tập</span>
           <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
         </button>
       </div>
 
-      {/* CARD 3: Adaptive DAG Roadmap */}
+      {/* CARD 3: Adaptive Roadmap */}
       <div className="bg-white rounded-2xl p-5 border border-slate-200/80 card-shadow flex flex-col justify-between hover:border-indigo-300 transition-all group">
         <div>
           <div className="flex items-center justify-between mb-2">
             <span className="text-[11px] font-bold tracking-wider uppercase text-slate-400">
-              Lộ trình học thích ứng (DAG)
+              Tiến độ lộ trình học
             </span>
             <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 text-xs font-bold border border-blue-200">
-              {roadmap.completedMilestones}/{roadmap.totalMilestones} mốc
+              {roadmap.completedMilestones}/{roadmap.totalMilestones} bài đã học
             </span>
           </div>
 
@@ -159,23 +159,23 @@ export default function MetricsGrid({
 
         <button
           onClick={onOpenDAG}
-          className="w-full flex items-center justify-between text-xs font-bold text-indigo-600 group-hover:text-indigo-700 pt-2 border-t border-slate-100"
+          className="w-full flex items-center justify-between text-xs font-bold text-indigo-600 group-hover:text-indigo-700 pt-2 border-t border-slate-100 cursor-pointer"
         >
-          <span>Xem toàn bộ Lộ trình DAG</span>
+          <span>Xem chi tiết lộ trình</span>
           <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
         </button>
       </div>
 
-      {/* CARD 4: Knowledge Gap Early Warning */}
+      {/* CARD 4: Knowledge Gap */}
       <div className="bg-white rounded-2xl p-5 border border-slate-200/80 card-shadow flex flex-col justify-between hover:border-amber-300 transition-all group">
         <div>
           <div className="flex items-center justify-between mb-2">
             <span className="text-[11px] font-bold tracking-wider uppercase text-slate-400">
-              Miền năng lực cần bù đắp
+              Trọng tâm cần cải thiện
             </span>
             <span className="px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 text-xs font-bold border border-amber-200 flex items-center gap-1">
               <AlertTriangle className="w-3 h-3 text-amber-600" />
-              Cần tối ưu
+              Cần lưu ý
             </span>
           </div>
 
@@ -183,7 +183,7 @@ export default function MetricsGrid({
             <span className="text-3xl font-extrabold text-amber-600 tracking-tight">
               {String(displayedGaps.length).padStart(2, '0')}
             </span>
-            <span className="text-xs font-semibold text-slate-500">mảng dưới ngưỡng đích</span>
+            <span className="text-xs font-semibold text-slate-500">chuyên đề cần ưu tiên</span>
           </div>
 
           <div className="space-y-1 mb-4 text-xs font-semibold text-slate-700">
@@ -199,7 +199,7 @@ export default function MetricsGrid({
               ))
             ) : (
               <div className="p-2 rounded-lg bg-slate-50 border border-slate-100 text-[11px] text-slate-500">
-                Làm bài khảo sát 30 câu để xác định miền năng lực cần bù đắp
+                Hoàn thành bài đánh giá 30 câu để nhận diện trọng tâm cần cải thiện
               </div>
             )}
           </div>
@@ -207,9 +207,9 @@ export default function MetricsGrid({
 
         <button
           onClick={onOpenZPD}
-          className="w-full flex items-center justify-between text-xs font-bold text-amber-600 group-hover:text-amber-700 pt-2 border-t border-slate-100"
+          className="w-full flex items-center justify-between text-xs font-bold text-amber-600 group-hover:text-amber-700 pt-2 border-t border-slate-100 cursor-pointer"
         >
-          <span>Luyện tập thích ứng ZPD ngay</span>
+          <span>Luyện tập nội dung trọng tâm</span>
           <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
         </button>
       </div>
