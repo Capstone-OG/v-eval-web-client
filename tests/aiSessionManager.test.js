@@ -11,7 +11,8 @@ import {
   deleteSession,
   findSessionByQuestionId,
   mergeCloudInteractions,
-  clearAllSessions
+  clearAllSessions,
+  cleanDoubledWords
 } from '../src/utils/aiSessionManager.js';
 
 // Polyfill global localStorage for NodeJS test runner
@@ -156,5 +157,16 @@ test('aiSessionManager - deletes session cleanly', () => {
   const remaining = getSessions(student);
   assert.equal(remaining.length, 1);
   assert.equal(remaining[0].id, s2.id);
+});
+
+test('aiSessionManager - cleanDoubledWords eliminates consecutive doubled tokens', () => {
+  const corrupted = 'Chào Chào em! em! Chà, Chà, em em vừa vừa mang mang đến đến một một "thử "thử thách" thách" nhỏ nhỏ thú thú vị vị rồi rồi đây. đây. Thầy Thầy rất rất thích thích tinh tinh thần thần chủ chủ động động mang mang câu câu hỏi hỏi bên bên ngoài ngoài vào vào để để cùng cùng trao trao đổi đổi với với thầy thầy trò trò mình. mình.';
+  const cleaned = cleanDoubledWords(corrupted);
+
+  assert.equal(cleaned, 'Chào em! Chà, em vừa mang đến một "thử thách" nhỏ thú vị rồi đây. Thầy rất thích tinh thần chủ động mang câu hỏi bên ngoài vào để cùng trao đổi với thầy trò mình.');
+
+  // Normal text with intentional natural reduplication should NOT be harmed
+  const normalVietnamese = 'Ta thong thả bước đi chầm chậm từng bước một';
+  assert.equal(cleanDoubledWords(normalVietnamese), normalVietnamese);
 });
 

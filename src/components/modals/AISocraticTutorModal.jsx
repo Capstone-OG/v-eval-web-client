@@ -53,6 +53,7 @@ export default function AISocraticTutorModal({ isOpen, onClose, initialContext =
 
   const abortControllerRef = useRef(null);
   const chatBottomRef = useRef(null);
+  const streamedTextRef = useRef('');
 
   // Load or initialize sessions when modal opens or initialContext changes
   useEffect(() => {
@@ -240,6 +241,7 @@ export default function AISocraticTutorModal({ isOpen, onClose, initialContext =
     const updatedWithPlaceholder = [...updatedWithUser, aiMsgPlaceholder];
     aiSessionManager.updateSessionMessages(currentUserId, activeSession.id, updatedWithPlaceholder);
     setSessions(aiSessionManager.getSessions(currentUserId));
+    streamedTextRef.current = '';
 
     const controller = new AbortController();
     abortControllerRef.current = controller;
@@ -257,78 +259,83 @@ export default function AISocraticTutorModal({ isOpen, onClose, initialContext =
         signal: controller.signal,
         onInteractionId: (id) => {
           setSessions(prev => {
-            const list = [...prev];
-            const target = list.find(s => s.id === activeSession.id);
-            if (target && target.messages.length > 0) {
-              const last = target.messages[target.messages.length - 1];
-              if (last.sender === 'ai') {
-                last.interactionId = id;
-              }
-              aiSessionManager.saveSessions(currentUserId, list);
-            }
-            return list;
+            const next = prev.map(s => {
+              if (s.id !== activeSession.id) return s;
+              const msgs = s.messages.map((m, idx) => {
+                if (idx === s.messages.length - 1 && m.sender === 'ai') {
+                  return { ...m, interactionId: id };
+                }
+                return m;
+              });
+              return { ...s, messages: msgs };
+            });
+            aiSessionManager.saveSessions(currentUserId, next);
+            return next;
           });
         },
         onToken: (token) => {
-          setSessions(prev => {
-            const list = [...prev];
-            const target = list.find(s => s.id === activeSession.id);
-            if (target && target.messages.length > 0) {
-              const last = target.messages[target.messages.length - 1];
-              if (last.sender === 'ai') {
-                last.text = (last.text || '') + token;
-              }
-              aiSessionManager.saveSessions(currentUserId, list);
-            }
-            return list;
-          });
+          streamedTextRef.current += token;
+          const currentText = streamedTextRef.current;
+          setSessions(prev =>
+            prev.map(s => {
+              if (s.id !== activeSession.id) return s;
+              const msgs = s.messages.map((m, idx) => {
+                if (idx === s.messages.length - 1 && m.sender === 'ai') {
+                  return { ...m, text: currentText };
+                }
+                return m;
+              });
+              return { ...s, messages: msgs };
+            })
+          );
         },
         onError: (err) => {
           setIsTyping(false);
           abortControllerRef.current = null;
+          let fallbackErrorText = '';
           if (err.status === 429) {
             setRateLimitWarning(err.message);
-            setSessions(prev => {
-              const list = [...prev];
-              const target = list.find(s => s.id === activeSession.id);
-              if (target && target.messages.length > 0) {
-                const last = target.messages[target.messages.length - 1];
-                if (last.sender === 'ai' && !last.text) {
-                  last.text = 'Hạn mức kết nối hiện tại đang tạm thời đạt giới hạn (Tối đa 10 câu/phút). Em hãy dành chút thời gian suy ngẫm câu hỏi trước khi gửi tiếp nhé!';
-                }
-                aiSessionManager.saveSessions(currentUserId, list);
-              }
-              return list;
-            });
+            fallbackErrorText = 'Hạn mức kết nối hiện tại đang tạm thời đạt giới hạn (Tối đa 10 câu/phút). Em hãy dành chút thời gian suy ngẫm câu hỏi trước khi gửi tiếp nhé!';
           } else if (err.name !== 'AbortError') {
+            fallbackErrorText = 'Thầy gặp chút gián đoạn khi kết nối máy chủ AI. Em hãy bấm thử lại hoặc kiểm tra kết nối mạng nhé!';
+          }
+
+          if (fallbackErrorText) {
             setSessions(prev => {
-              const list = [...prev];
-              const target = list.find(s => s.id === activeSession.id);
-              if (target && target.messages.length > 0) {
-                const last = target.messages[target.messages.length - 1];
-                if (last.sender === 'ai' && !last.text) {
-                  last.text = 'Thầy gặp chút gián đoạn khi kết nối máy chủ AI. Em hãy bấm thử lại hoặc kiểm tra kết nối mạng nhé!';
-                }
-                aiSessionManager.saveSessions(currentUserId, list);
-              }
-              return list;
+              const next = prev.map(s => {
+                if (s.id !== activeSession.id) return s;
+                const msgs = s.messages.map((m, idx) => {
+                  if (idx === s.messages.length - 1 && m.sender === 'ai' && !m.text) {
+                    return { ...m, text: fallbackErrorText };
+                  }
+                  return m;
+                });
+                return { ...s, messages: msgs };
+              });
+              aiSessionManager.saveSessions(currentUserId, next);
+              return next;
             });
           }
         },
-        onComplete: () => {
+        onComplete: (completedFullText) => {
           setIsTyping(false);
           abortControllerRef.current = null;
+          const finalText = (completedFullText || streamedTextRef.current || '').trim() ||
+            'Chào em! Thầy đang lắng nghe thắc mắc của em. Em hãy chia sẻ cụ thể hơn về bài tập hoặc hướng suy luận em muốn thầy gợi mở nhé!';
+
           setSessions(prev => {
-            const list = [...prev];
-            const target = list.find(s => s.id === activeSession.id);
-            if (target && target.messages.length > 0) {
-              const last = target.messages[target.messages.length - 1];
-              if (last.sender === 'ai' && (!last.text || !last.text.trim())) {
-                last.text = 'Chào em! Thầy đang lắng nghe thắc mắc của em. Em hãy chia sẻ cụ thể hơn về bài tập hoặc hướng suy luận em muốn thầy gợi mở nhé!';
-              }
-              aiSessionManager.saveSessions(currentUserId, list);
-            }
-            return list;
+            const next = prev.map(s => {
+              if (s.id !== activeSession.id) return s;
+              const msgs = s.messages.map((m, idx) => {
+                if (idx === s.messages.length - 1 && m.sender === 'ai') {
+                  return { ...m, text: finalText };
+                }
+                return m;
+              });
+              return { ...s, messages: msgs, updatedAt: new Date().toISOString() };
+            });
+            aiSessionManager.saveSessions(currentUserId, next);
+            return next;
           });
         }
       });

@@ -2085,3 +2085,14 @@ Backend follow-up: Practice sends an empty AllSkillIds mapping to AI, preventing
   - Modernized the in-place report view to match the modal dialog: replaced legacy `line-clamp-3` truncated containers with modern `p-4 sm:p-5 rounded-2xl` reading passage cards featuring `max-h-72 overflow-y-auto whitespace-pre-line`, `BookOpen` icon, and a `Bài đọc ngữ cảnh` badge.
   - Standardized options grid styling with semantic ring boundaries (`ring-1 ring-emerald-500/30` for correct options, `ring-1 ring-rose-500/30` for incorrect student choices) alongside crisp `Check` and `X` indicators and soft purple explanation cards (`bg-purple-50/70 border-purple-200`).
 - **Verification**: Production build verified in 1.08s; 38/38 unit tests pass (100% success rate); zero linter errors.
+
+### [16/11/2026] - Socratic AI Tutor Stream Decoupling & Double-Token Prevention Architecture
+
+- **Root Cause Identification & Stream Decoupling (`src/components/modals/AISocraticTutorModal.jsx`, `src/components/dashboard/AISocraticTutorWidget.jsx`)**:
+  - Uncovered a concurrency vulnerability under React 19 / Vite development mode: React StrictMode executes functional state updaters (`setSessions(prev => ...)`) twice in succession to detect side-effects.
+  - The previous implementation mutated the active session's message object in-place (`last.text = (last.text || '') + token`), which caused every arriving token to be concatenated twice upon each update cycle, resulting in duplicate tokens across entire sentences (`"Chào Chào em! em! Chà, Chà..."`).
+  - Decoupled token accumulation using a mutable ref anchor (`streamedTextRef.current += token`), passing the authoritative text directly into immutable state transitions (`prev.map(...)`). State updaters remain completely pure and invariant against StrictMode's dual invocation.
+  - Eliminated high-frequency synchronous disk I/O bottlenecks: removed `aiSessionManager.saveSessions(...)` from the per-token loop (which previously invoked ~200+ synchronous `localStorage.setItem` calls per response), persisting session state strictly upon stream completion (`onComplete`) or error handling (`onError`).
+- **Historical Session Data Self-Healing Engine (`src/utils/aiSessionManager.js`, `tests/aiSessionManager.test.js`)**:
+  - Implemented `cleanDoubledWords` to detect and heal previously saved sessions in client storage corrupted by token doubling, while safely preserving genuine Vietnamese reduplicated vocabulary (`"thong thả"`, `"chầm chậm"`).
+- **Verification**: Vite production build succeeded in 1.52s; 39/39 unit test cases passed with 100% success rate; zero linter errors.

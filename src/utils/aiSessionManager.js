@@ -70,6 +70,35 @@ export function generateSessionTitle(questionText, skillName) {
 }
 
 /**
+ * Khử sạch lỗi lặp từ do React StrictMode/SSE double concatenation
+ */
+export function cleanDoubledWords(text) {
+  if (!text || typeof text !== 'string') return text;
+  const tokens = text.split(/\s+/);
+  if (tokens.length < 6) return text;
+
+  let dupCount = 0;
+  for (let i = 0; i < tokens.length - 1; i += 2) {
+    if (tokens[i] === tokens[i + 1]) {
+      dupCount++;
+    }
+  }
+
+  const pairCount = Math.floor(tokens.length / 2);
+  if (pairCount > 0 && dupCount / pairCount > 0.6) {
+    const deduped = [];
+    for (let i = 0; i < tokens.length; i++) {
+      if (i > 0 && tokens[i] === tokens[i - 1] && (i % 2 === 1)) {
+        continue;
+      }
+      deduped.push(tokens[i]);
+    }
+    return deduped.join(' ');
+  }
+  return text;
+}
+
+/**
  * Đọc toàn bộ danh sách phiên từ LocalStorage của học sinh
  */
 export function getSessions(userId) {
@@ -78,7 +107,13 @@ export function getSessions(userId) {
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
-    return parsed.sort((a, b) => {
+    return parsed.map(s => ({
+      ...s,
+      messages: (s.messages || []).map(m => ({
+        ...m,
+        text: cleanDoubledWords(m.text)
+      }))
+    })).sort((a, b) => {
       const timeA = new Date(a.updatedAt || a.createdAt || 0).getTime();
       const timeB = new Date(b.updatedAt || b.createdAt || 0).getTime();
       return timeB - timeA;
@@ -305,7 +340,8 @@ export const aiSessionManager = {
   updateSessionMessages,
   deleteSession,
   clearAllSessions,
-  mergeCloudInteractions
+  mergeCloudInteractions,
+  cleanDoubledWords
 };
 
 export default aiSessionManager;

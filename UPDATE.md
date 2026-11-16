@@ -1,22 +1,13 @@
 # NHẬT KÝ CẬP NHẬT (UPDATE LOG) - V-EVAL WEB CLIENT
 
-## [15/11/2026] - Triển Khai Bộ Tiện Ích Chuẩn Hóa Dấu Tiếng Việt Toàn Diện, Đồng Bộ Giao Diện Bảng Đánh Giá Chi Tiết & Tối Ưu Hóa Ngữ Liệu Khảo Sát Năng Lực
+## [16/11/2026] - Khắc Phục Triệt Để Hiện Tượng Lặp Từ Kép (Double Token Glitch) Khi Gia Sư AI Socratic Trả Lời & Tối Ưu Hóa Dòng Stream SSE
 
-- **Chuẩn Hóa Triệt Để Dấu Tiếng Việt & Typography Hệ Thống ([`vietnameseUtils.js`](./src/utils/vietnameseUtils.js), [`DiagnosticAssessmentPage.jsx`](./src/components/diagnostic/DiagnosticAssessmentPage.jsx), [`vietnameseDiacritics.test.js`](./tests/vietnameseDiacritics.test.js))**:
-  - **Module Tiện Ích `cleanVietnameseDiacritics`**: Xây dựng thuật toán chuẩn hóa dấu tiếng Việt chuyên sâu, xử lý triệt để các ký tự dấu thanh lơ lửng bị phân rã (decomposed/floating diacritics như `´` `\u00B4`, ``` ` ``` `\u0060`, `\u0301`, `\u0300`, `\u0309`, `\u0303`, `\u0323`) thường gặp từ nguồn OCR hoặc PDF scan (ví dụ `số´ng` -> `sống`, `đế´n` -> `đến`, `nhiê`u` -> `nhiều`, `quố´c biê´n` -> `quốc biến`, `thơ â´u` -> `thơ ấu`, `mẹ hiê`n` -> `mẹ hiền`, `nê` nê´p` -> `nề nếp`).
-  - **Bảo Toàn 100% Công Thức Toán & KaTeX**: Thuật toán chỉ tác động chính xác lên cụm nguyên âm tiếng Việt, hoàn toàn không chạm vào cú pháp LaTeX (`\frac`, `\text`, `^`, `$`), đảm bảo các ký hiệu hóa học và toán học hiển thị nguyên vẹn.
-  - **Khử Bỏ Hoàn Toàn `font-serif`**: Loại bỏ dứt điểm font serif gây xung đột render glyph tiếng Việt trên Chromium Windows, chuyển toàn bộ container ngữ liệu sang `font-sans` (`Plus Jakarta Sans`) sắc nét và hiện đại.
-- **Đồng Bộ Toàn Diện Giao Diện Xem Lại Bài Làm (2 Render Loops)**:
-  - **Đồng bộ Bảng Đánh Giá Chi Tiết Tại Trang Kết Quả (`DiagnosticReportPanel id="review"`)**: Nâng cấp toàn bộ khối hiển thị câu hỏi và ngữ liệu tại trang kết quả sau nộp bài tương đương 100% với modal lịch sử, xóa bỏ bộ cắt dòng cũ (`line-clamp-3`), chuyển sang thẻ bài đọc ngữ cảnh bo cong cao cấp (`p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-blue-50/90 to-indigo-50/50`) với thanh cuộn tự nhiên (`max-h-72 overflow-y-auto whitespace-pre-line`).
-  - **Lưới Phương Án Trắc Nghiệm Chuẩn SaaS**: Áp dụng thẻ lựa chọn phân màu ngữ nghĩa cao cấp với hiệu ứng ring (`ring-1 ring-emerald-500/30` cho đáp án đúng, `ring-1 ring-rose-500/30` cho lựa chọn sai của thí sinh), icon `Check` và `X` sắc nét cùng nhãn trạng thái rõ ràng.
-  - **Thẻ Lời Giải Tư Duy Chi Tiết**: Nền tím nhạt thanh lịch (`bg-purple-50/70 border-purple-200`) kèm icon `Sparkles`, thụt lề chuẩn mực và văn phong sư phạm tích cực cho mọi phân môn.
-  - **Ánh Xạ Đúng Miền Năng Lực**: Kỹ năng đọc hiểu Tiếng Việt hiển thị chuẩn miền `Sử dụng Ngôn ngữ & Văn học` với badge xanh lục dịu mắt.
-- **Quản Lý Phiên Hội Thoại Đa Lượt Gia Sư AI Socratic ([`aiSessionManager.js`](./src/utils/aiSessionManager.js), [`AISocraticTutorModal.jsx`](./src/components/modals/AISocraticTutorModal.jsx))**:
-  - Khắc phục lỗi React Rules of Hooks (*"Rendered more hooks than during the previous render"*).
-  - Tích hợp thanh trượt lịch sử phiên hội thoại đa lượt, lưu trữ cục bộ kết hợp đồng bộ tương tác Supabase.
-- **Tái Thiết Kế Toàn Diện Bố Cục Trang Chủ Quản Lý Học Thuật ([`CampusManagerDashboardView.jsx`](./src/components/dashboard/CampusManagerDashboardView.jsx))**:
-  - Khắc phục triệt để lỗi phần trăm (`6688%` và `7600%`) bằng bộ chuẩn hóa `normalizeMasteryPct`.
-  - HeroBanner tích hợp chào mừng Quản lý học thuật, 4 thẻ KPI đối xứng, ma trận nhiệt đối sánh 4 miền cấp cơ sở.
+- **Khắc Phục Lỗi Lặp Từ Kép Khi AI Stream Phản Hồi ([`AISocraticTutorModal.jsx`](./src/components/modals/AISocraticTutorModal.jsx), [`AISocraticTutorWidget.jsx`](./src/components/dashboard/AISocraticTutorWidget.jsx))**:
+  - **Xác định nguyên nhân gốc rễ**: Trong môi trường React 19 / Vite development mode, React StrictMode thực thi các hàm cập nhật trạng thái (`setSessions(prev => ...)`) **2 lần liên tiếp** nhằm kiểm tra tính thuần khiết (pure function). Trước đây, code cũ thực hiện biến đổi trực tiếp thuộc tính đối tượng in-place (`last.text = (last.text || '') + token`), khiến mỗi token gửi từ SSE bị cộng dồn 2 lần (dẫn đến hiện tượng mọi từ đều bị lặp kép như *"Chào Chào em! em! Chà, Chà, em em vừa vừa mang mang đến đến một một..."*).
+  - **Tách biệt luồng tích lũy với `useRef` (Decoupled Stream Ref)**: Sử dụng `streamedTextRef.current` lưu trữ nguồn dữ liệu chính xác duy nhất cho chuỗi văn bản đang stream. State updater chỉ thực hiện gán bất biến (`text: currentText`) qua `prev.map(...)`, hoàn toàn miễn nhiễm 100% trước cơ chế chạy lặp của React StrictMode.
+  - **Triệt tiêu 200+ lần ghi đĩa dư thừa vào LocalStorage**: Loại bỏ lời gọi `aiSessionManager.saveSessions(...)` bên trong callback `onToken`. Việc lưu phiên chỉ thực hiện đúng 1 lần duy nhất khi kết thúc lượt stream (`onComplete`) hoặc khi gặp lỗi (`onError`), giải phóng hoàn toàn nghẽn I/O và giật lag giao diện.
+- **Tự Động Làm Sạch & Phục Hồi Dữ Liệu Phiên Cũ ([`aiSessionManager.js`](./src/utils/aiSessionManager.js), [`aiSessionManager.test.js`](./tests/aiSessionManager.test.js))**:
+  - Xây dựng hàm `cleanDoubledWords` nhận diện và tự động chữa lành các tin nhắn lịch sử từng bị dính lỗi lặp từ trước đó trong `localStorage` ngay khi nạp phiên, đồng thời giữ nguyên các từ láy tự nhiên trong tiếng Việt (như "thong thả", "chầm chậm").
 - **Kiểm Thử & Biên Dịch**:
-  - `npm run build`: Thành công 100% trong 1.08s.
-  - `node --test`: Đạt **38/38 unit tests pass 100%** (bao gồm 2 bài test tự động cho `cleanVietnameseDiacritics`).
+  - `npm run build`: Thành công 100% trong 1.52s.
+  - `node --test`: Đạt **39/39 unit tests pass 100%** (bổ sung bài test tự động cho `cleanDoubledWords`).

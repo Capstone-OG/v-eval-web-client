@@ -48,3 +48,4 @@ export function cleanVietnameseDiacritics(text) {
 
   return s.normalize('NFC');
 }
+
