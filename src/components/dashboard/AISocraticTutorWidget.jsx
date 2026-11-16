@@ -21,6 +21,7 @@ export default function AISocraticTutorWidget({ onOpenFullChat }) {
 
   const abortControllerRef = useRef(null);
   const chatBottomRef = useRef(null);
+  const widgetStreamedTextRef = useRef('');
 
   useEffect(() => {
     chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -66,19 +67,22 @@ export default function AISocraticTutorWidget({ onOpenFullChat }) {
 
     const controller = new AbortController();
     abortControllerRef.current = controller;
+    widgetStreamedTextRef.current = '';
 
     try {
       await practiceService.askAiTutorStream({
         questionLatex: query,
         signal: controller.signal,
         onToken: (token) => {
+          widgetStreamedTextRef.current += token;
+          const currentText = widgetStreamedTextRef.current;
           setMessages(prev => {
             const next = [...prev];
             const lastIdx = next.length - 1;
             if (lastIdx >= 0 && next[lastIdx].sender === 'ai') {
               next[lastIdx] = {
                 ...next[lastIdx],
-                text: next[lastIdx].text + token
+                text: currentText
               };
             }
             return next;
@@ -103,9 +107,23 @@ export default function AISocraticTutorWidget({ onOpenFullChat }) {
             });
           }
         },
-        onComplete: () => {
+        onComplete: (completedFullText) => {
           setIsTyping(false);
           abortControllerRef.current = null;
+          const finalText = (completedFullText || widgetStreamedTextRef.current || '').trim();
+          if (finalText) {
+            setMessages(prev => {
+              const next = [...prev];
+              const lastIdx = next.length - 1;
+              if (lastIdx >= 0 && next[lastIdx].sender === 'ai') {
+                next[lastIdx] = {
+                  ...next[lastIdx],
+                  text: finalText
+                };
+              }
+              return next;
+            });
+          }
         }
       });
     } catch {

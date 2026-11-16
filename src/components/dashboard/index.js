@@ -11,5 +11,6 @@ export { default as ScorePredictionPanel } from './ScorePredictionPanel';
 export { default as StudentEarlyWarningsCard } from './StudentEarlyWarningsCard';
 export { default as EarlyWarningsMentorPanel } from './EarlyWarningsMentorPanel';
 export { default as MistakeNotebookSM2View } from './MistakeNotebookSM2View';
+export { default as AiTutorModerationView } from './AiTutorModerationView';
 export { default as StudentScheduleView } from './StudentScheduleView';
 export { default as LiveClassQnAView } from './LiveClassQnAView';

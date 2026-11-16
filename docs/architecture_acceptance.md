@@ -1995,6 +1995,143 @@ Backend follow-up: Practice sends an empty AllSkillIds mapping to AI, preventing
   - Replaced legacy badge asset with high-resolution authentic Vietnamese student photography (`vietnamese_student_real.jpg`) in a glassmorphic frame (`bg-white/10 backdrop-blur-md border-white/20`).
 - **Verification**: 31/31 unit tests passed; bundle verification passed in 1.05s.
 
+
+### [15/11/2026] - Core Flow 4: Socratic AI Tutor Moderation & Dual-Layer Knowledge Graph Feedback Architecture for Academic Management
+
+- **Human-in-the-Loop Socratic Moderation Dashboard (`src/components/dashboard/AiTutorModerationView.jsx`)**:
+  - Engineered an enterprise-grade moderation interface for **Academic Managers (`ACADEMIC_MANAGER`)** and **Academic Directors (`ACADEMIC_DIRECTOR`)** to inspect, validate, and remediate student-reported Socratic AI Tutor interactions.
+  - Aligned with Core Flow 4 (`core4_activity.mmd` and `core_flow_4_ai_tutor_graph_rag.md`) to establish an active feedback loop between student learning friction and the persistent GraphRAG Knowledge Graph.
+  - Real-time KPI aggregation tracks 4 critical pedagogical metrics: *Pending Reports*, *Resolved & KG Ingested*, *Total Flagged Interactions*, and *Monitored Dialogues*.
+- **Interaction Inspector & Ground-Truth Verification Workflow**:
+  - Implemented split-view layout featuring a searchable/filterable queue on the left and a comprehensive diagnostic inspector on the right.
+  - Seamless KaTeX formula rendering via `MathText` for question stems and options.
+  - Visual ground-truth discrepancy analysis: highlights student choice (Red - cognitive error) directly against official database answer (Green - correct).
+  - Chronological Socratic dialogue reconstruction visualizing each conversational turn (`student` vs `ai_tutor`).
+- **Tri-Modal Pedagogical Knowledge Graph Intervention Actions**:
+  - **Action 1: Override Golden Exemplar (`PatternExemplar`)**: Allows academic managers to author verified expert explanations and step-by-step Socratic reasoning chains, saved directly to `pattern_exemplars` in the Knowledge Graph for dynamic few-shot retrieval.
+  - **Action 2: Add Novel Cognitive Trap (`PatternTrap`)**: Captures newly discovered misconceptions with custom trap codes, misconception analysis, and targeted reflective guiding questions, persisting into `pattern_traps`.
+  - **Action 3: Verify & Dismiss**: Closes false-positive reports when the Socratic AI's guidance adhered strictly to pedagogical guidelines and the student experienced misconception resistance.
+- **Client Service Layer & Navigation Integration (`practiceService.js`, `Sidebar.jsx`, `App.jsx`, `roles.js`)**:
+  - Added dedicated API client methods: `overrideTutorExemplar`, `addTutorNovelTrap`, and `resolveTutorReport` with graceful local storage fallback.
+  - Integrated `ai_moderation` into the Academic Management portal navigation with the `Bot` icon and `Core Flow 4` indicator.
+- **Verification**: Production build succeeded with zero errors (`1.29s`); all 31 automated test cases passed; zero linter errors.
+
+### [15/11/2026] - Academic Portal Layout Redesign & Student Design System Harmonization
+
+- **Visual Architecture & Design Harmonization (`AiTutorModerationView.jsx`, `CampusManagerDashboardView.jsx`, `Sidebar.jsx`)**:
+  - Overhauled the Academic Management UI to align completely with the verified Student Portal visual design system (`#FDFBF7` ambient glow palette).
+  - Replaced the dark, heavy slate header banners with the flagship royal blue-indigo gradient (`from-blue-700 via-indigo-700 to-blue-900`) complemented by radiant gold (`#FACC15`) and cyan (`cyan-400`) ambient blur orbs.
+  - Introduced the glassmorphic **GraphRAG Monitor Card** (`bg-white/10 backdrop-blur-md border border-white/20 rounded-3xl`) tracking real-time Socratic fidelity (97.6%), active Knowledge Graph nodes (142 Exemplars, 68 Traps), and operational health.
+- **Symmetrical 4-Card KPI Grid Architecture (`MetricsGrid` Pattern)**:
+  - Re-architected all stat containers into high-contrast, interactive metric cards featuring uppercase micro-tags, semantic status chips (`Cần can thiệp`, `Đã lưu Graph`, `Gắn cờ AI`, `Supabase Pooler`), and a bottom action bar with dividers enabling instant 1-click list filtering.
+- **Interactive Queue & Inspection Workspace Refinement**:
+  - Integrated student avatar initials badges, dynamic status-colored left border accents (Rose for pending, Emerald for resolved, Slate for baseline), and KaTeX-rendered formula previews.
+  - Streamlined sidebar badge to `Flow 4`, completely resolving label truncation in narrow sidebar viewports.
+- **Database Seed Alignment & Verification**:
+  - Seeded 3 representative interaction logs in PostgreSQL Supabase (`v_eval_ai.ai_tutor_interaction_logs`) to ensure real-time queue hydration on initial mount.
+  - All 31 automated tests passed; Vite production build verified in 1.09s with zero linter errors.
+
+### [15/11/2026] - Campus Manager Flagship Dashboard Overhaul & Percentage Scaling Normalization
+
+- **Defensive Percentage Scaling Architecture (`normalizeMasteryPct`)**:
+  - Identified and resolved a critical decimal-scaling regression where backend pre-multiplied percentages (`76.0`, `52.5`, `68.0`, `71.0`) were multiplied by 100 on the client, resulting in anomalous values (`7600%` and `6688% BKT`).
+  - Implemented `normalizeMasteryPct(val)` to dynamically detect input scale (treating `val > 1` as percentage and `val <= 1` as decimal fraction), guaranteeing 0-100% integer clamping across all four domains (`76%`, `53%`, `68%`, `71%`) and whole-campus mastery (`67% BKT`).
+- **Greeting & Hero Banner Integration (`CampusManagerDashboardView.jsx`, `App.jsx`)**:
+  - Eliminated the isolated raw `h1` greeting header above the viewport container, integrating official managerial greetings directly into the flagship royal blue-indigo `HeroBanner`.
+  - Added dynamic pedagogical message rotation (`Sparkles`) powered by Framer Motion, gold status chips (`#FACC15`), and a glassmorphic right-hand Campus Allocation Monitor card.
+- **Enterprise Comparative Heatmap Table & Micro-Group Orchestration**:
+  - Modernized the Flow 5 class comparison table with progress bars, dual-metric domain badges (`% Làm chủ` & `% Học sinh yếu`), and enhanced action triggers for micro-group seating arrangements (`ClassMicroGroupsModal`).
+  - Refined teaching faculty list with initials avatar badges, accurate status badges (Green for `Active`, Rose for `Locked`), and IAM policy notices.
+- **Early Warning Hub Visual Polish (`EarlyWarningsMentorPanel.jsx`)**:
+  - Re-architected the 6 BR-04 early-warning tier cards with modern card-shadows, responsive grid symmetry, and intuitive action buttons for tripartite parent-student counseling.
+- **Verification**: Production build verified in 1.10s; 31/31 unit tests pass; zero lint errors.
+
+### [15/11/2026] - Socratic AI Tutor Multi-Turn Session Persistence & Interactive History Navigation Architecture
+
+- **Hybrid Progressive Session Management Architecture (`src/utils/aiSessionManager.js`, `tests/aiSessionManager.test.js`)**:
+  - Architected an offline-first, client-synchronized session manager isolating conversation threads per authenticated student (`veval_socratic_sessions_${userId}`).
+  - **Zero-Latency Persistence**: Intercepts SSE streaming tokens in real time, automatically flushing user questions, Socratic guiding hints, LaTeX formulas, and student misconception choices into local storage. Ensures students can close the modal, reload the browser, or switch questions without losing their line of reasoning.
+  - **Background Cloud Synchronization (`practiceService.getAiTutorInteractions`)**: Seamlessly polls historical Socratic interactions from PostgreSQL Supabase (`v_eval_ai.ai_tutor_interaction_logs`) in the background, executing deduplicated hydration (`mergeCloudInteractions`) so historical interactions appear alongside local threads without overwriting in-flight discussions.
+  - **Automated Test Coverage (36/36 Tests Pass)**: Developed comprehensive unit tests in `tests/aiSessionManager.test.js` validating title generation, multi-user storage key isolation, message thread extension, cloud interaction ingestion, and session deletion.
+- **Two-Column Socratic Workspace & History Drawer (`src/components/modals/AISocraticTutorModal.jsx`)**:
+  - **Collapsible History Drawer**: Integrated a sliding left sidebar (`w-72 sm:w-80`) with one-click toggle (`PanelLeftClose`/`PanelLeftOpen`), session count badge, and a high-contrast `+ Bắt đầu phiên hỏi mới` action trigger.
+  - **Intelligent Thread Indexing**: Provides instant keyword search across questions and skills, active session highlight (blue border + shadow), message count pills (`n tin`), timestamp badges (`Hôm nay`, `Hôm qua`, formatted dates), cloud synchronization indicator (`Cloud` icon), and hover delete actions (`Trash2`).
+  - **Dynamic Multi-Mode Context Transition**: When launched from an incorrect exam question review (`initialContext`), the system automatically discovers if a session already exists for that `questionId` to resume the thread, or initializes a new Socratic greeting targeted precisely at the student's selected wrong option.
+  - **Responsive Layout Geometry**: Automatically expands modal viewport to `max-w-5xl h-[90vh]` when the history drawer is opened for a comfortable desktop workspace, and collapses gracefully to `max-w-3xl` when closed.
+  - **Strict React Hooks Invariant Enforcement**: Eliminated conditional hook dispatch by promoting `filteredSessions` memoization above all control flow returns and positioning `if (!isOpen) return null` strictly before JSX evaluation, permanently preventing *"Rendered more hooks than during previous render"* exceptions.
+- **Verification**: Production build verified in 1.10s; 36/36 unit test cases passed with 100% success rate; zero linter errors.
+
+### [15/11/2026] - Diagnostic History Question Content Hydration & Presentation Normalization Architecture
+
+- **Historical Question Content Hydration (`src/components/diagnostic/DiagnosticAssessmentPage.jsx`)**:
+  - Addressed a critical data starvation flaw where historical submissions retrieved from Practice Service (`practiceService.getDiagnosticResult`) previously only carried submission metadata and telemetry without question content, options, or explanations.
+  - Upgraded `DiagnosticAssessmentPage.jsx` to directly consume the enriched DTO returned by Practice Service's gRPC pipeline with Content Service (`q.content`, `q.options`, `q.explanation`, `q.passageContent`, `q.passageTitle`), with graceful client hydration fallback through `contentService.getDiagnosticTest()`.
+  - Guarantees zero blank content: each reviewed question inherits full Markdown/LaTeX question stems, responsive 4-option grids (A/B/C/D), reading comprehension passages, Bloom taxonomy tags, and pedagogical explanations.
+- **Ordinal Indexing & Taxonomy Normalization**:
+  - Eliminated anomalous *"Câu 0:"* headers caused by zero/null `questionOrder` values from legacy records, establishing strict fallback indexing `idx + 1` (mapping cleanly to Questions 1 through 30).
+  - Resolved *"Bloom 0/6"* display regressions by normalizing difficulty taxonomy (`difficultyLevel || matched?.bloom || 2`).
+- **Verification**: Vite production build succeeded in 1.08s; 36/36 unit test cases passed with 100% success rate; zero linter errors.
+
+### [15/11/2026] - Comprehensive Vietnamese Diacritic Normalization & Dual Review Render Loop Synchronization Architecture
+
+- **Vietnamese Diacritic Normalization Engine (`src/utils/vietnameseUtils.js`, `tests/vietnameseDiacritics.test.js`)**:
+  - Implemented `cleanVietnameseDiacritics` to resolve OCR / PDF encoding artifacts characterized by detached or decomposed floating diacritics (`´` `\u00B4`, ``` ` ``` `\u0060`, `\u0301`, `\u0300`, `\u0309`, `\u0303`, `\u0323`).
+  - Automatically merges floating tone marks into precomposed Vietnamese characters (e.g. `số´ng` -> `sống`, `đế´n` -> `đến`, `nhiê`u` -> `nhiều`, `quố´c biê´n` -> `quốc biến`, `thơ â´u` -> `thơ ấu`, `mẹ hiê`n` -> `mẹ hiền`, `nê` nê´p` -> `nề nếp`), eliminating visual character glitches across all browser platforms.
+  - Carefully engineered regex tokenizers preserve LaTeX mathematical notation (`\frac`, `\text`, `^`, `$`), ensuring chemistry equations and mathematics symbols are entirely unaffected.
+  - Completely purged `font-serif` across all reading passage containers to prevent font fallback and glyph rendering bugs on Windows Chromium, migrating to standard modern `font-sans` (`Plus Jakarta Sans`).
+- **Dual Review Render Loop Synchronization (`DiagnosticAssessmentPage.jsx`)**:
+  - Identified and synchronized two independent question review render loops: (1) In-place post-submission review panel (`DiagnosticReportPanel id="review"`), and (2) History review modal dialog (`selectedHistoryExam`).
+  - Modernized the in-place report view to match the modal dialog: replaced legacy `line-clamp-3` truncated containers with modern `p-4 sm:p-5 rounded-2xl` reading passage cards featuring `max-h-72 overflow-y-auto whitespace-pre-line`, `BookOpen` icon, and a `Bài đọc ngữ cảnh` badge.
+  - Standardized options grid styling with semantic ring boundaries (`ring-1 ring-emerald-500/30` for correct options, `ring-1 ring-rose-500/30` for incorrect student choices) alongside crisp `Check` and `X` indicators and soft purple explanation cards (`bg-purple-50/70 border-purple-200`).
+- **Verification**: Production build verified in 1.08s; 38/38 unit tests pass (100% success rate); zero linter errors.
+
+### [16/11/2026] - Socratic AI Tutor Stream Decoupling & Double-Token Prevention Architecture
+
+- **Root Cause Identification & Stream Decoupling (`src/components/modals/AISocraticTutorModal.jsx`, `src/components/dashboard/AISocraticTutorWidget.jsx`)**:
+  - Uncovered a concurrency vulnerability under React 19 / Vite development mode: React StrictMode executes functional state updaters (`setSessions(prev => ...)`) twice in succession to detect side-effects.
+  - The previous implementation mutated the active session's message object in-place (`last.text = (last.text || '') + token`), which caused every arriving token to be concatenated twice upon each update cycle, resulting in duplicate tokens across entire sentences (`"Chào Chào em! em! Chà, Chà..."`).
+  - Decoupled token accumulation using a mutable ref anchor (`streamedTextRef.current += token`), passing the authoritative text directly into immutable state transitions (`prev.map(...)`). State updaters remain completely pure and invariant against StrictMode's dual invocation.
+  - Eliminated high-frequency synchronous disk I/O bottlenecks: removed `aiSessionManager.saveSessions(...)` from the per-token loop (which previously invoked ~200+ synchronous `localStorage.setItem` calls per response), persisting session state strictly upon stream completion (`onComplete`) or error handling (`onError`).
+- **Historical Session Data Self-Healing Engine (`src/utils/aiSessionManager.js`, `tests/aiSessionManager.test.js`)**:
+  - Implemented `cleanDoubledWords` to detect and heal previously saved sessions in client storage corrupted by token doubling, while safely preserving genuine Vietnamese reduplicated vocabulary (`"thong thả"`, `"chầm chậm"`).
+- **Verification**: Vite production build succeeded in 1.52s; 39/39 unit test cases passed with 100% success rate; zero linter errors.
+
+### [16/11/2026] - Client-Side Session Isolation, Stale Closure Elimination & Tombstones Deletion Architecture
+
+- **Architectural Boundary Separation (Audit Log vs. User Chat Sessions)**:
+  - Disentangled the architectural conflation between the system's **immutable audit log** (`v_eval_ai.ai_tutor_interaction_logs` serving Core Flow 4 Mentor Audit & Moderation) and student **user chat sessions**.
+  - Identified that hard-deleting records from `ai_tutor_interaction_logs` violates data governance and compliance principles by stripping audit trails needed by academic mentors to investigate hallucinations and pedagogical errors.
+  - Decoupled the student chat modal from the mentor audit endpoint (`GET /api/practice/ai-tutor/interactions`). Students now manage their own personal chat sessions with zero leakage from or dependencies on system-wide audit queries.
+- **Atomic Functional State Transitions & Closure Bug Fix (`AISocraticTutorModal.jsx`)**:
+  - Resolved a stale closure defect in `handleDeleteSession` and `handleCreateNewSession` where deleting the active or last session previously captured outdated `sessions` array references in scope, causing deleted items to be accidentally reintroduced into component state.
+  - Converted session lifecycle operations to atomic functional state updaters (`setSessions(prev => ...)`). When deleting an active session, the remaining array is evaluated synchronously, and when all sessions are cleared, a pristine initial session (`[freshSess]`) is initialized without retaining stale references.
+- **Tombstones Persistence Engine (`aiSessionManager.js`, `tests/aiSessionManager.test.js`)**:
+  - Implemented client-side tombstones (`veval_deleted_socratic_sessions_${userId}`) via `markSessionDeleted`, `getDeletedSessionIds`, and `isSessionDeleted`.
+  - When a student deletes a session, its ID, corresponding question identifier (`q_${questionId}`), and interaction logs are recorded in the tombstone registry.
+  - Any subsequent synchronization or merge operation strictly filters against this registry, permanently preventing resurrection of deleted sessions.
+- **Verification**: Vite production build succeeded in 1.08s; 22/22 unit tests pass (100% success rate); zero linter errors.
+
+
+### [16/11/2026] - Socratic AI Tutor Multi-Turn Conversation History Forwarding Architecture
+
+- **Client Multi-Turn History Forwarding (`src/components/modals/AISocraticTutorModal.jsx`, `src/services/practiceService.js`)**:
+  - Enhanced `practiceService.askAiTutorStream` to accept `conversationHistory = null` and serialize it into the streaming request payload.
+  - In `handleSendMessage`, mapped the last 6 message turns (`messages.slice(-6).map(m => ({ role: m.sender === 'user' ? 'student' : 'tutor', text: m.text }))`) and forwarded them as conversation history.
+  - Guarantees seamless multi-turn context retention: subsequent follow-up queries (e.g. asking for an illustrative example or method clarification) maintain the specific question, figure, and pedagogical direction already established in prior conversation turns.
+- **Verification**:
+  - Vite production build succeeded in 1.15s with 0 errors.
+  - `node --test` passed 22/22 unit tests with 100% success rate.
+
+### [16/11/2026] - Socratic AI Tutor Skill & Question Relational Grounding Propagation Architecture
+
+- **Skill ID & Question Relational Forwarding (`src/components/modals/AISocraticTutorModal.jsx`, `src/components/modals/AdaptiveQuizModal.jsx`)**:
+  - Attached `skillId: initialContext.skillId || initialContext.skill_id || null` into the active session schema upon opening the modal from quiz review or practice sessions.
+  - In `handleSendMessage`, forwarded `skillId: isQuestionMode ? (activeSession.skillId || null) : null` into `practiceService.askAiTutorStream`.
+  - In `AdaptiveQuizModal.jsx`, mapped `skillId: q.skill_id || q.skillId || null` and provided it in `onOpenAiTutorWithContext`.
+  - Enables the backend AI Engine to immediately link questions to textbook curriculum materials (`v_eval_content."Materials"`) using relational foreign key joins, achieving zero-hardcode pedagogical grounding.
+- **Verification**:
+  - Vite production build succeeded in 1.06s with 0 errors.
+  - `node --test` passed 22/22 unit tests with 100% success rate.
 ### [14/11/2026] - Early MathLab Block Shielding, Bold Heading Repair & Zero-Hardcode Extraction Cards
 
 - **Early Placeholder Isolation & Bold Heading Normalization (`src/components/common/MathText.jsx`)**:

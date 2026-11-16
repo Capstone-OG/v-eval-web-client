@@ -203,10 +203,10 @@ export default function EarlyWarningsMentorPanel({
                 Phân quyền: {roleLabel}
               </span>
             </div>
-            <h2 className="text-lg lg:text-xl font-extrabold text-slate-900">
+            <h2 className="text-lg lg:text-xl font-black text-slate-900">
               Bảng Điều Phối Cảnh Báo Sớm 3 Tầng & Đặt Lịch Tư Vấn Mục Tiêu 3 Bên
             </h2>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-slate-500 mt-1 leading-relaxed">
               Theo dõi các ca học sinh lệch quỹ đạo điểm dự báo SEM, ghi nhận biên bản can thiệp tại lớp và tổ chức phiên tư vấn 3 bên (Giáo viên - Học sinh - Phụ huynh) khi mục tiêu vượt ngưỡng khả thi.
             </p>
           </div>
@@ -214,60 +214,71 @@ export default function EarlyWarningsMentorPanel({
           <button
             type="button"
             onClick={() => loadAlertsDashboard(false)}
-            className="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-extrabold flex items-center gap-2 self-start lg:self-auto transition-all"
+            className="px-4 py-2.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-black flex items-center gap-2 self-start lg:self-auto transition-all shadow-xs cursor-pointer"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
             <span>Làm mới cảnh báo</span>
           </button>
         </div>
 
-        {/* 6 KPI Summary Cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3">
-          <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200">
-            <div className="text-[10px] font-bold uppercase text-slate-400">Tổng cảnh báo</div>
-            <div className="text-2xl font-black text-slate-900 mt-0.5">
+        {/* 6 KPI Summary Cards - Modern Card Shadow */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3.5">
+          <div className="p-4 rounded-2xl bg-white border border-slate-200/90 card-shadow hover:border-slate-400 transition-all">
+            <div className="text-[10px] font-black tracking-wider uppercase text-slate-400">Tổng cảnh báo</div>
+            <div className="text-2xl font-black text-slate-900 mt-1">
               {dashboardData?.totalAlerts ?? 0}
             </div>
+            <div className="text-[10px] text-slate-400 font-semibold mt-0.5">Toàn cơ sở</div>
           </div>
-          <div className="p-3.5 rounded-2xl bg-indigo-50/60 border border-indigo-200">
-            <div className="text-[10px] font-bold uppercase text-indigo-700">Chờ can thiệp</div>
-            <div className="text-2xl font-black text-indigo-700 mt-0.5">
+
+          <div className="p-4 rounded-2xl bg-white border border-indigo-200 card-shadow hover:border-indigo-400 transition-all">
+            <div className="text-[10px] font-black tracking-wider uppercase text-indigo-700">Chờ can thiệp</div>
+            <div className="text-2xl font-black text-indigo-700 mt-1">
               {dashboardData?.activeAlertsCount ?? 0}
             </div>
+            <div className="text-[10px] text-indigo-600 font-semibold mt-0.5">Cần xử lý gấp</div>
           </div>
-          <div className="p-3.5 rounded-2xl bg-rose-50/70 border border-rose-200">
-            <div className="text-[10px] font-bold uppercase text-rose-700">Cảnh báo Đỏ</div>
-            <div className="text-2xl font-black text-rose-600 mt-0.5">
+
+          <div className="p-4 rounded-2xl bg-white border border-rose-200 card-shadow hover:border-rose-400 transition-all">
+            <div className="text-[10px] font-black tracking-wider uppercase text-rose-700">Cảnh báo Đỏ</div>
+            <div className="text-2xl font-black text-rose-600 mt-1">
               {dashboardData?.redAlertsCount ?? 0}
             </div>
+            <div className="text-[10px] text-rose-600 font-semibold mt-0.5">Tier 1 • Nguy cơ cao</div>
           </div>
-          <div className="p-3.5 rounded-2xl bg-amber-50/70 border border-amber-200">
-            <div className="text-[10px] font-bold uppercase text-amber-800">Nhắc nhở Vàng</div>
-            <div className="text-2xl font-black text-amber-600 mt-0.5">
+
+          <div className="p-4 rounded-2xl bg-white border border-amber-200 card-shadow hover:border-amber-400 transition-all">
+            <div className="text-[10px] font-black tracking-wider uppercase text-amber-800">Nhắc nhở Vàng</div>
+            <div className="text-2xl font-black text-amber-600 mt-1">
               {dashboardData?.yellowAlertsCount ?? 0}
             </div>
+            <div className="text-[10px] text-amber-700 font-semibold mt-0.5">Tier 2 • Trượt tiến độ</div>
           </div>
-          <div className="p-3.5 rounded-2xl bg-purple-50/70 border border-purple-200">
-            <div className="text-[10px] font-bold uppercase text-purple-800">Mục tiêu ảo</div>
-            <div className="text-2xl font-black text-purple-700 mt-0.5">
+
+          <div className="p-4 rounded-2xl bg-white border border-purple-200 card-shadow hover:border-purple-400 transition-all">
+            <div className="text-[10px] font-black tracking-wider uppercase text-purple-800">Mục tiêu ảo</div>
+            <div className="text-2xl font-black text-purple-700 mt-1">
               {dashboardData?.unrealisticGoalCount ?? 0}
             </div>
+            <div className="text-[10px] text-purple-700 font-semibold mt-0.5">Tier 3 • Đích không tưởng</div>
           </div>
-          <div className="p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-200">
-            <div className="text-[10px] font-bold uppercase text-emerald-700">Đã xử lý</div>
-            <div className="text-2xl font-black text-emerald-600 mt-0.5">
+
+          <div className="p-4 rounded-2xl bg-white border border-emerald-200 card-shadow hover:border-emerald-400 transition-all">
+            <div className="text-[10px] font-black tracking-wider uppercase text-emerald-700">Đã xử lý</div>
+            <div className="text-2xl font-black text-emerald-600 mt-1">
               {dashboardData?.resolvedAlertsCount ?? 0}
             </div>
+            <div className="text-[10px] text-emerald-700 font-semibold mt-0.5">Đã lưu biên bản</div>
           </div>
         </div>
 
         {/* Filter Bar */}
-        <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80">
+        <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-2xl bg-slate-50 border border-slate-200/90">
           <div className="flex flex-wrap items-center gap-2">
             <select
               value={classFilter}
               onChange={(e) => setClassFilter(e.target.value)}
-              className="px-3 py-2 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+              className="px-3 py-2 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer"
             >
               <option value="ALL">Tất cả các lớp phụ trách</option>
               <option value={FLOW5_DEFAULTS.CLASS_ID}>Lớp ĐGNL Cơ sở 1 (Mã: 01)</option>
@@ -284,9 +295,9 @@ export default function EarlyWarningsMentorPanel({
                 key={item.id}
                 type="button"
                 onClick={() => setAlertTypeFilter(item.id)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
                   alertTypeFilter === item.id
-                    ? 'bg-slate-900 text-white'
+                    ? 'bg-slate-900 text-white shadow-xs'
                     : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
                 }`}
               >
@@ -305,9 +316,9 @@ export default function EarlyWarningsMentorPanel({
                 key={st.id}
                 type="button"
                 onClick={() => setStatusFilter(st.id)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
                   statusFilter === st.id
-                    ? 'bg-indigo-600 text-white'
+                    ? 'bg-indigo-600 text-white shadow-xs'
                     : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
                 }`}
               >

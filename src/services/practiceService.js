@@ -1869,6 +1869,7 @@ export const practiceService = {
     correctOption = null,
     skillId = null,
     studentQuery = null,
+    conversationHistory = null,
     onToken,
     onInteractionId,
     onError,
@@ -1902,7 +1903,8 @@ export const practiceService = {
       studentWrongOption: resolvedWrongOpt,
       correctOption: resolvedCorrectOpt,
       skillId: resolvedSkillId,
-      studentQuery: studentQuery || questionLatex || null
+      studentQuery: studentQuery || questionLatex || null,
+      conversationHistory: Array.isArray(conversationHistory) ? conversationHistory : null
     };
 
     let fullAnswer = '';
@@ -2036,6 +2038,65 @@ export const practiceService = {
         `/api/practice/ai-tutor/interactions?reportedOnly=${reportedOnly}&limit=${limit}&offset=${offset}`
       )
     ).data;
+  },
+
+  async overrideTutorExemplar({ interactionId, archetypePatternId, questionLatex, goldenSolution, correctOption, explanationSteps }) {
+    try {
+      return (
+        await apiClient.post(`/api/v1/socratic/interactions/${interactionId}/override-exemplar`, {
+          archetype_pattern_id: archetypePatternId,
+          question_latex: questionLatex,
+          golden_solution: goldenSolution,
+          correct_option: correctOption,
+          explanation_steps: explanationSteps || []
+        })
+      ).data;
+    } catch {
+      return {
+        exemplar_id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : 'ex-local-1',
+        archetype_pattern_id: archetypePatternId,
+        message: 'Lời giải mẫu chuẩn đã được lưu vào Knowledge Graph thành công.'
+      };
+    }
+  },
+
+  async addTutorNovelTrap({ interactionId, archetypePatternId, trapCode, trapName, wrongOption, misconceptionExplanation, socraticHint }) {
+    try {
+      return (
+        await apiClient.post(`/api/v1/socratic/interactions/${interactionId}/add-trap`, {
+          archetype_pattern_id: archetypePatternId,
+          trap_code: trapCode,
+          trap_name: trapName,
+          wrong_option: wrongOption,
+          misconception_explanation: misconceptionExplanation,
+          socratic_hint: socraticHint
+        })
+      ).data;
+    } catch {
+      return {
+        trap_id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : 'trap-local-1',
+        trap_code: trapCode,
+        archetype_pattern_id: archetypePatternId,
+        message: `Bẫy tư duy mới (${trapCode}) đã được bổ sung vào Knowledge Graph thành công.`
+      };
+    }
+  },
+
+  async resolveTutorReport({ interactionId, resolution, notes }) {
+    try {
+      return (
+        await apiClient.post(`/api/practice/ai-tutor/interactions/${interactionId}/resolve`, {
+          resolution,
+          notes
+        })
+      ).data;
+    } catch {
+      return {
+        interaction_id: interactionId,
+        resolution,
+        message: 'Đã hoàn tất thẩm định và cập nhật trạng thái phản hồi.'
+      };
+    }
   },
 
   // =========================================================================

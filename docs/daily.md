@@ -2,6 +2,117 @@
 
 ---
 
+## [16/11/2026] - Chuyển Tiếp Lịch Sử Hội Thoại Đa Lượt & Skill ID Chuẩn Xác Cho Gia Sư Socratic, Khắc Phục Triệt Để Hiện Tượng Lặp Từ Kép, Chuẩn Hóa Xóa Phiên (Tombstones)
+
+- **Đồng Bộ Chuyển Tiếp `skillId` & `questionId` Cho Gia Sư AI (`src/components/modals/AISocraticTutorModal.jsx`, `src/components/modals/AdaptiveQuizModal.jsx`)**:
+  - Lưu trữ thuộc tính `skillId: initialContext.skillId || initialContext.skill_id || null` vào state phiên `activeSession` khi khởi tạo cuộc trò chuyện Socratic từ câu hỏi kiểm tra/luyện tập.
+  - Forward chính xác `skillId: isQuestionMode ? (activeSession.skillId || null) : null` vào `practiceService.askAiTutorStream`.
+  - Trong `AdaptiveQuizModal.jsx`: trích xuất `skillId: q.skill_id || q.skillId || null` và chuyển tiếp sang modal gia sư qua `onOpenAiTutorWithContext`, giúp AI Engine neo đậu chính xác vào tài liệu SGK chuẩn GDPT 2018 (`v_eval_content."Materials"`).
+- **Chuyển Tiếp Lịch Sử Hội Thoại Đa Lượt Cho Gia Sư Socratic (`src/components/modals/AISocraticTutorModal.jsx`, `src/services/practiceService.js`)**:
+  - Mở rộng hàm `practiceService.askAiTutorStream` tiếp nhận tham số `conversationHistory = null` và đóng gói vào body JSON gửi lên backend Practice Service.
+  - Trong `AISocraticTutorModal.jsx`: khi người dùng gửi tin nhắn mới, tự động trích xuất tối đa 6 lượt trò chuyện gần nhất (`messages.slice(-6).map(m => ({ role: m.sender === 'user' ? 'student' : 'tutor', text: m.text }))`) và chuyển tiếp vào luồng stream SSE.
+  - Đảm bảo AI gia sư luôn nhớ sâu sắc bối cảnh các câu hỏi trước (ví dụ: hình chóp `S.ABCD`, giao tuyến `SO`) khi học sinh hỏi tiếp nối thay vì quên bối cảnh.
+- **Chuẩn Hóa Kiến Trúc Xóa Phiên & Phân Tách Rạch Ròi Audit Log (`src/components/modals/AISocraticTutorModal.jsx`, `src/utils/aiSessionManager.js`, `tests/aiSessionManager.test.js`)**:
+  - **Tách bạch 2 tầng kiến trúc chuẩn Enterprise SaaS**: Phân định rõ ràng giữa **Audit Log kiểm toán bất biến** của nhà trường (`v_eval_ai.ai_tutor_interaction_logs` dành cho Mentor/Quản lý học thuật ở Core Flow 4) và **User Chat Sessions** dành cho học sinh. Tuyệt đối không xóa thô (hard-delete) dữ liệu kiểm toán hệ thống.
+  - **Ngắt hoàn toàn việc gọi nhầm API kiểm duyệt Mentor**: Xóa bỏ lời gọi ngầm `practiceService.getAiTutorInteractions({ reportedOnly: false })` trong modal học sinh. Học sinh chỉ tải và quản lý các phiên hội thoại cá nhân của chính mình.
+  - **Khắc phục lỗi React State Closure khi xóa phiên**: Thay thế biến `sessions` cũ bằng functional state updater nguyên tử `setSessions(prev => ...)`. Khi xóa phiên đang chọn hoặc xóa phiên cuối cùng, hệ thống tính toán danh sách `remaining` tức thời và khởi tạo phiên mới tinh khôi `[freshSess]` mà không kéo theo phiên cũ.
+  - **Triển khai cơ chế Tombstones vĩnh viễn**: Bổ sung các phương thức `markSessionDeleted`, `getDeletedSessionIds`, `isSessionDeleted` trong `aiSessionManager.js` lưu vết danh sách ID đã xóa vào `localStorage`. Bất kỳ tiến trình đồng bộ nào cũng tự động bỏ qua các ID này, ngăn chặn 100% hiện tượng hồi sinh phiên đã xóa.
+- **Khắc Phục Lỗi Lặp Từ Kép Khi AI Stream Phản Hồi (`src/components/modals/AISocraticTutorModal.jsx`, `src/components/dashboard/AISocraticTutorWidget.jsx`)**:
+  - **Xác định nguyên nhân gốc rễ**: Trong môi trường React 19 / Vite development mode, React StrictMode thực thi các hàm cập nhật trạng thái (`setSessions(prev => ...)`) 2 lần liên tiếp nhằm kiểm tra tính thuần khiết (pure function). Trước đây, code cũ thực hiện biến đổi trực tiếp thuộc tính đối tượng in-place (`last.text = (last.text || '') + token`), khiến mỗi token gửi từ SSE bị cộng dồn 2 lần (dẫn đến hiện tượng mọi từ đều bị lặp kép như *"Chào Chào em! em! Chà, Chà, em em vừa vừa mang mang đến đến một một..."*).
+  - **Tách biệt luồng tích lũy với `useRef` (Decoupled Stream Ref)**: Sử dụng `streamedTextRef.current` lưu trữ nguồn dữ liệu chính xác duy nhất cho chuỗi văn bản đang stream. State updater chỉ thực hiện gán bất biến (`text: currentText`) qua `prev.map(...)`, hoàn toàn miễn nhiễm 100% trước cơ chế chạy lặp của React StrictMode.
+  - **Triệt tiêu 200+ lần ghi đĩa dư thừa vào LocalStorage**: Loại bỏ lời gọi `aiSessionManager.saveSessions(...)` bên trong callback `onToken`. Việc lưu phiên chỉ thực hiện đúng 1 lần duy nhất khi kết thúc lượt stream (`onComplete`) hoặc khi gặp lỗi (`onError`), giải phóng hoàn toàn nghẽn I/O và giật lag giao diện.
+- **Tự Động Làm Sạch & Phục Hồi Dữ Liệu Phiên Cũ (`src/utils/aiSessionManager.js`, `tests/aiSessionManager.test.js`)**:
+  - Xây dựng hàm `cleanDoubledWords` nhận diện và tự động chữa lành các tin nhắn lịch sử từng bị dính lỗi lặp từ trước đó trong `localStorage` ngay khi nạp phiên, đồng thời giữ nguyên các từ láy tự nhiên trong tiếng Việt (như "thong thả", "chầm chậm").
+- **Kiểm Thử & Biên Dịch**:
+  - `npm run build`: Thành công 100% trong 1.06s.
+  - `node --test`: Đạt **22/22 unit tests pass 100%**.
+
+---
+
+## [15/11/2026] - Tách Riêng Trang Thời Khóa Biểu & Điểm Danh (`StudentScheduleView` - `schedule`) Khỏi Trang Lớp Học & Live Q&A (`LiveClassQnAView` - `live`), Loại Bỏ 100% Mock Data & Hardcode Và Hiển Thị Đầy Đủ `radarChart` + `skillPriors` Trong Lịch Sử Bài Làm
+
+- **Tách Biệt Rạch Ròi Trang "Thời Khóa Biểu & Điểm Danh" (`schedule`) Và Trang "Lớp Học & Live Q&A" (`live`) ([`Sidebar.jsx`](../src/components/layout/Sidebar.jsx), [`App.jsx`](../src/App.jsx), [`StudentScheduleView.jsx`](../src/components/dashboard/StudentScheduleView.jsx), [`LiveClassQnAView.jsx`](../src/components/dashboard/LiveClassQnAView.jsx), [`practiceService.js`](../src/services/practiceService.js))**:
+  - Bổ sung mục điều hướng độc lập **`id: 'schedule'` ("Thời khóa biểu & Điểm danh")** trong nhóm *Không Gian Học Viên* của `Sidebar.jsx` và `ROLE_PORTAL_DEFINITIONS.student.tabs` của `App.jsx`, tách biệt hoàn toàn với mục **`id: 'live'` ("Lớp học & Live Q&A")** trong nhóm *Luyện Tập & Gia Sư AI*.
+  - **`StudentScheduleView.jsx` (`activeTab === 'schedule'`)**: Chuyên biệt 100% cho nghiệp vụ Học vụ, Thời khóa biểu theo Học kỳ (`AcademicTerms`) & Khóa học (`Courses`), Khung lịch định kỳ tuần (`ClassSchedules`), danh sách Buổi học (`ClassSessions` kèm nhãn Học bù / Dạy thay) và Điểm danh chuyên cần cá nhân (`SessionAttendances`: `PRESENT`, `LATE`, `EXCUSED`, `ABSENT`, `UNRECORDED`).
+  - **`LiveClassQnAView.jsx` (`activeTab === 'live'`)**: Không gian chuyên biệt cho Lớp học phần đang tham gia, Nhóm vi mô tại bàn, lịch Phụ đạo trực tuyến (`LiveQnACard`), danh sách Giảng viên cơ sở từ `userService` và kết nối nhanh với Gia sư AI Socratic 24/7.
+  - **Loại Bỏ 100% Mock Data & Hardcode**: Xóa bỏ hoàn toàn hàm `buildSeedScheduleData` trong `practiceService.js` và mọi giá trị hardcode trong `StudentScheduleView.jsx`, `DiagnosticAssessmentPage.jsx`, `SubmissionHistoryView.jsx`; hiển thị Empty State trung thực khi dữ liệu chưa được tạo trên hệ thống.
+
+- **Đồng Bộ & Hiển Thị Đầy Đủ `radarChart` Và `skillPriors` Khi Thi Xong Lẫn Khi Xem Lại Lịch Sử Bài Làm ([`DiagnosticAssessmentPage.jsx`](../src/components/diagnostic/DiagnosticAssessmentPage.jsx), [`SubmissionHistoryView.jsx`](../src/components/diagnostic/SubmissionHistoryView.jsx), [`practiceService.js`](../src/services/practiceService.js))**:
+  - Bổ sung hàm chuẩn hóa `normalizeRadarChart` cùng `normalizeSkillPriors` (chỉ đọc dữ liệu thực từ API Backend, không tự suy diễn hay gán cứng fallback) trong `DiagnosticAssessmentPage.jsx` và `SubmissionHistoryView.jsx`.
+  - Render trực quan khối **Ma Trận Tiên Nghiệm Kỹ Năng BKT `` `P(L_0)` `` & Tham Số Năng Lực `` `\theta_{\text{skill}}` `` (`skillPriors`)** song hành cùng **Biểu Đồ Radar Năng Lực (`radarChart`)** trên cả màn hình Kết quả sau thi lẫn màn hình Chi tiết lịch sử bài làm.
+
+- **Kiểm Thử Vận Hành & Biên Dịch**:
+  - Toàn bộ 17/17 unit tests (`node --test`) vượt qua 100%, `npm run build` (`vite v8.3.0`) thành công với 0 lỗi.
+
+---
+
+## [15/11/2026] - Triển Khai Module Tiện Ích Chuẩn Hóa Dấu Tiếng Việt Toàn Diện & Đồng Bộ Giao Diện Bảng Đánh Giá Chi Tiết 30 Câu Khảo Sát Năng Lực
+
+- **Chuẩn Hóa Triệt Để Dấu Tiếng Việt & Typography Hệ Thống (`src/utils/vietnameseUtils.js`, `src/components/diagnostic/DiagnosticAssessmentPage.jsx`, `tests/vietnameseDiacritics.test.js`)**:
+  - **Module Tiện Ích `cleanVietnameseDiacritics`**: Xây dựng thuật toán chuẩn hóa dấu tiếng Việt chuyên sâu, xử lý triệt để các ký tự dấu thanh lơ lửng bị phân rã (decomposed/floating diacritics như `´` `\u00B4`, ``` ` ``` `\u0060`, `\u0301`, `\u0300`, `\u0309`, `\u0303`, `\u0323`) thường gặp từ nguồn OCR hoặc PDF scan (ví dụ `số´ng` -> `sống`, `đế´n` -> `đến`, `nhiê`u` -> `nhiều`, `quố´c biê´n` -> `quốc biến`, `thơ â´u` -> `thơ ấu`, `mẹ hiê`n` -> `mẹ hiền`, `nê` nê´p` -> `nề nếp`).
+  - **Bảo Toàn 100% Công Thức Toán & KaTeX**: Thuật toán chỉ tác động chính xác lên cụm nguyên âm tiếng Việt, hoàn toàn không chạm vào cú pháp LaTeX (`\frac`, `\text`, `^`, `$`), đảm bảo các ký hiệu hóa học và toán học hiển thị nguyên vẹn.
+  - **Khử Bỏ Hoàn Toàn `font-serif`**: Loại bỏ dứt điểm font serif gây xung đột render glyph tiếng Việt trên Chromium Windows, chuyển toàn bộ container ngữ liệu sang `font-sans` (`Plus Jakarta Sans`) sắc nét và hiện đại.
+- **Đồng Bộ Toàn Diện Giao Diện Xem Lại Bài Làm (2 Render Loops)**:
+  - **Đồng bộ Bảng Đánh Giá Chi Tiết Tại Trang Kết Quả (`DiagnosticReportPanel id="review"`)**: Nâng cấp toàn bộ khối hiển thị câu hỏi và ngữ liệu tại trang kết quả sau nộp bài tương đương 100% với modal lịch sử, xóa bỏ bộ cắt dòng cũ (`line-clamp-3`), chuyển sang thẻ bài đọc ngữ cảnh bo cong cao cấp (`p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-blue-50/90 to-indigo-50/50`) với thanh cuộn tự nhiên (`max-h-72 overflow-y-auto whitespace-pre-line`).
+  - **Lưới Phương Án Trắc Nghiệm Chuẩn SaaS**: Áp dụng thẻ lựa chọn phân màu ngữ nghĩa cao cấp với hiệu ứng ring (`ring-1 ring-emerald-500/30` cho đáp án đúng, `ring-1 ring-rose-500/30` cho lựa chọn sai của thí sinh), icon `Check` và `X` sắc nét cùng nhãn trạng thái rõ ràng.
+  - **Thẻ Lời Giải Tư Duy Chi Tiết**: Nền tím nhạt thanh lịch (`bg-purple-50/70 border-purple-200`) kèm icon `Sparkles`, thụt lề chuẩn mực và văn phong sư phạm tích cực cho mọi phân môn.
+  - **Ánh Xạ Đúng Miền Năng Lực**: Kỹ năng đọc hiểu Tiếng Việt hiển thị chuẩn miền `Sử dụng Ngôn ngữ & Văn học` với badge xanh lục dịu mắt.
+- **Kiểm Thử & Biên Dịch**:
+  - `npm run build`: Thành công 100% trong 1.08s.
+  - `node --test`: Đạt **38/38 unit tests pass 100%** (bao gồm 2 bài test tự động cho `cleanVietnameseDiacritics`).
+
+---
+
+## [15/11/2026] - Triển Khai Cơ Chế Lưu Phiên Hội Thoại Đa Lượt & Thanh Điều Hướng Lịch Sử Gia Sư AI Socratic (Hybrid Client Storage & Supabase Cloud Sync)
+
+- **Tối Ưu Hóa Giao Diện Hiển Thị Lịch Sử Làm Bài & Chuẩn Hóa Typography Ngữ Liệu (`src/components/diagnostic/DiagnosticAssessmentPage.jsx`)**:
+  - **Chuẩn hóa Huy hiệu Miền Năng lực**: Ánh xạ chuẩn xác kỹ năng Đọc hiểu sang miền `Sử dụng Ngôn ngữ & Văn học` (`dom_lang`) với badge màu xanh lục (`bg-emerald-50 text-emerald-700 border-emerald-200`), xóa bỏ hoàn toàn lỗi hiển thị nhầm thành *"Toán học & Tư duy định lượng"*.
+  - **Khắc phục triệt để lỗi Font chữ & Dấu tiếng Việt**: Loại bỏ thuộc tính `font-serif` gây xung đột font dự phòng KaTeX trên Windows (lỗi hiển thị dấu sắc trôi nổi như `số´ng`, `quố´c`, `biê´n`), chuyển sang font chuẩn hệ thống `font-sans` (`Plus Jakarta Sans`) sắc nét, mượt mà.
+  - **Nâng cấp Khung Ngữ liệu Đọc hiểu**: Thay thế bộ cắt dòng 3 dòng (`line-clamp-3`) bằng container bài đọc ngữ cảnh chuyên nghiệp (`max-h-72 overflow-y-auto whitespace-pre-line`), bổ sung tiêu đề ngữ liệu kèm icon `BookOpen` và nhãn `Bài đọc ngữ cảnh`.
+  - **Tối ưu hóa Lưới Phương án Trắc nghiệm**: Mở rộng padding thẻ lựa chọn (`p-3.5 sm:p-4`), tích hợp viền bo tròn, hiệu ứng ring tinh tế cho đáp án đúng (`ring-1 ring-emerald-500/30`) và đáp án học sinh chọn sai (`ring-1 ring-rose-500/30`) kèm icon `Check` và `X` trực quan.
+  - **Trau chuốt Lời giải Chi tiết**: Tinh chỉnh văn phong lời giải fallback phù hợp cho mọi phân môn ("nắm vững kiến thức trọng tâm và kỹ năng tư duy"), loại bỏ từ ngữ toán học "định lý" khi áp dụng cho môn Ngữ văn/Khoa học.
+  - **Khắc phục triệt để thông báo placeholder `"API lịch sử không cung cấp nội dung câu hỏi."`**: Nâng cấp hàm `openHistoryExam` trực tiếp tiêu thụ DTO giàu dữ liệu (`data.questions`) được làm giàu tự động từ backend Practice Service thông qua pipeline gRPC với Content Service (`q.content`, `q.options`, `q.explanation`, `q.passageContent`, `q.passageTitle`), kết hợp cơ chế lập chỉ mục linh hoạt.
+  - **Khử bỏ hoàn toàn lỗi `"Câu 0:"` và `"Bloom 0/6"`**: Tự động kế thừa thứ tự câu và độ khó Bloom chuẩn hóa từ backend (`q.questionOrder` và `q.difficultyLevel`), kết hợp bộ đệm an toàn theo chỉ mục (`idx + 1`) không phụ thuộc vào chuỗi hardcode.
+- **Triển Khai Phân Hệ Quản Lý Phiên Hội Thoại Gia Sư AI Socratic (`src/utils/aiSessionManager.js`, `tests/aiSessionManager.test.js`)**:
+  - **Kiến trúc Lai Tiến Tiến (Hybrid Progressive Session Management)**: Xây dựng module quản lý phiên hội thoại đa lượt độc lập cách ly theo định danh học sinh (`veval_socratic_sessions_${userId}`).
+  - **Lưu trữ Cục bộ Tức thì (Zero Latency Persistence)**: Tự động lưu trữ và đồng bộ hóa toàn bộ chuỗi tin nhắn hỏi - đáp, câu hỏi đang xét, phương án học sinh chọn sai và bối cảnh đề thi ngay trong thời gian thực khi AI stream phản hồi, chấm dứt hoàn toàn hiện tượng mất dữ liệu khi đóng modal hoặc tải lại trang.
+  - **Đồng bộ Đám mây Supabase Nền (Background Cloud Sync)**: Tích hợp hàm `mergeCloudInteractions(userId, cloudInteractions)` tự động đối soát và tải về các phiên tương tác lịch sử từ bảng `v_eval_ai.ai_tutor_interaction_logs` thông qua `practiceService.getAiTutorInteractions()`, chuyển đổi thành các phiên hội thoại hoàn chỉnh mà không ghi đè hoặc trùng lặp với phiên hiện tại.
+  - **Khắc Phục Lỗi Vi Phạm React Rules of Hooks (`Rendered more hooks than during previous render`)**: Tái cấu trúc vị trí khai báo `useMemo(filteredSessions)` lên đầu component cùng toàn bộ hooks, di chuyển `if (!isOpen) return null` xuống ngay trước khối return JSX; đảm bảo số lượng hooks render luôn nhất quán 100% trong mọi trạng thái đóng/mở modal.
+  - **Kiểm thử Đơn vị Đạt 100% (36/36 Tests Pass)**: Bổ sung bộ kiểm thử `tests/aiSessionManager.test.js` kiểm tra toàn diện việc khởi tạo phiên, phân lập dữ liệu giữa nhiều học sinh, cập nhật tin nhắn đa lượt, đối soát gộp đám mây và xóa phiên an toàn.
+- **Tái Cấu Trúc Toàn Diện Modal Gia Sư AI Thành Không Gian Làm Việc 2 Cột Đẳng Cấp (`src/components/modals/AISocraticTutorModal.jsx`)**:
+  - **Thanh Điều Hướng Lịch Sử Trượt Mở (Collapsible Session History Drawer)**: Thiết kế cột lịch sử phiên hỏi đáp trượt mở linh hoạt (`w-72 sm:w-80`), hỗ trợ nút thu gọn/mở rộng (`PanelLeftClose` / `PanelLeftOpen`), đếm số lượng phiên theo thời gian thực và nút nổi bật `+ Bắt đầu phiên hỏi mới`.
+  - **Tìm kiếm & Phân loại Phiên Thông Minh**: Tích hợp ô tìm kiếm lọc nhanh theo tiêu đề hoặc chủ đề kiến thức, thẻ phiên có viền xanh dương nổi bật khi đang hoạt động, hiển thị số lượng tin nhắn (`n tin`), nhãn chủ đề năng lực, huy hiệu đám mây (`Cloud`) cho phiên đã đồng bộ và nút xóa phiên nhanh (`Trash2`).
+  - **Mở Rộng Không Gian Đối Thoại Đa Nhiệm**: Nâng cấp độ rộng modal lên `max-w-5xl h-[90vh]` khi mở thanh lịch sử, đồng thời tự động co gọn `max-w-3xl` khi thu nhỏ thanh lịch sử để học sinh tập trung tối đa vào bài giải.
+  - **Chuyển Đổi & Kế Thừa Bối Cảnh Liền Mạch**: Khi học sinh bấm mở gia sư từ một câu hỏi trắc nghiệm làm sai (`initialContext`), hệ thống kiểm tra nếu câu hỏi đã từng hỏi sẽ nạp ngay phiên trước đó, nếu chưa sẽ tạo mới phiên kèm bối cảnh đề thi, phương án sai và lời gợi mở chuẩn sư phạm Socratic.
+
+---
+
+## [15/11/2026] - Triển Khai Phân Hệ Kiểm Duyệt Báo Cáo Gia Sư AI Socratic Cho Quản Lý Học Thuật & Tái Thiết Kế Toàn Diện Bố Cục Đồng Bộ Chuẩn Student Portal (Core Flow 4: Human-in-the-Loop & GraphRAG Feedback)
+
+- **Tái Thiết Kế Toàn Diện Bố Cục Trang Chủ Quản Lý Học Thuật (Academic Dashboard - `CampusManagerDashboardView.jsx`, `EarlyWarningsMentorPanel.jsx`, `App.jsx`)**:
+  - **Khắc phục triệt để lỗi tỷ lệ phần trăm (6688% BKT & 7600%)**: Xây dựng hàm chuẩn hóa `normalizeMasteryPct(val)` tự động nhận diện giá trị thập phân (0-1) hoặc tỷ lệ phần trăm (0-100) để quy đổi chính xác, đưa mức làm chủ 4 miền về `76%`, `53%`, `68%`, `71%` và chỉ số toàn cơ sở về đúng **`67% BKT`** (chấm dứt lỗi hiển thị `6688%` và `7600%`).
+  - **Tích hợp Lời chào vào Flagship HeroBanner**: Loại bỏ dòng chữ `h1` trơ trọi phía trên banner trong `App.jsx`, tích hợp lời chào trang trọng `"Chào mừng Quản lý Học thuật, Nguyễn Duy Khôi!"` cùng dải chuyển động luân phiên 4 thông điệp sư phạm (`Sparkles`), chip năng lực vàng `#FACC15`, và thẻ kính mờ điều phối cơ sở bên phải.
+  - **Chuẩn hóa 4 Thẻ KPI Symmetrical**: Thiết kế lại 4 thẻ chỉ số theo đúng chuẩn `MetricsGrid.jsx` (Học viên hoạt động, Giảng viên cơ sở, Quy mô lớp học, Năng lực toàn cơ sở) kèm nhãn micro-tags, badge trạng thái và footer liên kết điều hướng.
+  - **Nâng cấp Bảng Ma Trận Đối Sánh 4 Miền Cấp Cơ Sở (Flow 5)**: Thiết kế giao diện bảng dữ liệu Enterprise SaaS với thanh đo sĩ số lớp học trực quan, các ô miền năng lực bo góc hiển thị rõ % làm chủ và % học sinh yếu, nhãn rủi ro sư phạm nổi bật và nút hành động *"Sơ Đồ Bàn Vi Mô"* hiệu ứng chuyển màu cao cấp.
+  - **Tối ưu hóa 2 Cột Lớp Học Offline & Đội ngũ Giảng viên**: Thẻ lớp học hiển thị tiến độ ZPD chuẩn hóa, danh sách giảng viên bổ sung avatar chữ cái viết tắt, badge trạng thái tài khoản màu chuẩn (`Active` xanh lục, `Locked` đỏ nhạt) và khung thông tin quy trình bảo mật IAM.
+  - **Nâng cấp Bảng Điều Phối Cảnh Báo Sớm 3 Tầng (`EarlyWarningsMentorPanel.jsx`)**: Tinh chỉnh 6 thẻ thống kê phân tầng cảnh báo (Tổng, Chờ can thiệp, Cảnh báo Đỏ, Nhắc nhở Vàng, Mục tiêu ảo, Đã xử lý) với phong cách `card-shadow` hiện đại và bộ lọc danh sách mượt mà.
+- **Tái Thiết Kế Toàn Diện Bố Cục Phân Hệ Quản Lý Học Thuật Đồng Bộ Ngôn Ngữ Thiết Kế Student Portal (`AiTutorModerationView.jsx`, `CampusManagerDashboardView.jsx`, `Sidebar.jsx`)**:
+  - **Hero Banner Học Thuật Đẳng Cấp**: Chuyển đổi toàn bộ banner nền tối cũ sang dải gradient xanh dương - chàm hoàng gia (`from-blue-700 via-indigo-700 to-blue-900`) đồng bộ hoàn hảo với `HeroBanner.jsx` phía học sinh. Tích hợp hiệu ứng hạt tán xạ mờ (`blur-3xl`) màu vàng `#FACC15` và ngọc bích `cyan-400`.
+  - **Thẻ Giám Sát GraphRAG Monitor Kính Mờ (Glassmorphism Highlight Card)**: Bổ sung khung giám sát thời gian thực bên phải banner với hiệu ứng ánh sáng viền chuyển động, theo dõi độ tin cậy Socratic (97.6%), dung lượng tri thức Knowledge Graph (142 Exemplars, 68 Traps) và trạng thái đồng bộ trực tiếp Supabase Pooler.
+  - **Chuẩn Hóa 4 Thẻ KPI Symmetrical Theo Kiểu Dáng `MetricsGrid`**: Nâng cấp 4 thẻ chỉ số với nhãn micro-tag in hoa phía trên, badge màu tương ứng từng trạng thái (`Cần can thiệp`, `Đã lưu Graph`, `Gắn cờ AI`, `Supabase Pooler`), số liệu 3D đậm nét và thanh điều hướng footer có gạch ngang (`border-t`) cho phép 1-click lọc nhanh danh sách.
+  - **Tối Ưu Hóa Không Gian Làm Việc Đối Soát (Workspace Split Pane)**:
+    - *Cột hàng đợi (5 cột)*: Card trắng bo góc `rounded-3xl` cao cấp, thanh tìm kiếm bo tròn có icon, viền thẻ hiển thị dải màu trạng thái (Đỏ hồng - chờ xử lý, Xanh lục - đã giải quyết, Xám - bình thường), hiển thị avatar chữ cái viết tắt của học sinh và nguyên văn lý do phản ánh.
+    - *Cột thẩm định (7 cột)*: Đối chiếu trực quan đề bài KaTeX, so sánh đáp án đúng CSDL (xanh) với đáp án học sinh chọn sai (đỏ), hiển thị cây đàm thoại Socratic dạng bong bóng chat và bàn làm việc 3 tab can thiệp sư phạm (Ghi đè lời giải mẫu chuẩn, Thêm bẫy tư duy mới, Xác nhận AI hợp lệ).
+  - **Tối Ưu Sidebar & Chống Tràn Chữ**: Rút gọn badge từ `Core Flow 4` thành `Flow 4` giúp tiêu đề `Kiểm duyệt Gia sư AI` hiển thị trọn vẹn 100%, không còn bị co ngắn thành `Kiểm duyệt G...`. Đồng bộ banner của `CampusManagerDashboardView.jsx` sang chuẩn màu Student Portal.
+- **Dữ Liệu Thực Tế Supabase & Cơ Chế Phục Hồi**:
+  - Cập nhật 3 bản ghi đàm thoại trong bảng `v_eval_ai.ai_tutor_interaction_logs` trên Supabase thành trạng thái học sinh báo cáo (`student_reported = true`) để màn hình kiểm duyệt hiển thị dữ liệu thực ngay khi kết nối.
+  - Tích hợp cơ chế gộp dữ liệu đệm chuẩn mực (`SEED_INTERACTIONS`) đảm bảo luôn sẵn sàng các ca kiểm duyệt mẫu phong phú.
+- **Kiểm Thử & Biên Dịch**:
+  - `npm run build`: Biên dịch Vite thành công 100% trong 1.09s.
+  - `node --test`: Toàn bộ 31/31 unit tests vượt qua, 0 lỗi linter.
+
+---
+
 ## [15/11/2026] - Tách Riêng Trang Thời Khóa Biểu & Điểm Danh (`StudentScheduleView` - `schedule`) Khỏi Trang Lớp Học & Live Q&A (`LiveClassQnAView` - `live`), Loại Bỏ 100% Mock Data & Hardcode Và Hiển Thị Đầy Đủ `radarChart` + `skillPriors` Trong Lịch Sử Bài Làm
 
 - **Tách Biệt Rạch Ròi Trang "Thời Khóa Biểu & Điểm Danh" (`schedule`) Và Trang "Lớp Học & Live Q&A" (`live`) ([`Sidebar.jsx`](../src/components/layout/Sidebar.jsx), [`App.jsx`](../src/App.jsx), [`StudentScheduleView.jsx`](../src/components/dashboard/StudentScheduleView.jsx), [`LiveClassQnAView.jsx`](../src/components/dashboard/LiveClassQnAView.jsx), [`practiceService.js`](../src/services/practiceService.js))**:
