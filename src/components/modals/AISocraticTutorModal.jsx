@@ -81,6 +81,7 @@ export default function AISocraticTutorModal({ isOpen, onClose, initialContext =
           questionId: targetQuestionId,
           questionLatex: initialContext.question,
           skill: initialContext.skill,
+          skillId: initialContext.skillId || initialContext.skill_id || null,
           selectedWrong: initialContext.selectedWrong,
           correctOption: initialContext.correctOption,
           options: initialContext.options,
@@ -260,7 +261,7 @@ export default function AISocraticTutorModal({ isOpen, onClose, initialContext =
         options: isQuestionMode ? activeSession.options : null,
         studentWrongOption: isQuestionMode ? (activeSession.selectedWrong || null) : null,
         correctOption: isQuestionMode ? (activeSession.correctOption || null) : null,
-        skillId: null,
+        skillId: isQuestionMode ? (activeSession.skillId || null) : null,
         signal: controller.signal,
         onInteractionId: (id) => {
           setSessions(prev => {

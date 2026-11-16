@@ -2122,3 +2122,14 @@ Backend follow-up: Practice sends an empty AllSkillIds mapping to AI, preventing
 - **Verification**:
   - Vite production build succeeded in 1.15s with 0 errors.
   - `node --test` passed 22/22 unit tests with 100% success rate.
+
+### [16/11/2026] - Socratic AI Tutor Skill & Question Relational Grounding Propagation Architecture
+
+- **Skill ID & Question Relational Forwarding (`src/components/modals/AISocraticTutorModal.jsx`, `src/components/modals/AdaptiveQuizModal.jsx`)**:
+  - Attached `skillId: initialContext.skillId || initialContext.skill_id || null` into the active session schema upon opening the modal from quiz review or practice sessions.
+  - In `handleSendMessage`, forwarded `skillId: isQuestionMode ? (activeSession.skillId || null) : null` into `practiceService.askAiTutorStream`.
+  - In `AdaptiveQuizModal.jsx`, mapped `skillId: q.skill_id || q.skillId || null` and provided it in `onOpenAiTutorWithContext`.
+  - Enables the backend AI Engine to immediately link questions to textbook curriculum materials (`v_eval_content."Materials"`) using relational foreign key joins, achieving zero-hardcode pedagogical grounding.
+- **Verification**:
+  - Vite production build succeeded in 1.06s with 0 errors.
+  - `node --test` passed 22/22 unit tests with 100% success rate.

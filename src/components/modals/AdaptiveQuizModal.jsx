@@ -54,6 +54,7 @@ export default function AdaptiveQuizModal({ isOpen, onClose, onOpenAiTutorWithCo
           const correctIdx = Math.max(0, ['A', 'B', 'C', 'D'].indexOf(correctLetter));
           return {
             id: String(q.question_id || q.questionId || `zpd_q_${idx + 1}`),
+            skillId: q.skill_id || q.skillId || null,
             skill: q.suggested_skill_name || q.suggestedSkillName || 'Kỹ năng ZPD ĐGNL',
             question: q.content || q.text || '',
             options: formattedOpts,
@@ -164,6 +165,7 @@ export default function AdaptiveQuizModal({ isOpen, onClose, onOpenAiTutorWithCo
       question: item.question,
       options: item.options,
       skill: item.skill,
+      skillId: item.skillId || null,
       selectedWrong: chosenIdx !== undefined && chosenIdx !== item.correct ? item.options[chosenIdx] : null,
       correctOption: item.options[item.correct] || 'B',
       difficultyB: item.difficultyB,
