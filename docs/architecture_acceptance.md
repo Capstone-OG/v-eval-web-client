@@ -2096,3 +2096,18 @@ Backend follow-up: Practice sends an empty AllSkillIds mapping to AI, preventing
 - **Historical Session Data Self-Healing Engine (`src/utils/aiSessionManager.js`, `tests/aiSessionManager.test.js`)**:
   - Implemented `cleanDoubledWords` to detect and heal previously saved sessions in client storage corrupted by token doubling, while safely preserving genuine Vietnamese reduplicated vocabulary (`"thong thả"`, `"chầm chậm"`).
 - **Verification**: Vite production build succeeded in 1.52s; 39/39 unit test cases passed with 100% success rate; zero linter errors.
+
+### [16/11/2026] - Client-Side Session Isolation, Stale Closure Elimination & Tombstones Deletion Architecture
+
+- **Architectural Boundary Separation (Audit Log vs. User Chat Sessions)**:
+  - Disentangled the architectural conflation between the system's **immutable audit log** (`v_eval_ai.ai_tutor_interaction_logs` serving Core Flow 4 Mentor Audit & Moderation) and student **user chat sessions**.
+  - Identified that hard-deleting records from `ai_tutor_interaction_logs` violates data governance and compliance principles by stripping audit trails needed by academic mentors to investigate hallucinations and pedagogical errors.
+  - Decoupled the student chat modal from the mentor audit endpoint (`GET /api/practice/ai-tutor/interactions`). Students now manage their own personal chat sessions with zero leakage from or dependencies on system-wide audit queries.
+- **Atomic Functional State Transitions & Closure Bug Fix (`AISocraticTutorModal.jsx`)**:
+  - Resolved a stale closure defect in `handleDeleteSession` and `handleCreateNewSession` where deleting the active or last session previously captured outdated `sessions` array references in scope, causing deleted items to be accidentally reintroduced into component state.
+  - Converted session lifecycle operations to atomic functional state updaters (`setSessions(prev => ...)`). When deleting an active session, the remaining array is evaluated synchronously, and when all sessions are cleared, a pristine initial session (`[freshSess]`) is initialized without retaining stale references.
+- **Tombstones Persistence Engine (`aiSessionManager.js`, `tests/aiSessionManager.test.js`)**:
+  - Implemented client-side tombstones (`veval_deleted_socratic_sessions_${userId}`) via `markSessionDeleted`, `getDeletedSessionIds`, and `isSessionDeleted`.
+  - When a student deletes a session, its ID, corresponding question identifier (`q_${questionId}`), and interaction logs are recorded in the tombstone registry.
+  - Any subsequent synchronization or merge operation strictly filters against this registry, permanently preventing resurrection of deleted sessions.
+- **Verification**: Vite production build succeeded in 1.08s; 22/22 unit tests pass (100% success rate); zero linter errors.

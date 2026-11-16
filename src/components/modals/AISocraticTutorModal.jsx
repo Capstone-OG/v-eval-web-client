@@ -38,7 +38,6 @@ export default function AISocraticTutorModal({ isOpen, onClose, initialContext =
   const [activeSessionId, setActiveSessionId] = useState(null);
   const [isHistoryOpen, setIsHistoryOpen] = useState(true);
   const [historySearchTerm, setHistorySearchTerm] = useState('');
-  const [isSyncingCloud, setIsSyncingCloud] = useState(false);
 
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -117,24 +116,6 @@ export default function AISocraticTutorModal({ isOpen, onClose, initialContext =
     }
 
     setSessions(loaded);
-
-    // Sync cloud interactions in background without blocking UI
-    const syncCloud = async () => {
-      try {
-        setIsSyncingCloud(true);
-        const cloudData = await practiceService.getAiTutorInteractions({ reportedOnly: false, limit: 30 });
-        if (Array.isArray(cloudData) && cloudData.length > 0) {
-          const merged = aiSessionManager.mergeCloudInteractions(currentUserId, cloudData);
-          setSessions(merged);
-        }
-      } catch {
-        // Silently tolerate network/cloud sync errors
-      } finally {
-        setIsSyncingCloud(false);
-      }
-    };
-
-    syncCloud();
   }, [isOpen, initialContext, currentUserId]);
 
   // Active session object
@@ -190,24 +171,39 @@ export default function AISocraticTutorModal({ isOpen, onClose, initialContext =
       initialMessages: [defaultGreeting]
     });
 
-    const updated = [newSess, ...sessions];
-    setSessions(updated);
+    setSessions(prev => [newSess, ...prev]);
     setActiveSessionId(newSess.id);
   };
 
   const handleDeleteSession = (e, sessionId) => {
     e.stopPropagation();
     aiSessionManager.deleteSession(currentUserId, sessionId);
-    const remaining = sessions.filter(s => s.id !== sessionId);
-    setSessions(remaining);
 
-    if (activeSessionId === sessionId) {
-      if (remaining.length > 0) {
-        setActiveSessionId(remaining[0].id);
-      } else {
-        handleCreateNewSession();
+    setSessions(prev => {
+      const remaining = prev.filter(s => s.id !== sessionId);
+      if (activeSessionId === sessionId) {
+        if (remaining.length > 0) {
+          setActiveSessionId(remaining[0].id);
+        } else {
+          const defaultGreeting = {
+            sender: 'ai',
+            text: 'Chào em! Thầy là **Gia Sư AI Đồng Hành**. Thầy sẽ gợi mở từng bước dễ hiểu để em tự tìm ra cách giải và nắm chắc kiến thức.\n\nEm đang gặp khó khăn ở câu hỏi hay chủ đề nào?',
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            topicLabel: null,
+            interactionId: null
+          };
+
+          const freshSess = aiSessionManager.createSession(currentUserId, {
+            title: 'Phiên hỏi đáp mới',
+            skill: null,
+            initialMessages: [defaultGreeting]
+          });
+          setActiveSessionId(freshSess.id);
+          return [freshSess];
+        }
       }
-    }
+      return remaining;
+    });
   };
 
   const handleSendMessage = async (textToSend = null) => {
@@ -535,15 +531,13 @@ export default function AISocraticTutorModal({ isOpen, onClose, initialContext =
                 )}
               </div>
 
-              {/* Bottom Drawer Telemetry / Cloud Sync Indicator */}
+              {/* Bottom Drawer Telemetry / Local Storage Indicator */}
               <div className="p-2.5 border-t border-slate-200/80 bg-white/50 px-3 flex items-center justify-between text-[11px] text-slate-500">
                 <div className="flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                   <span className="font-semibold text-slate-600">Lưu phiên tự động</span>
                 </div>
-                {isSyncingCloud && (
-                  <RefreshCw className="w-3 h-3 animate-spin text-blue-500" title="Đang đồng bộ..." />
-                )}
+                <span className="text-[10px] text-slate-400 font-medium">Bảo mật riêng tư</span>
               </div>
             </aside>
           )}

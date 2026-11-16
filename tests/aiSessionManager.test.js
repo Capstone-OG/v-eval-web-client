@@ -144,11 +144,15 @@ test('aiSessionManager - merges cloud interactions without duplicating', () => {
   assert.equal(cloudSession.isSynced, true);
 });
 
-test('aiSessionManager - deletes session cleanly', () => {
+test('aiSessionManager - deletes session cleanly and records tombstone to prevent resurrection', () => {
   const student = 'user_del';
   clearAllSessions(student);
 
-  const s1 = createSession(student, { title: 'Phiên 1' });
+  const s1 = createSession(student, {
+    title: 'Phiên 1',
+    questionId: 'Q_DEL_01',
+    initialMessages: [{ sender: 'ai', text: 'Hi', interactionId: 'int_del_999' }]
+  });
   const s2 = createSession(student, { title: 'Phiên 2' });
 
   assert.equal(getSessions(student).length, 2);
@@ -157,6 +161,18 @@ test('aiSessionManager - deletes session cleanly', () => {
   const remaining = getSessions(student);
   assert.equal(remaining.length, 1);
   assert.equal(remaining[0].id, s2.id);
+
+  // Attempting to merge a cloud item matching deleted s1 should be ignored (Tombstone)
+  const cloudMock = [{
+    id: 'int_del_999',
+    question_id: 'Q_DEL_01',
+    pattern_name: 'Dạng bài đã xóa',
+    ai_guidance_transcript: [{ role: 'tutor', text: 'Nội dung cũ' }]
+  }];
+
+  const afterMerge = mergeCloudInteractions(student, cloudMock);
+  assert.equal(afterMerge.length, 1);
+  assert.equal(afterMerge[0].id, s2.id);
 });
 
 test('aiSessionManager - cleanDoubledWords eliminates consecutive doubled tokens', () => {

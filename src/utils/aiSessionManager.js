@@ -222,11 +222,73 @@ export function updateSessionMessages(userId, sessionId, messages) {
 }
 
 /**
- * Xóa một phiên hỏi đáp
+ * Khóa lưu danh sách ID phiên đã bị xóa vĩnh viễn (Tombstone)
+ */
+export function getDeletedStorageKey(userId) {
+  const safeId = userId && String(userId).trim() ? String(userId).trim() : 'guest_student';
+  return `veval_deleted_socratic_sessions_${safeId}`;
+}
+
+/**
+ * Đọc danh sách các ID phiên đã bị học sinh chủ động xóa
+ */
+export function getDeletedSessionIds(userId) {
+  try {
+    const raw = localStorage.getItem(getDeletedStorageKey(userId));
+    if (!raw) return new Set();
+    const parsed = JSON.parse(raw);
+    return new Set(Array.isArray(parsed) ? parsed : []);
+  } catch {
+    return new Set();
+  }
+}
+
+/**
+ * Đánh dấu các ID đã bị xóa vĩnh viễn để ngăn mọi hành vi hồi sinh dữ liệu
+ */
+export function markSessionDeleted(userId, sessionId, extraIds = []) {
+  try {
+    const set = getDeletedSessionIds(userId);
+    if (sessionId) set.add(String(sessionId));
+    extraIds.forEach(id => {
+      if (id) set.add(String(id));
+    });
+    localStorage.setItem(getDeletedStorageKey(userId), JSON.stringify(Array.from(set)));
+  } catch {
+    // Silently ignore storage quota issues
+  }
+}
+
+/**
+ * Kiểm tra xem một ID hoặc QuestionId đã bị xóa hay chưa
+ */
+export function isSessionDeleted(userId, sessionId) {
+  if (!sessionId) return false;
+  const set = getDeletedSessionIds(userId);
+  return set.has(String(sessionId));
+}
+
+/**
+ * Xóa một phiên hỏi đáp và ghi nhận Tombstone vĩnh viễn
  */
 export function deleteSession(userId, sessionId) {
   if (!sessionId) return false;
   const sessions = getSessions(userId);
+  const target = sessions.find(s => s.id === sessionId);
+  const extraIds = [];
+  if (target?.questionId) {
+    extraIds.push(String(target.questionId));
+    extraIds.push(`q_${target.questionId}`);
+  }
+  if (Array.isArray(target?.messages)) {
+    target.messages.forEach(m => {
+      if (m.interactionId) {
+        extraIds.push(String(m.interactionId));
+        extraIds.push(`cloud_${m.interactionId}`);
+      }
+    });
+  }
+  markSessionDeleted(userId, sessionId, extraIds);
   const filtered = sessions.filter(s => s.id !== sessionId);
   saveSessions(userId, filtered);
   return true;
@@ -237,6 +299,8 @@ export function deleteSession(userId, sessionId) {
  */
 export function clearAllSessions(userId) {
   try {
+    const sessions = getSessions(userId);
+    sessions.forEach(s => deleteSession(userId, s.id));
     localStorage.removeItem(getStorageKey(userId));
     return true;
   } catch {
@@ -252,6 +316,7 @@ export function mergeCloudInteractions(userId, cloudInteractions = []) {
     return getSessions(userId);
   }
 
+  const deletedIds = getDeletedSessionIds(userId);
   const localSessions = getSessions(userId);
   const existingIds = new Set(localSessions.map(s => s.id));
   const existingQuestionIds = new Set(
@@ -263,6 +328,10 @@ export function mergeCloudInteractions(userId, cloudInteractions = []) {
   for (const item of cloudInteractions) {
     const interactionId = item.id ? String(item.id) : null;
     const questionId = item.question_id ? String(item.question_id) : null;
+
+    // Bỏ qua nếu phiên này đã bị người dùng chủ động xóa (Tombstone)
+    if (interactionId && (deletedIds.has(interactionId) || deletedIds.has(`cloud_${interactionId}`))) continue;
+    if (questionId && (deletedIds.has(questionId) || deletedIds.has(`q_${questionId}`))) continue;
 
     // Bỏ qua nếu đã tồn tại session tương ứng
     if (interactionId && existingIds.has(interactionId)) continue;
@@ -331,6 +400,10 @@ export function mergeCloudInteractions(userId, cloudInteractions = []) {
 
 export const aiSessionManager = {
   getStorageKey,
+  getDeletedStorageKey,
+  getDeletedSessionIds,
+  markSessionDeleted,
+  isSessionDeleted,
   formatSessionTime,
   generateSessionTitle,
   getSessions,
