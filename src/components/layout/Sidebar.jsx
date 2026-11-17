@@ -208,6 +208,15 @@ export default function Sidebar({
                 onClick: () => setActiveTab('teacher_heatmap')
               },
               {
+                id: 'ai_moderation',
+                label: 'Kiểm duyệt Gia sư AI',
+                sublabel: 'Báo cáo sai lệch & Bẫy tư duy',
+                icon: Bot,
+                active: activeTab === 'ai_moderation',
+                onClick: () => setActiveTab('ai_moderation'),
+                badge: 'Flow 4'
+              },
+              {
                 id: 'roadmap',
                 label: 'Quản lý Khung Chương trình',
                 sublabel: 'Phê duyệt học liệu & Câu hỏi',

@@ -32,6 +32,7 @@ import ParentDashboardView from './components/dashboard/ParentDashboardView';
 import TeacherDashboardView from './components/dashboard/TeacherDashboardView';
 import TeacherPortalView from './components/dashboard/TeacherPortalView';
 import CampusManagerDashboardView from './components/dashboard/CampusManagerDashboardView';
+import AiTutorModerationView from './components/dashboard/AiTutorModerationView';
 import LearningAnalyticsView from './components/dashboard/LearningAnalyticsView';
 import StudentScheduleView from './components/dashboard/StudentScheduleView';
 import LiveClassQnAView from './components/dashboard/LiveClassQnAView';
@@ -119,6 +120,7 @@ const ROLE_PORTAL_DEFINITIONS = {
     tabs: [
       { id: 'dashboard', label: 'So sánh Cơ sở', icon: Building2 },
       { id: 'teacher_heatmap', label: 'Ma trận Lớp học', icon: LayoutGrid },
+      { id: 'ai_moderation', label: 'Kiểm duyệt Gia sư AI', icon: Bot },
       { id: 'roadmap', label: 'Khung Chương trình', icon: Network },
       { id: 'provision', label: 'Cấp phát Tài khoản', icon: UserPlus },
       { id: 'analytics', label: 'Báo cáo Chất lượng', icon: BarChart3 }
@@ -536,6 +538,15 @@ export default function App() {
       );
     }
 
+    if (activeTab === 'ai_moderation') {
+      return (
+        <AiTutorModerationView
+          currentUser={currentUser}
+          onBackToDashboard={() => setActiveTab('dashboard')}
+        />
+      );
+    }
+
     if (activeTab === 'teacher_heatmap') {
       return (
         <TeacherDashboardView
@@ -564,6 +575,7 @@ export default function App() {
       case 'manager':
         return (
           <CampusManagerDashboardView
+            currentUser={currentUser}
             onOpenProvisioning={() => setActiveTab('provision')}
           />
         );
@@ -571,6 +583,7 @@ export default function App() {
       case 'admin':
         return (
           <CampusManagerDashboardView
+            currentUser={currentUser}
             onOpenProvisioning={() => setActiveTab('provision')}
           />
         );
@@ -665,7 +678,7 @@ export default function App() {
 
           {/* Main Workspace Container */}
           <main className="min-w-0 flex-1 p-4 sm:p-6 w-full max-w-full">
-            {role !== 'student' && role !== 'parent' && activeTab === currentPortal.defaultTab && (
+            {role !== 'student' && role !== 'parent' && role !== 'manager' && activeTab === currentPortal.defaultTab && (
               <h1 className="mb-5 text-xl font-bold tracking-tight text-slate-900">{accountGreeting(role, currentUser)}</h1>
             )}
             {renderRolePortalContent()}

@@ -1,7 +1,7 @@
 # V-Eval Web Client Update
 
-## [17/11/2026] - Homepage Introduction navigation and metrics
+## [17/11/2026] - Merge develop and retain homepage refinement
 
-- Removed the homepage 3 Q&A specification action and standalone 120-question navigation item.
-- Kept the four metric cards below the hero content and grouped them under the Introduction anchor; updated footer links.
-- `npm run build` succeeds; existing bundle-size and JSXGraph eval advisories remain.
+- Merged the latest develop updates for Socratic multi-turn sessions, session deletion tombstones, AI moderation, mentor dashboards, and diagnostic history.
+- Retained the homepage cleanup: metrics stay below the hero under Introduction, with the 3 Q&A and standalone 120-question navigation removed.
+- `npm run build` succeeds; existing large-bundle and JSXGraph eval advisories remain.
