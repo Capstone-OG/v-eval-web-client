@@ -2040,3 +2040,17 @@ The diagnostic report JSX parse failure from an incomplete duplicate trend-chart
 
 
 Radar and skill-prior displays consume API response fields; the benchmark overlay and prior values are omitted when absent instead of being filled with synthetic defaults. The result page now uses normalized API-derived prior data without unresolved component/helper references.
+
+
+## [16/11/2026] - Homepage Introduction and Metrics Consolidation
+
+- Removed the homepage navigation entry for the standalone 120-question specification and the 3 Q&A specification action.
+- Grouped the four platform metric cards under the Introduction anchor while preserving their position below the hero content; updated footer links to the new metrics anchor.
+- Verified the frontend production build with `npm run build`. Existing large-bundle and JSXGraph eval advisories remain.
+
+
+## [17/11/2026] - Homepage Introduction Navigation
+
+- Kept the four metric cards directly below hero content and grouped them semantically under the Introduction navigation anchor.
+- Removed the standalone 120-question navigation entry and 3 Q&A specification action; footer links target the metric strip.
+- Verified the production build with npm run build; existing bundle-size and JSXGraph eval advisories remain.

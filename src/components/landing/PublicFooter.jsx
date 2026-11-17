@@ -62,8 +62,8 @@ export default function PublicFooter({ onOpenLogin, onOpenDiagnostic }) {
               Khảo Thí & Luyện Thi
             </div>
             <ul className="space-y-2.5 text-slate-400 font-semibold">
-              <li><a href="#exam-matrix" className="hover:text-blue-400 transition-colors flex items-center gap-1.5">➔ Đề thi thử IRT 120 câu chuẩn ĐHQG</a></li>
-              <li><a href="#exam-matrix" className="hover:text-blue-400 transition-colors flex items-center gap-1.5">➔ Bài khảo sát chẩn đoán 30 câu</a></li>
+              <li><a href="#hero-stats" className="hover:text-blue-400 transition-colors flex items-center gap-1.5">➔ Đề thi thử IRT 120 câu chuẩn ĐHQG</a></li>
+              <li><a href="#hero-stats" className="hover:text-blue-400 transition-colors flex items-center gap-1.5">➔ Bài khảo sát chẩn đoán 30 câu</a></li>
               <li><a href="#tech-grid" className="hover:text-blue-400 transition-colors flex items-center gap-1.5">➔ Luyện tập ZPD thích ứng theo năng lực</a></li>
               <li><a href="#tech-grid" className="hover:text-blue-400 transition-colors flex items-center gap-1.5">➔ Ma trận lỗ hổng kiến thức 5 miền</a></li>
               <li>

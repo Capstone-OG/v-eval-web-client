@@ -1,8 +1,7 @@
 # V-Eval Web Client Update
 
-## [16/11/2026] - Sync pulled student features and repair diagnostic JSX
+## [17/11/2026] - Homepage Introduction navigation and metrics
 
-- Integrated the incoming curriculum/math rendering, tuition and PayOS payment views, diagnostic submission history, and student live classroom/schedule features.
-- Preserved TNhan branch changes and added the missing GUID matcher required by practice service helpers.
-- Removed an incomplete duplicate trend-chart wrapper that broke JSX parsing in the diagnostic history view.
-- Excluded .env.bak from the merge. Vite production build succeeds; only existing chunk-size and dependency eval warnings remain.
+- Removed the homepage 3 Q&A specification action and standalone 120-question navigation item.
+- Kept the four metric cards below the hero content and grouped them under the Introduction anchor; updated footer links.
+- `npm run build` succeeds; existing bundle-size and JSXGraph eval advisories remain.

@@ -776,3 +776,17 @@ Validation: build and lint pass with existing warnings; live API integration rem
 
 | API-only radar and prior values | Corrected | No synthetic benchmark or default mastery values are displayed when omitted by API. |
 | Diagnostic report runtime references | Corrected | Reused normalized skill priors and removed a dangling component reference. |
+
+
+## Homepage UI update [16/11/2026]
+
+| Item | Files | Status | Progress | Notes |
+|---|---|---|---:|---|
+| Group four metric cards under the Introduction anchor in their existing below-hero position; remove the 120-question nav item and 3 Q&A action; update footer anchors | `src/components/landing/PublicLandingPage.jsx`, `PublicHeader.jsx`, `PublicFooter.jsx` | Complete | 100% | Production build succeeds |
+
+
+## Homepage navigation update [17/11/2026]
+
+| Item | Files | Status | Notes |
+|---|---|---|---|
+| Keep platform metrics in their below-hero position under the Introduction anchor; remove the 120-question and 3 Q&A navigation actions | `src/components/landing/PublicLandingPage.jsx`, `PublicHeader.jsx`, `PublicFooter.jsx` | Complete | Production build succeeds |

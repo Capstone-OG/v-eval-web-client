@@ -1,5 +1,11 @@
 # NHẬT KÝ TIẾN ĐỘ HẰNG NGÀY (DAILY LOG) - V-EVAL WEB CLIENT
 
+## [16/11/2026] - Homepage introduction and metrics consolidation
+
+- Removed the homepage 3 Q&A specification action and standalone 120-question navigation item.
+- Grouped the four metric cards under the Introduction anchor while preserving their position below the hero content; updated footer links to the new anchor.
+- `npm run build` succeeds; existing large-bundle and JSXGraph eval advisories remain.
+
 ---
 
 ## [15/11/2026] - Tách Riêng Trang Thời Khóa Biểu & Điểm Danh (`StudentScheduleView` - `schedule`) Khỏi Trang Lớp Học & Live Q&A (`LiveClassQnAView` - `live`), Loại Bỏ 100% Mock Data & Hardcode Và Hiển Thị Đầy Đủ `radarChart` + `skillPriors` Trong Lịch Sử Bài Làm
@@ -2808,3 +2814,10 @@
 - Follow-up repair: removed an incomplete duplicate trend-chart wrapper in DiagnosticAssessmentPage.jsx that caused Vite JSX parse errors. Vite production build now succeeds (existing bundle-size and dependency eval warnings only).
 
 - API-only result handling: stopped supplying an 80% benchmark or default prior values when the API omits them; the benchmark series and mastery values now appear only when the response includes those values. Also removed two unresolved runtime references in the diagnostic report.
+
+
+## [17/11/2026] - Preserve metrics position under Introduction
+
+- Kept the four metric cards directly below the hero content, grouped them with the Introduction navigation anchor, and updated footer links.
+- The homepage 3 Q&A action and standalone 120-question navigation item are removed.
+- npm run build succeeds with existing bundle-size and JSXGraph eval advisories.

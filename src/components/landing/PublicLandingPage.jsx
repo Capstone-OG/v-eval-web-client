@@ -28,7 +28,7 @@ export default function PublicLandingPage({ currentUser, onOpenLogin, onOpenRegi
   // ScrollSpy listener to detect current active section when scrolling
   useEffect(() => {
     const handleScroll = () => {
-      const sections = ['hero', 'exam-matrix', 'tech-grid', 'process-steps', 'testimonials'];
+      const sections = ['hero', 'tech-grid', 'process-steps', 'testimonials'];
       const scrollPosition = window.scrollY + 200;
 
       for (const sectionId of sections) {
@@ -193,14 +193,14 @@ export default function PublicLandingPage({ currentUser, onOpenLogin, onOpenRegi
         onOpenRegister={onOpenRegister}
         onOpenDashboard={onOpenDashboard}
         onOpenDiagnostic={onOpenDiagnostic}
-        onOpenArchModal={onOpenArchModal}
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
         activeSection={activeSection}
       />
 
       {/* 2. HERO SECTION - WITH ATMOSPHERIC CLASSROOM BACKGROUND BLEND */}
-      <section id="hero" className="relative min-h-[660px] lg:min-h-[720px] w-full flex items-center overflow-hidden bg-gradient-to-b from-[#FDFBF7] via-blue-50/30 to-white pt-8 pb-16">
+      <div id="hero">
+      <section className="relative min-h-[660px] lg:min-h-[720px] w-full flex items-center overflow-hidden bg-gradient-to-b from-[#FDFBF7] via-blue-50/30 to-white pt-8 pb-16">
 
         {/* ATMOSPHERIC CLASSROOM BACKGROUND IMAGE ON RIGHT SIDE */}
         <div className="absolute top-0 right-0 w-full lg:w-[52%] h-full pointer-events-none z-0 overflow-hidden select-none">
@@ -414,8 +414,8 @@ export default function PublicLandingPage({ currentUser, onOpenLogin, onOpenRegi
         </div>
       </section>
 
-      {/* 3. STATS HIGHLIGHT COUNTER STRIP */}
-      <section id="exam-matrix" className="py-12 px-6 lg:px-14 bg-white border-y border-slate-200/80">
+      {/* Introductory platform metrics */}
+      <section id="hero-stats" className="w-full px-6 lg:px-14 py-10 bg-white/80 border-y border-slate-200/80">
         <div className="max-w-7xl mx-auto grid grid-cols-2 lg:grid-cols-4 gap-6">
 
           <motion.div
@@ -456,6 +456,7 @@ export default function PublicLandingPage({ currentUser, onOpenLogin, onOpenRegi
 
         </div>
       </section>
+      </div>
 
       {/* 4. BỘ TỨ CÔNG NGHỆ ĐỘC QUYỀN DẪN LỐI ĐIỂM 900+ */}
       <section id="tech-grid" className="py-20 px-6 lg:px-14 bg-[#FDFBF7]">
