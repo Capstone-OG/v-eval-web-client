@@ -573,10 +573,12 @@ export function MathFormulaPalette({
 function normalizeBloomLevel(rawLevel) {
   if (!rawLevel) return 'Vận dụng (L3)';
   const s = String(rawLevel).trim().toLowerCase();
-  if (s.includes('l1') || s.includes('nhận biết')) return 'Nhận biết (L1)';
-  if (s.includes('l2') || s.includes('thông hiểu')) return 'Thông hiểu (L2)';
-  if (s.includes('l4') || s.includes('vận dụng cao')) return 'Vận dụng cao (L4)';
-  if (s.includes('l3') || s.includes('vận dụng')) return 'Vận dụng (L3)';
+  if (s.includes('l1') || s.includes('nhớ') || s.includes('nhận biết') || s.includes('remember')) return 'Nhớ / Nhận biết (L1)';
+  if (s.includes('l2') || s.includes('hiểu') || s.includes('understand')) return 'Hiểu / Thông hiểu (L2)';
+  if (s.includes('l6') || s.includes('sáng tạo') || s.includes('create')) return 'Sáng tạo (L6)';
+  if (s.includes('l5') || s.includes('đánh giá') || s.includes('evaluate')) return 'Đánh giá (L5)';
+  if (s.includes('l4') || s.includes('phân tích') || s.includes('vận dụng cao') || s.includes('analyze')) return 'Phân tích (L4)';
+  if (s.includes('l3') || s.includes('vận dụng') || s.includes('apply')) return 'Vận dụng (L3)';
   return 'Vận dụng (L3)';
 }
 
@@ -601,7 +603,7 @@ function cleanOptionOrText(str) {
   return s;
 }
 
-export default function CurriculumStudioEditor({ pattern, domain, chapter, lesson, onClose, onSaveSuccess }) {
+export default function CurriculumStudioEditor({ pattern, domain, chapter, lesson, mode = 'pattern', onClose, onSaveSuccess }) {
   const isStem = isMathOrStemDomain(domain);
 
   // View mode: 'editor' | 'preview' | 'split'
@@ -2350,9 +2352,16 @@ export default function CurriculumStudioEditor({ pattern, domain, chapter, lesso
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-700">Mức độ nhận thức chuẩn Bloom:</label>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                    {['Nhận biết (L1)', 'Thông hiểu (L2)', 'Vận dụng (L3)', 'Vận dụng cao (L4)'].map((lvl) => {
+                  <label className="text-xs font-bold text-slate-700">Mức độ nhận thức chuẩn Bloom Taxonomy (6 cấp độ):</label>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                    {[
+                      'Nhớ / Nhận biết (L1)',
+                      'Hiểu / Thông hiểu (L2)',
+                      'Vận dụng (L3)',
+                      'Phân tích (L4)',
+                      'Đánh giá (L5)',
+                      'Sáng tạo (L6)'
+                    ].map((lvl) => {
                       const isSelected = normalizeBloomLevel(form.level) === lvl;
                       return (
                         <button

@@ -58,12 +58,47 @@ export const aiService = {
    * @param {boolean} [options.forceReingest=false] - Bỏ qua checkpoint và nạp lại từ đầu
    * @returns {Promise<{jobId: string, fileHash: string, totalPages: number, status: string}>}
    */
+  async scanTextbookSkeleton(file, { subjectCode = '', grade = 10, bookEdition = '' } = {}) {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (subjectCode) formData.append('subjectCode', subjectCode);
+    if (grade) formData.append('grade', grade);
+    if (bookEdition) formData.append('bookEdition', bookEdition);
+    const response = await apiClient.upload('/api/ai-engine/textbooks/scan-skeleton', formData);
+    return response.data;
+  },
+
+  async generatePatternExercises({
+    subject = 'Toán học',
+    grade = 10,
+    chapter = '',
+    lesson = '',
+    patternName = '',
+    bloomLevel = 2,
+    theoryContext = '',
+    count = 3
+  } = {}) {
+    const response = await apiClient.post('/api/ai-engine/textbooks/generate-exercises', {
+      subject,
+      grade,
+      chapter,
+      lesson,
+      patternName,
+      bloomLevel,
+      theoryContext,
+      count
+    });
+    return response.data;
+  },
+
   async uploadTextbookPdf(file, {
     domainId = 'Domain-Default',
     skillId = 'Skill-Default',
     docType = 'TEXTBOOK',
     ocrMode = 'TEXT_HUMANITIES',
-    forceReingest = false
+    forceReingest = false,
+    targetDpi = 56,
+    batchSize = 5
   } = {}) {
     const formData = new FormData();
     formData.append('file', file);
@@ -72,6 +107,8 @@ export const aiService = {
     formData.append('docType', docType);
     formData.append('ocrMode', ocrMode);
     formData.append('forceReingest', forceReingest.toString());
+    formData.append('targetDpi', targetDpi.toString());
+    formData.append('batchSize', batchSize.toString());
 
     const response = await apiClient.upload('/api/ai-engine/textbooks/upload-pdf', formData);
     return response.data;
@@ -133,6 +170,26 @@ export const aiService = {
    */
   async saveTextbookChunksToDb(textbookResultDto) {
     const response = await apiClient.post('/api/ai-engine/textbooks/save-db', textbookResultDto);
+    return response.data;
+  },
+
+  /**
+   * Lấy danh sách toàn bộ SGK đã nạp vào CSDL kèm cấu trúc Chương - Bài - Dạng bài & Chunks
+   * @returns {Promise<{totalSources: number, sources: Array<object>}>}
+   */
+  async getIngestedTextbooks() {
+    const response = await apiClient.get('/api/ai-engine/textbooks/sources');
+    return response.data;
+  },
+
+  /**
+   * Tổng hợp các Chunks SGK đã nạp thành cây Chương - Bài - Dạng bài chuẩn Content Service
+   * @param {string} fileHash
+   * @param {string} [domainId]
+   */
+  async synthesizeCurriculumFromTextbook(fileHash, domainId = '') {
+    const query = domainId ? `?domainId=${encodeURIComponent(domainId)}` : '';
+    const response = await apiClient.post(`/api/ai-engine/textbooks/synthesize-curriculum/${encodeURIComponent(fileHash)}${query}`, {});
     return response.data;
   },
 

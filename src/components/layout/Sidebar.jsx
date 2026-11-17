@@ -5,6 +5,7 @@ import {
   Award,
   BarChart3,
   BookOpen,
+  FileSpreadsheet,
   Bot,
   Briefcase,
   Building2,
@@ -151,12 +152,28 @@ export default function Sidebar({
               },
               {
                 id: 'roadmap',
-                label: 'Studio Biên soạn Học liệu',
-                sublabel: 'Cây chương trình & Câu hỏi LaTeX',
-                icon: BookOpen,
+                label: 'Khung Chương trình & Dạng bài',
+                sublabel: 'Cây kiến thức & Ma trận Bloom',
+                icon: Network,
                 active: activeTab === 'roadmap',
                 onClick: () => setActiveTab('roadmap'),
                 badge: 'Studio'
+              },
+              {
+                id: 'textbook-studio',
+                label: 'Sách giáo khoa (SGK)',
+                sublabel: 'Studio Khung & Nạp SGK',
+                icon: BookOpen,
+                active: activeTab === 'textbook-studio',
+                onClick: () => setActiveTab('textbook-studio')
+              },
+              {
+                id: 'exam-studio',
+                label: 'Parse Đề thi',
+                sublabel: 'Tách câu hỏi & Studio Đề',
+                icon: FileSpreadsheet,
+                active: activeTab === 'exam-studio',
+                onClick: () => setActiveTab('exam-studio')
               },
               {
                 id: 'diagnostic',
@@ -225,6 +242,22 @@ export default function Sidebar({
                 onClick: () => setActiveTab('roadmap')
               },
               {
+                id: 'textbook-studio',
+                label: 'Sách giáo khoa (SGK)',
+                sublabel: 'Studio Khung & Nạp SGK',
+                icon: BookOpen,
+                active: activeTab === 'textbook-studio',
+                onClick: () => setActiveTab('textbook-studio')
+              },
+              {
+                id: 'exam-studio',
+                label: 'Parse Đề thi',
+                sublabel: 'Tách câu hỏi & Studio Đề',
+                icon: FileSpreadsheet,
+                active: activeTab === 'exam-studio',
+                onClick: () => setActiveTab('exam-studio')
+              },
+              {
                 id: 'analytics',
                 label: 'Báo cáo Chất lượng Đào tạo',
                 sublabel: 'Dự báo điểm chuẩn ĐGNL cơ sở',
@@ -287,6 +320,22 @@ export default function Sidebar({
                 icon: Network,
                 active: activeTab === 'roadmap',
                 onClick: () => setActiveTab('roadmap')
+              },
+              {
+                id: 'textbook-studio',
+                label: 'Sách giáo khoa (SGK)',
+                sublabel: 'Studio Khung & Nạp SGK',
+                icon: BookOpen,
+                active: activeTab === 'textbook-studio',
+                onClick: () => setActiveTab('textbook-studio')
+              },
+              {
+                id: 'exam-studio',
+                label: 'Parse Đề thi',
+                sublabel: 'Tách câu hỏi & Studio Đề',
+                icon: FileSpreadsheet,
+                active: activeTab === 'exam-studio',
+                onClick: () => setActiveTab('exam-studio')
               },
               {
                 id: 'tuition',

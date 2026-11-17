@@ -67,6 +67,9 @@
 | 28 | **Nâng Cấp Lộ Trình Học Cá Nhân Hóa (Flow 2) 9 Môn Thi, Phân Cấp 3 Giai Đoạn & Cây Chương - Bài** | `RoadmapLearningPage.jsx`, `roadmapSubjectsData.js` | 🟢 Hoàn thành | 100% | Phân lớp 9 môn thi vào 3 GĐ dựa vào điểm thi đầu vào; Cây Chương - Bài học; 4 tab học liệu (Video YouTube, Tri thức Panorama SGK & Bẫy ĐGNL, Lịch Live Google Meet, Quiz củng cố) |
 | 29 | **Chuẩn Hóa Tên Gọi Menu Sidebar & Nhãn Chức Năng Sang Ngôn Ngữ Người Dùng Trực Quan** | `Sidebar.jsx`, `MetricsGrid.jsx`, `DiagnosticAssessmentPage.jsx`, `AdaptiveQuizModal.jsx` | 🟢 Hoàn thành | 100% | Loại bỏ thuật ngữ kỹ thuật/sư phạm khó hiểu (DAG, ZPD, Socratic, BKT); đổi tên: Tổng quan học tập, Thi đánh giá đầu vào, Lộ trình học cá nhân, Luyện tập thích ứng, Gia sư AI gợi mở; phân nhóm Học tập & Luyện thi, Hỗ trợ & Phân tích |
 | 30 | **Màn Hình Cài Đặt Tài Khoản & Hồ Sơ Năng Lực (Account Settings)** | `AccountSettingsPage.jsx`, `authService.js`, `App.jsx`, `Navbar.jsx` | 🟢 Hoàn thành | 100% | Triển khai màn hình Cài đặt tài khoản 5 tabs (Hồ sơ cá nhân, Mục tiêu 1200 điểm, Liên kết phụ huynh Cha/Mẹ & Học bạ điện tử ĐGNL, Đổi mật khẩu, Tùy chọn AI); tích hợp mã kết nối VIP card, bộ chọn avatar 3D và nút in/xuất học bạ PDF |
+| 31 | **Studio Sách Giáo Khoa (SGK) 2 Phân Hệ & 5 Sector Sư Phạm** | `TextbookStudioView.jsx` | 🟢 Hoàn thành | 100% | Tách biệt hoàn toàn 2 chế độ: Nạp & Parse SGK 2 Bước (không hiện nội dung kế bên) và Kho Sách 5 Sector chuyên biệt. Tự động đồng bộ 122 chunks từ Supabase vào Sector 1, lọc theo bài học/toàn bộ sách/từ khóa, chép KaTeX và liên kết Studio |
+| 32 | **Đồng Bộ Điều Hướng 3 Module Học Thuật Trên Sidebar** | `Sidebar.jsx`, `App.jsx` | 🟢 Hoàn thành | 100% | Khung Chương trình (`roadmap`), Sách Giáo Khoa (`textbook-studio`), Parse Đề thi (`exam-studio`) đều có Studio đi kèm độc lập cho Teacher/Manager/Admin |
+| 33 | **Studio Parse & Bóc Tách Đề Thi Học Kỳ / ĐGNL** | `ExamParserStudioView.jsx` | 🟢 Hoàn thành | 100% | Tích hợp Vision AI bóc tách đề thi PDF/ảnh, phân loại ma trận câu hỏi và chuyển tiếp vào Question Bank |
 
 
 
@@ -786,3 +789,4 @@ Validation: build and lint pass with existing warnings; live API integration rem
 
 | API-only radar and prior values | Corrected | No synthetic benchmark or default mastery values are displayed when omitted by API. |
 | Diagnostic report runtime references | Corrected | Reused normalized skill priors and removed a dangling component reference. |
+| Diagram Placeholder `[IMAGE_PLACEHOLDER]` & Low-DPI Textbook Upload | Completed | `MathText.jsx` renders diagram/image supplement alerts; `aiService.js` passes `targetDpi = 56` and `batchSize = 5`; Vite build passed in 1.74s. |

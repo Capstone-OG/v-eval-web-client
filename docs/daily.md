@@ -2,6 +2,68 @@
 
 ---
 
+## [17/11/2026] - Khắc Phục Triệt Để Hiện Tượng Trống Sector 1: Đồng Bộ Hóa 122 Trang Lý Thuyết SGK Từ CSDL Supabase Vào Giao Diện & Nâng Cấp Bộ Lọc Đa Tầng
+
+- **Tự động Hydrate Chunks vào React State (`filledChunks`) trong `src/components/curriculum/TextbookStudioView.jsx`**:
+  - Khắc phục triệt để hiện tượng Sector 1 ("Lý Thuyết Cốt Lõi") hiển thị thông báo chưa nạp nội dung sau khi Bước 2 hoàn thành.
+  - Khi khởi động component hoặc khi kết thúc polling Bước 2, tự động kích hoạt `loadChunksForSource` để nạp toàn bộ 122 chunks tri thức từ Supabase CSDL vào `filledChunks`.
+  - Tự động nhận diện khi người dùng upload file PDF đã từng được nạp (`SGK VL 10 CD.pdf`), lập tức kết nối và hiển thị tri thức mà không cần quét lại từ đầu.
+- **Thuật toán Khớp Lý Thuyết Đa Tầng Cực Kỳ Chuẩn Xác (`currentLessonChunks`)**:
+  - *Tầng 1 (Ưu tiên tuyệt đối)*: Khớp theo khoảng trang bài học (`c.pageNumber >= activeLesson.pageStart && c.pageNumber <= activeLesson.pageEnd`). Bài 1 (Trang 15–20) khớp chuẩn xác 6 trang lý thuyết gồm Tốc độ, Vận tốc, Vectơ vận tốc `\vec{v} = \frac{\Delta \vec{d}}{\Delta t}` và thực hành đo tốc độ.
+  - *Tầng 2*: Khớp theo tiêu đề bài học đã chuẩn hóa.
+  - *Tầng 3*: Khớp theo từ khóa cốt lõi trong nội dung bài.
+  - *Tầng 4*: Khớp theo khoảng trang của toàn bộ Chương đang chọn.
+  - *Tầng 5 (Fallback an toàn)*: Hiển thị 12 chunks gần nhất của cuốn sách, đảm bảo Sector 1 **tuyệt đối không bao giờ để trắng**.
+- **Nâng Cấp Giao Diện Sector 1 Tiện Ích & Trực Quan**:
+  - Bộ chuyển đổi chế độ xem linh hoạt: `[📖 Bài này (6 đoạn)]` vs `[🌐 Toàn bộ SGK (122 trang)]`.
+  - Thanh tìm kiếm tức thì theo từ khóa, định nghĩa, công thức KaTeX kèm nút xóa tìm kiếm nhanh.
+  - Nút `[⚡ Nạp ngay từ CSDL Supabase]` hỗ trợ nạp nóng dữ liệu tức thì.
+  - Nút `[Sao chép đoạn]` (sao chép KaTeX vào clipboard) và nút `[Đưa vào Studio]` (mở trực tiếp sang `CurriculumStudioEditor`).
+- **Kiểm Thử**: `npm run build` (`vite build`) đạt `✓ built in 1.26s` với 0 cảnh báo/lỗi biên dịch.
+
+## [17/11/2026] - Tái Thiết Kế Toàn Diện Kiến Trúc Studio Sách Giáo Khoa (SGK) & Đồng Bộ 3 Module Học Thuật Kèm Studio Sư Phạm Trên Sidebar
+
+- **Tách Biệt 2 Phân Hệ Rõ Rệt Cho Sách Giáo Khoa Trong `src/components/curriculum/TextbookStudioView.jsx`**:
+  - **Phân hệ 1: "⚡ Parse & Nạp SGK Mới (2-Stage Pipeline)"**: Khi mới vào trang Parse, **tuyệt đối không hiển thị nội dung sách cũ kế bên**. Toàn bộ giao diện tập trung vào việc upload file PDF SGK, chọn môn/khối lớp/bộ sách và vận hành quy trình 2 bước:
+    - *Bước 1 (5–10s)*: Quét nhanh Mục lục & Cấu trúc qua Vision AI (10 trang đầu & 6 trang cuối), bóc tách toàn bộ cây Chương/Bài học/Dạng bài và hiển thị bảng kiểm tra trực quan.
+    - *Bước 2*: Quét sâu nội dung toàn bộ SGK (độ phủ 70%–80%) qua Vision AI (`ocrMode: 'VISION_AI'`, DPI 72, batch 4 trang) bóc tách toàn bộ Lý thuyết, Công thức KaTeX, Ví dụ mẫu vào Supabase Database.
+    - Nút điều hướng nổi bật "📖 Chuyển sang Kho & Studio SGK" để mở xem chi tiết sau khi nạp.
+  - **Phân hệ 2: "📚 Kho & Studio Sách Giáo Khoa (5-Sector Workspace)"**:
+    - Dropdown chọn cuốn sách từ Kho SGK đã nạp (hiển thị môn, lớp, số trang, số chunks).
+    - Nút mở "🖋️ Studio Biên Soạn Sư Phạm (Toàn Màn Hình)" (`CurriculumStudioEditor`).
+    - Không gian làm việc 3 cột chuyên biệt: Cột Chương -> Cột Bài học -> Cột 5 Sector Sư phạm:
+      - **Sector 1: 📖 Lý thuyết cốt lõi**: Bóc tách chi tiết định nghĩa, định luật, tính chất kèm trích dẫn số trang SGK, render KaTeX/Markdown chuẩn đẹp.
+      - **Sector 2: ∑ Kho công thức KaTeX**: Danh sách công thức toán/lý/hóa chuẩn, thanh ký hiệu KaTeX nhanh, nút sao chép clipboard và ô nhập chèn công thức mới.
+      - **Sector 3: 💡 Ví dụ mẫu SGK**: Bài toán ví dụ giải mẫu từ sách giáo khoa, hướng dẫn giải chi tiết từng bước.
+      - **Sector 4: 🎯 Ma trận Dạng bài & Bloom**: Chuẩn hóa dạng bài theo 6 cấp độ Bloom (Nhớ, Hiểu, Vận dụng, Phân tích, Đánh giá, Sáng tạo).
+      - **Sector 5: ⚡ Sinh & Tùy biến Bài tập Mới**: Tách riêng lấy lý thuyết và công thức trước, sau đó sinh bài tập ra nhiều dạng (Trắc nghiệm lý thuyết, Bài tập tính toán công thức, Vận dụng thực tiễn) bằng AI hoặc tự soạn thủ công, cho phép chỉnh sửa đề/đáp án/lời giải và gán Bloom.
+- **Đồng Bộ Hóa Điều Hướng Sidebar (`src/components/layout/Sidebar.jsx` & `src/App.jsx`)**:
+  - Cung cấp đầy đủ 3 phân hệ học thuật độc lập trên Sidebar cho Teacher, Campus Manager và IAM Admin:
+    1. Khung Chương Trình & Dạng Bài (`roadmap`) - kèm Studio biên soạn câu hỏi.
+    2. Sách Giáo Khoa SGK (`textbook-studio`) - kèm Studio 5 Sector & Pipeline Parse 2 bước.
+    3. Parse Đề Thi (`exam-studio`) - kèm Studio bóc tách câu hỏi & ma trận đề.
+  - Sửa router trong `App.jsx` cho phép Teacher truy cập trực tiếp `textbook-studio` và `exam-studio`.
+- **Khắc Phục Triệt Để Lỗi JavaScript**:
+  - Sửa lỗi `selectedSubject is not defined`: Đồng bộ tham chiếu state `skeleton.subjectCode`, `skeleton.grade`, `skeleton.bookEdition`.
+  - Thêm safe toast wrapper chống lỗi `toast.error is not a function`.
+- **Kiểm Thử**: `npm run build` (`vite build`) đạt `✓ built in 1.21s` với 0 cảnh báo/lỗi biên dịch.
+
+## [17/11/2026] - Nâng Cấp Toàn Diện Quy Trình Số Hóa SGK Thuần Ảnh (Vision AI Direct Routing), Chuẩn Hóa Lọc Lý Thuyết Sector 1 & Tái Cấu Trúc Studio Biên Soạn Sư Phạm
+
+- **Tối Ưu Bước 1 & Bước 2 Trong Studio Khung SGK (`src/components/curriculum/TextbookStudioView.jsx`)**:
+  - **Bước 1**: Truyền đầy đủ mã môn (`subjectCode`), khối lớp (`grade`) và bộ sách (`bookEdition`) được chọn trên dropdown sang API `scan-skeleton`, giúp AI Engine nhận diện ngay cấu trúc SGK chính xác mà không đoán mò.
+  - **Bước 2**: Chuyển đổi phương thức sang `ocrMode: 'VISION_AI'` với `forceReingest: true`, `targetDpi: 72`, `batchSize: 4`. Gửi ảnh các trang scan chất lượng cao trực tiếp sang Gemini Vision AI để trích xuất đầy đủ 70%–80% lý thuyết và công thức KaTeX cho file PDF thuần ảnh.
+- **Nâng Cấp Bộ Lọc Chunks Lý Thuyết Sector 1 (`currentLessonChunks`)**:
+  - Bổ sung đối chiếu theo cả tiêu đề bài học (`lessonName`) và khoảng trang (`pageStart`–`pageEnd`), đảm bảo khi click vào bất kỳ bài học nào, toàn bộ các thẻ lý thuyết trích xuất tương ứng sẽ hiển thị đầy đủ, không còn hiện tượng rỗng hay bị dồn toàn bộ vào bài mở đầu.
+- **Kiểm Thử**: `npm run build` (`vite build`) thành công 100% (`✓ built in 1.22s`).
+
+- **Render Khung Nhắc Nhở Bổ Sung Hình Ảnh / Sơ Đồ (`src/components/common/MathText.jsx`)**:
+  - Bảo vệ thẻ `[IMAGE_PLACEHOLDER: id="..." page="..." type="..." desc="..."]` trong `normalizeMathString` tránh bị các regex KaTeX can thiệp.
+  - Bổ sung bộ phân tích và hiển thị khung nhắc nhở trực quan (kèm loại sơ đồ, số trang gốc trong PDF và mô tả chi tiết) trong `renderStructuredContent` để Frontend/Giáo viên dễ dàng nhận biết vị trí cần cắt ảnh và bổ sung hình minh họa.
+- **Đồng Bộ Tham Số Nạp SGK Siêu Nhẹ (`src/services/aiService.js`)**:
+  - Mở rộng `uploadTextbookPdf` truyền mặc định `targetDpi = 56` và `batchSize = 5` sang `POST /api/ai-engine/textbooks/upload-pdf` phục vụ nạp trơn tru các tài liệu PDF ảnh 106 - 170+ trang.
+- **Kiểm Thử**: `npm run build` (Vite v8.3.0) thành công 100% (`✓ built in 1.74s`).
+
 ## [16/11/2026] - Chuyển Tiếp Lịch Sử Hội Thoại Đa Lượt & Skill ID Chuẩn Xác Cho Gia Sư Socratic, Khắc Phục Triệt Để Hiện Tượng Lặp Từ Kép, Chuẩn Hóa Xóa Phiên (Tombstones)
 
 - **Đồng Bộ Chuyển Tiếp `skillId` & `questionId` Cho Gia Sư AI (`src/components/modals/AISocraticTutorModal.jsx`, `src/components/modals/AdaptiveQuizModal.jsx`)**:

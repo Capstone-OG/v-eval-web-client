@@ -2177,3 +2177,30 @@ The diagnostic report JSX parse failure from an incomplete duplicate trend-chart
 
 
 Radar and skill-prior displays consume API response fields; the benchmark overlay and prior values are omitted when absent instead of being filled with synthetic defaults. The result page now uses normalized API-derived prior data without unresolved component/helper references.
+
+
+---
+
+## Acceptance Update: Diagram Placeholder Rendering & Low-DPI Textbook Upload Parameters - 17/11/2026
+
+1. **Diagram Placeholder UI Rendering (`src/components/common/MathText.jsx`)**:
+   - Protected `[IMAGE_PLACEHOLDER: id="..." page="..." type="..." desc="..."]` tags from LaTeX normalization inside `normalizeMathString`.
+   - Added a dedicated dashed-border alert card in `renderStructuredContent` displaying the diagram type, source PDF page number, and description so Frontend users/instructors can crop and supplement missing diagrams.
+2. **Low-DPI Batch Ingestion Client Integration (`src/services/aiService.js`)**:
+   - Updated `uploadTextbookPdf` to pass `targetDpi = 56` and `batchSize = 5` by default to `V-Eval-Ai_Engine`.
+3. **Textbook Studio 2-Stage Pipeline & 5 Dedicated Pedagogical Sectors (`TextbookStudioView.jsx`)**:
+   - Cleanly separated the Textbook workspace into two distinct sub-modes:
+     - `mode === 'parse'`: Dedicated 2-stage ingestion pipeline (Step 1: Rapid Skeleton Extraction via Vision AI 10-page & last-page rendering; Step 2: Deep 70-80% Knowledge Ingestion via Vision OCR). Strictly suppresses any adjacent uninitialized book previews on initial entry.
+     - `mode === 'view'`: Ingested Book Vault reader and 3-column workspace with 5 dedicated sectors: Sector 1 (Core Theory with page citations), Sector 2 (KaTeX Formulas with quick-insert palette & copy), Sector 3 (Worked Textbook Examples), Sector 4 (Pattern Matrix with 6-level Bloom Taxonomy), Sector 5 (AI-driven Exercise Generation and Custom Item Authoring).
+   - Unified Sidebar access for all 3 academic modules (`roadmap`, `textbook-studio`, `exam-studio`) with full-screen Studio editor integration across Teacher, Manager, and Admin roles.
+4. **Sector 1 Deep Theory Hydration & Multi-Tier Resilient Matching Architecture (`TextbookStudioView.jsx`)**:
+   - **Automatic State Hydration (`filledChunks`)**: Eliminated the blank theory state by automatically executing `loadChunksForSource` during component initialization, vault selection, and Step 2 completion polling. Ingested chunks from Supabase PostgreSQL (`KnowledgeVectorChunks`) are immediately loaded into React state.
+   - **Multi-Tier Matching Engine (`currentLessonChunks`)**:
+     - *Priority 1*: Page-range alignment (`activeLesson.pageStart <= chunk.pageNumber <= activeLesson.pageEnd`). Accurately maps all 6 core physics pages (Pages 15-20) for Lesson 1 (Speed, Velocity, Vector displacement formula `\vec{v} = \frac{\Delta \vec{d}}{\Delta t}`, and lab experiments).
+     - *Priority 2*: Normalized title substring matching.
+     - *Priority 3*: Content keyword indexing.
+     - *Priority 4*: Chapter page boundaries fallback.
+     - *Priority 5*: Safe 12-chunk window fallback ensuring Sector 1 never renders blank when textbook data exists in Supabase.
+   - **Interactive User Utilities**: Added a view mode toggle (`[By Lesson]` vs `[Entire Book - 122 pages]`), live regex-based keyword search with instant clear, one-click clipboard copy for KaTeX snippets, and direct handoff to `CurriculumStudioEditor`.
+5. **Verification**:
+   - `npm run build` (Vite v8.3.0) completed cleanly in 1.26s with zero errors.

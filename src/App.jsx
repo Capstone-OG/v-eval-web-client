@@ -44,6 +44,8 @@ import SubmissionHistoryView from './components/diagnostic/SubmissionHistoryView
 import StudentHistoryPage from './components/diagnostic/StudentHistoryPage';
 import AccountSettingsPage from './components/settings/AccountSettingsPage';
 import CurriculumExplorerView from './components/curriculum/CurriculumExplorerView';
+import TextbookStudioView from './components/curriculum/TextbookStudioView';
+import ExamParserStudioView from './components/curriculum/ExamParserStudioView';
 import StudentRoadmapWorkspace from './components/roadmap/StudentRoadmapWorkspace';
 import TuitionPaymentView from './components/payment/TuitionPaymentView';
 import {
@@ -407,7 +409,7 @@ export default function App() {
       return <AccountSettingsPage currentUser={currentUser} onUpdateUser={setCurrentUser}
         activeRole={role} onNavigateTab={setActiveTab} onLogout={handleLogout} />;
     }
-    if (role === 'teacher' && activeTab !== 'roadmap') {
+    if (role === 'teacher' && activeTab !== 'roadmap' && activeTab !== 'textbook-studio' && activeTab !== 'exam-studio') {
       return <TeacherPortalView key={`${currentUser?.userId || currentUser?.id}:${currentUser?.classId || ''}:${activeTab}`}
         currentUser={currentUser} section={activeTab} onNavigate={setActiveTab} />;
     }
@@ -445,6 +447,12 @@ export default function App() {
       );
     }
 
+    if (activeTab === 'textbook-studio') {
+      return <TextbookStudioView onBack={() => setActiveTab('roadmap')} />;
+    }
+    if (activeTab === 'exam-studio') {
+      return <ExamParserStudioView />;
+    }
     if (activeTab === 'roadmap') {
       const curriculum = (
         <CurriculumExplorerView
