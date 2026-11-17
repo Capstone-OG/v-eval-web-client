@@ -3,12 +3,14 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   BarChart3,
   BookOpen,
+  BookOpenCheck,
   Briefcase,
   Building2,
   Calendar,
   ClipboardCheck,
   CreditCard,
   Crown,
+  FileSpreadsheet,
   GraduationCap,
   HeartHandshake,
   History,
@@ -44,6 +46,8 @@ import SubmissionHistoryView from './components/diagnostic/SubmissionHistoryView
 import StudentHistoryPage from './components/diagnostic/StudentHistoryPage';
 import AccountSettingsPage from './components/settings/AccountSettingsPage';
 import CurriculumExplorerView from './components/curriculum/CurriculumExplorerView';
+import TextbookStandardView from './components/curriculum/TextbookStandardView';
+import TextbookIngestView from './components/curriculum/TextbookIngestView';
 import TextbookStudioView from './components/curriculum/TextbookStudioView';
 import ExamParserStudioView from './components/curriculum/ExamParserStudioView';
 import StudentRoadmapWorkspace from './components/roadmap/StudentRoadmapWorkspace';
@@ -106,6 +110,10 @@ const ROLE_PORTAL_DEFINITIONS = {
     tabs: [
       { id: 'dashboard', label: 'Tổng quan giảng dạy', icon: LayoutGrid },
       { id: 'teacher_heatmap', label: 'Lớp học & bản đồ năng lực', icon: Users },
+      { id: 'textbook-standard', label: '1. Sách Giáo Khoa Chuẩn', icon: BookOpen },
+      { id: 'textbook-ingest', label: '2. Nạp Tài Liệu SGK', icon: BookOpenCheck },
+      { id: 'textbook-studio', label: '3. Studio Biên Soạn SGK', icon: BookOpenCheck },
+      { id: 'exam-studio', label: 'Số Hóa & Parse Đề Thi', icon: FileSpreadsheet },
       { id: 'roadmap', label: 'Studio Biên soạn Học liệu', icon: BookOpen },
       { id: 'diagnostic', label: 'Ngân hàng đề thi', icon: ClipboardCheck },
       { id: 'history', label: 'Nhật ký Bài làm Học viên', icon: History },
@@ -122,6 +130,10 @@ const ROLE_PORTAL_DEFINITIONS = {
     tabs: [
       { id: 'dashboard', label: 'So sánh Cơ sở', icon: Building2 },
       { id: 'teacher_heatmap', label: 'Ma trận Lớp học', icon: LayoutGrid },
+      { id: 'textbook-standard', label: '1. Sách Giáo Khoa Chuẩn', icon: BookOpen },
+      { id: 'textbook-ingest', label: '2. Nạp Tài Liệu SGK', icon: BookOpenCheck },
+      { id: 'textbook-studio', label: '3. Studio Biên Soạn SGK', icon: BookOpenCheck },
+      { id: 'exam-studio', label: 'Số Hóa & Parse Đề Thi', icon: FileSpreadsheet },
       { id: 'ai_moderation', label: 'Kiểm duyệt Gia sư AI', icon: Bot },
       { id: 'roadmap', label: 'Khung Chương trình', icon: Network },
       { id: 'provision', label: 'Cấp phát Tài khoản', icon: UserPlus },
@@ -148,6 +160,7 @@ const ROLE_PORTAL_DEFINITIONS = {
 export default function App() {
   // Check existing token in localStorage to restore session
   const [mobileNavigation, setMobileNavigation] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const closeNavigation = useCallback(() => setMobileNavigation(false), []);
   const [currentUser, setCurrentUser] = useState(() => authService.getCurrentUser());
 
@@ -409,7 +422,12 @@ export default function App() {
       return <AccountSettingsPage currentUser={currentUser} onUpdateUser={setCurrentUser}
         activeRole={role} onNavigateTab={setActiveTab} onLogout={handleLogout} />;
     }
-    if (role === 'teacher' && activeTab !== 'roadmap' && activeTab !== 'textbook-studio' && activeTab !== 'exam-studio') {
+    if (role === 'teacher' &&
+        activeTab !== 'roadmap' &&
+        activeTab !== 'textbook-standard' &&
+        activeTab !== 'textbook-ingest' &&
+        activeTab !== 'textbook-studio' &&
+        activeTab !== 'exam-studio') {
       return <TeacherPortalView key={`${currentUser?.userId || currentUser?.id}:${currentUser?.classId || ''}:${activeTab}`}
         currentUser={currentUser} section={activeTab} onNavigate={setActiveTab} />;
     }
@@ -447,8 +465,20 @@ export default function App() {
       );
     }
 
+    if (activeTab === 'textbook-standard') {
+      return (
+        <TextbookStandardView
+          onNavigateTab={setActiveTab}
+          onBack={() => setActiveTab('roadmap')}
+          isSidebarCollapsed={isSidebarCollapsed}
+        />
+      );
+    }
+    if (activeTab === 'textbook-ingest') {
+      return <TextbookIngestView onNavigateTab={setActiveTab} onBack={() => setActiveTab('roadmap')} />;
+    }
     if (activeTab === 'textbook-studio') {
-      return <TextbookStudioView onBack={() => setActiveTab('roadmap')} />;
+      return <TextbookStudioView onNavigateTab={setActiveTab} onBack={() => setActiveTab('textbook-standard')} />;
     }
     if (activeTab === 'exam-studio') {
       return <ExamParserStudioView />;
@@ -651,6 +681,8 @@ export default function App() {
           role={role}
           activeTab={activeTab}
           setActiveTab={setActiveTab}
+          isCollapsed={isSidebarCollapsed}
+          onToggleCollapse={() => setIsSidebarCollapsed(prev => !prev)}
           onOpenAdaptiveQuiz={handleOpenAdaptiveQuiz}
           onOpenMockExam={handleOpenMockExam}
           onOpenAiTutor={() => {
@@ -676,6 +708,8 @@ export default function App() {
             role={role}
             activeTab={activeTab}
             pageTitle={pageTitle}
+            isSidebarCollapsed={isSidebarCollapsed}
+            onToggleSidebar={() => setIsSidebarCollapsed(prev => !prev)}
             onOpenNavigation={() => setMobileNavigation(true)}
             currentUser={currentUser}
             portalMetrics={portalMetrics}

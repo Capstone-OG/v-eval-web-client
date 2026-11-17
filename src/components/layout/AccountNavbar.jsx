@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { Bell, CalendarDays, ChevronDown, ChevronRight, Flame, Home, LayoutDashboard, LogOut, Menu, Settings } from 'lucide-react';
+import { Bell, CalendarDays, ChevronDown, ChevronRight, Flame, Home, LayoutDashboard, LogOut, Menu, Settings, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { accountRoleLabel } from '../../utils/accountPresentation';
 
 export default function AccountNavbar({ role = 'student', pageTitle = 'Tổng quan', currentUser,
-  portalMetrics = {}, onLogout, onOpenLandingPage, onOpenSettings, onOpenNavigation }) {
+  portalMetrics = {}, onLogout, onOpenLandingPage, onOpenSettings, onOpenNavigation,
+  isSidebarCollapsed = false, onToggleSidebar }) {
   const [open, setOpen] = useState(false);
   const container = useRef(null);
   const trigger = useRef(null);
@@ -48,6 +49,17 @@ export default function AccountNavbar({ role = 'student', pageTitle = 'Tổng qu
       <div className="flex min-w-0 flex-1 items-center gap-3">
         <button type="button" onClick={onOpenNavigation} aria-label="Mở menu điều hướng"
           className="rounded-xl border border-slate-200 bg-white p-2 text-slate-600 hover:bg-slate-100 lg:hidden"><Menu className="h-5 w-5" /></button>
+        {onToggleSidebar && (
+          <button
+            type="button"
+            onClick={onToggleSidebar}
+            aria-label={isSidebarCollapsed ? "Mở rộng thanh điều hướng" : "Thu gọn thanh điều hướng"}
+            title={isSidebarCollapsed ? "Mở rộng sidebar (Ctrl+B)" : "Thu gọn sidebar (Ctrl+B)"}
+            className="hidden lg:flex items-center justify-center rounded-xl border border-slate-200 bg-white p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors shadow-2xs cursor-pointer"
+          >
+            {isSidebarCollapsed ? <PanelLeftOpen className="h-5 w-5 text-emerald-700" /> : <PanelLeftClose className="h-5 w-5 text-slate-600" />}
+          </button>
+        )}
         <span className="hidden h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-blue-100 bg-blue-50 text-blue-600 sm:flex">
           <LayoutDashboard className="h-5 w-5" />
         </span>

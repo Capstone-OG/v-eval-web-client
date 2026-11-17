@@ -58,12 +58,13 @@ export const aiService = {
    * @param {boolean} [options.forceReingest=false] - Bỏ qua checkpoint và nạp lại từ đầu
    * @returns {Promise<{jobId: string, fileHash: string, totalPages: number, status: string}>}
    */
-  async scanTextbookSkeleton(file, { subjectCode = '', grade = 10, bookEdition = '' } = {}) {
+  async scanTextbookSkeleton(file, { subjectCode = '', grade = 10, bookEdition = '', targetDpi = 72 } = {}) {
     const formData = new FormData();
     formData.append('file', file);
     if (subjectCode) formData.append('subjectCode', subjectCode);
     if (grade) formData.append('grade', grade);
     if (bookEdition) formData.append('bookEdition', bookEdition);
+    if (targetDpi) formData.append('targetDpi', targetDpi.toString());
     const response = await apiClient.upload('/api/ai-engine/textbooks/scan-skeleton', formData);
     return response.data;
   },
@@ -150,6 +151,16 @@ export const aiService = {
    */
   async getTextbookChunks(sourceId) {
     const response = await apiClient.get(`/api/ai-engine/textbooks/chunks/${sourceId}`);
+    return response.data;
+  },
+
+  /**
+   * Xóa một cuốn SGK đã nạp khỏi CSDL Supabase và toàn bộ Chunks liên quan
+   * @param {string} sourceId
+   * @returns {Promise<{success: boolean, message: string}>}
+   */
+  async deleteTextbookSource(sourceId) {
+    const response = await apiClient.delete(`/api/ai-engine/textbooks/sources/${sourceId}`);
     return response.data;
   },
 
