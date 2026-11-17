@@ -2132,6 +2132,24 @@ Backend follow-up: Practice sends an empty AllSkillIds mapping to AI, preventing
 - **Verification**:
   - Vite production build succeeded in 1.06s with 0 errors.
   - `node --test` passed 22/22 unit tests with 100% success rate.
+
+### [17/11/2026] - Parent Companion Portal UI Simplification & Navigation Guardrail Architecture
+
+- **Domain Perimeter Separation for Guardian / Parent Persona (`src/components/layout/Sidebar.jsx`, `src/App.jsx`)**:
+  - Re-evaluated user journey for **Parent Companion Portal (`role === 'parent'`)**: parents track holistic readiness (`R_exam`), weekly commitment (12h/week), exam history and tuition status, rather than deep pedagogical curriculum graphs or 4-domain radar charts meant for student practice.
+  - Removed two student-centric sidebar items from `Sidebar.jsx`:
+    - `analytics`: *Báo cáo Năng lực 4 Miền* (Score prediction & progress charts).
+    - `roadmap`: *Cây Tri thức & Chuyên đề* (Curriculum DAG graph & topic quizzes).
+  - Streamlined `ROLE_PORTAL_DEFINITIONS.parent.tabs` down to:
+    1. `dashboard`: *Tổng quan Đồng hành* (`HeartHandshake`).
+    2. `history`: *Lịch sử Bài thi của Con* (`History`).
+    3. `tuition`: *Đóng Học phí PayOS* (`CreditCard`).
+- **Defensive Navigation Guardrails (`src/App.jsx`)**:
+  - Added guards `activeTab === 'roadmap' && role !== 'parent'` and `activeTab === 'analytics' && role !== 'parent'` inside `renderRolePortalContent`. Any accidental or direct navigation falls back securely to `ParentDashboardView`.
+  - Disconnected student roadmap/quiz callbacks in `TuitionPaymentView` when viewed by a parent.
+- **Verification**:
+  - Vite production build succeeded in 1.68s with 0 errors.
+  - All 22/22 unit tests in `tests/*.test.js` passed with 100% success rate.
 ### [14/11/2026] - Early MathLab Block Shielding, Bold Heading Repair & Zero-Hardcode Extraction Cards
 
 - **Early Placeholder Isolation & Bold Heading Normalization (`src/components/common/MathText.jsx`)**:

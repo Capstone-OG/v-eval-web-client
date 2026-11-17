@@ -88,9 +88,7 @@ const ROLE_PORTAL_DEFINITIONS = {
     accentBadge: 'bg-amber-50 text-amber-800 border-amber-200',
     tabs: [
       { id: 'dashboard', label: 'Tổng quan Đồng hành', icon: HeartHandshake },
-      { id: 'analytics', label: 'Năng lực 4 Miền của Con', icon: TrendingUp },
       { id: 'history', label: 'Lịch sử Bài thi của Con', icon: History },
-      { id: 'roadmap', label: 'Tiến độ Chuyên đề', icon: Network },
       { id: 'tuition', label: 'Đóng Học phí PayOS', icon: CreditCard }
     ]
   },
@@ -445,7 +443,7 @@ export default function App() {
       );
     }
 
-    if (activeTab === 'roadmap') {
+    if (activeTab === 'roadmap' && role !== 'parent') {
       const curriculum = (
         <CurriculumExplorerView
           role={role === 'parent' ? 'student' : role}
@@ -504,11 +502,11 @@ export default function App() {
         <TuitionPaymentView
           currentUser={currentUser}
           onBackToDashboard={() => setActiveTab('dashboard')}
-          onNavigateRoadmap={() => setActiveTab('roadmap')}
-          onNavigateAdaptive={() => setActiveTab('adaptive')}
-          onNavigateSchedule={() => setActiveTab('schedule')}
-          onNavigateLive={() => setActiveTab('live')}
-          onNavigateAiTutor={() => {
+          onNavigateRoadmap={role === 'parent' ? undefined : () => setActiveTab('roadmap')}
+          onNavigateAdaptive={role === 'parent' ? undefined : () => setActiveTab('adaptive')}
+          onNavigateSchedule={role === 'parent' ? undefined : () => setActiveTab('schedule')}
+          onNavigateLive={role === 'parent' ? undefined : () => setActiveTab('live')}
+          onNavigateAiTutor={role === 'parent' ? undefined : () => {
             setAiTutorInitialContext(null);
             setActiveModal('ai');
           }}
@@ -516,7 +514,7 @@ export default function App() {
       );
     }
 
-    if (activeTab === 'analytics') {
+    if (activeTab === 'analytics' && role !== 'parent') {
       return (
         <LearningAnalyticsView
           currentUser={currentUser}

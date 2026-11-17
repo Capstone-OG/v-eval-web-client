@@ -2,6 +2,23 @@
 
 ---
 
+## [17/11/2026] - Tối Giản Hóa Giao Diện Cổng Phụ Huynh: Loại Bỏ Báo Cáo Năng Lực 4 Miền & Cây Tri Thức Chuyên Đề
+
+- **Tinh Gọn Điều Hướng Sidebar Phụ Huynh ([`Sidebar.jsx`](../src/components/layout/Sidebar.jsx))**:
+  - Loại bỏ hoàn toàn 2 mục điều hướng không thuộc phạm vi theo dõi tổng quan của phụ huynh trong nhóm *Không Gian Phụ Huynh*:
+    - Mục `id: 'analytics'` ("Báo cáo Năng lực 4 Miền" - Biểu đồ tiến bộ & Dự báo điểm).
+    - Mục `id: 'roadmap'` ("Cây Tri thức & Chuyên đề" - Theo dõi lộ trình học của con).
+  - Giữ lại đúng 2 mục cốt lõi phục vụ đồng hành cùng học sinh: **Tổng quan Đồng hành (`dashboard`)** và **Lịch sử Bài thi của Con (`history`)**, kết hợp mục **Đóng Học phí & Gói học (`tuition`)** qua PayOS.
+- **Chuẩn Hóa Danh Mục Tab Cổng Phụ Huynh & Bảo Vệ Điều Hướng ([`App.jsx`](../src/App.jsx))**:
+  - Cập nhật cấu hình `ROLE_PORTAL_DEFINITIONS.parent.tabs`, loại bỏ các tab `analytics` và `roadmap`.
+  - Bổ sung rào chắn bảo vệ `activeTab === 'roadmap' && role !== 'parent'` và `activeTab === 'analytics' && role !== 'parent'` trong hàm `renderRolePortalContent`, tự động điều hướng an toàn về `ParentDashboardView` khi phụ huynh truy cập nhầm các đường dẫn sư phạm dành riêng cho học sinh.
+  - Ngắt các callback điều hướng lộ trình/luyện tập học sinh khỏi màn hình thanh toán học phí khi phụ huynh xem giao diện `TuitionPaymentView`.
+- **Kiểm Thử & Nghiệm Thu**:
+  - `npm run build`: Thành công 100% trong 1.68s, 0 lỗi biên dịch.
+  - `node --test tests/*.test.js`: Đạt **22/22 unit tests pass 100%**.
+
+---
+
 ## [16/11/2026] - Chuyển Tiếp Lịch Sử Hội Thoại Đa Lượt & Skill ID Chuẩn Xác Cho Gia Sư Socratic, Khắc Phục Triệt Để Hiện Tượng Lặp Từ Kép, Chuẩn Hóa Xóa Phiên (Tombstones)
 
 - **Đồng Bộ Chuyển Tiếp `skillId` & `questionId` Cho Gia Sư AI (`src/components/modals/AISocraticTutorModal.jsx`, `src/components/modals/AdaptiveQuizModal.jsx`)**:

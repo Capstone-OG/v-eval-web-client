@@ -87,28 +87,12 @@ export default function Sidebar({
                 onClick: () => setActiveTab('dashboard')
               },
               {
-                id: 'analytics',
-                label: 'Báo cáo Năng lực 4 Miền',
-                sublabel: 'Biểu đồ tiến bộ & Dự báo điểm',
-                icon: TrendingUp,
-                active: activeTab === 'analytics',
-                onClick: () => setActiveTab('analytics')
-              },
-              {
                 id: 'history',
                 label: 'Lịch sử Bài thi của Con',
                 sublabel: 'Chi tiết điểm & Nhận xét AI',
                 icon: History,
                 active: activeTab === 'history',
                 onClick: () => setActiveTab('history')
-              },
-              {
-                id: 'roadmap',
-                label: 'Cây Tri thức & Chuyên đề',
-                sublabel: 'Theo dõi lộ trình học của con',
-                icon: Network,
-                active: activeTab === 'roadmap',
-                onClick: () => setActiveTab('roadmap')
               }
             ]
           },

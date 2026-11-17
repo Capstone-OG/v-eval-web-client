@@ -747,6 +747,7 @@ Architecture: existing curriculum, sidebar and roadmap components retain their r
 | 162 | **Chuẩn Hóa Kiến Trúc Xóa Phiên Gia Sư AI Socratic (Client-Side Isolation & Tombstones)** | `src/components/modals/AISocraticTutorModal.jsx`, `src/utils/aiSessionManager.js`, `tests/aiSessionManager.test.js` | 🟢 Hoàn thành | 100% | Phân định rạch ròi giữa Audit Log bất biến (`ai_tutor_interaction_logs` cho Mentor ở Flow 4) và User Chat Sessions của học sinh; ngắt hoàn toàn lời gọi API kiểm duyệt của Mentor vào modal học sinh; giải quyết triệt để lỗi State Closure trong React khi xóa phiên đang active bằng atomic updater `setSessions(prev => ...)`; tích hợp cơ chế Tombstones `markSessionDeleted` và `isSessionDeleted` trong `aiSessionManager.js` ngăn 100% việc hồi sinh phiên đã xóa; 22/22 unit tests pass, build sạch 1.08s |
 | 163 | **Chuyển Tiếp Lịch Sử Hội Thoại Đa Lượt Cho Gia Sư Socratic (Conversation History Forwarding)** | `src/components/modals/AISocraticTutorModal.jsx`, `src/services/practiceService.js` | 🟢 Hoàn thành | 100% | Trích xuất 6 lượt trao đổi gần nhất gửi qua `practiceService.askAiTutorStream`, bảo toàn ngữ cảnh sư phạm giữa học sinh và gia sư AI; 22/22 tests pass, build sạch |
 | 164 | **Đồng Bộ Chuyển Tiếp `skillId` & `questionId` Cho Gia Sư Socratic (Curriculum Grounding)** | `src/components/modals/AISocraticTutorModal.jsx`, `src/components/modals/AdaptiveQuizModal.jsx` | 🟢 Hoàn thành | 100% | Lưu trữ và chuyển tiếp `skillId` từ context câu hỏi và Adaptive Quiz vào `askAiTutorStream`, hỗ trợ AI Engine định tuyến và neo đậu vào tài liệu SGK chuẩn `v_eval_content."Materials"`; 22/22 tests pass, build sạch 1.06s |
+| 165 | **Tối Giản Hóa Giao Diện Cổng Phụ Huynh: Loại Bỏ Báo Cáo Năng Lực 4 Miền & Cây Tri Thức Chuyên Đề** | `src/components/layout/Sidebar.jsx`, `src/App.jsx` | 🟢 Hoàn thành | 100% | Tinh giản Sidebar và danh mục tab phụ huynh (`role === 'parent'`), xóa bỏ 2 mục sư phạm học sinh (`analytics`: Báo cáo Năng lực 4 Miền và `roadmap`: Cây Tri thức & Chuyên đề); rào chắn an toàn tự chuyển về Dashboard nếu truy cập nhầm URL; 22/22 unit tests pass, build 1.68s |
 
 
 ## [15/11/2026] - CF2 per-skill resources
@@ -786,3 +787,12 @@ Validation: build and lint pass with existing warnings; live API integration rem
 
 | API-only radar and prior values | Corrected | No synthetic benchmark or default mastery values are displayed when omitted by API. |
 | Diagnostic report runtime references | Corrected | Reused normalized skill priors and removed a dangling component reference. |
+
+## [17/11/2026] - Parent Companion Portal UI Simplification
+
+| Item | Status | Detail |
+| --- | --- | --- |
+| Parent Sidebar Navigation | Optimized | Removed `analytics` (Báo cáo Năng lực 4 Miền) and `roadmap` (Cây Tri thức & Chuyên đề) from Parent Portal sidebar. |
+| Role Portal Tab Guardrails | Hardened | Updated `ROLE_PORTAL_DEFINITIONS.parent.tabs` and restricted `roadmap`/`analytics` rendering for `role === 'parent'`. |
+| Tuition Perk Actions | Isolated | Disconnected student roadmap/quiz navigation callbacks in tuition payment view when role is parent. |
+| Verification | Passed | `node --test tests/*.test.js` passed 22/22 tests; `vite build` completed in 1.68s with 0 errors. |
