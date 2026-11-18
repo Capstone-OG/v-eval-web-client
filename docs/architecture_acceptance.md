@@ -2204,3 +2204,21 @@ Radar and skill-prior displays consume API response fields; the benchmark overla
 The authentication completion handler now closes the OTP modal, switches the underlying page to login, and pre-populates the account email. Password reset completion also pre-populates the newly chosen password. The public landing page received a visual refinement across its section backgrounds, decorative accents, and cards.
 
 Acceptance evidence: `npm run build` completed successfully. Existing large-chunk and JSXGraph direct `eval` advisories remain. Interactive browser verification was not performed.
+
+## [18/11/2026] - Student Live Q&A feature removal
+
+The student-facing Live Q&A feature has been removed from the sidebar, portal route, roadmap lesson experience, and tuition package list. Its dedicated dashboard view, unused card, mock session data, and associated student and management role-menu entries were also removed. Regular class schedules and attendance remain available.
+
+Acceptance evidence: `npm run build` completed successfully. Existing large-chunk and JSXGraph direct `eval` advisories remain. Interactive browser verification was not performed.
+
+## [19/11/2026] - Sidebar stale-menu-entry guard
+
+The student sidebar no longer includes the stale `entries.live` reference left after Live Q&A was removed. That reference was undefined and caused `item.icon` to throw during rendering. An `Activity` fallback remains for any valid item that lacks an icon.
+
+Acceptance evidence: production build passed. Existing bundle-size and JSXGraph direct-eval advisories remain; interactive browser verification was not run.
+
+## [19/11/2026] - Student sidebar cleanup
+
+The student sidebar no longer contains the stale Live Q&A reference or the Gia sư AI navigation item. Invalid entries are filtered before rendering. The AI chat experience remains unchanged.
+
+Acceptance evidence: production build passed. Existing bundle-size and JSXGraph direct-eval advisories remain.

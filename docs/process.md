@@ -818,3 +818,27 @@ Validation: build and lint pass with existing warnings; live API integration rem
 | OTP/password reset completion | Updated | Completion returns to login and prefills email; reset flow prefills the new password. |
 | Public landing page | Updated | Refined section presentation, decorative backgrounds, and card styling. |
 | Production build | Passed | `npm run build` succeeds; existing bundle-size and JSXGraph eval warnings remain. |
+
+## [18/11/2026] - Student Live Q&A feature removal
+
+| Item | Status | Detail |
+| --- | --- | --- |
+| Student navigation and portal route | Removed | The sidebar entry and `live` route are no longer available. |
+| Live Q&A components and mock data | Removed | Deleted the dedicated student view, unused card, and mock session. |
+| Roadmap and tuition references | Removed | Removed live-session schedule UI/data and the Live Q&A package entry. |
+| Production build | Passed | `npm run build` succeeds; existing bundle-size and JSXGraph eval warnings remain. |
+
+## [19/11/2026] - Sidebar stale-menu-entry fix
+
+| Component | Status | Detail |
+| --- | --- | --- |
+| Sidebar navigation rendering | Implemented | Removed the stale `entries.live` reference that inserted an undefined item into the student menu after Live Q&A was removed; missing icons also have a Lucide `Activity` fallback. |
+| Validation | Build passed | `npm run build` passed; existing bundle-size and JSXGraph eval advisories remain. Browser verification was not run. |
+
+## [19/11/2026] - Student sidebar cleanup
+
+| Component | Status | Detail |
+| --- | --- | --- |
+| Student sidebar | Updated | Removed the stale Live Q&A reference and Gia sư AI menu item; invalid menu entries are filtered. |
+| AI chat | Unchanged | Only its sidebar link was removed. |
+| Validation | Build passed | Existing bundle-size and JSXGraph eval advisories remain. |

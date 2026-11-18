@@ -2945,3 +2945,20 @@
 - Fixed the completed OTP activation/password-reset action in `WebLoginPage.jsx`: closing the modal now returns to login and prefills the account email; password reset also prefills the new password.
 - Refined the public landing page presentation in `PublicLandingPage.jsx` with updated section backgrounds, decorative elements, and card styling.
 - Validation: `npm run build` passed. Existing large-chunk and JSXGraph `eval` warnings remain.
+
+## [18/11/2026] - Remove student Live Q&A feature
+
+- Removed the student sidebar and portal navigation entry for “Lớp học & Live Q&A” and deleted its dedicated dashboard view and unused Live Q&A card.
+- Removed mock live session data, roadmap live-session schedules and tab, and the Live Q&A course package and role-menu entries.
+- Validation: `npm run build` passed. Existing large-chunk and JSXGraph `eval` warnings remain.
+
+## [19/11/2026] - Sidebar stale-menu-entry fix
+
+- Removed the stale student menu reference `entries.live`, which had inserted an undefined menu item after the Live Q&A feature was removed.
+- Validation: production build passed with existing bundle-size and JSXGraph eval advisories; browser verification pending.
+
+## [19/11/2026] - Student sidebar cleanup
+
+- Removed the stale `entries.live` reference that produced an undefined student menu item and added defensive filtering.
+- Removed only the student Gia sư AI sidebar entry; the chat feature remains in its existing location.
+- `npm run build` passed with existing bundle-size and JSXGraph eval advisories.

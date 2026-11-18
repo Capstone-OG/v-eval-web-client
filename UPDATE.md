@@ -1,7 +1,7 @@
 ﻿# V-Eval Web Client Update
 
-## [18/11/2026] - Login completion and landing page refinement
+## [19/11/2026] - Sidebar navigation cleanup
 
-- Updated OTP activation/password-reset completion to return to login with the account email prefilled; the password reset flow also prefills the new password.
-- Refined the public landing page section backgrounds, decorative accents, and cards.
-- `npm run build` passed with existing chunk-size and JSXGraph eval warnings.
+- Removed the stale `entries.live` reference that caused the student sidebar crash, filtered invalid entries, and added a fallback icon for valid items missing an icon.
+- Removed only the student-facing Gia sư AI sidebar entry; the existing AI chat experience remains unchanged.
+- `npm run build` passed; existing bundle-size and JSXGraph eval advisories remain.

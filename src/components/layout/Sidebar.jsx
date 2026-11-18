@@ -23,7 +23,6 @@ import {
   TrendingUp,
   UserPlus,
   Users,
-  Video,
   Zap
 } from 'lucide-react';
 
@@ -34,7 +33,6 @@ export default function Sidebar({
   onOpenAdaptiveQuiz,
   onOpenMockExam,
   onOpenAiTutor,
-  onOpenLiveClass,
   latestDiagnosticResult,
   mobile = false,
   onNavigate,
@@ -390,25 +388,6 @@ export default function Sidebar({
                 active: false,
                 onClick: onOpenMockExam
               },
-              {
-                id: 'ai',
-                label: 'AI Socratic Tutor 24/7',
-                sublabel: 'Gợi mở tư duy & Không giải hộ',
-                icon: Bot,
-                iconColor: 'from-violet-500 to-purple-600',
-                activeGlow: 'shadow-purple-500/30',
-                active: false,
-                onClick: onOpenAiTutor,
-                badge: 'AI'
-              },
-              {
-                id: 'live',
-                label: 'Lớp học & Live Q&A',
-                sublabel: 'Phụ đạo trực tuyến & Nhóm vi mô',
-                icon: Video,
-                active: activeTab === 'live',
-                onClick: () => (onOpenLiveClass ? onOpenLiveClass() : setActiveTab('live'))
-              }
             ]
           },
           {
@@ -444,8 +423,7 @@ export default function Sidebar({
       { sectionTitle: 'Học tập', items: [
         { ...entries.roadmap, label: 'Lộ trình của tôi' },
         { ...entries.schedule, label: 'Thời khóa biểu & Điểm danh' },
-        { ...entries.adaptive, label: 'Luyện tập' },
-        { ...entries.ai, label: 'Gia sư AI' }
+        { ...entries.adaptive, label: 'Luyện tập' }
       ] },
       { sectionTitle: 'Đánh giá', items: [
         { id: 'exams', label: 'Kiểm tra & Thi thử', icon: ClipboardCheck, iconColor: 'from-orange-400 to-rose-500',
@@ -454,7 +432,7 @@ export default function Sidebar({
         entries.history,
         { ...entries.analytics, label: 'Báo cáo học tập' }
       ] },
-      { sectionTitle: 'Dịch vụ học viên', items: [entries.live, entries.tuition] }
+      { sectionTitle: 'Dịch vụ học viên', items: [entries.tuition] }
     ];
   }
 
@@ -477,8 +455,9 @@ export default function Sidebar({
                 <span className="h-px flex-1 bg-slate-100" />
               </div>
               <div className="space-y-1">
-                {section.items.map((item) => {
-                  const Icon = item.icon;
+                {section.items.filter(Boolean).map((item) => {
+                  // Keep navigation renderable if a role-specific config omits an icon.
+                  const Icon = item.icon || Activity;
                   const iconGradient = item.iconColor || 'from-slate-400 to-slate-600';
                   const glowClass = item.activeGlow || 'shadow-blue-500/30';
                   if (item.children) {
