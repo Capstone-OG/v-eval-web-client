@@ -66,17 +66,46 @@ export default function ConnectedRoadmapPage({ onNavigateDiagnostic, onNavigateD
       setRoadmap(current);
       const attempts = await practiceService.getDiagnosticHistory(studentId);
       if (!Array.isArray(attempts)) throw new Error('Không đọc được lịch sử bài kiểm tra.');
-      const completed = attempts.filter((item) => item.status === 'COMPLETED' && item.studentId === studentId)
+      const completed = attempts.filter((item) => item.status === 'COMPLETED'
+        && item.examType === 'DIAGNOSTIC' && item.studentId === studentId)
         .sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt));
       setHistory(completed);
       setSubmissionId(current?.diagnosticSubmissionId || completed[0]?.submissionId || '');
       if (!current) {
+        let profile = null;
         try {
-          const profile = await authService.getStudentProfile();
-          setExamDate(profile?.examDate?.slice(0, 10) || '');
-          setHours(profile?.studyHoursDay ?? '');
-        } catch (err) {
-          if (err.status !== 404) throw err;
+          profile = await authService.getStudentProfile();
+        } catch { /* Planning defaults keep roadmap creation available without profile data. */ }
+        const fallbackDate = new Date(Date.now() + 45 * 86400000);
+        const fallbackDateValue = [fallbackDate.getFullYear(), String(fallbackDate.getMonth() + 1).padStart(2, '0'), String(fallbackDate.getDate()).padStart(2, '0')].join('-');
+        const profileDate = profile?.examDate?.slice(0, 10);
+        const parsedProfileDate = profileDate ? new Date(`${profileDate}T00:00:00`) : null;
+        const nextExamDate = parsedProfileDate && parsedProfileDate > new Date()
+          ? profileDate
+          : fallbackDateValue;
+        const profileHours = Number(profile?.studyHoursDay);
+        const studyHoursPerDay = profileHours > 0 && profileHours <= 24 ? profileHours : 2;
+        setExamDate(nextExamDate);
+        setHours(String(studyHoursPerDay));
+
+        const diagnosticSubmissionId = completed[0]?.submissionId;
+        if (diagnosticSubmissionId && !creatingRef.current) {
+          setCreating(true);
+          creatingRef.current = true;
+          try {
+            const generated = await practiceService.generateRoadmap({
+              studentId,
+              diagnosticSubmissionId,
+              examDate: `${nextExamDate}T00:00:00`,
+              studyHoursPerDay
+            });
+            setRoadmap(validateRoadmap(generated, studentId));
+          } catch (err) {
+            setError(`Chưa thể tạo lộ trình tự động: ${err.message}`);
+          } finally {
+            creatingRef.current = false;
+            setCreating(false);
+          }
         }
       }
     } catch (err) {

@@ -2222,3 +2222,9 @@ Acceptance evidence: production build passed. Existing bundle-size and JSXGraph 
 The student sidebar no longer contains the stale Live Q&A reference or the Gia sư AI navigation item. Invalid entries are filtered before rendering. The AI chat experience remains unchanged.
 
 Acceptance evidence: production build passed. Existing bundle-size and JSXGraph direct-eval advisories remain.
+
+## [19/11/2026] - Single-assessment personal roadmap
+
+One completed diagnostic assessment now unlocks the student's personal roadmap. The connected roadmap opens by default and automatically generates from the latest completed diagnostic submission, using profile exam date and study hours when available or defaults otherwise. If automatic generation fails, the user can review or adjust the prefilled values in the existing form.
+
+Acceptance evidence: diagnostic eligibility tests and production build passed. Existing bundle-size and JSXGraph direct-eval advisories remain.

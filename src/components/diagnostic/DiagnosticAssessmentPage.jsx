@@ -1018,7 +1018,7 @@ export default function DiagnosticAssessmentPage({
       const history = await practiceService.getDiagnosticHistory(ownerId);
       const completedIds = completedDiagnosticExamIds(history, ownerId);
       if (completedIds.size >= DIAGNOSTIC_TARGET) {
-        showPopupAlert('Bạn đã hoàn thành đủ 3/3 bài chẩn đoán khác nhau. Hãy xem lại kết quả trong lịch sử.', 'Đã hoàn thành chẩn đoán');
+        showPopupAlert(`Bạn đã hoàn thành bài đánh giá đầu vào. Hãy xem kết quả hoặc mở lộ trình học cá nhân.`, 'Đã hoàn thành đánh giá đầu vào', 'info', onNavigateRoadmap);
         setHistoryReload((value) => value + 1);
         return;
       }
@@ -1046,10 +1046,10 @@ export default function DiagnosticAssessmentPage({
         setSelectedHistoryExam(null);
         setResultData(null);
         setCustomAlert({
-          title: 'Bạn đã hoàn thành đề này',
-          message: 'Đề tiếp theo hiện chưa có. Bạn quay lại sau nhé!',
-          type: 'diagnostic-progress',
-          completedCount: completedIds.size
+          title: 'Bạn đã hoàn thành bài đánh giá đầu vào',
+          message: 'Mở lộ trình để hệ thống tạo kế hoạch học cá nhân từ kết quả đánh giá của bạn.',
+          type: 'info',
+          onConfirm: onNavigateRoadmap
         });
         setHistoryReload((value) => value + 1);
         return;
@@ -2165,13 +2165,13 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
                             ))}
                           </div>
                           <span className="text-sm font-bold text-emerald-400" role="status">
-                            {completedExamCount >= DIAGNOSTIC_TARGET ? '✓ Hoàn thành bộ chẩn đoán' : `${completedExamCount}/${DIAGNOSTIC_TARGET} bài chẩn đoán`}
+                            {completedExamCount >= DIAGNOSTIC_TARGET ? '✓ Hoàn thành đánh giá đầu vào' : `${completedExamCount}/${DIAGNOSTIC_TARGET} bài đánh giá đầu vào`}
                           </span>
                         </div>
                       )}
 
                       <p className="text-sm text-blue-200/70 font-medium max-w-lg">
-                        {historyOnly ? 'Xem các bài đã hoàn thành và báo cáo năng lực từng lần đánh giá.' : 'Hoàn thành các bài đầu vào để đánh giá năng lực và chuẩn bị lộ trình học phù hợp.'}
+                        {historyOnly ? 'Xem bài đánh giá đầu vào đã hoàn thành và báo cáo năng lực.' : 'Hoàn thành bài đánh giá đầu vào để hệ thống xây dựng lộ trình học cá nhân phù hợp.'}
                       </p>
                     </div>
 
@@ -2247,11 +2247,11 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
                         </div>
                         <div className="flex items-center gap-1.5">
                           <div className="flex gap-1">
-                            {[...Array(3)].map((_, i) => (
+                            {[...Array(DIAGNOSTIC_TARGET)].map((_, i) => (
                               <div key={i} className={`h-1.5 rounded-full transition-all ${i < examHistory.length ? 'w-6 bg-gradient-to-r from-blue-400 to-indigo-500' : 'w-2 bg-slate-200'}`} />
                             ))}
                           </div>
-                          <span className="text-[10px] text-blue-400 font-bold">{examHistory.length}/3 bài</span>
+                          <span className="text-[10px] text-blue-400 font-bold">{completedExamCount}/{DIAGNOSTIC_TARGET} bài</span>
                         </div>
                       </div>
                     </div>
@@ -3617,10 +3617,10 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
               <div className="rounded-2xl border border-blue-100 bg-blue-50/70 p-4 text-left">
                 <div className="flex items-center justify-between gap-3">
                   <span className="text-sm font-medium text-slate-600">Tiến độ chẩn đoán</span>
-                  <span className="text-sm font-bold text-blue-700">{customAlert.completedCount}/3 bài</span>
+                  <span className="text-sm font-bold text-blue-700">{customAlert.completedCount}/{DIAGNOSTIC_TARGET} bài</span>
                 </div>
-                <div className="mt-3 flex gap-2" aria-label={`Đã hoàn thành ${customAlert.completedCount} trên 3 bài`}>
-                  {[1, 2, 3].map((step) => (
+                <div className="mt-3 flex gap-2" aria-label={`Đã hoàn thành ${customAlert.completedCount} trên ${DIAGNOSTIC_TARGET} bài`}>
+                  {Array.from({ length: DIAGNOSTIC_TARGET }, (_, index) => index + 1).map((step) => (
                     <span key={step} className={`h-2 flex-1 rounded-full ${step <= customAlert.completedCount ? 'bg-blue-600' : 'bg-blue-100'}`} />
                   ))}
                 </div>
@@ -3637,7 +3637,7 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
                 }}
                 className="w-full py-3.5 px-6 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-black text-xs shadow-lg shadow-blue-500/25 transition-all cursor-pointer"
               >
-                {customAlert.type === 'diagnostic-progress' ? 'Về lịch sử' : 'Đã Hiểu & Đóng'}
+                {customAlert.onConfirm ? 'Mở lộ trình học cá nhân' : customAlert.type === 'diagnostic-progress' ? 'Về lịch sử' : 'Đã Hiểu & Đóng'}
               </button>
             </div>
           </div>

@@ -43,19 +43,19 @@ export default function DiagnosticOnboardingCard({ currentUser, onOpenDiagnostic
   const complete = progress?.count >= DIAGNOSTIC_TARGET;
   const title = loading ? 'Đang kiểm tra đánh giá đầu vào…'
     : failed ? 'Chưa tải được tiến độ đầu vào'
-    : complete ? 'Bạn đã hoàn thành đánh giá đầu vào'
+    : complete ? 'Bạn đã hoàn thành bài đánh giá đầu vào'
     : progress.locked ? 'Bài đánh giá đang chờ gửi'
     : progress.pending ? 'Tiếp tục bài đánh giá của bạn'
     : progress.count === 0 ? 'Bắt đầu với đánh giá năng lực đầu vào' : 'Tiếp tục đánh giá năng lực đầu vào';
   const description = loading ? 'Vui lòng chờ trong giây lát.'
     : failed ? 'Thử lại để xem đúng tiến độ của bạn.'
-    : complete ? 'Khám phá lộ trình và chọn nội dung học tiếp theo.'
+    : complete ? 'Mở lộ trình để hệ thống tạo kế hoạch học cá nhân từ kết quả đánh giá của bạn.'
     : progress.locked ? 'Đáp án đã được chốt. Mở bài để kiểm tra kết quả hoặc gửi lại.'
     : progress.pending ? 'Bài làm đã được lưu. Mở lại để tiếp tục với thời gian còn lại.'
-    : 'Hoàn thành các bài đầu vào để đánh giá năng lực và xây dựng lộ trình phù hợp.';
+    : 'Hoàn thành bài đánh giá đầu vào để hệ thống xây dựng lộ trình học phù hợp với năng lực của bạn.';
   const action = failed ? 'Thử lại' : complete ? 'Xem lộ trình'
     : progress?.locked ? 'Mở bài đã chốt' : progress?.pending ? 'Tiếp tục bài đang làm'
-    : progress?.count === 0 ? 'Bắt đầu đánh giá' : 'Kiểm tra bài tiếp theo';
+    : progress?.count === 0 ? 'Bắt đầu đánh giá' : 'Xem kết quả & tạo lộ trình';
 
   return <section aria-label="Hướng dẫn đánh giá đầu vào"
     className={`@container relative isolate flex min-w-0 flex-col justify-center overflow-hidden rounded-[28px] border p-5 shadow-lg sm:p-6 ${complete ? 'border-emerald-200/80 bg-gradient-to-br from-emerald-50 via-white to-teal-50 shadow-emerald-100/40' : 'border-blue-200/80 bg-gradient-to-br from-blue-50 via-indigo-50/60 to-violet-100/60 shadow-indigo-100/50'}`}>
@@ -83,11 +83,11 @@ export default function DiagnosticOnboardingCard({ currentUser, onOpenDiagnostic
             <span className={`text-xs font-bold ${complete ? 'text-emerald-700' : 'text-indigo-700'}`}>{progress.count}/{DIAGNOSTIC_TARGET} bài hoàn thành</span>
           </div>
           <div className="flex items-center gap-2">
-            {[1, 2, 3].map((step) => <div key={step} className="flex flex-1 items-center gap-2">
+            {Array.from({ length: DIAGNOSTIC_TARGET }, (_, index) => index + 1).map((step) => <div key={step} className="flex flex-1 items-center gap-2">
               <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold ${step <= progress.count ? (complete ? 'bg-emerald-500 text-white' : 'bg-blue-600 text-white shadow-sm shadow-blue-200') : 'border border-slate-200 bg-slate-50 text-slate-400'}`}>
                 {step <= progress.count ? <Check className="h-4 w-4" /> : step}
               </span>
-              {step < 3 && <span className={`h-1 flex-1 rounded-full ${step < progress.count ? (complete ? 'bg-emerald-300' : 'bg-blue-300') : 'bg-slate-100'}`} />}
+              {step < DIAGNOSTIC_TARGET && <span className={`h-1 flex-1 rounded-full ${step < progress.count ? (complete ? 'bg-emerald-300' : 'bg-blue-300') : 'bg-slate-100'}`} />}
             </div>)}
           </div>
         </div>}

@@ -842,3 +842,11 @@ Validation: build and lint pass with existing warnings; live API integration rem
 | Student sidebar | Updated | Removed the stale Live Q&A reference and Gia sư AI menu item; invalid menu entries are filtered. |
 | AI chat | Unchanged | Only its sidebar link was removed. |
 | Validation | Build passed | Existing bundle-size and JSXGraph eval advisories remain. |
+
+## [19/11/2026] - Single-assessment personal roadmap
+
+| Component | Status | Detail |
+| --- | --- | --- |
+| Diagnostic eligibility | Updated | One completed diagnostic assessment is sufficient. |
+| Connected personal roadmap | Automated | Uses the latest completed diagnostic submission and profile planning data; missing planning data defaults to 45 days and 2 study hours/day. |
+| Validation | Passed | Eligibility tests and production build passed with existing advisories. |

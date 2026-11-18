@@ -2962,3 +2962,9 @@
 - Removed the stale `entries.live` reference that produced an undefined student menu item and added defensive filtering.
 - Removed only the student Gia sư AI sidebar entry; the chat feature remains in its existing location.
 - `npm run build` passed with existing bundle-size and JSXGraph eval advisories.
+
+## [19/11/2026] - Single-assessment personal roadmap
+
+- One completed distinct diagnostic assessment now satisfies the onboarding requirement.
+- The connected personal roadmap opens by default and automatically generates from the latest completed diagnostic submission using profile planning data or defaults.
+- Updated progress messaging; eligibility tests and production build passed.

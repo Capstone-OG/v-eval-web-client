@@ -10,7 +10,6 @@ import {
   FileText, 
   Award,
   Zap,
-  Users,
   AlertCircle,
   Network,
   RefreshCw,
@@ -33,7 +32,6 @@ export default function TuitionPaymentView({
   onNavigateRoadmap, 
   onNavigateAdaptive,
   onNavigateSchedule,
-  onNavigateLive,
   onNavigateAiTutor,
   showToast 
 }) {
@@ -259,15 +257,6 @@ export default function TuitionPaymentView({
       action: onNavigateSchedule,
       actionLabel: 'Xem Lịch Học'
     },
-    {
-      id: 'live',
-      title: 'Lớp Học Phần & Diễn Đàn Live Q&A',
-      desc: 'Không gian học tập nhóm vi mô 3-5 bạn tại bàn kèm trực tiếp cùng Giảng viên cơ sở.',
-      icon: Users,
-      color: 'text-cyan-600 bg-cyan-50 border-cyan-200',
-      action: onNavigateLive,
-      actionLabel: 'Vào Lớp Học'
-    }
   ];
 
   return (

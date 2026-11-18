@@ -56,7 +56,6 @@ export default function PublicLandingPage({ currentUser, onOpenLogin, onOpenRegi
     "⚡ Lộ trình ZPD vừa tự động mở chặng 04 (Logic & Số liệu) cho 84 học sinh.",
     "🤖 AI Tutor vừa giải thích câu 42 Socratic cho bạn Lê Quỳnh A.",
     "🎯 94% học sinh làm test chẩn đoán tăng trung bình +75 điểm sau 2 tuần.",
-    "📢 Lớp Bứt Phá có buổi Live Q&A giải đề trực tuyến lúc 19h30 tối nay!"
   ];
   const [actIdx, setActIdx] = useState(0);
   const [actVisible, setActVisible] = useState(true);

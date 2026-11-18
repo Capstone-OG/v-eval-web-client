@@ -25,13 +25,13 @@ export function resolveRole(user) {
 export const ROLE_MENUS = {
   teacher: [
     ['dashboard', 'Tổng quan giảng dạy'], ['teaching_classes', 'Lớp phụ trách'],
-    ['teaching_schedule', 'Lịch dạy & Live Q&A'], ['attendance', 'Điểm danh học sinh'],
+    ['teaching_schedule', 'Lịch dạy'], ['attendance', 'Điểm danh học sinh'],
     ['teaching_materials', 'Bài giảng & Học liệu'], ['student_progress', 'Tiến độ học sinh'],
   ],
   manager: [
     ['dashboard', 'Tổng quan đào tạo'], ['teacher_heatmap', 'Ma trận Lớp học'],
     ['ai_moderation', 'Kiểm duyệt Gia sư AI'], ['class_management', 'Quản lý lớp học'],
-    ['teacher_assignment', 'Phân công giáo viên'], ['live_management', 'Xếp lịch Live Q&A'],
+    ['teacher_assignment', 'Phân công giáo viên'],
     ['clustering', 'Phân lớp chuyên đề'], ['training_reports', 'Báo cáo đào tạo'],
   ],
   director: [
@@ -54,6 +54,6 @@ export const ROLE_MENUS = {
 
 export function canAccessTab(role, tab) {
   if (tab === 'settings') return true;
-  if (role === 'student') return ['dashboard', 'diagnostic', 'roadmap', 'adaptive', 'question_bank', 'ai_tutor', 'live_qa', 'analytics'].includes(tab);
+  if (role === 'student') return ['dashboard', 'diagnostic', 'roadmap', 'adaptive', 'question_bank', 'ai_tutor', 'analytics'].includes(tab);
   return (ROLE_MENUS[role] || ROLE_MENUS.unknown).some(([id]) => id === tab);
 }

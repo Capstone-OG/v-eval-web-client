@@ -2,7 +2,7 @@ import { useState } from 'react';
 import ConnectedRoadmapPage from './ConnectedRoadmapPage';
 
 export default function StudentRoadmapWorkspace({ curriculum, onNavigateDiagnostic, onNavigateDashboard }) {
-  const [view, setView] = useState('curriculum');
+  const [view, setView] = useState('connected');
 
   return (
     <div className="space-y-5">

@@ -629,7 +629,7 @@ export default function StudentScheduleView({
           </div>
         </div>
 
-        {/* Right 4 Columns: Selected Session Inspector & Live Q&A Card */}
+        {/* Right 4 Columns: Selected Session Inspector */}
         <div className="xl:col-span-4 space-y-5 xl:sticky xl:top-20">
           {selectedSession ? (
             <div className="bg-white rounded-3xl border border-slate-200/90 p-6 shadow-md space-y-5">
