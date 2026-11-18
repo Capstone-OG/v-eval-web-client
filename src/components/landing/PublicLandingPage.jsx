@@ -19,6 +19,7 @@ import PublicFooter from './PublicFooter';
 import studentsBadge from '../../assets/students_cutout_badge.jpg';
 import studentsClean from '../../assets/students_cutout_clean.jpg';
 import studentsOriginal from '../../assets/students_original.png';
+import vietnameseStudentReal from '../../assets/vietnamese_student_real.jpg';
 
 export default function PublicLandingPage({ currentUser, onOpenLogin, onOpenRegister, onOpenDiagnostic, onOpenDashboard, onOpenArchModal }) {
   const [showStickyBar, setShowStickyBar] = useState(false);
@@ -200,7 +201,11 @@ export default function PublicLandingPage({ currentUser, onOpenLogin, onOpenRegi
 
       {/* 2. HERO SECTION - WITH ATMOSPHERIC CLASSROOM BACKGROUND BLEND */}
       <div id="hero">
-      <section className="relative min-h-[660px] lg:min-h-[720px] w-full flex items-center overflow-hidden bg-gradient-to-b from-[#FDFBF7] via-blue-50/30 to-white pt-8 pb-16">
+      <section className="relative min-h-[660px] lg:min-h-[720px] w-full flex items-center overflow-hidden bg-gradient-to-b from-[#FDFBF7] via-blue-50/20 to-white pt-8 pb-16">
+
+        {/* MỀM MẠI: Dải lụa Aurora Mesh Gradient mượt mà, KHÔNG DÙNG CHẤM BI */}
+        <div className="absolute -top-32 left-1/4 w-[600px] h-[600px] rounded-full bg-gradient-to-br from-blue-400/15 via-indigo-300/10 to-transparent blur-[140px] pointer-events-none" />
+        <div className="absolute top-1/3 left-10 w-[450px] h-[450px] rounded-full bg-cyan-300/15 blur-[120px] pointer-events-none" />
 
         {/* ATMOSPHERIC CLASSROOM BACKGROUND IMAGE ON RIGHT SIDE */}
         <div className="absolute top-0 right-0 w-full lg:w-[52%] h-full pointer-events-none z-0 overflow-hidden select-none">
@@ -415,13 +420,18 @@ export default function PublicLandingPage({ currentUser, onOpenLogin, onOpenRegi
       </section>
 
       {/* Introductory platform metrics */}
-      <section id="hero-stats" className="w-full px-6 lg:px-14 py-10 bg-white/80 border-y border-slate-200/80">
-        <div className="max-w-7xl mx-auto grid grid-cols-2 lg:grid-cols-4 gap-6">
+      <section id="hero-stats" className="w-full px-6 lg:px-14 py-12 bg-gradient-to-r from-blue-50/40 via-white to-indigo-50/40 border-y border-slate-200/80 relative overflow-hidden">
+        {/* Ambient glow in stats */}
+        <div className="absolute -top-12 left-1/4 w-80 h-40 bg-blue-400/10 rounded-full blur-[80px] pointer-events-none" />
+        <div className="absolute -bottom-12 right-1/4 w-80 h-40 bg-emerald-400/10 rounded-full blur-[80px] pointer-events-none" />
+
+        <div className="max-w-7xl mx-auto grid grid-cols-2 lg:grid-cols-4 gap-6 relative z-10">
 
           <motion.div
             whileHover={{ y: -4, scale: 1.02 }}
-            className="p-6 rounded-3xl bg-[#FDFBF7] border border-slate-200/80 shadow-sm text-center space-y-2 hover:border-blue-300 transition-all"
+            className="relative p-6 rounded-3xl bg-white/90 backdrop-blur-md border border-slate-200/90 shadow-md text-center space-y-2 hover:border-blue-400 hover:shadow-xl hover:shadow-blue-500/10 transition-all overflow-hidden group"
           >
+            <div className="absolute top-0 left-0 right-0 h-1 bg-blue-600" />
             <div className="text-3xl sm:text-4xl lg:text-5xl font-black text-blue-600 font-sans tracking-tight">120+</div>
             <div className="text-xs sm:text-sm font-extrabold text-slate-900">Đề Thi Chuẩn Ma Trận ĐHQG</div>
             <div className="text-[11px] text-slate-500 font-medium">Bao quát đủ 3 phân môn lớn 150 phút</div>
@@ -429,8 +439,9 @@ export default function PublicLandingPage({ currentUser, onOpenLogin, onOpenRegi
 
           <motion.div
             whileHover={{ y: -4, scale: 1.02 }}
-            className="p-6 rounded-3xl bg-[#FDFBF7] border border-slate-200/80 shadow-sm text-center space-y-2 hover:border-indigo-300 transition-all"
+            className="relative p-6 rounded-3xl bg-white/90 backdrop-blur-md border border-slate-200/90 shadow-md text-center space-y-2 hover:border-indigo-400 hover:shadow-xl hover:shadow-indigo-500/10 transition-all overflow-hidden group"
           >
+            <div className="absolute top-0 left-0 right-0 h-1 bg-indigo-600" />
             <div className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-950 font-sans tracking-tight">15.000+</div>
             <div className="text-xs sm:text-sm font-extrabold text-slate-900">Câu Hỏi Được Gán Nhãn IRT</div>
             <div className="text-[11px] text-slate-500 font-medium">Định độ khó a, b, c phân hóa chính xác</div>
@@ -438,8 +449,9 @@ export default function PublicLandingPage({ currentUser, onOpenLogin, onOpenRegi
 
           <motion.div
             whileHover={{ y: -4, scale: 1.02 }}
-            className="p-6 rounded-3xl bg-[#FDFBF7] border border-slate-200/80 shadow-sm text-center space-y-2 hover:border-cyan-300 transition-all"
+            className="relative p-6 rounded-3xl bg-white/90 backdrop-blur-md border border-slate-200/90 shadow-md text-center space-y-2 hover:border-cyan-400 hover:shadow-xl hover:shadow-cyan-500/10 transition-all overflow-hidden group"
           >
+            <div className="absolute top-0 left-0 right-0 h-1 bg-cyan-600" />
             <div className="text-3xl sm:text-4xl lg:text-5xl font-black text-blue-600 font-sans tracking-tight">3.2 Triệu</div>
             <div className="text-xs sm:text-sm font-extrabold text-slate-900">Lượt Giải Bài & Tương Tác</div>
             <div className="text-[11px] text-slate-500 font-medium">Cộng đồng tự học lớn nhất toàn quốc</div>
@@ -447,8 +459,9 @@ export default function PublicLandingPage({ currentUser, onOpenLogin, onOpenRegi
 
           <motion.div
             whileHover={{ y: -4, scale: 1.02 }}
-            className="p-6 rounded-3xl bg-[#FDFBF7] border border-slate-200/80 shadow-sm text-center space-y-2 hover:border-emerald-300 transition-all"
+            className="relative p-6 rounded-3xl bg-white/90 backdrop-blur-md border border-slate-200/90 shadow-md text-center space-y-2 hover:border-emerald-400 hover:shadow-xl hover:shadow-emerald-500/10 transition-all overflow-hidden group"
           >
+            <div className="absolute top-0 left-0 right-0 h-1 bg-emerald-600" />
             <div className="text-3xl sm:text-4xl lg:text-5xl font-black text-emerald-600 font-sans tracking-tight">99.2%</div>
             <div className="text-xs sm:text-sm font-extrabold text-slate-900">Độ Tin Cậy K-20 Đo Lường</div>
             <div className="text-[11px] text-slate-500 font-medium">Đã kiểm chứng trên 45.000 sĩ tử</div>
@@ -459,8 +472,60 @@ export default function PublicLandingPage({ currentUser, onOpenLogin, onOpenRegi
       </div>
 
       {/* 4. BỘ TỨ CÔNG NGHỆ ĐỘC QUYỀN DẪN LỐI ĐIỂM 900+ */}
-      <section id="tech-grid" className="py-20 px-6 lg:px-14 bg-[#FDFBF7]">
-        <div className="max-w-7xl mx-auto space-y-12">
+      <section id="tech-grid" className="py-24 px-6 lg:px-14 bg-[#FDFBF7] relative overflow-hidden">
+
+        {/* LỚP ẢNH HỌC ĐƯỜNG MỜ THỰC TẾ (Atmospheric Classroom Background Blend) */}
+        <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden select-none">
+          <img
+            src={studentsOriginal}
+            alt=""
+            className="w-full h-full object-cover object-center opacity-12 lg:opacity-18 filter saturate-140 blur-[1px]"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-[#FDFBF7] via-[#FDFBF7]/85 to-[#FDFBF7]" />
+        </div>
+
+        {/* PHONG CÁCH MỚI: BẢN VẼ KỸ THUẬT (ARCHITECTURAL BLUEPRINT GRID - KHÔNG DÙNG CHẤM BI) */}
+        <div
+          className="absolute inset-0 pointer-events-none opacity-40 z-0"
+          style={{
+            backgroundImage: `
+              linear-gradient(to right, rgba(148, 163, 184, 0.35) 1px, transparent 1px),
+              linear-gradient(to bottom, rgba(148, 163, 184, 0.35) 1px, transparent 1px)
+            `,
+            backgroundSize: '64px 64px',
+            maskImage: 'radial-gradient(ellipse at center, rgba(0,0,0,1) 30%, rgba(0,0,0,0) 80%)',
+            WebkitMaskImage: 'radial-gradient(ellipse at center, rgba(0,0,0,1) 30%, rgba(0,0,0,0) 80%)'
+          }}
+        />
+
+        {/* ĐỒ THỊ CÂY TRI THỨC DAG NỐI MẠNG MỜ (Knowledge Graph Network SVG) */}
+        <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-20 z-0" xmlns="http://www.w3.org/2000/svg">
+          <line x1="8%" y1="20%" x2="25%" y2="40%" stroke="#3b82f6" strokeWidth="1.5" strokeDasharray="6 4" />
+          <line x1="25%" y1="40%" x2="18%" y2="70%" stroke="#6366f1" strokeWidth="1.5" />
+          <line x1="85%" y1="15%" x2="72%" y2="35%" stroke="#06b6d4" strokeWidth="1.5" strokeDasharray="6 4" />
+          <line x1="72%" y1="35%" x2="90%" y2="65%" stroke="#3b82f6" strokeWidth="1.5" />
+          <circle cx="8%" cy="20%" r="5" fill="#3b82f6" />
+          <circle cx="25%" cy="40%" r="7" fill="#6366f1" />
+          <circle cx="18%" cy="70%" r="4" fill="#3b82f6" />
+          <circle cx="85%" cy="15%" r="6" fill="#06b6d4" />
+          <circle cx="72%" cy="35%" r="7" fill="#3b82f6" />
+          <circle cx="90%" cy="65%" r="5" fill="#8b5cf6" />
+        </svg>
+
+        {/* Dải lụa cực quang Aurora Mesh Gradient mượt mà */}
+        <div className="absolute -top-32 left-1/12 w-[600px] h-[600px] rounded-full bg-gradient-to-br from-blue-400/18 to-cyan-300/15 blur-[140px] pointer-events-none" />
+        <div className="absolute -bottom-32 right-1/12 w-[650px] h-[650px] rounded-full bg-gradient-to-tr from-indigo-500/18 to-purple-400/15 blur-[150px] pointer-events-none" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[450px] rounded-full bg-blue-100/40 blur-[170px] pointer-events-none" />
+
+        {/* Vệt trang trí hình học vi mô mờ (Decorative Math/IRT Accents) ở 2 biên */}
+        <div className="absolute top-16 left-6 text-slate-400/50 text-7xl font-serif font-black select-none pointer-events-none hidden xl:block">
+          &Theta;
+        </div>
+        <div className="absolute bottom-20 right-8 text-slate-400/50 text-6xl font-serif font-black select-none pointer-events-none hidden xl:block">
+          &int;
+        </div>
+
+        <div className="max-w-7xl mx-auto space-y-12 relative z-10">
 
           <motion.div
             initial={{ opacity: 0, y: 30 }}
@@ -469,7 +534,7 @@ export default function PublicLandingPage({ currentUser, onOpenLogin, onOpenRegi
             transition={{ duration: 0.5 }}
             className="text-center max-w-3xl mx-auto space-y-4"
           >
-            <span className="inline-block px-4 py-1.5 rounded-full bg-blue-100 border border-blue-200 text-blue-800 text-xs font-black uppercase tracking-wider mb-2">
+            <span className="inline-block px-4 py-1.5 rounded-full bg-blue-100 border border-blue-200 text-blue-800 text-xs font-black uppercase tracking-wider mb-2 shadow-xs">
               KHOA HỌC KHẢO THÍ HIỆN ĐẠI
             </span>
             <h2 className="text-3xl lg:text-4xl font-black text-slate-950 font-sans tracking-tight">
@@ -484,6 +549,7 @@ export default function PublicLandingPage({ currentUser, onOpenLogin, onOpenRegi
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {techCards.map((card, idx) => {
               const Icon = card.icon;
+              const stepNumber = `0${idx + 1}`;
               return (
                 <motion.div
                   key={card.id}
@@ -492,14 +558,22 @@ export default function PublicLandingPage({ currentUser, onOpenLogin, onOpenRegi
                   viewport={{ once: false }}
                   transition={{ duration: 0.5, delay: idx * 0.1 }}
                   whileHover={{ scale: 1.02, y: -4 }}
-                  className="p-8 rounded-3xl bg-white border border-slate-200/90 shadow-md space-y-5 hover:border-blue-400 transition-all flex flex-col justify-between group"
+                  className="relative p-8 rounded-3xl bg-white/95 backdrop-blur-sm border border-slate-200/90 shadow-lg shadow-slate-200/50 space-y-5 hover:border-blue-400/80 hover:shadow-2xl hover:shadow-blue-500/10 transition-all flex flex-col justify-between group overflow-hidden"
                 >
-                  <div className="space-y-4">
+                  {/* Watermark Số Thứ Tự Lớn Chìm (01, 02, 03, 04) - Tạo chiều sâu phân lớp thị giác */}
+                  <span className="absolute -top-2 right-4 text-7xl sm:text-8xl font-black text-slate-100 select-none pointer-events-none group-hover:text-blue-50/80 group-hover:scale-105 transition-all duration-300 font-sans">
+                    {stepNumber}
+                  </span>
+
+                  {/* Dải gradient mỏng tinh tế ở đỉnh Card khi hover */}
+                  <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${card.color} opacity-0 group-hover:opacity-100 transition-opacity duration-300`} />
+
+                  <div className="space-y-4 relative z-10">
                     <div className="flex items-center justify-between">
                       <div className={`w-12 h-12 rounded-2xl bg-gradient-to-tr ${card.color} text-white flex items-center justify-center shadow-md group-hover:scale-110 transition-transform`}>
                         <Icon className="w-6 h-6" />
                       </div>
-                      <span className={`px-3 py-1 rounded-full text-[10px] font-black tracking-wider uppercase border ${card.badgeColor}`}>
+                      <span className={`px-3 py-1 rounded-full text-[10px] font-black tracking-wider uppercase border ${card.badgeColor} shadow-2xs`}>
                         {card.badge}
                       </span>
                     </div>
@@ -513,9 +587,9 @@ export default function PublicLandingPage({ currentUser, onOpenLogin, onOpenRegi
                     </p>
                   </div>
 
-                  <div className="pt-4 border-t border-slate-100 flex flex-wrap items-center gap-3 text-xs font-bold text-slate-700">
-                    <span className="px-3 py-1 bg-slate-50 rounded-xl border border-slate-200">{card.subTag1}</span>
-                    <span className="px-3 py-1 bg-slate-50 rounded-xl border border-slate-200">{card.subTag2}</span>
+                  <div className="pt-4 border-t border-slate-100 flex flex-wrap items-center gap-3 text-xs font-bold text-slate-700 relative z-10">
+                    <span className="px-3 py-1 bg-slate-50/90 rounded-xl border border-slate-200/80 group-hover:bg-blue-50/50 group-hover:border-blue-200 transition-colors">{card.subTag1}</span>
+                    <span className="px-3 py-1 bg-slate-50/90 rounded-xl border border-slate-200/80 group-hover:bg-blue-50/50 group-hover:border-blue-200 transition-colors">{card.subTag2}</span>
                   </div>
                 </motion.div>
               );
@@ -526,8 +600,37 @@ export default function PublicLandingPage({ currentUser, onOpenLogin, onOpenRegi
       </section>
 
       {/* 5. LỘ TRÌNH 4 BƯỚC CHINH PHỤC ĐIỂM SỐ 900+ MỤC TIÊU */}
-      <section id="process-steps" className="py-20 px-6 lg:px-14 bg-white border-t border-slate-200/80">
-        <div className="max-w-7xl mx-auto space-y-12">
+      <section id="process-steps" className="py-24 px-6 lg:px-14 bg-white border-t border-slate-200/80 relative overflow-hidden">
+
+        {/* LỚP ẢNH NỀN HỌC ĐƯỜNG THỰC TẾ (Atmospheric Photo Overlay) */}
+        <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden select-none">
+          <img
+            src={vietnameseStudentReal}
+            alt=""
+            className="w-full h-full object-cover object-center opacity-10 lg:opacity-15 filter saturate-140 blur-[1px]"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-white via-white/85 to-white" />
+        </div>
+
+        {/* Lưới kẻ chỉ kỹ thuật (Blueprint Grid Lines - Không dùng chấm bi) */}
+        <div
+          className="absolute inset-0 pointer-events-none opacity-30 z-0"
+          style={{
+            backgroundImage: `
+              linear-gradient(to right, rgba(148, 163, 184, 0.3) 1px, transparent 1px),
+              linear-gradient(to bottom, rgba(148, 163, 184, 0.3) 1px, transparent 1px)
+            `,
+            backgroundSize: '56px 56px',
+            maskImage: 'radial-gradient(ellipse at center, rgba(0,0,0,1) 30%, rgba(0,0,0,0) 85%)',
+            WebkitMaskImage: 'radial-gradient(ellipse at center, rgba(0,0,0,1) 30%, rgba(0,0,0,0) 85%)'
+          }}
+        />
+
+        {/* Ambient Glows for Process Steps */}
+        <div className="absolute top-1/2 left-0 -translate-y-1/2 w-[500px] h-[500px] bg-emerald-400/12 rounded-full blur-[140px] pointer-events-none" />
+        <div className="absolute top-1/3 right-0 w-[500px] h-[500px] bg-blue-500/12 rounded-full blur-[140px] pointer-events-none" />
+
+        <div className="max-w-7xl mx-auto space-y-12 relative z-10">
 
           <motion.div
             initial={{ opacity: 0, y: 30 }}
@@ -536,19 +639,22 @@ export default function PublicLandingPage({ currentUser, onOpenLogin, onOpenRegi
             transition={{ duration: 0.5 }}
             className="text-center max-w-3xl mx-auto space-y-4"
           >
-            <span className="inline-block px-4 py-1.5 rounded-full bg-emerald-100 border border-emerald-300 text-emerald-900 text-xs font-black uppercase tracking-wider mb-2">
+            <span className="inline-block px-4 py-1.5 rounded-full bg-emerald-100 border border-emerald-300 text-emerald-900 text-xs font-black uppercase tracking-wider mb-2 shadow-xs">
               SỐ HÓA TỰ HỌC TỔNG THỂ 4 BƯỚC
             </span>
             <h2 className="text-3xl lg:text-4xl font-black text-slate-950 font-sans tracking-tight">
               4 Bước Chinh Phục Điểm Số 900+ Mục Tiêu
             </h2>
-            <p className="text-sm text-slate-500 font-medium">
+            <p className="text-sm text-slate-600 font-medium">
               Khoa học giáo dục đã chứng minh học có phương pháp rút ngắn 65% thời gian so với tập đề làm tự do.
             </p>
           </motion.div>
 
           {/* 4 Process Cards Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 relative">
+            {/* Connecting Roadmap Line on Desktop */}
+            <div className="hidden lg:block absolute top-12 left-10 right-10 h-0.5 border-t-2 border-dashed border-blue-200/80 -z-0 pointer-events-none" />
+
             {processSteps.map((st, idx) => (
               <motion.div
                 key={st.step}
@@ -557,10 +663,15 @@ export default function PublicLandingPage({ currentUser, onOpenLogin, onOpenRegi
                 viewport={{ once: false }}
                 transition={{ duration: 0.4, delay: idx * 0.1 }}
                 whileHover={{ scale: 1.03, y: -4 }}
-                className="p-6 rounded-3xl bg-[#FDFBF7] border border-slate-200/80 shadow-md space-y-4 hover:border-blue-400 transition-all flex flex-col justify-between group"
+                className="relative p-6 rounded-3xl bg-white/95 backdrop-blur-sm border border-slate-200/90 shadow-lg shadow-slate-200/50 space-y-4 hover:border-emerald-400/80 hover:shadow-2xl hover:shadow-emerald-500/10 transition-all flex flex-col justify-between group overflow-hidden z-10"
               >
-                <div className="space-y-3">
-                  <div className="w-10 h-10 rounded-2xl bg-blue-600 text-white font-black flex items-center justify-center text-sm shadow-md font-sans">
+                {/* Watermark Step Number Chìm */}
+                <span className="absolute -bottom-2 -right-1 text-6xl font-black text-slate-100 select-none pointer-events-none group-hover:text-emerald-50/80 transition-colors font-sans">
+                  {st.step}
+                </span>
+
+                <div className="space-y-3 relative z-10">
+                  <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-black flex items-center justify-center text-sm shadow-md font-sans group-hover:scale-110 transition-transform">
                     {st.step}
                   </div>
                   <h3 className="text-base font-black text-slate-950 group-hover:text-blue-600 transition-colors">
@@ -573,7 +684,7 @@ export default function PublicLandingPage({ currentUser, onOpenLogin, onOpenRegi
 
                 <button
                   onClick={onOpenDiagnostic}
-                  className="text-xs font-extrabold text-blue-600 hover:text-blue-800 flex items-center gap-1 transition-colors pt-2 border-t border-slate-200/60"
+                  className="text-xs font-extrabold text-blue-600 hover:text-blue-800 flex items-center gap-1 transition-colors pt-2 border-t border-slate-100 relative z-10"
                 >
                   <span>{st.linkText}</span>
                 </button>
@@ -598,8 +709,23 @@ export default function PublicLandingPage({ currentUser, onOpenLogin, onOpenRegi
       </section>
 
       {/* 6. CÂU CHUYỆN THÀNH CÔNG TỪ SĨ TỬ ĐGNL KHÓA TRƯỚC */}
-      <section id="testimonials" className="py-20 px-6 lg:px-14 bg-[#FDFBF7]">
-        <div className="max-w-7xl mx-auto space-y-12">
+      <section id="testimonials" className="py-24 px-6 lg:px-14 bg-[#FDFBF7] relative overflow-hidden">
+
+        {/* LỚP ẢNH HỌC SINH ĐẠT GIẢI / THÀNH TÍCH MỜ */}
+        <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden select-none">
+          <img
+            src={studentsBadge}
+            alt=""
+            className="w-full h-full object-cover object-center opacity-10 lg:opacity-15 filter saturate-140 blur-[1.5px]"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-[#FDFBF7] via-[#FDFBF7]/85 to-[#FDFBF7]" />
+        </div>
+
+        {/* Dải lụa ấm áp Bảng Vàng vinh danh (Pure Silk Golden Gradient - Không chấm bi) */}
+        <div className="absolute -top-20 left-1/4 w-[550px] h-[550px] bg-gradient-to-br from-amber-400/15 via-yellow-300/10 to-transparent rounded-full blur-[140px] pointer-events-none" />
+        <div className="absolute -bottom-20 right-1/4 w-[550px] h-[550px] bg-gradient-to-tr from-orange-400/12 via-amber-300/10 to-transparent rounded-full blur-[140px] pointer-events-none" />
+
+        <div className="max-w-7xl mx-auto space-y-12 relative z-10">
 
           <motion.div
             initial={{ opacity: 0, y: 30 }}
@@ -608,7 +734,7 @@ export default function PublicLandingPage({ currentUser, onOpenLogin, onOpenRegi
             transition={{ duration: 0.5 }}
             className="text-center max-w-3xl mx-auto space-y-4"
           >
-            <span className="inline-block px-4 py-1.5 rounded-full bg-amber-100 border border-amber-300 text-amber-900 text-xs font-black uppercase tracking-wider mb-2">
+            <span className="inline-block px-4 py-1.5 rounded-full bg-amber-100 border border-amber-300 text-amber-900 text-xs font-black uppercase tracking-wider mb-2 shadow-xs">
               BẢNG VÀNG THÀNH TÍCH
             </span>
             <h2 className="text-3xl lg:text-4xl font-black text-slate-950 font-sans tracking-tight">
@@ -627,10 +753,15 @@ export default function PublicLandingPage({ currentUser, onOpenLogin, onOpenRegi
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: false }}
                 transition={{ duration: 0.5, delay: idx * 0.1 }}
-                whileHover={{ scale: 1.02 }}
-                className="p-7 rounded-3xl bg-white border border-slate-200/90 shadow-md space-y-4 flex flex-col justify-between"
+                whileHover={{ scale: 1.02, y: -4 }}
+                className="relative p-7 rounded-3xl bg-white/95 backdrop-blur-sm border border-slate-200/90 shadow-lg shadow-slate-200/50 space-y-4 flex flex-col justify-between hover:border-amber-400/80 hover:shadow-2xl hover:shadow-amber-500/10 transition-all overflow-hidden group"
               >
-                <div className="space-y-3">
+                {/* Watermark Quote Symbol Chìm */}
+                <span className="absolute -top-3 right-4 text-7xl font-serif font-black text-slate-100 select-none pointer-events-none group-hover:text-amber-100/90 transition-colors">
+                  &ldquo;
+                </span>
+
+                <div className="space-y-3 relative z-10">
                   {/* Rating Stars */}
                   <div className="flex items-center gap-1 text-amber-400">
                     {[...Array(5)].map((_, i) => (
@@ -644,8 +775,8 @@ export default function PublicLandingPage({ currentUser, onOpenLogin, onOpenRegi
                   </p>
                 </div>
 
-                <div className="flex items-center gap-3 pt-4 border-t border-slate-100">
-                  <div className="w-11 h-11 rounded-full overflow-hidden border border-blue-500 shrink-0">
+                <div className="flex items-center gap-3 pt-4 border-t border-slate-100 relative z-10">
+                  <div className="w-11 h-11 rounded-full overflow-hidden border-2 border-amber-400 shrink-0 shadow-sm">
                     <img src={story.avatar} alt={story.name} className="w-full h-full object-cover object-top" />
                   </div>
                   <div>

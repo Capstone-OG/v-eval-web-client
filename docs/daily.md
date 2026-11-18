@@ -2939,3 +2939,9 @@
 - Integrated the latest develop changes for Socratic multi-turn sessions, session tombstones, AI moderation, mentor dashboards, and diagnostic history.
 - Preserved the local homepage navigation and metrics changes.
 - Production build succeeds; existing large-bundle and JSXGraph eval advisories remain.
+
+## [18/11/2026] - Login completion routing and landing page refinement
+
+- Fixed the completed OTP activation/password-reset action in `WebLoginPage.jsx`: closing the modal now returns to login and prefills the account email; password reset also prefills the new password.
+- Refined the public landing page presentation in `PublicLandingPage.jsx` with updated section backgrounds, decorative elements, and card styling.
+- Validation: `npm run build` passed. Existing large-chunk and JSXGraph `eval` warnings remain.

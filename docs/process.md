@@ -810,3 +810,11 @@ Validation: build and lint pass with existing warnings; live API integration rem
 | Academic moderation and dashboards | Integrated | Added AI tutor moderation workspace and merged mentor/campus dashboard updates. |
 | Homepage navigation | Preserved | Metrics remain below hero under Introduction; obsolete 3 Q&A and 120-question nav entries remain removed. |
 | Build | Verified | Production build passes with existing bundle-size and JSXGraph eval advisories. |
+
+## [18/11/2026] - Authentication and landing page updates
+
+| Item | Status | Detail |
+| --- | --- | --- |
+| OTP/password reset completion | Updated | Completion returns to login and prefills email; reset flow prefills the new password. |
+| Public landing page | Updated | Refined section presentation, decorative backgrounds, and card styling. |
+| Production build | Passed | `npm run build` succeeds; existing bundle-size and JSXGraph eval warnings remain. |

@@ -1,7 +1,7 @@
-import { toast } from '../../context/ToastContext';
-import BrandLogo from '../common/BrandLogo';
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { toast } from "../../context/ToastContext";
+import BrandLogo from "../common/BrandLogo";
+import React, { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   PhoneCall,
   GraduationCap,
@@ -16,23 +16,27 @@ import {
   Lock,
   User,
   X,
-  CheckCircle
-} from 'lucide-react';
+  CheckCircle,
+} from "lucide-react";
 
-import studentAvatar from '../../assets/vietnamese_student_real.jpg';
-import LoginForm from './LoginForm';
-import RegisterForm from './RegisterForm';
-import ForgotPasswordModal from './ForgotPasswordModal';
-import authService from '../../services/authService';
-import { formatApiError } from '../../utils/apiErrorHandler';
+import studentAvatar from "../../assets/vietnamese_student_real.jpg";
+import LoginForm from "./LoginForm";
+import RegisterForm from "./RegisterForm";
+import ForgotPasswordModal from "./ForgotPasswordModal";
+import authService from "../../services/authService";
+import { formatApiError } from "../../utils/apiErrorHandler";
 import {
   validateEmailSyntaxAndRules,
-  validateEmailComprehensive
-} from '../../utils/emailValidator';
+  validateEmailComprehensive,
+} from "../../utils/emailValidator";
 
-export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, onNavigateHome }) {
-  const [role, setRole] = useState('student'); // student | parent (for registration)
-  const [mode, setMode] = useState(initialMode || 'login'); // login | register
+export default function WebLoginPage({
+  initialMode = "login",
+  onLoginSuccess,
+  onNavigateHome,
+}) {
+  const [role, setRole] = useState("student"); // student | parent (for registration)
+  const [mode, setMode] = useState(initialMode || "login"); // login | register
 
   useEffect(() => {
     if (initialMode) {
@@ -41,24 +45,24 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
   }, [initialMode]);
 
   // Login form state
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
 
   // Registration form state
-  const [regFullName, setRegFullName] = useState('');
-  const [regEmail, setRegEmail] = useState('');
-  const [regPhone, setRegPhone] = useState('');
-  const [regPassword, setRegPassword] = useState('');
-  const [regConfirmPassword, setRegConfirmPassword] = useState('');
-  const [regGrade, setRegGrade] = useState('12');
-  const [regTargetScore, setRegTargetScore] = useState('900');
+  const [regFullName, setRegFullName] = useState("");
+  const [regEmail, setRegEmail] = useState("");
+  const [regPhone, setRegPhone] = useState("");
+  const [regPassword, setRegPassword] = useState("");
+  const [regConfirmPassword, setRegConfirmPassword] = useState("");
+  const [regGrade, setRegGrade] = useState("12");
+  const [regTargetScore, setRegTargetScore] = useState("900");
   const [regAgreeTerms, setRegAgreeTerms] = useState(true);
 
   // Campuses state from Backend API
   const [campuses, setCampuses] = useState([]);
-  const [selectedCampusId, setSelectedCampusId] = useState('');
+  const [selectedCampusId, setSelectedCampusId] = useState("");
   const [campusDropdownOpen, setCampusDropdownOpen] = useState(false);
 
   // Custom rounded dropdown open states
@@ -71,12 +75,12 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
 
   // Forgot Password Modal state
   const [isForgotModalOpen, setIsForgotModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState('forgot'); // 'activation' | 'forgot'
-  const [forgotEmail, setForgotEmail] = useState('');
+  const [modalMode, setModalMode] = useState("forgot"); // 'activation' | 'forgot'
+  const [forgotEmail, setForgotEmail] = useState("");
   const [forgotStep, setForgotStep] = useState(1);
-  const [otpCode, setOtpCode] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [otpCode, setOtpCode] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [modalError, setModalError] = useState(null);
   const [modalSuccess, setModalSuccess] = useState(null);
 
@@ -100,6 +104,20 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
     if (message) toast.success(message);
   };
 
+  const handleAuthModalClose = () => {
+    // After password reset (or account activation), return to login instead of
+    // leaving the user on the registration screen underneath the closed modal.
+    if (forgotStep === 4) {
+      setMode("login");
+      setEmail(forgotEmail);
+      setPassword(modalMode === "forgot" ? newPassword : "");
+    }
+    setIsForgotModalOpen(false);
+    setForgotStep(1);
+    notifyModalError(null);
+    notifyModalSuccess(null);
+  };
+
   const notifyModalSuccess = (message) => {
     setModalSuccess(message);
     if (message) toast.success(message);
@@ -108,45 +126,45 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
   const [fieldErrors, setFieldErrors] = useState({});
 
   // Real-time Email Validation state for Registration
-  const [emailValidationStatus, setEmailValidationStatus] = useState('idle'); // 'idle' | 'checking' | 'valid' | 'invalid'
-  const [emailValidationMessage, setEmailValidationMessage] = useState('');
+  const [emailValidationStatus, setEmailValidationStatus] = useState("idle"); // 'idle' | 'checking' | 'valid' | 'invalid'
+  const [emailValidationMessage, setEmailValidationMessage] = useState("");
   const [emailSuggestedFix, setEmailSuggestedFix] = useState(null);
 
   // Run live email check (syntax + Gmail rules + fake pattern + DNS MX + DB availability)
   const runLiveEmailValidation = async (rawEmailValue) => {
-    const trimmed = (rawEmailValue || '').trim();
+    const trimmed = (rawEmailValue || "").trim();
     if (!trimmed) {
-      setEmailValidationStatus('idle');
-      setEmailValidationMessage('');
+      setEmailValidationStatus("idle");
+      setEmailValidationMessage("");
       setEmailSuggestedFix(null);
       return;
     }
 
     const syncCheck = validateEmailSyntaxAndRules(trimmed);
     if (!syncCheck.isValid) {
-      setEmailValidationStatus('invalid');
+      setEmailValidationStatus("invalid");
       setEmailValidationMessage(syncCheck.message);
       setEmailSuggestedFix(syncCheck.suggestedEmail || null);
       setFieldErrors((prev) => ({ ...prev, regEmail: syncCheck.message }));
       return;
     }
 
-    setEmailValidationStatus('checking');
+    setEmailValidationStatus("checking");
     setEmailSuggestedFix(null);
 
     const asyncCheck = await validateEmailComprehensive(trimmed, (em) =>
-      authService.validateEmail(em)
+      authService.validateEmail(em),
     );
 
     if (!asyncCheck.isValid) {
-      setEmailValidationStatus('invalid');
+      setEmailValidationStatus("invalid");
       setEmailValidationMessage(asyncCheck.message);
       setEmailSuggestedFix(asyncCheck.suggestedEmail || null);
       setFieldErrors((prev) => ({ ...prev, regEmail: asyncCheck.message }));
     } else {
-      setEmailValidationStatus('valid');
+      setEmailValidationStatus("valid");
       setEmailValidationMessage(
-        asyncCheck.message || 'Email hợp lệ, sẵn sàng đăng ký'
+        asyncCheck.message || "Email hợp lệ, sẵn sàng đăng ký",
       );
       setEmailSuggestedFix(null);
       setFieldErrors((prev) => ({ ...prev, regEmail: null }));
@@ -155,11 +173,11 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
 
   // Debounced live validation while typing registration email
   useEffect(() => {
-    if (mode !== 'register') return;
+    if (mode !== "register") return;
     const trimmed = regEmail.trim();
     if (!trimmed) {
-      setEmailValidationStatus('idle');
-      setEmailValidationMessage('');
+      setEmailValidationStatus("idle");
+      setEmailValidationMessage("");
       setEmailSuggestedFix(null);
       return;
     }
@@ -175,36 +193,42 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
   // Fetch Campuses on Mount
   useEffect(() => {
     let isMounted = true;
-    authService.getCampuses().then((data) => {
-      if (isMounted && Array.isArray(data) && data.length > 0) {
-        setCampuses(data);
-        setSelectedCampusId(data[0].campusId || data[0].id || '');
-      }
-    }).catch(() => {});
-    return () => { isMounted = false; };
+    authService
+      .getCampuses()
+      .then((data) => {
+        if (isMounted && Array.isArray(data) && data.length > 0) {
+          setCampuses(data);
+          setSelectedCampusId(data[0].campusId || data[0].id || "");
+        }
+      })
+      .catch(() => {});
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // Grade & Target Options
   const gradeOptions = [
-    { value: '12', label: 'Lớp 12 (Thi 2026)' },
-    { value: '11', label: 'Lớp 11 (Chuẩn bị)' },
-    { value: 'freelance', label: 'Thí sinh tự do' }
+    { value: "12", label: "Lớp 12 (Thi 2026)" },
+    { value: "11", label: "Lớp 11 (Chuẩn bị)" },
+    { value: "freelance", label: "Thí sinh tự do" },
   ];
 
   const targetOptions = [
-    { value: '900', label: '900+ (Bách Khoa/Y Dược)' },
-    { value: '800', label: '800+ (KHTN/Kinh Tế)' },
-    { value: '700', label: '700+ (Tiêu chuẩn)' }
+    { value: "900", label: "900+ (Bách Khoa/Y Dược)" },
+    { value: "800", label: "800+ (KHTN/Kinh Tế)" },
+    { value: "700", label: "700+ (Tiêu chuẩn)" },
   ];
 
   // Dynamic Campus & Highlight Ticker on Left Panel
-  const liveActivities = campuses.length > 0
-    ? campuses.map((c) => `🏫 Cơ sở đang hoạt động: ${c.name}`)
-    : [
-        "📚 Hệ thống bài thi thử ĐGNL bám sát cấu trúc đề ĐHQG TP.HCM.",
-        "🎯 Chấm điểm tức thì và phân tích chi tiết 4 phần thi năng lực.",
-        "👩‍🏫 Đồng hành giải đáp thắc mắc và luyện đề hiệu quả mỗi ngày."
-      ];
+  const liveActivities =
+    campuses.length > 0
+      ? campuses.map((c) => `🏫 Cơ sở đang hoạt động: ${c.name}`)
+      : [
+          "📚 Hệ thống bài thi thử ĐGNL bám sát cấu trúc đề ĐHQG TP.HCM.",
+          "🎯 Chấm điểm tức thì và phân tích chi tiết 4 phần thi năng lực.",
+          "👩‍🏫 Đồng hành giải đáp thắc mắc và luyện đề hiệu quả mỗi ngày.",
+        ];
   const [actIdx, setActIdx] = useState(0);
 
   useEffect(() => {
@@ -220,19 +244,48 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
     notifyFormError(null);
     notifySubmitSuccessMsg(null);
     setFieldErrors({});
-    if (newMode === 'register' && (role === 'teacher' || role === 'manager')) {
-      setRole('student');
+    if (newMode === "register" && (role === "teacher" || role === "manager")) {
+      setRole("student");
     }
   };
 
   // Determine App Role from BE roles array response
   const determineRoleFromResponse = (res) => {
     const roles = res?.user?.roles || res?.roles || [];
-    if (roles.some(r => r.toLowerCase().includes('admin') || r.toLowerCase().includes('administrator'))) return 'admin';
-    if (roles.some(r => r.toLowerCase().includes('teacher') || r.toLowerCase().includes('giaovien'))) return 'teacher';
-    if (roles.some(r => r.toLowerCase().includes('manager') || r.toLowerCase().includes('director') || r.toLowerCase().includes('quanly'))) return 'manager';
-    if (roles.some(r => r.toLowerCase().includes('parent') || r.toLowerCase().includes('phuhuynh'))) return 'parent';
-    return 'student';
+    if (
+      roles.some(
+        (r) =>
+          r.toLowerCase().includes("admin") ||
+          r.toLowerCase().includes("administrator"),
+      )
+    )
+      return "admin";
+    if (
+      roles.some(
+        (r) =>
+          r.toLowerCase().includes("teacher") ||
+          r.toLowerCase().includes("giaovien"),
+      )
+    )
+      return "teacher";
+    if (
+      roles.some(
+        (r) =>
+          r.toLowerCase().includes("manager") ||
+          r.toLowerCase().includes("director") ||
+          r.toLowerCase().includes("quanly"),
+      )
+    )
+      return "manager";
+    if (
+      roles.some(
+        (r) =>
+          r.toLowerCase().includes("parent") ||
+          r.toLowerCase().includes("phuhuynh"),
+      )
+    )
+      return "parent";
+    return "student";
   };
 
   // Handle Login Submit with Real API Integration
@@ -265,7 +318,7 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
         id: response.userId || response.id,
         email: response.email || email,
         fullName: response.fullName || email,
-        roles: response.roles || []
+        roles: response.roles || [],
       };
 
       const resolvedRole = authService.resolveAppRole(loggedUser);
@@ -275,23 +328,35 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
       }
     } catch (err) {
       setIsSubmitting(false);
-      console.warn('[WebLoginPage] Login error:', err);
+      console.warn("[WebLoginPage] Login error:", err);
 
       // Account not yet activated with OTP
-      if (err.data?.error?.code === 'Auth.AccountNotActivated' || err.message?.includes('chưa được kích hoạt')) {
-        setModalMode('activation');
+      if (
+        err.data?.error?.code === "Auth.AccountNotActivated" ||
+        err.message?.includes("chưa được kích hoạt")
+      ) {
+        setModalMode("activation");
         setForgotEmail(email);
-        setOtpCode('');
+        setOtpCode("");
         notifyModalError(null);
-        setModalSuccess('Tài khoản chưa được kích hoạt. Vui lòng kiểm tra email và nhập mã OTP 6 số để kích hoạt.');
+        setModalSuccess(
+          "Tài khoản chưa được kích hoạt. Vui lòng kiểm tra email và nhập mã OTP 6 số để kích hoạt.",
+        );
         setForgotStep(2);
         setIsForgotModalOpen(true);
-        setFormError('Tài khoản chưa được kích hoạt OTP. Vui lòng nhập mã OTP 6 số để kích hoạt.');
-        toast.warning('Vui lòng nhập mã OTP trong email để kích hoạt tài khoản.');
+        setFormError(
+          "Tài khoản chưa được kích hoạt OTP. Vui lòng nhập mã OTP 6 số để kích hoạt.",
+        );
+        toast.warning(
+          "Vui lòng nhập mã OTP trong email để kích hoạt tài khoản.",
+        );
         return;
       }
 
-      const msg = formatApiError(err, 'Đăng nhập không thành công. Vui lòng kiểm tra lại email hoặc mật khẩu.');
+      const msg = formatApiError(
+        err,
+        "Đăng nhập không thành công. Vui lòng kiểm tra lại email hoặc mật khẩu.",
+      );
       notifyFormError(msg);
     }
   };
@@ -311,7 +376,7 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
     const syncEmailCheck = validateEmailSyntaxAndRules(regEmail);
     if (!syncEmailCheck.isValid) {
       errs.regEmail = syncEmailCheck.message;
-      setEmailValidationStatus('invalid');
+      setEmailValidationStatus("invalid");
       setEmailValidationMessage(syncEmailCheck.message);
       setEmailSuggestedFix(syncEmailCheck.suggestedEmail || null);
     }
@@ -320,9 +385,10 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
       errs.regPhone = "Vui lòng nhập Số điện thoại liên hệ.";
     } else {
       const phoneRegex = /^(0[3|5|7|8|9])[0-9]{8}$/;
-      const cleanPhone = regPhone.trim().replace(/\s/g, '');
+      const cleanPhone = regPhone.trim().replace(/\s/g, "");
       if (!phoneRegex.test(cleanPhone)) {
-        errs.regPhone = "SĐT không hợp lệ (10 chữ số, bắt đầu bằng 03, 05, 07, 08, 09).";
+        errs.regPhone =
+          "SĐT không hợp lệ (10 chữ số, bắt đầu bằng 03, 05, 07, 08, 09).";
       }
     }
 
@@ -346,7 +412,10 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
 
     if (Object.keys(errs).length > 0) {
       setFieldErrors(errs);
-      notifyFormError(errs.regEmail || "Vui lòng kiểm tra và hoàn thiện chính xác các trường thông tin bên dưới.");
+      notifyFormError(
+        errs.regEmail ||
+          "Vui lòng kiểm tra và hoàn thiện chính xác các trường thông tin bên dưới.",
+      );
       return;
     }
     setFieldErrors({});
@@ -354,14 +423,15 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
     setIsSubmitting(true);
     try {
       // BẮT BUỘC kiểm tra toàn diện Email (DNS MX + Chống email ảo + Kiểm tra tồn tại CSDL) trước khi gọi API đăng ký
-      setEmailValidationStatus('checking');
-      const liveEmailCheck = await validateEmailComprehensive(regEmail.trim(), (em) =>
-        authService.validateEmail(em)
+      setEmailValidationStatus("checking");
+      const liveEmailCheck = await validateEmailComprehensive(
+        regEmail.trim(),
+        (em) => authService.validateEmail(em),
       );
 
       if (!liveEmailCheck.isValid) {
         setIsSubmitting(false);
-        setEmailValidationStatus('invalid');
+        setEmailValidationStatus("invalid");
         setEmailValidationMessage(liveEmailCheck.message);
         setEmailSuggestedFix(liveEmailCheck.suggestedEmail || null);
         setFieldErrors({ regEmail: liveEmailCheck.message });
@@ -369,7 +439,7 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
         return;
       }
 
-      setEmailValidationStatus('valid');
+      setEmailValidationStatus("valid");
       setEmailValidationMessage(liveEmailCheck.message);
 
       const payload = {
@@ -377,35 +447,39 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
         email: regEmail.trim(),
         phone: regPhone.trim(),
         password: regPassword,
-        roleName: role === 'parent' ? 'PARENT' : 'STUDENT',
-        campusId: selectedCampusId || (campuses[0]?.campusId || campuses[0]?.id)
+        roleName: role === "parent" ? "PARENT" : "STUDENT",
+        campusId: selectedCampusId || campuses[0]?.campusId || campuses[0]?.id,
       };
 
       await authService.register(payload);
       setIsSubmitting(false);
 
       // Open OTP verification step in modal without auto-filling OTP
-      setModalMode('activation');
+      setModalMode("activation");
       setForgotEmail(regEmail.trim());
-      setOtpCode(''); // Empty input field so user must enter OTP from email
+      setOtpCode(""); // Empty input field so user must enter OTP from email
       notifyModalError(null);
       notifyModalSuccess(
-        "Đã kiểm tra email hợp lệ! Mã xác thực OTP 6 chữ số đã được gửi về email của bạn. Vui lòng kiểm tra hộp thư và nhập mã OTP để xác minh tài khoản."
+        "Đã kiểm tra email hợp lệ! Mã xác thực OTP 6 chữ số đã được gửi về email của bạn. Vui lòng kiểm tra hộp thư và nhập mã OTP để xác minh tài khoản.",
       );
       setForgotStep(2);
       setIsForgotModalOpen(true);
     } catch (err) {
       setIsSubmitting(false);
-      console.warn('[WebLoginPage] Register error:', err);
+      console.warn("[WebLoginPage] Register error:", err);
       const msg =
         err.data?.error?.description ||
         err.data?.errors?.[0]?.description ||
         err.data?.message ||
         err.message ||
-        'Đăng ký không thành công. Vui lòng kiểm tra lại thông tin.';
+        "Đăng ký không thành công. Vui lòng kiểm tra lại thông tin.";
       notifyFormError(msg);
-      if (msg.toLowerCase().includes('email') || msg.toLowerCase().includes('tên miền') || msg.toLowerCase().includes('gmail')) {
-        setEmailValidationStatus('invalid');
+      if (
+        msg.toLowerCase().includes("email") ||
+        msg.toLowerCase().includes("tên miền") ||
+        msg.toLowerCase().includes("gmail")
+      ) {
+        setEmailValidationStatus("invalid");
         setFieldErrors((prev) => ({ ...prev, regEmail: msg }));
       }
     }
@@ -413,10 +487,12 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
 
   // Password strength score
   const getPasswordStrength = (pass) => {
-    if (!pass) return { score: 0, label: '', color: 'bg-slate-200' };
-    if (pass.length < 6) return { score: 1, label: 'Yếu', color: 'bg-rose-500' };
-    if (pass.length < 10 || !/\d/.test(pass)) return { score: 2, label: 'Trung bình', color: 'bg-amber-500' };
-    return { score: 3, label: 'Mạnh (Tối ưu)', color: 'bg-emerald-500' };
+    if (!pass) return { score: 0, label: "", color: "bg-slate-200" };
+    if (pass.length < 6)
+      return { score: 1, label: "Yếu", color: "bg-rose-500" };
+    if (pass.length < 10 || !/\d/.test(pass))
+      return { score: 2, label: "Trung bình", color: "bg-amber-500" };
+    return { score: 3, label: "Mạnh (Tối ưu)", color: "bg-emerald-500" };
   };
   const passStrength = getPasswordStrength(regPassword);
 
@@ -429,7 +505,7 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
 
     try {
       if (forgotStep === 1) {
-        const cleanEmail = (forgotEmail || '').trim();
+        const cleanEmail = (forgotEmail || "").trim();
         if (!cleanEmail) {
           setIsSubmitting(false);
           notifyModalError("Vui lòng nhập địa chỉ Email tài khoản.");
@@ -438,20 +514,26 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
         // Gọi API forgot-password để kiểm tra email tồn tại và gửi mã OTP
         await authService.forgotPassword(cleanEmail);
         setIsSubmitting(false);
-        setOtpCode('');
-        notifyModalSuccess(`Đã kiểm tra tài khoản thành công! Mã OTP xác thực đặt lại mật khẩu đã được gửi đến email ${cleanEmail}. Vui lòng kiểm tra hộp thư.`);
+        setOtpCode("");
+        notifyModalSuccess(
+          `Đã kiểm tra tài khoản thành công! Mã OTP xác thực đặt lại mật khẩu đã được gửi đến email ${cleanEmail}. Vui lòng kiểm tra hộp thư.`,
+        );
         setForgotStep(2);
       } else if (forgotStep === 2) {
         if (!otpCode || otpCode.trim().length !== 6) {
           setIsSubmitting(false);
-          notifyModalError("Vui lòng nhập đầy đủ mã xác thực OTP gồm 6 chữ số.");
+          notifyModalError(
+            "Vui lòng nhập đầy đủ mã xác thực OTP gồm 6 chữ số.",
+          );
           return;
         }
-        if (modalMode === 'activation') {
+        if (modalMode === "activation") {
           // Activation flow for registration
           await authService.verifyOtp(forgotEmail.trim(), otpCode.trim());
           setIsSubmitting(false);
-          notifyModalSuccess("Xác thực và kích hoạt tài khoản thành công! Bạn có thể đăng nhập ngay.");
+          notifyModalSuccess(
+            "Xác thực và kích hoạt tài khoản thành công! Bạn có thể đăng nhập ngay.",
+          );
           setForgotStep(4);
         } else {
           // Forgot password flow: BẮT BUỘC KIỂM TRA MÃ OTP VỚI BACKEND TRƯỚC KHI CHO QUA BƯỚC 3!
@@ -459,8 +541,8 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
           setIsSubmitting(false);
           notifyModalError(null);
           notifyModalSuccess(null);
-          setNewPassword('');
-          setConfirmPassword('');
+          setNewPassword("");
+          setConfirmPassword("");
           setForgotStep(3);
         }
       } else if (forgotStep === 3) {
@@ -469,29 +551,42 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
           notifyModalError("Mật khẩu mới phải có tối thiểu 8 ký tự.");
           return;
         }
-        if (!/[A-Z]/.test(newPassword) || !/[a-z]/.test(newPassword) || !/[0-9]/.test(newPassword)) {
+        if (
+          !/[A-Z]/.test(newPassword) ||
+          !/[a-z]/.test(newPassword) ||
+          !/[0-9]/.test(newPassword)
+        ) {
           setIsSubmitting(false);
-          notifyModalError("Mật khẩu phải chứa ít nhất 1 chữ hoa, 1 chữ thường và 1 chữ số (VD: Password123@).");
+          notifyModalError(
+            "Mật khẩu phải chứa ít nhất 1 chữ hoa, 1 chữ thường và 1 chữ số (VD: Password123@).",
+          );
           return;
         }
         if (newPassword !== confirmPassword) {
           setIsSubmitting(false);
-          notifyModalError("Mật khẩu xác nhận không khớp. Vui lòng kiểm tra lại.");
+          notifyModalError(
+            "Mật khẩu xác nhận không khớp. Vui lòng kiểm tra lại.",
+          );
           return;
         }
         await authService.resetPassword({
           email: forgotEmail.trim(),
           otpCode: otpCode.trim(),
           newPassword,
-          confirmPassword
+          confirmPassword,
         });
         setIsSubmitting(false);
-        notifyModalSuccess("Đặt lại mật khẩu thành công! Bạn có thể sử dụng mật khẩu mới để đăng nhập ngay bây giờ.");
+        notifyModalSuccess(
+          "Đặt lại mật khẩu thành công! Bạn có thể sử dụng mật khẩu mới để đăng nhập ngay bây giờ.",
+        );
         setForgotStep(4);
       }
     } catch (err) {
       setIsSubmitting(false);
-      const msg = formatApiError(err, 'Thao tác không thành công. Vui lòng kiểm tra lại.');
+      const msg = formatApiError(
+        err,
+        "Thao tác không thành công. Vui lòng kiểm tra lại.",
+      );
       notifyModalError(msg);
     }
   };
@@ -500,14 +595,21 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
   const handleResendOtp = async () => {
     notifyModalError(null);
     try {
-      if (modalMode === 'activation') {
-        notifyModalSuccess('Đã gửi lại mã OTP kích hoạt đến email ' + forgotEmail);
+      if (modalMode === "activation") {
+        notifyModalSuccess(
+          "Đã gửi lại mã OTP kích hoạt đến email " + forgotEmail,
+        );
       } else {
         await authService.forgotPassword(forgotEmail.trim());
-        notifyModalSuccess('Đã gửi lại mã OTP đặt lại mật khẩu mới đến email ' + forgotEmail);
+        notifyModalSuccess(
+          "Đã gửi lại mã OTP đặt lại mật khẩu mới đến email " + forgotEmail,
+        );
       }
     } catch (err) {
-      const msg = formatApiError(err, 'Không thể gửi lại mã OTP. Vui lòng thử lại sau.');
+      const msg = formatApiError(
+        err,
+        "Không thể gửi lại mã OTP. Vui lòng thử lại sau.",
+      );
       notifyModalError(msg);
       throw err;
     }
@@ -515,11 +617,9 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
 
   return (
     <div className="min-h-screen w-full bg-[#FDFBF7] text-slate-900 flex flex-col font-sans selection:bg-[#FACC15] selection:text-slate-950">
-
       {/* 1. TOP HEADER NAVIGATION */}
       <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-6 lg:px-8 py-1.5 transition-all shadow-xs">
         <div className="w-full max-w-7xl mx-auto flex items-center justify-between gap-4">
-
           {/* Logo & Brand Name */}
           <div
             onClick={onNavigateHome}
@@ -532,7 +632,10 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
           <div className="flex items-center gap-3">
             <div className="hidden sm:flex items-center gap-2 text-xs font-semibold text-slate-700 bg-slate-100 px-3 py-1.5 rounded-full border border-slate-200">
               <PhoneCall className="w-3.5 h-3.5 text-blue-600" />
-              <span>Hotline Tư Vấn: <strong className="text-blue-900">1900 8889</strong></span>
+              <span>
+                Hotline Tư Vấn:{" "}
+                <strong className="text-blue-900">1900 8889</strong>
+              </span>
             </div>
 
             <button
@@ -543,29 +646,24 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
               <span>Quay lại Trang Chủ</span>
             </button>
           </div>
-
         </div>
       </header>
 
       {/* 2. MAIN CENTER CONTENT CONTAINER */}
       <main className="flex-1 flex items-center justify-center p-3 sm:p-5 lg:px-8 lg:py-4 relative overflow-hidden">
-
         {/* Soft Ambient Background Glows */}
         <div className="absolute top-1/4 left-10 w-96 h-96 rounded-full bg-blue-400/10 blur-[120px] pointer-events-none"></div>
         <div className="absolute bottom-10 right-10 w-96 h-96 rounded-full bg-indigo-400/10 blur-[120px] pointer-events-none"></div>
 
         <div className="w-full max-w-[1060px] bg-white rounded-[28px] shadow-[0_20px_60px_-15px_rgba(15,23,42,0.12)] overflow-hidden grid grid-cols-1 lg:grid-cols-12 border border-slate-200/80 text-slate-900 z-10">
-
           {/* LEFT COLUMN (6 Spans): Balanced Editorial Showcase */}
           <div className="lg:col-span-6 bg-gradient-to-br from-[#F0F6FF] via-[#F5F7FF] to-[#ECFEFF] p-6 sm:p-7 lg:p-8 text-slate-900 flex flex-col justify-between gap-5 relative overflow-hidden border-b lg:border-b-0 lg:border-r border-slate-200/70">
-
             {/* Ambient inner highlights */}
             <div className="absolute -top-24 -left-24 w-80 h-80 rounded-full bg-blue-300/20 blur-3xl pointer-events-none"></div>
             <div className="absolute -bottom-24 -right-24 w-80 h-80 rounded-full bg-cyan-300/20 blur-3xl pointer-events-none"></div>
 
             {/* Hero Copy + Full-Bleed Aligned Image */}
             <div className="relative z-10 space-y-4">
-
               <div className="space-y-2">
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/95 border border-blue-200/80 text-[11px] font-bold text-blue-700 shadow-2xs">
                   <Flame className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
@@ -573,14 +671,15 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
                 </span>
 
                 <h1 className="text-2xl sm:text-[27px] font-black leading-tight tracking-tight text-slate-900">
-                  Khám phá Năng lực &{' '}
+                  Khám phá Năng lực &{" "}
                   <span className="bg-gradient-to-r from-blue-700 via-indigo-700 to-cyan-600 bg-clip-text text-transparent">
                     Bứt phá 900+ Điểm
                   </span>
                 </h1>
 
                 <p className="text-xs sm:text-[13px] text-slate-600 font-medium leading-relaxed">
-                  Đánh giá năng lực chuẩn cấu trúc 120 câu hỏi, nhận diện điểm yếu và xây dựng lộ trình ôn tập hiệu quả mỗi ngày.
+                  Đánh giá năng lực chuẩn cấu trúc 120 câu hỏi, nhận diện điểm
+                  yếu và xây dựng lộ trình ôn tập hiệu quả mỗi ngày.
                 </p>
               </div>
 
@@ -609,7 +708,6 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
                   </div>
                 </div>
               </div>
-
             </div>
 
             {/* Bottom Highlights: Feature Grid + Subtle Live Status */}
@@ -651,34 +749,33 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
                 </AnimatePresence>
               </div>
             </div>
-
           </div>
 
           {/* RIGHT COLUMN (6 Spans): Centered & Clean Auth Form Column */}
           <div className="lg:col-span-6 p-6 sm:p-8 lg:px-10 lg:py-7 flex flex-col justify-between gap-4 bg-white relative lg:max-h-[calc(100vh-5.5rem)] lg:overflow-y-auto">
-
             <div className="my-auto space-y-5">
-
               {/* Header Mode Switcher: Login / Register */}
               <div className="space-y-3.5">
                 <div className="p-1 bg-slate-100 rounded-2xl flex items-center border border-slate-200">
                   <button
-                    onClick={() => handleModeSwitch('login')}
-                    className={`flex-1 py-2.5 rounded-xl font-black text-xs transition-all flex items-center justify-center gap-1.5 ${mode === 'login'
-                        ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md'
-                        : 'text-slate-600 hover:text-slate-900'
-                      }`}
+                    onClick={() => handleModeSwitch("login")}
+                    className={`flex-1 py-2.5 rounded-xl font-black text-xs transition-all flex items-center justify-center gap-1.5 ${
+                      mode === "login"
+                        ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
                   >
                     <Lock className="w-3.5 h-3.5" />
                     <span>Đăng nhập</span>
                   </button>
 
                   <button
-                    onClick={() => handleModeSwitch('register')}
-                    className={`flex-1 py-2.5 rounded-xl font-black text-xs transition-all flex items-center justify-center gap-1.5 ${mode === 'register'
-                        ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md'
-                        : 'text-slate-600 hover:text-slate-900'
-                      }`}
+                    onClick={() => handleModeSwitch("register")}
+                    className={`flex-1 py-2.5 rounded-xl font-black text-xs transition-all flex items-center justify-center gap-1.5 ${
+                      mode === "register"
+                        ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
                   >
                     <User className="w-3.5 h-3.5" />
                     <span>Đăng ký mới</span>
@@ -687,32 +784,35 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
 
                 <div>
                   <h2 className="text-2xl font-black text-slate-900 tracking-tight">
-                    {mode === 'login' ? 'Đăng Nhập' : 'Đăng Ký Tài Khoản Mới'}
+                    {mode === "login" ? "Đăng Nhập" : "Đăng Ký Tài Khoản Mới"}
                   </h2>
                   <p className="text-xs text-slate-500 font-semibold mt-1">
-                    {mode === 'login'
-                      ? 'Nhập Email hoặc Số điện thoại và Mật khẩu để đăng nhập.'
-                      : 'Đăng ký tài khoản dành cho Học sinh và Phụ huynh.'}
+                    {mode === "login"
+                      ? "Nhập Email hoặc Số điện thoại và Mật khẩu để đăng nhập."
+                      : "Đăng ký tài khoản dành cho Học sinh và Phụ huynh."}
                   </p>
                 </div>
               </div>
 
               {/* Role Selection Switcher (Register mode: Student vs Parent) */}
-              {mode === 'register' && (
+              {mode === "register" && (
                 <div>
                   <div className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400 mb-2 flex items-center justify-between">
                     <span>BẠN LÀ:</span>
                     <span className="text-blue-600 font-bold">
-                      {role === 'student' ? 'Học sinh 2k8/2k9' : 'Phụ huynh'}
+                      {role === "student" ? "Học sinh 2k8/2k9" : "Phụ huynh"}
                     </span>
                   </div>
 
                   <div className="p-1 bg-slate-100 rounded-2xl flex items-center gap-1 border border-slate-200 text-xs font-bold">
                     <button
                       type="button"
-                      onClick={() => setRole('student')}
-                      className={`flex-1 py-2 px-1 rounded-xl transition-all flex items-center justify-center gap-1 ${role === 'student' ? 'bg-white text-blue-700 shadow-sm font-extrabold' : 'text-slate-500 hover:text-slate-800'
-                        }`}
+                      onClick={() => setRole("student")}
+                      className={`flex-1 py-2 px-1 rounded-xl transition-all flex items-center justify-center gap-1 ${
+                        role === "student"
+                          ? "bg-white text-blue-700 shadow-sm font-extrabold"
+                          : "text-slate-500 hover:text-slate-800"
+                      }`}
                     >
                       <GraduationCap className="w-3.5 h-3.5" />
                       <span>Học sinh</span>
@@ -720,9 +820,12 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
 
                     <button
                       type="button"
-                      onClick={() => setRole('parent')}
-                      className={`flex-1 py-2 px-1 rounded-xl transition-all flex items-center justify-center gap-1 ${role === 'parent' ? 'bg-white text-blue-700 shadow-sm font-extrabold' : 'text-slate-500 hover:text-slate-800'
-                        }`}
+                      onClick={() => setRole("parent")}
+                      className={`flex-1 py-2 px-1 rounded-xl transition-all flex items-center justify-center gap-1 ${
+                        role === "parent"
+                          ? "bg-white text-blue-700 shadow-sm font-extrabold"
+                          : "text-slate-500 hover:text-slate-800"
+                      }`}
                     >
                       <Users className="w-3.5 h-3.5" />
                       <span>Phụ huynh</span>
@@ -747,7 +850,7 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
               )}
 
               {/* Form Views: Login vs Register */}
-              {mode === 'login' ? (
+              {mode === "login" ? (
                 <LoginForm
                   email={email}
                   setEmail={setEmail}
@@ -762,11 +865,11 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
                   setFieldErrors={setFieldErrors}
                   handleLoginSubmit={handleLoginSubmit}
                   onOpenForgotPassword={() => {
-                    setModalMode('forgot');
-                    setForgotEmail('');
-                    setOtpCode('');
-                    setNewPassword('');
-                    setConfirmPassword('');
+                    setModalMode("forgot");
+                    setForgotEmail("");
+                    setOtpCode("");
+                    setNewPassword("");
+                    setConfirmPassword("");
                     notifyModalError(null);
                     notifyModalSuccess(null);
                     setForgotStep(1);
@@ -824,28 +927,20 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
                   }}
                 />
               )}
-
             </div>
 
             {/* Bottom Footer Note */}
             <div className="pt-2.5 border-t border-slate-100 text-center text-[11px] text-slate-400 font-medium">
-              Hệ thống Bảo mật 256-bit • Hỗ trợ học viên 24/7
+              Hỗ trợ học viên 24/7
             </div>
-
           </div>
-
         </div>
-
       </main>
 
       {/* Forgot Password Modal */}
       <ForgotPasswordModal
         isOpen={isForgotModalOpen}
-        onClose={() => {
-          setIsForgotModalOpen(false);
-          notifyModalError(null);
-          notifyModalSuccess(null);
-        }}
+        onClose={handleAuthModalClose}
         modalMode={modalMode}
         forgotStep={forgotStep}
         setForgotStep={setForgotStep}
@@ -863,7 +958,6 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
         modalSuccess={modalSuccess}
         onResendOtp={handleResendOtp}
       />
-
     </div>
   );
 }

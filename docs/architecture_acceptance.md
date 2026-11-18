@@ -2198,3 +2198,9 @@ Radar and skill-prior displays consume API response fields; the benchmark overla
 - Integrated upstream Socratic multi-turn session management, tombstone-based deletion, Vietnamese text normalization, AI tutor moderation, mentor dashboard changes, and diagnostic history updates.
 - Preserved the local homepage Introduction grouping and navigation cleanup.
 - Verified `npm run build` successfully. Existing large-bundle and JSXGraph eval advisories remain. Automated tests were not run in this merge check.
+
+## [18/11/2026] - Authentication completion and landing page presentation
+
+The authentication completion handler now closes the OTP modal, switches the underlying page to login, and pre-populates the account email. Password reset completion also pre-populates the newly chosen password. The public landing page received a visual refinement across its section backgrounds, decorative accents, and cards.
+
+Acceptance evidence: `npm run build` completed successfully. Existing large-chunk and JSXGraph direct `eval` advisories remain. Interactive browser verification was not performed.
