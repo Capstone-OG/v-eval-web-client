@@ -38,13 +38,82 @@ import MathText from '../common/MathText';
 
 const optionalNumber = (value) => value == null || value === '' ? undefined : Number(value);
 
+const cleanExamTitle = (title, examType) => {
+  if (title && !title.includes('(DIAGNOSTIC)') && !title.includes('(ZPD_QUIZ)') && !title.includes('(TOPIC_QUIZ)')) {
+    return title;
+  }
+  if (examType === 'ZPD_QUIZ') return 'Phiếu Luyện Tập Thích Ứng Cá Nhân Hóa';
+  if (examType === 'TOPIC_QUIZ') return 'Bài Kiểm Tra Chuyên Đề';
+  return 'Bài Khảo Sát Năng Lực ĐGNL (30 câu)';
+};
+
+const formatThetaDisplay = (theta, isParent = false) => {
+  const val = Number(theta);
+  if (isNaN(val)) {
+    return {
+      label: 'Chưa xác định',
+      sublabel: 'Chưa đủ dữ liệu bài thi',
+      scoreCls: 'text-slate-500',
+      badgeCls: 'bg-slate-100 text-slate-700 border-slate-200'
+    };
+  }
+
+  if (isParent) {
+    if (val >= 1.0) {
+      return {
+        label: 'Vượt trội (Khá - Giỏi)',
+        sublabel: 'Năng lực làm bài vững vàng',
+        scoreCls: 'text-emerald-600',
+        badgeCls: 'bg-emerald-50 text-emerald-800 border-emerald-200'
+      };
+    }
+    if (val >= 0.0) {
+      return {
+        label: 'Đạt chuẩn (Trung bình khá)',
+        sublabel: 'Tiến độ làm chủ kiến thức tốt',
+        scoreCls: 'text-blue-600',
+        badgeCls: 'bg-blue-50 text-blue-800 border-blue-200'
+      };
+    }
+    if (val >= -1.0) {
+      return {
+        label: 'Cần củng cố (Trung bình)',
+        sublabel: 'Cần luyện thêm dạng bài cơ bản',
+        scoreCls: 'text-amber-600',
+        badgeCls: 'bg-amber-50 text-amber-800 border-amber-200'
+      };
+    }
+    return {
+      label: 'Khởi đầu nền tảng',
+      sublabel: 'Cần gia đình kèm cặp ôn tập thêm',
+      scoreCls: 'text-rose-600',
+      badgeCls: 'bg-rose-50 text-rose-800 border-rose-200'
+    };
+  }
+
+  // Góc nhìn học sinh
+  const sign = val > 0 ? `+${val.toFixed(2)}` : val.toFixed(2);
+  let rank = 'Cần củng cố';
+  let scoreCls = 'text-rose-600';
+  if (val >= 1.0) { rank = 'Xuất sắc'; scoreCls = 'text-emerald-600'; }
+  else if (val >= 0.0) { rank = 'Đạt chuẩn'; scoreCls = 'text-blue-600'; }
+  else if (val >= -1.0) { rank = 'Tiệm cận'; scoreCls = 'text-amber-600'; }
+
+  return {
+    label: `${sign} (${rank})`,
+    sublabel: 'Chỉ số ước lượng năng lực',
+    scoreCls,
+    badgeCls: 'bg-purple-50 text-purple-800 border-purple-200'
+  };
+};
+
 const EXAM_TYPE_LABELS = {
   DIAGNOSTIC: {
     label: 'Khảo sát ĐGNL (30 câu)',
     badge: 'bg-blue-500/15 text-cyan-300 border-blue-500/30'
   },
   ZPD_QUIZ: {
-    label: 'Luyện tập Thích ứng ZPD',
+    label: 'Luyện tập Thích ứng',
     badge: 'bg-amber-500/15 text-amber-300 border-amber-500/30'
   },
   TOPIC_QUIZ: {
@@ -125,7 +194,10 @@ export default function SubmissionHistoryView({
       ? (activeChildId || studentId || null)
       : (studentId || user?.id || user?.userId);
 
-    const localItems = practiceService.getSubmissionHistory(targetId);
+    const localItems = practiceService.getSubmissionHistory(targetId).map((item) => ({
+      ...item,
+      title: cleanExamTitle(item.title, item.examType)
+    }));
     setHistoryList(localItems);
 
     if (initialSubmissionId) {
@@ -156,7 +228,7 @@ export default function SubmissionHistoryView({
             merged.push({
               id: rId,
               studentId: targetId,
-              title: `Bài Khảo Sát ĐGNL (${remoteItem.examType || 'DIAGNOSTIC'})`,
+              title: cleanExamTitle(remoteItem.title, remoteItem.examType || 'DIAGNOSTIC'),
               examType: remoteItem.examType || 'DIAGNOSTIC',
               completedAt: remoteItem.completedAt || new Date().toISOString(),
               theta_0: remoteItem.theta0 ?? 0,
@@ -429,13 +501,17 @@ export default function SubmissionHistoryView({
     const totalAttempts = historyList.length;
     let totalQ = 0;
     let totalRight = 0;
+    let totalWrong = 0;
     historyList.forEach((s) => {
-      totalQ += s.pacing?.totalQuestions || s.reviewedQuestions?.length || 0;
-      totalRight += s.pacing?.totalCorrect || (s.reviewedQuestions || []).filter((q) => q.isCorrect).length;
+      const qCount = s.pacing?.totalQuestions || s.reviewedQuestions?.length || 0;
+      const rightCount = s.pacing?.totalCorrect ?? (s.reviewedQuestions || []).filter((q) => q.isCorrect).length;
+      totalQ += qCount;
+      totalRight += rightCount;
+      totalWrong += Math.max(0, qCount - rightCount);
     });
     const avgAcc = totalQ > 0 ? Math.round((totalRight / totalQ) * 100) : 0;
     const latestTheta = historyList[0]?.theta_0 ?? 0;
-    return { totalAttempts, totalQ, totalRight, avgAcc, latestTheta };
+    return { totalAttempts, totalQ, totalRight, totalWrong, avgAcc, latestTheta };
   }, [historyList]);
 
   const formatDate = (iso) => {
@@ -468,8 +544,8 @@ export default function SubmissionHistoryView({
 
     return (
       <div className="space-y-6 animate-fade pb-12">
-        {/* Top Back Navigation Bar (Synchronized with Home Page Royal Blue-Indigo Theme) */}
-        <div className="bg-gradient-to-r from-blue-700 via-indigo-700 to-blue-900 border border-blue-600/30 rounded-3xl p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xl text-white">
+        {/* Top Back Navigation Bar */}
+        <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-950 border border-indigo-900/60 rounded-3xl p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xl text-white">
           <div className="space-y-1">
             <button
               type="button"
@@ -480,32 +556,34 @@ export default function SubmissionHistoryView({
               <span>{isParent ? 'Quay lại Danh sách Lịch sử bài thi của con' : 'Quay lại Danh sách Lịch sử làm bài'}</span>
             </button>
             <h2 className="text-lg sm:text-xl font-black text-white flex flex-wrap items-center gap-2.5">
-              <span>{selectedSubmission.title}</span>
+              <span>{cleanExamTitle(selectedSubmission.title, selectedSubmission.examType)}</span>
               <span
-                className="text-[11px] px-2.5 py-0.5 rounded-full border font-bold bg-white/15 text-[#FACC15] border-white/25"
+                className="text-[11px] px-2.5 py-0.5 rounded-full border font-bold bg-white/10 text-[#FACC15] border-white/20"
               >
                 {EXAM_TYPE_LABELS[selectedSubmission.examType]?.label || 'Khảo sát ĐGNL'}
               </span>
             </h2>
-            <p className="text-xs text-blue-100">
+            <p className="text-xs text-slate-300">
               {isParent && resolvedStudentName ? (
                 <>Bài thi của: <strong className="text-[#FACC15]">{resolvedStudentName}</strong> • </>
               ) : null}
-              Hoàn thành lúc: <strong className="text-white">{formatDate(selectedSubmission.completedAt)}</strong> • Bấm vào bất kỳ câu hỏi nào bên dưới để xem đáp án giải chi tiết và phân tích Socratic.
+              Hoàn thành lúc: <strong className="text-white">{formatDate(selectedSubmission.completedAt)}</strong> • Bấm vào bất kỳ câu hỏi nào bên dưới để xem đáp án giải chi tiết và gợi ý phương pháp giải.
             </p>
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="px-4 py-2.5 rounded-2xl bg-white/15 backdrop-blur-md border border-white/20 text-center">
-              <div className="text-[10px] font-bold uppercase text-blue-100">Kết quả</div>
+            <div className="px-4 py-2.5 rounded-2xl bg-white/10 backdrop-blur-md border border-white/15 text-center">
+              <div className="text-[10px] font-bold uppercase text-slate-300">Kết quả làm bài</div>
               <div className="text-base font-black text-[#FACC15]">
                 {totalCorrect}/{totalQuestions} câu ({accPct}%)
               </div>
             </div>
-            <div className="px-4 py-2.5 rounded-2xl bg-white/15 backdrop-blur-md border border-white/20 text-center">
-              <div className="text-[10px] font-bold uppercase text-blue-100">Chỉ số IRT</div>
-              <div className="text-base font-black text-cyan-200">
-                {selectedSubmission.theta_0 > 0 ? `+${selectedSubmission.theta_0}` : selectedSubmission.theta_0 ?? 0}
+            <div className="px-4 py-2.5 rounded-2xl bg-white/10 backdrop-blur-md border border-white/15 text-center">
+              <div className="text-[10px] font-bold uppercase text-slate-300">
+                {isParent ? 'Đánh giá năng lực' : 'Ước lượng năng lực'}
+              </div>
+              <div className="text-sm font-black text-cyan-200">
+                {formatThetaDisplay(selectedSubmission.theta_0, isParent).label}
               </div>
             </div>
           </div>
@@ -513,13 +591,13 @@ export default function SubmissionHistoryView({
 
         {/* AI Commentary Banner */}
         {selectedSubmission.ai_commentary && (
-          <div className="bg-gradient-to-r from-blue-50 via-indigo-50/70 to-amber-50/50 border border-blue-200/80 rounded-2xl p-5 text-xs sm:text-sm text-slate-800 flex items-start gap-3.5 shadow-sm">
+          <div className="bg-gradient-to-r from-blue-50/90 via-indigo-50/60 to-slate-50 border border-blue-200/80 rounded-2xl p-5 text-xs sm:text-sm text-slate-800 flex items-start gap-3.5 shadow-xs">
             <div className="p-2.5 rounded-xl bg-blue-600 text-[#FACC15] shrink-0 shadow-xs">
               <Sparkles className="w-5 h-5" />
             </div>
             <div className="space-y-1">
-              <div className="font-black text-blue-800 text-xs uppercase tracking-wider">
-                Nhận Xét Chiến Thuật Từ AI Psychometrics:
+              <div className="font-black text-blue-900 text-xs uppercase tracking-wider">
+                Nhận Xét Sư Phạm &amp; Định Hướng Ôn Tập Từ Trợ Lý AI:
               </div>
               <div className="leading-relaxed text-slate-700 font-medium">{selectedSubmission.ai_commentary}</div>
             </div>
@@ -838,26 +916,26 @@ export default function SubmissionHistoryView({
   // ============================================================================
   return (
     <div className="space-y-6 animate-fade pb-12">
-      {/* Header Banner (Synchronized with Home Page Royal Blue-Indigo & Gold #FACC15) */}
-      <div className="bg-gradient-to-r from-blue-700 via-indigo-700 to-blue-900 border border-blue-600/30 rounded-3xl p-6 sm:p-8 text-white shadow-xl flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+      {/* Header Banner */}
+      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-950 border border-indigo-900/60 rounded-3xl p-6 lg:p-8 text-white shadow-xl flex flex-col lg:flex-row lg:items-center justify-between gap-6">
         <div className="space-y-3">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 text-[#FACC15] border border-white/20 text-xs font-bold">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-indigo-500/20 text-cyan-300 border border-indigo-400/30 text-xs font-bold uppercase tracking-wider">
             <History className="w-3.5 h-3.5" />
             <span>{isParent ? 'Không Gian Phụ Huynh • Nhật Ký Khảo Thí Của Con' : 'Hồ Sơ Học Thuật & Lịch Sử Khảo Thí'}</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white flex flex-wrap items-center gap-2.5">
-            <span>{isParent ? `Lịch Sử Bài Thi Của Con${resolvedStudentName ? `: ${resolvedStudentName}` : ''}` : 'Lịch Sử Làm Bài & Sổ Tay Lỗi Sai Socratic'}</span>
+            <span>{isParent ? `Lịch Sử Bài Thi Của Con${resolvedStudentName ? `: ${resolvedStudentName}` : ''}` : 'Lịch Sử Làm Bài & Sổ Tay Ôn Tập'}</span>
           </h1>
-          <p className="text-xs sm:text-sm text-blue-100 max-w-2xl leading-relaxed">
+          <p className="text-xs sm:text-sm text-slate-300 max-w-2xl leading-relaxed">
             {isParent
-              ? `Theo dõi toàn bộ kết quả bài khảo sát năng lực (ĐGNL) và các bài luyện tập của con${resolvedStudentName ? ` (${resolvedStudentName})` : ''}. Bấm vào bài làm bất kỳ để xem chi tiết từng câu hỏi, lời giải và phân tích tư duy Socratic.`
-              : 'Lưu trữ toàn bộ các bài khảo sát ĐGNL, phiếu luyện tập thích ứng ZPD và bài kiểm tra chuyên đề đã hoàn thành. Bấm vào bất kỳ bài làm nào để xem lại đáp án chi tiết và hỏi Gia sư AI Socratic.'}
+              ? `Theo dõi toàn bộ kết quả bài khảo sát năng lực (ĐGNL) và các bài luyện tập của con${resolvedStudentName ? ` (${resolvedStudentName})` : ''}. Bấm vào bài làm bất kỳ để xem chi tiết điểm số, bảng phân tích từng câu hỏi và gợi ý phương pháp giải.`
+              : 'Lưu trữ toàn bộ các bài khảo sát ĐGNL, phiếu luyện tập thích ứng và bài kiểm tra chuyên đề đã hoàn thành. Bấm vào bất kỳ bài làm nào để xem lại đáp án chi tiết và hướng dẫn giải.'}
           </p>
 
           {/* Multi-Child Selector Chips */}
           {isParent && internalChildren.length > 1 && (
-            <div className="flex flex-wrap items-center gap-2 pt-1">
-              <span className="text-xs text-blue-200 font-semibold mr-1">Chọn con:</span>
+            <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-white/10">
+              <span className="text-xs text-slate-400 font-bold mr-1">Chọn con:</span>
               {internalChildren.map((c, idx) => {
                 const cId = c.studentId || c.id || `child_${idx}`;
                 const isSelected = cId === activeChildId;
@@ -872,7 +950,7 @@ export default function SubmissionHistoryView({
                     className={`px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
                       isSelected
                         ? 'bg-[#FACC15] text-slate-950 shadow-md font-black'
-                        : 'bg-white/15 text-white hover:bg-white/25 border border-white/20'
+                        : 'bg-white/10 text-white hover:bg-white/20 border border-white/15'
                     }`}
                   >
                     {c.studentName || 'Học sinh'}
@@ -889,7 +967,7 @@ export default function SubmissionHistoryView({
           <button
             type="button"
             onClick={onStartNewDiagnostic}
-            className="px-5 py-3.5 rounded-2xl bg-[#FACC15] hover:bg-yellow-300 text-slate-950 font-black text-xs sm:text-sm shadow-lg shadow-yellow-500/20 transition-all flex items-center justify-center gap-2 shrink-0 cursor-pointer"
+            className="px-5 py-3.5 rounded-2xl bg-[#FACC15] hover:bg-yellow-300 text-slate-950 font-black text-xs sm:text-sm shadow-md transition-all flex items-center justify-center gap-2 shrink-0 cursor-pointer"
           >
             <Play className="w-4 h-4 fill-slate-950" />
             <span>Làm Đề Khảo Sát Mới</span>
@@ -901,61 +979,76 @@ export default function SubmissionHistoryView({
             type="button"
             onClick={() => loadHistory()}
             disabled={isSyncingBackend}
-            className="px-4 py-3 rounded-2xl bg-white/15 hover:bg-white/25 border border-white/20 text-white font-bold text-xs transition-all flex items-center justify-center gap-2 shrink-0 cursor-pointer disabled:opacity-50"
+            className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold text-xs transition-all flex items-center justify-center gap-2 shrink-0 cursor-pointer disabled:opacity-50"
           >
-            <RefreshCw className={`w-4 h-4 ${isSyncingBackend ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 ${isSyncingBackend ? 'animate-spin' : ''}`} />
             <span>{isSyncingBackend ? 'Đang đồng bộ...' : 'Làm mới danh sách'}</span>
           </button>
         )}
       </div>
 
       {/* 4 Summary Metric Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs hover:shadow-md transition-all flex items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 border border-blue-100">
             <History className="w-6 h-6" />
           </div>
           <div>
-            <div className="text-xs font-bold text-slate-500">Tổng số bài đã làm</div>
+            <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">Tổng số bài đã làm</div>
             <div className="text-2xl font-black text-slate-900">{summaryStats.totalAttempts} bài</div>
+            <div className="text-[11px] text-slate-400 font-medium">Khảo sát &amp; bài luyện tập</div>
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+        <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs hover:shadow-md transition-all flex items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-100">
             <CheckCircle2 className="w-6 h-6" />
           </div>
           <div>
-            <div className="text-xs font-bold text-slate-500">Độ chính xác TB</div>
+            <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">Độ chính xác trung bình</div>
             <div className="text-2xl font-black text-emerald-600">{summaryStats.avgAcc}%</div>
+            <div className="text-[11px] text-slate-400 font-medium">Tỷ lệ câu làm đúng</div>
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
-            <TrendingUp className="w-6 h-6" />
-          </div>
-          <div>
-            <div className="text-xs font-bold text-slate-500">Năng lực IRT gần nhất</div>
-            <div className="text-2xl font-black text-purple-600">
-              {summaryStats.latestTheta > 0 ? `+${summaryStats.latestTheta}` : summaryStats.latestTheta}
+        {(() => {
+          const thetaInfo = formatThetaDisplay(summaryStats.latestTheta, isParent);
+          return (
+            <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs hover:shadow-md transition-all flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center shrink-0 border border-purple-100">
+                <TrendingUp className="w-6 h-6" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                  {isParent ? 'Đánh giá năng lực' : 'Ước lượng năng lực'}
+                </div>
+                <div className={`text-base sm:text-lg font-black truncate ${thetaInfo.scoreCls}`}>
+                  {thetaInfo.label}
+                </div>
+                <div className="text-[11px] text-slate-400 font-medium truncate">{thetaInfo.sublabel}</div>
+              </div>
             </div>
-          </div>
-        </div>
+          );
+        })()}
 
-        <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
+        <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs hover:shadow-md transition-all flex items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0 border border-rose-100">
             <AlertTriangle className="w-6 h-6" />
           </div>
           <div>
-            <div className="text-xs font-bold text-slate-500">Câu cần ôn lại (Sai)</div>
-            <div className="text-2xl font-black text-rose-600">{allWrongQuestions.length} câu</div>
+            <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+              {isParent ? 'Câu con làm chưa đúng' : 'Câu cần ôn lại (Sai)'}
+            </div>
+            <div className="text-2xl font-black text-rose-600">
+              {summaryStats.totalWrong || allWrongQuestions.length} câu
+            </div>
+            <div className="text-[11px] text-slate-400 font-medium">Cần xem lại phương pháp giải</div>
           </div>
         </div>
       </div>
 
       {/* Mode Switcher Tabs: Lịch Sử Bài Làm vs Sổ Tay Lỗi Sai */}
-      <div className="bg-white rounded-3xl border border-slate-200/80 p-5 sm:p-6 shadow-sm space-y-6">
+      <div className="bg-white rounded-3xl border border-slate-200/80 p-5 sm:p-6 shadow-xs space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
           <div className="flex items-center gap-2">
             <button
@@ -963,7 +1056,7 @@ export default function SubmissionHistoryView({
               onClick={() => setActiveTab('submissions')}
               className={`px-4 py-2.5 rounded-xl text-xs font-extrabold transition-all flex items-center gap-2 cursor-pointer ${
                 activeTab === 'submissions'
-                  ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
+                  ? 'bg-blue-600 text-white shadow-sm'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               }`}
             >
@@ -976,12 +1069,12 @@ export default function SubmissionHistoryView({
               onClick={() => setActiveTab('mistakes')}
               className={`px-4 py-2.5 rounded-xl text-xs font-extrabold transition-all flex items-center gap-2 cursor-pointer ${
                 activeTab === 'mistakes'
-                  ? 'bg-rose-600 text-white shadow-md shadow-rose-600/20'
+                  ? 'bg-rose-600 text-white shadow-sm'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               }`}
             >
               <AlertTriangle className="w-4 h-4" />
-              <span>Sổ Tay Câu Làm Sai ({allWrongQuestions.length})</span>
+              <span>Sổ Tay Câu Làm Chưa Đúng ({summaryStats.totalWrong || allWrongQuestions.length})</span>
             </button>
           </div>
 
@@ -990,7 +1083,7 @@ export default function SubmissionHistoryView({
               {[
                 { id: 'ALL', label: 'Tất cả' },
                 { id: 'DIAGNOSTIC', label: 'Khảo sát ĐGNL' },
-                { id: 'ZPD_QUIZ', label: 'Luyện tập ZPD' },
+                { id: 'ZPD_QUIZ', label: 'Luyện tập thích ứng' },
                 { id: 'TOPIC_QUIZ', label: 'Chuyên đề' }
               ].map((tab) => (
                 <button
@@ -1037,37 +1130,39 @@ export default function SubmissionHistoryView({
                   <div
                     key={sub.id}
                     onClick={() => handleSelectSubmission(sub)}
-                    className="p-5 rounded-2xl border border-slate-200 hover:border-blue-400 hover:shadow-md bg-slate-50/70 hover:bg-white transition-all flex flex-col lg:flex-row lg:items-center justify-between gap-4 cursor-pointer group"
+                    className="p-5 rounded-2xl border border-slate-200/90 hover:border-blue-400 hover:shadow-md bg-slate-50/60 hover:bg-white transition-all flex flex-col lg:flex-row lg:items-center justify-between gap-4 cursor-pointer group"
                   >
                     <div className="space-y-2">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="px-2.5 py-0.5 rounded-lg text-[11px] font-extrabold bg-blue-100 text-blue-700">
-                          {EXAM_TYPE_LABELS[sub.examType]?.label || 'Khảo sát ĐGNL'}
+                          {EXAM_TYPE_LABELS[sub.examType]?.label || 'Khảo sát ĐGNL (30 câu)'}
                         </span>
                         <span className="text-xs text-slate-500 font-medium flex items-center gap-1">
                           <Clock className="w-3.5 h-3.5 text-slate-400" />
                           <span>{formatDate(sub.completedAt)}</span>
                         </span>
                         {sub.placement_class && (
-                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700">
-                            Nhóm: {sub.placement_class}
+                          <span className="px-2.5 py-0.5 rounded-lg text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            Phân nhóm: {sub.placement_class}
                           </span>
                         )}
                       </div>
 
                       <h3 className="text-base font-extrabold text-slate-900 group-hover:text-blue-600 transition-colors">
-                        {sub.title}
+                        {cleanExamTitle(sub.title, sub.examType)}
                       </h3>
 
-                      <div className="flex flex-wrap items-center gap-4 text-xs text-slate-600 font-semibold">
+                      <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs text-slate-600 font-semibold">
                         <span>
-                          Điểm: <strong className="text-slate-900">{totalCorrect}/{totalQuestions} câu</strong> ({accPct}%)
+                          Điểm số: <strong className="text-slate-900">{totalCorrect}/{totalQuestions} câu</strong> ({accPct}%)
                         </span>
                         <span className="text-emerald-600">✓ {totalCorrect} câu đúng</span>
                         <span className="text-rose-600">✗ {wrongCount} câu cần xem lại</span>
                         {sub.theta_0 !== undefined && (
-                          <span className="text-indigo-600">
-                            Theta IRT: <strong>{sub.theta_0 > 0 ? `+${sub.theta_0}` : sub.theta_0}</strong>
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-bold bg-slate-100 text-slate-700">
+                            {isParent
+                              ? `Năng lực: ${formatThetaDisplay(sub.theta_0, true).label}`
+                              : `Ước lượng năng lực: ${formatThetaDisplay(sub.theta_0, false).label}`}
                           </span>
                         )}
                       </div>
@@ -1083,7 +1178,7 @@ export default function SubmissionHistoryView({
                         className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs flex items-center gap-2 shadow-sm transition-all cursor-pointer"
                       >
                         <Eye className="w-4 h-4" />
-                        <span>Xem Lại Đáp Án & Hỏi AI</span>
+                        <span>Xem Lại Đáp Án &amp; Lời Giải</span>
                       </button>
 
                       {historyList.length > 1 && (
@@ -1108,9 +1203,15 @@ export default function SubmissionHistoryView({
         {activeTab === 'mistakes' && (
           <div className="space-y-4">
             {allWrongQuestions.length === 0 ? (
-              <div className="p-12 text-center space-y-2">
+              <div className="p-12 text-center space-y-3">
                 <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto" />
-                <div className="text-sm font-bold text-slate-800">Tuyệt vời! Bạn không có câu hỏi làm sai nào tồn đọng.</div>
+                <div className="text-sm font-bold text-slate-800">
+                  {summaryStats.totalWrong > 0
+                    ? 'Nhấn vào bài làm ở tab "Danh Sách Đề Đã Làm" để xem chi tiết đáp án và nạp sổ tay các câu con làm chưa đúng.'
+                    : isParent
+                    ? 'Tuyệt vời! Con không có câu hỏi làm sai nào tồn đọng.'
+                    : 'Tuyệt vời! Bạn không có câu hỏi làm sai nào tồn đọng.'}
+                </div>
               </div>
             ) : (
               allWrongQuestions.map((q, idx) => (

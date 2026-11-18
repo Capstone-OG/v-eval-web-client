@@ -818,4 +818,5 @@ Validation: build and lint pass with existing warnings; live API integration rem
 | 4 Metric Cards Grid | Complete | Standardized cards with rounded icon badges, bold score typography, and dynamic readiness tier calculation via `getTierInfo`. |
 | 3-Factor Readiness Cards | Complete | Containerized each factor into structured blocks with numbered badges (1, 2, 3), gradient progress bars, and plain-language captions. |
 | Dedicated Teacher Contact Card | Complete | Relocated teacher profile to right column with real teacher name or "Chưa có giáo viên phụ trách", phone, and 1-on-1 meeting request action. |
-| Verification | Passed | `node --test tests/*.test.js` passed 22/22 tests; `npm run build` succeeded in 1.07s with 0 errors. |
+| Submission History UI Harmonization | Complete | Redesigned `SubmissionHistoryView.jsx` with Navy-Indigo theme, humanized IRT theta with `formatThetaDisplay`, fixed wrong count mismatch (26 vs 0), and eliminated jargon `(DIAGNOSTIC)`. |
+| Verification | Passed | `node --test tests/*.test.js` passed 22/22 tests; `npm run build` succeeded in 1.15s with 0 errors. |

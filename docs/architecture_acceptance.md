@@ -2230,6 +2230,11 @@ The Parent Companion Portal (`ParentDashboardView.jsx`) was comprehensively rede
 - **3-Factor Readiness Progression & Dedicated Teacher Card**:
   - Structured the 3 evaluation factors into individual micro-cards with numbered badges (1, 2, 3), gradient progress bars, and accessible pedagogical captions.
   - Consolidated teacher information into a dedicated profile card on the right column, displaying real faculty details from database queries, phone contact, and an interactive 1-on-1 consultation scheduling action.
+- **Parent Submission History UI Modernization (`SubmissionHistoryView.jsx`)**:
+  - Re-themed the Header Banner with the deep Navy-Indigo aesthetic (`from-slate-900 via-indigo-950 to-blue-950`) and integrated responsive multi-child selector chips.
+  - Humanized psychometrics by converting raw IRT theta (`-1.8333`) into pedagogically grounded parent assessments via `formatThetaDisplay` (*"Khởi đầu nền tảng - Cần gia đình kèm cặp ôn tập thêm"*).
+  - Sanitized technical jargon: removed developer suffixes like `(DIAGNOSTIC)` and simplified filter tags from *"Luyện tập ZPD"* to *"Luyện tập thích ứng"*.
+  - Resolved mismatch in question counting: accurately computed `summaryStats.totalWrong` across all attempts so 26 incorrect questions are accurately reflected in the overview card.
 - **Verification**:
-  - `npm run build`: Verified 100% clean production bundle in 1.07s.
+  - `npm run build`: Verified 100% clean production bundle in 1.15s.
   - `node --test tests/*.test.js`: All 22 unit tests passing.
