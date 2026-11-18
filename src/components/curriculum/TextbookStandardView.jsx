@@ -268,29 +268,55 @@ export default function TextbookStandardView({ onBack, onNavigateTab, isSidebarC
           les.lessonNumber = lIdx + 1;
           if (!les.keyFormulas || les.keyFormulas.length === 0) {
             const cleanedLesTitle = cleanPrefix(les.title, 'lesson').toLowerCase();
-            let matchedFormulas = [];
+            let matchedLessonPreset = null;
             if (preset?.chapters) {
               for (const pCh of preset.chapters) {
                 const pLes = (pCh.lessons || []).find(pl => {
                   const plClean = cleanPrefix(pl.title, 'lesson').toLowerCase();
                   return cleanedLesTitle.includes(plClean) || plClean.includes(cleanedLesTitle);
                 });
-                if (pLes && pLes.keyFormulas?.length > 0) {
-                  matchedFormulas = pLes.keyFormulas;
+                if (pLes) {
+                  matchedLessonPreset = pLes;
                   break;
                 }
               }
             }
-            if (matchedFormulas.length === 0 && (targetSub === 'PHYS' || targetSub === 'Vật lí')) {
-              matchedFormulas = ['v = \\frac{s}{t}', 'a = \\frac{\\Delta v}{\\Delta t}', 'F = m \\cdot a'];
-            }
-            les.keyFormulas = matchedFormulas;
-          }
 
-          les.patterns = (les.patterns || []).map((p, pIdx) => ({
-            ...p,
-            patternCode: `P${pIdx + 1}`
-          }));
+            if (!les.keyFormulas || les.keyFormulas.length === 0) {
+              let matchedFormulas = matchedLessonPreset?.keyFormulas || [];
+              if (matchedFormulas.length === 0 && (targetSub === 'PHYS' || targetSub === 'Vật lí')) {
+                matchedFormulas = ['v = \\frac{s}{t}', 'a = \\frac{\\Delta v}{\\Delta t}', 'F = m \\cdot a'];
+              }
+              les.keyFormulas = matchedFormulas;
+            }
+
+            // Nạp và đa dạng hóa dạng bài (Bloom L1 - L4) từ preset nếu bài học chỉ có <= 1 dạng chung chung
+            const currentValidPatterns = (les.patterns || []).filter(p => !isNonPedagogical(p.name));
+            const isSingleOrGeneric = currentValidPatterns.length <= 1 && (
+              currentValidPatterns.length === 0 ||
+              currentValidPatterns[0].name.toLowerCase().includes('kiến thức') ||
+              currentValidPatterns[0].name.toLowerCase().includes('cốt lõi') ||
+              currentValidPatterns[0].name.toLowerCase().includes('trọng tâm') ||
+              currentValidPatterns[0].name.toLowerCase().includes('dạng 1')
+            );
+
+            if (isSingleOrGeneric && matchedLessonPreset?.patterns?.length > 0) {
+              const existingExercises = currentValidPatterns[0]?.exercises || [];
+              les.patterns = matchedLessonPreset.patterns.map((presetPat, pIdx) => ({
+                ...presetPat,
+                patternCode: `P${pIdx + 1}`,
+                status: 'ACCEPTED',
+                exercises: pIdx === 0 ? existingExercises : []
+              }));
+            } else if (les.patterns?.length > 0) {
+              const allSameL2 = les.patterns.every(p => !p.bloomLevel || p.bloomLevel === 2);
+              les.patterns = les.patterns.map((p, pIdx) => ({
+                ...p,
+                patternCode: `P${pIdx + 1}`,
+                bloomLevel: allSameL2 ? Math.min(4, Math.max(1, pIdx + 1)) : (p.bloomLevel || 2)
+              }));
+            }
+          }
 
           // Gán lý thuyết thuần từ Vector Chunks thực tế hoặc bộ chuẩn sư phạm (loại bỏ hoàn toàn generic placeholder)
           const chunksOfLesson = getChunksForLesson(les, chunks);
@@ -1086,11 +1112,33 @@ ${(activeLesson.keyFormulas || []).map(f => `$${f}$`).join(', ')}`;
                                             Dạng {pIdx + 1}: {cleanPrefix(pat.name, 'pattern') || pat.name}
                                           </span>
                                         </div>
-                                        <span className={`px-1 py-0.2 rounded text-[8px] font-bold shrink-0 ${
-                                          isPatternActive ? 'bg-white/20 text-white' : bloomMeta.color
-                                        }`}>
-                                          L{pat.bloomLevel || 2}
-                                        </span>
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            const nextLevel = ((pat.bloomLevel || 2) % 6) + 1;
+                                            setSkeleton(prev => {
+                                              const chapters = [...prev.chapters];
+                                              const ch = { ...chapters[cIdx] };
+                                              const lessons = [...ch.lessons];
+                                              const les = { ...lessons[lIdx] };
+                                              const patterns = [...(les.patterns || [])];
+                                              patterns[pIdx] = { ...patterns[pIdx], bloomLevel: nextLevel };
+                                              les.patterns = patterns;
+                                              lessons[lIdx] = les;
+                                              ch.lessons = lessons;
+                                              chapters[cIdx] = ch;
+                                              return { ...prev, chapters };
+                                            });
+                                            toast.success(`Đã đổi Dạng ${pIdx + 1} sang mức Bloom L${nextLevel}!`);
+                                          }}
+                                          title="Nhấn để đổi cấp độ nhận thức Bloom (L1 -> L6)"
+                                          className={`px-1.5 py-0.5 rounded text-[8px] font-black cursor-pointer hover:ring-2 hover:ring-amber-300 transition-all shrink-0 ${
+                                            isPatternActive ? 'bg-white/20 text-white' : bloomMeta.color
+                                          }`}
+                                        >
+                                          L{pat.bloomLevel || 2} ▾
+                                        </button>
                                       </div>
                                     );
                                   })}

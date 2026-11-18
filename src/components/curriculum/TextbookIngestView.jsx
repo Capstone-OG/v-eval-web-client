@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import {
   ArrowLeft,
   BookOpen,
@@ -24,7 +24,11 @@ import {
   Table2,
   Sliders,
   CheckSquare,
-  HelpCircle
+  HelpCircle,
+  ChevronDown,
+  ChevronRight,
+  Save,
+  X
 } from 'lucide-react';
 import aiService from '../../services/aiService';
 import MathText from '../common/MathText';
@@ -33,7 +37,9 @@ import {
   getStoredTextbookContext,
   saveStoredTextbookContext,
   isNonPedagogical,
-  filterPedagogicalChapters
+  filterPedagogicalChapters,
+  cleanPrefix,
+  getGdptPreset
 } from './textbookStateBridge';
 
 const BLOOM_LEVELS = [
@@ -87,9 +93,15 @@ export default function TextbookIngestView({ onBack, onNavigateTab }) {
   const [selectedChapterIdx, setSelectedChapterIdx] = useState(initCtx.selectedChapterIdx || 0);
   const [selectedLessonIdx, setSelectedLessonIdx] = useState(initCtx.selectedLessonIdx || 0);
   const [selectedPatternIdx, setSelectedPatternIdx] = useState(initCtx.selectedPatternIdx || 0);
+  const [expandedChapters, setExpandedChapters] = useState({ 0: true, 1: true });
+  const [expandedLessons, setExpandedLessons] = useState({ '0_0': true });
 
   const [copiedChunkIdx, setCopiedChunkIdx] = useState(null);
   const [textbookExercises, setTextbookExercises] = useState([]);
+  const [batchProgress, setBatchProgress] = useState(null);
+  const [confirmModal, setConfirmModal] = useState(null);
+  const [exerciseGenScope, setExerciseGenScope] = useState('current'); // 'current' | 'lesson'
+  const cancelBatchRef = useRef(false);
 
   const validChapters = (skeleton.chapters || []).filter(ch => ch && !isNonPedagogical(ch.title));
   const hasData = validChapters.length > 0;
@@ -99,6 +111,76 @@ export default function TextbookIngestView({ onBack, onNavigateTab }) {
   const validPatterns = (activeLesson?.patterns || []).filter(p => p && !isNonPedagogical(p.name));
   const activePattern = validPatterns.length > 0 ? (validPatterns[selectedPatternIdx] || validPatterns[0]) : null;
   const isLocked = skeleton.isVersionLocked;
+  const [lastSavedTime, setLastSavedTime] = useState(null);
+
+  const getStorageKey = useCallback((sourceId, fileName) => {
+    const key = sourceId || fileName || 'default';
+    return `veval_textbook_saved_${key}`;
+  }, []);
+
+  const saveToStorage = useCallback((currSkeleton = skeleton) => {
+    if (!currSkeleton) return false;
+    const key = getStorageKey(selectedSourceId, currSkeleton.fileName);
+    try {
+      const payload = {
+        sourceId: selectedSourceId,
+        fileName: currSkeleton.fileName,
+        skeleton: currSkeleton,
+        textbookExercises,
+        savedAt: new Date().toISOString()
+      };
+      localStorage.setItem(key, JSON.stringify(payload));
+      
+      saveStoredTextbookContext({
+        selectedSourceId,
+        fileName: currSkeleton.fileName,
+        subjectCode: currSkeleton.subjectCode,
+        subjectName: currSkeleton.subjectName,
+        grade: currSkeleton.grade,
+        chapters: currSkeleton.chapters
+      });
+
+      const timeStr = new Date().toLocaleTimeString('vi-VN');
+      setLastSavedTime(timeStr);
+      return true;
+    } catch (err) {
+      console.warn('Auto-save error:', err);
+      return false;
+    }
+  }, [selectedSourceId, skeleton, textbookExercises, getStorageKey]);
+
+  const handleSaveAll = () => {
+    const success = saveToStorage(skeleton);
+    if (success) {
+      toast.success('✓ Đã lưu toàn bộ Cấu trúc, Lý thuyết & Ngân hàng câu hỏi SGK thành công!');
+    } else {
+      toast.error('Có lỗi khi lưu dữ liệu vào bộ nhớ trình duyệt.');
+    }
+  };
+
+  const totalLessonCount = useMemo(() => {
+    return validChapters.reduce((acc, ch) => {
+      return acc + (ch.lessons || []).filter(l => !isNonPedagogical(l.title)).length;
+    }, 0);
+  }, [validChapters]);
+
+  const totalPatternCount = useMemo(() => {
+    return validChapters.reduce((acc, ch) => {
+      return acc + (ch.lessons || []).reduce((lAcc, les) => {
+        return lAcc + (les.patterns || []).filter(p => !isNonPedagogical(p.name)).length;
+      }, 0);
+    }, 0);
+  }, [validChapters]);
+
+  const totalExerciseCount = useMemo(() => {
+    return validChapters.reduce((acc, ch) => {
+      return acc + (ch.lessons || []).reduce((lAcc, les) => {
+        return lAcc + (les.patterns || []).reduce((pAcc, pat) => {
+          return pAcc + (pat.exercises || []).length;
+        }, 0);
+      }, 0);
+    }, 0);
+  }, [validChapters]);
 
   const handleDpiChange = (newVal) => {
     const val = Number(newVal);
@@ -231,6 +313,37 @@ export default function TextbookIngestView({ onBack, onNavigateTab }) {
       subjectName: targetSubName,
       grade: targetG
     });
+
+    // 0. Đọc dữ liệu đã lưu từ localStorage (nếu có) để khôi phục bài tập và dạng bài
+    const storageKey = getStorageKey(sourceId, found.fileName);
+    let cachedData = null;
+    try {
+      const raw = localStorage.getItem(storageKey);
+      if (raw) {
+        cachedData = JSON.parse(raw);
+        if (cachedData.savedAt) {
+          setLastSavedTime(new Date(cachedData.savedAt).toLocaleTimeString('vi-VN'));
+        }
+      }
+    } catch (e) {
+      console.warn('Cannot read cached textbook:', e);
+    }
+
+    const savedPatternData = new Map();
+    if (cachedData?.skeleton?.chapters) {
+      cachedData.skeleton.chapters.forEach(ch => {
+        (ch.lessons || []).forEach(les => {
+          (les.patterns || []).forEach(pat => {
+            const pKey = `${cleanPrefix(les.title, 'lesson').toLowerCase()}__${cleanPrefix(pat.name, 'pattern').toLowerCase()}`;
+            savedPatternData.set(pKey, {
+              bloomLevel: pat.bloomLevel,
+              exercises: pat.exercises || []
+            });
+          });
+        });
+      });
+    }
+
     const chunks = await loadChunksForSource(sourceId, sourceList);
 
     const chapterMap = new Map();
@@ -281,11 +394,80 @@ export default function TextbookIngestView({ onBack, onNavigateTab }) {
 
     const rawChapters = [];
     let chIdx = 1;
+    const preset = getGdptPreset(targetSub, targetG);
+
     chapterMap.forEach((lessonMap, cName) => {
       const lessons = Array.from(lessonMap.values()).filter(l => !isNonPedagogical(l.title));
       if (lessons.length === 0) return;
       const minPage = Math.min(...lessons.map(l => l.pageStart));
       const maxPage = Math.max(...lessons.map(l => l.pageEnd));
+
+      lessons.forEach((les, lIdx) => {
+        les.lessonNumber = lIdx + 1;
+        const cleanedLesTitle = cleanPrefix(les.title, 'lesson').toLowerCase();
+
+        // 1. Tìm preset bài học tương ứng
+        let matchedLessonPreset = null;
+        if (preset?.chapters) {
+          for (const pCh of preset.chapters) {
+            const foundPresetLes = (pCh.lessons || []).find(pl => {
+              const plClean = cleanPrefix(pl.title, 'lesson').toLowerCase();
+              return cleanedLesTitle.includes(plClean) || plClean.includes(cleanedLesTitle);
+            });
+            if (foundPresetLes) {
+              matchedLessonPreset = foundPresetLes;
+              break;
+            }
+          }
+        }
+
+        // 2. Nạp công thức nếu bài học chưa có
+        if ((!les.keyFormulas || les.keyFormulas.length === 0) && matchedLessonPreset?.keyFormulas) {
+          les.keyFormulas = matchedLessonPreset.keyFormulas;
+        }
+
+        // 3. Đa dạng hóa dạng bài và cấp độ Bloom Taxonomy (L1 - L4)
+        const currentValidPatterns = (les.patterns || []).filter(p => !isNonPedagogical(p.name));
+        const isSingleOrGeneric = currentValidPatterns.length <= 1 && (
+          currentValidPatterns.length === 0 ||
+          currentValidPatterns[0].name.toLowerCase().includes('kiến thức') ||
+          currentValidPatterns[0].name.toLowerCase().includes('cốt lõi') ||
+          currentValidPatterns[0].name.toLowerCase().includes('trọng tâm') ||
+          currentValidPatterns[0].name.toLowerCase().includes('dạng 1')
+        );
+
+        if (isSingleOrGeneric && matchedLessonPreset?.patterns?.length > 0) {
+          const existingExercises = currentValidPatterns[0]?.exercises || [];
+          les.patterns = matchedLessonPreset.patterns.map((presetPat, pIdx) => ({
+            ...presetPat,
+            patternCode: `P${pIdx + 1}`,
+            status: 'ACCEPTED',
+            exercises: pIdx === 0 ? existingExercises : []
+          }));
+        } else if (les.patterns?.length > 0) {
+          const allSameL2 = les.patterns.every(p => !p.bloomLevel || p.bloomLevel === 2);
+          les.patterns = les.patterns.map((p, pIdx) => ({
+            ...p,
+            patternCode: `P${pIdx + 1}`,
+            bloomLevel: allSameL2 ? Math.min(4, Math.max(1, pIdx + 1)) : (p.bloomLevel || 2)
+          }));
+        }
+
+        // Khôi phục bài tập và bloom level đã lưu từ cache (nếu có)
+        les.patterns = les.patterns.map(p => {
+          const pKey = `${cleanPrefix(les.title, 'lesson').toLowerCase()}__${cleanPrefix(p.name, 'pattern').toLowerCase()}`;
+          const cachedEntry = savedPatternData.get(pKey);
+          if (cachedEntry) {
+            return {
+              ...p,
+              bloomLevel: cachedEntry.bloomLevel || p.bloomLevel || 2,
+              exercises: (cachedEntry.exercises && cachedEntry.exercises.length > 0) ? cachedEntry.exercises : (p.exercises || [])
+            };
+          }
+          return p;
+        });
+      });
+
       rawChapters.push({
         chapterNumber: chIdx,
         title: cName,
@@ -304,6 +486,10 @@ export default function TextbookIngestView({ onBack, onNavigateTab }) {
     });
 
     const detectedChapters = filterPedagogicalChapters(rawChapters);
+
+    if (cachedData?.textbookExercises && cachedData.textbookExercises.length > 0) {
+      setTextbookExercises(cachedData.textbookExercises);
+    }
 
     setSkeleton(prev => ({
       ...prev,
@@ -420,7 +606,7 @@ export default function TextbookIngestView({ onBack, onNavigateTab }) {
     }
   };
 
-  // AI SINH BÀI TẬP (PHẦN 3)
+  // AI SINH BÀI TẬP (PHẦN 3) - 1 DẠNG BÀI (CHỈ SINH THÊM, BẢO TOÀN CÂU HỎI ĐÃ CÓ)
   const handleGenerateExercises = async () => {
     if (!activePattern || !activeLesson) {
       toast.warning('Vui lòng chọn Dạng bài để sinh bài tập!');
@@ -439,8 +625,10 @@ export default function TextbookIngestView({ onBack, onNavigateTab }) {
         count: 3
       });
 
-      const newEx = (res?.exercises || []).map(ex => ({
+      const existing = activePattern.exercises || [];
+      const newEx = (res?.exercises || []).map((ex, exIdx) => ({
         ...ex,
+        id: `ex_${Date.now()}_${Math.random().toString(36).substr(2, 6)}_${existing.length + exIdx + 1}`,
         status: 'PENDING_REVIEW',
         sourcePage: activeLesson.pageStart || 1,
         reusable: true
@@ -452,13 +640,244 @@ export default function TextbookIngestView({ onBack, onNavigateTab }) {
           exercises: [...(pat.exercises || []), ...newEx]
         }));
         setTextbookExercises(prev => [...prev, ...newEx]);
-        toast.success(`AI đã sinh ${newEx.length} bài tập mới (Chờ duyệt)!`);
+        setTimeout(() => saveToStorage(), 150);
+        toast.success(`🎉 Đã sinh thêm ${newEx.length} bài tập mới cho "${cleanPrefix(activePattern.name, 'pattern')}" và tự động lưu! (Tổng cộng: ${existing.length + newEx.length} câu)`);
       }
     } catch (err) {
       toast.error('Lỗi sinh bài tập: ' + (err?.response?.data?.message || err.message));
     } finally {
       setGeneratingExercises(false);
     }
+  };
+
+  // THỰC THI TIẾN TRÌNH SINH HÀNG LOẠT CHO 1 BÀI HỌC (NỐI THÊM, KHÔNG THAY THẾ)
+  const executeBatchLesson = async (cIdx, lIdx, targetPatterns, lessonTitle) => {
+    const ch = skeleton.chapters?.[cIdx];
+    const les = ch?.lessons?.[lIdx];
+    if (!les) return;
+
+    cancelBatchRef.current = false;
+    setBatchProgress({
+      current: 0,
+      total: targetPatterns.length,
+      currentPattern: '',
+      targetName: `Bài: ${cleanPrefix(lessonTitle, 'lesson')}`
+    });
+    toast.info(`Bắt đầu sinh thêm câu hỏi tự động cho ${targetPatterns.length} dạng bài...`);
+
+    let successCount = 0;
+    for (let i = 0; i < targetPatterns.length; i++) {
+      if (cancelBatchRef.current) {
+        toast.info('Đã dừng tiến trình sinh câu hỏi theo yêu cầu!');
+        break;
+      }
+
+      const pat = targetPatterns[i];
+      const actualPIdx = (les.patterns || []).findIndex(p => p.name === pat.name);
+      const safePIdx = actualPIdx >= 0 ? actualPIdx : i;
+
+      setBatchProgress({
+        current: i + 1,
+        total: targetPatterns.length,
+        currentPattern: pat.name,
+        targetName: `Bài: ${cleanPrefix(lessonTitle, 'lesson')}`
+      });
+
+      try {
+        const res = await aiService.generatePatternExercises({
+          subject: skeleton.subjectName,
+          grade: skeleton.grade,
+          chapter: ch?.title || '',
+          lesson: les?.title || '',
+          patternName: pat.name,
+          bloomLevel: pat.bloomLevel || 2,
+          theoryContext: (les?.keyFormulas || []).join('\n'),
+          count: 3
+        });
+
+        const newEx = res?.exercises || [];
+        if (newEx.length > 0) {
+          updatePatternAt(cIdx, lIdx, safePIdx, p => {
+            const existing = p.exercises || [];
+            const mappedNew = newEx.map((ex, exIdx) => ({
+              ...ex,
+              id: `ex_${Date.now()}_${Math.random().toString(36).substr(2, 6)}_${existing.length + exIdx + 1}`,
+              status: 'PENDING_REVIEW',
+              sourcePage: les.pageStart || ch?.pageStart || 1,
+              reusable: true
+            }));
+            return {
+              ...p,
+              exercises: [...existing, ...mappedNew]
+            };
+          });
+          setTextbookExercises(prev => [...prev, ...newEx]);
+          successCount++;
+        }
+      } catch (err) {
+        console.error(`Lỗi sinh bài tập cho dạng ${pat.name}:`, err);
+      }
+
+      await new Promise(r => setTimeout(r, 400));
+    }
+
+    setBatchProgress(null);
+    saveToStorage();
+    toast.success(`🎉 Đã sinh thêm câu hỏi thành công cho ${successCount}/${targetPatterns.length} dạng bài và tự động lưu toàn bộ!`);
+  };
+
+  // THỰC THI TIẾN TRÌNH SINH HÀNG LOẠT TOÀN CUỐN SÁCH (NỐI THÊM, KHÔNG THAY THẾ)
+  const executeBatchBook = async (tasks) => {
+    cancelBatchRef.current = false;
+    setBatchProgress({
+      current: 0,
+      total: tasks.length,
+      currentPattern: '',
+      targetName: 'Toàn bộ SGK'
+    });
+    toast.info(`Bắt đầu sinh thêm câu hỏi cho ${tasks.length} dạng bài toàn cuốn sách...`);
+
+    let successCount = 0;
+    for (let i = 0; i < tasks.length; i++) {
+      if (cancelBatchRef.current) {
+        toast.info('Đã dừng tiến trình sinh câu hỏi toàn sách!');
+        break;
+      }
+
+      const task = tasks[i];
+      setBatchProgress({
+        current: i + 1,
+        total: tasks.length,
+        currentPattern: `${task.pattern.name} (${cleanPrefix(task.lessonTitle, 'lesson')})`,
+        targetName: 'Toàn bộ SGK'
+      });
+
+      try {
+        const res = await aiService.generatePatternExercises({
+          subject: skeleton.subjectName,
+          grade: skeleton.grade,
+          chapter: task.chapterTitle,
+          lesson: task.lessonTitle,
+          patternName: task.pattern.name,
+          bloomLevel: task.pattern.bloomLevel || 2,
+          theoryContext: task.keyFormulas.join('\n'),
+          count: 3
+        });
+
+        const newEx = res?.exercises || [];
+        if (newEx.length > 0) {
+          updatePatternAt(task.cIdx, task.lIdx, task.pIdx, p => {
+            const existing = p.exercises || [];
+            const mappedNew = newEx.map((ex, exIdx) => ({
+              ...ex,
+              id: `ex_${Date.now()}_${Math.random().toString(36).substr(2, 6)}_${existing.length + exIdx + 1}`,
+              status: 'PENDING_REVIEW',
+              sourcePage: task.pageStart,
+              reusable: true
+            }));
+            return {
+              ...p,
+              exercises: [...existing, ...mappedNew]
+            };
+          });
+          setTextbookExercises(prev => [...prev, ...newEx]);
+          successCount++;
+        }
+      } catch (err) {
+        console.error(`Lỗi sinh bài tập cho dạng ${task.pattern.name}:`, err);
+      }
+
+      await new Promise(r => setTimeout(r, 400));
+    }
+
+    setBatchProgress(null);
+    saveToStorage();
+    toast.success(`🎉 Đã hoàn tất sinh thêm câu hỏi cho ${successCount}/${tasks.length} dạng bài toàn cuốn sách và tự động lưu toàn bộ!`);
+  };
+
+  // MỞ POPUP XÁC NHẬN SINH CHO TẤT CẢ DẠNG TRONG BÀI HỌC HIỆN TẠI
+  const handleGenerateExercisesForCurrentLesson = () => {
+    if (!activeLesson || validPatterns.length === 0) {
+      toast.warning('Bài học hiện tại chưa có Dạng bài nào để sinh!');
+      return;
+    }
+
+    const cIdx = selectedChapterIdx;
+    const lIdx = selectedLessonIdx;
+    const targetPatterns = (activeLesson.patterns || []).filter(p => !isNonPedagogical(p.name));
+
+    if (targetPatterns.length === 0) {
+      toast.warning('Không tìm thấy Dạng bài hợp lệ trong bài học này!');
+      return;
+    }
+
+    setConfirmModal({
+      title: 'Sinh Thêm Câu Hỏi Cho Bài Học',
+      targetName: `Bài: ${cleanPrefix(activeLesson.title, 'lesson') || activeLesson.title}`,
+      patternCount: targetPatterns.length,
+      questionsPerPattern: 3,
+      scope: 'lesson',
+      onConfirm: () => executeBatchLesson(cIdx, lIdx, targetPatterns, activeLesson.title)
+    });
+  };
+
+  // MỞ POPUP XÁC NHẬN SINH CHO 1 BÀI HỌC CỤ THỂ TỪ CÂY MỤC LỤC
+  const handleGenerateForSpecificLesson = (cIdx, lIdx) => {
+    const ch = skeleton.chapters?.[cIdx];
+    const les = ch?.lessons?.[lIdx];
+    if (!les) return;
+    const targetPatterns = (les.patterns || []).filter(p => !isNonPedagogical(p.name));
+    if (targetPatterns.length === 0) {
+      toast.warning(`Bài "${cleanPrefix(les.title, 'lesson')}" chưa có Dạng bài nào!`);
+      return;
+    }
+
+    setConfirmModal({
+      title: 'Sinh Thêm Câu Hỏi Cho Bài Học',
+      targetName: `Bài: ${cleanPrefix(les.title, 'lesson') || les.title}`,
+      patternCount: targetPatterns.length,
+      questionsPerPattern: 3,
+      scope: 'lesson',
+      onConfirm: () => executeBatchLesson(cIdx, lIdx, targetPatterns, les.title)
+    });
+  };
+
+  // MỞ POPUP XÁC NHẬN SINH CHO TẤT CẢ DẠNG TRONG TOÀN BỘ CUỐN SÁCH
+  const handleGenerateExercisesForAllPatternsInBook = () => {
+    const tasks = [];
+    (skeleton.chapters || []).forEach((ch, cIdx) => {
+      if (isNonPedagogical(ch.title)) return;
+      (ch.lessons || []).forEach((les, lIdx) => {
+        if (isNonPedagogical(les.title)) return;
+        (les.patterns || []).forEach((pat, pIdx) => {
+          if (isNonPedagogical(pat.name)) return;
+          tasks.push({
+            cIdx,
+            lIdx,
+            pIdx,
+            chapterTitle: ch.title,
+            lessonTitle: les.title,
+            pageStart: les.pageStart || ch.pageStart || 1,
+            keyFormulas: les.keyFormulas || [],
+            pattern: pat
+          });
+        });
+      });
+    });
+
+    if (tasks.length === 0) {
+      toast.warning('Chưa có Dạng bài nào trong toàn bộ cuốn sách để sinh!');
+      return;
+    }
+
+    setConfirmModal({
+      title: 'Sinh Thêm Câu Hỏi Cho Toàn Bộ Sách',
+      targetName: `${skeleton.subjectName} Lớp ${skeleton.grade} (${validChapters.length} Chương)`,
+      patternCount: tasks.length,
+      questionsPerPattern: 3,
+      scope: 'book',
+      onConfirm: () => executeBatchBook(tasks)
+    });
   };
 
   // AI BỔ SUNG KIẾN THỨC NỀN
@@ -504,7 +923,9 @@ export default function TextbookIngestView({ onBack, onNavigateTab }) {
       lessons[selectedLessonIdx] = updater({ ...lessons[selectedLessonIdx] });
       ch.lessons = lessons;
       chapters[selectedChapterIdx] = ch;
-      return { ...prev, chapters };
+      const updated = { ...prev, chapters };
+      saveToStorage(updated);
+      return updated;
     });
   };
 
@@ -515,6 +936,123 @@ export default function TextbookIngestView({ onBack, onNavigateTab }) {
       patterns[selectedPatternIdx] = updater({ ...patterns[selectedPatternIdx] });
       return { ...les, patterns };
     });
+  };
+
+  const updatePatternAt = (cIdx, lIdx, pIdx, updater) => {
+    setSkeleton(prev => {
+      const chapters = [...(prev.chapters || [])];
+      if (!chapters[cIdx]) return prev;
+      const ch = { ...chapters[cIdx] };
+      const lessons = [...(ch.lessons || [])];
+      if (!lessons[lIdx]) return prev;
+      const les = { ...lessons[lIdx] };
+      const patterns = [...(les.patterns || [])];
+      if (!patterns[pIdx]) return prev;
+      patterns[pIdx] = updater({ ...patterns[pIdx] });
+      les.patterns = patterns;
+      lessons[lIdx] = les;
+      ch.lessons = lessons;
+      chapters[cIdx] = ch;
+      const updated = { ...prev, chapters };
+      saveToStorage(updated);
+      return updated;
+    });
+  };
+
+  const handleAddNewChapter = () => {
+    setSkeleton(prev => {
+      const nextNum = (prev.chapters || []).length + 1;
+      return {
+        ...prev,
+        chapters: [
+          ...(prev.chapters || []),
+          {
+            chapterNumber: nextNum,
+            title: `Chương ${nextNum}: Tiêu đề chương mới`,
+            status: 'ACCEPTED',
+            pageStart: 1,
+            pageEnd: 20,
+            lessons: [
+              {
+                lessonNumber: 1,
+                title: 'Bài 1: Bài học trọng tâm',
+                status: 'ACCEPTED',
+                pageStart: 1,
+                pageEnd: 15,
+                theory: '',
+                keyFormulas: [],
+                patterns: [
+                  {
+                    patternCode: 'P1',
+                    name: 'Dạng 1: Dạng bài cơ bản',
+                    bloomLevel: 2,
+                    status: 'ACCEPTED',
+                    description: 'Mô tả dạng bài',
+                    method: 'Phương pháp giải',
+                    exercises: []
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      };
+    });
+    toast.success('Đã thêm Chương mới vào cây thư mục!');
+  };
+
+  const handleAddNewLessonToChapter = (cIdx) => {
+    setSkeleton(prev => {
+      const chapters = [...prev.chapters];
+      const ch = { ...chapters[cIdx] };
+      const nextNum = (ch.lessons || []).length + 1;
+      ch.lessons = [
+        ...(ch.lessons || []),
+        {
+          lessonNumber: nextNum,
+          title: `Bài ${nextNum}: Tiêu đề bài học mới`,
+          status: 'ACCEPTED',
+          pageStart: ch.pageStart || 1,
+          pageEnd: (ch.pageStart || 1) + 10,
+          theory: '',
+          keyFormulas: [],
+          patterns: []
+        }
+      ];
+      chapters[cIdx] = ch;
+      return { ...prev, chapters };
+    });
+    setExpandedChapters(prev => ({ ...prev, [cIdx]: true }));
+    toast.success('Đã thêm Bài học mới vào chương!');
+  };
+
+  const handleAddNewPatternToLesson = (cIdx, lIdx) => {
+    setSkeleton(prev => {
+      const chapters = [...prev.chapters];
+      const ch = { ...chapters[cIdx] };
+      const lessons = [...ch.lessons];
+      const les = { ...lessons[lIdx] };
+      const nextNum = (les.patterns || []).length + 1;
+      const smartBloom = Math.min(4, Math.max(1, nextNum));
+      les.patterns = [
+        ...(les.patterns || []),
+        {
+          patternCode: `P${nextNum}`,
+          name: `Dạng ${nextNum}: Dạng bài mới`,
+          bloomLevel: smartBloom,
+          status: 'ACCEPTED',
+          description: 'Mô tả dạng bài',
+          method: 'Phương pháp giải',
+          exercises: []
+        }
+      ];
+      lessons[lIdx] = les;
+      ch.lessons = lessons;
+      chapters[cIdx] = ch;
+      return { ...prev, chapters };
+    });
+    setExpandedLessons(prev => ({ ...prev, [`${cIdx}_${lIdx}`]: true }));
+    toast.success('Đã thêm Dạng bài mới vào bài học!');
   };
 
   const handleOpenStudio = () => {
@@ -667,6 +1205,63 @@ export default function TextbookIngestView({ onBack, onNavigateTab }) {
             </div>
           </div>
 
+          {/* 🌟 THANH TÁC VỤ TỔNG QUÁT: NÚT LƯU TOÀN BỘ SÁCH & SINH TOÀN SÁCH (NẰM TRÊN BỘ CHUYỂN 3 CHẾ ĐỘ) */}
+          <div className="p-3.5 rounded-2xl bg-gradient-to-r from-teal-50/90 via-emerald-50/80 to-sky-50/80 border border-teal-200/90 shadow-2xs flex items-center justify-between flex-wrap gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-10 h-10 rounded-xl bg-teal-700 text-white flex items-center justify-center shadow-xs shrink-0">
+                <Save className="w-5 h-5 text-emerald-200" />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs font-black text-teal-950 truncate max-w-sm">
+                    {skeleton.fileName || 'Chưa chọn tài liệu SGK'}
+                  </span>
+                  <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10.5px] font-bold border border-emerald-300 flex items-center gap-1.5 shadow-2xs">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                    <span>{lastSavedTime ? `Đã lưu lúc ${lastSavedTime}` : 'Tự động lưu đang bật (Auto-save ON)'}</span>
+                  </span>
+                </div>
+                <div className="text-[11px] text-teal-800 flex items-center gap-2 mt-0.5 font-medium flex-wrap">
+                  <span>{validChapters.length} Chương</span>
+                  <span>•</span>
+                  <span>{totalLessonCount} Bài học</span>
+                  <span>•</span>
+                  <span>{totalPatternCount} Dạng bài</span>
+                  <span>•</span>
+                  <span className="font-bold text-sky-700 bg-sky-100/70 px-2 py-0.5 rounded-md border border-sky-200">
+                    {totalExerciseCount} Câu hỏi đã tạo
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* CÁC NÚT HÀNH ĐỘNG TỔNG QUÁT (GLOBAL COMMANDS) */}
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* Nút 1: LƯU TOÀN BỘ SGK */}
+              <button
+                type="button"
+                onClick={handleSaveAll}
+                className="px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-black flex items-center gap-2 cursor-pointer shadow-xs hover:shadow-md transition-all ring-1 ring-emerald-600"
+                title="Lưu toàn bộ Cấu trúc mục lục, Lý thuyết và Ngân hàng câu hỏi SGK"
+              >
+                <Save className="w-4 h-4 text-emerald-200" />
+                <span>Lưu Toàn Bộ SGK</span>
+              </button>
+
+              {/* Nút 2: SINH CÂU HỎI TOÀN BỘ SÁCH */}
+              <button
+                type="button"
+                disabled={batchProgress !== null || validChapters.length === 0}
+                onClick={handleGenerateExercisesForAllPatternsInBook}
+                className="px-3.5 py-2 rounded-xl bg-indigo-700 hover:bg-indigo-800 text-white text-xs font-black flex items-center gap-2 cursor-pointer shadow-xs disabled:opacity-50 transition-all ring-1 ring-indigo-600"
+                title="Sinh câu hỏi tự động cho tất cả dạng bài toàn cuốn sách"
+              >
+                <Sparkles className="w-4 h-4 text-amber-300" />
+                <span>Sinh Toàn Bộ Sách</span>
+              </button>
+            </div>
+          </div>
+
           {/* TAB 3 GIAI ĐOẠN NẠP */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
             <button
@@ -727,68 +1322,248 @@ export default function TextbookIngestView({ onBack, onNavigateTab }) {
 
         {/* 3. WORKSPACE 3 PHẦN THỐNG NHẤT */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-0">
-          {/* CỘT TRÁI (3.5/12): CHƯƠNG & BÀI HỌC */}
+          {/* CỘT TRÁI (4/12): CÂY MỤC LỤC CẤU TRÚC SÁCH PHÂN CẤP */}
           <div className="lg:col-span-4 bg-white rounded-3xl border border-teal-200/80 p-4 shadow-xs flex flex-col gap-3">
-            <div className="flex items-center justify-between border-b border-teal-100 pb-2">
-              <span className="text-xs font-black uppercase text-teal-950 flex items-center gap-1.5">
-                <Layers className="w-3.5 h-3.5 text-teal-600" />
-                <span>Chương & Cấu trúc ({validChapters.length})</span>
-              </span>
-            </div>
-
-            <div className="space-y-1.5 max-h-[28vh] overflow-y-auto pr-1">
-              {validChapters.map((ch, idx) => {
-                const isSel = idx === selectedChapterIdx;
-                const lessonsInCh = (ch.lessons || []).filter(l => !isNonPedagogical(l.title));
-                return (
+            <div className="flex items-center justify-between border-b border-teal-100 pb-2.5">
+              <div className="flex items-center gap-2">
+                <Layers className="w-4 h-4 text-teal-600" />
+                <div>
+                  <h2 className="text-xs font-black uppercase tracking-wider text-teal-950">
+                    Mục Lục Cấu Trúc SGK ({validChapters.length} Chương)
+                  </h2>
+                  <span className="text-[10px] text-slate-400 font-medium">Chương ▾ Bài học ▾ Dạng bài</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {!isLocked && (
                   <button
-                    key={idx}
                     type="button"
-                    onClick={() => { setSelectedChapterIdx(idx); setSelectedLessonIdx(0); setSelectedPatternIdx(0); }}
-                    className={`w-full text-left p-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
-                      isSel
-                        ? 'bg-teal-700 text-white border-teal-700 shadow-2xs'
-                        : 'bg-teal-50/20 border-teal-100 hover:border-teal-300 text-slate-800'
-                    }`}
+                    onClick={handleAddNewChapter}
+                    className="px-2.5 py-1 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-800 text-[11px] font-bold flex items-center gap-1 cursor-pointer border border-teal-200"
                   >
-                    <div className="line-clamp-1">{ch.title}</div>
-                    <div className={`text-[10px] flex items-center justify-between mt-1 ${isSel ? 'text-teal-100' : 'text-slate-500'}`}>
-                      <span>{lessonsInCh.length} bài</span>
-                      <span>Tr.{ch.pageStart}–{ch.pageEnd}</span>
-                    </div>
+                    <Plus className="w-3 h-3" /> Thêm chương
                   </button>
-                );
-              })}
+                )}
+                <button
+                  type="button"
+                  disabled={batchProgress !== null || validChapters.length === 0}
+                  onClick={handleGenerateExercisesForAllPatternsInBook}
+                  className="px-2 py-1 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-800 text-[10.5px] font-bold flex items-center gap-1 cursor-pointer border border-indigo-200 disabled:opacity-40"
+                  title="Sinh câu hỏi tự động cho tất cả dạng bài toàn cuốn sách"
+                >
+                  <Sparkles className="w-3 h-3 text-indigo-600" /> Sinh toàn sách
+                </button>
+              </div>
             </div>
 
-            <div className="flex items-center justify-between border-b border-teal-100 pb-2 pt-1">
-              <span className="text-xs font-black uppercase text-teal-950 flex items-center gap-1.5">
-                <BookMarked className="w-3.5 h-3.5 text-teal-600" />
-                <span>Bài học ({validLessons.length})</span>
-              </span>
-            </div>
+            {/* Danh sách các Chương & Bài học (Mở rộng tự nhiên theo toàn bộ danh sách chương) */}
+            <div className="space-y-3 pr-1 max-h-[85vh] overflow-y-auto">
+              {validChapters.map((ch, cIdx) => {
+                const isChapterExpanded = expandedChapters[cIdx] !== false;
+                const isChapterActive = cIdx === selectedChapterIdx;
+                const lessonsInChapter = (ch.lessons || []).filter(l => !isNonPedagogical(l.title));
+                const totalPatterns = lessonsInChapter.reduce((acc, l) => acc + (l.patterns?.filter(p => !isNonPedagogical(p.name)).length || 0), 0);
 
-            <div className="space-y-1.5 flex-1 overflow-y-auto pr-1">
-              {validLessons.map((les, idx) => {
-                const isSel = idx === selectedLessonIdx;
-                const patCount = (les.patterns || []).filter(p => !isNonPedagogical(p.name)).length;
                 return (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => { setSelectedLessonIdx(idx); setSelectedPatternIdx(0); }}
-                    className={`w-full text-left p-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
-                      isSel
-                        ? 'bg-teal-50 border-teal-500 text-teal-950 ring-2 ring-teal-200'
-                        : 'bg-white border-slate-200 hover:border-slate-300 text-slate-700'
-                    }`}
-                  >
-                    <div className="line-clamp-2">{les.title}</div>
-                    <div className="text-[10px] text-teal-700 flex items-center justify-between mt-1 font-semibold">
-                      <span>{patCount} dạng</span>
-                      <span>Tr.{les.pageStart}–{les.pageEnd}</span>
+                  <div key={cIdx} className="rounded-2xl border border-slate-300/80 overflow-hidden bg-slate-100/70 shadow-2xs">
+                    {/* Header Chương */}
+                    <div
+                      onClick={() => {
+                        setSelectedChapterIdx(cIdx);
+                        setSelectedLessonIdx(0);
+                        setSelectedPatternIdx(0);
+                      }}
+                      className={`p-3 flex items-center justify-between gap-2 cursor-pointer transition-all ${
+                        isChapterActive
+                          ? 'bg-teal-100/80 border-b border-teal-200 text-teal-950'
+                          : 'hover:bg-slate-200/70 text-slate-900'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setExpandedChapters(prev => ({ ...prev, [cIdx]: !isChapterExpanded }));
+                          }}
+                          className="p-1 rounded-md hover:bg-teal-200/60 text-teal-900 cursor-pointer"
+                        >
+                          {isChapterExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+                        </button>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[10px] font-black uppercase text-white bg-teal-700 px-1.5 py-0.5 rounded shadow-2xs shrink-0">
+                              C.{ch.chapterNumber || cIdx + 1}
+                            </span>
+                            <span className="text-xs sm:text-[13px] font-black truncate text-slate-900">
+                              {cleanPrefix(ch.title, 'chapter') || ch.title}
+                            </span>
+                          </div>
+                          <div className="text-[10px] text-slate-500 font-medium mt-0.5">
+                            {lessonsInChapter.length} bài • {totalPatterns} dạng • Tr.{ch.pageStart}–{ch.pageEnd}
+                          </div>
+                        </div>
+                      </div>
+
+                      {!isLocked && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleAddNewLessonToChapter(cIdx);
+                          }}
+                          title="Thêm bài học vào chương này"
+                          className="p-1 rounded-md bg-white border border-slate-200 hover:bg-teal-50 text-slate-600 hover:text-teal-800 cursor-pointer shadow-2xs"
+                        >
+                          <Plus className="w-3 h-3" />
+                        </button>
+                      )}
                     </div>
-                  </button>
+
+                    {/* Danh sách Bài học con (Thụt lùi vô trong) */}
+                    {isChapterExpanded && (
+                      <div className="p-2.5 bg-slate-50/60 border-t border-slate-200/90 space-y-2">
+                        {lessonsInChapter.map((les, lIdx) => {
+                          const isLessonActive = isChapterActive && lIdx === selectedLessonIdx;
+                          const isLessonExpanded = expandedLessons[`${cIdx}_${lIdx}`] !== false;
+                          const patterns = (les.patterns || []).filter(p => !isNonPedagogical(p.name));
+
+                          return (
+                            <div
+                              key={lIdx}
+                              className={`ml-3.5 rounded-xl transition-all ${
+                                isLessonActive
+                                  ? 'bg-teal-50/90 border-2 border-teal-500 shadow-xs ring-2 ring-teal-100'
+                                  : 'bg-white hover:bg-slate-50 border border-slate-200/90 shadow-2xs'
+                              }`}
+                            >
+                              {/* Thanh Bài học */}
+                              <div
+                                onClick={() => {
+                                  setSelectedChapterIdx(cIdx);
+                                  setSelectedLessonIdx(lIdx);
+                                  setSelectedPatternIdx(0);
+                                }}
+                                className="p-2 flex items-center justify-between gap-1.5 cursor-pointer"
+                              >
+                                <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setExpandedLessons(prev => ({ ...prev, [`${cIdx}_${lIdx}`]: !isLessonExpanded }));
+                                    }}
+                                    className="p-0.5 rounded hover:bg-slate-200/60 text-slate-500 cursor-pointer"
+                                  >
+                                    {isLessonExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+                                  </button>
+                                  <BookMarked className={`w-3.5 h-3.5 shrink-0 ${isLessonActive ? 'text-teal-700' : 'text-slate-400'}`} />
+                                  <div className="min-w-0 flex-1">
+                                    <div className="flex items-center gap-1">
+                                      <span className="text-[9px] font-bold text-teal-800 bg-teal-100/70 px-1 rounded shrink-0">
+                                        B.{les.lessonNumber || lIdx + 1}
+                                      </span>
+                                      <span className={`text-[11px] leading-snug truncate ${isLessonActive ? 'font-black text-teal-950' : 'font-semibold text-slate-800'}`}>
+                                        {cleanPrefix(les.title, 'lesson') || les.title}
+                                      </span>
+                                    </div>
+                                    <div className="text-[9.5px] text-slate-500 flex items-center gap-1.5 mt-0.5">
+                                      <span>{patterns.length} dạng</span>
+                                      <span>•</span>
+                                      <span>Tr.{les.pageStart}–{les.pageEnd}</span>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center gap-1 shrink-0">
+                                  <span className={`px-1.5 py-0.2 rounded text-[8.5px] font-bold ${
+                                    les.status === 'ACCEPTED' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+                                  }`}>
+                                    {les.status === 'ACCEPTED' ? '✓' : '⏳'}
+                                  </span>
+                                  {patterns.length > 0 && (
+                                    <button
+                                      type="button"
+                                      disabled={batchProgress !== null}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleGenerateForSpecificLesson(cIdx, lIdx);
+                                      }}
+                                      title={`AI sinh câu hỏi cho tất cả ${patterns.length} dạng trong bài này`}
+                                      className="p-1 rounded bg-sky-50 hover:bg-sky-100 text-sky-700 cursor-pointer disabled:opacity-40"
+                                    >
+                                      <Zap className="w-2.5 h-2.5 text-amber-500" />
+                                    </button>
+                                  )}
+                                  {!isLocked && (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleAddNewPatternToLesson(cIdx, lIdx);
+                                      }}
+                                      title="Thêm dạng bài"
+                                      className="p-1 rounded bg-slate-100 hover:bg-teal-100 text-slate-600 hover:text-teal-800 cursor-pointer"
+                                    >
+                                      <Plus className="w-2.5 h-2.5" />
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Dạng bài con bên trong bài học (Thụt lùi tiếp vào trong) */}
+                              {isLessonExpanded && patterns.length > 0 && (
+                                <div className="ml-5 mr-1 mb-2 pt-1 border-t border-slate-100 space-y-1">
+                                  {patterns.map((pat, pIdx) => {
+                                    const isPatternActive = isLessonActive && pIdx === selectedPatternIdx;
+                                    const bloomMeta = BLOOM_LEVELS.find(b => b.level === pat.bloomLevel) || BLOOM_LEVELS[1];
+                                    return (
+                                      <div
+                                        key={pIdx}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setSelectedChapterIdx(cIdx);
+                                          setSelectedLessonIdx(lIdx);
+                                          setSelectedPatternIdx(pIdx);
+                                        }}
+                                        className={`p-1.5 rounded-lg flex items-center justify-between gap-1 cursor-pointer text-[10px] transition-colors ${
+                                          isPatternActive
+                                            ? 'bg-teal-700 text-white font-bold shadow-2xs'
+                                            : 'hover:bg-slate-100 text-slate-700'
+                                        }`}
+                                      >
+                                        <div className="flex items-center gap-1 min-w-0 flex-1">
+                                          <Target className={`w-3 h-3 shrink-0 ${isPatternActive ? 'text-teal-100' : 'text-teal-600'}`} />
+                                          <span className="truncate">
+                                            Dạng {pIdx + 1}: {cleanPrefix(pat.name, 'pattern') || pat.name}
+                                          </span>
+                                        </div>
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            const nextLevel = ((pat.bloomLevel || 2) % 6) + 1;
+                                            updatePatternAt(cIdx, lIdx, pIdx, p => ({ ...p, bloomLevel: nextLevel }));
+                                            toast.success(`Đã đổi Dạng ${pIdx + 1} sang mức Bloom L${nextLevel} (${BLOOM_LEVELS[nextLevel - 1].label})!`);
+                                          }}
+                                          title="Nhấn để đổi cấp độ nhận thức Bloom (L1 -> L6)"
+                                          className={`px-1.5 py-0.5 rounded text-[8px] font-black cursor-pointer hover:ring-2 hover:ring-amber-300 transition-all shrink-0 ${
+                                            isPatternActive ? 'bg-white/20 text-white' : bloomMeta.color
+                                          }`}
+                                        >
+                                          L{pat.bloomLevel || 2} ▾
+                                        </button>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
                 );
               })}
             </div>
@@ -1038,27 +1813,161 @@ export default function TextbookIngestView({ onBack, onNavigateTab }) {
               <div className="space-y-4">
                 <div className="p-4 rounded-2xl bg-sky-50/60 border border-sky-200 flex items-center justify-between flex-wrap gap-3">
                   <div>
-                    <div className="text-xs font-black text-sky-950">Ngân Hàng Câu Hỏi & Bài Tập Trích Từ SGK</div>
-                    <div className="text-[11px] text-sky-700 mt-0.5">Trích trực tiếp từ SGK, lưu vào ngân hàng để tái sử dụng lâu dài</div>
+                    <div className="text-xs font-black text-sky-950 flex items-center gap-2">
+                      <span>Ngân Hàng Câu Hỏi & Bài Tập Trích Từ SGK</span>
+                      <span className="px-2 py-0.5 rounded-md bg-sky-200/80 text-sky-900 text-[10px] font-bold">
+                        {activePattern?.exercises?.length || 0} câu hiện có
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-sky-700 mt-0.5">
+                      Đang chọn: <span className="font-bold text-sky-900">{cleanPrefix(activeLesson?.title || '', 'lesson')}</span> • {activePattern?.name || 'Chưa chọn dạng bài'}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  {/* BỘ CHỌN PHẠM VI 1 TRONG 2 & NÚT SINH CÂU HỎI TINH GỌN */}
+                  <div className="flex items-center gap-2.5 flex-wrap">
+                    <div className="flex items-center gap-1 bg-white border border-sky-200 p-1 rounded-xl shadow-2xs">
+                      <span className="text-[11px] font-bold text-slate-600 pl-2 pr-1">
+                        Sinh câu hỏi:
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setExerciseGenScope('current')}
+                        className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                          exerciseGenScope === 'current'
+                            ? 'bg-sky-700 text-white shadow-xs'
+                            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                        }`}
+                      >
+                        Dạng này
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setExerciseGenScope('lesson')}
+                        className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                          exerciseGenScope === 'lesson'
+                            ? 'bg-sky-700 text-white shadow-xs'
+                            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                        }`}
+                      >
+                        Cả bài học ({validPatterns.length})
+                      </button>
+                    </div>
+
                     <button
                       type="button"
-                      disabled={generatingExercises || !activePattern}
-                      onClick={handleGenerateExercises}
-                      className="px-3.5 py-1.5 rounded-xl bg-sky-700 hover:bg-sky-800 text-white text-xs font-black flex items-center gap-1.5 cursor-pointer shadow-xs disabled:opacity-50"
+                      disabled={
+                        generatingExercises ||
+                        batchProgress !== null ||
+                        (exerciseGenScope === 'current' && !activePattern) ||
+                        (exerciseGenScope === 'lesson' && validPatterns.length === 0)
+                      }
+                      onClick={() => {
+                        if (exerciseGenScope === 'current') {
+                          handleGenerateExercises();
+                        } else {
+                          handleGenerateExercisesForCurrentLesson();
+                        }
+                      }}
+                      className="px-4 py-1.5 rounded-xl bg-sky-700 hover:bg-sky-800 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs disabled:opacity-50 transition-all"
                     >
-                      {generatingExercises ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5 text-amber-300" />}
-                      <span>{generatingExercises ? 'AI đang sinh...' : '⚡ AI Sinh Câu Hỏi Mới'}</span>
+                      {generatingExercises || batchProgress !== null ? (
+                        <>
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                          <span>Đang sinh...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="w-3.5 h-3.5" />
+                          <span>Sinh câu hỏi</span>
+                        </>
+                      )}
                     </button>
                   </div>
                 </div>
+
+                {/* BANNER TIẾN TRÌNH SINH HÀNG LOẠT (NẾU ĐANG CHẠY) */}
+                {batchProgress && (
+                  <div className="p-3.5 rounded-2xl bg-gradient-to-r from-sky-900 via-teal-900 to-indigo-900 text-white shadow-md flex items-center justify-between flex-wrap gap-3 animate-in fade-in duration-200">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <RefreshCw className="w-4 h-4 text-amber-400 animate-spin shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <div className="text-xs font-black flex items-center gap-2 flex-wrap">
+                          <span>Đang sinh câu hỏi tự động: {batchProgress.targetName}</span>
+                          <span className="px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-300 text-[10px] font-mono font-bold">
+                            Dạng {batchProgress.current} / {batchProgress.total} ({Math.round((batchProgress.current / batchProgress.total) * 100)}%)
+                          </span>
+                        </div>
+                        <div className="text-[11px] text-sky-200 truncate mt-0.5">
+                          Đang xử lý: {cleanPrefix(batchProgress.currentPattern, 'pattern')}
+                        </div>
+                        {/* Thanh progress bar visual */}
+                        <div className="w-full bg-white/20 h-1.5 rounded-full mt-2 overflow-hidden">
+                          <div
+                            className="bg-amber-400 h-full rounded-full transition-all duration-300"
+                            style={{ width: `${Math.round((batchProgress.current / batchProgress.total) * 100)}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        cancelBatchRef.current = true;
+                        toast.info('Đang dừng sau khi hoàn thành dạng hiện tại...');
+                      }}
+                      className="px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold cursor-pointer shadow-xs shrink-0"
+                    >
+                      Dừng Lại
+                    </button>
+                  </div>
+                )}
+
+                {/* THANH ĐIỀU CHỈNH CẤP ĐỘ BLOOM CHO DẠNG ĐANG CHỌN */}
+                {activePattern && (
+                  <div className="p-3 rounded-2xl bg-white border border-slate-200/90 shadow-2xs flex items-center justify-between flex-wrap gap-3">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Target className="w-4 h-4 text-sky-600 shrink-0" />
+                      <div className="min-w-0">
+                        <div className="text-xs font-black text-slate-900 truncate">
+                          {activePattern.name}
+                        </div>
+                        <div className="text-[10px] text-slate-500">
+                          {activePattern.description || 'Mô tả dạng bài'}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-[10.5px] font-bold text-slate-500">Mức Bloom mục tiêu:</span>
+                      {BLOOM_LEVELS.map(b => {
+                        const isCur = (activePattern.bloomLevel || 2) === b.level;
+                        return (
+                          <button
+                            key={b.level}
+                            type="button"
+                            onClick={() => {
+                              updatePattern(p => ({ ...p, bloomLevel: b.level }));
+                              toast.success(`Đã chuyển dạng bài sang mức ${b.label}!`);
+                            }}
+                            className={`px-2 py-0.5 rounded-lg text-[10px] font-black cursor-pointer transition-all border ${
+                              isCur
+                                ? 'bg-sky-700 text-white border-sky-700 shadow-xs ring-2 ring-sky-200'
+                                : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                            }`}
+                          >
+                            {b.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
 
                 {(!activePattern?.exercises || activePattern.exercises.length === 0) ? (
                   <div className="p-10 text-center rounded-2xl bg-slate-50 border border-dashed border-slate-300 text-xs text-slate-600 space-y-2">
                     <HelpCircle className="w-8 h-8 text-sky-500 mx-auto" />
                     <p className="font-bold text-slate-800">Chưa có bài tập nào được lưu trữ cho dạng bài này.</p>
-                    <p className="text-[11px] text-slate-500">Bấm nút "⚡ AI Sinh Câu Hỏi Mới" ở trên để tạo câu hỏi trắc nghiệm kèm KaTeX.</p>
+                    <p className="text-[11px] text-slate-500">Bấm nút "Sinh câu hỏi" ở trên để tạo câu hỏi trắc nghiệm kèm KaTeX.</p>
                   </div>
                 ) : (
                   <div className="space-y-3 max-h-[50vh] overflow-y-auto pr-1">
@@ -1121,6 +2030,86 @@ export default function TextbookIngestView({ onBack, onNavigateTab }) {
           </div>
         </div>
       </div>
+
+      {/* POPUP XÁC NHẬN SINH THÊM CÂU HỎI (THAY THẾ WINDOW.CONFIRM / ALERT) */}
+      {confirmModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-md w-full p-6 space-y-4 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-700">
+                  <Sparkles className="w-5 h-5 text-indigo-600 animate-pulse" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-slate-900">{confirmModal.title}</h3>
+                  <p className="text-[11px] text-slate-500 font-medium">Bổ sung bài tập tự động bằng AI</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setConfirmModal(null)}
+                className="p-1 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2 text-xs">
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-500 font-medium">Phạm vi áp dụng:</span>
+                  <span className="font-bold text-slate-900">{confirmModal.targetName}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-500 font-medium">Tổng số dạng bài:</span>
+                  <span className="font-black text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-lg border border-indigo-200">
+                    {confirmModal.patternCount} dạng
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-500 font-medium">Số câu sinh thêm:</span>
+                  <span className="font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200">
+                    +{confirmModal.patternCount * (confirmModal.questionsPerPattern || 3)} câu hỏi mới
+                  </span>
+                </div>
+              </div>
+
+              {/* Thông báo cam kết CHỈ SINH THÊM, KHÔNG THAY THẾ */}
+              <div className="p-3.5 rounded-2xl bg-emerald-50/80 border border-emerald-200 flex items-start gap-2.5 text-xs text-emerald-950">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                <div className="space-y-0.5">
+                  <div className="font-bold">Cam kết chỉ sinh thêm, không thay thế:</div>
+                  <div className="text-[11px] text-emerald-800 leading-relaxed">
+                    Hệ thống chỉ <strong>sinh thêm</strong> câu hỏi mới và nối tiếp vào danh sách. Toàn bộ các câu hỏi đã có trước đó đều được <strong>giữ nguyên 100%</strong>, tuyệt đối không bị ghi đè hoặc thay thế.
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setConfirmModal(null)}
+                className="px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-bold cursor-pointer transition-all"
+              >
+                Hủy Bỏ
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const onConfirm = confirmModal.onConfirm;
+                  setConfirmModal(null);
+                  if (onConfirm) onConfirm();
+                }}
+                className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black flex items-center gap-1.5 cursor-pointer shadow-xs transition-all"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                <span>Bắt Đầu Sinh Thêm</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

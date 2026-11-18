@@ -2386,3 +2386,94 @@ Radar and skill-prior displays consume API response fields; the benchmark overla
     - **Non-Pedagogical Exclusion Defense in Bloom Taxonomy**:
       - Hardened `isNonPedagogical` filters across all view components, preventing cover pages, blank pages, and N/A placeholders from ever being registered as pedagogical lessons or Bloom taxonomy problem types.
     - **Verification**: `npm run build` (Vite v8.3.0) compiled cleanly in 1.15s with 3053 modules transformed and zero errors.
+
+
+18. **Unified Hierarchical Pedagogical Tree Synchronization in Textbook Ingestion (`TextbookIngestView.jsx`)**:
+    - **Architectural Motivation & Parity**:
+      - Previously, `TextbookIngestView.jsx` rendered a decoupled two-tier flat box layout (separate scrollable boxes for Chapters and Lessons, with no pattern-level visibility), creating a disjointed user experience compared to the standard 3-tier view (`TextbookStandardView.jsx`).
+      - In addition, because patterns were omitted from the tree, users were unable to select specific pedagogical patterns (`activePattern`), preventing direct interaction with Part 3 ("⚡ AI Sinh Câu Hỏi Mới").
+    - **Implementation Details**:
+      - **3-Tier Hierarchical Tree Accordion**: Refactored the left column (`lg:col-span-4`) to mirror `TextbookStandardView.jsx`:
+        - **Level 1 (Chapters)**: Chapter header with `C.X` badge, sanitization via `cleanPrefix(ch.title, 'chapter')`, lesson and pattern counters, page range (`Tr.X–Y`), and expandable `ChevronDown`/`ChevronRight` toggles.
+        - **Level 2 (Lessons)**: Indented (`ml-3.5`) lesson row with `B.X` badge, `cleanPrefix(les.title, 'lesson')`, status indicators (`✓` / `⏳`), and collapsible sub-tree.
+        - **Level 3 (Patterns)**: Deep-indented (`ml-5`) pattern element with `Target` icon, `Dạng X: {cleanPrefix(pat.name, 'pattern')}`, and Bloom taxonomy level badge (`L1`–`L6`).
+      - **Interactive Pattern Selection**: Clicking any pattern item directly sets `selectedChapterIdx`, `selectedLessonIdx`, and `selectedPatternIdx`, unlocking seamless question generation and exercise validation in Part 3.
+      - **Inline Node Management**: Integrated `handleAddNewChapter`, `handleAddNewLessonToChapter`, and `handleAddNewPatternToLesson` with state variables `expandedChapters` and `expandedLessons` for dynamic manual curriculum editing.
+    - **Verification**: `npm run build` (Vite v8.3.0) compiled cleanly in 1.67s with 3053 modules transformed and zero errors.
+
+
+19. **Batch Exercise Generation Pipeline for Multi-Pattern & Full-Book Curriculum (`TextbookIngestView.jsx`)**:
+    - **Architectural Motivation**:
+      - Previously, question synthesis was limited to a single pattern invocation (`handleGenerateExercises`), requiring academic directors and teachers to manually select and trigger generation for dozens of patterns across multiple lessons individually.
+    - **Implementation Details**:
+      - **Multi-Scope Generation Engine**:
+        - *Single Pattern Scope*: Targeted 3-exercise generation for the currently active pattern.
+        - *Lesson-Level Batch Scope (`handleGenerateExercisesForCurrentLesson`)*: Sequentially iterates through all valid patterns of the active lesson, invoking the Gemini generation pipeline with rate-limiting pacing (400ms inter-task jitter) and safe state updates.
+        - *Full-Book Batch Scope (`handleGenerateExercisesForAllPatternsInBook`)*: Flattens all pedagogical patterns across all chapters and lessons into a task queue, displaying an explicit confirmation prompt before triggering batch execution.
+        - *Direct Tree Trigger (`handleGenerateForSpecificLesson`)*: Added a lightning trigger button (`Zap`) directly on each lesson node within the navigation tree, enabling one-click generation without navigating away.
+      - **Safe Immutable State Projection (`updatePatternAt`)**:
+        - Developed a location-indexed state updater targeting `(cIdx, lIdx, pIdx)` coordinates directly in `skeleton.chapters`, decoupling generation writes from the currently selected UI active pattern state.
+      - **Real-Time Visual Progress Telemetry & Abort Controller**:
+        - Engineered an animated progress telemetry banner displaying execution percentage, pattern index (`Dạng X / Y`), current target name, and a visual progress bar.
+        - Integrated an abort mechanism (`cancelBatchRef`) allowing users to gracefully interrupt long-running batch sequences while preserving all successfully generated exercises.
+    - **Verification**: `npm run build` (Vite v8.3.0) compiled cleanly in 1.63s with 3053 modules transformed and zero errors.
+
+
+20. **In-App Confirmation Modal Dialog & Strict Append-Only Exercise Synthesis Safeguard (`TextbookIngestView.jsx`)**:
+    - **Architectural Motivation**:
+      - Browser-native blocking dialogs (`window.confirm`, `window.alert`) introduce disruptive browser UI friction, freeze JavaScript event loops, and fail to provide pedagogical context.
+      - Furthermore, educators require strict guarantees that automated batch question synthesis acts purely as an additive enrichment operation, preventing accidental loss or mutation of existing vetted questions.
+    - **Implementation Details**:
+      - **In-App Confirmation Modal (`confirmModal`)**:
+        - Completely eliminated native browser alert and confirm calls in favor of an accessible Tailwind CSS modal overlay with backdrop blur.
+        - Provides rich telemetry before execution: target scope (book or lesson), valid pattern count, and projected question additions (`+3 questions per pattern`).
+        - Integrates an explicit pedagogical commitment badge assuring users of zero data overwriting.
+      - **Strict Append-Only Immutable State Writes**:
+        - Guaranteed that all synthesis paths (`handleGenerateExercises`, `executeBatchLesson`, `executeBatchBook`) append new questions onto existing arrays: `exercises: [...existing, ...mappedNew]`.
+        - Generates cryptographically collision-resistant unique identifiers (`id: ex_${Date.now()}_${random}_${index}`) for every synthesized question, preventing React key clashing and state mutation hazards.
+        - Toast notifications dynamically aggregate cumulative counts (e.g., `Added 3 new questions (Total: 6 questions)`).
+    - **Verification**: `npm run build` (Vite v8.3.0) compiled cleanly in 1.32s with 3053 modules transformed and zero errors.
+
+
+21. **Dynamic Bloom Taxonomy & Pedagogical Pattern Diversification Pipeline (`TextbookIngestView.jsx`, `TextbookStandardView.jsx`)**:
+    - **Architectural Motivation**:
+      - OCR and vector chunk ingestion previously labeled chunks with single generic pattern names (e.g., `"Dạng 1: Kiến thức & Kỹ năng trọng tâm"`), defaulted to Bloom level 2 (Comprehension). When ingested into the frontend, lessons were restricted to a single pattern, causing pedagogical monotony.
+    - **Implementation Details**:
+      - **Automatic GDPT 2018 Pattern Enrichment**:
+        - When loaded textbook chunks only yield `<= 1` generic pattern, `handleSelectSource` in `TextbookIngestView.jsx` and the chunk mapper in `TextbookStandardView.jsx` automatically query `getGdptPreset` to enrich the lesson with 2–4 authentic pedagogical patterns spanning multiple cognitive levels (L1 Remembering, L2 Understanding, L3 Applying, L4 Analyzing).
+      - **Interactive Bloom Level Selectors**:
+        - *Navigation Tree Switcher*: Made the Bloom level badge (`L{pat.bloomLevel || 2} ▾`) interactive with single-click cycle progression (L1 -> L2 -> L3 -> L4 -> L5 -> L6) and real-time color badge mutation.
+        - *Part 3 Exercise Pill Bar*: Embedded a 6-tier Bloom level pill bar above the question list in Part 3, allowing teachers to fine-tune the target cognitive demand prior to synthesis.
+        - *Progressive New Pattern Defaults*: Updated `handleAddNewPatternToLesson` to assign progressive Bloom levels (`Math.min(4, Math.max(1, nextNum))`).
+    - **Verification**: `npm run build` (Vite v8.3.0) compiled cleanly with 3053 modules transformed and zero errors.
+
+
+22. **Global Command Bar, Prominent Full-Book Save & Persistent Auto-Save Architecture (`TextbookIngestView.jsx`)**:
+    - **Architectural Motivation**:
+      - Previously, global actions (such as saving the entire textbook curriculum or initiating batch question generation across all chapters) were either missing or buried within sub-panels and individual lesson tabs. Users had no centralized top-level control bar and experienced uncertainty about whether newly synthesized questions were persisted.
+    - **Implementation Details**:
+      - **Top-Level Global Command Bar**:
+        - Positioned a dedicated command banner directly above the 3-stage mode switcher (Phần 1: Cấu trúc / Phần 2: Lý thuyết / Phần 3: Câu hỏi).
+        - Houses book-wide controls: **`[Lưu Toàn Bộ SGK]`** (emerald button with Save icon), **`[Sinh Cho Toàn Bộ Sách]`** (indigo button with Sparkles icon), and an active auto-save telemetry badge with pulse indicator (`Đã lưu lúc HH:mm:ss`).
+        - Displays live pedagogical telemetry across the entire book: Chapter count, Lesson count, Pattern count, and synthesized Question count.
+      - **Zero-Loss Persistent Auto-Save Pipeline**:
+        - Automatically serializes curriculum state, generated questions, and cognitive levels into `localStorage` (`veval_textbook_saved_${sourceId}`) upon exercise synthesis or pattern modifications.
+        - Restores all previously generated exercises, custom Bloom taxonomy levels, and manual patterns upon re-selecting a textbook or refreshing the page (`Auto-Restore`).
+    - **Verification**: `npm run build` (Vite v8.3.0) compiled cleanly in 1.28s with 3053 modules transformed and zero errors.
+
+
+23. **Streamlined Lesson Question Synthesis Header & Binary Scope Selector (`TextbookIngestView.jsx`)**:
+    - **Architectural Motivation**:
+      - The Part 3 question synthesis header previously presented three separate multi-emoji buttons (`✨ ⚡ Sinh Cho Dạng Này`, `⚡ ⚡ ⚡ Sinh Toàn Bộ Dạng Trong Bài`, `✨ 🌟 Sinh Toàn Bộ Sách`), causing visual clutter, redundant emojis, and conceptual overlap between local lesson scope and book-level scope.
+    - **Implementation Details**:
+      - **Local vs Global Scope Segregation**:
+        - Completely removed the book-wide synthesis trigger from the Part 3 lesson header, ensuring Part 3 remains 100% focused on lesson-level interactions.
+      - **Binary Scope Segmented Control**:
+        - Added a compact scope selector labelled `Sinh câu hỏi:`, allowing educators to toggle seamlessly between:
+          1. `Dạng này`: Targets the currently selected pattern (`activePattern`).
+          2. `Cả bài học ({count})`: Targets all valid pedagogical patterns within the active lesson.
+      - **Unified Single Synthesis Button**:
+        - Replaced three disparate trigger buttons with a single unified action button `[Sinh câu hỏi]`, maintaining dynamic loading feedback (`Đang sinh...`) and disabling when prerequisites are missing.
+      - **Iconography Sanitization**:
+        - Purged all raw emoji characters (`⚡`, `🌟`), adhering to consistent Lucide icon standards (`Sparkles`, `RefreshCw`).
+    - **Verification**: `npm run build` (Vite v8.3.0) compiled cleanly in 2.24s with 3053 modules transformed and zero errors.

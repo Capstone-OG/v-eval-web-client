@@ -2,8 +2,69 @@
 
 ---
 
-## [18/11/2026] - Triệt Tiêu 100% Mock/Template Giả Lập: Lý Thuyết Thuần Cô Đặc (Không Ghi Trang, Tăng Chiều Dài Gấp Đôi, Font Tinh Gọn), Mục Lục Mở Rộng Hết Chương, Tính Năng Xóa Sách & Vô Hiệu Hóa 2 Nút Điều Hướng
+## [18/11/2026] - Tối Giản Hóa Giao Diện Sinh Câu Hỏi Phần 3: Loại Bỏ Nút Toàn Sách Cục Bộ, Bộ Chọn 1 Trong 2 Kèm Nút Sinh Duy Nhất & Dọn Dẹp Sạch Biểu Tượng Dư Thừa, Thanh Tác Vụ Tổng Quát Nằm Ngay Trên Bộ Chuyển 3 Chế Độ, Cơ Chế Tự Động Lưu (Auto-Save)
 
+- **Tối Giản Hóa Giao Diện Sinh Câu Hỏi Phần 3: Loại Bỏ Nút Toàn Sách Cục Bộ, Bộ Chọn 1 Trong 2 Kèm Nút Sinh Duy Nhất & Dọn Dẹp Sạch Biểu Tượng Dư Thừa (`TextbookIngestView.jsx`)**:
+  - *Xóa bỏ nút "Sinh toàn bộ sách" khỏi thanh bài học*: Loại bỏ triệt để nút sinh toàn sách khỏi Phần 3 (vốn chỉ thuộc phạm vi bài học cụ thể), tập trung 100% chức năng toàn sách lên Thanh Tác Vụ Tổng Quát phía trên.
+  - *Bộ chọn 1 trong 2 chuẩn mực*: Thiết kế thanh chọn phạm vi với tiêu mục rõ ràng `Sinh câu hỏi:` cho phép giáo viên/chuyên gia chọn 1 trong 2 chế độ:
+    + `[Dạng này]`: Sinh bài tập cho dạng bài đang chọn (`activePattern`).
+    + `[Cả bài học ({validPatterns.length})]`: Duyệt sinh bài tập cho toàn bộ các dạng bài của bài học hiện tại.
+  - *Nút `[Sinh câu hỏi]` duy nhất*: Thay thế cụm 3 nút cồng kềnh trước đây bằng 1 nút thực thi duy nhất theo phạm vi đã chọn; chuyển đổi mượt mà sang `Đang sinh...` kèm spinner xoay vòng khi đang xử lý.
+  - *Dọn dẹp triệt để icon và text dư thừa*: Xóa sạch các emoji lồng ghép thừa thãi (`⚡`, `⚡⚡`, `🌟`, `✨ ⚡`, `⚡ ⚡ ⚡`, `✨ 🌟`), quy chuẩn 100% về icon SVG Lucide tinh tế (`Sparkles`, `RefreshCw`).
+  - *Kiểm thử vận hành*: `npm run build` (`vite build`) đạt `✓ built in 2.24s` với 3053 modules sạch 100%, 0 lỗi.
+- **Thanh Tác Vụ Tổng Quát Nằm Ngay Trên Bộ Chuyển 3 Chế Độ (Cấu Trúc / Lý Thuyết / Câu Hỏi), Tự Động Lưu (Auto-Save) & Nút Lưu Toàn Bộ SGK (`TextbookIngestView.jsx`)**:
+  - *Giải quyết bất cập vị trí nút tác vụ tổng quát*: Khắc phục việc các nút mang tính toàn cục (như Lưu Toàn Bộ SGK hay Sinh Toàn Sách) bị đặt chìm dưới từng bài học hoặc lồng sâu trong tab bài tập. Thiết kế **Thanh Điều Khiển Tổng Quát (Global Action & Auto-Save Command Bar)** đặt trang trọng ngay phía trên bộ chuyển 3 giai đoạn (Phần 1: Cấu trúc / Phần 2: Lý thuyết / Phần 3: Câu hỏi).
+  - *Nút "Lưu Toàn Bộ SGK"*: Thiết kế nổi bật với icon `Save`, màu xanh ngọc lục bảo `bg-emerald-700`, cho phép người dùng chủ động bấm lưu toàn bộ Cấu trúc mục lục, Lý thuyết và Ngân hàng câu hỏi vào persistent storage (`localStorage` & `sessionStorage`), cập nhật thời gian lưu và hiển thị Toast xác nhận rõ ràng.
+  - *Nút "Sinh Toàn Bộ Sách"*: Đặt ngay tại thanh tổng quát trên cùng, tách bạch với các nút sinh cục bộ cho bài học (`⚡⚡ Sinh Toàn Bộ Dạng Trong Bài`) và dạng bài (`⚡ Sinh Cho Dạng Này`) ở Phần 3.
+  - *Cơ chế Tự Động Lưu (Auto-Save ON)*:
+    + Hệ thống tự động lưu tức thì vào `localStorage` (`veval_textbook_saved_${sourceId}`) ngay khi AI sinh thêm bài tập, khi chuyển cấp độ Bloom, khi thêm dạng bài/chương mới hoặc sửa đổi cấu trúc.
+    + Badge hiển thị trực quan: `Đã lưu lúc HH:mm:ss` kèm chấm tròn phát xung xanh lá, đem lại sự an tâm tuyệt đối cho giáo viên và chuyên gia học thuật.
+    + Khôi phục tự động (Auto-Restore): Khi người dùng chọn lại cuốn sách từ dropdown hoặc refresh trình duyệt, hệ thống tự động tải lại toàn bộ các câu hỏi đã sinh và dạng bài từ bộ nhớ cache, không bao giờ bị mất dữ liệu.
+  - *Kiểm thử vận hành*: `npm run build` (`vite build`) đạt `✓ built in 1.28s` với 3053 modules sạch 100%, 0 lỗi.
+- **Đa Dạng Hóa Dạng Bài Chuẩn GDPT 2018 & Bộ Chọn Cấp Độ Nhận Thức Bloom (L1–L6) Trực Quan 1-Click (`TextbookIngestView.jsx`, `TextbookStandardView.jsx`)**:
+  - *Nguyên nhân hiện tượng chỉ có 1 dạng bài L2*:
+    + Khi bóc tách PDF scan OCR vào Supabase chunks, các chunks thường chỉ được gắn nhãn mặc định chung (`"Dạng 1: Kiến thức & Kỹ năng trọng tâm"` hoặc `"Dạng 1: Khái niệm cốt lõi"`) với cấp độ Bloom mặc định bằng 2.
+    + Hàm `handleSelectSource` ở frontend trước đây chỉ trích xuất các nhãn duy nhất từ `chunk.patternName`. Nếu tất cả các chunks trong bài học đều mang nhãn chung đó, bài học chỉ tạo ra duy nhất 1 dạng bài và cấp độ nhận thức bị gán cứng L2 (Thông hiểu).
+  - *Tự động làm giàu dạng bài từ bộ chuẩn GDPT 2018 (`getGdptPreset`)*:
+    + Cập nhật logic `handleSelectSource` trong `TextbookIngestView.jsx` và quy trình ánh xạ trong `TextbookStandardView.jsx`: Khi nhận diện bài học chỉ có <= 1 dạng bài mang tính chung chung (generic), hệ thống tự động đối chiếu cơ sở tri thức chuẩn GDPT 2018 để nạp đầy đủ từ 2 đến 4 dạng bài thực tế với phân tầng nhận thức đa dạng (L1 Nhớ, L2 Hiểu, L3 Vận dụng, L4 Phân tích).
+    + Đảm bảo người dùng mở bất kỳ bài học nào của các bộ SGK chuẩn đều có đầy đủ hệ thống dạng bài phong phú thay vì chỉ 1 dạng duy nhất.
+  - *Bộ chuyển đổi Bloom Level tương tác trực quan 1-click (Interactive Bloom Switcher)*:
+    + **Trên cây thư mục bên trái**: Badge `L{pat.bloomLevel || 2} ▾` hỗ trợ bấm trực tiếp để xoay vòng cấp độ Bloom (L1 -> L2 -> L3 -> L4 -> L5 -> L6) kèm cập nhật màu sắc huy hiệu thời gian thực (L1: Xanh dương, L2: Xanh ngọc lục bảo, L3: Tím, L4: Hổ phách, L5: Cam đỏ, L6: Đỏ hồng).
+    + **Tại Phần 3 (⚡ AI Sinh Câu Hỏi Mới)**: Bổ sung thanh pill chọn nhanh 6 cấp độ Bloom (L1. Nhớ, L2. Hiểu, L3. Vận dụng, L4. Phân tích, L5. Đánh giá, L6. Sáng tạo) ngay trên danh sách bài tập, cho phép giáo viên tùy chỉnh mức độ khó/nhận thức của bài tập trước khi kích hoạt AI sinh bài tập.
+    + Khi bấm nút `[+ Thêm dạng bài]`, hệ thống tự động gán cấp độ Bloom tịnh tiến (`Math.min(4, Math.max(1, nextNum))`) thay vì gán cứng Bloom 2.
+- **Thay Thế Hoàn Toàn `window.confirm`/`alert` Bằng Modal Popup Xác Nhận Hiện Đại & Cam Kết Tuyệt Đối Chỉ Nối Thêm (Append-Only), Không Ghi Đè Câu Hỏi (`TextbookIngestView.jsx`)**:
+  - *Thay thế `window.confirm` bằng Modal Popup*: Loại bỏ hoàn toàn hộp thoại `window.confirm` của trình duyệt; tích hợp Modal Dialog Tailwind UI hiện đại (`confirmModal`):
+    + Backdrop mờ (`backdrop-blur-xs`), card nổi bo góc tròn 3xl kèm hiệu ứng zoom nhẹ.
+    + Thống kê rõ ràng: Tên phạm vi bài học / toàn sách, tổng số dạng bài và số câu hỏi sẽ sinh thêm (`+ 3 câu / dạng`).
+    + Khung cam kết xanh ngọc bảo: *"Cam kết chỉ sinh thêm, không thay thế: Hệ thống chỉ sinh thêm câu hỏi mới và nối tiếp vào danh sách. Toàn bộ các câu hỏi đã có trước đó đều được giữ nguyên 100%, tuyệt đối không bị ghi đè hoặc thay thế."*
+    + Nút tương tác rõ ràng: `[Hủy Bỏ]` và `[Bắt Đầu Sinh Thêm]`.
+  - *Cơ chế Append-Only bảo toàn 100% câu hỏi cũ*:
+    + Toàn bộ logic cập nhật bài tập (`updatePatternAt`, `updatePattern`) sử dụng cú pháp nối mảng `exercises: [...existing, ...mappedNew]`.
+    + Cấp phát mã định danh duy nhất cho từng bài tập sinh mới (`id: `ex_${Date.now()}_${Math.random()...}``) chống xung đột key React hoặc đè lấn state.
+    + Thông báo Toast phản ánh chính xác số lượng sinh thêm và tổng số câu tích lũy sau khi hoàn thành (ví dụ: `Đã sinh thêm 3 bài tập mới... (Tổng cộng: 6 câu)`).
+  - *Kiểm thử vận hành*: `npm run build` (`vite build`) đạt `✓ built in 1.32s` với 3053 modules sạch 100%, 0 lỗi.
+- **Tính Năng AI Sinh Câu Hỏi Hàng Loạt (Batch Exercise Generation) Cho Mọi Dạng Bài (`TextbookIngestView.jsx`)**:
+  - *Giải quyết bất cập bấm thủ công từng dạng*: Khắc phục trải nghiệm bất tiện khi giáo viên/chuyên gia học thuật phải bấm từng dạng bài một để sinh bài tập. Hệ thống nâng cấp hỗ trợ 3 chế độ sinh bài tập thông minh:
+    1. **⚡ Sinh Cho Dạng Này**: Sinh 3 câu hỏi trắc nghiệm kèm KaTeX cho dạng bài đơn lẻ đang được chọn.
+    2. **⚡⚡ Sinh Toàn Bộ Dạng Trong Bài**: Tự động duyệt tuần tự qua tất cả các dạng bài (`validPatterns`) của bài học hiện tại, gọi Vision/Language AI sinh 3 bài tập chuẩn GDPT 2018 cho từng dạng và cập nhật trực tiếp vào cây cấu trúc `skeleton`.
+    3. **🌟 Sinh Cho Toàn Bộ Sách**: Thu thập toàn bộ danh sách dạng bài hợp lệ trong toàn bộ các chương và bài học của cuốn sách, hiển thị popup xác nhận an toàn và tiến hành sinh tự động hàng loạt với bộ đệm điều tiết nhịp độ 400ms chống quá tải hạn ngạch (rate limit).
+  - *Kích hoạt nhanh từ Cây Mục Lục bên trái*:
+    + Nút `[🌟 Sinh toàn sách]` ngay trên thanh tiêu đề mục lục SGK.
+    + Biểu tượng tia sét `[⚡]` ngay trên thanh của từng bài học con, cho phép 1-click kích hoạt sinh câu hỏi cho toàn bộ các dạng của riêng bài đó mà không cần chuyển giao diện.
+  - *Thanh tiến trình trực quan thời gian thực (Real-time Progress Bar)*:
+    + Hiển thị tỷ lệ hoàn thành (`%`), số thứ tự dạng bài (`Dạng X / Y`), tên dạng bài và bài học đang được xử lý.
+    + Nút `[Dừng Lại]` cho phép người dùng chủ động ngắt tiến trình bất cứ lúc nào, lưu giữ trọn vẹn các câu hỏi đã sinh thành công trước đó.
+  - *Hàm cập nhật bất biến an toàn (`updatePatternAt`)*: Định vị chính xác tọa độ `(cIdx, lIdx, pIdx)` của từng dạng bài trong state React `skeleton`, cập nhật đồng thời vào `textbookExercises` để người dùng có thể duyệt và xuất ra ngân hàng câu hỏi dùng chung.
+  - *Kiểm thử vận hành*: `npm run build` (`vite build`) đạt `✓ built in 1.63s` với 3053 modules sạch 100%, 0 lỗi.
+- **Đồng Bộ Hoàn Toàn Cây Cấu Trúc Sách Phân Cấp (Chương ▾ Bài Học ▾ Dạng Bài) Cho Trang Nạp SGK Giống Trang Xem SGK Chuẩn (`TextbookIngestView.jsx`)**:
+  - *Thay thế bố cục phẳng 2 hộp giới hạn*: Loại bỏ hoàn toàn 2 hộp danh sách tĩnh phân tầng tách rời bị giới hạn chiều cao `max-h-[28vh]` (trước đây chỉ có danh sách Chương ở trên và Bài học ở dưới, hoàn toàn không có Dạng bài).
+  - *Kiến trúc cây thư mục 3 tầng phân cấp accordion (`Chương ▾ Bài học ▾ Dạng bài`)*: Tái thiết kế cột trái `lg:col-span-4` đồng bộ 100% với giao diện xem SGK chuẩn (`TextbookStandardView.jsx`):
+    + **Tầng 1 - Chương**: Header chương kèm badge `C.X`, bóc tách tiền tố chuẩn hóa qua `cleanPrefix(ch.title, 'chapter')`, hiển thị số lượng bài học, số dạng bài và khoảng trang `Tr.X–Y`. Tích hợp nút toggle đóng/mở `ChevronDown` / `ChevronRight` và nút `[+ Thêm chương]`, `[+ Thêm bài học]`.
+    + **Tầng 2 - Bài học**: Thụt lề `ml-3.5` với badge `B.X`, tiêu đề sạch `cleanPrefix(les.title, 'lesson')`, badge trạng thái kiểm duyệt (`✓` / `⏳`), nút toggle đóng/mở dạng bài và nút `[+ Thêm dạng bài]`.
+    + **Tầng 3 - Dạng bài**: Thụt lề sâu `ml-5` với icon mục tiêu `Target`, hiển thị `Dạng X: {cleanPrefix(pat.name, 'pattern')}` kèm badge cấp độ nhận thức Bloom L1–L6 (`bloomMeta.color`).
+  - *Tương tác liền mạch với Phần 3 (⚡ AI Sinh Câu Hỏi Mới)*: Cho phép giáo viên và chuyên gia học thuật trực tiếp chọn Dạng bài (`selectedPatternIdx`, `activePattern`) ngay trên cây thư mục, kích hoạt ngay lập tức tính năng sinh và duyệt câu hỏi trắc nghiệm/tự luận ở Phần 3 mà không bị khóa nút hoặc thiếu dữ liệu ngữ cảnh.
+  - *State quản lý accordion linh hoạt*: Bổ sung state `expandedChapters` và `expandedLessons`, các hàm thêm nhanh `handleAddNewChapter`, `handleAddNewLessonToChapter`, `handleAddNewPatternToLesson` duy trì tính đồng nhất dữ liệu khi người dùng muốn bổ sung mục lục thủ công.
+  - *Kiểm thử vận hành*: `npm run build` (`vite build`) đạt `✓ built in 1.67s` với 3053 modules sạch 100%, 0 lỗi.
 - **Lý Thuyết Thuần Cô Đặc, Phân Mục Đàng Hoàng, Tuyệt Đối Không Ghi Số Trang (`buildTheoryFromChunks`)**:
   - *Không ghi số trang*: Loại bỏ hoàn toàn nhãn `#### 📄 Trang X (SGK Gốc)` khỏi nội dung lý thuyết thuần.
   - *Cô đặc và tổng hợp chuẩn xác*: Thay vì dán ồ ạt hoặc copy 1-1, thuật ngữ và tri thức được chắt lọc, khử trùng lặp qua `seenSentences`, phân chia cấu trúc sư phạm 4 mục rõ ràng:
