@@ -549,10 +549,14 @@ export default function ParentDashboardView({ currentUser, onNavigateTuition }) 
           <div className="bg-white/10 backdrop-blur-md px-4 py-3 rounded-2xl border border-white/20 text-xs text-white space-y-1">
             <div className="text-cyan-300 font-bold">Giáo viên phụ trách lớp Offline:</div>
             <div className="font-extrabold text-sm">{child.assignedTeacherName}</div>
-            <div className="flex items-center gap-1.5 text-blue-200 text-[11px] pt-0.5">
-              <PhoneCall className="w-3.5 h-3.5 text-cyan-300" />
-              <span>Điện thoại: {child.teacherContactPhone}</span>
-            </div>
+            {child.teacherContactPhone && child.teacherContactPhone !== 'Chưa có' ? (
+              <div className="flex items-center gap-1.5 text-blue-200 text-[11px] pt-0.5">
+                <PhoneCall className="w-3.5 h-3.5 text-cyan-300" />
+                <span>Điện thoại: {child.teacherContactPhone}</span>
+              </div>
+            ) : (
+              <div className="text-blue-200/70 text-[11px] pt-0.5 italic">Chưa có số liên hệ</div>
+            )}
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
@@ -851,11 +855,15 @@ export default function ParentDashboardView({ currentUser, onNavigateTuition }) 
             </div>
 
             <button
-              onClick={() =>
+              onClick={() => {
+                if (!child.assignedTeacherName || child.assignedTeacherName.includes('Chưa có')) {
+                  toast.info('Lớp học của con hiện đang trong quá trình điều phối phân công giáo viên phụ trách.');
+                  return;
+                }
                 toast.success(
                   `Đã gửi yêu cầu kết nối trao đổi học vụ tới ${child.assignedTeacherName} (${child.teacherContactPhone})!`
-                )
-              }
+                );
+              }}
               className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs rounded-2xl transition-all flex items-center justify-center gap-2 shadow-md shadow-blue-600/20"
             >
               <PhoneCall className="w-4 h-4" />

@@ -1,20 +1,9 @@
 # NHẬT KÝ CẬP NHẬT (UPDATE LOG) - V-EVAL WEB CLIENT
 
-## [18/11/2026] - Gắn Bối Cảnh studentId Vào Lịch Sử Bài Thi Của Con & Hỗ Trợ Chuyển Đổi Đa Con Cho Phụ Huynh
+## [19/11/2026] - Tối Ưu Giao Diện Cổng Phụ Huynh Khi Lớp Chưa Có Giáo Viên Phụ Trách
 
-- **Gắn Bối Cảnh `studentId` Cho Màn Hình Lịch Sử Bài Thi ([`App.jsx`](./src/App.jsx), [`SubmissionHistoryView.jsx`](./src/components/diagnostic/SubmissionHistoryView.jsx))**:
-  - Truyền `studentId`, `studentName`, `childrenList` và cờ `isParent` từ `parentPortalData` vào `SubmissionHistoryView`.
-  - Thay thế việc truy vấn theo `user.id` của phụ huynh bằng `studentId` của học sinh khi gọi `practiceService.getStudentDiagnosticHistory(targetId)` và `practiceService.getSubmissionHistory(targetId)`.
-- **Thanh Chọn Nhanh Đa Con Linh Hoạt (Multi-Child Switcher Chips) ([`SubmissionHistoryView.jsx`](./src/components/diagnostic/SubmissionHistoryView.jsx))**:
-  - Tích hợp thanh chip chuyển đổi nhanh giữa các con ngay trên banner đầu trang khi phụ huynh có nhiều con (`childrenList.length > 1`).
-  - Tự động kích hoạt tải lại toàn bộ lịch sử làm bài, đồ thị năng lực và sổ tay lỗi sai tương ứng với học sinh được chọn.
-  - Bổ sung cơ chế tự phục hồi nạp dữ liệu từ `practiceService.getParentDashboard` khi phụ huynh tải lại trang trực tiếp.
-- **Cá Nhân Hóa Trải Nghiệm Vai Trò Phụ Huynh (Parent Persona UX) ([`SubmissionHistoryView.jsx`](./src/components/diagnostic/SubmissionHistoryView.jsx))**:
-  - Cập nhật tiêu đề: *"Lịch Sử Bài Thi Của Con: [Tên con]"* và mô tả đồng hành.
-  - Ẩn nút *"Làm Đề Khảo Sát Mới"* của học sinh, thay bằng nút *"Làm mới danh sách"* tích hợp trạng thái xoay đồng bộ từ Backend.
-  - Chuyển đổi nhãn hiển thị phương án trắc nghiệm thành *"Con đã chọn"* hoặc *"Con chọn đúng"*.
-- **Phân Lập Lưu Trữ & Xóa Bài Thi An Toàn ([`practiceService.js`](./src/services/practiceService.js))**:
-  - Hỗ trợ tham số `targetStudentId` trong `getSubmissionHistory` và `deleteSubmissionFromHistory`, bảo vệ toàn vẹn lịch sử giữa các tài khoản khác nhau.
-- **Kiểm Thử & Biên Dịch Toàn Diện**:
-  - `npm run build`: Biên dịch thành công 100% trong 1.70s, 0 lỗi.
-  - `node --test tests/*.test.js`: Đạt **22/22 unit tests pass 100%**.
+- **Xử Lý Trạng Thái Chưa Phân Công Giáo Viên ([`ParentDashboardView.jsx`](./src/components/dashboard/ParentDashboardView.jsx))**:
+  - Khối thông tin giáo viên phụ trách: Nếu chưa có SĐT (`child.teacherContactPhone === 'Chưa có'`), hiển thị thông điệp nhẹ nhàng *"Chưa có số liên hệ"*.
+  - Nút đăng ký lịch trao đổi 1-1: Bổ sung guard kiểm tra, nếu lớp con chưa có giáo viên phụ trách thì hiển thị toast thông báo: *"Lớp học của con hiện đang trong quá trình điều phối phân công giáo viên phụ trách."* thay vì gửi yêu cầu rỗng.
+- **Kiểm Thử & Biên Dịch**:
+  - `npm run build`: Biên dịch thành công 100% trong 1.14s, 0 lỗi.
