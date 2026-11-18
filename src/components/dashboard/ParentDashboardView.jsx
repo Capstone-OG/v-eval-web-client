@@ -6,6 +6,7 @@ import {
   CheckCircle2,
   Clock,
   GraduationCap,
+  BookOpen,
   PhoneCall,
   Sparkles,
   RefreshCw,
@@ -31,20 +32,53 @@ import paymentService from '../../services/paymentService';
 const TIER_MAP = {
   READY: {
     label: 'Sẵn sàng chinh phục nguyện vọng',
-    badgeCls: 'bg-emerald-100 text-emerald-800 border-emerald-200',
-    scoreCls: 'text-emerald-600'
+    badgeCls: 'bg-emerald-50 text-emerald-800 border-emerald-200',
+    scoreCls: 'text-emerald-600',
+    statusText: 'Đang đạt phong độ thi cử rất tốt'
+  },
+  ACCELERATING: {
+    label: 'Đang bứt phá tiến độ',
+    badgeCls: 'bg-blue-50 text-blue-800 border-blue-200',
+    scoreCls: 'text-blue-600',
+    statusText: 'Tiến độ làm chủ kiến thức khả quan'
+  },
+  PREPARING: {
+    label: 'Đang củng cố nền tảng',
+    badgeCls: 'bg-amber-50 text-amber-800 border-amber-200',
+    scoreCls: 'text-amber-600',
+    statusText: 'Cần duy trì luyện đề đều đặn hơn'
   },
   NEAR_READY: {
     label: 'Tiệm cận ngưỡng an toàn',
-    badgeCls: 'bg-amber-100 text-amber-800 border-amber-200',
-    scoreCls: 'text-amber-600'
+    badgeCls: 'bg-amber-50 text-amber-800 border-amber-200',
+    scoreCls: 'text-amber-600',
+    statusText: 'Cần duy trì nhịp học đều đặn'
+  },
+  NOT_READY: {
+    label: 'Cần tăng cường ôn tập',
+    badgeCls: 'bg-rose-50 text-rose-800 border-rose-200',
+    scoreCls: 'text-rose-600',
+    statusText: 'Cần gia đình động viên và kèm cặp thêm'
   },
   AT_RISK: {
-    label: 'Cần tăng cường kèm cặp ngay',
-    badgeCls: 'bg-rose-100 text-rose-800 border-rose-200',
-    scoreCls: 'text-rose-600'
+    label: 'Cần tăng cường ôn tập',
+    badgeCls: 'bg-rose-50 text-rose-800 border-rose-200',
+    scoreCls: 'text-rose-600',
+    statusText: 'Cần gia đình động viên và kèm cặp thêm'
   }
 };
+
+function getTierInfo(readiness) {
+  const tier = readiness?.readinessTier;
+  const score = Number(readiness?.readinessIndex ?? 0);
+  if (tier && TIER_MAP[tier]) {
+    return TIER_MAP[tier];
+  }
+  if (score >= 80) return TIER_MAP.READY;
+  if (score >= 65) return TIER_MAP.ACCELERATING;
+  if (score >= 50) return TIER_MAP.PREPARING;
+  return TIER_MAP.NOT_READY;
+}
 
 const DISCIPLINE_MAP = {
   EXCEEDED_GOAL: {
@@ -468,7 +502,7 @@ export default function ParentDashboardView({ currentUser, onNavigateTuition }) 
 
   const readiness = child.examReadiness || {};
   const discipline = child.weeklyDisciplines || {};
-  const tierInfo = TIER_MAP[readiness.readinessTier] || TIER_MAP.READY;
+  const tierInfo = getTierInfo(readiness);
   const disciplineInfo = DISCIPLINE_MAP[discipline.completionStatus] || DISCIPLINE_MAP.ON_TRACK;
   const recommendedHours = Number(discipline.recommendedHours || 12);
   const studyHours = Number(discipline.studyHoursThisWeek || 0);
@@ -500,77 +534,89 @@ export default function ParentDashboardView({ currentUser, onNavigateTuition }) 
 
   return (
     <div className="space-y-6 animate-fade w-full">
-      {/* Top Banner */}
-      <div className="bg-gradient-to-r from-blue-900 via-indigo-950 to-slate-900 rounded-3xl p-6 lg:p-8 text-white border border-blue-800/60 shadow-xl flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-        <div className="space-y-2.5">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-blue-500/20 border border-blue-400/30 text-cyan-300 text-[11px] font-extrabold uppercase tracking-wider">
-              <HeartHandshake className="w-3.5 h-3.5 text-cyan-400" />
-              Không Gian Đồng Hành Cùng Con
-            </span>
-            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold border bg-emerald-500/20 border-emerald-400/30 text-emerald-300 flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              Cập nhật trực tiếp theo thời gian thực
-            </span>
-          </div>
-
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-            Đồng Hành Cùng Con: {child.studentName}
-          </h1>
-          <p className="text-xs sm:text-sm text-blue-200/85 max-w-2xl leading-relaxed">
-            Báo cáo toàn diện về mức độ tự tin thi ĐGNL, thời lượng tự học thực tế và nhận xét đồng hành từ đội ngũ sư phạm V-Eval.
-          </p>
-
-          {children.length > 1 && (
-            <div className="flex flex-wrap items-center gap-2 pt-1">
-              {children.map((c, idx) => (
-                <button
-                  key={c.studentId || idx}
-                  onClick={() => setSelectedChildIdx(idx)}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition-all ${
-                    idx === selectedChildIdx
-                      ? 'bg-[#FACC15] text-slate-950 shadow-md'
-                      : 'bg-white/10 text-white hover:bg-white/20'
-                  }`}
-                >
-                  {c.studentName}
-                </button>
-              ))}
+      {/* Hero Header: Thông tin học sinh & Thao tác đồng hành */}
+      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-950 rounded-3xl p-6 lg:p-8 text-white border border-indigo-900/60 shadow-xl space-y-4">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-indigo-500/20 border border-indigo-400/30 text-indigo-200 text-[11px] font-extrabold uppercase tracking-wider">
+                <HeartHandshake className="w-3.5 h-3.5 text-cyan-400" />
+                Không Gian Đồng Hành Cùng Con
+              </span>
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold border bg-emerald-500/20 border-emerald-400/30 text-emerald-300 flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                Cập nhật trực tiếp theo thời gian thực
+              </span>
             </div>
-          )}
-        </div>
 
-        <div className="flex flex-col sm:flex-row lg:flex-col items-stretch sm:items-center lg:items-end gap-3 shrink-0">
-          <div className="bg-white/10 backdrop-blur-md px-4 py-3 rounded-2xl border border-white/20 text-xs text-white space-y-1">
-            <div className="text-cyan-300 font-bold">Giáo viên phụ trách lớp Offline:</div>
-            <div className="font-extrabold text-sm">{child.assignedTeacherName}</div>
-            {child.teacherContactPhone && child.teacherContactPhone !== 'Chưa có' ? (
-              <div className="flex items-center gap-1.5 text-blue-200 text-[11px] pt-0.5">
-                <PhoneCall className="w-3.5 h-3.5 text-cyan-300" />
-                <span>Điện thoại: {child.teacherContactPhone}</span>
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+                Đồng Hành Cùng Con: {child.studentName}
+              </h1>
+              <p className="text-xs sm:text-sm text-slate-300 max-w-2xl mt-1 leading-relaxed">
+                Theo dõi tiến độ học tập, mức độ sẵn sàng cho kỳ thi ĐGNL và nhận định sư phạm từ hệ thống V-Eval.
+              </p>
+            </div>
+
+            {/* Student metadata context pills */}
+            <div className="flex flex-wrap items-center gap-2 pt-1">
+              {child.school && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white/10 border border-white/15 text-xs text-slate-200 font-medium">
+                  <GraduationCap className="w-3.5 h-3.5 text-cyan-300" />
+                  <span>{child.school}</span>
+                </span>
+              )}
+              {child.grade && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white/10 border border-white/15 text-xs text-slate-200 font-medium">
+                  <BookOpen className="w-3.5 h-3.5 text-yellow-300" />
+                  <span>{child.grade}</span>
+                </span>
+              )}
+              {child.targetMajor && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white/10 border border-white/15 text-xs text-slate-200 font-medium">
+                  <Target className="w-3.5 h-3.5 text-emerald-300" />
+                  <span>Mục tiêu: {child.targetMajor}</span>
+                </span>
+              )}
+            </div>
+
+            {children.length > 1 && (
+              <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-white/10">
+                <span className="text-xs text-slate-400 font-bold">Chọn con để theo dõi:</span>
+                {children.map((c, idx) => (
+                  <button
+                    key={c.studentId || idx}
+                    onClick={() => setSelectedChildIdx(idx)}
+                    className={`px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
+                      idx === selectedChildIdx
+                        ? 'bg-[#FACC15] text-slate-950 shadow-md'
+                        : 'bg-white/10 text-white hover:bg-white/20'
+                    }`}
+                  >
+                    {c.studentName}
+                  </button>
+                ))}
               </div>
-            ) : (
-              <div className="text-blue-200/70 text-[11px] pt-0.5 italic">Chưa có số liên hệ</div>
             )}
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap lg:flex-col items-stretch lg:items-end gap-2.5 shrink-0">
             <button
               type="button"
               onClick={() => setShowLinkPanel((prev) => !prev)}
-              className="px-3.5 py-2 rounded-xl bg-[#FACC15] hover:bg-yellow-300 text-slate-950 text-xs font-black flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
+              className="px-4 py-2.5 rounded-xl bg-[#FACC15] hover:bg-yellow-300 text-slate-950 text-xs font-black flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer"
             >
-              <UserPlus className="w-3.5 h-3.5" />
+              <UserPlus className="w-4 h-4" />
               <span>{showLinkPanel ? 'Đóng khung liên kết' : '+ Liên kết thêm con'}</span>
             </button>
 
             <button
               onClick={() => loadParentPortal(true)}
               disabled={refreshing}
-              className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 border border-white/20 text-xs font-extrabold flex items-center justify-center gap-2 cursor-pointer"
+              className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 border border-white/20 text-xs font-extrabold flex items-center justify-center gap-2 transition-all cursor-pointer text-white"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
-              <span>Cập nhật báo cáo mới nhất</span>
+              <span>Cập nhật báo cáo</span>
             </button>
           </div>
         </div>
@@ -578,184 +624,239 @@ export default function ParentDashboardView({ currentUser, onNavigateTuition }) 
 
       {showLinkPanel && renderStudentLinkingCenter()}
 
-      {/* Tuition Fee & Course Activation Banner for Parents */}
-      <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-indigo-700 rounded-3xl p-6 text-white shadow-lg border border-blue-400/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <span className="px-2.5 py-0.5 rounded-full bg-white/20 text-white text-[10px] font-black uppercase tracking-wider flex items-center gap-1">
-              <ShieldCheck className="w-3 h-3 text-cyan-300" />
-              <span>Thanh Toán Học Phí Trực Tuyến</span>
-            </span>
-            <span className="text-xs font-bold text-blue-100">Khóa Luyện Thi Chuẩn (12 Tuần)</span>
+      {/* Thanh toán học phí: Sáng sủa, thanh lịch, đồng bộ không lấn át giao diện */}
+      <div className="bg-gradient-to-r from-blue-50/90 via-indigo-50/60 to-slate-50 border border-blue-200/80 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex items-start gap-3.5">
+          <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5">
+            <ShieldCheck className="w-5 h-5 text-white" />
           </div>
-          <h2 className="text-lg sm:text-xl font-extrabold text-white">
-            {paymentStatus === 'ACTIVE' 
-              ? 'Học Phí Khóa Học: ĐÃ THANH TOÁN (Lộ Trình Đang Kích Hoạt)' 
-              : 'Nộp Học Phí Để Mở Khóa Lộ Trình Học Cá Nhân Hóa Cho Con'}
-          </h2>
-          <p className="text-xs text-blue-100/90 max-w-xl">
-            {paymentStatus === 'ACTIVE'
-              ? 'Con đã được mở khóa toàn bộ lộ trình bài giảng, bài tập rèn luyện và gia sư AI kèm 24/7.'
-              : 'Học phí: 5.000 ₫ • Quét mã VietQR ngân hàng kích hoạt tự động tức thì sau 3 giây.'}
-          </p>
+          <div className="space-y-0.5">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[11px] font-black uppercase tracking-wider text-blue-700 bg-blue-100/80 px-2 py-0.5 rounded-md">
+                Dịch vụ học tập
+              </span>
+              <span className="text-xs font-bold text-slate-600">Khóa Luyện Thi Chuẩn (12 Tuần)</span>
+            </div>
+            <h2 className="text-sm sm:text-base font-extrabold text-slate-900">
+              {paymentStatus === 'ACTIVE'
+                ? 'Học Phí Khóa Học: ĐÃ THANH TOÁN (Lộ Trình Đang Kích Hoạt)'
+                : 'Mở Khóa Toàn Diện Lộ Trình Học Cá Nhân Hóa Cho Con'}
+            </h2>
+            <p className="text-xs text-slate-500">
+              {paymentStatus === 'ACTIVE'
+                ? 'Con đã được kích hoạt bài giảng chuyên sâu, bài luyện tập thích ứng và gia sư sư phạm hỗ trợ.'
+                : 'Học phí: 5.000 ₫ • Quét mã VietQR ngân hàng kích hoạt tức thì sau 3 giây.'}
+            </p>
+          </div>
         </div>
 
         <div className="flex items-center gap-2.5 shrink-0 w-full sm:w-auto">
           {paymentStatus !== 'ACTIVE' ? (
             <button
               onClick={handleQuickPay}
-              className="w-full sm:w-auto py-2.5 px-5 bg-white text-blue-700 hover:bg-blue-50 font-extrabold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full sm:w-auto py-2.5 px-4.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs rounded-xl shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
-              <QrCode className="w-4 h-4 text-blue-600" />
+              <QrCode className="w-4 h-4" />
               <span>Nộp Học Phí Cho Con</span>
             </button>
           ) : (
-            <span className="inline-flex items-center gap-1 px-4 py-2 rounded-xl text-xs font-extrabold bg-emerald-500 text-white shadow-sm">
-              <CheckCircle2 className="w-4 h-4" />
-              <span>Đã Kích Hoạt Thành Công</span>
+            <span className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-200">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+              <span>Đã Kích Hoạt</span>
             </span>
           )}
 
           {onNavigateTuition && (
             <button
               onClick={onNavigateTuition}
-              className="w-full sm:w-auto py-2.5 px-4 bg-white/10 hover:bg-white/20 text-white font-bold text-xs rounded-xl border border-white/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+              className="w-full sm:w-auto py-2.5 px-3.5 bg-white hover:bg-slate-100 text-slate-700 font-bold text-xs rounded-xl border border-slate-200 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
             >
-              <span>Xem Các Gói Học</span>
-              <ChevronRight className="w-4 h-4" />
+              <span>Xem Gói Học</span>
+              <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
             </button>
           )}
         </div>
       </div>
 
-      {/* 4 Core Summary Cards */}
+      {/* 4 Chỉ Số Trọng Tâm Của Con */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Card 1: Composite Exam Readiness Index */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs space-y-2">
+        {/* Card 1: Mức Độ Sẵn Sàng Thi */}
+        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md transition-all flex flex-col justify-between space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-              Chỉ Số Sẵn Sàng Thi ĐGNL
+            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+              Mức Độ Sẵn Sàng Thi
             </span>
-            <Award className="w-4 h-4 text-emerald-600" />
+            <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${tierInfo.badgeCls}`}>
+              <Award className="w-4 h-4" />
+            </div>
           </div>
-          <div className={`text-3xl font-black ${tierInfo.scoreCls}`}>
-            {Number(readiness.readinessIndex ?? 0).toFixed(1)}
-            <span className="text-sm font-bold text-slate-400"> / 100</span>
+          <div>
+            <div className="flex items-baseline gap-1.5">
+              <span className={`text-3xl font-black ${tierInfo.scoreCls}`}>
+                {Number(readiness.readinessIndex ?? 0).toFixed(1)}
+              </span>
+              <span className="text-xs font-bold text-slate-400">/ 100</span>
+            </div>
+            <p className="text-[11px] text-slate-500 mt-1 font-medium">{tierInfo.statusText}</p>
           </div>
-          <span className={`inline-block px-2.5 py-0.5 rounded-md border text-[11px] font-extrabold ${tierInfo.badgeCls}`}>
-            {tierInfo.label}
-          </span>
-        </div>
-
-        {/* Card 2: Weekly Verified Study Hours */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-              Giờ tự học tuần này
+          <div>
+            <span className={`inline-block px-2.5 py-0.5 rounded-full border text-[11px] font-extrabold ${tierInfo.badgeCls}`}>
+              {tierInfo.label}
             </span>
-            <Clock className="w-4 h-4 text-indigo-600" />
-          </div>
-          <div className="text-3xl font-black text-indigo-600">
-            {studyHours.toFixed(1)}
-            <span className="text-sm font-bold text-slate-400"> / {recommendedHours}h</span>
-          </div>
-          <span className={`inline-block px-2.5 py-0.5 rounded-md border text-[11px] font-extrabold ${disciplineInfo.cls}`}>
-            {disciplineInfo.label}
-          </span>
-        </div>
-
-        {/* Card 3: Consecutive Study Streak */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-              Chuỗi ngày chuyên cần
-            </span>
-            <Flame className="w-4 h-4 text-orange-500 fill-orange-500" />
-          </div>
-          <div className="text-3xl font-black text-orange-600">
-            {discipline.currentStreak ?? 0} <span className="text-sm font-bold text-slate-400">ngày</span>
-          </div>
-          <div className="text-[11px] font-semibold text-slate-600">
-            Duy trì đều đặn mỗi ngày trên hệ thống
           </div>
         </div>
 
-        {/* Card 4: Skill Coverage Score */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs space-y-2">
+        {/* Card 2: Giờ Tự Học Tuần Này */}
+        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md transition-all flex flex-col justify-between space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-              Độ phủ kỹ năng nền tảng
+            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+              Giờ Tự Học Tuần Này
             </span>
-            <Target className="w-4 h-4 text-blue-600" />
+            <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-indigo-50 text-indigo-600 border border-indigo-100">
+              <Clock className="w-4 h-4" />
+            </div>
           </div>
-          <div className="text-3xl font-black text-blue-600">
-            {Number(readiness.skillCoverageScore ?? 0).toFixed(1)}%
+          <div>
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-3xl font-black text-indigo-600">
+                {studyHours.toFixed(1)}
+              </span>
+              <span className="text-xs font-bold text-slate-400">/ {recommendedHours} giờ</span>
+            </div>
+            <p className="text-[11px] text-slate-500 mt-1 font-medium">Thời lượng bài học & bài tập thực tế</p>
           </div>
-          <div className="text-[11px] font-semibold text-slate-600">
-            Mức độ bao quát kiến thức các phần thi ĐGNL
+          <div>
+            <span className={`inline-block px-2.5 py-0.5 rounded-full border text-[11px] font-extrabold ${disciplineInfo.cls}`}>
+              {disciplineInfo.label}
+            </span>
+          </div>
+        </div>
+
+        {/* Card 3: Chuỗi Ngày Chuyên Cần */}
+        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md transition-all flex flex-col justify-between space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+              Chuỗi Ngày Chuyên Cần
+            </span>
+            <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-amber-50 text-amber-600 border border-amber-100">
+              <Flame className="w-4 h-4 fill-amber-500" />
+            </div>
+          </div>
+          <div>
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-3xl font-black text-amber-600">
+                {discipline.currentStreak ?? 0}
+              </span>
+              <span className="text-xs font-bold text-slate-400">ngày liên tục</span>
+            </div>
+            <p className="text-[11px] text-slate-500 mt-1 font-medium">Duy trì nhịp học đều đặn mỗi ngày</p>
+          </div>
+          <div>
+            <span className="inline-block px-2.5 py-0.5 rounded-full border text-[11px] font-extrabold bg-slate-50 text-slate-700 border-slate-200">
+              {(discipline.currentStreak ?? 0) > 0 ? `Đang duy trì ${discipline.currentStreak} ngày` : 'Chưa có chuỗi ngày'}
+            </span>
+          </div>
+        </div>
+
+        {/* Card 4: Độ Phủ Kiến Thức 4 Phần */}
+        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md transition-all flex flex-col justify-between space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+              Độ Phủ Kiến Thức ĐGNL
+            </span>
+            <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-teal-50 text-teal-600 border border-teal-100">
+              <Target className="w-4 h-4" />
+            </div>
+          </div>
+          <div>
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-3xl font-black text-teal-600">
+                {Number(readiness.skillCoverageScore ?? 0).toFixed(1)}%
+              </span>
+              <span className="text-xs font-bold text-slate-400">bao quát</span>
+            </div>
+            <p className="text-[11px] text-slate-500 mt-1 font-medium">Bao quát 4 môn thi ĐGNL ĐHQG-HCM</p>
+          </div>
+          <div>
+            <span className="inline-block px-2.5 py-0.5 rounded-full border text-[11px] font-extrabold bg-teal-50 text-teal-700 border-teal-200">
+              {Number(readiness.skillCoverageScore ?? 0) >= 70 ? 'Nắm chắc kiến thức' : 'Đang mở rộng độ phủ'}
+            </span>
           </div>
         </div>
       </div>
 
-      {/* Main 2-Column Section: 3-Factor Breakdown + AI Parent Alerts & Profile */}
+      {/* Main 2-Column Section: 3 Trụ Cột, AI Khuyến Nghị & Giáo Viên Phụ Trách */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left 7 cols: Formula Breakdown & AI Parent Alerts */}
+        {/* Left 7 cols: 3 Trụ Cột & Khuyến Nghị Đồng Hành */}
         <div className="lg:col-span-7 space-y-6">
-          {/* 3-Factor Exam Readiness Breakdown */}
-          <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-xs space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
-                  <ShieldCheck className="w-5 h-5 text-emerald-600" />
-                  <span>3 Trụ Cột Đánh Giá Mức Độ Sẵn Sàng Đi Thi Của Con</span>
-                </h2>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Tổng hợp từ năng lực làm đề, độ vững kiến thức và tính chuyên cần giúp ba mẹ dễ dàng theo dõi
-                </p>
-              </div>
+          {/* 3 Trụ Cột Đánh Giá Mức Độ Sẵn Sàng Đi Thi Của Con */}
+          <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-xs space-y-5">
+            <div>
+              <h2 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
+                <ShieldCheck className="w-5 h-5 text-emerald-600" />
+                <span>3 Trụ Cột Đánh Giá Mức Độ Sẵn Sàng Đi Thi Của Con</span>
+              </h2>
+              <p className="text-xs text-slate-500 mt-1">
+                Tổng hợp từ năng lực làm đề, độ bao quát kiến thức và kỷ luật tự học giúp gia đình dễ dàng đồng hành cùng con.
+              </p>
             </div>
 
-            <div className="space-y-3.5 pt-1">
-              {/* Factor 1: Normalized Theta (50%) */}
-              <div className="space-y-1.5">
-                <div className="flex justify-between text-xs font-bold">
-                  <span className="text-slate-700">1. Năng lực làm bài & giải đề thi (Chiếm 50%)</span>
-                  <span className="text-blue-700 font-black">{Number(readiness.normalizedThetaScore ?? 0).toFixed(1)} / 100</span>
+            <div className="space-y-3">
+              {/* Factor 1: Năng lực làm đề (50%) */}
+              <div className="p-4 rounded-2xl bg-slate-50/80 border border-slate-200/70 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="w-6 h-6 rounded-lg bg-blue-100 text-blue-700 font-black text-xs flex items-center justify-center">1</span>
+                    <span className="text-xs font-extrabold text-slate-800">Năng lực làm bài &amp; giải đề thi</span>
+                    <span className="text-[11px] font-semibold text-slate-400">(Trọng số 50%)</span>
+                  </div>
+                  <span className="text-sm font-black text-blue-700">{Number(readiness.normalizedThetaScore ?? 0).toFixed(1)} <span className="text-xs font-normal text-slate-400">/ 100</span></span>
                 </div>
-                <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                <div className="w-full h-2.5 bg-slate-200/70 rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-blue-600 rounded-full transition-all duration-500"
-                    style={{ width: `${Math.min(100, Number(readiness.normalizedThetaScore || 0))}%` }}
+                    className="h-full bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full transition-all duration-500"
+                    style={{ width: `${Math.min(100, Math.max(0, Number(readiness.normalizedThetaScore || 0)))}%` }}
                   />
                 </div>
+                <p className="text-[11px] text-slate-500">Đo lường độ chính xác và khả năng xử lý bài thi từ cơ bản đến vận dụng cao.</p>
               </div>
 
-              {/* Factor 2: Skill Coverage (35%) */}
-              <div className="space-y-1.5">
-                <div className="flex justify-between text-xs font-bold">
-                  <span className="text-slate-700">2. Độ vững kiến thức các môn thi ĐGNL (Chiếm 35%)</span>
-                  <span className="text-indigo-700 font-black">{Number(readiness.skillCoverageScore ?? 0).toFixed(1)} / 100</span>
+              {/* Factor 2: Độ phủ kiến thức (35%) */}
+              <div className="p-4 rounded-2xl bg-slate-50/80 border border-slate-200/70 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="w-6 h-6 rounded-lg bg-indigo-100 text-indigo-700 font-black text-xs flex items-center justify-center">2</span>
+                    <span className="text-xs font-extrabold text-slate-800">Độ vững kiến thức các môn thi ĐGNL</span>
+                    <span className="text-[11px] font-semibold text-slate-400">(Trọng số 35%)</span>
+                  </div>
+                  <span className="text-sm font-black text-indigo-700">{Number(readiness.skillCoverageScore ?? 0).toFixed(1)} <span className="text-xs font-normal text-slate-400">/ 100</span></span>
                 </div>
-                <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                <div className="w-full h-2.5 bg-slate-200/70 rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-indigo-600 rounded-full transition-all duration-500"
-                    style={{ width: `${Math.min(100, Number(readiness.skillCoverageScore || 0))}%` }}
+                    className="h-full bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full transition-all duration-500"
+                    style={{ width: `${Math.min(100, Math.max(0, Number(readiness.skillCoverageScore || 0)))}%` }}
                   />
                 </div>
+                <p className="text-[11px] text-slate-500">Bao quát các chuyên đề: Ngôn ngữ, Toán học, Tư duy logic &amp; Giải quyết vấn đề.</p>
               </div>
 
-              {/* Factor 3: Consistency Score (15%) */}
-              <div className="space-y-1.5">
-                <div className="flex justify-between text-xs font-bold">
-                  <span className="text-slate-700">3. Tính kỷ luật và sự chăm chỉ học tập trong tuần (Chiếm 15%)</span>
-                  <span className="text-emerald-700 font-black">{Number(readiness.consistencyScore ?? 0).toFixed(1)} / 100</span>
+              {/* Factor 3: Kỷ luật tự học (15%) */}
+              <div className="p-4 rounded-2xl bg-slate-50/80 border border-slate-200/70 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="w-6 h-6 rounded-lg bg-emerald-100 text-emerald-700 font-black text-xs flex items-center justify-center">3</span>
+                    <span className="text-xs font-extrabold text-slate-800">Kỷ luật &amp; sự đều đặn tự học</span>
+                    <span className="text-[11px] font-semibold text-slate-400">(Trọng số 15%)</span>
+                  </div>
+                  <span className="text-sm font-black text-emerald-700">{Number(readiness.consistencyScore ?? 0).toFixed(1)} <span className="text-xs font-normal text-slate-400">/ 100</span></span>
                 </div>
-                <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                <div className="w-full h-2.5 bg-slate-200/70 rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-emerald-600 rounded-full transition-all duration-500"
-                    style={{ width: `${Math.min(100, Number(readiness.consistencyScore || 0))}%` }}
+                    className="h-full bg-gradient-to-r from-emerald-500 to-teal-600 rounded-full transition-all duration-500"
+                    style={{ width: `${Math.min(100, Math.max(0, Number(readiness.consistencyScore || 0)))}%` }}
                   />
                 </div>
+                <p className="text-[11px] text-slate-500">Đánh giá tính kiên trì và thói quen rèn luyện hằng ngày của con trên hệ thống.</p>
               </div>
             </div>
           </div>
@@ -764,7 +865,7 @@ export default function ParentDashboardView({ currentUser, onNavigateTuition }) 
           <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-xs space-y-4">
             <h2 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-blue-600" />
-              <span>Nhận Định & Khuyến Nghị Đồng Hành Từ AI Sư Phạm</span>
+              <span>Nhận Định &amp; Khuyến Nghị Đồng Hành Từ AI Sư Phạm</span>
             </h2>
 
             <div className="space-y-3">
@@ -795,74 +896,100 @@ export default function ParentDashboardView({ currentUser, onNavigateTuition }) 
           </div>
         </div>
 
-        {/* Right 5 cols: Weekly Discipline Progress & Child Academic Profile */}
+        {/* Right 5 cols: Cam Kết Giờ Học & Giáo Viên Phụ Trách */}
         <div className="lg:col-span-5 space-y-6">
-          {/* Weekly 12h Baseline Tracker */}
+          {/* Định Mức Giờ Tự Học */}
           <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-xs space-y-4">
             <h2 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
               <Clock className="w-5 h-5 text-indigo-600" />
-              <span>Thời Lượng Tự Học Trong Tuần (Mục tiêu {recommendedHours} giờ/tuần)</span>
+              <span>Cam Kết Giờ Tự Học Tuần (12 giờ/tuần)</span>
             </h2>
 
-            <div className="p-4 rounded-2xl bg-indigo-50/70 border border-indigo-100 space-y-2.5">
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-indigo-50/70 via-blue-50/50 to-slate-50 border border-indigo-100/80 space-y-3">
               <div className="flex items-baseline justify-between">
-                <span className="text-xs font-bold text-indigo-950">Thời lượng học thực tế:</span>
+                <span className="text-xs font-bold text-slate-700">Thời lượng học thực tế:</span>
                 <span className="text-lg font-black text-indigo-700">
-                  {studyHours.toFixed(1)}h / {recommendedHours}h ({disciplinePct}%)
+                  {studyHours.toFixed(1)}h / {recommendedHours}h <span className="text-xs font-extrabold text-indigo-500">({disciplinePct}%)</span>
                 </span>
               </div>
-              <div className="w-full h-3 rounded-full bg-white border border-indigo-200 overflow-hidden">
+              <div className="w-full h-3 rounded-full bg-slate-200/70 overflow-hidden">
                 <div
                   className="h-full bg-gradient-to-r from-indigo-600 to-blue-500 rounded-full transition-all duration-500"
                   style={{ width: `${disciplinePct}%` }}
                 />
               </div>
-              <p className="text-[11px] text-indigo-900/80 leading-relaxed">
-                Hệ thống ghi nhận thời lượng thực chất khi con tập trung học video bài giảng và giải bài tập rèn luyện, giúp phụ huynh an tâm về việc học thật của con.
+              <p className="text-[11px] text-slate-600 leading-relaxed">
+                Hệ thống chỉ ghi nhận thời gian thực chất khi con xem bài giảng và hoàn thành bài tập rèn luyện (chống treo máy ảo), giúp phụ huynh theo dõi chính xác nỗ lực học tập của con.
               </p>
             </div>
           </div>
 
-          {/* Child Academic Profile */}
+          {/* Giáo Viên Phụ Trách & Đặt Lịch Trao Đổi */}
           <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-xs space-y-4">
             <h2 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
-              <GraduationCap className="w-5 h-5 text-indigo-600" />
-              <span>Hồ Sơ Học Viên & Kênh Trao Đổi Giáo Viên</span>
+              <GraduationCap className="w-5 h-5 text-blue-600" />
+              <span>Giáo Viên Phụ Trách &amp; Cố Vấn Học Vụ</span>
             </h2>
 
-            <div className="space-y-2.5 text-xs">
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex justify-between gap-2">
-                <span className="text-slate-500 font-medium">Họ tên học viên:</span>
-                <span className="font-extrabold text-slate-800">{child.studentName}</span>
+            {/* Khối Thông Tin Giáo Viên */}
+            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center font-black text-sm shrink-0">
+                  {child.assignedTeacherName && !child.assignedTeacherName.includes('Chưa có')
+                    ? child.assignedTeacherName.split(' ').slice(-1)[0][0]
+                    : 'GV'}
+                </div>
+                <div className="space-y-0.5 flex-1 min-w-0">
+                  <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                    Giáo viên phụ trách lớp Offline
+                  </div>
+                  <div className="text-sm font-extrabold text-slate-900 truncate">
+                    {child.assignedTeacherName || 'Chưa có giáo viên phụ trách'}
+                  </div>
+                  {child.teacherContactPhone && child.teacherContactPhone !== 'Chưa có' ? (
+                    <div className="flex items-center gap-1.5 text-xs text-slate-600 pt-0.5">
+                      <PhoneCall className="w-3.5 h-3.5 text-blue-600" />
+                      <span>{child.teacherContactPhone}</span>
+                    </div>
+                  ) : (
+                    <div className="text-xs text-slate-400 italic pt-0.5">Chưa có số liên hệ</div>
+                  )}
+                </div>
               </div>
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex justify-between gap-2">
-                <span className="text-slate-500 font-medium">Khối lớp:</span>
-                <span className="font-extrabold text-slate-800">{child.grade}</span>
-              </div>
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex justify-between gap-2">
-                <span className="text-slate-500 font-medium">Trường THPT:</span>
-                <span className="font-extrabold text-slate-800 text-right">{child.school}</span>
-              </div>
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex justify-between gap-2">
-                <span className="text-slate-500 font-medium">Ngành mục tiêu NV1:</span>
-                <span className="font-extrabold text-blue-700 text-right">{child.targetMajor}</span>
-              </div>
+
+              {child.grade && (
+                <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between text-xs">
+                  <span className="text-slate-500 font-medium">Lớp học:</span>
+                  <span className="font-bold text-slate-800 text-right truncate max-w-[200px]">{child.grade}</span>
+                </div>
+              )}
             </div>
 
+            {/* Nút Đặt Lịch Trao Đổi */}
             <button
+              type="button"
               onClick={() => {
-                if (!child.assignedTeacherName || child.assignedTeacherName.includes('Chưa có')) {
+                const hasTeacher =
+                  child.assignedTeacherName &&
+                  !child.assignedTeacherName.includes('Chưa có') &&
+                  child.assignedTeacherName !== 'Chưa phân công';
+
+                if (!hasTeacher) {
                   toast.info('Lớp học của con hiện đang trong quá trình điều phối phân công giáo viên phụ trách.');
                   return;
                 }
+                const phonePart =
+                  child.teacherContactPhone && child.teacherContactPhone !== 'Chưa có'
+                    ? ` (${child.teacherContactPhone})`
+                    : '';
                 toast.success(
-                  `Đã gửi yêu cầu kết nối trao đổi học vụ tới ${child.assignedTeacherName} (${child.teacherContactPhone})!`
+                  `Đã gửi yêu cầu kết nối trao đổi học vụ tới ${child.assignedTeacherName}${phonePart}!`
                 );
               }}
-              className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs rounded-2xl transition-all flex items-center justify-center gap-2 shadow-md shadow-blue-600/20"
+              className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs rounded-2xl transition-all flex items-center justify-center gap-2 shadow-sm cursor-pointer"
             >
               <PhoneCall className="w-4 h-4" />
-              <span>Đăng Ký Lịch Trao Đổi 1-1 Cùng Giáo Viên Phụ Trách</span>
+              <span>Đăng Ký Lịch Trao Đổi 1-1 Với Giáo Viên</span>
             </button>
           </div>
         </div>

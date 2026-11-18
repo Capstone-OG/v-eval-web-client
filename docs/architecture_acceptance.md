@@ -2211,3 +2211,25 @@ The diagnostic report JSX parse failure from an incomplete duplicate trend-chart
 
 
 Radar and skill-prior displays consume API response fields; the benchmark overlay and prior values are omitted when absent instead of being filled with synthetic defaults. The result page now uses normalized API-derived prior data without unresolved component/helper references.
+
+---
+
+## 13. Parent Companion Portal UI Architecture & Design Cohesion Acceptance - 19 November 2026
+
+The Parent Companion Portal (`ParentDashboardView.jsx`) was comprehensively redesigned to eliminate visual fragmentation, resolve competing saturated banners, and present a coherent, user-centric dashboard for parents:
+
+- **Unified Hero Banner & Student Context**:
+  - Replaced the awkward dual-layer layout with a single, deep navy-indigo Hero Header (`from-slate-900 via-indigo-950 to-blue-950`).
+  - Embedded student metadata context pills (`school`, `grade`, `targetMajor`) directly below the student name, grounding parents immediately with their child's academic context.
+  - Eliminated the floating teacher box that previously crowded the top banner.
+- **Refined Tuition Payment Ribbon**:
+  - Transformed the oversized blue banner into an elegant, light-slate/indigo fintech ribbon (`bg-gradient-to-r from-blue-50/90 via-indigo-50/60 to-slate-50 border border-blue-200/80`) with `ShieldCheck` icon badge and PayOS VietQR 1-click CTA.
+- **Unified 4-Metric Grid with Dynamic Readiness Tiers**:
+  - Replaced disconnected plain-white metric boxes with elevated cards featuring rounded colored icon badges, bold score typography, and supportive status captions.
+  - Implemented `getTierInfo` to accurately classify readiness tiers (`NOT_READY`, `PREPARING`, `ACCELERATING`, `READY`) based on both database tier and numerical index, preventing low scores (e.g. 19.2/100) from showing inappropriate green "Ready" badges.
+- **3-Factor Readiness Progression & Dedicated Teacher Card**:
+  - Structured the 3 evaluation factors into individual micro-cards with numbered badges (1, 2, 3), gradient progress bars, and accessible pedagogical captions.
+  - Consolidated teacher information into a dedicated profile card on the right column, displaying real faculty details from database queries, phone contact, and an interactive 1-on-1 consultation scheduling action.
+- **Verification**:
+  - `npm run build`: Verified 100% clean production bundle in 1.07s.
+  - `node --test tests/*.test.js`: All 22 unit tests passing.

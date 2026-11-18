@@ -808,3 +808,14 @@ Validation: build and lint pass with existing warnings; live API integration rem
 | Parent Persona Customization | Complete | Updated banner title, description, back navigation label, empty state message, and option selection tags ("Con đã chọn" / "Con chọn đúng") specifically tailored for parents. |
 | Safe Deletion & Storage Scope | Complete | Extended `practiceService.getSubmissionHistory` and `deleteSubmissionFromHistory` with optional `targetStudentId` scoping. |
 | Verification | Passed | `node --test tests/*.test.js` passed 22/22 tests; `npm run build` succeeded cleanly in 1.70s with 0 errors. |
+
+## [19/11/2026] - Parent Dashboard UI Refactor & Visual Harmony
+
+| Item | Status | Detail |
+| --- | --- | --- |
+| Hero Header & Context Pills | Complete | Unified Hero header with student metadata pills (`school`, `grade`, `targetMajor`) and child switcher; removed floating teacher block. |
+| Tuition Payment Ribbon | Complete | Replaced heavy saturated blue banner with an elegant light indigo/slate fintech ribbon with `ShieldCheck` icon and PayOS VietQR CTA. |
+| 4 Metric Cards Grid | Complete | Standardized cards with rounded icon badges, bold score typography, and dynamic readiness tier calculation via `getTierInfo`. |
+| 3-Factor Readiness Cards | Complete | Containerized each factor into structured blocks with numbered badges (1, 2, 3), gradient progress bars, and plain-language captions. |
+| Dedicated Teacher Contact Card | Complete | Relocated teacher profile to right column with real teacher name or "Chưa có giáo viên phụ trách", phone, and 1-on-1 meeting request action. |
+| Verification | Passed | `node --test tests/*.test.js` passed 22/22 tests; `npm run build` succeeded in 1.07s with 0 errors. |
