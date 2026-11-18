@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   ArrowLeft,
   BookOpen,
@@ -39,7 +39,10 @@ import {
   getDefaultLessonTheory,
   buildTheoryFromChunks,
   getChunksForLesson,
-  isGenericPlaceholder
+  isGenericPlaceholder,
+  getSavedTextbookData,
+  saveTextbookData,
+  mergeSavedExercisesIntoChapters
 } from './textbookStateBridge';
 
 const BLOOM_LEVELS = [
@@ -71,20 +74,51 @@ export default function TextbookStandardView({ onBack, onNavigateTab, isSidebarC
   const [sourceChunks, setSourceChunks] = useState([]);
 
   const [skeleton, setSkeleton] = useState(() => {
+    const saved = getSavedTextbookData(initCtx.selectedSourceId, initCtx.fileName);
     const preset = getGdptPreset(initCtx.subjectCode || 'PHYS', initCtx.grade || 10);
+    const baseChapters = saved?.skeleton?.chapters && saved.skeleton.chapters.length > 0
+      ? saved.skeleton.chapters
+      : (preset?.chapters || []);
+    const merged = mergeSavedExercisesIntoChapters(baseChapters, saved);
+
     return {
-      fileName: initCtx.fileName || '',
-      subjectCode: initCtx.subjectCode || 'PHYS',
-      subjectName: initCtx.subjectName || 'Vật lí',
-      grade: initCtx.grade || 10,
-      bookEdition: initCtx.bookEdition || preset?.bookEdition || 'Cánh Diều',
-      versionTag: initCtx.versionTag || '2025-2026',
+      fileName: saved?.skeleton?.fileName || initCtx.fileName || '',
+      subjectCode: saved?.skeleton?.subjectCode || initCtx.subjectCode || 'PHYS',
+      subjectName: saved?.skeleton?.subjectName || initCtx.subjectName || 'Vật lí',
+      grade: saved?.skeleton?.grade || initCtx.grade || 10,
+      bookEdition: saved?.skeleton?.bookEdition || initCtx.bookEdition || preset?.bookEdition || 'Cánh Diều',
+      versionTag: saved?.skeleton?.versionTag || initCtx.versionTag || '2025-2026',
       isVersionLocked: false,
       status: 'ACCEPTED',
-      totalPages: 0,
-      chapters: preset?.chapters || []
+      totalPages: saved?.skeleton?.totalPages || 0,
+      chapters: merged
     };
   });
+
+  const skeletonRef = useRef(skeleton);
+  useEffect(() => {
+    skeletonRef.current = skeleton;
+  }, [skeleton]);
+
+  // Lắng nghe sự kiện đồng bộ câu hỏi & cấu trúc từ các view khác
+  useEffect(() => {
+    const handleSync = (e) => {
+      const detail = e.detail;
+      if (!detail?.skeleton?.chapters) return;
+      if (detail.sourceId === selectedSourceId || detail.fileName === skeletonRef.current.fileName) {
+        setSkeleton(prev => {
+          const updated = {
+            ...prev,
+            chapters: mergeSavedExercisesIntoChapters(prev.chapters, detail)
+          };
+          skeletonRef.current = updated;
+          return updated;
+        });
+      }
+    };
+    window.addEventListener('veval:textbook-saved', handleSync);
+    return () => window.removeEventListener('veval:textbook-saved', handleSync);
+  }, [selectedSourceId]);
 
   const [selectedChapterIdx, setSelectedChapterIdx] = useState(initCtx.selectedChapterIdx || 0);
   const [selectedLessonIdx, setSelectedLessonIdx] = useState(initCtx.selectedLessonIdx || 0);
@@ -216,19 +250,8 @@ export default function TextbookStandardView({ onBack, onNavigateTab, isSidebarC
     saveStoredTextbookContext({ selectedSourceId: sourceId, fileName: found.fileName });
 
     try {
-      // 0. Đọc dữ liệu đã lưu từ CSDL / LocalStorage theo sourceId (Mã định danh ID SGK dưới Database Supabase)
-      const storageKey = `veval_textbook_saved_${sourceId}`;
-      let cachedData = null;
-      try {
-        const raw = (sourceId ? localStorage.getItem(storageKey) : null)
-          || (found.fileName ? localStorage.getItem(`veval_textbook_saved_${found.fileName}`) : null)
-          || localStorage.getItem('veval_textbook_saved_default');
-        if (raw) {
-          cachedData = JSON.parse(raw);
-        }
-      } catch (e) {
-        console.warn('Cannot read cached textbook:', e);
-      }
+      // 0. Đọc dữ liệu đã lưu từ Persistent Storage theo sourceId (Mã định danh ID SGK dưới Database Supabase)
+      const cachedData = getSavedTextbookData(sourceId, found.fileName);
 
       const savedPatternData = new Map();
       if (cachedData?.skeleton?.chapters) {
@@ -452,16 +475,23 @@ export default function TextbookStandardView({ onBack, onNavigateTab, isSidebarC
         }))
       }));
 
-      setSkeleton(prev => ({
-        ...prev,
-        fileName: found.fileName,
-        subjectCode: targetSub,
-        subjectName: targetSubName,
-        grade: targetG,
-        bookEdition: found.bookEdition || prev.bookEdition,
-        totalPages: found.totalPages || prev.totalPages,
-        chapters: detectedChapters.length > 0 ? detectedChapters : fallbackChapters
-      }));
+      const baseChapters = detectedChapters.length > 0 ? detectedChapters : fallbackChapters;
+      const finalChapters = mergeSavedExercisesIntoChapters(baseChapters, cachedData);
+
+      setSkeleton(prev => {
+        const next = {
+          ...prev,
+          fileName: found.fileName,
+          subjectCode: targetSub,
+          subjectName: targetSubName,
+          grade: targetG,
+          bookEdition: found.bookEdition || prev.bookEdition,
+          totalPages: found.totalPages || prev.totalPages,
+          chapters: finalChapters.length > 0 ? finalChapters : prev.chapters
+        };
+        skeletonRef.current = next;
+        return next;
+      });
 
       saveStoredTextbookContext({
         selectedSourceId: sourceId,
@@ -494,7 +524,14 @@ export default function TextbookStandardView({ onBack, onNavigateTab, isSidebarC
         });
         return { ...ch, lessons };
       });
-      return { ...prev, chapters };
+      const next = { ...prev, chapters };
+      skeletonRef.current = next;
+      saveTextbookData({
+        sourceId: selectedSourceId,
+        fileName: next.fileName,
+        skeleton: next
+      });
+      return next;
     });
   };
 

@@ -1,6 +1,16 @@
 # UPDATE - V-Eval-Web_Client
 
 ## [18/11/2026]
+- **Kiến Trúc Universal Storage Bridge, Triệt Tiêu Stale Closure & Đồng Bộ Câu Hỏi Thời Gian Thực Hai Chiều (`./src/components/curriculum/textbookStateBridge.js`, `./src/components/curriculum/TextbookIngestView.jsx`, `./src/components/curriculum/TextbookStandardView.jsx`)**:
+  - *Chẩn đoán & Khắc phục triệt để lỗi mất câu hỏi*:
+    + Triệt tiêu lỗi Stale Closure React trong `saveToStorage`: sử dụng `skeletonRef = useRef(skeleton)` và luôn cập nhật `skeletonRef.current` trước khi lưu vào persistent storage, loại bỏ hiện tượng async loop ghi đè skeleton rỗng lên `localStorage`.
+    + Loại bỏ lỗi lệch chỉ số mảng (Index Mismatch): thay thế truy cập chỉ số `chapters[cIdx]` bằng hàm `updatePatternByName(chapterTitle, lessonTitle, patternName, updater)` định vị tuyệt đối theo tên chương, bài học và dạng bài.
+    + Khắc phục trạng thái rỗng khi Mount: `TextbookStandardView.jsx` tự động nạp dữ liệu câu hỏi từ `getSavedTextbookData(sourceId, fileName)` và hợp nhất sâu qua `mergeSavedExercisesIntoChapters` ngay khi component khởi tạo.
+  - *Cứu cánh lưu trữ Universal Storage Bridge*:
+    + Hàm `getSavedTextbookData` tra cứu đa tầng qua `sourceId` CSDL Supabase, `fileName` và fallback mặc định across `localStorage` và `sessionStorage`.
+    + Hàm `saveTextbookData` ghi đồng thời vào nhiều khóa và phát sự kiện `window.dispatchEvent(new CustomEvent('veval:textbook-saved', { detail }))`.
+    + Tích hợp listener `veval:textbook-saved` giúp phản hồi tức thì hai chiều: AI sinh câu hỏi ở Trang Nạp là Trang Xem hiển thị ngay lập tức mà không cần F5.
+  - *Nạp sẵn bộ câu hỏi mẫu chuẩn GDPT 2018*: Bổ sung ngân hàng câu hỏi mẫu hoàn chỉnh kèm công thức KaTeX, đáp án A/B/C/D và lời giải chi tiết cho `PHYS_10` Bài 1 và Bài 2 trong `GDPT_PRESETS`.
 - **Thu Gọn Thanh Mục Lục Cấu Trúc SGK Linh Hoạt Tương Tự Sidebar (`./src/components/curriculum/TextbookStandardView.jsx`)**:
   - *Cơ chế thu gọn `isTocCollapsed`*: Tích hợp nút thu gọn (`ChevronLeft`) trên thanh tiêu đề mục lục bên trái.
   - *Thu nhỏ thành cột dọc tinh tế*: Khi thu gọn, cột mục lục co lại thành dải thanh dọc (`lg:col-span-1`) hiển thị nút mở rộng (`ChevronRight`) và tiêu đề xoay dọc `Mục Lục SGK ({count} Chương)`, giải phóng toàn bộ diện tích ngang cho cột nội dung lý thuyết và câu hỏi mở rộng sang `lg:col-span-11`.
@@ -15,9 +25,6 @@
   - *Thẻ bài tập chi tiết*: Render đề bài toán học qua `<MathText />`, 4 phương án trắc nghiệm A/B/C/D với đáp án đúng được làm nổi bật viền xanh ngọc `ring-1 ring-emerald-400` kèm icon `CheckCircle2`.
   - *Phương pháp & Lời giải chi tiết*: Nút đóng/mở xem phương pháp và lời giải chi tiết kèm icon bóng đèn `Lightbulb`.
   - *Empty State thân thiện*: Nếu bài học chưa có bài tập, hiển thị hướng dẫn kèm nút `[Đến Trang Nạp SGK để sinh câu hỏi]` điều hướng trực tiếp sang tab `ingest`.
-- **Đồng Bộ Dữ Liệu Câu Hỏi Theo `sourceId` CSDL Supabase Giữa Trang Xem & Trang Nạp SGK (`./src/components/curriculum/TextbookStandardView.jsx`, `./src/components/curriculum/TextbookIngestView.jsx`)**:
-  - Đồng bộ khóa lưu trữ `veval_textbook_saved_${sourceId}`: Khi chọn sách trong CSDL, cả hai trang đều đọc và ghi cùng một khóa định danh `sourceId`.
-  - Mọi câu hỏi sinh thêm hoặc cập nhật ở Trang Nạp SGK đều tự động hiển thị đầy đủ, nguyên vẹn khi người dùng chuyển sang Trang Xem SGK và ngược lại.
 - **Tối Giản Hóa Giao Diện Sinh Câu Hỏi Phần 3: Loại Bỏ Nút Toàn Sách Cục Bộ, Bộ Chọn 1 Trong 2 Kèm Nút Sinh Duy Nhất & Dọn Dẹp Icon Thừa (`./src/components/curriculum/TextbookIngestView.jsx`)**:
   - *Xóa nút "Sinh toàn bộ sách" khỏi header bài học*: Đưa chức năng toàn sách lên thanh điều khiển tổng quát trên cùng.
   - *Bộ chọn phạm vi 1 trong 2*: Bổ sung thanh chọn gọn gàng `Sinh câu hỏi:` cho phép chọn `[Dạng này]` hoặc `[Cả bài học ({count})]`.
@@ -31,4 +38,4 @@
   - Huy hiệu `L{bloomLevel} ▾` trên cây mục lục cho phép click xoay vòng cấp độ Bloom tức thì.
 - **Thay Thế `window.confirm`/`alert` Bằng Modal Popup Xác Nhận & Cam Kết Cơ Chế Chỉ Sinh Thêm (Append-Only) Tuyệt Đối Không Ghi Đè Câu Hỏi (`./src/components/curriculum/TextbookIngestView.jsx`)**:
   - Modal Dialog Tailwind UI hiện đại với cam kết bảo toàn nguyên vẹn 100% câu hỏi cũ.
-- **Kiểm Thử Vận Hành**: `npm run build` (`vite build`) đạt `✓ built in 1.35s` với 3053 modules sạch 100%, 0 lỗi.
+- **Kiểm Thử Vận Hành**: `npm run build` (`vite build`) đạt `✓ built in 1.24s` với 3053 modules sạch 100%, 0 lỗi.

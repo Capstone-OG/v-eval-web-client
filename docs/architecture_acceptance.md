@@ -2503,3 +2503,26 @@ Radar and skill-prior displays consume API response fields; the benchmark overla
         - `TextbookStandardView.jsx` reads `cachedData` upon source selection, maps `savedPatternData`, and populates `pat.exercises` across all patterns.
         - `TextbookIngestView.jsx` persists simultaneously to both `sourceId` and `fileName` keys in `saveToStorage`.
     - **Verification**: `npm run build` (Vite v8.3.0) compiled cleanly in 1.35s with 3053 modules transformed and zero errors.
+
+
+25. **Universal Storage Bridge, Stale Closure Elimination & Reactive Two-Way Question Bank Synchronization (`textbookStateBridge.js`, `TextbookIngestView.jsx`, `TextbookStandardView.jsx`)**:
+    - **Architectural Motivation**:
+      - Educators reported that synthesized questions were occasionally lost or not appearing across views.
+      - Deep root-cause analysis uncovered three subtle concurrency and state management bugs in React:
+        1. *Stale Closure State Overwrites*: In `TextbookIngestView.jsx`, `saveToStorage(currSkeleton = skeleton)` evaluated the default parameter within asynchronous loops (`executeBatchLesson`, `executeBatchBook`, or `setTimeout`), binding to the stale initial skeleton from the component mount closure and overwriting updated questions with empty arrays in `localStorage`.
+        2. *Array Index Mismatch*: Left-hand TOC filtered out non-pedagogical chapters into `validChapters`. Using filtered indices (`cIdx`, `lIdx`) directly on raw `prev.chapters[cIdx]` resulted in dropped or mismatched updates.
+        3. *Uninitialized Storage on Mount*: `TextbookStandardView.jsx` initialized state with static `preset.chapters || []`, ignoring previously saved questions until a manual source re-selection occurred.
+    - **Implementation Details**:
+      - **Universal Storage Bridge Module (`textbookStateBridge.js`)**:
+        - `getSavedTextbookData(sourceId, fileName)`: Multi-tier fallback resolution checking `sourceId`, `fileName`, and default storage keys across both `localStorage` and `sessionStorage`.
+        - `saveTextbookData({ sourceId, fileName, skeleton, textbookExercises })`: Multi-key transactional persistence with dispatch of custom window event `veval:textbook-saved`.
+        - `mergeSavedExercisesIntoChapters(targetChapters, savedData)`: Deep chapter-lesson-pattern merger deduplicating questions by ID and text stem, preventing regressions when reloading chunks.
+      - **Stale Closure Elimination via Mutable Refs**:
+        - Integrated `skeletonRef = useRef(skeleton)` synchronized via `useEffect`. All async handlers pass explicit updated state or read `skeletonRef.current`.
+      - **Title-Based Resilient Pattern Updating**:
+        - Introduced `updatePatternByName(chapterTitle, lessonTitle, patternName, updater)` replacing fragile array index lookups with deterministic title and name matching.
+      - **Pre-Populated GDPT 2018 Exemplar Question Banks**:
+        - Populated high-quality sample questions with KaTeX formulas, four multiple-choice options, correct index markers, and step-by-step pedagogical explanations directly into `GDPT_PRESETS['PHYS_10']` for Bài 1 and Bài 2.
+      - **Reactive Cross-View Synchronization**:
+        - Added listeners for `veval:textbook-saved` event across both views, ensuring that generating exercises in the Ingest View reflects instantly in the Standard View in real time.
+    - **Verification**: `npm run build` (Vite v8.3.0) compiled cleanly in 1.24s with 3053 modules transformed and zero errors.

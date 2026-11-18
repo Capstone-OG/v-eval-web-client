@@ -132,7 +132,36 @@ export const GDPT_PRESETS = {
                 status: 'ACCEPTED',
                 description: 'Xác định độ dịch chuyển và vận tốc trên quỹ đạo thẳng.',
                 method: 'Dùng công thức \\vec{d} = \\vec{x}_2 - \\vec{x}_1 và v_{tb} = \\frac{d}{\\Delta t}.',
-                exercises: []
+                exercises: [
+                  {
+                    id: 'ex_phys10_b1_p1_1',
+                    stem: 'Một vận động viên bơi lội bơi xuôi theo chiều dài $50\\text{ m}$ của bể bơi hết $20\\text{ s}$, rồi lập tức quay đầu bơi ngược lại về chỗ xuất phát trong $22\\text{ s}$. Tốc độ trung bình và độ lớn vận tốc trung bình của người đó trong cả hành trình lần lượt là:',
+                    options: [
+                      'Tốc độ trung bình $2,38\\text{ m/s}$; Vận tốc trung bình $0\\text{ m/s}$',
+                      'Tốc độ trung bình $0\\text{ m/s}$; Vận tốc trung bình $2,38\\text{ m/s}$',
+                      'Tốc độ trung bình $2,50\\text{ m/s}$; Vận tốc trung bình $2,27\\text{ m/s}$',
+                      'Tốc độ trung bình $1,19\\text{ m/s}$; Vận tốc trung bình $1,19\\text{ m/s}$'
+                    ],
+                    correctIndex: 0,
+                    bloomLevel: 2,
+                    solution: 'Tổng quãng đường bơi cả đi lẫn về là $s = 50 + 50 = 100\\text{ m}$. Tổng thời gian bơi là $t = 20 + 22 = 42\\text{ s}$. Do đó tốc độ trung bình: $v_{tb} = \\frac{s}{t} = \\frac{100}{42} \\approx 2,38\\text{ m/s}$. Vì điểm kết thúc trùng với điểm xuất phát nên độ dịch chuyển tổng cộng $d = 0\\text{ m}$. Độ lớn vận tốc trung bình: $v = \\frac{d}{t} = 0\\text{ m/s}$.',
+                    sourcePage: 16
+                  },
+                  {
+                    id: 'ex_phys10_b1_p1_2',
+                    stem: 'Một xe ô tô chạy từ thành phố A đến thành phố B. Trong nửa đoạn đường đầu ô tô chuyển động với tốc độ không đổi $v_1 = 60\\text{ km/h}$, trong nửa đoạn đường còn lại chuyển động với tốc độ $v_2 = 40\\text{ km/h}$. Tốc độ trung bình của ô tô trên toàn bộ quãng đường $AB$ là:',
+                    options: [
+                      '$48\\text{ km/h}$',
+                      '$50\\text{ km/h}$',
+                      '$45\\text{ km/h}$',
+                      '$52\\text{ km/h}$'
+                    ],
+                    correctIndex: 0,
+                    bloomLevel: 3,
+                    solution: 'Gọi chiều dài cả quãng đường là $s$. Thời gian đi nửa đầu: $t_1 = \\frac{s/2}{v_1} = \\frac{s}{120}$. Thời gian đi nửa sau: $t_2 = \\frac{s/2}{v_2} = \\frac{s}{80}$. Tổng thời gian chuyển động: $t = t_1 + t_2 = \\frac{s}{120} + \\frac{s}{80} = \\frac{5s}{240} = \\frac{s}{48}$. Tốc độ trung bình trên cả đoạn đường: $v_{tb} = \\frac{s}{t} = \\frac{s}{s/48} = 48\\text{ km/h}$.',
+                    sourcePage: 18
+                  }
+                ]
               },
               {
                 patternCode: 'P2',
@@ -141,7 +170,22 @@ export const GDPT_PRESETS = {
                 status: 'ACCEPTED',
                 description: 'Cộng vectơ vận tốc trong hệ quy chiếu đứng yên và chuyển động.',
                 method: 'Áp dụng công thức cộng vận tốc \\vec{v}_{13} = \\vec{v}_{12} + \\vec{v}_{23}.',
-                exercises: []
+                exercises: [
+                  {
+                    id: 'ex_phys10_b1_p2_1',
+                    stem: 'Một chiếc ca nô chạy xuôi dòng nước từ bến A đến bến B mất $2\\text{ giờ}$. Biết vận tốc của ca nô đối với dòng nước là $v_{12} = 15\\text{ km/h}$ và vận tốc của dòng nước đối với bờ là $v_{23} = 3\\text{ km/h}$. Khoảng cách giữa hai bến A và B là:',
+                    options: [
+                      '$36\\text{ km}$',
+                      '$30\\text{ km}$',
+                      '$24\\text{ km}$',
+                      '$18\\text{ km}$'
+                    ],
+                    correctIndex: 0,
+                    bloomLevel: 3,
+                    solution: 'Khi ca nô chuyển động xuôi dòng, vectơ vận tốc của ca nô cùng hướng với dòng nước. Vận tốc của ca nô đối với bờ là: $v_{13} = v_{12} + v_{23} = 15 + 3 = 18\\text{ km/h}$. Khoảng cách giữa hai bến: $s = v_{13} \\times t = 18 \\times 2 = 36\\text{ km}$.',
+                    sourcePage: 22
+                  }
+                ]
               }
             ]
           },
@@ -165,7 +209,22 @@ export const GDPT_PRESETS = {
                 status: 'ACCEPTED',
                 description: 'Độ dốc đồ thị d-t là vận tốc, độ dốc v-t là gia tốc.',
                 method: 'Hệ số góc k = \\frac{\\Delta d}{\\Delta t} biểu thị vận tốc.',
-                exercises: []
+                exercises: [
+                  {
+                    id: 'ex_phys10_b2_p1_1',
+                    stem: 'Đồ thị độ dịch chuyển – thời gian ($d - t$) của một chất điểm là một đường thẳng đi qua gốc tọa độ và qua điểm $M(t = 4\\text{ s};\\ d = 12\\text{ m})$. Tính chất chuyển động và vận tốc của vật là:',
+                    options: [
+                      'Chuyển động thẳng đều với vận tốc $v = 3\\text{ m/s}$',
+                      'Chuyển động nhanh dần đều với gia tốc $a = 3\\text{ m/s}^2$',
+                      'Chuyển động thẳng đều với vận tốc $v = 48\\text{ m/s}$',
+                      'Vật đứng yên tại tọa độ $d = 12\\text{ m}$'
+                    ],
+                    correctIndex: 0,
+                    bloomLevel: 2,
+                    solution: 'Đồ thị $d - t$ là đường thẳng xiên góc chứng tỏ vận tốc của vật không đổi theo thời gian (chuyển động thẳng đều). Hệ số góc của đồ thị biểu thị vận tốc: $v = \\frac{\\Delta d}{\\Delta t} = \\frac{12 - 0}{4 - 0} = 3\\text{ m/s}$.',
+                    sourcePage: 26
+                  }
+                ]
               },
               {
                 patternCode: 'P2',
@@ -174,7 +233,22 @@ export const GDPT_PRESETS = {
                 status: 'ACCEPTED',
                 description: 'Tính quãng đường, thời gian và vận tốc trong chuyển động thẳng biến đổi đều.',
                 method: 'Dùng hệ phương trình độc lập thời gian v^2 - v_0^2 = 2ad.',
-                exercises: []
+                exercises: [
+                  {
+                    id: 'ex_phys10_b2_p2_1',
+                    stem: 'Một đoàn tàu đang chạy với tốc độ $72\\text{ km/h}$ thì hãm phanh chuyển động chậm dần đều, sau thời gian $10\\text{ s}$ thì dừng hẳn. Quãng đường đoàn tàu đi được kể từ lúc hãm phanh đến khi dừng hẳn là:',
+                    options: [
+                      '$100\\text{ m}$',
+                      '$200\\text{ m}$',
+                      '$360\\text{ m}$',
+                      '$50\\text{ m}$'
+                    ],
+                    correctIndex: 0,
+                    bloomLevel: 3,
+                    solution: 'Đổi vận tốc ban đầu: $v_0 = 72\\text{ km/h} = 20\\text{ m/s}$. Vận tốc khi dừng hẳn: $v = 0\\text{ m/s}$. Gia tốc của tàu: $a = \\frac{v - v_0}{t} = \\frac{0 - 20}{10} = -2\\text{ m/s}^2$. Quãng đường tàu đi được: áp dụng hệ thức độc lập thời gian $v^2 - v_0^2 = 2ad \\implies 0^2 - 20^2 = 2 \\times (-2) \\times d \\implies d = \\frac{-400}{-4} = 100\\text{ m}$.',
+                    sourcePage: 30
+                  }
+                ]
               }
             ]
           },
@@ -1144,4 +1218,139 @@ export const saveStoredTextbookContext = (updates) => {
   } catch {
     return DEFAULT_STATE;
   }
+};
+
+/**
+ * Lấy dữ liệu SGK đã lưu từ localStorage/sessionStorage theo nhiều cấp độ dự phòng
+ */
+export const getSavedTextbookData = (sourceId, fileName) => {
+  const keys = [];
+  if (sourceId) keys.push(`veval_textbook_saved_${sourceId}`);
+  if (fileName) keys.push(`veval_textbook_saved_${fileName}`);
+  keys.push('veval_textbook_saved_default');
+
+  for (const k of keys) {
+    try {
+      const raw = localStorage.getItem(k);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && (parsed.skeleton || parsed.textbookExercises || parsed.chapters)) {
+          return parsed;
+        }
+      }
+    } catch {}
+  }
+
+  // Dự phòng sessionStorage
+  try {
+    const raw = sessionStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed?.chapters && parsed.chapters.length > 0) {
+        return { skeleton: parsed, savedAt: new Date().toISOString() };
+      }
+    }
+  } catch {}
+
+  return null;
+};
+
+/**
+ * Lưu dữ liệu SGK vào persistent storage và phát tín hiệu đồng bộ real-time
+ */
+export const saveTextbookData = ({ sourceId, fileName, skeleton, textbookExercises = [] }) => {
+  if (!skeleton) return false;
+  try {
+    const payload = {
+      sourceId: sourceId || '',
+      fileName: fileName || skeleton.fileName || '',
+      skeleton,
+      textbookExercises,
+      savedAt: new Date().toISOString()
+    };
+
+    const str = JSON.stringify(payload);
+    if (sourceId) localStorage.setItem(`veval_textbook_saved_${sourceId}`, str);
+    if (fileName) localStorage.setItem(`veval_textbook_saved_${fileName}`, str);
+    if (skeleton.fileName) localStorage.setItem(`veval_textbook_saved_${skeleton.fileName}`, str);
+    localStorage.setItem('veval_textbook_saved_default', str);
+
+    saveStoredTextbookContext({
+      selectedSourceId: sourceId,
+      fileName: fileName || skeleton.fileName,
+      subjectCode: skeleton.subjectCode,
+      subjectName: skeleton.subjectName,
+      grade: skeleton.grade,
+      chapters: skeleton.chapters
+    });
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('veval:textbook-saved', { detail: payload }));
+    }
+    return true;
+  } catch (err) {
+    console.warn('Lỗi lưu trữ dữ liệu SGK:', err);
+    return false;
+  }
+};
+
+/**
+ * Hợp nhất bài tập đã lưu vào cây cấu trúc chương/bài học
+ */
+export const mergeSavedExercisesIntoChapters = (targetChapters = [], savedData) => {
+  if (!targetChapters || targetChapters.length === 0) {
+    if (savedData?.skeleton?.chapters && savedData.skeleton.chapters.length > 0) {
+      return savedData.skeleton.chapters;
+    }
+    return [];
+  }
+  if (!savedData) return targetChapters;
+
+  const savedPatternMap = new Map();
+  const allSavedExercises = [];
+
+  const sourceChapters = savedData.skeleton?.chapters || savedData.chapters || [];
+  sourceChapters.forEach(ch => {
+    (ch.lessons || []).forEach(les => {
+      (les.patterns || []).forEach(pat => {
+        const pKey = `${cleanPrefix(les.title, 'lesson').toLowerCase()}__${cleanPrefix(pat.name, 'pattern').toLowerCase()}`;
+        if (pat.exercises && pat.exercises.length > 0) {
+          savedPatternMap.set(pKey, {
+            bloomLevel: pat.bloomLevel,
+            exercises: pat.exercises
+          });
+          allSavedExercises.push(...pat.exercises);
+        }
+      });
+    });
+  });
+
+  if (savedData.textbookExercises && savedData.textbookExercises.length > 0) {
+    allSavedExercises.push(...savedData.textbookExercises);
+  }
+
+  return targetChapters.map(ch => {
+    const lessons = (ch.lessons || []).map(les => {
+      const patterns = (les.patterns || []).map(pat => {
+        const pKey = `${cleanPrefix(les.title, 'lesson').toLowerCase()}__${cleanPrefix(pat.name, 'pattern').toLowerCase()}`;
+        const found = savedPatternMap.get(pKey);
+        const existing = pat.exercises || [];
+
+        let mergedExercises = existing;
+        if (found?.exercises && found.exercises.length > 0) {
+          const idSet = new Set(existing.map(e => e.id || e.stem));
+          const toAdd = found.exercises.filter(e => !idSet.has(e.id || e.stem));
+          mergedExercises = [...existing, ...toAdd];
+        }
+
+        return {
+          ...pat,
+          bloomLevel: found?.bloomLevel || pat.bloomLevel || 2,
+          exercises: mergedExercises
+        };
+      });
+      return { ...les, patterns };
+    });
+    return { ...ch, lessons };
+  });
 };

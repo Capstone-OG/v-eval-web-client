@@ -2,7 +2,22 @@
 
 ---
 
-## [18/11/2026] - Tối Giản Hóa Giao Diện Sinh Câu Hỏi Phần 3: Loại Bỏ Nút Toàn Sách Cục Bộ, Bộ Chọn 1 Trong 2 Kèm Nút Sinh Duy Nhất & Dọn Dẹp Sạch Biểu Tượng Dư Thừa, Thanh Tác Vụ Tổng Quát Nằm Ngay Trên Bộ Chuyển 3 Chế Độ, Cơ Chế Tự Động Lưu (Auto-Save)
+## [18/11/2026] - Cứu Cánh Lưu Trữ Toàn Diện (Universal Storage Bridge), Triệt Tiêu Stale Closure & Đồng Bộ Câu Hỏi Thời Gian Thực Hai Chiều Giữa Trang Nạp Và Trang Xem SGK
+
+- **Kiến Trúc Universal Storage Bridge & Đồng Bộ Hai Chiều Giữa Trang Nạp SGK & Trang Xem SGK (`textbookStateBridge.js`, `TextbookIngestView.jsx`, `TextbookStandardView.jsx`)**:
+  - *Chẩn đoán căn nguyên câu hỏi không hiển thị*:
+    + **Lỗi Stale Closure trong React**: Trong `TextbookIngestView.jsx`, hàm `saveToStorage` sử dụng giá trị mặc định `currSkeleton = skeleton`. Khi được gọi từ các tác vụ bất đồng bộ (như `executeBatchLesson`, `executeBatchBook` hoặc `setTimeout`), closure giữ tham chiếu đến `skeleton` ban đầu (lúc chưa có câu hỏi), dẫn đến việc ghi đè skeleton rỗng lên `localStorage`.
+    + **Lệch chỉ số mảng (Index Mismatch)**: Cây mục lục lọc ra danh sách chương hợp lệ `validChapters`, nhưng `updatePatternAt` lại dùng chỉ số này để truy cập trực tiếp vào `chapters[cIdx]` trong `prev.chapters`, gây sai lệch vị trí hoặc không tìm thấy bài học/dạng bài.
+    + **Không nạp từ bộ nhớ lưu trữ khi Mount**: `TextbookStandardView.jsx` khởi tạo `skeleton` từ preset tĩnh rỗng bài tập, hoàn toàn bỏ qua dữ liệu câu hỏi đã lưu trước đó trong `localStorage`.
+  - *Giải pháp Universal Storage Bridge*:
+    + `getSavedTextbookData(sourceId, fileName)`: Đọc tuần tự qua các khóa fallback (`veval_textbook_saved_${sourceId}`, `veval_textbook_saved_${fileName}`, `veval_textbook_saved_default`) và `sessionStorage`.
+    + `saveTextbookData({ sourceId, fileName, skeleton, textbookExercises })`: Ghi đồng thời vào nhiều khóa để tương thích cả khi tra cứu theo mã ID CSDL Supabase lẫn tên file; phát sự kiện tùy biến `window.dispatchEvent(new CustomEvent('veval:textbook-saved', { detail }))`.
+    + `mergeSavedExercisesIntoChapters(targetChapters, savedData)`: Thuật toán hợp nhất sâu câu hỏi theo tên bài học và tên dạng bài, lọc trùng bài tập dựa trên ID và nội dung câu hỏi (`stem`).
+  - *Triệt tiêu lỗi Stale Closure và Index Mismatch*:
+    + Sử dụng `skeletonRef = useRef(skeleton)` và luôn cập nhật `skeletonRef.current = next` trước khi gọi `saveToStorage(next)`.
+    + Bổ sung hàm `updatePatternByName(chapterTitle, lessonTitle, patternName, updater)` để tìm kiếm chính xác theo tiêu đề thay vì phụ thuộc vào chỉ số mảng.
+  - *Nạp sẵn ngân hàng câu hỏi mẫu chuẩn GDPT 2018*: Bổ sung các câu hỏi mẫu hoàn chỉnh kèm công thức KaTeX, đáp án A/B/C/D và lời giải chi tiết cho `PHYS_10` Bài 1 và Bài 2 trong `GDPT_PRESETS`.
+  - *Kiểm thử vận hành*: `npm run build` (`vite build`) đạt `✓ built in 1.24s` với 3053 modules sạch 100%, 0 lỗi.
 
 - **Tối Giản Hóa Giao Diện Sinh Câu Hỏi Phần 3: Loại Bỏ Nút Toàn Sách Cục Bộ, Bộ Chọn 1 Trong 2 Kèm Nút Sinh Duy Nhất & Dọn Dẹp Sạch Biểu Tượng Dư Thừa (`TextbookIngestView.jsx`)**:
   - *Xóa bỏ nút "Sinh toàn bộ sách" khỏi thanh bài học*: Loại bỏ triệt để nút sinh toàn sách khỏi Phần 3 (vốn chỉ thuộc phạm vi bài học cụ thể), tập trung 100% chức năng toàn sách lên Thanh Tác Vụ Tổng Quát phía trên.

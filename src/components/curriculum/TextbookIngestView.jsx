@@ -39,7 +39,10 @@ import {
   isNonPedagogical,
   filterPedagogicalChapters,
   cleanPrefix,
-  getGdptPreset
+  getGdptPreset,
+  getSavedTextbookData,
+  saveTextbookData,
+  mergeSavedExercisesIntoChapters
 } from './textbookStateBridge';
 
 const BLOOM_LEVELS = [
@@ -76,19 +79,33 @@ export default function TextbookIngestView({ onBack, onNavigateTab }) {
   const [selectedSourceId, setSelectedSourceId] = useState(initCtx.selectedSourceId || '');
   const [filledChunks, setFilledChunks] = useState([]);
 
-  // Skeleton Cấu Trúc SGK
-  const [skeleton, setSkeleton] = useState({
-    fileName: initCtx.fileName || '',
-    subjectCode: initCtx.subjectCode || 'PHYS',
-    subjectName: initCtx.subjectName || 'Vật lí',
-    grade: initCtx.grade || 10,
-    bookEdition: initCtx.bookEdition || 'Cánh Diều',
-    versionTag: initCtx.versionTag || '2025-2026',
-    isVersionLocked: false,
-    status: 'ACCEPTED',
-    totalPages: 0,
-    chapters: []
+  // Skeleton Cấu Trúc SGK (Tự động nạp dữ liệu đã lưu từ Persistent Storage)
+  const [skeleton, setSkeleton] = useState(() => {
+    const saved = getSavedTextbookData(initCtx.selectedSourceId, initCtx.fileName);
+    const preset = getGdptPreset(initCtx.subjectCode || 'PHYS', initCtx.grade || 10);
+    const baseChapters = saved?.skeleton?.chapters && saved.skeleton.chapters.length > 0
+      ? saved.skeleton.chapters
+      : (preset?.chapters || []);
+    const merged = mergeSavedExercisesIntoChapters(baseChapters, saved);
+
+    return {
+      fileName: saved?.skeleton?.fileName || initCtx.fileName || '',
+      subjectCode: saved?.skeleton?.subjectCode || initCtx.subjectCode || 'PHYS',
+      subjectName: saved?.skeleton?.subjectName || initCtx.subjectName || 'Vật lí',
+      grade: saved?.skeleton?.grade || initCtx.grade || 10,
+      bookEdition: saved?.skeleton?.bookEdition || initCtx.bookEdition || preset?.bookEdition || 'Cánh Diều',
+      versionTag: saved?.skeleton?.versionTag || initCtx.versionTag || '2025-2026',
+      isVersionLocked: false,
+      status: 'ACCEPTED',
+      totalPages: saved?.skeleton?.totalPages || 0,
+      chapters: merged
+    };
   });
+
+  const skeletonRef = useRef(skeleton);
+  useEffect(() => {
+    skeletonRef.current = skeleton;
+  }, [skeleton]);
 
   const [selectedChapterIdx, setSelectedChapterIdx] = useState(initCtx.selectedChapterIdx || 0);
   const [selectedLessonIdx, setSelectedLessonIdx] = useState(initCtx.selectedLessonIdx || 0);
@@ -113,48 +130,41 @@ export default function TextbookIngestView({ onBack, onNavigateTab }) {
   const isLocked = skeleton.isVersionLocked;
   const [lastSavedTime, setLastSavedTime] = useState(null);
 
-  const getStorageKey = useCallback((sourceId, fileName) => {
-    const key = sourceId || fileName || 'default';
-    return `veval_textbook_saved_${key}`;
-  }, []);
-
-  const saveToStorage = useCallback((currSkeleton = skeleton) => {
-    if (!currSkeleton) return false;
-    const key = getStorageKey(selectedSourceId, currSkeleton.fileName);
-    try {
-      const payload = {
-        sourceId: selectedSourceId,
-        fileName: currSkeleton.fileName,
-        skeleton: currSkeleton,
-        textbookExercises,
-        savedAt: new Date().toISOString()
-      };
-      localStorage.setItem(key, JSON.stringify(payload));
-      // Đồng bộ trực tiếp theo sourceId (mã ID dưới CSDL Supabase) và fileName
-      if (selectedSourceId) {
-        localStorage.setItem(`veval_textbook_saved_${selectedSourceId}`, JSON.stringify(payload));
-      }
-      if (currSkeleton.fileName) {
-        localStorage.setItem(`veval_textbook_saved_${currSkeleton.fileName}`, JSON.stringify(payload));
-      }
-      
-      saveStoredTextbookContext({
-        selectedSourceId,
-        fileName: currSkeleton.fileName,
-        subjectCode: currSkeleton.subjectCode,
-        subjectName: currSkeleton.subjectName,
-        grade: currSkeleton.grade,
-        chapters: currSkeleton.chapters
-      });
-
+  const saveToStorage = useCallback((currSkeleton) => {
+    const target = currSkeleton || skeletonRef.current;
+    if (!target) return false;
+    const success = saveTextbookData({
+      sourceId: selectedSourceId,
+      fileName: target.fileName,
+      skeleton: target,
+      textbookExercises
+    });
+    if (success) {
       const timeStr = new Date().toLocaleTimeString('vi-VN');
       setLastSavedTime(timeStr);
-      return true;
-    } catch (err) {
-      console.warn('Auto-save error:', err);
-      return false;
     }
-  }, [selectedSourceId, skeleton, textbookExercises, getStorageKey]);
+    return success;
+  }, [selectedSourceId, textbookExercises]);
+
+  // Lắng nghe sự kiện đồng bộ từ các view khác
+  useEffect(() => {
+    const handleSync = (e) => {
+      const detail = e.detail;
+      if (!detail?.skeleton?.chapters) return;
+      if (detail.sourceId === selectedSourceId || detail.fileName === skeletonRef.current.fileName) {
+        setSkeleton(prev => {
+          const updated = {
+            ...prev,
+            chapters: mergeSavedExercisesIntoChapters(prev.chapters, detail)
+          };
+          skeletonRef.current = updated;
+          return updated;
+        });
+      }
+    };
+    window.addEventListener('veval:textbook-saved', handleSync);
+    return () => window.removeEventListener('veval:textbook-saved', handleSync);
+  }, [selectedSourceId]);
 
   const handleSaveAll = () => {
     const success = saveToStorage(skeleton);
@@ -321,21 +331,10 @@ export default function TextbookIngestView({ onBack, onNavigateTab }) {
       grade: targetG
     });
 
-    // 0. Đọc dữ liệu đã lưu từ localStorage (ưu tiên theo sourceId CSDL Supabase, sau đó fileName)
-    const storageKey = getStorageKey(sourceId, found.fileName);
-    let cachedData = null;
-    try {
-      const raw = (sourceId ? localStorage.getItem(`veval_textbook_saved_${sourceId}`) : null)
-        || (found.fileName ? localStorage.getItem(`veval_textbook_saved_${found.fileName}`) : null)
-        || localStorage.getItem(storageKey);
-      if (raw) {
-        cachedData = JSON.parse(raw);
-        if (cachedData.savedAt) {
-          setLastSavedTime(new Date(cachedData.savedAt).toLocaleTimeString('vi-VN'));
-        }
-      }
-    } catch (e) {
-      console.warn('Cannot read cached textbook:', e);
+    // 0. Đọc dữ liệu đã lưu từ Persistent Storage (CSDL / localStorage)
+    const cachedData = getSavedTextbookData(sourceId, found.fileName);
+    if (cachedData?.savedAt) {
+      setLastSavedTime(new Date(cachedData.savedAt).toLocaleTimeString('vi-VN'));
     }
 
     const savedPatternData = new Map();
@@ -500,16 +499,26 @@ export default function TextbookIngestView({ onBack, onNavigateTab }) {
       setTextbookExercises(cachedData.textbookExercises);
     }
 
-    setSkeleton(prev => ({
-      ...prev,
-      fileName: found.fileName,
-      subjectCode: targetSub,
-      subjectName: targetSubName,
-      grade: targetG,
-      bookEdition: found.bookEdition || prev.bookEdition,
-      totalPages: found.totalPages || prev.totalPages,
-      chapters: detectedChapters.length > 0 ? detectedChapters : prev.chapters
-    }));
+    const baseChapters = detectedChapters.length > 0
+      ? detectedChapters
+      : (cachedData?.skeleton?.chapters || preset?.chapters || []);
+    const finalChapters = mergeSavedExercisesIntoChapters(baseChapters, cachedData);
+
+    setSkeleton(prev => {
+      const next = {
+        ...prev,
+        fileName: found.fileName,
+        subjectCode: targetSub,
+        subjectName: targetSubName,
+        grade: targetG,
+        bookEdition: found.bookEdition || prev.bookEdition,
+        totalPages: found.totalPages || prev.totalPages,
+        chapters: finalChapters.length > 0 ? finalChapters : prev.chapters
+      };
+      skeletonRef.current = next;
+      saveToStorage(next);
+      return next;
+    });
     setSelectedChapterIdx(0);
     setSelectedLessonIdx(0);
     setSelectedPatternIdx(0);
@@ -644,12 +653,11 @@ export default function TextbookIngestView({ onBack, onNavigateTab }) {
       }));
 
       if (newEx.length > 0) {
-        updatePattern(pat => ({
+        updatePatternByName(activeChapter?.title, activeLesson?.title, activePattern.name, pat => ({
           ...pat,
           exercises: [...(pat.exercises || []), ...newEx]
         }));
         setTextbookExercises(prev => [...prev, ...newEx]);
-        setTimeout(() => saveToStorage(), 150);
         toast.success(`🎉 Đã sinh thêm ${newEx.length} bài tập mới cho "${cleanPrefix(activePattern.name, 'pattern')}" và tự động lưu! (Tổng cộng: ${existing.length + newEx.length} câu)`);
       }
     } catch (err) {
@@ -706,7 +714,7 @@ export default function TextbookIngestView({ onBack, onNavigateTab }) {
 
         const newEx = res?.exercises || [];
         if (newEx.length > 0) {
-          updatePatternAt(cIdx, lIdx, safePIdx, p => {
+          updatePatternByName(ch?.title, les?.title, pat.name, p => {
             const existing = p.exercises || [];
             const mappedNew = newEx.map((ex, exIdx) => ({
               ...ex,
@@ -731,7 +739,7 @@ export default function TextbookIngestView({ onBack, onNavigateTab }) {
     }
 
     setBatchProgress(null);
-    saveToStorage();
+    saveToStorage(skeletonRef.current);
     toast.success(`🎉 Đã sinh thêm câu hỏi thành công cho ${successCount}/${targetPatterns.length} dạng bài và tự động lưu toàn bộ!`);
   };
 
@@ -775,7 +783,7 @@ export default function TextbookIngestView({ onBack, onNavigateTab }) {
 
         const newEx = res?.exercises || [];
         if (newEx.length > 0) {
-          updatePatternAt(task.cIdx, task.lIdx, task.pIdx, p => {
+          updatePatternByName(task.chapterTitle, task.lessonTitle, task.pattern.name, p => {
             const existing = p.exercises || [];
             const mappedNew = newEx.map((ex, exIdx) => ({
               ...ex,
@@ -800,7 +808,7 @@ export default function TextbookIngestView({ onBack, onNavigateTab }) {
     }
 
     setBatchProgress(null);
-    saveToStorage();
+    saveToStorage(skeletonRef.current);
     toast.success(`🎉 Đã hoàn tất sinh thêm câu hỏi cho ${successCount}/${tasks.length} dạng bài toàn cuốn sách và tự động lưu toàn bộ!`);
   };
 
@@ -926,13 +934,18 @@ export default function TextbookIngestView({ onBack, onNavigateTab }) {
   const updateLesson = (updater) => {
     if (isLocked || !activeChapter || !activeLesson) return;
     setSkeleton(prev => {
-      const chapters = [...prev.chapters];
-      const ch = { ...chapters[selectedChapterIdx] };
-      const lessons = [...ch.lessons];
-      lessons[selectedLessonIdx] = updater({ ...lessons[selectedLessonIdx] });
-      ch.lessons = lessons;
-      chapters[selectedChapterIdx] = ch;
+      const chapters = (prev.chapters || []).map((ch, cIdx) => {
+        if (activeChapter?.title ? ch.title !== activeChapter.title : cIdx !== selectedChapterIdx) return ch;
+        return {
+          ...ch,
+          lessons: (ch.lessons || []).map((les, lIdx) => {
+            if (activeLesson?.title ? les.title !== activeLesson.title : lIdx !== selectedLessonIdx) return les;
+            return updater({ ...les });
+          })
+        };
+      });
       const updated = { ...prev, chapters };
+      skeletonRef.current = updated;
       saveToStorage(updated);
       return updated;
     });
@@ -940,29 +953,83 @@ export default function TextbookIngestView({ onBack, onNavigateTab }) {
 
   const updatePattern = (updater) => {
     if (isLocked || !activeLesson || !activePattern) return;
-    updateLesson(les => {
-      const patterns = [...(les.patterns || [])];
-      patterns[selectedPatternIdx] = updater({ ...patterns[selectedPatternIdx] });
-      return { ...les, patterns };
+    setSkeleton(prev => {
+      const chapters = (prev.chapters || []).map((ch, cIdx) => {
+        if (activeChapter?.title ? ch.title !== activeChapter.title : cIdx !== selectedChapterIdx) return ch;
+        return {
+          ...ch,
+          lessons: (ch.lessons || []).map((les, lIdx) => {
+            if (activeLesson?.title ? les.title !== activeLesson.title : lIdx !== selectedLessonIdx) return les;
+            return {
+              ...les,
+              patterns: (les.patterns || []).map((pat, pIdx) => {
+                if (activePattern?.name ? pat.name !== activePattern.name : pIdx !== selectedPatternIdx) return pat;
+                return updater({ ...pat });
+              })
+            };
+          })
+        };
+      });
+      const updated = { ...prev, chapters };
+      skeletonRef.current = updated;
+      saveToStorage(updated);
+      return updated;
+    });
+  };
+
+  const updatePatternByName = (chapterTitle, lessonTitle, patternName, updater) => {
+    setSkeleton(prev => {
+      const chapters = (prev.chapters || []).map(ch => {
+        if (chapterTitle && ch.title !== chapterTitle) return ch;
+        return {
+          ...ch,
+          lessons: (ch.lessons || []).map(les => {
+            if (lessonTitle && les.title !== lessonTitle) return les;
+            return {
+              ...les,
+              patterns: (les.patterns || []).map(pat => {
+                if (pat.name !== patternName) return pat;
+                return updater({ ...pat });
+              })
+            };
+          })
+        };
+      });
+      const updated = { ...prev, chapters };
+      skeletonRef.current = updated;
+      saveToStorage(updated);
+      return updated;
     });
   };
 
   const updatePatternAt = (cIdx, lIdx, pIdx, updater) => {
     setSkeleton(prev => {
       const chapters = [...(prev.chapters || [])];
-      if (!chapters[cIdx]) return prev;
-      const ch = { ...chapters[cIdx] };
+      const targetCh = validChapters[cIdx] || chapters[cIdx];
+      const realCIdx = targetCh ? chapters.findIndex(c => c.title === targetCh.title) : cIdx;
+      if (realCIdx < 0 || !chapters[realCIdx]) return prev;
+
+      const ch = { ...chapters[realCIdx] };
       const lessons = [...(ch.lessons || [])];
-      if (!lessons[lIdx]) return prev;
-      const les = { ...lessons[lIdx] };
+      const validLes = (ch.lessons || []).filter(l => !isNonPedagogical(l.title));
+      const targetLes = validLes[lIdx] || lessons[lIdx];
+      const realLIdx = targetLes ? lessons.findIndex(l => l.title === targetLes.title) : lIdx;
+      if (realLIdx < 0 || !lessons[realLIdx]) return prev;
+
+      const les = { ...lessons[realLIdx] };
       const patterns = [...(les.patterns || [])];
-      if (!patterns[pIdx]) return prev;
-      patterns[pIdx] = updater({ ...patterns[pIdx] });
+      const validPat = (les.patterns || []).filter(p => !isNonPedagogical(p.name));
+      const targetPat = validPat[pIdx] || patterns[pIdx];
+      const realPIdx = targetPat ? patterns.findIndex(p => p.name === targetPat.name) : pIdx;
+      if (realPIdx < 0 || !patterns[realPIdx]) return prev;
+
+      patterns[realPIdx] = updater({ ...patterns[realPIdx] });
       les.patterns = patterns;
-      lessons[lIdx] = les;
+      lessons[realLIdx] = les;
       ch.lessons = lessons;
-      chapters[cIdx] = ch;
+      chapters[realCIdx] = ch;
       const updated = { ...prev, chapters };
+      skeletonRef.current = updated;
       saveToStorage(updated);
       return updated;
     });
