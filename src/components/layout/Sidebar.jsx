@@ -81,7 +81,7 @@ export default function Sidebar({
               {
                 id: 'dashboard',
                 label: 'Tổng quan Đồng hành',
-                sublabel: 'Chỉ số R_exam & Kỷ luật tuần',
+                sublabel: 'Chỉ số sẵn sàng & Tự học tuần',
                 icon: HeartHandshake,
                 active: activeTab === 'dashboard',
                 onClick: () => setActiveTab('dashboard')
@@ -89,7 +89,7 @@ export default function Sidebar({
               {
                 id: 'history',
                 label: 'Lịch sử Bài thi của Con',
-                sublabel: 'Chi tiết điểm & Nhận xét AI',
+                sublabel: 'Chi tiết điểm & Nhận xét sư phạm',
                 icon: History,
                 active: activeTab === 'history',
                 onClick: () => setActiveTab('history')
@@ -102,11 +102,11 @@ export default function Sidebar({
               {
                 id: 'tuition',
                 label: 'Đóng Học phí & Gói học',
-                sublabel: 'Cổng VietQR PayOS tức thì',
+                sublabel: 'Thanh toán học phí VietQR',
                 icon: CreditCard,
                 active: activeTab === 'tuition',
                 onClick: () => setActiveTab('tuition'),
-                badge: 'PayOS'
+                badge: 'VietQR'
               }
             ]
           }
@@ -599,7 +599,7 @@ export default function Sidebar({
                 : 'Chưa có học sinh liên kết'}
             </div>
             <div className="text-[11px] text-blue-100 flex items-center justify-between">
-              <span>Chỉ số sẵn sàng R_exam:</span>
+              <span>Chỉ số sẵn sàng thi:</span>
               <strong className="text-[#FACC15] font-black">
                 {firstChild
                   ? `${Number(firstChild.examReadiness?.readinessIndex ?? 0).toFixed(1)}%`

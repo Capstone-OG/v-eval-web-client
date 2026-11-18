@@ -80,16 +80,16 @@ const ROLE_PORTAL_DEFINITIONS = {
     ]
   },
   parent: {
-    code: 'PARENT COMPANION PORTAL',
+    code: 'KHÔNG GIAN PHỤ HUYNH',
     title: 'Cổng Phụ Huynh Đồng Hành Cùng Con',
-    subtitle: 'Theo dõi chỉ số sẵn sàng thi R_exam, kỷ luật tự học 12h/tuần & Thanh toán học phí VietQR',
+    subtitle: 'Theo dõi mức độ sẵn sàng thi, thời lượng tự học thực tế & Học phí trực tuyến',
     defaultTab: 'dashboard',
     icon: HeartHandshake,
     accentBadge: 'bg-amber-50 text-amber-800 border-amber-200',
     tabs: [
       { id: 'dashboard', label: 'Tổng quan Đồng hành', icon: HeartHandshake },
       { id: 'history', label: 'Lịch sử Bài thi của Con', icon: History },
-      { id: 'tuition', label: 'Đóng Học phí PayOS', icon: CreditCard }
+      { id: 'tuition', label: 'Đóng Học phí & Gói học', icon: CreditCard }
     ]
   },
   teacher: {
@@ -698,7 +698,7 @@ export default function App() {
                 <span>• Hệ sinh thái Khảo thí & Học tập Thích ứng ĐHQG TP.HCM</span>
               </div>
               <div className="flex items-center gap-4">
-                <span>Vai trò hiện tại: <strong className="text-blue-700 uppercase">{role}</strong></span>
+                <span>Tài khoản: <strong className="text-blue-700 font-bold">{role === 'parent' ? 'Phụ huynh' : role === 'student' ? 'Học sinh' : role === 'teacher' ? 'Giảng viên' : role === 'manager' ? 'Quản lý học thuật' : role}</strong></span>
                 <button
                   type="button"
                   onClick={() => setAppView('landing')}
