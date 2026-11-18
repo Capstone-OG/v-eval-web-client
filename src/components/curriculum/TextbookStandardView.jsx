@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   ArrowLeft,
   BookOpen,
@@ -21,7 +21,10 @@ import {
   FileText,
   Save,
   Compass,
-  Columns
+  Columns,
+  HelpCircle,
+  Lightbulb,
+  Filter
 } from 'lucide-react';
 import aiService from '../../services/aiService';
 import MathText from '../common/MathText';
@@ -96,6 +99,14 @@ export default function TextbookStandardView({ onBack, onNavigateTab, isSidebarC
   const [editedTheory, setEditedTheory] = useState('');
   const [enrichingKnowledge, setEnrichingKnowledge] = useState(false);
 
+  // Trạng thái thu gọn Mục lục SGK (tương tự như thu gọn Sidebar)
+  const [isTocCollapsed, setIsTocCollapsed] = useState(false);
+
+  // Bộ lọc & xem câu hỏi / bài tập SGK của bài học
+  const [exerciseFilterScope, setExerciseFilterScope] = useState('lesson'); // 'lesson' | 'pattern'
+  const [selectedBloomFilter, setSelectedBloomFilter] = useState(0); // 0 = Tất cả, 1..6
+  const [expandedExerciseSolutions, setExpandedExerciseSolutions] = useState({});
+
   // Parsed SGK Dropdown & Sub-Pagination state
   const [isOcrDropdownOpen, setIsOcrDropdownOpen] = useState(true);
   const [ocrCurrentPage, setOcrCurrentPage] = useState(1);
@@ -109,6 +120,41 @@ export default function TextbookStandardView({ onBack, onNavigateTab, isSidebarC
   const validPatterns = (activeLesson?.patterns || []).filter(p => p && !isNonPedagogical(p.name));
   const activePattern = validPatterns.length > 0 ? (validPatterns[selectedPatternIdx] || validPatterns[0]) : null;
   const isLocked = skeleton.isVersionLocked;
+
+  // Danh sách bài tập thuộc bài học hiện tại (bóc tách từ tất cả các dạng bài của bài học)
+  const activeLessonExercises = useMemo(() => {
+    if (!activeLesson) return [];
+    const list = [];
+    (activeLesson.patterns || []).filter(p => !isNonPedagogical(p.name)).forEach(pat => {
+      (pat.exercises || []).forEach(ex => {
+        list.push({
+          ...ex,
+          patternName: pat.name,
+          patternCode: pat.patternCode,
+          bloomLevel: ex.bloomLevel || pat.bloomLevel || 2
+        });
+      });
+    });
+    return list;
+  }, [activeLesson]);
+
+  // Danh sách bài tập thuộc dạng bài đang chọn
+  const activePatternExercises = useMemo(() => {
+    if (!activePattern) return [];
+    return (activePattern.exercises || []).map(ex => ({
+      ...ex,
+      patternName: activePattern.name,
+      patternCode: activePattern.patternCode,
+      bloomLevel: ex.bloomLevel || activePattern.bloomLevel || 2
+    }));
+  }, [activePattern]);
+
+  // Danh sách bài tập thực tế hiển thị theo bộ lọc
+  const displayedExercises = useMemo(() => {
+    const base = exerciseFilterScope === 'pattern' ? activePatternExercises : activeLessonExercises;
+    if (!selectedBloomFilter || selectedBloomFilter === 0) return base;
+    return base.filter(ex => (ex.bloomLevel || 2) === selectedBloomFilter);
+  }, [exerciseFilterScope, activeLessonExercises, activePatternExercises, selectedBloomFilter]);
 
   // Lấy các chunks bóc tách từ SGK thuộc về bài học đang chọn
   const currentLessonChunks = getChunksForLesson(activeLesson, sourceChunks);
@@ -170,6 +216,35 @@ export default function TextbookStandardView({ onBack, onNavigateTab, isSidebarC
     saveStoredTextbookContext({ selectedSourceId: sourceId, fileName: found.fileName });
 
     try {
+      // 0. Đọc dữ liệu đã lưu từ CSDL / LocalStorage theo sourceId (Mã định danh ID SGK dưới Database Supabase)
+      const storageKey = `veval_textbook_saved_${sourceId}`;
+      let cachedData = null;
+      try {
+        const raw = (sourceId ? localStorage.getItem(storageKey) : null)
+          || (found.fileName ? localStorage.getItem(`veval_textbook_saved_${found.fileName}`) : null)
+          || localStorage.getItem('veval_textbook_saved_default');
+        if (raw) {
+          cachedData = JSON.parse(raw);
+        }
+      } catch (e) {
+        console.warn('Cannot read cached textbook:', e);
+      }
+
+      const savedPatternData = new Map();
+      if (cachedData?.skeleton?.chapters) {
+        cachedData.skeleton.chapters.forEach(ch => {
+          (ch.lessons || []).forEach(les => {
+            (les.patterns || []).forEach(pat => {
+              const pKey = `${cleanPrefix(les.title, 'lesson').toLowerCase()}__${cleanPrefix(pat.name, 'pattern').toLowerCase()}`;
+              savedPatternData.set(pKey, {
+                bloomLevel: pat.bloomLevel,
+                exercises: pat.exercises || []
+              });
+            });
+          });
+        });
+      }
+
       const res = await aiService.getTextbookChunks(sourceId);
       const chunks = res?.chunks || [];
       setSourceChunks(chunks);
@@ -213,14 +288,16 @@ export default function TextbookStandardView({ onBack, onNavigateTab, isSidebarC
 
         // Chỉ nạp dạng bài sư phạm
         if (rawPName && !isNonPedagogical(rawPName) && !lesObj.patterns.some(p => p.name === rawPName)) {
+          const pKey = `${cleanPrefix(lName, 'lesson').toLowerCase()}__${cleanPrefix(rawPName, 'pattern').toLowerCase()}`;
+          const saved = savedPatternData.get(pKey);
           lesObj.patterns.push({
             patternCode: `P${lesObj.patterns.length + 1}`,
             name: rawPName,
-            bloomLevel: 2,
+            bloomLevel: saved?.bloomLevel || 2,
             status: 'ACCEPTED',
             description: 'Dạng bài bóc tách từ SGK.',
             method: 'Phương pháp sư phạm chuẩn SGK.',
-            exercises: []
+            exercises: saved?.exercises || []
           });
         }
       });
@@ -302,19 +379,29 @@ export default function TextbookStandardView({ onBack, onNavigateTab, isSidebarC
 
             if (isSingleOrGeneric && matchedLessonPreset?.patterns?.length > 0) {
               const existingExercises = currentValidPatterns[0]?.exercises || [];
-              les.patterns = matchedLessonPreset.patterns.map((presetPat, pIdx) => ({
-                ...presetPat,
-                patternCode: `P${pIdx + 1}`,
-                status: 'ACCEPTED',
-                exercises: pIdx === 0 ? existingExercises : []
-              }));
+              les.patterns = matchedLessonPreset.patterns.map((presetPat, pIdx) => {
+                const pKey = `${cleanPrefix(les.title, 'lesson').toLowerCase()}__${cleanPrefix(presetPat.name, 'pattern').toLowerCase()}`;
+                const saved = savedPatternData.get(pKey);
+                return {
+                  ...presetPat,
+                  patternCode: `P${pIdx + 1}`,
+                  status: 'ACCEPTED',
+                  bloomLevel: saved?.bloomLevel || presetPat.bloomLevel || 2,
+                  exercises: saved?.exercises || (pIdx === 0 && existingExercises.length > 0 ? existingExercises : (presetPat.exercises || []))
+                };
+              });
             } else if (les.patterns?.length > 0) {
               const allSameL2 = les.patterns.every(p => !p.bloomLevel || p.bloomLevel === 2);
-              les.patterns = les.patterns.map((p, pIdx) => ({
-                ...p,
-                patternCode: `P${pIdx + 1}`,
-                bloomLevel: allSameL2 ? Math.min(4, Math.max(1, pIdx + 1)) : (p.bloomLevel || 2)
-              }));
+              les.patterns = les.patterns.map((p, pIdx) => {
+                const pKey = `${cleanPrefix(les.title, 'lesson').toLowerCase()}__${cleanPrefix(p.name, 'pattern').toLowerCase()}`;
+                const saved = savedPatternData.get(pKey);
+                return {
+                  ...p,
+                  patternCode: `P${pIdx + 1}`,
+                  bloomLevel: saved?.bloomLevel || (allSameL2 ? Math.min(4, Math.max(1, pIdx + 1)) : (p.bloomLevel || 2)),
+                  exercises: saved?.exercises || p.exercises || []
+                };
+              });
             }
           }
 
@@ -349,6 +436,22 @@ export default function TextbookStandardView({ onBack, onNavigateTab, isSidebarC
 
       const detectedChapters = filterPedagogicalChapters(rawChapters);
 
+      const fallbackChapters = (preset?.chapters || prev.chapters || []).map(ch => ({
+        ...ch,
+        lessons: (ch.lessons || []).map(les => ({
+          ...les,
+          patterns: (les.patterns || []).map(pat => {
+            const pKey = `${cleanPrefix(les.title, 'lesson').toLowerCase()}__${cleanPrefix(pat.name, 'pattern').toLowerCase()}`;
+            const saved = savedPatternData.get(pKey);
+            return {
+              ...pat,
+              bloomLevel: saved?.bloomLevel || pat.bloomLevel || 2,
+              exercises: saved?.exercises || pat.exercises || []
+            };
+          })
+        }))
+      }));
+
       setSkeleton(prev => ({
         ...prev,
         fileName: found.fileName,
@@ -357,7 +460,7 @@ export default function TextbookStandardView({ onBack, onNavigateTab, isSidebarC
         grade: targetG,
         bookEdition: found.bookEdition || prev.bookEdition,
         totalPages: found.totalPages || prev.totalPages,
-        chapters: detectedChapters.length > 0 ? detectedChapters : (preset?.chapters || prev.chapters)
+        chapters: detectedChapters.length > 0 ? detectedChapters : fallbackChapters
       }));
 
       saveStoredTextbookContext({
@@ -613,8 +716,8 @@ ${(activeLesson.keyFormulas || []).map(f => `$${f}$`).join(', ')}`;
   const minOcrPage = ocrScope === 'lesson' && activeLesson?.pageStart ? activeLesson.pageStart : 1;
   const maxOcrPage = ocrScope === 'lesson' && activeLesson?.pageEnd ? activeLesson.pageEnd : totalBookPages;
 
-  // Nếu sidebar đang thu gọn (isSidebarCollapsed === true): hiển thị 2 trang; nếu sidebar mở: 1 trang
-  const pageSize = isSidebarCollapsed ? 2 : 1;
+  // Nếu sidebar hoặc mục lục đang thu gọn: hiển thị 2 trang; nếu cả 2 đều mở: 1 trang
+  const pageSize = (isSidebarCollapsed || isTocCollapsed) ? 2 : 1;
   const safeCurrentPage = Math.min(Math.max(minOcrPage, ocrCurrentPage), maxOcrPage);
 
   const handlePrevOcrPage = () => {
@@ -920,28 +1023,54 @@ ${(activeLesson.keyFormulas || []).map(f => `$${f}$`).join(', ')}`;
 
         {/* 3. KHÔNG GIAN SƯ PHẠM 2 CỘT: CÂY MỤC LỤC BÊN TRÁI & NỘI DUNG LÝ THUYẾT + SGK PARSE BÊN PHẢI */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-0">
-          {/* CỘT BÊN TRÁI (4/12): CÂY MỤC LỤC CẤU TRÚC SÁCH PHÂN CẤP */}
-          <div className="lg:col-span-4 bg-white rounded-3xl border border-emerald-200/80 p-4 shadow-xs flex flex-col gap-3">
-            <div className="flex items-center justify-between border-b border-emerald-100 pb-2.5">
-              <div className="flex items-center gap-2">
-                <Layers className="w-4 h-4 text-emerald-600" />
-                <div>
-                  <h2 className="text-xs font-black uppercase tracking-wider text-emerald-950">
-                    Mục Lục Cấu Trúc SGK ({validChapters.length} Chương)
-                  </h2>
-                  <span className="text-[10px] text-slate-400 font-medium">Chương ▾ Bài học ▾ Dạng bài</span>
+          {/* CỘT BÊN TRÁI: CÂY MỤC LỤC CẤU TRÚC SÁCH PHÂN CẤP (CHO PHÉP THU GỌN NHƯ SIDEBAR) */}
+          {isTocCollapsed ? (
+            <div className="lg:col-span-1 bg-white rounded-3xl border border-emerald-200/80 p-3 shadow-xs flex flex-col items-center gap-4 transition-all">
+              <button
+                type="button"
+                onClick={() => setIsTocCollapsed(false)}
+                title="Mở rộng mục lục SGK"
+                className="p-2.5 rounded-2xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 cursor-pointer transition-all shadow-2xs hover:scale-105"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
+              <div className="text-[11px] font-black uppercase tracking-wider text-emerald-900 [writing-mode:vertical-lr] rotate-180 select-none py-2 flex items-center gap-1.5">
+                <Layers className="w-3.5 h-3.5" />
+                <span>Mục Lục SGK ({validChapters.length} Chương)</span>
+              </div>
+            </div>
+          ) : (
+            <div className="lg:col-span-4 bg-white rounded-3xl border border-emerald-200/80 p-4 shadow-xs flex flex-col gap-3 transition-all">
+              <div className="flex items-center justify-between border-b border-emerald-100 pb-2.5">
+                <div className="flex items-center gap-2">
+                  <Layers className="w-4 h-4 text-emerald-600" />
+                  <div>
+                    <h2 className="text-xs font-black uppercase tracking-wider text-emerald-950">
+                      Mục Lục Cấu Trúc SGK ({validChapters.length} Chương)
+                    </h2>
+                    <span className="text-[10px] text-slate-400 font-medium">Chương ▾ Bài học ▾ Dạng bài</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  {!isLocked && (
+                    <button
+                      type="button"
+                      onClick={handleAddNewChapter}
+                      className="px-2 py-1 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-[11px] font-bold flex items-center gap-1 cursor-pointer border border-emerald-200"
+                    >
+                      <Plus className="w-3 h-3" /> Thêm chương
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setIsTocCollapsed(true)}
+                    title="Thu gọn thanh mục lục"
+                    className="p-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 cursor-pointer transition-colors"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
-              {!isLocked && (
-                <button
-                  type="button"
-                  onClick={handleAddNewChapter}
-                  className="px-2.5 py-1 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-[11px] font-bold flex items-center gap-1 cursor-pointer border border-emerald-200"
-                >
-                  <Plus className="w-3 h-3" /> Thêm chương
-                </button>
-              )}
-            </div>
 
             {/* Danh sách các Chương & Bài học (Mở rộng tự nhiên theo toàn bộ danh sách chương) */}
             <div className="space-y-3 pr-1">
@@ -1154,25 +1283,36 @@ ${(activeLesson.keyFormulas || []).map(f => `$${f}$`).join(', ')}`;
               })}
             </div>
           </div>
+        )}
 
-          {/* CỘT BÊN PHẢI (8/12): LÝ THUYẾT CHUẨN CỦA BÀI ĐÓ & NỘI DUNG SGK PARSE DROPDOWN */}
-          <div className="lg:col-span-8 flex flex-col gap-5 min-h-0">
-            {!activeLesson || isNonPedagogical(activeLesson.title) ? (
-              <div className="bg-white rounded-3xl border border-emerald-200/80 p-12 text-center text-slate-400 text-xs">
-                Vui lòng chọn bài học từ mục lục bên trái để xem lý thuyết và tri thức SGK.
-              </div>
-            ) : (
-              <>
-                {/* 1. KHỐI LÝ THUYẾT CHUẨN CỦA BÀI HỌC (Ô NỘI DUNG RẤT LỚN, KHÔNG RÂU RIA) */}
-                <div className="bg-white rounded-3xl border border-emerald-200/80 p-6 shadow-xs flex flex-col gap-4">
-                  {/* Header bài học với Breadcrumb & Các nút thao tác tinh gọn */}
-                  <div className="flex items-center justify-between flex-wrap gap-3 pb-3 border-b border-slate-100">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 text-[11px] text-slate-500 font-semibold mb-1">
-                        <span className="text-emerald-700 font-bold">{cleanPrefix(activeChapter?.title, 'chapter') || activeChapter?.title}</span>
-                        <span>›</span>
-                        <span>Trang {activeLesson.pageStart}–{activeLesson.pageEnd}</span>
-                      </div>
+        {/* CỘT BÊN PHẢI: LÝ THUYẾT CHUẨN, CÂU HỎI BÀI TẬP & NỘI DUNG SGK PARSE */}
+        <div className={`${isTocCollapsed ? 'lg:col-span-11' : 'lg:col-span-8'} flex flex-col gap-5 min-h-0 transition-all`}>
+          {!activeLesson || isNonPedagogical(activeLesson.title) ? (
+            <div className="bg-white rounded-3xl border border-emerald-200/80 p-12 text-center text-slate-400 text-xs">
+              Vui lòng chọn bài học từ mục lục bên trái để xem lý thuyết và tri thức SGK.
+            </div>
+          ) : (
+            <>
+              {/* 1. KHỐI LÝ THUYẾT CHUẨN CỦA BÀI HỌC */}
+              <div className="bg-white rounded-3xl border border-emerald-200/80 p-6 shadow-xs flex flex-col gap-4">
+                {/* Header bài học với Breadcrumb & Các nút thao tác tinh gọn */}
+                <div className="flex items-center justify-between flex-wrap gap-3 pb-3 border-b border-slate-100">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 text-[11px] text-slate-500 font-semibold mb-1">
+                      {isTocCollapsed && (
+                        <button
+                          type="button"
+                          onClick={() => setIsTocCollapsed(false)}
+                          className="mr-1 px-2 py-0.5 rounded-lg bg-emerald-100 hover:bg-emerald-200 text-emerald-900 text-[10.5px] font-bold flex items-center gap-1 cursor-pointer transition-colors"
+                          title="Mở rộng mục lục SGK"
+                        >
+                          <ChevronRight className="w-3 h-3" /> Mục lục
+                        </button>
+                      )}
+                      <span className="text-emerald-700 font-bold">{cleanPrefix(activeChapter?.title, 'chapter') || activeChapter?.title}</span>
+                      <span>›</span>
+                      <span>Trang {activeLesson.pageStart}–{activeLesson.pageEnd}</span>
+                    </div>
                       <div className="flex items-center gap-2 flex-wrap">
                         <h2 className="text-base sm:text-lg font-black text-emerald-950">
                           Bài {activeLesson.lessonNumber || selectedLessonIdx + 1}: {cleanPrefix(activeLesson.title, 'lesson') || activeLesson.title}
@@ -1260,7 +1400,7 @@ ${(activeLesson.keyFormulas || []).map(f => `$${f}$`).join(', ')}`;
                         </div>
                       </div>
                       <textarea
-                        rows={16}
+                        rows={10}
                         value={editedTheory}
                         onChange={e => setEditedTheory(e.target.value)}
                         placeholder="Nhập nội dung lý thuyết định nghĩa, định luật, nguyên lý vận hành..."
@@ -1268,7 +1408,7 @@ ${(activeLesson.keyFormulas || []).map(f => `$${f}$`).join(', ')}`;
                       />
                     </div>
                   ) : (
-                    <div className="p-6 rounded-2xl bg-slate-50/70 border border-slate-200/80 min-h-[920px] overflow-y-auto max-h-[140vh]">
+                    <div className="p-6 rounded-2xl bg-slate-50/70 border border-slate-200/80 min-h-[380px] max-h-[550px] overflow-y-auto">
                       <div className="text-[12px] leading-relaxed text-slate-800 space-y-2.5">
                         <MathText text={activeTheoryContent} />
                       </div>
@@ -1276,7 +1416,249 @@ ${(activeLesson.keyFormulas || []).map(f => `$${f}$`).join(', ')}`;
                   )}
                 </div>
 
-                {/* 2. KHỐI NỘI DUNG SGK PARSE RA (DỜI XUỐNG DƯỚI TRONG 1 DROPDOWN ĐƯỢC PHÂN TRANG CON VỚI < >) */}
+                {/* 2. KHỐI NGÂN HÀNG CÂU HỎI & BÀI TẬP SGK CỦA BÀI HỌC (LẤY THEO ID DƯỚI CSDL) */}
+                <div className="bg-white rounded-3xl border border-emerald-200/80 p-6 shadow-xs flex flex-col gap-4">
+                  {/* Header Section */}
+                  <div className="flex items-center justify-between flex-wrap gap-3 pb-3 border-b border-slate-100">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2.5 rounded-2xl bg-emerald-100 text-emerald-800 shadow-2xs">
+                        <HelpCircle className="w-5 h-5 text-emerald-700" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider text-emerald-950">
+                            Ngân Hàng Câu Hỏi & Bài Tập SGK
+                          </h3>
+                          <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10.5px] font-bold">
+                            {activeLessonExercises.length} câu hỏi
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-500 font-medium mt-0.5">
+                          Bài {activeLesson.lessonNumber || selectedLessonIdx + 1}: {cleanPrefix(activeLesson.title, 'lesson') || activeLesson.title} • Phân hóa theo Bloom Taxonomy L1–L6
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Scope & Action buttons */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {/* Tab Filter: Bài này vs Dạng đang chọn */}
+                      <div className="flex items-center bg-slate-100 p-1 rounded-xl">
+                        <button
+                          type="button"
+                          onClick={() => setExerciseFilterScope('lesson')}
+                          className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                            exerciseFilterScope === 'lesson'
+                              ? 'bg-white text-emerald-900 shadow-2xs'
+                              : 'text-slate-600 hover:text-slate-900'
+                          }`}
+                        >
+                          Cả bài ({activeLessonExercises.length})
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setExerciseFilterScope('pattern')}
+                          className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                            exerciseFilterScope === 'pattern'
+                              ? 'bg-white text-emerald-900 shadow-2xs'
+                              : 'text-slate-600 hover:text-slate-900'
+                          }`}
+                        >
+                          {activePattern ? cleanPrefix(activePattern.name, 'pattern') : 'Dạng bài'} ({activePatternExercises.length})
+                        </button>
+                      </div>
+
+                      {onNavigateTab && (
+                        <button
+                          type="button"
+                          onClick={() => onNavigateTab('ingest')}
+                          className="px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-2xs transition-all"
+                          title="Chuyển sang trang Nạp SGK để AI sinh câu hỏi mới"
+                        >
+                          <Sparkles className="w-3.5 h-3.5 text-emerald-700" />
+                          <span>Sinh thêm ở Trang Nạp</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Bloom Level Filters (nếu có câu hỏi) */}
+                  {activeLessonExercises.length > 0 && (
+                    <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
+                      <span className="text-[11px] font-bold text-slate-400 mr-1 flex items-center gap-1">
+                        <Filter className="w-3 h-3" /> Lọc cấp độ:
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedBloomFilter(0)}
+                        className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer border ${
+                          selectedBloomFilter === 0
+                            ? 'bg-emerald-700 text-white border-emerald-700 shadow-2xs'
+                            : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                        }`}
+                      >
+                        Tất cả ({exerciseFilterScope === 'pattern' ? activePatternExercises.length : activeLessonExercises.length})
+                      </button>
+                      {BLOOM_LEVELS.map(b => {
+                        const count = (exerciseFilterScope === 'pattern' ? activePatternExercises : activeLessonExercises).filter(ex => (ex.bloomLevel || 2) === b.level).length;
+                        if (count === 0) return null;
+                        return (
+                          <button
+                            key={b.level}
+                            type="button"
+                            onClick={() => setSelectedBloomFilter(b.level)}
+                            className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer border ${
+                              selectedBloomFilter === b.level
+                                ? 'bg-emerald-700 text-white border-emerald-700 shadow-2xs'
+                                : `${b.color} hover:opacity-80`
+                            }`}
+                          >
+                            {b.label} ({count})
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Exercise List or Empty State */}
+                  {displayedExercises.length === 0 ? (
+                    <div className="p-8 rounded-2xl bg-slate-50/80 border border-dashed border-slate-300 text-center flex flex-col items-center gap-3">
+                      <div className="p-3 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-200">
+                        <HelpCircle className="w-6 h-6" />
+                      </div>
+                      <div className="max-w-md">
+                        <h4 className="text-xs font-bold text-slate-800">
+                          {activeLessonExercises.length === 0
+                            ? 'Chưa có bài tập nào được lưu cho bài học này'
+                            : 'Không có bài tập nào phù hợp với bộ lọc hiện tại'}
+                        </h4>
+                        <p className="text-[11px] text-slate-500 mt-1">
+                          {activeLessonExercises.length === 0
+                            ? 'Bài tập được đồng bộ tự động theo ID tài liệu dưới CSDL. Bạn có thể sang Trang Nạp SGK để AI tự động sinh câu hỏi theo chuẩn Bloom L1–L6.'
+                            : 'Hãy thử chọn cấp độ Bloom khác hoặc xem tất cả bài tập trong bài.'}
+                        </p>
+                      </div>
+                      {activeLessonExercises.length === 0 && onNavigateTab && (
+                        <button
+                          type="button"
+                          onClick={() => onNavigateTab('ingest')}
+                          className="mt-1 px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold flex items-center gap-2 cursor-pointer shadow-xs transition-all hover:scale-105"
+                        >
+                          <Sparkles className="w-4 h-4" />
+                          <span>Đến Trang Nạp SGK để sinh câu hỏi</span>
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {displayedExercises.map((ex, exIdx) => {
+                        const bloomInfo = BLOOM_LEVELS.find(b => b.level === (ex.bloomLevel || 2)) || BLOOM_LEVELS[1];
+                        const isSolutionExpanded = !!expandedExerciseSolutions[ex.id || exIdx];
+
+                        return (
+                          <div
+                            key={ex.id || exIdx}
+                            className="p-5 rounded-2xl bg-slate-50/70 border border-slate-200/90 shadow-2xs hover:border-emerald-300 transition-all flex flex-col gap-3"
+                          >
+                            {/* Card Top: Number, Bloom Badge, Pattern info */}
+                            <div className="flex items-center justify-between flex-wrap gap-2">
+                              <div className="flex items-center gap-2">
+                                <span className="w-6 h-6 rounded-lg bg-emerald-800 text-white text-[11px] font-black flex items-center justify-center shadow-2xs">
+                                  {exIdx + 1}
+                                </span>
+                                <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold border ${bloomInfo.color}`}>
+                                  {bloomInfo.label}
+                                </span>
+                                {ex.patternName && (
+                                  <span className="px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-600 text-[10.5px] font-medium">
+                                    {cleanPrefix(ex.patternName, 'pattern')}
+                                  </span>
+                                )}
+                              </div>
+
+                              {ex.sourcePage && (
+                                <span className="text-[10px] font-medium text-slate-400">
+                                  Nguồn: Trang {ex.sourcePage}
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Question Stem */}
+                            <div className="text-[12.5px] font-medium text-slate-900 leading-relaxed pl-1">
+                              <MathText text={ex.stem} />
+                            </div>
+
+                            {/* Options A, B, C, D */}
+                            {ex.options && ex.options.length > 0 && (
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                                {ex.options.map((opt, optIdx) => {
+                                  const isCorrect = optIdx === ex.correctIndex;
+                                  const letter = String.fromCharCode(65 + optIdx);
+                                  return (
+                                    <div
+                                      key={optIdx}
+                                      className={`p-2.5 rounded-xl border text-xs transition-all flex items-start gap-2 ${
+                                        isCorrect
+                                          ? 'bg-emerald-50/90 border-emerald-300 text-emerald-950 font-bold ring-1 ring-emerald-400/50 shadow-2xs'
+                                          : 'bg-white border-slate-200/90 text-slate-800'
+                                      }`}
+                                    >
+                                      <span
+                                        className={`w-5 h-5 rounded-md flex items-center justify-center text-[10.5px] font-black shrink-0 ${
+                                          isCorrect
+                                            ? 'bg-emerald-700 text-white'
+                                            : 'bg-slate-100 text-slate-600'
+                                        }`}
+                                      >
+                                        {letter}
+                                      </span>
+                                      <div className="flex-1 leading-snug">
+                                        <MathText text={opt} />
+                                      </div>
+                                      {isCorrect && (
+                                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+
+                            {/* Solution toggle & display */}
+                            {ex.solution && (
+                              <div className="pt-2 border-t border-slate-200/70">
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setExpandedExerciseSolutions(prev => ({
+                                      ...prev,
+                                      [ex.id || exIdx]: !prev[ex.id || exIdx]
+                                    }))
+                                  }
+                                  className="text-[11px] font-bold text-amber-800 hover:text-amber-900 flex items-center gap-1.5 cursor-pointer transition-colors"
+                                >
+                                  <Lightbulb className="w-3.5 h-3.5 text-amber-600" />
+                                  <span>{isSolutionExpanded ? 'Thu gọn lời giải' : 'Xem phương pháp & lời giải chi tiết'}</span>
+                                  {isSolutionExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                                </button>
+
+                                {isSolutionExpanded && (
+                                  <div className="mt-2 p-3.5 rounded-xl bg-amber-50/60 border border-amber-200 text-xs text-amber-950 leading-relaxed shadow-2xs">
+                                    <span className="text-[10px] font-black uppercase tracking-wider text-amber-800 block mb-1">
+                                      💡 Hướng Dẫn Giải Chi Tiết:
+                                    </span>
+                                    <MathText text={ex.solution} />
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* 3. KHỐI NỘI DUNG SGK PARSE RA (DỜI XUỐNG DƯỚI TRONG 1 DROPDOWN ĐƯỢC PHÂN TRANG CON VỚI < >) */}
                 <div className="rounded-3xl border border-slate-200/90 bg-white overflow-hidden shadow-2xs">
                   {/* Header Dropdown Toggle */}
                   <div
@@ -1375,7 +1757,7 @@ ${(activeLesson.keyFormulas || []).map(f => `$${f}$`).join(', ')}`;
                           {/* Huy hiệu chế độ xem 1 trang hoặc 2 trang */}
                           <div className="hidden sm:flex items-center gap-1 text-[10.5px] font-bold text-slate-500 pl-2 border-l border-slate-200">
                             <Columns className="w-3.5 h-3.5 text-slate-400" />
-                            <span>{pageSize === 2 ? '2 Trang (Sidebar đóng)' : '1 Trang (Sidebar mở)'}</span>
+                            <span>{pageSize === 2 ? '2 Trang (Mục lục / Sidebar thu gọn)' : '1 Trang (Mục lục mở)'}</span>
                           </div>
                         </div>
                       </div>

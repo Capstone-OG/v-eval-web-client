@@ -2477,3 +2477,29 @@ Radar and skill-prior displays consume API response fields; the benchmark overla
       - **Iconography Sanitization**:
         - Purged all raw emoji characters (`⚡`, `🌟`), adhering to consistent Lucide icon standards (`Sparkles`, `RefreshCw`).
     - **Verification**: `npm run build` (Vite v8.3.0) compiled cleanly in 2.24s with 3053 modules transformed and zero errors.
+
+
+24. **Collapsible Table of Contents, 3/5 Theory Box Optimization & Integrated Question Bank Viewer Keyed by Database Source ID (`TextbookStandardView.jsx`, `TextbookIngestView.jsx`)**:
+    - **Architectural Motivation**:
+      - In the standardized textbook viewer (`TextbookStandardView.jsx`), the left navigation tree was statically pinned to a 4/12 grid column without collapse capability, limiting horizontal canvas space on standard screens.
+      - The core theory view container previously occupied excessive vertical height (`min-h-[920px] max-h-[140vh]`), completely pushing lower sections off-screen.
+      - Furthermore, synthesized pedagogical exercises created in the Ingestion Studio (`TextbookIngestView.jsx`) were isolated from the Standard Viewer, leaving teachers unable to review existing question banks within the primary reading view.
+    - **Implementation Details**:
+      - **Collapsible Table of Contents (TOC) with Dynamic Grid Rebalancing**:
+        - Integrated `isTocCollapsed` reactive state toggled via `ChevronLeft` in the TOC header and `ChevronRight` in the collapsed strip.
+        - When collapsed, the TOC shrinks into a slim vertical spine (`lg:col-span-1`) with a vertical label (`Mục Lục SGK`), while the right content canvas expands from `lg:col-span-8` to `lg:col-span-11`.
+        - The right lesson header features a quick-action `[Mục lục]` button with `ChevronRight` for frictionless one-click TOC expansion.
+        - Synchronized OCR page rendering: When either the TOC or main application sidebar is collapsed (`isSidebarCollapsed || isTocCollapsed`), the OCR page viewer automatically switches to side-by-side dual-page view (`pageSize = 2`).
+      - **Calibrated 3/5 Theory Box Dimensioning**:
+        - Scaled the theory container from `min-h-[920px]` down to ~3/5 proportions (`min-h-[380px] max-h-[550px] overflow-y-auto`), accompanied by an inline edit textarea adjustment (`rows={10}`).
+        - Ensures balanced pedagogical ergonomics, presenting lesson theory without dominating the entire viewport.
+      - **Embedded Question & Exercise Bank Viewer**:
+        - Rendered directly beneath the theory box: displays real-time question counts, lesson identification, and Bloom Taxonomy (L1–L6) badge categorization.
+        - Includes dual-scope filtering (`Cả bài ({count})` vs `Dạng bài ({count})`) and quick-access cognitive level filtering tabs (L1 Remembering through L6 Creating).
+        - Detailed question cards feature KaTeX math stems via `<MathText />`, multiple-choice options A/B/C/D with correct answers highlighted in emerald with `CheckCircle2` badges, and expandable step-by-step solution guides with `Lightbulb` indicators.
+        - Unpopulated lessons render an empty-state banner with a direct navigational CTA to the Ingestion Studio (`onNavigateTab('ingest')`).
+      - **Database Source ID (`sourceId`) Question Synchronization**:
+        - Unified caching and persistence through database Supabase `sourceId` (`veval_textbook_saved_${sourceId}`).
+        - `TextbookStandardView.jsx` reads `cachedData` upon source selection, maps `savedPatternData`, and populates `pat.exercises` across all patterns.
+        - `TextbookIngestView.jsx` persists simultaneously to both `sourceId` and `fileName` keys in `saveToStorage`.
+    - **Verification**: `npm run build` (Vite v8.3.0) compiled cleanly in 1.35s with 3053 modules transformed and zero errors.

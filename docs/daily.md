@@ -3197,3 +3197,34 @@
 - Follow-up repair: removed an incomplete duplicate trend-chart wrapper in DiagnosticAssessmentPage.jsx that caused Vite JSX parse errors. Vite production build now succeeds (existing bundle-size and dependency eval warnings only).
 
 - API-only result handling: stopped supplying an 80% benchmark or default prior values when the API omits them; the benchmark series and mastery values now appear only when the response includes those values. Also removed two unresolved runtime references in the diagnostic report.
+
+---
+
+## [18/11/2026] - Thu Gọn Thanh Mục Lục Cấu Trúc SGK, Thu Nhỏ Ô Lý Thuyết Còn 3/5, Tích Hợp Phân Hệ Xem Câu Hỏi & Bài Tập SGK Trực Tiếp Và Đồng Bộ Câu Hỏi Theo `sourceId` CSDL Supabase Giữa Trang Xem & Trang Nạp
+
+- **Thu Gọn Thanh Mục Lục Cấu Trúc SGK Linh Hoạt Tương Tự Sidebar ([`TextbookStandardView.jsx`](../src/components/curriculum/TextbookStandardView.jsx))**:
+  - Tích hợp trạng thái `isTocCollapsed`: Cho phép người dùng bấm nút thu gọn (`ChevronLeft`) trên header cây mục lục bên trái.
+  - Khi thu gọn: Cột mục lục co lại thành dải thanh dọc tinh tế (`lg:col-span-1`) hiển thị nút mở rộng (`ChevronRight`) và tiêu đề xoay dọc `Mục Lục SGK ({count} Chương)`, đồng thời giải phóng toàn bộ không gian ngang cho cột nội dung bên phải mở rộng lên `lg:col-span-11`.
+  - Khi mở rộng: Cột mục lục khôi phục kích thước `lg:col-span-4`, cột nội dung chiếm `lg:col-span-8`.
+  - Trên header bài học cột phải: Tích hợp nút shortcut `[Mục lục]` với icon `ChevronRight` giúp người dùng mở lại nhanh cây mục lục bất kỳ lúc nào mà không cần kéo chuột sang mép trái màn hình.
+  - Tự động đồng bộ số trang OCR hiển thị song song: Khi thanh mục lục hoặc thanh sidebar thu gọn (`isSidebarCollapsed || isTocCollapsed`), bộ trích xuất OCR tự động chuyển sang chế độ hiển thị 2 trang song song (`pageSize = 2`), tận dụng triệt để màn hình widescreen.
+
+- **Thu Nhỏ Kích Thước Ô View Lý Thuyết Còn 3/5 Tỉ Lệ Chuẩn ([`TextbookStandardView.jsx`](../src/components/curriculum/TextbookStandardView.jsx))**:
+  - Cắt giảm chiều cao tối thiểu và tối đa của ô hiển thị lý thuyết chuẩn từ `min-h-[920px] max-h-[140vh]` xuống còn `min-h-[380px] max-h-[550px] overflow-y-auto` (khoảng 3/5 so với kích thước cũ ~550px, làm tròn xuống số chẵn), đảm bảo nội dung lý thuyết gọn gàng, thanh thoát và cuộn mượt mà.
+  - Ở chế độ chỉnh sửa trực tiếp lý thuyết (`isEditingTheory`): Điều chỉnh ô nhập liệu `textarea` từ `rows={16}` xuống `rows={10}` tương ứng với tỉ lệ 3/5.
+
+- **Bổ Sung Phân Hệ Ngân Hàng Câu Hỏi & Bài Tập SGK Ngay Dưới Ô Lý Thuyết ([`TextbookStandardView.jsx`](../src/components/curriculum/TextbookStandardView.jsx))**:
+  - Bố trí khối giao diện độc lập chuẩn sư phạm ngay bên dưới ô lý thuyết:
+    + **Header Phân Hệ**: Huy hiệu đếm số câu hỏi thực tế (`{activeLessonExercises.length} câu hỏi`), tiêu đề định danh bài học kèm phân hóa theo Bloom Taxonomy L1–L6.
+    + **Bộ Lọc Phạm Vi & Cấp Độ**: Cho phép chuyển đổi giữa `[Cả bài ({count})]` và `[Dạng bài đang chọn ({count})]`, kèm thanh lọc nhanh theo 6 cấp độ Bloom (Tất cả, L1. Nhớ, L2. Hiểu, L3. Vận dụng, L4. Phân tích, L5. Đánh giá, L6. Sáng tạo).
+    + **Thẻ Bài Tập Chi Tiết**: Hiển thị số thứ tự câu hỏi, huy hiệu màu Bloom, tên dạng bài, đề bài kết xuất công thức toán học qua `<MathText />`, 4 phương án trắc nghiệm A/B/C/D với đáp án đúng được làm nổi bật viền xanh ngọc `ring-1 ring-emerald-400` kèm icon tích xanh `CheckCircle2`.
+    + **Phương Pháp & Lời Giải Chi Tiết**: Nút mở rộng/thu gọn kèm icon bóng đèn `Lightbulb`, kết xuất lời giải sư phạm chi tiết với công thức KaTeX.
+    + **Empty State Thân Thiện**: Nếu bài học chưa có câu hỏi, hiển thị banner hướng dẫn kèm nút CTA `[Đến Trang Nạp SGK để sinh câu hỏi]` kết nối trực tiếp tab `ingest`.
+
+- **Đồng Bộ Câu Hỏi Dưới Database Theo `sourceId` Giữa Trang Nạp & Trang Xem SGK ([`TextbookStandardView.jsx`](../src/components/curriculum/TextbookStandardView.jsx), [`TextbookIngestView.jsx`](../src/components/curriculum/TextbookIngestView.jsx))**:
+  - Chuẩn hóa cơ chế lưu trữ và phục hồi dữ liệu bài tập thông qua mã định danh tài liệu CSDL Supabase `sourceId` (`veval_textbook_saved_${sourceId}`).
+  - Trong `TextbookStandardView.jsx`: Khi chọn sách (`handleSelectSource`), hệ thống tự động đọc bộ nhớ cache theo `sourceId` (và `fileName`), bóc tách `savedPatternData` và gán bài tập `pat.exercises` cho từng dạng bài tương ứng của bài học.
+  - Trong `TextbookIngestView.jsx`: Cập nhật hàm `saveToStorage` lưu song song dưới cả khóa `sourceId` và `fileName`. Mọi câu hỏi sinh ra hoặc chỉnh sửa tại Trang Nạp SGK đều tự động hiển thị đầy đủ, nguyên vẹn khi người dùng chuyển sang Trang Xem SGK và ngược lại.
+
+- **Kiểm Thử & Biên Dịch**:
+  - `npm run build` (`vite v8.3.0`) biên dịch thành công 100% trong 1.35s với 3053 modules sạch sẽ, 0 lỗi cú pháp hay cảnh báo render.

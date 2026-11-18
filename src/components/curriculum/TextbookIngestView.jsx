@@ -130,6 +130,13 @@ export default function TextbookIngestView({ onBack, onNavigateTab }) {
         savedAt: new Date().toISOString()
       };
       localStorage.setItem(key, JSON.stringify(payload));
+      // Đồng bộ trực tiếp theo sourceId (mã ID dưới CSDL Supabase) và fileName
+      if (selectedSourceId) {
+        localStorage.setItem(`veval_textbook_saved_${selectedSourceId}`, JSON.stringify(payload));
+      }
+      if (currSkeleton.fileName) {
+        localStorage.setItem(`veval_textbook_saved_${currSkeleton.fileName}`, JSON.stringify(payload));
+      }
       
       saveStoredTextbookContext({
         selectedSourceId,
@@ -314,11 +321,13 @@ export default function TextbookIngestView({ onBack, onNavigateTab }) {
       grade: targetG
     });
 
-    // 0. Đọc dữ liệu đã lưu từ localStorage (nếu có) để khôi phục bài tập và dạng bài
+    // 0. Đọc dữ liệu đã lưu từ localStorage (ưu tiên theo sourceId CSDL Supabase, sau đó fileName)
     const storageKey = getStorageKey(sourceId, found.fileName);
     let cachedData = null;
     try {
-      const raw = localStorage.getItem(storageKey);
+      const raw = (sourceId ? localStorage.getItem(`veval_textbook_saved_${sourceId}`) : null)
+        || (found.fileName ? localStorage.getItem(`veval_textbook_saved_${found.fileName}`) : null)
+        || localStorage.getItem(storageKey);
       if (raw) {
         cachedData = JSON.parse(raw);
         if (cachedData.savedAt) {
