@@ -2,6 +2,30 @@
 
 ---
 
+## [18/11/2026] - Gắn Bối Cảnh studentId Vào Lịch Sử Bài Thi Của Con & Hỗ Trợ Chuyển Đổi Đa Con Cho Phụ Huynh
+
+- **Gắn Bối Cảnh `studentId` Cho Màn Hình Lịch Sử Bài Thi ([`App.jsx`](../src/App.jsx), [`SubmissionHistoryView.jsx`](../src/components/diagnostic/SubmissionHistoryView.jsx))**:
+  - Khắc phục triệt để lỗi logic nghiệp vụ khi phụ huynh truy cập tab *Lịch sử Bài thi của Con* (`activeTab === 'history'`): code cũ truy vấn theo `user.id` của phụ huynh dẫn đến danh sách bài thi rỗng hoặc lỗi 404/400 từ Backend Practice Service.
+  - Trong `App.jsx`: tự động trích xuất danh sách con `parentPortalData?.children` và truyền `studentId`, `studentName`, `childrenList`, `isParent={role === 'parent'}` vào `SubmissionHistoryView`.
+  - Trong `SubmissionHistoryView.jsx`: xác định `targetId = isParent ? (activeChildId || studentId) : (studentId || user.id)` để truy vấn lịch sử chẩn đoán thực tế của con từ Backend thông qua `practiceService.getStudentDiagnosticHistory(targetId)`.
+- **Thanh Chọn Nhanh Đa Con Linh Hoạt (Multi-Child Switcher Chips) ([`SubmissionHistoryView.jsx`](../src/components/diagnostic/SubmissionHistoryView.jsx))**:
+  - Khi phụ huynh liên kết nhiều con (`childrenList.length > 1`), hiển thị danh sách chip chọn nhanh con ở ngay banner đầu trang với tên và lớp (ví dụ: *"Phạm Tấn Lộc (Lớp 12A1)"*).
+  - Thao tác chọn con cập nhật `activeChildId` tức thì và tự động kích hoạt tải lại toàn bộ lịch sử làm bài, biểu đồ phân tích năng lực và sổ tay lỗi sai của con tương ứng.
+  - Bổ sung cơ chế tự phục hồi: nếu phụ huynh tải lại trang trực tiếp tại tab `history` khi `parentPortalData` chưa sẵn sàng, component tự động gọi `practiceService.getParentDashboard` để lấy danh sách con và thiết lập con đầu tiên làm mặc định.
+- **Cá Nhân Hóa Trải Nghiệm Cho Vai Trò Phụ Huynh (Parent Persona UX) ([`SubmissionHistoryView.jsx`](../src/components/diagnostic/SubmissionHistoryView.jsx))**:
+  - Tiêu đề banner chuyển thành: *"Lịch Sử Bài Thi Của Con: [Tên con]"* kèm badge *"Không Gian Phụ Huynh • Nhật Ký Khảo Thí Của Con"*.
+  - Ẩn nút *"Làm Đề Khảo Sát Mới"* (hành động của học sinh) và thay thế bằng nút *"Làm mới danh sách"* tích hợp hiệu ứng xoay đồng bộ từ Backend.
+  - Tinh chỉnh nhãn lựa chọn trắc nghiệm trong câu hỏi thành *"Con đã chọn"* hoặc *"Con chọn đúng"* thay vì *"Bạn đã chọn"*.
+  - Điều chỉnh thông báo khi chưa có bài làm thành lời nhắc đồng hành: *"Chưa ghi nhận bài khảo sát hoặc luyện tập nào của con. Khi con hoàn thành bài thi, kết quả sẽ tự động đồng bộ về đây."*
+- **Chuẩn Hóa Phân Lập Dữ Liệu Local Storage ([`practiceService.js`](../src/services/practiceService.js))**:
+  - Nâng cấp các hàm `practiceService.getSubmissionHistory(targetStudentId = null)` và `practiceService.deleteSubmissionFromHistory(submissionId, targetStudentId = null)` hỗ trợ tham số `targetStudentId`.
+  - Bảo vệ toàn vẹn dữ liệu: thao tác xóa bài làm chỉ tác động đúng bài thi chỉ định, không ghi đè làm mất bài làm của các tài khoản khác trên cùng trình duyệt.
+- **Kiểm Thử & Biên Dịch**:
+  - `npm run build`: Thành công 100% trong 1.70s, 0 lỗi biên dịch.
+  - `node --test tests/*.test.js`: Đạt **22/22 unit tests pass 100%**.
+
+---
+
 ## [17/11/2026] - Tối Giản Hóa Giao Diện Cổng Phụ Huynh: Loại Bỏ Báo Cáo Năng Lực 4 Miền & Cây Tri Thức Chuyên Đề
 
 - **Tinh Gọn Điều Hướng Sidebar Phụ Huynh ([`Sidebar.jsx`](../src/components/layout/Sidebar.jsx))**:

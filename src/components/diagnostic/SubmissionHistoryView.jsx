@@ -19,7 +19,9 @@ import {
   TrendingUp,
   Target,
   Brain,
-  BarChart3
+  BarChart3,
+  RefreshCw,
+  User
 } from 'lucide-react';
 import {
   Radar,
@@ -52,10 +54,18 @@ const EXAM_TYPE_LABELS = {
 };
 
 export default function SubmissionHistoryView({
+  studentId = null,
+  studentName = null,
+  childrenList = [],
+  isParent = false,
   onStartNewDiagnostic,
   onOpenAiTutorWithContext,
   initialSubmissionId = null
 }) {
+  const [internalChildren, setInternalChildren] = useState(childrenList || []);
+  const [activeChildId, setActiveChildId] = useState(
+    studentId || (childrenList && childrenList[0]?.studentId) || null
+  );
   const [historyList, setHistoryList] = useState([]);
   const [selectedSubmission, setSelectedSubmission] = useState(null);
   const [activeTab, setActiveTab] = useState('submissions'); // 'submissions' | 'mistakes'
@@ -69,8 +79,53 @@ export default function SubmissionHistoryView({
   const [tutorStreaming, setTutorStreaming] = useState(false);
   const tutorAbortRef = useRef(null);
 
+  // Sync internal children and activeChildId when props change
+  useEffect(() => {
+    if (Array.isArray(childrenList) && childrenList.length > 0) {
+      setInternalChildren(childrenList);
+      setActiveChildId((prev) => {
+        if (prev && childrenList.some((c) => (c.studentId || c.id) === prev)) {
+          return prev;
+        }
+        return childrenList[0]?.studentId || childrenList[0]?.id || null;
+      });
+    } else if (studentId) {
+      setActiveChildId(studentId);
+    }
+  }, [childrenList, studentId]);
+
+  // If parent has no children loaded yet (e.g. direct nav or refresh), fetch parent dashboard
+  useEffect(() => {
+    if (isParent && (!internalChildren || internalChildren.length === 0)) {
+      const user = tokenStorage.getUser();
+      const parentUid = user?.id || user?.userId;
+      if (parentUid) {
+        practiceService
+          .getParentDashboard(parentUid)
+          .then((data) => {
+            const kids = data?.children || [];
+            if (kids.length > 0) {
+              setInternalChildren(kids);
+              setActiveChildId((prev) => prev || kids[0]?.studentId || kids[0]?.id || null);
+            }
+          })
+          .catch(() => {});
+      }
+    }
+  }, [isParent, internalChildren]);
+
+  const activeChild = internalChildren.find(
+    (c) => (c.studentId || c.id) === activeChildId
+  );
+  const resolvedStudentName = activeChild?.studentName || studentName || '';
+
   const loadHistory = async () => {
-    const localItems = practiceService.getSubmissionHistory();
+    const user = tokenStorage.getUser();
+    const targetId = isParent
+      ? (activeChildId || studentId || null)
+      : (studentId || user?.id || user?.userId);
+
+    const localItems = practiceService.getSubmissionHistory(targetId);
     setHistoryList(localItems);
 
     if (initialSubmissionId) {
@@ -78,11 +133,12 @@ export default function SubmissionHistoryView({
       if (found) setSelectedSubmission(found);
     }
 
+    if (!targetId) return;
+
     // Attempt to sync summaries from Backend Practice Service if available
     setIsSyncingBackend(true);
     try {
-      const user = tokenStorage.getUser();
-      const remoteList = await practiceService.getStudentDiagnosticHistory(user?.id || user?.userId);
+      const remoteList = await practiceService.getStudentDiagnosticHistory(targetId);
       const unwrapped = Array.isArray(remoteList)
         ? remoteList
         : Array.isArray(remoteList?.data)
@@ -99,6 +155,7 @@ export default function SubmissionHistoryView({
           if (rId && !existingIds.has(rId)) {
             merged.push({
               id: rId,
+              studentId: targetId,
               title: `Bài Khảo Sát ĐGNL (${remoteItem.examType || 'DIAGNOSTIC'})`,
               examType: remoteItem.examType || 'DIAGNOSTIC',
               completedAt: remoteItem.completedAt || new Date().toISOString(),
@@ -148,7 +205,7 @@ export default function SubmissionHistoryView({
         tutorAbortRef.current.abort();
       }
     };
-  }, [initialSubmissionId]);
+  }, [activeChildId, initialSubmissionId]);
 
   const handleSelectSubmission = async (sub) => {
     setActiveTutorQuestionId(null);
@@ -213,7 +270,11 @@ export default function SubmissionHistoryView({
 
   const handleDeleteSubmission = (e, submissionId) => {
     e.stopPropagation();
-    const updated = practiceService.deleteSubmissionFromHistory(submissionId);
+    const user = tokenStorage.getUser();
+    const targetId = isParent
+      ? (activeChildId || studentId || null)
+      : (studentId || user?.id || user?.userId);
+    const updated = practiceService.deleteSubmissionFromHistory(submissionId, targetId);
     setHistoryList(updated);
     if (selectedSubmission?.id === submissionId) {
       setSelectedSubmission(null);
@@ -416,7 +477,7 @@ export default function SubmissionHistoryView({
               className="inline-flex items-center gap-1.5 text-xs font-extrabold text-[#FACC15] hover:text-yellow-300 mb-1 cursor-pointer"
             >
               <ChevronLeft className="w-4 h-4" />
-              <span>Quay lại Danh sách Lịch sử làm bài</span>
+              <span>{isParent ? 'Quay lại Danh sách Lịch sử bài thi của con' : 'Quay lại Danh sách Lịch sử làm bài'}</span>
             </button>
             <h2 className="text-lg sm:text-xl font-black text-white flex flex-wrap items-center gap-2.5">
               <span>{selectedSubmission.title}</span>
@@ -427,7 +488,10 @@ export default function SubmissionHistoryView({
               </span>
             </h2>
             <p className="text-xs text-blue-100">
-              Hoàn thành lúc: <strong className="text-white">{formatDate(selectedSubmission.completedAt)}</strong> • Bấm vào bất kỳ câu hỏi nào bên dưới để xem đáp án giải chi tiết và hỏi Gia sư AI Socratic.
+              {isParent && resolvedStudentName ? (
+                <>Bài thi của: <strong className="text-[#FACC15]">{resolvedStudentName}</strong> • </>
+              ) : null}
+              Hoàn thành lúc: <strong className="text-white">{formatDate(selectedSubmission.completedAt)}</strong> • Bấm vào bất kỳ câu hỏi nào bên dưới để xem đáp án giải chi tiết và phân tích Socratic.
             </p>
           </div>
 
@@ -685,7 +749,7 @@ export default function SubmissionHistoryView({
                           )}
                           {isStudentChoice && !isCorrectChoice && (
                             <span className="px-2 py-0.5 rounded text-[10px] bg-rose-100 text-rose-800 font-black border border-rose-300 shrink-0">
-                              Bạn đã chọn
+                              {isParent ? 'Con đã chọn' : 'Bạn đã chọn'}
                             </span>
                           )}
                         </div>
@@ -776,20 +840,52 @@ export default function SubmissionHistoryView({
     <div className="space-y-6 animate-fade pb-12">
       {/* Header Banner (Synchronized with Home Page Royal Blue-Indigo & Gold #FACC15) */}
       <div className="bg-gradient-to-r from-blue-700 via-indigo-700 to-blue-900 border border-blue-600/30 rounded-3xl p-6 sm:p-8 text-white shadow-xl flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-        <div className="space-y-2">
+        <div className="space-y-3">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 text-[#FACC15] border border-white/20 text-xs font-bold">
             <History className="w-3.5 h-3.5" />
-            <span>Hồ Sơ Học Thuật & Lịch Sử Khảo Thí</span>
+            <span>{isParent ? 'Không Gian Phụ Huynh • Nhật Ký Khảo Thí Của Con' : 'Hồ Sơ Học Thuật & Lịch Sử Khảo Thí'}</span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
-            Lịch Sử Làm Bài & Sổ Tay Lỗi Sai Socratic
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white flex flex-wrap items-center gap-2.5">
+            <span>{isParent ? `Lịch Sử Bài Thi Của Con${resolvedStudentName ? `: ${resolvedStudentName}` : ''}` : 'Lịch Sử Làm Bài & Sổ Tay Lỗi Sai Socratic'}</span>
           </h1>
           <p className="text-xs sm:text-sm text-blue-100 max-w-2xl leading-relaxed">
-            Lưu trữ toàn bộ các bài khảo sát ĐGNL, phiếu luyện tập thích ứng ZPD và bài kiểm tra chuyên đề đã hoàn thành. Bấm vào bất kỳ bài làm nào để xem lại đáp án chi tiết và hỏi Gia sư AI Socratic.
+            {isParent
+              ? `Theo dõi toàn bộ kết quả bài khảo sát năng lực (ĐGNL) và các bài luyện tập của con${resolvedStudentName ? ` (${resolvedStudentName})` : ''}. Bấm vào bài làm bất kỳ để xem chi tiết từng câu hỏi, lời giải và phân tích tư duy Socratic.`
+              : 'Lưu trữ toàn bộ các bài khảo sát ĐGNL, phiếu luyện tập thích ứng ZPD và bài kiểm tra chuyên đề đã hoàn thành. Bấm vào bất kỳ bài làm nào để xem lại đáp án chi tiết và hỏi Gia sư AI Socratic.'}
           </p>
+
+          {/* Multi-Child Selector Chips */}
+          {isParent && internalChildren.length > 1 && (
+            <div className="flex flex-wrap items-center gap-2 pt-1">
+              <span className="text-xs text-blue-200 font-semibold mr-1">Chọn con:</span>
+              {internalChildren.map((c, idx) => {
+                const cId = c.studentId || c.id || `child_${idx}`;
+                const isSelected = cId === activeChildId;
+                return (
+                  <button
+                    key={cId}
+                    type="button"
+                    onClick={() => {
+                      setActiveChildId(cId);
+                      setSelectedSubmission(null);
+                    }}
+                    className={`px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
+                      isSelected
+                        ? 'bg-[#FACC15] text-slate-950 shadow-md font-black'
+                        : 'bg-white/15 text-white hover:bg-white/25 border border-white/20'
+                    }`}
+                  >
+                    {c.studentName || 'Học sinh'}
+                    {c.grade ? ` (${c.grade})` : ''}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
 
-        {onStartNewDiagnostic && (
+        {/* Right Action: Diagnostic Button (Students) or Refresh Button (Parents) */}
+        {!isParent && onStartNewDiagnostic && (
           <button
             type="button"
             onClick={onStartNewDiagnostic}
@@ -797,6 +893,18 @@ export default function SubmissionHistoryView({
           >
             <Play className="w-4 h-4 fill-slate-950" />
             <span>Làm Đề Khảo Sát Mới</span>
+          </button>
+        )}
+
+        {isParent && (
+          <button
+            type="button"
+            onClick={() => loadHistory()}
+            disabled={isSyncingBackend}
+            className="px-4 py-3 rounded-2xl bg-white/15 hover:bg-white/25 border border-white/20 text-white font-bold text-xs transition-all flex items-center justify-center gap-2 shrink-0 cursor-pointer disabled:opacity-50"
+          >
+            <RefreshCw className={`w-4 h-4 ${isSyncingBackend ? 'animate-spin' : ''}`} />
+            <span>{isSyncingBackend ? 'Đang đồng bộ...' : 'Làm mới danh sách'}</span>
           </button>
         )}
       </div>
@@ -910,7 +1018,9 @@ export default function SubmissionHistoryView({
                 <History className="w-10 h-10 text-slate-300 mx-auto" />
                 <div className="text-sm font-bold text-slate-700">Chưa có bài làm nào trong danh mục này</div>
                 <p className="text-xs text-slate-500">
-                  Hãy bắt đầu một bài khảo sát hoặc luyện tập để hệ thống lưu lại lịch sử và phân tích đáp án cùng AI.
+                  {isParent
+                    ? 'Chưa ghi nhận bài khảo sát hoặc luyện tập nào của con. Khi con hoàn thành bài thi, kết quả sẽ tự động đồng bộ về đây.'
+                    : 'Hãy bắt đầu một bài khảo sát hoặc luyện tập để hệ thống lưu lại lịch sử và phân tích đáp án cùng AI.'}
                 </p>
               </div>
             ) : (
@@ -1059,7 +1169,7 @@ export default function SubmissionHistoryView({
                           )}
                           {isStudentChoice && !isCorrectChoice && (
                             <span className="px-2 py-0.5 rounded text-[10px] bg-rose-100 text-rose-800 font-black border border-rose-300 shrink-0">
-                              Bạn đã chọn
+                              {isParent ? 'Con đã chọn' : 'Bạn đã chọn'}
                             </span>
                           )}
                         </div>

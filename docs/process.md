@@ -748,6 +748,7 @@ Architecture: existing curriculum, sidebar and roadmap components retain their r
 | 163 | **Chuyển Tiếp Lịch Sử Hội Thoại Đa Lượt Cho Gia Sư Socratic (Conversation History Forwarding)** | `src/components/modals/AISocraticTutorModal.jsx`, `src/services/practiceService.js` | 🟢 Hoàn thành | 100% | Trích xuất 6 lượt trao đổi gần nhất gửi qua `practiceService.askAiTutorStream`, bảo toàn ngữ cảnh sư phạm giữa học sinh và gia sư AI; 22/22 tests pass, build sạch |
 | 164 | **Đồng Bộ Chuyển Tiếp `skillId` & `questionId` Cho Gia Sư Socratic (Curriculum Grounding)** | `src/components/modals/AISocraticTutorModal.jsx`, `src/components/modals/AdaptiveQuizModal.jsx` | 🟢 Hoàn thành | 100% | Lưu trữ và chuyển tiếp `skillId` từ context câu hỏi và Adaptive Quiz vào `askAiTutorStream`, hỗ trợ AI Engine định tuyến và neo đậu vào tài liệu SGK chuẩn `v_eval_content."Materials"`; 22/22 tests pass, build sạch 1.06s |
 | 165 | **Tối Giản Hóa Giao Diện Cổng Phụ Huynh: Loại Bỏ Báo Cáo Năng Lực 4 Miền & Cây Tri Thức Chuyên Đề** | `src/components/layout/Sidebar.jsx`, `src/App.jsx` | 🟢 Hoàn thành | 100% | Tinh giản Sidebar và danh mục tab phụ huynh (`role === 'parent'`), xóa bỏ 2 mục sư phạm học sinh (`analytics`: Báo cáo Năng lực 4 Miền và `roadmap`: Cây Tri thức & Chuyên đề); rào chắn an toàn tự chuyển về Dashboard nếu truy cập nhầm URL; 22/22 unit tests pass, build 1.68s |
+| 166 | **Gắn Bối Cảnh studentId Vào Lịch Sử Bài Thi Của Con & Hỗ Trợ Chuyển Đổi Đa Con Cho Phụ Huynh** | `src/components/diagnostic/SubmissionHistoryView.jsx`, `src/App.jsx`, `src/services/practiceService.js` | 🟢 Hoàn thành | 100% | Truyền `studentId`, `studentName`, `childrenList` và cờ `isParent` từ `parentPortalData` vào `SubmissionHistoryView`; nạp lịch sử chẩn đoán backend theo `studentId` của con thay vì `user.id` phụ huynh; bộ chọn nhanh đa con cho phép chuyển đổi tức thì; ẩn nút thi của học sinh và thay bằng nút làm mới; điều chỉnh nhãn "Con đã chọn"; 22/22 unit tests pass, build 1.70s |
 
 
 ## [15/11/2026] - CF2 per-skill resources
@@ -796,3 +797,14 @@ Validation: build and lint pass with existing warnings; live API integration rem
 | Role Portal Tab Guardrails | Hardened | Updated `ROLE_PORTAL_DEFINITIONS.parent.tabs` and restricted `roadmap`/`analytics` rendering for `role === 'parent'`. |
 | Tuition Perk Actions | Isolated | Disconnected student roadmap/quiz navigation callbacks in tuition payment view when role is parent. |
 | Verification | Passed | `node --test tests/*.test.js` passed 22/22 tests; `vite build` completed in 1.68s with 0 errors. |
+
+## [18/11/2026] - Parent Submission History Student Context & Multi-Child Switcher
+
+| Item | Status | Detail |
+| --- | --- | --- |
+| Student Context Injection | Complete | Injected `studentId`, `studentName`, and `childrenList` from `parentPortalData` into `SubmissionHistoryView`. |
+| History Loading Isolation | Complete | Updated `loadHistory` to query `practiceService.getStudentDiagnosticHistory(targetId)` and `getSubmissionHistory(targetId)` using child's studentId instead of parent's user ID. |
+| Multi-Child Switcher Chips | Complete | Added interactive child selector pills in the header banner for parents with multiple linked children, updating active submission list dynamically. |
+| Parent Persona Customization | Complete | Updated banner title, description, back navigation label, empty state message, and option selection tags ("Con đã chọn" / "Con chọn đúng") specifically tailored for parents. |
+| Safe Deletion & Storage Scope | Complete | Extended `practiceService.getSubmissionHistory` and `deleteSubmissionFromHistory` with optional `targetStudentId` scoping. |
+| Verification | Passed | `node --test tests/*.test.js` passed 22/22 tests; `npm run build` succeeded cleanly in 1.70s with 0 errors. |

@@ -435,8 +435,15 @@ export default function App() {
         currentUser={currentUser} onOpenDiagnostic={() => setActiveTab('diagnostic')} />;
     }
     if (activeTab === 'history') {
+      const parentChildren = parentPortalData?.children || [];
+      const defaultChild = parentChildren[0] || null;
       return (
         <SubmissionHistoryView
+          key={`history_${role}_${defaultChild?.studentId || 'default'}`}
+          isParent={role === 'parent'}
+          studentId={role === 'parent' ? (defaultChild?.studentId || null) : (currentUser?.id || currentUser?.userId)}
+          studentName={role === 'parent' ? (defaultChild?.studentName || null) : (currentUser?.fullName || null)}
+          childrenList={role === 'parent' ? parentChildren : []}
           onStartNewDiagnostic={() => setActiveTab('diagnostic')}
           onOpenAiTutorWithContext={handleOpenAiTutorWithQuestion}
         />

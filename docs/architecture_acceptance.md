@@ -2150,6 +2150,22 @@ Backend follow-up: Practice sends an empty AllSkillIds mapping to AI, preventing
 - **Verification**:
   - Vite production build succeeded in 1.68s with 0 errors.
   - All 22/22 unit tests in `tests/*.test.js` passed with 100% success rate.
+
+### [18/11/2026] - Parent Submission History Student Context & Dynamic Multi-Child Switching
+
+- **Parent-to-Student Context Binding (`src/App.jsx`, `src/components/diagnostic/SubmissionHistoryView.jsx`)**:
+  - Bound `studentId={role === 'parent' ? defaultChild?.studentId : currentUser?.id}` and forwarded `childrenList={parentPortalData?.children || []}` into `SubmissionHistoryView`.
+  - Resolved the critical context mismatch where parent account ID was previously querying child diagnostic submission history, resulting in empty or errored submissions.
+- **Dynamic Multi-Child Switcher & Reactive Reloading**:
+  - Implemented an interactive child selector chip bar in `SubmissionHistoryView` header banner when `internalChildren.length > 1`.
+  - Switching active child updates `activeChildId`, seamlessly re-querying `practiceService.getStudentDiagnosticHistory(targetId)` and local history `practiceService.getSubmissionHistory(targetId)` for the selected child.
+- **Parent Persona Customization**:
+  - Tailored the view for parents: updated banner title to `"Lịch Sử Bài Thi Của Con: [Tên con]"`, replaced the student diagnostic action button with an on-demand `"Làm mới danh sách"` button, and updated option selection indicators to `"Con đã chọn"` / `"Con chọn đúng"`.
+- **Scoped Storage & Safe Deletion (`src/services/practiceService.js`)**:
+  - Extended `practiceService.getSubmissionHistory(targetStudentId = null)` and `deleteSubmissionFromHistory(submissionId, targetStudentId = null)` to respect the child's identity without clearing other accounts' cached submissions.
+- **Verification**:
+  - Unit tests: 22/22 passed (`node --test tests/*.test.js`).
+  - Production build: `npm run build` succeeded cleanly in 1.70s with 0 errors.
 ### [14/11/2026] - Early MathLab Block Shielding, Bold Heading Repair & Zero-Hardcode Extraction Cards
 
 - **Early Placeholder Isolation & Bold Heading Normalization (`src/components/common/MathText.jsx`)**:

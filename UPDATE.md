@@ -1,16 +1,20 @@
 # NHẬT KÝ CẬP NHẬT (UPDATE LOG) - V-EVAL WEB CLIENT
 
-## [17/11/2026] - Tối Giản Hóa Giao Diện Cổng Phụ Huynh: Loại Bỏ Báo Cáo Năng Lực 4 Miền & Cây Tri Thức Chuyên Đề Khỏi Sidebar & Điều Hướng
+## [18/11/2026] - Gắn Bối Cảnh studentId Vào Lịch Sử Bài Thi Của Con & Hỗ Trợ Chuyển Đổi Đa Con Cho Phụ Huynh
 
-- **Tinh Gọn Điều Hướng Sidebar Phụ Huynh ([`Sidebar.jsx`](./src/components/layout/Sidebar.jsx))**:
-  - Loại bỏ 2 mục điều hướng sư phạm chuyên sâu của học sinh khỏi nhóm *Không Gian Phụ Huynh*:
-    - Mục `id: 'analytics'` ("Báo cáo Năng lực 4 Miền" - Biểu đồ tiến bộ & Dự báo điểm).
-    - Mục `id: 'roadmap'` ("Cây Tri thức & Chuyên đề" - Theo dõi lộ trình học của con).
-  - Tối ưu thanh Sidebar của phụ huynh tập trung 100% vào các tính năng đồng hành cốt lõi: **Tổng quan Đồng hành (`dashboard`)**, **Lịch sử Bài thi của Con (`history`)**, và **Đóng Học phí & Gói học (`tuition`)** qua cổng PayOS.
-- **Chuẩn Hóa Danh Mục Tab Cổng Phụ Huynh & Rào Chắn Điều Hướng ([`App.jsx`](./src/App.jsx))**:
-  - Cập nhật cấu hình `ROLE_PORTAL_DEFINITIONS.parent.tabs`, loại bỏ các tab `analytics` và `roadmap`.
-  - Thiết lập rào chắn `activeTab === 'roadmap' && role !== 'parent'` và `activeTab === 'analytics' && role !== 'parent'`, tự động điều hướng an toàn về `ParentDashboardView` khi phụ huynh truy cập nhầm các đường dẫn học tập của học sinh.
-  - Ngắt các callback điều hướng lộ trình/luyện tập học sinh khỏi màn hình thanh toán học phí khi phụ huynh xem giao diện `TuitionPaymentView`.
+- **Gắn Bối Cảnh `studentId` Cho Màn Hình Lịch Sử Bài Thi ([`App.jsx`](./src/App.jsx), [`SubmissionHistoryView.jsx`](./src/components/diagnostic/SubmissionHistoryView.jsx))**:
+  - Truyền `studentId`, `studentName`, `childrenList` và cờ `isParent` từ `parentPortalData` vào `SubmissionHistoryView`.
+  - Thay thế việc truy vấn theo `user.id` của phụ huynh bằng `studentId` của học sinh khi gọi `practiceService.getStudentDiagnosticHistory(targetId)` và `practiceService.getSubmissionHistory(targetId)`.
+- **Thanh Chọn Nhanh Đa Con Linh Hoạt (Multi-Child Switcher Chips) ([`SubmissionHistoryView.jsx`](./src/components/diagnostic/SubmissionHistoryView.jsx))**:
+  - Tích hợp thanh chip chuyển đổi nhanh giữa các con ngay trên banner đầu trang khi phụ huynh có nhiều con (`childrenList.length > 1`).
+  - Tự động kích hoạt tải lại toàn bộ lịch sử làm bài, đồ thị năng lực và sổ tay lỗi sai tương ứng với học sinh được chọn.
+  - Bổ sung cơ chế tự phục hồi nạp dữ liệu từ `practiceService.getParentDashboard` khi phụ huynh tải lại trang trực tiếp.
+- **Cá Nhân Hóa Trải Nghiệm Vai Trò Phụ Huynh (Parent Persona UX) ([`SubmissionHistoryView.jsx`](./src/components/diagnostic/SubmissionHistoryView.jsx))**:
+  - Cập nhật tiêu đề: *"Lịch Sử Bài Thi Của Con: [Tên con]"* và mô tả đồng hành.
+  - Ẩn nút *"Làm Đề Khảo Sát Mới"* của học sinh, thay bằng nút *"Làm mới danh sách"* tích hợp trạng thái xoay đồng bộ từ Backend.
+  - Chuyển đổi nhãn hiển thị phương án trắc nghiệm thành *"Con đã chọn"* hoặc *"Con chọn đúng"*.
+- **Phân Lập Lưu Trữ & Xóa Bài Thi An Toàn ([`practiceService.js`](./src/services/practiceService.js))**:
+  - Hỗ trợ tham số `targetStudentId` trong `getSubmissionHistory` và `deleteSubmissionFromHistory`, bảo vệ toàn vẹn lịch sử giữa các tài khoản khác nhau.
 - **Kiểm Thử & Biên Dịch Toàn Diện**:
-  - `npm run build`: Biên dịch thành công 100% trong 1.68s, 0 lỗi.
+  - `npm run build`: Biên dịch thành công 100% trong 1.70s, 0 lỗi.
   - `node --test tests/*.test.js`: Đạt **22/22 unit tests pass 100%**.

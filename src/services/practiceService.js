@@ -1468,25 +1468,26 @@ export const practiceService = {
     return filtered;
   },
 
-  getSubmissionHistory() {
+  getSubmissionHistory(targetStudentId = null) {
     try {
       const user = tokenStorage.getUser();
-      const owner = user?.userId || user?.id;
+      const owner = targetStudentId || user?.userId || user?.id;
       if (!owner) return [];
       const parsed = JSON.parse(localStorage.getItem(HISTORY_STORAGE_KEY) || '[]');
-      return Array.isArray(parsed) ? parsed.filter((item) => item.studentId === owner) : [];
+      return Array.isArray(parsed) ? parsed.filter((item) => !item.studentId || item.studentId === owner) : [];
     } catch { return []; }
   },
 
-  deleteSubmissionFromHistory(submissionId) {
+  deleteSubmissionFromHistory(submissionId, targetStudentId = null) {
     try {
-      const current = this.getSubmissionHistory();
-      const filtered = current.filter((item) => item.id !== submissionId);
-      localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(filtered));
+      const raw = localStorage.getItem(HISTORY_STORAGE_KEY);
+      const all = raw ? JSON.parse(raw) : [];
+      const updated = Array.isArray(all) ? all.filter((item) => item.id !== submissionId) : [];
+      localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(updated));
       if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
         window.dispatchEvent(new CustomEvent('veval:submission-updated', { detail: { deletedId: submissionId } }));
       }
-      return filtered;
+      return this.getSubmissionHistory(targetStudentId);
     } catch (e) {
       console.warn('Could not delete submission from history:', e);
       return [];
