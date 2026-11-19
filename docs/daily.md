@@ -2,7 +2,11 @@
 
 ---
 
-## [20/11/2026] - Chuyển Đổi & Nâng Cấp Toàn Diện Trình Bóc Tách Đề Thi Thực Tế (`view-exam.html` -> `ExamParserStudioView.jsx`) Lên Web Client
+## [20/11/2026] - Hotfix Lỗi `ReferenceError: iconGradient is not defined` Trên Sidebar Thu Gọn & Nâng Cấp Trình Bóc Tách Đề Thi (`Sidebar.jsx`, `ExamParserStudioView.jsx`)
+
+- **Hotfix Khẩn Cấp Production (`Sidebar.jsx`)**:
+  - Khắc phục lỗi crash `ReferenceError: iconGradient is not defined` và `glowClass is not defined` khi thu gọn thanh điều hướng (`isCollapsed`) bằng cách khai báo lại `iconGradient` (`item.iconColor || 'from-blue-500 to-indigo-600'`) và `glowClass` (`item.activeGlow || 'shadow-blue-500/30'`).
+  - Đã kiểm thử `npx oxlint -D no-undef src/components/layout/Sidebar.jsx` (`0 Error`) và `npm run build` (`3076 modules`, `5.38s`, `0 Error`).
 ## [19/11/2026] - Khắc Phục Triệt Để Lỗi Hook Màn Hình Đỏ, Chuẩn Hóa Cổng Phụ Huynh 4 Phân Hệ & Bố Cục Dashboard 3 Tầng Hiện Đại
 
 - **Khắc Phục Lỗi Vi Phạm Quy Tắc Hook Màn Hình Đỏ ([`ParentDashboardView.jsx`](../src/components/dashboard/ParentDashboardView.jsx))**:
