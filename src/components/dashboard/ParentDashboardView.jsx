@@ -37,7 +37,7 @@ import {
 import practiceService from '../../services/practiceService';
 import paymentService from '../../services/paymentService';
 import { userService } from '../../services/userService';
-import toast from 'react-hot-toast';
+import { toast } from '../../context/ToastContext';
 
 const TIER_MAP = {
   READY: {

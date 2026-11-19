@@ -16,7 +16,7 @@ import {
   Info
 } from 'lucide-react';
 import practiceService from '../../services/practiceService';
-import toast from 'react-hot-toast';
+import { toast } from '../../context/ToastContext';
 
 export default function ParentEarlyWarningsAndTeacherView({
   currentUser,
@@ -443,3 +443,4 @@ export default function ParentEarlyWarningsAndTeacherView({
     </div>
   );
 }
+

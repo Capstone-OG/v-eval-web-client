@@ -16,6 +16,8 @@
   - *Tầng 1*: Thanh chọn con (kèm dropdown chuyển con nếu có nhiều con) + Thông tin Giáo viên lớp Offline phụ trách & nút Nhắn tin; Dải cảnh báo học phí vàng nhạt chỉ hiện khi chưa đóng tiền, tự động ẩn khi đã thanh toán.
   - *Tầng 2*: 4 Thẻ chỉ số Ba Mẹ quan tâm nhất: Điểm thi dự kiến (kèm khoảng dao động và tỉ lệ đạt), Mức độ sẵn sàng thi, Thời gian học tuần này (kèm nút xem 7/30 ngày) và Tiến độ lộ trình cá nhân.
   - *Tầng 3*: Bố cục 2 cột (Cột trái 7 phần: Cảnh báo học tập & Bài thi gần đây; Cột phải 5 phần: Đánh giá 3 mặt học tập & Hồ sơ học tập kèm nút Hủy liên kết con).
+- **Chuẩn Hóa Import Toast Hệ Thống ([`ParentDashboardView.jsx`](./src/components/dashboard/ParentDashboardView.jsx), [`ParentEarlyWarningsAndTeacherView.jsx`](./src/components/dashboard/ParentEarlyWarningsAndTeacherView.jsx))**:
+  - Chuyển đổi import sang `ToastContext` nội bộ của dự án (`import { toast } from '../../context/ToastContext'`) thay vì package `react-hot-toast` ngoài, triệt tiêu hoàn toàn lỗi import analysis của Vite.
 - **Dọn Sạch Toàn Bộ Thuật Ngữ Kỹ Thuật & Dữ Liệu Test ([`TuitionPaymentView.jsx`](./src/components/payment/TuitionPaymentView.jsx))**:
   - Loại bỏ hoàn toàn các từ viết tắt nội bộ: IRT Theta, BKT, ZPD, PLAR, Core Flow 5, Live Identity + Practice gRPC, giá thử nghiệm 5.000 ₫; thay bằng ngôn ngữ tiếng Việt đời thường, dễ hiểu cho gia đình.
 - **Kiểm Thử & Nghiệm Thu**:
