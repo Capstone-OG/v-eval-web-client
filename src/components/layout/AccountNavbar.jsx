@@ -322,11 +322,11 @@ export default function AccountNavbar({
   return (
     <>
       <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/95 backdrop-blur-md shadow-xs transition-all">
-        <div className="flex h-18 items-center justify-between gap-2 px-3 sm:h-20 sm:gap-4 sm:px-6 lg:px-8">
+        <div className="flex h-18 items-center justify-between gap-3 px-4 sm:h-20 sm:gap-6 sm:px-6 lg:px-8">
           {/* ========================================================= */}
-          {/* 1. LEFT: Navigation, Breadcrumb & Child/Campus Badge     */}
+          {/* 1. LEFT: Clean Navigation & Page Title (No Truncation!)   */}
           {/* ========================================================= */}
-          <div className="flex min-w-0 flex-1 items-center gap-3">
+          <div className="flex items-center gap-3 shrink-0 min-w-0">
             <button
               type="button"
               onClick={onOpenNavigation}
@@ -336,7 +336,7 @@ export default function AccountNavbar({
               <Menu className="h-5 w-5" />
             </button>
 
-            <span className="hidden h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-blue-100 bg-blue-50 text-blue-600 sm:flex">
+            <span className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-blue-100 bg-blue-50 text-blue-600 sm:flex">
               <LayoutDashboard className="h-5 w-5" />
             </span>
 
@@ -344,114 +344,85 @@ export default function AccountNavbar({
               <div className="flex items-center gap-1.5 text-[10px] font-medium text-slate-400 sm:text-[11px]">
                 <span className="font-semibold tracking-wide text-blue-600">V-Eval</span>
                 <ChevronRight className="h-3 w-3" />
-                <span className="truncate">{roleLabel}</span>
+                <span>{roleLabel}</span>
               </div>
-              <p className="truncate text-sm font-bold tracking-tight text-slate-900 sm:text-lg">{pageTitle}</p>
+              <p className="text-base font-bold tracking-tight text-slate-900 sm:text-lg whitespace-nowrap">
+                {pageTitle}
+              </p>
+            </div>
+          </div>
+
+          {/* ========================================================= */}
+          {/* 2. CENTER: Sleek Minimalist Mission Control Pill          */}
+          {/* ========================================================= */}
+          <div className="hidden lg:flex items-center justify-center flex-1 px-2">
+            <button
+              type="button"
+              onClick={() => setExamModalOpen(true)}
+              className="group flex items-center gap-2.5 rounded-full border border-slate-200/90 bg-slate-50/80 hover:bg-indigo-50/70 hover:border-indigo-200/90 px-4 py-1.5 text-xs text-slate-700 transition-all duration-200 hover:shadow-xs"
+              title="Nhấn để xem lịch thi chi tiết và cấu trúc đề thi ĐGNL"
+            >
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-600"></span>
+              </span>
+              <span className="font-bold text-slate-800 group-hover:text-indigo-700">
+                {upcomingExam.name}
+              </span>
+              <span className="text-slate-300">•</span>
+              <span className="font-extrabold text-indigo-600">
+                {daysLeft > 0 ? `Còn ${daysLeft} ngày` : daysLeft === 0 ? 'Hôm nay thi!' : 'Đã diễn ra'}
+              </span>
+              <span className="text-[11px] text-slate-400 hidden xl:inline">
+                ({upcomingExam.formattedDate})
+              </span>
+            </button>
+          </div>
+
+          {/* ========================================================= */}
+          {/* 3. RIGHT: Unified Telemetry, Child Chip, Alerts, Profile  */}
+          {/* ========================================================= */}
+          <div className="flex shrink-0 items-center gap-2.5 sm:gap-3.5">
+            {/* Live Today Date - Only on extra large screens */}
+            <div className="hidden 2xl:flex items-center gap-1.5 border-r border-slate-200/70 pr-3.5 text-xs text-slate-400">
+              <CalendarDays className="h-3.5 w-3.5 text-slate-400" />
+              <span className="font-medium capitalize">{today}</span>
             </div>
 
-            {/* Parent Role: Active Child Chip */}
+            {/* Parent Role: Compact Student Companion Badge */}
             {role === 'parent' && activeChild && (
               <div
-                className="hidden xl:flex items-center gap-2 rounded-2xl border border-blue-100 bg-gradient-to-r from-blue-50/90 to-indigo-50/70 px-3 py-1.5 text-xs text-blue-900 shadow-2xs"
-                title={`Học sinh đang theo dõi: ${activeChild.studentName || activeChild.fullName} - ${activeChild.school || 'Trường THPT'}`}
+                className="hidden sm:flex items-center gap-1.5 rounded-xl border border-blue-100 bg-blue-50/60 px-2.5 py-1.5 text-xs text-blue-900 shadow-2xs"
+                title={`Học sinh: ${activeChild.studentName || activeChild.fullName}${activeChild.school ? ` • ${activeChild.school}` : ''}${activeChild.grade ? ` • ${activeChild.grade}` : ''}`}
               >
-                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 text-white shadow-xs">
-                  <UserCheck className="h-3.5 w-3.5" />
-                </div>
-                <div className="flex flex-col leading-tight">
-                  <span className="text-[10px] font-medium text-blue-600">Đang đồng hành</span>
-                  <div className="flex items-center gap-1.5">
-                    <strong className="font-bold text-slate-900 truncate max-w-[140px]">
-                      {activeChild.studentName || activeChild.fullName}
-                    </strong>
-                    {activeChild.grade && (
-                      <span className="rounded-md bg-white/90 border border-blue-200/60 px-1.5 py-0.2 text-[10px] font-medium text-blue-700">
-                        {activeChild.grade}
-                      </span>
-                    )}
-                  </div>
-                </div>
+                <UserCheck className="h-3.5 w-3.5 text-blue-600 shrink-0" />
+                <span className="text-slate-500 font-normal hidden md:inline">Con:</span>
+                <strong className="font-bold text-slate-800 max-w-[120px] truncate">
+                  {activeChild.studentName || activeChild.fullName}
+                </strong>
               </div>
             )}
 
             {/* Student Role: Campus Badge if assigned */}
             {role === 'student' && currentUser?.campusName && (
               <div
-                className="hidden 2xl:flex items-center gap-1.5 rounded-xl border border-slate-200/80 bg-slate-50/80 px-2.5 py-1 text-xs text-slate-600 shadow-2xs"
+                className="hidden xl:flex items-center gap-1.5 rounded-xl border border-slate-200/80 bg-slate-50/80 px-2.5 py-1.5 text-xs text-slate-600 shadow-2xs"
                 title={currentUser.campusName}
               >
                 <GraduationCap className="h-3.5 w-3.5 text-blue-600 shrink-0" />
-                <span className="truncate max-w-[180px] font-medium">{currentUser.campusName}</span>
+                <span className="truncate max-w-[150px] font-medium">{currentUser.campusName}</span>
               </div>
             )}
-          </div>
 
-          {/* ========================================================= */}
-          {/* 2. CENTER: Mission Control Countdown Pill                */}
-          {/* ========================================================= */}
-          <div className="hidden md:flex shrink-0 items-center">
-            <button
-              type="button"
-              onClick={() => setExamModalOpen(true)}
-              className="group relative flex items-center gap-2.5 rounded-2xl border border-indigo-100/90 bg-gradient-to-r from-blue-50/80 via-indigo-50/60 to-purple-50/80 px-3.5 py-1.5 text-left shadow-xs transition-all duration-200 hover:border-indigo-300 hover:shadow-sm hover:scale-[1.01]"
-              title="Nhấn để xem chi tiết lịch thi và cấu trúc bài thi ĐGNL"
-            >
-              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-600 to-blue-600 text-white shadow-xs shadow-indigo-300">
-                <Target className="h-4 w-4" />
-              </div>
-              <div className="flex flex-col leading-tight">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-700">
-                    {upcomingExam.name}
-                  </span>
-                  <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
-                  </span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs font-extrabold text-slate-800">
-                    {daysLeft > 0 ? `Còn ${daysLeft} ngày` : daysLeft === 0 ? 'Hôm nay thi!' : 'Đã diễn ra'}
-                  </span>
-                  <span className="text-[10px] text-slate-400">({upcomingExam.formattedDate})</span>
-                </div>
-              </div>
-            </button>
-          </div>
-
-          {/* ========================================================= */}
-          {/* 3. RIGHT: Live Stats, Notification Bell & Profile Pill   */}
-          {/* ========================================================= */}
-          <div className="flex shrink-0 items-center gap-2 sm:gap-3 xl:gap-4">
-            {/* Live Today Date */}
-            <div className="hidden items-center gap-2 border-r border-slate-200/70 pr-3.5 text-slate-500 xl:flex">
-              <CalendarDays className="h-4 w-4 text-slate-400" />
-              <span className="text-xs font-medium capitalize">{today}</span>
-            </div>
-
-            {/* Student Streak Pill */}
-            {role === 'student' && (
+            {/* Student Role: Streak Pill */}
+            {role === 'student' && streak > 0 && (
               <span
                 title={`Chuỗi học tập liên tục: ${streak} ngày`}
                 aria-label={`Chuỗi học tập ${streak} ngày`}
-                className={`inline-flex items-center gap-2 rounded-2xl border px-2.5 py-1.5 text-xs transition-colors ${
-                  streak
-                    ? 'border-orange-200/80 bg-orange-50/80 text-orange-700'
-                    : 'border-slate-200/70 bg-white text-slate-500'
-                }`}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-orange-200/80 bg-orange-50/80 px-2.5 py-1.5 text-xs text-orange-700 shadow-2xs"
               >
-                <Flame
-                  className={`h-4 w-4 sm:h-4.5 sm:w-4.5 ${
-                    streak ? 'fill-orange-400 text-orange-500 animate-bounce' : 'text-orange-300'
-                  }`}
-                />
-                <span className="flex flex-col leading-tight">
-                  <span className="hidden text-[9px] font-medium text-slate-500 sm:block">Chuỗi học tập</span>
-                  <strong className="text-xs sm:text-sm font-extrabold">
-                    {streak}
-                    <span className="hidden sm:inline font-semibold"> ngày</span>
-                  </strong>
-                </span>
+                <Flame className="h-4 w-4 fill-orange-400 text-orange-500" />
+                <strong className="font-extrabold">{streak} ngày</strong>
               </span>
             )}
 
@@ -463,7 +434,7 @@ export default function AccountNavbar({
                 type="button"
                 onClick={() => setAlertsOpen((prev) => !prev)}
                 aria-label={`Thông báo (${alertsData.unreadCount || 0} chưa đọc)`}
-                className={`relative rounded-xl border p-2.5 transition-all focus-visible:outline-2 focus-visible:outline-blue-500 ${
+                className={`relative rounded-xl border p-2 transition-all focus-visible:outline-2 focus-visible:outline-blue-500 ${
                   alertsOpen
                     ? 'border-blue-300 bg-blue-50 text-blue-600'
                     : 'border-slate-200/80 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50'
@@ -569,7 +540,7 @@ export default function AccountNavbar({
             {/* User Profile Pill Capsule & Dropdown                      */}
             {/* ========================================================= */}
             <div
-              className="relative border-l border-slate-100 pl-2 sm:pl-3"
+              className="relative border-l border-slate-200/80 pl-2 sm:pl-3"
               ref={containerRef}
               onBlur={(event) => {
                 if (!event.currentTarget.contains(event.relatedTarget)) setAccountMenuOpen(false);
@@ -588,10 +559,10 @@ export default function AccountNavbar({
                     setAccountMenuOpen(true);
                   }
                 }}
-                className={`flex items-center gap-2.5 rounded-2xl border p-1.5 text-left transition-colors focus-visible:outline-2 focus-visible:outline-blue-500 ${
+                className={`flex items-center gap-2 rounded-2xl border p-1 text-left transition-colors focus-visible:outline-2 focus-visible:outline-blue-500 ${
                   accountMenuOpen
                     ? 'border-blue-200 bg-blue-50/70'
-                    : 'border-transparent hover:border-slate-200 hover:bg-white'
+                    : 'border-transparent hover:border-slate-200 hover:bg-slate-50'
                 }`}
               >
                 <div className="relative shrink-0">
@@ -599,13 +570,13 @@ export default function AccountNavbar({
                     {initials}
                   </span>
                   <span
-                    className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-emerald-500 shadow-xs"
+                    className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-emerald-500"
                     title="Đang trực tuyến"
                   />
                 </div>
-                <span className="hidden max-w-36 sm:block">
+                <span className="hidden md:block max-w-32 leading-tight">
                   <span className="block truncate text-sm font-semibold text-slate-800">{displayName}</span>
-                  <span className="mt-0.5 block truncate text-[10px] font-medium text-slate-500">{roleLabel}</span>
+                  <span className="block truncate text-[10px] font-medium text-slate-500">{roleLabel}</span>
                 </span>
                 <ChevronDown
                   className={`h-3.5 w-3.5 text-slate-400 transition-transform ${

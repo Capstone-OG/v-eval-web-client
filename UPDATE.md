@@ -1,11 +1,12 @@
 # NHẬT KÝ CẬP NHẬT (UPDATE LOG) - V-EVAL WEB CLIENT
 
-## [19/11/2026] - Tái Thiết Kế Thanh Điều Hướng Đỉnh Cao "EdTech Mission Control" & Nâng Cấp Giao Diện Cổng Phụ Huynh, Lịch Sử Bài Thi
+## [19/11/2026] - Tinh Chỉnh Bố Cục Thanh Điều Hướng Đỉnh Cao "EdTech Mission Control" & Nâng Cấp Giao Diện Cổng Phụ Huynh, Lịch Sử Bài Thi
 
-- **Tái Thiết Kế Top Navbar Theo Concept "EdTech Mission Control" ([`AccountNavbar.jsx`](./src/components/layout/AccountNavbar.jsx))**:
+- **Tối Ưu Bố Cục Top Navbar Theo Concept "EdTech Mission Control" ([`AccountNavbar.jsx`](./src/components/layout/AccountNavbar.jsx))**:
   - **Triệt tiêu 100% hardcode**: Dữ liệu đếm ngược kỳ thi, thông báo, chip học sinh đồng hành, cơ sở học tập và chuỗi ngày streak được lấy trực tiếp từ CSDL Backend (`practiceService.getAcademicTerms`, `practiceService.getMyAlerts`, `portalMetrics`, `currentUser`).
-  - **Viên Nang Đếm Ngược Kỳ Thi & Lộ Trình (Center Pill)**: Tính toán động số ngày còn lại đến kỳ thi ĐGNL ĐHQG TP.HCM / Học kỳ từ CSDL; tích hợp radar pulse và click mở modal chi tiết lộ trình thi Đợt 1, Đợt 2, cấu trúc đề 120 câu / 150 phút và điểm mục tiêu cá nhân (1200 điểm).
-  - **Ngữ Cảnh Học Sinh Cho Phụ Huynh & Cơ Sở Cho Học Viên (Left Context)**: Tự động hiển thị chip học sinh đang theo dõi (`👤 Đang đồng hành: [Tên con] ([Lớp])`) cho phụ huynh và huy hiệu cơ sở học tập cho học sinh.
+  - **Khắc phục triệt để lỗi ép cụt chữ (Zero Title Truncation)**: Loại bỏ chuỗi khóa học 54 ký tự chèn ép tiêu đề; cố định tiêu đề `Tổng quan Đồng hành` hiển thị sắc nét, thoáng đãng không bị co cụt (`whitespace-nowrap shrink-0`).
+  - **Viên Nang Đếm Ngược 1 Dòng Kính Mờ (Center Pill)**: Chuyển đổi khối hộp 2 dòng cồng kềnh sang viên nang thanh mảnh 1 dòng (`● ĐGNL Đợt 1 (2027) • Còn 129 ngày (28/03/2027)`), nằm chính giữa thanh điều hướng tạo khoảng thở rộng rãi; click mở Modal chi tiết 2 đợt thi và cấu trúc 120 câu / 150 phút.
+  - **Tối Ưu Cụm Hành Động & Phân Nhánh Quyền (Right Actions)**: Chuyển chip học sinh đồng hành sang góc phải nhỏ gọn (`👦 Con: [Tên con]`), ẩn bớt ngày tháng thứ yếu, tinh chỉnh chuông cảnh báo tương tác Flow 6 và căn chỉnh chấm xanh online chuẩn xác.
   - **Chuông Cảnh Báo Sớm Tương Tác Sư Phạm (Notification Bell & Flow 6 Drawer)**: Móc nối API `practiceService.getMyAlerts`, lắng nghe sự kiện `veval:flow6-updated`, hiển thị badge số lượng chưa đọc (`animate-pulse`), dropdown phân loại cảnh báo đỏ / vàng / lời khuyên sư phạm kèm thao tác đánh dấu đã đọc (`markAlertAsRead`) và đọc tất cả.
   - **Viên Nang Hồ Sơ & Trạng Thái Trực Tuyến (User Profile Pill & Menu)**: Avatar với chấm xanh online, tên người dùng thật, nhãn vai trò tiếng Việt, menu tài khoản truy cập nhanh cài đặt và đăng xuất.
 - **Tái Cấu Trúc Toàn Diện Hero Header & Thông Tin Ngữ Cảnh Con ([`ParentDashboardView.jsx`](./src/components/dashboard/ParentDashboardView.jsx))**:
@@ -18,5 +19,5 @@
   - Triệt tiêu thuật ngữ kỹ thuật khó hiểu: chuyển đổi theta IRT khô khan (`-1.8333`) sang phân cấp sư phạm nhân văn qua `formatThetaDisplay`, xóa bỏ hậu tố developer `(DIAGNOSTIC)` và nhãn `ZPD`.
   - Khắc phục lỗi đếm lệch câu làm sai (0 câu vs 26 câu): tính toán chuẩn xác `summaryStats.totalWrong` trên toàn bộ các bài thi.
 - **Kiểm Thử & Biên Dịch Toàn Bộ Web Client**:
-  - `npm run build`: Thành công 100% trong 1.04s, 0 lỗi biên dịch.
+  - `npm run build`: Thành công 100% trong 1.07s, 0 lỗi biên dịch.
   - `node --test tests/*.test.js`: Đạt **22/22 tests passed**.

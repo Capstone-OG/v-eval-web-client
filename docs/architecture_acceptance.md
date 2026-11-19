@@ -2247,12 +2247,13 @@ The top navigation system (`AccountNavbar.jsx`) was re-engineered under the **"E
 
 - **100% Real-Data Backed Architecture (Zero Hardcoding)**:
   - All displayed entities (countdown targets, days remaining, pedagogical alerts, active child, campus assignment, continuous learning streaks) are dynamically resolved from database queries and API services (`practiceService.getAcademicTerms`, `practiceService.getMyAlerts`, `portalMetrics`, and `currentUser`).
-- **Dynamic Exam Countdown & Mission Control Capsule (Center)**:
+- **Dynamic Exam Countdown & Minimalist Mission Control Capsule (Center)**:
   - Dynamically calculates the countdown to upcoming VNU-HCM V-ACT examination rounds or backend `AcademicTerms` using `getUpcomingExam(terms, studentDash, user)` and current timestamp math.
-  - Features a prominent, accessible pill capsule with an indigo `Target` icon, live radar ping animation, target exam label, and remaining days count (`Còn X ngày`).
+  - Implemented an ultra-refined, single-line capsule pill (`rounded-full border border-slate-200/90 bg-slate-50/80 hover:bg-indigo-50/70`) with subtle radar ping dot, target exam label, and remaining days count (`● ĐGNL Đợt 1 (2027) • Còn 129 ngày (28/03/2027)`).
   - Clicking opens an interactive **Exam Timeline & Blueprint Modal** (`ExamTimelineModal`), detailing Round 1 & Round 2 schedules, exam locations across Vietnam, the 120-question / 150-minute 3-section blueprint, and personalized 1200-point target score telemetry.
-- **Contextual Left Identity & Student Representation**:
-  - For Parents (`role === 'parent'`): Displays an active student companion badge (`👤 Đang đồng hành: [studentName] ([grade])`) resolved from `parentPortalData.children[0]`.
+- **Contextual Left Identity & Anti-Truncation Layout**:
+  - Eliminated bulky badge cramming beside the title, ensuring `pageTitle` (*Tổng quan Đồng hành*) is strictly non-truncating (`whitespace-nowrap shrink-0`).
+  - For Parents (`role === 'parent'`): Positions a compact companion chip on the right action bar (`👦 Con: [studentName]`) with rich tooltip metadata (School, Grade), preventing horizontal space collisions.
   - For Students (`role === 'student'`): Renders the campus badge (`currentUser.campusName`) when enrolled.
 - **Interactive Early Warning & Pedagogical Alert System (Core Flow 6)**:
   - Replaced the previous disabled placeholder button with an active notification drawer consuming `practiceService.getMyAlerts({ studentId })`.

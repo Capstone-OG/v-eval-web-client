@@ -4,17 +4,19 @@
 
 ## [19/11/2026] - Nâng Cấp Toàn Diện Trải Nghiệm Giao Diện Cổng Phụ Huynh, Lịch Sử Bài Thi & Tái Thiết Kế Thanh Điều Hướng Đỉnh Cao (Account Navbar Mission Control)
 
-- **Tái Thiết Kế Thanh Điều Hướng Top Navbar Theo Concept "EdTech Mission Control" ([`AccountNavbar.jsx`](../src/components/layout/AccountNavbar.jsx))**:
+- **Tái Thiết Kế & Tối Ưu Bố Cục Thanh Điều Hướng Top Navbar "EdTech Mission Control" ([`AccountNavbar.jsx`](../src/components/layout/AccountNavbar.jsx))**:
   - **Triệt tiêu 100% hardcode**: Toàn bộ dữ liệu hiển thị (kỳ thi mục tiêu, đếm ngược ngày thi, số chuông thông báo, chip học sinh đồng hành, cơ sở học tập, chuỗi ngày streak) đều được trích xuất trực tiếp từ API CSDL Backend thật (`practiceService.getAcademicTerms`, `practiceService.getMyAlerts`, `portalMetrics`, `currentUser`).
-  - **Viên Nang Đếm Ngược Kỳ Thi & Lộ Trình (Mission Control Center Pill)**:
-    - Tính toán động số ngày còn lại đến kỳ thi ĐGNL ĐHQG TP.HCM hoặc Học kỳ tuyển sinh (`upcomingExam`) thông qua CSDL `AcademicTerms` và hồ sơ cá nhân của học sinh.
-    - Hiển thị viên nang hiện đại bo cong lớn (`rounded-2xl border border-indigo-100/90 bg-gradient-to-r from-blue-50/80 via-indigo-50/60 to-purple-50/80`) với icon mục tiêu `Target`, tên kỳ thi, chấm pulse radar sinh động và số ngày đếm ngược trực quan (`Còn X ngày`).
-    - Khi click: Mở Modal chi tiết Lộ trình Khảo thí ĐGNL (`ExamTimelineModal`): Lịch thi Đợt 1 (cuối tháng 3), Đợt 2 (cuối tháng 5), danh sách các cụm tỉnh thi, cấu trúc đề chuẩn 120 câu / 150 phút (3 phần) và mục tiêu điểm số cá nhân (1200 điểm) từ CSDL.
-  - **Ngữ Cảnh Học Sinh Cho Phụ Huynh & Cơ Sở Cho Học Viên (Left Context)**:
-    - Với vai trò Phụ huynh: Hiển thị ngay chip nhận diện học sinh đang đồng hành (`👤 Đang đồng hành: [Tên con] ([Khối lớp])`) kết nối trực tiếp từ danh sách `parentPortalData.children[0]`.
-    - Với vai trò Học viên: Tự động hiển thị huy hiệu cơ sở đang theo học (`currentUser.campusName`).
+  - **Khắc phục triệt để lỗi ép cụt chữ (Zero Title Truncation)**: Loại bỏ việc nhồi nhét chuỗi tên lớp dài 54 ký tự cạnh tiêu đề; cố định tiêu đề trang `Tổng quan Đồng hành` hiển thị sắc nét, đầy đủ (`whitespace-nowrap shrink-0`) không bị thu nhỏ hoặc cụt thành `Tổng quan Đồng ...`.
+  - **Viên Nang Đếm Ngược 1 Dòng Tinh Tế (Minimalist Single-Line Mission Pill)**:
+    - Chuyển đổi từ khối hộp 2 dòng dày cộm sang dạng viên nang thanh mảnh 1 dòng (`rounded-full border border-slate-200/90 bg-slate-50/80 hover:bg-indigo-50/70 hover:border-indigo-200/90`): `● ĐGNL Đợt 1 (2027) • Còn 129 ngày (28/03/2027)`.
+    - Đặt chính giữa thanh điều hướng tạo khoảng thở (white space) rộng rãi, sang trọng.
+    - Click mở Modal chi tiết Lộ trình Khảo thí ĐGNL (`ExamTimelineModal`): Lịch thi Đợt 1 (cuối tháng 3), Đợt 2 (cuối tháng 5), danh sách các cụm tỉnh thi, cấu trúc đề chuẩn 120 câu / 150 phút (3 phần) và mục tiêu điểm số cá nhân (1200 điểm) từ CSDL.
+  - **Tối Ưu Ngữ Cảnh Đồng Hành & Tránh Trùng Lặp (Clean Context & Right Actions)**:
+    - Chuyển định danh con sang chip nhỏ gọn bên góc phải: `👦 Con: [Tên con]` với tooltip đầy đủ (Trường, Khối lớp), không làm loãng thanh điều hướng.
+    - Ẩn bớt thẻ ngày thứ yếu `Thứ Năm, 19/11` trên màn hình thông thường (chỉ hiện trên màn hình `2xl`), giải phóng diện tích cho giao diện.
+    - Tinh chỉnh chuông thông báo thanh lịch và căn chỉnh lại chấm xanh online góc avatar chuẩn xác không bị đè viền.
   - **Chuông Thông Báo & Cảnh Báo Sớm Tương Tác Sư Phạm (Interactive Notification Bell & Flow 6 Drawer)**:
-    - Thay thế nút chuông tĩnh bị vô hiệu hóa trước đây bằng hệ thống thông báo tương tác thời gian thực: gọi API `practiceService.getMyAlerts({ studentId })` và lắng nghe sự kiện đồng bộ `veval:flow6-updated`.
+    - Tự động gọi API `practiceService.getMyAlerts({ studentId })` và lắng nghe sự kiện đồng bộ `veval:flow6-updated`.
     - Hiển thị badge số lượng cảnh báo chưa đọc với hiệu ứng nhịp thở `animate-pulse` khi có tin mới.
     - Hộp thoại thông báo thả xuống hỗ trợ: phân loại cảnh báo đỏ (`AlertTriangle`), cảnh báo vàng (`AlertCircle`) và lời khuyên sư phạm (`Info`); hiển thị mốc thời gian thân thiện (`formatRelativeTime`); click trực tiếp để đánh dấu đã đọc (`practiceService.markAlertAsRead`); nút *"Đọc tất cả"* giúp dọn sạch thông báo tức thì.
   - **Viên Nang Hồ Sơ & Trạng Thái Trực Tuyến (User Profile Pill & Menu)**:
