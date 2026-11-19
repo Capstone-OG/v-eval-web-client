@@ -229,107 +229,159 @@ export default function Sidebar({
           }
         ];
 
-      case 'manager':
+      case 'director':
+      case 'manager': {
+        const currentRoles = Array.isArray(portalMetrics?.currentUser?.roles)
+          ? portalMetrics.currentUser.roles.map((r) => String(r).toUpperCase())
+          : [];
+        const isDirectorRole =
+          role === 'director' ||
+          currentRoles.some((r) => r.includes('DIRECTOR')) ||
+          String(portalMetrics?.currentUser?.email || '').toLowerCase().startsWith('director');
+
+        if (isDirectorRole) {
+          return [
+            {
+              sectionTitle: 'Quản Trị Học Thuật Cơ Sở',
+              items: [
+                {
+                  id: 'dashboard',
+                  label: 'Trung tâm Điều phối Cơ sở',
+                  sublabel: 'AI Clustering & Bản đồ nhiệt',
+                  icon: Building2,
+                  active: activeTab === 'dashboard',
+                  onClick: () => setActiveTab('dashboard')
+                },
+                {
+                  id: 'teacher_heatmap',
+                  label: 'Giám sát Ma trận Lớp học',
+                  sublabel: 'Theo dõi độ làm chủ từng lớp',
+                  icon: LayoutGrid,
+                  active: activeTab === 'teacher_heatmap',
+                  onClick: () => setActiveTab('teacher_heatmap')
+                },
+                {
+                  id: 'ai_moderation',
+                  label: 'Kiểm duyệt Gia sư AI',
+                  sublabel: 'Báo cáo sai lệch & Bẫy tư duy',
+                  icon: Bot,
+                  active: activeTab === 'ai_moderation',
+                  onClick: () => setActiveTab('ai_moderation'),
+                  badge: 'Flow 4'
+                },
+                {
+                  id: 'roadmap',
+                  label: 'Quản lý Khung Chương trình',
+                  sublabel: 'Phê duyệt học liệu & Câu hỏi',
+                  icon: Network,
+                  active: activeTab === 'roadmap',
+                  onClick: () => setActiveTab('roadmap')
+                },
+                {
+                  id: 'textbook-group',
+                  label: 'Sách giáo khoa (SGK)',
+                  sublabel: 'Chuẩn, Nạp & Studio',
+                  icon: BookOpen,
+                  iconColor: 'from-emerald-500 to-teal-700',
+                  children: [
+                    {
+                      id: 'textbook-standard',
+                      label: '1. Sách Giáo Khoa Chuẩn',
+                      badge: 'Khung',
+                      active: activeTab === 'textbook-standard',
+                      onClick: () => setActiveTab('textbook-standard')
+                    },
+                    {
+                      id: 'textbook-ingest',
+                      label: '2. Nạp Tài Liệu SGK',
+                      badge: '3 Phần',
+                      active: activeTab === 'textbook-ingest',
+                      onClick: () => setActiveTab('textbook-ingest')
+                    },
+                    {
+                      id: 'textbook-studio',
+                      label: '3. Studio Biên Soạn SGK',
+                      badge: 'Studio',
+                      active: activeTab === 'textbook-studio',
+                      onClick: () => setActiveTab('textbook-studio')
+                    }
+                  ]
+                },
+                {
+                  id: 'exam-studio',
+                  label: 'Parse Đề thi',
+                  sublabel: 'Tách câu hỏi & Studio Đề',
+                  icon: FileSpreadsheet,
+                  active: activeTab === 'exam-studio',
+                  onClick: () => setActiveTab('exam-studio')
+                },
+                {
+                  id: 'analytics',
+                  label: 'Báo cáo Chất lượng Đào tạo',
+                  sublabel: 'Dự báo điểm chuẩn ĐGNL cơ sở',
+                  icon: BarChart3,
+                  active: activeTab === 'analytics',
+                  onClick: () => setActiveTab('analytics')
+                }
+              ]
+            },
+            {
+              sectionTitle: 'Nhân Sự & Tài Khoản Cơ Sở',
+              items: [
+                {
+                  id: 'provision',
+                  label: 'Cấp phát Tài khoản Cơ sở',
+                  sublabel: 'Giảng viên & Học viên mới',
+                  icon: UserPlus,
+                  active: activeTab === 'provision',
+                  onClick: () => setActiveTab('provision'),
+                  badge: 'IAM'
+                }
+              ]
+            }
+          ];
+        }
+
         return [
           {
-            sectionTitle: 'Quản Trị Học Thuật Cơ Sở',
+            sectionTitle: 'Điều Phối Học Thuật Cơ Sở',
             items: [
               {
                 id: 'dashboard',
-                label: 'Trung tâm Điều phối Cơ sở',
-                sublabel: 'AI Clustering & Bản đồ nhiệt',
+                label: 'Tổng quan & Đối sánh Cơ sở',
+                sublabel: 'Bản đồ nhiệt lớp & Xuất báo cáo',
                 icon: Building2,
-                active: activeTab === 'dashboard',
+                active: activeTab === 'dashboard' || activeTab === 'analytics',
                 onClick: () => setActiveTab('dashboard')
               },
               {
-                id: 'teacher_heatmap',
-                label: 'Giám sát Ma trận Lớp học',
-                sublabel: 'Theo dõi độ làm chủ từng lớp',
-                icon: LayoutGrid,
-                active: activeTab === 'teacher_heatmap',
-                onClick: () => setActiveTab('teacher_heatmap')
+                id: 'classes_schedule',
+                label: 'Lớp học, Lịch học & Phân công GV',
+                sublabel: 'Đợt học, Trần 20 HS & Thời khóa biểu',
+                icon: Calendar,
+                active: activeTab === 'classes_schedule',
+                onClick: () => setActiveTab('classes_schedule')
               },
               {
-                id: 'ai_moderation',
-                label: 'Kiểm duyệt Gia sư AI',
-                sublabel: 'Báo cáo sai lệch & Bẫy tư duy',
-                icon: Bot,
-                active: activeTab === 'ai_moderation',
-                onClick: () => setActiveTab('ai_moderation'),
-                badge: 'Flow 4'
+                id: 'clustering',
+                label: 'Xếp lớp Đầu vào & Phân cụm AI',
+                sublabel: 'K-Means 4 miền & Gán Giáo viên',
+                icon: Sparkles,
+                active: activeTab === 'clustering',
+                onClick: () => setActiveTab('clustering')
               },
               {
-                id: 'roadmap',
-                label: 'Quản lý Khung Chương trình',
-                sublabel: 'Phê duyệt học liệu & Câu hỏi',
-                icon: Network,
-                active: activeTab === 'roadmap',
-                onClick: () => setActiveTab('roadmap')
-              },
-              {
-                id: 'textbook-group',
-                label: 'Sách giáo khoa (SGK)',
-                sublabel: 'Chuẩn, Nạp & Studio',
-                icon: BookOpen,
-                iconColor: 'from-emerald-500 to-teal-700',
-                children: [
-                  {
-                    id: 'textbook-standard',
-                    label: '1. Sách Giáo Khoa Chuẩn',
-                    badge: 'Khung',
-                    active: activeTab === 'textbook-standard',
-                    onClick: () => setActiveTab('textbook-standard')
-                  },
-                  {
-                    id: 'textbook-ingest',
-                    label: '2. Nạp Tài Liệu SGK',
-                    badge: '3 Phần',
-                    active: activeTab === 'textbook-ingest',
-                    onClick: () => setActiveTab('textbook-ingest')
-                  },
-                  {
-                    id: 'textbook-studio',
-                    label: '3. Studio Biên Soạn SGK',
-                    badge: 'Studio',
-                    active: activeTab === 'textbook-studio',
-                    onClick: () => setActiveTab('textbook-studio')
-                  }
-                ]
-              },
-              {
-                id: 'exam-studio',
-                label: 'Parse Đề thi',
-                sublabel: 'Tách câu hỏi & Studio Đề',
-                icon: FileSpreadsheet,
-                active: activeTab === 'exam-studio',
-                onClick: () => setActiveTab('exam-studio')
-              },
-              {
-                id: 'analytics',
-                label: 'Báo cáo Chất lượng Đào tạo',
-                sublabel: 'Dự báo điểm chuẩn ĐGNL cơ sở',
-                icon: BarChart3,
-                active: activeTab === 'analytics',
-                onClick: () => setActiveTab('analytics')
-              }
-            ]
-          },
-          {
-            sectionTitle: 'Nhân Sự & Tài Khoản Cơ Sở',
-            items: [
-              {
-                id: 'provision',
-                label: 'Cấp phát Tài khoản Cơ sở',
-                sublabel: 'Giảng viên & Học viên mới',
-                icon: UserPlus,
-                active: activeTab === 'provision',
-                onClick: () => setActiveTab('provision'),
-                badge: 'IAM'
+                id: 'escalations',
+                label: 'Cảnh báo Cấp 3 & Họp 3 bên',
+                sublabel: 'Can thiệp học viên nguy cơ cao',
+                icon: Activity,
+                active: activeTab === 'escalations',
+                onClick: () => setActiveTab('escalations')
               }
             ]
           }
         ];
+      }
 
       case 'admin':
         return [
@@ -918,12 +970,12 @@ export default function Sidebar({
           </>
         )}
 
-        {role === 'manager' && (
+        {(role === 'manager' || role === 'director') && (
           <>
             <div className="flex items-center justify-between">
               <span className="text-[10px] uppercase tracking-wider font-extrabold text-[#FACC15] flex items-center gap-1">
                 <Building2 className="w-3 h-3" />
-                <span>Điều Phối Cơ Sở</span>
+                <span>{role === 'director' ? 'Hội Đồng Học Thuật' : 'Điều Phối Cơ Sở'}</span>
               </span>
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold">
                 Live API

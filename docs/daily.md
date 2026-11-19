@@ -2,6 +2,52 @@
 
 ---
 
+## [19/11/2026] - Khởi Tạo `AcademicManagerDashboardView.jsx` Chuyên Biệt Cho Quản Lý Học Thuật Cơ Sở (Zero Hardcode), Khóa Chặt Cơ Sở Phụ Trách, Khắc Phục Lỗi Xung Đột Phòng Học 409 & Khử Trùng Lặp Cảnh Báo Sớm
+
+- **Khắc Phục Lỗi Xung Đột Phòng Học 409 Khi Đổi Phòng Lớp Học (`./src/components/dashboard/AcademicManagerDashboardView.jsx`)**:
+  - *Chuyển đổi cơ chế cập nhật ca học (Edit Slot Thay Vì Append)*:
+    - Bổ sung danh sách các ca học hiện tại trong tuần của lớp trong Modal 5 (Thời khóa biểu & Buổi học), hiển thị rõ Thứ, Khung giờ, và Phòng học.
+    - Bổ sung nút ✏️ **"Đổi Phòng / Giờ"** cho từng ca học, cho phép chọn nhanh phòng học mới (ví dụ từ `P.301` sang `P.302`) và nút 🗑️ **"Xóa"** ca học thừa.
+    - Cập nhật hàm `handleSaveWeeklySlotAndGenerate`: Khi đang ở chế độ chỉnh sửa (`editingSlotIdx !== null`), hệ thống thay thế trực tiếp ca học đang chọn thay vì thêm mới chồng lấn, triệt tiêu mã phòng cũ (`P.301`) trước khi gửi lên API Backend `saveClassWeeklySchedules`.
+    - Cập nhật bộ phát hiện xung đột thời gian thực `scheduleSlotConflict`: Loại trừ chính slot đang chỉnh sửa khỏi danh sách so sánh nội bộ, giúp cảnh báo biến mất ngay khi người dùng chọn phòng trống hợp lệ.
+- **Triệt Tiêu 100% Hardcode Tên Học Sinh - Kết Nối Động Qua Identity REST API (`./src/components/dashboard/EarlyWarningsMentorPanel.jsx`)**:
+  - *Bổ sung import `useMemo`*: Khắc phục lỗi runtime `ReferenceError: useMemo is not defined` tại dòng 1 của `EarlyWarningsMentorPanel.jsx`.
+  - *Xóa bỏ toàn bộ hàm `resolveStudentDisplayName` và mảng GUID tĩnh*: Không còn bất kỳ đoạn mã gán tên theo chuỗi hex nào (`11111111`, `11110000`, `99999999`, `BC933364`...).
+  - *Tích hợp truy vấn động từ `userService.getUsers({ role: 'STUDENT', pageSize: 100 })`*: Tự động xây dựng từ điển người dùng `identityUsersMap` từ Identity Service (`GET /api/v1/users`) để điền tên đầy đủ cho bất kỳ học sinh nào khi cần.
+  - *Ưu tiên dữ liệu chuẩn xác*: Hiển thị trực tiếp `studentName` trả về từ Backend (vốn đã được đồng bộ qua gRPC từ `iam.users`), chỉ fallback sang Identity REST API khi tên bị trống.
+  - *Khử trùng lặp thẻ cảnh báo*: Giữ lại bộ lọc `seenAlerts` theo cặp `(studentId, alertType)` để loại bỏ các bản ghi trùng lặp ở client.
+- **Kiểm Soát Xung Đột Phòng Học & Lịch Giảng Dạy Thời Gian Thực (Schedule & Room Conflict Detection - `./src/components/dashboard/AcademicManagerDashboardView.jsx`)**:
+  - *Bộ kiểm tra xung đột thời gian thực (`classConflictsMap`, `createClassConflict`, `scheduleSlotConflict`)*:
+    - Thuật toán kiểm tra giao thoa thời gian: $\max(\text{start}_1, \text{start}_2) < \min(\text{end}_1, \text{end}_2)$ trên cùng thứ trong tuần (`dayOfWeek`).
+    - **Xung đột phòng học**: Tự động phát hiện nếu cùng phòng (`room`) tại cùng cơ sở đã có lớp khác sử dụng trong khung giờ đó.
+    - **Xung đột giảng viên**: Tự động phát hiện nếu giảng viên được phân công đã có lịch dạy lớp khác tại cùng khung giờ.
+  - *Hộp cảnh báo đỏ thời gian thực & Khóa nút gửi*:
+    - Hiển thị hộp cảnh báo đỏ trực quan ngay bên dưới khung lịch trong Modal *"Mở Lớp Học Mới"* và Modal *"Thời Khóa Biểu & Phòng"*.
+    - Vô hiệu hóa (disable) nút *"Mở Lớp & Sinh Lịch Học"* và nút *"Lưu Ca Học & Sinh Buổi Học"* khi phát hiện có xung đột.
+  - *Thẻ cảnh báo trên danh sách lớp học Section 2*: Hiển thị hộp cảnh báo đỏ trên từng thẻ lớp học nếu lớp đó đang bị trùng phòng/giờ với lớp khác, kèm hướng dẫn bấm *"Thời Khóa Biểu & Phòng"* để đổi phòng/giờ.
+  - *Thanh gợi ý phòng học thông minh (Quick Room Suggestion Chips)*: Bổ sung các chip chọn nhanh phòng học (`P.301`, `P.302`, `P.303`, `P.304`, `P.305`, `Lab 01`, `Lab 02`) và tự động đề xuất phòng còn trống khi mở modal.
+- **Tách Riêng Component `AcademicManagerDashboardView.jsx` & Giữ Nguyên 100% `CampusManagerDashboardView.jsx` Gốc Cho Director (`./src/components/dashboard/AcademicManagerDashboardView.jsx`, `./src/components/dashboard/CampusManagerDashboardView.jsx`, `./src/services/authService.js`, `./src/App.jsx`, `./src/components/layout/Sidebar.jsx`)**:
+  - Giữ nguyên hoàn toàn code gốc của `CampusManagerDashboardView.jsx` và menu gốc cho vai trò `ACADEMIC_DIRECTOR` (`role === 'director'`).
+  - Tạo mới `AcademicManagerDashboardView.jsx` dành riêng cho vai trò `ACADEMIC_MANAGER` / `CAMPUS_MANAGER` (`role === 'manager'`).
+- **Triệt Tiêu 100% Dữ Liệu Hardcode Trong `AcademicManagerDashboardView.jsx` (`./src/components/dashboard/AcademicManagerDashboardView.jsx`)**:
+  - *Xóa tên chào mừng cố định*: Loại bỏ chuỗi cứng `, Nguyễn Duy Khôi!` trên Banner đầu trang, hiển thị chính xác họ tên của tài khoản Quản lý đang đăng nhập từ API `/api/v1/users/me`.
+  - *Xóa số lớp giả lập và điểm sao tự bịa của Giảng viên*: Gỡ bỏ `activeClasses: 1` và nhãn `★ 4.9`; tính toán số lớp giảng dạy thực tế của từng giảng viên bằng cách đối chiếu `cls.teacherId` trên danh sách lớp thật lấy từ `GET /api/practice/classes?campusId={selectedCampus}`.
+  - *Xóa dữ liệu lớp suy diễn và lịch học cố định*: Gọi trực tiếp `GET /api/practice/classes` kết hợp `GET /api/practice/analytics/campus/{campusId}/comparative-heatmap` để hiển thị chính xác `maxCapacity` (20 HS), `enrolledStudentsCount`, `termName`, `courseName`, `focusDomain` và chuỗi Thời khóa biểu Offline thực tế từ `weeklySchedules` (Thứ, Khung giờ, Phòng học).
+  - *Xóa tỷ lệ làm chủ giả lập `67%`*: Khi cơ sở chưa có dữ liệu bài làm, hiển thị trung thực `0%` (`Chưa có dữ liệu`).
+  - *Kiểm soát phạm vi cơ sở theo RBAC (`MGR_07`, `MGR_22`)*: Ràng buộc tài khoản Quản lý cơ sở chỉ thao tác trong phạm vi `campusId` được phân công; chặn và báo lỗi `403 Access Denied` khi cố tình chuyển sang điều phối hoặc gán giảng viên thuộc cơ sở khác.
+- **Tách Bạch Menu Sidebar Giữa `Academic Director` và `Academic Manager` (`./src/components/layout/Sidebar.jsx`, `./src/App.jsx`)**:
+  - Phân tách rõ 4 mục chức năng chuyên biệt của **Academic Manager**:
+    1. `Tổng quan & Đối sánh Cơ sở`: Bản đồ nhiệt 4 miền giữa các lớp, bộ lọc đa chiều (Đợt học, Khóa học, Miền năng lực, Giảng viên) và xuất báo cáo `.csv/.xlsx` (`MGR_16`, `MGR_18`, `MGR_21`).
+    2. `Lớp học, Lịch học & Phân công GV`: Quản lý Đợt học (`AcademicTerms`), Khóa học (`Courses`), mở lớp mới (trần 20 HS/lớp, thanh màu sĩ số Xanh/Vàng/Đỏ), Modal Phân công / Đổi Giáo viên (`PUT /api/practice/classes/{classId}/assign-teacher`) và Modal Thời khóa biểu Offline & Buổi học (`MGR_01` - `MGR_08`).
+    3. `Xếp lớp Đầu vào & Phân cụm AI`: Cấu hình tham số `MaxK` động có kiểm định biên, gọi `POST /api/practice/classes/auto-cluster`, hiển thị hồ sơ năng lực tâm cụm 4 miền (`Centroid Profile`) và gán Giáo viên trực tiếp cho từng cụm lớp (`MGR_09` - `MGR_15`).
+    4. `Cảnh báo Cấp 3 & Họp 3 bên`: Điều phối can thiệp học viên nguy cơ cao, đặt lịch họp 3 bên và ghi biên bản nghiệm thu (`MGR_17`, `MGR_19`, `MGR_20`).
+  - Khắc phục lỗi định tuyến tab `analytics` của Manager trước đây mở nhầm `LearningAnalyticsView` của Học sinh, và gỡ bỏ nút chia nhóm bàn vi mô 3-5 học sinh (thuộc thẩm quyền Giáo viên đứng lớp) khỏi dòng lớp học của Manager.
+- **Mở Rộng Wrapper API Trong `practiceService.js` (`./src/services/practiceService.js`)**:
+  - Bổ sung đầy đủ các hàm kết nối Backend thật: `createAcademicTerm`, `updateAcademicTermStatus`, `createCourse`, `createClassWithSchedule`, `saveClassWeeklySchedules`, `generateClassSessions`, `getClassSessions`, `updateClassSession`, `rescheduleClassSession` và chuẩn hóa validation cho `assignTeacher`, `autoClusterClasses`.
+- **Kiểm thử vận hành**: `npm run build` (`vite build`) đạt `✓ built in 2.02s` với 3053 modules sạch 100%, 0 lỗi.
+
+---
+
 ## [18/11/2026] - Triệt Tiêu 100% Mock/Template Giả Lập: Lý Thuyết Thuần Cô Đặc (Không Ghi Trang, Tăng Chiều Dài Gấp Đôi, Font Tinh Gọn), Mục Lục Mở Rộng Hết Chương, Tính Năng Xóa Sách & Vô Hiệu Hóa 2 Nút Điều Hướng
 
 - **Lý Thuyết Thuần Cô Đặc, Phân Mục Đàng Hoàng, Tuyệt Đối Không Ghi Số Trang (`buildTheoryFromChunks`)**:

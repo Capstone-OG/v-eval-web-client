@@ -75,6 +75,7 @@
 | 36 | **Loại Bỏ Mục Phi Sư Phạm (Bìa Sách, Trang Trắng, N/A) Khỏi SGK** | `TextbookStandardView.jsx`, `TextbookIngestView.jsx`, `textbookStateBridge.js` | 🟢 Hoàn thành | 100% | Lọc sạch 100% các nhãn bìa sách, trang trắng, mục lục, N/A; bảo vệ bài học và dạng bài hiển thị chuẩn sư phạm GDPT 2018 |
 | 37 | **Sidebar Thu Gọn Toàn Diện (Collapsible Rail w-20/w-72)** | `Sidebar.jsx`, `AccountNavbar.jsx`, `App.jsx` | 🟢 Hoàn thành | 100% | Thu gọn sidebar trên Desktop cho Giám đốc học thuật và mọi vai trò; chuyển thành icon rail `w-20` kèm tooltip trực quan, nút thu gọn trên sidebar và navbar |
 | 38 | **Chuẩn Hóa Sư Phạm GDPT 2018 & Xóa Bỏ Trùng Lặp Tiêu Đề** | `TextbookStandardView.jsx`, `textbookStateBridge.js` | 🟢 Hoàn thành | 100% | Bóc tách tiền tố (`cleanPrefix`), xóa lỗi `CHƯƠNG 4 \n Chương 2:...`, nút 1-chạm `📚 Chuẩn Hóa GDPT 2018`, tự động nạp công thức KaTeX đặc trưng và đánh số dạng bài tuần tự |
+| 39 | **Khởi Tạo Cổng Quản Lý Học Thuật Cơ Sở Độc Lập (`AcademicManagerDashboardView.jsx` - Zero Hardcode) & Bảo Toàn `CampusManagerDashboardView.jsx` Gốc Cho Director** | `AcademicManagerDashboardView.jsx`, `CampusManagerDashboardView.jsx`, `Sidebar.jsx`, `App.jsx`, `practiceService.js` | 🟢 Hoàn thành | 100% | Giữ nguyên `CampusManagerDashboardView.jsx` gốc cho `director`; tạo mới `AcademicManagerDashboardView.jsx` (0% hardcode) cho `manager` với 4 mục chuẩn nghiệp vụ nối trực tiếp API Backend thật |
 
 
 
@@ -805,3 +806,15 @@ Validation: build and lint pass with existing warnings; live API integration rem
 | API-only radar and prior values | Corrected | No synthetic benchmark or default mastery values are displayed when omitted by API. |
 | Diagnostic report runtime references | Corrected | Reused normalized skill priors and removed a dangling component reference. |
 | Diagram Placeholder `[IMAGE_PLACEHOLDER]` & Low-DPI Textbook Upload | Completed | `MathText.jsx` renders diagram/image supplement alerts; `aiService.js` passes `targetDpi = 56` and `batchSize = 5`; Vite build passed in 1.74s. |
+
+## [19/11/2026] - Quản Lý Học Thuật Cơ Sở (`AcademicManagerDashboardView.jsx`), Khắc Phục Lỗi Xung Đột Phòng 409 & Khử Trùng Cảnh Báo Sớm
+
+| Hạng Mục Triển Khai | Vị Trí Triển Khai | Trạng Thái | Chi Tiết Nghiệm Thu |
+| :--- | :--- | :---: | :--- |
+| **Khắc phục lỗi xung đột phòng 409 khi đổi phòng** | `AcademicManagerDashboardView.jsx` | 🟢 Hoàn thành | Hiển thị danh sách ca học hiện tại, hỗ trợ sửa đổi trực tiếp (`handleSaveWeeklySlotAndGenerate`) thay thế slot cũ `P.301` trước khi gửi lên API Backend `saveClassWeeklySchedules`. |
+| **Xóa ca học offline trong tuần** | `AcademicManagerDashboardView.jsx` | 🟢 Hoàn thành | Nút xóa 🗑️ cho từng ca học, ràng buộc lớp học duy trì tối thiểu 1 ca học. |
+| **Phát hiện xung đột phòng / GV thời gian thực** | `AcademicManagerDashboardView.jsx` | 🟢 Hoàn thành | Bộ kiểm tra `scheduleSlotConflict` loại trừ slot đang chỉnh sửa; cảnh báo đỏ biến mất tức thì khi chọn sang phòng trống. |
+| **Truy vấn họ tên học sinh thực tế & Khử trùng lặp cảnh báo (Zero Hardcode)** | `EarlyWarningsMentorPanel.jsx` | 🟢 Hoàn thành | Tích hợp `userService.getUsers` động từ Identity REST API; hiển thị họ tên đầy đủ từ DB; `seenAlerts` khử trùng lặp các thẻ cảnh báo giống nhau cho cùng học sinh. |
+| **Khóa chặt cơ sở phụ trách RBAC** | `AcademicManagerDashboardView.jsx` | 🟢 Hoàn thành | Huy hiệu Locked Badge với biểu tượng `Lock` và `ShieldCheck` cố định theo `currentUser.campusId`. |
+| **Nút nạp đợt học / khóa học mẫu** | `AcademicManagerDashboardView.jsx` | 🟢 Hoàn thành | Nút nạp mẫu rỗng và nút điền mẫu trong modal tạo mới giúp kiểm thử 1-click. |
+| **Biên dịch Web Client** | Toàn bộ ứng dụng | 🟢 Hoàn thành | `npm run build` đạt `✓ built in 1.75s` với 3054 modules sạch 100%, 0 lỗi. |

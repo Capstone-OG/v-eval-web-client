@@ -2386,3 +2386,41 @@ Radar and skill-prior displays consume API response fields; the benchmark overla
     - **Non-Pedagogical Exclusion Defense in Bloom Taxonomy**:
       - Hardened `isNonPedagogical` filters across all view components, preventing cover pages, blank pages, and N/A placeholders from ever being registered as pedagogical lessons or Bloom taxonomy problem types.
     - **Verification**: `npm run build` (Vite v8.3.0) compiled cleanly in 1.15s with 3053 modules transformed and zero errors.
+
+
+18. **Academic Manager Portal Separation (`AcademicManagerDashboardView.jsx`) & Original `CampusManagerDashboardView.jsx` Preservation for Director (`AcademicManagerDashboardView.jsx`, `CampusManagerDashboardView.jsx`, `authService.js`, `Sidebar.jsx`, `App.jsx`, `practiceService.js`)**:
+    - **Role Separation & Navigation Architecture**:
+      - Preserved the original `CampusManagerDashboardView.jsx` and original navigation menu 100% intact for `Academic Director` (`role === 'director'`, `ACADEMIC_DIRECTOR`) and `Admin`.
+      - Created the dedicated `AcademicManagerDashboardView.jsx` component for `Academic Manager` (`role === 'manager'`, `ACADEMIC_MANAGER` / `CAMPUS_MANAGER`) with a 4-module navigation structure: (1) Campus Overview & Comparative Analytics, (2) Academic Terms, Courses, Offline Class Schedules & Teacher Allocation, (3) Automated K-Means 4-Domain Class Clustering, and (4) Tier-3 Academic Escalations & 3-Way Counseling.
+    - **Complete Elimination of Hardcoded Values in `AcademicManagerDashboardView.jsx`**:
+      - Removed hardcoded greeting suffix, hardcoded teacher class counts (`activeClasses: 1`), fake ratings, hardcoded class schedule strings, and fallback `67%` mastery metrics.
+      - Integrated real Backend endpoints across `AcademicTermsController`, `CoursesController`, `ClassesController`, `SchedulesController`, `AnalyticsController`, and `EarlyWarningsController`.
+      - Enforced Campus RBAC isolation (`MGR_07`, `MGR_22`), dynamic `MaxK` clustering validation (`MGR_09` - `MGR_15`), color-coded 20-student capacity bars (`MGR_08`), teacher assignment validation (`MGR_01`, `MGR_03`, `MGR_06`), manual student enrollment with 21st-student auto-overflow (`MGR_02`, `MGR_04`, `MGR_13`), and CSV/Excel campus report export (`MGR_18`).
+    - **Verification**: `npm run build` (Vite v8.3.0) compiled cleanly in 1.55s with 3054 modules transformed and zero errors.
+
+
+19. **Real-time Schedule & Physical Room Conflict Prevention Engine (`AcademicManagerDashboardView.jsx`)**:
+    - **Dual-Layer Real-time Conflict Engine (`classConflictsMap`, `createClassConflict`, `scheduleSlotConflict`)**:
+      - Evaluates time interval overlap on the same day of the week: `max(start1, start2) < min(end1, end2)`.
+      - **Physical Room Conflict**: Automatically identifies if the selected room (`room`) is already allocated to another active class within the same campus.
+      - **Instructor Conflict**: Automatically detects if the assigned teacher already has a teaching commitment during the intersecting time window.
+    - **Visual Conflict Feedback & Submission Protection**:
+      - Renders an immediate red conflict alert box directly within Modal 4 (*"Mở Lớp Học Mới"*) and Modal 5 (*"Thời Khóa Biểu & Buổi Học"*).
+      - Disables the submit buttons (*"Mở Lớp & Sinh Lịch Học"*, *"Lưu Khung Giờ & Đồng Bộ Buổi Học"*) whenever a conflict condition is active, preventing accidental database collisions.
+      - Displays a conflict alert banner on class cards in Section 2 with instructions to adjust room/time slots.
+      - Implements Quick Room Suggestion Chips (`P.301` through `P.305`, `Lab 01`, `Lab 02`) with automated suggestion of vacant rooms upon opening modals.
+    - **Verification**: `npm run build` (Vite v8.3.0) compiled cleanly in 1.62s with 3054 modules transformed and zero errors.
+
+
+20. **Schedule Slot In-Place Mutation (409 Conflict Resolution) & Early Warning Normalization (`AcademicManagerDashboardView.jsx`, `EarlyWarningsMentorPanel.jsx`)**:
+    - **In-Place Weekly Slot Editing & Deletion**:
+      - Replaced the append-only schedule slot behavior in Modal 5 with an interactive slot management table displaying existing weekly slots with Day, Time, and Room.
+      - Provided inline ✏️ *"Đổi Phòng / Giờ"* (Edit) and 🗑️ *"Xóa"* (Delete) actions for each weekly schedule slot.
+      - In edit mode (`editingSlotIdx !== null`), `handleSaveWeeklySlotAndGenerate` replaces the designated slot in-place within `finalSlots`, completely purging the conflicting room assignment (`P.301`) before dispatching to the Backend API `saveClassWeeklySchedules`.
+      - Updated `scheduleSlotConflict` real-time validation to exclude the slot currently being modified, eliminating spurious conflict alerts once an open room chip is clicked.
+    - **Dynamic Student Identity Resolution via Identity REST API (Zero Hardcode) & Alert Deduplication (`EarlyWarningsMentorPanel.jsx`)**:
+      - Eradicated all hardcoded student name arrays and hex GUID mappings (`resolveStudentDisplayName`).
+      - Integrated dynamic retrieval via `userService.getUsers({ role: 'STUDENT', pageSize: 100 })` querying Identity Service (`GET /api/v1/users`), populating `identityUsersMap` on mount.
+      - Prioritizes authentic names delivered by Backend (sourced through gRPC `GetStudentsByIds`), with dynamic fallback to the Identity REST API.
+      - Preserved client-side alert deduplication (`seenAlerts = new Set()`) to eliminate duplicate cards for the same student/alert pair.
+    - **Verification**: `npm run build` (Vite v8.3.0) compiled cleanly in 1.66s with 3054 modules transformed and zero errors.

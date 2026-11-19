@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   ShieldAlert,
   AlertOctagon,
@@ -13,23 +13,24 @@ import {
   X
 } from 'lucide-react';
 import { practiceService, FLOW5_DEFAULTS } from '../../services/practiceService';
+import { userService } from '../../services/userService';
 import { toast } from '../../context/ToastContext';
 
 const ALERT_BADGE_META = {
   RED: {
-    label: 'Cảnh báo Đỏ (Nguy cấp)',
+    label: 'Cảnh Báo Nguy Cơ Cao',
     badgeCls: 'bg-rose-600 text-white',
     rowCls: 'border-rose-200 bg-rose-50/35',
     icon: AlertOctagon
   },
   YELLOW: {
-    label: 'Nhắc nhở Vàng (Lệch nhịp)',
+    label: 'Nhắc Nhở Cần Theo Dõi',
     badgeCls: 'bg-amber-500 text-white',
     rowCls: 'border-amber-200 bg-amber-50/35',
     icon: AlertTriangle
   },
   UNREALISTIC_GOAL: {
-    label: 'Mục tiêu vượt ngưỡng (BR-04 Tier 3)',
+    label: 'Mục Tiêu Cần Hiệu Chỉnh',
     badgeCls: 'bg-purple-600 text-white',
     rowCls: 'border-purple-200 bg-purple-50/40',
     icon: Compass
@@ -37,9 +38,9 @@ const ALERT_BADGE_META = {
 };
 
 const QUICK_RESOLUTION_TEMPLATES = [
-  'Đã kèm 1-1 tại Bàn vi mô và giao Toa thuốc bù điểm ROI #1 (3 câu đồng cấu).',
-  'Đã trao đổi trực tiếp với học sinh, rà soát lại Sổ tay lỗi sai SM-2 và cam kết lịch tự học 45 phút/tối.',
-  'Đã gửi báo cáo tiến độ SEM sang Cổng Phụ huynh đồng hành để phối hợp nhắc nhở chuyên cần.'
+  'Đã kèm 1-1 tại Bàn vi mô và giao gói bài tập trọng tâm bổ trợ kiến thức (+30đ).',
+  'Đã trao đổi trực tiếp với học sinh, rà soát lại Sổ tay lỗi sai và cam kết lịch tự học 45 phút/tối.',
+  'Đã gửi báo cáo tiến độ học tập sang Cổng Phụ huynh để phối hợp nhắc nhở chuyên cần.'
 ];
 
 const getDefaultFutureDateTimeLocal = () => {
@@ -186,7 +187,62 @@ export default function EarlyWarningsMentorPanel({
     }
   };
 
-  const alerts = dashboardData?.alerts || [];
+  // Nạp danh sách User từ Identity Service để liên kết FullName động (Không hardcode)
+  const [identityUsersMap, setIdentityUsersMap] = useState({});
+
+  useEffect(() => {
+    let isMounted = true;
+    userService
+      .getUsers({ role: 'STUDENT', pageSize: 100 })
+      .then((data) => {
+        if (!isMounted || !data) return;
+        const items = data.items || data.Items || [];
+        const map = {};
+        for (const u of items) {
+          const id = String(u.userId || u.id || '').toLowerCase();
+          if (id && u.fullName) {
+            map[id] = u.fullName;
+          }
+        }
+        setIdentityUsersMap(map);
+      })
+      .catch((err) => {
+        console.warn('[EarlyWarningsMentorPanel] Không thể nạp danh sách user từ Identity Service:', err);
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const rawAlerts = dashboardData?.alerts || [];
+
+  const alerts = useMemo(() => {
+    const seen = new Set();
+    return rawAlerts
+      .map((a) => {
+        const idLower = String(a.studentId || '').toLowerCase();
+        // 1. Ưu tiên lấy studentName đã resolve từ Backend (qua Identity gRPC)
+        // 2. Nếu Backend chưa có tên hoặc trả về prefix mặc định, tra cứu trực tiếp từ Identity REST API
+        let displayName = a.studentName;
+        if (
+          (!displayName || displayName.toLowerCase().startsWith('học sinh') || displayName.toLowerCase().startsWith('học viên')) &&
+          identityUsersMap[idLower]
+        ) {
+          displayName = identityUsersMap[idLower];
+        }
+
+        return {
+          ...a,
+          studentName: displayName || a.studentName || 'Học viên'
+        };
+      })
+      .filter((a) => {
+        const key = `${a.studentId}_${a.alertType}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+  }, [rawAlerts, identityUsersMap]);
 
   return (
     <>
@@ -197,17 +253,17 @@ export default function EarlyWarningsMentorPanel({
             <div className="flex flex-wrap items-center gap-2">
               <span className="px-2.5 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200 text-[11px] font-extrabold uppercase tracking-wider flex items-center gap-1.5">
                 <ShieldAlert className="w-3.5 h-3.5" />
-                Core Flow 6 • Trung Tâm Cảnh Báo Sớm & Can Thiệp Sư Phạm (BR-04)
+                Trung Tâm Giám Sát Học Thuật & Can Thiệp Sớm
               </span>
               <span className="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[10px] font-bold">
                 Phân quyền: {roleLabel}
               </span>
             </div>
             <h2 className="text-lg lg:text-xl font-black text-slate-900">
-              Bảng Điều Phối Cảnh Báo Sớm 3 Tầng & Đặt Lịch Tư Vấn Mục Tiêu 3 Bên
+              Bảng Điều Phối Cảnh Báo & Lịch Tư Vấn 3 Bên
             </h2>
             <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-              Theo dõi các ca học sinh lệch quỹ đạo điểm dự báo SEM, ghi nhận biên bản can thiệp tại lớp và tổ chức phiên tư vấn 3 bên (Giáo viên - Học sinh - Phụ huynh) khi mục tiêu vượt ngưỡng khả thi.
+              Theo dõi các học sinh có xu hướng giảm sút hoặc lệch tiến độ mục tiêu, ghi nhận biên bản can thiệp và tổ chức buổi tư vấn 3 bên (Giáo viên - Học sinh - Phụ huynh) để hiệu chỉnh kế hoạch học tập.
             </p>
           </div>
 
@@ -244,7 +300,7 @@ export default function EarlyWarningsMentorPanel({
             <div className="text-2xl font-black text-rose-600 mt-1">
               {dashboardData?.redAlertsCount ?? 0}
             </div>
-            <div className="text-[10px] text-rose-600 font-semibold mt-0.5">Tier 1 • Nguy cơ cao</div>
+            <div className="text-[10px] text-rose-600 font-semibold mt-0.5">Nguy cơ cao</div>
           </div>
 
           <div className="p-4 rounded-2xl bg-white border border-amber-200 card-shadow hover:border-amber-400 transition-all">
@@ -252,15 +308,15 @@ export default function EarlyWarningsMentorPanel({
             <div className="text-2xl font-black text-amber-600 mt-1">
               {dashboardData?.yellowAlertsCount ?? 0}
             </div>
-            <div className="text-[10px] text-amber-700 font-semibold mt-0.5">Tier 2 • Trượt tiến độ</div>
+            <div className="text-[10px] text-amber-700 font-semibold mt-0.5">Chậm tiến độ tuần</div>
           </div>
 
           <div className="p-4 rounded-2xl bg-white border border-purple-200 card-shadow hover:border-purple-400 transition-all">
-            <div className="text-[10px] font-black tracking-wider uppercase text-purple-800">Mục tiêu ảo</div>
+            <div className="text-[10px] font-black tracking-wider uppercase text-purple-800">Mục tiêu lệch</div>
             <div className="text-2xl font-black text-purple-700 mt-1">
               {dashboardData?.unrealisticGoalCount ?? 0}
             </div>
-            <div className="text-[10px] text-purple-700 font-semibold mt-0.5">Tier 3 • Đích không tưởng</div>
+            <div className="text-[10px] text-purple-700 font-semibold mt-0.5">Cần điều chỉnh</div>
           </div>
 
           <div className="p-4 rounded-2xl bg-white border border-emerald-200 card-shadow hover:border-emerald-400 transition-all">
@@ -286,9 +342,9 @@ export default function EarlyWarningsMentorPanel({
             </select>
 
             {[
-              { id: 'ALL', label: 'Mọi phân tầng' },
+              { id: 'ALL', label: 'Tất cả mức độ' },
               { id: 'RED', label: 'Cảnh báo Đỏ' },
-              { id: 'UNREALISTIC_GOAL', label: 'Mục tiêu vượt ngưỡng' },
+              { id: 'UNREALISTIC_GOAL', label: 'Mục tiêu cần hiệu chỉnh' },
               { id: 'YELLOW', label: 'Nhắc nhở Vàng' }
             ].map((item) => (
               <button

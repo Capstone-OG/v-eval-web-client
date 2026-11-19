@@ -229,8 +229,9 @@ export default function WebLoginPage({ initialMode = 'login', onLoginSuccess, on
   const determineRoleFromResponse = (res) => {
     const roles = res?.user?.roles || res?.roles || [];
     if (roles.some(r => r.toLowerCase().includes('admin') || r.toLowerCase().includes('administrator'))) return 'admin';
+    if (roles.some(r => r.toLowerCase().includes('director') || r.toLowerCase().includes('giamdoc'))) return 'director';
     if (roles.some(r => r.toLowerCase().includes('teacher') || r.toLowerCase().includes('giaovien'))) return 'teacher';
-    if (roles.some(r => r.toLowerCase().includes('manager') || r.toLowerCase().includes('director') || r.toLowerCase().includes('quanly'))) return 'manager';
+    if (roles.some(r => r.toLowerCase().includes('manager') || r.toLowerCase().includes('quanly'))) return 'manager';
     if (roles.some(r => r.toLowerCase().includes('parent') || r.toLowerCase().includes('phuhuynh'))) return 'parent';
     return 'student';
   };
