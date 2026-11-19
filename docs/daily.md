@@ -2,8 +2,24 @@
 
 ---
 
-## [19/11/2026] - Nâng Cấp Toàn Diện Trải Nghiệm Giao Diện Cổng Phụ Huynh & Lịch Sử Bài Thi Của Con (Parent Companion Portal & Submission History)
+## [19/11/2026] - Nâng Cấp Toàn Diện Trải Nghiệm Giao Diện Cổng Phụ Huynh, Lịch Sử Bài Thi & Tái Thiết Kế Thanh Điều Hướng Đỉnh Cao (Account Navbar Mission Control)
 
+- **Tái Thiết Kế Thanh Điều Hướng Top Navbar Theo Concept "EdTech Mission Control" ([`AccountNavbar.jsx`](../src/components/layout/AccountNavbar.jsx))**:
+  - **Triệt tiêu 100% hardcode**: Toàn bộ dữ liệu hiển thị (kỳ thi mục tiêu, đếm ngược ngày thi, số chuông thông báo, chip học sinh đồng hành, cơ sở học tập, chuỗi ngày streak) đều được trích xuất trực tiếp từ API CSDL Backend thật (`practiceService.getAcademicTerms`, `practiceService.getMyAlerts`, `portalMetrics`, `currentUser`).
+  - **Viên Nang Đếm Ngược Kỳ Thi & Lộ Trình (Mission Control Center Pill)**:
+    - Tính toán động số ngày còn lại đến kỳ thi ĐGNL ĐHQG TP.HCM hoặc Học kỳ tuyển sinh (`upcomingExam`) thông qua CSDL `AcademicTerms` và hồ sơ cá nhân của học sinh.
+    - Hiển thị viên nang hiện đại bo cong lớn (`rounded-2xl border border-indigo-100/90 bg-gradient-to-r from-blue-50/80 via-indigo-50/60 to-purple-50/80`) với icon mục tiêu `Target`, tên kỳ thi, chấm pulse radar sinh động và số ngày đếm ngược trực quan (`Còn X ngày`).
+    - Khi click: Mở Modal chi tiết Lộ trình Khảo thí ĐGNL (`ExamTimelineModal`): Lịch thi Đợt 1 (cuối tháng 3), Đợt 2 (cuối tháng 5), danh sách các cụm tỉnh thi, cấu trúc đề chuẩn 120 câu / 150 phút (3 phần) và mục tiêu điểm số cá nhân (1200 điểm) từ CSDL.
+  - **Ngữ Cảnh Học Sinh Cho Phụ Huynh & Cơ Sở Cho Học Viên (Left Context)**:
+    - Với vai trò Phụ huynh: Hiển thị ngay chip nhận diện học sinh đang đồng hành (`👤 Đang đồng hành: [Tên con] ([Khối lớp])`) kết nối trực tiếp từ danh sách `parentPortalData.children[0]`.
+    - Với vai trò Học viên: Tự động hiển thị huy hiệu cơ sở đang theo học (`currentUser.campusName`).
+  - **Chuông Thông Báo & Cảnh Báo Sớm Tương Tác Sư Phạm (Interactive Notification Bell & Flow 6 Drawer)**:
+    - Thay thế nút chuông tĩnh bị vô hiệu hóa trước đây bằng hệ thống thông báo tương tác thời gian thực: gọi API `practiceService.getMyAlerts({ studentId })` và lắng nghe sự kiện đồng bộ `veval:flow6-updated`.
+    - Hiển thị badge số lượng cảnh báo chưa đọc với hiệu ứng nhịp thở `animate-pulse` khi có tin mới.
+    - Hộp thoại thông báo thả xuống hỗ trợ: phân loại cảnh báo đỏ (`AlertTriangle`), cảnh báo vàng (`AlertCircle`) và lời khuyên sư phạm (`Info`); hiển thị mốc thời gian thân thiện (`formatRelativeTime`); click trực tiếp để đánh dấu đã đọc (`practiceService.markAlertAsRead`); nút *"Đọc tất cả"* giúp dọn sạch thông báo tức thì.
+  - **Viên Nang Hồ Sơ & Trạng Thái Trực Tuyến (User Profile Pill & Menu)**:
+    - Hiển thị avatar ký tự với chấm xanh trạng thái online (`bg-emerald-500 ring-2 ring-white`), tên người dùng thật, nhãn vai trò thân thiện tiếng Việt (`Phụ huynh`, `Học viên`, `Thầy/cô`).
+    - Menu thả xuống tích hợp thẻ người dùng đầy đủ email, cơ sở học tập, cùng các lối tắt: *Cài đặt tài khoản*, *Về trang chủ*, và nút *Đăng xuất* an toàn.
 - **Tái Cấu Trúc Toàn Diện Hero Header & Thông Tin Ngữ Cảnh Con ([`ParentDashboardView.jsx`](../src/components/dashboard/ParentDashboardView.jsx))**:
   - Khắc phục triệt để tình trạng 2 banner màu xanh đậm cồng kềnh xếp chồng lên nhau gây nặng nề và rời rạc thị giác.
   - Tích hợp trực tiếp các chip thông tin trường lớp của con (`Trường THPT`, `Khối lớp`, `Ngành mục tiêu NV1`) ngay dưới tên học sinh trong Hero Header (`from-slate-900 via-indigo-950 to-blue-950`), giúp phụ huynh nhanh chóng nhận diện bối cảnh học tập của con.
@@ -25,7 +41,7 @@
     - Làm mới thông điệp: loại bỏ các thuật ngữ developer như *"phân tích tư duy Socratic"*, thay bằng *"hướng dẫn giải chi tiết và gợi ý phương pháp giải"*.
   - **Khắc phục lỗi đếm lệch câu làm sai (0 câu vs 26 câu)**: Tính toán chính xác tổng số câu làm chưa đúng (`summaryStats.totalWrong = totalQuestions - totalCorrect`) trên toàn bộ các bài thi, hiển thị trung thực `26 câu` và bổ sung hướng dẫn người dùng bấm vào bài làm để tải chi tiết câu hỏi vào sổ tay.
 - **Kiểm Thử & Biên Dịch**:
-  - `npm run build`: Hoàn thành trong 1.15s, 0 lỗi biên dịch.
+  - `npm run build`: Hoàn thành trong 1.04s, 0 lỗi biên dịch.
   - `node --test tests/*.test.js`: Đạt **22/22 tests passed**.
 
 ---
