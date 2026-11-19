@@ -820,4 +820,6 @@ Validation: build and lint pass with existing warnings; live API integration rem
 | 3-Factor Readiness Cards | Complete | Containerized each factor into structured blocks with numbered badges (1, 2, 3), gradient progress bars, and plain-language captions. |
 | Dedicated Teacher Contact Card | Complete | Relocated teacher profile to right column with real teacher name or "Chưa có giáo viên phụ trách", phone, and 1-on-1 meeting request action. |
 | Submission History UI Harmonization | Complete | Redesigned `SubmissionHistoryView.jsx` with Navy-Indigo theme, humanized IRT theta with `formatThetaDisplay`, fixed wrong count mismatch (26 vs 0), and eliminated jargon `(DIAGNOSTIC)`. |
-| Verification | Passed | `node --test tests/*.test.js` passed 22/22 tests; `npm run build` succeeded in 1.15s with 0 errors. |
+| Top Navbar Mission Control | Complete | Redesigned `AccountNavbar.jsx` with real dynamic VNU-HCM V-ACT countdown pill, zero title truncation (`whitespace-nowrap shrink-0`), and interactive Core Flow 6 alert bell popover. |
+| Left Sidebar Option 1 Modern SaaS Redesign | Complete | Transformed `Sidebar.jsx` into single-line compact rows (~40px), eliminated bulky `VietQR` badge causing truncation, modernized active/hover states, and truncated footer student card cleanly. |
+| Verification | Passed | `node --test tests/*.test.js` passed 22/22 tests; `npm run build` succeeded in 1.06s with 0 errors. |

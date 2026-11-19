@@ -46,8 +46,20 @@
     - Xóa bỏ hậu tố kỹ thuật tiếng Anh `(DIAGNOSTIC)` trong tên bài thi; chuẩn hóa các nhãn phân loại thành *"Khảo sát ĐGNL (30 câu)"*, *"Luyện tập thích ứng"*, *"Chuyên đề"*.
     - Làm mới thông điệp: loại bỏ các thuật ngữ developer như *"phân tích tư duy Socratic"*, thay bằng *"hướng dẫn giải chi tiết và gợi ý phương pháp giải"*.
   - **Khắc phục lỗi đếm lệch câu làm sai (0 câu vs 26 câu)**: Tính toán chính xác tổng số câu làm chưa đúng (`summaryStats.totalWrong = totalQuestions - totalCorrect`) trên toàn bộ các bài thi, hiển thị trung thực `26 câu` và bổ sung hướng dẫn người dùng bấm vào bài làm để tải chi tiết câu hỏi vào sổ tay.
+- **Tối Ưu & Tái Thiết Kế Thanh Điều Hướng Dọc Tinh Giản 1 Dòng - Phương Án 1 (Modern SaaS Sidebar Redesign) ([`Sidebar.jsx`](../src/components/layout/Sidebar.jsx))**:
+  - **Triệt tiêu hoàn toàn lỗi cụt chữ (Zero Truncation)**: Loại bỏ huy hiệu `VietQR` cồng kềnh chiếm hơn 60px gây ép cụt dòng thành `Đóng Học phí & ...`; rút gọn nhãn danh mục thành `Học phí & Gói học` thanh thoát, sắc nét trên khung rộng 288px.
+  - **Bố cục 1 dòng tinh gọn (Single-Line Compact Row - ~40px)**:
+    - Chuyển toàn bộ các mục điều hướng từ khối hộp 2 dòng (tiêu đề + mô tả) dày cộm (~60px) sang hàng ngang 1 dòng tiêu chuẩn Modern SaaS (Linear & Notion style).
+    - Biểu tượng inline trực quan (`w-4.5 h-4.5`), loại bỏ các ô vuông xám xịt buồn tẻ trông như nút bị vô hiệu hóa (disabled).
+    - Giữ trọn vẹn ngữ nghĩa mô tả chi tiết thông qua thuộc tính tooltip tiêu chuẩn trình duyệt `title={item.sublabel ? `${item.label} (${item.sublabel})` : item.label}` giúp thanh sidebar thông thoáng, ngăn nắp.
+  - **Hiệu ứng kích hoạt & di chuột trang nhã (Active & Hover States)**:
+    - Trạng thái Active: Sử dụng dải màu gradient hoàng gia `from-blue-600 to-indigo-600` với bóng đổ dịu nhẹ `shadow-sm shadow-blue-500/20` và phông chữ đậm nét, thay thế mảng gradient xanh-cyan chói lóa cũ.
+    - Trạng thái Hover: Nền xanh dịu nhẹ `hover:bg-blue-50/60` và đổi màu chữ `hover:text-blue-700` tạo phản hồi thị giác nhạy bén, thanh lịch.
+  - **Tối ưu thẻ chân trang học sinh liên kết (Footer Student Card)**:
+    - Hiển thị tên học sinh kèm tên trường THPT thực tế (`${firstChild.studentName} • ${firstChild.school}`) thay vì chuỗi tên chuyên đề dài 54 ký tự gây tràn chữ.
+    - Tích hợp thuộc tính `title` và nhãn `truncate` giữ cho khối chân trang luôn nguyên vẹn và chuẩn mực trên mọi độ phân giải.
 - **Kiểm Thử & Biên Dịch**:
-  - `npm run build`: Hoàn thành trong 1.04s, 0 lỗi biên dịch.
+  - `npm run build`: Hoàn thành trong 1.06s, 0 lỗi biên dịch.
   - `node --test tests/*.test.js`: Đạt **22/22 tests passed**.
 
 ---

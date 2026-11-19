@@ -2266,3 +2266,25 @@ The top navigation system (`AccountNavbar.jsx`) was re-engineered under the **"E
 - **Verification**:
   - `npm run build`: Completed in 1.04s with 0 errors.
   - `node --test tests/*.test.js`: 22/22 unit tests pass 100%.
+
+---
+
+## 15. Modern SaaS Single-Line Left Sidebar Redesign Acceptance - 19 November 2026
+
+The vertical navigation system (`Sidebar.jsx`) was re-engineered under the **Modern SaaS / Linear & Notion Style** (Option 1), optimizing vertical space, eliminating text truncation, and providing a clean, distraction-free companion navigation experience:
+
+- **Single-Line Ergonomics & Zero Truncation**:
+  - Transformed bulky, 2-line stacked item cards (~60px height) into compact single-line rows (~40px height) with balanced whitespace (`px-3.5 py-2.5 rounded-xl`).
+  - Removed the oversized `VietQR` badge that forced item titles to truncate into ellipsis (`Đóng Học phí & ...`).
+  - Shortened navigation labels to concise, modern terminology (`Học phí & Gói học`), ensuring full readability within the 288px (`w-72`) sidebar container.
+  - Subtitles are now cleanly preserved as native browser hover tooltips via `title={item.sublabel ? `${item.label} (${item.sublabel})` : item.label}`, removing visual clutter while retaining pedagogical clarity.
+- **Unified Visual Hierarchy & High-Affordance States**:
+  - Inactive State: Clean, neutral slate typography (`text-slate-600 font-medium`) with subtle blue tint on hover (`hover:bg-blue-50/60 hover:text-blue-700`).
+  - Active State: Vibrant yet refined royal blue-to-indigo gradient (`bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold`) paired with a soft ambient shadow (`shadow-sm shadow-blue-500/20`), completely replacing the previously harsh cyan-blue block.
+  - Icons: Shifted from dull, dark-grey container boxes to crisp inline Lucide icons (`w-4.5 h-4.5 shrink-0`) that switch dynamically to bright white when active and interactive blue on hover.
+- **Robust Footer Student Card Containment**:
+  - For parent users (`role === 'parent'`), updated the linked student display to show `${firstChild.studentName} • ${firstChild.school}`, substituting the unwieldy 54-character curriculum topic string.
+  - Hardened with CSS `truncate` and descriptive `title` tooltips, guaranteeing aesthetic resilience regardless of school or student name lengths.
+- **Verification**:
+  - `npm run build`: Verified 100% clean production bundle in 1.06s with 0 errors.
+  - `node --test tests/*.test.js`: All 22 unit tests passing (100%).

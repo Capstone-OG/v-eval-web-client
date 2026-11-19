@@ -101,12 +101,11 @@ export default function Sidebar({
             items: [
               {
                 id: 'tuition',
-                label: 'Đóng Học phí & Gói học',
+                label: 'Học phí & Gói học',
                 sublabel: 'Thanh toán học phí VietQR',
                 icon: CreditCard,
                 active: activeTab === 'tuition',
-                onClick: () => setActiveTab('tuition'),
-                badge: 'VietQR'
+                onClick: () => setActiveTab('tuition')
               }
             ]
           }
@@ -463,80 +462,96 @@ export default function Sidebar({
               <div className="space-y-1">
                 {section.items.map((item) => {
                   const Icon = item.icon;
-                  const iconGradient = item.iconColor || 'from-slate-400 to-slate-600';
-                  const glowClass = item.activeGlow || 'shadow-blue-500/30';
                   if (item.children) {
                     const activeGroup = item.children.some((child) => child.active);
-                    const groupIconGradient = item.iconColor || 'from-orange-400 to-rose-500';
-                    return <div key={item.id}>
-                      <button type="button" aria-expanded={examsExpanded} aria-controls={`exam-navigation-${mobile ? 'mobile' : 'desktop'}`}
-                        onClick={() => setExamsExpanded((value) => !value)}
-                        className={`flex w-full items-center gap-3 rounded-2xl border px-3.5 py-2.5 text-left transition-all ${activeGroup ? 'border-orange-100 bg-orange-50 text-orange-700' : 'border-transparent text-slate-700 hover:border-slate-200 hover:bg-slate-50'}`}>
-                        <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${groupIconGradient} text-white shadow-sm`}><Icon className="h-4 w-4" /></span>
-                        <span className="flex-1 text-xs font-extrabold">{item.label}</span>
-                        <ChevronDown className={`h-3.5 w-3.5 shrink-0 transition-transform ${examsExpanded ? 'rotate-180' : ''} ${activeGroup ? 'text-orange-500' : 'text-slate-400'}`} />
-                      </button>
-                      <div id={`exam-navigation-${mobile ? 'mobile' : 'desktop'}`} hidden={!examsExpanded}>
-                        <div className="mb-2 ml-7 mt-1 space-y-1 border-l-2 border-orange-100 pl-3">
-                          {item.children.map((child) => <button key={child.id} type="button"
-                            aria-current={child.active ? 'page' : undefined}
-                            onClick={() => { child.onClick?.(); onNavigate?.(); }}
-                            className={`flex w-full items-center justify-between gap-2 rounded-xl px-3 py-2.5 text-left text-xs transition-colors ${child.active ? 'bg-gradient-to-r from-orange-500 to-rose-500 font-bold text-white shadow-sm shadow-orange-500/25' : 'font-medium text-slate-600 hover:bg-orange-50 hover:text-orange-700'}`}>
-                            <span>{child.label}</span>
-                            {child.badge && <span className={`shrink-0 rounded-md px-1.5 py-0.5 text-[9px] font-bold ${child.active ? 'bg-white/20 text-white' : 'bg-orange-50 text-orange-600'}`}>{child.badge}</span>}
-                          </button>)}
+                    return (
+                      <div key={item.id}>
+                        <button
+                          type="button"
+                          aria-expanded={examsExpanded}
+                          aria-controls={`exam-navigation-${mobile ? 'mobile' : 'desktop'}`}
+                          onClick={() => setExamsExpanded((value) => !value)}
+                          className={`flex w-full items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-left transition-all ${
+                            activeGroup
+                              ? 'bg-orange-50 text-orange-700 font-bold border border-orange-200/80'
+                              : 'text-slate-600 hover:bg-slate-100/80 hover:text-slate-900 font-medium'
+                          }`}
+                        >
+                          <Icon className={`h-4.5 w-4.5 shrink-0 ${activeGroup ? 'text-orange-600' : 'text-slate-400'}`} />
+                          <span className="flex-1 text-xs sm:text-sm font-semibold">{item.label}</span>
+                          <ChevronDown
+                            className={`h-3.5 w-3.5 shrink-0 transition-transform ${
+                              examsExpanded ? 'rotate-180' : ''
+                            } ${activeGroup ? 'text-orange-500' : 'text-slate-400'}`}
+                          />
+                        </button>
+                        <div id={`exam-navigation-${mobile ? 'mobile' : 'desktop'}`} hidden={!examsExpanded}>
+                          <div className="mb-2 ml-7 mt-1 space-y-1 border-l-2 border-orange-100 pl-3">
+                            {item.children.map((child) => (
+                              <button
+                                key={child.id}
+                                type="button"
+                                aria-current={child.active ? 'page' : undefined}
+                                onClick={() => {
+                                  child.onClick?.();
+                                  onNavigate?.();
+                                }}
+                                className={`flex w-full items-center justify-between gap-2 rounded-xl px-3 py-2 text-left text-xs transition-colors ${
+                                  child.active
+                                    ? 'bg-gradient-to-r from-orange-500 to-rose-500 font-bold text-white shadow-sm shadow-orange-500/25'
+                                    : 'font-medium text-slate-600 hover:bg-orange-50 hover:text-orange-700'
+                                }`}
+                              >
+                                <span>{child.label}</span>
+                                {child.badge && (
+                                  <span
+                                    className={`shrink-0 rounded-md px-1.5 py-0.5 text-[9px] font-bold ${
+                                      child.active ? 'bg-white/20 text-white' : 'bg-orange-50 text-orange-600'
+                                    }`}
+                                  >
+                                    {child.badge}
+                                  </span>
+                                )}
+                              </button>
+                            ))}
+                          </div>
                         </div>
                       </div>
-                    </div>;
+                    );
                   }
                   return (
                     <button
                       key={item.id}
                       type="button"
                       aria-current={item.active ? 'page' : undefined}
-                      onClick={() => { item.onClick?.(); onNavigate?.(); }}
-                      className={`w-full flex items-center justify-between gap-2.5 px-3.5 py-2.5 rounded-2xl text-left transition-all cursor-pointer group ${
+                      onClick={() => {
+                        item.onClick?.();
+                        onNavigate?.();
+                      }}
+                      title={item.sublabel ? `${item.label} (${item.sublabel})` : item.label}
+                      className={`w-full flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-xl text-left transition-all duration-150 cursor-pointer group ${
                         item.active
-                          ? `bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 text-white shadow-md ${glowClass}`
-                          : 'text-slate-700 hover:bg-white hover:shadow-sm border border-transparent hover:border-slate-200/80'
+                          ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-sm shadow-blue-500/20 font-bold'
+                          : 'text-slate-600 hover:text-blue-700 hover:bg-blue-50/60 font-medium'
                       }`}
                     >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div
-                          className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-all ${
-                            item.active
-                              ? 'bg-white/20 text-white'
-                              : `bg-gradient-to-br ${iconGradient} text-white shadow-sm group-hover:scale-110`
+                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                        <Icon
+                          className={`w-4.5 h-4.5 shrink-0 transition-colors ${
+                            item.active ? 'text-white' : 'text-slate-400 group-hover:text-blue-600'
                           }`}
-                        >
-                          <Icon className="w-4 h-4" />
-                        </div>
-                        <div className="min-w-0">
-                          <div
-                            className={`text-xs font-extrabold truncate ${
-                              item.active ? 'text-white' : 'text-slate-800 group-hover:text-blue-700'
-                            }`}
-                          >
-                            {item.label}
-                          </div>
-                          {item.sublabel && (
-                            <div
-                              className={`text-[10px] truncate ${
-                                item.active ? 'text-blue-100 font-medium' : 'text-slate-400 font-medium'
-                              }`}
-                            >
-                              {item.sublabel}
-                            </div>
-                          )}
-                        </div>
+                        />
+                        <span className="text-xs sm:text-sm truncate">
+                          {item.label}
+                        </span>
                       </div>
 
                       {item.badge && (
                         <span
-                          className={`text-[10px] font-black px-2 py-0.5 rounded-full shrink-0 ${
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded-md shrink-0 ${
                             item.active
-                              ? 'bg-[#FACC15] text-slate-950'
-                              : 'bg-blue-50 text-blue-700 border border-blue-200'
+                              ? 'bg-white/20 text-white'
+                              : 'bg-blue-50 text-blue-700 border border-blue-200/80'
                           }`}
                         >
                           {item.badge}
@@ -593,9 +608,16 @@ export default function Sidebar({
                 {firstChild ? 'Đã đồng bộ' : 'Chưa liên kết'}
               </span>
             </div>
-            <div className="text-xs font-extrabold text-white truncate">
+            <div
+              className="text-xs font-extrabold text-white truncate"
+              title={
+                firstChild
+                  ? `${firstChild.studentName}${firstChild.school ? ` • ${firstChild.school}` : (firstChild.grade ? ` • ${firstChild.grade}` : '')}`
+                  : undefined
+              }
+            >
               {firstChild
-                ? `${firstChild.studentName}${firstChild.grade ? ` • ${firstChild.grade}` : ''}`
+                ? `${firstChild.studentName}${firstChild.school ? ` • ${firstChild.school}` : (firstChild.grade ? ` • ${firstChild.grade}` : '')}`
                 : 'Chưa có học sinh liên kết'}
             </div>
             <div className="text-[11px] text-blue-100 flex items-center justify-between">
