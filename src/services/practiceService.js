@@ -934,46 +934,8 @@ const buildSeedClassHeatmap = (classId, { domainCode = '', minMastery = null } =
 };
 
 const buildSeedParentDashboard = (parentId) => ({
-  parentId: ensureGuid(parentId, FLOW5_DEFAULTS.PARENT_ID),
-  children: [
-    {
-      studentId: FLOW5_DEFAULTS.STUDENT_ID,
-      studentName: 'Phạm Minh Hoàng',
-      grade: 'Lớp 12A1',
-      school: 'THPT Chuyên Lê Hồng Phong - TP.HCM',
-      targetMajor: 'Khoa học Máy tính - ĐH Bách Khoa (ĐHQG TP.HCM)',
-      assignedTeacherName: 'ThS. Nguyễn Minh Triết',
-      teacherContactPhone: '0908 246 357',
-      examReadiness: {
-        readinessIndex: 82.4,
-        readinessTier: 'READY',
-        normalizedThetaScore: 81.2,
-        skillCoverageScore: 79.5,
-        consistencyScore: 95.0
-      },
-      weeklyDisciplines: {
-        studyHoursThisWeek: 13.5,
-        recommendedHours: 12.0,
-        currentStreak: 12,
-        completionStatus: 'EXCEEDED_GOAL'
-      },
-      aiParentAlerts: [
-        {
-          type: 'SUCCESS',
-          title: 'Duy trì chuỗi 12 ngày tự học liên tiếp vượt chuẩn 12 giờ/tuần',
-          description:
-            'Hoàng đã hoàn thành 13.5 giờ tự học có xác thực trong 7 ngày qua (đạt 112.5% định mức khuyến nghị) và hoàn thành Chặng 07 đúng tiến độ.'
-        },
-        {
-          type: 'WARNING',
-          title: 'Cần củng cố thêm mảng Toán Logic Mệnh Đề & Suy Luận',
-          description:
-            'Độ thành thạo chuyên đề suy luận kéo theo hiện ở mức khá nhưng tốc độ xử lý câu hỏi vận dụng cao còn chậm. Giáo viên trên lớp đã xếp Hoàng vào nhóm bàn hỗ trợ chéo.'
-        }
-      ]
-    }
-  ],
-  _source: 'seed_fallback'
+  parentId: parentId || null,
+  children: []
 });
 
 const buildSeedCampusComparativeHeatmap = (campusId) => ({
@@ -1274,8 +1236,15 @@ export const practiceService = {
   },
 
   async getStudentDiagnosticHistory(studentId) {
-    const resolvedId = ensureGuid(studentId || tokenStorage.getUser()?.id, FLOW5_DEFAULTS.STUDENT_ID);
-    return (await apiClient.get(`/api/practice/diagnostic-submissions/student/${resolvedId}`)).data;
+    const user = tokenStorage.getUser();
+    const resolvedId = studentId || user?.id || user?.userId;
+    if (!resolvedId) return [];
+    try {
+      return (await apiClient.get(`/api/practice/diagnostic-submissions/student/${resolvedId}`)).data;
+    } catch (err) {
+      console.warn('[PracticeService] getStudentDiagnosticHistory error:', err?.message);
+      return [];
+    }
   },
 
   async getDiagnosticSubmissionById(submissionId) {
@@ -2166,13 +2135,17 @@ export const practiceService = {
   },
 
   async getParentDashboard(parentId) {
-    const resolvedParentId = ensureGuid(parentId || tokenStorage.getUser()?.id, FLOW5_DEFAULTS.PARENT_ID);
+    const user = tokenStorage.getUser();
+    const resolvedParentId = parentId || user?.id || user?.userId;
+    if (!resolvedParentId) {
+      return { parentId: null, children: [] };
+    }
     try {
       const data = (await apiClient.get(`/api/practice/analytics/parent/${resolvedParentId}/children`)).data;
       return { ...data, _source: 'backend' };
     } catch (err) {
-      console.warn('[Core Flow 5] getParentDashboard fallback activated:', err?.message);
-      return buildSeedParentDashboard(resolvedParentId);
+      console.warn('[Core Flow 5] getParentDashboard error:', err?.message);
+      return { parentId: resolvedParentId, children: [], _error: err?.message };
     }
   },
 

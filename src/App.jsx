@@ -505,9 +505,14 @@ export default function App() {
     }
 
     if (activeTab === 'tuition') {
+      const parentChildren = parentPortalData?.children || [];
+      const defaultChild = parentChildren[0] || null;
       return (
         <TuitionPaymentView
           currentUser={currentUser}
+          isParent={role === 'parent'}
+          activeChild={defaultChild}
+          childrenList={parentChildren}
           onBackToDashboard={() => setActiveTab('dashboard')}
           onNavigateRoadmap={role === 'parent' ? undefined : () => setActiveTab('roadmap')}
           onNavigateAdaptive={role === 'parent' ? undefined : () => setActiveTab('adaptive')}

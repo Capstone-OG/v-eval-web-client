@@ -2288,3 +2288,21 @@ The vertical navigation system (`Sidebar.jsx`) was re-engineered under the **Mod
 - **Verification**:
   - `npm run build`: Verified 100% clean production bundle in 1.06s with 0 errors.
   - `node --test tests/*.test.js`: All 22 unit tests passing (100%).
+
+---
+
+## 16. Dynamic Entity Resolution & Empty-State Resilience Acceptance - 19 November 2026
+
+The Parent Companion Portal architecture across backend microservices and frontend client layers was upgraded to enforce 100% dynamic database binding and resilient empty-state handling:
+
+- **Strict Database Entity Resolution**:
+  - Backend gRPC services (`IdentityGrpcService.cs`, `IdentityGrpcClient.cs`) return real database attributes for `SchoolName` and `TargetScore`, eliminating synthetic string injection when fields are unpopulated.
+  - Query Handler (`GetParentDashboardQueryHandler.cs`) dynamically reads enrolled classes, campuses, and target scores. Missing or unconfigured fields resolve to meaningful domain states: *"Chưa phân lớp"*, *"Chưa cập nhật"*, and *"Chưa thiết lập mục tiêu"*.
+  - Removed mock student injection (`buildSeedParentDashboard`) from `practiceService.js`. If an account has no linked children, the API returns an empty array (`children: []`), allowing the client to render the interactive `renderStudentLinkingCenter` without fake personas.
+- **Accurate Tuition Payment Context for Parents (`TuitionPaymentView.jsx`, `App.jsx`)**:
+  - Injected child context (`isParent`, `activeChild`, `childrenList`) into `TuitionPaymentView.jsx`.
+  - Resolved `studentId` to the targeted child's unique identifier rather than the authenticated parent's user ID, preventing billing attribution errors.
+  - Integrated dynamic course querying (`practiceService.getCourses`), retrieving real active course entities, fees, and durations from PostgreSQL `v_eval_enrollment.Courses`.
+- **Verification**:
+  - `npm run build`: Verified 100% clean production bundle in 1.29s with 0 errors.
+  - `node --test tests/*.test.js`: All 22 unit tests passing (100%).

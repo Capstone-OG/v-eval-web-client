@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { 
   CreditCard, 
   ShieldCheck, 
@@ -26,10 +26,14 @@ import {
 } from 'lucide-react';
 import PayOsCheckoutModal from '../modals/PayOsCheckoutModal';
 import paymentService from '../../services/paymentService';
+import { practiceService } from '../../services/practiceService';
 import { isTuitionPaid, setTuitionPaid, syncTuitionStatusFromServer } from '../curriculum/curriculumAccess';
 
 export default function TuitionPaymentView({ 
   currentUser, 
+  isParent = false,
+  activeChild = null,
+  childrenList = [],
   onNavigateRoadmap, 
   onNavigateAdaptive,
   onNavigateSchedule,
@@ -37,7 +41,18 @@ export default function TuitionPaymentView({
   onNavigateAiTutor,
   showToast 
 }) {
-  const studentId = currentUser?.userId || currentUser?.id || currentUser?.studentId || 's1111111-1111-1111-1111-111111111111';
+  const [selectedChild, setSelectedChild] = useState(activeChild || childrenList[0] || null);
+
+  useEffect(() => {
+    if (activeChild) setSelectedChild(activeChild);
+    else if (childrenList.length > 0 && !selectedChild) setSelectedChild(childrenList[0]);
+  }, [activeChild, childrenList]);
+
+  const targetStudentId = isParent
+    ? (selectedChild?.studentId || selectedChild?.id || null)
+    : (currentUser?.userId || currentUser?.id || currentUser?.studentId || null);
+
+  const studentId = targetStudentId;
   const [selectedPlan, setSelectedPlan] = useState('STANDARD');
   const [isLoading, setIsLoading] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -47,6 +62,22 @@ export default function TuitionPaymentView({
   const [tuitionStatus, setTuitionStatus] = useState(null);
   const [transactionHistory, setTransactionHistory] = useState([]);
   const [selectedReceipt, setSelectedReceipt] = useState(null);
+  const [dbCourses, setDbCourses] = useState([]);
+
+  useEffect(() => {
+    let active = true;
+    practiceService
+      .getCourses({ isActive: true })
+      .then((res) => {
+        if (active && Array.isArray(res) && res.length > 0) {
+          setDbCourses(res);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
 
   // Danh mục 3 gói đào tạo thích ứng ĐGNL
   const coursePackages = [
@@ -109,6 +140,24 @@ export default function TuitionPaymentView({
     }
   ];
 
+  const resolvedPackages = useMemo(() => {
+    return coursePackages.map((pkg) => {
+      const match = dbCourses.find(
+        (c) => c.code === pkg.code || c.planType === pkg.planType || c.courseId === pkg.courseId
+      );
+      if (match) {
+        return {
+          ...pkg,
+          courseId: match.courseId,
+          name: match.name || pkg.name,
+          price: Number(match.tuitionFee) > 0 ? Number(match.tuitionFee) : pkg.price,
+          durationWeeks: match.durationWeeks || pkg.durationWeeks
+        };
+      }
+      return pkg;
+    });
+  }, [dbCourses]);
+
   // Nạp dữ liệu học phí và lịch sử thanh toán thực tế từ Database Backend
   const loadTuitionAndHistory = useCallback(async () => {
     if (!studentId) return;
@@ -168,9 +217,13 @@ export default function TuitionPaymentView({
   };
 
   const handleCreatePayment = async (pkg) => {
+    if (!studentId) {
+      if (showToast) showToast('Chưa xác định được tài khoản học sinh để thanh toán.');
+      return;
+    }
     setIsLoading(true);
     try {
-      const parentId = currentUser?.role === 'parent' ? currentUser.id : studentId;
+      const parentId = isParent ? (currentUser?.id || currentUser?.userId) : studentId;
       
       const payload = {
         studentId,
@@ -187,7 +240,9 @@ export default function TuitionPaymentView({
         checkoutUrl: result.checkoutUrl,
         amount: pkg.price,
         courseName: pkg.name,
-        studentName: currentUser?.fullName || 'Học viên V-Eval',
+        studentName: isParent
+          ? (selectedChild?.studentName || 'Học viên')
+          : (currentUser?.fullName || 'Học viên V-Eval'),
         durationWeeks: pkg.durationWeeks
       });
 
@@ -286,6 +341,29 @@ export default function TuitionPaymentView({
           <p className="text-xs sm:text-sm text-blue-200/80 mt-1.5 max-w-2xl leading-relaxed">
             Tích hợp Cổng thanh toán trực tuyến PayOS: Quét mã VietQR tiện lợi, xử lý giao dịch nguyên khối (ACID Transaction) và tự động mở khóa chặng học đầu tiên tức thì.
           </p>
+          {isParent && childrenList.length > 1 && (
+            <div className="flex flex-wrap items-center gap-2 pt-3 mt-3 border-t border-white/10">
+              <span className="text-xs text-slate-300 font-bold">Chọn con để nộp học phí:</span>
+              {childrenList.map((c, idx) => {
+                const cId = c.studentId || c.id;
+                const isCur = (selectedChild?.studentId || selectedChild?.id) === cId;
+                return (
+                  <button
+                    key={cId || idx}
+                    type="button"
+                    onClick={() => setSelectedChild(c)}
+                    className={`px-3 py-1 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
+                      isCur
+                        ? 'bg-blue-600 text-white shadow-sm'
+                        : 'bg-white/10 text-slate-300 hover:bg-white/20 hover:text-white'
+                    }`}
+                  >
+                    {c.studentName || `Con ${idx + 1}`}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
@@ -513,7 +591,7 @@ export default function TuitionPaymentView({
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {coursePackages.map((pkg) => {
+          {resolvedPackages.map((pkg) => {
             const isSelected = selectedPlan === pkg.id;
             const formattedPrice = new Intl.NumberFormat('vi-VN', {
               style: 'currency',

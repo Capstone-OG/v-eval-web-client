@@ -103,6 +103,8 @@ export default function ParentDashboardView({ currentUser, onNavigateTuition }) 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [activePaymentData, setActivePaymentData] = useState(null);
   const [paymentStatus, setPaymentStatus] = useState('UNPAID'); // UNPAID | ACTIVE
+  const [availableCourses, setAvailableCourses] = useState([]);
+  const [childTuitionStatus, setChildTuitionStatus] = useState(null);
 
   // State cho Trung tâm Liên kết Tài khoản Học sinh (3 phương thức: Mã Code / Link & QR / Gửi yêu cầu Email)
   const [showLinkPanel, setShowLinkPanel] = useState(false);
@@ -113,6 +115,22 @@ export default function ParentDashboardView({ currentUser, onNavigateTuition }) 
   const [linkFeedback, setLinkFeedback] = useState(null); // { type: 'success' | 'error', text: string }
 
   const parentId = currentUser?.id || currentUser?.userId;
+
+  // Tải danh mục khóa học thật từ CSDL
+  useEffect(() => {
+    let active = true;
+    practiceService
+      .getCourses({ isActive: true })
+      .then((res) => {
+        if (active && Array.isArray(res) && res.length > 0) {
+          setAvailableCourses(res);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const loadParentPortal = useCallback(
     async (isRefresh = false) => {
@@ -517,12 +535,59 @@ export default function ParentDashboardView({ currentUser, onNavigateTuition }) 
   const studyHours = Number(discipline.studyHoursThisWeek || 0);
   const disciplinePct = Math.min(100, Math.round((studyHours / recommendedHours) * 100));
 
+  const childStudentId = child?.studentId;
+
+  // Tải trạng thái học phí thực tế của con từ CSDL
+  useEffect(() => {
+    if (!childStudentId) {
+      setPaymentStatus('UNPAID');
+      setChildTuitionStatus(null);
+      return;
+    }
+    let active = true;
+    paymentService
+      .getStudentTuitionStatus(childStudentId)
+      .then((status) => {
+        if (active && status) {
+          setChildTuitionStatus(status);
+          setPaymentStatus(status.isPaid ? 'ACTIVE' : 'UNPAID');
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setPaymentStatus('UNPAID');
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, [childStudentId]);
+
+  const targetCourse =
+    availableCourses.find((c) => c.planType === 'STANDARD') ||
+    availableCourses[0] ||
+    null;
+
   const handleQuickPay = async () => {
+    if (!childStudentId) {
+      toast.error('Chưa xác định được tài khoản học sinh của con.');
+      return;
+    }
+    const resolvedCourseId =
+      childTuitionStatus?.courseId ||
+      targetCourse?.courseId ||
+      targetCourse?.id;
+
+    if (!resolvedCourseId) {
+      toast.error('Chưa có thông tin khóa đào tạo mở đăng ký tại cơ sở.');
+      return;
+    }
+
     try {
       const payload = {
-        studentId: child.studentId || currentUser?.id,
-        parentId: currentUser?.id,
-        courseId: 'c2222222-2222-2222-2222-222222222222',
+        studentId: childStudentId,
+        parentId: currentUser?.id || currentUser?.userId,
+        courseId: resolvedCourseId,
         returnUrl: window.location.origin + '/payment/success',
         cancelUrl: window.location.origin + '/payment/cancel'
       };
@@ -530,14 +595,18 @@ export default function ParentDashboardView({ currentUser, onNavigateTuition }) 
       setActivePaymentData({
         orderCode: result.orderCode,
         checkoutUrl: result.checkoutUrl,
-        amount: result.amount || 5000,
-        courseName: 'Khóa Luyện Thi Chuẩn (Standard Adaptive 12 Tuần)',
+        amount: targetCourse?.tuitionFee ?? result.amount ?? 0,
+        courseName: targetCourse?.name || childTuitionStatus?.courseName || 'Khóa Luyện Thi Chuẩn',
         studentName: child.studentName || 'Học viên',
-        durationWeeks: 12
+        durationWeeks: targetCourse?.durationWeeks || 12
       });
       setIsModalOpen(true);
     } catch (err) {
-      console.error(err);
+      const errMsg =
+        err?.data?.error?.description ||
+        err?.message ||
+        'Không thể khởi tạo link thanh toán VietQR.';
+      toast.error(errMsg);
     }
   };
 
@@ -649,9 +718,9 @@ export default function ParentDashboardView({ currentUser, onNavigateTuition }) 
               </span>
               <p
                 className="mt-0.5 text-xs sm:text-sm font-bold text-slate-100 truncate"
-                title={child.grade || 'Lớp Nền tảng'}
+                title={child.grade && child.grade !== 'Chưa phân lớp' ? child.grade : 'Chưa phân lớp học'}
               >
-                {child.grade || 'Lớp Nền tảng'}
+                {child.grade && child.grade !== 'Chưa phân lớp' ? child.grade : 'Chưa phân lớp học'}
               </p>
             </div>
           </div>
@@ -689,7 +758,10 @@ export default function ParentDashboardView({ currentUser, onNavigateTuition }) 
               <span className="text-[11px] font-black uppercase tracking-wider text-blue-700 bg-blue-100/80 px-2 py-0.5 rounded-md">
                 Dịch vụ học tập
               </span>
-              <span className="text-xs font-bold text-slate-600">Khóa Luyện Thi Chuẩn (12 Tuần)</span>
+              <span className="text-xs font-bold text-slate-600">
+                {childTuitionStatus?.courseName || targetCourse?.name || 'Khóa Luyện Thi Chuẩn'}
+                {targetCourse?.durationWeeks ? ` (${targetCourse.durationWeeks} Tuần)` : ''}
+              </span>
             </div>
             <h2 className="text-sm sm:text-base font-extrabold text-slate-900">
               {paymentStatus === 'ACTIVE'
@@ -699,7 +771,7 @@ export default function ParentDashboardView({ currentUser, onNavigateTuition }) 
             <p className="text-xs text-slate-500">
               {paymentStatus === 'ACTIVE'
                 ? 'Con đã được kích hoạt bài giảng chuyên sâu, bài luyện tập thích ứng và gia sư sư phạm hỗ trợ.'
-                : 'Học phí: 5.000 ₫ • Quét mã VietQR ngân hàng kích hoạt tức thì sau 3 giây.'}
+                : `Học phí: ${targetCourse?.tuitionFee ? `${Number(targetCourse.tuitionFee).toLocaleString('vi-VN')} ₫` : 'Theo biểu phí niêm yết'} • Quét mã VietQR ngân hàng kích hoạt tức thì sau 3 giây.`}
             </p>
           </div>
         </div>

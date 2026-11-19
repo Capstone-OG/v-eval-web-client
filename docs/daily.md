@@ -58,8 +58,20 @@
   - **Tối ưu thẻ chân trang học sinh liên kết (Footer Student Card)**:
     - Hiển thị tên học sinh kèm tên trường THPT thực tế (`${firstChild.studentName} • ${firstChild.school}`) thay vì chuỗi tên chuyên đề dài 54 ký tự gây tràn chữ.
     - Tích hợp thuộc tính `title` và nhãn `truncate` giữ cho khối chân trang luôn nguyên vẹn và chuẩn mực trên mọi độ phân giải.
+- **Chuẩn Hóa Phân Giải Thực Thể Động & Xử Lý Trạng Thái Dữ Liệu Rỗng (Dynamic Entity Resolution & Empty-State Resilience)**:
+  - **Triệt tiêu hoàn toàn dữ liệu sinh ngẫu nhiên/giả lập**: Xóa bỏ toàn bộ dữ liệu mẫu trong `buildSeedParentDashboard` tại `practiceService.js`. Khi phụ huynh chưa có học sinh liên kết hoặc khi hệ thống mất kết nối mạng, service trả về danh sách rỗng (`children: []`) thay vì tự động tạo học sinh giả "Phạm Minh Hoàng" với các chỉ số ảo.
+  - **Khắc phục xung đột định danh thanh toán học phí phụ huynh (`TuitionPaymentView.jsx`, `App.jsx`)**:
+    - Truyền bối cảnh học sinh đồng hành (`activeChild`, `childrenList`, `isParent`) từ `App.jsx` sang `TuitionPaymentView.jsx`.
+    - Phân giải đúng `studentId = activeChild.studentId` của con thay vì gán nhầm ID của phụ huynh.
+    - Bổ sung bộ chọn nhanh con (Child Switcher Chips) trực tiếp trên trang Học phí khi phụ huynh liên kết nhiều con.
+    - Nạp danh mục khóa đào tạo động từ API CSDL Backend (`practiceService.getCourses`) và tự động đồng bộ giá tiền, thời lượng, mã khóa học thực tế.
+  - **Xử lý trạng thái rỗng sư phạm và thân thiện người dùng (Pedagogical Empty States)**:
+    - Khi con chưa được xếp lớp: Hiển thị nhãn trung thực *"Chưa phân lớp học"*.
+    - Khi con chưa cập nhật trường: Hiển thị *"Chưa cập nhật trường THPT"*.
+    - Khi con chưa cài đặt điểm mục tiêu: Hiển thị *"Chưa thiết lập mục tiêu"*.
+    - Đồng bộ tự động trạng thái học phí của con từ `paymentService.getStudentTuitionStatus`, hiển thị chính xác trạng thái ĐÃ KÍCH HOẠT hoặc NỘP HỌC PHÍ theo dữ liệu thực từ CSDL.
 - **Kiểm Thử & Biên Dịch**:
-  - `npm run build`: Hoàn thành trong 1.06s, 0 lỗi biên dịch.
+  - `npm run build`: Hoàn thành trong 1.29s, 0 lỗi biên dịch.
   - `node --test tests/*.test.js`: Đạt **22/22 tests passed**.
 
 ---

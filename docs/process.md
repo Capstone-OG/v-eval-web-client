@@ -822,4 +822,5 @@ Validation: build and lint pass with existing warnings; live API integration rem
 | Submission History UI Harmonization | Complete | Redesigned `SubmissionHistoryView.jsx` with Navy-Indigo theme, humanized IRT theta with `formatThetaDisplay`, fixed wrong count mismatch (26 vs 0), and eliminated jargon `(DIAGNOSTIC)`. |
 | Top Navbar Mission Control | Complete | Redesigned `AccountNavbar.jsx` with real dynamic VNU-HCM V-ACT countdown pill, zero title truncation (`whitespace-nowrap shrink-0`), and interactive Core Flow 6 alert bell popover. |
 | Left Sidebar Option 1 Modern SaaS Redesign | Complete | Transformed `Sidebar.jsx` into single-line compact rows (~40px), eliminated bulky `VietQR` badge causing truncation, modernized active/hover states, and truncated footer student card cleanly. |
-| Verification | Passed | `node --test tests/*.test.js` passed 22/22 tests; `npm run build` succeeded in 1.06s with 0 errors. |
+| Dynamic Entity Resolution & Empty-State Resilience | Complete | Eliminated synthetic mock fallbacks in `practiceService.js`, bound real `studentId` context in `TuitionPaymentView`, enabled dynamic DB courses mapping, and standardized graceful empty-state messaging. |
+| Verification | Passed | `node --test tests/*.test.js` passed 22/22 tests; `npm run build` succeeded in 1.29s with 0 errors. |
