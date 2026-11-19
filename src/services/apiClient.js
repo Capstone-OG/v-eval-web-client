@@ -9,7 +9,10 @@ import { formatApiError } from '../utils/apiErrorHandler.js';
  */
 
 export const getGatewayBaseUrl = () => {
-  if (typeof window !== 'undefined' && window.location.hostname.includes('pickic.io.vn')) {
+  if (typeof window !== 'undefined' && (window.location.hostname.includes('veval.io.vn') || window.location.hostname.includes('pickic.io.vn'))) {
+    if (window.location.hostname.includes('veval.io.vn')) {
+      return 'https://api.veval.io.vn';
+    }
     return 'https://api.pickic.io.vn';
   }
   return import.meta.env?.VITE_API_GATEWAY_URL || 'http://localhost:5212';

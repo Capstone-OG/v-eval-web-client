@@ -53,7 +53,9 @@ import CurriculumExplorerView from './components/curriculum/CurriculumExplorerVi
 import TextbookStandardView from './components/curriculum/TextbookStandardView';
 import TextbookIngestView from './components/curriculum/TextbookIngestView';
 import TextbookStudioView from './components/curriculum/TextbookStudioView';
-import ExamParserStudioView from './components/curriculum/ExamParserStudioView';
+import ExamBankView from './components/curriculum/ExamBankView';
+import ExamIngestView from './components/curriculum/ExamIngestView';
+import ExamStudioView from './components/curriculum/ExamStudioView';
 import StudentRoadmapWorkspace from './components/roadmap/StudentRoadmapWorkspace';
 import TuitionPaymentView from './components/payment/TuitionPaymentView';
 import {
@@ -80,7 +82,7 @@ const ROLE_PORTAL_DEFINITIONS = {
     accentBadge: 'bg-blue-50 text-blue-700 border-blue-200',
     tabs: [
       { id: 'dashboard', label: 'Tổng quan Học tập', icon: LayoutGrid },
-      { id: 'diagnostic', label: 'Khảo thí 30 câu', icon: ClipboardCheck },
+      { id: 'diagnostic', label: 'Khảo thí & Chẩn đoán', icon: ClipboardCheck },
       { id: 'history', label: 'Lịch sử & Lỗi sai', icon: History },
       { id: 'roadmap', label: 'Cây tri thức & Lộ trình', icon: Network },
       { id: 'schedule', label: 'Thời khóa biểu & Điểm danh', icon: Calendar },
@@ -116,7 +118,9 @@ const ROLE_PORTAL_DEFINITIONS = {
       { id: 'textbook-standard', label: '1. Sách Giáo Khoa Chuẩn', icon: BookOpen },
       { id: 'textbook-ingest', label: '2. Nạp Tài Liệu SGK', icon: BookOpenCheck },
       { id: 'textbook-studio', label: '3. Studio Biên Soạn SGK', icon: BookOpenCheck },
-      { id: 'exam-studio', label: 'Số Hóa & Parse Đề Thi', icon: FileSpreadsheet },
+      { id: 'exam-bank', label: '1. Kho Đề & Xem Đề Thi', icon: FileSpreadsheet },
+      { id: 'exam-ingest', label: '2. Parse PDF & AI Bloom', icon: Sparkles },
+      { id: 'exam-studio', label: '3. Studio Biên Soạn Đề', icon: FileSpreadsheet },
       { id: 'roadmap', label: 'Studio Biên soạn Học liệu', icon: BookOpen },
       { id: 'diagnostic', label: 'Ngân hàng đề thi', icon: ClipboardCheck },
       { id: 'history', label: 'Nhật ký Bài làm Học viên', icon: History },
@@ -151,9 +155,12 @@ const ROLE_PORTAL_DEFINITIONS = {
       { id: 'textbook-standard', label: '1. Sách Giáo Khoa Chuẩn', icon: BookOpen },
       { id: 'textbook-ingest', label: '2. Nạp Tài Liệu SGK', icon: BookOpenCheck },
       { id: 'textbook-studio', label: '3. Studio Biên Soạn SGK', icon: BookOpenCheck },
-      { id: 'exam-studio', label: 'Ngân hàng Câu hỏi & Parse Đề', icon: FileSpreadsheet },
+      { id: 'exam-bank', label: '1. Kho Đề & Xem Đề Thi', icon: FileSpreadsheet },
+      { id: 'exam-ingest', label: '2. Parse PDF & AI Bloom', icon: Sparkles },
+      { id: 'exam-studio', label: '3. Studio Biên Soạn Đề', icon: FileSpreadsheet },
       { id: 'ai_moderation', label: 'Kiểm duyệt Câu hỏi & Gia sư AI', icon: Bot },
       { id: 'teacher_heatmap', label: 'Giám sát Ma trận Lớp học', icon: LayoutGrid },
+      { id: 'provision', label: 'Cấp phát Tài khoản', icon: UserPlus },
       { id: 'analytics', label: 'Báo cáo Học thuật Toàn trường', icon: BarChart3 }
     ]
   },
@@ -169,6 +176,12 @@ const ROLE_PORTAL_DEFINITIONS = {
       { id: 'dashboard', label: 'Giám sát Đa Cơ sở', icon: Building2 },
       { id: 'teacher_heatmap', label: 'Ma trận Nhiệt Hệ thống', icon: LayoutGrid },
       { id: 'roadmap', label: 'Cây Tri thức Quốc gia', icon: Network },
+      { id: 'textbook-standard', label: '1. Sách Giáo Khoa Chuẩn', icon: BookOpen },
+      { id: 'textbook-ingest', label: '2. Nạp Tài Liệu SGK', icon: BookOpenCheck },
+      { id: 'textbook-studio', label: '3. Studio Biên Soạn SGK', icon: BookOpenCheck },
+      { id: 'exam-bank', label: '1. Kho Đề & Xem Đề Thi', icon: FileSpreadsheet },
+      { id: 'exam-ingest', label: '2. Parse PDF & AI Bloom', icon: Sparkles },
+      { id: 'exam-studio', label: '3. Studio Biên Soạn Đề', icon: FileSpreadsheet },
       { id: 'tuition', label: 'Đối soát Cổng PayOS', icon: CreditCard }
     ]
   }
@@ -479,12 +492,11 @@ export default function App() {
         activeTab !== 'textbook-standard' &&
         activeTab !== 'textbook-ingest' &&
         activeTab !== 'textbook-studio' &&
+        activeTab !== 'exam-bank' &&
+        activeTab !== 'exam-ingest' &&
         activeTab !== 'exam-studio') {
       return <TeacherPortalView key={`${currentUser?.userId || currentUser?.id}:${currentUser?.classId || ''}:${activeTab}`}
         currentUser={currentUser} section={activeTab} onNavigate={setActiveTab} />;
-    }
-    if (activeTab === 'diagnostic' && role !== 'student') {
-      return <CurriculumExplorerView role={role} onStartTopicQuiz={handleOpenAdaptiveQuiz} />;
     }
     if (activeTab === 'diagnostic') {
       return (
@@ -539,8 +551,14 @@ export default function App() {
     if (activeTab === 'textbook-studio') {
       return <TextbookStudioView onNavigateTab={setActiveTab} onBack={() => setActiveTab('textbook-standard')} />;
     }
+    if (activeTab === 'exam-bank') {
+      return <ExamBankView onNavigateTab={setActiveTab} />;
+    }
+    if (activeTab === 'exam-ingest') {
+      return <ExamIngestView onNavigateTab={setActiveTab} />;
+    }
     if (activeTab === 'exam-studio') {
-      return <ExamParserStudioView />;
+      return <ExamStudioView onNavigateTab={setActiveTab} />;
     }
     if (activeTab === 'roadmap' && role !== 'parent') {
       const curriculum = (

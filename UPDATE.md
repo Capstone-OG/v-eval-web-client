@@ -1,20 +1,15 @@
 # UPDATE - V-Eval-Web_Client
 
-## [19/11/2026] - Chuẩn Hóa Cổng Phụ Huynh 4 Phân Hệ & Tối Ưu Quản Lý Học Thuật Cơ Sở
-
-- **Chuẩn Hóa Cổng Phụ Huynh 4 Phân Hệ & Bố Cục Dashboard 3 Tầng ([`ParentDashboardView.jsx`](./src/components/dashboard/ParentDashboardView.jsx), [`ParentChildResultsView.jsx`](./src/components/dashboard/ParentChildResultsView.jsx), [`ParentEarlyWarningsAndTeacherView.jsx`](./src/components/dashboard/ParentEarlyWarningsAndTeacherView.jsx))**:
-  - Di chuyển toàn bộ các Hook `useEffect` lên đầu component trước các câu lệnh `if (...) return`, triệt tiêu hoàn toàn ngoại lệ `Rendered more hooks than during the previous render`.
-  - Nâng state `parentActiveChildId` lên `App.jsx`, đồng bộ hóa việc chọn con cho toàn bộ các tab con: Dashboard, Tiến độ & Kết quả, Cảnh báo sớm và Học phí.
-  - Tái thiết kế Sidebar thành 4 mục chuẩn: *1. Tổng quan đồng hành*, *2. Tiến độ & Kết quả của con*, *3. Cảnh báo & Trao đổi Giáo viên*, *4. Học phí & Lịch sử giao dịch*.
-  - Bổ sung bộ chọn dropdown con ngay trên thanh điều hướng đầu trang `AccountNavbar` khi phụ huynh liên kết $\ge 2$ con, cho phép chuyển đổi học sinh tức thì từ mọi trang.
-  - Đồng bộ hóa sự kiện click chọn thẻ con trong `TuitionPaymentView` với `onSelectChildId`, cập nhật trạng thái `activeChildId` toàn cục ngay lập tức.
-  - Loại bỏ hoàn toàn các từ viết tắt nội bộ: IRT Theta, BKT, ZPD, PLAR, Core Flow 5, Live Identity + Practice gRPC, giá thử nghiệm 5.000 ₫; thay bằng ngôn ngữ tiếng Việt đời thường, dễ hiểu cho gia đình.
-- **Nâng Cấp Giao Diện Xếp Lớp Đầu Vào Theo Ma Trận 4 Miền × 3 Cấp Bậc (12 Lớp Chuẩn - [`AcademicManagerDashboardView.jsx`](./src/components/dashboard/AcademicManagerDashboardView.jsx), [`practiceService.js`](./src/services/practiceService.js))**:
-  - Thay thế ô nhập `Max K` cũ bằng cấu hình ngưỡng trực quan: **Ngưỡng Cơ bản (`< 50%`)**, **Ngưỡng Nâng cao (`>= 75%`)**, tùy chọn **Hiển thị & khởi tạo đủ khung 12 lớp** và checkbox **Chỉ xếp học sinh mới chưa có lớp (Bảo toàn 100% lớp của HS cũ)**.
-  - Hiển thị kết quả dưới dạng **Ma trận 4 hàng (4 Miền kiến thức) × 3 cột (Cơ bản / Tăng tốc / Nâng cao)** kèm badge `+N mới`, thanh độ nắm vững trung bình từng miền, sĩ số `X/20 HS`, nhãn trạng thái (`Đủ điều kiện mở lớp`, `Đang gom lớp (< 5 HS)`, `Chưa có HS`) và nút **Gán Giáo Viên Phụ Trách** trực tiếp cho từng lớp.
-- **Tối Ưu Đồng Bộ Dữ Liệu Học Sinh & Khắc Phục Xung Đột Phòng Học ([`EarlyWarningsMentorPanel.jsx`](./src/components/dashboard/EarlyWarningsMentorPanel.jsx), [`AcademicManagerDashboardView.jsx`](./src/components/dashboard/AcademicManagerDashboardView.jsx))**:
-  - Bổ sung `useMemo`, kết nối truy vấn động `userService.getUsers({ role: 'STUDENT' })` lấy tên học sinh từ Identity REST API, ưu tiên dữ liệu từ backend và lọc trùng cảnh báo.
-  - Bổ sung cơ chế đổi phòng/giờ học (Edit Slot thay vì Append), cập nhật phát hiện xung đột thời gian thực trong Modal Thời khóa biểu.
-- **Kiểm Thử Vận Hành**:
-  - `npm run build`: Thành công 100%, 0 lỗi biên dịch.
-  - `node --test tests/*.test.js`: Toàn bộ **22/22 unit tests Passed**.
+## [20/11/2026]
+- **Tách Cụm Đề Thi Thành 3 Trang Độc Lập Đồng Bộ 1:1 Với Kiến Trúc SGK & Bổ Sung Chức Năng Xóa Đề Toàn Diện (`Sidebar.jsx`, `App.jsx`, `examStateBridge.js`, `useExamWorkspaceController.js`, `ExamWorkspaceHeader.jsx`, `ExamSharedModals.jsx`, `ExamBankView.jsx`, `ExamIngestView.jsx`, `ExamStudioView.jsx`, `ExamDatabaseModal.jsx`, `TeacherPortalView.jsx`)**:
+  - **Menu Dropdown `exam-group` (`Đề thi & AI Bloom`)** trên Sidebar cho `teacher`, `manager`, `admin`:
+    1. **Trang 1 — `1. Kho Đề & Xem Đề Thi` (`exam-bank`)**: Kho Đề Supabase + Xem Đề Thi chuẩn in + Sắp Xếp & Trộn Đề kéo-thả.
+    2. **Trang 2 — `2. Parse PDF & AI Bloom` (`exam-ingest`)**: Phần 1 Parse PDF (Gemini Vision AI OCR nền xuyên trang) & Phần 2 AI Sinh Câu Hỏi 6 Mức Bloom (`L1–L6`) + Hàng Đợi Kiểm Duyệt.
+    3. **Trang 3 — `3. Studio Biên Soạn Đề` (`exam-studio`)**: Studio 2 cột sửa từng câu hỏi + Full Studio 838 ký hiệu & 3D MathLab.
+  - **Chức năng `Xóa Đề` đầy đủ trên mọi màn hình**: Hỗ trợ xóa cả đề đã lưu trong Supabase (`DELETE /api/content/exams/{id}`) lẫn đề nháp vừa parse PDF / soạn thủ công khỏi phiên làm việc, hiển thị rõ nút **`Xóa Đề` / `Xóa`** kèm hộp thoại xác nhận tại Trang 1 (Kho Đề + Header Xem Đề), Trang 2 (Parse PDF & AI Bloom), Trang 3 (Studio), Modal đổi đề và `Ngân hàng đề thi` trong `TeacherPortalView.jsx`.
+- **Render Bảng HTML `rowspan`/`colspan`, Bảo Vệ `[VARIATION_TABLE]` & Port 100% `view-exam.html` + Node 4 Tầng (`examParserUtils.js`, `ExamRichContent.jsx`, `examCurriculumMatcher.js`, `examOrganizerUtils.js`, `ExamMediaLightbox.jsx`, `ExamNodePickerModal.jsx`, `ExamBlueprintDrawer.jsx`, `aiService.js`, `contentService.js`)**:
+  - Khử nhiễu KaTeX 6 tầng, bảng Markdown 2 tầng + bảng HTML `<table>` gộp ô, bảo vệ `[VARIATION_TABLE]`/`[MATH_GRAPH]`/`[MATH_GRAPH_3D]`, biểu đồ Recharts, tự động nhận diện `Miền -> Chương -> Bài -> Dạng bài` + `AI Gắn Chương/Bài` và **Ma Trận Đặc Tả Đề Thi**.
+- **Kiểm Thử Vận Hành & Biên Dịch**:
+  - `oxlint`: 0 Warning, 0 Error trên toàn bộ 22 file của phân hệ Đề thi.
+  - `node --test`: Pass 37/37 unit tests toàn bộ Web Client.
+  - `npm run build`: Biên dịch sạch sẽ trong 6.19s (`3073 modules`, `0 Error`).

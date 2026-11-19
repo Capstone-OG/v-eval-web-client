@@ -3,6 +3,7 @@ import katex from 'katex';
 import 'katex/dist/katex.min.css';
 import { AlertTriangle, Sparkles, BookOpen, FileText } from 'lucide-react';
 import VariationTable, { parseVariationTableString } from './VariationTable';
+import AcademicChartBlock, { parseDataChartString } from './AcademicChartBlock';
 import MathGraphView, { parseGraphTag } from './MathGraphView';
 import InteractiveMathRenderer from './InteractiveMathRenderer';
 import { autoSynthesizeMathGraph3DFromText, autoSynthesizeMathGraph2DFromText, autoSynthesizeVariationTableFromText } from '../../utils/mathGraphUtils';
@@ -245,8 +246,8 @@ export function normalizeMathString(text) {
   str = str.replace(/(?:^|\n)\s*\\?undefined\s*(?=\n|$)/gi, '\n');
   str = str.replace(/\\?undefined/gi, '');
 
-  // Tách rời tiêu đề markdown ### nếu bị dính liền sau câu hoặc công thức
-  str = str.replace(/([^\r\n])\s*(###\s+[^\r\n]+)/g, '$1\n\n$2');
+  // Tách rời tiêu đề markdown #, ##, ###, #### nếu bị dính liền sau câu hoặc công thức (không cắt đôi #### thành # + ###)
+  str = str.replace(/([^\r\n#])\s*(#{1,4}\s+[^\r\n]+)/g, '$1\n\n$2');
 
   // Nối các dòng bị ngắt cụt gây gãy layout
   str = str.replace(/\r?\n\s*:\s*/g, ': ');
@@ -580,13 +581,11 @@ function renderInlineContent(text, keyPrefix = '') {
   if (!text) return null;
   if (typeof text !== 'string') return text;
 
-  // 1. Process markdown bold-italic (***...***) and bold (**...**) first
-  // so that bold blocks containing math (such as `**Công thức đốt cháy (chứa $\pi$):**`)
-  // do not get their bold markers broken across math delimiter splits!
-  const boldRegex = /(\*\*\*[^\*\n]+?\*\*\*|\*\*[^\*\n]+?\*\*)/g;
-  if (boldRegex.test(text)) {
-    const boldParts = text.split(boldRegex);
-    return boldParts.map((bPart, bIdx) => {
+  // 1. Process markdown bold-italic (***...***), bold (**...**), underline (<u>...</u>), strikethrough (~~...~~) first
+  const richInlineRegex = /(\*\*\*[^\*\n]+?\*\*\*|\*\*[^\*\n]+?\*\*|<u>[^<\n]+?<\/u>|~~[^~\n]+?~~)/gi;
+  if (richInlineRegex.test(text)) {
+    const richParts = text.split(richInlineRegex);
+    return richParts.map((bPart, bIdx) => {
       if (!bPart) return null;
       const bKey = `${keyPrefix}-b${bIdx}`;
       if (bPart.startsWith('***') && bPart.endsWith('***') && bPart.length >= 6) {
@@ -601,6 +600,20 @@ function renderInlineContent(text, keyPrefix = '') {
           <strong key={bKey} className="font-extrabold">
             {renderInlineMathAndText(bPart.slice(2, -2), `${bKey}-b`)}
           </strong>
+        );
+      }
+      if (/^<u>[\s\S]+<\/u>$/i.test(bPart)) {
+        return (
+          <u key={bKey} className="underline decoration-slate-400 underline-offset-2">
+            {renderInlineMathAndText(bPart.slice(3, -4), `${bKey}-u`)}
+          </u>
+        );
+      }
+      if (bPart.startsWith('~~') && bPart.endsWith('~~') && bPart.length >= 4) {
+        return (
+          <s key={bKey} className="line-through text-slate-500">
+            {renderInlineMathAndText(bPart.slice(2, -2), `${bKey}-s`)}
+          </s>
         );
       }
       return renderInlineMathAndText(bPart, bKey);
@@ -816,13 +829,18 @@ function renderStructuredContent(raw, onEditMathGraph = null) {
   // 4. [VARIATION_TABLE]...[/VARIATION_TABLE]
   // 5. [GRAPH:...]
   // 6. Display math $$...$$ or \[...\]
-  const blockRegex = /(\[MATH_GRAPH_3D\][\s\S]*?\[\/MATH_GRAPH_3D\]|\[MATH_GRAPH\][\s\S]*?\[\/MATH_GRAPH\]|\[MATH_GEOMETRY_2D\][\s\S]*?\[\/MATH_GEOMETRY_2D\]|\[VARIATION_TABLE\][\s\S]*?\[\/VARIATION_TABLE\]|\[GRAPH:[\s\S]*?\]|\[IMAGE_PLACEHOLDER:[\s\S]*?\]|\$\$[\s\S]*?\$\$|\\\[[\s\S]*?\\\])/gi;
+  const blockRegex = /(\[DATA_CHART\][\s\S]*?\[\/DATA_CHART\]|\[MATH_GRAPH_3D\][\s\S]*?\[\/MATH_GRAPH_3D\]|\[MATH_GRAPH\][\s\S]*?\[\/MATH_GRAPH\]|\[MATH_GEOMETRY_2D\][\s\S]*?\[\/MATH_GEOMETRY_2D\]|\[VARIATION_TABLE\][\s\S]*?\[\/VARIATION_TABLE\]|\[GRAPH:[\s\S]*?\]|\[IMAGE_PLACEHOLDER:[\s\S]*?\]|\$\$[\s\S]*?\$\$|\\\[[\s\S]*?\\\])/gi;
   const blocks = effectiveRaw.split(blockRegex);
 
   return blocks.map((block, bIdx) => {
     if (!block) return null;
 
     const trimmedBlock = typeof block === 'string' ? block.trim() : '';
+
+    // Interactive Academic Data Chart Block [DATA_CHART]...[/DATA_CHART]
+    if (trimmedBlock.toUpperCase().startsWith('[DATA_CHART]') && trimmedBlock.toUpperCase().endsWith('[/DATA_CHART]')) {
+      return <AcademicChartBlock key={`dc-${bIdx}`} data={parseDataChartString(trimmedBlock)} />;
+    }
 
     // Interactive 3D Spatial Geometry Block [MATH_GRAPH_3D]...[/MATH_GRAPH_3D]
     if (trimmedBlock.toUpperCase().startsWith('[MATH_GRAPH_3D]') && trimmedBlock.toUpperCase().endsWith('[/MATH_GRAPH_3D]')) {

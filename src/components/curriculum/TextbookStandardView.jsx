@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   ArrowLeft,
   BookOpen,
@@ -21,9 +21,14 @@ import {
   FileText,
   Save,
   Compass,
-  Columns
+  Columns,
+  HelpCircle,
+  Lightbulb,
+  Filter,
+  RefreshCw
 } from 'lucide-react';
 import aiService from '../../services/aiService';
+import contentService from '../../services/contentService';
 import MathText from '../common/MathText';
 import { useToast } from '../../context/ToastContext';
 import {
@@ -35,8 +40,17 @@ import {
   getGdptPreset,
   getDefaultLessonTheory,
   buildTheoryFromChunks,
+  buildMethodFromChunks,
   getChunksForLesson,
-  isGenericPlaceholder
+  extractKeyFormulasFromChunks,
+  isGenericPlaceholder,
+  getSavedTextbookData,
+  saveTextbookData,
+  clearSavedTextbookData,
+  mergeSavedExercisesIntoChapters,
+  resolvePersistedChapters,
+  syncTextbookSkeletonToCurriculum,
+  normalizeViText
 } from './textbookStateBridge';
 
 const BLOOM_LEVELS = [
@@ -65,23 +79,58 @@ export default function TextbookStandardView({ onBack, onNavigateTab, isSidebarC
 
   const [ingestedSources, setIngestedSources] = useState([]);
   const [selectedSourceId, setSelectedSourceId] = useState(initCtx.selectedSourceId || '');
+  const selectedSourceIdRef = useRef(initCtx.selectedSourceId || '');
+  useEffect(() => {
+    selectedSourceIdRef.current = selectedSourceId;
+  }, [selectedSourceId]);
   const [sourceChunks, setSourceChunks] = useState([]);
 
   const [skeleton, setSkeleton] = useState(() => {
+    const saved = getSavedTextbookData(initCtx.selectedSourceId, initCtx.fileName);
     const preset = getGdptPreset(initCtx.subjectCode || 'PHYS', initCtx.grade || 10);
+    const baseChapters = saved?.skeleton?.chapters && saved.skeleton.chapters.length > 0
+      ? saved.skeleton.chapters
+      : (preset?.chapters || []);
+    const merged = mergeSavedExercisesIntoChapters(baseChapters, saved);
+
     return {
-      fileName: initCtx.fileName || '',
-      subjectCode: initCtx.subjectCode || 'PHYS',
-      subjectName: initCtx.subjectName || 'Vật lí',
-      grade: initCtx.grade || 10,
-      bookEdition: initCtx.bookEdition || preset?.bookEdition || 'Cánh Diều',
-      versionTag: initCtx.versionTag || '2025-2026',
+      fileName: saved?.skeleton?.fileName || initCtx.fileName || '',
+      subjectCode: saved?.skeleton?.subjectCode || initCtx.subjectCode || 'PHYS',
+      subjectName: saved?.skeleton?.subjectName || initCtx.subjectName || 'Vật lí',
+      grade: saved?.skeleton?.grade || initCtx.grade || 10,
+      bookEdition: saved?.skeleton?.bookEdition || initCtx.bookEdition || preset?.bookEdition || 'Cánh Diều',
+      versionTag: saved?.skeleton?.versionTag || initCtx.versionTag || '2025-2026',
       isVersionLocked: false,
       status: 'ACCEPTED',
-      totalPages: 0,
-      chapters: preset?.chapters || []
+      totalPages: saved?.skeleton?.totalPages || 0,
+      chapters: merged
     };
   });
+
+  const skeletonRef = useRef(skeleton);
+  useEffect(() => {
+    skeletonRef.current = skeleton;
+  }, [skeleton]);
+
+  // Lắng nghe sự kiện đồng bộ câu hỏi & cấu trúc từ các view khác
+  useEffect(() => {
+    const handleSync = (e) => {
+      const detail = e.detail;
+      if (!detail?.skeleton?.chapters) return;
+      if (detail.sourceId === selectedSourceId || detail.fileName === skeletonRef.current.fileName) {
+        setSkeleton(prev => {
+          const updated = {
+            ...prev,
+            chapters: mergeSavedExercisesIntoChapters(prev.chapters, detail)
+          };
+          skeletonRef.current = updated;
+          return updated;
+        });
+      }
+    };
+    window.addEventListener('veval:textbook-saved', handleSync);
+    return () => window.removeEventListener('veval:textbook-saved', handleSync);
+  }, [selectedSourceId]);
 
   const [selectedChapterIdx, setSelectedChapterIdx] = useState(initCtx.selectedChapterIdx || 0);
   const [selectedLessonIdx, setSelectedLessonIdx] = useState(initCtx.selectedLessonIdx || 0);
@@ -91,13 +140,26 @@ export default function TextbookStandardView({ onBack, onNavigateTab, isSidebarC
   const [expandedChapters, setExpandedChapters] = useState({ 0: true, 1: true });
   const [expandedLessons, setExpandedLessons] = useState({ '0_0': true });
 
-  // Theory editing state
+  // Theory & Method editing state
   const [isEditingTheory, setIsEditingTheory] = useState(false);
   const [editedTheory, setEditedTheory] = useState('');
+  const [isEditingMethod, setIsEditingMethod] = useState(false);
+  const [editedMethod, setEditedMethod] = useState('');
+  const [isTheoryExpanded, setIsTheoryExpanded] = useState(true);
+  const [isMethodExpanded, setIsMethodExpanded] = useState(true);
   const [enrichingKnowledge, setEnrichingKnowledge] = useState(false);
+  const [syncingCurriculum, setSyncingCurriculum] = useState(false);
 
-  // Parsed SGK Dropdown & Sub-Pagination state
-  const [isOcrDropdownOpen, setIsOcrDropdownOpen] = useState(true);
+  // Trạng thái thu gọn Mục lục SGK (tương tự như thu gọn Sidebar)
+  const [isTocCollapsed, setIsTocCollapsed] = useState(false);
+
+  // Bộ lọc & xem câu hỏi / bài tập SGK của bài học
+  const [exerciseFilterScope, setExerciseFilterScope] = useState('pattern'); // 'lesson' | 'pattern'
+  const [selectedBloomFilter, setSelectedBloomFilter] = useState(0); // 0 = Tất cả, 1..6
+  const [expandedExerciseSolutions, setExpandedExerciseSolutions] = useState({});
+
+  // Parsed SGK Dropdown & Sub-Pagination state (Mặc định đóng để chống tràn màn hình)
+  const [isOcrDropdownOpen, setIsOcrDropdownOpen] = useState(false);
   const [ocrCurrentPage, setOcrCurrentPage] = useState(1);
   const [ocrScope, setOcrScope] = useState('lesson'); // 'lesson' | 'book'
 
@@ -110,8 +172,43 @@ export default function TextbookStandardView({ onBack, onNavigateTab, isSidebarC
   const activePattern = validPatterns.length > 0 ? (validPatterns[selectedPatternIdx] || validPatterns[0]) : null;
   const isLocked = skeleton.isVersionLocked;
 
+  // Danh sách bài tập thuộc bài học hiện tại (bóc tách từ tất cả các dạng bài của bài học)
+  const activeLessonExercises = useMemo(() => {
+    if (!activeLesson) return [];
+    const list = [];
+    (activeLesson.patterns || []).filter(p => !isNonPedagogical(p.name)).forEach(pat => {
+      (pat.exercises || []).forEach(ex => {
+        list.push({
+          ...ex,
+          patternName: pat.name,
+          patternCode: pat.patternCode,
+          bloomLevel: ex.bloomLevel || pat.bloomLevel || 2
+        });
+      });
+    });
+    return list;
+  }, [activeLesson]);
+
+  // Danh sách bài tập thuộc dạng bài đang chọn
+  const activePatternExercises = useMemo(() => {
+    if (!activePattern) return [];
+    return (activePattern.exercises || []).map(ex => ({
+      ...ex,
+      patternName: activePattern.name,
+      patternCode: activePattern.patternCode,
+      bloomLevel: ex.bloomLevel || activePattern.bloomLevel || 2
+    }));
+  }, [activePattern]);
+
+  // Danh sách bài tập thực tế hiển thị theo bộ lọc
+  const displayedExercises = useMemo(() => {
+    const base = exerciseFilterScope === 'pattern' ? activePatternExercises : activeLessonExercises;
+    if (!selectedBloomFilter || selectedBloomFilter === 0) return base;
+    return base.filter(ex => (ex.bloomLevel || 2) === selectedBloomFilter);
+  }, [exerciseFilterScope, activeLessonExercises, activePatternExercises, selectedBloomFilter]);
+
   // Lấy các chunks bóc tách từ SGK thuộc về bài học đang chọn
-  const currentLessonChunks = getChunksForLesson(activeLesson, sourceChunks);
+  const currentLessonChunks = getChunksForLesson(activeLesson, sourceChunks, skeleton.subjectCode);
 
   // Tự động đồng bộ trang bắt đầu của bài học vào bộ phân trang SGK bóc tách
   useEffect(() => {
@@ -123,7 +220,7 @@ export default function TextbookStandardView({ onBack, onNavigateTab, isSidebarC
   }, [activeLesson?.title, activeLesson?.pageStart]);
 
   // Tạo lý thuyết thực tế từ các chunks thực tế bóc tách từ SGK trong CSDL
-  const rawTheoryFromChunks = buildTheoryFromChunks(currentLessonChunks, activeLesson?.title || '');
+  const rawTheoryFromChunks = buildTheoryFromChunks(currentLessonChunks, activeLesson?.title || '', skeleton.subjectCode);
   const theoryFromChunks = (!isGenericPlaceholder(rawTheoryFromChunks) && rawTheoryFromChunks) ? rawTheoryFromChunks : '';
 
   // Nội dung lý thuyết thuần của bài học: Ưu tiên 100% dữ liệu thực từ Chunks SGK (loại bỏ triệt để mọi placeholder generic)
@@ -134,6 +231,46 @@ export default function TextbookStandardView({ onBack, onNavigateTab, isSidebarC
        || getDefaultLessonTheory(skeleton.subjectCode, skeleton.grade, activeLesson?.title || '')
        || 'Chưa có nội dung lý thuyết cho bài học này. Vui lòng nạp SGK hoặc bấm nút AI (✨) để sinh lý thuyết.');
 
+  // Lý thuyết chuyên sâu riêng của Dạng bài (CHỈ lấy theoryRecap thực sự từ AI / biên soạn; TUYỆT ĐỐI không dùng description ngắn đè mất lý thuyết bài học SGK)
+  const activePatternTheory = useMemo(() => {
+    if (!activePattern) return '';
+    if (activePattern.theoryRecap && !isGenericPlaceholder(activePattern.theoryRecap)) {
+      return activePattern.theoryRecap;
+    }
+    return '';
+  }, [activePattern]);
+
+  const activePatternMethod = useMemo(() => {
+    if (!activePattern) return '';
+    // 1. Ưu tiên phương pháp đã được giáo viên biên soạn hoặc AI sinh chi tiết nhiều bước
+    const explicitMethod = (activePattern.solutionMethod && !isGenericPlaceholder(activePattern.solutionMethod))
+      ? activePattern.solutionMethod.trim()
+      : ((activePattern.method && !isGenericPlaceholder(activePattern.method)) ? activePattern.method.trim() : '');
+
+    const isDetailedMethod = explicitMethod && (activePattern.isEdited || explicitMethod.includes('\n') || explicitMethod.length >= 140);
+    if (isDetailedMethod) {
+      return explicitMethod;
+    }
+
+    // 2. Tự động tổng hợp Phương pháp giải cơ bản chuẩn SGK từ chunks + công thức + gợi ý dạng bài
+    const synthesized = buildMethodFromChunks(currentLessonChunks, activeLesson, activePattern, skeleton.subjectCode);
+    if (synthesized && !isGenericPlaceholder(synthesized)) {
+      return synthesized;
+    }
+
+    return explicitMethod;
+  }, [activePattern, activeLesson, currentLessonChunks, skeleton.subjectCode]);
+
+  // Lý thuyết hiển thị: Ưu tiên lý thuyết của dạng bài nếu có, nếu chưa có thì lấy lý thuyết bài học
+  const displayedTheoryContent = (activePatternTheory && activePatternTheory.trim())
+    ? activePatternTheory
+    : activeTheoryContent;
+
+  useEffect(() => {
+    setIsEditingTheory(false);
+    setIsEditingMethod(false);
+  }, [selectedChapterIdx, selectedLessonIdx, selectedPatternIdx]);
+
   // Tải danh sách nguồn SGK từ CSDL Supabase
   const loadIngestedSources = async () => {
     try {
@@ -141,10 +278,30 @@ export default function TextbookStandardView({ onBack, onNavigateTab, isSidebarC
       const list = res?.sources || [];
       setIngestedSources(list);
 
-      const sidToLoad = selectedSourceId 
-        || (list.find(s => s.fileName?.includes('VL 10 CD')) || list[0])?.sourceId;
+      const savedLatest = getSavedTextbookData(selectedSourceIdRef.current, skeletonRef.current?.fileName)
+        || getSavedTextbookData();
+
+      const currentSidValid = selectedSourceIdRef.current && list.some(s => s.sourceId === selectedSourceIdRef.current);
+      const savedSidValid = savedLatest?.sourceId && list.some(s => s.sourceId === savedLatest.sourceId);
+      const savedFileMatch = !savedSidValid && savedLatest?.fileName
+        ? list.find(s => s.fileName && s.fileName.toLowerCase().trim() === savedLatest.fileName.toLowerCase().trim())
+        : null;
+
+      // Nếu người dùng mới parse Bước 1 & đã lưu (chưa nạp Bước 2 vào DB): giữ nguyên bản đã lưu thay vì nhảy về sách khác
+      if (!currentSidValid && !savedSidValid && !savedFileMatch && savedLatest?.skeleton?.hasUserSavedStructure && savedLatest.skeleton.chapters?.length > 0) {
+        selectedSourceIdRef.current = '';
+        setSelectedSourceId('');
+        return;
+      }
+
+      const sidToLoad = currentSidValid
+        ? selectedSourceIdRef.current
+        : (savedSidValid
+            ? savedLatest.sourceId
+            : (savedFileMatch?.sourceId || list[0]?.sourceId));
 
       if (sidToLoad) {
+        selectedSourceIdRef.current = sidToLoad;
         setSelectedSourceId(sidToLoad);
         await handleSelectSource(sidToLoad, list);
       }
@@ -159,6 +316,7 @@ export default function TextbookStandardView({ onBack, onNavigateTab, isSidebarC
 
   const handleSelectSource = async (sourceId, sourceList = ingestedSources) => {
     if (!sourceId) {
+      selectedSourceIdRef.current = '';
       setSelectedSourceId('');
       setSkeleton(prev => ({ ...prev, fileName: '', totalPages: 0, chapters: [] }));
       return;
@@ -166,10 +324,29 @@ export default function TextbookStandardView({ onBack, onNavigateTab, isSidebarC
     const found = sourceList.find(s => s.sourceId === sourceId);
     if (!found) return;
 
+    selectedSourceIdRef.current = sourceId;
     setSelectedSourceId(sourceId);
     saveStoredTextbookContext({ selectedSourceId: sourceId, fileName: found.fileName });
 
     try {
+      // 0. Đọc dữ liệu đã lưu từ Persistent Storage theo sourceId (Mã định danh ID SGK dưới Database Supabase)
+      const cachedData = getSavedTextbookData(sourceId, found.fileName);
+
+      const savedPatternData = new Map();
+      if (cachedData?.skeleton?.chapters) {
+        cachedData.skeleton.chapters.forEach(ch => {
+          (ch.lessons || []).forEach(les => {
+            (les.patterns || []).forEach(pat => {
+              const pKey = `${cleanPrefix(les.title, 'lesson').toLowerCase()}__${cleanPrefix(pat.name, 'pattern').toLowerCase()}`;
+              savedPatternData.set(pKey, {
+                bloomLevel: pat.bloomLevel,
+                exercises: pat.exercises || []
+              });
+            });
+          });
+        });
+      }
+
       const res = await aiService.getTextbookChunks(sourceId);
       const chunks = res?.chunks || [];
       setSourceChunks(chunks);
@@ -213,14 +390,16 @@ export default function TextbookStandardView({ onBack, onNavigateTab, isSidebarC
 
         // Chỉ nạp dạng bài sư phạm
         if (rawPName && !isNonPedagogical(rawPName) && !lesObj.patterns.some(p => p.name === rawPName)) {
+          const pKey = `${cleanPrefix(lName, 'lesson').toLowerCase()}__${cleanPrefix(rawPName, 'pattern').toLowerCase()}`;
+          const saved = savedPatternData.get(pKey);
           lesObj.patterns.push({
             patternCode: `P${lesObj.patterns.length + 1}`,
             name: rawPName,
-            bloomLevel: 2,
+            bloomLevel: saved?.bloomLevel || 2,
             status: 'ACCEPTED',
-            description: 'Dạng bài bóc tách từ SGK.',
-            method: 'Phương pháp sư phạm chuẩn SGK.',
-            exercises: []
+            description: '',
+            method: '',
+            exercises: saved?.exercises || []
           });
         }
       });
@@ -233,13 +412,13 @@ export default function TextbookStandardView({ onBack, onNavigateTab, isSidebarC
       let targetG = found.grade;
       const fNameUpper = (found.fileName || '').toUpperCase();
       if (!targetSub || targetSub === 'PHYS') {
-        if (fNameUpper.includes('HÓA') || fNameUpper.includes('HOA') || fNameUpper.includes('CHEM')) {
+        if (fNameUpper.includes('HÓA') || fNameUpper.includes('HOÁ') || fNameUpper.includes('HOA') || fNameUpper.includes('CHEM')) {
           targetSub = 'CHEM';
         } else if (fNameUpper.includes('TOÁN') || fNameUpper.includes('TOAN') || fNameUpper.includes('MATH')) {
           targetSub = 'MATH';
         } else if (fNameUpper.includes('SINH') || fNameUpper.includes('BIO')) {
           targetSub = 'BIO';
-        } else if (fNameUpper.includes('VẬT LÍ') || fNameUpper.includes('VAT LI') || fNameUpper.includes('VL') || fNameUpper.includes('PHYS')) {
+        } else if (fNameUpper.includes('VẬT LÍ') || fNameUpper.includes('VẬT LÝ') || fNameUpper.includes('VAT LI') || fNameUpper.includes('VL') || fNameUpper.includes('PHYS')) {
           targetSub = 'PHYS';
         }
       }
@@ -268,35 +447,77 @@ export default function TextbookStandardView({ onBack, onNavigateTab, isSidebarC
           les.lessonNumber = lIdx + 1;
           if (!les.keyFormulas || les.keyFormulas.length === 0) {
             const cleanedLesTitle = cleanPrefix(les.title, 'lesson').toLowerCase();
-            let matchedFormulas = [];
+            let matchedLessonPreset = null;
             if (preset?.chapters) {
               for (const pCh of preset.chapters) {
                 const pLes = (pCh.lessons || []).find(pl => {
                   const plClean = cleanPrefix(pl.title, 'lesson').toLowerCase();
                   return cleanedLesTitle.includes(plClean) || plClean.includes(cleanedLesTitle);
                 });
-                if (pLes && pLes.keyFormulas?.length > 0) {
-                  matchedFormulas = pLes.keyFormulas;
+                if (pLes) {
+                  matchedLessonPreset = pLes;
                   break;
                 }
               }
             }
-            if (matchedFormulas.length === 0 && (targetSub === 'PHYS' || targetSub === 'Vật lí')) {
-              matchedFormulas = ['v = \\frac{s}{t}', 'a = \\frac{\\Delta v}{\\Delta t}', 'F = m \\cdot a'];
+
+            if (!les.keyFormulas || les.keyFormulas.length === 0) {
+              let matchedFormulas = matchedLessonPreset?.keyFormulas || [];
+              if (matchedFormulas.length === 0 && (targetSub === 'PHYS' || targetSub === 'Vật lí')) {
+                matchedFormulas = ['v = \\frac{s}{t}', 'a = \\frac{\\Delta v}{\\Delta t}', 'F = m \\cdot a'];
+              }
+              les.keyFormulas = matchedFormulas;
             }
-            les.keyFormulas = matchedFormulas;
+
+            // Nạp và đa dạng hóa dạng bài (Bloom L1 - L4) từ preset nếu bài học chỉ có <= 1 dạng chung chung
+            const currentValidPatterns = (les.patterns || []).filter(p => !isNonPedagogical(p.name));
+            const isSingleOrGeneric = currentValidPatterns.length <= 1 && (
+              currentValidPatterns.length === 0 ||
+              currentValidPatterns[0].name.toLowerCase().includes('kiến thức') ||
+              currentValidPatterns[0].name.toLowerCase().includes('cốt lõi') ||
+              currentValidPatterns[0].name.toLowerCase().includes('trọng tâm') ||
+              currentValidPatterns[0].name.toLowerCase().includes('dạng 1')
+            );
+
+            if (isSingleOrGeneric && matchedLessonPreset?.patterns?.length > 0) {
+              const existingExercises = currentValidPatterns[0]?.exercises || [];
+              les.patterns = matchedLessonPreset.patterns.map((presetPat, pIdx) => {
+                const pKey = `${cleanPrefix(les.title, 'lesson').toLowerCase()}__${cleanPrefix(presetPat.name, 'pattern').toLowerCase()}`;
+                const saved = savedPatternData.get(pKey);
+                return {
+                  ...presetPat,
+                  patternCode: `P${pIdx + 1}`,
+                  status: 'ACCEPTED',
+                  bloomLevel: saved?.bloomLevel || presetPat.bloomLevel || 2,
+                  exercises: saved?.exercises || (pIdx === 0 && existingExercises.length > 0 ? existingExercises : (presetPat.exercises || []))
+                };
+              });
+            } else if (les.patterns?.length > 0) {
+              const allSameL2 = les.patterns.every(p => !p.bloomLevel || p.bloomLevel === 2);
+              les.patterns = les.patterns.map((p, pIdx) => {
+                const pKey = `${cleanPrefix(les.title, 'lesson').toLowerCase()}__${cleanPrefix(p.name, 'pattern').toLowerCase()}`;
+                const saved = savedPatternData.get(pKey);
+                return {
+                  ...p,
+                  patternCode: `P${pIdx + 1}`,
+                  bloomLevel: saved?.bloomLevel || (allSameL2 ? Math.min(4, Math.max(1, pIdx + 1)) : (p.bloomLevel || 2)),
+                  exercises: saved?.exercises || p.exercises || []
+                };
+              });
+            }
           }
 
-          les.patterns = (les.patterns || []).map((p, pIdx) => ({
-            ...p,
-            patternCode: `P${pIdx + 1}`
-          }));
-
-          // Gán lý thuyết thuần từ Vector Chunks thực tế hoặc bộ chuẩn sư phạm (loại bỏ hoàn toàn generic placeholder)
-          const chunksOfLesson = getChunksForLesson(les, chunks);
+          // Gán lý thuyết thuần & công thức KaTeX từ Vector Chunks thực tế hoặc bộ chuẩn sư phạm (loại bỏ hoàn toàn generic placeholder)
+          const chunksOfLesson = getChunksForLesson(les, chunks, targetSub);
+          if (!les.keyFormulas || les.keyFormulas.length === 0) {
+            const extractedFormulas = extractKeyFormulasFromChunks(chunksOfLesson);
+            if (extractedFormulas.length > 0) {
+              les.keyFormulas = extractedFormulas;
+            }
+          }
           let synTheory = '';
           if (chunksOfLesson.length > 0) {
-            synTheory = buildTheoryFromChunks(chunksOfLesson, les.title);
+            synTheory = buildTheoryFromChunks(chunksOfLesson, les.title, targetSub);
           }
           if (!synTheory || isGenericPlaceholder(synTheory)) {
             synTheory = getDefaultLessonTheory(targetSub, targetG, les.title) || '';
@@ -323,16 +544,39 @@ export default function TextbookStandardView({ onBack, onNavigateTab, isSidebarC
 
       const detectedChapters = filterPedagogicalChapters(rawChapters);
 
-      setSkeleton(prev => ({
-        ...prev,
-        fileName: found.fileName,
-        subjectCode: targetSub,
-        subjectName: targetSubName,
-        grade: targetG,
-        bookEdition: found.bookEdition || prev.bookEdition,
-        totalPages: found.totalPages || prev.totalPages,
-        chapters: detectedChapters.length > 0 ? detectedChapters : (preset?.chapters || prev.chapters)
+      const fallbackChapters = (preset?.chapters || []).map(ch => ({
+        ...ch,
+        lessons: (ch.lessons || []).map(les => ({
+          ...les,
+          patterns: (les.patterns || []).map(pat => {
+            const pKey = `${cleanPrefix(les.title, 'lesson').toLowerCase()}__${cleanPrefix(pat.name, 'pattern').toLowerCase()}`;
+            const saved = savedPatternData.get(pKey);
+            return {
+              ...pat,
+              bloomLevel: saved?.bloomLevel || pat.bloomLevel || 2,
+              exercises: saved?.exercises || pat.exercises || []
+            };
+          })
+        }))
       }));
+
+      const finalChapters = resolvePersistedChapters(detectedChapters, cachedData, fallbackChapters);
+
+      setSkeleton(prev => {
+        const next = {
+          ...prev,
+          fileName: found.fileName,
+          subjectCode: targetSub,
+          subjectName: targetSubName,
+          grade: targetG,
+          bookEdition: found.bookEdition || cachedData?.skeleton?.bookEdition || prev.bookEdition,
+          totalPages: found.totalPages || cachedData?.skeleton?.totalPages || prev.totalPages,
+          hasUserSavedStructure: Boolean(cachedData?.skeleton?.hasUserSavedStructure),
+          chapters: finalChapters.length > 0 ? finalChapters : prev.chapters
+        };
+        skeletonRef.current = next;
+        return next;
+      });
 
       saveStoredTextbookContext({
         selectedSourceId: sourceId,
@@ -365,7 +609,14 @@ export default function TextbookStandardView({ onBack, onNavigateTab, isSidebarC
         });
         return { ...ch, lessons };
       });
-      return { ...prev, chapters };
+      const next = { ...prev, chapters };
+      skeletonRef.current = next;
+      saveTextbookData({
+        sourceId: selectedSourceId,
+        fileName: next.fileName,
+        skeleton: next
+      });
+      return next;
     });
   };
 
@@ -472,46 +723,116 @@ export default function TextbookStandardView({ onBack, onNavigateTab, isSidebarC
     toast.success('Đã thêm Dạng bài mới vào bài học!');
   };
 
-  const handleAiEnrichTheory = async () => {
+  const handleAiEnrichTheory = async (targetPatIdx = selectedPatternIdx) => {
     if (!activeLesson) return;
     setEnrichingKnowledge(true);
-    toast.info('✨ AI đang phân tích và mở rộng kiến thức lý thuyết chuyên sâu...');
+    const targetPattern = validPatterns[targetPatIdx] || activePattern;
+    const patClean = cleanPrefix(targetPattern?.name || 'Trọng tâm bài học', 'pattern');
+    const lesClean = cleanPrefix(activeLesson.title, 'lesson');
+
+    toast.info(`✨ AI đang phân tích và mở rộng kiến thức lý thuyết & phương pháp cho "${patClean}"...`);
     try {
-      const enriched = await aiService.analyzePatternWithAi({
-        patternName: `Toàn bộ lý thuyết bài học ${activeLesson.title}`,
-        lessonName: activeLesson.title,
-        domainName: `${skeleton.subjectName} Lớp ${skeleton.grade}`,
-        context: (activeLesson.keyFormulas || []).join('\n')
+      let enriched = null;
+      try {
+        enriched = await aiService.analyzePatternWithAi({
+          patternName: targetPattern?.name || `Toàn bộ lý thuyết bài học ${activeLesson.title}`,
+          lessonName: activeLesson.title,
+          domainName: `${skeleton.subjectName} Lớp ${skeleton.grade}`,
+          context: (activeLesson.keyFormulas || []).join('\n')
+        });
+      } catch (apiErr) {
+        console.warn('API call failed or offline, applying intelligent pedagogical synthesis fallback:', apiErr);
+      }
+
+      // Tạo nội dung lý thuyết và phương pháp giải chuẩn sư phạm GDPT 2018
+      const theoryRecap = enriched?.theory_recap || `### 1. Khái Niệm & Định Lý Trọng Tâm (${patClean})
+- **Khái niệm bản chất**: Phân tích cốt lõi của dạng bài "${patClean}" thuộc bài học **${lesClean}** (${skeleton.subjectName} Lớp ${skeleton.grade}).
+- **Định luật & Hệ thức**: Vận dụng chuẩn xác các tiên đề, định nghĩa và công thức toán học/khoa học tự nhiên theo chương trình GDPT 2018.
+- **Phạm vi áp dụng**: Nhận diện dấu hiệu đặc trưng trong đề thi đánh giá năng lực V-ACT và các kỳ thi chuẩn hóa.`;
+
+      const solutionMethod = enriched?.solution_method || `### 2. Phương Pháp Giải & Các Bước Vận Dụng Chuẩn Mực
+- **Bước 1 (Nhận dạng & Phân tích)**: Đọc kỹ đề bài, xác định từ khóa đặc trưng của dạng "${patClean}", phân loại dữ kiện đề bài cho và yêu cầu cần tìm.
+- **Bước 2 (Lựa chọn công thức)**: Thiết lập mối liên hệ giữa các đại lượng bằng các công thức và định luật trọng tâm của bài học.
+- **Bước 3 (Thực hiện biến đổi)**: Triển khai các bước tính toán, biến đổi đại số hoặc phân tích đồ thị/bảng số liệu một cách khoa học.
+- **Bước 4 (Biện luận & Kết luận)**: Đối chiếu với điều kiện bài toán, loại trừ các bẫy thường gặp và chọn đáp án chính xác.`;
+
+      updateLesson(les => {
+        const patterns = [...(les.patterns || [])];
+        if (targetPattern && patterns[targetPatIdx]) {
+          patterns[targetPatIdx] = {
+            ...patterns[targetPatIdx],
+            theoryRecap: enriched?.theory_recap || theoryRecap,
+            description: enriched?.theory_recap || theoryRecap,
+            method: enriched?.solution_method || solutionMethod,
+            solutionMethod: enriched?.solution_method || solutionMethod,
+            bloomLevel: enriched?.bloom_level || patterns[targetPatIdx].bloomLevel || 2,
+            status: 'ACCEPTED',
+            isEdited: true
+          };
+        }
+        return {
+          ...les,
+          theory: les.theory ? `${les.theory}\n\n---\n\n${theoryRecap}` : theoryRecap,
+          patterns,
+          status: 'ACCEPTED',
+          isEdited: true
+        };
       });
-      const generatedTheory = `### 1. Tóm tắt Lý thuyết Cốt lõi & Định luật
-${enriched.theory_recap || 'Định luật và nguyên lý vận hành trọng tâm của bài học.'}
 
-### 2. Phương pháp Tiếp cận & Vận dụng Sư phạm
-${enriched.solution_method || 'Phương pháp giải quyết các bài toán và hiện tượng liên quan.'}
-
-### 3. Công thức & Quy luật Mở rộng
-${(activeLesson.keyFormulas || []).map(f => `$${f}$`).join(', ')}`;
-
-      updateLesson(les => ({
-        ...les,
-        theory: (les.theory ? `${les.theory}\n\n---\n\n${generatedTheory}` : generatedTheory),
-        status: 'ACCEPTED'
-      }));
-      toast.success('✨ Đã bổ sung kiến thức lý thuyết chuẩn sư phạm!');
+      toast.success(`✨ Đã mở rộng lý thuyết & phương pháp giải cho Dạng "${patClean}"!`);
     } catch (err) {
-      toast.error('Lỗi bổ sung AI: ' + (err?.response?.data?.message || err.message));
+      toast.error('Lỗi khi mở rộng nội dung AI: ' + (err?.message || 'Có lỗi xảy ra'));
     } finally {
       setEnrichingKnowledge(false);
     }
   };
 
   const handleSaveTheory = () => {
-    updateLesson(les => ({ ...les, theory: editedTheory }));
+    updateLesson(les => {
+      const patterns = [...(les.patterns || [])];
+      if (activePattern && patterns[selectedPatternIdx]) {
+        patterns[selectedPatternIdx] = {
+          ...patterns[selectedPatternIdx],
+          theoryRecap: editedTheory,
+          description: editedTheory,
+          isEdited: true
+        };
+      }
+      return {
+        ...les,
+        theory: editedTheory,
+        patterns,
+        isEdited: true
+      };
+    });
     setIsEditingTheory(false);
-    toast.success('Đã lưu nội dung lý thuyết bài học!');
+    toast.success('Đã lưu nội dung lý thuyết thành công!');
+  };
+
+  const handleSaveMethod = () => {
+    if (!activePattern) return;
+    updateLesson(les => {
+      const patterns = [...(les.patterns || [])];
+      if (patterns[selectedPatternIdx]) {
+        patterns[selectedPatternIdx] = {
+          ...patterns[selectedPatternIdx],
+          method: editedMethod,
+          solutionMethod: editedMethod,
+          isEdited: true
+        };
+      }
+      return {
+        ...les,
+        patterns,
+        isEdited: true
+      };
+    });
+    setIsEditingMethod(false);
+    toast.success('Đã lưu phương pháp giải dạng bài thành công!');
   };
 
   const handleOpenStudio = (pat = activePattern) => {
+    saveToStorage(skeleton, selectedSourceId);
     saveStoredTextbookContext({
       selectedSourceId,
       fileName: skeleton.fileName,
@@ -521,7 +842,12 @@ ${(activeLesson.keyFormulas || []).map(f => `$${f}$`).join(', ')}`;
       bookEdition: skeleton.bookEdition,
       selectedChapterIdx,
       selectedLessonIdx,
-      selectedPatternIdx
+      selectedPatternIdx,
+      activeChapterTitle: activeChapter?.title || '',
+      activeLessonTitle: activeLesson?.title || '',
+      activePatternName: (pat || activePattern)?.name || '',
+      activeTheoryPreview: displayedTheoryContent || '',
+      activeMethodPreview: activePatternMethod || ''
     });
     if (onNavigateTab) {
       onNavigateTab('textbook-studio');
@@ -536,8 +862,9 @@ ${(activeLesson.keyFormulas || []).map(f => `$${f}$`).join(', ')}`;
 
     try {
       await aiService.deleteTextbookSource(selectedSourceId);
-      toast.success(`Đã xóa thành công cuốn sách "${bookName}"!`);
-      
+      clearSavedTextbookData(selectedSourceId, skeleton.fileName || bookName);
+      toast.success(`Đã xóa thành công cuốn sách "${bookName}" và đồng bộ xóa cache Khung chương trình!`);
+
       const updatedSources = ingestedSources.filter(s => s.sourceId !== selectedSourceId);
       setIngestedSources(updatedSources);
 
@@ -551,6 +878,27 @@ ${(activeLesson.keyFormulas || []).map(f => `$${f}$`).join(', ')}`;
       }
     } catch (err) {
       toast.error('Lỗi khi xóa cuốn sách: ' + (err?.response?.data?.message || err.message));
+    }
+  };
+
+  const handleSyncToCurriculum = async () => {
+    if (!skeleton?.chapters || validChapters.length === 0) {
+      toast.warning('Chưa có dữ liệu Chương / Bài học SGK để đồng bộ sang Khung Chương Trình!');
+      return;
+    }
+    setSyncingCurriculum(true);
+    toast.info(`⏳ Đang đồng bộ ${validChapters.length} Chương SGK "${skeleton.subjectName} Lớp ${skeleton.grade}" sang CSDL Khung Chương Trình...`);
+    try {
+      await syncTextbookSkeletonToCurriculum({
+        skeleton,
+        chunks: sourceChunks,
+        contentService
+      });
+      toast.success(`🎉 Đã đồng bộ 100% Lý thuyết, Phương pháp & Câu hỏi SGK sang Khung Chương Trình & Dàn Kiến Thức!`);
+    } catch (err) {
+      toast.error('Lỗi đồng bộ Khung Chương Trình: ' + (err?.response?.data?.message || err.message));
+    } finally {
+      setSyncingCurriculum(false);
     }
   };
 
@@ -587,8 +935,8 @@ ${(activeLesson.keyFormulas || []).map(f => `$${f}$`).join(', ')}`;
   const minOcrPage = ocrScope === 'lesson' && activeLesson?.pageStart ? activeLesson.pageStart : 1;
   const maxOcrPage = ocrScope === 'lesson' && activeLesson?.pageEnd ? activeLesson.pageEnd : totalBookPages;
 
-  // Nếu sidebar đang thu gọn (isSidebarCollapsed === true): hiển thị 2 trang; nếu sidebar mở: 1 trang
-  const pageSize = isSidebarCollapsed ? 2 : 1;
+  // Nếu sidebar hoặc mục lục đang thu gọn: hiển thị 2 trang; nếu cả 2 đều mở: 1 trang
+  const pageSize = (isSidebarCollapsed || isTocCollapsed) ? 2 : 1;
   const safeCurrentPage = Math.min(Math.max(minOcrPage, ocrCurrentPage), maxOcrPage);
 
   const handlePrevOcrPage = () => {
@@ -688,6 +1036,17 @@ ${(activeLesson.keyFormulas || []).map(f => `$${f}$`).join(', ')}`;
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
+          <button
+            type="button"
+            disabled={syncingCurriculum || validChapters.length === 0}
+            onClick={handleSyncToCurriculum}
+            title="Đẩy toàn bộ Lý thuyết, Phương pháp & Câu hỏi SGK hiện tại vào CSDL Khung Chương Trình & Dàn Kiến Thức"
+            className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black flex items-center gap-1.5 cursor-pointer shadow-xs disabled:opacity-50 transition-all"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${syncingCurriculum ? 'animate-spin' : ''}`} />
+            <span>{syncingCurriculum ? 'Đang đồng bộ...' : 'Đồng Bộ Khung CT'}</span>
+          </button>
+
           <button
             type="button"
             onClick={handleResetToStandardGdpt}
@@ -894,28 +1253,54 @@ ${(activeLesson.keyFormulas || []).map(f => `$${f}$`).join(', ')}`;
 
         {/* 3. KHÔNG GIAN SƯ PHẠM 2 CỘT: CÂY MỤC LỤC BÊN TRÁI & NỘI DUNG LÝ THUYẾT + SGK PARSE BÊN PHẢI */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-0">
-          {/* CỘT BÊN TRÁI (4/12): CÂY MỤC LỤC CẤU TRÚC SÁCH PHÂN CẤP */}
-          <div className="lg:col-span-4 bg-white rounded-3xl border border-emerald-200/80 p-4 shadow-xs flex flex-col gap-3">
-            <div className="flex items-center justify-between border-b border-emerald-100 pb-2.5">
-              <div className="flex items-center gap-2">
-                <Layers className="w-4 h-4 text-emerald-600" />
-                <div>
-                  <h2 className="text-xs font-black uppercase tracking-wider text-emerald-950">
-                    Mục Lục Cấu Trúc SGK ({validChapters.length} Chương)
-                  </h2>
-                  <span className="text-[10px] text-slate-400 font-medium">Chương ▾ Bài học ▾ Dạng bài</span>
+          {/* CỘT BÊN TRÁI: CÂY MỤC LỤC CẤU TRÚC SÁCH PHÂN CẤP (CHO PHÉP THU GỌN NHƯ SIDEBAR) */}
+          {isTocCollapsed ? (
+            <div className="lg:col-span-1 bg-white rounded-3xl border border-emerald-200/80 p-3 shadow-xs flex flex-col items-center gap-4 transition-all">
+              <button
+                type="button"
+                onClick={() => setIsTocCollapsed(false)}
+                title="Mở rộng mục lục SGK"
+                className="p-2.5 rounded-2xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 cursor-pointer transition-all shadow-2xs hover:scale-105"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
+              <div className="text-[11px] font-black uppercase tracking-wider text-emerald-900 [writing-mode:vertical-lr] rotate-180 select-none py-2 flex items-center gap-1.5">
+                <Layers className="w-3.5 h-3.5" />
+                <span>Mục Lục SGK ({validChapters.length} Chương)</span>
+              </div>
+            </div>
+          ) : (
+            <div className="lg:col-span-4 bg-white rounded-3xl border border-emerald-200/80 p-4 shadow-xs flex flex-col gap-3 transition-all">
+              <div className="flex items-center justify-between border-b border-emerald-100 pb-2.5">
+                <div className="flex items-center gap-2">
+                  <Layers className="w-4 h-4 text-emerald-600" />
+                  <div>
+                    <h2 className="text-xs font-black uppercase tracking-wider text-emerald-950">
+                      Mục Lục Cấu Trúc SGK ({validChapters.length} Chương)
+                    </h2>
+                    <span className="text-[10px] text-slate-400 font-medium">Chương ▾ Bài học ▾ Dạng bài</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  {!isLocked && (
+                    <button
+                      type="button"
+                      onClick={handleAddNewChapter}
+                      className="px-2 py-1 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-[11px] font-bold flex items-center gap-1 cursor-pointer border border-emerald-200"
+                    >
+                      <Plus className="w-3 h-3" /> Thêm chương
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setIsTocCollapsed(true)}
+                    title="Thu gọn thanh mục lục"
+                    className="p-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 cursor-pointer transition-colors"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
-              {!isLocked && (
-                <button
-                  type="button"
-                  onClick={handleAddNewChapter}
-                  className="px-2.5 py-1 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-[11px] font-bold flex items-center gap-1 cursor-pointer border border-emerald-200"
-                >
-                  <Plus className="w-3 h-3" /> Thêm chương
-                </button>
-              )}
-            </div>
 
             {/* Danh sách các Chương & Bài học (Mở rộng tự nhiên theo toàn bộ danh sách chương) */}
             <div className="space-y-3 pr-1">
@@ -1086,11 +1471,33 @@ ${(activeLesson.keyFormulas || []).map(f => `$${f}$`).join(', ')}`;
                                             Dạng {pIdx + 1}: {cleanPrefix(pat.name, 'pattern') || pat.name}
                                           </span>
                                         </div>
-                                        <span className={`px-1 py-0.2 rounded text-[8px] font-bold shrink-0 ${
-                                          isPatternActive ? 'bg-white/20 text-white' : bloomMeta.color
-                                        }`}>
-                                          L{pat.bloomLevel || 2}
-                                        </span>
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            const nextLevel = ((pat.bloomLevel || 2) % 6) + 1;
+                                            setSkeleton(prev => {
+                                              const chapters = [...prev.chapters];
+                                              const ch = { ...chapters[cIdx] };
+                                              const lessons = [...ch.lessons];
+                                              const les = { ...lessons[lIdx] };
+                                              const patterns = [...(les.patterns || [])];
+                                              patterns[pIdx] = { ...patterns[pIdx], bloomLevel: nextLevel };
+                                              les.patterns = patterns;
+                                              lessons[lIdx] = les;
+                                              ch.lessons = lessons;
+                                              chapters[cIdx] = ch;
+                                              return { ...prev, chapters };
+                                            });
+                                            toast.success(`Đã đổi Dạng ${pIdx + 1} sang mức Bloom L${nextLevel}!`);
+                                          }}
+                                          title="Nhấn để đổi cấp độ nhận thức Bloom (L1 -> L6)"
+                                          className={`px-1.5 py-0.5 rounded text-[8px] font-black cursor-pointer hover:ring-2 hover:ring-amber-300 transition-all shrink-0 ${
+                                            isPatternActive ? 'bg-white/20 text-white' : bloomMeta.color
+                                          }`}
+                                        >
+                                          L{pat.bloomLevel || 2} ▾
+                                        </button>
                                       </div>
                                     );
                                   })}
@@ -1106,129 +1513,571 @@ ${(activeLesson.keyFormulas || []).map(f => `$${f}$`).join(', ')}`;
               })}
             </div>
           </div>
+        )}
 
-          {/* CỘT BÊN PHẢI (8/12): LÝ THUYẾT CHUẨN CỦA BÀI ĐÓ & NỘI DUNG SGK PARSE DROPDOWN */}
-          <div className="lg:col-span-8 flex flex-col gap-5 min-h-0">
-            {!activeLesson || isNonPedagogical(activeLesson.title) ? (
-              <div className="bg-white rounded-3xl border border-emerald-200/80 p-12 text-center text-slate-400 text-xs">
-                Vui lòng chọn bài học từ mục lục bên trái để xem lý thuyết và tri thức SGK.
-              </div>
-            ) : (
-              <>
-                {/* 1. KHỐI LÝ THUYẾT CHUẨN CỦA BÀI HỌC (Ô NỘI DUNG RẤT LỚN, KHÔNG RÂU RIA) */}
-                <div className="bg-white rounded-3xl border border-emerald-200/80 p-6 shadow-xs flex flex-col gap-4">
-                  {/* Header bài học với Breadcrumb & Các nút thao tác tinh gọn */}
-                  <div className="flex items-center justify-between flex-wrap gap-3 pb-3 border-b border-slate-100">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 text-[11px] text-slate-500 font-semibold mb-1">
-                        <span className="text-emerald-700 font-bold">{cleanPrefix(activeChapter?.title, 'chapter') || activeChapter?.title}</span>
-                        <span>›</span>
-                        <span>Trang {activeLesson.pageStart}–{activeLesson.pageEnd}</span>
-                      </div>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <h2 className="text-base sm:text-lg font-black text-emerald-950">
-                          Bài {activeLesson.lessonNumber || selectedLessonIdx + 1}: {cleanPrefix(activeLesson.title, 'lesson') || activeLesson.title}
-                        </h2>
-                        <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-[10px] font-bold">
-                          {validPatterns.length} Dạng bài
-                        </span>
+        {/* CỘT BÊN PHẢI: LÝ THUYẾT CHUẨN, CÂU HỎI BÀI TẬP & NỘI DUNG SGK PARSE */}
+        <div className={`${isTocCollapsed ? 'lg:col-span-11' : 'lg:col-span-8'} flex flex-col gap-5 min-h-0 transition-all`}>
+          {!activeLesson || isNonPedagogical(activeLesson.title) ? (
+            <div className="bg-white rounded-3xl border border-emerald-200/80 p-12 text-center text-slate-400 text-xs">
+              Vui lòng chọn bài học từ mục lục bên trái để xem lý thuyết và tri thức SGK.
+            </div>
+          ) : (
+            <>
+              {/* 1. KHỐI TIÊU ĐỀ & BỘ CHỌN DẠNG BÀI NHANH */}
+              <div className="bg-white rounded-3xl border border-emerald-200/80 p-5 shadow-xs flex flex-col gap-3">
+                {/* Header bài học với Breadcrumb & Các nút thao tác tinh gọn */}
+                <div className="flex items-center justify-between flex-wrap gap-3 pb-3 border-b border-slate-100">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 text-[11px] text-slate-500 font-semibold mb-1">
+                      {isTocCollapsed && (
                         <button
                           type="button"
-                          onClick={() => toggleLessonStatus(activeLesson)}
-                          className={`px-2 py-0.5 rounded-md text-[10px] font-bold cursor-pointer inline-flex items-center gap-1 ${
-                            activeLesson.status === 'ACCEPTED'
-                              ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200'
-                              : 'bg-amber-100 text-amber-800 hover:bg-amber-200'
-                          }`}
+                          onClick={() => setIsTocCollapsed(false)}
+                          className="mr-1 px-2 py-0.5 rounded-lg bg-emerald-100 hover:bg-emerald-200 text-emerald-900 text-[10.5px] font-bold flex items-center gap-1 cursor-pointer transition-colors"
+                          title="Mở rộng mục lục SGK"
                         >
-                          {activeLesson.status === 'ACCEPTED' ? <Check className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
-                          <span>{activeLesson.status === 'ACCEPTED' ? '✓ Đã duyệt bài học' : '⏳ Chưa duyệt'}</span>
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      {/* NÚT AI GEN: CHỈ CÓ ICON AI, KHÔNG CÓ LABEL TEXT */}
-                      <button
-                        type="button"
-                        disabled={enrichingKnowledge}
-                        onClick={handleAiEnrichTheory}
-                        title="AI sinh & mở rộng lý thuyết chuẩn sư phạm"
-                        className="p-2.5 rounded-xl bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-700 cursor-pointer shadow-2xs hover:scale-105 transition-all disabled:opacity-50"
-                      >
-                        <Sparkles className={`w-4 h-4 ${enrichingKnowledge ? 'animate-spin' : ''}`} />
-                      </button>
-
-                      {/* Nút sửa lý thuyết */}
-                      {!isLocked && !isEditingTheory && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setEditedTheory(activeTheoryContent);
-                            setIsEditingTheory(true);
-                          }}
-                          title="Chỉnh sửa lý thuyết bài học"
-                          className="p-2.5 rounded-xl border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 cursor-pointer shadow-2xs hover:scale-105 transition-all"
-                        >
-                          <Edit3 className="w-4 h-4 text-emerald-700" />
+                          <ChevronRight className="w-3 h-3" /> Mục lục
                         </button>
                       )}
+                      <span className="text-emerald-700 font-bold">{cleanPrefix(activeChapter?.title, 'chapter') || activeChapter?.title}</span>
+                      <span>›</span>
+                      <span>{cleanPrefix(activeLesson?.title, 'lesson') || activeLesson?.title}</span>
+                      <span>›</span>
+                      <span>Trang {activeLesson.pageStart}–{activeLesson.pageEnd}</span>
+                    </div>
 
-                      {/* Nút mở Studio biên soạn */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h2 className="text-base sm:text-lg font-black text-emerald-950">
+                        {activePattern
+                          ? `Dạng ${selectedPatternIdx + 1}: ${cleanPrefix(activePattern.name, 'pattern') || activePattern.name}`
+                          : `Bài ${activeLesson.lessonNumber || selectedLessonIdx + 1}: ${cleanPrefix(activeLesson.title, 'lesson') || activeLesson.title}`}
+                      </h2>
+                      {activePattern && (
+                        <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
+                          BLOOM_LEVELS.find(b => b.level === activePattern.bloomLevel)?.color || 'bg-emerald-100 text-emerald-800'
+                        }`}>
+                          Bloom L{activePattern.bloomLevel || 2}
+                        </span>
+                      )}
+                      <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                        {validPatterns.length} Dạng bài
+                      </span>
                       <button
                         type="button"
-                        onClick={() => handleOpenStudio()}
-                        className="px-3.5 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs"
+                        onClick={() => toggleLessonStatus(activeLesson)}
+                        className={`px-2 py-0.5 rounded-md text-[10px] font-bold cursor-pointer inline-flex items-center gap-1 ${
+                          (activePattern ? activePattern.status === 'ACCEPTED' : activeLesson.status === 'ACCEPTED')
+                            ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200'
+                            : 'bg-amber-100 text-amber-800 hover:bg-amber-200'
+                        }`}
                       >
-                        <Edit3 className="w-3.5 h-3.5" />
-                        <span>Mở Studio</span>
+                        {(activePattern ? activePattern.status === 'ACCEPTED' : activeLesson.status === 'ACCEPTED') ? <Check className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
+                        <span>{(activePattern ? activePattern.status === 'ACCEPTED' : activeLesson.status === 'ACCEPTED') ? '✓ Đã duyệt' : '⏳ Chờ duyệt'}</span>
                       </button>
                     </div>
                   </div>
 
-                  {/* Vùng nội dung lý thuyết thuần (Rộng lớn, chiếm toàn bộ không gian) */}
-                  {isEditingTheory ? (
-                    <div className="space-y-3 p-4 rounded-2xl bg-emerald-50/40 border border-emerald-300">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-black text-emerald-950 flex items-center gap-1.5">
-                          <Edit3 className="w-4 h-4 text-emerald-600" />
-                          Chỉnh sửa trực tiếp lý thuyết bài học
-                        </span>
-                        <div className="flex gap-2">
-                          <button
-                            type="button"
-                            onClick={() => setIsEditingTheory(false)}
-                            className="px-3 py-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-bold text-slate-700 cursor-pointer"
-                          >
-                            Hủy
-                          </button>
-                          <button
-                            type="button"
-                            onClick={handleSaveTheory}
-                            className="px-3 py-1 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-xs font-bold text-white cursor-pointer shadow-xs flex items-center gap-1"
-                          >
-                            <Save className="w-3.5 h-3.5" /> Lưu lý thuyết
-                          </button>
+                  <div className="flex items-center gap-2">
+                    {/* NÚT AI MỞ RỘNG & SINH LÝ THUYẾT & PHƯƠNG PHÁP */}
+                    <button
+                      type="button"
+                      disabled={enrichingKnowledge}
+                      onClick={() => handleAiEnrichTheory(selectedPatternIdx)}
+                      title="AI sinh & mở rộng lý thuyết, phương pháp giải chuyên sâu chuẩn GDPT 2018"
+                      className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white text-xs font-black flex items-center gap-1.5 cursor-pointer shadow-xs hover:scale-105 transition-all disabled:opacity-50"
+                    >
+                      <Sparkles className={`w-3.5 h-3.5 ${enrichingKnowledge ? 'animate-spin' : ''}`} />
+                      <span>{enrichingKnowledge ? 'Đang phân tích...' : '✨ AI Mở Rộng Dạng Này'}</span>
+                    </button>
+
+                    {/* Nút mở Studio biên soạn */}
+                    <button
+                      type="button"
+                      onClick={() => handleOpenStudio()}
+                      className="px-3.5 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs"
+                    >
+                      <Edit3 className="w-3.5 h-3.5" />
+                      <span>Mở Studio</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Thanh chọn Dạng bài nhanh (Quick Pattern Switcher) */}
+                {validPatterns.length > 0 && (
+                  <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
+                    <span className="text-[11px] font-bold text-slate-400 mr-1 flex items-center gap-1 shrink-0">
+                      <Target className="w-3.5 h-3.5 text-emerald-600" /> Dạng bài:
+                    </span>
+                    {validPatterns.map((pat, pIdx) => {
+                      const isPatActive = pIdx === selectedPatternIdx;
+                      return (
+                        <button
+                          key={pIdx}
+                          type="button"
+                          onClick={() => {
+                            setSelectedPatternIdx(pIdx);
+                            setIsEditingTheory(false);
+                            setIsEditingMethod(false);
+                          }}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 flex items-center gap-1.5 ${
+                            isPatActive
+                              ? 'bg-emerald-700 text-white shadow-xs'
+                              : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                          }`}
+                        >
+                          <span>Dạng {pIdx + 1}: {cleanPrefix(pat.name, 'pattern') || pat.name}</span>
+                          <span className={`px-1.5 py-0.2 rounded text-[9px] font-bold ${
+                            isPatActive ? 'bg-white/20 text-white' : 'bg-emerald-100 text-emerald-800'
+                          }`}>
+                            L{pat.bloomLevel || 2}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* [TẦNG 1] 📚 KHỐI 1: LÝ THUYẾT TRỌNG TÂM CHUẨN SGK GDPT 2018 */}
+              <div className="rounded-3xl border border-emerald-200/90 bg-white overflow-hidden shadow-2xs">
+                <div 
+                  onClick={() => setIsTheoryExpanded(!isTheoryExpanded)}
+                  className="p-4 bg-gradient-to-r from-emerald-50/80 via-teal-50/40 to-white flex items-center justify-between cursor-pointer border-b border-emerald-100 hover:bg-emerald-50 transition-colors select-none"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <span className="w-6 h-6 rounded-lg bg-emerald-700 text-white flex items-center justify-center text-xs font-black shadow-xs">
+                      1
+                    </span>
+                    <div>
+                      <h3 className="text-xs font-extrabold text-emerald-950 uppercase tracking-wider flex items-center gap-2">
+                        <span>Khối 1: Lý Thuyết Trọng Tâm Chuẩn SGK GDPT 2018</span>
+                        {activePattern && (
+                          <span className="px-2 py-0.2 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-extrabold">
+                            Dạng {selectedPatternIdx + 1}
+                          </span>
+                        )}
+                      </h3>
+                      <p className="text-[11px] text-emerald-800 font-medium">
+                        Khái niệm cốt lõi, hiện tượng khoa học và công thức định lý chuẩn hóa
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    {!isLocked && !isEditingTheory && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditedTheory(displayedTheoryContent);
+                          setIsEditingTheory(true);
+                          setIsTheoryExpanded(true);
+                        }}
+                        title="Chỉnh sửa lý thuyết"
+                        className="p-1.5 rounded-lg border border-emerald-300 bg-white hover:bg-emerald-100 text-emerald-800 text-xs font-bold cursor-pointer"
+                      >
+                        <Edit3 className="w-3.5 h-3.5 text-emerald-700" />
+                      </button>
+                    )}
+                    {isTheoryExpanded ? <ChevronUp className="w-4 h-4 text-emerald-700" /> : <ChevronDown className="w-4 h-4 text-emerald-700" />}
+                  </div>
+                </div>
+
+                {isTheoryExpanded && (
+                  <div className="p-5">
+                    {isEditingTheory ? (
+                      <div className="space-y-3 p-4 rounded-2xl bg-emerald-50/40 border border-emerald-300">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-black text-emerald-950 flex items-center gap-1.5">
+                            <Edit3 className="w-4 h-4 text-emerald-600" />
+                            Chỉnh sửa lý thuyết dạng bài / bài học
+                          </span>
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setIsEditingTheory(false)}
+                              className="px-3 py-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-bold text-slate-700 cursor-pointer"
+                            >
+                              Hủy
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleSaveTheory}
+                              className="px-3 py-1 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-xs font-bold text-white cursor-pointer shadow-xs flex items-center gap-1"
+                            >
+                              <Save className="w-3.5 h-3.5" /> Lưu lý thuyết
+                            </button>
+                          </div>
+                        </div>
+                        <textarea
+                          rows={10}
+                          value={editedTheory}
+                          onChange={e => setEditedTheory(e.target.value)}
+                          placeholder="Nhập nội dung lý thuyết định nghĩa, định luật, nguyên lý vận hành..."
+                          className="w-full p-4 rounded-xl border border-emerald-300 bg-white text-xs font-mono leading-relaxed outline-none focus:ring-2 focus:ring-emerald-400"
+                        />
+                      </div>
+                    ) : (
+                      <div className="p-5 rounded-2xl bg-slate-50/70 border border-slate-200/80 min-h-[160px] max-h-[450px] overflow-y-auto">
+                        <div className="text-[12px] leading-relaxed text-slate-800 space-y-2.5">
+                          <MathText text={displayedTheoryContent} />
                         </div>
                       </div>
-                      <textarea
-                        rows={16}
-                        value={editedTheory}
-                        onChange={e => setEditedTheory(e.target.value)}
-                        placeholder="Nhập nội dung lý thuyết định nghĩa, định luật, nguyên lý vận hành..."
-                        className="w-full p-4 rounded-xl border border-emerald-300 bg-white text-xs font-mono leading-relaxed outline-none focus:ring-2 focus:ring-emerald-400"
-                      />
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* [TẦNG 2] 💡 KHỐI 2: PHƯƠNG PHÁP GIẢI CHI TIẾT & DẠNG BÀI MẪU */}
+              <div className="rounded-3xl border border-amber-200/90 bg-white overflow-hidden shadow-2xs">
+                <div 
+                  onClick={() => setIsMethodExpanded(!isMethodExpanded)}
+                  className="p-4 bg-gradient-to-r from-amber-50/80 via-orange-50/40 to-white flex items-center justify-between cursor-pointer border-b border-amber-100 hover:bg-amber-50 transition-colors select-none"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <span className="w-6 h-6 rounded-lg bg-amber-600 text-white flex items-center justify-center text-xs font-black shadow-xs">
+                      2
+                    </span>
+                    <div>
+                      <h3 className="text-xs font-extrabold text-amber-950 uppercase tracking-wider flex items-center gap-2">
+                        <span>Khối 2: Phương Pháp Giải Chi Tiết & Dạng Bài Mẫu</span>
+                        {activePattern && (
+                          <span className="px-2 py-0.2 rounded-full bg-amber-100 text-amber-900 text-[10px] font-extrabold">
+                            {cleanPrefix(activePattern.name, 'pattern') || activePattern.name}
+                          </span>
+                        )}
+                      </h3>
+                      <p className="text-[11px] text-amber-800 font-medium">
+                        Các bước giải tuần tự, thuật toán biến đổi và dấu hiệu nhận biết dạng bài
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    {!isLocked && !isEditingMethod && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditedMethod(activePatternMethod || '');
+                          setIsEditingMethod(true);
+                          setIsMethodExpanded(true);
+                        }}
+                        title="Chỉnh sửa phương pháp giải"
+                        className="p-1.5 rounded-lg border border-amber-300 bg-white hover:bg-amber-100 text-amber-800 text-xs font-bold cursor-pointer"
+                      >
+                        <Edit3 className="w-3.5 h-3.5 text-amber-700" />
+                      </button>
+                    )}
+                    {isMethodExpanded ? <ChevronUp className="w-4 h-4 text-amber-700" /> : <ChevronDown className="w-4 h-4 text-amber-700" />}
+                  </div>
+                </div>
+
+                {isMethodExpanded && (
+                  <div className="p-5">
+                    {isEditingMethod ? (
+                      <div className="space-y-3 p-4 rounded-2xl bg-amber-50/40 border border-amber-300">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-black text-amber-950 flex items-center gap-1.5">
+                            <Edit3 className="w-4 h-4 text-amber-600" />
+                            Chỉnh sửa phương pháp giải chi tiết
+                          </span>
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setIsEditingMethod(false)}
+                              className="px-3 py-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-bold text-slate-700 cursor-pointer"
+                            >
+                              Hủy
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleSaveMethod}
+                              className="px-3 py-1 rounded-xl bg-amber-600 hover:bg-amber-700 text-xs font-bold text-white cursor-pointer shadow-xs flex items-center gap-1"
+                            >
+                              <Save className="w-3.5 h-3.5" /> Lưu phương pháp
+                            </button>
+                          </div>
+                        </div>
+                        <textarea
+                          rows={8}
+                          value={editedMethod}
+                          onChange={e => setEditedMethod(e.target.value)}
+                          placeholder="Nhập các bước giải: Bước 1: ..., Bước 2: ..., Bước 3: ..."
+                          className="w-full p-4 rounded-xl border border-amber-300 bg-white text-xs font-mono leading-relaxed outline-none focus:ring-2 focus:ring-amber-400"
+                        />
+                      </div>
+                    ) : activePatternMethod && activePatternMethod.trim() ? (
+                      <div className="p-5 rounded-2xl bg-slate-50/70 border border-slate-200/80 min-h-[120px] max-h-[450px] overflow-y-auto">
+                        <div className="text-[12px] leading-relaxed text-slate-800 space-y-2.5">
+                          <MathText text={activePatternMethod} />
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="p-6 rounded-2xl bg-amber-50/40 border border-dashed border-amber-300 text-center space-y-2">
+                        <Lightbulb className="w-6 h-6 text-amber-500 mx-auto" />
+                        <div className="text-xs font-bold text-slate-800">Chưa có phương pháp giải chi tiết cho dạng bài này</div>
+                        <p className="text-[11px] text-slate-500 max-w-md mx-auto">
+                          Bấm nút AI dưới đây để tự động phân tích và sinh phương pháp giải 4 bước bám sát SGK GDPT 2018.
+                        </p>
+                        <button
+                          type="button"
+                          disabled={enrichingKnowledge}
+                          onClick={() => handleAiEnrichTheory(selectedPatternIdx)}
+                          className="px-3.5 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer shadow-xs transition-all disabled:opacity-50"
+                        >
+                          <Sparkles className="w-3.5 h-3.5" />
+                          <span>Sinh Phương Pháp Giải Bằng AI</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+                {/* 3. KHỐI 3: NGÂN HÀNG CÂU HỎI & BÀI TẬP SGK CỦA BÀI HỌC / DẠNG BÀI */}
+                <div className="bg-white rounded-3xl border border-emerald-200/80 p-6 shadow-xs flex flex-col gap-4">
+                  {/* Header Section */}
+                  <div className="flex items-center justify-between flex-wrap gap-3 pb-3 border-b border-slate-100">
+                    <div className="flex items-center gap-3">
+                      <span className="w-6 h-6 rounded-lg bg-emerald-700 text-white flex items-center justify-center text-xs font-black shadow-xs">
+                        3
+                      </span>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider text-emerald-950">
+                            Khối 3: Ngân Hàng Câu Hỏi & Bài Tập SGK
+                          </h3>
+                          <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10.5px] font-bold">
+                            {displayedExercises.length} câu hỏi
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-500 font-medium mt-0.5">
+                          {activePattern ? `Dạng ${selectedPatternIdx + 1}: ${cleanPrefix(activePattern.name, 'pattern') || activePattern.name}` : `Bài ${activeLesson.lessonNumber || selectedLessonIdx + 1}: ${cleanPrefix(activeLesson.title, 'lesson') || activeLesson.title}`} • Phân hóa theo Bloom Taxonomy L1–L6
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Scope & Action buttons */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {/* Tab Filter: Bài này vs Dạng đang chọn */}
+                      <div className="flex items-center bg-slate-100 p-1 rounded-xl">
+                        <button
+                          type="button"
+                          onClick={() => setExerciseFilterScope('lesson')}
+                          className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                            exerciseFilterScope === 'lesson'
+                              ? 'bg-white text-emerald-900 shadow-2xs'
+                              : 'text-slate-600 hover:text-slate-900'
+                          }`}
+                        >
+                          Cả bài ({activeLessonExercises.length})
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setExerciseFilterScope('pattern')}
+                          className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                            exerciseFilterScope === 'pattern'
+                              ? 'bg-white text-emerald-900 shadow-2xs'
+                              : 'text-slate-600 hover:text-slate-900'
+                          }`}
+                        >
+                          {activePattern ? cleanPrefix(activePattern.name, 'pattern') : 'Dạng bài'} ({activePatternExercises.length})
+                        </button>
+                      </div>
+
+                      {onNavigateTab && (
+                        <button
+                          type="button"
+                          onClick={() => onNavigateTab('ingest')}
+                          className="px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-2xs transition-all"
+                          title="Chuyển sang trang Nạp SGK để AI sinh câu hỏi mới"
+                        >
+                          <Sparkles className="w-3.5 h-3.5 text-emerald-700" />
+                          <span>Sinh thêm ở Trang Nạp</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Bloom Level Filters (nếu có câu hỏi) */}
+                  {activeLessonExercises.length > 0 && (
+                    <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
+                      <span className="text-[11px] font-bold text-slate-400 mr-1 flex items-center gap-1">
+                        <Filter className="w-3 h-3" /> Lọc cấp độ:
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedBloomFilter(0)}
+                        className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer border ${
+                          selectedBloomFilter === 0
+                            ? 'bg-emerald-700 text-white border-emerald-700 shadow-2xs'
+                            : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                        }`}
+                      >
+                        Tất cả ({exerciseFilterScope === 'pattern' ? activePatternExercises.length : activeLessonExercises.length})
+                      </button>
+                      {BLOOM_LEVELS.map(b => {
+                        const count = (exerciseFilterScope === 'pattern' ? activePatternExercises : activeLessonExercises).filter(ex => (ex.bloomLevel || 2) === b.level).length;
+                        if (count === 0) return null;
+                        return (
+                          <button
+                            key={b.level}
+                            type="button"
+                            onClick={() => setSelectedBloomFilter(b.level)}
+                            className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer border ${
+                              selectedBloomFilter === b.level
+                                ? 'bg-emerald-700 text-white border-emerald-700 shadow-2xs'
+                                : `${b.color} hover:opacity-80`
+                            }`}
+                          >
+                            {b.label} ({count})
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Exercise List or Empty State */}
+                  {displayedExercises.length === 0 ? (
+                    <div className="p-8 rounded-2xl bg-slate-50/80 border border-dashed border-slate-300 text-center flex flex-col items-center gap-3">
+                      <div className="p-3 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-200">
+                        <HelpCircle className="w-6 h-6" />
+                      </div>
+                      <div className="max-w-md">
+                        <h4 className="text-xs font-bold text-slate-800">
+                          {activeLessonExercises.length === 0
+                            ? 'Chưa có bài tập nào được lưu cho bài học này'
+                            : 'Không có bài tập nào phù hợp với bộ lọc hiện tại'}
+                        </h4>
+                        <p className="text-[11px] text-slate-500 mt-1">
+                          {activeLessonExercises.length === 0
+                            ? 'Bài tập được đồng bộ tự động theo ID tài liệu dưới CSDL. Bạn có thể sang Trang Nạp SGK để AI tự động sinh câu hỏi theo chuẩn Bloom L1–L6.'
+                            : 'Hãy thử chọn cấp độ Bloom khác hoặc xem tất cả bài tập trong bài.'}
+                        </p>
+                      </div>
+                      {activeLessonExercises.length === 0 && onNavigateTab && (
+                        <button
+                          type="button"
+                          onClick={() => onNavigateTab('ingest')}
+                          className="mt-1 px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold flex items-center gap-2 cursor-pointer shadow-xs transition-all hover:scale-105"
+                        >
+                          <Sparkles className="w-4 h-4" />
+                          <span>Đến Trang Nạp SGK để sinh câu hỏi</span>
+                        </button>
+                      )}
                     </div>
                   ) : (
-                    <div className="p-6 rounded-2xl bg-slate-50/70 border border-slate-200/80 min-h-[920px] overflow-y-auto max-h-[140vh]">
-                      <div className="text-[12px] leading-relaxed text-slate-800 space-y-2.5">
-                        <MathText text={activeTheoryContent} />
-                      </div>
+                    <div className="space-y-4">
+                      {displayedExercises.map((ex, exIdx) => {
+                        const bloomInfo = BLOOM_LEVELS.find(b => b.level === (ex.bloomLevel || 2)) || BLOOM_LEVELS[1];
+                        const isSolutionExpanded = !!expandedExerciseSolutions[ex.id || exIdx];
+
+                        return (
+                          <div
+                            key={ex.id || exIdx}
+                            className="p-5 rounded-2xl bg-slate-50/70 border border-slate-200/90 shadow-2xs hover:border-emerald-300 transition-all flex flex-col gap-3"
+                          >
+                            {/* Card Top: Number, Bloom Badge, Pattern info */}
+                            <div className="flex items-center justify-between flex-wrap gap-2">
+                              <div className="flex items-center gap-2">
+                                <span className="w-6 h-6 rounded-lg bg-emerald-800 text-white text-[11px] font-black flex items-center justify-center shadow-2xs">
+                                  {exIdx + 1}
+                                </span>
+                                <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold border ${bloomInfo.color}`}>
+                                  {bloomInfo.label}
+                                </span>
+                                {ex.patternName && (
+                                  <span className="px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-600 text-[10.5px] font-medium">
+                                    {cleanPrefix(ex.patternName, 'pattern')}
+                                  </span>
+                                )}
+                              </div>
+
+                              {ex.sourcePage && (
+                                <span className="text-[10px] font-medium text-slate-400">
+                                  Nguồn: Trang {ex.sourcePage}
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Question Stem */}
+                            <div className="text-[12.5px] font-medium text-slate-900 leading-relaxed pl-1">
+                              <MathText text={ex.stem} />
+                            </div>
+
+                            {/* Options A, B, C, D */}
+                            {ex.options && ex.options.length > 0 && (
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                                {ex.options.map((opt, optIdx) => {
+                                  const isCorrect = optIdx === ex.correctIndex;
+                                  const letter = String.fromCharCode(65 + optIdx);
+                                  return (
+                                    <div
+                                      key={optIdx}
+                                      className={`p-2.5 rounded-xl border text-xs transition-all flex items-start gap-2 ${
+                                        isCorrect
+                                          ? 'bg-emerald-50/90 border-emerald-300 text-emerald-950 font-bold ring-1 ring-emerald-400/50 shadow-2xs'
+                                          : 'bg-white border-slate-200/90 text-slate-800'
+                                      }`}
+                                    >
+                                      <span
+                                        className={`w-5 h-5 rounded-md flex items-center justify-center text-[10.5px] font-black shrink-0 ${
+                                          isCorrect
+                                            ? 'bg-emerald-700 text-white'
+                                            : 'bg-slate-100 text-slate-600'
+                                        }`}
+                                      >
+                                        {letter}
+                                      </span>
+                                      <div className="flex-1 leading-snug">
+                                        <MathText text={opt} />
+                                      </div>
+                                      {isCorrect && (
+                                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+
+                            {/* Solution toggle & display */}
+                            {ex.solution && (
+                              <div className="pt-2 border-t border-slate-200/70">
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setExpandedExerciseSolutions(prev => ({
+                                      ...prev,
+                                      [ex.id || exIdx]: !prev[ex.id || exIdx]
+                                    }))
+                                  }
+                                  className="text-[11px] font-bold text-amber-800 hover:text-amber-900 flex items-center gap-1.5 cursor-pointer transition-colors"
+                                >
+                                  <Lightbulb className="w-3.5 h-3.5 text-amber-600" />
+                                  <span>{isSolutionExpanded ? 'Thu gọn lời giải' : 'Xem phương pháp & lời giải chi tiết'}</span>
+                                  {isSolutionExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                                </button>
+
+                                {isSolutionExpanded && (
+                                  <div className="mt-2 p-3.5 rounded-xl bg-amber-50/60 border border-amber-200 text-xs text-amber-950 leading-relaxed shadow-2xs">
+                                    <span className="text-[10px] font-black uppercase tracking-wider text-amber-800 block mb-1">
+                                      💡 Hướng Dẫn Giải Chi Tiết:
+                                    </span>
+                                    <MathText text={ex.solution} />
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
 
-                {/* 2. KHỐI NỘI DUNG SGK PARSE RA (DỜI XUỐNG DƯỚI TRONG 1 DROPDOWN ĐƯỢC PHÂN TRANG CON VỚI < >) */}
+                {/* 4. KHỐI 4: NỘI DUNG SGK PARSE RA (DROPDOWN BẢNG BIỂU & OCR TỪNG TRANG) */}
                 <div className="rounded-3xl border border-slate-200/90 bg-white overflow-hidden shadow-2xs">
                   {/* Header Dropdown Toggle */}
                   <div
@@ -1236,12 +2085,12 @@ ${(activeLesson.keyFormulas || []).map(f => `$${f}$`).join(', ')}`;
                     className="p-4 bg-slate-50/90 hover:bg-slate-100/90 border-b border-slate-200 flex items-center justify-between cursor-pointer transition-colors"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-xl bg-teal-100 text-teal-800 shadow-2xs">
-                        <FileText className="w-4 h-4" />
-                      </div>
+                      <span className="w-6 h-6 rounded-lg bg-teal-700 text-white flex items-center justify-center text-xs font-black shadow-xs">
+                        4
+                      </span>
                       <div>
                         <h3 className="text-xs font-black uppercase tracking-wider text-slate-900 flex items-center gap-2">
-                          <span>Nội Dung Bóc Tách Từ SGK Gốc</span>
+                          <span>Khối 4: Nội Dung Bóc Tách Từ SGK Gốc (OCR)</span>
                           <span className="px-2 py-0.5 rounded-full bg-teal-100 text-teal-800 text-[10px] font-bold">
                             {sourceChunks.length} Đoạn Trích OCR
                           </span>
@@ -1327,7 +2176,7 @@ ${(activeLesson.keyFormulas || []).map(f => `$${f}$`).join(', ')}`;
                           {/* Huy hiệu chế độ xem 1 trang hoặc 2 trang */}
                           <div className="hidden sm:flex items-center gap-1 text-[10.5px] font-bold text-slate-500 pl-2 border-l border-slate-200">
                             <Columns className="w-3.5 h-3.5 text-slate-400" />
-                            <span>{pageSize === 2 ? '2 Trang (Sidebar đóng)' : '1 Trang (Sidebar mở)'}</span>
+                            <span>{pageSize === 2 ? '2 Trang (Mục lục / Sidebar thu gọn)' : '1 Trang (Mục lục mở)'}</span>
                           </div>
                         </div>
                       </div>

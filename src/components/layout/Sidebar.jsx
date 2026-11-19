@@ -186,12 +186,34 @@ export default function Sidebar({
                 ]
               },
               {
-                id: 'exam-studio',
-                label: 'Parse Đề thi',
-                sublabel: 'Tách câu hỏi & Studio Đề',
+                id: 'exam-group',
+                label: 'Đề thi & AI Bloom',
+                sublabel: 'Kho đề, Parse & Studio',
                 icon: FileSpreadsheet,
-                active: activeTab === 'exam-studio',
-                onClick: () => setActiveTab('exam-studio')
+                iconColor: 'from-indigo-500 to-blue-700',
+                children: [
+                  {
+                    id: 'exam-bank',
+                    label: '1. Kho Đề & Xem Đề Thi',
+                    badge: 'Kho Đề',
+                    active: activeTab === 'exam-bank',
+                    onClick: () => setActiveTab('exam-bank')
+                  },
+                  {
+                    id: 'exam-ingest',
+                    label: '2. Parse PDF & AI Bloom',
+                    badge: '2 Phần',
+                    active: activeTab === 'exam-ingest',
+                    onClick: () => setActiveTab('exam-ingest')
+                  },
+                  {
+                    id: 'exam-studio',
+                    label: '3. Studio Biên Soạn Đề',
+                    badge: 'Studio',
+                    active: activeTab === 'exam-studio',
+                    onClick: () => setActiveTab('exam-studio')
+                  }
+                ]
               },
               {
                 id: 'diagnostic',
@@ -300,12 +322,34 @@ export default function Sidebar({
                   ]
                 },
                 {
-                  id: 'exam-studio',
-                  label: 'Parse Đề thi',
-                  sublabel: 'Tách câu hỏi & Studio Đề',
+                  id: 'exam-group',
+                  label: 'Đề thi & AI Bloom',
+                  sublabel: 'Kho đề, Parse & Studio',
                   icon: FileSpreadsheet,
-                  active: activeTab === 'exam-studio',
-                  onClick: () => setActiveTab('exam-studio')
+                  iconColor: 'from-indigo-500 to-blue-700',
+                  children: [
+                    {
+                      id: 'exam-bank',
+                      label: '1. Kho Đề & Xem Đề Thi',
+                      badge: 'Kho Đề',
+                      active: activeTab === 'exam-bank',
+                      onClick: () => setActiveTab('exam-bank')
+                    },
+                    {
+                      id: 'exam-ingest',
+                      label: '2. Parse PDF & AI Bloom',
+                      badge: '2 Phần',
+                      active: activeTab === 'exam-ingest',
+                      onClick: () => setActiveTab('exam-ingest')
+                    },
+                    {
+                      id: 'exam-studio',
+                      label: '3. Studio Biên Soạn Đề',
+                      badge: 'Studio',
+                      active: activeTab === 'exam-studio',
+                      onClick: () => setActiveTab('exam-studio')
+                    }
+                  ]
                 },
                 {
                   id: 'analytics',
@@ -444,12 +488,34 @@ export default function Sidebar({
                 ]
               },
               {
-                id: 'exam-studio',
-                label: 'Parse Đề thi',
-                sublabel: 'Tách câu hỏi & Studio Đề',
+                id: 'exam-group',
+                label: 'Đề thi & AI Bloom',
+                sublabel: 'Kho đề, Parse & Studio',
                 icon: FileSpreadsheet,
-                active: activeTab === 'exam-studio',
-                onClick: () => setActiveTab('exam-studio')
+                iconColor: 'from-indigo-500 to-blue-700',
+                children: [
+                  {
+                    id: 'exam-bank',
+                    label: '1. Kho Đề & Xem Đề Thi',
+                    badge: 'Kho Đề',
+                    active: activeTab === 'exam-bank',
+                    onClick: () => setActiveTab('exam-bank')
+                  },
+                  {
+                    id: 'exam-ingest',
+                    label: '2. Parse PDF & AI Bloom',
+                    badge: '2 Phần',
+                    active: activeTab === 'exam-ingest',
+                    onClick: () => setActiveTab('exam-ingest')
+                  },
+                  {
+                    id: 'exam-studio',
+                    label: '3. Studio Biên Soạn Đề',
+                    badge: 'Studio',
+                    active: activeTab === 'exam-studio',
+                    onClick: () => setActiveTab('exam-studio')
+                  }
+                ]
               },
               {
                 id: 'tuition',
@@ -482,13 +548,13 @@ export default function Sidebar({
               {
                 id: 'diagnostic',
                 label: 'Khảo thí & Chẩn đoán',
-                sublabel: 'Đề chuẩn hóa 30 câu & IRT 2PL',
+                sublabel: 'Đề chuẩn hóa năng lực & IRT 2PL',
                 icon: ClipboardCheck,
                 iconColor: 'from-orange-400 to-rose-500',
                 activeGlow: 'shadow-rose-500/30',
                 active: activeTab === 'diagnostic',
                 onClick: () => setActiveTab('diagnostic'),
-                badge: '30 câu'
+                badge: 'Khảo thí'
               },
               {
                 id: 'history',
@@ -596,7 +662,8 @@ export default function Sidebar({
   const prevTabRef = React.useRef(activeTab);
   const [expandedGroups, setExpandedGroups] = useState({
     exams: activeTab === 'diagnostic' || activeTab === 'mock',
-    'textbook-group': activeTab === 'textbook-standard' || activeTab === 'textbook-ingest' || activeTab === 'textbook-studio'
+    'textbook-group': activeTab === 'textbook-standard' || activeTab === 'textbook-ingest' || activeTab === 'textbook-studio',
+    'exam-group': activeTab === 'exam-bank' || activeTab === 'exam-ingest' || activeTab === 'exam-studio'
   });
 
   useEffect(() => {
@@ -607,6 +674,9 @@ export default function Sidebar({
       }
       if (activeTab === 'textbook-standard' || activeTab === 'textbook-ingest' || activeTab === 'textbook-studio') {
         setExpandedGroups(prev => ({ ...prev, 'textbook-group': true }));
+      }
+      if (activeTab === 'exam-bank' || activeTab === 'exam-ingest' || activeTab === 'exam-studio') {
+        setExpandedGroups(prev => ({ ...prev, 'exam-group': true }));
       }
     }
   }, [activeTab]);
@@ -696,7 +766,15 @@ export default function Sidebar({
                   if (item.children) {
                     const isExpanded = !!expandedGroups[item.id];
                     const activeGroup = item.children.some((child) => child.active);
-                    const groupIconGradient = item.iconColor || (item.id === 'textbook-group' ? 'from-emerald-500 to-teal-700' : 'from-orange-400 to-rose-500');
+                    const isTextbookGroup = item.id === 'textbook-group';
+                    const isExamGroup = item.id === 'exam-group';
+                    const groupIconGradient =
+                      item.iconColor ||
+                      (isTextbookGroup
+                        ? 'from-emerald-500 to-teal-700'
+                        : isExamGroup
+                        ? 'from-indigo-500 to-blue-700'
+                        : 'from-orange-400 to-rose-500');
 
                     if (isCollapsed) {
                       return (
@@ -710,7 +788,11 @@ export default function Sidebar({
                             }}
                             className={`flex w-full items-center justify-center rounded-2xl p-2 transition-all cursor-pointer ${
                               activeGroup
-                                ? 'bg-gradient-to-br from-emerald-600 to-teal-600 text-white shadow-md'
+                                ? isTextbookGroup
+                                  ? 'bg-gradient-to-br from-emerald-600 to-teal-600 text-white shadow-md'
+                                  : isExamGroup
+                                  ? 'bg-gradient-to-br from-[#1E3A5F] to-indigo-600 text-white shadow-md'
+                                  : 'bg-gradient-to-br from-orange-500 to-rose-500 text-white shadow-md'
                                 : 'text-slate-700 hover:bg-white hover:border-slate-200 hover:shadow-xs'
                             }`}
                           >
@@ -731,7 +813,11 @@ export default function Sidebar({
                           onClick={() => toggleGroup(item.id)}
                           className={`flex w-full items-center gap-3 rounded-2xl border px-3.5 py-2.5 text-left transition-all cursor-pointer ${
                             activeGroup
-                              ? (item.id === 'textbook-group' ? 'border-emerald-200 bg-emerald-50 text-emerald-950 font-bold' : 'border-orange-100 bg-orange-50 text-orange-700')
+                              ? isTextbookGroup
+                                ? 'border-emerald-200 bg-emerald-50 text-emerald-950 font-bold'
+                                : isExamGroup
+                                ? 'border-indigo-200 bg-indigo-50 text-indigo-950 font-bold'
+                                : 'border-orange-100 bg-orange-50 text-orange-700'
                               : 'border-transparent text-slate-700 hover:border-slate-200 hover:bg-slate-50'
                           }`}
                         >
@@ -742,10 +828,10 @@ export default function Sidebar({
                             <span className="block text-xs font-extrabold truncate">{item.label}</span>
                             {item.sublabel && <span className="block text-[10px] text-slate-400 font-medium truncate">{item.sublabel}</span>}
                           </div>
-                          <ChevronDown className={`h-3.5 w-3.5 shrink-0 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''} ${activeGroup ? (item.id === 'textbook-group' ? 'text-emerald-700' : 'text-orange-500') : 'text-slate-400'}`} />
+                          <ChevronDown className={`h-3.5 w-3.5 shrink-0 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''} ${activeGroup ? (isTextbookGroup ? 'text-emerald-700' : isExamGroup ? 'text-indigo-700' : 'text-orange-500') : 'text-slate-400'}`} />
                         </button>
                         <div id={`nav-group-${item.id}-${mobile ? 'mobile' : 'desktop'}`} hidden={!isExpanded}>
-                          <div className={`mb-2 ml-7 mt-1 space-y-1 border-l-2 pl-3 ${item.id === 'textbook-group' ? 'border-emerald-200' : 'border-orange-100'}`}>
+                          <div className={`mb-2 ml-7 mt-1 space-y-1 border-l-2 pl-3 ${isTextbookGroup ? 'border-emerald-200' : isExamGroup ? 'border-indigo-200' : 'border-orange-100'}`}>
                             {item.children.map((child) => (
                               <button
                                 key={child.id}
@@ -754,12 +840,16 @@ export default function Sidebar({
                                 onClick={() => { child.onClick?.(); onNavigate?.(); }}
                                 className={`flex w-full items-center justify-between gap-2 rounded-xl px-3 py-2 text-left text-xs transition-colors cursor-pointer ${
                                   child.active
-                                    ? (item.id === 'textbook-group'
-                                        ? 'bg-gradient-to-r from-emerald-600 to-teal-600 font-bold text-white shadow-sm shadow-emerald-500/25'
-                                        : 'bg-gradient-to-r from-orange-500 to-rose-500 font-bold text-white shadow-sm shadow-orange-500/25')
-                                    : (item.id === 'textbook-group'
-                                        ? 'font-medium text-slate-600 hover:bg-emerald-50 hover:text-emerald-800'
-                                        : 'font-medium text-slate-600 hover:bg-orange-50 hover:text-orange-700')
+                                    ? isTextbookGroup
+                                      ? 'bg-gradient-to-r from-emerald-600 to-teal-600 font-bold text-white shadow-sm shadow-emerald-500/25'
+                                      : isExamGroup
+                                      ? 'bg-gradient-to-r from-[#1E3A5F] to-indigo-600 font-bold text-white shadow-sm shadow-indigo-500/25'
+                                      : 'bg-gradient-to-r from-orange-500 to-rose-500 font-bold text-white shadow-sm shadow-orange-500/25'
+                                    : isTextbookGroup
+                                    ? 'font-medium text-slate-600 hover:bg-emerald-50 hover:text-emerald-800'
+                                    : isExamGroup
+                                    ? 'font-medium text-slate-600 hover:bg-indigo-50 hover:text-indigo-900'
+                                    : 'font-medium text-slate-600 hover:bg-orange-50 hover:text-orange-700'
                                 }`}
                               >
                                 <span className="truncate">{child.label}</span>
@@ -767,7 +857,11 @@ export default function Sidebar({
                                   <span className={`shrink-0 rounded-md px-1.5 py-0.5 text-[9px] font-bold ${
                                     child.active
                                       ? 'bg-white/20 text-white'
-                                      : (item.id === 'textbook-group' ? 'bg-emerald-100 text-emerald-800' : 'bg-orange-50 text-orange-600')
+                                      : isTextbookGroup
+                                      ? 'bg-emerald-100 text-emerald-800'
+                                      : isExamGroup
+                                      ? 'bg-indigo-100 text-indigo-800'
+                                      : 'bg-orange-50 text-orange-600'
                                   }`}>
                                     {child.badge}
                                   </span>

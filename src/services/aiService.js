@@ -34,6 +34,16 @@ export const aiService = {
   },
 
   /**
+   * Phân loại hàng loạt câu hỏi đề thi vào đúng nút Miền -> Chương -> Bài -> Dạng bài của Khung chương trình
+   * @param {object} payload - { subject_code, exam_title, taxonomy_nodes, questions }
+   * @returns {Promise<{classified_count: number, provider: string, mappings: Array<object>}>}
+   */
+  async classifyExamNodes(payload) {
+    const response = await apiClient.post('/api/ai-engine/exams/classify-nodes', payload);
+    return response.data;
+  },
+
+  /**
    * Lấy URL trang giao diện xem trước đề thi bóc tách trực quan
    * @param {string} [jobId]
    * @returns {string}
