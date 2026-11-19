@@ -69,12 +69,65 @@ export const cleanPrefix = (str, type = 'chapter') => {
 };
 
 /**
- * Kiểm tra xem một chuỗi lý thuyết có phải là template placeholder rỗng/chung chung hay không
+ * Chuẩn hóa dấu thanh tiếng Việt cũ/mới (hoá <-> hóa, lí <-> lý...) phục vụ so khớp tên môn/bài học
+ */
+export const normalizeViText = (str = '') => {
+  if (!str || typeof str !== 'string') return '';
+  return str
+    .normalize('NFC')
+    .toLowerCase()
+    .replace(/hoá/g, 'hóa')
+    .replace(/toá/g, 'tóa')
+    .replace(/oà/g, 'òa')
+    .replace(/oá/g, 'óa')
+    .replace(/oả/g, 'ỏa')
+    .replace(/oã/g, 'õa')
+    .replace(/oạ/g, 'ọa')
+    .replace(/uỳ/g, 'ùy')
+    .replace(/uý/g, 'úy')
+    .replace(/uỷ/g, 'ủy')
+    .replace(/uỹ/g, 'ũy')
+    .replace(/uỵ/g, 'ụy')
+    .replace(/vật lý/g, 'vật lí')
+    .replace(/địa lý/g, 'địa lí')
+    .trim();
+};
+
+/**
+ * Kiểm tra xem một chuỗi lý thuyết / mô tả / phương pháp có phải là template placeholder rỗng/chung chung hay không
  */
 export const isGenericPlaceholder = (text) => {
   if (!text || typeof text !== 'string') return false;
-  const clean = text.toLowerCase().trim();
+  const clean = normalizeViText(text);
   if (clean.length === 0) return true;
+
+  // Các câu mẫu stub tự sinh bởi backend/frontend (luôn bị coi là placeholder nếu ngắn hơn 320 ký tự)
+  const stubPrefixes = [
+    'mục tiêu nhận thức và kỹ năng áp dụng cho',
+    'áp dụng phương pháp sư phạm chuẩn sgk',
+    'dạng bài bóc tách từ sgk',
+    'phương pháp chuẩn sgk',
+    'phương pháp sư phạm chuẩn sgk',
+    'mô tả dạng bài',
+    'phương pháp giải',
+    'áp dụng quy tắc lý thuyết',
+    'quy trình giải quyết vấn đề',
+    'nhận diện các đặc trưng cốt lõi',
+    'vận dụng phân tích trường hợp cụ thể',
+    'lý thuyết trích xuất từ sách giáo khoa chuẩn gdpt 2018',
+    'lý thuyết bóc tách từ sgk chuẩn gdpt 2018',
+    'phương pháp giải từng bước chuẩn sư phạm',
+    'phương pháp giải từng bước kèm katex',
+    '(đang cập nhật lý thuyết sgk)',
+    '(đang cập nhật phương pháp giải)',
+    'phương pháp tư duy chuẩn hóa đgnl đhqg-hcm',
+    'kiến thức nền tảng trong cơ sở dữ liệu',
+    'phương pháp giải chi tiết trong cơ sở dữ liệu'
+  ];
+
+  if (clean.length < 320 && stubPrefixes.some(p => clean === p || clean === `${p}.` || clean.startsWith(p))) {
+    return true;
+  }
 
   // Các câu mẫu generic template cần lọc bỏ triệt để
   const placeholderPhrases = [
@@ -132,7 +185,36 @@ export const GDPT_PRESETS = {
                 status: 'ACCEPTED',
                 description: 'Xác định độ dịch chuyển và vận tốc trên quỹ đạo thẳng.',
                 method: 'Dùng công thức \\vec{d} = \\vec{x}_2 - \\vec{x}_1 và v_{tb} = \\frac{d}{\\Delta t}.',
-                exercises: []
+                exercises: [
+                  {
+                    id: 'ex_phys10_b1_p1_1',
+                    stem: 'Một vận động viên bơi lội bơi xuôi theo chiều dài $50\\text{ m}$ của bể bơi hết $20\\text{ s}$, rồi lập tức quay đầu bơi ngược lại về chỗ xuất phát trong $22\\text{ s}$. Tốc độ trung bình và độ lớn vận tốc trung bình của người đó trong cả hành trình lần lượt là:',
+                    options: [
+                      'Tốc độ trung bình $2,38\\text{ m/s}$; Vận tốc trung bình $0\\text{ m/s}$',
+                      'Tốc độ trung bình $0\\text{ m/s}$; Vận tốc trung bình $2,38\\text{ m/s}$',
+                      'Tốc độ trung bình $2,50\\text{ m/s}$; Vận tốc trung bình $2,27\\text{ m/s}$',
+                      'Tốc độ trung bình $1,19\\text{ m/s}$; Vận tốc trung bình $1,19\\text{ m/s}$'
+                    ],
+                    correctIndex: 0,
+                    bloomLevel: 2,
+                    solution: 'Tổng quãng đường bơi cả đi lẫn về là $s = 50 + 50 = 100\\text{ m}$. Tổng thời gian bơi là $t = 20 + 22 = 42\\text{ s}$. Do đó tốc độ trung bình: $v_{tb} = \\frac{s}{t} = \\frac{100}{42} \\approx 2,38\\text{ m/s}$. Vì điểm kết thúc trùng với điểm xuất phát nên độ dịch chuyển tổng cộng $d = 0\\text{ m}$. Độ lớn vận tốc trung bình: $v = \\frac{d}{t} = 0\\text{ m/s}$.',
+                    sourcePage: 16
+                  },
+                  {
+                    id: 'ex_phys10_b1_p1_2',
+                    stem: 'Một xe ô tô chạy từ thành phố A đến thành phố B. Trong nửa đoạn đường đầu ô tô chuyển động với tốc độ không đổi $v_1 = 60\\text{ km/h}$, trong nửa đoạn đường còn lại chuyển động với tốc độ $v_2 = 40\\text{ km/h}$. Tốc độ trung bình của ô tô trên toàn bộ quãng đường $AB$ là:',
+                    options: [
+                      '$48\\text{ km/h}$',
+                      '$50\\text{ km/h}$',
+                      '$45\\text{ km/h}$',
+                      '$52\\text{ km/h}$'
+                    ],
+                    correctIndex: 0,
+                    bloomLevel: 3,
+                    solution: 'Gọi chiều dài cả quãng đường là $s$. Thời gian đi nửa đầu: $t_1 = \\frac{s/2}{v_1} = \\frac{s}{120}$. Thời gian đi nửa sau: $t_2 = \\frac{s/2}{v_2} = \\frac{s}{80}$. Tổng thời gian chuyển động: $t = t_1 + t_2 = \\frac{s}{120} + \\frac{s}{80} = \\frac{5s}{240} = \\frac{s}{48}$. Tốc độ trung bình trên cả đoạn đường: $v_{tb} = \\frac{s}{t} = \\frac{s}{s/48} = 48\\text{ km/h}$.',
+                    sourcePage: 18
+                  }
+                ]
               },
               {
                 patternCode: 'P2',
@@ -141,7 +223,22 @@ export const GDPT_PRESETS = {
                 status: 'ACCEPTED',
                 description: 'Cộng vectơ vận tốc trong hệ quy chiếu đứng yên và chuyển động.',
                 method: 'Áp dụng công thức cộng vận tốc \\vec{v}_{13} = \\vec{v}_{12} + \\vec{v}_{23}.',
-                exercises: []
+                exercises: [
+                  {
+                    id: 'ex_phys10_b1_p2_1',
+                    stem: 'Một chiếc ca nô chạy xuôi dòng nước từ bến A đến bến B mất $2\\text{ giờ}$. Biết vận tốc của ca nô đối với dòng nước là $v_{12} = 15\\text{ km/h}$ và vận tốc của dòng nước đối với bờ là $v_{23} = 3\\text{ km/h}$. Khoảng cách giữa hai bến A và B là:',
+                    options: [
+                      '$36\\text{ km}$',
+                      '$30\\text{ km}$',
+                      '$24\\text{ km}$',
+                      '$18\\text{ km}$'
+                    ],
+                    correctIndex: 0,
+                    bloomLevel: 3,
+                    solution: 'Khi ca nô chuyển động xuôi dòng, vectơ vận tốc của ca nô cùng hướng với dòng nước. Vận tốc của ca nô đối với bờ là: $v_{13} = v_{12} + v_{23} = 15 + 3 = 18\\text{ km/h}$. Khoảng cách giữa hai bến: $s = v_{13} \\times t = 18 \\times 2 = 36\\text{ km}$.',
+                    sourcePage: 22
+                  }
+                ]
               }
             ]
           },
@@ -165,7 +262,22 @@ export const GDPT_PRESETS = {
                 status: 'ACCEPTED',
                 description: 'Độ dốc đồ thị d-t là vận tốc, độ dốc v-t là gia tốc.',
                 method: 'Hệ số góc k = \\frac{\\Delta d}{\\Delta t} biểu thị vận tốc.',
-                exercises: []
+                exercises: [
+                  {
+                    id: 'ex_phys10_b2_p1_1',
+                    stem: 'Đồ thị độ dịch chuyển – thời gian ($d - t$) của một chất điểm là một đường thẳng đi qua gốc tọa độ và qua điểm $M(t = 4\\text{ s};\\ d = 12\\text{ m})$. Tính chất chuyển động và vận tốc của vật là:',
+                    options: [
+                      'Chuyển động thẳng đều với vận tốc $v = 3\\text{ m/s}$',
+                      'Chuyển động nhanh dần đều với gia tốc $a = 3\\text{ m/s}^2$',
+                      'Chuyển động thẳng đều với vận tốc $v = 48\\text{ m/s}$',
+                      'Vật đứng yên tại tọa độ $d = 12\\text{ m}$'
+                    ],
+                    correctIndex: 0,
+                    bloomLevel: 2,
+                    solution: 'Đồ thị $d - t$ là đường thẳng xiên góc chứng tỏ vận tốc của vật không đổi theo thời gian (chuyển động thẳng đều). Hệ số góc của đồ thị biểu thị vận tốc: $v = \\frac{\\Delta d}{\\Delta t} = \\frac{12 - 0}{4 - 0} = 3\\text{ m/s}$.',
+                    sourcePage: 26
+                  }
+                ]
               },
               {
                 patternCode: 'P2',
@@ -174,7 +286,22 @@ export const GDPT_PRESETS = {
                 status: 'ACCEPTED',
                 description: 'Tính quãng đường, thời gian và vận tốc trong chuyển động thẳng biến đổi đều.',
                 method: 'Dùng hệ phương trình độc lập thời gian v^2 - v_0^2 = 2ad.',
-                exercises: []
+                exercises: [
+                  {
+                    id: 'ex_phys10_b2_p2_1',
+                    stem: 'Một đoàn tàu đang chạy với tốc độ $72\\text{ km/h}$ thì hãm phanh chuyển động chậm dần đều, sau thời gian $10\\text{ s}$ thì dừng hẳn. Quãng đường đoàn tàu đi được kể từ lúc hãm phanh đến khi dừng hẳn là:',
+                    options: [
+                      '$100\\text{ m}$',
+                      '$200\\text{ m}$',
+                      '$360\\text{ m}$',
+                      '$50\\text{ m}$'
+                    ],
+                    correctIndex: 0,
+                    bloomLevel: 3,
+                    solution: 'Đổi vận tốc ban đầu: $v_0 = 72\\text{ km/h} = 20\\text{ m/s}$. Vận tốc khi dừng hẳn: $v = 0\\text{ m/s}$. Gia tốc của tàu: $a = \\frac{v - v_0}{t} = \\frac{0 - 20}{10} = -2\\text{ m/s}^2$. Quãng đường tàu đi được: áp dụng hệ thức độc lập thời gian $v^2 - v_0^2 = 2ad \\implies 0^2 - 20^2 = 2 \\times (-2) \\times d \\implies d = \\frac{-400}{-4} = 100\\text{ m}$.',
+                    sourcePage: 30
+                  }
+                ]
               }
             ]
           },
@@ -848,24 +975,31 @@ export const getDefaultLessonTheory = (subjectCode = 'PHYS', grade = 10, lessonT
 /**
  * Trích xuất các Vector Chunks thuộc về bài học từ toàn bộ danh sách Chunks của cuốn sách
  */
-export const getChunksForLesson = (lesson, allChunks = []) => {
+export const getChunksForLesson = (lesson, allChunks = [], expectedSubject = '') => {
   if (!lesson || !Array.isArray(allChunks) || allChunks.length === 0) return [];
 
+  const sub = (expectedSubject || '').toUpperCase();
   const valid = allChunks.filter(c => {
     const sType = (c.sectionType || '').toUpperCase();
-    return sType !== 'COVER' && sType !== 'PREFACE' && sType !== 'INDEX';
+    if (sType === 'COVER' || sType === 'PREFACE' || sType === 'INDEX') return false;
+    if (isNonPedagogical(c.lessonName) && isNonPedagogical(c.patternName)) return false;
+    if (sub && c.subjectCode && c.subjectCode.toUpperCase() !== sub) return false;
+    return true;
   });
 
-  const aLName = cleanPrefix(lesson.title || '', 'lesson').toLowerCase().trim();
+  if (valid.length === 0) return [];
 
-  // 1. Ưu tiên khớp chính xác hoặc chứa tên bài học
-  const matchedByName = valid.filter(c => {
-    const cLName = cleanPrefix(c.lessonName || '', 'lesson').toLowerCase().trim();
-    if (!cLName) return false;
-    return cLName === aLName || cLName.includes(aLName) || aLName.includes(cLName);
-  });
+  const aLName = normalizeViText(cleanPrefix(lesson.title || '', 'lesson'));
 
-  if (matchedByName.length > 0) return matchedByName;
+  // 1. Ưu tiên khớp chính xác hoặc chứa tên bài học (đã chuẩn hóa dấu thanh tiếng Việt hoá/hóa)
+  if (aLName) {
+    const matchedByName = valid.filter(c => {
+      const cLName = normalizeViText(cleanPrefix(c.lessonName || '', 'lesson'));
+      if (!cLName) return false;
+      return cLName === aLName || cLName.includes(aLName) || aLName.includes(cLName);
+    });
+    if (matchedByName.length > 0) return matchedByName;
+  }
 
   // 2. Nếu tên bài không khớp trực tiếp, đối chiếu theo phạm vi trang của bài học
   if (lesson.pageStart && lesson.pageEnd) {
@@ -880,15 +1014,76 @@ export const getChunksForLesson = (lesson, allChunks = []) => {
 };
 
 /**
+ * Tự động bóc tách danh sách công thức KaTeX đặc trưng từ các đoạn trích SGK của bài học
+ */
+export const extractKeyFormulasFromChunks = (chunks = []) => {
+  if (!Array.isArray(chunks) || chunks.length === 0) return [];
+  const results = [];
+  const seen = new Set();
+
+  const tryAdd = (rawFormula) => {
+    const cleaned = (rawFormula || '').replace(/\s+/g, ' ').trim();
+    if (cleaned.length < 3 || cleaned.length > 180) return;
+    // Chỉ giữ các biểu thức thực sự là công thức/phương trình toán-lý-hóa
+    const looksLikeFormula = /[=≈≠≤≥<>]|\\frac|\\rightarrow|\\xrightarrow|\\rightleftharpoons|\\Delta|\\sum|\\vec|\\sqrt|\\cdot|\\times|_\{|\^\{/.test(cleaned);
+    if (!looksLikeFormula) return;
+    const norm = cleaned.toLowerCase();
+    if (seen.has(norm)) return;
+    seen.add(norm);
+    results.push(`$${cleaned}$`);
+  };
+
+  chunks.forEach(c => {
+    const text = (c.text || c.content || c.contentSnippet || '').trim();
+    if (!text) return;
+
+    // 1. Block math $$...$$
+    const blockMatches = text.matchAll(/\$\$([\s\S]+?)\$\$/g);
+    for (const m of blockMatches) {
+      tryAdd(m[1]);
+    }
+    // 2. Inline math $...$
+    const inlineMatches = text.matchAll(/(?<!\$)\$(?!\$)([^$\n]{3,160}?)(?<!\$)\$(?!\$)/g);
+    for (const m of inlineMatches) {
+      tryAdd(m[1]);
+    }
+  });
+
+  return results.slice(0, 12);
+};
+
+/**
  * Xây dựng tài liệu lý thuyết thuần chuẩn sư phạm, tổng hợp và cô đặc chi tiết từ các Vector Chunks trong CSDL
  * Tuyệt đối không ghi số trang SGK, không copy ồ ạt, phân chia theo cấu trúc trọng tâm đàng hoàng
  */
-export const buildTheoryFromChunks = (chunks = [], lessonTitle = '') => {
+export const buildTheoryFromChunks = (chunks = [], lessonTitle = '', expectedSubject = '') => {
   if (!Array.isArray(chunks) || chunks.length === 0) return '';
+
+  const cleanLesson = normalizeViText(lessonTitle || '');
+  const sub = (expectedSubject || '').toUpperCase() || (
+    cleanLesson.includes('hóa') || cleanLesson.includes('este') || cleanLesson.includes('halogen') ||
+    cleanLesson.includes('enthalpy') || cleanLesson.includes('phản ứng') || cleanLesson.includes('nguyên tử') ||
+    cleanLesson.includes('hydrocarbon') || cleanLesson.includes('cân bằng') ? 'CHEM' :
+    cleanLesson.includes('vật lí') || cleanLesson.includes('vận tốc') || cleanLesson.includes('gia tốc') ||
+    cleanLesson.includes('động lượng') || cleanLesson.includes('newton') ? 'PHYS' :
+    cleanLesson.includes('toán') || cleanLesson.includes('xác suất') || cleanLesson.includes('hàm số') ||
+    cleanLesson.includes('mệnh đề') || cleanLesson.includes('vectơ') ? 'MATH' : ''
+  );
 
   const validChunks = chunks.filter(c => {
     const sType = (c.sectionType || '').toUpperCase();
-    return sType !== 'COVER' && sType !== 'PREFACE' && sType !== 'INDEX';
+    if (sType === 'COVER' || sType === 'PREFACE' || sType === 'INDEX') return false;
+
+    // Lọc loại trừ chunks sai khác môn học (Cross-subject safety filter)
+    if (sub && c.subjectCode) {
+      const cSub = c.subjectCode.toUpperCase();
+      if ((sub === 'MATH' && cSub !== 'MATH') ||
+          (sub === 'CHEM' && cSub !== 'CHEM') ||
+          (sub === 'PHYS' && cSub !== 'PHYS')) {
+        return false;
+      }
+    }
+    return true;
   });
 
   if (validChunks.length === 0) return '';
@@ -956,6 +1151,20 @@ export const buildTheoryFromChunks = (chunks = [], lessonTitle = '') => {
         return;
       }
 
+      // Lọc bỏ ghi chú meta của AI Vision OCR (vd: "chứa các bài tập củng cố... không chứa lý thuyết mới")
+      const pNorm = normalizeViText(p);
+      if (
+        pNorm.includes('không chứa lý thuyết mới') ||
+        pNorm.includes('không chứa lí thuyết mới') ||
+        pNorm.includes('thuộc phần bài tập cuối bài') ||
+        pNorm.includes('chứa các bài tập củng cố') ||
+        pNorm.includes('trang này chỉ chứa bài tập') ||
+        pNorm.includes('không có nội dung lý thuyết') ||
+        pNorm.includes('là trang kết thúc bài học')
+      ) {
+        return;
+      }
+
       // Khử bài toán ví dụ giải mẫu chen ngang vào phần khái niệm
       if (/^(Ví dụ\s*\d*|Lời giải|Giải\s*:|Hướng dẫn giải)/i.test(p)) {
         if (pName) {
@@ -963,6 +1172,21 @@ export const buildTheoryFromChunks = (chunks = [], lessonTitle = '') => {
           if ((patternGroups.get(pName) || []).length < 2) patternGroups.get(pName).push(p);
         }
         return;
+      }
+
+      // Khử nội dung tạp nhiễm chéo môn học (Cross-subject contamination guard)
+      const pLower = p.toLowerCase();
+      if (sub === 'MATH') {
+        if (pLower.includes('electron') || pLower.includes('phân lớp') || pLower.includes('orbital') ||
+            pLower.includes('nguyên tử') || pLower.includes('hóa trị') || pLower.includes('halogen') ||
+            pLower.includes('đồng phân') || pLower.includes('phản ứng thế')) {
+          return;
+        }
+      } else if (sub === 'CHEM') {
+        if (pLower.includes('bất phương trình bậc hai') || pLower.includes('bất đẳng thức') ||
+            pLower.includes('vectơ') || pLower.includes('hình học toạ độ') || pLower.includes('không gian mẫu')) {
+          return;
+        }
       }
 
       // Chuẩn hóa phát hiện trùng lặp
@@ -1077,6 +1301,203 @@ export const buildTheoryFromChunks = (chunks = [], lessonTitle = '') => {
 };
 
 /**
+ * Trích xuất các Ví dụ mẫu & Lời giải bóc tách trực tiếp từ Vector Chunks SGK
+ */
+export const extractExamplesFromChunks = (chunks = []) => {
+  if (!Array.isArray(chunks) || chunks.length === 0) return [];
+  const examples = [];
+  const seen = new Set();
+
+  chunks.forEach(c => {
+    const sType = (c.sectionType || '').toUpperCase();
+    if (sType === 'COVER' || sType === 'PREFACE' || sType === 'INDEX') return;
+
+    let text = (c.text || c.content || c.contentSnippet || '').trim();
+    if (!text) return;
+    text = text
+      .replace(/\[TAXONOMY\s*:[^\]]+\]/gi, '')
+      .replace(/\[IMAGE_PLACEHOLDER:[^\]]+\]/g, '')
+      .replace(/^(Trang|Page)\s*\d+[:.\s-]*/gi, '')
+      .trim();
+
+    const paragraphs = text.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
+    for (let i = 0; i < paragraphs.length; i++) {
+      const p = paragraphs[i];
+      if (/^(Ví\s*dụ\s*\d*|Thí\s*dụ\s*\d*|Bài\s*toán\s*mẫu|Câu\s*hỏi\s*mẫu)/i.test(p) || sType === 'EXAMPLE') {
+        let prompt = p;
+        let solution = '';
+        // Nếu đoạn kế tiếp là lời giải/hướng dẫn giải thì ghép cặp luôn
+        if (i + 1 < paragraphs.length && /^(Lời\s*giải|Giải\s*:|Hướng\s*dẫn\s*giải|Trả\s*lời)/i.test(paragraphs[i + 1])) {
+          solution = paragraphs[i + 1];
+          i++;
+        } else {
+          // Hoặc tách phần "Lời giải:" nằm cùng đoạn
+          const splitMatch = p.match(/([\s\S]+?)\n+(?=(?:Lời\s*giải|Giải\s*:|Hướng\s*dẫn\s*giải))/i);
+          if (splitMatch) {
+            prompt = splitMatch[1].trim();
+            solution = p.slice(splitMatch[1].length).trim();
+          }
+        }
+
+        const normKey = normalizeViText(prompt).slice(0, 80);
+        if (normKey && !seen.has(normKey) && prompt.length >= 20) {
+          seen.add(normKey);
+          examples.push({
+            pageNumber: c.pageNumber || null,
+            prompt,
+            solution
+          });
+        }
+      }
+    }
+  });
+
+  return examples.slice(0, 6);
+};
+
+/**
+ * Tổng hợp Phương Pháp Giải Cơ Bản Chuẩn SGK (Khối 2) cho Dạng bài từ:
+ * 1. Gợi ý phương pháp ngắn từ khung cấu trúc (nếu có)
+ * 2. Công thức & Hệ thức KaTeX thực tế bóc từ bài học / chunks SGK
+ * 3. Các đoạn hướng dẫn giải, quy tắc tính toán & lưu ý bóc trực tiếp từ chunks SGK
+ * 4. Ví dụ minh họa kèm lời giải bóc từ SGK (nếu có)
+ */
+export const buildMethodFromChunks = (chunks = [], lesson = null, pattern = null, expectedSubject = '') => {
+  const validChunks = Array.isArray(chunks)
+    ? chunks.filter(c => {
+        const sType = (c.sectionType || '').toUpperCase();
+        if (sType === 'COVER' || sType === 'PREFACE' || sType === 'INDEX') return false;
+        const sub = (expectedSubject || '').toUpperCase();
+        if (sub && c.subjectCode && c.subjectCode.toUpperCase() !== sub) return false;
+        return true;
+      })
+    : [];
+
+  const rawHint = (pattern?.method && !isGenericPlaceholder(pattern.method))
+    ? pattern.method.trim()
+    : ((pattern?.description && !isGenericPlaceholder(pattern.description)) ? pattern.description.trim() : '');
+
+  const lessonFormulas = Array.isArray(lesson?.keyFormulas) && lesson.keyFormulas.length > 0
+    ? lesson.keyFormulas
+    : extractKeyFormulasFromChunks(validChunks);
+
+  // Nếu không có chunks, không có công thức và cũng không có gợi ý phương pháp thì trả về rỗng
+  if (validChunks.length === 0 && lessonFormulas.length === 0 && !rawHint) {
+    return '';
+  }
+
+  const methodSnippets = [];
+  const cautionNotes = [];
+  const seen = new Set();
+
+  validChunks.forEach(c => {
+    let text = (c.text || c.content || c.contentSnippet || '').trim();
+    if (!text) return;
+    text = text
+      .replace(/\[TAXONOMY\s*:[^\]]+\]/gi, '')
+      .replace(/\[IMAGE_PLACEHOLDER:[^\]]+\]/g, '')
+      .replace(/^[ \t]*(?:Tên sách|Bộ sách|Tổng chủ biên|Chủ biên|Các tác giả|Nhà xuất bản|Chịu trách nhiệm xuất bản)[^\r\n]*(\r?\n)?/gmi, '')
+      .replace(/^(Trang|Page)\s*\d+[:.\s-]*/gi, '')
+      .trim();
+
+    const paragraphs = text.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
+    paragraphs.forEach(p => {
+      const pNorm = normalizeViText(p);
+      if (
+        p.length < 25 ||
+        isGenericPlaceholder(p) ||
+        pNorm.includes('không chứa lý thuyết mới') ||
+        pNorm.includes('thuộc phần bài tập cuối bài') ||
+        pNorm.includes('chứa các bài tập củng cố') ||
+        pNorm.includes('tổng chủ biên') ||
+        pNorm.includes('nhà xuất bản')
+      ) {
+        return;
+      }
+
+      const key = pNorm.replace(/[\s\W_]+/g, ' ').slice(0, 70);
+      if (seen.has(key)) return;
+
+      if (/^(lưu\s*ý|chú\s*ý|điều\s*kiện|sai\s*lầm|nhận\s*xét|quy\s*ước)/i.test(p)) {
+        seen.add(key);
+        if (cautionNotes.length < 3) cautionNotes.push(p);
+      } else if (
+        !/^(Ví\s*dụ\s*\d*|Thí\s*dụ\s*\d*|Lời\s*giải|Giải\s*:|Hướng\s*dẫn\s*giải)/i.test(p) &&
+        (
+          /^(phương\s*pháp|cách\s*giải|các\s*bước|bước\s*\d|quy\s*tắc|hướng\s*dẫn|để\s*tính|để\s*xác\s*định|ta\s*có|áp\s*dụng)/i.test(p) ||
+          (p.includes('=') && (p.includes('$') || p.includes('\\frac') || p.includes('\\cdot') || p.includes('\\times')))
+        )
+      ) {
+        seen.add(key);
+        if (methodSnippets.length < 4) methodSnippets.push(p);
+      }
+    });
+  });
+
+  const examples = extractExamplesFromChunks(validChunks);
+  const patLabel = cleanPrefix(pattern?.name || lesson?.title || 'Dạng bài trọng tâm', 'pattern') || pattern?.name || '';
+  const lesLabel = cleanPrefix(lesson?.title || '', 'lesson') || lesson?.title || '';
+
+  const sections = [];
+
+  // 1. Hướng tiếp cận cốt lõi
+  sections.push(`### 1. Hướng Tiếp Cận Cơ Bản (${patLabel})`);
+  if (rawHint) {
+    sections.push(`- **Ý tưởng cốt lõi**: ${rawHint}`);
+  }
+  if (lesLabel) {
+    sections.push(`- **Cơ sở kiến thức áp dụng**: Vận dụng định nghĩa, tính chất và hệ thức trọng tâm của bài **${lesLabel}**.`);
+  }
+
+  // 2. Công thức & Hệ thức áp dụng trực tiếp
+  if (lessonFormulas.length > 0) {
+    sections.push(`\n### 2. Công Thức & Hệ Thức Áp Dụng`);
+    lessonFormulas.slice(0, 6).forEach(f => {
+      const formatted = f.trim().startsWith('$') ? f.trim() : `$${f.trim()}$`;
+      sections.push(`- ${formatted}`);
+    });
+  }
+
+  // 3. Các bước giải cơ bản chuẩn SGK
+  const stepNum = lessonFormulas.length > 0 ? 3 : 2;
+  sections.push(`\n### ${stepNum}. Quy Trình Các Bước Giải Cơ Bản`);
+  sections.push(`- **Bước 1 (Tóm tắt & Phân tích dữ kiện)**: Đọc kỹ đề bài thuộc dạng *${patLabel}*, xác định rõ các đại lượng đã cho, đại lượng cần tìm và đổi đơn vị về chuẩn thống nhất.`);
+  sections.push(
+    rawHint
+      ? `- **Bước 2 (Thiết lập phương trình / Công thức)**: ${rawHint}${lessonFormulas.length > 0 ? ' — kết hợp các hệ thức trọng tâm đã tổng hợp ở trên.' : '.'}`
+      : `- **Bước 2 (Thiết lập phương trình / Công thức)**: Chọn công thức liên hệ trực tiếp giữa giả thiết và yêu cầu bài toán từ cơ sở lý thuyết bài học.`
+  );
+  sections.push(`- **Bước 3 (Biến đổi & Tính toán)**: Thay số liệu cẩn thận, rút gọn biểu thức hoặc giải hệ phương trình để tìm giá trị ẩn số.`);
+  sections.push(`- **Bước 4 (Kiểm tra điều kiện & Kết luận)**: Kiểm tra tính hợp lí về dấu, thứ nguyên/đơn vị và đối chiếu với điều kiện bài toán trước khi kết luận.`);
+
+  if (methodSnippets.length > 0) {
+    sections.push(`\n### ${stepNum + 1}. Chi Tiết Biến Đổi & Quy Tắc Trích Từ SGK`);
+    methodSnippets.forEach(s => {
+      sections.push(`- ${s}`);
+    });
+  }
+
+  if (examples.length > 0) {
+    sections.push(`\n### Ví Dụ Minh Họa Bóc Tách Từ SGK`);
+    examples.slice(0, 2).forEach(ex => {
+      sections.push(`- ${ex.prompt}`);
+      if (ex.solution) {
+        sections.push(`  > ${ex.solution}`);
+      }
+    });
+  }
+
+  if (cautionNotes.length > 0) {
+    sections.push(`\n### Lưu Ý & Bẫy Thường Gặp`);
+    cautionNotes.forEach(n => {
+      sections.push(`> ⚠️ ${n}`);
+    });
+  }
+
+  return sections.join('\n\n');
+};
+
+/**
  * Lấy cấu trúc chuẩn GDPT 2018 theo Môn học và Khối lớp
  */
 export const getGdptPreset = (subjectCode = 'PHYS', grade = 10) => {
@@ -1125,23 +1546,1139 @@ const DEFAULT_STATE = {
   selectedPatternIdx: 0
 };
 
+const ACTIVE_CTX_LOCAL_KEY = 'veval_active_textbook_context_v2';
+
 export const getStoredTextbookContext = () => {
   try {
-    const raw = sessionStorage.getItem(STORAGE_KEY);
-    if (!raw) return DEFAULT_STATE;
-    return { ...DEFAULT_STATE, ...JSON.parse(raw) };
-  } catch {
-    return DEFAULT_STATE;
-  }
+    const rawSession = sessionStorage.getItem(STORAGE_KEY);
+    if (rawSession) {
+      const parsed = JSON.parse(rawSession);
+      if (parsed && (parsed.selectedSourceId || parsed.fileName)) {
+        return { ...DEFAULT_STATE, ...parsed };
+      }
+    }
+  } catch {}
+  try {
+    const rawLocal = localStorage.getItem(ACTIVE_CTX_LOCAL_KEY);
+    if (rawLocal) {
+      const parsed = JSON.parse(rawLocal);
+      if (parsed && (parsed.selectedSourceId || parsed.fileName)) {
+        return { ...DEFAULT_STATE, ...parsed };
+      }
+    }
+  } catch {}
+  return DEFAULT_STATE;
 };
 
 export const saveStoredTextbookContext = (updates) => {
   try {
     const current = getStoredTextbookContext();
-    const merged = { ...current, ...updates };
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+    // Tuyệt đối không nhồi toàn bộ mảng chapters khổng lồ vào context pointer (tránh tràn quota 5MB)
+    const { chapters: _omitChapters, ...safeUpdates } = updates || {};
+    const { chapters: _omitCurrChapters, ...safeCurrent } = current || {};
+    const merged = { ...safeCurrent, ...safeUpdates };
+    const serialized = JSON.stringify(merged);
+    sessionStorage.setItem(STORAGE_KEY, serialized);
+    localStorage.setItem(ACTIVE_CTX_LOCAL_KEY, serialized);
     return merged;
   } catch {
     return DEFAULT_STATE;
   }
+};
+
+/**
+ * Thu gọn payload SGK trước khi ghi localStorage (giảm 75-90% dung lượng, tránh QuotaExceededError)
+ * - Giữ nguyên 100% cấu trúc Chương/Bài/Dạng bài, Bloom, Bài tập, Công thức, và mọi Lý thuyết/Phương pháp đã chỉnh sửa
+ * - Nếu đã có sourceId trên CSDL, bỏ qua text `les.theory` tự sinh chưa sửa (vì luôn tái tạo tức thì từ chunks DB)
+ */
+const compactSkeletonForStorage = (skeleton, hasSourceInDb = false) => {
+  if (!skeleton) return skeleton;
+  return {
+    ...skeleton,
+    chapters: (skeleton.chapters || []).map(ch => ({
+      ...ch,
+      lessons: (ch.lessons || []).map(les => {
+        const keepTheory = !hasSourceInDb || Boolean(les.isEdited);
+        return {
+          ...les,
+          theory: keepTheory ? (les.theory || '') : '',
+          patterns: (les.patterns || []).map(pat => ({
+            ...pat,
+            exercises: Array.isArray(pat.exercises) ? pat.exercises : []
+          }))
+        };
+      })
+    }))
+  };
+};
+
+const readStorageEntry = (key) => {
+  if (!key) return null;
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed?.isPointer && parsed.targetKey && parsed.targetKey !== key) {
+      const targetRaw = localStorage.getItem(parsed.targetKey);
+      if (targetRaw) {
+        return JSON.parse(targetRaw);
+      }
+      return null;
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * Lấy dữ liệu SGK đã lưu từ localStorage theo đúng sourceId / fileName (hỗ trợ pointer chống trùng lặp và chống lấy nhầm sách khác)
+ */
+export const getSavedTextbookData = (sourceId, fileName) => {
+  const keys = [];
+  if (sourceId) keys.push(`veval_textbook_saved_${sourceId}`);
+  if (fileName) {
+    keys.push(`veval_textbook_saved_file_${fileName}`);
+    keys.push(`veval_textbook_saved_${fileName}`);
+  }
+
+  for (const k of keys) {
+    const parsed = readStorageEntry(k);
+    if (parsed && (parsed.skeleton || parsed.textbookExercises || parsed.chapters)) {
+      return parsed;
+    }
+  }
+
+  // Kiểm tra khóa mặc định: chỉ trả về nếu không truyền filter HOẶC khớp đúng cuốn sách đang hỏi
+  const defParsed = readStorageEntry('veval_textbook_saved_default');
+  if (defParsed && (defParsed.skeleton || defParsed.textbookExercises || defParsed.chapters)) {
+    const noFilter = !sourceId && !fileName;
+    const matchesSource = sourceId && defParsed.sourceId && String(defParsed.sourceId) === String(sourceId);
+    const matchesFile = fileName && (
+      (defParsed.fileName && defParsed.fileName.toLowerCase().trim() === fileName.toLowerCase().trim()) ||
+      (defParsed.skeleton?.fileName && defParsed.skeleton.fileName.toLowerCase().trim() === fileName.toLowerCase().trim())
+    );
+    if (noFilter || matchesSource || matchesFile) {
+      return defParsed;
+    }
+  }
+
+  return null;
+};
+
+/**
+ * Lưu dữ liệu SGK bền vững (1 bản duy nhất đã nén + pointer nhẹ, tự động dọn khóa cũ nếu đầy Quota)
+ */
+export const saveTextbookData = ({ sourceId, fileName, skeleton, textbookExercises = [] }) => {
+  if (!skeleton) return false;
+  const resolvedSourceId = sourceId || '';
+  const resolvedFileName = fileName || skeleton.fileName || '';
+  const canonicalKey = resolvedSourceId
+    ? `veval_textbook_saved_${resolvedSourceId}`
+    : (resolvedFileName ? `veval_textbook_saved_file_${resolvedFileName}` : 'veval_textbook_saved_default');
+
+  const compactSkeleton = compactSkeletonForStorage(skeleton, Boolean(resolvedSourceId));
+  const payload = {
+    sourceId: resolvedSourceId,
+    fileName: resolvedFileName,
+    skeleton: compactSkeleton,
+    // Chỉ lưu textbookExercises nếu chưa nằm sẵn trong chapters (tránh nhân đôi dung lượng)
+    textbookExercises: Array.isArray(textbookExercises) && textbookExercises.length <= 200 ? textbookExercises : [],
+    savedAt: new Date().toISOString()
+  };
+
+  const str = JSON.stringify(payload);
+  const pointerStr = JSON.stringify({
+    isPointer: true,
+    targetKey: canonicalKey,
+    sourceId: resolvedSourceId,
+    fileName: resolvedFileName,
+    savedAt: payload.savedAt
+  });
+
+  const writeAll = () => {
+    localStorage.setItem(canonicalKey, str);
+    if (canonicalKey !== 'veval_textbook_saved_default') {
+      localStorage.setItem('veval_textbook_saved_default', pointerStr);
+    }
+    if (resolvedFileName) {
+      const fileAlias = `veval_textbook_saved_file_${resolvedFileName}`;
+      if (fileAlias !== canonicalKey) {
+        localStorage.setItem(fileAlias, pointerStr);
+      }
+      // Xóa bản đầy đủ cũ dạng legacy key nếu trùng tên file để giải phóng quota
+      const legacyKey = `veval_textbook_saved_${resolvedFileName}`;
+      if (legacyKey !== canonicalKey) {
+        try { localStorage.removeItem(legacyKey); } catch {}
+      }
+    }
+  };
+
+  try {
+    writeAll();
+  } catch (err) {
+    // Tự phục hồi khi localStorage đầy (QuotaExceededError): dọn bớt các khóa legacy/trùng lặp cũ rồi ghi lại
+    try {
+      const keysToEvict = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith('veval_textbook_saved_') && k !== canonicalKey && k !== 'veval_textbook_saved_default') {
+          keysToEvict.push(k);
+        }
+      }
+      keysToEvict.forEach(k => localStorage.removeItem(k));
+      writeAll();
+    } catch (retryErr) {
+      console.warn('Lỗi lưu trữ dữ liệu SGK (vượt giới hạn bộ nhớ trình duyệt):', retryErr);
+      return false;
+    }
+  }
+
+  saveStoredTextbookContext({
+    selectedSourceId: resolvedSourceId,
+    fileName: resolvedFileName,
+    subjectCode: skeleton.subjectCode,
+    subjectName: skeleton.subjectName,
+    grade: skeleton.grade,
+    bookEdition: skeleton.bookEdition,
+    versionTag: skeleton.versionTag
+  });
+
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('veval:textbook-saved', { detail: payload }));
+  }
+  return true;
+};
+
+/**
+ * Hợp nhất bài tập, lý thuyết đã biên soạn và phương pháp giải đã lưu vào cây cấu trúc chương/bài học
+ */
+export const mergeSavedExercisesIntoChapters = (targetChapters = [], savedData) => {
+  if (!targetChapters || targetChapters.length === 0) {
+    if (savedData?.skeleton?.chapters && savedData.skeleton.chapters.length > 0) {
+      return savedData.skeleton.chapters;
+    }
+    return [];
+  }
+  if (!savedData) return targetChapters;
+
+  const savedLessonMap = new Map();
+  const savedPatternMap = new Map();
+  const allSavedExercises = [];
+
+  const sourceChapters = savedData.skeleton?.chapters || savedData.chapters || [];
+  sourceChapters.forEach(ch => {
+    (ch.lessons || []).forEach(les => {
+      const lKey = normalizeViText(cleanPrefix(les.title, 'lesson'));
+      if (lKey) {
+        const hasValidTheory = les.theory && !isGenericPlaceholder(les.theory);
+        const hasFormulas = Array.isArray(les.keyFormulas) && les.keyFormulas.length > 0;
+        if (hasValidTheory || hasFormulas || les.isEdited) {
+          savedLessonMap.set(lKey, {
+            theory: hasValidTheory ? les.theory : '',
+            isEdited: !!les.isEdited,
+            keyFormulas: hasFormulas ? les.keyFormulas : []
+          });
+        }
+      }
+
+      (les.patterns || []).forEach(pat => {
+        const pKey = `${lKey}__${normalizeViText(cleanPrefix(pat.name, 'pattern'))}`;
+        const hasValidRecap = pat.theoryRecap && !isGenericPlaceholder(pat.theoryRecap);
+        const hasValidMethod = (pat.method && !isGenericPlaceholder(pat.method)) || (pat.solutionMethod && !isGenericPlaceholder(pat.solutionMethod));
+        const hasExercises = Array.isArray(pat.exercises) && pat.exercises.length > 0;
+
+        if (hasExercises || hasValidRecap || hasValidMethod || pat.isEdited) {
+          savedPatternMap.set(pKey, {
+            bloomLevel: pat.bloomLevel,
+            exercises: pat.exercises || [],
+            theoryRecap: hasValidRecap ? pat.theoryRecap : '',
+            method: (pat.method && !isGenericPlaceholder(pat.method)) ? pat.method : '',
+            solutionMethod: (pat.solutionMethod && !isGenericPlaceholder(pat.solutionMethod)) ? pat.solutionMethod : '',
+            isEdited: !!pat.isEdited
+          });
+          if (hasExercises) {
+            allSavedExercises.push(...pat.exercises);
+          }
+        }
+      });
+    });
+  });
+
+  if (savedData.textbookExercises && savedData.textbookExercises.length > 0) {
+    allSavedExercises.push(...savedData.textbookExercises);
+  }
+
+  return targetChapters.map(ch => {
+    const lessons = (ch.lessons || []).map(les => {
+      const lKey = normalizeViText(cleanPrefix(les.title, 'lesson'));
+      const savedLes = savedLessonMap.get(lKey);
+
+      const patterns = (les.patterns || []).map(pat => {
+        const pKey = `${lKey}__${normalizeViText(cleanPrefix(pat.name, 'pattern'))}`;
+        const found = savedPatternMap.get(pKey);
+        const existing = pat.exercises || [];
+
+        let mergedExercises = existing;
+        if (found?.exercises && found.exercises.length > 0) {
+          const idSet = new Set(existing.map(e => e.id || e.stem));
+          const toAdd = found.exercises.filter(e => !idSet.has(e.id || e.stem));
+          mergedExercises = [...existing, ...toAdd];
+        }
+
+        const currentRecap = (pat.theoryRecap && !isGenericPlaceholder(pat.theoryRecap)) ? pat.theoryRecap : '';
+        const currentMethod = (pat.method && !isGenericPlaceholder(pat.method)) ? pat.method : '';
+        const currentSolMethod = (pat.solutionMethod && !isGenericPlaceholder(pat.solutionMethod)) ? pat.solutionMethod : '';
+
+        return {
+          ...pat,
+          bloomLevel: found?.bloomLevel || pat.bloomLevel || 2,
+          theoryRecap: found?.theoryRecap || currentRecap,
+          method: found?.method || currentMethod,
+          solutionMethod: found?.solutionMethod || currentSolMethod,
+          isEdited: Boolean(found?.isEdited || pat.isEdited),
+          exercises: mergedExercises
+        };
+      });
+
+      const currentLesTheory = (les.theory && !isGenericPlaceholder(les.theory)) ? les.theory : '';
+      const mergedTheory = (savedLes?.isEdited && savedLes?.theory)
+        ? savedLes.theory
+        : (currentLesTheory || savedLes?.theory || '');
+      const mergedFormulas = (les.keyFormulas && les.keyFormulas.length > 0)
+        ? les.keyFormulas
+        : (savedLes?.keyFormulas || []);
+
+      return {
+        ...les,
+        theory: mergedTheory,
+        isEdited: Boolean(savedLes?.isEdited || les.isEdited),
+        keyFormulas: mergedFormulas,
+        patterns
+      };
+    });
+    return { ...ch, lessons };
+  });
+};
+
+/**
+ * So sánh giữa cây chương dựng từ chunks thô và cây chương người dùng đã quét Bước 1 / biên soạn & lưu:
+ * Luôn ưu tiên bảo toàn cây đã lưu của người dùng khi đầy đủ hơn (tránh việc F5 bị chunks thô đè mất bài/dạng bài)
+ */
+export const resolvePersistedChapters = (detectedChapters = [], cachedData = null, fallbackChapters = []) => {
+  const cachedChapters = filterPedagogicalChapters(cachedData?.skeleton?.chapters || cachedData?.chapters || []);
+  const cleanDetected = filterPedagogicalChapters(detectedChapters);
+
+  const countMetrics = (chs) => {
+    let lessons = 0;
+    let patterns = 0;
+    (chs || []).forEach(c => {
+      (c.lessons || []).forEach(l => {
+        lessons++;
+        patterns += (l.patterns || []).length;
+      });
+    });
+    return { chapters: (chs || []).length, lessons, patterns };
+  };
+
+  if (cachedChapters.length > 0) {
+    if (cleanDetected.length === 0) {
+      return mergeSavedExercisesIntoChapters(cachedChapters, cachedData);
+    }
+    const cm = countMetrics(cachedChapters);
+    const dm = countMetrics(cleanDetected);
+    const userSaved = Boolean(cachedData?.skeleton?.hasUserSavedStructure);
+    if (userSaved || cm.lessons > dm.lessons || cm.patterns > dm.patterns) {
+      return mergeSavedExercisesIntoChapters(cachedChapters, cachedData);
+    }
+  }
+
+  const base = cleanDetected.length > 0
+    ? cleanDetected
+    : (cachedChapters.length > 0 ? cachedChapters : fallbackChapters);
+  return mergeSavedExercisesIntoChapters(base, cachedData);
+};
+
+/**
+ * Xóa sạch dữ liệu cache localStorage/sessionStorage của một cuốn SGK đã bị xóa khỏi CSDL
+ * và phát tín hiệu real-time để Khung chương trình & Dàn kiến thức làm mới ngay lập tức
+ */
+export const clearSavedTextbookData = (sourceId, fileName = '') => {
+  try {
+    if (sourceId) localStorage.removeItem(`veval_textbook_saved_${sourceId}`);
+    if (fileName) {
+      localStorage.removeItem(`veval_textbook_saved_${fileName}`);
+      localStorage.removeItem(`veval_textbook_saved_file_${fileName}`);
+    }
+
+    // Nếu cache mặc định đang trỏ/lưu đúng cuốn sách bị xóa thì xóa luôn để không còn "bóng ma" sách cũ
+    const rawDefault = localStorage.getItem('veval_textbook_saved_default');
+    if (rawDefault) {
+      const parsed = JSON.parse(rawDefault);
+      if (
+        (sourceId && parsed?.sourceId === sourceId) ||
+        (fileName && (parsed?.fileName === fileName || parsed?.skeleton?.fileName === fileName))
+      ) {
+        localStorage.removeItem('veval_textbook_saved_default');
+      }
+    }
+
+    [sessionStorage, localStorage].forEach((st, idx) => {
+      const key = idx === 0 ? STORAGE_KEY : ACTIVE_CTX_LOCAL_KEY;
+      const rawCtx = st.getItem(key);
+      if (rawCtx) {
+        const parsedCtx = JSON.parse(rawCtx);
+        if (
+          (sourceId && parsedCtx?.selectedSourceId === sourceId) ||
+          (fileName && parsedCtx?.fileName === fileName)
+        ) {
+          st.removeItem(key);
+        }
+      }
+    });
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('veval:textbook-deleted', { detail: { sourceId, fileName } }));
+    }
+    return true;
+  } catch (err) {
+    console.warn('Lỗi dọn cache SGK đã xóa:', err);
+    return false;
+  }
+};
+
+export const STUDIO_OVERRIDES_STORAGE_KEY = 'veval_textbook_saved_studio_overrides';
+
+/**
+ * Kiểm tra chuỗi có phải định dạng GUID 36 ký tự chuẩn của PostgreSQL / ASP.NET Core hay không
+ */
+export const isValidGuid = (val) =>
+  typeof val === 'string' &&
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val.trim());
+
+/**
+ * Tra cứu nội dung đã chỉnh sửa / AI mở rộng / bài tập từ kho lưu trữ SGK (chỉ duyệt các sourceId còn tồn tại trong DB)
+ * giúp Khung Chương Trình & Dàn Kiến Thức đồng bộ 100% với SGK mà không bị bóng ma dữ liệu từ sách đã xóa
+ */
+export const findSavedNodeData = (lessonName = '', patternName = '', activeSourceIds = []) => {
+  if (typeof localStorage === 'undefined') return null;
+  const targetLesson = normalizeViText(cleanPrefix(lessonName || '', 'lesson'));
+  const targetPattern = normalizeViText(cleanPrefix(patternName || '', 'pattern'));
+  if (!targetLesson && !targetPattern) return null;
+
+  const validIdSet = Array.isArray(activeSourceIds) && activeSourceIds.length > 0
+    ? new Set(activeSourceIds.map(String))
+    : null;
+
+  // Luôn ưu tiên kiểm tra bản ghi vừa được giảng viên chỉnh sửa trực tiếp trong Studio
+  const candidateKeys = [STUDIO_OVERRIDES_STORAGE_KEY];
+  if (validIdSet) {
+    validIdSet.forEach(sid => candidateKeys.push(`veval_textbook_saved_${sid}`));
+  } else {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (
+        k &&
+        k.startsWith('veval_textbook_saved_') &&
+        k !== 'veval_textbook_saved_default' &&
+        k !== STUDIO_OVERRIDES_STORAGE_KEY
+      ) {
+        candidateKeys.push(k);
+      }
+    }
+    candidateKeys.push('veval_textbook_saved_default');
+  }
+
+  for (const k of candidateKeys) {
+    try {
+      const parsed = readStorageEntry(k);
+      if (!parsed) continue;
+      if (
+        k !== STUDIO_OVERRIDES_STORAGE_KEY &&
+        validIdSet &&
+        parsed?.sourceId &&
+        !validIdSet.has(String(parsed.sourceId))
+      ) {
+        continue;
+      }
+      const chapters = parsed?.skeleton?.chapters || parsed?.chapters || [];
+
+      for (const ch of chapters) {
+        for (const les of (ch.lessons || [])) {
+          const lKey = normalizeViText(cleanPrefix(les.title || '', 'lesson'));
+          const lessonMatched = targetLesson && lKey && (lKey === targetLesson || lKey.includes(targetLesson) || targetLesson.includes(lKey));
+
+          for (const pat of (les.patterns || [])) {
+            const pKey = normalizeViText(cleanPrefix(pat.name || '', 'pattern'));
+            const patternMatched = targetPattern && pKey && (pKey === targetPattern || pKey.includes(targetPattern) || targetPattern.includes(pKey));
+
+            if (patternMatched || (lessonMatched && !targetPattern)) {
+              return { sourceId: parsed.sourceId || '', lesson: les, pattern: pat };
+            }
+          }
+
+          if (lessonMatched) {
+            return { sourceId: parsed.sourceId || '', lesson: les, pattern: les.patterns?.[0] || null };
+          }
+        }
+      }
+    } catch {}
+  }
+
+  return null;
+};
+
+/**
+ * Lưu thay đổi từ Studio (CurriculumStudioEditor / TextbookStudioView) vào kho dữ liệu SGK bền vững
+ * đảm bảo F5 tải lại trang hoặc chuyển đổi qua lại giữa SGK Chuẩn <-> Nạp SGK <-> Khung Chương Trình luôn giữ 100% nội dung vừa sửa
+ */
+export const saveStudioPatternToTextbookStorage = ({
+  context = null,
+  domain = null,
+  chapter = null,
+  lesson = null,
+  pattern = null,
+  updatedFields = {}
+}) => {
+  if (typeof localStorage === 'undefined') return false;
+
+  const ctx = context || getStoredTextbookContext();
+  const lessonTitle = (lesson?.title || lesson?.name || ctx?.activeLessonTitle || 'Bài 1: Nội dung trọng tâm').trim();
+  const chapterTitle = (chapter?.title || chapter?.name || ctx?.activeChapterTitle || 'Chương 1: Kiến thức trọng tâm').trim();
+  const oldPatternName = (pattern?.name || pattern?.patternName || ctx?.activePatternName || '').trim();
+  const newPatternName = (updatedFields.name || oldPatternName || `Dạng 1: Trọng tâm ${cleanPrefix(lessonTitle, 'lesson') || lessonTitle}`).trim();
+
+  const normLesTarget = normalizeViText(cleanPrefix(lessonTitle, 'lesson'));
+  const normPatOld = normalizeViText(cleanPrefix(oldPatternName, 'pattern'));
+  const normPatNew = normalizeViText(cleanPrefix(newPatternName, 'pattern'));
+
+  const buildSampleExercise = (sq) => {
+    if (!sq || !sq.contentLatex || !String(sq.contentLatex).trim()) return null;
+    const corrChar = String(sq.correctOption || 'A').toUpperCase().trim()[0] || 'A';
+    const corrIdx = Math.max(0, ['A', 'B', 'C', 'D'].indexOf(corrChar));
+    return {
+      id: sq.questionId || `studio_ex_${Date.now()}`,
+      stem: sq.contentLatex.trim(),
+      contentLatex: sq.contentLatex.trim(),
+      options: [
+        sq.optionA || '',
+        sq.optionB || '',
+        sq.optionC || '',
+        sq.optionD || ''
+      ],
+      optionA: sq.optionA || '',
+      optionB: sq.optionB || '',
+      optionC: sq.optionC || '',
+      optionD: sq.optionD || '',
+      correctIndex: corrIdx,
+      correctOption: corrChar,
+      bloomLevel: Number(sq.difficultyLevel) || Number(updatedFields.bloomLevel) || 2,
+      difficultyLevel: Number(sq.difficultyLevel) || Number(updatedFields.bloomLevel) || 2,
+      solution: sq.explanation || '',
+      explanation: sq.explanation || ''
+    };
+  };
+
+  const sampleEx = buildSampleExercise(updatedFields.sampleQuestion);
+
+  const applyUpdateToPattern = (pat, pIdx = 0) => {
+    const existingExercises = Array.isArray(pat?.exercises) ? [...pat.exercises] : [];
+    if (sampleEx) {
+      const existingIdx = existingExercises.findIndex(
+        e =>
+          (sampleEx.id && e.id === sampleEx.id) ||
+          normalizeViText(e.stem || e.contentLatex || '') === normalizeViText(sampleEx.stem)
+      );
+      if (existingIdx >= 0) {
+        existingExercises[existingIdx] = { ...existingExercises[existingIdx], ...sampleEx };
+      } else if (existingExercises.length > 0) {
+        existingExercises[0] = { ...existingExercises[0], ...sampleEx };
+      } else {
+        existingExercises.push(sampleEx);
+      }
+    }
+
+    return {
+      ...pat,
+      ...(isValidGuid(updatedFields.patternId) ? { patternId: updatedFields.patternId } : {}),
+      patternCode: pat?.patternCode || `P${pIdx + 1}`,
+      name: newPatternName,
+      bloomLevel: Number(updatedFields.bloomLevel) || pat?.bloomLevel || 2,
+      level: updatedFields.level || pat?.level || 'Vận dụng (L3)',
+      weight: updatedFields.weight || pat?.weight || '5%',
+      status: 'ACCEPTED',
+      theoryRecap: updatedFields.theoryRecap ?? pat?.theoryRecap ?? '',
+      solutionMethod: updatedFields.solutionMethod ?? pat?.solutionMethod ?? '',
+      method: updatedFields.solutionMethod ?? pat?.method ?? '',
+      examTraps: updatedFields.examTraps ?? pat?.examTraps ?? '',
+      casioTricks: updatedFields.casioTricks ?? pat?.casioTricks ?? '',
+      videoUrl: updatedFields.videoUrl ?? pat?.videoUrl ?? null,
+      durationSeconds: updatedFields.durationSeconds ?? pat?.durationSeconds ?? 600,
+      isEdited: true,
+      exercises: existingExercises
+    };
+  };
+
+  let updatedAnyTextbook = false;
+
+  // 1. Cập nhật vào cuốn SGK đang mở (hoặc bất kỳ cuốn SGK đã lưu nào khớp bài học / dạng bài)
+  const targetSaved = getSavedTextbookData(ctx?.selectedSourceId, ctx?.fileName);
+  if (targetSaved && (targetSaved.skeleton?.chapters || targetSaved.chapters)) {
+    const rawChapters = targetSaved.skeleton?.chapters || targetSaved.chapters || [];
+    let matchedInBook = false;
+
+    const nextChapters = rawChapters.map((ch, cIdx) => {
+      const nextLessons = (ch.lessons || []).map((les, lIdx) => {
+        const lNorm = normalizeViText(cleanPrefix(les.title || '', 'lesson'));
+        const isTargetLessonByName =
+          normLesTarget &&
+          lNorm &&
+          (lNorm === normLesTarget || lNorm.includes(normLesTarget) || normLesTarget.includes(lNorm));
+        const isTargetLessonByIdx =
+          !normLesTarget &&
+          cIdx === Number(ctx?.selectedChapterIdx || 0) &&
+          lIdx === Number(ctx?.selectedLessonIdx || 0);
+
+        let lessonHit = false;
+        const nextPatterns = (les.patterns || []).map((pat, pIdx) => {
+          const pNorm = normalizeViText(cleanPrefix(pat.name || '', 'pattern'));
+          const patMatchesName =
+            (normPatOld && pNorm && (pNorm === normPatOld || pNorm.includes(normPatOld) || normPatOld.includes(pNorm))) ||
+            (normPatNew && pNorm && (pNorm === normPatNew || pNorm.includes(normPatNew) || normPatNew.includes(pNorm)));
+          const patMatchesIdx =
+            cIdx === Number(ctx?.selectedChapterIdx || 0) &&
+            lIdx === Number(ctx?.selectedLessonIdx || 0) &&
+            pIdx === Number(ctx?.selectedPatternIdx || 0);
+
+          if ((isTargetLessonByName && (patMatchesName || (les.patterns || []).length === 1)) || patMatchesName || (isTargetLessonByIdx && patMatchesIdx)) {
+            matchedInBook = true;
+            lessonHit = true;
+            return applyUpdateToPattern(pat, pIdx);
+          }
+          return pat;
+        });
+
+        if (lessonHit) {
+          const nextTheory =
+            updatedFields.theoryRecap && !isGenericPlaceholder(updatedFields.theoryRecap)
+              ? updatedFields.theoryRecap
+              : (les.theory || '');
+          return {
+            ...les,
+            theory: nextTheory,
+            isEdited: true,
+            patterns: nextPatterns
+          };
+        }
+        return les;
+      });
+      return { ...ch, lessons: nextLessons };
+    });
+
+    // Nếu không khớp bằng tên nhưng đang ở đúng cuốn sách trong TextbookStudioView, cập nhật theo index đang chọn
+    if (!matchedInBook && nextChapters.length > 0) {
+      const cIdx = Math.min(nextChapters.length - 1, Math.max(0, Number(ctx?.selectedChapterIdx || 0)));
+      const targetCh = { ...nextChapters[cIdx] };
+      const chLessons = [...(targetCh.lessons || [])];
+      if (chLessons.length > 0) {
+        const lIdx = Math.min(chLessons.length - 1, Math.max(0, Number(ctx?.selectedLessonIdx || 0)));
+        const targetLes = { ...chLessons[lIdx] };
+        const lesPatterns = [...(targetLes.patterns || [])];
+        const pIdx = Math.min(Math.max(0, lesPatterns.length - 1), Math.max(0, Number(ctx?.selectedPatternIdx || 0)));
+        if (lesPatterns.length > 0) {
+          lesPatterns[pIdx] = applyUpdateToPattern(lesPatterns[pIdx], pIdx);
+        } else {
+          lesPatterns.push(applyUpdateToPattern({}, 0));
+        }
+        targetLes.patterns = lesPatterns;
+        if (updatedFields.theoryRecap && !isGenericPlaceholder(updatedFields.theoryRecap)) {
+          targetLes.theory = updatedFields.theoryRecap;
+        }
+        targetLes.isEdited = true;
+        chLessons[lIdx] = targetLes;
+        targetCh.lessons = chLessons;
+        nextChapters[cIdx] = targetCh;
+        matchedInBook = true;
+      }
+    }
+
+    if (matchedInBook) {
+      saveTextbookData({
+        sourceId: targetSaved.sourceId || ctx?.selectedSourceId || '',
+        fileName: targetSaved.fileName || ctx?.fileName || targetSaved.skeleton?.fileName || '',
+        skeleton: {
+          ...(targetSaved.skeleton || {}),
+          hasUserSavedStructure: true,
+          chapters: nextChapters
+        },
+        textbookExercises: targetSaved.textbookExercises || []
+      });
+      updatedAnyTextbook = true;
+    }
+  } else if (updatedFields.forceCreateTextbookEntry) {
+    // Khởi tạo bản ghi SGK mới nếu người dùng mở thẳng Studio SGK khi chưa bấm Lưu ở trang SGK
+    const subCode = (ctx?.subjectCode || domain?.code || 'MATH').toUpperCase();
+    const grade = Number(ctx?.grade) || 10;
+    const newPat = applyUpdateToPattern({}, 0);
+    const initialSkeleton = {
+      fileName: ctx?.fileName || `SGK_${subCode}_G${grade}.pdf`,
+      subjectCode: subCode,
+      subjectName: ctx?.subjectName || domain?.name || domain?.title || 'Sách giáo khoa',
+      grade,
+      bookEdition: ctx?.bookEdition || 'Kết nối tri thức với cuộc sống',
+      hasUserSavedStructure: true,
+      chapters: [
+        {
+          chapterNumber: 1,
+          title: chapterTitle,
+          status: 'ACCEPTED',
+          lessons: [
+            {
+              lessonNumber: 1,
+              title: lessonTitle,
+              status: 'ACCEPTED',
+              theory: updatedFields.theoryRecap || '',
+              isEdited: true,
+              patterns: [newPat]
+            }
+          ]
+        }
+      ]
+    };
+    saveTextbookData({
+      sourceId: ctx?.selectedSourceId || '',
+      fileName: initialSkeleton.fileName,
+      skeleton: initialSkeleton,
+      textbookExercises: []
+    });
+    updatedAnyTextbook = true;
+  }
+
+  // 2. Luôn ghi nhận vào kho Studio Overrides để UnifiedNodeDetailView & SGK đồng bộ tức thì mọi chỉnh sửa từ Studio
+  try {
+    const existingOverrides = readStorageEntry(STUDIO_OVERRIDES_STORAGE_KEY) || {
+      sourceId: '',
+      fileName: 'studio_overrides',
+      skeleton: { chapters: [{ chapterNumber: 1, title: 'Studio Overrides', lessons: [] }] }
+    };
+    const overrideChapters = existingOverrides.skeleton?.chapters?.length > 0
+      ? [...existingOverrides.skeleton.chapters]
+      : [{ chapterNumber: 1, title: 'Studio Overrides', lessons: [] }];
+    const lessonsList = [...(overrideChapters[0].lessons || [])];
+
+    let lesIdx = lessonsList.findIndex(l => {
+      const lk = normalizeViText(cleanPrefix(l.title || '', 'lesson'));
+      return lk && normLesTarget && (lk === normLesTarget || lk.includes(normLesTarget) || normLesTarget.includes(lk));
+    });
+
+    if (lesIdx < 0) {
+      lessonsList.push({
+        lessonNumber: lessonsList.length + 1,
+        title: lessonTitle,
+        theory: updatedFields.theoryRecap || '',
+        isEdited: true,
+        patterns: [applyUpdateToPattern({}, 0)]
+      });
+    } else {
+      const targetLes = { ...lessonsList[lesIdx] };
+      const pats = [...(targetLes.patterns || [])];
+      const patIdx = pats.findIndex(p => {
+        const pk = normalizeViText(cleanPrefix(p.name || '', 'pattern'));
+        return (
+          (normPatOld && pk && (pk === normPatOld || pk.includes(normPatOld) || normPatOld.includes(pk))) ||
+          (normPatNew && pk && (pk === normPatNew || pk.includes(normPatNew) || normPatNew.includes(pk)))
+        );
+      });
+      if (patIdx >= 0) {
+        pats[patIdx] = applyUpdateToPattern(pats[patIdx], patIdx);
+      } else {
+        pats.push(applyUpdateToPattern({}, pats.length));
+      }
+      if (updatedFields.theoryRecap && !isGenericPlaceholder(updatedFields.theoryRecap)) {
+        targetLes.theory = updatedFields.theoryRecap;
+      }
+      targetLes.isEdited = true;
+      targetLes.patterns = pats;
+      lessonsList[lesIdx] = targetLes;
+    }
+
+    overrideChapters[0] = { ...overrideChapters[0], lessons: lessonsList };
+    const overridePayload = {
+      sourceId: '',
+      fileName: 'studio_overrides',
+      skeleton: { chapters: overrideChapters },
+      savedAt: new Date().toISOString()
+    };
+    localStorage.setItem(STUDIO_OVERRIDES_STORAGE_KEY, JSON.stringify(overridePayload));
+
+    if (typeof window !== 'undefined' && !updatedAnyTextbook) {
+      window.dispatchEvent(new CustomEvent('veval:textbook-saved', { detail: overridePayload }));
+    }
+  } catch (err) {
+    console.warn('Không thể ghi cache studio_overrides:', err);
+  }
+
+  return true;
+};
+
+/**
+ * Tự động ánh xạ hoặc khởi tạo (Upsert) Dạng bài từ Studio xuống PostgreSQL Content Service
+ * khi patternId không phải GUID (vd: "SGK_CHEM_G10_P1") hoặc chưa tồn tại trong bảng Skills (tránh lỗi 404 Not Found)
+ */
+export const upsertSinglePatternToCurriculumDb = async ({
+  domain = null,
+  chapter = null,
+  lesson = null,
+  pattern = null,
+  detectedSubject = '',
+  payload,
+  contentService
+}) => {
+  if (!contentService) return null;
+
+  const rawDomainCandidate =
+    domain?.domainId ||
+    (domain?.id ? String(domain.id).replace(/^domain-/i, '') : '');
+  const rawLessonId = lesson?.lessonId || '';
+
+  // Tầng 1: Nếu đã có lessonId và domainId là GUID hợp lệ trong CSDL -> tạo trực tiếp Node Dạng bài dưới Bài học đó
+  if (isValidGuid(rawLessonId) && isValidGuid(rawDomainIdCandidate(rawDomainCandidate))) {
+    const validDomainGuid = rawDomainIdCandidate(rawDomainCandidate);
+    const newId = await contentService.createNode({
+      domainId: validDomainGuid,
+      parentId: rawLessonId,
+      name: payload.name,
+      weight: payload.weight,
+      theoryRecap: payload.theoryRecap,
+      solutionMethod: payload.solutionMethod,
+      videoUrl: payload.videoUrl,
+      durationSeconds: payload.durationSeconds
+    });
+
+    if (isValidGuid(String(newId))) {
+      const guidStr = String(newId).trim();
+      if (payload.sampleQuestion) {
+        try {
+          return await contentService.updatePattern(guidStr, payload);
+        } catch {}
+      }
+      return {
+        patternId: guidStr,
+        name: payload.name,
+        weight: `${Math.round((payload.weight || 0.05) * 100)}%`,
+        theoryRecap: payload.theoryRecap,
+        solutionMethod: payload.solutionMethod
+      };
+    }
+  }
+
+  // Tầng 2: Truy vấn cây Khung Chương Trình hiện có để khớp Chương / Bài học / Dạng bài hoặc Upsert qua importCurriculum
+  const existingDomains = await contentService.getCurriculum();
+  if (!Array.isArray(existingDomains) || existingDomains.length === 0) {
+    return null;
+  }
+
+  const subUpper = String(detectedSubject || domain?.code || domain?.domainCode || '').toUpperCase();
+  const targetDomainCode =
+    subUpper.includes('PHYS') || subUpper.includes('CHEM') || subUpper.includes('BIO') || subUpper.includes('VẬT') || subUpper.includes('HÓA') || subUpper.includes('SINH') || subUpper.includes('NATURAL')
+      ? 'NATURAL_SCIENCES'
+      : subUpper.includes('HIST') || subUpper.includes('GEO') || subUpper.includes('CIV') || subUpper.includes('SỬ') || subUpper.includes('ĐỊA') || subUpper.includes('SOCIAL')
+      ? 'SOCIAL_SCIENCES'
+      : subUpper.includes('LIT') || subUpper.includes('VIET') || subUpper.includes('ENG') || subUpper.includes('VĂN') || subUpper.includes('ANH') || subUpper.includes('LANG')
+      ? 'LANGUAGE'
+      : 'MATH_LOGIC';
+
+  const matchedDomain =
+    (isValidGuid(rawDomainCandidate) && existingDomains.find(d => String(d.domainId).toLowerCase() === rawDomainCandidate.toLowerCase())) ||
+    existingDomains.find(d => (d.domainCode || '').toUpperCase() === targetDomainCode) ||
+    existingDomains[0];
+
+  if (!matchedDomain?.domainId) return null;
+
+  const chapTitle = (chapter?.name || chapter?.title || 'Chương 1: Kiến thức trọng tâm').trim();
+  const lesTitle = (lesson?.name || lesson?.title || 'Bài 1: Nội dung trọng tâm').trim();
+  const oldPatTitle = (pattern?.name || pattern?.patternName || payload.name || '').trim();
+  const newPatTitle = (payload.name || oldPatTitle || 'Dạng 1: Trọng tâm bài học').trim();
+
+  const normChap = normalizeViText(cleanPrefix(chapTitle.replace(/\([^)]*lớp\s*\d+[^)]*\)|\[[^\]]*lớp\s*\d+[^\]]*\]/gi, ''), 'chapter'));
+  const normLes = normalizeViText(cleanPrefix(lesTitle, 'lesson'));
+  const normPatOld = normalizeViText(cleanPrefix(oldPatTitle, 'pattern'));
+  const normPatNew = normalizeViText(cleanPrefix(newPatTitle, 'pattern'));
+
+  const existingChapters = matchedDomain.chapters || [];
+  const foundChap = existingChapters.find(ec => {
+    if (isValidGuid(chapter?.chapterId) && ec.chapterId === chapter.chapterId) return true;
+    const ecClean = normalizeViText(cleanPrefix(String(ec.name || '').replace(/\([^)]*lớp\s*\d+[^)]*\)|\[[^\]]*lớp\s*\d+[^\]]*\]/gi, ''), 'chapter'));
+    return ecClean && normChap && (ecClean === normChap || ecClean.includes(normChap) || normChap.includes(ecClean));
+  });
+
+  const foundLes = (foundChap?.lessons || []).find(el => {
+    if (isValidGuid(lesson?.lessonId) && el.lessonId === lesson.lessonId) return true;
+    const elClean = normalizeViText(cleanPrefix(el.name || '', 'lesson'));
+    return elClean && normLes && (elClean === normLes || elClean.includes(normLes) || normLes.includes(elClean));
+  });
+
+  const foundPat = (foundLes?.patterns || []).find(ep => {
+    const epClean = normalizeViText(cleanPrefix(ep.name || '', 'pattern'));
+    return (
+      (normPatOld && epClean && (epClean === normPatOld || epClean.includes(normPatOld) || normPatOld.includes(epClean))) ||
+      (normPatNew && epClean && (epClean === normPatNew || epClean.includes(normPatNew) || normPatNew.includes(epClean)))
+    );
+  }) || ((foundLes?.patterns || []).length === 1 ? foundLes.patterns[0] : null);
+
+  // 2a. Nếu tìm thấy đúng Dạng bài đã có GUID trong CSDL -> gọi updatePattern trực tiếp
+  if (foundPat && isValidGuid(foundPat.patternId)) {
+    return await contentService.updatePattern(foundPat.patternId, payload);
+  }
+
+  // 2b. Nếu đã có Bài học (lessonId GUID hợp lệ) nhưng chưa có Dạng bài này -> gọi createNode
+  if (foundLes && isValidGuid(foundLes.lessonId)) {
+    const newId = await contentService.createNode({
+      domainId: matchedDomain.domainId,
+      parentId: foundLes.lessonId,
+      name: newPatTitle,
+      weight: payload.weight,
+      theoryRecap: payload.theoryRecap,
+      solutionMethod: payload.solutionMethod,
+      videoUrl: payload.videoUrl,
+      durationSeconds: payload.durationSeconds
+    });
+    if (isValidGuid(String(newId))) {
+      const guidStr = String(newId).trim();
+      if (payload.sampleQuestion) {
+        try {
+          return await contentService.updatePattern(guidStr, payload);
+        } catch {}
+      }
+      return {
+        patternId: guidStr,
+        name: newPatTitle,
+        weight: `${Math.round((payload.weight || 0.05) * 100)}%`,
+        theoryRecap: payload.theoryRecap,
+        solutionMethod: payload.solutionMethod
+      };
+    }
+  }
+
+  // 2c. Upsert trọn vẹn Chương -> Bài học -> Dạng bài qua importCurriculum
+  const importPayload = {
+    domainId: matchedDomain.domainId,
+    domainName: matchedDomain.title || matchedDomain.name,
+    domainDescription: matchedDomain.subtitle || '',
+    chapters: [
+      {
+        ...(foundChap && isValidGuid(foundChap.chapterId) ? { chapterId: foundChap.chapterId } : {}),
+        chapterName: foundChap?.name || chapTitle,
+        weight: 0.25,
+        lessons: [
+          {
+            ...(foundLes && isValidGuid(foundLes.lessonId) ? { lessonId: foundLes.lessonId } : {}),
+            lessonName: foundLes?.name || lesTitle,
+            weight: 0.08,
+            summary: (payload.theoryRecap || '').slice(0, 260),
+            patterns: [
+              {
+                patternName: newPatTitle,
+                weight: payload.weight || 0.05,
+                theoryRecap: payload.theoryRecap || '',
+                solutionMethod: payload.solutionMethod || '',
+                videoUrl: payload.videoUrl || null,
+                durationSeconds: payload.durationSeconds || 600,
+                questions: payload.sampleQuestion ? [payload.sampleQuestion] : []
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  };
+
+  await contentService.importCurriculum(importPayload);
+
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('veval:curriculum-synced', {
+      detail: { domainId: matchedDomain.domainId, chaptersCount: 1 }
+    }));
+  }
+
+  // Lấy lại GUID của pattern vừa được import để đồng bộ state cho Studio
+  try {
+    const refreshedDomains = await contentService.getCurriculum();
+    const refDom = (refreshedDomains || []).find(d => d.domainId === matchedDomain.domainId) || refreshedDomains?.[0];
+    for (const c of (refDom?.chapters || [])) {
+      for (const l of (c.lessons || [])) {
+        for (const p of (l.patterns || [])) {
+          const pk = normalizeViText(cleanPrefix(p.name || '', 'pattern'));
+          if (pk && normPatNew && (pk === normPatNew || pk.includes(normPatNew) || normPatNew.includes(pk))) {
+            return p;
+          }
+        }
+      }
+    }
+  } catch {}
+
+  return {
+    name: newPatTitle,
+    weight: `${Math.round((payload.weight || 0.05) * 100)}%`,
+    theoryRecap: payload.theoryRecap,
+    solutionMethod: payload.solutionMethod
+  };
+};
+
+function rawDomainIdCandidate(val) {
+  return typeof val === 'string' ? val.trim() : '';
+}
+
+/**
+ * Đồng bộ trực tiếp toàn bộ cây Chương -> Bài học -> Dạng bài + Lý thuyết + Phương pháp giải + Câu hỏi
+ * từ Sách Giáo Khoa (AI Engine / Studio) xuống CSDL Khung Chương Trình (Content Service: POST /api/content/curriculum/import)
+ * Tự động ánh xạ ChapterId / LessonId / PatternId hiện có để cập nhật tại chỗ (Upsert), tuyệt đối không tạo chương trùng lặp
+ */
+export const syncTextbookSkeletonToCurriculum = async ({ skeleton, chunks = [], contentService }) => {
+  if (!skeleton || !Array.isArray(skeleton.chapters) || skeleton.chapters.length === 0) {
+    throw new Error('Chưa có cấu trúc Chương / Bài học SGK để đồng bộ.');
+  }
+  if (!contentService || typeof contentService.getCurriculum !== 'function' || typeof contentService.importCurriculum !== 'function') {
+    throw new Error('Content Service chưa sẵn sàng.');
+  }
+
+  const subCode = (skeleton.subjectCode || 'MATH').toUpperCase();
+  const grade = Number(skeleton.grade) || 10;
+  const subNameMap = {
+    MATH: 'Toán học',
+    PHYS: 'Vật lí',
+    CHEM: 'Hóa học',
+    BIO: 'Sinh học',
+    LIT: 'Ngữ văn',
+    VIET: 'Ngữ văn',
+    ENG: 'Tiếng Anh',
+    ENGL: 'Tiếng Anh',
+    HIST: 'Lịch sử',
+    GEO: 'Địa lí',
+    CIV: 'GDKT & Pháp luật'
+  };
+  const subjectLabel = skeleton.subjectName || subNameMap[subCode] || 'Toán học';
+
+  const targetDomainCode =
+    ['PHYS', 'CHEM', 'BIO'].includes(subCode) ? 'NATURAL_SCIENCES' :
+    ['HIST', 'GEO', 'CIV'].includes(subCode) ? 'SOCIAL_SCIENCES' :
+    ['LIT', 'VIET', 'ENG', 'ENGL'].includes(subCode) ? 'LANGUAGE' : 'MATH_LOGIC';
+
+  const existingDomains = await contentService.getCurriculum();
+  const matchedDomain = (existingDomains || []).find(d => (d.domainCode || '').toUpperCase() === targetDomainCode)
+    || (existingDomains || [])[0];
+
+  if (!matchedDomain?.domainId) {
+    throw new Error('Không tìm thấy Miền tri thức phù hợp trong Content Service.');
+  }
+
+  const stripMetaSuffix = (s) => normalizeViText(
+    cleanPrefix(String(s || '').replace(/\([^)]*lớp\s*\d+[^)]*\)|\[[^\]]*lớp\s*\d+[^\]]*\]/gi, ''), 'chapter')
+  );
+  const normLesson = (s) => normalizeViText(cleanPrefix(String(s || ''), 'lesson'));
+  const normPattern = (s) => normalizeViText(cleanPrefix(String(s || ''), 'pattern'));
+
+  const existingChapters = matchedDomain.chapters || [];
+  const validChapters = filterPedagogicalChapters(skeleton.chapters);
+
+  const importChapters = validChapters.map((ch, chIdx) => {
+    const cleanCh = stripMetaSuffix(ch.title);
+    const foundChap = existingChapters.find(ec => {
+      const ecText = normalizeViText(ec.name || '');
+      const hasSameGrade = !ecText.includes('lớp ') || ecText.includes(`lớp ${grade}`);
+      if (!hasSameGrade) return false;
+      const ecClean = stripMetaSuffix(ec.name);
+      return ecClean && cleanCh && (ecClean === cleanCh || ecClean.includes(cleanCh) || cleanCh.includes(ecClean));
+    });
+
+    const formattedChapterName = ch.title.toLowerCase().includes('lớp')
+      ? ch.title
+      : `${ch.title} (${subjectLabel} - Lớp ${grade})`;
+
+    const importLessons = (ch.lessons || []).map((les) => {
+      const cleanLes = normLesson(les.title);
+      const foundLes = (foundChap?.lessons || []).find(el => {
+        const elClean = normLesson(el.name);
+        return elClean && cleanLes && (elClean === cleanLes || elClean.includes(cleanLes) || cleanLes.includes(elClean));
+      });
+
+      const lesChunks = getChunksForLesson(les, chunks, subCode);
+      const compiledLessonTheory = (les.isEdited && les.theory && !isGenericPlaceholder(les.theory))
+        ? les.theory
+        : (buildTheoryFromChunks(lesChunks, les.title, subCode) || (!isGenericPlaceholder(les.theory) ? (les.theory || '') : ''));
+
+      const validPats = (les.patterns || []).filter(p => p && !isNonPedagogical(p.name));
+      const importPatterns = (validPats.length > 0 ? validPats : [{ name: `Dạng 1: Trọng tâm ${cleanPrefix(les.title, 'lesson') || les.title}`, bloomLevel: 2, exercises: [] }]).map((pat, pIdx) => {
+        const cleanPat = normPattern(pat.name);
+        const foundPat = (foundLes?.patterns || []).find(ep => {
+          const epClean = normPattern(ep.name);
+          return epClean && cleanPat && (epClean === cleanPat || epClean.includes(cleanPat) || cleanPat.includes(epClean));
+        }) || (validPats.length === 1 && foundLes?.patterns?.length === 1 ? foundLes.patterns[0] : null);
+
+        const patTheory = (pat.theoryRecap && !isGenericPlaceholder(pat.theoryRecap))
+          ? pat.theoryRecap
+          : compiledLessonTheory;
+
+        const explicitMethod = (pat.solutionMethod && !isGenericPlaceholder(pat.solutionMethod))
+          ? pat.solutionMethod.trim()
+          : ((pat.method && !isGenericPlaceholder(pat.method)) ? pat.method.trim() : '');
+        const patMethod = (explicitMethod && (pat.isEdited || explicitMethod.includes('\n') || explicitMethod.length >= 140))
+          ? explicitMethod
+          : (buildMethodFromChunks(lesChunks, les, pat, subCode) || explicitMethod);
+
+        const mappedQuestions = (pat.exercises || []).map(ex => {
+          const opts = Array.isArray(ex.options) ? ex.options : [];
+          return {
+            contentLatex: ex.contentLatex || ex.stem || ex.content || '',
+            optionA: ex.optionA || opts[0] || '',
+            optionB: ex.optionB || opts[1] || '',
+            optionC: ex.optionC || opts[2] || '',
+            optionD: ex.optionD || opts[3] || '',
+            correctOption: ex.correctOption !== undefined ? ex.correctOption : (ex.correctIndex ?? 0),
+            explanation: ex.explanation || ex.solution || '',
+            difficultyLevel: Number(ex.difficultyLevel || ex.bloomLevel || pat.bloomLevel) || 2
+          };
+        }).filter(q => q.contentLatex && q.optionA && q.optionB);
+
+        return {
+          ...(foundPat?.patternId ? { patternId: foundPat.patternId } : {}),
+          patternName: pat.name || `Dạng ${pIdx + 1}`,
+          theoryRecap: patTheory || '',
+          solutionMethod: patMethod || '',
+          questions: mappedQuestions
+        };
+      });
+
+      return {
+        ...(foundLes?.lessonId ? { lessonId: foundLes.lessonId } : {}),
+        lessonName: les.title,
+        summary: compiledLessonTheory ? compiledLessonTheory.slice(0, 260) : '',
+        patterns: importPatterns
+      };
+    });
+
+    return {
+      ...(foundChap?.chapterId ? { chapterId: foundChap.chapterId } : {}),
+      chapterName: formattedChapterName || `Chương ${chIdx + 1}`,
+      description: `Đồng bộ chuẩn từ SGK ${subjectLabel} Lớp ${grade} (${skeleton.bookEdition || 'GDPT 2018'})`,
+      lessons: importLessons
+    };
+  });
+
+  const payload = {
+    domainId: matchedDomain.domainId,
+    domainName: matchedDomain.title || matchedDomain.name,
+    domainDescription: matchedDomain.subtitle || '',
+    chapters: importChapters
+  };
+
+  const result = await contentService.importCurriculum(payload);
+
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('veval:curriculum-synced', {
+      detail: { domainId: matchedDomain.domainId, subjectCode: subCode, grade, chaptersCount: importChapters.length }
+    }));
+  }
+
+  return result;
 };

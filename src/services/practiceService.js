@@ -526,7 +526,7 @@ const buildSeedAlertsPool = (studentId) => {
       classId: FLOW5_DEFAULTS.CLASS_ID,
       alertType: 'RED',
       message:
-        'Cảnh báo Đỏ (BR-04): Tốc độ tích lũy điểm tuần qua chậm hơn 38% quỹ đạo mục tiêu 920đ và hổng liên tiếp dạng Mệnh đề kéo theo (P(Lt) = 0.42). Khuyến nghị làm ngay Toa thuốc bù điểm ROI #1 (+30đ).',
+        'Tốc độ tiến bộ tuần qua chậm hơn 38% so với lộ trình mục tiêu 920 điểm; học sinh gặp khó khăn liên tiếp ở chủ đề Mệnh đề & Logic (độ làm chủ 42%). Khuyến nghị giáo viên giao gói bài tập trọng tâm bổ trợ kiến thức (+30 điểm).',
       isRead: false,
       currentPredictedScore: 845,
       targetScore: 920,
@@ -543,7 +543,7 @@ const buildSeedAlertsPool = (studentId) => {
       classId: FLOW5_DEFAULTS.CLASS_ID,
       alertType: 'YELLOW',
       message:
-        'Nhắc nhở Vàng (BR-04): Em có 3 câu hỏi trong Sổ tay lỗi sai SM-2 đã đến hạn ôn tập ngắt quãng hôm nay (Tính pH dung dịch & Đạo hàm hàm hợp).',
+        'Học sinh có 3 câu hỏi trong Sổ tay lỗi sai đã đến chu kỳ ôn tập củng cố hôm nay (chuyên đề Tính pH dung dịch & Đạo hàm hàm hợp).',
       isRead: false,
       currentPredictedScore: 845,
       targetScore: 920,
@@ -560,7 +560,7 @@ const buildSeedAlertsPool = (studentId) => {
       classId: FLOW5_DEFAULTS.CLASS_ID,
       alertType: 'UNREALISTIC_GOAL',
       message:
-        'Cảnh báo Mục tiêu Vượt ngưỡng (BR-04 Tier 3): Điểm dự báo hiện tại 610đ (±48đ) cách mục tiêu 980đ tới 370 điểm trong khi quỹ thời gian ôn thi còn 6 tuần. Cần đặt lịch tư vấn 3 bên (Giáo viên - Học sinh - Phụ huynh) hiệu chỉnh lộ trình.',
+        'Điểm dự báo hiện tại 610 điểm cách xa mục tiêu 980 điểm (chênh lệch 370 điểm) trong khi thời gian chuẩn bị còn 6 tuần. Cần tổ chức buổi tư vấn 3 bên (Quản lý/Giáo viên - Học sinh - Phụ huynh) để thống nhất điều chỉnh lộ trình học tập phù hợp.',
       isRead: false,
       currentPredictedScore: 610,
       targetScore: 980,
@@ -577,7 +577,7 @@ const buildSeedAlertsPool = (studentId) => {
       classId: FLOW5_DEFAULTS.SECONDARY_CLASS_ID,
       alertType: 'RED',
       message:
-        'Cảnh báo Đỏ (BR-04): Gián đoạn chuỗi chuyên cần 5 ngày liên tiếp và tụt 45 điểm ở bài thi thử Đợt 2 miền Khoa học Tự nhiên.',
+        'Học sinh vắng học / gián đoạn chuyên cần 5 ngày liên tiếp và giảm 45 điểm ở bài thi khảo sát Đợt 2 phần Khoa học Tự nhiên.',
       isRead: true,
       currentPredictedScore: 735,
       targetScore: 860,
@@ -934,46 +934,8 @@ const buildSeedClassHeatmap = (classId, { domainCode = '', minMastery = null } =
 };
 
 const buildSeedParentDashboard = (parentId) => ({
-  parentId: ensureGuid(parentId, FLOW5_DEFAULTS.PARENT_ID),
-  children: [
-    {
-      studentId: FLOW5_DEFAULTS.STUDENT_ID,
-      studentName: 'Phạm Minh Hoàng',
-      grade: 'Lớp 12A1',
-      school: 'THPT Chuyên Lê Hồng Phong - TP.HCM',
-      targetMajor: 'Khoa học Máy tính - ĐH Bách Khoa (ĐHQG TP.HCM)',
-      assignedTeacherName: 'ThS. Nguyễn Minh Triết',
-      teacherContactPhone: '0908 246 357',
-      examReadiness: {
-        readinessIndex: 82.4,
-        readinessTier: 'READY',
-        normalizedThetaScore: 81.2,
-        skillCoverageScore: 79.5,
-        consistencyScore: 95.0
-      },
-      weeklyDisciplines: {
-        studyHoursThisWeek: 13.5,
-        recommendedHours: 12.0,
-        currentStreak: 12,
-        completionStatus: 'EXCEEDED_GOAL'
-      },
-      aiParentAlerts: [
-        {
-          type: 'SUCCESS',
-          title: 'Duy trì chuỗi 12 ngày tự học liên tiếp vượt chuẩn 12 giờ/tuần',
-          description:
-            'Hoàng đã hoàn thành 13.5 giờ tự học có xác thực trong 7 ngày qua (đạt 112.5% định mức khuyến nghị) và hoàn thành Chặng 07 đúng tiến độ.'
-        },
-        {
-          type: 'WARNING',
-          title: 'Cần củng cố thêm mảng Toán Logic Mệnh Đề & Suy Luận',
-          description:
-            'Độ thành thạo chuyên đề suy luận kéo theo hiện ở mức khá nhưng tốc độ xử lý câu hỏi vận dụng cao còn chậm. Giáo viên trên lớp đã xếp Hoàng vào nhóm bàn hỗ trợ chéo.'
-        }
-      ]
-    }
-  ],
-  _source: 'seed_fallback'
+  parentId: parentId || null,
+  children: []
 });
 
 const buildSeedCampusComparativeHeatmap = (campusId) => ({
@@ -1274,8 +1236,15 @@ export const practiceService = {
   },
 
   async getStudentDiagnosticHistory(studentId) {
-    const resolvedId = ensureGuid(studentId || tokenStorage.getUser()?.id, FLOW5_DEFAULTS.STUDENT_ID);
-    return (await apiClient.get(`/api/practice/diagnostic-submissions/student/${resolvedId}`)).data;
+    const user = tokenStorage.getUser();
+    const resolvedId = studentId || user?.id || user?.userId;
+    if (!resolvedId) return [];
+    try {
+      return (await apiClient.get(`/api/practice/diagnostic-submissions/student/${resolvedId}`)).data;
+    } catch (err) {
+      console.warn('[PracticeService] getStudentDiagnosticHistory error:', err?.message);
+      return [];
+    }
   },
 
   async getDiagnosticSubmissionById(submissionId) {
@@ -1468,25 +1437,26 @@ export const practiceService = {
     return filtered;
   },
 
-  getSubmissionHistory() {
+  getSubmissionHistory(targetStudentId = null) {
     try {
       const user = tokenStorage.getUser();
-      const owner = user?.userId || user?.id;
+      const owner = targetStudentId || user?.userId || user?.id;
       if (!owner) return [];
       const parsed = JSON.parse(localStorage.getItem(HISTORY_STORAGE_KEY) || '[]');
-      return Array.isArray(parsed) ? parsed.filter((item) => item.studentId === owner) : [];
+      return Array.isArray(parsed) ? parsed.filter((item) => !item.studentId || item.studentId === owner) : [];
     } catch { return []; }
   },
 
-  deleteSubmissionFromHistory(submissionId) {
+  deleteSubmissionFromHistory(submissionId, targetStudentId = null) {
     try {
-      const current = this.getSubmissionHistory();
-      const filtered = current.filter((item) => item.id !== submissionId);
-      localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(filtered));
+      const raw = localStorage.getItem(HISTORY_STORAGE_KEY);
+      const all = raw ? JSON.parse(raw) : [];
+      const updated = Array.isArray(all) ? all.filter((item) => item.id !== submissionId) : [];
+      localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(updated));
       if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
         window.dispatchEvent(new CustomEvent('veval:submission-updated', { detail: { deletedId: submissionId } }));
       }
-      return filtered;
+      return this.getSubmissionHistory(targetStudentId);
     } catch (e) {
       console.warn('Could not delete submission from history:', e);
       return [];
@@ -1820,14 +1790,66 @@ export const practiceService = {
   // Core Flow 2: Quản Lý Phân Công Lớp Học & Nhóm Vi Mô (3 - 5 bạn)
   // =========================================================================
 
-  async assignTeacher(classId, teacherId) {
-    const resolvedClassId = ensureGuid(classId, FLOW5_DEFAULTS.CLASS_ID);
-    return (await apiClient.put(`/api/practice/classes/${resolvedClassId}/assign-teacher`, { teacherId })).data;
+  async assignTeacher(classId, teacherId, { teacherCampusId = null, managerCampusId = null } = {}) {
+    if (!classId || !GUID_REGEX.test(String(classId).trim())) {
+      throw new Error('Mã lớp học không hợp lệ.');
+    }
+    if (!teacherId || !GUID_REGEX.test(String(teacherId).trim())) {
+      throw new Error('Vui lòng chọn giáo viên phụ trách hợp lệ');
+    }
+    const res = await apiClient.put(`/api/practice/classes/${String(classId).trim()}/assign-teacher`, {
+      teacherId: String(teacherId).trim(),
+      teacherCampusId: teacherCampusId && GUID_REGEX.test(String(teacherCampusId).trim()) ? String(teacherCampusId).trim() : undefined,
+      managerCampusId: managerCampusId && GUID_REGEX.test(String(managerCampusId).trim()) ? String(managerCampusId).trim() : undefined
+    });
+    return res.data?.value || res.data?.data || res.data;
   },
 
-  async autoClusterClasses(campusId, maxK = 6) {
-    const resolvedCampusId = ensureGuid(campusId, FLOW5_DEFAULTS.CAMPUS_ID);
-    return (await apiClient.post('/api/practice/classes/auto-cluster', { campusId: resolvedCampusId, maxK })).data;
+  async enrollOrTransferStudent(classId, { studentId, managerCampusId = null } = {}) {
+    if (!classId || !GUID_REGEX.test(String(classId).trim())) {
+      throw new Error('Mã lớp học không hợp lệ.');
+    }
+    if (!studentId || !GUID_REGEX.test(String(studentId).trim())) {
+      throw new Error('Vui lòng nhập hoặc chọn mã học sinh (UUID) hợp lệ.');
+    }
+    const res = await apiClient.post(`/api/practice/classes/${String(classId).trim()}/enroll-student`, {
+      studentId: String(studentId).trim(),
+      managerCampusId: managerCampusId && GUID_REGEX.test(String(managerCampusId).trim()) ? String(managerCampusId).trim() : undefined
+    });
+    return res.data?.value || res.data?.data || res.data;
+  },
+
+  async autoClusterClasses(
+    campusId,
+    maxK = 12,
+    {
+      minCapacity = 5,
+      maxCapacity = 20,
+      dryRun = false,
+      managerCampusId = null,
+      foundationThreshold = 0.50,
+      advancedThreshold = 0.75,
+      includeEmptyClasses = true,
+      preserveExistingEnrollments = true
+    } = {}
+  ) {
+    if (!campusId || !GUID_REGEX.test(String(campusId).trim())) {
+      throw new Error('Vui lòng chọn cơ sở hợp lệ để chạy xếp lớp.');
+    }
+    const parsedK = Number(maxK) || 12;
+    const res = await apiClient.post('/api/practice/classes/auto-cluster', {
+      campusId: String(campusId).trim(),
+      maxK: parsedK,
+      minCapacity: Number(minCapacity || 5),
+      maxCapacity: Number(maxCapacity || 20),
+      dryRun: Boolean(dryRun),
+      managerCampusId: managerCampusId && GUID_REGEX.test(String(managerCampusId).trim()) ? String(managerCampusId).trim() : undefined,
+      foundationThreshold: Number(foundationThreshold || 0.50),
+      advancedThreshold: Number(advancedThreshold || 0.75),
+      includeEmptyClasses: Boolean(includeEmptyClasses),
+      preserveExistingEnrollments: Boolean(preserveExistingEnrollments)
+    });
+    return res.data?.value || res.data?.data || res.data;
   },
 
   async autoPartitionMicroGroups(classId, preferredGroupSize = 4) {
@@ -2165,13 +2187,17 @@ export const practiceService = {
   },
 
   async getParentDashboard(parentId) {
-    const resolvedParentId = ensureGuid(parentId || tokenStorage.getUser()?.id, FLOW5_DEFAULTS.PARENT_ID);
+    const user = tokenStorage.getUser();
+    const resolvedParentId = parentId || user?.id || user?.userId;
+    if (!resolvedParentId) {
+      return { parentId: null, children: [] };
+    }
     try {
       const data = (await apiClient.get(`/api/practice/analytics/parent/${resolvedParentId}/children`)).data;
       return { ...data, _source: 'backend' };
     } catch (err) {
-      console.warn('[Core Flow 5] getParentDashboard fallback activated:', err?.message);
-      return buildSeedParentDashboard(resolvedParentId);
+      console.warn('[Core Flow 5] getParentDashboard error:', err?.message);
+      return { parentId: resolvedParentId, children: [], _error: err?.message };
     }
   },
 
@@ -2970,13 +2996,67 @@ export const practiceService = {
   async getClasses({ campusId = null, termId = null, courseId = null, teacherId = null } = {}) {
     const params = new URLSearchParams();
     if (campusId) params.set('campusId', campusId);
-    if (termId) params.set('termId', termId);
-    if (courseId) params.set('courseId', courseId);
-    if (teacherId) params.set('teacherId', teacherId);
+    if (termId && termId !== 'ALL') params.set('termId', termId);
+    if (courseId && courseId !== 'ALL') params.set('courseId', courseId);
+    if (teacherId && teacherId !== 'ALL') params.set('teacherId', teacherId);
     const qs = params.toString();
 
     const res = (await apiClient.get(`/api/practice/classes${qs ? `?${qs}` : ''}`)).data;
     return Array.isArray(res) ? res : Array.isArray(res?.data) ? res.data : Array.isArray(res?.value) ? res.value : [];
+  },
+
+  async createAcademicTerm(payload) {
+    const res = (await apiClient.post('/api/practice/academic-terms', payload)).data;
+    return res?.value || res?.data || res;
+  },
+
+  async updateAcademicTermStatus(termId, status) {
+    const res = (await apiClient.patch(`/api/practice/academic-terms/${termId}/status`, { status })).data;
+    return res?.value || res?.data || res;
+  },
+
+  async createCourse(payload) {
+    const res = (await apiClient.post('/api/practice/courses', payload)).data;
+    return res?.value || res?.data || res;
+  },
+
+  async createClassWithSchedule(payload) {
+    const res = (await apiClient.post('/api/practice/classes', payload)).data;
+    return res?.value || res?.data || res;
+  },
+
+  async saveClassWeeklySchedules(classId, { slots = [], regenerateFutureSessions = true } = {}) {
+    const res = (
+      await apiClient.put(`/api/practice/schedules/classes/${classId}/weekly-schedules`, {
+        slots,
+        regenerateFutureSessions
+      })
+    ).data;
+    return Array.isArray(res) ? res : Array.isArray(res?.value) ? res.value : Array.isArray(res?.data) ? res.data : [];
+  },
+
+  async generateClassSessions(classId, payload = {}) {
+    const res = (await apiClient.post(`/api/practice/schedules/classes/${classId}/sessions/generate`, payload)).data;
+    return res?.value || res?.data || res;
+  },
+
+  async getClassSessions(classId, { fromDate = null, toDate = null } = {}) {
+    const params = new URLSearchParams();
+    if (fromDate) params.set('fromDate', fromDate);
+    if (toDate) params.set('toDate', toDate);
+    const qs = params.toString();
+    const res = (await apiClient.get(`/api/practice/schedules/classes/${classId}/sessions${qs ? `?${qs}` : ''}`)).data;
+    return Array.isArray(res) ? res : Array.isArray(res?.value) ? res.value : Array.isArray(res?.data) ? res.data : [];
+  },
+
+  async updateClassSession(sessionId, payload) {
+    const res = (await apiClient.put(`/api/practice/schedules/sessions/${sessionId}`, payload)).data;
+    return res?.value || res?.data || res;
+  },
+
+  async rescheduleClassSession(sessionId, payload) {
+    const res = (await apiClient.post(`/api/practice/schedules/sessions/${sessionId}/reschedule`, payload)).data;
+    return res?.value || res?.data || res;
   },
 
   async getStudentTimetable({ studentId = null, termId = null, courseId = null, fromDate = null, toDate = null } = {}) {

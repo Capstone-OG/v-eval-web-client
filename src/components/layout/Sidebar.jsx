@@ -2,6 +2,7 @@ import BrandLogo from '../common/BrandLogo';
 import React, { useEffect, useState } from 'react';
 import {
   Activity,
+  AlertTriangle,
   Award,
   BarChart3,
   BookOpen,
@@ -85,35 +86,27 @@ export default function Sidebar({
             items: [
               {
                 id: 'dashboard',
-                label: 'Tổng quan Đồng hành',
-                sublabel: 'Chỉ số R_exam & Kỷ luật tuần',
+                label: 'Tổng quan đồng hành',
+                sublabel: 'Điểm dự kiến & Sẵn sàng thi',
                 icon: HeartHandshake,
                 active: activeTab === 'dashboard',
                 onClick: () => setActiveTab('dashboard')
               },
               {
-                id: 'analytics',
-                label: 'Báo cáo Năng lực 4 Miền',
-                sublabel: 'Biểu đồ tiến bộ & Dự báo điểm',
-                icon: TrendingUp,
-                active: activeTab === 'analytics',
-                onClick: () => setActiveTab('analytics')
+                id: 'results',
+                label: 'Tiến độ & Kết quả của con',
+                sublabel: 'Năng lực 4 môn & Lộ trình',
+                icon: BarChart3,
+                active: activeTab === 'results',
+                onClick: () => setActiveTab('results')
               },
               {
-                id: 'history',
-                label: 'Lịch sử Bài thi của Con',
-                sublabel: 'Chi tiết điểm & Nhận xét AI',
-                icon: History,
-                active: activeTab === 'history',
-                onClick: () => setActiveTab('history')
-              },
-              {
-                id: 'roadmap',
-                label: 'Cây Tri thức & Chuyên đề',
-                sublabel: 'Theo dõi lộ trình học của con',
-                icon: Network,
-                active: activeTab === 'roadmap',
-                onClick: () => setActiveTab('roadmap')
+                id: 'warnings',
+                label: 'Cảnh báo & Trao đổi Giáo viên',
+                sublabel: 'Cảnh báo sớm & Họp 3 bên',
+                icon: AlertTriangle,
+                active: activeTab === 'warnings',
+                onClick: () => setActiveTab('warnings')
               }
             ]
           },
@@ -122,12 +115,11 @@ export default function Sidebar({
             items: [
               {
                 id: 'tuition',
-                label: 'Đóng Học phí & Gói học',
-                sublabel: 'Cổng VietQR PayOS tức thì',
+                label: 'Học phí & Lịch sử giao dịch',
+                sublabel: 'VietQR PayOS & Hóa đơn',
                 icon: CreditCard,
                 active: activeTab === 'tuition',
-                onClick: () => setActiveTab('tuition'),
-                badge: 'PayOS'
+                onClick: () => setActiveTab('tuition')
               }
             ]
           }
@@ -194,12 +186,34 @@ export default function Sidebar({
                 ]
               },
               {
-                id: 'exam-studio',
-                label: 'Parse Đề thi',
-                sublabel: 'Tách câu hỏi & Studio Đề',
+                id: 'exam-group',
+                label: 'Đề thi & AI Bloom',
+                sublabel: 'Kho đề, Parse & Studio',
                 icon: FileSpreadsheet,
-                active: activeTab === 'exam-studio',
-                onClick: () => setActiveTab('exam-studio')
+                iconColor: 'from-indigo-500 to-blue-700',
+                children: [
+                  {
+                    id: 'exam-bank',
+                    label: '1. Kho Đề & Xem Đề Thi',
+                    badge: 'Kho Đề',
+                    active: activeTab === 'exam-bank',
+                    onClick: () => setActiveTab('exam-bank')
+                  },
+                  {
+                    id: 'exam-ingest',
+                    label: '2. Parse PDF & AI Bloom',
+                    badge: '2 Phần',
+                    active: activeTab === 'exam-ingest',
+                    onClick: () => setActiveTab('exam-ingest')
+                  },
+                  {
+                    id: 'exam-studio',
+                    label: '3. Studio Biên Soạn Đề',
+                    badge: 'Studio',
+                    active: activeTab === 'exam-studio',
+                    onClick: () => setActiveTab('exam-studio')
+                  }
+                ]
               },
               {
                 id: 'diagnostic',
@@ -229,107 +243,181 @@ export default function Sidebar({
           }
         ];
 
-      case 'manager':
+      case 'director':
+      case 'manager': {
+        const currentRoles = Array.isArray(portalMetrics?.currentUser?.roles)
+          ? portalMetrics.currentUser.roles.map((r) => String(r).toUpperCase())
+          : [];
+        const isDirectorRole =
+          role === 'director' ||
+          currentRoles.some((r) => r.includes('DIRECTOR')) ||
+          String(portalMetrics?.currentUser?.email || '').toLowerCase().startsWith('director');
+
+        if (isDirectorRole) {
+          return [
+            {
+              sectionTitle: 'Quản Trị Học Thuật Cơ Sở',
+              items: [
+                {
+                  id: 'dashboard',
+                  label: 'Trung tâm Điều phối Cơ sở',
+                  sublabel: 'AI Clustering & Bản đồ nhiệt',
+                  icon: Building2,
+                  active: activeTab === 'dashboard',
+                  onClick: () => setActiveTab('dashboard')
+                },
+                {
+                  id: 'teacher_heatmap',
+                  label: 'Giám sát Ma trận Lớp học',
+                  sublabel: 'Theo dõi độ làm chủ từng lớp',
+                  icon: LayoutGrid,
+                  active: activeTab === 'teacher_heatmap',
+                  onClick: () => setActiveTab('teacher_heatmap')
+                },
+                {
+                  id: 'ai_moderation',
+                  label: 'Kiểm duyệt Gia sư AI',
+                  sublabel: 'Báo cáo sai lệch & Bẫy tư duy',
+                  icon: Bot,
+                  active: activeTab === 'ai_moderation',
+                  onClick: () => setActiveTab('ai_moderation'),
+                  badge: 'Flow 4'
+                },
+                {
+                  id: 'roadmap',
+                  label: 'Quản lý Khung Chương trình',
+                  sublabel: 'Phê duyệt học liệu & Câu hỏi',
+                  icon: Network,
+                  active: activeTab === 'roadmap',
+                  onClick: () => setActiveTab('roadmap')
+                },
+                {
+                  id: 'textbook-group',
+                  label: 'Sách giáo khoa (SGK)',
+                  sublabel: 'Chuẩn, Nạp & Studio',
+                  icon: BookOpen,
+                  iconColor: 'from-emerald-500 to-teal-700',
+                  children: [
+                    {
+                      id: 'textbook-standard',
+                      label: '1. Sách Giáo Khoa Chuẩn',
+                      badge: 'Khung',
+                      active: activeTab === 'textbook-standard',
+                      onClick: () => setActiveTab('textbook-standard')
+                    },
+                    {
+                      id: 'textbook-ingest',
+                      label: '2. Nạp Tài Liệu SGK',
+                      badge: '3 Phần',
+                      active: activeTab === 'textbook-ingest',
+                      onClick: () => setActiveTab('textbook-ingest')
+                    },
+                    {
+                      id: 'textbook-studio',
+                      label: '3. Studio Biên Soạn SGK',
+                      badge: 'Studio',
+                      active: activeTab === 'textbook-studio',
+                      onClick: () => setActiveTab('textbook-studio')
+                    }
+                  ]
+                },
+                {
+                  id: 'exam-group',
+                  label: 'Đề thi & AI Bloom',
+                  sublabel: 'Kho đề, Parse & Studio',
+                  icon: FileSpreadsheet,
+                  iconColor: 'from-indigo-500 to-blue-700',
+                  children: [
+                    {
+                      id: 'exam-bank',
+                      label: '1. Kho Đề & Xem Đề Thi',
+                      badge: 'Kho Đề',
+                      active: activeTab === 'exam-bank',
+                      onClick: () => setActiveTab('exam-bank')
+                    },
+                    {
+                      id: 'exam-ingest',
+                      label: '2. Parse PDF & AI Bloom',
+                      badge: '2 Phần',
+                      active: activeTab === 'exam-ingest',
+                      onClick: () => setActiveTab('exam-ingest')
+                    },
+                    {
+                      id: 'exam-studio',
+                      label: '3. Studio Biên Soạn Đề',
+                      badge: 'Studio',
+                      active: activeTab === 'exam-studio',
+                      onClick: () => setActiveTab('exam-studio')
+                    }
+                  ]
+                },
+                {
+                  id: 'analytics',
+                  label: 'Báo cáo Chất lượng Đào tạo',
+                  sublabel: 'Dự báo điểm chuẩn ĐGNL cơ sở',
+                  icon: BarChart3,
+                  active: activeTab === 'analytics',
+                  onClick: () => setActiveTab('analytics')
+                }
+              ]
+            },
+            {
+              sectionTitle: 'Nhân Sự & Tài Khoản Cơ Sở',
+              items: [
+                {
+                  id: 'provision',
+                  label: 'Cấp phát Tài khoản Cơ sở',
+                  sublabel: 'Giảng viên & Học viên mới',
+                  icon: UserPlus,
+                  active: activeTab === 'provision',
+                  onClick: () => setActiveTab('provision'),
+                  badge: 'IAM'
+                }
+              ]
+            }
+          ];
+        }
+
         return [
           {
-            sectionTitle: 'Quản Trị Học Thuật Cơ Sở',
+            sectionTitle: 'Điều Phối Học Thuật Cơ Sở',
             items: [
               {
                 id: 'dashboard',
-                label: 'Trung tâm Điều phối Cơ sở',
-                sublabel: 'AI Clustering & Bản đồ nhiệt',
+                label: 'Tổng quan & Đối sánh Cơ sở',
+                sublabel: 'Bản đồ nhiệt lớp & Xuất báo cáo',
                 icon: Building2,
-                active: activeTab === 'dashboard',
+                active: activeTab === 'dashboard' || activeTab === 'analytics',
                 onClick: () => setActiveTab('dashboard')
               },
               {
-                id: 'teacher_heatmap',
-                label: 'Giám sát Ma trận Lớp học',
-                sublabel: 'Theo dõi độ làm chủ từng lớp',
-                icon: LayoutGrid,
-                active: activeTab === 'teacher_heatmap',
-                onClick: () => setActiveTab('teacher_heatmap')
+                id: 'classes_schedule',
+                label: 'Lớp học, Lịch học & Phân công GV',
+                sublabel: 'Đợt học, Trần 20 HS & Thời khóa biểu',
+                icon: Calendar,
+                active: activeTab === 'classes_schedule',
+                onClick: () => setActiveTab('classes_schedule')
               },
               {
-                id: 'ai_moderation',
-                label: 'Kiểm duyệt Gia sư AI',
-                sublabel: 'Báo cáo sai lệch & Bẫy tư duy',
-                icon: Bot,
-                active: activeTab === 'ai_moderation',
-                onClick: () => setActiveTab('ai_moderation'),
-                badge: 'Flow 4'
+                id: 'clustering',
+                label: 'Xếp lớp Đầu vào & Phân cụm AI',
+                sublabel: 'K-Means 4 miền & Gán Giáo viên',
+                icon: Sparkles,
+                active: activeTab === 'clustering',
+                onClick: () => setActiveTab('clustering')
               },
               {
-                id: 'roadmap',
-                label: 'Quản lý Khung Chương trình',
-                sublabel: 'Phê duyệt học liệu & Câu hỏi',
-                icon: Network,
-                active: activeTab === 'roadmap',
-                onClick: () => setActiveTab('roadmap')
-              },
-              {
-                id: 'textbook-group',
-                label: 'Sách giáo khoa (SGK)',
-                sublabel: 'Chuẩn, Nạp & Studio',
-                icon: BookOpen,
-                iconColor: 'from-emerald-500 to-teal-700',
-                children: [
-                  {
-                    id: 'textbook-standard',
-                    label: '1. Sách Giáo Khoa Chuẩn',
-                    badge: 'Khung',
-                    active: activeTab === 'textbook-standard',
-                    onClick: () => setActiveTab('textbook-standard')
-                  },
-                  {
-                    id: 'textbook-ingest',
-                    label: '2. Nạp Tài Liệu SGK',
-                    badge: '3 Phần',
-                    active: activeTab === 'textbook-ingest',
-                    onClick: () => setActiveTab('textbook-ingest')
-                  },
-                  {
-                    id: 'textbook-studio',
-                    label: '3. Studio Biên Soạn SGK',
-                    badge: 'Studio',
-                    active: activeTab === 'textbook-studio',
-                    onClick: () => setActiveTab('textbook-studio')
-                  }
-                ]
-              },
-              {
-                id: 'exam-studio',
-                label: 'Parse Đề thi',
-                sublabel: 'Tách câu hỏi & Studio Đề',
-                icon: FileSpreadsheet,
-                active: activeTab === 'exam-studio',
-                onClick: () => setActiveTab('exam-studio')
-              },
-              {
-                id: 'analytics',
-                label: 'Báo cáo Chất lượng Đào tạo',
-                sublabel: 'Dự báo điểm chuẩn ĐGNL cơ sở',
-                icon: BarChart3,
-                active: activeTab === 'analytics',
-                onClick: () => setActiveTab('analytics')
-              }
-            ]
-          },
-          {
-            sectionTitle: 'Nhân Sự & Tài Khoản Cơ Sở',
-            items: [
-              {
-                id: 'provision',
-                label: 'Cấp phát Tài khoản Cơ sở',
-                sublabel: 'Giảng viên & Học viên mới',
-                icon: UserPlus,
-                active: activeTab === 'provision',
-                onClick: () => setActiveTab('provision'),
-                badge: 'IAM'
+                id: 'escalations',
+                label: 'Cảnh báo Cấp 3 & Họp 3 bên',
+                sublabel: 'Can thiệp học viên nguy cơ cao',
+                icon: Activity,
+                active: activeTab === 'escalations',
+                onClick: () => setActiveTab('escalations')
               }
             ]
           }
         ];
+      }
 
       case 'admin':
         return [
@@ -400,12 +488,34 @@ export default function Sidebar({
                 ]
               },
               {
-                id: 'exam-studio',
-                label: 'Parse Đề thi',
-                sublabel: 'Tách câu hỏi & Studio Đề',
+                id: 'exam-group',
+                label: 'Đề thi & AI Bloom',
+                sublabel: 'Kho đề, Parse & Studio',
                 icon: FileSpreadsheet,
-                active: activeTab === 'exam-studio',
-                onClick: () => setActiveTab('exam-studio')
+                iconColor: 'from-indigo-500 to-blue-700',
+                children: [
+                  {
+                    id: 'exam-bank',
+                    label: '1. Kho Đề & Xem Đề Thi',
+                    badge: 'Kho Đề',
+                    active: activeTab === 'exam-bank',
+                    onClick: () => setActiveTab('exam-bank')
+                  },
+                  {
+                    id: 'exam-ingest',
+                    label: '2. Parse PDF & AI Bloom',
+                    badge: '2 Phần',
+                    active: activeTab === 'exam-ingest',
+                    onClick: () => setActiveTab('exam-ingest')
+                  },
+                  {
+                    id: 'exam-studio',
+                    label: '3. Studio Biên Soạn Đề',
+                    badge: 'Studio',
+                    active: activeTab === 'exam-studio',
+                    onClick: () => setActiveTab('exam-studio')
+                  }
+                ]
               },
               {
                 id: 'tuition',
@@ -438,13 +548,13 @@ export default function Sidebar({
               {
                 id: 'diagnostic',
                 label: 'Khảo thí & Chẩn đoán',
-                sublabel: 'Đề chuẩn hóa 30 câu & IRT 2PL',
+                sublabel: 'Đề chuẩn hóa năng lực & IRT 2PL',
                 icon: ClipboardCheck,
                 iconColor: 'from-orange-400 to-rose-500',
                 activeGlow: 'shadow-rose-500/30',
                 active: activeTab === 'diagnostic',
                 onClick: () => setActiveTab('diagnostic'),
-                badge: '30 câu'
+                badge: 'Khảo thí'
               },
               {
                 id: 'history',
@@ -552,7 +662,8 @@ export default function Sidebar({
   const prevTabRef = React.useRef(activeTab);
   const [expandedGroups, setExpandedGroups] = useState({
     exams: activeTab === 'diagnostic' || activeTab === 'mock',
-    'textbook-group': activeTab === 'textbook-standard' || activeTab === 'textbook-ingest' || activeTab === 'textbook-studio'
+    'textbook-group': activeTab === 'textbook-standard' || activeTab === 'textbook-ingest' || activeTab === 'textbook-studio',
+    'exam-group': activeTab === 'exam-bank' || activeTab === 'exam-ingest' || activeTab === 'exam-studio'
   });
 
   useEffect(() => {
@@ -563,6 +674,9 @@ export default function Sidebar({
       }
       if (activeTab === 'textbook-standard' || activeTab === 'textbook-ingest' || activeTab === 'textbook-studio') {
         setExpandedGroups(prev => ({ ...prev, 'textbook-group': true }));
+      }
+      if (activeTab === 'exam-bank' || activeTab === 'exam-ingest' || activeTab === 'exam-studio') {
+        setExpandedGroups(prev => ({ ...prev, 'exam-group': true }));
       }
     }
   }, [activeTab]);
@@ -649,12 +763,18 @@ export default function Sidebar({
               <div className="space-y-1">
                 {section.items.map((item) => {
                   const Icon = item.icon;
-                  const iconGradient = item.iconColor || 'from-slate-400 to-slate-600';
-                  const glowClass = item.activeGlow || 'shadow-blue-500/30';
                   if (item.children) {
                     const isExpanded = !!expandedGroups[item.id];
                     const activeGroup = item.children.some((child) => child.active);
-                    const groupIconGradient = item.iconColor || (item.id === 'textbook-group' ? 'from-emerald-500 to-teal-700' : 'from-orange-400 to-rose-500');
+                    const isTextbookGroup = item.id === 'textbook-group';
+                    const isExamGroup = item.id === 'exam-group';
+                    const groupIconGradient =
+                      item.iconColor ||
+                      (isTextbookGroup
+                        ? 'from-emerald-500 to-teal-700'
+                        : isExamGroup
+                        ? 'from-indigo-500 to-blue-700'
+                        : 'from-orange-400 to-rose-500');
 
                     if (isCollapsed) {
                       return (
@@ -668,7 +788,11 @@ export default function Sidebar({
                             }}
                             className={`flex w-full items-center justify-center rounded-2xl p-2 transition-all cursor-pointer ${
                               activeGroup
-                                ? 'bg-gradient-to-br from-emerald-600 to-teal-600 text-white shadow-md'
+                                ? isTextbookGroup
+                                  ? 'bg-gradient-to-br from-emerald-600 to-teal-600 text-white shadow-md'
+                                  : isExamGroup
+                                  ? 'bg-gradient-to-br from-[#1E3A5F] to-indigo-600 text-white shadow-md'
+                                  : 'bg-gradient-to-br from-orange-500 to-rose-500 text-white shadow-md'
                                 : 'text-slate-700 hover:bg-white hover:border-slate-200 hover:shadow-xs'
                             }`}
                           >
@@ -689,7 +813,11 @@ export default function Sidebar({
                           onClick={() => toggleGroup(item.id)}
                           className={`flex w-full items-center gap-3 rounded-2xl border px-3.5 py-2.5 text-left transition-all cursor-pointer ${
                             activeGroup
-                              ? (item.id === 'textbook-group' ? 'border-emerald-200 bg-emerald-50 text-emerald-950 font-bold' : 'border-orange-100 bg-orange-50 text-orange-700')
+                              ? isTextbookGroup
+                                ? 'border-emerald-200 bg-emerald-50 text-emerald-950 font-bold'
+                                : isExamGroup
+                                ? 'border-indigo-200 bg-indigo-50 text-indigo-950 font-bold'
+                                : 'border-orange-100 bg-orange-50 text-orange-700'
                               : 'border-transparent text-slate-700 hover:border-slate-200 hover:bg-slate-50'
                           }`}
                         >
@@ -700,10 +828,10 @@ export default function Sidebar({
                             <span className="block text-xs font-extrabold truncate">{item.label}</span>
                             {item.sublabel && <span className="block text-[10px] text-slate-400 font-medium truncate">{item.sublabel}</span>}
                           </div>
-                          <ChevronDown className={`h-3.5 w-3.5 shrink-0 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''} ${activeGroup ? (item.id === 'textbook-group' ? 'text-emerald-700' : 'text-orange-500') : 'text-slate-400'}`} />
+                          <ChevronDown className={`h-3.5 w-3.5 shrink-0 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''} ${activeGroup ? (isTextbookGroup ? 'text-emerald-700' : isExamGroup ? 'text-indigo-700' : 'text-orange-500') : 'text-slate-400'}`} />
                         </button>
                         <div id={`nav-group-${item.id}-${mobile ? 'mobile' : 'desktop'}`} hidden={!isExpanded}>
-                          <div className={`mb-2 ml-7 mt-1 space-y-1 border-l-2 pl-3 ${item.id === 'textbook-group' ? 'border-emerald-200' : 'border-orange-100'}`}>
+                          <div className={`mb-2 ml-7 mt-1 space-y-1 border-l-2 pl-3 ${isTextbookGroup ? 'border-emerald-200' : isExamGroup ? 'border-indigo-200' : 'border-orange-100'}`}>
                             {item.children.map((child) => (
                               <button
                                 key={child.id}
@@ -712,12 +840,16 @@ export default function Sidebar({
                                 onClick={() => { child.onClick?.(); onNavigate?.(); }}
                                 className={`flex w-full items-center justify-between gap-2 rounded-xl px-3 py-2 text-left text-xs transition-colors cursor-pointer ${
                                   child.active
-                                    ? (item.id === 'textbook-group'
-                                        ? 'bg-gradient-to-r from-emerald-600 to-teal-600 font-bold text-white shadow-sm shadow-emerald-500/25'
-                                        : 'bg-gradient-to-r from-orange-500 to-rose-500 font-bold text-white shadow-sm shadow-orange-500/25')
-                                    : (item.id === 'textbook-group'
-                                        ? 'font-medium text-slate-600 hover:bg-emerald-50 hover:text-emerald-800'
-                                        : 'font-medium text-slate-600 hover:bg-orange-50 hover:text-orange-700')
+                                    ? isTextbookGroup
+                                      ? 'bg-gradient-to-r from-emerald-600 to-teal-600 font-bold text-white shadow-sm shadow-emerald-500/25'
+                                      : isExamGroup
+                                      ? 'bg-gradient-to-r from-[#1E3A5F] to-indigo-600 font-bold text-white shadow-sm shadow-indigo-500/25'
+                                      : 'bg-gradient-to-r from-orange-500 to-rose-500 font-bold text-white shadow-sm shadow-orange-500/25'
+                                    : isTextbookGroup
+                                    ? 'font-medium text-slate-600 hover:bg-emerald-50 hover:text-emerald-800'
+                                    : isExamGroup
+                                    ? 'font-medium text-slate-600 hover:bg-indigo-50 hover:text-indigo-900'
+                                    : 'font-medium text-slate-600 hover:bg-orange-50 hover:text-orange-700'
                                 }`}
                               >
                                 <span className="truncate">{child.label}</span>
@@ -725,7 +857,11 @@ export default function Sidebar({
                                   <span className={`shrink-0 rounded-md px-1.5 py-0.5 text-[9px] font-bold ${
                                     child.active
                                       ? 'bg-white/20 text-white'
-                                      : (item.id === 'textbook-group' ? 'bg-emerald-100 text-emerald-800' : 'bg-orange-50 text-orange-600')
+                                      : isTextbookGroup
+                                      ? 'bg-emerald-100 text-emerald-800'
+                                      : isExamGroup
+                                      ? 'bg-indigo-100 text-indigo-800'
+                                      : 'bg-orange-50 text-orange-600'
                                   }`}>
                                     {child.badge}
                                   </span>
@@ -770,49 +906,34 @@ export default function Sidebar({
                       key={item.id}
                       type="button"
                       aria-current={item.active ? 'page' : undefined}
-                      onClick={() => { item.onClick?.(); onNavigate?.(); }}
-                      className={`w-full flex items-center justify-between gap-2.5 px-3.5 py-2.5 rounded-2xl text-left transition-all cursor-pointer group ${
+                      onClick={() => {
+                        item.onClick?.();
+                        onNavigate?.();
+                      }}
+                      title={item.sublabel ? `${item.label} (${item.sublabel})` : item.label}
+                      className={`w-full flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-xl text-left transition-all duration-150 cursor-pointer group ${
                         item.active
-                          ? `bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 text-white shadow-md ${glowClass}`
-                          : 'text-slate-700 hover:bg-white hover:shadow-sm border border-transparent hover:border-slate-200/80'
+                          ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-sm shadow-blue-500/20 font-bold'
+                          : 'text-slate-600 hover:text-blue-700 hover:bg-blue-50/60 font-medium'
                       }`}
                     >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div
-                          className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-all ${
-                            item.active
-                              ? 'bg-white/20 text-white'
-                              : `bg-gradient-to-br ${iconGradient} text-white shadow-sm group-hover:scale-110`
+                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                        <Icon
+                          className={`w-4.5 h-4.5 shrink-0 transition-colors ${
+                            item.active ? 'text-white' : 'text-slate-400 group-hover:text-blue-600'
                           }`}
-                        >
-                          <Icon className="w-4 h-4" />
-                        </div>
-                        <div className="min-w-0">
-                          <div
-                            className={`text-xs font-extrabold truncate ${
-                              item.active ? 'text-white' : 'text-slate-800 group-hover:text-blue-700'
-                            }`}
-                          >
-                            {item.label}
-                          </div>
-                          {item.sublabel && (
-                            <div
-                              className={`text-[10px] truncate ${
-                                item.active ? 'text-blue-100 font-medium' : 'text-slate-400 font-medium'
-                              }`}
-                            >
-                              {item.sublabel}
-                            </div>
-                          )}
-                        </div>
+                        />
+                        <span className="text-xs sm:text-sm truncate">
+                          {item.label}
+                        </span>
                       </div>
 
                       {item.badge && (
                         <span
-                          className={`text-[10px] font-black px-2 py-0.5 rounded-full shrink-0 ${
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded-md shrink-0 ${
                             item.active
-                              ? 'bg-[#FACC15] text-slate-950'
-                              : 'bg-blue-50 text-blue-700 border border-blue-200'
+                              ? 'bg-white/20 text-white'
+                              : 'bg-blue-50 text-blue-700 border border-blue-200/80'
                           }`}
                         >
                           {item.badge}
@@ -879,13 +1000,20 @@ export default function Sidebar({
                 {firstChild ? 'Đã đồng bộ' : 'Chưa liên kết'}
               </span>
             </div>
-            <div className="text-xs font-extrabold text-white truncate">
+            <div
+              className="text-xs font-extrabold text-white truncate"
+              title={
+                firstChild
+                  ? `${firstChild.studentName}${firstChild.school ? ` • ${firstChild.school}` : (firstChild.grade ? ` • ${firstChild.grade}` : '')}`
+                  : undefined
+              }
+            >
               {firstChild
-                ? `${firstChild.studentName}${firstChild.grade ? ` • ${firstChild.grade}` : ''}`
+                ? `${firstChild.studentName}${firstChild.school ? ` • ${firstChild.school}` : (firstChild.grade ? ` • ${firstChild.grade}` : '')}`
                 : 'Chưa có học sinh liên kết'}
             </div>
             <div className="text-[11px] text-blue-100 flex items-center justify-between">
-              <span>Chỉ số sẵn sàng R_exam:</span>
+              <span>Chỉ số sẵn sàng thi:</span>
               <strong className="text-[#FACC15] font-black">
                 {firstChild
                   ? `${Number(firstChild.examReadiness?.readinessIndex ?? 0).toFixed(1)}%`
@@ -918,12 +1046,12 @@ export default function Sidebar({
           </>
         )}
 
-        {role === 'manager' && (
+        {(role === 'manager' || role === 'director') && (
           <>
             <div className="flex items-center justify-between">
               <span className="text-[10px] uppercase tracking-wider font-extrabold text-[#FACC15] flex items-center gap-1">
                 <Building2 className="w-3 h-3" />
-                <span>Điều Phối Cơ Sở</span>
+                <span>{role === 'director' ? 'Hội Đồng Học Thuật' : 'Điều Phối Cơ Sở'}</span>
               </span>
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold">
                 Live API

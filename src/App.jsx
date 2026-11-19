@@ -1,6 +1,7 @@
 import { toast } from './context/ToastContext';
 import React, { useState, useEffect, useCallback } from 'react';
 import {
+  AlertTriangle,
   BarChart3,
   BookOpen,
   BookOpenCheck,
@@ -31,9 +32,12 @@ import DiagnosticOnboardingCard from './components/dashboard/DiagnosticOnboardin
 import MetricsGrid from './components/dashboard/MetricsGrid';
 import StudentParentLinkCard from './components/dashboard/StudentParentLinkCard';
 import ParentDashboardView from './components/dashboard/ParentDashboardView';
+import ParentChildResultsView from './components/dashboard/ParentChildResultsView';
+import ParentEarlyWarningsAndTeacherView from './components/dashboard/ParentEarlyWarningsAndTeacherView';
 import TeacherDashboardView from './components/dashboard/TeacherDashboardView';
 import TeacherPortalView from './components/dashboard/TeacherPortalView';
 import CampusManagerDashboardView from './components/dashboard/CampusManagerDashboardView';
+import AcademicManagerDashboardView from './components/dashboard/AcademicManagerDashboardView';
 import AiTutorModerationView from './components/dashboard/AiTutorModerationView';
 import LearningAnalyticsView from './components/dashboard/LearningAnalyticsView';
 import StudentScheduleView from './components/dashboard/StudentScheduleView';
@@ -49,7 +53,9 @@ import CurriculumExplorerView from './components/curriculum/CurriculumExplorerVi
 import TextbookStandardView from './components/curriculum/TextbookStandardView';
 import TextbookIngestView from './components/curriculum/TextbookIngestView';
 import TextbookStudioView from './components/curriculum/TextbookStudioView';
-import ExamParserStudioView from './components/curriculum/ExamParserStudioView';
+import ExamBankView from './components/curriculum/ExamBankView';
+import ExamIngestView from './components/curriculum/ExamIngestView';
+import ExamStudioView from './components/curriculum/ExamStudioView';
 import StudentRoadmapWorkspace from './components/roadmap/StudentRoadmapWorkspace';
 import TuitionPaymentView from './components/payment/TuitionPaymentView';
 import {
@@ -76,7 +82,7 @@ const ROLE_PORTAL_DEFINITIONS = {
     accentBadge: 'bg-blue-50 text-blue-700 border-blue-200',
     tabs: [
       { id: 'dashboard', label: 'Tổng quan Học tập', icon: LayoutGrid },
-      { id: 'diagnostic', label: 'Khảo thí 30 câu', icon: ClipboardCheck },
+      { id: 'diagnostic', label: 'Khảo thí & Chẩn đoán', icon: ClipboardCheck },
       { id: 'history', label: 'Lịch sử & Lỗi sai', icon: History },
       { id: 'roadmap', label: 'Cây tri thức & Lộ trình', icon: Network },
       { id: 'schedule', label: 'Thời khóa biểu & Điểm danh', icon: Calendar },
@@ -86,18 +92,17 @@ const ROLE_PORTAL_DEFINITIONS = {
     ]
   },
   parent: {
-    code: 'PARENT COMPANION PORTAL',
+    code: 'KHÔNG GIAN PHỤ HUYNH',
     title: 'Cổng Phụ Huynh Đồng Hành Cùng Con',
-    subtitle: 'Theo dõi chỉ số sẵn sàng thi R_exam, kỷ luật tự học 12h/tuần & Thanh toán học phí VietQR',
+    subtitle: 'Theo dõi mức độ sẵn sàng thi, thời lượng tự học thực tế & Học phí trực tuyến',
     defaultTab: 'dashboard',
     icon: HeartHandshake,
     accentBadge: 'bg-amber-50 text-amber-800 border-amber-200',
     tabs: [
-      { id: 'dashboard', label: 'Tổng quan Đồng hành', icon: HeartHandshake },
-      { id: 'analytics', label: 'Năng lực 4 Miền của Con', icon: TrendingUp },
-      { id: 'history', label: 'Lịch sử Bài thi của Con', icon: History },
-      { id: 'roadmap', label: 'Tiến độ Chuyên đề', icon: Network },
-      { id: 'tuition', label: 'Đóng Học phí PayOS', icon: CreditCard }
+      { id: 'dashboard', label: 'Tổng quan đồng hành', icon: HeartHandshake },
+      { id: 'results', label: 'Tiến độ & Kết quả của con', icon: BarChart3 },
+      { id: 'warnings', label: 'Cảnh báo & Trao đổi Giáo viên', icon: AlertTriangle },
+      { id: 'tuition', label: 'Học phí & Lịch sử giao dịch', icon: CreditCard }
     ]
   },
   teacher: {
@@ -113,7 +118,9 @@ const ROLE_PORTAL_DEFINITIONS = {
       { id: 'textbook-standard', label: '1. Sách Giáo Khoa Chuẩn', icon: BookOpen },
       { id: 'textbook-ingest', label: '2. Nạp Tài Liệu SGK', icon: BookOpenCheck },
       { id: 'textbook-studio', label: '3. Studio Biên Soạn SGK', icon: BookOpenCheck },
-      { id: 'exam-studio', label: 'Số Hóa & Parse Đề Thi', icon: FileSpreadsheet },
+      { id: 'exam-bank', label: '1. Kho Đề & Xem Đề Thi', icon: FileSpreadsheet },
+      { id: 'exam-ingest', label: '2. Parse PDF & AI Bloom', icon: Sparkles },
+      { id: 'exam-studio', label: '3. Studio Biên Soạn Đề', icon: FileSpreadsheet },
       { id: 'roadmap', label: 'Studio Biên soạn Học liệu', icon: BookOpen },
       { id: 'diagnostic', label: 'Ngân hàng đề thi', icon: ClipboardCheck },
       { id: 'history', label: 'Nhật ký Bài làm Học viên', icon: History },
@@ -123,21 +130,38 @@ const ROLE_PORTAL_DEFINITIONS = {
   manager: {
     code: 'CAMPUS MANAGER PORTAL',
     title: 'Cổng Quản Lý Học Thuật Cơ Sở',
-    subtitle: 'Điều phối đào tạo đa lớp, Phân cụm học viên AI Clustering & Cấp phát nhân sự cơ sở',
+    subtitle: 'Điều phối đào tạo đa lớp, Phân cụm học viên AI Clustering & Lịch học Offline',
     defaultTab: 'dashboard',
     icon: Briefcase,
     accentBadge: 'bg-cyan-50 text-cyan-800 border-cyan-200',
     tabs: [
-      { id: 'dashboard', label: 'So sánh Cơ sở', icon: Building2 },
-      { id: 'teacher_heatmap', label: 'Ma trận Lớp học', icon: LayoutGrid },
+      { id: 'dashboard', label: 'Tổng quan & Đối sánh Cơ sở', icon: Building2 },
+      { id: 'classes_schedule', label: 'Lớp học, Lịch học & Phân công GV', icon: Calendar },
+      { id: 'clustering', label: 'Xếp lớp Đầu vào & Phân cụm AI', icon: Sparkles },
+      { id: 'escalations', label: 'Cảnh báo Cấp 3 & Họp 3 bên', icon: BarChart3 },
+      { id: 'analytics', label: 'Báo cáo Chất lượng', icon: BarChart3 }
+    ]
+  },
+  director: {
+    code: 'ACADEMIC DIRECTOR PORTAL',
+    title: 'Cổng Giám Đốc Học Thuật Toàn Trường',
+    subtitle: 'Quản trị Đồ thị Tri thức DAG 4 tầng, Ngân hàng Câu hỏi IRT 2PL, Kiểm duyệt AI & Kho học liệu RAG',
+    defaultTab: 'dashboard',
+    icon: Crown,
+    accentBadge: 'bg-purple-50 text-purple-800 border-purple-200',
+    tabs: [
+      { id: 'dashboard', label: 'Tổng quan & Báo cáo Liên Cơ sở', icon: Building2 },
+      { id: 'roadmap', label: 'Đồ thị Tri thức DAG 4 Tầng', icon: Network },
       { id: 'textbook-standard', label: '1. Sách Giáo Khoa Chuẩn', icon: BookOpen },
       { id: 'textbook-ingest', label: '2. Nạp Tài Liệu SGK', icon: BookOpenCheck },
       { id: 'textbook-studio', label: '3. Studio Biên Soạn SGK', icon: BookOpenCheck },
-      { id: 'exam-studio', label: 'Số Hóa & Parse Đề Thi', icon: FileSpreadsheet },
-      { id: 'ai_moderation', label: 'Kiểm duyệt Gia sư AI', icon: Bot },
-      { id: 'roadmap', label: 'Khung Chương trình', icon: Network },
+      { id: 'exam-bank', label: '1. Kho Đề & Xem Đề Thi', icon: FileSpreadsheet },
+      { id: 'exam-ingest', label: '2. Parse PDF & AI Bloom', icon: Sparkles },
+      { id: 'exam-studio', label: '3. Studio Biên Soạn Đề', icon: FileSpreadsheet },
+      { id: 'ai_moderation', label: 'Kiểm duyệt Câu hỏi & Gia sư AI', icon: Bot },
+      { id: 'teacher_heatmap', label: 'Giám sát Ma trận Lớp học', icon: LayoutGrid },
       { id: 'provision', label: 'Cấp phát Tài khoản', icon: UserPlus },
-      { id: 'analytics', label: 'Báo cáo Chất lượng', icon: BarChart3 }
+      { id: 'analytics', label: 'Báo cáo Học thuật Toàn trường', icon: BarChart3 }
     ]
   },
   admin: {
@@ -152,6 +176,12 @@ const ROLE_PORTAL_DEFINITIONS = {
       { id: 'dashboard', label: 'Giám sát Đa Cơ sở', icon: Building2 },
       { id: 'teacher_heatmap', label: 'Ma trận Nhiệt Hệ thống', icon: LayoutGrid },
       { id: 'roadmap', label: 'Cây Tri thức Quốc gia', icon: Network },
+      { id: 'textbook-standard', label: '1. Sách Giáo Khoa Chuẩn', icon: BookOpen },
+      { id: 'textbook-ingest', label: '2. Nạp Tài Liệu SGK', icon: BookOpenCheck },
+      { id: 'textbook-studio', label: '3. Studio Biên Soạn SGK', icon: BookOpenCheck },
+      { id: 'exam-bank', label: '1. Kho Đề & Xem Đề Thi', icon: FileSpreadsheet },
+      { id: 'exam-ingest', label: '2. Parse PDF & AI Bloom', icon: Sparkles },
+      { id: 'exam-studio', label: '3. Studio Biên Soạn Đề', icon: FileSpreadsheet },
       { id: 'tuition', label: 'Đối soát Cổng PayOS', icon: CreditCard }
     ]
   }
@@ -193,6 +223,7 @@ export default function App() {
   // Real Backend Portal Metrics State
   const [studentDashboard, setStudentDashboard] = useState(null);
   const [parentPortalData, setParentPortalData] = useState(null);
+  const [parentActiveChildId, setParentActiveChildId] = useState(null);
   const [teacherHeatmapData, setTeacherHeatmapData] = useState(null);
   const [managerPortalData, setManagerPortalData] = useState(null);
   const [campusesCount, setCampusesCount] = useState(0);
@@ -210,10 +241,13 @@ export default function App() {
       } else if (activeRole === 'parent') {
         const pData = await practiceService.getParentDashboard(uid);
         setParentPortalData(pData);
+        if (pData?.children?.length > 0) {
+          setParentActiveChildId((prev) => prev || pData.children[0].studentId);
+        }
       } else if (activeRole === 'teacher') {
         // TeacherPortalView loads scoped live data; do not substitute a default class.
         setTeacherHeatmapData(null);
-      } else if (activeRole === 'manager' || activeRole === 'admin') {
+      } else if (activeRole === 'manager' || activeRole === 'director' || activeRole === 'admin') {
         const [campusesRes, campusHm, usersRes] = await Promise.all([
           userService.getCampuses().catch(() => []),
           practiceService.getCampusComparativeHeatmap(userObj?.campusId).catch(() => null),
@@ -417,22 +451,52 @@ export default function App() {
   const pageTitle = activeTab === 'settings' ? 'Cài đặt tài khoản'
     : currentPortal.tabs.find((tab) => tab.id === activeTab)?.label || 'Tổng quan';
 
+  const parentChildren = parentPortalData?.children || [];
+  const activeChild =
+    parentChildren.find((c) => c.studentId === parentActiveChildId) ||
+    parentChildren[0] ||
+    null;
+  const activeChildId = activeChild?.studentId || null;
+
   const renderRolePortalContent = () => {
     if (activeTab === 'settings') {
       return <AccountSettingsPage currentUser={currentUser} onUpdateUser={setCurrentUser}
         activeRole={role} onNavigateTab={setActiveTab} onLogout={handleLogout} />;
+    }
+    if (role === 'parent' && activeTab === 'results') {
+      return (
+        <ParentChildResultsView
+          currentUser={currentUser}
+          activeChild={activeChild}
+          activeChildId={activeChildId}
+          childrenList={parentChildren}
+          onSelectChildId={setParentActiveChildId}
+          onNavigateTab={setActiveTab}
+        />
+      );
+    }
+    if (role === 'parent' && activeTab === 'warnings') {
+      return (
+        <ParentEarlyWarningsAndTeacherView
+          currentUser={currentUser}
+          activeChild={activeChild}
+          activeChildId={activeChildId}
+          childrenList={parentChildren}
+          onSelectChildId={setParentActiveChildId}
+          onNavigateTab={setActiveTab}
+        />
+      );
     }
     if (role === 'teacher' &&
         activeTab !== 'roadmap' &&
         activeTab !== 'textbook-standard' &&
         activeTab !== 'textbook-ingest' &&
         activeTab !== 'textbook-studio' &&
+        activeTab !== 'exam-bank' &&
+        activeTab !== 'exam-ingest' &&
         activeTab !== 'exam-studio') {
       return <TeacherPortalView key={`${currentUser?.userId || currentUser?.id}:${currentUser?.classId || ''}:${activeTab}`}
         currentUser={currentUser} section={activeTab} onNavigate={setActiveTab} />;
-    }
-    if (activeTab === 'diagnostic' && role !== 'student') {
-      return <CurriculumExplorerView role={role} onStartTopicQuiz={handleOpenAdaptiveQuiz} />;
     }
     if (activeTab === 'diagnostic') {
       return (
@@ -457,8 +521,15 @@ export default function App() {
         currentUser={currentUser} onOpenDiagnostic={() => setActiveTab('diagnostic')} />;
     }
     if (activeTab === 'history') {
+      const parentChildren = parentPortalData?.children || [];
+      const defaultChild = parentChildren[0] || null;
       return (
         <SubmissionHistoryView
+          key={`history_${role}_${defaultChild?.studentId || 'default'}`}
+          isParent={role === 'parent'}
+          studentId={role === 'parent' ? (defaultChild?.studentId || null) : (currentUser?.id || currentUser?.userId)}
+          studentName={role === 'parent' ? (defaultChild?.studentName || null) : (currentUser?.fullName || null)}
+          childrenList={role === 'parent' ? parentChildren : []}
           onStartNewDiagnostic={() => setActiveTab('diagnostic')}
           onOpenAiTutorWithContext={handleOpenAiTutorWithQuestion}
         />
@@ -480,10 +551,16 @@ export default function App() {
     if (activeTab === 'textbook-studio') {
       return <TextbookStudioView onNavigateTab={setActiveTab} onBack={() => setActiveTab('textbook-standard')} />;
     }
-    if (activeTab === 'exam-studio') {
-      return <ExamParserStudioView />;
+    if (activeTab === 'exam-bank') {
+      return <ExamBankView onNavigateTab={setActiveTab} />;
     }
-    if (activeTab === 'roadmap') {
+    if (activeTab === 'exam-ingest') {
+      return <ExamIngestView onNavigateTab={setActiveTab} />;
+    }
+    if (activeTab === 'exam-studio') {
+      return <ExamStudioView onNavigateTab={setActiveTab} />;
+    }
+    if (activeTab === 'roadmap' && role !== 'parent') {
       const curriculum = (
         <CurriculumExplorerView
           role={role === 'parent' ? 'student' : role}
@@ -541,12 +618,16 @@ export default function App() {
       return (
         <TuitionPaymentView
           currentUser={currentUser}
+          isParent={role === 'parent'}
+          activeChild={activeChild}
+          childrenList={parentChildren}
+          onSelectChildId={setParentActiveChildId}
           onBackToDashboard={() => setActiveTab('dashboard')}
-          onNavigateRoadmap={() => setActiveTab('roadmap')}
-          onNavigateAdaptive={() => setActiveTab('adaptive')}
-          onNavigateSchedule={() => setActiveTab('schedule')}
-          onNavigateLive={() => setActiveTab('live')}
-          onNavigateAiTutor={() => {
+          onNavigateRoadmap={role === 'parent' ? undefined : () => setActiveTab('roadmap')}
+          onNavigateAdaptive={role === 'parent' ? undefined : () => setActiveTab('adaptive')}
+          onNavigateSchedule={role === 'parent' ? undefined : () => setActiveTab('schedule')}
+          onNavigateLive={role === 'parent' ? undefined : () => setActiveTab('live')}
+          onNavigateAiTutor={role === 'parent' ? undefined : () => {
             setAiTutorInitialContext(null);
             setActiveModal('ai');
           }}
@@ -554,7 +635,36 @@ export default function App() {
       );
     }
 
-    if (activeTab === 'analytics') {
+    const isDirectorUser =
+      role === 'director' ||
+      (Array.isArray(currentUser?.roles) &&
+        currentUser.roles.some((r) => String(r).toUpperCase().includes('DIRECTOR'))) ||
+      String(currentUser?.email || '').toLowerCase().startsWith('director');
+
+    if (isDirectorUser && activeTab === 'dashboard') {
+      return (
+        <CampusManagerDashboardView
+          currentUser={currentUser}
+          onOpenProvisioning={() => setActiveTab('provision')}
+        />
+      );
+    }
+
+    if (
+      role === 'manager' &&
+      !isDirectorUser &&
+      ['dashboard', 'classes_schedule', 'clustering', 'escalations', 'analytics'].includes(activeTab)
+    ) {
+      return (
+        <AcademicManagerDashboardView
+          currentUser={currentUser}
+          activeSection={activeTab === 'analytics' ? 'dashboard' : activeTab}
+          onNavigateSection={setActiveTab}
+        />
+      );
+    }
+
+    if (activeTab === 'analytics' && role !== 'parent') {
       return (
         <LearningAnalyticsView
           currentUser={currentUser}
@@ -599,7 +709,13 @@ export default function App() {
         return (
           <ParentDashboardView
             currentUser={currentUser}
+            activeChild={activeChild}
+            activeChildId={activeChildId}
+            childrenList={parentChildren}
+            onSelectChildId={setParentActiveChildId}
             onNavigateTuition={() => setActiveTab('tuition')}
+            onNavigateWarnings={() => setActiveTab('warnings')}
+            onNavigateResults={() => setActiveTab('results')}
           />
         );
 
@@ -610,11 +726,20 @@ export default function App() {
           />
         );
 
-      case 'manager':
+      case 'director':
         return (
           <CampusManagerDashboardView
             currentUser={currentUser}
             onOpenProvisioning={() => setActiveTab('provision')}
+          />
+        );
+
+      case 'manager':
+        return (
+          <AcademicManagerDashboardView
+            currentUser={currentUser}
+            activeSection="dashboard"
+            onNavigateSection={setActiveTab}
           />
         );
 
@@ -660,8 +785,12 @@ export default function App() {
   };
 
   const portalMetrics = {
+    currentUser,
     studentDashboard,
     parentPortalData,
+    parentActiveChildId,
+    setParentActiveChildId,
+    activeChild,
     teacherHeatmapData,
     managerPortalData,
     campusesCount,
@@ -715,12 +844,13 @@ export default function App() {
             portalMetrics={portalMetrics}
             onLogout={handleLogout}
             onOpenLandingPage={() => setAppView('landing')}
-              onOpenSettings={() => setActiveTab('settings')}
+            onOpenSettings={() => setActiveTab('settings')}
+            onSelectChildId={setParentActiveChildId}
           />
 
           {/* Main Workspace Container */}
           <main className="min-w-0 flex-1 p-4 sm:p-6 w-full max-w-full">
-            {role !== 'student' && role !== 'parent' && role !== 'manager' && activeTab === currentPortal.defaultTab && (
+            {role !== 'student' && role !== 'parent' && role !== 'manager' && role !== 'director' && activeTab === currentPortal.defaultTab && (
               <h1 className="mb-5 text-xl font-bold tracking-tight text-slate-900">{accountGreeting(role, currentUser)}</h1>
             )}
             {renderRolePortalContent()}
@@ -735,7 +865,7 @@ export default function App() {
                 <span>• Hệ sinh thái Khảo thí & Học tập Thích ứng ĐHQG TP.HCM</span>
               </div>
               <div className="flex items-center gap-4">
-                <span>Vai trò hiện tại: <strong className="text-blue-700 uppercase">{role}</strong></span>
+                <span>Tài khoản: <strong className="text-blue-700 font-bold">{role === 'parent' ? 'Phụ huynh' : role === 'student' ? 'Học sinh' : role === 'teacher' ? 'Giảng viên' : role === 'manager' ? 'Quản lý học thuật' : role}</strong></span>
                 <button
                   type="button"
                   onClick={() => setAppView('landing')}

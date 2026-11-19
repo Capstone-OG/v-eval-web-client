@@ -739,7 +739,7 @@ export default function StudentCurriculumView({
                     Chưa Làm Bài Khảo Sát Năng Lực Đầu Vào
                   </h3>
                   <p className="text-xs sm:text-sm text-slate-600 leading-relaxed max-w-2xl">
-                    Hoàn thành bài khảo sát năng lực 30 câu để thuật toán IRT 2PL tính toán chính xác lỗ hổng và xây dựng lộ trình riêng cho bạn.
+                    Hoàn thành bài khảo sát năng lực khởi điểm để thuật toán IRT 2PL tính toán chính xác lỗ hổng và xây dựng lộ trình riêng cho bạn.
                   </p>
                 </div>
               </div>
