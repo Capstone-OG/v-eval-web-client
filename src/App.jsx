@@ -730,7 +730,8 @@ export default function App() {
             portalMetrics={portalMetrics}
             onLogout={handleLogout}
             onOpenLandingPage={() => setAppView('landing')}
-              onOpenSettings={() => setActiveTab('settings')}
+            onOpenSettings={() => setActiveTab('settings')}
+            onSelectChildId={setParentActiveChildId}
           />
 
           {/* Main Workspace Container */}

@@ -2306,3 +2306,33 @@ The Parent Companion Portal architecture across backend microservices and fronte
 - **Verification**:
   - `npm run build`: Verified 100% clean production bundle in 1.29s with 0 errors.
   - `node --test tests/*.test.js`: All 22 unit tests passing (100%).
+
+---
+
+## 17. Parent Companion Portal Complete Architecture & Hook Order Resolution - 19 November 2026
+
+The Parent Companion Portal was completely redesigned and hardened according to the full system specification, resolving React lifecycle exceptions and establishing a unified 4-module parent ecosystem:
+
+- **React Rules of Hooks & Lifecycle Resolution (`ParentDashboardView.jsx`)**:
+  - Reordered and elevated all top-level React hooks (`useEffect`, `useCallback`, `useMemo`, `useState`) prior to any conditional returns (`if (loading)`, `if (!currentChild)`), eliminating the `Rendered more hooks than during the previous render` runtime error.
+  - Replaced external package dependency `react-hot-toast` with internal `ToastContext` (`import { toast } from '../../context/ToastContext'`), eliminating Vite bundler module resolution failures.
+- **Universal Active Child State Synchronization (`App.jsx`, `AccountNavbar.jsx`, `TuitionPaymentView.jsx`)**:
+  - Lifted `parentActiveChildId` to root `App.jsx`, cascading down to `ParentDashboardView`, `ParentChildResultsView`, `ParentEarlyWarningsAndTeacherView`, `TuitionPaymentView`, and `AccountNavbar`.
+  - Added seamless inline dropdown switcher in the top navigation bar (`AccountNavbar.jsx`) when a parent has $\ge 2$ linked children, allowing instantaneous child switching from any page.
+  - Bound child pill selections in `TuitionPaymentView` to trigger `onSelectChildId`, updating global telemetry immediately.
+- **4-Module Sidebar Navigation Structure (`Sidebar.jsx`)**:
+  - Structured the parent experience into 4 dedicated modules:
+    1. *Tổng quan đồng hành*: Tier 1-3 dashboard overview.
+    2. *Tiến độ & Kết quả của con*: 3-tab unified view (Radar multi-domain mastery, Read-Only personalized roadmap, Proctored examination history).
+    3. *Cảnh báo & Trao đổi Giáo viên*: Yellow/Red early warnings filter, 3-way parent-student-teacher conference confirmation modal, and direct teacher messaging drawer.
+    4. *Học phí & Lịch sử giao dịch*: PayOS VietQR payment, invoice tracking, and receipt downloads.
+- **3-Tier Dashboard Architecture (`ParentDashboardView.jsx`)**:
+  - *Tier 1 (Header Strip)*: Current child profile, multi-child dropdown, `+ Liên kết thêm con` action, Offline class teacher card (Name, Phone, Direct messaging), and conditional tuition warning ribbon (auto-hidden when paid).
+  - *Tier 2 (4 Parent-Focused Metric Cards)*: Projected Exam Score (1200 scale, confidence interval, target comparison, success likelihood); Exam Readiness Index (100 scale, natural language status text); Weekly Study Hours (7-day/30-day toggle, continuous streak); Personal Roadmap Mastery (completed vs total skills).
+  - *Tier 3 (2-Column 7:5 Split)*: Left column renders actionable early warnings and recent proctored mock exams; Right column provides natural language pedagogical feedback across 3 learning facets and student profile with unlinking confirmation modal.
+- **Zero Technical Jargon & Read-Only Parent Sandbox**:
+  - Completely purged all internal acronyms (*IRT Theta*, *BKT*, *ZPD*, *PLAR*, *Core Flow 5*, *5.000 ₫ test price*).
+  - Enforced strict Read-Only mode: all quiz-taking and exam-sitting capabilities are blocked or hidden for parent personas.
+- **Verification**:
+  - `npm run build`: Succeeded 100% in 1.15s with 0 errors.
+  - `node --test tests/*.test.js`: All 22 unit tests passing (100%).

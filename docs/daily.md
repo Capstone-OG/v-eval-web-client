@@ -20,8 +20,11 @@
 - **Dọn Sạch Toàn Bộ Thuật Ngữ Kỹ Thuật & Dữ Liệu Test (Zero Technical Jargon)**:
   - Xóa bỏ triệt để các từ viết tắt nội bộ: IRT Theta, BKT, ZPD, PLAR, Core Flow 5, Live Identity + Practice gRPC, giá thử nghiệm 5.000 ₫ trong `TuitionPaymentView.jsx` và toàn bộ giao diện; diễn đạt 100% bằng tiếng Việt thân thiện, dễ hiểu cho gia đình.
 - **Kiểm Thử & Nghiệm Thu**:
-  - `npm run build`: Thành công 100% trong 1.18s, 0 lỗi biên dịch.
+  - `npm run build`: Thành công 100% trong 1.15s, 0 lỗi biên dịch.
   - `node --test tests/*.test.js`: Toàn bộ **22/22 unit tests Passed**.
+- **Đồng Bộ Bộ Chọn Con Toàn Diện Trên Top Navbar & Học Phí ([`AccountNavbar.jsx`](../src/components/layout/AccountNavbar.jsx), [`TuitionPaymentView.jsx`](../src/components/payment/TuitionPaymentView.jsx), [`App.jsx`](../src/App.jsx))**:
+  - Bổ sung bộ chọn dropdown con ngay trên thanh điều hướng đầu trang `AccountNavbar` khi phụ huynh liên kết $\ge 2$ con, cho phép chuyển đổi học sinh tức thì từ mọi trang mà không cần quay lại trang chủ.
+  - Đồng bộ hóa sự kiện click chọn thẻ con trong `TuitionPaymentView` với `onSelectChildId`, cập nhật trạng thái `activeChildId` toàn cục ngay lập tức.
 
 - **Tái Thiết Kế & Tối Ưu Bố Cục Thanh Điều Hướng Top Navbar "EdTech Mission Control" ([`AccountNavbar.jsx`](../src/components/layout/AccountNavbar.jsx))**:
   - **Triệt tiêu 100% hardcode**: Toàn bộ dữ liệu hiển thị (kỳ thi mục tiêu, đếm ngược ngày thi, số chuông thông báo, chip học sinh đồng hành, cơ sở học tập, chuỗi ngày streak) đều được trích xuất trực tiếp từ API CSDL Backend thật (`practiceService.getAcademicTerms`, `practiceService.getMyAlerts`, `portalMetrics`, `currentUser`).

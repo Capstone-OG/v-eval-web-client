@@ -34,6 +34,7 @@ export default function TuitionPaymentView({
   isParent = false,
   activeChild = null,
   childrenList = [],
+  onSelectChildId,
   onNavigateRoadmap, 
   onNavigateAdaptive,
   onNavigateSchedule,
@@ -351,7 +352,10 @@ export default function TuitionPaymentView({
                   <button
                     key={cId || idx}
                     type="button"
-                    onClick={() => setSelectedChild(c)}
+                    onClick={() => {
+                      setSelectedChild(c);
+                      if (cId) onSelectChildId?.(cId);
+                    }}
                     className={`px-3 py-1 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
                       isCur
                         ? 'bg-blue-600 text-white shadow-sm'

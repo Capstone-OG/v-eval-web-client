@@ -20,6 +20,9 @@
   - Chuyển đổi import sang `ToastContext` nội bộ của dự án (`import { toast } from '../../context/ToastContext'`) thay vì package `react-hot-toast` ngoài, triệt tiêu hoàn toàn lỗi import analysis của Vite.
 - **Dọn Sạch Toàn Bộ Thuật Ngữ Kỹ Thuật & Dữ Liệu Test ([`TuitionPaymentView.jsx`](./src/components/payment/TuitionPaymentView.jsx))**:
   - Loại bỏ hoàn toàn các từ viết tắt nội bộ: IRT Theta, BKT, ZPD, PLAR, Core Flow 5, Live Identity + Practice gRPC, giá thử nghiệm 5.000 ₫; thay bằng ngôn ngữ tiếng Việt đời thường, dễ hiểu cho gia đình.
+- **Đồng Bộ Bộ Chọn Con Toàn Diện Trên Top Navbar & Học Phí ([`AccountNavbar.jsx`](./src/components/layout/AccountNavbar.jsx), [`TuitionPaymentView.jsx`](./src/components/payment/TuitionPaymentView.jsx), [`App.jsx`](./src/App.jsx))**:
+  - Bổ sung bộ chọn dropdown con ngay trên thanh điều hướng đầu trang `AccountNavbar` khi phụ huynh liên kết $\ge 2$ con, cho phép chuyển đổi học sinh tức thì từ mọi trang.
+  - Đồng bộ hóa sự kiện click chọn thẻ con trong `TuitionPaymentView` với `onSelectChildId`, cập nhật trạng thái `activeChildId` toàn cục ngay lập tức.
 - **Kiểm Thử & Nghiệm Thu**:
-  - `npm run build`: Thành công 100% trong 1.18s, 0 lỗi biên dịch.
+  - `npm run build`: Thành công 100% trong 1.15s, 0 lỗi biên dịch.
   - `node --test tests/*.test.js`: Toàn bộ **22/22 unit tests Passed**.

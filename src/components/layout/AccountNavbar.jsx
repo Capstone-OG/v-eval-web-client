@@ -135,7 +135,8 @@ export default function AccountNavbar({
   onLogout,
   onOpenLandingPage,
   onOpenSettings,
-  onOpenNavigation
+  onOpenNavigation,
+  onSelectChildId
 }) {
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [alertsOpen, setAlertsOpen] = useState(false);
@@ -401,7 +402,7 @@ export default function AccountNavbar({
               <span className="font-medium capitalize">{today}</span>
             </div>
 
-            {/* Parent Role: Compact Student Companion Badge */}
+            {/* Parent Role: Compact Student Companion Badge / Switcher */}
             {role === 'parent' && activeChild && (
               <div
                 className="hidden sm:flex items-center gap-1.5 rounded-xl border border-blue-100 bg-blue-50/60 px-2.5 py-1.5 text-xs text-blue-900 shadow-2xs"
@@ -409,9 +410,23 @@ export default function AccountNavbar({
               >
                 <UserCheck className="h-3.5 w-3.5 text-blue-600 shrink-0" />
                 <span className="text-slate-500 font-normal hidden md:inline">Con:</span>
-                <strong className="font-bold text-slate-800 max-w-[120px] truncate">
-                  {activeChild.studentName || activeChild.fullName}
-                </strong>
+                {portalMetrics?.parentPortalData?.children?.length > 1 ? (
+                  <select
+                    value={activeChild.studentId || activeChild.id}
+                    onChange={(e) => onSelectChildId?.(e.target.value)}
+                    className="font-bold text-slate-800 bg-transparent border-0 p-0 pr-1 focus:outline-none cursor-pointer max-w-[130px] truncate"
+                  >
+                    {portalMetrics.parentPortalData.children.map((c) => (
+                      <option key={c.studentId || c.id} value={c.studentId || c.id}>
+                        {c.studentName || c.fullName}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <strong className="font-bold text-slate-800 max-w-[120px] truncate">
+                    {activeChild.studentName || activeChild.fullName}
+                  </strong>
+                )}
               </div>
             )}
 

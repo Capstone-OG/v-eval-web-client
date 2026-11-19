@@ -826,4 +826,5 @@ Validation: build and lint pass with existing warnings; live API integration rem
 | React Hook Ordering Fix & Parent Portal Architecture | Complete | Relocated all `useEffect` hooks to top of `ParentDashboardView.jsx` before early returns, eliminating `Rendered more hooks` error; lifted `parentActiveChildId` to `App.jsx` for universal child sync. |
 | 4-Module Parent Portal Structure | Complete | Implemented `ParentChildResultsView.jsx` (Radar, Roadmap, History) and `ParentEarlyWarningsAndTeacherView.jsx` (Level 2 & 3 warnings, 3-way meeting confirmation, Teacher messaging). |
 | 3-Tier Dashboard Refactor & Jargon Purge | Complete | Refactored `ParentDashboardView.jsx` into Tier 1 (Child & Teacher bar + conditional tuition alert), Tier 2 (4 parent-focused metric cards), Tier 3 (7:5 two-column layout); purged all technical jargon (ZPD, BKT, PLAR, IRT). |
-| Verification | Passed | `node --test tests/*.test.js` passed 22/22 tests; `npm run build` succeeded in 1.18s with 0 errors. |
+| Universal Active Child Switcher | Complete | Enabled dropdown child switcher in top AccountNavbar for multi-child parents, and synchronized child selection in TuitionPaymentView with global activeChildId. |
+| Verification | Passed | `node --test tests/*.test.js` passed 22/22 tests; `npm run build` succeeded in 1.15s with 0 errors. |
