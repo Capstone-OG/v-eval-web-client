@@ -64,6 +64,12 @@ import contentService from '../../services/contentService';
 import { practiceService } from '../../services/practiceService';
 import { aiService } from '../../services/aiService';
 import { toast } from '../../context/ToastContext';
+import {
+  normalizeViText,
+  isValidGuid,
+  saveStudioPatternToTextbookStorage,
+  upsertSinglePatternToCurriculumDb
+} from './textbookStateBridge';
 
 // Cấu hình phân môn riêng biệt theo từng Miền tri thức
 export const SUB_SUBJECTS_BY_DOMAIN = {
@@ -71,7 +77,7 @@ export const SUB_SUBJECTS_BY_DOMAIN = {
   'NATURAL_SCIENCES': [
     { id: 'all', name: 'Tất cả môn KHTN', keywords: [] },
     { id: 'physics', name: 'Vật lí', keywords: ['vật lí', 'vật lý', 'dao động', 'sóng', 'điện', 'quang', 'hạt nhân', 'nhiệt', 'khí', 'lực', 'chuyển động', 'năng lượng', 'cơ học', 'physics'] },
-    { id: 'chemistry', name: 'Hóa học', keywords: ['hóa', 'hóa học', 'este', 'lipit', 'cacbohidrat', 'amin', 'polime', 'kim loại', 'hữu cơ', 'vô cơ', 'nguyên tử', 'dung dịch', 'phản ứng', 'axit', 'bazơ', 'muối', 'chemistry'] },
+    { id: 'chemistry', name: 'Hóa học', keywords: ['hóa', 'hoá', 'hóa học', 'hoá học', 'este', 'ester', 'lipit', 'lipid', 'cacbohidrat', 'carbohydrate', 'amin', 'amine', 'polime', 'polymer', 'kim loại', 'hữu cơ', 'vô cơ', 'nguyên tử', 'dung dịch', 'phản ứng', 'axit', 'acid', 'bazơ', 'muối', 'halogen', 'enthalpy', 'hydrocarbon', 'chemistry'] },
     { id: 'biology', name: 'Sinh học', keywords: ['sinh', 'sinh học', 'di truyền', 'tiến hóa', 'sinh thái', 'tế bào', 'nhiễm sắc thể', 'adn', 'arn', 'quần thể', 'hệ sinh thái', 'đột biến', 'gen', 'biology'] }
   ],
   // Khoa học xã hội: Lịch sử, Địa lí, GDKT & Pháp luật
@@ -97,14 +103,14 @@ export const SUB_SUBJECTS_BY_DOMAIN = {
   ]
 };
 
-// Nhận diện Khối lớp từ tên chương hoặc bài học
-export const detectGrade = (text) => {
-  if (!text) return '12';
-  const lower = text.toLowerCase();
+// Nhận diện Khối lớp từ tên chương hoặc bài học (cho phép truyền fallback=null khi đối khớp chunks để không ép nhầm lớp 10/11 sang 12)
+export const detectGrade = (text, fallback = '12') => {
+  if (!text) return fallback;
+  const lower = normalizeViText(text);
   if (lower.includes('lớp 10') || lower.includes('grade 10') || lower.includes('[10]') || lower.includes('khối 10')) return '10';
   if (lower.includes('lớp 11') || lower.includes('grade 11') || lower.includes('[11]') || lower.includes('khối 11')) return '11';
   if (lower.includes('lớp 12') || lower.includes('grade 12') || lower.includes('[12]') || lower.includes('khối 12')) return '12';
-  return '12'; // Trọng tâm chuẩn ĐGNL V-ACT
+  return fallback;
 };
 
 // Nhận diện Năm học từ tên chương hoặc mô tả
@@ -129,28 +135,131 @@ export const getDomainKey = (domain) => {
   return 'DOM_MATH';
 };
 
-// Kiểm tra xem chương/bài học có khớp với phân môn không
+// Kiểm tra xem chương/bài học có khớp với phân môn không (ưu tiên tuyệt đối nhãn môn tường minh trong ngoặc/tiêu đề Chương để không bị lọt môn khác do trùng từ khóa như "tiến hóa", "chuyển hóa", "hóa học của tế bào", "năng lượng", "kinh tế")
 export const matchesSubSubject = (chap, subSubjectId, domainKey) => {
   if (!subSubjectId || subSubjectId === 'all') return true;
   const config = SUB_SUBJECTS_BY_DOMAIN[domainKey] || [];
   const target = config.find(s => s.id === subSubjectId);
   if (!target || !target.keywords || target.keywords.length === 0) return true;
 
-  const combinedText = `${chap.name || ''} ${chap.description || ''} ${(chap.lessons || []).map(l => l.name + ' ' + (l.patterns || []).map(p => p.name).join(' ')).join(' ')}`.toLowerCase();
-  return target.keywords.some(kw => combinedText.includes(kw.toLowerCase()));
+  const chapTitleNorm = normalizeViText(chap?.name || '');
+  const chapCodeUpper = String(chap?.code || chap?.skillCode || '').toUpperCase();
+  // Trích riêng phần nhãn ngoặc đơn/vuông ở tiêu đề (vd: "(Sinh học - Lớp 10)", "(Hóa học – Lớp 10)", "(GDKT & PL - Lớp 10)")
+  const tagText = (chapTitleNorm.match(/[(\[][^)\]]+[)\]]/g) || []).join(' ');
+
+  // 1a. Ưu tiên tuyệt đối nhãn phân môn tường minh trong ngoặc (...) hoặc [...]
+  if (tagText) {
+    if (domainKey === 'NATURAL_SCIENCES') {
+      if (tagText.includes('sinh học') || /[(\[]\s*sinh\b/.test(tagText)) return subSubjectId === 'biology';
+      if (tagText.includes('hóa học') || /[(\[]\s*hóa(?:\s|[-–)\]])/.test(tagText)) return subSubjectId === 'chemistry';
+      if (tagText.includes('vật lí') || /[(\[]\s*vật(?:\s|[-–)\]])/.test(tagText)) return subSubjectId === 'physics';
+    } else if (domainKey === 'SOCIAL_SCIENCES') {
+      if (tagText.includes('lịch sử') || /[(\[]\s*sử(?:\s|[-–)\]])/.test(tagText)) return subSubjectId === 'history';
+      if (tagText.includes('địa lí') || /[(\[]\s*địa(?:\s|[-–)\]])/.test(tagText)) return subSubjectId === 'geography';
+      if (tagText.includes('gdkt') || tagText.includes('kinh tế') || tagText.includes('pháp luật')) return subSubjectId === 'civics';
+    } else if (domainKey === 'LANGUAGE') {
+      if (tagText.includes('tiếng anh') || tagText.includes('english')) return subSubjectId === 'english';
+      if (tagText.includes('ngữ văn') || tagText.includes('tiếng việt')) return subSubjectId === 'vietnamese';
+    }
+  }
+
+  // 1b. Ưu tiên nhãn phân môn hoặc chủ đề đặc trưng tuyệt đối trong phần thân tiêu đề Chương / mã Chương (khi chương tự tạo chưa gắn hậu tố ngoặc)
+  if (domainKey === 'NATURAL_SCIENCES') {
+    if (
+      chapTitleNorm.includes('sinh học') || chapTitleNorm.includes('tế bào') ||
+      chapTitleNorm.includes('di truyền') || chapTitleNorm.includes('tiến hóa') ||
+      chapTitleNorm.includes('sinh thái') || chapTitleNorm.includes('sinh vật') ||
+      chapTitleNorm.includes('phân bào') || /(^|_)BIO(_|$)/.test(chapCodeUpper)
+    ) {
+      return subSubjectId === 'biology';
+    }
+    if (
+      chapTitleNorm.includes('hóa học') || chapTitleNorm.includes('bảng tuần hoàn') ||
+      chapTitleNorm.includes('oxi hóa') || chapTitleNorm.includes('halogen') ||
+      chapTitleNorm.includes('hydrocarbon') || chapTitleNorm.includes('carbohydrate') ||
+      chapTitleNorm.includes('polymer') || chapTitleNorm.includes('kim loại') ||
+      chapTitleNorm.includes('điện phân') || chapTitleNorm.includes('carboxylic') ||
+      /(^|_)CHEM(_|$)/.test(chapCodeUpper)
+    ) {
+      return subSubjectId === 'chemistry';
+    }
+    if (
+      chapTitleNorm.includes('vật lí') || chapTitleNorm.includes('chuyển động') ||
+      chapTitleNorm.includes('định luật newton') || chapTitleNorm.includes('dao động') ||
+      chapTitleNorm.includes('điện trường') || chapTitleNorm.includes('dòng điện') ||
+      chapTitleNorm.includes('từ trường') || chapTitleNorm.includes('khí lí tưởng') ||
+      chapTitleNorm.includes('hạt nhân') || /(^|_)PHYS(_|$)/.test(chapCodeUpper)
+    ) {
+      return subSubjectId === 'physics';
+    }
+  } else if (domainKey === 'SOCIAL_SCIENCES') {
+    if (chapTitleNorm.includes('lịch sử') || /(^|_)HIST(_|$)/.test(chapCodeUpper)) {
+      return subSubjectId === 'history';
+    }
+    if (chapTitleNorm.includes('địa lí') || /(^|_)GEOG?(_|$)/.test(chapCodeUpper)) {
+      return subSubjectId === 'geography';
+    }
+    if (chapTitleNorm.includes('gdkt') || chapTitleNorm.includes('pháp luật') || /(^|_)CIV(_|$)/.test(chapCodeUpper)) {
+      return subSubjectId === 'civics';
+    }
+  } else if (domainKey === 'LANGUAGE') {
+    if (chapTitleNorm.includes('tiếng anh') || chapTitleNorm.includes('english') || /(^|_)ENG(_|$)/.test(chapCodeUpper)) {
+      return subSubjectId === 'english';
+    }
+    if (chapTitleNorm.includes('ngữ văn') || chapTitleNorm.includes('tiếng việt') || /(^|_)LIT(_|$)/.test(chapCodeUpper)) {
+      return subSubjectId === 'vietnamese';
+    }
+  }
+
+  // 2. Fallback theo từ khóa chuyên ngành (khi tiêu đề chương chưa gắn tên môn tường minh)
+  const combinedText = normalizeViText(
+    `${chap.name || ''} ${chap.description || ''} ${(chap.lessons || []).map(l => l.name + ' ' + (l.patterns || []).map(p => p.name).join(' ')).join(' ')}`
+  );
+  // Tránh từ khóa "hóa" đơn lẻ khớp nhầm các từ ghép ngoài Hóa học (không dùng \b ASCII vì chữ có dấu tiếng Việt là \W trong JS)
+  const sanitizedText = subSubjectId === 'chemistry'
+    ? combinedText.replace(/(?:tiến hóa|chuyển hóa|văn hóa|đô thị hóa|công nghiệp hóa|hiện đại hóa|toàn cầu hóa|sinh hóa|phân hóa|đồng hóa|dị hóa)/g, '')
+    : combinedText;
+
+  return target.keywords.some(kw => sanitizedText.includes(normalizeViText(kw)));
 };
 
-// Nhận diện mã Môn học từ ngữ cảnh văn bản và miền tri thức
+// Nhận diện mã Môn học từ ngữ cảnh văn bản và miền tri thức (ưu tiên nhãn ngoặc & tên môn tường minh trước từ khóa phụ, chuẩn hóa dấu hoá/hóa, vật lý/vật lí)
 export const detectSubjectFromContext = (text = '', domain = null) => {
-  const lower = (text || '').toLowerCase();
-  if (lower.includes('hóa') || lower.includes('hoa hoc') || lower.includes('chem')) return 'CHEM';
-  if (lower.includes('vật lí') || lower.includes('vật lý') || lower.includes('vat ly') || lower.includes('phys')) return 'PHYS';
-  if (lower.includes('sinh') || lower.includes('bio')) return 'BIO';
-  if (lower.includes('ngữ văn') || lower.includes('tiếng việt') || lower.includes('văn')) return 'LIT';
-  if (lower.includes('lịch sử') || lower.includes('sử') || lower.includes('hist')) return 'HIST';
-  if (lower.includes('địa lí') || lower.includes('địa lý') || lower.includes('geo')) return 'GEO';
+  const lower = normalizeViText(text || '');
+  const tagText = (lower.match(/[(\[][^)\]]+[)\]]/g) || []).join(' ');
+
+  // 1a. Khớp nhãn môn trong ngoặc trước (vd: "Thành phần hóa học của tế bào (Sinh học - Lớp 10)" -> BIO)
+  if (tagText) {
+    if (tagText.includes('sinh học') || /[(\[]\s*sinh\b/.test(tagText)) return 'BIO';
+    if (tagText.includes('hóa học') || tagText.includes('hoa hoc') || /[(\[]\s*hóa(?:\s|[-–)\]])/.test(tagText)) return 'CHEM';
+    if (tagText.includes('vật lí') || tagText.includes('vat ly') || tagText.includes('vat li') || /[(\[]\s*vật(?:\s|[-–)\]])/.test(tagText)) return 'PHYS';
+    if (tagText.includes('lịch sử') || /[(\[]\s*sử(?:\s|[-–)\]])/.test(tagText)) return 'HIST';
+    if (tagText.includes('địa lí') || /[(\[]\s*địa(?:\s|[-–)\]])/.test(tagText)) return 'GEO';
+    if (tagText.includes('tiếng anh') || tagText.includes('english')) return 'ENG';
+    if (tagText.includes('ngữ văn') || tagText.includes('tiếng việt')) return 'LIT';
+    if (tagText.includes('gdkt') || tagText.includes('kinh tế') || tagText.includes('pháp luật')) return 'CIV';
+    if (tagText.includes('toán')) return 'MATH';
+  }
+
+  // 1b. Khớp tên phân môn tường minh trong nội dung (tránh "Tiến hóa (Sinh học)" hay "Năng lượng hóa học" bị nhận nhầm môn)
+  if (lower.includes('sinh học') || lower.includes('tế bào')) return 'BIO';
+  if (lower.includes('hóa học') || lower.includes('hoa hoc')) return 'CHEM';
+  if (lower.includes('vật lí') || lower.includes('vat ly') || lower.includes('vat li')) return 'PHYS';
+  if (lower.includes('lịch sử')) return 'HIST';
+  if (lower.includes('địa lí')) return 'GEO';
   if (lower.includes('tiếng anh') || lower.includes('english')) return 'ENG';
-  if (lower.includes('pháp luật') || lower.includes('kinh tế') || lower.includes('gdkt')) return 'CIV';
+  if (lower.includes('ngữ văn') || lower.includes('tiếng việt')) return 'LIT';
+  if (lower.includes('gdkt') || lower.includes('kinh tế và pháp luật') || lower.includes('pháp luật')) return 'CIV';
+  if (lower.includes('toán học') || lower.includes('(toán')) return 'MATH';
+
+  // 2. Fallback từ khóa đặc trưng môn học
+  if (lower.includes('di truyền') || lower.includes('nhiễm sắc thể') || lower.includes('bio')) return 'BIO';
+  if (lower.includes('chem') || lower.includes('nguyên tử') || lower.includes('halogen') || lower.includes('enthalpy') || lower.includes('ester') || lower.includes('hydrocarbon') || lower.includes('oxi hóa')) return 'CHEM';
+  if (lower.includes('phys') || lower.includes('động lượng') || lower.includes('dao động') || lower.includes('định luật newton')) return 'PHYS';
+  if (lower.includes('hist')) return 'HIST';
+  if (lower.includes('geo')) return 'GEO';
+  if (lower.includes('văn')) return 'LIT';
+  if (lower.includes('kinh tế')) return 'CIV';
   if (lower.includes('toán') || lower.includes('đại số') || lower.includes('hình học') || lower.includes('xác suất')) return 'MATH';
 
   if (domain) {
@@ -164,8 +273,8 @@ export const detectSubjectFromContext = (text = '', domain = null) => {
 // Kiểm tra tính tương thích giữa 2 mã môn học (chống trộn lẫn Hóa vào Toán hoặc ngược lại)
 export const isSubjectCompatible = (subCode1, subCode2) => {
   if (!subCode1 || !subCode2) return true;
-  const s1 = String(subCode1).toUpperCase().trim();
-  const s2 = String(subCode2).toUpperCase().trim();
+  const s1 = normalizeViText(String(subCode1)).toUpperCase();
+  const s2 = normalizeViText(String(subCode2)).toUpperCase();
   if (s1 === s2) return true;
   const isM1 = s1 === 'MATH' || s1.includes('TOÁN');
   const isM2 = s2 === 'MATH' || s2.includes('TOÁN');
@@ -533,12 +642,15 @@ export default function CurriculumExplorerView({
               for (const l of (c.lessons || [])) {
                 for (const p of (l.patterns || [])) {
                   if (p.patternId === preservePatternId) {
-                    foundPat = p;
+                    foundPat = { ...p, _parentLesson: l, _parentChapter: c };
                     break;
                   }
                 }
+                if (foundPat) break;
               }
+              if (foundPat) break;
             }
+            if (foundPat) break;
           }
           if (foundPat) {
             setSelectedPattern(foundPat);
@@ -622,15 +734,34 @@ export default function CurriculumExplorerView({
   useEffect(() => {
     fetchCurriculumData();
     fetchIngestedTextbooks();
+
+    const handleSgkChange = () => {
+      fetchIngestedTextbooks();
+    };
+    const handleCurriculumSynced = () => {
+      fetchCurriculumData();
+      fetchIngestedTextbooks();
+    };
+
+    window.addEventListener('veval:textbook-saved', handleSgkChange);
+    window.addEventListener('veval:textbook-deleted', handleSgkChange);
+    window.addEventListener('veval:curriculum-synced', handleCurriculumSynced);
+    return () => {
+      window.removeEventListener('veval:textbook-saved', handleSgkChange);
+      window.removeEventListener('veval:textbook-deleted', handleSgkChange);
+      window.removeEventListener('veval:curriculum-synced', handleCurriculumSynced);
+    };
   }, []);
 
   const normalizeTaxonomyLabel = (str) => {
     if (!str) return '';
-    return String(str)
-      .toLowerCase()
-      .replace(/\[lớp\s*\d+[^\]]*\]/gi, '')
-      .replace(/^(chương|chuyên đề|bài|dạng)\s*[ivxlcdm\d,\s&]*[:\.\-–]\s*/gi, '')
-      .replace(/\b(trọng tâm|lý thuyết|phương pháp|phương pháp giải|giải|bài toán|bài tập|dạng bài)\b/gi, '')
+    return normalizeViText(String(str))
+      .replace(/\[[^\]]*lớp\s*\d+[^\]]*\]/gi, '')
+      .replace(/\([^)]*lớp\s*\d+[^)]*\)/gi, '')
+      .replace(/\((?:hóa học|vật lí|sinh học|toán học|ngữ văn|lịch sử|địa lí|tiếng anh)[^)]*\)/gi, '')
+      .replace(/^(chương|chủ\s*đề|chuyên\s*đề|bài|dạng)\s*[ivxlcdm\d,\s&]*[:\.\-–]\s*/gi, '')
+      .replace(/\b(trọng tâm|lý thuyết|lí thuyết|phương pháp|phương pháp giải|giải|bài toán|bài tập|dạng bài)\b/gi, '')
+      .replace(/[()\[\],;:]+/g, ' ')
       .replace(/\s+/g, ' ')
       .trim();
   };
@@ -656,6 +787,7 @@ export default function CurriculumExplorerView({
     return ingestedTextbooks.flatMap(src =>
       (src.chunks || []).map(ch => ({
         ...ch,
+        _sourceId: src.sourceId,
         _sourceFileName: src.fileName,
         _sourceFileHash: src.fileHash,
         _sourceDpi: src.dpiUsed || ch.dpiUsed || 56
@@ -663,15 +795,20 @@ export default function CurriculumExplorerView({
     );
   }, [ingestedTextbooks]);
 
+  const activeSourceIds = useMemo(
+    () => ingestedTextbooks.map(s => s.sourceId).filter(Boolean),
+    [ingestedTextbooks]
+  );
+
   const getMatchedChunksForChapter = (chap) => {
     if (!chap || allIngestedChunks.length === 0) return [];
     const targetSub = detectSubjectFromContext(chap.name, currentDomain);
-    const targetGrade = detectGrade(chap.name) || (selectedGrade !== 'all' ? selectedGrade : null);
+    const targetGrade = detectGrade(chap.name, null) || (selectedGrade !== 'all' ? selectedGrade : null);
 
     return allIngestedChunks.filter(c => {
       // 1. Phải cùng môn học
       if (targetSub && c.subjectCode && !isSubjectCompatible(c.subjectCode, targetSub)) return false;
-      // 2. Phải cùng khối lớp
+      // 2. Phải cùng khối lớp (nếu nhận diện rõ lớp)
       if (targetGrade && c.grade && Number(c.grade) !== Number(targetGrade)) return false;
       // 3. Khớp tên chương
       return isFuzzyLabelMatch(c.chapterName, chap.name);
@@ -681,12 +818,12 @@ export default function CurriculumExplorerView({
   const getMatchedChunksForLesson = (les, parentChap = null) => {
     if (!les || allIngestedChunks.length === 0) return [];
     const targetSub = detectSubjectFromContext(parentChap?.name || les.name, currentDomain);
-    const targetGrade = detectGrade(parentChap?.name || les.name) || (selectedGrade !== 'all' ? selectedGrade : null);
+    const targetGrade = detectGrade(parentChap?.name || les.name, null) || (selectedGrade !== 'all' ? selectedGrade : null);
 
     return allIngestedChunks.filter(c => {
       // 1. Phải cùng môn học
       if (targetSub && c.subjectCode && !isSubjectCompatible(c.subjectCode, targetSub)) return false;
-      // 2. Phải cùng khối lớp
+      // 2. Phải cùng khối lớp (nếu nhận diện rõ lớp)
       if (targetGrade && c.grade && Number(c.grade) !== Number(targetGrade)) return false;
       // 3. Chunks bắt buộc phải thuộc cùng Chương
       if (parentChap && c.chapterName && !isFuzzyLabelMatch(c.chapterName, parentChap.name)) return false;
@@ -698,7 +835,7 @@ export default function CurriculumExplorerView({
   const getMatchedChunksForPattern = (pat, parentLesson = null, parentChapter = null) => {
     if (!pat || allIngestedChunks.length === 0) return [];
     const targetSub = detectSubjectFromContext(parentChapter?.name || parentLesson?.name || pat.name, currentDomain);
-    const targetGrade = detectGrade(parentChapter?.name || parentLesson?.name || pat.name) || (selectedGrade !== 'all' ? selectedGrade : null);
+    const targetGrade = detectGrade(parentChapter?.name || parentLesson?.name || pat.name, null) || (selectedGrade !== 'all' ? selectedGrade : null);
 
     // 1. Giới hạn chặt chẽ phạm vi chunks theo Môn học, Khối lớp và Chương
     const scopedChunks = allIngestedChunks.filter(c => {
@@ -862,8 +999,8 @@ export default function CurriculumExplorerView({
             code: s.code,
             level: s.level,
             weight: s.weight,
-            theoryRecap: s.theory,
-            solutionMethod: "Phương pháp tư duy chuẩn hóa ĐGNL ĐHQG-HCM.",
+            theoryRecap: s.theory || "",
+            solutionMethod: "",
             keyFormulas: s.keyFormulas || [],
             crossModel: s.crossModel,
             crossNote: s.crossNote,
@@ -1157,19 +1294,67 @@ export default function CurriculumExplorerView({
         solutionMethod: editingForm.solutionMethod,
         videoUrl: editingForm.videoUrl?.trim() || null,
         durationSeconds: parseInt(editingForm.durationSeconds, 10) || 0,
-        prerequisiteSkillIds: editingForm.prerequisiteSkillIds || []
+        prerequisiteSkillIds: (editingForm.prerequisiteSkillIds || []).filter(isValidGuid)
       };
 
-      await contentService.updatePattern(editingForm.patternId, payload);
+      const targetChap = (chapters || []).find(c => c.chapterId === editingForm.chapterId) || selectedPattern?._parentChapter || null;
+      const targetLes = (targetChap?.lessons || []).find(l => l.lessonId === editingForm.lessonId) || selectedPattern?._parentLesson || null;
+
+      saveStudioPatternToTextbookStorage({
+        domain: currentDomain,
+        chapter: targetChap,
+        lesson: targetLes,
+        pattern: selectedPattern,
+        updatedFields: {
+          patternId: editingForm.patternId,
+          name: editingForm.name.trim(),
+          weight: `${Math.round(weightVal * 100)}%`,
+          level: editingForm.level,
+          theoryRecap: editingForm.theoryRecap,
+          solutionMethod: editingForm.solutionMethod,
+          videoUrl: payload.videoUrl,
+          durationSeconds: payload.durationSeconds
+        }
+      });
+
+      let savedPatId = editingForm.patternId;
+      if (isValidGuid(editingForm.patternId)) {
+        try {
+          await contentService.updatePattern(editingForm.patternId, payload);
+        } catch {
+          const upserted = await upsertSinglePatternToCurriculumDb({
+            domain: currentDomain,
+            chapter: targetChap,
+            lesson: targetLes,
+            pattern: selectedPattern,
+            payload,
+            contentService
+          });
+          if (upserted?.patternId) savedPatId = upserted.patternId;
+        }
+      } else {
+        const upserted = await upsertSinglePatternToCurriculumDb({
+          domain: currentDomain,
+          chapter: targetChap,
+          lesson: targetLes,
+          pattern: selectedPattern,
+          payload,
+          contentService
+        });
+        if (upserted?.patternId) savedPatId = upserted.patternId;
+      }
 
       setSelectedPattern(prev => ({
         ...prev,
+        patternId: savedPatId,
         name: editingForm.name.trim(),
         weight: `${Math.round(weightVal * 100)}%`,
         level: editingForm.level
       }));
 
-      await fetchCurriculumData(editingForm.patternId);
+      if (isValidGuid(savedPatId)) {
+        await fetchCurriculumData(savedPatId);
+      }
       toast.success('Đã cập nhật thông tin dạng bài thành công!');
       setIsEditModalOpen(false);
     } catch (err) {
@@ -1905,10 +2090,16 @@ export default function CurriculumExplorerView({
             setStudioTargetPattern(null);
           }}
           onSaveSuccess={(updatedPattern) => {
-            if (updatedPattern?.patternId) {
+            if (updatedPattern) {
+              setStudioTargetPattern(prev => ({
+                ...(prev || {}),
+                ...updatedPattern
+              }));
               setSelectedPattern(prev => ({
-                ...prev,
+                ...(prev || {}),
                 ...updatedPattern,
+                _parentLesson: prev?._parentLesson || studioTargetLesson,
+                _parentChapter: prev?._parentChapter || studioTargetChapter,
                 videoLesson: updatedPattern.videoUrl ? {
                   title: updatedPattern.name,
                   teacher: "Ban Chuyên Môn / Giảng Viên",
@@ -1918,7 +2109,9 @@ export default function CurriculumExplorerView({
                   videoUrl: updatedPattern.videoUrl
                 } : prev?.videoLesson
               }));
-              fetchCurriculumData(updatedPattern.patternId);
+              if (isValidGuid(updatedPattern.patternId)) {
+                fetchCurriculumData(updatedPattern.patternId);
+              }
             }
           }}
         />
@@ -2550,6 +2743,7 @@ export default function CurriculumExplorerView({
               parentLesson={selectedPattern._parentLesson || null}
               parentChapter={selectedPattern._parentChapter || null}
               matchedSgkChunks={getMatchedChunksForPattern(selectedPattern, selectedPattern._parentLesson || null, selectedPattern._parentChapter || null)}
+              activeSourceIds={activeSourceIds}
               onOpenStudio={(pat) => handleOpenStudio(pat, selectedPattern._parentChapter, selectedPattern._parentLesson)}
               onOpenQuickEdit={(pat) => handleOpenEditModal(pat)}
               onLaunchAdaptiveQuiz={(pat) => handleLaunchAdaptiveQuiz(pat)}

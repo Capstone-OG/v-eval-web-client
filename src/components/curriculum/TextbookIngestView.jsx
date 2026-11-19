@@ -32,6 +32,7 @@ import {
   X
 } from 'lucide-react';
 import aiService from '../../services/aiService';
+import contentService from '../../services/contentService';
 import MathText from '../common/MathText';
 import { useToast } from '../../context/ToastContext';
 import {
@@ -44,9 +45,16 @@ import {
   getSavedTextbookData,
   saveTextbookData,
   mergeSavedExercisesIntoChapters,
+  resolvePersistedChapters,
   buildTheoryFromChunks,
+  buildMethodFromChunks,
+  getChunksForLesson,
+  extractKeyFormulasFromChunks,
+  extractExamplesFromChunks,
   isGenericPlaceholder,
-  getDefaultLessonTheory
+  getDefaultLessonTheory,
+  syncTextbookSkeletonToCurriculum,
+  normalizeViText
 } from './textbookStateBridge';
 
 const BLOOM_LEVELS = [
@@ -77,10 +85,15 @@ export default function TextbookIngestView({ onBack, onNavigateTab }) {
   const [fillProgress, setFillProgress] = useState(null);
   const [generatingExercises, setGeneratingExercises] = useState(false);
   const [enrichingKnowledge, setEnrichingKnowledge] = useState(false);
+  const [syncingCurriculum, setSyncingCurriculum] = useState(false);
 
   // Kho SGK từ Database
   const [ingestedSources, setIngestedSources] = useState([]);
   const [selectedSourceId, setSelectedSourceId] = useState(initCtx.selectedSourceId || '');
+  const selectedSourceIdRef = useRef(initCtx.selectedSourceId || '');
+  useEffect(() => {
+    selectedSourceIdRef.current = selectedSourceId;
+  }, [selectedSourceId]);
   const [filledChunks, setFilledChunks] = useState([]);
 
   // Skeleton Cấu Trúc SGK (Tự động nạp dữ liệu đã lưu từ Persistent Storage)
@@ -141,11 +154,12 @@ export default function TextbookIngestView({ onBack, onNavigateTab }) {
   const isLocked = skeleton.isVersionLocked;
   const [lastSavedTime, setLastSavedTime] = useState(null);
 
-  const saveToStorage = useCallback((currSkeleton) => {
+  const saveToStorage = useCallback((currSkeleton, overrideSourceId) => {
     const target = currSkeleton || skeletonRef.current;
     if (!target) return false;
+    const effectiveSourceId = overrideSourceId !== undefined ? overrideSourceId : selectedSourceIdRef.current;
     const success = saveTextbookData({
-      sourceId: selectedSourceId,
+      sourceId: effectiveSourceId,
       fileName: target.fileName,
       skeleton: target,
       textbookExercises
@@ -155,14 +169,14 @@ export default function TextbookIngestView({ onBack, onNavigateTab }) {
       setLastSavedTime(timeStr);
     }
     return success;
-  }, [selectedSourceId, textbookExercises]);
+  }, [textbookExercises]);
 
   // Lắng nghe sự kiện đồng bộ từ các view khác
   useEffect(() => {
     const handleSync = (e) => {
       const detail = e.detail;
       if (!detail?.skeleton?.chapters) return;
-      if (detail.sourceId === selectedSourceId || detail.fileName === skeletonRef.current.fileName) {
+      if (detail.sourceId === selectedSourceIdRef.current || (detail.fileName && detail.fileName === skeletonRef.current.fileName)) {
         setSkeleton(prev => {
           const updated = {
             ...prev,
@@ -175,14 +189,42 @@ export default function TextbookIngestView({ onBack, onNavigateTab }) {
     };
     window.addEventListener('veval:textbook-saved', handleSync);
     return () => window.removeEventListener('veval:textbook-saved', handleSync);
-  }, [selectedSourceId]);
+  }, []);
 
   const handleSaveAll = () => {
-    const success = saveToStorage(skeleton);
+    const nextSkeleton = {
+      ...skeletonRef.current,
+      hasUserSavedStructure: true
+    };
+    skeletonRef.current = nextSkeleton;
+    setSkeleton(nextSkeleton);
+    const success = saveToStorage(nextSkeleton, selectedSourceIdRef.current);
     if (success) {
-      toast.success('✓ Đã lưu toàn bộ Cấu trúc, Lý thuyết & Ngân hàng câu hỏi SGK thành công!');
+      toast.success('✓ Đã lưu bền vững toàn bộ Cấu trúc, Lý thuyết, Phương pháp & Câu hỏi SGK!');
     } else {
-      toast.error('Có lỗi khi lưu dữ liệu vào bộ nhớ trình duyệt.');
+      toast.error('Bộ nhớ trình duyệt đã đầy, không thể lưu. Hãy dùng nút "Đồng Bộ Khung CT" để lưu thẳng vào Database!');
+    }
+  };
+
+  const handleSyncToCurriculum = async () => {
+    if (!skeleton?.chapters || validChapters.length === 0) {
+      toast.warning('Chưa có cấu trúc Chương / Bài học SGK để đồng bộ sang Khung Chương Trình!');
+      return;
+    }
+    setSyncingCurriculum(true);
+    toast.info(`⏳ Đang đồng bộ ${validChapters.length} Chương SGK "${skeleton.subjectName} Lớp ${skeleton.grade}" sang CSDL Khung Chương Trình...`);
+    try {
+      saveToStorage(skeleton);
+      await syncTextbookSkeletonToCurriculum({
+        skeleton,
+        chunks: filledChunks,
+        contentService
+      });
+      toast.success(`🎉 Đã đồng bộ 100% Lý thuyết, Phương pháp & Câu hỏi SGK sang Khung Chương Trình & Dàn Kiến Thức!`);
+    } catch (err) {
+      toast.error('Lỗi đồng bộ Khung Chương Trình: ' + (err?.response?.data?.message || err.message));
+    } finally {
+      setSyncingCurriculum(false);
     }
   };
 
@@ -228,34 +270,39 @@ export default function TextbookIngestView({ onBack, onNavigateTab }) {
 
   const currentLessonChunks = useMemo(() => {
     if (!filledChunks || filledChunks.length === 0) return [];
+    // 1. Khớp bài học ưu tiên tên bài (đã chuẩn hóa dấu tiếng Việt hoá/hóa) rồi mới tới phạm vi trang, kèm lọc môn học
+    const matched = getChunksForLesson(activeLesson, filledChunks, skeleton.subjectCode);
+    if (matched.length > 0) return matched;
+
+    // 2. Fallback: khớp theo tên dạng bài đang chọn (nếu cùng môn học)
+    const sub = (skeleton.subjectCode || '').toUpperCase();
     const pedagogicalChunks = filledChunks.filter(c => {
       const sType = (c.sectionType || '').toUpperCase();
       if (sType === 'COVER' || sType === 'PREFACE' || sType === 'INDEX') return false;
       if (isNonPedagogical(c.lessonName) && isNonPedagogical(c.patternName)) return false;
+      if (sub && c.subjectCode && c.subjectCode.toUpperCase() !== sub) return false;
       return true;
     });
 
-    if (activeLesson?.pageStart && activeLesson?.pageEnd) {
-      const byPage = pedagogicalChunks.filter(c => c.pageNumber >= activeLesson.pageStart && c.pageNumber <= activeLesson.pageEnd);
-      if (byPage.length > 0) return byPage;
+    if (activePattern?.name) {
+      const cleanP = normalizeViText(cleanPrefix(activePattern.name, 'pattern'));
+      if (cleanP) {
+        const byPat = pedagogicalChunks.filter(c => {
+          const cP = normalizeViText(cleanPrefix(c.patternName || '', 'pattern'));
+          return cP && (cP === cleanP || cP.includes(cleanP) || cleanP.includes(cP));
+        });
+        if (byPat.length > 0) return byPat;
+      }
     }
-    if (activeLesson?.title) {
-      const cleanLTitle = activeLesson.title.toLowerCase().replace(/^(bài\s*\d*[:\.\-]?\s*)/i, '').trim();
-      const byLessonName = pedagogicalChunks.filter(c => {
-        if (!c.lessonName || isNonPedagogical(c.lessonName)) return false;
-        const cleanCName = c.lessonName.toLowerCase().replace(/^(bài\s*\d*[:\.\-]?\s*)/i, '').trim();
-        return cleanLTitle.includes(cleanCName) || cleanCName.includes(cleanLTitle);
-      });
-      if (byLessonName.length > 0) return byLessonName;
-    }
-    return pedagogicalChunks.slice(0, 10);
-  }, [filledChunks, activeLesson]);
+
+    return [];
+  }, [filledChunks, activeLesson, activePattern, skeleton.subjectCode]);
 
   // Tạo lý thuyết tổng hợp chuẩn sư phạm từ các đoạn trích SGK
   const rawTheoryFromChunks = useMemo(() => {
     if (!currentLessonChunks || currentLessonChunks.length === 0) return '';
-    return buildTheoryFromChunks(currentLessonChunks, activeLesson?.title || '');
-  }, [currentLessonChunks, activeLesson?.title]);
+    return buildTheoryFromChunks(currentLessonChunks, activeLesson?.title || '', skeleton.subjectCode);
+  }, [currentLessonChunks, activeLesson?.title, skeleton.subjectCode]);
 
   const activeTheoryContent = useMemo(() => {
     if (activeLesson?.isEdited && activeLesson?.theory && !isGenericPlaceholder(activeLesson.theory)) {
@@ -274,32 +321,50 @@ export default function TextbookIngestView({ onBack, onNavigateTab }) {
     return '';
   }, [activeLesson, rawTheoryFromChunks, skeleton.subjectCode, skeleton.grade]);
 
-  // Lý thuyết và phương pháp riêng biệt cho Dạng bài đang chọn
+  // Lý thuyết chuyên sâu riêng của Dạng bài (CHỈ lấy theoryRecap thực sự từ AI / biên soạn; TUYỆT ĐỐI không lấy description ngắn đè mất lý thuyết bài học SGK)
   const activePatternTheory = useMemo(() => {
     if (!activePattern) return '';
     if (activePattern.theoryRecap && !isGenericPlaceholder(activePattern.theoryRecap)) {
       return activePattern.theoryRecap;
-    }
-    if (activePattern.description && !isGenericPlaceholder(activePattern.description) && activePattern.description !== 'Mô tả dạng bài') {
-      return activePattern.description;
     }
     return '';
   }, [activePattern]);
 
   const activePatternMethod = useMemo(() => {
     if (!activePattern) return '';
-    if (activePattern.method && !isGenericPlaceholder(activePattern.method) && activePattern.method !== 'Phương pháp giải') {
-      return activePattern.method;
+    // 1. Ưu tiên phương pháp đã được giáo viên chỉnh sửa hoặc AI sinh chi tiết nhiều bước
+    const explicitMethod = (activePattern.solutionMethod && !isGenericPlaceholder(activePattern.solutionMethod))
+      ? activePattern.solutionMethod.trim()
+      : ((activePattern.method && !isGenericPlaceholder(activePattern.method)) ? activePattern.method.trim() : '');
+
+    const isDetailedMethod = explicitMethod && (activePattern.isEdited || explicitMethod.includes('\n') || explicitMethod.length >= 140);
+    if (isDetailedMethod) {
+      return explicitMethod;
     }
-    if (activePattern.solutionMethod && !isGenericPlaceholder(activePattern.solutionMethod)) {
-      return activePattern.solutionMethod;
+
+    // 2. Tự động tổng hợp Phương pháp giải cơ bản chuẩn SGK từ chunks + công thức + gợi ý dạng bài
+    const synthesized = buildMethodFromChunks(currentLessonChunks, activeLesson, activePattern, skeleton.subjectCode);
+    if (synthesized && !isGenericPlaceholder(synthesized)) {
+      return synthesized;
     }
-    return '';
-  }, [activePattern]);
+
+    return explicitMethod;
+  }, [activePattern, activeLesson, currentLessonChunks, skeleton.subjectCode]);
+
+  const displayedExamples = useMemo(() => {
+    return extractExamplesFromChunks(currentLessonChunks);
+  }, [currentLessonChunks]);
 
   const displayedTheoryContent = (activePatternTheory && activePatternTheory.trim())
     ? activePatternTheory
     : activeTheoryContent;
+
+  const displayedKeyFormulas = useMemo(() => {
+    if (activeLesson?.keyFormulas && activeLesson.keyFormulas.length > 0) {
+      return activeLesson.keyFormulas;
+    }
+    return extractKeyFormulasFromChunks(currentLessonChunks);
+  }, [activeLesson?.keyFormulas, currentLessonChunks]);
 
   useEffect(() => {
     setIsEditingTheory(false);
@@ -333,10 +398,35 @@ export default function TextbookIngestView({ onBack, onNavigateTab }) {
       const list = res?.sources || [];
       setIngestedSources(list);
 
-      const sidToLoad = selectedSourceId || (list.find(s => s.fileName?.includes('VL 10 CD')) || list[0])?.sourceId;
+      // Ưu tiên phục hồi chính xác cuốn sách người dùng vừa parse/lưu gần nhất (tránh F5 nhảy về sách cũ hoặc ghi đè bản đã lưu)
+      const savedLatest = getSavedTextbookData(selectedSourceIdRef.current, skeletonRef.current?.fileName)
+        || getSavedTextbookData();
+      if (savedLatest?.savedAt) {
+        setLastSavedTime(new Date(savedLatest.savedAt).toLocaleTimeString('vi-VN'));
+      }
+
+      const currentSidValid = selectedSourceIdRef.current && list.some(s => s.sourceId === selectedSourceIdRef.current);
+      const savedSidValid = savedLatest?.sourceId && list.some(s => s.sourceId === savedLatest.sourceId);
+      const savedFileMatch = !savedSidValid && savedLatest?.fileName
+        ? list.find(s => s.fileName && s.fileName.toLowerCase().trim() === savedLatest.fileName.toLowerCase().trim())
+        : null;
+
+      // Nếu người dùng mới parse Bước 1 & đã bấm Lưu (chưa chạy Bước 2 nên chưa có sourceId trên DB): GIỮ NGUYÊN, không tự đè bằng sách khác!
+      if (!currentSidValid && !savedSidValid && !savedFileMatch && savedLatest?.skeleton?.hasUserSavedStructure && savedLatest.skeleton.chapters?.length > 0) {
+        selectedSourceIdRef.current = '';
+        setSelectedSourceId('');
+        return;
+      }
+
+      const sidToLoad = currentSidValid
+        ? selectedSourceIdRef.current
+        : (savedSidValid
+            ? savedLatest.sourceId
+            : (savedFileMatch?.sourceId || list[0]?.sourceId));
+
       if (sidToLoad) {
+        selectedSourceIdRef.current = sidToLoad;
         setSelectedSourceId(sidToLoad);
-        await loadChunksForSource(sidToLoad, list);
         await handleSelectSource(sidToLoad, list);
       }
     } catch (err) {
@@ -350,6 +440,7 @@ export default function TextbookIngestView({ onBack, onNavigateTab }) {
 
   const handleSelectSource = async (sourceId, sourceList = ingestedSources) => {
     if (!sourceId) {
+      selectedSourceIdRef.current = '';
       setSelectedSourceId('');
       setFilledChunks([]);
       setSkeleton(prev => ({ ...prev, fileName: '', totalPages: 0, chapters: [] }));
@@ -358,6 +449,7 @@ export default function TextbookIngestView({ onBack, onNavigateTab }) {
     const found = sourceList.find(s => s.sourceId === sourceId);
     if (!found) return;
 
+    selectedSourceIdRef.current = sourceId;
     setSelectedSourceId(sourceId);
     
     // Phát hiện môn học và khối lớp chuẩn xác từ sourceId, subjectCode hoặc fileName
@@ -365,13 +457,13 @@ export default function TextbookIngestView({ onBack, onNavigateTab }) {
     let targetG = found.grade;
     const fNameUpper = (found.fileName || '').toUpperCase();
     if (!targetSub || targetSub === 'PHYS') {
-      if (fNameUpper.includes('HÓA') || fNameUpper.includes('HOA') || fNameUpper.includes('CHEM')) {
+      if (fNameUpper.includes('HÓA') || fNameUpper.includes('HOÁ') || fNameUpper.includes('HOA') || fNameUpper.includes('CHEM')) {
         targetSub = 'CHEM';
       } else if (fNameUpper.includes('TOÁN') || fNameUpper.includes('TOAN') || fNameUpper.includes('MATH')) {
         targetSub = 'MATH';
       } else if (fNameUpper.includes('SINH') || fNameUpper.includes('BIO')) {
         targetSub = 'BIO';
-      } else if (fNameUpper.includes('VẬT LÍ') || fNameUpper.includes('VAT LI') || fNameUpper.includes('VL') || fNameUpper.includes('PHYS')) {
+      } else if (fNameUpper.includes('VẬT LÍ') || fNameUpper.includes('VẬT LÝ') || fNameUpper.includes('VAT LI') || fNameUpper.includes('VL') || fNameUpper.includes('PHYS')) {
         targetSub = 'PHYS';
       }
     }
@@ -459,8 +551,8 @@ export default function TextbookIngestView({ onBack, onNavigateTab }) {
           name: rawPName,
           bloomLevel: 2,
           status: 'ACCEPTED',
-          description: 'Dạng bài bóc tách từ SGK.',
-          method: 'Phương pháp chuẩn SGK.',
+          description: '',
+          method: '',
           exercises: []
         });
       }
@@ -478,14 +570,14 @@ export default function TextbookIngestView({ onBack, onNavigateTab }) {
 
       lessons.forEach((les, lIdx) => {
         les.lessonNumber = lIdx + 1;
-        const cleanedLesTitle = cleanPrefix(les.title, 'lesson').toLowerCase();
+        const cleanedLesTitle = normalizeViText(cleanPrefix(les.title, 'lesson'));
 
         // 1. Tìm preset bài học tương ứng
         let matchedLessonPreset = null;
         if (preset?.chapters) {
           for (const pCh of preset.chapters) {
             const foundPresetLes = (pCh.lessons || []).find(pl => {
-              const plClean = cleanPrefix(pl.title, 'lesson').toLowerCase();
+              const plClean = normalizeViText(cleanPrefix(pl.title, 'lesson'));
               return cleanedLesTitle.includes(plClean) || plClean.includes(cleanedLesTitle);
             });
             if (foundPresetLes) {
@@ -495,12 +587,29 @@ export default function TextbookIngestView({ onBack, onNavigateTab }) {
           }
         }
 
-        // 2. Nạp công thức nếu bài học chưa có
+        const chunksOfLesson = getChunksForLesson(les, chunks, targetSub);
+
+        // 2. Nạp công thức từ preset hoặc tự động bóc tách KaTeX từ chunks thực tế của bài học
         if ((!les.keyFormulas || les.keyFormulas.length === 0) && matchedLessonPreset?.keyFormulas) {
           les.keyFormulas = matchedLessonPreset.keyFormulas;
         }
+        if (!les.keyFormulas || les.keyFormulas.length === 0) {
+          const extractedFormulas = extractKeyFormulasFromChunks(chunksOfLesson);
+          if (extractedFormulas.length > 0) {
+            les.keyFormulas = extractedFormulas;
+          }
+        }
 
-        // 3. Đa dạng hóa dạng bài và cấp độ Bloom Taxonomy (L1 - L4)
+        // 3. Tổng hợp sẵn lý thuyết bài học chuẩn từ Vector Chunks thực tế (không dùng placeholder)
+        let synTheory = chunksOfLesson.length > 0
+          ? buildTheoryFromChunks(chunksOfLesson, les.title, targetSub)
+          : '';
+        if (!synTheory || isGenericPlaceholder(synTheory)) {
+          synTheory = getDefaultLessonTheory(targetSub, targetG, les.title) || '';
+        }
+        les.theory = synTheory;
+
+        // 4. Đa dạng hóa dạng bài và cấp độ Bloom Taxonomy (L1 - L4)
         const currentValidPatterns = (les.patterns || []).filter(p => !isNonPedagogical(p.name));
         const isSingleOrGeneric = currentValidPatterns.length <= 1 && (
           currentValidPatterns.length === 0 ||
@@ -565,10 +674,7 @@ export default function TextbookIngestView({ onBack, onNavigateTab }) {
       setTextbookExercises(cachedData.textbookExercises);
     }
 
-    const baseChapters = detectedChapters.length > 0
-      ? detectedChapters
-      : (cachedData?.skeleton?.chapters || preset?.chapters || []);
-    const finalChapters = mergeSavedExercisesIntoChapters(baseChapters, cachedData);
+    const finalChapters = resolvePersistedChapters(detectedChapters, cachedData, preset?.chapters || []);
 
     setSkeleton(prev => {
       const next = {
@@ -577,12 +683,13 @@ export default function TextbookIngestView({ onBack, onNavigateTab }) {
         subjectCode: targetSub,
         subjectName: targetSubName,
         grade: targetG,
-        bookEdition: found.bookEdition || prev.bookEdition,
-        totalPages: found.totalPages || prev.totalPages,
+        bookEdition: found.bookEdition || cachedData?.skeleton?.bookEdition || prev.bookEdition,
+        totalPages: found.totalPages || cachedData?.skeleton?.totalPages || prev.totalPages,
+        hasUserSavedStructure: Boolean(cachedData?.skeleton?.hasUserSavedStructure),
         chapters: finalChapters.length > 0 ? finalChapters : prev.chapters
       };
       skeletonRef.current = next;
-      saveToStorage(next);
+      saveToStorage(next, sourceId);
       return next;
     });
     setSelectedChapterIdx(0);
@@ -600,10 +707,11 @@ export default function TextbookIngestView({ onBack, onNavigateTab }) {
     setScanning(true);
     setScanStatusMsg(`🚀 [Phần 1]: Đang quét cấu trúc SGK với độ phân giải ${safeDpi} DPI...`);
     try {
+      // Không ép cứng subjectCode/grade của cuốn sách cũ lên file PDF mới — để AI Backend tự nhận diện từ tên file & nội dung bìa/mục lục
       const data = await aiService.scanTextbookSkeleton(pdfFile, {
-        subjectCode: skeleton.subjectCode,
-        grade: skeleton.grade,
-        bookEdition: skeleton.bookEdition,
+        subjectCode: 'AUTO',
+        grade: 0,
+        bookEdition: '',
         targetDpi: safeDpi
       });
 
@@ -615,6 +723,8 @@ export default function TextbookIngestView({ onBack, onNavigateTab }) {
           status: 'PENDING_REVIEW',
           patterns: (les.patterns || []).map(pat => ({
             ...pat,
+            description: isGenericPlaceholder(pat.description) ? '' : (pat.description || ''),
+            method: isGenericPlaceholder(pat.method) ? '' : (pat.method || ''),
             status: 'PENDING_REVIEW',
             exercises: []
           }))
@@ -623,16 +733,38 @@ export default function TextbookIngestView({ onBack, onNavigateTab }) {
 
       const cleanNormalized = filterPedagogicalChapters(normalized);
 
-      setSkeleton(prev => ({
-        ...prev,
-        ...data,
-        status: 'PENDING_REVIEW',
-        chapters: cleanNormalized.length > 0 ? cleanNormalized : prev.chapters
-      }));
+      // Nếu cuốn sách PDF này đã được nạp Bước 2 trước đó trong Kho SGK -> tự động liên kết sourceId & nạp chunks lý thuyết;
+      // ngược lại reset sourceId về '' để không lưu đè lên cuốn sách cũ
+      const matchedExisting = ingestedSources.find(s =>
+        s.fileName && pdfFile.name && s.fileName.toLowerCase().trim() === pdfFile.name.toLowerCase().trim()
+      );
+      const nextSourceId = matchedExisting ? matchedExisting.sourceId : '';
+      selectedSourceIdRef.current = nextSourceId;
+      setSelectedSourceId(nextSourceId);
+
+      if (matchedExisting) {
+        await loadChunksForSource(matchedExisting.sourceId);
+      } else {
+        setFilledChunks([]);
+      }
+
+      setSkeleton(prev => {
+        const next = {
+          ...prev,
+          ...data,
+          fileName: data.fileName || pdfFile.name,
+          status: 'PENDING_REVIEW',
+          hasUserSavedStructure: true,
+          chapters: cleanNormalized.length > 0 ? cleanNormalized : prev.chapters
+        };
+        skeletonRef.current = next;
+        saveToStorage(next, nextSourceId);
+        return next;
+      });
       setSelectedChapterIdx(0);
       setSelectedLessonIdx(0);
       setSelectedPatternIdx(0);
-      toast.success(`Đã quét xong khung mục lục (${normalized.length} chương, chờ duyệt)!`);
+      toast.success(`Đã quét xong khung mục lục (${cleanNormalized.length} chương) và tự động lưu bền vững!`);
     } catch (err) {
       toast.error('Lỗi quét khung: ' + (err?.response?.data?.message || err.message));
     } finally {
@@ -671,9 +803,31 @@ export default function TextbookIngestView({ onBack, onNavigateTab }) {
             setScanStatusMsg(`🎉 [Phần 2 Hoàn tất] Đã nạp thành công ${st.totalPages || ''} trang SGK vào Database!`);
             toast.success('Đã quét sâu và nạp toàn bộ nội dung SGK vào Database!');
             const finishedSid = st.sourceId || st.result?.documentId;
-            if (finishedSid) {
-              setSelectedSourceId(finishedSid);
-              await loadChunksForSource(finishedSid);
+            try {
+              const sourcesRes = await aiService.getIngestedTextbooks();
+              const refreshedList = sourcesRes?.sources || [];
+              setIngestedSources(refreshedList);
+              if (finishedSid) {
+                selectedSourceIdRef.current = finishedSid;
+                setSelectedSourceId(finishedSid);
+                await loadChunksForSource(finishedSid, refreshedList);
+                const updatedSkel = {
+                  ...skeletonRef.current,
+                  fileName: skeletonRef.current?.fileName || pdfFile.name,
+                  totalPages: st.totalPages || skeletonRef.current?.totalPages || 0,
+                  hasUserSavedStructure: true
+                };
+                skeletonRef.current = updatedSkel;
+                setSkeleton(updatedSkel);
+                saveToStorage(updatedSkel, finishedSid);
+              }
+            } catch {
+              if (finishedSid) {
+                selectedSourceIdRef.current = finishedSid;
+                setSelectedSourceId(finishedSid);
+                await loadChunksForSource(finishedSid);
+                saveToStorage({ ...skeletonRef.current, hasUserSavedStructure: true }, finishedSid);
+              }
             }
           } else if (st.status === 'FAILED') {
             clearInterval(poll);
@@ -1254,12 +1408,22 @@ export default function TextbookIngestView({ onBack, onNavigateTab }) {
   };
 
   const handleOpenStudio = () => {
+    saveToStorage(skeleton, selectedSourceId);
     saveStoredTextbookContext({
       selectedSourceId,
       fileName: skeleton.fileName,
+      subjectCode: skeleton.subjectCode,
+      subjectName: skeleton.subjectName,
+      grade: skeleton.grade,
+      bookEdition: skeleton.bookEdition,
       selectedChapterIdx,
       selectedLessonIdx,
-      selectedPatternIdx
+      selectedPatternIdx,
+      activeChapterTitle: activeChapter?.title || '',
+      activeLessonTitle: activeLesson?.title || '',
+      activePatternName: activePattern?.name || '',
+      activeTheoryPreview: displayedTheoryContent || '',
+      activeMethodPreview: activePatternMethod || ''
     });
     if (onNavigateTab) onNavigateTab('textbook-studio');
   };
@@ -1444,6 +1608,18 @@ export default function TextbookIngestView({ onBack, onNavigateTab }) {
               >
                 <Save className="w-4 h-4 text-emerald-200" />
                 <span>Lưu Toàn Bộ SGK</span>
+              </button>
+
+              {/* Nút 1.5: ĐỒNG BỘ SANG KHUNG CHƯƠNG TRÌNH (CSDL CONTENT SERVICE) */}
+              <button
+                type="button"
+                disabled={syncingCurriculum || validChapters.length === 0}
+                onClick={handleSyncToCurriculum}
+                className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black flex items-center gap-2 cursor-pointer shadow-xs disabled:opacity-50 transition-all ring-1 ring-blue-500"
+                title="Đẩy toàn bộ Lý thuyết, Phương pháp giải & Câu hỏi SGK vào CSDL Khung Chương Trình & Dàn Kiến Thức"
+              >
+                <RefreshCw className={`w-4 h-4 ${syncingCurriculum ? 'animate-spin' : ''}`} />
+                <span>{syncingCurriculum ? 'Đang đồng bộ...' : 'Đồng Bộ Khung CT'}</span>
               </button>
 
               {/* Nút 2: SINH CÂU HỎI TOÀN BỘ SÁCH */}
@@ -1944,7 +2120,7 @@ export default function TextbookIngestView({ onBack, onNavigateTab }) {
                     }`}
                   >
                     <Sigma className="w-3.5 h-3.5" />
-                    <span>Công thức ({activeLesson?.keyFormulas?.length || 0})</span>
+                    <span>Công thức ({displayedKeyFormulas.length})</span>
                   </button>
                   <button
                     type="button"
@@ -1964,7 +2140,7 @@ export default function TextbookIngestView({ onBack, onNavigateTab }) {
                     }`}
                   >
                     <Lightbulb className="w-3.5 h-3.5" />
-                    <span>Ví dụ mẫu</span>
+                    <span>Ví dụ mẫu ({displayedExamples.length})</span>
                   </button>
                 </div>
 
@@ -2264,16 +2440,24 @@ export default function TextbookIngestView({ onBack, onNavigateTab }) {
 
                 {ingestPart2Sector === 'formulas' && (
                   <div className="space-y-2 max-h-[45vh] overflow-y-auto pr-1">
-                    {(activeLesson?.keyFormulas || []).map((f, i) => (
-                      <div key={i} className="p-3 rounded-2xl bg-white border border-slate-200 flex items-center justify-between gap-2">
-                        <div className="text-xs font-semibold text-slate-900 overflow-x-auto">
-                          <MathText text={f} />
-                        </div>
-                        <button type="button" onClick={handleOpenStudio} className="p-1 rounded text-teal-700 cursor-pointer">
-                          <Edit3 className="w-3.5 h-3.5" />
-                        </button>
+                    {displayedKeyFormulas.length === 0 ? (
+                      <div className="p-8 text-center rounded-2xl bg-slate-50 border border-dashed border-slate-200 text-xs text-slate-500 space-y-1.5">
+                        <Sigma className="w-7 h-7 text-slate-400 mx-auto" />
+                        <p className="font-bold text-slate-700">Chưa có công thức KaTeX nào cho bài học này</p>
+                        <p className="text-[11px] text-slate-400">Chạy "Quét Sâu SGK (Bước 2)" để AI bóc tách tự động hoặc mở Studio để thêm công thức.</p>
                       </div>
-                    ))}
+                    ) : (
+                      displayedKeyFormulas.map((f, i) => (
+                        <div key={i} className="p-3 rounded-2xl bg-white border border-slate-200 flex items-center justify-between gap-2">
+                          <div className="text-xs font-semibold text-slate-900 overflow-x-auto">
+                            <MathText text={f} />
+                          </div>
+                          <button type="button" onClick={handleOpenStudio} className="p-1 rounded text-teal-700 cursor-pointer">
+                            <Edit3 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ))
+                    )}
                   </div>
                 )}
 
@@ -2287,19 +2471,38 @@ export default function TextbookIngestView({ onBack, onNavigateTab }) {
 
                 {ingestPart2Sector === 'examples' && (
                   <div className="space-y-3 max-h-[45vh] overflow-y-auto pr-1">
-                    <div className="p-4 rounded-2xl bg-white border border-slate-200 space-y-2">
-                      <div className="text-xs font-black text-teal-900 flex items-center gap-1.5">
-                        <Lightbulb className="w-4 h-4 text-amber-500" />
-                        <span>Ví dụ mẫu bóc tách từ SGK:</span>
+                    {displayedExamples.length === 0 ? (
+                      <div className="p-8 text-center rounded-2xl bg-slate-50 border border-dashed border-slate-200 text-xs text-slate-500 space-y-1.5">
+                        <Lightbulb className="w-7 h-7 text-amber-400 mx-auto" />
+                        <p className="font-bold text-slate-700">Chưa có ví dụ mẫu nào được bóc tách từ SGK cho bài học này</p>
+                        <p className="text-[11px] text-slate-400">Chạy "Quét Sâu SGK (Bước 2)" hoặc mở Studio để biên soạn ví dụ minh họa chuẩn cho bài học.</p>
                       </div>
-                      <div className="p-3 rounded-xl bg-slate-50 text-xs text-slate-800 font-mono">
-                        <MathText text="Một xe chuyển động thẳng đều với vận tốc $v = 15\\text{ m/s}$. Tính quãng đường vật đi được trong $t = 6\\text{ s}$." />
-                      </div>
-                      <div className="p-3 rounded-xl bg-teal-50/50 border border-teal-100 text-xs text-teal-950 flex items-center gap-1.5 flex-wrap">
-                        <strong>Lời giải mẫu:</strong>
-                        <MathText text="$s = v \times t = 15 \times 6 = 90\text{ m}$." />
-                      </div>
-                    </div>
+                    ) : (
+                      displayedExamples.map((ex, exIdx) => (
+                        <div key={exIdx} className="p-4 rounded-2xl bg-white border border-slate-200 space-y-2">
+                          <div className="text-xs font-black text-teal-900 flex items-center justify-between gap-1.5">
+                            <span className="flex items-center gap-1.5">
+                              <Lightbulb className="w-4 h-4 text-amber-500" />
+                              <span>Ví dụ mẫu #{exIdx + 1} bóc tách từ SGK</span>
+                            </span>
+                            {ex.pageNumber && (
+                              <span className="px-2 py-0.5 rounded-md bg-teal-50 text-teal-800 text-[10px] font-bold">
+                                Trang {ex.pageNumber}
+                              </span>
+                            )}
+                          </div>
+                          <div className="p-3 rounded-xl bg-slate-50 text-xs text-slate-800 leading-relaxed">
+                            <MathText text={ex.prompt} />
+                          </div>
+                          {ex.solution && (
+                            <div className="p-3 rounded-xl bg-teal-50/50 border border-teal-100 text-xs text-teal-950 leading-relaxed space-y-1">
+                              <strong className="block text-[11px] text-teal-800">Hướng dẫn / Lời giải SGK:</strong>
+                              <MathText text={ex.solution} />
+                            </div>
+                          )}
+                        </div>
+                      ))
+                    )}
                   </div>
                 )}
               </div>

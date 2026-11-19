@@ -1532,77 +1532,62 @@ function OpenMathWorkbench({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="relative w-full max-w-7xl max-h-[96vh] flex flex-col bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden text-slate-800">
         
-        {/* ========================================================= */}
-        {/* MODAL HEADER: CLEAN JSXGRAPH ENGINE TITLE & SUB-TABS */}
-        {/* ========================================================= */}
+        {/* MODAL HEADER */}
         <div className="px-5 py-3 border-b border-slate-200 bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 shadow-xs">
-              <Compass className="w-6 h-6 animate-spin-slow" />
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
+              <Compass className="w-4 h-4" />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-base font-extrabold text-slate-900">
-                  MathLab 2D / 3D (JSXGraph Native Engine)
-                </h2>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
-                  Offline • 60 FPS Canvas/SVG • Đổi tên & Sửa tọa độ đỉnh
-                </span>
-              </div>
-              <p className="text-xs text-slate-500 font-medium">
-                Hình học không gian chỉnh đỉnh tùy ý, kẻ đường phụ • Đồ thị VD/VDC tiệm cận xiên, trị tuyệt đối & đạo hàm
-              </p>
-            </div>
+            <h2 className="text-sm font-extrabold text-slate-900">MathLab 2D / 3D</h2>
           </div>
 
-          {/* Sub-Tabs Selector Bar */}
           <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-2xl border border-slate-200 self-start sm:self-auto">
             <button
               type="button"
               onClick={() => setJsxSubTab('2d_function')}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
                 jsxSubTab === '2d_function'
                   ? 'bg-white text-indigo-700 shadow-sm border border-slate-200'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              <TrendingUp className="w-4 h-4 text-indigo-600" />
-              <span>📈 Đồ Thị VD / VDC</span>
+              <TrendingUp className="w-3.5 h-3.5 text-indigo-600" />
+              <span>Đồ thị 2D</span>
             </button>
 
             <button
               type="button"
               onClick={() => setJsxSubTab('3d_space')}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
                 jsxSubTab === '3d_space'
                   ? 'bg-white text-indigo-700 shadow-sm border border-slate-200'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              <Box className="w-4 h-4 text-indigo-600" />
-              <span>🧊 Không Gian 3D</span>
+              <Box className="w-3.5 h-3.5 text-indigo-600" />
+              <span>Không gian 3D</span>
             </button>
 
             <button
               type="button"
               onClick={() => setJsxSubTab('2d_geometry')}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
                 jsxSubTab === '2d_geometry'
                   ? 'bg-white text-indigo-700 shadow-sm border border-slate-200'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              <Triangle className="w-4 h-4 text-indigo-600" />
-              <span>📐 Hình Phẳng 2D</span>
+              <Triangle className="w-3.5 h-3.5 text-indigo-600" />
+              <span>Hình phẳng 2D</span>
             </button>
-            
+
             <button
               type="button"
               onClick={onClose}
-              className="p-1.5 ml-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-200 transition-colors cursor-pointer"
-              title="Đóng modal"
+              className="p-1.5 ml-1 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-200 transition-colors cursor-pointer"
+              title="Đóng"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4" />
             </button>
           </div>
         </div>
@@ -1615,65 +1600,28 @@ function OpenMathWorkbench({
           </div>
         )}
 
-        {/* ========================================================= */}
         {/* BODY CONTENT */}
-        {/* ========================================================= */}
         <div className="flex-1 overflow-y-auto p-4 bg-slate-50/50 flex flex-col gap-3">
-          
           <div className="flex flex-col gap-3 flex-1">
-            
-            {/* Formula Preview Header Badge */}
-            <div className="flex items-center justify-between gap-2.5 bg-white p-2.5 rounded-2xl border border-slate-200 shadow-2xs">
-              <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="text-xs font-extrabold text-slate-800">
-                  {jsxSubTab === '2d_function' && 'Đồ Thị Tọa Độ Oxy Chuyên Sâu (VD / VDC)'}
-                  {jsxSubTab === '3d_space' && 'Không Gian Oxyz (Chỉnh Tọa Độ Đỉnh, Đổi Tên & Kẻ Đường Phụ)'}
-                  {jsxSubTab === '2d_geometry' && 'Mặt Phẳng Hình Học Tương Tác'}
-                </span>
-              </div>
-
-              <div className="flex items-center gap-2 bg-slate-50 px-3 py-1 rounded-xl border border-slate-200">
-                <span className="text-[11px] font-bold text-slate-500">Mô hình:</span>
-                <span className="text-xs font-extrabold text-indigo-700">
-                  <MathText
-                    text={
-                      getCurrentFormulaString().includes('$')
-                        ? getCurrentFormulaString()
-                        : `$${getCurrentFormulaString()}$`
-                    }
-                  />
-                </span>
-              </div>
-            </div>
-
-            {/* Main Grid: Controls on Left, Live Board on Right */}
+            {/* Main Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 flex-1 min-h-[520px]">
-              
-              {/* --------------------------------------------------- */}
-              {/* LEFT COLUMN: HIGH CUSTOMIZATION CONTROLS */}
-              {/* --------------------------------------------------- */}
-              <div className="lg:col-span-5 flex flex-col gap-3 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm overflow-y-auto max-h-[640px]">
-                
-                {/* ================================================= */}
-                {/* A. 2D FUNCTION CONTROLS (VD & VDC SPECIALTIES) */}
-                {/* ================================================= */}
+
+              {/* LEFT COLUMN */}
+              <div className="lg:col-span-5 flex flex-col gap-3 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm overflow-y-auto max-h-[660px]">
+
+                {/* A. 2D FUNCTION CONTROLS */}
                 {jsxSubTab === '2d_function' && (
                   <div className="flex flex-col gap-3">
-                    
-                    {/* Chuyên đề Toán THPT Selector */}
                     <div>
-                      <label className="text-xs font-bold text-slate-700 mb-1.5 block">
-                        Chọn Chuyên đề Đồ thị VD / VDC:
-                      </label>
+                      <label className="text-xs font-bold text-slate-700 mb-1.5 block">Chuyên đề đồ thị</label>
                       <div className="grid grid-cols-2 gap-1.5">
                         {[
-                          { id: 'standard', label: '1. Khảo sát & Tiệm cận xiên' },
-                          { id: 'absolute_transform', label: '2. Biến đổi trị tuyệt đối' },
-                          { id: 'derivative_fprime', label: '3. Đạo hàm f\'(x) & Tương giao' },
-                          { id: 'parametric_line', label: '4. Biện luận y = ax + m' },
-                          { id: 'area_integral', label: '5. Tích phân 2 đường cong' },
-                          { id: 'three_curves_recognition', label: '6. Nhận dạng f, f\', F(x)' }
+                          { id: 'standard', label: 'Khảo sát & Tiệm cận' },
+                          { id: 'absolute_transform', label: 'Trị tuyệt đối' },
+                          { id: 'derivative_fprime', label: "Đạo hàm f'(x)" },
+                          { id: 'parametric_line', label: 'Đường thẳng y = ax + m' },
+                          { id: 'area_integral', label: 'Tích phân 2 đường cong' },
+                          { id: 'three_curves_recognition', label: "Nhận dạng f, f', F" }
                         ].map((item) => (
                           <button
                             key={item.id}
@@ -1681,7 +1629,7 @@ function OpenMathWorkbench({
                             onClick={() => setExam2DMode(item.id)}
                             className={`px-2.5 py-1.5 rounded-xl text-left text-xs font-bold border transition-all cursor-pointer ${
                               exam2DMode === item.id
-                                ? 'bg-indigo-50 border-indigo-500 text-indigo-700 shadow-2xs'
+                                ? 'bg-indigo-50 border-indigo-500 text-indigo-700'
                                 : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
                             }`}
                           >
@@ -1691,7 +1639,6 @@ function OpenMathWorkbench({
                       </div>
                     </div>
 
-                    {/* CHUYÊN ĐỀ 1: KHẢO SÁT & TIỆM CẬN XIÊN (GDPT 2018) */}
                     {exam2DMode === 'standard' && (
                       <div className="flex flex-col gap-2.5 p-3 rounded-xl bg-slate-50 border border-slate-200">
                         <div className="flex p-0.5 bg-slate-200 rounded-lg text-xs font-bold">
@@ -1702,7 +1649,7 @@ function OpenMathWorkbench({
                               funcInputMode === 'preset' ? 'bg-white text-indigo-700 shadow-2xs' : 'text-slate-600'
                             }`}
                           >
-                            Dạng Chuẩn SGK
+                            Hàm mẫu
                           </button>
                           <button
                             type="button"
@@ -1711,7 +1658,7 @@ function OpenMathWorkbench({
                               funcInputMode === 'custom' ? 'bg-white text-indigo-700 shadow-2xs' : 'text-slate-600'
                             }`}
                           >
-                            Gõ Hàm Tự Do
+                            Nhập tự do
                           </button>
                         </div>
 
@@ -1720,7 +1667,7 @@ function OpenMathWorkbench({
                             <div className="grid grid-cols-3 gap-1">
                               {[
                                 { id: 'cubic', label: 'Bậc 3' },
-                                { id: 'rational_2_1', label: 'TC Xiên (2/1)' },
+                                { id: 'rational_2_1', label: 'Phân thức 2/1' },
                                 { id: 'rational_1_1', label: 'Phân thức 1/1' },
                                 { id: 'quartic', label: 'Trùng phương' },
                                 { id: 'quadratic', label: 'Parabol' },
@@ -1739,27 +1686,21 @@ function OpenMathWorkbench({
                               ))}
                             </div>
 
-                            {funcType === 'rational_2_1' && (
-                              <div className="p-2 rounded-lg bg-purple-50 border border-purple-200 text-[11px] text-purple-900 font-medium">
-                                💡 <b>Hàm phân thức bậc 2 trên bậc 1 (GDPT 2018):</b> Tự động vẽ <b>Tiệm Cận Đứng</b> (đỏ nét đứt), <b>Tiệm Cận Xiên</b> (tím nét đứt) và giao điểm <b>Tâm đối xứng I</b>!
-                              </div>
-                            )}
-
                             <div className="flex flex-col gap-1.5 text-xs font-bold text-slate-600">
                               <div className="flex items-center gap-2">
-                                <span className="w-12">Hệ số a:</span>
+                                <span className="w-8">a:</span>
                                 <input type="range" min="-4" max="4" step="0.5" value={paramA} onChange={(e) => setParamA(parseFloat(e.target.value) || 0)} className="flex-1 accent-indigo-600" />
-                                <span className="w-6">{paramA}</span>
+                                <span className="w-6 text-right">{paramA}</span>
                               </div>
                               <div className="flex items-center gap-2">
-                                <span className="w-12">Hệ số b:</span>
+                                <span className="w-8">b:</span>
                                 <input type="range" min="-4" max="4" step="0.5" value={paramB} onChange={(e) => setParamB(parseFloat(e.target.value) || 0)} className="flex-1 accent-indigo-600" />
-                                <span className="w-6">{paramB}</span>
+                                <span className="w-6 text-right">{paramB}</span>
                               </div>
                               <div className="flex items-center gap-2">
-                                <span className="w-12">Hệ số c:</span>
+                                <span className="w-8">c:</span>
                                 <input type="range" min="-4" max="4" step="0.5" value={paramC} onChange={(e) => setParamC(parseFloat(e.target.value) || 0)} className="flex-1 accent-indigo-600" />
-                                <span className="w-6">{paramC}</span>
+                                <span className="w-6 text-right">{paramC}</span>
                               </div>
                             </div>
                           </div>
@@ -1770,7 +1711,7 @@ function OpenMathWorkbench({
                               value={customExpr}
                               onChange={(e) => setCustomExpr(e.target.value)}
                               className="w-full px-2.5 py-1.5 text-xs font-mono font-bold border border-indigo-300 rounded-lg bg-white"
-                              placeholder="x^3 - 3*x + 1..."
+                              placeholder="x^3 - 3*x + 1"
                             />
                             <div className="flex flex-wrap gap-1">
                               {['abs(x^2 - 4)', '(x^2 - 2*x + 3)/(x - 1)', 'sqrt(9 - x^2)', 'sin(2*x) + cos(x)', 'x * exp(-x)'].map((ex, i) => (
@@ -1778,7 +1719,7 @@ function OpenMathWorkbench({
                                   key={i}
                                   type="button"
                                   onClick={() => setCustomExpr(ex)}
-                                  className="px-2 py-0.5 rounded bg-white text-[10px] font-bold border hover:bg-indigo-50"
+                                  className="px-2 py-0.5 rounded bg-white text-[10px] font-bold border hover:bg-indigo-50 cursor-pointer"
                                 >
                                   {ex}
                                 </button>
@@ -1789,20 +1730,17 @@ function OpenMathWorkbench({
                       </div>
                     )}
 
-                    {/* CHUYÊN ĐỀ 2: BIẾN ĐỔI ĐỒ THỊ TRỊ TUYỆT ĐỐI (VD/VDC) */}
                     {exam2DMode === 'absolute_transform' && (
-                      <div className="p-3 rounded-xl bg-purple-50/80 border border-purple-200 flex flex-col gap-2.5">
-                        <span className="text-xs font-black text-purple-900">
-                          Phép biến đổi đồ thị chứa dấu giá trị tuyệt đối:
-                        </span>
+                      <div className="p-3 rounded-xl bg-purple-50/80 border border-purple-200 flex flex-col gap-2">
+                        <span className="text-xs font-bold text-purple-900">Biến đổi trị tuyệt đối</span>
                         <div className="grid grid-cols-2 gap-1.5">
                           {[
-                            { id: 'none', label: '1. Đồ thị gốc f(x)' },
-                            { id: 'abs_total', label: '2. y = |f(x)| (Lật dưới Ox)' },
-                            { id: 'abs_x', label: '3. y = f(|x|) (Đối xứng qua Oy)' },
-                            { id: 'abs_both', label: '4. y = |f(|x|)| (Kết hợp)' },
-                            { id: 'abs_shifted', label: '5. y = |f(x) + m| (Tịnh tiến)' },
-                            { id: 'abs_half', label: '6. y = f(x) + |f(x)|' }
+                            { id: 'none', label: 'f(x)' },
+                            { id: 'abs_total', label: '|f(x)|' },
+                            { id: 'abs_x', label: 'f(|x|)' },
+                            { id: 'abs_both', label: '|f(|x|)|' },
+                            { id: 'abs_shifted', label: '|f(x) + m|' },
+                            { id: 'abs_half', label: 'f(x) + |f(x)|' }
                           ].map((abs) => (
                             <button
                               key={abs.id}
@@ -1810,7 +1748,7 @@ function OpenMathWorkbench({
                               onClick={() => setAbsTransformType(abs.id)}
                               className={`px-2 py-1.5 rounded-lg text-left text-xs font-bold border cursor-pointer ${
                                 absTransformType === abs.id
-                                  ? 'bg-purple-600 text-white shadow-2xs'
+                                  ? 'bg-purple-600 text-white'
                                   : 'bg-white border-purple-200 text-purple-900 hover:bg-purple-100'
                               }`}
                             >
@@ -1820,9 +1758,9 @@ function OpenMathWorkbench({
                         </div>
 
                         {absTransformType === 'abs_shifted' && (
-                          <div className="p-2 bg-white rounded-lg border border-purple-200 flex flex-col gap-1.5">
+                          <div className="p-2 bg-white rounded-lg border border-purple-200 flex flex-col gap-1">
                             <div className="flex items-center justify-between text-xs font-bold text-purple-900">
-                              <span>Tham số dịch chuyển m:</span>
+                              <span>m</span>
                               <span className="px-2 py-0.5 rounded bg-purple-100 text-purple-700">{paramShiftM}</span>
                             </div>
                             <input
@@ -1832,193 +1770,124 @@ function OpenMathWorkbench({
                             />
                           </div>
                         )}
-
-                        <div className="text-[11px] text-purple-800 italic">
-                          💡 Đường nét đứt màu xám hiển thị dáng điệu đồ thị gốc trước khi biến đổi.
-                        </div>
                       </div>
                     )}
 
-                    {/* CHUYÊN ĐỀ 3: ĐỒ THỊ ĐẠO HÀM f'(x) & HÀM HỢP TƯƠNG GIAO */}
                     {exam2DMode === 'derivative_fprime' && (
-                      <div className="p-3 rounded-xl bg-rose-50/80 border border-rose-200 flex flex-col gap-2.5">
-                        <span className="text-xs font-black text-rose-950">
-                          Khảo sát đồ thị Đạo Hàm f'(x) & Tương giao hàm hợp:
-                        </span>
+                      <div className="p-3 rounded-xl bg-rose-50/80 border border-rose-200 flex flex-col gap-2">
                         <label className="flex items-center gap-2 text-xs font-bold text-rose-900 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={showDerivativeCurve}
-                            onChange={(e) => setShowDerivativeCurve(e.target.checked)}
-                            className="rounded text-rose-600"
-                          />
-                          <span>Vẽ đường cong Đạo Hàm f'(x) (màu đỏ nét đứt)</span>
+                          <input type="checkbox" checked={showDerivativeCurve} onChange={(e) => setShowDerivativeCurve(e.target.checked)} className="rounded text-rose-600" />
+                          <span>Hiện f'(x)</span>
                         </label>
                         <label className="flex items-center gap-2 text-xs font-bold text-rose-900 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={showAuxiliaryCurve}
-                            onChange={(e) => setShowAuxiliaryCurve(e.target.checked)}
-                            className="rounded text-rose-600"
-                          />
-                          <span>Vẽ đường phụ h(x) để xét f'(x) = h(x)</span>
+                          <input type="checkbox" checked={showAuxiliaryCurve} onChange={(e) => setShowAuxiliaryCurve(e.target.checked)} className="rounded text-rose-600" />
+                          <span>Hiện đường phụ h(x)</span>
                         </label>
-
                         <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-rose-900">Hàm h(x):</span>
+                          <span className="text-xs font-bold text-rose-900">h(x):</span>
                           <input
                             type="text"
                             value={auxiliaryExpr}
                             onChange={(e) => setAuxiliaryExpr(e.target.value)}
                             className="flex-1 px-2.5 py-1 text-xs font-mono font-bold border border-rose-300 rounded-lg bg-white"
-                            placeholder="-x + 1..."
+                            placeholder="-x + 1"
                           />
-                        </div>
-                        <div className="text-[11px] text-rose-800 italic">
-                          💡 Các chấm đỏ đánh dấu các nghiệm x_i (hoành độ giao điểm), là các điểm cực trị của hàm hiệu g(x) = f(x) - ∫h(x)dx.
                         </div>
                       </div>
                     )}
 
-                    {/* CHUYÊN ĐỀ 4: BIỆN LUẬN NGHIỆM VỚI ĐƯỜNG XIÊN y = ax + m */}
                     {exam2DMode === 'parametric_line' && (
                       <div className="p-3 rounded-xl bg-pink-50/80 border border-pink-200 flex flex-col gap-2">
                         <div className="flex items-center justify-between">
                           <span className="text-xs font-black text-pink-950">
-                            Đường thẳng tham số d: y = {slopeM !== 0 ? `${slopeM}x + ` : ''}m
+                            y = {slopeM !== 0 ? `${slopeM}x + ` : ''}m
                           </span>
                           <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-pink-200 text-pink-900">
-                            {foundRoots.length} Nghiệm
+                            {foundRoots.length} nghiệm
                           </span>
                         </div>
-
                         <div className="flex items-center gap-2 text-xs font-bold text-pink-900">
-                          <span className="w-12">Hệ số a:</span>
-                          <input
-                            type="range" min="-2" max="2" step="0.5" value={slopeM}
-                            onChange={(e) => setSlopeM(parseFloat(e.target.value) || 0)}
-                            className="flex-1 accent-pink-600"
-                          />
-                          <span className="w-8">{slopeM}</span>
+                          <span className="w-8">a:</span>
+                          <input type="range" min="-2" max="2" step="0.5" value={slopeM} onChange={(e) => setSlopeM(parseFloat(e.target.value) || 0)} className="flex-1 accent-pink-600" />
+                          <span className="w-8 text-right">{slopeM}</span>
                         </div>
-
                         <div className="flex items-center gap-2 text-xs font-bold text-pink-900">
-                          <span className="w-12">Tham số m:</span>
-                          <input
-                            type="range" min="-5" max="5" step="0.2" value={paramM}
-                            onChange={(e) => setParamM(parseFloat(e.target.value) || 0)}
-                            className="flex-1 accent-pink-600"
-                          />
-                          <span className="w-8">{paramM}</span>
+                          <span className="w-8">m:</span>
+                          <input type="range" min="-5" max="5" step="0.2" value={paramM} onChange={(e) => setParamM(parseFloat(e.target.value) || 0)} className="flex-1 accent-pink-600" />
+                          <span className="w-8 text-right">{paramM}</span>
                         </div>
                       </div>
                     )}
 
-                    {/* CHUYÊN ĐỀ 5: DIỆN TÍCH TÍCH PHÂN 2 ĐƯỜNG CONG */}
                     {exam2DMode === 'area_integral' && (
                       <div className="p-3 rounded-xl bg-cyan-50/80 border border-cyan-200 flex flex-col gap-2">
-                        <span className="text-xs font-black text-cyan-950">
-                          Diện tích hình phẳng giới hạn bởi 2 đường cong:
-                        </span>
                         <div className="flex items-center gap-2 text-xs font-bold text-cyan-900">
-                          <span className="w-16">Đường 1:</span>
-                          <input
-                            type="text"
-                            value={integralUpperExpr}
-                            onChange={(e) => setIntegralUpperExpr(e.target.value)}
-                            className="flex-1 px-2 py-1 text-xs font-mono font-bold border border-cyan-300 rounded-lg bg-white"
-                            placeholder="4 - x^2"
-                          />
+                          <span className="w-16">Đường 1</span>
+                          <input type="text" value={integralUpperExpr} onChange={(e) => setIntegralUpperExpr(e.target.value)} className="flex-1 px-2 py-1 text-xs font-mono font-bold border border-cyan-300 rounded-lg bg-white" placeholder="4 - x^2" />
                         </div>
                         <div className="flex items-center gap-2 text-xs font-bold text-cyan-900">
-                          <span className="w-16">Đường 2:</span>
-                          <input
-                            type="text"
-                            value={integralLowerExpr}
-                            onChange={(e) => setIntegralLowerExpr(e.target.value)}
-                            className="flex-1 px-2 py-1 text-xs font-mono font-bold border border-cyan-300 rounded-lg bg-white"
-                            placeholder="x + 2"
-                          />
+                          <span className="w-16">Đường 2</span>
+                          <input type="text" value={integralLowerExpr} onChange={(e) => setIntegralLowerExpr(e.target.value)} className="flex-1 px-2 py-1 text-xs font-mono font-bold border border-cyan-300 rounded-lg bg-white" placeholder="x + 2" />
                         </div>
                         <div className="p-2 rounded bg-white border border-cyan-200 text-xs font-bold text-cyan-800 flex items-center justify-between">
-                          <span>Diện tích miền phẳng S:</span>
+                          <span>Diện tích S</span>
                           <span className="text-sm font-black text-cyan-600">≈ {calculatedArea.toFixed(3)}</span>
                         </div>
                       </div>
                     )}
 
-                    {/* CHUYÊN ĐỀ 6: NHẬN DẠNG BỘ BA ĐỒ THỊ f(x), f'(x), F(x) */}
                     {exam2DMode === 'three_curves_recognition' && (
                       <div className="p-3 rounded-xl bg-emerald-50/80 border border-emerald-200 flex flex-col gap-2 text-xs font-bold text-emerald-950">
-                        <span>Nhận dạng bộ 3 đồ thị THPT:</span>
                         <div className="flex flex-col gap-1.5">
                           <label className="flex items-center gap-2 cursor-pointer">
                             <input type="checkbox" checked={showC1} onChange={(e) => setShowC1(e.target.checked)} className="rounded text-blue-600" />
-                            <span className="text-blue-700">Đường C₁: f(x) = x³ - 3x (Xanh dương)</span>
+                            <span className="text-blue-700">C₁: f(x) = x³ - 3x</span>
                           </label>
                           <label className="flex items-center gap-2 cursor-pointer">
                             <input type="checkbox" checked={showC2} onChange={(e) => setShowC2(e.target.checked)} className="rounded text-red-600" />
-                            <span className="text-red-700">Đường C₂: f'(x) = 3x² - 3 (Đỏ nét đứt)</span>
+                            <span className="text-red-700">C₂: f'(x) = 3x² - 3</span>
                           </label>
                           <label className="flex items-center gap-2 cursor-pointer">
                             <input type="checkbox" checked={showC3} onChange={(e) => setShowC3(e.target.checked)} className="rounded text-emerald-600" />
-                            <span className="text-emerald-700">Đường C₃: F(x) = x⁴/4 - 3x²/2 (Xanh lá)</span>
+                            <span className="text-emerald-700">C₃: F(x) = x⁴/4 - 3x²/2</span>
                           </label>
                         </div>
                         <label className="flex items-center gap-2 cursor-pointer pt-1 border-t border-emerald-200/60">
                           <input type="checkbox" checked={hideCurveLabels} onChange={(e) => setHideCurveLabels(e.target.checked)} className="rounded text-emerald-600" />
-                          <span>Ẩn tên hàm (Chế độ câu hỏi trắc nghiệm đố học sinh)</span>
+                          <span>Ẩn nhãn hàm</span>
                         </label>
                       </div>
                     )}
 
-                    {/* TIỆN ÍCH PHỤ: ĐƯỜNG NỐI CỰC TRỊ, TIẾP TUYẾN */}
                     <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 flex flex-col gap-2 text-xs font-medium text-slate-700">
                       <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={showInflectionLine}
-                          onChange={(e) => setShowInflectionLine(e.target.checked)}
-                          className="rounded text-indigo-600"
-                        />
-                        <span>📍 Đường thẳng qua 2 điểm Cực Đại & Cực Tiểu</span>
+                        <input type="checkbox" checked={showInflectionLine} onChange={(e) => setShowInflectionLine(e.target.checked)} className="rounded text-indigo-600" />
+                        <span>Đường qua 2 cực trị</span>
                       </label>
                       <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={showTangent}
-                          onChange={(e) => setShowTangent(e.target.checked)}
-                          className="rounded text-amber-600"
-                        />
-                        <span>📐 Tiếp tuyến động tại M(x₀)</span>
+                        <input type="checkbox" checked={showTangent} onChange={(e) => setShowTangent(e.target.checked)} className="rounded text-amber-600" />
+                        <span>Tiếp tuyến tại M(x₀)</span>
                       </label>
                     </div>
-
                   </div>
                 )}
 
-                {/* ================================================= */}
-                {/* B. 3D SPATIAL GEOMETRY (ĐA DẠNG HÌNH & KẺ ĐƯỜNG PHỤ) */}
-                {/* ================================================= */}
+                {/* B. 3D SPATIAL GEOMETRY */}
                 {jsxSubTab === '3d_space' && (
                   <div className="flex flex-col gap-3">
-                    
-                    {/* B1. Chọn Loại Hình Không Gian Đa Dạng */}
                     <div>
-                      <label className="text-xs font-bold text-slate-700 mb-1.5 block">
-                        1. Chọn Loại Hình Không Gian THPT:
-                      </label>
+                      <label className="text-xs font-bold text-slate-700 mb-1.5 block">Hình khối 3D</label>
                       <div className="grid grid-cols-2 gap-1.5">
                         {[
-                          { id: 'pyramid_rect_sa', label: 'Chóp S.ABCD (SA ⊥ đáy)' },
-                          { id: 'pyramid_tri_sa', label: 'Chóp S.ABC (SA ⊥ đáy)' },
-                          { id: 'pyramid_regular_quad', label: 'Chóp Tứ Giác Đều (SO ⊥ đáy)' },
-                          { id: 'pyramid_regular_tri', label: 'Chóp Tam Giác Đều (SG ⊥ đáy)' },
-                          { id: 'pyramid_side_perp', label: 'Mặt bên vuông đáy (SAB ⊥)' },
-                          { id: 'prism_tri', label: 'Lăng Trụ Tam Giác ABC.A\'B\'C\'' },
-                          { id: 'box_cube', label: 'Hình Hộp / Lập Phương' },
-                          { id: 'solid_revolution', label: 'Nón / Trụ Tròn Xoay' },
-                          { id: 'sphere_plane', label: 'Cầu cắt Phẳng Oxyz' }
+                          { id: 'pyramid_rect_sa', label: 'Chóp S.ABCD (SA ⊥)' },
+                          { id: 'pyramid_tri_sa', label: 'Chóp S.ABC (SA ⊥)' },
+                          { id: 'pyramid_regular_quad', label: 'Chóp tứ giác đều' },
+                          { id: 'pyramid_regular_tri', label: 'Chóp tam giác đều' },
+                          { id: 'pyramid_side_perp', label: 'Mặt bên vuông đáy' },
+                          { id: 'prism_tri', label: "Lăng trụ ABC.A'B'C'" },
+                          { id: 'box_cube', label: 'Hình hộp / Lập phương' },
+                          { id: 'solid_revolution', label: 'Nón / Trụ tròn xoay' },
+                          { id: 'sphere_plane', label: 'Cầu cắt phẳng' }
                         ].map((item) => (
                           <button
                             key={item.id}
@@ -2026,7 +1895,7 @@ function OpenMathWorkbench({
                             onClick={() => handleSelectShape3D(item.id)}
                             className={`px-2.5 py-1.5 rounded-xl text-left text-[11px] font-bold border transition-all cursor-pointer ${
                               shape3DType === item.id
-                                ? 'bg-indigo-50 border-indigo-500 text-indigo-700 shadow-2xs'
+                                ? 'bg-indigo-50 border-indigo-500 text-indigo-700'
                                 : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
                             }`}
                           >
@@ -2036,7 +1905,6 @@ function OpenMathWorkbench({
                       </div>
                     </div>
 
-                    {/* B2. TOGGLE TÙY CHỈNH VỊ TRÍ & ĐỔI TÊN ĐỈNH (USER REQUEST) */}
                     <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-100/90 border border-slate-200">
                       <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-800">
                         <input
@@ -2045,17 +1913,13 @@ function OpenMathWorkbench({
                           onChange={(e) => setIsCustomizingBasePoints(e.target.checked)}
                           className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 accent-indigo-600"
                         />
-                        <span className="flex items-center gap-1.5">
-                          <SlidersHorizontal className="w-3.5 h-3.5 text-indigo-600" />
-                          <span>Tùy chỉnh vị trí (X, Y, Z) & Đổi tên các đỉnh</span>
-                        </span>
+                        <span>Sửa tọa độ & tên đỉnh</span>
                       </label>
                       {isCustomizingBasePoints && (
                         <button
                           type="button"
                           onClick={handleResetBasePoints}
-                          className="px-2 py-0.5 rounded text-[11px] font-bold text-slate-500 hover:text-indigo-600 hover:bg-white border border-transparent hover:border-slate-300 transition-all flex items-center gap-1 cursor-pointer"
-                          title="Khôi phục lại tọa độ và tên đỉnh mặc định"
+                          className="px-2 py-0.5 rounded text-[11px] font-bold text-slate-500 hover:text-indigo-600 flex items-center gap-1 cursor-pointer"
                         >
                           <RotateCcw className="w-3 h-3" />
                           <span>Mặc định</span>
@@ -2063,91 +1927,60 @@ function OpenMathWorkbench({
                       )}
                     </div>
 
-                    {/* B2.1. BẢNG DANH SÁCH ĐỈNH ĐỂ SỬA TỌA ĐỘ VÀ TÊN */}
                     {isCustomizingBasePoints && (
-                      <div className="p-3 rounded-xl bg-indigo-50/60 border border-indigo-200 flex flex-col gap-2 animate-in fade-in duration-200">
+                      <div className="p-3 rounded-xl bg-indigo-50/60 border border-indigo-200 flex flex-col gap-2">
                         <div className="flex items-center justify-between">
-                          <span className="text-xs font-black text-indigo-950 flex items-center gap-1">
-                            <Edit2 className="w-3.5 h-3.5 text-indigo-600" />
-                            <span>Bảng tọa độ và tên đỉnh của hình:</span>
-                          </span>
+                          <span className="text-xs font-bold text-indigo-950">Tọa độ đỉnh</span>
                           <span className="text-[10px] text-indigo-700 font-bold">
-                            {Object.keys(customBasePoints).length} Đỉnh
+                            {Object.keys(customBasePoints).length} đỉnh
                           </span>
                         </div>
 
                         <div className="flex flex-col gap-2 max-h-56 overflow-y-auto pr-1">
                           {Object.entries(customBasePoints).map(([key, pt]) => (
-                            <div key={key} className="p-2 bg-white rounded-lg border border-slate-200 shadow-2xs flex flex-col gap-1.5 text-xs">
+                            <div key={key} className="p-2 bg-white rounded-lg border border-slate-200 flex flex-col gap-1.5 text-xs">
                               <div className="flex items-center justify-between">
                                 <span className="font-bold text-slate-700 flex items-center gap-1.5">
                                   <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: pt.color || '#0f172a' }} />
-                                  <span>Gốc <b>{key}</b> ({pt.desc || 'Đỉnh'}):</span>
+                                  <span>{key}</span>
                                 </span>
-                                <div className="flex items-center gap-1.5">
-                                  <span className="text-[11px] text-slate-500 font-medium">Tên hiển thị:</span>
-                                  <input
-                                    type="text"
-                                    value={pt.label}
-                                    onChange={(e) => handleUpdateBasePoint(key, 'label', e.target.value)}
-                                    className="w-16 px-1.5 py-0.5 font-bold text-xs text-indigo-700 border border-indigo-200 rounded bg-indigo-50/50 text-center uppercase"
-                                    maxLength={6}
-                                  />
-                                </div>
+                                <input
+                                  type="text"
+                                  value={pt.label}
+                                  onChange={(e) => handleUpdateBasePoint(key, 'label', e.target.value)}
+                                  className="w-16 px-1.5 py-0.5 font-bold text-xs text-indigo-700 border border-indigo-200 rounded bg-indigo-50/50 text-center uppercase"
+                                  maxLength={6}
+                                />
                               </div>
 
-                              <div className="grid grid-cols-3 gap-2 text-[11px] font-bold text-slate-600 pt-0.5">
+                              <div className="grid grid-cols-3 gap-2 text-[11px] font-bold text-slate-600">
                                 <div className="flex items-center gap-1">
-                                  <span className="text-red-600 font-black">X:</span>
-                                  <input
-                                    type="number"
-                                    step="0.2"
-                                    value={pt.x}
-                                    onChange={(e) => handleUpdateBasePoint(key, 'x', e.target.value)}
-                                    className="w-full px-1 py-0.5 border rounded bg-slate-50 text-slate-800 text-center"
-                                  />
+                                  <span className="text-red-600">X</span>
+                                  <input type="number" step="0.2" value={pt.x} onChange={(e) => handleUpdateBasePoint(key, 'x', e.target.value)} className="w-full px-1 py-0.5 border rounded bg-slate-50 text-slate-800 text-center" />
                                 </div>
                                 <div className="flex items-center gap-1">
-                                  <span className="text-emerald-600 font-black">Y:</span>
-                                  <input
-                                    type="number"
-                                    step="0.2"
-                                    value={pt.y}
-                                    onChange={(e) => handleUpdateBasePoint(key, 'y', e.target.value)}
-                                    className="w-full px-1 py-0.5 border rounded bg-slate-50 text-slate-800 text-center"
-                                  />
+                                  <span className="text-emerald-600">Y</span>
+                                  <input type="number" step="0.2" value={pt.y} onChange={(e) => handleUpdateBasePoint(key, 'y', e.target.value)} className="w-full px-1 py-0.5 border rounded bg-slate-50 text-slate-800 text-center" />
                                 </div>
                                 <div className="flex items-center gap-1">
-                                  <span className="text-blue-600 font-black">Z:</span>
-                                  <input
-                                    type="number"
-                                    step="0.2"
-                                    value={pt.z}
-                                    onChange={(e) => handleUpdateBasePoint(key, 'z', e.target.value)}
-                                    className="w-full px-1 py-0.5 border rounded bg-slate-50 text-slate-800 text-center"
-                                  />
+                                  <span className="text-blue-600">Z</span>
+                                  <input type="number" step="0.2" value={pt.z} onChange={(e) => handleUpdateBasePoint(key, 'z', e.target.value)} className="w-full px-1 py-0.5 border rounded bg-slate-50 text-slate-800 text-center" />
                                 </div>
                               </div>
                             </div>
                           ))}
                         </div>
-                        <div className="text-[10px] text-slate-500 italic">
-                          💡 Thay đổi tên hoặc tọa độ sẽ cập nhật ngay lập tức các cạnh và đường phụ trên mô hình 3D.
-                        </div>
                       </div>
                     )}
 
-                    {/* B3. Chọn Mô hình Kẻ Đường Phụ Đề Thi */}
                     <div>
-                      <label className="text-xs font-bold text-slate-700 mb-1.5 block">
-                        2. Mô hình Kẻ Phụ Kinh Điển (VD / VDC):
-                      </label>
+                      <label className="text-xs font-bold text-slate-700 mb-1.5 block">Đường phụ mẫu</label>
                       <div className="grid grid-cols-2 gap-1.5">
                         {[
-                          { id: 'distance_model', label: 'Khoảng cách d(A, (SBC))' },
-                          { id: 'angle_line_plane', label: 'Góc Đường và Mặt phẳng' },
-                          { id: 'cross_section_mid', label: 'Thiết diện cắt (MNPQ)' },
-                          { id: 'none', label: 'Tự do hoàn toàn' }
+                          { id: 'distance_model', label: 'd(A, (SBC))' },
+                          { id: 'angle_line_plane', label: 'Góc đường – mặt' },
+                          { id: 'cross_section_mid', label: 'Thiết diện (MNPQ)' },
+                          { id: 'none', label: 'Tự do' }
                         ].map((m) => (
                           <button
                             key={m.id}
@@ -2165,97 +1998,51 @@ function OpenMathWorkbench({
                       </div>
                     </div>
 
-                    {/* B4. MÔ TẢ MÔ HÌNH 2 BƯỚC KẺ d(A, (SBC)) */}
                     {exam3DConstructionPreset === 'distance_model' && (
-                      <div className="p-3 rounded-xl bg-amber-50/80 border border-amber-200 flex flex-col gap-1.5 text-xs">
-                        <span className="font-bold text-amber-950 flex items-center gap-1.5">
-                          <Zap className="w-4 h-4 text-amber-600" />
-                          <span>Mô hình 2 bước kẻ khoảng cách từ chân đường cao:</span>
-                        </span>
-                        <div className="space-y-1 text-slate-700 text-[11px]">
-                          <div>• <b>Bước 1:</b> Kẻ $AH \perp BC$ (đáy vuông tại $B$ nên $H \equiv B$).</div>
-                          <div>• <b>Bước 2:</b> Trong $(SAB)$, kẻ $AK \perp SB$ tại $K$.</div>
-                          <div>• <b>Kết luận:</b> $AK \perp (SBC) \Rightarrow d(A, (SBC)) = AK$.</div>
-                        </div>
-                        <label className="flex items-center gap-2 font-bold text-amber-900 cursor-pointer pt-1">
-                          <input
-                            type="checkbox"
-                            checked={showPresetAuxLine2}
-                            onChange={(e) => setShowPresetAuxLine2(e.target.checked)}
-                            className="rounded text-amber-600"
-                          />
-                          <span>Hiện đường vuông góc phụ AK (màu đỏ nét đứt)</span>
+                      <div className="p-2.5 rounded-xl bg-amber-50/80 border border-amber-200 text-xs">
+                        <label className="flex items-center gap-2 font-bold text-amber-900 cursor-pointer">
+                          <input type="checkbox" checked={showPresetAuxLine2} onChange={(e) => setShowPresetAuxLine2(e.target.checked)} className="rounded text-amber-600" />
+                          <span>Hiện đường vuông góc AK</span>
                         </label>
                       </div>
                     )}
 
-                    {/* B5. CÔNG CỤ TẠO ĐIỂM PHỤ MỚI TRÊN CẠNH */}
+                    {/* Điểm phụ */}
                     <div className="p-3 rounded-xl bg-purple-50/70 border border-purple-200 flex flex-col gap-2">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-black text-purple-950 flex items-center gap-1">
-                          <Plus className="w-3.5 h-3.5 text-purple-600" />
-                          <span>Thêm Điểm Phụ Trên Cạnh (Trung điểm / Trọng tâm):</span>
-                        </span>
-                        <span className="text-[10px] text-purple-700 font-bold">
-                          {extraPoints.length} Điểm
-                        </span>
+                        <span className="text-xs font-bold text-purple-950">Thêm điểm phụ</span>
+                        <span className="text-[10px] text-purple-700 font-bold">{extraPoints.length} điểm</span>
                       </div>
 
                       <div className="grid grid-cols-3 gap-1.5 text-xs font-bold text-slate-700">
                         <div>
-                          <span>Tên điểm:</span>
+                          <span>Tên</span>
                           <input
                             type="text"
                             value={newPtName}
                             onChange={(e) => setNewPtName(e.target.value.toUpperCase())}
                             className="w-full mt-1 p-1 border rounded-lg bg-white text-xs font-bold uppercase"
-                            placeholder="M, N..."
+                            placeholder="M"
                             maxLength={3}
                           />
                         </div>
                         <div>
-                          <span>Trên cạnh:</span>
+                          <span>Cạnh</span>
                           <div className="flex items-center gap-1 mt-1">
-                            <select
-                              value={newPtEdge1}
-                              onChange={(e) => setNewPtEdge1(e.target.value)}
-                              className="w-1/2 p-1 border rounded bg-white text-xs"
-                            >
+                            <select value={newPtEdge1} onChange={(e) => setNewPtEdge1(e.target.value)} className="w-1/2 p-1 border rounded bg-white text-xs">
                               {availablePointsList.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
                             </select>
-                            <select
-                              value={newPtEdge2}
-                              onChange={(e) => setNewPtEdge2(e.target.value)}
-                              className="w-1/2 p-1 border rounded bg-white text-xs"
-                            >
+                            <select value={newPtEdge2} onChange={(e) => setNewPtEdge2(e.target.value)} className="w-1/2 p-1 border rounded bg-white text-xs">
                               {availablePointsList.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
                             </select>
                           </div>
                         </div>
                         <div>
-                          <span>Tỉ lệ k ({newPtRatio}):</span>
+                          <span>k = {newPtRatio}</span>
                           <div className="flex items-center gap-1 mt-1">
-                            <button
-                              type="button"
-                              onClick={() => setNewPtRatio(0.5)}
-                              className="px-1 py-1 rounded bg-white border text-[10px] hover:bg-purple-100"
-                              title="Trung điểm (1/2)"
-                            >
-                              1/2
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setNewPtRatio(0.33)}
-                              className="px-1 py-1 rounded bg-white border text-[10px] hover:bg-purple-100"
-                              title="Trọng tâm (1/3)"
-                            >
-                              1/3
-                            </button>
-                            <input
-                              type="range" min="0.1" max="0.9" step="0.1" value={newPtRatio}
-                              onChange={(e) => setNewPtRatio(parseFloat(e.target.value))}
-                              className="w-12 accent-purple-600"
-                            />
+                            <button type="button" onClick={() => setNewPtRatio(0.5)} className="px-1 py-1 rounded bg-white border text-[10px] hover:bg-purple-100 cursor-pointer">1/2</button>
+                            <button type="button" onClick={() => setNewPtRatio(0.33)} className="px-1 py-1 rounded bg-white border text-[10px] hover:bg-purple-100 cursor-pointer">1/3</button>
+                            <input type="range" min="0.1" max="0.9" step="0.1" value={newPtRatio} onChange={(e) => setNewPtRatio(parseFloat(e.target.value))} className="w-12 accent-purple-600" />
                           </div>
                         </div>
                       </div>
@@ -2263,182 +2050,112 @@ function OpenMathWorkbench({
                       <button
                         type="button"
                         onClick={handleAddExtraPoint}
-                        className="w-full py-1 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold shadow-xs flex items-center justify-center gap-1 cursor-pointer"
+                        className="w-full py-1 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold flex items-center justify-center gap-1 cursor-pointer"
                       >
                         <Plus className="w-3.5 h-3.5" />
-                        <span>Tạo Điểm {newPtName} trên cạnh này</span>
+                        <span>Thêm điểm {newPtName}</span>
                       </button>
 
-                      {/* List of custom points */}
-                      <div className="flex flex-wrap gap-1 pt-1">
-                        {extraPoints.map((pt) => (
-                          <span key={pt.id} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white border border-purple-200 text-[10px] font-bold text-purple-900">
-                            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: pt.color }} />
-                            <span>{pt.name}</span>
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveExtraPoint(pt.id)}
-                              className="text-slate-400 hover:text-rose-600 ml-1"
-                            >
-                              ×
-                            </button>
-                          </span>
-                        ))}
-                      </div>
+                      {extraPoints.length > 0 && (
+                        <div className="flex flex-wrap gap-1 pt-1">
+                          {extraPoints.map((pt) => (
+                            <span key={pt.id} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white border border-purple-200 text-[10px] font-bold text-purple-900">
+                              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: pt.color }} />
+                              <span>{pt.name}</span>
+                              <button type="button" onClick={() => handleRemoveExtraPoint(pt.id)} className="text-slate-400 hover:text-rose-600 ml-1 cursor-pointer">×</button>
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
 
-                    {/* B6. CÔNG CỤ KẺ THÊM ĐƯỜNG PHỤ TỰ DO */}
-                    <div className="p-3 rounded-xl bg-indigo-50/70 border border-indigo-200 flex flex-col gap-2.5">
+                    {/* Đường phụ */}
+                    <div className="p-3 rounded-xl bg-indigo-50/70 border border-indigo-200 flex flex-col gap-2">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-black text-indigo-950 flex items-center gap-1">
-                          <Edit2 className="w-3.5 h-3.5 text-indigo-600" />
-                          <span>Kẻ Đường Thẳng Phụ (Nối 2 Điểm Bất Kỳ):</span>
-                        </span>
-                        <span className="text-[10px] text-indigo-700 font-bold">
-                          {customAuxLines.length} Đường
-                        </span>
+                        <span className="text-xs font-bold text-indigo-950">Kẻ đường phụ</span>
+                        <span className="text-[10px] text-indigo-700 font-bold">{customAuxLines.length} đường</span>
                       </div>
 
-                      {/* Controls to add new line */}
                       <div className="grid grid-cols-2 gap-2 text-xs font-bold text-slate-700">
-                        <div>
-                          <span>Từ điểm:</span>
-                          <select
-                            value={newLineFrom}
-                            onChange={(e) => setNewLineFrom(e.target.value)}
-                            className="w-full mt-1 p-1.5 border rounded-lg bg-white"
-                          >
-                            {availablePointsList.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
-                          </select>
-                        </div>
-                        <div>
-                          <span>Đến điểm:</span>
-                          <select
-                            value={newLineTo}
-                            onChange={(e) => setNewLineTo(e.target.value)}
-                            className="w-full mt-1 p-1.5 border rounded-lg bg-white"
-                          >
-                            {availablePointsList.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
-                          </select>
-                        </div>
+                        <select value={newLineFrom} onChange={(e) => setNewLineFrom(e.target.value)} className="w-full p-1.5 border rounded-lg bg-white">
+                          {availablePointsList.map(p => <option key={p.id} value={p.id}>Từ {p.label}</option>)}
+                        </select>
+                        <select value={newLineTo} onChange={(e) => setNewLineTo(e.target.value)} className="w-full p-1.5 border rounded-lg bg-white">
+                          {availablePointsList.map(p => <option key={p.id} value={p.id}>Đến {p.label}</option>)}
+                        </select>
                       </div>
 
                       <div className="flex items-center gap-2 text-xs font-bold text-slate-700">
-                        <div className="flex-1">
-                          <span>Kiểu nét:</span>
-                          <select
-                            value={newLineDash}
-                            onChange={(e) => setNewLineDash(parseInt(e.target.value, 10))}
-                            className="w-full mt-1 p-1.5 border rounded-lg bg-white text-xs"
-                          >
-                            <option value={2}>Nét đứt (Khuất - SGK)</option>
-                            <option value={0}>Nét liền (Nhìn thấy)</option>
-                          </select>
-                        </div>
-                        <div className="w-24">
-                          <span>Màu nét:</span>
-                          <select
-                            value={newLineColor}
-                            onChange={(e) => setNewLineColor(e.target.value)}
-                            className="w-full mt-1 p-1.5 border rounded-lg bg-white text-xs"
-                          >
-                            <option value="#ef4444">Đỏ rực</option>
-                            <option value="#f59e0b">Vàng cam</option>
-                            <option value="#8b5cf6">Tím neon</option>
-                            <option value="#10b981">Xanh lá</option>
-                            <option value="#2563eb">Xanh dương</option>
-                          </select>
-                        </div>
+                        <select value={newLineDash} onChange={(e) => setNewLineDash(parseInt(e.target.value, 10))} className="flex-1 p-1.5 border rounded-lg bg-white text-xs">
+                          <option value={2}>Nét đứt</option>
+                          <option value={0}>Nét liền</option>
+                        </select>
+                        <select value={newLineColor} onChange={(e) => setNewLineColor(e.target.value)} className="w-24 p-1.5 border rounded-lg bg-white text-xs">
+                          <option value="#ef4444">Đỏ</option>
+                          <option value="#f59e0b">Cam</option>
+                          <option value="#8b5cf6">Tím</option>
+                          <option value="#10b981">Xanh lá</option>
+                          <option value="#2563eb">Xanh dương</option>
+                        </select>
                       </div>
 
                       <button
                         type="button"
                         onClick={handleAddCustomLine}
-                        className="w-full py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                        className="w-full py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center justify-center gap-1 cursor-pointer"
                       >
                         <Plus className="w-3.5 h-3.5" />
-                        <span>Kẻ đường thẳng {newLineFrom}{newLineTo} này</span>
+                        <span>Kẻ {newLineFrom}{newLineTo}</span>
                       </button>
 
-                      {/* List of custom lines */}
-                      <div className="flex flex-col gap-1 max-h-28 overflow-y-auto pt-1">
-                        {customAuxLines.map((line) => (
-                          <div key={line.id} className="flex items-center justify-between px-2 py-1 bg-white rounded border border-slate-200 text-[11px] font-bold">
-                            <span className="flex items-center gap-1.5">
-                              <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: line.color }} />
-                              <span>Đoạn {line.from}{line.to} ({line.dash === 2 ? 'Nét đứt' : 'Nét liền'})</span>
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveCustomLine(line.id)}
-                              className="text-slate-400 hover:text-rose-600 p-0.5"
-                              title="Xóa đường này"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
+                      {customAuxLines.length > 0 && (
+                        <div className="flex flex-col gap-1 max-h-28 overflow-y-auto pt-1">
+                          {customAuxLines.map((line) => (
+                            <div key={line.id} className="flex items-center justify-between px-2 py-1 bg-white rounded border border-slate-200 text-[11px] font-bold">
+                              <span className="flex items-center gap-1.5">
+                                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: line.color }} />
+                                <span>{line.from}{line.to} ({line.dash === 2 ? 'đứt' : 'liền'})</span>
+                              </span>
+                              <button type="button" onClick={() => handleRemoveCustomLine(line.id)} className="text-slate-400 hover:text-rose-600 p-0.5 cursor-pointer">
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
 
-                    {/* Dimension Sliders */}
-                    <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex flex-col gap-2">
-                      <span className="text-xs font-bold text-slate-800">
-                        Kích thước tổng thể:
-                      </span>
-                      <div className="flex items-center gap-2 text-xs font-bold text-slate-600">
-                        <span className="w-16">Cao h:</span>
+                    {/* Kích thước */}
+                    <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex flex-col gap-1.5 text-xs font-bold text-slate-600">
+                      <div className="flex items-center gap-2">
+                        <span className="w-12">Cao h</span>
                         <input type="range" min="2" max="7" step="0.5" value={shape3dHeight} onChange={(e) => setShape3dHeight(parseFloat(e.target.value) || 4)} className="flex-1 accent-indigo-600" />
-                        <span className="w-6">{shape3dHeight}</span>
+                        <span className="w-6 text-right">{shape3dHeight}</span>
                       </div>
-                      <div className="flex items-center gap-2 text-xs font-bold text-slate-600">
-                        <span className="w-16">Đáy a:</span>
+                      <div className="flex items-center gap-2">
+                        <span className="w-12">Đáy a</span>
                         <input type="range" min="2" max="6" step="0.5" value={shape3dWidth} onChange={(e) => setShape3dWidth(parseFloat(e.target.value) || 4)} className="flex-1 accent-indigo-600" />
-                        <span className="w-6">{shape3dWidth}</span>
+                        <span className="w-6 text-right">{shape3dWidth}</span>
                       </div>
                     </div>
 
-                    {/* 3D Orbit Tip */}
-                    <div className="p-2.5 rounded-xl bg-indigo-50/50 border border-indigo-100 flex items-center justify-between text-xs text-slate-600">
-                      <span>Nhấn giữ chuột trái để xoay 3D 360°</span>
+                    <div className="flex justify-end">
                       <button
                         type="button"
                         onClick={() => { setAzimuthAngle(0.85); setElevationAngle(0.35); }}
-                        className="text-indigo-600 font-bold hover:underline"
+                        className="text-xs text-indigo-600 font-bold hover:underline cursor-pointer"
                       >
-                        Góc SGK
+                        Đặt lại góc nhìn
                       </button>
                     </div>
-
                   </div>
                 )}
 
-                {/* ================================================= */}
                 {/* C. 2D PLANE GEOMETRY */}
-                {/* ================================================= */}
                 {jsxSubTab === '2d_geometry' && (
                   <div className="flex flex-col gap-3">
-                    {/* 1. Mô tả sư phạm hiển thị chuẩn KaTeX */}
-                    <div className="flex flex-col gap-1.5 p-3 bg-indigo-50/60 rounded-xl border border-indigo-100 text-xs text-slate-700">
-                      <span className="font-extrabold text-indigo-900 flex items-center gap-1.5">
-                        <Triangle className="w-3.5 h-3.5 text-indigo-600" />
-                        <span>Mô hình Hình học phẳng 2D tương tác:</span>
-                      </span>
-                      <div className="leading-relaxed text-slate-700">
-                        <MathText
-                          text={
-                            SHAPES_2D_META[shape2DType]?.desc ||
-                            'Tam giác vuông $ABC$ tại $A$, đường cao $AH \\perp BC$, trung tuyến $AM$ và đường tròn ngoại tiếp tâm $M$. Dùng chuột kéo các đỉnh để quan sát.'
-                          }
-                        />
-                      </div>
-                    </div>
-
-                    {/* 2. Chọn mô hình hình học phẳng chuẩn SGK */}
                     <div className="flex flex-col gap-1.5">
-                      <label className="text-xs font-bold text-slate-700">
-                        1. Chọn Mô Hình Hình Học Phẳng Chuẩn Đề Thi:
-                      </label>
+                      <label className="text-xs font-bold text-slate-700">Hình phẳng</label>
                       <div className="grid grid-cols-2 gap-1.5">
                         {Object.values(SHAPES_2D_META).map((item) => (
                           <button
@@ -2457,57 +2174,31 @@ function OpenMathWorkbench({
                       </div>
                     </div>
 
-                    {/* 3. Bật / Tắt các yếu tố hình học */}
                     <div className="flex flex-col gap-1.5 p-3 bg-slate-50 rounded-xl border border-slate-200">
-                      <span className="text-xs font-bold text-slate-800">
-                        2. Hiển Thị Yếu Tố Hình Học & Đường Phụ Chuẩn:
-                      </span>
+                      <span className="text-xs font-bold text-slate-800">Hiển thị</span>
                       <div className="grid grid-cols-2 gap-2 pt-1">
                         <label className="flex items-center gap-2 text-xs text-slate-700 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={show2DAltitude}
-                            onChange={(e) => setShow2DAltitude(e.target.checked)}
-                            className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-                          />
-                          <span>Đường cao / Giao điểm ($H$)</span>
+                          <input type="checkbox" checked={show2DAltitude} onChange={(e) => setShow2DAltitude(e.target.checked)} className="rounded border-slate-300 text-indigo-600" />
+                          <span>Đường cao (H)</span>
                         </label>
                         <label className="flex items-center gap-2 text-xs text-slate-700 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={show2DMedian}
-                            onChange={(e) => setShow2DMedian(e.target.checked)}
-                            className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-                          />
-                          <span>Trung tuyến / Tâm ($M, G, O$)</span>
+                          <input type="checkbox" checked={show2DMedian} onChange={(e) => setShow2DMedian(e.target.checked)} className="rounded border-slate-300 text-indigo-600" />
+                          <span>Trung tuyến (M, G, O)</span>
                         </label>
                         <label className="flex items-center gap-2 text-xs text-slate-700 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={show2DCircumcircle}
-                            onChange={(e) => setShow2DCircumcircle(e.target.checked)}
-                            className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-                          />
+                          <input type="checkbox" checked={show2DCircumcircle} onChange={(e) => setShow2DCircumcircle(e.target.checked)} className="rounded border-slate-300 text-indigo-600" />
                           <span>Đường tròn ngoại tiếp</span>
                         </label>
                         <label className="flex items-center gap-2 text-xs text-slate-700 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={show2DAxes}
-                            onChange={(e) => setShow2DAxes(e.target.checked)}
-                            className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-                          />
-                          <span>Hệ trục tọa độ $Oxy$</span>
+                          <input type="checkbox" checked={show2DAxes} onChange={(e) => setShow2DAxes(e.target.checked)} className="rounded border-slate-300 text-indigo-600" />
+                          <span>Hệ trục Oxy</span>
                         </label>
                       </div>
                     </div>
 
-                    {/* 4. Chỉnh sửa tên và tọa độ các đỉnh (X, Y) */}
                     <div className="flex flex-col gap-2 p-3 bg-slate-50 rounded-xl border border-slate-200">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-slate-800">
-                          3. Tùy Chỉnh Nhãn & Tọa Độ Đỉnh $(x; y)$:
-                        </span>
+                        <span className="text-xs font-bold text-slate-800">Tọa độ đỉnh (x; y)</span>
                         <button
                           type="button"
                           onClick={() => setCustom2DPoints(getDefault2DGeometryPoints(shape2DType))}
@@ -2528,154 +2219,66 @@ function OpenMathWorkbench({
                               value={pt.name ?? key}
                               onChange={(e) => handleUpdate2DPoint(key, 'name', e.target.value)}
                               className="col-span-4 px-2 py-1 rounded-lg border border-slate-200 bg-white text-xs font-bold text-slate-800"
-                              placeholder="Tên đỉnh"
+                              placeholder="Tên"
                             />
                             <div className="col-span-3 flex items-center gap-1">
-                              <span className="text-[10px] text-slate-400 font-bold">X:</span>
-                              <input
-                                type="number"
-                                step="0.5"
-                                value={pt.x ?? 0}
-                                onChange={(e) => handleUpdate2DPoint(key, 'x', e.target.value)}
-                                className="w-full px-1.5 py-1 rounded-lg border border-slate-200 bg-white text-xs text-slate-800"
-                              />
+                              <span className="text-[10px] text-slate-400 font-bold">X</span>
+                              <input type="number" step="0.5" value={pt.x ?? 0} onChange={(e) => handleUpdate2DPoint(key, 'x', e.target.value)} className="w-full px-1.5 py-1 rounded-lg border border-slate-200 bg-white text-xs text-slate-800" />
                             </div>
                             <div className="col-span-3 flex items-center gap-1">
-                              <span className="text-[10px] text-slate-400 font-bold">Y:</span>
-                              <input
-                                type="number"
-                                step="0.5"
-                                value={pt.y ?? 0}
-                                onChange={(e) => handleUpdate2DPoint(key, 'y', e.target.value)}
-                                className="w-full px-1.5 py-1 rounded-lg border border-slate-200 bg-white text-xs text-slate-800"
-                              />
+                              <span className="text-[10px] text-slate-400 font-bold">Y</span>
+                              <input type="number" step="0.5" value={pt.y ?? 0} onChange={(e) => handleUpdate2DPoint(key, 'y', e.target.value)} className="w-full px-1.5 py-1 rounded-lg border border-slate-200 bg-white text-xs text-slate-800" />
                             </div>
                           </div>
                         ))}
                       </div>
                     </div>
 
-                    {/* 5. Thêm điểm phụ & Kẻ đoạn thẳng phụ */}
                     <div className="flex flex-col gap-2 p-3 bg-slate-50 rounded-xl border border-slate-200">
-                      <span className="text-xs font-bold text-slate-800">
-                        4. Thêm Điểm Phụ & Kẻ Đoạn Thẳng Phụ:
-                      </span>
+                      <span className="text-xs font-bold text-slate-800">Điểm & đoạn phụ</span>
                       <div className="grid grid-cols-12 gap-1.5 items-center text-xs">
-                        <input
-                          type="text"
-                          value={new2DPtName}
-                          onChange={(e) => setNew2DPtName(e.target.value)}
-                          placeholder="Tên (E)"
-                          className="col-span-2 px-2 py-1 rounded-lg border border-slate-200 bg-white text-xs font-bold"
-                        />
-                        <select
-                          value={new2DPtParentA}
-                          onChange={(e) => setNew2DPtParentA(e.target.value)}
-                          className="col-span-3 px-1.5 py-1 rounded-lg border border-slate-200 bg-white text-xs"
-                        >
-                          {Object.keys(custom2DPoints || {}).map((k) => (
-                            <option key={k} value={k}>Từ {k}</option>
-                          ))}
+                        <input type="text" value={new2DPtName} onChange={(e) => setNew2DPtName(e.target.value)} placeholder="E" className="col-span-2 px-2 py-1 rounded-lg border border-slate-200 bg-white text-xs font-bold" />
+                        <select value={new2DPtParentA} onChange={(e) => setNew2DPtParentA(e.target.value)} className="col-span-3 px-1.5 py-1 rounded-lg border border-slate-200 bg-white text-xs">
+                          {Object.keys(custom2DPoints || {}).map((k) => (<option key={k} value={k}>Từ {k}</option>))}
                         </select>
-                        <select
-                          value={new2DPtParentB}
-                          onChange={(e) => setNew2DPtParentB(e.target.value)}
-                          className="col-span-3 px-1.5 py-1 rounded-lg border border-slate-200 bg-white text-xs"
-                        >
-                          {Object.keys(custom2DPoints || {}).map((k) => (
-                            <option key={k} value={k}>Đến {k}</option>
-                          ))}
+                        <select value={new2DPtParentB} onChange={(e) => setNew2DPtParentB(e.target.value)} className="col-span-3 px-1.5 py-1 rounded-lg border border-slate-200 bg-white text-xs">
+                          {Object.keys(custom2DPoints || {}).map((k) => (<option key={k} value={k}>Đến {k}</option>))}
                         </select>
-                        <input
-                          type="number"
-                          step="0.1"
-                          min="0.1"
-                          max="0.9"
-                          value={new2DPtRatio}
-                          onChange={(e) => setNew2DPtRatio(parseFloat(e.target.value) || 0.5)}
-                          className="col-span-2 px-1.5 py-1 rounded-lg border border-slate-200 bg-white text-xs"
-                          title="Tỉ số chia đoạn (0.5 = Trung điểm)"
-                        />
-                        <button
-                          type="button"
-                          onClick={handleAdd2DExtraPoint}
-                          className="col-span-2 px-2 py-1 rounded-lg bg-indigo-600 text-white font-bold text-[11px] hover:bg-indigo-700 cursor-pointer"
-                        >
-                          + Điểm
-                        </button>
+                        <input type="number" step="0.1" min="0.1" max="0.9" value={new2DPtRatio} onChange={(e) => setNew2DPtRatio(parseFloat(e.target.value) || 0.5)} className="col-span-2 px-1.5 py-1 rounded-lg border border-slate-200 bg-white text-xs" />
+                        <button type="button" onClick={handleAdd2DExtraPoint} className="col-span-2 px-2 py-1 rounded-lg bg-indigo-600 text-white font-bold text-[11px] hover:bg-indigo-700 cursor-pointer">+ Điểm</button>
                       </div>
 
                       {extra2DPoints.length > 0 && (
                         <div className="flex flex-wrap gap-1.5 pt-1">
                           {extra2DPoints.map((ep) => (
-                            <span
-                              key={ep.id}
-                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-pink-50 border border-pink-200 text-pink-700 text-[11px] font-bold"
-                            >
+                            <span key={ep.id} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-pink-50 border border-pink-200 text-pink-700 text-[11px] font-bold">
                               <span>{ep.name} ({ep.parentA}{ep.parentB}, k={ep.ratio})</span>
-                              <button
-                                type="button"
-                                onClick={() => handleRemove2DExtraPoint(ep.id)}
-                                className="text-pink-400 hover:text-pink-700 cursor-pointer"
-                              >
-                                <X className="w-3 h-3" />
-                              </button>
+                              <button type="button" onClick={() => handleRemove2DExtraPoint(ep.id)} className="text-pink-400 hover:text-pink-700 cursor-pointer"><X className="w-3 h-3" /></button>
                             </span>
                           ))}
                         </div>
                       )}
 
                       <div className="grid grid-cols-12 gap-1.5 items-center text-xs pt-1 border-t border-slate-200/70">
-                        <select
-                          value={new2DLineFrom}
-                          onChange={(e) => setNew2DLineFrom(e.target.value)}
-                          className="col-span-3 px-1.5 py-1 rounded-lg border border-slate-200 bg-white text-xs"
-                        >
-                          {available2DPointKeys.map((k) => (
-                            <option key={k} value={k}>Nối {k}</option>
-                          ))}
+                        <select value={new2DLineFrom} onChange={(e) => setNew2DLineFrom(e.target.value)} className="col-span-3 px-1.5 py-1 rounded-lg border border-slate-200 bg-white text-xs">
+                          {available2DPointKeys.map((k) => (<option key={k} value={k}>Nối {k}</option>))}
                         </select>
-                        <select
-                          value={new2DLineTo}
-                          onChange={(e) => setNew2DLineTo(e.target.value)}
-                          className="col-span-3 px-1.5 py-1 rounded-lg border border-slate-200 bg-white text-xs"
-                        >
-                          {available2DPointKeys.map((k) => (
-                            <option key={k} value={k}>Tới {k}</option>
-                          ))}
+                        <select value={new2DLineTo} onChange={(e) => setNew2DLineTo(e.target.value)} className="col-span-3 px-1.5 py-1 rounded-lg border border-slate-200 bg-white text-xs">
+                          {available2DPointKeys.map((k) => (<option key={k} value={k}>Tới {k}</option>))}
                         </select>
-                        <select
-                          value={new2DLineStyle}
-                          onChange={(e) => setNew2DLineStyle(e.target.value)}
-                          className="col-span-3 px-1.5 py-1 rounded-lg border border-slate-200 bg-white text-xs"
-                        >
+                        <select value={new2DLineStyle} onChange={(e) => setNew2DLineStyle(e.target.value)} className="col-span-3 px-1.5 py-1 rounded-lg border border-slate-200 bg-white text-xs">
                           <option value="dashed">Nét đứt</option>
                           <option value="solid">Nét liền</option>
                         </select>
-                        <button
-                          type="button"
-                          onClick={handleAdd2DAuxLine}
-                          className="col-span-3 px-2 py-1 rounded-lg bg-amber-500 text-white font-bold text-[11px] hover:bg-amber-600 cursor-pointer"
-                        >
-                          + Kẻ đoạn
-                        </button>
+                        <button type="button" onClick={handleAdd2DAuxLine} className="col-span-3 px-2 py-1 rounded-lg bg-amber-500 text-white font-bold text-[11px] hover:bg-amber-600 cursor-pointer">+ Đoạn</button>
                       </div>
 
                       {custom2DAuxLines.length > 0 && (
                         <div className="flex flex-wrap gap-1.5 pt-1">
                           {custom2DAuxLines.map((line, idx) => (
-                            <span
-                              key={`${line.from}-${line.to}-${idx}`}
-                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-[11px] font-bold"
-                            >
-                              <span>Đoạn {line.from}{line.to} ({line.style === 'solid' ? 'liền' : 'đứt'})</span>
-                              <button
-                                type="button"
-                                onClick={() => handleRemove2DAuxLine(idx)}
-                                className="text-amber-500 hover:text-amber-800 cursor-pointer"
-                              >
-                                <X className="w-3 h-3" />
-                              </button>
+                            <span key={`${line.from}-${line.to}-${idx}`} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-[11px] font-bold">
+                              <span>{line.from}{line.to} ({line.style === 'solid' ? 'liền' : 'đứt'})</span>
+                              <button type="button" onClick={() => handleRemove2DAuxLine(idx)} className="text-amber-500 hover:text-amber-800 cursor-pointer"><X className="w-3 h-3" /></button>
                             </span>
                           ))}
                         </div>
@@ -2686,26 +2289,27 @@ function OpenMathWorkbench({
 
               </div>
 
-              {/* --------------------------------------------------- */}
-              {/* RIGHT COLUMN: INTERACTIVE JSXGRAPH CANVAS BOARD */}
-              {/* --------------------------------------------------- */}
+              {/* RIGHT COLUMN: CANVAS */}
               <div className="lg:col-span-7 flex flex-col bg-white rounded-2xl border border-slate-300 shadow-sm p-3 relative">
-                
-                {/* Canvas Toolbar Badge */}
-                <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-100 px-1">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                    <span className="text-xs font-extrabold text-slate-800">
-                      {jsxSubTab === '2d_function' && 'Đồ Thị Oxy Chuyên Sâu (VD / VDC)'}
-                      {jsxSubTab === '3d_space' && 'Không Gian Oxyz (Chỉnh Đỉnh Tùy Ý & Kẻ Đường Phụ)'}
-                      {jsxSubTab === '2d_geometry' && 'Mặt Phẳng Hình Học Tương Tác'}
+                <div className="flex items-center justify-between gap-2 pb-2 mb-2 border-b border-slate-100 px-1 flex-wrap">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-xs font-extrabold text-slate-800 shrink-0">
+                      {jsxSubTab === '2d_function' && 'Đồ thị Oxy'}
+                      {jsxSubTab === '3d_space' && 'Không gian Oxyz'}
+                      {jsxSubTab === '2d_geometry' && 'Hình phẳng 2D'}
+                    </span>
+                    <span className="text-xs font-bold text-indigo-700 bg-slate-50 px-2.5 py-0.5 rounded-lg border border-slate-200 truncate">
+                      <MathText
+                        text={
+                          getCurrentFormulaString().includes('$')
+                            ? getCurrentFormulaString()
+                            : `$${getCurrentFormulaString()}$`
+                        }
+                      />
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <span className="text-[11px] text-slate-500 font-medium hidden sm:inline">
-                      Lăn chuột Zoom • Kéo Di chuyển
-                    </span>
+                  <div className="flex items-center gap-1.5 shrink-0">
                     {jsxSubTab === '3d_space' && (
                       <button
                         type="button"
@@ -2715,83 +2319,70 @@ function OpenMathWorkbench({
                             ? 'bg-indigo-600 border-indigo-600 text-white shadow-xs'
                             : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
                         }`}
-                        title={show3DAxes ? 'Ẩn hệ trục tọa độ Oxyz' : 'Hiện hệ trục tọa độ Oxyz'}
                       >
                         <Compass className={`w-3.5 h-3.5 ${show3DAxes ? 'text-white' : 'text-indigo-600'}`} />
-                        <span>{show3DAxes ? 'Đang bật Oxyz' : 'Trục Oxyz'}</span>
+                        <span>Trục Oxyz</span>
                       </button>
                     )}
                     <button
                       type="button"
                       onClick={() => handleCopyCode(getCurrentFormulaString(), 'công thức')}
                       className="px-2 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-bold flex items-center gap-1 transition-colors cursor-pointer"
-                      title="Copy công thức LaTeX"
                     >
                       <Copy className="w-3.5 h-3.5" />
-                      <span>Copy LaTeX</span>
+                      <span>Sao chép LaTeX</span>
                     </button>
                   </div>
                 </div>
 
-                {/* JSXGraph Canvas DOM Container */}
-                <div className={`flex-1 w-full min-h-[440px] relative rounded-xl overflow-hidden border border-slate-200 ${
+                <div className={`flex-1 w-full min-h-[460px] relative rounded-xl overflow-hidden border border-slate-200 ${
                   jsxSubTab === '3d_space' ? 'bg-grid-notebook' : 'bg-white'
                 }`}>
                   <div
                     id="jsxgraph_board_container"
                     ref={jxgContainerRef}
-                    className={`jxgbox w-full h-full min-h-[440px] ${
+                    className={`jxgbox w-full h-full min-h-[460px] ${
                       jsxSubTab === '3d_space' ? 'jxgbox-3d-grid' : ''
                     }`}
                   />
-                </div>
-
-                {/* High-contrast status indicator */}
-                <div className="mt-2 flex items-center justify-between text-[11px] text-slate-500 px-1">
-                  <span>Engine: <b>JSXGraph v1.14.0</b> (Native React Vector Engine)</span>
-                  <span className="font-semibold text-indigo-600">Render 60 FPS Canvas/SVG</span>
                 </div>
               </div>
 
             </div>
           </div>
 
-          {/* ======================================================= */}
-          {/* FLOW 3 PREVIEW DRAWER (STUDENT ADAPTIVE QUIZ VIEW) */}
-          {/* ======================================================= */}
+          {/* PREVIEW DRAWER */}
           {showStudentPreview && (
             <div className="p-3.5 rounded-2xl bg-indigo-50/80 border border-indigo-200 flex flex-col gap-2.5 animate-in fade-in slide-in-from-bottom-2">
               <div className="flex items-center justify-between border-b border-indigo-200/60 pb-1.5">
-                <span className="text-xs font-black text-indigo-950">
-                  👁️ Mô phỏng Giao Diện Học Sinh khi làm bài thi Adaptive Quiz (Flow 3)
-                </span>
+                <span className="text-xs font-bold text-indigo-950">Xem trước câu hỏi</span>
                 <button
                   type="button"
                   onClick={() => setShowStudentPreview(false)}
                   className="text-xs font-bold text-indigo-600 hover:underline cursor-pointer"
                 >
-                  Thu gọn
+                  Đóng
                 </button>
               </div>
 
               <div className="bg-white p-3.5 rounded-xl border border-indigo-100 shadow-sm flex flex-col gap-2.5">
                 <div className="text-xs font-bold text-slate-800">
-                  <b>Câu hỏi (Mức độ Vận dụng cao):</b> Cho hình chóp $S.ABCD$ có đáy là hình vuông cạnh $a$, $SA \perp (ABCD)$. Kẻ đường cao phụ $AK \perp SB$. Tính khoảng cách $d(A, (SBC))$?
+                  <MathText text="Cho hình chóp $S.ABCD$ có đáy là hình vuông cạnh $a$, $SA \perp (ABCD)$. Kẻ $AK \perp SB$. Tính $d(A, (SBC))$." />
                 </div>
                 <div className="rounded-xl border border-indigo-100 overflow-hidden shadow-xs">
                   <MathText text={currentSnippetTag} />
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                  <div className="p-2 rounded-lg border border-slate-200 hover:border-indigo-400 bg-white cursor-pointer font-medium">
+                  <div className="p-2 rounded-lg border border-slate-200 bg-white font-medium">
                     A. <MathText text="$d(A, (SBC)) = AK = \frac{SA \cdot AB}{\sqrt{SA^2 + AB^2}}$" />
                   </div>
-                  <div className="p-2 rounded-lg border border-slate-200 hover:border-indigo-400 bg-white cursor-pointer font-medium">
+                  <div className="p-2 rounded-lg border border-slate-200 bg-white font-medium">
                     B. <MathText text="$d(A, (SBC)) = \frac{1}{2} SC$" />
                   </div>
-                  <div className="p-2 rounded-lg border border-slate-200 hover:border-indigo-400 bg-white cursor-pointer font-medium">
+                  <div className="p-2 rounded-lg border border-slate-200 bg-white font-medium">
                     C. <MathText text="$d(A, (SBC)) = SB$" />
                   </div>
-                  <div className="p-2 rounded-lg border border-slate-200 hover:border-indigo-400 bg-white cursor-pointer font-medium">
+                  <div className="p-2 rounded-lg border border-slate-200 bg-white font-medium">
                     D. <MathText text="$d(A, (SBC)) = \frac{a \sqrt{3}}{2}$" />
                   </div>
                 </div>
@@ -2801,28 +2392,16 @@ function OpenMathWorkbench({
 
         </div>
 
-        {/* ========================================================= */}
-        {/* MODAL FOOTER: ACTION BUTTONS (FLOW 2 & FLOW 3) */}
-        {/* ========================================================= */}
-        <div className="px-5 py-3 border-t border-slate-200 bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setShowStudentPreview(!showStudentPreview)}
-              className="px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold border border-indigo-200 transition-colors flex items-center gap-1.5 cursor-pointer"
-            >
-              <Eye className="w-4 h-4" />
-              <span>{showStudentPreview ? 'Đóng xem thử Flow 3' : 'Mô phỏng Flow 3 (Học sinh)'}</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => handleCopyCode(getCurrentFormulaString(), 'công thức')}
-              className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer"
-            >
-              <Copy className="w-4 h-4" />
-              <span>Copy LaTeX</span>
-            </button>
-          </div>
+        {/* MODAL FOOTER */}
+        <div className="px-5 py-3 border-t border-slate-200 bg-white flex items-center justify-between gap-3">
+          <button
+            type="button"
+            onClick={() => setShowStudentPreview(!showStudentPreview)}
+            className="px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold border border-indigo-200 transition-colors flex items-center gap-1.5 cursor-pointer"
+          >
+            <Eye className="w-4 h-4" />
+            <span>{showStudentPreview ? 'Ẩn xem trước' : 'Xem trước'}</span>
+          </button>
 
           <div className="flex items-center gap-2">
             <button
@@ -2830,15 +2409,15 @@ function OpenMathWorkbench({
               onClick={onClose}
               className="px-4 py-1.5 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
             >
-              Hủy bỏ
+              Hủy
             </button>
             <button
               type="button"
               onClick={handleInsertToStudio}
-              className="px-5 py-1.5 rounded-xl text-xs font-extrabold text-white bg-indigo-600 hover:bg-indigo-700 shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer"
+              className="px-5 py-1.5 rounded-xl text-xs font-extrabold text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
             >
-              <Sparkles className="w-4 h-4" />
-              <span>📥 Chèn Mô Hình Này Vào Bài Soạn (Flow 2)</span>
+              <Check className="w-4 h-4" />
+              <span>Chèn mô hình</span>
             </button>
           </div>
         </div>

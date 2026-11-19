@@ -21,7 +21,16 @@ import {
 } from 'lucide-react';
 import MathText from '../common/MathText';
 import InteractiveMathRenderer from '../common/InteractiveMathRenderer';
-import { buildTheoryFromChunks, cleanPrefix, getSavedTextbookData } from './textbookStateBridge';
+import {
+  buildTheoryFromChunks,
+  buildMethodFromChunks,
+  extractKeyFormulasFromChunks,
+  cleanPrefix,
+  findSavedNodeData,
+  isGenericPlaceholder,
+  isValidGuid,
+  normalizeViText
+} from './textbookStateBridge';
 import contentService from '../../services/contentService';
 import { toast } from '../../context/ToastContext';
 
@@ -37,6 +46,7 @@ export default function UnifiedNodeDetailView({
   parentLesson,
   parentChapter,
   matchedSgkChunks = [],
+  activeSourceIds = [],
   onOpenStudio,
   onOpenQuickEdit,
   onLaunchAdaptiveQuiz,
@@ -47,6 +57,38 @@ export default function UnifiedNodeDetailView({
   const [isTheoryExpanded, setIsTheoryExpanded] = useState(false);
   const [isMethodExpanded, setIsMethodExpanded] = useState(false);
   const [isQuestionsExpanded, setIsQuestionsExpanded] = useState(false);
+  const [syncVersion, setSyncVersion] = useState(0);
+
+  // Lắng nghe sự kiện đồng bộ real-time khi bên SGK lưu/sửa/xóa sách
+  useEffect(() => {
+    const bump = () => setSyncVersion(v => v + 1);
+    window.addEventListener('veval:textbook-saved', bump);
+    window.addEventListener('veval:textbook-deleted', bump);
+    window.addEventListener('veval:curriculum-synced', bump);
+    return () => {
+      window.removeEventListener('veval:textbook-saved', bump);
+      window.removeEventListener('veval:textbook-deleted', bump);
+      window.removeEventListener('veval:curriculum-synced', bump);
+    };
+  }, []);
+
+  // Tra cứu dữ liệu mới nhất bên SGK (chỉ duyệt các sourceId còn tồn tại trong DB, triệt tiêu bóng ma sách đã xóa)
+  const savedSgkNode = useMemo(() => {
+    if (!selectedPattern) return null;
+    return findSavedNodeData(parentLesson?.name || '', selectedPattern?.name || '', activeSourceIds);
+  }, [parentLesson?.name, selectedPattern?.name, activeSourceIds, syncVersion]);
+
+  const detectedSub = useMemo(() => {
+    if (matchedSgkChunks && matchedSgkChunks.length > 0 && matchedSgkChunks[0]?.subjectCode) {
+      return String(matchedSgkChunks[0].subjectCode).toUpperCase();
+    }
+    const ctxLabel = normalizeViText(`${parentChapter?.name || ''} ${parentLesson?.name || ''} ${selectedPattern?.name || ''}`);
+    if (ctxLabel.includes('hóa') || ctxLabel.includes('nguyên tử') || ctxLabel.includes('phản ứng') || ctxLabel.includes('halogen') || ctxLabel.includes('ester') || ctxLabel.includes('hydrocarbon')) return 'CHEM';
+    if (ctxLabel.includes('vật lí') || ctxLabel.includes('chuyển động') || ctxLabel.includes('newton') || ctxLabel.includes('động lượng')) return 'PHYS';
+    if (ctxLabel.includes('sinh học') || ctxLabel.includes('di truyền')) return 'BIO';
+    if (ctxLabel.includes('toán') || ctxLabel.includes('hàm số') || ctxLabel.includes('xác suất') || ctxLabel.includes('vectơ')) return 'MATH';
+    return '';
+  }, [matchedSgkChunks, parentChapter?.name, parentLesson?.name, selectedPattern?.name]);
 
   // 2. State Ngân hàng câu hỏi thực tế của Node
   const [questions, setQuestions] = useState([]);
@@ -54,7 +96,7 @@ export default function UnifiedNodeDetailView({
   const [questionFilterLevel, setQuestionFilterLevel] = useState('ALL'); // 'ALL' | 'L1' | 'L2' | 'L3' | 'L4'
   const [expandedExplanationMap, setExpandedExplanationMap] = useState({});
 
-  // 3. Tự động truy vấn câu hỏi thực tế từ Content Service (Database) khi đổi selectedPattern
+  // 3. Tự động truy vấn câu hỏi thực tế từ Content Service (Database) & hợp nhất câu hỏi SGK còn hiệu lực
   useEffect(() => {
     let isMounted = true;
     const fetchNodeQuestions = async () => {
@@ -65,30 +107,29 @@ export default function UnifiedNodeDetailView({
       }
 
       setLoadingQuestions(true);
+      const localExercises = Array.isArray(savedSgkNode?.pattern?.exercises)
+        ? savedSgkNode.pattern.exercises.map((ex, idx) => ({
+            questionId: ex.id || `sgk-q-${idx}`,
+            contentLatex: ex.contentLatex || ex.stem || ex.content || '',
+            optionA: ex.optionA || ex.options?.[0] || '',
+            optionB: ex.optionB || ex.options?.[1] || '',
+            optionC: ex.optionC || ex.options?.[2] || '',
+            optionD: ex.optionD || ex.options?.[3] || '',
+            correctOption: typeof ex.correctOption === 'string'
+              ? ex.correctOption
+              : String.fromCharCode(65 + (Number(ex.correctIndex) || 0)),
+            explanation: ex.explanation || ex.solution || '',
+            difficultyLevel: Number(ex.difficultyLevel || ex.bloomLevel) || 2
+          }))
+        : [];
+
       try {
-        // Truy vấn câu hỏi từ CSDL thông qua API Content Service
-        const res = await contentService.getQuestionsBySkill(patternId);
+        // Truy vấn câu hỏi từ CSDL thông qua API Content Service (chỉ gọi khi patternId là GUID chuẩn)
+        const res = isValidGuid(patternId) ? await contentService.getQuestionsBySkill(patternId) : [];
         if (isMounted && res) {
           const list = Array.isArray(res) ? res : (res.questions || []);
-          
-          // Hợp nhất với câu hỏi đã lưu cục bộ từ Universal Storage Bridge nếu có
-          const savedData = getSavedTextbookData();
-          let localExercises = [];
-          if (savedData?.skeleton?.chapters) {
-            savedData.skeleton.chapters.forEach(ch => {
-              (ch.lessons || []).forEach(les => {
-                (les.patterns || []).forEach(pat => {
-                  if (pat.patternId === patternId || pat.name === selectedPattern.name) {
-                    if (Array.isArray(pat.exercises) && pat.exercises.length > 0) {
-                      localExercises = pat.exercises;
-                    }
-                  }
-                });
-              });
-            });
-          }
 
-          // Gộp không trùng lặp
+          // Gộp không trùng lặp giữa CSDL Content Service và câu hỏi mới sinh bên SGK
           const combined = [...list];
           localExercises.forEach(locQ => {
             const locText = (locQ.content || locQ.contentLatex || '').trim();
@@ -101,11 +142,10 @@ export default function UnifiedNodeDetailView({
           setQuestions(combined);
         }
       } catch (err) {
-        // Fallback: Lấy từ sampleQuestion hoặc local Universal Storage Bridge nếu chưa có trong DB
+        // Fallback: Lấy từ câu hỏi SGK còn hiệu lực hoặc sampleQuestion nếu API chưa có
         if (isMounted) {
-          const savedData = getSavedTextbookData();
-          let fallbackList = [];
-          if (selectedPattern.sampleQuestion) {
+          const fallbackList = [...localExercises];
+          if (fallbackList.length === 0 && selectedPattern.sampleQuestion) {
             fallbackList.push({
               questionId: 'sample-' + (selectedPattern.patternId || '0'),
               contentLatex: selectedPattern.sampleQuestion.content,
@@ -127,23 +167,78 @@ export default function UnifiedNodeDetailView({
 
     fetchNodeQuestions();
     return () => { isMounted = false; };
-  }, [selectedPattern?.patternId, selectedPattern?.name]);
+  }, [selectedPattern?.patternId, selectedPattern?.name, savedSgkNode, syncVersion]);
 
-  // 4. Tổng hợp lý thuyết thuần cô đặc từ CSDL (ưu tiên số 1) hoặc Vector Chunks thực tế (có guard bảo vệ chống chéo môn)
+  // 4. Tổng hợp lý thuyết thuần đồng nhất 100% với bên SGK:
+  //    Ưu tiên 1: Lý thuyết giảng viên vừa chỉnh sửa / AI mở rộng bên SGK (còn hiệu lực trong DB)
+  //    Ưu tiên 2: Dữ liệu thực tế từ cuốn SGK mới nhất đang khớp trong DB (matchedSgkChunks) — không để dữ liệu seed cũ đè lên sách mới
+  //    Ưu tiên 3: Lý thuyết đã lưu trong Content Service DB (nếu chưa nạp sách SGK cho bài này)
   const synthesizedTheory = useMemo(() => {
-    // Ưu tiên số 1: Dữ liệu chuẩn đã được lưu trữ trong CSDL của Node
-    if (selectedPattern?.theoryRecap && selectedPattern.theoryRecap.trim()) {
+    if (savedSgkNode?.pattern?.isEdited && savedSgkNode?.pattern?.theoryRecap && !isGenericPlaceholder(savedSgkNode.pattern.theoryRecap)) {
+      return savedSgkNode.pattern.theoryRecap;
+    }
+    if (savedSgkNode?.lesson?.isEdited && savedSgkNode?.lesson?.theory && !isGenericPlaceholder(savedSgkNode.lesson.theory)) {
+      return savedSgkNode.lesson.theory;
+    }
+    if (matchedSgkChunks && matchedSgkChunks.length > 0) {
+      const pure = buildTheoryFromChunks(matchedSgkChunks, parentLesson?.name || selectedPattern?.name || '', detectedSub);
+      if (pure && pure.trim() && !isGenericPlaceholder(pure)) return pure;
+    }
+    if (selectedPattern?.theoryRecap && selectedPattern.theoryRecap.trim() && !isGenericPlaceholder(selectedPattern.theoryRecap)) {
       return selectedPattern.theoryRecap;
     }
-    // Ưu tiên số 2: Chỉ khi CSDL chưa có lý thuyết thì mới dùng Chunks SGK
-    if (matchedSgkChunks && matchedSgkChunks.length > 0) {
-      const detectedSub = (parentChapter?.name || parentLesson?.name || selectedPattern?.name || '').toLowerCase().includes('hóa') ? 'CHEM' :
-                          (parentChapter?.name || parentLesson?.name || selectedPattern?.name || '').toLowerCase().includes('vật') ? 'PHYS' : 'MATH';
-      const pure = buildTheoryFromChunks(matchedSgkChunks, parentLesson?.name || selectedPattern?.name || '', detectedSub);
-      if (pure && pure.trim()) return pure;
-    }
     return '';
-  }, [matchedSgkChunks, parentChapter?.name, parentLesson?.name, selectedPattern?.name, selectedPattern?.theoryRecap]);
+  }, [savedSgkNode, matchedSgkChunks, parentLesson?.name, selectedPattern?.name, selectedPattern?.theoryRecap, detectedSub]);
+
+  // 4.1. Công thức KaTeX đặc trưng đồng bộ trực tiếp từ SGK chunks + bài học đã lưu + CSDL
+  const displayedKeyFormulas = useMemo(() => {
+    const out = [];
+    const seen = new Set();
+    const pushItem = (f) => {
+      const latex = typeof f === 'string' ? f.trim() : (f?.latex || '').trim();
+      if (!latex) return;
+      const norm = latex.replace(/^\$+|\$+$/g, '').trim().toLowerCase();
+      if (!norm || seen.has(norm)) return;
+      seen.add(norm);
+      out.push(typeof f === 'string' ? { label: 'Công thức', latex: latex.replace(/^\$+|\$+$/g, '').trim() } : f);
+    };
+
+    if (matchedSgkChunks && matchedSgkChunks.length > 0) {
+      extractKeyFormulasFromChunks(matchedSgkChunks).forEach(pushItem);
+    }
+    (savedSgkNode?.lesson?.keyFormulas || []).forEach(pushItem);
+    (selectedPattern?.keyFormulas || []).forEach(pushItem);
+    return out;
+  }, [matchedSgkChunks, savedSgkNode?.lesson?.keyFormulas, selectedPattern?.keyFormulas]);
+
+  // 4.2. Phương pháp giải đồng bộ 100% với Khối 2 bên SGK (ưu tiên biên soạn mới -> tổng hợp từ SGK mới nhất -> CSDL Content Service)
+  const synthesizedMethod = useMemo(() => {
+    const savedMethod = (savedSgkNode?.pattern?.solutionMethod && !isGenericPlaceholder(savedSgkNode.pattern.solutionMethod))
+      ? savedSgkNode.pattern.solutionMethod.trim()
+      : ((savedSgkNode?.pattern?.method && !isGenericPlaceholder(savedSgkNode.pattern.method)) ? savedSgkNode.pattern.method.trim() : '');
+
+    if (savedMethod && (savedSgkNode?.pattern?.isEdited || savedMethod.includes('\n') || savedMethod.length >= 140)) {
+      return savedMethod;
+    }
+
+    const dbMethod = (selectedPattern?.solutionMethod && !isGenericPlaceholder(selectedPattern.solutionMethod))
+      ? selectedPattern.solutionMethod.trim()
+      : '';
+
+    if (matchedSgkChunks && matchedSgkChunks.length > 0) {
+      const fromSgk = buildMethodFromChunks(
+        matchedSgkChunks,
+        { title: parentLesson?.name || '', keyFormulas: displayedKeyFormulas.map(f => f.latex || f) },
+        { name: selectedPattern?.name || '', method: savedMethod || (dbMethod.length < 140 ? dbMethod : '') },
+        detectedSub
+      );
+      if (fromSgk && !isGenericPlaceholder(fromSgk)) {
+        return fromSgk;
+      }
+    }
+
+    return dbMethod || savedMethod || '';
+  }, [savedSgkNode, matchedSgkChunks, parentLesson?.name, selectedPattern?.name, selectedPattern?.solutionMethod, displayedKeyFormulas, detectedSub]);
 
   // 5. Trích xuất tag đồ thị JSXGraph từ phương pháp giải hoặc đề mẫu
   const embeddedGraphTag = useMemo(() => {
@@ -204,7 +299,14 @@ export default function UnifiedNodeDetailView({
           {/* Action buttons */}
           <div className="flex items-center gap-2 shrink-0 flex-wrap">
             <button
-              onClick={() => onOpenStudio && onOpenStudio(selectedPattern)}
+              onClick={() =>
+                onOpenStudio &&
+                onOpenStudio({
+                  ...selectedPattern,
+                  theoryRecap: synthesizedTheory || selectedPattern?.theoryRecap || '',
+                  solutionMethod: synthesizedMethod || selectedPattern?.solutionMethod || ''
+                })
+              }
               className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-black flex items-center gap-2 shadow-md shadow-blue-500/25 transition-all hover:scale-105 active:scale-95 cursor-pointer"
               title="Mở Studio sư phạm chuyên sâu: đồ thị minh họa, bẫy đề thi, LaTeX và review học sinh"
             >
@@ -322,16 +424,16 @@ export default function UnifiedNodeDetailView({
             )}
 
             {/* Danh sách công thức KaTeX đặc trưng nếu có */}
-            {selectedPattern?.keyFormulas && selectedPattern.keyFormulas.length > 0 && (
+            {displayedKeyFormulas.length > 0 && (
               <div className="space-y-2 pt-1">
                 <div className="text-[11px] font-extrabold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-cyan-500"></span>
-                  <span>Công thức & Phương trình đặc trưng:</span>
+                  <span>Công thức & Phương trình đặc trưng ({displayedKeyFormulas.length}):</span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {selectedPattern.keyFormulas.map((f, idx) => (
+                  {displayedKeyFormulas.map((f, idx) => (
                     <div key={idx} className="p-3 rounded-xl bg-slate-900 text-white flex items-center justify-between gap-2 border border-slate-800 shadow-2xs">
-                      <span className="text-[11px] font-bold text-slate-300">{f.label || 'Công thức'}:</span>
+                      <span className="text-[11px] font-bold text-slate-300">{f.label || `Công thức ${idx + 1}`}:</span>
                       <div className="text-cyan-300 text-xs font-semibold overflow-x-auto py-0.5">
                         <MathText text={`$$${f.latex || f}$$`} />
                       </div>
@@ -380,13 +482,13 @@ export default function UnifiedNodeDetailView({
         {isMethodExpanded && (
           <div className="p-5 space-y-4">
             {/* Phương pháp giải từng bước */}
-            {selectedPattern?.solutionMethod && selectedPattern.solutionMethod.trim() ? (
+            {synthesizedMethod && synthesizedMethod.trim() ? (
               <div className="p-4 rounded-xl bg-white border border-amber-100 text-xs text-slate-800 leading-relaxed font-medium shadow-2xs">
                 <div className="font-extrabold text-amber-950 mb-2 flex items-center gap-2">
                   <Compass className="w-4 h-4 text-amber-600" />
                   <span>Thuật toán và Quy trình tư duy giải dạng này:</span>
                 </div>
-                <MathText text={selectedPattern.solutionMethod} />
+                <MathText text={synthesizedMethod} />
               </div>
             ) : (
               <div className="p-6 rounded-xl bg-white border border-dashed border-amber-200 text-center space-y-1">
@@ -605,7 +707,7 @@ export default function UnifiedNodeDetailView({
                             <span>Phương pháp và Lời giải chi tiết:</span>
                           </div>
                           <div className="whitespace-pre-line text-slate-700 font-medium pl-5">
-                            <MathText text={q.explanation || 'Áp dụng công thức và thuật toán của Dạng bài để giải quyết phương án đúng.'} />
+                            <MathText text={q.explanation || 'Chưa có lời giải chi tiết cho câu hỏi này.'} />
                           </div>
                         </div>
                       )}
