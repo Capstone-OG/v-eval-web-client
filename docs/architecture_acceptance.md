@@ -2218,10 +2218,10 @@ Radar and skill-prior displays consume API response fields; the benchmark overla
 
 The Parent Companion Portal (`ParentDashboardView.jsx`) was comprehensively redesigned to eliminate visual fragmentation, resolve competing saturated banners, and present a coherent, user-centric dashboard for parents:
 
-- **Unified Hero Banner & Student Context**:
-  - Replaced the awkward dual-layer layout with a single, deep navy-indigo Hero Header (`from-slate-900 via-indigo-950 to-blue-950`).
-  - Embedded student metadata context pills (`school`, `grade`, `targetMajor`) directly below the student name, grounding parents immediately with their child's academic context.
-  - Eliminated the floating teacher box that previously crowded the top banner.
+- **Unified Hero Banner & Structured 3-Column Profile Strip**:
+  - Replaced cluttered badges and floating pills with an elegant Student Profile Card: student avatar initials (`childInitials`), active live presence dot, and clean typography.
+  - Implemented a balanced 3-column metadata grid (`School`, `Course/Class`, `Target Major NV1`) with dedicated semantic icons (`GraduationCap`, `BookOpen`, `Target`), replacing awkward multi-line wrapped bubbles.
+  - Replaced the high-contrast yellow button with elegant translucent glass buttons (`bg-white/10 hover:bg-white/20 border border-white/20`), preserving visual hierarchy and returning focus to the student's academic progress.
 - **Refined Tuition Payment Ribbon**:
   - Transformed the oversized blue banner into an elegant, light-slate/indigo fintech ribbon (`bg-gradient-to-r from-blue-50/90 via-indigo-50/60 to-slate-50 border border-blue-200/80`) with `ShieldCheck` icon badge and PayOS VietQR 1-click CTA.
 - **Unified 4-Metric Grid with Dynamic Readiness Tiers**:

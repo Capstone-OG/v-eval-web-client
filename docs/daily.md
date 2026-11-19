@@ -22,10 +22,14 @@
   - **Viên Nang Hồ Sơ & Trạng Thái Trực Tuyến (User Profile Pill & Menu)**:
     - Hiển thị avatar ký tự với chấm xanh trạng thái online (`bg-emerald-500 ring-2 ring-white`), tên người dùng thật, nhãn vai trò thân thiện tiếng Việt (`Phụ huynh`, `Học viên`, `Thầy/cô`).
     - Menu thả xuống tích hợp thẻ người dùng đầy đủ email, cơ sở học tập, cùng các lối tắt: *Cài đặt tài khoản*, *Về trang chủ*, và nút *Đăng xuất* an toàn.
-- **Tái Cấu Trúc Toàn Diện Hero Header & Thông Tin Ngữ Cảnh Con ([`ParentDashboardView.jsx`](../src/components/dashboard/ParentDashboardView.jsx))**:
-  - Khắc phục triệt để tình trạng 2 banner màu xanh đậm cồng kềnh xếp chồng lên nhau gây nặng nề và rời rạc thị giác.
-  - Tích hợp trực tiếp các chip thông tin trường lớp của con (`Trường THPT`, `Khối lớp`, `Ngành mục tiêu NV1`) ngay dưới tên học sinh trong Hero Header (`from-slate-900 via-indigo-950 to-blue-950`), giúp phụ huynh nhanh chóng nhận diện bối cảnh học tập của con.
-  - Loại bỏ hoàn toàn khối giáo viên hiển thị tạm bợ, chật chội trôi nổi bên trong Hero Banner.
+- **Tái Cấu Trúc Toàn Diện Hero Header Theo Thẻ Hồ Sơ Học Sinh Tinh Giản 3 Cột (Phương án 1) ([`ParentDashboardView.jsx`](../src/components/dashboard/ParentDashboardView.jsx))**:
+  - **Triệt tiêu hiện tượng rớt dòng & hộp khối lổn nhổn**: Xóa bỏ các nhãn kỹ thuật sáo rỗng (*"Không gian đồng hành cùng con"*, *"Cập nhật trực tiếp theo thời gian thực"*) và 3 viên nang bubble lộn xộn.
+  - **Hồ sơ học sinh trang nhã (Top Row)**: Bổ sung avatar chữ ký tự của con (`childInitials` - ví dụ `PL` cho Phạm Tấn Lộc) với chấm trạng thái xanh lá trực quan; tên học sinh to rõ, nổi bật.
+  - **Dải thông tin 3 cột cân đối (Bottom Strip)**: Chuyển toàn bộ bối cảnh trường lớp thành dải card 3 cột thẳng hàng:
+    - Cột 1: `Trường THPT` (`child.school`) với icon `GraduationCap` màu cyan.
+    - Cột 2: `Khóa Học & Lớp Học` (`child.grade`) với icon `BookOpen` màu amber, văn bản dài tự động thu gọn `truncate` kèm tooltip đầy đủ.
+    - Cột 3: `Nguyện Vọng Mục Tiêu NV1` (`child.targetMajor`) với icon `Target` màu emerald.
+  - **Hài hòa hóa nút hành động**: Chuyển nút `+ Liên kết con` từ màu vàng chóe `#FACC15` sang phong cách kính mờ cao cấp (`bg-white/10 hover:bg-white/20 border border-white/20`), hài hòa tuyệt đối với giao diện, trả lại sự tập trung vào kết quả học tập của con.
 - **Tinh Tế Hóa Khối Thanh Toán Học Phí PayOS (Tuition Ribbon) ([`ParentDashboardView.jsx`](../src/components/dashboard/ParentDashboardView.jsx))**:
   - Chuyển đổi từ banner gradient xanh đậm 200px cồng kềnh thành ribbon thông báo tài chính thanh lịch với tông màu sáng dịu (`bg-gradient-to-r from-blue-50/90 via-indigo-50/60 to-slate-50 border border-blue-200/80`).
   - Tích hợp biểu tượng `ShieldCheck`, nhãn dịch vụ học tập, mức học phí rõ ràng (5.000 ₫) và nút kêu gọi hành động VietQR quét mã tức thì.

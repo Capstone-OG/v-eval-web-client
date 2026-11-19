@@ -457,6 +457,15 @@ export default function ParentDashboardView({ currentUser, onNavigateTuition }) 
 
   const children = portalData?.children || [];
   const child = children[selectedChildIdx] || null;
+  const childInitials = child?.studentName
+    ? child.studentName
+        .trim()
+        .split(/\s+/)
+        .slice(-2)
+        .map((w) => w[0])
+        .join('')
+        .toUpperCase()
+    : 'HV';
 
   if (!child) {
     return (
@@ -534,90 +543,135 @@ export default function ParentDashboardView({ currentUser, onNavigateTuition }) 
 
   return (
     <div className="space-y-6 animate-fade w-full">
-      {/* Hero Header: Thông tin học sinh & Thao tác đồng hành */}
-      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-950 rounded-3xl p-6 lg:p-8 text-white border border-indigo-900/60 shadow-xl space-y-4">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-          <div className="space-y-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-indigo-500/20 border border-indigo-400/30 text-indigo-200 text-[11px] font-extrabold uppercase tracking-wider">
-                <HeartHandshake className="w-3.5 h-3.5 text-cyan-400" />
-                Không Gian Đồng Hành Cùng Con
-              </span>
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold border bg-emerald-500/20 border-emerald-400/30 text-emerald-300 flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                Cập nhật trực tiếp theo thời gian thực
-              </span>
-            </div>
-
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-                Đồng Hành Cùng Con: {child.studentName}
-              </h1>
-              <p className="text-xs sm:text-sm text-slate-300 max-w-2xl mt-1 leading-relaxed">
-                Theo dõi tiến độ học tập, mức độ sẵn sàng cho kỳ thi ĐGNL và nhận định sư phạm từ hệ thống V-Eval.
-              </p>
-            </div>
-
-            {/* Student metadata context pills */}
-            <div className="flex flex-wrap items-center gap-2 pt-1">
-              {child.school && (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white/10 border border-white/15 text-xs text-slate-200 font-medium">
-                  <GraduationCap className="w-3.5 h-3.5 text-cyan-300" />
-                  <span>{child.school}</span>
-                </span>
-              )}
-              {child.grade && (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white/10 border border-white/15 text-xs text-slate-200 font-medium">
-                  <BookOpen className="w-3.5 h-3.5 text-yellow-300" />
-                  <span>{child.grade}</span>
-                </span>
-              )}
-              {child.targetMajor && (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white/10 border border-white/15 text-xs text-slate-200 font-medium">
-                  <Target className="w-3.5 h-3.5 text-emerald-300" />
-                  <span>Mục tiêu: {child.targetMajor}</span>
-                </span>
-              )}
-            </div>
-
-            {children.length > 1 && (
-              <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-white/10">
-                <span className="text-xs text-slate-400 font-bold">Chọn con để theo dõi:</span>
-                {children.map((c, idx) => (
-                  <button
-                    key={c.studentId || idx}
-                    onClick={() => setSelectedChildIdx(idx)}
-                    className={`px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
-                      idx === selectedChildIdx
-                        ? 'bg-[#FACC15] text-slate-950 shadow-md'
-                        : 'bg-white/10 text-white hover:bg-white/20'
-                    }`}
-                  >
-                    {c.studentName}
-                  </button>
-                ))}
+      {/* Hero Header: Thẻ Hồ Sơ Học Sinh Tinh Giản & Dải Thông Tin 3 Cột (Phương án 1) */}
+      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-950 rounded-3xl p-6 lg:p-7 text-white border border-indigo-900/60 shadow-xl">
+        {/* Top: Thông tin học sinh & Thao tác liên kết */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5 min-w-0">
+            <div className="relative shrink-0">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 via-indigo-600 to-cyan-500 text-white font-extrabold text-base shadow-md shadow-blue-500/20 ring-2 ring-white/20">
+                {childInitials}
               </div>
-            )}
+              <span
+                className="absolute -bottom-1 -right-1 h-3.5 w-3.5 rounded-full border-2 border-slate-900 bg-emerald-400"
+                title="Đang đồng hành học tập trực tiếp"
+              />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-cyan-300">
+                  Hồ sơ học tập của con
+                </span>
+                <span className="h-1 w-1 rounded-full bg-slate-400" />
+                <span className="text-[11px] text-slate-300">ĐGNL ĐHQG-HCM</span>
+              </div>
+              <h1 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight truncate">
+                {child.studentName}
+              </h1>
+            </div>
           </div>
 
-          <div className="flex flex-wrap lg:flex-col items-stretch lg:items-end gap-2.5 shrink-0">
+          {/* Top Right Actions: Kính mờ thanh lịch, không chói lóa */}
+          <div className="flex items-center gap-2.5 shrink-0">
             <button
               type="button"
               onClick={() => setShowLinkPanel((prev) => !prev)}
-              className="px-4 py-2.5 rounded-xl bg-[#FACC15] hover:bg-yellow-300 text-slate-950 text-xs font-black flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer"
+              className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-xs font-bold text-white flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs"
             >
-              <UserPlus className="w-4 h-4" />
-              <span>{showLinkPanel ? 'Đóng khung liên kết' : '+ Liên kết thêm con'}</span>
+              <UserPlus className="w-3.5 h-3.5 text-cyan-300" />
+              <span>{showLinkPanel ? 'Đóng liên kết' : '+ Liên kết con'}</span>
             </button>
 
             <button
+              type="button"
               onClick={() => loadParentPortal(true)}
               disabled={refreshing}
-              className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 border border-white/20 text-xs font-extrabold flex items-center justify-center gap-2 transition-all cursor-pointer text-white"
+              className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-xs font-bold text-white flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs"
+              title="Cập nhật số liệu mới nhất"
             >
-              <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
-              <span>Cập nhật báo cáo</span>
+              <RefreshCw className={`w-3.5 h-3.5 text-slate-200 ${refreshing ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline">Cập nhật</span>
             </button>
+          </div>
+        </div>
+
+        {/* Chuyển đổi con khi phụ huynh liên kết nhiều con */}
+        {children.length > 1 && (
+          <div className="flex flex-wrap items-center gap-2 pt-3 mt-3 border-t border-white/10">
+            <span className="text-xs text-slate-400 font-bold">Chọn con để theo dõi:</span>
+            {children.map((c, idx) => (
+              <button
+                key={c.studentId || idx}
+                onClick={() => setSelectedChildIdx(idx)}
+                className={`px-3 py-1 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
+                  idx === selectedChildIdx
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : 'bg-white/10 text-slate-300 hover:bg-white/20 hover:text-white'
+                }`}
+              >
+                {c.studentName}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Đường kẻ chia ngăn thanh lịch */}
+        <div className="border-t border-white/10 my-4" />
+
+        {/* Dải thông tin học sinh 3 cột cân đối (Không còn bị rớt dòng lộn xộn) */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {/* Cột 1: Trường THPT */}
+          <div className="rounded-2xl bg-white/5 border border-white/10 p-3.5 flex items-start gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-cyan-500/20 text-cyan-300 border border-cyan-400/20">
+              <GraduationCap className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <span className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                Trường THPT
+              </span>
+              <p
+                className="mt-0.5 text-xs sm:text-sm font-bold text-slate-100 truncate"
+                title={child.school || 'Chưa cập nhật'}
+              >
+                {child.school || 'Chưa cập nhật'}
+              </p>
+            </div>
+          </div>
+
+          {/* Cột 2: Lớp Học & Khóa Học */}
+          <div className="rounded-2xl bg-white/5 border border-white/10 p-3.5 flex items-start gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-500/20 text-amber-300 border border-amber-400/20">
+              <BookOpen className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <span className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                Khóa Học & Lớp Học
+              </span>
+              <p
+                className="mt-0.5 text-xs sm:text-sm font-bold text-slate-100 truncate"
+                title={child.grade || 'Lớp Nền tảng'}
+              >
+                {child.grade || 'Lớp Nền tảng'}
+              </p>
+            </div>
+          </div>
+
+          {/* Cột 3: Nguyện Vọng Mục Tiêu NV1 */}
+          <div className="rounded-2xl bg-white/5 border border-white/10 p-3.5 flex items-start gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-400/20">
+              <Target className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <span className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                Nguyện Vọng Mục Tiêu NV1
+              </span>
+              <p
+                className="mt-0.5 text-xs sm:text-sm font-bold text-slate-100 truncate"
+                title={child.targetMajor || 'Chưa thiết lập mục tiêu'}
+              >
+                {child.targetMajor || 'Chưa thiết lập mục tiêu'}
+              </p>
+            </div>
           </div>
         </div>
       </div>
