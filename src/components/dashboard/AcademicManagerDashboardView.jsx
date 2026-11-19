@@ -134,8 +134,11 @@ export default function AcademicManagerDashboardView({
     }
   };
 
-  // K-Means Clustering states (Section 3)
-  const [maxKInput, setMaxKInput] = useState(4);
+  // Domain-Tier Matrix Placement states (Section 3: 4 Miền x 3 Cấp bậc = 12 lớp)
+  const [foundationThresholdPct, setFoundationThresholdPct] = useState(50);
+  const [advancedThresholdPct, setAdvancedThresholdPct] = useState(75);
+  const [includeEmptyClasses, setIncludeEmptyClasses] = useState(true);
+  const [preserveExistingEnrollments, setPreserveExistingEnrollments] = useState(true);
   const [clusteringLoading, setClusteringLoading] = useState(false);
   const [clusterResult, setClusterResult] = useState(null);
   const [clusterError, setClusterError] = useState('');
@@ -770,7 +773,7 @@ export default function AcademicManagerDashboardView({
     }
   };
 
-  // Run K-Means Auto-Clustering (DryRun Simulation MGR_15 vs Official Publish MGR_09, MGR_10)
+  // Run 4-Domain x 3-Tier Matrix Placement (DryRun Preview vs Official Publish)
   const executeKMeansClustering = async (isDryRun = false) => {
     setClusterError('');
 
@@ -781,10 +784,16 @@ export default function AcademicManagerDashboardView({
       return;
     }
 
-    const kVal = Number(maxKInput);
-    const maxAllowedK = Math.max(2, Math.min(10, Math.floor(Math.max(10, totalCampusStudents) / 5)));
-    if (!Number.isInteger(kVal) || kVal < 1 || kVal > Math.max(7, maxAllowedK)) {
-      const msg = `Số lượng cụm K không hợp lệ. Vui lòng nhập số cụm K nằm trong khoảng từ 1 đến ${Math.max(7, maxAllowedK)} (đảm bảo sĩ số 5 - 20 học sinh/lớp).`;
+    const fPct = Number(foundationThresholdPct);
+    const aPct = Number(advancedThresholdPct);
+    if (!Number.isFinite(fPct) || fPct < 10 || fPct > 80) {
+      const msg = 'Ngưỡng Cơ bản phải nằm trong khoảng từ 10% đến 80%.';
+      setClusterError(msg);
+      toast.error(msg);
+      return;
+    }
+    if (!Number.isFinite(aPct) || aPct <= fPct || aPct > 95) {
+      const msg = `Ngưỡng Nâng cao phải lớn hơn ngưỡng Cơ bản (${fPct}%) và không vượt quá 95%.`;
       setClusterError(msg);
       toast.error(msg);
       return;
@@ -792,24 +801,28 @@ export default function AcademicManagerDashboardView({
 
     setClusteringLoading(true);
     try {
-      const res = await practiceService.autoClusterClasses(selectedCampus, kVal, {
+      const res = await practiceService.autoClusterClasses(selectedCampus, 12, {
         minCapacity: 5,
         maxCapacity: 20,
         dryRun: isDryRun,
-        managerCampusId: !isGlobalRole ? assignedCampusId : null
+        managerCampusId: !isGlobalRole ? assignedCampusId : null,
+        foundationThreshold: fPct / 100,
+        advancedThreshold: aPct / 100,
+        includeEmptyClasses,
+        preserveExistingEnrollments
       });
       setClusterResult(res);
       toast.success(
         res?.message ||
           (isDryRun
-            ? `Đã chạy mô phỏng xem trước (${res?.optimalK || kVal} cụm lớp đề xuất).`
-            : `Đã phê duyệt và xuất bản ${res?.optimalK || kVal} lớp chuyên đề chính thức.`)
+            ? `Đã chạy mô phỏng ma trận ${res?.optimalK || 12} lớp (4 Miền × 3 Cấp bậc).`
+            : `Đã xuất bản chính thức ${res?.optimalK || 12} lớp theo ma trận 4 Miền × 3 Cấp bậc.`)
       );
       if (!isDryRun) {
         await loadCampusOperationalData();
       }
     } catch (err) {
-      const msg = err?.data?.error?.description || err?.message || 'Không thể chạy phân cụm lớp học.';
+      const msg = err?.data?.error?.description || err?.message || 'Không thể chạy xếp lớp phân tầng.';
       setClusterError(msg);
       toast.error(msg);
     } finally {
@@ -2100,13 +2113,13 @@ export default function AcademicManagerDashboardView({
               <div className="space-y-1">
                 <h2 className="text-lg font-black text-slate-900 flex items-center gap-2">
                   <Sparkles className="w-5 h-5 text-indigo-600" />
-                  <span>Tự Động Xếp Lớp & Phân Cụm Lớp Chuyên Đề AI K-Means (5 - 20 Học Sinh / Lớp)</span>
+                  <span>Tự Động Xếp Lớp Theo Ma Trận 4 Miền × 3 Cấp Bậc (Tối Thiểu 12 Lớp)</span>
                 </h2>
                 <p className="text-xs text-slate-500 max-w-3xl">
-                  Phân tích vector năng lực 4 miền (Ngôn ngữ, Toán & Logic, KHTN, KHXH) từ bài khảo sát đầu vào 30 câu để gom học sinh có cùng lỗ hổng kiến thức vào các Lớp Chuyên Đề tại cơ sở.
+                  Dựa trên độ nắm vững kỹ năng từ bài kiểm tra đầu vào 30 câu, mỗi học sinh được phân hóa vào đúng <strong>4 lớp</strong> (1 lớp/miền kiến thức: Ngôn ngữ, Toán &amp; Logic, KHTN, KHXH) theo 3 cấp bậc <strong>Cơ bản – Tăng tốc – Nâng cao</strong> (trần 20 HS/lớp, tự tách lớp khi vượt 20 HS).
                 </p>
                 <div className="text-[11px] text-indigo-700 bg-indigo-100/70 border border-indigo-200 px-3 py-1 rounded-lg mt-1 inline-flex items-center gap-1.5 font-medium">
-                  💡 <strong>Phân biệt nghiệp vụ:</strong> Quản lý cơ sở dùng tính năng này để <u>lập Lớp Chuyên Đề mới</u> cho học sinh toàn campus (5 - 20 HS/lớp). Việc chia nhóm nhỏ vi mô (3 - 5 HS/bàn) trong một lớp cụ thể sẽ do <u>Giáo viên phụ trách lớp</u> thực hiện trên lớp học.
+                  💡 <strong>Phân tách 2 tầng sư phạm:</strong> Quản lý cơ sở xếp lớp theo <u>Ma trận 4 Miền × 3 Cấp bậc (12 lớp chuẩn)</u>. Bên trong từng lớp, <u>Giáo viên phụ trách</u> chạy AI K-Means chia nhóm bàn vi mô (3 - 5 HS/bàn) theo lỗ hổng kỹ năng chi tiết.
                 </div>
               </div>
             </div>
@@ -2118,23 +2131,52 @@ export default function AcademicManagerDashboardView({
               <div className="flex flex-wrap items-end gap-4">
                 <div>
                   <label className="block text-xs font-extrabold text-slate-800 mb-1.5">
-                    Số lượng cụm lớp tối đa (Max K):
+                    Ngưỡng Cơ bản (&lt; %):
                   </label>
                   <input
                     type="number"
-                    value={maxKInput}
-                    onChange={(e) => setMaxKInput(e.target.value)}
-                    className="w-36 px-3.5 py-2.5 rounded-xl border border-indigo-200 bg-white text-sm font-black text-slate-900"
-                    placeholder="VD: 4"
+                    min={10}
+                    max={80}
+                    value={foundationThresholdPct}
+                    onChange={(e) => setFoundationThresholdPct(e.target.value)}
+                    className="w-28 px-3 py-2 rounded-xl border border-indigo-200 bg-white text-sm font-black text-slate-900"
                   />
                 </div>
-                <div className="text-xs text-slate-600 space-y-0.5 pb-1">
+                <div>
+                  <label className="block text-xs font-extrabold text-slate-800 mb-1.5">
+                    Ngưỡng Nâng cao (&ge; %):
+                  </label>
+                  <input
+                    type="number"
+                    min={20}
+                    max={95}
+                    value={advancedThresholdPct}
+                    onChange={(e) => setAdvancedThresholdPct(e.target.value)}
+                    className="w-28 px-3 py-2 rounded-xl border border-indigo-200 bg-white text-sm font-black text-slate-900"
+                  />
+                </div>
+                <div className="text-xs text-slate-600 space-y-1 pb-0.5">
                   <div>
-                    • Ràng buộc sĩ số chuẩn: <strong>Tối thiểu 5 HS – Tối đa 20 HS / Lớp</strong>
+                    • Phân bậc: <strong className="text-rose-700">Cơ bản (&lt;{foundationThresholdPct}%)</strong> • <strong className="text-indigo-700">Tăng tốc ({foundationThresholdPct}%–{Number(advancedThresholdPct) - 1}%)</strong> • <strong className="text-emerald-700">Nâng cao (&ge;{advancedThresholdPct}%)</strong>
                   </div>
-                  <div>
-                    • Học sinh chưa hoàn thành bài kiểm tra đầu vào 30 câu sẽ tự động loại khỏi xếp cụm.
-                  </div>
+                  <label className="inline-flex items-center gap-2 cursor-pointer font-semibold text-slate-700">
+                    <input
+                      type="checkbox"
+                      checked={includeEmptyClasses}
+                      onChange={(e) => setIncludeEmptyClasses(e.target.checked)}
+                      className="rounded border-slate-300 text-indigo-600"
+                    />
+                    <span>Hiển thị &amp; khởi tạo đủ khung 12 lớp (kể cả ô lớp 0 HS)</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer font-bold text-emerald-800">
+                    <input
+                      type="checkbox"
+                      checked={preserveExistingEnrollments}
+                      onChange={(e) => setPreserveExistingEnrollments(e.target.checked)}
+                      className="rounded border-emerald-400 text-emerald-600"
+                    />
+                    <span>Chỉ xếp học sinh mới chưa có lớp (Bảo toàn 100% lớp của HS cũ)</span>
+                  </label>
                 </div>
               </div>
 
@@ -2146,7 +2188,7 @@ export default function AcademicManagerDashboardView({
                 >
                   <Sparkles className={`w-4 h-4 ${clusteringLoading ? 'animate-spin' : ''}`} />
                   <span>
-                    {clusteringLoading ? 'Đang mô phỏng...' : 'Chạy Mô Phỏng Xem Trước (Preview)'}
+                    {clusteringLoading ? 'Đang mô phỏng...' : 'Chạy Mô Phỏng Ma Trận 12 Lớp (Preview)'}
                   </span>
                 </button>
                 <button
@@ -2156,7 +2198,7 @@ export default function AcademicManagerDashboardView({
                   className="px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-extrabold flex items-center justify-center gap-2 shadow-md cursor-pointer disabled:opacity-50"
                 >
                   <CheckCircle2 className="w-4 h-4" />
-                  <span>Phê Duyệt & Xuất Bản Lớp (Approve & Publish)</span>
+                  <span>Phê Duyệt &amp; Xuất Bản 12 Lớp (Publish)</span>
                 </button>
               </div>
             </form>
@@ -2168,7 +2210,7 @@ export default function AcademicManagerDashboardView({
               </div>
             )}
 
-            {/* K-Means Result Display (MGR_09, MGR_10, MGR_11, MGR_14, MGR_15) */}
+            {/* 4-Domain x 3-Tier Matrix Result Display (12+ Classes) */}
             {clusterResult && (
               <div className="space-y-5 pt-2">
                 <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 flex flex-wrap items-center justify-between gap-3 text-xs">
@@ -2176,11 +2218,11 @@ export default function AcademicManagerDashboardView({
                     <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                     <span>
                       {clusterResult.message ||
-                        `Đã phân bổ ${clusterResult.totalStudentsClustered} học sinh vào ${clusterResult.optimalK} lớp chuyên đề tối ưu.`}
+                        `Đã phân hóa ${clusterResult.totalStudentsClustered} học sinh vào ma trận ${clusterResult.optimalK} lớp (4 Miền × 3 Cấp bậc).`}
                     </span>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
-                    {typeof clusterResult.excludedUndiagnosedCount === 'number' && (
+                    {typeof clusterResult.excludedUndiagnosedCount === 'number' && clusterResult.excludedUndiagnosedCount > 0 && (
                       <span className="px-3 py-1 rounded-full bg-amber-100 border border-amber-300 text-amber-900 font-bold">
                         Đã loại trừ {clusterResult.excludedUndiagnosedCount} HS chưa làm bài 30 câu
                       </span>
@@ -2192,83 +2234,135 @@ export default function AcademicManagerDashboardView({
                           : 'bg-white border-emerald-300 text-emerald-800'
                       }`}
                     >
-                      {clusterResult.isDryRun ? 'Chế độ Mô phỏng (DryRun)' : 'Đã Xuất Bản Chính Thức'} • Optimal K ={' '}
-                      {clusterResult.optimalK}
+                      {clusterResult.isDryRun ? 'Chế độ Mô phỏng (Preview)' : 'Đã Xuất Bản Chính Thức'} • Tổng {clusterResult.optimalK} lớp
                     </span>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  {(clusterResult.clusters || []).map((cl) => {
-                    const centroid = Array.isArray(cl.centroid) ? cl.centroid : [0.5, 0.5, 0.5, 0.5];
+                {/* 4 Rows (4 Domains) x 3 Columns (Cơ bản / Tăng tốc / Nâng cao) */}
+                <div className="space-y-4">
+                  {DOMAIN_ORDER.map((dom) => {
+                    const DomIcon = dom.icon;
+                    const domainClasses = (clusterResult.clusters || []).filter(
+                      (c) => c.domainCode === dom.code
+                    );
+                    const totalInDomain = domainClasses.reduce((acc, c) => acc + (c.studentCount || 0), 0);
+
                     return (
                       <div
-                        key={cl.classId || cl.clusterIndex}
-                        className="p-5 rounded-2xl border border-slate-200 bg-slate-50/70 space-y-4"
+                        key={dom.code}
+                        className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-xs"
                       >
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <span className="px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-800 text-[10px] font-black uppercase">
-                              Cụm #{cl.clusterIndex + 1} • {cl.domainCode || '4 Miền'}
-                            </span>
-                            <h3 className="text-sm font-black text-slate-900 mt-1">{cl.className}</h3>
-                            {Array.isArray(cl.dominantWeakDomains) && cl.dominantWeakDomains.length > 0 && (
-                              <p className="text-[11px] text-rose-700 font-semibold mt-0.5">
-                                Miền cần bù đắp: {cl.dominantWeakDomains.join(', ')}
-                              </p>
-                            )}
+                        <div className="px-4 py-3 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <div className="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center">
+                              <DomIcon className="w-4 h-4" />
+                            </div>
+                            <div>
+                              <h3 className="text-sm font-black text-slate-900">{dom.name}</h3>
+                              <span className="text-[10px] font-bold text-slate-500 uppercase">{dom.code}</span>
+                            </div>
                           </div>
-                          <span className="px-3 py-1 rounded-xl bg-white border border-slate-200 text-xs font-black text-blue-700 shrink-0">
-                            {cl.studentCount}/20 HS
+                          <span className="text-xs font-extrabold text-indigo-700 bg-indigo-50 border border-indigo-200 px-3 py-1 rounded-full">
+                            {domainClasses.length} lớp • {totalInDomain} lượt xếp lớp
                           </span>
                         </div>
 
-                        {/* 4-Domain Centroid Bars (MGR_14) */}
-                        <div className="space-y-2 bg-white p-3.5 rounded-xl border border-slate-200/80">
-                          <div className="text-[11px] font-extrabold text-slate-700">
-                            Hồ sơ năng lực tâm cụm 4 miền (Centroid Profile):
-                          </div>
-                          {DOMAIN_ORDER.map((dom, dIdx) => {
-                            const pct = normalizeMasteryPct(centroid[dIdx] ?? 0.5);
+                        <div className="p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+                          {domainClasses.map((cl) => {
+                            const tierCode = cl.tierCode || 'ACCELERATED';
+                            const tierStyle =
+                              tierCode === 'FOUNDATION'
+                                ? {
+                                    badge: 'bg-rose-100 text-rose-800 border-rose-200',
+                                    bar: 'bg-rose-500',
+                                    border: 'border-rose-200/80 bg-rose-50/30'
+                                  }
+                                : tierCode === 'ADVANCED'
+                                  ? {
+                                      badge: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+                                      bar: 'bg-emerald-500',
+                                      border: 'border-emerald-200/80 bg-emerald-50/30'
+                                    }
+                                  : {
+                                      badge: 'bg-indigo-100 text-indigo-800 border-indigo-200',
+                                      bar: 'bg-indigo-500',
+                                      border: 'border-indigo-200/80 bg-indigo-50/30'
+                                    };
+
+                            const avgPct = normalizeMasteryPct(cl.averageDomainMastery ?? 0);
+                            const statusMeta =
+                              cl.classStatus === 'READY'
+                                ? { label: 'Đủ điều kiện mở lớp', cls: 'bg-emerald-100 text-emerald-800' }
+                                : cl.classStatus === 'PENDING_MIN_CAPACITY'
+                                  ? { label: 'Đang gom lớp (< 5 HS)', cls: 'bg-amber-100 text-amber-800' }
+                                  : { label: 'Chưa có HS (0 HS)', cls: 'bg-slate-100 text-slate-500' };
+
                             return (
-                              <div key={dom.code} className="space-y-1">
-                                <div className="flex justify-between text-[11px] font-semibold">
-                                  <span className="text-slate-600">{dom.name}</span>
-                                  <span className="font-bold text-slate-900">{pct}%</span>
+                              <div
+                                key={cl.classId && cl.classId !== '00000000-0000-0000-0000-000000000000' ? cl.classId : `${dom.code}-${cl.clusterIndex}`}
+                                className={`p-4 rounded-xl border space-y-3 flex flex-col justify-between ${tierStyle.border}`}
+                              >
+                                <div className="space-y-2">
+                                  <div className="flex items-start justify-between gap-2">
+                                    <span className={`px-2 py-0.5 rounded-md border text-[10px] font-black uppercase ${tierStyle.badge}`}>
+                                      {cl.tierName || tierCode}
+                                    </span>
+                                    <div className="flex items-center gap-1.5">
+                                      {cl.newStudentsAssignedCount > 0 && (
+                                        <span className="px-2 py-0.5 rounded-lg bg-emerald-600 text-white text-[10px] font-black">
+                                          +{cl.newStudentsAssignedCount} mới
+                                        </span>
+                                      )}
+                                      <span className="px-2.5 py-0.5 rounded-lg bg-white border border-slate-200 text-xs font-black text-blue-700">
+                                        {cl.studentCount}/20 HS
+                                      </span>
+                                    </div>
+                                  </div>
+
+                                  <h4 className="text-xs font-black text-slate-900 leading-snug">
+                                    {cl.className}
+                                  </h4>
+
+                                  <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold ${statusMeta.cls}`}>
+                                    {statusMeta.label}
+                                  </span>
+
+                                  <div className="bg-white/90 p-2.5 rounded-lg border border-slate-200/70 space-y-1">
+                                    <div className="flex justify-between text-[11px] font-semibold">
+                                      <span className="text-slate-600">Độ nắm vững TB miền:</span>
+                                      <span className="font-black text-slate-900">
+                                        {cl.studentCount > 0 ? `${avgPct}%` : '—'}
+                                      </span>
+                                    </div>
+                                    <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                                      <div
+                                        className={`h-full rounded-full ${tierStyle.bar}`}
+                                        style={{ width: `${cl.studentCount > 0 ? avgPct : 0}%` }}
+                                      />
+                                    </div>
+                                  </div>
                                 </div>
-                                <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                                  <div
-                                    className={`h-full rounded-full ${
-                                      pct < 55 ? 'bg-rose-500' : pct < 70 ? 'bg-amber-500' : 'bg-emerald-500'
-                                    }`}
-                                    style={{ width: `${pct}%` }}
-                                  />
-                                </div>
+
+                                {cl.classId && cl.classId !== '00000000-0000-0000-0000-000000000000' && (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      handleOpenAssignModal({
+                                        classId: cl.classId,
+                                        name: cl.className,
+                                        campusId: selectedCampus,
+                                        teacherId: null
+                                      })
+                                    }
+                                    className="w-full px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-extrabold cursor-pointer transition-colors"
+                                  >
+                                    Gán Giáo Viên Phụ Trách
+                                  </button>
+                                )}
                               </div>
                             );
                           })}
-                        </div>
-
-                        <div className="flex items-center justify-between pt-2">
-                          <span className="text-[11px] text-slate-500">
-                            WCSS: <strong>{cl.wcss}</strong>
-                          </span>
-                          {cl.classId && (
-                            <button
-                              type="button"
-                              onClick={() =>
-                                handleOpenAssignModal({
-                                  classId: cl.classId,
-                                  name: cl.className,
-                                  campusId: selectedCampus,
-                                  teacherId: null
-                                })
-                              }
-                              className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold cursor-pointer"
-                            >
-                              Gán Giáo Viên Phụ Trách
-                            </button>
-                          )}
                         </div>
                       </div>
                     );

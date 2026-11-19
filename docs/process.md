@@ -817,4 +817,5 @@ Validation: build and lint pass with existing warnings; live API integration rem
 | **Truy vấn họ tên học sinh thực tế & Khử trùng lặp cảnh báo (Zero Hardcode)** | `EarlyWarningsMentorPanel.jsx` | 🟢 Hoàn thành | Tích hợp `userService.getUsers` động từ Identity REST API; hiển thị họ tên đầy đủ từ DB; `seenAlerts` khử trùng lặp các thẻ cảnh báo giống nhau cho cùng học sinh. |
 | **Khóa chặt cơ sở phụ trách RBAC** | `AcademicManagerDashboardView.jsx` | 🟢 Hoàn thành | Huy hiệu Locked Badge với biểu tượng `Lock` và `ShieldCheck` cố định theo `currentUser.campusId`. |
 | **Nút nạp đợt học / khóa học mẫu** | `AcademicManagerDashboardView.jsx` | 🟢 Hoàn thành | Nút nạp mẫu rỗng và nút điền mẫu trong modal tạo mới giúp kiểm thử 1-click. |
-| **Biên dịch Web Client** | Toàn bộ ứng dụng | 🟢 Hoàn thành | `npm run build` đạt `✓ built in 1.75s` với 3054 modules sạch 100%, 0 lỗi. |
+| **Biên dịch Web Client** | Toàn bộ ứng dụng | 🟢 Hoàn thành | `npm run build` đạt `✓ built in 2.13s` với 3054 modules sạch 100%, 0 lỗi. |
+| **Giao diện Xếp lớp Ma trận 4 Miền × 3 Cấp bậc (12 Lớp)** | `AcademicManagerDashboardView.jsx`, `practiceService.js` | 🟢 Hoàn thành | Cấu hình ngưỡng Cơ bản / Nâng cao trực quan, render ma trận 4 hàng × 3 cột (12 lớp chuẩn) kèm trạng thái sĩ số và nút Gán GV trực tiếp. |

@@ -1851,23 +1851,33 @@ export const practiceService = {
 
   async autoClusterClasses(
     campusId,
-    maxK = 6,
-    { minCapacity = 5, maxCapacity = 20, dryRun = false, managerCampusId = null } = {}
+    maxK = 12,
+    {
+      minCapacity = 5,
+      maxCapacity = 20,
+      dryRun = false,
+      managerCampusId = null,
+      foundationThreshold = 0.50,
+      advancedThreshold = 0.75,
+      includeEmptyClasses = true,
+      preserveExistingEnrollments = true
+    } = {}
   ) {
     if (!campusId || !GUID_REGEX.test(String(campusId).trim())) {
-      throw new Error('Vui lòng chọn cơ sở hợp lệ để chạy phân cụm.');
+      throw new Error('Vui lòng chọn cơ sở hợp lệ để chạy xếp lớp.');
     }
-    const parsedK = Number(maxK);
-    if (!Number.isInteger(parsedK) || parsedK < 2) {
-      throw new Error('Số lượng cụm K tối đa phải là số nguyên từ 2 trở lên.');
-    }
+    const parsedK = Number(maxK) || 12;
     const res = await apiClient.post('/api/practice/classes/auto-cluster', {
       campusId: String(campusId).trim(),
       maxK: parsedK,
       minCapacity: Number(minCapacity || 5),
       maxCapacity: Number(maxCapacity || 20),
       dryRun: Boolean(dryRun),
-      managerCampusId: managerCampusId && GUID_REGEX.test(String(managerCampusId).trim()) ? String(managerCampusId).trim() : undefined
+      managerCampusId: managerCampusId && GUID_REGEX.test(String(managerCampusId).trim()) ? String(managerCampusId).trim() : undefined,
+      foundationThreshold: Number(foundationThreshold || 0.50),
+      advancedThreshold: Number(advancedThreshold || 0.75),
+      includeEmptyClasses: Boolean(includeEmptyClasses),
+      preserveExistingEnrollments: Boolean(preserveExistingEnrollments)
     });
     return res.data?.value || res.data?.data || res.data;
   },
