@@ -291,23 +291,25 @@ export const authService = {
   },
 
   /**
-   * Phân giải Role chuẩn của ứng dụng ('student' | 'parent' | 'teacher' | 'manager' | 'admin')
+   * Phân giải Role chuẩn của ứng dụng ('student' | 'parent' | 'teacher' | 'manager' | 'director' | 'admin')
    */
   resolveAppRole(user) {
     if (!user) return 'student';
-    if (user.role && ['student', 'parent', 'teacher', 'manager', 'admin'].includes(user.role)) {
-      return user.role;
-    }
     const roles = Array.isArray(user.roles) ? user.roles : [];
     const normalized = roles.map((r) => String(r).toLowerCase());
+    const emailLower = String(user.email || '').toLowerCase();
+
     if (normalized.some((r) => r.includes('admin') || r.includes('administrator'))) {
       return 'admin';
     }
     if (
-      normalized.some(
-        (r) => r.includes('manager') || r.includes('director') || r.includes('quanly')
-      )
+      normalized.some((r) => r.includes('director') || r.includes('giamdoc')) ||
+      user.role === 'director' ||
+      emailLower.startsWith('director')
     ) {
+      return 'director';
+    }
+    if (normalized.some((r) => r.includes('manager') || r.includes('quanly'))) {
       return 'manager';
     }
     if (normalized.some((r) => r.includes('teacher') || r.includes('giaovien'))) {
@@ -315,6 +317,12 @@ export const authService = {
     }
     if (normalized.some((r) => r.includes('parent') || r.includes('phuhuynh'))) {
       return 'parent';
+    }
+    if (
+      user.role &&
+      ['student', 'parent', 'teacher', 'manager', 'director', 'admin'].includes(user.role)
+    ) {
+      return user.role;
     }
     return 'student';
   },

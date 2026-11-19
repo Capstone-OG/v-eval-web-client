@@ -123,7 +123,7 @@ export default function StudentEarlyWarningsCard({ studentId }) {
             Nhắc Nhở Ôn Tập & Lời Khuyên Từ Giáo Viên Cố Vấn
           </h3>
           <p className="text-xs text-slate-500">
-            Theo dõi sát tiến độ học tập hằng tuần để nhắc bạn ôn bài đúng lúc và điều chỉnh kế hoạch học phù hợp.
+            Theo dõi sát tiến độ học tập hằng tuần để đồng hành, nhắc nhở con ôn bài đúng lúc và điều chỉnh kế hoạch học tập kịp thời.
           </p>
         </div>
 
@@ -171,7 +171,7 @@ export default function StudentEarlyWarningsCard({ studentId }) {
         </div>
       ) : alerts.length === 0 ? (
         <div className="p-6 rounded-2xl bg-slate-50 border border-slate-200 text-center text-xs text-slate-500 font-semibold">
-          Không có nhắc nhở nào ở mục này. Bạn đang duy trì nhịp độ học tập rất tốt!
+          Không có nhắc nhở nào ở mục này. Con đang duy trì nhịp độ học tập rất tốt!
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

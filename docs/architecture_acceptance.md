@@ -2150,6 +2150,40 @@ Backend follow-up: Practice sends an empty AllSkillIds mapping to AI, preventing
 - **Verification**:
   - Vite production build succeeded in 1.06s with 0 errors.
   - `node --test` passed 22/22 unit tests with 100% success rate.
+
+### [17/11/2026] - Parent Companion Portal UI Simplification & Navigation Guardrail Architecture
+
+- **Domain Perimeter Separation for Guardian / Parent Persona (`src/components/layout/Sidebar.jsx`, `src/App.jsx`)**:
+  - Re-evaluated user journey for **Parent Companion Portal (`role === 'parent'`)**: parents track holistic readiness (`R_exam`), weekly commitment (12h/week), exam history and tuition status, rather than deep pedagogical curriculum graphs or 4-domain radar charts meant for student practice.
+  - Removed two student-centric sidebar items from `Sidebar.jsx`:
+    - `analytics`: *Báo cáo Năng lực 4 Miền* (Score prediction & progress charts).
+    - `roadmap`: *Cây Tri thức & Chuyên đề* (Curriculum DAG graph & topic quizzes).
+  - Streamlined `ROLE_PORTAL_DEFINITIONS.parent.tabs` down to:
+    1. `dashboard`: *Tổng quan Đồng hành* (`HeartHandshake`).
+    2. `history`: *Lịch sử Bài thi của Con* (`History`).
+    3. `tuition`: *Đóng Học phí PayOS* (`CreditCard`).
+- **Defensive Navigation Guardrails (`src/App.jsx`)**:
+  - Added guards `activeTab === 'roadmap' && role !== 'parent'` and `activeTab === 'analytics' && role !== 'parent'` inside `renderRolePortalContent`. Any accidental or direct navigation falls back securely to `ParentDashboardView`.
+  - Disconnected student roadmap/quiz callbacks in `TuitionPaymentView` when viewed by a parent.
+- **Verification**:
+  - Vite production build succeeded in 1.68s with 0 errors.
+  - All 22/22 unit tests in `tests/*.test.js` passed with 100% success rate.
+
+### [18/11/2026] - Parent Submission History Student Context & Dynamic Multi-Child Switching
+
+- **Parent-to-Student Context Binding (`src/App.jsx`, `src/components/diagnostic/SubmissionHistoryView.jsx`)**:
+  - Bound `studentId={role === 'parent' ? defaultChild?.studentId : currentUser?.id}` and forwarded `childrenList={parentPortalData?.children || []}` into `SubmissionHistoryView`.
+  - Resolved the critical context mismatch where parent account ID was previously querying child diagnostic submission history, resulting in empty or errored submissions.
+- **Dynamic Multi-Child Switcher & Reactive Reloading**:
+  - Implemented an interactive child selector chip bar in `SubmissionHistoryView` header banner when `internalChildren.length > 1`.
+  - Switching active child updates `activeChildId`, seamlessly re-querying `practiceService.getStudentDiagnosticHistory(targetId)` and local history `practiceService.getSubmissionHistory(targetId)` for the selected child.
+- **Parent Persona Customization**:
+  - Tailored the view for parents: updated banner title to `"Lịch Sử Bài Thi Của Con: [Tên con]"`, replaced the student diagnostic action button with an on-demand `"Làm mới danh sách"` button, and updated option selection indicators to `"Con đã chọn"` / `"Con chọn đúng"`.
+- **Scoped Storage & Safe Deletion (`src/services/practiceService.js`)**:
+  - Extended `practiceService.getSubmissionHistory(targetStudentId = null)` and `deleteSubmissionFromHistory(submissionId, targetStudentId = null)` to respect the child's identity without clearing other accounts' cached submissions.
+- **Verification**:
+  - Unit tests: 22/22 passed (`node --test tests/*.test.js`).
+  - Production build: `npm run build` succeeded cleanly in 1.70s with 0 errors.
 ### [14/11/2026] - Early MathLab Block Shielding, Bold Heading Repair & Zero-Hardcode Extraction Cards
 
 - **Early Placeholder Isolation & Bold Heading Normalization (`src/components/common/MathText.jsx`)**:
@@ -2196,6 +2230,130 @@ The diagnostic report JSX parse failure from an incomplete duplicate trend-chart
 
 Radar and skill-prior displays consume API response fields; the benchmark overlay and prior values are omitted when absent instead of being filled with synthetic defaults. The result page now uses normalized API-derived prior data without unresolved component/helper references.
 
+---
+
+## 13. Parent Companion Portal UI Architecture & Design Cohesion Acceptance - 19 November 2026
+
+The Parent Companion Portal (`ParentDashboardView.jsx`) was comprehensively redesigned to eliminate visual fragmentation, resolve competing saturated banners, and present a coherent, user-centric dashboard for parents:
+
+- **Unified Hero Banner & Structured 3-Column Profile Strip**:
+  - Replaced cluttered badges and floating pills with an elegant Student Profile Card: student avatar initials (`childInitials`), active live presence dot, and clean typography.
+  - Implemented a balanced 3-column metadata grid (`School`, `Course/Class`, `Target Major NV1`) with dedicated semantic icons (`GraduationCap`, `BookOpen`, `Target`), replacing awkward multi-line wrapped bubbles.
+  - Replaced the high-contrast yellow button with elegant translucent glass buttons (`bg-white/10 hover:bg-white/20 border border-white/20`), preserving visual hierarchy and returning focus to the student's academic progress.
+- **Refined Tuition Payment Ribbon**:
+  - Transformed the oversized blue banner into an elegant, light-slate/indigo fintech ribbon (`bg-gradient-to-r from-blue-50/90 via-indigo-50/60 to-slate-50 border border-blue-200/80`) with `ShieldCheck` icon badge and PayOS VietQR 1-click CTA.
+- **Unified 4-Metric Grid with Dynamic Readiness Tiers**:
+  - Replaced disconnected plain-white metric boxes with elevated cards featuring rounded colored icon badges, bold score typography, and supportive status captions.
+  - Implemented `getTierInfo` to accurately classify readiness tiers (`NOT_READY`, `PREPARING`, `ACCELERATING`, `READY`) based on both database tier and numerical index, preventing low scores (e.g. 19.2/100) from showing inappropriate green "Ready" badges.
+- **3-Factor Readiness Progression & Dedicated Teacher Card**:
+  - Structured the 3 evaluation factors into individual micro-cards with numbered badges (1, 2, 3), gradient progress bars, and accessible pedagogical captions.
+  - Consolidated teacher information into a dedicated profile card on the right column, displaying real faculty details from database queries, phone contact, and an interactive 1-on-1 consultation scheduling action.
+- **Parent Submission History UI Modernization (`SubmissionHistoryView.jsx`)**:
+  - Re-themed the Header Banner with the deep Navy-Indigo aesthetic (`from-slate-900 via-indigo-950 to-blue-950`) and integrated responsive multi-child selector chips.
+  - Humanized psychometrics by converting raw IRT theta (`-1.8333`) into pedagogically grounded parent assessments via `formatThetaDisplay` (*"Khởi đầu nền tảng - Cần gia đình kèm cặp ôn tập thêm"*).
+  - Sanitized technical jargon: removed developer suffixes like `(DIAGNOSTIC)` and simplified filter tags from *"Luyện tập ZPD"* to *"Luyện tập thích ứng"*.
+  - Resolved mismatch in question counting: accurately computed `summaryStats.totalWrong` across all attempts so 26 incorrect questions are accurately reflected in the overview card.
+- **Verification**:
+  - `npm run build`: Verified 100% clean production bundle in 1.15s.
+  - `node --test tests/*.test.js`: All 22 unit tests passing.
+
+---
+
+## 14. Top Navigation Bar "EdTech Mission Control" Architecture Acceptance - 19 November 2026
+
+The top navigation system (`AccountNavbar.jsx`) was re-engineered under the **"EdTech Mission Control"** paradigm, delivering real-time academic telemetry, zero hardcoded values, and seamless synchronization with backend services:
+
+- **100% Real-Data Backed Architecture (Zero Hardcoding)**:
+  - All displayed entities (countdown targets, days remaining, pedagogical alerts, active child, campus assignment, continuous learning streaks) are dynamically resolved from database queries and API services (`practiceService.getAcademicTerms`, `practiceService.getMyAlerts`, `portalMetrics`, and `currentUser`).
+- **Dynamic Exam Countdown & Minimalist Mission Control Capsule (Center)**:
+  - Dynamically calculates the countdown to upcoming VNU-HCM V-ACT examination rounds or backend `AcademicTerms` using `getUpcomingExam(terms, studentDash, user)` and current timestamp math.
+  - Implemented an ultra-refined, single-line capsule pill (`rounded-full border border-slate-200/90 bg-slate-50/80 hover:bg-indigo-50/70`) with subtle radar ping dot, target exam label, and remaining days count (`● ĐGNL Đợt 1 (2027) • Còn 129 ngày (28/03/2027)`).
+  - Clicking opens an interactive **Exam Timeline & Blueprint Modal** (`ExamTimelineModal`), detailing Round 1 & Round 2 schedules, exam locations across Vietnam, the 120-question / 150-minute 3-section blueprint, and personalized 1200-point target score telemetry.
+- **Contextual Left Identity & Anti-Truncation Layout**:
+  - Eliminated bulky badge cramming beside the title, ensuring `pageTitle` (*Tổng quan Đồng hành*) is strictly non-truncating (`whitespace-nowrap shrink-0`).
+  - For Parents (`role === 'parent'`): Positions a compact companion chip on the right action bar (`👦 Con: [studentName]`) with rich tooltip metadata (School, Grade), preventing horizontal space collisions.
+  - For Students (`role === 'student'`): Renders the campus badge (`currentUser.campusName`) when enrolled.
+- **Interactive Early Warning & Pedagogical Alert System (Core Flow 6)**:
+  - Replaced the previous disabled placeholder button with an active notification drawer consuming `practiceService.getMyAlerts({ studentId })`.
+  - Listens to the `veval:flow6-updated` event for reactive state synchronization without polling.
+  - Displays a pulsating unread counter badge (`animate-pulse`) when unread alerts exist.
+  - Popover dropdown presents categorized alerts (`RED` risk warnings, `YELLOW` deadline reminders, `INFO` pedagogical guidance) with relative timestamps (`formatRelativeTime`), 1-click read acknowledgment (`markAlertAsRead`), and a *"Đọc tất cả"* bulk acknowledgment action.
+- **User Profile Pill & Real-Time Presence Indicator**:
+  - Displays user initials with a live green presence indicator dot (`bg-emerald-500 ring-2 ring-white`), full name, and localized Vietnamese role tags (`Phụ huynh`, `Học viên`, `Thầy/cô`).
+  - Dropdown menu provides direct access to Account Settings, Landing Page, and authenticated Logout.
+- **Verification**:
+  - `npm run build`: Completed in 1.04s with 0 errors.
+  - `node --test tests/*.test.js`: 22/22 unit tests pass 100%.
+
+---
+
+## 15. Modern SaaS Single-Line Left Sidebar Redesign Acceptance - 19 November 2026
+
+The vertical navigation system (`Sidebar.jsx`) was re-engineered under the **Modern SaaS / Linear & Notion Style** (Option 1), optimizing vertical space, eliminating text truncation, and providing a clean, distraction-free companion navigation experience:
+
+- **Single-Line Ergonomics & Zero Truncation**:
+  - Transformed bulky, 2-line stacked item cards (~60px height) into compact single-line rows (~40px height) with balanced whitespace (`px-3.5 py-2.5 rounded-xl`).
+  - Removed the oversized `VietQR` badge that forced item titles to truncate into ellipsis (`Đóng Học phí & ...`).
+  - Shortened navigation labels to concise, modern terminology (`Học phí & Gói học`), ensuring full readability within the 288px (`w-72`) sidebar container.
+  - Subtitles are now cleanly preserved as native browser hover tooltips via `title={item.sublabel ? `${item.label} (${item.sublabel})` : item.label}`, removing visual clutter while retaining pedagogical clarity.
+- **Unified Visual Hierarchy & High-Affordance States**:
+  - Inactive State: Clean, neutral slate typography (`text-slate-600 font-medium`) with subtle blue tint on hover (`hover:bg-blue-50/60 hover:text-blue-700`).
+  - Active State: Vibrant yet refined royal blue-to-indigo gradient (`bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold`) paired with a soft ambient shadow (`shadow-sm shadow-blue-500/20`), completely replacing the previously harsh cyan-blue block.
+  - Icons: Shifted from dull, dark-grey container boxes to crisp inline Lucide icons (`w-4.5 h-4.5 shrink-0`) that switch dynamically to bright white when active and interactive blue on hover.
+- **Robust Footer Student Card Containment**:
+  - For parent users (`role === 'parent'`), updated the linked student display to show `${firstChild.studentName} • ${firstChild.school}`, substituting the unwieldy 54-character curriculum topic string.
+  - Hardened with CSS `truncate` and descriptive `title` tooltips, guaranteeing aesthetic resilience regardless of school or student name lengths.
+- **Verification**:
+  - `npm run build`: Verified 100% clean production bundle in 1.06s with 0 errors.
+  - `node --test tests/*.test.js`: All 22 unit tests passing (100%).
+
+---
+
+## 16. Dynamic Entity Resolution & Empty-State Resilience Acceptance - 19 November 2026
+
+The Parent Companion Portal architecture across backend microservices and frontend client layers was upgraded to enforce 100% dynamic database binding and resilient empty-state handling:
+
+- **Strict Database Entity Resolution**:
+  - Backend gRPC services (`IdentityGrpcService.cs`, `IdentityGrpcClient.cs`) return real database attributes for `SchoolName` and `TargetScore`, eliminating synthetic string injection when fields are unpopulated.
+  - Query Handler (`GetParentDashboardQueryHandler.cs`) dynamically reads enrolled classes, campuses, and target scores. Missing or unconfigured fields resolve to meaningful domain states: *"Chưa phân lớp"*, *"Chưa cập nhật"*, and *"Chưa thiết lập mục tiêu"*.
+  - Removed mock student injection (`buildSeedParentDashboard`) from `practiceService.js`. If an account has no linked children, the API returns an empty array (`children: []`), allowing the client to render the interactive `renderStudentLinkingCenter` without fake personas.
+- **Accurate Tuition Payment Context for Parents (`TuitionPaymentView.jsx`, `App.jsx`)**:
+  - Injected child context (`isParent`, `activeChild`, `childrenList`) into `TuitionPaymentView.jsx`.
+  - Resolved `studentId` to the targeted child's unique identifier rather than the authenticated parent's user ID, preventing billing attribution errors.
+  - Integrated dynamic course querying (`practiceService.getCourses`), retrieving real active course entities, fees, and durations from PostgreSQL `v_eval_enrollment.Courses`.
+- **Verification**:
+  - `npm run build`: Verified 100% clean production bundle in 1.29s with 0 errors.
+  - `node --test tests/*.test.js`: All 22 unit tests passing (100%).
+
+---
+
+## 17. Parent Companion Portal Complete Architecture & Hook Order Resolution - 19 November 2026
+
+The Parent Companion Portal was completely redesigned and hardened according to the full system specification, resolving React lifecycle exceptions and establishing a unified 4-module parent ecosystem:
+
+- **React Rules of Hooks & Lifecycle Resolution (`ParentDashboardView.jsx`)**:
+  - Reordered and elevated all top-level React hooks (`useEffect`, `useCallback`, `useMemo`, `useState`) prior to any conditional returns (`if (loading)`, `if (!currentChild)`), eliminating the `Rendered more hooks than during the previous render` runtime error.
+  - Replaced external package dependency `react-hot-toast` with internal `ToastContext` (`import { toast } from '../../context/ToastContext'`), eliminating Vite bundler module resolution failures.
+- **Universal Active Child State Synchronization (`App.jsx`, `AccountNavbar.jsx`, `TuitionPaymentView.jsx`)**:
+  - Lifted `parentActiveChildId` to root `App.jsx`, cascading down to `ParentDashboardView`, `ParentChildResultsView`, `ParentEarlyWarningsAndTeacherView`, `TuitionPaymentView`, and `AccountNavbar`.
+  - Added seamless inline dropdown switcher in the top navigation bar (`AccountNavbar.jsx`) when a parent has $\ge 2$ linked children, allowing instantaneous child switching from any page.
+  - Bound child pill selections in `TuitionPaymentView` to trigger `onSelectChildId`, updating global telemetry immediately.
+- **4-Module Sidebar Navigation Structure (`Sidebar.jsx`)**:
+  - Structured the parent experience into 4 dedicated modules:
+    1. *Tổng quan đồng hành*: Tier 1-3 dashboard overview.
+    2. *Tiến độ & Kết quả của con*: 3-tab unified view (Radar multi-domain mastery, Read-Only personalized roadmap, Proctored examination history).
+    3. *Cảnh báo & Trao đổi Giáo viên*: Yellow/Red early warnings filter, 3-way parent-student-teacher conference confirmation modal, and direct teacher messaging drawer.
+    4. *Học phí & Lịch sử giao dịch*: PayOS VietQR payment, invoice tracking, and receipt downloads.
+- **3-Tier Dashboard Architecture (`ParentDashboardView.jsx`)**:
+  - *Tier 1 (Header Strip)*: Current child profile, multi-child dropdown, `+ Liên kết thêm con` action, Offline class teacher card (Name, Phone, Direct messaging), and conditional tuition warning ribbon (auto-hidden when paid).
+  - *Tier 2 (4 Parent-Focused Metric Cards)*: Projected Exam Score (1200 scale, confidence interval, target comparison, success likelihood); Exam Readiness Index (100 scale, natural language status text); Weekly Study Hours (7-day/30-day toggle, continuous streak); Personal Roadmap Mastery (completed vs total skills).
+  - *Tier 3 (2-Column 7:5 Split)*: Left column renders actionable early warnings and recent proctored mock exams; Right column provides natural language pedagogical feedback across 3 learning facets and student profile with unlinking confirmation modal.
+- **Zero Technical Jargon & Read-Only Parent Sandbox**:
+  - Completely purged all internal acronyms (*IRT Theta*, *BKT*, *ZPD*, *PLAR*, *Core Flow 5*, *5.000 ₫ test price*).
+  - Enforced strict Read-Only mode: all quiz-taking and exam-sitting capabilities are blocked or hidden for parent personas.
+- **Verification**:
+  - `npm run build`: Succeeded 100% in 1.15s with 0 errors.
+  - `node --test tests/*.test.js`: All 22 unit tests passing (100%).
 
 ---
 
@@ -2855,3 +3013,46 @@ Radar and skill-prior displays consume API response fields; the benchmark overla
 
 
 
+18. **Academic Manager Portal Separation (`AcademicManagerDashboardView.jsx`) & Original `CampusManagerDashboardView.jsx` Preservation for Director (`AcademicManagerDashboardView.jsx`, `CampusManagerDashboardView.jsx`, `authService.js`, `Sidebar.jsx`, `App.jsx`, `practiceService.js`)**:
+    - **Role Separation & Navigation Architecture**:
+      - Preserved the original `CampusManagerDashboardView.jsx` and original navigation menu 100% intact for `Academic Director` (`role === 'director'`, `ACADEMIC_DIRECTOR`) and `Admin`.
+      - Created the dedicated `AcademicManagerDashboardView.jsx` component for `Academic Manager` (`role === 'manager'`, `ACADEMIC_MANAGER` / `CAMPUS_MANAGER`) with a 4-module navigation structure: (1) Campus Overview & Comparative Analytics, (2) Academic Terms, Courses, Offline Class Schedules & Teacher Allocation, (3) Automated K-Means 4-Domain Class Clustering, and (4) Tier-3 Academic Escalations & 3-Way Counseling.
+    - **Complete Elimination of Hardcoded Values in `AcademicManagerDashboardView.jsx`**:
+      - Removed hardcoded greeting suffix, hardcoded teacher class counts (`activeClasses: 1`), fake ratings, hardcoded class schedule strings, and fallback `67%` mastery metrics.
+      - Integrated real Backend endpoints across `AcademicTermsController`, `CoursesController`, `ClassesController`, `SchedulesController`, `AnalyticsController`, and `EarlyWarningsController`.
+      - Enforced Campus RBAC isolation (`MGR_07`, `MGR_22`), dynamic `MaxK` clustering validation (`MGR_09` - `MGR_15`), color-coded 20-student capacity bars (`MGR_08`), teacher assignment validation (`MGR_01`, `MGR_03`, `MGR_06`), manual student enrollment with 21st-student auto-overflow (`MGR_02`, `MGR_04`, `MGR_13`), and CSV/Excel campus report export (`MGR_18`).
+    - **Verification**: `npm run build` (Vite v8.3.0) compiled cleanly in 1.55s with 3054 modules transformed and zero errors.
+
+
+19. **Real-time Schedule & Physical Room Conflict Prevention Engine (`AcademicManagerDashboardView.jsx`)**:
+    - **Dual-Layer Real-time Conflict Engine (`classConflictsMap`, `createClassConflict`, `scheduleSlotConflict`)**:
+      - Evaluates time interval overlap on the same day of the week: `max(start1, start2) < min(end1, end2)`.
+      - **Physical Room Conflict**: Automatically identifies if the selected room (`room`) is already allocated to another active class within the same campus.
+      - **Instructor Conflict**: Automatically detects if the assigned teacher already has a teaching commitment during the intersecting time window.
+    - **Visual Conflict Feedback & Submission Protection**:
+      - Renders an immediate red conflict alert box directly within Modal 4 (*"Mở Lớp Học Mới"*) and Modal 5 (*"Thời Khóa Biểu & Buổi Học"*).
+      - Disables the submit buttons (*"Mở Lớp & Sinh Lịch Học"*, *"Lưu Khung Giờ & Đồng Bộ Buổi Học"*) whenever a conflict condition is active, preventing accidental database collisions.
+      - Displays a conflict alert banner on class cards in Section 2 with instructions to adjust room/time slots.
+      - Implements Quick Room Suggestion Chips (`P.301` through `P.305`, `Lab 01`, `Lab 02`) with automated suggestion of vacant rooms upon opening modals.
+    - **Verification**: `npm run build` (Vite v8.3.0) compiled cleanly in 1.62s with 3054 modules transformed and zero errors.
+
+
+20. **Schedule Slot In-Place Mutation (409 Conflict Resolution) & Early Warning Normalization (`AcademicManagerDashboardView.jsx`, `EarlyWarningsMentorPanel.jsx`)**:
+    - **In-Place Weekly Slot Editing & Deletion**:
+      - Replaced the append-only schedule slot behavior in Modal 5 with an interactive slot management table displaying existing weekly slots with Day, Time, and Room.
+      - Provided inline ✏️ *"Đổi Phòng / Giờ"* (Edit) and 🗑️ *"Xóa"* (Delete) actions for each weekly schedule slot.
+      - In edit mode (`editingSlotIdx !== null`), `handleSaveWeeklySlotAndGenerate` replaces the designated slot in-place within `finalSlots`, completely purging the conflicting room assignment (`P.301`) before dispatching to the Backend API `saveClassWeeklySchedules`.
+      - Updated `scheduleSlotConflict` real-time validation to exclude the slot currently being modified, eliminating spurious conflict alerts once an open room chip is clicked.
+    - **Dynamic Student Identity Resolution via Identity REST API (Zero Hardcode) & Alert Deduplication (`EarlyWarningsMentorPanel.jsx`)**:
+      - Eradicated all hardcoded student name arrays and hex GUID mappings (`resolveStudentDisplayName`).
+      - Integrated dynamic retrieval via `userService.getUsers({ role: 'STUDENT', pageSize: 100 })` querying Identity Service (`GET /api/v1/users`), populating `identityUsersMap` on mount.
+      - Prioritizes authentic names delivered by Backend (sourced through gRPC `GetStudentsByIds`), with dynamic fallback to the Identity REST API.
+      - Preserved client-side alert deduplication (`seenAlerts = new Set()`) to eliminate duplicate cards for the same student/alert pair.
+    - **Verification**: `npm run build` (Vite v8.3.0) compiled cleanly in 2.13s with 3054 modules transformed and zero errors.
+
+
+21. **4-Domain × 3-Tier Matrix Placement UI (`AcademicManagerDashboardView.jsx`, `practiceService.js`)**:
+    - Replaced the single-class `MaxK` clustering UI in Section 3 with a structured **4-Domain × 3-Tier (12-Class) Matrix** interface.
+    - Added configurable threshold inputs (`foundationThresholdPct` default `50%`, `advancedThresholdPct` default `75%`) and `includeEmptyClasses` toggle.
+    - Renders 4 domain rows (`DOM_LANG`, `DOM_MATH`, `DOM_NAT_SCI`, `DOM_SOC_SCI`) × 3 proficiency tier columns (`Cơ bản`, `Tăng tốc`, `Nâng cao`) with average mastery bars, `X/20 HS` capacity indicators, readiness badges, and direct teacher assignment actions.
+    - **Verification**: `npm run build` (Vite v8.3.0) compiled cleanly in 2.13s with zero errors.

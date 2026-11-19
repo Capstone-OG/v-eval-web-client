@@ -3,6 +3,193 @@
 ---
 
 ## [20/11/2026] - Chuyển Đổi & Nâng Cấp Toàn Diện Trình Bóc Tách Đề Thi Thực Tế (`view-exam.html` -> `ExamParserStudioView.jsx`) Lên Web Client
+## [19/11/2026] - Khắc Phục Triệt Để Lỗi Hook Màn Hình Đỏ, Chuẩn Hóa Cổng Phụ Huynh 4 Phân Hệ & Bố Cục Dashboard 3 Tầng Hiện Đại
+
+- **Khắc Phục Lỗi Vi Phạm Quy Tắc Hook Màn Hình Đỏ ([`ParentDashboardView.jsx`](../src/components/dashboard/ParentDashboardView.jsx))**:
+  - Di chuyển toàn bộ các Hook `useEffect` (tải học phí `getStudentTuitionStatus`, dự báo `getMyForecast`, lộ trình `getStudentDashboard`, cảnh báo sớm và bài thi gần đây) lên đầu component trước mọi câu lệnh điều kiện `return`, triệt tiêu hoàn toàn ngoại lệ `Rendered more hooks than during the previous render`.
+- **Đồng Bộ Hoàn Toàn `activeChildId` Xuyên Suốt Toàn Bộ Các Trang ([`App.jsx`](../src/App.jsx), [`ParentDashboardView.jsx`](../src/components/dashboard/ParentDashboardView.jsx), [`AccountNavbar.jsx`](../src/components/layout/AccountNavbar.jsx))**:
+  - Nâng state `parentActiveChildId` lên `App.jsx`, đồng bộ hóa việc chọn con cho toàn bộ các tab con: Dashboard, Tiến độ & Kết quả, Cảnh báo sớm và Học phí.
+- **Tái Thiết Kế Menu Sidebar Cổng Phụ Huynh 4 Mục Chuẩn ([`Sidebar.jsx`](../src/components/layout/Sidebar.jsx), [`App.jsx`](../src/App.jsx))**:
+  - 1. *Tổng quan đồng hành*: Xem nhanh điểm thi dự kiến, mức độ sẵn sàng thi, thời lượng học và cảnh báo.
+  - 2. *Tiến độ & Kết quả của con* ([`ParentChildResultsView.jsx`](../src/components/dashboard/ParentChildResultsView.jsx)): Gộp 3 góc nhìn (Năng lực 4 môn với Radar Chart, Tiến độ Lộ trình cá nhân Chế độ chỉ đọc, Lịch sử thi thử & Kiểm tra).
+  - 3. *Cảnh báo & Trao đổi Giáo viên* ([`ParentEarlyWarningsAndTeacherView.jsx`](../src/components/dashboard/ParentEarlyWarningsAndTeacherView.jsx)): Cảnh báo sớm Mức 2 & 3, nút Xác nhận đã xem, Xác nhận họp 3 bên và Khung trao đổi gửi tin nhắn cho Giáo viên phụ trách.
+  - 4. *Học phí & Lịch sử giao dịch* ([`TuitionPaymentView.jsx`](../src/components/payment/TuitionPaymentView.jsx)): Thanh toán VietQR PayOS, lịch sử giao dịch và biên lai.
+- **Tái Cấu Trúc Bố Cục Dashboard 3 Tầng**:
+  - *Tầng 1*: Dải ngang trên cùng hiển thị học sinh đang theo dõi kèm dropdown chuyển con + thông tin Giáo viên lớp Offline phụ trách (tên, SĐT, nút Nhắn tin). Dải thông báo học phí màu vàng nhạt chỉ hiện khi con chưa thanh toán, ẩn hoàn toàn khi đã thanh toán.
+  - *Tầng 2*: 4 Thẻ chỉ số Ba Mẹ quan tâm nhất: Điểm thi dự kiến (kèm khoảng dao động, đối chiếu mục tiêu và tỉ lệ đạt), Mức độ sẵn sàng thi (thang điểm 100), Thời gian học tuần này (kèm nút chuyển 7 ngày / 30 ngày) và Tiến độ lộ trình cá nhân.
+  - *Tầng 3*: Bố cục 2 cột (Cột trái 7 phần: Cảnh báo học tập & Bài thi gần đây; Cột phải 5 phần: Đánh giá 3 mặt học tập & Hồ sơ học tập kèm nút Hủy liên kết con).
+- **Dọn Sạch Toàn Bộ Thuật Ngữ Kỹ Thuật & Dữ Liệu Test (Zero Technical Jargon)**:
+  - Xóa bỏ triệt để các từ viết tắt nội bộ: IRT Theta, BKT, ZPD, PLAR, Core Flow 5, Live Identity + Practice gRPC, giá thử nghiệm 5.000 ₫ trong `TuitionPaymentView.jsx` và toàn bộ giao diện; diễn đạt 100% bằng tiếng Việt thân thiện, dễ hiểu cho gia đình.
+- **Kiểm Thử & Nghiệm Thu**:
+  - `npm run build`: Thành công 100% trong 1.15s, 0 lỗi biên dịch.
+  - `node --test tests/*.test.js`: Toàn bộ **22/22 unit tests Passed**.
+- **Đồng Bộ Bộ Chọn Con Toàn Diện Trên Top Navbar & Học Phí ([`AccountNavbar.jsx`](../src/components/layout/AccountNavbar.jsx), [`TuitionPaymentView.jsx`](../src/components/payment/TuitionPaymentView.jsx), [`App.jsx`](../src/App.jsx))**:
+  - Bổ sung bộ chọn dropdown con ngay trên thanh điều hướng đầu trang `AccountNavbar` khi phụ huynh liên kết $\ge 2$ con, cho phép chuyển đổi học sinh tức thì từ mọi trang mà không cần quay lại trang chủ.
+  - Đồng bộ hóa sự kiện click chọn thẻ con trong `TuitionPaymentView` với `onSelectChildId`, cập nhật trạng thái `activeChildId` toàn cục ngay lập tức.
+
+- **Tái Thiết Kế & Tối Ưu Bố Cục Thanh Điều Hướng Top Navbar "EdTech Mission Control" ([`AccountNavbar.jsx`](../src/components/layout/AccountNavbar.jsx))**:
+  - **Triệt tiêu 100% hardcode**: Toàn bộ dữ liệu hiển thị (kỳ thi mục tiêu, đếm ngược ngày thi, số chuông thông báo, chip học sinh đồng hành, cơ sở học tập, chuỗi ngày streak) đều được trích xuất trực tiếp từ API CSDL Backend thật (`practiceService.getAcademicTerms`, `practiceService.getMyAlerts`, `portalMetrics`, `currentUser`).
+  - **Khắc phục triệt để lỗi ép cụt chữ (Zero Title Truncation)**: Loại bỏ việc nhồi nhét chuỗi tên lớp dài 54 ký tự cạnh tiêu đề; cố định tiêu đề trang `Tổng quan Đồng hành` hiển thị sắc nét, đầy đủ (`whitespace-nowrap shrink-0`) không bị thu nhỏ hoặc cụt thành `Tổng quan Đồng ...`.
+  - **Viên Nang Đếm Ngược 1 Dòng Tinh Tế (Minimalist Single-Line Mission Pill)**:
+    - Chuyển đổi từ khối hộp 2 dòng dày cộm sang dạng viên nang thanh mảnh 1 dòng (`rounded-full border border-slate-200/90 bg-slate-50/80 hover:bg-indigo-50/70 hover:border-indigo-200/90`): `● ĐGNL Đợt 1 (2027) • Còn 129 ngày (28/03/2027)`.
+    - Đặt chính giữa thanh điều hướng tạo khoảng thở (white space) rộng rãi, sang trọng.
+    - Click mở Modal chi tiết Lộ trình Khảo thí ĐGNL (`ExamTimelineModal`): Lịch thi Đợt 1 (cuối tháng 3), Đợt 2 (cuối tháng 5), danh sách các cụm tỉnh thi, cấu trúc đề chuẩn 120 câu / 150 phút (3 phần) và mục tiêu điểm số cá nhân (1200 điểm) từ CSDL.
+  - **Tối Ưu Ngữ Cảnh Đồng Hành & Tránh Trùng Lặp (Clean Context & Right Actions)**:
+    - Chuyển định danh con sang chip nhỏ gọn bên góc phải: `👦 Con: [Tên con]` với tooltip đầy đủ (Trường, Khối lớp), không làm loãng thanh điều hướng.
+    - Ẩn bớt thẻ ngày thứ yếu `Thứ Năm, 19/11` trên màn hình thông thường (chỉ hiện trên màn hình `2xl`), giải phóng diện tích cho giao diện.
+    - Tinh chỉnh chuông thông báo thanh lịch và căn chỉnh lại chấm xanh online góc avatar chuẩn xác không bị đè viền.
+  - **Chuông Thông Báo & Cảnh Báo Sớm Tương Tác Sư Phạm (Interactive Notification Bell & Flow 6 Drawer)**:
+    - Tự động gọi API `practiceService.getMyAlerts({ studentId })` và lắng nghe sự kiện đồng bộ `veval:flow6-updated`.
+    - Hiển thị badge số lượng cảnh báo chưa đọc với hiệu ứng nhịp thở `animate-pulse` khi có tin mới.
+    - Hộp thoại thông báo thả xuống hỗ trợ: phân loại cảnh báo đỏ (`AlertTriangle`), cảnh báo vàng (`AlertCircle`) và lời khuyên sư phạm (`Info`); hiển thị mốc thời gian thân thiện (`formatRelativeTime`); click trực tiếp để đánh dấu đã đọc (`practiceService.markAlertAsRead`); nút *"Đọc tất cả"* giúp dọn sạch thông báo tức thì.
+  - **Viên Nang Hồ Sơ & Trạng Thái Trực Tuyến (User Profile Pill & Menu)**:
+    - Hiển thị avatar ký tự với chấm xanh trạng thái online (`bg-emerald-500 ring-2 ring-white`), tên người dùng thật, nhãn vai trò thân thiện tiếng Việt (`Phụ huynh`, `Học viên`, `Thầy/cô`).
+    - Menu thả xuống tích hợp thẻ người dùng đầy đủ email, cơ sở học tập, cùng các lối tắt: *Cài đặt tài khoản*, *Về trang chủ*, và nút *Đăng xuất* an toàn.
+- **Tái Cấu Trúc Toàn Diện Hero Header Theo Thẻ Hồ Sơ Học Sinh Tinh Giản 3 Cột (Phương án 1) ([`ParentDashboardView.jsx`](../src/components/dashboard/ParentDashboardView.jsx))**:
+  - **Triệt tiêu hiện tượng rớt dòng & hộp khối lổn nhổn**: Xóa bỏ các nhãn kỹ thuật sáo rỗng (*"Không gian đồng hành cùng con"*, *"Cập nhật trực tiếp theo thời gian thực"*) và 3 viên nang bubble lộn xộn.
+  - **Hồ sơ học sinh trang nhã (Top Row)**: Bổ sung avatar chữ ký tự của con (`childInitials` - ví dụ `PL` cho Phạm Tấn Lộc) với chấm trạng thái xanh lá trực quan; tên học sinh to rõ, nổi bật.
+  - **Dải thông tin 3 cột cân đối (Bottom Strip)**: Chuyển toàn bộ bối cảnh trường lớp thành dải card 3 cột thẳng hàng:
+    - Cột 1: `Trường THPT` (`child.school`) với icon `GraduationCap` màu cyan.
+    - Cột 2: `Khóa Học & Lớp Học` (`child.grade`) với icon `BookOpen` màu amber, văn bản dài tự động thu gọn `truncate` kèm tooltip đầy đủ.
+    - Cột 3: `Nguyện Vọng Mục Tiêu NV1` (`child.targetMajor`) với icon `Target` màu emerald.
+  - **Hài hòa hóa nút hành động**: Chuyển nút `+ Liên kết con` từ màu vàng chóe `#FACC15` sang phong cách kính mờ cao cấp (`bg-white/10 hover:bg-white/20 border border-white/20`), hài hòa tuyệt đối với giao diện, trả lại sự tập trung vào kết quả học tập của con.
+- **Tinh Tế Hóa Khối Thanh Toán Học Phí PayOS (Tuition Ribbon) ([`ParentDashboardView.jsx`](../src/components/dashboard/ParentDashboardView.jsx))**:
+  - Chuyển đổi từ banner gradient xanh đậm 200px cồng kềnh thành ribbon thông báo tài chính thanh lịch với tông màu sáng dịu (`bg-gradient-to-r from-blue-50/90 via-indigo-50/60 to-slate-50 border border-blue-200/80`).
+  - Tích hợp biểu tượng `ShieldCheck`, nhãn dịch vụ học tập, mức học phí rõ ràng (5.000 ₫) và nút kêu gọi hành động VietQR quét mã tức thì.
+- **Nâng Cấp Thiết Kế 4 Thẻ Chỉ Số Trọng Tâm (4 Metric Cards Grid) ([`ParentDashboardView.jsx`](../src/components/dashboard/ParentDashboardView.jsx))**:
+  - Đồng bộ hóa cấu trúc 4 thẻ (`Mức Độ Sẵn Sàng Thi`, `Giờ Tự Học Tuần Này`, `Chuỗi Ngày Chuyên Cần`, `Độ Phủ Kiến Thức ĐGNL`) với icon badge màu ngữ nghĩa bo cong (`w-8 h-8 rounded-xl`), số liệu đậm nét và nhãn trạng thái sinh động.
+  - Cập nhật hàm thông minh `getTierInfo` phân loại chuẩn xác 4 cấp bậc sẵn sàng (`NOT_READY`, `PREPARING`, `ACCELERATING`, `READY`), loại bỏ hoàn toàn lỗi hiển thị sai lệch khi điểm thấp (19.2/100) bị gắn nhãn màu xanh "Sẵn sàng".
+- **Hài Hòa Hóa 3 Trụ Cột Đánh Giá Năng Lực & Khối Giáo Viên Phụ Trách ([`ParentDashboardView.jsx`](../src/components/dashboard/ParentDashboardView.jsx))**:
+  - Thiết kế từng trụ cột thành các khối thẻ micro tinh tế với số thứ tự đánh dấu (1, 2, 3), thanh đo gradient mượt mà và lời giải thích ngắn gọn, dễ hiểu.
+  - Đưa khối thông tin giáo viên phụ trách về đúng vị trí tại cột phải trong card `Giáo Viên Phụ Trách & Cố Vấn Học Vụ`: hiển thị avatar ký tự, tên giảng viên phụ trách thật hoặc nhãn trung thực *"Chưa có giáo viên phụ trách"*, số điện thoại liên hệ, thông tin lớp học và nút *"Đăng Ký Lịch Trao Đổi 1-1 Với Giáo Viên"*.
+- **Chuẩn Hóa Giao Diện Lịch Sử Bài Thi Của Con ([`SubmissionHistoryView.jsx`](../src/components/diagnostic/SubmissionHistoryView.jsx))**:
+  - **Đồng bộ Hero Header sang chủ đề Navy-Indigo sang trọng**: Chuyển banner sang tông màu `from-slate-900 via-indigo-950 to-blue-950` đồng điệu với trang Tổng quan, bổ sung thanh chọn nhanh con đa năng linh hoạt.
+  - **Triệt tiêu thuật ngữ kỹ thuật khó hiểu**:
+    - Chuyển đổi hiển thị chỉ số toán học psychometrics khô khan (`Theta IRT: -1.8333`) sang phân cấp sư phạm nhân văn và dễ hiểu qua hàm `formatThetaDisplay` (*"Khởi đầu nền tảng - Cần gia đình kèm cặp ôn tập thêm"* / *"Đạt chuẩn"* / *"Vượt trội"*).
+    - Xóa bỏ hậu tố kỹ thuật tiếng Anh `(DIAGNOSTIC)` trong tên bài thi; chuẩn hóa các nhãn phân loại thành *"Khảo sát ĐGNL (30 câu)"*, *"Luyện tập thích ứng"*, *"Chuyên đề"*.
+    - Làm mới thông điệp: loại bỏ các thuật ngữ developer như *"phân tích tư duy Socratic"*, thay bằng *"hướng dẫn giải chi tiết và gợi ý phương pháp giải"*.
+  - **Khắc phục lỗi đếm lệch câu làm sai (0 câu vs 26 câu)**: Tính toán chính xác tổng số câu làm chưa đúng (`summaryStats.totalWrong = totalQuestions - totalCorrect`) trên toàn bộ các bài thi, hiển thị trung thực `26 câu` và bổ sung hướng dẫn người dùng bấm vào bài làm để tải chi tiết câu hỏi vào sổ tay.
+- **Tối Ưu & Tái Thiết Kế Thanh Điều Hướng Dọc Tinh Giản 1 Dòng - Phương Án 1 (Modern SaaS Sidebar Redesign) ([`Sidebar.jsx`](../src/components/layout/Sidebar.jsx))**:
+  - **Triệt tiêu hoàn toàn lỗi cụt chữ (Zero Truncation)**: Loại bỏ huy hiệu `VietQR` cồng kềnh chiếm hơn 60px gây ép cụt dòng thành `Đóng Học phí & ...`; rút gọn nhãn danh mục thành `Học phí & Gói học` thanh thoát, sắc nét trên khung rộng 288px.
+  - **Bố cục 1 dòng tinh gọn (Single-Line Compact Row - ~40px)**:
+    - Chuyển toàn bộ các mục điều hướng từ khối hộp 2 dòng (tiêu đề + mô tả) dày cộm (~60px) sang hàng ngang 1 dòng tiêu chuẩn Modern SaaS (Linear & Notion style).
+    - Biểu tượng inline trực quan (`w-4.5 h-4.5`), loại bỏ các ô vuông xám xịt buồn tẻ trông như nút bị vô hiệu hóa (disabled).
+    - Giữ trọn vẹn ngữ nghĩa mô tả chi tiết thông qua thuộc tính tooltip tiêu chuẩn trình duyệt `title={item.sublabel ? `${item.label} (${item.sublabel})` : item.label}` giúp thanh sidebar thông thoáng, ngăn nắp.
+  - **Hiệu ứng kích hoạt & di chuột trang nhã (Active & Hover States)**:
+    - Trạng thái Active: Sử dụng dải màu gradient hoàng gia `from-blue-600 to-indigo-600` với bóng đổ dịu nhẹ `shadow-sm shadow-blue-500/20` và phông chữ đậm nét, thay thế mảng gradient xanh-cyan chói lóa cũ.
+    - Trạng thái Hover: Nền xanh dịu nhẹ `hover:bg-blue-50/60` và đổi màu chữ `hover:text-blue-700` tạo phản hồi thị giác nhạy bén, thanh lịch.
+  - **Tối ưu thẻ chân trang học sinh liên kết (Footer Student Card)**:
+    - Hiển thị tên học sinh kèm tên trường THPT thực tế (`${firstChild.studentName} • ${firstChild.school}`) thay vì chuỗi tên chuyên đề dài 54 ký tự gây tràn chữ.
+    - Tích hợp thuộc tính `title` và nhãn `truncate` giữ cho khối chân trang luôn nguyên vẹn và chuẩn mực trên mọi độ phân giải.
+- **Chuẩn Hóa Phân Giải Thực Thể Động & Xử Lý Trạng Thái Dữ Liệu Rỗng (Dynamic Entity Resolution & Empty-State Resilience)**:
+  - **Triệt tiêu hoàn toàn dữ liệu sinh ngẫu nhiên/giả lập**: Xóa bỏ toàn bộ dữ liệu mẫu trong `buildSeedParentDashboard` tại `practiceService.js`. Khi phụ huynh chưa có học sinh liên kết hoặc khi hệ thống mất kết nối mạng, service trả về danh sách rỗng (`children: []`) thay vì tự động tạo học sinh giả "Phạm Minh Hoàng" với các chỉ số ảo.
+  - **Khắc phục xung đột định danh thanh toán học phí phụ huynh (`TuitionPaymentView.jsx`, `App.jsx`)**:
+    - Truyền bối cảnh học sinh đồng hành (`activeChild`, `childrenList`, `isParent`) từ `App.jsx` sang `TuitionPaymentView.jsx`.
+    - Phân giải đúng `studentId = activeChild.studentId` của con thay vì gán nhầm ID của phụ huynh.
+    - Bổ sung bộ chọn nhanh con (Child Switcher Chips) trực tiếp trên trang Học phí khi phụ huynh liên kết nhiều con.
+    - Nạp danh mục khóa đào tạo động từ API CSDL Backend (`practiceService.getCourses`) và tự động đồng bộ giá tiền, thời lượng, mã khóa học thực tế.
+  - **Xử lý trạng thái rỗng sư phạm và thân thiện người dùng (Pedagogical Empty States)**:
+    - Khi con chưa được xếp lớp: Hiển thị nhãn trung thực *"Chưa phân lớp học"*.
+    - Khi con chưa cập nhật trường: Hiển thị *"Chưa cập nhật trường THPT"*.
+    - Khi con chưa cài đặt điểm mục tiêu: Hiển thị *"Chưa thiết lập mục tiêu"*.
+    - Đồng bộ tự động trạng thái học phí của con từ `paymentService.getStudentTuitionStatus`, hiển thị chính xác trạng thái ĐÃ KÍCH HOẠT hoặc NỘP HỌC PHÍ theo dữ liệu thực từ CSDL.
+- **Kiểm Thử & Biên Dịch**:
+  - `npm run build`: Hoàn thành trong 1.29s, 0 lỗi biên dịch.
+  - `node --test tests/*.test.js`: Đạt **22/22 tests passed**.
+
+---
+
+## [18/11/2026] - Gắn Bối Cảnh studentId Vào Lịch Sử Bài Thi Của Con & Hỗ Trợ Chuyển Đổi Đa Con Cho Phụ Huynh
+
+- **Gắn Bối Cảnh `studentId` Cho Màn Hình Lịch Sử Bài Thi ([`App.jsx`](../src/App.jsx), [`SubmissionHistoryView.jsx`](../src/components/diagnostic/SubmissionHistoryView.jsx))**:
+  - Khắc phục triệt để lỗi logic nghiệp vụ khi phụ huynh truy cập tab *Lịch sử Bài thi của Con* (`activeTab === 'history'`): code cũ truy vấn theo `user.id` của phụ huynh dẫn đến danh sách bài thi rỗng hoặc lỗi 404/400 từ Backend Practice Service.
+  - Trong `App.jsx`: tự động trích xuất danh sách con `parentPortalData?.children` và truyền `studentId`, `studentName`, `childrenList`, `isParent={role === 'parent'}` vào `SubmissionHistoryView`.
+  - Trong `SubmissionHistoryView.jsx`: xác định `targetId = isParent ? (activeChildId || studentId) : (studentId || user.id)` để truy vấn lịch sử chẩn đoán thực tế của con từ Backend thông qua `practiceService.getStudentDiagnosticHistory(targetId)`.
+- **Thanh Chọn Nhanh Đa Con Linh Hoạt (Multi-Child Switcher Chips) ([`SubmissionHistoryView.jsx`](../src/components/diagnostic/SubmissionHistoryView.jsx))**:
+  - Khi phụ huynh liên kết nhiều con (`childrenList.length > 1`), hiển thị danh sách chip chọn nhanh con ở ngay banner đầu trang với tên và lớp (ví dụ: *"Phạm Tấn Lộc (Lớp 12A1)"*).
+  - Thao tác chọn con cập nhật `activeChildId` tức thì và tự động kích hoạt tải lại toàn bộ lịch sử làm bài, biểu đồ phân tích năng lực và sổ tay lỗi sai của con tương ứng.
+  - Bổ sung cơ chế tự phục hồi: nếu phụ huynh tải lại trang trực tiếp tại tab `history` khi `parentPortalData` chưa sẵn sàng, component tự động gọi `practiceService.getParentDashboard` để lấy danh sách con và thiết lập con đầu tiên làm mặc định.
+- **Cá Nhân Hóa Trải Nghiệm Cho Vai Trò Phụ Huynh (Parent Persona UX) ([`SubmissionHistoryView.jsx`](../src/components/diagnostic/SubmissionHistoryView.jsx))**:
+  - Tiêu đề banner chuyển thành: *"Lịch Sử Bài Thi Của Con: [Tên con]"* kèm badge *"Không Gian Phụ Huynh • Nhật Ký Khảo Thí Của Con"*.
+  - Ẩn nút *"Làm Đề Khảo Sát Mới"* (hành động của học sinh) và thay thế bằng nút *"Làm mới danh sách"* tích hợp hiệu ứng xoay đồng bộ từ Backend.
+  - Tinh chỉnh nhãn lựa chọn trắc nghiệm trong câu hỏi thành *"Con đã chọn"* hoặc *"Con chọn đúng"* thay vì *"Bạn đã chọn"*.
+  - Điều chỉnh thông báo khi chưa có bài làm thành lời nhắc đồng hành: *"Chưa ghi nhận bài khảo sát hoặc luyện tập nào của con. Khi con hoàn thành bài thi, kết quả sẽ tự động đồng bộ về đây."*
+- **Chuẩn Hóa Phân Lập Dữ Liệu Local Storage ([`practiceService.js`](../src/services/practiceService.js))**:
+  - Nâng cấp các hàm `practiceService.getSubmissionHistory(targetStudentId = null)` và `practiceService.deleteSubmissionFromHistory(submissionId, targetStudentId = null)` hỗ trợ tham số `targetStudentId`.
+  - Bảo vệ toàn vẹn dữ liệu: thao tác xóa bài làm chỉ tác động đúng bài thi chỉ định, không ghi đè làm mất bài làm của các tài khoản khác trên cùng trình duyệt.
+- **Kiểm Thử & Biên Dịch**:
+  - `npm run build`: Thành công 100% trong 1.70s, 0 lỗi biên dịch.
+  - `node --test tests/*.test.js`: Đạt **22/22 unit tests pass 100%**.
+
+---
+
+## [17/11/2026] - Tối Giản Hóa Giao Diện Cổng Phụ Huynh: Loại Bỏ Báo Cáo Năng Lực 4 Miền & Cây Tri Thức Chuyên Đề
+
+- **Tinh Gọn Điều Hướng Sidebar Phụ Huynh ([`Sidebar.jsx`](../src/components/layout/Sidebar.jsx))**:
+  - Loại bỏ hoàn toàn 2 mục điều hướng không thuộc phạm vi theo dõi tổng quan của phụ huynh trong nhóm *Không Gian Phụ Huynh*:
+    - Mục `id: 'analytics'` ("Báo cáo Năng lực 4 Miền" - Biểu đồ tiến bộ & Dự báo điểm).
+    - Mục `id: 'roadmap'` ("Cây Tri thức & Chuyên đề" - Theo dõi lộ trình học của con).
+  - Giữ lại đúng 2 mục cốt lõi phục vụ đồng hành cùng học sinh: **Tổng quan Đồng hành (`dashboard`)** và **Lịch sử Bài thi của Con (`history`)**, kết hợp mục **Đóng Học phí & Gói học (`tuition`)** qua PayOS.
+- **Chuẩn Hóa Danh Mục Tab Cổng Phụ Huynh & Bảo Vệ Điều Hướng ([`App.jsx`](../src/App.jsx))**:
+  - Cập nhật cấu hình `ROLE_PORTAL_DEFINITIONS.parent.tabs`, loại bỏ các tab `analytics` và `roadmap`.
+  - Bổ sung rào chắn bảo vệ `activeTab === 'roadmap' && role !== 'parent'` và `activeTab === 'analytics' && role !== 'parent'` trong hàm `renderRolePortalContent`, tự động điều hướng an toàn về `ParentDashboardView` khi phụ huynh truy cập nhầm các đường dẫn sư phạm dành riêng cho học sinh.
+  - Ngắt các callback điều hướng lộ trình/luyện tập học sinh khỏi màn hình thanh toán học phí khi phụ huynh xem giao diện `TuitionPaymentView`.
+- **Kiểm Thử & Nghiệm Thu**:
+  - `npm run build`: Thành công 100% trong 1.68s, 0 lỗi biên dịch.
+  - `node --test tests/*.test.js`: Đạt **22/22 unit tests pass 100%**.
+
+---
+
+## [19/11/2026] - Nâng Cấp Giao Diện Xếp Lớp Ma Trận 4 Miền × 3 Cấp Bậc (12 Lớp Chuẩn), Khắc Phục Lỗi Xung Đột Phòng Học 409 & Khử Trùng Lặp Cảnh Báo Sớm
+
+- **Giao Diện Xếp Lớp Ma Trận 4 Miền × 3 Cấp Bậc (`./src/components/dashboard/AcademicManagerDashboardView.jsx`, `./src/services/practiceService.js`)**:
+  - Thay thế ô nhập `Max K` cũ bằng cấu hình ngưỡng trực quan: Ngưỡng Cơ bản (`< 50%`), Ngưỡng Nâng cao (`>= 75%`), tùy chọn khởi tạo đủ khung 12 lớp và chế độ **Chỉ xếp học sinh mới chưa có lớp (Bảo toàn 100% HS cũ)** kèm badge `+N mới` trên từng thẻ lớp.
+  - Hiển thị ma trận 4 hàng (4 miền kiến thức) × 3 cột (Cơ bản / Tăng tốc / Nâng cao) kèm thanh độ nắm vững trung bình miền, sĩ số `X/20 HS`, nhãn trạng thái và nút Gán Giáo Viên Phụ Trách trực tiếp.
+- **Khắc Phục Lỗi Xung Đột Phòng Học 409 Khi Đổi Phòng Lớp Học (`./src/components/dashboard/AcademicManagerDashboardView.jsx`)**:
+  - *Chuyển đổi cơ chế cập nhật ca học (Edit Slot Thay Vì Append)*:
+    - Bổ sung danh sách các ca học hiện tại trong tuần của lớp trong Modal 5 (Thời khóa biểu & Buổi học), hiển thị rõ Thứ, Khung giờ, và Phòng học.
+    - Bổ sung nút ✏️ **"Đổi Phòng / Giờ"** cho từng ca học, cho phép chọn nhanh phòng học mới (ví dụ từ `P.301` sang `P.302`) và nút 🗑️ **"Xóa"** ca học thừa.
+    - Cập nhật hàm `handleSaveWeeklySlotAndGenerate`: Khi đang ở chế độ chỉnh sửa (`editingSlotIdx !== null`), hệ thống thay thế trực tiếp ca học đang chọn thay vì thêm mới chồng lấn, triệt tiêu mã phòng cũ (`P.301`) trước khi gửi lên API Backend `saveClassWeeklySchedules`.
+    - Cập nhật bộ phát hiện xung đột thời gian thực `scheduleSlotConflict`: Loại trừ chính slot đang chỉnh sửa khỏi danh sách so sánh nội bộ, giúp cảnh báo biến mất ngay khi người dùng chọn phòng trống hợp lệ.
+- **Triệt Tiêu 100% Hardcode Tên Học Sinh - Kết Nối Động Qua Identity REST API (`./src/components/dashboard/EarlyWarningsMentorPanel.jsx`)**:
+  - *Bổ sung import `useMemo`*: Khắc phục lỗi runtime `ReferenceError: useMemo is not defined` tại dòng 1 của `EarlyWarningsMentorPanel.jsx`.
+  - *Xóa bỏ toàn bộ hàm `resolveStudentDisplayName` và mảng GUID tĩnh*: Không còn bất kỳ đoạn mã gán tên theo chuỗi hex nào (`11111111`, `11110000`, `99999999`, `BC933364`...).
+  - *Tích hợp truy vấn động từ `userService.getUsers({ role: 'STUDENT', pageSize: 100 })`*: Tự động xây dựng từ điển người dùng `identityUsersMap` từ Identity Service (`GET /api/v1/users`) để điền tên đầy đủ cho bất kỳ học sinh nào khi cần.
+  - *Ưu tiên dữ liệu chuẩn xác*: Hiển thị trực tiếp `studentName` trả về từ Backend (vốn đã được đồng bộ qua gRPC từ `iam.users`), chỉ fallback sang Identity REST API khi tên bị trống.
+  - *Khử trùng lặp thẻ cảnh báo*: Giữ lại bộ lọc `seenAlerts` theo cặp `(studentId, alertType)` để loại bỏ các bản ghi trùng lặp ở client.
+- **Kiểm Soát Xung Đột Phòng Học & Lịch Giảng Dạy Thời Gian Thực (Schedule & Room Conflict Detection - `./src/components/dashboard/AcademicManagerDashboardView.jsx`)**:
+  - *Bộ kiểm tra xung đột thời gian thực (`classConflictsMap`, `createClassConflict`, `scheduleSlotConflict`)*:
+    - Thuật toán kiểm tra giao thoa thời gian: $\max(\text{start}_1, \text{start}_2) < \min(\text{end}_1, \text{end}_2)$ trên cùng thứ trong tuần (`dayOfWeek`).
+    - **Xung đột phòng học**: Tự động phát hiện nếu cùng phòng (`room`) tại cùng cơ sở đã có lớp khác sử dụng trong khung giờ đó.
+    - **Xung đột giảng viên**: Tự động phát hiện nếu giảng viên được phân công đã có lịch dạy lớp khác tại cùng khung giờ.
+  - *Hộp cảnh báo đỏ thời gian thực & Khóa nút gửi*:
+    - Hiển thị hộp cảnh báo đỏ trực quan ngay bên dưới khung lịch trong Modal *"Mở Lớp Học Mới"* và Modal *"Thời Khóa Biểu & Phòng"*.
+    - Vô hiệu hóa (disable) nút *"Mở Lớp & Sinh Lịch Học"* và nút *"Lưu Ca Học & Sinh Buổi Học"* khi phát hiện có xung đột.
+  - *Thẻ cảnh báo trên danh sách lớp học Section 2*: Hiển thị hộp cảnh báo đỏ trên từng thẻ lớp học nếu lớp đó đang bị trùng phòng/giờ với lớp khác, kèm hướng dẫn bấm *"Thời Khóa Biểu & Phòng"* để đổi phòng/giờ.
+  - *Thanh gợi ý phòng học thông minh (Quick Room Suggestion Chips)*: Bổ sung các chip chọn nhanh phòng học (`P.301`, `P.302`, `P.303`, `P.304`, `P.305`, `Lab 01`, `Lab 02`) và tự động đề xuất phòng còn trống khi mở modal.
+- **Tách Riêng Component `AcademicManagerDashboardView.jsx` & Giữ Nguyên 100% `CampusManagerDashboardView.jsx` Gốc Cho Director (`./src/components/dashboard/AcademicManagerDashboardView.jsx`, `./src/components/dashboard/CampusManagerDashboardView.jsx`, `./src/services/authService.js`, `./src/App.jsx`, `./src/components/layout/Sidebar.jsx`)**:
+  - Giữ nguyên hoàn toàn code gốc của `CampusManagerDashboardView.jsx` và menu gốc cho vai trò `ACADEMIC_DIRECTOR` (`role === 'director'`).
+  - Tạo mới `AcademicManagerDashboardView.jsx` dành riêng cho vai trò `ACADEMIC_MANAGER` / `CAMPUS_MANAGER` (`role === 'manager'`).
+- **Triệt Tiêu 100% Dữ Liệu Hardcode Trong `AcademicManagerDashboardView.jsx` (`./src/components/dashboard/AcademicManagerDashboardView.jsx`)**:
+  - *Xóa tên chào mừng cố định*: Loại bỏ chuỗi cứng `, Nguyễn Duy Khôi!` trên Banner đầu trang, hiển thị chính xác họ tên của tài khoản Quản lý đang đăng nhập từ API `/api/v1/users/me`.
+  - *Xóa số lớp giả lập và điểm sao tự bịa của Giảng viên*: Gỡ bỏ `activeClasses: 1` và nhãn `★ 4.9`; tính toán số lớp giảng dạy thực tế của từng giảng viên bằng cách đối chiếu `cls.teacherId` trên danh sách lớp thật lấy từ `GET /api/practice/classes?campusId={selectedCampus}`.
+  - *Xóa dữ liệu lớp suy diễn và lịch học cố định*: Gọi trực tiếp `GET /api/practice/classes` kết hợp `GET /api/practice/analytics/campus/{campusId}/comparative-heatmap` để hiển thị chính xác `maxCapacity` (20 HS), `enrolledStudentsCount`, `termName`, `courseName`, `focusDomain` và chuỗi Thời khóa biểu Offline thực tế từ `weeklySchedules` (Thứ, Khung giờ, Phòng học).
+  - *Xóa tỷ lệ làm chủ giả lập `67%`*: Khi cơ sở chưa có dữ liệu bài làm, hiển thị trung thực `0%` (`Chưa có dữ liệu`).
+  - *Kiểm soát phạm vi cơ sở theo RBAC (`MGR_07`, `MGR_22`)*: Ràng buộc tài khoản Quản lý cơ sở chỉ thao tác trong phạm vi `campusId` được phân công; chặn và báo lỗi `403 Access Denied` khi cố tình chuyển sang điều phối hoặc gán giảng viên thuộc cơ sở khác.
+- **Tách Bạch Menu Sidebar Giữa `Academic Director` và `Academic Manager` (`./src/components/layout/Sidebar.jsx`, `./src/App.jsx`)**:
+  - Phân tách rõ 4 mục chức năng chuyên biệt của **Academic Manager**:
+    1. `Tổng quan & Đối sánh Cơ sở`: Bản đồ nhiệt 4 miền giữa các lớp, bộ lọc đa chiều (Đợt học, Khóa học, Miền năng lực, Giảng viên) và xuất báo cáo `.csv/.xlsx` (`MGR_16`, `MGR_18`, `MGR_21`).
+    2. `Lớp học, Lịch học & Phân công GV`: Quản lý Đợt học (`AcademicTerms`), Khóa học (`Courses`), mở lớp mới (trần 20 HS/lớp, thanh màu sĩ số Xanh/Vàng/Đỏ), Modal Phân công / Đổi Giáo viên (`PUT /api/practice/classes/{classId}/assign-teacher`) và Modal Thời khóa biểu Offline & Buổi học (`MGR_01` - `MGR_08`).
+    3. `Xếp lớp Đầu vào & Phân cụm AI`: Cấu hình tham số `MaxK` động có kiểm định biên, gọi `POST /api/practice/classes/auto-cluster`, hiển thị hồ sơ năng lực tâm cụm 4 miền (`Centroid Profile`) và gán Giáo viên trực tiếp cho từng cụm lớp (`MGR_09` - `MGR_15`).
+    4. `Cảnh báo Cấp 3 & Họp 3 bên`: Điều phối can thiệp học viên nguy cơ cao, đặt lịch họp 3 bên và ghi biên bản nghiệm thu (`MGR_17`, `MGR_19`, `MGR_20`).
+  - Khắc phục lỗi định tuyến tab `analytics` của Manager trước đây mở nhầm `LearningAnalyticsView` của Học sinh, và gỡ bỏ nút chia nhóm bàn vi mô 3-5 học sinh (thuộc thẩm quyền Giáo viên đứng lớp) khỏi dòng lớp học của Manager.
+- **Mở Rộng Wrapper API Trong `practiceService.js` (`./src/services/practiceService.js`)**:
+  - Bổ sung đầy đủ các hàm kết nối Backend thật: `createAcademicTerm`, `updateAcademicTermStatus`, `createCourse`, `createClassWithSchedule`, `saveClassWeeklySchedules`, `generateClassSessions`, `getClassSessions`, `updateClassSession`, `rescheduleClassSession` và chuẩn hóa validation cho `assignTeacher`, `autoClusterClasses`.
+- **Kiểm thử vận hành**: `npm run build` (`vite build`) đạt `✓ built in 2.02s` với 3053 modules sạch 100%, 0 lỗi.
+
+---
+
+## [18/11/2026] - Triệt Tiêu 100% Mock/Template Giả Lập: Lý Thuyết Thuần Cô Đặc (Không Ghi Trang, Tăng Chiều Dài Gấp Đôi, Font Tinh Gọn), Mục Lục Mở Rộng Hết Chương, Tính Năng Xóa Sách & Vô Hiệu Hóa 2 Nút Điều Hướng
 
 - **Chuyển Đổi 100% Tính Năng Parse Đề Thi PDF Thực Tế Từ AI Engine Lên Web Client (`./src/components/curriculum/ExamParserStudioView.jsx`, `./src/utils/examParserUtils.js`, `./src/services/contentService.js`)**:
   - *Kết nối luồng Gemini Vision AI OCR qua API Gateway (`:5212`)*: Tích hợp kéo thả hoặc chọn tệp PDF gọi `aiService.uploadPdfExam` (`POST /api/ai-engine/upload-pdf`) và vòng lặp polling tiến trình nền mỗi 2 giây qua `aiService.getExamJobStatus` (`GET /api/ai-engine/jobs/{jobId}`), hiển thị đồng hồ đếm thời gian thực `(mm:ss)`, trạng thái từng bước (`current_step`) và hủy chờ an toàn.
