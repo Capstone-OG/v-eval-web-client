@@ -4,6 +4,10 @@ import {
   Cpu,
   BarChart2,
   Atom,
+  Calculator,
+  Languages,
+  FlaskConical,
+  Landmark,
   Search,
   Sparkles,
   PlayCircle,
@@ -17,6 +21,7 @@ import {
   X,
   ChevronRight,
   ChevronDown,
+  ChevronUp,
   Compass,
   FileText,
   Clock,
@@ -52,6 +57,7 @@ import {
 import MathText from '../common/MathText';
 import TextbookStudioView from './TextbookStudioView';
 import StudentCurriculumView from './StudentCurriculumView';
+import UnifiedNodeDetailView from './UnifiedNodeDetailView';
 import CurriculumStudioEditor, { parseSolutionMethodSections, parseTheoryRecapSections, isMathOrStemDomain } from './CurriculumStudioEditor';
 import InteractiveMathWorkbenchModal from './InteractiveMathWorkbenchModal';
 import contentService from '../../services/contentService';
@@ -134,15 +140,131 @@ export const matchesSubSubject = (chap, subSubjectId, domainKey) => {
   return target.keywords.some(kw => combinedText.includes(kw.toLowerCase()));
 };
 
+// Nhận diện mã Môn học từ ngữ cảnh văn bản và miền tri thức
+export const detectSubjectFromContext = (text = '', domain = null) => {
+  const lower = (text || '').toLowerCase();
+  if (lower.includes('hóa') || lower.includes('hoa hoc') || lower.includes('chem')) return 'CHEM';
+  if (lower.includes('vật lí') || lower.includes('vật lý') || lower.includes('vat ly') || lower.includes('phys')) return 'PHYS';
+  if (lower.includes('sinh') || lower.includes('bio')) return 'BIO';
+  if (lower.includes('ngữ văn') || lower.includes('tiếng việt') || lower.includes('văn')) return 'LIT';
+  if (lower.includes('lịch sử') || lower.includes('sử') || lower.includes('hist')) return 'HIST';
+  if (lower.includes('địa lí') || lower.includes('địa lý') || lower.includes('geo')) return 'GEO';
+  if (lower.includes('tiếng anh') || lower.includes('english')) return 'ENG';
+  if (lower.includes('pháp luật') || lower.includes('kinh tế') || lower.includes('gdkt')) return 'CIV';
+  if (lower.includes('toán') || lower.includes('đại số') || lower.includes('hình học') || lower.includes('xác suất')) return 'MATH';
+
+  if (domain) {
+    const dKey = getDomainKey(domain);
+    if (dKey === 'DOM_MATH') return 'MATH';
+    if (dKey === 'LANGUAGE') return 'LIT';
+  }
+  return null;
+};
+
+// Kiểm tra tính tương thích giữa 2 mã môn học (chống trộn lẫn Hóa vào Toán hoặc ngược lại)
+export const isSubjectCompatible = (subCode1, subCode2) => {
+  if (!subCode1 || !subCode2) return true;
+  const s1 = String(subCode1).toUpperCase().trim();
+  const s2 = String(subCode2).toUpperCase().trim();
+  if (s1 === s2) return true;
+  const isM1 = s1 === 'MATH' || s1.includes('TOÁN');
+  const isM2 = s2 === 'MATH' || s2.includes('TOÁN');
+  if (isM1 && isM2) return true;
+  const isC1 = s1 === 'CHEM' || s1.includes('HÓA');
+  const isC2 = s2 === 'CHEM' || s2.includes('HÓA');
+  if (isC1 && isC2) return true;
+  const isP1 = s1 === 'PHYS' || s1.includes('VẬT');
+  const isP2 = s2 === 'PHYS' || s2.includes('VẬT');
+  if (isP1 && isP2) return true;
+  const isB1 = s1 === 'BIO' || s1.includes('SINH');
+  const isB2 = s2 === 'BIO' || s2.includes('SINH');
+  if (isB1 && isB2) return true;
+  return false;
+};
+
 const DOMAIN_ICONS = {
   Cpu,
+  Calculator,
+  Languages,
+  FlaskConical,
+  Landmark,
   BookOpen,
   Atom,
   BarChart2,
   Layers
 };
 
-const getDomainIcon = (iconName) => DOMAIN_ICONS[iconName] || Cpu;
+const getDomainVisuals = (domain) => {
+  const code = (domain.domainCode || domain.code || domain.id || '').toUpperCase();
+  const title = (domain.title || domain.name || '').toLowerCase();
+
+  // 1. Toán học & Tư duy định lượng
+  if (code.includes('MATH') || title.includes('toán')) {
+    return {
+      Icon: Calculator,
+      gradient: 'from-blue-600 to-indigo-600',
+      activeRing: 'border-blue-600 ring-2 ring-blue-500/20 bg-blue-50/40',
+      iconBg: 'bg-blue-600 text-white',
+      inactiveIconBg: 'bg-blue-50 text-blue-600 border border-blue-200/60',
+      tag: 'Miền 2 (Định lượng)',
+      tagActiveBg: 'bg-blue-100 text-blue-800 font-extrabold',
+      accent: 'text-blue-700'
+    };
+  }
+
+  // 2. Sử dụng ngôn ngữ
+  if (code.includes('LANG') || title.includes('ngôn ngữ') || title.includes('tiếng')) {
+    return {
+      Icon: Languages,
+      gradient: 'from-emerald-600 to-teal-600',
+      activeRing: 'border-emerald-600 ring-2 ring-emerald-500/20 bg-emerald-50/40',
+      iconBg: 'bg-emerald-600 text-white',
+      inactiveIconBg: 'bg-emerald-50 text-emerald-600 border border-emerald-200/60',
+      tag: 'Miền 1 (Ngôn ngữ)',
+      tagActiveBg: 'bg-emerald-100 text-emerald-800 font-extrabold',
+      accent: 'text-emerald-700'
+    };
+  }
+
+  // 3. Khoa học tự nhiên
+  if (code.includes('NATURAL') || title.includes('tự nhiên') || title.includes('khtn')) {
+    return {
+      Icon: FlaskConical,
+      gradient: 'from-amber-600 to-orange-600',
+      activeRing: 'border-amber-600 ring-2 ring-amber-500/20 bg-amber-50/40',
+      iconBg: 'bg-amber-600 text-white',
+      inactiveIconBg: 'bg-amber-50 text-amber-600 border border-amber-200/60',
+      tag: 'Miền 3 (Lý, Hóa, Sinh)',
+      tagActiveBg: 'bg-amber-100 text-amber-800 font-extrabold',
+      accent: 'text-amber-700'
+    };
+  }
+
+  // 4. Khoa học xã hội
+  if (code.includes('SOCIAL') || title.includes('xã hội') || title.includes('khxh')) {
+    return {
+      Icon: Landmark,
+      gradient: 'from-violet-600 to-purple-600',
+      activeRing: 'border-purple-600 ring-2 ring-purple-500/20 bg-purple-50/40',
+      iconBg: 'bg-purple-600 text-white',
+      inactiveIconBg: 'bg-purple-50 text-purple-600 border border-purple-200/60',
+      tag: 'Miền 4 (Sử, Địa, GDKT)',
+      tagActiveBg: 'bg-purple-100 text-purple-800 font-extrabold',
+      accent: 'text-purple-700'
+    };
+  }
+
+  return {
+    Icon: Layers,
+    gradient: 'from-slate-700 to-slate-900',
+    activeRing: 'border-slate-800 ring-2 ring-slate-500/20 bg-slate-50',
+    iconBg: 'bg-slate-800 text-white',
+    inactiveIconBg: 'bg-slate-100 text-slate-700 border border-slate-200',
+    tag: 'Đa miền',
+    tagActiveBg: 'bg-slate-200 text-slate-800 font-extrabold',
+    accent: 'text-slate-800'
+  };
+};
 
 const MATH_SNIPPETS = [
   { label: 'Phân số', code: '\\frac{a}{b}' },
@@ -258,9 +380,11 @@ export default function CurriculumExplorerView({
   const [studioTargetChapter, setStudioTargetChapter] = useState(null);
   const [studioTargetLesson, setStudioTargetLesson] = useState(null);
 
-  // Multi-Dimensional Classification & Filter States (Lớp, Năm học, Phân môn riêng biệt)
+  // Multi-Dimensional Classification & Filter States (Lớp, Độ khó Bloom, Phân môn riêng biệt)
   const [selectedGrade, setSelectedGrade] = useState('all'); // 'all' | '12' | '11' | '10'
   const [selectedAcademicYear, setSelectedAcademicYear] = useState('all'); // 'all' | '2025-2026' | '2024-2025'
+  const [selectedBloomFilter, setSelectedBloomFilter] = useState('all'); // 'all' | '1' | '2' | '3' | '4'
+  const [isFilterCollapsed, setIsFilterCollapsed] = useState(true);
   const [selectedSubSubject, setSelectedSubSubject] = useState('all');
 
   // Node Deletion Tracking
@@ -376,15 +500,35 @@ export default function CurriculumExplorerView({
     try {
       const data = await contentService.getCurriculum();
       if (data && Array.isArray(data) && data.length > 0) {
-        setDomains(data);
-        const targetDomain = data.find(d => d.id === activeDomainId) || data[0];
-        if (!activeDomainId) {
+        // Loại bỏ miền "Tổng hợp" nhân tạo, chỉ lấy 4 miền chuẩn
+        const validDomains = data.filter(d => {
+          const t = (d.title || d.name || '').toLowerCase();
+          return !t.includes('tổng hợp');
+        });
+        const cleanDomains = validDomains.length > 0 ? validDomains : data;
+
+        // Sắp xếp 4 miền theo chuẩn cấu trúc ĐGNL (Toán -> Ngôn ngữ -> Tự nhiên -> Xã hội)
+        const domainSortMap = {
+          'MATH_LOGIC': 1,
+          'LANGUAGE': 2,
+          'NATURAL_SCIENCES': 3,
+          'SOCIAL_SCIENCES': 4
+        };
+        cleanDomains.sort((a, b) => {
+          const ordA = domainSortMap[a.domainCode] || 99;
+          const ordB = domainSortMap[b.domainCode] || 99;
+          return ordA - ordB;
+        });
+
+        setDomains(cleanDomains);
+        const targetDomain = cleanDomains.find(d => d.id === activeDomainId) || cleanDomains[0];
+        if (!activeDomainId || !cleanDomains.some(d => d.id === activeDomainId)) {
           setActiveDomainId(targetDomain.id);
         }
 
         if (preservePatternId) {
           let foundPat = null;
-          for (const d of data) {
+          for (const d of cleanDomains) {
             for (const c of (d.chapters || [])) {
               for (const l of (c.lessons || [])) {
                 for (const p of (l.patterns || [])) {
@@ -486,6 +630,7 @@ export default function CurriculumExplorerView({
       .toLowerCase()
       .replace(/\[lớp\s*\d+[^\]]*\]/gi, '')
       .replace(/^(chương|chuyên đề|bài|dạng)\s*[ivxlcdm\d,\s&]*[:\.\-–]\s*/gi, '')
+      .replace(/\b(trọng tâm|lý thuyết|phương pháp|phương pháp giải|giải|bài toán|bài tập|dạng bài)\b/gi, '')
       .replace(/\s+/g, ' ')
       .trim();
   };
@@ -493,13 +638,18 @@ export default function CurriculumExplorerView({
   const isFuzzyLabelMatch = (a, b) => {
     const na = normalizeTaxonomyLabel(a);
     const nb = normalizeTaxonomyLabel(b);
-    if (!na || !nb || na.length < 4 || nb.length < 4) return false;
+    if (!na || !nb || na.length < 3 || nb.length < 3) return false;
+    if (na === nb) return true;
     if (na.includes(nb) || nb.includes(na)) return true;
-    const wordsA = na.split(' ').filter(w => w.length >= 4);
-    const wordsB = nb.split(' ').filter(w => w.length >= 4);
+    const wordsA = na.split(' ').filter(w => w.length >= 3);
+    const wordsB = nb.split(' ').filter(w => w.length >= 3);
     if (wordsA.length === 0 || wordsB.length === 0) return false;
     const overlap = wordsA.filter(w => wordsB.includes(w)).length;
-    return overlap >= Math.min(2, Math.min(wordsA.length, wordsB.length));
+    const minWords = Math.min(wordsA.length, wordsB.length);
+    if (minWords <= 2) {
+      return overlap === minWords;
+    }
+    return overlap >= Math.ceil(minWords * 0.6);
   };
 
   const allIngestedChunks = useMemo(() => {
@@ -515,60 +665,76 @@ export default function CurriculumExplorerView({
 
   const getMatchedChunksForChapter = (chap) => {
     if (!chap || allIngestedChunks.length === 0) return [];
-    return allIngestedChunks.filter(c => isFuzzyLabelMatch(c.chapterName, chap.name));
+    const targetSub = detectSubjectFromContext(chap.name, currentDomain);
+    const targetGrade = detectGrade(chap.name) || (selectedGrade !== 'all' ? selectedGrade : null);
+
+    return allIngestedChunks.filter(c => {
+      // 1. Phải cùng môn học
+      if (targetSub && c.subjectCode && !isSubjectCompatible(c.subjectCode, targetSub)) return false;
+      // 2. Phải cùng khối lớp
+      if (targetGrade && c.grade && Number(c.grade) !== Number(targetGrade)) return false;
+      // 3. Khớp tên chương
+      return isFuzzyLabelMatch(c.chapterName, chap.name);
+    });
   };
 
-  const getMatchedChunksForLesson = (les) => {
+  const getMatchedChunksForLesson = (les, parentChap = null) => {
     if (!les || allIngestedChunks.length === 0) return [];
-    return allIngestedChunks.filter(c => isFuzzyLabelMatch(c.lessonName, les.name));
+    const targetSub = detectSubjectFromContext(parentChap?.name || les.name, currentDomain);
+    const targetGrade = detectGrade(parentChap?.name || les.name) || (selectedGrade !== 'all' ? selectedGrade : null);
+
+    return allIngestedChunks.filter(c => {
+      // 1. Phải cùng môn học
+      if (targetSub && c.subjectCode && !isSubjectCompatible(c.subjectCode, targetSub)) return false;
+      // 2. Phải cùng khối lớp
+      if (targetGrade && c.grade && Number(c.grade) !== Number(targetGrade)) return false;
+      // 3. Chunks bắt buộc phải thuộc cùng Chương
+      if (parentChap && c.chapterName && !isFuzzyLabelMatch(c.chapterName, parentChap.name)) return false;
+      // 4. Khớp tên bài học
+      return isFuzzyLabelMatch(c.lessonName, les.name);
+    });
   };
 
-  const getMatchedChunksForPattern = (pat, parentLesson = null) => {
+  const getMatchedChunksForPattern = (pat, parentLesson = null, parentChapter = null) => {
     if (!pat || allIngestedChunks.length === 0) return [];
-    const gradeChunks = selectedGrade
-      ? allIngestedChunks.filter(c => !c.grade || Number(c.grade) === Number(selectedGrade))
-      : allIngestedChunks;
-    const exactPat = gradeChunks.filter(c => isFuzzyLabelMatch(c.patternName, pat.name));
-    if (exactPat.length > 0) return exactPat;
+    const targetSub = detectSubjectFromContext(parentChapter?.name || parentLesson?.name || pat.name, currentDomain);
+    const targetGrade = detectGrade(parentChapter?.name || parentLesson?.name || pat.name) || (selectedGrade !== 'all' ? selectedGrade : null);
+
+    // 1. Giới hạn chặt chẽ phạm vi chunks theo Môn học, Khối lớp và Chương
+    const scopedChunks = allIngestedChunks.filter(c => {
+      if (targetSub && c.subjectCode && !isSubjectCompatible(c.subjectCode, targetSub)) return false;
+      if (targetGrade && c.grade && Number(c.grade) !== Number(targetGrade)) return false;
+      if (parentChapter && c.chapterName && !isFuzzyLabelMatch(c.chapterName, parentChapter.name)) return false;
+      return true;
+    });
+
+    if (scopedChunks.length === 0) return [];
+
+    // 2. Nếu có parentLesson, bắt buộc giới hạn trong các chunks của Bài học này
     if (parentLesson) {
-      return gradeChunks.filter(c => isFuzzyLabelMatch(c.lessonName, parentLesson.name));
+      const lessonScoped = scopedChunks.filter(c => isFuzzyLabelMatch(c.lessonName, parentLesson.name));
+      if (lessonScoped.length > 0) {
+        // Nếu trong bài học có chunks gán đích danh Dạng bài thì ưu tiên
+        const patExact = lessonScoped.filter(c => c.patternName && isFuzzyLabelMatch(c.patternName, pat.name));
+        if (patExact.length > 0) return patExact;
+        // Fallback về đúng các chunks của bài học này
+        return lessonScoped;
+      }
     }
+
+    // 3. Fallback cuối cùng: chỉ tìm trong scopedChunks (đã lọc cùng Môn, cùng Khối lớp và cùng Chương)
+    const patMatches = scopedChunks.filter(c => c.patternName && isFuzzyLabelMatch(c.patternName, pat.name));
+    if (patMatches.length > 0) return patMatches;
+
     return [];
   };
 
   const initSelection = (domain) => {
     if (!domain) return;
-    const chapters = domain.chapters || [];
-    if (chapters.length > 0) {
-      const firstChap = chapters[0];
-      setExpandedChapters({ [firstChap.chapterId]: true });
-      if (firstChap.lessons && firstChap.lessons.length > 0) {
-        const firstLes = firstChap.lessons[0];
-        setExpandedLessons({ [firstLes.lessonId]: true });
-        if (firstLes.patterns && firstLes.patterns.length > 0) {
-          setSelectedPattern(firstLes.patterns[0]);
-        }
-      }
-    } else if (domain.skills && domain.skills.length > 0) {
-      // Fallback: Map flat skill to pattern structure
-      const s = domain.skills[0];
-      setSelectedPattern({
-        patternId: s.skillId,
-        name: s.name,
-        code: s.code,
-        level: s.level,
-        weight: s.weight,
-        theoryRecap: s.theory,
-        solutionMethod: "Phương pháp tư duy chuẩn hóa ĐGNL ĐHQG-HCM.",
-        keyFormulas: s.keyFormulas || [],
-        crossModel: s.crossModel,
-        crossNote: s.crossNote,
-        prerequisiteIds: s.prerequisiteIds || [],
-        videoLesson: s.videoLesson,
-        sampleQuestion: s.sampleQuestion,
-        questionBankCount: 5
-      });
-    }
+    // Mặc định tất cả toggle đều đóng khi chuyển miền tri thức
+    setExpandedChapters({});
+    setExpandedLessons({});
+    setSelectedPattern(null);
   };
 
   const currentDomain = domains.find(d => d.id === activeDomainId) || domains[0] || { chapters: [], skills: [] };
@@ -659,35 +825,19 @@ export default function CurriculumExplorerView({
     loadRoadmapAndAssessment();
   }, []);
 
-  // Helper to toggle chapter / lesson accordion & auto-load content
-  const toggleChapter = (chapterId, chap) => {
-    setExpandedChapters(prev => {
-      const willExpand = !prev[chapterId];
-      if (willExpand && chap?.lessons?.length > 0) {
-        const firstLes = chap.lessons[0];
-        setExpandedLessons(lPrev => ({ ...lPrev, [firstLes.lessonId]: true }));
-        if (firstLes.patterns && firstLes.patterns.length > 0) {
-          setSelectedPattern(firstLes.patterns[0]);
-        }
-      }
-      return {
-        ...prev,
-        [chapterId]: willExpand
-      };
-    });
+  // Helper to toggle chapter / lesson accordion độc lập (không tự động bung cấp con)
+  const toggleChapter = (chapterId) => {
+    setExpandedChapters(prev => ({
+      ...prev,
+      [chapterId]: !prev[chapterId]
+    }));
   };
 
-  const toggleLesson = (lessonId, les) => {
-    setExpandedLessons(prev => {
-      const willExpand = !prev[lessonId];
-      if (willExpand && les?.patterns && les.patterns.length > 0) {
-        setSelectedPattern(les.patterns[0]);
-      }
-      return {
-        ...prev,
-        [lessonId]: willExpand
-      };
-    });
+  const toggleLesson = (lessonId) => {
+    setExpandedLessons(prev => ({
+      ...prev,
+      [lessonId]: !prev[lessonId]
+    }));
   };
 
   // Get effective chapters (handling fallback if domain only has flat skills)
@@ -756,7 +906,29 @@ export default function CurriculumExplorerView({
       result = result.filter(chap => matchesSubSubject(chap, selectedSubSubject, domainKey));
     }
 
-    // 4. Lọc theo Search Query (Chương, Bài học, Dạng bài, KaTeX)
+    // 4. Lọc theo Cấp độ Bloom thực tế của Dạng bài
+    if (selectedBloomFilter !== 'all') {
+      const targetBloom = Number(selectedBloomFilter);
+      result = result.map(chap => {
+        const filteredLessons = (chap.lessons || []).map(les => {
+          const filteredPatterns = (les.patterns || []).filter(pat => {
+            const patLvl = Number(pat.bloomLevel || pat.difficultyLevel || (pat.level ? String(pat.level).replace(/[^0-9]/g, '') : 2)) || 2;
+            return patLvl === targetBloom;
+          });
+          if (filteredPatterns.length > 0) {
+            return { ...les, patterns: filteredPatterns };
+          }
+          return null;
+        }).filter(Boolean);
+
+        if (filteredLessons.length > 0) {
+          return { ...chap, lessons: filteredLessons };
+        }
+        return null;
+      }).filter(Boolean);
+    }
+
+    // 5. Lọc theo Search Query (Chương, Bài học, Dạng bài, KaTeX)
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       result = result.map(chap => {
@@ -783,7 +955,7 @@ export default function CurriculumExplorerView({
     }
 
     return result;
-  }, [chapters, selectedGrade, selectedAcademicYear, selectedSubSubject, domainKey, searchQuery]);
+  }, [chapters, selectedGrade, selectedAcademicYear, selectedSubSubject, selectedBloomFilter, domainKey, searchQuery]);
 
   // Helper to get Mastery percentage for a Pattern
   const getPatternMastery = (pattern) => {
@@ -1757,331 +1929,238 @@ export default function CurriculumExplorerView({
   return (
     <div className="@container w-full min-w-0 max-w-full space-y-6 pb-12">
 
-      {/* 1. HERO BANNER: LỘ TRÌNH PHỔ THÔNG PHÂN CẤP (CLEAN LIGHT THEME) */}
-      <div className="relative min-w-0 overflow-hidden rounded-2xl bg-white border border-slate-200/80 shadow-xs p-5 lg:p-6">
-        <div className="relative z-10 flex flex-col @[70rem]:flex-row items-start @[70rem]:items-center justify-between gap-4">
-          <div className="min-w-0 flex-1 space-y-2 max-w-3xl">
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-indigo-50 border border-indigo-200/70 text-indigo-700 text-[11px] font-bold tracking-wide">
-              <Sparkles className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
-              <span>LỘ TRÌNH HỌC PHỔ THÔNG PHÂN CẤP: CHƯƠNG → BÀI → DẠNG BÀI</span>
-            </div>
-
+      {/* 1. HEADER TINH GỌN & 4 NHÓM MIỀN TRI THỨC */}
+      <div className="relative min-w-0 overflow-hidden rounded-2xl bg-white border border-slate-200/80 shadow-xs p-5 lg:p-6 space-y-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+          <div>
             <h1 className="text-xl lg:text-2xl font-black tracking-tight text-slate-900 leading-tight">
-              Dàn Kiến Thức Chuẩn SGK & Phương Pháp Giải Từng Dạng Bài
+              Khung Chương Trình & Dàn Kiến Thức Chuẩn
             </h1>
-
-            <p className="text-xs text-slate-600 font-medium leading-relaxed">
-              Mỗi dạng bài được trang bị đầy đủ 4 khối nội dung sư phạm:
-              <strong className="text-indigo-600 font-bold"> (1) Nền tảng SGK</strong>,
-              <strong className="text-amber-600 font-bold"> (2) Phương pháp giải KaTeX</strong>,
-              <strong className="text-emerald-600 font-bold"> (3) Video & Bài toán mẫu</strong>, và
-              <strong className="text-rose-600 font-bold"> (4) Quiz thích ứng</strong> tự động gom các dạng bài cần cải thiện.
+            <p className="text-xs text-slate-500 font-medium mt-0.5">
+              Hệ thống hóa tri thức chuẩn SGK GDPT 2018, phương pháp giải chuyên sâu & ngân hàng câu hỏi ĐGNL
             </p>
           </div>
-
-          <div className="flex max-w-full flex-wrap items-center gap-2.5 self-start @[70rem]:self-center">
-            <button
-              type="button"
-              onClick={() => {
-                setMathLabEngine('jsxgraph');
-                setIsMathLabModalOpen(true);
-              }}
-              className="px-3.5 py-2 rounded-xl bg-linear-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white text-xs font-black shadow-sm flex items-center gap-2 transition-all cursor-pointer"
-              title="Phòng thí nghiệm MathLab 2D & Hình học không gian 3D (JSXGraph Native Engine)"
-            >
-              <Compass className="w-4 h-4 text-amber-300" />
-              <span>⚡ MathLab 2D/3D (JSXGraph)</span>
-            </button>
-            <div className="px-3.5 py-2 rounded-xl bg-slate-50/90 border border-slate-200/80 text-left">
-              <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Cấu trúc phân cấp</div>
-              <div className="text-xs font-black text-slate-800 flex items-center gap-1.5 mt-0.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-cyan-500"></span>
-                Chương <span className="text-slate-300">•</span> Bài <span className="text-slate-300">•</span> Dạng
-              </div>
-            </div>
-            <div className="px-3.5 py-2 rounded-xl bg-slate-50/90 border border-slate-200/80 text-left">
-              <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Trọng số chuẩn hóa</div>
-              <div className="text-xs font-black text-emerald-700 flex items-center gap-1.5 mt-0.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                1.200 Điểm
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* 4/5 Core Domains Tabs */}
-        <div className="relative z-10 mt-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5 pt-4 border-t border-slate-100">
-          {domains.map((domain) => {
-            const Icon = getDomainIcon(domain.icon);
-            const isActive = domain.id === activeDomainId;
-            return (
-              <button
-                key={domain.id}
-                onClick={() => setActiveDomainId(domain.id)}
-                className={`flex min-w-0 items-center gap-2.5 p-2.5 px-3 rounded-xl text-left transition-all group ${
-                  isActive
-                    ? 'bg-indigo-50/90 border-2 border-indigo-600 text-slate-900 shadow-sm font-bold ring-2 ring-indigo-500/15'
-                    : 'bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 hover:border-slate-300 shadow-2xs hover:shadow-xs'
-                }`}
-              >
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
-                  isActive
-                    ? 'bg-gradient-to-tr ' + domain.gradient + ' text-white shadow-xs'
-                    : 'bg-slate-100/90 border border-slate-200/80 text-slate-600 group-hover:bg-indigo-50 group-hover:text-indigo-600 group-hover:border-indigo-200 shadow-2xs transition-colors'
-                }`}>
-                  <Icon className="w-4 h-4" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className={`text-xs font-bold leading-tight truncate ${isActive ? 'text-indigo-950 font-black' : 'text-slate-800 group-hover:text-slate-900'}`}>
-                    {domain.title}
-                  </div>
-                  <div className={`text-[10px] font-medium truncate mt-0.5 ${isActive ? 'text-indigo-700/80' : 'text-slate-500'}`}>
-                    {domain.subtitle}
-                  </div>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* 1.5 DYNAMIC ASSESSMENT STATUS BANNER */}
-      {!userAssessment ? (
-        <div className="p-5 sm:p-6 rounded-3xl bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/15 border border-amber-500/30 text-amber-950 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm animate-fade">
-          <div className="flex items-start sm:items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-lg shadow-amber-500/25">
-              <AlertTriangle className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <div className="text-xs font-black uppercase tracking-wider text-amber-800 flex items-center gap-2">
-                <span>BẠN CHƯA LÀM BÀI KHẢO SÁT NĂNG LỰC ĐẦU VÀO</span>
-                <span className="px-2 py-0.5 rounded-full bg-amber-200 text-amber-900 text-[10px] font-black">
-                  Khung Chuẩn 120 Câu (Ontology)
-                </span>
-              </div>
-              <p className="text-xs text-amber-900/90 font-medium mt-1 leading-relaxed max-w-3xl">
-                Cây tri thức bên dưới đang hiển thị toàn bộ lộ trình SGK chuẩn. Hãy làm bài <strong>Khảo sát năng lực đầu vào (30 câu)</strong> để hệ thống tự động gắn cờ các dạng bài yếu hoặc hổng kiến thức (&lt;10%) của riêng bạn!
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={onNavigateDiagnostic}
-            className="w-full sm:w-auto px-5 py-3 rounded-2xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white text-xs font-extrabold shrink-0 shadow-md shadow-amber-600/25 flex items-center justify-center gap-2 transition-all hover:scale-105 active:scale-95"
-          >
-            <span>Làm bài khảo sát ngay (30 câu)</span>
-            <ArrowRight className="w-4 h-4" />
-          </button>
-        </div>
-      ) : (
-        <div className="p-5 sm:p-6 rounded-3xl bg-gradient-to-r from-blue-900/5 via-indigo-900/5 to-cyan-900/10 border border-blue-500/30 text-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm animate-fade">
-          <div className="flex items-start sm:items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-blue-600 to-cyan-500 text-white flex items-center justify-center shrink-0 shadow-lg shadow-cyan-500/20">
-              <Target className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <div className="text-xs font-black uppercase tracking-wider text-blue-700 flex items-center gap-2">
-                <span>HỒ SƠ ĐỊNH VỊ NĂNG LỰC CÁ NHÂN THEO DẠNG BÀI</span>
-                <span className="px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800 text-[10px] font-black border border-blue-200">
-                  {userAssessment.placementClassLabel || 'Lớp Tăng Tốc'}
-                </span>
-              </div>
-              <div className="text-xs text-slate-600 font-medium mt-1.5 flex flex-wrap items-center gap-3">
-                <span>Năng lực ước lượng: <strong className="text-blue-700 font-mono text-sm">{userAssessment.theta0 > 0 ? `+${userAssessment.theta0.toFixed(2)}` : userAssessment.theta0.toFixed(2)}</strong></span>
-                <span className="text-slate-300">•</span>
-                <span>Điểm thô: <strong className="text-slate-800">{userAssessment.totalCorrect}/30 câu</strong></span>
-                <span className="text-slate-300">•</span>
-                <span>AI phát hiện: <strong className="text-rose-600">{userAssessment.weakCount} dạng bài vùng trũng</strong> (cần củng cố)</span>
-              </div>
-            </div>
-          </div>
-          <button
-            onClick={onNavigateDiagnostic}
-            className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold shrink-0 shadow-sm flex items-center justify-center gap-1.5 transition-all"
-          >
-            <RefreshCw className="w-3.5 h-3.5 text-blue-600" />
-            <span>Khảo sát lại đề khác</span>
-          </button>
-        </div>
-      )}
-
-      {/* 1.8 MULTI-DIMENSIONAL CLASSIFICATION & FILTER SUITE (Môn học riêng biệt • Khối lớp • Năm học) */}
-      <div className="bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-slate-200/80 space-y-3.5">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-slate-100">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center shrink-0">
-              <Filter className="w-4 h-4" />
-            </div>
-            <div>
-              <h4 className="text-xs font-black text-slate-900 uppercase tracking-wide">Bộ Lọc Phân Loại Tri Thức</h4>
-              <p className="text-[11px] text-slate-500 font-medium">Phân tách rõ ràng theo phân môn riêng biệt, khối lớp và năm học chuẩn GDPT 2018</p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 flex-wrap">
-            <button
-              type="button"
-              onClick={() => setIsSgkModalOpen(true)}
-              className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold transition-colors flex items-center gap-1.5 shadow-2xs cursor-pointer"
-              title="Mở giao diện React Nạp SGK PDF (56 DPI) và đồng bộ tự động vào Giáo trình chung"
-            >
-              <UploadCloud className="w-3.5 h-3.5" />
-              <span>Nạp SGK (56 DPI)</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setIsStudioOpen(true)}
-              className="px-2.5 py-1 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-[11px] font-bold transition-colors flex items-center gap-1.5 shadow-2xs cursor-pointer"
-              title="Mở trang Studio Khung SGK (Quét mục lục 5-10s, Bloom 6 cấp độ, KaTeX & Khóa Version)"
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Studio Khung SGK</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                fetchIngestedTextbooks();
-                setIsSgkLibraryOpen(true);
-              }}
-              className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-900 text-white text-[11px] font-bold transition-colors flex items-center gap-1.5 shadow-2xs cursor-pointer"
-              title="Xem toàn bộ các cuốn SGK đã nạp vào Database theo từng trang"
-            >
-              <BookOpen className="w-3.5 h-3.5" />
-              <span>Kho SGK ({ingestedTextbooks.length})</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => fetchIngestedTextbooks()}
-              disabled={loadingTextbooks}
-              className="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-[11px] font-bold border border-emerald-200 transition-colors flex items-center gap-1 cursor-pointer disabled:opacity-60"
-              title="Đồng bộ lại các SGK đã nạp từ AI Engine để hiển thị tick xanh"
-            >
-              <RefreshCw className={`w-3 h-3 ${loadingTextbooks ? 'animate-spin' : ''}`} />
-              <span>Đã nạp: {ingestedTextbooks.length} SGK</span>
-            </button>
-            {(selectedGrade !== 'all' || selectedAcademicYear !== 'all' || selectedSubSubject !== 'all' || searchQuery.trim()) && (
-              <button
-                onClick={() => {
-                  setSelectedGrade('all');
-                  setSelectedAcademicYear('all');
-                  setSelectedSubSubject('all');
-                  setSearchQuery('');
-                }}
-                className="px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 text-[11px] font-bold border border-rose-200 transition-colors flex items-center gap-1 cursor-pointer"
-              >
-                <X className="w-3 h-3" />
-                <span>Đặt lại bộ lọc</span>
-              </button>
-            )}
-            <span className="text-[11px] font-bold text-slate-600 px-2.5 py-1 rounded-lg bg-slate-100">
+            <span className="text-xs font-bold text-slate-600 px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200/60">
               Khớp: <strong className="text-blue-700 font-mono">{filteredChapters.length}</strong> Chương • <strong className="text-indigo-700 font-mono">{filteredChapters.reduce((acc, c) => acc + (c.lessons?.length || 0), 0)}</strong> Bài học
             </span>
           </div>
         </div>
 
-        {/* Dòng 1: Môn học riêng biệt (Sub-Subjects) */}
-        {subSubjectsList.length > 0 && (
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2 text-xs">
-            <span className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider shrink-0 w-24 flex items-center gap-1.5">
-              <Book className="w-3.5 h-3.5 text-indigo-600" />
-              <span>Phân môn:</span>
-            </span>
-            <div className="flex items-center gap-1.5 flex-wrap">
-              {subSubjectsList.map(subj => {
-                const isActive = selectedSubSubject === subj.id;
-                return (
-                  <button
-                    key={subj.id}
-                    onClick={() => setSelectedSubSubject(subj.id)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                      isActive
-                        ? 'bg-indigo-600 text-white shadow-xs ring-2 ring-indigo-500/20'
-                        : 'bg-slate-100/80 hover:bg-slate-200/80 text-slate-700 border border-slate-200/60'
-                    }`}
-                  >
-                    {subj.name}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
+        {/* 4 Nhóm Miền Tri Thức Chuẩn (Toán học, Ngôn ngữ, Khoa học tự nhiên, Khoa học xã hội) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+          {domains
+            .filter(d => {
+              const t = (d.title || d.name || '').toLowerCase();
+              return !t.includes('tổng hợp') || domains.length <= 4;
+            })
+            .map((domain) => {
+              const visual = getDomainVisuals(domain);
+              const DomainIcon = visual.Icon;
+              const isActive = domain.id === activeDomainId;
+              const chapCount = domain.chapters?.length || 0;
+              const lesCount = domain.chapters?.reduce((acc, c) => acc + (c.lessons?.length || 0), 0) || 0;
 
-        {/* Dòng 2: Khối lớp & Năm học */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
-          {/* Khối lớp */}
-          <div className="flex items-center gap-2 text-xs">
-            <span className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider shrink-0 w-24 flex items-center gap-1.5">
-              <GraduationCap className="w-3.5 h-3.5 text-blue-600" />
-              <span>Khối lớp:</span>
-            </span>
-            <div className="flex items-center gap-1.5 flex-wrap">
-              {[
-                { id: 'all', label: 'Tất cả lớp' },
-                { id: '12', label: 'Lớp 12 (Trọng tâm ĐGNL)', badge: 'V-ACT' },
-                { id: '11', label: 'Lớp 11' },
-                { id: '10', label: 'Lớp 10' }
-              ].map(g => {
-                const isActive = selectedGrade === g.id;
-                return (
-                  <button
-                    key={g.id}
-                    onClick={() => setSelectedGrade(g.id)}
-                    className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                      isActive
-                        ? 'bg-blue-600 text-white shadow-xs'
-                        : 'bg-slate-100 hover:bg-slate-200/80 text-slate-700 border border-slate-200/60'
-                    }`}
-                  >
-                    <span>{g.label}</span>
-                    {g.badge && (
-                      <span className={`text-[9px] px-1 py-0.2 rounded font-black ${isActive ? 'bg-blue-800 text-white' : 'bg-blue-100 text-blue-700'}`}>
-                        {g.badge}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+              return (
+                <button
+                  key={domain.id}
+                  onClick={() => setActiveDomainId(domain.id)}
+                  className={`flex flex-col justify-between p-4 rounded-2xl text-left transition-all cursor-pointer relative overflow-hidden group border ${
+                    isActive
+                      ? `bg-white shadow-sm ring-2 ${visual.activeRing}`
+                      : 'bg-white hover:bg-slate-50/90 text-slate-800 border-slate-200/90 shadow-2xs hover:shadow-xs'
+                  }`}
+                >
+                  {/* Dải màu nhận diện thương hiệu trên cùng khi Active */}
+                  {isActive && (
+                    <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${visual.gradient}`} />
+                  )}
 
-          {/* Năm học */}
-          <div className="flex items-center gap-2 text-xs">
-            <span className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider shrink-0 w-24 flex items-center gap-1.5">
-              <Calendar className="w-3.5 h-3.5 text-emerald-600" />
-              <span>Năm học:</span>
-            </span>
-            <div className="flex items-center gap-1.5 flex-wrap">
-              {[
-                { id: 'all', label: 'Tất cả năm' },
-                { id: '2025-2026', label: '2025 - 2026', badge: 'Mới' },
-                { id: '2024-2025', label: '2024 - 2025' }
-              ].map(y => {
-                const isActive = selectedAcademicYear === y.id;
-                return (
-                  <button
-                    key={y.id}
-                    onClick={() => setSelectedAcademicYear(y.id)}
-                    className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                      isActive
-                        ? 'bg-emerald-600 text-white shadow-xs'
-                        : 'bg-slate-100 hover:bg-slate-200/80 text-slate-700 border border-slate-200/60'
-                    }`}
-                  >
-                    <span>{y.label}</span>
-                    {y.badge && (
-                      <span className={`text-[9px] px-1 py-0.2 rounded font-black ${isActive ? 'bg-emerald-800 text-white' : 'bg-emerald-100 text-emerald-700'}`}>
-                        {y.badge}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+                  <div className="flex items-center justify-between gap-2 mb-2.5">
+                    <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md ${
+                      isActive ? visual.tagActiveBg : 'bg-slate-100 text-slate-500'
+                    }`}>
+                      {visual.tag}
+                    </span>
+                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center transition-transform group-hover:scale-110 ${
+                      isActive ? visual.iconBg : 'bg-slate-100 text-slate-500'
+                    }`}>
+                      <DomainIcon className="w-4 h-4" />
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className={`text-sm font-black leading-snug tracking-tight truncate ${
+                      isActive ? 'text-slate-900' : 'text-slate-800 group-hover:text-blue-600'
+                    }`}>
+                      {domain.title}
+                    </h3>
+                    <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-400 mt-1">
+                      <span className="font-mono text-slate-700 font-bold">{chapCount}</span> Chương
+                      <span>•</span>
+                      <span className="font-mono text-slate-700 font-bold">{lesCount}</span> Bài học
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
         </div>
       </div>
 
-      {/* 2. SEARCH & SUMMARY BAR (KÈM CÔNG CỤ HIỆU ĐÍNH GIẢNG VIÊN & NẠP AI SGK) */}
+      {/* 2. BỘ LỌC ĐA CHIỀU CÔNG THÁI HỌC (THU GỌN / MỞ RỘNG • KHỐI LỚP • ĐỘ KHÓ BLOOM THỰC TẾ • PHÂN MÔN) */}
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden transition-all">
+        {/* Header Bộ Lọc kèm nút Thu gọn */}
+        <div 
+          onClick={() => setIsFilterCollapsed(!isFilterCollapsed)}
+          className="p-3.5 px-4 bg-slate-50/60 flex items-center justify-between cursor-pointer hover:bg-slate-100/60 transition-colors select-none border-b border-slate-100"
+        >
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center shrink-0">
+              <Filter className="w-3.5 h-3.5" />
+            </div>
+            <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wide flex items-center gap-2">
+              <span>Bộ Lọc Khung Tri Thức</span>
+              <span className="text-[10px] text-slate-400 font-medium normal-case">
+                (Khối lớp • Cấp độ Bloom L1-L4 • Phân môn)
+              </span>
+            </h4>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {(selectedGrade !== 'all' || selectedBloomFilter !== 'all' || selectedSubSubject !== 'all' || searchQuery.trim()) && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedGrade('all');
+                  setSelectedBloomFilter('all');
+                  setSelectedSubSubject('all');
+                  setSearchQuery('');
+                }}
+                className="px-2 py-0.5 rounded-md bg-rose-50 hover:bg-rose-100 text-rose-700 text-[10px] font-bold border border-rose-200 flex items-center gap-1 cursor-pointer"
+              >
+                <X className="w-3 h-3" />
+                <span>Đặt lại</span>
+              </button>
+            )}
+            <button
+              type="button"
+              className="text-slate-400 hover:text-slate-600 transition-colors"
+            >
+              {isFilterCollapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
+            </button>
+          </div>
+        </div>
+
+        {/* Nội dung bộ lọc khi mở rộng */}
+        {!isFilterCollapsed && (
+          <div className="p-4 sm:p-5 space-y-3.5">
+            {/* Hàng 1: Khối lớp & Cấp độ Bloom thực tế */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+              {/* Khối lớp */}
+              <div className="flex items-center gap-2 text-xs">
+                <span className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider shrink-0 w-24 flex items-center gap-1.5">
+                  <GraduationCap className="w-3.5 h-3.5 text-blue-600" />
+                  <span>Khối lớp:</span>
+                </span>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {[
+                    { id: 'all', label: 'Tất cả lớp' },
+                    { id: '12', label: 'Lớp 12 (Trọng tâm ĐGNL)', badge: 'V-ACT' },
+                    { id: '11', label: 'Lớp 11' },
+                    { id: '10', label: 'Lớp 10' }
+                  ].map(g => {
+                    const isActive = selectedGrade === g.id;
+                    return (
+                      <button
+                        key={g.id}
+                        type="button"
+                        onClick={() => setSelectedGrade(g.id)}
+                        className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                          isActive
+                            ? 'bg-blue-600 text-white shadow-xs'
+                            : 'bg-slate-100 hover:bg-slate-200/80 text-slate-700 border border-slate-200/60'
+                        }`}
+                      >
+                        <span>{g.label}</span>
+                        {g.badge && (
+                          <span className={`text-[9px] px-1 py-0.2 rounded font-black ${isActive ? 'bg-blue-800 text-white' : 'bg-blue-100 text-blue-700'}`}>
+                            {g.badge}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Độ khó thực tế Bloom L1 - L4 */}
+              <div className="flex items-center gap-2 text-xs">
+                <span className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider shrink-0 w-24 flex items-center gap-1.5">
+                  <Target className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Độ khó Bloom:</span>
+                </span>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {[
+                    { id: 'all', label: 'Tất cả cấp độ' },
+                    { id: '1', label: 'L1: Nhận biết' },
+                    { id: '2', label: 'L2: Thông hiểu' },
+                    { id: '3', label: 'L3: Vận dụng' },
+                    { id: '4', label: 'L4: Vận dụng cao' }
+                  ].map(b => {
+                    const isActive = selectedBloomFilter === b.id;
+                    return (
+                      <button
+                        key={b.id}
+                        type="button"
+                        onClick={() => setSelectedBloomFilter(b.id)}
+                        className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${
+                          isActive
+                            ? 'bg-emerald-600 text-white shadow-xs'
+                            : 'bg-slate-100 hover:bg-slate-200/80 text-slate-700 border border-slate-200/60'
+                        }`}
+                      >
+                        <span>{b.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Hàng 2: Phân môn chi tiết */}
+            {subSubjectsList.length > 0 && (
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 text-xs pt-1 border-t border-slate-100">
+                <span className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider shrink-0 w-24 flex items-center gap-1.5">
+                  <Book className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>Phân môn:</span>
+                </span>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {subSubjectsList.map(subj => {
+                    const isActive = selectedSubSubject === subj.id;
+                    return (
+                      <button
+                        key={subj.id}
+                        type="button"
+                        onClick={() => setSelectedSubSubject(subj.id)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                          isActive
+                            ? 'bg-indigo-600 text-white shadow-xs ring-2 ring-indigo-500/20'
+                            : 'bg-slate-100/80 hover:bg-slate-200/80 text-slate-700 border border-slate-200/60'
+                        }`}
+                      >
+                        {subj.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* 3. THANH TÌM KIẾM CỐT LÕI */}
       <div className="flex flex-col md:flex-row items-center justify-between gap-4 bg-white p-4 rounded-2xl shadow-sm border border-slate-200/80">
         <div className="flex items-center gap-3 w-full md:w-auto flex-1 max-w-xl">
           <div className="relative w-full">
@@ -2166,7 +2245,7 @@ export default function CurriculumExplorerView({
 
           <div className="space-y-3">
             {filteredChapters.map((chap) => {
-              const isChapExpanded = expandedChapters[chap.chapterId] ?? true;
+              const isChapExpanded = Boolean(expandedChapters[chap.chapterId]);
               const chapSgkChunks = getMatchedChunksForChapter(chap);
               const hasChapSgk = chapSgkChunks.length > 0;
               return (
@@ -2178,7 +2257,7 @@ export default function CurriculumExplorerView({
                 >
                   {/* Chapter Header */}
                   <div
-                    onClick={() => toggleChapter(chap.chapterId, chap)}
+                    onClick={() => toggleChapter(chap.chapterId)}
                     className={`p-3.5 flex items-center justify-between cursor-pointer border-b transition-colors group/chap ${
                       hasChapSgk ? 'bg-emerald-50/40 hover:bg-emerald-50/80 border-emerald-100' : 'bg-slate-50/90 hover:bg-slate-100/90 border-slate-100'
                     }`}
@@ -2251,20 +2330,26 @@ export default function CurriculumExplorerView({
                   {/* Lessons List (Level 2) */}
                   {isChapExpanded && (
                     <div className="p-2 space-y-2 bg-slate-50/30">
-                      {(chap.lessons || []).map((les) => {
-                        const isLesExpanded = expandedLessons[les.lessonId] ?? true;
-                        const lesSgkChunks = getMatchedChunksForLesson(les);
-                        const hasLesSgk = lesSgkChunks.length > 0;
-                        return (
-                          <div
-                            key={les.lessonId}
-                            className={`rounded-xl border overflow-hidden ${
-                              hasLesSgk ? 'border-emerald-200 bg-white' : 'border-slate-200/60 bg-white'
-                            }`}
-                          >
-                            {/* Lesson Header */}
+                      {(chap.lessons || []).length === 0 ? (
+                        <div className="p-4 rounded-xl bg-slate-50 border border-dashed border-slate-200 text-center text-xs text-slate-500 font-medium space-y-1">
+                          <div className="font-bold text-slate-700">Chưa có dữ liệu nguồn bài học cho chương này</div>
+                          <div className="text-[11px] text-slate-400">Bạn có thể bấm &quot;Thêm bài&quot; để tạo bài học đầu tiên.</div>
+                        </div>
+                      ) : (
+                        (chap.lessons || []).map((les) => {
+                          const isLesExpanded = Boolean(expandedLessons[les.lessonId]);
+                          const lesSgkChunks = getMatchedChunksForLesson(les, chap);
+                          const hasLesSgk = lesSgkChunks.length > 0;
+                          return (
                             <div
-                              onClick={() => toggleLesson(les.lessonId, les)}
+                              key={les.lessonId}
+                              className={`rounded-xl border overflow-hidden ${
+                                hasLesSgk ? 'border-emerald-200 bg-white' : 'border-slate-200/60 bg-white'
+                              }`}
+                            >
+                              {/* Lesson Header */}
+                              <div
+                                onClick={() => toggleLesson(les.lessonId)}
                               className={`p-3 flex items-center justify-between cursor-pointer transition-colors group/les ${
                                 hasLesSgk ? 'hover:bg-emerald-50/40' : 'hover:bg-slate-50'
                               }`}
@@ -2336,19 +2421,25 @@ export default function CurriculumExplorerView({
                             {/* Patterns List (Level 3 - Selectable Leaves) */}
                             {isLesExpanded && (
                               <div className="px-2 pb-2 pt-1 space-y-1.5 border-t border-slate-100/80 bg-slate-50/40">
-                                {(les.patterns || []).map((pat) => {
+                                {(les.patterns || []).length === 0 ? (
+                                  <div className="p-3 rounded-lg bg-slate-50 border border-dashed border-slate-200 text-center text-xs text-slate-500 font-medium space-y-1">
+                                    <div className="font-bold text-slate-700">Chưa có dữ liệu nguồn dạng bài cho bài học này</div>
+                                    <div className="text-[11px] text-slate-400">Bạn có thể bấm &quot;Thêm dạng&quot; hoặc &quot;+ Studio&quot; để tạo dạng bài mới.</div>
+                                  </div>
+                                ) : (
+                                  (les.patterns || []).map((pat) => {
                                   const isSelected = selectedPattern?.patternId === pat.patternId;
                                   const mastery = getPatternMastery(pat);
                                   const isSevere = mastery !== undefined && mastery <= 10;
                                   const isWeak = mastery !== undefined && mastery < 60;
                                   const isGood = mastery !== undefined && mastery >= 60;
-                                  const patSgkChunks = getMatchedChunksForPattern(pat, les);
+                                  const patSgkChunks = getMatchedChunksForPattern(pat, les, chap);
                                   const hasPatSgk = patSgkChunks.length > 0;
 
                                   return (
                                     <div
                                       key={pat.patternId}
-                                      onClick={() => setSelectedPattern({ ...pat, _parentLesson: les })}
+                                      onClick={() => setSelectedPattern({ ...pat, _parentLesson: les, _parentChapter: chap })}
                                       className={`p-3 rounded-xl border text-left cursor-pointer transition-all relative overflow-hidden group ${
                                         isSelected
                                           ? 'bg-blue-50/90 border-blue-500 shadow-sm ring-1 ring-blue-500'
@@ -2437,12 +2528,12 @@ export default function CurriculumExplorerView({
                                       </div>
                                     </div>
                                   );
-                                })}
+                                }))}
                               </div>
                             )}
                           </div>
                         );
-                      })}
+                      }))}
                     </div>
                   )}
                 </div>
@@ -2451,334 +2542,20 @@ export default function CurriculumExplorerView({
           </div>
         </div>
 
-        {/* Right Column: 4 Pedagogical Layers for the Selected Pattern (7 Cols) */}
+        {/* Right Column: 3 Pedagogical Layers for the Selected Node (7 Cols) */}
         <div className="min-w-0 lg:col-span-7">
           {selectedPattern ? (
-            <div className="bg-white rounded-3xl border border-slate-200/90 shadow-md p-6 lg:p-8 space-y-6">
-
-              {/* Header: Pattern Identity & Mastery Status */}
-              <div className="pb-5 border-b border-slate-100 space-y-3">
-                {/* Top Row: Meta Badges & Action Buttons */}
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-700 text-[11px] font-black font-mono">
-                      {selectedPattern.code}
-                    </span>
-                    <span className="px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700 text-[11px] font-bold">
-                      Trọng số: {selectedPattern.weight}
-                    </span>
-                    <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[11px] font-bold">
-                      {selectedPattern.level || "Vận dụng"}
-                    </span>
-                  </div>
-
-                  {/* Layer Actions: Edit & Adaptive Quiz Buttons */}
-                  <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
-                    <button
-                      onClick={() => handleOpenStudio(selectedPattern)}
-                      className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-black flex items-center gap-2 shadow-md shadow-blue-500/25 transition-all hover:scale-105 active:scale-95"
-                      title="Mở Studio sư phạm toàn diện: đồ thị minh họa, bẫy đề thi, Casio, video timestamps và review học sinh"
-                    >
-                      <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-                      <span>Mở Studio Biên Soạn Sư Phạm</span>
-                    </button>
-
-                    <button
-                      onClick={() => handleOpenEditModal(selectedPattern)}
-                      className="p-2 rounded-xl bg-slate-100 hover:bg-indigo-50 hover:border-indigo-300 border border-slate-200 text-slate-600 hover:text-indigo-600 transition-all shadow-2xs cursor-pointer"
-                      title="Sửa thông tin nhanh (Tên dạng bài, Chương, Khối lớp, Mức độ Bloom)"
-                    >
-                      <Pencil className="w-4 h-4" />
-                    </button>
-
-                    <button
-                      onClick={() => handleLaunchAdaptiveQuiz(selectedPattern)}
-                      className="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-bold flex items-center gap-2 shadow-lg shadow-blue-500/25 hover:scale-105 active:scale-95 transition-all shrink-0"
-                    >
-                      <Zap className="w-4 h-4 text-amber-300 fill-amber-300" />
-                      <span>Luyện tập củng cố (5 câu)</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Main Title - Spans full width without being squished */}
-                <h2 className="text-xl lg:text-2xl font-black text-slate-900 leading-tight">
-                  {selectedPattern.name}
-                </h2>
-              </div>
-
-              {/* Matched Ingested SGK Content Panel (Hiển thị trực tiếp nội dung từ file SGK PDF đã nạp) */}
-              {(() => {
-                const matchedSgk = getMatchedChunksForPattern(selectedPattern, selectedPattern._parentLesson || null);
-                if (!matchedSgk || matchedSgk.length === 0) return null;
-                const firstMeta = matchedSgk[0];
-                return (
-                  <div className="p-4 rounded-2xl bg-emerald-50/70 border border-emerald-300 space-y-3 shadow-2xs animate-fade">
-                    <div className="flex items-center justify-between gap-2 flex-wrap border-b border-emerald-200/80 pb-2.5">
-                      <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0">
-                          <CheckCircle2 className="w-4 h-4" />
-                        </div>
-                        <div>
-                          <div className="text-xs font-black text-emerald-950">
-                            Tài liệu SGK gốc đã nạp ({matchedSgk.length} trang khớp)
-                          </div>
-                          <div className="text-[10.5px] text-emerald-800 font-medium">
-                            Nguồn: <strong>{firstMeta._sourceFileName}</strong> • {firstMeta.subjectName} Lớp {firstMeta.grade} ({firstMeta.bookEdition}) • {firstMeta._sourceDpi} DPI
-                          </div>
-                        </div>
-                      </div>
-                      <span className="px-2 py-0.5 rounded-full bg-emerald-600 text-white text-[10px] font-black">
-                        ✓ Đã liên kết SGK
-                      </span>
-                    </div>
-
-                    <div className="space-y-2.5 max-h-80 overflow-y-auto pr-1">
-                      {matchedSgk.slice(0, 6).map((c, idx) => (
-                        <div key={idx} className="p-3 rounded-xl bg-white border border-emerald-200/80 text-xs text-slate-800 space-y-1.5 shadow-2xs">
-                          <div className="flex items-center justify-between gap-2 text-[10.5px] font-bold text-emerald-800 border-b border-slate-100 pb-1">
-                            <span>📄 Trang {c.pageNumber} • {c.lessonName}</span>
-                            <div className="flex items-center gap-1.5">
-                              <span className="px-1.5 py-0.2 rounded bg-slate-100 text-slate-700">{c.sectionType || 'THEORY'}</span>
-                              {c.hasDiagram && (
-                                <span className="px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 border border-amber-300">
-                                  🖼️ {c.imagePlaceholders?.length || 1} Sơ đồ
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                          <div className="leading-relaxed">
-                            <MathText text={c.text} />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })()}
-
-              {/* Severe Weakness & Adjacent Remedial Notification */}
-              {isSelectedSeverelyWeak ? (
-                <div className="p-4 rounded-2xl bg-rose-50 border border-rose-300 flex items-start gap-3.5 text-xs text-rose-950 animate-fade">
-                  <div className="w-10 h-10 rounded-xl bg-rose-600 text-white flex items-center justify-center shrink-0 shadow-sm">
-                    <AlertCircle className="w-5 h-5" />
-                  </div>
-                  <div className="space-y-1">
-                    <div className="font-black text-rose-900 text-sm">
-                      CẢNH BÁO: DẠNG BÀI ĐANG HỔNG KIẾN THỨC NẶNG (Độ thành thạo: {selectedMastery}%)
-                    </div>
-                    <p className="text-rose-800 leading-relaxed font-medium">
-                      Học sinh chưa nắm vững điều kiện tiên quyết và thuật toán giải dạng bài này. Hệ thống đã tự động kích hoạt chế độ <strong>Phục hồi Vi mô (Micro-Remediation)</strong>: hãy đọc kỹ Khối 1 và Khối 2 bên dưới trước khi bấm làm bài tập củng cố.
-                    </p>
-                  </div>
-                </div>
-              ) : isSelectedWeak ? (
-                <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-between gap-3 text-xs text-amber-900 animate-fade">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
-                      <AlertTriangle className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <div className="font-extrabold text-amber-900">VÙNG TRŨNG: Độ thành thạo ước tính {selectedMastery}% (&lt;60%)</div>
-                      <div className="text-[11px] text-amber-700 font-medium">Cần hoàn thiện phương pháp giải và làm thêm 5 câu củng cố để vượt ngưỡng.</div>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => handleLaunchAdaptiveQuiz(selectedPattern)}
-                    className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold shrink-0 shadow-sm"
-                  >
-                    Củng cố ngay
-                  </button>
-                </div>
-              ) : null}
-
-              {/* Automatic Adjacent Weak Skill Warning (Layer 4 Feature) */}
-              {weakPrerequisites.length > 0 && (
-                <div className="p-3.5 rounded-2xl bg-gradient-to-r from-rose-500/10 to-indigo-500/10 border border-rose-300 text-xs flex items-center gap-3">
-                  <Zap className="w-4 h-4 text-rose-600 shrink-0" />
-                  <div className="text-slate-700 font-medium leading-relaxed">
-                    <strong className="text-rose-700">Tự động gom dạng bài tiên quyết: </strong>
-                    Phát hiện bạn đang bị hổng kiến thức nền ở dạng bài liên kết. Khi bạn bấm nút luyện tập, đề thi vi mô sẽ tự động gom thêm câu hỏi từ dạng tiên quyết để bạn củng cố dứt điểm gốc rễ!
-                  </div>
-                </div>
-              )}
-
-              {/* ================= KHỐI 1: KIẾN THỨC NỀN TẢNG & TIÊN QUYẾT ================= */}
-              <div className="space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-2">
-                    <span className="w-5 h-5 rounded-full bg-cyan-100 text-cyan-700 flex items-center justify-center text-[10px] font-black">1</span>
-                    <span>Khối 1: Kiến Thức Nền Tảng & Điều Kiện Tiên Quyết</span>
-                  </h4>
-                </div>
-
-                <div className="p-4 rounded-2xl bg-cyan-50/40 border border-cyan-100 text-xs text-slate-800 font-medium leading-relaxed">
-                  <MathText text={selectedPattern.theoryRecap || "Kiến thức nền tảng chuẩn theo chương trình phổ thông."} />
-                </div>
-              </div>
-
-              {/* ================= KHỐI 2: CÔNG THỨC, ĐỊNH LÝ & PHƯƠNG PHÁP GIẢI RIÊNG ================= */}
-              <div className="space-y-3 pt-2">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-2">
-                    <span className="w-5 h-5 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center text-[10px] font-black">2</span>
-                    <span>Khối 2: Phương Pháp Giải Chuyên Biệt & Công Thức KaTeX</span>
-                  </h4>
-                  <span className="text-[10px] text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full font-bold">
-                    Cách giải riêng từng bước
-                  </span>
-                </div>
-
-                {/* Step-by-Step Method */}
-                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 text-xs text-slate-800 leading-relaxed font-medium">
-                  <div className="font-extrabold text-indigo-900 mb-1.5 flex items-center gap-1.5">
-                    <Compass className="w-3.5 h-3.5 text-indigo-600" />
-                    <span>Quy trình giải chi tiết cho dạng bài này:</span>
-                  </div>
-                  <MathText text={selectedPattern.solutionMethod || "Áp dụng định lý đạo hàm và lập bảng biến thiên để tìm nghiệm tối ưu."} />
-                </div>
-
-                {/* KaTeX Formulas */}
-                {selectedPattern.keyFormulas && selectedPattern.keyFormulas.length > 0 && (
-                  <div className="grid grid-cols-1 gap-2 pt-1">
-                    {selectedPattern.keyFormulas.map((f, idx) => (
-                      <div key={idx} className="p-3.5 rounded-xl bg-slate-900 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border border-slate-800 shadow-sm">
-                        <span className="text-xs font-bold text-slate-300 shrink-0">
-                          {f.label}:
-                        </span>
-                        <div className="text-cyan-300 text-sm font-semibold tracking-wide overflow-x-auto py-0.5">
-                          <MathText text={`$$${f.latex}$$`} />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* GraphRAG Cross-Model Badge */}
-                {selectedPattern.crossModel && (
-                  <div className="p-4 rounded-2xl bg-gradient-to-br from-indigo-950 via-slate-900 to-blue-950 text-white border border-indigo-500/30 shadow-sm">
-                    <div className="flex items-center gap-2 text-indigo-300 font-extrabold text-[11px] mb-1.5">
-                      <Share2 className="w-3.5 h-3.5 text-indigo-400" />
-                      <span>MÔ HÌNH LIÊN MÔN GRAPHRAG (ỨNG DỤNG ĐGNL ĐHQG-HCM)</span>
-                    </div>
-                    <div className="text-xs font-bold text-white mb-1">
-                      {selectedPattern.crossModel}
-                    </div>
-                    <div className="text-[11px] text-slate-300 font-medium leading-relaxed">
-                      <MathText text={selectedPattern.crossNote || "Kế thừa trực tiếp trong các bài toán thực tiễn đa môn."} />
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* ================= KHỐI 3: VIDEO BÀI GIẢNG & LỜI GIẢI MẪU CHI TIẾT ================= */}
-              <div className="space-y-3 pt-2">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-2">
-                    <span className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-[10px] font-black">3</span>
-                    <span>Khối 3: Video Bài Giảng Phương Pháp & Lời Giải Mẫu</span>
-                  </h4>
-                  <span className="text-[10px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full font-bold">
-                    FSM Gate ≥ 80%
-                  </span>
-                </div>
-
-                {/* Video Lesson Mini Player */}
-                {selectedPattern.videoLesson && (
-                  <div className="p-4 rounded-2xl border border-slate-200 bg-emerald-50/40 flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-11 h-11 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-emerald-600/20">
-                        <PlayCircle className="w-6 h-6" />
-                      </div>
-                      <div>
-                        <div className="text-xs font-bold text-slate-900 leading-snug">
-                          {selectedPattern.videoLesson.title}
-                        </div>
-                        <div className="text-[11px] text-slate-500 font-medium mt-0.5 flex items-center gap-2">
-                          <span>{selectedPattern.videoLesson.teacher}</span>
-                          <span>•</span>
-                          <span className="flex items-center gap-1">
-                            <Clock className="w-3 h-3 text-slate-400" /> {selectedPattern.videoLesson.duration}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => toast.info(`Đang phát video bài giảng chuyên sâu: ${selectedPattern.videoLesson.title}`, 'Video Bài Giảng')}
-                      className="px-3.5 py-2 bg-white border border-slate-200 hover:border-emerald-500 text-emerald-700 text-xs font-bold rounded-xl shadow-sm shrink-0 transition-colors flex items-center gap-1.5"
-                    >
-                      <PlayCircle className="w-3.5 h-3.5" />
-                      <span>Xem bài giảng</span>
-                    </button>
-                  </div>
-                )}
-
-                {/* Sample Exemplar Question with Step-by-Step Explanation */}
-                {selectedPattern.sampleQuestion && (
-                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-extrabold text-slate-700 flex items-center gap-1.5">
-                        <FileText className="w-3.5 h-3.5 text-blue-600" />
-                        <span>Bài toán mẫu minh họa (Ngân hàng khảo thí):</span>
-                      </span>
-                      <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md">
-                        Đáp án đúng: {String.fromCharCode(65 + (selectedPattern.sampleQuestion.correct || 0))}
-                      </span>
-                    </div>
-
-                    <div className="text-xs font-bold text-slate-900 leading-relaxed">
-                      <MathText text={selectedPattern.sampleQuestion.content} />
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      {(selectedPattern.sampleQuestion.options || []).map((opt, oIdx) => (
-                        <div
-                          key={oIdx}
-                          className={`p-2.5 rounded-xl text-xs border ${
-                            oIdx === selectedPattern.sampleQuestion.correct
-                              ? 'bg-emerald-50 border-emerald-300 text-emerald-900 font-bold'
-                              : 'bg-white border-slate-200 text-slate-700'
-                          }`}
-                        >
-                          <MathText text={opt} />
-                        </div>
-                      ))}
-                    </div>
-
-                    <div className="p-3 bg-white rounded-xl border border-slate-200 text-xs text-slate-700 leading-relaxed">
-                      <strong className="text-slate-900 font-bold">Lời giải chi tiết theo phương pháp của dạng: </strong>
-                      <div className="mt-1 whitespace-pre-line">
-                        <MathText text={selectedPattern.sampleQuestion.explanation} />
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* ================= KHỐI 4: QUIZ THÍCH ỨNG CỦNG CỐ DẠNG BÀI (API 19) ================= */}
-              <div className="p-5 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-600 text-white flex flex-col sm:flex-row items-center justify-between gap-4 shadow-lg shadow-blue-500/20">
-                <div className="space-y-1 text-center sm:text-left">
-                  <div className="text-xs font-black uppercase tracking-wider text-cyan-200 flex items-center gap-1.5 justify-center sm:justify-start">
-                    <span className="w-5 h-5 rounded-full bg-white text-blue-700 flex items-center justify-center text-[10px] font-black">4</span>
-                    <span>Khối 4: Luyện Tập Thích Ứng Củng Cố Dạng Bài (API 19)</span>
-                  </div>
-                  <h4 className="text-base font-extrabold text-white">
-                    Kiểm Tra Nhanh 5 Câu Vi Mô Cho Dạng Này
-                  </h4>
-                  <p className="text-xs text-blue-100 font-medium max-w-xl">
-                    Hệ thống sẽ bốc 5 câu hỏi từ ngân hàng câu hỏi chuẩn Bloom (L1 - L3), đồng thời tự động gom các câu hỏi thuộc dạng bài tiên quyết nếu bạn đang yếu (&lt;10%).
-                  </p>
-                </div>
-                <button
-                  onClick={() => handleLaunchAdaptiveQuiz(selectedPattern)}
-                  className="px-6 py-3 rounded-2xl bg-white text-blue-700 hover:bg-blue-50 text-xs font-black shadow-md shrink-0 flex items-center gap-2 transition-transform hover:scale-105 active:scale-95"
-                >
-                  <Zap className="w-4 h-4 text-amber-500 fill-amber-500" />
-                  <span>Bắt đầu luyện tập ngay</span>
-                </button>
-              </div>
-
-            </div>
+            <UnifiedNodeDetailView
+              selectedPattern={selectedPattern}
+              parentLesson={selectedPattern._parentLesson || null}
+              parentChapter={selectedPattern._parentChapter || null}
+              matchedSgkChunks={getMatchedChunksForPattern(selectedPattern, selectedPattern._parentLesson || null, selectedPattern._parentChapter || null)}
+              onOpenStudio={(pat) => handleOpenStudio(pat, selectedPattern._parentChapter, selectedPattern._parentLesson)}
+              onOpenQuickEdit={(pat) => handleOpenEditModal(pat)}
+              onLaunchAdaptiveQuiz={(pat) => handleLaunchAdaptiveQuiz(pat)}
+              onSelectPattern={(pat) => setSelectedPattern(pat)}
+              instructorMode={instructorMode}
+            />
           ) : (
             <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm p-12 text-center text-slate-400 space-y-4">
               <div className="w-16 h-16 rounded-2xl bg-indigo-50 text-indigo-500 flex items-center justify-center mx-auto shadow-2xs">
@@ -2804,7 +2581,11 @@ export default function CurriculumExplorerView({
                     if (firstLes) {
                       setExpandedLessons(prev => ({ ...prev, [firstLes.lessonId]: true }));
                       if (firstLes.patterns?.[0]) {
-                        setSelectedPattern(firstLes.patterns[0]);
+                        setSelectedPattern({
+                          ...firstLes.patterns[0],
+                          _parentLesson: firstLes,
+                          _parentChapter: firstChap
+                        });
                       }
                     }
                   }}

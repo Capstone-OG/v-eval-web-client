@@ -957,12 +957,30 @@ export const getChunksForLesson = (lesson, allChunks = []) => {
  * Xây dựng tài liệu lý thuyết thuần chuẩn sư phạm, tổng hợp và cô đặc chi tiết từ các Vector Chunks trong CSDL
  * Tuyệt đối không ghi số trang SGK, không copy ồ ạt, phân chia theo cấu trúc trọng tâm đàng hoàng
  */
-export const buildTheoryFromChunks = (chunks = [], lessonTitle = '') => {
+export const buildTheoryFromChunks = (chunks = [], lessonTitle = '', expectedSubject = '') => {
   if (!Array.isArray(chunks) || chunks.length === 0) return '';
+
+  const cleanLesson = (lessonTitle || '').toLowerCase();
+  const sub = (expectedSubject || '').toUpperCase() || (
+    cleanLesson.includes('hóa') || cleanLesson.includes('este') || cleanLesson.includes('halogen') ? 'CHEM' :
+    cleanLesson.includes('vật lí') || cleanLesson.includes('vận tốc') || cleanLesson.includes('gia tốc') ? 'PHYS' :
+    cleanLesson.includes('toán') || cleanLesson.includes('xác suất') || cleanLesson.includes('hàm số') || cleanLesson.includes('mệnh đề') ? 'MATH' : ''
+  );
 
   const validChunks = chunks.filter(c => {
     const sType = (c.sectionType || '').toUpperCase();
-    return sType !== 'COVER' && sType !== 'PREFACE' && sType !== 'INDEX';
+    if (sType === 'COVER' || sType === 'PREFACE' || sType === 'INDEX') return false;
+
+    // Lọc loại trừ chunks sai khác môn học (Cross-subject safety filter)
+    if (sub && c.subjectCode) {
+      const cSub = c.subjectCode.toUpperCase();
+      if ((sub === 'MATH' && cSub !== 'MATH') ||
+          (sub === 'CHEM' && cSub !== 'CHEM') ||
+          (sub === 'PHYS' && cSub !== 'PHYS')) {
+        return false;
+      }
+    }
+    return true;
   });
 
   if (validChunks.length === 0) return '';
@@ -1037,6 +1055,21 @@ export const buildTheoryFromChunks = (chunks = [], lessonTitle = '') => {
           if ((patternGroups.get(pName) || []).length < 2) patternGroups.get(pName).push(p);
         }
         return;
+      }
+
+      // Khử nội dung tạp nhiễm chéo môn học (Cross-subject contamination guard)
+      const pLower = p.toLowerCase();
+      if (sub === 'MATH') {
+        if (pLower.includes('electron') || pLower.includes('phân lớp') || pLower.includes('orbital') ||
+            pLower.includes('nguyên tử') || pLower.includes('hóa trị') || pLower.includes('halogen') ||
+            pLower.includes('đồng phân') || pLower.includes('phản ứng thế')) {
+          return;
+        }
+      } else if (sub === 'CHEM') {
+        if (pLower.includes('bất phương trình bậc hai') || pLower.includes('bất đẳng thức') ||
+            pLower.includes('vectơ') || pLower.includes('hình học toạ độ') || pLower.includes('không gian mẫu')) {
+          return;
+        }
       }
 
       // Chuẩn hóa phát hiện trùng lặp

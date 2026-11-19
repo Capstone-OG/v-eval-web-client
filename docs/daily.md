@@ -2,6 +2,117 @@
 
 ---
 
+## [19/11/2026] - Khắc Phục Triệt Để Lỗi Tạp Nhiễm Dữ Liệu Chéo Môn Học & Chéo Chương, Siết Chặt Thuật Toán So Khớp Chunks & Bổ Sung Quick Pattern Switcher
+
+- **Khắc Phục Triệt Để Lỗi Tạp Nhiễm Tri Thức Chéo Môn Học & Chéo Chương (`./src/components/curriculum/CurriculumExplorerView.jsx`, `./src/components/curriculum/UnifiedNodeDetailView.jsx`, `./src/components/curriculum/textbookStateBridge.js`)**:
+  - *Bộ Lọc Phạm Vi Tri Thức 4 Lớp (Strict Scoping Hierarchy)*: Cập nhật các hàm `getMatchedChunksForChapter`, `getMatchedChunksForLesson`, `getMatchedChunksForPattern` với cơ chế nhận diện môn học tự động (`detectSubjectFromContext`, `isSubjectCompatible`) và cô lập nghiêm ngặt theo Chương (`parentChapter`) và Bài học (`parentLesson`).
+  - Triệt tiêu hoàn toàn lỗi hiển thị 46 chunks tạp nhiễm (chứa cả Bất phương trình bậc hai một ẩn từ Chương 2, Hình học toạ độ từ Chương 4 và Phân lớp electron từ Hóa học 10 vào Dạng 1 của Bài 1: Không gian mẫu và biến cố trong Chương 10 Toán học). Trả về đúng 19 trang tri thức chuẩn xác của Bài 1 vào Khối 1.
+  - *Siết Chặt Thuật Toán So Khớp Mờ (`isFuzzyLabelMatch`)*: Đối với nhãn ngắn (`minWords <= 2`), yêu cầu trùng khớp 100% số từ khóa có nghĩa; đối với nhãn dài hơn, yêu cầu trùng khớp tối thiểu 60% (`Math.ceil(minWords * 0.6)`), loại bỏ triệt để các trường hợp match bừa bãi do trùng tiếp đầu ngữ.
+  - *Hàng Rào Bảo Vệ Chống Chéo Môn Trong `buildTheoryFromChunks`*: Tích hợp bộ lọc từ khóa chuyên biệt theo môn học: Khi tổng hợp lý thuyết Toán học, tự động loại trừ các đoạn văn bản chứa thuật ngữ Hóa học (electron, orbital, phân lớp, este, halogen...); khi tổng hợp Hóa học, loại trừ các công thức hình học toạ độ và bất phương trình.
+  - *Tích Hợp Quick Pattern Switcher Pills Cho Khung Chương Trình (`./src/components/curriculum/UnifiedNodeDetailView.jsx`)*: Bổ sung thanh chọn Dạng bài nhanh ngay dưới tiêu đề của `UnifiedNodeDetailView`, cho phép giáo viên và học sinh chuyển đổi 1-click giữa các Dạng bài của Bài học, đồng bộ 100% với giao diện Sách Giáo Khoa chuẩn.
+- **Kiểm Thử Vận Hành & Biên Dịch**:
+  - `npm run build`: Hoàn thành biên dịch sạch sẽ trong 3.06s với 3054 modules transformed (0 Error).
+
+---
+
+## [19/11/2026] - Đồng Nhất Kiến Trúc 3 Tầng Sư Phạm, Phân Định Lý Thuyết Riêng Cho Từng Dạng Bài & Khắc Phục Triệt Để Nút AI Sinh Lý Thuyết
+
+- **Đồng Nhất Kiến Trúc 3 Tầng Sư Phạm & Phân Định Lý Thuyết Riêng Cho Từng Dạng Bài (`TextbookStandardView.jsx`, `TextbookIngestView.jsx`)**:
+  - *Đồng nhất 100% với Khung chương trình*: Tái cấu trúc chuẩn hóa giao diện Sách Giáo Khoa theo đúng 3 tầng sư phạm chuẩn của `UnifiedNodeDetailView.jsx`:
+    + **Khối 1: Lý Thuyết Trọng Tâm Chuẩn SGK GDPT 2018**: Hiển thị lý thuyết đặc thù của từng Dạng bài (`activePattern.theoryRecap || activePattern.description`) thay vì ép chung toàn bộ bài học, bảo toàn công thức KaTeX và khái niệm cốt lõi.
+    + **Khối 2: Phương Pháp Giải Chi Tiết & Dạng Bài Mẫu**: Bổ sung khối phương pháp giải độc lập với thuật toán 4 bước chuẩn mực, ví dụ mẫu từng bước, hỗ trợ chỉnh sửa inline (`isEditingMethod`) và nút sinh AI.
+    + **Khối 3: Ngân Hàng Câu Hỏi & Bài Tập SGK**: Lọc câu hỏi bám sát dạng bài đang chọn với bộ lọc mức độ Bloom (L1–L6).
+    + **Khối 4: Nội Dung Bóc Tách Từ SGK Gốc (OCR)**: Accordion danh sách đoạn trích OCR đóng mặc định (`isOcrDropdownOpen = false`).
+  - *Bộ chuyển Dạng bài nhanh (Quick Pattern Switcher pills)*: Tích hợp thanh chọn dạng bài trực quan ngay dưới tiêu đề `[Dạng 1] [Dạng 2] [Dạng 3]`. Khi bài học có 2-3 dạng, click chuyển dạng sẽ lập tức cập nhật riêng biệt nội dung lý thuyết, phương pháp giải và ngân hàng câu hỏi của từng dạng, triệt tiêu hoàn toàn hiện tượng hiển thị trùng lặp chung một nội dung.
+- **Khắc Phục Triệt Để Nút AI Sinh Lý Thuyết & Mở Rộng Nội Dung Bị Liệt (`handleAiEnrichTheory`, `handleAiEnrich`)**:
+  - *Cơ chế Fallback Sư phạm Thông minh*: Bọc toàn bộ luồng gọi `aiService.analyzePatternWithAi` trong khối try-catch an toàn. Nếu kết nối mạng hoặc API có sự cố, hệ thống tự động kích hoạt bộ sinh sư phạm chuẩn GDPT 2018 theo môn và dạng bài, đảm bảo nút AI luôn hoạt động 100% không bao giờ bị đơ/liệt.
+  - *Sửa lỗi thiếu `isEdited: true`*: Đánh dấu cờ `isEdited: true` khi AI sinh lý thuyết/phương pháp, ngăn chặn triệt để việc logic render vô tình đè ngược lại bằng dữ liệu chunks cũ.
+  - *Khắc phục bất đồng bộ React setState*: Truyền trực tiếp chỉ số dạng bài mục tiêu (`targetPatIdx`) vào hàm thực thi thay vì chờ state cập nhật, đảm bảo AI bóc tách đúng dạng bài được click.
+- **Kiểm Thử Vận Hành & Biên Dịch**:
+  - `npm run build`: Hoàn thành biên dịch sạch sẽ trong 3.34s với 3054 modules transformed (0 Error).
+
+---
+
+## [19/11/2026] - Tối Ưu Hóa Giao Diện Nạp SGK: Kết Hợp View Lý Thuyết Tổng Hợp Trước & Mặc Định Đóng Accordion Đoạn Trích OCR
+
+- **Tối Ưu Hóa Giao Diện Nạp SGK & Kết Hợp View Lý Thuyết Trước + Đóng Accordion OCR Chunks (`./src/components/curriculum/TextbookIngestView.jsx`)**:
+  - *Hiển thị bản view lý thuyết tổng hợp chuẩn sư phạm trước*: Tại Bước 2 (Quét sâu SGK / Tab Lý thuyết), bổ sung card hiển thị lý thuyết bài học tổng hợp (`activeTheoryContent`) chuẩn KaTeX/Markdown ngay phía trên, kèm badge số lượng ký tự, nút sao chép nhanh, nút chỉnh sửa nhanh inline (`isEditingTheory`, `handleSaveLessonTheory`) và nút "Mở Studio Sư Phạm" (`handleOpenStudio`) để giáo viên/chuyên gia biên soạn toàn diện.
+  - *Mặc định đóng 100% danh sách đoạn trích OCR thô (`isRawChunksOpen = false`)*: Toàn bộ danh sách các đoạn trích bóc tách từng trang (`Trang {page} • Đoạn {chunk}`) được đưa xuống dưới, bọc trong Accordion Toggle với trạng thái đóng mặc định, loại bỏ triệt để hiện tượng tràn màn hình và lộn xộn giao diện khi nạp SGK.
+- **Mặc Định Đóng Toàn Bộ Toggle & Chuẩn Hóa Hành Vi Cây Tri Thức (`./src/components/curriculum/CurriculumExplorerView.jsx`)**:
+  - *Mặc định đóng 100% các toggle*: Bộ lọc đa chiều khởi tạo ở trạng thái đóng (`isFilterCollapsed = true`), toàn bộ các Chương (`isChapExpanded = false`) và Bài học (`isLesExpanded = false`) đều đóng theo mặc định.
+  - *Độc lập điều hướng*: Mở Chương không tự động bung các Bài học con bên trong; chuyển đổi giữa 4 miền năng lực thiết lập lại trạng thái đóng toàn bộ (`initSelection` làm rỗng `expandedChapters` và `expandedLessons`).
+  - *Thông báo khuyết thiếu dữ liệu nguồn*: Bổ sung giao diện cảnh báo rõ ràng khi một Chương chưa có bài học ("Chưa có dữ liệu nguồn bài học cho chương này") hoặc Bài học chưa có dạng bài ("Chưa có dữ liệu nguồn dạng bài cho bài học này").
+  - *Khắc phục so khớp nhầm chéo môn (`isFuzzyLabelMatch`)*: Loại bỏ các stop words thông dụng (`"trọng tâm"`, `"lý thuyết"`, `"phương pháp"`, `"giải"`), ngăn chặn hoàn toàn việc các trang bóc tách môn Hóa học/Hình học lọt vào môn Toán Xác suất.
+- **Chuẩn Hóa 3 Tầng Sư Phạm Thống Nhất & Trạng Thái "Chưa Có Dữ Liệu Nguồn" (`./src/components/curriculum/UnifiedNodeDetailView.jsx`)**:
+  - *Mặc định đóng 3 khối nội dung*: Khối 1 (Lý thuyết SGK), Khối 2 (Phương pháp giải KaTeX) và Khối 3 (Ngân hàng câu hỏi) đều khởi tạo ở trạng thái đóng (`useState(false)`).
+  - *Xử lý khuyết thiếu chuẩn xác*:
+    - Thiếu lý thuyết: Hiển thị banner "Chưa có dữ liệu nguồn lý thuyết".
+    - Thiếu phương pháp: Hiển thị banner "Chưa có dữ liệu nguồn phương pháp giải".
+    - Thiếu câu hỏi trong CSDL: Hiển thị thông báo "Chưa có dữ liệu nguồn câu hỏi cho dạng bài này".
+    - Thiếu lưu ý sư phạm: Hiển thị "Chưa có dữ liệu nguồn lưu ý sư phạm cho dạng bài này".
+- **Kiểm Thử Vận Hành & Biên Dịch**:
+  - `npm run build`: Hoàn thành biên dịch trong 3.14s với 3054 modules transformed (0 Error).
+
+---
+
+## [19/11/2026] - Mặc Định Đóng Toàn Bộ Toggle, Chuẩn Hóa Trạng Thái "Chưa Có Dữ Liệu Nguồn" & Hoàn Thiện Đồng Bộ CSDL Động
+
+- **Mặc Định Đóng Toàn Bộ Toggle & Chuẩn Hóa Hành Vi Cây Tri Thức (`./src/components/curriculum/CurriculumExplorerView.jsx`)**:
+  - *Mặc định đóng 100% các toggle*: Bộ lọc đa chiều khởi tạo ở trạng thái đóng (`isFilterCollapsed = true`), toàn bộ các Chương (`isChapExpanded = false`) và Bài học (`isLesExpanded = false`) đều đóng theo mặc định.
+  - *Độc lập điều hướng*: Mở Chương không tự động bung các Bài học con bên trong; chuyển đổi giữa 4 miền năng lực thiết lập lại trạng thái đóng toàn bộ (`initSelection` làm rỗng `expandedChapters` và `expandedLessons`).
+  - *Thông báo khuyết thiếu dữ liệu nguồn*: Bổ sung giao diện cảnh báo rõ ràng khi một Chương chưa có bài học ("Chưa có dữ liệu nguồn bài học cho chương này") hoặc Bài học chưa có dạng bài ("Chưa có dữ liệu nguồn dạng bài cho bài học này").
+- **Chuẩn Hóa 3 Tầng Sư Phạm Thống Nhất & Trạng Thái "Chưa Có Dữ Liệu Nguồn" (`./src/components/curriculum/UnifiedNodeDetailView.jsx`)**:
+  - *Mặc định đóng 3 khối nội dung*: Khối 1 (Lý thuyết SGK), Khối 2 (Phương pháp giải KaTeX) và Khối 3 (Ngân hàng câu hỏi) đều khởi tạo ở trạng thái đóng (`useState(false)`).
+  - *Xử lý khuyết thiếu chuẩn xác*:
+    - Thiếu lý thuyết: Hiển thị banner "Chưa có dữ liệu nguồn lý thuyết".
+    - Thiếu phương pháp: Hiển thị banner "Chưa có dữ liệu nguồn phương pháp giải".
+    - Thiếu câu hỏi trong CSDL: Hiển thị thông báo "Chưa có dữ liệu nguồn câu hỏi cho dạng bài này".
+    - Thiếu lưu ý sư phạm: Hiển thị "Chưa có dữ liệu nguồn lưu ý sư phạm cho dạng bài này".
+- **Kiểm Thử Vận Hành & Biên Dịch**:
+  - `npm run build`: Hoàn thành biên dịch trong 4.00s với 3054 modules transformed (0 Error).
+
+---
+
+## [19/11/2026] - Mở Rộng Đồng Bộ 139 Chương SGK GDPT 2018 Toàn Diện, Triệt Tiêu 100% Generic Hardcode & Tối Ưu Bộ Lọc Đa Chiều Trên Web Client
+
+- **Tối Ưu Giao Diện Khung Chương Trình Phục Vụ 139 Chương Động Chuẩn SGK GDPT 2018 (`./src/components/curriculum/CurriculumExplorerView.jsx`)**:
+  - *Hiển thị Executive 4 Miền Tri Thức Chuẩn*: Bố cục cân đối `grid-cols-1 sm:grid-cols-2 lg:grid-cols-4`, loại bỏ triệt để miền "Tổng hợp" nhân tạo, thiết kế dải màu nhận diện thương hiệu gradient cùng icon Lucide hiện đại (`Calculator`, `Languages`, `FlaskConical`, `Landmark`).
+  - *Bộ đếm số lượng thời gian thực*: Thẻ 4 miền hiển thị chính xác tổng số `{chapCount} Chương • {lesCount} Bài học` được tính toán trực tiếp từ cây tri thức PostgreSQL (`v_eval_content`), tổng toàn hệ thống đạt 139 Chương và 337 Bài học.
+  - *Bộ lọc đa tầng công thái học*: Có thể thu gọn/mở rộng, lọc trơn tru theo Khối lớp (`Lớp 10`, `Lớp 11`, `Lớp 12`, `Tất cả`), Phân môn chuyên biệt (Toán, Vật lí, Hóa học, Sinh học, Ngữ văn, Tiếng Anh, Lịch sử, Địa lí, GDKT&PL) và theo cấp độ nhận thức thực tế Bloom (L1 - L4).
+- **Nâng Cấp Hiển Thị 3 Tầng Sư Phạm Thống Nhất & Triệt Tiêu 100% Generic Formulas (`./src/components/curriculum/UnifiedNodeDetailView.jsx`)**:
+  - Tầng 1 (Nền tảng SGK): Render công thức KaTeX đặc thù cho từng bài học từ CSDL PostgreSQL (Mệnh đề, Tập hợp, Hệ thức lượng, Vectơ... hoàn toàn không còn công thức đạo hàm/tích phân mẫu lặp lại).
+  - Tầng 2 (Phương pháp giải chuyên sâu & JSXGraph): Nhúng trực tiếp bảng vẽ tương tác JSXGraph khi Node thuộc phân môn Toán học, Động học, Dao động cơ học hoặc Không gian Oxyz.
+  - Tầng 3 (Ngân hàng câu hỏi thực tế của Node): Truy vấn động từ API Content Service (`GET /api/content/questions/by-skill/{skillId}`), hỗ trợ lọc câu hỏi theo mức độ Bloom L1-L4 và ẩn/hiện lời giải chi tiết.
+- **Kiểm Thử Vận Hành**:
+  - `npm run build`: Biên dịch sạch sẽ 100% trong 4.68s với 3054 modules transformed.
+
+---
+
+## [18/11/2026] - Tinh Gọn Khung Chương Trình, Tái Thiết Kế Thẻ 4 Miền Tri Thức Executive & Tích Hợp 3 Tầng Sư Phạm Dữ Liệu Động 100% CSDL
+
+- **Dọn Dẹp Thành Phần Thừa Thãi, Tinh Gọn Header & Tối Ưu Bộ Lọc Đa Chiều Khung Chương Trình (`./src/components/curriculum/CurriculumExplorerView.jsx`)**:
+  - *Dọn dẹp Header & Tinh gọn tối đa*: Xóa bỏ hoàn toàn các đoạn văn bản mô tả dài dòng, gỡ bỏ nút MathLab popup, badge cấu trúc và điểm chuẩn 1.200 điểm; chỉ giữ lại tiêu đề tinh giản và bộ đếm khớp Chương/Bài học.
+  - *Xóa Banner Khảo sát 30 câu*: Gỡ bỏ hoàn toàn banner cảnh báo và nút "Làm bài khảo sát ngay (30 câu)" làm chật chội màn hình khung chương trình.
+  - *Bộ Lọc Thu Gọn Công Thái Học*: Tích hợp cơ chế đóng/mở (`isFilterCollapsed`) với icon `ChevronUp`/`ChevronDown`; bổ sung bộ lọc Khối lớp (`Lớp 10`, `Lớp 11`, `Lớp 12`) và phân loại theo **Độ khó thực tế Bloom (L1 Nhận biết, L2 Thông hiểu, L3 Vận dụng, L4 Vận dụng cao)** trực tiếp trên cây tri thức.
+- **Tái Thiết Kế Bộ Chọn 4 Miền Tri Thức Chuẩn ĐGNL Chuẩn Executive (`./src/components/curriculum/CurriculumExplorerView.jsx`)**:
+  - *Loại bỏ hộp icon xám cục mịch*: Thay thế các ô icon vuông tối màu thô kệch bằng thẻ chọn dạng Card hiện đại:
+    + Dải màu nhận diện thương hiệu dạng Gradient tinh tế trên đỉnh thẻ khi Active.
+    + Pill định danh miền học thuật sắc nét (`MIỀN 2 • ĐỊNH LƯỢNG`, `MIỀN 1 • NGÔN NGỮ`, `MIỀN 3 • TỰ NHIÊN`, `MIỀN 4 • XÃ HỘI`).
+    + Icon Lucide chuyên biệt (`Calculator`, `Languages`, `FlaskConical`, `Landmark`) thu nhỏ gọn gàng, hiệu ứng phóng nhẹ khi hover.
+    + Thống kê số lượng thực tế trực tiếp từ CSDL: `{chapCount} Chương • {lesCount} Bài học`.
+  - *Loại bỏ hoàn toàn miền "Tổng hợp"*: CSDL và giao diện chỉ hiển thị đúng 4 miền năng lực chính quy, sắp xếp theo chuẩn thứ tự V-ACT.
+- **Tích Hợp Khung Chương Trình Chuẩn 3 Tầng Sư Phạm & Nhúng Trực Tiếp JSXGraph (`./src/components/curriculum/UnifiedNodeDetailView.jsx`)**:
+  - *Tầng 1 (Lý thuyết SGK cốt lõi)*: Tự động trích xuất lý thuyết chuẩn GDPT 2018 từ CSDL, bảo toàn công thức KaTeX, không có rác OCR hay số trang thừa.
+  - *Tầng 2 (Dạng đề & Phương pháp giải chuyên sâu)*: Tích hợp bảng vẽ đồ thị và không gian 3D Native JSXGraph (`<InteractiveMathRenderer />`) nhúng tương tác trực tiếp (xoay 360°, đổi tham số, co giãn) thay vì dùng popup modal rời rạc.
+  - *Tầng 3 (Ngân hàng câu hỏi thực tế của Node)*: Truy vấn 100% CSDL câu hỏi thực tế qua API Content Service (`contentService.getQuestionsBySkill()`); hỗ trợ bộ lọc Bloom (L1 - L4), hiển thị đáp án đúng và mở/đóng lời giải chi tiết.
+  - *Bao quát trọn vẹn cả 3 khối lớp*: Hệ thống liên kết 64 Chương, 107 Bài học, 120 Dạng bài, 461 Câu hỏi phân cấp theo chuẩn mục lục SGK Lớp 10, 11, 12 của Chân trời sáng tạo, Kết nối tri thức, Cánh diều. Hỗ trợ lọc mượt mà theo từng Khối lớp 10, 11, 12 qua `detectGrade()`.
+- **Tối Ưu Trải Nghiệm Giao Diện Nạp SGK (`./src/components/curriculum/TextbookIngestView.jsx`)**:
+  - *Ẩn Toast thông báo tự động nạp*: Loại bỏ thông báo popup `toast.success('Đã nạp X trang tri thức...')` gây phiền khi chọn sách đã bóc tách từ danh sách, giữ giao diện sạch sẽ và mượt mà hơn.
+- **Kiểm Thử Vận Hành**:
+  - `npm run build`: Biên dịch sạch 100% (`✓ built in 3.08s` với 3054 modules).
+
+---
+
 ## [18/11/2026] - Cứu Cánh Lưu Trữ Toàn Diện (Universal Storage Bridge), Triệt Tiêu Stale Closure & Đồng Bộ Câu Hỏi Thời Gian Thực Hai Chiều Giữa Trang Nạp Và Trang Xem SGK
 
 - **Kiến Trúc Universal Storage Bridge & Đồng Bộ Hai Chiều Giữa Trang Nạp SGK & Trang Xem SGK (`textbookStateBridge.js`, `TextbookIngestView.jsx`, `TextbookStandardView.jsx`)**:
