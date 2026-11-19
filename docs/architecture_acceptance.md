@@ -2778,4 +2778,80 @@ Radar and skill-prior displays consume API response fields; the benchmark overla
       - **Full Context Hydration into `TextbookStudioView`**: `TextbookStandardView`, `TextbookIngestView`, and `UnifiedNodeDetailView` flush current state and pass active chapter/lesson/pattern titles plus synthesized theory and method previews into Studio; `CurriculumExplorerView` preserves `_parentLesson` and `_parentChapter` references across `fetchCurriculumData` refreshes.
     - **Verification**: Vite production build (`npm run build`) succeeded in 1.23s (3055 modules transformed, 0 errors); Node.js ESM verification (`verify_studio_save.mjs`) passed 100%.
 
+39. **Complete React Port & Enterprise UI Transformation of Real Exam PDF Parser Studio (`ExamParserStudioView.jsx`, `ExamItemCards.jsx`, `ExamRichContent.jsx`, `ExamDatabaseModal.jsx`, `ExamMediaLightbox.jsx`, `examParserUtils.js`, `contentService.js`) [20/11/2026]**:
+    - **Architectural Objective**:
+      - Replace the mock stub in `ExamParserStudioView.jsx` with a full-featured, production-ready React architecture porting 100% of the legacy standalone `view-exam.html` (AI Engine) exam ingestion and management pipeline into the unified V-Eval Web Client SPA, routed securely through the YARP API Gateway (`:5212`) with JWT authentication.
+    - **Implementation Details**:
+      - **Gateway-Unified Content & AI Engine Integration (`contentService.js`, `aiService.js`)**:
+        - Extended `contentService.js` with `importExam` (`POST /api/content/exams/import` preserving `imageUrl` on both passages and questions plus normalized `correctOption`), `publishExam` (`PATCH /api/content/exams/{id}/publish`), and `deleteExam` (`DELETE /api/content/exams/{id}`).
+        - Connected drag-and-drop and click PDF upload to `aiService.uploadPdfExam` (`POST /api/ai-engine/upload-pdf`) with 2-second job polling via `aiService.getExamJobStatus` (`GET /api/ai-engine/jobs/{jobId}`), real-time `mm:ss` elapsed timer, current processing step telemetry, and safe unmount/cancel timer cleanup.
+      - **Pure Exam Parsing & Normalization Engine (`examParserUtils.js`, `examParserUtils.test.js`)**:
+        - Ported the 6-stage OCR math/LaTeX recovery pipeline (`sanitizeExamMathAndLatex`: ASCII control character restoration for `\frac`/`\times`/`\text`/`\bar`/`\beta`/`\theta`/`\tau`, `\Delta` OCR misread fixes, chemical reaction rate equations, transmission efficiency formulas, negative-exponent STEM units, and bare symbol wrapping).
+        - Built safe structured 2-tier Markdown table parsing (`parseTwoTierMarkdownTable` supporting `rowspan="2"` and `colspan="N"` grouped headers without raw HTML injection) and Vietnamese statistical Bar/Pie chart extraction (`extractInlineChartsFromText` handling comma decimals).
+        - Unified normalization (`normalizeExamData`) across AI Engine `ParsedExamDto`, Content Service `MockExamDetailDto` (including clean extraction of embedded leading Markdown images), and manual blank exam authoring (`createBlankExam`).
+      - **Rich Exam Rendering, Interactive Charts & Media Lightbox (`ExamRichContent.jsx`, `ExamMediaLightbox.jsx`)**:
+        - Rendered passages, questions, options, and explanations through `MathText`, 2-tier React tables, and interactive Recharts Bar/Pie charts with direct `%` data labels (`LabelList`).
+        - Resolved relative `/extracted_images/...` media paths against the API Gateway base URL, smartly suppressed duplicate PDF crop screenshots when an interactive chart/table is already rendered (with an on-demand toggle to inspect the original PDF crop), and added a full-screen `ExamImageLightbox` (`50%`–`250%` zoom, keyboard shortcuts, `ESC` dismiss).
+      - **Modern Bento-Grid Workspace, Sticky Question Matrix, Clipboard Paste & Studio Sync (`ExamParserStudioView.jsx`, `ExamItemCards.jsx`, `ExamDatabaseModal.jsx`)**:
+        - Built a 2-mode workspace: Home Hub (Hero Banner, Drag-and-Drop PDF Dropzone, Manual Authoring CTA, and inline Supabase Database Exam Cards Grid) and Exam Viewer & Authoring Workspace (Sticky Action Header with editable title/metadata/stats/Save/Publish/Delete/Lock controls, Sticky Question Matrix 1–120 with `IntersectionObserver` scroll-sync and missing-question gap indicators, inline Quick-Edit for Passages & Questions, global `Ctrl+V` clipboard image paste persisted directly into React state, and 1-click integration with `CurriculumStudioEditor` syncing stem, options, correct option, Bloom level, and explanation).
+    - **Verification**:
+      - `oxlint`: 0 warnings and 0 errors across all 7 created/upgraded files.
+      - `node --test`: 12/12 unit tests passed (including 7 new test suites in `src/utils/examParserUtils.test.js`).
+      - `npm run build`: Production build succeeded cleanly in 3.58s (3060 modules transformed, 0 errors).
+
+40. **End-to-End 4-Level Competency & Curriculum Node Auto-Mapping, AI Batch Classification & Exam Specification Blueprint (`examCurriculumMatcher.js`, `ExamNodePickerModal.jsx`, `ExamBlueprintDrawer.jsx`, `ExamItemCards.jsx`, `ExamParserStudioView.jsx`, `aiService.js`, `contentService.js`) [20/11/2026]**:
+    - **Architectural Objective**:
+      - Bridge real parsed exam questions directly into the live 4-level PostgreSQL Competency & Curriculum Tree (`CompetencyDomain -> Chapter -> Lesson -> Pattern`) so instructors immediately know which Chapter, Lesson, and Pattern each exam question assesses, inspect full exam specification coverage, refine mappings interactively, and persist exact `SkillId` foreign keys without creating orphan skills.
+    - **Implementation Details**:
+      - **Live Tree Flattening & Instant Auto-Mapping Engine (`examCurriculumMatcher.js`, `examCurriculumMatcher.test.js`)**:
+        - Flattens `GET /api/content/curriculum` into a searchable index with grade extraction (`Lớp 10/11/12`), authoritative parenthetical subject detection, and NFC/NFD Vietnamese accent folding.
+        - Scores every extracted question (`matchQuestionToCurriculumNode`) using weighted overlap across `suggestedSkillName`, stem text, and passage context combined with subject-alignment bonuses and cross-subject penalties.
+      - **AI Deep Batch Classification (`aiService.classifyExamNodes`)**:
+        - Sends compact live `taxonomy_nodes[]` and exam `questions[]` to `POST /api/ai-engine/exams/classify-nodes` and merges returned `skill_id`, `chapter_name`, `lesson_name`, `pattern_name`, `confidence`, `bloom_level`, and `reason` onto exam state (`applyAiNodeMappingsToExam`), with graceful local fallback.
+      - **Node Breadcrumbs, 4-Column Cascading Picker & Blueprint Matrix (`ExamItemCards.jsx`, `ExamNodePickerModal.jsx`, `ExamBlueprintDrawer.jsx`)**:
+        - Displays a color-coded `Domain › Chapter › Lesson › Pattern` breadcrumb strip and source badge (`DB` / `Đã duyệt` / `AI %` / `Tự động %`) on every `ExamQuestionCard`.
+        - Provides `ExamNodePickerModal` (unified accent-insensitive search, top-4 candidates, and 4-column cascading tree selector) and `ExamBlueprintDrawer` (coverage KPIs, Domain & Bloom L1–L6 charts, expandable Chapter -> Lesson table with 1-click question jump and chapter filter).
+        - Forwards real `skillId` GUIDs plus `domainName`/`chapterName`/`lessonName` in `contentService.importExam` and hydrates ancestor lineage returned by `GET /api/content/exams/{id}`.
+    - **Verification**:
+      - `oxlint`: 0 warnings and 0 errors across all 11 files.
+      - `node --test`: 16/16 unit tests passed (including 4 new suites in `src/utils/examCurriculumMatcher.test.js`).
+      - `npm run build`: Production build succeeded in 4.19s (3063 modules transformed, 0 errors).
+
+41. **Soft-Academic 4-Mode Exam Studio Redesign: Exam Paper View, Single-Question Studio Editor, Drag-and-Drop Exam Organizer & AI 6-Level Bloom Generator with Review Queue (`ExamParserStudioView.jsx`, `ExamPaperView.jsx`, `ExamQuestionStudioTab.jsx`, `ExamOrganizerTab.jsx`, `ExamBloomAiGeneratorTab.jsx`, `examOrganizerUtils.js`, `examOrganizerUtils.test.js`) [20/11/2026]**:
+    - **Architectural & UX Objective**:
+      - Elevate the Exam Parser into a unified, scholarly 4-mode authoring suite (`#F6F5F1` parchment canvas, `#FFFFFF` sheets, `#1E3A5F` ink accents) combining formal exam viewing, deep per-question Studio editing, structural drag-and-drop exam organization, and Skill-targeted 6-level Bloom AI question generation with mandatory human review before insertion.
+    - **Implementation Details**:
+      - **Mode 1 — Print-Ready Exam Paper View (`ExamPaperView.jsx`)**: Formal exam paper header, sticky question matrix navigator (`1..120`), answer-key/explanation/tag toggles, interactive Quick Practice & Grading mode (instant 10-point score calculation), `window.print()` print support, `Ctrl+V` image pasting, and 1-click handoff to edit any question in Studio.
+      - **Mode 2 — Dedicated Per-Question Studio (`ExamQuestionStudioTab.jsx`)**: 2-pane authoring workspace with filterable left question list and full right-hand editor featuring 6 clickable Bloom level buttons (`L1`–`L6`), Curriculum Node Picker, inline parent-passage editing, KaTeX quick-insert bar, live side-by-side preview, 4-option editor with single-question option shuffling, explanation preview, `Alt + ArrowLeft/ArrowRight` stepping, question duplication, and 1-click handoff to `CurriculumStudioEditor` (838-item catalog & 3D MathLab).
+      - **Mode 3 — Exam Organizer & Reorder Board (`ExamOrganizerTab.jsx`, `examOrganizerUtils.js`)**: Pure immutable transformation helpers powering HTML5 drag-and-drop block reordering, in-passage child reordering, continuous `1..N` renumbering, Bloom (`L1 -> L6`) sorting, Curriculum Chapter grouping, passage-safe exam shuffling, full-exam A/B/C/D option shuffling with accurate `correctOption` remapping, passage attach/detach, and 1-step Undo.
+      - **Mode 4 — AI 6-Level Bloom Skill Generator + Review Queue (`ExamBloomAiGeneratorTab.jsx`)**: Allows selecting any live Curriculum Tree Skill node, allocating exact counts across all 6 Bloom levels (`L1`–`L6`, with 3 quick presets), calling `aiService.generatePatternExercises` with live progress telemetry, and staging generated questions inside an Approval Queue (`pending` / `approved` / `rejected`) supporting inline editing, single-question regeneration, rejection/restoration, and single or bulk approval into the exam with real `skillId` binding.
+    - **Verification**:
+      - `oxlint`: 0 warnings and 0 errors across all 17 files.
+      - `node --test`: 23/23 unit tests passed (including 7 new suites in `src/utils/examOrganizerUtils.test.js`).
+      - `npm run build`: Production build succeeded cleanly in 3.18s (3067 modules transformed, 0 errors).
+
+42. **3-Page Exam Suite Decomposition Mirroring Textbook (SGK) Sidebar Architecture (`Sidebar.jsx`, `App.jsx`, `examStateBridge.js`, `examStateBridge.test.js`, `useExamWorkspaceController.js`, `ExamWorkspaceHeader.jsx`, `ExamSharedModals.jsx`, `ExamBankView.jsx`, `ExamIngestView.jsx`, `ExamStudioView.jsx`) [20/11/2026]**:
+    - **Architectural Objective**:
+      - Align the Exam Authoring & AI Bloom workflow 1:1 with the proven 3-page Textbook (`textbook-group`) navigation paradigm so instructors, campus managers, and administrators navigate directly to dedicated workspaces without nested screen clutter while preserving full state continuity across page transitions.
+    - **Implementation Details**:
+      - **Collapsible Sidebar Group (`exam-group`) & Role Routing (`Sidebar.jsx`, `App.jsx`)**:
+        - Replaced the single `exam-studio` sidebar link across `teacher`, `manager`, and `admin` roles with an auto-expanding indigo-themed collapsible group (`Đề thi & AI Bloom`) housing 3 standalone pages:
+          1. **`1. Kho Đề & Xem Đề Thi` (`exam-bank` -> `ExamBankView.jsx`)**: Supabase Exam Catalog KPIs & cards grid + active exam viewer toggling cleanly between Print-Ready `ExamPaperView` and Drag-and-Drop `ExamOrganizerTab`, with 1-click question jump into Page 3.
+          2. **`2. Parse PDF & AI Bloom` (`exam-ingest` -> `ExamIngestView.jsx`)**: Clean 2-part ingestion page separating **Part 1 (PDF Gemini Vision AI OCR)** — featuring extraction verification & cross-page handoff controls — and **Part 2 (AI 6-Level Bloom Generator & Human Review Queue)**, which automatically initializes a target draft exam if approved when no exam is open.
+          3. **`3. Studio Biên Soạn Đề` (`exam-studio` -> `ExamStudioView.jsx`)**: Dedicated 2-pane `ExamQuestionStudioTab` with instant exam switching, blank manual authoring starter, `Ctrl+V` image pasting, and 1-click handoff to the Full 838-item `CurriculumStudioEditor`.
+        - Updated `App.jsx` (`ROLE_PORTAL_DEFINITIONS` and the `role === 'teacher'` portal guard) so all 3 routes render cleanly and display accurate Navbar titles across all 3 roles; kept `ExamParserStudioView.jsx` as a backwards-compatible re-export.
+      - **Cross-Page Reactive State Store & Module-Level PDF Poller (`examStateBridge.js`, `useExamWorkspaceController.js`)**:
+        - Implemented an external store consumed via React `useSyncExternalStore` backed by quota-safe `sessionStorage` (`stripLargeBase64ForStorage`), sharing `currentExam`, `selectedQuestionLocalId`, `isLocked`, `hasUnsavedChanges`, `aiBloomDrafts`, `bloomTargetSkillNode`, `dbExams`, and `curriculumDomains` seamlessly across all 3 pages.
+        - Moved the Gemini Vision PDF polling timers into `examStateBridge.js` so switching pages while a multi-minute PDF OCR job is executing never cancels polling and surfaces completion notifications via `ExamPageFlowBar` and toast on whichever page is active.
+        - Factored common chrome and modals into `ExamWorkspaceHeader.jsx` (`ExamPageFlowBar` + sticky exam header) and `ExamSharedModals.jsx` to guarantee zero business-logic duplication across the 3 views.
+        - Extended `examParserUtils.js` (`parseHtmlExamTable`) and `ExamRichContent.jsx` (`StructuredHtmlExamTable`) to safely render multi-tier HTML `<table>` (`rowspan`/`colspan`) with inline KaTeX while shielding `[VARIATION_TABLE]`, `[MATH_GRAPH]`, and `[MATH_GRAPH_3D]` blocks from Markdown table splitting.
+        - Unified explicit **Delete Exam (`Xóa Đề`)** workflows across `useExamWorkspaceController.js`, `ExamWorkspaceHeader.jsx`, `ExamIngestView.jsx`, `ExamDatabaseModal.jsx`, and `TeacherPortalView.jsx` (`section === 'diagnostic'`), handling both persisted PostgreSQL exams (`DELETE /api/content/exams/{id}`) and unsaved AI/manual draft exams via in-app confirmation dialogs.
+    - **Verification**:
+      - `oxlint`: 0 warnings and 0 errors across all 22 Exam module files.
+      - `node --test`: 37/37 unit tests passed across the entire Web Client suite (including `src/components/curriculum/examStateBridge.test.js` and HTML table / `[VARIATION_TABLE]` assertions in `src/utils/examParserUtils.test.js`).
+      - `npm run build`: Production build succeeded cleanly in 6.19s (3073 modules transformed, 0 errors).
+
+
+
+
 
