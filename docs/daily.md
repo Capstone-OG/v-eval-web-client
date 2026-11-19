@@ -2,6 +2,17 @@
 
 ---
 
+## [19/11/2026] - Tách Biệt Triệt Để Khung Chương Trình Chuẩn Và Luồng Khảo Thí Năng Lực, Chuẩn Hóa Điều Hướng & Nhãn Giao Diện
+
+- **Tách Biệt Triệt Để Khung Chương Trình Chuẩn Và Luồng Khảo Thí Năng Lực (`./src/App.jsx`, `./src/components/layout/Sidebar.jsx`, `./src/components/curriculum/StudentCurriculumView.jsx`)**:
+  - *Sửa lỗi điều hướng Tab Khảo thí*: Loại bỏ hoàn toàn khối override định tuyến giả định `if (activeTab === 'diagnostic' && role !== 'student') return <CurriculumExplorerView />` trong `App.jsx`. Giờ đây tab `diagnostic` luôn hiển thị chính xác trang khảo thí chẩn đoán năng lực (`DiagnosticAssessmentPage`) cho mọi vai trò (học sinh, giảng viên, admin, khách), không còn hiện tượng bấm vào kiểm tra năng lực lại bị điều hướng nhầm vào trang Khung chương trình.
+  - *Chuẩn hóa nhãn menu và Sidebar*: Cập nhật nhãn tab tại `App.jsx` từ `Khảo thí 30 câu` thành `Khảo thí & Chẩn đoán`, đổi badge và sublabel tại `Sidebar.jsx` thành `Khảo thí` và `Đề chuẩn hóa năng lực & IRT 2PL`, loại bỏ sự trùng lặp và gây hiểu nhầm về số lượng câu hỏi.
+  - *Tinh chỉnh thông điệp học sinh (`./src/components/curriculum/StudentCurriculumView.jsx`)*: Chuẩn hóa lời nhắc khảo sát đầu vào trong tab Lộ trình cá nhân, phân định rõ ràng giữa Khung chương trình chuẩn đào tạo GDPT 2018 (kèm phiếu củng cố 5 câu theo dạng bài) và Bài thi khảo thí chẩn đoán năng lực.
+- **Kiểm Thử Vận Hành & Biên Dịch**:
+  - `npm run build`: Hoàn thành biên dịch sạch sẽ trong 2.56s với 3054 modules transformed (0 Error).
+
+---
+
 ## [19/11/2026] - Khắc Phục Triệt Để Lỗi Tạp Nhiễm Dữ Liệu Chéo Môn Học & Chéo Chương, Siết Chặt Thuật Toán So Khớp Chunks & Bổ Sung Quick Pattern Switcher
 
 - **Khắc Phục Triệt Để Lỗi Tạp Nhiễm Tri Thức Chéo Môn Học & Chéo Chương (`./src/components/curriculum/CurriculumExplorerView.jsx`, `./src/components/curriculum/UnifiedNodeDetailView.jsx`, `./src/components/curriculum/textbookStateBridge.js`)**:

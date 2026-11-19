@@ -58,6 +58,9 @@ V-Eval-Web_Client/
 
 ### 4.1. Flow 1: Diagnostic Assessment (IRT 2PL Model & 30-Question Real Test Page)
 - Implemented in `DiagnosticAssessmentPage.jsx` and quick modal `DiagnosticTestModal.jsx`.
+- **Architectural Decoupling from Curriculum Explorer**:
+  - Removed legacy mock redirect `if (activeTab === 'diagnostic' && role !== 'student') return <CurriculumExplorerView />` in `App.jsx`. Navigating to `diagnostic` consistently serves `DiagnosticAssessmentPage` across all roles (Student, Instructor, Admin, and Guest), eliminating unexpected cross-routing to the Curriculum Explorer.
+  - Normalized tab labels in `App.jsx` and `Sidebar.jsx` to `Khảo thí & Chẩn đoán`, clearly delineating between the 30-question diagnostic exam and the 5-question pattern reinforcement quizzes in `UnifiedNodeDetailView.jsx`.
 - **Dual Entry Architecture (Guest Mode vs. Logged-in Mode)**:
   - *Guest Mode (Unauthenticated)*: Triggered from Public Landing Page via quick entry modal (`autoStart: true`), directly entering the proctored 30-question diagnostic test without requiring registration or exposing student dashboard.
   - *Logged-in Mode (Authenticated)*: Accessed either via the **"Thi thử ngay" Top Header button** (adjacent to Architecture 3 Q&A in `Navbar.jsx`) or Dashboard Sidebar (`Khảo thí & Chẩn đoán - Flow 1`). Triggering the Top Header button opens the standalone **Exam Detail & Passcode Verification Modal** (`ExamPasscodeModal.jsx`), showing 30 questions / 45-min specs and prefilled code `VACT2026`. Confirming passcode immediately launches the proctored test in full-screen mode, hiding navigation chrome.

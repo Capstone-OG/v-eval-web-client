@@ -76,7 +76,7 @@ const ROLE_PORTAL_DEFINITIONS = {
     accentBadge: 'bg-blue-50 text-blue-700 border-blue-200',
     tabs: [
       { id: 'dashboard', label: 'Tổng quan Học tập', icon: LayoutGrid },
-      { id: 'diagnostic', label: 'Khảo thí 30 câu', icon: ClipboardCheck },
+      { id: 'diagnostic', label: 'Khảo thí & Chẩn đoán', icon: ClipboardCheck },
       { id: 'history', label: 'Lịch sử & Lỗi sai', icon: History },
       { id: 'roadmap', label: 'Cây tri thức & Lộ trình', icon: Network },
       { id: 'schedule', label: 'Thời khóa biểu & Điểm danh', icon: Calendar },
@@ -430,9 +430,6 @@ export default function App() {
         activeTab !== 'exam-studio') {
       return <TeacherPortalView key={`${currentUser?.userId || currentUser?.id}:${currentUser?.classId || ''}:${activeTab}`}
         currentUser={currentUser} section={activeTab} onNavigate={setActiveTab} />;
-    }
-    if (activeTab === 'diagnostic' && role !== 'student') {
-      return <CurriculumExplorerView role={role} onStartTopicQuiz={handleOpenAdaptiveQuiz} />;
     }
     if (activeTab === 'diagnostic') {
       return (

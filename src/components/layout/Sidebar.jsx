@@ -438,13 +438,13 @@ export default function Sidebar({
               {
                 id: 'diagnostic',
                 label: 'Khảo thí & Chẩn đoán',
-                sublabel: 'Đề chuẩn hóa 30 câu & IRT 2PL',
+                sublabel: 'Đề chuẩn hóa năng lực & IRT 2PL',
                 icon: ClipboardCheck,
                 iconColor: 'from-orange-400 to-rose-500',
                 activeGlow: 'shadow-rose-500/30',
                 active: activeTab === 'diagnostic',
                 onClick: () => setActiveTab('diagnostic'),
-                badge: '30 câu'
+                badge: 'Khảo thí'
               },
               {
                 id: 'history',
