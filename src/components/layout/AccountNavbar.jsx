@@ -14,6 +14,8 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
+  PanelLeftClose,
+  PanelLeftOpen,
   Settings,
   Sparkles,
   Target,
@@ -136,6 +138,8 @@ export default function AccountNavbar({
   onOpenLandingPage,
   onOpenSettings,
   onOpenNavigation,
+  isSidebarCollapsed = false,
+  onToggleSidebar,
   onSelectChildId
 }) {
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
@@ -150,7 +154,6 @@ export default function AccountNavbar({
   const triggerRef = useRef(null);
   const menuRef = useRef(null);
   const alertsRef = useRef(null);
-
   const roleLabel = accountRoleLabel(role, currentUser);
   const displayName = currentUser?.fullName?.trim() || roleLabel;
   const initials =
@@ -348,6 +351,18 @@ export default function AccountNavbar({
             >
               <Menu className="h-5 w-5" />
             </button>
+
+            {onToggleSidebar && (
+              <button
+                type="button"
+                onClick={onToggleSidebar}
+                aria-label={isSidebarCollapsed ? "Mở rộng thanh điều hướng" : "Thu gọn thanh điều hướng"}
+                title={isSidebarCollapsed ? "Mở rộng sidebar (Ctrl+B)" : "Thu gọn sidebar (Ctrl+B)"}
+                className="hidden lg:flex items-center justify-center rounded-xl border border-slate-200 bg-white p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors shadow-2xs cursor-pointer"
+              >
+                {isSidebarCollapsed ? <PanelLeftOpen className="h-5 w-5 text-emerald-700" /> : <PanelLeftClose className="h-5 w-5 text-slate-600" />}
+              </button>
+            )}
 
             <span className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-blue-100 bg-blue-50 text-blue-600 sm:flex">
               <LayoutDashboard className="h-5 w-5" />

@@ -6,12 +6,15 @@ import {
   Award,
   BarChart3,
   BookOpen,
+  FileSpreadsheet,
   Bot,
   Briefcase,
   Building2,
   Calendar,
   ClipboardCheck,
   ChevronDown,
+  PanelLeftClose,
+  PanelLeftOpen,
   CreditCard,
   FileCheck2,
   GraduationCap,
@@ -32,6 +35,8 @@ export default function Sidebar({
   role = 'student',
   activeTab,
   setActiveTab,
+  isCollapsed = false,
+  onToggleCollapse,
   onOpenAdaptiveQuiz,
   onOpenMockExam,
   onOpenAiTutor,
@@ -143,12 +148,50 @@ export default function Sidebar({
               },
               {
                 id: 'roadmap',
-                label: 'Studio Biên soạn Học liệu',
-                sublabel: 'Cây chương trình & Câu hỏi LaTeX',
-                icon: BookOpen,
+                label: 'Khung Chương trình & Dạng bài',
+                sublabel: 'Cây kiến thức & Ma trận Bloom',
+                icon: Network,
                 active: activeTab === 'roadmap',
                 onClick: () => setActiveTab('roadmap'),
                 badge: 'Studio'
+              },
+              {
+                id: 'textbook-group',
+                label: 'Sách giáo khoa (SGK)',
+                sublabel: 'Chuẩn, Nạp & Studio',
+                icon: BookOpen,
+                iconColor: 'from-emerald-500 to-teal-700',
+                children: [
+                  {
+                    id: 'textbook-standard',
+                    label: '1. Sách Giáo Khoa Chuẩn',
+                    badge: 'Khung',
+                    active: activeTab === 'textbook-standard',
+                    onClick: () => setActiveTab('textbook-standard')
+                  },
+                  {
+                    id: 'textbook-ingest',
+                    label: '2. Nạp Tài Liệu SGK',
+                    badge: '3 Phần',
+                    active: activeTab === 'textbook-ingest',
+                    onClick: () => setActiveTab('textbook-ingest')
+                  },
+                  {
+                    id: 'textbook-studio',
+                    label: '3. Studio Biên Soạn SGK',
+                    badge: 'Studio',
+                    active: activeTab === 'textbook-studio',
+                    onClick: () => setActiveTab('textbook-studio')
+                  }
+                ]
+              },
+              {
+                id: 'exam-studio',
+                label: 'Parse Đề thi',
+                sublabel: 'Tách câu hỏi & Studio Đề',
+                icon: FileSpreadsheet,
+                active: activeTab === 'exam-studio',
+                onClick: () => setActiveTab('exam-studio')
               },
               {
                 id: 'diagnostic',
@@ -178,69 +221,159 @@ export default function Sidebar({
           }
         ];
 
-      case 'manager':
+      case 'director':
+      case 'manager': {
+        const currentRoles = Array.isArray(portalMetrics?.currentUser?.roles)
+          ? portalMetrics.currentUser.roles.map((r) => String(r).toUpperCase())
+          : [];
+        const isDirectorRole =
+          role === 'director' ||
+          currentRoles.some((r) => r.includes('DIRECTOR')) ||
+          String(portalMetrics?.currentUser?.email || '').toLowerCase().startsWith('director');
+
+        if (isDirectorRole) {
+          return [
+            {
+              sectionTitle: 'Quản Trị Học Thuật Cơ Sở',
+              items: [
+                {
+                  id: 'dashboard',
+                  label: 'Trung tâm Điều phối Cơ sở',
+                  sublabel: 'AI Clustering & Bản đồ nhiệt',
+                  icon: Building2,
+                  active: activeTab === 'dashboard',
+                  onClick: () => setActiveTab('dashboard')
+                },
+                {
+                  id: 'teacher_heatmap',
+                  label: 'Giám sát Ma trận Lớp học',
+                  sublabel: 'Theo dõi độ làm chủ từng lớp',
+                  icon: LayoutGrid,
+                  active: activeTab === 'teacher_heatmap',
+                  onClick: () => setActiveTab('teacher_heatmap')
+                },
+                {
+                  id: 'ai_moderation',
+                  label: 'Kiểm duyệt Gia sư AI',
+                  sublabel: 'Báo cáo sai lệch & Bẫy tư duy',
+                  icon: Bot,
+                  active: activeTab === 'ai_moderation',
+                  onClick: () => setActiveTab('ai_moderation'),
+                  badge: 'Flow 4'
+                },
+                {
+                  id: 'roadmap',
+                  label: 'Quản lý Khung Chương trình',
+                  sublabel: 'Phê duyệt học liệu & Câu hỏi',
+                  icon: Network,
+                  active: activeTab === 'roadmap',
+                  onClick: () => setActiveTab('roadmap')
+                },
+                {
+                  id: 'textbook-group',
+                  label: 'Sách giáo khoa (SGK)',
+                  sublabel: 'Chuẩn, Nạp & Studio',
+                  icon: BookOpen,
+                  iconColor: 'from-emerald-500 to-teal-700',
+                  children: [
+                    {
+                      id: 'textbook-standard',
+                      label: '1. Sách Giáo Khoa Chuẩn',
+                      badge: 'Khung',
+                      active: activeTab === 'textbook-standard',
+                      onClick: () => setActiveTab('textbook-standard')
+                    },
+                    {
+                      id: 'textbook-ingest',
+                      label: '2. Nạp Tài Liệu SGK',
+                      badge: '3 Phần',
+                      active: activeTab === 'textbook-ingest',
+                      onClick: () => setActiveTab('textbook-ingest')
+                    },
+                    {
+                      id: 'textbook-studio',
+                      label: '3. Studio Biên Soạn SGK',
+                      badge: 'Studio',
+                      active: activeTab === 'textbook-studio',
+                      onClick: () => setActiveTab('textbook-studio')
+                    }
+                  ]
+                },
+                {
+                  id: 'exam-studio',
+                  label: 'Parse Đề thi',
+                  sublabel: 'Tách câu hỏi & Studio Đề',
+                  icon: FileSpreadsheet,
+                  active: activeTab === 'exam-studio',
+                  onClick: () => setActiveTab('exam-studio')
+                },
+                {
+                  id: 'analytics',
+                  label: 'Báo cáo Chất lượng Đào tạo',
+                  sublabel: 'Dự báo điểm chuẩn ĐGNL cơ sở',
+                  icon: BarChart3,
+                  active: activeTab === 'analytics',
+                  onClick: () => setActiveTab('analytics')
+                }
+              ]
+            },
+            {
+              sectionTitle: 'Nhân Sự & Tài Khoản Cơ Sở',
+              items: [
+                {
+                  id: 'provision',
+                  label: 'Cấp phát Tài khoản Cơ sở',
+                  sublabel: 'Giảng viên & Học viên mới',
+                  icon: UserPlus,
+                  active: activeTab === 'provision',
+                  onClick: () => setActiveTab('provision'),
+                  badge: 'IAM'
+                }
+              ]
+            }
+          ];
+        }
+
         return [
           {
-            sectionTitle: 'Quản Trị Học Thuật Cơ Sở',
+            sectionTitle: 'Điều Phối Học Thuật Cơ Sở',
             items: [
               {
                 id: 'dashboard',
-                label: 'Trung tâm Điều phối Cơ sở',
-                sublabel: 'AI Clustering & Bản đồ nhiệt',
+                label: 'Tổng quan & Đối sánh Cơ sở',
+                sublabel: 'Bản đồ nhiệt lớp & Xuất báo cáo',
                 icon: Building2,
-                active: activeTab === 'dashboard',
+                active: activeTab === 'dashboard' || activeTab === 'analytics',
                 onClick: () => setActiveTab('dashboard')
               },
               {
-                id: 'teacher_heatmap',
-                label: 'Giám sát Ma trận Lớp học',
-                sublabel: 'Theo dõi độ làm chủ từng lớp',
-                icon: LayoutGrid,
-                active: activeTab === 'teacher_heatmap',
-                onClick: () => setActiveTab('teacher_heatmap')
+                id: 'classes_schedule',
+                label: 'Lớp học, Lịch học & Phân công GV',
+                sublabel: 'Đợt học, Trần 20 HS & Thời khóa biểu',
+                icon: Calendar,
+                active: activeTab === 'classes_schedule',
+                onClick: () => setActiveTab('classes_schedule')
               },
               {
-                id: 'ai_moderation',
-                label: 'Kiểm duyệt Gia sư AI',
-                sublabel: 'Báo cáo sai lệch & Bẫy tư duy',
-                icon: Bot,
-                active: activeTab === 'ai_moderation',
-                onClick: () => setActiveTab('ai_moderation'),
-                badge: 'Flow 4'
+                id: 'clustering',
+                label: 'Xếp lớp Đầu vào & Phân cụm AI',
+                sublabel: 'K-Means 4 miền & Gán Giáo viên',
+                icon: Sparkles,
+                active: activeTab === 'clustering',
+                onClick: () => setActiveTab('clustering')
               },
               {
-                id: 'roadmap',
-                label: 'Quản lý Khung Chương trình',
-                sublabel: 'Phê duyệt học liệu & Câu hỏi',
-                icon: Network,
-                active: activeTab === 'roadmap',
-                onClick: () => setActiveTab('roadmap')
-              },
-              {
-                id: 'analytics',
-                label: 'Báo cáo Chất lượng Đào tạo',
-                sublabel: 'Dự báo điểm chuẩn ĐGNL cơ sở',
-                icon: BarChart3,
-                active: activeTab === 'analytics',
-                onClick: () => setActiveTab('analytics')
-              }
-            ]
-          },
-          {
-            sectionTitle: 'Nhân Sự & Tài Khoản Cơ Sở',
-            items: [
-              {
-                id: 'provision',
-                label: 'Cấp phát Tài khoản Cơ sở',
-                sublabel: 'Giảng viên & Học viên mới',
-                icon: UserPlus,
-                active: activeTab === 'provision',
-                onClick: () => setActiveTab('provision'),
-                badge: 'IAM'
+                id: 'escalations',
+                label: 'Cảnh báo Cấp 3 & Họp 3 bên',
+                sublabel: 'Can thiệp học viên nguy cơ cao',
+                icon: Activity,
+                active: activeTab === 'escalations',
+                onClick: () => setActiveTab('escalations')
               }
             ]
           }
         ];
+      }
 
       case 'admin':
         return [
@@ -279,6 +412,44 @@ export default function Sidebar({
                 icon: Network,
                 active: activeTab === 'roadmap',
                 onClick: () => setActiveTab('roadmap')
+              },
+              {
+                id: 'textbook-group',
+                label: 'Sách giáo khoa (SGK)',
+                sublabel: 'Chuẩn, Nạp & Studio',
+                icon: BookOpen,
+                iconColor: 'from-emerald-500 to-teal-700',
+                children: [
+                  {
+                    id: 'textbook-standard',
+                    label: '1. Sách Giáo Khoa Chuẩn',
+                    badge: 'Khung',
+                    active: activeTab === 'textbook-standard',
+                    onClick: () => setActiveTab('textbook-standard')
+                  },
+                  {
+                    id: 'textbook-ingest',
+                    label: '2. Nạp Tài Liệu SGK',
+                    badge: '3 Phần',
+                    active: activeTab === 'textbook-ingest',
+                    onClick: () => setActiveTab('textbook-ingest')
+                  },
+                  {
+                    id: 'textbook-studio',
+                    label: '3. Studio Biên Soạn SGK',
+                    badge: 'Studio',
+                    active: activeTab === 'textbook-studio',
+                    onClick: () => setActiveTab('textbook-studio')
+                  }
+                ]
+              },
+              {
+                id: 'exam-studio',
+                label: 'Parse Đề thi',
+                sublabel: 'Tách câu hỏi & Studio Đề',
+                icon: FileSpreadsheet,
+                active: activeTab === 'exam-studio',
+                onClick: () => setActiveTab('exam-studio')
               },
               {
                 id: 'tuition',
@@ -422,10 +593,27 @@ export default function Sidebar({
     }
   };
 
-  const [examsExpanded, setExamsExpanded] = useState(activeTab === 'diagnostic');
+  const prevTabRef = React.useRef(activeTab);
+  const [expandedGroups, setExpandedGroups] = useState({
+    exams: activeTab === 'diagnostic' || activeTab === 'mock',
+    'textbook-group': activeTab === 'textbook-standard' || activeTab === 'textbook-ingest' || activeTab === 'textbook-studio'
+  });
+
   useEffect(() => {
-    if (activeTab === 'diagnostic') setExamsExpanded(true);
+    if (prevTabRef.current !== activeTab) {
+      prevTabRef.current = activeTab;
+      if (activeTab === 'diagnostic' || activeTab === 'mock') {
+        setExpandedGroups(prev => ({ ...prev, exams: true }));
+      }
+      if (activeTab === 'textbook-standard' || activeTab === 'textbook-ingest' || activeTab === 'textbook-studio') {
+        setExpandedGroups(prev => ({ ...prev, 'textbook-group': true }));
+      }
+    }
   }, [activeTab]);
+
+  const toggleGroup = (groupId) => {
+    setExpandedGroups(prev => ({ ...prev, [groupId]: !prev[groupId] }));
+  };
 
   let navSections = getRoleNavigation();
   if (role === 'student') {
@@ -451,73 +639,136 @@ export default function Sidebar({
   }
 
   return (
-    <aside className={`${mobile ? 'flex w-full min-h-full' : 'hidden lg:flex w-72'} flex-col justify-between border-r border-slate-200/80 bg-gradient-to-b from-slate-50/80 to-white p-5 select-none shrink-0`}>
+    <aside className={`${mobile ? 'flex w-full min-h-full p-5' : (isCollapsed ? 'hidden lg:flex w-20 p-3' : 'hidden lg:flex w-72 p-5')} flex-col justify-between border-r border-slate-200/80 bg-gradient-to-b from-slate-50/80 to-white select-none shrink-0 transition-all duration-200`}>
       <div className="space-y-6">
         {/* Brand Identity Header - Synchronized with Home Page (PublicHeader.jsx) */}
-        <div className="space-y-3 px-1">
-          <BrandLogo className="w-44" />
-
-
+        <div className="flex items-center justify-between px-1">
+          {!isCollapsed ? (
+            <>
+              <BrandLogo className="w-40" />
+              {onToggleCollapse && (
+                <button
+                  type="button"
+                  onClick={onToggleCollapse}
+                  title="Thu gọn sidebar"
+                  aria-label="Thu gọn sidebar"
+                  className="p-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-500 hover:text-slate-800 transition-colors cursor-pointer shadow-2xs"
+                >
+                  <PanelLeftClose className="w-4 h-4" />
+                </button>
+              )}
+            </>
+          ) : (
+            <div className="w-full flex flex-col items-center gap-2">
+              <span className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-600 via-indigo-600 to-cyan-500 flex items-center justify-center text-white font-black text-sm shadow-md">
+                V
+              </span>
+              {onToggleCollapse && (
+                <button
+                  type="button"
+                  onClick={onToggleCollapse}
+                  title="Mở rộng sidebar"
+                  aria-label="Mở rộng sidebar"
+                  className="p-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-500 hover:text-slate-800 transition-colors cursor-pointer shadow-2xs"
+                >
+                  <PanelLeftOpen className="w-4 h-4 text-emerald-700" />
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Role-Specific Navigation Sections */}
         <nav className="space-y-5">
           {navSections.map((section) => (
             <div key={section.sectionTitle} className="space-y-1.5">
-              <div className="px-3 text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
-                <span className="flex-1">{section.sectionTitle}</span>
-                <span className="h-px flex-1 bg-slate-100" />
-              </div>
+              {!isCollapsed ? (
+                <div className="px-3 text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                  <span className="flex-1">{section.sectionTitle}</span>
+                  <span className="h-px flex-1 bg-slate-100" />
+                </div>
+              ) : (
+                <div className="h-px w-8 mx-auto bg-slate-200 my-2" />
+              )}
               <div className="space-y-1">
                 {section.items.map((item) => {
                   const Icon = item.icon;
                   if (item.children) {
+                    const isExpanded = !!expandedGroups[item.id];
                     const activeGroup = item.children.some((child) => child.active);
+                    const groupIconGradient = item.iconColor || (item.id === 'textbook-group' ? 'from-emerald-500 to-teal-700' : 'from-orange-400 to-rose-500');
+
+                    if (isCollapsed) {
+                      return (
+                        <div key={item.id} className="relative group/collapsed">
+                          <button
+                            type="button"
+                            title={item.label}
+                            onClick={() => {
+                              onToggleCollapse?.();
+                              toggleGroup(item.id);
+                            }}
+                            className={`flex w-full items-center justify-center rounded-2xl p-2 transition-all cursor-pointer ${
+                              activeGroup
+                                ? 'bg-gradient-to-br from-emerald-600 to-teal-600 text-white shadow-md'
+                                : 'text-slate-700 hover:bg-white hover:border-slate-200 hover:shadow-xs'
+                            }`}
+                          >
+                            <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${groupIconGradient} text-white shadow-sm`}>
+                              <Icon className="h-4.5 w-4.5" />
+                            </span>
+                          </button>
+                        </div>
+                      );
+                    }
+
                     return (
                       <div key={item.id}>
                         <button
                           type="button"
-                          aria-expanded={examsExpanded}
-                          aria-controls={`exam-navigation-${mobile ? 'mobile' : 'desktop'}`}
-                          onClick={() => setExamsExpanded((value) => !value)}
-                          className={`flex w-full items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-left transition-all ${
+                          aria-expanded={isExpanded}
+                          aria-controls={`nav-group-${item.id}-${mobile ? 'mobile' : 'desktop'}`}
+                          onClick={() => toggleGroup(item.id)}
+                          className={`flex w-full items-center gap-3 rounded-2xl border px-3.5 py-2.5 text-left transition-all cursor-pointer ${
                             activeGroup
-                              ? 'bg-orange-50 text-orange-700 font-bold border border-orange-200/80'
-                              : 'text-slate-600 hover:bg-slate-100/80 hover:text-slate-900 font-medium'
+                              ? (item.id === 'textbook-group' ? 'border-emerald-200 bg-emerald-50 text-emerald-950 font-bold' : 'border-orange-100 bg-orange-50 text-orange-700')
+                              : 'border-transparent text-slate-700 hover:border-slate-200 hover:bg-slate-50'
                           }`}
                         >
-                          <Icon className={`h-4.5 w-4.5 shrink-0 ${activeGroup ? 'text-orange-600' : 'text-slate-400'}`} />
-                          <span className="flex-1 text-xs sm:text-sm font-semibold">{item.label}</span>
-                          <ChevronDown
-                            className={`h-3.5 w-3.5 shrink-0 transition-transform ${
-                              examsExpanded ? 'rotate-180' : ''
-                            } ${activeGroup ? 'text-orange-500' : 'text-slate-400'}`}
-                          />
+                          <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${groupIconGradient} text-white shadow-sm`}>
+                            <Icon className="h-4 w-4" />
+                          </span>
+                          <div className="flex-1 min-w-0">
+                            <span className="block text-xs font-extrabold truncate">{item.label}</span>
+                            {item.sublabel && <span className="block text-[10px] text-slate-400 font-medium truncate">{item.sublabel}</span>}
+                          </div>
+                          <ChevronDown className={`h-3.5 w-3.5 shrink-0 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''} ${activeGroup ? (item.id === 'textbook-group' ? 'text-emerald-700' : 'text-orange-500') : 'text-slate-400'}`} />
                         </button>
-                        <div id={`exam-navigation-${mobile ? 'mobile' : 'desktop'}`} hidden={!examsExpanded}>
-                          <div className="mb-2 ml-7 mt-1 space-y-1 border-l-2 border-orange-100 pl-3">
+                        <div id={`nav-group-${item.id}-${mobile ? 'mobile' : 'desktop'}`} hidden={!isExpanded}>
+                          <div className={`mb-2 ml-7 mt-1 space-y-1 border-l-2 pl-3 ${item.id === 'textbook-group' ? 'border-emerald-200' : 'border-orange-100'}`}>
                             {item.children.map((child) => (
                               <button
                                 key={child.id}
                                 type="button"
                                 aria-current={child.active ? 'page' : undefined}
-                                onClick={() => {
-                                  child.onClick?.();
-                                  onNavigate?.();
-                                }}
-                                className={`flex w-full items-center justify-between gap-2 rounded-xl px-3 py-2 text-left text-xs transition-colors ${
+                                onClick={() => { child.onClick?.(); onNavigate?.(); }}
+                                className={`flex w-full items-center justify-between gap-2 rounded-xl px-3 py-2 text-left text-xs transition-colors cursor-pointer ${
                                   child.active
-                                    ? 'bg-gradient-to-r from-orange-500 to-rose-500 font-bold text-white shadow-sm shadow-orange-500/25'
-                                    : 'font-medium text-slate-600 hover:bg-orange-50 hover:text-orange-700'
+                                    ? (item.id === 'textbook-group'
+                                        ? 'bg-gradient-to-r from-emerald-600 to-teal-600 font-bold text-white shadow-sm shadow-emerald-500/25'
+                                        : 'bg-gradient-to-r from-orange-500 to-rose-500 font-bold text-white shadow-sm shadow-orange-500/25')
+                                    : (item.id === 'textbook-group'
+                                        ? 'font-medium text-slate-600 hover:bg-emerald-50 hover:text-emerald-800'
+                                        : 'font-medium text-slate-600 hover:bg-orange-50 hover:text-orange-700')
                                 }`}
                               >
-                                <span>{child.label}</span>
+                                <span className="truncate">{child.label}</span>
                                 {child.badge && (
-                                  <span
-                                    className={`shrink-0 rounded-md px-1.5 py-0.5 text-[9px] font-bold ${
-                                      child.active ? 'bg-white/20 text-white' : 'bg-orange-50 text-orange-600'
-                                    }`}
-                                  >
+                                  <span className={`shrink-0 rounded-md px-1.5 py-0.5 text-[9px] font-bold ${
+                                    child.active
+                                      ? 'bg-white/20 text-white'
+                                      : (item.id === 'textbook-group' ? 'bg-emerald-100 text-emerald-800' : 'bg-orange-50 text-orange-600')
+                                  }`}>
                                     {child.badge}
                                   </span>
                                 )}
@@ -528,6 +779,34 @@ export default function Sidebar({
                       </div>
                     );
                   }
+
+                  if (isCollapsed) {
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        title={item.label}
+                        aria-current={item.active ? 'page' : undefined}
+                        onClick={() => { item.onClick?.(); onNavigate?.(); }}
+                        className={`w-full flex items-center justify-center p-2 rounded-2xl transition-all cursor-pointer group ${
+                          item.active
+                            ? `bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 text-white shadow-md ${glowClass}`
+                            : 'text-slate-700 hover:bg-white hover:shadow-xs border border-transparent hover:border-slate-200/80'
+                        }`}
+                      >
+                        <div
+                          className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-all ${
+                            item.active
+                              ? 'bg-white/20 text-white'
+                              : `bg-gradient-to-br ${iconGradient} text-white shadow-sm group-hover:scale-110`
+                          }`}
+                        >
+                          <Icon className="w-4.5 h-4.5" />
+                        </div>
+                      </button>
+                    );
+                  }
+
                   return (
                     <button
                       key={item.id}
@@ -576,6 +855,16 @@ export default function Sidebar({
       </div>
 
       {/* Role-Specific Footer Card (Matches Home Page Deep Royal Blue-Indigo Gradient) */}
+      {isCollapsed ? (
+        <div
+          className="mt-6 flex flex-col items-center justify-center p-2.5 rounded-2xl bg-gradient-to-br from-blue-700 via-indigo-800 to-slate-900 text-white shadow-md border border-blue-600/30 cursor-pointer"
+          title={`Vai trò: ${role.toUpperCase()}`}
+          onClick={onToggleCollapse}
+        >
+          <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span className="text-[9px] font-mono font-bold uppercase mt-1 text-cyan-200">{role.slice(0, 3)}</span>
+        </div>
+      ) : (
       <div className="mt-6 p-4 rounded-3xl bg-gradient-to-br from-blue-700 via-indigo-800 to-slate-900 text-white space-y-3 shadow-lg border border-blue-600/30 relative overflow-hidden">
         <div className="absolute -right-6 -bottom-6 w-24 h-24 rounded-full bg-[#FACC15]/15 blur-xl pointer-events-none"></div>
 
@@ -663,12 +952,12 @@ export default function Sidebar({
           </>
         )}
 
-        {role === 'manager' && (
+        {(role === 'manager' || role === 'director') && (
           <>
             <div className="flex items-center justify-between">
               <span className="text-[10px] uppercase tracking-wider font-extrabold text-[#FACC15] flex items-center gap-1">
                 <Building2 className="w-3 h-3" />
-                <span>Điều Phối Cơ Sở</span>
+                <span>{role === 'director' ? 'Hội Đồng Học Thuật' : 'Điều Phối Cơ Sở'}</span>
               </span>
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold">
                 Live API
@@ -709,6 +998,7 @@ export default function Sidebar({
           </>
         )}
       </div>
+      )}
     </aside>
   );
 }

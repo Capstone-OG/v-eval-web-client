@@ -173,12 +173,12 @@ export function normalizeMathString(text) {
   // 1. Unescape literal string escaped newlines e.g. "\n" -> real newlines
   str = unescapeLiteralNewlines(str);
 
-  // 1.1. BẢO VỆ TUYỆT ĐỐI CÁC KHỐI ĐỒ THỊ & BẢNG BIẾN THIÊN ([MATH_GRAPH_3D], [MATH_GRAPH], [VARIATION_TABLE], [MATH_GEOMETRY_2D])
+  // 1.1. BẢO VỆ TUYỆT ĐỐI CÁC KHỐI ĐỒ THỊ, BẢNG BIẾN THIÊN & THẺ NHẮC NHỞ HÌNH ẢNH ([IMAGE_PLACEHOLDER:...])
   // Khôi phục cả trường hợp thẻ đã bị dính dấu $ từ CSDL cũ (như [$MATH_GRAPH_3D$])
   str = str.replace(/\[\s*\$?(\/?)\s*\$?(MATH_GRAPH_3D|MATH_GRAPH|VARIATION_TABLE|MATH_GEOMETRY_2D)\$?\s*\]/gi, '[$1$2]');
   const preservedSpecialBlocks = [];
   str = str.replace(
-    /(\[(?:MATH_GRAPH_3D|MATH_GRAPH|VARIATION_TABLE|MATH_GEOMETRY_2D)\][\s\S]*?\[\/(?:MATH_GRAPH_3D|MATH_GRAPH|VARIATION_TABLE|MATH_GEOMETRY_2D)\]|\[GRAPH:[\s\S]*?\])/gi,
+    /(\[(?:MATH_GRAPH_3D|MATH_GRAPH|VARIATION_TABLE|MATH_GEOMETRY_2D)\][\s\S]*?\[\/(?:MATH_GRAPH_3D|MATH_GRAPH|VARIATION_TABLE|MATH_GEOMETRY_2D)\]|\[GRAPH:[\s\S]*?\]|\[IMAGE_PLACEHOLDER:[\s\S]*?\])/gi,
     (match) => {
       const cleanedBlock = match.replace(/\$/g, '');
       const idxCode = String(preservedSpecialBlocks.length).split('').map(d => String.fromCharCode(97 + Number(d))).join('');
@@ -816,7 +816,7 @@ function renderStructuredContent(raw, onEditMathGraph = null) {
   // 4. [VARIATION_TABLE]...[/VARIATION_TABLE]
   // 5. [GRAPH:...]
   // 6. Display math $$...$$ or \[...\]
-  const blockRegex = /(\[MATH_GRAPH_3D\][\s\S]*?\[\/MATH_GRAPH_3D\]|\[MATH_GRAPH\][\s\S]*?\[\/MATH_GRAPH\]|\[MATH_GEOMETRY_2D\][\s\S]*?\[\/MATH_GEOMETRY_2D\]|\[VARIATION_TABLE\][\s\S]*?\[\/VARIATION_TABLE\]|\[GRAPH:[\s\S]*?\]|\$\$[\s\S]*?\$\$|\\\[[\s\S]*?\\\])/gi;
+  const blockRegex = /(\[MATH_GRAPH_3D\][\s\S]*?\[\/MATH_GRAPH_3D\]|\[MATH_GRAPH\][\s\S]*?\[\/MATH_GRAPH\]|\[MATH_GEOMETRY_2D\][\s\S]*?\[\/MATH_GEOMETRY_2D\]|\[VARIATION_TABLE\][\s\S]*?\[\/VARIATION_TABLE\]|\[GRAPH:[\s\S]*?\]|\[IMAGE_PLACEHOLDER:[\s\S]*?\]|\$\$[\s\S]*?\$\$|\\\[[\s\S]*?\\\])/gi;
   const blocks = effectiveRaw.split(blockRegex);
 
   return blocks.map((block, bIdx) => {
@@ -850,6 +850,45 @@ function renderStructuredContent(raw, onEditMathGraph = null) {
     if (block.toUpperCase().startsWith('[GRAPH:') && block.endsWith(']')) {
       const parsed = parseGraphTag(block);
       return <MathGraphView key={`mg-${bIdx}`} data={parsed} />;
+    }
+
+    // Diagram / Image Placeholder Block [IMAGE_PLACEHOLDER: id="..." page="..." type="..." desc="..."]
+    if (trimmedBlock.toUpperCase().startsWith('[IMAGE_PLACEHOLDER:') && trimmedBlock.endsWith(']')) {
+      const attrRaw = trimmedBlock.slice('[IMAGE_PLACEHOLDER:'.length, -1).trim();
+      const extractAttr = (k) => {
+        const m = attrRaw.match(new RegExp(`${k}\\s*=\\s*["']([^"']+)["']`, 'i'));
+        return m ? m[1] : '';
+      };
+      const imgType = extractAttr('type') || 'FIGURE';
+      const pageNum = extractAttr('page');
+      const desc = extractAttr('desc') || extractAttr('description') || attrRaw;
+
+      return (
+        <div
+          key={`img-ph-${bIdx}`}
+          className="my-2.5 p-3 rounded-xl border-2 border-dashed border-amber-400/80 bg-amber-50/80 text-amber-950 flex items-start gap-2.5 shadow-2xs"
+          data-image-placeholder="true"
+          data-diagram-type={imgType}
+          data-page={pageNum}
+        >
+          <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0 space-y-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-[11px] font-extrabold text-amber-900">
+                Cần bổ sung Hình ảnh / Sơ đồ ({imgType})
+              </span>
+              {pageNum && (
+                <span className="px-1.5 py-0.5 rounded bg-amber-200/80 text-amber-950 text-[10px] font-bold">
+                  Trang {pageNum}
+                </span>
+              )}
+            </div>
+            <div className="text-[11px] text-amber-900/90 font-medium leading-snug">
+              {desc}
+            </div>
+          </div>
+        </div>
+      );
     }
 
     // Multi-line display math block
@@ -1137,7 +1176,7 @@ export default function MathText({ text, className = '', onEditMathGraph = null 
   const hasBullets = /^\s*(?:[-+•\u2022]|\*(?!\*))\s+/m.test(raw);
   const hasCallouts = /###\s*[⚠️💡📌📝📄]/m.test(raw) || /^[⚠️💡📌📝📄]/m.test(raw);
   const hasHeadings = /^(?:#{1,4})\s+/m.test(raw);
-  const hasSpecialBlocks = raw.includes('[VARIATION_TABLE]') || raw.includes('[GRAPH:') || raw.includes('[MATH_GRAPH') || raw.includes('[MATH_GRAPH_3D');
+  const hasSpecialBlocks = raw.includes('[VARIATION_TABLE]') || raw.includes('[GRAPH:') || raw.includes('[MATH_GRAPH') || raw.includes('[MATH_GRAPH_3D') || raw.includes('[IMAGE_PLACEHOLDER:');
   const isStructured = hasLinebreaks || hasBlockMath || hasBullets || hasCallouts || hasHeadings || hasSpecialBlocks;
 
   if (!isStructured) {

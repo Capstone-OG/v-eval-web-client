@@ -50,6 +50,7 @@ import {
   Book
 } from 'lucide-react';
 import MathText from '../common/MathText';
+import TextbookStudioView from './TextbookStudioView';
 import StudentCurriculumView from './StudentCurriculumView';
 import CurriculumStudioEditor, { parseSolutionMethodSections, parseTheoryRecapSections, isMathOrStemDomain } from './CurriculumStudioEditor';
 import InteractiveMathWorkbenchModal from './InteractiveMathWorkbenchModal';
@@ -194,6 +195,22 @@ export default function CurriculumExplorerView({
   const [expandedChapters, setExpandedChapters] = useState({});
   const [expandedLessons, setExpandedLessons] = useState({});
   const [selectedPattern, setSelectedPattern] = useState(null);
+
+  // Ingested Textbooks Matching State (Đồng bộ tự động từ V-Eval-Ai_Engine)
+  const [ingestedTextbooks, setIngestedTextbooks] = useState([]);
+  const [loadingTextbooks, setLoadingTextbooks] = useState(false);
+
+  // React SGK Upload Modal State (Nạp SGK trực tiếp trên React, không dùng HTML rời)
+  const [isSgkModalOpen, setIsSgkModalOpen] = useState(false);
+  const [isSgkLibraryOpen, setIsSgkLibraryOpen] = useState(false);
+  const [selectedLibrarySource, setSelectedLibrarySource] = useState(null);
+  const [sgkFile, setSgkFile] = useState(null);
+  const [sgkOcrMode, setSgkOcrMode] = useState('TEXT_HUMANITIES');
+  const [sgkDpi, setSgkDpi] = useState(56);
+  const [sgkBatchSize, setSgkBatchSize] = useState(10);
+  const [sgkForceReingest, setSgkForceReingest] = useState(false);
+  const [sgkUploading, setSgkUploading] = useState(false);
+  const [sgkJobStatus, setSgkJobStatus] = useState(null);
 
   // Dynamic Assessment & Mastery State
   const [userAssessment, setUserAssessment] = useState(null);
@@ -393,9 +410,131 @@ export default function CurriculumExplorerView({
     }
   };
 
+  const fetchIngestedTextbooks = async () => {
+    setLoadingTextbooks(true);
+    try {
+      const res = await aiService.getIngestedTextbooks();
+      if (res && Array.isArray(res.sources)) {
+        setIngestedTextbooks(res.sources);
+      }
+    } catch (err) {
+      console.warn("Chưa tải được danh sách SGK đã nạp từ AI Engine:", err);
+    } finally {
+      setLoadingTextbooks(false);
+    }
+  };
+
+  const handleStartSgkUpload = async () => {
+    if (!sgkFile) {
+      toast.warning("Vui lòng chọn tệp PDF Sách giáo khoa trước khi nạp!");
+      return;
+    }
+    setSgkUploading(true);
+    setSgkJobStatus({ status: 'PROCESSING', progressPercent: 2, currentStep: 'Đang tải tệp PDF lên AI Engine...' });
+
+    try {
+      const currentD = domains.find(d => d.id === activeDomainId) || domains[0];
+      const domainIdVal = currentD?.domainId || (currentD?.id ? currentD.id.replace('domain-', '') : 'Domain-Default');
+
+      const job = await aiService.uploadTextbookPdf(sgkFile, {
+        domainId: domainIdVal,
+        skillId: 'Skill-SGK',
+        docType: 'TEXTBOOK',
+        ocrMode: sgkOcrMode,
+        forceReingest: sgkForceReingest,
+        targetDpi: sgkDpi,
+        batchSize: sgkBatchSize
+      });
+
+      setSgkJobStatus(job);
+      const jobId = job.jobId;
+
+      const poll = setInterval(async () => {
+        try {
+          const statusRes = await aiService.getTextbookJobStatus(jobId);
+          setSgkJobStatus(statusRes);
+
+          if (statusRes.status === 'COMPLETED') {
+            clearInterval(poll);
+            setSgkUploading(false);
+            toast.success(`Nạp thành công ${statusRes.totalPages || ''} trang SGK '${sgkFile.name}'!`, 'Hoàn tất nạp SGK');
+            await fetchIngestedTextbooks();
+          } else if (statusRes.status === 'FAILED') {
+            clearInterval(poll);
+            setSgkUploading(false);
+            toast.error(`Nạp SGK thất bại: ${statusRes.errorMessage || 'Lỗi không xác định'}`);
+          }
+        } catch (pollErr) {
+          console.warn('Polling SGK error:', pollErr);
+        }
+      }, 1500);
+    } catch (err) {
+      setSgkUploading(false);
+      setSgkJobStatus({ status: 'FAILED', progressPercent: 0, errorMessage: err.message });
+      toast.error('Lỗi tải lên SGK: ' + (err?.response?.data?.message || err.message));
+    }
+  };
+
   useEffect(() => {
     fetchCurriculumData();
+    fetchIngestedTextbooks();
   }, []);
+
+  const normalizeTaxonomyLabel = (str) => {
+    if (!str) return '';
+    return String(str)
+      .toLowerCase()
+      .replace(/\[lớp\s*\d+[^\]]*\]/gi, '')
+      .replace(/^(chương|chuyên đề|bài|dạng)\s*[ivxlcdm\d,\s&]*[:\.\-–]\s*/gi, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  };
+
+  const isFuzzyLabelMatch = (a, b) => {
+    const na = normalizeTaxonomyLabel(a);
+    const nb = normalizeTaxonomyLabel(b);
+    if (!na || !nb || na.length < 4 || nb.length < 4) return false;
+    if (na.includes(nb) || nb.includes(na)) return true;
+    const wordsA = na.split(' ').filter(w => w.length >= 4);
+    const wordsB = nb.split(' ').filter(w => w.length >= 4);
+    if (wordsA.length === 0 || wordsB.length === 0) return false;
+    const overlap = wordsA.filter(w => wordsB.includes(w)).length;
+    return overlap >= Math.min(2, Math.min(wordsA.length, wordsB.length));
+  };
+
+  const allIngestedChunks = useMemo(() => {
+    return ingestedTextbooks.flatMap(src =>
+      (src.chunks || []).map(ch => ({
+        ...ch,
+        _sourceFileName: src.fileName,
+        _sourceFileHash: src.fileHash,
+        _sourceDpi: src.dpiUsed || ch.dpiUsed || 56
+      }))
+    );
+  }, [ingestedTextbooks]);
+
+  const getMatchedChunksForChapter = (chap) => {
+    if (!chap || allIngestedChunks.length === 0) return [];
+    return allIngestedChunks.filter(c => isFuzzyLabelMatch(c.chapterName, chap.name));
+  };
+
+  const getMatchedChunksForLesson = (les) => {
+    if (!les || allIngestedChunks.length === 0) return [];
+    return allIngestedChunks.filter(c => isFuzzyLabelMatch(c.lessonName, les.name));
+  };
+
+  const getMatchedChunksForPattern = (pat, parentLesson = null) => {
+    if (!pat || allIngestedChunks.length === 0) return [];
+    const gradeChunks = selectedGrade
+      ? allIngestedChunks.filter(c => !c.grade || Number(c.grade) === Number(selectedGrade))
+      : allIngestedChunks;
+    const exactPat = gradeChunks.filter(c => isFuzzyLabelMatch(c.patternName, pat.name));
+    if (exactPat.length > 0) return exactPat;
+    if (parentLesson) {
+      return gradeChunks.filter(c => isFuzzyLabelMatch(c.lessonName, parentLesson.name));
+    }
+    return [];
+  };
 
   const initSelection = (domain) => {
     if (!domain) return;
@@ -1779,6 +1918,46 @@ export default function CurriculumExplorerView({
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
+            <button
+              type="button"
+              onClick={() => setIsSgkModalOpen(true)}
+              className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold transition-colors flex items-center gap-1.5 shadow-2xs cursor-pointer"
+              title="Mở giao diện React Nạp SGK PDF (56 DPI) và đồng bộ tự động vào Giáo trình chung"
+            >
+              <UploadCloud className="w-3.5 h-3.5" />
+              <span>Nạp SGK (56 DPI)</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsStudioOpen(true)}
+              className="px-2.5 py-1 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-[11px] font-bold transition-colors flex items-center gap-1.5 shadow-2xs cursor-pointer"
+              title="Mở trang Studio Khung SGK (Quét mục lục 5-10s, Bloom 6 cấp độ, KaTeX & Khóa Version)"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Studio Khung SGK</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                fetchIngestedTextbooks();
+                setIsSgkLibraryOpen(true);
+              }}
+              className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-900 text-white text-[11px] font-bold transition-colors flex items-center gap-1.5 shadow-2xs cursor-pointer"
+              title="Xem toàn bộ các cuốn SGK đã nạp vào Database theo từng trang"
+            >
+              <BookOpen className="w-3.5 h-3.5" />
+              <span>Kho SGK ({ingestedTextbooks.length})</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => fetchIngestedTextbooks()}
+              disabled={loadingTextbooks}
+              className="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-[11px] font-bold border border-emerald-200 transition-colors flex items-center gap-1 cursor-pointer disabled:opacity-60"
+              title="Đồng bộ lại các SGK đã nạp từ AI Engine để hiển thị tick xanh"
+            >
+              <RefreshCw className={`w-3 h-3 ${loadingTextbooks ? 'animate-spin' : ''}`} />
+              <span>Đã nạp: {ingestedTextbooks.length} SGK</span>
+            </button>
             {(selectedGrade !== 'all' || selectedAcademicYear !== 'all' || selectedSubSubject !== 'all' || searchQuery.trim()) && (
               <button
                 onClick={() => {
@@ -1988,24 +2167,40 @@ export default function CurriculumExplorerView({
           <div className="space-y-3">
             {filteredChapters.map((chap) => {
               const isChapExpanded = expandedChapters[chap.chapterId] ?? true;
+              const chapSgkChunks = getMatchedChunksForChapter(chap);
+              const hasChapSgk = chapSgkChunks.length > 0;
               return (
                 <div
                   key={chap.chapterId}
-                  className="rounded-2xl border border-slate-200/90 bg-white overflow-hidden shadow-sm transition-all"
+                  className={`rounded-2xl border overflow-hidden shadow-sm transition-all ${
+                    hasChapSgk ? 'border-emerald-300/90 bg-white' : 'border-slate-200/90 bg-white'
+                  }`}
                 >
                   {/* Chapter Header */}
                   <div
                     onClick={() => toggleChapter(chap.chapterId, chap)}
-                    className="p-3.5 bg-slate-50/90 hover:bg-slate-100/90 flex items-center justify-between cursor-pointer border-b border-slate-100 transition-colors group/chap"
+                    className={`p-3.5 flex items-center justify-between cursor-pointer border-b transition-colors group/chap ${
+                      hasChapSgk ? 'bg-emerald-50/40 hover:bg-emerald-50/80 border-emerald-100' : 'bg-slate-50/90 hover:bg-slate-100/90 border-slate-100'
+                    }`}
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="w-8 h-8 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center font-black text-xs shrink-0 shadow-2xs">
-                        {chap.code?.slice(-2) || "CH"}
+                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs shrink-0 shadow-2xs ${
+                        hasChapSgk ? 'bg-emerald-600 text-white' : 'bg-blue-100 text-blue-700'
+                      }`}>
+                        {hasChapSgk ? <CheckCircle2 className="w-4 h-4" /> : (chap.code?.slice(-2) || "CH")}
                       </div>
                       <div className="min-w-0">
-                        <h3 className="text-xs font-black text-slate-900 leading-tight truncate">
-                          {chap.name}
-                        </h3>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <h3 className="text-xs font-black text-slate-900 leading-tight truncate">
+                            {chap.name}
+                          </h3>
+                          {hasChapSgk && (
+                            <span className="px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 text-[9.5px] font-black shrink-0 flex items-center gap-1">
+                              <Check className="w-2.5 h-2.5" />
+                              <span>Đã nạp SGK ({chapSgkChunks.length} trang)</span>
+                            </span>
+                          )}
+                        </div>
                         <div className="text-[10px] text-slate-500 font-medium mt-0.5 flex items-center gap-2">
                           <span>{chap.lessons?.length || 0} bài học</span>
                           <span>•</span>
@@ -2058,21 +2253,33 @@ export default function CurriculumExplorerView({
                     <div className="p-2 space-y-2 bg-slate-50/30">
                       {(chap.lessons || []).map((les) => {
                         const isLesExpanded = expandedLessons[les.lessonId] ?? true;
+                        const lesSgkChunks = getMatchedChunksForLesson(les);
+                        const hasLesSgk = lesSgkChunks.length > 0;
                         return (
                           <div
                             key={les.lessonId}
-                            className="rounded-xl border border-slate-200/60 bg-white overflow-hidden"
+                            className={`rounded-xl border overflow-hidden ${
+                              hasLesSgk ? 'border-emerald-200 bg-white' : 'border-slate-200/60 bg-white'
+                            }`}
                           >
                             {/* Lesson Header */}
                             <div
                               onClick={() => toggleLesson(les.lessonId, les)}
-                              className="p-3 hover:bg-slate-50 flex items-center justify-between cursor-pointer transition-colors group/les"
+                              className={`p-3 flex items-center justify-between cursor-pointer transition-colors group/les ${
+                                hasLesSgk ? 'hover:bg-emerald-50/40' : 'hover:bg-slate-50'
+                              }`}
                             >
                               <div className="flex items-center gap-2 truncate">
-                                <BookOpen className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                                <BookOpen className={`w-3.5 h-3.5 shrink-0 ${hasLesSgk ? 'text-emerald-600' : 'text-indigo-500'}`} />
                                 <span className="text-xs font-extrabold text-slate-800 truncate">
                                   {les.name}
                                 </span>
+                                {hasLesSgk && (
+                                  <span className="px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 text-[9px] font-black shrink-0 flex items-center gap-0.5">
+                                    <Check className="w-2.5 h-2.5" />
+                                    <span>SGK ({lesSgkChunks.length})</span>
+                                  </span>
+                                )}
                               </div>
                               <div className="flex items-center gap-1.5 shrink-0">
                                 <button
@@ -2135,11 +2342,13 @@ export default function CurriculumExplorerView({
                                   const isSevere = mastery !== undefined && mastery <= 10;
                                   const isWeak = mastery !== undefined && mastery < 60;
                                   const isGood = mastery !== undefined && mastery >= 60;
+                                  const patSgkChunks = getMatchedChunksForPattern(pat, les);
+                                  const hasPatSgk = patSgkChunks.length > 0;
 
                                   return (
                                     <div
                                       key={pat.patternId}
-                                      onClick={() => setSelectedPattern(pat)}
+                                      onClick={() => setSelectedPattern({ ...pat, _parentLesson: les })}
                                       className={`p-3 rounded-xl border text-left cursor-pointer transition-all relative overflow-hidden group ${
                                         isSelected
                                           ? 'bg-blue-50/90 border-blue-500 shadow-sm ring-1 ring-blue-500'
@@ -2147,6 +2356,8 @@ export default function CurriculumExplorerView({
                                           ? 'bg-rose-50/50 border-rose-300 hover:border-rose-400'
                                           : isWeak
                                           ? 'bg-amber-50/40 border-amber-200 hover:border-amber-300'
+                                          : hasPatSgk
+                                          ? 'bg-emerald-50/30 border-emerald-200 hover:border-emerald-300'
                                           : 'bg-white border-slate-200/70 hover:border-slate-300 hover:bg-slate-50/50'
                                       }`}
                                     >
@@ -2159,6 +2370,13 @@ export default function CurriculumExplorerView({
                                           <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 text-[10px] font-black font-mono">
                                             {pat.code?.split('_').pop() || "Dạng"}
                                           </span>
+
+                                          {hasPatSgk && (
+                                            <span className="px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 text-[9.5px] font-black flex items-center gap-0.5">
+                                              <CheckCircle2 className="w-2.5 h-2.5 text-emerald-600" />
+                                              <span>SGK</span>
+                                            </span>
+                                          )}
 
                                           {/* Mastery Badge */}
                                           {isSevere ? (
@@ -2288,6 +2506,56 @@ export default function CurriculumExplorerView({
                   {selectedPattern.name}
                 </h2>
               </div>
+
+              {/* Matched Ingested SGK Content Panel (Hiển thị trực tiếp nội dung từ file SGK PDF đã nạp) */}
+              {(() => {
+                const matchedSgk = getMatchedChunksForPattern(selectedPattern, selectedPattern._parentLesson || null);
+                if (!matchedSgk || matchedSgk.length === 0) return null;
+                const firstMeta = matchedSgk[0];
+                return (
+                  <div className="p-4 rounded-2xl bg-emerald-50/70 border border-emerald-300 space-y-3 shadow-2xs animate-fade">
+                    <div className="flex items-center justify-between gap-2 flex-wrap border-b border-emerald-200/80 pb-2.5">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0">
+                          <CheckCircle2 className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <div className="text-xs font-black text-emerald-950">
+                            Tài liệu SGK gốc đã nạp ({matchedSgk.length} trang khớp)
+                          </div>
+                          <div className="text-[10.5px] text-emerald-800 font-medium">
+                            Nguồn: <strong>{firstMeta._sourceFileName}</strong> • {firstMeta.subjectName} Lớp {firstMeta.grade} ({firstMeta.bookEdition}) • {firstMeta._sourceDpi} DPI
+                          </div>
+                        </div>
+                      </div>
+                      <span className="px-2 py-0.5 rounded-full bg-emerald-600 text-white text-[10px] font-black">
+                        ✓ Đã liên kết SGK
+                      </span>
+                    </div>
+
+                    <div className="space-y-2.5 max-h-80 overflow-y-auto pr-1">
+                      {matchedSgk.slice(0, 6).map((c, idx) => (
+                        <div key={idx} className="p-3 rounded-xl bg-white border border-emerald-200/80 text-xs text-slate-800 space-y-1.5 shadow-2xs">
+                          <div className="flex items-center justify-between gap-2 text-[10.5px] font-bold text-emerald-800 border-b border-slate-100 pb-1">
+                            <span>📄 Trang {c.pageNumber} • {c.lessonName}</span>
+                            <div className="flex items-center gap-1.5">
+                              <span className="px-1.5 py-0.2 rounded bg-slate-100 text-slate-700">{c.sectionType || 'THEORY'}</span>
+                              {c.hasDiagram && (
+                                <span className="px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 border border-amber-300">
+                                  🖼️ {c.imagePlaceholders?.length || 1} Sơ đồ
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="leading-relaxed">
+                            <MathText text={c.text} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* Severe Weakness & Adjacent Remedial Notification */}
               {isSelectedSeverelyWeak ? (
@@ -4561,6 +4829,266 @@ export default function CurriculumExplorerView({
               </div>
             </div>
 
+          </div>
+        </div>
+      )}
+
+      {/* 4.5. REACT SGK UPLOAD & BATCH 56 DPI INGESTION MODAL */}
+      {isSgkModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fade-in">
+          <div className="w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="px-5 py-4 bg-gradient-to-r from-emerald-600 to-teal-600 text-white flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <UploadCloud className="w-5 h-5 text-emerald-100" />
+                <div>
+                  <h3 className="text-sm font-black">Nạp Sách Giáo Khoa (PDF Ảnh 106–170 Trang)</h3>
+                  <p className="text-[11px] text-emerald-100 font-medium">
+                    Tự động nhận diện Chương - Bài - Dạng bài • Chuẩn hóa KaTeX • Cảnh báo sơ đồ [IMAGE_PLACEHOLDER]
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsSgkModalOpen(false)}
+                className="w-8 h-8 rounded-full bg-white/15 hover:bg-white/25 flex items-center justify-center cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-5 overflow-y-auto space-y-4 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Chế độ OCR</label>
+                  <select
+                    value={sgkOcrMode}
+                    onChange={(e) => setSgkOcrMode(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white font-semibold text-slate-800"
+                  >
+                    <option value="TEXT_HUMANITIES">Tự động thông minh</option>
+                    <option value="VISION_AI">Vision AI 100% (PDF Scan)</option>
+                    <option value="STEM_FORMULAS">Toán / Lý / Hóa (KaTeX)</option>
+                    <option value="AUTO_LOCAL">Chỉ đọc chữ số hóa</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Độ phân giải (DPI)</label>
+                  <select
+                    value={sgkDpi}
+                    onChange={(e) => setSgkDpi(Number(e.target.value))}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white font-semibold text-slate-800"
+                  >
+                    <option value={56}>56 DPI - Siêu nhẹ (~20KB/tr)</option>
+                    <option value={48}>48 DPI - Cực nhẹ (~15KB/tr)</option>
+                    <option value={72}>72 DPI - Tiêu chuẩn</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Gộp Batch Vision</label>
+                  <select
+                    value={sgkBatchSize}
+                    onChange={(e) => setSgkBatchSize(Number(e.target.value))}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white font-semibold text-slate-800"
+                  >
+                    <option value={10}>10 trang / lượt (Nhanh & An toàn)</option>
+                    <option value={12}>12 trang / lượt (Siêu nhanh)</option>
+                    <option value={8}>8 trang / lượt (Chi tiết cao)</option>
+                  </select>
+                </div>
+              </div>
+
+              <label className="flex items-center gap-2 p-3 rounded-xl bg-slate-50 border border-slate-200 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={sgkForceReingest}
+                  onChange={(e) => setSgkForceReingest(e.target.checked)}
+                  className="w-4 h-4 accent-emerald-600"
+                />
+                <span className="font-semibold text-slate-700">
+                  Nạp lại từ đầu (Xóa checkpoint cũ của file này nếu trước đó bị lỗi)
+                </span>
+              </label>
+
+              <label className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-emerald-300 hover:border-emerald-500 rounded-2xl bg-emerald-50/30 cursor-pointer text-center space-y-1.5">
+                <input
+                  type="file"
+                  accept=".pdf"
+                  onChange={(e) => setSgkFile(e.target.files?.[0] || null)}
+                  className="hidden"
+                />
+                <UploadCloud className="w-7 h-7 text-emerald-600" />
+                <div className="font-bold text-slate-800">
+                  {sgkFile ? `📄 ${sgkFile.name} (${(sgkFile.size / 1024 / 1024).toFixed(2)} MB)` : 'Bấm chọn tệp PDF Sách giáo khoa (tối đa 250MB)'}
+                </div>
+              </label>
+
+              {sgkJobStatus && (
+                <div className="p-3.5 rounded-2xl bg-slate-900 text-slate-100 space-y-2">
+                  <div className="flex items-center justify-between font-bold">
+                    <span className="text-emerald-400">{sgkJobStatus.status}</span>
+                    <span>{sgkJobStatus.progressPercent || 0}%</span>
+                  </div>
+                  <div className="w-full h-2 rounded-full bg-slate-700 overflow-hidden">
+                    <div
+                      className="h-full bg-emerald-500 transition-all duration-300"
+                      style={{ width: `${sgkJobStatus.progressPercent || 0}%` }}
+                    />
+                  </div>
+                  <div className="text-[11px] text-slate-300 font-mono">
+                    {sgkJobStatus.currentStep || sgkJobStatus.errorMessage}
+                  </div>
+                  {sgkJobStatus.status === 'COMPLETED' && (
+                    <div className="mt-2 p-2.5 rounded-lg bg-emerald-950/60 border border-emerald-500/40 text-emerald-200 text-xs space-y-1">
+                      <div className="font-bold">✅ Đã lưu thành công vào Kho SGK (Database)!</div>
+                      <div className="text-[11px] text-emerald-300/90">
+                        {sgkJobStatus.result?.detectedSubjectName ? `Môn: ${sgkJobStatus.result.detectedSubjectName} • ` : ''}
+                        {sgkJobStatus.result?.detectedGrade ? `Lớp ${sgkJobStatus.result.detectedGrade} • ` : ''}
+                        Tổng {sgkJobStatus.totalPages || sgkJobStatus.result?.totalPages || 0} trang.
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="px-5 py-3 border-t border-slate-100 bg-slate-50 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setIsSgkModalOpen(false)}
+                className="px-4 py-2 rounded-xl border border-slate-300 text-xs font-bold text-slate-700 hover:bg-white cursor-pointer"
+              >
+                Đóng
+              </button>
+              {sgkJobStatus?.status === 'COMPLETED' ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSgkModalOpen(false);
+                    fetchIngestedTextbooks();
+                    setIsSgkLibraryOpen(true);
+                  }}
+                  className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black flex items-center gap-1.5 cursor-pointer"
+                >
+                  <span>Hoàn tất & Xem Kho SGK</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  disabled={sgkUploading || !sgkFile}
+                  onClick={handleStartSgkUpload}
+                  className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+                >
+                  {sgkUploading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <UploadCloud className="w-3.5 h-3.5" />}
+                  <span>{sgkUploading ? 'Đang nạp SGK...' : 'Bắt Đầu Nạp SGK'}</span>
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isStudioOpen && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-white">
+          <TextbookStudioView
+            onBack={() => setIsStudioOpen(false)}
+            onRefreshSources={fetchIngestedTextbooks}
+          />
+        </div>
+      )}
+
+      {/* 4B. KHO SGK ĐÃ NẠP (XEM TOÀN BỘ TỪNG CUỐN & TỪNG TRANG) */}
+      {isSgkLibraryOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-5xl h-[85vh] overflow-hidden flex flex-col">
+            <div className="px-5 py-4 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-slate-800 text-white flex items-center justify-center">
+                  <BookOpen className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-slate-900">Kho SGK đã nạp ({ingestedTextbooks.length} cuốn)</h3>
+                  <p className="text-[11px] text-slate-500">Duyệt toàn bộ nội dung từng trang & công thức KaTeX đã lưu trong Database</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsSgkLibraryOpen(false)}
+                className="p-1.5 rounded-lg hover:bg-slate-200 text-slate-500 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-12">
+              <div className="md:col-span-4 border-r border-slate-100 overflow-y-auto p-3 space-y-2 bg-slate-50/50">
+                {ingestedTextbooks.length === 0 ? (
+                  <div className="text-xs text-slate-500 p-4 text-center">Chưa có cuốn SGK nào được nạp.</div>
+                ) : (
+                  ingestedTextbooks.map((src) => {
+                    const isSelected = (selectedLibrarySource?.sourceId || ingestedTextbooks[0]?.sourceId) === src.sourceId;
+                    return (
+                      <button
+                        key={src.sourceId}
+                        type="button"
+                        onClick={() => setSelectedLibrarySource(src)}
+                        className={`w-full text-left p-3 rounded-xl border transition-all cursor-pointer ${
+                          isSelected
+                            ? 'bg-emerald-50 border-emerald-400 shadow-2xs'
+                            : 'bg-white border-slate-200 hover:border-slate-300'
+                        }`}
+                      >
+                        <div className="text-xs font-bold text-slate-900 line-clamp-2">{src.fileName}</div>
+                        <div className="mt-1.5 flex items-center gap-1.5 flex-wrap text-[10.5px]">
+                          <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 font-bold">
+                            {src.subjectName || src.subjectCode} • Lớp {src.grade || '?'}
+                          </span>
+                          <span className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold">
+                            {src.totalPages} trang ({src.totalChunks} chunks)
+                          </span>
+                        </div>
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+
+              <div className="md:col-span-8 overflow-y-auto p-4 space-y-3 bg-white">
+                {(() => {
+                  const activeSrc = selectedLibrarySource || ingestedTextbooks[0];
+                  if (!activeSrc) return null;
+                  const chunks = activeSrc.chunks || [];
+                  return (
+                    <>
+                      <div className="pb-2 border-b border-slate-100 flex items-center justify-between flex-wrap gap-2">
+                        <div>
+                          <div className="text-xs font-black text-slate-900">{activeSrc.fileName}</div>
+                          <div className="text-[11px] text-slate-500">
+                            {activeSrc.subjectName} Lớp {activeSrc.grade} ({activeSrc.bookEdition}) • {chunks.length} trang/chunks
+                          </div>
+                        </div>
+                      </div>
+                      {chunks.map((chunk, idx) => (
+                        <div key={`${activeSrc.sourceId}-${chunk.chunkIndex}-${idx}`} className="p-3 rounded-xl border border-slate-200 bg-slate-50/40 space-y-1.5">
+                          <div className="flex items-center justify-between gap-2 text-[11px]">
+                            <span className="font-bold text-emerald-700">
+                              📄 Trang {chunk.pageNumber}
+                              {chunk.chapterName ? ` • ${chunk.chapterName}` : ''}
+                              {chunk.lessonName ? ` • ${chunk.lessonName}` : ''}
+                            </span>
+                            <span className="px-1.5 py-0.5 rounded bg-slate-200/70 text-slate-700 font-mono text-[10px]">
+                              {chunk.sectionType || 'THEORY'}
+                            </span>
+                          </div>
+                          <div className="text-xs text-slate-800 leading-relaxed whitespace-pre-wrap">
+                            <MathText text={chunk.text || ''} />
+                          </div>
+                        </div>
+                      ))}
+                    </>
+                  );
+                })()}
+              </div>
+            </div>
           </div>
         </div>
       )}

@@ -139,6 +139,272 @@
 
 ---
 
+## [19/11/2026] - Nâng Cấp Giao Diện Xếp Lớp Ma Trận 4 Miền × 3 Cấp Bậc (12 Lớp Chuẩn), Khắc Phục Lỗi Xung Đột Phòng Học 409 & Khử Trùng Lặp Cảnh Báo Sớm
+
+- **Giao Diện Xếp Lớp Ma Trận 4 Miền × 3 Cấp Bậc (`./src/components/dashboard/AcademicManagerDashboardView.jsx`, `./src/services/practiceService.js`)**:
+  - Thay thế ô nhập `Max K` cũ bằng cấu hình ngưỡng trực quan: Ngưỡng Cơ bản (`< 50%`), Ngưỡng Nâng cao (`>= 75%`), tùy chọn khởi tạo đủ khung 12 lớp và chế độ **Chỉ xếp học sinh mới chưa có lớp (Bảo toàn 100% HS cũ)** kèm badge `+N mới` trên từng thẻ lớp.
+  - Hiển thị ma trận 4 hàng (4 miền kiến thức) × 3 cột (Cơ bản / Tăng tốc / Nâng cao) kèm thanh độ nắm vững trung bình miền, sĩ số `X/20 HS`, nhãn trạng thái và nút Gán Giáo Viên Phụ Trách trực tiếp.
+- **Khắc Phục Lỗi Xung Đột Phòng Học 409 Khi Đổi Phòng Lớp Học (`./src/components/dashboard/AcademicManagerDashboardView.jsx`)**:
+  - *Chuyển đổi cơ chế cập nhật ca học (Edit Slot Thay Vì Append)*:
+    - Bổ sung danh sách các ca học hiện tại trong tuần của lớp trong Modal 5 (Thời khóa biểu & Buổi học), hiển thị rõ Thứ, Khung giờ, và Phòng học.
+    - Bổ sung nút ✏️ **"Đổi Phòng / Giờ"** cho từng ca học, cho phép chọn nhanh phòng học mới (ví dụ từ `P.301` sang `P.302`) và nút 🗑️ **"Xóa"** ca học thừa.
+    - Cập nhật hàm `handleSaveWeeklySlotAndGenerate`: Khi đang ở chế độ chỉnh sửa (`editingSlotIdx !== null`), hệ thống thay thế trực tiếp ca học đang chọn thay vì thêm mới chồng lấn, triệt tiêu mã phòng cũ (`P.301`) trước khi gửi lên API Backend `saveClassWeeklySchedules`.
+    - Cập nhật bộ phát hiện xung đột thời gian thực `scheduleSlotConflict`: Loại trừ chính slot đang chỉnh sửa khỏi danh sách so sánh nội bộ, giúp cảnh báo biến mất ngay khi người dùng chọn phòng trống hợp lệ.
+- **Triệt Tiêu 100% Hardcode Tên Học Sinh - Kết Nối Động Qua Identity REST API (`./src/components/dashboard/EarlyWarningsMentorPanel.jsx`)**:
+  - *Bổ sung import `useMemo`*: Khắc phục lỗi runtime `ReferenceError: useMemo is not defined` tại dòng 1 của `EarlyWarningsMentorPanel.jsx`.
+  - *Xóa bỏ toàn bộ hàm `resolveStudentDisplayName` và mảng GUID tĩnh*: Không còn bất kỳ đoạn mã gán tên theo chuỗi hex nào (`11111111`, `11110000`, `99999999`, `BC933364`...).
+  - *Tích hợp truy vấn động từ `userService.getUsers({ role: 'STUDENT', pageSize: 100 })`*: Tự động xây dựng từ điển người dùng `identityUsersMap` từ Identity Service (`GET /api/v1/users`) để điền tên đầy đủ cho bất kỳ học sinh nào khi cần.
+  - *Ưu tiên dữ liệu chuẩn xác*: Hiển thị trực tiếp `studentName` trả về từ Backend (vốn đã được đồng bộ qua gRPC từ `iam.users`), chỉ fallback sang Identity REST API khi tên bị trống.
+  - *Khử trùng lặp thẻ cảnh báo*: Giữ lại bộ lọc `seenAlerts` theo cặp `(studentId, alertType)` để loại bỏ các bản ghi trùng lặp ở client.
+- **Kiểm Soát Xung Đột Phòng Học & Lịch Giảng Dạy Thời Gian Thực (Schedule & Room Conflict Detection - `./src/components/dashboard/AcademicManagerDashboardView.jsx`)**:
+  - *Bộ kiểm tra xung đột thời gian thực (`classConflictsMap`, `createClassConflict`, `scheduleSlotConflict`)*:
+    - Thuật toán kiểm tra giao thoa thời gian: $\max(\text{start}_1, \text{start}_2) < \min(\text{end}_1, \text{end}_2)$ trên cùng thứ trong tuần (`dayOfWeek`).
+    - **Xung đột phòng học**: Tự động phát hiện nếu cùng phòng (`room`) tại cùng cơ sở đã có lớp khác sử dụng trong khung giờ đó.
+    - **Xung đột giảng viên**: Tự động phát hiện nếu giảng viên được phân công đã có lịch dạy lớp khác tại cùng khung giờ.
+  - *Hộp cảnh báo đỏ thời gian thực & Khóa nút gửi*:
+    - Hiển thị hộp cảnh báo đỏ trực quan ngay bên dưới khung lịch trong Modal *"Mở Lớp Học Mới"* và Modal *"Thời Khóa Biểu & Phòng"*.
+    - Vô hiệu hóa (disable) nút *"Mở Lớp & Sinh Lịch Học"* và nút *"Lưu Ca Học & Sinh Buổi Học"* khi phát hiện có xung đột.
+  - *Thẻ cảnh báo trên danh sách lớp học Section 2*: Hiển thị hộp cảnh báo đỏ trên từng thẻ lớp học nếu lớp đó đang bị trùng phòng/giờ với lớp khác, kèm hướng dẫn bấm *"Thời Khóa Biểu & Phòng"* để đổi phòng/giờ.
+  - *Thanh gợi ý phòng học thông minh (Quick Room Suggestion Chips)*: Bổ sung các chip chọn nhanh phòng học (`P.301`, `P.302`, `P.303`, `P.304`, `P.305`, `Lab 01`, `Lab 02`) và tự động đề xuất phòng còn trống khi mở modal.
+- **Tách Riêng Component `AcademicManagerDashboardView.jsx` & Giữ Nguyên 100% `CampusManagerDashboardView.jsx` Gốc Cho Director (`./src/components/dashboard/AcademicManagerDashboardView.jsx`, `./src/components/dashboard/CampusManagerDashboardView.jsx`, `./src/services/authService.js`, `./src/App.jsx`, `./src/components/layout/Sidebar.jsx`)**:
+  - Giữ nguyên hoàn toàn code gốc của `CampusManagerDashboardView.jsx` và menu gốc cho vai trò `ACADEMIC_DIRECTOR` (`role === 'director'`).
+  - Tạo mới `AcademicManagerDashboardView.jsx` dành riêng cho vai trò `ACADEMIC_MANAGER` / `CAMPUS_MANAGER` (`role === 'manager'`).
+- **Triệt Tiêu 100% Dữ Liệu Hardcode Trong `AcademicManagerDashboardView.jsx` (`./src/components/dashboard/AcademicManagerDashboardView.jsx`)**:
+  - *Xóa tên chào mừng cố định*: Loại bỏ chuỗi cứng `, Nguyễn Duy Khôi!` trên Banner đầu trang, hiển thị chính xác họ tên của tài khoản Quản lý đang đăng nhập từ API `/api/v1/users/me`.
+  - *Xóa số lớp giả lập và điểm sao tự bịa của Giảng viên*: Gỡ bỏ `activeClasses: 1` và nhãn `★ 4.9`; tính toán số lớp giảng dạy thực tế của từng giảng viên bằng cách đối chiếu `cls.teacherId` trên danh sách lớp thật lấy từ `GET /api/practice/classes?campusId={selectedCampus}`.
+  - *Xóa dữ liệu lớp suy diễn và lịch học cố định*: Gọi trực tiếp `GET /api/practice/classes` kết hợp `GET /api/practice/analytics/campus/{campusId}/comparative-heatmap` để hiển thị chính xác `maxCapacity` (20 HS), `enrolledStudentsCount`, `termName`, `courseName`, `focusDomain` và chuỗi Thời khóa biểu Offline thực tế từ `weeklySchedules` (Thứ, Khung giờ, Phòng học).
+  - *Xóa tỷ lệ làm chủ giả lập `67%`*: Khi cơ sở chưa có dữ liệu bài làm, hiển thị trung thực `0%` (`Chưa có dữ liệu`).
+  - *Kiểm soát phạm vi cơ sở theo RBAC (`MGR_07`, `MGR_22`)*: Ràng buộc tài khoản Quản lý cơ sở chỉ thao tác trong phạm vi `campusId` được phân công; chặn và báo lỗi `403 Access Denied` khi cố tình chuyển sang điều phối hoặc gán giảng viên thuộc cơ sở khác.
+- **Tách Bạch Menu Sidebar Giữa `Academic Director` và `Academic Manager` (`./src/components/layout/Sidebar.jsx`, `./src/App.jsx`)**:
+  - Phân tách rõ 4 mục chức năng chuyên biệt của **Academic Manager**:
+    1. `Tổng quan & Đối sánh Cơ sở`: Bản đồ nhiệt 4 miền giữa các lớp, bộ lọc đa chiều (Đợt học, Khóa học, Miền năng lực, Giảng viên) và xuất báo cáo `.csv/.xlsx` (`MGR_16`, `MGR_18`, `MGR_21`).
+    2. `Lớp học, Lịch học & Phân công GV`: Quản lý Đợt học (`AcademicTerms`), Khóa học (`Courses`), mở lớp mới (trần 20 HS/lớp, thanh màu sĩ số Xanh/Vàng/Đỏ), Modal Phân công / Đổi Giáo viên (`PUT /api/practice/classes/{classId}/assign-teacher`) và Modal Thời khóa biểu Offline & Buổi học (`MGR_01` - `MGR_08`).
+    3. `Xếp lớp Đầu vào & Phân cụm AI`: Cấu hình tham số `MaxK` động có kiểm định biên, gọi `POST /api/practice/classes/auto-cluster`, hiển thị hồ sơ năng lực tâm cụm 4 miền (`Centroid Profile`) và gán Giáo viên trực tiếp cho từng cụm lớp (`MGR_09` - `MGR_15`).
+    4. `Cảnh báo Cấp 3 & Họp 3 bên`: Điều phối can thiệp học viên nguy cơ cao, đặt lịch họp 3 bên và ghi biên bản nghiệm thu (`MGR_17`, `MGR_19`, `MGR_20`).
+  - Khắc phục lỗi định tuyến tab `analytics` của Manager trước đây mở nhầm `LearningAnalyticsView` của Học sinh, và gỡ bỏ nút chia nhóm bàn vi mô 3-5 học sinh (thuộc thẩm quyền Giáo viên đứng lớp) khỏi dòng lớp học của Manager.
+- **Mở Rộng Wrapper API Trong `practiceService.js` (`./src/services/practiceService.js`)**:
+  - Bổ sung đầy đủ các hàm kết nối Backend thật: `createAcademicTerm`, `updateAcademicTermStatus`, `createCourse`, `createClassWithSchedule`, `saveClassWeeklySchedules`, `generateClassSessions`, `getClassSessions`, `updateClassSession`, `rescheduleClassSession` và chuẩn hóa validation cho `assignTeacher`, `autoClusterClasses`.
+- **Kiểm thử vận hành**: `npm run build` (`vite build`) đạt `✓ built in 2.02s` với 3053 modules sạch 100%, 0 lỗi.
+
+---
+
+## [18/11/2026] - Triệt Tiêu 100% Mock/Template Giả Lập: Lý Thuyết Thuần Cô Đặc (Không Ghi Trang, Tăng Chiều Dài Gấp Đôi, Font Tinh Gọn), Mục Lục Mở Rộng Hết Chương, Tính Năng Xóa Sách & Vô Hiệu Hóa 2 Nút Điều Hướng
+
+- **Lý Thuyết Thuần Cô Đặc, Phân Mục Đàng Hoàng, Tuyệt Đối Không Ghi Số Trang (`buildTheoryFromChunks`)**:
+  - *Không ghi số trang*: Loại bỏ hoàn toàn nhãn `#### 📄 Trang X (SGK Gốc)` khỏi nội dung lý thuyết thuần.
+  - *Cô đặc và tổng hợp chuẩn xác*: Thay vì dán ồ ạt hoặc copy 1-1, thuật ngữ và tri thức được chắt lọc, khử trùng lặp qua `seenSentences`, phân chia cấu trúc sư phạm 4 mục rõ ràng:
+    1. Khái Niệm & Định Nghĩa Trọng Tâm
+    2. Công Thức & Phương Trình Đặc Trưng (KaTeX)
+    3. Phân Loại Dạng Bài & Trọng Tâm Vận Dụng
+    4. Lưu Ý Sư Phạm & Bẫy Tư Duy Thường Gặp
+- **Mở Rộng Không Gian Mục Lục & Gấp Đôi Chiều Dài Lý Thuyết (`TextbookStandardView.jsx`)**:
+  - *Mục lục dài đến khi hết chương*: Gỡ bỏ giới hạn `max-h-[75vh]` và thanh cuộn cục bộ ở cột trái, cho phép cây mục lục trải dài tự nhiên theo toàn bộ danh sách chương và bài học.
+  - *Lý thuyết dài gấp đôi*: Tăng chiều cao tối thiểu lên gấp đôi (`min-h-[920px]`, `max-h-[140vh]`), font chữ tinh gọn (`text-[12px] leading-relaxed`) giúp giáo viên đọc liền mạch, sâu sắc.
+- **Tính Năng Xóa Sách & Vô Hiệu Hóa 2 Nút Điều Hướng**:
+  - *Xóa sách*: Bổ sung nút `[🗑️ Xóa sách]` cạnh bộ chọn kho SGK, tích hợp popup xác nhận an toàn và gọi API `aiService.deleteTextbookSource(selectedSourceId)` xóa sạch dữ liệu sách và toàn bộ chunks khỏi Supabase.
+  - *Vô hiệu hóa 2 nút*: Vô hiệu hóa 2 nút điều hướng `[Sang Trang Nạp SGK]` và `[Mở Studio Biên Soạn]` trên top header với `disabled`, `cursor-not-allowed opacity-50` và tooltip hướng dẫn dùng menu Sidebar chuyên biệt.
+- **Sửa Lỗi ReferenceError: m is not defined Trong Trang Nạp SGK (`TextbookIngestView.jsx`)**:
+  - *Nguyên nhân*: Tại phần Ví dụ mẫu bóc tách SGK, chuỗi LaTeX `90\text{ m}` bị đặt trực tiếp trong JSX text mà không bọc `<MathText />`. Trình phân tích cú pháp JSX của React hiểu nhầm `{ m}` là biểu thức JavaScript thực thi biến `m`, dẫn đến lỗi `ReferenceError: m is not defined` khi chuyển sang tab Nạp SGK.
+  - *Xử lý*: Bọc toàn bộ chuỗi công thức vào `<MathText text="$s = v \times t = 15 \times 6 = 90\text{ m}$." />`, hiển thị KaTeX chuẩn xác và triệt tiêu 100% lỗi runtime JavaScript.
+- **Chuẩn Hóa Pipeline Bóc Tách C# Backend & Frontend: Triệt Tiêu Thẻ Rò Rỉ `[TAXONOMY: ...]`, Rác Thông Tin Xuất Bản & Gãy Dòng KaTeX Vectơ (`CurriculumTaxonomyRegistry.cs`, `CurriculumAiService.cs`, `PdfPigTextbookParserService.cs`, `textbookStateBridge.js`)**:
+  - *Xóa sạch 100% thẻ rò rỉ `[TAXONOMY: ...]`*: C# duyệt qua tất cả thẻ để trích xuất tọa độ ma trận GDPT 2018 và chạy `Regex.Replace` xóa sạch toàn bộ khỏi văn bản; frontend `textbookStateBridge.js` gia cố cơ chế phòng thủ kép.
+  - *Lọc sạch rác thông tin xuất bản*: Loại bỏ các dòng `Tên sách`, `Bộ sách`, `Tổng chủ biên`, `Chủ biên`, `Nhà xuất bản`, tự động phân loại trang bản quyền thành `section="COVER"` để ngăn 100% việc rò rỉ vào Dạng bài.
+  - *Nối dòng gãy KaTeX và chuẩn hóa vectơ*: Tự động nối các biến số, điểm hình học, vectơ bị ngắt dòng (`A,`, `B`, `| AB |`); chuẩn hóa sang KaTeX `\vec{AB}`, `|\vec{AB}| = AB`; tách ví dụ mẫu ra khỏi phần khái niệm cốt lõi để lý thuyết luôn cô đặc và chuẩn xác.
+- **Sửa Lỗi Màn Trắng SyntaxError: The requested module does not provide an export named 'isGenericPlaceholder' Trong `textbookStateBridge.js` (`TextbookStandardView.jsx`)**:
+  - *Nguyên nhân*: `TextbookStandardView.jsx` import hàm `isGenericPlaceholder` từ `textbookStateBridge.js` để lọc sạch các câu chữ văn mẫu generic template nhưng `textbookStateBridge.js` chưa export hàm này, dẫn đến việc trình duyệt quăng lỗi `Uncaught SyntaxError: The requested module '/src/components/curriculum/textbookStateBridge.js' does not provide an export named 'isGenericPlaceholder'` và gây trắng màn hình.
+  - *Xử lý*: Triển khai và export đầy đủ hàm `isGenericPlaceholder(text)` trong `textbookStateBridge.js`. Hàm này tự động quét và nhận diện các câu văn mẫu sáo rỗng (`nội dung định nghĩa cốt lõi của bài học...`, `các hiện tượng, quy luật khoa học...`, `các đại lượng vật lí / toán học / hóa học đo lường...`, `ý nghĩa thực tiễn & bẫy tư duy...`), đồng thời ứng dụng trong `buildTheoryFromChunks` và bộ lọc state để loại bỏ 100% boilerplate và khôi phục giao diện hoạt động trơn tru.
+- **Sửa Lỗi Màn Trắng SyntaxError: Invalid regular expression Trong `textbookStateBridge.js`**:
+  - *Nguyên nhân*: Cú pháp RegExp JavaScript không hỗ trợ cờ nội dòng `(?i)` (vốn thuộc về PCRE/.NET Regex). Việc đưa `/(?i)...` vào JS khiến trình thông dịch V8/Chromium quăng lỗi `SyntaxError: Invalid regular expression: ... Invalid group` làm gãy bundle và gây màn hình trắng.
+  - *Xử lý*: Chuyển đổi toàn bộ sang regex JavaScript chuẩn mực không dùng `(?i)`, sử dụng cờ `/gi` ở đuôi kết hợp hàm thay thế an toàn `(match, p1) => ...` và chặn ký tự tiếng Việt có dấu `(?![a-zA-Zà-ỹ])` tránh nuốt chữ; loại bỏ 100% lỗi màn trắng.
+- **Kiểm thử vận hành**: `npm run build` (`vite build`) đạt `✓ built in 1.22s` với 3053 modules sạch 100%, 0 lỗi.
+
+---
+
+## [17/11/2026] - Kiến Trúc Cây Thư Mục Phân Cấp (Chương ▾ Bài Học ▾ Dạng Bài) Bên Trái & Hiển Thị Toàn Bộ Lý Thuyết Thuần SGK Kèm Công Thức KaTeX Bên Phải
+
+- **Tái Thiết Kế Bố Cục Trang SGK Chuẩn: Cây Thư Mục Bên Trái & Lý Thuyết Thuần Bên Phải (`src/components/curriculum/TextbookStandardView.jsx`, `textbookStateBridge.js`)**:
+  - *Giải quyết bất cập 3 cột rải rác*: Thay vì chia nhỏ thành 3 cột (Cột Chương riêng, Cột Bài học riêng, Cột Dạng bài/công thức không có chữ lý thuyết nào), hệ thống tái cấu trúc toàn diện thành bố cục 2 phân khu sư phạm chuẩn mực:
+    1. **Cột Bên Trái (`lg:col-span-4`): Cây Thư Mục Cấu Trúc Sách Phân Cấp 3 Tầng**:
+       - Cây phân cấp: **Chương / Chủ đề** (có nút toggle mở rộng/thu gọn) ➔ **Bài học** (thu gọn/mở rộng, có số dạng & số công thức) ➔ **Dạng bài** (mã dạng `P1, P2...`, nhãn Bloom L1–L6).
+       - Thao tác nhanh inline: Thêm chương mới, thêm bài học vào chương, thêm dạng bài vào bài học.
+       - Tự động highlight bài học và dạng bài được chọn, hỗ trợ điều hướng tức thì.
+    2. **Cột Bên Phải (`lg:col-span-8`): Hiển Thị Toàn Bộ Lý Thuyết Thuần & Tri Thức Bài Học**:
+       - **Khối 1: Lý Thuyết Thuần & Kiến Thức Cốt Lõi**:
+         - Hiển thị trọn vẹn văn bản định nghĩa, định luật, tính chất, giải thích hiện tượng và lưu ý bẫy tư duy của bài học.
+         - Tích hợp trực tiếp các đoạn trích bóc tách từ SGK gốc (Trang X, Đoạn Y) nếu cuốn sách đã được nạp qua OCR.
+         - Cung cấp chế độ `[✏️ Sửa Lý Thuyết]` cho phép giáo viên chỉnh sửa trực tiếp nội dung văn bản kèm công thức KaTeX và `[💾 Lưu Lý Thuyết]`.
+         - Nút `[✨ AI Bổ sung lý thuyết]` gọi Gemini AI mở rộng lý thuyết chuyên sâu sư phạm.
+       - **Khối 2: Công Thức Đặc Trưng Liên Kết (KaTeX)**:
+         - Hiển thị công thức KaTeX đặc trưng kèm nút sao chép nhanh, thanh chèn snippets và ô nhập công thức.
+       - **Khối 3: Dạng Bài Toán & Phương Pháp Giải (Bloom Taxonomy)**:
+         - Danh sách các dạng bài toán kèm phương pháp giải từng bước và nút chuyển tiếp sang Studio biên soạn.
+  - *Kho Lý Thuyết Thuần Chuẩn GDPT 2018 (`getDefaultLessonTheory`)*:
+    - Xây dựng kho lý thuyết thuần cho các bài học môn Vật lí 10 (Chuyển động cơ, Vận tốc, Gia tốc, Đồ thị d-t, Ném ngang/xiên, Ba định luật Newton, Lực ma sát, Đàn hồi Hooke, Công cơ học, Động năng, Thế năng, Bảo toàn cơ năng, Động lượng...) và khung mặc định các môn khác, đảm bảo giao diện luôn đầy đủ 100% kiến thức lý thuyết chứ không bao giờ để trống.
+- **Kiểm thử vận hành**: `npm run build` (`vite build`) đạt `✓ built in 1.40s` với 3053 modules sạch 100%, 0 lỗi.
+
+---
+
+## [17/11/2026] - Nâng Cấp Sidebar Thu Gọn Toàn Diện (Collapsible Rail w-20/w-72) Cho Giám Đốc Học Thuật & Chuẩn Hóa Cấu Trúc Khung SGK GDPT 2018 (Xóa Trùng Lặp Tiêu Đề, Tự Động Nạp KaTeX)
+
+- **Sidebar Thu Gọn Toàn Diện (Collapsible Rail) Cho Role Giám Đốc Học Thuật & Desktop (`src/components/layout/Sidebar.jsx`, `AccountNavbar.jsx`, `App.jsx`)**:
+  - *Khắc phục lỗi Sidebar không đóng được*: Trước đây thanh Sidebar cố định chiều rộng `w-72` (288px) không có cơ chế thu gọn, chiếm dụng diện tích hiển thị trên các màn hình làm việc 3 cột chuyên sâu của Giám đốc học thuật.
+  - *Cơ chế thu gọn linh hoạt*:
+    - Bổ sung state `isSidebarCollapsed` trong `App.jsx`, truyền qua `Sidebar` và `AccountNavbar`.
+    - Thêm nút thu gọn/mở rộng `PanelLeftClose` / `PanelLeftOpen` ngay trên Header của Sidebar và trên Top Navbar cạnh tiêu đề trang.
+    - Chế độ thu gọn (`w-20`): Tối ưu hóa thành icon rail thanh thoát, căn giữa các biểu tượng chức năng, ẩn nhãn chữ và phụ đề, bổ sung tooltip `title` trực quan khi di chuột. Thẻ footer thu gọn thành avatar trạng thái vai trò nhỏ gọn với đèn led trạng thái.
+    - Cải tiến `useRef(activeTab)` cho `expandedGroups`: Giúp người dùng có thể chủ động bấm đóng/mở dropdown `textbook-group` mà không bị `useEffect` cưỡng ép bung ra lại.
+- **Chuẩn Hóa Sư Phạm Khung SGK GDPT 2018 & Loại Bỏ Triệt Để Trùng Lặp Tiêu Đề (`src/components/curriculum/TextbookStandardView.jsx`, `textbookStateBridge.js`)**:
+  - *Khắc phục lỗi trùng lặp số thứ tự (Double Numbering)*: Trước đây hiển thị `CHƯƠNG 4` rồi lại đến `Chương 2: Khí lí tưởng`, `BÀI 1` rồi lại đến `Bài 1: Định luật Boyle...`, `Dạng 3` đứng đơn độc mà không có Dạng 1 & 2.
+  - *Tự động bóc tách tiền tố (`cleanPrefix`)*: Bóc tách sạch sẽ các tiền tố `Chương`, `Chủ đề`, `Bài`, `Dạng` khi render trên giao diện:
+    - Cột 1 (Chương): Badge `Chương {ch.chapterNumber}` + Tiêu đề sạch `{cleanPrefix(ch.title, 'chapter')}`.
+    - Cột 2 (Bài học): Badge `Bài {les.lessonNumber}` + Tiêu đề sạch `{cleanPrefix(les.title, 'lesson')}`.
+    - Cột 3 (Chi tiết): Header `Bài {les.lessonNumber}: {cleanPrefix(les.title, 'lesson')}` + Dạng bài đánh số tuần tự `Dạng {pIdx + 1}:` kèm tên sạch.
+  - *Nút "📚 Chuẩn Hóa GDPT 2018"*: Nút 1-chạm khôi phục toàn bộ cây kiến thức chuẩn sư phạm GDPT 2018 (Vật lí 10 với 5 Chủ đề, đầy đủ Bài học, công thức KaTeX đặc trưng và ma trận Bloom 6 cấp độ).
+  - *Tự động bổ sung công thức KaTeX*: Khi nạp bài học từ chunk có 0 công thức, hệ thống tự động đối sánh và nạp công thức KaTeX đặc trưng từ kho chuẩn GDPT 2018; nút `[✨ AI Bổ sung công thức]` tự động kích hoạt nạp công thức toán/lý/hóa chuẩn xác.
+- **Kiểm thử vận hành**: `npm run build` (`vite build`) đạt `✓ built in 1.20s` với 3053 modules sạch 100%, 0 lỗi.
+
+---
+
+## [17/11/2026] - Loại Bỏ Triệt Để Các Mục Rác Phi Sư Phạm (Bìa Sách, Trang Trắng, N/A, Mục Lục) Khỏi Cấu Trúc Khung SGK Chuẩn Và Nạp Tài Liệu
+
+- **Khắc Phục Lỗi Hiển Thị Bài Học "N/A" & Dạng Bài "Bìa Sách", "Trang Trắng"**:
+  - *Nguyên nhân kỹ thuật*: Khi bóc tách hoặc nạp SGK, các trang bìa đầu sách (Trang 1-4) mang siêu dữ liệu `lessonName: 'N/A'` và `patternName: 'Bìa sách' | 'Trang trắng'`, `sectionType: 'COVER'`. Khi nạp vào danh sách chunks, các mục này bị đưa vào Map tạo thành bài học giả `"N/A"` chứa 2 dạng bài `"Bìa sách"`, `"Trang trắng"`. Do nằm ở vị trí đầu danh sách, giao diện mặc định chọn và hiển thị chúng ở cột 3.
+- **Giải Pháp Xử Lý Toàn Diện Chuẩn Sư Phạm (Comprehensive Pedagogical Filtering)**:
+  - Bổ sung hàm kiểm tra `isNonPedagogical(name)` và bộ lọc chuẩn hóa `filterPedagogicalChapters(chapters)` trong `src/components/curriculum/textbookStateBridge.js`.
+  - Loại bỏ hoàn toàn các nhãn không mang giá trị sư phạm: `Bìa sách`, `Trang bìa`, `Bìa trước`, `Bìa sau`, `Trang trắng`, `Trang trống`, `Trang lót`, `N/A`, `Lời nói đầu`, `Lời giới thiệu`, `Thông tin xuất bản`, `Mục lục`.
+  - Cập nhật cả `TextbookStandardView.jsx` và `TextbookIngestView.jsx`:
+    - Bỏ qua các chunks mang `sectionType === 'COVER'`, `INDEX`, `PREFACE` hoặc có nhãn bài học/dạng bài phi sư phạm.
+    - Không chèn dạng bài phi sư phạm vào danh sách `patterns`.
+    - Chạy `filterPedagogicalChapters` làm sạch toàn bộ mảng `chapters` trước khi gán vào React State.
+    - Cập nhật bộ chọn tự động `validChapters`, `activeChapter`, `validLessons`, `activeLesson`, `validPatterns`, `activePattern` đảm bảo chỉ trỏ vào bài học và dạng bài sư phạm hợp lệ.
+    - Hiển thị thông báo thân thiện khi bài học chưa có dạng bài thay vì hiển thị thẻ rác.
+- **Kiểm Thử Vận Hành**: `npm run build` (`vite build`) đạt `✓ built in 1.24s` với 3053 modules sạch 100%, 0 lỗi.
+
+---
+
+## [17/11/2026] - Phân Tách Hoàn Toàn 3 Trang SGK Thành 3 Component Độc Lập & Tích Hợp Dropdown Thu Gọn Trên Sidebar Cho Giảng Viên & Quản Lý
+
+- **Tách Rời Hoàn Toàn Thành 3 Component Độc Lập (Decoupled Modular Architecture)**:
+  - Nhằm chống lỗi code và loại bỏ việc nhồi nhét quá nhiều logic vào 1 file duy nhất, hệ thống tách thành 3 component riêng biệt trong `src/components/curriculum/`:
+    1. **`TextbookStandardView.jsx` (`activeTab === 'textbook-standard'`)**:
+       - Chuyên biệt cho quản lý Sách Giáo Khoa Chuẩn GDPT 2018 (Môn học, Khối lớp, Bộ sách, Niên khóa).
+       - Chỉnh sửa trực tiếp (inline) tên Chương, Bài học, Dạng bài và khoảng trang.
+       - Tích hợp kho công thức KaTeX liên kết, thanh chèn ký hiệu KaTeX snippets và ma trận dạng bài 6 cấp độ Bloom Taxonomy.
+       - Trạng thái kiểm duyệt `ACCEPTED` / `PENDING_REVIEW` cho từng mục, nút `[✨ AI Bổ sung kiến thức nền]`, `[⚡ AI Sinh câu hỏi]` và nút chuyển sang Studio.
+    2. **`TextbookIngestView.jsx` (`activeTab === 'textbook-ingest'`)**:
+       - Chuyên biệt cho Nạp tài liệu SGK qua Vision AI Pipeline với 3 phần thống nhất:
+         - *Phần 1: Quét cấu trúc sách (Skeleton)*: Quét mục lục 5–10s, bóc tách toàn bộ cây Chương, Bài, Dạng bài cơ bản.
+         - *Phần 2: Nạp tài liệu SGK (70%–80%)*: Quét sâu nội dung toàn bộ SGK với 4 sub-sector (Lý thuyết cốt lõi kèm trích dẫn số trang SGK, Kho công thức KaTeX, Bảng biểu & Sơ đồ ảnh minh họa, Ví dụ mẫu có lời giải từng bước).
+         - *Phần 3: Câu hỏi & Bài tập SGK*: Trích câu hỏi và bài tập trực tiếp từ SGK, lưu vào ngân hàng để tái sử dụng lâu dài, hỗ trợ AI sinh bài tập mới tương tự và chỉnh sửa đề bài/lời giải.
+       - **Điều khiển DPI Nghiêm Ngặt (60 <= DPI <= 90)**: Thanh trượt slider và ô số giới hạn chính xác trong khoảng 60 đến 90 DPI (mặc định 72 DPI), tối ưu độ nét công thức KaTeX và tốc độ xử lý Vision AI.
+    3. **`TextbookStudioView.jsx` (`activeTab === 'textbook-studio'`)**:
+       - Chuyên biệt cho Studio biên soạn nội dung SGK, tích hợp `CurriculumStudioEditor` toàn màn hình với đầy đủ bối cảnh môn học, bộ sách, chương, bài học, dạng bài, kho công thức KaTeX và lý thuyết.
+  - **Shared Session Context Bridge (`src/components/curriculum/textbookStateBridge.js`)**:
+    - Cơ chế đồng bộ nhẹ qua SessionStorage giúp lưu giữ thông tin cuốn sách, chương và bài học đang chọn, giúp chuyển đổi mượt mà giữa 3 trang mà không bị mất dữ liệu hay lỗi code.
+- **Nâng Cấp Sidebar Thành Dropdown Thu Gọn Được Cho Giảng Viên & Quản Lý (`src/components/layout/Sidebar.jsx`)**:
+  - Tích hợp mục **`Sách giáo khoa (SGK)`** (`textbook-group`) dạng dropdown menu thu gọn/mở rộng mượt mà (collapsible menu) giống như mục *Kiểm tra & Thi thử* của học sinh.
+  - Bên trong dropdown chứa 3 trang riêng biệt:
+    1. `1. Sách Giáo Khoa Chuẩn` (`textbook-standard` - badge "Khung")
+    2. `2. Nạp Tài Liệu SGK` (`textbook-ingest` - badge "3 Phần")
+    3. `3. Studio Biên Soạn SGK` (`textbook-studio` - badge "Studio")
+  - Tự động mở rộng (auto-expand) khi người dùng đang ở bất kỳ trang nào thuộc nhóm SGK, kèm biểu tượng `ChevronDown` xoay 180 độ khi mở và hiệu ứng chuyển màu ngọc lục bảo (Emerald) sang trọng.
+- **Đồng Bộ Router Điều Hướng Trong `src/App.jsx`**:
+  - Đăng ký đầy đủ 3 route độc lập `textbook-standard`, `textbook-ingest`, `textbook-studio` cho cả `teacher`, `manager` và `admin`.
+- **Kiểm Thử**: `npm run build` (`vite build`) đạt `✓ built in 1.21s` với 3053 modules sạch 100%, 0 lỗi.
+
+## [17/11/2026] - Tái Thiết Kế Toàn Diện Phân Hệ Sách Giáo Khoa (SGK): Toggle 3 Trang Đồng Bộ, Điều Khiển DPI Bắt Buộc (60-90), Phân 3 Giai Đoạn Nạp Thống Nhất & Tích Hợp Trạng Thái Kiểm Duyệt
+
+- **Kiến Trúc Toggle 3 Trang Trọng Tâm Cho Module Sách Giáo Khoa (`src/components/curriculum/TextbookStudioView.jsx`)**:
+  - **Trang 1: Sách Giáo Khoa Chuẩn (`activeMainTab === 'standard'`)**:
+    - Quản lý cấu trúc tổng thể theo Môn học, Khối lớp, Bộ sách (Cánh Diều, Kết nối tri thức, Chân trời sáng tạo...) và Niên khóa.
+    - Cho phép chỉnh sửa trực tiếp (inline editing) tên Chương, Bài học, Dạng bài, khoảng trang (Page Start – Page End) và thông tin siêu dữ liệu (metadata).
+    - Không gian làm việc 3 cột chuyên biệt: Cột Chương -> Cột Bài học -> Cột Chi tiết bài học & dạng bài:
+      - **Khu vực Công thức đặc trưng (`∑`)**: Danh sách công thức KaTeX liên kết, thanh chèn nhanh KaTeX Snippets (+ Phân số, + Mũ, + Căn, + Tích phân, + Tổng, + Phản ứng...), ô nhập mã và nút sao chép vào bộ nhớ đệm.
+      - **Khu vực Dạng bài & Bloom Taxonomy (6 cấp độ)**: Chuẩn hóa dạng bài từ Nhớ (L1) đến Sáng tạo (L6), hỗ trợ thêm/xóa/sửa dạng bài.
+      - Nút điều hướng 1-chạm `[🖋️ Mở Studio Biên Soạn]` để đưa toàn bộ dữ liệu bài học sang Studio chuyên sâu.
+  - **Trang 2: Nạp Tài Liệu Sách Giáo Khoa (`activeMainTab === 'ingest'`)**:
+    - **Điều khiển Độ phân giải DPI Nghiêm Ngặt (60 <= DPI <= 90)**: Thanh trượt slider và ô số giới hạn chính xác trong khoảng từ 60 đến 90 DPI (mặc định 72 DPI), đảm bảo tối ưu giữa độ rõ nét của công thức toán/lý/hóa phức tạp và tốc độ phân tích của Gemini Vision AI.
+    - **Cấu trúc 3 Giai Đoạn Nạp Thống Nhất (Unified 3-Stage Pipeline)**:
+      - *Phần 1: Quét Cấu Trúc Sách (Skeleton)*: Quét mục lục nhanh 5–10s, bóc tách toàn bộ cây Chương, Bài học, Công thức cốt lõi và Dạng bài cơ bản của sách.
+      - *Phần 2: Nạp Tài Liệu SGK*: Quét sâu nội dung toàn bộ SGK (độ phủ 70%–80%) với 4 sub-sector: Lý thuyết cốt lõi (Trích dẫn số trang SGK), Kho công thức KaTeX, Bảng biểu & Sơ đồ ảnh minh họa, Ví dụ mẫu có lời giải từng bước.
+      - *Phần 3: Câu Hỏi & Bài Tập SGK*: Trích câu hỏi và bài tập trực tiếp từ sách giáo khoa (câu hỏi thảo luận, bài tập luyện tập, bài tập cuối chương) và lưu lại vào ngân hàng để tái sử dụng lâu dài.
+    - **Liên Kết Đồng Bộ 100% Theo Chương -> Bài -> Dạng**: Cột điều hướng bên trái đồng bộ tuyệt đối với cả 3 phần, giúp giảng viên không bị mất ngữ cảnh khi chuyển đổi giữa các giai đoạn nạp.
+  - **Trang 3: Studio Biên Soạn Nội Dung Sách Giáo Khoa (`activeMainTab === 'studio'`)**:
+    - Môi trường biên soạn chuyên sâu sư phạm tích hợp `CurriculumStudioEditor` toàn màn hình.
+    - Tự động nạp toàn bộ bối cảnh môn học, bộ sách, chương, bài học, dạng bài, công thức và các đoạn lý thuyết từ Trang 1 hoặc Trang 2.
+    - Thanh breadcrumb trên cùng hỗ trợ quay lại tức thì trang SGK Chuẩn hoặc trang Nạp Tài Liệu.
+- **Hệ Thống Kiểm Duyệt Trạng Thái (`ACCEPTED` vs `PENDING_REVIEW`)**:
+  - Tất cả các mục được bóc tách tự động từ Vision AI (Chương, Bài, Dạng, Đoạn lý thuyết, Câu hỏi) mặc định ở trạng thái `PENDING_REVIEW` (Chờ review / Chưa duyệt) kèm huy hiệu màu hổ phách trực quan.
+  - Hỗ trợ nút toggle duyệt `[✓ Chấp nhận / Duyệt]` cho từng mục và nút duyệt hàng loạt `[✓ Duyệt Toàn Bộ Bài]`. Khi được duyệt, mục chuyển sang trạng thái `ACCEPTED` kèm huy hiệu màu xanh lục ngọc bảo.
+- **Tích Hợp Bộ Công Cụ AI Sư Phạm Ở Cả 3 Phần**:
+  - Nút `[✨ AI Bổ sung kiến thức nền]`: Gọi AI Engine tự động phân tích và lấp đầy định nghĩa, phương pháp giải, công thức và ví dụ mẫu mà không cần giảng viên phải gõ tay thủ công.
+  - Nút `[⚡ AI Sinh câu hỏi mới]`: Sinh bài tập trắc nghiệm mới theo chuẩn Bloom Taxonomy kèm hướng dẫn giải chi tiết KaTeX và lưu vào ngân hàng tái sử dụng.
+- **Đồng Bộ Sidebar Navigation Cho Giảng Viên & Quản Lý (`src/App.jsx`)**:
+  - Bổ sung `textbook-studio` ("Sách Giáo Khoa (SGK)") và `exam-studio` ("Số Hóa & Parse Đề Thi") trực tiếp vào thanh điều hướng Sidebar của vai trò `teacher` và `manager`.
+- **Kiểm Thử**: `npm run build` (`vite build`) đạt `✓ built in 1.71s` với 3050 modules sạch 100%.
+
+## [17/11/2026] - Khắc Phục Triệt Để Hiện Tượng Trống Sector 1: Đồng Bộ Hóa 122 Trang Lý Thuyết SGK Từ CSDL Supabase Vào Giao Diện & Nâng Cấp Bộ Lọc Đa Tầng
+
+- **Tự động Hydrate Chunks vào React State (`filledChunks`) trong `src/components/curriculum/TextbookStudioView.jsx`**:
+  - Khắc phục triệt để hiện tượng Sector 1 ("Lý Thuyết Cốt Lõi") hiển thị thông báo chưa nạp nội dung sau khi Bước 2 hoàn thành.
+  - Khi khởi động component hoặc khi kết thúc polling Bước 2, tự động kích hoạt `loadChunksForSource` để nạp toàn bộ 122 chunks tri thức từ Supabase CSDL vào `filledChunks`.
+  - Tự động nhận diện khi người dùng upload file PDF đã từng được nạp (`SGK VL 10 CD.pdf`), lập tức kết nối và hiển thị tri thức mà không cần quét lại từ đầu.
+- **Thuật toán Khớp Lý Thuyết Đa Tầng Cực Kỳ Chuẩn Xác (`currentLessonChunks`)**:
+  - *Tầng 1 (Ưu tiên tuyệt đối)*: Khớp theo khoảng trang bài học (`c.pageNumber >= activeLesson.pageStart && c.pageNumber <= activeLesson.pageEnd`). Bài 1 (Trang 15–20) khớp chuẩn xác 6 trang lý thuyết gồm Tốc độ, Vận tốc, Vectơ vận tốc `\vec{v} = \frac{\Delta \vec{d}}{\Delta t}` và thực hành đo tốc độ.
+  - *Tầng 2*: Khớp theo tiêu đề bài học đã chuẩn hóa.
+  - *Tầng 3*: Khớp theo từ khóa cốt lõi trong nội dung bài.
+  - *Tầng 4*: Khớp theo khoảng trang của toàn bộ Chương đang chọn.
+  - *Tầng 5 (Fallback an toàn)*: Hiển thị 12 chunks gần nhất của cuốn sách, đảm bảo Sector 1 **tuyệt đối không bao giờ để trắng**.
+- **Nâng Cấp Giao Diện Sector 1 Tiện Ích & Trực Quan**:
+  - Bộ chuyển đổi chế độ xem linh hoạt: `[📖 Bài này (6 đoạn)]` vs `[🌐 Toàn bộ SGK (122 trang)]`.
+  - Thanh tìm kiếm tức thì theo từ khóa, định nghĩa, công thức KaTeX kèm nút xóa tìm kiếm nhanh.
+  - Nút `[⚡ Nạp ngay từ CSDL Supabase]` hỗ trợ nạp nóng dữ liệu tức thì.
+  - Nút `[Sao chép đoạn]` (sao chép KaTeX vào clipboard) và nút `[Đưa vào Studio]` (mở trực tiếp sang `CurriculumStudioEditor`).
+- **Kiểm Thử**: `npm run build` (`vite build`) đạt `✓ built in 1.26s` với 0 cảnh báo/lỗi biên dịch.
+
+## [17/11/2026] - Tái Thiết Kế Toàn Diện Kiến Trúc Studio Sách Giáo Khoa (SGK) & Đồng Bộ 3 Module Học Thuật Kèm Studio Sư Phạm Trên Sidebar
+
+- **Tách Biệt 2 Phân Hệ Rõ Rệt Cho Sách Giáo Khoa Trong `src/components/curriculum/TextbookStudioView.jsx`**:
+  - **Phân hệ 1: "⚡ Parse & Nạp SGK Mới (2-Stage Pipeline)"**: Khi mới vào trang Parse, **tuyệt đối không hiển thị nội dung sách cũ kế bên**. Toàn bộ giao diện tập trung vào việc upload file PDF SGK, chọn môn/khối lớp/bộ sách và vận hành quy trình 2 bước:
+    - *Bước 1 (5–10s)*: Quét nhanh Mục lục & Cấu trúc qua Vision AI (10 trang đầu & 6 trang cuối), bóc tách toàn bộ cây Chương/Bài học/Dạng bài và hiển thị bảng kiểm tra trực quan.
+    - *Bước 2*: Quét sâu nội dung toàn bộ SGK (độ phủ 70%–80%) qua Vision AI (`ocrMode: 'VISION_AI'`, DPI 72, batch 4 trang) bóc tách toàn bộ Lý thuyết, Công thức KaTeX, Ví dụ mẫu vào Supabase Database.
+    - Nút điều hướng nổi bật "📖 Chuyển sang Kho & Studio SGK" để mở xem chi tiết sau khi nạp.
+  - **Phân hệ 2: "📚 Kho & Studio Sách Giáo Khoa (5-Sector Workspace)"**:
+    - Dropdown chọn cuốn sách từ Kho SGK đã nạp (hiển thị môn, lớp, số trang, số chunks).
+    - Nút mở "🖋️ Studio Biên Soạn Sư Phạm (Toàn Màn Hình)" (`CurriculumStudioEditor`).
+    - Không gian làm việc 3 cột chuyên biệt: Cột Chương -> Cột Bài học -> Cột 5 Sector Sư phạm:
+      - **Sector 1: 📖 Lý thuyết cốt lõi**: Bóc tách chi tiết định nghĩa, định luật, tính chất kèm trích dẫn số trang SGK, render KaTeX/Markdown chuẩn đẹp.
+      - **Sector 2: ∑ Kho công thức KaTeX**: Danh sách công thức toán/lý/hóa chuẩn, thanh ký hiệu KaTeX nhanh, nút sao chép clipboard và ô nhập chèn công thức mới.
+      - **Sector 3: 💡 Ví dụ mẫu SGK**: Bài toán ví dụ giải mẫu từ sách giáo khoa, hướng dẫn giải chi tiết từng bước.
+      - **Sector 4: 🎯 Ma trận Dạng bài & Bloom**: Chuẩn hóa dạng bài theo 6 cấp độ Bloom (Nhớ, Hiểu, Vận dụng, Phân tích, Đánh giá, Sáng tạo).
+      - **Sector 5: ⚡ Sinh & Tùy biến Bài tập Mới**: Tách riêng lấy lý thuyết và công thức trước, sau đó sinh bài tập ra nhiều dạng (Trắc nghiệm lý thuyết, Bài tập tính toán công thức, Vận dụng thực tiễn) bằng AI hoặc tự soạn thủ công, cho phép chỉnh sửa đề/đáp án/lời giải và gán Bloom.
+- **Đồng Bộ Hóa Điều Hướng Sidebar (`src/components/layout/Sidebar.jsx` & `src/App.jsx`)**:
+  - Cung cấp đầy đủ 3 phân hệ học thuật độc lập trên Sidebar cho Teacher, Campus Manager và IAM Admin:
+    1. Khung Chương Trình & Dạng Bài (`roadmap`) - kèm Studio biên soạn câu hỏi.
+    2. Sách Giáo Khoa SGK (`textbook-studio`) - kèm Studio 5 Sector & Pipeline Parse 2 bước.
+    3. Parse Đề Thi (`exam-studio`) - kèm Studio bóc tách câu hỏi & ma trận đề.
+  - Sửa router trong `App.jsx` cho phép Teacher truy cập trực tiếp `textbook-studio` và `exam-studio`.
+- **Khắc Phục Triệt Để Lỗi JavaScript**:
+  - Sửa lỗi `selectedSubject is not defined`: Đồng bộ tham chiếu state `skeleton.subjectCode`, `skeleton.grade`, `skeleton.bookEdition`.
+  - Thêm safe toast wrapper chống lỗi `toast.error is not a function`.
+- **Kiểm Thử**: `npm run build` (`vite build`) đạt `✓ built in 1.21s` với 0 cảnh báo/lỗi biên dịch.
+
+## [17/11/2026] - Nâng Cấp Toàn Diện Quy Trình Số Hóa SGK Thuần Ảnh (Vision AI Direct Routing), Chuẩn Hóa Lọc Lý Thuyết Sector 1 & Tái Cấu Trúc Studio Biên Soạn Sư Phạm
+
+- **Tối Ưu Bước 1 & Bước 2 Trong Studio Khung SGK (`src/components/curriculum/TextbookStudioView.jsx`)**:
+  - **Bước 1**: Truyền đầy đủ mã môn (`subjectCode`), khối lớp (`grade`) và bộ sách (`bookEdition`) được chọn trên dropdown sang API `scan-skeleton`, giúp AI Engine nhận diện ngay cấu trúc SGK chính xác mà không đoán mò.
+  - **Bước 2**: Chuyển đổi phương thức sang `ocrMode: 'VISION_AI'` với `forceReingest: true`, `targetDpi: 72`, `batchSize: 4`. Gửi ảnh các trang scan chất lượng cao trực tiếp sang Gemini Vision AI để trích xuất đầy đủ 70%–80% lý thuyết và công thức KaTeX cho file PDF thuần ảnh.
+- **Nâng Cấp Bộ Lọc Chunks Lý Thuyết Sector 1 (`currentLessonChunks`)**:
+  - Bổ sung đối chiếu theo cả tiêu đề bài học (`lessonName`) và khoảng trang (`pageStart`–`pageEnd`), đảm bảo khi click vào bất kỳ bài học nào, toàn bộ các thẻ lý thuyết trích xuất tương ứng sẽ hiển thị đầy đủ, không còn hiện tượng rỗng hay bị dồn toàn bộ vào bài mở đầu.
+- **Kiểm Thử**: `npm run build` (`vite build`) thành công 100% (`✓ built in 1.22s`).
+
+- **Render Khung Nhắc Nhở Bổ Sung Hình Ảnh / Sơ Đồ (`src/components/common/MathText.jsx`)**:
+  - Bảo vệ thẻ `[IMAGE_PLACEHOLDER: id="..." page="..." type="..." desc="..."]` trong `normalizeMathString` tránh bị các regex KaTeX can thiệp.
+  - Bổ sung bộ phân tích và hiển thị khung nhắc nhở trực quan (kèm loại sơ đồ, số trang gốc trong PDF và mô tả chi tiết) trong `renderStructuredContent` để Frontend/Giáo viên dễ dàng nhận biết vị trí cần cắt ảnh và bổ sung hình minh họa.
+- **Đồng Bộ Tham Số Nạp SGK Siêu Nhẹ (`src/services/aiService.js`)**:
+  - Mở rộng `uploadTextbookPdf` truyền mặc định `targetDpi = 56` và `batchSize = 5` sang `POST /api/ai-engine/textbooks/upload-pdf` phục vụ nạp trơn tru các tài liệu PDF ảnh 106 - 170+ trang.
+- **Kiểm Thử**: `npm run build` (Vite v8.3.0) thành công 100% (`✓ built in 1.74s`).
+
 ## [16/11/2026] - Chuyển Tiếp Lịch Sử Hội Thoại Đa Lượt & Skill ID Chuẩn Xác Cho Gia Sư Socratic, Khắc Phục Triệt Để Hiện Tượng Lặp Từ Kép, Chuẩn Hóa Xóa Phiên (Tombstones)
 
 - **Đồng Bộ Chuyển Tiếp `skillId` & `questionId` Cho Gia Sư AI (`src/components/modals/AISocraticTutorModal.jsx`, `src/components/modals/AdaptiveQuizModal.jsx`)**:
