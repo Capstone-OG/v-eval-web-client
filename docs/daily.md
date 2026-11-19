@@ -2,7 +2,26 @@
 
 ---
 
-## [19/11/2026] - Nâng Cấp Toàn Diện Trải Nghiệm Giao Diện Cổng Phụ Huynh, Lịch Sử Bài Thi & Tái Thiết Kế Thanh Điều Hướng Đỉnh Cao (Account Navbar Mission Control)
+## [19/11/2026] - Khắc Phục Triệt Để Lỗi Hook Màn Hình Đỏ, Chuẩn Hóa Cổng Phụ Huynh 4 Phân Hệ & Bố Cục Dashboard 3 Tầng Hiện Đại
+
+- **Khắc Phục Lỗi Vi Phạm Quy Tắc Hook Màn Hình Đỏ ([`ParentDashboardView.jsx`](../src/components/dashboard/ParentDashboardView.jsx))**:
+  - Di chuyển toàn bộ các Hook `useEffect` (tải học phí `getStudentTuitionStatus`, dự báo `getMyForecast`, lộ trình `getStudentDashboard`, cảnh báo sớm và bài thi gần đây) lên đầu component trước mọi câu lệnh điều kiện `return`, triệt tiêu hoàn toàn ngoại lệ `Rendered more hooks than during the previous render`.
+- **Đồng Bộ Hoàn Toàn `activeChildId` Xuyên Suốt Toàn Bộ Các Trang ([`App.jsx`](../src/App.jsx), [`ParentDashboardView.jsx`](../src/components/dashboard/ParentDashboardView.jsx), [`AccountNavbar.jsx`](../src/components/layout/AccountNavbar.jsx))**:
+  - Nâng state `parentActiveChildId` lên `App.jsx`, đồng bộ hóa việc chọn con cho toàn bộ các tab con: Dashboard, Tiến độ & Kết quả, Cảnh báo sớm và Học phí.
+- **Tái Thiết Kế Menu Sidebar Cổng Phụ Huynh 4 Mục Chuẩn ([`Sidebar.jsx`](../src/components/layout/Sidebar.jsx), [`App.jsx`](../src/App.jsx))**:
+  - 1. *Tổng quan đồng hành*: Xem nhanh điểm thi dự kiến, mức độ sẵn sàng thi, thời lượng học và cảnh báo.
+  - 2. *Tiến độ & Kết quả của con* ([`ParentChildResultsView.jsx`](../src/components/dashboard/ParentChildResultsView.jsx)): Gộp 3 góc nhìn (Năng lực 4 môn với Radar Chart, Tiến độ Lộ trình cá nhân Chế độ chỉ đọc, Lịch sử thi thử & Kiểm tra).
+  - 3. *Cảnh báo & Trao đổi Giáo viên* ([`ParentEarlyWarningsAndTeacherView.jsx`](../src/components/dashboard/ParentEarlyWarningsAndTeacherView.jsx)): Cảnh báo sớm Mức 2 & 3, nút Xác nhận đã xem, Xác nhận họp 3 bên và Khung trao đổi gửi tin nhắn cho Giáo viên phụ trách.
+  - 4. *Học phí & Lịch sử giao dịch* ([`TuitionPaymentView.jsx`](../src/components/payment/TuitionPaymentView.jsx)): Thanh toán VietQR PayOS, lịch sử giao dịch và biên lai.
+- **Tái Cấu Trúc Bố Cục Dashboard 3 Tầng**:
+  - *Tầng 1*: Dải ngang trên cùng hiển thị học sinh đang theo dõi kèm dropdown chuyển con + thông tin Giáo viên lớp Offline phụ trách (tên, SĐT, nút Nhắn tin). Dải thông báo học phí màu vàng nhạt chỉ hiện khi con chưa thanh toán, ẩn hoàn toàn khi đã thanh toán.
+  - *Tầng 2*: 4 Thẻ chỉ số Ba Mẹ quan tâm nhất: Điểm thi dự kiến (kèm khoảng dao động, đối chiếu mục tiêu và tỉ lệ đạt), Mức độ sẵn sàng thi (thang điểm 100), Thời gian học tuần này (kèm nút chuyển 7 ngày / 30 ngày) và Tiến độ lộ trình cá nhân.
+  - *Tầng 3*: Bố cục 2 cột (Cột trái 7 phần: Cảnh báo học tập & Bài thi gần đây; Cột phải 5 phần: Đánh giá 3 mặt học tập & Hồ sơ học tập kèm nút Hủy liên kết con).
+- **Dọn Sạch Toàn Bộ Thuật Ngữ Kỹ Thuật & Dữ Liệu Test (Zero Technical Jargon)**:
+  - Xóa bỏ triệt để các từ viết tắt nội bộ: IRT Theta, BKT, ZPD, PLAR, Core Flow 5, Live Identity + Practice gRPC, giá thử nghiệm 5.000 ₫ trong `TuitionPaymentView.jsx` và toàn bộ giao diện; diễn đạt 100% bằng tiếng Việt thân thiện, dễ hiểu cho gia đình.
+- **Kiểm Thử & Nghiệm Thu**:
+  - `npm run build`: Thành công 100% trong 1.18s, 0 lỗi biên dịch.
+  - `node --test tests/*.test.js`: Toàn bộ **22/22 unit tests Passed**.
 
 - **Tái Thiết Kế & Tối Ưu Bố Cục Thanh Điều Hướng Top Navbar "EdTech Mission Control" ([`AccountNavbar.jsx`](../src/components/layout/AccountNavbar.jsx))**:
   - **Triệt tiêu 100% hardcode**: Toàn bộ dữ liệu hiển thị (kỳ thi mục tiêu, đếm ngược ngày thi, số chuông thông báo, chip học sinh đồng hành, cơ sở học tập, chuỗi ngày streak) đều được trích xuất trực tiếp từ API CSDL Backend thật (`practiceService.getAcademicTerms`, `practiceService.getMyAlerts`, `portalMetrics`, `currentUser`).

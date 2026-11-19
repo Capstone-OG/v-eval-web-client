@@ -1,6 +1,7 @@
 import { toast } from './context/ToastContext';
 import React, { useState, useEffect, useCallback } from 'react';
 import {
+  AlertTriangle,
   BarChart3,
   BookOpen,
   Briefcase,
@@ -29,6 +30,8 @@ import DiagnosticOnboardingCard from './components/dashboard/DiagnosticOnboardin
 import MetricsGrid from './components/dashboard/MetricsGrid';
 import StudentParentLinkCard from './components/dashboard/StudentParentLinkCard';
 import ParentDashboardView from './components/dashboard/ParentDashboardView';
+import ParentChildResultsView from './components/dashboard/ParentChildResultsView';
+import ParentEarlyWarningsAndTeacherView from './components/dashboard/ParentEarlyWarningsAndTeacherView';
 import TeacherDashboardView from './components/dashboard/TeacherDashboardView';
 import TeacherPortalView from './components/dashboard/TeacherPortalView';
 import CampusManagerDashboardView from './components/dashboard/CampusManagerDashboardView';
@@ -87,9 +90,10 @@ const ROLE_PORTAL_DEFINITIONS = {
     icon: HeartHandshake,
     accentBadge: 'bg-amber-50 text-amber-800 border-amber-200',
     tabs: [
-      { id: 'dashboard', label: 'Tổng quan Đồng hành', icon: HeartHandshake },
-      { id: 'history', label: 'Lịch sử Bài thi của Con', icon: History },
-      { id: 'tuition', label: 'Đóng Học phí & Gói học', icon: CreditCard }
+      { id: 'dashboard', label: 'Tổng quan đồng hành', icon: HeartHandshake },
+      { id: 'results', label: 'Tiến độ & Kết quả của con', icon: BarChart3 },
+      { id: 'warnings', label: 'Cảnh báo & Trao đổi Giáo viên', icon: AlertTriangle },
+      { id: 'tuition', label: 'Học phí & Lịch sử giao dịch', icon: CreditCard }
     ]
   },
   teacher: {
@@ -176,6 +180,7 @@ export default function App() {
   // Real Backend Portal Metrics State
   const [studentDashboard, setStudentDashboard] = useState(null);
   const [parentPortalData, setParentPortalData] = useState(null);
+  const [parentActiveChildId, setParentActiveChildId] = useState(null);
   const [teacherHeatmapData, setTeacherHeatmapData] = useState(null);
   const [managerPortalData, setManagerPortalData] = useState(null);
   const [campusesCount, setCampusesCount] = useState(0);
@@ -193,6 +198,9 @@ export default function App() {
       } else if (activeRole === 'parent') {
         const pData = await practiceService.getParentDashboard(uid);
         setParentPortalData(pData);
+        if (pData?.children?.length > 0) {
+          setParentActiveChildId((prev) => prev || pData.children[0].studentId);
+        }
       } else if (activeRole === 'teacher') {
         // TeacherPortalView loads scoped live data; do not substitute a default class.
         setTeacherHeatmapData(null);
@@ -400,10 +408,41 @@ export default function App() {
   const pageTitle = activeTab === 'settings' ? 'Cài đặt tài khoản'
     : currentPortal.tabs.find((tab) => tab.id === activeTab)?.label || 'Tổng quan';
 
+  const parentChildren = parentPortalData?.children || [];
+  const activeChild =
+    parentChildren.find((c) => c.studentId === parentActiveChildId) ||
+    parentChildren[0] ||
+    null;
+  const activeChildId = activeChild?.studentId || null;
+
   const renderRolePortalContent = () => {
     if (activeTab === 'settings') {
       return <AccountSettingsPage currentUser={currentUser} onUpdateUser={setCurrentUser}
         activeRole={role} onNavigateTab={setActiveTab} onLogout={handleLogout} />;
+    }
+    if (role === 'parent' && activeTab === 'results') {
+      return (
+        <ParentChildResultsView
+          currentUser={currentUser}
+          activeChild={activeChild}
+          activeChildId={activeChildId}
+          childrenList={parentChildren}
+          onSelectChildId={setParentActiveChildId}
+          onNavigateTab={setActiveTab}
+        />
+      );
+    }
+    if (role === 'parent' && activeTab === 'warnings') {
+      return (
+        <ParentEarlyWarningsAndTeacherView
+          currentUser={currentUser}
+          activeChild={activeChild}
+          activeChildId={activeChildId}
+          childrenList={parentChildren}
+          onSelectChildId={setParentActiveChildId}
+          onNavigateTab={setActiveTab}
+        />
+      );
     }
     if (role === 'teacher' && activeTab !== 'roadmap') {
       return <TeacherPortalView key={`${currentUser?.userId || currentUser?.id}:${currentUser?.classId || ''}:${activeTab}`}
@@ -505,14 +544,13 @@ export default function App() {
     }
 
     if (activeTab === 'tuition') {
-      const parentChildren = parentPortalData?.children || [];
-      const defaultChild = parentChildren[0] || null;
       return (
         <TuitionPaymentView
           currentUser={currentUser}
           isParent={role === 'parent'}
-          activeChild={defaultChild}
+          activeChild={activeChild}
           childrenList={parentChildren}
+          onSelectChildId={setParentActiveChildId}
           onBackToDashboard={() => setActiveTab('dashboard')}
           onNavigateRoadmap={role === 'parent' ? undefined : () => setActiveTab('roadmap')}
           onNavigateAdaptive={role === 'parent' ? undefined : () => setActiveTab('adaptive')}
@@ -571,7 +609,13 @@ export default function App() {
         return (
           <ParentDashboardView
             currentUser={currentUser}
+            activeChild={activeChild}
+            activeChildId={activeChildId}
+            childrenList={parentChildren}
+            onSelectChildId={setParentActiveChildId}
             onNavigateTuition={() => setActiveTab('tuition')}
+            onNavigateWarnings={() => setActiveTab('warnings')}
+            onNavigateResults={() => setActiveTab('results')}
           />
         );
 
@@ -634,6 +678,9 @@ export default function App() {
   const portalMetrics = {
     studentDashboard,
     parentPortalData,
+    parentActiveChildId,
+    setParentActiveChildId,
+    activeChild,
     teacherHeatmapData,
     managerPortalData,
     campusesCount,

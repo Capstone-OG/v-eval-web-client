@@ -88,35 +88,35 @@ export default function TuitionPaymentView({
       name: 'Khóa Cấp Tốc Về Đích (Sprint)',
       planType: 'FAST_TRACK',
       durationWeeks: 8,
-      price: 2000,
-      badge: 'Test PayOS (2K)',
+      price: 1800000,
+      badge: 'Cấp Tốc',
       highlightColor: 'from-amber-500 to-orange-600',
       description: 'Dành cho học sinh cần tổng ôn bấm giờ thực chiến và vá lỗ hổng kiến thức thần tốc trong 2 tháng cuối.',
       features: [
-        'Khảo sát chẩn đoán IRT 30 câu chuẩn Bloom',
+        'Khảo sát chẩn đoán năng lực 30 câu chuẩn hóa',
         '8 tuần luyện đề thực chiến có bấm giờ',
-        'Sổ tay lỗi sai & Lặp lại ngắt quãng SM-2',
-        'Hỏi đáp Gia sư AI Socratic cơ bản'
+        'Sổ tay lỗi sai & Ôn tập lặp lại định kỳ',
+        'Hỏi đáp Gia sư AI giải đáp thắc mắc 24/7'
       ]
     },
     {
       id: 'STANDARD',
       courseId: 'c2222222-2222-2222-2222-222222222222',
       code: 'CRS_STD',
-      name: 'Khóa Luyện Thi Chuẩn (Standard Adaptive)',
+      name: 'Khóa Luyện Thi Chuẩn (Standard)',
       planType: 'STANDARD',
       durationWeeks: 12,
-      price: 5000,
-      badge: 'Phổ Biến (5K Test)',
+      price: 2400000,
+      badge: 'Phổ Biến Nhất',
       isPopular: true,
       highlightColor: 'from-blue-600 to-indigo-600',
-      description: 'Lộ trình cá nhân hóa toàn diện theo chu trình 4 bước PLAR, tối ưu hóa điểm số cho mục tiêu 800+ ĐGNL.',
+      description: 'Lộ trình cá nhân hóa toàn diện theo năng lực của học sinh, tối ưu hóa điểm số cho mục tiêu 800+ ĐGNL.',
       features: [
-        'Toàn bộ quyền lợi gói Fast-Track',
-        'Lộ trình thích ứng 4 bước PLAR (P-L-A-R)',
-        'Gia sư AI Socratic thông minh kèm 24/7',
-        'Tự động xếp lớp chuyên đề tại cơ sở',
-        'Cam kết điểm số chuẩn đầu ra ĐHQG'
+        'Toàn bộ quyền lợi gói Cấp Tốc',
+        'Lộ trình học tập thích ứng cá nhân hóa',
+        'Gia sư AI thông minh đồng hành 24/7',
+        'Xếp lớp học chuyên đề phù hợp năng lực',
+        'Cam kết nâng cao điểm số chuẩn đầu ra'
       ]
     },
     {
@@ -126,16 +126,16 @@ export default function TuitionPaymentView({
       name: 'Khóa Chuyên Đề Bứt Phá (Intensive Plus)',
       planType: 'INTENSIVE',
       durationWeeks: 16,
-      price: 10000,
-      badge: 'Top 10% (10K Test)',
+      price: 3200000,
+      badge: 'Mục Tiêu 900+',
       highlightColor: 'from-indigo-600 to-purple-600',
-      description: 'Khóa học kèm vi mô 3-5 bạn cùng Toa thuốc bù điểm Knapsack ROI và Hệ thống cảnh báo sớm 3 cấp.',
+      description: 'Khóa học kèm nhóm nhỏ 3-5 bạn cùng kế hoạch bù đắp kiến thức cá nhân và theo dõi sát sao từ giáo viên.',
       features: [
-        'Toàn bộ quyền lợi gói Standard',
-        'Nhóm học tập vi mô (3 - 5 học sinh) trên lớp',
-        'Dự báo khoảng điểm SEM 95% & Toa thuốc Knapsack',
-        'Giám sát webcam & thi thử 120 câu chuẩn ĐHQG',
-        'Hỗ trợ 1-1 cùng Giáo viên & Mentor cơ sở'
+        'Toàn bộ quyền lợi gói Chuẩn',
+        'Nhóm học tập kèm cặp (3 - 5 học sinh) trên lớp',
+        'Dự báo khoảng điểm và bài tập ôn tập tối ưu',
+        'Thi thử 120 câu chuẩn cấu trúc ĐHQG-HCM',
+        'Hỗ trợ 1-1 cùng Giáo viên phụ trách cơ sở'
       ]
     }
   ];
@@ -263,7 +263,7 @@ export default function TuitionPaymentView({
     await loadTuitionAndHistory();
 
     if (showToast) {
-      showToast('Kích hoạt khóa học & mở khóa Lộ trình PLAR thành công!');
+      showToast('Kích hoạt khóa học & mở khóa lộ trình học tập thành công!');
     }
   };
 
@@ -271,12 +271,12 @@ export default function TuitionPaymentView({
   const unlockedPerks = [
     {
       id: 'roadmap',
-      title: 'Lộ Trình Cá Nhân Thích Ứng (PLAR)',
-      desc: 'Mở khóa 100% các chặng học theo chu trình P-L-A-R, phân bổ dạng bài theo điểm thi đầu vào.',
+      title: 'Lộ Trình Cá Nhân Thích Ứng',
+      desc: 'Mở khóa 100% các chặng học theo năng lực thực tế, phân bổ dạng bài theo điểm thi đầu vào.',
       icon: Network,
       color: 'text-indigo-600 bg-indigo-50 border-indigo-200',
-      action: onNavigateRoadmap,
-      actionLabel: 'Vào Lộ Trình'
+      action: isParent ? undefined : onNavigateRoadmap,
+      actionLabel: isParent ? 'Đã Mở Khóa' : 'Vào Lộ Trình'
     },
     {
       id: 'curriculum',
@@ -284,26 +284,26 @@ export default function TuitionPaymentView({
       desc: 'Toàn quyền học chi tiết tất cả bài giảng của Lớp học chung & Lộ trình cá nhân riêng.',
       icon: BookOpen,
       color: 'text-blue-600 bg-blue-50 border-blue-200',
-      action: onNavigateRoadmap,
-      actionLabel: 'Xem Bài Học'
+      action: isParent ? undefined : onNavigateRoadmap,
+      actionLabel: isParent ? 'Đã Mở Khóa' : 'Xem Bài Học'
     },
     {
       id: 'adaptive',
-      title: 'Kho Luyện Tập Thích Ứng ZPD',
-      desc: 'Hệ thống sinh câu hỏi tự động bám sát Vùng phát triển gần nhất và cập nhật tham số BKT.',
+      title: 'Kho Luyện Tập Thích Ứng Cá Nhân Hóa',
+      desc: 'Hệ thống sinh câu hỏi tự động bám sát năng lực học sinh và cập nhật độ tiến bộ liên tục.',
       icon: Zap,
       color: 'text-amber-600 bg-amber-50 border-amber-200',
-      action: onNavigateAdaptive || onNavigateRoadmap,
-      actionLabel: 'Luyện Tập ZPD'
+      action: isParent ? undefined : (onNavigateAdaptive || onNavigateRoadmap),
+      actionLabel: isParent ? 'Đã Mở Khóa' : 'Luyện Tập'
     },
     {
       id: 'ai_tutor',
-      title: 'Gia Sư AI Socratic Kèm 24/7',
-      desc: 'Hỏi đáp tương tác thời gian thực, gợi mở tư duy logic đa bước không làm lộ lời giải tắt.',
+      title: 'Gia Sư AI Đồng Hành Kèm 24/7',
+      desc: 'Hỏi đáp tương tác thời gian thực, gợi mở tư duy logic đa bước hỗ trợ con học tập.',
       icon: MessageSquare,
       color: 'text-purple-600 bg-purple-50 border-purple-200',
-      action: onNavigateAiTutor,
-      actionLabel: 'Hỏi Gia Sư AI'
+      action: isParent ? undefined : onNavigateAiTutor,
+      actionLabel: isParent ? 'Đã Mở Khóa' : 'Hỏi Gia Sư AI'
     },
     {
       id: 'schedule',
@@ -311,17 +311,17 @@ export default function TuitionPaymentView({
       desc: 'Tra cứu lịch học định kỳ, các buổi học bù/dạy thay và theo dõi chuyên cần tại cơ sở.',
       icon: Calendar,
       color: 'text-emerald-600 bg-emerald-50 border-emerald-200',
-      action: onNavigateSchedule,
-      actionLabel: 'Xem Lịch Học'
+      action: isParent ? undefined : onNavigateSchedule,
+      actionLabel: isParent ? 'Đã Mở Khóa' : 'Xem Lịch Học'
     },
     {
       id: 'live',
-      title: 'Lớp Học Phần & Diễn Đàn Live Q&A',
-      desc: 'Không gian học tập nhóm vi mô 3-5 bạn tại bàn kèm trực tiếp cùng Giảng viên cơ sở.',
+      title: 'Lớp Học Phần & Trao Đổi Cùng Giáo Viên',
+      desc: 'Không gian học tập nhóm nhỏ tại bàn kèm trực tiếp cùng Giảng viên phụ trách cơ sở.',
       icon: Users,
       color: 'text-cyan-600 bg-cyan-50 border-cyan-200',
-      action: onNavigateLive,
-      actionLabel: 'Vào Lớp Học'
+      action: isParent ? undefined : onNavigateLive,
+      actionLabel: isParent ? 'Đã Mở Khóa' : 'Vào Lớp Học'
     }
   ];
 
@@ -336,10 +336,10 @@ export default function TuitionPaymentView({
             <span>Phân Hệ Học Phí & Đăng Ký Khóa Học (PayOS / VietQR)</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-            Nộp Học Phí & Kích Hoạt Lộ Trình Thích Ứng PLAR
+            Nộp Học Phí & Kích Hoạt Khóa Học ĐGNL
           </h1>
           <p className="text-xs sm:text-sm text-blue-200/80 mt-1.5 max-w-2xl leading-relaxed">
-            Tích hợp Cổng thanh toán trực tuyến PayOS: Quét mã VietQR tiện lợi, xử lý giao dịch nguyên khối (ACID Transaction) và tự động mở khóa chặng học đầu tiên tức thì.
+            Tích hợp Cổng thanh toán trực tuyến PayOS: Quét mã VietQR tiện lợi, xử lý giao dịch an toàn và tự động kích hoạt khóa học tức thì sau 3 giây.
           </p>
           {isParent && childrenList.length > 1 && (
             <div className="flex flex-wrap items-center gap-2 pt-3 mt-3 border-t border-white/10">

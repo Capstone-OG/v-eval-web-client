@@ -1,25 +1,23 @@
 # NHẬT KÝ CẬP NHẬT (UPDATE LOG) - V-EVAL WEB CLIENT
 
-## [19/11/2026] - Nâng Cấp Toàn Diện Cổng Phụ Huynh: Giao Diện Hiện Đại & Kết Nối 100% Dữ Liệu Thực Tế
+## [19/11/2026] - Khắc Phục Triệt Để Lỗi Hook Màn Hình Đỏ, Chuẩn Hóa Cổng Phụ Huynh 4 Phân Hệ & Bố Cục Dashboard 3 Tầng Hiện Đại
 
-- **Tái Thiết Kế Thanh Điều Hướng Dọc Tinh Giản 1 Dòng - Phương Án 1 ([`Sidebar.jsx`](./src/components/layout/Sidebar.jsx))**:
-  - **Triệt tiêu hoàn toàn lỗi cụt chữ (Zero Truncation)**: Loại bỏ huy hiệu `VietQR` cồng kềnh chiếm hơn 60px gây ép cụt chữ thành `Đóng Học phí & ...`; rút gọn nhãn danh mục thành `Học phí & Gói học` thanh thoát, rõ ràng trên khung rộng 288px.
-  - **Bố cục 1 dòng tinh gọn (Single-Line Compact Row - ~40px)**: Chuyển các mục điều hướng từ khối hộp 2 dòng (tiêu đề + mô tả) dày cộm sang hàng ngang 1 dòng tiêu chuẩn Modern SaaS (Linear & Notion style).
-  - **Biểu tượng inline tinh tế**: Sử dụng Lucide icon trực quan (`w-4.5 h-4.5`), loại bỏ các ô vuông xám xịt buồn tẻ; chuyển mô tả phụ vào tooltip tiêu chuẩn `title={item.sublabel ? `${item.label} (${item.sublabel})` : item.label}` giúp thanh điều hướng thông thoáng, không bị ngợp thị giác.
-  - **Tối ưu thẻ chân trang học sinh liên kết (Footer Student Card)**: Hiển thị tên học sinh kèm tên trường THPT thực tế (`${firstChild.studentName} • ${firstChild.school}`) thay vì chuỗi tên chuyên đề dài 54 ký tự gây tràn chữ.
-- **Tái Cấu Trúc Toàn Diện Hero Header Cổng Phụ Huynh ([`ParentDashboardView.jsx`](./src/components/dashboard/ParentDashboardView.jsx))**:
-  - **Chuẩn hóa 100% dữ liệu thực tế từ CSDL**: Toàn bộ thông tin học sinh (`child.studentName`, `child.school`, `child.grade`, `child.targetMajor`) được tải từ Backend API. Khi trường thông tin chưa có dữ liệu trong CSDL, hệ thống hiển thị thông điệp trang nhã: `"Chưa cập nhật trường THPT"`, `"Chưa phân lớp học"`, `"Chưa thiết lập mục tiêu"`.
-  - **Hồ sơ học sinh trang nhã (Top Row)**: Bổ sung avatar ký tự con (`childInitials` - ví dụ `PL`), chấm xanh live trực quan, tiêu đề nổi bật và nhãn ĐGNL ĐHQG-HCM tinh gọn.
-  - **Dải thông tin 3 cột cân đối (Bottom Strip)**: Trường THPT (`GraduationCap` cyan), Khóa học & Lớp học (`BookOpen` amber, `truncate` kèm tooltip), Nguyện vọng mục tiêu NV1 (`Target` emerald).
-  - **Hài hòa hóa nút hành động**: Chuyển nút `+ Liên kết con` từ màu vàng chói sang phong cách kính mờ cao cấp (`bg-white/10 hover:bg-white/20 border border-white/20`).
-- **Tối Ưu Bố Cục Top Navbar Theo Concept "EdTech Mission Control" ([`AccountNavbar.jsx`](./src/components/layout/AccountNavbar.jsx))**:
-  - **Khắc phục triệt để lỗi ép cụt chữ (Zero Title Truncation)**: Cố định tiêu đề `Tổng quan Đồng hành` hiển thị sắc nét, thoáng đãng không bị co cụt (`whitespace-nowrap shrink-0`).
-  - **Viên Nang Đếm Ngược 1 Dòng Kính Mờ (Center Pill)**: Viên nang thanh mảnh 1 dòng (`● ĐGNL Đợt 1 (2027) • Còn 129 ngày (28/03/2027)`), nằm chính giữa thanh điều hướng; click mở Modal chi tiết 2 đợt thi và cấu trúc 120 câu / 150 phút.
-  - **Tối Ưu Cụm Hành Động & Phân Nhánh Quyền (Right Actions)**: Chuyển chip học sinh đồng hành sang góc phải nhỏ gọn (`👦 Con: [Tên con]`), ẩn bớt ngày tháng thứ yếu, tích hợp chuông cảnh báo tương tác Flow 6 và căn chỉnh chấm xanh online chuẩn xác.
-- **Đồng Bộ Dữ Liệu Đóng Học Phí & Khóa Học Cho Phụ Huynh ([`TuitionPaymentView.jsx`](./src/components/payment/TuitionPaymentView.jsx), [`practiceService.js`](./src/services/practiceService.js), [`App.jsx`](./src/App.jsx))**:
-  - Truyền ngữ cảnh học sinh (`activeChild`, `childrenList`) vào `TuitionPaymentView`, tự động giải quyết `studentId` về ID của con thay vì ID tài khoản phụ huynh.
-  - Tải danh sách khóa học thực tế từ CSDL qua `practiceService.getCourses`, hiển thị chính xác tên gói, học phí và mã khóa học thật khi tạo liên kết thanh toán PayOS.
-  - Xóa bỏ hoàn toàn hàm mock dữ liệu mẫu trong `practiceService.js`, trả về danh sách con rỗng và kích hoạt giao diện liên kết học sinh khi phụ huynh chưa liên kết con.
-- **Kiểm Thử & Biên Dịch Toàn Bộ Web Client**:
-  - `npm run build`: Thành công 100% trong 1.06s, 0 lỗi biên dịch.
-  - `node --test tests/*.test.js`: Đạt **22/22 tests passed**.
+- **Khắc Phục Lỗi Hook Vi Phạm Thứ Tự Render ([`ParentDashboardView.jsx`](./src/components/dashboard/ParentDashboardView.jsx))**:
+  - Di chuyển toàn bộ các Hook `useEffect` (tải học phí `getStudentTuitionStatus`, dự báo `getMyForecast`, lộ trình `getStudentDashboard`, cảnh báo sớm và bài thi gần đây) lên đầu component trước các câu lệnh `if (...) return`, triệt tiêu hoàn toàn ngoại lệ `Rendered more hooks than during the previous render`.
+- **Đồng Bộ Hoàn Toàn `activeChildId` Xuyên Suốt Hệ Thống ([`App.jsx`](./src/App.jsx), [`ParentDashboardView.jsx`](./src/components/dashboard/ParentDashboardView.jsx), [`AccountNavbar.jsx`](./src/components/layout/AccountNavbar.jsx))**:
+  - Nâng state `parentActiveChildId` lên `App.jsx`, giải quyết triệt để lỗi lệch ngữ cảnh con khi chuyển tab; đồng bộ tự động cho toàn bộ Dashboard, Tiến độ & Kết quả, Cảnh báo sớm và Học phí.
+- **Tái Thiết Kế Menu Sidebar 4 Mục Chuẩn ([`Sidebar.jsx`](./src/components/layout/Sidebar.jsx), [`App.jsx`](./src/App.jsx))**:
+  - Phân tách rạch ròi 4 mục điều hướng: *1. Tổng quan đồng hành*, *2. Tiến độ & Kết quả của con*, *3. Cảnh báo & Trao đổi Giáo viên*, *4. Học phí & Lịch sử giao dịch*.
+- **Xây Dựng Phân Hệ Tiến Độ & Kết Quả 3 Tab Hợp Nhất ([`ParentChildResultsView.jsx`](./src/components/dashboard/ParentChildResultsView.jsx))**:
+  - Tích hợp 3 góc nhìn dùng chung `activeChildId`: Biểu đồ Radar đối chiếu năng lực 4 môn với ngưỡng mục tiêu, Lộ trình kỹ năng cá nhân hóa (Chế độ chỉ đọc, không có nút làm bài thay con), và Lịch sử thi thử kèm trạng thái giám sát.
+- **Xây Dựng Phân Hệ Cảnh Báo & Trao Đổi Giáo Viên ([`ParentEarlyWarningsAndTeacherView.jsx`](./src/components/dashboard/ParentEarlyWarningsAndTeacherView.jsx))**:
+  - Lọc chính xác cảnh báo Mức 2 (Lưu ý) và Mức 3 (Nghiêm trọng), hỗ trợ nút *Xác nhận đã xem*, *Xác nhận tham gia họp 3 bên*, và khung nhắn tin trao đổi trực tiếp với Giáo viên phụ trách kèm mã cảnh báo.
+- **Tái Cấu Trúc Bố Cục Dashboard 3 Tầng Hoàn Chỉnh**:
+  - *Tầng 1*: Thanh chọn con (kèm dropdown chuyển con nếu có nhiều con) + Thông tin Giáo viên lớp Offline phụ trách & nút Nhắn tin; Dải cảnh báo học phí vàng nhạt chỉ hiện khi chưa đóng tiền, tự động ẩn khi đã thanh toán.
+  - *Tầng 2*: 4 Thẻ chỉ số Ba Mẹ quan tâm nhất: Điểm thi dự kiến (kèm khoảng dao động và tỉ lệ đạt), Mức độ sẵn sàng thi, Thời gian học tuần này (kèm nút xem 7/30 ngày) và Tiến độ lộ trình cá nhân.
+  - *Tầng 3*: Bố cục 2 cột (Cột trái 7 phần: Cảnh báo học tập & Bài thi gần đây; Cột phải 5 phần: Đánh giá 3 mặt học tập & Hồ sơ học tập kèm nút Hủy liên kết con).
+- **Dọn Sạch Toàn Bộ Thuật Ngữ Kỹ Thuật & Dữ Liệu Test ([`TuitionPaymentView.jsx`](./src/components/payment/TuitionPaymentView.jsx))**:
+  - Loại bỏ hoàn toàn các từ viết tắt nội bộ: IRT Theta, BKT, ZPD, PLAR, Core Flow 5, Live Identity + Practice gRPC, giá thử nghiệm 5.000 ₫; thay bằng ngôn ngữ tiếng Việt đời thường, dễ hiểu cho gia đình.
+- **Kiểm Thử & Nghiệm Thu**:
+  - `npm run build`: Thành công 100% trong 1.18s, 0 lỗi biên dịch.
+  - `node --test tests/*.test.js`: Toàn bộ **22/22 unit tests Passed**.

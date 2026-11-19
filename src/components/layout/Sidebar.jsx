@@ -2,6 +2,7 @@ import BrandLogo from '../common/BrandLogo';
 import React, { useEffect, useState } from 'react';
 import {
   Activity,
+  AlertTriangle,
   Award,
   BarChart3,
   BookOpen,
@@ -80,19 +81,27 @@ export default function Sidebar({
             items: [
               {
                 id: 'dashboard',
-                label: 'Tổng quan Đồng hành',
-                sublabel: 'Chỉ số sẵn sàng & Tự học tuần',
+                label: 'Tổng quan đồng hành',
+                sublabel: 'Điểm dự kiến & Sẵn sàng thi',
                 icon: HeartHandshake,
                 active: activeTab === 'dashboard',
                 onClick: () => setActiveTab('dashboard')
               },
               {
-                id: 'history',
-                label: 'Lịch sử Bài thi của Con',
-                sublabel: 'Chi tiết điểm & Nhận xét sư phạm',
-                icon: History,
-                active: activeTab === 'history',
-                onClick: () => setActiveTab('history')
+                id: 'results',
+                label: 'Tiến độ & Kết quả của con',
+                sublabel: 'Năng lực 4 môn & Lộ trình',
+                icon: BarChart3,
+                active: activeTab === 'results',
+                onClick: () => setActiveTab('results')
+              },
+              {
+                id: 'warnings',
+                label: 'Cảnh báo & Trao đổi Giáo viên',
+                sublabel: 'Cảnh báo sớm & Họp 3 bên',
+                icon: AlertTriangle,
+                active: activeTab === 'warnings',
+                onClick: () => setActiveTab('warnings')
               }
             ]
           },
@@ -101,8 +110,8 @@ export default function Sidebar({
             items: [
               {
                 id: 'tuition',
-                label: 'Học phí & Gói học',
-                sublabel: 'Thanh toán học phí VietQR',
+                label: 'Học phí & Lịch sử giao dịch',
+                sublabel: 'VietQR PayOS & Hóa đơn',
                 icon: CreditCard,
                 active: activeTab === 'tuition',
                 onClick: () => setActiveTab('tuition')

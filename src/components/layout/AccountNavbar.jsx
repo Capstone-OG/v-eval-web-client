@@ -173,16 +173,28 @@ export default function AccountNavbar({
   // Resolved student ID (for student role or active child of parent role)
   const resolvedStudentId = useMemo(() => {
     if (role === 'parent') {
-      return portalMetrics?.parentPortalData?.children?.[0]?.studentId || null;
+      return (
+        portalMetrics?.activeChild?.studentId ||
+        portalMetrics?.parentActiveChildId ||
+        portalMetrics?.parentPortalData?.children?.[0]?.studentId ||
+        null
+      );
     }
     return currentUser?.id || currentUser?.userId || null;
-  }, [role, portalMetrics?.parentPortalData?.children, currentUser]);
+  }, [role, portalMetrics?.activeChild, portalMetrics?.parentActiveChildId, portalMetrics?.parentPortalData?.children, currentUser]);
 
   // Active child for parent portal
   const activeChild = useMemo(() => {
     if (role !== 'parent') return null;
-    return portalMetrics?.parentPortalData?.children?.[0] || null;
-  }, [role, portalMetrics?.parentPortalData?.children]);
+    return (
+      portalMetrics?.activeChild ||
+      portalMetrics?.parentPortalData?.children?.find(
+        (c) => c.studentId === portalMetrics?.parentActiveChildId
+      ) ||
+      portalMetrics?.parentPortalData?.children?.[0] ||
+      null
+    );
+  }, [role, portalMetrics?.activeChild, portalMetrics?.parentActiveChildId, portalMetrics?.parentPortalData?.children]);
 
   // Fetch Academic Terms from CSDL
   useEffect(() => {
