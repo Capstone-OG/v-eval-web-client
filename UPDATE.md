@@ -1,6 +1,9 @@
 # UPDATE - V-Eval-Web_Client
 
 ## [19/11/2026]
+- **Nâng Cấp Giao Diện Xếp Lớp Đầu Vào Theo Ma Trận 4 Miền × 3 Cấp Bậc (12 Lớp Chuẩn - `./src/components/dashboard/AcademicManagerDashboardView.jsx`, `./src/services/practiceService.js`)**:
+  - Thay thế ô nhập `Max K` cũ bằng cấu hình ngưỡng trực quan: **Ngưỡng Cơ bản (`< 50%`)**, **Ngưỡng Nâng cao (`>= 75%`)**, tùy chọn **Hiển thị & khởi tạo đủ khung 12 lớp** và checkbox **Chỉ xếp học sinh mới chưa có lớp (Bảo toàn 100% lớp của HS cũ)**.
+  - Hiển thị kết quả dưới dạng **Ma trận 4 hàng (4 Miền kiến thức) × 3 cột (Cơ bản / Tăng tốc / Nâng cao)** kèm badge `+N mới`, thanh độ nắm vững trung bình từng miền, sĩ số `X/20 HS`, nhãn trạng thái (`Đủ điều kiện mở lớp`, `Đang gom lớp (< 5 HS)`, `Chưa có HS`) và nút **Gán Giáo Viên Phụ Trách** trực tiếp cho từng lớp.
 - **Triệt Tiêu 100% Hardcode Tên Học Sinh - Kết Nối Động Qua Identity REST API (`./src/components/dashboard/EarlyWarningsMentorPanel.jsx`)**:
   - *Bổ sung import `useMemo`*: Khắc phục lỗi runtime `ReferenceError: useMemo is not defined` tại dòng 1 của `EarlyWarningsMentorPanel.jsx`.
   - *Xóa bỏ toàn bộ hàm `resolveStudentDisplayName` và mảng GUID tĩnh*: Không còn bất kỳ đoạn mã gán tên theo chuỗi hex nào (`11111111`, `11110000`, `99999999`, `BC933364`...).

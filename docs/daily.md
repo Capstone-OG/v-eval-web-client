@@ -2,8 +2,11 @@
 
 ---
 
-## [19/11/2026] - Khởi Tạo `AcademicManagerDashboardView.jsx` Chuyên Biệt Cho Quản Lý Học Thuật Cơ Sở (Zero Hardcode), Khóa Chặt Cơ Sở Phụ Trách, Khắc Phục Lỗi Xung Đột Phòng Học 409 & Khử Trùng Lặp Cảnh Báo Sớm
+## [19/11/2026] - Nâng Cấp Giao Diện Xếp Lớp Ma Trận 4 Miền × 3 Cấp Bậc (12 Lớp Chuẩn), Khắc Phục Lỗi Xung Đột Phòng Học 409 & Khử Trùng Lặp Cảnh Báo Sớm
 
+- **Giao Diện Xếp Lớp Ma Trận 4 Miền × 3 Cấp Bậc (`./src/components/dashboard/AcademicManagerDashboardView.jsx`, `./src/services/practiceService.js`)**:
+  - Thay thế ô nhập `Max K` cũ bằng cấu hình ngưỡng trực quan: Ngưỡng Cơ bản (`< 50%`), Ngưỡng Nâng cao (`>= 75%`), tùy chọn khởi tạo đủ khung 12 lớp và chế độ **Chỉ xếp học sinh mới chưa có lớp (Bảo toàn 100% HS cũ)** kèm badge `+N mới` trên từng thẻ lớp.
+  - Hiển thị ma trận 4 hàng (4 miền kiến thức) × 3 cột (Cơ bản / Tăng tốc / Nâng cao) kèm thanh độ nắm vững trung bình miền, sĩ số `X/20 HS`, nhãn trạng thái và nút Gán Giáo Viên Phụ Trách trực tiếp.
 - **Khắc Phục Lỗi Xung Đột Phòng Học 409 Khi Đổi Phòng Lớp Học (`./src/components/dashboard/AcademicManagerDashboardView.jsx`)**:
   - *Chuyển đổi cơ chế cập nhật ca học (Edit Slot Thay Vì Append)*:
     - Bổ sung danh sách các ca học hiện tại trong tuần của lớp trong Modal 5 (Thời khóa biểu & Buổi học), hiển thị rõ Thứ, Khung giờ, và Phòng học.

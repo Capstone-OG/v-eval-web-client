@@ -2423,4 +2423,11 @@ Radar and skill-prior displays consume API response fields; the benchmark overla
       - Integrated dynamic retrieval via `userService.getUsers({ role: 'STUDENT', pageSize: 100 })` querying Identity Service (`GET /api/v1/users`), populating `identityUsersMap` on mount.
       - Prioritizes authentic names delivered by Backend (sourced through gRPC `GetStudentsByIds`), with dynamic fallback to the Identity REST API.
       - Preserved client-side alert deduplication (`seenAlerts = new Set()`) to eliminate duplicate cards for the same student/alert pair.
-    - **Verification**: `npm run build` (Vite v8.3.0) compiled cleanly in 1.66s with 3054 modules transformed and zero errors.
+    - **Verification**: `npm run build` (Vite v8.3.0) compiled cleanly in 2.13s with 3054 modules transformed and zero errors.
+
+
+21. **4-Domain × 3-Tier Matrix Placement UI (`AcademicManagerDashboardView.jsx`, `practiceService.js`)**:
+    - Replaced the single-class `MaxK` clustering UI in Section 3 with a structured **4-Domain × 3-Tier (12-Class) Matrix** interface.
+    - Added configurable threshold inputs (`foundationThresholdPct` default `50%`, `advancedThresholdPct` default `75%`) and `includeEmptyClasses` toggle.
+    - Renders 4 domain rows (`DOM_LANG`, `DOM_MATH`, `DOM_NAT_SCI`, `DOM_SOC_SCI`) × 3 proficiency tier columns (`Cơ bản`, `Tăng tốc`, `Nâng cao`) with average mastery bars, `X/20 HS` capacity indicators, readiness badges, and direct teacher assignment actions.
+    - **Verification**: `npm run build` (Vite v8.3.0) compiled cleanly in 2.13s with zero errors.
