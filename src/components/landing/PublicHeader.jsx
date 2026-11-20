@@ -2,6 +2,7 @@ import BrandLogo from '../common/BrandLogo';
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Search, Zap, ArrowRight, User } from 'lucide-react';
+import { authService } from '../../services/authService';
 
 export default function PublicHeader({
   currentUser,
@@ -93,7 +94,7 @@ export default function PublicHeader({
 
         {/* Action Buttons */}
         <div className="flex items-center gap-2.5 shrink-0 pl-1">
-          {currentUser ? (
+          {currentUser && authService.isAuthenticated() ? (
             <div className="flex items-center gap-2.5">
               <div className="hidden sm:block text-right">
                 <div className="text-xs font-black text-slate-900 leading-tight">

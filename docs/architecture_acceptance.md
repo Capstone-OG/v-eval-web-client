@@ -3056,3 +3056,22 @@ The Parent Companion Portal was completely redesigned and hardened according to 
     - Added configurable threshold inputs (`foundationThresholdPct` default `50%`, `advancedThresholdPct` default `75%`) and `includeEmptyClasses` toggle.
     - Renders 4 domain rows (`DOM_LANG`, `DOM_MATH`, `DOM_NAT_SCI`, `DOM_SOC_SCI`) × 3 proficiency tier columns (`Cơ bản`, `Tăng tốc`, `Nâng cao`) with average mastery bars, `X/20 HS` capacity indicators, readiness badges, and direct teacher assignment actions.
     - **Verification**: `npm run build` (Vite v8.3.0) compiled cleanly in 2.13s with zero errors.
+
+
+22. **Academic Director Role Clarification & Read-Only Supervision Mode (`CampusManagerDashboardView.jsx`, `Sidebar.jsx`, `App.jsx`)**:
+    - Preserved all 4 core Academic Director modules (`AiTutorModerationView`, `CurriculumExplorerView`, `Textbook*View`, `Exam*View`) completely untouched.
+    - Refined `Sidebar.jsx` Director menu to 5 role-aligned items under *"Quản Trị Học Thuật Toàn Trường"*, removing misrouted Teacher/Student/Admin entries and removing the `Flow 4` badge that truncated the label.
+    - Implemented `isDirectorMode` directly inside `CampusManagerDashboardView.jsx`, defaulting to All-Campuses (`ALL`) multi-campus aggregation with a dedicated Cross-Campus Comparison Table, removing hardcoded greeting names and the `67%` fallback, wiring real KPI counts from `contentService.getSkillsTree()` and `contentService.getMockExams()`, adding 4 quick-access pillar cards, and hiding operational Manager/Teacher/Admin actions.
+    - Resolved Logout Race Condition across `App.jsx`, `apiClient.js`, `authService.js`, and `PublicHeader.jsx` via `sessionVersion` guards, preventing ghost `USER_KEY` writes without a valid access token, optimistic state clearing, and `isAuthenticated()` checks on the public header.
+    - **Verification**: `npm run build` (Vite v8.3.0) compiled cleanly in 1.96s with 3076 modules transformed and zero errors.
+
+
+23. **Real-Time Academic Term & Course Synchronization to Student/Parent Tuition Portal & Course CRUD UI (`TuitionPaymentView.jsx`, `AcademicManagerDashboardView.jsx`, `practiceService.js`)**:
+    - **Elimination of Hardcoded 3-Package Mock Array in `TuitionPaymentView.jsx`**:
+      - Removed the static 3-package array (`1.8M / 2.4M / 3.2M VND`) completely to align with the V-ACT 2-wave/year enrollment model.
+      - Implemented `loadCampusTermsAndCourses` fetching `practiceService.getAcademicTerms({ campusId, status: 'ACTIVE' })` and `practiceService.getCourses({ campusId, isActive: true })` scoped to the student's campus.
+      - Added an Active Academic Term Banner displaying the active wave's name, academic year, and enrollment date range, followed by a responsive dynamic grid rendering the exact database courses (code, title, real tuition fee, duration, 20-student capacity) wired directly to PayOS VietQR checkout, plus an explicit empty state when no courses are open.
+    - **Course Edit & Safe Delete UI in `AcademicManagerDashboardView.jsx`**:
+      - Added `updateCourse(courseId, payload)` and `deleteCourse(courseId)` wrappers in `practiceService.js`.
+      - Added inline Edit (✏️) and Delete (🗑️) buttons per course row, upgrading the course creation modal into a dual Create/Edit modal with pre-filled values and confirmation prompts.
+    - **Verification**: `npm run build` (Vite v8.3.0) compiled cleanly in 1.39s with 3076 modules transformed and zero errors.

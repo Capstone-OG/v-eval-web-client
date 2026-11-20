@@ -1,15 +1,31 @@
 # UPDATE - V-Eval-Web_Client
 
 ## [20/11/2026]
-- **Tách Cụm Đề Thi Thành 3 Trang Độc Lập Đồng Bộ 1:1 Với Kiến Trúc SGK & Bổ Sung Chức Năng Xóa Đề Toàn Diện (`Sidebar.jsx`, `App.jsx`, `examStateBridge.js`, `useExamWorkspaceController.js`, `ExamWorkspaceHeader.jsx`, `ExamSharedModals.jsx`, `ExamBankView.jsx`, `ExamIngestView.jsx`, `ExamStudioView.jsx`, `ExamDatabaseModal.jsx`, `TeacherPortalView.jsx`)**:
-  - **Menu Dropdown `exam-group` (`Đề thi & AI Bloom`)** trên Sidebar cho `teacher`, `manager`, `admin`:
-    1. **Trang 1 — `1. Kho Đề & Xem Đề Thi` (`exam-bank`)**: Kho Đề Supabase + Xem Đề Thi chuẩn in + Sắp Xếp & Trộn Đề kéo-thả.
-    2. **Trang 2 — `2. Parse PDF & AI Bloom` (`exam-ingest`)**: Phần 1 Parse PDF (Gemini Vision AI OCR nền xuyên trang) & Phần 2 AI Sinh Câu Hỏi 6 Mức Bloom (`L1–L6`) + Hàng Đợi Kiểm Duyệt.
-    3. **Trang 3 — `3. Studio Biên Soạn Đề` (`exam-studio`)**: Studio 2 cột sửa từng câu hỏi + Full Studio 838 ký hiệu & 3D MathLab.
-  - **Chức năng `Xóa Đề` đầy đủ trên mọi màn hình**: Hỗ trợ xóa cả đề đã lưu trong Supabase (`DELETE /api/content/exams/{id}`) lẫn đề nháp vừa parse PDF / soạn thủ công khỏi phiên làm việc, hiển thị rõ nút **`Xóa Đề` / `Xóa`** kèm hộp thoại xác nhận tại Trang 1 (Kho Đề + Header Xem Đề), Trang 2 (Parse PDF & AI Bloom), Trang 3 (Studio), Modal đổi đề và `Ngân hàng đề thi` trong `TeacherPortalView.jsx`.
-- **Render Bảng HTML `rowspan`/`colspan`, Bảo Vệ `[VARIATION_TABLE]` & Port 100% `view-exam.html` + Node 4 Tầng (`examParserUtils.js`, `ExamRichContent.jsx`, `examCurriculumMatcher.js`, `examOrganizerUtils.js`, `ExamMediaLightbox.jsx`, `ExamNodePickerModal.jsx`, `ExamBlueprintDrawer.jsx`, `aiService.js`, `contentService.js`)**:
-  - Khử nhiễu KaTeX 6 tầng, bảng Markdown 2 tầng + bảng HTML `<table>` gộp ô, bảo vệ `[VARIATION_TABLE]`/`[MATH_GRAPH]`/`[MATH_GRAPH_3D]`, biểu đồ Recharts, tự động nhận diện `Miền -> Chương -> Bài -> Dạng bài` + `AI Gắn Chương/Bài` và **Ma Trận Đặc Tả Đề Thi**.
-- **Kiểm Thử Vận Hành & Biên Dịch**:
-  - `oxlint`: 0 Warning, 0 Error trên toàn bộ 22 file của phân hệ Đề thi.
-  - `node --test`: Pass 37/37 unit tests toàn bộ Web Client.
-  - `npm run build`: Biên dịch sạch sẽ trong 6.19s (`3073 modules`, `0 Error`).
+- **Chuẩn Hóa & Phân Định Rõ Vai Trò Cổng Giám Đốc Học Thuật Liên Cơ Sở (`ACADEMIC_DIRECTOR` - `./src/components/dashboard/CampusManagerDashboardView.jsx`, `./src/components/layout/Sidebar.jsx`, `./src/App.jsx`)**:
+  - *Bảo toàn 100% 4 phân hệ cốt lõi của Director*: Giữ nguyên hoàn toàn mã nguồn và giao diện của **Kiểm duyệt Gia sư AI** (`AiTutorModerationView`), **Quản lý Khung Chương trình** (`CurriculumExplorerView`), **Sách giáo khoa (SGK)** (`TextbookStandard/Ingest/Studio`), và **Đề thi & AI Bloom** (`ExamBank/Ingest/Studio`).
+  - *Dọn sạch Menu Sidebar cho Director (`Sidebar.jsx`)*:
+    - Đổi tiêu đề nhóm sang **"Quản Trị Học Thuật Liên Cơ Sở"** và mục trang chủ sang **"Tổng quan Các Cơ sở"**.
+    - Giữ đúng 5 mục đúng vai trò: `Tổng quan Học thuật`, `Kiểm duyệt Gia sư AI` (gỡ badge `Flow 4` để không còn bị cắt chữ), `Quản lý Khung Chương trình`, `Sách giáo khoa (SGK)`, và `Đề thi & AI Bloom`.
+    - Gỡ 3 mục trỏ nhầm / lấn sân vai trò khác: `Giám sát Ma trận Lớp học` (trỏ nhầm `TeacherDashboardView`), `Báo cáo Chất lượng Đào tạo` (trỏ nhầm `LearningAnalyticsView` của Học sinh), và `Cấp phát Tài khoản Cơ sở` (thuộc quyền IAM của Admin).
+  - *Nâng cấp chế độ `isDirectorMode` trực tiếp trong `CampusManagerDashboardView.jsx` (Zero Hardcode)*:
+    - Gỡ bỏ hoàn toàn chuỗi hardcode `, Nguyễn Duy Khôi!` trên lời chào và số giả lập `67%` khi chưa có dữ liệu.
+    - Nạp KPI thật từ `contentService.getSkillsTree()`, `contentService.getMockExams()`, `userService.getCampuses()` và `practiceService.getCampusComparativeHeatmap()`.
+    - Bổ sung 4 thẻ lối tắt nhanh vào 4 trụ cột chuyên môn của Director.
+    - Chuyển Bản đồ nhiệt so sánh sang **Chế độ Giám sát (Chỉ đọc)** cho Director: ẩn cột `Sơ Đồ Bàn Vi Mô` (của Teacher), ẩn khu vực xếp lớp/gom cụm (của Manager) và cấp phát tài khoản IAM (của Admin).
+  - *Cập nhật điều hướng trong `App.jsx`*: Truyền `mode="director"` và `onNavigateTab={setActiveTab}` vào `CampusManagerDashboardView`, tự động điều hướng về `dashboard` nếu tài khoản Director truy cập các tab không thuộc thẩm quyền (`analytics`, `teacher_heatmap`, `provision`).
+  - *Hiển thị Đa Cơ Sở (`Tất cả các cơ sở` - `ALL`) cho Academic Director (`CampusManagerDashboardView.jsx`)*:
+    - Mặc định chọn `"ALL"` tải song song dữ liệu toàn bộ cơ sở qua `Promise.all`, cộng dồn KPI toàn hệ thống, hiển thị thêm **Bảng Đối Sánh Chất Lượng Giữa Các Cơ Sở** kèm nút *"Xem lớp cơ sở này"* và gắn nhãn tên cơ sở trên từng dòng lớp học.
+- **Khắc Phục Triệt Để Lỗi Logout Vẫn Dính `Manager / MANAGER` + `Vào Dashboard` (`./src/App.jsx`, `./src/services/apiClient.js`, `./src/services/authService.js`, `./src/components/landing/PublicHeader.jsx`)**:
+  - Chặn Race Condition khi `/api/v1/users/me` trả về sau khi bấm Đăng xuất bằng cách đối chiếu `tokenStorage.getSessionVersion()` và `authService.isAuthenticated()`.
+  - Chỉ khởi tạo `currentUser` từ `localStorage` khi còn `accessToken` hợp lệ và chặn `tokenStorage.setTokens` lưu `veval_user_profile` khi `accessToken` rỗng.
+  - Áp dụng Optimistic Logout (xóa token & reset state ngay lập tức, thu hồi `refreshToken` ở nền) và ràng buộc `PublicHeader.jsx` chỉ hiển thị nút `Vào Dashboard` khi `currentUser && authService.isAuthenticated()`.
+- **Đồng Bộ 100% Đợt Học & Khóa Học Từ Academic Manager Sang Cổng Học Phí Student/Parent + Bổ Sung Sửa/Xóa Khóa Học (`./src/components/payment/TuitionPaymentView.jsx`, `./src/components/dashboard/AcademicManagerDashboardView.jsx`, `./src/services/practiceService.js`)**:
+  - *Đồng bộ nguồn dữ liệu thật trên `TuitionPaymentView.jsx` (bám sát mô hình 2 Đợt thi ĐGNL/năm)*:
+    - Gỡ bỏ hoàn toàn mảng 3 gói hardcode (`1.8tr / 2.4tr / 3.2tr`).
+    - Tải song song `getAcademicTerms({ campusId, status: 'ACTIVE' })` và `getCourses({ campusId, isActive: true })` theo đúng cơ sở của học sinh/con.
+    - Hiển thị **Banner Đợt học đang mở tuyển sinh** (tên đợt, năm học, thời gian từ ngày đến ngày) và danh sách khóa học thật với mã khóa, tên khóa, học phí thật, thời lượng và sĩ số tối đa `20 HS/lớp` để thanh toán PayOS VietQR; hiển thị trạng thái trống rõ ràng khi cơ sở chưa mở khóa.
+    - Bổ sung phân giải `campusId` của con cho Phụ huynh (`selectedChild.campusId` kèm fallback tra cứu hồ sơ học sinh) và nút *"Đồng bộ từ Database"* tải lại cả lịch sử thanh toán lẫn danh sách đợt/khóa học; dọn bỏ lời gọi `getCourses` dư thừa trong `ParentDashboardView.jsx`; chuẩn hóa tiêu đề `ParentEarlyWarningsAndTeacherView.jsx` tách rõ tên học sinh khỏi chữ *"Giáo Viên"*.
+  - *Bổ sung Chỉnh sửa & Xóa/Ngừng mở bán khóa học trên `AcademicManagerDashboardView.jsx` & `practiceService.js`*:
+    - Thêm `updateCourse(courseId, payload)` và `deleteCourse(courseId)` vào `practiceService.js`.
+    - Gắn nút **Sửa (✏️)** và **Xóa (🗑️)** trên từng dòng khóa học trong mục *"Khóa Học & Mức Học Phí Đợt Học"*, tái sử dụng Modal tạo/sửa hợp nhất với tiêu đề động và xác nhận xóa an toàn.
+- **Kiểm Thử Vận Hành**: `npm run build` (`vite build`) đạt `✓ built in 1.39s` với 3076 modules sạch 100%, 0 lỗi.

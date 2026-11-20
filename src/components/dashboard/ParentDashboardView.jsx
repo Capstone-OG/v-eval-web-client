@@ -92,7 +92,6 @@ export default function ParentDashboardView({
   const [portalData, setPortalData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [availableCourses, setAvailableCourses] = useState([]);
   const [childTuitionStatus, setChildTuitionStatus] = useState(null);
   const [childForecast, setChildForecast] = useState(null);
   const [childDashboard, setChildDashboard] = useState(null);
@@ -112,23 +111,7 @@ export default function ParentDashboardView({
 
   const parentId = currentUser?.id || currentUser?.userId;
 
-  // 2. Tải danh mục khóa học thật từ CSDL
-  useEffect(() => {
-    let active = true;
-    practiceService
-      .getCourses({ isActive: true })
-      .then((res) => {
-        if (active && Array.isArray(res) && res.length > 0) {
-          setAvailableCourses(res);
-        }
-      })
-      .catch(() => {});
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  // 3. Tải tổng quan dữ liệu cổng phụ huynh
+  // 2. Tải tổng quan dữ liệu cổng phụ huynh
   const loadParentPortal = useCallback(
     async (isRefresh = false) => {
       if (isRefresh) setRefreshing(true);
