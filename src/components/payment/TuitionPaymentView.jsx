@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   CreditCard, 
   ShieldCheck, 
@@ -25,10 +25,14 @@ import {
 } from 'lucide-react';
 import PayOsCheckoutModal from '../modals/PayOsCheckoutModal';
 import paymentService from '../../services/paymentService';
+import { getPaymentStatusView, refreshPendingPayments, getPaymentContinuation } from '../../utils/paymentStatus';
+import { toast } from '../../context/ToastContext';
+import { tokenStorage } from '../../services/apiClient';
 import { isTuitionPaid, setTuitionPaid, syncTuitionStatusFromServer } from '../curriculum/curriculumAccess';
 
 export default function TuitionPaymentView({ 
   currentUser, 
+  onBeforePayment,
   onNavigateRoadmap, 
   onNavigateAdaptive,
   onNavigateSchedule,
@@ -45,6 +49,9 @@ export default function TuitionPaymentView({
   const [tuitionStatus, setTuitionStatus] = useState(null);
   const [transactionHistory, setTransactionHistory] = useState([]);
   const [selectedReceipt, setSelectedReceipt] = useState(null);
+  const receiptView = getPaymentStatusView(selectedReceipt?.status);
+  const [resumingOrder, setResumingOrder] = useState(null);
+  const resumeBusy = useRef(false);
 
   // Danh mục 3 gói đào tạo thích ứng ĐGNL
   const coursePackages = [
@@ -117,22 +124,19 @@ export default function TuitionPaymentView({
         setTuitionStatus(statusRes);
         if (statusRes.isPaid) {
           setIsPaid(true);
-          setTuitionPaid(studentId, true);
+          if (!isTuitionPaid(studentId)) setTuitionPaid(studentId, true);
         }
 
-        if (Array.isArray(statusRes.payments) && statusRes.payments.length > 0) {
-          setTransactionHistory(statusRes.payments);
-        } else {
-          // Fallback gọi trực tiếp endpoint payments
-          const paymentsRes = await paymentService.getStudentPayments(studentId);
-          if (Array.isArray(paymentsRes) && paymentsRes.length > 0) {
-            setTransactionHistory(paymentsRes);
-            const hasSuccess = paymentsRes.some(p => p.status === 'SUCCESS' || p.status === 'PAID');
-            if (hasSuccess) {
-              setIsPaid(true);
-              setTuitionPaid(studentId, true);
-            }
-          }
+        const history = Array.isArray(statusRes.payments) && statusRes.payments.length > 0
+          ? statusRes.payments : await paymentService.getStudentPayments(studentId);
+        const refreshed = await refreshPendingPayments(history, (orderCode) => paymentService.getPaymentStatus(orderCode), studentId);
+        setTransactionHistory(refreshed);
+        setSelectedReceipt((previous) => previous
+          ? refreshed.find((item) => previous.paymentId ? item.paymentId === previous.paymentId : String(item.orderCode) === String(previous.orderCode)) || previous
+          : null);
+        if (refreshed.some((payment) => getPaymentStatusView(payment.status).success)) {
+          setIsPaid(true);
+          if (!isTuitionPaid(studentId)) setTuitionPaid(studentId, true);
         }
       }
     } catch (err) {
@@ -166,6 +170,7 @@ export default function TuitionPaymentView({
   };
 
   const handleCreatePayment = async (pkg) => {
+    if (isLoading || resumeBusy.current || onBeforePayment?.() === false) return;
     setIsLoading(true);
     try {
       const parentId = currentUser?.role === 'parent' ? currentUser.id : studentId;
@@ -192,22 +197,66 @@ export default function TuitionPaymentView({
       setIsModalOpen(true);
     } catch (err) {
       console.error('Error creating payment link:', err);
-      if (showToast) showToast('Không thể tạo link PayOS. Vui lòng thử lại!');
+      toast.error('Không thể tạo liên kết thanh toán. Vui lòng thử lại.');
     } finally {
       setIsLoading(false);
     }
   };
 
+  const handleResumePayment = async (transaction) => {
+    if (resumeBusy.current || isLoading) return;
+    if (onBeforePayment?.() === false) { setSelectedReceipt(null); return; }
+    resumeBusy.current = true;
+    setResumingOrder(transaction.orderCode);
+    try {
+      const latest = await paymentService.getPaymentStatus(transaction.orderCode);
+      const signedIn = tokenStorage.getUser();
+      if ((signedIn?.userId || signedIn?.id || signedIn?.studentId) !== studentId) return;
+      const result = getPaymentContinuation(transaction, latest, studentId);
+      const matches = (item) => transaction.paymentId ? item.paymentId === transaction.paymentId : String(item.orderCode) === String(transaction.orderCode);
+      setTransactionHistory((items) => items.map((item) => matches(item) ? result.payment : item));
+      setSelectedReceipt((previous) => previous && matches(previous) ? result.payment : previous);
+      if (result.kind === 'success') {
+        await handlePaymentSuccess(result.payment);
+      } else if (result.kind === 'unavailable') {
+        if (getPaymentStatusView(result.payment.status).kind === 'failed') toast.error(result.message);
+        else toast.warning(result.message);
+      } else {
+        setSelectedReceipt(null);
+        setActivePaymentData({
+          orderCode: result.payment.orderCode,
+          checkoutUrl: result.payment.checkoutUrl,
+          amount: result.payment.amount,
+          courseName: result.payment.courseName,
+          studentName: currentUser?.fullName || 'Học viên V-Eval',
+          durationWeeks: coursePackages.find((plan) => plan.courseId === result.payment.courseId)?.durationWeeks
+        });
+        setIsModalOpen(true);
+      }
+    } catch (error) {
+      toast.error(error.message || 'Chưa thể tiếp tục thanh toán. Vui lòng thử lại.');
+    } finally {
+      resumeBusy.current = false;
+      setResumingOrder(null);
+    }
+  };
+
   const handlePaymentSuccess = async (paymentInfo) => {
+    toast.success('Thanh toán thành công! Học phí của bạn đã được xác nhận.');
     setTuitionPaid(studentId, true);
     setIsPaid(true);
 
     // Nạp lại dữ liệu thực tế từ database
     await loadTuitionAndHistory();
 
-    if (showToast) {
-      showToast('Kích hoạt khóa học & mở khóa Lộ trình PLAR thành công!');
-    }
+  };
+
+  const handlePaymentFailure = (paymentInfo) => {
+    const view = getPaymentStatusView(paymentInfo.status);
+    if (view.kind === 'failed') toast.error('Thanh toán không thành công. Vui lòng kiểm tra lại hoặc tạo thanh toán mới.');
+    else toast.warning(view.title + '. Bạn có thể tạo thanh toán mới tại trang học phí.');
+    setTransactionHistory((items) => items.map((item) => String(item.orderCode) === String(paymentInfo.orderCode) ? { ...item, ...paymentInfo } : item));
+    void loadTuitionAndHistory();
   };
 
   // 6 Quyền lợi & Phân hệ được mở khóa hoàn toàn
@@ -285,7 +334,7 @@ export default function TuitionPaymentView({
             className="bg-white/10 hover:bg-white/15 backdrop-blur-md px-4 py-3 rounded-2xl border border-white/20 text-xs text-white font-bold flex items-center justify-center gap-2 transition-all cursor-pointer"
           >
             <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin text-cyan-300' : 'text-slate-300'}`} />
-            <span>{isSyncing ? 'Đang đồng bộ...' : 'Đồng bộ từ Database'}</span>
+            <span>{isSyncing ? 'Đang làm mới...' : 'Làm mới'}</span>
           </button>
 
           <div className="bg-white/10 backdrop-blur-md px-5 py-3 rounded-2xl border border-white/20 text-xs text-white space-y-1 shrink-0">
@@ -315,7 +364,7 @@ export default function TuitionPaymentView({
           <div>
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-xs font-black uppercase">
-                {isPaid ? 'Trạng Thái Khóa Học: Đã Kích Hoạt (Đã Đóng Học Phí)' : 'Trạng Thái Khóa Học: Chế Độ Xem Lộ Trình Tổng Quát'}
+                {isPaid ? 'Trạng Thái Khóa Học: Đã Kích Hoạt (Đã Đóng Học Phí)' : 'Cần kích hoạt khóa học để xem nội dung'}
               </span>
               <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase border ${
                 isPaid ? 'bg-emerald-200 text-emerald-900 border-emerald-300' : 'bg-amber-200 text-amber-900 border-amber-300'
@@ -326,7 +375,7 @@ export default function TuitionPaymentView({
             <p className="text-xs text-slate-600 mt-1 leading-relaxed max-w-2xl font-medium">
               {isPaid 
                 ? 'Tài khoản của bạn đã được mở khóa toàn bộ bài giảng chi tiết, video lý thuyết và bài tập củng cố của Lớp học chung & Lộ trình cá nhân.' 
-                : 'Bạn đang xem lộ trình dạng tổng quát sau khi hoàn thành bài thi. Hãy chọn gói học bên dưới và thanh toán để vào học ngay.'}
+                : 'Chọn gói học phù hợp bên dưới và hoàn tất thanh toán để mở khóa bài giảng, bài tập và lộ trình học cá nhân.'}
             </p>
           </div>
         </div>
@@ -621,14 +670,14 @@ export default function TuitionPaymentView({
                 <th className="py-3 px-4">Kênh Thanh Toán</th>
                 <th className="py-3 px-4">Thời Gian</th>
                 <th className="py-3 px-4 text-center">Trạng Thái</th>
-                <th className="py-3 px-4 text-center">Biên Lai</th>
+                <th className="py-3 px-4 text-center">Thao tác</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {transactionHistory.length > 0 ? (
                 transactionHistory.map((tx, idx) => {
                   const orderCodeDisplay = tx.orderCode ? `#${tx.orderCode}` : (tx.paymentId ? `#${tx.paymentId.slice(0, 8)}` : `#${idx + 1}`);
-                  const isSuccess = tx.status === 'SUCCESS' || tx.status === 'PAID';
+                  const statusView = getPaymentStatusView(tx.status);
                   const formattedAmount = tx.amount === 0 
                     ? 'Miễn phí' 
                     : new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(tx.amount);
@@ -654,16 +703,18 @@ export default function TuitionPaymentView({
                         {formattedDate}
                       </td>
                       <td className="py-3.5 px-4 text-center">
-                        <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-extrabold border ${
-                          isSuccess
-                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                            : 'bg-amber-50 text-amber-700 border-amber-200'
-                        }`}>
-                          {isSuccess ? <CheckCircle2 className="w-3 h-3 text-emerald-600" /> : <Clock className="w-3 h-3 text-amber-600" />}
-                          <span>{isSuccess ? 'ĐÃ HOÀN TẤT' : 'CHỜ XỬ LÝ'}</span>
+                        <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase border ${statusView.tone}`}>
+                          {statusView.success ? <CheckCircle2 className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
+                          <span>{statusView.label}</span>
                         </span>
                       </td>
                       <td className="py-3.5 px-4 text-center">
+                        {statusView.kind === 'pending' && tx.orderCode && (
+                          <button type="button" onClick={() => handleResumePayment(tx)} disabled={resumingOrder !== null || isLoading}
+                            className="mr-2 my-1 inline-flex items-center gap-1 whitespace-nowrap rounded-lg bg-blue-600 px-2.5 py-1 text-[11px] font-bold text-white hover:bg-blue-700 disabled:opacity-50 cursor-pointer disabled:cursor-wait">
+                            <CreditCard className="h-3 w-3" />{resumingOrder === tx.orderCode ? 'Đang kiểm tra…' : 'Tiếp tục thanh toán'}
+                          </button>
+                        )}
                         <button
                           type="button"
                           onClick={() => setSelectedReceipt(tx)}
@@ -679,7 +730,7 @@ export default function TuitionPaymentView({
               ) : (
                 <tr>
                   <td colSpan={7} className="py-8 px-4 text-center text-xs text-slate-500 font-medium">
-                    {isSyncing ? 'Đang truy vấn lịch sử giao dịch từ Database...' : 'Chưa có giao dịch học phí nào được ghi nhận trên hệ thống PayOS cho tài khoản này.'}
+                    {isSyncing ? 'Đang làm mới lịch sử giao dịch...' : 'Chưa có giao dịch học phí nào được ghi nhận trên hệ thống PayOS cho tài khoản này.'}
                   </td>
                 </tr>
               )}
@@ -694,6 +745,7 @@ export default function TuitionPaymentView({
         onClose={() => setIsModalOpen(false)}
         paymentData={activePaymentData}
         onPaymentSuccess={handlePaymentSuccess}
+        onPaymentFailure={handlePaymentFailure}
       />
 
       {/* Modal Chi Tiết Biên Lai / Kiểm Toán Giao Dịch */}
@@ -730,13 +782,13 @@ export default function TuitionPaymentView({
 
             {/* Modal Body */}
             <div className="p-6 space-y-4 text-xs">
-              <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-between">
+              <div className={`p-4 rounded-2xl border flex items-center justify-between ${receiptView.tone}`}>
                 <div>
-                  <span className="text-[11px] font-bold text-emerald-800 uppercase block">Trạng Thái Giao Dịch</span>
-                  <span className="text-sm font-black text-emerald-900 block mt-0.5">Thanh Toán Thành Công</span>
+                  <span className="text-[11px] font-bold uppercase block">Trạng Thái Giao Dịch</span>
+                  <span className="text-sm font-black block mt-0.5">{receiptView.title}</span>
                 </div>
-                <div className="w-10 h-10 rounded-full bg-emerald-600 text-white flex items-center justify-center">
-                  <CheckCircle2 className="w-6 h-6" />
+                <div className={`w-10 h-10 rounded-full text-white flex items-center justify-center ${receiptView.iconTone}`}>
+                  {receiptView.success ? <CheckCircle2 className="w-6 h-6" /> : <Clock className="w-6 h-6" />}
                 </div>
               </div>
 
@@ -749,7 +801,7 @@ export default function TuitionPaymentView({
                 </div>
 
                 <div className="pt-2.5 flex justify-between text-slate-600">
-                  <span className="font-medium">Số tiền đã nộp:</span>
+                  <span className="font-medium">{receiptView.success ? 'Số tiền đã nộp:' : 'Số tiền giao dịch:'}</span>
                   <span className="font-black text-blue-600 text-sm">
                     {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(selectedReceipt.amount || 0)}
                   </span>
@@ -783,19 +835,24 @@ export default function TuitionPaymentView({
                 <div className="pt-2.5 flex justify-between text-slate-600">
                   <span className="font-medium">Thời gian ghi nhận:</span>
                   <span className="text-slate-800">
-                    {selectedReceipt.paidAt ? new Date(selectedReceipt.paidAt).toLocaleString('vi-VN') : 'Đã thanh toán'}
+                    {selectedReceipt.paidAt ? new Date(selectedReceipt.paidAt).toLocaleString('vi-VN') : 'Chưa có thời gian xác nhận'}
                   </span>
                 </div>
 
                 <div className="pt-2.5 flex justify-between text-slate-600">
-                  <span className="font-medium">Kiểm toán bảo mật:</span>
-                  <span className="text-emerald-700 font-bold inline-flex items-center gap-1">
-                    <ShieldCheck className="w-3.5 h-3.5" />
-                    <span>HMAC-SHA512 Verified</span>
+                  <span className="font-medium">Trạng thái ghi nhận:</span>
+                  <span className="font-bold">
+                    <span>{receiptView.label}</span>
                   </span>
                 </div>
               </div>
 
+              {receiptView.kind === 'pending' && selectedReceipt.orderCode && (
+                <button type="button" onClick={() => handleResumePayment(selectedReceipt)} disabled={resumingOrder !== null || isLoading}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 font-bold text-white hover:bg-blue-700 disabled:opacity-50 cursor-pointer disabled:cursor-wait">
+                  <CreditCard className="h-4 w-4" />{resumingOrder === selectedReceipt.orderCode ? 'Đang kiểm tra…' : 'Tiếp tục thanh toán'}
+                </button>
+              )}
               <div className="pt-4 flex gap-2">
                 <button
                   type="button"

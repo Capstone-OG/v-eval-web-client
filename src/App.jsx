@@ -43,8 +43,9 @@ import SubmissionHistoryView from './components/diagnostic/SubmissionHistoryView
 import StudentHistoryPage from './components/diagnostic/StudentHistoryPage';
 import AccountSettingsPage from './components/settings/AccountSettingsPage';
 import CurriculumExplorerView from './components/curriculum/CurriculumExplorerView';
-import StudentRoadmapWorkspace from './components/roadmap/StudentRoadmapWorkspace';
 import TuitionPaymentView from './components/payment/TuitionPaymentView';
+import useStudentActivation from './hooks/useStudentActivation';
+import StudentActivationGuide, { ActivationChecklist } from './components/activation/StudentActivationGuide';
 import {
   AdaptiveQuizModal,
   DiagnosticTestModal,
@@ -168,6 +169,41 @@ export default function App() {
 
   // Latest diagnostic assessment result
   const [latestDiagnosticResult, setLatestDiagnosticResult] = useState(null);
+  const activation = useStudentActivation(currentUser, role === 'student' && appView === 'dashboard');
+  const [showActivationGuide, setShowActivationGuide] = useState(false);
+  const [guideProfile, setGuideProfile] = useState(false);
+  const [pendingProfileCheck, setPendingProfileCheck] = useState(null);
+  const activationUserId = currentUser?.userId || currentUser?.id || currentUser?.studentId;
+  useEffect(() => {
+    if (!pendingProfileCheck) return;
+    if (pendingProfileCheck !== activationUserId || role !== 'student') {
+      setPendingProfileCheck(null);
+      return;
+    }
+    if (activation.step === 'loading') return;
+    setPendingProfileCheck(null);
+    if (activation.step === 'payment' || activation.step === 'ready') {
+      setGuideProfile(false);
+      setActiveTab(activation.step === 'ready' ? 'roadmap' : 'tuition');
+      toast.success(activation.step === 'ready' ? 'Hồ sơ đã đầy đủ. Bạn có thể bắt đầu học.' : 'Hồ sơ đã đầy đủ. Tiếp theo, hãy chọn gói học và thanh toán.');
+    } else if (activation.step === 'profile') {
+      toast.warning(`Đã lưu hồ sơ. Bạn cần bổ sung: ${activation.missing.join(', ')}.`);
+    } else if (activation.step === 'error') {
+      toast.warning('Hồ sơ đã lưu thành công nhưng chưa kiểm tra được bước tiếp theo. Bạn có thể mở Học phí & Gói học để tiếp tục.');
+    }
+  }, [pendingProfileCheck, activationUserId, role, activation.step, activation.missing]);
+  const openRoadmap = () => {
+    if (role === 'student' && activation.step !== 'ready') setShowActivationGuide(true);
+    else setActiveTab('roadmap');
+  };
+  const continueActivation = () => {
+    if (activation.step === 'error') { activation.refresh(); return; }
+    setShowActivationGuide(false);
+    if (activation.step === 'profile') { setGuideProfile(true); setActiveTab('settings'); }
+    else if (activation.step === 'payment') setActiveTab('tuition');
+    else if (activation.step === 'diagnostic') setActiveTab('diagnostic');
+    else if (activation.step === 'ready') setActiveTab('roadmap');
+  };
 
   // Interactive Modal States: 'adaptive' | 'mock' | 'ai' | 'radar' | null
   const [activeModal, setActiveModal] = useState(null);
@@ -184,12 +220,24 @@ export default function App() {
 
   const loadRolePortalBackendMetrics = useCallback(async (activeRole, userObj) => {
     if (!authService.isAuthenticated()) return;
-    const uid = userObj?.id || userObj?.userId;
+    const uid = userObj?.userId || userObj?.id || userObj?.studentId;
 
     try {
       if (activeRole === 'student') {
-        const dash = await practiceService.getStudentDashboard(uid);
-        setStudentDashboard(dash);
+        const [dashboard, history] = await Promise.allSettled([
+          practiceService.getStudentDashboard(uid),
+          practiceService.getDiagnosticHistory(uid)
+        ]);
+        const signedInUser = authService.getCurrentUser();
+        if (!uid || (signedInUser?.userId || signedInUser?.id || signedInUser?.studentId) !== uid) return;
+        if (dashboard.status === 'fulfilled') setStudentDashboard(dashboard.value);
+        if (history.status === 'fulfilled' && Array.isArray(history.value)) {
+          const latest = history.value
+            .filter((item) => item.studentId === uid && item.status === 'COMPLETED'
+              && item.examType === 'DIAGNOSTIC' && Number.isFinite(item.theta0))
+            .sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt))[0];
+          setLatestDiagnosticResult(latest || null);
+        }
       } else if (activeRole === 'parent') {
         const pData = await practiceService.getParentDashboard(uid);
         setParentPortalData(pData);
@@ -293,6 +341,8 @@ export default function App() {
     const finalUser = loggedUser || authService.getCurrentUser();
     setRole(validRole);
     setLatestDiagnosticResult(null);
+    setShowActivationGuide(false);
+    setGuideProfile(false);
     setCurrentUser(finalUser);
     setActiveTab(ROLE_PORTAL_DEFINITIONS[validRole].defaultTab);
     setAppView('dashboard');
@@ -309,6 +359,8 @@ export default function App() {
       return;
     }
     setLatestDiagnosticResult(null);
+    setShowActivationGuide(false);
+    setGuideProfile(false);
     closeNavigation();
     setCurrentUser(null);
     setStudentDashboard(null);
@@ -388,14 +440,14 @@ export default function App() {
   const currentPortal =
     role === 'manager' && isDirector
       ? {
-          ...basePortal,
-          code: 'ACADEMIC DIRECTOR PORTAL',
-          title: 'Cổng Giám Đốc Học Thuật Toàn Trường',
-          subtitle:
-            'Toàn quyền học thuật liên cơ sở, Giám sát chất lượng & Khung chương trình chuẩn V-ACT 2026',
-          icon: Crown,
-          accentBadge: 'bg-purple-50 text-purple-700 border-purple-200'
-        }
+        ...basePortal,
+        code: 'ACADEMIC DIRECTOR PORTAL',
+        title: 'Cổng Giám Đốc Học Thuật Toàn Trường',
+        subtitle:
+          'Toàn quyền học thuật liên cơ sở, Giám sát chất lượng & Khung chương trình chuẩn V-ACT 2026',
+        icon: Crown,
+        accentBadge: 'bg-purple-50 text-purple-700 border-purple-200'
+      }
       : basePortal;
   const pageTitle = activeTab === 'settings' ? 'Cài đặt tài khoản'
     : currentPortal.tabs.find((tab) => tab.id === activeTab)?.label || 'Tổng quan';
@@ -403,6 +455,15 @@ export default function App() {
   const renderRolePortalContent = () => {
     if (activeTab === 'settings') {
       return <AccountSettingsPage currentUser={currentUser} onUpdateUser={setCurrentUser}
+        activationGuidance={guideProfile && role === 'student'}
+        activationChecking={pendingProfileCheck === activationUserId}
+        onProfileSaved={() => {
+          if (guideProfile && role === 'student') {
+            setShowActivationGuide(false);
+            setPendingProfileCheck(activationUserId);
+            activation.refresh();
+          }
+        }}
         activeRole={role} onNavigateTab={setActiveTab} onLogout={handleLogout} />;
     }
     if (role === 'teacher' && activeTab !== 'roadmap') {
@@ -420,10 +481,12 @@ export default function App() {
           isEmbedded={true}
           onNavigateDashboard={() => setActiveTab('dashboard')}
           onNavigateHistory={() => setActiveTab('history')}
-          onNavigateRoadmap={() => setActiveTab('roadmap')}
+          onNavigateRoadmap={openRoadmap}
           onNavigateTuition={() => setActiveTab('tuition')}
           onCompleteDiagnostic={(res) => {
             setLatestDiagnosticResult(res);
+            activation.refresh();
+            setShowActivationGuide(true);
           }}
           onOpenAiTutorWithContext={handleOpenAiTutorWithQuestion}
         />
@@ -444,6 +507,9 @@ export default function App() {
     }
 
     if (activeTab === 'roadmap') {
+      if (role === 'student' && activation.step !== 'ready') {
+        return <div className="mx-auto max-w-xl rounded-3xl border border-slate-200 bg-white p-6 sm:p-8"><ActivationChecklist activation={activation} onAction={continueActivation} /></div>;
+      }
       const curriculum = (
         <CurriculumExplorerView
           role={role === 'parent' ? 'student' : role}
@@ -455,15 +521,6 @@ export default function App() {
           onOpenAiTutorWithContext={handleOpenAiTutorWithQuestion}
         />
       );
-      if (role === 'student') {
-        return (
-          <StudentRoadmapWorkspace
-            curriculum={curriculum}
-            onNavigateDiagnostic={() => setActiveTab('diagnostic')}
-            onNavigateDashboard={() => setActiveTab('dashboard')}
-          />
-        );
-      }
       return curriculum;
     }
 
@@ -476,7 +533,7 @@ export default function App() {
             setAiTutorInitialContext(null);
             setActiveModal('ai');
           }}
-          onNavigateRoadmap={() => setActiveTab('roadmap')}
+          onNavigateRoadmap={openRoadmap}
         />
       );
     }
@@ -485,8 +542,15 @@ export default function App() {
       return (
         <TuitionPaymentView
           currentUser={currentUser}
+          onBeforePayment={() => {
+            if (role === 'student' && !['payment', 'ready'].includes(activation.step)) {
+              setShowActivationGuide(true);
+              return false;
+            }
+            return true;
+          }}
           onBackToDashboard={() => setActiveTab('dashboard')}
-          onNavigateRoadmap={() => setActiveTab('roadmap')}
+          onNavigateRoadmap={openRoadmap}
           onNavigateAdaptive={() => setActiveTab('adaptive')}
           onNavigateSchedule={() => setActiveTab('schedule')}
           onNavigateAiTutor={() => {
@@ -576,7 +640,7 @@ export default function App() {
             <HeroBanner
               currentUser={currentUser}
               studentDashboard={studentDashboard}
-              onOpenAdaptiveQuiz={() => setActiveTab('roadmap')}
+              onOpenAdaptiveQuiz={openRoadmap}
               onOpenDiagnostic={() => setActiveTab('diagnostic')}
               onOpenAiTutor={() => {
                 setAiTutorInitialContext(null);
@@ -587,14 +651,14 @@ export default function App() {
             <MetricsGrid
               studentDashboard={studentDashboard}
               onOpenRadar={() => setActiveModal('radar')}
-              onOpenDAG={() => setActiveTab('roadmap')}
+              onOpenDAG={openRoadmap}
               onOpenZPD={handleOpenAdaptiveQuiz}
               onOpenAnalytics={() => setActiveTab('analytics')}
             />
             <div className="grid grid-cols-1 items-stretch gap-5 xl:grid-cols-[minmax(0,7fr)_minmax(0,3fr)]">
-              <DiagnosticOnboardingCard key={currentUser?.userId || currentUser?.id || currentUser?.studentId}
+              <DiagnosticOnboardingCard activation={activation} key={currentUser?.userId || currentUser?.id || currentUser?.studentId}
                 currentUser={currentUser} onOpenDiagnostic={() => setActiveTab('diagnostic')}
-                onOpenRoadmap={() => setActiveTab('roadmap')} />
+                onOpenRoadmap={openRoadmap} />
               <StudentParentLinkCard currentUser={currentUser} />
             </div>
           </div>
@@ -613,129 +677,130 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FDFBF7] text-slate-900 flex flex-col font-sans selection:bg-[#FACC15] selection:text-slate-950 relative overflow-x-hidden">
-      {/* Ambient Home-Style Background Glows */}
-      <div className="fixed -top-24 -left-24 w-[480px] h-[480px] rounded-full bg-blue-500/8 blur-[130px] pointer-events-none z-0"></div>
-      <div className="fixed top-1/3 -right-24 w-[420px] h-[420px] rounded-full bg-[#FACC15]/10 blur-[130px] pointer-events-none z-0"></div>
+      <div className="h-screen w-full bg-[#FDFBF7] text-slate-900 flex flex-col font-sans selection:bg-[#FACC15] selection:text-slate-950 relative overflow-hidden">
+        {/* Ambient Home-Style Background Glows */}
+        <div className="fixed -top-24 -left-24 w-[480px] h-[480px] rounded-full bg-blue-500/8 blur-[130px] pointer-events-none z-0"></div>
+        <div className="fixed top-1/3 -right-24 w-[420px] h-[420px] rounded-full bg-[#FACC15]/10 blur-[130px] pointer-events-none z-0"></div>
 
-      <div className="flex flex-1 relative z-10">
-        {/* Left Role-Dedicated Sidebar */}
-        <Sidebar
-          role={role}
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          onOpenAdaptiveQuiz={handleOpenAdaptiveQuiz}
-          onOpenMockExam={handleOpenMockExam}
-          onOpenAiTutor={() => {
-            setAiTutorInitialContext(null);
-            setActiveModal('ai');
-          }}
-          latestDiagnosticResult={latestDiagnosticResult}
-          portalMetrics={portalMetrics}
-        />
+          <div className="flex flex-1 relative z-10 min-h-0 overflow-hidden">
+            {/* Left Role-Dedicated Sidebar */}
+            <Sidebar
+              role={role}
+              activeTab={activeTab}
+              setActiveTab={(tab) => tab === 'roadmap' ? openRoadmap() : setActiveTab(tab)}
+              onOpenAdaptiveQuiz={handleOpenAdaptiveQuiz}
+              onOpenMockExam={handleOpenMockExam}
+              onOpenAiTutor={() => {
+                setAiTutorInitialContext(null);
+                setActiveModal('ai');
+              }}
+              latestDiagnosticResult={latestDiagnosticResult}
+              portalMetrics={portalMetrics}
+            />
 
-        {mobileNavigation && <MobileSidebar role={role} activeTab={activeTab}
-          onClose={closeNavigation} setActiveTab={setActiveTab}
-          onOpenAdaptiveQuiz={handleOpenAdaptiveQuiz} onOpenMockExam={handleOpenMockExam}
-          onOpenAiTutor={() => { setAiTutorInitialContext(null); setActiveModal('ai'); }}
-          latestDiagnosticResult={latestDiagnosticResult} portalMetrics={portalMetrics} />}
+            {mobileNavigation && <MobileSidebar role={role} activeTab={activeTab}
+              onClose={closeNavigation} setActiveTab={(tab) => tab === 'roadmap' ? openRoadmap() : setActiveTab(tab)}
+              onOpenAdaptiveQuiz={handleOpenAdaptiveQuiz} onOpenMockExam={handleOpenMockExam}
+              onOpenAiTutor={() => { setAiTutorInitialContext(null); setActiveModal('ai'); }}
+              latestDiagnosticResult={latestDiagnosticResult} portalMetrics={portalMetrics} />}
 
-        {/* Main Role Portal Content Column */}
-        <div className="flex-1 flex flex-col min-w-0">
-          {/* Top Role-Aware Navbar */}
-          <Navbar
-            role={role}
-            activeTab={activeTab}
-            pageTitle={pageTitle}
-            onOpenNavigation={() => setMobileNavigation(true)}
-            currentUser={currentUser}
-            portalMetrics={portalMetrics}
-            onLogout={handleLogout}
-            onOpenLandingPage={() => setAppView('landing')}
-              onOpenSettings={() => setActiveTab('settings')}
-          />
+            {/* Main Role Portal Content Column */}
+              <div className="flex-1 flex flex-col min-w-0 h-full overflow-y-auto">
+                {/* Top Role-Aware Navbar */}
+                <Navbar
+                  role={role}
+                  activeTab={activeTab}
+                  pageTitle={pageTitle}
+                  onOpenNavigation={() => setMobileNavigation(true)}
+                  currentUser={currentUser}
+                  portalMetrics={portalMetrics}
+                  onLogout={handleLogout}
+                  onOpenLandingPage={() => setAppView('landing')}
+                  onOpenSettings={() => setActiveTab('settings')}
+                />
 
-          {/* Main Workspace Container */}
-          <main className="min-w-0 flex-1 p-4 sm:p-6 w-full max-w-full">
-            {role !== 'student' && role !== 'parent' && role !== 'manager' && activeTab === currentPortal.defaultTab && (
-              <h1 className="mb-5 text-xl font-bold tracking-tight text-slate-900">{accountGreeting(role, currentUser)}</h1>
-            )}
-            {renderRolePortalContent()}
-          </main>
+                {/* Main Workspace Container */}
+                <main className="min-w-0 flex-1 p-4 sm:p-6 w-full max-w-full">
+                  {role !== 'student' && role !== 'parent' && role !== 'manager' && activeTab === currentPortal.defaultTab && (
+                    <h1 className="mb-5 text-xl font-bold tracking-tight text-slate-900">{accountGreeting(role, currentUser)}</h1>
+                  )}
+                  {renderRolePortalContent()}
+                </main>
 
-          {/* Unified Home-Style Footer Strip */}
-          <footer className="border-t border-slate-200/80 bg-white/90 px-4 sm:px-6 py-4 mt-auto">
-            <div className="w-full flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-500 font-medium">
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-[#FACC15]"></span>
-                <span className="font-extrabold text-slate-800">ĐGNL AI Platform</span>
-                <span>• Hệ sinh thái Khảo thí & Học tập Thích ứng ĐHQG TP.HCM</span>
-              </div>
-              <div className="flex items-center gap-4">
-                <span>Vai trò hiện tại: <strong className="text-blue-700 uppercase">{role}</strong></span>
-                <button
-                  type="button"
-                  onClick={() => setAppView('landing')}
-                  className="text-blue-600 hover:underline font-bold cursor-pointer"
-                >
-                  Về Trang Chủ
-                </button>
+                {/* Unified Home-Style Footer Strip */}
+                <footer className="border-t border-slate-200/80 bg-white/90 px-4 sm:px-6 py-4 mt-auto">
+                  <div className="w-full flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-500 font-medium">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-[#FACC15]"></span>
+                      <span className="font-extrabold text-slate-800">ĐGNL AI Platform</span>
+                      <span>• Hệ sinh thái Khảo thí & Học tập Thích ứng ĐHQG TP.HCM</span>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <span>Vai trò hiện tại: <strong className="text-blue-700 uppercase">{role}</strong></span>
+                      <button
+                        type="button"
+                        onClick={() => setAppView('landing')}
+                        className="text-blue-600 hover:underline font-bold cursor-pointer"
+                      >
+                        Về Trang Chủ
+                      </button>
+                    </div>
+                  </div>
+                </footer>
               </div>
             </div>
-          </footer>
-        </div>
-      </div>
 
-      {/* Interactive Modals */}
-      <AdaptiveQuizModal
-        isOpen={activeModal === 'adaptive'}
-        onClose={() => setActiveModal(null)}
-        onOpenAiTutorWithContext={handleOpenAiTutorWithQuestion}
-      />
+            {/* Interactive Modals */}
+            <StudentActivationGuide open={showActivationGuide && role === 'student'} onClose={() => setShowActivationGuide(false)} activation={activation} onAction={continueActivation} />
+            <AdaptiveQuizModal
+              isOpen={activeModal === 'adaptive'}
+              onClose={() => setActiveModal(null)}
+              onOpenAiTutorWithContext={handleOpenAiTutorWithQuestion}
+            />
 
-      <DiagnosticTestModal
-        isOpen={activeModal === 'mock'}
-        onClose={() => setActiveModal(null)}
-      />
+            <DiagnosticTestModal
+              isOpen={activeModal === 'mock'}
+              onClose={() => setActiveModal(null)}
+            />
 
-      <RadarChartModal
-        isOpen={activeModal === 'radar'}
-        onClose={() => setActiveModal(null)}
-        studentDashboard={studentDashboard}
-        onOpenFullAnalytics={() => setActiveTab('analytics')}
-      />
+            <RadarChartModal
+              isOpen={activeModal === 'radar'}
+              onClose={() => setActiveModal(null)}
+              studentDashboard={studentDashboard}
+              onOpenFullAnalytics={() => setActiveTab('analytics')}
+            />
 
-      <AISocraticTutorModal
-        isOpen={activeModal === 'ai'}
-        onClose={() => setActiveModal(null)}
-        initialContext={aiTutorInitialContext}
-      />
+            <AISocraticTutorModal
+              isOpen={activeModal === 'ai'}
+              onClose={() => setActiveModal(null)}
+              initialContext={aiTutorInitialContext}
+            />
 
-      <AcademicArchitectureModal
-        isOpen={activeModal === 'arch'}
-        onClose={() => setActiveModal(null)}
-      />
+            <AcademicArchitectureModal
+              isOpen={activeModal === 'arch'}
+              onClose={() => setActiveModal(null)}
+            />
 
-      {/* Sleek Floating AI Tutor FAB (Bottom-Right Corner) */}
-      {role === 'student' && (
-        <div className="fixed bottom-6 right-6 z-40 flex items-center gap-3">
-          <div className="hidden sm:flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-slate-900/90 text-white text-xs font-bold shadow-xl border border-slate-700/80 backdrop-blur-md pointer-events-none">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-            <span>Hỏi Gia sư AI</span>
+            {/* Sleek Floating AI Tutor FAB (Bottom-Right Corner) */}
+            {role === 'student' && (
+              <div className="fixed bottom-6 right-6 z-40 flex items-center gap-3">
+                <div className="hidden sm:flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-slate-900/90 text-white text-xs font-bold shadow-xl border border-slate-700/80 backdrop-blur-md pointer-events-none">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                  <span>Hỏi Gia sư AI</span>
+                </div>
+
+                <button
+                  onClick={() => setActiveModal('ai')}
+                  className="relative group p-4 rounded-full bg-gradient-to-tr from-blue-600 via-indigo-600 to-violet-600 text-white shadow-2xl shadow-blue-500/40 hover:shadow-indigo-500/60 hover:scale-110 active:scale-95 transition-all duration-300 cursor-pointer border-2 border-white/20 flex items-center justify-center focus:outline-none focus:ring-4 focus:ring-blue-400/40"
+                  title="Hỏi Gia sư AI giải đáp bài tập 24/7"
+                  aria-label="Hỏi Gia sư AI"
+                >
+                  <span className="absolute -inset-1 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 opacity-40 blur-sm group-hover:opacity-80 transition duration-300 animate-pulse pointer-events-none" />
+                  <Bot className="w-7 h-7 relative z-10 text-white group-hover:rotate-6 transition-transform" />
+                  <span className="absolute top-0 right-0 w-3.5 h-3.5 bg-emerald-400 border-2 border-white rounded-full z-20 shadow-xs" />
+                </button>
+              </div>
+            )}
           </div>
-
-          <button
-            onClick={() => setActiveModal('ai')}
-            className="relative group p-4 rounded-full bg-gradient-to-tr from-blue-600 via-indigo-600 to-violet-600 text-white shadow-2xl shadow-blue-500/40 hover:shadow-indigo-500/60 hover:scale-110 active:scale-95 transition-all duration-300 cursor-pointer border-2 border-white/20 flex items-center justify-center focus:outline-none focus:ring-4 focus:ring-blue-400/40"
-            title="Hỏi Gia sư AI giải đáp bài tập 24/7"
-            aria-label="Hỏi Gia sư AI"
-          >
-            <span className="absolute -inset-1 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 opacity-40 blur-sm group-hover:opacity-80 transition duration-300 animate-pulse pointer-events-none" />
-            <Bot className="w-7 h-7 relative z-10 text-white group-hover:rotate-6 transition-transform" />
-            <span className="absolute top-0 right-0 w-3.5 h-3.5 bg-emerald-400 border-2 border-white rounded-full z-20 shadow-xs" />
-          </button>
-        </div>
-      )}
-    </div>
-  );
+          );
 }

@@ -1,0 +1,27 @@
+.veval-calendar.rdp-root {
+  --rdp-accent-color: #2563eb;
+  --rdp-accent-background-color: #eff6ff;
+  --rdp-day-height: 38px;
+  --rdp-day-width: 38px;
+  --rdp-day_button-height: 34px;
+  --rdp-day_button-width: 34px;
+  --rdp-day_button-border-radius: 10px;
+  font-family: inherit;
+  font-size: 12px;
+}
+.veval-calendar .rdp-selected .rdp-day_button {
+  color: white;
+  background: #2563eb;
+  box-shadow: 0 3px 8px #2563eb30;
+}
+.veval-calendar .rdp-day_button { transition: background-color 150ms, color 150ms; }
+.veval-calendar .rdp-day_button:hover:not(:disabled) { background: #eff6ff; color: #2563eb; }
+.veval-calendar .rdp-selected .rdp-day_button:hover { background: #1d4ed8; color: white; }
+.veval-calendar .rdp-weekday { font-size: 11px; font-weight: 600; color: #64748b; }
+.veval-calendar .rdp-dropdown_root { border-radius: 8px; padding: 4px; font-size: 12px; }
+.veval-calendar .rdp-dropdown_root:hover { background: #f1f5f9; }
+.veval-calendar .rdp-button_previous, .veval-calendar .rdp-button_next { border-radius: 10px; }
+.veval-calendar .rdp-button_previous:hover, .veval-calendar .rdp-button_next:hover { background: #eff6ff; }
+.veval-date-popover { max-height: var(--radix-popover-content-available-height); transform-origin: var(--radix-popover-content-transform-origin); animation: veval-date-enter 140ms ease-out; }
+@keyframes veval-date-enter { from { opacity: 0; transform: translateY(-4px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@media (prefers-reduced-motion: reduce) { .veval-date-popover { animation: none; } .veval-calendar .rdp-day_button { transition: none; } }

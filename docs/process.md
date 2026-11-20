@@ -850,3 +850,326 @@ Validation: build and lint pass with existing warnings; live API integration rem
 | Diagnostic eligibility | Updated | One completed diagnostic assessment is sufficient. |
 | Connected personal roadmap | Automated | Uses the latest completed diagnostic submission and profile planning data; missing planning data defaults to 45 days and 2 study hours/day. |
 | Validation | Passed | Eligibility tests and production build passed with existing advisories. |
+
+## [19/11/2026] - Diagnostic exam fullscreen entry
+
+| Component | Status | Detail |
+| --- | --- | --- |
+| Exam start | Updated | Requests fullscreen synchronously before asynchronous service calls. |
+| Setup stage | Updated | Preserves fullscreen while the exam loads; clears it on cancellation/error. |
+| Validation | Build passed | Existing advisories remain; browser interaction verification is pending. |
+
+## [19/11/2026] - Forgot-password validation
+
+| Component | Status | Detail |
+| --- | --- | --- |
+| Email form | Updated | `noValidate` routes submits through app validation; errors render in the modal instead of browser tooltip. |
+| Email syntax | Updated | Empty, invalid, and overlong addresses are rejected before API request. |
+| Unknown account | Updated | Backend `Auth.UserNotFound` is shown as an unregistered-email message; 404 is no longer retried as a route fallback. |
+
+## [20/11/2026] - Sidebar positioning and navigation access
+
+| Component | Status | Detail |
+| --- | --- | --- |
+| Desktop sidebar | Updated | Fixed to the viewport with independent vertical scrolling. |
+| Student IRT card | Updated | Moved above desktop navigation; mobile order remains unchanged. |
+## [20/11/2026] - Registration form simplification
+
+| Component | Status | Detail |
+| --- | --- | --- |
+| Grade selection | Updated | Removed from UI; grade 12 remains the default. |
+| Target score | Preserved | Retains 700+, 800+, and 900+. |
+| Build validation | Passed | `npm run build` completed successfully. |
+
+## [20/11/2026] - Sửa Lỗi Cập Nhật Hồ Sơ Cá Nhân & Đồng Bộ Identity Service
+
+| Component | Status | Detail |
+| --- | --- | --- |
+| User Profile API | Updated | Sửa route từ `/api/v1/users/profile` sang `/api/v1/users/me/profile` khớp với controller backend. |
+| Error Handling | Updated | Gỡ bỏ catch-block nuốt lỗi giả lập; tích hợp `formatApiError` thông báo lỗi thật tới người dùng. |
+| Campus Sync | Updated | Đồng bộ cập nhật `campusId` vào hồ sơ học sinh qua `authService.updateStudentProfile`. |
+| Fresh Data Fetch | Updated | Gọi `authService.fetchCurrentUserProfile()` khi mở trang để lấy hồ sơ chuẩn xác từ PostgreSQL. |
+| Build Validation | Passed | `npm run build` thành công 100% trong 5.14s. |
+
+
+
+
+## [20/11/2026] - Account settings diagnostic access
+
+Account settings displays the IRT status card without a diagnostic retake action.
+
+| Component | Status | Detail |
+| --- | --- | --- |
+| Academic settings IRT card | Completed | Removed diagnostic retake button and navigation handler. |
+| Production build | Passed | npm run build completed successfully. |
+
+
+## [20/11/2026] - IRT display placement
+
+Sidebar continues to display Theta from diagnostic results or the student dashboard.
+
+| Component | Status | Detail |
+| --- | --- | --- |
+| Academic settings | Completed | Removed duplicate IRT insight card and unused Zap import. |
+| Production build | Passed | npm run build succeeded. |
+
+
+## [20/11/2026] - Persisted sidebar diagnostic metrics
+
+App retrieves diagnostic history alongside dashboard metrics; Sidebar accepts API and submission result field names.
+
+| Component | Status | Detail |
+| --- | --- | --- |
+| App metrics loading | Completed | Select latest completed diagnostic for the authenticated student, with account guard. |
+| Sidebar IRT | Completed | Read theta0 and placementClass from persisted API results. |
+| Validation | Build passed | Live browser account verification remains unperformed. |
+
+
+## [20/11/2026] - Settings save and cancel behavior
+
+Editable settings retain loaded/saved snapshots for comparison and reset.
+
+| Component | Status | Detail |
+| --- | --- | --- |
+| Academic, parent, preferences | Completed | Disable unchanged saves; show cancel only for pending changes; reset baseline after persistence. |
+| Password | Completed | Disable empty submission and clear inputs/visibility on cancel. |
+| Validation | Passed | Production build succeeded; browser interaction not verified. |
+
+
+## [20/11/2026] - Authentication label
+
+| Component | Status | Detail |
+| --- | --- | --- |
+| Account settings badge | Completed | Display Đã xác thực; verified source text. |
+
+
+## [20/11/2026] - Separate transcript navigation
+
+Account settings exposes independent parent and transcript tabs for students.
+
+| Component | Status | Detail |
+| --- | --- | --- |
+| Parent tab | Completed | Retains parent form and family link code. |
+| Digital transcript tab | Completed | Contains existing transcript and report actions. |
+| Validation | Passed | Production build succeeded. Browser check not performed. |
+
+
+## [20/11/2026] - Optional parent information
+
+Registration does not collect student parent details. Settings must retain empty parent fields until explicitly updated.
+
+| Component | Status | Detail |
+| --- | --- | --- |
+| Parent settings | Completed | Empty defaults, no mock fallback or automatic linked status. |
+| Parent cache | Completed | Account-scoped keys; unowned legacy cache ignored. |
+| Validation | Passed | Node account-isolation checks and production build. |
+
+
+## [20/11/2026] - Optional high school profile
+
+| Component | Status | Detail |
+| --- | --- | --- |
+| School field | Completed | Empty default and fallback; API school retained when present. |
+| Missing school display | Completed | Neutral placeholder and transcript empty state. |
+| Validation | Passed | Production build succeeded. |
+
+
+## [20/11/2026] - Optional school input at registration
+
+Registration sends the optional school name through authService to RegisterUserCommand and persists it in Student.SchoolName.
+
+| Component | Status | Detail |
+| --- | --- | --- |
+| Registration inputs | Completed | Shared SchoolNameInput, muted example placeholder, optional field, 255-character limit. |
+| Registration API | Completed | Trim and persist school name; blank becomes null. |
+| Validation | Passed | Frontend build, isolated backend build, 5 handler cases and 3 payload checks. |
+| Running backend | Restart required | Existing process still uses previously loaded binaries. |
+
+
+## [20/11/2026] - Registration layout refinement
+
+| Component | Status | Detail |
+| --- | --- | --- |
+| School input | Completed | Removed optional label/helper; retained muted example and aligned icon. |
+| Registration layout | Completed | Full-width target, consistent spacing and responsive paired fields. |
+| Validation | Passed | Production build succeeded; visual browser check not performed. |
+
+
+## [20/11/2026] - Registration role transitions
+
+| Component | Status | Detail |
+| --- | --- | --- |
+| Role selector | Completed | Shared sliding selection indicator and color transitions. |
+| Student-only fields | Completed | Animate height/opacity with reduced-motion support. |
+| Validation | Passed | Production build succeeded; browser visual check not performed. |
+
+
+## [20/11/2026] - Library date picker for exam planning
+
+DatePicker combines DayPicker calendar selection with Radix popover positioning and focus management; calendarDate converts local date-only values.
+
+| Component | Status | Detail |
+| --- | --- | --- |
+| Exam date field | Completed | Vietnamese calendar, dd/mm/yyyy display, month/year controls, today and clear. |
+| Persistence | Preserved | YYYY-MM-DD values and existing save/cancel flow. |
+| Validation | Passed | Build, targeted lint and date conversion checks; browser verification not performed. |
+
+
+## [20/11/2026] - Live password change validation
+
+Password rules are derived from current values; touched fields show inline errors and server validation maps to matching inputs.
+
+| Component | Status | Detail |
+| --- | --- | --- |
+| Password fields | Completed | Live required/strength/equality checks with accessible inline errors. |
+| Submit and cancel | Completed | Disable invalid submits; reset validation after cancel/success. |
+| Validation | Passed | Build, utility lint, 12 validation checks. Browser verification not performed. |
+
+
+## [20/11/2026] - Password success toast
+
+| Component | Status | Detail |
+| --- | --- | --- |
+| Password success feedback | Completed | Uses shared toast.success; verified existing API usage. |
+
+
+## [20/11/2026] - Account joining date
+
+| Component | Status | Detail |
+| --- | --- | --- |
+| Profile joining date | Completed | Uses API createdAt instead of hardcoded 20/08/2025; Vietnam timezone and missing-data fallback. |
+| Validation | Passed | Backend mapping inspected and frontend build succeeded. Live DB row not queried. |
+
+
+## [20/11/2026] - School entry moved to profile only
+
+| Component | Status | Detail |
+| --- | --- | --- |
+| Registration | Completed | Removed school field and payload from both registration forms. |
+| Profile settings | Retained | School name can be entered after registration. |
+| Validation | Passed | Production build succeeded. |
+
+
+## [20/11/2026] - Unified profile and aspirations
+
+Account settings combines identity and student planning inputs with shared save/cancel controls. Student aspirations persist through the existing profile API to a nullable university_aspiration column.
+
+| Component | Status | Detail |
+| --- | --- | --- |
+| Profile layout | Completed | Removed public user ID row and separate academic tab; merged academic controls. |
+| School and aspiration | Completed | Editable with 255/500-character limits; tracked by shared dirty/reset state. |
+| Student API and DB | Completed | GET/PUT mappings and nullable-column migration applied. |
+| Validation | Passed | Frontend/API builds, 13 backend tests, EF snapshot check, live Swagger schema check. |
+| Running Identity | Updated | Restarted locally using ProfileVerification build; browser end-to-end save not exercised. |
+
+
+## [20/11/2026] - Frontend-only scope after backend rollback
+
+This entry supersedes earlier backend aspiration implementation progress for this session.
+
+| Component | Status | Detail |
+| --- | --- | --- |
+| Backend changes by assistant | Reverted | Source, tests, Identity docs, migration and added DB column removed. Pre-existing controller edit preserved. |
+| Profile UI | Retained | Unified form uses existing backend fields only. |
+| Aspiration | Frontend only | Per-account browser storage with explicit device-local notice. |
+| Verification | Passed | FE/BE builds, live old API schema, original migration list, local account isolation checks. |
+
+
+## [20/11/2026] - Remove duplicate connected roadmap UI
+
+| Component | Status | Detail |
+| --- | --- | --- |
+| Roadmap route | Updated | Directly renders existing CurriculumExplorerView. |
+| Backend roadmap tab | Removed from FE | Deleted wrapper and connected page; shared API clients retained. |
+| Validation | Passed | FE build and reference checks; all 5 BE repos remain clean. |
+
+
+## [20/11/2026] - Frontend student activation sequence
+
+Student activation loads account-scoped diagnostic history, saved profile and server payment status. The sequence is diagnostic, profile, payment, then roadmap access.
+
+| Component | Status | Detail |
+| --- | --- | --- |
+| Activation guide | Completed | Accessible modal/checklist with actionable settings and tuition navigation. |
+| Profile guidance | Completed | Settings banner and save callback recheck pending prerequisites. |
+| Roadmap/payment entry | Completed on FE | No page mount before required earlier steps; server payment confirmation required. |
+| Backend | Unchanged | Server-side generation and access rules retained. |
+| Verification | Passed | Frontend build and 12 activation/diagnostic checks; browser payment flow not exercised. |
+
+
+## [20/11/2026] - Sidebar IRT placement
+
+| Component | Status | Detail |
+| --- | --- | --- |
+| Student IRT summary | Completed | Below logo, above menu; stacked title/Theta and non-wrapping numeric label. |
+| Validation | Passed | Production build succeeded. |
+
+
+## [20/11/2026] - Correct Theta wrapping
+
+| Component | Status | Detail |
+| --- | --- | --- |
+| IRT card | Corrected | Returned below navigation; Theta badge cannot shrink or wrap. |
+
+
+## [20/11/2026] - Tuition pricing visibility
+
+| Component | Status | Detail |
+| --- | --- | --- |
+| Tuition page | Updated | Always displays packages/prices; prerequisites checked on checkout click. |
+| Roadmap gate | Retained | Checklist remains for incomplete activation. |
+| Validation | Passed | Production build succeeded. |
+
+
+## [20/11/2026] - Automatic progression after profile save
+
+| Component | Status | Detail |
+| --- | --- | --- |
+| Guided profile save | Updated | Rechecks automatically without reopening the modal; navigates to tuition or roadmap when ready. |
+| Missing data or error | Updated | Keep profile open and show toast; no manual check popup. |
+| Validation | Passed | Production build and focused diff check. |
+
+
+## [20/11/2026] - Tuition page copy
+
+| Component | Status | Detail |
+| --- | --- | --- |
+| Activation notice | Updated | States activation is required to view content. |
+| Refresh labels | Updated | Uses Làm mới instead of database terminology; verified source strings. |
+
+
+## [20/11/2026] - Consistent payment receipts
+
+| Component | Status | Detail |
+| --- | --- | --- |
+| Table/receipt status | Fixed | Shared status mapping; removed hardcoded success and unverified HMAC claims. |
+| Pending orders | Updated | Refresh through existing status endpoint with identity matching; preserve state on failure. |
+| Validation | Passed | Build and 6 payment checks. Specific live payment not queried. |
+
+
+## [20/11/2026] - Resume pending checkout
+
+| Component | Status | Detail |
+| --- | --- | --- |
+| Pending history/receipt | Completed | Resume button verifies status and reuses existing order checkout URL. |
+| Terminal/invalid states | Handled | Paid orders update; failed/cancelled/expired or invalid links show feedback without creating a new order. |
+| Validation | Passed | Build and 11 payment tests. No live payment performed. |
+
+
+## [20/11/2026] - Payment outcome notifications
+
+| Component | Status | Detail |
+| --- | --- | --- |
+| Success/create failure | Fixed | Shared toast API works without optional caller prop. |
+| Failed/cancelled/expired | Completed | Terminal UI and toast; polling stops. |
+| Network and cleanup | Completed | Sequential retries, limited connection notices, ignores closed-dialog responses. |
+| Validation | Passed | Production build and 18 payment tests; no real payment performed. |
+
+
+## [20/11/2026] - Frontend commit readiness
+
+| Component | Status | Detail |
+| --- | --- | --- |
+| Frontend changes | Ready | Profile/auth/navigation/activation/payment improvements and documentation included. |
+| Validation | Passed | Production build, 30 targeted tests, whitespace cleanup. |
+| Commit scope | Frontend only | No backend or System-Repo staging. |

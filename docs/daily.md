@@ -1,5 +1,47 @@
 # NHẬT KÝ TIẾN ĐỘ HẰNG NGÀY (DAILY LOG) - V-EVAL WEB CLIENT
 
+## [20/11/2026] - Khắc Phục Lỗi Cập Nhật Hồ Sơ Cá Nhân & Cuộn Trang Độc Lập Cho Sidebar
+
+- **Khắc Phục Lỗi Cập Nhật Hồ Sơ Cá Nhân & Trạng Thái Nút Thao Tác (`AccountSettingsPage.jsx`, `authService.js`)**:
+  - Lưu trữ trạng thái dữ liệu gốc `initialProfile` sau khi fetch từ API và sau mỗi lần submit thành công.
+  - Nút **"Hủy thay đổi"**: Chỉ hiển thị khi có thay đổi dữ liệu (`hasProfileChanges = true`), tự động ẩn khi form ở trạng thái nguyên bản.
+  - Nút **"Lưu Thay Đổi Hồ Sơ"**: Tự động làm mờ và vô hiệu hóa (`opacity-50 cursor-not-allowed`) khi không có thay đổi nào.
+  - Khắc phục lỗi endpoint API: Chuyển gọi API cập nhật hồ sơ từ `/api/v1/users/profile` sang `/api/v1/users/me/profile` (khớp với route `[HttpPut("me/profile")]` của `UsersController.cs` trong Identity Service).
+  - Loại bỏ khối `catch` nuốt lỗi giả lập cục bộ, thay bằng `formatApiError` để phản hồi trung thực kết quả và thông báo lỗi từ backend tới người dùng.
+  - Đồng bộ lưu trường "Cơ sở Đào tạo Trực thuộc" (`campusId`) vào hồ sơ học sinh (`authService.updateStudentProfile`).
+  - Khởi tạo trang với `authService.fetchCurrentUserProfile()` để kéo dữ liệu mới nhất từ cơ sở dữ liệu PostgreSQL.
+  - Chuẩn hóa cấu trúc danh sách cơ sở đào tạo đảm bảo tương thích cả hai trường `id` và `campusId`.
+- **Tách Biệt Vùng Cuộn Độc Lập Cho Sidebar (`App.jsx`, `Sidebar.jsx`)**:
+  - Xác định nguyên nhân gốc rễ: Thẻ cha root trước đây mang `min-h-screen overflow-x-hidden`, khiến Chromium xem container là overflow clipping box và vô hiệu hóa cơ chế `position: sticky` khi cuộn cửa sổ `window`.
+  - Nâng cấp kiến trúc chuẩn SaaS Enterprise (Decoupled Independent Scroll Layout): Khung ngoài đạt `h-screen overflow-hidden`, Sidebar trái là một cột độc lập `h-full shrink-0 overflow-y-auto` hoàn toàn đứng yên.
+  - Cột nội dung bên phải đảm nhiệm vùng cuộn độc lập `flex-1 h-full overflow-y-auto`, loại bỏ triệt để hiện tượng Sidebar bị kéo cuộn trôi lên trên khi học sinh cuộn xem danh sách dạng bài.
+  - Khối thẻ **"Hồ sơ năng lực IRT"** được ghim sát ngay bên dưới mục **"Học phí & Gói học"** (`Dịch vụ học viên`), xóa bỏ khoảng trắng thừa.
+- **Ràng Buộc & Xác Thực Form Quên Mật Khẩu (`ForgotPasswordModal.jsx`, `WebLoginPage.jsx`, `authService.js`)**:
+  - Bắt buộc kiểm tra email hợp lệ qua `validateEmailSyntaxAndRules`, disable nút gửi khi để trống.
+  - Loại bỏ fallback gọi nhầm endpoint Gateway trong `authService.js`, hiển thị chính xác: *"Email này không tồn tại trong hệ thống. Vui lòng kiểm tra lại hoặc đăng ký tài khoản mới."*.
+- Kiểm thử biên dịch `npm run build` thành công trong 2.79s.
+
+---
+
+## [19/11/2026] - Khóa Lộ Trình Cá Nhân Hóa, Phân Nhóm Ưu Tiên Cấp Thiết & Giữ Nguyên Accordion Layout
+
+- **Khóa Chế Độ Xem Lộ Trình Cá Nhân Hóa (`StudentCurriculumView.jsx`)**:
+  - Gỡ bỏ hoàn toàn toggle chuyển đổi "Lớp học chung", đảm bảo học sinh chỉ xem lộ trình cá nhân của bản thân được sinh ra từ kết quả thi đánh giá năng lực đầu vào.
+- **Thanh Phân Chia Môn Học Ghim Cố Định Đầu Trang**:
+  - Đưa 4 tab môn học (Toán học & Tư duy định lượng, Khoa học tự nhiên, Khoa học xã hội, Sử dụng Ngôn ngữ) lên hàng đầu, cho phép học sinh chuyển đổi giữa các môn học dễ dàng.
+- **Phân Loại Trọng Tâm Dựa Trên Kết Quả Khảo Sát**:
+  - Xây dựng thuật toán phân loại tự động kết hợp giữa tỷ lệ điểm phần trăm yếu (< 65%) từ `domainBreakdown` và trọng số dạng bài:
+    - `🚨 Ưu tiên cấp thiết`: Nhóm kiến thức yếu cần bù điểm gấp (tiềm năng tăng +25 ~ +35 điểm).
+    - `🛡️ Củng cố nền tảng`: Nhóm kiến thức cơ sở (tiềm năng tăng +15 ~ +20 điểm).
+    - `🚀 Vận dụng 900+`: Nhóm kiến thức nâng cao tối ưu hóa điểm số.
+  - Tích hợp bộ lọc filter chips trực quan (Tất cả, Ưu tiên cấp thiết, Củng cố nền tảng, Vận dụng 900+) kèm bộ đếm số lượng thực tế.
+- **Duy Trì 100% Accordion Layout Chuẩn**:
+  - Giữ nguyên cấu trúc cây Chương - Bài học - Dạng bài tương tự như màn hình tổng quan, hỗ trợ mở rộng/thu gọn (accordion), ô tìm kiếm bài học và nút hành động "Vào học".
+- **Kiểm Thử**:
+  - `npm run build` thành công trong 2.65s không phát sinh lỗi cú pháp hay TypeScript/JSX.
+
+---
+
 ## [16/11/2026] - Homepage introduction and metrics consolidation
 
 - Removed the homepage 3 Q&A specification action and standalone 120-question navigation item.
@@ -2968,3 +3010,234 @@
 - One completed distinct diagnostic assessment now satisfies the onboarding requirement.
 - The connected personal roadmap opens by default and automatically generates from the latest completed diagnostic submission using profile planning data or defaults.
 - Updated progress messaging; eligibility tests and production build passed.
+
+## [19/11/2026] - Diagnostic exam fullscreen entry
+
+- Requests fullscreen on the start gesture before loading APIs and keeps it through exam setup.
+- Synchronizes the fullscreen indicator and exits on error or cancellation.
+- Production build passed; browser interaction verification is pending.
+
+## [19/11/2026] - Forgot-password inline validation and error handling
+
+- The forgot-password modal now bypasses browser-native validation and routes each submit through application validation, displaying errors in the modal.
+- Validates empty, malformed, and overlong email values before requesting an OTP.
+- Maps Identity Service's unknown-account response to a clear email-not-registered message and removes the incorrect 404 endpoint fallback.
+
+## [20/11/2026] - Fixed student sidebar access
+
+- Pinned the desktop sidebar to the left viewport with its own vertical scrolling when its contents exceed the screen height.
+- Moved the IRT profile card above the desktop navigation so it remains immediately accessible while the main page scrolls.
+- Preserved the existing mobile sidebar layout.
+## [20/11/2026] - Simplified student registration
+
+- Removed grade selection from the student registration UI.
+- Preserved grade 12 as the default and retained three target score levels.
+
+
+
+## [20/11/2026] - Bỏ thao tác khảo sát lại trong cài đặt tài khoản
+
+- Xóa nút khảo sát lại Năng lực và liên kết mở bài khảo sát tại thẻ IRT trong AccountSettingsPage.jsx.
+- Kiểm tra: npm run build thành công; còn cảnh báo bundle lớn và eval từ thư viện JSXGraph.
+
+
+## [20/11/2026] - Gỡ khung IRT trùng lặp trong cài đặt
+
+- Bỏ khung Vector Năng lực Hiện tại trong phần mục tiêu khảo thí và import Zap không còn dùng. Theta tiếp tục hiển thị tại sidebar từ kết quả khảo sát/dashboard.
+- Kiểm tra: npm run build thành công.
+
+
+## [20/11/2026] - Đồng bộ Theta thật lên sidebar
+
+- App tải đồng thời dashboard và lịch sử khảo sát, chọn bài DIAGNOSTIC COMPLETED gần nhất đúng tài khoản để hiển thị IRT sau khi đăng nhập hoặc tải lại trang.
+- Sidebar hỗ trợ theta0/placementClass từ API và theta_0/placement_class từ kết quả vừa nộp; kiểm tra tài khoản trước khi cập nhật bất đồng bộ.
+- npm run build thành công; chưa kiểm tra trực tiếp tài khoản người dùng trên trình duyệt.
+
+
+## [20/11/2026] - Đồng nhất nút Lưu và Hủy trong cài đặt
+
+- Mục tiêu khảo thí, phụ huynh và tùy chọn học tập lưu bản gốc sau tải/lưu; nút Lưu mờ khi chưa đổi, hiện Hủy khi có thay đổi; Hủy khôi phục dữ liệu gốc.
+- Mật khẩu: vô hiệu hóa khi chưa nhập, Hủy xóa dữ liệu nhập và ẩn mật khẩu; giữ kiểm tra mật khẩu khớp.
+- Chặn gửi form không có thay đổi hoặc gửi lặp trong lúc lưu. npm run build thành công; chưa kiểm tra tương tác trên trình duyệt.
+
+
+## [20/11/2026] - Đơn giản hóa nhãn xác thực
+
+- Đổi nhãn Xác thực JWT 256-bit thành Đã xác thực trên trang cài đặt tài khoản. Kiểm tra trực tiếp chuỗi hiển thị trong mã nguồn.
+
+
+## [20/11/2026] - Tách tab Học bạ điện tử
+
+- Đổi tab gộp thành Phụ huynh, giữ thông tin cha mẹ và mã liên kết tại đây.
+- Tạo tab Học bạ điện tử riêng cho học sinh, chuyển toàn bộ bảng điểm, nhận xét và thao tác học bạ sang tab mới.
+- Kiểm tra npm run build thành công; chưa xác minh giao diện trong trình duyệt.
+
+
+## [20/11/2026] - Bỏ phụ huynh mẫu và cô lập dữ liệu tài khoản
+
+- Kiểm tra RegisterForm và RegisterUserCommand: đăng ký học sinh không thu thập thông tin phụ huynh, không tự liên kết cha mẹ.
+- Cài đặt khởi tạo phụ huynh trống, chưa liên kết; bỏ tên, điện thoại, email và mã liên kết mẫu cùng fallback mockUser.
+- authService dùng cache phụ huynh theo userId; không đọc cache chung cũ vì không xác định được chủ sở hữu. Không tự bật liên kết khi lưu thông tin.
+- Kiểm tra bằng Node: bỏ cache chung, tài khoản mới trống, dữ liệu A/B độc lập, đọc lại đúng tài khoản, chặn lưu khi chưa đăng nhập. Build thành công.
+
+
+## [20/11/2026] - Bỏ trường THPT mặc định
+
+- Bỏ giá trị và placeholder THPT Chuyên Lê Hồng Phong trong cài đặt. Chỉ hiển thị trường từ hồ sơ API; chưa khai báo hoặc tải lỗi thì để trống để cập nhật sau.
+- Đồng bộ bản gốc cho Lưu/Hủy với trường trống; học bạ hiển thị Chưa cập nhật trường THPT khi thiếu dữ liệu.
+- Kiểm tra build thành công; không tự sửa dữ liệu trường đã được lưu trên máy chủ.
+
+
+## [20/11/2026] - Tự nhập trường THPT khi đăng ký
+
+- Thêm ô trường THPT không bắt buộc trong hai form đăng ký học sinh, dùng placeholder màu mờ VD: Trường THPT Phước Long và hướng dẫn nhập tên đầy đủ.
+- Frontend gửi schoolName đã trim; backend đăng ký nhận trường tối đa 255 ký tự, lưu vào Student.SchoolName hoặc null khi trống. Không gọi dịch vụ tra cứu trường.
+- Đồng nhất placeholder trong cài đặt và bỏ tham chiếu dropdown khối lớp đã xóa ở RegisterForm.
+- Kiểm tra: frontend build, backend build thư mục riêng thành công; 5 test handler đăng ký và 3 kiểm tra payload frontend đều qua. Build backend mặc định bị khóa DLL do dịch vụ đang chạy; chưa khởi động lại dịch vụ.
+
+
+## [20/11/2026] - Căn lại bố cục đăng ký
+
+- Bỏ chữ không bắt buộc và dòng hướng dẫn dưới ô trường; giữ placeholder ví dụ màu mờ, thêm icon trường đồng nhất với các ô khác.
+- Mục tiêu ĐGNL dùng toàn bộ chiều ngang thay vì lẻ nửa hàng; đồng nhất bo góc, căn icon, khoảng cách và chia cột email/điện thoại, mật khẩu theo màn hình.
+- Dropdown mục tiêu/cơ sở đóng nhau khi mở. Không đổi quy tắc bắt buộc hay logic đăng ký.
+- npm run build thành công; chưa kiểm tra hình ảnh trong trình duyệt.
+
+
+## [20/11/2026] - Chuyển vai trò đăng ký mượt
+
+- Dùng RegistrationRoleSwitch chung cho trang đăng ký và modal: nền chọn trượt 300ms, chữ đổi màu nhẹ, hỗ trợ bàn phím và giảm chuyển động.
+- StudentRegistrationFields co giãn chiều cao và fade 280ms khi đổi vai trò; giữ giá trị form, đóng dropdown khi đổi vai trò, mở lại overflow sau animation để không cắt menu.
+- Kiểm tra npm run build thành công; chưa kiểm tra trực quan trong trình duyệt.
+
+
+## [20/11/2026] - Lịch chọn ngày thi bằng thư viện
+
+- Cài @daypicker/react và @radix-ui/react-popover; thay input date mặc định bằng lịch tiếng Việt, định dạng dd/mm/yyyy, chọn tháng/năm, nút Hôm nay và Xóa ngày.
+- Giao diện xanh, bo góc, shadow nhẹ và hiệu ứng mở; popover portal tránh bị cắt, hỗ trợ focus, Escape, bàn phím, giảm chuyển động và tránh mép màn hình.
+- Giá trị lưu vẫn YYYY-MM-DD, chuyển đổi theo ngày địa phương không qua UTC; giữ luồng Lưu/Hủy.
+- Kiểm tra build và lint các file mới thành công; kiểm tra round-trip ngày, năm nhuận, ngày không hợp lệ và xóa ngày qua Node. Chưa kiểm tra trực quan trên trình duyệt.
+
+
+## [20/11/2026] - Validate trực tiếp form đổi mật khẩu
+
+- Validate ngay khi nhập/blur: ô bắt buộc, tối thiểu 8 ký tự, chữ hoa/thường/số, mật khẩu mới khác hiện tại và xác nhận khớp; lỗi hiển thị dưới input với viền đỏ và aria-invalid.
+- Nút cập nhật chỉ bật khi đủ hợp lệ; chặn submit lỗi, khóa ô trong khi gửi, Hủy/thành công xóa touched và lỗi.
+- Ánh xạ lỗi API mật khẩu hiện tại sai, mật khẩu mới trùng và lỗi field về đúng ô; đúng/sai mật khẩu hiện tại chỉ xác minh khi gửi API.
+- Kiểm tra build/lint utility và 12 kiểm tra validation qua Node thành công; chưa kiểm tra tương tác trình duyệt.
+
+
+## [20/11/2026] - Toast đổi mật khẩu thành công
+
+- Chuyển thông báo đổi mật khẩu thành công sang toast.success dùng hệ thống toast chung. Giữ lỗi validation dưới input.
+- Kiểm tra import và lệnh gọi khớp ToastContext hiện có.
+
+
+## [20/11/2026] - Ngày gia nhập từ hồ sơ thật
+
+- Phát hiện ngày gia nhập đang hardcode 20/08/2025; API GetCurrentUser đã trả CreatedAt từ user trong DB.
+- Dùng createdAt của hồ sơ hiện tại, định dạng dd/mm/yyyy theo múi giờ Việt Nam; thiếu hoặc sai dữ liệu thì hiển thị Chưa có thông tin, không dùng ngày mẫu.
+- Kiểm tra npm run build thành công; chưa đối chiếu trực tiếp bản ghi tài khoản trong DB.
+
+
+## [20/11/2026] - Bỏ trường THPT khỏi đăng ký
+
+- Xóa ô trường THPT, state/props và payload trường khỏi cả trang đăng ký và modal; xóa component SchoolNameInput không còn dùng.
+- Người dùng cập nhật trường sau trong hồ sơ. Backend vẫn tương thích trường tùy chọn hiện có; đăng ký mới không gửi tên trường.
+- npm run build thành công.
+
+
+## [20/11/2026] - Gộp hồ sơ và mục tiêu, lưu nguyện vọng
+
+- Bỏ dòng Mã người dùng trong thẻ tài khoản và tab Mục tiêu thi cử riêng. Gộp trường THPT, nguyện vọng, điểm mục tiêu, ngày thi và giờ tự học vào tab Thông tin cá nhân với một nút Lưu/Hủy chung.
+- Bật nhập nguyện vọng tối đa 500 ký tự; thêm universityAspiration vào Student, DTO, GET/PUT hồ sơ và EF mapping. Cho phép xóa nguyện vọng bằng chuỗi rỗng; bỏ lỗi cập nhật học sinh bị nuốt khi lưu hồ sơ.
+- Migration AddStudentUniversityAspiration chỉ thêm cột nullable và đã áp dụng DB; đồng bộ snapshot với cấu hình model hiện có, không thay đổi ràng buộc campus trong migration này. Cập nhật SQL chuẩn.
+- Frontend build và backend build thành công; 13 test backend đã qua; EF xác nhận không còn pending model changes.
+- Đã khởi động lại riêng Identity bằng cấu hình ProfileVerification và kiểm tra Swagger đang chạy có field nguyện vọng ở request/response. Chưa kiểm tra tương tác lưu hồ sơ trực tiếp trong trình duyệt.
+
+
+## [20/11/2026] - Hoàn tác toàn bộ thay đổi backend của phiên, chỉ giữ frontend
+
+- Theo yêu cầu chỉ sửa FE: hoàn tác source BE nhận trường khi đăng ký, DTO/entity/GET/PUT nguyện vọng, EF mapping/snapshot, test thêm và tài liệu Identity do AI sửa. Giữ nguyên UsersController.cs vốn đã có thay đổi trước đó.
+- Rollback migration AddStudentUniversityAspiration và cột DB mới; hoàn tác thay đổi SQL chuẩn của AI. Backend được build/chạy lại bằng cấu hình FrontendOnlyRollback.
+- FE giữ hồ sơ gộp, trường và nguyện vọng; tên trường dùng API hồ sơ cũ, nguyện vọng chỉ lưu localStorage theo userId, có nhãn lưu trên thiết bị và không gửi field mới lên BE.
+- Xác minh Swagger đang chạy không còn extension aspiration/registration school; danh sách migration chỉ còn 4 bản ban đầu. Frontend/backend build và kiểm tra local aspiration độc lập tài khoản/xóa/trim đã qua.
+
+
+## [20/11/2026] - Bỏ màn Roadmap backend trên FE
+
+- Xóa StudentRoadmapWorkspace và ConnectedRoadmapPage, bỏ tab Roadmap backend, video & quiz; route roadmap mở trực tiếp CurriculumExplorerView hiện có.
+- Giữ các service API dùng chung để tránh ảnh hưởng luồng khác. Không sửa BE.
+- Build FE thành công; tìm kiếm xác nhận không còn import/tham chiếu tới hai component đã xóa. Cả 5 repo BE vẫn Git clean.
+
+
+## [20/11/2026] - Hướng dẫn hồ sơ và học phí trước lộ trình trên FE
+
+- Sau bài đầu vào, hiện modal checklist đánh giá → hồ sơ → thanh toán; kết quả vẫn được giữ để xem lại.
+- Kiểm tra hồ sơ đã lưu gồm tên, điện thoại, trường, nguyện vọng cục bộ, điểm mục tiêu, ngày thi từ hôm nay và giờ tự học; dẫn vào Cài đặt tài khoản với banner chỉ rõ nơi cập nhật. Lưu xong kiểm tra lại và hướng dẫn học phí.
+- Chặn mở roadmap/checkout trên FE khi còn thiếu bước; các nút dashboard/kết quả/sidebar đều đi qua hướng dẫn. Chỉ mở roadmap sau khi API xác nhận isPaid=true; API lỗi thì có trạng thái thử lại, không tự suy đoán.
+- Thêm chế độ throwOnError tùy chọn cho paymentService và ngăn phát sự kiện học phí lặp khi đồng bộ trạng thái đã trả tiền. Cập nhật thẻ dashboard không còn báo kích hoạt sớm.
+- Build và 12 test đầu vào/activation qua. Không thay đổi BE hay cơ chế sinh roadmap BE; chưa kiểm tra end-to-end thanh toán trên trình duyệt.
+
+
+## [20/11/2026] - Đưa khung IRT lên đầu sidebar
+
+- Đưa khung IRT học sinh ngay dưới logo, trước menu trên desktop và mobile; khung vai trò khác giữ cuối menu.
+- Tách tiêu đề và Theta thành hai hàng rõ ràng, ngăn ngắt dòng trong giá trị Theta; hàng mục tiêu/tiến độ tự xuống hàng khi thiếu chỗ.
+- Build FE thành công. Chỉ sửa FE, không đổi BE.
+
+
+## [20/11/2026] - Chỉnh đúng dòng Theta sidebar
+
+- Trả khung IRT về dưới menu. Tiêu đề và badge Theta cùng hàng; badge shrink-0/whitespace-nowrap giữ ký hiệu, dấu bằng và số trên một dòng.
+- Kiểm tra class layout trong nguồn; chỉ sửa FE.
+
+
+## [20/11/2026] - Luôn hiển thị bảng giá học phí
+
+- Bỏ gate thay thế toàn bộ trang Học phí & Gói học; người dùng luôn xem được gói và giá.
+- Chỉ kiểm tra điều kiện khi bấm thanh toán, hiện modal hướng dẫn nếu thiếu bước; lộ trình cá nhân vẫn giữ checklist.
+- Build FE thành công. Không sửa BE.
+
+
+## [20/11/2026] - Tự kiểm tra sau khi lưu hồ sơ
+
+- Bỏ mở lại popup sau submit thành công trong luồng hướng dẫn. Tự refresh điều kiện và chuyển học phí khi hồ sơ đủ, hoặc mở lộ trình nếu đã thanh toán.
+- Đang kiểm tra thì hiện trạng thái trong banner và khóa form; còn thiếu thông tin thì giữ trang với toast liệt kê, lỗi kiểm tra thì thông báo riêng không báo lưu thất bại.
+- Kết quả kiểm tra gắn với tài khoản hiện tại để tránh điều hướng sau đổi tài khoản. FE build thành công; không sửa BE.
+
+
+## [20/11/2026] - Chuẩn hóa câu chữ trang học phí
+
+- Đổi trạng thái chưa trả tiền thành Cần kích hoạt khóa học để xem nội dung và hướng dẫn chọn gói/thanh toán.
+- Đổi Đồng bộ từ Database thành Làm mới; trạng thái tải và lịch sử giao dịch dùng câu chữ tương ứng, bỏ thuật ngữ DB trên giao diện.
+- Kiểm tra trực tiếp chuỗi trong nguồn; thay đổi nội dung FE, không sửa BE.
+
+
+## [20/11/2026] - Đồng nhất trạng thái lịch sử và biên lai
+
+- Sửa biên lai ghi cố định Thanh toán thành công/HMAC verified/Đã thanh toán dù giao dịch chưa xác nhận. Bảng và popup dùng chung mapping trạng thái thực tế, phân biệt chờ, thành công, lỗi, hủy, hết hạn và chưa rõ.
+- Khi tải lịch sử, đối chiếu các đơn chờ qua API trạng thái hiện có, kiểm tra mã đơn/chủ tài khoản/paymentId và cập nhật cả dòng lẫn popup đang mở. Lỗi API giữ nguyên trạng thái, không tự gán thành công.
+- Build FE và 6 test trạng thái/đối chiếu đã qua. Không sửa BE; chưa xác minh giao dịch cụ thể trên tài khoản người dùng.
+
+
+## [20/11/2026] - Tiếp tục thanh toán đơn đang chờ
+
+- Thêm nút Tiếp tục thanh toán tại bảng lịch sử và popup chi tiết cho đơn chờ có orderCode.
+- Kiểm tra lại đơn bằng API trạng thái hiện có, đối chiếu đơn/tài khoản/paymentId; đơn còn chờ mở lại modal PayOS với checkoutUrl của chính đơn đó, không gọi tạo đơn mới.
+- Đã trả tiền thì cập nhật thành công; hủy/hết hạn/thất bại/thiếu link thì báo rõ. Chặn bấm lặp và tạo đơn khác trong lúc đang kiểm tra; giữ bước kiểm tra hồ sơ trước thanh toán.
+- Build và 11 test trạng thái/tiếp tục thanh toán đã qua. Không sửa BE; chưa thực hiện thanh toán thật trên trình duyệt.
+
+
+## [20/11/2026] - Toast kết quả thanh toán
+
+- Sửa toast thành công dùng singleton chung thay vì callback showToast chưa được truyền. Lỗi tạo liên kết cũng dùng toast.error.
+- Theo dõi thanh toán xử lý SUCCESS/PAID và FAILED/CANCELLED/EXPIRED: dừng khi có kết quả cuối, hiện toast tương ứng và màn kết quả thất bại; cập nhật lịch sử. Đơn cũ tiếp tục dùng cùng thông báo.
+- Chuyển polling sang tuần tự, không gọi chồng; hủy bỏ callback sau đóng modal, kiểm tra mã đơn, lỗi mạng chỉ cảnh báo một lần trong đợt mất kết nối và tự thử lại.
+- Build và 18 test trạng thái/monitor/tiếp tục thanh toán đã qua. Chỉ sửa FE, không thanh toán thật khi kiểm thử.
+
+
+## [20/11/2026] - Chốt thay đổi để commit riêng FE
+
+- Tổng hợp UPDATE.md về trạng thái cuối ngày, giữ phạm vi web-client; dọn khoảng trắng thừa trong StudentCurriculumView.
+- Xác minh build FE và 30 kiểm thử thành công. Chuẩn bị commit giao diện hồ sơ/đăng ký, activation, sidebar và thanh toán; không stage/commit BE hoặc System-Repo.

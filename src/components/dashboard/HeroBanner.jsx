@@ -95,25 +95,50 @@ export default function HeroBanner({
             </span>
           </div>
 
-          {/* Action Buttons */}
+          {/* Action Buttons: Tự động đổi ưu tiên theo trạng thái đã làm hay chưa làm bài test */}
           <div className="flex flex-wrap items-center gap-3 pt-2">
-            <button
-              type="button"
-              onClick={handleMilestoneClick}
-              className="flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl bg-[#FACC15] text-slate-950 font-black text-sm hover:bg-[#eab308] transition-all shadow-xl shadow-yellow-500/10 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
-            >
-              <span>Vào học theo lộ trình</span>
-              <ArrowRight className="w-4.5 h-4.5" />
-            </button>
+            {estimatedScore === 0 ? (
+              <>
+                <button
+                  type="button"
+                  onClick={handleMockOrDiagnosticClick}
+                  className="flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl bg-[#FACC15] text-slate-950 font-black text-sm hover:bg-[#eab308] transition-all shadow-xl shadow-yellow-500/20 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                >
+                  <Sparkles className="w-4.5 h-4.5 fill-slate-950 text-slate-950" />
+                  <span>Làm bài đánh giá năng lực ngay (15p)</span>
+                  <ArrowRight className="w-4.5 h-4.5" />
+                </button>
 
-            <button
-              type="button"
-              onClick={handleMockOrDiagnosticClick}
-              className="flex items-center justify-center gap-2 px-5 py-3.5 rounded-2xl bg-white/15 hover:bg-white/25 border border-white/25 backdrop-blur-md text-white font-bold text-sm transition-all hover:scale-[1.02] cursor-pointer"
-            >
-              <FileText className="w-4 h-4 text-[#FACC15]" />
-              <span>Đánh giá năng lực đầu vào</span>
-            </button>
+                <button
+                  type="button"
+                  onClick={handleMilestoneClick}
+                  className="flex items-center justify-center gap-2 px-5 py-3.5 rounded-2xl bg-white/15 hover:bg-white/25 border border-white/25 backdrop-blur-md text-white font-bold text-sm transition-all hover:scale-[1.02] cursor-pointer"
+                >
+                  <FileText className="w-4 h-4 text-[#FACC15]" />
+                  <span>Lộ trình học (Cần kích hoạt)</span>
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={handleMilestoneClick}
+                  className="flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl bg-[#FACC15] text-slate-950 font-black text-sm hover:bg-[#eab308] transition-all shadow-xl shadow-yellow-500/10 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                >
+                  <span>Vào học theo lộ trình</span>
+                  <ArrowRight className="w-4.5 h-4.5" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleMockOrDiagnosticClick}
+                  className="flex items-center justify-center gap-2 px-5 py-3.5 rounded-2xl bg-white/15 hover:bg-white/25 border border-white/25 backdrop-blur-md text-white font-bold text-sm transition-all hover:scale-[1.02] cursor-pointer"
+                >
+                  <FileText className="w-4 h-4 text-[#FACC15]" />
+                  <span>Xem kết quả đánh giá</span>
+                </button>
+              </>
+            )}
 
             <button
               type="button"

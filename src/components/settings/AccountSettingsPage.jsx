@@ -1,11 +1,14 @@
 import { ROLE_LABELS } from '../../config/roles';
+import DatePicker from '../common/DatePicker';
+import { toast } from '../../context/ToastContext';
+import { readLocalAspiration, saveLocalAspiration } from '../../utils/localAspiration';
+import { validatePasswordChange, passwordApiFieldErrors } from '../../utils/passwordValidation';
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import {
   User,
   ShieldCheck,
-  Target,
   Bell,
   Sparkles,
   Camera,
@@ -23,11 +26,8 @@ import {
   Sliders,
   LogOut,
   ChevronRight,
-  Award,
-  Zap,
   Smartphone,
   Mail,
-  Calendar,
   Lock,
   Volume2,
   Bot,
@@ -43,6 +43,7 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { authService, tokenStorage } from '../../services';
+import { formatApiError } from '../../utils/apiErrorHandler';
 import { mockUser, campusesList } from '../../data/mockData';
 
 // Avatar preset options
@@ -59,17 +60,31 @@ export default function AccountSettingsPage({
   currentUser,
   onUpdateUser,
   activeRole = 'student',
+  activationGuidance = false,
+  activationChecking = false,
+  onProfileSaved,
   onNavigateTab,
   onLogout
 }) {
-  const [activeTab, setActiveTab] = useState('profile'); // 'profile' | 'academic' | 'family' | 'security' | 'preferences'
+  const [activeTab, setActiveTab] = useState('profile'); // 'profile' | 'family' | 'transcript' | 'security' | 'preferences'
 
   // Profile Form States
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
+  const [joinedAt, setJoinedAt] = useState(null);
+  const joinedDate = joinedAt ? new Date(joinedAt) : null;
+  const joinedDateDisplay = joinedDate && !Number.isNaN(joinedDate.getTime())
+    ? joinedDate.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Asia/Ho_Chi_Minh' })
+    : 'Chưa có thông tin';
   const [avatarUrl, setAvatarUrl] = useState('');
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
+  const [initialProfile, setInitialProfile] = useState({
+    fullName: '',
+    phone: '',
+    avatarUrl: '',
+    campusId: ''
+  });
 
   // Academic Profile States (Student specific)
   const [targetScore, setTargetScore] = useState(850);
@@ -77,15 +92,16 @@ export default function AccountSettingsPage({
   const [campuses, setCampuses] = useState(campusesList);
   const [examDate, setExamDate] = useState('2026-03-29');
   const [studyHoursDay, setStudyHoursDay] = useState(2.5);
-  const [schoolName, setSchoolName] = useState('THPT Chuyên Lê Hồng Phong');
+  const [schoolName, setSchoolName] = useState('');
+  const [universityAspiration, setUniversityAspiration] = useState('');
 
   // Parent & Family Link States
-  const [parentRelation, setParentRelation] = useState('father'); // 'father' | 'mother' | 'guardian'
-  const [parentName, setParentName] = useState('Phạm Văn Minh');
-  const [parentPhone, setParentPhone] = useState('0903123456');
-  const [parentEmail, setParentEmail] = useState('minh.pham.ph@veval.edu.vn');
-  const [parentConnectCode, setParentConnectCode] = useState('VEVAL-STU-88902');
-  const [isParentLinked, setIsParentLinked] = useState(true);
+  const [parentRelation, setParentRelation] = useState(''); // 'father' | 'mother' | 'guardian'
+  const [parentName, setParentName] = useState('');
+  const [parentPhone, setParentPhone] = useState('');
+  const [parentEmail, setParentEmail] = useState('');
+  const [parentConnectCode, setParentConnectCode] = useState('');
+  const [isParentLinked, setIsParentLinked] = useState(false);
   const [isCopiedCode, setIsCopiedCode] = useState(false);
   const [isSavingParent, setIsSavingParent] = useState(false);
   const [isSendingReport, setIsSendingReport] = useState(false);
@@ -97,6 +113,31 @@ export default function AccountSettingsPage({
   const [showCurrentPw, setShowCurrentPw] = useState(false);
   const [showNewPw, setShowNewPw] = useState(false);
   const [showConfirmPw, setShowConfirmPw] = useState(false);
+  const [passwordTouched, setPasswordTouched] = useState({});
+  const [passwordServerErrors, setPasswordServerErrors] = useState({});
+  const passwordErrors = validatePasswordChange({ currentPassword, newPassword, confirmPassword });
+  const canChangePassword = Object.keys(passwordErrors).length === 0 && Object.keys(passwordServerErrors).length === 0;
+  const passwordError = (field) => passwordServerErrors[field] || (passwordTouched[field] ? passwordErrors[field] : '');
+  const updatePasswordField = (field, value) => {
+    ({ currentPassword: setCurrentPassword, newPassword: setNewPassword, confirmPassword: setConfirmPassword })[field](value);
+    setPasswordTouched((prev) => ({ ...prev, [field]: true }));
+    setPasswordServerErrors((prev) => {
+      const next = { ...prev };
+      delete next[field];
+      if (field === 'currentPassword' || field === 'newPassword') delete next.newPassword;
+      if (field === 'newPassword') delete next.confirmPassword;
+      return next;
+    });
+  };
+  const passwordInputClass = (field) => `w-full pl-10 pr-10 py-2.5 text-xs font-semibold border rounded-xl focus:bg-white focus:outline-none focus:ring-2 transition-all text-slate-800 ${
+    passwordError(field) ? 'bg-rose-50/50 border-rose-400 focus:ring-rose-500/20 focus:border-rose-500'
+      : 'bg-slate-50 border-slate-200 focus:ring-blue-500/30 focus:border-blue-500'
+  }`;
+  const renderPasswordError = (field) => passwordError(field) && (
+    <p id={`${field}-error`} aria-live="polite" className="mt-1.5 flex items-start gap-1 text-[11px] font-semibold text-rose-500">
+      <AlertCircle className="mt-0.5 h-3 w-3 shrink-0" />{passwordError(field)}
+    </p>
+  );
 
   // Preference Settings States
   const [socraticMode, setSocraticMode] = useState(true);
@@ -109,9 +150,40 @@ export default function AccountSettingsPage({
   // Status feedback
   const [isLoading, setIsLoading] = useState(false);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
-  const [isSavingAcademic, setIsSavingAcademic] = useState(false);
   const [isSavingPassword, setIsSavingPassword] = useState(false);
   const [alertInfo, setAlertInfo] = useState(null); // { type: 'success' | 'error', message: string }
+  const [savedSettings, setSavedSettings] = useState(null);
+  const academicValues = { targetScore: Number(targetScore), examDate, studyHoursDay: Number(studyHoursDay), schoolName, universityAspiration };
+  const parentValues = { parentRelation, parentName, parentPhone, parentEmail };
+  const preferenceValues = { socraticMode, dailyReminder, reminderTime, soundEffects, weeklyEmailReport, autoSaveDraft };
+  const hasChanges = (section, values) => !isLoading && Boolean(savedSettings)
+    && Object.keys(values).some((key) => values[key] !== savedSettings[section][key]);
+  const hasAcademicChanges = hasChanges('academic', academicValues);
+  const hasParentChanges = hasChanges('parent', parentValues);
+  const hasPreferenceChanges = hasChanges('preferences', preferenceValues);
+  const hasPasswordChanges = Boolean(currentPassword || newPassword || confirmPassword);
+  const resetPassword = () => {
+    setPasswordTouched({}); setPasswordServerErrors({});
+    setCurrentPassword(''); setNewPassword(''); setConfirmPassword('');
+    setShowCurrentPw(false); setShowNewPw(false); setShowConfirmPw(false);
+    setAlertInfo(null);
+  };
+  const resetSettings = (section) => {
+    const setters = {
+      academic: { targetScore: setTargetScore, examDate: setExamDate, studyHoursDay: setStudyHoursDay, schoolName: setSchoolName, universityAspiration: setUniversityAspiration },
+      parent: { parentRelation: setParentRelation, parentName: setParentName, parentPhone: setParentPhone, parentEmail: setParentEmail },
+      preferences: { socraticMode: setSocraticMode, dailyReminder: setDailyReminder, reminderTime: setReminderTime,
+        soundEffects: setSoundEffects, weeklyEmailReport: setWeeklyEmailReport, autoSaveDraft: setAutoSaveDraft }
+    };
+    Object.entries(savedSettings[section]).forEach(([key, value]) => setters[section][key](value));
+    setAlertInfo(null);
+  };
+  const cancelButton = (visible, onClick, saving = false) => visible && (
+    <button type="button" onClick={onClick} disabled={saving}
+      className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-50 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
+      Hủy thay đổi
+    </button>
+  );
 
   // Load Initial Data
   useEffect(() => {
@@ -119,24 +191,46 @@ export default function AccountSettingsPage({
 
     async function loadData() {
       setIsLoading(true);
+      setSchoolName('');
+      setUniversityAspiration('');
+      const loadedSettings = { academic: { ...academicValues, schoolName: '', universityAspiration: '' }, parent: { ...parentValues }, preferences: { ...preferenceValues } };
 
       // 1. Initialize from props / token storage
       const storedUser = currentUser || tokenStorage.getUser() || mockUser;
-      const initialName = storedUser.fullName || storedUser.name || mockUser.name;
-      const initialPhone = storedUser.phone || '0988123456';
-      const initialEmail = storedUser.email || mockUser.email;
-      const initialAvatar = storedUser.avatarUrl || storedUser.avatar || mockUser.avatar;
+      const localAspiration = readLocalAspiration(localStorage, storedUser.userId || storedUser.id || storedUser.studentId);
+      loadedSettings.academic.universityAspiration = localAspiration;
+      setUniversityAspiration(localAspiration);
+      setJoinedAt((currentUser || tokenStorage.getUser())?.createdAt || null);
+      let initialName = storedUser.fullName || storedUser.name || mockUser.name;
+      let initialPhone = storedUser.phone || '0988123456';
+      let initialEmail = storedUser.email || mockUser.email;
+      let initialAvatar = storedUser.avatarUrl || storedUser.avatar || mockUser.avatar;
+      let initialCampus = storedUser.campusId || 'campus-1';
 
       setFullName(initialName);
       setPhone(initialPhone);
       setEmail(initialEmail);
       setAvatarUrl(initialAvatar);
+      setCampusId(initialCampus);
+      setInitialProfile({
+        fullName: initialName,
+        phone: initialPhone,
+        avatarUrl: initialAvatar,
+        campusId: initialCampus
+      });
 
       // 2. Load campus list from API if available
       try {
         const campusRes = await authService.getCampuses();
         if (isMounted && campusRes && Array.isArray(campusRes) && campusRes.length > 0) {
-          setCampuses(campusRes);
+          const normalized = campusRes.map((c) => ({
+            id: c.campusId || c.id,
+            campusId: c.campusId || c.id,
+            name: c.name,
+            address: c.address,
+            phone: c.phone
+          }));
+          setCampuses(normalized);
         }
       } catch (err) {
         // Keep fallback campusesList
@@ -144,12 +238,28 @@ export default function AccountSettingsPage({
 
       // 3. Try to fetch backend User Profile
       try {
-        const userProfile = await authService.getCurrentUser();
+        let userProfile = null;
+        if (authService.fetchCurrentUserProfile) {
+          userProfile = await authService.fetchCurrentUserProfile();
+        } else {
+          userProfile = authService.getCurrentUser();
+        }
         if (isMounted && userProfile) {
-          if (userProfile.fullName) setFullName(userProfile.fullName);
-          if (userProfile.phone) setPhone(userProfile.phone);
-          if (userProfile.avatarUrl) setAvatarUrl(userProfile.avatarUrl);
-          if (userProfile.email) setEmail(userProfile.email);
+          setJoinedAt(userProfile.createdAt || null);
+          if (userProfile.fullName) initialName = userProfile.fullName;
+          if (userProfile.phone) initialPhone = userProfile.phone;
+          if (userProfile.avatarUrl) initialAvatar = userProfile.avatarUrl;
+          if (userProfile.email) initialEmail = userProfile.email;
+          setFullName(initialName);
+          setPhone(initialPhone);
+          setAvatarUrl(initialAvatar);
+          setEmail(initialEmail);
+          setInitialProfile((prev) => ({
+            ...prev,
+            fullName: initialName,
+            phone: initialPhone,
+            avatarUrl: initialAvatar
+          }));
         }
       } catch (err) {
         // Fallback to local user
@@ -159,46 +269,64 @@ export default function AccountSettingsPage({
       try {
         const studentProfile = await authService.getStudentProfile();
         if (isMounted && studentProfile) {
+          loadedSettings.academic = {
+            targetScore: Number(studentProfile.targetScore ?? loadedSettings.academic.targetScore),
+            examDate: studentProfile.examDate || loadedSettings.academic.examDate,
+            studyHoursDay: Number(studentProfile.studyHoursDay || loadedSettings.academic.studyHoursDay),
+            schoolName: studentProfile.schoolName ?? '',
+            universityAspiration: localAspiration
+          };
           if (studentProfile.targetScore != null) setTargetScore(studentProfile.targetScore);
-          if (studentProfile.campusId) setCampusId(studentProfile.campusId);
+          if (studentProfile.campusId) {
+            initialCampus = studentProfile.campusId;
+            setCampusId(studentProfile.campusId);
+            setInitialProfile((prev) => ({
+              ...prev,
+              campusId: studentProfile.campusId
+            }));
+          }
           if (studentProfile.examDate) setExamDate(studentProfile.examDate);
           if (studentProfile.studyHoursDay) setStudyHoursDay(studentProfile.studyHoursDay);
-          if (studentProfile.schoolName) setSchoolName(studentProfile.schoolName);
+          setSchoolName(studentProfile.schoolName ?? '');
+          setUniversityAspiration(localAspiration);
         }
       } catch (err) {
         setTargetScore(mockUser.targetScore || 850);
+        loadedSettings.academic.targetScore = Number(mockUser.targetScore || 850);
+        loadedSettings.academic.schoolName = '';
         setCampusId(mockUser.campusId || 'campus-1');
-        setSchoolName('THPT Chuyên Lê Hồng Phong');
+        setSchoolName('');
+      setUniversityAspiration(localAspiration);
       }
 
-      // 5. Load parent info from authService / localStorage / mockUser
+      // Optional parent details belong only to the signed-in account.
+      let parentData = null;
       try {
-        const parentData = await authService.getParentInfo();
-        if (isMounted && parentData) {
-          if (parentData.parentRelation) setParentRelation(parentData.parentRelation);
-          if (parentData.parentName) setParentName(parentData.parentName);
-          if (parentData.parentPhone) setParentPhone(parentData.parentPhone);
-          if (parentData.parentEmail) setParentEmail(parentData.parentEmail);
-          if (parentData.parentConnectCode) setParentConnectCode(parentData.parentConnectCode);
-          if (parentData.isParentLinked !== undefined) setIsParentLinked(parentData.isParentLinked);
-        } else {
-          setParentRelation(mockUser.parentRelation || 'father');
-          setParentName(mockUser.parentName || 'Phạm Văn Minh');
-          setParentPhone(mockUser.parentPhone || '0903123456');
-          setParentEmail(mockUser.parentEmail || 'minh.pham.ph@veval.edu.vn');
-          setParentConnectCode(mockUser.parentConnectCode || 'VEVAL-STU-88902');
-          setIsParentLinked(mockUser.isParentLinked ?? true);
-        }
+        parentData = await authService.getParentInfo();
       } catch (err) {
-        setParentRelation('father');
-        setParentName('Phạm Văn Minh');
+        console.warn('Could not load parent information:', err);
       }
-
+      if (!isMounted) return;
+      loadedSettings.parent = {
+        parentRelation: parentData?.parentRelation || '', parentName: parentData?.parentName || '',
+        parentPhone: parentData?.parentPhone || '', parentEmail: parentData?.parentEmail || ''
+      };
+      setParentRelation(loadedSettings.parent.parentRelation);
+      setParentName(loadedSettings.parent.parentName);
+      setParentPhone(loadedSettings.parent.parentPhone);
+      setParentEmail(loadedSettings.parent.parentEmail);
+      setParentConnectCode(parentData?.parentConnectCode || '');
+      setIsParentLinked(parentData?.isParentLinked === true);
       // 6. Load saved preferences
       try {
         const savedPrefs = localStorage.getItem('veval_user_preferences');
         if (savedPrefs) {
           const parsed = JSON.parse(savedPrefs);
+          Object.keys(loadedSettings.preferences).forEach((key) => {
+            if (parsed[key] !== undefined && (key !== 'reminderTime' || parsed[key])) {
+              loadedSettings.preferences[key] = parsed[key];
+            }
+          });
           if (parsed.socraticMode !== undefined) setSocraticMode(parsed.socraticMode);
           if (parsed.dailyReminder !== undefined) setDailyReminder(parsed.dailyReminder);
           if (parsed.reminderTime) setReminderTime(parsed.reminderTime);
@@ -210,7 +338,10 @@ export default function AccountSettingsPage({
         console.warn('Could not parse user preferences', err);
       }
 
-      if (isMounted) setIsLoading(false);
+      if (isMounted) {
+        setSavedSettings(loadedSettings);
+        setIsLoading(false);
+      }
     }
 
     loadData();
@@ -230,6 +361,7 @@ export default function AccountSettingsPage({
   // 1. Handle Save Personal Profile
   const handleSaveProfile = async (e) => {
     if (e) e.preventDefault();
+    if (isLoading || isSavingProfile || !hasAnyProfileChanges) return;
     if (!fullName.trim()) {
       showAlert('error', 'Họ và tên không được để trống.');
       return;
@@ -237,20 +369,40 @@ export default function AccountSettingsPage({
 
     setIsSavingProfile(true);
     try {
-      await authService.updateProfile({
+      const cleanPhone = phone.trim().replace(/[\s.-]/g, '');
+      const updatedProfile = await authService.updateProfile({
         fullName: fullName.trim(),
-        phone: phone.trim(),
-        avatarUrl: avatarUrl.trim()
+        phone: cleanPhone,
+        avatarUrl: avatarUrl ? avatarUrl.trim() : null
       });
 
+      if (activeRole === 'student') {
+        const savedStudent = await authService.updateStudentProfile({
+          campusId,
+          targetScore: Number(targetScore),
+          examDate: examDate || null,
+          studyHoursDay: Number(studyHoursDay),
+          schoolName: schoolName.trim()
+        });
+        if (savedStudent?.schoolName !== schoolName.trim()) {
+          throw new Error('Máy chủ chưa xác nhận trường đã lưu. Vui lòng thử lại.');
+        }
+        const user = tokenStorage.getUser();
+        saveLocalAspiration(localStorage, user?.userId || user?.id || user?.studentId, universityAspiration);
+        setSavedSettings((prev) => ({ ...prev, academic: academicValues }));
+        window.dispatchEvent(new CustomEvent('veval-campus-updated', { detail: { campusId } }));
+        window.dispatchEvent(new Event('veval:submission-updated'));
+      }
       const existingUser = tokenStorage.getUser() || {};
       const updatedUser = {
         ...existingUser,
+        ...(updatedProfile || {}),
         fullName: fullName.trim(),
         name: fullName.trim(),
-        phone: phone.trim(),
-        avatarUrl: avatarUrl.trim(),
-        avatar: avatarUrl.trim()
+        phone: cleanPhone,
+        avatarUrl: avatarUrl ? avatarUrl.trim() : existingUser.avatarUrl,
+        avatar: avatarUrl ? avatarUrl.trim() : existingUser.avatar,
+        campusId: campusId || existingUser.campusId
       };
       const token = tokenStorage.getAccessToken();
       const rToken = tokenStorage.getRefreshToken();
@@ -263,63 +415,42 @@ export default function AccountSettingsPage({
       }
 
       confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 } });
-      showAlert('success', 'Đã cập nhật thông tin tài khoản thành công!');
-    } catch (err) {
-      console.warn('Update profile error, applying local optimistic sync:', err);
-      const existingUser = tokenStorage.getUser() || {};
-      const updatedUser = {
-        ...existingUser,
+      showAlert('success', 'Đã cập nhật thông tin hồ sơ thành công vào hệ thống!');
+
+      // Cập nhật lại initialProfile sau khi lưu thành công để nút quay lại trạng thái không thay đổi
+      setInitialProfile({
         fullName: fullName.trim(),
-        name: fullName.trim(),
-        phone: phone.trim(),
-        avatarUrl: avatarUrl.trim(),
-        avatar: avatarUrl.trim()
-      };
-      if (onUpdateUser) onUpdateUser(updatedUser);
-      showAlert('success', 'Đã lưu thông tin tài khoản vào hệ thống cá nhân.');
+        phone: cleanPhone,
+        avatarUrl: avatarUrl ? avatarUrl.trim() : (initialProfile.avatarUrl || ''),
+        campusId: campusId || initialProfile.campusId
+      });
+      onProfileSaved?.();
+    } catch (err) {
+      console.error('Update profile error:', err);
+      const msg = formatApiError(err, 'Cập nhật thông tin thất bại. Vui lòng kiểm tra lại thông tin.');
+      showAlert('error', msg);
     } finally {
       setIsSavingProfile(false);
     }
   };
 
-  // 2. Handle Save Academic Profile
-  const handleSaveAcademic = async (e) => {
-    if (e) e.preventDefault();
-    if (isSavingAcademic) return;
-    setIsSavingAcademic(true);
-    try {
-      const profile = await authService.updateStudentProfile({
-        campusId,
-        targetScore: Number(targetScore),
-        examDate: examDate || null,
-        studyHoursDay: Number(studyHoursDay),
-        schoolName: schoolName.trim()
-      });
-      if (profile?.targetScore !== Number(targetScore) || profile?.campusId !== campusId) {
-        throw new Error('Máy chủ chưa xác nhận mục tiêu và cơ sở đã lưu. Vui lòng tải lại hồ sơ để kiểm tra.');
-      }
+  // Kiểm tra có thay đổi nào so với dữ liệu ban đầu/đã lưu hay không
+  const hasProfileChanges =
+    fullName.trim() !== (initialProfile.fullName || '').trim() ||
+    phone.trim() !== (initialProfile.phone || '').trim() ||
+    (avatarUrl || '').trim() !== (initialProfile.avatarUrl || '').trim() ||
+    (campusId || '') !== (initialProfile.campusId || '');
 
-      window.dispatchEvent(new CustomEvent('veval-campus-updated', { detail: { campusId: profile.campusId } }));
-      try {
-        localStorage.setItem('veval_target_score', String(profile.targetScore));
-        localStorage.setItem('veval_campus_id', profile.campusId);
-      } catch (cacheError) {
-        console.warn('Profile saved; browser cache unavailable:', cacheError);
-      }
-
-      confetti({ particleCount: 60, spread: 70, origin: { y: 0.7 } });
-      showAlert('success', '🎯 Đã cập nhật mục tiêu thi cử & hồ sơ học sinh thành công!');
-    } catch (err) {
-      console.warn('Update student profile error:', err);
-      showAlert('error', err.message || 'Chưa lưu được mục tiêu vào hồ sơ học sinh. Vui lòng thử lại.');
-    } finally {
-      setIsSavingAcademic(false);
-    }
-  };
+  const hasAnyProfileChanges = hasProfileChanges || (activeRole === 'student' && hasAcademicChanges);
 
   // 3. Handle Save Parent & Family Info
   const handleSaveParent = async (e) => {
     if (e) e.preventDefault();
+    if (isSavingParent || !hasParentChanges) return;
+    if (!['father', 'mother', 'guardian'].includes(parentRelation)) {
+      showAlert('error', 'Vui lòng chọn cha, mẹ hoặc người giám hộ.');
+      return;
+    }
     if (!parentName.trim()) {
       showAlert('error', 'Vui lòng nhập họ và tên của Cha hoặc Mẹ.');
       return;
@@ -336,20 +467,18 @@ export default function AccountSettingsPage({
       parentPhone: parentPhone.trim(),
       parentEmail: parentEmail.trim(),
       parentConnectCode,
-      isParentLinked: true
+      isParentLinked
     };
 
     try {
       await authService.updateParentInfo(parentPayload);
-      setIsParentLinked(true);
+      setSavedSettings((prev) => ({ ...prev, parent: parentValues }));
+
       confetti({ particleCount: 65, spread: 70, origin: { y: 0.65 } });
       const roleText = parentRelation === 'father' ? 'Cha (Bố)' : parentRelation === 'mother' ? 'Mẹ' : 'Người giám hộ';
-      showAlert('success', `👨‍👩‍👧 Đã lưu thông tin đại diện phụ huynh [${roleText}: ${parentName}] và đồng bộ mã kết nối!`);
+      showAlert('success', `Đã lưu thông tin phụ huynh [${roleText}: ${parentName}].`);
     } catch (err) {
-      console.warn('Update parent error, caching locally:', err);
-      localStorage.setItem('veval_parent_info', JSON.stringify(parentPayload));
-      setIsParentLinked(true);
-      showAlert('success', `👨‍👩‍👧 Đã lưu thông tin phụ huynh [${parentName}] vào hồ sơ liên lạc gia đình.`);
+      showAlert('error', err.message || 'Chưa lưu được thông tin phụ huynh.');
     } finally {
       setIsSavingParent(false);
     }
@@ -368,7 +497,9 @@ export default function AccountSettingsPage({
     const randomSuffix = Math.floor(10000 + Math.random() * 90000);
     const newCode = `VEVAL-STU-${randomSuffix}`;
     setParentConnectCode(newCode);
-    localStorage.setItem('veval_parent_code', newCode);
+    const user = tokenStorage.getUser();
+    const userId = user?.userId || user?.id || user?.studentId;
+    if (userId) localStorage.setItem('veval_parent_code:' + userId, newCode);
     showAlert('success', `🔄 Đã tạo mã kết nối mới: ${newCode}`);
   };
 
@@ -394,26 +525,9 @@ export default function AccountSettingsPage({
   // 4. Handle Change Password
   const handleChangePassword = async (e) => {
     if (e) e.preventDefault();
-    if (!currentPassword) {
-      showAlert('error', 'Vui lòng nhập mật khẩu hiện tại.');
-      return;
-    }
-    if (!newPassword) {
-      showAlert('error', 'Vui lòng nhập mật khẩu mới.');
-      return;
-    }
-    if (newPassword.length < 8) {
-      showAlert('error', 'Mật khẩu mới phải có ít nhất 8 ký tự.');
-      return;
-    }
-    if (!/[A-Z]/.test(newPassword) || !/[a-z]/.test(newPassword) || !/[0-9]/.test(newPassword)) {
-      showAlert('error', 'Mật khẩu mới phải chứa ít nhất 1 chữ hoa, 1 chữ thường và 1 chữ số.');
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      showAlert('error', 'Xác nhận mật khẩu mới không khớp.');
-      return;
-    }
+    if (isSavingPassword || !hasPasswordChanges) return;
+    setPasswordTouched({ currentPassword: true, newPassword: true, confirmPassword: true });
+    if (!canChangePassword) return;
 
     setIsSavingPassword(true);
     try {
@@ -422,15 +536,15 @@ export default function AccountSettingsPage({
         newPassword,
         confirmPassword
       });
-      setCurrentPassword('');
-      setNewPassword('');
-      setConfirmPassword('');
+      resetPassword();
       confetti({ particleCount: 70, spread: 80, origin: { y: 0.5 } });
-      showAlert('success', '🔑 Đổi mật khẩu thành công! Hãy bảo mật mật khẩu mới của bạn.');
+      toast.success('Đổi mật khẩu thành công! Hãy bảo mật mật khẩu mới của bạn.');
     } catch (err) {
       console.warn('Change password error:', err);
-      const apiMsg = err.response?.data?.detail || err.response?.data?.message || err.message;
-      showAlert('error', apiMsg || 'Không thể đổi mật khẩu. Vui lòng kiểm tra lại mật khẩu hiện tại.');
+      const apiMsg = formatApiError(err, 'Không thể đổi mật khẩu. Vui lòng thử lại.');
+      const fields = passwordApiFieldErrors(err.data || err.response?.data, apiMsg);
+      setPasswordServerErrors(fields);
+      if (!Object.keys(fields).length) showAlert('error', apiMsg);
     } finally {
       setIsSavingPassword(false);
     }
@@ -438,6 +552,7 @@ export default function AccountSettingsPage({
 
   // 5. Handle Save Preferences
   const handleSavePreferences = () => {
+    if (!hasPreferenceChanges) return;
     const prefs = {
       socraticMode,
       dailyReminder,
@@ -447,6 +562,7 @@ export default function AccountSettingsPage({
       autoSaveDraft
     };
     localStorage.setItem('veval_user_preferences', JSON.stringify(prefs));
+    setSavedSettings((prev) => ({ ...prev, preferences: prefs }));
     confetti({ particleCount: 40, spread: 50, origin: { y: 0.8 } });
     showAlert('success', '⚙️ Đã lưu thiết lập học tập & thông báo AI!');
   };
@@ -536,7 +652,7 @@ export default function AccountSettingsPage({
             )}
             <div className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-xs font-bold flex items-center gap-2 shadow-md">
               <ShieldCheck className="w-4 h-4 text-emerald-400" />
-              <span>Xác thực JWT 256-bit</span>
+              <span>Đã xác thực</span>
             </div>
           </div>
         </div>
@@ -560,7 +676,7 @@ export default function AccountSettingsPage({
                 </span>
               </div>
               <div className="text-xs text-slate-400 font-mono mt-0.5">
-                {email} • Phụ huynh: <strong className="text-cyan-300">{parentName} ({parentRelation === 'father' ? 'Cha' : parentRelation === 'mother' ? 'Mẹ' : 'Giám hộ'})</strong>
+                {email} • Phụ huynh: <strong className="text-cyan-300">{parentName ? `${parentName} (${parentRelation === 'father' ? 'Cha' : parentRelation === 'mother' ? 'Mẹ' : 'Giám hộ'})` : 'Chưa cập nhật'}</strong>
               </div>
             </div>
           </div>
@@ -568,7 +684,7 @@ export default function AccountSettingsPage({
           <div className="flex items-center gap-3">
             <div className="px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-xs">
               <span className="text-slate-400">Mã kết nối: </span>
-              <strong className="text-cyan-300 font-mono">{parentConnectCode}</strong>
+              <strong className="text-cyan-300 font-mono">{parentConnectCode || 'Chưa có'}</strong>
             </div>
             <div className="px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-xs">
               <span className="text-slate-400">Mục tiêu: </span>
@@ -583,6 +699,12 @@ export default function AccountSettingsPage({
       </div>
 
       {/* Main Settings Navigation Tabs */}
+      {activationGuidance && (
+        <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-xs leading-relaxed text-blue-800">
+          <p className="font-extrabold">{activationChecking ? 'Đã lưu hồ sơ — đang kiểm tra bước tiếp theo…' : 'Bước 2: Hoàn thiện hồ sơ trước khi thanh toán'}</p>
+          <p className="mt-1">Trong <strong>Thông tin cá nhân</strong>, bổ sung họ tên, số điện thoại, trường THPT, nguyện vọng, điểm mục tiêu, ngày thi sắp tới và thời lượng tự học. Sau đó bấm <strong>Lưu thay đổi hồ sơ</strong> ở cuối biểu mẫu để tiếp tục.</p>
+        </div>
+      )}
       <div className="bg-white rounded-2xl border border-slate-200/80 p-2 shadow-xs flex flex-wrap gap-2">
         <button
           type="button"
@@ -597,22 +719,9 @@ export default function AccountSettingsPage({
           <span>Thông tin Cá nhân</span>
         </button>
 
-        {activeRole === 'student' && (
-          <button
-            type="button"
-            onClick={() => setActiveTab('academic')}
-            className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              activeTab === 'academic'
-                ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25'
-                : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-            }`}
-          >
-            <Target className="w-4 h-4" />
-            <span>Mục tiêu Thi cử & ĐGNL</span>
-          </button>
-        )}
 
-        {/* Tab 3: Phụ huynh & Học bạ Điện tử */}
+
+        {/* Parent information */}
         {activeRole === 'student' && (
           <button
             type="button"
@@ -624,10 +733,25 @@ export default function AccountSettingsPage({
             }`}
           >
             <Users className="w-4 h-4" />
-            <span>Phụ huynh & Học bạ Điện tử</span>
+            <span>Phụ huynh</span>
             {isParentLinked && (
               <span className="w-2 h-2 rounded-full bg-emerald-400" />
             )}
+          </button>
+        )}
+
+        {activeRole === 'student' && (
+          <button
+            type="button"
+            onClick={() => setActiveTab('transcript')}
+            className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              activeTab === 'transcript'
+                ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25'
+                : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+            }`}
+          >
+            <FileText className="w-4 h-4" />
+            <span>Học bạ điện tử</span>
           </button>
         )}
 
@@ -750,12 +874,7 @@ export default function AccountSettingsPage({
 
             {/* Account Details Specs */}
             <div className="space-y-3 pt-3 border-t border-slate-100 text-xs">
-              <div className="flex items-center justify-between py-1.5 border-b border-slate-50">
-                <span className="text-slate-500">Mã người dùng:</span>
-                <span className="font-mono font-bold text-slate-800">
-                  {currentUser?.id || currentUser?.userId || mockUser.id}
-                </span>
-              </div>
+
               <div className="flex items-center justify-between py-1.5 border-b border-slate-50">
                 <span className="text-slate-500">Vai trò hệ thống:</span>
                 <span className="font-bold text-blue-700 capitalize">
@@ -765,18 +884,18 @@ export default function AccountSettingsPage({
               <div className="flex items-center justify-between py-1.5 border-b border-slate-50">
                 <span className="text-slate-500">Phụ huynh đại diện:</span>
                 <span className="font-bold text-emerald-700 text-right truncate max-w-[170px]">
-                  {parentName} ({parentRelation === 'father' ? 'Cha' : parentRelation === 'mother' ? 'Mẹ' : 'Giám hộ'})
+                  {parentName ? `${parentName} (${parentRelation === 'father' ? 'Cha' : parentRelation === 'mother' ? 'Mẹ' : 'Giám hộ'})` : 'Chưa cập nhật'}
                 </span>
               </div>
               <div className="flex items-center justify-between py-1.5 border-b border-slate-50">
                 <span className="text-slate-500">Cơ sở đăng ký:</span>
                 <span className="font-bold text-slate-800 text-right truncate max-w-[170px]">
-                  {campuses.find((c) => c.id === campusId)?.name || 'Cơ sở 1: ĐHQG TP.HCM'}
+                  {campuses.find((c) => (c.id || c.campusId) === campusId)?.name || 'Cơ sở 1: ĐHQG TP.HCM'}
                 </span>
               </div>
               <div className="flex items-center justify-between py-1.5">
                 <span className="text-slate-500">Ngày gia nhập:</span>
-                <span className="font-bold text-slate-800">20/08/2025</span>
+                <span className="font-bold text-slate-800">{joinedDateDisplay}</span>
               </div>
             </div>
           </div>
@@ -785,7 +904,7 @@ export default function AccountSettingsPage({
           <div className="lg:col-span-8 bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-xs">
             <div className="mb-6 pb-4 border-b border-slate-100 flex items-center justify-between">
               <div>
-                <h3 className="text-base font-extrabold text-slate-800">Thông tin Cá nhân Cơ bản</h3>
+                <h3 className="text-base font-extrabold text-slate-800">Hồ sơ cá nhân</h3>
                 <p className="text-xs text-slate-500 mt-0.5">Thông tin này được dùng để hiển thị trên chứng nhận, bảng điểm và học bạ.</p>
               </div>
               <span className="text-xs px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 font-bold">
@@ -794,6 +913,7 @@ export default function AccountSettingsPage({
             </div>
 
             <form onSubmit={handleSaveProfile} className="space-y-5">
+              <fieldset disabled={isLoading || isSavingProfile || activationChecking} className="space-y-5 min-w-0">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
 
                 {/* Full Name */}
@@ -862,7 +982,7 @@ export default function AccountSettingsPage({
                       className="w-full pl-10 pr-4 py-2.5 text-xs font-semibold bg-slate-50/80 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all text-slate-800 cursor-pointer"
                     >
                       {campuses.map((c) => (
-                        <option key={c.id} value={c.id}>
+                        <option key={c.id || c.campusId} value={c.id || c.campusId}>
                           {c.name}
                         </option>
                       ))}
@@ -872,55 +992,51 @@ export default function AccountSettingsPage({
 
               </div>
 
-              {/* Action Buttons */}
-              <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    const u = currentUser || tokenStorage.getUser() || mockUser;
-                    setFullName(u.fullName || u.name || '');
-                    setPhone(u.phone || '');
-                  }}
-                  className="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
-                >
-                  Hủy thay đổi
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSavingProfile}
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md shadow-blue-500/20 hover:scale-102 active:scale-98 transition-all cursor-pointer disabled:opacity-50"
-                >
-                  <Save className="w-4 h-4" />
-                  <span>{isSavingProfile ? 'Đang lưu...' : 'Lưu Thay Đổi Hồ Sơ'}</span>
-                </button>
+              {activeRole === 'student' && (
+                <section className="space-y-5 border-t border-slate-100 pt-5">
+                  <div>
+                    <h4 className="text-sm font-extrabold text-slate-800">Học tập & Mục tiêu thi cử</h4>
+                    <span className={`mt-2 inline-flex rounded-full border px-2.5 py-1 text-[11px] font-semibold ${scoreInfo.color}`}>{scoreInfo.label}</span>
+                    <p className="mt-1 text-xs text-slate-500">Cập nhật trường THPT, nguyện vọng và kế hoạch ôn thi của bạn.</p>
+                  </div>
+
+<div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                  Nguyện vọng & Trường Đại học Mục tiêu
+                </label>
+                <div className="relative">
+                  <School className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <input
+                    type="text"
+                    value={universityAspiration}
+                    onChange={(e) => setUniversityAspiration(e.target.value)}
+                    maxLength={500}
+                    placeholder="VD: Đại học Bách khoa — ngành Khoa học máy tính"
+                    className="w-full pl-10 pr-4 py-2.5 text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all text-slate-800"
+                  />
+                </div>
+                <p className="mt-1 text-[11px] text-slate-400">Nguyện vọng được lưu trên thiết bị này.</p>
               </div>
-            </form>
-          </div>
 
-        </div>
-      )}
-
-      {/* Tab 2: Mục tiêu Thi cử & ĐGNL (Student Academic Goals) */}
-      {activeTab === 'academic' && (
-        <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-xs space-y-8">
-
-          <div className="pb-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-bold mb-1.5">
-                <Award className="w-3.5 h-3.5 text-blue-600" />
-                <span>Thang đo Năng lực Chuẩn hóa V-ACT 1200 Điểm</span>
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                  Trường THPT Đang theo học
+                </label>
+                <div className="relative">
+                  <School className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <input
+                    type="text"
+                    value={schoolName}
+                    onChange={(e) => setSchoolName(e.target.value)}
+                    placeholder="VD: Trường THPT Phước Long"
+                    maxLength={255}
+                    className="w-full pl-10 pr-4 py-2.5 text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all text-slate-800"
+                  />
+                </div>
               </div>
-              <h3 className="text-lg font-extrabold text-slate-800">Mục tiêu Khảo thí & Lộ trình Thích ứng</h3>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Thuật toán IRT & DAG đồ thị tri thức sẽ tự động điều chỉnh độ khó bài tập bám sát theo điểm mục tiêu của em.
-              </p>
-            </div>
-            <div className={`px-4 py-2 rounded-2xl border text-xs font-bold ${scoreInfo.color}`}>
-              {scoreInfo.label}
-            </div>
-          </div>
 
-          <form onSubmit={handleSaveAcademic} className="space-y-8">
+            </div>
 
             {/* Interactive Target Score Slider */}
             <div className="bg-slate-50 rounded-2xl p-6 border border-slate-200/80 space-y-4">
@@ -1003,54 +1119,12 @@ export default function AccountSettingsPage({
               </div>
             </div>
 
-            {/* Target Major & Exam Date & Study Hours */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                  Nguyện vọng & Trường Đại học Mục tiêu
-                </label>
-                <div className="relative">
-                  <School className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <input
-                    type="text"
-                    value=""
-                    disabled
-                    placeholder="Chưa hỗ trợ lưu nguyện vọng"
-                    className="w-full pl-10 pr-4 py-2.5 text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all text-slate-800"
-                  />
-                </div>
-                <p className="mt-1 text-[11px] text-slate-500">Nguyện vọng chưa được hỗ trợ lưu vào hồ sơ.</p>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                  Trường THPT Đang theo học
-                </label>
-                <div className="relative">
-                  <School className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <input
-                    type="text"
-                    value={schoolName}
-                    onChange={(e) => setSchoolName(e.target.value)}
-                    placeholder="THPT Chuyên Lê Hồng Phong"
-                    className="w-full pl-10 pr-4 py-2.5 text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all text-slate-800"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                <label htmlFor="academic-exam-date" className="block text-xs font-bold text-slate-700 mb-1.5">
                   Ngày thi ĐGNL Dự kiến
                 </label>
-                <div className="relative">
-                  <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <input
-                    type="date"
-                    value={examDate}
-                    onChange={(e) => setExamDate(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2.5 text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all text-slate-800"
-                  />
-                </div>
+                <DatePicker id="academic-exam-date" label="Ngày thi ĐGNL dự kiến" value={examDate} onChange={setExamDate} disabled={isLoading || isSavingProfile} />
               </div>
 
               <div>
@@ -1073,47 +1147,48 @@ export default function AccountSettingsPage({
               </div>
             </div>
 
-            {/* IRT Psychometrics Live Status Insight Card */}
-            <div className="p-5 rounded-2xl bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200/70 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-              <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold shadow-md shadow-blue-500/30 shrink-0">
-                  <Zap className="w-5 h-5 text-[#FACC15] fill-[#FACC15]" />
-                </div>
-                <div>
-                  <div className="text-xs font-extrabold text-blue-900">Vector Năng lực Hiện tại (IRT Theta 0): +0.65</div>
-                  <p className="text-[11px] text-blue-700 font-medium mt-0.5 max-w-xl">
-                    Đã làm chủ 18/28 chuyên đề trọng tâm. Bạn cần tích lũy thêm khoảng 65 điểm để vững vàng trong top 5% trúng tuyển ngành Khoa học Máy tính ĐH Bách Khoa.
-                  </p>
-                </div>
-              </div>
-              {onNavigateTab && (
-                <button
-                  type="button"
-                  onClick={() => onNavigateTab('diagnostic')}
-                  className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shrink-0 transition-colors cursor-pointer"
-                >
-                  Khảo sát lại Năng lực
-                </button>
-              )}
-            </div>
 
-            {/* Save Academic Button */}
-            <div className="pt-4 border-t border-slate-100 flex items-center justify-end">
-              <button
-                type="submit"
-                disabled={isSavingAcademic}
-                className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md shadow-blue-500/20 hover:scale-102 active:scale-98 transition-all cursor-pointer disabled:opacity-50"
-              >
-                <Save className="w-4 h-4" />
-                <span>{isSavingAcademic ? 'Đang cập nhật...' : 'Lưu Mục Tiêu Khảo Thí'}</span>
-              </button>
-            </div>
-          </form>
+                </section>
+              )}
+
+              {/* Action Buttons */}
+              <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-3 min-h-[58px]">
+                {hasAnyProfileChanges && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFullName(initialProfile.fullName || '');
+                      setPhone(initialProfile.phone || '');
+                      setAvatarUrl(initialProfile.avatarUrl || '');
+                      setCampusId(initialProfile.campusId || '');
+                      if (activeRole === 'student') resetSettings('academic');
+                    }}
+                    className="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
+                  >
+                    Hủy thay đổi
+                  </button>
+                )}
+                <button
+                  type="submit"
+                  disabled={isLoading || !hasAnyProfileChanges || isSavingProfile}
+                  className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                    isLoading || !hasAnyProfileChanges || isSavingProfile
+                      ? 'bg-blue-600/40 text-white/70 cursor-not-allowed opacity-50 shadow-none'
+                      : 'bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-500/20 hover:scale-102 active:scale-98 cursor-pointer'
+                  }`}
+                >
+                  <Save className="w-4 h-4" />
+                  <span>{isSavingProfile ? 'Đang lưu...' : 'Lưu Thay Đổi Hồ Sơ'}</span>
+                </button>
+              </div>
+              </fieldset>
+            </form>
+          </div>
 
         </div>
       )}
 
-      {/* Tab 3: Phụ huynh & Học bạ Điện tử (Family Link & Digital Transcript) */}
+      {/* Parent information and family linking */}
       {activeTab === 'family' && (
         <div className="space-y-8 animate-fade">
 
@@ -1148,11 +1223,12 @@ export default function AccountSettingsPage({
                 {/* Code Display Box */}
                 <div className="p-4 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-between gap-3">
                   <span className="font-mono text-xl sm:text-2xl font-black tracking-widest text-[#FACC15] select-all">
-                    {parentConnectCode}
+                    {parentConnectCode || 'Chưa có mã liên kết'}
                   </span>
                   <button
                     type="button"
                     onClick={handleCopyCode}
+                    disabled={!parentConnectCode}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-md active:scale-95 cursor-pointer"
                   >
                     {isCopiedCode ? (
@@ -1312,10 +1388,11 @@ export default function AccountSettingsPage({
 
                 {/* Action Buttons */}
                 <div className="pt-3 border-t border-slate-100 flex items-center justify-end">
+                  {cancelButton(hasParentChanges, () => resetSettings('parent'), isSavingParent)}
                   <button
                     type="submit"
-                    disabled={isSavingParent}
-                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md shadow-blue-500/20 hover:scale-102 active:scale-98 transition-all cursor-pointer disabled:opacity-50"
+                    disabled={isLoading || !hasParentChanges || isSavingParent}
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md shadow-blue-500/20 hover:scale-102 active:scale-98 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                   >
                     <Save className="w-4 h-4" />
                     <span>{isSavingParent ? 'Đang lưu...' : 'Lưu Thông Tin Phụ Huynh'}</span>
@@ -1327,7 +1404,12 @@ export default function AccountSettingsPage({
 
           </div>
 
-          {/* Section 2: Học Bạ Điện Tử & Bảng Điểm ĐGNL (Digital Academic Transcript) */}
+        </div>
+      )}
+
+      {activeRole === 'student' && activeTab === 'transcript' && (
+        <div className="space-y-6">
+          {/* Học Bạ Điện Tử & Bảng Điểm ĐGNL (Digital Academic Transcript) */}
           <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-xs space-y-6">
 
             {/* Header of Transcript */}
@@ -1355,7 +1437,7 @@ export default function AccountSettingsPage({
                   type="button"
                   onClick={handleSendReportEmail}
                   disabled={isSendingReport}
-                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all cursor-pointer disabled:opacity-50"
+                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                   title="Gửi bảng điểm này tới email của phụ huynh"
                 >
                   <Send className="w-3.5 h-3.5 text-blue-600" />
@@ -1383,13 +1465,13 @@ export default function AccountSettingsPage({
               <div>
                 <span className="text-slate-500 block">Lớp & Trường THPT:</span>
                 <strong className="text-slate-900 font-bold">{mockUser.grade}</strong>
-                <span className="text-slate-500 block text-[11px] truncate">{schoolName}</span>
+                <span className="text-slate-500 block text-[11px] truncate">{schoolName || 'Chưa cập nhật trường THPT'}</span>
               </div>
               <div>
                 <span className="text-slate-500 block">Phụ huynh đại diện:</span>
-                <strong className="text-emerald-700 font-extrabold text-sm">{parentName}</strong>
+                <strong className="text-emerald-700 font-extrabold text-sm">{parentName || 'Chưa cập nhật'}</strong>
                 <span className="text-slate-500 block text-[11px]">
-                  {parentRelation === 'father' ? 'Cha' : parentRelation === 'mother' ? 'Mẹ' : 'Giám hộ'} • {parentPhone}
+                  {parentPhone || 'Chưa cập nhật số điện thoại'}
                 </span>
               </div>
               <div>
@@ -1559,7 +1641,7 @@ export default function AccountSettingsPage({
               </p>
             </div>
 
-            <form onSubmit={handleChangePassword} className="space-y-5">
+            <form onSubmit={handleChangePassword} className="space-y-5" noValidate>
 
               {/* Current Password */}
               <div>
@@ -1571,10 +1653,16 @@ export default function AccountSettingsPage({
                   <input
                     type={showCurrentPw ? 'text' : 'password'}
                     value={currentPassword}
-                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    onChange={(e) => updatePasswordField('currentPassword', e.target.value)}
+                    onBlur={() => setPasswordTouched((prev) => ({ ...prev, currentPassword: true }))}
+                    id="currentPassword"
+                    aria-invalid={Boolean(passwordError('currentPassword'))}
+                    aria-describedby={passwordError('currentPassword') ? 'currentPassword-error' : undefined}
+                    autoComplete="current-password"
+                    disabled={isSavingPassword}
                     placeholder="Nhập mật khẩu hiện tại"
                     required
-                    className="w-full pl-10 pr-10 py-2.5 text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all text-slate-800"
+                    className={passwordInputClass('currentPassword')}
                   />
                   <button
                     type="button"
@@ -1584,6 +1672,7 @@ export default function AccountSettingsPage({
                     {showCurrentPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
+                {renderPasswordError('currentPassword')}
               </div>
 
               {/* New Password */}
@@ -1596,10 +1685,16 @@ export default function AccountSettingsPage({
                   <input
                     type={showNewPw ? 'text' : 'password'}
                     value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
+                    onChange={(e) => updatePasswordField('newPassword', e.target.value)}
+                    onBlur={() => setPasswordTouched((prev) => ({ ...prev, newPassword: true }))}
+                    id="newPassword"
+                    aria-invalid={Boolean(passwordError('newPassword'))}
+                    aria-describedby={passwordError('newPassword') ? 'newPassword-error' : undefined}
+                    autoComplete="new-password"
+                    disabled={isSavingPassword}
                     placeholder="Nhập ít nhất 8 ký tự kèm chữ hoa, thường, số"
                     required
-                    className="w-full pl-10 pr-10 py-2.5 text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all text-slate-800"
+                    className={passwordInputClass('newPassword')}
                   />
                   <button
                     type="button"
@@ -1609,6 +1704,8 @@ export default function AccountSettingsPage({
                     {showNewPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
+
+                {renderPasswordError('newPassword')}
 
                 {/* Password Strength Meter */}
                 {newPassword && (
@@ -1639,10 +1736,16 @@ export default function AccountSettingsPage({
                   <input
                     type={showConfirmPw ? 'text' : 'password'}
                     value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    onChange={(e) => updatePasswordField('confirmPassword', e.target.value)}
+                    onBlur={() => setPasswordTouched((prev) => ({ ...prev, confirmPassword: true }))}
+                    id="confirmPassword"
+                    aria-invalid={Boolean(passwordError('confirmPassword'))}
+                    aria-describedby={passwordError('confirmPassword') ? 'confirmPassword-error' : undefined}
+                    autoComplete="new-password"
+                    disabled={isSavingPassword}
                     placeholder="Nhập lại mật khẩu mới"
                     required
-                    className="w-full pl-10 pr-10 py-2.5 text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all text-slate-800"
+                    className={passwordInputClass('confirmPassword')}
                   />
                   <button
                     type="button"
@@ -1652,17 +1755,16 @@ export default function AccountSettingsPage({
                     {showConfirmPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
-                {confirmPassword && newPassword !== confirmPassword && (
-                  <p className="text-[11px] text-rose-500 font-bold mt-1">Mật khẩu xác nhận chưa khớp với mật khẩu mới.</p>
-                )}
+                {renderPasswordError('confirmPassword')}
               </div>
 
               {/* Submit Button */}
-              <div className="pt-4 border-t border-slate-100 flex items-center justify-end">
+              <div className="pt-4 border-t border-slate-100 flex flex-wrap items-center justify-end gap-3">
+                {cancelButton(hasPasswordChanges, resetPassword, isSavingPassword)}
                 <button
                   type="submit"
-                  disabled={isSavingPassword || (confirmPassword && newPassword !== confirmPassword)}
-                  className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md shadow-blue-500/20 hover:scale-102 active:scale-98 transition-all cursor-pointer disabled:opacity-50"
+                  disabled={!canChangePassword || isSavingPassword}
+                  className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md shadow-blue-500/20 hover:scale-102 active:scale-98 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                 >
                   <KeyRound className="w-4 h-4" />
                   <span>{isSavingPassword ? 'Đang cập nhật...' : 'Cập Nhật Mật Khẩu'}</span>
@@ -1820,11 +1922,13 @@ export default function AccountSettingsPage({
 
           </div>
 
-          <div className="pt-4 border-t border-slate-100 flex items-center justify-end">
+          <div className="pt-4 border-t border-slate-100 flex flex-wrap items-center justify-end gap-3">
+            {cancelButton(hasPreferenceChanges, () => resetSettings('preferences'))}
             <button
               type="button"
               onClick={handleSavePreferences}
-              className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md shadow-blue-500/20 hover:scale-102 active:scale-98 transition-all cursor-pointer"
+              disabled={isLoading || !hasPreferenceChanges}
+              className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md shadow-blue-500/20 hover:scale-102 active:scale-98 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
             >
               <Save className="w-4 h-4" />
               <span>Lưu Cấu Hình Tùy Chọn</span>

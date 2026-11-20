@@ -1,3 +1,4 @@
+import RegistrationRoleSwitch from './RegistrationRoleSwitch';
 import { toast } from "../../context/ToastContext";
 import BrandLogo from "../common/BrandLogo";
 import React, { useState, useEffect } from "react";
@@ -66,7 +67,6 @@ export default function WebLoginPage({
   const [campusDropdownOpen, setCampusDropdownOpen] = useState(false);
 
   // Custom rounded dropdown open states
-  const [gradeDropdownOpen, setGradeDropdownOpen] = useState(false);
   const [targetDropdownOpen, setTargetDropdownOpen] = useState(false);
 
   // Show/Hide password toggles for registration
@@ -208,12 +208,6 @@ export default function WebLoginPage({
   }, []);
 
   // Grade & Target Options
-  const gradeOptions = [
-    { value: "12", label: "Lớp 12 (Thi 2026)" },
-    { value: "11", label: "Lớp 11 (Chuẩn bị)" },
-    { value: "freelance", label: "Thí sinh tự do" },
-  ];
-
   const targetOptions = [
     { value: "900", label: "900+ (Bách Khoa/Y Dược)" },
     { value: "800", label: "800+ (KHTN/Kinh Tế)" },
@@ -501,16 +495,22 @@ export default function WebLoginPage({
     if (e) e.preventDefault();
     notifyModalError(null);
     notifyModalSuccess(null);
+
+    if (forgotStep === 1) {
+      const cleanEmail = (forgotEmail || "").trim().toLowerCase();
+      const emailCheck = validateEmailSyntaxAndRules(cleanEmail);
+      if (!emailCheck.isValid) {
+        notifyModalError(emailCheck.message || "Vui lòng nhập địa chỉ Email tài khoản.");
+        return;
+      }
+      setForgotEmail(cleanEmail);
+    }
+
     setIsSubmitting(true);
 
     try {
       if (forgotStep === 1) {
-        const cleanEmail = (forgotEmail || "").trim();
-        if (!cleanEmail) {
-          setIsSubmitting(false);
-          notifyModalError("Vui lòng nhập địa chỉ Email tài khoản.");
-          return;
-        }
+        const cleanEmail = (forgotEmail || "").trim().toLowerCase();
         // Gọi API forgot-password để kiểm tra email tồn tại và gửi mã OTP
         await authService.forgotPassword(cleanEmail);
         setIsSubmitting(false);
@@ -583,6 +583,18 @@ export default function WebLoginPage({
       }
     } catch (err) {
       setIsSubmitting(false);
+      const errorCode = err.data?.error?.code || err.data?.Error?.Code || err.code;
+      const errorDescription = err.data?.error?.description || err.data?.Error?.Description || err.message || "";
+      if (
+        forgotStep === 1 &&
+        (err.status === 404 ||
+          errorCode === "Auth.UserNotFound" ||
+          /không tìm thấy|usernotfound|not found/i.test(errorDescription) ||
+          /không tìm thấy|usernotfound|not found/i.test(err.message))
+      ) {
+        notifyModalError("Email này không tồn tại trong hệ thống. Vui lòng kiểm tra lại hoặc đăng ký tài khoản mới.");
+        return;
+      }
       const msg = formatApiError(
         err,
         "Thao tác không thành công. Vui lòng kiểm tra lại.",
@@ -753,7 +765,7 @@ export default function WebLoginPage({
 
           {/* RIGHT COLUMN (6 Spans): Centered & Clean Auth Form Column */}
           <div className="lg:col-span-6 p-6 sm:p-8 lg:px-10 lg:py-7 flex flex-col justify-between gap-4 bg-white relative lg:max-h-[calc(100vh-5.5rem)] lg:overflow-y-auto">
-            <div className="my-auto space-y-5">
+            <div className="mt-0 space-y-5">
               {/* Header Mode Switcher: Login / Register */}
               <div className="space-y-3.5">
                 <div className="p-1 bg-slate-100 rounded-2xl flex items-center border border-slate-200">
@@ -782,16 +794,24 @@ export default function WebLoginPage({
                   </button>
                 </div>
 
-                <div>
-                  <h2 className="text-2xl font-black text-slate-900 tracking-tight">
+                <AnimatePresence mode="wait" initial={false}>
+                <motion.div
+                  key={mode}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.2, ease: "easeOut" }}
+                >
+                  <h2 className="text-2xl font-extrabold text-slate-900 tracking-normal leading-tight">
                     {mode === "login" ? "Đăng Nhập" : "Đăng Ký Tài Khoản Mới"}
                   </h2>
-                  <p className="text-xs text-slate-500 font-semibold mt-1">
+                  <p className="text-xs text-slate-500 font-medium mt-2 leading-relaxed tracking-wide">
                     {mode === "login"
                       ? "Nhập Email hoặc Số điện thoại và Mật khẩu để đăng nhập."
                       : "Đăng ký tài khoản dành cho Học sinh và Phụ huynh."}
                   </p>
-                </div>
+                </motion.div>
+                </AnimatePresence>
               </div>
 
               {/* Role Selection Switcher (Register mode: Student vs Parent) */}
@@ -800,37 +820,11 @@ export default function WebLoginPage({
                   <div className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400 mb-2 flex items-center justify-between">
                     <span>BẠN LÀ:</span>
                     <span className="text-blue-600 font-bold">
-                      {role === "student" ? "Học sinh 2k8/2k9" : "Phụ huynh"}
+                      {role === "student" ? "Học sinh" : "Phụ huynh"}
                     </span>
                   </div>
 
-                  <div className="p-1 bg-slate-100 rounded-2xl flex items-center gap-1 border border-slate-200 text-xs font-bold">
-                    <button
-                      type="button"
-                      onClick={() => setRole("student")}
-                      className={`flex-1 py-2 px-1 rounded-xl transition-all flex items-center justify-center gap-1 ${
-                        role === "student"
-                          ? "bg-white text-blue-700 shadow-sm font-extrabold"
-                          : "text-slate-500 hover:text-slate-800"
-                      }`}
-                    >
-                      <GraduationCap className="w-3.5 h-3.5" />
-                      <span>Học sinh</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setRole("parent")}
-                      className={`flex-1 py-2 px-1 rounded-xl transition-all flex items-center justify-center gap-1 ${
-                        role === "parent"
-                          ? "bg-white text-blue-700 shadow-sm font-extrabold"
-                          : "text-slate-500 hover:text-slate-800"
-                      }`}
-                    >
-                      <Users className="w-3.5 h-3.5" />
-                      <span>Phụ huynh</span>
-                    </button>
-                  </div>
+                  <RegistrationRoleSwitch role={role} disabled={isSubmitting} onChange={(nextRole) => { setRole(nextRole); setTargetDropdownOpen(false); setCampusDropdownOpen(false); }} />
                 </div>
               )}
 
@@ -850,6 +844,14 @@ export default function WebLoginPage({
               )}
 
               {/* Form Views: Login vs Register */}
+              <AnimatePresence mode="wait" initial={false}>
+              <motion.div
+                key={mode}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.24, ease: "easeOut" }}
+              >
               {mode === "login" ? (
                 <LoginForm
                   email={email}
@@ -895,8 +897,6 @@ export default function WebLoginPage({
                   setRegTargetScore={setRegTargetScore}
                   regAgreeTerms={regAgreeTerms}
                   setRegAgreeTerms={setRegAgreeTerms}
-                  gradeDropdownOpen={gradeDropdownOpen}
-                  setGradeDropdownOpen={setGradeDropdownOpen}
                   targetDropdownOpen={targetDropdownOpen}
                   setTargetDropdownOpen={setTargetDropdownOpen}
                   regShowPassword={regShowPassword}
@@ -904,7 +904,6 @@ export default function WebLoginPage({
                   regShowConfirmPassword={regShowConfirmPassword}
                   setRegShowConfirmPassword={setRegShowConfirmPassword}
                   passStrength={passStrength}
-                  gradeOptions={gradeOptions}
                   targetOptions={targetOptions}
                   campuses={campuses}
                   selectedCampusId={selectedCampusId}
@@ -927,6 +926,8 @@ export default function WebLoginPage({
                   }}
                 />
               )}
+              </motion.div>
+              </AnimatePresence>
             </div>
 
             {/* Bottom Footer Note */}
@@ -946,6 +947,10 @@ export default function WebLoginPage({
         setForgotStep={setForgotStep}
         forgotEmail={forgotEmail}
         setForgotEmail={setForgotEmail}
+        onEmailChange={() => {
+          notifyModalError(null);
+          notifyModalSuccess(null);
+        }}
         otpCode={otpCode}
         setOtpCode={setOtpCode}
         newPassword={newPassword}

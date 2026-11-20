@@ -771,6 +771,7 @@ export default function DiagnosticAssessmentPage({
 
   // Azota Proctored Anti-Cheat Fullscreen & Tab Switch States
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const launchFullscreenPendingRef = useRef(false);
   const [tabSwitchCount, setTabSwitchCount] = useState(0);
   const [showViolationModal, setShowViolationModal] = useState(false);
   const [violationReason, setViolationReason] = useState('tab_switch'); // 'tab_switch' | 'exit_fullscreen'
@@ -803,10 +804,22 @@ export default function DiagnosticAssessmentPage({
   // Fullscreen Helper Functions
   const requestFullScreenMode = () => {
     const elem = document.documentElement;
-    if (elem.requestFullscreen) {
-      elem.requestFullscreen().catch(() => { });
-    } else if (elem.webkitRequestFullscreen) {
-      elem.webkitRequestFullscreen();
+    try {
+      let request;
+      if (elem.requestFullscreen) request = elem.requestFullscreen();
+      else if (elem.webkitRequestFullscreen) request = elem.webkitRequestFullscreen();
+      else return Promise.resolve(false);
+
+      return Promise.resolve(request).then(() => {
+        setIsFullscreen(true);
+        return true;
+      }).catch(() => {
+        setIsFullscreen(false);
+        return false;
+      });
+    } catch {
+      setIsFullscreen(false);
+      return Promise.resolve(false);
     }
   };
 
@@ -829,6 +842,7 @@ export default function DiagnosticAssessmentPage({
           document.msExitFullscreen();
         }
       }
+      setIsFullscreen(false);
     } catch (e) {
       console.warn('Exit fullscreen error:', e);
     }
@@ -836,7 +850,7 @@ export default function DiagnosticAssessmentPage({
 
   // Automatically exit fullscreen and close all exam modals when not in testing stage
   useEffect(() => {
-    if (stage === 'result' || stage === 'setup') {
+    if (stage === 'result' || (stage === 'setup' && !launchFullscreenPendingRef.current)) {
       setShowViolationModal(false);
       setShowSubmitModal(false);
       exitFullScreenMode();
@@ -1006,6 +1020,9 @@ export default function DiagnosticAssessmentPage({
   const handleStartAssessment = async () => {
     if (historyOnly) return;
     if (recovering || recoveryBlocked.current || submittingRef.current) return;
+    // Request fullscreen synchronously from the user's click before API awaits consume the gesture.
+    launchFullscreenPendingRef.current = true;
+    requestFullScreenMode();
     setStage('setup');
     setIsLoading(true);
     setLoadingMsg('Đang kiểm tra cơ sở theo học trước khi vào thi...');
@@ -1018,6 +1035,8 @@ export default function DiagnosticAssessmentPage({
       const history = await practiceService.getDiagnosticHistory(ownerId);
       const completedIds = completedDiagnosticExamIds(history, ownerId);
       if (completedIds.size >= DIAGNOSTIC_TARGET) {
+        launchFullscreenPendingRef.current = false;
+        exitFullScreenMode();
         showPopupAlert(`Bạn đã hoàn thành bài đánh giá đầu vào. Hãy xem kết quả hoặc mở lộ trình học cá nhân.`, 'Đã hoàn thành đánh giá đầu vào', 'info', onNavigateRoadmap);
         setHistoryReload((value) => value + 1);
         return;
@@ -1043,6 +1062,8 @@ export default function DiagnosticAssessmentPage({
       const transformed = transformBackendExamToQuestions(rawExamDto);
       if (!transformed.id) throw new Error('Máy chủ chưa cung cấp mã đề thi.');
       if (completedIds.has(transformed.id)) {
+        launchFullscreenPendingRef.current = false;
+        exitFullScreenMode();
         setSelectedHistoryExam(null);
         setResultData(null);
         setCustomAlert({
@@ -1071,8 +1092,11 @@ export default function DiagnosticAssessmentPage({
       setTimeRemaining((transformed.durationMinutes || 45) * 60);
       setTabSwitchCount(0);
       setShowViolationModal(false);
+      launchFullscreenPendingRef.current = false;
       setStage('testing');
     } catch (err) {
+      launchFullscreenPendingRef.current = false;
+      exitFullScreenMode();
       console.error('Lỗi khi tải đề thi từ backend:', err);
       showPopupAlert(
         `Không thể nạp đề thi từ máy chủ: ${err.message || err}\n\nVui lòng đảm bảo các dịch vụ Backend (API Gateway :5212, Content Service :5249) đang chạy!`,
@@ -1477,7 +1501,11 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
           </select>
           {campusError && <p role="alert" className="text-red-600">{campusError}</p>}
           <button type="button" disabled={!selectedCampusId || campusSaving} onClick={saveCampusAndStart} className="rounded-xl bg-blue-600 text-white p-3 disabled:opacity-50">{campusSaving ? 'Đang lưu...' : 'Lưu và bắt đầu'}</button>
-          <button type="button" disabled={campusSaving} onClick={() => setShowCampusSetup(false)} className="p-3">Hủy</button>
+          <button type="button" disabled={campusSaving} onClick={() => {
+            launchFullscreenPendingRef.current = false;
+            exitFullScreenMode();
+            setShowCampusSetup(false);
+          }} className="p-3">Hủy</button>
         </div>
       </div>}
 

@@ -60,7 +60,7 @@ export const paymentService = {
    * @param {string} studentId
    * @returns {Promise<{ isPaid: boolean, activeCourseId, courseName, planType, durationWeeks, startDate, endDate, assignedClassName, unlockedFeatures: string[], payments: Array }>}
    */
-  async getStudentTuitionStatus(studentId) {
+  async getStudentTuitionStatus(studentId, { throwOnError = false } = {}) {
     if (!studentId) return { isPaid: false, unlockedFeatures: [], payments: [] };
     try {
       const response = await apiClient.get(`/api/practice/payments/status-by-student/${studentId}`);
@@ -69,7 +69,8 @@ export const paymentService = {
       try {
         const fallbackRes = await apiClient.get(`/api/practice/payments/my-status?studentId=${studentId}`);
         return fallbackRes.data;
-      } catch {
+      } catch (fallbackError) {
+        if (throwOnError) throw fallbackError;
         return { isPaid: false, unlockedFeatures: [], payments: [] };
       }
     }

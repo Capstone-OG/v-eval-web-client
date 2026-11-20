@@ -39,7 +39,7 @@ export default function Sidebar({
   portalMetrics = {}
 }) {
   const studentDashboard = portalMetrics.studentDashboard;
-  const rawTheta = latestDiagnosticResult?.theta_0 ?? studentDashboard?.theta0;
+  const rawTheta = latestDiagnosticResult?.theta_0 ?? latestDiagnosticResult?.theta0 ?? studentDashboard?.theta0;
   const thetaDisplay =
     rawTheta !== undefined && rawTheta !== null
       ? Number(rawTheta) > 0
@@ -47,7 +47,7 @@ export default function Sidebar({
         : `${Number(rawTheta).toFixed(2)}`
       : '0.00';
 
-  const placementCode = latestDiagnosticResult?.placement_class || studentDashboard?.placementClass;
+  const placementCode = latestDiagnosticResult?.placement_class || latestDiagnosticResult?.placementClass || studentDashboard?.placementClass;
   const placementLabel =
     placementCode === 'BREAKTHROUGH'
       ? 'Lớp Bứt Phá (900+)'
@@ -437,17 +437,15 @@ export default function Sidebar({
   }
 
   return (
-    <aside className={`${mobile ? 'flex w-full min-h-full' : 'hidden lg:flex w-72'} flex-col justify-between border-r border-slate-200/80 bg-gradient-to-b from-slate-50/80 to-white p-5 select-none shrink-0`}>
-      <div className="space-y-6">
+    <aside className={`${mobile ? 'flex w-full min-h-full' : 'hidden lg:flex w-72 h-full sticky top-0 overflow-y-auto'} flex-col border-r border-slate-200/80 bg-gradient-to-b from-slate-50/80 to-white p-5 select-none shrink-0`}>
+      <div className="flex min-w-0 flex-col gap-5">
         {/* Brand Identity Header - Synchronized with Home Page (PublicHeader.jsx) */}
         <div className="space-y-3 px-1">
           <BrandLogo className="w-44" />
-
-
         </div>
 
         {/* Role-Specific Navigation Sections */}
-        <nav className="space-y-5">
+        <nav className="order-2 space-y-5">
           {navSections.map((section) => (
             <div key={section.sectionTitle} className="space-y-1.5">
               <div className="px-3 text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
@@ -544,20 +542,20 @@ export default function Sidebar({
             </div>
           ))}
         </nav>
-      </div>
 
-      {/* Role-Specific Footer Card (Matches Home Page Deep Royal Blue-Indigo Gradient) */}
-      <div className="mt-6 p-4 rounded-3xl bg-gradient-to-br from-blue-700 via-indigo-800 to-slate-900 text-white space-y-3 shadow-lg border border-blue-600/30 relative overflow-hidden">
-        <div className="absolute -right-6 -bottom-6 w-24 h-24 rounded-full bg-[#FACC15]/15 blur-xl pointer-events-none"></div>
+        {/* Role summaries stay below navigation. */}
+        <div className="order-3 min-w-0 pt-2">
+          <div className="p-4 rounded-3xl bg-gradient-to-br from-blue-700 via-indigo-800 to-slate-900 text-white space-y-3 shadow-lg border border-blue-600/30 relative overflow-hidden">
+            <div className="absolute -right-6 -bottom-6 w-24 h-24 rounded-full bg-[#FACC15]/15 blur-xl pointer-events-none"></div>
 
         {role === 'student' && (
           <>
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] uppercase tracking-wider font-extrabold text-[#FACC15] flex items-center gap-1">
-                <Sparkles className="w-3 h-3" />
+            <div className="flex items-center justify-between gap-2">
+              <span className="min-w-0 text-[10px] uppercase tracking-wide font-extrabold text-[#FACC15] flex items-center gap-1.5">
+                <Sparkles className="w-3 h-3 shrink-0" />
                 <span>Hồ Sơ Năng Lực IRT</span>
               </span>
-              <span className="text-xs px-2 py-0.5 rounded-full bg-white/15 text-cyan-200 font-mono font-bold">
+              <span className="shrink-0 whitespace-nowrap text-[11px] px-2 py-1 rounded-lg bg-white/15 text-cyan-200 font-mono font-bold tabular-nums">
                 θ₀ = {thetaDisplay}
               </span>
             </div>
@@ -570,9 +568,9 @@ export default function Sidebar({
                 style={{ width: `${studentProgressPct}%` }}
               ></div>
             </div>
-            <div className="flex items-center justify-between text-[11px] text-blue-100">
-              <span>Mục tiêu: {studentTarget}+ ĐGNL</span>
-              <span className="text-[#FACC15] font-black">{studentProgressPct}% lộ trình</span>
+            <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-blue-100">
+              <span className="whitespace-nowrap">Mục tiêu: {studentTarget}+ ĐGNL</span>
+              <span className="whitespace-nowrap text-[#FACC15] font-black">{studentProgressPct}% lộ trình</span>
             </div>
           </>
         )}
@@ -672,6 +670,8 @@ export default function Sidebar({
             </div>
           </>
         )}
+          </div>
+        </div>
       </div>
     </aside>
   );
