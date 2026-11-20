@@ -148,41 +148,29 @@ describe('practiceService Core Flow 6 APIs', () => {
     assert.ok(capturedCalls[12].url.endsWith(`/api/practice/mistakes/${FLOW6_DEFAULTS.MISTAKE_1_ID}/review-submit`));
   });
 
-  it('persists offline remediation, alert resolution, and SM-2 mastery progression seamlessly', async () => {
+  it('returns clean empty dynamic states without fabricating mock data when backend is unreachable', async () => {
     globalThis.fetch = async () => {
       throw new Error('Failed to fetch');
     };
 
-    const initialForecast = await practiceService.getMyForecast();
-    assert.strictEqual(initialForecast.forecast.predictedScore, 845);
-    assert.strictEqual(initialForecast.balanceSheet.deficitScore, 75);
+    const emptyForecast = await practiceService.getMyForecast();
+    assert.strictEqual(emptyForecast.forecast.predictedScore, 0);
+    assert.strictEqual(emptyForecast.prescriptions.length, 0);
+    assert.strictEqual(emptyForecast._source, 'empty_backend');
 
-    const session = await practiceService.getPrescriptionPracticeSession('PAT_TOAN_LOGIC_01');
-    assert.strictEqual(session.questions.length, 3);
+    const emptyAlerts = await practiceService.getMyAlerts();
+    assert.strictEqual(emptyAlerts.totalAlerts, 0);
+    assert.strictEqual(emptyAlerts.alerts.length, 0);
+    assert.strictEqual(emptyAlerts._source, 'empty_backend');
 
-    const submitRes = await practiceService.submitPrescriptionPracticeSession('PAT_TOAN_LOGIC_01', {
-      sessionId: session.sessionId,
-      answers: [
-        { questionId: 'f6200001-0000-4000-8000-000000000001', selectedOption: 'C', timeSpentSeconds: 18 },
-        { questionId: 'f6200001-0000-4000-8000-000000000002', selectedOption: 'B', timeSpentSeconds: 25 },
-        { questionId: 'f6200001-0000-4000-8000-000000000003', selectedOption: 'A', timeSpentSeconds: 15 }
-      ]
-    });
-    assert.strictEqual(submitRes.isMastered, true);
-    assert.strictEqual(submitRes.pointsRecovered, 30);
-    assert.strictEqual(submitRes.remainingDeficit, 45);
+    const emptyMistakes = await practiceService.getMistakeNotebook();
+    assert.strictEqual(emptyMistakes.totalCount, 0);
+    assert.strictEqual(emptyMistakes.items.length, 0);
+    assert.strictEqual(emptyMistakes._source, 'empty_backend');
 
-    const updatedForecast = await practiceService.getMyForecast();
-    assert.strictEqual(updatedForecast.forecast.predictedScore, 875);
-    assert.strictEqual(updatedForecast.prescriptions[0].isRemedied, true);
-
-    // Mistake #2 starts at consecutiveCorrectReviews = 2 -> one correct answer reaches 3 -> Mastered!
-    const sm2Res = await practiceService.submitDailyMistakeReview(FLOW6_DEFAULTS.MISTAKE_2_ID, {
-      selectedOption: 'A',
-      timeSpentSeconds: 20
-    });
-    assert.strictEqual(sm2Res.isCorrect, true);
-    assert.strictEqual(sm2Res.consecutiveCorrectReviews, 3);
-    assert.strictEqual(sm2Res.isMastered, true);
+    const emptyDaily = await practiceService.getDailyMistakeReview();
+    assert.strictEqual(emptyDaily.totalDueQuestions, 0);
+    assert.strictEqual(emptyDaily.questions.length, 0);
+    assert.strictEqual(emptyDaily._source, 'empty_backend');
   });
 });

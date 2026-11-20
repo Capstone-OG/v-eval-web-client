@@ -133,15 +133,15 @@ export default function ParentEarlyWarningsAndTeacherView({
             <AlertTriangle className="w-6 h-6" />
           </div>
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <span className="text-[11px] font-extrabold text-amber-600 uppercase tracking-wider">
                 Trung Tâm Cảnh Báo &amp; Trao Đổi
               </span>
               <span className="text-slate-300">•</span>
-              <span className="text-xs text-slate-500 font-medium">Đồng hành cùng Giáo viên lớp</span>
+              <span className="text-xs text-slate-500 font-medium">Học sinh: <strong className="text-blue-700">{childName}</strong></span>
             </div>
             <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-              Cảnh Báo &amp; Trao Đổi Giáo Viên: <span className="text-blue-700">{childName}</span>
+              Cảnh Báo Học Tập &amp; Trao Đổi Giáo Viên
             </h1>
           </div>
         </div>

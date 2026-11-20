@@ -10,7 +10,14 @@ export const contentService = {
    * @param {string} [excludeExamId] - ID đề thi muốn bỏ qua khi làm lại đề mới
    */
   async getDiagnosticTest(excludeExamId = null) {
-    const endpoint = excludeExamId 
+    if (Array.isArray(excludeExamId)) {
+      const cleaned = excludeExamId.filter(Boolean);
+      const endpoint = cleaned.length > 0
+        ? `/api/content/diagnostic-test?excludeExamIds=${encodeURIComponent(cleaned.join(','))}`
+        : '/api/content/diagnostic-test';
+      return (await apiClient.get(endpoint)).data;
+    }
+    const endpoint = excludeExamId
       ? `/api/content/diagnostic-test?excludeExamId=${encodeURIComponent(excludeExamId)}`
       : '/api/content/diagnostic-test';
     return (await apiClient.get(endpoint)).data;

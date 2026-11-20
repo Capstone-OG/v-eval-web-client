@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import confetti from 'canvas-confetti';
 import {
   Brain,
@@ -172,6 +173,10 @@ function transformBackendExamToQuestions(examDto) {
           skill_name: skillName,
           domain_id: domainInfo.id,
           domain_name: domainInfo.name,
+          domain_code: q.domainCode || '',
+          subject_name: q.subjectName || '',
+          chapter_name: q.chapterName || '',
+          lesson_name: q.lessonName || '',
           bloom: q.difficultyLevel || 2
         });
       });
@@ -197,6 +202,10 @@ function transformBackendExamToQuestions(examDto) {
         skill_name: skillName,
         domain_id: domainInfo.id,
         domain_name: domainInfo.name,
+        domain_code: q.domainCode || '',
+        subject_name: q.subjectName || '',
+        chapter_name: q.chapterName || '',
+        lesson_name: q.lessonName || '',
         bloom: q.difficultyLevel || 2
       });
     });
@@ -509,81 +518,62 @@ export default function DiagnosticAssessmentPage({
         throw new Error('Kết quả bài kiểm tra không hợp lệ.');
       }
 
-      // 1. Nạp ngân hàng câu hỏi gốc từ Content Service hoặc bộ nhớ để ghép nội dung, phương án và lời giải
+      // 1. Nạp ngân hàng câu hỏi gốc từ Content Service đúng theo data.examId (KHÔNG dùng câu hỏi mock)
       let examQuestionsMap = new Map();
       let examQuestionsList = [];
 
-      if (examData?.questions?.length > 0) {
-        examQuestionsList = examData.questions;
-      } else if (questions?.length > 0) {
-        examQuestionsList = questions;
-      } else {
-        try {
-          const rawExam = await contentService.getDiagnosticTest();
-          const transformed = transformBackendExamToQuestions(rawExam);
-          if (transformed.questions?.length > 0) {
-            examQuestionsList = transformed.questions;
+      const hasAllServerContent = Array.isArray(data.questions) && data.questions.every((q) => q.content && Array.isArray(q.options) && q.options.length > 0);
+      if (!hasAllServerContent) {
+        if (examData?.id === data.examId && examData?.questions?.length > 0) {
+          examQuestionsList = examData.questions;
+        } else if (data.examId) {
+          try {
+            const rawExam = await contentService.getExamDetail(data.examId);
+            const transformed = transformBackendExamToQuestions(rawExam);
+            if (transformed.questions?.length > 0) {
+              examQuestionsList = transformed.questions;
+            }
+          } catch (contentErr) {
+            console.warn('[DiagnosticAssessmentPage] Không thể nạp chi tiết đề thi từ Content Service:', contentErr);
           }
-        } catch (contentErr) {
-          console.warn('[DiagnosticAssessmentPage] Không thể nạp đề thi từ Content Service:', contentErr);
         }
       }
 
       examQuestionsList.forEach((eq, idx) => {
         if (eq.id) examQuestionsMap.set(String(eq.id).toLowerCase(), eq);
         examQuestionsMap.set(`num_${eq.question_number || (idx + 1)}`, eq);
-        examQuestionsMap.set(`idx_${idx}`, eq);
       });
 
       const reviewed = (data.questions || []).map((q, idx) => {
         const qId = String(q.questionId || '').toLowerCase();
         const qNum = (q.questionOrder && q.questionOrder > 0) ? q.questionOrder : (idx + 1);
-        const matched = examQuestionsMap.get(qId) ||
-          examQuestionsMap.get(`num_${qNum}`) ||
-          examQuestionsMap.get(`idx_${idx}`) ||
-          (idx < examQuestionsList.length ? examQuestionsList[idx] : null);
+        const matched = examQuestionsMap.get(qId) || examQuestionsMap.get(`num_${qNum}`) || null;
 
-        const sampleFallback = Array.isArray(sampleQuestionsForDiagnostic) && sampleQuestionsForDiagnostic.length > 0
-          ? sampleQuestionsForDiagnostic[idx % sampleQuestionsForDiagnostic.length]
-          : null;
-
-        const rawContent = q.content || matched?.content;
-        const content = (rawContent && !rawContent.includes('API lịch sử không cung cấp'))
-          ? rawContent
-          : sampleFallback?.question ||
-            `Câu hỏi ${qNum}: Khảo sát và đánh giá năng lực tư duy chuẩn hóa ĐGNL V-ACT 2026.`;
-
+        const content = q.content || matched?.content || `Câu hỏi #${qNum} (đã lưu trên máy chủ)`;
         const options = (q.options && q.options.length > 0)
           ? q.options
-          : (matched?.options && matched.options.length > 0)
-            ? matched.options
-            : sampleFallback?.options || [
-                'Phương án A: Phương án lựa chọn A',
-                'Phương án B: Phương án lựa chọn B',
-                'Phương án C: Phương án lựa chọn C',
-                'Phương án D: Phương án lựa chọn D'
-              ];
+          : (matched?.options && matched.options.length > 0 ? matched.options : []);
 
-        const skillName = q.skillName || matched?.skill_name || sampleFallback?.skill || 'Kỹ năng chuẩn hóa ĐGNL';
+        const skillName = q.skillName || matched?.skill_name || 'Kỹ năng chuẩn hóa ĐGNL';
         const domainMapping = mapSkillToDomain(skillName, idx);
-        const domainName = (q.domainName && !q.domainName.includes('Chưa xác định') && q.domainName !== 'Toán học & Tư duy định lượng')
+        const domainName = (q.domainName && !q.domainName.includes('Chưa xác định'))
           ? q.domainName
           : domainMapping.name;
-        const domainId = domainMapping.id;
+        const domainId = q.domainCode || q.domainId || domainMapping.id;
         const bloom = (q.difficultyLevel && q.difficultyLevel > 0)
           ? q.difficultyLevel
           : (matched?.bloom || 2);
 
-        const timeSpent = q.timeSpentSeconds ?? 25;
+        const timeSpent = q.timeSpentSeconds ?? 0;
         let speedCategory = 'normal';
         if (timeSpent < 25) speedCategory = 'fast';
         else if (timeSpent > 90) speedCategory = 'slow';
 
-        const correctChoice = (q.correctOption || matched?.correctChoice || (typeof sampleFallback?.correctOption === 'number' ? ['A', 'B', 'C', 'D'][sampleFallback.correctOption] : 'A')).trim().toUpperCase();
+        const correctChoice = (q.correctOption || matched?.correctChoice || '').trim().toUpperCase();
 
         const explanation = (q.explanation && q.explanation.trim()) ||
           (matched?.explanation && matched.explanation.trim()) ||
-          `Phương án chính xác là **${correctChoice}**. Đề bài yêu cầu nắm vững kiến thức trọng tâm và kỹ năng tư duy của chuyên đề **${skillName}**.`;
+          '';
 
         return {
           id: q.questionId || matched?.id || `q_${idx + 1}`,
@@ -626,6 +616,7 @@ export default function DiagnosticAssessmentPage({
         theta_0: data.theta0, placement_class: data.placementClass,
         ai_commentary: data.aiCommentary, reviewedQuestions: reviewed, domain_scores: computedDomainScores,
         weakSkills: data.weakSkills, skillBreakdowns: data.skillBreakdowns,
+        subjectBreakdowns: data.subjectBreakdowns || [],
         radar_chart: normalizedRadar,
         radarChart: normalizedRadar,
         skill_priors: normalizedPriors,
@@ -1039,7 +1030,7 @@ export default function DiagnosticAssessmentPage({
         return;
       }
       setLoadingMsg('Đang nạp đề kiểm tra đầu vào...');
-      const rawExamDto = await contentService.getDiagnosticTest();
+      const rawExamDto = await contentService.getDiagnosticTest(Array.from(completedIds));
       const transformed = transformBackendExamToQuestions(rawExamDto);
       if (!transformed.id) throw new Error('Máy chủ chưa cung cấp mã đề thi.');
       if (completedIds.has(transformed.id)) {
@@ -1285,6 +1276,7 @@ export default function DiagnosticAssessmentPage({
         reviewedQuestions: reviewedQuestionsList,
         weakSkills: apiResponse?.weakSkills || [],
         skillBreakdowns: apiResponse?.skillBreakdowns || [],
+        subjectBreakdowns: apiResponse?.subjectBreakdowns || [],
         skillPriors: normalizedPriors,
         pacing: {
           totalCorrect: apiResponse?.totalCorrect ?? totalCorrect,
@@ -1464,8 +1456,24 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
 
   const isTakingExam = stage === 'testing' || stage === 'analyzing';
 
-  return (
-    <div className={`${historyOnly ? 'min-w-0' : 'min-h-screen'} text-slate-900 flex flex-col font-sans selection:bg-blue-600 selection:text-white ${isEmbedded ? 'bg-transparent' : 'bg-[#F4F7FC]'} ${isTakingExam ? 'fixed inset-0 z-50 overflow-y-auto w-full h-full' : ''}`}>
+  // Khóa cuộn trang nền khi học sinh đang làm bài thi ở chế độ trang riêng toàn màn hình nền trắng
+  useEffect(() => {
+    if (!isTakingExam || typeof document === 'undefined') return undefined;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [isTakingExam]);
+
+  const rootContent = (
+    <div
+      className={`${
+        isTakingExam
+          ? 'fixed inset-0 z-[200] w-screen h-screen overflow-y-auto bg-white'
+          : `${historyOnly ? 'min-w-0' : 'min-h-screen'} ${isEmbedded ? 'bg-transparent' : 'bg-[#F4F7FC]'}`
+      } text-slate-900 flex flex-col font-sans selection:bg-blue-600 selection:text-white`}
+    >
       {showCampusSetup && <div className="fixed inset-0 z-100 flex items-center justify-center bg-slate-950/70 p-4">
         <div role="dialog" aria-modal="true" aria-labelledby="campus-title" className="w-full max-w-lg rounded-2xl bg-white p-6 space-y-4">
           <h2 id="campus-title" className="text-xl font-bold">Đăng ký cơ sở trước khi làm bài</h2>
@@ -1570,14 +1578,34 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
                   </div>
                 </div>
 
-                <div className={historyOnly ? 'hidden' : 'flex items-center gap-2'}>
+                <div className={historyOnly ? 'hidden' : 'flex flex-wrap items-center gap-2'}>
+                  {onNavigateRoadmap && (
+                    <button
+                      type="button"
+                      onClick={onNavigateRoadmap}
+                      className="px-4 py-2.5 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-white font-bold text-xs shadow-md shadow-emerald-500/20 flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
+                    >
+                      <ArrowRight className="w-3.5 h-3.5" />
+                      <span>Xem Lộ Trình Cá Nhân (PLAR)</span>
+                    </button>
+                  )}
+                  {onNavigateTuition && (
+                    <button
+                      type="button"
+                      onClick={onNavigateTuition}
+                      className="px-4 py-2.5 rounded-2xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow-md shadow-amber-500/20 flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
+                    >
+                      <Award className="w-3.5 h-3.5" />
+                      <span>Đóng Học Phí Mở Khóa</span>
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => onNavigateQuestionBank ? onNavigateQuestionBank() : handleRetakeExam()}
                     className="px-4 py-2.5 rounded-2xl bg-linear-to-r from-blue-600 to-indigo-600 hover:opacity-95 text-white font-bold text-xs shadow-md shadow-blue-500/20 flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
                   >
                     <Play className="w-3.5 h-3.5 fill-white" />
-                    <span>Làm Đề Mới (Ngân Hàng Đề)</span>
+                    <span>Làm Đề Tiếp Theo</span>
                   </button>
                 </div>
               </div>
@@ -1587,6 +1615,42 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
 <DiagnosticReportPanel id="overview" active={reportTab}>
 
               <WeakSkills result={currentDisplayResult} />
+
+              {Array.isArray(currentDisplayResult?.subjectBreakdowns) && currentDisplayResult.subjectBreakdowns.length > 0 && (
+                <div className="p-6 bg-white border border-slate-200/90 rounded-3xl shadow-sm space-y-4 text-slate-900">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                    <div className="flex items-center gap-2">
+                      <BookOpen className="w-4 h-4 text-indigo-600" />
+                      <h3 className="text-sm font-black text-slate-900">Bản Đồ Năng Lực Chi Tiết Theo Môn Học (Chuẩn GDPT 2018)</h3>
+                    </div>
+                    <span className="text-xs font-semibold text-slate-500">
+                      {currentDisplayResult.subjectBreakdowns.length} môn được đánh giá trực tiếp
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {currentDisplayResult.subjectBreakdowns.map((subj) => {
+                      const pct = Math.round(subj.accuracyPercentage ?? 0);
+                      const tone = pct < 50 ? 'border-rose-200 bg-rose-50/70 text-rose-700' : pct < 75 ? 'border-amber-200 bg-amber-50/70 text-amber-800' : 'border-emerald-200 bg-emerald-50/70 text-emerald-700';
+                      const bar = pct < 50 ? 'bg-rose-500' : pct < 75 ? 'bg-amber-500' : 'bg-emerald-500';
+                      return (
+                        <div key={subj.subjectName} className={`rounded-2xl border p-3.5 space-y-2 ${tone}`}>
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-extrabold text-xs text-slate-900 truncate">{subj.subjectName}</span>
+                            <span className="text-xs font-black">{pct}%</span>
+                          </div>
+                          <div className="h-1.5 w-full rounded-full bg-white/80 overflow-hidden">
+                            <div className={`h-full rounded-full ${bar}`} style={{ width: `${Math.max(4, pct)}%` }} />
+                          </div>
+                          <div className="flex items-center justify-between text-[11px] text-slate-600">
+                            <span>Đúng {subj.correctCount}/{subj.totalQuestions} câu</span>
+                            <span className="font-bold">{subj.isWeak ? 'Ưu tiên PLAR' : 'Đạt chuẩn'}</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
 
 {/* 2 COLUMN GRAPHS: RADAR CHART & ACCURACY BAR CHART                 */}
@@ -3858,7 +3922,7 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
       {recovering && <div role="status" className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60"><p className="rounded-2xl bg-white p-6">Đang kiểm tra và khôi phục bài...</p></div>}
       {/* Fullscreen Loading Overlay */}
       {isLoading && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[220] bg-white/95 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="p-6 bg-white rounded-3xl shadow-2xl border border-slate-200 flex flex-col items-center gap-4 text-center max-w-sm text-slate-900 animate-fade-in">
             <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-200 flex items-center justify-center">
               <Sparkles className="w-6 h-6 text-blue-600 animate-spin" />
@@ -3873,4 +3937,10 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
 
     </div>
   );
+
+  if (isTakingExam && typeof document !== 'undefined' && document.body) {
+    return createPortal(rootContent, document.body);
+  }
+
+  return rootContent;
 }

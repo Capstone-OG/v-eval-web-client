@@ -18,17 +18,19 @@ const STOP_WORDS = new Set([
 const SUBJECT_SIGNALS = {
   MATH: [
     'ham so', 'dao ham', 'tich phan', 'nguyen ham', 'cuc tri', 'cuc dai', 'cuc tieu',
-    'tiem can', 'logarit', 'mu', 'phuong trinh', 'bat phuong trinh', 'luong giac',
-    'cap so cong', 'cap so nhan', 'xac suat', 'to hop', 'chinh hop', 'hoan vi',
-    'vecto', 'oxyz', 'mat phang', 'mat cau', 'hinh chop', 'hinh lang tru', 'hinh non',
-    'hinh tru', 'gioi han', 'lim', 'sin', 'cos', 'tan', 'so phuc', 'parabol', 'elip'
+    'tiem can', 'logarit', 'log', 'ln', 'so mu', 'ham so mu', 'phuong trinh', 'bat phuong trinh',
+    'vo nghiem', 'co nghiem', 'tham so', 'tap hop', 'menh de', 'lien tuc', 'dien tich',
+    'hinh phang', 'truc hoanh', 'goc toa do', 'luong giac', 'cap so cong', 'cap so nhan',
+    'xac suat', 'to hop', 'chinh hop', 'hoan vi', 'vecto', 'oxyz', 'mat phang', 'mat cau',
+    'hinh chop', 'hinh lang tru', 'hinh non', 'hinh tru', 'gioi han', 'lim', 'sin', 'cos',
+    'tan', 'so phuc', 'parabol', 'elip', 'so nguyen', 'thi tran', 'tuyen duong'
   ],
   PHYS: [
     'dao dong', 'con lac', 'lo xo', 'song co', 'giao thoa', 'song dung', 'song am',
     'dien truong', 'tu dien', 'dien tro', 'dong dien', 'cam ung dien tu', 'tu truong',
     'lorentz', 'xoay chieu', 'rlc', 'may bien ap', 'truyen tai dien', 'quang pho',
     'anh sang', 'thau kinh', 'luong tu', 'hat nhan', 'phong xa', 'khi li tuong',
-    'nhiet dung', 'dong luong', 'dong nang', 'the nang', 'gia toc', 'van toc'
+    'nhiet dung', 'dong luong', 'dong nang', 'the nang', 'gia toc', 'van toc', 'chu ki', 'tan so'
   ],
   CHEM: [
     'ester', 'este', 'lipid', 'chat beo', 'xa phong hoa', 'carbohydrate', 'glucozo',
@@ -36,21 +38,22 @@ const SUBJECT_SIGNALS = {
     'amino acid', 'peptide', 'peptit', 'protein', 'polymer', 'polime', 'kim loai',
     'dien phan', 'pin dien', 'an mon', 'alkane', 'ankan', 'alkene', 'anken', 'alkyne',
     'alcohol', 'ancol', 'phenol', 'aldehyde', 'ketone', 'carboxylic', 'acid', 'axit',
-    'bazo', 'muoi', 'mol', 'nong do', 'can bang hoa hoc', 'toc do phan ung', 'orbital',
-    'electron', 'oxi hoa', 'khu', 'enthalpy', 'ph', 'naoh', 'hcl', 'h2so4', 'nh3'
+    'bazo', 'muoi', 'so mol', 'nong do', 'can bang hoa hoc', 'toc do phan ung', 'orbital',
+    'electron', 'oxi hoa', 'chat khu', 'enthalpy', 'do ph', 'naoh', 'hcl', 'h2so4', 'nh3'
   ],
   BIOL: [
-    'te bao', 'quang hop', 'ho hap', 'adn', 'dna', 'arn', 'rna', 'gen', 'dot bien',
+    'te bao', 'quang hop', 'ho hap', 'adn', 'dna', 'arn', 'rna', 'dot bien',
     'nhiem sac the', 'nst', 'nguyen phan', 'giam phan', 'menden', 'di truyen',
     'hoan vi gen', 'lien ket gen', 'quan the', 'hardy', 'tien hoa', 'sinh thai',
     'he sinh thai', 'chuoi thuc an', 'mien dich', 'tuan hoan', 'than kinh', 'pha he',
-    'nhom mau', 'operon', 'codon', 'phien ma', 'dich ma', 'da boi', 'lech boi'
+    'nhom mau', 'operon', 'codon', 'phien ma', 'dich ma', 'da boi', 'lech boi',
+    'nghiem thuc', 'mang te bao', 'khuech tan', 'sac to'
   ],
   VIET: [
-    'doc hieu', 'van ban', 'tho', 'truyen ngan', 'tieu thuyet', 'tac gia', 'tac pham',
-    'bien phap tu tu', 'an du', 'hoan du', 'nhan hoa', 'so sanh', 'nghi luan',
-    'phong cach ngon ngu', 'chinh ta', 'ngu phap tieng viet', 'tu lay', 'tu ghep',
-    'tu han viet', 'thanh ngu', 'ca dao', 'than thoai', 'su thi', 'cheo', 'tuong'
+    'doc hieu', 'van ban', 'bai tho', 'tho hien dai', 'truyen ngan', 'tieu thuyet',
+    'tac gia', 'tac pham', 'bien phap tu tu', 'an du', 'hoan du', 'nhan hoa', 'so sanh',
+    'nghi luan', 'phong cach ngon ngu', 'chinh ta', 'ngu phap tieng viet', 'tu lay',
+    'tu ghep', 'tu han viet', 'thanh ngu', 'ca dao', 'than thoai', 'su thi'
   ],
   ENGL: [
     'choose the best', 'closest in meaning', 'opposite in meaning', 'underlined part',
@@ -74,6 +77,19 @@ const SUBJECT_SIGNALS = {
     'toc do tang truong', 'sap xep cho ngoi', 'dieu kien can', 'neu thi', 'tu duy logic'
   ]
 };
+
+function countWholeKeywordHits(foldedText, keywords) {
+  let hits = 0;
+  for (const kw of keywords) {
+    const escaped = kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const re = new RegExp(`(?:^|[^a-z0-9])${escaped}(?:$|[^a-z0-9])`, 'g');
+    const matches = foldedText.match(re);
+    if (matches) {
+      hits += matches.length * (kw.includes(' ') ? 2 : 1);
+    }
+  }
+  return hits;
+}
 
 export function foldVietnamese(text) {
   if (!text) return '';
@@ -138,22 +154,36 @@ export function detectNodeSubSubject(domainName, chapterName, lessonName) {
 
 export function inferQuestionSubject(question, passageContent = '', examSubjectCode = 'GENERAL') {
   const upperExam = String(examSubjectCode || 'GENERAL').trim().toUpperCase();
-  const textFold = foldVietnamese(
-    `${question?.suggestedSkillName || ''} ${question?.content || ''} ${passageContent || ''}`
-  );
+  const rawStem = `${question?.content || ''} ${Object.values(question?.options || {}).join(' ')}`;
+  const rawCombined = `${question?.suggestedSkillName || ''} ${rawStem} ${passageContent || ''}`;
+  const textFold = foldVietnamese(rawCombined);
+  const stemFold = foldVietnamese(rawStem);
 
-  // Detect English questions strongly by English function words
-  const englishHits = (textFold.match(/\b(the|which|following|according|passage|choose|word|sentence|closest|meaning|underlined)\b/g) || []).length;
-  if (englishHits >= 3) return 'ENGL';
+  // 1. Nhận diện câu hỏi Tiếng Anh (ENGL) chính xác cao:
+  // - Có cấu trúc gạch chân tìm lỗi sai <u>...</u> (A) ... (B) với từ tiếng Anh
+  // - Hoặc chứa >= 2 từ chức năng/ngữ pháp tiếng Anh và mật độ dấu tiếng Việt trong stem rất thấp
+  const viAccentCount = (String(question?.content || '').match(/[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/gi) || []).length;
+  const englishWords = (
+    stemFold.match(
+      /\b(the|is|are|was|were|have|has|had|will|would|could|should|which|that|who|whom|whose|many|much|some|any|from|into|with|without|about|because|although|however|between|among|before|after|during|while|since|until|their|there|these|those|this|her|his|its|our|your|they|them|students|believe|difficult|actually|require|logical|thinking|rather|than|visited|museum|famous|collection|ancient|paintings|worried|ability|pass|coming|graduation|exams|elephants|niece|favorite|animal|smartest|animals|passage|following|according|choose|word|sentence|closest|opposite|meaning|underlined)\b/g
+    ) || []
+  ).length;
 
-  // Score signals per subject
+  if (
+    (englishWords >= 2 && viAccentCount <= 2) ||
+    englishWords >= 4 ||
+    (/<u>[\s\S]+?<\/\s*\$?u/i.test(rawStem) && viAccentCount <= 2) ||
+    textFold.includes('tieng anh') ||
+    textFold.includes('english')
+  ) {
+    return 'ENGL';
+  }
+
+  // 2. Chấm điểm tín hiệu từ khóa nguyên từ (Word-boundary matching, không khớp chuỗi con 2 ký tự như 'ph', 'mu', 'tho')
   let bestSubject = null;
   let bestHits = 0;
   for (const [subj, keywords] of Object.entries(SUBJECT_SIGNALS)) {
-    let hits = 0;
-    for (const kw of keywords) {
-      if (textFold.includes(kw)) hits += kw.includes(' ') ? 2 : 1;
-    }
+    const hits = countWholeKeywordHits(textFold, keywords);
     if (hits > bestHits) {
       bestHits = hits;
       bestSubject = subj;
@@ -303,9 +333,22 @@ export function matchQuestionToCurriculumNode(
   const contentTokens = extractTokens(contentFold);
   const passageTokens = extractTokens(passageFold);
 
+  // Khóa chặt phân môn: Câu Tiếng Anh CHỈ khớp vào node Tiếng Anh, câu Toán CHỈ khớp vào node Toán/Logic...
+  let candidateNodes = flatNodes;
+  if (inferredSubj && inferredSubj !== 'GENERAL') {
+    const strictMatches = flatNodes.filter((n) => {
+      if (n.subSubject === inferredSubj) return true;
+      if (inferredSubj === 'LOGIC' && n.subSubject === 'MATH') return true;
+      return false;
+    });
+    if (strictMatches.length > 0) {
+      candidateNodes = strictMatches;
+    }
+  }
+
   const scored = [];
 
-  for (const node of flatNodes) {
+  for (const node of candidateNodes) {
     let score = 0;
 
     // 1. Direct phrase containment boost
@@ -335,12 +378,30 @@ export function matchQuestionToCurriculumNode(
 
     score += skillOverlap * 2.5 + contentOverlap * 1.25 + passageOverlap * 0.65;
 
+    // 2.5. Ngữ cảnh chuyên biệt cho Tiếng Anh (vì tên chương Tiếng Anh trong SGK là tiếng Việt/Anh hỗn hợp)
+    if (inferredSubj === 'ENGL') {
+      score += 1.0; // Base score cho mọi node Tiếng Anh hợp lệ
+      const nodeText = node.searchText;
+      if (/\b(which|that|who|whom|whose)\b/.test(contentFold) && (nodeText.includes('menh de quan he') || nodeText.includes('relative'))) {
+        score += 4.5;
+      }
+      if (/\b(had|were|should|if|would|could)\b/.test(contentFold) && (nodeText.includes('modal') || nodeText.includes('conditional') || nodeText.includes('dieu kien'))) {
+        score += 4.5;
+      }
+      if (/<u>/i.test(question.content || '') && (nodeText.includes('ngu phap') || nodeText.includes('cau truc') || nodeText.includes('hoa hop') || nodeText.includes('tu loai') || nodeText.includes('menh de'))) {
+        score += 2.5;
+      }
+      if ((passageFold.length > 80 || /\b(passage|paragraph|title|author)\b/.test(contentFold)) && (nodeText.includes('doc hieu') || nodeText.includes('reading'))) {
+        score += 4.5;
+      }
+    }
+
     // 3. Subject alignment bonus / cross-subject penalty
     if (inferredSubj && inferredSubj !== 'GENERAL' && node.subSubject && node.subSubject !== 'GENERAL') {
       if (inferredSubj === node.subSubject) {
         score += 2.2;
       } else {
-        score -= 2.5;
+        score -= 8.0;
       }
     }
 
@@ -399,23 +460,40 @@ export function autoMapExamQuestions(exam, flatNodes = [], { force = false } = {
   }
 
   const mapSingle = (q, passageContent = '') => {
-    // Hydrate existing DB / manual node if present and not forced
+    const inferredSubj = inferQuestionSubject(q, passageContent, exam.subjectCode);
+    // Hydrate existing DB / manual node if present and not forced, UNLESS it has a cross-subject mismatch (e.g. English mapped to Physics/Chemistry)
     if (!force && q.curriculumNode?.skillId) {
       const existing = nodeBySkillId.get(String(q.curriculumNode.skillId).toLowerCase());
-      if (existing) {
-        return {
-          ...q,
-          curriculumNode: {
-            ...buildCurriculumNodeRef(existing, {
-              confidence: q.curriculumNode.confidence ?? 1.0,
-              matchSource: q.curriculumNode.matchSource || 'database',
-              reason: q.curriculumNode.reason || 'Liên kết trực tiếp từ cây Khung chương trình'
-            })
-          }
-        };
-      }
-      if (q.curriculumNode.chapterName || q.curriculumNode.lessonName) {
-        return q;
+      const existingSubj = existing?.subSubject || detectNodeSubSubject(
+        q.curriculumNode.domainName,
+        q.curriculumNode.chapterName,
+        q.curriculumNode.lessonName
+      );
+      const isCrossSubjectError =
+        q.curriculumNode.matchSource !== 'manual' &&
+        inferredSubj &&
+        inferredSubj !== 'GENERAL' &&
+        existingSubj &&
+        existingSubj !== 'GENERAL' &&
+        existingSubj !== inferredSubj &&
+        !(inferredSubj === 'LOGIC' && existingSubj === 'MATH');
+
+      if (!isCrossSubjectError) {
+        if (existing) {
+          return {
+            ...q,
+            curriculumNode: {
+              ...buildCurriculumNodeRef(existing, {
+                confidence: q.curriculumNode.confidence ?? 1.0,
+                matchSource: q.curriculumNode.matchSource || 'database',
+                reason: q.curriculumNode.reason || 'Liên kết trực tiếp từ cây Khung chương trình'
+              })
+            }
+          };
+        }
+        if (q.curriculumNode.chapterName || q.curriculumNode.lessonName) {
+          return q;
+        }
       }
     }
 

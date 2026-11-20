@@ -28,9 +28,13 @@ export default function HeroBanner({
     studentDashboard?.roadmapProgress?.currentMilestoneTitle ||
     'Chưa khởi tạo lộ trình thích ứng DAG';
 
-  // Calculate real days remaining until next V-ACT exam window (March 29, 2026 / next cycle)
-  const examDate = new Date('2026-03-29T08:00:00');
-  const daysLeft = Math.max(1, Math.ceil((examDate.getTime() - Date.now()) / 86400000));
+  // Compute days remaining until next V-ACT exam cycle dynamically (March 29 of current or next year)
+  const nowDate = new Date();
+  const nextCycleYear = (nowDate.getMonth() > 2 || (nowDate.getMonth() === 2 && nowDate.getDate() >= 29))
+    ? nowDate.getFullYear() + 1
+    : nowDate.getFullYear();
+  const examDate = new Date(`${nextCycleYear}-03-29T08:00:00`);
+  const daysLeft = Math.max(1, Math.ceil((examDate.getTime() - nowDate.getTime()) / 86400000));
 
   const tips = [
     estimatedScore > 0

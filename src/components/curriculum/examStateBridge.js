@@ -5,7 +5,7 @@ import {
   buildExamBlueprintStats
 } from '../../utils/examCurriculumMatcher.js';
 
-const STORAGE_KEY = 'veval_active_exam_workspace_v1';
+const STORAGE_KEY = 'veval_active_exam_workspace_v3'; // v3: bump to force passage auto-healing and remove (A)..(D) labels
 
 const DEFAULT_PERSISTED_FIELDS = {
   currentExam: null,
@@ -27,7 +27,12 @@ function createInitialState() {
         const parsed = JSON.parse(raw);
         if (parsed && typeof parsed === 'object') {
           restored = {
-            currentExam: parsed.currentExam ?? null,
+            currentExam: parsed.currentExam
+              ? normalizeExamData(parsed.currentExam, {
+                  source: parsed.currentExam.source || 'ai',
+                  isPublished: Boolean(parsed.currentExam.isPublished)
+                })
+              : null,
             selectedQuestionLocalId: parsed.selectedQuestionLocalId ?? null,
             isLocked: Boolean(parsed.isLocked),
             hasUnsavedChanges: Boolean(parsed.hasUnsavedChanges),

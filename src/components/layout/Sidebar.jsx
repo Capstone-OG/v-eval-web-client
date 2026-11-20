@@ -256,23 +256,15 @@ export default function Sidebar({
         if (isDirectorRole) {
           return [
             {
-              sectionTitle: 'Quản Trị Học Thuật Cơ Sở',
+              sectionTitle: 'Quản Trị Học Thuật Liên Cơ Sở',
               items: [
                 {
                   id: 'dashboard',
-                  label: 'Trung tâm Điều phối Cơ sở',
-                  sublabel: 'AI Clustering & Bản đồ nhiệt',
+                  label: 'Tổng quan Các Cơ sở',
+                  sublabel: 'Giám sát chất lượng liên cơ sở',
                   icon: Building2,
                   active: activeTab === 'dashboard',
                   onClick: () => setActiveTab('dashboard')
-                },
-                {
-                  id: 'teacher_heatmap',
-                  label: 'Giám sát Ma trận Lớp học',
-                  sublabel: 'Theo dõi độ làm chủ từng lớp',
-                  icon: LayoutGrid,
-                  active: activeTab === 'teacher_heatmap',
-                  onClick: () => setActiveTab('teacher_heatmap')
                 },
                 {
                   id: 'ai_moderation',
@@ -280,13 +272,12 @@ export default function Sidebar({
                   sublabel: 'Báo cáo sai lệch & Bẫy tư duy',
                   icon: Bot,
                   active: activeTab === 'ai_moderation',
-                  onClick: () => setActiveTab('ai_moderation'),
-                  badge: 'Flow 4'
+                  onClick: () => setActiveTab('ai_moderation')
                 },
                 {
                   id: 'roadmap',
                   label: 'Quản lý Khung Chương trình',
-                  sublabel: 'Phê duyệt học liệu & Câu hỏi',
+                  sublabel: 'Đồ thị DAG 4 tầng & Học liệu',
                   icon: Network,
                   active: activeTab === 'roadmap',
                   onClick: () => setActiveTab('roadmap')
@@ -350,28 +341,6 @@ export default function Sidebar({
                       onClick: () => setActiveTab('exam-studio')
                     }
                   ]
-                },
-                {
-                  id: 'analytics',
-                  label: 'Báo cáo Chất lượng Đào tạo',
-                  sublabel: 'Dự báo điểm chuẩn ĐGNL cơ sở',
-                  icon: BarChart3,
-                  active: activeTab === 'analytics',
-                  onClick: () => setActiveTab('analytics')
-                }
-              ]
-            },
-            {
-              sectionTitle: 'Nhân Sự & Tài Khoản Cơ Sở',
-              items: [
-                {
-                  id: 'provision',
-                  label: 'Cấp phát Tài khoản Cơ sở',
-                  sublabel: 'Giảng viên & Học viên mới',
-                  icon: UserPlus,
-                  active: activeTab === 'provision',
-                  onClick: () => setActiveTab('provision'),
-                  badge: 'IAM'
                 }
               ]
             }
@@ -875,6 +844,8 @@ export default function Sidebar({
                   }
 
                   if (isCollapsed) {
+                    const iconGradient = item.iconColor || 'from-blue-500 to-indigo-600';
+                    const glowClass = item.activeGlow || 'shadow-blue-500/30';
                     return (
                       <button
                         key={item.id}

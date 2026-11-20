@@ -222,7 +222,6 @@ export default function LearningAnalyticsView({
 
           <button
             onClick={() => {
-              setOnboardingOverride(null);
               loadAnalytics(true);
             }}
             disabled={refreshing}
