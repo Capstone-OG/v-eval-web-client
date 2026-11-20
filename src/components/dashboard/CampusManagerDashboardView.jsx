@@ -19,12 +19,17 @@ import {
   AlertTriangle,
   ChevronRight,
   BookOpen,
+  Bot,
+  Crown,
+  FileSpreadsheet,
+  Network,
   Zap,
   Clock,
   ArrowRight
 } from 'lucide-react';
 import { userService } from '../../services/userService';
 import { practiceService, FLOW5_DEFAULTS } from '../../services/practiceService';
+import { contentService } from '../../services/contentService';
 import { toast } from '../../context/ToastContext';
 import { ClassMicroGroupsModal } from '../modals';
 import EarlyWarningsMentorPanel from './EarlyWarningsMentorPanel';
@@ -43,12 +48,27 @@ export const normalizeMasteryPct = (val) => {
   return Math.min(100, Math.max(0, Math.round(pct)));
 };
 
-export default function CampusManagerDashboardView({ currentUser, onOpenProvisioning, onOpenProvisionPage }) {
+export default function CampusManagerDashboardView({
+  currentUser,
+  mode = null,
+  onOpenProvisioning,
+  onOpenProvisionPage,
+  onNavigateTab
+}) {
   const handleOpenProvision = onOpenProvisioning || onOpenProvisionPage;
+  const isDirectorMode =
+    mode === 'director' ||
+    (Array.isArray(currentUser?.roles) &&
+      currentUser.roles.some((r) => String(r).toUpperCase().includes('DIRECTOR')) &&
+      !currentUser.roles.some((r) => String(r).toUpperCase().includes('ADMIN'))) ||
+    String(currentUser?.email || '').toLowerCase().startsWith('director');
+
   const [campusesList, setCampusesList] = useState([]);
   const [selectedCampus, setSelectedCampus] = useState(
-    currentUser?.campusId || FLOW5_DEFAULTS.CAMPUS_ID
+    isDirectorMode ? 'ALL' : currentUser?.campusId || FLOW5_DEFAULTS.CAMPUS_ID
   );
+  const [allCampusSummaries, setAllCampusSummaries] = useState([]);
+  const [curriculumStats, setCurriculumStats] = useState({ skillsCount: 0, examsCount: 0 });
   const [showCreateStaffModal, setShowCreateStaffModal] = useState(false);
   const [selectedClassForGroups, setSelectedClassForGroups] = useState(null);
   const [clusteringLoading, setClusteringLoading] = useState(false);
@@ -64,12 +84,19 @@ export default function CampusManagerDashboardView({ currentUser, onOpenProvisio
   const [heatmapLoading, setHeatmapLoading] = useState(true);
 
   // Dynamic banner rotating tips
-  const tips = [
-    'Đối sánh hiệu năng đào tạo 4 miền ĐGNL giữa các lớp trong cùng cơ sở.',
-    'Thuật toán Elbow + K-Means tự động tối ưu hóa nhóm bàn vi mô (3 - 5 bạn).',
-    'Hệ thống Cảnh báo sớm 3 tầng BR-04 theo dõi sát sao sai số đo lường SEM.',
-    'Điều phối trợ giảng và điều chỉnh nhịp độ giảng dạy kịp thời theo chuẩn GDPT 2018.'
-  ];
+  const tips = isDirectorMode
+    ? [
+        'Quản trị Đồ thị Tri thức DAG 4 tầng và chuẩn hóa trọng số 4 miền ĐGNL V-ACT 2026.',
+        'Kiểm duyệt chất lượng Gia sư AI và phê duyệt câu hỏi sinh bởi AI Bloom.',
+        'Quản lý Kho Sách giáo khoa chuẩn & Học liệu RAG phục vụ toàn bộ hệ thống cơ sở.',
+        'Giám sát chất lượng đào tạo và mức độ làm chủ 4 miền liên cơ sở theo thời gian thực.'
+      ]
+    : [
+        'Đối sánh hiệu năng đào tạo 4 miền ĐGNL giữa các lớp trong cùng cơ sở.',
+        'Giám sát quy mô học viên, sĩ số lớp học và tỷ lệ làm chủ kỹ năng trên toàn hệ thống.',
+        'Theo dõi sát sao các lớp có tỷ lệ học sinh yếu cao để hỗ trợ học thuật kịp thời.',
+        'Quản trị tập trung tài khoản cán bộ, giảng viên và điều phối đa cơ sở.'
+      ];
   const [tipIdx, setTipIdx] = useState(0);
 
   useEffect(() => {
@@ -96,9 +123,10 @@ export default function CampusManagerDashboardView({ currentUser, onOpenProvisio
           code: c.code
         }));
         setCampusesList(mappedCampuses);
-        setSelectedCampus((prev) =>
-          mappedCampuses.some((mc) => mc.id === prev) ? prev : mappedCampuses[0].id
-        );
+        setSelectedCampus((prev) => {
+          if (isDirectorMode && prev === 'ALL') return 'ALL';
+          return mappedCampuses.some((mc) => mc.id === prev) ? prev : mappedCampuses[0].id;
+        });
       }
 
       const rawTeachers = Array.isArray(usersRes?.items) ? usersRes.items : [];
@@ -122,16 +150,114 @@ export default function CampusManagerDashboardView({ currentUser, onOpenProvisio
     loadCampusesAndTeachers();
   }, [loadCampusesAndTeachers]);
 
+  useEffect(() => {
+    if (!isDirectorMode) return;
+    let mounted = true;
+    Promise.all([
+      contentService.getSkillsTree().catch(() => []),
+      contentService.getMockExams().catch(() => [])
+    ]).then(([skillsRes, examsRes]) => {
+      if (!mounted) return;
+      const skillsArr = Array.isArray(skillsRes) ? skillsRes : skillsRes?.items || skillsRes?.data || [];
+      const examsArr = Array.isArray(examsRes) ? examsRes : examsRes?.items || examsRes?.data || [];
+      setCurriculumStats({
+        skillsCount: skillsArr.length,
+        examsCount: examsArr.length
+      });
+    });
+    return () => {
+      mounted = false;
+    };
+  }, [isDirectorMode]);
+
   const loadCampusHeatmap = useCallback(async () => {
     setHeatmapLoading(true);
     try {
-      const resolvedGuid = selectedCampus || currentUser?.campusId || FLOW5_DEFAULTS.CAMPUS_ID;
-      const data = await practiceService.getCampusComparativeHeatmap(resolvedGuid);
-      setCampusHeatmap(data);
+      if (selectedCampus === 'ALL') {
+        if (campusesList.length === 0) {
+          return;
+        }
+        const results = await Promise.all(
+          campusesList.map(async (c) => {
+            const data = await practiceService.getCampusComparativeHeatmap(c.id).catch(() => null);
+            return { campus: c, data };
+          })
+        );
+
+        const combinedClasses = [];
+        const summaries = [];
+        const domainBuckets = new Map(DOMAIN_ORDER.map((d) => [d.code, []]));
+
+        results.forEach(({ campus, data }) => {
+          const classes = Array.isArray(data?.classComparisons) ? data.classComparisons : [];
+          const totalStudentsInCampus = classes.reduce((acc, cls) => acc + Number(cls.totalStudents ?? 0), 0);
+          const highRiskCount = classes.filter((cls) => cls.overallRiskLevel === 'HIGH_RISK').length;
+
+          const domAvgMap = new Map();
+          (data?.domainAverages || []).forEach((da) => {
+            const pct = normalizeMasteryPct(da.averageMastery);
+            domAvgMap.set(da.domainCode, pct);
+            if (classes.length > 0 && domainBuckets.has(da.domainCode)) {
+              domainBuckets.get(da.domainCode).push(Number(da.averageMastery || 0));
+            }
+          });
+
+          const domValues = Array.from(domAvgMap.values());
+          const campusAvgPct =
+            domValues.length > 0 ? Math.round(domValues.reduce((a, b) => a + b, 0) / domValues.length) : 0;
+
+          summaries.push({
+            campusId: campus.id,
+            campusName: campus.name,
+            campusCode: campus.code,
+            classCount: classes.length,
+            totalStudents: totalStudentsInCampus,
+            highRiskCount,
+            overallMasteryPct: campusAvgPct,
+            domainPcts: Object.fromEntries(domAvgMap)
+          });
+
+          classes.forEach((cls) => {
+            combinedClasses.push({
+              ...cls,
+              _campusId: campus.id,
+              _campusName: campus.name
+            });
+          });
+        });
+
+        const aggregatedDomainAverages = DOMAIN_ORDER.map((d) => {
+          const arr = domainBuckets.get(d.code) || [];
+          const avg = arr.length > 0 ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
+          return {
+            domainCode: d.code,
+            domainName: d.name,
+            averageMastery: avg
+          };
+        });
+
+        setAllCampusSummaries(summaries);
+        setCampusHeatmap({
+          domainAverages: aggregatedDomainAverages,
+          classComparisons: combinedClasses,
+          _source: 'backend',
+          _isAllCampuses: true
+        });
+      } else {
+        const resolvedGuid = selectedCampus || currentUser?.campusId || FLOW5_DEFAULTS.CAMPUS_ID;
+        const data = await practiceService.getCampusComparativeHeatmap(resolvedGuid);
+        const currentCampus = campusesList.find((c) => c.id === resolvedGuid);
+        const enrichedClasses = (data?.classComparisons || []).map((cls) => ({
+          ...cls,
+          _campusId: resolvedGuid,
+          _campusName: currentCampus?.name || ''
+        }));
+        setCampusHeatmap(data ? { ...data, classComparisons: enrichedClasses } : null);
+      }
     } finally {
       setHeatmapLoading(false);
     }
-  }, [selectedCampus, currentUser?.campusId]);
+  }, [selectedCampus, currentUser?.campusId, campusesList]);
 
   useEffect(() => {
     loadCampusHeatmap();
@@ -166,7 +292,7 @@ export default function CampusManagerDashboardView({ currentUser, onOpenProvisio
 
   const totalCampusStudents = classesList.reduce((acc, c) => acc + c.studentCount, 0);
 
-  // Correct calculation for overall campus mastery percentage (clamped 0-100%)
+  // Correct calculation for overall campus mastery percentage (clamped 0-100%, zero hardcode)
   const overallCampusMasteryPct =
     (campusHeatmap?.domainAverages || []).length > 0
       ? Math.round(
@@ -175,7 +301,7 @@ export default function CampusManagerDashboardView({ currentUser, onOpenProvisio
             0
           ) / campusHeatmap.domainAverages.length
         )
-      : 67;
+      : 0;
 
   const handleAutoClusterThematic = async () => {
     try {
@@ -237,9 +363,12 @@ export default function CampusManagerDashboardView({ currentUser, onOpenProvisio
     }
   };
 
-  const currentCampusObj = campusesList.find((c) => c.id === selectedCampus) || {
-    name: 'Cơ sở 1 - Khu đô thị ĐHQG-HCM, TP. Thủ Đức'
-  };
+  const currentCampusObj =
+    selectedCampus === 'ALL'
+      ? { name: `Tất cả các cơ sở (${campusesList.length} cơ sở toàn hệ thống)` }
+      : campusesList.find((c) => c.id === selectedCampus) || {
+          name: 'Cơ sở đang chọn'
+        };
 
   return (
     <div className="space-y-6 animate-fade w-full pb-12 font-sans">
@@ -253,12 +382,21 @@ export default function CampusManagerDashboardView({ currentUser, onOpenProvisio
           {/* Left Column: Greeting, Dynamic Sliding Tips, Chips & Actions */}
           <div className="space-y-4 max-w-2xl flex-1">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 text-[#FACC15] text-xs font-bold uppercase tracking-wider">
-              <Building2 className="w-4 h-4 text-[#FACC15]" />
-              <span>Phân hệ Quản lý Học thuật Cơ sở • Core Flow 2 & Flow 5</span>
+              {isDirectorMode ? (
+                <>
+                  <Crown className="w-4 h-4 text-[#FACC15]" />
+                  <span>Cổng Giám Đốc Học Thuật Liên Cơ Sở • Chuẩn V-ACT 2026</span>
+                </>
+              ) : (
+                <>
+                  <Building2 className="w-4 h-4 text-[#FACC15]" />
+                  <span>Giám Sát Đa Cơ Sở • Quản Trị Hệ Thống</span>
+                </>
+              )}
             </div>
 
             <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-white leading-tight font-sans">
-              Chào mừng {currentUser?.fullName || 'Quản lý Học thuật'}, Nguyễn Duy Khôi!
+              Chào mừng {currentUser?.fullName || (isDirectorMode ? 'Giám Đốc Học Thuật' : 'Quản Trị Hệ Thống')}!
             </h1>
 
             {/* Dynamic Animated Sliding Tip */}
@@ -298,24 +436,48 @@ export default function CampusManagerDashboardView({ currentUser, onOpenProvisio
 
             {/* Action Buttons */}
             <div className="flex flex-wrap items-center gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => setShowCreateStaffModal(true)}
-                className="flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-[#FACC15] text-slate-950 font-black text-xs hover:bg-[#eab308] transition-all shadow-xl shadow-yellow-500/10 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Cấp tài khoản Cán bộ / GV mới</span>
-              </button>
+              {isDirectorMode ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => onNavigateTab?.('roadmap')}
+                    className="flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-[#FACC15] text-slate-950 font-black text-xs hover:bg-[#eab308] transition-all shadow-xl shadow-yellow-500/10 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                  >
+                    <Network className="w-4 h-4" />
+                    <span>Quản Lý Khung Chương Trình (DAG)</span>
+                  </button>
 
-              <button
-                type="button"
-                onClick={handleAutoClusterThematic}
-                disabled={clusteringLoading}
-                className="flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-white/15 hover:bg-white/25 border border-white/25 backdrop-blur-md text-white font-bold text-xs transition-all hover:scale-[1.02] cursor-pointer disabled:opacity-50"
-              >
-                <Sparkles className={`w-4 h-4 text-[#FACC15] ${clusteringLoading ? 'animate-spin' : ''}`} />
-                <span>{clusteringLoading ? 'Đang phân cụm K-Means...' : 'Tự Động Gom Cụm AI K-Means'}</span>
-              </button>
+                  <button
+                    type="button"
+                    onClick={() => onNavigateTab?.('ai_moderation')}
+                    className="flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-white/15 hover:bg-white/25 border border-white/25 backdrop-blur-md text-white font-bold text-xs transition-all hover:scale-[1.02] cursor-pointer"
+                  >
+                    <Bot className="w-4 h-4 text-[#FACC15]" />
+                    <span>Kiểm Duyệt Gia Sư AI</span>
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setShowCreateStaffModal(true)}
+                    className="flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-[#FACC15] text-slate-950 font-black text-xs hover:bg-[#eab308] transition-all shadow-xl shadow-yellow-500/10 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Cấp tài khoản Cán bộ / GV mới</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleAutoClusterThematic}
+                    disabled={clusteringLoading}
+                    className="flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-white/15 hover:bg-white/25 border border-white/25 backdrop-blur-md text-white font-bold text-xs transition-all hover:scale-[1.02] cursor-pointer disabled:opacity-50"
+                  >
+                    <Sparkles className={`w-4 h-4 text-[#FACC15] ${clusteringLoading ? 'animate-spin' : ''}`} />
+                    <span>{clusteringLoading ? 'Đang phân cụm K-Means...' : 'Tự Động Gom Cụm AI K-Means'}</span>
+                  </button>
+                </>
+              )}
             </div>
           </div>
 
@@ -327,16 +489,18 @@ export default function CampusManagerDashboardView({ currentUser, onOpenProvisio
               <div className="flex items-center justify-between pb-2 border-b border-white/10">
                 <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#FACC15] flex items-center gap-1.5">
                   <Building2 className="w-3.5 h-3.5" />
-                  <span>Điều Phối Cơ Sở</span>
+                  <span>{isDirectorMode ? 'Giám Sát Liên Cơ Sở' : 'Điều Phối Cơ Sở'}</span>
                 </span>
                 <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-[10px] font-bold flex items-center gap-1">
-                  ● Live API 5
+                  ● {campusesList.length} Cơ sở
                 </span>
               </div>
 
               {/* Campus Selector Dropdown inside Glass Box */}
               <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold text-slate-300">Cơ sở đang điều phối:</label>
+                <label className="text-[11px] font-semibold text-slate-300">
+                  {isDirectorMode ? 'Cơ sở đang giám sát:' : 'Cơ sở đang điều phối:'}
+                </label>
                 <div className="bg-slate-900/60 border border-white/20 rounded-xl px-3 py-2 flex items-center gap-2">
                   <Building2 className="w-4 h-4 text-cyan-300 shrink-0" />
                   <select
@@ -344,6 +508,11 @@ export default function CampusManagerDashboardView({ currentUser, onOpenProvisio
                     onChange={(e) => setSelectedCampus(e.target.value)}
                     className="w-full bg-transparent text-white font-bold text-xs focus:outline-none cursor-pointer truncate"
                   >
+                    {isDirectorMode && (
+                      <option value="ALL" className="text-slate-900 font-bold bg-white">
+                        Tất cả các cơ sở ({campusesList.length} cơ sở)
+                      </option>
+                    )}
                     {campusesList.map((c) => (
                       <option key={c.id} value={c.id} className="text-slate-900 font-semibold bg-white">
                         {c.name}
@@ -370,8 +539,165 @@ export default function CampusManagerDashboardView({ currentUser, onOpenProvisio
         </div>
       )}
 
-      {/* 2. Symmetrical MetricsGrid (4 Cards Matching Student Style with Realistic Numbers) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-5 my-6">
+      {/* 2. Symmetrical MetricsGrid */}
+      {isDirectorMode ? (
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-5 my-6">
+            {/* DIRECTOR CARD 1: Campuses & Students */}
+            <div className="bg-white rounded-2xl p-5 border border-slate-200/80 card-shadow flex flex-col justify-between hover:border-blue-300 transition-all">
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[11px] font-bold tracking-wider uppercase text-slate-400">
+                    Quy mô Các Cơ sở
+                  </span>
+                  <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 text-xs font-bold border border-blue-200">
+                    {campusesList.length} Cơ sở
+                  </span>
+                </div>
+                <div className="flex items-baseline gap-2 mb-1">
+                  <span className="text-3xl font-extrabold text-slate-900 tracking-tight">{totalCampusStudents}</span>
+                  <span className="text-sm font-semibold text-slate-400">học viên</span>
+                </div>
+                <div className="text-xs font-semibold text-slate-600 bg-slate-50 p-2 rounded-xl border border-slate-100 flex items-center justify-between">
+                  <span>Lớp đang hoạt động:</span>
+                  <strong className="text-blue-700 font-bold">{classesList.length} lớp</strong>
+                </div>
+              </div>
+            </div>
+
+            {/* DIRECTOR CARD 2: Knowledge Graph DAG */}
+            <div className="bg-white rounded-2xl p-5 border border-slate-200/80 card-shadow flex flex-col justify-between hover:border-indigo-300 transition-all">
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[11px] font-bold tracking-wider uppercase text-slate-400">
+                    Khung Chương Trình
+                  </span>
+                  <span className="px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 text-xs font-bold border border-indigo-200">
+                    DAG 4 Tầng
+                  </span>
+                </div>
+                <div className="flex items-baseline gap-2 mb-1">
+                  <span className="text-3xl font-extrabold text-slate-900 tracking-tight">{curriculumStats.skillsCount}</span>
+                  <span className="text-sm font-semibold text-slate-400">kỹ năng chuẩn</span>
+                </div>
+                <div className="text-xs font-semibold text-slate-600 bg-slate-50 p-2 rounded-xl border border-slate-100 flex items-center justify-between">
+                  <span>Phạm vi:</span>
+                  <strong className="text-indigo-700 font-bold">4 Miền V-ACT 2026</strong>
+                </div>
+              </div>
+            </div>
+
+            {/* DIRECTOR CARD 3: Official Exam Bank */}
+            <div className="bg-white rounded-2xl p-5 border border-slate-200/80 card-shadow flex flex-col justify-between hover:border-purple-300 transition-all">
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[11px] font-bold tracking-wider uppercase text-slate-400">
+                    Ngân Hàng Đề Thi
+                  </span>
+                  <span className="px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 text-xs font-bold border border-purple-200">
+                    AI Bloom
+                  </span>
+                </div>
+                <div className="flex items-baseline gap-2 mb-1">
+                  <span className="text-3xl font-extrabold text-slate-900 tracking-tight">{curriculumStats.examsCount}</span>
+                  <span className="text-sm font-semibold text-slate-400">đề khảo thí</span>
+                </div>
+                <div className="text-xs font-semibold text-slate-600 bg-slate-50 p-2 rounded-xl border border-slate-100 flex items-center justify-between">
+                  <span>Chuẩn ma trận:</span>
+                  <strong className="text-purple-700 font-bold">IRT 2PL &amp; Bloom</strong>
+                </div>
+              </div>
+            </div>
+
+            {/* DIRECTOR CARD 4: Mastery */}
+            <div className="bg-white rounded-2xl p-5 border border-slate-200/80 card-shadow flex flex-col justify-between hover:border-emerald-300 transition-all">
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[11px] font-bold tracking-wider uppercase text-slate-400">
+                    Chất Lượng Đào Tạo
+                  </span>
+                  <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 text-xs font-bold border border-emerald-200">
+                    Giám sát BKT
+                  </span>
+                </div>
+                <div className="flex items-baseline gap-2 mb-1">
+                  <span className="text-3xl font-extrabold text-slate-900 tracking-tight">
+                    {overallCampusMasteryPct > 0 ? `${overallCampusMasteryPct}%` : '—'}
+                  </span>
+                  <span className="text-sm font-semibold text-slate-400">làm chủ TB</span>
+                </div>
+                <div className="text-xs font-semibold text-slate-600 bg-slate-50 p-2 rounded-xl border border-slate-100 flex items-center justify-between">
+                  <span>Đánh giá cơ sở:</span>
+                  <strong className={overallCampusMasteryPct >= 65 ? 'text-emerald-700 font-bold' : 'text-amber-700 font-bold'}>
+                    {overallCampusMasteryPct === 0 ? 'Chưa có dữ liệu' : overallCampusMasteryPct >= 65 ? 'Đạt chuẩn làm chủ' : 'Cần hỗ trợ chuyên môn'}
+                  </strong>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 4 Core Academic Director Pillars Quick Access */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[
+              {
+                id: 'ai_moderation',
+                title: 'Kiểm duyệt Gia sư AI',
+                desc: 'Rà soát báo cáo sai lệch, kiểm duyệt phản hồi Socratic & bẫy tư duy.',
+                icon: Bot,
+                cls: 'from-blue-600 to-indigo-600',
+                btnCls: 'text-blue-700'
+              },
+              {
+                id: 'roadmap',
+                title: 'Quản lý Khung Chương trình',
+                desc: 'Quản trị Đồ thị Tri thức DAG 4 tầng, trọng số miền & học liệu chuẩn.',
+                icon: Network,
+                cls: 'from-purple-600 to-indigo-700',
+                btnCls: 'text-purple-700'
+              },
+              {
+                id: 'textbook-standard',
+                title: 'Sách giáo khoa (SGK)',
+                desc: 'Quản lý SGK chuẩn, nạp tài liệu vào kho RAG và Studio biên soạn.',
+                icon: BookOpen,
+                cls: 'from-emerald-500 to-teal-700',
+                btnCls: 'text-emerald-700'
+              },
+              {
+                id: 'exam-bank',
+                title: 'Đề thi & AI Bloom',
+                desc: 'Kho đề khảo thí, Parse PDF AI Bloom và Studio biên soạn đề thi.',
+                icon: FileSpreadsheet,
+                cls: 'from-indigo-500 to-blue-700',
+                btnCls: 'text-indigo-700'
+              }
+            ].map((pillar) => {
+              const PillarIcon = pillar.icon;
+              return (
+                <button
+                  key={pillar.id}
+                  type="button"
+                  onClick={() => onNavigateTab?.(pillar.id)}
+                  className="text-left bg-white rounded-2xl p-5 border border-slate-200/80 hover:border-indigo-300 hover:shadow-md transition-all flex flex-col justify-between gap-3 cursor-pointer group"
+                >
+                  <div className="space-y-2.5">
+                    <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${pillar.cls} text-white flex items-center justify-center shadow-sm`}>
+                      <PillarIcon className="w-5 h-5" />
+                    </div>
+                    <h3 className="text-sm font-black text-slate-900">{pillar.title}</h3>
+                    <p className="text-xs text-slate-500 leading-relaxed">{pillar.desc}</p>
+                  </div>
+                  <div className={`text-xs font-extrabold flex items-center justify-between pt-2 border-t border-slate-100 ${pillar.btnCls}`}>
+                    <span>Mở phân hệ</span>
+                    <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-5 my-6">
         {/* CARD 1: Total Campus Students */}
         <div className="bg-white rounded-2xl p-5 border border-slate-200/80 card-shadow flex flex-col justify-between hover:border-blue-300 transition-all group">
           <div>
@@ -502,40 +828,52 @@ export default function CampusManagerDashboardView({ currentUser, onOpenProvisio
           </div>
         </div>
       </div>
+      )}
 
-      {/* 3. CORE FLOW 5 (API 5): CAMPUS COMPARATIVE HEATMAP (FIXED: 76%, 53%, 68%, 71%!) */}
+      {/* 3. CAMPUS COMPARATIVE HEATMAP */}
       <div className="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/80 card-shadow space-y-6">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-100">
           <div>
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="text-lg font-black text-slate-900 flex items-center gap-2">
                 <BarChart3 className="w-5 h-5 text-blue-600" />
-                <span>Bản Đồ Nhiệt So Sánh Năng Lực 4 Miền Cấp Cơ Sở (Flow 5 Comparative Heatmap)</span>
+                <span>
+                  {isDirectorMode
+                    ? 'Giám Sát Chất Lượng Đào Tạo 4 Miền Theo Cơ Sở'
+                    : 'Bản Đồ Nhiệt So Sánh Năng Lực 4 Miền Cấp Cơ Sở'}
+                </span>
               </h2>
-              <span
-                className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
-                  campusHeatmap?._source === 'backend'
-                    ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
-                    : 'bg-blue-50 border-blue-200 text-blue-700'
-                }`}
-              >
-                ● Live API 5
-              </span>
+              {isDirectorMode && (
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold border bg-purple-50 border-purple-200 text-purple-700">
+                  Chế độ Giám sát (Chỉ đọc)
+                </span>
+              )}
             </div>
             <p className="text-xs text-slate-500 mt-1">
-              {currentCampusObj.name} • Đối sánh mức độ làm chủ trung bình P(Lt) và tỷ lệ học sinh yếu giữa các lớp để điều động trợ giảng kịp thời.
+              {currentCampusObj.name} • Đối sánh mức độ làm chủ trung bình 4 miền và tỷ lệ học sinh cần hỗ trợ giữa các lớp.
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={loadCampusHeatmap}
-            disabled={heatmapLoading}
-            className="px-4 py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-extrabold flex items-center gap-2 self-start lg:self-auto transition-all cursor-pointer disabled:opacity-50"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${heatmapLoading ? 'animate-spin' : ''}`} />
-            <span>Làm mới đối sánh</span>
-          </button>
+          <div className="flex flex-wrap items-center gap-2 self-start lg:self-auto">
+            {isDirectorMode && selectedCampus !== 'ALL' && (
+              <button
+                type="button"
+                onClick={() => setSelectedCampus('ALL')}
+                className="px-4 py-2.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-extrabold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
+              >
+                <span>← Quay lại Tất cả các cơ sở</span>
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={loadCampusHeatmap}
+              disabled={heatmapLoading}
+              className="px-4 py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-extrabold flex items-center gap-2 transition-all cursor-pointer disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${heatmapLoading ? 'animate-spin' : ''}`} />
+              <span>Làm mới đối sánh</span>
+            </button>
+          </div>
         </div>
 
         {/* 4 Domain Averages Display (Corrected Percentages: 76%, 53%, 68%, 71%) */}
@@ -588,7 +926,109 @@ export default function CampusManagerDashboardView({ currentUser, onOpenProvisio
           </div>
         )}
 
+        {/* Campus-by-Campus Summary Comparison Table (When Director views ALL campuses) */}
+        {isDirectorMode && selectedCampus === 'ALL' && allCampusSummaries.length > 0 && !heatmapLoading && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-black text-slate-900 flex items-center gap-2">
+                <Building2 className="w-4 h-4 text-indigo-600" />
+                <span>Đối Sánh Chất Lượng Giữa Các Cơ Sở ({allCampusSummaries.length} cơ sở)</span>
+              </h3>
+              <span className="text-[11px] font-semibold text-slate-500">
+                Bấm &quot;Xem lớp cơ sở này&quot; để lọc sâu từng cơ sở
+              </span>
+            </div>
+
+            <div className="overflow-x-auto rounded-2xl border border-indigo-200/80 shadow-2xs">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="bg-indigo-50/70 border-b border-indigo-200/80 text-slate-700">
+                    <th className="p-3.5 font-extrabold min-w-[230px]">Cơ sở / Trung tâm</th>
+                    <th className="p-3 font-extrabold text-center">Lớp / Học viên</th>
+                    {DOMAIN_ORDER.map((d) => (
+                      <th key={d.code} className="p-3 font-extrabold text-center min-w-[110px]">
+                        {d.short}
+                      </th>
+                    ))}
+                    <th className="p-3 font-extrabold text-center">Trung bình</th>
+                    <th className="p-3.5 font-extrabold text-right">Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 bg-white">
+                  {allCampusSummaries.map((cs) => (
+                    <tr key={cs.campusId} className="hover:bg-indigo-50/30 transition-colors">
+                      <td className="p-3.5">
+                        <div className="font-black text-slate-900">{cs.campusName}</div>
+                        {cs.campusCode && (
+                          <div className="text-[10px] font-bold text-slate-500 uppercase mt-0.5">{cs.campusCode}</div>
+                        )}
+                      </td>
+                      <td className="p-3 text-center">
+                        <div className="font-extrabold text-slate-900">{cs.classCount} lớp</div>
+                        <div className="text-[11px] font-semibold text-slate-500">{cs.totalStudents} học viên</div>
+                      </td>
+                      {DOMAIN_ORDER.map((d) => {
+                        const pct = cs.domainPcts?.[d.code];
+                        const hasData = cs.classCount > 0 && typeof pct === 'number';
+                        const badgeCls = !hasData
+                          ? 'bg-slate-50 text-slate-400 border-slate-200'
+                          : pct < 50
+                            ? 'bg-rose-50 text-rose-700 border-rose-200'
+                            : pct < 70
+                              ? 'bg-amber-50 text-amber-700 border-amber-200'
+                              : 'bg-emerald-50 text-emerald-700 border-emerald-200';
+                        return (
+                          <td key={d.code} className="p-3 text-center">
+                            <span className={`inline-block px-2.5 py-1 rounded-lg border font-black text-xs ${badgeCls}`}>
+                              {hasData ? `${pct}%` : '—'}
+                            </span>
+                          </td>
+                        );
+                      })}
+                      <td className="p-3 text-center">
+                        <span className="font-black text-indigo-700">
+                          {cs.classCount > 0 ? `${cs.overallMasteryPct}%` : 'Chưa có lớp'}
+                        </span>
+                      </td>
+                      <td className="p-3.5 text-right">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedCampus(cs.campusId)}
+                          className="px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-extrabold text-[11px] cursor-pointer transition-colors"
+                        >
+                          Xem lớp cơ sở này
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
         {/* Class-by-Class 4-Domain Comparative Matrix Table */}
+        <div className="space-y-3">
+          {isDirectorMode && (
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h3 className="text-sm font-black text-slate-900 flex items-center gap-2">
+                <Layers className="w-4 h-4 text-blue-600" />
+                <span>
+                  Chi Tiết Chất Lượng Từng Lớp Học ({(campusHeatmap?.classComparisons || []).length} lớp
+                  {selectedCampus === 'ALL' ? ' trên tất cả cơ sở' : ''})
+                </span>
+              </h3>
+              {selectedCampus !== 'ALL' && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedCampus('ALL')}
+                  className="text-xs font-extrabold text-indigo-600 hover:text-indigo-800 hover:underline cursor-pointer"
+                >
+                  ← Xem lại tất cả các cơ sở
+                </button>
+              )}
+            </div>
+          )}
         {heatmapLoading ? (
           <div className="py-12 text-center text-xs font-bold text-slate-500 animate-pulse space-y-2">
             <RefreshCw className="w-6 h-6 animate-spin mx-auto text-blue-600" />
@@ -607,7 +1047,7 @@ export default function CampusManagerDashboardView({ currentUser, onOpenProvisio
                     </th>
                   ))}
                   <th className="p-3.5 font-extrabold text-center">Rủi ro lớp</th>
-                  <th className="p-4 font-extrabold text-right">Điều phối</th>
+                  {!isDirectorMode && <th className="p-4 font-extrabold text-right">Điều phối</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -624,6 +1064,12 @@ export default function CampusManagerDashboardView({ currentUser, onOpenProvisio
                     <tr key={cls.classId} className="hover:bg-slate-50/80 transition-all">
                       <td className="p-4">
                         <div className="font-black text-slate-900 text-sm">{cls.className}</div>
+                        {selectedCampus === 'ALL' && cls._campusName && (
+                          <div className="inline-flex items-center gap-1 px-2 py-0.5 mt-1 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200 text-[10px] font-bold">
+                            <Building2 className="w-3 h-3" />
+                            <span>{cls._campusName}</span>
+                          </div>
+                        )}
                         <div className="text-[11px] text-slate-500 font-medium mt-0.5 flex items-center gap-1.5">
                           <UserCheck className="w-3.5 h-3.5 text-slate-400" />
                           <span>GV: <strong className="text-slate-700">{cls.teacherName}</strong></span>
@@ -663,23 +1109,25 @@ export default function CampusManagerDashboardView({ currentUser, onOpenProvisio
                           {riskBadge.label}
                         </span>
                       </td>
-                      <td className="p-4 text-right">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setSelectedClassForGroups({
-                              id: cls.classId,
-                              classId: cls.classId,
-                              name: cls.className,
-                              assignedTeacher: cls.teacherName
-                            })
-                          }
-                          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-blue-700 to-indigo-700 hover:from-blue-600 hover:to-indigo-600 text-white font-black text-xs shadow-xs transition-all hover:scale-[1.02] cursor-pointer"
-                        >
-                          <Layers className="w-3.5 h-3.5" />
-                          <span>Sơ Đồ Bàn Vi Mô</span>
-                        </button>
-                      </td>
+                      {!isDirectorMode && (
+                        <td className="p-4 text-right">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setSelectedClassForGroups({
+                                id: cls.classId,
+                                classId: cls.classId,
+                                name: cls.className,
+                                assignedTeacher: cls.teacherName
+                              })
+                            }
+                            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-blue-700 to-indigo-700 hover:from-blue-600 hover:to-indigo-600 text-white font-black text-xs shadow-xs transition-all hover:scale-[1.02] cursor-pointer"
+                          >
+                            <Layers className="w-3.5 h-3.5" />
+                            <span>Sơ Đồ Bàn Vi Mô</span>
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   );
                 })}
@@ -687,9 +1135,12 @@ export default function CampusManagerDashboardView({ currentUser, onOpenProvisio
             </table>
           </div>
         )}
+        </div>
       </div>
 
-      {/* 4. Two Columns: Offline Class Allocation & Teaching Faculty */}
+      {/* 4. Two Columns: Offline Class Allocation & Teaching Faculty (Admin / Campus Ops Only) */}
+      {!isDirectorMode && (
+      <>
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Left Column (7 Cols): Offline Class Modules */}
         <div className="lg:col-span-7 bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/80 card-shadow space-y-4">
@@ -866,6 +1317,8 @@ export default function CampusManagerDashboardView({ currentUser, onOpenProvisio
         defaultClassId="ALL"
         roleLabel="Trưởng Ban Học Thuật & Quản Lý Cơ Sở"
       />
+      </>
+      )}
 
       {/* CREATE STAFF MODAL */}
       {showCreateStaffModal && (

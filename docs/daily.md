@@ -2,6 +2,23 @@
 
 ---
 
+## [20/11/2026] - Chuẩn Hóa & Phân Định Rõ Vai Trò Cổng Giám Đốc Học Thuật Toàn Trường (`ACADEMIC_DIRECTOR`) Trong `CampusManagerDashboardView.jsx`
+
+- **Bảo Toàn 100% 4 Phân Hệ Chuyên Môn Cốt Lõi**: Giữ nguyên hoàn toàn `AiTutorModerationView`, `CurriculumExplorerView`, nhóm `Textbook*View` (SGK) và nhóm `Exam*View` (Đề thi & AI Bloom).
+- **Dọn Sạch Menu Sidebar Director (`./src/components/layout/Sidebar.jsx`)**:
+  - Đổi nhóm menu thành **"Quản Trị Học Thuật Toàn Trường"** với đúng 5 mục chuẩn vai trò; gỡ badge `Flow 4` để tiêu đề `Kiểm duyệt Gia sư AI` hiển thị trọn vẹn.
+  - Gỡ 3 mục trỏ nhầm/lấn sân: `Giám sát Ma trận Lớp học` (mở nhầm Teacher), `Báo cáo Chất lượng Đào tạo` (mở nhầm Student), `Cấp phát Tài khoản Cơ sở` (thuộc Admin).
+- **Triển Khai Chế Độ `isDirectorMode` Trực Tiếp Trong `./src/components/dashboard/CampusManagerDashboardView.jsx` & `./src/App.jsx`**:
+  - Xóa bỏ chuỗi hardcode `, Nguyễn Duy Khôi!` và số giả lập `67%`.
+  - Nạp KPI thực tế từ `contentService.getSkillsTree()`, `contentService.getMockExams()`, `userService.getCampuses()` và `practiceService.getCampusComparativeHeatmap()`.
+  - Hiển thị 4 thẻ lối tắt vào 4 trụ cột học thuật, mặc định chế độ **Tất cả các cơ sở (`ALL`)** với **Bảng Đối Sánh Chất Lượng Giữa Các Cơ Sở** và chuyển Bản đồ nhiệt sang chế độ Giám sát (Chỉ đọc), ẩn các nút tác vụ cấp Manager/Teacher/Admin.
+- **Khắc Phục Triệt Để Lỗi Logout Vẫn Dính Tài Khoản Cũ Trên Trang Chủ (`./src/App.jsx`, `./src/services/apiClient.js`, `./src/services/authService.js`, `./src/components/landing/PublicHeader.jsx`)**:
+  - Chặn Race Condition của `/api/v1/users/me` bằng `sessionVersion`, ngăn lưu `USER_KEY` khi thiếu `accessToken`, áp dụng Optimistic Logout tức thì và đồng bộ kiểm tra `authService.isAuthenticated()` trên `PublicHeader.jsx`.
+- **Đồng Bộ 100% Đợt Học & Khóa Học Sang Cổng Học Phí Student/Parent + Chỉnh Sửa / Xóa Khóa Học (`./src/components/payment/TuitionPaymentView.jsx`, `./src/components/dashboard/AcademicManagerDashboardView.jsx`, `./src/services/practiceService.js`)**:
+  - Xóa bỏ hoàn toàn mảng 3 gói học hardcode trên `TuitionPaymentView.jsx`; tải song song `AcademicTerms` (`ACTIVE`) và `Courses` (`isActive: true`) theo `campusId` của học sinh/con (kèm cơ chế phân giải `campusId` cho Phụ huynh & nút làm mới đồng bộ cả 2 nguồn); bổ sung Banner Đợt học đang tuyển sinh và lưới khóa học động đúng với dữ liệu Quản lý cơ sở đã tạo.
+  - Bổ sung `updateCourse` và `deleteCourse` vào `practiceService.js`; thêm nút Sửa (✏️) và Xóa (🗑️) trên từng khóa học trong `AcademicManagerDashboardView.jsx` kèm Modal tạo/sửa hợp nhất; gỡ state `availableCourses` dư thừa trong `ParentDashboardView.jsx`.
+- **Kiểm Thử Vận Hành**: `npm run build` đạt `✓ built in 1.39s`, 0 lỗi.
+
 ## [20/11/2026] - Chuyển Đổi & Nâng Cấp Toàn Diện Trình Bóc Tách Đề Thi Thực Tế (`view-exam.html` -> `ExamParserStudioView.jsx`) Lên Web Client
 ## [19/11/2026] - Khắc Phục Triệt Để Lỗi Hook Màn Hình Đỏ, Chuẩn Hóa Cổng Phụ Huynh 4 Phân Hệ & Bố Cục Dashboard 3 Tầng Hiện Đại
 

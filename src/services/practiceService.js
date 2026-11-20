@@ -3020,6 +3020,16 @@ export const practiceService = {
     return res?.value || res?.data || res;
   },
 
+  async updateCourse(courseId, payload) {
+    const res = (await apiClient.put(`/api/practice/courses/${courseId}`, payload)).data;
+    return res?.value || res?.data || res;
+  },
+
+  async deleteCourse(courseId) {
+    const res = (await apiClient.delete(`/api/practice/courses/${courseId}`)).data;
+    return res?.value || res?.data || res;
+  },
+
   async createClassWithSchedule(payload) {
     const res = (await apiClient.post('/api/practice/classes', payload)).data;
     return res?.value || res?.data || res;
