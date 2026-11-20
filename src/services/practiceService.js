@@ -1187,35 +1187,36 @@ const buildEmptyStudentDashboard = (studentId) => {
     currentUser?.name ||
     currentUser?.email?.split('@')[0] ||
     'Học viên V-Eval';
+  const targetScore = Number(currentUser?.targetScore || 900);
 
   return {
     studentId,
     studentName,
     currentEstimatedScore: 0,
-    confidenceInterval: [0, 0],
-    domainScores: [
-      { domainCode: 'DOM_MATH', domainName: 'Toán học & Tư duy Logic', score: 0, maxScore: 300, theta: 0 },
-      { domainCode: 'DOM_LIT', domainName: 'Sử dụng Ngôn ngữ Tiếng Việt', score: 0, maxScore: 300, theta: 0 },
-      { domainCode: 'DOM_SCI', domainName: 'Khoa học Tự nhiên & STEM', score: 0, maxScore: 300, theta: 0 },
-      { domainCode: 'DOM_SOC', domainName: 'Khoa học Xã hội & Đọc hiểu', score: 0, maxScore: 300, theta: 0 }
+    targetScore,
+    confidenceInterval: 'Chưa có dữ liệu',
+    radarCompetency: [
+      { domainCode: 'DOM_LANG', domainName: 'Sử dụng Ngôn ngữ (Việt - Anh)', currentPercentage: 0, targetPercentage: 80 },
+      { domainCode: 'DOM_MATH', domainName: 'Toán học, Tư duy Logic & Phân tích số liệu', currentPercentage: 0, targetPercentage: 85 },
+      { domainCode: 'DOM_NAT_SCI', domainName: 'Giải quyết vấn đề - Khoa học Tự nhiên', currentPercentage: 0, targetPercentage: 80 },
+      { domainCode: 'DOM_SOC_SCI', domainName: 'Giải quyết vấn đề - Khoa học Xã hội', currentPercentage: 0, targetPercentage: 78 }
     ],
-    skillProficiencies: [],
+    roadmapProgress: {
+      totalMilestones: 0,
+      completedMilestones: 0,
+      progressPercentage: 0,
+      currentMilestoneTitle: 'Hoàn thành bài kiểm tra đầu vào 30 câu để mở khóa lộ trình cá nhân P-L-A-R'
+    },
     streakAnalytics: {
       currentStreak: 0,
-      targetHoursPerWeek: 12,
-      studyHoursThisWeek: 0,
-      activeDaysThisWeek: 0,
-      streakHistory: [false, false, false, false, false, false, false]
+      longestStreak: 0,
+      isFreezeAvailable: false,
+      isTodayCompleted: false,
+      weeklyActivityDays: [false, false, false, false, false, false, false]
     },
-    examReadiness: {
-      readinessIndex: 0,
-      targetScore: 900,
-      projectedExamScore: 0,
-      daysRemaining: 45,
-      urgencyLevel: 'LOW'
-    },
+    recentMockExams: [],
     needsOnboarding: true,
-    _source: 'empty_fallback'
+    _source: 'empty_backend'
   };
 };
 
@@ -1758,9 +1759,19 @@ export const practiceService = {
     return (await apiClient.get(`/api/practice/roadmaps/my-roadmap${query}`, { headers })).data;
   },
 
-  async getRoadmapNodeDetail(nodeId) {
-    return (await apiClient.get(`/api/practice/roadmaps/nodes/${nodeId}`)).data;
+  async getRoadmapNodeDetail(nodeId, studentId = null) {
+    const resolvedStudentId =
+      studentId ||
+      tokenStorage.getUser()?.userId ||
+      tokenStorage.getUser()?.id ||
+      tokenStorage.getUser()?.studentId;
+    const headers = resolvedStudentId ? { 'X-User-Id': resolvedStudentId } : {};
+    return (await apiClient.get(`/api/practice/roadmaps/nodes/${nodeId}`, { headers })).data;
   },
+
+  // =========================================================================
+  // Core Flow 3: Chu Trình Tự Học Thích Ứng P-L-A-R (StagesController - Đủ 8 APIs)
+  // =========================================================================
 
   async startRoadmapStage(nodeId, studentId) {
     return (await apiClient.post(`/api/practice/stages/${nodeId}/start`, { studentId })).data;
@@ -1770,20 +1781,66 @@ export const practiceService = {
     return (await apiClient.post(`/api/practice/stages/${stageProgressId}/preview-submit`, { answers })).data;
   },
 
-  async trackVideoProgress(nodeId, watchSeconds) {
-    return (await apiClient.post(`/api/practice/roadmaps/nodes/${nodeId}/track-video`, { watchSeconds })).data;
+  async trackStageVideo(stageProgressId, { studentId, watchedSeconds, totalSeconds }) {
+    return (
+      await apiClient.post(`/api/practice/stages/${stageProgressId}/track-video`, {
+        studentId,
+        watchedSeconds: Math.max(1, Math.round(Number(watchedSeconds || 0))),
+        totalSeconds: Math.max(1, Math.round(Number(totalSeconds || 100)))
+      })
+    ).data;
   },
 
-  async getMilestoneQuiz(nodeId) {
-    return (await apiClient.get(`/api/practice/roadmaps/nodes/${nodeId}/quiz`)).data;
+  async trackVideoProgress(stageProgressId, watchSeconds, studentId = null, totalSeconds = 100) {
+    const resolvedStudentId =
+      studentId ||
+      tokenStorage.getUser()?.userId ||
+      tokenStorage.getUser()?.id;
+    return this.trackStageVideo(stageProgressId, {
+      studentId: resolvedStudentId,
+      watchedSeconds: watchSeconds,
+      totalSeconds
+    });
   },
 
-  async submitMilestoneQuiz(nodeId, answers) {
-    return (await apiClient.post(`/api/practice/roadmaps/nodes/${nodeId}/submit-quiz`, answers)).data;
+  async getNextStageQuestion(stageProgressId) {
+    return (await apiClient.get(`/api/practice/stages/${stageProgressId}/next-question`)).data;
   },
 
-  async submitMakeupQuiz(nodeId, answers) {
-    return (await apiClient.post(`/api/practice/roadmaps/nodes/${nodeId}/submit-makeup-quiz`, answers)).data;
+  async submitStageAnswer(stageProgressId, { studentId, questionId, selectedOption, timeSpentSeconds = 15, patternId = 'STANDARD' }) {
+    return (
+      await apiClient.post(`/api/practice/stages/${stageProgressId}/submit-answer`, {
+        studentId,
+        questionId,
+        selectedOption,
+        timeSpentSeconds: Math.max(1, Math.round(Number(timeSpentSeconds || 15))),
+        patternId
+      })
+    ).data;
+  },
+
+  async getStageRemedial(stageProgressId) {
+    return (await apiClient.get(`/api/practice/stages/${stageProgressId}/remedial`)).data;
+  },
+
+  async submitStageRemedial(stageProgressId, { studentId, answers }) {
+    return (
+      await apiClient.post(`/api/practice/stages/${stageProgressId}/remedial-submit`, {
+        studentId,
+        answers
+      })
+    ).data;
+  },
+
+  async reflectCompleteStage(stageProgressId, { studentId, confidenceRating = 4, learnedSummary = '', mistakeNotes = '' }) {
+    return (
+      await apiClient.post(`/api/practice/stages/${stageProgressId}/reflect-complete`, {
+        studentId,
+        confidenceRating: Math.min(5, Math.max(1, Math.round(Number(confidenceRating || 4)))),
+        learnedSummary,
+        mistakeNotes
+      })
+    ).data;
   },
 
   // =========================================================================
@@ -2131,23 +2188,12 @@ export const practiceService = {
       studentId || currentUser?.id || currentUser?.userId,
       FLOW5_DEFAULTS.STUDENT_ID
     );
-    const realSubs = this.getRealUserSubmissions(resolvedStudentId);
 
     try {
       const data = (await apiClient.get(`/api/practice/analytics/student/${resolvedStudentId}/dashboard`)).data;
-      const hydrated = this.hydrateStudentDashboardWithLocalHistory(
-        { ...data, _source: 'backend' },
-        resolvedStudentId
-      );
-      if (realSubs.some((s) => !s.backendSynced)) {
-        this.syncUnsyncedSubmissions(resolvedStudentId).catch(() => {});
-      }
-      return hydrated;
+      return { ...data, _source: 'backend' };
     } catch (err) {
-      console.warn('[Core Flow 5] getStudentDashboard fallback activated:', err?.message);
-      if (realSubs.length > 0) {
-        return this.hydrateStudentDashboardWithLocalHistory(null, resolvedStudentId);
-      }
+      console.warn('[Core Flow 5] getStudentDashboard backend error (returning clean empty state, zero mock):', err?.message);
       return buildEmptyStudentDashboard(resolvedStudentId);
     }
   },
@@ -2257,9 +2303,25 @@ export const practiceService = {
           console.warn('[Core Flow 6] autoRecalculateOnMissing fallback:', retryErr?.message);
         }
       }
-      console.warn('[Core Flow 6] getMyForecast fallback activated:', err?.message);
-      const realSubs = this.getRealUserSubmissions(resolvedStudentId);
-      return buildSeedForecast(resolvedStudentId, realSubs);
+      console.warn('[Core Flow 6] getMyForecast unavailable (returning clean empty state, zero mock):', err?.message);
+      return {
+        studentId: resolvedStudentId,
+        forecast: {
+          predictedScore: 0,
+          sem: 0,
+          confidenceRate: 95,
+          scoreRange: { min: 0, max: 0 },
+          calculationSource: 'NONE',
+          lastUpdated: null
+        },
+        balanceSheet: {
+          targetScore: Number(currentUser?.targetScore || 900),
+          deficitScore: 0,
+          status: 'NO_DATA'
+        },
+        prescriptions: [],
+        _source: 'empty_backend'
+      };
     }
   },
 
@@ -2476,28 +2538,15 @@ export const practiceService = {
       ).data;
       return { ...data, _source: 'backend' };
     } catch (err) {
-      console.warn('[Core Flow 6] getMyAlerts fallback activated:', err?.message);
-      const studentAlerts = buildSeedAlertsPool(resolvedStudentId).filter(
-        (a) => a.studentId === resolvedStudentId
-      );
-      const unreadCount = studentAlerts.filter((a) => !a.isRead).length;
-      const redAlertsCount = studentAlerts.filter((a) => a.alertType === 'RED').length;
-      const yellowAlertsCount = studentAlerts.filter((a) => a.alertType === 'YELLOW').length;
-
-      const filtered = studentAlerts.filter((a) => {
-        if (unreadOnly && a.isRead) return false;
-        if (alertType && alertType !== 'ALL' && a.alertType !== String(alertType).toUpperCase()) return false;
-        return true;
-      });
-
+      console.warn('[Core Flow 6] getMyAlerts unavailable (returning empty list, zero mock):', err?.message);
       return {
         studentId: resolvedStudentId,
-        totalAlerts: studentAlerts.length,
-        unreadCount,
-        redAlertsCount,
-        yellowAlertsCount,
-        alerts: filtered,
-        _source: 'seed_fallback'
+        totalAlerts: 0,
+        unreadCount: 0,
+        redAlertsCount: 0,
+        yellowAlertsCount: 0,
+        alerts: [],
+        _source: 'empty_backend'
       };
     }
   },
@@ -2771,36 +2820,15 @@ export const practiceService = {
       const data = (await apiClient.get(`/api/practice/mistakes?${params.toString()}`)).data;
       return { ...data, _source: 'backend' };
     } catch (err) {
-      console.warn('[Core Flow 6] getMistakeNotebook fallback activated:', err?.message);
-      const allItems = buildSeedMistakeItems(resolvedStudentId);
-      const masteredCount = allItems.filter((i) => i.isMastered).length;
-      const unmasteredCount = allItems.length - masteredCount;
-
-      const filtered = allItems.filter((item) => {
-        if (skillId && skillId !== 'ALL' && item.skillId !== skillId) return false;
-        if (
-          cognitiveErrorTag &&
-          cognitiveErrorTag !== 'ALL' &&
-          item.cognitiveErrorTag !== String(cognitiveErrorTag).toUpperCase()
-        ) {
-          return false;
-        }
-        if (typeof isMastered === 'boolean' && Boolean(item.isMastered) !== isMastered) return false;
-        return true;
-      });
-
-      const safePage = Math.max(1, Number(pageIndex || 1));
-      const safeSize = Math.max(1, Number(pageSize || 10));
-      const paged = filtered.slice((safePage - 1) * safeSize, safePage * safeSize);
-
+      console.warn('[Core Flow 6] getMistakeNotebook unavailable (returning empty list, zero mock):', err?.message);
       return {
-        items: paged,
-        totalCount: filtered.length,
-        pageIndex: safePage,
-        pageSize: safeSize,
-        masteredCount,
-        unmasteredCount,
-        _source: 'seed_fallback'
+        items: [],
+        totalCount: 0,
+        pageIndex: Math.max(1, Number(pageIndex || 1)),
+        pageSize: Math.max(1, Number(pageSize || 10)),
+        masteredCount: 0,
+        unmasteredCount: 0,
+        _source: 'empty_backend'
       };
     }
   },
@@ -2819,35 +2847,13 @@ export const practiceService = {
       const data = (await apiClient.get(`/api/practice/mistakes/daily-review?${params.toString()}`)).data;
       return { ...data, _source: 'backend' };
     } catch (err) {
-      console.warn('[Core Flow 6] getDailyMistakeReview fallback activated:', err?.message);
-      const refTime = targetDate ? new Date(targetDate).getTime() : Date.now();
-      const dueItems = buildSeedMistakeItems(resolvedStudentId).filter(
-        (m) => !m.isMastered && new Date(m.nextReviewDate).getTime() <= refTime
-      );
-
-      const questions = dueItems.map((m) => ({
-        mistakeNotebookId: m.id,
-        originalQuestionId: m.questionId,
-        reviewQuestionId: deterministicUuidFromText(`iso_${m.id}_${m.reviewCount}`),
-        skillId: m.skillId,
-        skillName: m.skillName,
-        patternId: m.patternId,
-        content: m.questionContent,
-        options: m.options,
-        difficultyLevel: 2,
-        reviewCount: m.reviewCount,
-        consecutiveCorrect: m.consecutiveCorrectReviews,
-        cognitiveErrorTag: m.cognitiveErrorTag,
-        studentNotes: m.studentNotes,
-        isIsomorphicVariant: true
-      }));
-
+      console.warn('[Core Flow 6] getDailyMistakeReview unavailable (returning empty list, zero mock):', err?.message);
       return {
         studentId: resolvedStudentId,
-        reviewDate: new Date(refTime).toISOString(),
-        totalDueQuestions: questions.length,
-        questions,
-        _source: 'seed_fallback'
+        reviewDate: (targetDate ? new Date(targetDate) : new Date()).toISOString(),
+        totalDueQuestions: 0,
+        questions: [],
+        _source: 'empty_backend'
       };
     }
   },
@@ -2892,17 +2898,21 @@ export const practiceService = {
     }
   },
 
-  async submitDailyMistakeReview(mistakeId, { selectedOption, timeSpentSeconds = 30 } = {}) {
+  async submitDailyMistakeReview(mistakeId, { selectedOption, timeSpentSeconds = 30, reviewQuestionId = null } = {}) {
     const resolvedId = ensureGuid(mistakeId, FLOW6_DEFAULTS.MISTAKE_1_ID);
     const cleanOpt = cleanOptionKey(selectedOption, 'A');
     const cleanTime = Math.max(1, Math.round(Number(timeSpentSeconds || 30)));
 
     try {
+      const payload = {
+        selectedOption: cleanOpt,
+        timeSpentSeconds: cleanTime
+      };
+      if (reviewQuestionId && GUID_REGEX.test(String(reviewQuestionId).trim())) {
+        payload.reviewQuestionId = String(reviewQuestionId).trim();
+      }
       const data = (
-        await apiClient.post(`/api/practice/mistakes/${resolvedId}/review-submit`, {
-          selectedOption: cleanOpt,
-          timeSpentSeconds: cleanTime
-        })
+        await apiClient.post(`/api/practice/mistakes/${resolvedId}/review-submit`, payload)
       ).data;
       emitFlow6Updated({ type: 'mistake_reviewed', id: resolvedId });
       return { ...data, _source: 'backend' };

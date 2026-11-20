@@ -69,7 +69,8 @@ export default function StudentCurriculumView({
   const [outline, setOutline] = useState(false);
   const [expandedChapter, setExpandedChapter] = useState({});
   const [expandedLesson, setExpandedLesson] = useState({});
-  const [roadmapMode, setRoadmapMode] = useState(latestDiagnosticResult ? 'personalized' : 'general');
+  // Chỉ hiển thị Kho Chương Trình Chuẩn 9 Môn thật từ DB (Lộ trình cá nhân thật nằm ở Tab 1 PLAR)
+  const roadmapMode = 'general';
   const [showTuitionModal, setShowTuitionModal] = useState(false);
   const [pendingTarget, setPendingTarget] = useState(null);
 
@@ -526,44 +527,10 @@ export default function StudentCurriculumView({
           Hôm nay bạn muốn học gì?
         </h1>
         <p className="mt-2 max-w-2xl text-sm sm:text-base leading-6 text-slate-500">
-          Chọn giữa <strong>Lớp học chung</strong> (khung chuẩn ĐGNL) hoặc <strong>Lộ trình cá nhân riêng</strong> (tối ưu hóa theo kết quả thi chẩn đoán).
+          Tra cứu toàn bộ <strong>Khung Chương Trình Chuẩn 9 Môn GDPT 2018</strong> (4 Miền năng lực ĐGNL, 139 Chương, 337 Bài học &amp; Dạng bài động từ CSDL). Để học theo lộ trình cá nhân hóa P-L-A-R, hãy chuyển sang tab <strong>Lộ Trình Cá Nhân &amp; Chu Trình P-L-A-R</strong> phía trên.
         </p>
 
-        {/* 2 Primary Mode Switcher Tabs */}
-        <div className="mt-6 flex flex-wrap gap-3">
-          <button
-            type="button"
-            onClick={() => setRoadmapMode('general')}
-            className={`flex items-center gap-2.5 rounded-2xl px-5 py-3 text-sm font-bold transition-all shadow-sm cursor-pointer ${
-              roadmapMode === 'general'
-                ? 'bg-blue-600 text-white shadow-blue-200 ring-2 ring-blue-500/30'
-                : 'border border-slate-200 bg-white text-slate-700 hover:border-blue-300'
-            }`}
-          >
-            <GraduationCap className="w-4 h-4" />
-            <span>🏫 Lớp Học Chung (Chương Trình Đào Tạo Chuẩn)</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setRoadmapMode('personalized')}
-            className={`flex items-center gap-2.5 rounded-2xl px-5 py-3 text-sm font-bold transition-all shadow-sm cursor-pointer ${
-              roadmapMode === 'personalized'
-                ? 'bg-indigo-600 text-white shadow-indigo-200 ring-2 ring-indigo-500/30'
-                : 'border border-slate-200 bg-white text-slate-700 hover:border-indigo-300'
-            }`}
-          >
-            <Target className="w-4 h-4" />
-            <span>🎯 Lộ Trình Cá Nhân Riêng (Theo Kết Quả Khảo Sát)</span>
-            {latestDiagnosticResult && (
-              <span className="px-2 py-0.5 rounded-full bg-emerald-400 text-slate-900 text-[10px] font-black">
-                Có Kết Quả Thi
-              </span>
-            )}
-          </button>
-        </div>
-
-        {/* Domain pills (Only in general mode) */}
+        {/* Domain pills */}
         {roadmapMode === 'general' && (
           <div className="mt-6 flex flex-wrap gap-2 pt-4 border-t border-slate-200/80">
             {domains.map((domain) => (

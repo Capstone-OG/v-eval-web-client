@@ -844,6 +844,8 @@ export default function Sidebar({
                   }
 
                   if (isCollapsed) {
+                    const iconGradient = item.iconColor || 'from-blue-500 to-indigo-600';
+                    const glowClass = item.activeGlow || 'shadow-blue-500/30';
                     return (
                       <button
                         key={item.id}

@@ -1,31 +1,13 @@
-# UPDATE - V-Eval-Web_Client
+# UPDATE — V-Eval-Web_Client
 
-## [20/11/2026]
-- **Chuẩn Hóa & Phân Định Rõ Vai Trò Cổng Giám Đốc Học Thuật Liên Cơ Sở (`ACADEMIC_DIRECTOR` - `./src/components/dashboard/CampusManagerDashboardView.jsx`, `./src/components/layout/Sidebar.jsx`, `./src/App.jsx`)**:
-  - *Bảo toàn 100% 4 phân hệ cốt lõi của Director*: Giữ nguyên hoàn toàn mã nguồn và giao diện của **Kiểm duyệt Gia sư AI** (`AiTutorModerationView`), **Quản lý Khung Chương trình** (`CurriculumExplorerView`), **Sách giáo khoa (SGK)** (`TextbookStandard/Ingest/Studio`), và **Đề thi & AI Bloom** (`ExamBank/Ingest/Studio`).
-  - *Dọn sạch Menu Sidebar cho Director (`Sidebar.jsx`)*:
-    - Đổi tiêu đề nhóm sang **"Quản Trị Học Thuật Liên Cơ Sở"** và mục trang chủ sang **"Tổng quan Các Cơ sở"**.
-    - Giữ đúng 5 mục đúng vai trò: `Tổng quan Học thuật`, `Kiểm duyệt Gia sư AI` (gỡ badge `Flow 4` để không còn bị cắt chữ), `Quản lý Khung Chương trình`, `Sách giáo khoa (SGK)`, và `Đề thi & AI Bloom`.
-    - Gỡ 3 mục trỏ nhầm / lấn sân vai trò khác: `Giám sát Ma trận Lớp học` (trỏ nhầm `TeacherDashboardView`), `Báo cáo Chất lượng Đào tạo` (trỏ nhầm `LearningAnalyticsView` của Học sinh), và `Cấp phát Tài khoản Cơ sở` (thuộc quyền IAM của Admin).
-  - *Nâng cấp chế độ `isDirectorMode` trực tiếp trong `CampusManagerDashboardView.jsx` (Zero Hardcode)*:
-    - Gỡ bỏ hoàn toàn chuỗi hardcode `, Nguyễn Duy Khôi!` trên lời chào và số giả lập `67%` khi chưa có dữ liệu.
-    - Nạp KPI thật từ `contentService.getSkillsTree()`, `contentService.getMockExams()`, `userService.getCampuses()` và `practiceService.getCampusComparativeHeatmap()`.
-    - Bổ sung 4 thẻ lối tắt nhanh vào 4 trụ cột chuyên môn của Director.
-    - Chuyển Bản đồ nhiệt so sánh sang **Chế độ Giám sát (Chỉ đọc)** cho Director: ẩn cột `Sơ Đồ Bàn Vi Mô` (của Teacher), ẩn khu vực xếp lớp/gom cụm (của Manager) và cấp phát tài khoản IAM (của Admin).
-  - *Cập nhật điều hướng trong `App.jsx`*: Truyền `mode="director"` và `onNavigateTab={setActiveTab}` vào `CampusManagerDashboardView`, tự động điều hướng về `dashboard` nếu tài khoản Director truy cập các tab không thuộc thẩm quyền (`analytics`, `teacher_heatmap`, `provision`).
-  - *Hiển thị Đa Cơ Sở (`Tất cả các cơ sở` - `ALL`) cho Academic Director (`CampusManagerDashboardView.jsx`)*:
-    - Mặc định chọn `"ALL"` tải song song dữ liệu toàn bộ cơ sở qua `Promise.all`, cộng dồn KPI toàn hệ thống, hiển thị thêm **Bảng Đối Sánh Chất Lượng Giữa Các Cơ Sở** kèm nút *"Xem lớp cơ sở này"* và gắn nhãn tên cơ sở trên từng dòng lớp học.
-- **Khắc Phục Triệt Để Lỗi Logout Vẫn Dính `Manager / MANAGER` + `Vào Dashboard` (`./src/App.jsx`, `./src/services/apiClient.js`, `./src/services/authService.js`, `./src/components/landing/PublicHeader.jsx`)**:
-  - Chặn Race Condition khi `/api/v1/users/me` trả về sau khi bấm Đăng xuất bằng cách đối chiếu `tokenStorage.getSessionVersion()` và `authService.isAuthenticated()`.
-  - Chỉ khởi tạo `currentUser` từ `localStorage` khi còn `accessToken` hợp lệ và chặn `tokenStorage.setTokens` lưu `veval_user_profile` khi `accessToken` rỗng.
-  - Áp dụng Optimistic Logout (xóa token & reset state ngay lập tức, thu hồi `refreshToken` ở nền) và ràng buộc `PublicHeader.jsx` chỉ hiển thị nút `Vào Dashboard` khi `currentUser && authService.isAuthenticated()`.
-- **Đồng Bộ 100% Đợt Học & Khóa Học Từ Academic Manager Sang Cổng Học Phí Student/Parent + Bổ Sung Sửa/Xóa Khóa Học (`./src/components/payment/TuitionPaymentView.jsx`, `./src/components/dashboard/AcademicManagerDashboardView.jsx`, `./src/services/practiceService.js`)**:
-  - *Đồng bộ nguồn dữ liệu thật trên `TuitionPaymentView.jsx` (bám sát mô hình 2 Đợt thi ĐGNL/năm)*:
-    - Gỡ bỏ hoàn toàn mảng 3 gói hardcode (`1.8tr / 2.4tr / 3.2tr`).
-    - Tải song song `getAcademicTerms({ campusId, status: 'ACTIVE' })` và `getCourses({ campusId, isActive: true })` theo đúng cơ sở của học sinh/con.
-    - Hiển thị **Banner Đợt học đang mở tuyển sinh** (tên đợt, năm học, thời gian từ ngày đến ngày) và danh sách khóa học thật với mã khóa, tên khóa, học phí thật, thời lượng và sĩ số tối đa `20 HS/lớp` để thanh toán PayOS VietQR; hiển thị trạng thái trống rõ ràng khi cơ sở chưa mở khóa.
-    - Bổ sung phân giải `campusId` của con cho Phụ huynh (`selectedChild.campusId` kèm fallback tra cứu hồ sơ học sinh) và nút *"Đồng bộ từ Database"* tải lại cả lịch sử thanh toán lẫn danh sách đợt/khóa học; dọn bỏ lời gọi `getCourses` dư thừa trong `ParentDashboardView.jsx`; chuẩn hóa tiêu đề `ParentEarlyWarningsAndTeacherView.jsx` tách rõ tên học sinh khỏi chữ *"Giáo Viên"*.
-  - *Bổ sung Chỉnh sửa & Xóa/Ngừng mở bán khóa học trên `AcademicManagerDashboardView.jsx` & `practiceService.js`*:
-    - Thêm `updateCourse(courseId, payload)` và `deleteCourse(courseId)` vào `practiceService.js`.
-    - Gắn nút **Sửa (✏️)** và **Xóa (🗑️)** trên từng dòng khóa học trong mục *"Khóa Học & Mức Học Phí Đợt Học"*, tái sử dụng Modal tạo/sửa hợp nhất với tiêu đề động và xác nhận xóa an toàn.
-- **Kiểm Thử Vận Hành**: `npm run build` (`vite build`) đạt `✓ built in 1.39s` với 3076 modules sạch 100%, 0 lỗi.
+## [21/11/2026]
+
+- **Tự Động Chữa Lành Chùm Đọc Hiểu Bị Nuốt Câu (Passage 118–120) & Xóa Bỏ Ký Tự ABCD Trên Đề (`examParserUtils.js`, `examTextRepair.js`, `ExamPaperView.jsx`, `MathText.jsx`, `examStateBridge.js`, `examStateBridge.test.js`)**:
+  - `normalizeExamData` (`examParserUtils.js`): Bổ sung cơ chế tự động chữa lành chùm đọc hiểu (`healHistoryPassageAndTrappedQuestions` & `extractTrappedQuestionsFromPassage`):
+    + Khi chùm đọc hiểu có `questions: []` (hiển thị "0 câu") nhưng nội dung đoạn văn bị dính câu hỏi do lỗi OCR/PDF cũ: tự động tách nội dung đoạn văn gốc và giải cứu các câu hỏi con bị nuốt (vd: Câu 118, 119, 120 với đầy đủ phương án A/B/C/D), nâng số lượng câu hỏi chùm đọc hiểu từ "0 câu" lên "3 câu" tương tác đầy đủ.
+    + Khôi phục nguyên văn đoạn trích Lịch sử 11 trang 155 sạch sẽ, triệt tiêu 100% các chữ cái đơn bị xé lẻ (`o`, `g`, `n`, `u`, `V`, `i`, `đ`).
+  - `ExamPaperView.jsx`: Sửa nhãn chùm đọc hiểu khi có 1 câu duy nhất: `Dựa vào thông tin dưới đây để trả lời câu X` thay vì `từ X đến X`.
+  - `repairUnderlineTags` (`examTextRepair.js`): Xóa sạch các nhãn ký tự `(A)`, `(B)`, `(C)`, `(D)` lơ lửng trên thân câu hỏi; kết hợp `MathText.jsx` định dạng từ cần tìm lỗi sai thành **in đậm + gạch chân** (`font-bold underline`).
+  - `examStateBridge.js`: Nâng cấp khóa `STORAGE_KEY` lên `veval_active_exam_workspace_v3` để trình duyệt xóa bỏ cache hỏng cũ và tự động chạy cơ chế phục hồi ngay khi nạp trang.
+  - Bổ sung unit test 6 trong `examStateBridge.test.js` kiểm chứng phục hồi 100% chùm đọc hiểu 118–120 và tách 3 câu hỏi con.
+- **Kiểm thử**: `examStateBridge.test.js` `6/6` pass, `tests/*.test.js` `22/22` pass, `npm run build` thành công `6.40s`.

@@ -7,6 +7,10 @@ import AcademicChartBlock, { parseDataChartString } from './AcademicChartBlock';
 import MathGraphView, { parseGraphTag } from './MathGraphView';
 import InteractiveMathRenderer from './InteractiveMathRenderer';
 import { autoSynthesizeMathGraph3DFromText, autoSynthesizeMathGraph2DFromText, autoSynthesizeVariationTableFromText } from '../../utils/mathGraphUtils';
+import { repairDegreeUnits, repairUnderlineTags, normalizeVietnameseUnicode, repairSplitCapitalLetters } from '../../utils/examTextRepair';
+
+const VI_WORD_CHAR =
+  'a-zA-Z0-9_àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ';
 
 /**
  * Safe KaTeX HTML generator with fallback
@@ -18,10 +22,15 @@ export function renderKatexHtml(latex, displayMode = false) {
       .replace(/\x09imes/g, '\\times')
       .replace(/\x09ext/g, '\\text')
       .replace(/\x08ar/g, '\\bar')
+      .replace(/\x08egin/g, '\\begin')
       .replace(/\x08eta/g, '\\beta')
       .replace(/\x0c/g, '\\f')
       .replace(/\x09/g, '\\t')
       .replace(/\x08/g, '\\b')
+      .replace(/(\d+(?:[.,]\d+)?)\s*\^?\s*\{?\s*\\circ\s*([CFKcfk])\s*\}?(?![A-Za-z])/gi, '$1^\\circ\\text{$2}')
+      .replace(/\^\s*\{?\s*\\circ\s*([CFKcfk])\s*\}?(?![A-Za-z])/gi, '^\\circ\\text{$1}')
+      .replace(/\\circ\s*([CFKcfk])(?![A-Za-z])/gi, '^\\circ\\text{$1}')
+      .replace(/\\circ\s*C\b/gi, '°C')
       .replace(/\\?undefined/gi, '')
       .replace(/\\?null/gi, '')
       .trim();
@@ -82,7 +91,10 @@ export function renderKatexHtml(latex, displayMode = false) {
         // Fall through
       }
       // If still error, strip the katex-error tag and remove style="color:#cc0000" completely
-      return `<span class="inline-math font-serif text-slate-800">${clean.replace(/\\text\{([^{}]*)\}/g, '$1')}</span>`;
+      const plainFallback = clean
+        .replace(/\\circ\s*C\b/gi, '°C')
+        .replace(/\\text\{([^{}]*)\}/g, '$1');
+      return `<span class="inline-math font-serif text-slate-800">${plainFallback}</span>`;
     }
 
     return html.replace(/<span[^>]*class="katex-error"[^>]*>.*?undefined.*?<\/span>/gi, '');
@@ -102,7 +114,7 @@ export function unescapeLiteralNewlines(text) {
   return String(text)
     .replace(/\\+\s*(?=\r?\n|$)/g, '')
     .replace(
-      /\\n(?!(?:eq|otin|abla|u|atural|earrow|warrow|subseteq|supseteq|gtr|less|parallel|ormalsize|ot|ewcommand)\b)/g,
+      /\\n(?!(?:eq|e(?![a-zA-Z])|otin|abla|u\b|atural|earrow|warrow|subseteq|supseteq|gtr|less|parallel|ormalsize|ot\b|ewcommand|ewline|mid|exists|vdash))/g,
       '\n'
     );
 }
@@ -166,22 +178,59 @@ export function normalizeMathString(text) {
            .replace(/\x09imes/g, '\\times')
            .replace(/\x09ext/g, '\\text')
            .replace(/\x08ar/g, '\\bar')
+           .replace(/\x08egin/g, '\\begin')
            .replace(/\x08eta/g, '\\beta')
            .replace(/\x0c/g, '\\f')
            .replace(/\x09/g, '\\t')
            .replace(/\x08/g, '\\b');
 
+  // 0.05. Chuẩn hóa Unicode NFC (chữ tiếng Việt tổ hợp `a` + dấu không còn bị coi là ranh giới từ)
+  str = repairSplitCapitalLetters(normalizeVietnameseUnicode(str));
+
+  // 0.1. Chuẩn hóa \circC, ^{\circC}, ^{\circ C} -> ^\circ\text{C} (Câu 95, 111)
+  str = repairDegreeUnits(str);
+
+  // 0.2. Khôi phục thẻ gạch chân tiếng Anh <u>...</u> (kể cả `<\/u>`, `</u >`, `$</u > (A)$`) (Câu 27-39)
+  str = repairUnderlineTags(str);
+
+  // 0.3. Khôi phục từ tiếng Việt bị tách âm cuối vào $...$ (như "gì hế $t - V$ âng", "phẩm chấ $t - T$ ôi", "có sẵ $n$ gồm")
+  str = str.replace(
+    /([àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ])\s*\$?\s*([bcdfghjklmnpqrstvwxzBCDFGHJKLMNPQRSTVWXZ])\s*-\s*([a-zA-Z])\s*\$?\s*([àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ])/g,
+    '$1$2 - $3$4'
+  );
+  str = str.replace(
+    /([àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ])\s*\$([bcdfghjklmnpqrstvwxz])\$/gi,
+    '$1$2'
+  );
+
   // 1. Unescape literal string escaped newlines e.g. "\n" -> real newlines
   str = unescapeLiteralNewlines(str);
 
-  // 1.1. BẢO VỆ TUYỆT ĐỐI CÁC KHỐI ĐỒ THỊ, BẢNG BIẾN THIÊN & THẺ NHẮC NHỞ HÌNH ẢNH ([IMAGE_PLACEHOLDER:...])
+  // 1.05. Khôi phục \ne bị đứt dòng thành "\ne 2" -> "\n e 2" bên trong hàm từng khúc \begin{cases}...\end{cases} (Câu 69)
+  str = str.replace(/(&\s*[a-zA-Z0-9_]+\s*)\r?\n\s*e\s+(\d+|[a-zA-Z])/g, '$1\\ne $2');
+  str = str.replace(
+    /((?:[a-zA-Z]\([a-zA-Z]\)\s*=\s*)?\\begin\{(cases|aligned|array|matrix|pmatrix|bmatrix|vmatrix)\}[\s\S]*?\\end\{\2\})/g,
+    (match) => {
+      const cleanedCases = match
+        .replace(/(?<!\\)\$/g, '')
+        .replace(/(&\s*[a-zA-Z0-9_]+\s*)\r?\n\s*e\s+(\d+|[a-zA-Z])/g, '$1\\ne $2')
+        .replace(/\r?\n/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+      return `$${cleanedCases}$`;
+    }
+  );
+  str = str.replace(/\${2,}(\\begin\{)/g, '$$$1').replace(/(\\end\{[a-zA-Z]+\})\${2,}/g, '$1$');
+
+  // 1.1. BẢO VỆ TUYỆT ĐỐI CÁC KHỐI ĐỒ THỊ, BẢNG BIẾN THIÊN, THẺ <u>...</u> & THẺ NHẮC NHỞ HÌNH ẢNH ([IMAGE_PLACEHOLDER:...])
   // Khôi phục cả trường hợp thẻ đã bị dính dấu $ từ CSDL cũ (như [$MATH_GRAPH_3D$])
   str = str.replace(/\[\s*\$?(\/?)\s*\$?(MATH_GRAPH_3D|MATH_GRAPH|VARIATION_TABLE|MATH_GEOMETRY_2D)\$?\s*\]/gi, '[$1$2]');
   const preservedSpecialBlocks = [];
   str = str.replace(
-    /(\[(?:MATH_GRAPH_3D|MATH_GRAPH|VARIATION_TABLE|MATH_GEOMETRY_2D)\][\s\S]*?\[\/(?:MATH_GRAPH_3D|MATH_GRAPH|VARIATION_TABLE|MATH_GEOMETRY_2D)\]|\[GRAPH:[\s\S]*?\]|\[IMAGE_PLACEHOLDER:[\s\S]*?\])/gi,
+    /(\[(?:MATH_GRAPH_3D|MATH_GRAPH|VARIATION_TABLE|MATH_GEOMETRY_2D)\][\s\S]*?\[\/(?:MATH_GRAPH_3D|MATH_GRAPH|VARIATION_TABLE|MATH_GEOMETRY_2D)\]|\[GRAPH:[\s\S]*?\]|\[IMAGE_PLACEHOLDER:[\s\S]*?\]|<\s*u\b[^>]*>[\s\S]*?<\s*\/\s*u\s*>)/gi,
     (match) => {
-      const cleanedBlock = match.replace(/\$/g, '');
+      const isUnderline = /^<\s*u\b/i.test(match);
+      const cleanedBlock = isUnderline ? match : match.replace(/\$/g, '');
       const idxCode = String(preservedSpecialBlocks.length).split('').map(d => String.fromCharCode(97 + Number(d))).join('');
       preservedSpecialBlocks.push(cleanedBlock);
       return `@@mathlabblock${idxCode}@@`;
@@ -304,7 +353,11 @@ export function normalizeMathString(text) {
   str = str.replace(/\\text\s*(mol|gam|g|kg|lít|lit|ml)\b/gi, '\\text{$1}');
 
   // Chuẩn hóa biến đơn lẻ đứng trước đơn vị đo: a mol -> $a$ mol, V lít -> $V$ lít, m gam -> $m$ gam
-  str = str.replace(/(?<![\$\w])([amVnxy])\s+(mol|gam|g|kg|lít|lit|ml)\b/gi, '$$$1$$ $2');
+  // Dùng VI_WORD_CHAR để tuyệt đối KHÔNG cắt chữ tiếng Việt như "có sẵn gồm" -> "có sẵ$n$ gồm"
+  str = str.replace(
+    new RegExp(`(?<![\\$${VI_WORD_CHAR}])([amVnxy])\\s+(mol|gam|g|kg|lít|lit|ml)(?![${VI_WORD_CHAR}])`, 'gi'),
+    '$$$1$$ $2'
+  );
 
   // Chuẩn hóa chỉ số dưới tiếng Việt hóa học: k_{gốc} -> k_{\text{gốc}}, m_{dd} -> m_{\text{dd}}
   str = str.replace(/([a-zA-Z])_\{gốc\}/gi, '$1_{\\text{gốc}}');
@@ -329,11 +382,13 @@ export function normalizeMathString(text) {
   const expPattern = '(?:\\^\\s*(?:\\{[^{}]*\\}|[0-9a-zA-Z]))?';
   const coreAtom = `(?:\\d*\\s*[a-zA-Z]${subPattern}${expPattern}|\\\\frac\\s*\\{[^{}]*\\}\\s*\\{[^{}]*\\}|[0-9]+(?:[\\.,][0-9]+)?${expPattern}${unitPattern}?)`;
   const atomPattern = `(?:\\(\\s*)*${coreAtom}(?:\\s*\\))*`;
-  const fullEqRegex = new RegExp(`(?<![\\$\\\\\\w\\{_\\^])(${atomPattern}(?:[ \\t]*${opPattern}[ \\t]*${atomPattern})+)(?![\\$\\\\\\w\\}_])`, 'g');
+  const fullEqRegex = new RegExp(`(?<![\\$\\\\${VI_WORD_CHAR}\\{_\\^<\\/])(${atomPattern}(?:[ \\t]*${opPattern}[ \\t]*${atomPattern})+)(?![\\$\\\\${VI_WORD_CHAR}\\}_>])`, 'g');
   const eqSrc = str;
   str = str.replace(fullEqRegex, (m, g, offset) => {
     // Bỏ qua nếu khớp nằm bên trong cặp $...$ đã có
     if (((eqSrc.slice(0, offset).match(/\$/g)) || []).length % 2 === 1) return m;
+    // Bỏ qua nếu chỉ là chữ cái nối bằng gạch ngang trong văn xuôi (như "t - V", "A - B") mà không có dấu '=', số, chỉ số _/^ hay lệnh LaTeX \
+    if (!/[=0-9_^\\]/.test(g)) return m;
     let lead = '', trail = '';
     for (;;) {
       const tr = g.trim();
@@ -582,7 +637,7 @@ function renderInlineContent(text, keyPrefix = '') {
   if (typeof text !== 'string') return text;
 
   // 1. Process markdown bold-italic (***...***), bold (**...**), underline (<u>...</u>), strikethrough (~~...~~) first
-  const richInlineRegex = /(\*\*\*[^\*\n]+?\*\*\*|\*\*[^\*\n]+?\*\*|<u>[^<\n]+?<\/u>|~~[^~\n]+?~~)/gi;
+  const richInlineRegex = /(\*\*\*[^\*\n]+?\*\*\*|\*\*[^\*\n]+?\*\*|<\s*u\b[^>]*>[\s\S]+?<\s*\/\s*u\s*>|~~[^~\n]+?~~)/gi;
   if (richInlineRegex.test(text)) {
     const richParts = text.split(richInlineRegex);
     return richParts.map((bPart, bIdx) => {
@@ -602,10 +657,11 @@ function renderInlineContent(text, keyPrefix = '') {
           </strong>
         );
       }
-      if (/^<u>[\s\S]+<\/u>$/i.test(bPart)) {
+      if (/^<\s*u\b[^>]*>[\s\S]+<\s*\/\s*u\s*>$/i.test(bPart)) {
+        const innerUnderline = bPart.replace(/^<\s*u\b[^>]*>/i, '').replace(/<\s*\/\s*u\s*>$/i, '');
         return (
-          <u key={bKey} className="underline decoration-slate-400 underline-offset-2">
-            {renderInlineMathAndText(bPart.slice(3, -4), `${bKey}-u`)}
+          <u key={bKey} className="underline decoration-2 decoration-indigo-600 underline-offset-4 font-bold text-slate-900">
+            {renderInlineMathAndText(innerUnderline, `${bKey}-u`)}
           </u>
         );
       }

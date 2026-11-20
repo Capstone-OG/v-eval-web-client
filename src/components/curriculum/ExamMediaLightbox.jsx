@@ -134,6 +134,33 @@ export function ExamImageLightbox({ image, onClose }) {
   );
 }
 
+function hasFalsePositiveFigureText(content = '', isPassage = false) {
+  if (!content || isPassage) return false;
+  const lower = String(content).toLowerCase();
+  const hasExplicitFigureRef =
+    lower.includes('hình vẽ') ||
+    lower.includes('hình bên') ||
+    lower.includes('hình dưới') ||
+    lower.includes('như hình') ||
+    lower.includes('ở hình') ||
+    lower.includes('hình 1') ||
+    lower.includes('hình 2') ||
+    lower.includes('hình 3') ||
+    lower.includes('[hình') ||
+    lower.includes('sơ đồ') ||
+    lower.includes('dụng cụ') ||
+    lower.includes('thí nghiệm');
+  if (hasExplicitFigureRef) return false;
+  // Các bài toán giải tích thuần chữ kiểu "đồ thị (C) của nó đi qua gốc tọa độ. Tính diện tích phần hình phẳng..." (như Câu 72)
+  return (
+    lower.includes('hình phẳng') ||
+    lower.includes('đồ thị (c)') ||
+    lower.includes('hình chữ nhật') ||
+    lower.includes('hình chóp') ||
+    lower.includes('hình lăng trụ')
+  );
+}
+
 /**
  * Smart Figure Box for Passage & Question cards
  */
@@ -148,15 +175,18 @@ export function ExamFigureBox({
   onRemoveImage
 }) {
   const [forceShowSuppressed, setForceShowSuppressed] = useState(false);
+  const [failedSrcs, setFailedSrcs] = useState({});
   const baseUrl = apiClient.getBaseUrl();
 
-  const resolvedPrimary = resolveExamMediaUrl(imageUrl, baseUrl);
+  const rawPrimary = resolveExamMediaUrl(imageUrl, baseUrl);
+  const isFalsePositiveAutoCrop = !imageUserAttached && hasFalsePositiveFigureText(content, isPassage);
+  const resolvedPrimary = rawPrimary && !failedSrcs[rawPrimary] && !isFalsePositiveAutoCrop ? rawPrimary : '';
   const resolvedGallery = (images || [])
     .map((img) => ({
       name: img,
       src: resolveExamMediaUrl(img, baseUrl)
     }))
-    .filter((item) => Boolean(item.src));
+    .filter((item) => Boolean(item.src) && !failedSrcs[item.src]);
 
   const isChartOrTable = hasChartOrTableInContent(content, isPassage);
   const shouldSuppressPrimary = Boolean(resolvedPrimary) && isChartOrTable && !imageUserAttached && !forceShowSuppressed;
@@ -186,6 +216,7 @@ export function ExamFigureBox({
             <img
               src={resolvedPrimary}
               alt={isPassage ? 'Sơ đồ / Hình vẽ minh họa chùm bài' : 'Đồ thị / Hình vẽ minh họa câu hỏi'}
+              onError={() => setFailedSrcs((prev) => ({ ...prev, [resolvedPrimary]: true }))}
               onClick={() =>
                 onZoom?.(
                   resolvedPrimary,

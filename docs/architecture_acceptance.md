@@ -3065,7 +3065,6 @@ The Parent Companion Portal was completely redesigned and hardened according to 
     - Resolved Logout Race Condition across `App.jsx`, `apiClient.js`, `authService.js`, and `PublicHeader.jsx` via `sessionVersion` guards, preventing ghost `USER_KEY` writes without a valid access token, optimistic state clearing, and `isAuthenticated()` checks on the public header.
     - **Verification**: `npm run build` (Vite v8.3.0) compiled cleanly in 1.96s with 3076 modules transformed and zero errors.
 
-
 23. **Real-Time Academic Term & Course Synchronization to Student/Parent Tuition Portal & Course CRUD UI (`TuitionPaymentView.jsx`, `AcademicManagerDashboardView.jsx`, `practiceService.js`)**:
     - **Elimination of Hardcoded 3-Package Mock Array in `TuitionPaymentView.jsx`**:
       - Removed the static 3-package array (`1.8M / 2.4M / 3.2M VND`) completely to align with the V-ACT 2-wave/year enrollment model.
@@ -3075,3 +3074,36 @@ The Parent Companion Portal was completely redesigned and hardened according to 
       - Added `updateCourse(courseId, payload)` and `deleteCourse(courseId)` wrappers in `practiceService.js`.
       - Added inline Edit (✏️) and Delete (🗑️) buttons per course row, upgrading the course creation modal into a dual Create/Edit modal with pre-filled values and confirmation prompts.
     - **Verification**: `npm run build` (Vite v8.3.0) compiled cleanly in 1.39s with 3076 modules transformed and zero errors.
+
+24. **End-to-End Student Journey Unification, Standalone White Exam Room, Passage Context Delivery & Full-Spectrum Grade 10–12 3-Zone PLAR Studio (`StudentRoadmapWorkspace.jsx`, `ConnectedRoadmapPage.jsx`, `PlarNodeStudioPanel.jsx`, `DiagnosticAssessmentPage.jsx`, `TuitionPaymentView.jsx`, `PayOsCheckoutModal.jsx`, `practiceService.js`)**:
+    - **Standalone Full-Viewport White Exam Room (`DiagnosticAssessmentPage.jsx`)**: Mounted active exam-taking and grading states (`stage === 'testing' || stage === 'analyzing'`) directly onto `document.body` via `createPortal` with `fixed inset-0 z-[200] w-screen h-screen overflow-y-auto bg-white` and background scroll lock, completely eliminating transparent background bleed-through (`bg-transparent`) from the embedded student portal layout.
+    - **Full-Spectrum Grade 10–12 3-Zone Personalized Roadmap (`ConnectedRoadmapPage.jsx`)**: Displays all ~337 GDPT 2018 patterns across Grades 10–12 and all 9 subjects grouped into 3 distinct pedagogical priority zones: **(1) Priority Improvement (`WEAK` — tested & below threshold, shown first)** → **(2) Assessed & Mastered / Completed (`MASTERED` & `COMPLETED` — shown after weak skills, collapsible)** → **(3) Unassessed Grade 10–12 Spectrum (`UNASSESSED` — chapters/patterns not yet encountered in the 30-question diagnostic, shown at the bottom with an explicit `"Chưa đánh giá"` badge)**, equipped with Zone tabs, Grade (`Lớp 10`, `Lớp 11`, `Lớp 12`) filters, 9-Subject filters, instant search, and a 1-click upgrade banner for legacy 24-node roadmaps.
+    - **Reading Passage Context & 4-Phase PLAR Studio (`PlarNodeStudioPanel.jsx`)**: Added `PassageContextBox` to render reading comprehension passages (`passageTitle`, `passageContent`, `passageImageUrl`) above questions in Phase P (`Preview`), Phase A (`Apply`), and `BR-03` (`Remedial`); wired all 8 `StagesController` endpoints including persisted reflection display (`confidenceRating`, `learnedSummary`, `mistakeNotes`).
+    - Hardened `TuitionPaymentView` and `PayOsCheckoutModal`, purged 100% of mock/seed fallbacks (`sampleQuestionsForDiagnostic`, `845/920`, `"Phạm Minh Hoàng"`), and resolved runtime `ReferenceError` bugs in `Sidebar.jsx` and `LearningAnalyticsView.jsx`.
+    - **Verification**: `oxlint` (`0 Error`), `node --test tests/*.test.js` (`22/22 Passed`), `npm run build` (`3077 modules`, `4.63s`).
+
+25. **Exam Parser Rendering Hardening: Vietnamese Prose Guard, LaTeX/Table Recovery, False-Figure Suppression & Cross-Subject Auto-Healing (`MathText.jsx`, `examParserUtils.js`, `ExamMediaLightbox.jsx`, `examCurriculumMatcher.js`, `examStateBridge.js`) [20/11/2026]**:
+    - **Root Cause Analysis**: `\b` word boundaries and `\w` do not treat accented Vietnamese letters as word characters, so KaTeX auto-wrapping split words (`có sẵ n`, `hế t - V âng`); MathType PUA glyphs surfaced as `≡`; `\ne`/`\circC`/`<u>` were mangled; text-only analytic stems received false figure boxes; and 2-letter substring matching leaked English/Math questions into Physics/Chemistry nodes.
+    - **Implementation Details**: Introduced `VI_WORD_CHAR` boundary guards, prose-hyphen guard, `\begin{cases}` wrapping, `<u>` protection, `\circC` repair, adjacency-matrix-to-Markdown-table conversion, `hasFalsePositiveFigureText` + `onError` image fallback, whole-word keyword matching with English detection, and cross-subject self-healing of cached `curriculumNode`s on restore.
+    - **Verification**: `examStateBridge.test.js` `3/3`, `tests/*.test.js` `22/22`, `oxlint` `0 errors`, `npm run build` succeeded. Not deployed to Docker per user request.
+    - **Round 2 & 3 Follow-up**: Hardened `MathText.jsx` `richInlineRegex` to directly match `<s*ub[^>]*>[sS]+?<s*/s*us*>` rendering into standard `<u>` elements without relying on pre-cleaning; refined `repairDegreeUnits` to prevent accidental `$$$` math wrapping on already-delimited degree terms; embedded cross-subject guards in `normalizeQuestionItem` and `ExamPaperView.jsx` preventing English error-identification questions (Questions 26–29) from surfacing Physics/Chemistry/Math nodes; and added auto-healing to `useExamWorkspaceController.js` upon curriculum retrieval. Verified: `examStateBridge.test.js` `5/5`, `tests/*.test.js` `22/22`, `npm run build` succeeded.
+
+26. **SessionStorage Cache-Busting, Underline Normalization & Stray Letter Filter (`examTextRepair.js`, `examParserUtils.js`, `MathText.jsx`, `examStateBridge.js`) [21/11/2026]**:
+    - **Root Cause Analysis**:
+      - Even after logic fixes in `MathText.jsx` and `examTextRepair.js`, the browser retained stale state stored in `sessionStorage` under `veval_active_exam_workspace_v1`, causing already-parsed exams to persist literal `<u>` tags and outdated subject nodes.
+      - Scanned passage extracts in History/Social Science contained isolated single letters (`o`, `g`, `n`, `u`, `V`, `i`, `đ`) resulting from bitmap font PUA splitting in upstream OCR.
+    - **Implementation Details**:
+      - **SessionStorage Cache-Busting**: Upgraded `STORAGE_KEY` in `examStateBridge.js` to `veval_active_exam_workspace_v2`, automatically evicting corrupt legacy cached exams and triggering clean re-parsing on client load.
+      - **Robust Underline Normalization**: `repairUnderlineTags` strips all variant whitespace (`</u >`, `<\/u>`, `$< /u > (A)$`) and converts them to standard `</u>`.
+      - **Stray Character Filter**: Added step 1.9 to `examParserUtils.js` to eliminate isolated single consonants (`b-df-hj-np-tv`) on their own lines between substantive prose lines.
+    - **Verification**: `node --test src/components/curriculum/examStateBridge.test.js` passed `5/5`, `node --test tests/*.test.js` passed `22/22`, `npm run build` succeeded in 3.47s.
+
+27. **Passage Auto-Healing, Trapped Question Extraction & Pure Underline Error Identification (`examTextRepair.js`, `examParserUtils.js`, `ExamPaperView.jsx`, `MathText.jsx`, `examStateBridge.js`) [21/11/2026]**:
+    - **Passage Swallowing & Single-Letter Fragment Elimination**:
+      - Root cause: History passage 118–120 in real exam PDFs uses bare numbered stems (`118.`, `119.`, `120.`) without the prefix `"Câu"`. Upstream regex matching swallowed child questions into the passage body and left `passage.questions: []` (displaying "0 câu").
+      - Implementation: Added `healHistoryPassageAndTrappedQuestions` and `extractTrappedQuestionsFromPassage` in `examParserUtils.js` to automatically extract swallowed child questions and restore clean text.
+    - **Elimination of Inline (A), (B), (C), (D) Markers**:
+      - In error-identification questions (Questions 26–30), `repairUnderlineTags` strips all inline `(A)`, `(B)`, `(C)`, `(D)` labels (including math-mode `($C$)`), while `MathText.jsx` applies `font-bold underline` styling to target words so that only the question options below handle candidate selection.
+    - **Session Cache-Busting**:
+      - Upgraded `STORAGE_KEY` to `veval_active_exam_workspace_v3` in `examStateBridge.js`.
+    - **Verification**: `node --test src/components/curriculum/examStateBridge.test.js` passed `6/6`, `node --test tests/*.test.js` passed `22/22`, `npm run build` succeeded in 3.52s.
