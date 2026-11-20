@@ -10,7 +10,14 @@ export const contentService = {
    * @param {string} [excludeExamId] - ID đề thi muốn bỏ qua khi làm lại đề mới
    */
   async getDiagnosticTest(excludeExamId = null) {
-    const endpoint = excludeExamId 
+    if (Array.isArray(excludeExamId)) {
+      const cleaned = excludeExamId.filter(Boolean);
+      const endpoint = cleaned.length > 0
+        ? `/api/content/diagnostic-test?excludeExamIds=${encodeURIComponent(cleaned.join(','))}`
+        : '/api/content/diagnostic-test';
+      return (await apiClient.get(endpoint)).data;
+    }
+    const endpoint = excludeExamId
       ? `/api/content/diagnostic-test?excludeExamId=${encodeURIComponent(excludeExamId)}`
       : '/api/content/diagnostic-test';
     return (await apiClient.get(endpoint)).data;
@@ -46,7 +53,68 @@ export const contentService = {
    * @param {string} examId
    */
   async getExamDetail(examId) {
-    return (await apiClient.get(`/api/content/exams/${examId}`)).data;
+    return (await apiClient.get(`/api/content/exams/${encodeURIComponent(examId)}`)).data;
+  },
+
+  /**
+   * Import dữ liệu đề thi đã bóc tách từ AI Engine hoặc soạn thủ công vào Supabase PostgreSQL
+   * @param {Object} payload - Khớp với ImportMockExamCommand DTO
+   */
+  async importExam(payload) {
+    const sanitizeQuestion = (q) => ({
+      questionNumber: Number(q.questionNumber ?? q.question_number) || 1,
+      pageNumber: Number(q.pageNumber ?? q.page_number) || 1,
+      content: (q.content ?? '').toString(),
+      options: {
+        A: (q.options?.A ?? q.options?.a ?? '').toString(),
+        B: (q.options?.B ?? q.options?.b ?? '').toString(),
+        C: (q.options?.C ?? q.options?.c ?? '').toString(),
+        D: (q.options?.D ?? q.options?.d ?? '').toString()
+      },
+      correctOption: normalizeCorrectOption(q.correctOption ?? q.correct_option),
+      explanation: (q.explanation ?? '').toString(),
+      difficultyLevel: Number(q.difficultyLevel ?? q.difficulty_level) || 2,
+      suggestedSkillName: (q.suggestedSkillName ?? q.suggested_skill_name ?? 'Trắc nghiệm tổng hợp').toString(),
+      imageUrl: q.imageUrl ?? q.image_url ?? null,
+      skillId: q.skillId ?? q.skill_id ?? null,
+      domainName: q.domainName ?? q.domain_name ?? null,
+      chapterName: q.chapterName ?? q.chapter_name ?? null,
+      lessonName: q.lessonName ?? q.lesson_name ?? null
+    });
+
+    const cleanPayload = {
+      title: (payload.title || 'Đề thi trắc nghiệm').trim(),
+      durationMinutes: Number(payload.durationMinutes ?? payload.duration_minutes) || 150,
+      examCategory: payload.examCategory || payload.exam_category || 'FULL_MOCK',
+      subjectCode: payload.subjectCode || payload.subject_code || 'MATH',
+      difficultyLevel: Number(payload.difficultyLevel ?? payload.difficulty_level) || 2,
+      passages: (payload.passages || []).map((p) => ({
+        startQuestion: Number(p.startQuestion ?? p.start_question) || 1,
+        endQuestion: Number(p.endQuestion ?? p.end_question) || 1,
+        content: (p.content ?? '').toString(),
+        imageUrl: p.imageUrl ?? p.image_url ?? null,
+        questions: (p.questions || []).map(sanitizeQuestion)
+      })),
+      singleQuestions: (payload.singleQuestions || payload.single_questions || []).map(sanitizeQuestion)
+    };
+
+    return (await apiClient.post('/api/content/exams/import', cleanPayload)).data;
+  },
+
+  /**
+   * Phê duyệt và xuất bản đề thi trong kho đề (Chuyển trạng thái sang Đã xuất bản)
+   * @param {string} examId
+   */
+  async publishExam(examId) {
+    return (await apiClient.patch(`/api/content/exams/${encodeURIComponent(examId)}/publish`)).data;
+  },
+
+  /**
+   * Xóa đề thi khỏi cơ sở dữ liệu Supabase
+   * @param {string} examId
+   */
+  async deleteExam(examId) {
+    return (await apiClient.delete(`/api/content/exams/${encodeURIComponent(examId)}`)).data;
   },
 
   /**

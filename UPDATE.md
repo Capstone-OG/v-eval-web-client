@@ -12,3 +12,5 @@
 - Validation: 75 related unit tests passed; latest production build passed. Chrome stub-API checks passed navigation, passage, flags, resume, grading, violations and timeout.
 - Live catalog read confirmed three unpublished FULL_MOCK records and no published mock exams. No exam publication or live test submission performed.
 - Frontend only; no backend source changes. Existing dependency build warnings remain.
+
+- Resolved pull conflicts against 682c9e2 while preserving local student features and incoming parent payment/catalog/admin tooling. Retained removal of obsolete student roadmap tabs. 119 tests, build, 5 UI render checks and Chrome mock-exam scenarios passed; backend untouched.

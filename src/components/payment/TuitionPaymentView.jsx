@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { 
   CreditCard, 
   ShieldCheck, 
@@ -21,26 +21,101 @@ import {
   MessageSquare,
   BookOpen,
   Printer,
-  X
+  X,
+  Users
 } from 'lucide-react';
 import PayOsCheckoutModal from '../modals/PayOsCheckoutModal';
 import paymentService from '../../services/paymentService';
 import { getPaymentStatusView, refreshPendingPayments, getPaymentContinuation } from '../../utils/paymentStatus';
-import { toast } from '../../context/ToastContext';
+import { useToast } from '../../context/ToastContext';
+import { practiceService } from '../../services/practiceService';
+import { userService } from '../../services/userService';
 import { tokenStorage } from '../../services/apiClient';
 import { setTuitionPaid } from '../curriculum/curriculumAccess';
 
 export default function TuitionPaymentView({ 
   currentUser, 
   onBeforePayment,
+  isParent = false,
+  activeChild = null,
+  childrenList = [],
+  onSelectChildId,
+  onNavigateLive,
   onNavigateRoadmap, 
   onNavigateAdaptive,
   onNavigateSchedule,
   onNavigateAiTutor,
   showToast 
 }) {
-  const studentId = currentUser?.userId || currentUser?.id || currentUser?.studentId || 's1111111-1111-1111-1111-111111111111';
-  const [selectedPlan, setSelectedPlan] = useState('STANDARD');
+  const { toast } = useToast();
+  const notifySuccess = useCallback((msg) => {
+    if (showToast) showToast(msg);
+    else toast?.success?.(msg);
+  }, [showToast, toast]);
+  const notifyError = useCallback((msg) => {
+    if (showToast) showToast(msg);
+    else toast?.error?.(msg);
+  }, [showToast, toast]);
+  const [selectedChild, setSelectedChild] = useState(activeChild || childrenList[0] || null);
+
+  useEffect(() => {
+    if (activeChild) setSelectedChild(activeChild);
+    else if (childrenList.length > 0 && !selectedChild) setSelectedChild(childrenList[0]);
+  }, [activeChild, childrenList]);
+
+  const targetStudentId = isParent
+    ? (selectedChild?.studentId || selectedChild?.id || null)
+    : (currentUser?.userId || currentUser?.id || currentUser?.studentId || null);
+
+  const studentId = targetStudentId;
+  const directCampusId = isParent
+    ? (selectedChild?.campusId || currentUser?.campusId || null)
+    : (currentUser?.campusId || null);
+
+  const [resolvedCampusId, setResolvedCampusId] = useState(directCampusId);
+
+  useEffect(() => {
+    let active = true;
+    if (directCampusId) {
+      setResolvedCampusId(directCampusId);
+      return () => { active = false; };
+    }
+
+    // Với Phụ huynh: nếu ChildAnalyticsDto chưa trả campusId (trước khi restart BE), thử trích xuất từ hồ sơ học sinh
+    if (isParent && studentId) {
+      const uuidMatch = String(selectedChild?.school || '').match(
+        /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i
+      );
+      if (uuidMatch) {
+        setResolvedCampusId(uuidMatch[0]);
+        return () => { active = false; };
+      }
+
+      userService
+        .getUsers({ role: 'STUDENT', pageSize: 100 })
+        .then((res) => {
+          if (!active) return;
+          const items = Array.isArray(res) ? res : (res?.items || res?.data || []);
+          const found = items.find((u) => (u.userId || u.id) === studentId);
+          if (found?.campusId) {
+            setResolvedCampusId(found.campusId);
+          } else {
+            setResolvedCampusId(null);
+          }
+        })
+        .catch(() => {
+          if (active) setResolvedCampusId(null);
+        });
+    } else {
+      setResolvedCampusId(null);
+    }
+
+    return () => { active = false; };
+  }, [directCampusId, isParent, studentId, selectedChild?.school]);
+
+  const studentCampusId = resolvedCampusId;
+
+  const [selectedPlan, setSelectedPlan] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -52,80 +127,96 @@ export default function TuitionPaymentView({
   const receiptView = getPaymentStatusView(selectedReceipt?.status);
   const [resumingOrder, setResumingOrder] = useState(null);
   const resumeBusy = useRef(false);
+  const tuitionRequest = useRef(0);
+  const [dbCourses, setDbCourses] = useState([]);
+  const [activeTerms, setActiveTerms] = useState([]);
+  const [coursesLoading, setCoursesLoading] = useState(true);
 
-  // Danh mục 3 gói đào tạo thích ứng ĐGNL
-  const coursePackages = [
-    {
-      id: 'FAST_TRACK',
-      courseId: 'c1111111-1111-1111-1111-111111111111',
-      code: 'CRS_SPRINT',
-      name: 'Khóa Cấp Tốc Về Đích (Sprint)',
-      planType: 'FAST_TRACK',
-      durationWeeks: 8,
-      price: 2000,
-      badge: 'Test PayOS (2K)',
-      highlightColor: 'from-amber-500 to-orange-600',
-      description: 'Dành cho học sinh cần tổng ôn bấm giờ thực chiến và vá lỗ hổng kiến thức thần tốc trong 2 tháng cuối.',
-      features: [
-        'Khảo sát chẩn đoán IRT 30 câu chuẩn Bloom',
-        '8 tuần luyện đề thực chiến có bấm giờ',
-        'Sổ tay lỗi sai & Lặp lại ngắt quãng SM-2',
-        'Hỏi đáp Gia sư AI Socratic cơ bản'
-      ]
-    },
-    {
-      id: 'STANDARD',
-      courseId: 'c2222222-2222-2222-2222-222222222222',
-      code: 'CRS_STD',
-      name: 'Khóa Luyện Thi Chuẩn (Standard Adaptive)',
-      planType: 'STANDARD',
-      durationWeeks: 12,
-      price: 5000,
-      badge: 'Phổ Biến (5K Test)',
-      isPopular: true,
-      highlightColor: 'from-blue-600 to-indigo-600',
-      description: 'Lộ trình cá nhân hóa toàn diện theo chu trình 4 bước PLAR, tối ưu hóa điểm số cho mục tiêu 800+ ĐGNL.',
-      features: [
-        'Toàn bộ quyền lợi gói Fast-Track',
-        'Lộ trình thích ứng 4 bước PLAR (P-L-A-R)',
-        'Gia sư AI Socratic thông minh kèm 24/7',
-        'Tự động xếp lớp chuyên đề tại cơ sở',
-        'Cam kết điểm số chuẩn đầu ra ĐHQG'
-      ]
-    },
-    {
-      id: 'INTENSIVE_PLUS',
-      courseId: 'c3333333-3333-3333-3333-333333333333',
-      code: 'CRS_PRO',
-      name: 'Khóa Chuyên Đề Bứt Phá (Intensive Plus)',
-      planType: 'INTENSIVE',
-      durationWeeks: 16,
-      price: 10000,
-      badge: 'Top 10% (10K Test)',
-      highlightColor: 'from-indigo-600 to-purple-600',
-      description: 'Khóa học kèm vi mô 3-5 bạn cùng Toa thuốc bù điểm Knapsack ROI và Hệ thống cảnh báo sớm 3 cấp.',
-      features: [
-        'Toàn bộ quyền lợi gói Standard',
-        'Nhóm học tập vi mô (3 - 5 học sinh) trên lớp',
-        'Dự báo khoảng điểm SEM 95% & Toa thuốc Knapsack',
-        'Giám sát webcam & thi thử 120 câu chuẩn ĐHQG',
-        'Hỗ trợ 1-1 cùng Giáo viên & Mentor cơ sở'
-      ]
+  const loadCampusTermsAndCourses = useCallback(async () => {
+    setCoursesLoading(true);
+    try {
+      const courseParams = studentCampusId
+        ? { campusId: studentCampusId, isActive: true }
+        : { isActive: true };
+      const termParams = studentCampusId
+        ? { campusId: studentCampusId, status: 'ACTIVE' }
+        : { status: 'ACTIVE' };
+
+      const [termsRes, coursesRes] = await Promise.all([
+        practiceService.getAcademicTerms(termParams).catch(() => []),
+        practiceService.getCourses(courseParams).catch(() => [])
+      ]);
+
+      const termsArr = Array.isArray(termsRes) ? termsRes : [];
+      let coursesArr = Array.isArray(coursesRes) ? coursesRes : [];
+
+      // Nếu tài khoản chưa có campusId hoặc cơ sở chưa tạo khóa riêng, kiểm tra khóa chung đang active
+      if (coursesArr.length === 0 && !studentCampusId) {
+        const allCourses = await practiceService.getCourses({ isActive: true }).catch(() => []);
+        coursesArr = Array.isArray(allCourses) ? allCourses : [];
+      }
+
+      setActiveTerms(termsArr);
+      setDbCourses(coursesArr);
+      if (coursesArr.length > 0) {
+        setSelectedPlan((prev) =>
+          coursesArr.some((c) => c.courseId === prev) ? prev : coursesArr[0].courseId
+        );
+      }
+    } finally {
+      setCoursesLoading(false);
     }
-  ];
+  }, [studentCampusId]);
+
+  useEffect(() => {
+    loadCampusTermsAndCourses();
+  }, [loadCampusTermsAndCourses]);
+
+  // Chuẩn hóa danh sách Khóa học theo đợt trực tiếp từ Database (Zero Hardcode)
+  const resolvedPackages = useMemo(() => {
+    const standardFeatures = [
+      'Khảo sát chẩn đoán năng lực 30 câu chuẩn hóa 4 miền',
+      'Xếp lớp phân tầng 4 Miền × 3 Cấp bậc phù hợp năng lực',
+      'Lộ trình học tập thích ứng & Kho bài giảng chuẩn V-ACT',
+      'Gia sư AI Socratic đồng hành giải đáp 24/7',
+      'Thi thử 120 câu chuẩn cấu trúc ĐHQG-HCM & Sổ tay lỗi sai'
+    ];
+
+    return dbCourses.map((c, idx) => ({
+      id: c.courseId,
+      courseId: c.courseId,
+      code: c.code,
+      name: c.name,
+      planType: c.planType || 'STANDARD',
+      durationWeeks: c.durationWeeks || 12,
+      maxClassSize: c.maxClassSize || 20,
+      price: Number(c.tuitionFee || 0),
+      totalClassesCount: c.totalClassesCount || 0,
+      badge: activeTerms[idx]?.name
+        ? `Đợt ${activeTerms[idx].termOrder || idx + 1}`
+        : c.code || 'Đang mở đăng ký',
+      isPopular: idx === 0,
+      highlightColor: idx % 2 === 0 ? 'from-blue-600 to-indigo-600' : 'from-indigo-600 to-purple-600',
+      description: `Khóa luyện thi ĐGNL theo đợt tuyển sinh của cơ sở • Trần sĩ số chuẩn tối đa ${c.maxClassSize || 20} học sinh/lớp.`,
+      features: standardFeatures
+    }));
+  }, [dbCourses, activeTerms]);
 
   // Nạp dữ liệu học phí và lịch sử thanh toán thực tế từ Database Backend
   const loadTuitionAndHistory = useCallback(async () => {
+    const request = ++tuitionRequest.current;
     if (!studentId) return;
     setIsSyncing(true);
     try {
       const statusRes = await paymentService.getStudentTuitionStatus(studentId, { throwOnError: true });
+      if (request !== tuitionRequest.current) return;
       if (statusRes) {
         setTuitionStatus(statusRes);
 
         const history = Array.isArray(statusRes.payments) && statusRes.payments.length > 0
           ? statusRes.payments : await paymentService.getStudentPayments(studentId);
         const refreshed = await refreshPendingPayments(history, (orderCode) => paymentService.getPaymentStatus(orderCode), studentId);
+        if (request !== tuitionRequest.current) return;
         setTransactionHistory(refreshed);
         setSelectedReceipt((previous) => previous
           ? refreshed.find((item) => previous.paymentId ? item.paymentId === previous.paymentId : String(item.orderCode) === String(previous.orderCode)) || previous
@@ -137,12 +228,15 @@ export default function TuitionPaymentView({
     } catch (err) {
       console.warn('[TuitionPaymentView] Không thể đồng bộ trạng thái thanh toán từ server:', err);
     } finally {
-      setIsSyncing(false);
+      if (request === tuitionRequest.current) setIsSyncing(false);
     }
   }, [studentId]);
 
   useEffect(() => {
     setIsPaid(false);
+    setTuitionStatus(null);
+    setTransactionHistory([]);
+    setSelectedReceipt(null);
     loadTuitionAndHistory();
 
     const handleTuitionPaid = (event) => {
@@ -151,14 +245,18 @@ export default function TuitionPaymentView({
       }
     };
     window.addEventListener('veval:tuition-paid', handleTuitionPaid);
-    return () => window.removeEventListener('veval:tuition-paid', handleTuitionPaid);
+    return () => {
+      tuitionRequest.current++;
+      window.removeEventListener('veval:tuition-paid', handleTuitionPaid);
+    };
   }, [studentId, loadTuitionAndHistory]);
 
   const handleCreatePayment = async (pkg) => {
+    if (!studentId) { notifyError('Chưa xác định được tài khoản học sinh để thanh toán.'); return; }
     if (isLoading || resumeBusy.current || onBeforePayment?.() === false) return;
     setIsLoading(true);
     try {
-      const parentId = currentUser?.role === 'parent' ? currentUser.id : studentId;
+      const parentId = isParent ? (currentUser?.id || currentUser?.userId) : studentId;
       
       const payload = {
         studentId,
@@ -173,16 +271,19 @@ export default function TuitionPaymentView({
       setActivePaymentData({
         orderCode: result.orderCode,
         checkoutUrl: result.checkoutUrl,
-        amount: pkg.price,
+        amount: result.amount ?? pkg.price,
         courseName: pkg.name,
-        studentName: currentUser?.fullName || 'Học viên V-Eval',
+        studentName: isParent
+          ? (selectedChild?.studentName || 'Học viên')
+          : (currentUser?.fullName || 'Học viên V-Eval'),
         durationWeeks: pkg.durationWeeks
       });
 
       setIsModalOpen(true);
     } catch (err) {
       console.error('Error creating payment link:', err);
-      toast.error('Không thể tạo liên kết thanh toán. Vui lòng thử lại.');
+      const errMsg = err?.data?.detail || err?.data?.message || err?.message || 'Không thể tạo link PayOS. Vui lòng thử lại!';
+      notifyError(errMsg);
     } finally {
       setIsLoading(false);
     }
@@ -196,7 +297,7 @@ export default function TuitionPaymentView({
     try {
       const latest = await paymentService.getPaymentStatus(transaction.orderCode);
       const signedIn = tokenStorage.getUser();
-      if ((signedIn?.userId || signedIn?.id || signedIn?.studentId) !== studentId) return;
+      if ((signedIn?.userId || signedIn?.id || signedIn?.studentId) !== (currentUser?.userId || currentUser?.id || currentUser?.studentId)) return;
       const result = getPaymentContinuation(transaction, latest, studentId);
       const matches = (item) => transaction.paymentId ? item.paymentId === transaction.paymentId : String(item.orderCode) === String(transaction.orderCode);
       setTransactionHistory((items) => items.map((item) => matches(item) ? result.payment : item));
@@ -214,7 +315,7 @@ export default function TuitionPaymentView({
           amount: result.payment.amount,
           courseName: result.payment.courseName,
           studentName: currentUser?.fullName || 'Học viên V-Eval',
-          durationWeeks: coursePackages.find((plan) => plan.courseId === result.payment.courseId)?.durationWeeks
+          durationWeeks: resolvedPackages.find((plan) => plan.courseId === result.payment.courseId)?.durationWeeks
         });
         setIsModalOpen(true);
       }
@@ -246,12 +347,12 @@ export default function TuitionPaymentView({
   const unlockedPerks = [
     {
       id: 'roadmap',
-      title: 'Lộ Trình Cá Nhân Thích Ứng (PLAR)',
-      desc: 'Mở khóa 100% các chặng học theo chu trình P-L-A-R, phân bổ dạng bài theo điểm thi đầu vào.',
+      title: 'Lộ Trình Cá Nhân Thích Ứng',
+      desc: 'Mở khóa 100% các chặng học theo năng lực thực tế, phân bổ dạng bài theo điểm thi đầu vào.',
       icon: Network,
       color: 'text-indigo-600 bg-indigo-50 border-indigo-200',
-      action: onNavigateRoadmap,
-      actionLabel: 'Vào Lộ Trình'
+      action: isParent ? undefined : onNavigateRoadmap,
+      actionLabel: isParent ? 'Đã Mở Khóa' : 'Vào Lộ Trình'
     },
     {
       id: 'curriculum',
@@ -259,26 +360,26 @@ export default function TuitionPaymentView({
       desc: 'Toàn quyền học chi tiết tất cả bài giảng của Lớp học chung & Lộ trình cá nhân riêng.',
       icon: BookOpen,
       color: 'text-blue-600 bg-blue-50 border-blue-200',
-      action: onNavigateRoadmap,
-      actionLabel: 'Xem Bài Học'
+      action: isParent ? undefined : onNavigateRoadmap,
+      actionLabel: isParent ? 'Đã Mở Khóa' : 'Xem Bài Học'
     },
     {
       id: 'adaptive',
-      title: 'Kho Luyện Tập Thích Ứng ZPD',
-      desc: 'Hệ thống sinh câu hỏi tự động bám sát Vùng phát triển gần nhất và cập nhật tham số BKT.',
+      title: 'Kho Luyện Tập Thích Ứng Cá Nhân Hóa',
+      desc: 'Hệ thống sinh câu hỏi tự động bám sát năng lực học sinh và cập nhật độ tiến bộ liên tục.',
       icon: Zap,
       color: 'text-amber-600 bg-amber-50 border-amber-200',
-      action: onNavigateAdaptive || onNavigateRoadmap,
-      actionLabel: 'Luyện Tập ZPD'
+      action: isParent ? undefined : (onNavigateAdaptive || onNavigateRoadmap),
+      actionLabel: isParent ? 'Đã Mở Khóa' : 'Luyện Tập'
     },
     {
       id: 'ai_tutor',
-      title: 'Gia Sư AI Socratic Kèm 24/7',
-      desc: 'Hỏi đáp tương tác thời gian thực, gợi mở tư duy logic đa bước không làm lộ lời giải tắt.',
+      title: 'Gia Sư AI Đồng Hành Kèm 24/7',
+      desc: 'Hỏi đáp tương tác thời gian thực, gợi mở tư duy logic đa bước hỗ trợ con học tập.',
       icon: MessageSquare,
       color: 'text-purple-600 bg-purple-50 border-purple-200',
-      action: onNavigateAiTutor,
-      actionLabel: 'Hỏi Gia Sư AI'
+      action: isParent ? undefined : onNavigateAiTutor,
+      actionLabel: isParent ? 'Đã Mở Khóa' : 'Hỏi Gia Sư AI'
     },
     {
       id: 'schedule',
@@ -286,9 +387,18 @@ export default function TuitionPaymentView({
       desc: 'Tra cứu lịch học định kỳ, các buổi học bù/dạy thay và theo dõi chuyên cần tại cơ sở.',
       icon: Calendar,
       color: 'text-emerald-600 bg-emerald-50 border-emerald-200',
-      action: onNavigateSchedule,
-      actionLabel: 'Xem Lịch Học'
+      action: isParent ? undefined : onNavigateSchedule,
+      actionLabel: isParent ? 'Đã Mở Khóa' : 'Xem Lịch Học'
     },
+    {
+      id: 'live',
+      title: 'Lớp Học Phần & Trao Đổi Cùng Giáo Viên',
+      desc: 'Không gian học tập nhóm nhỏ tại bàn kèm trực tiếp cùng Giảng viên phụ trách cơ sở.',
+      icon: Users,
+      color: 'text-cyan-600 bg-cyan-50 border-cyan-200',
+      action: isParent ? undefined : onNavigateLive,
+      actionLabel: isParent ? 'Đã Mở Khóa' : 'Vào Lớp Học'
+    }
   ];
 
   return (
@@ -307,13 +417,42 @@ export default function TuitionPaymentView({
           <p className="text-xs sm:text-sm text-blue-200/80 mt-1.5 max-w-2xl leading-relaxed">
             Quét mã QR để thanh toán qua PayOS. Khóa học được mở sau khi thanh toán được xác nhận.
           </p>
+          {isParent && childrenList.length > 1 && (
+            <div className="flex flex-wrap items-center gap-2 pt-3 mt-3 border-t border-white/10">
+              <span className="text-xs text-slate-300 font-bold">Chọn con để nộp học phí:</span>
+              {childrenList.map((c, idx) => {
+                const cId = c.studentId || c.id;
+                const isCur = (selectedChild?.studentId || selectedChild?.id) === cId;
+                return (
+                  <button
+                    key={cId || idx}
+                    type="button"
+                    onClick={() => {
+                      setSelectedChild(c);
+                      if (cId) onSelectChildId?.(cId);
+                    }}
+                    className={`px-3 py-1 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
+                      isCur
+                        ? 'bg-blue-600 text-white shadow-sm'
+                        : 'bg-white/10 text-slate-300 hover:bg-white/20 hover:text-white'
+                    }`}
+                  >
+                    {c.studentName || `Con ${idx + 1}`}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
           <button
             type="button"
-            onClick={loadTuitionAndHistory}
-            disabled={isSyncing}
+            onClick={() => {
+              loadTuitionAndHistory();
+              loadCampusTermsAndCourses();
+            }}
+            disabled={isSyncing || coursesLoading}
             className="bg-white/10 hover:bg-white/15 backdrop-blur-md px-4 py-3 rounded-2xl border border-white/20 text-xs text-white font-bold flex items-center justify-center gap-2 transition-all cursor-pointer"
           >
             <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin text-cyan-300' : 'text-slate-300'}`} />
@@ -506,19 +645,64 @@ export default function TuitionPaymentView({
         </div>
       )}
 
-      {/* 3 Course Packages Grid (Hiển thị để chọn gói hoặc nâng cấp gói) */}
+      {/* Active Academic Terms & Courses Grid (Đồng bộ trực tiếp từ AcademicTerms & Courses của cơ sở) */}
       <div className="space-y-6">
         <div className="text-center max-w-2xl mx-auto">
           <h2 className="text-xl sm:text-2xl font-black text-slate-900">
-            {isPaid ? 'Nâng Cấp Gói Đào Tạo Hoặc Đăng Ký Khóa Mới' : 'Chọn Gói Đào Tạo Thích Ứng ĐGNL'}
+            {isPaid ? 'Đăng Ký Khóa Học Đợt Tiếp Theo' : 'Đăng Ký Khóa Học Theo Đợt Tuyển Sinh'}
           </h2>
           <p className="text-xs sm:text-sm text-slate-500 mt-1.5">
-            Các gói học được thiết kế bám sát năng lực thực tế, tự động phân cụm lớp học và tối ưu điểm số.
+            Danh sách đợt học (Đợt 1 &amp; Đợt 2 trong năm) và mức học phí chính thức tại cơ sở theo học.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {coursePackages.map((pkg) => {
+        {/* Active Academic Term Banner */}
+        {activeTerms.length > 0 && (
+          <div className="bg-indigo-50/70 border border-indigo-200/80 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0">
+                <Calendar className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="text-[11px] font-black uppercase tracking-wider text-indigo-700">
+                  Đợt Tuyển Sinh Đang Mở ({activeTerms.length} đợt)
+                </div>
+                <div className="text-sm font-extrabold text-slate-900">
+                  {activeTerms.map((t) => `${t.name} (${t.startDate} → ${t.endDate})`).join(' • ')}
+                </div>
+              </div>
+            </div>
+            <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-extrabold">
+              Đang nhận đăng ký
+            </span>
+          </div>
+        )}
+
+        {coursesLoading ? (
+          <div className="py-12 text-center text-xs font-bold text-slate-500 animate-pulse">
+            Đang tải danh sách đợt học và khóa học của cơ sở...
+          </div>
+        ) : resolvedPackages.length === 0 ? (
+          <div className="bg-white rounded-3xl p-8 border border-slate-200 text-center space-y-2">
+            <BookOpen className="w-8 h-8 text-slate-300 mx-auto" />
+            <h3 className="text-sm font-extrabold text-slate-800">
+              Cơ sở hiện chưa mở khóa học nào cho đợt tuyển sinh này
+            </h3>
+            <p className="text-xs text-slate-500 max-w-md mx-auto">
+              Vui lòng liên hệ Quản lý cơ sở để biết lịch khai giảng Đợt 1 / Đợt 2 tiếp theo.
+            </p>
+          </div>
+        ) : (
+        <div
+          className={`grid grid-cols-1 gap-6 ${
+            resolvedPackages.length === 1
+              ? 'max-w-lg mx-auto'
+              : resolvedPackages.length === 2
+                ? 'md:grid-cols-2 max-w-4xl mx-auto'
+                : 'md:grid-cols-3'
+          }`}
+        >
+          {resolvedPackages.map((pkg) => {
             const isSelected = selectedPlan === pkg.id;
             const formattedPrice = new Intl.NumberFormat('vi-VN', {
               style: 'currency',
@@ -589,7 +773,7 @@ export default function TuitionPaymentView({
                         : 'bg-slate-900 hover:bg-slate-800 text-white'
                     }`}
                   >
-                    <span>{isPaid ? 'Nâng Cấp Qua PayOS' : 'Nộp Học Phí Qua PayOS'}</span>
+                    <span>{isPaid ? 'Đăng Ký Khóa Này Qua PayOS' : 'Nộp Học Phí Qua PayOS'}</span>
                     <ArrowRight className="w-4 h-4" />
                   </button>
                 </div>
@@ -597,6 +781,7 @@ export default function TuitionPaymentView({
             );
           })}
         </div>
+        )}
       </div>
 
       {/* Transaction History Section (Lấy trực tiếp từ Database) */}
@@ -713,6 +898,7 @@ export default function TuitionPaymentView({
         paymentData={activePaymentData}
         onPaymentSuccess={handlePaymentSuccess}
         onPaymentFailure={handlePaymentFailure}
+        onNavigateRoadmap={onNavigateRoadmap}
       />
 
       {/* Modal Chi Tiết Biên Lai / Kiểm Toán Giao Dịch */}

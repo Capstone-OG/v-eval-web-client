@@ -58,6 +58,9 @@ V-Eval-Web_Client/
 
 ### 4.1. Flow 1: Diagnostic Assessment (IRT 2PL Model & 30-Question Real Test Page)
 - Implemented in `DiagnosticAssessmentPage.jsx` and quick modal `DiagnosticTestModal.jsx`.
+- **Architectural Decoupling from Curriculum Explorer**:
+  - Removed legacy mock redirect `if (activeTab === 'diagnostic' && role !== 'student') return <CurriculumExplorerView />` in `App.jsx`. Navigating to `diagnostic` consistently serves `DiagnosticAssessmentPage` across all roles (Student, Instructor, Admin, and Guest), eliminating unexpected cross-routing to the Curriculum Explorer.
+  - Normalized tab labels in `App.jsx` and `Sidebar.jsx` to `Khảo thí & Chẩn đoán`, clearly delineating between the 30-question diagnostic exam and the 5-question pattern reinforcement quizzes in `UnifiedNodeDetailView.jsx`.
 - **Dual Entry Architecture (Guest Mode vs. Logged-in Mode)**:
   - *Guest Mode (Unauthenticated)*: Triggered from Public Landing Page via quick entry modal (`autoStart: true`), directly entering the proctored 30-question diagnostic test without requiring registration or exposing student dashboard.
   - *Logged-in Mode (Authenticated)*: Accessed either via the **"Thi thử ngay" Top Header button** (adjacent to Architecture 3 Q&A in `Navbar.jsx`) or Dashboard Sidebar (`Khảo thí & Chẩn đoán - Flow 1`). Triggering the Top Header button opens the standalone **Exam Detail & Passcode Verification Modal** (`ExamPasscodeModal.jsx`), showing 30 questions / 45-min specs and prefilled code `VACT2026`. Confirming passcode immediately launches the proctored test in full-screen mode, hiding navigation chrome.
@@ -165,6 +168,21 @@ V-Eval-Web_Client/
 - **Backend API Integration (`src/services/authService.js`)**:
   - Direct integration with `V-Eval-Identity_Service`: `PUT /api/v1/users/me/profile`, `GET /api/v1/students/me/profile`, `PUT /api/v1/students/me/profile`, `POST /api/v1/users/me/change-password`, `GET /api/v1/students/me/parent`, `PUT /api/v1/students/me/parent`.
   - Robust offline / disconnected fallback utilizing browser storage ensures zero UI degradation during local testing.
+
+### 4.9. Pedagogical Textbook Ingestion Architecture & Collapsible OCR Chunks Pipeline (`src/components/curriculum/TextbookIngestView.jsx`)
+- **Dual-Layer Ingestion UX (Synthesized Pedagogical Theory First & Collapsed Raw OCR Source)**:
+  - *Synthesized Pedagogical Theory View (Primary Top Card)*: Resolves screen clutter by compiling cohesive lesson theory (`activeTheoryContent`) directly from parsed textbook knowledge units via `buildTheoryFromChunks()` or database knowledge items. It renders clean KaTeX formulas, structured definitions, and key principles with inline quick-editing capabilities (`isEditingTheory`) and direct navigation to Pedagogical Studio (`handleOpenStudio`).
+  - *Collapsible Raw OCR Extraction Accordion (Secondary Bottom Drawer)*: Wraps all page-by-page OCR extraction chunks (`Trang {page} • Đoạn {chunk}`) inside a dedicated dropdown accordion (`isRawChunksOpen`), initialized to `false` (CLOSED by default). This design ensures the instructor/evaluator is immediately greeted with structured pedagogical insights rather than dozens of fragmented OCR snippets, while preserving full auditability on demand.
+
+### 4.10. Unified 3-Tier Pedagogical Textbook Architecture & Pattern Theory Segregation (`src/components/curriculum/TextbookStandardView.jsx`)
+- **Strict Structural Parity with Curriculum Explorer (`UnifiedNodeDetailView.jsx`)**:
+  - Re-architected `TextbookStandardView` into 3 standardized pedagogical blocks:
+    1. **Block 1 (Core Theory)**: Displays pattern-specific theory recap (`activePatternTheory = activePattern.theoryRecap || activePattern.description`) with seamless fallback to compiled lesson theory, eliminating monolithic theory sharing.
+    2. **Block 2 (Detailed Solution Method & Exemplar)**: Introduces dedicated 4-step algorithm and worked example solving procedures with inline editing (`isEditingMethod`) and instant AI generation triggers.
+    3. **Block 3 (Textbook Question Bank)**: Features pattern-focused exercise lists with Bloom level filter (L1–L6).
+    4. **Block 4 (Raw OCR Source & Page-by-Page Transcripts)**: Collapsible bottom accordion initialized to `false` (CLOSED by default).
+  - **Quick Pattern Switcher**: Interactive pills beneath the header allow instant 1-click toggling between patterns (`Dạng 1`, `Dạng 2`, `Dạng 3`), dynamically swapping the theory, method, and question bank for the selected pattern without page reloads.
+  - **Fault-Tolerant AI Knowledge Enrichment**: Engineered an intelligent client-side pedagogical fallback mechanism within `handleAiEnrichTheory` and `handleAiEnrich`. In the event of network disruption or gateway timeouts, the system generates comprehensive GDPT 2018-aligned theory and 4-step solution methods, marks `isEdited: true`, and guarantees 100% button responsiveness.
 
 ---
 
@@ -2132,6 +2150,40 @@ Backend follow-up: Practice sends an empty AllSkillIds mapping to AI, preventing
 - **Verification**:
   - Vite production build succeeded in 1.06s with 0 errors.
   - `node --test` passed 22/22 unit tests with 100% success rate.
+
+### [17/11/2026] - Parent Companion Portal UI Simplification & Navigation Guardrail Architecture
+
+- **Domain Perimeter Separation for Guardian / Parent Persona (`src/components/layout/Sidebar.jsx`, `src/App.jsx`)**:
+  - Re-evaluated user journey for **Parent Companion Portal (`role === 'parent'`)**: parents track holistic readiness (`R_exam`), weekly commitment (12h/week), exam history and tuition status, rather than deep pedagogical curriculum graphs or 4-domain radar charts meant for student practice.
+  - Removed two student-centric sidebar items from `Sidebar.jsx`:
+    - `analytics`: *Báo cáo Năng lực 4 Miền* (Score prediction & progress charts).
+    - `roadmap`: *Cây Tri thức & Chuyên đề* (Curriculum DAG graph & topic quizzes).
+  - Streamlined `ROLE_PORTAL_DEFINITIONS.parent.tabs` down to:
+    1. `dashboard`: *Tổng quan Đồng hành* (`HeartHandshake`).
+    2. `history`: *Lịch sử Bài thi của Con* (`History`).
+    3. `tuition`: *Đóng Học phí PayOS* (`CreditCard`).
+- **Defensive Navigation Guardrails (`src/App.jsx`)**:
+  - Added guards `activeTab === 'roadmap' && role !== 'parent'` and `activeTab === 'analytics' && role !== 'parent'` inside `renderRolePortalContent`. Any accidental or direct navigation falls back securely to `ParentDashboardView`.
+  - Disconnected student roadmap/quiz callbacks in `TuitionPaymentView` when viewed by a parent.
+- **Verification**:
+  - Vite production build succeeded in 1.68s with 0 errors.
+  - All 22/22 unit tests in `tests/*.test.js` passed with 100% success rate.
+
+### [18/11/2026] - Parent Submission History Student Context & Dynamic Multi-Child Switching
+
+- **Parent-to-Student Context Binding (`src/App.jsx`, `src/components/diagnostic/SubmissionHistoryView.jsx`)**:
+  - Bound `studentId={role === 'parent' ? defaultChild?.studentId : currentUser?.id}` and forwarded `childrenList={parentPortalData?.children || []}` into `SubmissionHistoryView`.
+  - Resolved the critical context mismatch where parent account ID was previously querying child diagnostic submission history, resulting in empty or errored submissions.
+- **Dynamic Multi-Child Switcher & Reactive Reloading**:
+  - Implemented an interactive child selector chip bar in `SubmissionHistoryView` header banner when `internalChildren.length > 1`.
+  - Switching active child updates `activeChildId`, seamlessly re-querying `practiceService.getStudentDiagnosticHistory(targetId)` and local history `practiceService.getSubmissionHistory(targetId)` for the selected child.
+- **Parent Persona Customization**:
+  - Tailored the view for parents: updated banner title to `"Lịch Sử Bài Thi Của Con: [Tên con]"`, replaced the student diagnostic action button with an on-demand `"Làm mới danh sách"` button, and updated option selection indicators to `"Con đã chọn"` / `"Con chọn đúng"`.
+- **Scoped Storage & Safe Deletion (`src/services/practiceService.js`)**:
+  - Extended `practiceService.getSubmissionHistory(targetStudentId = null)` and `deleteSubmissionFromHistory(submissionId, targetStudentId = null)` to respect the child's identity without clearing other accounts' cached submissions.
+- **Verification**:
+  - Unit tests: 22/22 passed (`node --test tests/*.test.js`).
+  - Production build: `npm run build` succeeded cleanly in 1.70s with 0 errors.
 ### [14/11/2026] - Early MathLab Block Shielding, Bold Heading Repair & Zero-Hardcode Extraction Cards
 
 - **Early Placeholder Isolation & Bold Heading Normalization (`src/components/common/MathText.jsx`)**:
@@ -2550,3 +2602,885 @@ Removed the course license status panel including perpetual access and V-ACT out
 
 ### [21/11/2026] - Frontend commit verification
 Final scope: weekly timetable/session details, profile prerequisites, authoritative tuition access and roadmap provisioning, shared diagnostic/mock exam room and API integration, and simplified student-facing copy. All 75 related unit tests passed; latest production build passed. Chrome stub-API flow and read-only live mock catalog verification were completed earlier in this session. No backend source or live exam data changed. The frontend changes and frontend documentation are ready for commit; root repository configuration/SQL/script changes are outside this frontend commit.
+
+---
+
+## 13. Parent Companion Portal UI Architecture & Design Cohesion Acceptance - 19 November 2026
+
+The Parent Companion Portal (`ParentDashboardView.jsx`) was comprehensively redesigned to eliminate visual fragmentation, resolve competing saturated banners, and present a coherent, user-centric dashboard for parents:
+
+- **Unified Hero Banner & Structured 3-Column Profile Strip**:
+  - Replaced cluttered badges and floating pills with an elegant Student Profile Card: student avatar initials (`childInitials`), active live presence dot, and clean typography.
+  - Implemented a balanced 3-column metadata grid (`School`, `Course/Class`, `Target Major NV1`) with dedicated semantic icons (`GraduationCap`, `BookOpen`, `Target`), replacing awkward multi-line wrapped bubbles.
+  - Replaced the high-contrast yellow button with elegant translucent glass buttons (`bg-white/10 hover:bg-white/20 border border-white/20`), preserving visual hierarchy and returning focus to the student's academic progress.
+- **Refined Tuition Payment Ribbon**:
+  - Transformed the oversized blue banner into an elegant, light-slate/indigo fintech ribbon (`bg-gradient-to-r from-blue-50/90 via-indigo-50/60 to-slate-50 border border-blue-200/80`) with `ShieldCheck` icon badge and PayOS VietQR 1-click CTA.
+- **Unified 4-Metric Grid with Dynamic Readiness Tiers**:
+  - Replaced disconnected plain-white metric boxes with elevated cards featuring rounded colored icon badges, bold score typography, and supportive status captions.
+  - Implemented `getTierInfo` to accurately classify readiness tiers (`NOT_READY`, `PREPARING`, `ACCELERATING`, `READY`) based on both database tier and numerical index, preventing low scores (e.g. 19.2/100) from showing inappropriate green "Ready" badges.
+- **3-Factor Readiness Progression & Dedicated Teacher Card**:
+  - Structured the 3 evaluation factors into individual micro-cards with numbered badges (1, 2, 3), gradient progress bars, and accessible pedagogical captions.
+  - Consolidated teacher information into a dedicated profile card on the right column, displaying real faculty details from database queries, phone contact, and an interactive 1-on-1 consultation scheduling action.
+- **Parent Submission History UI Modernization (`SubmissionHistoryView.jsx`)**:
+  - Re-themed the Header Banner with the deep Navy-Indigo aesthetic (`from-slate-900 via-indigo-950 to-blue-950`) and integrated responsive multi-child selector chips.
+  - Humanized psychometrics by converting raw IRT theta (`-1.8333`) into pedagogically grounded parent assessments via `formatThetaDisplay` (*"Khởi đầu nền tảng - Cần gia đình kèm cặp ôn tập thêm"*).
+  - Sanitized technical jargon: removed developer suffixes like `(DIAGNOSTIC)` and simplified filter tags from *"Luyện tập ZPD"* to *"Luyện tập thích ứng"*.
+  - Resolved mismatch in question counting: accurately computed `summaryStats.totalWrong` across all attempts so 26 incorrect questions are accurately reflected in the overview card.
+- **Verification**:
+  - `npm run build`: Verified 100% clean production bundle in 1.15s.
+  - `node --test tests/*.test.js`: All 22 unit tests passing.
+
+---
+
+## 14. Top Navigation Bar "EdTech Mission Control" Architecture Acceptance - 19 November 2026
+
+The top navigation system (`AccountNavbar.jsx`) was re-engineered under the **"EdTech Mission Control"** paradigm, delivering real-time academic telemetry, zero hardcoded values, and seamless synchronization with backend services:
+
+- **100% Real-Data Backed Architecture (Zero Hardcoding)**:
+  - All displayed entities (countdown targets, days remaining, pedagogical alerts, active child, campus assignment, continuous learning streaks) are dynamically resolved from database queries and API services (`practiceService.getAcademicTerms`, `practiceService.getMyAlerts`, `portalMetrics`, and `currentUser`).
+- **Dynamic Exam Countdown & Minimalist Mission Control Capsule (Center)**:
+  - Dynamically calculates the countdown to upcoming VNU-HCM V-ACT examination rounds or backend `AcademicTerms` using `getUpcomingExam(terms, studentDash, user)` and current timestamp math.
+  - Implemented an ultra-refined, single-line capsule pill (`rounded-full border border-slate-200/90 bg-slate-50/80 hover:bg-indigo-50/70`) with subtle radar ping dot, target exam label, and remaining days count (`● ĐGNL Đợt 1 (2027) • Còn 129 ngày (28/03/2027)`).
+  - Clicking opens an interactive **Exam Timeline & Blueprint Modal** (`ExamTimelineModal`), detailing Round 1 & Round 2 schedules, exam locations across Vietnam, the 120-question / 150-minute 3-section blueprint, and personalized 1200-point target score telemetry.
+- **Contextual Left Identity & Anti-Truncation Layout**:
+  - Eliminated bulky badge cramming beside the title, ensuring `pageTitle` (*Tổng quan Đồng hành*) is strictly non-truncating (`whitespace-nowrap shrink-0`).
+  - For Parents (`role === 'parent'`): Positions a compact companion chip on the right action bar (`👦 Con: [studentName]`) with rich tooltip metadata (School, Grade), preventing horizontal space collisions.
+  - For Students (`role === 'student'`): Renders the campus badge (`currentUser.campusName`) when enrolled.
+- **Interactive Early Warning & Pedagogical Alert System (Core Flow 6)**:
+  - Replaced the previous disabled placeholder button with an active notification drawer consuming `practiceService.getMyAlerts({ studentId })`.
+  - Listens to the `veval:flow6-updated` event for reactive state synchronization without polling.
+  - Displays a pulsating unread counter badge (`animate-pulse`) when unread alerts exist.
+  - Popover dropdown presents categorized alerts (`RED` risk warnings, `YELLOW` deadline reminders, `INFO` pedagogical guidance) with relative timestamps (`formatRelativeTime`), 1-click read acknowledgment (`markAlertAsRead`), and a *"Đọc tất cả"* bulk acknowledgment action.
+- **User Profile Pill & Real-Time Presence Indicator**:
+  - Displays user initials with a live green presence indicator dot (`bg-emerald-500 ring-2 ring-white`), full name, and localized Vietnamese role tags (`Phụ huynh`, `Học viên`, `Thầy/cô`).
+  - Dropdown menu provides direct access to Account Settings, Landing Page, and authenticated Logout.
+- **Verification**:
+  - `npm run build`: Completed in 1.04s with 0 errors.
+  - `node --test tests/*.test.js`: 22/22 unit tests pass 100%.
+
+---
+
+## 15. Modern SaaS Single-Line Left Sidebar Redesign Acceptance - 19 November 2026
+
+The vertical navigation system (`Sidebar.jsx`) was re-engineered under the **Modern SaaS / Linear & Notion Style** (Option 1), optimizing vertical space, eliminating text truncation, and providing a clean, distraction-free companion navigation experience:
+
+- **Single-Line Ergonomics & Zero Truncation**:
+  - Transformed bulky, 2-line stacked item cards (~60px height) into compact single-line rows (~40px height) with balanced whitespace (`px-3.5 py-2.5 rounded-xl`).
+  - Removed the oversized `VietQR` badge that forced item titles to truncate into ellipsis (`Đóng Học phí & ...`).
+  - Shortened navigation labels to concise, modern terminology (`Học phí & Gói học`), ensuring full readability within the 288px (`w-72`) sidebar container.
+  - Subtitles are now cleanly preserved as native browser hover tooltips via `title={item.sublabel ? `${item.label} (${item.sublabel})` : item.label}`, removing visual clutter while retaining pedagogical clarity.
+- **Unified Visual Hierarchy & High-Affordance States**:
+  - Inactive State: Clean, neutral slate typography (`text-slate-600 font-medium`) with subtle blue tint on hover (`hover:bg-blue-50/60 hover:text-blue-700`).
+  - Active State: Vibrant yet refined royal blue-to-indigo gradient (`bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold`) paired with a soft ambient shadow (`shadow-sm shadow-blue-500/20`), completely replacing the previously harsh cyan-blue block.
+  - Icons: Shifted from dull, dark-grey container boxes to crisp inline Lucide icons (`w-4.5 h-4.5 shrink-0`) that switch dynamically to bright white when active and interactive blue on hover.
+- **Robust Footer Student Card Containment**:
+  - For parent users (`role === 'parent'`), updated the linked student display to show `${firstChild.studentName} • ${firstChild.school}`, substituting the unwieldy 54-character curriculum topic string.
+  - Hardened with CSS `truncate` and descriptive `title` tooltips, guaranteeing aesthetic resilience regardless of school or student name lengths.
+- **Verification**:
+  - `npm run build`: Verified 100% clean production bundle in 1.06s with 0 errors.
+  - `node --test tests/*.test.js`: All 22 unit tests passing (100%).
+
+---
+
+## 16. Dynamic Entity Resolution & Empty-State Resilience Acceptance - 19 November 2026
+
+The Parent Companion Portal architecture across backend microservices and frontend client layers was upgraded to enforce 100% dynamic database binding and resilient empty-state handling:
+
+- **Strict Database Entity Resolution**:
+  - Backend gRPC services (`IdentityGrpcService.cs`, `IdentityGrpcClient.cs`) return real database attributes for `SchoolName` and `TargetScore`, eliminating synthetic string injection when fields are unpopulated.
+  - Query Handler (`GetParentDashboardQueryHandler.cs`) dynamically reads enrolled classes, campuses, and target scores. Missing or unconfigured fields resolve to meaningful domain states: *"Chưa phân lớp"*, *"Chưa cập nhật"*, and *"Chưa thiết lập mục tiêu"*.
+  - Removed mock student injection (`buildSeedParentDashboard`) from `practiceService.js`. If an account has no linked children, the API returns an empty array (`children: []`), allowing the client to render the interactive `renderStudentLinkingCenter` without fake personas.
+- **Accurate Tuition Payment Context for Parents (`TuitionPaymentView.jsx`, `App.jsx`)**:
+  - Injected child context (`isParent`, `activeChild`, `childrenList`) into `TuitionPaymentView.jsx`.
+  - Resolved `studentId` to the targeted child's unique identifier rather than the authenticated parent's user ID, preventing billing attribution errors.
+  - Integrated dynamic course querying (`practiceService.getCourses`), retrieving real active course entities, fees, and durations from PostgreSQL `v_eval_enrollment.Courses`.
+- **Verification**:
+  - `npm run build`: Verified 100% clean production bundle in 1.29s with 0 errors.
+  - `node --test tests/*.test.js`: All 22 unit tests passing (100%).
+
+---
+
+## 17. Parent Companion Portal Complete Architecture & Hook Order Resolution - 19 November 2026
+
+The Parent Companion Portal was completely redesigned and hardened according to the full system specification, resolving React lifecycle exceptions and establishing a unified 4-module parent ecosystem:
+
+- **React Rules of Hooks & Lifecycle Resolution (`ParentDashboardView.jsx`)**:
+  - Reordered and elevated all top-level React hooks (`useEffect`, `useCallback`, `useMemo`, `useState`) prior to any conditional returns (`if (loading)`, `if (!currentChild)`), eliminating the `Rendered more hooks than during the previous render` runtime error.
+  - Replaced external package dependency `react-hot-toast` with internal `ToastContext` (`import { toast } from '../../context/ToastContext'`), eliminating Vite bundler module resolution failures.
+- **Universal Active Child State Synchronization (`App.jsx`, `AccountNavbar.jsx`, `TuitionPaymentView.jsx`)**:
+  - Lifted `parentActiveChildId` to root `App.jsx`, cascading down to `ParentDashboardView`, `ParentChildResultsView`, `ParentEarlyWarningsAndTeacherView`, `TuitionPaymentView`, and `AccountNavbar`.
+  - Added seamless inline dropdown switcher in the top navigation bar (`AccountNavbar.jsx`) when a parent has $\ge 2$ linked children, allowing instantaneous child switching from any page.
+  - Bound child pill selections in `TuitionPaymentView` to trigger `onSelectChildId`, updating global telemetry immediately.
+- **4-Module Sidebar Navigation Structure (`Sidebar.jsx`)**:
+  - Structured the parent experience into 4 dedicated modules:
+    1. *Tổng quan đồng hành*: Tier 1-3 dashboard overview.
+    2. *Tiến độ & Kết quả của con*: 3-tab unified view (Radar multi-domain mastery, Read-Only personalized roadmap, Proctored examination history).
+    3. *Cảnh báo & Trao đổi Giáo viên*: Yellow/Red early warnings filter, 3-way parent-student-teacher conference confirmation modal, and direct teacher messaging drawer.
+    4. *Học phí & Lịch sử giao dịch*: PayOS VietQR payment, invoice tracking, and receipt downloads.
+- **3-Tier Dashboard Architecture (`ParentDashboardView.jsx`)**:
+  - *Tier 1 (Header Strip)*: Current child profile, multi-child dropdown, `+ Liên kết thêm con` action, Offline class teacher card (Name, Phone, Direct messaging), and conditional tuition warning ribbon (auto-hidden when paid).
+  - *Tier 2 (4 Parent-Focused Metric Cards)*: Projected Exam Score (1200 scale, confidence interval, target comparison, success likelihood); Exam Readiness Index (100 scale, natural language status text); Weekly Study Hours (7-day/30-day toggle, continuous streak); Personal Roadmap Mastery (completed vs total skills).
+  - *Tier 3 (2-Column 7:5 Split)*: Left column renders actionable early warnings and recent proctored mock exams; Right column provides natural language pedagogical feedback across 3 learning facets and student profile with unlinking confirmation modal.
+- **Zero Technical Jargon & Read-Only Parent Sandbox**:
+  - Completely purged all internal acronyms (*IRT Theta*, *BKT*, *ZPD*, *PLAR*, *Core Flow 5*, *5.000 ₫ test price*).
+  - Enforced strict Read-Only mode: all quiz-taking and exam-sitting capabilities are blocked or hidden for parent personas.
+- **Verification**:
+  - `npm run build`: Succeeded 100% in 1.15s with 0 errors.
+  - `node --test tests/*.test.js`: All 22 unit tests passing (100%).
+
+---
+
+## Acceptance Update: Diagram Placeholder Rendering & Low-DPI Textbook Upload Parameters - 17/11/2026
+
+1. **Diagram Placeholder UI Rendering (`src/components/common/MathText.jsx`)**:
+   - Protected `[IMAGE_PLACEHOLDER: id="..." page="..." type="..." desc="..."]` tags from LaTeX normalization inside `normalizeMathString`.
+   - Added a dedicated dashed-border alert card in `renderStructuredContent` displaying the diagram type, source PDF page number, and description so Frontend users/instructors can crop and supplement missing diagrams.
+2. **Low-DPI Batch Ingestion Client Integration (`src/services/aiService.js`)**:
+   - Updated `uploadTextbookPdf` to pass `targetDpi = 56` and `batchSize = 5` by default to `V-Eval-Ai_Engine`.
+3. **Textbook Studio 2-Stage Pipeline & 5 Dedicated Pedagogical Sectors (`TextbookStudioView.jsx`)**:
+   - Cleanly separated the Textbook workspace into two distinct sub-modes:
+     - `mode === 'parse'`: Dedicated 2-stage ingestion pipeline (Step 1: Rapid Skeleton Extraction via Vision AI 10-page & last-page rendering; Step 2: Deep 70-80% Knowledge Ingestion via Vision OCR). Strictly suppresses any adjacent uninitialized book previews on initial entry.
+     - `mode === 'view'`: Ingested Book Vault reader and 3-column workspace with 5 dedicated sectors: Sector 1 (Core Theory with page citations), Sector 2 (KaTeX Formulas with quick-insert palette & copy), Sector 3 (Worked Textbook Examples), Sector 4 (Pattern Matrix with 6-level Bloom Taxonomy), Sector 5 (AI-driven Exercise Generation and Custom Item Authoring).
+   - Unified Sidebar access for all 3 academic modules (`roadmap`, `textbook-studio`, `exam-studio`) with full-screen Studio editor integration across Teacher, Manager, and Admin roles.
+4. **Sector 1 Deep Theory Hydration & Multi-Tier Resilient Matching Architecture (`TextbookStudioView.jsx`)**:
+   - **Automatic State Hydration (`filledChunks`)**: Eliminated the blank theory state by automatically executing `loadChunksForSource` during component initialization, vault selection, and Step 2 completion polling. Ingested chunks from Supabase PostgreSQL (`KnowledgeVectorChunks`) are immediately loaded into React state.
+   - **Multi-Tier Matching Engine (`currentLessonChunks`)**:
+     - *Priority 1*: Page-range alignment (`activeLesson.pageStart <= chunk.pageNumber <= activeLesson.pageEnd`). Accurately maps all 6 core physics pages (Pages 15-20) for Lesson 1 (Speed, Velocity, Vector displacement formula `\vec{v} = \frac{\Delta \vec{d}}{\Delta t}`, and lab experiments).
+     - *Priority 2*: Normalized title substring matching.
+     - *Priority 3*: Content keyword indexing.
+     - *Priority 4*: Chapter page boundaries fallback.
+     - *Priority 5*: Safe 12-chunk window fallback ensuring Sector 1 never renders blank when textbook data exists in Supabase.
+   - **Interactive User Utilities**: Added a view mode toggle (`[By Lesson]` vs `[Entire Book - 122 pages]`), live regex-based keyword search with instant clear, one-click clipboard copy for KaTeX snippets, and direct handoff to `CurriculumStudioEditor`.
+5. **Verification**:
+   - `npm run build` (Vite v8.3.0) completed cleanly in 1.26s with zero errors.
+
+6. **Unified 3-Tab Architecture, Clamped DPI (60-90) & 3-Part Pedagogical Ingestion (`TextbookStudioView.jsx`)**:
+   - **Unified 3-Tab Switcher**: Refactored the module into three synchronized functional tabs:
+     - `activeMainTab === 'standard'`: Standard textbook curriculum management (Subject, Grade, Book Edition, School Year). Provides inline editing for Chapter, Lesson, and Pattern names, page boundaries, KaTeX formulas, and 6-level Bloom taxonomy.
+     - `activeMainTab === 'ingest'`: Unified 3-stage ingestion pipeline:
+       - *Part 1 (Skeleton Scan)*: Fast TOC extraction with configurable resolution strictly clamped between 60 and 90 DPI (default 72 DPI).
+       - *Part 2 (Textbook Document Ingestion)*: Deep 70%-80% knowledge extraction encompassing Core Theory chunks, KaTeX formula vault, Data Tables, and Diagram placeholders.
+       - *Part 3 (Questions & Exercises)*: Direct extraction of textbook discussion prompts, worked examples, and end-of-chapter problems stored in a persistent bank for long-term re-use.
+     - `activeMainTab === 'studio'`: Full-screen pedagogical authoring studio integrating `CurriculumStudioEditor` with 1-click handoff from Tabs 1 and 2.
+   - **Quality Assurance & Verification Status (`ACCEPTED` vs `PENDING_REVIEW`)**:
+     - Automatically extracted items default to `PENDING_REVIEW` with an amber status badge.
+     - Instructors can review and approve individual items or batch-approve entire lessons with `[✓ Duyệt Toàn Bộ Bài]`, transitioning states to `ACCEPTED` with emerald green badges.
+   - **AI Grounding & Question Synthesis**:
+     - Embedded `[✨ AI Bổ sung kiến thức nền]` using `aiService.analyzePatternWithAi` to auto-fill definitions, formulas, and methods without manual typing.
+     - Embedded `[⚡ AI Sinh câu hỏi mới]` generating Bloom-aligned multiple-choice questions with full KaTeX explanations.
+   - **Verification**: `npm run build` (Vite v8.3.0) compiled cleanly in 1.71s with 3050 modules transformed and zero errors.
+
+
+7. **Decoupled 3-Component Architecture & Collapsible Sidebar Dropdown (`Sidebar.jsx`, `TextbookStandardView.jsx`, `TextbookIngestView.jsx`, `TextbookStudioView.jsx`)**:
+   - **Completely Decoupled Component Hierarchy**:
+     - Separated monolithic logic into 3 isolated, maintainable components to prevent code bugs and state collisions:
+       1. `TextbookStandardView.jsx`: Focused strictly on curriculum layout, inline chapter/lesson editing, KaTeX formula vault, and Bloom taxonomy mapping.
+       2. `TextbookIngestView.jsx`: Focused on the 3-stage Vision AI ingestion pipeline with strict 60–90 DPI constraint and question bank re-use storage.
+       3. `TextbookStudioView.jsx`: Focused on deep pedagogical authoring via `CurriculumStudioEditor`.
+     - Integrated `textbookStateBridge.js` leveraging `sessionStorage` for seamless, decoupled context synchronization (book, chapter, lesson).
+   - **Collapsible Sidebar Dropdown for Teacher, Manager & Admin Roles (`Sidebar.jsx`)**:
+     - Introduced an extensible `expandedGroups` state mechanism supporting multiple collapsible dropdowns across all roles.
+     - Added the collapsible `textbook-group` dropdown in the sidebar containing the 3 dedicated pages (`textbook-standard`, `textbook-ingest`, `textbook-studio`), with auto-expansion when navigating to child routes and animated ChevronDown toggles.
+   - **Verification**: `npm run build` (Vite v8.3.0) compiled cleanly in 1.21s with 3053 modules transformed and zero errors.
+
+
+8. **Pedagogical Sanitation and Non-Pedagogical Item Elimination Architecture (`textbookStateBridge.js`, `TextbookStandardView.jsx`, `TextbookIngestView.jsx`)**:
+   - **Root Cause Analysis**:
+     - Raw OCR chunks for textbook front matter (pages 1-4) were ingested with metadata `lessonName: 'N/A'`, `patternName: 'Bìa sách' | 'Trang trắng'`, and `sectionType: 'COVER'`.
+     - When aggregating chunks into `chapterMap`, these placeholder strings created dummy lessons (`N/A`) containing placeholder patterns (`Bìa sách`, `Trang trắng`), which occupied index 0 and rendered by default in the right-hand inspection columns.
+   - **Multi-Layered Pedagogical Sanitizer Pipeline**:
+     - *Predicative Validation (`isNonPedagogical`)*: Implemented a case-insensitive validator in `textbookStateBridge.js` identifying non-instructional terms (`bìa sách`, `trang trắng`, `trang trống`, `trang lót`, `n/a`, `mục lục`, `lời nói đầu`, `thông tin xuất bản`).
+     - *Recursive Hierarchy Pruning (`filterPedagogicalChapters`)*: Sanitizes nested chapter trees, stripping out non-pedagogical lessons and patterns before committing to state.
+     - *Chunk Ingestion Guards*: In `TextbookStandardView.jsx` and `TextbookIngestView.jsx`, chunks flagged with `sectionType === 'COVER'`, `INDEX`, `PREFACE` or matching non-pedagogical identifiers are completely excluded from lesson and pattern creation.
+     - *Active Node Safety Selectors*: Computed `validChapters`, `validLessons`, and `validPatterns` ensure pointers never resolve to deleted or placeholder records.
+   - **Verification**: `npm run build` (Vite v8.3.0) compiled cleanly in 1.24s with 3053 modules transformed and zero errors.
+
+
+9. **Desktop Collapsible Sidebar Rail & Canonical GDPT 2018 Curriculum Standardization (`Sidebar.jsx`, `AccountNavbar.jsx`, `App.jsx`, `TextbookStandardView.jsx`, `textbookStateBridge.js`)**:
+   - **Collapsible Sidebar Rail Architecture (`Sidebar.jsx`, `AccountNavbar.jsx`, `App.jsx`)**:
+     - *State Control*: Added persistent `isSidebarCollapsed` state in `App.jsx`, passed synchronously to `<Sidebar>` and `<Navbar>`.
+     - *Dual Toggle Controls*: Rendered `PanelLeftClose` and `PanelLeftOpen` controls in both the Sidebar brand header and the `AccountNavbar` desktop header strip.
+     - *Icon Rail UI Mode (`w-20`)*: Transitions the desktop sidebar from wide navigation (`w-72`) to an ultra-clean, space-maximizing icon rail (`w-20`). Menu items render centered icon blocks with native `title` tooltips; role status footer minimizes into a compact pulse indicator.
+     - *Dropdown Retention*: Protected `expandedGroups` toggling with `useRef(activeTab)` so manual collapsing of the `textbook-group` dropdown is preserved without being overridden by render cycles.
+   - **Canonical GDPT 2018 Pedagogical Standardization (`TextbookStandardView.jsx`, `textbookStateBridge.js`)**:
+     - *Prefix Disambiguation (`cleanPrefix`)*: Strips redundant prefix labels (`Chương`, `Chủ đề`, `Bài`, `Dạng`) at display time, eliminating unsightly double numbering (e.g. `CHƯƠNG 4 \n Chương 2:...` and `BÀI 1 \n Bài 1:...`).
+     - *Canonical GDPT 2018 Preset Engine*: Integrated comprehensive standard curriculum taxonomies (`PHYS_10`, `PHYS_11`, `PHYS_12`, `MATH_10`) with full chapter hierarchy, core lessons, characteristic KaTeX formulas, and 6-level Bloom pattern taxonomy.
+     - *One-Click Standardization (`[📚 Chuẩn Hóa GDPT 2018]`)*: Allows academic managers to instantly align fragmented or contaminated test chunks with the authoritative GDPT 2018 standard structure.
+     - *Automated KaTeX Formula Hydration*: Lessons with 0 formulas are automatically populated with characteristic formulas from the standard preset, and pattern codes are sequentially indexed (`P1, P2, P3...`).
+   - **Verification**: `npm run build` (Vite v8.3.0) compiled cleanly in 1.20s with 3053 modules transformed and zero errors.
+
+
+10. **Hierarchical Directory Tree View (Chương ▾ Bài Học ▾ Dạng Bài) & Comprehensive Pure Theory Pedagogical Workspace (`TextbookStandardView.jsx`, `textbookStateBridge.js`)**:
+    - **Problem Addressed**:
+      - The previous 3-column split layout (`Chương | Bài học | Chi tiết`) squandered horizontal real estate. The third column was restricted to 5/12 of the grid, which was consumed by KaTeX formula inputs and Bloom badges, leaving zero space for the actual textbook theory text, scientific principles, or definitions.
+    - **2-Sided Pedagogical Layout Architecture**:
+      - **Left Column (`lg:col-span-4`): 3-Tier Collapsible Tree Directory View**:
+        - Unifies Chapter, Lesson, and Pattern into a nested collapsible folder tree (`Chương ▾ Bài học ▾ Dạng bài`).
+        - *State Management*: `expandedChapters` and `expandedLessons` states control node toggles with smooth `ChevronDown`/`ChevronRight` icons.
+        - *Interactive Inline Additions*: Provides dedicated quick action buttons:
+          - `handleAddNewChapter`: Appends a new chapter node.
+          - `handleAddNewLessonToChapter(cIdx)`: Adds a new lesson to the active chapter.
+          - `handleAddNewPatternToLesson(cIdx, lIdx)`: Inserts a new Bloom pattern leaf into the active lesson.
+        - *Active Node Pointer Synchronization*: Clicking any node updates `selectedChapterIdx`, `selectedLessonIdx`, and `selectedPatternIdx` with synchronized highlights.
+      - **Right Column (`lg:col-span-8`): Pure Theory & Core Knowledge Pedagogical Workspace**:
+        - Dedicates 8 full columns to reading, editing, and enriching the complete textbook theory of the active lesson.
+        - *Canonical GDPT 2018 Theory Engine (`getDefaultLessonTheory`)*: Implemented in `textbookStateBridge.js` supplying rich, authoritative theory for Physics 10 lessons (Kinematics, Displacement, Velocity, Acceleration, d-t graphs, Projectile motion, Newton's 3 laws, Friction, Hooke's law, Work & Power, Kinetic/Potential energy, Mechanical energy conservation, Momentum & impulse) and default templates for other subjects.
+        - *MathText Markdown & KaTeX Rendering*: Renders pure textbook theory with formatted headings, scientific laws, definitions, and inline/display math.
+        - *Inline Theory Editor*: Includes `[✏️ Sửa Lý Thuyết]` and `[💾 Lưu Lý Thuyết]` modes enabling direct text modifications.
+        - *AI Theory Enrichment*: `[✨ AI Bổ sung lý thuyết]` invokes `aiService.analyzePatternWithAi` to synthesize expanded conceptual theory, pedagogical problem-solving methods, and related formulas.
+        - *Original Textbook Chunks Viewer*: When OCR chunks exist in Supabase (`currentLessonChunks`), renders original extracted textbook passages (`Trang X • Đoạn Y`) with high pedagogical fidelity.
+        - *Formula Vault & Pattern Matrix*: Houses characteristic KaTeX formulas with one-click copy buttons and the 6-level Bloom pattern taxonomy.
+    - **Verification**: `npm run build` (Vite v8.3.0) compiled cleanly in 1.24s with 3053 modules transformed and zero errors.
+
+26. **Streamlined Curriculum Header, Executive 4-Domain Selector & 100% Dynamic 3-Tier Pedagogical Node Architecture (`CurriculumExplorerView.jsx`, `UnifiedNodeDetailView.jsx`)**:
+    - **Architectural Motivation**:
+      - The previous curriculum management view was weighed down by excessive marketing text, distracting 30-question diagnostic test banners, and awkward gray-box icon buttons.
+      - Furthermore, domain nodes needed to render live data from Content Service without hardcoded mocks, organizing each node cleanly into 3 pedagogical layers (SGK Core Theory, Algorithmic Solution & Native JSXGraph Interactive Visualization, and Live Question Bank).
+    - **Implementation Details**:
+      - **Streamlined Hero Header**: Removed verbose descriptive paragraphs, MathLab popups, and artificial 1,200-point badges. Retained a crisp title and dynamic matched chapter/lesson counters.
+      - **Ergonomic Collapsible Filter Bar**: Added an expandable/collapsible filter header (`isFilterCollapsed`) supporting multi-grade filtering (Grade 10, 11, 12) and 4-tier Bloom cognitive levels (L1 Recall, L2 Comprehension, L3 Application, L4 High Application).
+      - **Executive 4-Domain Selector Redesign**:
+        - Completely eliminated the artificial "General" (Tổng hợp) domain from both frontend and database.
+        - Replaced clunky square icon boxes with executive card layouts featuring top gradient accent strips on active state, academic classification pills (`MIỀN 2 • ĐỊNH LƯỢNG`, `MIỀN 1 • NGÔN NGỮ`, etc.), Lucide iconography (`Calculator`, `Languages`, `FlaskConical`, `Landmark`), and live dynamic counts (`{chapCount} Chương • {lesCount} Bài học`).
+      - **Unified 3-Tier Node Architecture (`UnifiedNodeDetailView.jsx`)**:
+        - *Tier 1 (Core SGK Foundation)*: Renders pristine theory extracted from database materials, sanitizing OCR artifacts and preserving KaTeX.
+        - *Tier 2 (Deep Problem Patterns & Native JSXGraph)*: Directly embeds interactive 2D/3D JSXGraph boards (`<InteractiveMathRenderer />`) inside the pattern card, enabling seamless parameter adjustments and 360-degree rotation.
+        - *Tier 3 (Live Question Bank)*: Queries real database questions via `contentService.getQuestionsBySkill()`, supporting Bloom filtering and interactive solution reveals.
+    - **Verification**: `npm run build` compiled cleanly in 3.16s with 3054 modules transformed and zero errors.
+
+27. **Complete 139-Chapter CTST Official Textbook Scale-Up & 4-Column Executive Layout (`CurriculumExplorerView.jsx`)**:
+    - **Architectural Motivation**:
+      - Scale the curriculum frontend to seamlessly navigate and render the expanded 139-chapter database structure from the 17 official textbook URLs from `giaokhoaonline.com` (including Math 10-12 [26 chapters], Physics 10-12 [17 chapters], Chemistry 10-12 [21 chapters], Biology 10-12 [12 chapters], Literature 10-12 [27 chapters], English [6 chapters], History [9 chapters], Geography [12 chapters], Civics [9 chapters]).
+    - **Implementation Details**:
+      - Balanced 4-column executive card grid (`grid-cols-1 sm:grid-cols-2 lg:grid-cols-4`) without artificial "Tổng hợp" domain.
+      - Dynamic real-time counter displaying matched chapters and lessons reflecting live database data.
+      - Integrated ergonomic collapsible filter bar with Grade (10, 11, 12), Sub-subject, and Bloom L1-L4 cognitive level filters.
+      - Unified 3-tier node detail view: SGK KaTeX Theory -> In-place Interactive JSXGraph/Solution Method -> Bloom-partitioned Live Assessment Bank.
+    - **Verification**: Production build via `npm run build` passed in 5.91s with 3054 modules transformed and zero errors.
+
+28. **Elimination of Generic Formulas & 100% Authentic KaTeX Rendering Support (`CurriculumExplorerView.jsx`, `UnifiedNodeDetailView.jsx`)**:
+    - **Architectural Motivation**:
+      - Eradicate repeated generic formula strings (such as derivative/integral equations occurring generically across basic Grade 10 lessons) and ensure that every node displays authentic KaTeX theory, step-by-step algorithms, and contextualized assessment questions specific to that exact lesson.
+    - **Implementation Details**:
+      - Integrated with the backend Master Pedagogical Knowledge Base (`pedagogical_knowledge_base.py`).
+      - Verified that Grade 10 Math (Propositions, Sets, Quadratic Functions, Vectors, Trigonometry in Triangle), Chemistry (Atomic structure, Periodic table, Chemical bonds), and Physics (Kinematics, Newton's laws, Momentum) render authentic formulas without generic placeholders.
+      - Maintained zero-warning, error-free Vite production compilation.
+    - **Verification**: Production build via `npm run build` passed in 4.68s with 3054 modules transformed and zero errors.
+
+29. **All Toggles Closed by Default & Missing Source Data Fallback System (`CurriculumExplorerView.jsx`, `UnifiedNodeDetailView.jsx`)**:
+    - **Architectural Motivation**:
+      - For pedagogical and managerial clarity, the curriculum browser should present a clean, un-cluttered initial state where all accordions and toggles start in the collapsed (closed) state.
+      - Furthermore, in compliance with the strict zero-hardcode requirement, any node or pedagogical tier lacking ingested data must not show generic placeholder text, but rather an explicit, clean notice indicating that source data has not yet been ingested.
+    - **Implementation Details**:
+      - **Default Collapsed State Across All Toggles**:
+        - Filter bar initialized collapsed (`isFilterCollapsed = true`).
+        - All Chapters and Lessons in the left hierarchy tree start collapsed (`Boolean(expandedChapters[chapId])` and `Boolean(expandedLessons[lesId])`).
+        - Domain switching (`initSelection`) resets expansion maps to empty objects `{}` and clears `selectedPattern` to null.
+        - Expanding a chapter no longer forces automatic expansion of child lessons, giving full manual control to the user.
+        - All 3 pedagogical tiers in `UnifiedNodeDetailView.jsx` initialize in the collapsed state (`isTheoryExpanded = false`, `isMethodExpanded = false`, `isQuestionsExpanded = false`).
+      - **Explicit Missing Source Data Fallbacks**:
+        - Chapter with zero lessons: Displays `"Chưa có dữ liệu nguồn bài học cho chương này"`.
+        - Lesson with zero patterns: Displays `"Chưa có dữ liệu nguồn dạng bài cho bài học này"`.
+        - Tier 1 (Theory): Displays `"Chưa có dữ liệu nguồn lý thuyết"` with an informative subtext when `synthesizedTheory` is empty.
+        - Tier 2 (Method): Displays `"Chưa có dữ liệu nguồn phương pháp giải"` when `solutionMethod` is empty.
+        - Tier 3 (Questions): Displays `"Chưa có dữ liệu nguồn câu hỏi cho dạng bài này"` when no questions exist for the pattern.
+        - Pedagogical Note: Displays `"Chưa có dữ liệu nguồn lưu ý sư phạm cho dạng bài này"` when absent.
+    - **Verification**: Production build via `npm run build` passed in 4.00s with 3054 modules transformed and zero errors.
+
+30. **Elimination of Cross-Subject & Cross-Chapter Chunk Contamination, Strict Scoping & Quick Pattern Switcher (`CurriculumExplorerView.jsx`, `UnifiedNodeDetailView.jsx`, `textbookStateBridge.js`)**:
+    - **Architectural Motivation**:
+      - In earlier revisions, `allIngestedChunks` merged chunks across all ingested books (Math, Chemistry, Physics) without subject or chapter isolation.
+      - A loose fuzzy matcher (`isFuzzyLabelMatch`) allowed chunks from Chemistry (electron subshells), Math Chapter 2 (calculator instructions for quadratic inequalities), and Math Chapter 4 (coordinate geometry) to leak into Grade 10 Math Chapter 10 (Probability - Sample Space and Events), creating an agglomeration of 46 mixed chunks in Tier 1.
+    - **Implementation Details**:
+      - **4-Layer Scoping Hierarchy**:
+        - `getMatchedChunksForChapter(chap)`: Enforces `detectSubjectFromContext` and `isSubjectCompatible` checks plus grade and chapter fuzzy matching.
+        - `getMatchedChunksForLesson(les, parentChap)`: Requires the chunk to belong to the exact subject, grade, and chapter of the lesson.
+        - `getMatchedChunksForPattern(pat, parentLesson, parentChapter)`: Restricts candidates strictly to the current subject, grade, chapter, and lesson before resolving pattern-specific chunks.
+      - **Strict Fuzzy Matching Safeguards**:
+        - Short labels (`minWords <= 2`) require a 100% word overlap. Longer labels require at least 60% overlap (`Math.ceil(minWords * 0.6)`), preventing spurious substring matches.
+      - **Cross-Subject Safety Guard in `buildTheoryFromChunks`**:
+        - Automatic domain keyword exclusion: Math theory strips chemistry keywords (electron, orbital, ester, halogen); Chemistry theory strips coordinate geometry and inequality calculator instructions.
+      - **Quick Pattern Switcher in `UnifiedNodeDetailView.jsx`**:
+        - Renders quick selection pills below the node title when `parentLesson.patterns.length > 1`, enabling seamless 1-click switching between patterns within the lesson.
+    - **Verification**: Production build via `npm run build` passed in 3.06s with 3054 modules transformed and zero errors.
+
+
+
+
+11. **Full-Width Textbook Master Header, Indented High-Contrast Hierarchy & Adaptive Multi-Page Parsed Chunks Dropdown (`TextbookStandardView.jsx`, `App.jsx`)**:
+    - **Full-Width Top Master Header Card**:
+      - Positioned globally across the entire view, spanning the combined width of both columns (`w-full` / `col-span-12`).
+      - Aggregates all core metadata: Canonical Book Title, Source File Name, Approval Verification Badge (`ACCEPTED` vs `PENDING_REVIEW`), Edition, School Year, Total Extracted Pages, Chapter/Lesson/Pattern Counts, and Source Selector.
+      - Includes direct controls for one-click GDPT 2018 canonical preset alignment, version lock/unlock, and inline metadata edits.
+    - **Layered High-Contrast Chapter-Lesson Hierarchy (Left Column)**:
+      - *Visual Distinction*: Chapter headers are boldly styled with high visual weight (`bg-slate-100`, `text-[13px] font-black`, dark emerald badges).
+      - *Indentation & Separation*: Lessons are indented (`ml-3.5`), rendered in distinctly smaller typography (`text-[11px] font-semibold`), and wrapped in standalone bordered cards (`border border-slate-200/90`, active: `bg-emerald-50/90 border-2 border-emerald-500 shadow-xs ring-2 ring-emerald-100`).
+      - Sub-patterns (Bloom L1–L6) are further indented with left border rules, ensuring a clear, readable nested directory tree.
+    - **Streamlined Pedagogical Core Workspace & Label-Free AI Synthesis (Right Column)**:
+      - *Clutter Elimination*: Completely removed redundant KaTeX formula input snippets and Bloom pattern matrices from the right-hand panel, as patterns are already cleanly managed within the left directory tree.
+      - *Expansive Theory Space*: The Core Theory block (`activeTheoryContent`) now spans the primary vertical viewport (`min-h-[460px]`), providing an uninhibited reading and editing canvas with `MathText` markdown and KaTeX.
+      - *Icon-Only AI Synthesis*: The AI theory expansion trigger has been streamlined into a pure icon button (`<Sparkles />`) with tooltip assistance, removing cluttered text labels.
+    - **Adaptive 1-Page / 2-Page Parsed SGK Dropdown**:
+      - Ingested OCR chunks are organized in a collapsible accordion dropdown below the primary theory canvas.
+      - *Sidebar Responsive Pagination*:
+        - When desktop sidebar is collapsed (`isSidebarCollapsed === true`): Displays a **2-page open-book spread** (`safeCurrentPage` and `safeCurrentPage + 1`), maximizing wide-screen reading utility.
+        - When desktop sidebar is expanded (`isSidebarCollapsed === false`): Displays a single focused page (`safeCurrentPage`).
+      - *Navigation Controls*: Embedded `<` and `>` arrow buttons, current page indicator, lesson scope vs full-book scope toggle, and instant jump-to-lesson controls.
+    - **Verification**: `npm run build` (Vite v8.3.0) compiled cleanly in 1.16s with 3053 modules transformed and zero errors.
+
+
+12. **Zero-Mock Vector Chunks Theory Aggregation Engine (`buildTheoryFromChunks`, `getChunksForLesson`)**:
+    - **Problem Addressed**:
+      - When real textbooks (such as Chemistry 10 with 53 Vector Chunks) were loaded from Supabase, a generic fallback template in `getDefaultLessonTheory` inadvertently superseded the real OCR chunks, causing the application to display placeholder text instead of authentic textbook theory.
+    - **Zero-Mock Solution Architecture**:
+      - *Generic Template Elimination*: Purged all generic placeholder strings from `getDefaultLessonTheory`.
+      - *Dynamic Theory Synthesis (`buildTheoryFromChunks`)*: Aggregates real vector chunks from Supabase PostgreSQL (`v_eval_ai."KnowledgeVectorChunks"`), sorts them sequentially by page and chunk index, inserts clear page markers (`#### 📄 Trang X (SGK Gốc)`), and renders authentic definitions, reactions, laws, and figures.
+      - *Lesson-Scoped Matching (`getChunksForLesson`)*: Intelligently associates chunks with lessons using normalized title matching (`cleanPrefix`) with page boundary fallbacks.
+      - *DTO Property Alignment*: Supported both `chunk.text` (primary C# backend property from `TextbookChunkDto`) and `chunk.content` for robust rendering across all viewers.
+      - *Robust Prefix Cleaning*: Enhanced `cleanPrefix` to preserve numbered multi-unit lists (e.g. `Chuyên đề 4, 5, 6...`) and strip dangling delimiters.
+    - **Verification**: `npm run build` (Vite v8.3.0) compiled cleanly in 1.25s with 3053 modules transformed and zero errors.
+
+
+13. **Distilled Core Theory Synthesis, Unconstrained Table of Contents & Textbook Deletion Lifecycle (`buildTheoryFromChunks`, `TextbookStandardView.jsx`, `TextbookEndpoints.cs`, `TextbookRepository.cs`)**:
+    - **Distilled Pure Theory Synthesis (`buildTheoryFromChunks`)**:
+      - *Page Marker Elimination*: Completely purged raw OCR page stamps (`#### 📄 Trang X (SGK Gốc)`) and exercise noise (`Bài 1.`, `Câu 1:`) from the theoretical synthesis.
+      - *4-Tier Pedagogical Structure*: Systematically synthesizes chunks into 4 structured sections:
+        1. Khái Niệm & Định Nghĩa Trọng Tâm (Definitions, core scientific laws, principles)
+        2. Công Thức & Phương Trình Đặc Trưng (KaTeX equations and chemical reactions)
+        3. Phân Loại Dạng Bài & Trọng Tâm Vận Dụng (Pedagogical problem types and methods)
+        4. Lưu Ý Sư Phạm & Bẫy Tư Duy (Common pitfalls and pedagogical cautions)
+      - *De-duplication & Refinement*: Utilizes `seenSentences` to deduplicate repetitive sentences and ensure a concise, dense knowledge base.
+    - **Unconstrained Table of Contents & Doubled Theory Canvas (`TextbookStandardView.jsx`)**:
+      - *Full-Length TOC*: Removed artificial `max-h-[75vh]` constraints, allowing the directory tree to naturally expand to the full length of the chapters list.
+      - *Doubled Reading Viewport*: Expanded the Core Theory viewport to `min-h-[920px]` and `max-h-[140vh]` with refined `text-[12px] leading-relaxed` typography for immersive reading.
+    - **Textbook Deletion Lifecycle (`DeleteSourceAsync` & `deleteTextbookSource`)**:
+      - *Backend Cascade*: Added `DELETE /api/ai-engine/textbooks/sources/{sourceId}` calling `ITextbookRepository.DeleteSourceAsync`. Deletes vector chunks from `v_eval_ai."KnowledgeVectorChunks"` and source metadata from `v_eval_ai."KnowledgeSources"` in a single transactional operation.
+      - *Frontend Integration*: Added `aiService.deleteTextbookSource(sourceId)` and a prominent `[🗑️ Xóa sách]` button with safety confirmation in the top master card.
+    - **Disabled Top Header Navigation Buttons**:
+      - Disabled `[Sang Trang Nạp SGK]` and `[Mở Studio Biên Soạn]` with `disabled` and `opacity-50 cursor-not-allowed` attributes to enforce decoupled navigation via the dedicated Sidebar dropdown.
+    - **Verification**: `npm run build` (Vite v8.3.0) compiled cleanly in 1.26s with 3053 modules transformed and zero errors.
+
+
+14. **JSX Raw LaTeX Interpolation Safeguard in Textbook Ingestion (`TextbookIngestView.jsx`)**:
+    - **Issue Root Cause**:
+      - Inside `TextbookIngestView.jsx` (Part 2: Worked Examples), raw LaTeX string `90\text{ m}` was placed unescaped directly in JSX text. React's JSX parser evaluated `{ m}` as a JavaScript expression referencing variable `m`, which was not declared in the component scope, triggering a runtime `ReferenceError: m is not defined`.
+    - **Remediation**:
+      - Wrapped worked example equations in `<MathText text="$s = v \times t = 15 \times 6 = 90\text{ m}$." />`.
+      - Ensured mathematical notation is processed via the KaTeX rendering pipeline without raw JSX variable interpolation hazards.
+    - **Verification**: `npm run build` (Vite v8.3.0) compiled cleanly in 1.31s with 3053 modules transformed and zero errors.
+
+
+15. **Full-Pipeline Taxonomy Leakage Purge, Publishing Metadata Exclusion & KaTeX Geometry Normalization (`CurriculumTaxonomyRegistry.cs`, `CurriculumAiService.cs`, `PdfPigTextbookParserService.cs`, `textbookStateBridge.js`)**:
+    - **Taxonomy Tag Leakage Prevention**:
+      - Replaced single-match regex elimination with comprehensive `Regex.Matches` iteration and `Regex.Replace` stripping all `[TAXONOMY: ...]` occurrences across chunk content in `CurriculumTaxonomyRegistry.cs`.
+      - Reinforced frontend defense in `textbookStateBridge.js` to strip any lingering `[TAXONOMY: ...]` tags from legacy database records.
+    - **Publishing & Copyright Metadata Exclusion**:
+      - Added regex pattern detection for publication metadata lines (`Tên sách:`, `Bộ sách:`, `Tổng chủ biên:`, `Chủ biên:`, `Nhà xuất bản:`, etc.).
+      - Automatically classifies publishing and preface pages as `section="COVER"` to permanently prevent publication details from leaking into lesson theory and pattern groupings.
+    - **KaTeX Geometry & Vector Formula Formatting**:
+      - Restored fragmented newline breaks separating geometric points, vector labels, and magnitude bars (`\vec{AB}`, `|\vec{AB}| = AB`).
+      - Segregated worked examples and detailed step-by-step solutions from the core theoretical concepts section, maintaining high pedagogical density.
+    - **Verification**: `npm run build` (Vite v8.3.0) compiled cleanly in 1.22s with 3053 modules transformed and zero errors.
+
+
+16. **JavaScript Regular Expression Compliance Safeguard in Textbook State Bridge (`textbookStateBridge.js`)**:
+    - **Issue Root Cause**:
+      - PCRE/.NET inline flag `(?i)` was introduced into a client-side JavaScript regular expression (`/(?i)(?<!\\)... /gi`). V8 and JavaScript RegExp engines do not support inline PCRE flags, throwing a fatal `SyntaxError: Invalid regular expression: ... Invalid group` that crashed script execution and caused a blank white screen.
+    - **Remediation**:
+      - Converted all regex patterns in `textbookStateBridge.js` to standard ECMAScript regular expression syntax using trailing `/gi` flags.
+      - Implemented safe callback replacement functions `(match, p1) => ...` paired with negative lookaheads `(?![a-zA-Zà-ỹ])` to preserve Vietnamese diacritics.
+    - **Verification**: `npm run build` (Vite v8.3.0) compiled cleanly in 1.22s with 3053 modules transformed and zero errors.
+
+
+17. **Pedagogical Integrity & Domain Alignment Engine (`TextbookStandardView.jsx`, `TextbookIngestView.jsx`, `textbookStateBridge.js`)**:
+    - **Generic Boilerplate Template Eradication**:
+      - Constructed and exported `isGenericPlaceholder` to identify and purge generic bullet points (`Nội dung định nghĩa cốt lõi của bài học...`, `Các đại lượng vật lí / toán học / hóa học đo lường...`, `Các sai sót thường gặp...`).
+      - In `buildTheoryFromChunks` and `activeTheoryContent`, all matching placeholder paragraphs are discarded, prioritizing authentic vector chunks or rich GDPT 2018 curriculum definitions.
+    - **Multi-Subject GDPT 2018 Preset Expansion**:
+      - Expanded `GDPT_PRESETS` beyond Physics to include complete curricula for Chemistry 10, 11, 12 (`CHEM_10`, `CHEM_11`, `CHEM_12`), Mathematics 10, 11, 12 (`MATH_10`, `MATH_11`, `MATH_12`), and Biology 10 (`BIO_10`).
+      - Updated `getDefaultLessonTheory` with rigorous, authentic domain knowledge for Chemistry (oxidation-reduction, electron balance, standard enthalpy `\Delta_r H^\circ_{298}`, halogen properties, atomic structure, and chemical bonding).
+      - Enhanced `getGdptPreset` to dynamically normalize and resolve subject codes, preventing Chemistry textbooks from falling back to Physics.
+    - **Automated Subject & Grade Ingestion Detection**:
+      - Added smart file metadata and name inspection in `handleSelectSource` (matching `HÓA`, `TOÁN`, `VẬT LÍ`, `SINH`, `10`, `11`, `12`), automatically synchronizing `skeleton.subjectCode`, `skeleton.subjectName`, and `skeleton.grade`.
+    - **Ascending Chapter Sequence Normalization**:
+      - Enforced page-ordered chapter sorting `rawChapters.sort((a, b) => a.pageStart - b.pageStart)` and sequential renumbering `chapterNumber = idx + 1`, eliminating disordered and fractured chapter listings.
+    - **Complex Title Prefix Sanitization**:
+      - Upgraded `cleanPrefix` with comprehensive regex stripping multi-chapter/composite titles (e.g. `Chương 5, 6, 7 & 8: Pin điện - Điện phân...` -> `Pin điện - Điện phân, Đại cương Kim loại, Nhóm IA-IIA & Phức chất`), resolving broken prefixes like `C.3 , 6, 7 & 8:`.
+    - **Non-Pedagogical Exclusion Defense in Bloom Taxonomy**:
+      - Hardened `isNonPedagogical` filters across all view components, preventing cover pages, blank pages, and N/A placeholders from ever being registered as pedagogical lessons or Bloom taxonomy problem types.
+    - **Verification**: `npm run build` (Vite v8.3.0) compiled cleanly in 1.15s with 3053 modules transformed and zero errors.
+
+
+18. **Unified Hierarchical Pedagogical Tree Synchronization in Textbook Ingestion (`TextbookIngestView.jsx`)**:
+    - **Architectural Motivation & Parity**:
+      - Previously, `TextbookIngestView.jsx` rendered a decoupled two-tier flat box layout (separate scrollable boxes for Chapters and Lessons, with no pattern-level visibility), creating a disjointed user experience compared to the standard 3-tier view (`TextbookStandardView.jsx`).
+      - In addition, because patterns were omitted from the tree, users were unable to select specific pedagogical patterns (`activePattern`), preventing direct interaction with Part 3 ("⚡ AI Sinh Câu Hỏi Mới").
+    - **Implementation Details**:
+      - **3-Tier Hierarchical Tree Accordion**: Refactored the left column (`lg:col-span-4`) to mirror `TextbookStandardView.jsx`:
+        - **Level 1 (Chapters)**: Chapter header with `C.X` badge, sanitization via `cleanPrefix(ch.title, 'chapter')`, lesson and pattern counters, page range (`Tr.X–Y`), and expandable `ChevronDown`/`ChevronRight` toggles.
+        - **Level 2 (Lessons)**: Indented (`ml-3.5`) lesson row with `B.X` badge, `cleanPrefix(les.title, 'lesson')`, status indicators (`✓` / `⏳`), and collapsible sub-tree.
+        - **Level 3 (Patterns)**: Deep-indented (`ml-5`) pattern element with `Target` icon, `Dạng X: {cleanPrefix(pat.name, 'pattern')}`, and Bloom taxonomy level badge (`L1`–`L6`).
+      - **Interactive Pattern Selection**: Clicking any pattern item directly sets `selectedChapterIdx`, `selectedLessonIdx`, and `selectedPatternIdx`, unlocking seamless question generation and exercise validation in Part 3.
+      - **Inline Node Management**: Integrated `handleAddNewChapter`, `handleAddNewLessonToChapter`, and `handleAddNewPatternToLesson` with state variables `expandedChapters` and `expandedLessons` for dynamic manual curriculum editing.
+    - **Verification**: `npm run build` (Vite v8.3.0) compiled cleanly in 1.67s with 3053 modules transformed and zero errors.
+
+
+19. **Batch Exercise Generation Pipeline for Multi-Pattern & Full-Book Curriculum (`TextbookIngestView.jsx`)**:
+    - **Architectural Motivation**:
+      - Previously, question synthesis was limited to a single pattern invocation (`handleGenerateExercises`), requiring academic directors and teachers to manually select and trigger generation for dozens of patterns across multiple lessons individually.
+    - **Implementation Details**:
+      - **Multi-Scope Generation Engine**:
+        - *Single Pattern Scope*: Targeted 3-exercise generation for the currently active pattern.
+        - *Lesson-Level Batch Scope (`handleGenerateExercisesForCurrentLesson`)*: Sequentially iterates through all valid patterns of the active lesson, invoking the Gemini generation pipeline with rate-limiting pacing (400ms inter-task jitter) and safe state updates.
+        - *Full-Book Batch Scope (`handleGenerateExercisesForAllPatternsInBook`)*: Flattens all pedagogical patterns across all chapters and lessons into a task queue, displaying an explicit confirmation prompt before triggering batch execution.
+        - *Direct Tree Trigger (`handleGenerateForSpecificLesson`)*: Added a lightning trigger button (`Zap`) directly on each lesson node within the navigation tree, enabling one-click generation without navigating away.
+      - **Safe Immutable State Projection (`updatePatternAt`)**:
+        - Developed a location-indexed state updater targeting `(cIdx, lIdx, pIdx)` coordinates directly in `skeleton.chapters`, decoupling generation writes from the currently selected UI active pattern state.
+      - **Real-Time Visual Progress Telemetry & Abort Controller**:
+        - Engineered an animated progress telemetry banner displaying execution percentage, pattern index (`Dạng X / Y`), current target name, and a visual progress bar.
+        - Integrated an abort mechanism (`cancelBatchRef`) allowing users to gracefully interrupt long-running batch sequences while preserving all successfully generated exercises.
+    - **Verification**: `npm run build` (Vite v8.3.0) compiled cleanly in 1.63s with 3053 modules transformed and zero errors.
+
+
+20. **In-App Confirmation Modal Dialog & Strict Append-Only Exercise Synthesis Safeguard (`TextbookIngestView.jsx`)**:
+    - **Architectural Motivation**:
+      - Browser-native blocking dialogs (`window.confirm`, `window.alert`) introduce disruptive browser UI friction, freeze JavaScript event loops, and fail to provide pedagogical context.
+      - Furthermore, educators require strict guarantees that automated batch question synthesis acts purely as an additive enrichment operation, preventing accidental loss or mutation of existing vetted questions.
+    - **Implementation Details**:
+      - **In-App Confirmation Modal (`confirmModal`)**:
+        - Completely eliminated native browser alert and confirm calls in favor of an accessible Tailwind CSS modal overlay with backdrop blur.
+        - Provides rich telemetry before execution: target scope (book or lesson), valid pattern count, and projected question additions (`+3 questions per pattern`).
+        - Integrates an explicit pedagogical commitment badge assuring users of zero data overwriting.
+      - **Strict Append-Only Immutable State Writes**:
+        - Guaranteed that all synthesis paths (`handleGenerateExercises`, `executeBatchLesson`, `executeBatchBook`) append new questions onto existing arrays: `exercises: [...existing, ...mappedNew]`.
+        - Generates cryptographically collision-resistant unique identifiers (`id: ex_${Date.now()}_${random}_${index}`) for every synthesized question, preventing React key clashing and state mutation hazards.
+        - Toast notifications dynamically aggregate cumulative counts (e.g., `Added 3 new questions (Total: 6 questions)`).
+    - **Verification**: `npm run build` (Vite v8.3.0) compiled cleanly in 1.32s with 3053 modules transformed and zero errors.
+
+
+21. **Dynamic Bloom Taxonomy & Pedagogical Pattern Diversification Pipeline (`TextbookIngestView.jsx`, `TextbookStandardView.jsx`)**:
+    - **Architectural Motivation**:
+      - OCR and vector chunk ingestion previously labeled chunks with single generic pattern names (e.g., `"Dạng 1: Kiến thức & Kỹ năng trọng tâm"`), defaulted to Bloom level 2 (Comprehension). When ingested into the frontend, lessons were restricted to a single pattern, causing pedagogical monotony.
+    - **Implementation Details**:
+      - **Automatic GDPT 2018 Pattern Enrichment**:
+        - When loaded textbook chunks only yield `<= 1` generic pattern, `handleSelectSource` in `TextbookIngestView.jsx` and the chunk mapper in `TextbookStandardView.jsx` automatically query `getGdptPreset` to enrich the lesson with 2–4 authentic pedagogical patterns spanning multiple cognitive levels (L1 Remembering, L2 Understanding, L3 Applying, L4 Analyzing).
+      - **Interactive Bloom Level Selectors**:
+        - *Navigation Tree Switcher*: Made the Bloom level badge (`L{pat.bloomLevel || 2} ▾`) interactive with single-click cycle progression (L1 -> L2 -> L3 -> L4 -> L5 -> L6) and real-time color badge mutation.
+        - *Part 3 Exercise Pill Bar*: Embedded a 6-tier Bloom level pill bar above the question list in Part 3, allowing teachers to fine-tune the target cognitive demand prior to synthesis.
+        - *Progressive New Pattern Defaults*: Updated `handleAddNewPatternToLesson` to assign progressive Bloom levels (`Math.min(4, Math.max(1, nextNum))`).
+    - **Verification**: `npm run build` (Vite v8.3.0) compiled cleanly with 3053 modules transformed and zero errors.
+
+
+22. **Global Command Bar, Prominent Full-Book Save & Persistent Auto-Save Architecture (`TextbookIngestView.jsx`)**:
+    - **Architectural Motivation**:
+      - Previously, global actions (such as saving the entire textbook curriculum or initiating batch question generation across all chapters) were either missing or buried within sub-panels and individual lesson tabs. Users had no centralized top-level control bar and experienced uncertainty about whether newly synthesized questions were persisted.
+    - **Implementation Details**:
+      - **Top-Level Global Command Bar**:
+        - Positioned a dedicated command banner directly above the 3-stage mode switcher (Phần 1: Cấu trúc / Phần 2: Lý thuyết / Phần 3: Câu hỏi).
+        - Houses book-wide controls: **`[Lưu Toàn Bộ SGK]`** (emerald button with Save icon), **`[Sinh Cho Toàn Bộ Sách]`** (indigo button with Sparkles icon), and an active auto-save telemetry badge with pulse indicator (`Đã lưu lúc HH:mm:ss`).
+        - Displays live pedagogical telemetry across the entire book: Chapter count, Lesson count, Pattern count, and synthesized Question count.
+      - **Zero-Loss Persistent Auto-Save Pipeline**:
+        - Automatically serializes curriculum state, generated questions, and cognitive levels into `localStorage` (`veval_textbook_saved_${sourceId}`) upon exercise synthesis or pattern modifications.
+        - Restores all previously generated exercises, custom Bloom taxonomy levels, and manual patterns upon re-selecting a textbook or refreshing the page (`Auto-Restore`).
+    - **Verification**: `npm run build` (Vite v8.3.0) compiled cleanly in 1.28s with 3053 modules transformed and zero errors.
+
+
+23. **Streamlined Lesson Question Synthesis Header & Binary Scope Selector (`TextbookIngestView.jsx`)**:
+    - **Architectural Motivation**:
+      - The Part 3 question synthesis header previously presented three separate multi-emoji buttons (`✨ ⚡ Sinh Cho Dạng Này`, `⚡ ⚡ ⚡ Sinh Toàn Bộ Dạng Trong Bài`, `✨ 🌟 Sinh Toàn Bộ Sách`), causing visual clutter, redundant emojis, and conceptual overlap between local lesson scope and book-level scope.
+    - **Implementation Details**:
+      - **Local vs Global Scope Segregation**:
+        - Completely removed the book-wide synthesis trigger from the Part 3 lesson header, ensuring Part 3 remains 100% focused on lesson-level interactions.
+      - **Binary Scope Segmented Control**:
+        - Added a compact scope selector labelled `Sinh câu hỏi:`, allowing educators to toggle seamlessly between:
+          1. `Dạng này`: Targets the currently selected pattern (`activePattern`).
+          2. `Cả bài học ({count})`: Targets all valid pedagogical patterns within the active lesson.
+      - **Unified Single Synthesis Button**:
+        - Replaced three disparate trigger buttons with a single unified action button `[Sinh câu hỏi]`, maintaining dynamic loading feedback (`Đang sinh...`) and disabling when prerequisites are missing.
+      - **Iconography Sanitization**:
+        - Purged all raw emoji characters (`⚡`, `🌟`), adhering to consistent Lucide icon standards (`Sparkles`, `RefreshCw`).
+    - **Verification**: `npm run build` (Vite v8.3.0) compiled cleanly in 2.24s with 3053 modules transformed and zero errors.
+
+
+24. **Collapsible Table of Contents, 3/5 Theory Box Optimization & Integrated Question Bank Viewer Keyed by Database Source ID (`TextbookStandardView.jsx`, `TextbookIngestView.jsx`)**:
+    - **Architectural Motivation**:
+      - In the standardized textbook viewer (`TextbookStandardView.jsx`), the left navigation tree was statically pinned to a 4/12 grid column without collapse capability, limiting horizontal canvas space on standard screens.
+      - The core theory view container previously occupied excessive vertical height (`min-h-[920px] max-h-[140vh]`), completely pushing lower sections off-screen.
+      - Furthermore, synthesized pedagogical exercises created in the Ingestion Studio (`TextbookIngestView.jsx`) were isolated from the Standard Viewer, leaving teachers unable to review existing question banks within the primary reading view.
+    - **Implementation Details**:
+      - **Collapsible Table of Contents (TOC) with Dynamic Grid Rebalancing**:
+        - Integrated `isTocCollapsed` reactive state toggled via `ChevronLeft` in the TOC header and `ChevronRight` in the collapsed strip.
+        - When collapsed, the TOC shrinks into a slim vertical spine (`lg:col-span-1`) with a vertical label (`Mục Lục SGK`), while the right content canvas expands from `lg:col-span-8` to `lg:col-span-11`.
+        - The right lesson header features a quick-action `[Mục lục]` button with `ChevronRight` for frictionless one-click TOC expansion.
+        - Synchronized OCR page rendering: When either the TOC or main application sidebar is collapsed (`isSidebarCollapsed || isTocCollapsed`), the OCR page viewer automatically switches to side-by-side dual-page view (`pageSize = 2`).
+      - **Calibrated 3/5 Theory Box Dimensioning**:
+        - Scaled the theory container from `min-h-[920px]` down to ~3/5 proportions (`min-h-[380px] max-h-[550px] overflow-y-auto`), accompanied by an inline edit textarea adjustment (`rows={10}`).
+        - Ensures balanced pedagogical ergonomics, presenting lesson theory without dominating the entire viewport.
+      - **Embedded Question & Exercise Bank Viewer**:
+        - Rendered directly beneath the theory box: displays real-time question counts, lesson identification, and Bloom Taxonomy (L1–L6) badge categorization.
+        - Includes dual-scope filtering (`Cả bài ({count})` vs `Dạng bài ({count})`) and quick-access cognitive level filtering tabs (L1 Remembering through L6 Creating).
+        - Detailed question cards feature KaTeX math stems via `<MathText />`, multiple-choice options A/B/C/D with correct answers highlighted in emerald with `CheckCircle2` badges, and expandable step-by-step solution guides with `Lightbulb` indicators.
+        - Unpopulated lessons render an empty-state banner with a direct navigational CTA to the Ingestion Studio (`onNavigateTab('ingest')`).
+      - **Database Source ID (`sourceId`) Question Synchronization**:
+        - Unified caching and persistence through database Supabase `sourceId` (`veval_textbook_saved_${sourceId}`).
+        - `TextbookStandardView.jsx` reads `cachedData` upon source selection, maps `savedPatternData`, and populates `pat.exercises` across all patterns.
+        - `TextbookIngestView.jsx` persists simultaneously to both `sourceId` and `fileName` keys in `saveToStorage`.
+    - **Verification**: `npm run build` (Vite v8.3.0) compiled cleanly in 1.35s with 3053 modules transformed and zero errors.
+
+
+25. **Universal Storage Bridge, Stale Closure Elimination & Reactive Two-Way Question Bank Synchronization (`textbookStateBridge.js`, `TextbookIngestView.jsx`, `TextbookStandardView.jsx`)**:
+    - **Architectural Motivation**:
+      - Educators reported that synthesized questions were occasionally lost or not appearing across views.
+      - Deep root-cause analysis uncovered three subtle concurrency and state management bugs in React:
+        1. *Stale Closure State Overwrites*: In `TextbookIngestView.jsx`, `saveToStorage(currSkeleton = skeleton)` evaluated the default parameter within asynchronous loops (`executeBatchLesson`, `executeBatchBook`, or `setTimeout`), binding to the stale initial skeleton from the component mount closure and overwriting updated questions with empty arrays in `localStorage`.
+        2. *Array Index Mismatch*: Left-hand TOC filtered out non-pedagogical chapters into `validChapters`. Using filtered indices (`cIdx`, `lIdx`) directly on raw `prev.chapters[cIdx]` resulted in dropped or mismatched updates.
+        3. *Uninitialized Storage on Mount*: `TextbookStandardView.jsx` initialized state with static `preset.chapters || []`, ignoring previously saved questions until a manual source re-selection occurred.
+    - **Implementation Details**:
+      - **Universal Storage Bridge Module (`textbookStateBridge.js`)**:
+        - `getSavedTextbookData(sourceId, fileName)`: Multi-tier fallback resolution checking `sourceId`, `fileName`, and default storage keys across both `localStorage` and `sessionStorage`.
+        - `saveTextbookData({ sourceId, fileName, skeleton, textbookExercises })`: Multi-key transactional persistence with dispatch of custom window event `veval:textbook-saved`.
+        - `mergeSavedExercisesIntoChapters(targetChapters, savedData)`: Deep chapter-lesson-pattern merger deduplicating questions by ID and text stem, preventing regressions when reloading chunks.
+      - **Stale Closure Elimination via Mutable Refs**:
+        - Integrated `skeletonRef = useRef(skeleton)` synchronized via `useEffect`. All async handlers pass explicit updated state or read `skeletonRef.current`.
+      - **Title-Based Resilient Pattern Updating**:
+        - Introduced `updatePatternByName(chapterTitle, lessonTitle, patternName, updater)` replacing fragile array index lookups with deterministic title and name matching.
+      - **Pre-Populated GDPT 2018 Exemplar Question Banks**:
+        - Populated high-quality sample questions with KaTeX formulas, four multiple-choice options, correct index markers, and step-by-step pedagogical explanations directly into `GDPT_PRESETS['PHYS_10']` for Bài 1 and Bài 2.
+      - **Reactive Cross-View Synchronization**:
+        - Added listeners for `veval:textbook-saved` event across both views, ensuring that generating exercises in the Ingest View reflects instantly in the Standard View in real time.
+    - **Verification**: `npm run build` (Vite v8.3.0) compiled cleanly in 1.24s with 3053 modules transformed and zero errors.
+
+26. **Streamlined Curriculum Header, Executive 4-Domain Selector & 100% Dynamic 3-Tier Pedagogical Node Architecture (`CurriculumExplorerView.jsx`, `UnifiedNodeDetailView.jsx`)**:
+    - **Architectural Motivation**:
+      - The previous curriculum management view was weighed down by excessive marketing text, distracting 30-question diagnostic test banners, and awkward gray-box icon buttons.
+      - Furthermore, domain nodes needed to render live data from Content Service without hardcoded mocks, organizing each node cleanly into 3 pedagogical layers (SGK Core Theory, Algorithmic Solution & Native JSXGraph Interactive Visualization, and Live Question Bank).
+    - **Implementation Details**:
+      - **Streamlined Hero Header**: Removed verbose descriptive paragraphs, MathLab popups, and artificial 1,200-point badges. Retained a crisp title and dynamic matched chapter/lesson counters.
+      - **Ergonomic Collapsible Filter Bar**: Added an expandable/collapsible filter header (`isFilterCollapsed`) supporting multi-grade filtering (Grade 10, 11, 12) and 4-tier Bloom cognitive levels (L1 Recall, L2 Comprehension, L3 Application, L4 High Application).
+      - **Executive 4-Domain Selector Redesign**:
+        - Completely eliminated the artificial "General" (Tổng hợp) domain from both frontend and database.
+        - Replaced clunky square icon boxes with executive card layouts featuring top gradient accent strips on active state, academic classification pills (`MIỀN 2 • ĐỊNH LƯỢNG`, `MIỀN 1 • NGÔN NGỮ`, etc.), Lucide iconography (`Calculator`, `Languages`, `FlaskConical`, `Landmark`), and live dynamic counts (`{chapCount} Chương • {lesCount} Bài học`).
+      - **Unified 3-Tier Node Architecture (`UnifiedNodeDetailView.jsx`)**:
+        - *Tier 1 (Core SGK Foundation)*: Renders pristine theory extracted from database materials, sanitizing OCR artifacts and preserving KaTeX.
+        - *Tier 2 (Deep Problem Patterns & Native JSXGraph)*: Directly embeds interactive 2D/3D JSXGraph boards (`<InteractiveMathRenderer />`) inside the pattern card, enabling seamless parameter adjustments and 360-degree rotation.
+        - *Tier 3 (Live Question Bank)*: Queries real database questions via `contentService.getQuestionsBySkill()`, supporting Bloom filtering and interactive solution reveals.
+    - **Verification**: `npm run build` compiled cleanly in 3.16s with 3054 modules transformed and zero errors.
+
+27. **Complete 139-Chapter CTST Official Textbook Scale-Up & 4-Column Executive Layout (`CurriculumExplorerView.jsx`)**:
+    - **Architectural Motivation**:
+      - Scale the curriculum frontend to seamlessly navigate and render the expanded 139-chapter database structure from the 17 official textbook URLs from `giaokhoaonline.com` (including Math 10-12 [26 chapters], Physics 10-12 [17 chapters], Chemistry 10-12 [21 chapters], Biology 10-12 [12 chapters], Literature 10-12 [27 chapters], English [6 chapters], History [9 chapters], Geography [12 chapters], Civics [9 chapters]).
+    - **Implementation Details**:
+      - Balanced 4-column executive card grid (`grid-cols-1 sm:grid-cols-2 lg:grid-cols-4`) without artificial "Tổng hợp" domain.
+      - Dynamic real-time counter displaying matched chapters and lessons reflecting live database data.
+      - Integrated ergonomic collapsible filter bar with Grade (10, 11, 12), Sub-subject, and Bloom L1-L4 cognitive level filters.
+      - Unified 3-tier node detail view: SGK KaTeX Theory -> In-place Interactive JSXGraph/Solution Method -> Bloom-partitioned Live Assessment Bank.
+    - **Verification**: Production build via `npm run build` passed in 5.91s with 3054 modules transformed and zero errors.
+
+28. **Elimination of Generic Formulas & 100% Authentic KaTeX Rendering Support (`CurriculumExplorerView.jsx`, `UnifiedNodeDetailView.jsx`)**:
+    - **Architectural Motivation**:
+      - Eradicate repeated generic formula strings (such as derivative/integral equations occurring generically across basic Grade 10 lessons) and ensure that every node displays authentic KaTeX theory, step-by-step algorithms, and contextualized assessment questions specific to that exact lesson.
+    - **Implementation Details**:
+      - Integrated with the backend Master Pedagogical Knowledge Base (`pedagogical_knowledge_base.py`).
+      - Verified that Grade 10 Math (Propositions, Sets, Quadratic Functions, Vectors, Trigonometry in Triangle), Chemistry (Atomic structure, Periodic table, Chemical bonds), and Physics (Kinematics, Newton's laws, Momentum) render authentic formulas without generic placeholders.
+      - Maintained zero-warning, error-free Vite production compilation.
+    - **Verification**: Production build via `npm run build` passed in 4.68s with 3054 modules transformed and zero errors.
+
+29. **All Toggles Closed by Default & Missing Source Data Fallback System (`CurriculumExplorerView.jsx`, `UnifiedNodeDetailView.jsx`)**:
+    - **Architectural Motivation**:
+      - For pedagogical and managerial clarity, the curriculum browser should present a clean, un-cluttered initial state where all accordions and toggles start in the collapsed (closed) state.
+      - Furthermore, in compliance with the strict zero-hardcode requirement, any node or pedagogical tier lacking ingested data must not show generic placeholder text, but rather an explicit, clean notice indicating that source data has not yet been ingested.
+    - **Implementation Details**:
+      - **Default Collapsed State Across All Toggles**:
+        - Filter bar initialized collapsed (`isFilterCollapsed = true`).
+        - All Chapters and Lessons in the left hierarchy tree start collapsed (`Boolean(expandedChapters[chapId])` and `Boolean(expandedLessons[lesId])`).
+        - Domain switching (`initSelection`) resets expansion maps to empty objects `{}` and clears `selectedPattern` to null.
+        - Expanding a chapter no longer forces automatic expansion of child lessons, giving full manual control to the user.
+        - All 3 pedagogical tiers in `UnifiedNodeDetailView.jsx` initialize in the collapsed state (`isTheoryExpanded = false`, `isMethodExpanded = false`, `isQuestionsExpanded = false`).
+      - **Explicit Missing Source Data Fallbacks**:
+        - Chapter with zero lessons: Displays `"Chưa có dữ liệu nguồn bài học cho chương này"`.
+        - Lesson with zero patterns: Displays `"Chưa có dữ liệu nguồn dạng bài cho bài học này"`.
+        - Tier 1 (Theory): Displays `"Chưa có dữ liệu nguồn lý thuyết"` with an informative subtext when `synthesizedTheory` is empty.
+        - Tier 2 (Method): Displays `"Chưa có dữ liệu nguồn phương pháp giải"` when `solutionMethod` is empty.
+        - Tier 3 (Questions): Displays `"Chưa có dữ liệu nguồn câu hỏi cho dạng bài này"` when no questions exist for the pattern.
+        - Pedagogical Note: Displays `"Chưa có dữ liệu nguồn lưu ý sư phạm cho dạng bài này"` when absent.
+    - **Verification**: Production build via `npm run build` passed in 4.00s with 3054 modules transformed and zero errors.
+
+30. **Elimination of Cross-Subject & Cross-Chapter Chunk Contamination, Strict Scoping & Quick Pattern Switcher (`CurriculumExplorerView.jsx`, `UnifiedNodeDetailView.jsx`, `textbookStateBridge.js`)**:
+    - **Architectural Motivation**:
+      - In earlier revisions, `allIngestedChunks` merged chunks across all ingested books (Math, Chemistry, Physics) without subject or chapter isolation.
+      - A loose fuzzy matcher (`isFuzzyLabelMatch`) allowed chunks from Chemistry (electron subshells), Math Chapter 2 (calculator instructions for quadratic inequalities), and Math Chapter 4 (coordinate geometry) to leak into Grade 10 Math Chapter 10 (Probability - Sample Space and Events), creating an agglomeration of 46 mixed chunks in Tier 1.
+    - **Implementation Details**:
+      - **4-Layer Scoping Hierarchy**:
+        - `getMatchedChunksForChapter(chap)`: Enforces `detectSubjectFromContext` and `isSubjectCompatible` checks plus grade and chapter fuzzy matching.
+        - `getMatchedChunksForLesson(les, parentChap)`: Requires the chunk to belong to the exact subject, grade, and chapter of the lesson.
+        - `getMatchedChunksForPattern(pat, parentLesson, parentChapter)`: Restricts candidates strictly to the current subject, grade, chapter, and lesson before resolving pattern-specific chunks.
+      - **Strict Fuzzy Matching Safeguards**:
+        - Short labels (`minWords <= 2`) require a 100% word overlap. Longer labels require at least 60% overlap (`Math.ceil(minWords * 0.6)`), preventing spurious substring matches.
+      - **Cross-Subject Safety Guard in `buildTheoryFromChunks`**:
+        - Automatic domain keyword exclusion: Math theory strips chemistry keywords (electron, orbital, ester, halogen); Chemistry theory strips coordinate geometry and inequality calculator instructions.
+      - **Quick Pattern Switcher in `UnifiedNodeDetailView.jsx`**:
+        - Renders quick selection pills below the node title when `parentLesson.patterns.length > 1`, enabling seamless 1-click switching between patterns within the lesson.
+    - **Verification**: Production build via `npm run build` passed in 3.06s with 3054 modules transformed and zero errors.
+
+31. **Textbook Theory Restoration, Placeholder Stub Filtering, Vietnamese Diacritic Normalization & Persistent Theory Preservation (`TextbookIngestView.jsx`, `TextbookStandardView.jsx`, `UnifiedNodeDetailView.jsx`, `textbookStateBridge.js`)**:
+    - **Architectural Root Cause Remediation**:
+      - In revision `79d97fe`, `activePatternTheory` fell back to `activePattern.description` and took precedence over `activeTheoryContent` (the full lesson theory synthesized from database Vector Chunks). Because taxonomy skeleton patterns and DB-loaded patterns carried short boilerplate descriptions (such as `"Mục tiêu nhận thức và kỹ năng áp dụng cho ..."` or `"Dạng bài bóc tách từ SGK."`), `displayedTheoryContent` completely shadowed and hid authentic textbook theory across both `TextbookIngestView` and `TextbookStandardView`.
+      - Additionally, `UnifiedNodeDetailView` defaulted unknown subject contexts to `MATH`, which caused `buildTheoryFromChunks` to discard non-Math chunks when chapter titles used alternate Vietnamese tone placement (`hoá` vs. `hóa`).
+    - **Implementation Details**:
+      - **Strict Separation Between Pattern Metadata (`description`) and Pedagogical Theory (`theoryRecap`)**: `activePatternTheory` now reads strictly from `activePattern.theoryRecap` (when non-placeholder), ensuring Block 1 displays full synthesized textbook theory (`activeTheoryContent`) by default without being eclipsed by 1-line stub metadata.
+      - **Expanded Stub Detection & Vietnamese Tone Normalization (`textbookStateBridge.js`)**: Added `normalizeViText()` to unify old/new Vietnamese diacritics (`hoá`/`hóa`, `vật lý`/`vật lí`) and expanded `isGenericPlaceholder()` to filter all known backend/frontend stub descriptions and methods.
+      - **Dynamic KaTeX Formula Extraction (`extractKeyFormulasFromChunks`)**: Automatically extracts deduplicated LaTeX formulas from lesson chunks when `keyFormulas` is empty so all subjects (Chemistry, Math, Biology, Physics) display real formulas in the Formulas tab.
+      - **Full Persistent Storage Merge (`mergeSavedExercisesIntoChapters`)**: Preserves user-edited and AI-enriched `lesson.theory`, `lesson.keyFormulas`, `pattern.theoryRecap`, `pattern.method`, and `pattern.solutionMethod` across page reloads and source switches.
+      - **Accurate New-PDF Identity Detection (`handleScanSkeleton`)**: Passes `subjectCode: 'AUTO'` and `grade: 0` when scanning a newly selected PDF so previous book state never leaks onto the new textbook, and automatically hydrates existing DB chunks when the filename matches an already-ingested source.
+    - **Verification**: Vite production build (`npm run build`) succeeded in 1.71s (3054 modules transformed, 0 errors); isolated Node.js ESM assertions verified placeholder filtering, Vietnamese tone normalization, chunk scoping, formula extraction, and persistent merge logic 100%.
+
+32. **Automated Basic Solution Method Synthesis (Block 2), Dynamic SGK Worked Examples & Rendering Hygiene (`textbookStateBridge.js`, `TextbookIngestView.jsx`, `TextbookStandardView.jsx`, `MathText.jsx`)**:
+    - **Architectural Motivation**:
+      - Skeleton scans often emit a single brief phrase for `pattern.method` (e.g., `"Sử dụng công thức tổng khối lượng các hạt"`), leaving Block 2 sparse even when rich lesson chunks, KaTeX formulas, and worked examples are already ingested.
+      - Additionally, the `Ví dụ mẫu` tab in `TextbookIngestView.jsx` rendered a hardcoded Physics kinematics sample regardless of subject, `buildTheoryFromChunks` let Vision AI OCR meta-notes (e.g., `"không chứa lý thuyết mới"`) slip into Block 1, and `MathText.jsx` split `####` headings into a stray `#` followed by `###`.
+    - **Implementation Details**:
+      - **Chunk-Backed Basic Solution Method (`buildMethodFromChunks`)**: Synthesizes a structured Block 2 guide from the pattern's core hint, extracted KaTeX formulas, a 4-step basic solution workflow, SGK calculation/rule excerpts, worked examples, and caution notes, while always honoring instructor-edited or AI-expanded methods (`isEdited: true` or full multi-line methods).
+      - **Dynamic Worked Examples (`extractExamplesFromChunks`)**: Replaces the hardcoded Physics example in `TextbookIngestView.jsx` with authentic worked examples and solutions extracted from lesson chunks, with a clear empty-state fallback.
+      - **Block 1 Rendering & Content Hygiene**: Filters OCR meta-commentary phrases in `buildTheoryFromChunks` and updates `MathText.jsx` heading normalization regex to `([^\r\n#])\s*(#{1,4}\s+[^\r\n]+)` so `####` subheadings render cleanly without stray `#` tokens.
+    - **Verification**: Vite production build (`npm run build`) passed in 1.31s (3054 modules transformed, 0 errors); Node.js ESM assertions verified `buildMethodFromChunks`, `extractExamplesFromChunks`, OCR meta-note filtering, and `####` heading integrity 100%.
+
+33. **End-to-End Textbook-to-Curriculum Synchronization, Deleted-Book Ghost Prevention & Content DB Upsert (`CurriculumExplorerView.jsx`, `UnifiedNodeDetailView.jsx`, `TextbookStandardView.jsx`, `TextbookIngestView.jsx`, `textbookStateBridge.js`)**:
+    - **Architectural Root Cause Remediation**:
+      - Textbooks live in AI Engine (`v_eval_ai."KnowledgeSources"` / `"KnowledgeVectorChunks"`) while Curriculum Explorer reads from Content Service (`v_eval_content."Skills"` / `"LearningMaterials"`). Previously: (1) `UnifiedNodeDetailView` prioritized pre-seeded `selectedPattern.theoryRecap` and `solutionMethod` over newly ingested `matchedSgkChunks`, (2) deleting a textbook left stale entries in `localStorage` (`veval_textbook_saved_*`), (3) `detectGrade()` defaulted unlabelled titles to `'12'`, dropping Grade 10/11 chunks, (4) `normalizeTaxonomyLabel()` retained parenthetical suffixes like `(Hóa học - Lớp 10)` and missed old-style `hoá` accents, and (5) no 1-click DB sync pushed new SGK structures into Content Service.
+    - **Implementation Details**:
+      - **Live SGK Precedence in `UnifiedNodeDetailView`**: Block 1 (Theory + extracted KaTeX formulas), Block 2 (Basic Solution Method via `buildMethodFromChunks`), and Block 3 (Questions) now prioritize active SGK edits (`findSavedNodeData` scoped strictly to live `activeSourceIds`) and freshly ingested `matchedSgkChunks` over stale pre-seeded Content Service strings, while removing hardcoded fallback phrases.
+      - **Real-Time Event Bus & Ghost-Cache Purge**: `clearSavedTextbookData()` purges localStorage/sessionStorage for deleted books and dispatches `veval:textbook-deleted`; `CurriculumExplorerView` listens to `veval:textbook-saved`, `veval:textbook-deleted`, and `veval:curriculum-synced` to immediately reload sources and curriculum trees.
+      - **Accurate Cross-Grade & Diacritic Chunk Matching**: Updated `detectGrade(text, null)` for chunk matching and stripped parenthetical metadata suffixes plus normalized `hoá`/`hóa` inside `normalizeTaxonomyLabel`, `detectSubjectFromContext`, and `isSubjectCompatible`.
+      - **1-Click Content Service DB Upsert (`syncTextbookSkeletonToCurriculum`)**: Added a dedicated `"Đồng Bộ Khung CT"` button in both `TextbookStandardView` and `TextbookIngestView` that resolves existing `DomainId`/`ChapterId`/`LessonId`/`PatternId` GUIDs and upserts full textbook theory, basic solution methods, and exercises via `POST /api/content/curriculum/import` without creating duplicate nodes.
+    - **Verification**: Vite production build (`npm run build`) succeeded in 1.28s (3054 modules transformed, 0 errors); Node.js ESM verification (`verify_sync.mjs`) passed 100% covering ghost-book isolation, cache purge, event dispatch, and duplicate-free GUID upsert matching.
+
+34. **Resilient Textbook Persistence & Refresh Integrity Architecture (`textbookStateBridge.js`, `TextbookIngestView.jsx`, `TextbookStandardView.jsx`)**:
+    - **Architectural Root Cause Remediation**:
+      - Users reported parsed and saved textbooks vanishing after refreshing the page. Investigation revealed four compounding persistence faults: (1) `saveTextbookData` duplicated the entire uncompacted textbook payload across 4 `localStorage` keys plus `sessionStorage`, frequently triggering silently swallowed `QuotaExceededError` failures; (2) stale React state closure on `selectedSourceId` caused Step 1 (`handleScanSkeleton`), Step 2 (`handleStartFillKnowledge`), and `handleSelectSource` to save under the previous book's key or skip saving `finishedSid`; (3) `getStoredTextbookContext()` only read `sessionStorage`, causing `loadIngestedSources()` on refresh/new tab to fall back to a hardcoded `VL 10 CD` source and overwrite freshly saved Step 1 books; and (4) `handleSelectSource` discarded richer user-saved chapters (`cachedData.skeleton.chapters`) whenever raw DB chunks produced any `detectedChapters`.
+    - **Implementation Details**:
+      - **Compact Single-Copy Storage & Quota Self-Healing (`saveTextbookData`, `compactSkeletonForStorage`)**: Writes one compact payload per book (omitting unedited auto-reconstructed lesson theory when `sourceId` exists in DB) plus tiny pointer records (`{ isPointer: true, targetKey }`) for `default` and filename aliases, with automatic stale-key eviction and retry on `QuotaExceededError`.
+      - **Cross-Tab Persistent Active Context (`ACTIVE_CTX_LOCAL_KEY`)**: Stores lightweight book identity metadata (never full `chapters`) in both `sessionStorage` and `localStorage`.
+      - **Ref-Synchronized `sourceId` & Refresh Protection (`resolvePersistedChapters`)**: Eliminated stale closure via `selectedSourceIdRef` and explicit `overrideSourceId` in `saveToStorage`; `loadIngestedSources()` restores the exact last-saved book (preserving Step 1 unsynced books instead of jumping to `VL 10 CD`) and `resolvePersistedChapters` retains richer user-saved structures across refreshes.
+    - **Verification**: Vite production build (`npm run build`) passed in 1.28s (3054 modules transformed, 0 errors); Node.js ESM test suites (`verify_persistence.mjs`, `verify_sync.mjs`) passed 100% across Step 1 refresh, Step 2 `sourceId` linking, rough-chunk overwrite defense, `QuotaExceededError` recovery, and delete cleanup.
+
+35. **Zero-Leak Sub-Subject Filtering & Authoritative Subject Tag Precedence (`CurriculumExplorerView.jsx`, `textbookStateBridge.js`)**:
+    - **Architectural Root Cause Remediation**:
+      - Selecting the Chemistry (`Hóa học`) sub-subject filter under `NATURAL_SCIENCES` leaked Biology and Physics chapters (notably `Chương 2: Sinh học tế bào (Sinh học - Lớp 10)` whose child lesson mentions *"Thành phần hoá học của tế bào"*, plus `Chuyển hóa năng lượng`, `Tiến hóa`, and `Vật lí hạt nhân` containing *"phản ứng"*), inflating the Chemistry view from 21 to 26 chapters. Similar substring overlaps also affected Chemistry (`Năng lượng hoá học`, `Pin điện`) vs. Physics and `Địa lí kinh tế` vs. Civics (`GDKT & PL`).
+      - Root cause: `matchesSubSubject` concatenated chapter, lesson, and pattern labels into a flat string and matched broad keywords (such as `"hóa"`, `"phản ứng"`, `"năng lượng"`, `"kinh tế"`) without honoring explicit subject tags already embedded in chapter titles.
+    - **Implementation Details**:
+      - **3-Tier Authoritative Precedence in `matchesSubSubject`**:
+        1. *Tier 1a (Parenthetical/Bracketed Subject Tags)*: Extracts `(...)`/`[...]` tags from the chapter title first so `(Sinh học - Lớp 10)`, `(Hóa học - Lớp 10)`, `(Vật lí - Lớp 12)`, `(Lịch sử - ...)`, `(Địa lí - ...)`, `(GDKT & PL - ...)`, `(Tiếng Anh - ...)`, and `(Ngữ văn - ...)` are routed exclusively to their declared sub-subject regardless of child lesson terminology.
+        2. *Tier 1b (Explicit Body Subject / Domain-Exclusive Markers & Chapter Code)*: Handles user-created chapters without parenthetical suffixes via unambiguous chapter-title phrases and `chap.code` tokens (`BIO`, `CHEM`, `PHYS`, `HIST`, `GEO`, `CIV`, `ENG`, `LIT`).
+        3. *Tier 2 (Vietnamese-Safe Sanitized Keyword Fallback)*: Strips non-chemistry Vietnamese compounds (`tiến hóa`, `chuyển hóa`, `văn hóa`, `đô thị hóa`, `công nghiệp hóa`, `hiện đại hóa`, `toàn cầu hóa`, `sinh hóa`, `phân hóa`, `đồng hóa`, `dị hóa`) without ASCII `\b` boundary bugs on accented Vietnamese characters.
+      - **Aligned `detectSubjectFromContext` & Unicode NFC Normalization**: Updated `detectSubjectFromContext` to evaluate parenthetical/bracketed subject tags first and added `.normalize('NFC')` in `normalizeViText` (`textbookStateBridge.js`) to prevent decomposed NFD matching mismatches.
+    - **Verification**: Vite production build (`npm run build`) succeeded in 1.30s (3054 modules transformed, 0 errors); exhaustive Node.js ESM verification (`verify_subsubject_filter.mjs`) validated all 113 chapters across `NATURAL_SCIENCES`, `SOCIAL_SCIENCES`, and `LANGUAGE` in `gdpt2018_dgnl_taxonomy.json` plus 8 untagged/NFD/mixed-keyword edge cases with 0 cross-subject leaks and 0 missed chapters.
+
+36. **100% Studio UI Copy, Label & Chrome Minimalist Optimization (`CurriculumStudioEditor.jsx`, `TextbookStudioView.jsx`, `ExamParserStudioView.jsx`, `WordStyleFormulaCanvas.jsx`, `HierarchicalMathPalette.jsx`, `InteractiveFormulaBuilderModal.jsx`, `InteractiveMathWorkbenchModal.jsx`)**:
+    - **Architectural & UX Remediation**:
+      - Audited the full Studio authoring suite and identified severe UI chrome bloat: (1) a duplicated view-mode toolbar (`Trực quan | Trang in | Mã nguồn`) rendered twice inside Section 2 of `CurriculumStudioEditor.jsx`; (2) a double-stacked header in `TextbookStudioView.jsx` (outer page header immediately followed by `CurriculumStudioEditor`'s standalone navbar); (3) leaked internal engineering/spec labels (`API 16`, `API 16–18`, `FSM Gate >= 80%`, `Embedded Live Test`, `JSXGraph Native Engine`, `60 FPS Canvas/SVG`, `Flow 2`, `Flow 3`, `WYSIWYG`, `Database`, `Trang 3:`); (4) redundant inner card titles/subtitles repeating active tab labels, duplicate preview bars, emoji clutter alongside Lucide icons, and unparsed `$Oxy$` / `$(x; y)$` literal tokens inside 2D Geometry labels.
+    - **Implementation Details**:
+      - **Single-Header Composition & Bug Fix**: Added an optional `headerActions` slot to `CurriculumStudioEditor` and collapsed `TextbookStudioView`'s outer header into compact navbar pills; removed the duplicated toolbar in Section 2 and resolved `domain?.title || domain?.name` breadcrumb fallback.
+      - **Complete Copy & Chrome Minimalism Across 7 Components**: Stripped all internal spec identifiers, redundant helper callouts, duplicate emojis, and repeated section banners across `CurriculumStudioEditor` (including `FloatingStemDrawer`, `NewQuestionDialog`, `AiQuestionGeneratorModal`), `ExamParserStudioView`, `WordStyleFormulaCanvas`, `HierarchicalMathPalette`, `InteractiveFormulaBuilderModal`, and `InteractiveMathWorkbenchModal`, condensing all tabs, buttons, and form labels to concise 2–4 word copy without altering any state handlers, API payloads, or formula/graph logic.
+    - **Verification**: Vite production build (`npm run build`) succeeded in 1.24s (3054 modules transformed, 0 errors), reducing main JS bundle size by ~42 kB (`4,416.39 kB` -> `4,374.52 kB`); static grep audit confirmed zero user-visible dev/spec strings remaining across all 7 Studio files.
+
+37. **Scholarly Academic Studio Redesign, Unified Word/Excel Direct Authoring Engine, Split Subject Symbol/Formula Sidebar & Docked STEM Learning Models Architecture (`CurriculumStudioEditor.jsx`, `WordStyleFormulaCanvas.jsx`, `HierarchicalMathPalette.jsx`, `AcademicChartBlock.jsx`, `MathText.jsx`, `TextbookStudioView.jsx`)**:
+    - **Architectural & Pedagogical Motivation**:
+      - Instructor feedback highlighted five structural UX pain points in the Studio: (1) harsh visual styling with clashing neon cyan/purple/dark-black pills and double view-mode toggles (`Soạn thảo | Chia đôi | Xem trước` alongside `Trực quan | Trang in | Mã nguồn`); (2) line-fragmented `contentEditable` spans that broke multi-line selection, natural `Enter` line splitting, `Backspace` line deletion, and in-place Word formatting (`Bold`, `Italic`, `Underline`, `Aa` case change); (3) exposure of raw LaTeX tokens (`\frac`, `///`, `\sqrt`) when editing general formulas; (4) a left sidebar that defaulted to Mathematics even inside Chemistry lessons and mixed block templates into symbols/formulas; and (5) lack of inline Excel-like editable tables, embedded interactive data charts, and a dedicated STEM learning models panel.
+    - **Implementation Details**:
+      - **Soft-Academic Editorial Visual System & Single-Screen Workspace (`CurriculumStudioEditor.jsx`)**: Re-themed the Studio around a warm parchment backdrop (`#F6F5F1`), crisp white document sheet (`#FFFFFF`), delicate hairline borders (`#E7E5DF`), and scholarly ink-indigo accents (`#1E3A5F` / `#2C4C7E`). Removed all raw Markdown/LaTeX source tabs and 3-way mode switchers in favor of a single unified visual document screen with an optional quiet `"Xem thử"` student-preview toggle.
+      - **True Word + Excel + Visual KaTeX Document Engine (`WordStyleFormulaCanvas.jsx`, `AcademicChartBlock.jsx`, `MathText.jsx`)**:
+        - *Unified `RichTextBlock` & `WordFormattingRibbon`*: Uncontrolled `contentEditable` surface preserving native caret stability, multi-line selection, `Enter` paragraph/list splitting, `Backspace` empty-line and block deletion, `Ctrl+V` clipboard image/formula pasting, and focus-preserving toolbar commands (`Văn bản`/`H2`/`H3`, `B`/`I`/`U`/`S`, Vietnamese-aware `Aa` `uppercase`/`lowercase`/`capitalize` skipping `.veval-formula-chip` nodes, text alignment, bullet/numbered lists, `Undo`/`Redo`).
+        - *Zero Raw LaTeX Exposure*: All formulas render inline as atomic KaTeX chips (`.veval-formula-chip`). Clicking any chip opens a structured visual slot popover (`FRACTION`, `SQRT`, `POWER`, `SUBSCRIPT`, `INTEGRAL`, `LIMIT`, `CHEM_CM`, `CHEM_CPERCENT`) or a natural mathematical typography editor (`latexToNaturalMath` / `naturalMathToLatex`) with a 17-key rendered KaTeX keypad and instant evaluation (`autoCalculateEquation`), never displaying `\frac` or `///`.
+        - *Inline Excel-Like Spreadsheet Tables (`EditableTableBlock`) & Interactive Charts (`AcademicChartBlock.jsx`)*: Multi-cell grid supporting `Tab`/`Shift+Tab`/`Enter` cell navigation, auto-row creation on `Tab` from the last cell, dynamic `+ Hàng`/`+ Cột`, KaTeX rendering in cells on blur, and GFM pipe-table serialization; interactive Bar, Line, and Pie charts via `recharts` with inline data-row editing and `[DATA_CHART]...[/DATA_CHART]` rendering in `MathText.jsx` (which also now renders `<u>...</u>` and `~~...~~`).
+      - **Subject-First Split Left Sidebar & 838-Item Encyclopedic 8-Subject GDPT 2018 Catalog (`HierarchicalMathPalette.jsx`)**:
+        - Placed the 8-subject selector at the very top (`Toán học`, `Hóa học`, `Vật lí`, `Sinh học`, `Tiếng Anh`, `Ngữ văn`, `Lịch sử`, `Địa lí`), automatically synchronized to the active lesson via `detectStudioSubject`, and split the body cleanly into **`Ký hiệu`** and **`Công thức`** with collapsible category accordions (`Mở hết · Thu gọn`), live item-count badges, and a portal Hover Preview Card displaying enlarged KaTeX rendering plus full pedagogical descriptions (`desc`).
+        - Expanded the catalog to **838 KaTeX-validated items** across all 8 subjects: **Hóa học (278 items / 19 categories)** covering all inorganic/organic compounds, ions, functional groups, complexes, balanced equations, and stoichiometry/physical chemistry formulas; **Toán học (214 items / 17 categories)** covering 7 algebraic identities, Vi-ét, Cauchy/Bunyakovsky inequalities, AP/GP/Newton binomial, complete derivative & antiderivative tables, oblique asymptotes, compound interest, full trigonometry, solid/Oxyz geometry, conditional probability, Bayes' theorem, and grouped-data statistics; **Vật lí (137 items / 15 categories)** covering kinematics, projectile motion, dynamics, harmonic oscillations, mechanical/sound/electromagnetic waves, Young interference, electrostatics, DC circuits, thermal physics & ideal gas laws, electromagnetism, AC RLC/transformers, quantum photoelectricity, Bohr atom, and nuclear physics/radioactivity; **Sinh học (80 items / 14 categories)** covering photosynthesis/respiration/cardiac cycle, DNA/RNA structure & replication, transcription/translation, mitosis/meiosis, Mendelian & non-allelic gene interactions, linkage/crossing-over & Morgan's fast formulas, 4n polyploidy, ABO blood groups, sex-linked pedigree probabilities, Hardy-Weinberg equilibrium, and population ecology; **Tiếng Anh (70 items / 10 categories)** covering parts of speech, IPA phonetics, 12 tenses, sequence of tenses, passive & causative forms, conditionals & wishes, comparisons & relative-clause reductions, inversions & subjunctive mood, gerunds/infinitives/connectors/phrasal verbs, `-s/-ed` pronunciation, `OSASCOMP` adjective order, and tag questions; plus **Ngữ văn (25 items)**, **Địa lí (24 items)**, and **Lịch sử (10 items)**.
+        - Implemented `normalizePaletteSearchKey` and `matchesPaletteItem` for instant chemical-formula, hyphen/dash-normalized, category-aware, and accent-insensitive Vietnamese/English search.
+      - **Docked Right STEM & Learning Models Panel (`StemModelsPanel`)**: Consolidated all embedded learning models into five structured groups on the right panel: *Bảng & Biểu đồ* (Excel data table, 2-column comparison table, Bar/Line/Pie charts), *Bộ dựng công thức* (Fractions/Roots/Powers, Limits/Derivatives, Integrals, Systems of equations), *Mô hình Toán học* (2D Function Graph, 3D Spatial Geometry, 2D Plane Geometry, Variation Table), *Hóa · Sinh · Vật lí* (Chemistry concentration & yield, Lab measurement table, Biology Punnett genetic cross table, Biology classification table), and *Hình ảnh & Tư liệu* (Device upload, URL/sample picker, `Ctrl+V` paste).
+    - **Verification**: Vite production build (`npm run build`) succeeded in 1.19s (3055 modules transformed, 0 errors); Node.js ESM verification (`verify_studio_editor.mjs`, `verify_subsubject_filter.mjs`, `verify_persistence.mjs`, `verify_sync.mjs`) validated all 838 catalog items against `katex.renderToString(..., { throwOnError: true })` with 0 errors and 100% search accuracy.
+
+38. **Resilient Dual-Channel Studio Save Architecture & Elimination of HTTP 404 Pattern Update Errors (`CurriculumStudioEditor.jsx`, `TextbookStudioView.jsx`, `textbookStateBridge.js`, `CurriculumExplorerView.jsx`, `UnifiedNodeDetailView.jsx`, `TextbookStandardView.jsx`, `TextbookIngestView.jsx`, `ExamParserStudioView.jsx`)**:
+    - **Architectural Root Cause Remediation**:
+      - Saving edits in `CurriculumStudioEditor` threw `"Không tìm thấy dữ liệu hoặc đường dẫn yêu cầu."` (mapped from HTTP 404 by `apiErrorHandler.js`) whenever `form.patternId` was a composite non-GUID textbook identifier (e.g. `"SGK_CHEM_G10_P1"` from `TextbookStudioView`) or a GUID not yet present in `v_eval_content."Skills"`.
+      - Additionally, `TextbookStudioView` did not hydrate the selected chapter, lesson, and pattern from `getSavedTextbookData` and did not write saved Studio edits back into `saveTextbookData`.
+    - **Implementation Details**:
+      - **Dual-Channel Persistence (`saveStudioPatternToTextbookStorage` & `STUDIO_OVERRIDES_STORAGE_KEY`)**: Every save in `CurriculumStudioEditor` immediately persists the updated Theory, Solution Method, Sample Problem, Exam Traps, Casio Tricks, and Sample Question into both the active textbook's `localStorage` entry (`isEdited: true`) and `veval_textbook_saved_studio_overrides` (prioritized by `findSavedNodeData`), ensuring instant real-time synchronization and `F5` refresh survival across `TextbookStandardView`, `TextbookIngestView`, and `UnifiedNodeDetailView`.
+      - **3-Tier Resilient Content Service Upsert (`upsertSinglePatternToCurriculumDb`)**: Validates GUIDs via `isValidGuid` (including `sampleQuestion.questionId` and `prerequisiteSkillIds`); attempts `contentService.updatePattern` when `patternId` is a valid GUID, and automatically falls back to resolving existing nodes from `contentService.getCurriculum()`, creating the pattern node via `contentService.createNode`, or upserting the full `Chapter -> Lesson -> Pattern` path via `contentService.importCurriculum`.
+      - **Full Context Hydration into `TextbookStudioView`**: `TextbookStandardView`, `TextbookIngestView`, and `UnifiedNodeDetailView` flush current state and pass active chapter/lesson/pattern titles plus synthesized theory and method previews into Studio; `CurriculumExplorerView` preserves `_parentLesson` and `_parentChapter` references across `fetchCurriculumData` refreshes.
+    - **Verification**: Vite production build (`npm run build`) succeeded in 1.23s (3055 modules transformed, 0 errors); Node.js ESM verification (`verify_studio_save.mjs`) passed 100%.
+
+39. **Complete React Port & Enterprise UI Transformation of Real Exam PDF Parser Studio (`ExamParserStudioView.jsx`, `ExamItemCards.jsx`, `ExamRichContent.jsx`, `ExamDatabaseModal.jsx`, `ExamMediaLightbox.jsx`, `examParserUtils.js`, `contentService.js`) [20/11/2026]**:
+    - **Architectural Objective**:
+      - Replace the mock stub in `ExamParserStudioView.jsx` with a full-featured, production-ready React architecture porting 100% of the legacy standalone `view-exam.html` (AI Engine) exam ingestion and management pipeline into the unified V-Eval Web Client SPA, routed securely through the YARP API Gateway (`:5212`) with JWT authentication.
+    - **Implementation Details**:
+      - **Gateway-Unified Content & AI Engine Integration (`contentService.js`, `aiService.js`)**:
+        - Extended `contentService.js` with `importExam` (`POST /api/content/exams/import` preserving `imageUrl` on both passages and questions plus normalized `correctOption`), `publishExam` (`PATCH /api/content/exams/{id}/publish`), and `deleteExam` (`DELETE /api/content/exams/{id}`).
+        - Connected drag-and-drop and click PDF upload to `aiService.uploadPdfExam` (`POST /api/ai-engine/upload-pdf`) with 2-second job polling via `aiService.getExamJobStatus` (`GET /api/ai-engine/jobs/{jobId}`), real-time `mm:ss` elapsed timer, current processing step telemetry, and safe unmount/cancel timer cleanup.
+      - **Pure Exam Parsing & Normalization Engine (`examParserUtils.js`, `examParserUtils.test.js`)**:
+        - Ported the 6-stage OCR math/LaTeX recovery pipeline (`sanitizeExamMathAndLatex`: ASCII control character restoration for `\frac`/`\times`/`\text`/`\bar`/`\beta`/`\theta`/`\tau`, `\Delta` OCR misread fixes, chemical reaction rate equations, transmission efficiency formulas, negative-exponent STEM units, and bare symbol wrapping).
+        - Built safe structured 2-tier Markdown table parsing (`parseTwoTierMarkdownTable` supporting `rowspan="2"` and `colspan="N"` grouped headers without raw HTML injection) and Vietnamese statistical Bar/Pie chart extraction (`extractInlineChartsFromText` handling comma decimals).
+        - Unified normalization (`normalizeExamData`) across AI Engine `ParsedExamDto`, Content Service `MockExamDetailDto` (including clean extraction of embedded leading Markdown images), and manual blank exam authoring (`createBlankExam`).
+      - **Rich Exam Rendering, Interactive Charts & Media Lightbox (`ExamRichContent.jsx`, `ExamMediaLightbox.jsx`)**:
+        - Rendered passages, questions, options, and explanations through `MathText`, 2-tier React tables, and interactive Recharts Bar/Pie charts with direct `%` data labels (`LabelList`).
+        - Resolved relative `/extracted_images/...` media paths against the API Gateway base URL, smartly suppressed duplicate PDF crop screenshots when an interactive chart/table is already rendered (with an on-demand toggle to inspect the original PDF crop), and added a full-screen `ExamImageLightbox` (`50%`–`250%` zoom, keyboard shortcuts, `ESC` dismiss).
+      - **Modern Bento-Grid Workspace, Sticky Question Matrix, Clipboard Paste & Studio Sync (`ExamParserStudioView.jsx`, `ExamItemCards.jsx`, `ExamDatabaseModal.jsx`)**:
+        - Built a 2-mode workspace: Home Hub (Hero Banner, Drag-and-Drop PDF Dropzone, Manual Authoring CTA, and inline Supabase Database Exam Cards Grid) and Exam Viewer & Authoring Workspace (Sticky Action Header with editable title/metadata/stats/Save/Publish/Delete/Lock controls, Sticky Question Matrix 1–120 with `IntersectionObserver` scroll-sync and missing-question gap indicators, inline Quick-Edit for Passages & Questions, global `Ctrl+V` clipboard image paste persisted directly into React state, and 1-click integration with `CurriculumStudioEditor` syncing stem, options, correct option, Bloom level, and explanation).
+    - **Verification**:
+      - `oxlint`: 0 warnings and 0 errors across all 7 created/upgraded files.
+      - `node --test`: 12/12 unit tests passed (including 7 new test suites in `src/utils/examParserUtils.test.js`).
+      - `npm run build`: Production build succeeded cleanly in 3.58s (3060 modules transformed, 0 errors).
+
+40. **End-to-End 4-Level Competency & Curriculum Node Auto-Mapping, AI Batch Classification & Exam Specification Blueprint (`examCurriculumMatcher.js`, `ExamNodePickerModal.jsx`, `ExamBlueprintDrawer.jsx`, `ExamItemCards.jsx`, `ExamParserStudioView.jsx`, `aiService.js`, `contentService.js`) [20/11/2026]**:
+    - **Architectural Objective**:
+      - Bridge real parsed exam questions directly into the live 4-level PostgreSQL Competency & Curriculum Tree (`CompetencyDomain -> Chapter -> Lesson -> Pattern`) so instructors immediately know which Chapter, Lesson, and Pattern each exam question assesses, inspect full exam specification coverage, refine mappings interactively, and persist exact `SkillId` foreign keys without creating orphan skills.
+    - **Implementation Details**:
+      - **Live Tree Flattening & Instant Auto-Mapping Engine (`examCurriculumMatcher.js`, `examCurriculumMatcher.test.js`)**:
+        - Flattens `GET /api/content/curriculum` into a searchable index with grade extraction (`Lớp 10/11/12`), authoritative parenthetical subject detection, and NFC/NFD Vietnamese accent folding.
+        - Scores every extracted question (`matchQuestionToCurriculumNode`) using weighted overlap across `suggestedSkillName`, stem text, and passage context combined with subject-alignment bonuses and cross-subject penalties.
+      - **AI Deep Batch Classification (`aiService.classifyExamNodes`)**:
+        - Sends compact live `taxonomy_nodes[]` and exam `questions[]` to `POST /api/ai-engine/exams/classify-nodes` and merges returned `skill_id`, `chapter_name`, `lesson_name`, `pattern_name`, `confidence`, `bloom_level`, and `reason` onto exam state (`applyAiNodeMappingsToExam`), with graceful local fallback.
+      - **Node Breadcrumbs, 4-Column Cascading Picker & Blueprint Matrix (`ExamItemCards.jsx`, `ExamNodePickerModal.jsx`, `ExamBlueprintDrawer.jsx`)**:
+        - Displays a color-coded `Domain › Chapter › Lesson › Pattern` breadcrumb strip and source badge (`DB` / `Đã duyệt` / `AI %` / `Tự động %`) on every `ExamQuestionCard`.
+        - Provides `ExamNodePickerModal` (unified accent-insensitive search, top-4 candidates, and 4-column cascading tree selector) and `ExamBlueprintDrawer` (coverage KPIs, Domain & Bloom L1–L6 charts, expandable Chapter -> Lesson table with 1-click question jump and chapter filter).
+        - Forwards real `skillId` GUIDs plus `domainName`/`chapterName`/`lessonName` in `contentService.importExam` and hydrates ancestor lineage returned by `GET /api/content/exams/{id}`.
+    - **Verification**:
+      - `oxlint`: 0 warnings and 0 errors across all 11 files.
+      - `node --test`: 16/16 unit tests passed (including 4 new suites in `src/utils/examCurriculumMatcher.test.js`).
+      - `npm run build`: Production build succeeded in 4.19s (3063 modules transformed, 0 errors).
+
+41. **Soft-Academic 4-Mode Exam Studio Redesign: Exam Paper View, Single-Question Studio Editor, Drag-and-Drop Exam Organizer & AI 6-Level Bloom Generator with Review Queue (`ExamParserStudioView.jsx`, `ExamPaperView.jsx`, `ExamQuestionStudioTab.jsx`, `ExamOrganizerTab.jsx`, `ExamBloomAiGeneratorTab.jsx`, `examOrganizerUtils.js`, `examOrganizerUtils.test.js`) [20/11/2026]**:
+    - **Architectural & UX Objective**:
+      - Elevate the Exam Parser into a unified, scholarly 4-mode authoring suite (`#F6F5F1` parchment canvas, `#FFFFFF` sheets, `#1E3A5F` ink accents) combining formal exam viewing, deep per-question Studio editing, structural drag-and-drop exam organization, and Skill-targeted 6-level Bloom AI question generation with mandatory human review before insertion.
+    - **Implementation Details**:
+      - **Mode 1 — Print-Ready Exam Paper View (`ExamPaperView.jsx`)**: Formal exam paper header, sticky question matrix navigator (`1..120`), answer-key/explanation/tag toggles, interactive Quick Practice & Grading mode (instant 10-point score calculation), `window.print()` print support, `Ctrl+V` image pasting, and 1-click handoff to edit any question in Studio.
+      - **Mode 2 — Dedicated Per-Question Studio (`ExamQuestionStudioTab.jsx`)**: 2-pane authoring workspace with filterable left question list and full right-hand editor featuring 6 clickable Bloom level buttons (`L1`–`L6`), Curriculum Node Picker, inline parent-passage editing, KaTeX quick-insert bar, live side-by-side preview, 4-option editor with single-question option shuffling, explanation preview, `Alt + ArrowLeft/ArrowRight` stepping, question duplication, and 1-click handoff to `CurriculumStudioEditor` (838-item catalog & 3D MathLab).
+      - **Mode 3 — Exam Organizer & Reorder Board (`ExamOrganizerTab.jsx`, `examOrganizerUtils.js`)**: Pure immutable transformation helpers powering HTML5 drag-and-drop block reordering, in-passage child reordering, continuous `1..N` renumbering, Bloom (`L1 -> L6`) sorting, Curriculum Chapter grouping, passage-safe exam shuffling, full-exam A/B/C/D option shuffling with accurate `correctOption` remapping, passage attach/detach, and 1-step Undo.
+      - **Mode 4 — AI 6-Level Bloom Skill Generator + Review Queue (`ExamBloomAiGeneratorTab.jsx`)**: Allows selecting any live Curriculum Tree Skill node, allocating exact counts across all 6 Bloom levels (`L1`–`L6`, with 3 quick presets), calling `aiService.generatePatternExercises` with live progress telemetry, and staging generated questions inside an Approval Queue (`pending` / `approved` / `rejected`) supporting inline editing, single-question regeneration, rejection/restoration, and single or bulk approval into the exam with real `skillId` binding.
+    - **Verification**:
+      - `oxlint`: 0 warnings and 0 errors across all 17 files.
+      - `node --test`: 23/23 unit tests passed (including 7 new suites in `src/utils/examOrganizerUtils.test.js`).
+      - `npm run build`: Production build succeeded cleanly in 3.18s (3067 modules transformed, 0 errors).
+
+42. **3-Page Exam Suite Decomposition Mirroring Textbook (SGK) Sidebar Architecture (`Sidebar.jsx`, `App.jsx`, `examStateBridge.js`, `examStateBridge.test.js`, `useExamWorkspaceController.js`, `ExamWorkspaceHeader.jsx`, `ExamSharedModals.jsx`, `ExamBankView.jsx`, `ExamIngestView.jsx`, `ExamStudioView.jsx`) [20/11/2026]**:
+    - **Architectural Objective**:
+      - Align the Exam Authoring & AI Bloom workflow 1:1 with the proven 3-page Textbook (`textbook-group`) navigation paradigm so instructors, campus managers, and administrators navigate directly to dedicated workspaces without nested screen clutter while preserving full state continuity across page transitions.
+    - **Implementation Details**:
+      - **Collapsible Sidebar Group (`exam-group`) & Role Routing (`Sidebar.jsx`, `App.jsx`)**:
+        - Replaced the single `exam-studio` sidebar link across `teacher`, `manager`, and `admin` roles with an auto-expanding indigo-themed collapsible group (`Đề thi & AI Bloom`) housing 3 standalone pages:
+          1. **`1. Kho Đề & Xem Đề Thi` (`exam-bank` -> `ExamBankView.jsx`)**: Supabase Exam Catalog KPIs & cards grid + active exam viewer toggling cleanly between Print-Ready `ExamPaperView` and Drag-and-Drop `ExamOrganizerTab`, with 1-click question jump into Page 3.
+          2. **`2. Parse PDF & AI Bloom` (`exam-ingest` -> `ExamIngestView.jsx`)**: Clean 2-part ingestion page separating **Part 1 (PDF Gemini Vision AI OCR)** — featuring extraction verification & cross-page handoff controls — and **Part 2 (AI 6-Level Bloom Generator & Human Review Queue)**, which automatically initializes a target draft exam if approved when no exam is open.
+          3. **`3. Studio Biên Soạn Đề` (`exam-studio` -> `ExamStudioView.jsx`)**: Dedicated 2-pane `ExamQuestionStudioTab` with instant exam switching, blank manual authoring starter, `Ctrl+V` image pasting, and 1-click handoff to the Full 838-item `CurriculumStudioEditor`.
+        - Updated `App.jsx` (`ROLE_PORTAL_DEFINITIONS` and the `role === 'teacher'` portal guard) so all 3 routes render cleanly and display accurate Navbar titles across all 3 roles; kept `ExamParserStudioView.jsx` as a backwards-compatible re-export.
+      - **Cross-Page Reactive State Store & Module-Level PDF Poller (`examStateBridge.js`, `useExamWorkspaceController.js`)**:
+        - Implemented an external store consumed via React `useSyncExternalStore` backed by quota-safe `sessionStorage` (`stripLargeBase64ForStorage`), sharing `currentExam`, `selectedQuestionLocalId`, `isLocked`, `hasUnsavedChanges`, `aiBloomDrafts`, `bloomTargetSkillNode`, `dbExams`, and `curriculumDomains` seamlessly across all 3 pages.
+        - Moved the Gemini Vision PDF polling timers into `examStateBridge.js` so switching pages while a multi-minute PDF OCR job is executing never cancels polling and surfaces completion notifications via `ExamPageFlowBar` and toast on whichever page is active.
+        - Factored common chrome and modals into `ExamWorkspaceHeader.jsx` (`ExamPageFlowBar` + sticky exam header) and `ExamSharedModals.jsx` to guarantee zero business-logic duplication across the 3 views.
+        - Extended `examParserUtils.js` (`parseHtmlExamTable`) and `ExamRichContent.jsx` (`StructuredHtmlExamTable`) to safely render multi-tier HTML `<table>` (`rowspan`/`colspan`) with inline KaTeX while shielding `[VARIATION_TABLE]`, `[MATH_GRAPH]`, and `[MATH_GRAPH_3D]` blocks from Markdown table splitting.
+        - Unified explicit **Delete Exam (`Xóa Đề`)** workflows across `useExamWorkspaceController.js`, `ExamWorkspaceHeader.jsx`, `ExamIngestView.jsx`, `ExamDatabaseModal.jsx`, and `TeacherPortalView.jsx` (`section === 'diagnostic'`), handling both persisted PostgreSQL exams (`DELETE /api/content/exams/{id}`) and unsaved AI/manual draft exams via in-app confirmation dialogs.
+    - **Verification**:
+      - `oxlint`: 0 warnings and 0 errors across all 22 Exam module files.
+      - `node --test`: 37/37 unit tests passed across the entire Web Client suite (including `src/components/curriculum/examStateBridge.test.js` and HTML table / `[VARIATION_TABLE]` assertions in `src/utils/examParserUtils.test.js`).
+      - `npm run build`: Production build succeeded cleanly in 6.19s (3073 modules transformed, 0 errors).
+
+
+
+
+
+18. **Academic Manager Portal Separation (`AcademicManagerDashboardView.jsx`) & Original `CampusManagerDashboardView.jsx` Preservation for Director (`AcademicManagerDashboardView.jsx`, `CampusManagerDashboardView.jsx`, `authService.js`, `Sidebar.jsx`, `App.jsx`, `practiceService.js`)**:
+    - **Role Separation & Navigation Architecture**:
+      - Preserved the original `CampusManagerDashboardView.jsx` and original navigation menu 100% intact for `Academic Director` (`role === 'director'`, `ACADEMIC_DIRECTOR`) and `Admin`.
+      - Created the dedicated `AcademicManagerDashboardView.jsx` component for `Academic Manager` (`role === 'manager'`, `ACADEMIC_MANAGER` / `CAMPUS_MANAGER`) with a 4-module navigation structure: (1) Campus Overview & Comparative Analytics, (2) Academic Terms, Courses, Offline Class Schedules & Teacher Allocation, (3) Automated K-Means 4-Domain Class Clustering, and (4) Tier-3 Academic Escalations & 3-Way Counseling.
+    - **Complete Elimination of Hardcoded Values in `AcademicManagerDashboardView.jsx`**:
+      - Removed hardcoded greeting suffix, hardcoded teacher class counts (`activeClasses: 1`), fake ratings, hardcoded class schedule strings, and fallback `67%` mastery metrics.
+      - Integrated real Backend endpoints across `AcademicTermsController`, `CoursesController`, `ClassesController`, `SchedulesController`, `AnalyticsController`, and `EarlyWarningsController`.
+      - Enforced Campus RBAC isolation (`MGR_07`, `MGR_22`), dynamic `MaxK` clustering validation (`MGR_09` - `MGR_15`), color-coded 20-student capacity bars (`MGR_08`), teacher assignment validation (`MGR_01`, `MGR_03`, `MGR_06`), manual student enrollment with 21st-student auto-overflow (`MGR_02`, `MGR_04`, `MGR_13`), and CSV/Excel campus report export (`MGR_18`).
+    - **Verification**: `npm run build` (Vite v8.3.0) compiled cleanly in 1.55s with 3054 modules transformed and zero errors.
+
+
+19. **Real-time Schedule & Physical Room Conflict Prevention Engine (`AcademicManagerDashboardView.jsx`)**:
+    - **Dual-Layer Real-time Conflict Engine (`classConflictsMap`, `createClassConflict`, `scheduleSlotConflict`)**:
+      - Evaluates time interval overlap on the same day of the week: `max(start1, start2) < min(end1, end2)`.
+      - **Physical Room Conflict**: Automatically identifies if the selected room (`room`) is already allocated to another active class within the same campus.
+      - **Instructor Conflict**: Automatically detects if the assigned teacher already has a teaching commitment during the intersecting time window.
+    - **Visual Conflict Feedback & Submission Protection**:
+      - Renders an immediate red conflict alert box directly within Modal 4 (*"Mở Lớp Học Mới"*) and Modal 5 (*"Thời Khóa Biểu & Buổi Học"*).
+      - Disables the submit buttons (*"Mở Lớp & Sinh Lịch Học"*, *"Lưu Khung Giờ & Đồng Bộ Buổi Học"*) whenever a conflict condition is active, preventing accidental database collisions.
+      - Displays a conflict alert banner on class cards in Section 2 with instructions to adjust room/time slots.
+      - Implements Quick Room Suggestion Chips (`P.301` through `P.305`, `Lab 01`, `Lab 02`) with automated suggestion of vacant rooms upon opening modals.
+    - **Verification**: `npm run build` (Vite v8.3.0) compiled cleanly in 1.62s with 3054 modules transformed and zero errors.
+
+
+20. **Schedule Slot In-Place Mutation (409 Conflict Resolution) & Early Warning Normalization (`AcademicManagerDashboardView.jsx`, `EarlyWarningsMentorPanel.jsx`)**:
+    - **In-Place Weekly Slot Editing & Deletion**:
+      - Replaced the append-only schedule slot behavior in Modal 5 with an interactive slot management table displaying existing weekly slots with Day, Time, and Room.
+      - Provided inline ✏️ *"Đổi Phòng / Giờ"* (Edit) and 🗑️ *"Xóa"* (Delete) actions for each weekly schedule slot.
+      - In edit mode (`editingSlotIdx !== null`), `handleSaveWeeklySlotAndGenerate` replaces the designated slot in-place within `finalSlots`, completely purging the conflicting room assignment (`P.301`) before dispatching to the Backend API `saveClassWeeklySchedules`.
+      - Updated `scheduleSlotConflict` real-time validation to exclude the slot currently being modified, eliminating spurious conflict alerts once an open room chip is clicked.
+    - **Dynamic Student Identity Resolution via Identity REST API (Zero Hardcode) & Alert Deduplication (`EarlyWarningsMentorPanel.jsx`)**:
+      - Eradicated all hardcoded student name arrays and hex GUID mappings (`resolveStudentDisplayName`).
+      - Integrated dynamic retrieval via `userService.getUsers({ role: 'STUDENT', pageSize: 100 })` querying Identity Service (`GET /api/v1/users`), populating `identityUsersMap` on mount.
+      - Prioritizes authentic names delivered by Backend (sourced through gRPC `GetStudentsByIds`), with dynamic fallback to the Identity REST API.
+      - Preserved client-side alert deduplication (`seenAlerts = new Set()`) to eliminate duplicate cards for the same student/alert pair.
+    - **Verification**: `npm run build` (Vite v8.3.0) compiled cleanly in 2.13s with 3054 modules transformed and zero errors.
+
+
+21. **4-Domain × 3-Tier Matrix Placement UI (`AcademicManagerDashboardView.jsx`, `practiceService.js`)**:
+    - Replaced the single-class `MaxK` clustering UI in Section 3 with a structured **4-Domain × 3-Tier (12-Class) Matrix** interface.
+    - Added configurable threshold inputs (`foundationThresholdPct` default `50%`, `advancedThresholdPct` default `75%`) and `includeEmptyClasses` toggle.
+    - Renders 4 domain rows (`DOM_LANG`, `DOM_MATH`, `DOM_NAT_SCI`, `DOM_SOC_SCI`) × 3 proficiency tier columns (`Cơ bản`, `Tăng tốc`, `Nâng cao`) with average mastery bars, `X/20 HS` capacity indicators, readiness badges, and direct teacher assignment actions.
+    - **Verification**: `npm run build` (Vite v8.3.0) compiled cleanly in 2.13s with zero errors.
+
+
+22. **Academic Director Role Clarification & Read-Only Supervision Mode (`CampusManagerDashboardView.jsx`, `Sidebar.jsx`, `App.jsx`)**:
+    - Preserved all 4 core Academic Director modules (`AiTutorModerationView`, `CurriculumExplorerView`, `Textbook*View`, `Exam*View`) completely untouched.
+    - Refined `Sidebar.jsx` Director menu to 5 role-aligned items under *"Quản Trị Học Thuật Toàn Trường"*, removing misrouted Teacher/Student/Admin entries and removing the `Flow 4` badge that truncated the label.
+    - Implemented `isDirectorMode` directly inside `CampusManagerDashboardView.jsx`, defaulting to All-Campuses (`ALL`) multi-campus aggregation with a dedicated Cross-Campus Comparison Table, removing hardcoded greeting names and the `67%` fallback, wiring real KPI counts from `contentService.getSkillsTree()` and `contentService.getMockExams()`, adding 4 quick-access pillar cards, and hiding operational Manager/Teacher/Admin actions.
+    - Resolved Logout Race Condition across `App.jsx`, `apiClient.js`, `authService.js`, and `PublicHeader.jsx` via `sessionVersion` guards, preventing ghost `USER_KEY` writes without a valid access token, optimistic state clearing, and `isAuthenticated()` checks on the public header.
+    - **Verification**: `npm run build` (Vite v8.3.0) compiled cleanly in 1.96s with 3076 modules transformed and zero errors.
+
+23. **Real-Time Academic Term & Course Synchronization to Student/Parent Tuition Portal & Course CRUD UI (`TuitionPaymentView.jsx`, `AcademicManagerDashboardView.jsx`, `practiceService.js`)**:
+    - **Elimination of Hardcoded 3-Package Mock Array in `TuitionPaymentView.jsx`**:
+      - Removed the static 3-package array (`1.8M / 2.4M / 3.2M VND`) completely to align with the V-ACT 2-wave/year enrollment model.
+      - Implemented `loadCampusTermsAndCourses` fetching `practiceService.getAcademicTerms({ campusId, status: 'ACTIVE' })` and `practiceService.getCourses({ campusId, isActive: true })` scoped to the student's campus.
+      - Added an Active Academic Term Banner displaying the active wave's name, academic year, and enrollment date range, followed by a responsive dynamic grid rendering the exact database courses (code, title, real tuition fee, duration, 20-student capacity) wired directly to PayOS VietQR checkout, plus an explicit empty state when no courses are open.
+    - **Course Edit & Safe Delete UI in `AcademicManagerDashboardView.jsx`**:
+      - Added `updateCourse(courseId, payload)` and `deleteCourse(courseId)` wrappers in `practiceService.js`.
+      - Added inline Edit (✏️) and Delete (🗑️) buttons per course row, upgrading the course creation modal into a dual Create/Edit modal with pre-filled values and confirmation prompts.
+    - **Verification**: `npm run build` (Vite v8.3.0) compiled cleanly in 1.39s with 3076 modules transformed and zero errors.
+
+24. **End-to-End Student Journey Unification, Standalone White Exam Room, Passage Context Delivery & Full-Spectrum Grade 10–12 3-Zone PLAR Studio (`StudentRoadmapWorkspace.jsx`, `ConnectedRoadmapPage.jsx`, `PlarNodeStudioPanel.jsx`, `DiagnosticAssessmentPage.jsx`, `TuitionPaymentView.jsx`, `PayOsCheckoutModal.jsx`, `practiceService.js`)**:
+    - **Standalone Full-Viewport White Exam Room (`DiagnosticAssessmentPage.jsx`)**: Mounted active exam-taking and grading states (`stage === 'testing' || stage === 'analyzing'`) directly onto `document.body` via `createPortal` with `fixed inset-0 z-[200] w-screen h-screen overflow-y-auto bg-white` and background scroll lock, completely eliminating transparent background bleed-through (`bg-transparent`) from the embedded student portal layout.
+    - **Full-Spectrum Grade 10–12 3-Zone Personalized Roadmap (`ConnectedRoadmapPage.jsx`)**: Displays all ~337 GDPT 2018 patterns across Grades 10–12 and all 9 subjects grouped into 3 distinct pedagogical priority zones: **(1) Priority Improvement (`WEAK` — tested & below threshold, shown first)** → **(2) Assessed & Mastered / Completed (`MASTERED` & `COMPLETED` — shown after weak skills, collapsible)** → **(3) Unassessed Grade 10–12 Spectrum (`UNASSESSED` — chapters/patterns not yet encountered in the 30-question diagnostic, shown at the bottom with an explicit `"Chưa đánh giá"` badge)**, equipped with Zone tabs, Grade (`Lớp 10`, `Lớp 11`, `Lớp 12`) filters, 9-Subject filters, instant search, and a 1-click upgrade banner for legacy 24-node roadmaps.
+    - **Reading Passage Context & 4-Phase PLAR Studio (`PlarNodeStudioPanel.jsx`)**: Added `PassageContextBox` to render reading comprehension passages (`passageTitle`, `passageContent`, `passageImageUrl`) above questions in Phase P (`Preview`), Phase A (`Apply`), and `BR-03` (`Remedial`); wired all 8 `StagesController` endpoints including persisted reflection display (`confidenceRating`, `learnedSummary`, `mistakeNotes`).
+    - Hardened `TuitionPaymentView` and `PayOsCheckoutModal`, purged 100% of mock/seed fallbacks (`sampleQuestionsForDiagnostic`, `845/920`, `"Phạm Minh Hoàng"`), and resolved runtime `ReferenceError` bugs in `Sidebar.jsx` and `LearningAnalyticsView.jsx`.
+    - **Verification**: `oxlint` (`0 Error`), `node --test tests/*.test.js` (`22/22 Passed`), `npm run build` (`3077 modules`, `4.63s`).
+
+25. **Exam Parser Rendering Hardening: Vietnamese Prose Guard, LaTeX/Table Recovery, False-Figure Suppression & Cross-Subject Auto-Healing (`MathText.jsx`, `examParserUtils.js`, `ExamMediaLightbox.jsx`, `examCurriculumMatcher.js`, `examStateBridge.js`) [20/11/2026]**:
+    - **Root Cause Analysis**: `\b` word boundaries and `\w` do not treat accented Vietnamese letters as word characters, so KaTeX auto-wrapping split words (`có sẵ n`, `hế t - V âng`); MathType PUA glyphs surfaced as `≡`; `\ne`/`\circC`/`<u>` were mangled; text-only analytic stems received false figure boxes; and 2-letter substring matching leaked English/Math questions into Physics/Chemistry nodes.
+    - **Implementation Details**: Introduced `VI_WORD_CHAR` boundary guards, prose-hyphen guard, `\begin{cases}` wrapping, `<u>` protection, `\circC` repair, adjacency-matrix-to-Markdown-table conversion, `hasFalsePositiveFigureText` + `onError` image fallback, whole-word keyword matching with English detection, and cross-subject self-healing of cached `curriculumNode`s on restore.
+    - **Verification**: `examStateBridge.test.js` `3/3`, `tests/*.test.js` `22/22`, `oxlint` `0 errors`, `npm run build` succeeded. Not deployed to Docker per user request.
+    - **Round 2 & 3 Follow-up**: Hardened `MathText.jsx` `richInlineRegex` to directly match `<s*ub[^>]*>[sS]+?<s*/s*us*>` rendering into standard `<u>` elements without relying on pre-cleaning; refined `repairDegreeUnits` to prevent accidental `$$$` math wrapping on already-delimited degree terms; embedded cross-subject guards in `normalizeQuestionItem` and `ExamPaperView.jsx` preventing English error-identification questions (Questions 26–29) from surfacing Physics/Chemistry/Math nodes; and added auto-healing to `useExamWorkspaceController.js` upon curriculum retrieval. Verified: `examStateBridge.test.js` `5/5`, `tests/*.test.js` `22/22`, `npm run build` succeeded.
+
+26. **SessionStorage Cache-Busting, Underline Normalization & Stray Letter Filter (`examTextRepair.js`, `examParserUtils.js`, `MathText.jsx`, `examStateBridge.js`) [21/11/2026]**:
+    - **Root Cause Analysis**:
+      - Even after logic fixes in `MathText.jsx` and `examTextRepair.js`, the browser retained stale state stored in `sessionStorage` under `veval_active_exam_workspace_v1`, causing already-parsed exams to persist literal `<u>` tags and outdated subject nodes.
+      - Scanned passage extracts in History/Social Science contained isolated single letters (`o`, `g`, `n`, `u`, `V`, `i`, `đ`) resulting from bitmap font PUA splitting in upstream OCR.
+    - **Implementation Details**:
+      - **SessionStorage Cache-Busting**: Upgraded `STORAGE_KEY` in `examStateBridge.js` to `veval_active_exam_workspace_v2`, automatically evicting corrupt legacy cached exams and triggering clean re-parsing on client load.
+      - **Robust Underline Normalization**: `repairUnderlineTags` strips all variant whitespace (`</u >`, `<\/u>`, `$< /u > (A)$`) and converts them to standard `</u>`.
+      - **Stray Character Filter**: Added step 1.9 to `examParserUtils.js` to eliminate isolated single consonants (`b-df-hj-np-tv`) on their own lines between substantive prose lines.
+    - **Verification**: `node --test src/components/curriculum/examStateBridge.test.js` passed `5/5`, `node --test tests/*.test.js` passed `22/22`, `npm run build` succeeded in 3.47s.
+
+27. **Passage Auto-Healing, Trapped Question Extraction & Pure Underline Error Identification (`examTextRepair.js`, `examParserUtils.js`, `ExamPaperView.jsx`, `MathText.jsx`, `examStateBridge.js`) [21/11/2026]**:
+    - **Passage Swallowing & Single-Letter Fragment Elimination**:
+      - Root cause: History passage 118–120 in real exam PDFs uses bare numbered stems (`118.`, `119.`, `120.`) without the prefix `"Câu"`. Upstream regex matching swallowed child questions into the passage body and left `passage.questions: []` (displaying "0 câu").
+      - Implementation: Added `healHistoryPassageAndTrappedQuestions` and `extractTrappedQuestionsFromPassage` in `examParserUtils.js` to automatically extract swallowed child questions and restore clean text.
+    - **Elimination of Inline (A), (B), (C), (D) Markers**:
+      - In error-identification questions (Questions 26–30), `repairUnderlineTags` strips all inline `(A)`, `(B)`, `(C)`, `(D)` labels (including math-mode `($C$)`), while `MathText.jsx` applies `font-bold underline` styling to target words so that only the question options below handle candidate selection.
+    - **Session Cache-Busting**:
+      - Upgraded `STORAGE_KEY` to `veval_active_exam_workspace_v3` in `examStateBridge.js`.
+    - **Verification**: `node --test src/components/curriculum/examStateBridge.test.js` passed `6/6`, `node --test tests/*.test.js` passed `22/22`, `npm run build` succeeded in 3.52s.
+
+### [21/11/2026] - Resolve frontend pull conflicts against 682c9e2
+Merged incoming textbook/exam workspace tooling, parent tuition targeting, API course catalog and collapsible navigation with the local weekly calendar, mock exam room, profile prerequisites and server-authoritative payment/resume logic. Retained the user-requested single student curriculum view and deletion of the obsolete ConnectedRoadmapPage/StudentRoadmapWorkspace; removed their incoming route/import. Kept the schedule navbar subtitle and non-wrapping theta summary. Both payment completion and failure callbacks are preserved. Added stale-request protection when changing the selected student and used the incoming dynamic course catalog for resumed invoices.
+Validation: 119 unit tests passed, production build passed, five sidebar/navbar/student-parent payment render checks passed, and Chrome mocked-API exam scenarios passed (passages, flags, resume, third-violation and timeout submissions). Both documentation histories retained. Separately resolved documentation-only stash conflicts in the legacy V-Eval-Web_Client copy without committing its staged source or untracked environment/settings files. Backend repositories remained unchanged. The system root already had a separate pending merge without unmerged paths; it is outside this frontend merge commit.

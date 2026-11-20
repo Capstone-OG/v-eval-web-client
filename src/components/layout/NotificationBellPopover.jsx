@@ -59,7 +59,7 @@ export default function NotificationBellPopover({
   const [markingId, setMarkingId] = useState(null);
   const containerRef = useRef(null);
 
-  const isStaffView = activeRole === 'teacher' || activeRole === 'manager' || activeRole === 'admin';
+  const isStaffView = activeRole === 'teacher' || activeRole === 'manager' || activeRole === 'director' || activeRole === 'admin';
 
   const loadNotifications = useCallback(async () => {
     try {

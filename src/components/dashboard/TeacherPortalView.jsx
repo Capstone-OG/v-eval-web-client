@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowRight, BookOpen, ClipboardCheck, Users, ShieldAlert, RefreshCw, GraduationCap, History, X } from 'lucide-react';
+import { ArrowRight, BookOpen, ClipboardCheck, Users, ShieldAlert, RefreshCw, GraduationCap, History, Trash2, X } from 'lucide-react';
 import apiClient from '../../services/apiClient';
+import contentService from '../../services/contentService';
 import { accountGreeting } from '../../utils/accountPresentation';
 import { teacherPortalRequests } from '../../services/teacherPortalRequests';
 
@@ -21,6 +22,9 @@ export default function TeacherPortalView({ currentUser, section = 'dashboard', 
   const [examDetail, setExamDetail] = useState(null);
   const [detailError, setDetailError] = useState('');
   const [detailLoading, setDetailLoading] = useState(false);
+  const [deletingExam, setDeletingExam] = useState(null);
+  const [deleteBusyId, setDeleteBusyId] = useState(null);
+  const [deleteError, setDeleteError] = useState('');
   const [resolving, setResolving] = useState(null);
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
@@ -68,6 +72,30 @@ export default function TeacherPortalView({ currentUser, section = 'dashboard', 
     try { setExamDetail((await apiClient.get(`/api/content/exams/${encodeURIComponent(examId)}`)).data); }
     catch (error) { setDetailError(error.message || 'Không tải được chi tiết đề.'); }
     finally { setDetailLoading(false); }
+  };
+
+  const confirmDeleteExam = async () => {
+    if (!deletingExam?.examId || deleteBusyId) return;
+    setDeleteBusyId(deletingExam.examId);
+    setDeleteError('');
+    try {
+      await contentService.deleteExam(deletingExam.examId);
+      setResources((old) => ({
+        ...old,
+        exams: {
+          ...old.exams,
+          data: (Array.isArray(old.exams?.data) ? old.exams.data : []).filter((e) => e.examId !== deletingExam.examId)
+        }
+      }));
+      if (examDetail?.examId === deletingExam.examId || examDetail?.exam_id === deletingExam.examId) {
+        setExamDetail(null);
+      }
+      setDeletingExam(null);
+    } catch (error) {
+      setDeleteError(error.message || 'Không thể xóa đề thi khỏi hệ thống.');
+    } finally {
+      setDeleteBusyId(null);
+    }
   };
 
   const resolveAlert = async (event) => {
@@ -125,7 +153,8 @@ export default function TeacherPortalView({ currentUser, section = 'dashboard', 
       </>}
     </section>}
 
-    {section === 'diagnostic' && <section className="space-y-5 rounded-3xl border border-slate-200 bg-white p-6"><h2 className="text-xl font-bold">Ngân hàng đề thi</h2><p className="text-sm text-slate-500">Danh sách đề từ hệ thống. Giáo viên xem thông tin đề tại đây; biên soạn nội dung tại Studio học liệu.</p>{resourceState('exams') || (exams.length ? <div className="grid gap-4 md:grid-cols-2">{exams.map((exam) => <button key={exam.examId} onClick={() => openExam(exam.examId)} className="rounded-2xl border border-slate-200 p-5 text-left hover:border-blue-400"><span className={`rounded-full px-2.5 py-1 text-xs font-bold ${exam.isPublished ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>{exam.isPublished ? 'Đã xuất bản' : 'Bản nháp'}</span><h3 className="mt-4 text-lg font-bold">{exam.title}</h3><p className="mt-2 text-sm text-slate-500">{exam.totalQuestions} câu · {exam.durationMinutes} phút · {exam.examCategory}</p><span className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-blue-600">Xem thông tin đề <ArrowRight size={15} /></span></button>)}</div> : <p>Chưa có đề trong ngân hàng.</p>)}
+    {section === 'diagnostic' && <section className="space-y-5 rounded-3xl border border-slate-200 bg-white p-6"><h2 className="text-xl font-bold">Ngân hàng đề thi</h2><p className="text-sm text-slate-500">Danh sách đề từ hệ thống. Giáo viên xem thông tin hoặc xóa đề thi tại đây; biên soạn nội dung tại 3 trang Đề thi & AI Bloom.</p>{deleteError && <Notice>{deleteError}</Notice>}{resourceState('exams') || (exams.length ? <div className="grid gap-4 md:grid-cols-2">{exams.map((exam) => <div key={exam.examId} className="rounded-2xl border border-slate-200 p-5 text-left hover:border-blue-400 flex flex-col justify-between gap-4"><div><div className="flex items-center justify-between gap-2"><span className={`rounded-full px-2.5 py-1 text-xs font-bold ${exam.isPublished ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>{exam.isPublished ? 'Đã xuất bản' : 'Bản nháp'}</span><button type="button" disabled={deleteBusyId === exam.examId} onClick={() => { setDeleteError(''); setDeletingExam(exam); }} className="inline-flex items-center gap-1 rounded-xl border border-rose-200 bg-rose-50 px-2.5 py-1 text-xs font-bold text-rose-700 hover:bg-rose-100 cursor-pointer disabled:opacity-50"><Trash2 size={13} /> Xóa đề</button></div><h3 className="mt-3 text-lg font-bold">{exam.title}</h3><p className="mt-1.5 text-sm text-slate-500">{exam.totalQuestions} câu · {exam.durationMinutes} phút · {exam.examCategory}</p></div><button type="button" onClick={() => openExam(exam.examId)} className="inline-flex items-center gap-2 text-sm font-semibold text-blue-600 hover:text-blue-800 cursor-pointer w-fit">Xem thông tin đề <ArrowRight size={15} /></button></div>)}</div> : <p>Chưa có đề trong ngân hàng.</p>)}
+      {deletingExam && <div className="rounded-2xl border border-rose-200 bg-rose-50 p-5 space-y-3"><h3 className="font-bold text-rose-900">Xác nhận xóa đề thi khỏi Database?</h3><p className="text-sm text-rose-800">Đề thi <strong>{deletingExam.title}</strong> sẽ bị xóa vĩnh viễn cùng các câu hỏi độc quyền thuộc đề này.</p><div className="flex items-center gap-2"><button type="button" disabled={Boolean(deleteBusyId)} onClick={confirmDeleteExam} className="rounded-xl bg-rose-600 hover:bg-rose-700 px-4 py-2 text-xs font-bold text-white cursor-pointer disabled:opacity-50">{deleteBusyId ? 'Đang xóa…' : 'Xóa vĩnh viễn'}</button><button type="button" disabled={Boolean(deleteBusyId)} onClick={() => setDeletingExam(null)} className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-700 cursor-pointer">Hủy bỏ</button></div></div>}
       {detailLoading && <p role="status">Đang tải thông tin đề…</p>}{detailError && <Notice>{detailError}</Notice>}{examDetail && <div className="rounded-2xl border border-blue-200 bg-blue-50 p-5"><button onClick={() => setExamDetail(null)} className="float-right rounded-lg p-1" aria-label="Đóng thông tin đề"><X size={20} /></button><h3 className="pr-8 font-bold">{examDetail.title}</h3><p className="mt-2 text-sm">{examDetail.total_questions ?? examDetail.totalQuestions ?? examDetail.questions?.length ?? '—'} câu · {examDetail.duration_minutes ?? examDetail.durationMinutes ?? '—'} phút</p>{examDetail.description && <p className="mt-3 text-sm leading-6">{examDetail.description}</p>}</div>}
     </section>}
 
