@@ -27,133 +27,6 @@ import MathText from '../common/MathText';
 import { practiceService } from '../../services/practiceService';
 import { toast } from '../../context/ToastContext';
 
-// Mock seed cases representing standard Core Flow 4 Human-in-the-Loop scenarios
-const SEED_INTERACTIONS = [
-  {
-    id: '98e1f0fd-aed6-45f6-beac-be24686b573c',
-    student_id: '4f7bf3f2-790c-45d7-a2a2-524bf0e6cb61',
-    student_name: 'Nguyễn Minh Quân',
-    class_name: 'Lớp ĐGNL Cơ sở 1 - ĐHQG TP.HCM',
-    question_id: '22222222-2222-2222-2222-222222222222',
-    question_latex: 'Tìm tất cả các giá trị của tham số thực $m$ để đồ thị hàm số $y = \\frac{x - 1}{x^2 - 2mx + 4}$ có đúng hai đường tiệm cận đứng.',
-    options: {
-      A: '$m \\in (-\\infty; -2) \\cup (2; +\\infty) \\setminus \\{\\frac{5}{2}\\}$',
-      B: '$-2 < m < 2$',
-      C: '$m > 2$',
-      D: '$m \\in (-\\infty; -2) \\cup (2; +\\infty)$'
-    },
-    student_selected_option: 'B',
-    correct_option: 'A',
-    pattern_code: 'PAT_CALC_ASYMPTOTE_03',
-    pattern_name: 'Tìm tham số m để đồ thị hàm phân thức có đúng k tiệm cận đứng',
-    matched_trap_id: 'trap-001',
-    trap_code: 'TRAP_DENOMINATOR_ROOT_CANCEL',
-    trap_name: 'Quên kiểm tra nghiệm của mẫu số làm triệt tiêu tử số',
-    misconception_explanation: 'Học sinh chỉ đặt điều kiện mẫu có 2 nghiệm phân biệt (Delta > 0) mà quên mất điều kiện nghiệm của mẫu phải khác nghiệm tử số (x = 1), dẫn đến chọn thiếu điều kiện loại trừ m = 5/2.',
-    ai_guidance_transcript: [
-      {
-        role: 'student',
-        option: 'B',
-        option_text: '-2 < m < 2',
-        text: 'Em chọn phương án B: -2 < m < 2 vì em nghĩ mẫu số phải có nghiệm.'
-      },
-      {
-        role: 'tutor',
-        text: 'Chào em! Đáp án đúng câu này phải là phương án A nhé. Vì mẫu số cần 2 nghiệm phân biệt và nghiệm đó không được làm triệt tiêu tử số $x = 1$. Khi thay $x = 1$ vào mẫu ta có $1 - 2m + 4 = 0 \\iff m = 5/2$, nên ta loại $m = 5/2$. Do đó đáp án là A.',
-        is_fallback: false
-      }
-    ],
-    student_reported: true,
-    report_reason: 'revealed_direct_answer: AI nói thẳng đáp án là A ngay ở dòng đầu tiên, không có tính sư phạm gợi mở từng bước.',
-    validation_status: 'FLAGGED',
-    mentor_resolution: null,
-    mentor_notes: '',
-    created_at: new Date(Date.now() - 35 * 60 * 1000).toISOString()
-  },
-  {
-    id: '640f303e-5120-41a3-a9a9-c8931ec3fe14',
-    student_id: '5e8bf3f2-120c-45d7-b3b3-624bf0e6cb72',
-    student_name: 'Trần Thị Mai Lan',
-    class_name: 'Lớp ĐGNL Tăng Tốc (750 - 900)',
-    question_id: '33333333-3333-3333-3333-333333333333',
-    question_latex: 'Trong một nhóm bạn gồm 6 người A, B, C, D, E, F ngồi quanh một bàn tròn. Biết A luôn ngồi cạnh B, nhưng C không ngồi cạnh D. Có bao nhiêu cách xếp chỗ thỏa mãn?',
-    options: {
-      A: '48 cách',
-      B: '36 cách',
-      C: '24 cách',
-      D: '18 cách'
-    },
-    student_selected_option: 'C',
-    correct_option: 'A',
-    pattern_code: 'PAT_LOGIC_CIRCULAR_PERMUTATION',
-    pattern_name: 'Tư duy hoán vị vòng quanh có điều kiện buộc và loại trừ',
-    matched_trap_id: 'trap-002',
-    trap_code: 'TRAP_CIRCULAR_FIX_POINT',
-    trap_name: 'Nhầm lẫn công thức hoán vị thẳng n! với hoán vị tròn (n-1)!',
-    misconception_explanation: 'Học sinh quên cố định 1 phần tử khi xếp bàn tròn, hoặc tính trùng lặp khi buộc cặp (A, B) thành 1 khối.',
-    ai_guidance_transcript: [
-      {
-        role: 'student',
-        option: 'C',
-        option_text: '24 cách',
-        text: 'Em tính ra 24 cách vì lấy 4! = 24.'
-      },
-      {
-        role: 'tutor',
-        text: 'Chào em! Để giải bài toán xếp bàn tròn này, em hãy dùng công thức tính nhanh đặc biệt $n! / 2$ của hình học phẳng nhé. Khi áp dụng cho 6 người ta có $6! / 2 = 360$ rồi chia cho số cặp...',
-        is_fallback: false
-      }
-    ],
-    student_reported: true,
-    report_reason: 'hallucination: AI đưa ra công thức tính nhanh n! / 2 hoàn toàn lạ và sai lệch, không có trong phương pháp giải hoán vị tròn.',
-    validation_status: 'FLAGGED',
-    mentor_resolution: null,
-    mentor_notes: '',
-    created_at: new Date(Date.now() - 2 * 3600 * 1000).toISOString()
-  },
-  {
-    id: 'b3de25cb-7cec-403b-a5da-3e3f8c68f85c',
-    student_id: '6f9cf3f2-890c-45d7-c4c4-734bf0e6cb83',
-    student_name: 'Lê Hoàng Nam',
-    class_name: 'Lớp ĐGNL Nền Tảng (<750)',
-    question_id: '44444444-4444-4444-4444-444444444444',
-    question_latex: 'Cho $m$ gam bột sắt phản ứng hoàn toàn với dung dịch $HNO_3$ loãng dư, thu được $0,448$ lít khí $NO$ (đktc, sản phẩm khử duy nhất). Giá trị của $m$ là bao nhiêu?',
-    options: {
-      A: '1,12 gam',
-      B: '1,68 gam',
-      C: '0,56 gam',
-      D: '2,24 gam'
-    },
-    student_selected_option: 'C',
-    correct_option: 'A',
-    pattern_code: 'PAT_CHEM_REDOX_ELECTRON_BALANCE',
-    pattern_name: 'Bảo toàn electron kim loại tác dụng axit có tính oxi hóa mạnh',
-    matched_trap_id: 'trap-003',
-    trap_code: 'TRAP_FE_OXIDATION_STATE',
-    trap_name: 'Nhầm số oxi hóa Fe lên +2 thay vì +3 khi HNO3 dư',
-    misconception_explanation: 'Học sinh coi Fe lên Fe+2 nên nhường 2e thay vì nhường 3e lên Fe+3 khi gặp HNO3 dư.',
-    ai_guidance_transcript: [
-      {
-        role: 'student',
-        option: 'C',
-        option_text: '0,56 gam',
-        text: 'Em tính n_NO = 0.02 mol, bảo toàn e: 2 * n_Fe = 2 * n_NO nên n_Fe = 0.01 mol -> m = 0.56g.'
-      },
-      {
-        role: 'tutor',
-        text: 'Chào em! Em hãy kiểm tra lại bài học về tính oxi hóa của axit nhé. Axit này có tính oxi hóa rất mạnh đấy.',
-        is_fallback: false
-      }
-    ],
-    student_reported: true,
-    report_reason: 'confusing_guidance: Lời gợi ý của AI quá ngắn và mơ hồ, không giúp chỉ ra em đang viết sai phương trình trao đổi electron ở đâu.',
-    validation_status: 'FLAGGED',
-    mentor_resolution: 'OVERRIDDEN_EXEMPLAR_SAVED',
-    mentor_notes: 'Đã bổ sung lời giải mẫu chuẩn: Nhấn mạnh Fe + HNO3 dư -> Fe(NO3)3 (Fe nhường 3e).',
-    created_at: new Date(Date.now() - 6 * 3600 * 1000).toISOString()
-  }
-];
-
 export default function AiTutorModerationView({ currentUser, onBackToDashboard }) {
   const [interactions, setInteractions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -179,82 +52,61 @@ export default function AiTutorModerationView({ currentUser, onBackToDashboard }
   // Form: Verify & Dismiss
   const [verifyNotes, setVerifyNotes] = useState('');
 
-  // Load interactions from real API / fallback to seed
+  // Load interactions from real API
   const loadInteractions = useCallback(async () => {
     setLoading(true);
     try {
       const data = await practiceService.getAiTutorInteractions({ reportedOnly: false });
       const rawList = Array.isArray(data) ? data : data?.items || [];
 
-      // Merge real backend data with seed interactions ensuring unique IDs
-      const mergedMap = new Map();
+      const list = rawList.map((item) => {
+        const sid = item.student_id ? String(item.student_id).slice(0, 6).toUpperCase() : 'HS';
+        const qid = item.question_id ? String(item.question_id).slice(0, 8).toUpperCase() : '';
 
-      // First add seed items to guarantee reported demos exist
-      SEED_INTERACTIONS.forEach(item => mergedMap.set(item.id, item));
-
-      // Overlay real backend interactions
-      rawList.forEach(item => {
-        const mapped = {
-          id: item.id || String(Math.random()),
+        return {
+          id: item.id || item.interaction_id || item.interactionId,
           student_id: item.student_id || 'unknown',
-          student_name: item.student_name || 'Học viên ĐGNL',
-          class_name: item.class_name || 'Lớp ĐGNL Cơ sở 1 - ĐHQG TP.HCM',
+          student_name: item.student_name || `Học sinh #${sid}`,
+          class_name: item.class_name || 'Lớp khảo thí ĐGNL',
           question_id: item.question_id,
-          question_latex: item.question_latex || item.questionLatex || item.core_theory_latex || 'Tìm tham số $m$ để đồ thị hàm số đạt cực trị thỏa mãn điều kiện đề bài.',
-          options: item.options || {
-            A: '$m \\in (-\\infty; -2) \\cup (2; +\\infty) \\setminus \\{\\frac{5}{2}\\}$',
-            B: '$-2 < m < 2$',
-            C: '$m > 2$',
-            D: '$m \\in (-\\infty; -2) \\cup (2; +\\infty)$'
-          },
-          student_selected_option: item.student_selected_option || item.studentSelectedOption || 'B',
-          correct_option: item.correct_option || item.correctOption || 'A',
-          pattern_code: item.pattern_code || item.patternCode || 'PAT_CORE_DEFAULT',
-          pattern_name: item.pattern_name || item.patternName || 'Khảo sát tiệm cận hàm phân thức chứa tham số m',
+          question_latex:
+            item.question_latex ||
+            item.core_theory_latex ||
+            item.questionLatex ||
+            (qid ? `Câu hỏi khảo thí #${qid}` : 'Nội dung câu hỏi khảo thí'),
+          options: item.options || null,
+          student_selected_option: item.student_selected_option || item.studentSelectedOption || 'Chưa chọn',
+          correct_option: item.correct_option || item.correctOption || 'Chưa xác định',
+          pattern_code: item.pattern_code || item.patternCode || 'PAT_DEFAULT',
+          pattern_name: item.pattern_name || item.patternName || 'Chuyên đề kiến thức trọng tâm',
           matched_trap_id: item.matched_trap_id || item.matchedTrapId,
-          trap_code: item.trap_code || item.trapCode || 'TRAP_CORE_LOGIC',
-          trap_name: item.trap_name || item.trapName || 'Quên điều kiện triệt tiêu nghiệm của mẫu số',
-          misconception_explanation: item.misconception_explanation || item.misconceptionExplanation || 'Học sinh nhầm lẫn giữa điều kiện mẫu số có 2 nghiệm và điều kiện nghiệm mẫu số khác nghiệm tử số.',
-          ai_guidance_transcript: Array.isArray(item.ai_guidance_transcript) && item.ai_guidance_transcript.length > 0
-            ? item.ai_guidance_transcript
-            : [
-                {
-                  role: 'student',
-                  option: item.student_selected_option || 'B',
-                  option_text: 'Phương án B',
-                  text: 'Em chọn phương án B vì em nghĩ mẫu số có nghiệm.'
-                },
-                {
-                  role: 'tutor',
-                  text: 'Chào em! Khi tìm số đường tiệm cận đứng của hàm phân thức, em cần chú ý điều kiện mẫu số bằng 0 nhưng nghiệm đó không được làm triệt tiêu tử số nhé.',
-                  is_fallback: false
-                }
-              ],
+          trap_code: item.trap_code || item.trapCode || 'TRAP_LOGIC',
+          trap_name: item.trap_name || item.trapName || 'Lỗ hổng tư duy học sinh',
+          misconception_explanation: item.misconception_explanation || item.misconceptionExplanation || '',
+          ai_guidance_transcript: Array.isArray(item.ai_guidance_transcript) ? item.ai_guidance_transcript : [],
           student_reported: Boolean(item.student_reported ?? item.studentReported),
-          report_reason: item.report_reason || item.reason || (item.student_reported ? 'Học sinh báo cáo câu trả lời của AI chưa chính xác hoặc lộ đáp án quá sớm.' : ''),
+          report_reason:
+            item.report_reason ||
+            item.reason ||
+            (item.student_reported ? 'Học sinh báo cáo câu trả lời của trợ lý AI cần thẩm duyệt sư phạm' : ''),
           validation_status: item.validation_status || item.validationStatus || 'PASSED',
           mentor_resolution: item.mentor_resolution || item.mentorResolution || null,
           mentor_notes: item.mentor_notes || '',
           created_at: item.created_at || item.createdAt || new Date().toISOString()
         };
-        mergedMap.set(mapped.id, mapped);
       });
 
-      const list = Array.from(mergedMap.values());
       setInteractions(list);
 
       // Select first item by default
       if (list.length > 0 && !selectedId) {
         // Prioritize pending report
-        const firstPending = list.find(i => i.student_reported && !i.mentor_resolution);
+        const firstPending = list.find((i) => i.student_reported && !i.mentor_resolution);
         setSelectedId(firstPending ? firstPending.id : list[0].id);
       }
-    } catch {
-      // Fallback seamlessly to seed interactions
-      setInteractions(SEED_INTERACTIONS);
-      if (!selectedId && SEED_INTERACTIONS.length > 0) {
-        setSelectedId(SEED_INTERACTIONS[0].id);
-      }
+    } catch (err) {
+      console.warn('[AiTutorModerationView] Error loading interactions:', err?.message);
+      setInteractions([]);
     } finally {
       setLoading(false);
     }
@@ -266,25 +118,24 @@ export default function AiTutorModerationView({ currentUser, onBackToDashboard }
 
   // Selected item reference
   const selectedItem = useMemo(() => {
-    return interactions.find(item => item.id === selectedId) || interactions[0] || null;
+    return interactions.find((item) => item.id === selectedId) || interactions[0] || null;
   }, [interactions, selectedId]);
 
   // Pre-fill action forms when selected item changes
   useEffect(() => {
     if (selectedItem) {
       setGoldenSolution(
-        selectedItem.correct_option === 'A'
-          ? `Điều kiện có 2 tiệm cận đứng phân biệt:\n1. Phương trình mẫu số $x^2 - 2mx + 4 = 0$ có 2 nghiệm phân biệt: $\\Delta' = m^2 - 4 > 0 \\iff m > 2$ hoặc $m < -2$.\n2. Nghiệm của mẫu số khác nghiệm tử số ($x \\neq 1$): $1^2 - 2m(1) + 4 \\neq 0 \\iff 5 - 2m \\neq 0 \\iff m \\neq \\frac{5}{2}$.\n\nKết luận: $m \\in (-\\infty; -2) \\cup (2; +\\infty) \\setminus \\{\\frac{5}{2}\\}$.`
-          : `Lời giải chuẩn hóa chuyên môn cho dạng bài: ${selectedItem.pattern_name}`
+        selectedItem.core_theory_latex ||
+        (selectedItem.pattern_name ? `Lời giải chuẩn hóa chuyên môn cho dạng bài: ${selectedItem.pattern_name}` : '')
       );
       setSocraticSteps(
-        `Bước 1: Nhắc học sinh định nghĩa hình học của đường tiệm cận đứng.\nBước 2: Yêu cầu học sinh đặt điều kiện mẫu số có 2 nghiệm phân biệt.\nBước 3: Đặt câu hỏi phản tư: Nếu nghiệm mẫu trùng nghiệm tử ($x = 1$) thì phân thức sẽ bị triệt tiêu như thế nào?`
+        `Bước 1: Xác định bản chất câu hỏi và miền kiến thức trọng tâm.\nBước 2: Gợi mở công thức cốt lõi và hướng dẫn học sinh tự loại trừ phương án nhiễu.\nBước 3: Đặt câu hỏi phản tư để học sinh tự tìm ra kết quả đúng.`
       );
       setTrapCode(selectedItem.trap_code ? `${selectedItem.trap_code}_REVISED` : `TRAP_ACADEMIC_${selectedItem.pattern_code || '01'}`);
-      setTrapName(selectedItem.trap_name || 'Bẫy nhận thức sai lầm mới');
+      setTrapName(selectedItem.trap_name || 'Bẫy nhận thức sai lầm cần ghi nhận');
       setTrapOption(selectedItem.student_selected_option || 'B');
-      setTrapExplanation(selectedItem.misconception_explanation || 'Học sinh nhầm lẫn giữa điều kiện cần và điều kiện đủ.');
-      setTrapSocraticHint('Em hãy thử thay nghiệm của mẫu số vào biểu thức tử số xem phân số có bị rút gọn không nhé?');
+      setTrapExplanation(selectedItem.misconception_explanation || 'Học sinh nhầm lẫn phương pháp giải hoặc bản chất câu hỏi.');
+      setTrapSocraticHint('Em hãy kiểm tra lại điều kiện bài toán và các bước biến đổi trung gian nhé.');
       setVerifyNotes('');
     }
   }, [selectedItem]);
@@ -951,46 +802,63 @@ export default function AiTutorModerationView({ currentUser, onBackToDashboard }
                     <MathText text={selectedItem.question_latex} />
                   </div>
 
-                  {/* 4 Options Grid with Ground Truth Highlighting */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                    {['A', 'B', 'C', 'D'].map((optKey) => {
-                      const isCorrect = optKey === selectedItem.correct_option;
-                      const isStudentSelected = optKey === selectedItem.student_selected_option;
-                      const optionText = selectedItem.options?.[optKey] || `Phương án ${optKey}`;
+                  {/* Options Grid or Answer Summary */}
+                  {selectedItem.options && Object.keys(selectedItem.options).length > 0 ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                      {Object.entries(selectedItem.options).map(([optKey, optVal]) => {
+                        const isCorrect = optKey === selectedItem.correct_option;
+                        const isStudentSelected = optKey === selectedItem.student_selected_option;
+                        const optionText = typeof optVal === 'string' ? optVal : `Phương án ${optKey}`;
 
-                      let borderClass = 'border-slate-200 bg-white text-slate-800';
-                      if (isCorrect) borderClass = 'border-emerald-300 bg-emerald-50/90 text-emerald-950 font-bold ring-2 ring-emerald-500/20';
-                      if (isStudentSelected && !isCorrect) borderClass = 'border-rose-300 bg-rose-50/90 text-rose-950 font-bold ring-2 ring-rose-500/20';
+                        let borderClass = 'border-slate-200 bg-white text-slate-800';
+                        if (isCorrect) borderClass = 'border-emerald-300 bg-emerald-50/90 text-emerald-950 font-bold ring-2 ring-emerald-500/20';
+                        if (isStudentSelected && !isCorrect) borderClass = 'border-rose-300 bg-rose-50/90 text-rose-950 font-bold ring-2 ring-rose-500/20';
 
-                      return (
-                        <div
-                          key={optKey}
-                          className={`p-3.5 rounded-2xl border flex items-start gap-3 transition-all ${borderClass}`}
-                        >
-                          <span className={`w-6 h-6 rounded-xl flex items-center justify-center font-extrabold text-xs shrink-0 mt-0.5 shadow-xs ${
-                            isCorrect
-                              ? 'bg-emerald-600 text-white'
-                              : isStudentSelected
-                              ? 'bg-rose-600 text-white'
-                              : 'bg-slate-100 text-slate-600'
-                          }`}>
-                            {optKey}
-                          </span>
-                          <div className="min-w-0 flex-1">
-                            <MathText text={optionText} />
-                            <div className="flex items-center gap-2 mt-1.5 text-[10px] font-black">
-                              {isCorrect && <span className="text-emerald-700">✓ ĐÁP ÁN ĐÚNG CSDL</span>}
-                              {isStudentSelected && (
-                                <span className={isCorrect ? 'text-emerald-700' : 'text-rose-700'}>
-                                  (Học sinh chọn {isCorrect ? 'đúng' : 'sai'})
-                                </span>
-                              )}
+                        return (
+                          <div
+                            key={optKey}
+                            className={`p-3.5 rounded-2xl border flex items-start gap-3 transition-all ${borderClass}`}
+                          >
+                            <span className={`w-6 h-6 rounded-xl flex items-center justify-center font-extrabold text-xs shrink-0 mt-0.5 shadow-xs ${
+                              isCorrect
+                                ? 'bg-emerald-600 text-white'
+                                : isStudentSelected
+                                ? 'bg-rose-600 text-white'
+                                : 'bg-slate-100 text-slate-600'
+                            }`}>
+                              {optKey}
+                            </span>
+                            <div className="min-w-0 flex-1">
+                              <MathText text={optionText} />
+                              <div className="flex items-center gap-2 mt-1.5 text-[10px] font-black">
+                                {isCorrect && <span className="text-emerald-700">✓ ĐÁP ÁN ĐÚNG CSDL</span>}
+                                {isStudentSelected && (
+                                  <span className={isCorrect ? 'text-emerald-700' : 'text-rose-700'}>
+                                    (Học sinh chọn {isCorrect ? 'đúng' : 'sai'})
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 text-xs flex flex-wrap items-center justify-between gap-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-slate-500 font-bold">Học sinh chọn:</span>
+                        <span className="px-2.5 py-1 rounded-xl bg-slate-200 font-black text-slate-800">
+                          {selectedItem.student_selected_option || 'Chưa chọn'}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-slate-500 font-bold">Đáp án chuẩn:</span>
+                        <span className="px-2.5 py-1 rounded-xl bg-emerald-100 text-emerald-800 border border-emerald-300 font-black">
+                          {selectedItem.correct_option || 'Chưa xác định'}
+                        </span>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Identified Cognitive Trap Tag */}
                   {selectedItem.trap_name && (

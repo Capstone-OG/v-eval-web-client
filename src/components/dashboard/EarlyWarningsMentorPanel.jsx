@@ -38,9 +38,9 @@ const ALERT_BADGE_META = {
 };
 
 const QUICK_RESOLUTION_TEMPLATES = [
-  'Đã kèm 1-1 tại Bàn vi mô và giao gói bài tập trọng tâm bổ trợ kiến thức (+30đ).',
-  'Đã trao đổi trực tiếp với học sinh, rà soát lại Sổ tay lỗi sai và cam kết lịch tự học 45 phút/tối.',
-  'Đã gửi báo cáo tiến độ học tập sang Cổng Phụ huynh để phối hợp nhắc nhở chuyên cần.'
+  'Đã kèm 1-1 theo nhóm và giao phiếu bài tập trọng tâm bổ trợ kiến thức.',
+  'Đã trao đổi trực tiếp với học sinh, rà soát lại sổ tay câu sai và thống nhất lịch tự học mỗi tối.',
+  'Đã gửi thông tin tiến độ học tập sang Cổng Phụ huynh để phối hợp nhắc nhở chuyên cần.'
 ];
 
 const getDefaultFutureDateTimeLocal = () => {
@@ -53,6 +53,7 @@ const getDefaultFutureDateTimeLocal = () => {
 export default function EarlyWarningsMentorPanel({
   currentUser,
   defaultClassId = 'ALL',
+  classesList = [],
   roleLabel = 'Giáo Viên & Cố Vấn Học Tập'
 }) {
   const [classFilter, setClassFilter] = useState(defaultClassId || 'ALL');
@@ -253,17 +254,17 @@ export default function EarlyWarningsMentorPanel({
             <div className="flex flex-wrap items-center gap-2">
               <span className="px-2.5 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200 text-[11px] font-extrabold uppercase tracking-wider flex items-center gap-1.5">
                 <ShieldAlert className="w-3.5 h-3.5" />
-                Trung Tâm Giám Sát Học Thuật & Can Thiệp Sớm
+                Theo Dõi Học Sinh Cần Hỗ Trợ
               </span>
               <span className="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[10px] font-bold">
                 Phân quyền: {roleLabel}
               </span>
             </div>
             <h2 className="text-lg lg:text-xl font-black text-slate-900">
-              Bảng Điều Phối Cảnh Báo & Lịch Tư Vấn 3 Bên
+              Danh Sách Học Sinh Cần Hỗ Trợ & Lịch Tư Vấn
             </h2>
             <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-              Theo dõi các học sinh có xu hướng giảm sút hoặc lệch tiến độ mục tiêu, ghi nhận biên bản can thiệp và tổ chức buổi tư vấn 3 bên (Giáo viên - Học sinh - Phụ huynh) để hiệu chỉnh kế hoạch học tập.
+              Theo dõi các học sinh có xu hướng giảm sút hoặc chưa đạt mục tiêu, ghi nhận nội dung hỗ trợ và tổ chức buổi tư vấn (Thầy cô - Học sinh - Phụ huynh) để điều chỉnh kế hoạch học tập.
             </p>
           </div>
 
@@ -337,8 +338,11 @@ export default function EarlyWarningsMentorPanel({
               className="px-3 py-2 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer"
             >
               <option value="ALL">Tất cả các lớp phụ trách</option>
-              <option value={FLOW5_DEFAULTS.CLASS_ID}>Lớp ĐGNL Cơ sở 1 (Mã: 01)</option>
-              <option value={FLOW5_DEFAULTS.SECONDARY_CLASS_ID}>Lớp Tăng Tốc 01 (Mã: 02)</option>
+              {classesList.map((cls) => (
+                <option key={cls.id || cls.classId} value={cls.id || cls.classId}>
+                  {cls.name || cls.className || `Lớp ${cls.code || cls.id}`}
+                </option>
+              ))}
             </select>
 
             {[
@@ -418,7 +422,7 @@ export default function EarlyWarningsMentorPanel({
                       </span>
                       {alert.currentPredictedScore !== null && alert.currentPredictedScore !== undefined && (
                         <span className="px-2.5 py-0.5 rounded-lg bg-white border border-slate-200 text-xs font-bold text-slate-700">
-                          Dự báo SEM: <strong className="text-indigo-700">{alert.currentPredictedScore}đ</strong> / Đích:{' '}
+                          Điểm dự kiến: <strong className="text-indigo-700">{alert.currentPredictedScore}đ</strong> / Mục tiêu:{' '}
                           <strong>{alert.targetScore}đ</strong>{' '}
                           <span className="text-rose-600 font-extrabold">
                             (Thiếu {alert.deficitScore ?? Math.max(0, (alert.targetScore || 0) - alert.currentPredictedScore)}đ)

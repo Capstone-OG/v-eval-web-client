@@ -3056,3 +3056,69 @@ The Parent Companion Portal was completely redesigned and hardened according to 
     - Added configurable threshold inputs (`foundationThresholdPct` default `50%`, `advancedThresholdPct` default `75%`) and `includeEmptyClasses` toggle.
     - Renders 4 domain rows (`DOM_LANG`, `DOM_MATH`, `DOM_NAT_SCI`, `DOM_SOC_SCI`) × 3 proficiency tier columns (`Cơ bản`, `Tăng tốc`, `Nâng cao`) with average mastery bars, `X/20 HS` capacity indicators, readiness badges, and direct teacher assignment actions.
     - **Verification**: `npm run build` (Vite v8.3.0) compiled cleanly in 2.13s with zero errors.
+
+
+22. **Teacher Role End-to-End Upgrade: User-Centric Experience, Dynamic Rosters & Proctoring Review (`TeacherDashboardView.jsx`, `TeacherProctoringReviewModal.jsx`, `TeacherStudentDrillDownModal.jsx`, `ClassMicroGroupsModal.jsx`, `EarlyWarningsMentorPanel.jsx`, `practiceService.js`, `Sidebar.jsx`, `App.jsx`)**:
+    - **User-Centric & Pedagogical Language Refactor (Zero Statistical Jargon)**:
+      - Purged all raw mathematical, statistical, and developer jargon (`IRT \theta`, `P(L_t)`, `Bimodal \sigma \ge 0.28`, `Force Aggregate`, `Drill-Down`, `SEM`, `Liêm chính học thuật`, `BKT`, `Offline Station`) from all teacher-facing views and modals.
+      - Standardized all copy into natural, encouraging Vietnamese pedagogical phrasing: `Tiến Độ Học Tập Theo Chuyên Đề`, `Học Sinh Cần Hỗ Trợ`, `Chuyên Đề Cần Củng Cố`, `Kiểm Tra Bài Thi Bất Thường`, `Xếp Nhóm Học Tập (3–5 Em)`, `Cập Nhật Dữ Liệu`, `Xem Chi Tiết`.
+      - Replaced raw numeric $\theta$ scores with an intuitive 5-tier pedagogical evaluation: **Xuất sắc**, **Giỏi**, **Khá**, **Trung bình**, and **Cần bồi dưỡng**.
+      - Fixed `ReferenceError: RotateCw is not defined` bug when toggling to proctoring review queue.
+    - **Tri-View Pedagogical Dashboard**:
+      - Integrated 3 dedicated view tabs in `TeacherDashboardView`: (1) Tiến độ học tập theo chuyên đề & Xếp nhóm học tập 3–5 em (Core Flow 5), (2) Học sinh cần hỗ trợ & Lịch tư vấn (Core Flow 6), (3) Kiểm tra bài thi bất thường (Core Flow 3 / BR-20).
+      - Replaced static class definitions with dynamic asynchronous roster retrieval via `practiceService.getClasses({ teacherId })`, rendering intuitive guidance when no assigned classes are found.
+    - **Proctoring Review Dossier Modal (`TeacherProctoringReviewModal.jsx`)**:
+      - Displays real-time proctoring queue querying `/api/practice/mock-exams/flagged-reviews` (`TCH_19` - `TCH_27`).
+      - Renders Visual Audit Trail webcam snapshots with timestamp and face detection validation tags.
+      - Displays tab departure counter (BR-20) highlighted in red when exceeding threshold (> 3).
+      - Enforces teacher verdict selection (`APPROVED` / `DISQUALIFIED`) with mandatory pedagogical review notes before dispatching `PATCH /api/practice/mock-exams/{id}/mentor-review`.
+    - **Student Profile Modal (`TeacherStudentDrillDownModal.jsx`)**:
+      - Click-to-inspect student profile (`TCH_06`): retrieves real diagnostic submissions history via `GET /api/practice/diagnostic-submissions/student/{studentId}`.
+      - Identifies weak skill gaps (under 50%) with 1-click action to assign to study groups.
+      - Includes direct pedagogical feedback composer transmitting notes and guidance to students and parents.
+    - **Progress Export & Clean State Handling**:
+      - CSV export action (`TCH_07`) generating downloadable spreadsheet with mastery percentages across all domain skills.
+      - Eradicated all static demo group arrays in `ClassMicroGroupsModal.jsx` and seed fallbacks in `practiceService.js`, displaying clean empty states with clear trigger CTAs.
+      - Streamlined Teacher Sidebar from 10 flat/redundant items down to 6 structured items grouped into 3 operational pillars (Class Management, Curriculum & Exams, Moderation & AI), eliminating all duplicate routes and label truncation.
+      - Rectified route interception in `App.jsx`, ensuring Teacher role properly accesses `TeacherDashboardView` with dynamic `initialView`, `AiTutorModerationView`, and `TeacherPortalView`.
+    - **Verification**: `npm run build` (Vite v8.3.0) compiled cleanly in 1.18s with 3078 modules transformed and zero errors.
+
+23. **Teacher Schedule & Real-Time Attendance Management Subsystem (`TeacherScheduleView.jsx`, `practiceService.js`, `Sidebar.jsx`, `App.jsx`, `ClassMicroGroupsModal.jsx`)**:
+    - **Full Real-Time API Synchronization (Zero Mock Fallbacks)**:
+      - Integrated `GET /api/practice/schedules/teachers/{teacherId}/schedule` returning all scheduled class sessions grouped chronologically by date.
+      - Integrated `GET /api/practice/schedules/sessions/{sessionId}/attendances` and `POST /api/practice/schedules/sessions/{sessionId}/attendances` for live session roster attendance checks.
+    - **4-KPI Teaching Overview**:
+      - `Lớp học phụ trách` (Assigned Classes count).
+      - `Ca dạy sắp tới` (Upcoming teaching sessions).
+      - `Ca đã hoàn thành` (Completed teaching sessions).
+      - `Dạy thay / Học bù` (Substitute or makeup sessions).
+    - **Multidimensional Filters & Timeline Schedule View**:
+      - Real-time search query filtering by Class Name, Room, Course, or Pedagogical Topic.
+      - Dynamic Academic Term (`termId`) selector loaded directly from backend terms.
+      - Session status toggle (`ALL` | `SCHEDULED` | `COMPLETED`).
+      - Chronological date grouping displaying weekday label, start/end time, room number, class badge, course name, topic/skill card, enrolled student tally, and live attendance rate percentage.
+    - **Interactive In-Class Attendance Modal (`TeacherAttendanceModal`)**:
+      - Modal roster pulling enrolled students with initial status from database or fallback to class roster.
+      - 4 Status toggles: **Có mặt** (`PRESENT`), **Đi muộn** (`LATE`), **Vắng mặt** (`ABSENT`), **Nghỉ có phép** (`EXCUSED`).
+      - 1-Click **"Tất cả có mặt"** action marking entire class present in one click.
+      - Student-specific attendance notes and instant submission to `practiceService.submitSessionAttendances`.
+    - **Direct Micro-Grouping Integration (`ClassMicroGroupsModal.jsx`)**:
+      - Session cards feature a 1-click micro-grouping button (`Layers`) to generate 3-5 student study tables based on the specific session topic.
+    - **Sidebar & App Routing Integration**:
+      - Integrated `Thời khóa biểu & Điểm danh` (`id: 'schedule'`) under `Quản Lý Lớp Học` on the Teacher Sidebar.
+      - Routed `role === 'teacher' && activeTab === 'schedule'` directly to `<TeacherScheduleView currentUser={currentUser} />`.
+    - **Verification**: `npm run build` (Vite v8.3.0) compiled cleanly in 1.27s with 3079 modules transformed and zero errors.
+
+24. **Real Database Integration & Dynamic State Standardization for Teacher Operations (`TeacherDashboardView.jsx`, `TeacherScheduleView.jsx`, `AiTutorModerationView.jsx`)**:
+    - **Class Heatmap Matrix Real-Time Synchronization (`TeacherDashboardView.jsx`)**:
+      - Standardized class selection model to cleanly resolve both `classId` and `id` properties from `/api/practice/classes`, resolving the zero-student rendering issue.
+      - Connected 100% live data from PostgreSQL via `/api/practice/classes/{classId}/heatmap`, populating actual class roster (6 enrolled students), individual IRT $\theta$ competencies, bimodal polarized skills, and pedagogical alert triggers.
+    - **Dynamic Class Filtering & Live Attendances in Schedule View (`TeacherScheduleView.jsx`)**:
+      - Added dynamic Class Selector dropdown populated from `practiceService.getClasses()`, allowing teachers to inspect sessions for specific classes or aggregate across all active classes.
+      - Replaced all static numeric fallbacks with live properties (`enrolledStudentsCount` / `totalStudentsCount`) and dynamic percentage calculation: `Math.round((presentCount / studentCount) * 100)`.
+      - Augmented attendance modal with automatic student name resolution against class heatmaps, eliminating raw GUID labels.
+    - **Complete Eradication of Seed Interactions in AI Tutor Moderation (`AiTutorModerationView.jsx`)**:
+      - Completely removed mock array `SEED_INTERACTIONS` and hardcoded asymptote mathematical strings.
+      - Directly binds to 50 real dialogue sessions fetched from `GET /api/practice/ai-tutor/interactions`, displaying actual student questions, student choices, ground-truth answers, and AI Socratic conversation transcripts.
+      - Implemented clean empty state presentation when no reported dialogues are pending review.
+    - **Verification**: `npm run build` (Vite v8.3.0) compiled cleanly in 1.22s with 3079 modules transformed and zero errors; backend Practice Service builds with 0 warnings and 0 errors.

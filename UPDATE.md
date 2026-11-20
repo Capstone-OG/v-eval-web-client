@@ -1,15 +1,22 @@
 # UPDATE - V-Eval-Web_Client
 
 ## [20/11/2026]
-- **Tách Cụm Đề Thi Thành 3 Trang Độc Lập Đồng Bộ 1:1 Với Kiến Trúc SGK & Bổ Sung Chức Năng Xóa Đề Toàn Diện (`Sidebar.jsx`, `App.jsx`, `examStateBridge.js`, `useExamWorkspaceController.js`, `ExamWorkspaceHeader.jsx`, `ExamSharedModals.jsx`, `ExamBankView.jsx`, `ExamIngestView.jsx`, `ExamStudioView.jsx`, `ExamDatabaseModal.jsx`, `TeacherPortalView.jsx`)**:
-  - **Menu Dropdown `exam-group` (`Đề thi & AI Bloom`)** trên Sidebar cho `teacher`, `manager`, `admin`:
-    1. **Trang 1 — `1. Kho Đề & Xem Đề Thi` (`exam-bank`)**: Kho Đề Supabase + Xem Đề Thi chuẩn in + Sắp Xếp & Trộn Đề kéo-thả.
-    2. **Trang 2 — `2. Parse PDF & AI Bloom` (`exam-ingest`)**: Phần 1 Parse PDF (Gemini Vision AI OCR nền xuyên trang) & Phần 2 AI Sinh Câu Hỏi 6 Mức Bloom (`L1–L6`) + Hàng Đợi Kiểm Duyệt.
-    3. **Trang 3 — `3. Studio Biên Soạn Đề` (`exam-studio`)**: Studio 2 cột sửa từng câu hỏi + Full Studio 838 ký hiệu & 3D MathLab.
-  - **Chức năng `Xóa Đề` đầy đủ trên mọi màn hình**: Hỗ trợ xóa cả đề đã lưu trong Supabase (`DELETE /api/content/exams/{id}`) lẫn đề nháp vừa parse PDF / soạn thủ công khỏi phiên làm việc, hiển thị rõ nút **`Xóa Đề` / `Xóa`** kèm hộp thoại xác nhận tại Trang 1 (Kho Đề + Header Xem Đề), Trang 2 (Parse PDF & AI Bloom), Trang 3 (Studio), Modal đổi đề và `Ngân hàng đề thi` trong `TeacherPortalView.jsx`.
-- **Render Bảng HTML `rowspan`/`colspan`, Bảo Vệ `[VARIATION_TABLE]` & Port 100% `view-exam.html` + Node 4 Tầng (`examParserUtils.js`, `ExamRichContent.jsx`, `examCurriculumMatcher.js`, `examOrganizerUtils.js`, `ExamMediaLightbox.jsx`, `ExamNodePickerModal.jsx`, `ExamBlueprintDrawer.jsx`, `aiService.js`, `contentService.js`)**:
-  - Khử nhiễu KaTeX 6 tầng, bảng Markdown 2 tầng + bảng HTML `<table>` gộp ô, bảo vệ `[VARIATION_TABLE]`/`[MATH_GRAPH]`/`[MATH_GRAPH_3D]`, biểu đồ Recharts, tự động nhận diện `Miền -> Chương -> Bài -> Dạng bài` + `AI Gắn Chương/Bài` và **Ma Trận Đặc Tả Đề Thi**.
+- **Kết Nối CSDL Thời Gian Thực Toàn Diện & Chuẩn Hóa Dữ Liệu Động Cho Phân Hệ Giáo Viên (`TeacherDashboardView.jsx`, `TeacherScheduleView.jsx`, `AiTutorModerationView.jsx`, `Sidebar.jsx`, `App.jsx`, `practiceService.js`)**:
+  - *Bản đồ ma trận học tập 2D (`TeacherDashboardView.jsx`)*:
+    - Chuẩn hóa bộ chọn lớp học phụ trách, khắc phục triệt để lỗi bất đồng bộ mã định danh (`classId` thay vì `id`), kết nối dữ liệu thật từ endpoint `GET /api/practice/classes` và `GET /api/practice/classes/{classId}/heatmap`.
+    - Hiển thị trực tiếp 100% dữ liệu thực tế từ CSDL PostgreSQL: danh sách toàn bộ học sinh trong lớp, điểm năng lực, trạng thái cần hỗ trợ, chuyên đề phân hóa 2 đầu và bảng ma trận tiến độ học tập chi tiết.
+  - *Thời khóa biểu & Điểm danh chuyên cần (`TeacherScheduleView.jsx`)*:
+    - Bổ sung bộ chọn Lớp học phụ trách (`selectedClassId`), tự động tải danh sách ca dạy thực tế từ endpoint `GET /api/practice/schedules/classes/{classId}/sessions` và `GET /api/practice/schedules/teachers/{teacherId}/schedule`.
+    - Loại bỏ hoàn toàn các giá trị mặc định tĩnh; liên kết trực tiếp sĩ số học sinh (`enrolledStudentsCount` / `totalStudentsCount`) và tính toán tỷ lệ điểm danh theo thời gian thực.
+    - Kết nối danh sách học sinh từ ma trận lớp để hiển thị chính xác họ tên trong Modal điểm danh và lưu trữ trực tiếp lên máy chủ thông qua endpoint `POST /api/practice/schedules/sessions/{sessionId}/attendances`.
+  - *Kiểm duyệt Gia sư AI Socratic (`AiTutorModerationView.jsx`)*:
+    - Loại bỏ hoàn toàn mảng mẫu tĩnh giả lập (`SEED_INTERACTIONS`) và các công thức cố định trước đây.
+    - Kết nối trực tiếp vào 50 phiên đối thoại thực tế từ CSDL backend qua endpoint `GET /api/practice/ai-tutor/interactions`.
+    - Hiển thị chính xác nội dung câu hỏi khảo thí, các phương án lựa chọn thực tế từ hệ thống, tiến trình đối thoại Socratic giữa học sinh và trợ lý AI, cùng trạng thái gắn cờ kiểm duyệt.
+    - Cung cấp giao diện sư phạm cho phép giáo viên nhập lời giải chuẩn hóa hoặc xác nhận bẫy tư duy dựa trên dữ liệu chuyên môn thật.
+  - *Menu Sidebar & Điều Hướng (`Sidebar.jsx`, `App.jsx`)*:
+    - Tối giản menu của Giáo viên thành 3 khối nghiệp vụ rõ ràng: **Quản Lý Lớp Học** (`Lớp học & Tiến độ`, `Thời khóa biểu & Điểm danh`, `Lịch sử làm bài`), **Học Liệu & Đề Thi** (`Khung chương trình`, `Sách giáo khoa`, `Đề thi & AI Bloom`), **Kiểm Duyệt & AI** (`Kiểm duyệt gia sư AI`).
+    - Đảm bảo mục `Thời khóa biểu & Điểm danh` hiển thị trang trọng trên Sidebar với biểu tượng Calendar và định tuyến mượt mà.
 - **Kiểm Thử Vận Hành & Biên Dịch**:
-  - `oxlint`: 0 Warning, 0 Error trên toàn bộ 22 file của phân hệ Đề thi.
-  - `node --test`: Pass 37/37 unit tests toàn bộ Web Client.
-  - `npm run build`: Biên dịch sạch sẽ trong 6.19s (`3073 modules`, `0 Error`).
+  - `npm run build`: Biên dịch thành công 100% trong 1.22s (`3079 modules`, `0 Error`).
+  - `dotnet build`: Dịch thành công toàn bộ Practice Service (`0 Warning`, `0 Error`).

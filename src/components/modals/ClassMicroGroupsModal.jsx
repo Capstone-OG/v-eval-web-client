@@ -26,90 +26,6 @@ export default function ClassMicroGroupsModal({ isOpen, onClose, classData }) {
   const [successNotice, setSuccessNotice] = useState('');
   const [assigningGroupId, setAssigningGroupId] = useState(null);
 
-  // Dữ liệu mẫu chuẩn sư phạm 20 học sinh phân thành các nhóm 3 - 5 bạn
-  const defaultSampleGroups = [
-    {
-      groupId: 'GRP-01',
-      groupName: 'Bàn 01 - Trọng tâm: Khảo sát hàm số & Đạo hàm',
-      focusArea: 'Đạo hàm & Cực trị hàm số',
-      commonWeakSkillIds: ['Hàm hợp', 'Tiệm cận đồ thị', 'Điểm cực trị'],
-      recommendedWorksheetTitle: 'Phiếu bài tập vi mô #01: Chinh phục Cực trị & Đạo hàm hàm hợp',
-      assignedWorksheetTitle: 'Phiếu bài tập vi mô #01: Chinh phục Cực trị & Đạo hàm hàm hợp',
-      worksheetAssignedAt: new Date().toISOString(),
-      memberCount: 4,
-      members: [
-        { studentId: 'HS-001', name: 'Nguyễn Văn An', mastery: 0.42, avatarColor: 'bg-blue-500' },
-        { studentId: 'HS-002', name: 'Trần Thị Bình', mastery: 0.45, avatarColor: 'bg-emerald-500' },
-        { studentId: 'HS-003', name: 'Lê Hoàng Cường', mastery: 0.48, avatarColor: 'bg-purple-500' },
-        { studentId: 'HS-004', name: 'Phạm Minh Đức', mastery: 0.52, avatarColor: 'bg-amber-500' }
-      ]
-    },
-    {
-      groupId: 'GRP-02',
-      groupName: 'Bàn 02 - Trọng tâm: Hình học không gian & Khoảng cách',
-      focusArea: 'Góc & Khoảng cách trong không gian Oxyz',
-      commonWeakSkillIds: ['Khoảng cách 2 đường chéo nhau', 'Góc giữa mặt phẳng'],
-      recommendedWorksheetTitle: 'Phiếu bài tập vi mô #02: Kỹ thuật tọa độ hóa hình không gian',
-      assignedWorksheetTitle: null,
-      worksheetAssignedAt: null,
-      memberCount: 4,
-      members: [
-        { studentId: 'HS-005', name: 'Đỗ Thảo Hương', mastery: 0.38, avatarColor: 'bg-rose-500' },
-        { studentId: 'HS-006', name: 'Vũ Quốc Khánh', mastery: 0.41, avatarColor: 'bg-indigo-500' },
-        { studentId: 'HS-007', name: 'Bùi Gia Linh', mastery: 0.47, avatarColor: 'bg-teal-500' },
-        { studentId: 'HS-008', name: 'Đặng Tuấn Minh', mastery: 0.50, avatarColor: 'bg-orange-500' }
-      ]
-    },
-    {
-      groupId: 'GRP-03',
-      groupName: 'Bàn 03 - Trọng tâm: Tích phân & Ứng dụng thực tế',
-      focusArea: 'Tích phân từng phần & Diện tích hình phẳng',
-      commonWeakSkillIds: ['Đổi biến số tích phân', 'Ứng dụng hình học'],
-      recommendedWorksheetTitle: 'Phiếu bài tập vi mô #03: Đổi biến & Tích phân từng phần nhanh',
-      assignedWorksheetTitle: null,
-      worksheetAssignedAt: null,
-      memberCount: 5,
-      members: [
-        { studentId: 'HS-009', name: 'Hồ Phương Nam', mastery: 0.44, avatarColor: 'bg-cyan-500' },
-        { studentId: 'HS-010', name: 'Ngô Kim Ngân', mastery: 0.46, avatarColor: 'bg-pink-500' },
-        { studentId: 'HS-011', name: 'Phan Đình Phong', mastery: 0.49, avatarColor: 'bg-violet-500' },
-        { studentId: 'HS-012', name: 'Dương Thị Quỳnh', mastery: 0.51, avatarColor: 'bg-lime-600' },
-        { studentId: 'HS-013', name: 'Tạ Minh Sơn', mastery: 0.53, avatarColor: 'bg-yellow-600' }
-      ]
-    },
-    {
-      groupId: 'GRP-04',
-      groupName: 'Bàn 04 - Trọng tâm: Tổ hợp, Xác suất & Thống kê',
-      focusArea: 'Xác suất có điều kiện & Nhị thức Newton',
-      commonWeakSkillIds: ['Quy tắc đếm tổ hợp', 'Biến cố độc lập'],
-      recommendedWorksheetTitle: 'Phiếu bài tập vi mô #04: Tư duy mô hình hóa bài toán Xác suất',
-      assignedWorksheetTitle: null,
-      worksheetAssignedAt: null,
-      memberCount: 4,
-      members: [
-        { studentId: 'HS-014', name: 'Trịnh Hữu Tài', mastery: 0.52, avatarColor: 'bg-blue-600' },
-        { studentId: 'HS-015', name: 'Mai Thu Uyên', mastery: 0.54, avatarColor: 'bg-emerald-600' },
-        { studentId: 'HS-016', name: 'Đoàn Bảo Việt', mastery: 0.56, avatarColor: 'bg-purple-600' },
-        { studentId: 'HS-017', name: 'Lý Hải Yến', mastery: 0.58, avatarColor: 'bg-rose-600' }
-      ]
-    },
-    {
-      groupId: 'GRP-05',
-      groupName: 'Bàn 05 - Bàn Nâng Cao: Vận dụng cao 900+',
-      focusArea: 'Luyện đề Nâng cao & Phân hóa đỉnh cao',
-      commonWeakSkillIds: ['Min-Max hàm trị tuyệt đối', 'Bất đẳng thức tích phân'],
-      recommendedWorksheetTitle: 'Phiếu bài tập vi mô #05: Bộ 10 câu Vận dụng cao phân loại thí sinh',
-      assignedWorksheetTitle: 'Phiếu bài tập vi mô #05: Bộ 10 câu Vận dụng cao phân loại thí sinh',
-      worksheetAssignedAt: new Date().toISOString(),
-      memberCount: 3,
-      members: [
-        { studentId: 'HS-018', name: 'Nguyễn Tấn Đạt', mastery: 0.78, avatarColor: 'bg-amber-600' },
-        { studentId: 'HS-019', name: 'Cao Thanh Hà', mastery: 0.82, avatarColor: 'bg-indigo-600' },
-        { studentId: 'HS-020', name: 'Vũ Đức Trọng', mastery: 0.85, avatarColor: 'bg-teal-600' }
-      ]
-    }
-  ];
-
   // Nạp danh sách nhóm thực tế từ Backend khi mở modal
   useEffect(() => {
     if (!isOpen || !classData) return;
@@ -145,7 +61,7 @@ export default function ClassMicroGroupsModal({ isOpen, onClose, classData }) {
       const nextGroups = Array.isArray(res?.groups) ? res.groups : Array.isArray(res) ? res : [];
       setGroups(nextGroups);
       setSuccessNotice(
-        `Thuật toán Backend đã gom cụm thành công ${res?.totalGroups ?? nextGroups.length} bàn học vi mô (${preferredGroupSize} bạn/bàn) theo độ tương đồng lỗ hổng kiến thức!`
+        `Đã xếp thành công ${res?.totalGroups ?? nextGroups.length} nhóm học tập (${preferredGroupSize} bạn/nhóm) theo chuyên đề cần củng cố!`
       );
       setTimeout(() => setSuccessNotice(''), 6000);
     } catch (err) {
@@ -202,7 +118,7 @@ export default function ClassMicroGroupsModal({ isOpen, onClose, classData }) {
 
   if (!isOpen || !classData) return null;
 
-  const totalStudents = groups.reduce((acc, g) => acc + (g.memberCount || (g.members ? g.members.length : 0)), 0) || 20;
+  const totalStudents = groups.reduce((acc, g) => acc + (g.memberCount || (g.members ? g.members.length : 0)), 0) || (classData.totalStudents || 0);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/70 backdrop-blur-md animate-fade-in overflow-y-auto">
@@ -217,13 +133,13 @@ export default function ClassMicroGroupsModal({ isOpen, onClose, classData }) {
             <div>
               <div className="flex flex-wrap items-center gap-2">
                 <h2 className="text-lg sm:text-xl font-black tracking-tight text-white">
-                  Sơ Đồ Nhóm Học Tập Vi Mô (Micro Study Groups: 3 - 5 Bạn)
+                  Sơ Đồ Chia Nhóm Học Tập (3 – 5 Học Sinh / Bàn)
                 </h2>
                 <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-[11px] font-bold">
-                  Sĩ số: {totalStudents}/20 Học sinh
+                  Sĩ số: {totalStudents} Học sinh
                 </span>
                 <span className="px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-400/30 text-[11px] font-bold">
-                  Offline Station
+                  Học trên lớp
                 </span>
               </div>
               <p className="text-xs text-indigo-200/80 font-medium mt-1">
@@ -260,7 +176,7 @@ export default function ClassMicroGroupsModal({ isOpen, onClose, classData }) {
               ))}
             </div>
             <span className="text-[11px] text-slate-400 italic">
-              (Ràng buộc chặt: 100% bàn luôn từ 3 đến 5 học sinh)
+              (Mỗi bàn từ 3 đến 5 học sinh)
             </span>
           </div>
 
@@ -275,7 +191,7 @@ export default function ClassMicroGroupsModal({ isOpen, onClose, classData }) {
               ) : (
                 <Sparkles className="w-4 h-4 text-amber-300" />
               )}
-              <span>Tự Động Gom Bàn Theo Lỗ Hổng Kiến Thức</span>
+              <span>Tự Động Xếp Nhóm Theo Chuyên Đề</span>
             </button>
 
             <button
@@ -301,14 +217,37 @@ export default function ClassMicroGroupsModal({ isOpen, onClose, classData }) {
           <div className="flex items-center justify-between text-xs text-slate-500 font-bold">
             <div className="flex items-center gap-2">
               <Target className="w-4 h-4 text-indigo-600" />
-              <span>Sơ đồ {groups.length} Trạm Bàn Học Hoạt Động Cùng Năng Lực & Trợ Giảng Trực Tiếp</span>
+              <span>Sơ đồ {groups.length} Nhóm Bàn Học Cần Hỗ Trợ</span>
             </div>
             <span className="text-slate-400 font-normal">
-              Chuẩn Differentiated Instruction (Dạy học phân hoá)
+              Phân nhóm học tập theo năng lực
             </span>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {loading ? (
+            <div className="py-16 text-center space-y-3">
+              <RotateCw className="w-8 h-8 text-indigo-600 animate-spin mx-auto" />
+              <p className="text-xs font-bold text-slate-600">Đang tải danh sách nhóm học tập...</p>
+            </div>
+          ) : groups.length === 0 ? (
+            <div className="p-8 text-center bg-slate-50 rounded-3xl border border-dashed border-slate-300 space-y-3">
+              <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto">
+                <Users className="w-6 h-6" />
+              </div>
+              <h3 className="text-sm font-extrabold text-slate-800">Chưa chia nhóm học tập cho lớp này</h3>
+              <p className="text-xs text-slate-500 max-w-md mx-auto">
+                Bấm vào nút <strong>"Tự Động Xếp Nhóm Theo Chuyên Đề"</strong> phía trên để hệ thống xếp các em có cùng chuyên đề cần củng cố vào chung một nhóm bàn.
+              </p>
+              <button
+                onClick={handleAutoPartition}
+                className="mt-2 inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs rounded-xl shadow-md transition-all cursor-pointer"
+              >
+                <Sparkles className="w-4 h-4 text-yellow-300" />
+                <span>Tự động xếp nhóm ngay</span>
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {groups.map((grp, idx) => {
               const members = grp.members || [];
               const isWorksheetAssigned = !!grp.assignedWorksheetTitle;
@@ -376,7 +315,7 @@ export default function ClassMicroGroupsModal({ isOpen, onClose, classData }) {
                                 {Math.round(m.mastery * 100)}%
                               </span>
                             ) : (
-                              <span className="text-slate-400">P(L0): 0.50</span>
+                              <span className="text-slate-400">Đang luyện</span>
                             )}
                           </div>
                         </div>
@@ -389,7 +328,7 @@ export default function ClassMicroGroupsModal({ isOpen, onClose, classData }) {
                     <div className="text-[11px] text-slate-500 flex items-start gap-1.5 leading-relaxed">
                       <FileText className="w-3.5 h-3.5 text-indigo-500 shrink-0 mt-0.5" />
                       <span className="line-clamp-2">
-                        <strong>Đề xuất:</strong> {grp.recommendedWorksheetTitle || 'Phiếu bài tập vi mô củng cố'}
+                        <strong>Đề xuất:</strong> {grp.recommendedWorksheetTitle || 'Phiếu bài tập củng cố'}
                       </span>
                     </div>
 
@@ -417,7 +356,7 @@ export default function ClassMicroGroupsModal({ isOpen, onClose, classData }) {
                         ) : (
                           <Send className="w-3.5 h-3.5" />
                         )}
-                        <span>Phát Đề Thích Ứng Cho Bàn Này</span>
+                        <span>Giao Phiếu Bài Tập Cho Nhóm Này</span>
                       </button>
                     )}
                   </div>
@@ -425,20 +364,21 @@ export default function ClassMicroGroupsModal({ isOpen, onClose, classData }) {
               );
             })}
           </div>
+          )}
         </div>
 
         {/* Modal Footer */}
         <div className="p-4 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500 font-medium">
           <div className="flex items-center gap-2">
             <GraduationCap className="w-4 h-4 text-indigo-600" />
-            <span>Mô hình Bàn học Vi mô giúp Giảng viên kèm cặp 100% học sinh, tránh ỷ lại và học tập tương hỗ.</span>
+            <span>Chia nhóm học tập nhỏ giúp giáo viên dễ dàng kèm cặp và hướng dẫn các em học tập hiệu quả.</span>
           </div>
 
           <button
             onClick={onClose}
             className="px-5 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-extrabold rounded-xl transition-all cursor-pointer"
           >
-            Đóng Sơ Đồ
+            Đóng
           </button>
         </div>
 

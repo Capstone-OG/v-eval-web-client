@@ -128,27 +128,40 @@ export default function Sidebar({
       case 'teacher':
         return [
           {
-            sectionTitle: 'Điều Phối Giảng Dạy',
+            sectionTitle: 'Quản Lý Lớp Học',
             items: [
               {
                 id: 'dashboard',
-                label: 'Tổng quan giảng dạy',
-                sublabel: 'Công việc & công cụ giáo viên',
+                label: 'Lớp học & Tiến độ',
+                sublabel: 'Tiến độ, cảnh báo & thi thử',
                 icon: LayoutGrid,
-                active: activeTab === 'dashboard',
+                active: activeTab === 'dashboard' || activeTab === 'teacher_heatmap' || activeTab === 'proctoring' || activeTab === 'analytics',
                 onClick: () => setActiveTab('dashboard')
               },
               {
-                id: 'teacher_heatmap',
-                label: 'Lớp học & năng lực',
-                sublabel: 'Học sinh và bản đồ kỹ năng',
-                icon: Users,
-                active: activeTab === 'teacher_heatmap',
-                onClick: () => setActiveTab('teacher_heatmap')
+                id: 'schedule',
+                label: 'Thời khóa biểu & Điểm danh',
+                sublabel: 'Lịch dạy, phòng học & điểm danh',
+                icon: Calendar,
+                active: activeTab === 'schedule',
+                onClick: () => setActiveTab('schedule')
               },
               {
+                id: 'history',
+                label: 'Lịch sử làm bài',
+                sublabel: 'Tra cứu bài kiểm tra học viên',
+                icon: History,
+                active: activeTab === 'history',
+                onClick: () => setActiveTab('history')
+              }
+            ]
+          },
+          {
+            sectionTitle: 'Học Liệu & Đề Thi',
+            items: [
+              {
                 id: 'roadmap',
-                label: 'Khung Chương trình & Dạng bài',
+                label: 'Khung chương trình',
                 sublabel: 'Cây kiến thức & Ma trận Bloom',
                 icon: Network,
                 active: activeTab === 'roadmap',
@@ -214,30 +227,19 @@ export default function Sidebar({
                     onClick: () => setActiveTab('exam-studio')
                   }
                 ]
-              },
+              }
+            ]
+          },
+          {
+            sectionTitle: 'Kiểm Duyệt & AI',
+            items: [
               {
-                id: 'diagnostic',
-                label: 'Ngân hàng Đề Khảo thí',
-                sublabel: 'Danh sách đề & trạng thái xuất bản',
-                icon: ClipboardCheck,
-                active: activeTab === 'diagnostic',
-                onClick: () => setActiveTab('diagnostic')
-              },
-              {
-                id: 'history',
-                label: 'Nhật ký Bài làm Học viên',
-                sublabel: 'Tra cứu bài chẩn đoán theo lớp',
-                icon: History,
-                active: activeTab === 'history',
-                onClick: () => setActiveTab('history')
-              },
-              {
-                id: 'analytics',
-                label: 'Cảnh báo & hỗ trợ',
-                sublabel: 'Theo dõi và ghi nhận can thiệp',
-                icon: BarChart3,
-                active: activeTab === 'analytics',
-                onClick: () => setActiveTab('analytics')
+                id: 'ai_moderation',
+                label: 'Kiểm duyệt gia sư AI',
+                sublabel: 'Góp ý câu trả lời trợ lý AI',
+                icon: Bot,
+                active: activeTab === 'ai_moderation',
+                onClick: () => setActiveTab('ai_moderation')
               }
             ]
           }
