@@ -28,6 +28,7 @@ import PayOsCheckoutModal from '../modals/PayOsCheckoutModal';
 import paymentService from '../../services/paymentService';
 import { practiceService } from '../../services/practiceService';
 import { isTuitionPaid, setTuitionPaid, syncTuitionStatusFromServer } from '../curriculum/curriculumAccess';
+import { useToast } from '../../context/ToastContext';
 
 export default function TuitionPaymentView({ 
   currentUser, 
@@ -42,6 +43,15 @@ export default function TuitionPaymentView({
   onNavigateAiTutor,
   showToast 
 }) {
+  const { toast } = useToast();
+  const notifySuccess = useCallback((msg) => {
+    if (showToast) showToast(msg);
+    else toast?.success?.(msg);
+  }, [showToast, toast]);
+  const notifyError = useCallback((msg) => {
+    if (showToast) showToast(msg);
+    else toast?.error?.(msg);
+  }, [showToast, toast]);
   const [selectedChild, setSelectedChild] = useState(activeChild || childrenList[0] || null);
 
   useEffect(() => {
@@ -167,10 +177,9 @@ export default function TuitionPaymentView({
       const statusRes = await paymentService.getStudentTuitionStatus(studentId);
       if (statusRes) {
         setTuitionStatus(statusRes);
-        if (statusRes.isPaid) {
-          setIsPaid(true);
-          setTuitionPaid(studentId, true);
-        }
+        const serverPaid = Boolean(statusRes.isPaid);
+        setIsPaid(serverPaid);
+        setTuitionPaid(studentId, serverPaid);
 
         if (Array.isArray(statusRes.payments) && statusRes.payments.length > 0) {
           setTransactionHistory(statusRes.payments);
@@ -219,7 +228,7 @@ export default function TuitionPaymentView({
 
   const handleCreatePayment = async (pkg) => {
     if (!studentId) {
-      if (showToast) showToast('Chưa xác định được tài khoản học sinh để thanh toán.');
+      notifyError('Chưa xác định được tài khoản học sinh để thanh toán.');
       return;
     }
     setIsLoading(true);
@@ -239,7 +248,7 @@ export default function TuitionPaymentView({
       setActivePaymentData({
         orderCode: result.orderCode,
         checkoutUrl: result.checkoutUrl,
-        amount: pkg.price,
+        amount: result.amount ?? pkg.price,
         courseName: pkg.name,
         studentName: isParent
           ? (selectedChild?.studentName || 'Học viên')
@@ -250,22 +259,21 @@ export default function TuitionPaymentView({
       setIsModalOpen(true);
     } catch (err) {
       console.error('Error creating payment link:', err);
-      if (showToast) showToast('Không thể tạo link PayOS. Vui lòng thử lại!');
+      const errMsg = err?.data?.detail || err?.data?.message || err?.message || 'Không thể tạo link PayOS. Vui lòng thử lại!';
+      notifyError(errMsg);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handlePaymentSuccess = async (paymentInfo) => {
+  const handlePaymentSuccess = async () => {
     setTuitionPaid(studentId, true);
     setIsPaid(true);
 
     // Nạp lại dữ liệu thực tế từ database
     await loadTuitionAndHistory();
 
-    if (showToast) {
-      showToast('Kích hoạt khóa học & mở khóa lộ trình học tập thành công!');
-    }
+    notifySuccess('Kích hoạt khóa học & mở khóa lộ trình học tập P-L-A-R thành công!');
   };
 
   // 6 Quyền lợi & Phân hệ được mở khóa hoàn toàn
@@ -437,14 +445,16 @@ export default function TuitionPaymentView({
             </button>
           )}
 
-          <button
-            type="button"
-            onClick={handleToggleTestPayment}
-            title="Chuyển đổi trạng thái đóng học phí để kiểm thử nghiệm thu"
-            className="px-3.5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs border border-slate-200 transition-all cursor-pointer"
-          >
-            {isPaid ? 'Hủy kích hoạt (Test)' : '⚡ Kích hoạt nhanh (Test)'}
-          </button>
+          {import.meta.env.DEV && (
+            <button
+              type="button"
+              onClick={handleToggleTestPayment}
+              title="Chuyển đổi trạng thái đóng học phí cục bộ (chỉ hiện ở môi trường DEV)"
+              className="px-3.5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs border border-slate-200 transition-all cursor-pointer"
+            >
+              {isPaid ? 'Hủy kích hoạt (Dev)' : '⚡ Kích hoạt nhanh (Dev)'}
+            </button>
+          )}
         </div>
       </div>
 
@@ -787,6 +797,7 @@ export default function TuitionPaymentView({
         onClose={() => setIsModalOpen(false)}
         paymentData={activePaymentData}
         onPaymentSuccess={handlePaymentSuccess}
+        onNavigateRoadmap={onNavigateRoadmap}
       />
 
       {/* Modal Chi Tiết Biên Lai / Kiểm Toán Giao Dịch */}

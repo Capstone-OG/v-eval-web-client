@@ -99,7 +99,7 @@ export default function MetricsGrid({
           </div>
 
           <div className="flex items-center justify-between gap-1 bg-orange-50/50 p-2 rounded-xl border border-orange-100/80 mb-4">
-            {(streak.weeklyActivityDays || [true, true, true, true, true, true, true])
+            {(streak.weeklyActivityDays || [false, false, false, false, false, false, false])
               .slice(0, 7)
               .map((done, idx) => (
                 <div

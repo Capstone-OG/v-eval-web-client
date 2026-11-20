@@ -144,38 +144,78 @@ export default function ExamPaperView({
                   {bloom.code} · {bloom.name}
                 </span>
 
-                {node?.chapterName ? (
-                  <button
-                    type="button"
-                    disabled={isLocked}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (!isLocked) onOpenNodePicker?.(q, parentPassageLocalId, parentPassageContent);
-                    }}
-                    title={`${node.domainName} › ${node.chapterName}${node.lessonName ? ` › ${node.lessonName}` : ''}`}
-                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-indigo-50/80 hover:bg-indigo-100 border border-indigo-200/80 text-[10.5px] font-semibold text-indigo-800 max-w-[340px] truncate cursor-pointer disabled:cursor-default print:hidden"
-                  >
-                    <GitBranch className="w-3 h-3 shrink-0" />
-                    <span className="truncate">
-                      {node.chapterName}
-                      {node.lessonName ? ` › ${node.lessonName}` : ''}
-                    </span>
-                  </button>
-                ) : (
-                  !isLocked && (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onOpenNodePicker?.(q, parentPassageLocalId, parentPassageContent);
-                      }}
-                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md border border-dashed border-amber-300 bg-amber-50/70 hover:bg-amber-100 text-[10.5px] font-bold text-amber-800 cursor-pointer print:hidden"
-                    >
-                      <GitBranch className="w-3 h-3" />
-                      <span>Gắn Chương/Bài</span>
-                    </button>
-                  )
-                )}
+                {(() => {
+                  const stemFold = `${q.content || ''} ${q.suggestedSkillName || ''}`;
+                  const hasVi = /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(stemFold);
+                  const engHits = (stemFold.match(/\b(the|of|and|to|is|are|was|were|has|have|had|would|could|should|which|that|with|for|in|on|by|at|from|magazine|participants|journalist|ability|attractions|beautiful|lovely|always|greet|question|student|students|teacher)\b/gi) || []).length;
+                  const isPureEng = (!hasVi && engHits >= 2) || /<\s*u\b[^>]*>[\s\S]+?<\s*\/\s*u\s*>/i.test(q.content || '');
+                  const nodeFold = `${node?.domainName || ''} ${node?.chapterName || ''} ${node?.lessonName || ''}`.toLowerCase();
+                  const isCrossSubjectMismatch = isPureEng && (
+                    nodeFold.includes('vật lí') ||
+                    nodeFold.includes('vật lý') ||
+                    nodeFold.includes('hoá học') ||
+                    nodeFold.includes('hóa học') ||
+                    nodeFold.includes('toán') ||
+                    nodeFold.includes('sinh học') ||
+                    nodeFold.includes('lịch sử') ||
+                    nodeFold.includes('địa lí') ||
+                    nodeFold.includes('ngữ văn')
+                  );
+
+                  if (node?.chapterName && !isCrossSubjectMismatch) {
+                    return (
+                      <button
+                        type="button"
+                        disabled={isLocked}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (!isLocked) onOpenNodePicker?.(q, parentPassageLocalId, parentPassageContent);
+                        }}
+                        title={`${node.domainName} › ${node.chapterName}${node.lessonName ? ` › ${node.lessonName}` : ''}`}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-indigo-50/80 hover:bg-indigo-100 border border-indigo-200/80 text-[10.5px] font-semibold text-indigo-800 max-w-[340px] truncate cursor-pointer disabled:cursor-default print:hidden"
+                      >
+                        <GitBranch className="w-3 h-3 shrink-0" />
+                        <span className="truncate">
+                          {node.chapterName}
+                          {node.lessonName ? ` › ${node.lessonName}` : ''}
+                        </span>
+                      </button>
+                    );
+                  }
+
+                  if (isCrossSubjectMismatch && !isLocked) {
+                    return (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onOpenNodePicker?.(q, parentPassageLocalId, parentPassageContent);
+                        }}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md border border-dashed border-sky-400 bg-sky-50/80 hover:bg-sky-100 text-[10.5px] font-bold text-sky-800 cursor-pointer print:hidden"
+                        title="Câu hỏi Tiếng Anh đang bị gán sai môn. Nhấn để chọn đúng Chương/Bài Tiếng Anh."
+                      >
+                        <GitBranch className="w-3 h-3 text-sky-600" />
+                        <span>Gắn Chương/Bài (Tiếng Anh)</span>
+                      </button>
+                    );
+                  }
+
+                  return (
+                    !isLocked && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onOpenNodePicker?.(q, parentPassageLocalId, parentPassageContent);
+                        }}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md border border-dashed border-amber-300 bg-amber-50/70 hover:bg-amber-100 text-[10.5px] font-bold text-amber-800 cursor-pointer print:hidden"
+                      >
+                        <GitBranch className="w-3 h-3" />
+                        <span>Gắn Chương/Bài</span>
+                      </button>
+                    )
+                  );
+                })()}
               </>
             )}
           </div>
@@ -635,7 +675,9 @@ export default function ExamPaperView({
                           <span className="inline-flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wide text-[#1E3A5F]">
                             <BookOpen className="w-3.5 h-3.5" />
                             <span>
-                              Dựa vào thông tin dưới đây để trả lời các câu từ {p.startQuestion} đến {p.endQuestion}
+                              {p.startQuestion === p.endQuestion
+                                ? `Dựa vào thông tin dưới đây để trả lời câu ${p.startQuestion}`
+                                : `Dựa vào thông tin dưới đây để trả lời các câu từ ${p.startQuestion} đến ${p.endQuestion}`}
                             </span>
                           </span>
                           <span className="text-[11px] font-bold text-[#2C4C7E] bg-white px-2 py-0.5 rounded-full border border-[#D4DFED]">

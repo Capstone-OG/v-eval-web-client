@@ -316,11 +316,11 @@ export default function App() {
   }, [role, currentUser, loadRolePortalBackendMetrics]);
 
   const handleOpenAdaptiveQuiz = () => {
-    setActiveModal('adaptive');
+    setActiveTab('roadmap');
   };
 
   const handleOpenMockExam = () => {
-    setActiveModal('mock');
+    setActiveTab('diagnostic');
   };
 
   const handleOpenAiTutorWithQuestion = (questionContext) => {
@@ -578,6 +578,8 @@ export default function App() {
             curriculum={curriculum}
             onNavigateDiagnostic={() => setActiveTab('diagnostic')}
             onNavigateDashboard={() => setActiveTab('dashboard')}
+            onNavigateTuition={() => setActiveTab('tuition')}
+            onOpenAiTutorWithContext={handleOpenAiTutorWithQuestion}
           />
         );
       }
@@ -624,7 +626,7 @@ export default function App() {
           onSelectChildId={setParentActiveChildId}
           onBackToDashboard={() => setActiveTab('dashboard')}
           onNavigateRoadmap={role === 'parent' ? undefined : () => setActiveTab('roadmap')}
-          onNavigateAdaptive={role === 'parent' ? undefined : () => setActiveTab('adaptive')}
+          onNavigateAdaptive={role === 'parent' ? undefined : () => setActiveTab('roadmap')}
           onNavigateSchedule={role === 'parent' ? undefined : () => setActiveTab('schedule')}
           onNavigateLive={role === 'parent' ? undefined : () => setActiveTab('live')}
           onNavigateAiTutor={role === 'parent' ? undefined : () => {
@@ -670,6 +672,9 @@ export default function App() {
           currentUser={currentUser}
           onStartDiagnostic={() => setActiveTab('diagnostic')}
           onStartAdaptiveQuiz={handleOpenAdaptiveQuiz}
+          onOpenZPD={handleOpenAdaptiveQuiz}
+          onOpenRoadmap={() => setActiveTab('roadmap')}
+          onOpenHistory={() => setActiveTab('history')}
           onOpenAiTutor={() => {
             setAiTutorInitialContext(null);
             setActiveModal('ai');

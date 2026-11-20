@@ -2,8 +2,40 @@
 
 ---
 
-## [20/11/2026] - Hotfix Lỗi `ReferenceError: iconGradient is not defined` Trên Sidebar Thu Gọn & Nâng Cấp Trình Bóc Tách Đề Thi (`Sidebar.jsx`, `ExamParserStudioView.jsx`)
+## [21/11/2026] - Chuẩn Hóa Thẻ Gạch Chân `<u>`, KaTeX `\circC` & Bóc Tách Chùm Đọc Hiểu / Câu Hỏi Số Trần
 
+- **Loại Bỏ Nhãn ABCD Trên Thân Câu Hỏi & In Đậm + Gạch Chân Từ Cần Tìm Lỗi ([`examTextRepair.js`](../src/utils/examTextRepair.js), [`MathText.jsx`](../src/components/common/MathText.jsx), [`examStateBridge.test.js`](../src/components/curriculum/examStateBridge.test.js))**:
+  - `repairUnderlineTags`: Xóa sạch nhãn `(A)`, `(B)`, `(C)`, `(D)` bám theo sau thẻ `<u>...</u>` (vd: `<u>were</u> (C)` -> `<u>were</u>`), trả lại câu văn tiếng Anh tự nhiên, mượt mà chuẩn đề gốc. Đáp án trắc nghiệm A/B/C/D được hiển thị rõ ràng và độc lập qua hệ thống 4 nút phương án bên dưới.
+  - `MathText.jsx`: Định dạng thẻ `<u>` thành `font-bold underline decoration-2 decoration-indigo-600 underline-offset-4` đảm bảo từ khóa vừa **in đậm** vừa **gạch chân**.
+- **Thẻ Gạch Chân & KaTeX ([`examTextRepair.js`](../src/utils/examTextRepair.js), [`MathText.jsx`](../src/components/common/MathText.jsx))**:
+  - `repairUnderlineTags` chuẩn hóa mọi biến thể `</u >`, `<\/u>`, `$</u > (A)$` thành `</u>` hợp lệ, giữ nguyên khoảng trắng và nội dung từ.
+  - `repairDegreeUnits` tách biệt chuẩn hóa `\circC` khỏi logic bọc `$`, triệt tiêu lỗi `$$$` gây đỏ KaTeX ở Câu 95; `renderKatexHtml` bổ sung dự phòng chuyển `\circ C` -> `°C`.
+- **Đồng Bộ Dữ Liệu & Bộ Nhớ Tạm ([`examStateBridge.js`](../src/components/curriculum/examStateBridge.js), [`examParserUtils.js`](../src/utils/examParserUtils.js))**:
+  - Nâng cấp khóa `sessionStorage` lên `veval_active_exam_workspace_v2`, tự động xóa sạch dữ liệu lỗi từ các lần import cũ trên trình duyệt.
+  - `examParserUtils.js` bổ sung bước 1.9 dọn sạch phụ âm đơn lẻ bị xen kẽ giữa các đoạn văn Lịch sử/Ngữ văn.
+- **Kiểm thử**: `examStateBridge.test.js` `5/5`, `tests/*.test.js` `22/22`, `npm run build` thành công `4.69s`.
+
+## [20/11/2026] - Sửa Hàng Loạt Lỗi Li Ti Khi Parse Đề PDF Ở Web Client (Chạy Local, Chưa Deploy Docker)
+
+- **Render văn bản & công thức ([`MathText.jsx`](../src/components/common/MathText.jsx), [`examParserUtils.js`](../src/utils/examParserUtils.js))**: hết bọc KaTeX nhầm văn xuôi tiếng Việt quanh dấu gạch và cắt chữ `có sẵn`; sửa `\circC`, `<u>...</u>`, `\ne` + `\begin{cases}`; phục hồi `≡` PUA MathType; chuyển ma trận kề viết liền thành bảng Markdown.
+- **Hình & map node ([`ExamMediaLightbox.jsx`](../src/components/curriculum/ExamMediaLightbox.jsx), [`examCurriculumMatcher.js`](../src/utils/examCurriculumMatcher.js), [`examStateBridge.js`](../src/components/curriculum/examStateBridge.js))**: chặn khung hình giả ở câu văn bản thuần, ẩn ảnh lỗi; khớp từ khóa theo từ nguyên và tự chữa node sai môn; chuẩn hóa đề khôi phục từ `sessionStorage`; thêm 2 test hồi quy ở `examStateBridge.test.js`.
+- **Vòng 2 & 3 ([`examTextRepair.js`](../src/utils/examTextRepair.js), [`MathText.jsx`](../src/components/common/MathText.jsx), [`ExamPaperView.jsx`](../src/components/curriculum/ExamPaperView.jsx), [`useExamWorkspaceController.js`](../src/components/curriculum/useExamWorkspaceController.js))**:
+  - `MathText.jsx` trực tiếp match `<s*ub[^>]*>[sS]+?<s*/s*us*>` thành thẻ `<u>`, không còn phụ thuộc tiền xử lý; dự phòng `renderKatexHtml` chuyển `\circC` thành `°C`.
+  - `repairDegreeUnits` tách biệt chuẩn hóa `\circC` khỏi logic bọc `$`, triệt tiêu lỗi `$$$` gây đỏ KaTeX ở Câu 95.
+  - `normalizeQuestionItem` & `ExamPaperView.jsx` phát hiện lệch môn, chặn gán sai môn Vật lí/Hóa học/Toán cho câu tiếng Anh Câu 26–29; `useExamWorkspaceController.js` tự động chữa lành `currentExam` khi nạp cây môn học.
+  - **Vòng 3**: `examStateBridge.js` bump sessionStorage key `v1` → `v2` buộc browser xóa cache cũ; `examParserUtils.js` thêm bước 1.9 lọc ký tự ASCII đơn lẻ bị xen kẽ trên dòng riêng trong đoạn văn Lịch sử/Ngữ văn (lỗi font bitmap PUA của AI cloud/PdfPig parser, Passage Câu 118–120).
+- **Kiểm thử**: `examStateBridge.test.js` `5/5`, `tests/*.test.js` `22/22`, `npm run build` thành công 3.47s.
+
+## [20/11/2026] - Hoàn Thiện Hành Trình Học Sinh End-to-End (Phòng Thi Độc Lập Nền Trắng -> Đầy Đủ Đoạn Văn `Passage` Trong PLAR -> Bản Đồ Lộ Trình Lớp 10–12 Phân 3 Vùng `WEAK` / `MASTERED` / `UNASSESSED` -> Cổng Học Phí PayOS) & Hotfix Sidebar
+
+- **Phòng Thi Độc Lập Nền Trắng Toàn Màn Hình (`DiagnosticAssessmentPage.jsx`)**:
+  - Render màn hình đang làm bài và chấm bài (`stage === 'testing' || stage === 'analyzing'`) qua `createPortal(..., document.body)` với `fixed inset-0 z-[200] w-screen h-screen overflow-y-auto bg-white` và khóa cuộn trang nền, tách hẳn phòng thi thành trang riêng nền trắng tinh khiết (loại bỏ hoàn toàn lỗi lộ nền `bg-transparent` của Dashboard/Sidebar phía sau).
+- **Hiển Thị Đoạn Văn Đọc Hiểu `PassageContextBox` & Studio Chu Trình P-L-A-R 4 Pha (`StudentRoadmapWorkspace.jsx`, `ConnectedRoadmapPage.jsx`, `PlarNodeStudioPanel.jsx`, `practiceService.js`)**:
+  - Bổ sung `PassageContextBox` trong `PlarNodeStudioPanel.jsx` hiển thị đầy đủ tiêu đề, đoạn văn ngữ cảnh (`passageContent`) và hình ảnh (`passageImageUrl`) cho câu hỏi đọc hiểu ở cả 3 pha `Preview`, `Apply` và `Remedial` (`BR-03`).
+  - Nâng cấp `ConnectedRoadmapPage.jsx` hiển thị toàn bộ phổ kiến thức ~337 dạng bài Lớp 10–12 của 9 môn GDPT 2018 chia làm 3 vùng ưu tiên rõ ràng: **(1) Ưu tiên cải thiện ngay (`WEAK` — xếp đầu)** → **(2) Đã đánh giá đạt điểm OK / Hoàn thành (`MASTERED` & `COMPLETED` — hiển thị sau)** → **(3) Chưa đánh giá — Phổ Lớp 10–12 (`UNASSESSED` — xếp ở cuối)**, tích hợp bộ lọc theo Vùng / Khối Lớp 10–11–12 / 9 Môn học / Tìm kiếm tức thì và banner nâng cấp 1 chạm cho lộ trình 24 chặng cũ.
+  - Kết nối trọn vẹn 8/8 endpoint `StagesController`: `start`, `preview-submit`, `track-video`, `next-question`, `submit-answer`, `remedial`, `remedial-submit`, `reflect-complete`.
+- **Test Đầu Vào 30 Câu 9 Môn & Cổng Học Phí An Toàn (`DiagnosticAssessmentPage.jsx`, `contentService.js`, `TuitionPaymentView.jsx`, `PayOsCheckoutModal.jsx`, `curriculumAccess.js`, `LearningAnalyticsView.jsx`, `App.jsx`)**:
+  - Hỗ trợ `excludeExamIds` làm đủ 3 đề chẩn đoán cân bằng 9 môn GDPT 2018, bổ sung bảng năng lực từng môn (`subjectBreakdowns`) và nút CTA chuyển thẳng sang Lộ trình / Học phí; đồng bộ xóa cache `localStorage` khi server trả `isPaid = false`; ẩn nút kích hoạt/giả lập webhook khỏi production (`import.meta.env.DEV`); sửa lỗi `ReferenceError: setOnboardingOverride` ở `LearningAnalyticsView.jsx`.
 - **Hotfix Khẩn Cấp Production (`Sidebar.jsx`)**:
   - Khắc phục lỗi crash `ReferenceError: iconGradient is not defined` và `glowClass is not defined` khi thu gọn thanh điều hướng (`isCollapsed`) bằng cách khai báo lại `iconGradient` (`item.iconColor || 'from-blue-500 to-indigo-600'`) và `glowClass` (`item.activeGlow || 'shadow-blue-500/30'`).
   - Đã kiểm thử `npx oxlint -D no-undef src/components/layout/Sidebar.jsx` (`0 Error`) và `npm run build` (`3076 modules`, `5.38s`, `0 Error`).
