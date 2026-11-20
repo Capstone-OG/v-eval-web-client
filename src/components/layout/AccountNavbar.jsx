@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Bell, CalendarDays, ChevronDown, ChevronRight, Flame, Home, LayoutDashboard, LogOut, Menu, Settings } from 'lucide-react';
 import { accountRoleLabel } from '../../utils/accountPresentation';
 
-export default function AccountNavbar({ role = 'student', pageTitle = 'Tổng quan', currentUser,
+export default function AccountNavbar({ role = 'student', pageTitle = 'Tổng quan', pageSubtitle, currentUser,
   portalMetrics = {}, onLogout, onOpenLandingPage, onOpenSettings, onOpenNavigation }) {
   const [open, setOpen] = useState(false);
   const container = useRef(null);
@@ -58,6 +58,7 @@ export default function AccountNavbar({ role = 'student', pageTitle = 'Tổng qu
             <span className="truncate">{roleLabel}</span>
           </div>
           <p className="truncate text-sm font-bold tracking-tight text-slate-900 sm:text-lg">{pageTitle}</p>
+          {pageSubtitle && <p className="mt-0.5 truncate text-[11px] text-slate-500">{pageSubtitle}</p>}
         </div>
       </div>
       <div className="flex shrink-0 items-center gap-2 sm:gap-3 xl:gap-4">

@@ -1,7 +1,6 @@
 import { ROLE_LABELS } from '../../config/roles';
 import DatePicker from '../common/DatePicker';
 import { toast } from '../../context/ToastContext';
-import { readLocalAspiration, saveLocalAspiration } from '../../utils/localAspiration';
 import { validatePasswordChange, passwordApiFieldErrors } from '../../utils/passwordValidation';
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -90,10 +89,9 @@ export default function AccountSettingsPage({
   const [targetScore, setTargetScore] = useState(850);
   const [campusId, setCampusId] = useState('campus-1');
   const [campuses, setCampuses] = useState(campusesList);
-  const [examDate, setExamDate] = useState('2026-03-29');
+  const [examDate, setExamDate] = useState('');
   const [studyHoursDay, setStudyHoursDay] = useState(2.5);
   const [schoolName, setSchoolName] = useState('');
-  const [universityAspiration, setUniversityAspiration] = useState('');
 
   // Parent & Family Link States
   const [parentRelation, setParentRelation] = useState(''); // 'father' | 'mother' | 'guardian'
@@ -153,7 +151,7 @@ export default function AccountSettingsPage({
   const [isSavingPassword, setIsSavingPassword] = useState(false);
   const [alertInfo, setAlertInfo] = useState(null); // { type: 'success' | 'error', message: string }
   const [savedSettings, setSavedSettings] = useState(null);
-  const academicValues = { targetScore: Number(targetScore), examDate, studyHoursDay: Number(studyHoursDay), schoolName, universityAspiration };
+  const academicValues = { targetScore: Number(targetScore), examDate, studyHoursDay: Number(studyHoursDay), schoolName };
   const parentValues = { parentRelation, parentName, parentPhone, parentEmail };
   const preferenceValues = { socraticMode, dailyReminder, reminderTime, soundEffects, weeklyEmailReport, autoSaveDraft };
   const hasChanges = (section, values) => !isLoading && Boolean(savedSettings)
@@ -170,7 +168,7 @@ export default function AccountSettingsPage({
   };
   const resetSettings = (section) => {
     const setters = {
-      academic: { targetScore: setTargetScore, examDate: setExamDate, studyHoursDay: setStudyHoursDay, schoolName: setSchoolName, universityAspiration: setUniversityAspiration },
+      academic: { targetScore: setTargetScore, examDate: setExamDate, studyHoursDay: setStudyHoursDay, schoolName: setSchoolName },
       parent: { parentRelation: setParentRelation, parentName: setParentName, parentPhone: setParentPhone, parentEmail: setParentEmail },
       preferences: { socraticMode: setSocraticMode, dailyReminder: setDailyReminder, reminderTime: setReminderTime,
         soundEffects: setSoundEffects, weeklyEmailReport: setWeeklyEmailReport, autoSaveDraft: setAutoSaveDraft }
@@ -192,14 +190,11 @@ export default function AccountSettingsPage({
     async function loadData() {
       setIsLoading(true);
       setSchoolName('');
-      setUniversityAspiration('');
-      const loadedSettings = { academic: { ...academicValues, schoolName: '', universityAspiration: '' }, parent: { ...parentValues }, preferences: { ...preferenceValues } };
+      setExamDate('');
+      const loadedSettings = { academic: { ...academicValues, schoolName: '', examDate: '' }, parent: { ...parentValues }, preferences: { ...preferenceValues } };
 
       // 1. Initialize from props / token storage
       const storedUser = currentUser || tokenStorage.getUser() || mockUser;
-      const localAspiration = readLocalAspiration(localStorage, storedUser.userId || storedUser.id || storedUser.studentId);
-      loadedSettings.academic.universityAspiration = localAspiration;
-      setUniversityAspiration(localAspiration);
       setJoinedAt((currentUser || tokenStorage.getUser())?.createdAt || null);
       let initialName = storedUser.fullName || storedUser.name || mockUser.name;
       let initialPhone = storedUser.phone || '0988123456';
@@ -274,7 +269,6 @@ export default function AccountSettingsPage({
             examDate: studentProfile.examDate || loadedSettings.academic.examDate,
             studyHoursDay: Number(studentProfile.studyHoursDay || loadedSettings.academic.studyHoursDay),
             schoolName: studentProfile.schoolName ?? '',
-            universityAspiration: localAspiration
           };
           if (studentProfile.targetScore != null) setTargetScore(studentProfile.targetScore);
           if (studentProfile.campusId) {
@@ -288,7 +282,6 @@ export default function AccountSettingsPage({
           if (studentProfile.examDate) setExamDate(studentProfile.examDate);
           if (studentProfile.studyHoursDay) setStudyHoursDay(studentProfile.studyHoursDay);
           setSchoolName(studentProfile.schoolName ?? '');
-          setUniversityAspiration(localAspiration);
         }
       } catch (err) {
         setTargetScore(mockUser.targetScore || 850);
@@ -296,7 +289,6 @@ export default function AccountSettingsPage({
         loadedSettings.academic.schoolName = '';
         setCampusId(mockUser.campusId || 'campus-1');
         setSchoolName('');
-      setUniversityAspiration(localAspiration);
       }
 
       // Optional parent details belong only to the signed-in account.
@@ -387,8 +379,7 @@ export default function AccountSettingsPage({
         if (savedStudent?.schoolName !== schoolName.trim()) {
           throw new Error('Máy chủ chưa xác nhận trường đã lưu. Vui lòng thử lại.');
         }
-        const user = tokenStorage.getUser();
-        saveLocalAspiration(localStorage, user?.userId || user?.id || user?.studentId, universityAspiration);
+
         setSavedSettings((prev) => ({ ...prev, academic: academicValues }));
         window.dispatchEvent(new CustomEvent('veval-campus-updated', { detail: { campusId } }));
         window.dispatchEvent(new Event('veval:submission-updated'));
@@ -636,7 +627,7 @@ export default function AccountSettingsPage({
               Cài đặt Tài khoản & Hồ sơ Năng lực
             </h1>
             <p className="text-xs sm:text-sm text-slate-300 max-w-2xl font-medium">
-              Tùy chỉnh thông tin định danh cá nhân, mục tiêu điểm số ĐGNL V-ACT 1200, quản lý thông tin phụ huynh & tra cứu học bạ điện tử gia đình.
+              Tùy chỉnh thông tin định danh cá nhân, quản lý thông tin phụ huynh & tra cứu học bạ điện tử gia đình.
             </p>
           </div>
 
@@ -702,7 +693,7 @@ export default function AccountSettingsPage({
       {activationGuidance && (
         <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-xs leading-relaxed text-blue-800">
           <p className="font-extrabold">{activationChecking ? 'Đã lưu hồ sơ — đang kiểm tra bước tiếp theo…' : 'Bước 2: Hoàn thiện hồ sơ trước khi thanh toán'}</p>
-          <p className="mt-1">Trong <strong>Thông tin cá nhân</strong>, bổ sung họ tên, số điện thoại, trường THPT, nguyện vọng, điểm mục tiêu, ngày thi sắp tới và thời lượng tự học. Sau đó bấm <strong>Lưu thay đổi hồ sơ</strong> ở cuối biểu mẫu để tiếp tục.</p>
+          <p className="mt-1">Trong <strong>Thông tin cá nhân</strong>, bổ sung họ tên, số điện thoại, trường THPT, điểm mục tiêu, ngày thi dự kiến và thời lượng tự học. Sau đó bấm <strong>Lưu thay đổi hồ sơ</strong> ở cuối biểu mẫu để tiếp tục. Thông tin phụ huynh có thể cập nhật sau.</p>
         </div>
       )}
       <div className="bg-white rounded-2xl border border-slate-200/80 p-2 shadow-xs flex flex-wrap gap-2">
@@ -997,28 +988,10 @@ export default function AccountSettingsPage({
                   <div>
                     <h4 className="text-sm font-extrabold text-slate-800">Học tập & Mục tiêu thi cử</h4>
                     <span className={`mt-2 inline-flex rounded-full border px-2.5 py-1 text-[11px] font-semibold ${scoreInfo.color}`}>{scoreInfo.label}</span>
-                    <p className="mt-1 text-xs text-slate-500">Cập nhật trường THPT, nguyện vọng và kế hoạch ôn thi của bạn.</p>
+                    <p className="mt-1 text-xs text-slate-500">Cập nhật trường THPT và kế hoạch ôn thi của bạn.</p>
                   </div>
 
-<div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                  Nguyện vọng & Trường Đại học Mục tiêu
-                </label>
-                <div className="relative">
-                  <School className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <input
-                    type="text"
-                    value={universityAspiration}
-                    onChange={(e) => setUniversityAspiration(e.target.value)}
-                    maxLength={500}
-                    placeholder="VD: Đại học Bách khoa — ngành Khoa học máy tính"
-                    className="w-full pl-10 pr-4 py-2.5 text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all text-slate-800"
-                  />
-                </div>
-                <p className="mt-1 text-[11px] text-slate-400">Nguyện vọng được lưu trên thiết bị này.</p>
-              </div>
-
+<div className="grid grid-cols-1 gap-5">
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1.5">
                   Trường THPT Đang theo học

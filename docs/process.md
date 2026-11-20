@@ -1173,3 +1173,119 @@ Student activation loads account-scoped diagnostic history, saved profile and se
 | Frontend changes | Ready | Profile/auth/navigation/activation/payment improvements and documentation included. |
 | Validation | Passed | Production build, 30 targeted tests, whitespace cleanup. |
 | Commit scope | Frontend only | No backend or System-Repo staging. |
+
+
+## [21/11/2026] - Weekly timetable frontend
+
+StudentScheduleView retains existing API loading/filtering; WeeklyScheduleCalendar handles the week grid and ScheduleSessionDialog displays selected-session details. weeklySchedule utilities resolve dates, time rows and attendance presentation.
+
+| Component | Status | Detail |
+| --- | --- | --- |
+| Weekly schedule | Completed | Seven days, six numbered standard slots, actual custom time rows, week controls and mobile agenda. |
+| Class labels and details | Completed | API className outside and inside modal; room omitted, existing practice/AI actions retained. |
+| Validation | Passed | Production build, 8 date/grouping tests and React render assertions. |
+| Backend scope | Unchanged | Five backend repositories remain clean. |
+
+
+## [21/11/2026] - Schedule heading deduplication
+
+| Component | Status | Detail |
+| --- | --- | --- |
+| Schedule heading | Completed | Navbar retains title; duplicate content title/icon removed. Source verified. |
+
+
+## [21/11/2026] - Schedule subtitle and filter action
+
+| Component | Status | Detail |
+| --- | --- | --- |
+| Navbar subtitle | Completed | Optional schedule-only description below page title. |
+| Refresh action | Completed | Right-aligned in filter row. Production build passed. |
+
+
+## [21/11/2026] - Remove aspiration frontend field
+
+| Component | Status | Detail |
+| --- | --- | --- |
+| Profile aspiration | Removed | Input, local storage access and dirty/reset state removed. |
+| Activation checks | Updated | Aspiration is no longer required. Build and 9 tests passed. |
+
+
+## [21/11/2026] - Student-only profile eligibility
+
+| Component | Status | Detail |
+| --- | --- | --- |
+| Exam date check | Corrected | Valid date required; past dates do not block checkout. |
+| Parent profile | Optional | Never required for payment activation. |
+| Post-save check | Updated | Runs for any successful student profile save, including ordinary settings entry. |
+| Validation | Passed | Build and 10 activation tests. |
+
+## [21/11/2026] - Paid roadmap access
+| Component | Status | Detail |
+| --- | --- | --- |
+| Tuition resolution | Complete | Normalize summary and scoped successful payment history. |
+| Roadmap lifecycle | Complete | Idempotent tuition events, shared activation result and background refresh without remounting. |
+| Verification | Passed | 29 regression tests and frontend production build; backend untouched. |
+
+### [21/11/2026] - Empty exam date default (FE)
+Removed the prefilled exam date from account settings. Profiles without a saved date show the date picker placeholder; saved dates remain visible. Reset the date when loading another account. Frontend production build passed; no backend changes.
+
+### [21/11/2026] - Membership benefits visibility (FE)
+Membership benefits now remain visible before payment, with activation-required labels and no unlocked action links. Paid members retain unlocked actions and the active course card. The heading uses the actual benefit count. Removed the test deactivation button and its reversal behavior. Frontend production build passed; backend unchanged.
+
+### [21/11/2026] - Remove stale local tuition authorization
+Fixed the tuition view retaining a cached test activation after an unpaid server response. It now starts without cached access and applies both paid and unpaid API results. Removed quick test activation. Curriculum synchronization clears unpaid cache and never grants access from cached state on request failure. Server tuition summary or confirmed successful payment history remains the payment source. Validation: 31 regression tests and frontend production build passed. Backend unchanged; live account not inspected.
+
+### [21/11/2026] - Authoritative tuition API access
+Supersedes the earlier history-based fallback: frontend access now strictly follows isPaid from GET /api/practice/payments/status-by-student/{studentId} (existing my-status fallback). Payment history and checkout success callbacks cannot grant access independently; payment completion reloads tuition status. Standalone roadmap initializes locked and rechecks the API on events rather than reading local cache. Existing backend computes eligibility from ACTIVE registration or SUCCESS/PAID payments; backend unchanged. Validation: 31 regression tests and production build passed.
+
+## [21/11/2026] - Paid roadmap generation and timetable
+| Component | Status | Detail |
+| --- | --- | --- |
+| Paid activation | Complete | Ensure existing roadmap or generate once on confirmed payment, using saved profile and completed diagnostic. |
+| Existing progress | Preserved | Only 404 permits generation; no generation on network/auth failures. |
+| Milestone card | Updated | Read-only roadmap loading; refreshes after roadmap update event. |
+| Timetable | Updated | Optional metadata errors no longer hide sessions; distinguish empty states. |
+| Validation | Passed | 45 regression tests and FE build. Real account data not inspected. |
+
+## [21/11/2026] - Mock exam API integration
+| Component | Status | Detail |
+| --- | --- | --- |
+| Published full exams | Connected | GET /api/content/exams; published FULL_MOCK only. |
+| Exam session | Connected | POST mock-exams/{examId}/start; actual questions and duration, no fixed exam ID. |
+| Submission and results | Connected | POST {submissionId}/submit and GET {submissionId}; no frontend grading. |
+| Proctoring | Connected | Tab visibility departure logging; webcam capture not implemented in this change. |
+| Resume/error handling | Complete | Per-student browser draft, original deadline, retry and server-result recovery after ambiguous submit failure. |
+| Verification | Passed | 11 unit tests, production build, Chrome mocked-API interaction flow. Live API execution outstanding. |
+
+## [21/11/2026] - Shared assessment room
+| Component | Status | Detail |
+| --- | --- | --- |
+| ExamRoom | Shared | Original diagnostic header, question/passage layout, flags, navigation, timing display and submit confirmation. |
+| Diagnostic | Preserved | Existing diagnostic state, submission, recovery and anti-cheat logic retained. |
+| Mock page | Complete | Dedicated sidebar page, shared renderer and equivalent fullscreen/three-violation/timeout mechanics. Uses mock APIs. |
+| Draft | Complete | Answers, flags, violation count and original deadline restored per student. |
+| Validation | Passed | 23 unit tests, production build, Chrome stub-API passage/resume/three-violation/timeout scenarios. |
+
+### [21/11/2026] - Mock lobby duplicate title and live catalog check
+Removed the repeated mock lobby heading, retaining the account navbar title. Read-only GET http://localhost:5212/api/content/exams confirmed three FULL_MOCK records, all isPublished=false: 2019 (119 questions), de-minh-hoa-dhqdtphcm2025 (120), De-thi-mau-DHQG-HCM-2024-pdf-pdf (120); all 150 minutes. The published-only frontend filter is correct; no exam publication or backend/database edits were performed. Frontend production build passed.
+
+### [21/11/2026] - Simplify mock lobby copy
+Removed the amber rules banner and the sentence comparing mock mechanics to diagnostic assessment, as requested. Retained the brief exam selection prompt and refresh button. Frontend build passed; exam behavior and backend unchanged.
+
+### [21/11/2026] - Remove activated course banner
+Removed the green activated-course notification and official-student badge from StudentCurriculumView. Payment eligibility logic unchanged. Frontend production build passed; backend untouched.
+
+### [21/11/2026] - Simplify account settings description
+Removed the V-ACT 1200 target-score phrase from the account settings header description as requested. Frontend production build passed; backend unchanged.
+
+### [21/11/2026] - Simplify student roadmap, history and payment copy
+Removed the DAG/ZPD suffix from the personalized roadmap badge and the visible submission UUID from the attempt history table. Replaced technical ACID/NAPAS payment wording and the fixed 1-3 second activation claim with concise PayOS payment and confirmed-payment activation text. IDs remain available to API handlers. Frontend build passed; backend unchanged.
+
+### [21/11/2026] - Shorten tuition heading
+Removed the adaptive PLAR suffix from the tuition activation heading, retaining the payment and roadmap activation wording. Verified the resulting source string and git diff whitespace check. Copy-only frontend change; backend unchanged.
+
+### [21/11/2026] - Remove course license panel
+Removed the course license status panel including perpetual access and V-ACT outcome commitment copy. Adjusted the remaining course information grid to two columns. Frontend production build passed; backend unchanged.
+
+### [21/11/2026] - Frontend commit verification
+Final scope: weekly timetable/session details, profile prerequisites, authoritative tuition access and roadmap provisioning, shared diagnostic/mock exam room and API integration, and simplified student-facing copy. All 75 related unit tests passed; latest production build passed. Chrome stub-API flow and read-only live mock catalog verification were completed earlier in this session. No backend source or live exam data changed. The frontend changes and frontend documentation are ready for commit; root repository configuration/SQL/script changes are outside this frontend commit.

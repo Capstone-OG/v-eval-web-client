@@ -28,7 +28,7 @@ import paymentService from '../../services/paymentService';
 import { getPaymentStatusView, refreshPendingPayments, getPaymentContinuation } from '../../utils/paymentStatus';
 import { toast } from '../../context/ToastContext';
 import { tokenStorage } from '../../services/apiClient';
-import { isTuitionPaid, setTuitionPaid, syncTuitionStatusFromServer } from '../curriculum/curriculumAccess';
+import { setTuitionPaid } from '../curriculum/curriculumAccess';
 
 export default function TuitionPaymentView({ 
   currentUser, 
@@ -45,7 +45,7 @@ export default function TuitionPaymentView({
   const [isSyncing, setIsSyncing] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [activePaymentData, setActivePaymentData] = useState(null);
-  const [isPaid, setIsPaid] = useState(() => isTuitionPaid(studentId));
+  const [isPaid, setIsPaid] = useState(false);
   const [tuitionStatus, setTuitionStatus] = useState(null);
   const [transactionHistory, setTransactionHistory] = useState([]);
   const [selectedReceipt, setSelectedReceipt] = useState(null);
@@ -119,13 +119,9 @@ export default function TuitionPaymentView({
     if (!studentId) return;
     setIsSyncing(true);
     try {
-      const statusRes = await paymentService.getStudentTuitionStatus(studentId);
+      const statusRes = await paymentService.getStudentTuitionStatus(studentId, { throwOnError: true });
       if (statusRes) {
         setTuitionStatus(statusRes);
-        if (statusRes.isPaid) {
-          setIsPaid(true);
-          if (!isTuitionPaid(studentId)) setTuitionPaid(studentId, true);
-        }
 
         const history = Array.isArray(statusRes.payments) && statusRes.payments.length > 0
           ? statusRes.payments : await paymentService.getStudentPayments(studentId);
@@ -134,10 +130,9 @@ export default function TuitionPaymentView({
         setSelectedReceipt((previous) => previous
           ? refreshed.find((item) => previous.paymentId ? item.paymentId === previous.paymentId : String(item.orderCode) === String(previous.orderCode)) || previous
           : null);
-        if (refreshed.some((payment) => getPaymentStatusView(payment.status).success)) {
-          setIsPaid(true);
-          if (!isTuitionPaid(studentId)) setTuitionPaid(studentId, true);
-        }
+        const paid = statusRes.isPaid === true;
+        setIsPaid(paid);
+        setTuitionPaid(studentId, paid);
       }
     } catch (err) {
       console.warn('[TuitionPaymentView] Không thể đồng bộ trạng thái thanh toán từ server:', err);
@@ -147,27 +142,17 @@ export default function TuitionPaymentView({
   }, [studentId]);
 
   useEffect(() => {
-    setIsPaid(isTuitionPaid(studentId));
+    setIsPaid(false);
     loadTuitionAndHistory();
 
     const handleTuitionPaid = (event) => {
       if (!studentId || event.detail?.studentId === studentId) {
-        setIsPaid(isTuitionPaid(studentId));
         loadTuitionAndHistory();
       }
     };
     window.addEventListener('veval:tuition-paid', handleTuitionPaid);
     return () => window.removeEventListener('veval:tuition-paid', handleTuitionPaid);
   }, [studentId, loadTuitionAndHistory]);
-
-  const handleToggleTestPayment = () => {
-    const nextState = !isPaid;
-    setTuitionPaid(studentId, nextState);
-    setIsPaid(nextState);
-    if (showToast) {
-      showToast(nextState ? 'Đã kích hoạt học phí (Môi trường Test)!' : 'Đã hoàn tác trạng thái học phí.');
-    }
-  };
 
   const handleCreatePayment = async (pkg) => {
     if (isLoading || resumeBusy.current || onBeforePayment?.() === false) return;
@@ -243,8 +228,6 @@ export default function TuitionPaymentView({
 
   const handlePaymentSuccess = async (paymentInfo) => {
     toast.success('Thanh toán thành công! Học phí của bạn đã được xác nhận.');
-    setTuitionPaid(studentId, true);
-    setIsPaid(true);
 
     // Nạp lại dữ liệu thực tế từ database
     await loadTuitionAndHistory();
@@ -319,10 +302,10 @@ export default function TuitionPaymentView({
             <span>Phân Hệ Học Phí & Đăng Ký Khóa Học (PayOS / VietQR)</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-            Nộp Học Phí & Kích Hoạt Lộ Trình Thích Ứng PLAR
+            Nộp Học Phí & Kích Hoạt Lộ Trình
           </h1>
           <p className="text-xs sm:text-sm text-blue-200/80 mt-1.5 max-w-2xl leading-relaxed">
-            Tích hợp Cổng thanh toán trực tuyến PayOS: Quét mã VietQR tiện lợi, xử lý giao dịch nguyên khối (ACID Transaction) và tự động mở khóa chặng học đầu tiên tức thì.
+            Quét mã QR để thanh toán qua PayOS. Khóa học được mở sau khi thanh toán được xác nhận.
           </p>
         </div>
 
@@ -340,10 +323,10 @@ export default function TuitionPaymentView({
           <div className="bg-white/10 backdrop-blur-md px-5 py-3 rounded-2xl border border-white/20 text-xs text-white space-y-1 shrink-0">
             <div className="flex items-center gap-2 text-cyan-300 font-bold">
               <ShieldCheck className="w-4 h-4" />
-              <span>Bảo mật chuẩn NAPAS</span>
+              <span>Thanh toán qua PayOS</span>
             </div>
             <div className="text-blue-100/90 text-[11px]">
-              Tự động kích hoạt sau 1-3 giây quét mã
+              Tự động mở khóa khi thanh toán thành công
             </div>
           </div>
         </div>
@@ -393,22 +376,14 @@ export default function TuitionPaymentView({
             </button>
           )}
 
-          <button
-            type="button"
-            onClick={handleToggleTestPayment}
-            title="Chuyển đổi trạng thái đóng học phí để kiểm thử nghiệm thu"
-            className="px-3.5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs border border-slate-200 transition-all cursor-pointer"
-          >
-            {isPaid ? 'Hủy kích hoạt (Test)' : '⚡ Kích hoạt nhanh (Test)'}
-          </button>
         </div>
       </div>
 
       {/* NẾU ĐÃ THANH TOÁN: Hiển thị Thẻ Gói Đang Kích Hoạt & 6 Phân Hệ Đã Mở Khóa */}
-      {isPaid && (
+      {(
         <div className="space-y-6">
           {/* Active Course Card */}
-          <div className="bg-gradient-to-br from-emerald-950 via-teal-950 to-slate-900 text-white rounded-3xl p-6 sm:p-8 border border-emerald-500/30 shadow-xl relative overflow-hidden">
+          {isPaid && <div className="bg-gradient-to-br from-emerald-950 via-teal-950 to-slate-900 text-white rounded-3xl p-6 sm:p-8 border border-emerald-500/30 shadow-xl relative overflow-hidden">
             <div className="absolute -right-12 -bottom-12 w-48 h-48 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none" />
             
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
@@ -427,7 +402,7 @@ export default function TuitionPaymentView({
                   {tuitionStatus?.courseName || 'Khóa Luyện Thi Chuẩn (Standard Adaptive)'}
                 </h2>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 text-xs">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 text-xs">
                   <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3.5 border border-white/15">
                     <span className="text-slate-300 text-[11px] block">Thời Hạn Khóa Học</span>
                     <span className="text-sm font-extrabold text-emerald-300 mt-0.5 block">
@@ -448,15 +423,6 @@ export default function TuitionPaymentView({
                     </span>
                   </div>
 
-                  <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3.5 border border-white/15">
-                    <span className="text-slate-300 text-[11px] block">Trạng Thái Bản Quyền</span>
-                    <span className="text-sm font-extrabold text-amber-300 mt-0.5 block">
-                      Toàn quyền vĩnh viễn khóa thi
-                    </span>
-                    <span className="text-[10px] text-slate-300 block mt-0.5">
-                      Cam kết chuẩn đầu ra V-ACT 2026
-                    </span>
-                  </div>
                 </div>
               </div>
 
@@ -478,7 +444,8 @@ export default function TuitionPaymentView({
             </div>
           </div>
 
-          {/* 6 Unlocked Modules Section */}
+          }
+          {/* Membership benefits remain visible before payment. */}
           <div className="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/90 shadow-sm space-y-5">
             <div className="flex items-center justify-between flex-wrap gap-3">
               <div>
@@ -487,11 +454,11 @@ export default function TuitionPaymentView({
                   <span>Đặc Quyền Hội Viên V-Eval</span>
                 </div>
                 <h3 className="text-lg sm:text-xl font-black text-slate-900 mt-1">
-                  6 Phân Hệ & Quyền Lợi Đã Được Mở Khóa 100%
+                  {unlockedPerks.length} Phân Hệ & Quyền Lợi {isPaid ? 'Đã Được Mở Khóa' : 'Hội Viên'}
                 </h3>
               </div>
               <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                Tất cả tính năng đã sẵn sàng
+                {isPaid ? 'Tất cả tính năng đã sẵn sàng' : 'Thanh toán để mở khóa'}
               </span>
             </div>
 
@@ -508,9 +475,9 @@ export default function TuitionPaymentView({
                         <div className={`w-9 h-9 rounded-xl flex items-center justify-center border shadow-2xs ${perk.color}`}>
                           <IconComponent className="w-5 h-5" />
                         </div>
-                        <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-full">
-                          <Check className="w-3 h-3 text-emerald-600" />
-                          <span>Đã Mở</span>
+                        <span className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${isPaid ? 'text-emerald-700 bg-emerald-100/80' : 'text-amber-700 bg-amber-100/80'}`}>
+                          {isPaid ? <Check className="w-3 h-3" /> : <AlertCircle className="w-3 h-3" />}
+                          <span>{isPaid ? 'Đã Mở' : 'Cần kích hoạt'}</span>
                         </span>
                       </div>
                       <h4 className="text-sm font-extrabold text-slate-900 group-hover:text-blue-600 transition-colors">
@@ -521,7 +488,7 @@ export default function TuitionPaymentView({
                       </p>
                     </div>
 
-                    {perk.action && (
+                    {isPaid && perk.action && (
                       <button
                         type="button"
                         onClick={perk.action}

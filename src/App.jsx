@@ -48,11 +48,11 @@ import useStudentActivation from './hooks/useStudentActivation';
 import StudentActivationGuide, { ActivationChecklist } from './components/activation/StudentActivationGuide';
 import {
   AdaptiveQuizModal,
-  DiagnosticTestModal,
   RadarChartModal,
   AcademicArchitectureModal,
   AISocraticTutorModal
 } from './components/modals';
+import MockAssessmentPage from './components/diagnostic/MockAssessmentPage';
 import { authService } from './services/authService';
 import { Bot, CheckCircle2 } from 'lucide-react';
 import { ScorePredictionPanel, MistakeNotebookSM2View } from './components/dashboard';
@@ -317,7 +317,8 @@ export default function App() {
   };
 
   const handleOpenMockExam = () => {
-    setActiveModal('mock');
+    setActiveModal(null);
+    setActiveTab('mock');
   };
 
   const handleOpenAiTutorWithQuestion = (questionContext) => {
@@ -450,15 +451,17 @@ export default function App() {
       }
       : basePortal;
   const pageTitle = activeTab === 'settings' ? 'Cài đặt tài khoản'
+    : activeTab === 'mock' ? 'Thi thử V-ACT'
     : currentPortal.tabs.find((tab) => tab.id === activeTab)?.label || 'Tổng quan';
 
   const renderRolePortalContent = () => {
+    if (activeTab === 'mock') return <MockAssessmentPage currentUser={currentUser} onClose={() => setActiveTab('dashboard')} />;
     if (activeTab === 'settings') {
       return <AccountSettingsPage currentUser={currentUser} onUpdateUser={setCurrentUser}
-        activationGuidance={guideProfile && role === 'student'}
+        activationGuidance={(guideProfile || pendingProfileCheck === activationUserId) && role === 'student'}
         activationChecking={pendingProfileCheck === activationUserId}
         onProfileSaved={() => {
-          if (guideProfile && role === 'student') {
+          if (role === 'student') {
             setShowActivationGuide(false);
             setPendingProfileCheck(activationUserId);
             activation.refresh();
@@ -513,6 +516,7 @@ export default function App() {
       const curriculum = (
         <CurriculumExplorerView
           role={role === 'parent' ? 'student' : role}
+          tuitionPaid={role === 'student' ? activation.paid : undefined}
           currentUser={currentUser}
           latestDiagnosticResult={latestDiagnosticResult}
           onNavigateTuition={() => setActiveTab('tuition')}
@@ -711,6 +715,7 @@ export default function App() {
                   role={role}
                   activeTab={activeTab}
                   pageTitle={pageTitle}
+                  pageSubtitle={activeTab === 'schedule' && role === 'student' ? 'Theo dõi lịch tuần và chọn từng buổi học để xem chi tiết.' : undefined}
                   onOpenNavigation={() => setMobileNavigation(true)}
                   currentUser={currentUser}
                   portalMetrics={portalMetrics}
@@ -756,11 +761,6 @@ export default function App() {
               isOpen={activeModal === 'adaptive'}
               onClose={() => setActiveModal(null)}
               onOpenAiTutorWithContext={handleOpenAiTutorWithQuestion}
-            />
-
-            <DiagnosticTestModal
-              isOpen={activeModal === 'mock'}
-              onClose={() => setActiveModal(null)}
             />
 
             <RadarChartModal

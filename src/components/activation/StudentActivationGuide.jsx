@@ -18,7 +18,7 @@ export function ActivationChecklist({ activation, onAction }) {
       <ol className="space-y-2.5">
         {[
           { id: 'diagnostic', name: 'Đánh giá đầu vào', detail: 'Xác định năng lực hiện tại', icon: ClipboardCheck, done: activation.diagnosticComplete },
-          { id: 'profile', name: 'Hoàn thiện hồ sơ', detail: 'Trường THPT, nguyện vọng và mục tiêu thi cử', icon: UserRound, done: ['payment', 'ready'].includes(step) },
+          { id: 'profile', name: 'Hoàn thiện hồ sơ', detail: 'Trường THPT và mục tiêu thi cử', icon: UserRound, done: ['payment', 'ready'].includes(step) },
           { id: 'payment', name: 'Thanh toán học phí', detail: 'Chọn gói học tại Học phí & Gói học', icon: CreditCard, done: ready }
         ].map(({ id, name, detail, icon: Icon, done }, index) => (
           <li key={id} className={`flex items-center gap-3 rounded-2xl border p-3 ${step === id ? 'border-blue-200 bg-blue-50/70' : 'border-slate-100 bg-slate-50/70'}`}>

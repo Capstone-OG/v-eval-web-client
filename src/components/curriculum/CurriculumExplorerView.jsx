@@ -181,6 +181,7 @@ export default function CurriculumExplorerView({
   currentUser = null,
   latestDiagnosticResult = null,
   onNavigateTuition,
+  tuitionPaid,
   onStartQuizModal, 
   onNavigateDiagnostic, 
   onOpenAiTutorWithContext 
@@ -1542,6 +1543,7 @@ export default function CurriculumExplorerView({
         onAskAi={onOpenAiTutorWithContext} 
         quizOpen={isQuizModalOpen}
         currentUser={currentUser}
+        tuitionPaid={tuitionPaid}
         latestDiagnosticResult={latestDiagnosticResult}
         onNavigateTuition={onNavigateTuition}
         onNavigateDiagnostic={onNavigateDiagnostic}

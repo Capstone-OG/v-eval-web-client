@@ -21,90 +21,34 @@ export default function MilestoneCard({ currentUser, studentDashboard, onStartTa
 
   useEffect(() => {
     let isMounted = true;
-    
-    // Only attempt fetch if user has active session
+    let revision = 0;
+    const studentId = currentUser?.userId || currentUser?.id || currentUser?.studentId;
     const fetchRoadmap = async () => {
+      if (!studentId) return;
+      const request = ++revision;
       setIsLoading(true);
-      const resolvedStudentId = currentUser?.id || currentUser?.userId;
-
-      const checkExamHistory = () => {
-        if (!resolvedStudentId) return false;
-        if (studentDashboard && !studentDashboard.needsOnboarding) return true;
-        if (studentDashboard?.recentMockExams && studentDashboard.recentMockExams.length > 0) return true;
-        if (studentDashboard && Number(studentDashboard.currentEstimatedScore) > 0) return true;
-        if (studentDashboard?.streakAnalytics?.currentStreak > 0) return true;
-        if (practiceService.getRealUserSubmissions(resolvedStudentId).length > 0) return true;
-        if (typeof localStorage !== 'undefined') {
-          if (localStorage.getItem('v_eval_diagnostic_done')) return true;
-          if (localStorage.getItem(`v_eval_diagnostic_${resolvedStudentId}`)) return true;
-          if (localStorage.getItem('v_eval_submissions')) return true;
-        }
-        return false;
-      };
-
-      const hasExamHistory = checkExamHistory();
-
-      const autoGenRoadmap = async () => {
-        if (!hasExamHistory || !resolvedStudentId) return null;
-        try {
-          const diagExam = studentDashboard?.recentMockExams?.find(e => e.examTitle?.includes('Chẩn Đoán') || e.totalQuestions === 30) || studentDashboard?.recentMockExams?.[0];
-          const subId = diagExam?.submissionId;
-          if (subId) {
-            return await practiceService.generateRoadmap({
-              studentId: resolvedStudentId,
-              diagnosticSubmissionId: subId,
-              examDate: new Date(Date.now() + 45 * 86400000).toISOString(),
-              studyHoursPerDay: 2.0
-            });
-          }
-        } catch (e) {
-          console.warn('[MilestoneCard] auto-generateRoadmap error:', e);
-        }
-        return null;
-      };
-
       try {
-        const res = await practiceService.getMyRoadmap(resolvedStudentId);
-        if (isMounted) {
-          if (res && res.stages && res.stages.length > 0) {
-            setRoadmapData(res);
-            setHasNoRoadmap(false);
-          } else {
-            if (hasExamHistory) {
-              setHasNoRoadmap(false);
-              const gen = await autoGenRoadmap();
-              if (gen && gen.stages && gen.stages.length > 0) {
-                setRoadmapData(gen);
-              } else {
-                setRoadmapData(null);
-              }
-            } else {
-              setHasNoRoadmap(true);
-            }
-          }
-          setIsLoading(false);
+        const roadmap = await practiceService.getMyRoadmap(studentId);
+        if (isMounted && request === revision) {
+          setRoadmapData(roadmap);
+          setHasNoRoadmap(false);
         }
-      } catch {
-        if (isMounted) {
-          setIsLoading(false);
-          if (hasExamHistory) {
-            setHasNoRoadmap(false);
-            const gen = await autoGenRoadmap();
-            if (gen && gen.stages && gen.stages.length > 0) {
-              setRoadmapData(gen);
-            } else {
-              setRoadmapData(null);
-            }
-          } else {
-            setHasNoRoadmap(true);
-          }
+      } catch (error) {
+        if (isMounted && request === revision) {
+          setRoadmapData(null);
+          setHasNoRoadmap(error.status === 404);
         }
+      } finally {
+        if (isMounted && request === revision) setIsLoading(false);
       }
     };
-
+    const onRoadmapUpdated = (event) => {
+      if (event.detail?.studentId === studentId) fetchRoadmap();
+    };
     fetchRoadmap();
-    return () => { isMounted = false; };
-  }, [currentUser, studentDashboard]);
+    window.addEventListener('veval:roadmap-updated', onRoadmapUpdated);
+    return () => { isMounted = false; window.removeEventListener('veval:roadmap-updated', onRoadmapUpdated); };
+  }, [currentUser?.userId, currentUser?.id, currentUser?.studentId]);
 
   // Loading Skeleton State
   if (isLoading) {

@@ -26,6 +26,8 @@ export function isTuitionPaid(studentId, storage = typeof localStorage !== 'unde
  */
 export function setTuitionPaid(studentId, paid = true, storage = typeof localStorage !== 'undefined' ? localStorage : null) {
   if (!studentId || !storage) return;
+  // Repeated reads must not re-emit paid events and remount the roadmap.
+  if (isTuitionPaid(studentId, storage) === Boolean(paid)) return;
   if (paid) {
     storage.setItem(`${TUITION_STORAGE_PREFIX}${studentId}`, 'true');
   } else {
@@ -49,13 +51,11 @@ export async function syncTuitionStatusFromServer(studentId, service = null, sto
   try {
     const s = service || paymentService;
     const status = await s.getStudentTuitionStatus(studentId);
-    if (status?.isPaid) {
-      setTuitionPaid(studentId, true, storage);
-    }
+    setTuitionPaid(studentId, status?.isPaid === true, storage);
     return status;
   } catch {
     return {
-      isPaid: isTuitionPaid(studentId, storage),
+      isPaid: false,
       unlockedFeatures: [],
       payments: []
     };

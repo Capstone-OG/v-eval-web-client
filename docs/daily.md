@@ -3241,3 +3241,96 @@
 
 - Tổng hợp UPDATE.md về trạng thái cuối ngày, giữ phạm vi web-client; dọn khoảng trắng thừa trong StudentCurriculumView.
 - Xác minh build FE và 30 kiểm thử thành công. Chuẩn bị commit giao diện hồ sơ/đăng ký, activation, sidebar và thanh toán; không stage/commit BE hoặc System-Repo.
+
+
+## [21/11/2026] - Triển khai lịch tuần và chi tiết buổi học trên FE
+
+- Thay danh sách buổi học bằng lịch Thứ 2–Chủ nhật, 6 ca đánh số kèm giờ, chuyển tuần/tuần hiện tại và đến buổi gần nhất. Giữ bộ lọc học kỳ, khóa học và trạng thái; màn nhỏ dùng danh sách theo ngày.
+- Tên lớp hiển thị ngay trên thẻ buổi học và popup. Popup theo demo đã duyệt: header xanh, ngày/ca/giờ, lớp, điểm danh/check-in, phiếu bài tập, ZPD và AI. Không hiện phòng hoặc tự điền tên giảng viên.
+- Dùng dữ liệu timetable API hiện có, giữ học bù/dạy thay; ca có giờ riêng được bổ sung theo lịch cấu hình, không bỏ mất nhiều lớp cùng ô. Chặn phản hồi tải cũ khi đổi tài khoản/học kỳ.
+- Build FE, 8 test lịch tuần và kiểm tra render React thành công; không thử end-to-end trên tài khoản đang đăng nhập. Cả 5 repo BE vẫn sạch, không sửa BE.
+
+
+## [21/11/2026] - Bỏ tiêu đề thời khóa biểu trùng
+
+- Bỏ tiêu đề và icon trong nội dung WeeklyScheduleCalendar; giữ tiêu đề Navbar, mô tả ngắn và nút Làm mới. Kiểm tra chuỗi JSX trong nguồn, chỉ sửa FE.
+
+
+## [21/11/2026] - Sắp xếp mô tả và nút làm mới lịch
+
+- Chuyển mô tả theo dõi lịch xuống ngay dưới tiêu đề Navbar bằng pageSubtitle tùy chọn chỉ cho trang lịch học sinh.
+- Chuyển nút Làm mới sang bên phải hàng bộ lọc học kỳ/khóa học/trạng thái. Build FE thành công; không sửa BE.
+
+
+## [21/11/2026] - Bỏ nguyện vọng khỏi hồ sơ FE
+
+- Xóa ô nguyện vọng cùng state, baseline, lưu/đọc localStorage và utility localAspiration. Giữ trường THPT để cập nhật qua API hiện có.
+- Gỡ yêu cầu nguyện vọng khỏi điều kiện kích hoạt và nội dung hướng dẫn để không chặn hồ sơ hợp lệ.
+- Build FE và 9 test activation đã qua. Không sửa BE.
+
+
+## [21/11/2026] - Mở thanh toán khi đủ hồ sơ học sinh
+
+- Xác định ngày thi quá khứ trong ảnh bị gate ngày tương lai chặn. Bỏ yêu cầu tương lai, chỉ yêu cầu ngày hợp lệ; không yêu cầu dữ liệu phụ huynh hay nguyện vọng.
+- Sau lưu hồ sơ học sinh, luôn tự kiểm tra bước tiếp theo, không phụ thuộc việc mở hồ sơ từ modal hướng dẫn hay menu cài đặt.
+- Build và 10 test activation đã qua, gồm trường hợp đúng dữ liệu trong ảnh với ngày 29/03/2026 và không có phụ huynh. Chỉ sửa FE.
+
+## [21/11/2026] - Fix paid roadmap refresh loop (FE only)
+- Deduplicate tuition state events; share verified payment status between activation and roadmap.
+- Reconcile tuition summary with successful student payment history; retain ready view during background checks.
+- Validation: 29 regression tests passed and frontend production build passed. Live account flow not exercised; no backend changes.
+
+### [21/11/2026] - Empty exam date default (FE)
+Removed the prefilled exam date from account settings. Profiles without a saved date show the date picker placeholder; saved dates remain visible. Reset the date when loading another account. Frontend production build passed; no backend changes.
+
+### [21/11/2026] - Membership benefits visibility (FE)
+Membership benefits now remain visible before payment, with activation-required labels and no unlocked action links. Paid members retain unlocked actions and the active course card. The heading uses the actual benefit count. Removed the test deactivation button and its reversal behavior. Frontend production build passed; backend unchanged.
+
+### [21/11/2026] - Remove stale local tuition authorization
+Fixed the tuition view retaining a cached test activation after an unpaid server response. It now starts without cached access and applies both paid and unpaid API results. Removed quick test activation. Curriculum synchronization clears unpaid cache and never grants access from cached state on request failure. Server tuition summary or confirmed successful payment history remains the payment source. Validation: 31 regression tests and frontend production build passed. Backend unchanged; live account not inspected.
+
+### [21/11/2026] - Authoritative tuition API access
+Supersedes the earlier history-based fallback: frontend access now strictly follows isPaid from GET /api/practice/payments/status-by-student/{studentId} (existing my-status fallback). Payment history and checkout success callbacks cannot grant access independently; payment completion reloads tuition status. Standalone roadmap initializes locked and rechecks the API on events rather than reading local cache. Existing backend computes eligibility from ACTIVE registration or SUCCESS/PAID payments; backend unchanged. Validation: 31 regression tests and production build passed.
+
+## [21/11/2026] - Tao lo trinh sau thanh toan va kiem tra lich hoc (FE)
+- API hoc phi xac nhan isPaid=true: doc lo trinh hien co, chi POST roadmaps/generate khi GET tra 404. Dung submission DIAGNOSTIC COMPLETED dung student va ngay thi/gio hoc da luu.
+- Giu tien do lo trinh cu; khong tao lai khi loi mang/phan quyen; gop yeu cau dong thoi. Bo auto-generate cu dung ngay thi/gio hoc mac dinh trong MilestoneCard.
+- Canh bao khi ngay thi qua han theo rang buoc API tao lo trinh; khong thay doi trang thai da thanh toan.
+- Khong an timetable khi API metadata hoc ky/khoa hoc loi. Thong bao rieng: tuan khong co buoi, bo loc, lop chua co lich hoac chua xep lop.
+- 45 regression tests va build FE thanh cong; chua truy cap du lieu tai khoan a1@gmail.com. BE chi doc, khong sua.
+
+## [21/11/2026] - Ket noi API Thi thu V-ACT (FE)
+- Thay man 10 cau tu cham diem cu bang MockExamModal: lay de FULL_MOCK da xuat ban tu Content; bat dau, nop bai, xem ket qua va ghi nhan roi tab qua Practice API.
+- Hien toan bo cau/option do API tra ve, dong ho theo thoi luong phien; dieu huong cau, xac nhan nop, tu nop khi het gio, bao loi va cho thu lai.
+- Giu draft theo student trong sessionStorage; dong/mo lai khong tao phien moi hoac keo dai gio. Ket qua/diem do server tra, bao trang thai cho tham dinh va phat su kien cap nhat lich su.
+- Validation: 8 mock API/payload tests + 3 exam-clock tests passed; production build passed. Chrome headless with stub APIs passed choose/start/answer/navigate/close/resume/submit/server-score/clear-draft flow. Chua thi thu tai khoan/de that. Khong sua BE.
+
+## [21/11/2026] - Dong nhat co che thi thu va thi dau vao (FE)
+- Tach header, man cau hoi/nguu lieu, danh sach cau, gan co va xac nhan nop bai hien co thanh ExamRoom dung chung. Diagnostic giu nguyen state/API; thi thu dung MockAssessmentPage thay popup rieng.
+- Thi thu co fullscreen, canh bao roi tab/cua so/thoat fullscreen, chong dem trung 1.5 giay, khoa va tu nop o lan 3 nhu dau vao; het gio tu nop. Dong ho tung cau, ban nhap/gan co va deadline duoc giu khi khoi phuc.
+- Van dung API thi thu cho de, phien, nop bai va ket qua; khong dung de/diem IRT cua diagnostic. Navbar/sidebar chon dung muc Thi thu V-ACT.
+- Kiem tra: 23 unit tests diagnostic/mock va production build thanh cong. Chrome stub-API flow qua chon de, cau co nguu lieu, gan co, dieu huong, restore, nop/diem server, 3 vi pham va het gio. Khong sua BE, chua thi tren tai khoan that.
+
+### [21/11/2026] - Mock lobby duplicate title and live catalog check
+Removed the repeated mock lobby heading, retaining the account navbar title. Read-only GET http://localhost:5212/api/content/exams confirmed three FULL_MOCK records, all isPublished=false: 2019 (119 questions), de-minh-hoa-dhqdtphcm2025 (120), De-thi-mau-DHQG-HCM-2024-pdf-pdf (120); all 150 minutes. The published-only frontend filter is correct; no exam publication or backend/database edits were performed. Frontend production build passed.
+
+### [21/11/2026] - Simplify mock lobby copy
+Removed the amber rules banner and the sentence comparing mock mechanics to diagnostic assessment, as requested. Retained the brief exam selection prompt and refresh button. Frontend build passed; exam behavior and backend unchanged.
+
+### [21/11/2026] - Remove activated course banner
+Removed the green activated-course notification and official-student badge from StudentCurriculumView. Payment eligibility logic unchanged. Frontend production build passed; backend untouched.
+
+### [21/11/2026] - Simplify account settings description
+Removed the V-ACT 1200 target-score phrase from the account settings header description as requested. Frontend production build passed; backend unchanged.
+
+### [21/11/2026] - Simplify student roadmap, history and payment copy
+Removed the DAG/ZPD suffix from the personalized roadmap badge and the visible submission UUID from the attempt history table. Replaced technical ACID/NAPAS payment wording and the fixed 1-3 second activation claim with concise PayOS payment and confirmed-payment activation text. IDs remain available to API handlers. Frontend build passed; backend unchanged.
+
+### [21/11/2026] - Shorten tuition heading
+Removed the adaptive PLAR suffix from the tuition activation heading, retaining the payment and roadmap activation wording. Verified the resulting source string and git diff whitespace check. Copy-only frontend change; backend unchanged.
+
+### [21/11/2026] - Remove course license panel
+Removed the course license status panel including perpetual access and V-ACT outcome commitment copy. Adjusted the remaining course information grid to two columns. Frontend production build passed; backend unchanged.
+
+### [21/11/2026] - Frontend commit verification
+Final scope: weekly timetable/session details, profile prerequisites, authoritative tuition access and roadmap provisioning, shared diagnostic/mock exam room and API integration, and simplified student-facing copy. All 75 related unit tests passed; latest production build passed. Chrome stub-API flow and read-only live mock catalog verification were completed earlier in this session. No backend source or live exam data changed. The frontend changes and frontend documentation are ready for commit; root repository configuration/SQL/script changes are outside this frontend commit.

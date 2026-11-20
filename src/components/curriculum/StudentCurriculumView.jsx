@@ -23,7 +23,6 @@ import {
 } from 'lucide-react';
 import MathText from '../common/MathText';
 import {
-  isTuitionPaid,
   buildPersonalizedStages,
   syncTuitionStatusFromServer
 } from './curriculumAccess';
@@ -58,6 +57,7 @@ export default function StudentCurriculumView({
   onAskAi,
   quizOpen,
   currentUser = null,
+  tuitionPaid,
   latestDiagnosticResult = null,
   onNavigateTuition,
   onNavigateDiagnostic
@@ -74,26 +74,30 @@ export default function StudentCurriculumView({
   const [pendingTarget, setPendingTarget] = useState(null);
 
   const studentId = currentUser?.userId || currentUser?.id || currentUser?.studentId;
-  const [isPaid, setIsPaid] = useState(() => isTuitionPaid(studentId));
+  const [isPaid, setIsPaid] = useState(() => tuitionPaid === true);
 
   // Sync tuition paid status on custom events and check with backend
   useEffect(() => {
-    setIsPaid(isTuitionPaid(studentId));
+    if (typeof tuitionPaid === 'boolean') {
+      setIsPaid(tuitionPaid);
+      return;
+    }
+    setIsPaid(false);
     if (studentId) {
       syncTuitionStatusFromServer(studentId)
         .then((res) => {
-          if (res?.isPaid) setIsPaid(true);
+          setIsPaid(res?.isPaid === true);
         })
         .catch(() => {});
     }
     const handleTuitionPaid = (event) => {
       if (!studentId || event.detail?.studentId === studentId) {
-        setIsPaid(isTuitionPaid(studentId));
+        syncTuitionStatusFromServer(studentId).then((res) => setIsPaid(res?.isPaid === true));
       }
     };
     window.addEventListener('veval:tuition-paid', handleTuitionPaid);
     return () => window.removeEventListener('veval:tuition-paid', handleTuitionPaid);
-  }, [studentId]);
+  }, [studentId, tuitionPaid]);
 
   const reader = useRef(null);
   const back = useRef(null);
@@ -568,19 +572,7 @@ export default function StudentCurriculumView({
             </button>
           </div>
         </section>
-      ) : (
-        <section className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-4 text-emerald-900 flex items-center justify-between gap-3 shadow-xs">
-          <div className="flex items-center gap-3">
-            <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
-            <div className="text-xs sm:text-sm font-bold">
-              Khóa học đã được kích hoạt! Bạn có toàn quyền truy cập toàn bộ bài giảng Lớp học chung & Lộ trình cá nhân.
-            </div>
-          </div>
-          <span className="hidden sm:inline-flex px-3 py-1 rounded-full bg-emerald-200/80 text-emerald-800 text-xs font-black uppercase">
-            Học viên Chính Thức
-          </span>
-        </section>
-      )}
+      ) : null}
 
       {/* Hero Header: Lộ Trình Học Tập Cá Nhân Hóa (Dành riêng cho học sinh) */}
       <section className="relative overflow-hidden rounded-3xl border border-indigo-100 bg-gradient-to-br from-indigo-50/70 via-white to-blue-50/60 p-6 sm:p-8 shadow-sm">
@@ -588,7 +580,7 @@ export default function StudentCurriculumView({
           <div className="space-y-1.5">
             <span className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-widest text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-200/80">
               <Target className="h-4 w-4 text-indigo-600" />
-              Lộ Trình Học Tập Cá Nhân Hóa • Cây Tri Thức DAG & ZPD
+              Lộ Trình Học Tập Cá Nhân Hóa
             </span>
             <h1 className="text-2xl font-black tracking-tight text-slate-950 sm:text-3xl font-sans mt-2">
               Lộ Trình Tối Ưu Hóa Riêng Cho Bạn

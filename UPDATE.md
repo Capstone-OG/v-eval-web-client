@@ -1,11 +1,14 @@
 # V-Eval Web Client Update
 
-## [20/11/2026] - Hồ sơ, hướng dẫn kích hoạt và thanh toán học viên
+## [21/11/2026] - Student schedule, activation and V-ACT mock exams
 
-- Gộp hồ sơ và mục tiêu thi cử, hỗ trợ Lưu/Hủy theo thay đổi, nhập trường THPT và nguyện vọng; nguyện vọng và thông tin phụ huynh cục bộ tách theo tài khoản. Bỏ dữ liệu phụ huynh/trường/ngày gia nhập mẫu; ngày gia nhập lấy từ API hiện có.
-- Bổ sung lịch tiếng Việt DayPicker/Radix, validation trực tiếp đổi mật khẩu và toast; tinh chỉnh đăng ký, khôi phục mật khẩu, chuyển vai trò và bố cục sidebar/IRT.
-- Sau bài đầu vào, hướng dẫn hoàn thiện hồ sơ → thanh toán → mở lộ trình; lưu hồ sơ xong tự kiểm tra bước tiếp theo. Trang học phí luôn hiển thị bảng giá, kiểm tra hồ sơ khi thanh toán.
-- Bỏ màn Roadmap backend/video/quiz trùng lặp trên FE; giữ trang chương trình/lộ trình cá nhân và các thay đổi giao diện học tập hiện có.
-- Đồng nhất trạng thái lịch sử/biên lai, kiểm tra lại đơn chờ và hỗ trợ tiếp tục thanh toán cùng đơn. Toast thành công/thất bại/hủy/hết hạn dùng hệ thống chung; polling tuần tự, bỏ qua phản hồi sau đóng modal và phân biệt lỗi mạng.
-- Chỉ commit FE. Backend, schema DB và các repo dịch vụ không thuộc commit này.
-- Kiểm tra: npm run build thành công; 30 test đầu vào, activation, trạng thái/tiếp tục thanh toán và polling đã qua; dọn khoảng trắng cuối dòng. Chưa kiểm tra thanh toán thật hoặc luồng trình duyệt end-to-end.
+- Replace the session list with a weekly calendar, numbered slots, filters and session details showing class, attendance, worksheets, ZPD and tutor actions.
+- Remove aspiration from profile and eligibility checks; leave unsaved exam date empty. Parent information remains optional for checkout.
+- Use tuition API isPaid for access, clear stale local activation, remove test activation and prevent repeated tuition events/roadmap remounts.
+- After verified paid activation, reuse an existing roadmap or generate a missing one from saved profile and completed diagnostic. Preserve existing progress.
+- Connect published FULL_MOCK exam listing and mock start/submit/result/proctoring APIs. Reuse the diagnostic exam room, flags, navigation, confirmation and timing display.
+- Match diagnostic fullscreen, warning, three-violation and timeout submission behavior; retain per-student answers, flags and original deadline when resuming.
+- Simplify account, roadmap, payment and history wording; remove redundant banners, visible attempt IDs and license claims.
+- Validation: 75 related unit tests passed; latest production build passed. Chrome stub-API checks passed navigation, passage, flags, resume, grading, violations and timeout.
+- Live catalog read confirmed three unpublished FULL_MOCK records and no published mock exams. No exam publication or live test submission performed.
+- Frontend only; no backend source changes. Existing dependency build warnings remain.

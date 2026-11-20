@@ -385,7 +385,7 @@ export default function Sidebar({
                 icon: FileCheck2,
                 iconColor: 'from-cyan-400 to-blue-500',
                 activeGlow: 'shadow-cyan-500/30',
-                active: false,
+                active: activeTab === 'mock',
                 onClick: onOpenMockExam
               },
             ]
@@ -409,9 +409,9 @@ export default function Sidebar({
     }
   };
 
-  const [examsExpanded, setExamsExpanded] = useState(activeTab === 'diagnostic');
+  const [examsExpanded, setExamsExpanded] = useState(activeTab === 'diagnostic' || activeTab === 'mock');
   useEffect(() => {
-    if (activeTab === 'diagnostic') setExamsExpanded(true);
+    if (activeTab === 'diagnostic' || activeTab === 'mock') setExamsExpanded(true);
   }, [activeTab]);
 
   let navSections = getRoleNavigation();
