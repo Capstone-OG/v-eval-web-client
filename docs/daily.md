@@ -11,9 +11,26 @@
   - `repairUnderlineTags` chuẩn hóa mọi biến thể `</u >`, `<\/u>`, `$</u > (A)$` thành `</u>` hợp lệ, giữ nguyên khoảng trắng và nội dung từ.
   - `repairDegreeUnits` tách biệt chuẩn hóa `\circC` khỏi logic bọc `$`, triệt tiêu lỗi `$$$` gây đỏ KaTeX ở Câu 95; `renderKatexHtml` bổ sung dự phòng chuyển `\circ C` -> `°C`.
 - **Đồng Bộ Dữ Liệu & Bộ Nhớ Tạm ([`examStateBridge.js`](../src/components/curriculum/examStateBridge.js), [`examParserUtils.js`](../src/utils/examParserUtils.js))**:
-  - Nâng cấp khóa `sessionStorage` lên `veval_active_exam_workspace_v2`, tự động xóa sạch dữ liệu lỗi từ các lần import cũ trên trình duyệt.
-  - `examParserUtils.js` bổ sung bước 1.9 dọn sạch phụ âm đơn lẻ bị xen kẽ giữa các đoạn văn Lịch sử/Ngữ văn.
-- **Kiểm thử**: `examStateBridge.test.js` `5/5`, `tests/*.test.js` `22/22`, `npm run build` thành công `4.69s`.
+  - Nâng cấp khóa `sessionStorage` lên `veval_active_exam_workspace_v3`, tự động xóa sạch dữ liệu lỗi từ các lần import cũ trên trình duyệt.
+  - `examParserUtils.js` bổ sung `extractTrappedQuestionsFromPassage` và `healHistoryPassageAndTrappedQuestions` dọn sạch phụ âm đơn lẻ và khôi phục 3 câu hỏi 118, 119, 120.
+- **Kiểm thử**: `examStateBridge.test.js` `6/6`, `tests/*.test.js` `22/22`, `npm run build` thành công `3.52s`.
+
+## [20/11/2026] - Chuẩn Hóa & Phân Định Rõ Vai Trò Cổng Giám Đốc Học Thuật Toàn Trường (`ACADEMIC_DIRECTOR`) Trong `CampusManagerDashboardView.jsx`
+
+- **Bảo Toàn 100% 4 Phân Hệ Chuyên Môn Cốt Lõi**: Giữ nguyên hoàn toàn `AiTutorModerationView`, `CurriculumExplorerView`, nhóm `Textbook*View` (SGK) và nhóm `Exam*View` (Đề thi & AI Bloom).
+- **Dọn Sạch Menu Sidebar Director (`./src/components/layout/Sidebar.jsx`)**:
+  - Đổi nhóm menu thành **"Quản Trị Học Thuật Toàn Trường"** với đúng 5 mục chuẩn vai trò; gỡ badge `Flow 4` để tiêu đề `Kiểm duyệt Gia sư AI` hiển thị trọn vẹn.
+  - Gỡ 3 mục trỏ nhầm/lấn sân: `Giám sát Ma trận Lớp học` (mở nhầm Teacher), `Báo cáo Chất lượng Đào tạo` (mở nhầm Student), `Cấp phát Tài khoản Cơ sở` (thuộc Admin).
+- **Triển Khai Chế Độ `isDirectorMode` Trực Tiếp Trong `./src/components/dashboard/CampusManagerDashboardView.jsx` & `./src/App.jsx`**:
+  - Xóa bỏ chuỗi hardcode `, Nguyễn Duy Khôi!` và số giả lập `67%`.
+  - Nạp KPI thực tế từ `contentService.getSkillsTree()`, `contentService.getMockExams()`, `userService.getCampuses()` và `practiceService.getCampusComparativeHeatmap()`.
+  - Hiển thị 4 thẻ lối tắt vào 4 trụ cột học thuật, mặc định chế độ **Tất cả các cơ sở (`ALL`)** với **Bảng Đối Sánh Chất Lượng Giữa Các Cơ Sở** và chuyển Bản đồ nhiệt sang chế độ Giám sát (Chỉ đọc), ẩn các nút tác vụ cấp Manager/Teacher/Admin.
+- **Khắc Phục Triệt Để Lỗi Logout Vẫn Dính Tài Khoản Cũ Trên Trang Chủ (`./src/App.jsx`, `./src/services/apiClient.js`, `./src/services/authService.js`, `./src/components/landing/PublicHeader.jsx`)**:
+  - Chặn Race Condition của `/api/v1/users/me` bằng `sessionVersion`, ngăn lưu `USER_KEY` khi thiếu `accessToken`, áp dụng Optimistic Logout tức thì và đồng bộ kiểm tra `authService.isAuthenticated()` trên `PublicHeader.jsx`.
+- **Đồng Bộ 100% Đợt Học & Khóa Học Sang Cổng Học Phí Student/Parent + Chỉnh Sửa / Xóa Khóa Học (`./src/components/payment/TuitionPaymentView.jsx`, `./src/components/dashboard/AcademicManagerDashboardView.jsx`, `./src/services/practiceService.js`)**:
+  - Xóa bỏ hoàn toàn mảng 3 gói học hardcode trên `TuitionPaymentView.jsx`; tải song song `AcademicTerms` (`ACTIVE`) và `Courses` (`isActive: true`) theo `campusId` của học sinh/con (kèm cơ chế phân giải `campusId` cho Phụ huynh & nút làm mới đồng bộ cả 2 nguồn); bổ sung Banner Đợt học đang tuyển sinh và lưới khóa học động đúng với dữ liệu Quản lý cơ sở đã tạo.
+  - Bổ sung `updateCourse` và `deleteCourse` vào `practiceService.js`; thêm nút Sửa (✏️) và Xóa (🗑️) trên từng khóa học trong `AcademicManagerDashboardView.jsx` kèm Modal tạo/sửa hợp nhất; gỡ state `availableCourses` dư thừa trong `ParentDashboardView.jsx`.
+- **Kiểm Thử Vận Hành**: `npm run build` đạt `✓ built in 1.39s`, 0 lỗi.
 
 ## [20/11/2026] - Sửa Hàng Loạt Lỗi Li Ti Khi Parse Đề PDF Ở Web Client (Chạy Local, Chưa Deploy Docker)
 
@@ -23,7 +40,6 @@
   - `MathText.jsx` trực tiếp match `<s*ub[^>]*>[sS]+?<s*/s*us*>` thành thẻ `<u>`, không còn phụ thuộc tiền xử lý; dự phòng `renderKatexHtml` chuyển `\circC` thành `°C`.
   - `repairDegreeUnits` tách biệt chuẩn hóa `\circC` khỏi logic bọc `$`, triệt tiêu lỗi `$$$` gây đỏ KaTeX ở Câu 95.
   - `normalizeQuestionItem` & `ExamPaperView.jsx` phát hiện lệch môn, chặn gán sai môn Vật lí/Hóa học/Toán cho câu tiếng Anh Câu 26–29; `useExamWorkspaceController.js` tự động chữa lành `currentExam` khi nạp cây môn học.
-  - **Vòng 3**: `examStateBridge.js` bump sessionStorage key `v1` → `v2` buộc browser xóa cache cũ; `examParserUtils.js` thêm bước 1.9 lọc ký tự ASCII đơn lẻ bị xen kẽ trên dòng riêng trong đoạn văn Lịch sử/Ngữ văn (lỗi font bitmap PUA của AI cloud/PdfPig parser, Passage Câu 118–120).
 - **Kiểm thử**: `examStateBridge.test.js` `5/5`, `tests/*.test.js` `22/22`, `npm run build` thành công 3.47s.
 
 ## [20/11/2026] - Hoàn Thiện Hành Trình Học Sinh End-to-End (Phòng Thi Độc Lập Nền Trắng -> Đầy Đủ Đoạn Văn `Passage` Trong PLAR -> Bản Đồ Lộ Trình Lớp 10–12 Phân 3 Vùng `WEAK` / `MASTERED` / `UNASSESSED` -> Cổng Học Phí PayOS) & Hotfix Sidebar

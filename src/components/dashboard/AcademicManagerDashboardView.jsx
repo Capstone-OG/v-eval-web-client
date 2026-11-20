@@ -169,8 +169,9 @@ export default function AcademicManagerDashboardView({
   });
   const [termBusy, setTermBusy] = useState(false);
 
-  // Create Course Modal
+  // Create / Edit Course Modal
   const [showCourseModal, setShowCourseModal] = useState(false);
+  const [editingCourseId, setEditingCourseId] = useState(null);
   const [courseForm, setCourseForm] = useState({
     code: '',
     name: '',
@@ -935,7 +936,46 @@ export default function AcademicManagerDashboardView({
     }
   };
 
-  // Create Course
+  // Create / Update Course
+  const handleOpenCreateCourse = () => {
+    setEditingCourseId(null);
+    setCourseForm({
+      code: '',
+      name: '',
+      planType: 'STANDARD',
+      durationWeeks: 12,
+      tuitionFee: 4500000,
+      maxClassSize: 20
+    });
+    setShowCourseModal(true);
+  };
+
+  const handleOpenEditCourse = (crs) => {
+    setEditingCourseId(crs.courseId);
+    setCourseForm({
+      code: crs.code || '',
+      name: crs.name || '',
+      planType: crs.planType || 'STANDARD',
+      durationWeeks: crs.durationWeeks || 12,
+      tuitionFee: Number(crs.tuitionFee || 0),
+      maxClassSize: crs.maxClassSize || 20
+    });
+    setShowCourseModal(true);
+  };
+
+  const handleDeleteCourse = async (crs) => {
+    if (!window.confirm(`Bạn có chắc muốn xóa khóa học "${crs.name}" (${crs.code}) không?`)) {
+      return;
+    }
+    try {
+      const msg = await practiceService.deleteCourse(crs.courseId);
+      toast.success(typeof msg === 'string' ? msg : `Đã xóa khóa học "${crs.name}".`);
+      await loadCampusOperationalData();
+    } catch (err) {
+      toast.error(err?.message || 'Không thể xóa khóa học.');
+    }
+  };
+
   const handleCreateCourseSubmit = async (e) => {
     e.preventDefault();
     if (!courseForm.code.trim() || !courseForm.name.trim()) {
@@ -944,17 +984,30 @@ export default function AcademicManagerDashboardView({
     }
     setCourseBusy(true);
     try {
-      await practiceService.createCourse({
-        campusId: selectedCampus,
-        code: courseForm.code.trim().toUpperCase(),
-        name: courseForm.name.trim(),
-        planType: courseForm.planType,
-        durationWeeks: Number(courseForm.durationWeeks || 12),
-        tuitionFee: Number(courseForm.tuitionFee || 0),
-        maxClassSize: Math.min(20, Math.max(5, Number(courseForm.maxClassSize || 20)))
-      });
-      toast.success(`Đã tạo khóa học "${courseForm.name}" thành công.`);
+      if (editingCourseId) {
+        await practiceService.updateCourse(editingCourseId, {
+          code: courseForm.code.trim().toUpperCase(),
+          name: courseForm.name.trim(),
+          planType: courseForm.planType,
+          durationWeeks: Number(courseForm.durationWeeks || 12),
+          tuitionFee: Number(courseForm.tuitionFee || 0),
+          maxClassSize: Math.min(20, Math.max(5, Number(courseForm.maxClassSize || 20)))
+        });
+        toast.success(`Đã cập nhật khóa học "${courseForm.name}" thành công.`);
+      } else {
+        await practiceService.createCourse({
+          campusId: selectedCampus,
+          code: courseForm.code.trim().toUpperCase(),
+          name: courseForm.name.trim(),
+          planType: courseForm.planType,
+          durationWeeks: Number(courseForm.durationWeeks || 12),
+          tuitionFee: Number(courseForm.tuitionFee || 0),
+          maxClassSize: Math.min(20, Math.max(5, Number(courseForm.maxClassSize || 20)))
+        });
+        toast.success(`Đã tạo khóa học "${courseForm.name}" thành công.`);
+      }
       setShowCourseModal(false);
+      setEditingCourseId(null);
       setCourseForm({
         code: '',
         name: '',
@@ -965,7 +1018,7 @@ export default function AcademicManagerDashboardView({
       });
       await loadCampusOperationalData();
     } catch (err) {
-      toast.error(err?.message || 'Không thể tạo khóa học.');
+      toast.error(err?.message || (editingCourseId ? 'Không thể cập nhật khóa học.' : 'Không thể tạo khóa học.'));
     } finally {
       setCourseBusy(false);
     }
@@ -1836,7 +1889,7 @@ export default function AcademicManagerDashboardView({
                 </div>
                 <button
                   type="button"
-                  onClick={() => setShowCourseModal(true)}
+                  onClick={handleOpenCreateCourse}
                   className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-extrabold flex items-center gap-1.5 cursor-pointer"
                 >
                   <Plus className="w-3.5 h-3.5" />
@@ -1873,11 +1926,31 @@ export default function AcademicManagerDashboardView({
                           Thời lượng: {crs.durationWeeks} tuần • Sĩ số tối đa: {crs.maxClassSize || 20} HS/lớp
                         </div>
                       </div>
-                      <div className="text-right shrink-0">
-                        <div className="font-black text-emerald-700">
-                          {Number(crs.tuitionFee || 0).toLocaleString('vi-VN')} ₫
+                      <div className="flex items-center gap-2.5 shrink-0">
+                        <div className="text-right">
+                          <div className="font-black text-emerald-700">
+                            {Number(crs.tuitionFee || 0).toLocaleString('vi-VN')} ₫
+                          </div>
+                          <div className="text-[10px] text-slate-500">{crs.totalClassesCount || 0} lớp đang mở</div>
                         </div>
-                        <div className="text-[10px] text-slate-500">{crs.totalClassesCount || 0} lớp đang mở</div>
+                        <div className="flex items-center gap-1 border-l border-slate-200 pl-2">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEditCourse(crs)}
+                            title="Chỉnh sửa khóa học"
+                            className="p-1.5 rounded-lg bg-white hover:bg-indigo-50 text-slate-500 hover:text-indigo-700 border border-slate-200 cursor-pointer transition-colors"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteCourse(crs)}
+                            title="Xóa khóa học"
+                            className="p-1.5 rounded-lg bg-white hover:bg-rose-50 text-slate-400 hover:text-rose-600 border border-slate-200 cursor-pointer transition-colors"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ))
@@ -2570,20 +2643,27 @@ export default function AcademicManagerDashboardView({
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="text-base font-extrabold text-slate-900">Tạo Khóa Học Theo Đợt</h3>
+              <h3 className="text-base font-extrabold text-slate-900">
+                {editingCourseId ? 'Chỉnh Sửa Khóa Học Theo Đợt' : 'Tạo Khóa Học Theo Đợt'}
+              </h3>
               <div className="flex items-center gap-2">
+                {!editingCourseId && (
+                  <button
+                    type="button"
+                    onClick={handleFillSampleCourseData}
+                    className="px-2.5 py-1 rounded-xl bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 text-[11px] font-extrabold flex items-center gap-1 cursor-pointer transition-all"
+                    title="Điền tự động dữ liệu mẫu hợp lệ để kiểm thử nhanh"
+                  >
+                    <Sparkles className="w-3 h-3 text-indigo-600" />
+                    <span>Điền Mẫu</span>
+                  </button>
+                )}
                 <button
                   type="button"
-                  onClick={handleFillSampleCourseData}
-                  className="px-2.5 py-1 rounded-xl bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 text-[11px] font-extrabold flex items-center gap-1 cursor-pointer transition-all"
-                  title="Điền tự động dữ liệu mẫu hợp lệ để kiểm thử nhanh"
-                >
-                  <Sparkles className="w-3 h-3 text-indigo-600" />
-                  <span>Điền Mẫu</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowCourseModal(false)}
+                  onClick={() => {
+                    setShowCourseModal(false);
+                    setEditingCourseId(null);
+                  }}
                   className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center cursor-pointer"
                 >
                   <X className="w-4 h-4" />

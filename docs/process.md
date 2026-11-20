@@ -83,6 +83,7 @@
 | 42 | **Khắc Phục Tạp Nhiễm Tri Thức Chéo Môn Học & Chéo Chương & Quick Pattern Switcher** | `CurriculumExplorerView.jsx`, `UnifiedNodeDetailView.jsx`, `textbookStateBridge.js` | 🟢 Hoàn thành | 100% | Thiết lập bộ lọc phạm vi tri thức 4 lớp, siết chặt thuật toán so khớp mờ `isFuzzyLabelMatch`, hàng rào chặn từ khóa chéo môn trong `buildTheoryFromChunks`, bổ sung Quick Pattern Switcher pills |
 | 43 | **Bóc Tách Triệt Để Khung Chương Trình Chuẩn Và Luồng Khảo Thí Năng Lực** | `App.jsx`, `Sidebar.jsx`, `StudentCurriculumView.jsx` | 🟢 Hoàn thành | 100% | Loại bỏ override định tuyến sai hướng trong `App.jsx` (`diagnostic` render nhầm `CurriculumExplorerView`), chuẩn hóa nhãn menu/sidebar từ 'Khảo thí 30 câu' thành 'Khảo thí & Chẩn đoán', tinh chỉnh thông điệp học sinh |
 | 39 | **Khởi Tạo Cổng Quản Lý Học Thuật Cơ Sở Độc Lập (`AcademicManagerDashboardView.jsx` - Zero Hardcode) & Bảo Toàn `CampusManagerDashboardView.jsx` Gốc Cho Director** | `AcademicManagerDashboardView.jsx`, `CampusManagerDashboardView.jsx`, `Sidebar.jsx`, `App.jsx`, `practiceService.js` | 🟢 Hoàn thành | 100% | Giữ nguyên `CampusManagerDashboardView.jsx` gốc cho `director`; tạo mới `AcademicManagerDashboardView.jsx` (0% hardcode) cho `manager` với 4 mục chuẩn nghiệp vụ nối trực tiếp API Backend thật |
+| 44 | **Đồng Bộ Đợt Học & Khóa Học Sang Cổng Học Phí Student/Parent + Sửa/Xóa Khóa Học** | `TuitionPaymentView.jsx`, `AcademicManagerDashboardView.jsx`, `practiceService.js` | 🟢 Hoàn thành | 100% | Bỏ hoàn toàn 3 gói học hardcode trên `TuitionPaymentView.jsx`, đồng bộ 100% `AcademicTerms` & `Courses` theo `campusId`; bổ sung Sửa (✏️) / Xóa (🗑️) khóa học cho Academic Manager |
 
 
 
@@ -895,6 +896,8 @@ Validation: build and lint pass with existing warnings; live API integration rem
 | **Nút nạp đợt học / khóa học mẫu** | `AcademicManagerDashboardView.jsx` | 🟢 Hoàn thành | Nút nạp mẫu rỗng và nút điền mẫu trong modal tạo mới giúp kiểm thử 1-click. |
 | **Biên dịch Web Client** | Toàn bộ ứng dụng | 🟢 Hoàn thành | `npm run build` đạt `✓ built in 2.13s` với 3054 modules sạch 100%, 0 lỗi. |
 | **Giao diện Xếp lớp Ma trận 4 Miền × 3 Cấp bậc (12 Lớp)** | `AcademicManagerDashboardView.jsx`, `practiceService.js` | 🟢 Hoàn thành | Cấu hình ngưỡng Cơ bản / Nâng cao trực quan, render ma trận 4 hàng × 3 cột (12 lớp chuẩn) kèm trạng thái sĩ số và nút Gán GV trực tiếp. |
+| **Chuẩn hóa vai trò Cổng Academic Director (`isDirectorMode`) & Đối sánh Đa Cơ Sở (`ALL`)** | `CampusManagerDashboardView.jsx`, `Sidebar.jsx`, `App.jsx` | 🟢 Hoàn thành | Giữ nguyên 4 phân hệ cốt lõi, mặc định hiển thị tất cả cơ sở kèm Bảng Đối Sánh Giữa Các Cơ Sở, gỡ 3 mục trỏ nhầm trên Sidebar, xóa hardcode tên/67% (`vite build` 1.96s). |
+| **Khắc phục lỗi Logout vẫn dính tài khoản cũ (Race Condition)** | `App.jsx`, `apiClient.js`, `authService.js`, `PublicHeader.jsx` | 🟢 Hoàn thành | Chặn `/api/v1/users/me` ghi đè sau logout bằng `sessionVersion`, chặn lưu `USER_KEY` không có token, Optimistic Logout và kiểm tra `isAuthenticated()` ở `PublicHeader`. |
 
 ## [20/11/2026] - Hoàn Thiện Hành Trình Học Sinh End-to-End: Phòng Thi Độc Lập Nền Trắng, Đoạn Văn `Passage` Trong PLAR, Bản Đồ Lộ Trình Lớp 10–12 Phân 3 Vùng (`WEAK` / `MASTERED` / `UNASSESSED`) & Cổng Học Phí PayOS
 

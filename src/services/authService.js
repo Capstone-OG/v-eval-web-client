@@ -254,8 +254,8 @@ export const authService = {
   /**
    * Đăng xuất và thu hồi Refresh Token (UC 07)
    */
-  async logout() {
-    const refreshToken = tokenStorage.getRefreshToken();
+  async logout(explicitRefreshToken = null) {
+    const refreshToken = explicitRefreshToken || tokenStorage.getRefreshToken();
     try {
       if (refreshToken) {
         await apiClient.post('/api/auth/logout', { refreshToken });
