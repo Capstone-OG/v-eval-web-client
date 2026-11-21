@@ -13,8 +13,6 @@ import {
   Calendar,
   ClipboardCheck,
   ChevronDown,
-  PanelLeftClose,
-  PanelLeftOpen,
   CreditCard,
   FileCheck2,
   GraduationCap,
@@ -128,27 +126,40 @@ export default function Sidebar({
       case 'teacher':
         return [
           {
-            sectionTitle: 'Điều Phối Giảng Dạy',
+            sectionTitle: 'Quản Lý Lớp Học',
             items: [
               {
                 id: 'dashboard',
-                label: 'Tổng quan giảng dạy',
-                sublabel: 'Công việc & công cụ giáo viên',
+                label: 'Lớp học & Tiến độ',
+                sublabel: 'Tiến độ, cảnh báo & thi thử',
                 icon: LayoutGrid,
-                active: activeTab === 'dashboard',
+                active: activeTab === 'dashboard' || activeTab === 'teacher_heatmap' || activeTab === 'proctoring' || activeTab === 'analytics',
                 onClick: () => setActiveTab('dashboard')
               },
               {
-                id: 'teacher_heatmap',
-                label: 'Lớp học & năng lực',
-                sublabel: 'Học sinh và bản đồ kỹ năng',
-                icon: Users,
-                active: activeTab === 'teacher_heatmap',
-                onClick: () => setActiveTab('teacher_heatmap')
+                id: 'schedule',
+                label: 'Thời khóa biểu & Điểm danh',
+                sublabel: 'Lịch dạy, phòng học & điểm danh',
+                icon: Calendar,
+                active: activeTab === 'schedule',
+                onClick: () => setActiveTab('schedule')
               },
               {
+                id: 'history',
+                label: 'Lịch sử làm bài',
+                sublabel: 'Tra cứu bài kiểm tra học viên',
+                icon: History,
+                active: activeTab === 'history',
+                onClick: () => setActiveTab('history')
+              }
+            ]
+          },
+          {
+            sectionTitle: 'Học Liệu & Đề Thi',
+            items: [
+              {
                 id: 'roadmap',
-                label: 'Khung Chương trình & Dạng bài',
+                label: 'Khung chương trình',
                 sublabel: 'Cây kiến thức & Ma trận Bloom',
                 icon: Network,
                 active: activeTab === 'roadmap',
@@ -214,30 +225,19 @@ export default function Sidebar({
                     onClick: () => setActiveTab('exam-studio')
                   }
                 ]
-              },
+              }
+            ]
+          },
+          {
+            sectionTitle: 'Kiểm Duyệt & AI',
+            items: [
               {
-                id: 'diagnostic',
-                label: 'Ngân hàng Đề Khảo thí',
-                sublabel: 'Danh sách đề & trạng thái xuất bản',
-                icon: ClipboardCheck,
-                active: activeTab === 'diagnostic',
-                onClick: () => setActiveTab('diagnostic')
-              },
-              {
-                id: 'history',
-                label: 'Nhật ký Bài làm Học viên',
-                sublabel: 'Tra cứu bài chẩn đoán theo lớp',
-                icon: History,
-                active: activeTab === 'history',
-                onClick: () => setActiveTab('history')
-              },
-              {
-                id: 'analytics',
-                label: 'Cảnh báo & hỗ trợ',
-                sublabel: 'Theo dõi và ghi nhận can thiệp',
-                icon: BarChart3,
-                active: activeTab === 'analytics',
-                onClick: () => setActiveTab('analytics')
+                id: 'ai_moderation',
+                label: 'Kiểm duyệt gia sư AI',
+                sublabel: 'Góp ý câu trả lời trợ lý AI',
+                icon: Bot,
+                active: activeTab === 'ai_moderation',
+                onClick: () => setActiveTab('ai_moderation')
               }
             ]
           }
@@ -575,7 +575,7 @@ export default function Sidebar({
                 icon: Zap,
                 iconColor: 'from-yellow-400 to-amber-500',
                 activeGlow: 'shadow-yellow-500/30',
-                active: false,
+                active: activeTab === 'adaptive-practice',
                 onClick: onOpenAdaptiveQuiz
               },
               {
@@ -585,7 +585,7 @@ export default function Sidebar({
                 icon: FileCheck2,
                 iconColor: 'from-cyan-400 to-blue-500',
                 activeGlow: 'shadow-cyan-500/30',
-                active: false,
+                active: activeTab === 'mock-exam',
                 onClick: onOpenMockExam
               },
               {
@@ -598,14 +598,6 @@ export default function Sidebar({
                 active: false,
                 onClick: onOpenAiTutor,
                 badge: 'AI'
-              },
-              {
-                id: 'live',
-                label: 'Lớp học & Live Q&A',
-                sublabel: 'Phụ đạo trực tuyến & Nhóm vi mô',
-                icon: Video,
-                active: activeTab === 'live',
-                onClick: () => (onOpenLiveClass ? onOpenLiveClass() : setActiveTab('live'))
               }
             ]
           },
@@ -673,46 +665,22 @@ export default function Sidebar({
         entries.history,
         { ...entries.analytics, label: 'Báo cáo học tập' }
       ] },
-      { sectionTitle: 'Dịch vụ học viên', items: [entries.live, entries.tuition] }
+      { sectionTitle: 'Dịch vụ học viên', items: [entries.tuition].filter(Boolean) }
     ];
   }
 
   return (
-    <aside className={`${mobile ? 'flex w-full min-h-full p-5' : (isCollapsed ? 'hidden lg:flex w-20 p-3' : 'hidden lg:flex w-72 p-5')} flex-col justify-between border-r border-slate-200/80 bg-gradient-to-b from-slate-50/80 to-white select-none shrink-0 transition-all duration-200`}>
+    <aside className={`${mobile ? 'flex w-full min-h-full p-5' : (isCollapsed ? 'hidden lg:flex lg:sticky lg:top-0 lg:h-screen lg:overflow-y-auto w-20 p-3' : 'hidden lg:flex lg:sticky lg:top-0 lg:h-screen lg:overflow-y-auto w-72 p-5')} flex-col justify-between border-r border-slate-200/80 bg-gradient-to-b from-slate-50/80 to-white select-none shrink-0 transition-all duration-200`}>
       <div className="space-y-6">
         {/* Brand Identity Header - Synchronized with Home Page (PublicHeader.jsx) */}
-        <div className="flex items-center justify-between px-1">
+        <div className="flex items-center px-1">
           {!isCollapsed ? (
-            <>
-              <BrandLogo className="w-40" />
-              {onToggleCollapse && (
-                <button
-                  type="button"
-                  onClick={onToggleCollapse}
-                  title="Thu gọn sidebar"
-                  aria-label="Thu gọn sidebar"
-                  className="p-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-500 hover:text-slate-800 transition-colors cursor-pointer shadow-2xs"
-                >
-                  <PanelLeftClose className="w-4 h-4" />
-                </button>
-              )}
-            </>
+            <BrandLogo className="w-40" />
           ) : (
             <div className="w-full flex flex-col items-center gap-2">
               <span className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-600 via-indigo-600 to-cyan-500 flex items-center justify-center text-white font-black text-sm shadow-md">
                 V
               </span>
-              {onToggleCollapse && (
-                <button
-                  type="button"
-                  onClick={onToggleCollapse}
-                  title="Mở rộng sidebar"
-                  aria-label="Mở rộng sidebar"
-                  className="p-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-500 hover:text-slate-800 transition-colors cursor-pointer shadow-2xs"
-                >
-                  <PanelLeftOpen className="w-4 h-4 text-emerald-700" />
-                </button>
-              )}
             </div>
           )}
         </div>

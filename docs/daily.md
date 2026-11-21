@@ -2,6 +2,22 @@
 
 ---
 
+## [22/11/2026] - Tách PLAR Thành Trang Studio Toàn Màn Hình 4 Tab Chu Trình, Cố Định Sticky Sidebar & Sửa Ánh Xạ Lý Thuyết SGK 9 Môn
+
+- **Tách PLAR Thành Trang Học Chuyên Biệt Toàn Màn Hình ([`ConnectedRoadmapPage.jsx`](../src/components/roadmap/ConnectedRoadmapPage.jsx), [`PlarNodeStudioPanel.jsx`](../src/components/roadmap/PlarNodeStudioPanel.jsx))**:
+  - Bỏ bố cục chia cột chật hẹp; Bản Đồ Kiến Thức hiển thị toàn chiều rộng dạng lưới 3 cột (`grid-cols-1 md:grid-cols-2 xl:grid-cols-3`).
+  - Khi chọn chặng học, mở **P-L-A-R Studio toàn màn hình** có nút `← Quay lại Bản Đồ Kiến Thức` và thanh **4 Tab Chu Trình ngang** (`1. Preview`, `2. Learn`, `3. Apply`, `4. Reflect`) giống phong cách trang Parse Sách / Textbook Studio, cho phép chuyển qua lại giữa các tab đã mở khóa.
+- **Sửa Lỗi Nạp Lý Thuyết SGK 9 Môn ([`PlarNodeStudioPanel.jsx`](../src/components/roadmap/PlarNodeStudioPanel.jsx))**:
+  - Thêm `resolveSubjectCode` chuyển chuẩn `subjectName` sang `MATH`/`PHYS`/`CHEM`/`BIO`/`LIT`/`ENG`/`HIST`/`GEO`/`CIVIC` thay vì truyền `domainCode` (`DOM_NAT_SCI`), nạp đủ lý thuyết từ `getDefaultLessonTheory`, `getSavedTextbookData` và `GDPT_PRESETS`.
+- **Cố Định Thanh Sidebar Desktop & Khôi Phục Duy Nhất 1 Nút Thu Gọn Sidebar Toàn Hệ Thống ([`Sidebar.jsx`](../src/components/layout/Sidebar.jsx), [`AccountNavbar.jsx`](../src/components/layout/AccountNavbar.jsx))**:
+  - Thêm `lg:sticky lg:top-0 lg:h-screen lg:overflow-y-auto` để Sidebar luôn bám cố định khi cuộn trang.
+  - Bổ sung duy nhất 1 nút `PanelLeftClose` / `PanelLeftOpen` trên `AccountNavbar.jsx` để mọi trang trong hệ thống đều có 1 nút đóng/mở thanh bên nhất quán.
+- **Tái Thiết Kế Giao Diện Sách Giáo Khoa Chuẩn ([`TextbookStandardView.jsx`](../src/components/curriculum/TextbookStandardView.jsx), [`MathText.jsx`](../src/components/common/MathText.jsx))**:
+  - Sửa vỡ cột `headingStyles[3]` từ `flex` sang `block`; thiết kế lại Studio 3 Tab + `CleanTextbookRenderer`.
+  - Chuyển toàn bộ nhãn `Bloom L1`–`L6` sang tên Tiếng Việt (`Nhận biết`, `Thông hiểu`, `Vận dụng cơ bản`, `Vận dụng cao`, `Đánh giá`, `Sáng tạo`); sửa trùng dấu `✓ ✓ Đã duyệt`; bỏ thanh `Dạng bài:` trùng lặp bên phải.
+  - Gắn chặt bộ lọc `Môn học` + `Khối lớp` ánh xạ trực tiếp tới đúng cuốn SGK trong CSDL và rút gọn dropdown thành `Phiên bản SGK` theo đúng Môn/Lớp; mở khóa 2 nút `Sang Trang Nạp SGK` và `Mở Studio Biên Soạn`.
+- **Kiểm Thử**: `npm run build` thành công `1.42s` (`3081 modules`, `0 Error`).
+
 ## [21/11/2026] - Khắc Phục Giới Hạn Chiều Cao Khung Lý Thuyết PLAR, Khơi Thông Toàn Văn SGK & Chuẩn Hóa Thẻ Gạch Chân `<u>`
 
 - **Khắc Phục Giới Hạn Chiều Cao & Khơi Thông Toàn Văn Lý Thuyết SGK Trong Pha Learn PLAR ([`PlarNodeStudioPanel.jsx`](../src/components/roadmap/PlarNodeStudioPanel.jsx))**:
@@ -9,6 +25,38 @@
   - Xóa bỏ mọi rào cản chiều cao (`overflow-visible`), hiển thị toàn văn rõ ràng, không bị che khuất hay cắt ngang.
   - Tối ưu hóa `PassageContextBox`: Bổ sung nút chuyển đổi `Xem toàn văn / Thu gọn` và tăng trần chiều cao lên `max-h-[460px]`, triệt tiêu hoàn toàn hiện tượng đoạn văn đọc hiểu dài bị co cụm hoặc khó đọc.
   - Nâng cấp nội dung tài liệu chuyên đề Toán 10 (Đường thẳng trong mặt phẳng toạ độ) trong CSDL PostgreSQL `v_eval_content."Materials"` từ 722 ký tự lên 4,270 ký tự toàn văn chuẩn sư phạm GDPT 2018.
+
+## [21/11/2026] - Tối Ưu Hóa Trải Nghiệm Giáo Viên: Gom Cảnh Báo Sư Phạm Thành Nút Popup, Tái Cấu Trúc Ma Trận Thời Khóa Biểu Tuần 8 Cột & Chuẩn Hóa Đọc Hiểu / KaTeX
+
+- **Chuẩn Hóa Dữ Liệu Động Toàn Diện & Triệt Tiêu Giá Trị Tĩnh Trong Phân Hệ Giáo Viên ([`TeacherScheduleView.jsx`](../src/components/dashboard/TeacherScheduleView.jsx), [`AiTutorModerationView.jsx`](../src/components/dashboard/AiTutorModerationView.jsx), [`ClassMicroGroupsModal.jsx`](../src/components/modals/ClassMicroGroupsModal.jsx), [`TeacherStudentDrillDownModal.jsx`](../src/components/modals/TeacherStudentDrillDownModal.jsx), [`practiceService.js`](../src/services/practiceService.js))**:
+  - *Thời khóa biểu & Điểm danh (`TeacherScheduleView.jsx`)*: Xóa bỏ hoàn toàn giá trị mặc định tĩnh `'Teacher Khôi'`, thay bằng logic liên kết động `primaryTeacherName || fullName || name || 'Giảng viên phụ trách'`; thay thế nhãn `'Offline'` cố định bằng cơ chế nhận diện hình thức linh hoạt (`Online` / `Offline`) theo phòng học và URL phòng họp; thay thế phòng `'P.301'` mặc định bằng hiển thị đúng hiện trạng (`Trực tuyến` hoặc `Chưa xếp phòng`); chuẩn hóa nhãn định danh học sinh trong modal điểm danh.
+  - *Kiểm duyệt gia sư AI (`AiTutorModerationView.jsx`)*: Chuyển đổi toàn bộ các chỉ số của thẻ "GraphRAG Monitor" (`97.6%`, `142 Exemplars • 68 Traps`) sang tính toán tự động từ tập dữ liệu đàm thoại thực tế (`socraticReliability`, `exemplarsCount`, `trapsCount`); làm sạch các đoạn văn bản mẫu gán sẵn để giáo viên chủ động nhập nhận xét sư phạm nguyên bản; chuẩn hóa tên lớp và học sinh.
+  - *Sơ đồ nhóm bàn học vi mô (`ClassMicroGroupsModal.jsx`)*: Loại bỏ hàm sinh mã ngẫu nhiên `Math.random()` và chuỗi dự phòng `WS-OFFLINE-01`; kích hoạt cơ chế tự động đóng gói 5 câu hỏi thích ứng trực tiếp từ Content Service API qua backend khi phát đề; tích hợp lệnh in thực tế `window.print()` cho sơ đồ bàn học.
+  - *Hồ sơ chi tiết học sinh (`TeacherStudentDrillDownModal.jsx`)*: Thay thế cơ chế mô phỏng `setTimeout` bằng hệ thống lưu trữ bền vững lịch sử dặn dò sư phạm theo từng học sinh; hiển thị danh sách các lời dặn dò đã gửi gần đây.
+  - *Tầng dịch vụ (`practiceService.js`)*: Xóa bỏ dữ liệu giả lập `_source: 'seed_fallback'` trong hàm `forceAggregateClassHeatmap`, đảm bảo ném lỗi chân thực khi dịch vụ backend gặp sự cố.
+- **Loại Bỏ Nút Thu Gọn Sidebar Trùng Lặp & Làm Gọn Thanh Điều Hướng Header ([`Sidebar.jsx`](../src/components/layout/Sidebar.jsx), [`AccountNavbar.jsx`](../src/components/layout/AccountNavbar.jsx))**:
+  - Loại bỏ hoàn toàn 2 nút thu gọn/mở rộng sidebar (`PanelLeftClose`/`PanelLeftOpen`) trùng lặp nằm sát cạnh nhau ở góc trên bên trái (một nút nằm trên thanh Brand Header của Sidebar, một nút nằm trên thanh Header Navbar).
+  - Tối giản hóa bố cục thanh điều hướng desktop, loại bỏ các nút dư thừa gây rối mắt, giữ trọn vẹn nút menu điều hướng mobile (`Menu`) và cấu trúc bố cục đồng điệu, thoáng đãng.
+- **Gom Khối Cảnh Báo Sư Phạm Thành Nút Bấm Popup Tinh Gọn ([`TeacherDashboardView.jsx`](../src/components/dashboard/TeacherDashboardView.jsx))**:
+  - Loại bỏ hoàn toàn danh sách các thẻ cảnh báo đỏ/vàng trải dài thô xuống màn hình, vốn đẩy bảng ma trận tiến độ học tập xuống quá sâu.
+  - Thay thế bằng dải thông báo tinh gọn (height ~50px) với 1 nút bấm trực quan: `Xem danh sách chuyên đề ({count})`.
+  - Tích hợp Modal chuyên dụng `Chuyên Đề Cần Bồi Dưỡng Gấp` hiển thị danh sách cuộn mượt (`max-h-[85vh]`), hỗ trợ đầy đủ số liệu tỷ lệ hiểu bài, số học sinh chưa đạt và nút 1-chạm `Tạo Nhóm Bồi Dưỡng` kích hoạt xếp bàn học vi mô 3–5 em.
+- **Tối Giản Giao Diện & Loại Bỏ Banner Xanh Đen Cồng Kềnh ([`TeacherScheduleView.jsx`](../src/components/dashboard/TeacherScheduleView.jsx))**:
+  - Loại bỏ hoàn toàn khối banner hero xanh đen (`bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-950`) gây cảm giác lệch tông, nặng nề và thiếu đồng điệu với giao diện phẳng sáng màu.
+  - Tích hợp nút "Làm mới" (`RefreshCw`) gọn gàng trực tiếp vào thanh điều khiển của container ma trận thời khóa biểu tuần, đảm bảo đầy đủ chức năng nhưng tối ưu chiều cao hiển thị.
+- **Tái Thiết Kế Ma Trận Thời Khóa Biểu Tuần 8 Cột ([`TeacherScheduleView.jsx`](../src/components/dashboard/TeacherScheduleView.jsx))**:
+  - Chuyển đổi giao diện lịch dạy từ dạng danh sách timeline dọc sang mô hình bảng Ma Trận Thời Khóa Biểu Tuần (Weekly Timetable Matrix) 8 cột chuẩn khảo thí & học viện:
+    - *Cột 1 (Slot)*: Hiển thị 6 ca học chuẩn gồm Slot 1 (07:30 - 09:30), Slot 2 (09:45 - 11:45), Slot 3 (13:00 - 15:00), Slot 4 (15:15 - 17:15), Slot 5 (18:00 - 20:00), Slot 6 (20:15 - 22:30) kèm nhãn buổi (Sáng, Chiều, Tối).
+    - *7 Cột Thứ trong tuần*: Từ Thứ 2 đến Chủ nhật kèm ngày cụ thể `(DD/MM)`. Tự động nhận diện và làm nổi bật ngày hiện tại ("Hôm nay") bằng màu nền xanh ngọc dịu nhẹ (`bg-emerald-100/80 text-emerald-950 font-black border-b-2 border-b-emerald-600`).
+    - *Ô rỗng (Empty Cell)*: Hiển thị ký tự gạch ngang `-` căn giữa thanh lịch khi không có lịch dạy, chuẩn theo giao diện đào tạo đại học.
+    - *Thẻ ca học (Slot Session Card)*: Thiết kế thẻ nhỏ gọn chứa đầy đủ thông tin: Biểu tượng sách & tên lớp học, huy hiệu chuyên cần (Có mặt / Chưa điểm danh), khung giờ dạy chi tiết, phòng học, hình thức Offline/Online, tên giảng viên phụ trách, nhãn chuyên đề bài học và sĩ số học sinh.
+    - *Tương tác nghiệp vụ*: Nút "Điểm danh" / "Xem / Sửa" mở trực tiếp Modal điểm danh chuyên cần tại lớp, và nút xếp nhóm học tập vi mô 3–5 em.
+- **Thanh Điều Hướng Tuần & Chế Độ Xem Linh Hoạt ([`TeacherScheduleView.jsx`](../src/components/dashboard/TeacherScheduleView.jsx))**:
+  - Cụm điều hướng tuần thông minh: Nút `< Tuần trước`, `Tuần này`, `Tuần sau >` và nhãn hiển thị khoảng ngày `Tuần (DD/MM - DD/MM)`.
+  - Banner chuyển nhanh thông minh: Khi tuần hiện tại không có ca dạy, hệ thống tự động phát hiện ca dạy gần nhất trong tương lai và hiển thị nút "Chuyển đến tuần này" với 1-chạm.
+  - Bộ chuyển chế độ xem (View Mode Switcher): Cho phép giáo viên chuyển đổi linh hoạt giữa `Lưới tuần` (Weekly Matrix Grid - mặc định) và `Danh sách` (Agenda Timeline Cards).
+- **Duy Trì Kết Nối API Thời Gian Thực & Lưu Điểm Danh Trực Tiếp**:
+  - Tích hợp 100% dữ liệu thực tế từ backend: `practiceService.getClasses()`, `practiceService.getClassSessions()`, `practiceService.getTeacherSchedule()`, `practiceService.getSessionAttendances()` và `practiceService.submitSessionAttendances()`.
 - **Loại Bỏ Nhãn ABCD Trên Thân Câu Hỏi & In Đậm + Gạch Chân Từ Cần Tìm Lỗi ([`examTextRepair.js`](../src/utils/examTextRepair.js), [`MathText.jsx`](../src/components/common/MathText.jsx), [`examStateBridge.test.js`](../src/components/curriculum/examStateBridge.test.js))**:
   - `repairUnderlineTags`: Xóa sạch nhãn `(A)`, `(B)`, `(C)`, `(D)` bám theo sau thẻ `<u>...</u>` (vd: `<u>were</u> (C)` -> `<u>were</u>`), trả lại câu văn tiếng Anh tự nhiên, mượt mà chuẩn đề gốc. Đáp án trắc nghiệm A/B/C/D được hiển thị rõ ràng và độc lập qua hệ thống 4 nút phương án bên dưới.
   - `MathText.jsx`: Định dạng thẻ `<u>` thành `font-bold underline decoration-2 decoration-indigo-600 underline-offset-4` đảm bảo từ khóa vừa **in đậm** vừa **gạch chân**.
@@ -60,6 +108,58 @@
 - **Hotfix Khẩn Cấp Production (`Sidebar.jsx`)**:
   - Khắc phục lỗi crash `ReferenceError: iconGradient is not defined` và `glowClass is not defined` khi thu gọn thanh điều hướng (`isCollapsed`) bằng cách khai báo lại `iconGradient` (`item.iconColor || 'from-blue-500 to-indigo-600'`) và `glowClass` (`item.activeGlow || 'shadow-blue-500/30'`).
   - Đã kiểm thử `npx oxlint -D no-undef src/components/layout/Sidebar.jsx` (`0 Error`) và `npm run build` (`3076 modules`, `5.38s`, `0 Error`).
+
+## [20/11/2026] - Kết Nối CSDL Thời Gian Thực Toàn Diện & Chuẩn Hóa Dữ Liệu Động Cho Phân Hệ Giáo Viên (Teacher Role)
+
+- **Kết Nối CSDL Bản Đồ Ma Trận Lớp Học 2D Thời Gian Thực ([`TeacherDashboardView.jsx`](../src/components/dashboard/TeacherDashboardView.jsx), [`practiceService.js`](../src/services/practiceService.js))**:
+  - Chuẩn hóa bộ chọn lớp học phụ trách, khắc phục triệt để lỗi bất đồng bộ mã định danh (`classId` thay vì `id`), kết nối dữ liệu thật từ endpoint `GET /api/practice/classes` và `GET /api/practice/classes/{classId}/heatmap`.
+  - Hiển thị trực tiếp 100% dữ liệu thực tế từ CSDL PostgreSQL: danh sách học sinh trong lớp, điểm năng lực, trạng thái cần hỗ trợ, chuyên đề phân hóa 2 đầu và bảng ma trận tiến độ học tập chi tiết.
+- **Chuẩn Hóa Dữ Liệu Động Cho Phân Hệ Thời Khóa Biểu & Điểm Danh Chuyên Cần ([`TeacherScheduleView.jsx`](../src/components/dashboard/TeacherScheduleView.jsx), [`practiceService.js`](../src/services/practiceService.js))**:
+  - Bổ sung bộ chọn Lớp học phụ trách (`selectedClassId`), tự động tải danh sách ca dạy thực tế từ endpoint `GET /api/practice/schedules/classes/{classId}/sessions` và `GET /api/practice/schedules/teachers/{teacherId}/schedule`.
+  - Loại bỏ hoàn toàn các giá trị mặc định tĩnh; liên kết trực tiếp sĩ số học sinh (`enrolledStudentsCount` / `totalStudentsCount`) và tính toán tỷ lệ điểm danh theo thời gian thực.
+  - Kết nối danh sách học sinh từ ma trận lớp để hiển thị chính xác họ tên trong Modal điểm danh và lưu trữ trực tiếp lên máy chủ thông qua endpoint `POST /api/practice/schedules/sessions/{sessionId}/attendances`.
+- **Loại Bỏ Dữ Liệu Tĩnh Giả Lập Trong Phân Hệ Kiểm Duyệt Gia Sư AI ([`AiTutorModerationView.jsx`](../src/components/dashboard/AiTutorModerationView.jsx), [`practiceService.js`](../src/services/practiceService.js))**:
+  - Loại bỏ hoàn toàn mảng mẫu tĩnh giả lập (`SEED_INTERACTIONS`) và các công thức cố định trước đây.
+  - Kết nối trực tiếp vào 50 phiên đối thoại thực tế từ CSDL backend qua endpoint `GET /api/practice/ai-tutor/interactions`.
+  - Hiển thị chính xác nội dung câu hỏi khảo thí, phương án lựa chọn thực tế từ hệ thống, tiến trình đối thoại Socratic giữa học sinh và trợ lý AI, cùng trạng thái gắn cờ kiểm duyệt.
+  - Cung cấp giao diện sư phạm cho phép giáo viên nhập lời giải chuẩn hóa hoặc xác nhận bẫy tư duy dựa trên dữ liệu chuyên môn thật.
+- **Tối Giản Menu Sidebar & Điều Hướng Chuẩn EdTech ([`Sidebar.jsx`](../src/components/layout/Sidebar.jsx), [`App.jsx`](../src/App.jsx))**:
+  - Đảm bảo mục `Thời khóa biểu & Điểm danh` hiển thị trang trọng trên Sidebar của giáo viên với biểu tượng Calendar trong khối Quản Lý Lớp Học, định tuyến mượt mà giữa các phân hệ.
+
+## [20/11/2026] - Nâng Cấp Toàn Diện Phân Hệ Giáo Viên (Teacher Role), Tích Hợp Thời Khóa Biểu & Điểm Danh, Chuẩn Hóa Trải Nghiệm Người Dùng & Kết Nối API Thời Gian Thực
+
+- **Tích Hợp Phân Hệ Thời Khóa Biểu & Điểm Danh Chuyên Cần Cho Giáo Viên ([`TeacherScheduleView.jsx`](../src/components/dashboard/TeacherScheduleView.jsx), [`practiceService.js`](../src/services/practiceService.js), [`Sidebar.jsx`](../src/components/layout/Sidebar.jsx), [`App.jsx`](../src/App.jsx), [`ClassMicroGroupsModal.jsx`](../src/components/modals/ClassMicroGroupsModal.jsx))**:
+  - Tích hợp API CSDL thời gian thực: `practiceService.getTeacherSchedule` truy vấn ca dạy theo kỳ và giáo viên; `practiceService.getSessionAttendances` và `practiceService.submitSessionAttendances` nạp & lưu dữ liệu điểm danh từng ca.
+  - 4 Thẻ KPI: Lớp học phụ trách, Ca dạy sắp tới, Ca đã hoàn thành, Dạy thay / Học bù.
+  - Bộ lọc: Ô tìm kiếm đa năng (tên lớp, phòng học, chuyên đề); dropdown chọn học kỳ; dropdown trạng thái ca dạy (Sắp diễn ra, Đã hoàn thành).
+  - Modal Điểm danh trực tiếp tại lớp: Nút 1-chạm "Tất cả có mặt", 4 trạng thái linh hoạt (Có mặt, Đi muộn, Vắng mặt, Nghỉ có phép), ghi chú và lưu điểm danh tức thì.
+  - Tích hợp nút mở nhanh Xếp nhóm học tập vi mô (3–5 em) phân chia bàn học theo chuyên đề bài học hôm đó.
+  - Đưa mục `Thời khóa biểu & Điểm danh` vào nhóm `Quản Lý Lớp Học` trên Sidebar và điều hướng chuẩn xác trong `App.jsx`.
+- **Chuẩn Hóa Ngôn Ngữ Sư Phạm Thân Thiện & Loại Bỏ Thuật Ngữ Kỹ Thuật ([`TeacherDashboardView.jsx`](../src/components/dashboard/TeacherDashboardView.jsx), [`TeacherProctoringReviewModal.jsx`](../src/components/modals/TeacherProctoringReviewModal.jsx), [`TeacherStudentDrillDownModal.jsx`](../src/components/modals/TeacherStudentDrillDownModal.jsx), [`ClassMicroGroupsModal.jsx`](../src/components/modals/ClassMicroGroupsModal.jsx))**:
+  - Loại bỏ hoàn toàn các thuật ngữ toán học/thống kê (`IRT θ`, `P(Lt)`, `Bimodal σ ≥ 0.28`, `Force Aggregate`, `Drill-Down`, `SEM`, `Liêm chính học thuật`, `BKT`).
+  - Chuyển đổi thành từ ngữ sư phạm gần gũi với giáo viên: `Tiến Độ Học Tập Theo Chuyên Đề`, `Học Sinh Cần Hỗ Trợ`, `Chuyên Đề Cần Củng Cố`, `Kiểm Tra Bài Thi Bất Thường`, `Xếp Nhóm Học Tập (3–5 Em)`, `Cập Nhật Dữ Liệu`, `Xem Chi Tiết`.
+  - Quy đổi thang đánh giá học lực thành 5 mức sư phạm rõ ràng: **Xuất sắc**, **Giỏi**, **Khá**, **Trung bình**, **Cần bồi dưỡng**.
+  - Khắc phục lỗi `ReferenceError: RotateCw is not defined` khi chuyển sang tab kiểm tra bài thi.
+- **Nâng Cấp Dashboard Giáo Viên Với 3 Góc Nhìn Sư Phạm ([`TeacherDashboardView.jsx`](../src/components/dashboard/TeacherDashboardView.jsx))**:
+  - Tích hợp 3 góc nhìn: (1) Tiến độ học tập theo chuyên đề & Xếp nhóm học tập 3–5 em, (2) Học sinh cần hỗ trợ & Lịch tư vấn, (3) Kiểm tra bài thi bất thường.
+  - Kết nối danh sách lớp học động từ API `/api/practice/classes?teacherId={id}`, hiển thị thông báo thân thiện khi chưa được phân công lớp.
+  - Bổ sung chức năng Xuất Báo Cáo CSV (`TCH_07`) tải dữ liệu tiến độ lớp học dạng file CSV/Excel.
+  - Tích hợp Hồ sơ học sinh (`TeacherStudentDrillDownModal.jsx`): xem lịch sử bài kiểm tra khảo sát đầu vào, chuyên đề cần ôn tập và biểu mẫu gửi lời dặn dò đến học sinh & phụ huynh.
+- **Quy Trình Kiểm Tra Bài Thi Thử Bất Thường Trực Tuyến ([`TeacherProctoringReviewModal.jsx`](../src/components/modals/TeacherProctoringReviewModal.jsx), [`practiceService.js`](../src/services/practiceService.js))**:
+  - Hàng đợi bài thi thử có gắn cờ: giám sát số lần rời màn hình thi và chuỗi hình ảnh chụp định kỳ từ webcam.
+  - Biểu mẫu đánh giá của Giáo viên cho phép công nhận bài thi hợp lệ hoặc hủy kết quả bài thi vi phạm quy chế kèm nhận xét lý do bắt buộc.
+- **Chuẩn Hóa Sơ Đồ Xếp Nhóm Học Tập & Học Sinh Cần Hỗ Trợ ([`ClassMicroGroupsModal.jsx`](../src/components/modals/ClassMicroGroupsModal.jsx), [`EarlyWarningsMentorPanel.jsx`](../src/components/dashboard/EarlyWarningsMentorPanel.jsx))**:
+  - Loại bỏ hoàn toàn mảng mẫu tĩnh giả lập, kết nối 100% backend và hiển thị trạng thái rỗng thân thiện kèm nút kích hoạt tự động xếp nhóm học tập.
+  - Truyền danh sách lớp học thực tế vào bộ lọc học sinh cần hỗ trợ.
+- **Tối Giản & Tái Cấu Trúc Menu Sidebar Giáo Viên Chuẩn EdTech ([`Sidebar.jsx`](../src/components/layout/Sidebar.jsx), [`App.jsx`](../src/App.jsx), [`TeacherDashboardView.jsx`](../src/components/dashboard/TeacherDashboardView.jsx))**:
+  - Gom 10 mục dài, rời rạc và trùng lặp xuống còn 6 mục tinh gọn theo 3 khối công việc:
+    1. *Quản Lý Lớp Học*: `Lớp học & Tiến độ` (tích hợp trọn gói 3 tab Bản đồ tiến độ, Cảnh báo sớm, Kiểm tra bài thi thử) và `Lịch sử làm bài`.
+    2. *Học Liệu & Đề Thi*: `Khung chương trình` (rút gọn nhãn chống cắt chữ `...`), `Sách giáo khoa (SGK)` (3 trang), `Đề thi & AI Bloom` (3 trang).
+    3. *Kiểm Duyệt & AI*: `Kiểm duyệt gia sư AI`.
+  - Loại bỏ hoàn toàn 4 mục trùng lặp: `Lớp học & năng lực`, `Cảnh báo & hỗ trợ`, `Kiểm tra bài thi thử` (đã nằm trong Dashboard) và `Ngân hàng Đề Khảo thí` (đã được thay thế bởi Kho Đề Supabase mới).
+  - Tích hợp `initialView` vào `TeacherDashboardView` giúp định tuyến mượt mà từ mọi liên kết sâu.
+- **Sửa Lỗi Định Tuyến & Điều Hướng ([`App.jsx`](../src/App.jsx), [`Sidebar.jsx`](../src/components/layout/Sidebar.jsx))**:
+  - Khắc phục lỗi bắt nhầm route khiến Teacher không mở được Dashboard và Kiểm duyệt câu trả lời gia sư AI.
 ## [19/11/2026] - Khắc Phục Triệt Để Lỗi Hook Màn Hình Đỏ, Chuẩn Hóa Cổng Phụ Huynh 4 Phân Hệ & Bố Cục Dashboard 3 Tầng Hiện Đại
 
 - **Khắc Phục Lỗi Vi Phạm Quy Tắc Hook Màn Hình Đỏ ([`ParentDashboardView.jsx`](../src/components/dashboard/ParentDashboardView.jsx))**:

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import confetti from 'canvas-confetti';
 import {
   AlertTriangle,
+  ArrowLeft,
   ArrowRight,
   Award,
   BookOpen,
@@ -10,6 +11,7 @@ import {
   ChevronRight,
   Clock,
   FileText,
+  Flag,
   Lock,
   Play,
   RefreshCw,
@@ -23,7 +25,27 @@ import {
 import { practiceService } from '../../services/practiceService';
 import contentService from '../../services/contentService';
 import MathText from '../common/MathText';
-import { getSavedTextbookData, getDefaultLessonTheory } from '../curriculum/textbookStateBridge';
+import FlagQuestionModal from '../common/FlagQuestionModal';
+import { addFlaggedQuestion, getFlaggedQuestionIdSet } from '../../utils/questionFlagStore';
+import { getSavedTextbookData, getDefaultLessonTheory, GDPT_PRESETS, normalizeViText } from '../curriculum/textbookStateBridge';
+
+const resolveSubjectCode = (subjectName = '', domainCode = '') => {
+  const s = normalizeViText(subjectName || '');
+  if (s.includes('toan')) return 'MATH';
+  if (s.includes('vat li') || s.includes('vat ly')) return 'PHYS';
+  if (s.includes('hoa hoc') || s.includes('hoa')) return 'CHEM';
+  if (s.includes('sinh hoc') || s.includes('sinh')) return 'BIO';
+  if (s.includes('ngu van') || s.includes('tieng viet')) return 'LIT';
+  if (s.includes('tieng anh') || s.includes('english')) return 'ENG';
+  if (s.includes('lich su')) return 'HIST';
+  if (s.includes('dia li') || s.includes('dia ly')) return 'GEO';
+  if (s.includes('gdkt') || s.includes('phap luat') || s.includes('kinh te')) return 'CIVIC';
+  if (domainCode === 'DOM_MATH') return 'MATH';
+  if (domainCode === 'DOM_NAT_SCI') return 'PHYS';
+  if (domainCode === 'DOM_LANG') return 'LIT';
+  if (domainCode === 'DOM_SOC_SCI') return 'HIST';
+  return 'MATH';
+};
 
 const PLAR_STEPS = [
   { key: 'PREVIEW', code: 'P', label: 'Preview', subtitle: 'Khởi động 3 câu' },
@@ -87,6 +109,52 @@ function PassageContextBox({ title, content, imageUrl }) {
   );
 }
 
+const cleanPatternTitle = (name = '') =>
+  String(name).replace(/^(Dạng|Pattern)\s*\d+\s*[:.\-•]\s*/i, '').trim() || name;
+
+function StructuredTheoryRenderer({ content }) {
+  if (!content) return null;
+  const lines = String(content).replace(/\r\n/g, '\n').split('\n');
+  const blocks = [];
+
+  lines.forEach((rawLine, idx) => {
+    const line = rawLine.trim();
+    if (!line) return;
+
+    if (line.startsWith('## ')) {
+      blocks.push(
+        <h3 key={idx} className="text-base sm:text-lg font-black text-slate-900 pt-1">
+          <MathText text={line.slice(3).trim()} />
+        </h3>
+      );
+    } else if (line.startsWith('### ')) {
+      blocks.push(
+        <div key={idx} className="mt-4 mb-2 border-l-4 border-blue-600 bg-blue-50/50 px-3.5 py-2 rounded-r-xl text-sm font-black text-blue-950">
+          <MathText text={line.slice(4).trim()} />
+        </div>
+      );
+    } else if (/^[-•+]\s+/.test(line)) {
+      const itemText = line.replace(/^[-•+]\s+/, '');
+      blocks.push(
+        <div key={idx} className="flex items-start gap-2.5 pl-2 text-sm sm:text-[15px] text-slate-800 leading-relaxed">
+          <span className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-2.5 shrink-0" />
+          <div className="min-w-0 flex-1">
+            <MathText text={itemText} />
+          </div>
+        </div>
+      );
+    } else {
+      blocks.push(
+        <p key={idx} className="text-sm sm:text-[15px] text-slate-700 leading-relaxed">
+          <MathText text={line} />
+        </p>
+      );
+    }
+  });
+
+  return <div className="space-y-2">{blocks}</div>;
+}
+
 const getVideoEmbedUrl = (rawUrl) => {
   if (!rawUrl) return null;
   try {
@@ -106,6 +174,7 @@ export default function PlarNodeStudioPanel({
   node,
   studentId,
   isPaid,
+  onBackToMap,
   onNavigateTuition,
   onOpenAiTutorWithContext,
   onNodeCompleted,
@@ -115,6 +184,7 @@ export default function PlarNodeStudioPanel({
   const [detail, setDetail] = useState(null);
   const [materials, setMaterials] = useState([]);
   const [stage, setStage] = useState(null);
+  const [selectedTab, setSelectedTab] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [tuitionBlocked, setTuitionBlocked] = useState(false);
@@ -132,7 +202,42 @@ export default function PlarNodeStudioPanel({
   const [learnMessage, setLearnMessage] = useState('');
   const [checkedMaterialIds, setCheckedMaterialIds] = useState({});
   const [sgkTheoryContent, setSgkTheoryContent] = useState('');
+  const [learnSubTab, setLearnSubTab] = useState('theory'); // 'theory' | 'examples' | 'traps'
   const lastVideoReportRef = useRef(0);
+
+  const splitLearnSections = (rawContent = '') => {
+    const text = String(rawContent || '').replace(/\r\n/g, '\n').trim();
+    if (!text) return { theory: '', examples: '', traps: '' };
+
+    const m3 = text.match(/^#{2,4}\s*3\./m);
+    const m4 = text.match(/^#{2,4}\s*4\./m);
+
+    const idx3 = m3 && m3.index !== undefined ? m3.index : -1;
+    const idx4 = m4 && m4.index !== undefined ? m4.index : -1;
+
+    if (idx3 !== -1 && idx4 !== -1 && idx4 > idx3) {
+      return {
+        theory: text.slice(0, idx3).trim(),
+        examples: text.slice(idx3, idx4).trim(),
+        traps: text.slice(idx4).trim()
+      };
+    }
+    if (idx3 !== -1) {
+      return {
+        theory: text.slice(0, idx3).trim(),
+        examples: text.slice(idx3).trim(),
+        traps: ''
+      };
+    }
+    if (idx4 !== -1) {
+      return {
+        theory: text.slice(0, idx4).trim(),
+        examples: '',
+        traps: text.slice(idx4).trim()
+      };
+    }
+    return { theory: text, examples: '', traps: '' };
+  };
 
   // Phase A (Apply - ZPD + BKT) state
   const [currentQuestion, setCurrentQuestion] = useState(null);
@@ -153,6 +258,94 @@ export default function PlarNodeStudioPanel({
   const [learnedSummary, setLearnedSummary] = useState('');
   const [mistakeNotes, setMistakeNotes] = useState('');
   const [reflectBusy, setReflectBusy] = useState(false);
+  const [flagTarget, setFlagTarget] = useState(null); // { mode: 'preview' | 'apply', question }
+  const [flagBusy, setFlagBusy] = useState(false);
+  const [flagNotice, setFlagNotice] = useState('');
+
+  const handleConfirmFlagPlarQuestion = async ({ reasonCode, note }) => {
+    if (!flagTarget?.question) return;
+    const q = flagTarget.question;
+    setFlagBusy(true);
+    const opts = (q.options || []).map((o) => o.content || o.text || '');
+    addFlaggedQuestion({
+      questionId: q.questionId,
+      skillId: node?.skillId || '',
+      skillName: node?.skillName || '',
+      subjectName: node?.subjectName || node?.domainName || '',
+      questionContent: q.content || '',
+      options: opts,
+      correctOption: answerFeedback?.correctOption || '',
+      explanation: answerFeedback?.explanation || '',
+      difficultyLevel: q.difficultyLevel || 2,
+      reasonCode,
+      note,
+      sourcePage: flagTarget.mode === 'preview' ? 'Lộ trình PLAR • Pha Preview' : 'Lộ trình PLAR • Pha Apply'
+    });
+
+    if (flagTarget.mode === 'preview') {
+      const usedIds = new Set([...(stage?.previewQuestions || []).map((x) => String(x.questionId)), ...getFlaggedQuestionIdSet()]);
+      let swapped = false;
+      if (node?.skillId) {
+        try {
+          const res = await contentService.getQuestionsBySkill(node.skillId);
+          const rawList = Array.isArray(res) ? res : (res?.questions || res?.data?.questions || []);
+          const found = rawList.find((item) => !usedIds.has(String(item.questionId || item.id || '')));
+          if (found) {
+            const newOpts = Array.isArray(found.options) && found.options.length > 0
+              ? found.options.map((o, idx) => ({
+                  optionId: o.key || ['A', 'B', 'C', 'D'][idx],
+                  content: o.content || ''
+                }))
+              : [
+                  { optionId: 'A', content: found.optionA || '' },
+                  { optionId: 'B', content: found.optionB || '' },
+                  { optionId: 'C', content: found.optionC || '' },
+                  { optionId: 'D', content: found.optionD || '' }
+                ];
+            const replacement = {
+              questionId: String(found.questionId || found.id),
+              questionOrder: q.questionOrder,
+              content: found.contentLatex || found.content || '',
+              difficultyLevel: Number(found.difficultyLevel || 2),
+              options: newOpts
+            };
+            setStage((prev) => ({
+              ...prev,
+              previewQuestions: (prev?.previewQuestions || []).map((item) =>
+                item.questionId === q.questionId ? replacement : item
+              )
+            }));
+            setPreviewAnswers((prev) => {
+              const next = { ...prev };
+              delete next[q.questionId];
+              return next;
+            });
+            swapped = true;
+          }
+        } catch {
+          // ignore
+        }
+      }
+      setFlagNotice(
+        swapped
+          ? 'Đã gửi báo lỗi câu hỏi cho Giảng viên / Ban quản lý và tự động đổi sang câu hỏi mới!'
+          : 'Đã gửi báo lỗi câu hỏi tới Giảng viên / Ban quản lý để xét duyệt.'
+      );
+    } else {
+      // Pha Apply: đổi ngay sang câu hỏi thích ứng kế tiếp
+      setSelectedOption('');
+      setAnswerFeedback(null);
+      try {
+        await loadNextAdaptiveQuestion(stage.stageProgressId);
+        setFlagNotice('Đã gửi báo lỗi câu hỏi cho Giảng viên / Ban quản lý và tự động đổi sang câu hỏi mới!');
+      } catch {
+        setFlagNotice('Đã gửi báo lỗi câu hỏi tới Giảng viên / Ban quản lý để xét duyệt.');
+      }
+    }
+
+    setFlagBusy(false);
+    setFlagTarget(null);
+  };
   const [reflectResult, setReflectResult] = useState(null);
 
   const requestSeqRef = useRef(0);
@@ -244,27 +437,62 @@ export default function PlarNodeStudioPanel({
         const matList = matRes?.materials || matRes?.data?.materials || (Array.isArray(matRes) ? matRes : []);
         setMaterials(matList);
 
-        // Khám phá lý thuyết SGK từ CSDL / Sách giáo khoa lưu trữ
+        // Khám phá lý thuyết SGK chuẩn GDPT 2018 từ Sách giáo khoa đã lưu & Kho Preset SGK
         const lessonName = detailRes?.lessonName || node.lessonName || '';
-        const subjectCode = detailRes?.domainCode || 'MATH';
-        const gradeLevel = Number(node.gradeLevel) || 10;
+        const subjectName = detailRes?.subjectName || node.subjectName || '';
+        const subjectCode = resolveSubjectCode(subjectName, detailRes?.domainCode || node.domainCode);
+        const gradeLevel = Number(node.gradeLevel || node._gradeLevel) || 10;
+        const normLesson = normalizeViText(lessonName || node.skillName || '');
 
-        let resolvedSgk = getDefaultLessonTheory(subjectCode, gradeLevel, lessonName || node.skillName || '');
+        let resolvedSgk = getDefaultLessonTheory(subjectCode, gradeLevel, lessonName || node.skillName || '')
+          || getDefaultLessonTheory(subjectName, gradeLevel, lessonName || node.skillName || '');
+
+        // Kiểm tra sách giáo khoa đã parse/lưu cục bộ
         const savedTextbook = getSavedTextbookData();
         if (savedTextbook) {
           const allChapters = savedTextbook.skeleton?.chapters || savedTextbook.chapters || [];
           for (const ch of allChapters) {
             for (const les of ch.lessons || []) {
-              const lTitle = (les.title || '').toLowerCase();
-              if (lessonName && lTitle.includes(lessonName.toLowerCase())) {
-                if (les.theory) resolvedSgk = les.theory;
+              const lTitle = normalizeViText(les.title || '');
+              if (normLesson && lTitle && (lTitle.includes(normLesson) || normLesson.includes(lTitle))) {
+                if (les.theory && les.theory.length > 60) resolvedSgk = les.theory;
                 break;
               }
             }
             if (resolvedSgk) break;
           }
         }
+
+        // Dự phòng chuẩn hóa từ kho GDPT_PRESETS (10-12 cho đầy đủ 9 môn)
+        if (!resolvedSgk && GDPT_PRESETS) {
+          const preset = GDPT_PRESETS[`${subjectCode}_${gradeLevel}`] || GDPT_PRESETS[`${subjectCode}_10`];
+          if (preset?.chapters) {
+            for (const ch of preset.chapters) {
+              for (const les of ch.lessons || []) {
+                const lTitle = normalizeViText(les.title || '');
+                if (normLesson && lTitle && (lTitle.includes(normLesson) || normLesson.includes(lTitle))) {
+                  const parts = [];
+                  if (les.theory) parts.push(les.theory);
+                  if (Array.isArray(les.patterns) && les.patterns.length > 0) {
+                    parts.push(
+                      '### Phương pháp giải & Dạng bài trọng tâm\n' +
+                      les.patterns.map((p, i) => `- **Dạng ${i + 1}: ${p.name}**${p.solutionMethod ? `\n  ${p.solutionMethod}` : ''}`).join('\n')
+                    );
+                  }
+                  if (parts.length > 0) {
+                    resolvedSgk = parts.join('\n\n');
+                    break;
+                  }
+                }
+              }
+              if (resolvedSgk) break;
+            }
+          }
+        }
+
         setSgkTheoryContent(resolvedSgk || '');
+        setSelectedTab(null);
+        setLearnSubTab('theory');
 
         if (node.status === 'SKIPPED_PRUNED') {
           setLoading(false);
@@ -508,13 +736,37 @@ export default function PlarNodeStudioPanel({
     ? 'REFLECT'
     : (stage?.currentStep || 'PREVIEW');
   const activeStepIndex = Math.max(0, PLAR_STEPS.findIndex((s) => s.key === activeStepKey));
+  const visibleTab = selectedTab || activeStepKey;
   const masteryPct = Math.round(Number(stage?.bktMasteryPlt ?? node?.masteryPlt ?? 0) * 100);
+
+  // Tự động đồng bộ tab khi học sinh mở khóa pha mới
+  useEffect(() => {
+    setSelectedTab(null);
+  }, [stage?.currentStep, stage?.status]);
 
   const primaryVideoUrl = stage?.resolvedVideoUrl || detail?.videoUrl || materials.find((m) => m.videoUrl)?.videoUrl || '';
   const hasAnyVideo = Boolean(primaryVideoUrl);
 
   return (
     <section className="rounded-3xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+      {/* Studio Top Bar (Dedicated Full-Page Mode) */}
+      {onBackToMap && (
+        <div className="flex flex-wrap items-center justify-between gap-3 px-5 sm:px-6 py-3.5 bg-slate-50 border-b border-slate-200">
+          <button
+            type="button"
+            onClick={onBackToMap}
+            className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-100 px-3.5 py-2 text-xs font-extrabold text-slate-800 shadow-2xs transition-colors cursor-pointer"
+          >
+            <ArrowLeft className="w-4 h-4 text-blue-600" />
+            <span>Quay lại Bản Đồ Kiến Thức</span>
+          </button>
+          <div className="flex items-center gap-2 text-xs text-slate-500 font-semibold">
+            <BookOpen className="w-4 h-4 text-indigo-600" />
+            <span>Không gian tự học chuyên sâu P-L-A-R Studio • Toàn màn hình</span>
+          </div>
+        </div>
+      )}
+
       {/* Node Header */}
       <div className="bg-gradient-to-r from-[#1E3A5F] via-slate-900 to-indigo-950 text-white p-5 sm:p-6 space-y-4">
         <div className="flex flex-wrap items-start justify-between gap-4">
@@ -542,11 +794,11 @@ export default function PlarNodeStudioPanel({
                 {detail?.domainName || node.domainName}
               </span>
             </div>
-            <h2 className="text-lg sm:text-xl font-black tracking-tight">
-              {detail?.skillName || node.skillName}
+            <h2 className="text-lg sm:text-2xl font-black tracking-tight">
+              {cleanPatternTitle(detail?.skillName || node.skillName)}
             </h2>
             {(detail?.chapterName || node.chapterName) && (
-              <p className="text-xs text-slate-300">
+              <p className="text-xs sm:text-sm text-slate-300">
                 {detail?.chapterName || node.chapterName}
                 {(detail?.lessonName || node.lessonName) ? ` › ${detail?.lessonName || node.lessonName}` : ''}
               </p>
@@ -569,36 +821,6 @@ export default function PlarNodeStudioPanel({
               </button>
             )}
           </div>
-        </div>
-
-        {/* PLAR 4-Phase Stepper */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
-          {PLAR_STEPS.map((step, idx) => {
-            const isDone = stage?.status === 'COMPLETED' || idx < activeStepIndex;
-            const isCurrent = stage?.status !== 'COMPLETED' && idx === activeStepIndex;
-            return (
-              <div
-                key={step.key}
-                className={`rounded-2xl px-3 py-2.5 border transition-all flex items-center gap-2.5 ${
-                  isDone
-                    ? 'bg-emerald-500/20 border-emerald-400/40 text-emerald-100'
-                    : isCurrent
-                    ? 'bg-blue-500/30 border-cyan-300/70 text-white shadow-sm'
-                    : 'bg-white/5 border-white/10 text-slate-300/70'
-                }`}
-              >
-                <span className={`w-7 h-7 rounded-xl flex items-center justify-center text-xs font-black shrink-0 ${
-                  isDone ? 'bg-emerald-500 text-white' : isCurrent ? 'bg-cyan-400 text-slate-950' : 'bg-white/10 text-slate-300'
-                }`}>
-                  {isDone ? <CheckCircle2 className="w-4 h-4" /> : step.code}
-                </span>
-                <div className="min-w-0">
-                  <div className="text-xs font-extrabold truncate">{step.label}</div>
-                  <div className="text-[10px] opacity-80 truncate">{step.subtitle}</div>
-                </div>
-              </div>
-            );
-          })}
         </div>
 
         {/* Live BKT Mastery Meter */}
@@ -627,6 +849,58 @@ export default function PlarNodeStudioPanel({
             </div>
           </div>
         )}
+      </div>
+
+      {/* Interactive 4-Phase PLAR Horizontal Studio Tabs (like Textbook Studio) */}
+      <div className="bg-slate-50/90 border-b border-slate-200 px-4 sm:px-6 py-3">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
+          {PLAR_STEPS.map((step, idx) => {
+            const isDone = stage?.status === 'COMPLETED' || idx < activeStepIndex;
+            const isUnlocked = stage?.status === 'COMPLETED' || idx <= activeStepIndex;
+            const isViewing = visibleTab === step.key;
+            return (
+              <button
+                key={step.key}
+                type="button"
+                disabled={!isUnlocked}
+                onClick={() => isUnlocked && setSelectedTab(step.key)}
+                title={isUnlocked ? `Mở tab ${step.label}` : `Hoàn thành pha trước để mở khóa ${step.label}`}
+                className={`rounded-2xl px-4 py-3 border text-left transition-all flex items-center gap-3 ${
+                  isViewing
+                    ? 'bg-white border-blue-600 ring-2 ring-blue-500/20 shadow-sm cursor-pointer'
+                    : isUnlocked
+                    ? 'bg-white/70 border-slate-200 hover:border-blue-300 hover:bg-white cursor-pointer'
+                    : 'bg-slate-100/70 border-slate-200/70 text-slate-400 opacity-70 cursor-not-allowed'
+                }`}
+              >
+                <span className={`w-8 h-8 rounded-xl flex items-center justify-center text-xs font-black shrink-0 ${
+                  isDone
+                    ? 'bg-emerald-600 text-white'
+                    : isViewing
+                    ? 'bg-blue-600 text-white'
+                    : isUnlocked
+                    ? 'bg-slate-200 text-slate-700'
+                    : 'bg-slate-200 text-slate-400'
+                }`}>
+                  {isDone ? <CheckCircle2 className="w-4 h-4" /> : !isUnlocked ? <Lock className="w-3.5 h-3.5" /> : step.code}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-1">
+                    <span className={`text-xs sm:text-sm font-black truncate ${isViewing ? 'text-blue-950' : isUnlocked ? 'text-slate-800' : 'text-slate-400'}`}>
+                      {idx + 1}. {step.label}
+                    </span>
+                    {isViewing && (
+                      <span className="w-2 h-2 rounded-full bg-blue-600 shrink-0" />
+                    )}
+                  </div>
+                  <div className={`text-[11px] truncate ${isViewing ? 'text-blue-700 font-semibold' : 'text-slate-500'}`}>
+                    {step.subtitle}
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Body */}
@@ -699,7 +973,7 @@ export default function PlarNodeStudioPanel({
         {/* =============================================================== */}
         {/* PHASE P: PREVIEW (3 QUICK CHECK QUESTIONS)                       */}
         {/* =============================================================== */}
-        {!loading && !tuitionBlocked && stage && stage.currentStep === 'PREVIEW' && stage.status !== 'COMPLETED' && (
+        {!loading && !tuitionBlocked && stage && visibleTab === 'PREVIEW' && (
           <div className="space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-indigo-50 border border-indigo-100 p-4">
               <div>
@@ -739,9 +1013,20 @@ export default function PlarNodeStudioPanel({
                         <span className="inline-block mr-1.5 text-indigo-700">Câu {q.questionOrder}.</span>
                         <MathText text={q.content} />
                       </legend>
-                      <span className="shrink-0 rounded-lg bg-white border border-slate-200 px-2 py-0.5 text-[10px] font-bold text-slate-500">
-                        {BLOOM_LABELS[q.difficultyLevel] || `L${q.difficultyLevel}`}
-                      </span>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => setFlagTarget({ mode: 'preview', question: q })}
+                          title="Báo lỗi câu hỏi sai miền / sai đáp án & đổi câu mới"
+                          className="rounded-lg bg-rose-50 hover:bg-rose-100 border border-rose-200 px-2 py-0.5 text-[10px] font-bold text-rose-700 inline-flex items-center gap-1 cursor-pointer"
+                        >
+                          <Flag className="w-3 h-3" />
+                          <span>Báo lỗi &amp; Đổi câu</span>
+                        </button>
+                        <span className="rounded-lg bg-white border border-slate-200 px-2 py-0.5 text-[10px] font-bold text-slate-500">
+                          {BLOOM_LABELS[q.difficultyLevel] || `L${q.difficultyLevel}`}
+                        </span>
+                      </div>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {(q.options || []).map((opt) => {
@@ -793,7 +1078,7 @@ export default function PlarNodeStudioPanel({
         {/* =============================================================== */}
         {/* PHASE L: LEARN (REAL SGK THEORY + VIDEO TRACKING >= 80%)        */}
         {/* =============================================================== */}
-        {!loading && !tuitionBlocked && stage && stage.currentStep === 'LEARN' && stage.status !== 'COMPLETED' && (
+        {!loading && !tuitionBlocked && stage && visibleTab === 'LEARN' && (
           <div className="space-y-5">
             {previewResult && (
               <div className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-4 space-y-2.5">
@@ -859,75 +1144,134 @@ export default function PlarNodeStudioPanel({
               </div>
             )}
 
-            {/* Real SGK Materials from Content Service & Pedagogical Knowledge Hub */}
-            <div className="space-y-4">
-              {sgkTheoryContent && (
-                <article className="rounded-2xl border border-indigo-200 bg-white p-5 sm:p-6 space-y-3.5 shadow-2xs">
-                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-indigo-100 pb-3">
-                    <div className="flex items-center gap-2">
-                      <BookOpen className="w-5 h-5 text-indigo-600" />
-                      <div>
-                        <h4 className="font-extrabold text-sm sm:text-base text-indigo-950">
-                          {detail?.lessonName ? `Lý thuyết trọng tâm SGK: ${detail.lessonName}` : 'Lý thuyết trọng tâm SGK Chuẩn GDPT 2018'}
-                        </h4>
-                        <span className="text-[11px] font-bold text-indigo-600">Định lý, hệ thức &amp; kiến thức nền tảng bài học</span>
-                      </div>
-                    </div>
-                    <span className="px-2.5 py-1 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-800 text-xs font-bold">
-                      Toàn văn SGK
-                    </span>
-                  </div>
-                  <div className="text-sm sm:text-base text-slate-800 leading-relaxed whitespace-pre-wrap overflow-visible">
-                    <MathText text={sgkTheoryContent} />
-                  </div>
-                </article>
-              )}
+            {/* 3-Tab Studio cho Pha Learn: Lý Thuyết | Ví Dụ Mẫu & Lời Giải | Bẫy Đề Thi V-ACT */}
+            {(() => {
+              const primaryContent = materials.length > 0
+                ? materials.map((m) => m.content || '').filter(Boolean).join('\n\n')
+                : (sgkTheoryContent || '');
+              const sec = splitLearnSections(primaryContent);
+              const hasStructuredTabs = Boolean(sec.examples || sec.traps);
 
-              {materials.length === 0 && !sgkTheoryContent ? (
-                <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-5 text-sm text-slate-600">
-                  Chuyên đề <strong>{detail?.skillName || node.skillName}</strong> chưa có bài đọc riêng trong bảng Materials. Bạn có thể bấm nút bên dưới để chuyển sang pha Luyện tập thích ứng APPLY ngay.
-                </div>
-              ) : (
-                materials.map((mat, idx) => {
-                  const isChecked = !!checkedMaterialIds[mat.materialId];
-                  return (
-                    <article key={mat.materialId || idx} className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 space-y-3.5 shadow-2xs">
+              return (
+                <div className="space-y-4">
+                  {/* Thanh 3 Tab Học Tập */}
+                  <div className="flex items-center gap-2 flex-wrap bg-slate-100/90 p-1.5 rounded-2xl border border-slate-200">
+                    {[
+                      { id: 'theory', label: '1. Lý Thuyết & Công Thức', hasData: Boolean(sec.theory) },
+                      { id: 'examples', label: '2. Ví Dụ Mẫu & Lời Giải', hasData: Boolean(sec.examples) },
+                      { id: 'traps', label: '3. Bẫy Đề Thi V-ACT & Lưu Ý', hasData: Boolean(sec.traps) }
+                    ].map((tab) => {
+                      const active = learnSubTab === tab.id;
+                      return (
+                        <button
+                          key={tab.id}
+                          type="button"
+                          onClick={() => setLearnSubTab(tab.id)}
+                          className={`flex-1 min-w-[160px] px-4 py-2.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                            active
+                              ? 'bg-emerald-700 text-white shadow-xs'
+                              : 'bg-transparent text-slate-600 hover:bg-white hover:text-slate-900'
+                          }`}
+                        >
+                          <span>{tab.label}</span>
+                          {tab.hasData && !active && (
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {!primaryContent ? (
+                    <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-5 text-sm text-slate-600">
+                      Chuyên đề <strong>{cleanPatternTitle(detail?.skillName || node.skillName)}</strong> chưa có bài đọc riêng trong bảng Materials. Bạn có thể bấm nút bên dưới để chuyển sang pha Luyện tập thích ứng APPLY ngay.
+                    </div>
+                  ) : (
+                    <article className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 space-y-4 shadow-2xs">
                       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
                         <div className="flex items-center gap-2">
-                          <BookOpen className="w-4 h-4 text-emerald-600" />
-                          <h4 className="font-extrabold text-sm sm:text-base text-slate-900">{mat.title || `Tài liệu SGK #${idx + 1}`}</h4>
+                          <BookOpen className="w-4 h-4 text-emerald-600 shrink-0" />
+                          <h4 className="font-extrabold text-sm sm:text-base text-slate-900">
+                            {learnSubTab === 'theory'
+                              ? `Lý thuyết & Công thức: ${cleanPatternTitle(detail?.skillName || node.skillName)}`
+                              : learnSubTab === 'examples'
+                                ? `Ví dụ mẫu & Lời giải chi tiết: ${cleanPatternTitle(detail?.skillName || node.skillName)}`
+                                : `Lưu ý sư phạm & Bẫy đề thi ĐGNL V-ACT`}
+                          </h4>
                         </div>
-                        <label className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={isChecked}
-                            onChange={(e) => setCheckedMaterialIds((prev) => ({ ...prev, [mat.materialId]: e.target.checked }))}
-                            className="accent-emerald-600 w-4 h-4"
-                          />
-                          <span>Đã đọc mục này</span>
-                        </label>
+                        {materials[0] && (
+                          <label className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={!!checkedMaterialIds[materials[0].materialId]}
+                              onChange={(e) =>
+                                setCheckedMaterialIds((prev) => ({
+                                  ...prev,
+                                  [materials[0].materialId]: e.target.checked
+                                }))
+                              }
+                              className="accent-emerald-600 w-4 h-4"
+                            />
+                            <span>Đã đọc kỹ bài này</span>
+                          </label>
+                        )}
                       </div>
-                      {mat.content && (
-                        <div className="text-sm sm:text-base text-slate-700 leading-relaxed whitespace-pre-wrap overflow-visible">
-                          <MathText text={mat.content} />
-                        </div>
-                      )}
-                      {mat.fileUrl && (
-                        <a
-                          href={mat.fileUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 hover:underline"
-                        >
-                          <FileText className="w-3.5 h-3.5" />
-                          <span>Mở tài liệu đính kèm</span>
-                        </a>
-                      )}
+
+                      <div className="overflow-x-hidden break-words">
+                        {learnSubTab === 'theory' && (
+                          <StructuredTheoryRenderer content={hasStructuredTabs ? (sec.theory || primaryContent) : primaryContent} />
+                        )}
+
+                        {learnSubTab === 'examples' && (
+                          sec.examples ? (
+                            <StructuredTheoryRenderer content={sec.examples} />
+                          ) : (
+                            <div className="p-6 rounded-2xl bg-amber-50/60 border border-dashed border-amber-300 text-center text-xs text-amber-900 space-y-1.5">
+                              <div className="font-black text-sm">Ví dụ mẫu đang tích hợp ngay trong mục Lý thuyết</div>
+                              <p>Bạn có thể xem nhanh ở tab <strong>1. Lý Thuyết &amp; Công Thức</strong> hoặc bấm sang <strong>Pha 3. Apply</strong> để luyện trực tiếp các câu hỏi có lời giải chi tiết.</p>
+                            </div>
+                          )
+                        )}
+
+                        {learnSubTab === 'traps' && (
+                          sec.traps ? (
+                            <StructuredTheoryRenderer content={sec.traps} />
+                          ) : (
+                            <div className="p-6 rounded-2xl bg-blue-50/60 border border-dashed border-blue-200 text-center text-xs text-blue-900 space-y-1.5">
+                              <div className="font-black text-sm">Mẹo tránh bẫy đề thi ĐGNL V-ACT</div>
+                              <p>Kiểm tra kỹ điều kiện xác định, đơn vị đo lường và từ khóa phủ định (KHÔNG, NGOẠI TRỪ) trước khi chọn đáp án.</p>
+                            </div>
+                          )
+                        )}
+                      </div>
+
+                      {/* Quick Next Sub-tab Button */}
+                      <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+                        {learnSubTab !== 'theory' ? (
+                          <button
+                            type="button"
+                            onClick={() => setLearnSubTab(learnSubTab === 'traps' ? 'examples' : 'theory')}
+                            className="px-3.5 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 cursor-pointer"
+                          >
+                            ← Phần trước
+                          </button>
+                        ) : <div />}
+
+                        {learnSubTab !== 'traps' && (
+                          <button
+                            type="button"
+                            onClick={() => setLearnSubTab(learnSubTab === 'theory' ? 'examples' : 'traps')}
+                            className="px-4 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 text-xs font-black cursor-pointer"
+                          >
+                            {learnSubTab === 'theory' ? 'Xem Ví Dụ Mẫu & Lời Giải →' : 'Xem Bẫy Đề Thi V-ACT →'}
+                          </button>
+                        )}
+                      </div>
                     </article>
-                  );
-                })
-              )}
-            </div>
+                  )}
+                </div>
+              );
+            })()}
 
             {learnMessage && (
               <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-2.5 text-xs font-semibold text-blue-800">
@@ -1076,7 +1420,7 @@ export default function PlarNodeStudioPanel({
         {/* =============================================================== */}
         {/* PHASE A: APPLY (REAL ZPD QUESTION SELECTOR + BKT ENGINE)         */}
         {/* =============================================================== */}
-        {!loading && !tuitionBlocked && stage && stage.currentStep === 'APPLY' && stage.status === 'IN_PROGRESS' && (
+        {!loading && !tuitionBlocked && stage && visibleTab === 'APPLY' && stage.status !== 'REMEDIAL_REQUIRED' && (
           <div className="space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-cyan-50 border border-cyan-100 p-4">
               <div>
@@ -1086,7 +1430,16 @@ export default function PlarNodeStudioPanel({
                 </p>
               </div>
               {currentQuestion && (
-                <div className="flex items-center gap-2 text-[11px] font-bold">
+                <div className="flex items-center gap-2 flex-wrap text-[11px] font-bold">
+                  <button
+                    type="button"
+                    onClick={() => setFlagTarget({ mode: 'apply', question: currentQuestion })}
+                    title="Báo lỗi câu hỏi sai miền / sai đáp án & đổi câu mới"
+                    className="px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 inline-flex items-center gap-1 cursor-pointer"
+                  >
+                    <Flag className="w-3.5 h-3.5" />
+                    <span>Báo lỗi &amp; Đổi câu</span>
+                  </button>
                   <span className="px-2.5 py-1 rounded-lg bg-white border border-cyan-200 text-cyan-800">
                     Câu #{currentQuestion.attemptOrder}
                   </span>
@@ -1096,6 +1449,12 @@ export default function PlarNodeStudioPanel({
                 </div>
               )}
             </div>
+
+            {flagNotice && (
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-xs font-bold text-emerald-800">
+                {flagNotice}
+              </div>
+            )}
 
             {applyBusy && !currentQuestion && (
               <div className="py-10 text-center text-sm text-slate-500">
@@ -1222,7 +1581,7 @@ export default function PlarNodeStudioPanel({
         {/* =============================================================== */}
         {/* PHASE R: REFLECT & COMPLETE NODE (UNLOCK NEXT NODE ON ROADMAP)   */}
         {/* =============================================================== */}
-        {!loading && !tuitionBlocked && stage && (stage.currentStep === 'REFLECT' || stage.status === 'COMPLETED') && (
+        {!loading && !tuitionBlocked && stage && visibleTab === 'REFLECT' && (
           <div className="space-y-5">
             {stage.status === 'COMPLETED' || reflectResult ? (
               <div className="rounded-3xl border border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-teal-50 p-6 sm:p-8 text-center space-y-4">
@@ -1358,6 +1717,13 @@ export default function PlarNodeStudioPanel({
           </div>
         )}
       </div>
+      <FlagQuestionModal
+        isOpen={Boolean(flagTarget)}
+        onClose={() => setFlagTarget(null)}
+        onConfirm={handleConfirmFlagPlarQuestion}
+        questionPreview={flagTarget?.question?.content}
+        busy={flagBusy}
+      />
     </section>
   );
 }

@@ -2199,7 +2199,10 @@ export const practiceService = {
   },
 
   async getClassHeatmap(classId, { domainCode = '', minMastery = null } = {}) {
-    const resolvedClassId = ensureGuid(classId, FLOW5_DEFAULTS.CLASS_ID);
+    if (!classId) {
+      return { totalStudents: 0, columns: [], rows: [], pedagogicalAlerts: [], empty: true };
+    }
+    const resolvedClassId = classId;
     const params = new URLSearchParams();
     if (domainCode && domainCode !== 'ALL') params.set('domainCode', domainCode);
     if (minMastery !== null && minMastery !== undefined && minMastery !== '') {
@@ -2210,26 +2213,27 @@ export const practiceService = {
       const data = (await apiClient.get(`/api/practice/classes/${resolvedClassId}/heatmap${qs}`)).data;
       return { ...data, _source: 'backend' };
     } catch (err) {
-      console.warn('[Core Flow 5] getClassHeatmap fallback activated:', err?.message);
-      return buildSeedClassHeatmap(resolvedClassId, { domainCode, minMastery });
+      console.warn('[Core Flow 5] getClassHeatmap fetch failed:', err?.message);
+      return {
+        classId: resolvedClassId,
+        className: null,
+        totalStudents: 0,
+        columns: [],
+        rows: [],
+        pedagogicalAlerts: [],
+        lastAggregatedAt: null,
+        _source: 'backend',
+        empty: true,
+        errorMessage: err?.message || 'Không thể tải dữ liệu ma trận nhiệt.'
+      };
     }
   },
 
   async forceAggregateClassHeatmap(classId) {
-    const resolvedClassId = ensureGuid(classId, FLOW5_DEFAULTS.CLASS_ID);
-    try {
-      const data = (await apiClient.post(`/api/practice/classes/${resolvedClassId}/heatmap/force-aggregate`, {})).data;
-      return { ...data, _source: 'backend' };
-    } catch (err) {
-      console.warn('[Core Flow 5] forceAggregateClassHeatmap fallback activated:', err?.message);
-      return {
-        classId: resolvedClassId,
-        aggregatedAt: new Date().toISOString(),
-        totalSkillsCalculated: 5,
-        message: 'Đã tái tổng hợp ma trận nhiệt lớp học và cập nhật ngưỡng cảnh báo sư phạm thành công.',
-        _source: 'seed_fallback'
-      };
-    }
+    if (!classId) throw new Error('Mã lớp học không hợp lệ.');
+    const resolvedClassId = classId;
+    const res = await apiClient.post(`/api/practice/classes/${resolvedClassId}/heatmap/force-aggregate`, {});
+    return res.data?.value || res.data?.data || res.data || { _source: 'backend' };
   },
 
   async getParentDashboard(parentId) {
@@ -2538,7 +2542,7 @@ export const practiceService = {
       ).data;
       return { ...data, _source: 'backend' };
     } catch (err) {
-      console.warn('[Core Flow 6] getMyAlerts unavailable (returning empty list, zero mock):', err?.message);
+      console.warn('[Core Flow 6] getMyAlerts backend error:', err?.message);
       return {
         studentId: resolvedStudentId,
         totalAlerts: 0,
@@ -2546,6 +2550,8 @@ export const practiceService = {
         redAlertsCount: 0,
         yellowAlertsCount: 0,
         alerts: [],
+        empty: true,
+        error: err?.message || null,
         _source: 'empty_backend'
       };
     }
@@ -2623,41 +2629,20 @@ export const practiceService = {
       ).data;
       return { ...data, _source: 'backend' };
     } catch (err) {
-      console.warn('[Core Flow 6] getEarlyWarningsDashboard fallback activated:', err?.message);
-      const pool = buildSeedAlertsPool(FLOW6_DEFAULTS.STUDENT_ID).filter((a) => a.alertType !== 'GREEN');
-      const scopedByClass = resolvedClassId ? pool.filter((a) => a.classId === resolvedClassId) : pool;
-
-      const totalAlerts = scopedByClass.length;
-      const resolvedAlertsCount = scopedByClass.filter((a) => Boolean(a.resolvedAt)).length;
-      const activeAlertsCount = totalAlerts - resolvedAlertsCount;
-      const redAlertsCount = scopedByClass.filter((a) => a.alertType === 'RED' && !a.resolvedAt).length;
-      const yellowAlertsCount = scopedByClass.filter((a) => a.alertType === 'YELLOW' && !a.resolvedAt).length;
-      const unrealisticGoalCount = scopedByClass.filter(
-        (a) => a.alertType === 'UNREALISTIC_GOAL' && !a.resolvedAt
-      ).length;
-
-      const filtered = scopedByClass.filter((a) => {
-        if (alertType && alertType !== 'ALL' && a.alertType !== String(alertType).toUpperCase()) return false;
-        if (typeof isResolved === 'boolean' && Boolean(a.resolvedAt) !== isResolved) return false;
-        return true;
-      });
-
+      console.warn('[Core Flow 6] getEarlyWarningsDashboard backend error:', err?.message);
       return {
         classId: resolvedClassId,
-        className:
-          resolvedClassId === FLOW5_DEFAULTS.SECONDARY_CLASS_ID
-            ? 'Lớp Chuyên Đề ĐGNL Tăng Tốc 01 (Mã: 02)'
-            : resolvedClassId
-              ? 'Lớp ĐGNL Cơ sở 1 - ĐHQG TP.HCM (Mã: 01)'
-              : 'Toàn bộ các lớp phụ trách',
-        totalAlerts,
-        activeAlertsCount,
-        redAlertsCount,
-        yellowAlertsCount,
-        unrealisticGoalCount,
-        resolvedAlertsCount,
-        alerts: filtered,
-        _source: 'seed_fallback'
+        className: 'Lớp được phân công',
+        totalAlerts: 0,
+        activeAlertsCount: 0,
+        redAlertsCount: 0,
+        yellowAlertsCount: 0,
+        unrealisticGoalCount: 0,
+        resolvedAlertsCount: 0,
+        alerts: [],
+        empty: true,
+        error: err?.message || null,
+        _source: 'empty_real'
       };
     }
   },
@@ -3079,6 +3064,16 @@ export const practiceService = {
     return res?.value || res?.data || res;
   },
 
+  async getSessionAttendances(sessionId) {
+    const res = (await apiClient.get(`/api/practice/schedules/sessions/${sessionId}/attendances`)).data;
+    return res?.value || res?.data || res;
+  },
+
+  async submitSessionAttendances(sessionId, payload) {
+    const res = (await apiClient.post(`/api/practice/schedules/sessions/${sessionId}/attendances`, payload)).data;
+    return res?.value || res?.data || res;
+  },
+
   async getStudentTimetable({ studentId = null, termId = null, courseId = null, fromDate = null, toDate = null } = {}) {
     const currentUser = tokenStorage.getUser();
     const rawStudentId = studentId || currentUser?.id || currentUser?.userId || currentUser?.studentId || null;
@@ -3223,6 +3218,28 @@ export const practiceService = {
 
     const res = (await apiClient.get(endpoint)).data;
     return res?.data || res?.value || res;
+  },
+
+  // Core Flow 3: Academic Integrity & Proctoring Reviews (BR-20)
+  async getFlaggedMockExams(classId = null) {
+    const qs = classId && classId !== 'ALL' ? `?classId=${encodeURIComponent(classId)}` : '';
+    const res = (await apiClient.get(`/api/practice/mock-exams/flagged-reviews${qs}`)).data;
+    return Array.isArray(res) ? res : Array.isArray(res?.value) ? res.value : Array.isArray(res?.data) ? res.data : [];
+  },
+
+  async getMockExamSubmissionDetail(submissionId) {
+    const res = (await apiClient.get(`/api/practice/mock-exams/${encodeURIComponent(submissionId)}`)).data;
+    return res?.value || res?.data || res;
+  },
+
+  async submitMentorReview(submissionId, { verdict, notes = '' } = {}) {
+    const res = (
+      await apiClient.patch(`/api/practice/mock-exams/${encodeURIComponent(submissionId)}/mentor-review`, {
+        verdict,
+        notes: String(notes || '').trim()
+      })
+    ).data;
+    return res?.value || res?.data || res;
   }
 };
 

@@ -3057,15 +3057,125 @@ The Parent Companion Portal was completely redesigned and hardened according to 
     - Renders 4 domain rows (`DOM_LANG`, `DOM_MATH`, `DOM_NAT_SCI`, `DOM_SOC_SCI`) × 3 proficiency tier columns (`Cơ bản`, `Tăng tốc`, `Nâng cao`) with average mastery bars, `X/20 HS` capacity indicators, readiness badges, and direct teacher assignment actions.
     - **Verification**: `npm run build` (Vite v8.3.0) compiled cleanly in 2.13s with zero errors.
 
+22. **Teacher Role End-to-End Upgrade: User-Centric Experience, Dynamic Rosters & Proctoring Review (`TeacherDashboardView.jsx`, `TeacherProctoringReviewModal.jsx`, `TeacherStudentDrillDownModal.jsx`, `ClassMicroGroupsModal.jsx`, `EarlyWarningsMentorPanel.jsx`, `practiceService.js`, `Sidebar.jsx`, `App.jsx`)**:
+    - **User-Centric & Pedagogical Language Refactor (Zero Statistical Jargon)**:
+      - Purged all raw mathematical, statistical, and developer jargon (`IRT \theta`, `P(L_t)`, `Bimodal \sigma \ge 0.28`, `Force Aggregate`, `Drill-Down`, `SEM`, `Liêm chính học thuật`, `BKT`, `Offline Station`) from all teacher-facing views and modals.
+      - Standardized all copy into natural, encouraging Vietnamese pedagogical phrasing: `Tiến Độ Học Tập Theo Chuyên Đề`, `Học Sinh Cần Hỗ Trợ`, `Chuyên Đề Cần Củng Cố`, `Kiểm Tra Bài Thi Bất Thường`, `Xếp Nhóm Học Tập (3–5 Em)`, `Cập Nhật Dữ Liệu`, `Xem Chi Tiết`.
+      - Replaced raw numeric `\theta` scores with an intuitive 5-tier pedagogical evaluation: **Xuất sắc**, **Giỏi**, **Khá**, **Trung bình**, and **Cần bồi dưỡng**.
+      - Fixed `ReferenceError: RotateCw is not defined` bug when toggling to proctoring review queue.
+    - **Tri-View Pedagogical Dashboard**:
+      - Integrated 3 dedicated view tabs in `TeacherDashboardView`: (1) Tiến độ học tập theo chuyên đề & Xếp nhóm học tập 3–5 em (Core Flow 5), (2) Học sinh cần hỗ trợ & Lịch tư vấn (Core Flow 6), (3) Kiểm tra bài thi bất thường (Core Flow 3 / BR-20).
+      - Replaced static class definitions with dynamic asynchronous roster retrieval via `practiceService.getClasses({ teacherId })`, rendering intuitive guidance when no assigned classes are found.
+    - **Proctoring Review Dossier Modal (`TeacherProctoringReviewModal.jsx`)**:
+      - Displays real-time proctoring queue querying `/api/practice/mock-exams/flagged-reviews` (`TCH_19` - `TCH_27`).
+      - Renders Visual Audit Trail webcam snapshots with timestamp and face detection validation tags.
+      - Displays tab departure counter (BR-20) highlighted in red when exceeding threshold (> 3).
+      - Enforces teacher verdict selection (`APPROVED` / `DISQUALIFIED`) with mandatory pedagogical review notes before dispatching `PATCH /api/practice/mock-exams/{id}/mentor-review`.
+    - **Student Profile Modal (`TeacherStudentDrillDownModal.jsx`)**:
+      - Click-to-inspect student profile (`TCH_06`): retrieves real diagnostic submissions history via `GET /api/practice/diagnostic-submissions/student/{studentId}`.
+      - Identifies weak skill gaps (under 50%) with 1-click action to assign to study groups.
+      - Includes direct pedagogical feedback composer transmitting notes and guidance to students and parents.
+    - **Progress Export & Clean State Handling**:
+      - CSV export action (`TCH_07`) generating downloadable spreadsheet with mastery percentages across all domain skills.
+      - Eradicated all static demo group arrays in `ClassMicroGroupsModal.jsx` and seed fallbacks in `practiceService.js`, displaying clean empty states with clear trigger CTAs.
+      - Streamlined Teacher Sidebar from 10 flat/redundant items down to 6 structured items grouped into 3 operational pillars (Class Management, Curriculum & Exams, Moderation & AI), eliminating all duplicate routes and label truncation.
+      - Rectified route interception in `App.jsx`, ensuring Teacher role properly accesses `TeacherDashboardView` with dynamic `initialView`, `AiTutorModerationView`, and `TeacherPortalView`.
+    - **Verification**: `npm run build` (Vite v8.3.0) compiled cleanly in 1.18s with 3078 modules transformed and zero errors.
 
-22. **Academic Director Role Clarification & Read-Only Supervision Mode (`CampusManagerDashboardView.jsx`, `Sidebar.jsx`, `App.jsx`)**:
+23. **Teacher Schedule & Real-Time Attendance Management Subsystem (`TeacherScheduleView.jsx`, `practiceService.js`, `Sidebar.jsx`, `App.jsx`, `ClassMicroGroupsModal.jsx`)**:
+    - **Full Real-Time API Synchronization (Zero Mock Fallbacks)**:
+      - Integrated `GET /api/practice/schedules/teachers/{teacherId}/schedule` returning all scheduled class sessions grouped chronologically by date.
+      - Integrated `GET /api/practice/schedules/sessions/{sessionId}/attendances` and `POST /api/practice/schedules/sessions/{sessionId}/attendances` for live session roster attendance checks.
+    - **4-KPI Teaching Overview**:
+      - `Lớp học phụ trách` (Assigned Classes count).
+      - `Ca dạy sắp tới` (Upcoming teaching sessions).
+      - `Ca đã hoàn thành` (Completed teaching sessions).
+      - `Dạy thay / Học bù` (Substitute or makeup sessions).
+    - **Multidimensional Filters & Timeline Schedule View**:
+      - Real-time search query filtering by Class Name, Room, Course, or Pedagogical Topic.
+      - Dynamic Academic Term (`termId`) selector loaded directly from backend terms.
+      - Session status toggle (`ALL` | `SCHEDULED` | `COMPLETED`).
+      - Chronological date grouping displaying weekday label, start/end time, room number, class badge, course name, topic/skill card, enrolled student tally, and live attendance rate percentage.
+    - **Interactive In-Class Attendance Modal (`TeacherAttendanceModal`)**:
+      - Modal roster pulling enrolled students with initial status from database or fallback to class roster.
+      - 4 Status toggles: **Có mặt** (`PRESENT`), **Đi muộn** (`LATE`), **Vắng mặt** (`ABSENT`), **Nghỉ có phép** (`EXCUSED`).
+      - 1-Click **"Tất cả có mặt"** action marking entire class present in one click.
+      - Student-specific attendance notes and instant submission to `practiceService.submitSessionAttendances`.
+    - **Direct Micro-Grouping Integration (`ClassMicroGroupsModal.jsx`)**:
+      - Session cards feature a 1-click micro-grouping button (`Layers`) to generate 3-5 student study tables based on the specific session topic.
+    - **Sidebar & App Routing Integration**:
+      - Integrated `Thời khóa biểu & Điểm danh` (`id: 'schedule'`) under `Quản Lý Lớp Học` on the Teacher Sidebar.
+      - Routed `role === 'teacher' && activeTab === 'schedule'` directly to `<TeacherScheduleView currentUser={currentUser} />`.
+    - **Verification**: `npm run build` (Vite v8.3.0) compiled cleanly in 1.27s with 3079 modules transformed and zero errors.
+
+24. **Real Database Integration & Dynamic State Standardization for Teacher Operations (`TeacherDashboardView.jsx`, `TeacherScheduleView.jsx`, `AiTutorModerationView.jsx`)**:
+    - **Class Heatmap Matrix Real-Time Synchronization (`TeacherDashboardView.jsx`)**:
+      - Standardized class selection model to cleanly resolve both `classId` and `id` properties from `/api/practice/classes`, resolving the zero-student rendering issue.
+      - Connected 100% live data from PostgreSQL via `/api/practice/classes/{classId}/heatmap`, populating actual class roster (6 enrolled students), individual IRT $\theta$ competencies, bimodal polarized skills, and pedagogical alert triggers.
+    - **Dynamic Class Filtering & Live Attendances in Schedule View (`TeacherScheduleView.jsx`)**:
+      - Added dynamic Class Selector dropdown populated from `practiceService.getClasses()`, allowing teachers to inspect sessions for specific classes or aggregate across all active classes.
+      - Replaced all static numeric fallbacks with live properties (`enrolledStudentsCount` / `totalStudentsCount`) and dynamic percentage calculation: `Math.round((presentCount / studentCount) * 100)`.
+      - Augmented attendance modal with automatic student name resolution against class heatmaps, eliminating raw GUID labels.
+    - **Complete Eradication of Seed Interactions in AI Tutor Moderation (`AiTutorModerationView.jsx`)**:
+      - Completely removed mock array `SEED_INTERACTIONS` and hardcoded asymptote mathematical strings.
+      - Directly binds to 50 real dialogue sessions fetched from `GET /api/practice/ai-tutor/interactions`, displaying actual student questions, student choices, ground-truth answers, and AI Socratic conversation transcripts.
+      - Implemented clean empty state presentation when no reported dialogues are pending review.
+    - **Verification**: `npm run build` (Vite v8.3.0) compiled cleanly in 1.22s with 3079 modules transformed and zero errors; backend Practice Service builds with 0 warnings and 0 errors.
+
+25. **Weekly Timetable Matrix Architecture Subsystem (`TeacherScheduleView.jsx`)**:
+    - **Streamlined Harmonious Header Architecture**:
+      - Purged the oversized dark navy hero banner in favor of a minimalist, unified white card design directly integrating the table controls and a compact `RefreshCw` reload button.
+    - **8-Column Weekly Grid Matrix Layout**:
+      - Transformed schedule view into a standard academic 8-column timetable matrix: Column 1 allocates 6 structured slots (Slot 1: 07:30–09:30, Slot 2: 09:45–11:45, Slot 3: 13:00–15:00, Slot 4: 15:15–17:15, Slot 5: 18:00–20:00, Slot 6: 20:15–22:30), while Columns 2–8 map days Monday through Sunday.
+      - Dynamic date computation (`getMonday`, `formatDateVi`, `toYMD`, `isSameDay`) automatically calculates current week boundaries `Tuần (DD/MM - DD/MM)`.
+      - Real-time column highlighting dynamically highlights the current calendar date with high-contrast emerald borders and subheadings.
+      - Empty grid slots display a clean minimalist dash `-`, matching standard university portals.
+    - **Detailed Session Slot Cards**:
+      - Render class code, attendance completion badges (`PRESENT` tallies vs unrecorded state), room assignment, Offline/Online mode, lecturer name, topic badge, and enrolled student counts.
+      - Integrated direct attendance launch button (`handleOpenAttendance`) and micro-group generation (`ClassMicroGroupsModal`).
+    - **Week Navigation & Dual View Modes**:
+      - Controls for previous week, current week, and next week, complemented by an intelligent fast-forward banner jumping to the nearest scheduled teaching week.
+      - Seamless dual-mode toggling between `Lưới tuần` (Matrix Grid) and `Danh sách` (Agenda List).
+    - **Verification**: `npm run build` compiled cleanly in 1.71s with zero warnings or errors.
+
+26. **Pedagogical Alerts Modal & Ergonomic View Architecture (`TeacherDashboardView.jsx`)**:
+    - **Consolidated Alert Strip**:
+      - Replaced sprawling full-width alert cards with a compact, non-intrusive alert strip featuring count badges and an explicit launch action.
+    - **Dedicated Modal Overlay (`isAlertsModalOpen`)**:
+      - Modal overlay renders a scrollable view (`max-h-[85vh]`) containing structured diagnostic alert items with comprehension percentages, struggling student tallies, and direct micro-group assignment triggers (`handleOpenMicroGroups`).
+    - **Verification**: `npm run build` compiled cleanly in 1.32s with zero warnings or errors.
+
+27. **Removal of Redundant Desktop Sidebar Toggle Controls (`Sidebar.jsx`, `AccountNavbar.jsx`)**:
+    - **UI Clutter Elimination**:
+      - Discarded duplicate `PanelLeftClose`/`PanelLeftOpen` buttons rendered adjacent to one another along the border dividing the brand header and navbar.
+      - Preserved the mobile responsive navigation trigger (`Menu`) for compact screens while establishing a clean, distraction-free desktop layout header.
+    - **Verification**: `npm run build` (Vite v8.3.0) compiled cleanly in 1.32s with 3079 modules transformed and zero errors.
+
+28. **Comprehensive Dynamic Data Standardization & Elimination of Static Fallbacks Across Teacher Operations (`TeacherScheduleView.jsx`, `AiTutorModerationView.jsx`, `ClassMicroGroupsModal.jsx`, `TeacherStudentDrillDownModal.jsx`, `practiceService.js`)**:
+    - **Dynamic Session Resolution (`TeacherScheduleView.jsx`)**:
+      - Purged static instructor fallback strings (`'Teacher Khôi'`) in favor of dynamic identity hierarchy: `s.primaryTeacherName || currentUser?.fullName || currentUser?.name || 'Giảng viên phụ trách'`.
+      - Replaced hardcoded `'Offline'` pills with context-aware delivery mode indicators (`Online` vs `Offline`) resolving rooms and virtual URLs.
+      - Standardized fallback room presentation to display `'Trực tuyến'` or `'Chưa xếp phòng'` instead of arbitrary room identifiers (`'P.301'`).
+    - **Telemetry & Grounding Normalization (`AiTutorModerationView.jsx`)**:
+      - Replaced static telemetry labels (`97.6%`, `142 Exemplars • 68 Traps`) with real-time computations derived directly from current interaction records (`socraticReliability`, `exemplarsCount`, `trapsCount`).
+      - Stripped predetermined boilerplate steps from authoring inputs to foster genuine educator evaluation.
+    - **Micro-Group Auto-Packaging & Native Printing (`ClassMicroGroupsModal.jsx`)**:
+      - Omitted client-side synthetic identifiers (`Math.random()`), enabling backend `AssignGroupWorksheetCommandHandler` to automatically package Bloom L1–L3 questions targeting groups' common weak skills.
+      - Integrated native `window.print()` functionality for instant classroom seating chart distribution.
+    - **Persistent Pedagogical Counseling Record (`TeacherStudentDrillDownModal.jsx`)**:
+      - Replaced mock `setTimeout` simulation with a resilient local history cache per student, displaying timestamped remarks in chronological order.
+    - **Strict Exception Handling (`practiceService.js`)**:
+      - Eliminated synthetic fallback objects in `forceAggregateClassHeatmap`, ensuring backend anomalies surface genuine error notifications.
+    - **Verification**: `npm run build` (Vite v8.3.0) compiled cleanly in 1.49s with 3079 modules transformed and zero errors.
+
+29. **Academic Director Role Clarification & Read-Only Supervision Mode (`CampusManagerDashboardView.jsx`, `Sidebar.jsx`, `App.jsx`)**:
     - Preserved all 4 core Academic Director modules (`AiTutorModerationView`, `CurriculumExplorerView`, `Textbook*View`, `Exam*View`) completely untouched.
     - Refined `Sidebar.jsx` Director menu to 5 role-aligned items under *"Quản Trị Học Thuật Toàn Trường"*, removing misrouted Teacher/Student/Admin entries and removing the `Flow 4` badge that truncated the label.
     - Implemented `isDirectorMode` directly inside `CampusManagerDashboardView.jsx`, defaulting to All-Campuses (`ALL`) multi-campus aggregation with a dedicated Cross-Campus Comparison Table, removing hardcoded greeting names and the `67%` fallback, wiring real KPI counts from `contentService.getSkillsTree()` and `contentService.getMockExams()`, adding 4 quick-access pillar cards, and hiding operational Manager/Teacher/Admin actions.
     - Resolved Logout Race Condition across `App.jsx`, `apiClient.js`, `authService.js`, and `PublicHeader.jsx` via `sessionVersion` guards, preventing ghost `USER_KEY` writes without a valid access token, optimistic state clearing, and `isAuthenticated()` checks on the public header.
     - **Verification**: `npm run build` (Vite v8.3.0) compiled cleanly in 1.96s with 3076 modules transformed and zero errors.
 
-23. **Real-Time Academic Term & Course Synchronization to Student/Parent Tuition Portal & Course CRUD UI (`TuitionPaymentView.jsx`, `AcademicManagerDashboardView.jsx`, `practiceService.js`)**:
+30. **Real-Time Academic Term & Course Synchronization to Student/Parent Tuition Portal & Course CRUD UI (`TuitionPaymentView.jsx`, `AcademicManagerDashboardView.jsx`, `practiceService.js`)**:
     - **Elimination of Hardcoded 3-Package Mock Array in `TuitionPaymentView.jsx`**:
       - Removed the static 3-package array (`1.8M / 2.4M / 3.2M VND`) completely to align with the V-ACT 2-wave/year enrollment model.
       - Implemented `loadCampusTermsAndCourses` fetching `practiceService.getAcademicTerms({ campusId, status: 'ACTIVE' })` and `practiceService.getCourses({ campusId, isActive: true })` scoped to the student's campus.
@@ -3075,20 +3185,20 @@ The Parent Companion Portal was completely redesigned and hardened according to 
       - Added inline Edit (✏️) and Delete (🗑️) buttons per course row, upgrading the course creation modal into a dual Create/Edit modal with pre-filled values and confirmation prompts.
     - **Verification**: `npm run build` (Vite v8.3.0) compiled cleanly in 1.39s with 3076 modules transformed and zero errors.
 
-24. **End-to-End Student Journey Unification, Standalone White Exam Room, Passage Context Delivery & Full-Spectrum Grade 10–12 3-Zone PLAR Studio (`StudentRoadmapWorkspace.jsx`, `ConnectedRoadmapPage.jsx`, `PlarNodeStudioPanel.jsx`, `DiagnosticAssessmentPage.jsx`, `TuitionPaymentView.jsx`, `PayOsCheckoutModal.jsx`, `practiceService.js`)**:
+31. **End-to-End Student Journey Unification, Standalone White Exam Room, Passage Context Delivery & Full-Spectrum Grade 10–12 3-Zone PLAR Studio (`StudentRoadmapWorkspace.jsx`, `ConnectedRoadmapPage.jsx`, `PlarNodeStudioPanel.jsx`, `DiagnosticAssessmentPage.jsx`, `TuitionPaymentView.jsx`, `PayOsCheckoutModal.jsx`, `practiceService.js`)**:
     - **Standalone Full-Viewport White Exam Room (`DiagnosticAssessmentPage.jsx`)**: Mounted active exam-taking and grading states (`stage === 'testing' || stage === 'analyzing'`) directly onto `document.body` via `createPortal` with `fixed inset-0 z-[200] w-screen h-screen overflow-y-auto bg-white` and background scroll lock, completely eliminating transparent background bleed-through (`bg-transparent`) from the embedded student portal layout.
     - **Full-Spectrum Grade 10–12 3-Zone Personalized Roadmap (`ConnectedRoadmapPage.jsx`)**: Displays all ~337 GDPT 2018 patterns across Grades 10–12 and all 9 subjects grouped into 3 distinct pedagogical priority zones: **(1) Priority Improvement (`WEAK` — tested & below threshold, shown first)** → **(2) Assessed & Mastered / Completed (`MASTERED` & `COMPLETED` — shown after weak skills, collapsible)** → **(3) Unassessed Grade 10–12 Spectrum (`UNASSESSED` — chapters/patterns not yet encountered in the 30-question diagnostic, shown at the bottom with an explicit `"Chưa đánh giá"` badge)**, equipped with Zone tabs, Grade (`Lớp 10`, `Lớp 11`, `Lớp 12`) filters, 9-Subject filters, instant search, and a 1-click upgrade banner for legacy 24-node roadmaps.
     - **Reading Passage Context & 4-Phase PLAR Studio (`PlarNodeStudioPanel.jsx`)**: Added `PassageContextBox` to render reading comprehension passages (`passageTitle`, `passageContent`, `passageImageUrl`) above questions in Phase P (`Preview`), Phase A (`Apply`), and `BR-03` (`Remedial`); wired all 8 `StagesController` endpoints including persisted reflection display (`confidenceRating`, `learnedSummary`, `mistakeNotes`).
     - Hardened `TuitionPaymentView` and `PayOsCheckoutModal`, purged 100% of mock/seed fallbacks (`sampleQuestionsForDiagnostic`, `845/920`, `"Phạm Minh Hoàng"`), and resolved runtime `ReferenceError` bugs in `Sidebar.jsx` and `LearningAnalyticsView.jsx`.
     - **Verification**: `oxlint` (`0 Error`), `node --test tests/*.test.js` (`22/22 Passed`), `npm run build` (`3077 modules`, `4.63s`).
 
-25. **Exam Parser Rendering Hardening: Vietnamese Prose Guard, LaTeX/Table Recovery, False-Figure Suppression & Cross-Subject Auto-Healing (`MathText.jsx`, `examParserUtils.js`, `ExamMediaLightbox.jsx`, `examCurriculumMatcher.js`, `examStateBridge.js`) [20/11/2026]**:
+32. **Exam Parser Rendering Hardening: Vietnamese Prose Guard, LaTeX/Table Recovery, False-Figure Suppression & Cross-Subject Auto-Healing (`MathText.jsx`, `examParserUtils.js`, `ExamMediaLightbox.jsx`, `examCurriculumMatcher.js`, `examStateBridge.js`) [20/11/2026]**:
     - **Root Cause Analysis**: `\b` word boundaries and `\w` do not treat accented Vietnamese letters as word characters, so KaTeX auto-wrapping split words (`có sẵ n`, `hế t - V âng`); MathType PUA glyphs surfaced as `≡`; `\ne`/`\circC`/`<u>` were mangled; text-only analytic stems received false figure boxes; and 2-letter substring matching leaked English/Math questions into Physics/Chemistry nodes.
     - **Implementation Details**: Introduced `VI_WORD_CHAR` boundary guards, prose-hyphen guard, `\begin{cases}` wrapping, `<u>` protection, `\circC` repair, adjacency-matrix-to-Markdown-table conversion, `hasFalsePositiveFigureText` + `onError` image fallback, whole-word keyword matching with English detection, and cross-subject self-healing of cached `curriculumNode`s on restore.
     - **Verification**: `examStateBridge.test.js` `3/3`, `tests/*.test.js` `22/22`, `oxlint` `0 errors`, `npm run build` succeeded. Not deployed to Docker per user request.
     - **Round 2 & 3 Follow-up**: Hardened `MathText.jsx` `richInlineRegex` to directly match `<s*ub[^>]*>[sS]+?<s*/s*us*>` rendering into standard `<u>` elements without relying on pre-cleaning; refined `repairDegreeUnits` to prevent accidental `$$$` math wrapping on already-delimited degree terms; embedded cross-subject guards in `normalizeQuestionItem` and `ExamPaperView.jsx` preventing English error-identification questions (Questions 26–29) from surfacing Physics/Chemistry/Math nodes; and added auto-healing to `useExamWorkspaceController.js` upon curriculum retrieval. Verified: `examStateBridge.test.js` `5/5`, `tests/*.test.js` `22/22`, `npm run build` succeeded.
 
-26. **SessionStorage Cache-Busting, Underline Normalization & Stray Letter Filter (`examTextRepair.js`, `examParserUtils.js`, `MathText.jsx`, `examStateBridge.js`) [21/11/2026]**:
+33. **SessionStorage Cache-Busting, Underline Normalization & Stray Letter Filter (`examTextRepair.js`, `examParserUtils.js`, `MathText.jsx`, `examStateBridge.js`) [21/11/2026]**:
     - **Root Cause Analysis**:
       - Even after logic fixes in `MathText.jsx` and `examTextRepair.js`, the browser retained stale state stored in `sessionStorage` under `veval_active_exam_workspace_v1`, causing already-parsed exams to persist literal `<u>` tags and outdated subject nodes.
       - Scanned passage extracts in History/Social Science contained isolated single letters (`o`, `g`, `n`, `u`, `V`, `i`, `đ`) resulting from bitmap font PUA splitting in upstream OCR.
@@ -3098,7 +3208,7 @@ The Parent Companion Portal was completely redesigned and hardened according to 
       - **Stray Character Filter**: Added step 1.9 to `examParserUtils.js` to eliminate isolated single consonants (`b-df-hj-np-tv`) on their own lines between substantive prose lines.
     - **Verification**: `node --test src/components/curriculum/examStateBridge.test.js` passed `5/5`, `node --test tests/*.test.js` passed `22/22`, `npm run build` succeeded in 3.47s.
 
-27. **Passage Auto-Healing, Trapped Question Extraction & Pure Underline Error Identification (`examTextRepair.js`, `examParserUtils.js`, `ExamPaperView.jsx`, `MathText.jsx`, `examStateBridge.js`) [21/11/2026]**:
+34. **Passage Auto-Healing, Trapped Question Extraction & Pure Underline Error Identification (`examTextRepair.js`, `examParserUtils.js`, `ExamPaperView.jsx`, `MathText.jsx`, `examStateBridge.js`) [21/11/2026]**:
     - **Passage Swallowing & Single-Letter Fragment Elimination**:
       - Root cause: History passage 118–120 in real exam PDFs uses bare numbered stems (`118.`, `119.`, `120.`) without the prefix `"Câu"`. Upstream regex matching swallowed child questions into the passage body and left `passage.questions: []` (displaying "0 câu").
       - Implementation: Added `healHistoryPassageAndTrappedQuestions` and `extractTrappedQuestionsFromPassage` in `examParserUtils.js` to automatically extract swallowed child questions and restore clean text.
@@ -3119,3 +3229,14 @@ The Parent Companion Portal was completely redesigned and hardened according to 
       - **Height Uncapping & Responsive Expand**: Removed all height restrictions from theory content (`overflow-visible`), and enhanced `PassageContextBox` with an interactive `Xem toàn văn / Thu gọn` toggle and expanded default height (`max-h-[460px]`).
       - **Database Content Enrichment**: Enriched the Math 10 milestone material (`224d7f47-d569-5848-acff-5223f9d2665b`) in Supabase PostgreSQL from 722 characters to 4,270 characters containing comprehensive definitions, equations, theorems, step-by-step methods, and VNU-HCM exam traps.
     - **Verification**: `npm run build` succeeded in 4.38s, Docker container `v-eval-web-client` rebuilt and deployed cleanly.
+
+
+---
+
+### [22/11/2026] - Dedicated Full-Page PLAR Studio with 4 Phase Tabs, Sticky Sidebar & 9-Subject SGK Theory Hydration
+- **Target Files**: `ConnectedRoadmapPage.jsx`, `PlarNodeStudioPanel.jsx`, `Sidebar.jsx`.
+- **Key Deliverables**:
+  1. Replaced the cramped split-screen roadmap layout with a full-width 3-column Knowledge Map and a dedicated full-width **PLAR Studio** view featuring a horizontal 4-tab phase bar (`Preview`, `Learn`, `Apply`, `Reflect`) and back navigation.
+  2. Added `resolveSubjectCode` to correctly map Vietnamese subject names to `GDPT_PRESETS` / `getDefaultLessonTheory` codes across all 9 subjects.
+  3. Applied `lg:sticky lg:top-0 lg:h-screen lg:overflow-y-auto` to `Sidebar.jsx` so navigation stays anchored while scrolling.
+  4. **Verification**: `npm run build` succeeded in `1.81s` (`3081 modules`, `0 Error`).
