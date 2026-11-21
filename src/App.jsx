@@ -144,7 +144,7 @@ const ROLE_PORTAL_DEFINITIONS = {
   },
   director: {
     code: 'ACADEMIC DIRECTOR PORTAL',
-    title: 'Cổng Giám Đốc Học Thuật Toàn Trường',
+    title: 'Cổng Giám Đốc Học Thuật Liên Cơ Sở',
     subtitle: 'Quản trị Đồ thị Tri thức DAG 4 tầng, Ngân hàng Câu hỏi IRT 2PL, Kiểm duyệt AI & Kho học liệu RAG',
     defaultTab: 'dashboard',
     icon: Crown,
@@ -192,7 +192,9 @@ export default function App() {
   const [mobileNavigation, setMobileNavigation] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const closeNavigation = useCallback(() => setMobileNavigation(false), []);
-  const [currentUser, setCurrentUser] = useState(() => authService.getCurrentUser());
+  const [currentUser, setCurrentUser] = useState(() =>
+    authService.isAuthenticated() ? authService.getCurrentUser() : null
+  );
 
   // View State: 'landing' (Public Home), 'login' (Web Auth), 'dashboard' (Dedicated Role Portal)
   const [appView, setAppView] = useState(() =>
@@ -272,10 +274,19 @@ export default function App() {
     if (!authService.isAuthenticated()) return;
 
     let isMounted = true;
+    const reqSession = tokenStorage.getSessionVersion();
     authService
       .fetchCurrentUserProfile()
       .then((me) => {
-        if (!isMounted || !me) return;
+        // Chặn Race Condition: nếu người dùng đã bấm Logout trong lúc request /users/me đang chạy -> hủy ngay
+        if (
+          !isMounted ||
+          !me ||
+          !authService.isAuthenticated() ||
+          tokenStorage.getSessionVersion() !== reqSession
+        ) {
+          return;
+        }
         const resolvedRole = authService.resolveAppRole(me);
         const enriched = {
           ...authService.getCurrentUser(),
@@ -294,6 +305,9 @@ export default function App() {
         loadRolePortalBackendMetrics(resolvedRole, enriched);
       })
       .catch(() => {
+        if (!isMounted || !authService.isAuthenticated() || tokenStorage.getSessionVersion() !== reqSession) {
+          return;
+        }
         const saved = authService.getCurrentUser();
         const resolvedRole = authService.resolveAppRole(saved);
         setRole(resolvedRole);
@@ -316,11 +330,11 @@ export default function App() {
   }, [role, currentUser, loadRolePortalBackendMetrics]);
 
   const handleOpenAdaptiveQuiz = () => {
-    setActiveModal('adaptive');
+    setActiveTab('roadmap');
   };
 
   const handleOpenMockExam = () => {
-    setActiveModal('mock');
+    setActiveTab('diagnostic');
   };
 
   const handleOpenAiTutorWithQuestion = (questionContext) => {
@@ -351,14 +365,10 @@ export default function App() {
     loadRolePortalBackendMetrics(validRole, finalUser);
   };
 
-  // Logout Handler
+  // Logout Handler (Optimistic clear: xóa token & state ngay lập tức, thu hồi refresh token ở nền)
   const handleLogout = async () => {
-    try {
-      await authService.logout();
-    } catch (err) {
-      toast.error(err.message || 'Không thể đăng xuất. Vui lòng thử lại.');
-      return;
-    }
+    const refreshToken = tokenStorage.getRefreshToken();
+    tokenStorage.clearTokens();
     setLatestDiagnosticResult(null);
     closeNavigation();
     setCurrentUser(null);
@@ -370,6 +380,10 @@ export default function App() {
     setActiveTab('dashboard');
     setAppView('landing');
     toast.success('Đã đăng xuất khỏi tài khoản.');
+
+    if (refreshToken) {
+      authService.logout(refreshToken).catch(() => {});
+    }
   };
 
   // 1. PUBLIC LANDING PAGE (Reference Home Template)
@@ -441,7 +455,7 @@ export default function App() {
       ? {
           ...basePortal,
           code: 'ACADEMIC DIRECTOR PORTAL',
-          title: 'Cổng Giám Đốc Học Thuật Toàn Trường',
+          title: 'Cổng Giám Đốc Học Thuật Liên Cơ Sở',
           subtitle:
             'Toàn quyền học thuật liên cơ sở, Giám sát chất lượng & Khung chương trình chuẩn V-ACT 2026',
           icon: Crown,
@@ -602,6 +616,8 @@ export default function App() {
             curriculum={curriculum}
             onNavigateDiagnostic={() => setActiveTab('diagnostic')}
             onNavigateDashboard={() => setActiveTab('dashboard')}
+            onNavigateTuition={() => setActiveTab('tuition')}
+            onOpenAiTutorWithContext={handleOpenAiTutorWithQuestion}
           />
         );
       }
@@ -648,7 +664,7 @@ export default function App() {
           onSelectChildId={setParentActiveChildId}
           onBackToDashboard={() => setActiveTab('dashboard')}
           onNavigateRoadmap={role === 'parent' ? undefined : () => setActiveTab('roadmap')}
-          onNavigateAdaptive={role === 'parent' ? undefined : () => setActiveTab('adaptive')}
+          onNavigateAdaptive={role === 'parent' ? undefined : () => setActiveTab('roadmap')}
           onNavigateSchedule={role === 'parent' ? undefined : () => setActiveTab('schedule')}
           onNavigateLive={role === 'parent' ? undefined : () => setActiveTab('live')}
           onNavigateAiTutor={role === 'parent' ? undefined : () => {
@@ -665,11 +681,12 @@ export default function App() {
         currentUser.roles.some((r) => String(r).toUpperCase().includes('DIRECTOR'))) ||
       String(currentUser?.email || '').toLowerCase().startsWith('director');
 
-    if (isDirectorUser && activeTab === 'dashboard') {
+    if (isDirectorUser && ['dashboard', 'analytics', 'teacher_heatmap', 'provision'].includes(activeTab)) {
       return (
         <CampusManagerDashboardView
           currentUser={currentUser}
-          onOpenProvisioning={() => setActiveTab('provision')}
+          mode="director"
+          onNavigateTab={setActiveTab}
         />
       );
     }
@@ -694,6 +711,9 @@ export default function App() {
           currentUser={currentUser}
           onStartDiagnostic={() => setActiveTab('diagnostic')}
           onStartAdaptiveQuiz={handleOpenAdaptiveQuiz}
+          onOpenZPD={handleOpenAdaptiveQuiz}
+          onOpenRoadmap={() => setActiveTab('roadmap')}
+          onOpenHistory={() => setActiveTab('history')}
           onOpenAiTutor={() => {
             setAiTutorInitialContext(null);
             setActiveModal('ai');
@@ -754,7 +774,8 @@ export default function App() {
         return (
           <CampusManagerDashboardView
             currentUser={currentUser}
-            onOpenProvisioning={() => setActiveTab('provision')}
+            mode="director"
+            onNavigateTab={setActiveTab}
           />
         );
 

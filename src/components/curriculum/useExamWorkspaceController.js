@@ -155,9 +155,16 @@ export function useExamWorkspaceController({ onNavigateTab, enableClipboardPaste
         .getCurriculum()
         .then((domains) => {
           if (!active) return;
-          updateExamWorkspaceState({
-            curriculumDomains: Array.isArray(domains) ? domains : [],
-            curriculumLoaded: true
+          const flat = flattenCurriculumTree(domains || []);
+          updateExamWorkspaceState((prev) => {
+            const healedExam = prev.currentExam && flat.length > 0
+              ? autoMapExamQuestions(prev.currentExam, flat, { force: false })
+              : prev.currentExam;
+            return {
+              curriculumDomains: Array.isArray(domains) ? domains : [],
+              curriculumLoaded: true,
+              ...(healedExam ? { currentExam: healedExam } : {})
+            };
           });
         })
         .catch((err) => {

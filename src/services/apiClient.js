@@ -53,7 +53,8 @@ export const tokenStorage = {
 
     if (accessToken) storage.setItem(TOKEN_KEY, accessToken);
     if (refreshToken) storage.setItem(REFRESH_TOKEN_KEY, refreshToken);
-    if (user) storage.setItem(USER_KEY, JSON.stringify(user));
+    // Chỉ lưu hồ sơ user khi có accessToken hợp lệ, tránh tạo hồ sơ "bóng ma" sau khi logout
+    if (user && accessToken) storage.setItem(USER_KEY, JSON.stringify(user));
   },
   clearTokens: () => {
     ++sessionVersion;

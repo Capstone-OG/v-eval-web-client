@@ -49,8 +49,8 @@ export async function syncTuitionStatusFromServer(studentId, service = null, sto
   try {
     const s = service || paymentService;
     const status = await s.getStudentTuitionStatus(studentId);
-    if (status?.isPaid) {
-      setTuitionPaid(studentId, true, storage);
+    if (typeof status?.isPaid === 'boolean') {
+      setTuitionPaid(studentId, status.isPaid, storage);
     }
     return status;
   } catch {

@@ -130,11 +130,11 @@ export default function ScorePredictionPanel({
     displayTitle: formatPrescriptionTitle(item, idx)
   }));
 
-  const predictedScore = Number(forecast.predictedScore ?? 845);
-  const sem = Number(forecast.sem ?? 24.5);
+  const predictedScore = Number(forecast.predictedScore ?? 0);
+  const sem = Number(forecast.sem ?? 0);
   const minScore = Number(forecast.scoreRange?.min ?? Math.max(0, Math.round(predictedScore - 1.96 * sem)));
   const maxScore = Number(forecast.scoreRange?.max ?? Math.min(1200, Math.round(predictedScore + 1.96 * sem)));
-  const targetScore = Number(balance.targetScore ?? 920);
+  const targetScore = Number(balance.targetScore ?? 900);
   const deficitScore = Number(balance.deficitScore ?? Math.max(0, targetScore - predictedScore));
   const statusKey = STATUS_META[balance.status] ? balance.status : deficitScore <= 0 ? 'ON_TRACK' : deficitScore <= 80 ? 'AT_RISK' : 'CRITICAL';
   const statusInfo = STATUS_META[statusKey];

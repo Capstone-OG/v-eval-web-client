@@ -19,7 +19,8 @@ export default function PayOsCheckoutModal({
   isOpen,
   onClose,
   paymentData, // { orderCode, checkoutUrl, amount, courseName, studentName, durationWeeks }
-  onPaymentSuccess
+  onPaymentSuccess,
+  onNavigateRoadmap
 }) {
   const [status, setStatus] = useState('PENDING'); // PENDING | SUCCESS | FAILED
   const [isPolling, setIsPolling] = useState(false);
@@ -154,10 +155,13 @@ export default function PayOsCheckoutModal({
 
               <div className="pt-2">
                 <button
-                  onClick={onClose}
+                  onClick={() => {
+                    onClose?.();
+                    onNavigateRoadmap?.();
+                  }}
                   className="w-full py-3 px-5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-extrabold text-sm rounded-xl shadow-lg shadow-blue-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer"
                 >
-                  <span>Bắt Đầu Lộ Trình Học Ngay</span>
+                  <span>Bắt Đầu Lộ Trình Học P-L-A-R Ngay</span>
                   <ArrowRight className="w-4 h-4" />
                 </button>
               </div>
@@ -235,16 +239,18 @@ export default function PayOsCheckoutModal({
                 <RefreshCw className={`w-3.5 h-3.5 text-slate-400 ${isPolling ? 'animate-spin' : ''}`} />
               </div>
 
-              {/* Dev Simulation Option */}
-              <div className="pt-1 text-center">
-                <button
-                  type="button"
-                  onClick={handleSimulateSuccess}
-                  className="text-[11px] text-slate-400 hover:text-indigo-600 underline transition-colors cursor-pointer"
-                >
-                  [Demo] Giả lập nhận Webhook PayOS thành công (Instant Verify)
-                </button>
-              </div>
+              {/* Dev Simulation Option (Hidden in Production Builds) */}
+              {import.meta.env.DEV && (
+                <div className="pt-1 text-center">
+                  <button
+                    type="button"
+                    onClick={handleSimulateSuccess}
+                    className="text-[11px] text-slate-400 hover:text-indigo-600 underline transition-colors cursor-pointer"
+                  >
+                    [Dev] Giả lập nhận Webhook PayOS thành công
+                  </button>
+                </div>
+              )}
             </>
           )}
 
