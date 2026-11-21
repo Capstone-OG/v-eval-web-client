@@ -4,6 +4,9 @@
 
 ## [21/11/2026] - Tái Cấu Trúc Giao Diện Thời Khóa Biểu Tuần Thành Ma Trận 8 Cột (Weekly Timetable Matrix Grid) Theo Chuẩn Học Viện & Đại Học
 
+- **Tối Giản Giao Diện & Loại Bỏ Banner Xanh Đen Cồng Kềnh ([`TeacherScheduleView.jsx`](../src/components/dashboard/TeacherScheduleView.jsx))**:
+  - Loại bỏ hoàn toàn khối banner hero xanh đen (`bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-950`) gây cảm giác lệch tông, nặng nề và thiếu đồng điệu với giao diện phẳng sáng màu.
+  - Tích hợp nút "Làm mới" (`RefreshCw`) gọn gàng trực tiếp vào thanh điều khiển của container ma trận thời khóa biểu tuần, đảm bảo đầy đủ chức năng nhưng tối ưu chiều cao hiển thị.
 - **Tái Thiết Kế Ma Trận Thời Khóa Biểu Tuần 8 Cột ([`TeacherScheduleView.jsx`](../src/components/dashboard/TeacherScheduleView.jsx))**:
   - Chuyển đổi giao diện lịch dạy từ dạng danh sách timeline dọc sang mô hình bảng Ma Trận Thời Khóa Biểu Tuần (Weekly Timetable Matrix) 8 cột chuẩn khảo thí & học viện:
     - *Cột 1 (Slot)*: Hiển thị 6 ca học chuẩn gồm Slot 1 (07:30 - 09:30), Slot 2 (09:45 - 11:45), Slot 3 (13:00 - 15:00), Slot 4 (15:15 - 17:15), Slot 5 (18:00 - 20:00), Slot 6 (20:15 - 22:30) kèm nhãn buổi (Sáng, Chiều, Tối).

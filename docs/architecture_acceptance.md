@@ -3124,6 +3124,8 @@ The Parent Companion Portal was completely redesigned and hardened according to 
     - **Verification**: `npm run build` (Vite v8.3.0) compiled cleanly in 1.22s with 3079 modules transformed and zero errors; backend Practice Service builds with 0 warnings and 0 errors.
 
 25. **Weekly Timetable Matrix Architecture Subsystem (`TeacherScheduleView.jsx`)**:
+    - **Streamlined Harmonious Header Architecture**:
+      - Purged the oversized dark navy hero banner in favor of a minimalist, unified white card design directly integrating the table controls and a compact `RefreshCw` reload button.
     - **8-Column Weekly Grid Matrix Layout**:
       - Transformed schedule view into a standard academic 8-column timetable matrix: Column 1 allocates 6 structured slots (Slot 1: 07:30–09:30, Slot 2: 09:45–11:45, Slot 3: 13:00–15:00, Slot 4: 15:15–17:15, Slot 5: 18:00–20:00, Slot 6: 20:15–22:30), while Columns 2–8 map days Monday through Sunday.
       - Dynamic date computation (`getMonday`, `formatDateVi`, `toYMD`, `isSameDay`) automatically calculates current week boundaries `Tuần (DD/MM - DD/MM)`.
@@ -3135,4 +3137,4 @@ The Parent Companion Portal was completely redesigned and hardened according to 
     - **Week Navigation & Dual View Modes**:
       - Controls for previous week, current week, and next week, complemented by an intelligent fast-forward banner jumping to the nearest scheduled teaching week.
       - Seamless dual-mode toggling between `Lưới tuần` (Matrix Grid) and `Danh sách` (Agenda List).
-    - **Verification**: `npm run build` compiled cleanly in 1.42s with zero warnings or errors.
+    - **Verification**: `npm run build` compiled cleanly in 1.71s with zero warnings or errors.
