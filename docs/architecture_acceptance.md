@@ -3138,3 +3138,10 @@ The Parent Companion Portal was completely redesigned and hardened according to 
       - Controls for previous week, current week, and next week, complemented by an intelligent fast-forward banner jumping to the nearest scheduled teaching week.
       - Seamless dual-mode toggling between `Lưới tuần` (Matrix Grid) and `Danh sách` (Agenda List).
     - **Verification**: `npm run build` compiled cleanly in 1.71s with zero warnings or errors.
+
+26. **Pedagogical Alerts Modal & Ergonomic View Architecture (`TeacherDashboardView.jsx`)**:
+    - **Consolidated Alert Strip**:
+      - Replaced sprawling full-width alert cards with a compact, non-intrusive alert strip featuring count badges and an explicit launch action.
+    - **Dedicated Modal Overlay (`isAlertsModalOpen`)**:
+      - Modal overlay renders a scrollable view (`max-h-[85vh]`) containing structured diagnostic alert items with comprehension percentages, struggling student tallies, and direct micro-group assignment triggers (`handleOpenMicroGroups`).
+    - **Verification**: `npm run build` compiled cleanly in 1.32s with zero warnings or errors.

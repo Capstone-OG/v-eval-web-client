@@ -2,8 +2,12 @@
 
 ---
 
-## [21/11/2026] - Tái Cấu Trúc Giao Diện Thời Khóa Biểu Tuần Thành Ma Trận 8 Cột (Weekly Timetable Matrix Grid) Theo Chuẩn Học Viện & Đại Học
+## [21/11/2026] - Tối Ưu Hóa Trải Nghiệm Giáo Viên: Gom Cảnh Báo Sư Phạm Thành Nút Popup & Tái Cấu Trúc Ma Trận Thời Khóa Biểu Tuần 8 Cột
 
+- **Gom Khối Cảnh Báo Sư Phạm Thành Nút Bấm Popup Tinh Gọn ([`TeacherDashboardView.jsx`](../src/components/dashboard/TeacherDashboardView.jsx))**:
+  - Loại bỏ hoàn toàn danh sách các thẻ cảnh báo đỏ/vàng trải dài thô xuống màn hình, vốn đẩy bảng ma trận tiến độ học tập xuống quá sâu.
+  - Thay thế bằng dải thông báo tinh gọn (height ~50px) với 1 nút bấm trực quan: `Xem danh sách chuyên đề ({count})`.
+  - Tích hợp Modal chuyên dụng `Chuyên Đề Cần Bồi Dưỡng Gấp` hiển thị danh sách cuộn mượt (`max-h-[85vh]`), hỗ trợ đầy đủ số liệu tỷ lệ hiểu bài, số học sinh chưa đạt và nút 1-chạm `Tạo Nhóm Bồi Dưỡng` kích hoạt xếp bàn học vi mô 3–5 em.
 - **Tối Giản Giao Diện & Loại Bỏ Banner Xanh Đen Cồng Kềnh ([`TeacherScheduleView.jsx`](../src/components/dashboard/TeacherScheduleView.jsx))**:
   - Loại bỏ hoàn toàn khối banner hero xanh đen (`bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-950`) gây cảm giác lệch tông, nặng nề và thiếu đồng điệu với giao diện phẳng sáng màu.
   - Tích hợp nút "Làm mới" (`RefreshCw`) gọn gàng trực tiếp vào thanh điều khiển của container ma trận thời khóa biểu tuần, đảm bảo đầy đủ chức năng nhưng tối ưu chiều cao hiển thị.

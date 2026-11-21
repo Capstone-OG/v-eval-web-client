@@ -21,6 +21,7 @@ import {
   Award,
   CheckCircle2,
   XCircle,
+  X,
   LayoutGrid
 } from 'lucide-react';
 import { practiceService } from '../../services/practiceService';
@@ -82,6 +83,9 @@ export default function TeacherDashboardView({ currentUser, onOpenAdaptiveQuiz, 
   // Micro-Groups Modal
   const [isMicroGroupsOpen, setIsMicroGroupsOpen] = useState(false);
   const [microGroupClassContext, setMicroGroupClassContext] = useState(null);
+
+  // Pedagogical Alerts Modal
+  const [isAlertsModalOpen, setIsAlertsModalOpen] = useState(false);
 
   // Student Drill-Down Modal
   const [drillDownStudent, setDrillDownStudent] = useState(null);
@@ -194,6 +198,7 @@ export default function TeacherDashboardView({ currentUser, onOpenAdaptiveQuiz, 
   };
 
   const handleOpenMicroGroups = (focusSkillName = null) => {
+    setIsAlertsModalOpen(false);
     const currentClass = classesList.find((c) => (c.classId || c.id) === selectedClassId);
     setMicroGroupClassContext({
       id: selectedClassId,
@@ -412,61 +417,34 @@ export default function TeacherDashboardView({ currentUser, onOpenAdaptiveQuiz, 
             </div>
           </div>
 
-          {/* Dynamic Pedagogical Alerts */}
+          {/* Compact Pedagogical Alerts Strip (Gom thành 1 nút bấm mở danh sách) */}
           {(heatmap?.pedagogicalAlerts || []).length > 0 && (
-            <div className="space-y-3">
-              {heatmap.pedagogicalAlerts.map((alert) => {
-                const isCritical = alert.alertLevel === 'CRITICAL_RED';
-                return (
-                  <div
-                    key={alert.skillId}
-                    className={`p-4 lg:p-5 rounded-2xl border flex flex-col lg:flex-row lg:items-center justify-between gap-4 ${
-                      isCritical
-                        ? 'bg-rose-50/90 border-rose-200 text-rose-950'
-                        : 'bg-amber-50/90 border-amber-200 text-amber-950'
-                    }`}
-                  >
-                    <div className="flex items-start gap-3">
-                      <div
-                        className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
-                          isCritical ? 'bg-rose-600 text-white' : 'bg-amber-500 text-white'
-                        }`}
-                      >
-                        <AlertTriangle className="w-4 h-4" />
-                      </div>
-                      <div className="space-y-1 text-xs">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span
-                            className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase ${
-                              isCritical ? 'bg-rose-600 text-white' : 'bg-amber-500 text-white'
-                            }`}
-                          >
-                            {isCritical ? 'Cần bồi dưỡng gấp' : 'Cần lưu ý ôn tập'}
-                          </span>
-                          <strong className="text-sm font-extrabold">{alert.skillName}</strong>
-                          <span className="text-[11px] font-bold opacity-80">
-                            • Hiểu bài: {(Number(alert.averagePlt || 0) * 100).toFixed(0)}% • Chưa đạt:{' '}
-                            {(Number(alert.strugglingRate || 0) * 100).toFixed(0)}% ({alert.strugglingCount} học sinh)
-                          </span>
-                        </div>
-                        <p className="leading-relaxed opacity-90">{alert.suggestedAction}</p>
-                      </div>
-                    </div>
-
-                    <button
-                      onClick={() => handleOpenMicroGroups(alert.skillName)}
-                      className={`px-4 py-2.5 rounded-xl font-extrabold text-xs shrink-0 flex items-center gap-2 transition-all shadow-sm cursor-pointer ${
-                        isCritical
-                          ? 'bg-rose-600 hover:bg-rose-700 text-white'
-                          : 'bg-amber-600 hover:bg-amber-700 text-white'
-                      }`}
-                    >
-                      <Zap className="w-3.5 h-3.5" />
-                      <span>Tạo Nhóm Bồi Dưỡng Chuyên Đề Này</span>
-                    </button>
+            <div className="p-3.5 px-4 rounded-2xl bg-rose-50/80 border border-rose-200/90 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-rose-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                  <AlertTriangle className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="text-xs font-black text-rose-950 flex flex-wrap items-center gap-2">
+                    <span>Cảnh báo sư phạm: Phát hiện {heatmap.pedagogicalAlerts.length} chuyên đề cần bồi dưỡng</span>
+                    <span className="px-2 py-0.5 rounded-full bg-rose-200 text-rose-900 text-[10px] font-extrabold">
+                      {heatmap.pedagogicalAlerts.filter(a => a.alertLevel === 'CRITICAL_RED').length} khẩn cấp
+                    </span>
                   </div>
-                );
-              })}
+                  <p className="text-[11px] text-rose-800/80 font-medium">
+                    Hệ thống phát hiện các chuyên đề có tỷ lệ hiểu bài thấp (chưa đạt ≥ 40%). Bấm xem danh sách để tổ chức ôn tập hoặc chia nhóm vi mô.
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsAlertsModalOpen(true)}
+                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs shrink-0 flex items-center gap-2 transition-all shadow-xs cursor-pointer self-start sm:self-auto"
+              >
+                <Zap className="w-3.5 h-3.5" />
+                <span>Xem danh sách chuyên đề ({heatmap.pedagogicalAlerts.length})</span>
+              </button>
             </div>
           )}
 
@@ -924,6 +902,105 @@ export default function TeacherDashboardView({ currentUser, onOpenAdaptiveQuiz, 
           loadFlaggedExams();
         }}
       />
+
+      {/* Pedagogical Alerts Modal Popup (Danh sách chuyên đề cần bồi dưỡng) */}
+      {isAlertsModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-fade">
+          <div className="bg-white rounded-3xl max-w-3xl w-full border border-slate-200 shadow-2xl flex flex-col max-h-[85vh] overflow-hidden animate-scale-up">
+            {/* Modal Header */}
+            <div className="p-5 lg:p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/60">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center shrink-0">
+                  <AlertTriangle className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-black text-slate-900 tracking-tight flex items-center gap-2">
+                    <span>Chuyên Đề Cần Bồi Dưỡng Gấp</span>
+                    <span className="px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 text-xs font-black border border-rose-200">
+                      {heatmap?.pedagogicalAlerts?.length || 0} chuyên đề
+                    </span>
+                  </h3>
+                  <p className="text-xs text-slate-500 font-medium">
+                    Danh sách các chuyên đề có tỷ lệ học sinh chưa đạt ≥ 40%. Thầy/cô có thể tạo ngay nhóm vi mô 3–5 em kèm riêng.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsAlertsModalOpen(false)}
+                className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body: Scrollable list */}
+            <div className="p-5 lg:p-6 overflow-y-auto space-y-3 divide-y divide-slate-100">
+              {(heatmap?.pedagogicalAlerts || []).map((alert) => {
+                const isCritical = alert.alertLevel === 'CRITICAL_RED';
+                return (
+                  <div
+                    key={alert.skillId}
+                    className="pt-3 first:pt-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3.5"
+                  >
+                    <div className="space-y-1 text-xs">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span
+                          className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase ${
+                            isCritical
+                              ? 'bg-rose-100 text-rose-800 border border-rose-200'
+                              : 'bg-amber-100 text-amber-800 border border-amber-200'
+                          }`}
+                        >
+                          {isCritical ? 'Cần bồi dưỡng gấp' : 'Cần lưu ý ôn tập'}
+                        </span>
+                        <strong className="text-sm font-extrabold text-slate-900">{alert.skillName}</strong>
+                      </div>
+                      <div className="text-[11px] font-bold text-slate-600 flex items-center gap-2">
+                        <span>
+                          Hiểu bài: <strong className="text-slate-900">{(Number(alert.averagePlt || 0) * 100).toFixed(0)}%</strong>
+                        </span>
+                        <span className="text-slate-300">•</span>
+                        <span>
+                          Chưa đạt:{' '}
+                          <strong className="text-rose-600">
+                            {(Number(alert.strugglingRate || 0) * 100).toFixed(0)}% ({alert.strugglingCount} học sinh)
+                          </strong>
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 leading-relaxed">{alert.suggestedAction}</p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => handleOpenMicroGroups(alert.skillName)}
+                      className={`px-3.5 py-2 rounded-xl font-extrabold text-xs shrink-0 flex items-center gap-1.5 transition-all shadow-xs cursor-pointer self-start sm:self-center ${
+                        isCritical
+                          ? 'bg-rose-600 hover:bg-rose-700 text-white'
+                          : 'bg-amber-600 hover:bg-amber-700 text-white'
+                      }`}
+                    >
+                      <Zap className="w-3.5 h-3.5" />
+                      <span>Tạo Nhóm Bồi Dưỡng</span>
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 px-6 border-t border-slate-100 bg-slate-50/80 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setIsAlertsModalOpen(false)}
+                className="px-5 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-700 font-extrabold text-xs transition-colors cursor-pointer"
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
