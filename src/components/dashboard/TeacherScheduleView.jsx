@@ -18,7 +18,13 @@ import {
   Layers,
   Sparkles,
   Search,
-  UserCheck
+  UserCheck,
+  ChevronLeft,
+  ChevronRight,
+  LayoutGrid,
+  List,
+  Bookmark,
+  ArrowRight
 } from 'lucide-react';
 import { practiceService } from '../../services/practiceService';
 import ClassMicroGroupsModal from '../modals/ClassMicroGroupsModal';
@@ -31,6 +37,67 @@ const ATTENDANCE_BADGE_MAP = {
   EXCUSED: { label: 'Nghỉ có phép', badge: 'bg-purple-100 text-purple-800 border-purple-300', dot: 'bg-purple-500' }
 };
 
+// 6 Standard Academic Teaching Slots (Khung 6 Slot chuẩn của trung tâm)
+const TIME_SLOTS = [
+  { slot: 1, label: 'Slot 1', timeRange: '07:30 - 09:30', period: 'Sáng', startHour: 7.5, endHour: 9.5 },
+  { slot: 2, label: 'Slot 2', timeRange: '09:45 - 11:45', period: 'Sáng', startHour: 9.75, endHour: 11.75 },
+  { slot: 3, label: 'Slot 3', timeRange: '13:00 - 15:00', period: 'Chiều', startHour: 13.0, endHour: 15.0 },
+  { slot: 4, label: 'Slot 4', timeRange: '15:15 - 17:15', period: 'Chiều', startHour: 15.25, endHour: 17.25 },
+  { slot: 5, label: 'Slot 5', timeRange: '18:00 - 20:00', period: 'Tối', startHour: 18.0, endHour: 20.0 },
+  { slot: 6, label: 'Slot 6', timeRange: '20:15 - 22:30', period: 'Tối', startHour: 20.25, endHour: 22.5 }
+];
+
+const DAY_NAMES = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'Chủ nhật'];
+
+// Helper functions for Date calculations
+function getMonday(d) {
+  const date = new Date(d);
+  const day = date.getDay();
+  const diff = date.getDate() - day + (day === 0 ? -6 : 1);
+  const mon = new Date(date.setDate(diff));
+  mon.setHours(0, 0, 0, 0);
+  return mon;
+}
+
+function formatDateVi(d) {
+  if (!d) return '';
+  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function toYMD(d) {
+  if (!d) return '';
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function isSameDay(d1, d2) {
+  if (!d1 || !d2) return false;
+  return (
+    d1.getDate() === d2.getDate() &&
+    d1.getMonth() === d2.getMonth() &&
+    d1.getFullYear() === d2.getFullYear()
+  );
+}
+
+// Map a session's startTime or slotNo to slot 1-6
+function getSessionSlot(session) {
+  if (session.slotNo && session.slotNo >= 1 && session.slotNo <= 6) {
+    return session.slotNo;
+  }
+  const timeStr = String(session.startTime || '');
+  if (!timeStr) return 5;
+  const parts = timeStr.split(':');
+  const hour = parseInt(parts[0], 10) + (parseInt(parts[1], 10) || 0) / 60;
+  if (hour < 9.6) return 1;
+  if (hour < 12.0) return 2;
+  if (hour < 15.1) return 3;
+  if (hour < 17.5) return 4;
+  if (hour < 20.1) return 5;
+  return 6;
+}
+
 export default function TeacherScheduleView({ currentUser }) {
   const [scheduleData, setScheduleData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -39,6 +106,10 @@ export default function TeacherScheduleView({ currentUser }) {
   const [selectedTermId, setSelectedTermId] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('ALL'); // ALL | SCHEDULED | COMPLETED
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Weekly Matrix View Controls
+  const [viewMode, setViewMode] = useState('grid'); // 'grid' (Lưới tuần - Ảnh 2) | 'agenda' (Danh sách thẻ)
+  const [currentWeekDate, setCurrentWeekDate] = useState(new Date());
 
   // Attendance Modal State
   const [attendanceSession, setAttendanceSession] = useState(null);
@@ -182,7 +253,7 @@ export default function TeacherScheduleView({ currentUser }) {
     });
   }, [scheduleData?.sessions, statusFilter, searchQuery]);
 
-  // Group Sessions by Date
+  // Group Sessions by Date for Agenda / Timeline mode
   const groupedSessions = useMemo(() => {
     const map = new Map();
     for (const session of filteredSessions) {
@@ -194,6 +265,57 @@ export default function TeacherScheduleView({ currentUser }) {
     }
     return Array.from(map.entries());
   }, [filteredSessions]);
+
+  // 7 Days of the currently selected week (Monday to Sunday)
+  const weekDays = useMemo(() => {
+    const monday = getMonday(currentWeekDate);
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + i);
+      return d;
+    });
+  }, [currentWeekDate]);
+
+  const weekLabel = useMemo(() => {
+    if (weekDays.length < 7) return '';
+    return `Tuần (${formatDateVi(weekDays[0])} - ${formatDateVi(weekDays[6])})`;
+  }, [weekDays]);
+
+  // Find next upcoming session in the future to offer a quick jump if current week is empty
+  const nextUpcomingSession = useMemo(() => {
+    const todayStr = toYMD(new Date());
+    const upcoming = filteredSessions
+      .filter((s) => s.sessionDate && s.sessionDate >= todayStr)
+      .sort((a, b) => a.sessionDate.localeCompare(b.sessionDate));
+    return upcoming[0] || null;
+  }, [filteredSessions]);
+
+  // Sessions falling into the current week view
+  const currentWeekSessionsCount = useMemo(() => {
+    const startStr = toYMD(weekDays[0]);
+    const endStr = toYMD(weekDays[6]);
+    return filteredSessions.filter((s) => s.sessionDate >= startStr && s.sessionDate <= endStr).length;
+  }, [filteredSessions, weekDays]);
+
+  // Week navigation handlers
+  const handlePrevWeek = () => {
+    setCurrentWeekDate((prev) => new Date(prev.getTime() - 7 * 86400000));
+  };
+
+  const handleNextWeek = () => {
+    setCurrentWeekDate((prev) => new Date(prev.getTime() + 7 * 86400000));
+  };
+
+  const handleTodayWeek = () => {
+    setCurrentWeekDate(new Date());
+  };
+
+  const handleJumpToSessionWeek = (sessionDateStr) => {
+    if (!sessionDateStr) return;
+    const parts = sessionDateStr.split('-');
+    const target = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+    setCurrentWeekDate(target);
+  };
 
   // Open Attendance Modal
   const handleOpenAttendance = async (session) => {
@@ -217,22 +339,26 @@ export default function TeacherScheduleView({ currentUser }) {
       }
 
       if (records.length > 0) {
-        setAttendanceRecords(records.map(r => ({
-          studentId: r.studentId,
-          studentName: r.studentName || nameMap.get(r.studentId) || `Học sinh #${String(r.studentId).slice(0, 6).toUpperCase()}`,
-          status: r.status || 'PRESENT',
-          note: r.note || ''
-        })));
+        setAttendanceRecords(
+          records.map((r) => ({
+            studentId: r.studentId,
+            studentName: r.studentName || nameMap.get(r.studentId) || `Học sinh #${String(r.studentId).slice(0, 6).toUpperCase()}`,
+            status: r.status || 'PRESENT',
+            note: r.note || ''
+          }))
+        );
       } else {
         // 2. If no attendance records yet, fetch class roster to initialize
         const heatmap = await practiceService.getClassHeatmap(session.classId);
         const rows = heatmap?.rows || [];
-        setAttendanceRecords(rows.map(row => ({
-          studentId: row.studentId,
-          studentName: row.studentName,
-          status: 'PRESENT',
-          note: ''
-        })));
+        setAttendanceRecords(
+          rows.map((row) => ({
+            studentId: row.studentId,
+            studentName: row.studentName,
+            status: 'PRESENT',
+            note: ''
+          }))
+        );
       }
     } catch (err) {
       console.warn('[TeacherScheduleView] Error loading session attendances:', err.message);
@@ -244,12 +370,12 @@ export default function TeacherScheduleView({ currentUser }) {
 
   // Change single student attendance
   const handleChangeStatus = (studentId, status) => {
-    setAttendanceRecords(prev => prev.map(r => r.studentId === studentId ? { ...r, status } : r));
+    setAttendanceRecords((prev) => prev.map((r) => (r.studentId === studentId ? { ...r, status } : r)));
   };
 
   // Mark all present
   const handleMarkAllPresent = () => {
-    setAttendanceRecords(prev => prev.map(r => ({ ...r, status: 'PRESENT' })));
+    setAttendanceRecords((prev) => prev.map((r) => ({ ...r, status: 'PRESENT' })));
     toast.info('Đã đánh dấu tất cả học sinh có mặt!');
   };
 
@@ -259,7 +385,7 @@ export default function TeacherScheduleView({ currentUser }) {
     setSavingAttendance(true);
     try {
       const payload = {
-        attendances: attendanceRecords.map(r => ({
+        attendances: attendanceRecords.map((r) => ({
           studentId: r.studentId,
           status: r.status,
           note: r.note || null
@@ -307,7 +433,7 @@ export default function TeacherScheduleView({ currentUser }) {
             Thời Khóa Biểu & Điểm Danh Chuyên Cần
           </h1>
           <p className="text-xs lg:text-sm text-indigo-100/90 max-w-2xl leading-relaxed">
-            Theo dõi các ca dạy trong tuần, phòng học, chuyên đề bài học và thực hiện điểm danh học sinh trực tiếp tại lớp.
+            Theo dõi các ca dạy trong tuần theo ma trận Slot x Thứ, quản lý phòng học, chuyên đề bài học và thực hiện điểm danh học sinh trực tiếp tại lớp.
           </p>
         </div>
 
@@ -318,7 +444,7 @@ export default function TeacherScheduleView({ currentUser }) {
             className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/20 text-white font-extrabold text-xs transition-all disabled:opacity-50 cursor-pointer"
           >
             <RefreshCw className={`w-4 h-4 text-cyan-300 ${loading ? 'animate-spin' : ''}`} />
-            <span>Làm mới thời khóa biểu</span>
+            <span>Làm mới lịch</span>
           </button>
         </div>
       </div>
@@ -374,9 +500,87 @@ export default function TeacherScheduleView({ currentUser }) {
         </div>
       </div>
 
-      {/* Filter Toolbar */}
-      <div className="bg-white rounded-3xl p-5 border border-slate-200/80 card-shadow space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      {/* Main Weekly Timetable Container (Ma Trận Thời Khóa Biểu Tuần) */}
+      <div className="bg-white rounded-3xl p-5 lg:p-6 border border-slate-200/90 shadow-sm space-y-5">
+        {/* Top Header Bar: Title, Week Navigator & View Mode Toggle */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+          <div className="space-y-1">
+            <h2 className="text-xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
+              <Calendar className="w-5 h-5 text-indigo-600" />
+              <span>Thời khóa biểu tuần</span>
+            </h2>
+            <div className="flex items-center gap-2.5 text-xs text-slate-600">
+              <span className="font-extrabold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-100">
+                {weekLabel}
+              </span>
+              <span className="text-slate-400">•</span>
+              <span className="font-medium">
+                {currentWeekSessionsCount} ca học trong tuần này
+              </span>
+            </div>
+          </div>
+
+          {/* Week Navigation Controls & View Mode Toggle */}
+          <div className="flex flex-wrap items-center gap-2.5">
+            {/* Prev / Today / Next Week Buttons */}
+            <div className="inline-flex items-center rounded-xl bg-slate-100 p-1 border border-slate-200">
+              <button
+                type="button"
+                onClick={handlePrevWeek}
+                title="Tuần trước"
+                className="p-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-white transition-all cursor-pointer"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={handleTodayWeek}
+                className="px-3 py-1 rounded-lg text-xs font-bold text-slate-700 hover:text-indigo-700 hover:bg-white transition-all cursor-pointer"
+              >
+                Tuần này
+              </button>
+              <button
+                type="button"
+                onClick={handleNextWeek}
+                title="Tuần sau"
+                className="p-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-white transition-all cursor-pointer"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* View Mode Toggle: Grid vs Agenda */}
+            <div className="inline-flex items-center rounded-xl bg-slate-100 p-1 border border-slate-200 text-xs font-bold">
+              <button
+                type="button"
+                onClick={() => setViewMode('grid')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                  viewMode === 'grid'
+                    ? 'bg-white text-indigo-900 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <LayoutGrid className="w-3.5 h-3.5" />
+                <span>Lưới tuần</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('agenda')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                  viewMode === 'agenda'
+                    ? 'bg-white text-indigo-900 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <List className="w-3.5 h-3.5" />
+                <span>Danh sách</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Filter Toolbar (Search, Class, Term, Status) */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
           <div className="flex flex-wrap items-center gap-2">
             <div className="relative">
               <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5 pointer-events-none" />
@@ -437,27 +641,250 @@ export default function TeacherScheduleView({ currentUser }) {
           </div>
 
           <div className="text-xs text-slate-500 font-bold">
-            Hiển thị <span className="text-indigo-600 font-black">{filteredSessions.length}</span> ca giảng dạy
+            Tổng cộng: <span className="text-indigo-600 font-black">{filteredSessions.length}</span> ca học
           </div>
         </div>
 
-        {/* Sessions Calendar / Timeline */}
+        {/* Smart Notice: If current week has 0 sessions but upcoming sessions exist, show helpful jump banner */}
+        {currentWeekSessionsCount === 0 && nextUpcomingSession && (
+          <div className="p-3.5 rounded-2xl bg-indigo-50/80 border border-indigo-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-2.5 text-indigo-950 font-semibold">
+              <Calendar className="w-4 h-4 text-indigo-600 shrink-0" />
+              <span>
+                Tuần này không có ca dạy. Ca dạy gần nhất diễn ra vào{' '}
+                <strong>{nextUpcomingSession.dayOfWeekLabel || 'Lịch'} ngày {formatDateVi(new Date(nextUpcomingSession.sessionDate))}</strong> ({nextUpcomingSession.className}).
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => handleJumpToSessionWeek(nextUpcomingSession.sessionDate)}
+              className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs shrink-0 flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
+            >
+              <span>Chuyển đến tuần này</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
+
+        {/* Content Area: Grid Mode (Ảnh 2) OR Agenda Mode */}
         {loading ? (
-          <div className="py-16 text-center space-y-3">
+          <div className="py-20 text-center space-y-3">
             <RotateCw className="w-8 h-8 text-indigo-600 animate-spin mx-auto" />
-            <p className="text-xs font-bold text-slate-600">Đang tải thời khóa biểu giảng dạy...</p>
+            <p className="text-xs font-bold text-slate-600">Đang tải ma trận thời khóa biểu tuần...</p>
           </div>
         ) : filteredSessions.length === 0 ? (
-          <div className="p-8 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-300 space-y-2">
+          <div className="p-10 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-300 space-y-2">
             <Calendar className="w-10 h-10 text-slate-400 mx-auto" />
-            <div className="text-xs font-extrabold text-slate-700">
+            <div className="text-sm font-extrabold text-slate-700">
               Không có ca dạy nào khớp với bộ lọc hiện tại.
             </div>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-slate-500 max-w-md mx-auto">
               Thời khóa biểu sẽ tự động hiển thị khi học vụ phân công ca dạy cho các lớp bạn phụ trách.
             </p>
           </div>
+        ) : viewMode === 'grid' ? (
+          /* ========================================================================= */
+          /* VIEW 1: WEEKLY TIMETABLE MATRIX TABLE (Chuẩn Thiết Kế Ảnh 2)             */
+          /* ========================================================================= */
+          <div className="overflow-x-auto rounded-2xl border border-slate-200 shadow-2xs">
+            <table className="w-full border-collapse text-left min-w-[980px]">
+              <thead>
+                <tr className="border-b border-slate-200">
+                  {/* Slot Column Header */}
+                  <th className="w-28 min-w-[100px] p-3 text-center text-xs font-black uppercase text-slate-600 bg-slate-100/80 border-r border-slate-200">
+                    Slot
+                  </th>
+
+                  {/* 7 Day Column Headers */}
+                  {weekDays.map((day, idx) => {
+                    const isCurrentDay = isSameDay(day, new Date());
+                    return (
+                      <th
+                        key={idx}
+                        className={`p-3 text-center text-xs border-r border-slate-200 transition-colors ${
+                          isCurrentDay
+                            ? 'bg-emerald-100/80 text-emerald-950 font-black border-b-2 border-b-emerald-600'
+                            : 'bg-slate-50 text-slate-700 font-extrabold'
+                        } ${idx === 6 ? 'border-r-0' : ''}`}
+                      >
+                        <div className="flex flex-col items-center gap-0.5">
+                          <span className={isCurrentDay ? 'text-emerald-900 font-black' : 'text-slate-800'}>
+                            {DAY_NAMES[idx]} ({formatDateVi(day)})
+                          </span>
+                          {isCurrentDay && (
+                            <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider">
+                              (Hôm nay)
+                            </span>
+                          )}
+                        </div>
+                      </th>
+                    );
+                  })}
+                </tr>
+              </thead>
+
+              <tbody className="divide-y divide-slate-200 bg-white">
+                {TIME_SLOTS.map((slotObj) => (
+                  <tr key={slotObj.slot} className="hover:bg-slate-50/50 transition-colors">
+                    {/* Column 1: Slot Indicator */}
+                    <td className="p-3 text-center bg-slate-50/60 border-r border-slate-200 align-middle">
+                      <div className="font-black text-xs text-slate-900">{slotObj.label}</div>
+                      <div className="text-[10px] font-mono text-slate-500 mt-0.5 whitespace-nowrap">
+                        {slotObj.timeRange}
+                      </div>
+                      <span className="inline-block mt-1 px-1.5 py-0.2 rounded text-[9px] font-bold bg-slate-200 text-slate-700">
+                        {slotObj.period}
+                      </span>
+                    </td>
+
+                    {/* Columns 2-8: 7 Days Cells */}
+                    {weekDays.map((day, dIdx) => {
+                      const dayStr = toYMD(day);
+                      const isCurrentDay = isSameDay(day, new Date());
+
+                      // Find all sessions on this day and in this slot
+                      const cellSessions = filteredSessions.filter(
+                        (s) => s.sessionDate === dayStr && getSessionSlot(s) === slotObj.slot
+                      );
+
+                      return (
+                        <td
+                          key={dIdx}
+                          className={`p-2.5 border-r border-slate-200 align-top transition-colors ${
+                            isCurrentDay ? 'bg-emerald-50/20' : ''
+                          } ${dIdx === 6 ? 'border-r-0' : ''}`}
+                        >
+                          {cellSessions.length === 0 ? (
+                            /* Empty Cell: Clean dash '-' like in Image 2 */
+                            <div className="text-slate-300 font-bold text-center select-none py-6 text-sm">
+                              -
+                            </div>
+                          ) : (
+                            /* Sessions Cell: Structured Card like in Image 2 */
+                            <div className="space-y-2">
+                              {cellSessions.map((s) => {
+                                const hasAttendance = s.presentCount > 0 || s.absentCount > 0 || s.lateCount > 0;
+                                const studentCount = s.enrolledStudentsCount ?? s.totalStudentsCount ?? 0;
+                                const attendancePct =
+                                  studentCount > 0 && s.presentCount > 0
+                                    ? Math.round((s.presentCount / studentCount) * 100)
+                                    : 0;
+
+                                return (
+                                  <div
+                                    key={s.sessionId}
+                                    className="p-3 rounded-xl bg-white border border-blue-200 hover:border-indigo-400 hover:shadow-md transition-all space-y-2 text-xs"
+                                  >
+                                    {/* Class / Subject Title & Attendance Badge */}
+                                    <div className="space-y-1">
+                                      <div className="flex items-start justify-between gap-1.5">
+                                        <div
+                                          className="font-black text-xs text-blue-900 line-clamp-1 flex items-center gap-1.5"
+                                          title={s.className}
+                                        >
+                                          <BookOpen className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                                          <span className="truncate">{s.className}</span>
+                                        </div>
+                                      </div>
+
+                                      {/* Attendance Badge */}
+                                      <div>
+                                        {hasAttendance ? (
+                                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-[10px] font-black border border-emerald-200">
+                                            <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                            <span>
+                                              Có mặt ({s.presentCount}/{studentCount})
+                                            </span>
+                                          </span>
+                                        ) : (
+                                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-800 text-[10px] font-bold border border-amber-200">
+                                            <AlertTriangle className="w-3 h-3 text-amber-600" />
+                                            <span>Chưa điểm danh</span>
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+
+                                    {/* Time & Room & Mode (Offline/Online) */}
+                                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-slate-600">
+                                      <span className="flex items-center gap-1 font-bold text-slate-800">
+                                        <Clock className="w-3 h-3 text-indigo-600" />
+                                        <span>
+                                          {String(s.startTime).slice(0, 5)} - {String(s.endTime).slice(0, 5)}
+                                        </span>
+                                      </span>
+                                      <span className="flex items-center gap-1 font-semibold text-slate-600">
+                                        <MapPin className="w-3 h-3 text-slate-500" />
+                                        <span>{s.room || 'P.301'}</span>
+                                      </span>
+                                      <span className="px-1.5 py-0.2 rounded bg-slate-100 text-[10px] font-bold text-slate-600">
+                                        Offline
+                                      </span>
+                                    </div>
+
+                                    {/* Teacher / Lecturer */}
+                                    <div className="flex items-center gap-1 text-[11px] text-slate-600">
+                                      <UserCheck className="w-3 h-3 text-slate-500 shrink-0" />
+                                      <span className="font-semibold truncate">
+                                        {s.primaryTeacherName || currentUser?.fullName || 'Teacher Khôi'}
+                                      </span>
+                                    </div>
+
+                                    {/* Topic / Skill + Sĩ số */}
+                                    <div className="p-2 rounded-lg bg-slate-50 border border-slate-100 text-[11px] text-slate-700 space-y-0.5">
+                                      <div
+                                        className="font-semibold line-clamp-2 leading-tight text-slate-900"
+                                        title={s.topicTitle || s.skillName}
+                                      >
+                                        🔖 {s.topicTitle || s.skillName || 'Luyện tập chuyên đề'}
+                                      </div>
+                                      <div className="text-[10px] text-slate-500 font-bold flex items-center justify-between pt-0.5">
+                                        <span>Sĩ số: {studentCount} HS</span>
+                                        <span className="text-slate-400">Buổi {s.sessionNo}</span>
+                                      </div>
+                                    </div>
+
+                                    {/* Action Buttons: Điểm danh & Nhóm vi mô */}
+                                    <div className="flex items-center gap-1.5 pt-1">
+                                      <button
+                                        type="button"
+                                        onClick={() => handleOpenAttendance(s)}
+                                        className={`flex-1 py-1.5 px-2 rounded-lg font-black text-[11px] flex items-center justify-center gap-1 transition-all cursor-pointer shadow-xs ${
+                                          hasAttendance
+                                            ? 'bg-slate-100 hover:bg-slate-200 text-slate-800'
+                                            : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+                                        }`}
+                                      >
+                                        <CheckSquare className="w-3 h-3" />
+                                        <span>{hasAttendance ? 'Xem / Sửa' : 'Điểm danh'}</span>
+                                      </button>
+
+                                      <button
+                                        type="button"
+                                        onClick={() => handleOpenMicroGroups(s)}
+                                        className="p-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-xs font-bold transition-all cursor-pointer"
+                                        title="Xếp nhóm học tập vi mô 3–5 em"
+                                      >
+                                        <Layers className="w-3.5 h-3.5 text-amber-600" />
+                                      </button>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         ) : (
+          /* ========================================================================= */
+          /* VIEW 2: AGENDA / TIMELINE LIST MODE (Chế độ xem danh sách)                 */
+          /* ========================================================================= */
           <div className="space-y-6">
             {groupedSessions.map(([dateStr, sessions]) => (
               <div key={dateStr} className="space-y-3">
@@ -473,8 +900,12 @@ export default function TeacherScheduleView({ currentUser }) {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5">
                   {sessions.map((s) => {
-                    const isCompleted = s.sessionStatus === 'COMPLETED';
                     const hasAttendance = s.presentCount > 0 || s.absentCount > 0 || s.lateCount > 0;
+                    const studentCount = s.enrolledStudentsCount ?? s.totalStudentsCount ?? 0;
+                    const attendancePct =
+                      studentCount > 0 && s.presentCount > 0
+                        ? Math.round((s.presentCount / studentCount) * 100)
+                        : 0;
 
                     return (
                       <div
@@ -486,7 +917,9 @@ export default function TeacherScheduleView({ currentUser }) {
                           <div className="flex items-center justify-between gap-2">
                             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-800 text-xs font-black">
                               <Clock className="w-3.5 h-3.5 text-indigo-600" />
-                              <span>{String(s.startTime).slice(0, 5)} - {String(s.endTime).slice(0, 5)}</span>
+                              <span>
+                                {String(s.startTime).slice(0, 5)} - {String(s.endTime).slice(0, 5)}
+                              </span>
                             </span>
 
                             <span className="inline-flex items-center gap-1 text-xs font-extrabold text-slate-700 bg-slate-100 px-2.5 py-1 rounded-xl">
@@ -517,18 +950,14 @@ export default function TeacherScheduleView({ currentUser }) {
                           <div className="flex items-center justify-between text-[11px]">
                             <span className="text-slate-500 font-bold flex items-center gap-1">
                               <Users className="w-3.5 h-3.5" />
-                              <span>Sĩ số: <strong>{s.enrolledStudentsCount ?? s.totalStudentsCount ?? 0} HS</strong></span>
+                              <span>Sĩ số: <strong>{studentCount} HS</strong></span>
                             </span>
 
                             {hasAttendance ? (
                               <span className="text-emerald-700 font-black flex items-center gap-1">
                                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                                 <span>
-                                  {s.presentCount} có mặt ({
-                                    (s.enrolledStudentsCount ?? s.totalStudentsCount ?? 0) > 0
-                                      ? Math.round(((s.presentCount || 0) / (s.enrolledStudentsCount ?? s.totalStudentsCount ?? 1)) * 100)
-                                      : 0
-                                  }%)
+                                  {s.presentCount} có mặt ({attendancePct}%)
                                 </span>
                               </span>
                             ) : (
@@ -702,4 +1131,3 @@ export default function TeacherScheduleView({ currentUser }) {
     </div>
   );
 }
-

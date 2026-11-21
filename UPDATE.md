@@ -1,22 +1,19 @@
 # UPDATE - V-Eval-Web_Client
 
-## [20/11/2026]
-- **Kết Nối CSDL Thời Gian Thực Toàn Diện & Chuẩn Hóa Dữ Liệu Động Cho Phân Hệ Giáo Viên (`TeacherDashboardView.jsx`, `TeacherScheduleView.jsx`, `AiTutorModerationView.jsx`, `Sidebar.jsx`, `App.jsx`, `practiceService.js`)**:
-  - *Bản đồ ma trận học tập 2D (`TeacherDashboardView.jsx`)*:
-    - Chuẩn hóa bộ chọn lớp học phụ trách, khắc phục triệt để lỗi bất đồng bộ mã định danh (`classId` thay vì `id`), kết nối dữ liệu thật từ endpoint `GET /api/practice/classes` và `GET /api/practice/classes/{classId}/heatmap`.
-    - Hiển thị trực tiếp 100% dữ liệu thực tế từ CSDL PostgreSQL: danh sách toàn bộ học sinh trong lớp, điểm năng lực, trạng thái cần hỗ trợ, chuyên đề phân hóa 2 đầu và bảng ma trận tiến độ học tập chi tiết.
-  - *Thời khóa biểu & Điểm danh chuyên cần (`TeacherScheduleView.jsx`)*:
-    - Bổ sung bộ chọn Lớp học phụ trách (`selectedClassId`), tự động tải danh sách ca dạy thực tế từ endpoint `GET /api/practice/schedules/classes/{classId}/sessions` và `GET /api/practice/schedules/teachers/{teacherId}/schedule`.
-    - Loại bỏ hoàn toàn các giá trị mặc định tĩnh; liên kết trực tiếp sĩ số học sinh (`enrolledStudentsCount` / `totalStudentsCount`) và tính toán tỷ lệ điểm danh theo thời gian thực.
-    - Kết nối danh sách học sinh từ ma trận lớp để hiển thị chính xác họ tên trong Modal điểm danh và lưu trữ trực tiếp lên máy chủ thông qua endpoint `POST /api/practice/schedules/sessions/{sessionId}/attendances`.
-  - *Kiểm duyệt Gia sư AI Socratic (`AiTutorModerationView.jsx`)*:
-    - Loại bỏ hoàn toàn mảng mẫu tĩnh giả lập (`SEED_INTERACTIONS`) và các công thức cố định trước đây.
-    - Kết nối trực tiếp vào 50 phiên đối thoại thực tế từ CSDL backend qua endpoint `GET /api/practice/ai-tutor/interactions`.
-    - Hiển thị chính xác nội dung câu hỏi khảo thí, các phương án lựa chọn thực tế từ hệ thống, tiến trình đối thoại Socratic giữa học sinh và trợ lý AI, cùng trạng thái gắn cờ kiểm duyệt.
-    - Cung cấp giao diện sư phạm cho phép giáo viên nhập lời giải chuẩn hóa hoặc xác nhận bẫy tư duy dựa trên dữ liệu chuyên môn thật.
-  - *Menu Sidebar & Điều Hướng (`Sidebar.jsx`, `App.jsx`)*:
-    - Tối giản menu của Giáo viên thành 3 khối nghiệp vụ rõ ràng: **Quản Lý Lớp Học** (`Lớp học & Tiến độ`, `Thời khóa biểu & Điểm danh`, `Lịch sử làm bài`), **Học Liệu & Đề Thi** (`Khung chương trình`, `Sách giáo khoa`, `Đề thi & AI Bloom`), **Kiểm Duyệt & AI** (`Kiểm duyệt gia sư AI`).
-    - Đảm bảo mục `Thời khóa biểu & Điểm danh` hiển thị trang trọng trên Sidebar với biểu tượng Calendar và định tuyến mượt mà.
+## [21/11/2026]
+- **Tái Cấu Trúc Ma Trận Thời Khóa Biểu Tuần 8 Cột (Weekly Timetable Matrix Grid) (`TeacherScheduleView.jsx`)**:
+  - *Giao diện ma trận tuần 8 cột chuẩn học viện & đại học*:
+    - Cột 1 (Slot): Phân định 6 khung giờ ca học chuẩn: Slot 1 (07:30 - 09:30), Slot 2 (09:45 - 11:45), Slot 3 (13:00 - 15:00), Slot 4 (15:15 - 17:15), Slot 5 (18:00 - 20:00), Slot 6 (20:15 - 22:30).
+    - 7 Cột Thứ trong tuần (Thứ 2 đến Chủ nhật) kèm ngày chi tiết `(DD/MM)`. Nổi bật trực quan ngày hiện tại ("Hôm nay") bằng dải màu xanh ngọc dịu nhẹ.
+    - Ô không có lịch dạy hiển thị dấu `-` căn giữa thanh lịch.
+    - Thẻ ca học đầy đủ thông tin sư phạm: Tên lớp học kèm biểu tượng sách, trạng thái chuyên cần (Có mặt / Chưa điểm danh), giờ học, phòng học, hình thức Offline, giảng viên phụ trách, nhãn chuyên đề bài học và sĩ số học sinh.
+    - Tích hợp nút 1-chạm mở Modal điểm danh chuyên cần và nút xếp nhóm học tập vi mô 3–5 em.
+  - *Điều hướng tuần & chuyển đổi chế độ xem*:
+    - Bộ điều hướng tuần: `< Tuần trước`, `Tuần này`, `Tuần sau >` kèm nhãn khoảng ngày tuần động `Tuần (DD/MM - DD/MM)`.
+    - Banner phát hiện thông minh: Tự động phát hiện ca dạy gần nhất trong tương lai khi tuần hiện tại trống lịch và hỗ trợ nút chuyển nhanh 1-chạm đến tuần có lịch dạy.
+    - Bộ chuyển đổi chế độ xem linh hoạt giữa `Lưới tuần` (Weekly Matrix Grid) và `Danh sách` (Agenda Cards).
+  - *Duy trì kết nối CSDL và lưu điểm danh thời gian thực*:
+    - Kết nối 100% dữ liệu thực qua `practiceService.getClasses()`, `practiceService.getClassSessions()`, `practiceService.getTeacherSchedule()`, `practiceService.getSessionAttendances()` và `practiceService.submitSessionAttendances()`.
 - **Kiểm Thử Vận Hành & Biên Dịch**:
-  - `npm run build`: Biên dịch thành công 100% trong 1.22s (`3079 modules`, `0 Error`).
+  - `npm run build`: Biên dịch thành công 100% trong 1.42s (`3079 modules`, `0 Error`).
   - `dotnet build`: Dịch thành công toàn bộ Practice Service (`0 Warning`, `0 Error`).

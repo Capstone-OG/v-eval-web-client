@@ -2,6 +2,22 @@
 
 ---
 
+## [21/11/2026] - Tái Cấu Trúc Giao Diện Thời Khóa Biểu Tuần Thành Ma Trận 8 Cột (Weekly Timetable Matrix Grid) Theo Chuẩn Học Viện & Đại Học
+
+- **Tái Thiết Kế Ma Trận Thời Khóa Biểu Tuần 8 Cột ([`TeacherScheduleView.jsx`](../src/components/dashboard/TeacherScheduleView.jsx))**:
+  - Chuyển đổi giao diện lịch dạy từ dạng danh sách timeline dọc sang mô hình bảng Ma Trận Thời Khóa Biểu Tuần (Weekly Timetable Matrix) 8 cột chuẩn khảo thí & học viện:
+    - *Cột 1 (Slot)*: Hiển thị 6 ca học chuẩn gồm Slot 1 (07:30 - 09:30), Slot 2 (09:45 - 11:45), Slot 3 (13:00 - 15:00), Slot 4 (15:15 - 17:15), Slot 5 (18:00 - 20:00), Slot 6 (20:15 - 22:30) kèm nhãn buổi (Sáng, Chiều, Tối).
+    - *7 Cột Thứ trong tuần*: Từ Thứ 2 đến Chủ nhật kèm ngày cụ thể `(DD/MM)`. Tự động nhận diện và làm nổi bật ngày hiện tại ("Hôm nay") bằng màu nền xanh ngọc dịu nhẹ (`bg-emerald-100/80 text-emerald-950 font-black border-b-2 border-b-emerald-600`).
+    - *Ô rỗng (Empty Cell)*: Hiển thị ký tự gạch ngang `-` căn giữa thanh lịch khi không có lịch dạy, chuẩn theo giao diện đào tạo đại học.
+    - *Thẻ ca học (Slot Session Card)*: Thiết kế thẻ nhỏ gọn chứa đầy đủ thông tin: Biểu tượng sách & tên lớp học, huy hiệu chuyên cần (Có mặt / Chưa điểm danh), khung giờ dạy chi tiết, phòng học, hình thức Offline/Online, tên giảng viên phụ trách, nhãn chuyên đề bài học và sĩ số học sinh.
+    - *Tương tác nghiệp vụ*: Nút "Điểm danh" / "Xem / Sửa" mở trực tiếp Modal điểm danh chuyên cần tại lớp, và nút xếp nhóm học tập vi mô 3–5 em.
+- **Thanh Điều Hướng Tuần & Chế Độ Xem Linh Hoạt ([`TeacherScheduleView.jsx`](../src/components/dashboard/TeacherScheduleView.jsx))**:
+  - Cụm điều hướng tuần thông minh: Nút `< Tuần trước`, `Tuần này`, `Tuần sau >` và nhãn hiển thị khoảng ngày `Tuần (DD/MM - DD/MM)`.
+  - Banner chuyển nhanh thông minh: Khi tuần hiện tại không có ca dạy, hệ thống tự động phát hiện ca dạy gần nhất trong tương lai và hiển thị nút "Chuyển đến tuần này" với 1-chạm.
+  - Bộ chuyển chế độ xem (View Mode Switcher): Cho phép giáo viên chuyển đổi linh hoạt giữa `Lưới tuần` (Weekly Matrix Grid - mặc định) và `Danh sách` (Agenda Timeline Cards).
+- **Duy Trì Kết Nối API Thời Gian Thực & Lưu Điểm Danh Trực Tiếp**:
+  - Tích hợp 100% dữ liệu thực tế từ backend: `practiceService.getClasses()`, `practiceService.getClassSessions()`, `practiceService.getTeacherSchedule()`, `practiceService.getSessionAttendances()` và `practiceService.submitSessionAttendances()`.
+
 ## [20/11/2026] - Kết Nối CSDL Thời Gian Thực Toàn Diện & Chuẩn Hóa Dữ Liệu Động Cho Phân Hệ Giáo Viên (Teacher Role)
 
 - **Kết Nối CSDL Bản Đồ Ma Trận Lớp Học 2D Thời Gian Thực ([`TeacherDashboardView.jsx`](../src/components/dashboard/TeacherDashboardView.jsx), [`practiceService.js`](../src/services/practiceService.js))**:
