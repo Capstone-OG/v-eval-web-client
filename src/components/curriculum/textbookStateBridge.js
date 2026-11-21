@@ -1267,9 +1267,10 @@ export const buildTheoryFromChunks = (chunks = [], lessonTitle = '', expectedSub
         !it.includes('Nhà xuất bản')
       );
       if (validItems.length > 0 || cleanName) {
-        doc.push(`#### Dạng ${pIdx}: ${cleanName || pName}`);
+        doc.push(`\n#### ${cleanName || pName}`);
         validItems.slice(0, 3).forEach(it => {
-          doc.push(`- ${it}`);
+          const cleanIt = String(it || '').replace(/^#{1,4}\s+/gm, '').replace(/\s*#{2,4}\s+/g, '\n').trim();
+          if (cleanIt) doc.push(`- ${cleanIt}`);
         });
         pIdx++;
       }

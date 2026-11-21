@@ -575,7 +575,7 @@ export default function Sidebar({
                 icon: Zap,
                 iconColor: 'from-yellow-400 to-amber-500',
                 activeGlow: 'shadow-yellow-500/30',
-                active: false,
+                active: activeTab === 'adaptive-practice',
                 onClick: onOpenAdaptiveQuiz
               },
               {
@@ -585,7 +585,7 @@ export default function Sidebar({
                 icon: FileCheck2,
                 iconColor: 'from-cyan-400 to-blue-500',
                 activeGlow: 'shadow-cyan-500/30',
-                active: false,
+                active: activeTab === 'mock-exam',
                 onClick: onOpenMockExam
               },
               {
@@ -598,14 +598,6 @@ export default function Sidebar({
                 active: false,
                 onClick: onOpenAiTutor,
                 badge: 'AI'
-              },
-              {
-                id: 'live',
-                label: 'Lớp học & Live Q&A',
-                sublabel: 'Phụ đạo trực tuyến & Nhóm vi mô',
-                icon: Video,
-                active: activeTab === 'live',
-                onClick: () => (onOpenLiveClass ? onOpenLiveClass() : setActiveTab('live'))
               }
             ]
           },
@@ -673,12 +665,12 @@ export default function Sidebar({
         entries.history,
         { ...entries.analytics, label: 'Báo cáo học tập' }
       ] },
-      { sectionTitle: 'Dịch vụ học viên', items: [entries.live, entries.tuition] }
+      { sectionTitle: 'Dịch vụ học viên', items: [entries.tuition].filter(Boolean) }
     ];
   }
 
   return (
-    <aside className={`${mobile ? 'flex w-full min-h-full p-5' : (isCollapsed ? 'hidden lg:flex w-20 p-3' : 'hidden lg:flex w-72 p-5')} flex-col justify-between border-r border-slate-200/80 bg-gradient-to-b from-slate-50/80 to-white select-none shrink-0 transition-all duration-200`}>
+    <aside className={`${mobile ? 'flex w-full min-h-full p-5' : (isCollapsed ? 'hidden lg:flex lg:sticky lg:top-0 lg:h-screen lg:overflow-y-auto w-20 p-3' : 'hidden lg:flex lg:sticky lg:top-0 lg:h-screen lg:overflow-y-auto w-72 p-5')} flex-col justify-between border-r border-slate-200/80 bg-gradient-to-b from-slate-50/80 to-white select-none shrink-0 transition-all duration-200`}>
       <div className="space-y-6">
         {/* Brand Identity Header - Synchronized with Home Page (PublicHeader.jsx) */}
         <div className="flex items-center px-1">

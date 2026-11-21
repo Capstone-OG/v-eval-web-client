@@ -24,6 +24,8 @@ import {
   Activity
 } from 'lucide-react';
 import MathText from '../common/MathText';
+import FlaggedQuestionsReviewPanel from './FlaggedQuestionsReviewPanel';
+import { getPendingFlagCount } from '../../utils/questionFlagStore';
 import { practiceService } from '../../services/practiceService';
 import { toast } from '../../context/ToastContext';
 
@@ -31,7 +33,19 @@ export default function AiTutorModerationView({ currentUser, onBackToDashboard }
   const [interactions, setInteractions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState(null);
+  const [pendingQuestionFlags, setPendingQuestionFlags] = useState(() => getPendingFlagCount());
+  const [workspaceSection, setWorkspaceSection] = useState(() => (getPendingFlagCount() > 0 ? 'flagged_questions' : 'flagged_questions')); // 'flagged_questions' | 'ai_tutor'
   const [filterMode, setFilterMode] = useState('pending'); // 'pending' | 'all' | 'resolved' | 'reported'
+
+  useEffect(() => {
+    const refreshFlags = () => setPendingQuestionFlags(getPendingFlagCount());
+    window.addEventListener('veval:question-flags-updated', refreshFlags);
+    window.addEventListener('storage', refreshFlags);
+    return () => {
+      window.removeEventListener('veval:question-flags-updated', refreshFlags);
+      window.removeEventListener('storage', refreshFlags);
+    };
+  }, []);
   const [searchQuery, setSearchQuery] = useState('');
 
   // Mentor Action Form States
@@ -405,6 +419,48 @@ export default function AiTutorModerationView({ currentUser, onBackToDashboard }
         </div>
       </div>
 
+      {/* Mode Switcher: Flagged Questions Review vs AI Tutor Moderation */}
+      <div className="flex items-center gap-2 flex-wrap bg-white p-1.5 rounded-2xl border border-slate-200 shadow-2xs">
+        <button
+          type="button"
+          onClick={() => setWorkspaceSection('flagged_questions')}
+          className={`px-4 py-2.5 rounded-xl text-xs font-black flex items-center gap-2 cursor-pointer transition-all ${
+            workspaceSection === 'flagged_questions'
+              ? 'bg-rose-600 text-white shadow-xs'
+              : 'text-slate-600 hover:bg-slate-100'
+          }`}
+        >
+          <Flag className="w-4 h-4" />
+          <span>Xét Duyệt Câu Hỏi Bị Gắn Cờ</span>
+          <span
+            className={`px-2 py-0.5 rounded-full text-[10.5px] font-black ${
+              workspaceSection === 'flagged_questions'
+                ? 'bg-white/20 text-white'
+                : 'bg-rose-100 text-rose-700'
+            }`}
+          >
+            {pendingQuestionFlags} chờ duyệt
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setWorkspaceSection('ai_tutor')}
+          className={`px-4 py-2.5 rounded-xl text-xs font-black flex items-center gap-2 cursor-pointer transition-all ${
+            workspaceSection === 'ai_tutor'
+              ? 'bg-blue-700 text-white shadow-xs'
+              : 'text-slate-600 hover:bg-slate-100'
+          }`}
+        >
+          <Bot className="w-4 h-4" />
+          <span>Kiểm Duyệt Phản Hồi Gia Sư AI ({counts.pending})</span>
+        </button>
+      </div>
+
+      {workspaceSection === 'flagged_questions' ? (
+        <FlaggedQuestionsReviewPanel currentUser={currentUser} />
+      ) : (
+      <>
       {/* 2. MetricsGrid: 4 High-End KPI Cards (Exact Student MetricsGrid Styling) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-5 my-6">
         {/* CARD 1: Pending Reports */}
@@ -1151,6 +1207,8 @@ export default function AiTutorModerationView({ currentUser, onBackToDashboard }
           )}
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 }

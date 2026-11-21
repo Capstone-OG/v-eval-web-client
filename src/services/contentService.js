@@ -27,7 +27,7 @@ export const contentService = {
    * Core Flow 2 - Lấy toàn bộ cây kỹ năng DAG kèm trọng số (12 kỹ năng chuẩn ĐGNL)
    */
   async getSkillsTree() {
-    return (await apiClient.get('/api/content/skills-tree')).data;
+    return (await apiClient.get('/api/content/curriculum')).data;
   },
 
   /**

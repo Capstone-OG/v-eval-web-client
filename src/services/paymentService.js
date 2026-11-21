@@ -21,6 +21,7 @@ export const paymentService = {
    * @returns {Promise<{ paymentId, orderCode, status, paidAt, counterAccountBankName }>}
    */
   async getPaymentStatus(orderCode) {
+    if (!orderCode) return null;
     const response = await apiClient.get(`/api/practice/payments/status/${orderCode}`);
     return response.data;
   },
