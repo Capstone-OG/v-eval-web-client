@@ -2,6 +2,14 @@
 
 ---
 
+## [21/11/2026] - Khắc Phục Giới Hạn Chiều Cao Khung Lý Thuyết PLAR, Khơi Thông Toàn Văn SGK & Chuẩn Hóa Thẻ Gạch Chân `<u>`
+
+- **Khắc Phục Giới Hạn Chiều Cao & Khơi Thông Toàn Văn Lý Thuyết SGK Trong Pha Learn PLAR ([`PlarNodeStudioPanel.jsx`](../src/components/roadmap/PlarNodeStudioPanel.jsx))**:
+  - Tích hợp trực tiếp module tri thức SGK `getDefaultLessonTheory` & `getSavedTextbookData` vào Pha Learn của PLAR. Khi học sinh học bất kỳ chặng nào, hệ thống tự động nhận diện Bài học SGK và hiển thị toàn bộ định lý, công thức KaTeX, phương pháp giải chuẩn GDPT 2018.
+  - Xóa bỏ mọi rào cản chiều cao (`overflow-visible`), hiển thị toàn văn rõ ràng, không bị che khuất hay cắt ngang.
+  - Tối ưu hóa `PassageContextBox`: Bổ sung nút chuyển đổi `Xem toàn văn / Thu gọn` và tăng trần chiều cao lên `max-h-[460px]`, triệt tiêu hoàn toàn hiện tượng đoạn văn đọc hiểu dài bị co cụm hoặc khó đọc.
+  - Nâng cấp nội dung tài liệu chuyên đề Toán 10 (Đường thẳng trong mặt phẳng toạ độ) trong CSDL PostgreSQL `v_eval_content."Materials"` từ 722 ký tự lên 4,270 ký tự toàn văn chuẩn sư phạm GDPT 2018.
+
 ## [21/11/2026] - Tối Ưu Hóa Trải Nghiệm Giáo Viên: Gom Cảnh Báo Sư Phạm Thành Nút Popup, Tái Cấu Trúc Ma Trận Thời Khóa Biểu Tuần 8 Cột & Chuẩn Hóa Đọc Hiểu / KaTeX
 
 - **Chuẩn Hóa Dữ Liệu Động Toàn Diện & Triệt Tiêu Giá Trị Tĩnh Trong Phân Hệ Giáo Viên ([`TeacherScheduleView.jsx`](../src/components/dashboard/TeacherScheduleView.jsx), [`AiTutorModerationView.jsx`](../src/components/dashboard/AiTutorModerationView.jsx), [`ClassMicroGroupsModal.jsx`](../src/components/modals/ClassMicroGroupsModal.jsx), [`TeacherStudentDrillDownModal.jsx`](../src/components/modals/TeacherStudentDrillDownModal.jsx), [`practiceService.js`](../src/services/practiceService.js))**:
