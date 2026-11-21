@@ -3107,3 +3107,15 @@ The Parent Companion Portal was completely redesigned and hardened according to 
     - **Session Cache-Busting**:
       - Upgraded `STORAGE_KEY` to `veval_active_exam_workspace_v3` in `examStateBridge.js`.
     - **Verification**: `node --test src/components/curriculum/examStateBridge.test.js` passed `6/6`, `node --test tests/*.test.js` passed `22/22`, `npm run build` succeeded in 3.52s.
+
+28. **PLAR Learn Phase Theory Height Uncapping, SGK Knowledge Hydration & Pedagogical Knowledge Base Enrichment (`PlarNodeStudioPanel.jsx`, Supabase PostgreSQL `v_eval_content."Materials"`) [21/11/2026]**:
+    - **Problem & Root Cause**:
+      - Students reported that the theory learning framework in the PLAR Learn phase was truncated/cut short, showing only the beginning snippet compared to the full textbook material available in the SGK curriculum view.
+      - Investigation identified two contributing factors:
+        1. In the database (`v_eval_content."Materials"`), milestone materials only contained brief 700-character summaries without full GDPT 2018 definitions, equation variants, relative positions, angles, distances, and exam trap alerts.
+        2. In the frontend component (`PlarNodeStudioPanel.jsx`), `PassageContextBox` applied an inflexible `max-h-72` clamp on long passages, and the Learn phase only displayed direct material items without falling back to textbook knowledge from `getDefaultLessonTheory` or `getSavedTextbookData`.
+    - **Implementation Details**:
+      - **SGK Theory Bridge Hydration**: Integrated `getDefaultLessonTheory` and `getSavedTextbookData` into `PlarNodeStudioPanel.jsx` to dynamically retrieve lesson definitions and formulas when rendering Phase Learn.
+      - **Height Uncapping & Responsive Expand**: Removed all height restrictions from theory content (`overflow-visible`), and enhanced `PassageContextBox` with an interactive `Xem toàn văn / Thu gọn` toggle and expanded default height (`max-h-[460px]`).
+      - **Database Content Enrichment**: Enriched the Math 10 milestone material (`224d7f47-d569-5848-acff-5223f9d2665b`) in Supabase PostgreSQL from 722 characters to 4,270 characters containing comprehensive definitions, equations, theorems, step-by-step methods, and VNU-HCM exam traps.
+    - **Verification**: `npm run build` succeeded in 4.38s, Docker container `v-eval-web-client` rebuilt and deployed cleanly.
