@@ -2,6 +2,22 @@
 
 ---
 
+## [22/11/2026] - Tách PLAR Thành Trang Studio Toàn Màn Hình 4 Tab Chu Trình, Cố Định Sticky Sidebar & Sửa Ánh Xạ Lý Thuyết SGK 9 Môn
+
+- **Tách PLAR Thành Trang Học Chuyên Biệt Toàn Màn Hình ([`ConnectedRoadmapPage.jsx`](../src/components/roadmap/ConnectedRoadmapPage.jsx), [`PlarNodeStudioPanel.jsx`](../src/components/roadmap/PlarNodeStudioPanel.jsx))**:
+  - Bỏ bố cục chia cột chật hẹp; Bản Đồ Kiến Thức hiển thị toàn chiều rộng dạng lưới 3 cột (`grid-cols-1 md:grid-cols-2 xl:grid-cols-3`).
+  - Khi chọn chặng học, mở **P-L-A-R Studio toàn màn hình** có nút `← Quay lại Bản Đồ Kiến Thức` và thanh **4 Tab Chu Trình ngang** (`1. Preview`, `2. Learn`, `3. Apply`, `4. Reflect`) giống phong cách trang Parse Sách / Textbook Studio, cho phép chuyển qua lại giữa các tab đã mở khóa.
+- **Sửa Lỗi Nạp Lý Thuyết SGK 9 Môn ([`PlarNodeStudioPanel.jsx`](../src/components/roadmap/PlarNodeStudioPanel.jsx))**:
+  - Thêm `resolveSubjectCode` chuyển chuẩn `subjectName` sang `MATH`/`PHYS`/`CHEM`/`BIO`/`LIT`/`ENG`/`HIST`/`GEO`/`CIVIC` thay vì truyền `domainCode` (`DOM_NAT_SCI`), nạp đủ lý thuyết từ `getDefaultLessonTheory`, `getSavedTextbookData` và `GDPT_PRESETS`.
+- **Cố Định Thanh Sidebar Desktop & Khôi Phục Duy Nhất 1 Nút Thu Gọn Sidebar Toàn Hệ Thống ([`Sidebar.jsx`](../src/components/layout/Sidebar.jsx), [`AccountNavbar.jsx`](../src/components/layout/AccountNavbar.jsx))**:
+  - Thêm `lg:sticky lg:top-0 lg:h-screen lg:overflow-y-auto` để Sidebar luôn bám cố định khi cuộn trang.
+  - Bổ sung duy nhất 1 nút `PanelLeftClose` / `PanelLeftOpen` trên `AccountNavbar.jsx` để mọi trang trong hệ thống đều có 1 nút đóng/mở thanh bên nhất quán.
+- **Tái Thiết Kế Giao Diện Sách Giáo Khoa Chuẩn ([`TextbookStandardView.jsx`](../src/components/curriculum/TextbookStandardView.jsx), [`MathText.jsx`](../src/components/common/MathText.jsx))**:
+  - Sửa vỡ cột `headingStyles[3]` từ `flex` sang `block`; thiết kế lại Studio 3 Tab + `CleanTextbookRenderer`.
+  - Chuyển toàn bộ nhãn `Bloom L1`–`L6` sang tên Tiếng Việt (`Nhận biết`, `Thông hiểu`, `Vận dụng cơ bản`, `Vận dụng cao`, `Đánh giá`, `Sáng tạo`); sửa trùng dấu `✓ ✓ Đã duyệt`; bỏ thanh `Dạng bài:` trùng lặp bên phải.
+  - Gắn chặt bộ lọc `Môn học` + `Khối lớp` ánh xạ trực tiếp tới đúng cuốn SGK trong CSDL và rút gọn dropdown thành `Phiên bản SGK` theo đúng Môn/Lớp; mở khóa 2 nút `Sang Trang Nạp SGK` và `Mở Studio Biên Soạn`.
+- **Kiểm Thử**: `npm run build` thành công `1.42s` (`3081 modules`, `0 Error`).
+
 ## [21/11/2026] - Khắc Phục Giới Hạn Chiều Cao Khung Lý Thuyết PLAR, Khơi Thông Toàn Văn SGK & Chuẩn Hóa Thẻ Gạch Chân `<u>`
 
 - **Khắc Phục Giới Hạn Chiều Cao & Khơi Thông Toàn Văn Lý Thuyết SGK Trong Pha Learn PLAR ([`PlarNodeStudioPanel.jsx`](../src/components/roadmap/PlarNodeStudioPanel.jsx))**:

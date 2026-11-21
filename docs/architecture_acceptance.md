@@ -3229,3 +3229,14 @@ The Parent Companion Portal was completely redesigned and hardened according to 
       - **Height Uncapping & Responsive Expand**: Removed all height restrictions from theory content (`overflow-visible`), and enhanced `PassageContextBox` with an interactive `Xem toàn văn / Thu gọn` toggle and expanded default height (`max-h-[460px]`).
       - **Database Content Enrichment**: Enriched the Math 10 milestone material (`224d7f47-d569-5848-acff-5223f9d2665b`) in Supabase PostgreSQL from 722 characters to 4,270 characters containing comprehensive definitions, equations, theorems, step-by-step methods, and VNU-HCM exam traps.
     - **Verification**: `npm run build` succeeded in 4.38s, Docker container `v-eval-web-client` rebuilt and deployed cleanly.
+
+
+---
+
+### [22/11/2026] - Dedicated Full-Page PLAR Studio with 4 Phase Tabs, Sticky Sidebar & 9-Subject SGK Theory Hydration
+- **Target Files**: `ConnectedRoadmapPage.jsx`, `PlarNodeStudioPanel.jsx`, `Sidebar.jsx`.
+- **Key Deliverables**:
+  1. Replaced the cramped split-screen roadmap layout with a full-width 3-column Knowledge Map and a dedicated full-width **PLAR Studio** view featuring a horizontal 4-tab phase bar (`Preview`, `Learn`, `Apply`, `Reflect`) and back navigation.
+  2. Added `resolveSubjectCode` to correctly map Vietnamese subject names to `GDPT_PRESETS` / `getDefaultLessonTheory` codes across all 9 subjects.
+  3. Applied `lg:sticky lg:top-0 lg:h-screen lg:overflow-y-auto` to `Sidebar.jsx` so navigation stays anchored while scrolling.
+  4. **Verification**: `npm run build` succeeded in `1.81s` (`3081 modules`, `0 Error`).

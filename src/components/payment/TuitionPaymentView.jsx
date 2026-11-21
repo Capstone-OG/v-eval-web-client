@@ -235,8 +235,7 @@ export default function TuitionPaymentView({
 
     const handleTuitionPaid = (event) => {
       if (!studentId || event.detail?.studentId === studentId) {
-        setIsPaid(isTuitionPaid(studentId));
-        loadTuitionAndHistory();
+        setIsPaid(Boolean(event.detail?.paid ?? isTuitionPaid(studentId)));
       }
     };
     window.addEventListener('veval:tuition-paid', handleTuitionPaid);

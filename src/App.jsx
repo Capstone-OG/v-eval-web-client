@@ -42,7 +42,6 @@ import AiTutorModerationView from './components/dashboard/AiTutorModerationView'
 import LearningAnalyticsView from './components/dashboard/LearningAnalyticsView';
 import StudentScheduleView from './components/dashboard/StudentScheduleView';
 import TeacherScheduleView from './components/dashboard/TeacherScheduleView';
-import LiveClassQnAView from './components/dashboard/LiveClassQnAView';
 import PublicLandingPage from './components/landing/PublicLandingPage';
 import WebLoginPage from './components/auth/WebLoginPage';
 import AccountProvisioningView from './components/admin/AccountProvisioningView';
@@ -58,6 +57,7 @@ import ExamBankView from './components/curriculum/ExamBankView';
 import ExamIngestView from './components/curriculum/ExamIngestView';
 import ExamStudioView from './components/curriculum/ExamStudioView';
 import StudentRoadmapWorkspace from './components/roadmap/StudentRoadmapWorkspace';
+import StudentMockExamPage from './components/mock/StudentMockExamPage';
 import TuitionPaymentView from './components/payment/TuitionPaymentView';
 import {
   AdaptiveQuizModal,
@@ -88,7 +88,6 @@ const ROLE_PORTAL_DEFINITIONS = {
       { id: 'roadmap', label: 'Cây tri thức & Lộ trình', icon: Network },
       { id: 'schedule', label: 'Thời khóa biểu & Điểm danh', icon: Calendar },
       { id: 'analytics', label: 'Báo cáo & Dự báo', icon: BarChart3 },
-      { id: 'live', label: 'Lớp học & Live Q&A', icon: Users },
       { id: 'tuition', label: 'Học phí & Gói học', icon: CreditCard }
     ]
   },
@@ -330,11 +329,11 @@ export default function App() {
   }, [role, currentUser, loadRolePortalBackendMetrics]);
 
   const handleOpenAdaptiveQuiz = () => {
-    setActiveTab('roadmap');
+    setActiveTab('adaptive-practice');
   };
 
   const handleOpenMockExam = () => {
-    setActiveTab('diagnostic');
+    setActiveTab('mock-exam');
   };
 
   const handleOpenAiTutorWithQuestion = (questionContext) => {
@@ -536,6 +535,26 @@ export default function App() {
         );
       }
     }
+    if (activeTab === 'adaptive-practice') {
+      return (
+        <AdaptiveQuizModal
+          isOpen={true}
+          isEmbedded={true}
+          onClose={() => setActiveTab('dashboard')}
+          onOpenAiTutorWithContext={handleOpenAiTutorWithQuestion}
+        />
+      );
+    }
+
+    if (activeTab === 'mock-exam') {
+      return (
+        <StudentMockExamPage
+          onOpenAiTutorWithContext={handleOpenAiTutorWithQuestion}
+          onNavigateHistory={() => setActiveTab('history')}
+        />
+      );
+    }
+
     if (activeTab === 'diagnostic') {
       return (
         <DiagnosticAssessmentPage
@@ -638,22 +657,6 @@ export default function App() {
       );
     }
 
-    if (activeTab === 'live') {
-      return (
-        <LiveClassQnAView
-          currentUser={currentUser}
-          studentId={currentUser?.userId || currentUser?.id || currentUser?.studentId}
-          onOpenPracticeModal={handleOpenAdaptiveQuiz}
-          onOpenAiTutor={() => {
-            setAiTutorInitialContext(null);
-            setActiveModal('ai');
-          }}
-          onNavigateSchedule={() => setActiveTab('schedule')}
-          onNavigateRoadmap={() => setActiveTab('roadmap')}
-        />
-      );
-    }
-
     if (activeTab === 'tuition') {
       return (
         <TuitionPaymentView
@@ -666,7 +669,6 @@ export default function App() {
           onNavigateRoadmap={role === 'parent' ? undefined : () => setActiveTab('roadmap')}
           onNavigateAdaptive={role === 'parent' ? undefined : () => setActiveTab('roadmap')}
           onNavigateSchedule={role === 'parent' ? undefined : () => setActiveTab('schedule')}
-          onNavigateLive={role === 'parent' ? undefined : () => setActiveTab('live')}
           onNavigateAiTutor={role === 'parent' ? undefined : () => {
             setAiTutorInitialContext(null);
             setActiveModal('ai');

@@ -278,8 +278,11 @@ export function normalizeMathString(text) {
   str = str.replace(/([a-zA-Z])_\{thựctế\}/gi, '$1_{\\text{thực tế}}');
   str = str.replace(/([a-zA-Z])_\{lýthuyết\}/gi, '$1_{\\text{lý thuyết}}');
   str = str.replace(/([a-zA-Z])_\{líthuyết\}/gi, '$1_{\\text{lí thuyết}}');
-  // Bọc an toàn mọi cụm từ tiếng Việt trong _{...} bằng \text{...}
-  str = str.replace(/([a-zA-Z])_\{(?!\s*\\text\{)([a-zA-Zàáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ\s()]{2,})\}/g, '$1_{\\text{$2}}');
+  // Bọc an toàn mọi cụm từ tiếng Việt trong _{...} bằng \text{...} (kể cả có dấu cách LaTeX '\ ')
+  str = str.replace(
+    /([a-zA-Z])_\{(?!\s*\\text\{)([a-zA-Zàáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ\s\\()]{2,})\}/g,
+    (m, v, sub) => `${v}_{\\text{${sub.replace(/\\\s+/g, ' ').trim()}}}`
+  );
 
   // Khắc phục khoảng trắng sai vị trí sau dấu gạch dưới chỉ số e.g. (OH)_ 3 -> (OH)_3, C_ 2 -> C_2
   str = str.replace(/_\s+(\d+|[a-zA-Z]|\{[^}]+\})/g, '_$1');
@@ -378,7 +381,7 @@ export function normalizeMathString(text) {
   // n = \frac{0,3}{0,1} = 3
   const opPattern = '(?:[-+\\=><]|\\\\times|\\\\cdot|\\\\pm|\\\\longrightarrow|\\\\rightarrow|\\\\implies|\\\\Rightarrow|\\\\ge|\\\\le|\\\\approx|\\\\equiv|\\\\rightleftharpoons|\\\\xrightarrow(?:\\s*\\{[^{}]*\\})*)';
   const subPattern = '(?:_\\{(?:[^{}]*|\\{[^{}]*\\})*\\}|_[a-zA-Z0-9]+)?';
-  const unitPattern = '(?:\\s*\\\\*text\\s*\\{\\s*(?:mol|gam|g|kg|lít|lit|ml)\\s*\\}|\\s*\\\\*text\\s*(?:mol|gam|g|kg|lít|lit|ml)\\b|\\s*(?:mol|gam|g|kg|lít|lit|ml))';
+  const unitPattern = '(?:\\s*\\\\*text\\s*\\{[^{}]{1,25}\\}|\\s*\\\\*text\\s*(?:mol|gam|g|kg|lít|lit|ml)\\b|\\s*(?:mol|gam|g|kg|lít|lit|ml))';
   const expPattern = '(?:\\^\\s*(?:\\{[^{}]*\\}|[0-9a-zA-Z]))?';
   const coreAtom = `(?:\\d*\\s*[a-zA-Z]${subPattern}${expPattern}|\\\\frac\\s*\\{[^{}]*\\}\\s*\\{[^{}]*\\}|[0-9]+(?:[\\.,][0-9]+)?${expPattern}${unitPattern}?)`;
   const atomPattern = `(?:\\(\\s*)*${coreAtom}(?:\\s*\\))*`;
@@ -514,6 +517,25 @@ export function normalizeMathString(text) {
   // Fix orphaned trailing :** (e.g. "Bài toán mẫu:**" or "Ví dụ:**" where leading ** got stripped)
   str = str.replace(/(^|[\n•\-]\s*)(?!\*)([A-ZÀ-Ỹa-zà-ỹ0-9\s&]{2,30}):\*\*/g, '$1**$2:**');
 
+  // Giải phóng các chuỗi sơ đồ văn xuôi tiếng Việt dài bị bọc trong $...$ hoặc $$...$$ (vd: \text{Biện pháp tu từ} + \text{Dẫn chứng} \longrightarrow ...)
+  // để trình duyệt tự xuống dòng thay vì tạo 1 dòng KaTeX dài tràn khung
+  str = str.replace(/\$\$?([^\$\r\n]+?)\$\$?/g, (match, inner) => {
+    const textMatches = inner.match(/\\text\{([^{}]+)\}/g) || [];
+    if (textMatches.length >= 2) {
+      const viChars = textMatches.join(' ').replace(/\\text\{|\}/g, '');
+      if (viChars.length >= 35 && vietnameseLettersRegex.test(viChars)) {
+        return inner
+          .replace(/\\text\{([^{}]*)\}/g, '$1')
+          .replace(/\\(?:longrightarrow|rightarrow|implies|Rightarrow)/g, ' → ')
+          .replace(/\\(?:longleftarrow|leftarrow)/g, ' ← ')
+          .replace(/\\(?:leftrightarrow|Leftrightarrow|iff)/g, ' ↔ ')
+          .replace(/\s+/g, ' ')
+          .trim();
+      }
+    }
+    return match;
+  });
+
   // 2. Tokenize by existing explicit math delimiters AND special tags ([VARIATION_TABLE], [MATH_GRAPH], etc.)
   // Inline math is strictly matched without newline ($[^$\r\n]+?$) so math mode NEVER spans multiple lines!
   const specialBlockAndMathDelimiterRegex = /(\[MATH_GRAPH_3D\][\s\S]*?\[\/MATH_GRAPH_3D\]|\[MATH_GRAPH\][\s\S]*?\[\/MATH_GRAPH\]|\[MATH_GEOMETRY_2D\][\s\S]*?\[\/MATH_GEOMETRY_2D\]|\[VARIATION_TABLE\][\s\S]*?\[\/VARIATION_TABLE\]|\[GRAPH:[\s\S]*?\]|\$\$[\s\S]*?\$\$|\$[^\$\r\n]+?\$|\\\[[\s\S]*?\\\]|\\\([\s\S]*?\\\))/gi;
@@ -521,7 +543,9 @@ export function normalizeMathString(text) {
 
   const processed = parts.map((part) => {
     if (!part) return '';
-    // If it's already an explicit math delimiter block or a special tag, preserve 100% as-is
+    let textChunk = part;
+
+    // If it's already an explicit math delimiter block or a special tag, preserve unless it swallowed Vietnamese prose
     const trimmedPart = part.trim().toUpperCase();
     if (
       (part.startsWith('$$') && part.endsWith('$$')) ||
@@ -534,29 +558,30 @@ export function normalizeMathString(text) {
       (trimmedPart.startsWith('[MATH_GEOMETRY_2D]') && trimmedPart.endsWith('[/MATH_GEOMETRY_2D]')) ||
       (trimmedPart.startsWith('[GRAPH:') && trimmedPart.endsWith(']'))
     ) {
-      // Phục hồi an toàn nếu văn bản tiếng Việt bị nuốt nhầm vào trong $...$ hoặc $$...$$
+      // Phục hồi an toàn nếu văn bản tiếng Việt bị nuốt nhầm vào trong $...$ hoặc $$...$$:
+      // KHÔNG return sớm mà cho đi tiếp qua bước auto-wrap công thức con bên dưới!
       if (part.startsWith('$$') && part.endsWith('$$')) {
         const inner = part.slice(2, -2).trim();
         const innerOut = inner.replace(/\\text\{[^{}]*\}/g, '').replace(/[_^]\{[^{}]*\}/g, '');
         if (vietnameseWordsRegex.test(innerOut) || (vietnameseLettersRegex.test(innerOut) && !inner.includes('\\text{'))) {
-          return inner;
+          textChunk = inner;
+        } else {
+          return '$$' + inner.replace(/(?<!\\)\$/g, '') + '$$';
         }
-        return '$$' + inner.replace(/(?<!\\)\$/g, '') + '$$';
-      }
-      if (part.startsWith('$') && part.endsWith('$') && !part.startsWith('$$')) {
+      } else if (part.startsWith('$') && part.endsWith('$') && !part.startsWith('$$')) {
         const inner = part.slice(1, -1);
         const innerOut = inner.replace(/\\text\{[^{}]*\}/g, '').replace(/[_^]\{[^{}]*\}/g, '');
         if (vietnameseWordsRegex.test(innerOut) ||
             /\b[a-zA-Zàáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]{3,}\s+[a-zA-Zàáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]{2,}\b/i.test(innerOut) ||
             (vietnameseLettersRegex.test(innerOut) && !inner.includes('\\text{'))) {
-          return inner;
+          textChunk = inner;
+        } else {
+          return '$' + inner.replace(/(?<!\\)\$/g, '') + '$';
         }
-        return '$' + inner.replace(/(?<!\\)\$/g, '') + '$';
+      } else {
+        return part;
       }
-      return part;
     }
-
-    let textChunk = part;
 
     function wrapUntouchedMath(s, regex, replacer) {
       const chunks = s.split(/(\$[^\$\r\n]+?\$)/);
@@ -615,6 +640,10 @@ export function normalizeMathString(text) {
 
     // Khắc phục triệt để lỗi lồng dấu $ bên trong ngoặc đơn e.g. $($C_{17}H_{35}COO$)_3C_3H_5$
     textChunk = textChunk.replace(/\$\(\$([^\$]+)\$([^\$]*)\$/g, '$($1)$2$');
+
+    // Làm sạch lệnh \text{...} và dấu $ lẻ còn sót ngoài vùng công thức $...$
+    textChunk = wrapUntouchedMath(textChunk, /\\text\{([^{}]*)\}/g, '$1');
+    textChunk = wrapUntouchedMath(textChunk, /(?<!\\)\$/g, '');
 
     return textChunk;
   });
@@ -1154,10 +1183,10 @@ function renderStructuredContent(raw, onEditMathGraph = null) {
             const level = headingMatch[1].length;
             const headingText = headingMatch[2].trim();
             const headingStyles = {
-              1: 'text-base font-black text-slate-900 border-b border-slate-200 pb-1.5 mt-3 mb-2',
-              2: 'text-sm font-extrabold text-slate-900 border-b border-slate-100 pb-1 mt-2.5 mb-1.5',
-              3: 'text-xs font-bold text-slate-800 mt-2 mb-1 flex items-center gap-1.5',
-              4: 'text-xs font-semibold text-slate-700 mt-1.5 mb-1'
+              1: 'text-base font-black text-slate-900 border-b border-slate-200 pb-1.5 mt-3 mb-2 block',
+              2: 'text-sm font-extrabold text-slate-900 border-b border-slate-100 pb-1 mt-2.5 mb-1.5 block',
+              3: 'text-xs sm:text-sm font-extrabold text-slate-900 mt-3 mb-1.5 block leading-relaxed',
+              4: 'text-xs font-bold text-slate-800 mt-2 mb-1 block leading-relaxed'
             };
             elements.push(
               <div key={lineKey} className={headingStyles[level] || headingStyles[3]}>
