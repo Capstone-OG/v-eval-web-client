@@ -75,42 +75,30 @@ export default function ClassMicroGroupsModal({ isOpen, onClose, classData }) {
   const handleAssignWorksheet = async (group) => {
     try {
       setAssigningGroupId(group.groupId);
-      const wsId = 'WS-MC-' + Math.floor(1000 + Math.random() * 9000);
-      const wsTitle = group.recommendedWorksheetTitle || `Phiếu bài tập củng cố: ${group.focusArea}`;
-
-      await practiceService.assignGroupWorksheet(classData.id, group.groupId, wsId, wsTitle);
+      // Backend tự động đóng gói bộ 5 câu hỏi thích ứng theo CommonWeakSkillIds của nhóm khi worksheetId để trống
+      const res = await practiceService.assignGroupWorksheet(classData.id, group.groupId, null, group.recommendedWorksheetTitle || null);
+      const resData = res?.value || res?.data || res;
+      const assignedId = resData?.assignedWorksheetId || `WS-${String(group.groupId).slice(0, 8)}`;
+      const assignedTitle = resData?.assignedWorksheetTitle || group.recommendedWorksheetTitle || `Phiếu bài tập củng cố: ${group.focusArea || 'Chuyên đề trọng tâm'}`;
 
       // Cập nhật state nhóm
       setGroups(prev => prev.map(g => {
         if (g.groupId === group.groupId) {
           return {
             ...g,
-            assignedWorksheetId: wsId,
-            assignedWorksheetTitle: wsTitle,
+            assignedWorksheetId: assignedId,
+            assignedWorksheetTitle: assignedTitle,
             worksheetAssignedAt: new Date().toISOString()
           };
         }
         return g;
       }));
 
-      setSuccessNotice(`Đã phân phối thành công "${wsTitle}" trực tiếp tới ${group.groupName}!`);
+      setSuccessNotice(`Đã phân phối thành công "${assignedTitle}" trực tiếp tới ${group.groupName}!`);
       setTimeout(() => setSuccessNotice(''), 5000);
     } catch (err) {
-      console.warn('Assign worksheet fallback:', err.message);
-      // Cập nhật UI ngay cho trải nghiệm mượt mà
-      setGroups(prev => prev.map(g => {
-        if (g.groupId === group.groupId) {
-          return {
-            ...g,
-            assignedWorksheetId: 'WS-OFFLINE-01',
-            assignedWorksheetTitle: group.recommendedWorksheetTitle,
-            worksheetAssignedAt: new Date().toISOString()
-          };
-        }
-        return g;
-      }));
-      setSuccessNotice(`Đã phát "${group.recommendedWorksheetTitle}" cho ${group.groupName}!`);
-      setTimeout(() => setSuccessNotice(''), 5000);
+      console.warn('Assign worksheet error:', err.message);
+      toast.error('Không thể phát phiếu bài tập lúc này: ' + (err?.message || 'Lỗi kết nối'));
     } finally {
       setAssigningGroupId(null);
     }
@@ -195,8 +183,9 @@ export default function ClassMicroGroupsModal({ isOpen, onClose, classData }) {
             </button>
 
             <button
-              onClick={() => toast.info('Đã xuất file sơ đồ phân bàn PDF cho Giảng viên in trực tiếp tại văn phòng cơ sở!')}
+              onClick={() => window.print()}
               className="flex items-center gap-1.5 px-3 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 font-bold text-xs rounded-xl transition-all cursor-pointer shadow-2xs"
+              title="In trực tiếp hoặc Lưu dưới dạng PDF qua trình duyệt"
             >
               <Printer className="w-4 h-4 text-slate-500" />
               <span className="hidden sm:inline">In Sơ Đồ Bàn (PDF)</span>

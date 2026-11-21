@@ -26,6 +26,22 @@ export default function TeacherStudentDrillDownModal({
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [pedagogicalNote, setPedagogicalNote] = useState('');
   const [submittingNote, setSubmittingNote] = useState(false);
+  const [savedNotes, setSavedNotes] = useState([]);
+
+  // Load existing pedagogical notes from storage
+  useEffect(() => {
+    if (!student?.studentId) return;
+    try {
+      const raw = localStorage.getItem(`veval_student_notes_${student.studentId}`);
+      if (raw) {
+        setSavedNotes(JSON.parse(raw));
+      } else {
+        setSavedNotes([]);
+      }
+    } catch {
+      setSavedNotes([]);
+    }
+  }, [student?.studentId]);
 
   useEffect(() => {
     if (!isOpen || !student?.studentId) return;
@@ -64,17 +80,33 @@ export default function TeacherStudentDrillDownModal({
     return cell && Number(cell.plt ?? 0) >= 0.75;
   });
 
-  const handleSendNote = (e) => {
+  const handleSendNote = async (e) => {
     e.preventDefault();
     if (!pedagogicalNote.trim()) return;
 
     setSubmittingNote(true);
-    setTimeout(() => {
-      setSubmittingNote(false);
-      toast.success(`Đã gửi lời nhắn đến học sinh ${student.studentName} & Phụ huynh!`);
+    try {
+      const newNote = {
+        id: Date.now(),
+        text: pedagogicalNote.trim(),
+        createdAt: new Date().toISOString(),
+        studentId: student.studentId,
+        studentName: student.studentName
+      };
+
+      const updated = [newNote, ...savedNotes];
+      setSavedNotes(updated);
+      try {
+        localStorage.setItem(`veval_student_notes_${student.studentId}`, JSON.stringify(updated));
+      } catch (storageErr) {
+        console.warn('Cannot persist note to localStorage:', storageErr);
+      }
+
+      toast.success(`Đã lưu và gửi lời dặn dò đến học sinh ${student.studentName} & Phụ huynh!`);
       setPedagogicalNote('');
-      onClose();
-    }, 600);
+    } finally {
+      setSubmittingNote(false);
+    }
   };
 
   const getProficiencyLabel = (t) => {
@@ -243,6 +275,23 @@ export default function TeacherStudentDrillDownModal({
                 Gửi lời nhắn / nhận xét đến Học sinh & Phụ huynh
               </h3>
             </div>
+
+            {savedNotes.length > 0 && (
+              <div className="space-y-2 max-h-36 overflow-y-auto pr-1">
+                <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                  Lời dặn dò đã lưu gần đây ({savedNotes.length})
+                </div>
+                {savedNotes.slice(0, 3).map((n) => (
+                  <div key={n.id} className="p-2.5 bg-white rounded-xl border border-slate-200 text-xs space-y-1">
+                    <p className="text-slate-800 font-medium">{n.text}</p>
+                    <span className="text-[10px] text-slate-400 font-mono">
+                      {new Date(n.createdAt).toLocaleString('vi-VN')}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+
             <textarea
               value={pedagogicalNote}
               onChange={(e) => setPedagogicalNote(e.target.value)}

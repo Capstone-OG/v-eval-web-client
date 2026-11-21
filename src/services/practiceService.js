@@ -2184,20 +2184,10 @@ export const practiceService = {
   },
 
   async forceAggregateClassHeatmap(classId) {
-    const resolvedClassId = ensureGuid(classId, FLOW5_DEFAULTS.CLASS_ID);
-    try {
-      const data = (await apiClient.post(`/api/practice/classes/${resolvedClassId}/heatmap/force-aggregate`, {})).data;
-      return { ...data, _source: 'backend' };
-    } catch (err) {
-      console.warn('[Core Flow 5] forceAggregateClassHeatmap fallback activated:', err?.message);
-      return {
-        classId: resolvedClassId,
-        aggregatedAt: new Date().toISOString(),
-        totalSkillsCalculated: 5,
-        message: 'Đã tái tổng hợp ma trận nhiệt lớp học và cập nhật ngưỡng cảnh báo sư phạm thành công.',
-        _source: 'seed_fallback'
-      };
-    }
+    if (!classId) throw new Error('Mã lớp học không hợp lệ.');
+    const resolvedClassId = classId;
+    const res = await apiClient.post(`/api/practice/classes/${resolvedClassId}/heatmap/force-aggregate`, {});
+    return res.data?.value || res.data?.data || res.data || { _source: 'backend' };
   },
 
   async getParentDashboard(parentId) {

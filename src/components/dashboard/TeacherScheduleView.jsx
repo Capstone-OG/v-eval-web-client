@@ -342,7 +342,7 @@ export default function TeacherScheduleView({ currentUser }) {
         setAttendanceRecords(
           records.map((r) => ({
             studentId: r.studentId,
-            studentName: r.studentName || nameMap.get(r.studentId) || `Học sinh #${String(r.studentId).slice(0, 6).toUpperCase()}`,
+            studentName: r.studentName || nameMap.get(r.studentId) || (r.studentId ? `Học sinh ${String(r.studentId).slice(0, 6)}` : 'Học sinh'),
             status: r.status || 'PRESENT',
             note: r.note || ''
           }))
@@ -794,10 +794,14 @@ export default function TeacherScheduleView({ currentUser }) {
                                       </span>
                                       <span className="flex items-center gap-1 font-semibold text-slate-600">
                                         <MapPin className="w-3 h-3 text-slate-500" />
-                                        <span>{s.room || 'P.301'}</span>
+                                        <span>{s.room || (s.deliveryMode === 'ONLINE' ? 'Trực tuyến' : 'Chưa xếp phòng')}</span>
                                       </span>
-                                      <span className="px-1.5 py-0.2 rounded bg-slate-100 text-[10px] font-bold text-slate-600">
-                                        Offline
+                                      <span className={`px-1.5 py-0.2 rounded text-[10px] font-bold ${
+                                        s.deliveryMode === 'ONLINE' || (!s.room && s.onlineMeetingUrl)
+                                          ? 'bg-purple-100 text-purple-700'
+                                          : 'bg-slate-100 text-slate-600'
+                                      }`}>
+                                        {s.deliveryMode === 'ONLINE' || (!s.room && s.onlineMeetingUrl) ? 'Online' : 'Offline'}
                                       </span>
                                     </div>
 
@@ -805,7 +809,7 @@ export default function TeacherScheduleView({ currentUser }) {
                                     <div className="flex items-center gap-1 text-[11px] text-slate-600">
                                       <UserCheck className="w-3 h-3 text-slate-500 shrink-0" />
                                       <span className="font-semibold truncate">
-                                        {s.primaryTeacherName || currentUser?.fullName || 'Teacher Khôi'}
+                                        {s.primaryTeacherName || currentUser?.fullName || currentUser?.name || 'Giảng viên phụ trách'}
                                       </span>
                                     </div>
 
@@ -903,7 +907,7 @@ export default function TeacherScheduleView({ currentUser }) {
 
                             <span className="inline-flex items-center gap-1 text-xs font-extrabold text-slate-700 bg-slate-100 px-2.5 py-1 rounded-xl">
                               <MapPin className="w-3.5 h-3.5 text-slate-500" />
-                              <span>{s.room || 'Phòng học'}</span>
+                              <span>{s.room || (s.deliveryMode === 'ONLINE' ? 'Trực tuyến' : 'Chưa xếp phòng')}</span>
                             </span>
                           </div>
 

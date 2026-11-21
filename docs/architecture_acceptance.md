@@ -3151,3 +3151,20 @@ The Parent Companion Portal was completely redesigned and hardened according to 
       - Discarded duplicate `PanelLeftClose`/`PanelLeftOpen` buttons rendered adjacent to one another along the border dividing the brand header and navbar.
       - Preserved the mobile responsive navigation trigger (`Menu`) for compact screens while establishing a clean, distraction-free desktop layout header.
     - **Verification**: `npm run build` (Vite v8.3.0) compiled cleanly in 1.32s with 3079 modules transformed and zero errors.
+
+28. **Comprehensive Dynamic Data Standardization & Elimination of Static Fallbacks Across Teacher Operations (`TeacherScheduleView.jsx`, `AiTutorModerationView.jsx`, `ClassMicroGroupsModal.jsx`, `TeacherStudentDrillDownModal.jsx`, `practiceService.js`)**:
+    - **Dynamic Session Resolution (`TeacherScheduleView.jsx`)**:
+      - Purged static instructor fallback strings (`'Teacher Khôi'`) in favor of dynamic identity hierarchy: `s.primaryTeacherName || currentUser?.fullName || currentUser?.name || 'Giảng viên phụ trách'`.
+      - Replaced hardcoded `'Offline'` pills with context-aware delivery mode indicators (`Online` vs `Offline`) resolving rooms and virtual URLs.
+      - Standardized fallback room presentation to display `'Trực tuyến'` or `'Chưa xếp phòng'` instead of arbitrary room identifiers (`'P.301'`).
+    - **Telemetry & Grounding Normalization (`AiTutorModerationView.jsx`)**:
+      - Replaced static telemetry labels (`97.6%`, `142 Exemplars • 68 Traps`) with real-time computations derived directly from current interaction records (`socraticReliability`, `exemplarsCount`, `trapsCount`).
+      - Stripped predetermined boilerplate steps from authoring inputs to foster genuine educator evaluation.
+    - **Micro-Group Auto-Packaging & Native Printing (`ClassMicroGroupsModal.jsx`)**:
+      - Omitted client-side synthetic identifiers (`Math.random()`), enabling backend `AssignGroupWorksheetCommandHandler` to automatically package Bloom L1–L3 questions targeting groups' common weak skills.
+      - Integrated native `window.print()` functionality for instant classroom seating chart distribution.
+    - **Persistent Pedagogical Counseling Record (`TeacherStudentDrillDownModal.jsx`)**:
+      - Replaced mock `setTimeout` simulation with a resilient local history cache per student, displaying timestamped remarks in chronological order.
+    - **Strict Exception Handling (`practiceService.js`)**:
+      - Eliminated synthetic fallback objects in `forceAggregateClassHeatmap`, ensuring backend anomalies surface genuine error notifications.
+    - **Verification**: `npm run build` (Vite v8.3.0) compiled cleanly in 1.49s with 3079 modules transformed and zero errors.

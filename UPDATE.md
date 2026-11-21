@@ -1,6 +1,12 @@
 # UPDATE - V-Eval-Web_Client
 
 ## [21/11/2026]
+- **Chuẩn Hóa Dữ Liệu Động Toàn Diện & Triệt Tiêu Giá Trị Tĩnh Cho Phân Hệ Giáo Viên (`TeacherScheduleView.jsx`, `AiTutorModerationView.jsx`, `ClassMicroGroupsModal.jsx`, `TeacherStudentDrillDownModal.jsx`, `practiceService.js`)**:
+  - *Thời khóa biểu & Điểm danh (`TeacherScheduleView.jsx`)*: Xóa bỏ hoàn toàn giá trị mặc định tĩnh `'Teacher Khôi'`, thay bằng logic liên kết danh tính động `primaryTeacherName || fullName || name || 'Giảng viên phụ trách'`; thay thế nhãn `'Offline'` cố định bằng cơ chế nhận diện hình thức linh hoạt (`Online` / `Offline`) theo phòng học và URL phòng họp; thay thế phòng `'P.301'` mặc định bằng hiển thị đúng hiện trạng (`Trực tuyến` hoặc `Chưa xếp phòng`); chuẩn hóa nhãn định danh học sinh trong modal điểm danh.
+  - *Kiểm duyệt gia sư AI (`AiTutorModerationView.jsx`)*: Chuyển đổi toàn bộ các chỉ số của thẻ "GraphRAG Monitor" (`97.6%`, `142 Exemplars • 68 Traps`) sang tính toán tự động từ tập dữ liệu đàm thoại thực tế (`socraticReliability`, `exemplarsCount`, `trapsCount`); làm sạch các đoạn văn bản mẫu gán sẵn để giáo viên chủ động nhập nhận xét sư phạm nguyên bản; chuẩn hóa tên lớp và học sinh.
+  - *Sơ đồ nhóm bàn học vi mô (`ClassMicroGroupsModal.jsx`)*: Loại bỏ hàm sinh mã ngẫu nhiên `Math.random()` và chuỗi dự phòng `WS-OFFLINE-01`; kích hoạt cơ chế tự động đóng gói 5 câu hỏi thích ứng trực tiếp từ Content Service API qua backend khi phát đề; tích hợp lệnh in thực tế `window.print()` cho sơ đồ bàn học.
+  - *Hồ sơ chi tiết học sinh (`TeacherStudentDrillDownModal.jsx`)*: Thay thế cơ chế mô phỏng `setTimeout` bằng hệ thống lưu trữ bền vững lịch sử dặn dò sư phạm theo từng học sinh; hiển thị danh sách các lời dặn dò đã gửi gần đây.
+  - *Tầng dịch vụ (`practiceService.js`)*: Xóa bỏ dữ liệu giả lập `_source: 'seed_fallback'` trong hàm `forceAggregateClassHeatmap`, đảm bảo ném lỗi chân thực khi dịch vụ backend gặp sự cố.
 - **Loại Bỏ 2 Nút Thu Gọn Sidebar Trùng Lặp Ở Mép Brand Header & Navbar (`Sidebar.jsx`, `AccountNavbar.jsx`)**:
   - *Triệt tiêu nút dư thừa gây rối mắt*: Loại bỏ hoàn toàn 2 nút thu gọn/mở rộng sidebar (`PanelLeftClose`/`PanelLeftOpen`) nằm liền kề nhau giữa mép phải thanh Brand Header của Sidebar và mép trái thanh Top Navbar.
   - *Tối giản thanh điều hướng*: Giữ trọn vẹn nút menu điều hướng responsive mobile (`Menu`), làm phẳng và thoáng đãng toàn bộ thanh tiêu đề desktop.
@@ -13,4 +19,4 @@
   - *Thẻ ca học đầy đủ thông tin sư phạm*: Tên lớp học, chuyên cần, giờ học, phòng học, hình thức Offline, giảng viên phụ trách, chuyên đề bài học và sĩ số; tích hợp nút mở modal điểm danh chuyên cần tại lớp.
   - *Điều hướng tuần linh hoạt*: `< Tuần trước`, `Tuần này`, `Tuần sau >`, banner phát hiện ca dạy gần nhất và bộ chuyển chế độ xem giữa `Lưới tuần` và `Danh sách`.
 - **Kiểm Thử Vận Hành & Biên Dịch**:
-  - `npm run build`: Biên dịch thành công 100% trong 1.32s (`3079 modules`, `0 Error`).
+  - `npm run build`: Biên dịch thành công 100% trong 1.49s (`3079 modules`, `0 Error`).

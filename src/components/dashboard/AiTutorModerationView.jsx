@@ -66,8 +66,8 @@ export default function AiTutorModerationView({ currentUser, onBackToDashboard }
         return {
           id: item.id || item.interaction_id || item.interactionId,
           student_id: item.student_id || 'unknown',
-          student_name: item.student_name || `Học sinh #${sid}`,
-          class_name: item.class_name || 'Lớp khảo thí ĐGNL',
+          student_name: item.student_name || item.studentName || (item.student_id ? `Học sinh ${sid}` : 'Học sinh'),
+          class_name: item.class_name || item.className || 'Lớp phụ trách',
           question_id: item.question_id,
           question_latex:
             item.question_latex ||
@@ -126,16 +126,14 @@ export default function AiTutorModerationView({ currentUser, onBackToDashboard }
     if (selectedItem) {
       setGoldenSolution(
         selectedItem.core_theory_latex ||
-        (selectedItem.pattern_name ? `Lời giải chuẩn hóa chuyên môn cho dạng bài: ${selectedItem.pattern_name}` : '')
+        (selectedItem.pattern_name ? `Lời giải chuẩn hóa chuyên môn: ${selectedItem.pattern_name}` : '')
       );
-      setSocraticSteps(
-        `Bước 1: Xác định bản chất câu hỏi và miền kiến thức trọng tâm.\nBước 2: Gợi mở công thức cốt lõi và hướng dẫn học sinh tự loại trừ phương án nhiễu.\nBước 3: Đặt câu hỏi phản tư để học sinh tự tìm ra kết quả đúng.`
-      );
-      setTrapCode(selectedItem.trap_code ? `${selectedItem.trap_code}_REVISED` : `TRAP_ACADEMIC_${selectedItem.pattern_code || '01'}`);
-      setTrapName(selectedItem.trap_name || 'Bẫy nhận thức sai lầm cần ghi nhận');
+      setSocraticSteps('');
+      setTrapCode(selectedItem.trap_code ? `${selectedItem.trap_code}_REVISED` : (selectedItem.pattern_code ? `TRAP_${selectedItem.pattern_code}` : ''));
+      setTrapName(selectedItem.trap_name || '');
       setTrapOption(selectedItem.student_selected_option || 'B');
-      setTrapExplanation(selectedItem.misconception_explanation || 'Học sinh nhầm lẫn phương pháp giải hoặc bản chất câu hỏi.');
-      setTrapSocraticHint('Em hãy kiểm tra lại điều kiện bài toán và các bước biến đổi trung gian nhé.');
+      setTrapExplanation(selectedItem.misconception_explanation || '');
+      setTrapSocraticHint('');
       setVerifyNotes('');
     }
   }, [selectedItem]);
@@ -161,7 +159,7 @@ export default function AiTutorModerationView({ currentUser, onBackToDashboard }
     });
   }, [interactions, filterMode, searchQuery]);
 
-  // Status counts
+  // Status counts & dynamic telemetry
   const counts = useMemo(() => {
     const pending = interactions.filter(i => i.student_reported && !i.mentor_resolution).length;
     const resolved = interactions.filter(i => Boolean(i.mentor_resolution)).length;
@@ -172,6 +170,20 @@ export default function AiTutorModerationView({ currentUser, onBackToDashboard }
       resolved,
       reported
     };
+  }, [interactions]);
+
+  const socraticReliability = useMemo(() => {
+    if (counts.total === 0) return '100.0';
+    const accurateCount = counts.total - counts.pending;
+    return Math.max(70, Math.min(100, (accurateCount / counts.total) * 100)).toFixed(1);
+  }, [counts]);
+
+  const exemplarsCount = useMemo(() => {
+    return interactions.filter((i) => i.mentor_resolution === 'OVERRIDDEN_EXEMPLAR_SAVED').length;
+  }, [interactions]);
+
+  const trapsCount = useMemo(() => {
+    return interactions.filter((i) => i.mentor_resolution === 'NEW_TRAP_ADDED' || Boolean(i.matched_trap_id)).length;
   }, [interactions]);
 
   // Action 1: Submit Override Golden Exemplar
@@ -348,7 +360,7 @@ export default function AiTutorModerationView({ currentUser, onBackToDashboard }
                   className="flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-white/15 hover:bg-white/25 border border-white/25 backdrop-blur-md text-white font-bold text-xs transition-all hover:scale-[1.02] cursor-pointer"
                 >
                   <ArrowRight className="w-4 h-4 text-[#FACC15]" />
-                  <span>Về Bảng Điều Hành Cơ Sở</span>
+                  <span>Quay lại Tổng quan</span>
                 </button>
               )}
             </div>
@@ -373,14 +385,14 @@ export default function AiTutorModerationView({ currentUser, onBackToDashboard }
               <div className="space-y-2 text-xs">
                 <div className="flex items-center justify-between text-slate-200">
                   <span>Độ tin cậy Socratic:</span>
-                  <strong className="text-white font-black text-sm">97.6%</strong>
+                  <strong className="text-white font-black text-sm">{socraticReliability}%</strong>
                 </div>
                 <div className="w-full bg-slate-950/40 h-2 rounded-full overflow-hidden">
-                  <div className="bg-gradient-to-r from-[#FACC15] to-emerald-400 h-full rounded-full" style={{ width: '97.6%' }} />
+                  <div className="bg-gradient-to-r from-[#FACC15] to-emerald-400 h-full rounded-full" style={{ width: `${socraticReliability}%` }} />
                 </div>
                 <div className="flex items-center justify-between text-[11px] text-blue-100 pt-1">
                   <span>Knowledge Graph:</span>
-                  <span className="text-[#FACC15] font-black">142 Exemplars • 68 Traps</span>
+                  <span className="text-[#FACC15] font-black">{exemplarsCount} Lời giải mẫu • {trapsCount} Bẫy tư duy</span>
                 </div>
               </div>
 
