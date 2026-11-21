@@ -4,6 +4,9 @@
 
 ## [21/11/2026] - Tối Ưu Hóa Trải Nghiệm Giáo Viên: Gom Cảnh Báo Sư Phạm Thành Nút Popup & Tái Cấu Trúc Ma Trận Thời Khóa Biểu Tuần 8 Cột
 
+- **Loại Bỏ Nút Thu Gọn Sidebar Trùng Lặp & Làm Gọn Thanh Điều Hướng Header ([`Sidebar.jsx`](../src/components/layout/Sidebar.jsx), [`AccountNavbar.jsx`](../src/components/layout/AccountNavbar.jsx))**:
+  - Loại bỏ hoàn toàn 2 nút thu gọn/mở rộng sidebar (`PanelLeftClose`/`PanelLeftOpen`) trùng lặp nằm sát cạnh nhau ở góc trên bên trái (một nút nằm trên thanh Brand Header của Sidebar, một nút nằm trên thanh Header Navbar).
+  - Tối giản hóa bố cục thanh điều hướng desktop, loại bỏ các nút dư thừa gây rối mắt, giữ trọn vẹn nút menu điều hướng mobile (`Menu`) và cấu trúc bố cục đồng điệu, thoáng đãng.
 - **Gom Khối Cảnh Báo Sư Phạm Thành Nút Bấm Popup Tinh Gọn ([`TeacherDashboardView.jsx`](../src/components/dashboard/TeacherDashboardView.jsx))**:
   - Loại bỏ hoàn toàn danh sách các thẻ cảnh báo đỏ/vàng trải dài thô xuống màn hình, vốn đẩy bảng ma trận tiến độ học tập xuống quá sâu.
   - Thay thế bằng dải thông báo tinh gọn (height ~50px) với 1 nút bấm trực quan: `Xem danh sách chuyên đề ({count})`.

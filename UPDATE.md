@@ -1,6 +1,9 @@
 # UPDATE - V-Eval-Web_Client
 
 ## [21/11/2026]
+- **Loại Bỏ 2 Nút Thu Gọn Sidebar Trùng Lặp Ở Mép Brand Header & Navbar (`Sidebar.jsx`, `AccountNavbar.jsx`)**:
+  - *Triệt tiêu nút dư thừa gây rối mắt*: Loại bỏ hoàn toàn 2 nút thu gọn/mở rộng sidebar (`PanelLeftClose`/`PanelLeftOpen`) nằm liền kề nhau giữa mép phải thanh Brand Header của Sidebar và mép trái thanh Top Navbar.
+  - *Tối giản thanh điều hướng*: Giữ trọn vẹn nút menu điều hướng responsive mobile (`Menu`), làm phẳng và thoáng đãng toàn bộ thanh tiêu đề desktop.
 - **Tối Giản Cảnh Báo Sư Phạm Thành Nút Bấm Popup (Pedagogical Alerts Modal) (`TeacherDashboardView.jsx`)**:
   - *Gom khối cảnh báo thành dải thông báo tinh gọn*: Loại bỏ hoàn toàn danh sách các thẻ cảnh báo đỏ/vàng trải dài thô xuống màn hình gây chiếm diện tích; thay thế bằng dải thông báo mỏng gọn (chiều cao ~50px) với nút bấm trực quan `Xem danh sách chuyên đề ({count})`.
   - *Tích hợp Modal chuyên dụng*: Khi bấm nút, modal `Chuyên Đề Cần Bồi Dưỡng Gấp` hiện lên với danh sách cuộn mượt (`max-h-[85vh]`), hiển thị rõ ràng tỷ lệ hiểu bài, số học sinh chưa đạt và nút `Tạo Nhóm Bồi Dưỡng` kích hoạt xếp bàn học vi mô 3–5 em.

@@ -3145,3 +3145,9 @@ The Parent Companion Portal was completely redesigned and hardened according to 
     - **Dedicated Modal Overlay (`isAlertsModalOpen`)**:
       - Modal overlay renders a scrollable view (`max-h-[85vh]`) containing structured diagnostic alert items with comprehension percentages, struggling student tallies, and direct micro-group assignment triggers (`handleOpenMicroGroups`).
     - **Verification**: `npm run build` compiled cleanly in 1.32s with zero warnings or errors.
+
+27. **Removal of Redundant Desktop Sidebar Toggle Controls (`Sidebar.jsx`, `AccountNavbar.jsx`)**:
+    - **UI Clutter Elimination**:
+      - Discarded duplicate `PanelLeftClose`/`PanelLeftOpen` buttons rendered adjacent to one another along the border dividing the brand header and navbar.
+      - Preserved the mobile responsive navigation trigger (`Menu`) for compact screens while establishing a clean, distraction-free desktop layout header.
+    - **Verification**: `npm run build` (Vite v8.3.0) compiled cleanly in 1.32s with 3079 modules transformed and zero errors.
