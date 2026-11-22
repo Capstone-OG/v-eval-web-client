@@ -1,30 +1,41 @@
 # UPDATE — V-Eval-Web_Client
 
-## [21/11/2026]
-- **Chuẩn Hóa Dữ Liệu Động Toàn Diện & Triệt Tiêu Giá Trị Tĩnh Cho Phân Hệ Giáo Viên (`TeacherScheduleView.jsx`, `AiTutorModerationView.jsx`, `ClassMicroGroupsModal.jsx`, `TeacherStudentDrillDownModal.jsx`, `practiceService.js`)**:
-  - *Thời khóa biểu & Điểm danh (`TeacherScheduleView.jsx`)*: Xóa bỏ hoàn toàn giá trị mặc định tĩnh `'Teacher Khôi'`, thay bằng logic liên kết danh tính động `primaryTeacherName || fullName || name || 'Giảng viên phụ trách'`; thay thế nhãn `'Offline'` cố định bằng cơ chế nhận diện hình thức linh hoạt (`Online` / `Offline`) theo phòng học và URL phòng họp; thay thế phòng `'P.301'` mặc định bằng hiển thị đúng hiện trạng (`Trực tuyến` hoặc `Chưa xếp phòng`); chuẩn hóa nhãn định danh học sinh trong modal điểm danh.
-  - *Kiểm duyệt gia sư AI (`AiTutorModerationView.jsx`)*: Chuyển đổi toàn bộ các chỉ số của thẻ "GraphRAG Monitor" (`97.6%`, `142 Exemplars • 68 Traps`) sang tính toán tự động từ tập dữ liệu đàm thoại thực tế (`socraticReliability`, `exemplarsCount`, `trapsCount`); làm sạch các đoạn văn bản mẫu gán sẵn để giáo viên chủ động nhập nhận xét sư phạm nguyên bản; chuẩn hóa tên lớp và học sinh.
-  - *Sơ đồ nhóm bàn học vi mô (`ClassMicroGroupsModal.jsx`)*: Loại bỏ hàm sinh mã ngẫu nhiên `Math.random()` và chuỗi dự phòng `WS-OFFLINE-01`; kích hoạt cơ chế tự động đóng gói 5 câu hỏi thích ứng trực tiếp từ Content Service API qua backend khi phát đề; tích hợp lệnh in thực tế `window.print()` cho sơ đồ bàn học.
-  - *Hồ sơ chi tiết học sinh (`TeacherStudentDrillDownModal.jsx`)*: Thay thế cơ chế mô phỏng `setTimeout` bằng hệ thống lưu trữ bền vững lịch sử dặn dò sư phạm theo từng học sinh; hiển thị danh sách các lời dặn dò đã gửi gần đây.
-  - *Tầng dịch vụ (`practiceService.js`)*: Xóa bỏ dữ liệu giả lập `_source: 'seed_fallback'` trong hàm `forceAggregateClassHeatmap`, đảm bảo ném lỗi chân thực khi dịch vụ backend gặp sự cố.
-- **Loại Bỏ 2 Nút Thu Gọn Sidebar Trùng Lặp Ở Mép Brand Header & Navbar (`Sidebar.jsx`, `AccountNavbar.jsx`)**:
-  - *Triệt tiêu nút dư thừa gây rối mắt*: Loại bỏ hoàn toàn 2 nút thu gọn/mở rộng sidebar (`PanelLeftClose`/`PanelLeftOpen`) nằm liền kề nhau giữa mép phải thanh Brand Header của Sidebar và mép trái thanh Top Navbar.
-  - *Tối giản thanh điều hướng*: Giữ trọn vẹn nút menu điều hướng responsive mobile (`Menu`), làm phẳng và thoáng đãng toàn bộ thanh tiêu đề desktop.
-- **Tối Giản Cảnh Báo Sư Phạm Thành Nút Bấm Popup (Pedagogical Alerts Modal) (`TeacherDashboardView.jsx`)**:
-  - *Gom khối cảnh báo thành dải thông báo tinh gọn*: Loại bỏ hoàn toàn danh sách các thẻ cảnh báo đỏ/vàng trải dài thô xuống màn hình gây chiếm diện tích; thay thế bằng dải thông báo mỏng gọn (chiều cao ~50px) với nút bấm trực quan `Xem danh sách chuyên đề ({count})`.
-  - *Tích hợp Modal chuyên dụng*: Khi bấm nút, modal `Chuyên Đề Cần Bồi Dưỡng Gấp` hiện lên với danh sách cuộn mượt (`max-h-[85vh]`), hiển thị rõ ràng tỷ lệ hiểu bài, số học sinh chưa đạt và nút `Tạo Nhóm Bồi Dưỡng` kích hoạt xếp bàn học vi mô 3–5 em.
-- **Tối Giản & Tái Cấu Trúc Ma Trận Thời Khóa Biểu Tuần 8 Cột (Weekly Timetable Matrix Grid) (`TeacherScheduleView.jsx`)**:
-  - *Tối giản giao diện & loại bỏ banner lệch tông*: Loại bỏ hoàn toàn khối banner hero xanh đen cồng kềnh giúp giao diện thời khóa biểu đồng điệu với phong cách phẳng sáng màu; chuyển nút làm mới lịch (`RefreshCw`) vào thanh công cụ của bảng tuần.
-  - *Giao diện ma trận tuần 8 cột chuẩn học viện & đại học*: Thiết kế bảng ma trận gồm Cột 1 (Slot 1-6) và 7 cột Thứ trong tuần (Thứ 2 - Chủ nhật kèm ngày DD/MM). Tự động nhận diện và làm nổi bật ngày hiện tại ("Hôm nay") bằng viền và nền xanh ngọc dịu nhẹ; các ô trống hiển thị dấu gạch ngang `-` thanh lịch.
-  - *Thẻ ca học đầy đủ thông tin sư phạm*: Tên lớp học, chuyên cần, giờ học, phòng học, hình thức Offline, giảng viên phụ trách, chuyên đề bài học và sĩ số; tích hợp nút mở modal điểm danh chuyên cần tại lớp.
-  - *Điều hướng tuần linh hoạt*: `< Tuần trước`, `Tuần này`, `Tuần sau >`, banner phát hiện ca dạy gần nhất và bộ chuyển chế độ xem giữa `Lưới tuần` và `Danh sách`.
-- **Tự Động Chữa Lành Chùm Đọc Hiểu Bị Nuốt Câu (Passage 118–120) & Xóa Bỏ Ký Tự ABCD Trên Đề (`examParserUtils.js`, `examTextRepair.js`, `ExamPaperView.jsx`, `MathText.jsx`, `examStateBridge.js`, `examStateBridge.test.js`)**:
-  - `normalizeExamData` (`examParserUtils.js`): Bổ sung cơ chế tự động chữa lành chùm đọc hiểu (`healHistoryPassageAndTrappedQuestions` & `extractTrappedQuestionsFromPassage`):
-    + Khi chùm đọc hiểu có `questions: []` (hiển thị "0 câu") nhưng nội dung đoạn văn bị dính câu hỏi do lỗi OCR/PDF cũ: tự động tách nội dung đoạn văn gốc và giải cứu các câu hỏi con bị nuốt (vd: Câu 118, 119, 120 với đầy đủ phương án A/B/C/D), nâng số lượng câu hỏi chùm đọc hiểu từ "0 câu" lên "3 câu" tương tác đầy đủ.
-    + Khôi phục nguyên văn đoạn trích Lịch sử 11 trang 155 sạch sẽ, triệt tiêu 100% các chữ cái đơn bị xé lẻ (`o`, `g`, `n`, `u`, `V`, `i`, `đ`).
-  - `ExamPaperView.jsx`: Sửa nhãn chùm đọc hiểu khi có 1 câu duy nhất: `Dựa vào thông tin dưới đây để trả lời câu X` thay vì `từ X đến X`.
-  - `repairUnderlineTags` (`examTextRepair.js`): Xóa sạch các nhãn ký tự `(A)`, `(B)`, `(C)`, `(D)` lơ lửng trên thân câu hỏi; kết hợp `MathText.jsx` định dạng từ cần tìm lỗi sai thành **in đậm + gạch chân** (`font-bold underline`).
-  - `examStateBridge.js`: Nâng cấp khóa `STORAGE_KEY` lên `veval_active_exam_workspace_v3` để trình duyệt xóa bỏ cache hỏng cũ và tự động chạy cơ chế phục hồi ngay khi nạp trang.
-  - Bổ sung unit test 6 trong `examStateBridge.test.js` kiểm chứng phục hồi 100% chùm đọc hiểu 118–120 và tách 3 câu hỏi con.
-- **Kiểm Thử Vận Hành & Biên Dịch**:
-  - `npm run build`: Biên dịch thành công 100% trong 1.49s (`3079 modules`, `0 Error`).
+## [22/11/2026]
+- **Phân Định Phân Quyền Giảng Viên & Triệt Tiêu Lấn Sân Quyền Quản Trị Cấp Hệ Thống (TCH-01) (`Sidebar.jsx`, `App.jsx`, `CurriculumExplorerView.jsx`, `TextbookStandardView.jsx`, `ExamBankView.jsx`, `ExamWorkspaceHeader.jsx`)**:
+  - *Tái cấu trúc Sidebar phân hệ Giảng viên (`Sidebar.jsx`)*:
+    + Mục Khung chương trình: Chuyển badge sang `'Tra cứu'`, sublabel `'Tra cứu cây kiến thức & Bloom'`.
+    + Nhóm Sách giáo khoa (SGK): Thay thế nhóm 3 tầng con thành 1 mục tra cứu duy nhất: `'Sách giáo khoa (SGK)'`, sublabel `'Tra cứu SGK chuẩn GDPT 2018'`, badge `'Chuẩn'`. Ẩn hoàn toàn các mục Nạp tài liệu SGK (`textbook-ingest`) và Studio biên soạn (`textbook-studio`).
+    + Nhóm Đề thi & AI Bloom: Thay thế nhóm 3 tầng con thành 1 mục tra cứu duy nhất: `'Kho đề thi đã xuất bản'`, sublabel `'Tra cứu & xem đề khảo thí'`, badge `'Kho Đề'`. Ẩn hoàn toàn Parse PDF (`exam-ingest`) và Studio biên soạn đề (`exam-studio`).
+    + Mục Kiểm duyệt gia sư AI: Cập nhật sublabel `'Đề xuất sửa & Bẫy tư duy lớp mình'`, badge `'Đề xuất'`.
+    + Widget chân trang Teacher: Thay đổi nhãn từ `'Studio'` thành `'Tra cứu'`.
+  - *Điều hướng & Route Guard (`App.jsx`)*:
+    + Cập nhật `ROLE_PORTAL_DEFINITIONS.teacher.tabs` tinh gọn đúng 7 mục theo chuẩn chức năng giảng viên.
+    + Bổ sung cơ chế Route Guard tự động chuyển hướng: Giảng viên truy cập tab biên soạn/nạp SGK sẽ được tự động điều hướng về `textbook-standard`; truy cập tab bóc tách/biên soạn đề thi sẽ được điều hướng về `exam-bank`.
+    + Truyền tham số vai trò `role` xuống các view chuyên môn để kích hoạt chế độ xem an toàn.
+  - *Chế độ Tra cứu Khung chương trình (`CurriculumExplorerView.jsx`)*:
+    + Nhận biết vai trò `isReadOnly` khi đăng nhập Giảng viên: ẩn nút `'Vào Studio Sư Phạm'` và `'AI Bóc Tách Tài Liệu & Dạng Bài'`; hiển thị badge nhận diện `'Chế độ Tra Cứu Khung Chương Trình (Read-only)'`.
+    + Khóa các thao tác thêm bài, xóa chương, thêm dạng, mở studio và sửa nhanh trên cây tri thức.
+    + Chuyển `instructorMode = false` đối với `UnifiedNodeDetailView` để ẩn các công cụ can thiệp cấu trúc.
+  - *Chế độ Tra cứu Sách giáo khoa chuẩn (`TextbookStandardView.jsx`)*:
+    + Khi `isReadOnly`: Ẩn nút `'Đồng Bộ Khung CT'`, `'Chuẩn Hóa GDPT 2018'`, nút `'Mở Studio Biên Soạn'` và nút điều hướng nạp tài liệu; hiển thị badge `'Chế độ Tra Cứu SGK Chuẩn GDPT 2018 (Read-only)'`.
+    + Ẩn hoàn toàn nút xóa cuốn sách khỏi cơ sở dữ liệu (`handleDeleteBook`) và các nút thêm chương/bài/dạng.
+  - *Chế độ Tra cứu Kho đề thi đã xuất bản (`ExamBankView.jsx`, `ExamWorkspaceHeader.jsx`)*:
+    + Khi `isReadOnly`: Ẩn thanh luồng 3 bước `ExamPageFlowBar`, ẩn các nút `'Parse PDF (Trang 2)'`, `'AI Bloom L1–L6'` và `'Soạn Trong Studio'`; thay bằng badge `'Chế độ Tra Cứu Kho Đề Đã Xuất Bản (Read-only)'`.
+    + Bộ lọc kho đề: Tự động lọc chỉ hiển thị các đề thi đã được thẩm định xuất bản (`e.isPublished === true`), vô hiệu hóa quyền xuất bản và xóa đề.
+    + Thanh tiêu đề chi tiết đề thi (`ExamWorkspaceHeader.jsx`): Khóa chỉnh sửa, ẩn các nút Lưu Database, Phê duyệt đề, Xóa đề, AI sinh thêm câu Bloom và AI gắn chương/bài.
+- **Tách Rõ 2 Tầng Nghiệp Vụ Kiểm Duyệt Gia Sư AI Core Flow 4 Giữa Giảng Viên Và Giám Đốc Học Thuật (`AiTutorModerationView.jsx`)**:
+  - *Tầng Giảng viên (`role === 'teacher'`)*:
+    + Giới hạn phạm vi: Tích hợp bộ lọc lớp học phụ trách, chỉ theo dõi các tương tác của Gia sư AI với học sinh trong danh sách lớp được phân công.
+    + Hero Banner: Cập nhật tiêu đề `'Kiểm Duyệt Gia Sư AI — Lớp Phụ Trách & Đề Xuất Sư Phạm'` kèm bộ chọn lớp trực tiếp.
+    + Bàn làm việc đề xuất sư phạm: Chuyển đổi thành cơ chế 2 bước gửi đề xuất gồm Tab 1 (`Đề Xuất Lời Giải Chuẩn`) và Tab 2 (`Đề Xuất Bẫy Tư Duy`). Ẩn hoàn toàn Tab 3 (Xác nhận AI đúng & đóng báo cáo).
+    + Cơ chế lưu trữ đề xuất: Đóng gói dữ liệu đề xuất kèm thông tin định danh giảng viên và thời gian tạo, cập nhật trạng thái `PENDING_DIRECTOR_REVIEW` và hiển thị thẻ thông báo đề xuất đang chờ Giám đốc duyệt.
+  - *Tầng Giám đốc Học thuật (`role === 'director'`)*:
+    + Giữ trọn vẹn quyền giám sát toàn trường trên toàn bộ các lớp học và cơ sở.
+    + Bổ sung bộ lọc hàng đợi `'Đề xuất GV ({count})'` giúp Giám đốc phát hiện ngay các đóng góp chuyên môn từ giáo viên.
+    + Khối thẩm định đề xuất nổi bật: Hiển thị chi tiết lời giải mẫu hoặc bẫy tư duy do Giảng viên đề xuất, tích hợp 2 nút thao tác 1-chạm:
+      * `✓ Phê Duyệt & Ghi Đè Vào Kho RAG Toàn Trường`: Tự động gọi API cập nhật node `PatternExemplar` hoặc `PatternTrap` trong GraphRAG và xóa đề xuất khỏi hàng đợi chờ.
+      * `✕ Từ Chối Đề Xuất`: Đóng đề xuất và lưu vết phản hồi sư phạm.
+    + Duy trì quyền can thiệp trực tiếp 3 Tab (Ghi đè lời giải mẫu, Bổ sung bẫy tư duy, Xác nhận AI đúng & đóng báo cáo).
+- **Kiểm Thử & Biên Dịch**:
+  - `npm run build`: Hoàn thành 100% trong 1.97s (`3081 modules`, `0 Error`).
+  - Unit tests: 28/28 unit tests passed (`tests/*.test.js` 22/22, `examStateBridge.test.js` 6/6).

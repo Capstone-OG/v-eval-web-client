@@ -460,6 +460,7 @@ export default function CurriculumExplorerView({
   // Giảng viên & Ban Chuyên Môn Curation Suite State (Tối đa hóa hỗ trợ chỉnh sửa)
   // =========================================================================
   const [instructorMode, setInstructorMode] = useState(true);
+  const isReadOnly = role === 'teacher';
   const [confirmDeleteDialog, setConfirmDeleteDialog] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [activeEditTab, setActiveEditTab] = useState('settings');
@@ -2369,31 +2370,42 @@ export default function CurriculumExplorerView({
         </div>
 
         <div className="flex items-center gap-2.5 w-full md:w-auto justify-between md:justify-end flex-wrap">
-          {/* Nút Vào Studio Biên Soạn Sư Phạm */}
-          <button
-            onClick={() => handleOpenStudio(selectedPattern)}
-            className="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-black flex items-center gap-2 shadow-md shadow-blue-500/20 transition-all hover:scale-105 active:scale-95 cursor-pointer"
-            title="Mở toàn màn hình Studio biên soạn sư phạm, đồ thị minh họa và review học sinh"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-            <span>Vào Studio Sư Phạm</span>
-          </button>
+          {/* Nút Vào Studio Biên Soạn Sư Phạm - Chỉ dành cho Director/Manager */}
+          {!isReadOnly && (
+            <button
+              onClick={() => handleOpenStudio(selectedPattern)}
+              className="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-black flex items-center gap-2 shadow-md shadow-blue-500/20 transition-all hover:scale-105 active:scale-95 cursor-pointer"
+              title="Mở toàn màn hình Studio biên soạn sư phạm, đồ thị minh họa và review học sinh"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+              <span>Vào Studio Sư Phạm</span>
+            </button>
+          )}
 
-          {/* Nút AI Bóc Tách Tài Liệu & Dạng Bài */}
-          <button
-            onClick={() => setIsImportModalOpen(true)}
-            className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-purple-50 to-indigo-50 hover:from-purple-100 hover:to-indigo-100 border border-purple-200 text-purple-800 text-xs font-black flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
-            title="Kéo thả file PDF/DOCX SGK để AI Tri Thức tự động bóc tách Chương, Bài và các Dạng bài toán"
-          >
-            <Wand2 className="w-3.5 h-3.5 text-purple-600" />
-            <span>AI Bóc Tách Tài Liệu & Dạng Bài</span>
-          </button>
+          {/* Nút AI Bóc Tách Tài Liệu & Dạng Bài - Chỉ dành cho Director/Manager */}
+          {!isReadOnly && (
+            <button
+              onClick={() => setIsImportModalOpen(true)}
+              className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-purple-50 to-indigo-50 hover:from-purple-100 hover:to-indigo-100 border border-purple-200 text-purple-800 text-xs font-black flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
+              title="Kéo thả file PDF/DOCX SGK để AI Tri Thức tự động bóc tách Chương, Bài và các Dạng bài toán"
+            >
+              <Wand2 className="w-3.5 h-3.5 text-purple-600" />
+              <span>AI Bóc Tách Tài Liệu & Dạng Bài</span>
+            </button>
+          )}
 
-          {/* Badge Chế độ Giảng viên Hiệu đính */}
-          <div className="px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span>Chế độ Hiệu đính Sư phạm: BẬT</span>
-          </div>
+          {/* Badge Chế độ */}
+          {isReadOnly ? (
+            <div className="px-3 py-1.5 rounded-xl bg-blue-50 border border-blue-200 text-blue-800 text-xs font-bold flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+              <span>Chế độ Tra Cứu Khung Chương Trình (Read-only)</span>
+            </div>
+          ) : (
+            <div className="px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span>Chế độ Hiệu đính Sư phạm: BẬT</span>
+            </div>
+          )}
 
           <div className="hidden lg:flex items-center gap-3 text-xs text-slate-500 font-medium pl-2 border-l border-slate-200">
             <div className="flex items-center gap-1.5">
@@ -2482,35 +2494,39 @@ export default function CurriculumExplorerView({
                     </div>
 
                     <div className="flex items-center gap-1.5 shrink-0">
-                      {/* Nút Thêm Bài Học Mới vào Chương */}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleOpenCreateLessonModal(chap);
-                        }}
-                        title="Thêm Bài học mới vào chương này"
-                        className="px-2 py-1 rounded-lg bg-white hover:bg-indigo-50 border border-slate-200 hover:border-indigo-300 text-indigo-700 text-[10px] font-bold flex items-center gap-1 shadow-2xs transition-all cursor-pointer"
-                      >
-                        <Plus className="w-3 h-3 text-indigo-600" />
-                        <span>Thêm bài</span>
-                      </button>
+                      {/* Nút Thêm Bài Học Mới vào Chương (Chỉ Director/Manager) */}
+                      {!isReadOnly && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenCreateLessonModal(chap);
+                          }}
+                          title="Thêm Bài học mới vào chương này"
+                          className="px-2 py-1 rounded-lg bg-white hover:bg-indigo-50 border border-slate-200 hover:border-indigo-300 text-indigo-700 text-[10px] font-bold flex items-center gap-1 shadow-2xs transition-all cursor-pointer"
+                        >
+                          <Plus className="w-3 h-3 text-indigo-600" />
+                          <span>Thêm bài</span>
+                        </button>
+                      )}
 
-                      {/* Nút Xóa Chương */}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteChapter(chap);
-                        }}
-                        disabled={deletingNodeId === chap.chapterId}
-                        title="Xóa chương này và toàn bộ bài học, dạng bài bên trong"
-                        className="p-1.5 rounded-lg bg-white hover:bg-rose-50 border border-slate-200 hover:border-rose-300 text-slate-400 hover:text-rose-600 shadow-2xs transition-all disabled:opacity-50 cursor-pointer"
-                      >
-                        {deletingNodeId === chap.chapterId ? (
-                          <RefreshCw className="w-3 h-3 animate-spin text-rose-500" />
-                        ) : (
-                          <Trash2 className="w-3 h-3" />
-                        )}
-                      </button>
+                      {/* Nút Xóa Chương (Chỉ Director/Manager) */}
+                      {!isReadOnly && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteChapter(chap);
+                          }}
+                          disabled={deletingNodeId === chap.chapterId}
+                          title="Xóa chương này và toàn bộ bài học, dạng bài bên trong"
+                          className="p-1.5 rounded-lg bg-white hover:bg-rose-50 border border-slate-200 hover:border-rose-300 text-slate-400 hover:text-rose-600 shadow-2xs transition-all disabled:opacity-50 cursor-pointer"
+                        >
+                          {deletingNodeId === chap.chapterId ? (
+                            <RefreshCw className="w-3 h-3 animate-spin text-rose-500" />
+                          ) : (
+                            <Trash2 className="w-3 h-3" />
+                          )}
+                        </button>
+                      )}
 
                       {isChapExpanded ? (
                         <ChevronDown className="w-4 h-4 text-slate-400 ml-0.5" />
@@ -2560,45 +2576,49 @@ export default function CurriculumExplorerView({
                                 )}
                               </div>
                               <div className="flex items-center gap-1.5 shrink-0">
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleOpenCreatePatternModal(les.lessonId, les.name);
-                                  }}
-                                  title="Thêm Dạng bài mới vào bài học này"
-                                  className="px-2 py-0.5 rounded-md bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[10px] font-bold flex items-center gap-1 border border-indigo-200/60 transition-colors cursor-pointer"
-                                >
-                                  <Plus className="w-3 h-3" />
-                                  <span>Thêm dạng</span>
-                                </button>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleOpenStudio(null, chap, les);
-                                  }}
-                                  title="Mở Studio thiết kế dạng bài mới toàn diện với đồ thị và phương pháp"
-                                  className="px-2 py-0.5 rounded-md bg-blue-50 hover:bg-blue-100 text-blue-700 text-[10px] font-bold flex items-center gap-1 border border-blue-200/60 transition-colors cursor-pointer"
-                                >
-                                  <Sparkles className="w-2.5 h-2.5 text-amber-500" />
-                                  <span>+ Studio</span>
-                                </button>
+                                {!isReadOnly && (
+                                  <>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleOpenCreatePatternModal(les.lessonId, les.name);
+                                      }}
+                                      title="Thêm Dạng bài mới vào bài học này"
+                                      className="px-2 py-0.5 rounded-md bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[10px] font-bold flex items-center gap-1 border border-indigo-200/60 transition-colors cursor-pointer"
+                                    >
+                                      <Plus className="w-3 h-3" />
+                                      <span>Thêm dạng</span>
+                                    </button>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleOpenStudio(null, chap, les);
+                                      }}
+                                      title="Mở Studio thiết kế dạng bài mới toàn diện với đồ thị và phương pháp"
+                                      className="px-2 py-0.5 rounded-md bg-blue-50 hover:bg-blue-100 text-blue-700 text-[10px] font-bold flex items-center gap-1 border border-blue-200/60 transition-colors cursor-pointer"
+                                    >
+                                      <Sparkles className="w-2.5 h-2.5 text-amber-500" />
+                                      <span>+ Studio</span>
+                                    </button>
 
-                                {/* Nút Xóa Bài Học */}
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDeleteLesson(les, chap.name);
-                                  }}
-                                  disabled={deletingNodeId === les.lessonId}
-                                  title="Xóa bài học này và toàn bộ dạng bài bên trong"
-                                  className="p-1 rounded-md bg-white hover:bg-rose-50 border border-slate-200 hover:border-rose-300 text-slate-400 hover:text-rose-600 transition-all disabled:opacity-50 cursor-pointer"
-                                >
-                                  {deletingNodeId === les.lessonId ? (
-                                    <RefreshCw className="w-2.5 h-2.5 animate-spin text-rose-500" />
-                                  ) : (
-                                    <Trash2 className="w-2.5 h-2.5" />
-                                  )}
-                                </button>
+                                    {/* Nút Xóa Bài Học */}
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDeleteLesson(les, chap.name);
+                                      }}
+                                      disabled={deletingNodeId === les.lessonId}
+                                      title="Xóa bài học này và toàn bộ dạng bài bên trong"
+                                      className="p-1 rounded-md bg-white hover:bg-rose-50 border border-slate-200 hover:border-rose-300 text-slate-400 hover:text-rose-600 transition-all disabled:opacity-50 cursor-pointer"
+                                    >
+                                      {deletingNodeId === les.lessonId ? (
+                                        <RefreshCw className="w-2.5 h-2.5 animate-spin text-rose-500" />
+                                      ) : (
+                                        <Trash2 className="w-2.5 h-2.5" />
+                                      )}
+                                    </button>
+                                  </>
+                                )}
 
                                 <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[10px] font-bold">
                                   {les.patterns?.length || 0} dạng
@@ -2689,28 +2709,32 @@ export default function CurriculumExplorerView({
                                           <span className="text-[10px] font-bold text-slate-400">
                                             {pat.weight}
                                           </span>
-                                          {/* Nút Mở Studio / Hiệu đính nhanh */}
-                                          <button
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              handleOpenStudio(pat, chap, les);
-                                            }}
-                                            title="Mở Studio sư phạm & đồ thị cho dạng bài này"
-                                            className="opacity-0 group-hover:opacity-100 px-1.5 py-0.5 rounded-md bg-blue-600 hover:bg-blue-700 text-white transition-all shadow-xs flex items-center gap-1 text-[10px] font-bold"
-                                          >
-                                            <Sparkles className="w-2.5 h-2.5 text-amber-300" />
-                                            <span>Studio</span>
-                                          </button>
-                                          <button
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              handleOpenEditModal(pat);
-                                            }}
-                                            title="Sửa nhanh dạng bài này"
-                                            className="opacity-0 group-hover:opacity-100 p-1 rounded-md bg-white border border-slate-200 hover:border-slate-400 text-slate-500 hover:text-slate-800 transition-all shadow-xs"
-                                          >
-                                            <Pencil className="w-3 h-3" />
-                                          </button>
+                                          {/* Nút Mở Studio / Hiệu đính nhanh (Chỉ Director/Manager) */}
+                                          {!isReadOnly && (
+                                            <>
+                                              <button
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  handleOpenStudio(pat, chap, les);
+                                                }}
+                                                title="Mở Studio sư phạm & đồ thị cho dạng bài này"
+                                                className="opacity-0 group-hover:opacity-100 px-1.5 py-0.5 rounded-md bg-blue-600 hover:bg-blue-700 text-white transition-all shadow-xs flex items-center gap-1 text-[10px] font-bold"
+                                              >
+                                                <Sparkles className="w-2.5 h-2.5 text-amber-300" />
+                                                <span>Studio</span>
+                                              </button>
+                                              <button
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  handleOpenEditModal(pat);
+                                                }}
+                                                title="Sửa nhanh dạng bài này"
+                                                className="opacity-0 group-hover:opacity-100 p-1 rounded-md bg-white border border-slate-200 hover:border-slate-400 text-slate-500 hover:text-slate-800 transition-all shadow-xs"
+                                              >
+                                                <Pencil className="w-3 h-3" />
+                                              </button>
+                                            </>
+                                          )}
                                         </div>
                                       </div>
 
@@ -2744,11 +2768,11 @@ export default function CurriculumExplorerView({
               parentChapter={selectedPattern._parentChapter || null}
               matchedSgkChunks={getMatchedChunksForPattern(selectedPattern, selectedPattern._parentLesson || null, selectedPattern._parentChapter || null)}
               activeSourceIds={activeSourceIds}
-              onOpenStudio={(pat) => handleOpenStudio(pat, selectedPattern._parentChapter, selectedPattern._parentLesson)}
-              onOpenQuickEdit={(pat) => handleOpenEditModal(pat)}
+              onOpenStudio={isReadOnly ? undefined : ((pat) => handleOpenStudio(pat, selectedPattern._parentChapter, selectedPattern._parentLesson))}
+              onOpenQuickEdit={isReadOnly ? undefined : ((pat) => handleOpenEditModal(pat))}
               onLaunchAdaptiveQuiz={(pat) => handleLaunchAdaptiveQuiz(pat)}
               onSelectPattern={(pat) => setSelectedPattern(pat)}
-              instructorMode={instructorMode}
+              instructorMode={!isReadOnly && instructorMode}
             />
           ) : (
             <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm p-12 text-center text-slate-400 space-y-4">

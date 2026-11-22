@@ -23,7 +23,8 @@ import { useToast } from '../../context/ToastContext';
  * Trang 1 (exam-bank) — Kho Đề Thi Supabase, Xem Đề Thi Chuẩn In & Sắp Xếp / Trộn Mã Đề
  * Mirrors SGK Page 1 (TextbookStandardView) in the 3-page workflow.
  */
-export default function ExamBankView({ onNavigateTab }) {
+export default function ExamBankView({ onNavigateTab, role = 'director' }) {
+  const isReadOnly = role === 'teacher';
   const { toast } = useToast();
   const controller = useExamWorkspaceController({
     onNavigateTab,
@@ -197,12 +198,14 @@ export default function ExamBankView({ onNavigateTab }) {
 
   return (
     <div className="min-h-[calc(100vh-120px)] bg-[#F6F5F1] -m-4 sm:-m-6 p-4 sm:p-6 text-slate-900 space-y-4">
-      <ExamPageFlowBar
-        activePage="exam-bank"
-        onNavigateTab={onNavigateTab}
-        pendingBloomCount={pendingBloomCount}
-        processingJob={processingJob}
-      />
+      {!isReadOnly && (
+        <ExamPageFlowBar
+          activePage="exam-bank"
+          onNavigateTab={onNavigateTab}
+          pendingBloomCount={pendingBloomCount}
+          processingJob={processingJob}
+        />
+      )}
 
       {!currentExam ? (
         <div className="max-w-7xl mx-auto space-y-5 pb-8">
@@ -223,40 +226,47 @@ export default function ExamBankView({ onNavigateTab }) {
                 </p>
               </div>
 
-              <div className="flex flex-wrap items-center gap-2 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIngestPart('pdf');
-                    onNavigateTab?.('exam-ingest');
-                  }}
-                  className="px-4 py-2.5 rounded-xl bg-[#1E3A5F] hover:bg-[#162C49] text-white text-xs font-extrabold flex items-center gap-2 shadow-xs cursor-pointer"
-                >
-                  <UploadCloud className="w-4 h-4" />
-                  <span>Parse PDF (Trang 2)</span>
-                </button>
+              {isReadOnly ? (
+                <div className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-900 text-xs font-bold shadow-2xs">
+                  <BookOpen className="w-4 h-4 text-indigo-600" />
+                  <span>Chế độ Tra Cứu Kho Đề Đã Xuất Bản (Read-only)</span>
+                </div>
+              ) : (
+                <div className="flex flex-wrap items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIngestPart('pdf');
+                      onNavigateTab?.('exam-ingest');
+                    }}
+                    className="px-4 py-2.5 rounded-xl bg-[#1E3A5F] hover:bg-[#162C49] text-white text-xs font-extrabold flex items-center gap-2 shadow-xs cursor-pointer"
+                  >
+                    <UploadCloud className="w-4 h-4" />
+                    <span>Parse PDF (Trang 2)</span>
+                  </button>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIngestPart('bloom');
-                    onNavigateTab?.('exam-ingest');
-                  }}
-                  className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-cyan-600 hover:opacity-95 text-white text-xs font-extrabold flex items-center gap-2 shadow-xs cursor-pointer"
-                >
-                  <Sparkles className="w-4 h-4" />
-                  <span>AI Bloom L1–L6</span>
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIngestPart('bloom');
+                      onNavigateTab?.('exam-ingest');
+                    }}
+                    className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-cyan-600 hover:opacity-95 text-white text-xs font-extrabold flex items-center gap-2 shadow-xs cursor-pointer"
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    <span>AI Bloom L1–L6</span>
+                  </button>
 
-                <button
-                  type="button"
-                  onClick={() => handleCreateBlankExam({ navigateTo: 'exam-studio' })}
-                  className="px-3.5 py-2.5 rounded-xl border border-[#DCD9D0] bg-[#FAF9F6] hover:bg-[#EEF2F7] text-[#1E3A5F] text-xs font-bold flex items-center gap-2 cursor-pointer"
-                >
-                  <PenTool className="w-4 h-4" />
-                  <span>Soạn Trong Studio</span>
-                </button>
-              </div>
+                  <button
+                    type="button"
+                    onClick={() => handleCreateBlankExam({ navigateTo: 'exam-studio' })}
+                    className="px-3.5 py-2.5 rounded-xl border border-[#DCD9D0] bg-[#FAF9F6] hover:bg-[#EEF2F7] text-[#1E3A5F] text-xs font-bold flex items-center gap-2 cursor-pointer"
+                  >
+                    <PenTool className="w-4 h-4" />
+                    <span>Soạn Trong Studio</span>
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Compact KPI Row */}
@@ -302,7 +312,7 @@ export default function ExamBankView({ onNavigateTab }) {
 
           {/* Supabase Saved Exams Grid */}
           <ExamDatabaseCardsGrid
-            exams={dbExams}
+            exams={isReadOnly ? dbExams.filter((e) => e.isPublished) : dbExams}
             loading={dbLoading}
             error={dbError}
             activeExamId={currentExam?.examId}
@@ -314,8 +324,8 @@ export default function ExamBankView({ onNavigateTab }) {
               setChapterFilter('');
               handleLoadExamFromDb(examSummary, { subView: 'paper' });
             }}
-            onPublishExam={handlePublishExam}
-            onDeleteExam={requestDeleteExam}
+            onPublishExam={isReadOnly ? undefined : handlePublishExam}
+            onDeleteExam={isReadOnly ? undefined : requestDeleteExam}
           />
         </div>
       ) : (
@@ -325,6 +335,7 @@ export default function ExamBankView({ onNavigateTab }) {
             activePage="exam-bank"
             onNavigateTab={onNavigateTab}
             showBackToBank={true}
+            isReadOnly={isReadOnly}
             leftRow2Slot={
               <>
                 <nav className="inline-flex items-center gap-1 p-1 rounded-xl bg-[#F4F3EE] border border-[#E5E3DC]">
@@ -362,14 +373,16 @@ export default function ExamBankView({ onNavigateTab }) {
                   </button>
                 </nav>
 
-                <button
-                  type="button"
-                  onClick={() => onNavigateTab?.('exam-studio')}
-                  className="px-3 py-1.5 rounded-xl border border-[#D4DFED] bg-[#EEF2F7] hover:bg-[#E2EAF4] text-[#1E3A5F] text-xs font-bold flex items-center gap-1.5 cursor-pointer"
-                >
-                  <Edit3 className="w-3.5 h-3.5" />
-                  <span>Sửa Từng Câu (Trang 3)</span>
-                </button>
+                {!isReadOnly && (
+                  <button
+                    type="button"
+                    onClick={() => onNavigateTab?.('exam-studio')}
+                    className="px-3 py-1.5 rounded-xl border border-[#D4DFED] bg-[#EEF2F7] hover:bg-[#E2EAF4] text-[#1E3A5F] text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Edit3 className="w-3.5 h-3.5" />
+                    <span>Sửa Từng Câu (Trang 3)</span>
+                  </button>
+                )}
               </>
             }
           />

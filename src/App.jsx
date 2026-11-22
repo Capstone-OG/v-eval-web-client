@@ -118,12 +118,8 @@ const ROLE_PORTAL_DEFINITIONS = {
       { id: 'schedule', label: 'Thời khóa biểu & Điểm danh', icon: Calendar },
       { id: 'history', label: 'Lịch sử làm bài', icon: History },
       { id: 'roadmap', label: 'Khung chương trình', icon: BookOpen },
-      { id: 'textbook-standard', label: '1. Sách Giáo Khoa Chuẩn', icon: BookOpen },
-      { id: 'textbook-ingest', label: '2. Nạp Tài Liệu SGK', icon: BookOpenCheck },
-      { id: 'textbook-studio', label: '3. Studio Biên Soạn SGK', icon: BookOpenCheck },
-      { id: 'exam-bank', label: '1. Kho Đề & Xem Đề Thi', icon: FileSpreadsheet },
-      { id: 'exam-ingest', label: '2. Parse PDF & AI Bloom', icon: Sparkles },
-      { id: 'exam-studio', label: '3. Studio Biên Soạn Đề', icon: FileSpreadsheet },
+      { id: 'textbook-standard', label: 'Sách giáo khoa (SGK)', icon: BookOpen },
+      { id: 'exam-bank', label: 'Kho đề thi đã xuất bản', icon: FileSpreadsheet },
       { id: 'ai_moderation', label: 'Kiểm duyệt gia sư AI', icon: Bot }
     ]
   },
@@ -521,6 +517,7 @@ export default function App() {
         return (
           <AiTutorModerationView
             currentUser={currentUser}
+            role={role}
             onBackToDashboard={() => setActiveTab('dashboard')}
           />
         );
@@ -574,9 +571,25 @@ export default function App() {
       );
     }
 
+    // Guard: Giảng viên chỉ có quyền tra cứu SGK chuẩn và Kho đề đã xuất bản; ẩn & chặn các trang Ingest & Studio
+    if (role === 'teacher' && (activeTab === 'textbook-ingest' || activeTab === 'textbook-studio')) {
+      return (
+        <TextbookStandardView
+          role={role}
+          onNavigateTab={setActiveTab}
+          onBack={() => setActiveTab('roadmap')}
+          isSidebarCollapsed={isSidebarCollapsed}
+        />
+      );
+    }
+    if (role === 'teacher' && (activeTab === 'exam-ingest' || activeTab === 'exam-studio')) {
+      return <ExamBankView role={role} onNavigateTab={setActiveTab} />;
+    }
+
     if (activeTab === 'textbook-standard') {
       return (
         <TextbookStandardView
+          role={role}
           onNavigateTab={setActiveTab}
           onBack={() => setActiveTab('roadmap')}
           isSidebarCollapsed={isSidebarCollapsed}
@@ -590,7 +603,7 @@ export default function App() {
       return <TextbookStudioView onNavigateTab={setActiveTab} onBack={() => setActiveTab('textbook-standard')} />;
     }
     if (activeTab === 'exam-bank') {
-      return <ExamBankView onNavigateTab={setActiveTab} />;
+      return <ExamBankView role={role} onNavigateTab={setActiveTab} />;
     }
     if (activeTab === 'exam-ingest') {
       return <ExamIngestView onNavigateTab={setActiveTab} />;
@@ -734,6 +747,7 @@ export default function App() {
       return (
         <AiTutorModerationView
           currentUser={currentUser}
+          role={role}
           onBackToDashboard={() => setActiveTab('dashboard')}
         />
       );

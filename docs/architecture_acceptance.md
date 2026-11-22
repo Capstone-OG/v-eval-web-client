@@ -3217,3 +3217,27 @@ The Parent Companion Portal was completely redesigned and hardened according to 
     - **Session Cache-Busting**:
       - Upgraded `STORAGE_KEY` to `veval_active_exam_workspace_v3` in `examStateBridge.js`.
     - **Verification**: `node --test src/components/curriculum/examStateBridge.test.js` passed `6/6`, `node --test tests/*.test.js` passed `22/22`, `npm run build` succeeded in 3.52s.
+
+35. **Pedagogical Role Segregation & Two-Tier Human-in-the-Loop Socratic AI Moderation Architecture (TCH-01) (`Sidebar.jsx`, `App.jsx`, `CurriculumExplorerView.jsx`, `TextbookStandardView.jsx`, `ExamBankView.jsx`, `ExamWorkspaceHeader.jsx`, `AiTutorModerationView.jsx`) [22/11/2026]**:
+    - **Problem Statement (TCH-01)**:
+      - The Instructor portal navigation inadvertently exposed administrative and curation authoring suites (Curriculum Studio, Textbook Ingestion/Authoring, and Exam Bank Parsing/Authoring) mirroring the Academic Director role.
+      - In Core Flow 4 (AI Tutor Moderation), Instructors possessed unconstrained system-wide write access, permitting direct overrides of Golden Exemplars and Cognitive Traps into the shared GraphRAG knowledge base without academic governance.
+    - **Pedagogical Role Segregation & Read-Only Enforcement**:
+      - *Sidebar Redesign (`Sidebar.jsx`)*: Replaced multi-tier authoring suites in the teacher menu with single, dedicated read-only inquiry entries: Curriculum (`Tra cứu cây kiến thức & Bloom`), Textbook Standard (`Tra cứu SGK chuẩn GDPT 2018`), and Exam Bank (`Kho đề thi đã xuất bản`). Ingestion and Studio routes were removed.
+      - *Route Guards (`App.jsx`)*: Intercepted direct navigation to authoring URLs for teachers, automatically redirecting them to their respective standard read-only views (`textbook-standard`, `exam-bank`).
+      - *Read-Only Enforcement*:
+        - `CurriculumExplorerView.jsx`: Suppressed Studio entry buttons, structural additions, and deletion handlers; enforced `instructorMode = false` on `UnifiedNodeDetailView.jsx`.
+        - `TextbookStandardView.jsx`: Suppressed curriculum sync, GDPT reset, textbook deletion, and ingestion navigation; displayed an explicit read-only indicator.
+        - `ExamBankView.jsx` & `ExamWorkspaceHeader.jsx`: Suppressed `ExamPageFlowBar`, PDF parsing, Bloom generation, and Studio authoring buttons; locked exam headers against database overwrites and deletions, displaying published exams only.
+    - **Two-Tier Human-in-the-Loop Socratic AI Moderation (Core Flow 4) (`AiTutorModerationView.jsx`)**:
+      - *Tier 1 — Instructor Layer (`role === 'teacher'`)*:
+        - Scoped strictly to assigned teaching classes with dynamic class selector filtering.
+        - Replaced direct knowledge graph overwrite permissions with a 2-step pedagogical proposal workbench: **Tab 1: Propose Golden Exemplar** and **Tab 2: Propose Cognitive Trap**, omitting report dismissal actions.
+        - Proposals persist with instructor provenance metadata and transition interaction logs to `PENDING_DIRECTOR_REVIEW` state.
+      - *Tier 2 — Academic Director Layer (`role === 'director'`)*:
+        - Provides campus-wide administrative oversight with a dedicated `Đề xuất GV` queue filter tab.
+        - Displays prominent proposal inspection callouts with 1-click execution controls:
+          1. **Approve & Overwrite Graph (`✓ Phê Duyệt & Ghi Đè Vào Kho RAG Toàn Trường`)**: Ingests proposed solutions/traps directly into `PatternExemplar` or `PatternTrap` nodes in the shared GraphRAG base.
+          2. **Reject Proposal (`✕ Từ Chối Đề Xuất`)**: Dismisses the proposal with pedagogical feedback.
+        - Retains full 3-tab direct intervention autonomy across all system interactions.
+    - **Verification**: `npm run build` compiled 3081 modules in 1.97s with zero errors; unit tests passed 28/28 (`tests/*.test.js` 22/22, `examStateBridge.test.js` 6/6).

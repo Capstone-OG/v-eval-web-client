@@ -27,29 +27,55 @@ import MathText from '../common/MathText';
 import { practiceService } from '../../services/practiceService';
 import { toast } from '../../context/ToastContext';
 
-export default function AiTutorModerationView({ currentUser, onBackToDashboard }) {
+const TUTOR_PROPOSALS_STORAGE_KEY = 'veval_tutor_proposals';
+
+const getStoredProposals = () => {
+  try {
+    const raw = localStorage.getItem(TUTOR_PROPOSALS_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+};
+
+const saveStoredProposals = (data) => {
+  try {
+    localStorage.setItem(TUTOR_PROPOSALS_STORAGE_KEY, JSON.stringify(data));
+  } catch (err) {
+    console.warn('[AiTutorModerationView] Failed to save proposals:', err);
+  }
+};
+
+export default function AiTutorModerationView({ currentUser, onBackToDashboard, role = 'director' }) {
+  const isTeacher = role === 'teacher';
+  const isDirector = !isTeacher;
+
   const [interactions, setInteractions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState(null);
-  const [filterMode, setFilterMode] = useState('pending'); // 'pending' | 'all' | 'resolved' | 'reported'
+  const [filterMode, setFilterMode] = useState('pending'); // 'pending' | 'proposals' | 'all' | 'resolved' | 'reported'
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedClassFilter, setSelectedClassFilter] = useState('all');
+
+  // Persistent proposals from Teachers (Hybrid localStorage + runtime state)
+  const [proposals, setProposals] = useState(getStoredProposals);
 
   // Mentor Action Form States
   const [actionTab, setActionTab] = useState('override'); // 'override' | 'add_trap' | 'verify'
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Form: Override Golden Exemplar
+  // Form: Override / Propose Golden Exemplar
   const [goldenSolution, setGoldenSolution] = useState('');
   const [socraticSteps, setSocraticSteps] = useState('');
 
-  // Form: Add Novel Cognitive Trap
+  // Form: Add / Propose Novel Cognitive Trap
   const [trapCode, setTrapCode] = useState('');
   const [trapName, setTrapName] = useState('');
   const [trapOption, setTrapOption] = useState('B');
   const [trapExplanation, setTrapExplanation] = useState('');
   const [trapSocraticHint, setTrapSocraticHint] = useState('');
 
-  // Form: Verify & Dismiss
+  // Form: Verify & Dismiss (Director only)
   const [verifyNotes, setVerifyNotes] = useState('');
 
   // Load interactions from real API
@@ -58,16 +84,20 @@ export default function AiTutorModerationView({ currentUser, onBackToDashboard }
     try {
       const data = await practiceService.getAiTutorInteractions({ reportedOnly: false });
       const rawList = Array.isArray(data) ? data : data?.items || [];
+      const storedProposals = getStoredProposals();
 
       const list = rawList.map((item) => {
         const sid = item.student_id ? String(item.student_id).slice(0, 6).toUpperCase() : 'HS';
         const qid = item.question_id ? String(item.question_id).slice(0, 8).toUpperCase() : '';
+        const itemId = item.id || item.interaction_id || item.interactionId;
+        const currentProposal = storedProposals[itemId] || null;
 
         return {
-          id: item.id || item.interaction_id || item.interactionId,
+          id: itemId,
           student_id: item.student_id || 'unknown',
           student_name: item.student_name || item.studentName || (item.student_id ? `Học sinh ${sid}` : 'Học sinh'),
           class_name: item.class_name || item.className || 'Lớp phụ trách',
+          class_id: item.class_id || item.classId || 'class_01',
           question_id: item.question_id,
           question_latex:
             item.question_latex ||
@@ -92,7 +122,8 @@ export default function AiTutorModerationView({ currentUser, onBackToDashboard }
           validation_status: item.validation_status || item.validationStatus || 'PASSED',
           mentor_resolution: item.mentor_resolution || item.mentorResolution || null,
           mentor_notes: item.mentor_notes || '',
-          created_at: item.created_at || item.createdAt || new Date().toISOString()
+          created_at: item.created_at || item.createdAt || new Date().toISOString(),
+          proposal: currentProposal
         };
       });
 
@@ -100,8 +131,7 @@ export default function AiTutorModerationView({ currentUser, onBackToDashboard }
 
       // Select first item by default
       if (list.length > 0 && !selectedId) {
-        // Prioritize pending report
-        const firstPending = list.find((i) => i.student_reported && !i.mentor_resolution);
+        const firstPending = list.find((i) => (i.student_reported && !i.mentor_resolution) || Boolean(i.proposal));
         setSelectedId(firstPending ? firstPending.id : list[0].id);
       }
     } catch (err) {
@@ -116,35 +146,76 @@ export default function AiTutorModerationView({ currentUser, onBackToDashboard }
     loadInteractions();
   }, [loadInteractions]);
 
-  // Selected item reference
+  // Extract distinct classes for class filter dropdown
+  const availableClasses = useMemo(() => {
+    const classSet = new Set();
+    interactions.forEach((item) => {
+      if (item.class_name) classSet.add(item.class_name);
+    });
+    return Array.from(classSet);
+  }, [interactions]);
+
+  // Selected item reference enriched with latest proposal
   const selectedItem = useMemo(() => {
-    return interactions.find((item) => item.id === selectedId) || interactions[0] || null;
-  }, [interactions, selectedId]);
+    const found = interactions.find((item) => item.id === selectedId) || interactions[0] || null;
+    if (!found) return null;
+    return {
+      ...found,
+      proposal: proposals[found.id] || found.proposal || null
+    };
+  }, [interactions, selectedId, proposals]);
 
   // Pre-fill action forms when selected item changes
   useEffect(() => {
     if (selectedItem) {
-      setGoldenSolution(
-        selectedItem.core_theory_latex ||
-        (selectedItem.pattern_name ? `Lời giải chuẩn hóa chuyên môn: ${selectedItem.pattern_name}` : '')
-      );
-      setSocraticSteps('');
-      setTrapCode(selectedItem.trap_code ? `${selectedItem.trap_code}_REVISED` : (selectedItem.pattern_code ? `TRAP_${selectedItem.pattern_code}` : ''));
-      setTrapName(selectedItem.trap_name || '');
-      setTrapOption(selectedItem.student_selected_option || 'B');
-      setTrapExplanation(selectedItem.misconception_explanation || '');
-      setTrapSocraticHint('');
+      if (selectedItem.proposal && selectedItem.proposal.type === 'exemplar') {
+        setGoldenSolution(selectedItem.proposal.goldenSolution || '');
+        setSocraticSteps(selectedItem.proposal.socraticSteps || '');
+      } else {
+        setGoldenSolution(
+          selectedItem.core_theory_latex ||
+          (selectedItem.pattern_name ? `Lời giải chuẩn hóa chuyên môn: ${selectedItem.pattern_name}` : '')
+        );
+        setSocraticSteps('');
+      }
+
+      if (selectedItem.proposal && selectedItem.proposal.type === 'trap') {
+        setTrapCode(selectedItem.proposal.trapCode || '');
+        setTrapName(selectedItem.proposal.trapName || '');
+        setTrapOption(selectedItem.proposal.trapOption || 'B');
+        setTrapExplanation(selectedItem.proposal.trapExplanation || '');
+        setTrapSocraticHint(selectedItem.proposal.trapSocraticHint || '');
+      } else {
+        setTrapCode(selectedItem.trap_code ? `${selectedItem.trap_code}_REVISED` : (selectedItem.pattern_code ? `TRAP_${selectedItem.pattern_code}` : ''));
+        setTrapName(selectedItem.trap_name || '');
+        setTrapOption(selectedItem.student_selected_option || 'B');
+        setTrapExplanation(selectedItem.misconception_explanation || '');
+        setTrapSocraticHint('');
+      }
       setVerifyNotes('');
     }
   }, [selectedItem]);
 
-  // Filtered interaction list
+  // Filtered interaction list based on Role, Class, Status Tab, Search
   const filteredList = useMemo(() => {
-    return interactions.filter(item => {
+    return interactions.filter((item) => {
+      const itemProposal = proposals[item.id] || item.proposal;
+
+      // 0. Class Filter (Active for Teacher or when selected)
+      if (selectedClassFilter !== 'all' && item.class_name !== selectedClassFilter) {
+        return false;
+      }
+
       // 1. Tab filter
-      if (filterMode === 'pending' && (item.mentor_resolution || !item.student_reported)) return false;
-      if (filterMode === 'resolved' && !item.mentor_resolution) return false;
-      if (filterMode === 'reported' && !item.student_reported) return false;
+      if (filterMode === 'pending') {
+        if (item.mentor_resolution || !item.student_reported) return false;
+      } else if (filterMode === 'proposals') {
+        if (!itemProposal) return false;
+      } else if (filterMode === 'resolved') {
+        if (!item.mentor_resolution) return false;
+      } else if (filterMode === 'reported') {
+        if (!item.student_reported) return false;
+      }
 
       // 2. Search query
       if (searchQuery.trim()) {
@@ -157,20 +228,28 @@ export default function AiTutorModerationView({ currentUser, onBackToDashboard }
       }
       return true;
     });
-  }, [interactions, filterMode, searchQuery]);
+  }, [interactions, proposals, selectedClassFilter, filterMode, searchQuery]);
 
   // Status counts & dynamic telemetry
   const counts = useMemo(() => {
-    const pending = interactions.filter(i => i.student_reported && !i.mentor_resolution).length;
-    const resolved = interactions.filter(i => Boolean(i.mentor_resolution)).length;
-    const reported = interactions.filter(i => Boolean(i.student_reported)).length;
+    // Filter base by class if teacher has a class filter
+    const baseList = selectedClassFilter !== 'all'
+      ? interactions.filter((i) => i.class_name === selectedClassFilter)
+      : interactions;
+
+    const pending = baseList.filter((i) => i.student_reported && !i.mentor_resolution).length;
+    const resolved = baseList.filter((i) => Boolean(i.mentor_resolution)).length;
+    const reported = baseList.filter((i) => Boolean(i.student_reported)).length;
+    const proposalsCount = baseList.filter((i) => Boolean(proposals[i.id] || i.proposal)).length;
+
     return {
-      total: interactions.length,
+      total: baseList.length,
       pending,
       resolved,
-      reported
+      reported,
+      proposalsCount
     };
-  }, [interactions]);
+  }, [interactions, proposals, selectedClassFilter]);
 
   const socraticReliability = useMemo(() => {
     if (counts.total === 0) return '100.0';
@@ -186,7 +265,164 @@ export default function AiTutorModerationView({ currentUser, onBackToDashboard }
     return interactions.filter((i) => i.mentor_resolution === 'NEW_TRAP_ADDED' || Boolean(i.matched_trap_id)).length;
   }, [interactions]);
 
-  // Action 1: Submit Override Golden Exemplar
+  // --- TEACHER ACTIONS: Gửi Đề Xuất (Chờ Director duyệt) ---
+  const handleTeacherProposeExemplar = (e) => {
+    e.preventDefault();
+    if (!selectedItem || !goldenSolution.trim()) return;
+
+    const newProposal = {
+      type: 'exemplar',
+      interactionId: selectedItem.id,
+      teacherName: currentUser?.fullName || currentUser?.name || 'Giảng viên phụ trách',
+      teacherId: currentUser?.id || 'teacher_current',
+      goldenSolution: goldenSolution.trim(),
+      socraticSteps: socraticSteps.trim(),
+      proposedAt: new Date().toISOString(),
+      status: 'PENDING_DIRECTOR_REVIEW'
+    };
+
+    const nextProposals = { ...proposals, [selectedItem.id]: newProposal };
+    setProposals(nextProposals);
+    saveStoredProposals(nextProposals);
+
+    setInteractions((prev) =>
+      prev.map((item) => (item.id === selectedItem.id ? { ...item, proposal: newProposal } : item))
+    );
+
+    toast.success('Đã gửi đề xuất Lời Giải Mẫu Chuẩn lên Giám đốc Học thuật phê duyệt!');
+  };
+
+  const handleTeacherProposeTrap = (e) => {
+    e.preventDefault();
+    if (!selectedItem || !trapCode.trim() || !trapName.trim()) return;
+
+    const newProposal = {
+      type: 'trap',
+      interactionId: selectedItem.id,
+      teacherName: currentUser?.fullName || currentUser?.name || 'Giảng viên phụ trách',
+      teacherId: currentUser?.id || 'teacher_current',
+      trapCode: trapCode.trim(),
+      trapName: trapName.trim(),
+      trapOption,
+      trapExplanation: trapExplanation.trim(),
+      trapSocraticHint: trapSocraticHint.trim(),
+      proposedAt: new Date().toISOString(),
+      status: 'PENDING_DIRECTOR_REVIEW'
+    };
+
+    const nextProposals = { ...proposals, [selectedItem.id]: newProposal };
+    setProposals(nextProposals);
+    saveStoredProposals(nextProposals);
+
+    setInteractions((prev) =>
+      prev.map((item) => (item.id === selectedItem.id ? { ...item, proposal: newProposal } : item))
+    );
+
+    toast.success(`Đã gửi đề xuất Bẫy tư duy (${trapCode.trim()}) lên Giám đốc Học thuật phê duyệt!`);
+  };
+
+  const handleCancelProposal = (interactionId) => {
+    const nextProposals = { ...proposals };
+    delete nextProposals[interactionId];
+    setProposals(nextProposals);
+    saveStoredProposals(nextProposals);
+
+    setInteractions((prev) =>
+      prev.map((item) => (item.id === interactionId ? { ...item, proposal: null } : item))
+    );
+
+    toast.info('Đã hủy đề xuất sư phạm.');
+  };
+
+  // --- DIRECTOR ACTIONS: Phê Duyệt Đề Xuất của Giảng viên & Can Thiệp Trực Tiếp ---
+  const handleApproveProposal = async () => {
+    if (!selectedItem || !selectedItem.proposal) return;
+    const prop = selectedItem.proposal;
+
+    try {
+      setIsSubmitting(true);
+      if (prop.type === 'exemplar') {
+        const stepsList = (prop.socraticSteps || '').split('\n').filter((s) => s.trim().length > 0);
+        await practiceService.overrideTutorExemplar({
+          interactionId: selectedItem.id,
+          archetypePatternId: selectedItem.matched_trap_id || selectedItem.id,
+          questionLatex: selectedItem.question_latex,
+          goldenSolution: prop.goldenSolution,
+          correctOption: selectedItem.correct_option,
+          explanationSteps: stepsList
+        });
+
+        setInteractions((prev) =>
+          prev.map((item) =>
+            item.id === selectedItem.id
+              ? {
+                  ...item,
+                  proposal: null,
+                  mentor_resolution: 'OVERRIDDEN_EXEMPLAR_SAVED',
+                  mentor_notes: `Đã phê duyệt đề xuất từ GV ${prop.teacherName} và lưu vào Knowledge Graph.`
+                }
+              : item
+          )
+        );
+      } else if (prop.type === 'trap') {
+        await practiceService.addTutorNovelTrap({
+          interactionId: selectedItem.id,
+          archetypePatternId: selectedItem.matched_trap_id || selectedItem.id,
+          trapCode: prop.trapCode,
+          trapName: prop.trapName,
+          wrongOption: prop.trapOption,
+          misconceptionExplanation: prop.trapExplanation,
+          socraticHint: prop.trapSocraticHint
+        });
+
+        setInteractions((prev) =>
+          prev.map((item) =>
+            item.id === selectedItem.id
+              ? {
+                  ...item,
+                  proposal: null,
+                  mentor_resolution: 'NEW_TRAP_ADDED',
+                  trap_code: prop.trapCode,
+                  trapName: prop.trapName,
+                  misconception_explanation: prop.trapExplanation,
+                  mentor_notes: `Đã phê duyệt bẫy tư duy từ GV ${prop.teacherName} và lưu vào Knowledge Graph.`
+                }
+              : item
+          )
+        );
+      }
+
+      // Xóa proposal sau khi đã duyệt thành công
+      const nextProposals = { ...proposals };
+      delete nextProposals[selectedItem.id];
+      setProposals(nextProposals);
+      saveStoredProposals(nextProposals);
+
+      toast.success('Đã phê duyệt & ghi đè đề xuất của Giảng viên vào kho RAG toàn trường!');
+    } catch (err) {
+      toast.error('Lỗi khi phê duyệt đề xuất: ' + (err.message || 'Lỗi hệ thống'));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleRejectProposal = () => {
+    if (!selectedItem || !selectedItem.proposal) return;
+    const prop = selectedItem.proposal;
+
+    const nextProposals = { ...proposals };
+    delete nextProposals[selectedItem.id];
+    setProposals(nextProposals);
+    saveStoredProposals(nextProposals);
+
+    setInteractions((prev) =>
+      prev.map((item) => (item.id === selectedItem.id ? { ...item, proposal: null } : item))
+    );
+
+    toast.info(`Đã từ chối đề xuất của Giảng viên (${prop.teacherName}).`);
+  };
+
+  // Director Direct Action 1: Submit Override Golden Exemplar
   const handleOverrideExemplar = async (e) => {
     e.preventDefault();
     if (!selectedItem || !goldenSolution.trim()) return;
@@ -203,12 +439,18 @@ export default function AiTutorModerationView({ currentUser, onBackToDashboard }
         explanationSteps: stepsList
       });
 
-      // Update state in-place
+      // Update state in-place & clear proposal if any
+      const nextProposals = { ...proposals };
+      delete nextProposals[selectedItem.id];
+      setProposals(nextProposals);
+      saveStoredProposals(nextProposals);
+
       setInteractions(prev =>
         prev.map(item =>
           item.id === selectedItem.id
             ? {
                 ...item,
+                proposal: null,
                 mentor_resolution: 'OVERRIDDEN_EXEMPLAR_SAVED',
                 mentor_notes: 'Đã lưu lời giải mẫu chuẩn vào Knowledge Graph.'
               }
@@ -224,7 +466,7 @@ export default function AiTutorModerationView({ currentUser, onBackToDashboard }
     }
   };
 
-  // Action 2: Submit Add Novel Cognitive Trap
+  // Director Direct Action 2: Submit Add Novel Cognitive Trap
   const handleAddTrap = async (e) => {
     e.preventDefault();
     if (!selectedItem || !trapCode.trim() || !trapName.trim()) return;
@@ -241,12 +483,18 @@ export default function AiTutorModerationView({ currentUser, onBackToDashboard }
         socraticHint: trapSocraticHint.trim()
       });
 
-      // Update state in-place
+      // Update state in-place & clear proposal if any
+      const nextProposals = { ...proposals };
+      delete nextProposals[selectedItem.id];
+      setProposals(nextProposals);
+      saveStoredProposals(nextProposals);
+
       setInteractions(prev =>
         prev.map(item =>
           item.id === selectedItem.id
             ? {
                 ...item,
+                proposal: null,
                 mentor_resolution: 'NEW_TRAP_ADDED',
                 trap_code: trapCode.trim(),
                 trap_name: trapName.trim(),
@@ -265,7 +513,7 @@ export default function AiTutorModerationView({ currentUser, onBackToDashboard }
     }
   };
 
-  // Action 3: Verify / Mark as Accurate
+  // Director Direct Action 3: Verify / Mark as Accurate
   const handleVerifyAccurate = async (e) => {
     e.preventDefault();
     if (!selectedItem) return;
@@ -278,12 +526,17 @@ export default function AiTutorModerationView({ currentUser, onBackToDashboard }
         notes: verifyNotes.trim() || 'Học sinh hiểu nhầm. Câu trả lời của Gia sư AI hoàn toàn đúng chuẩn sư phạm gợi mở.'
       });
 
-      // Update state in-place
+      const nextProposals = { ...proposals };
+      delete nextProposals[selectedItem.id];
+      setProposals(nextProposals);
+      saveStoredProposals(nextProposals);
+
       setInteractions(prev =>
         prev.map(item =>
           item.id === selectedItem.id
             ? {
                 ...item,
+                proposal: null,
                 mentor_resolution: 'VERIFIED_ACCURATE',
                 mentor_notes: verifyNotes.trim() || 'Thẩm định: Câu trả lời của AI chính xác, đúng chuẩn Socratic.'
               }
@@ -312,22 +565,37 @@ export default function AiTutorModerationView({ currentUser, onBackToDashboard }
           <div className="space-y-4 max-w-2xl flex-1">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 text-[#FACC15] text-xs font-bold uppercase tracking-wider">
               <Bot className="w-4 h-4 text-[#FACC15]" />
-              <span>Phân hệ Quản trị Học thuật • Core Flow 4: Socratic AI & GraphRAG</span>
+              <span>
+                {isTeacher
+                  ? 'Phân hệ Giảng viên • Đề xuất Sư phạm Gia sư AI'
+                  : 'Phân hệ Quản trị Học thuật • Core Flow 4: Socratic AI & GraphRAG'}
+              </span>
             </div>
 
             <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-white leading-tight font-sans">
-              Trung Tâm Kiểm Duyệt Phản Hồi Gia Sư AI & Báo Cáo Học Sinh
+              {isTeacher
+                ? 'Kiểm Duyệt Gia Sư AI — Lớp Phụ Trách & Đề Xuất Sư Phạm'
+                : 'Trung Tâm Kiểm Duyệt Phản Hồi Gia Sư AI & Báo Cáo Học Sinh'}
             </h1>
 
             <p className="text-sm text-slate-200 font-medium leading-relaxed">
-              Tiếp nhận các phiên trả lời bị học sinh báo cáo sai hoặc ảo giác kiến thức. Ban Chuyên môn thẩm định và can thiệp sư phạm: Ghi đè lời giải mẫu chuẩn hoặc Bổ sung bẫy tư duy mới vào Knowledge Graph.
+              {isTeacher
+                ? 'Theo dõi tương tác của Gia sư AI với học sinh trong các lớp bạn giảng dạy. Đóng góp đề xuất Lời giải chuẩn hoặc Bẫy tư duy mới để Giám đốc Học thuật thẩm định & ghi đè vào kho tri thức RAG.'
+                : 'Tiếp nhận các phiên trả lời bị học sinh báo cáo sai hoặc ảo giác kiến thức. Ban Chuyên môn thẩm định đề xuất từ Giảng viên hoặc trực tiếp can thiệp sư phạm vào Knowledge Graph.'}
             </p>
 
             {/* Quick Status Chips */}
             <div className="flex flex-wrap items-center gap-2.5 text-xs font-semibold pt-1">
               <span className="flex items-center gap-1.5 font-extrabold text-slate-950 bg-[#FACC15] px-3 py-1.5 rounded-xl shadow-sm">
                 <Clock className="w-3.5 h-3.5 text-slate-950" />
-                Chờ thẩm định: <strong className="font-black">{counts.pending} báo cáo</strong>
+                {isTeacher ? 'Báo cáo lớp cần xem:' : 'Chờ thẩm định:'}{' '}
+                <strong className="font-black">{counts.pending} báo cáo</strong>
+              </span>
+
+              <span className="flex items-center gap-1.5 text-amber-200 bg-amber-500/20 px-3 py-1.5 rounded-xl border border-amber-400/30 font-bold">
+                <Award className="w-3.5 h-3.5 text-amber-300" />
+                {isTeacher ? 'Đề xuất đã gửi:' : 'Đề xuất từ GV:'}{' '}
+                <strong className="text-white font-extrabold">{counts.proposalsCount} đề xuất</strong>
               </span>
 
               <span className="flex items-center gap-1.5 text-emerald-200 bg-emerald-500/20 px-3 py-1.5 rounded-xl border border-emerald-400/30 font-bold">
@@ -337,12 +605,31 @@ export default function AiTutorModerationView({ currentUser, onBackToDashboard }
 
               <span className="flex items-center gap-1.5 text-slate-200 bg-white/10 px-3 py-1.5 rounded-xl border border-white/10">
                 <Layers className="w-3.5 h-3.5 text-cyan-300" />
-                CSDL PostgreSQL: <strong className="text-white font-extrabold">{counts.total} đàm thoại</strong>
+                {isTeacher ? 'Phạm vi lớp:' : 'CSDL PostgreSQL:'}{' '}
+                <strong className="text-white font-extrabold">{counts.total} đàm thoại</strong>
               </span>
             </div>
 
-            {/* Banner Action Buttons */}
+            {/* Banner Action Buttons & Teacher Class Filter */}
             <div className="flex flex-wrap items-center gap-3 pt-2">
+              {availableClasses.length > 0 && (
+                <div className="flex items-center gap-2 bg-white/15 backdrop-blur-md px-3.5 py-2 rounded-2xl border border-white/20">
+                  <span className="text-xs font-bold text-[#FACC15]">Lớp:</span>
+                  <select
+                    value={selectedClassFilter}
+                    onChange={(e) => setSelectedClassFilter(e.target.value)}
+                    className="bg-slate-900/80 text-white border border-white/20 text-xs font-bold px-2.5 py-1 rounded-xl outline-none cursor-pointer"
+                  >
+                    <option value="all">Tất cả lớp ({availableClasses.length} lớp)</option>
+                    {availableClasses.map((cls) => (
+                      <option key={cls} value={cls}>
+                        {cls}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               <button
                 type="button"
                 onClick={loadInteractions}
@@ -397,8 +684,10 @@ export default function AiTutorModerationView({ currentUser, onBackToDashboard }
               </div>
 
               <div className="p-2.5 rounded-2xl bg-slate-900/40 border border-white/10 flex items-center justify-between text-xs font-bold text-slate-200">
-                <span>Cơ chế phản hồi:</span>
-                <span className="text-cyan-300 font-extrabold">Human-in-the-Loop</span>
+                <span>Cơ chế thẩm duyệt:</span>
+                <span className="text-cyan-300 font-extrabold">
+                  {isTeacher ? 'Đề xuất 2 tầng' : 'Human-in-the-Loop'}
+                </span>
               </div>
             </div>
           </div>
@@ -412,11 +701,11 @@ export default function AiTutorModerationView({ currentUser, onBackToDashboard }
           <div>
             <div className="flex items-center justify-between mb-2">
               <span className="text-[11px] font-bold tracking-wider uppercase text-slate-400">
-                Yêu cầu cần xử lý
+                {isTeacher ? 'Báo cáo lớp phụ trách' : 'Yêu cầu cần xử lý'}
               </span>
               <span className="px-2 py-0.5 rounded-md bg-rose-50 text-rose-700 text-xs font-bold border border-rose-200 flex items-center gap-1">
                 <AlertTriangle className="w-3 h-3 text-rose-600" />
-                Cần can thiệp
+                Cần xem xét
               </span>
             </div>
 
@@ -443,12 +732,46 @@ export default function AiTutorModerationView({ currentUser, onBackToDashboard }
           </button>
         </div>
 
-        {/* CARD 2: Resolved & Ingested into Graph */}
+        {/* CARD 2: Proposals (GV: Đã gửi / Director: Chờ phê duyệt) */}
+        <div className="bg-white rounded-2xl p-5 border border-slate-200/80 card-shadow flex flex-col justify-between hover:border-amber-300 transition-all group">
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[11px] font-bold tracking-wider uppercase text-slate-400">
+                {isTeacher ? 'Đề xuất của bạn' : 'Đề xuất từ Giảng viên'}
+              </span>
+              <span className="px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 text-xs font-bold border border-amber-200 flex items-center gap-1">
+                <Award className="w-3 h-3 text-amber-600" />
+                {isTeacher ? 'Chờ Director duyệt' : 'Cần thẩm định'}
+              </span>
+            </div>
+
+            <div className="flex items-baseline gap-2 mb-1">
+              <span className="text-3xl font-extrabold text-amber-600 tracking-tight">{counts.proposalsCount}</span>
+              <span className="text-sm font-semibold text-slate-400">đề xuất</span>
+            </div>
+
+            <div className="text-xs font-semibold text-slate-600 bg-slate-50 p-2 rounded-xl border border-slate-100 mb-4 flex items-center justify-between">
+              <span>Phân loại:</span>
+              <strong className="text-amber-700 font-bold">Lời giải mẫu & Bẫy tư duy</strong>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setFilterMode('proposals')}
+            className="w-full flex items-center justify-between text-xs font-bold text-amber-600 group-hover:text-amber-700 pt-2 border-t border-slate-100 cursor-pointer"
+          >
+            <span>{isTeacher ? 'Xem các đề xuất của tôi' : 'Xem đề xuất từ Giảng viên'}</span>
+            <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+          </button>
+        </div>
+
+        {/* CARD 3: Resolved & Ingested into Graph */}
         <div className="bg-white rounded-2xl p-5 border border-slate-200/80 card-shadow flex flex-col justify-between hover:border-emerald-300 transition-all group">
           <div>
             <div className="flex items-center justify-between mb-2">
               <span className="text-[11px] font-bold tracking-wider uppercase text-slate-400">
-                Can thiệp sư phạm
+                Đã xử lý & Lưu Graph
               </span>
               <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 text-xs font-bold border border-emerald-200 flex items-center gap-1">
                 <CheckCircle2 className="w-3 h-3 text-emerald-600" />
@@ -477,50 +800,16 @@ export default function AiTutorModerationView({ currentUser, onBackToDashboard }
           </button>
         </div>
 
-        {/* CARD 3: Total Student Flags */}
-        <div className="bg-white rounded-2xl p-5 border border-slate-200/80 card-shadow flex flex-col justify-between hover:border-amber-300 transition-all group">
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[11px] font-bold tracking-wider uppercase text-slate-400">
-                Khiếu nại từ học sinh
-              </span>
-              <span className="px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 text-xs font-bold border border-amber-200 flex items-center gap-1">
-                <Flag className="w-3 h-3 text-amber-600" />
-                Gắn cờ AI
-              </span>
-            </div>
-
-            <div className="flex items-baseline gap-2 mb-1">
-              <span className="text-3xl font-extrabold text-slate-900 tracking-tight">{counts.reported}</span>
-              <span className="text-sm font-semibold text-slate-400">lượt khiếu nại</span>
-            </div>
-
-            <div className="text-xs font-semibold text-slate-600 bg-slate-50 p-2 rounded-xl border border-slate-100 mb-4 flex items-center justify-between">
-              <span>Nguồn báo cáo:</span>
-              <strong className="text-amber-700 font-bold">Nút Báo Cáo trên Chat</strong>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => setFilterMode('reported')}
-            className="w-full flex items-center justify-between text-xs font-bold text-amber-600 group-hover:text-amber-700 pt-2 border-t border-slate-100 cursor-pointer"
-          >
-            <span>Xem tất cả khiếu nại</span>
-            <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-          </button>
-        </div>
-
         {/* CARD 4: Total System AI Interactions Monitored */}
         <div className="bg-white rounded-2xl p-5 border border-slate-200/80 card-shadow flex flex-col justify-between hover:border-blue-300 transition-all group">
           <div>
             <div className="flex items-center justify-between mb-2">
               <span className="text-[11px] font-bold tracking-wider uppercase text-slate-400">
-                Giám sát hệ thống
+                {isTeacher ? 'Giám sát lớp mình' : 'Giám sát hệ thống'}
               </span>
               <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 text-xs font-bold border border-blue-200 flex items-center gap-1">
                 <Bot className="w-3 h-3 text-blue-600" />
-                Supabase Pooler
+                {isTeacher ? 'Lớp Phụ Trách' : 'Supabase Pooler'}
               </span>
             </div>
 
@@ -530,7 +819,7 @@ export default function AiTutorModerationView({ currentUser, onBackToDashboard }
             </div>
 
             <div className="text-xs font-semibold text-slate-600 bg-slate-50 p-2 rounded-xl border border-slate-100 mb-4 flex items-center justify-between">
-              <span>Đồng bộ CSDL:</span>
+              <span>CSDL đàm thoại:</span>
               <strong className="text-blue-700 font-bold">ai_tutor_interaction_logs</strong>
             </div>
           </div>
@@ -568,7 +857,7 @@ export default function AiTutorModerationView({ currentUser, onBackToDashboard }
               <button
                 type="button"
                 onClick={() => setFilterMode('pending')}
-                className={`flex-1 min-w-[85px] py-2 px-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                className={`flex-1 min-w-[75px] py-2 px-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                   filterMode === 'pending'
                     ? 'bg-rose-600 text-white shadow-xs'
                     : 'text-slate-600 hover:text-slate-900'
@@ -584,14 +873,31 @@ export default function AiTutorModerationView({ currentUser, onBackToDashboard }
 
               <button
                 type="button"
+                onClick={() => setFilterMode('proposals')}
+                className={`flex-1 min-w-[75px] py-2 px-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                  filterMode === 'proposals'
+                    ? 'bg-amber-600 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <span>{isTeacher ? 'Đề xuất GV' : 'Đề xuất GV'}</span>
+                {counts.proposalsCount > 0 && (
+                  <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${filterMode === 'proposals' ? 'bg-white text-amber-700' : 'bg-amber-100 text-amber-700'}`}>
+                    {counts.proposalsCount}
+                  </span>
+                )}
+              </button>
+
+              <button
+                type="button"
                 onClick={() => setFilterMode('reported')}
-                className={`flex-1 min-w-[85px] py-2 px-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                className={`flex-1 min-w-[75px] py-2 px-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                   filterMode === 'reported'
                     ? 'bg-indigo-600 text-white shadow-xs'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                <span>Tất cả Báo cáo</span>
+                <span>Báo cáo</span>
                 <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${filterMode === 'reported' ? 'bg-white text-indigo-700' : 'bg-indigo-100 text-indigo-700'}`}>
                   {counts.reported}
                 </span>
@@ -600,7 +906,7 @@ export default function AiTutorModerationView({ currentUser, onBackToDashboard }
               <button
                 type="button"
                 onClick={() => setFilterMode('resolved')}
-                className={`flex-1 min-w-[80px] py-2 px-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                className={`flex-1 min-w-[70px] py-2 px-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                   filterMode === 'resolved'
                     ? 'bg-emerald-600 text-white shadow-xs'
                     : 'text-slate-600 hover:text-slate-900'
@@ -615,7 +921,7 @@ export default function AiTutorModerationView({ currentUser, onBackToDashboard }
               <button
                 type="button"
                 onClick={() => setFilterMode('all')}
-                className={`flex-1 min-w-[65px] py-2 px-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                className={`flex-1 min-w-[60px] py-2 px-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                   filterMode === 'all'
                     ? 'bg-slate-900 text-white shadow-xs'
                     : 'text-slate-600 hover:text-slate-900'
@@ -657,13 +963,15 @@ export default function AiTutorModerationView({ currentUser, onBackToDashboard }
               ) : (
                 filteredList.map((item) => {
                   const isSelected = item.id === selectedId;
+                  const itemProposal = proposals[item.id] || item.proposal;
                   const isPending = item.student_reported && !item.mentor_resolution;
                   const isResolved = Boolean(item.mentor_resolution);
 
                   // Border accent color
                   let borderAccent = 'border-l-4 border-l-slate-300';
-                  if (isPending) borderAccent = 'border-l-4 border-l-rose-500';
-                  if (isResolved) borderAccent = 'border-l-4 border-l-emerald-500';
+                  if (itemProposal) borderAccent = 'border-l-4 border-l-amber-500';
+                  else if (isPending) borderAccent = 'border-l-4 border-l-rose-500';
+                  else if (isResolved) borderAccent = 'border-l-4 border-l-emerald-500';
 
                   return (
                     <div
@@ -679,7 +987,9 @@ export default function AiTutorModerationView({ currentUser, onBackToDashboard }
                       <div className="flex items-start justify-between gap-2 mb-2">
                         <div className="flex items-center gap-2.5 min-w-0">
                           <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-extrabold text-xs shrink-0 shadow-xs ${
-                            isPending
+                            itemProposal
+                              ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                              : isPending
                               ? 'bg-rose-100 text-rose-700 border border-rose-200'
                               : isResolved
                               ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
@@ -695,7 +1005,12 @@ export default function AiTutorModerationView({ currentUser, onBackToDashboard }
 
                         {/* Status Badge */}
                         <div className="shrink-0 text-right">
-                          {isPending ? (
+                          {itemProposal ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-800 border border-amber-300">
+                              <Award className="w-2.5 h-2.5 text-amber-600" />
+                              <span>{isTeacher ? 'Đề xuất của bạn' : 'Đề xuất GV'}</span>
+                            </span>
+                          ) : isPending ? (
                             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-rose-100 text-rose-700 border border-rose-200 animate-pulse">
                               <Flag className="w-2.5 h-2.5" />
                               <span>Cần xử lý</span>
@@ -726,6 +1041,11 @@ export default function AiTutorModerationView({ currentUser, onBackToDashboard }
                         {item.trap_code && (
                           <span className="px-2 py-0.5 rounded-lg bg-amber-50 text-amber-700 font-semibold border border-amber-200 truncate max-w-[140px]">
                             {item.trap_code}
+                          </span>
+                        )}
+                        {itemProposal && (
+                          <span className="px-2 py-0.5 rounded-lg bg-amber-100 text-amber-900 font-bold border border-amber-300">
+                            {itemProposal.type === 'exemplar' ? '💡 Đề xuất lời giải' : '⚡ Đề xuất bẫy tư duy'}
                           </span>
                         )}
                       </div>
@@ -800,6 +1120,108 @@ export default function AiTutorModerationView({ currentUser, onBackToDashboard }
                     <p className="text-xs text-rose-900 font-semibold leading-relaxed pl-6">
                       "{selectedItem.report_reason}"
                     </p>
+                  </div>
+                )}
+
+                {/* Section: Proposal Callout (Director Approval / Teacher Pending Notice) */}
+                {selectedItem.proposal && (
+                  <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-amber-50/90 to-orange-50/80 border-2 border-amber-300 shadow-sm space-y-3.5 animate-fade">
+                    <div className="flex items-center justify-between flex-wrap gap-2 pb-2.5 border-b border-amber-200">
+                      <div className="flex items-center gap-2">
+                        <Award className="w-5 h-5 text-amber-600 shrink-0" />
+                        <div>
+                          <h4 className="text-xs font-black text-amber-950 uppercase tracking-wide">
+                            {isDirector ? 'Đề Xuất Cải Tiến Sư Phạm Từ Giảng Viên' : 'Đề Xuất Của Bạn Đang Chờ Duyệt'}
+                          </h4>
+                          <span className="text-[11px] text-amber-800 font-medium">
+                            Giảng viên: <strong>{selectedItem.proposal.teacherName}</strong> • Gửi lúc{' '}
+                            {new Date(selectedItem.proposal.proposedAt).toLocaleString('vi-VN')}
+                          </span>
+                        </div>
+                      </div>
+
+                      <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-amber-200 text-amber-900 border border-amber-300">
+                        ⏳ Chờ Giám đốc phê duyệt
+                      </span>
+                    </div>
+
+                    <div className="space-y-2 text-xs text-amber-950">
+                      <div className="font-extrabold text-amber-900 flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-amber-500" />
+                        <span>Loại đề xuất: </span>
+                        <strong className="text-amber-950 underline">
+                          {selectedItem.proposal.type === 'exemplar'
+                            ? 'Lời Giải Mẫu Chuẩn & Tư Duy Socratic'
+                            : `Bẫy Tư Duy Mới (${selectedItem.proposal.trapCode})`}
+                        </strong>
+                      </div>
+
+                      {selectedItem.proposal.type === 'exemplar' ? (
+                        <div className="space-y-1.5 pl-3 border-l-2 border-amber-300">
+                          <div>
+                            <span className="font-bold text-slate-700">Lời giải đề xuất:</span>
+                            <div className="p-2.5 bg-white/90 rounded-xl border border-amber-200 mt-1 font-mono text-[11px] text-slate-800">
+                              <MathText text={selectedItem.proposal.goldenSolution} />
+                            </div>
+                          </div>
+                          {selectedItem.proposal.socraticSteps && (
+                            <div>
+                              <span className="font-bold text-slate-700">Các bước gợi mở Socratic:</span>
+                              <pre className="p-2.5 bg-white/90 rounded-xl border border-amber-200 mt-1 text-[11px] text-slate-800 whitespace-pre-wrap font-sans">
+                                {selectedItem.proposal.socraticSteps}
+                              </pre>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="space-y-1.5 pl-3 border-l-2 border-amber-300 text-xs">
+                          <div><strong>Tên bẫy:</strong> {selectedItem.proposal.trapName} (Phương án {selectedItem.proposal.trapOption})</div>
+                          <div><strong>Giải thích sai lầm:</strong> {selectedItem.proposal.trapExplanation}</div>
+                          {selectedItem.proposal.trapSocraticHint && (
+                            <div><strong>Gợi ý phản tư:</strong> {selectedItem.proposal.trapSocraticHint}</div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Action buttons on Proposal */}
+                    <div className="flex items-center justify-between flex-wrap gap-2 pt-2 border-t border-amber-200">
+                      {isDirector ? (
+                        <div className="flex items-center gap-2.5">
+                          <button
+                            type="button"
+                            disabled={isSubmitting}
+                            onClick={handleApproveProposal}
+                            className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black flex items-center gap-1.5 cursor-pointer shadow-sm hover:scale-102 transition-all disabled:opacity-50"
+                          >
+                            <CheckCircle2 className="w-4 h-4" />
+                            <span>Phê Duyệt & Ghi Đè Vào Kho RAG Toàn Trường</span>
+                          </button>
+                          <button
+                            type="button"
+                            disabled={isSubmitting}
+                            onClick={handleRejectProposal}
+                            className="px-3.5 py-2 rounded-xl bg-white hover:bg-rose-50 border border-rose-300 text-rose-700 text-xs font-bold flex items-center gap-1 cursor-pointer transition-all"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                            <span>Từ Chối Đề Xuất</span>
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-between w-full">
+                          <span className="text-[11px] text-amber-800 italic">
+                            Đề xuất của bạn đã được chuyển tới hàng đợi thẩm định của Giám đốc Học thuật.
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleCancelProposal(selectedItem.id)}
+                            className="px-3 py-1.5 rounded-xl bg-white hover:bg-rose-50 border border-amber-300 text-rose-700 text-xs font-bold cursor-pointer"
+                          >
+                            Hủy đề xuất
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
 
@@ -920,17 +1342,19 @@ export default function AiTutorModerationView({ currentUser, onBackToDashboard }
                 </div>
               </div>
 
-              {/* 4. Pedagogical Action Workbench (3 Human-in-the-Loop Action Tabs) */}
+              {/* 4. Pedagogical Action Workbench (Phân tầng: Teacher Propose vs Director Graph Overwrite) */}
               <div className="bg-white rounded-3xl p-6 sm:p-7 border-2 border-indigo-200 card-shadow space-y-5">
                 <div className="flex items-center justify-between gap-3 pb-3 border-b border-slate-100">
                   <div className="flex items-center gap-2">
                     <Sparkles className="w-5 h-5 text-indigo-600" />
                     <h3 className="text-sm sm:text-base font-black text-slate-900">
-                      Bàn Làm Việc Thẩm Định & Can Thiệp Sư Phạm (Human-in-the-Loop)
+                      {isTeacher
+                        ? 'Bàn Làm Việc Đề Xuất Sư Phạm (Chờ Director duyệt)'
+                        : 'Bàn Làm Việc Thẩm Định & Can Thiệp Sư Phạm (Human-in-the-Loop)'}
                     </h3>
                   </div>
                   <span className="text-[11px] font-black text-indigo-700 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-200">
-                    GraphRAG Knowledge Update
+                    {isTeacher ? 'Đề xuất nâng cấp RAG' : 'GraphRAG Knowledge Update'}
                   </span>
                 </div>
 
@@ -946,7 +1370,7 @@ export default function AiTutorModerationView({ currentUser, onBackToDashboard }
                     }`}
                   >
                     <Award className="w-4 h-4 text-amber-500" />
-                    <span>1. Ghi đè Lời Giải Mẫu Chuẩn</span>
+                    <span>{isTeacher ? '1. Đề Xuất Lời Giải Chuẩn' : '1. Ghi đè Lời Giải Mẫu Chuẩn'}</span>
                   </button>
 
                   <button
@@ -959,30 +1383,38 @@ export default function AiTutorModerationView({ currentUser, onBackToDashboard }
                     }`}
                   >
                     <Zap className="w-4 h-4 text-indigo-600" />
-                    <span>2. Bổ sung Bẫy Tư Duy Mới</span>
+                    <span>{isTeacher ? '2. Đề Xuất Bẫy Tư Duy' : '2. Bổ sung Bẫy Tư Duy Mới'}</span>
                   </button>
 
-                  <button
-                    type="button"
-                    onClick={() => setActionTab('verify')}
-                    className={`flex-1 py-2.5 px-3 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2 ${
-                      actionTab === 'verify'
-                        ? 'bg-white text-emerald-950 shadow-sm'
-                        : 'text-slate-600 hover:text-slate-900'
-                    }`}
-                  >
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                    <span>3. Xác Nhận AI Đúng & Đóng Báo Cáo</span>
-                  </button>
+                  {!isTeacher && (
+                    <button
+                      type="button"
+                      onClick={() => setActionTab('verify')}
+                      className={`flex-1 py-2.5 px-3 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                        actionTab === 'verify'
+                          ? 'bg-white text-emerald-950 shadow-sm'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                      <span>3. Xác Nhận AI Đúng & Đóng Báo Cáo</span>
+                    </button>
+                  )}
                 </div>
 
-                {/* TAB 1: Override Golden Exemplar */}
+                {/* TAB 1: Override / Propose Golden Exemplar */}
                 {actionTab === 'override' && (
-                  <form onSubmit={handleOverrideExemplar} className="space-y-4 animate-fade">
+                  <form
+                    onSubmit={isTeacher ? handleTeacherProposeExemplar : handleOverrideExemplar}
+                    className="space-y-4 animate-fade"
+                  >
                     <div className="p-3.5 bg-amber-50/80 border border-amber-200 rounded-2xl text-xs text-amber-900 leading-relaxed flex items-start gap-2.5">
                       <Award className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                       <div>
-                        <strong>Mục tiêu:</strong> Soạn thảo lời giải chuẩn của Giảng viên và các bước tư duy gợi mở Socratic. Hệ thống sẽ lưu trực tiếp vào node <code className="bg-amber-100 px-1 py-0.5 rounded font-mono font-bold">PatternExemplar</code> trong Knowledge Graph làm dữ liệu mẫu (few-shot) tối ưu cho các lần đàm thoại tiếp theo.
+                        <strong>Mục tiêu:</strong>{' '}
+                        {isTeacher
+                          ? 'Soạn thảo lời giải chuẩn và các bước tư duy gợi mở Socratic gửi lên Giám đốc Học thuật thẩm duyệt trước khi ghi đè vào Knowledge Graph toàn trường.'
+                          : 'Soạn thảo lời giải chuẩn và các bước tư duy gợi mở Socratic. Hệ thống sẽ lưu trực tiếp vào node PatternExemplar trong Knowledge Graph làm dữ liệu mẫu (few-shot) tối ưu cho các lần đàm thoại tiếp theo.'}
                       </div>
                     </div>
 
@@ -1022,19 +1454,31 @@ export default function AiTutorModerationView({ currentUser, onBackToDashboard }
                         className="flex items-center gap-2 px-6 py-3 bg-[#FACC15] hover:bg-[#eab308] text-slate-950 text-xs font-black rounded-2xl shadow-xl shadow-yellow-500/10 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer disabled:opacity-50"
                       >
                         <Award className="w-4 h-4 text-slate-950" />
-                        <span>{isSubmitting ? 'Đang lưu Knowledge Graph...' : 'Ghi Đè Lời Giải Mẫu Chuẩn Vào Graph'}</span>
+                        <span>
+                          {isSubmitting
+                            ? 'Đang xử lý...'
+                            : isTeacher
+                            ? 'Gửi Đề Xuất Lời Giải Cho Giám Đốc Duyệt'
+                            : 'Ghi Đè Lời Giải Mẫu Chuẩn Vào Graph'}
+                        </span>
                       </button>
                     </div>
                   </form>
                 )}
 
-                {/* TAB 2: Add Novel Cognitive Trap */}
+                {/* TAB 2: Add / Propose Novel Cognitive Trap */}
                 {actionTab === 'add_trap' && (
-                  <form onSubmit={handleAddTrap} className="space-y-4 animate-fade">
+                  <form
+                    onSubmit={isTeacher ? handleTeacherProposeTrap : handleAddTrap}
+                    className="space-y-4 animate-fade"
+                  >
                     <div className="p-3.5 bg-blue-50/80 border border-blue-200 rounded-2xl text-xs text-blue-900 leading-relaxed flex items-start gap-2.5">
                       <Zap className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
                       <div>
-                        <strong>Mục tiêu:</strong> Gắn nhãn một bẫy tư duy mới phát hiện từ phản ánh của học sinh, lưu vào node <code className="bg-blue-100 px-1 py-0.5 rounded font-mono font-bold">PatternTrap</code> trong Knowledge Graph để RAG tự động nhận diện sai lầm này ở các học sinh khác.
+                        <strong>Mục tiêu:</strong>{' '}
+                        {isTeacher
+                          ? 'Đề xuất gắn nhãn một bẫy tư duy mới phát hiện từ phản ánh của học sinh lớp bạn để Giám đốc Học thuật thẩm định & bổ sung vào Knowledge Graph.'
+                          : 'Gắn nhãn một bẫy tư duy mới phát hiện từ phản ánh của học sinh, lưu vào node PatternTrap trong Knowledge Graph để RAG tự động nhận diện sai lầm này ở các học sinh khác.'}
                       </div>
                     </div>
 
@@ -1107,14 +1551,20 @@ export default function AiTutorModerationView({ currentUser, onBackToDashboard }
                         className="flex items-center gap-2 px-6 py-3 bg-[#FACC15] hover:bg-[#eab308] text-slate-950 text-xs font-black rounded-2xl shadow-xl shadow-yellow-500/10 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer disabled:opacity-50"
                       >
                         <Zap className="w-4 h-4 text-slate-950" />
-                        <span>{isSubmitting ? 'Đang lưu Knowledge Graph...' : 'Bổ Sung Bẫy Tư Duy Mới Vào Graph'}</span>
+                        <span>
+                          {isSubmitting
+                            ? 'Đang xử lý...'
+                            : isTeacher
+                            ? 'Gửi Đề Xuất Bẫy Cho Giám Đốc Duyệt'
+                            : 'Bổ Sung Bẫy Tư Duy Mới Vào Graph'}
+                        </span>
                       </button>
                     </div>
                   </form>
                 )}
 
-                {/* TAB 3: Verify & Dismiss */}
-                {actionTab === 'verify' && (
+                {/* TAB 3: Verify & Dismiss (Director Only) */}
+                {actionTab === 'verify' && !isTeacher && (
                   <form onSubmit={handleVerifyAccurate} className="space-y-4 animate-fade">
                     <div className="p-3.5 bg-emerald-50/80 border border-emerald-200 rounded-2xl text-xs text-emerald-900 leading-relaxed flex items-start gap-2.5">
                       <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />

@@ -73,7 +73,8 @@ const SUBJECT_OPTIONS = [
   { code: 'ENG', name: 'Tiếng Anh' }
 ];
 
-export default function TextbookStandardView({ onBack, onNavigateTab, isSidebarCollapsed = false }) {
+export default function TextbookStandardView({ onBack, onNavigateTab, isSidebarCollapsed = false, role = 'director' }) {
+  const isReadOnly = role === 'teacher';
   const { toast } = useToast();
   const initCtx = getStoredTextbookContext();
 
@@ -1036,58 +1037,48 @@ export default function TextbookStandardView({ onBack, onNavigateTab, isSidebarC
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          <button
-            type="button"
-            disabled={syncingCurriculum || validChapters.length === 0}
-            onClick={handleSyncToCurriculum}
-            title="Đẩy toàn bộ Lý thuyết, Phương pháp & Câu hỏi SGK hiện tại vào CSDL Khung Chương Trình & Dàn Kiến Thức"
-            className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black flex items-center gap-1.5 cursor-pointer shadow-xs disabled:opacity-50 transition-all"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${syncingCurriculum ? 'animate-spin' : ''}`} />
-            <span>{syncingCurriculum ? 'Đang đồng bộ...' : 'Đồng Bộ Khung CT'}</span>
-          </button>
+          {isReadOnly ? (
+            <div className="px-3.5 py-1.5 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-800 text-xs font-bold flex items-center gap-2 shadow-2xs">
+              <BookOpen className="w-3.5 h-3.5 text-emerald-700" />
+              <span>Chế độ Tra Cứu SGK Chuẩn GDPT 2018 (Read-only)</span>
+            </div>
+          ) : (
+            <>
+              <button
+                type="button"
+                disabled={syncingCurriculum || validChapters.length === 0}
+                onClick={handleSyncToCurriculum}
+                title="Đẩy toàn bộ Lý thuyết, Phương pháp & Câu hỏi SGK hiện tại vào CSDL Khung Chương Trình & Dàn Kiến Thức"
+                className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black flex items-center gap-1.5 cursor-pointer shadow-xs disabled:opacity-50 transition-all"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${syncingCurriculum ? 'animate-spin' : ''}`} />
+                <span>{syncingCurriculum ? 'Đang đồng bộ...' : 'Đồng Bộ Khung CT'}</span>
+              </button>
 
-          <button
-            type="button"
-            onClick={handleResetToStandardGdpt}
-            title="Đồng bộ cấu trúc GDPT 2018"
-            className="px-3 py-1.5 rounded-xl bg-teal-50 hover:bg-teal-100 border border-teal-200 text-teal-800 text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-2xs"
-          >
-            <Compass className="w-3.5 h-3.5 text-teal-600" />
-            <span>Chuẩn Hóa GDPT 2018</span>
-          </button>
+              <button
+                type="button"
+                onClick={handleResetToStandardGdpt}
+                title="Đồng bộ cấu trúc GDPT 2018"
+                className="px-3 py-1.5 rounded-xl bg-teal-50 hover:bg-teal-100 border border-teal-200 text-teal-800 text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-2xs"
+              >
+                <Compass className="w-3.5 h-3.5 text-teal-600" />
+                <span>Chuẩn Hóa GDPT 2018</span>
+              </button>
 
-          {/* 2 nút điều hướng nhanh đã vô hiệu hóa theo yêu cầu (người dùng chuyển trang qua Sidebar chuyên biệt) */}
-          <button
-            type="button"
-            disabled
-            title="Đã phân tách vào menu Sidebar chuyên biệt"
-            className="px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-100 text-slate-400 text-xs font-bold flex items-center gap-1.5 cursor-not-allowed opacity-50"
-          >
-            <span>Sang Trang Nạp SGK</span>
-          </button>
-          <button
-            type="button"
-            disabled
-            title="Đã phân tách vào menu Sidebar chuyên biệt"
-            className="px-3.5 py-1.5 rounded-xl border border-slate-200 bg-slate-100 text-slate-400 text-xs font-bold flex items-center gap-1.5 cursor-not-allowed opacity-50"
-          >
-            <Edit3 className="w-3.5 h-3.5" />
-            <span>Mở Studio Biên Soạn</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setSkeleton(prev => ({ ...prev, isVersionLocked: !prev.isVersionLocked }))}
-            className={`px-3 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all ${
-              isLocked
-                ? 'bg-amber-50 border-amber-300 text-amber-800 ring-2 ring-amber-100'
-                : 'bg-white border-emerald-200 text-emerald-800 hover:bg-emerald-50'
-            }`}
-          >
-            {isLocked ? <Lock className="w-3.5 h-3.5 text-amber-600" /> : <Unlock className="w-3.5 h-3.5 text-emerald-600" />}
-            <span>{isLocked ? `Đã Khóa (${skeleton.versionTag})` : `Mở Khóa (${skeleton.versionTag})`}</span>
-          </button>
+              <button
+                type="button"
+                onClick={() => setSkeleton(prev => ({ ...prev, isVersionLocked: !prev.isVersionLocked }))}
+                className={`px-3 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all ${
+                  isLocked
+                    ? 'bg-amber-50 border-amber-300 text-amber-800 ring-2 ring-amber-100'
+                    : 'bg-white border-emerald-200 text-emerald-800 hover:bg-emerald-50'
+                }`}
+              >
+                {isLocked ? <Lock className="w-3.5 h-3.5 text-amber-600" /> : <Unlock className="w-3.5 h-3.5 text-emerald-600" />}
+                <span>{isLocked ? `Đã Khóa (${skeleton.versionTag})` : `Mở Khóa (${skeleton.versionTag})`}</span>
+              </button>
+            </>
+          )}
         </div>
       </header>
 
@@ -1144,7 +1135,7 @@ export default function TextbookStandardView({ onBack, onNavigateTab, isSidebarC
                 </select>
               </div>
 
-              {selectedSourceId && (
+              {selectedSourceId && !isReadOnly && (
                 <button
                   type="button"
                   onClick={handleDeleteBook}
@@ -1282,7 +1273,7 @@ export default function TextbookStandardView({ onBack, onNavigateTab, isSidebarC
                   </div>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  {!isLocked && (
+                  {!isLocked && !isReadOnly && (
                     <button
                       type="button"
                       onClick={handleAddNewChapter}
@@ -1351,7 +1342,7 @@ export default function TextbookStandardView({ onBack, onNavigateTab, isSidebarC
                         </div>
                       </div>
 
-                      {!isLocked && (
+                      {!isLocked && !isReadOnly && (
                         <button
                           type="button"
                           onClick={(e) => {
@@ -1428,7 +1419,7 @@ export default function TextbookStandardView({ onBack, onNavigateTab, isSidebarC
                                   }`}>
                                     {les.status === 'ACCEPTED' ? '✓' : '⏳'}
                                   </span>
-                                  {!isLocked && (
+                                  {!isLocked && !isReadOnly && (
                                     <button
                                       type="button"
                                       onClick={(e) => {
@@ -1591,14 +1582,16 @@ export default function TextbookStandardView({ onBack, onNavigateTab, isSidebarC
                     </button>
 
                     {/* Nút mở Studio biên soạn */}
-                    <button
-                      type="button"
-                      onClick={() => handleOpenStudio()}
-                      className="px-3.5 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs"
-                    >
-                      <Edit3 className="w-3.5 h-3.5" />
-                      <span>Mở Studio</span>
-                    </button>
+                    {!isReadOnly && (
+                      <button
+                        type="button"
+                        onClick={() => handleOpenStudio()}
+                        className="px-3.5 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs"
+                      >
+                        <Edit3 className="w-3.5 h-3.5" />
+                        <span>Mở Studio</span>
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -1886,7 +1879,7 @@ export default function TextbookStandardView({ onBack, onNavigateTab, isSidebarC
                         </button>
                       </div>
 
-                      {onNavigateTab && (
+                      {onNavigateTab && !isReadOnly && (
                         <button
                           type="button"
                           onClick={() => onNavigateTab('ingest')}
@@ -1956,7 +1949,7 @@ export default function TextbookStandardView({ onBack, onNavigateTab, isSidebarC
                             : 'Hãy thử chọn cấp độ Bloom khác hoặc xem tất cả bài tập trong bài.'}
                         </p>
                       </div>
-                      {activeLessonExercises.length === 0 && onNavigateTab && (
+                      {activeLessonExercises.length === 0 && onNavigateTab && !isReadOnly && (
                         <button
                           type="button"
                           onClick={() => onNavigateTab('ingest')}

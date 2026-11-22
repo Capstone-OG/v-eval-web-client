@@ -2,6 +2,49 @@
 
 ---
 
+## [22/11/2026] - Phân Định Phân Quyền Giảng Viên (TCH-01) & Tách Rõ 2 Tầng Nghiệp Vụ Gia Sư AI Core Flow 4 Giữa Giảng Viên Và Giám Đốc Học Thuật
+
+- **Phân Định Phân Quyền Giảng Viên & Triệt Tiêu Lấn Sân Quyền Quản Trị Cấp Hệ Thống (TCH-01) ([`Sidebar.jsx`](../src/components/layout/Sidebar.jsx), [`App.jsx`](../src/App.jsx), [`CurriculumExplorerView.jsx`](../src/components/curriculum/CurriculumExplorerView.jsx), [`TextbookStandardView.jsx`](../src/components/curriculum/TextbookStandardView.jsx), [`ExamBankView.jsx`](../src/components/curriculum/ExamBankView.jsx), [`ExamWorkspaceHeader.jsx`](../src/components/curriculum/ExamWorkspaceHeader.jsx))**:
+  - *Tái cấu trúc Sidebar Giảng viên (`Sidebar.jsx`)*:
+    + Khung chương trình: Đổi badge sang `'Tra cứu'`, sublabel `'Tra cứu cây kiến thức & Bloom'`.
+    + Nhóm Sách giáo khoa (SGK): Thay vì mở 3 mục con giống hệt Giám đốc, thay bằng 1 mục tra cứu duy nhất: `'Sách giáo khoa (SGK)'`, sublabel `'Tra cứu SGK chuẩn GDPT 2018'`, badge `'Chuẩn'`. Ẩn hoàn toàn Nạp SGK (`textbook-ingest`) và Studio biên soạn (`textbook-studio`).
+    + Nhóm Đề thi & AI Bloom: Thay vì mở 3 mục con giống hệt Giám đốc, thay bằng 1 mục tra cứu duy nhất: `'Kho đề thi đã xuất bản'`, sublabel `'Tra cứu & xem đề khảo thí'`, badge `'Kho Đề'`. Ẩn hoàn toàn Parse PDF (`exam-ingest`) và Studio biên soạn đề (`exam-studio`).
+    + Mục Kiểm duyệt gia sư AI: Đổi sublabel thành `'Đề xuất sửa & Bẫy tư duy lớp mình'`, badge `'Đề xuất'`.
+    + Widget chân trang Teacher: Thay nhãn `'Studio'` thành `'Tra cứu'`.
+  - *Điều hướng & Route Guard an toàn (`App.jsx`)*:
+    + Định nghĩa danh sách tab Giảng viên `ROLE_PORTAL_DEFINITIONS.teacher.tabs` chuẩn 7 mục chuyên môn.
+    + Bổ sung Route Guard: Tự động bắt và chuyển hướng khi Giảng viên cố ý truy cập các tab Nạp/Studio về đúng trang tra cứu chuẩn tương ứng (`textbook-standard` hoặc `exam-bank`).
+    + Truyền tham số vai trò `role` xuống các view chuyên môn để kích hoạt chế độ xem an toàn.
+  - *Chế độ Tra cứu Khung chương trình Read-only (`CurriculumExplorerView.jsx`)*:
+    + Ẩn các nút can thiệp chuyên môn: `'Vào Studio Sư Phạm'` và `'AI Bóc Tách Tài Liệu & Dạng Bài'`. Hiển thị badge nhận diện `'Chế độ Tra Cứu Khung Chương Trình (Read-only)'`.
+    + Khóa các thao tác thêm bài, xóa chương, thêm dạng, mở studio và sửa nhanh trên cây tri thức.
+    + Thiết lập `instructorMode = false` cho `UnifiedNodeDetailView`.
+  - *Chế độ Tra cứu Sách giáo khoa chuẩn Read-only (`TextbookStandardView.jsx`)*:
+    + Ẩn các nút quản trị cấp hệ thống: `'Đồng Bộ Khung CT'`, `'Chuẩn Hóa GDPT 2018'`, nút `'Mở Studio Biên Soạn'` và nút chuyển sang trang nạp; hiển thị badge `'Chế độ Tra Cứu SGK Chuẩn GDPT 2018 (Read-only)'`.
+    + Ẩn hoàn toàn nút xóa cuốn sách khỏi CSDL (`handleDeleteBook`) và các nút thêm chương/bài/dạng.
+  - *Chế độ Tra cứu Kho đề thi đã xuất bản Read-only (`ExamBankView.jsx`, `ExamWorkspaceHeader.jsx`)*:
+    + Ẩn thanh luồng 3 bước `ExamPageFlowBar`, ẩn các nút `'Parse PDF (Trang 2)'`, `'AI Bloom L1–L6'` và `'Soạn Trong Studio'`; thay bằng badge `'Chế độ Tra Cứu Kho Đề Đã Xuất Bản (Read-only)'`.
+    + Tự động lọc danh sách chỉ hiển thị các đề thi đã xuất bản (`e.isPublished === true`), loại bỏ quyền xuất bản và xóa đề.
+    + Khóa chỉnh sửa trên `ExamWorkspaceHeader`, ẩn các nút Lưu Database, Phê duyệt đề, Xóa đề, AI sinh thêm câu Bloom và AI gắn chương/bài.
+- **Tách Rõ 2 Tầng Nghiệp Vụ Kiểm Duyệt Gia Sư AI Core Flow 4 Giữa Giảng Viên Và Giám Đốc Học Thuật ([`AiTutorModerationView.jsx`](../src/components/dashboard/AiTutorModerationView.jsx))**:
+  - *Tầng Giảng viên (`role === 'teacher'`)*:
+    + Giới hạn phạm vi: Tích hợp bộ lọc lớp học phụ trách, chỉ theo dõi các tương tác của Gia sư AI với học sinh trong danh sách lớp được phân công.
+    + Hero Banner: Cập nhật tiêu đề `'Kiểm Duyệt Gia Sư AI — Lớp Phụ Trách & Đề Xuất Sư Phạm'` kèm bộ chọn lớp trực tiếp.
+    + Bàn làm việc đề xuất sư phạm: Chuyển đổi thành cơ chế 2 bước gửi đề xuất gồm Tab 1 (`Đề Xuất Lời Giải Chuẩn`) và Tab 2 (`Đề Xuất Bẫy Tư Duy`). Ẩn hoàn toàn Tab 3 (Xác nhận AI đúng & đóng báo cáo).
+    + Cơ chế lưu trữ đề xuất: Đóng gói dữ liệu đề xuất kèm thông tin định danh giảng viên và thời gian tạo, cập nhật trạng thái `PENDING_DIRECTOR_REVIEW` và hiển thị thẻ thông báo đề xuất đang chờ Giám đốc duyệt.
+  - *Tầng Giám đốc Học thuật (`role === 'director'`)*:
+    + Giữ trọn vẹn quyền giám sát toàn trường trên toàn bộ các lớp học và cơ sở.
+    + Bổ sung bộ lọc hàng đợi `'Đề xuất GV ({count})'` giúp Giám đốc phát hiện ngay các đóng góp chuyên môn từ giáo viên.
+    + Khối thẩm định đề xuất nổi bật: Hiển thị chi tiết lời giải mẫu hoặc bẫy tư duy do Giảng viên đề xuất, tích hợp 2 nút thao tác 1-chạm:
+      * `✓ Phê Duyệt & Ghi Đè Vào Kho RAG Toàn Trường`: Tự động gọi API cập nhật node `PatternExemplar` hoặc `PatternTrap` trong GraphRAG và xóa đề xuất khỏi hàng đợi chờ.
+      * `✕ Từ Chối Đề Xuất`: Đóng đề xuất và lưu vết phản hồi sư phạm.
+    + Duy trì quyền can thiệp trực tiếp 3 Tab (Ghi đè lời giải mẫu, Bổ sung bẫy tư duy, Xác nhận AI đúng & đóng báo cáo).
+- **Kiểm Thử & Biên Dịch**:
+  - `npm run build`: Hoàn thành 100% trong 1.97s (`3081 modules`, `0 Error`).
+  - Unit tests: 28/28 unit tests passed (`tests/*.test.js` 22/22, `examStateBridge.test.js` 6/6).
+
+---
+
 ## [21/11/2026] - Tối Ưu Hóa Trải Nghiệm Giáo Viên: Gom Cảnh Báo Sư Phạm Thành Nút Popup, Tái Cấu Trúc Ma Trận Thời Khóa Biểu Tuần 8 Cột & Chuẩn Hóa Đọc Hiểu / KaTeX
 
 - **Chuẩn Hóa Dữ Liệu Động Toàn Diện & Triệt Tiêu Giá Trị Tĩnh Trong Phân Hệ Giáo Viên ([`TeacherScheduleView.jsx`](../src/components/dashboard/TeacherScheduleView.jsx), [`AiTutorModerationView.jsx`](../src/components/dashboard/AiTutorModerationView.jsx), [`ClassMicroGroupsModal.jsx`](../src/components/modals/ClassMicroGroupsModal.jsx), [`TeacherStudentDrillDownModal.jsx`](../src/components/modals/TeacherStudentDrillDownModal.jsx), [`practiceService.js`](../src/services/practiceService.js))**:
