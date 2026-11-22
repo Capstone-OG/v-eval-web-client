@@ -378,6 +378,22 @@ export default function InteractiveMathRenderer({
           view.create('line3d', [ptS, ptA], { straightFirst: false, straightLast: false, strokeColor: '#2563eb', strokeWidth: 2 });
           view.create('line3d', [ptS, ptB], { straightFirst: false, straightLast: false, strokeColor: '#2563eb', strokeWidth: 2 });
           view.create('line3d', [ptA, ptB], { straightFirst: false, straightLast: false, strokeColor: '#94a3b8', strokeWidth: 1.5, dash: 2 });
+        } else if (shapeType === 'cylinder') {
+          const R = config.dimensions?.r || 2.8;
+          const H = config.dimensions?.h || 4.2;
+          const ptO = view.create('point3d', [0, 0, 0], { name: 'O', size: 3.5, color: '#dc2626' });
+          const ptOp = view.create('point3d', [0, 0, H], { name: "O'", size: 3.5, color: '#2563eb' });
+          view.create('line3d', [ptO, ptOp], { straightFirst: false, straightLast: false, strokeColor: '#dc2626', strokeWidth: 2, dash: 2 });
+          view.create('circle3d', [ptO, [0, 0, 1], R], { strokeColor: '#0f172a', strokeWidth: 2 });
+          view.create('circle3d', [ptOp, [0, 0, 1], R], { strokeColor: '#2563eb', strokeWidth: 2 });
+          const ptA = view.create('point3d', [-R, 0, 0], { name: 'A', size: 3 });
+          const ptB = view.create('point3d', [R, 0, 0], { name: 'B', size: 3 });
+          const ptAp = view.create('point3d', [-R, 0, H], { name: "A'", size: 3, color: '#2563eb' });
+          const ptBp = view.create('point3d', [R, 0, H], { name: "B'", size: 3, color: '#2563eb' });
+          view.create('line3d', [ptA, ptAp], { straightFirst: false, straightLast: false, strokeColor: '#2563eb', strokeWidth: 2 });
+          view.create('line3d', [ptB, ptBp], { straightFirst: false, straightLast: false, strokeColor: '#2563eb', strokeWidth: 2 });
+          view.create('line3d', [ptA, ptB], { straightFirst: false, straightLast: false, strokeColor: '#94a3b8', strokeWidth: 1.5, dash: 2 });
+          view.create('line3d', [ptAp, ptBp], { straightFirst: false, straightLast: false, strokeColor: '#94a3b8', strokeWidth: 1.5, dash: 2 });
         } else if (shapeType === 'sphere_plane') {
           const R = config.dimensions?.r || 3;
           const d = Math.min(config.dimensions?.planeD || 1.8, R - 0.2);
@@ -398,7 +414,30 @@ export default function InteractiveMathRenderer({
         // Render extra user-defined points
         if (config.extraPoints && Array.isArray(config.extraPoints)) {
           config.extraPoints.forEach(pt => {
-            if (pt.isPresetProjection && ptsMap['S'] && ptsMap['B']) {
+            if (Array.isArray(pt.coords) && pt.coords.length === 3) {
+              const [px, py, pz] = pt.coords.map(Number);
+              ptsMap[pt.id] = view.create('point3d', [px, py, pz], {
+                name: pt.name || pt.id,
+                size: 4,
+                color: pt.color || '#10b981'
+              });
+              coordMap[pt.id] = [px, py, pz];
+            } else if (pt.centroidOf && Array.isArray(pt.centroidOf) && pt.centroidOf.length === 3) {
+              const c1 = coordMap[pt.centroidOf[0]];
+              const c2 = coordMap[pt.centroidOf[1]];
+              const c3 = coordMap[pt.centroidOf[2]];
+              if (c1 && c2 && c3) {
+                const gx = (c1[0] + c2[0] + c3[0]) / 3;
+                const gy = (c1[1] + c2[1] + c3[1]) / 3;
+                const gz = (c1[2] + c2[2] + c3[2]) / 3;
+                ptsMap[pt.id] = view.create('point3d', [gx, gy, gz], {
+                  name: pt.name || pt.id,
+                  size: 4,
+                  color: pt.color || '#f59e0b'
+                });
+                coordMap[pt.id] = [gx, gy, gz];
+              }
+            } else if (pt.isPresetProjection && ptsMap['S'] && ptsMap['B']) {
               const cS = coordMap['S'] || [0, 0, config.dimensions?.h || 4];
               const cB = coordMap['B'] || [config.dimensions?.w || 4, 0, 0];
               const aVal = cB[0];
@@ -418,6 +457,20 @@ export default function InteractiveMathRenderer({
                 ptsMap[pt.id] = view.create('point3d', [px, py, pz], { name: pt.name || pt.id, size: 3.5, color: pt.color || '#ec4899' });
                 coordMap[pt.id] = [px, py, pz];
               }
+            }
+          });
+        }
+
+        // Custom auxiliary 3D cross-section polygons
+        if (config.auxPolygons && Array.isArray(config.auxPolygons)) {
+          config.auxPolygons.forEach(poly => {
+            const verts = (poly.vertices || []).map(k => ptsMap[k]).filter(Boolean);
+            if (verts.length >= 3) {
+              view.create('polygon3d', verts, {
+                fillColor: poly.color || '#6366f1',
+                fillOpacity: poly.opacity ?? 0.25,
+                borders: { strokeColor: poly.color || '#4f46e5', strokeWidth: 1.8 }
+              });
             }
           });
         }
@@ -595,9 +648,11 @@ export default function InteractiveMathRenderer({
             finalFn = (x) => Math.abs(baseFn(x) + shiftM);
           }
 
-          const isRational = config.type === 'rational' || config.type === 'rational_21';
-          const isCleanFormula = config.formula &&
+          const isRational = config.type === 'rational' || config.type === 'rational_21' || String(config.customExpr || '').includes('/');
+          const isCleanFormula = !config.hideCurveLabels &&
+            config.formula &&
             config.formula.length < 35 &&
+            !config.formula.includes('\\') &&
             !config.formula.includes('[') &&
             !config.formula.includes('bảng') &&
             !/^[fghuvy]\s*\(/i.test(config.formula.replace(/^y\s*=\s*/i, ''));

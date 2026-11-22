@@ -767,45 +767,45 @@ export default function PlarNodeStudioPanel({
         </div>
       )}
 
-      {/* Node Header */}
-      <div className="bg-gradient-to-r from-[#1E3A5F] via-slate-900 to-indigo-950 text-white p-5 sm:p-6 space-y-4">
+      {/* Clean, Modern Light Studio Header */}
+      <div className="bg-white border-b border-slate-200/80 p-5 sm:p-6 space-y-4">
         <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="space-y-1.5 min-w-0">
+          <div className="space-y-1.5 min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2 text-xs">
-              <span className="px-2.5 py-0.5 rounded-full bg-white/15 font-extrabold">
+              <span className="px-2.5 py-0.5 rounded-lg bg-blue-600 text-white font-black">
                 Chặng #{node.stepOrder}
               </span>
               {Number(node.gradeLevel) > 0 && (
-                <span className="px-2.5 py-0.5 rounded-full bg-cyan-500/25 text-cyan-100 border border-cyan-400/40 font-extrabold">
+                <span className="px-2.5 py-0.5 rounded-lg bg-slate-100 text-slate-700 border border-slate-200 font-bold">
                   Lớp {node.gradeLevel}
                 </span>
               )}
               {(detail?.subjectName || node.subjectName) && (
-                <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-200 border border-emerald-400/30 font-bold">
+                <span className="px-2.5 py-0.5 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold">
                   {detail?.subjectName || node.subjectName}
                 </span>
               )}
               {ASSESSMENT_BADGES[node.assessmentStatus] && (
-                <span className={`px-2.5 py-0.5 rounded-full border font-bold ${ASSESSMENT_BADGES[node.assessmentStatus].cls}`}>
+                <span className="px-2.5 py-0.5 rounded-lg bg-rose-50 text-rose-700 border border-rose-200 font-bold">
                   {ASSESSMENT_BADGES[node.assessmentStatus].label}
                 </span>
               )}
-              <span className="text-blue-200/90 font-medium">
+              <span className="text-slate-400 font-medium">
                 {detail?.domainName || node.domainName}
               </span>
             </div>
-            <h2 className="text-lg sm:text-2xl font-black tracking-tight">
+            <h2 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight leading-snug">
               {cleanPatternTitle(detail?.skillName || node.skillName)}
             </h2>
             {(detail?.chapterName || node.chapterName) && (
-              <p className="text-xs sm:text-sm text-slate-300">
+              <p className="text-xs sm:text-sm text-slate-500 font-medium">
                 {detail?.chapterName || node.chapterName}
                 {(detail?.lessonName || node.lessonName) ? ` › ${detail?.lessonName || node.lessonName}` : ''}
               </p>
             )}
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
             {onOpenAiTutorWithContext && (
               <button
                 type="button"
@@ -814,38 +814,41 @@ export default function PlarNodeStudioPanel({
                   subject: detail?.subjectName || node.subjectName || detail?.domainName,
                   questionContent: currentQuestion?.content || `Giải thích phương pháp giải dạng bài: ${detail?.skillName || node.skillName}`
                 })}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-white/15 hover:bg-white/25 border border-white/20 px-3.5 py-2 text-xs font-bold text-white transition-colors cursor-pointer"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-violet-50 hover:bg-violet-100 border border-violet-200 px-3.5 py-2 text-xs font-bold text-violet-800 transition-colors cursor-pointer"
               >
-                <Bot className="w-4 h-4 text-cyan-300" />
-                <span>Hỏi Gia Sư AI Socratic</span>
+                <Bot className="w-4 h-4 text-violet-600" />
+                <span>Hỏi Gia Sư AI</span>
               </button>
             )}
           </div>
         </div>
 
-        {/* Live BKT Mastery Meter */}
+        {/* Sleek Light BKT Mastery Meter */}
         {stage && (
-          <div className="rounded-2xl bg-white/10 border border-white/15 p-3.5 space-y-2">
+          <div className="rounded-2xl bg-slate-50 border border-slate-200/80 px-4 py-3 space-y-2">
             <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-              <div className="flex items-center gap-2 font-bold">
-                <Target className="w-4 h-4 text-cyan-300" />
-                <span>Độ thành thạo BKT P(Lt): <strong className="text-cyan-300">{masteryPct}%</strong> / Mục tiêu 85%</span>
+              <div className="flex items-center gap-2 font-bold text-slate-700">
+                <Target className="w-4 h-4 text-blue-600" />
+                <span>
+                  Độ thành thạo: <strong className={masteryPct >= 85 ? 'text-emerald-600' : 'text-blue-700'}>{masteryPct}%</strong>
+                  <span className="text-slate-400 font-medium"> / Mục tiêu 85%</span>
+                </span>
               </div>
-              <div className="flex items-center gap-3 text-[11px] text-slate-200">
-                <span>Vận dụng đúng liên tiếp: <strong>{stage.consecutiveAdvancedCorrect || 0}/2</strong></span>
+              <div className="flex items-center gap-3 text-[11px] text-slate-500 font-semibold">
+                <span>Vận dụng đúng liên tiếp: <strong className="text-slate-800">{stage.consecutiveAdvancedCorrect || 0}/2</strong></span>
                 {(stage.consecutiveIncorrect || 0) > 0 && (
-                  <span className="text-amber-300 font-bold">Sai liên tiếp: {stage.consecutiveIncorrect}/3</span>
+                  <span className="text-rose-600 font-bold">Sai liên tiếp: {stage.consecutiveIncorrect}/3</span>
                 )}
               </div>
             </div>
-            <div className="relative h-2.5 rounded-full bg-slate-900/60 overflow-hidden">
+            <div className="relative h-2 rounded-full bg-slate-200 overflow-hidden">
               <div
                 className={`h-full rounded-full transition-all duration-500 ${
-                  masteryPct >= 85 ? 'bg-emerald-400' : masteryPct >= 50 ? 'bg-cyan-400' : 'bg-amber-400'
+                  masteryPct >= 85 ? 'bg-emerald-500' : masteryPct >= 50 ? 'bg-blue-600' : 'bg-amber-500'
                 }`}
                 style={{ width: `${Math.max(4, Math.min(100, masteryPct))}%` }}
               />
-              <div className="absolute top-0 bottom-0 left-[85%] w-0.5 bg-white/80" title="Ngưỡng đạt chuẩn BR-01: 85%" />
+              <div className="absolute top-0 bottom-0 left-[85%] w-0.5 bg-slate-400" title="Ngưỡng đạt chuẩn: 85%" />
             </div>
           </div>
         )}

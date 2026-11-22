@@ -1,19 +1,23 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
-  Zap,
+  Check,
   CheckCircle2,
   XCircle,
   ArrowRight,
+  ArrowLeft,
   X,
   AlertCircle,
   Bot,
   RefreshCw,
-  SlidersHorizontal,
   Play,
   Award,
   Sparkles,
   BookOpen,
-  Flag
+  Flag,
+  Clock,
+  Layers,
+  SlidersHorizontal,
+  Flame
 } from 'lucide-react';
 import MathText from '../common/MathText';
 import FlagQuestionModal from '../common/FlagQuestionModal';
@@ -21,34 +25,40 @@ import { addFlaggedQuestion, getFlaggedQuestionIdSet } from '../../utils/questio
 import { practiceService } from '../../services/practiceService';
 import { contentService } from '../../services/contentService';
 
-const SUBJECT_FILTERS = [
-  { code: 'ALL', label: 'Tất cả 8 môn V-ACT' },
-  { code: 'MATH', label: 'Toán học' },
-  { code: 'PHYS', label: 'Vật lí' },
-  { code: 'CHEM', label: 'Hóa học' },
-  { code: 'BIO', label: 'Sinh học' },
-  { code: 'LIT', label: 'Ngữ văn' },
-  { code: 'ENG', label: 'Tiếng Anh' },
-  { code: 'HIST', label: 'Lịch sử' },
-  { code: 'GEO', label: 'Địa lí' }
+const CORE_SUBJECTS = [
+  { code: 'MATH', label: 'Toán học', dot: 'bg-indigo-500' },
+  { code: 'PHYS', label: 'Vật lí', dot: 'bg-sky-500' },
+  { code: 'CHEM', label: 'Hóa học', dot: 'bg-emerald-500' },
+  { code: 'BIO', label: 'Sinh học', dot: 'bg-lime-500' },
+  { code: 'LIT', label: 'Ngữ văn', dot: 'bg-rose-500' },
+  { code: 'ENG', label: 'Tiếng Anh', dot: 'bg-violet-500' },
+  { code: 'HIST', label: 'Lịch sử', dot: 'bg-amber-500' },
+  { code: 'GEO', label: 'Địa lí', dot: 'bg-teal-500' }
 ];
 
+const SUBJECT_LABEL_MAP = CORE_SUBJECTS.reduce((acc, item) => {
+  acc[item.code] = item.label;
+  return acc;
+}, { ALL: 'Tổng hợp 8 môn V-ACT' });
+
 const DIFFICULTY_OPTIONS = [
-  { value: 0, label: 'Thích ứng tự động (ZPD)' },
-  { value: 1, label: 'Nhận biết' },
-  { value: 2, label: 'Thông hiểu' },
-  { value: 3, label: 'Vận dụng cơ bản' },
-  { value: 4, label: 'Vận dụng cao' }
+  { value: 0, label: 'Thích ứng (ZPD)', desc: 'Tự động cân bằng độ khó' },
+  { value: 1, label: 'Nhận biết', desc: 'Củng cố nền tảng' },
+  { value: 2, label: 'Thông hiểu', desc: 'Hiểu bản chất & công thức' },
+  { value: 3, label: 'Vận dụng', desc: 'Bài tập chuẩn đề ĐGNL' },
+  { value: 4, label: 'Vận dụng cao', desc: 'Câu hỏi phân loại 900+' }
 ];
 
 const BLOOM_BADGE = {
   1: { label: 'Nhận biết', cls: 'bg-slate-100 text-slate-700 border-slate-200' },
-  2: { label: 'Thông hiểu', cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-  3: { label: 'Vận dụng cơ bản', cls: 'bg-teal-50 text-teal-700 border-teal-200' },
-  4: { label: 'Vận dụng cao', cls: 'bg-sky-50 text-sky-700 border-sky-200' }
+  2: { label: 'Thông hiểu', cls: 'bg-sky-50 text-sky-700 border-sky-200' },
+  3: { label: 'Vận dụng', cls: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
+  4: { label: 'Vận dụng cao', cls: 'bg-violet-50 text-violet-700 border-violet-200' }
 };
 
-const COUNT_OPTIONS = [5, 10, 15, 20];
+const COUNT_PRESETS = [10, 20, 30, 45, 60];
+const MAX_QUESTIONS = 60;
+const MIN_QUESTIONS = 5;
 
 function detectSubjectCode(text = '') {
   const s = String(text || '').toLowerCase();
@@ -77,10 +87,10 @@ export default function AdaptiveQuizModal({ isOpen, isEmbedded = false, onClose,
   const [curriculumPatterns, setCurriculumPatterns] = useState([]);
   const [loadingCurriculum, setLoadingCurriculum] = useState(false);
 
-  // Setup filters
-  const [selectedSubject, setSelectedSubject] = useState('ALL');
+  // Setup filters: empty array = ALL 8 subjects; non-empty = multi-selected subject codes
+  const [selectedSubjects, setSelectedSubjects] = useState([]);
   const [selectedDifficulty, setSelectedDifficulty] = useState(0);
-  const [questionCount, setQuestionCount] = useState(10);
+  const [questionCount, setQuestionCount] = useState(20);
 
   // Practice state
   const [bktMastery, setBktMastery] = useState(0.5);
@@ -100,9 +110,9 @@ export default function AdaptiveQuizModal({ isOpen, isEmbedded = false, onClose,
   const [flagBusy, setFlagBusy] = useState(false);
   const [flagNotice, setFlagNotice] = useState('');
 
-  // Load real curriculum pattern pool once when modal opens
+  // Load real curriculum pattern pool once
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen && !isEmbedded) return;
     setStage('setup');
     setLoadError('');
     if (curriculumPatterns.length > 0) return;
@@ -127,7 +137,9 @@ export default function AdaptiveQuizModal({ isOpen, isEmbedded = false, onClose,
                 const sid = pat.patternId || pat.skillId || pat.id;
                 if (!sid || seen.has(String(sid))) return;
                 seen.add(String(sid));
-                const sub = subFromCh !== 'OTHER' ? subFromCh : detectSubjectCode(`${les.name || ''} ${pat.name || ''} ${domTitle}`);
+                const sub = subFromCh !== 'OTHER'
+                  ? subFromCh
+                  : detectSubjectCode(`${les.name || ''} ${pat.name || ''} ${domTitle}`);
                 patterns.push({
                   skillId: String(sid),
                   name: pat.name || 'Chuyên đề GDPT 2018',
@@ -153,20 +165,56 @@ export default function AdaptiveQuizModal({ isOpen, isEmbedded = false, onClose,
     return () => {
       mounted = false;
     };
-  }, [isOpen]);
+  }, [isOpen, isEmbedded]);
+
+  const subjectStats = useMemo(() => {
+    const map = {};
+    CORE_SUBJECTS.forEach((s) => {
+      map[s.code] = { questions: 0, patterns: 0 };
+    });
+    curriculumPatterns.forEach((p) => {
+      if (map[p.subjectCode]) {
+        map[p.subjectCode].questions += p.questionCount || 0;
+        map[p.subjectCode].patterns += 1;
+      }
+    });
+    return map;
+  }, [curriculumPatterns]);
+
+  const isAllSubjects = selectedSubjects.length === 0 || selectedSubjects.length === CORE_SUBJECTS.length;
 
   const filteredPatterns = useMemo(() => {
-    if (selectedSubject === 'ALL') return curriculumPatterns;
-    return curriculumPatterns.filter((p) => p.subjectCode === selectedSubject);
-  }, [curriculumPatterns, selectedSubject]);
+    if (isAllSubjects) return curriculumPatterns;
+    const set = new Set(selectedSubjects);
+    return curriculumPatterns.filter((p) => set.has(p.subjectCode));
+  }, [curriculumPatterns, selectedSubjects, isAllSubjects]);
 
   const availableQuestionEstimate = useMemo(() => {
     return filteredPatterns.reduce((acc, p) => acc + (p.questionCount || 0), 0);
   }, [filteredPatterns]);
 
+  const selectedSubjectsLabel = useMemo(() => {
+    if (isAllSubjects) return 'Tổng hợp 8 môn V-ACT';
+    return selectedSubjects.map((c) => SUBJECT_LABEL_MAP[c] || c).join(', ');
+  }, [selectedSubjects, isAllSubjects]);
+
+  const toggleSubject = (code) => {
+    if (code === 'ALL') {
+      setSelectedSubjects([]);
+      return;
+    }
+    setSelectedSubjects((prev) => {
+      const exists = prev.includes(code);
+      const next = exists ? prev.filter((c) => c !== code) : [...prev, code];
+      if (next.length === CORE_SUBJECTS.length) return [];
+      return next;
+    });
+  };
+
   if (!isOpen && !isEmbedded) return null;
 
   const handleStartPractice = async () => {
+    const targetCount = Math.max(MIN_QUESTIONS, Math.min(MAX_QUESTIONS, Number(questionCount) || 20));
     setLoadingItems(true);
     setLoadError('');
     setItemIndex(0);
@@ -181,63 +229,77 @@ export default function AdaptiveQuizModal({ isOpen, isEmbedded = false, onClose,
     try {
       const poolWithQ = filteredPatterns.filter((p) => p.questionCount > 0);
       const candidates = shuffleArray(poolWithQ.length > 0 ? poolWithQ : filteredPatterns);
-      const pickedSkills = candidates.slice(0, Math.min(candidates.length, Math.max(8, Math.ceil(questionCount * 1.2))));
+      const flaggedSet = getFlaggedQuestionIdSet();
+      const uniqueMap = new Map();
+      const fallbackMap = new Map();
 
-      const responses = await Promise.all(
-        pickedSkills.map((sk) =>
-          contentService
-            .getQuestionsBySkill(sk.skillId)
-            .then((res) => {
-              const rawList = Array.isArray(res) ? res : (res?.questions || res?.data?.questions || []);
-              return rawList.map((q) => ({ q, sk }));
-            })
-            .catch(() => [])
-        )
-      );
+      // Batch fetch in chunks of 10 skills until we collect enough questions (fast even for 60 questions)
+      const batchSize = 10;
+      const maxSkillsToScan = Math.min(candidates.length, 40);
 
-      let flat = responses.flat();
-      // Filter by requested difficulty if specified
-      if (selectedDifficulty > 0) {
-        const exactDiff = flat.filter(({ q }) => Number(q.difficultyLevel || 2) === selectedDifficulty);
-        if (exactDiff.length >= Math.min(questionCount, 3)) {
-          flat = exactDiff;
+      for (let start = 0; start < maxSkillsToScan; start += batchSize) {
+        const chunk = candidates.slice(start, start + batchSize);
+        const responses = await Promise.all(
+          chunk.map((sk) =>
+            contentService
+              .getQuestionsBySkill(sk.skillId)
+              .then((res) => {
+                const rawList = Array.isArray(res) ? res : (res?.questions || res?.data?.questions || []);
+                return rawList.map((q) => ({ q, sk }));
+              })
+              .catch(() => [])
+          )
+        );
+
+        shuffleArray(responses.flat()).forEach(({ q, sk }) => {
+          const qid = String(q.questionId || q.id || '');
+          if (!qid || flaggedSet.has(qid) || uniqueMap.has(qid) || fallbackMap.has(qid)) return;
+          const opts = Array.isArray(q.options) && q.options.length > 0
+            ? q.options.map((o) => (typeof o === 'string' ? o : (o?.content ?? '')))
+            : [q.optionA || '', q.optionB || '', q.optionC || '', q.optionD || ''];
+          const corrLetter = String(q.correctOption || 'A').trim().toUpperCase().slice(0, 1);
+          const corrIdx = Math.max(0, ['A', 'B', 'C', 'D'].indexOf(corrLetter));
+          const normalized = {
+            id: qid,
+            skillId: sk.skillId,
+            skill: sk.name.replace(/^(Dạng|Pattern)\s*\d+\s*[:.\-–]\s*/i, ''),
+            lessonName: sk.lessonName,
+            subjectCode: sk.subjectCode,
+            bloom: Math.max(1, Math.min(4, Number(q.difficultyLevel || 2))),
+            question: q.contentLatex || q.content || '',
+            options: opts,
+            correct: corrIdx,
+            explanation: q.explanation || `Đáp án chính xác là phương án ${corrLetter}.`
+          };
+
+          if (selectedDifficulty === 0 || normalized.bloom === selectedDifficulty) {
+            uniqueMap.set(qid, normalized);
+          } else {
+            fallbackMap.set(qid, normalized);
+          }
+        });
+
+        if (uniqueMap.size >= targetCount + 5) break;
+      }
+
+      // If strict difficulty didn't yield enough, top up from fallback pool
+      const combined = [...Array.from(uniqueMap.values())];
+      if (combined.length < targetCount && fallbackMap.size > 0) {
+        for (const item of fallbackMap.values()) {
+          combined.push(item);
+          if (combined.length >= targetCount + 5) break;
         }
       }
 
-      const uniqueMap = new Map();
-      shuffleArray(flat).forEach(({ q, sk }) => {
-        const qid = String(q.questionId || q.id || '');
-        if (!qid || uniqueMap.has(qid)) return;
-        const opts = Array.isArray(q.options) && q.options.length > 0
-          ? q.options.map((o) => (typeof o === 'string' ? o : (o?.content ?? '')))
-          : [q.optionA || '', q.optionB || '', q.optionC || '', q.optionD || ''];
-        const corrLetter = String(q.correctOption || 'A').trim().toUpperCase().slice(0, 1);
-        const corrIdx = Math.max(0, ['A', 'B', 'C', 'D'].indexOf(corrLetter));
-        uniqueMap.set(qid, {
-          id: qid,
-          skillId: sk.skillId,
-          skill: sk.name.replace(/^(Dạng|Pattern)\s*\d+\s*[:.\-–]\s*/i, ''),
-          lessonName: sk.lessonName,
-          subjectCode: sk.subjectCode,
-          bloom: Math.max(1, Math.min(4, Number(q.difficultyLevel || 2))),
-          question: q.contentLatex || q.content || '',
-          options: opts,
-          correct: corrIdx,
-          explanation: q.explanation || `Đáp án chính xác là phương án ${corrLetter}.`
-        });
-      });
-
-      const flaggedSet = getFlaggedQuestionIdSet();
-      const allUnique = Array.from(uniqueMap.values()).filter((it) => !flaggedSet.has(it.id));
-      const finalItems = allUnique.slice(0, questionCount);
+      const finalItems = combined.slice(0, targetCount);
       if (finalItems.length === 0) {
-        setLoadError('Chưa tìm thấy câu hỏi phù hợp cho bộ lọc này. Hãy thử chọn "Tất cả 8 môn V-ACT" hoặc mức độ "Thích ứng tự động".');
+        setLoadError('Chưa tìm thấy câu hỏi phù hợp cho bộ lọc này. Hãy thử chọn "Tổng hợp 8 môn V-ACT" hoặc mức độ "Thích ứng (ZPD)".');
         setLoadingItems(false);
         return;
       }
 
       setQuizItems(finalItems);
-      setExtraQuestionPool(allUnique.slice(questionCount));
+      setExtraQuestionPool(combined.slice(targetCount));
       setFlagNotice('');
       setStage('practice');
     } catch {
@@ -256,7 +318,7 @@ export default function AdaptiveQuizModal({ isOpen, isEmbedded = false, onClose,
       questionId: currentItem.id,
       skillId: currentItem.skillId,
       skillName: currentItem.skill,
-      subjectName: SUBJECT_FILTERS.find((s) => s.code === currentItem.subjectCode)?.label || 'Luyện tập ZPD',
+      subjectName: SUBJECT_LABEL_MAP[currentItem.subjectCode] || 'Luyện tập Quiz',
       questionContent: currentItem.question,
       options: currentItem.options,
       correctOption: ['A', 'B', 'C', 'D'][currentItem.correct] || 'A',
@@ -264,7 +326,7 @@ export default function AdaptiveQuizModal({ isOpen, isEmbedded = false, onClose,
       difficultyLevel: currentItem.bloom,
       reasonCode,
       note,
-      sourcePage: 'Luyện tập Thích ứng ZPD'
+      sourcePage: 'Luyện tập Quiz Tự Chọn'
     });
 
     const usedIds = new Set([...quizItems.map((x) => x.id), ...getFlaggedQuestionIdSet()]);
@@ -272,7 +334,6 @@ export default function AdaptiveQuizModal({ isOpen, isEmbedded = false, onClose,
     if (replacement) {
       setExtraQuestionPool((prev) => prev.filter((x) => x.id !== replacement.id));
     } else {
-      // Fetch fresh replacement from another skill in current subject filter
       const candidates = shuffleArray(filteredPatterns.filter((p) => p.questionCount > 0)).slice(0, 4);
       for (const sk of candidates) {
         try {
@@ -308,9 +369,9 @@ export default function AdaptiveQuizModal({ isOpen, isEmbedded = false, onClose,
       setQuizItems((prev) => prev.map((it, idx) => (idx === itemIndex ? replacement : it)));
       setSelectedOpt(null);
       setFeedback(null);
-      setFlagNotice('Đã gửi báo lỗi tới Giảng viên / Ban quản lý và tự động đổi sang câu hỏi mới!');
+      setFlagNotice('Đã gửi báo lỗi và tự động đổi sang câu hỏi mới.');
     } else {
-      setFlagNotice('Đã gửi báo lỗi tới Giảng viên / Ban quản lý để xét duyệt lại miền kiến thức.');
+      setFlagNotice('Đã gửi báo lỗi tới hệ thống xét duyệt.');
     }
     setFlagBusy(false);
     setFlagModalOpen(false);
@@ -329,7 +390,7 @@ export default function AdaptiveQuizModal({ isOpen, isEmbedded = false, onClose,
       setConsecutiveWrong(0);
       setFeedback({
         type: 'correct',
-        msg: `Chính xác! Độ nắm vững tăng lên ${Math.round(newMastery * 100)}%.`
+        msg: `Chính xác! Độ nắm vững đạt ${Math.round(newMastery * 100)}%.`
       });
     } else {
       const newMastery = Math.max(0.08, bktMastery - 0.1);
@@ -341,7 +402,7 @@ export default function AdaptiveQuizModal({ isOpen, isEmbedded = false, onClose,
         setRemedialNodeActive(true);
         setFeedback({
           type: 'remedial',
-          msg: 'Bạn vừa sai 3 câu liên tiếp — hãy đọc kỹ lời giải chi tiết hoặc hỏi Gia sư AI để củng cố nền tảng trước khi sang câu tiếp theo.'
+          msg: 'Bạn vừa sai 3 câu liên tiếp — hãy xem kỹ lời giải hoặc hỏi Gia sư AI trước khi chuyển câu.'
         });
       } else {
         setFeedback({
@@ -355,6 +416,7 @@ export default function AdaptiveQuizModal({ isOpen, isEmbedded = false, onClose,
   const handleNextItem = () => {
     setSelectedOpt(null);
     setFeedback(null);
+    setFlagNotice('');
     if (itemIndex < quizItems.length - 1) {
       setItemIndex(itemIndex + 1);
     } else {
@@ -368,7 +430,7 @@ export default function AdaptiveQuizModal({ isOpen, isEmbedded = false, onClose,
           content: item.question,
           options: item.options,
           skill_name: item.skill,
-          domain_name: SUBJECT_FILTERS.find((s) => s.code === item.subjectCode)?.label || 'Luyện tập ZPD',
+          domain_name: SUBJECT_LABEL_MAP[item.subjectCode] || 'Luyện tập Quiz',
           bloom: item.bloom,
           studentChoice: chosenChar,
           correctChoice: correctChar,
@@ -379,15 +441,14 @@ export default function AdaptiveQuizModal({ isOpen, isEmbedded = false, onClose,
         };
       });
       const correctCount = reviewedQuestions.filter((q) => q.isCorrect).length;
-      const subLabel = SUBJECT_FILTERS.find((s) => s.code === selectedSubject)?.label || 'Tổng hợp';
       practiceService.saveSubmissionToHistory({
         id: `zpd_${Date.now()}`,
-        title: `Luyện tập Thích ứng ZPD • ${subLabel} (${quizItems.length} câu)`,
+        title: `Luyện tập Quiz • ${selectedSubjectsLabel} (${quizItems.length} câu)`,
         examType: 'ZPD_QUIZ',
         completedAt: new Date().toISOString(),
         theta_0: Number((bktMastery - 0.25).toFixed(2)),
         placement_class: bktMastery >= 0.8 ? 'BREAKTHROUGH' : bktMastery >= 0.55 ? 'ACCELERATION' : 'FOUNDATION',
-        ai_commentary: `Hoàn thành ${correctCount}/${quizItems.length} câu đúng (${Math.round((correctCount / Math.max(1, quizItems.length)) * 100)}%) với độ nắm vững BKT đạt ${Math.round(bktMastery * 100)}%.`,
+        ai_commentary: `Hoàn thành ${correctCount}/${quizItems.length} câu đúng (${Math.round((correctCount / Math.max(1, quizItems.length)) * 100)}%) với độ nắm vững đạt ${Math.round(bktMastery * 100)}%.`,
         reviewedQuestions,
         pacing: {
           totalCorrect: correctCount,
@@ -401,401 +462,544 @@ export default function AdaptiveQuizModal({ isOpen, isEmbedded = false, onClose,
   };
 
   const correctTotal = quizItems.filter((it) => answerHistory[it.id] === it.correct).length;
+  const accuracyPct = Math.round((correctTotal / Math.max(1, quizItems.length)) * 100);
+  const progressPct = quizItems.length > 0 ? Math.round(((itemIndex + 1) / quizItems.length) * 100) : 0;
+  const estimatedMinutes = Math.max(5, Math.round(questionCount * 1.1));
+  const selectedDiffObj = DIFFICULTY_OPTIONS.find((d) => d.value === selectedDifficulty) || DIFFICULTY_OPTIONS[0];
 
-  const innerCard = (
-    <div className={isEmbedded
-      ? 'bg-white rounded-3xl shadow-xs border border-slate-200 w-full flex flex-col overflow-hidden'
-      : 'bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden'
-    }>
-        {/* Header */}
-        <div className="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-amber-50 via-white to-emerald-50 flex items-center justify-between gap-3 shrink-0">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 rounded-2xl bg-amber-500 text-white flex items-center justify-center shadow-xs shrink-0">
-              <Zap className="w-5 h-5" />
-            </div>
-            <div className="min-w-0">
-              <h2 className="text-base sm:text-lg font-black text-slate-900 truncate">
-                Luyện Tập Thích Ứng ZPD (Chuẩn GDPT 2018)
-              </h2>
-              <p className="text-xs text-slate-500 font-medium truncate">
-                Ngân hàng câu hỏi chuẩn V-ACT có lời giải từng bước & theo dõi độ nắm vững BKT
-              </p>
-            </div>
-          </div>
-          {!isEmbedded && (
-            <button
-              type="button"
-              onClick={onClose}
-              className="p-2 rounded-xl border border-slate-200 bg-white text-slate-500 hover:text-slate-900 hover:bg-slate-100 cursor-pointer"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          )}
-        </div>
+  const subjectBreakdown = useMemo(() => {
+    if (stage !== 'summary') return [];
+    const bySub = {};
+    quizItems.forEach((it) => {
+      const code = it.subjectCode || 'OTHER';
+      if (!bySub[code]) bySub[code] = { code, label: SUBJECT_LABEL_MAP[code] || 'Tổng hợp', total: 0, correct: 0 };
+      bySub[code].total += 1;
+      if (answerHistory[it.id] === it.correct) bySub[code].correct += 1;
+    });
+    return Object.values(bySub);
+  }, [stage, quizItems, answerHistory]);
 
-        {/* Body */}
-        <div className="flex-1 overflow-y-auto p-5 sm:p-6">
-          {stage === 'setup' && (
-            <div className="space-y-6">
-              <div className="rounded-2xl border border-emerald-200 bg-emerald-50/50 p-4 flex items-center justify-between flex-wrap gap-3">
-                <div className="flex items-center gap-3">
-                  <BookOpen className="w-5 h-5 text-emerald-700 shrink-0" />
-                  <div>
-                    <div className="text-sm font-black text-emerald-950">
-                      Kho câu hỏi sẵn sàng: {loadingCurriculum ? 'Đang nạp...' : `${availableQuestionEstimate.toLocaleString('vi-VN')} câu hỏi`}
-                    </div>
-                    <div className="text-xs text-emerald-800">
-                      Phủ {filteredPatterns.length} dạng bài trọng tâm chuẩn SGK Chân trời sáng tạo
-                    </div>
-                  </div>
+  const content = (
+    <div className="w-full space-y-5">
+      {/* ========================================================= */}
+      {/* STAGE 1: MODERN 2-COLUMN QUIZ BUILDER                     */}
+      {/* ========================================================= */}
+      {stage === 'setup' && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+          {/* Left Configuration Column */}
+          <div className="lg:col-span-8 space-y-5">
+            {/* Step 1: Subject Picker (Single, Multi, or All 8) */}
+            <section className="rounded-2xl border border-slate-200/90 bg-white p-5 sm:p-6 shadow-2xs">
+              <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
+                <div>
+                  <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                    <Layers className="w-4 h-4 text-indigo-600" />
+                    1. Chọn môn học luyện tập
+                  </h2>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Chọn 1 môn, kết hợp nhiều môn hoặc luyện tổng hợp cả 8 môn ĐGNL.
+                  </p>
                 </div>
-                <span className="px-3 py-1 rounded-full bg-white border border-emerald-200 text-emerald-800 text-xs font-bold">
-                  Chấm điểm & Giải thích tức thì
+                <button
+                  type="button"
+                  onClick={() => toggleSubject('ALL')}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all cursor-pointer ${
+                    isAllSubjects
+                      ? 'bg-indigo-600 text-white border-indigo-600 shadow-2xs'
+                      : 'bg-white text-slate-600 border-slate-200 hover:border-indigo-300 hover:text-indigo-700'
+                  }`}
+                >
+                  {isAllSubjects && <Check className="w-3.5 h-3.5" />}
+                  <span>Tổng hợp 8 môn</span>
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                {CORE_SUBJECTS.map((sub) => {
+                  const isPicked = !isAllSubjects && selectedSubjects.includes(sub.code);
+                  const count = subjectStats[sub.code]?.questions || 0;
+                  return (
+                    <button
+                      key={sub.code}
+                      type="button"
+                      onClick={() => toggleSubject(sub.code)}
+                      className={`group relative rounded-xl border p-3 text-left transition-all cursor-pointer ${
+                        isPicked
+                          ? 'border-indigo-500 bg-indigo-50/70 ring-1 ring-indigo-500/30'
+                          : 'border-slate-200/90 bg-white hover:border-slate-300 hover:bg-slate-50/70'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-1.5">
+                        <span className={`w-2 h-2 rounded-full shrink-0 ${sub.dot}`} />
+                        {isPicked && (
+                          <span className="w-4 h-4 rounded-full bg-indigo-600 text-white flex items-center justify-center">
+                            <Check className="w-2.5 h-2.5" />
+                          </span>
+                        )}
+                      </div>
+                      <div className={`mt-2 text-xs font-bold ${isPicked ? 'text-indigo-950' : 'text-slate-800'}`}>
+                        {sub.label}
+                      </div>
+                      <div className="mt-0.5 text-[11px] text-slate-400 font-medium">
+                        {loadingCurriculum ? '...' : `${count.toLocaleString('vi-VN')} câu`}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+
+            {/* Step 2: Difficulty Level */}
+            <section className="rounded-2xl border border-slate-200/90 bg-white p-5 sm:p-6 shadow-2xs">
+              <div className="mb-3.5">
+                <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <SlidersHorizontal className="w-4 h-4 text-indigo-600" />
+                  2. Mức độ nhận thức
+                </h2>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Chọn mức độ mục tiêu hoặc để hệ thống tự điều chỉnh theo năng lực.
+                </p>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                {DIFFICULTY_OPTIONS.map((opt) => {
+                  const active = selectedDifficulty === opt.value;
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setSelectedDifficulty(opt.value)}
+                      className={`px-3 py-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                        active
+                          ? 'bg-slate-900 text-white border-slate-900 shadow-2xs'
+                          : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                      }`}
+                    >
+                      <div className="text-xs font-bold leading-tight">{opt.label}</div>
+                      <div className={`text-[10px] mt-1 leading-snug ${active ? 'text-slate-300' : 'text-slate-400'}`}>
+                        {opt.desc}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+
+            {/* Step 3: Question Count (Up to 60) */}
+            <section className="rounded-2xl border border-slate-200/90 bg-white p-5 sm:p-6 shadow-2xs">
+              <div className="flex items-center justify-between gap-3 mb-4">
+                <div>
+                  <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                    <BookOpen className="w-4 h-4 text-indigo-600" />
+                    3. Số lượng câu hỏi
+                  </h2>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Chọn nhanh hoặc kéo thanh trượt (tối thiểu 5 câu, tối đa 60 câu).
+                  </p>
+                </div>
+                <span className="px-3 py-1 rounded-full bg-indigo-50 border border-indigo-200/80 text-indigo-700 text-xs font-extrabold whitespace-nowrap">
+                  {questionCount} / {MAX_QUESTIONS} câu
                 </span>
               </div>
 
-              {/* Subject Grid */}
-              <div>
-                <label className="text-xs font-black uppercase tracking-wider text-slate-500 flex items-center gap-1.5 mb-2.5">
-                  <SlidersHorizontal className="w-3.5 h-3.5 text-amber-600" />
-                  1. Chọn môn học luyện tập
-                </label>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                  {SUBJECT_FILTERS.map((sub) => {
-                    const active = selectedSubject === sub.code;
-                    return (
-                      <button
-                        key={sub.code}
-                        type="button"
-                        onClick={() => setSelectedSubject(sub.code)}
-                        className={`px-3.5 py-2.5 rounded-xl border text-xs font-bold text-left transition-all cursor-pointer ${
-                          active
-                            ? 'bg-emerald-700 text-white border-emerald-700 shadow-xs'
-                            : 'bg-white text-slate-700 border-slate-200 hover:border-emerald-300 hover:bg-emerald-50/40'
-                        }`}
-                      >
-                        {sub.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Difficulty & Question Count */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                <div>
-                  <label className="text-xs font-black uppercase tracking-wider text-slate-500 block mb-2.5">
-                    2. Mức độ nhận thức
-                  </label>
-                  <div className="flex flex-wrap gap-2">
-                    {DIFFICULTY_OPTIONS.map((opt) => (
-                      <button
-                        key={opt.value}
-                        type="button"
-                        onClick={() => setSelectedDifficulty(opt.value)}
-                        className={`px-3 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
-                          selectedDifficulty === opt.value
-                            ? 'bg-amber-500 text-white border-amber-500 shadow-xs'
-                            : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
-                        }`}
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-xs font-black uppercase tracking-wider text-slate-500 block mb-2.5">
-                    3. Số câu hỏi mỗi phiên
-                  </label>
-                  <div className="flex flex-wrap gap-2">
-                    {COUNT_OPTIONS.map((cnt) => (
-                      <button
-                        key={cnt}
-                        type="button"
-                        onClick={() => setQuestionCount(cnt)}
-                        className={`px-4 py-2 rounded-xl border text-xs font-black transition-all cursor-pointer ${
-                          questionCount === cnt
-                            ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
-                            : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
-                        }`}
-                      >
-                        {cnt} câu
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {loadError && (
-                <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-xs font-semibold text-rose-800 flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 shrink-0" />
-                  <span>{loadError}</span>
-                </div>
-              )}
-
-              <div className="pt-2 flex items-center justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 cursor-pointer"
-                >
-                  Đóng
-                </button>
-                <button
-                  type="button"
-                  disabled={loadingItems || loadingCurriculum}
-                  onClick={handleStartPractice}
-                  className="px-6 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-black flex items-center gap-2 shadow-sm cursor-pointer disabled:opacity-50"
-                >
-                  {loadingItems ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
-                  <span>{loadingItems ? 'Đang chọn câu hỏi thích ứng...' : `Bắt đầu luyện ${questionCount} câu ngay`}</span>
-                </button>
-              </div>
-            </div>
-          )}
-
-          {stage === 'practice' && currentItem && (
-            <div className="space-y-5">
-              {/* Top Telemetry Bar */}
-              <div className="flex items-center justify-between flex-wrap gap-3 p-3.5 rounded-2xl bg-slate-50 border border-slate-200">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="px-2.5 py-1 rounded-lg bg-slate-900 text-white text-xs font-black">
-                    Câu {itemIndex + 1} / {quizItems.length}
-                  </span>
-                  <span className={`px-2.5 py-1 rounded-lg border text-xs font-bold ${(BLOOM_BADGE[currentItem.bloom] || BLOOM_BADGE[2]).cls}`}>
-                    {(BLOOM_BADGE[currentItem.bloom] || BLOOM_BADGE[2]).label}
-                  </span>
-                  <span className="text-xs font-bold text-slate-600 truncate max-w-xs">
-                    {currentItem.skill}
-                  </span>
-                </div>
-                <div className="flex items-center gap-3 text-xs font-bold">
-                  {consecutiveCorrect >= 2 && (
-                    <span className="px-2.5 py-1 rounded-full bg-amber-100 text-amber-800">
-                      🔥 Chuỗi {consecutiveCorrect} câu đúng
-                    </span>
-                  )}
-                  <div className="flex items-center gap-2">
-                    <span className="text-slate-500">Nắm vững:</span>
-                    <div className="w-24 h-2 rounded-full bg-slate-200 overflow-hidden">
-                      <div
-                        className="h-full bg-emerald-600 transition-all duration-300"
-                        style={{ width: `${Math.round(bktMastery * 100)}%` }}
-                      />
-                    </div>
-                    <span className="text-emerald-700 font-black">{Math.round(bktMastery * 100)}%</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Question Stem */}
-              <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-2xs text-sm sm:text-[15px] font-medium text-slate-900 leading-relaxed">
-                <MathText text={currentItem.question} />
-              </div>
-
-              {/* Options */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {currentItem.options.map((opt, oIdx) => {
-                  const letter = ['A', 'B', 'C', 'D'][oIdx];
-                  const isAnswered = selectedOpt !== null;
-                  const isSelected = selectedOpt === oIdx;
-                  const isCorrectOpt = oIdx === currentItem.correct;
-
-                  let cardStyle = 'bg-white border-slate-200 hover:border-emerald-400 hover:bg-emerald-50/40 text-slate-800';
-                  if (isAnswered) {
-                    if (isCorrectOpt) {
-                      cardStyle = 'bg-emerald-50 border-emerald-500 text-emerald-950 ring-2 ring-emerald-200 font-semibold';
-                    } else if (isSelected && !isCorrectOpt) {
-                      cardStyle = 'bg-rose-50 border-rose-400 text-rose-950 ring-2 ring-rose-200';
-                    } else {
-                      cardStyle = 'bg-slate-50/60 border-slate-200 text-slate-500 opacity-75';
-                    }
-                  }
-
+              <div className="flex flex-wrap gap-2 mb-4">
+                {COUNT_PRESETS.map((cnt) => {
+                  const active = questionCount === cnt;
                   return (
                     <button
-                      key={oIdx}
+                      key={cnt}
                       type="button"
-                      disabled={isAnswered}
-                      onClick={() => handleAnswerSubmit(oIdx)}
-                      className={`p-3.5 rounded-2xl border text-left transition-all flex items-start gap-3 cursor-pointer disabled:cursor-default ${cardStyle}`}
+                      onClick={() => setQuestionCount(cnt)}
+                      className={`px-4 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                        active
+                          ? 'bg-indigo-600 text-white border-indigo-600 shadow-2xs'
+                          : 'bg-white text-slate-700 border-slate-200 hover:border-indigo-300 hover:text-indigo-700'
+                      }`}
                     >
-                      <span
-                        className={`w-7 h-7 rounded-xl flex items-center justify-center text-xs font-black shrink-0 ${
-                          isAnswered && isCorrectOpt
-                            ? 'bg-emerald-600 text-white'
-                            : isAnswered && isSelected && !isCorrectOpt
-                              ? 'bg-rose-600 text-white'
-                              : 'bg-slate-100 text-slate-700'
-                        }`}
-                      >
-                        {letter}
-                      </span>
-                      <div className="flex-1 min-w-0 overflow-x-auto text-sm leading-snug pt-0.5 break-words">
-                        <MathText text={opt} />
-                      </div>
-                      {isAnswered && isCorrectOpt && <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />}
-                      {isAnswered && isSelected && !isCorrectOpt && <XCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />}
+                      {cnt} câu
                     </button>
                   );
                 })}
               </div>
 
-              {/* Instant Feedback & Detailed Solution */}
-              {feedback && (
-                <div
-                  className={`p-4 rounded-2xl border space-y-2.5 ${
-                    feedback.type === 'correct'
-                      ? 'bg-emerald-50/80 border-emerald-200 text-emerald-950'
-                      : feedback.type === 'remedial'
-                        ? 'bg-amber-50 border-amber-300 text-amber-950'
-                        : 'bg-rose-50/70 border-rose-200 text-rose-950'
-                  }`}
-                >
-                  <div className="text-xs font-black flex items-center gap-2">
-                    {feedback.type === 'correct' ? (
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                    ) : (
-                      <AlertCircle className="w-4 h-4 text-rose-600" />
-                    )}
-                    <span>{feedback.msg}</span>
-                  </div>
-                  <div className="pt-2 border-t border-black/10 text-xs sm:text-sm text-slate-800 leading-relaxed">
-                    <div className="text-[11px] font-black uppercase tracking-wider text-slate-500 mb-1">
-                      Lời giải chi tiết:
-                    </div>
-                    <MathText text={currentItem.explanation} />
-                  </div>
+              <div className="space-y-1.5">
+                <input
+                  type="range"
+                  min={MIN_QUESTIONS}
+                  max={MAX_QUESTIONS}
+                  step={5}
+                  value={questionCount}
+                  onChange={(e) => setQuestionCount(Number(e.target.value))}
+                  aria-label="Chọn số lượng câu hỏi"
+                  className="w-full accent-indigo-600 cursor-pointer"
+                />
+                <div className="flex justify-between text-[11px] font-medium text-slate-400">
+                  <span>5 câu</span>
+                  <span>20 câu</span>
+                  <span>40 câu</span>
+                  <span>60 câu (Tối đa)</span>
                 </div>
-              )}
+              </div>
+            </section>
+          </div>
 
-              {/* Bottom Action Row */}
-              {flagNotice && (
-                <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs font-bold text-emerald-800">
-                  {flagNotice}
+          {/* Right Sticky Launch Summary Column */}
+          <aside className="lg:col-span-4 lg:sticky lg:top-20">
+            <div className="rounded-2xl border border-slate-200/90 bg-white p-5 sm:p-6 shadow-xs space-y-5">
+              <div className="flex items-center justify-between gap-2 pb-3.5 border-b border-slate-100">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">Tóm tắt phiên Quiz</h3>
+                  <p className="text-[11px] text-slate-500 mt-0.5">Chấm điểm & giải thích tức thì</p>
                 </div>
-              )}
-              <div className="flex items-center justify-between flex-wrap gap-2 pt-2">
-                <div className="flex items-center gap-2 flex-wrap">
+                {!isEmbedded && onClose && (
                   <button
                     type="button"
-                    onClick={() => setFlagModalOpen(true)}
-                    className="px-3 py-2 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+                    onClick={onClose}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer"
+                    aria-label="Đóng"
                   >
-                    <Flag className="w-3.5 h-3.5" />
-                    <span>Báo lỗi &amp; Đổi câu</span>
+                    <X className="w-4 h-4" />
                   </button>
-                  {onOpenAiTutorWithContext && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        onOpenAiTutorWithContext({
-                          questionContent: currentItem.question,
-                          skillName: currentItem.skill,
-                          studentChoice: selectedOpt !== null ? ['A', 'B', 'C', 'D'][selectedOpt] : '',
-                          correctChoice: ['A', 'B', 'C', 'D'][currentItem.correct],
-                          explanation: currentItem.explanation
-                        });
-                      }}
-                      className="px-3.5 py-2 rounded-xl border border-violet-200 bg-violet-50 hover:bg-violet-100 text-violet-800 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
-                    >
-                      <Bot className="w-4 h-4" />
-                      <span>Hỏi Gia sư AI câu này</span>
-                    </button>
-                  )}
-                </div>
-
-                <button
-                  type="button"
-                  disabled={selectedOpt === null}
-                  onClick={handleNextItem}
-                  className="px-5 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-black flex items-center gap-1.5 cursor-pointer disabled:opacity-40"
-                >
-                  <span>{itemIndex < quizItems.length - 1 ? 'Câu tiếp theo' : 'Xem tổng kết phiên luyện tập'}</span>
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-              </div>
-              <FlagQuestionModal
-                isOpen={flagModalOpen}
-                onClose={() => setFlagModalOpen(false)}
-                onConfirm={handleConfirmFlag}
-                questionPreview={currentItem?.question}
-                busy={flagBusy}
-              />
-            </div>
-          )}
-
-          {stage === 'summary' && (
-            <div className="space-y-5 text-center py-4">
-              <div className="w-16 h-16 rounded-3xl bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto">
-                <Award className="w-8 h-8" />
-              </div>
-              <div>
-                <h3 className="text-xl font-black text-slate-900">Hoàn Thành Phiên Luyện Tập!</h3>
-                <p className="text-xs text-slate-500 mt-1">
-                  Kết quả đã được lưu tự động vào Lịch sử làm bài của bạn.
-                </p>
+                )}
               </div>
 
-              <div className="grid grid-cols-3 gap-3 max-w-lg mx-auto">
-                <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200">
-                  <div className="text-[11px] font-bold text-emerald-700">Số câu đúng</div>
-                  <div className="text-2xl font-black text-emerald-900 mt-0.5">
-                    {correctTotal}/{quizItems.length}
-                  </div>
+              <dl className="space-y-3 text-xs">
+                <div className="flex items-start justify-between gap-3">
+                  <dt className="text-slate-500 shrink-0">Môn học</dt>
+                  <dd className="font-semibold text-slate-900 text-right">{selectedSubjectsLabel}</dd>
                 </div>
-                <div className="p-3.5 rounded-2xl bg-blue-50 border border-blue-200">
-                  <div className="text-[11px] font-bold text-blue-700">Tỷ lệ chính xác</div>
-                  <div className="text-2xl font-black text-blue-900 mt-0.5">
-                    {Math.round((correctTotal / Math.max(1, quizItems.length)) * 100)}%
-                  </div>
+                <div className="flex items-center justify-between gap-3">
+                  <dt className="text-slate-500">Mức độ</dt>
+                  <dd className="font-semibold text-slate-900">{selectedDiffObj.label}</dd>
                 </div>
-                <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200">
-                  <div className="text-[11px] font-bold text-amber-700">Độ nắm vững</div>
-                  <div className="text-2xl font-black text-amber-900 mt-0.5">
-                    {Math.round(bktMastery * 100)}%
-                  </div>
+                <div className="flex items-center justify-between gap-3">
+                  <dt className="text-slate-500">Số câu hỏi</dt>
+                  <dd className="font-extrabold text-indigo-600">{questionCount} câu</dd>
                 </div>
-              </div>
+                <div className="flex items-center justify-between gap-3">
+                  <dt className="text-slate-500">Thời gian dự kiến</dt>
+                  <dd className="font-semibold text-slate-700 inline-flex items-center gap-1">
+                    <Clock className="w-3.5 h-3.5 text-slate-400" />
+                    ~{estimatedMinutes} phút
+                  </dd>
+                </div>
+                <div className="flex items-center justify-between gap-3 pt-2.5 border-t border-slate-100">
+                  <dt className="text-slate-500">Kho câu phù hợp</dt>
+                  <dd className="font-semibold text-emerald-700">
+                    {loadingCurriculum
+                      ? 'Đang nạp...'
+                      : `${availableQuestionEstimate.toLocaleString('vi-VN')} câu (${filteredPatterns.length} dạng)`}
+                  </dd>
+                </div>
+              </dl>
 
-              {remedialNodeActive && (
-                <div className="max-w-lg mx-auto p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-xs text-amber-900 font-medium">
-                  Gợi ý: Bạn nên quay lại phần <strong>Lý thuyết & Ví dụ mẫu</strong> trong Lộ trình PLAR để củng cố thêm các dạng bài vừa sai.
+              {loadError && (
+                <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs font-medium text-rose-700 flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <span>{loadError}</span>
                 </div>
               )}
 
-              <div className="flex items-center justify-center gap-3 pt-2">
+              <button
+                type="button"
+                disabled={loadingItems || loadingCurriculum}
+                onClick={handleStartPractice}
+                className="w-full py-3 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold flex items-center justify-center gap-2 shadow-sm shadow-indigo-200 transition-colors cursor-pointer disabled:opacity-50"
+              >
+                {loadingItems ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <span>Đang tạo đề {questionCount} câu...</span>
+                  </>
+                ) : (
+                  <>
+                    <Play className="w-4 h-4 fill-current" />
+                    <span>Bắt đầu làm {questionCount} câu</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </aside>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* STAGE 2: CLEAN INTERACTIVE PRACTICE STUDIO                */}
+      {/* ========================================================= */}
+      {stage === 'practice' && currentItem && (
+        <div className="max-w-4xl mx-auto rounded-2xl border border-slate-200/90 bg-white shadow-xs overflow-hidden">
+          {/* Progress Bar */}
+          <div className="h-1.5 w-full bg-slate-100">
+            <div
+              className="h-full bg-indigo-600 transition-all duration-300"
+              style={{ width: `${progressPct}%` }}
+            />
+          </div>
+
+          <div className="p-5 sm:p-7 space-y-5">
+            {/* Top Session Bar */}
+            <div className="flex items-center justify-between flex-wrap gap-3 pb-4 border-b border-slate-100">
+              <div className="flex items-center gap-2 flex-wrap">
                 <button
                   type="button"
                   onClick={() => setStage('setup')}
-                  className="px-5 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-black flex items-center gap-1.5 cursor-pointer"
+                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50 cursor-pointer"
                 >
-                  <Sparkles className="w-4 h-4" />
-                  <span>Luyện bộ câu hỏi mới</span>
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  <span>Đổi cấu hình</span>
                 </button>
+                <span className="px-2.5 py-1 rounded-lg bg-slate-900 text-white text-xs font-bold">
+                  Câu {itemIndex + 1} / {quizItems.length}
+                </span>
+                <span className={`px-2.5 py-1 rounded-lg border text-xs font-semibold ${(BLOOM_BADGE[currentItem.bloom] || BLOOM_BADGE[2]).cls}`}>
+                  {(BLOOM_BADGE[currentItem.bloom] || BLOOM_BADGE[2]).label}
+                </span>
+                <span className="text-xs font-medium text-slate-500 truncate max-w-xs">
+                  {SUBJECT_LABEL_MAP[currentItem.subjectCode] || ''} · {currentItem.skill}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-3 text-xs font-semibold">
+                {consecutiveCorrect >= 2 && (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-orange-50 text-orange-600">
+                    <Flame className="w-3.5 h-3.5 fill-orange-400 text-orange-500" />
+                    {consecutiveCorrect} liên tiếp
+                  </span>
+                )}
+                <span className="text-slate-500">
+                  Đúng: <strong className="text-emerald-600">{correctTotal}</strong>/{Object.keys(answerHistory).length}
+                </span>
+              </div>
+            </div>
+
+            {/* Question Stem */}
+            <div className="p-5 rounded-2xl bg-slate-50/70 border border-slate-200/80 text-sm sm:text-[15px] font-medium text-slate-900 leading-relaxed">
+              <MathText text={currentItem.question} />
+            </div>
+
+            {/* Options */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {currentItem.options.map((opt, oIdx) => {
+                const letter = ['A', 'B', 'C', 'D'][oIdx];
+                const isAnswered = selectedOpt !== null;
+                const isSelected = selectedOpt === oIdx;
+                const isCorrectOpt = oIdx === currentItem.correct;
+
+                let cardStyle = 'bg-white border-slate-200 hover:border-indigo-400 hover:bg-indigo-50/30 text-slate-800';
+                if (isAnswered) {
+                  if (isCorrectOpt) {
+                    cardStyle = 'bg-emerald-50 border-emerald-500 text-emerald-950 ring-1 ring-emerald-300 font-semibold';
+                  } else if (isSelected && !isCorrectOpt) {
+                    cardStyle = 'bg-rose-50 border-rose-400 text-rose-950 ring-1 ring-rose-200';
+                  } else {
+                    cardStyle = 'bg-slate-50/60 border-slate-200 text-slate-400';
+                  }
+                }
+
+                return (
+                  <button
+                    key={oIdx}
+                    type="button"
+                    disabled={isAnswered}
+                    onClick={() => handleAnswerSubmit(oIdx)}
+                    className={`p-3.5 rounded-xl border text-left transition-all flex items-start gap-3 cursor-pointer disabled:cursor-default ${cardStyle}`}
+                  >
+                    <span
+                      className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 ${
+                        isAnswered && isCorrectOpt
+                          ? 'bg-emerald-600 text-white'
+                          : isAnswered && isSelected && !isCorrectOpt
+                            ? 'bg-rose-600 text-white'
+                            : 'bg-slate-100 text-slate-700'
+                      }`}
+                    >
+                      {letter}
+                    </span>
+                    <div className="flex-1 min-w-0 overflow-x-auto text-sm leading-snug pt-0.5 break-words">
+                      <MathText text={opt} />
+                    </div>
+                    {isAnswered && isCorrectOpt && <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />}
+                    {isAnswered && isSelected && !isCorrectOpt && <XCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Instant Feedback & Detailed Solution */}
+            {feedback && (
+              <div
+                className={`p-4 rounded-xl border space-y-2 ${
+                  feedback.type === 'correct'
+                    ? 'bg-emerald-50/80 border-emerald-200 text-emerald-950'
+                    : feedback.type === 'remedial'
+                      ? 'bg-amber-50 border-amber-200 text-amber-950'
+                      : 'bg-rose-50/70 border-rose-200 text-rose-950'
+                }`}
+              >
+                <div className="text-xs font-bold flex items-center gap-2">
+                  {feedback.type === 'correct' ? (
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  ) : (
+                    <AlertCircle className="w-4 h-4 text-rose-600" />
+                  )}
+                  <span>{feedback.msg}</span>
+                </div>
+                <div className="pt-2 border-t border-black/10 text-xs sm:text-sm text-slate-800 leading-relaxed">
+                  <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+                    Lời giải chi tiết
+                  </div>
+                  <MathText text={currentItem.explanation} />
+                </div>
+              </div>
+            )}
+
+            {flagNotice && (
+              <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs font-semibold text-emerald-800">
+                {flagNotice}
+              </div>
+            )}
+
+            {/* Bottom Controls */}
+            <div className="flex items-center justify-between flex-wrap gap-2 pt-2 border-t border-slate-100">
+              <div className="flex items-center gap-2 flex-wrap">
                 <button
                   type="button"
-                  onClick={onClose}
-                  className="px-5 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold cursor-pointer"
+                  onClick={() => setFlagModalOpen(true)}
+                  className="px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-rose-50 hover:border-rose-200 hover:text-rose-700 text-slate-600 text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors"
                 >
-                  Đóng
+                  <Flag className="w-3.5 h-3.5" />
+                  <span>Báo lỗi &amp; Đổi câu</span>
                 </button>
+                {onOpenAiTutorWithContext && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onOpenAiTutorWithContext({
+                        questionContent: currentItem.question,
+                        skillName: currentItem.skill,
+                        studentChoice: selectedOpt !== null ? ['A', 'B', 'C', 'D'][selectedOpt] : '',
+                        correctChoice: ['A', 'B', 'C', 'D'][currentItem.correct],
+                        explanation: currentItem.explanation
+                      });
+                    }}
+                    className="px-3.5 py-2 rounded-xl border border-indigo-200 bg-indigo-50/70 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors"
+                  >
+                    <Bot className="w-4 h-4" />
+                    <span>Hỏi Gia sư AI</span>
+                  </button>
+                )}
+              </div>
+
+              <button
+                type="button"
+                disabled={selectedOpt === null}
+                onClick={handleNextItem}
+                className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer disabled:opacity-40 transition-colors"
+              >
+                <span>{itemIndex < quizItems.length - 1 ? 'Câu tiếp theo' : 'Xem tổng kết'}</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          <FlagQuestionModal
+            isOpen={flagModalOpen}
+            onClose={() => setFlagModalOpen(false)}
+            onConfirm={handleConfirmFlag}
+            questionPreview={currentItem?.question}
+            busy={flagBusy}
+          />
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* STAGE 3: SUMMARY REPORT                                   */}
+      {/* ========================================================= */}
+      {stage === 'summary' && (
+        <div className="max-w-3xl mx-auto rounded-2xl border border-slate-200/90 bg-white p-6 sm:p-8 shadow-xs space-y-6 text-center">
+          <div className="w-14 h-14 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto">
+            <Award className="w-7 h-7" />
+          </div>
+          <div>
+            <h3 className="text-xl font-bold text-slate-900">Hoàn Thành Phiên Luyện Tập</h3>
+            <p className="text-xs text-slate-500 mt-1">
+              Kết quả đã được lưu vào Lịch sử làm bài.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-3 gap-3 max-w-lg mx-auto">
+            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80">
+              <div className="text-[11px] font-medium text-slate-500">Số câu đúng</div>
+              <div className="text-2xl font-extrabold text-emerald-600 mt-0.5">
+                {correctTotal}/{quizItems.length}
+              </div>
+            </div>
+            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80">
+              <div className="text-[11px] font-medium text-slate-500">Độ chính xác</div>
+              <div className="text-2xl font-extrabold text-indigo-600 mt-0.5">
+                {accuracyPct}%
+              </div>
+            </div>
+            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80">
+              <div className="text-[11px] font-medium text-slate-500">Độ nắm vững</div>
+              <div className="text-2xl font-extrabold text-slate-900 mt-0.5">
+                {Math.round(bktMastery * 100)}%
+              </div>
+            </div>
+          </div>
+
+          {subjectBreakdown.length > 1 && (
+            <div className="max-w-lg mx-auto text-left rounded-xl border border-slate-200/80 p-4 space-y-2.5">
+              <div className="text-xs font-bold text-slate-700">Kết quả theo từng môn</div>
+              <div className="grid grid-cols-2 gap-2">
+                {subjectBreakdown.map((sb) => (
+                  <div key={sb.code} className="flex items-center justify-between text-xs px-3 py-2 rounded-lg bg-slate-50">
+                    <span className="font-medium text-slate-700">{sb.label}</span>
+                    <span className="font-bold text-slate-900">{sb.correct}/{sb.total}</span>
+                  </div>
+                ))}
               </div>
             </div>
           )}
+
+          {remedialNodeActive && (
+            <div className="max-w-lg mx-auto p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900">
+              Gợi ý: Bạn có thể xem lại phần <strong>Kiến thức nền</strong> hoặc <strong>Luyện tập (P-L-A-R)</strong> để củng cố các dạng bài vừa sai.
+            </div>
+          )}
+
+          <div className="flex items-center justify-center gap-3 pt-1">
+            <button
+              type="button"
+              onClick={() => setStage('setup')}
+              className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+            >
+              <Sparkles className="w-4 h-4" />
+              <span>Tạo bộ Quiz mới</span>
+            </button>
+            {!isEmbedded && onClose && (
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-5 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold cursor-pointer"
+              >
+                Đóng
+              </button>
+            )}
+          </div>
         </div>
-      </div>
+      )}
+    </div>
   );
 
   if (isEmbedded) {
-    return <div className="max-w-5xl mx-auto p-4 sm:p-6">{innerCard}</div>;
+    return <div className="w-full max-w-6xl mx-auto py-1">{content}</div>;
   }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-3 sm:p-5">
-      {innerCard}
+      <div className="bg-slate-50 rounded-3xl shadow-2xl border border-slate-200 w-full max-w-5xl max-h-[92vh] overflow-y-auto p-5 sm:p-6">
+        {content}
+      </div>
     </div>
   );
 }

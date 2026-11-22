@@ -2,6 +2,18 @@
 
 ---
 
+## [22/11/2026] - Hoàn Thiện UX Học Viên (Kiến Thức Nền, Quiz 60 Câu, Sổ Tay Lỗi Sai 2 Trang) & Sổ Tay Tra Cứu / Mô Phỏng 3D-2D-PhET / Casio FX-580
+
+- **Tinh Giản Header, Phân Tách Lộ Trình & Kiến Thức Nền ([`AccountNavbar.jsx`](../src/components/layout/AccountNavbar.jsx), [`Sidebar.jsx`](../src/components/layout/Sidebar.jsx), [`StudentFoundationKnowledgeView.jsx`](../src/components/curriculum/StudentFoundationKnowledgeView.jsx), [`ConnectedRoadmapPage.jsx`](../src/components/roadmap/ConnectedRoadmapPage.jsx), [`PlarNodeStudioPanel.jsx`](../src/components/roadmap/PlarNodeStudioPanel.jsx))**:
+  - Tinh gọn thanh `AccountNavbar.jsx`, chuyển nút thu gọn Sidebar sang `Sidebar.jsx`, và gom nhóm `Lộ trình của tôi` gồm 4 mục (`Lộ trình cá nhân hóa`, `Luyện tập (P-L-A-R)`, `Kiến thức nền`, `Sổ tay lỗi sai (SM-2)`).
+  - Áp dụng khóa tuần tự FSM theo `stepOrder` (bắt đầu chuẩn từ Chặng #1) và thiết kế mới trang **Kiến thức nền** read-only 8 môn × Lớp 10–12 cho học sinh.
+- **Sổ Tay Lỗi Sai 2 Trang & Luyện Tập Quiz 60 Câu ([`MistakeNotebookSM2View.jsx`](../src/components/dashboard/MistakeNotebookSM2View.jsx), [`AdaptiveQuizModal.jsx`](../src/components/modals/AdaptiveQuizModal.jsx), [`contentService.js`](../src/services/contentService.js))**:
+  - Thiết kế Sổ tay lỗi sai dạng danh sách kèm Chặng ➔ mở trang sách 2 mặt trắng tinh, hydrate câu hỏi thật từ `GET /api/content/questions/{id}`.
+  - Thiết kế lại hoàn toàn trang **Luyện tập Quiz** 2 cột hiện đại, chọn đa môn / 8 môn, tối đa **60 câu** (batch fetch nhanh).
+- **Bookmark Tra Cứu Công Thức, Mô Phỏng & Casio FX-580 ([`StudentBookmarkDrawer.jsx`](../src/components/common/StudentBookmarkDrawer.jsx), [`ConstantsReferencePanel.jsx`](../src/components/common/ConstantsReferencePanel.jsx), [`UnitConverterPanel.jsx`](../src/components/common/UnitConverterPanel.jsx), [`UnitCircleSimulator.jsx`](../src/components/common/UnitCircleSimulator.jsx), [`NativePhysicsLab.jsx`](../src/components/common/NativePhysicsLab.jsx), [`InteractiveMathRenderer.jsx`](../src/components/common/InteractiveMathRenderer.jsx), [`mathGraphUtils.js`](../src/utils/mathGraphUtils.js))**:
+  - Triển khai thanh Bookmark cạnh phải (`Tra cứu` & `FX-580`) chỉ hiện trong **Lộ trình của tôi** và **Luyện tập Quiz**: Tab 1 Công thức chuẩn GDPT 2018 (Toán, Lý, Hóa + Bảng tuần hoàn 118 nguyên tố + Kết tủa, Anh, Sinh, Sử, Địa, 48 Hằng số + 17 góc π, Đổi đơn vị SI); Tab 2 Mô phỏng (Toán 3D 11 khối dựng Trung tuyến/Trọng tâm/Thiết diện, Toán 2D kéo-thả, Đồ thị hàm số có bàn phím Toán, Đường tròn lượng giác & Pha Lý, 10 thí nghiệm PhET); Tab 3 Máy tính Casio fx-580VN X cắt gọn thân máy.
+- **Kiểm Thử**: `npm run build` đạt `3094 modules`, `1.30s`, `0 Error`.
+
 ## [22/11/2026] - Tách PLAR Thành Trang Studio Toàn Màn Hình 4 Tab Chu Trình, Cố Định Sticky Sidebar & Sửa Ánh Xạ Lý Thuyết SGK 9 Môn
 
 - **Tách PLAR Thành Trang Học Chuyên Biệt Toàn Màn Hình ([`ConnectedRoadmapPage.jsx`](../src/components/roadmap/ConnectedRoadmapPage.jsx), [`PlarNodeStudioPanel.jsx`](../src/components/roadmap/PlarNodeStudioPanel.jsx))**:

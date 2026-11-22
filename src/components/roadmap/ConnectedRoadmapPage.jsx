@@ -79,21 +79,34 @@ const cleanDisplaySkillName = (name = '') =>
   String(name).replace(/^(Dạng|Pattern)\s*\d+\s*[:.\-•]\s*/i, '').trim() || name;
 
 function RoadmapLessonRow({ node, isSelected, onSelect }) {
-  const assess = node._assessmentStatus;
-  const isCompleted = assess === 'COMPLETED' || node.status === 'COMPLETED';
-  const isWeak = assess === 'WEAK';
-  const isMastered = assess === 'MASTERED';
-  const isUnassessed = assess === 'UNASSESSED';
-  const isPruned = node.status === 'SKIPPED_PRUNED';
+  const fsm = node._fsmStatus || 'LOCKED';
+  const isCompleted = fsm === 'COMPLETED';
+  const isInProgress = fsm === 'IN_PROGRESS';
+  const isLocked = fsm === 'LOCKED';
+  const isUnassessed = node._assessmentStatus === 'UNASSESSED';
   const plarInfo = PLAR_BADGE_MAP[node.currentPlarStep] || null;
   const mastery = Math.round(Number(node.masteryPlt || 0) * 100);
 
   return (
     <button
       type="button"
-      onClick={() => onSelect(node.nodeId)}
-      className={`group w-full flex items-center justify-between gap-3 px-4 py-3 text-left transition-colors cursor-pointer border-t border-slate-100 first:border-t-0 ${
-        isSelected ? 'bg-blue-50/70' : 'bg-white hover:bg-slate-50'
+      disabled={isLocked}
+      onClick={() => !isLocked && onSelect(node.nodeId)}
+      title={
+        isLocked
+          ? 'Chặng đã khóa — Hoàn thành đủ 4 bước P-L-A-R của chặng đang học để mở khóa chặng tiếp theo'
+          : isInProgress
+            ? 'Vào học 4 bước P-L-A-R cho chặng này'
+            : 'Xem lại chặng đã hoàn thành'
+      }
+      className={`group w-full flex items-center justify-between gap-3 px-4 py-3 text-left transition-colors border-t border-slate-100 first:border-t-0 ${
+        isLocked
+          ? 'bg-slate-50/70 opacity-65 cursor-not-allowed'
+          : isInProgress
+            ? 'bg-blue-50/70 hover:bg-blue-50 cursor-pointer ring-1 ring-inset ring-blue-200'
+            : isSelected
+              ? 'bg-emerald-50/40 hover:bg-emerald-50/70 cursor-pointer'
+              : 'bg-white hover:bg-slate-50 cursor-pointer'
       }`}
     >
       <div className="flex items-center gap-3 min-w-0">
@@ -101,24 +114,37 @@ function RoadmapLessonRow({ node, isSelected, onSelect }) {
           className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black shrink-0 ${
             isCompleted
               ? 'bg-emerald-600 text-white'
-              : isWeak
-              ? 'bg-rose-100 text-rose-700'
-              : isMastered
-              ? 'bg-emerald-100 text-emerald-700'
-              : isPruned
-              ? 'bg-slate-200 text-slate-500'
-              : 'bg-slate-100 text-slate-600'
+              : isInProgress
+                ? 'bg-blue-600 text-white shadow-xs'
+                : 'bg-slate-200 text-slate-500'
           }`}
         >
-          {isCompleted ? <CheckCircle2 className="w-4 h-4" /> : isPruned ? <Lock className="w-3.5 h-3.5" /> : node.stepOrder}
+          {isCompleted ? <CheckCircle2 className="w-4 h-4" /> : isLocked ? <Lock className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5 fill-white" />}
         </span>
 
         <div className="min-w-0">
-          <div className="text-sm font-bold text-slate-900 truncate">
-            {cleanDisplaySkillName(node.skillName)}
+          <div className="flex items-center gap-2">
+            <span className={`text-sm font-bold truncate ${isLocked ? 'text-slate-500' : 'text-slate-900'}`}>
+              Chặng #{node.stepOrder}: {cleanDisplaySkillName(node.skillName)}
+            </span>
+            {isInProgress && (
+              <span className="px-2 py-0.5 rounded-full bg-blue-600 text-white text-[10px] font-black shrink-0">
+                Đang học
+              </span>
+            )}
+            {isCompleted && (
+              <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black shrink-0">
+                Hoàn thành
+              </span>
+            )}
+            {isLocked && (
+              <span className="px-2 py-0.5 rounded-full bg-slate-200 text-slate-600 text-[10px] font-bold shrink-0">
+                Đã khóa
+              </span>
+            )}
           </div>
           {node.lessonName && (
-            <div className="text-xs text-slate-500 truncate">
+            <div className="text-xs text-slate-500 truncate mt-0.5">
               {node.lessonName}
             </div>
           )}
@@ -126,9 +152,9 @@ function RoadmapLessonRow({ node, isSelected, onSelect }) {
       </div>
 
       <div className="flex items-center gap-2.5 shrink-0">
-        {plarInfo && !isCompleted && !isPruned && node.currentPlarStep !== 'PREVIEW' && (
+        {plarInfo && isInProgress && (
           <span className={`hidden sm:inline-block rounded-md px-2 py-0.5 text-[11px] font-bold ${plarInfo.cls}`}>
-            {plarInfo.label}
+            Pha: {plarInfo.label}
           </span>
         )}
         <span className="text-xs font-bold tabular-nums w-12 text-right">
@@ -140,17 +166,32 @@ function RoadmapLessonRow({ node, isSelected, onSelect }) {
             </span>
           )}
         </span>
-        <span className="inline-flex items-center gap-1 rounded-lg bg-slate-100 group-hover:bg-blue-600 group-hover:text-white px-2.5 py-1 text-xs font-bold text-slate-700 transition-colors">
-          <span>Học</span>
-          <ArrowRight className="w-3.5 h-3.5" />
-        </span>
+        {isLocked ? (
+          <span className="inline-flex items-center gap-1 rounded-lg bg-slate-200/80 px-2.5 py-1 text-xs font-bold text-slate-500">
+            <Lock className="w-3 h-3" />
+            <span>Khóa</span>
+          </span>
+        ) : isInProgress ? (
+          <span className="inline-flex items-center gap-1 rounded-lg bg-blue-600 group-hover:bg-blue-700 px-3 py-1.5 text-xs font-extrabold text-white shadow-xs transition-colors">
+            <span>Học chặng này</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 group-hover:bg-emerald-600 group-hover:text-white border border-emerald-200 px-2.5 py-1 text-xs font-bold text-emerald-700 transition-colors">
+            <span>Xem lại</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </span>
+        )}
       </div>
     </button>
   );
 }
 
 export default function ConnectedRoadmapPage({
-  curriculum,
+  viewMode = 'map', // 'map' (Core Flow 2: Lộ trình cá nhân hóa) | 'study' (Core Flow 3: Luyện tập P-L-A-R)
+  initialNodeId = null,
+  onOpenPlarNode,
+  onBackToRoadmap,
   onNavigateDiagnostic,
   onNavigateTuition,
   onOpenAiTutorWithContext
@@ -167,16 +208,25 @@ export default function ConnectedRoadmapPage({
   // Real Tuition Status from Backend
   const [isPaid, setIsPaid] = useState(false);
 
-  // Learn-First Navigation: 'study' (Default: PLAR Studio) | 'map' (Compact Chapter Map) | 'curriculum' (SGK 9 môn)
-  const [workspaceMode, setWorkspaceMode] = useState('study');
+  const [workspaceMode, setWorkspaceMode] = useState(viewMode);
   const [zoneFilter, setZoneFilter] = useState('WEAK'); // WEAK | UNASSESSED | MASTERED
   const [selectedSubjectFilter, setSelectedSubjectFilter] = useState('ALL');
   const [selectedGradeFilter, setSelectedGradeFilter] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedNodeId, setSelectedNodeId] = useState(null);
+  const [selectedNodeId, setSelectedNodeId] = useState(initialNodeId);
   const [showRegenerateForm, setShowRegenerateForm] = useState(false);
   const [expandedChapters, setExpandedChapters] = useState({});
   const [visibleChapterCount, setVisibleChapterCount] = useState(10);
+
+  useEffect(() => {
+    setWorkspaceMode(viewMode);
+  }, [viewMode]);
+
+  useEffect(() => {
+    if (initialNodeId) {
+      setSelectedNodeId(initialNodeId);
+    }
+  }, [initialNodeId]);
 
   const creatingRef = useRef(false);
   const user = tokenStorage.getUser();
@@ -184,9 +234,13 @@ export default function ConnectedRoadmapPage({
 
   const handleOpenNodeStudio = useCallback((nodeId) => {
     setSelectedNodeId(nodeId);
-    setWorkspaceMode('study');
+    if (onOpenPlarNode) {
+      onOpenPlarNode(nodeId);
+    } else {
+      setWorkspaceMode('study');
+    }
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, []);
+  }, [onOpenPlarNode]);
 
   const load = useCallback(async ({ silent = false } = {}) => {
     if (!silent) setLoading(true);
@@ -318,7 +372,7 @@ export default function ConnectedRoadmapPage({
   };
 
   const allNodes = useMemo(() => {
-    return (roadmap?.nodes || [])
+    const sorted = (roadmap?.nodes || [])
       .map((n) => ({
         ...n,
         _assessmentStatus: resolveAssessmentStatus(n),
@@ -326,13 +380,30 @@ export default function ConnectedRoadmapPage({
         _chapterNum: extractNumber(n.chapterName, 'Chương'),
         _lessonNum: extractNumber(n.lessonName, 'Bài')
       }))
-      .sort((a, b) => {
-        const za = ZONE_SORT_ORDER[a._assessmentStatus] ?? 1;
-        const zb = ZONE_SORT_ORDER[b._assessmentStatus] ?? 1;
-        if (za !== zb) return za - zb;
-        return a.stepOrder - b.stepOrder;
-      });
+      .sort((a, b) => a.stepOrder - b.stepOrder);
+
+    // Áp dụng chặt cơ chế mở khóa tuần tự theo đúng thứ tự Chặng #1 -> #2 -> #3... (FSM):
+    // - COMPLETED: đã hoàn thành (được mở để Xem lại)
+    // - IN_PROGRESS: chặng chưa hoàn thành ĐẦU TIÊN theo thứ tự stepOrder (bắt đầu từ Chặng #1, không nhảy cóc sang Chặng #13)
+    // - LOCKED: toàn bộ các chặng sau đều bị khóa cho tới khi hoàn thành đủ 4 bước P-L-A-R chặng hiện tại
+    const firstActiveNode = sorted.find(
+      (n) => n.status !== 'COMPLETED' && n._assessmentStatus !== 'COMPLETED' && n.status !== 'SKIPPED_PRUNED'
+    );
+
+    return sorted.map((n) => {
+      const isDone = n.status === 'COMPLETED' || n._assessmentStatus === 'COMPLETED';
+      const isCurrent = firstActiveNode && n.nodeId === firstActiveNode.nodeId;
+      return {
+        ...n,
+        _fsmStatus: isDone ? 'COMPLETED' : isCurrent ? 'IN_PROGRESS' : 'LOCKED'
+      };
+    });
   }, [roadmap]);
+
+  const activeFsmNode = useMemo(
+    () => allNodes.find((n) => n._fsmStatus === 'IN_PROGRESS') || allNodes.find((n) => n._fsmStatus === 'COMPLETED') || allNodes[0] || null,
+    [allNodes]
+  );
 
   const zoneCounts = useMemo(() => {
     let weak = 0;
@@ -417,61 +488,54 @@ export default function ConnectedRoadmapPage({
   return (
     <div className="space-y-4 text-slate-900">
       {/* SINGLE UNIFIED SLIM TOP BAR (No double headers, no redundant KPI walls) */}
-      <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 shadow-2xs">
-        <div className="flex flex-wrap items-center gap-1.5">
-          <button
-            type="button"
-            onClick={() => setWorkspaceMode('study')}
-            className={`inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs sm:text-sm font-extrabold transition-all cursor-pointer ${
-              workspaceMode === 'study'
-                ? 'bg-gradient-to-r from-[#1E3A5F] to-blue-600 text-white shadow-xs'
-                : 'text-slate-600 hover:bg-slate-100'
-            }`}
-          >
-            <Play className="w-3.5 h-3.5 fill-current" />
-            <span>{selectedNode ? `Đang Học • Chặng #${selectedNode.stepOrder}` : 'Đang Học (P-L-A-R)'}</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setWorkspaceMode('map')}
-            className={`inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs sm:text-sm font-extrabold transition-all cursor-pointer ${
-              workspaceMode === 'map'
-                ? 'bg-slate-900 text-white shadow-xs'
-                : 'text-slate-600 hover:bg-slate-100'
-            }`}
-          >
-            <Compass className="w-4 h-4" />
-            <span>Chọn Bài / Lộ Trình</span>
-            {zoneCounts.weak > 0 && (
-              <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-black ${
-                workspaceMode === 'map' ? 'bg-rose-500 text-white' : 'bg-rose-100 text-rose-700'
-              }`}>
-                {zoneCounts.weak} ưu tiên
+      {/* TOP HEADER BAR — PHÂN TÁCH RÕ CORE FLOW 2 (LỘ TRÌNH) & CORE FLOW 3 (LUYỆN TẬP P-L-A-R) */}
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-2xs">
+        <div className="flex flex-wrap items-center gap-2.5">
+          {workspaceMode === 'map' ? (
+            <>
+              <div className="flex items-center gap-2">
+                <span className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-xs">
+                  <Compass className="w-4 h-4" />
+                </span>
+                <div>
+                  <h1 className="text-sm font-black text-slate-900">Lộ Trình Cá Nhân Hóa (Mở Khóa Tuần Tự)</h1>
+                  <p className="text-[11px] text-slate-500 font-medium">
+                    Hoàn thành đủ 4 bước P-L-A-R của chặng đang học để mở khóa chặng tiếp theo
+                  </p>
+                </div>
+              </div>
+              {activeFsmNode && (
+                <button
+                  type="button"
+                  onClick={() => handleOpenNodeStudio(activeFsmNode.nodeId)}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 px-3.5 py-2 text-xs font-extrabold text-white shadow-xs cursor-pointer"
+                >
+                  <Play className="w-3.5 h-3.5 fill-white" />
+                  <span>Học ngay Chặng #{activeFsmNode.stepOrder}</span>
+                </button>
+              )}
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={() => (onBackToRoadmap ? onBackToRoadmap() : setWorkspaceMode('map'))}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 px-3 py-1.5 text-xs font-extrabold text-slate-700 cursor-pointer"
+              >
+                <Compass className="w-3.5 h-3.5 text-blue-600" />
+                <span>← Lộ trình cá nhân hóa</span>
+              </button>
+              <span className="text-xs sm:text-sm font-black text-slate-900">
+                {selectedNode ? `Luyện tập P-L-A-R • Chặng #${selectedNode.stepOrder}` : 'Luyện tập Thích ứng (P-L-A-R)'}
               </span>
-            )}
-          </button>
-
-          {curriculum && (
-            <button
-              type="button"
-              onClick={() => setWorkspaceMode('curriculum')}
-              className={`inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs sm:text-sm font-extrabold transition-all cursor-pointer ${
-                workspaceMode === 'curriculum'
-                  ? 'bg-emerald-600 text-white shadow-xs'
-                  : 'text-slate-600 hover:bg-slate-100'
-              }`}
-            >
-              <BookOpen className="w-4 h-4" />
-              <span>Kho SGK 9 Môn</span>
-            </button>
+            </>
           )}
         </div>
 
         <div className="flex items-center gap-2">
           {roadmap && (
             <span className="hidden md:inline-flex items-center gap-1.5 rounded-lg bg-slate-50 border border-slate-200 px-2.5 py-1.5 text-xs font-bold text-slate-600">
-              <span>Đạt OK: <strong className="text-emerald-600">{zoneCounts.ok}</strong>/{allNodes.length}</span>
+              <span>Tiến độ: <strong className="text-emerald-600">{Math.round((zoneCounts.ok / Math.max(1, allNodes.length)) * 100)}%</strong> ({zoneCounts.ok}/{allNodes.length})</span>
               <span className="text-slate-300">•</span>
               <span>Mục tiêu: <strong className="text-indigo-700">{roadmap.targetScore}</strong></span>
             </span>
@@ -617,13 +681,13 @@ export default function ConnectedRoadmapPage({
         </div>
       )}
 
-      {/* TAB 1 (DEFAULT — LEARN FIRST!): FULL-WIDTH DEDICATED PLAR STUDIO */}
-      {workspaceMode === 'study' && !loading && roadmap && selectedNode && (
+      {/* CORE FLOW 3: FULL-WIDTH DEDICATED P-L-A-R PRACTICE STUDIO */}
+      {workspaceMode === 'study' && !loading && roadmap && (selectedNode || activeFsmNode) && (
         <PlarNodeStudioPanel
-          node={selectedNode}
+          node={selectedNode || activeFsmNode}
           studentId={studentId}
           isPaid={isPaid}
-          onBackToMap={() => setWorkspaceMode('map')}
+          onBackToMap={() => (onBackToRoadmap ? onBackToRoadmap() : setWorkspaceMode('map'))}
           onNavigateTuition={onNavigateTuition}
           onOpenAiTutorWithContext={onOpenAiTutorWithContext}
           onNodeCompleted={() => load({ silent: true })}
