@@ -337,11 +337,9 @@ export default function AccountNavbar({
 
   return (
     <>
-      <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/95 backdrop-blur-md shadow-xs transition-all">
-        <div className="flex h-18 items-center justify-between gap-3 px-4 sm:h-20 sm:gap-6 sm:px-6 lg:px-8">
-          {/* ========================================================= */}
-          {/* 1. LEFT: Clean Navigation & Page Title (No Truncation!)   */}
-          {/* ========================================================= */}
+      <header className="sticky top-0 z-30 border-b border-slate-200/70 bg-white/95 backdrop-blur-md transition-all">
+        <div className="flex h-14 items-center justify-between gap-3 px-4 sm:h-16 sm:gap-4 sm:px-6 lg:px-8">
+          {/* 1. LEFT: Minimal Page Title */}
           <div className="flex items-center gap-3 shrink-0 min-w-0">
             <button
               type="button"
@@ -352,79 +350,37 @@ export default function AccountNavbar({
               <Menu className="h-5 w-5" />
             </button>
 
-            {onToggleSidebar && (
-              <button
-                type="button"
-                onClick={onToggleSidebar}
-                aria-label={isSidebarCollapsed ? 'Mở rộng thanh điều hướng' : 'Thu gọn thanh điều hướng'}
-                title={isSidebarCollapsed ? 'Mở rộng thanh bên' : 'Thu gọn thanh bên'}
-                className="hidden lg:inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors cursor-pointer"
-              >
-                {isSidebarCollapsed ? <PanelLeftOpen className="h-5 w-5" /> : <PanelLeftClose className="h-5 w-5" />}
-              </button>
-            )}
-
-            <span className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-blue-100 bg-blue-50 text-blue-600 sm:flex">
-              <LayoutDashboard className="h-5 w-5" />
-            </span>
-
-            <div className="min-w-0 space-y-0.5">
-              <div className="flex items-center gap-1.5 text-[10px] font-medium text-slate-400 sm:text-[11px]">
-                <span className="font-semibold tracking-wide text-blue-600">V-Eval</span>
-                <ChevronRight className="h-3 w-3" />
-                <span>{roleLabel}</span>
-              </div>
-              <p className="text-base font-bold tracking-tight text-slate-900 sm:text-lg whitespace-nowrap">
-                {pageTitle}
-              </p>
-            </div>
+            <h1 className="text-base font-bold tracking-tight text-slate-900 sm:text-lg whitespace-nowrap truncate">
+              {pageTitle}
+            </h1>
           </div>
 
-          {/* ========================================================= */}
-          {/* 2. CENTER: Sleek Minimalist Mission Control Pill          */}
-          {/* ========================================================= */}
-          <div className="hidden lg:flex items-center justify-center flex-1 px-2">
+          {/* 2. RIGHT: Streamlined Controls */}
+          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+            {/* Compact Exam Countdown Pill */}
             <button
               type="button"
               onClick={() => setExamModalOpen(true)}
-              className="group flex items-center gap-2.5 rounded-full border border-slate-200/90 bg-slate-50/80 hover:bg-indigo-50/70 hover:border-indigo-200/90 px-4 py-1.5 text-xs text-slate-700 transition-all duration-200 hover:shadow-xs"
-              title="Nhấn để xem lịch thi chi tiết và cấu trúc đề thi ĐGNL"
+              className="hidden md:inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-slate-50/90 hover:bg-indigo-50/70 hover:border-indigo-200 px-3 py-1.5 text-xs text-slate-600 transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+              title={`${upcomingExam.name} (${upcomingExam.formattedDate}) — Nhấn để xem lịch thi chi tiết`}
             >
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-600"></span>
+              <span className="h-1.5 w-1.5 rounded-full bg-indigo-500 shrink-0" />
+              <span className="font-semibold text-slate-700 whitespace-nowrap">
+                {String(upcomingExam.name || '').replace(/\s*\(\d{4}\)/, '')}
               </span>
-              <span className="font-bold text-slate-800 group-hover:text-indigo-700">
-                {upcomingExam.name}
-              </span>
-              <span className="text-slate-300">•</span>
-              <span className="font-extrabold text-indigo-600">
+              <span className="text-slate-300">·</span>
+              <span className="font-bold text-indigo-600 whitespace-nowrap">
                 {daysLeft > 0 ? `Còn ${daysLeft} ngày` : daysLeft === 0 ? 'Hôm nay thi!' : 'Đã diễn ra'}
               </span>
-              <span className="text-[11px] text-slate-400 hidden xl:inline">
-                ({upcomingExam.formattedDate})
-              </span>
             </button>
-          </div>
 
-          {/* ========================================================= */}
-          {/* 3. RIGHT: Unified Telemetry, Child Chip, Alerts, Profile  */}
-          {/* ========================================================= */}
-          <div className="flex shrink-0 items-center gap-2.5 sm:gap-3.5">
-            {/* Live Today Date - Only on extra large screens */}
-            <div className="hidden 2xl:flex items-center gap-1.5 border-r border-slate-200/70 pr-3.5 text-xs text-slate-400">
-              <CalendarDays className="h-3.5 w-3.5 text-slate-400" />
-              <span className="font-medium capitalize">{today}</span>
-            </div>
-
-            {/* Parent Role: Compact Student Companion Badge / Switcher */}
+            {/* Parent Role: Compact Student Switcher */}
             {role === 'parent' && activeChild && (
               <div
-                className="hidden sm:flex items-center gap-1.5 rounded-xl border border-blue-100 bg-blue-50/60 px-2.5 py-1.5 text-xs text-blue-900 shadow-2xs"
-                title={`Học sinh: ${activeChild.studentName || activeChild.fullName}${activeChild.school ? ` • ${activeChild.school}` : ''}${activeChild.grade ? ` • ${activeChild.grade}` : ''}`}
+                className="hidden sm:flex items-center gap-1.5 rounded-xl border border-blue-100 bg-blue-50/60 px-2.5 py-1.5 text-xs text-blue-900"
+                title={`Học sinh: ${activeChild.studentName || activeChild.fullName}`}
               >
                 <UserCheck className="h-3.5 w-3.5 text-blue-600 shrink-0" />
-                <span className="text-slate-500 font-normal hidden md:inline">Con:</span>
                 {portalMetrics?.parentPortalData?.children?.length > 1 ? (
                   <select
                     value={activeChild.studentId || activeChild.id}
@@ -445,46 +401,33 @@ export default function AccountNavbar({
               </div>
             )}
 
-            {/* Student Role: Campus Badge if assigned */}
-            {role === 'student' && currentUser?.campusName && (
-              <div
-                className="hidden xl:flex items-center gap-1.5 rounded-xl border border-slate-200/80 bg-slate-50/80 px-2.5 py-1.5 text-xs text-slate-600 shadow-2xs"
-                title={currentUser.campusName}
-              >
-                <GraduationCap className="h-3.5 w-3.5 text-blue-600 shrink-0" />
-                <span className="truncate max-w-[150px] font-medium">{currentUser.campusName}</span>
-              </div>
-            )}
-
-            {/* Student Role: Streak Pill */}
+            {/* Student Role: Minimal Streak Badge */}
             {role === 'student' && streak > 0 && (
               <span
                 title={`Chuỗi học tập liên tục: ${streak} ngày`}
                 aria-label={`Chuỗi học tập ${streak} ngày`}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-orange-200/80 bg-orange-50/80 px-2.5 py-1.5 text-xs text-orange-700 shadow-2xs"
+                className="inline-flex items-center gap-1 rounded-full bg-orange-50 px-2.5 py-1 text-xs font-bold text-orange-600 whitespace-nowrap"
               >
-                <Flame className="h-4 w-4 fill-orange-400 text-orange-500" />
-                <strong className="font-extrabold">{streak} ngày</strong>
+                <Flame className="h-3.5 w-3.5 fill-orange-400 text-orange-500" />
+                <span>{streak}</span>
               </span>
             )}
 
-            {/* ========================================================= */}
-            {/* Interactive Notification Bell & Popover                  */}
-            {/* ========================================================= */}
+            {/* Notification Bell */}
             <div className="relative" ref={alertsRef}>
               <button
                 type="button"
                 onClick={() => setAlertsOpen((prev) => !prev)}
                 aria-label={`Thông báo (${alertsData.unreadCount || 0} chưa đọc)`}
-                className={`relative rounded-xl border p-2 transition-all focus-visible:outline-2 focus-visible:outline-blue-500 ${
+                className={`relative rounded-xl p-2 transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-blue-500 ${
                   alertsOpen
-                    ? 'border-blue-300 bg-blue-50 text-blue-600'
-                    : 'border-slate-200/80 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50'
+                    ? 'bg-blue-50 text-blue-600'
+                    : 'text-slate-500 hover:bg-slate-100 hover:text-slate-800'
                 }`}
               >
                 <Bell className="h-4.5 w-4.5" />
                 {alertsData.unreadCount > 0 && (
-                  <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white shadow-xs animate-pulse">
+                  <span className="absolute top-0.5 right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white">
                     {alertsData.unreadCount > 9 ? '9+' : alertsData.unreadCount}
                   </span>
                 )}
@@ -578,11 +521,9 @@ export default function AccountNavbar({
               )}
             </div>
 
-            {/* ========================================================= */}
-            {/* User Profile Pill Capsule & Dropdown                      */}
-            {/* ========================================================= */}
+            {/* User Profile Trigger & Dropdown */}
             <div
-              className="relative border-l border-slate-200/80 pl-2 sm:pl-3"
+              className="relative pl-1"
               ref={containerRef}
               onBlur={(event) => {
                 if (!event.currentTarget.contains(event.relatedTarget)) setAccountMenuOpen(false);
@@ -601,24 +542,17 @@ export default function AccountNavbar({
                     setAccountMenuOpen(true);
                   }
                 }}
-                className={`flex items-center gap-2 rounded-2xl border p-1 text-left transition-colors focus-visible:outline-2 focus-visible:outline-blue-500 ${
+                className={`flex items-center gap-2 rounded-full p-1 pr-2 text-left transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-blue-500 ${
                   accountMenuOpen
-                    ? 'border-blue-200 bg-blue-50/70'
-                    : 'border-transparent hover:border-slate-200 hover:bg-slate-50'
+                    ? 'bg-slate-100'
+                    : 'hover:bg-slate-100/80'
                 }`}
               >
-                <div className="relative shrink-0">
-                  <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 text-xs font-bold text-white shadow-sm shadow-blue-200">
-                    {initials}
-                  </span>
-                  <span
-                    className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-emerald-500"
-                    title="Đang trực tuyến"
-                  />
-                </div>
-                <span className="hidden md:block max-w-32 leading-tight">
-                  <span className="block truncate text-sm font-semibold text-slate-800">{displayName}</span>
-                  <span className="block truncate text-[10px] font-medium text-slate-500">{roleLabel}</span>
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-xs font-bold text-white">
+                  {initials}
+                </span>
+                <span className="hidden md:block max-w-32 truncate text-sm font-semibold text-slate-800">
+                  {displayName}
                 </span>
                 <ChevronDown
                   className={`h-3.5 w-3.5 text-slate-400 transition-transform ${

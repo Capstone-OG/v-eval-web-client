@@ -136,6 +136,14 @@ export const contentService = {
   },
 
   /**
+   * Lấy chi tiết 1 câu hỏi theo Question ID từ Content Service
+   * @param {string} questionId
+   */
+  async getQuestionById(questionId) {
+    return (await apiClient.get(`/api/content/questions/${encodeURIComponent(questionId)}`)).data;
+  },
+
+  /**
    * Lấy danh sách câu hỏi theo Skill ID từ Content Service
    * @param {string} skillId 
    */

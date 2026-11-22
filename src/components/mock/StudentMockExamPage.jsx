@@ -563,10 +563,10 @@ export default function StudentMockExamPage({ onOpenAiTutorWithContext, onNaviga
           </div>
           <div className="flex items-center gap-2 text-xs font-bold">
             <span className="px-3 py-1.5 rounded-xl bg-white border border-blue-200 text-blue-800">
-              {officialExams.length} Bộ đề chính thức
+              {officialExams.length} Bộ đề chuẩn 120 câu / 150 phút
             </span>
-            <span className="px-3 py-1.5 rounded-xl bg-white border border-emerald-200 text-emerald-800">
-              {totalBankQuestions.toLocaleString('vi-VN')} Câu ngân hàng
+            <span className="px-3 py-1.5 rounded-xl bg-white border border-rose-200 text-rose-700 inline-flex items-center gap-1">
+              <Lock className="w-3.5 h-3.5" /> Giám sát toàn màn hình
             </span>
           </div>
         </div>
@@ -583,7 +583,7 @@ export default function StudentMockExamPage({ onOpenAiTutorWithContext, onNaviga
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-black uppercase tracking-wider text-slate-700 flex items-center gap-2">
               <Award className="w-4 h-4 text-blue-600" />
-              1. Bộ Đề Thi Thử Chính Thức ĐHQG-HCM (Full 150 Phút)
+              Bộ Đề Thi Thử Chính Thức ĐHQG-HCM (Chuẩn V-ACT 120 Câu — 150 Phút)
             </h2>
           </div>
 
@@ -593,7 +593,7 @@ export default function StudentMockExamPage({ onOpenAiTutorWithContext, onNaviga
             </div>
           ) : officialExams.length === 0 ? (
             <div className="p-8 rounded-3xl bg-white border border-dashed border-slate-300 text-center text-xs text-slate-500">
-              Chưa có bộ đề Full 150 phút nào được xuất bản. Bạn có thể tạo đề thi thử ngay ở mục 2 bên dưới!
+              Chưa có bộ đề thi thử V-ACT 120 câu nào được xuất bản trong hệ thống.
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -614,7 +614,7 @@ export default function StudentMockExamPage({ onOpenAiTutorWithContext, onNaviga
                     </div>
                     <h3 className="text-base font-black text-slate-900 leading-snug">{exam.title}</h3>
                     <p className="text-xs text-slate-500">
-                      Gồm <strong>{exam.totalQuestions || 120} câu hỏi</strong> chuẩn cấu trúc ĐHQG-HCM (Ngôn ngữ, Toán học – Tư duy logic, Giải quyết vấn đề KHTN/KHXH).
+                      Gồm <strong>{exam.totalQuestions || 120} câu hỏi</strong> chuẩn cấu trúc ĐHQG-HCM (Ngôn ngữ, Toán học – Tư duy logic, Giải quyết vấn đề KHTN/KHXH). Bật tự động khóa toàn màn hình và giám sát chuyển tab khi vào phòng thi.
                     </p>
                   </div>
                   <button
@@ -630,84 +630,6 @@ export default function StudentMockExamPage({ onOpenAiTutorWithContext, onNaviga
               ))}
             </div>
           )}
-        </div>
-
-        {/* Section 2: Custom Mock Exam Generator */}
-        <div className="rounded-3xl bg-white border border-slate-200 p-6 shadow-2xs space-y-5">
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <div>
-              <h2 className="text-sm font-black uppercase tracking-wider text-slate-800 flex items-center gap-2">
-                <SlidersHorizontal className="w-4 h-4 text-emerald-600" />
-                2. Tổ Hợp Đề Thi Thử Tự Chọn (Từ Kho {totalBankQuestions.toLocaleString('vi-VN')} Câu Chuẩn SGK)
-              </h2>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Tự tạo đề thi thử ngẫu nhiên chuẩn áp lực thời gian cho riêng từng môn hoặc tổ hợp 8 môn V-ACT.
-              </p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5">
-            {SUBJECT_PRESETS.map((sub) => {
-              const active = customSubject === sub.code;
-              return (
-                <button
-                  key={sub.code}
-                  type="button"
-                  onClick={() => {
-                    setCustomSubject(sub.code);
-                    setCustomCount(sub.defaultCount);
-                    setCustomMinutes(sub.defaultMinutes);
-                  }}
-                  className={`px-3 py-2.5 rounded-xl border text-xs font-bold text-left transition-all cursor-pointer ${
-                    active
-                      ? 'bg-emerald-700 text-white border-emerald-700 shadow-xs'
-                      : 'bg-slate-50/70 text-slate-700 border-slate-200 hover:border-emerald-300'
-                  }`}
-                >
-                  {sub.label}
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="flex items-center justify-between flex-wrap gap-4 pt-2 border-t border-slate-100">
-            <div className="flex items-center gap-4 flex-wrap">
-              <div className="flex items-center gap-2 text-xs font-bold text-slate-700">
-                <span>Số câu:</span>
-                {[15, 20, 30, 40, 60].map((c) => (
-                  <button
-                    key={c}
-                    type="button"
-                    onClick={() => {
-                      setCustomCount(c);
-                      setCustomMinutes(Math.round(c * 1.25));
-                    }}
-                    className={`px-3 py-1.5 rounded-lg border cursor-pointer ${
-                      customCount === c
-                        ? 'bg-slate-900 text-white border-slate-900'
-                        : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
-                    }`}
-                  >
-                    {c}
-                  </button>
-                ))}
-              </div>
-              <span className="text-xs font-bold text-slate-500 flex items-center gap-1">
-                <Clock className="w-3.5 h-3.5 text-emerald-600" />
-                Thời gian: <strong className="text-slate-900">{customMinutes} phút</strong>
-              </span>
-            </div>
-
-            <button
-              type="button"
-              disabled={startingExam || loadingLobby}
-              onClick={handleStartCustomMock}
-              className="px-6 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-black flex items-center gap-2 cursor-pointer shadow-xs disabled:opacity-50"
-            >
-              {startingExam ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-              <span>Bắt Đầu Thi Thử ({customCount} Câu)</span>
-            </button>
-          </div>
         </div>
       </div>
     );

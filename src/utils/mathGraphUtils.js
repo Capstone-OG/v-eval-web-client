@@ -11,26 +11,27 @@ export function compileMathFunction(exprStr) {
   try {
     let s = exprStr.trim().toLowerCase();
     const fnMap = [
-      ['sin', 'Math.sin'],
-      ['cos', 'Math.cos'],
-      ['tan', 'Math.tan'],
-      ['sqrt', 'Math.sqrt'],
-      ['abs', 'Math.abs'],
-      ['ln', 'Math.log'],
-      ['log', 'Math.log10'],
-      ['exp', 'Math.exp']
+      ['sin', 'Math.sin', '§A§'],
+      ['cos', 'Math.cos', '§B§'],
+      ['tan', 'Math.tan', '§C§'],
+      ['sqrt', 'Math.sqrt', '§D§'],
+      ['abs', 'Math.abs', '§E§'],
+      ['ln', 'Math.log', '§F§'],
+      ['log', 'Math.log10', '§G§'],
+      ['exp', 'Math.exp', '§H§']
     ];
-    fnMap.forEach(([k], i) => {
-      s = s.replace(new RegExp(`\\b${k}\\b`, 'g'), `__FN_${i}__`);
+    // Insert implicit multiplication BEFORE word-boundary function substitution (so "2sin(x)" -> "2*sin(x)")
+    s = s.replace(/(\d)\s*(sin|cos|tan|sqrt|abs|ln|log|exp|pi|e\b|x|\()/gi, '$1*$2');
+    s = s.replace(/(\))\s*([\dx(]|sin|cos|tan|sqrt|abs|ln|log|exp|pi)/gi, '$1*$2');
+    s = s.replace(/(\bx)\s*(\(|sin|cos|tan|sqrt|abs|ln|log|exp|pi)/gi, '$1*$2');
+    fnMap.forEach(([k, , token]) => {
+      s = s.replace(new RegExp(`\\b${k}\\b`, 'g'), token);
     });
     s = s.replace(/\bpi\b/g, 'Math.PI');
     s = s.replace(/\be\b/g, 'Math.E');
     s = s.replace(/\^/g, '**');
-    s = s.replace(/(\d)\s*([x(])/g, '$1*$2');
-    s = s.replace(/(\))\s*([\dx(])/g, '$1*$2');
-    s = s.replace(/([x])\s*(\()/g, '$1*$2');
-    fnMap.forEach(([_, repl], i) => {
-      s = s.replace(new RegExp(`__FN_${i}__`, 'g'), repl);
+    fnMap.forEach(([, repl, token]) => {
+      s = s.split(token).join(repl);
     });
 
     const fn = new Function('x', `

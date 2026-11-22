@@ -58,6 +58,8 @@ import ExamIngestView from './components/curriculum/ExamIngestView';
 import ExamStudioView from './components/curriculum/ExamStudioView';
 import StudentRoadmapWorkspace from './components/roadmap/StudentRoadmapWorkspace';
 import StudentMockExamPage from './components/mock/StudentMockExamPage';
+import StudentFoundationKnowledgeView from './components/curriculum/StudentFoundationKnowledgeView';
+import StudentBookmarkDrawer from './components/common/StudentBookmarkDrawer';
 import TuitionPaymentView from './components/payment/TuitionPaymentView';
 import {
   AdaptiveQuizModal,
@@ -220,6 +222,7 @@ export default function App() {
   // Interactive Modal States: 'adaptive' | 'mock' | 'ai' | 'radar' | null
   const [activeModal, setActiveModal] = useState(null);
   const [aiTutorInitialContext, setAiTutorInitialContext] = useState(null);
+  const [selectedPlarNodeId, setSelectedPlarNodeId] = useState(null);
 
   // Real Backend Portal Metrics State
   const [studentDashboard, setStudentDashboard] = useState(null);
@@ -537,6 +540,37 @@ export default function App() {
     }
     if (activeTab === 'adaptive-practice') {
       return (
+        <StudentRoadmapWorkspace
+          viewMode="study"
+          initialNodeId={selectedPlarNodeId}
+          onBackToRoadmap={() => setActiveTab('roadmap')}
+          onNavigateDiagnostic={() => setActiveTab('diagnostic')}
+          onNavigateDashboard={() => setActiveTab('dashboard')}
+          onNavigateTuition={() => setActiveTab('tuition')}
+          onOpenAiTutorWithContext={handleOpenAiTutorWithQuestion}
+        />
+      );
+    }
+
+    if (activeTab === 'foundation-knowledge') {
+      return (
+        <StudentFoundationKnowledgeView
+          onOpenAiTutorWithContext={handleOpenAiTutorWithQuestion}
+        />
+      );
+    }
+
+    if (activeTab === 'mistake-notebook') {
+      return (
+        <MistakeNotebookSM2View
+          currentUser={currentUser}
+          onOpenAiTutorWithContext={handleOpenAiTutorWithQuestion}
+        />
+      );
+    }
+
+    if (activeTab === 'quiz-practice') {
+      return (
         <AdaptiveQuizModal
           isOpen={true}
           isEmbedded={true}
@@ -574,8 +608,14 @@ export default function App() {
     }
 
     if (activeTab === 'history' && role === 'student') {
-      return <StudentHistoryPage key={currentUser?.userId || currentUser?.id || 'guest'}
-        currentUser={currentUser} onOpenDiagnostic={() => setActiveTab('diagnostic')} />;
+      return (
+        <StudentHistoryPage
+          key={currentUser?.userId || currentUser?.id || 'guest'}
+          currentUser={currentUser}
+          onOpenDiagnostic={() => setActiveTab('diagnostic')}
+          onOpenAiTutorWithContext={handleOpenAiTutorWithQuestion}
+        />
+      );
     }
     if (activeTab === 'history') {
       const parentChildren = parentPortalData?.children || [];
@@ -618,7 +658,22 @@ export default function App() {
       return <ExamStudioView onNavigateTab={setActiveTab} />;
     }
     if (activeTab === 'roadmap' && role !== 'parent') {
-      const curriculum = (
+      if (role === 'student') {
+        return (
+          <StudentRoadmapWorkspace
+            viewMode="map"
+            onOpenPlarNode={(nodeId) => {
+              setSelectedPlarNodeId(nodeId);
+              setActiveTab('adaptive-practice');
+            }}
+            onNavigateDiagnostic={() => setActiveTab('diagnostic')}
+            onNavigateDashboard={() => setActiveTab('dashboard')}
+            onNavigateTuition={() => setActiveTab('tuition')}
+            onOpenAiTutorWithContext={handleOpenAiTutorWithQuestion}
+          />
+        );
+      }
+      return (
         <CurriculumExplorerView
           role={role === 'parent' ? 'student' : role}
           currentUser={currentUser}
@@ -629,18 +684,6 @@ export default function App() {
           onOpenAiTutorWithContext={handleOpenAiTutorWithQuestion}
         />
       );
-      if (role === 'student') {
-        return (
-          <StudentRoadmapWorkspace
-            curriculum={curriculum}
-            onNavigateDiagnostic={() => setActiveTab('diagnostic')}
-            onNavigateDashboard={() => setActiveTab('dashboard')}
-            onNavigateTuition={() => setActiveTab('tuition')}
-            onOpenAiTutorWithContext={handleOpenAiTutorWithQuestion}
-          />
-        );
-      }
-      return curriculum;
     }
 
     if (activeTab === 'schedule') {
@@ -900,7 +943,9 @@ export default function App() {
             {role !== 'student' && role !== 'parent' && role !== 'manager' && role !== 'director' && activeTab === currentPortal.defaultTab && (
               <h1 className="mb-5 text-xl font-bold tracking-tight text-slate-900">{accountGreeting(role, currentUser)}</h1>
             )}
-            {renderRolePortalContent()}
+            <div key={activeTab} className="min-w-0">
+              {renderRolePortalContent()}
+            </div>
           </main>
 
           {/* Unified Home-Style Footer Strip */}
@@ -955,6 +1000,12 @@ export default function App() {
         isOpen={activeModal === 'arch'}
         onClose={() => setActiveModal(null)}
       />
+
+      {/* Right-Edge Quick Reference Bookmark Drawer — Only in Lộ trình của tôi & Luyện tập Quiz */}
+      {role === 'student' &&
+        ['roadmap', 'adaptive-practice', 'foundation-knowledge', 'mistake-notebook', 'quiz-practice'].includes(activeTab) && (
+          <StudentBookmarkDrawer />
+        )}
 
       {/* Sleek Floating AI Tutor FAB (Bottom-Right Corner) */}
       {role === 'student' && (

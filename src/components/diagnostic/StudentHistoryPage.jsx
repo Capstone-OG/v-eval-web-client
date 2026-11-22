@@ -1,34 +1,41 @@
 import { useState } from 'react';
-import { BookOpen, ClipboardCheck, FileCheck2, History, ArrowLeft } from 'lucide-react';
+import { BookOpen, ClipboardCheck, FileCheck2, History, ArrowLeft, Brain } from 'lucide-react';
 import DiagnosticAssessmentPage from './DiagnosticAssessmentPage';
+import MistakeNotebookSM2View from '../dashboard/MistakeNotebookSM2View';
 import { practiceService } from '../../services/practiceService';
 import MathText from '../common/MathText';
 
 const categories = [
   { id: 'diagnostic', label: 'Đầu vào', icon: ClipboardCheck },
   { id: 'practice', label: 'Luyện tập', icon: BookOpen },
-  { id: 'mock', label: 'Thi thử', icon: FileCheck2 }
+  { id: 'mock', label: 'Thi thử', icon: FileCheck2 },
+  { id: 'mistakes', label: 'Sổ tay lỗi sai', icon: Brain }
 ];
 
-export default function StudentHistoryPage({ currentUser, onOpenDiagnostic }) {
+export default function StudentHistoryPage({ currentUser, onOpenDiagnostic, onOpenAiTutorWithContext }) {
   const [category, setCategory] = useState('diagnostic');
   const [selected, setSelected] = useState(null);
   const [diagnosticDetailOpen, setDiagnosticDetailOpen] = useState(false);
   const detailOpen = category === 'diagnostic' ? diagnosticDetailOpen : Boolean(selected);
   const owner = currentUser?.userId || currentUser?.id || currentUser?.studentId;
-  const localPractice = practiceService.getSubmissionHistory().filter((item) =>
-    item.studentId === owner && ['ZPD_QUIZ', 'TOPIC_QUIZ'].includes(item.examType));
+  const allLocal = practiceService.getSubmissionHistory();
+  const localPractice = allLocal.filter((item) =>
+    (!item.studentId || item.studentId === owner) && ['ZPD_QUIZ', 'TOPIC_QUIZ'].includes(item.examType));
+  const localMocks = allLocal.filter((item) =>
+    (!item.studentId || item.studentId === owner) && item.examType === 'MOCK_EXAM');
 
   const subtitleMap = {
     diagnostic: 'Kết quả đánh giá đầu vào',
     practice: 'Các bài luyện tập đã lưu',
-    mock: 'Kết quả các lần thi thử',
+    mock: 'Kết quả các lần thi thử V-ACT',
+    mistakes: 'Sổ tay lỗi sai SM-2: gắn nhãn nguyên nhân & ôn tập biến thể mỗi ngày'
   };
 
   const accentMap = {
     diagnostic: { from: 'from-indigo-500', to: 'to-blue-500', light: 'bg-indigo-50', text: 'text-indigo-600', ring: 'ring-indigo-200', active: 'text-indigo-700', indicator: 'bg-indigo-500' },
     practice:   { from: 'from-emerald-500', to: 'to-teal-500', light: 'bg-emerald-50', text: 'text-emerald-600', ring: 'ring-emerald-200', active: 'text-emerald-700', indicator: 'bg-emerald-500' },
     mock:       { from: 'from-violet-500', to: 'to-purple-500', light: 'bg-violet-50', text: 'text-violet-600', ring: 'ring-violet-200', active: 'text-violet-700', indicator: 'bg-violet-500' },
+    mistakes:   { from: 'from-rose-500', to: 'to-amber-500', light: 'bg-rose-50', text: 'text-rose-600', ring: 'ring-rose-200', active: 'text-rose-700', indicator: 'bg-rose-500' },
   };
   const accent = accentMap[category];
 
@@ -54,7 +61,7 @@ export default function StudentHistoryPage({ currentUser, onOpenDiagnostic }) {
 
           {/* Right: pill tab switcher */}
           <div
-            className="grid grid-cols-3 gap-1.5 rounded-2xl bg-slate-100/80 p-1.5 sm:min-w-[300px]"
+            className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 rounded-2xl bg-slate-100/80 p-1.5"
             role="tablist"
             aria-label="Loại bài làm"
           >
@@ -109,13 +116,38 @@ export default function StudentHistoryPage({ currentUser, onOpenDiagnostic }) {
           </li>)}
         </ul> : <p className="rounded-2xl bg-emerald-50/50 border border-emerald-100 p-5 text-sm text-slate-500">Chưa có bài luyện tập được lưu trên trình duyệt này.</p>}
       </div>}
-      {category === 'mock' && <div className="rounded-3xl border border-violet-100 bg-gradient-to-br from-violet-50/50 to-white p-8 text-center shadow-sm">
-        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 shadow-md shadow-violet-500/25">
-          <FileCheck2 className="h-7 w-7 text-white" />
+      {category === 'mock' && <div className="space-y-4 rounded-3xl border border-slate-200 bg-white p-5 sm:p-6">
+        <div>
+          <h2 className="font-black text-slate-900 tracking-tight">Lịch sử Thi thử V-ACT</h2>
+          <p className="mt-1 text-sm text-slate-500">Tổng hợp các lần thi thử 120 câu có giám sát bạn đã hoàn thành.</p>
         </div>
-        <h2 className="font-black text-slate-800 tracking-tight">Lịch sử thi thử chưa khả dụng</h2>
-        <p className="mt-2 text-sm text-slate-500 max-w-xs mx-auto leading-relaxed">Kết quả thi thử sẽ được hiển thị tại đây khi chức năng được hoàn thiện.</p>
+        {selected ? <>
+          <button type="button" onClick={() => setSelected(null)} className="flex items-center gap-2 text-sm font-semibold text-blue-600 hover:text-blue-700 cursor-pointer"><ArrowLeft className="h-4 w-4" />Quay lại danh sách</button>
+          <h3 className="font-bold text-slate-900">{selected.title || 'Đề thi thử V-ACT'}</h3>
+          <p className="text-xs text-slate-500">{selected.ai_commentary}</p>
+          {(selected.reviewedQuestions || []).map((q, i) => <div key={q.id || i} className="rounded-2xl border border-slate-100 p-4 text-sm space-y-2">
+            <p className="text-xs font-bold text-slate-500">Câu {q.question_number || i + 1}</p>
+            <MathText text={q.content || 'Chưa có nội dung câu hỏi.'} />
+            <p className="text-slate-600 text-xs">Bạn chọn: <strong>{q.studentChoice || 'Bỏ trống'}</strong>{q.correctChoice && <> · Đáp án đúng: <strong className="text-emerald-700">{q.correctChoice}</strong></>}</p>
+          </div>)}
+        </> : localMocks.length ? <ul className="divide-y divide-slate-100">
+          {localMocks.map((item) => <li key={item.id} className="flex flex-wrap items-center justify-between gap-3 py-4">
+            <div>
+              <p className="font-bold text-slate-800">{item.title || 'Đề thi thử V-ACT'}</p>
+              <p className="mt-1 text-xs text-slate-500">{item.completedAt ? new Date(item.completedAt).toLocaleString('vi-VN') : ''} • {item.ai_commentary || ''}</p>
+            </div>
+            <button type="button" onClick={() => setSelected(item)} className="rounded-xl bg-violet-50 px-4 py-2 text-xs font-bold text-violet-700 border border-violet-200 hover:bg-violet-100 transition-colors cursor-pointer">Xem bài làm</button>
+          </li>)}
+        </ul> : <div className="rounded-2xl bg-violet-50/50 border border-violet-100 p-6 text-center text-sm text-slate-500">
+          Bạn chưa hoàn thành đề thi thử V-ACT nào. Hãy vào mục <strong>Kiểm tra &amp; Thi thử ➔ Thi thử V-ACT</strong> để thi thử 120 câu chuẩn ĐHQG-HCM!
+        </div>}
       </div>}
+      {category === 'mistakes' && (
+        <MistakeNotebookSM2View
+          currentUser={currentUser}
+          onOpenAiTutorWithContext={onOpenAiTutorWithContext}
+        />
+      )}
     </div>
     {category === 'diagnostic' && !detailOpen && <button type="button" onClick={onOpenDiagnostic} className="inline-flex items-center gap-1.5 text-sm font-bold text-blue-600 hover:text-blue-700 transition-colors">Đi đến đánh giá đầu vào →</button>}
   </div>;

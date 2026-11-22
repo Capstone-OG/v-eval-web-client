@@ -1,7 +1,10 @@
 import ConnectedRoadmapPage from './ConnectedRoadmapPage';
 
 export default function StudentRoadmapWorkspace({
-  curriculum,
+  viewMode = 'map',
+  initialNodeId = null,
+  onOpenPlarNode,
+  onBackToRoadmap,
   onNavigateDiagnostic,
   onNavigateDashboard,
   onNavigateTuition,
@@ -9,7 +12,10 @@ export default function StudentRoadmapWorkspace({
 }) {
   return (
     <ConnectedRoadmapPage
-      curriculum={curriculum}
+      viewMode={viewMode}
+      initialNodeId={initialNodeId}
+      onOpenPlarNode={onOpenPlarNode}
+      onBackToRoadmap={onBackToRoadmap}
       onNavigateDiagnostic={onNavigateDiagnostic}
       onNavigateDashboard={onNavigateDashboard}
       onNavigateTuition={onNavigateTuition}

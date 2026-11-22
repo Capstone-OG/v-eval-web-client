@@ -20,6 +20,8 @@ import {
   History,
   LayoutGrid,
   Network,
+  PanelLeftClose,
+  PanelLeftOpen,
   ShieldCheck,
   Sparkles,
   TrendingUp,
@@ -622,7 +624,8 @@ export default function Sidebar({
 
   const prevTabRef = React.useRef(activeTab);
   const [expandedGroups, setExpandedGroups] = useState({
-    exams: activeTab === 'diagnostic' || activeTab === 'mock',
+    exams: activeTab === 'diagnostic' || activeTab === 'mock-exam' || activeTab === 'quiz-practice',
+    'roadmap-group': true,
     'textbook-group': activeTab === 'textbook-standard' || activeTab === 'textbook-ingest' || activeTab === 'textbook-studio',
     'exam-group': activeTab === 'exam-bank' || activeTab === 'exam-ingest' || activeTab === 'exam-studio'
   });
@@ -630,8 +633,11 @@ export default function Sidebar({
   useEffect(() => {
     if (prevTabRef.current !== activeTab) {
       prevTabRef.current = activeTab;
-      if (activeTab === 'diagnostic' || activeTab === 'mock') {
+      if (activeTab === 'diagnostic' || activeTab === 'mock-exam' || activeTab === 'quiz-practice') {
         setExpandedGroups(prev => ({ ...prev, exams: true }));
+      }
+      if (activeTab === 'roadmap' || activeTab === 'adaptive-practice' || activeTab === 'foundation-knowledge' || activeTab === 'mistake-notebook') {
+        setExpandedGroups(prev => ({ ...prev, 'roadmap-group': true }));
       }
       if (activeTab === 'textbook-standard' || activeTab === 'textbook-ingest' || activeTab === 'textbook-studio') {
         setExpandedGroups(prev => ({ ...prev, 'textbook-group': true }));
@@ -648,20 +654,59 @@ export default function Sidebar({
 
   let navSections = getRoleNavigation();
   if (role === 'student') {
-    // Rearrange existing actions only; all tab IDs and handlers stay unchanged.
+    // Phân tách chuẩn Core Flow 2 (Lộ trình cá nhân hóa) & Core Flow 3 (Luyện tập P-L-A-R + Sổ tay lỗi sai SM-2)
     const entries = Object.fromEntries(navSections.flatMap((section) => section.items).map((item) => [item.id, item]));
     navSections = [
       { sectionTitle: 'Tổng quan', items: [entries.dashboard] },
       { sectionTitle: 'Học tập', items: [
-        { ...entries.roadmap, label: 'Lộ trình của tôi' },
+        {
+          id: 'roadmap-group',
+          label: 'Lộ trình của tôi',
+          sublabel: 'Lộ trình, P-L-A-R & Sổ tay',
+          icon: Network,
+          iconColor: 'from-blue-500 to-indigo-600',
+          children: [
+            {
+              id: 'roadmap',
+              label: 'Lộ trình cá nhân hóa',
+              active: activeTab === 'roadmap',
+              onClick: () => setActiveTab('roadmap')
+            },
+            {
+              id: 'adaptive-practice',
+              label: 'Luyện tập (P-L-A-R)',
+              active: activeTab === 'adaptive-practice',
+              onClick: () => setActiveTab('adaptive-practice')
+            },
+            {
+              id: 'foundation-knowledge',
+              label: 'Kiến thức nền',
+              active: activeTab === 'foundation-knowledge',
+              onClick: () => setActiveTab('foundation-knowledge')
+            },
+            {
+              id: 'mistake-notebook',
+              label: 'Sổ tay lỗi sai (SM-2)',
+              active: activeTab === 'mistake-notebook',
+              onClick: () => setActiveTab('mistake-notebook')
+            }
+          ]
+        },
         { ...entries.schedule, label: 'Thời khóa biểu & Điểm danh' },
-        { ...entries.adaptive, label: 'Luyện tập' },
         { ...entries.ai, label: 'Gia sư AI' }
       ] },
       { sectionTitle: 'Đánh giá', items: [
         { id: 'exams', label: 'Kiểm tra & Thi thử', icon: ClipboardCheck, iconColor: 'from-orange-400 to-rose-500',
-          children: [{ ...entries.diagnostic, label: 'Đánh giá đầu vào' },
-            { ...entries.mock, label: 'Thi thử V-ACT' }] },
+          children: [
+            { ...entries.diagnostic, label: 'Đánh giá đầu vào' },
+            { ...entries.mock, label: 'Thi thử V-ACT' },
+            {
+              id: 'quiz-practice',
+              label: 'Luyện tập Quiz',
+              active: activeTab === 'quiz-practice',
+              onClick: () => setActiveTab('quiz-practice')
+            }
+          ] },
         entries.history,
         { ...entries.analytics, label: 'Báo cáo học tập' }
       ] },
@@ -673,14 +718,38 @@ export default function Sidebar({
     <aside className={`${mobile ? 'flex w-full min-h-full p-5' : (isCollapsed ? 'hidden lg:flex lg:sticky lg:top-0 lg:h-screen lg:overflow-y-auto w-20 p-3' : 'hidden lg:flex lg:sticky lg:top-0 lg:h-screen lg:overflow-y-auto w-72 p-5')} flex-col justify-between border-r border-slate-200/80 bg-gradient-to-b from-slate-50/80 to-white select-none shrink-0 transition-all duration-200`}>
       <div className="space-y-6">
         {/* Brand Identity Header - Synchronized with Home Page (PublicHeader.jsx) */}
-        <div className="flex items-center px-1">
+        <div className={`flex items-center px-1 ${!isCollapsed ? 'justify-between gap-2' : 'justify-center'}`}>
           {!isCollapsed ? (
-            <BrandLogo className="w-40" />
+            <>
+              <BrandLogo className="w-36" />
+              {!mobile && onToggleCollapse && (
+                <button
+                  type="button"
+                  onClick={onToggleCollapse}
+                  aria-label="Thu gọn thanh bên"
+                  title="Thu gọn thanh bên"
+                  className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors cursor-pointer shrink-0"
+                >
+                  <PanelLeftClose className="h-4 w-4" />
+                </button>
+              )}
+            </>
           ) : (
             <div className="w-full flex flex-col items-center gap-2">
               <span className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-600 via-indigo-600 to-cyan-500 flex items-center justify-center text-white font-black text-sm shadow-md">
                 V
               </span>
+              {!mobile && onToggleCollapse && (
+                <button
+                  type="button"
+                  onClick={onToggleCollapse}
+                  aria-label="Mở rộng thanh bên"
+                  title="Mở rộng thanh bên"
+                  className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors cursor-pointer"
+                >
+                  <PanelLeftOpen className="h-4 w-4" />
+                </button>
+              )}
             </div>
           )}
         </div>
