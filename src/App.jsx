@@ -597,19 +597,19 @@ export default function App() {
       );
     }
     if (activeTab === 'textbook-ingest') {
-      return <TextbookIngestView onNavigateTab={setActiveTab} onBack={() => setActiveTab('roadmap')} />;
+      return <TextbookIngestView role={role} onNavigateTab={setActiveTab} onBack={() => setActiveTab('roadmap')} />;
     }
     if (activeTab === 'textbook-studio') {
-      return <TextbookStudioView onNavigateTab={setActiveTab} onBack={() => setActiveTab('textbook-standard')} />;
+      return <TextbookStudioView role={role} onNavigateTab={setActiveTab} onBack={() => setActiveTab('textbook-standard')} />;
     }
     if (activeTab === 'exam-bank') {
       return <ExamBankView role={role} onNavigateTab={setActiveTab} />;
     }
     if (activeTab === 'exam-ingest') {
-      return <ExamIngestView onNavigateTab={setActiveTab} />;
+      return <ExamIngestView role={role} onNavigateTab={setActiveTab} />;
     }
     if (activeTab === 'exam-studio') {
-      return <ExamStudioView onNavigateTab={setActiveTab} />;
+      return <ExamStudioView role={role} onNavigateTab={setActiveTab} />;
     }
     if (activeTab === 'roadmap' && role !== 'parent') {
       const curriculum = (

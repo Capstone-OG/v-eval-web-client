@@ -3241,3 +3241,19 @@ The Parent Companion Portal was completely redesigned and hardened according to 
           2. **Reject Proposal (`✕ Từ Chối Đề Xuất`)**: Dismisses the proposal with pedagogical feedback.
         - Retains full 3-tab direct intervention autonomy across all system interactions.
     - **Verification**: `npm run build` compiled 3081 modules in 1.97s with zero errors; unit tests passed 28/28 (`tests/*.test.js` 22/22, `examStateBridge.test.js` 6/6).
+
+38. **Two-Part Flipped Offline Operational Model (TCH-02) & Teacher Maker-Checker Authorization Architecture (`TeacherScheduleView.jsx`, `OfflineSessionPreparationModal.jsx`, `offlineSessionStore.js`, `TextbookIngestView.jsx`, `CurriculumStudioEditor.jsx`, `ExamWorkspaceHeader.jsx`, `tests/offlineSessionStore.test.js`) [23/11/2026]**:
+    - **Problem Statement & Pedagogical Principles**:
+      - Offline campus sessions must never repeat raw theoretical lectures from scratch (which are studied autonomously online via P-L-A-R, Socratic AI, and SM-2 notebook).
+      - Instead, each offline session operates under a strict two-part flipped model:
+        1. **Part 1 (First Half • 45–60 mins)**: Collective class test correction focused on high-error skills and V-ACT exam traps identified through real-time class heatmaps.
+        2. **Part 2 (Second Half • 45–60 mins)**: Table-based micro-group remediation (3–5 students per table sharing identical learning gaps), accompanied by targeted ZPD worksheets and direct instructor desk coaching.
+      - **Decision Rights Matrix**: Instructors possess 100% autonomous authority over Part 1 and Part 2 offline session preparation without requiring Director approval (since questions and worksheets are derived from pre-approved repositories). Operational modifications (rescheduling, room swaps, substitute teaching) require Academic Manager approval to ensure zero campus-wide physical room collisions.
+    - **Implementation Details**:
+      - *Two-Part Session Card Architecture (`TeacherScheduleView.jsx`)*: Displays structured visual modules for Part 1 (heatmap-driven focus skills and trap alerts) and Part 2 (table micro-groups and ZPD worksheets) in both Weekly Matrix and Agenda List views.
+      - *Offline Session Preparation Modal (`OfflineSessionPreparationModal.jsx`)*: Directly hydrates class heatmap metrics (`practiceService.getClassHeatmap`), highlights low-mastery skills (&lt; 50%), and enables seamless 1-click persistence into `offlineSessionStore.js`.
+      - *100% Real Student Roster Synchronization & Stale Cache Cleansing (`offlineSessionStore.js`)*: Resolves actual student roster from PostgreSQL database via `getClassHeatmap` and `getSessionAttendances` (`Trần Thái Thịnh`, `Trần Ngọc Mai`, `Mai Thành Nhân`, `Lê Hoàng Long`, `Nguyễn Hoàng An`, `Phạm Tấn Lộc`), discarding any stale mock data in local storage.
+      - *Maker-Checker Curriculum & Exam Bank Refinement*:
+        - `TextbookIngestView.jsx`: Enforces read-only inspection for teachers, suppressing PDF file uploads and system-level AI parsing.
+        - `CurriculumStudioEditor.jsx` & `ExamWorkspaceHeader.jsx`: Renders dedicated Maker banners, restricting teacher persistence to Draft Save and `Gửi duyệt (PENDING_REVIEW)` without unconstrained system-wide publish or deletion permissions.
+    - **Verification**: `npm run build` compiled 3083 modules in 1.15s with zero errors; unit tests passed **30/30 passed 100%** (`tests/*.test.js` 22/22, `examStateBridge.test.js` 6/6, `offlineSessionStore.test.js` 2/2).

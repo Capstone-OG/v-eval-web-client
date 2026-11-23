@@ -28,6 +28,8 @@ import {
 } from 'lucide-react';
 import { practiceService } from '../../services/practiceService';
 import ClassMicroGroupsModal from '../modals/ClassMicroGroupsModal';
+import OfflineSessionPreparationModal from '../modals/OfflineSessionPreparationModal';
+import { getOfflineSessionPlan } from '../../utils/offlineSessionStore';
 import { toast } from '../../context/ToastContext';
 
 const ATTENDANCE_BADGE_MAP = {
@@ -120,6 +122,22 @@ export default function TeacherScheduleView({ currentUser }) {
   // Micro-Groups Modal State
   const [microGroupClass, setMicroGroupClass] = useState(null);
   const [isMicroGroupsOpen, setIsMicroGroupsOpen] = useState(false);
+
+  // Offline Session Preparation Modal State (Flipped Classroom 2 Parts)
+  const [prepSession, setPrepSession] = useState(null);
+  const [isPrepModalOpen, setIsPrepModalOpen] = useState(false);
+  const [offlineRefreshTick, setOfflineRefreshTick] = useState(0);
+
+  useEffect(() => {
+    const handler = () => setOfflineRefreshTick((v) => v + 1);
+    window.addEventListener('veval:offline-session-updated', handler);
+    return () => window.removeEventListener('veval:offline-session-updated', handler);
+  }, []);
+
+  const handleOpenPrepModal = (session) => {
+    setPrepSession(session);
+    setIsPrepModalOpen(true);
+  };
 
   const teacherId = currentUser?.id || currentUser?.userId;
 
@@ -813,19 +831,47 @@ export default function TeacherScheduleView({ currentUser }) {
                                       </span>
                                     </div>
 
-                                    {/* Topic / Skill + Sĩ số */}
-                                    <div className="p-2 rounded-lg bg-slate-50 border border-slate-100 text-[11px] text-slate-700 space-y-0.5">
-                                      <div
-                                        className="font-semibold line-clamp-2 leading-tight text-slate-900"
-                                        title={s.topicTitle || s.skillName}
-                                      >
-                                        🔖 {s.topicTitle || s.skillName || 'Luyện tập chuyên đề'}
-                                      </div>
-                                      <div className="text-[10px] text-slate-500 font-bold flex items-center justify-between pt-0.5">
-                                        <span>Sĩ số: {studentCount} HS</span>
-                                        <span className="text-slate-400">Buổi {s.sessionNo}</span>
-                                      </div>
-                                    </div>
+                                    {/* 2-Part Flipped Classroom Structure & Actions */}
+                                    {(() => {
+                                      const plan = getOfflineSessionPlan(s.sessionId, s);
+                                      const p1Count = plan?.part1?.focusTopics?.length || 0;
+                                      const p2Count = plan?.part2?.microGroups?.length || 0;
+                                      return (
+                                        <div className="space-y-1.5">
+                                          <div className="p-2 rounded-lg bg-slate-50 border border-slate-200 text-[11px] space-y-1">
+                                            <div className="flex items-center justify-between text-[10px] font-bold text-indigo-700">
+                                              <span>1. Chữa bài chung</span>
+                                              <span className="text-slate-400">{p1Count} dạng</span>
+                                            </div>
+                                            <div
+                                              className="font-bold line-clamp-1 text-slate-900 leading-tight"
+                                              title={plan?.part1?.focusTopics?.[0]?.skillName || s.topicTitle}
+                                            >
+                                              {plan?.part1?.focusTopics?.[0]?.skillName || s.topicTitle || 'Từ vựng & Suy luận'}
+                                            </div>
+                                            <div className="flex items-center justify-between text-[10px] text-slate-500 pt-0.5 border-t border-slate-100">
+                                              <span>2. Nhóm tại bàn</span>
+                                              <span className="font-bold text-slate-700">{p2Count} bàn</span>
+                                            </div>
+                                          </div>
+
+                                          <div className="text-[10px] text-slate-500 font-bold flex items-center justify-between px-0.5">
+                                            <span>Sĩ số: {studentCount} HS</span>
+                                            <span className="text-slate-400">Buổi {s.sessionNo}</span>
+                                          </div>
+
+                                          <button
+                                            type="button"
+                                            onClick={() => handleOpenPrepModal(s)}
+                                            className="w-full py-1.5 px-2 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-[11px] font-bold transition-all flex items-center justify-center gap-1 cursor-pointer"
+                                            title="Chuẩn bị nội dung chữa bài và bài tập nhóm"
+                                          >
+                                            <BookOpen className="w-3 h-3 text-indigo-600" />
+                                            <span>Chuẩn bị buổi học</span>
+                                          </button>
+                                        </div>
+                                      );
+                                    })()}
 
                                     {/* Action Buttons: Điểm danh & Nhóm vi mô */}
                                     <div className="flex items-center gap-1.5 pt-1">
@@ -921,13 +967,47 @@ export default function TeacherScheduleView({ currentUser }) {
                             </div>
                           </div>
 
-                          {/* Topic / Skill */}
-                          <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 flex items-start gap-2">
-                            <BookOpen className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
-                            <div className="text-xs font-bold text-slate-800 line-clamp-2">
-                              {s.topicTitle || s.skillName || 'Luyện tập chuyên đề theo năng lực'}
-                            </div>
-                          </div>
+                          {/* 2-Part Offline Session Structure */}
+                          {(() => {
+                            const plan = getOfflineSessionPlan(s.sessionId, s);
+                            const p1Topics = plan?.part1?.focusTopics || [];
+                            const p2Groups = plan?.part2?.microGroups || [];
+                            return (
+                              <div className="space-y-2">
+                                {/* 1. Chữa bài chung */}
+                                <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
+                                  <div className="flex items-center justify-between text-[11px]">
+                                    <span className="font-bold text-indigo-900 flex items-center gap-1.5">
+                                      <BookOpen className="w-3.5 h-3.5 text-indigo-600" />
+                                      <span>1. Chữa bài chung cả lớp:</span>
+                                    </span>
+                                    <span className="text-[10px] font-bold text-slate-500">
+                                      {p1Topics.length} dạng bài
+                                    </span>
+                                  </div>
+                                  <div className="text-xs font-bold text-slate-900 line-clamp-1">
+                                    {p1Topics.map((t) => t.skillName).join(' • ') || s.topicTitle || 'Từ vựng trong ngữ cảnh & Suy luận'}
+                                  </div>
+                                </div>
+
+                                {/* 2. Nhóm học tập tại bàn */}
+                                <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
+                                  <div className="flex items-center justify-between text-[11px]">
+                                    <span className="font-bold text-slate-800 flex items-center gap-1.5">
+                                      <Users className="w-3.5 h-3.5 text-slate-500" />
+                                      <span>2. Nhóm học tập tại bàn:</span>
+                                    </span>
+                                    <span className="text-[10px] font-bold text-slate-500">
+                                      {p2Groups.length} bàn học
+                                    </span>
+                                  </div>
+                                  <div className="text-[11px] font-medium text-slate-700 line-clamp-1">
+                                    {p2Groups.map((g) => `${g.tableName} (${g.studentCount} bạn)`).join(' • ') || 'Đã xếp các bàn học kèm phiếu bài tập'}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })()}
 
                           {/* Attendance Status Pill */}
                           <div className="flex items-center justify-between text-[11px]">
@@ -952,7 +1032,17 @@ export default function TeacherScheduleView({ currentUser }) {
                         </div>
 
                         {/* Actions */}
-                        <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
+                        <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenPrepModal(s)}
+                            className="flex-1 sm:flex-initial py-2 px-3 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-bold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                            title="Chuẩn bị nội dung chữa bài và bài tập nhóm"
+                          >
+                            <BookOpen className="w-3.5 h-3.5 text-indigo-600" />
+                            <span>Chuẩn bị buổi học</span>
+                          </button>
+
                           <button
                             type="button"
                             onClick={() => handleOpenAttendance(s)}
@@ -1110,6 +1200,13 @@ export default function TeacherScheduleView({ currentUser }) {
         isOpen={isMicroGroupsOpen}
         onClose={() => setIsMicroGroupsOpen(false)}
         classData={microGroupClass}
+      />
+
+      {/* Offline Session Preparation Modal (Flipped Classroom 2 Parts) */}
+      <OfflineSessionPreparationModal
+        isOpen={isPrepModalOpen}
+        onClose={() => setIsPrepModalOpen(false)}
+        session={prepSession}
       />
     </div>
   );

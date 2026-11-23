@@ -66,7 +66,8 @@ const BLOOM_LEVELS = [
   { level: 6, label: 'L6. Sáng tạo', color: 'bg-purple-50 text-purple-700 border-purple-300' }
 ];
 
-export default function TextbookIngestView({ onBack, onNavigateTab }) {
+export default function TextbookIngestView({ onBack, onNavigateTab, role = 'director' }) {
+  const isReadOnly = role === 'teacher';
   const { toast } = useToast();
   const initCtx = getStoredTextbookContext();
 
@@ -1478,6 +1479,21 @@ export default function TextbookIngestView({ onBack, onNavigateTab }) {
         </div>
       </header>
 
+      {/* READ-ONLY BANNER CHO ROLE TEACHER */}
+      {isReadOnly && (
+        <div className="bg-amber-50 border-b border-amber-200 px-6 py-2.5 flex items-center justify-between text-xs text-amber-900">
+          <div className="flex items-center gap-2">
+            <Lock className="w-4 h-4 text-amber-600 shrink-0" />
+            <span className="font-semibold">
+              <strong>Chế độ Tra Cứu Tài Liệu Nạp (Read-only):</strong> Giảng viên có quyền tra cứu toàn văn lý thuyết và cấu trúc SGK chuẩn GDPT 2018. Thao tác nạp file PDF mới và chạy AI bóc tách cấp hệ thống thuộc thẩm quyền của Giám đốc Học thuật.
+            </span>
+          </div>
+          <span className="px-2 py-0.5 rounded-md bg-amber-200/80 text-amber-950 font-black text-[11px] shrink-0">
+            CHỈ XEM (READ-ONLY)
+          </span>
+        </div>
+      )}
+
       {/* NOTIFICATION STATUS BANNER */}
       {(scanStatusMsg || fillProgress) && (
         <div className="bg-teal-950 text-teal-100 px-6 py-2 text-xs flex items-center justify-between flex-wrap gap-2">
@@ -1537,20 +1553,22 @@ export default function TextbookIngestView({ onBack, onNavigateTab }) {
 
             {/* Chọn file & Kho SGK */}
             <div className="flex items-center gap-2 flex-wrap">
-              <label className="px-3.5 py-2 rounded-xl border border-dashed border-teal-400 bg-teal-50/70 hover:bg-teal-100 text-xs font-bold text-teal-800 cursor-pointer flex items-center gap-2 transition-colors">
-                <FileText className="w-4 h-4 text-teal-600" />
-                <span className="max-w-[180px] truncate">{pdfFile ? pdfFile.name : 'Chọn file PDF SGK...'}</span>
-                <input
-                  type="file"
-                  accept=".pdf"
-                  className="hidden"
-                  onChange={async (e) => {
-                    const f = e.target.files?.[0] || null;
-                    setPdfFile(f);
-                    if (f) setSkeleton(prev => ({ ...prev, fileName: f.name }));
-                  }}
-                />
-              </label>
+              {!isReadOnly && (
+                <label className="px-3.5 py-2 rounded-xl border border-dashed border-teal-400 bg-teal-50/70 hover:bg-teal-100 text-xs font-bold text-teal-800 cursor-pointer flex items-center gap-2 transition-colors">
+                  <FileText className="w-4 h-4 text-teal-600" />
+                  <span className="max-w-[180px] truncate">{pdfFile ? pdfFile.name : 'Chọn file PDF SGK...'}</span>
+                  <input
+                    type="file"
+                    accept=".pdf"
+                    className="hidden"
+                    onChange={async (e) => {
+                      const f = e.target.files?.[0] || null;
+                      setPdfFile(f);
+                      if (f) setSkeleton(prev => ({ ...prev, fileName: f.name }));
+                    }}
+                  />
+                </label>
+              )}
 
               <select
                 value={selectedSourceId}

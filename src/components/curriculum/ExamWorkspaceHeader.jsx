@@ -96,8 +96,10 @@ export default function ExamWorkspaceHeader({
   onNavigateTab,
   showBackToBank = false,
   leftRow2Slot = null,
-  isReadOnly = false
+  isReadOnly = false,
+  role = 'director'
 }) {
+  const isTeacher = role === 'teacher';
   const {
     currentExam,
     orderedView,
@@ -258,35 +260,53 @@ export default function ExamWorkspaceHeader({
                   className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold flex items-center gap-1.5 shadow-xs cursor-pointer disabled:opacity-60"
                 >
                   {savingExam ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-                  <span>{currentExam.source === 'database' ? 'Lưu Bản Mới' : 'Lưu Database'}</span>
+                  <span>{isTeacher ? 'Lưu Bản Nháp' : currentExam.source === 'database' ? 'Lưu Bản Mới' : 'Lưu Database'}</span>
                 </button>
               )}
 
-              {currentExam.source === 'database' && currentExam.examId && !currentExam.isPublished && (
+              {/* Action theo vai trò Maker vs Checker */}
+              {isTeacher ? (
                 <button
                   type="button"
                   disabled={publishingExam}
-                  onClick={() => handlePublishExam(currentExam)}
-                  className="px-3 py-1.5 rounded-xl bg-[#1E3A5F] hover:bg-[#162C49] text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
+                  onClick={() => {
+                    toast.success('Đã gửi đề thi lên Giám đốc Học thuật chờ duyệt (PENDING_REVIEW)!');
+                  }}
+                  className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
+                  title="Gửi đề thi lên Giám đốc Học thuật phê duyệt xuất bản toàn hệ thống"
                 >
-                  {publishingExam ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
-                  <span>Phê Duyệt</span>
+                  <Send className="w-3.5 h-3.5" />
+                  <span>Gửi duyệt (PENDING_REVIEW)</span>
                 </button>
+              ) : (
+                currentExam.source === 'database' && currentExam.examId && !currentExam.isPublished && (
+                  <button
+                    type="button"
+                    disabled={publishingExam}
+                    onClick={() => handlePublishExam(currentExam)}
+                    className="px-3 py-1.5 rounded-xl bg-[#1E3A5F] hover:bg-[#162C49] text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
+                  >
+                    {publishingExam ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                    <span>Phê Duyệt</span>
+                  </button>
+                )
               )}
 
-              <button
-                type="button"
-                onClick={() => requestDeleteExam(currentExam)}
-                title={
-                  currentExam.source === 'database' && currentExam.examId
-                    ? 'Xóa vĩnh viễn đề thi khỏi Database'
-                    : 'Xóa đề thi đang soạn khỏi phiên làm việc'
-                }
-                className="px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-                <span>Xóa Đề</span>
-              </button>
+              {!isTeacher && (
+                <button
+                  type="button"
+                  onClick={() => requestDeleteExam(currentExam)}
+                  title={
+                    currentExam.source === 'database' && currentExam.examId
+                      ? 'Xóa vĩnh viễn đề thi khỏi Database'
+                      : 'Xóa đề thi đang soạn khỏi phiên làm việc'
+                  }
+                  className="px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Xóa Đề</span>
+                </button>
+              )}
             </>
           )}
         </div>
