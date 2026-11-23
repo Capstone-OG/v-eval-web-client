@@ -2,6 +2,20 @@
 
 ---
 
+## [23/11/2026] - Luồng Phê Duyệt Lộ Trình 2 Cấp, Thiết Kế Lại Pha Reflect & Tối Ưu UX P-L-A-R
+
+- **Luồng Phê Duyệt Lộ Trình 2 Cấp ([`ConnectedRoadmapPage.jsx`](../src/components/roadmap/ConnectedRoadmapPage.jsx), [`RoadmapApprovalStudioView.jsx`](../src/components/dashboard/RoadmapApprovalStudioView.jsx), [`Sidebar.jsx`](../src/components/layout/Sidebar.jsx), [`App.jsx`](../src/App.jsx), [`practiceService.js`](../src/services/practiceService.js))**:
+  - Gỡ chức năng học sinh tự tạo/cập nhật lộ trình; hiển thị banner theo dõi tiến trình 3 bước duyệt (`Thi 30 câu -> Giảng viên rà soát -> Giám đốc phê duyệt`) khi lộ trình đang ở trạng thái bản nháp/chờ duyệt.
+  - Triển khai `RoadmapApprovalStudioView.jsx` cho vai trò Giảng viên (thêm/ẩn chặng, đổi thứ tự ưu tiên, sửa mục tiêu điểm, ghi chú sư phạm, gửi duyệt) và Director / Quản lý học thuật (phê duyệt kích hoạt `ACTIVE` hoặc trả lại giảng viên chỉnh sửa).
+- **Thiết Kế Lại Pha Reflect, Thẻ Hoàn Thành Chặng & Thanh Lọc ([`PlarNodeStudioPanel.jsx`](../src/components/roadmap/PlarNodeStudioPanel.jsx), [`ConnectedRoadmapPage.jsx`](../src/components/roadmap/ConnectedRoadmapPage.jsx))**:
+  - Thiết kế lại form `Pha R — Reflect` (thẻ gợi ý & placeholder thích ứng theo từng môn học) và thẻ Hoàn thành chặng (vòng tròn SVG độ thành thạo, 3 thẻ chỉ số, nhật ký 2 cột, nút `Sang Chặng Kế Tiếp` luôn hoạt động kể cả sau khi F5).
+  - Gom 5 tab bộ lọc lộ trình thành Segmented Control gọn gàng theo thứ tự: `Ưu tiên -> Chưa đánh giá -> Đã đạt OK -> Đã hoàn thành -> Tất cả`; sửa lỗi mất trạng thái khi đang đọc lý thuyết P-L-A-R và bổ sung fallback tên chặng từ `contentService.getCurriculum()`.
+- **Nút Nháp Toán & Sửa Lỗi Hiển Thị ([`MathScratchpadButton.jsx`](../src/components/common/MathScratchpadButton.jsx), [`StudentBookmarkDrawer.jsx`](../src/components/common/StudentBookmarkDrawer.jsx), [`MathText.jsx`](../src/components/common/MathText.jsx), [`index.css`](../src/index.css))**:
+  - Tích hợp nút `Nháp Toán` vào các màn hình học & luyện tập; sửa lỗi render ký tự toán học `vàB`/`cốB` trong `MathText.jsx` và chặn dấu nháy caret trên text không nhập liệu trong `index.css`.
+- **Kiểm Thử**: `npm run build` đạt `3096+ modules`, `0 Error`.
+
+---
+
 ## [23/11/2026] - Cô Lập Lịch Học Nhóm Phụ Đạo Theo Chuyên Đề, Chuẩn Hóa Khung 6 Slot & Đồng Bộ Thời Khóa Biểu Giảng Viên (`ClassMicroGroupsModal.jsx`, `TeacherScheduleView.jsx`, `remedialSessionStore.js`, `tests/remedialSessionStore.test.js`, `tests/classMicroGroups.test.js`)
 
 - **Cô Lập Hoàn Toàn Lịch Phụ Đạo Giữa Các Chuyên Đề Khác Nhau ([`ClassMicroGroupsModal.jsx`](../src/components/modals/ClassMicroGroupsModal.jsx), [`remedialSessionStore.js`](../src/utils/remedialSessionStore.js), [`tests/remedialSessionStore.test.js`](../tests/remedialSessionStore.test.js), [`tests/classMicroGroups.test.js`](../tests/classMicroGroups.test.js))**:

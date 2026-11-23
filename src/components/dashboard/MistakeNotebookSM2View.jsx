@@ -24,6 +24,7 @@ import {
   X
 } from 'lucide-react';
 import MathText from '../common/MathText';
+import MathScratchpadButton from '../common/MathScratchpadButton';
 import { practiceService } from '../../services/practiceService';
 import contentService from '../../services/contentService';
 import { toast } from '../../context/ToastContext';
@@ -405,6 +406,11 @@ export default function MistakeNotebookSM2View({
               {isBookFullscreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
               <span>{isBookFullscreen ? 'Thu nhỏ sổ' : 'Phóng to sổ'}</span>
             </button>
+
+            <MathScratchpadButton
+              text={`${activeBookItem._skillName || ''} ${activeBookItem._content || ''}`}
+              subjectHint={activeBookItem._subjectName || ''}
+            />
 
             {onOpenAiTutorWithContext && (
               <button

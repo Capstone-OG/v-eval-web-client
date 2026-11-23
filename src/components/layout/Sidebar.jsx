@@ -139,6 +139,15 @@ export default function Sidebar({
                 onClick: () => setActiveTab('dashboard')
               },
               {
+                id: 'roadmap_approval',
+                label: 'Duyệt lộ trình học sinh',
+                sublabel: 'Rà soát bản nháp & trình Giám đốc',
+                icon: ClipboardCheck,
+                active: activeTab === 'roadmap_approval',
+                onClick: () => setActiveTab('roadmap_approval'),
+                badge: 'Duyệt'
+              },
+              {
                 id: 'schedule',
                 label: 'Thời khóa biểu & Điểm danh',
                 sublabel: 'Lịch dạy, phòng học & điểm danh',
@@ -228,6 +237,15 @@ export default function Sidebar({
                   icon: Building2,
                   active: activeTab === 'dashboard',
                   onClick: () => setActiveTab('dashboard')
+                },
+                {
+                  id: 'roadmap_approval',
+                  label: 'Phê duyệt Lộ trình HS',
+                  sublabel: 'Duyệt cuối & kích hoạt ACTIVE',
+                  icon: ClipboardCheck,
+                  active: activeTab === 'roadmap_approval',
+                  onClick: () => setActiveTab('roadmap_approval'),
+                  badge: 'Duyệt'
                 },
                 {
                   id: 'ai_moderation',
@@ -329,6 +347,15 @@ export default function Sidebar({
                 icon: Calendar,
                 active: activeTab === 'classes_schedule',
                 onClick: () => setActiveTab('classes_schedule')
+              },
+              {
+                id: 'roadmap_approval',
+                label: 'Phê duyệt Lộ trình HS',
+                sublabel: 'Duyệt cuối & kích hoạt ACTIVE',
+                icon: ClipboardCheck,
+                active: activeTab === 'roadmap_approval',
+                onClick: () => setActiveTab('roadmap_approval'),
+                badge: 'Duyệt'
               },
               {
                 id: 'clustering',
@@ -507,6 +534,15 @@ export default function Sidebar({
                 activeGlow: 'shadow-blue-500/30',
                 active: activeTab === 'roadmap',
                 onClick: () => setActiveTab('roadmap')
+              },
+              {
+                id: 'roadmap_approval',
+                label: 'Duyệt lộ trình học sinh',
+                sublabel: 'Rà soát bản nháp & trình Giám đốc',
+                icon: ClipboardCheck,
+                active: activeTab === 'roadmap_approval',
+                onClick: () => setActiveTab('roadmap_approval'),
+                badge: 'Duyệt'
               },
               {
                 id: 'schedule',

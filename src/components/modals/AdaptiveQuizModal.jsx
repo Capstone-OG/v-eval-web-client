@@ -20,6 +20,7 @@ import {
   Flame
 } from 'lucide-react';
 import MathText from '../common/MathText';
+import MathScratchpadButton from '../common/MathScratchpadButton';
 import FlagQuestionModal from '../common/FlagQuestionModal';
 import { addFlaggedQuestion, getFlaggedQuestionIdSet } from '../../utils/questionFlagStore';
 import { practiceService } from '../../services/practiceService';
@@ -869,6 +870,11 @@ export default function AdaptiveQuizModal({ isOpen, isEmbedded = false, onClose,
                   <Flag className="w-3.5 h-3.5" />
                   <span>Báo lỗi &amp; Đổi câu</span>
                 </button>
+                <MathScratchpadButton
+                  text={`${currentItem.skill || ''} ${currentItem.lessonName || ''} ${currentItem.question || ''}`}
+                  subjectHint={SUBJECT_LABEL_MAP[currentItem.subjectCode] || ''}
+                  className="py-2"
+                />
                 {onOpenAiTutorWithContext && (
                   <button
                     type="button"
