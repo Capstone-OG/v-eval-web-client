@@ -36,6 +36,7 @@ import ParentChildResultsView from './components/dashboard/ParentChildResultsVie
 import ParentEarlyWarningsAndTeacherView from './components/dashboard/ParentEarlyWarningsAndTeacherView';
 import TeacherDashboardView from './components/dashboard/TeacherDashboardView';
 import TeacherPortalView from './components/dashboard/TeacherPortalView';
+import TeacherSubmissionHistoryView from './components/dashboard/TeacherSubmissionHistoryView';
 import CampusManagerDashboardView from './components/dashboard/CampusManagerDashboardView';
 import AcademicManagerDashboardView from './components/dashboard/AcademicManagerDashboardView';
 import AiTutorModerationView from './components/dashboard/AiTutorModerationView';
@@ -119,12 +120,8 @@ const ROLE_PORTAL_DEFINITIONS = {
       { id: 'schedule', label: 'Thời khóa biểu & Điểm danh', icon: Calendar },
       { id: 'history', label: 'Lịch sử làm bài', icon: History },
       { id: 'roadmap', label: 'Khung chương trình', icon: BookOpen },
-      { id: 'textbook-standard', label: '1. Sách Giáo Khoa Chuẩn', icon: BookOpen },
-      { id: 'textbook-ingest', label: '2. Nạp Tài Liệu SGK', icon: BookOpenCheck },
-      { id: 'textbook-studio', label: '3. Studio Biên Soạn SGK', icon: BookOpenCheck },
-      { id: 'exam-bank', label: '1. Kho Đề & Xem Đề Thi', icon: FileSpreadsheet },
-      { id: 'exam-ingest', label: '2. Parse PDF & AI Bloom', icon: Sparkles },
-      { id: 'exam-studio', label: '3. Studio Biên Soạn Đề', icon: FileSpreadsheet },
+      { id: 'textbook-standard', label: 'Sách giáo khoa (SGK)', icon: BookOpen },
+      { id: 'exam-bank', label: 'Kho đề thi đã xuất bản', icon: FileSpreadsheet },
       { id: 'ai_moderation', label: 'Kiểm duyệt gia sư AI', icon: Bot }
     ]
   },
@@ -523,16 +520,16 @@ export default function App() {
         return (
           <AiTutorModerationView
             currentUser={currentUser}
+            role={role}
             onBackToDashboard={() => setActiveTab('dashboard')}
           />
         );
       }
       if (activeTab === 'history') {
         return (
-          <TeacherPortalView
-            key={`${currentUser?.userId || currentUser?.id}:${currentUser?.classId || ''}:${activeTab}`}
+          <TeacherSubmissionHistoryView
+            key={`${currentUser?.userId || currentUser?.id}:${activeTab}`}
             currentUser={currentUser}
-            section={activeTab}
             onNavigate={setActiveTab}
           />
         );
@@ -633,9 +630,25 @@ export default function App() {
       );
     }
 
+    // Guard: Giảng viên chỉ có quyền tra cứu SGK chuẩn và Kho đề đã xuất bản; ẩn & chặn các trang Ingest & Studio
+    if (role === 'teacher' && (activeTab === 'textbook-ingest' || activeTab === 'textbook-studio')) {
+      return (
+        <TextbookStandardView
+          role={role}
+          onNavigateTab={setActiveTab}
+          onBack={() => setActiveTab('roadmap')}
+          isSidebarCollapsed={isSidebarCollapsed}
+        />
+      );
+    }
+    if (role === 'teacher' && (activeTab === 'exam-ingest' || activeTab === 'exam-studio')) {
+      return <ExamBankView role={role} onNavigateTab={setActiveTab} />;
+    }
+
     if (activeTab === 'textbook-standard') {
       return (
         <TextbookStandardView
+          role={role}
           onNavigateTab={setActiveTab}
           onBack={() => setActiveTab('roadmap')}
           isSidebarCollapsed={isSidebarCollapsed}
@@ -643,19 +656,19 @@ export default function App() {
       );
     }
     if (activeTab === 'textbook-ingest') {
-      return <TextbookIngestView onNavigateTab={setActiveTab} onBack={() => setActiveTab('roadmap')} />;
+      return <TextbookIngestView role={role} onNavigateTab={setActiveTab} onBack={() => setActiveTab('roadmap')} />;
     }
     if (activeTab === 'textbook-studio') {
-      return <TextbookStudioView onNavigateTab={setActiveTab} onBack={() => setActiveTab('textbook-standard')} />;
+      return <TextbookStudioView role={role} onNavigateTab={setActiveTab} onBack={() => setActiveTab('textbook-standard')} />;
     }
     if (activeTab === 'exam-bank') {
-      return <ExamBankView onNavigateTab={setActiveTab} />;
+      return <ExamBankView role={role} onNavigateTab={setActiveTab} />;
     }
     if (activeTab === 'exam-ingest') {
-      return <ExamIngestView onNavigateTab={setActiveTab} />;
+      return <ExamIngestView role={role} onNavigateTab={setActiveTab} />;
     }
     if (activeTab === 'exam-studio') {
-      return <ExamStudioView onNavigateTab={setActiveTab} />;
+      return <ExamStudioView role={role} onNavigateTab={setActiveTab} />;
     }
     if (activeTab === 'roadmap' && role !== 'parent') {
       if (role === 'student') {
@@ -779,6 +792,7 @@ export default function App() {
       return (
         <AiTutorModerationView
           currentUser={currentUser}
+          role={role}
           onBackToDashboard={() => setActiveTab('dashboard')}
         />
       );

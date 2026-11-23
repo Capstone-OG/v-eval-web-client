@@ -3240,3 +3240,151 @@ The Parent Companion Portal was completely redesigned and hardened according to 
   2. Added `resolveSubjectCode` to correctly map Vietnamese subject names to `GDPT_PRESETS` / `getDefaultLessonTheory` codes across all 9 subjects.
   3. Applied `lg:sticky lg:top-0 lg:h-screen lg:overflow-y-auto` to `Sidebar.jsx` so navigation stays anchored while scrolling.
   4. **Verification**: `npm run build` succeeded in `1.81s` (`3081 modules`, `0 Error`).
+
+35. **Pedagogical Role Segregation & Two-Tier Human-in-the-Loop Socratic AI Moderation Architecture (TCH-01) (`Sidebar.jsx`, `App.jsx`, `CurriculumExplorerView.jsx`, `TextbookStandardView.jsx`, `ExamBankView.jsx`, `ExamWorkspaceHeader.jsx`, `AiTutorModerationView.jsx`) [22/11/2026]**:
+    - **Problem Statement (TCH-01)**:
+      - The Instructor portal navigation inadvertently exposed administrative and curation authoring suites (Curriculum Studio, Textbook Ingestion/Authoring, and Exam Bank Parsing/Authoring) mirroring the Academic Director role.
+      - In Core Flow 4 (AI Tutor Moderation), Instructors possessed unconstrained system-wide write access, permitting direct overrides of Golden Exemplars and Cognitive Traps into the shared GraphRAG knowledge base without academic governance.
+    - **Pedagogical Role Segregation & Read-Only Enforcement**:
+      - *Sidebar Redesign (`Sidebar.jsx`)*: Replaced multi-tier authoring suites in the teacher menu with single, dedicated read-only inquiry entries: Curriculum (`Tra cứu cây kiến thức & Bloom`), Textbook Standard (`Tra cứu SGK chuẩn GDPT 2018`), and Exam Bank (`Kho đề thi đã xuất bản`). Ingestion and Studio routes were removed.
+      - *Route Guards (`App.jsx`)*: Intercepted direct navigation to authoring URLs for teachers, automatically redirecting them to their respective standard read-only views (`textbook-standard`, `exam-bank`).
+      - *Read-Only Enforcement*:
+        - `CurriculumExplorerView.jsx`: Suppressed Studio entry buttons, structural additions, and deletion handlers; enforced `instructorMode = false` on `UnifiedNodeDetailView.jsx`.
+        - `TextbookStandardView.jsx`: Suppressed curriculum sync, GDPT reset, textbook deletion, and ingestion navigation; displayed an explicit read-only indicator.
+        - `ExamBankView.jsx` & `ExamWorkspaceHeader.jsx`: Suppressed `ExamPageFlowBar`, PDF parsing, Bloom generation, and Studio authoring buttons; locked exam headers against database overwrites and deletions, displaying published exams only.
+    - **Two-Tier Human-in-the-Loop Socratic AI Moderation (Core Flow 4) (`AiTutorModerationView.jsx`)**:
+      - *Tier 1 — Instructor Layer (`role === 'teacher'`)*:
+        - Scoped strictly to assigned teaching classes with dynamic class selector filtering.
+        - Replaced direct knowledge graph overwrite permissions with a 2-step pedagogical proposal workbench: **Tab 1: Propose Golden Exemplar** and **Tab 2: Propose Cognitive Trap**, omitting report dismissal actions.
+        - Proposals persist with instructor provenance metadata and transition interaction logs to `PENDING_DIRECTOR_REVIEW` state.
+      - *Tier 2 — Academic Director Layer (`role === 'director'`)*:
+        - Provides campus-wide administrative oversight with a dedicated `Đề xuất GV` queue filter tab.
+        - Displays prominent proposal inspection callouts with 1-click execution controls:
+          1. **Approve & Overwrite Graph (`✓ Phê Duyệt & Ghi Đè Vào Kho RAG Toàn Trường`)**: Ingests proposed solutions/traps directly into `PatternExemplar` or `PatternTrap` nodes in the shared GraphRAG base.
+          2. **Reject Proposal (`✕ Từ Chối Đề Xuất`)**: Dismisses the proposal with pedagogical feedback.
+        - Retains full 3-tab direct intervention autonomy across all system interactions.
+    - **Verification**: `npm run build` compiled 3081 modules in 1.97s with zero errors; unit tests passed 28/28 (`tests/*.test.js` 22/22, `examStateBridge.test.js` 6/6).
+
+38. **Two-Part Flipped Offline Operational Model (TCH-02) & Teacher Maker-Checker Authorization Architecture (`TeacherScheduleView.jsx`, `OfflineSessionPreparationModal.jsx`, `offlineSessionStore.js`, `TextbookIngestView.jsx`, `CurriculumStudioEditor.jsx`, `ExamWorkspaceHeader.jsx`, `tests/offlineSessionStore.test.js`) [23/11/2026]**:
+    - **Problem Statement & Pedagogical Principles**:
+      - Offline campus sessions must never repeat raw theoretical lectures from scratch (which are studied autonomously online via P-L-A-R, Socratic AI, and SM-2 notebook).
+      - Instead, each offline session operates under a strict two-part flipped model:
+        1. **Part 1 (First Half • 45–60 mins)**: Collective class test correction focused on high-error skills and V-ACT exam traps identified through real-time class heatmaps.
+        2. **Part 2 (Second Half • 45–60 mins)**: Table-based micro-group remediation (3–5 students per table sharing identical learning gaps), accompanied by targeted ZPD worksheets and direct instructor desk coaching.
+      - **Decision Rights Matrix**: Instructors possess 100% autonomous authority over Part 1 and Part 2 offline session preparation without requiring Director approval (since questions and worksheets are derived from pre-approved repositories). Operational modifications (rescheduling, room swaps, substitute teaching) require Academic Manager approval to ensure zero campus-wide physical room collisions.
+    - **Implementation Details**:
+      - *Two-Part Session Card Architecture (`TeacherScheduleView.jsx`)*: Displays structured visual modules for Part 1 (heatmap-driven focus skills and trap alerts) and Part 2 (table micro-groups and ZPD worksheets) in both Weekly Matrix and Agenda List views.
+      - *Offline Session Preparation Modal (`OfflineSessionPreparationModal.jsx`)*: Directly hydrates class heatmap metrics (`practiceService.getClassHeatmap`), highlights low-mastery skills (&lt; 50%), and enables seamless 1-click persistence into `offlineSessionStore.js`.
+      - *100% Real Student Roster Synchronization & Stale Cache Cleansing (`offlineSessionStore.js`)*: Resolves actual student roster from PostgreSQL database via `getClassHeatmap` and `getSessionAttendances` (`Trần Thái Thịnh`, `Trần Ngọc Mai`, `Mai Thành Nhân`, `Lê Hoàng Long`, `Nguyễn Hoàng An`, `Phạm Tấn Lộc`), discarding any stale mock data in local storage.
+      - *Maker-Checker Curriculum & Exam Bank Refinement*:
+        - `TextbookIngestView.jsx`: Enforces read-only inspection for teachers, suppressing PDF file uploads and system-level AI parsing.
+        - `CurriculumStudioEditor.jsx` & `ExamWorkspaceHeader.jsx`: Renders dedicated Maker banners, restricting teacher persistence to Draft Save and `Gửi duyệt (PENDING_REVIEW)` without unconstrained system-wide publish or deletion permissions.
+    - **Verification**: `npm run build` compiled 3083 modules in 1.15s with zero errors; unit tests passed **30/30 passed 100%** (`tests/*.test.js` 22/22, `examStateBridge.test.js` 6/6, `offlineSessionStore.test.js` 2/2).
+
+39. **Curriculum Explorer User Interface & Pedagogical Refinement for Instructors (`CurriculumExplorerView.jsx`, `UnifiedNodeDetailView.jsx`, `ExamBankView.jsx`, `ExamWorkspaceHeader.jsx`, `TextbookStandardView.jsx`, `TextbookIngestView.jsx`) [23/11/2026]**:
+    - **Architectural Motivation**:
+      - Technical system indicators, internal database labels, and raw processing terminology (e.g., `(Read-only)`, `Trọng số: ...%`, `Đã nạp SGK (x trang)`, `CẤU TRÚC PHÂN CẤP BÀI HỌC`, `Bloom L1-L4`) create cognitive clutter and reduce usability for pedagogical practitioners.
+      - Instructors need clean, intuitive interfaces prioritizing educational content over underlying software mechanics.
+    - **Implementation Details**:
+      - *Curriculum Explorer (`CurriculumExplorerView.jsx`)*:
+        - Replaced technical `(Read-only)` status badges with an intuitive `Khung chương trình chuẩn` tag.
+        - Integrated quick Grade selection pills (`Tất cả`, `Lớp 12`, `Lớp 11`, `Lớp 10`) at the top of the chapter hierarchy, immediately reducing list length from 14+ chapters down to 2–7 chapters for active grade teaching.
+        - Engineered Split Independent Scroll architecture (`lg:sticky lg:top-4 lg:max-h-[calc(100vh-100px)] lg:overflow-y-auto`): left chapter navigation and right 3-tier pedagogical detail view scroll independently, guaranteeing that detail content is never dragged out of sight.
+        - Added an ergonomic 1-click `Thu gọn hết / Mở tất cả` toggle and compacted chapter card density (`p-2.5 sm:px-3`, `w-7 h-7` badges).
+        - Streamlined chapter cards by removing internal weight percentages and raw ingested page counts; replaced with a clean `Sách giáo khoa` indicator and lesson tally.
+        - Renamed tree heading to `Danh sách chương` and hid administrator creation buttons (`+ Thêm Chương`) from teacher views.
+        - Simplified lesson pattern items by removing `pat.weight` and adopting human-readable mastery categories (`Cần bổ trợ`, `Cần củng cố`, `Đã vững`).
+      - *Pedagogical Node Details (`UnifiedNodeDetailView.jsx`)*:
+        - Harmonized the 3 knowledge blocks into intuitive pedagogical layers: Core Textbook Theory (`Khối 1: Lý Thuyết Trọng Tâm Chuẩn SGK`), Problem-Solving Methods & Visual Lab (`Khối 2: Phương Pháp Giải & Mô Hình Minh Họa Trực Quan`), and Practice Question Bank (`Khối 3: Ngân Hàng Câu Hỏi Luyện Tập`).
+        - Replaced cognitive taxonomy acronyms (L1–L4) with standard educational terms (`Nhận biết`, `Thông hiểu`, `Vận dụng`, `Vận dụng cao`).
+      - *System-wide Read-only Badge Harmonization*: Synchronized non-technical, user-friendly labels across `ExamBankView.jsx`, `ExamWorkspaceHeader.jsx`, `TextbookStandardView.jsx`, and `TextbookIngestView.jsx`.
+    - **Verification**: `npm run build` compiled 3083 modules in 1.18s with zero errors; unit tests passed **24/24 passed 100%** (`tests/*.test.js`).
+
+40. **3-Way Parent-Teacher-Student Counseling Action Gate Refinement (`EarlyWarningsMentorPanel.jsx`) [23/11/2026]**:
+    - **Architectural Motivation**:
+      - Initiating formal 3-way pedagogical counseling (`Hẹn Tư Vấn 3 Bên`) requires teacher, student, and parent synchronization. It should be reserved strictly for high-risk critical alerts (Red Alerts) rather than minor weekly pace lags or moderate score target recalibrations (`UNREALISTIC_GOAL`).
+    - **Implementation Details**:
+      - Constrained the `Hẹn Tư Vấn 3 Bên` action trigger to evaluate `alert.alertType === 'RED'`, removing redundant exposure on goal misalignment alerts.
+      - Non-critical alerts now cleanly provide `Ghi Nhận Can Thiệp` to document pedagogical intervention without creating premature calendar commitments.
+    - **Verification**: `npm run build` compiled 3083 modules in 1.17s with zero errors; unit tests passed **24/24 passed 100%** (`tests/*.test.js`).
+
+  39. **Comprehensive Teacher Portal Feature Architecture: TCH-03, TCH-04, TCH-05 (`TeacherSubmissionHistoryView.jsx`, `parentTeacherMessagingStore.js`, `ParentEarlyWarningsAndTeacherView.jsx`, `EarlyWarningsMentorPanel.jsx`, `tests/parentTeacherMessagingStore.test.js`) [23/11/2026]**:
+      - **Architectural Motivation & Role Segregation Compliance**:
+        - *TCH-03 (Student Submission History & Pedagogical Gap Analysis)*: Eliminates single static class constraints by integrating dynamic multi-class rosters (`practiceService.getClasses({ teacherId })`) and hydrating comprehensive tripartite submission categories: (1) Diagnostic Assessments (30 questions, IRT Theta 0 estimation, 4-domain radar charts); (2) Adaptive Practice (ZPD and Topic Quizzes); and (3) Standardized V-ACT Mock Exams (120 questions with proctoring audit trail). Enables teachers to inspect granular question-level errors rendered with LaTeX math expressions (`MathText.jsx`) and attach targeted pedagogical notes.
+        - *TCH-04 (Bidirectional Parent-Teacher Messaging)*: Implements reactive asynchronous message bus `parentTeacherMessagingStore.js` with CustomEvent dispatching (`veval:parent-teacher-message`). Bridges Parent Portal (`ParentEarlyWarningsAndTeacherView.jsx`) and Teacher Portal (`EarlyWarningsMentorPanel.jsx`), enabling parents to submit inquiries tied to specific early warnings and empowering teachers to deliver immediate pedagogical guidance back to parents.
+        - *TCH-05 (Multi-Tier Early Warning Escalation Governance)*: Enforces strict separation of pedagogical responsibilities: Tier 1–2 alerts (Yellow reminders & Unrealistic goals) are directly mentored by classroom teachers, whereas Tier 3 alerts (Red high-risk, protracted stagnation > 7 days) are routed via a dedicated escalation workflow ("Chuyển Lên Quản Lý Cơ Sở (Họp 3 Bên)") to Campus Managers for institutional 3-way conference coordination.
+      - **Verification & Acceptance Metrics**:
+        - Test suite `tests/parentTeacherMessagingStore.test.js` verified 100% pass across all messaging and reply flows.
+        - Total unit test coverage: 26/26 tests passing in 169ms.
+        - Production build: `npm run build` completed in 1.25s (3085 modules transformed, 0 warnings/errors).
+
+41. **Zero Raw GUID Leakage & Real Identity Resolution in Class Micro-Groups Architecture (`ClassMicroGroupsModal.jsx`, `offlineSessionStore.js`, `tests/classMicroGroups.test.js`) [23/11/2026]**:
+    - **Architectural Motivation**:
+      - Automatic table clustering algorithms partition students into homogeneous capability clusters (3–5 students per table). However, returning raw UUID strings for `CommonWeakSkillIds` caused cards to overflow vertically with dozens of red GUID tags, obscuring student rosters and breaking modal responsiveness.
+      - Furthermore, student names must be resolved from real system identities in PostgreSQL via gRPC, and classes containing homonymous students (such as two distinct students sharing the name "Phạm Tấn Lộc") require transparent disambiguation suffixes (`#8A51` vs `#B099`) to prevent instructor confusion.
+    - **Implementation Details**:
+      - *Concurrent Multi-Source Data Hydration*: In `ClassMicroGroupsModal.jsx`, fetches class micro-groups (`practiceService.getClassMicroGroups`), class heatmap (`practiceService.getClassHeatmap`), and curriculum tree (`contentService.getSkillsTree`) in parallel.
+      - *GUID Suppression & Vietnamese Skill Name Resolution*: Built `skillNameMap` resolving GUIDs to clean pedagogical names. Implemented regex check `isRawGuid` ensuring zero raw UUIDs leak into the interface.
+      - *Ergonomic Weakness Tag Capping*: Weak skill tags are strictly capped at 2 per table card, with a subtle `+X chuyên đề khác` badge showing all remaining skills on tooltip hover.
+      - *Homonym Student Disambiguation*: Built `nameFrequencyMap`; when multiple enrolled students share identical full names, attaches short unique 4-character ID suffixes derived from their PostgreSQL `StudentId` (e.g. `Phạm Tấn Lộc (#8A51)` and `Phạm Tấn Lộc (#B099)`).
+    - **Verification & Acceptance Metrics**:
+      - New test suite `tests/classMicroGroups.test.js` verified UUID detection, skill name mapping, and homonym disambiguation.
+      - Unit test suite: 29/29 tests passed 100% (`node --test tests/*.test.js`).
+      - Production build: `npm run build` completed in 1.23s (3085 modules transformed, 0 errors).
+
+42. **Skill-to-Student Drill-down, Targeted Remedial Group Scheduling & Instructor Autonomy (`TeacherDashboardView.jsx`, `ClassMicroGroupsModal.jsx`, `OfflineSessionPreparationModal.jsx`, `remedialSessionStore.js`, `tests/remedialSessionStore.test.js`) [23/11/2026]**:
+    - **Architectural Motivation**:
+      - In pedagogical active learning and flipped classrooms, instructors must not be presented with generic or uncontextualized clusters. The workflow must seamlessly bridge: **Classroom Context Identification -> Struggling Skill Analysis -> Granular Student Drill-down -> Intentional Micro-Group Partitioning -> Remedial Study Session Scheduling (Offline or Live Q&A)**.
+      - Furthermore, instructors require full pedagogical autonomy to reassign students between tables based on in-person classroom observations, and the system must clearly explain mathematical partitioning constraints (e.g. why $N=7$ students partitions into $4 + 3$ instead of $5 + 2$, adhering to the strict pedagogical bounds of $3 \le \text{size} \le 5$).
+    - **Implementation Details**:
+      - *Pedagogical Alert Drill-down*: Enhanced `TeacherDashboardView.jsx` with class identification metadata (`Lớp: [Tên lớp] • Mã: [Mã lớp] • Sĩ số: [Sĩ số] học sinh`) and student drill-down accordions rendering individual struggling students with avatar, name, and comprehension percentage (< 50%). Passes focus skill and student IDs directly to `ClassMicroGroupsModal`.
+      - *Remedial Study Session Subsystem*: Created `remedialSessionStore.js` with CustomEvent bus `veval:remedial-session-scheduled`. Supports configuring session date, time slot presets (morning, afternoon, evening, custom), delivery format (Offline classroom or Live Q&A Online), and instructor guidance notes.
+      - *Instructor Table Reassignment Autonomy*: Added quick table switchers (`⇄ Sang Bàn X`) on each student row in both `ClassMicroGroupsModal.jsx` and `OfflineSessionPreparationModal.jsx` with soft capacity warnings.
+      - *Mathematical Breakdown Explanation*: Upgraded auto-partition notices to display exact table breakdowns (e.g. `Đã xếp thành công 2 nhóm bàn (Bàn 1: 4 bạn, Bàn 2: 3 bạn) cho 7 học sinh theo chuẩn sư phạm 3 – 5 bạn/bàn!`).
+    - **Verification & Acceptance Metrics**:
+      - New test suite `tests/remedialSessionStore.test.js` verified storage, multi-group scheduling, and deletion.
+      - Total test suite: 31/31 unit tests passed 100% (`node --test tests/*.test.js`).
+      - Production build: `npm run build` completed in 1.25s with 3086 modules transformed and 0 errors.
+
+43. **Deterministic Focus Skill Partitioning & Anti-Discrepancy Remedial Clustering Subsystem (`ClassMicroGroupsModal.jsx`, `practiceService.js`, `tests/classMicroGroups.test.js`) [23/11/2026]**:
+    - **Architectural Motivation**:
+      - When instructors click "Tạo Nhóm Bồi Dưỡng" from a specific pedagogical alert (e.g. "Giải quyết vấn đề Hóa học"), the system previously loaded stale historical database clusters generated by generic K-Means across all 66 skills (which selected generic reading or pronoun skills), causing severe cognitive dissonance between the modal's focus banner and the generated station titles.
+    - **Implementation Details**:
+      - *Deterministic Focus Skill Partitioning (`partitionStudentsForFocusSkill`)*: When `classData.focusSkill` is present, the subsystem enforces exact alignment: partitions class rosters sorted by their specific mastery in the targeted skill, generates focused station names (`Nhóm 01 - Bàn trọng tâm: [Tên chuyên đề]`), binds relevant weakness tags, and generates targeted 5-question micro-worksheets.
+      - *Interactive Re-clustering on Group Size Shift*: Clicking size controls (3, 4, 5 students/table) immediately triggers dynamic re-partitioning preserving focus skill alignment while strictly upholding the $3 \le \text{size} \le 5$ pedagogical constraint.
+      - *Dynamic Action CTA Binding*: Upgrades action button text to `Tự Động Xếp Nhóm: [Tên chuyên đề]` and provides granular mathematical breakdown notices.
+    - **Verification & Acceptance Metrics**:
+      - Verified with new unit test `ClassMicroGroups - partitionStudentsForFocusSkill groups students by designated focus skill` in `tests/classMicroGroups.test.js`.
+      - Total test suite: 32/32 unit tests passed 100% (`node --test tests/*.test.js`).
+      - Production build: `npm run build` completed in 1.27s with 3086 modules transformed and 0 errors.
+
+44. **Precision Remedial Candidate Filtering, Class-vs-Remedial Scope Toggle & Metric Harmonization (`ClassMicroGroupsModal.jsx`, `TeacherDashboardView.jsx`, `EarlyWarningsMentorPanel.jsx`, `rag-service/.env`, `tests/classMicroGroups.test.js`) [23/11/2026]**:
+    - **Architectural Motivation**:
+      - When instructors click "Tạo Nhóm Bồi Dưỡng" for a designated skill (such as "Giải quyết vấn đề Hóa học" with 4 struggling students), the system must strictly filter down to candidates needing remediation rather than coercing the entire class (7 students) into multiple remedial stations. Pulling non-struggling or unexamined students into remedial tables violates pedagogical zoning principles.
+      - Furthermore, the dashboard header alert ("Chưa đạt: 100% (7 học sinh)") was mathematically disjoint from the drill-down list ("Học sinh chưa đạt (4 em)") because backend aggregation defaulted unexamined students to 0.1 mastery.
+    - **Implementation Details**:
+      - *Targeted Candidate Roster Isolation*: In `ClassMicroGroupsModal.jsx`, `partitionStudentsForFocusSkill` checks `classData.targetStudentIds` and filters down to the exact subset of struggling candidates ($N = 4$). When $N \le 5$, creates exactly 1 micro-station (`GRP-FOCUS-01`) targeting only the 4 students, leaving other students unbothered.
+      - *Remedial Scope Switcher*: Added dual-scope toggle on the modal banner: `🎯 Chỉ [X] học sinh chưa đạt` (default) vs `👥 Cả lớp ([Y] học sinh)`, giving instructors complete autonomy to toggle between specialized remediation and whole-class differentiated instruction.
+      - *Metric Harmonization*: In `TeacherDashboardView.jsx`, updated calculation to prioritize actual struggling students count derived from student submissions (`strugglingStudents.length`), presenting a consistent `57% (4 học sinh)` aligned across both the summary card and the drill-down accordion.
+      - *Responsive Early Warning Strip Layout*: In `EarlyWarningsMentorPanel.jsx`, updated tier banner container with `w-full` and `flex-col sm:flex-row`, preventing pedagogical tier guidelines from collapsing into vertical single-word columns.
+      - *Supabase Pooler Transaction Port Configuration*: Switched `DATABASE_URL` in `rag-service/.env` from port `5432` (Session mode, max 15 clients) to port `6543` (Transaction mode), eliminating `EMAXCONNSESSION` pool exhaustion when running alongside .NET EF Core microservices.
+    - **Verification & Acceptance Metrics**:
+      - Verified with unit test `ClassMicroGroups - partitionStudentsForFocusSkill filters strictly to target struggling students` in `tests/classMicroGroups.test.js`.
+      - Unit test suite: 33/33 tests passed 100% (`node --test tests/*.test.js`).
+      - Production build: `npm run build` completed in 1.24s with 3086 modules transformed and 0 errors.
+
+45. **Remedial Schedule Isolation Across Focus Skills, Standard 6-Slot Timetable Harmonization & Bi-directional Reactive Calendar Sync (`ClassMicroGroupsModal.jsx`, `TeacherScheduleView.jsx`, `remedialSessionStore.js`, `tests/remedialSessionStore.test.js`, `tests/classMicroGroups.test.js`) [23/11/2026]**:
+    - **Architectural Motivation**:
+      - When scheduling remedial sessions across multiple focus skills (e.g. "Giải quyết vấn đề Hóa học" vs "Dạng 1: Cơ chế sinh học trọng tâm"), generic station IDs (`GRP-FOCUS-01`) previously resulted in namespace collision in persistent local storage. Consequently, setting an offline remedial date and ca for Chemistry erroneously leaked and appeared as the active schedule for Biology.
+      - Furthermore, arbitrary unstructured time strings (such as "14:00 - 15:30") clashed with the institution's official 6-slot timetable grid. Pedagogical remedial sessions must align with the standardized academic slot periods (Slot 1–6) and immediately project into the Instructor Timetable (`TeacherScheduleView.jsx`) with dedicated visual differentiation without requiring manual page reload.
+    - **Implementation Details**:
+      - *Deterministic Skill-Slug Namespacing*: In `ClassMicroGroupsModal.jsx`, sanitizes Vietnamese skill names (`replace(/[đĐ]/g, 'd')`, Unicode NFD normalization, hyphen cleanup) to generate unique station IDs: `GRP-${skillSlug}-01` (e.g. `GRP-giai-quyet-van-de-h-01` strictly isolated from `GRP-dang-1-co-che-sinh-h-01`). This eliminates cross-skill data collisions.
+      - *Standard 6-Slot Timetable Harmonization*: Defined `STANDARD_ACADEMIC_SLOTS` in `remedialSessionStore.js` with exact time ranges and periods (Slot 1: 07:30–09:30, Slot 2: 09:45–11:45, Slot 3: 13:00–15:00, Slot 4: 15:15–17:15, Slot 5: 18:00–20:00, Slot 6: 20:15–22:30). Replaced freeform buttons in `ClassMicroGroupsModal.jsx` with an interactive 3x2 academic slot grid that binds explicit `slotNo`, `startTime`, and `endTime`.
+      - *Bi-directional Reactive Timetable Projection*: In `TeacherScheduleView.jsx`, `loadSchedule` dynamically queries all remedial sessions (`getAllRemedialSessions`) and merges them into the weekly matrix based on date and `slotNo`. Added real-time CustomEvent listeners for `veval:remedial-session-scheduled` and `veval:remedial-session-deleted`.
+      - *Dedicated Pastel Purple Remedial Card UI & Modal Drill-Down Context Preservation*:
+        - *Weekly Timetable Grid Mode*: Renders high-visibility pastel purple cards with a `⚡ Phụ đạo vi mô` badge, focus skill topic, class/station name, enrolled student count, exact slot time range, room, online/offline mode badge, and a direct 1-click CTA `Xem nhóm phụ đạo`.
+        - *Agenda / Timeline Mode*: Extends card with detailed participating student rosters and direct access to micro-group station layouts.
+        - *Modal Drill-Down Context Preservation*: Fixed missing context in `handleOpenMicroGroups` and `mappedRemedial` by passing full context (`focusSkill`, `focusSkillId`, `targetGroupId`, `targetStudentIds`, `initialMembers`), and implemented multi-criteria scheduled session resolution (`groupId` or `focusArea` match) in `ClassMicroGroupsModal.jsx`, ensuring that opening the modal from the timetable accurately displays the focus skill banner, candidate roster, and scheduled session badge.
+    - **Verification & Acceptance Metrics**:
+      - Unit test suite: Added 3 new test cases verifying `STANDARD_ACADEMIC_SLOTS`, cross-class aggregation `getAllRemedialSessions`, and schedule collision prevention between Chemistry and Biology; 36/36 tests passed 100% (`node --test tests/*.test.js`).
+      - Production build: `npm run build` completed in 1.13s with 3086 modules transformed and 0 errors.

@@ -1,13 +1,23 @@
-# UPDATE — V-Eval-Web_Client
+# UPDATE - V-EVAL WEB CLIENT
 
-## [22/11/2026]
-- **Tái Cấu Trúc & Tối Ưu Hóa Toàn Diện Trải Nghiệm Học Viên (`Sidebar.jsx`, `AccountNavbar.jsx`, `App.jsx`, `ConnectedRoadmapPage.jsx`, `PlarNodeStudioPanel.jsx`, `StudentMockExamPage.jsx`, `StudentHistoryPage.jsx`)**:
-  - Tinh giản thanh `AccountNavbar.jsx` (bỏ breadcrumb, ngày tháng & chip cơ sở thừa; rút gọn pill đếm ngược ĐGNL 1 dòng), di chuyển nút đóng/mở Sidebar về `Sidebar.jsx`.
-  - Gom nhóm menu **`Lộ trình của tôi`** thành toggle 4 mục: **Lộ trình cá nhân hóa** (khóa tuần tự FSM theo `stepOrder` từ Chặng #1, tách bạch Core Flow 2), **Luyện tập (P-L-A-R)** (Core Flow 3, giao diện sáng gọn), **Kiến thức nền** (`StudentFoundationKnowledgeView.jsx` — kho SGK đọc-hiểu & tự luyện nhanh cho học sinh), và **Sổ tay lỗi sai (SM-2)** (`MistakeNotebookSM2View.jsx` — dạng cuốn sổ 2 trang trắng tinh, nạp đề thật qua `contentService.getQuestionById`, kèm số Chặng, dropdown nguyên nhân sai, công thức chỉnh sửa tay & ghi chú thu gọn).
-  - Bổ sung trang **Luyện tập Quiz** tối đa **60 câu** (thiết kế mới 2 cột trong `AdaptiveQuizModal.jsx`, chọn 1 môn / nhiều môn / tổng hợp 8 môn, batch tải đề nhanh) và tập trung **Phòng Thi thử V-ACT** 100% vào 4 bộ đề chuẩn ĐHQG-HCM 120 câu / 150 phút có giám sát.
-- **Sổ Tay Công Thức, Phòng Mô Phỏng Tương Tác & Máy Tính Casio FX-580 (`StudentBookmarkDrawer.jsx`, `ConstantsReferencePanel.jsx`, `UnitConverterPanel.jsx`, `UnitCircleSimulator.jsx`, `NativePhysicsLab.jsx`, `InteractiveMathRenderer.jsx`, `mathGraphUtils.js`, `referenceFormulasData.js`, `periodicTableData.js`, `englishGrammarData.js`)**:
-  - Thêm cụm nút bookmark cạnh phải **`Tra cứu`** & **`FX-580`** hiển thị riêng trong **Lộ trình của tôi** và **Luyện tập Quiz** với 3 tab chính:
-    1. **Công thức & Tra cứu (GDPT 2018 Lớp 10–12)**: Toán, Vật lý, Hóa học (Bảng tuần hoàn 118 nguyên tố, Công thức bảo toàn/đkc, Kết tủa màu & Phản ứng đặc trưng), Tiếng Anh (8 nhóm ngữ pháp), Sinh học, Lịch sử (Mốc 10–12 & Bạn có biết), Địa lý (Công thức, Vùng kinh tế & Bạn có biết), **Hằng số & Góc π** (48 hằng số lưới 2 cột + 17 góc lượng giác đặc biệt), và **Đổi đơn vị SI**.
-    2. **Mô phỏng Tương tác**: Toán 3D tùy biến (11 khối gồm đa diện + Nón/Trụ/Cầu; dựng Trung tuyến, Trọng tâm, điểm chia cạnh, đoạn phụ, mặt phẳng thiết diện `polygon3d`), Toán 2D kéo-thả (sửa `shapeType` & bật/tắt đường cao/trung tuyến/ngoại tiếp), Đồ thị hàm số (12 mẫu + bàn phím Toán + sửa lỗi nhân ẩn `2sin(x)` & `sqrt/abs/exp/ln`), Đường tròn Lượng giác & Pha Dao động Vật lý, và **Phòng thí nghiệm PhET** (10 mô phỏng Lý–Hóa).
-    3. **Máy tính Casio fx-580VN X**: Cắt gọn viewport hiển thị trực tiếp thân máy tính Casio 580 sạch gọn.
-- **Kiểm Thử**: `npm run build` đạt `3094 modules`, `1.30s`, `0 Error`.
+## [23/11/2026]
+- **Khắc Phục Lỗi Mất Ngữ Cảnh Khi Nhấn "Xem Nhóm Phụ Đạo" Từ Thời Khóa Biểu (`TeacherScheduleView.jsx`, `ClassMicroGroupsModal.jsx`)**:
+  - Khắc phục triệt để hiện tượng khi nhấn "Xem nhóm phụ đạo" từ thẻ Thời khóa biểu thì modal lại hiển thị thông tin nhóm chung chung (Reading Comprehension / Pronoun) và hiện nút "Lên lịch" thay vì ca học đã lên.
+  - Cập nhật `mappedRemedial` và `handleOpenMicroGroups` trong `TeacherScheduleView.jsx` truyền toàn vẹn ngữ cảnh: `focusSkill`, `focusSkillId`, `targetGroupId`, `targetStudentIds`, `initialMembers`.
+  - Nâng cấp `ClassMicroGroupsModal.jsx`: tích hợp cơ chế đối chiếu lịch phụ đạo đa tiêu chí (theo `groupId`, `targetGroupId` hoặc theo `focusArea`/`topic`), đảm bảo khi mở modal từ Thời khóa biểu, hệ thống luôn hiển thị đúng 100% chuyên đề bồi dưỡng, học sinh trong nhóm và huy hiệu lịch học đã lên.
+- **Cô Lập Hoàn Toàn Lịch Học Nhóm Phụ Đạo Giữa Các Chuyên Đề Khác Nhau (`ClassMicroGroupsModal.jsx`, `remedialSessionStore.js`, `tests/classMicroGroups.test.js`, `tests/remedialSessionStore.test.js`)**:
+  - Chuẩn hóa chuỗi slug tiếng Việt (`skillSlug`) từ tên chuyên đề để tạo mã nhóm định danh riêng biệt `GRP-${skillSlug}-01` (ví dụ: `GRP-giai-quyet-van-de-h-01` tách biệt tuyệt đối với `GRP-dang-1-co-che-sinh-h-01`).
+  - Dữ liệu lịch phụ đạo lưu trữ trong Local Storage được cô lập 100% theo từng chuyên đề kỹ năng, không bao giờ bị ghi đè hay hiển thị chéo.
+- **Chuẩn Hóa Khung 6 Slot Thời Khóa Biểu Đồng Bộ Hệ Thống (`ClassMicroGroupsModal.jsx`, `remedialSessionStore.js`)**:
+  - Khai báo bộ hằng số `STANDARD_ACADEMIC_SLOTS` đồng bộ với 6 ca học chuẩn: Slot 1 (07:30–09:30), Slot 2 (09:45–11:45), Slot 3 (13:00–15:00), Slot 4 (15:15–17:15), Slot 5 (18:00–20:00), Slot 6 (20:15–22:30).
+  - Thay thế các nút ca học tự do bằng lưới chọn 6 Slot học chuẩn (3x2), tự động điền `startTime`, `endTime`, `slotNo` và gợi ý phòng phụ đạo P.204.
+- **Đồng Bộ Hai Chiều & Hiển Thị Thẻ Phụ Đạo Chuyên Biệt Trên Thời Khóa Biểu Giảng Viên (`TeacherScheduleView.jsx`)**:
+  - Nạp các ca phụ đạo từ `remedialSessionStore`, ánh xạ chính xác vào ngày học và slot tương ứng.
+  - Tích hợp event listener phản ứng tức thời (`veval:remedial-session-scheduled`, `veval:remedial-session-deleted`), tự động cập nhật thời khóa biểu ngay khi Giảng viên tạo hoặc hủy lịch mà không cần tải lại trang.
+  - Thiết kế thẻ phụ đạo màu tím Pastel nổi bật với huy hiệu `⚡ Phụ đạo vi mô` ở cả 2 chế độ Weekly Grid và Agenda View.
+- **Lọc Chuẩn Xác Đối Tượng Học Sinh Bồi Dưỡng Chuyên Đề & Ngăn Ngừa Gom Cả Lớp (`ClassMicroGroupsModal.jsx`, `TeacherDashboardView.jsx`)**:
+  - Lọc chuẩn xác theo học sinh thực tế chưa đạt (< 50%) thay vì kéo cả lớp; với 4 học sinh chưa đạt tự động tạo đúng 1 bàn bồi dưỡng 4 bạn; tích hợp nút chuyển đổi phạm vi `🎯 Chỉ học sinh chưa đạt` vs `👥 Cả lớp`.
+  - Đồng bộ số liệu hiển thị cảnh báo sư phạm ngoài danh sách (`57% (4 học sinh)`), triệt tiêu mâu thuẫn số liệu.
+- **Kiểm Thử & Biên Dịch**:
+  - 36/36 unit tests passed 100% (`tests/classMicroGroups.test.js`, `tests/remedialSessionStore.test.js`, ...).
+  - `npm run build`: Hoàn thành 100% trong 1.28s (`3086 modules transformed`, `0 Error`).
