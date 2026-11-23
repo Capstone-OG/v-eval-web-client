@@ -18,6 +18,9 @@ import {
   Eye,
   FileText,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
+  Target,
   Award,
   CheckCircle2,
   XCircle,
@@ -86,6 +89,7 @@ export default function TeacherDashboardView({ currentUser, onOpenAdaptiveQuiz, 
 
   // Pedagogical Alerts Modal
   const [isAlertsModalOpen, setIsAlertsModalOpen] = useState(false);
+  const [expandedAlertSkillId, setExpandedAlertSkillId] = useState(null);
 
   // Student Drill-Down Modal
   const [drillDownStudent, setDrillDownStudent] = useState(null);
@@ -197,7 +201,7 @@ export default function TeacherDashboardView({ currentUser, onOpenAdaptiveQuiz, 
     }
   };
 
-  const handleOpenMicroGroups = (focusSkillName = null) => {
+  const handleOpenMicroGroups = (focusSkillName = null, focusSkillId = null, targetStudentIds = []) => {
     setIsAlertsModalOpen(false);
     const currentClass = classesList.find((c) => (c.classId || c.id) === selectedClassId);
     setMicroGroupClassContext({
@@ -205,8 +209,11 @@ export default function TeacherDashboardView({ currentUser, onOpenAdaptiveQuiz, 
       classId: selectedClassId,
       name: currentClass?.name || heatmap?.className || 'Lớp phụ trách',
       code: currentClass?.code || `CLS-${selectedClassId?.slice(0, 8)}`,
-      totalStudents: heatmap?.totalStudents || 0,
-      focusSkill: focusSkillName
+      totalStudents: heatmap?.totalStudents || (heatmap?.rows || []).length || 0,
+      assignedTeacher: currentClass?.assignedTeacher || 'Thầy/Cô phụ trách',
+      focusSkill: focusSkillName,
+      focusSkillId: focusSkillId,
+      targetStudentIds: targetStudentIds || []
     });
     setIsMicroGroupsOpen(true);
   };
@@ -920,8 +927,21 @@ export default function TeacherDashboardView({ currentUser, onOpenAdaptiveQuiz, 
                       {heatmap?.pedagogicalAlerts?.length || 0} chuyên đề
                     </span>
                   </h3>
-                  <p className="text-xs text-slate-500 font-medium">
-                    Danh sách các chuyên đề có tỷ lệ học sinh chưa đạt ≥ 40%. Thầy/cô có thể tạo ngay nhóm vi mô 3–5 em kèm riêng.
+                  {/* Ngữ Cảnh Lớp Học Rõ Ràng */}
+                  {(() => {
+                    const currentClass = classesList.find((c) => (c.classId || c.id) === selectedClassId);
+                    return (
+                      <div className="flex flex-wrap items-center gap-2 mt-1 text-xs text-slate-500 font-medium">
+                        <span>Lớp: <strong className="text-slate-900">{currentClass?.name || heatmap?.className || 'Lớp phụ trách'}</strong></span>
+                        <span className="text-slate-300">•</span>
+                        <span>Mã: <strong className="text-indigo-600 font-bold">{currentClass?.code || selectedClassId?.slice(0, 8)}</strong></span>
+                        <span className="text-slate-300">•</span>
+                        <span>Sĩ số: <strong className="text-slate-900">{heatmap?.totalStudents || (heatmap?.rows || []).length || 0} học sinh</strong></span>
+                      </div>
+                    );
+                  })()}
+                  <p className="text-xs text-slate-500 font-medium mt-1">
+                    Danh sách các chuyên đề có tỷ lệ học sinh chưa đạt ≥ 40%. Thầy/cô có thể bấm xem cụ thể học sinh nào chưa đạt và tạo ngay nhóm vi mô 3–5 em kèm riêng.
                   </p>
                 </div>
               </div>
@@ -935,54 +955,118 @@ export default function TeacherDashboardView({ currentUser, onOpenAdaptiveQuiz, 
             </div>
 
             {/* Modal Body: Scrollable list */}
-            <div className="p-5 lg:p-6 overflow-y-auto space-y-3 divide-y divide-slate-100">
+            <div className="p-5 lg:p-6 overflow-y-auto space-y-3.5 divide-y divide-slate-100">
               {(heatmap?.pedagogicalAlerts || []).map((alert) => {
                 const isCritical = alert.alertLevel === 'CRITICAL_RED';
+                const isExpanded = expandedAlertSkillId === alert.skillId;
+                const strugglingStudents = (heatmap?.rows || []).filter((r) => {
+                  const cell = (r.skillCells || []).find((c) => c.skillId === alert.skillId);
+                  return cell ? Number(cell.plt || 0) < 0.5 : false;
+                });
+
                 return (
                   <div
                     key={alert.skillId}
-                    className="pt-3 first:pt-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3.5"
+                    className="pt-3.5 first:pt-0 space-y-2.5"
                   >
-                    <div className="space-y-1 text-xs">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span
-                          className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase ${
-                            isCritical
-                              ? 'bg-rose-100 text-rose-800 border border-rose-200'
-                              : 'bg-amber-100 text-amber-800 border border-amber-200'
-                          }`}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3.5">
+                      <div className="space-y-1 text-xs flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span
+                            className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase ${
+                              isCritical
+                                ? 'bg-rose-100 text-rose-800 border border-rose-200'
+                                : 'bg-amber-100 text-amber-800 border border-amber-200'
+                            }`}
+                          >
+                            {isCritical ? 'Cần bồi dưỡng gấp' : 'Cần lưu ý ôn tập'}
+                          </span>
+                          <strong className="text-sm font-extrabold text-slate-900">{alert.skillName}</strong>
+                        </div>
+                        <div className="text-[11px] font-bold text-slate-600 flex items-center gap-2">
+                          <span>
+                            Hiểu bài: <strong className="text-slate-900">{(Number(alert.averagePlt || 0) * 100).toFixed(0)}%</strong>
+                          </span>
+                          <span className="text-slate-300">•</span>
+                          <span>
+                            Chưa đạt:{' '}
+                            <strong className="text-rose-600">
+                              {strugglingStudents.length > 0
+                                ? `${((strugglingStudents.length / (heatmap?.totalStudents || (heatmap?.rows || []).length || 1)) * 100).toFixed(0)}% (${strugglingStudents.length} học sinh)`
+                                : `${(Number(alert.strugglingRate || 0) * 100).toFixed(0)}% (${alert.strugglingCount || 0} học sinh)`}
+                            </strong>
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-500 leading-relaxed">{alert.suggestedAction}</p>
+
+                        {/* Nút Xem Danh Sách Học Sinh Cụ Thể */}
+                        <button
+                          type="button"
+                          onClick={() => setExpandedAlertSkillId(isExpanded ? null : alert.skillId)}
+                          className="mt-1 text-[11px] font-extrabold text-indigo-600 hover:text-indigo-800 inline-flex items-center gap-1 cursor-pointer transition-colors"
                         >
-                          {isCritical ? 'Cần bồi dưỡng gấp' : 'Cần lưu ý ôn tập'}
-                        </span>
-                        <strong className="text-sm font-extrabold text-slate-900">{alert.skillName}</strong>
+                          <Users className="w-3.5 h-3.5 text-indigo-500" />
+                          <span>
+                            {isExpanded 
+                              ? 'Thu gọn danh sách học sinh ▲' 
+                              : `Xem ${strugglingStudents.length} học sinh chưa đạt chuyên đề này ▼`}
+                          </span>
+                        </button>
                       </div>
-                      <div className="text-[11px] font-bold text-slate-600 flex items-center gap-2">
-                        <span>
-                          Hiểu bài: <strong className="text-slate-900">{(Number(alert.averagePlt || 0) * 100).toFixed(0)}%</strong>
-                        </span>
-                        <span className="text-slate-300">•</span>
-                        <span>
-                          Chưa đạt:{' '}
-                          <strong className="text-rose-600">
-                            {(Number(alert.strugglingRate || 0) * 100).toFixed(0)}% ({alert.strugglingCount} học sinh)
-                          </strong>
-                        </span>
-                      </div>
-                      <p className="text-[11px] text-slate-500 leading-relaxed">{alert.suggestedAction}</p>
+
+                      <button
+                        type="button"
+                        onClick={() => handleOpenMicroGroups(alert.skillName, alert.skillId, strugglingStudents.map(s => s.studentId))}
+                        className={`px-3.5 py-2 rounded-xl font-extrabold text-xs shrink-0 flex items-center gap-1.5 transition-all shadow-xs cursor-pointer self-start sm:self-center ${
+                          isCritical
+                            ? 'bg-rose-600 hover:bg-rose-700 text-white shadow-rose-600/20'
+                            : 'bg-amber-600 hover:bg-amber-700 text-white shadow-amber-600/20'
+                        }`}
+                        title="Tạo nhóm học tập vi mô 3 - 5 bạn trọng tâm chuyên đề này"
+                      >
+                        <Zap className="w-3.5 h-3.5" />
+                        <span>Tạo Nhóm Bồi Dưỡng</span>
+                      </button>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => handleOpenMicroGroups(alert.skillName)}
-                      className={`px-3.5 py-2 rounded-xl font-extrabold text-xs shrink-0 flex items-center gap-1.5 transition-all shadow-xs cursor-pointer self-start sm:self-center ${
-                        isCritical
-                          ? 'bg-rose-600 hover:bg-rose-700 text-white'
-                          : 'bg-amber-600 hover:bg-amber-700 text-white'
-                      }`}
-                    >
-                      <Zap className="w-3.5 h-3.5" />
-                      <span>Tạo Nhóm Bồi Dưỡng</span>
-                    </button>
+                    {/* Danh Sách Học Sinh Drill-down */}
+                    {isExpanded && (
+                      <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2.5 animate-fade-in">
+                        <div className="flex items-center justify-between text-[11px] font-black text-slate-500 uppercase tracking-wider">
+                          <span>Học sinh chưa đạt ({strugglingStudents.length} em):</span>
+                          <span className="text-slate-400 font-normal">Độ hiểu bài &lt; 50%</span>
+                        </div>
+
+                        {strugglingStudents.length === 0 ? (
+                          <div className="text-xs text-slate-400 italic py-1">Không có học sinh nào dưới 50% ở thời điểm này.</div>
+                        ) : (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            {strugglingStudents.map((st) => {
+                              const cell = (st.skillCells || []).find((c) => c.skillId === alert.skillId);
+                              const pltPct = cell ? Math.round(Number(cell.plt || 0) * 100) : 0;
+                              return (
+                                <div 
+                                  key={st.studentId}
+                                  className="flex items-center justify-between p-2 rounded-xl bg-white border border-slate-200 shadow-2xs text-xs"
+                                >
+                                  <div className="flex items-center gap-2 min-w-0">
+                                    <div className="w-6 h-6 rounded-full bg-indigo-500 text-white text-[10px] font-black flex items-center justify-center shrink-0">
+                                      {(st.studentName || 'H').charAt(0)}
+                                    </div>
+                                    <span className="font-bold text-slate-800 truncate" title={st.studentName}>
+                                      {st.studentName}
+                                    </span>
+                                  </div>
+                                  <span className="text-[11px] font-black text-rose-600 shrink-0 ml-2">
+                                    Hiểu: {pltPct}%
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 );
               })}

@@ -1926,12 +1926,18 @@ export const practiceService = {
     return res.data?.value || res.data?.data || res.data;
   },
 
-  async autoPartitionMicroGroups(classId, preferredGroupSize = 4) {
+  async autoPartitionMicroGroups(classId, preferredGroupSize = 4, options = {}) {
     const resolvedClassId = ensureGuid(classId, FLOW5_DEFAULTS.CLASS_ID);
+    const payload = {
+      preferredGroupSize,
+      ...(options.focusSkillId ? { focusSkillId: options.focusSkillId } : {}),
+      ...(options.focusSkillName ? { focusSkillName: options.focusSkillName } : {}),
+      ...(Array.isArray(options.targetStudentIds) && options.targetStudentIds.length > 0
+        ? { targetStudentIds: options.targetStudentIds }
+        : {})
+    };
     return (
-      await apiClient.post(`/api/practice/classes/${resolvedClassId}/micro-groups/auto-partition`, {
-        preferredGroupSize
-      })
+      await apiClient.post(`/api/practice/classes/${resolvedClassId}/micro-groups/auto-partition`, payload)
     ).data;
   },
 

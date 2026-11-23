@@ -12,4 +12,4 @@
 - **Công Cụ Nháp Toán & Sửa Lỗi Hiển Thị (`MathScratchpadButton.jsx`, `StudentBookmarkDrawer.jsx`, `MathText.jsx`, `index.css`)**:
   - Thêm nút `Nháp Toán` gọi nhanh Drawer mô phỏng 3D/2D/Đồ thị/FX-580 ngay tại bài học và bài tập.
   - Sửa lỗi dính chữ `vàB`/`cốB` và lỗi lệch cặp ký hiệu toán học trong `MathText.jsx`; thêm `caret-color: transparent` toàn trang cho phần tử không nhập liệu trong `index.css`.
-- **Kiểm Thử**: `npm run build` đạt `3096 modules`, `1.46s`, `0 Error`.
+- **Kiểm Thử**: `npm run build` đạt `3096+ modules`, `0 Error`.
