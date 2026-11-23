@@ -213,4 +213,3 @@ test('applyAiNodeMappingsToExam applies AI Engine classification results with Bl
   assert.equal(updated.singleQuestions[0].curriculumNode?.confidence, 0.94);
   assert.equal(updated.singleQuestions[0].difficultyLevel, 3);
 });
-

@@ -19,6 +19,7 @@ import PublicFooter from './PublicFooter';
 import studentsBadge from '../../assets/students_cutout_badge.jpg';
 import studentsClean from '../../assets/students_cutout_clean.jpg';
 import studentsOriginal from '../../assets/students_original.png';
+import vietnameseStudentReal from '../../assets/vietnamese_student_real.jpg';
 
 export default function PublicLandingPage({ currentUser, onOpenLogin, onOpenRegister, onOpenDiagnostic, onOpenDashboard, onOpenArchModal }) {
   const [showStickyBar, setShowStickyBar] = useState(false);
@@ -28,7 +29,7 @@ export default function PublicLandingPage({ currentUser, onOpenLogin, onOpenRegi
   // ScrollSpy listener to detect current active section when scrolling
   useEffect(() => {
     const handleScroll = () => {
-      const sections = ['hero', 'exam-matrix', 'tech-grid', 'process-steps', 'testimonials'];
+      const sections = ['hero', 'tech-grid', 'process-steps', 'testimonials'];
       const scrollPosition = window.scrollY + 200;
 
       for (const sectionId of sections) {
@@ -55,7 +56,6 @@ export default function PublicLandingPage({ currentUser, onOpenLogin, onOpenRegi
     "⚡ Lộ trình ZPD vừa tự động mở chặng 04 (Logic & Số liệu) cho 84 học sinh.",
     "🤖 AI Tutor vừa giải thích câu 42 Socratic cho bạn Lê Quỳnh A.",
     "🎯 94% học sinh làm test chẩn đoán tăng trung bình +75 điểm sau 2 tuần.",
-    "📢 Lớp Bứt Phá có buổi Live Q&A giải đề trực tuyến lúc 19h30 tối nay!"
   ];
   const [actIdx, setActIdx] = useState(0);
   const [actVisible, setActVisible] = useState(true);
@@ -83,47 +83,47 @@ export default function PublicLandingPage({ currentUser, onOpenLogin, onOpenRegi
   const techCards = [
     {
       id: 'dag',
-      title: 'Cây Tri Thức Định Hướng (DAG): Không Học Thừa Một Dạng Bài',
+      title: 'Học theo thứ tự, tập trung vào phần còn yếu',
       icon: GitFork,
-      badge: 'BỐC TÁCH MA TRẬN 120 CÂU',
+      badge: 'SẮP XẾP NỘI DUNG ÔN TẬP',
       badgeColor: 'bg-blue-100 text-blue-800 border-blue-200',
       color: 'from-blue-600 to-indigo-600',
-      desc: 'Ma trận bài học được sắp xếp theo Đồ thị DAG không chu trình. Thuật toán Topo Sort xác định chính xác kiến thức mấu chốt, tự động chèn Remedial Node khi bạn sai để lấp lỗ hổng nhanh nhất mà không mất thời gian học lại kiến thức đã vững.',
-      subTag1: '✓ Sắp xếp Topo Sort tối ưu',
-      subTag2: '✓ Tự động khắc phục lún kiến thức'
+      desc: 'Các bài học được sắp xếp từ nền tảng đến nâng cao. Khi bạn gặp khó ở một dạng bài, lộ trình sẽ bổ sung phần kiến thức cần ôn lại.',
+      subTag1: '✓ Học nền tảng trước, nâng cao sau',
+      subTag2: '✓ Ôn lại phần kiến thức còn yếu'
     },
     {
       id: 'irt',
-      title: 'Đo Lường Chuẩn IRT: Ước Tính Độ Khó & Năng Lực Thí Sinh',
+      title: 'Biết mình đang mạnh và yếu ở đâu',
       icon: Target,
-      badge: 'IRT 3PL & BKT MODEL',
+      badge: 'ĐÁNH GIÁ NĂNG LỰC',
       badgeColor: 'bg-emerald-100 text-emerald-800 border-emerald-200',
       color: 'from-emerald-500 to-teal-600',
-      desc: 'Mô phỏng đo lường điểm năng lực thí sinh Theta 0 chuẩn xác theo 3 tham số (Độ khó a, Độ phân hóa b, Yếu tố đoán mò c). Đánh giá đúng thực lực điểm sàn trúng tuyển thực tế của bạn tại các trường đại học TOP đầu.',
-      subTag1: '✓ Mô hình IRT 3PL chuẩn quốc tế',
-      subTag2: '✓ Ước tính Theta 0 real-time'
+      desc: 'Kết quả làm bài giúp bạn nhận biết phần đã nắm vững và phần cần luyện thêm, từ đó chọn nội dung ôn tập phù hợp.',
+      subTag1: '✓ Đánh giá từ kết quả làm bài',
+      subTag2: '✓ Theo dõi kết quả qua từng lần làm bài'
     },
     {
       id: 'socratic',
-      title: 'AI Socratic Tutor: Hướng Dẫn Tư Duy Phản Biện 24/7',
+      title: 'Gợi ý khi bạn chưa biết cách giải',
       icon: Bot,
-      badge: 'RAG POWERED & SOCRATIC',
+      badge: 'HỎI ĐÁP KHI HỌC',
       badgeColor: 'bg-amber-100 text-amber-800 border-amber-200',
       color: 'from-amber-500 to-orange-600',
-      desc: 'Không cho sẵn đáp án để học vẹt! Trợ lý AI dựa trên gợi mở Socratic đặt những câu hỏi phản biện từng bước, hỗ trợ bạn tự nghĩ ra hướng giải đúng với chỉ số tương đồng tri thức Cosine Similarity ≥ 0.78.',
-      subTag1: '✓ Phản hồi trong 2 giây',
-      subTag2: '✓ Bám sát giáo trình ĐHQG'
+      desc: 'Gia sư AI gợi ý từng bước và đặt câu hỏi để bạn tự tìm cách giải. Bạn có thể hỏi lại nếu chưa hiểu.',
+      subTag1: '✓ Gợi ý từng bước',
+      subTag2: '✓ Giải thích theo nội dung bài học'
     },
     {
       id: 'lockdown',
-      title: 'Chống Gian Lận & Lockdown Exam: 100% Áp Lực Phòng Thi Thật',
+      title: 'Làm quen với thời gian và cách làm bài thi',
       icon: Lock,
       badge: 'BẢO MẬT & MÔ PHỎNG THI',
       badgeColor: 'bg-indigo-100 text-indigo-800 border-indigo-200',
       color: 'from-indigo-600 to-violet-600',
-      desc: 'Trải nghiệm thi thử với khóa màn hình Fullscreen, chống chuyển tab linh hoạt, bấm giờ đếm ngược 150 phút và xáo trộn mã đề tự động giúp học sinh rèn luyện tâm lý vững vàng nhất trước kỳ thi chính thức.',
+      desc: 'Thi thử có bấm giờ, chế độ toàn màn hình và ghi nhận việc chuyển tab để bạn tập trung làm bài như khi đi thi.',
       subTag1: '✓ 120 câu / 150 phút chuẩn đợt 1 & 2',
-      subTag2: '✓ Báo cáo vi phạm realtime'
+      subTag2: '✓ Ghi nhận việc chuyển tab'
     }
   ];
 
@@ -131,26 +131,26 @@ export default function PublicLandingPage({ currentUser, onOpenLogin, onOpenRegi
   const processSteps = [
     {
       step: '01',
-      title: 'Chẩn Đoán Năng Lực IRT',
-      desc: 'Thi bài test 15-30 câu chẩn đoán đầu vào để hệ thống tính toán ngay lập tức Vector Năng lực Theta 0 của bạn.',
+      title: 'Kiểm tra đầu vào',
+      desc: 'Làm bài kiểm tra đầu vào để biết những phần bạn đã nắm vững và những phần cần ôn thêm.',
       linkText: 'Khảo sát năng lực ngay →'
     },
     {
       step: '02',
-      title: 'Ải Lập Cây DAG Cá Nhân',
-      desc: 'Hệ thống tự động vẽ ra cây lộ trình tự học gồm các chặng kiến thức tối ưu theo thứ tự ưu tiên nhất.',
+      title: 'Nhận lộ trình học',
+      desc: 'Lộ trình được sắp xếp theo kết quả đầu vào, ưu tiên những phần bạn cần luyện thêm.',
       linkText: 'Khám phá sơ đồ lộ trình →'
     },
     {
       step: '03',
-      title: 'Luyện ZPD & Hỏi AI Socratic',
-      desc: 'Làm bài tập vừa tầm P(Correct) 0.65-0.75 kết hợp sự trợ giúp gợi mở 24/7 từ AI Tutor.',
+      title: 'Luyện tập và hỏi khi chưa hiểu',
+      desc: 'Làm bài tập phù hợp với trình độ của bạn. Nếu gặp khó, bạn có thể nhờ gia sư AI gợi ý.',
       linkText: 'Trải nghiệm AI Tutor →'
     },
     {
       step: '04',
-      title: 'Thi Thử Tổng Hợp & Đỗ NV1',
-      desc: 'Cọ xát với phòng thi thật 120 câu, nhận dự báo tỷ lệ trúng tuyển nguyện vọng vào trường mơ ước.',
+      title: 'Thi thử và xem lại kết quả',
+      desc: 'Làm đề thi thử, xem điểm và chữa lại những câu sai để chuẩn bị cho kỳ thi.',
       linkText: 'Tự tin bước vào phòng thi →'
     }
   ];
@@ -193,14 +193,18 @@ export default function PublicLandingPage({ currentUser, onOpenLogin, onOpenRegi
         onOpenRegister={onOpenRegister}
         onOpenDashboard={onOpenDashboard}
         onOpenDiagnostic={onOpenDiagnostic}
-        onOpenArchModal={onOpenArchModal}
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
         activeSection={activeSection}
       />
 
       {/* 2. HERO SECTION - WITH ATMOSPHERIC CLASSROOM BACKGROUND BLEND */}
-      <section id="hero" className="relative min-h-[660px] lg:min-h-[720px] w-full flex items-center overflow-hidden bg-gradient-to-b from-[#FDFBF7] via-blue-50/30 to-white pt-8 pb-16">
+      <div id="hero">
+      <section className="relative min-h-[660px] lg:min-h-[720px] w-full flex items-center overflow-hidden bg-gradient-to-b from-[#FDFBF7] via-blue-50/20 to-white pt-8 pb-16">
+
+        {/* MỀM MẠI: Dải lụa Aurora Mesh Gradient mượt mà, KHÔNG DÙNG CHẤM BI */}
+        <div className="absolute -top-32 left-1/4 w-[600px] h-[600px] rounded-full bg-gradient-to-br from-blue-400/15 via-indigo-300/10 to-transparent blur-[140px] pointer-events-none" />
+        <div className="absolute top-1/3 left-10 w-[450px] h-[450px] rounded-full bg-cyan-300/15 blur-[120px] pointer-events-none" />
 
         {/* ATMOSPHERIC CLASSROOM BACKGROUND IMAGE ON RIGHT SIDE */}
         <div className="absolute top-0 right-0 w-full lg:w-[52%] h-full pointer-events-none z-0 overflow-hidden select-none">
@@ -231,22 +235,22 @@ export default function PublicLandingPage({ currentUser, onOpenLogin, onOpenRegi
             {/* Top Tagline Badge */}
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-50/90 border border-blue-200 text-blue-900 text-xs font-extrabold uppercase tracking-wider shadow-xs backdrop-blur-md">
               <span className="w-2 h-2 rounded-full bg-blue-600 animate-ping"></span>
-              <span>KHẢO THÍ ĐỀ THI ĐHQG | Nền tảng khảo thí ĐGNL hàng đầu TP.HCM</span>
+              <span>V-EVAL | Ôn thi ĐGNL ĐHQG TP.HCM</span>
             </div>
 
             {/* Huge Headline */}
             <div className="space-y-2">
               <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[1.12] text-slate-950 font-sans">
-                Chinh Phục Kỳ Thi ĐGNL ĐHQG Với <br />
+                Ôn thi ĐGNL ĐHQG <br />
                 <span className="bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 bg-clip-text text-transparent">
-                  Trí Tuệ Nhân Tạo & Chuẩn Khảo Thí IRT
+                  theo trình độ của bạn
                 </span>
               </h1>
             </div>
 
             {/* Subtitle */}
             <p className="text-sm sm:text-base text-slate-600 font-medium leading-relaxed max-w-2xl">
-              Tối ưu hóa điểm số với thuật toán Vùng phát triển gần nhất (ZPD), cây tri thức DAG cá nhân hóa và AI Socratic hướng dẫn tư duy phản biện 24/7. Không học vẹt, rèn bản lĩnh thi thật.
+              Biết mình cần ôn gì, luyện từng dạng bài và thi thử để theo dõi kết quả. Khi gặp bài khó, bạn có thể hỏi gia sư AI để được gợi ý cách giải.
             </p>
 
             {/* Action Buttons Row */}
@@ -348,7 +352,7 @@ export default function PublicLandingPage({ currentUser, onOpenLogin, onOpenRegi
               {/* Vector Theta Score Meter */}
               <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-200/80">
                 <div>
-                  <div className="text-[11px] text-slate-400 font-bold uppercase">Ước tính Vector Theta 0</div>
+                  <div className="text-[11px] text-slate-400 font-bold uppercase">Năng lực ước tính</div>
                   <div className="text-xl font-black text-blue-600 font-sans mt-0.5 flex items-center gap-1">
                     <span>+1.84</span>
                     <span className="text-[11px] font-extrabold text-emerald-600 bg-emerald-100 px-1.5 py-0.5 rounded">Top 1.2%</span>
@@ -394,7 +398,7 @@ export default function PublicLandingPage({ currentUser, onOpenLogin, onOpenRegi
               <div className="p-3.5 rounded-2xl bg-amber-50/90 border border-amber-200 text-amber-900 text-xs font-semibold flex items-center gap-2.5">
                 <Bot className="w-5 h-5 text-amber-600 shrink-0 animate-bounce" />
                 <div>
-                  <strong className="text-amber-950 font-extrabold">AI Socratic gợi ý:</strong> Luyện Tốc Độ — Khảo sát thêm 3 đề phân tích số liệu để đạt mốc 980+!
+                  <strong className="text-amber-950 font-extrabold">Gợi ý ôn tập:</strong> Luyện thêm phần phân tích số liệu và chú ý thời gian làm bài.
                 </div>
               </div>
 
@@ -414,14 +418,19 @@ export default function PublicLandingPage({ currentUser, onOpenLogin, onOpenRegi
         </div>
       </section>
 
-      {/* 3. STATS HIGHLIGHT COUNTER STRIP */}
-      <section id="exam-matrix" className="py-12 px-6 lg:px-14 bg-white border-y border-slate-200/80">
-        <div className="max-w-7xl mx-auto grid grid-cols-2 lg:grid-cols-4 gap-6">
+      {/* Introductory platform metrics */}
+      <section id="hero-stats" className="w-full px-6 lg:px-14 py-12 bg-gradient-to-r from-blue-50/40 via-white to-indigo-50/40 border-y border-slate-200/80 relative overflow-hidden">
+        {/* Ambient glow in stats */}
+        <div className="absolute -top-12 left-1/4 w-80 h-40 bg-blue-400/10 rounded-full blur-[80px] pointer-events-none" />
+        <div className="absolute -bottom-12 right-1/4 w-80 h-40 bg-emerald-400/10 rounded-full blur-[80px] pointer-events-none" />
+
+        <div className="max-w-7xl mx-auto grid grid-cols-2 lg:grid-cols-4 gap-6 relative z-10">
 
           <motion.div
             whileHover={{ y: -4, scale: 1.02 }}
-            className="p-6 rounded-3xl bg-[#FDFBF7] border border-slate-200/80 shadow-sm text-center space-y-2 hover:border-blue-300 transition-all"
+            className="relative p-6 rounded-3xl bg-white/90 backdrop-blur-md border border-slate-200/90 shadow-md text-center space-y-2 hover:border-blue-400 hover:shadow-xl hover:shadow-blue-500/10 transition-all overflow-hidden group"
           >
+            <div className="absolute top-0 left-0 right-0 h-1 bg-blue-600" />
             <div className="text-3xl sm:text-4xl lg:text-5xl font-black text-blue-600 font-sans tracking-tight">120+</div>
             <div className="text-xs sm:text-sm font-extrabold text-slate-900">Đề Thi Chuẩn Ma Trận ĐHQG</div>
             <div className="text-[11px] text-slate-500 font-medium">Bao quát đủ 3 phân môn lớn 150 phút</div>
@@ -429,8 +438,9 @@ export default function PublicLandingPage({ currentUser, onOpenLogin, onOpenRegi
 
           <motion.div
             whileHover={{ y: -4, scale: 1.02 }}
-            className="p-6 rounded-3xl bg-[#FDFBF7] border border-slate-200/80 shadow-sm text-center space-y-2 hover:border-indigo-300 transition-all"
+            className="relative p-6 rounded-3xl bg-white/90 backdrop-blur-md border border-slate-200/90 shadow-md text-center space-y-2 hover:border-indigo-400 hover:shadow-xl hover:shadow-indigo-500/10 transition-all overflow-hidden group"
           >
+            <div className="absolute top-0 left-0 right-0 h-1 bg-indigo-600" />
             <div className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-950 font-sans tracking-tight">15.000+</div>
             <div className="text-xs sm:text-sm font-extrabold text-slate-900">Câu Hỏi Được Gán Nhãn IRT</div>
             <div className="text-[11px] text-slate-500 font-medium">Định độ khó a, b, c phân hóa chính xác</div>
@@ -438,8 +448,9 @@ export default function PublicLandingPage({ currentUser, onOpenLogin, onOpenRegi
 
           <motion.div
             whileHover={{ y: -4, scale: 1.02 }}
-            className="p-6 rounded-3xl bg-[#FDFBF7] border border-slate-200/80 shadow-sm text-center space-y-2 hover:border-cyan-300 transition-all"
+            className="relative p-6 rounded-3xl bg-white/90 backdrop-blur-md border border-slate-200/90 shadow-md text-center space-y-2 hover:border-cyan-400 hover:shadow-xl hover:shadow-cyan-500/10 transition-all overflow-hidden group"
           >
+            <div className="absolute top-0 left-0 right-0 h-1 bg-cyan-600" />
             <div className="text-3xl sm:text-4xl lg:text-5xl font-black text-blue-600 font-sans tracking-tight">3.2 Triệu</div>
             <div className="text-xs sm:text-sm font-extrabold text-slate-900">Lượt Giải Bài & Tương Tác</div>
             <div className="text-[11px] text-slate-500 font-medium">Cộng đồng tự học lớn nhất toàn quốc</div>
@@ -447,8 +458,9 @@ export default function PublicLandingPage({ currentUser, onOpenLogin, onOpenRegi
 
           <motion.div
             whileHover={{ y: -4, scale: 1.02 }}
-            className="p-6 rounded-3xl bg-[#FDFBF7] border border-slate-200/80 shadow-sm text-center space-y-2 hover:border-emerald-300 transition-all"
+            className="relative p-6 rounded-3xl bg-white/90 backdrop-blur-md border border-slate-200/90 shadow-md text-center space-y-2 hover:border-emerald-400 hover:shadow-xl hover:shadow-emerald-500/10 transition-all overflow-hidden group"
           >
+            <div className="absolute top-0 left-0 right-0 h-1 bg-emerald-600" />
             <div className="text-3xl sm:text-4xl lg:text-5xl font-black text-emerald-600 font-sans tracking-tight">99.2%</div>
             <div className="text-xs sm:text-sm font-extrabold text-slate-900">Độ Tin Cậy K-20 Đo Lường</div>
             <div className="text-[11px] text-slate-500 font-medium">Đã kiểm chứng trên 45.000 sĩ tử</div>
@@ -456,10 +468,63 @@ export default function PublicLandingPage({ currentUser, onOpenLogin, onOpenRegi
 
         </div>
       </section>
+      </div>
 
       {/* 4. BỘ TỨ CÔNG NGHỆ ĐỘC QUYỀN DẪN LỐI ĐIỂM 900+ */}
-      <section id="tech-grid" className="py-20 px-6 lg:px-14 bg-[#FDFBF7]">
-        <div className="max-w-7xl mx-auto space-y-12">
+      <section id="tech-grid" className="py-24 px-6 lg:px-14 bg-[#FDFBF7] relative overflow-hidden">
+
+        {/* LỚP ẢNH HỌC ĐƯỜNG MỜ THỰC TẾ (Atmospheric Classroom Background Blend) */}
+        <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden select-none">
+          <img
+            src={studentsOriginal}
+            alt=""
+            className="w-full h-full object-cover object-center opacity-12 lg:opacity-18 filter saturate-140 blur-[1px]"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-[#FDFBF7] via-[#FDFBF7]/85 to-[#FDFBF7]" />
+        </div>
+
+        {/* PHONG CÁCH MỚI: BẢN VẼ KỸ THUẬT (ARCHITECTURAL BLUEPRINT GRID - KHÔNG DÙNG CHẤM BI) */}
+        <div
+          className="absolute inset-0 pointer-events-none opacity-40 z-0"
+          style={{
+            backgroundImage: `
+              linear-gradient(to right, rgba(148, 163, 184, 0.35) 1px, transparent 1px),
+              linear-gradient(to bottom, rgba(148, 163, 184, 0.35) 1px, transparent 1px)
+            `,
+            backgroundSize: '64px 64px',
+            maskImage: 'radial-gradient(ellipse at center, rgba(0,0,0,1) 30%, rgba(0,0,0,0) 80%)',
+            WebkitMaskImage: 'radial-gradient(ellipse at center, rgba(0,0,0,1) 30%, rgba(0,0,0,0) 80%)'
+          }}
+        />
+
+        {/* ĐỒ THỊ CÂY TRI THỨC DAG NỐI MẠNG MỜ (Knowledge Graph Network SVG) */}
+        <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-20 z-0" xmlns="http://www.w3.org/2000/svg">
+          <line x1="8%" y1="20%" x2="25%" y2="40%" stroke="#3b82f6" strokeWidth="1.5" strokeDasharray="6 4" />
+          <line x1="25%" y1="40%" x2="18%" y2="70%" stroke="#6366f1" strokeWidth="1.5" />
+          <line x1="85%" y1="15%" x2="72%" y2="35%" stroke="#06b6d4" strokeWidth="1.5" strokeDasharray="6 4" />
+          <line x1="72%" y1="35%" x2="90%" y2="65%" stroke="#3b82f6" strokeWidth="1.5" />
+          <circle cx="8%" cy="20%" r="5" fill="#3b82f6" />
+          <circle cx="25%" cy="40%" r="7" fill="#6366f1" />
+          <circle cx="18%" cy="70%" r="4" fill="#3b82f6" />
+          <circle cx="85%" cy="15%" r="6" fill="#06b6d4" />
+          <circle cx="72%" cy="35%" r="7" fill="#3b82f6" />
+          <circle cx="90%" cy="65%" r="5" fill="#8b5cf6" />
+        </svg>
+
+        {/* Dải lụa cực quang Aurora Mesh Gradient mượt mà */}
+        <div className="absolute -top-32 left-1/12 w-[600px] h-[600px] rounded-full bg-gradient-to-br from-blue-400/18 to-cyan-300/15 blur-[140px] pointer-events-none" />
+        <div className="absolute -bottom-32 right-1/12 w-[650px] h-[650px] rounded-full bg-gradient-to-tr from-indigo-500/18 to-purple-400/15 blur-[150px] pointer-events-none" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[450px] rounded-full bg-blue-100/40 blur-[170px] pointer-events-none" />
+
+        {/* Vệt trang trí hình học vi mô mờ (Decorative Math/IRT Accents) ở 2 biên */}
+        <div className="absolute top-16 left-6 text-slate-400/50 text-7xl font-serif font-black select-none pointer-events-none hidden xl:block">
+          &Theta;
+        </div>
+        <div className="absolute bottom-20 right-8 text-slate-400/50 text-6xl font-serif font-black select-none pointer-events-none hidden xl:block">
+          &int;
+        </div>
+
+        <div className="max-w-7xl mx-auto space-y-12 relative z-10">
 
           <motion.div
             initial={{ opacity: 0, y: 30 }}
@@ -468,14 +533,14 @@ export default function PublicLandingPage({ currentUser, onOpenLogin, onOpenRegi
             transition={{ duration: 0.5 }}
             className="text-center max-w-3xl mx-auto space-y-4"
           >
-            <span className="inline-block px-4 py-1.5 rounded-full bg-blue-100 border border-blue-200 text-blue-800 text-xs font-black uppercase tracking-wider mb-2">
+            <span className="inline-block px-4 py-1.5 rounded-full bg-blue-100 border border-blue-200 text-blue-800 text-xs font-black uppercase tracking-wider mb-2 shadow-xs">
               KHOA HỌC KHẢO THÍ HIỆN ĐẠI
             </span>
             <h2 className="text-3xl lg:text-4xl font-black text-slate-950 font-sans tracking-tight">
-              Bộ Tứ Công Nghệ Độc Quyền Dẫn Lối Điểm 900+
+              Bạn có thể học gì với V-Eval?
             </h2>
             <p className="text-sm text-slate-600 font-medium leading-relaxed">
-              Không còn phương pháp học tràn lan, ngập tràn đề thi; kho dữ liệu thông minh và thuật toán gợi ý tuyến tính sẽ dẫn bạn tới từng cột mốc điểm số.
+              Bắt đầu từ bài kiểm tra đầu vào, ôn những phần còn yếu rồi thi thử để xem mình đã tiến bộ đến đâu.
             </p>
           </motion.div>
 
@@ -483,6 +548,7 @@ export default function PublicLandingPage({ currentUser, onOpenLogin, onOpenRegi
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {techCards.map((card, idx) => {
               const Icon = card.icon;
+              const stepNumber = `0${idx + 1}`;
               return (
                 <motion.div
                   key={card.id}
@@ -491,14 +557,22 @@ export default function PublicLandingPage({ currentUser, onOpenLogin, onOpenRegi
                   viewport={{ once: false }}
                   transition={{ duration: 0.5, delay: idx * 0.1 }}
                   whileHover={{ scale: 1.02, y: -4 }}
-                  className="p-8 rounded-3xl bg-white border border-slate-200/90 shadow-md space-y-5 hover:border-blue-400 transition-all flex flex-col justify-between group"
+                  className="relative p-8 rounded-3xl bg-white/95 backdrop-blur-sm border border-slate-200/90 shadow-lg shadow-slate-200/50 space-y-5 hover:border-blue-400/80 hover:shadow-2xl hover:shadow-blue-500/10 transition-all flex flex-col justify-between group overflow-hidden"
                 >
-                  <div className="space-y-4">
+                  {/* Watermark Số Thứ Tự Lớn Chìm (01, 02, 03, 04) - Tạo chiều sâu phân lớp thị giác */}
+                  <span className="absolute -top-2 right-4 text-7xl sm:text-8xl font-black text-slate-100 select-none pointer-events-none group-hover:text-blue-50/80 group-hover:scale-105 transition-all duration-300 font-sans">
+                    {stepNumber}
+                  </span>
+
+                  {/* Dải gradient mỏng tinh tế ở đỉnh Card khi hover */}
+                  <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${card.color} opacity-0 group-hover:opacity-100 transition-opacity duration-300`} />
+
+                  <div className="space-y-4 relative z-10">
                     <div className="flex items-center justify-between">
                       <div className={`w-12 h-12 rounded-2xl bg-gradient-to-tr ${card.color} text-white flex items-center justify-center shadow-md group-hover:scale-110 transition-transform`}>
                         <Icon className="w-6 h-6" />
                       </div>
-                      <span className={`px-3 py-1 rounded-full text-[10px] font-black tracking-wider uppercase border ${card.badgeColor}`}>
+                      <span className={`px-3 py-1 rounded-full text-[10px] font-black tracking-wider uppercase border ${card.badgeColor} shadow-2xs`}>
                         {card.badge}
                       </span>
                     </div>
@@ -512,9 +586,9 @@ export default function PublicLandingPage({ currentUser, onOpenLogin, onOpenRegi
                     </p>
                   </div>
 
-                  <div className="pt-4 border-t border-slate-100 flex flex-wrap items-center gap-3 text-xs font-bold text-slate-700">
-                    <span className="px-3 py-1 bg-slate-50 rounded-xl border border-slate-200">{card.subTag1}</span>
-                    <span className="px-3 py-1 bg-slate-50 rounded-xl border border-slate-200">{card.subTag2}</span>
+                  <div className="pt-4 border-t border-slate-100 flex flex-wrap items-center gap-3 text-xs font-bold text-slate-700 relative z-10">
+                    <span className="px-3 py-1 bg-slate-50/90 rounded-xl border border-slate-200/80 group-hover:bg-blue-50/50 group-hover:border-blue-200 transition-colors">{card.subTag1}</span>
+                    <span className="px-3 py-1 bg-slate-50/90 rounded-xl border border-slate-200/80 group-hover:bg-blue-50/50 group-hover:border-blue-200 transition-colors">{card.subTag2}</span>
                   </div>
                 </motion.div>
               );
@@ -525,8 +599,37 @@ export default function PublicLandingPage({ currentUser, onOpenLogin, onOpenRegi
       </section>
 
       {/* 5. LỘ TRÌNH 4 BƯỚC CHINH PHỤC ĐIỂM SỐ 900+ MỤC TIÊU */}
-      <section id="process-steps" className="py-20 px-6 lg:px-14 bg-white border-t border-slate-200/80">
-        <div className="max-w-7xl mx-auto space-y-12">
+      <section id="process-steps" className="py-24 px-6 lg:px-14 bg-white border-t border-slate-200/80 relative overflow-hidden">
+
+        {/* LỚP ẢNH NỀN HỌC ĐƯỜNG THỰC TẾ (Atmospheric Photo Overlay) */}
+        <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden select-none">
+          <img
+            src={vietnameseStudentReal}
+            alt=""
+            className="w-full h-full object-cover object-center opacity-10 lg:opacity-15 filter saturate-140 blur-[1px]"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-white via-white/85 to-white" />
+        </div>
+
+        {/* Lưới kẻ chỉ kỹ thuật (Blueprint Grid Lines - Không dùng chấm bi) */}
+        <div
+          className="absolute inset-0 pointer-events-none opacity-30 z-0"
+          style={{
+            backgroundImage: `
+              linear-gradient(to right, rgba(148, 163, 184, 0.3) 1px, transparent 1px),
+              linear-gradient(to bottom, rgba(148, 163, 184, 0.3) 1px, transparent 1px)
+            `,
+            backgroundSize: '56px 56px',
+            maskImage: 'radial-gradient(ellipse at center, rgba(0,0,0,1) 30%, rgba(0,0,0,0) 85%)',
+            WebkitMaskImage: 'radial-gradient(ellipse at center, rgba(0,0,0,1) 30%, rgba(0,0,0,0) 85%)'
+          }}
+        />
+
+        {/* Ambient Glows for Process Steps */}
+        <div className="absolute top-1/2 left-0 -translate-y-1/2 w-[500px] h-[500px] bg-emerald-400/12 rounded-full blur-[140px] pointer-events-none" />
+        <div className="absolute top-1/3 right-0 w-[500px] h-[500px] bg-blue-500/12 rounded-full blur-[140px] pointer-events-none" />
+
+        <div className="max-w-7xl mx-auto space-y-12 relative z-10">
 
           <motion.div
             initial={{ opacity: 0, y: 30 }}
@@ -535,19 +638,22 @@ export default function PublicLandingPage({ currentUser, onOpenLogin, onOpenRegi
             transition={{ duration: 0.5 }}
             className="text-center max-w-3xl mx-auto space-y-4"
           >
-            <span className="inline-block px-4 py-1.5 rounded-full bg-emerald-100 border border-emerald-300 text-emerald-900 text-xs font-black uppercase tracking-wider mb-2">
+            <span className="inline-block px-4 py-1.5 rounded-full bg-emerald-100 border border-emerald-300 text-emerald-900 text-xs font-black uppercase tracking-wider mb-2 shadow-xs">
               SỐ HÓA TỰ HỌC TỔNG THỂ 4 BƯỚC
             </span>
             <h2 className="text-3xl lg:text-4xl font-black text-slate-950 font-sans tracking-tight">
-              4 Bước Chinh Phục Điểm Số 900+ Mục Tiêu
+              4 bước để bắt đầu ôn tập
             </h2>
-            <p className="text-sm text-slate-500 font-medium">
+            <p className="text-sm text-slate-600 font-medium">
               Khoa học giáo dục đã chứng minh học có phương pháp rút ngắn 65% thời gian so với tập đề làm tự do.
             </p>
           </motion.div>
 
           {/* 4 Process Cards Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 relative">
+            {/* Connecting Roadmap Line on Desktop */}
+            <div className="hidden lg:block absolute top-12 left-10 right-10 h-0.5 border-t-2 border-dashed border-blue-200/80 -z-0 pointer-events-none" />
+
             {processSteps.map((st, idx) => (
               <motion.div
                 key={st.step}
@@ -556,10 +662,15 @@ export default function PublicLandingPage({ currentUser, onOpenLogin, onOpenRegi
                 viewport={{ once: false }}
                 transition={{ duration: 0.4, delay: idx * 0.1 }}
                 whileHover={{ scale: 1.03, y: -4 }}
-                className="p-6 rounded-3xl bg-[#FDFBF7] border border-slate-200/80 shadow-md space-y-4 hover:border-blue-400 transition-all flex flex-col justify-between group"
+                className="relative p-6 rounded-3xl bg-white/95 backdrop-blur-sm border border-slate-200/90 shadow-lg shadow-slate-200/50 space-y-4 hover:border-emerald-400/80 hover:shadow-2xl hover:shadow-emerald-500/10 transition-all flex flex-col justify-between group overflow-hidden z-10"
               >
-                <div className="space-y-3">
-                  <div className="w-10 h-10 rounded-2xl bg-blue-600 text-white font-black flex items-center justify-center text-sm shadow-md font-sans">
+                {/* Watermark Step Number Chìm */}
+                <span className="absolute -bottom-2 -right-1 text-6xl font-black text-slate-100 select-none pointer-events-none group-hover:text-emerald-50/80 transition-colors font-sans">
+                  {st.step}
+                </span>
+
+                <div className="space-y-3 relative z-10">
+                  <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-black flex items-center justify-center text-sm shadow-md font-sans group-hover:scale-110 transition-transform">
                     {st.step}
                   </div>
                   <h3 className="text-base font-black text-slate-950 group-hover:text-blue-600 transition-colors">
@@ -572,7 +683,7 @@ export default function PublicLandingPage({ currentUser, onOpenLogin, onOpenRegi
 
                 <button
                   onClick={onOpenDiagnostic}
-                  className="text-xs font-extrabold text-blue-600 hover:text-blue-800 flex items-center gap-1 transition-colors pt-2 border-t border-slate-200/60"
+                  className="text-xs font-extrabold text-blue-600 hover:text-blue-800 flex items-center gap-1 transition-colors pt-2 border-t border-slate-100 relative z-10"
                 >
                   <span>{st.linkText}</span>
                 </button>
@@ -597,8 +708,23 @@ export default function PublicLandingPage({ currentUser, onOpenLogin, onOpenRegi
       </section>
 
       {/* 6. CÂU CHUYỆN THÀNH CÔNG TỪ SĨ TỬ ĐGNL KHÓA TRƯỚC */}
-      <section id="testimonials" className="py-20 px-6 lg:px-14 bg-[#FDFBF7]">
-        <div className="max-w-7xl mx-auto space-y-12">
+      <section id="testimonials" className="py-24 px-6 lg:px-14 bg-[#FDFBF7] relative overflow-hidden">
+
+        {/* LỚP ẢNH HỌC SINH ĐẠT GIẢI / THÀNH TÍCH MỜ */}
+        <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden select-none">
+          <img
+            src={studentsBadge}
+            alt=""
+            className="w-full h-full object-cover object-center opacity-10 lg:opacity-15 filter saturate-140 blur-[1.5px]"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-[#FDFBF7] via-[#FDFBF7]/85 to-[#FDFBF7]" />
+        </div>
+
+        {/* Dải lụa ấm áp Bảng Vàng vinh danh (Pure Silk Golden Gradient - Không chấm bi) */}
+        <div className="absolute -top-20 left-1/4 w-[550px] h-[550px] bg-gradient-to-br from-amber-400/15 via-yellow-300/10 to-transparent rounded-full blur-[140px] pointer-events-none" />
+        <div className="absolute -bottom-20 right-1/4 w-[550px] h-[550px] bg-gradient-to-tr from-orange-400/12 via-amber-300/10 to-transparent rounded-full blur-[140px] pointer-events-none" />
+
+        <div className="max-w-7xl mx-auto space-y-12 relative z-10">
 
           <motion.div
             initial={{ opacity: 0, y: 30 }}
@@ -607,7 +733,7 @@ export default function PublicLandingPage({ currentUser, onOpenLogin, onOpenRegi
             transition={{ duration: 0.5 }}
             className="text-center max-w-3xl mx-auto space-y-4"
           >
-            <span className="inline-block px-4 py-1.5 rounded-full bg-amber-100 border border-amber-300 text-amber-900 text-xs font-black uppercase tracking-wider mb-2">
+            <span className="inline-block px-4 py-1.5 rounded-full bg-amber-100 border border-amber-300 text-amber-900 text-xs font-black uppercase tracking-wider mb-2 shadow-xs">
               BẢNG VÀNG THÀNH TÍCH
             </span>
             <h2 className="text-3xl lg:text-4xl font-black text-slate-950 font-sans tracking-tight">
@@ -626,10 +752,15 @@ export default function PublicLandingPage({ currentUser, onOpenLogin, onOpenRegi
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: false }}
                 transition={{ duration: 0.5, delay: idx * 0.1 }}
-                whileHover={{ scale: 1.02 }}
-                className="p-7 rounded-3xl bg-white border border-slate-200/90 shadow-md space-y-4 flex flex-col justify-between"
+                whileHover={{ scale: 1.02, y: -4 }}
+                className="relative p-7 rounded-3xl bg-white/95 backdrop-blur-sm border border-slate-200/90 shadow-lg shadow-slate-200/50 space-y-4 flex flex-col justify-between hover:border-amber-400/80 hover:shadow-2xl hover:shadow-amber-500/10 transition-all overflow-hidden group"
               >
-                <div className="space-y-3">
+                {/* Watermark Quote Symbol Chìm */}
+                <span className="absolute -top-3 right-4 text-7xl font-serif font-black text-slate-100 select-none pointer-events-none group-hover:text-amber-100/90 transition-colors">
+                  &ldquo;
+                </span>
+
+                <div className="space-y-3 relative z-10">
                   {/* Rating Stars */}
                   <div className="flex items-center gap-1 text-amber-400">
                     {[...Array(5)].map((_, i) => (
@@ -643,8 +774,8 @@ export default function PublicLandingPage({ currentUser, onOpenLogin, onOpenRegi
                   </p>
                 </div>
 
-                <div className="flex items-center gap-3 pt-4 border-t border-slate-100">
-                  <div className="w-11 h-11 rounded-full overflow-hidden border border-blue-500 shrink-0">
+                <div className="flex items-center gap-3 pt-4 border-t border-slate-100 relative z-10">
+                  <div className="w-11 h-11 rounded-full overflow-hidden border-2 border-amber-400 shrink-0 shadow-sm">
                     <img src={story.avatar} alt={story.name} className="w-full h-full object-cover object-top" />
                   </div>
                   <div>
@@ -678,7 +809,7 @@ export default function PublicLandingPage({ currentUser, onOpenLogin, onOpenRegi
               </h2>
 
               <p className="text-sm text-blue-100 font-medium leading-relaxed max-w-2xl mx-auto">
-                Tham gia khảo sát chẩn đoán trình độ ngay hôm nay để nhận báo cáo năng lực IRT chi tiết và mở khóa lộ trình tự học cá nhân hóa hoàn toàn miễn phí.
+                Làm bài kiểm tra đầu vào để xem kết quả và nhận gợi ý ôn tập phù hợp với bạn.
               </p>
 
               <div className="flex flex-wrap items-center justify-center gap-4 pt-4">

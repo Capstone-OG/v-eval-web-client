@@ -1,3 +1,5 @@
+import RegistrationRoleSwitch from './RegistrationRoleSwitch';
+import StudentRegistrationFields from './StudentRegistrationFields';
 import { toast } from '../../context/ToastContext';
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -166,8 +168,8 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
       if (!regPhone.trim()) {
         errs.regPhone = "Vui lòng nhập Số điện thoại.";
       } else {
-        const phoneRegex = /^(0[3|5|7|8|9])[0-9]{8}$/;
-        if (!phoneRegex.test(regPhone.trim().replace(/\s/g, ''))) {
+        const phoneRegex = /^(0|\+84)[35789][0-9]{8}$/;
+        if (!phoneRegex.test(regPhone.trim().replace(/[\s.-]/g, ''))) {
           errs.regPhone = "SĐT không hợp lệ (10 chữ số).";
         }
       }
@@ -298,27 +300,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
 
           {/* Role selector tabbar shown ONLY IN REGISTER MODE */}
           {mode === 'register' && (
-            <div className="mt-3 p-1 bg-slate-800/80 rounded-2xl flex items-center gap-1 border border-slate-700 text-xs font-bold text-white">
-              <button
-                onClick={() => setRole('student')}
-                className={`flex-1 py-1.5 px-2 rounded-xl transition-all flex items-center justify-center gap-1 ${
-                  role === 'student' ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-black shadow-sm' : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <GraduationCap className="w-3.5 h-3.5" />
-                <span>Học sinh</span>
-              </button>
-
-              <button
-                onClick={() => setRole('parent')}
-                className={`flex-1 py-1.5 px-2 rounded-xl transition-all flex items-center justify-center gap-1 ${
-                  role === 'parent' ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-black shadow-sm' : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <Users className="w-3.5 h-3.5" />
-                <span>Phụ huynh</span>
-              </button>
-            </div>
+<div className="mt-3"><RegistrationRoleSwitch dark role={role} disabled={isSubmitting} onChange={(nextRole) => { setRole(nextRole); setTargetDropdownOpen(false); setGradeDropdownOpen(false); }} /></div>
           )}
         </div>
 
@@ -488,7 +470,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
                     <label className="block text-xs font-extrabold text-slate-700 mb-1">
                       Email <span className="text-rose-500">*</span>
                     </label>
-                    <div className="relative">
+                    <div className="relative hidden">
                       <input
                         type="email"
                         value={regEmail}
@@ -543,8 +525,11 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
                   </div>
                 </div>
 
+                <StudentRegistrationFields visible={role === 'student'}>
+
+
                 {/* Grade & Target Grid (DISPLAYED ONLY FOR STUDENT REGISTER, HIDDEN FOR PARENT) */}
-                {role === 'student' && (
+
                   <div className="grid grid-cols-2 gap-2">
                     {/* CUSTOM ROUNDED GRADE DROPDOWN */}
                     <div className="relative">
@@ -585,7 +570,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
                               </button>
                             ))}
                           </motion.div>
-                        )}
+                      )}
                       </AnimatePresence>
                     </div>
 
@@ -628,11 +613,13 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
                               </button>
                             ))}
                           </motion.div>
-                        )}
+                      )}
                       </AnimatePresence>
                     </div>
                   </div>
-                )}
+
+
+                </StudentRegistrationFields>
 
                 <div className="grid grid-cols-2 gap-2">
                   <div>

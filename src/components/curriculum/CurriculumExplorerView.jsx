@@ -408,14 +408,15 @@ const getEmbedVideoUrl = (url) => {
   }
 };
 
-export default function CurriculumExplorerView({ 
-  role = 'student', 
+export default function CurriculumExplorerView({
+  role = 'student',
   currentUser = null,
   latestDiagnosticResult = null,
   onNavigateTuition,
-  onStartQuizModal, 
-  onNavigateDiagnostic, 
-  onOpenAiTutorWithContext 
+  tuitionPaid,
+  onStartQuizModal,
+  onNavigateDiagnostic,
+  onOpenAiTutorWithContext
 }) {
   const [domains, setDomains] = useState([]);
   const [loadingCurriculum, setLoadingCurriculum] = useState(true);
@@ -2041,16 +2042,17 @@ export default function CurriculumExplorerView({
 
   if (role === 'student') {
     return <>
-      <StudentCurriculumView 
-        domains={domains} 
+      <StudentCurriculumView
+        domains={domains}
         activeDomainId={activeDomainId}
-        onSelectDomain={setActiveDomainId} 
+        onSelectDomain={setActiveDomainId}
         chapters={chapters}
-        onSelectPattern={setSelectedPattern} 
+        onSelectPattern={setSelectedPattern}
         onPractice={handleLaunchAdaptiveQuiz}
-        onAskAi={onOpenAiTutorWithContext} 
+        onAskAi={onOpenAiTutorWithContext}
         quizOpen={isQuizModalOpen}
         currentUser={currentUser}
+        tuitionPaid={tuitionPaid}
         latestDiagnosticResult={latestDiagnosticResult}
         onNavigateTuition={onNavigateTuition}
         onNavigateDiagnostic={onNavigateDiagnostic}
@@ -2216,7 +2218,7 @@ export default function CurriculumExplorerView({
       {/* 2. BỘ LỌC ĐA CHIỀU CÔNG THÁI HỌC (THU GỌN / MỞ RỘNG • KHỐI LỚP • ĐỘ KHÓ BLOOM THỰC TẾ • PHÂN MÔN) */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden transition-all">
         {/* Header Bộ Lọc kèm nút Thu gọn */}
-        <div 
+        <div
           onClick={() => setIsFilterCollapsed(!isFilterCollapsed)}
           className="p-3.5 px-4 bg-slate-50/60 flex items-center justify-between cursor-pointer hover:bg-slate-100/60 transition-colors select-none border-b border-slate-100"
         >
@@ -4301,7 +4303,7 @@ export default function CurriculumExplorerView({
                   <div className="space-y-5">
                     {/* WIDESCREEN 2-COLUMN LAYOUT (5 COLS / 7 COLS) */}
                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-                      
+
                       {/* CỘT TRÁI (5 COLS): NGUỒN TÀI LIỆU & PHẠM VI TRANG */}
                       <div className="lg:col-span-5 space-y-4">
                         {/* 1. Chọn Miền Năng Lực Mục Tiêu */}
@@ -4556,7 +4558,7 @@ export default function CurriculumExplorerView({
                                     <span className="text-[9.5px] font-bold text-indigo-600 bg-indigo-100 px-1.5 py-0.2 rounded">Toàn diện 60+ trang</span>
                                   </h4>
                                   <p className="text-[10px] text-indigo-800 font-semibold mt-0.5">
-                                    Quét toàn diện SGK GDPT 2018 & giáo trình dày, nhiều lý thuyết và bài tập mở rộng
+                                    Nhập nội dung từ SGK GDPT 2018 và giáo trình, gồm lý thuyết và bài tập
                                   </p>
                                 </div>
 
@@ -4924,7 +4926,7 @@ export default function CurriculumExplorerView({
                     onChange={(e) => setSgkOcrMode(e.target.value)}
                     className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white font-semibold text-slate-800"
                   >
-                    <option value="TEXT_HUMANITIES">Tự động thông minh</option>
+                    <option value="TEXT_HUMANITIES">Tự động nhận diện</option>
                     <option value="VISION_AI">Vision AI 100% (PDF Scan)</option>
                     <option value="STEM_FORMULAS">Toán / Lý / Hóa (KaTeX)</option>
                     <option value="AUTO_LOCAL">Chỉ đọc chữ số hóa</option>

@@ -4,6 +4,7 @@ import './index.css'
 import 'katex/dist/katex.min.css'
 import App from './App.jsx'
 import { ToastProvider } from './context/ToastContext.jsx'
+import FormValidationBoundary from './components/common/FormValidationBoundary.jsx'
 
 class RootErrorBoundary extends Component {
   constructor(props) {
@@ -61,7 +62,7 @@ createRoot(document.getElementById('root')).render(
   <StrictMode>
     <RootErrorBoundary>
       <ToastProvider>
-        <App />
+        <FormValidationBoundary><App /></FormValidationBoundary>
       </ToastProvider>
     </RootErrorBoundary>
   </StrictMode>,

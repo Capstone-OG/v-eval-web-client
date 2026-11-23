@@ -10,6 +10,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@daypicker/react": "^10.0.2",
+    "@radix-ui/react-popover": "^1.3.1",
     "canvas-confetti": "^1.9.4",
     "framer-motion": "^13.4.0",
     "jsxgraph": "^1.14.0",

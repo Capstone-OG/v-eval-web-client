@@ -24,12 +24,35 @@ export default function StudentHistoryPage({ currentUser, onOpenDiagnostic, onOp
   const localMocks = allLocal.filter((item) =>
     (!item.studentId || item.studentId === owner) && item.examType === 'MOCK_EXAM');
 
-  const subtitleMap = {
-    diagnostic: 'Kết quả đánh giá đầu vào',
-    practice: 'Các bài luyện tập đã lưu',
-    mock: 'Kết quả các lần thi thử V-ACT',
-    mistakes: 'Sổ tay lỗi sai SM-2: gắn nhãn nguyên nhân & ôn tập biến thể mỗi ngày'
+  const categoryMeta = {
+    diagnostic: {
+      title: 'Khảo thí & Chẩn đoán đầu vào',
+      subtitle: 'Kết quả đánh giá năng lực ban đầu & xếp lớp chuẩn ĐGNL',
+      icon: ClipboardCheck,
+      tag: 'Khảo thí ĐGNL'
+    },
+    practice: {
+      title: 'Luyện tập cá nhân (P-L-A-R)',
+      subtitle: 'Các bài luyện tập thích ứng ZPD & câu hỏi đã lưu',
+      icon: BookOpen,
+      tag: 'Tự luyện ZPD'
+    },
+    mock: {
+      title: 'Phòng thi thử V-ACT',
+      subtitle: 'Kết quả các đợt thi thử bấm giờ chuẩn cấu trúc ĐHQG-HCM',
+      icon: FileCheck2,
+      tag: 'Thi thử chuẩn hóa'
+    },
+    mistakes: {
+      title: 'Sổ tay lỗi sai (SM-2)',
+      subtitle: 'Gắn nhãn nguyên nhân & ôn tập lặp lại ngắt quãng mỗi ngày',
+      icon: Brain,
+      tag: 'Phân tích sai lầm'
+    }
   };
+
+  const currentMeta = categoryMeta[category] || categoryMeta.diagnostic;
+  const CategoryIcon = currentMeta.icon;
 
   const accentMap = {
     diagnostic: { from: 'from-indigo-500', to: 'to-blue-500', light: 'bg-indigo-50', text: 'text-indigo-600', ring: 'ring-indigo-200', active: 'text-indigo-700', indicator: 'bg-indigo-500' },
@@ -46,16 +69,25 @@ export default function StudentHistoryPage({ currentUser, onOpenDiagnostic, onOp
         <div className={`h-1 w-full bg-gradient-to-r ${accent.from} ${accent.to}`} />
 
         <div className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-5">
-          {/* Left: icon + title */}
-          <div className="flex items-center gap-3.5">
-            <div className={`relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br ${accent.from} ${accent.to} shadow-sm`}>
-              <History className="h-5 w-5 text-white" />
+          {/* Left: Dynamic icon + contextual title */}
+          <div className="flex items-center gap-3.5 min-w-0">
+            <div className={`relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br ${accent.from} ${accent.to} shadow-sm transition-all duration-300`}>
+              <CategoryIcon className="h-5 w-5 text-white" />
               {/* Live dot */}
               <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-emerald-400 animate-pulse" />
             </div>
-            <div>
-              <h1 className="text-sm font-black text-slate-900 leading-tight tracking-tight">Lịch sử & Lỗi sai</h1>
-              <p className={`text-xs font-semibold ${accent.text} transition-all mt-0.5`}>{subtitleMap[category]}</p>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <h2 className="text-sm sm:text-base font-black text-slate-900 leading-tight tracking-tight truncate">
+                  {currentMeta.title}
+                </h2>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border hidden min-[480px]:inline-block ${accent.light} ${accent.active} border-slate-200/60 shadow-2xs`}>
+                  {currentMeta.tag}
+                </span>
+              </div>
+              <p className={`text-xs font-semibold ${accent.text} transition-all mt-0.5 truncate`}>
+                {currentMeta.subtitle}
+              </p>
             </div>
           </div>
 

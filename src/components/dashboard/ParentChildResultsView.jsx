@@ -156,7 +156,7 @@ export default function ParentChildResultsView({
                 Góc Nhìn Học Tập Của Con
               </span>
               <span className="text-slate-300">•</span>
-              <span className="text-xs text-slate-500 font-medium">Chế độ đồng hành (Chỉ đọc)</span>
+              <span className="text-xs text-slate-500 font-medium">Chỉ xem kết quả</span>
             </div>
             <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
               Tiến Độ &amp; Kết Quả: <span className="text-blue-700">{childName}</span>
@@ -435,4 +435,3 @@ export default function ParentChildResultsView({
     </div>
   );
 }
-

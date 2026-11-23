@@ -474,4 +474,3 @@ export default function ExamIngestView({ onNavigateTab }) {
     </div>
   );
 }
-

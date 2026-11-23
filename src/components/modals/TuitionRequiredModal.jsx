@@ -89,11 +89,11 @@ export default function TuitionRequiredModal({
               </li>
               <li className="flex items-start gap-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                <span>Xem video bài giảng độc quyền, phương pháp giải tối ưu và công thức then chốt.</span>
+                <span>Xem video bài giảng, cách giải và các công thức cần nhớ.</span>
               </li>
               <li className="flex items-start gap-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                <span>Hệ thống luyện tập thích ứng ZPD cá nhân hóa & Gia sư AI Socratic kèm cặp 24/7.</span>
+                <span>Luyện bài tập phù hợp với trình độ và hỏi gia sư AI khi cần.</span>
               </li>
             </ul>
           </div>

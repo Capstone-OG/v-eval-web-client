@@ -10,7 +10,6 @@ export default function PublicHeader({
   onOpenRegister,
   onOpenDashboard,
   onOpenDiagnostic,
-  onOpenArchModal,
   searchQuery,
   setSearchQuery,
   activeSection = 'hero'
@@ -27,7 +26,6 @@ export default function PublicHeader({
 
   const navItems = [
     { id: 'hero', label: 'Giới thiệu' },
-    { id: 'exam-matrix', label: 'Đặc tả 120 câu' },
     { id: 'tech-grid', label: 'Lộ trình & AI' },
     { id: 'process-steps', label: '4 Bước học' },
     { id: 'testimonials', label: 'Bảng xếp hạng' },
@@ -83,12 +81,6 @@ export default function PublicHeader({
               );
             })}
 
-            <button
-              onClick={onOpenArchModal}
-              className="hover:text-blue-700 transition-colors text-indigo-600 font-extrabold bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-xl border border-indigo-200/80 shadow-2xs ml-1"
-            >
-              Đặc tả 3 Q&A
-            </button>
           </nav>
         </div>
 

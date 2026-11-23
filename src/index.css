@@ -72,6 +72,15 @@ textarea,
   background: #94A3B8;
 }
 
+/* Hide scrollbar while maintaining scrollability */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
 /* KaTeX Theme Tuning (Full High-Contrast Rendering) */
 .katex {
   color: inherit !important;

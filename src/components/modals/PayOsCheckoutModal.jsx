@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   X, 
   ExternalLink, 
@@ -14,17 +14,26 @@ import {
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import paymentService from '../../services/paymentService';
+import { monitorPayment } from '../../utils/paymentMonitor';
+import { getPaymentStatusView } from '../../utils/paymentStatus';
+import { toast } from '../../context/ToastContext';
 
 export default function PayOsCheckoutModal({
   isOpen,
   onClose,
   paymentData, // { orderCode, checkoutUrl, amount, courseName, studentName, durationWeeks }
   onPaymentSuccess,
+  onPaymentFailure,
   onNavigateRoadmap
 }) {
   const [status, setStatus] = useState('PENDING'); // PENDING | SUCCESS | FAILED
   const [isChecking, setIsChecking] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [connectionError, setConnectionError] = useState(false);
+  const callbacks = useRef({ onPaymentSuccess, onPaymentFailure });
+  callbacks.current = { onPaymentSuccess, onPaymentFailure };
+  const stopMonitor = useRef(null);
+  const statusView = getPaymentStatusView(status);
 
   const checkPaymentStatusOnce = React.useCallback(async () => {
     if (!paymentData?.orderCode || status === 'SUCCESS') return;
@@ -52,27 +61,28 @@ export default function PayOsCheckoutModal({
 
     setStatus('PENDING');
 
-    // Event-driven: tự động kiểm tra khi học sinh quay lại tab từ cổng PayOS VietQR hoặc nhận sự kiện thanh toán
-    const handleReturnToTab = () => {
-      if (document.visibilityState === 'visible') {
-        checkPaymentStatusOnce();
+    setConnectionError(false);
+    const stop = monitorPayment({
+      orderCode: paymentData.orderCode,
+      getStatus: (orderCode) => paymentService.getPaymentStatus(orderCode),
+      onSuccess: (payment) => {
+        setStatus('SUCCESS'); setIsPolling(false);
+        confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+        callbacks.current.onPaymentSuccess?.(payment);
+      },
+      onFailure: (payment) => {
+        setStatus(payment.status); setIsPolling(false);
+        callbacks.current.onPaymentFailure?.(payment);
+      },
+      onConnected: () => setConnectionError(false),
+      onConnectionError: () => {
+        setConnectionError(true);
+        toast.warning('Chưa kiểm tra được trạng thái thanh toán do kết nối gián đoạn. Hệ thống sẽ tự thử lại.');
       }
-    };
-    const handleFocus = () => checkPaymentStatusOnce();
-    const handleTuitionEvent = (e) => {
-      if (e?.detail?.paid) setStatus('SUCCESS');
-    };
-
-    window.addEventListener('focus', handleFocus);
-    document.addEventListener('visibilitychange', handleReturnToTab);
-    window.addEventListener('veval:tuition-paid', handleTuitionEvent);
-
-    return () => {
-      window.removeEventListener('focus', handleFocus);
-      document.removeEventListener('visibilitychange', handleReturnToTab);
-      window.removeEventListener('veval:tuition-paid', handleTuitionEvent);
-    };
-  }, [isOpen, paymentData?.orderCode, checkPaymentStatusOnce]);
+    });
+    stopMonitor.current = stop;
+    return stop;
+  }, [isOpen, paymentData?.orderCode]);
 
   if (!isOpen || !paymentData) return null;
 
@@ -83,6 +93,7 @@ export default function PayOsCheckoutModal({
   };
 
   const handleSimulateSuccess = () => {
+    stopMonitor.current?.();
     setStatus('SUCCESS');
     setIsChecking(false);
     confetti({
@@ -185,6 +196,13 @@ export default function PayOsCheckoutModal({
                 </button>
               </div>
             </div>
+          ) : ['failed', 'cancelled', 'expired'].includes(statusView.kind) ? (
+            <div className="space-y-4 py-5 text-center">
+              <div className={`mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border ${statusView.tone}`}><AlertCircle className="h-9 w-9" /></div>
+              <h3 className="text-xl font-extrabold text-slate-900">{statusView.title}</h3>
+              <p className="text-xs leading-relaxed text-slate-500">Mã đơn #{paymentData.orderCode}. Bạn có thể quay lại trang học phí để chọn gói và tạo thanh toán mới.</p>
+              <button type="button" onClick={onClose} className="w-full rounded-xl bg-blue-600 px-4 py-3 text-sm font-bold text-white hover:bg-blue-700 cursor-pointer">Về trang học phí</button>
+            </div>
           ) : (
             /* Pending / In-progress State */
             <>
@@ -246,11 +264,14 @@ export default function PayOsCheckoutModal({
                 </div>
               </div>
 
-              {/* Event-Driven Status Verification Strip (Zero Polling Spam) */}
-              <div className="flex items-center justify-between gap-2 p-3 rounded-xl bg-slate-50 border border-slate-200 text-[11px] text-slate-600">
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="w-2.5 h-2.5 rounded-full bg-cyan-500 shrink-0"></span>
-                  <span className="truncate">Tự động cập nhật khi bạn quay lại từ PayOS</span>
+              {/* Real-time Status Listening Indicator */}
+              <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200 text-[11px] text-slate-600">
+                <div className="flex items-center gap-2">
+                  <span className="relative flex h-2.5 w-2.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-cyan-500"></span>
+                  </span>
+                  <span>{connectionError ? 'Kết nối gián đoạn, đang thử kiểm tra lại…' : 'Đang kiểm tra trạng thái thanh toán…'}</span>
                 </div>
                 <button
                   type="button"

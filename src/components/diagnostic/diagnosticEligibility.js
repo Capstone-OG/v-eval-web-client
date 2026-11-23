@@ -1,4 +1,4 @@
-export const DIAGNOSTIC_TARGET = 3;
+export const DIAGNOSTIC_TARGET = 1;
 
 export function completedDiagnosticExamIds(items, studentId) {
   if (!studentId || !Array.isArray(items) || items.some((item) => item.studentId !== studentId)) {

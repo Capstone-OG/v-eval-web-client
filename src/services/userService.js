@@ -1,4 +1,5 @@
 import apiClient from './apiClient';
+import { buildProvisioningPayload } from '../utils/provisioningFields';
 
 /**
  * Service quản lý người dùng & cấp phát tài khoản nội bộ (User Management & Provisioning)
@@ -25,15 +26,7 @@ export const userService = {
    * @param {Object} userData - { email, password, fullName, phone, roleName, campusId, specialty }
    */
   async provisionUser(userData) {
-    const payload = {
-      email: (userData.email || '').trim().toLowerCase(),
-      password: userData.password || 'Password123@',
-      fullName: (userData.fullName || '').trim(),
-      phone: (userData.phone || '').trim(),
-      roleName: userData.roleName || 'TEACHER',
-      campusId: userData.campusId || null,
-      specialty: userData.specialty || null
-    };
+    const payload = buildProvisioningPayload(userData);
 
     try {
       const res = await apiClient.post('/api/v1/users/provision', payload);

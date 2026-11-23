@@ -8,14 +8,14 @@ const attempt = (examId, overrides = {}) => ({ studentId: 'A', examId,
 test('new student has zero completed exams', () => {
   assert.equal(completedDiagnosticExamIds([], 'A').size, 0);
 });
-test('counts distinct completed diagnostic exams only', () => {
+test('one distinct completed diagnostic exam is enough', () => {
   const ids = completedDiagnosticExamIds([attempt('one'), attempt('one'), attempt('two'),
     attempt('three', { status: 'IN_PROGRESS' }), attempt('mock', { examType: 'MOCK' })], 'A');
   assert.equal(ids.size, 2);
   assert.equal(ids.has('one'), true);
   assert.equal(ids.has('three'), false);
-  assert.equal(ids.size >= DIAGNOSTIC_TARGET, false);
-  assert.equal(completedDiagnosticExamIds(['one', 'two', 'three'].map((id) => attempt(id)), 'A').size >= DIAGNOSTIC_TARGET, true);
+  assert.equal(DIAGNOSTIC_TARGET, 1);
+  assert.equal(completedDiagnosticExamIds([attempt('one')], 'A').size >= DIAGNOSTIC_TARGET, true);
 });
 test('invalid or other-student history cannot permit entry', () => {
   assert.throws(() => completedDiagnosticExamIds(null, 'A'));

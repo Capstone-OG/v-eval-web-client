@@ -452,7 +452,7 @@ export default function TextbookIngestView({ onBack, onNavigateTab, role = 'dire
 
     selectedSourceIdRef.current = sourceId;
     setSelectedSourceId(sourceId);
-    
+
     // Phát hiện môn học và khối lớp chuẩn xác từ sourceId, subjectCode hoặc fileName
     let targetSub = found.subjectCode;
     let targetG = found.grade;

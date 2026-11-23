@@ -36,4 +36,3 @@ jobs:
       - name: Trigger Selective Deployment
         run: |
           /data/Capstone/Scripts/deploy/deploy_service.sh web-client
-

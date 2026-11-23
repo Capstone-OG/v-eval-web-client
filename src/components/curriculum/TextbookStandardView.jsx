@@ -1158,8 +1158,8 @@ export default function TextbookStandardView({ onBack, onNavigateTab, isSidebarC
   };
 
   // Tổng số trang và phạm vi trang cho bộ phân trang SGK bóc tách
-  const totalBookPages = skeleton.totalPages 
-    || (ingestedSources.find(s => s.sourceId === selectedSourceId)?.totalPages) 
+  const totalBookPages = skeleton.totalPages
+    || (ingestedSources.find(s => s.sourceId === selectedSourceId)?.totalPages)
     || 122;
 
   const minOcrPage = ocrScope === 'lesson' && activeLesson?.pageStart ? activeLesson.pageStart : 1;

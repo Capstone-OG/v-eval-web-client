@@ -51,15 +51,6 @@ export const MOCK_SUBJECTS_DATA = [
             duration: '26 phút',
             status: 'IN_PROGRESS', // COMPLETED | IN_PROGRESS | LOCKED
             videoUrl: 'https://www.youtube.com/embed/5qap5aO4i9A',
-            liveSchedule: {
-              title: 'Live Q&A: Kỹ thuật xử lý bẫy Cực trị & Giá trị cực trị đề ĐGNL',
-              teacher: 'ThS. Nguyễn Văn Đức',
-              teacherRole: 'Giảng viên chuyên môn ĐHQG-HCM',
-              scheduledAt: '19:30 - 21:00, Thứ Năm tuần này',
-              meetUrl: 'https://meet.google.com/xyz-veval-demo',
-              attendanceStatus: 'SCHEDULED', // SCHEDULED | ATTENDED | ABSENT
-              prepNotes: 'Học sinh đọc trước tài liệu tóm tắt công thức đạo hàm cấp 1, cấp 2 và tải file PDF 25 câu hỏi mẫu.'
-            },
             lectureNotes: {
               block1_sgk: {
                 title: 'Khối 1: Kiến thức nền tảng SGK',
@@ -115,15 +106,6 @@ export const MOCK_SUBJECTS_DATA = [
             duration: '24 phút',
             status: 'LOCKED',
             videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-            liveSchedule: {
-              title: 'Live Q&A: Kỹ thuật casio tìm tiệm cận đứng, ngang & GTLN-GTNN',
-              teacher: 'ThS. Nguyễn Văn Đức',
-              teacherRole: 'Giảng viên ĐHQG-HCM',
-              scheduledAt: '19:30 - 21:00, Thứ Bảy tuần này',
-              meetUrl: 'https://meet.google.com/xyz-veval-demo',
-              attendanceStatus: 'SCHEDULED',
-              prepNotes: 'Mang theo máy tính Casio fx-580VNX hoặc fx-880BTG.'
-            },
             lectureNotes: {
               block1_sgk: {
                 title: 'Khối 1: Kiến thức nền tảng SGK',
@@ -169,15 +151,6 @@ export const MOCK_SUBJECTS_DATA = [
             duration: '22 phút',
             status: 'LOCKED',
             videoUrl: 'https://www.youtube.com/embed/5qap5aO4i9A',
-            liveSchedule: {
-              title: 'Live Q&A: 10 công thức Logarit thần thánh hay thi ĐGNL',
-              teacher: 'ThS. Nguyễn Văn Đức',
-              teacherRole: 'Giảng viên ĐHQG-HCM',
-              scheduledAt: '19:30, Thứ Năm tuần sau',
-              meetUrl: 'https://meet.google.com/xyz-veval-demo',
-              attendanceStatus: 'SCHEDULED',
-              prepNotes: 'Học thuộc bảng công thức Logarit trước buổi học.'
-            },
             lectureNotes: {
               block1_sgk: {
                 title: 'Khối 1: Kiến thức nền tảng SGK',
@@ -231,15 +204,6 @@ export const MOCK_SUBJECTS_DATA = [
             duration: '25 phút',
             status: 'IN_PROGRESS',
             videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-            liveSchedule: {
-              title: 'Live Q&A: Vòng tròn lượng giác đa trục giải nhanh Vật lý ĐGNL',
-              teacher: 'TS. Trần Minh Hoàng',
-              teacherRole: 'Giảng viên Vật lý ĐHQG-HCM',
-              scheduledAt: '20:00, Thứ Ba tuần này',
-              meetUrl: 'https://meet.google.com/xyz-veval-demo',
-              attendanceStatus: 'SCHEDULED',
-              prepNotes: 'Chuẩn bị compa và thước đo góc để vẽ trục đa giác lượng giác.'
-            },
             lectureNotes: {
               block1_sgk: {
                 title: 'Khối 1: Kiến thức nền tảng SGK',
@@ -301,15 +265,6 @@ export const MOCK_SUBJECTS_DATA = [
             duration: '22 phút',
             status: 'IN_PROGRESS',
             videoUrl: 'https://www.youtube.com/embed/5qap5aO4i9A',
-            liveSchedule: {
-              title: 'Live Q&A: Sơ đồ tư duy 3 cơ chế di truyền trọng tâm ĐGNL',
-              teacher: 'ThS. Lê Thị Thảo',
-              teacherRole: 'Giảng viên ĐHQG-HCM',
-              scheduledAt: '19:30, Thứ Sáu tuần này',
-              meetUrl: 'https://meet.google.com/xyz-veval-demo',
-              attendanceStatus: 'SCHEDULED',
-              prepNotes: 'Ôn tập nguyên tắc bổ sung A-T/U và G-X.'
-            },
             lectureNotes: {
               block1_sgk: {
                 title: 'Khối 1: Kiến thức nền tảng SGK',
@@ -370,15 +325,6 @@ export const MOCK_SUBJECTS_DATA = [
             duration: '24 phút',
             status: 'COMPLETED',
             videoUrl: 'https://www.youtube.com/embed/5qap5aO4i9A',
-            liveSchedule: {
-              title: 'Live Q&A: 15 dạng câu sai ngữ pháp xuất hiện nhiều nhất trong đề VNU-HCM',
-              teacher: 'PGS.TS Phạm Văn Hùng',
-              teacherRole: 'Trưởng bộ môn Ngôn ngữ ĐHQG-HCM',
-              scheduledAt: '19:30, Thứ Ba tuần trước',
-              meetUrl: 'https://meet.google.com/xyz-veval-demo',
-              attendanceStatus: 'ATTENDED',
-              prepNotes: 'Xem lại bài giảng ghi hình recap và file giải thích lỗi câu.'
-            },
             lectureNotes: {
               block1_sgk: {
                 title: 'Khối 1: Kiến thức nền tảng SGK',
@@ -422,15 +368,6 @@ export const MOCK_SUBJECTS_DATA = [
             duration: '28 phút',
             status: 'IN_PROGRESS',
             videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-            liveSchedule: {
-              title: 'Live Q&A: Kỹ thuật định vị thông tin trong đoạn trích khoa học dài 600 từ',
-              teacher: 'PGS.TS Phạm Văn Hùng',
-              teacherRole: 'Giảng viên ĐHQG-HCM',
-              scheduledAt: '19:30, Thứ Bảy tuần này',
-              meetUrl: 'https://meet.google.com/xyz-veval-demo',
-              attendanceStatus: 'SCHEDULED',
-              prepNotes: 'In tài liệu đọc hiểu 5 đoạn văn mẫu trước buổi Live.'
-            },
             lectureNotes: {
               block1_sgk: {
                 title: 'Khối 1: Kiến thức nền tảng SGK',
@@ -484,15 +421,6 @@ export const MOCK_SUBJECTS_DATA = [
             duration: '25 phút',
             status: 'IN_PROGRESS',
             videoUrl: 'https://www.youtube.com/embed/5qap5aO4i9A',
-            liveSchedule: {
-              title: 'Live Q&A: Kỹ thuật dồn chất và bảo toàn nguyên tố este phân loại ĐGNL',
-              teacher: 'ThS. Đỗ Quốc Tuấn',
-              teacherRole: 'Giảng viên ĐHQG-HCM',
-              scheduledAt: '20:00, Thứ Tư tuần này',
-              meetUrl: 'https://meet.google.com/xyz-veval-demo',
-              attendanceStatus: 'SCHEDULED',
-              prepNotes: 'Ôn tập công thức tính số mol $CO_2, H_2O$ và định luật bảo toàn khối lượng.'
-            },
             lectureNotes: {
               block1_sgk: {
                 title: 'Khối 1: Kiến thức nền tảng SGK',
@@ -546,15 +474,6 @@ export const MOCK_SUBJECTS_DATA = [
             duration: '23 phút',
             status: 'IN_PROGRESS',
             videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-            liveSchedule: {
-              title: 'Live Q&A: Các dạng câu hỏi so sánh thời cơ & lực lượng đề thi ĐGNL',
-              teacher: 'TS. Nguyễn Thị Mai Hương',
-              teacherRole: 'Giảng viên ĐHQG-HCM',
-              scheduledAt: '19:30, Thứ Hai tuần tới',
-              meetUrl: 'https://meet.google.com/xyz-veval-demo',
-              attendanceStatus: 'SCHEDULED',
-              prepNotes: 'Đọc trước bảng so sánh Cương lĩnh chính trị đầu tiên và Luận cương 10/1930.'
-            },
             lectureNotes: {
               block1_sgk: {
                 title: 'Khối 1: Kiến thức nền tảng SGK',
@@ -617,15 +536,6 @@ export const MOCK_SUBJECTS_DATA = [
             duration: '30 phút',
             status: 'IN_PROGRESS',
             videoUrl: 'https://www.youtube.com/embed/5qap5aO4i9A',
-            liveSchedule: {
-              title: 'Live Q&A: Chiến thuật phá giải bài toán logic xếp chỗ & phân nhóm cực khó',
-              teacher: 'TS. Bùi Quốc Anh',
-              teacherRole: 'Chuyên gia Logic học & AI ĐHQG-HCM',
-              scheduledAt: '20:00, Thứ Bảy tuần này',
-              meetUrl: 'https://meet.google.com/xyz-veval-demo',
-              attendanceStatus: 'SCHEDULED',
-              prepNotes: 'In bảng ma trận logic 6x6 trước khi vào phòng Meet.'
-            },
             lectureNotes: {
               block1_sgk: {
                 title: 'Khối 1: Kiến thức nền tảng SGK & Chuẩn Logic quốc tế',
@@ -672,15 +582,6 @@ export const MOCK_SUBJECTS_DATA = [
             duration: '26 phút',
             status: 'LOCKED',
             videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-            liveSchedule: {
-              title: 'Live Q&A: 10 bài toán phân tích biểu đồ cột chồng & biểu đồ miền VNU-HCM',
-              teacher: 'TS. Bùi Quốc Anh',
-              teacherRole: 'Giảng viên ĐHQG-HCM',
-              scheduledAt: '20:00, Thứ Bảy tuần sau',
-              meetUrl: 'https://meet.google.com/xyz-veval-demo',
-              attendanceStatus: 'SCHEDULED',
-              prepNotes: 'Chuẩn bị thước đo tỷ lệ phần trăm.'
-            },
             lectureNotes: {
               block1_sgk: {
                 title: 'Khối 1: Kiến thức nền tảng',
@@ -734,15 +635,6 @@ export const MOCK_SUBJECTS_DATA = [
             duration: '28 phút',
             status: 'IN_PROGRESS',
             videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-            liveSchedule: {
-              title: 'Live Q&A: Bí kíp giải nhanh 20 câu tiếng Anh VNU-HCM dưới 12 phút',
-              teacher: 'ThS. Trần Anh Thư',
-              teacherRole: 'Giảng viên chuyên môn ĐHQG-HCM',
-              scheduledAt: '19:30, Thứ Năm tuần này',
-              meetUrl: 'https://meet.google.com/xyz-veval-demo',
-              attendanceStatus: 'SCHEDULED',
-              prepNotes: 'In trước đề thi thử tiếng Anh 2026 đính kèm trong thư mục tài liệu.'
-            },
             lectureNotes: {
               block1_sgk: {
                 title: 'Khối 1: Kiến thức nền tảng & Chuẩn VNU-ENG',
@@ -805,15 +697,6 @@ export const MOCK_SUBJECTS_DATA = [
             duration: '24 phút',
             status: 'IN_PROGRESS',
             videoUrl: 'https://www.youtube.com/embed/5qap5aO4i9A',
-            liveSchedule: {
-              title: 'Live Q&A: 10 câu hỏi khai thác biểu đồ địa lý kinh tế ĐGNL',
-              teacher: 'TS. Hoàng Hải Yến',
-              teacherRole: 'Giảng viên ĐHQG-HCM',
-              scheduledAt: '20:00, Thứ Tư tuần tới',
-              meetUrl: 'https://meet.google.com/xyz-veval-demo',
-              attendanceStatus: 'SCHEDULED',
-              prepNotes: 'Chuẩn bị Atlat Địa lý Việt Nam trang 29 (Vùng Đông Nam Bộ).'
-            },
             lectureNotes: {
               block1_sgk: {
                 title: 'Khối 1: Kiến thức nền tảng SGK',

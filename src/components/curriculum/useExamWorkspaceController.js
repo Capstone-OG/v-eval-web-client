@@ -913,4 +913,3 @@ export function useExamWorkspaceController({ onNavigateTab, enableClipboardPaste
     handleCloseExamToBank
   };
 }
-

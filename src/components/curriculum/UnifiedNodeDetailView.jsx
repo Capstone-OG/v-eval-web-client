@@ -272,7 +272,7 @@ export default function UnifiedNodeDetailView({
 
   return (
     <div className="bg-white rounded-3xl border border-slate-200/90 shadow-md p-6 lg:p-8 space-y-6 animate-fade">
-      
+
       {/* ========================================================================= */}
       {/* HEADER: ĐỊNH DANH NODE & THANH TÁC VỤ                                    */}
       {/* ========================================================================= */}
@@ -376,7 +376,7 @@ export default function UnifiedNodeDetailView({
       {/* [TẦNG 1] 📚 LÝ THUYẾT TRỌNG TÂM TỪ SÁCH GIÁO KHOA CHUẨN                  */}
       {/* ========================================================================= */}
       <div className="rounded-2xl border border-cyan-200/80 bg-cyan-50/20 overflow-hidden transition-all shadow-2xs">
-        <div 
+        <div
           onClick={() => setIsTheoryExpanded(!isTheoryExpanded)}
           className="p-4 bg-gradient-to-r from-cyan-50/80 via-blue-50/40 to-white flex items-center justify-between cursor-pointer border-b border-cyan-100/80 hover:bg-cyan-50 transition-colors select-none"
         >
@@ -448,7 +448,7 @@ export default function UnifiedNodeDetailView({
       {/* [TẦNG 2] 💡 DẠNG ĐỀ & PHƯƠNG PHÁP GIẢI CHUYÊN SÂU (NATIVE JSXGRAPH)        */}
       {/* ========================================================================= */}
       <div className="rounded-2xl border border-amber-200/80 bg-amber-50/20 overflow-hidden transition-all shadow-2xs">
-        <div 
+        <div
           onClick={() => setIsMethodExpanded(!isMethodExpanded)}
           className="p-4 bg-gradient-to-r from-amber-50/80 via-orange-50/40 to-white flex items-center justify-between cursor-pointer border-b border-amber-100/80 hover:bg-amber-50 transition-colors select-none"
         >
@@ -511,7 +511,7 @@ export default function UnifiedNodeDetailView({
                   <InteractiveMathRenderer rawTag={embeddedGraphTag} />
                 </div>
                 <p className="text-[10.5px] text-slate-400 italic text-center">
-                  Học sinh có thể kéo thả chuột để xoay mô hình 3D, thay đổi tham số hoặc thu phóng đồ thị tương tác thời gian thực.
+                  Kéo chuột để xoay mô hình 3D. Bạn có thể đổi tham số và thu phóng đồ thị.
                 </p>
               </div>
             ) : null}
@@ -534,7 +534,7 @@ export default function UnifiedNodeDetailView({
       {/* [TẦNG 3] 🎯 KHO CÂU HỎI THỰC TẾ & ĐỀ THI ĐGNL CỦA NODE                      */}
       {/* ========================================================================= */}
       <div className="rounded-2xl border border-indigo-200/80 bg-indigo-50/20 overflow-hidden transition-all shadow-2xs">
-        <div 
+        <div
           onClick={() => setIsQuestionsExpanded(!isQuestionsExpanded)}
           className="p-4 bg-gradient-to-r from-indigo-50/80 via-blue-50/40 to-white flex items-center justify-between cursor-pointer border-b border-indigo-100/80 hover:bg-indigo-50 transition-colors select-none"
         >
@@ -640,8 +640,8 @@ export default function UnifiedNodeDetailView({
                   const correct = (q.correctOption || 'A').toUpperCase();
 
                   return (
-                    <div 
-                      key={qId} 
+                    <div
+                      key={qId}
                       className="p-4 rounded-xl border border-slate-200 bg-white shadow-2xs hover:border-slate-300 transition-all space-y-3"
                     >
                       {/* Tiêu đề câu hỏi & Badge Bloom */}
@@ -731,4 +731,3 @@ export default function UnifiedNodeDetailView({
     </div>
   );
 }
-
