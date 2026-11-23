@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import practiceService from '../../services/practiceService';
 import { toast } from '../../context/ToastContext';
+import { parentTeacherMessagingStore } from '../../utils/parentTeacherMessagingStore';
 
 export default function ParentEarlyWarningsAndTeacherView({
   currentUser,
@@ -34,6 +35,17 @@ export default function ParentEarlyWarningsAndTeacherView({
   const [sendingMessage, setSendingMessage] = useState(false);
   const [counselingModalAlert, setCounselingModalAlert] = useState(null);
   const [counselingNotes, setCounselingNotes] = useState('');
+  const [conversationMessages, setConversationMessages] = useState([]);
+
+  useEffect(() => {
+    if (!activeChildId) return;
+    setConversationMessages(parentTeacherMessagingStore.getMessagesForStudent(activeChildId));
+
+    const unsubscribe = parentTeacherMessagingStore.subscribe(() => {
+      setConversationMessages(parentTeacherMessagingStore.getMessagesForStudent(activeChildId));
+    });
+    return () => unsubscribe();
+  }, [activeChildId]);
 
   const childName = activeChild?.studentName || activeChild?.fullName || 'Học sinh';
   const teacherName = activeChild?.assignedTeacherName && activeChild.assignedTeacherName !== 'Chưa có giáo viên phụ trách'
@@ -108,7 +120,7 @@ export default function ParentEarlyWarningsAndTeacherView({
     }
   };
 
-  // Gửi tin nhắn / ghi chú tới giáo viên phụ trách
+  // Gửi tin nhắn / ghi chú tới giáo viên phụ trách (Đồng bộ 2 chiều qua parentTeacherMessagingStore - TCH-04)
   const handleSendMessageToTeacher = (e) => {
     e.preventDefault();
     if (!teacherMessage.trim()) {
@@ -116,12 +128,27 @@ export default function ParentEarlyWarningsAndTeacherView({
       return;
     }
     setSendingMessage(true);
-    setTimeout(() => {
-      setSendingMessage(false);
+    try {
+      parentTeacherMessagingStore.sendMessage({
+        studentId: activeChildId,
+        studentName: childName,
+        parentName: currentUser?.fullName || `Phụ huynh em ${childName}`,
+        parentId: currentUser?.id || currentUser?.userId,
+        teacherId: activeChild?.teacherId || null,
+        teacherName: teacherName,
+        alertId: selectedAlertForMessage?.alertId || null,
+        alertTitle: selectedAlertForMessage?.title || null,
+        content: teacherMessage.trim()
+      });
       toast.success(`Đã gửi tin nhắn trao đổi tới Thầy/Cô ${teacherName}!`);
       setTeacherMessage('');
       setSelectedAlertForMessage(null);
-    }, 600);
+      setConversationMessages(parentTeacherMessagingStore.getMessagesForStudent(activeChildId));
+    } catch (err) {
+      toast.error('Không thể gửi tin nhắn.');
+    } finally {
+      setSendingMessage(false);
+    }
   };
 
   return (
@@ -385,6 +412,58 @@ export default function ParentEarlyWarningsAndTeacherView({
                 <span>{sendingMessage ? 'Đang gửi...' : 'Gửi Tin Nhắn Trao Đổi'}</span>
               </button>
             </form>
+
+            {/* Lịch Sử Trao Đổi 2 Chiều Giữa Phụ Huynh & Giáo Viên (TCH-04) */}
+            <div className="pt-3 border-t border-slate-100 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-black text-slate-800 uppercase tracking-wider">
+                  Lịch Sử Trao Đổi ({conversationMessages.length})
+                </span>
+                <span className="text-[10px] text-slate-400">Đồng bộ 2 chiều</span>
+              </div>
+
+              {conversationMessages.length === 0 ? (
+                <p className="text-[11px] text-slate-400 italic">Chưa có tin nhắn trao đổi nào.</p>
+              ) : (
+                <div className="space-y-2.5 max-h-60 overflow-y-auto pr-1">
+                  {conversationMessages.map((msg) => (
+                    <div key={msg.id} className="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2">
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="font-extrabold text-blue-700">Phụ huynh gửi:</span>
+                        <span className="text-[10px] text-slate-400">{new Date(msg.createdAt).toLocaleString('vi-VN')}</span>
+                      </div>
+                      {msg.alertTitle && (
+                        <div className="text-[10px] text-amber-800 bg-amber-50 px-2 py-0.5 rounded-lg border border-amber-200 w-fit">
+                          Vấn đề: <strong>{msg.alertTitle}</strong>
+                        </div>
+                      )}
+                      <p className="text-xs text-slate-800 leading-relaxed">{msg.content}</p>
+
+                      {/* Phản hồi từ Giáo Viên */}
+                      {msg.reply ? (
+                        <div className="mt-2 p-2.5 rounded-xl bg-indigo-50 border border-indigo-200 text-xs space-y-1">
+                          <div className="flex items-center justify-between text-[11px] font-black text-indigo-900">
+                            <span className="flex items-center gap-1">
+                              <span>Thầy/Cô {msg.reply.teacherName || 'Giáo viên'}:</span>
+                              <span className="px-1.5 py-0.2 rounded-full bg-indigo-200 text-indigo-800 text-[9px]">Đã phản hồi</span>
+                            </span>
+                            <span className="text-[10px] text-indigo-400 font-normal">
+                              {new Date(msg.reply.repliedAt).toLocaleString('vi-VN')}
+                            </span>
+                          </div>
+                          <p className="text-indigo-950 font-medium leading-relaxed">{msg.reply.text}</p>
+                        </div>
+                      ) : (
+                        <div className="text-[10px] text-slate-400 italic flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                          <span>Đang chờ Thầy/Cô phản hồi</span>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>

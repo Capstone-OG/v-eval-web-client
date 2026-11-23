@@ -26,15 +26,18 @@ export function isTuitionPaid(studentId, storage = typeof localStorage !== 'unde
  */
 export function setTuitionPaid(studentId, paid = true, storage = typeof localStorage !== 'undefined' ? localStorage : null) {
   if (!studentId || !storage) return;
-  // Repeated reads must not re-emit paid events and remount the roadmap.
-  if (isTuitionPaid(studentId, storage) === Boolean(paid)) return;
-  if (paid) {
+  const nextPaid = Boolean(paid);
+  const prevPaid = storage.getItem(`${TUITION_STORAGE_PREFIX}${studentId}`) === 'true';
+
+  if (nextPaid) {
     storage.setItem(`${TUITION_STORAGE_PREFIX}${studentId}`, 'true');
   } else {
     storage.removeItem(`${TUITION_STORAGE_PREFIX}${studentId}`);
   }
-  if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
-    window.dispatchEvent(new CustomEvent('veval:tuition-paid', { detail: { studentId, paid } }));
+
+  // Chỉ phát event khi trạng thái học phí THỰC SỰ thay đổi (chống vòng lặp vô hạn gây giật màn hình)
+  if (prevPaid !== nextPaid && typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+    window.dispatchEvent(new CustomEvent('veval:tuition-paid', { detail: { studentId, paid: nextPaid } }));
   }
 }
 

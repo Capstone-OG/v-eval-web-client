@@ -27,7 +27,7 @@ export default function PayOsCheckoutModal({
   onNavigateRoadmap
 }) {
   const [status, setStatus] = useState('PENDING'); // PENDING | SUCCESS | FAILED
-  const [isPolling, setIsPolling] = useState(false);
+  const [isChecking, setIsChecking] = useState(false);
   const [copied, setCopied] = useState(false);
   const [connectionError, setConnectionError] = useState(false);
   const callbacks = useRef({ onPaymentSuccess, onPaymentFailure });
@@ -35,11 +35,31 @@ export default function PayOsCheckoutModal({
   const stopMonitor = useRef(null);
   const statusView = getPaymentStatusView(status);
 
+  const checkPaymentStatusOnce = React.useCallback(async () => {
+    if (!paymentData?.orderCode || status === 'SUCCESS') return;
+    setIsChecking(true);
+    try {
+      const res = await paymentService.getPaymentStatus(paymentData.orderCode);
+      if (res && (res.status === 'SUCCESS' || res.status === 'PAID')) {
+        setStatus('SUCCESS');
+        confetti({
+          particleCount: 100,
+          spread: 70,
+          origin: { y: 0.6 }
+        });
+        if (onPaymentSuccess) onPaymentSuccess(res);
+      }
+    } catch (err) {
+      console.error('Lỗi kiểm tra trạng thái thanh toán:', err);
+    } finally {
+      setIsChecking(false);
+    }
+  }, [paymentData?.orderCode, status, onPaymentSuccess]);
+
   useEffect(() => {
-    if (!isOpen || !paymentData?.orderCode) return;
+    if (!isOpen || !paymentData?.orderCode) return undefined;
 
     setStatus('PENDING');
-    setIsPolling(true);
 
     setConnectionError(false);
     const stop = monitorPayment({
@@ -75,7 +95,7 @@ export default function PayOsCheckoutModal({
   const handleSimulateSuccess = () => {
     stopMonitor.current?.();
     setStatus('SUCCESS');
-    setIsPolling(false);
+    setIsChecking(false);
     confetti({
       particleCount: 120,
       spread: 80,
@@ -253,7 +273,15 @@ export default function PayOsCheckoutModal({
                   </span>
                   <span>{connectionError ? 'Kết nối gián đoạn, đang thử kiểm tra lại…' : 'Đang kiểm tra trạng thái thanh toán…'}</span>
                 </div>
-                <RefreshCw className={`w-3.5 h-3.5 text-slate-400 ${isPolling ? 'animate-spin' : ''}`} />
+                <button
+                  type="button"
+                  disabled={isChecking}
+                  onClick={checkPaymentStatusOnce}
+                  className="inline-flex items-center gap-1 rounded-lg bg-white border border-slate-200 hover:border-blue-400 px-2.5 py-1 text-[11px] font-bold text-blue-700 shrink-0 cursor-pointer disabled:opacity-50"
+                >
+                  <RefreshCw className={`w-3 h-3 ${isChecking ? 'animate-spin' : ''}`} />
+                  <span>{isChecking ? 'Đang kiểm tra...' : 'Kiểm tra ngay'}</span>
+                </button>
               </div>
 
               {/* Dev Simulation Option (Hidden in Production Builds) */}

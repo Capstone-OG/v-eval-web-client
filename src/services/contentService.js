@@ -27,7 +27,7 @@ export const contentService = {
    * Core Flow 2 - Lấy toàn bộ cây kỹ năng DAG kèm trọng số (12 kỹ năng chuẩn ĐGNL)
    */
   async getSkillsTree() {
-    return (await apiClient.get('/api/content/skills-tree')).data;
+    return (await apiClient.get('/api/content/curriculum')).data;
   },
 
   /**
@@ -133,6 +133,14 @@ export const contentService = {
    */
   async createAdaptiveQuiz(payload) {
     return (await apiClient.post('/api/content/exams/quiz', payload)).data;
+  },
+
+  /**
+   * Lấy chi tiết 1 câu hỏi theo Question ID từ Content Service
+   * @param {string} questionId
+   */
+  async getQuestionById(questionId) {
+    return (await apiClient.get(`/api/content/questions/${encodeURIComponent(questionId)}`)).data;
   },
 
   /**

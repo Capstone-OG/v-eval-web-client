@@ -37,11 +37,13 @@ import ParentChildResultsView from './components/dashboard/ParentChildResultsVie
 import ParentEarlyWarningsAndTeacherView from './components/dashboard/ParentEarlyWarningsAndTeacherView';
 import TeacherDashboardView from './components/dashboard/TeacherDashboardView';
 import TeacherPortalView from './components/dashboard/TeacherPortalView';
+import TeacherSubmissionHistoryView from './components/dashboard/TeacherSubmissionHistoryView';
 import CampusManagerDashboardView from './components/dashboard/CampusManagerDashboardView';
 import AcademicManagerDashboardView from './components/dashboard/AcademicManagerDashboardView';
 import AiTutorModerationView from './components/dashboard/AiTutorModerationView';
 import LearningAnalyticsView from './components/dashboard/LearningAnalyticsView';
 import StudentScheduleView from './components/dashboard/StudentScheduleView';
+import TeacherScheduleView from './components/dashboard/TeacherScheduleView';
 import PublicLandingPage from './components/landing/PublicLandingPage';
 import WebLoginPage from './components/auth/WebLoginPage';
 import AccountProvisioningView from './components/admin/AccountProvisioningView';
@@ -56,6 +58,10 @@ import TextbookStudioView from './components/curriculum/TextbookStudioView';
 import ExamBankView from './components/curriculum/ExamBankView';
 import ExamIngestView from './components/curriculum/ExamIngestView';
 import ExamStudioView from './components/curriculum/ExamStudioView';
+import StudentRoadmapWorkspace from './components/roadmap/StudentRoadmapWorkspace';
+import StudentMockExamPage from './components/mock/StudentMockExamPage';
+import StudentFoundationKnowledgeView from './components/curriculum/StudentFoundationKnowledgeView';
+import StudentBookmarkDrawer from './components/common/StudentBookmarkDrawer';
 import TuitionPaymentView from './components/payment/TuitionPaymentView';
 import useStudentActivation from './hooks/useStudentActivation';
 import StudentActivationGuide, { ActivationChecklist } from './components/activation/StudentActivationGuide';
@@ -107,24 +113,19 @@ const ROLE_PORTAL_DEFINITIONS = {
   },
   teacher: {
     code: 'TEACHER PEDAGOGICAL PORTAL',
-    title: 'Cổng Giảng Viên & Studio Sư Phạm ĐGNL',
-    subtitle: 'Ma trận nhiệt lớp học 2D, Xếp nhóm vi mô BKT & Studio biên soạn câu hỏi LaTeX',
+    title: 'Cổng Giảng Viên & Sư Phạm ĐGNL',
+    subtitle: 'Theo dõi tiến độ học tập của lớp, xếp nhóm hỗ trợ và biên soạn câu hỏi ôn luyện',
     defaultTab: 'dashboard',
     icon: BookOpen,
     accentBadge: 'bg-indigo-50 text-indigo-700 border-indigo-200',
     tabs: [
-      { id: 'dashboard', label: 'Tổng quan giảng dạy', icon: LayoutGrid },
-      { id: 'teacher_heatmap', label: 'Lớp học & bản đồ năng lực', icon: Users },
-      { id: 'textbook-standard', label: '1. Sách Giáo Khoa Chuẩn', icon: BookOpen },
-      { id: 'textbook-ingest', label: '2. Nạp Tài Liệu SGK', icon: BookOpenCheck },
-      { id: 'textbook-studio', label: '3. Studio Biên Soạn SGK', icon: BookOpenCheck },
-      { id: 'exam-bank', label: '1. Kho Đề & Xem Đề Thi', icon: FileSpreadsheet },
-      { id: 'exam-ingest', label: '2. Parse PDF & AI Bloom', icon: Sparkles },
-      { id: 'exam-studio', label: '3. Studio Biên Soạn Đề', icon: FileSpreadsheet },
-      { id: 'roadmap', label: 'Studio Biên soạn Học liệu', icon: BookOpen },
-      { id: 'diagnostic', label: 'Ngân hàng đề thi', icon: ClipboardCheck },
-      { id: 'history', label: 'Nhật ký Bài làm Học viên', icon: History },
-      { id: 'analytics', label: 'Cảnh báo & hỗ trợ', icon: BarChart3 }
+      { id: 'dashboard', label: 'Lớp học & Tiến độ', icon: LayoutGrid },
+      { id: 'schedule', label: 'Thời khóa biểu & Điểm danh', icon: Calendar },
+      { id: 'history', label: 'Lịch sử làm bài', icon: History },
+      { id: 'roadmap', label: 'Khung chương trình', icon: BookOpen },
+      { id: 'textbook-standard', label: 'Sách giáo khoa (SGK)', icon: BookOpen },
+      { id: 'exam-bank', label: 'Kho đề thi đã xuất bản', icon: FileSpreadsheet },
+      { id: 'ai_moderation', label: 'Kiểm duyệt gia sư AI', icon: Bot }
     ]
   },
   manager: {
@@ -251,6 +252,7 @@ export default function App() {
   // Interactive Modal States: 'adaptive' | 'mock' | 'ai' | 'radar' | null
   const [activeModal, setActiveModal] = useState(null);
   const [aiTutorInitialContext, setAiTutorInitialContext] = useState(null);
+  const [selectedPlarNodeId, setSelectedPlarNodeId] = useState(null);
 
   // Real Backend Portal Metrics State
   const [studentDashboard, setStudentDashboard] = useState(null);
@@ -372,7 +374,7 @@ export default function App() {
   }, [role, currentUser, loadRolePortalBackendMetrics]);
 
   const handleOpenAdaptiveQuiz = () => {
-    setActiveTab('roadmap');
+    setActiveTab('adaptive-practice');
   };
 
   const handleOpenMockExam = () => {
@@ -560,17 +562,92 @@ export default function App() {
         />
       );
     }
-    if (role === 'teacher' &&
-        activeTab !== 'roadmap' &&
-        activeTab !== 'textbook-standard' &&
-        activeTab !== 'textbook-ingest' &&
-        activeTab !== 'textbook-studio' &&
-        activeTab !== 'exam-bank' &&
-        activeTab !== 'exam-ingest' &&
-        activeTab !== 'exam-studio') {
-      return <TeacherPortalView key={`${currentUser?.userId || currentUser?.id}:${currentUser?.classId || ''}:${activeTab}`}
-        currentUser={currentUser} section={activeTab} onNavigate={setActiveTab} />;
+    if (role === 'teacher') {
+      if (activeTab === 'dashboard' || activeTab === 'teacher_heatmap' || activeTab === 'proctoring' || activeTab === 'analytics') {
+        const viewMode = activeTab === 'proctoring' ? 'proctoring' : activeTab === 'analytics' ? 'warnings' : 'heatmap';
+        return (
+          <TeacherDashboardView
+            currentUser={currentUser}
+            onOpenAdaptiveQuiz={handleOpenAdaptiveQuiz}
+            initialView={viewMode}
+          />
+        );
+      }
+      if (activeTab === 'schedule') {
+        return (
+          <TeacherScheduleView currentUser={currentUser} />
+        );
+      }
+      if (activeTab === 'ai_moderation') {
+        return (
+          <AiTutorModerationView
+            currentUser={currentUser}
+            role={role}
+            onBackToDashboard={() => setActiveTab('dashboard')}
+          />
+        );
+      }
+      if (activeTab === 'history') {
+        return (
+          <TeacherSubmissionHistoryView
+            key={`${currentUser?.userId || currentUser?.id}:${activeTab}`}
+            currentUser={currentUser}
+            onNavigate={setActiveTab}
+          />
+        );
+      }
     }
+    if (activeTab === 'adaptive-practice') {
+      return (
+        <StudentRoadmapWorkspace
+          viewMode="study"
+          initialNodeId={selectedPlarNodeId}
+          onBackToRoadmap={() => setActiveTab('roadmap')}
+          onNavigateDiagnostic={() => setActiveTab('diagnostic')}
+          onNavigateDashboard={() => setActiveTab('dashboard')}
+          onNavigateTuition={() => setActiveTab('tuition')}
+          onOpenAiTutorWithContext={handleOpenAiTutorWithQuestion}
+        />
+      );
+    }
+
+    if (activeTab === 'foundation-knowledge') {
+      return (
+        <StudentFoundationKnowledgeView
+          onOpenAiTutorWithContext={handleOpenAiTutorWithQuestion}
+        />
+      );
+    }
+
+    if (activeTab === 'mistake-notebook') {
+      return (
+        <MistakeNotebookSM2View
+          currentUser={currentUser}
+          onOpenAiTutorWithContext={handleOpenAiTutorWithQuestion}
+        />
+      );
+    }
+
+    if (activeTab === 'quiz-practice') {
+      return (
+        <AdaptiveQuizModal
+          isOpen={true}
+          isEmbedded={true}
+          onClose={() => setActiveTab('dashboard')}
+          onOpenAiTutorWithContext={handleOpenAiTutorWithQuestion}
+        />
+      );
+    }
+
+    if (activeTab === 'mock-exam') {
+      return (
+        <StudentMockExamPage
+          onOpenAiTutorWithContext={handleOpenAiTutorWithQuestion}
+          onNavigateHistory={() => setActiveTab('history')}
+        />
+      );
+    }
+
     if (activeTab === 'diagnostic') {
       return (
         <DiagnosticAssessmentPage
@@ -592,8 +669,14 @@ export default function App() {
     }
 
     if (activeTab === 'history' && role === 'student') {
-      return <StudentHistoryPage key={currentUser?.userId || currentUser?.id || 'guest'}
-        currentUser={currentUser} onOpenDiagnostic={() => setActiveTab('diagnostic')} />;
+      return (
+        <StudentHistoryPage
+          key={currentUser?.userId || currentUser?.id || 'guest'}
+          currentUser={currentUser}
+          onOpenDiagnostic={() => setActiveTab('diagnostic')}
+          onOpenAiTutorWithContext={handleOpenAiTutorWithQuestion}
+        />
+      );
     }
     if (activeTab === 'history') {
       const parentChildren = parentPortalData?.children || [];
@@ -611,9 +694,25 @@ export default function App() {
       );
     }
 
+    // Guard: Giảng viên chỉ có quyền tra cứu SGK chuẩn và Kho đề đã xuất bản; ẩn & chặn các trang Ingest & Studio
+    if (role === 'teacher' && (activeTab === 'textbook-ingest' || activeTab === 'textbook-studio')) {
+      return (
+        <TextbookStandardView
+          role={role}
+          onNavigateTab={setActiveTab}
+          onBack={() => setActiveTab('roadmap')}
+          isSidebarCollapsed={isSidebarCollapsed}
+        />
+      );
+    }
+    if (role === 'teacher' && (activeTab === 'exam-ingest' || activeTab === 'exam-studio')) {
+      return <ExamBankView role={role} onNavigateTab={setActiveTab} />;
+    }
+
     if (activeTab === 'textbook-standard') {
       return (
         <TextbookStandardView
+          role={role}
           onNavigateTab={setActiveTab}
           onBack={() => setActiveTab('roadmap')}
           isSidebarCollapsed={isSidebarCollapsed}
@@ -621,25 +720,40 @@ export default function App() {
       );
     }
     if (activeTab === 'textbook-ingest') {
-      return <TextbookIngestView onNavigateTab={setActiveTab} onBack={() => setActiveTab('roadmap')} />;
+      return <TextbookIngestView role={role} onNavigateTab={setActiveTab} onBack={() => setActiveTab('roadmap')} />;
     }
     if (activeTab === 'textbook-studio') {
-      return <TextbookStudioView onNavigateTab={setActiveTab} onBack={() => setActiveTab('textbook-standard')} />;
+      return <TextbookStudioView role={role} onNavigateTab={setActiveTab} onBack={() => setActiveTab('textbook-standard')} />;
     }
     if (activeTab === 'exam-bank') {
-      return <ExamBankView onNavigateTab={setActiveTab} />;
+      return <ExamBankView role={role} onNavigateTab={setActiveTab} />;
     }
     if (activeTab === 'exam-ingest') {
-      return <ExamIngestView onNavigateTab={setActiveTab} />;
+      return <ExamIngestView role={role} onNavigateTab={setActiveTab} />;
     }
     if (activeTab === 'exam-studio') {
-      return <ExamStudioView onNavigateTab={setActiveTab} />;
+      return <ExamStudioView role={role} onNavigateTab={setActiveTab} />;
     }
-    if (activeTab === 'roadmap') {
+    if (activeTab === 'roadmap' && role !== 'parent') {
       if (role === 'student' && activation.step !== 'ready') {
         return <div className="mx-auto max-w-xl rounded-3xl border border-slate-200 bg-white p-6 sm:p-8"><ActivationChecklist activation={activation} onAction={continueActivation} /></div>;
       }
-      const curriculum = (
+      if (role === 'student') {
+        return (
+          <StudentRoadmapWorkspace
+            viewMode="map"
+            onOpenPlarNode={(nodeId) => {
+              setSelectedPlarNodeId(nodeId);
+              setActiveTab('adaptive-practice');
+            }}
+            onNavigateDiagnostic={() => setActiveTab('diagnostic')}
+            onNavigateDashboard={() => setActiveTab('dashboard')}
+            onNavigateTuition={() => setActiveTab('tuition')}
+            onOpenAiTutorWithContext={handleOpenAiTutorWithQuestion}
+          />
+        );
+      }
+      return (
         <CurriculumExplorerView
           role={role === 'parent' ? 'student' : role}
           tuitionPaid={role === 'student' ? activation.paid : undefined}
@@ -651,7 +765,6 @@ export default function App() {
           onOpenAiTutorWithContext={handleOpenAiTutorWithQuestion}
         />
       );
-      return curriculum;
     }
 
     if (activeTab === 'schedule') {
@@ -684,10 +797,10 @@ export default function App() {
             return true;
           }}
           onBackToDashboard={() => setActiveTab('dashboard')}
-          onNavigateRoadmap={openRoadmap}
-          onNavigateAdaptive={() => setActiveTab('adaptive')}
-          onNavigateSchedule={() => setActiveTab('schedule')}
-          onNavigateAiTutor={() => {
+          onNavigateRoadmap={role === 'parent' ? undefined : openRoadmap}
+          onNavigateAdaptive={role === 'parent' ? undefined : () => setActiveTab('roadmap')}
+          onNavigateSchedule={role === 'parent' ? undefined : () => setActiveTab('schedule')}
+          onNavigateAiTutor={role === 'parent' ? undefined : () => {
             setAiTutorInitialContext(null);
             setActiveModal('ai');
           }}
@@ -754,6 +867,7 @@ export default function App() {
       return (
         <AiTutorModerationView
           currentUser={currentUser}
+          role={role}
           onBackToDashboard={() => setActiveTab('dashboard')}
         />
       );
@@ -970,6 +1084,7 @@ export default function App() {
               onClose={() => setActiveModal(null)}
             />
 
+            {role === 'student' && ['roadmap', 'adaptive-practice', 'foundation-knowledge', 'mistake-notebook', 'quiz-practice'].includes(activeTab) && <StudentBookmarkDrawer />}
             {/* Sleek Floating AI Tutor FAB (Bottom-Right Corner) */}
             {role === 'student' && (
               <div className="fixed bottom-6 right-6 z-40 flex items-center gap-3">

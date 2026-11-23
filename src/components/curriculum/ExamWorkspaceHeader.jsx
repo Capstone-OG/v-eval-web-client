@@ -95,8 +95,11 @@ export default function ExamWorkspaceHeader({
   activePage,
   onNavigateTab,
   showBackToBank = false,
-  leftRow2Slot = null
+  leftRow2Slot = null,
+  isReadOnly = false,
+  role = 'director'
 }) {
+  const isTeacher = role === 'teacher';
   const {
     currentExam,
     orderedView,
@@ -199,7 +202,7 @@ export default function ExamWorkspaceHeader({
             </span>
           </button>
 
-          {!isLocked && (
+          {!isReadOnly && !isLocked && (
             <button
               type="button"
               disabled={classifyingNodes || flatCurriculumNodes.length === 0}
@@ -229,56 +232,83 @@ export default function ExamWorkspaceHeader({
             <span className="hidden lg:inline">Đổi Đề ({dbExams.length})</span>
           </button>
 
-          <button
-            type="button"
-            onClick={toggleLock}
-            title={isLocked ? 'Mở khóa chỉnh sửa' : 'Khóa chỉnh sửa'}
-            className={`p-1.5 rounded-xl border cursor-pointer ${
-              isLocked
-                ? 'bg-amber-50 border-amber-300 text-amber-800'
-                : 'bg-white border-[#E5E3DC] text-slate-600 hover:bg-[#FAF9F6]'
-            }`}
-          >
-            {isLocked ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
-          </button>
+          {isReadOnly ? (
+            <div className="px-3 py-1.5 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-800 text-xs font-bold flex items-center gap-1.5 shadow-2xs">
+              <BookOpen className="w-3.5 h-3.5 text-indigo-600" />
+              <span>Chế độ xem đề thi</span>
+            </div>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={toggleLock}
+                title={isLocked ? 'Mở khóa chỉnh sửa' : 'Khóa chỉnh sửa'}
+                className={`p-1.5 rounded-xl border cursor-pointer ${
+                  isLocked
+                    ? 'bg-amber-50 border-amber-300 text-amber-800'
+                    : 'bg-white border-[#E5E3DC] text-slate-600 hover:bg-[#FAF9F6]'
+                }`}
+              >
+                {isLocked ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
+              </button>
 
-          {(currentExam.source !== 'database' || hasUnsavedChanges) && (
-            <button
-              type="button"
-              disabled={savingExam}
-              onClick={handleSaveExamToDb}
-              className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold flex items-center gap-1.5 shadow-xs cursor-pointer disabled:opacity-60"
-            >
-              {savingExam ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-              <span>{currentExam.source === 'database' ? 'Lưu Bản Mới' : 'Lưu Database'}</span>
-            </button>
+              {(currentExam.source !== 'database' || hasUnsavedChanges) && (
+                <button
+                  type="button"
+                  disabled={savingExam}
+                  onClick={handleSaveExamToDb}
+                  className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold flex items-center gap-1.5 shadow-xs cursor-pointer disabled:opacity-60"
+                >
+                  {savingExam ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                  <span>{isTeacher ? 'Lưu Bản Nháp' : currentExam.source === 'database' ? 'Lưu Bản Mới' : 'Lưu Database'}</span>
+                </button>
+              )}
+
+              {/* Action theo vai trò Maker vs Checker */}
+              {isTeacher ? (
+                <button
+                  type="button"
+                  disabled={publishingExam}
+                  onClick={() => {
+                    toast.success('Đã gửi đề thi lên Giám đốc Học thuật chờ duyệt (PENDING_REVIEW)!');
+                  }}
+                  className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
+                  title="Gửi đề thi lên Giám đốc Học thuật phê duyệt xuất bản toàn hệ thống"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  <span>Gửi duyệt (PENDING_REVIEW)</span>
+                </button>
+              ) : (
+                currentExam.source === 'database' && currentExam.examId && !currentExam.isPublished && (
+                  <button
+                    type="button"
+                    disabled={publishingExam}
+                    onClick={() => handlePublishExam(currentExam)}
+                    className="px-3 py-1.5 rounded-xl bg-[#1E3A5F] hover:bg-[#162C49] text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
+                  >
+                    {publishingExam ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                    <span>Phê Duyệt</span>
+                  </button>
+                )
+              )}
+
+              {!isTeacher && (
+                <button
+                  type="button"
+                  onClick={() => requestDeleteExam(currentExam)}
+                  title={
+                    currentExam.source === 'database' && currentExam.examId
+                      ? 'Xóa vĩnh viễn đề thi khỏi Database'
+                      : 'Xóa đề thi đang soạn khỏi phiên làm việc'
+                  }
+                  className="px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Xóa Đề</span>
+                </button>
+              )}
+            </>
           )}
-
-          {currentExam.source === 'database' && currentExam.examId && !currentExam.isPublished && (
-            <button
-              type="button"
-              disabled={publishingExam}
-              onClick={() => handlePublishExam(currentExam)}
-              className="px-3 py-1.5 rounded-xl bg-[#1E3A5F] hover:bg-[#162C49] text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
-            >
-              {publishingExam ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
-              <span>Phê Duyệt</span>
-            </button>
-          )}
-
-          <button
-            type="button"
-            onClick={() => requestDeleteExam(currentExam)}
-            title={
-              currentExam.source === 'database' && currentExam.examId
-                ? 'Xóa vĩnh viễn đề thi khỏi Database'
-                : 'Xóa đề thi đang soạn khỏi phiên làm việc'
-            }
-            className="px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-            <span>Xóa Đề</span>
-          </button>
         </div>
       </div>
 
@@ -287,7 +317,7 @@ export default function ExamWorkspaceHeader({
         <div className="flex items-center gap-2 flex-wrap">
           {leftRow2Slot}
 
-          {activePage !== 'exam-ingest' && (
+          {activePage !== 'exam-ingest' && !isReadOnly && (
             <button
               type="button"
               onClick={() => {
