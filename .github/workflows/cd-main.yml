@@ -1,0 +1,39 @@
+name: Continuous Deployment (Web Client)
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: deploy-web-client-prod
+  cancel-in-progress: false
+
+jobs:
+  ci-verify:
+    name: Verify Web Client Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build Web Application
+        run: npm run build
+
+  deploy-ubuntu:
+    name: Deploy Web Client to Ubuntu Server
+    needs: ci-verify
+    runs-on: [self-hosted, veval-prod]
+    steps:
+      - name: Trigger Selective Deployment
+        run: |
+          /data/Capstone/Scripts/deploy/deploy_service.sh web-client
+
