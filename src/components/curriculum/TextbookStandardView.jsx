@@ -1040,7 +1040,7 @@ export default function TextbookStandardView({ onBack, onNavigateTab, isSidebarC
           {isReadOnly ? (
             <div className="px-3.5 py-1.5 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-800 text-xs font-bold flex items-center gap-2 shadow-2xs">
               <BookOpen className="w-3.5 h-3.5 text-emerald-700" />
-              <span>Chế độ Tra Cứu SGK Chuẩn GDPT 2018 (Read-only)</span>
+              <span>Tra cứu SGK chuẩn GDPT 2018</span>
             </div>
           ) : (
             <>

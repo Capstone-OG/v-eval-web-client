@@ -3257,3 +3257,19 @@ The Parent Companion Portal was completely redesigned and hardened according to 
         - `TextbookIngestView.jsx`: Enforces read-only inspection for teachers, suppressing PDF file uploads and system-level AI parsing.
         - `CurriculumStudioEditor.jsx` & `ExamWorkspaceHeader.jsx`: Renders dedicated Maker banners, restricting teacher persistence to Draft Save and `Gửi duyệt (PENDING_REVIEW)` without unconstrained system-wide publish or deletion permissions.
     - **Verification**: `npm run build` compiled 3083 modules in 1.15s with zero errors; unit tests passed **30/30 passed 100%** (`tests/*.test.js` 22/22, `examStateBridge.test.js` 6/6, `offlineSessionStore.test.js` 2/2).
+
+39. **Curriculum Explorer User Interface & Pedagogical Refinement for Instructors (`CurriculumExplorerView.jsx`, `UnifiedNodeDetailView.jsx`, `ExamBankView.jsx`, `ExamWorkspaceHeader.jsx`, `TextbookStandardView.jsx`, `TextbookIngestView.jsx`) [23/11/2026]**:
+    - **Architectural Motivation**:
+      - Technical system indicators, internal database labels, and raw processing terminology (e.g., `(Read-only)`, `Trọng số: ...%`, `Đã nạp SGK (x trang)`, `CẤU TRÚC PHÂN CẤP BÀI HỌC`, `Bloom L1-L4`) create cognitive clutter and reduce usability for pedagogical practitioners.
+      - Instructors need clean, intuitive interfaces prioritizing educational content over underlying software mechanics.
+    - **Implementation Details**:
+      - *Curriculum Explorer (`CurriculumExplorerView.jsx`)*:
+        - Replaced technical `(Read-only)` status badges with an intuitive `Khung chương trình chuẩn` tag.
+        - Streamlined chapter cards by removing internal weight percentages and raw ingested page counts; replaced with a clean `Sách giáo khoa` indicator and lesson tally.
+        - Renamed tree heading to `Danh sách chương & bài học` and hid administrator creation buttons (`+ Thêm Chương`) from teacher views.
+        - Simplified lesson pattern items by removing `pat.weight` and adopting human-readable mastery categories (`Cần bổ trợ`, `Cần củng cố`, `Đã vững`).
+      - *Pedagogical Node Details (`UnifiedNodeDetailView.jsx`)*:
+        - Harmonized the 3 knowledge blocks into intuitive pedagogical layers: Core Textbook Theory (`Khối 1: Lý Thuyết Trọng Tâm Chuẩn SGK`), Problem-Solving Methods & Visual Lab (`Khối 2: Phương Pháp Giải & Mô Hình Minh Họa Trực Quan`), and Practice Question Bank (`Khối 3: Ngân Hàng Câu Hỏi Luyện Tập`).
+        - Replaced cognitive taxonomy acronyms (L1–L4) with standard educational terms (`Nhận biết`, `Thông hiểu`, `Vận dụng`, `Vận dụng cao`).
+      - *System-wide Read-only Badge Harmonization*: Synchronized non-technical, user-friendly labels across `ExamBankView.jsx`, `ExamWorkspaceHeader.jsx`, `TextbookStandardView.jsx`, and `TextbookIngestView.jsx`.
+    - **Verification**: `npm run build` compiled 3083 modules in 1.18s with zero errors; unit tests passed **24/24 passed 100%** (`tests/*.test.js`).

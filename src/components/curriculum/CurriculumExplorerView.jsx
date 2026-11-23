@@ -2361,7 +2361,7 @@ export default function CurriculumExplorerView({
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
-              placeholder="Tìm theo Chương, Bài học, Dạng bài, công thức KaTeX..."
+              placeholder="Tìm kiếm chương, bài học, dạng bài..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-slate-800 placeholder-slate-400"
@@ -2396,12 +2396,12 @@ export default function CurriculumExplorerView({
 
           {/* Badge Chế độ */}
           {isReadOnly ? (
-            <div className="px-3 py-1.5 rounded-xl bg-blue-50 border border-blue-200 text-blue-800 text-xs font-bold flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-blue-500"></span>
-              <span>Chế độ Tra Cứu Khung Chương Trình (Read-only)</span>
+            <div className="px-3.5 py-1.5 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-800 text-xs font-bold flex items-center gap-2 shadow-2xs">
+              <BookOpen className="w-3.5 h-3.5 text-indigo-600" />
+              <span>Khung chương trình chuẩn</span>
             </div>
           ) : (
-            <div className="px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-1.5">
+            <div className="px-3.5 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-2 shadow-2xs">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
               <span>Chế độ Hiệu đính Sư phạm: BẬT</span>
             </div>
@@ -2410,15 +2410,15 @@ export default function CurriculumExplorerView({
           <div className="hidden lg:flex items-center gap-3 text-xs text-slate-500 font-medium pl-2 border-l border-slate-200">
             <div className="flex items-center gap-1.5">
               <span className="w-2.5 h-2.5 rounded-full bg-rose-600"></span>
-              <span>Hổng (&lt;10%)</span>
+              <span>Cần bổ trợ (&lt;10%)</span>
             </div>
             <div className="flex items-center gap-1.5">
               <span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
-              <span>Vùng trũng (&lt;60%)</span>
+              <span>Cần củng cố (&lt;60%)</span>
             </div>
             <div className="flex items-center gap-1.5">
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-              <span>Vững (≥60%)</span>
+              <span>Đã nắm vững (≥60%)</span>
             </div>
           </div>
         </div>
@@ -2432,20 +2432,22 @@ export default function CurriculumExplorerView({
           <div className="flex items-center justify-between text-xs font-bold text-slate-600 px-1">
             <div className="flex items-center gap-2">
               <Layers className="w-3.5 h-3.5 text-blue-600" />
-              <span>CẤU TRÚC PHÂN CẤP BÀI HỌC</span>
-              <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[10px] font-black">
+              <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">Danh sách chương & bài học</span>
+              <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[10px] font-bold">
                 {filteredChapters.length} Chương
               </span>
             </div>
-            {/* Nút Thêm Chương Mới */}
-            <button
-              onClick={handleOpenCreateChapterModal}
-              className="px-2.5 py-1 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold flex items-center gap-1 shadow-sm transition-all hover:scale-105 active:scale-95 cursor-pointer"
-              title="Thêm một Chương mới vào miền tri thức này"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>+ Thêm Chương Mới</span>
-            </button>
+            {/* Nút Thêm Chương Mới - Chỉ dành cho Director/Manager */}
+            {!isReadOnly && (
+              <button
+                onClick={handleOpenCreateChapterModal}
+                className="px-2.5 py-1 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold flex items-center gap-1 shadow-sm transition-all hover:scale-105 active:scale-95 cursor-pointer"
+                title="Thêm một Chương mới vào miền tri thức này"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>+ Thêm Chương</span>
+              </button>
+            )}
           </div>
 
           <div className="space-y-3">
@@ -2471,7 +2473,7 @@ export default function CurriculumExplorerView({
                       <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs shrink-0 shadow-2xs ${
                         hasChapSgk ? 'bg-emerald-600 text-white' : 'bg-blue-100 text-blue-700'
                       }`}>
-                        {hasChapSgk ? <CheckCircle2 className="w-4 h-4" /> : (chap.code?.slice(-2) || "CH")}
+                        {hasChapSgk ? <BookOpen className="w-4 h-4" /> : (chap.code?.slice(-2) || "CH")}
                       </div>
                       <div className="min-w-0">
                         <div className="flex items-center gap-1.5 flex-wrap">
@@ -2479,16 +2481,14 @@ export default function CurriculumExplorerView({
                             {chap.name}
                           </h3>
                           {hasChapSgk && (
-                            <span className="px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 text-[9.5px] font-black shrink-0 flex items-center gap-1">
-                              <Check className="w-2.5 h-2.5" />
-                              <span>Đã nạp SGK ({chapSgkChunks.length} trang)</span>
+                            <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold shrink-0 flex items-center gap-1">
+                              <Check className="w-2.5 h-2.5 text-emerald-600" />
+                              <span>Sách giáo khoa</span>
                             </span>
                           )}
                         </div>
-                        <div className="text-[10px] text-slate-500 font-medium mt-0.5 flex items-center gap-2">
+                        <div className="text-[11px] text-slate-500 font-medium mt-0.5 flex items-center gap-2">
                           <span>{chap.lessons?.length || 0} bài học</span>
-                          <span>•</span>
-                          <span>Trọng số: {Math.round((chap.weight || 0.25) * 100)}%</span>
                         </div>
                       </div>
                     </div>
@@ -2569,9 +2569,9 @@ export default function CurriculumExplorerView({
                                   {les.name}
                                 </span>
                                 {hasLesSgk && (
-                                  <span className="px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 text-[9px] font-black shrink-0 flex items-center gap-0.5">
-                                    <Check className="w-2.5 h-2.5" />
-                                    <span>SGK ({lesSgkChunks.length})</span>
+                                  <span className="px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[9.5px] font-bold shrink-0 flex items-center gap-0.5">
+                                    <Check className="w-2.5 h-2.5 text-emerald-600" />
+                                    <span>SGK</span>
                                   </span>
                                 )}
                               </div>
@@ -2621,7 +2621,7 @@ export default function CurriculumExplorerView({
                                 )}
 
                                 <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[10px] font-bold">
-                                  {les.patterns?.length || 0} dạng
+                                  {les.patterns?.length || 0} dạng bài
                                 </span>
                                 {isLesExpanded ? (
                                   <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
@@ -2636,8 +2636,10 @@ export default function CurriculumExplorerView({
                               <div className="px-2 pb-2 pt-1 space-y-1.5 border-t border-slate-100/80 bg-slate-50/40">
                                 {(les.patterns || []).length === 0 ? (
                                   <div className="p-3 rounded-lg bg-slate-50 border border-dashed border-slate-200 text-center text-xs text-slate-500 font-medium space-y-1">
-                                    <div className="font-bold text-slate-700">Chưa có dữ liệu nguồn dạng bài cho bài học này</div>
-                                    <div className="text-[11px] text-slate-400">Bạn có thể bấm &quot;Thêm dạng&quot; hoặc &quot;+ Studio&quot; để tạo dạng bài mới.</div>
+                                    <div className="font-bold text-slate-700">Chưa có dạng bài cho bài học này</div>
+                                    {!isReadOnly && (
+                                      <div className="text-[11px] text-slate-400">Bạn có thể bấm &quot;Thêm dạng&quot; hoặc &quot;+ Studio&quot; để tạo dạng bài mới.</div>
+                                    )}
                                   </div>
                                 ) : (
                                   (les.patterns || []).map((pat) => {
@@ -2671,12 +2673,12 @@ export default function CurriculumExplorerView({
 
                                       <div className="flex items-start justify-between gap-2">
                                         <div className="flex items-center gap-1.5 flex-wrap">
-                                          <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 text-[10px] font-black font-mono">
-                                            {pat.code?.split('_').pop() || "Dạng"}
+                                          <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 text-[10px] font-bold">
+                                            Dạng bài
                                           </span>
 
                                           {hasPatSgk && (
-                                            <span className="px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 text-[9.5px] font-black flex items-center gap-0.5">
+                                            <span className="px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[9.5px] font-bold flex items-center gap-0.5">
                                               <CheckCircle2 className="w-2.5 h-2.5 text-emerald-600" />
                                               <span>SGK</span>
                                             </span>
@@ -2684,31 +2686,28 @@ export default function CurriculumExplorerView({
 
                                           {/* Mastery Badge */}
                                           {isSevere ? (
-                                            <span className="px-2 py-0.5 rounded-full bg-rose-600 text-white text-[10px] font-black flex items-center gap-1 animate-pulse">
+                                            <span className="px-2 py-0.5 rounded-full bg-rose-600 text-white text-[10px] font-bold flex items-center gap-1 animate-pulse">
                                               <AlertCircle className="w-2.5 h-2.5" />
-                                              <span>Hổng ({mastery}%)</span>
+                                              <span>Cần bổ trợ ({mastery}%)</span>
                                             </span>
                                           ) : isWeak ? (
                                             <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-bold border border-amber-200 flex items-center gap-1">
                                               <AlertTriangle className="w-2.5 h-2.5 text-amber-600" />
-                                              <span>Vùng trũng ({mastery}%)</span>
+                                              <span>Cần củng cố ({mastery}%)</span>
                                             </span>
                                           ) : isGood ? (
                                             <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold border border-emerald-200 flex items-center gap-1">
                                               <CheckCircle2 className="w-2.5 h-2.5 text-emerald-600" />
-                                              <span>Vững ({mastery}%)</span>
+                                              <span>Đã vững ({mastery}%)</span>
                                             </span>
                                           ) : (
-                                            <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[10px] font-semibold">
+                                            <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[10px] font-medium">
                                               {pat.level || "Vận dụng"}
                                             </span>
                                           )}
                                         </div>
 
                                         <div className="flex items-center gap-1.5 shrink-0">
-                                          <span className="text-[10px] font-bold text-slate-400">
-                                            {pat.weight}
-                                          </span>
                                           {/* Nút Mở Studio / Hiệu đính nhanh (Chỉ Director/Manager) */}
                                           {!isReadOnly && (
                                             <>
@@ -2781,10 +2780,10 @@ export default function CurriculumExplorerView({
               </div>
               <div className="space-y-1">
                 <div className="text-base font-extrabold text-slate-800">
-                  Chưa chọn Dạng bài nào
+                  Chọn dạng bài để xem chi tiết
                 </div>
                 <div className="text-xs text-slate-500 max-w-md mx-auto">
-                  Nhấp vào một Chương hoặc Dạng bài ở cây phân cấp bên trái để tải nội dung lý thuyết, phương pháp KaTeX và câu hỏi luyện tập.
+                  Nhấp vào một bài học hoặc dạng bài ở danh sách bên trái để xem nội dung kiến thức trọng tâm, phương pháp giải và câu hỏi luyện tập.
                 </div>
               </div>
               {chapters.length > 0 && (

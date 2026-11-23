@@ -235,7 +235,7 @@ export default function ExamWorkspaceHeader({
           {isReadOnly ? (
             <div className="px-3 py-1.5 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-800 text-xs font-bold flex items-center gap-1.5 shadow-2xs">
               <BookOpen className="w-3.5 h-3.5 text-indigo-600" />
-              <span>Chế độ Xem Đề (Read-only)</span>
+              <span>Chế độ xem đề thi</span>
             </div>
           ) : (
             <>

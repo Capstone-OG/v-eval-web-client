@@ -229,7 +229,7 @@ export default function ExamBankView({ onNavigateTab, role = 'director' }) {
               {isReadOnly ? (
                 <div className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-900 text-xs font-bold shadow-2xs">
                   <BookOpen className="w-4 h-4 text-indigo-600" />
-                  <span>Chế độ Tra Cứu Kho Đề Đã Xuất Bản (Read-only)</span>
+                  <span>Kho đề thi chuẩn đã xuất bản</span>
                 </div>
               ) : (
                 <div className="flex flex-wrap items-center gap-2 shrink-0">
