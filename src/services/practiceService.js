@@ -1769,6 +1769,23 @@ export const practiceService = {
     return (await apiClient.get(`/api/practice/roadmaps/nodes/${nodeId}`, { headers })).data;
   },
 
+  async getRoadmapReviewQueue(status = 'ALL') {
+    const query = status ? `?status=${encodeURIComponent(status)}` : '';
+    return (await apiClient.get(`/api/practice/roadmaps/review-queue${query}`)).data;
+  },
+
+  async getRoadmapById(roadmapId) {
+    return (await apiClient.get(`/api/practice/roadmaps/${encodeURIComponent(roadmapId)}`)).data;
+  },
+
+  async submitTeacherRoadmapReview(roadmapId, payload) {
+    return (await apiClient.put(`/api/practice/roadmaps/${encodeURIComponent(roadmapId)}/teacher-review`, payload)).data;
+  },
+
+  async submitDirectorRoadmapDecision(roadmapId, payload) {
+    return (await apiClient.post(`/api/practice/roadmaps/${encodeURIComponent(roadmapId)}/director-decision`, payload)).data;
+  },
+
   // =========================================================================
   // Core Flow 3: Chu Trình Tự Học Thích Ứng P-L-A-R (StagesController - Đủ 8 APIs)
   // =========================================================================
@@ -1909,12 +1926,18 @@ export const practiceService = {
     return res.data?.value || res.data?.data || res.data;
   },
 
-  async autoPartitionMicroGroups(classId, preferredGroupSize = 4) {
+  async autoPartitionMicroGroups(classId, preferredGroupSize = 4, options = {}) {
     const resolvedClassId = ensureGuid(classId, FLOW5_DEFAULTS.CLASS_ID);
+    const payload = {
+      preferredGroupSize,
+      ...(options.focusSkillId ? { focusSkillId: options.focusSkillId } : {}),
+      ...(options.focusSkillName ? { focusSkillName: options.focusSkillName } : {}),
+      ...(Array.isArray(options.targetStudentIds) && options.targetStudentIds.length > 0
+        ? { targetStudentIds: options.targetStudentIds }
+        : {})
+    };
     return (
-      await apiClient.post(`/api/practice/classes/${resolvedClassId}/micro-groups/auto-partition`, {
-        preferredGroupSize
-      })
+      await apiClient.post(`/api/practice/classes/${resolvedClassId}/micro-groups/auto-partition`, payload)
     ).data;
   },
 

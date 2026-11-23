@@ -25,6 +25,7 @@ import {
 import { practiceService } from '../../services/practiceService';
 import contentService from '../../services/contentService';
 import MathText from '../common/MathText';
+import MathScratchpadButton from '../common/MathScratchpadButton';
 import FlagQuestionModal from '../common/FlagQuestionModal';
 import { addFlaggedQuestion, getFlaggedQuestionIdSet } from '../../utils/questionFlagStore';
 import { getSavedTextbookData, getDefaultLessonTheory, GDPT_PRESETS, normalizeViText } from '../curriculum/textbookStateBridge';
@@ -63,12 +64,50 @@ const BLOOM_LABELS = {
   6: 'L6 • Sáng tạo'
 };
 
-const REFLECT_TAGS = [
-  'Đã nắm chắc bản chất công thức',
-  'Cần chú ý điều kiện xác định & dấu',
-  'Cần cải thiện tốc độ tính toán',
-  'Hay bị đánh lừa bởi phương án nhiễu'
-];
+const CONFIDENCE_LABELS = {
+  1: 'Cần ôn lại thêm',
+  2: 'Tạm hiểu cơ bản',
+  3: 'Khá ổn, cần luyện thêm',
+  4: 'Tự tin làm bài',
+  5: 'Rất vững vàng!'
+};
+
+const getReflectPresets = (subjectCode = 'MATH') => {
+  if (subjectCode === 'LIT' || subjectCode === 'ENG') {
+    return {
+      tags: [
+        'Đã nắm chắc đặc trưng thể loại & cấu trúc',
+        'Cần đọc kỹ ngữ liệu & từ khóa câu hỏi',
+        'Hay nhầm phương án suy diễn quá mức',
+        'Cần cải thiện tốc độ đọc hiểu văn bản'
+      ],
+      summaryPlaceholder: 'Ví dụ: Nhớ gạch chân từ khóa câu hỏi và đối chiếu trực tiếp với chi tiết trong ngữ liệu...',
+      mistakePlaceholder: 'Ví dụ: Dễ bị đánh lừa bởi phương án đúng một nửa hoặc đọc sót từ phủ định KHÔNG...'
+    };
+  }
+  if (subjectCode === 'HIST' || subjectCode === 'GEO' || subjectCode === 'CIVIC') {
+    return {
+      tags: [
+        'Đã nắm chắc mốc sự kiện & nguyên nhân – kết quả',
+        'Cần phân biệt kỹ các khái niệm dễ nhầm',
+        'Cần chú ý bảng số liệu & biểu đồ',
+        'Hay bị đánh lừa bởi phương án nhiễu'
+      ],
+      summaryPlaceholder: 'Ví dụ: Nhớ liên kết bối cảnh / đặc điểm cốt lõi với hệ quả trực tiếp của sự kiện...',
+      mistakePlaceholder: 'Ví dụ: Dễ nhầm mốc thời gian, tên khái niệm tương đồng hoặc đọc sót từ khóa phủ định...'
+    };
+  }
+  return {
+    tags: [
+      'Đã nắm chắc bản chất công thức',
+      'Cần chú ý điều kiện xác định & dấu',
+      'Cần cải thiện tốc độ tính toán',
+      'Hay bị đánh lừa bởi phương án nhiễu'
+    ],
+    summaryPlaceholder: 'Ví dụ: Nhớ kiểm tra điều kiện xác định, đơn vị đo trước khi rút gọn và chốt đáp án...',
+    mistakePlaceholder: 'Ví dụ: Dễ nhầm dấu, quên đổi đơn vị chuẩn hoặc đọc sót từ KHÔNG trong đề...'
+  };
+};
 
 const ASSESSMENT_BADGES = {
   WEAK: { label: 'Ưu tiên cải thiện', cls: 'bg-rose-500/25 text-rose-100 border-rose-400/40' },
@@ -172,6 +211,7 @@ const getVideoEmbedUrl = (rawUrl) => {
 
 export default function PlarNodeStudioPanel({
   node,
+  nextNode = null,
   studentId,
   isPaid,
   onBackToMap,
@@ -533,7 +573,7 @@ export default function PlarNodeStudioPanel({
         if (reqId === requestSeqRef.current) setLoading(false);
       }
     })();
-  }, [node?.nodeId, node?.skillId, node?.status, studentId, isPaid, loadNextAdaptiveQuestion, loadRemedialPackage]);
+  }, [node?.nodeId, node?.skillId, studentId, isPaid, loadNextAdaptiveQuestion, loadRemedialPackage]);
 
   // Real study reading timer during Phase L (LEARN)
   useEffect(() => {
@@ -806,6 +846,11 @@ export default function PlarNodeStudioPanel({
           </div>
 
           <div className="flex flex-wrap items-center gap-2 shrink-0">
+            <MathScratchpadButton
+              text={`${detail?.skillName || node.skillName || ''} ${detail?.lessonName || ''} ${currentQuestion?.content || ''}`}
+              subjectHint={detail?.subjectName || node.subjectName || ''}
+              className="py-2"
+            />
             {onOpenAiTutorWithContext && (
               <button
                 type="button"
@@ -1586,137 +1631,389 @@ export default function PlarNodeStudioPanel({
         {/* =============================================================== */}
         {!loading && !tuitionBlocked && stage && visibleTab === 'REFLECT' && (
           <div className="space-y-5">
-            {stage.status === 'COMPLETED' || reflectResult ? (
-              <div className="rounded-3xl border border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-teal-50 p-6 sm:p-8 text-center space-y-4">
-                <div className="w-14 h-14 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto">
-                  <Sparkles className="w-7 h-7" />
-                </div>
-                <div className="space-y-1">
-                  <span className="inline-block px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-black uppercase">
-                    Hoàn thành trọn vẹn chu trình P-L-A-R
-                  </span>
-                  <h3 className="text-lg font-black text-slate-900">
-                    Độ thành thạo đạt {Math.round((reflectResult?.finalMasteryPlt ?? stage.bktMasteryPlt ?? 0.85) * 100)}%
-                  </h3>
-                  <p className="text-sm text-slate-600 max-w-lg mx-auto">
-                    {reflectResult?.message || 'Chặng học này đã hoàn thành và được đồng bộ vào hồ sơ năng lực LearningProfiles của bạn!'}
-                  </p>
-                </div>
-                {(stage.confidenceRating || stage.learnedSummary || stage.mistakeNotes) && (
-                  <div className="max-w-xl mx-auto text-left rounded-2xl border border-emerald-200 bg-white p-4 space-y-2 text-xs">
-                    <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-2">
-                      <span className="font-extrabold text-emerald-900">Nhật ký phản tư đã lưu trong CSDL</span>
-                      {stage.confidenceRating && (
-                        <span className="inline-flex items-center gap-1 font-black text-amber-600">
-                          <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                          {stage.confidenceRating}/5 sao
-                        </span>
+            {stage.status === 'COMPLETED' || reflectResult ? (() => {
+              const finalPct = Math.round((reflectResult?.finalMasteryPlt ?? stage.bktMasteryPlt ?? 0.85) * 100);
+              const savedRating = Number(reflectResult?.confidenceRating ?? stage.confidenceRating ?? confidenceRating ?? 4);
+              const savedSummary = stage.learnedSummary || learnedSummary || '';
+              const savedMistakes = stage.mistakeNotes || mistakeNotes || '';
+              const summaryChips = savedSummary
+                .split(';')
+                .map((s) => s.trim())
+                .filter(Boolean);
+              const ringRadius = 26;
+              const ringCircumference = 2 * Math.PI * ringRadius;
+              const ringOffset = ringCircumference * (1 - Math.min(100, Math.max(0, finalPct)) / 100);
+              const resolvedNextNodeId = reflectResult?.nextUnlockedNodeId || nextNode?.nodeId || null;
+
+              return (
+                <div className="rounded-3xl border border-emerald-200/80 bg-white shadow-sm overflow-hidden">
+                  {/* Celebratory Hero Banner */}
+                  <div className="relative overflow-hidden bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-700 px-6 py-7 sm:px-8 sm:py-8 text-white">
+                    <div
+                      aria-hidden="true"
+                      className="pointer-events-none absolute -right-12 -top-12 w-56 h-56 rounded-full bg-white/10 blur-2xl"
+                    />
+                    <div
+                      aria-hidden="true"
+                      className="pointer-events-none absolute -left-10 -bottom-16 w-48 h-48 rounded-full bg-emerald-300/20 blur-2xl"
+                    />
+
+                    <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-5">
+                      <div className="flex items-start gap-4 min-w-0">
+                        <div className="relative shrink-0">
+                          <div className="w-14 h-14 rounded-2xl bg-white/15 backdrop-blur-xs border border-white/25 flex items-center justify-center shadow-md">
+                            <Award className="w-7 h-7 text-amber-300" />
+                          </div>
+                          <span className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-emerald-400 border-2 border-emerald-700 flex items-center justify-center">
+                            <CheckCircle2 className="w-3 h-3 text-emerald-950" />
+                          </span>
+                        </div>
+
+                        <div className="space-y-1.5 min-w-0">
+                          <div className="inline-flex items-center gap-1.5 rounded-full bg-white/15 border border-white/25 px-3 py-0.5 text-[11px] font-black uppercase tracking-wider text-emerald-50">
+                            <Sparkles className="w-3 h-3 text-amber-300" />
+                            <span>Hoàn thành trọn vẹn chu trình P-L-A-R</span>
+                          </div>
+                          <h3 className="text-xl sm:text-2xl font-black tracking-tight text-white">
+                            Xuất sắc! Chặng #{node?.stepOrder || ''} đã hoàn tất
+                          </h3>
+                          <p className="text-xs sm:text-sm text-emerald-50/90 max-w-xl leading-relaxed">
+                            {reflectResult?.message || 'Kết quả học tập của bạn đã được ghi nhận vào hồ sơ năng lực và chặng kế tiếp trên lộ trình đã sẵn sàng.'}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Circular Mastery Gauge */}
+                      <div className="flex items-center gap-3.5 rounded-2xl bg-white/12 backdrop-blur-xs border border-white/20 px-4 py-3 self-start sm:self-center shrink-0">
+                        <div className="relative w-16 h-16 flex items-center justify-center">
+                          <svg className="w-16 h-16 -rotate-90" viewBox="0 0 64 64">
+                            <circle
+                              cx="32"
+                              cy="32"
+                              r={ringRadius}
+                              fill="none"
+                              stroke="rgba(255,255,255,0.22)"
+                              strokeWidth="5.5"
+                            />
+                            <circle
+                              cx="32"
+                              cy="32"
+                              r={ringRadius}
+                              fill="none"
+                              stroke="#6ee7b7"
+                              strokeWidth="5.5"
+                              strokeLinecap="round"
+                              strokeDasharray={ringCircumference}
+                              strokeDashoffset={ringOffset}
+                            />
+                          </svg>
+                          <span className="absolute text-base font-black tabular-nums text-white">
+                            {finalPct}%
+                          </span>
+                        </div>
+                        <div className="text-left">
+                          <div className="text-[11px] font-bold uppercase tracking-wider text-emerald-100">
+                            Độ thành thạo
+                          </div>
+                          <div className="text-xs font-extrabold text-amber-200 mt-0.5">
+                            Vượt mục tiêu 85%
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Body: Stats Strip + Saved Reflection Notes */}
+                  <div className="p-5 sm:p-6 space-y-5 bg-gradient-to-b from-slate-50/60 to-white">
+                    {/* 3 Achievement Metric Pills */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div className="rounded-2xl border border-slate-200/80 bg-white p-3.5 flex items-center gap-3 shadow-2xs">
+                        <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                          <CheckCircle2 className="w-5 h-5" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-[11px] font-bold text-slate-500">Chu trình P-L-A-R</div>
+                          <div className="text-sm font-black text-slate-900">4/4 Pha hoàn tất</div>
+                        </div>
+                      </div>
+
+                      <div className="rounded-2xl border border-slate-200/80 bg-white p-3.5 flex items-center gap-3 shadow-2xs">
+                        <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-500 flex items-center justify-center shrink-0">
+                          <Star className="w-5 h-5 fill-amber-400" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-[11px] font-bold text-slate-500">Mức độ tự tin</div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-sm font-black text-slate-900">{savedRating}/5 sao</span>
+                            <span className="text-[11px] font-semibold text-amber-700 truncate">
+                              • {CONFIDENCE_LABELS[savedRating] || 'Tự tin'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="rounded-2xl border border-slate-200/80 bg-white p-3.5 flex items-center gap-3 shadow-2xs">
+                        <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                          <Target className="w-5 h-5" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-[11px] font-bold text-slate-500">Trạng thái lộ trình</div>
+                          <div className="text-sm font-black text-blue-700 truncate">
+                            {reflectResult?.nextUnlockedNodeId ? 'Đã mở khóa chặng kế tiếp' : 'Đã lưu vào hồ sơ'}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Saved Reflection Journal Card */}
+                    {(savedSummary || savedMistakes) && (
+                      <div className="rounded-2xl border border-slate-200/90 bg-white overflow-hidden shadow-2xs">
+                        <div className="flex items-center justify-between gap-2 px-4 py-2.5 bg-slate-50 border-b border-slate-100">
+                          <span className="inline-flex items-center gap-1.5 text-xs font-extrabold text-slate-800">
+                            <BookOpen className="w-3.5 h-3.5 text-emerald-600" />
+                            Nhật ký phản tư của bạn
+                          </span>
+                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 text-[10px] font-extrabold text-emerald-700">
+                            <CheckCircle2 className="w-3 h-3" />
+                            Đã lưu hồ sơ
+                          </span>
+                        </div>
+
+                        <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-1.5 font-extrabold text-slate-700">
+                              <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                              Kiến thức cốt lõi rút ra
+                            </div>
+                            {summaryChips.length > 0 ? (
+                              <div className="flex flex-wrap gap-1.5">
+                                {summaryChips.map((chip, i) => (
+                                  <span
+                                    key={i}
+                                    className="inline-flex items-center gap-1 rounded-lg bg-emerald-50/90 border border-emerald-200/80 px-2.5 py-1 text-xs font-semibold text-emerald-900"
+                                  >
+                                    <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" />
+                                    <span>{chip}</span>
+                                  </span>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-slate-400 italic">Chưa ghi chú thêm</p>
+                            )}
+                          </div>
+
+                          <div className="space-y-2 md:border-l md:border-slate-100 md:pl-4">
+                            <div className="flex items-center gap-1.5 font-extrabold text-slate-700">
+                              <span className="w-2 h-2 rounded-full bg-amber-500" />
+                              Bẫy / Lỗi sai cần tránh
+                            </div>
+                            {savedMistakes ? (
+                              <p className="rounded-xl bg-amber-50/70 border border-amber-200/70 px-3 py-2 text-slate-800 leading-relaxed">
+                                {savedMistakes}
+                              </p>
+                            ) : (
+                              <p className="text-slate-400 italic">Không có ghi chú lỗi sai</p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Action Footer */}
+                    <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-100">
+                      {onBackToMap ? (
+                        <button
+                          type="button"
+                          onClick={onBackToMap}
+                          className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 px-4 py-2.5 text-xs font-extrabold text-slate-700 cursor-pointer transition-colors"
+                        >
+                          <ArrowLeft className="w-3.5 h-3.5" />
+                          <span>Quay lại Lộ trình</span>
+                        </button>
+                      ) : <div />}
+
+                      {resolvedNextNodeId && onSelectNextNode && (
+                        <button
+                          type="button"
+                          onClick={() => onSelectNextNode(resolvedNextNodeId)}
+                          className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 px-6 py-3 text-sm font-extrabold text-white shadow-md hover:shadow-lg cursor-pointer transition-all"
+                        >
+                          <span>
+                            {nextNode?.stepOrder
+                              ? `Sang Chặng Kế Tiếp (Chặng #${nextNode.stepOrder})`
+                              : 'Chuyển Sang Chặng Kế Tiếp Đã Mở Khóa'}
+                          </span>
+                          <ArrowRight className="w-4 h-4" />
+                        </button>
                       )}
                     </div>
-                    {stage.learnedSummary && (
-                      <div>
-                        <span className="font-bold text-slate-500">Kiến thức cốt lõi rút ra: </span>
-                        <span className="text-slate-800">{stage.learnedSummary}</span>
-                      </div>
-                    )}
-                    {stage.mistakeNotes && (
-                      <div>
-                        <span className="font-bold text-slate-500">Bẫy / Lỗi sai cần tránh: </span>
-                        <span className="text-slate-800">{stage.mistakeNotes}</span>
-                      </div>
-                    )}
-                  </div>
-                )}
-                {reflectResult?.nextUnlockedNodeId && onSelectNextNode && (
-                  <button
-                    type="button"
-                    onClick={() => onSelectNextNode(reflectResult.nextUnlockedNodeId)}
-                    className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 px-6 py-3 text-sm font-extrabold text-white shadow-md cursor-pointer"
-                  >
-                    <span>Chuyển Sang Chặng Kế Tiếp Đã Mở Khóa</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
-            ) : (
-              <form onSubmit={handleSubmitReflect} className="rounded-2xl border border-emerald-200 bg-emerald-50/40 p-5 sm:p-6 space-y-4">
-                <div>
-                  <h3 className="text-sm font-black text-emerald-950">Pha R — Reflect: Phản Tư Nhận Thức &amp; Mở Khóa Chặng Kế Tiếp</h3>
-                  <p className="text-xs text-emerald-800 mt-0.5">
-                    Tuyệt vời! Bạn đã đạt ngưỡng thành thạo <strong>{masteryPct}%</strong>. Hãy tự đánh giá mức độ tự tin và ghi chú lại kinh nghiệm để đóng chặng học này.
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="block text-xs font-extrabold text-slate-700">Mức độ tự tin của bạn với dạng bài này (1–5 sao)</label>
-                  <div className="flex items-center gap-2">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <button
-                        key={star}
-                        type="button"
-                        onClick={() => setConfidenceRating(star)}
-                        className={`p-2 rounded-xl border transition-all cursor-pointer ${
-                          star <= confidenceRating
-                            ? 'border-amber-400 bg-amber-50 text-amber-500'
-                            : 'border-slate-200 bg-white text-slate-300'
-                        }`}
-                        aria-label={`${star} sao`}
-                      >
-                        <Star className={`w-5 h-5 ${star <= confidenceRating ? 'fill-amber-400' : ''}`} />
-                      </button>
-                    ))}
-                    <span className="text-xs font-bold text-slate-700 ml-1">{confidenceRating}/5 sao</span>
                   </div>
                 </div>
+              );
+            })() : (() => {
+              const subjCode = resolveSubjectCode(detail?.subjectName || node?.subjectName, detail?.domainCode || node?.domainCode);
+              const reflectPreset = getReflectPresets(subjCode);
+              const toggleReflectTag = (tag) => {
+                setLearnedSummary((prev) => {
+                  const parts = prev
+                    .split(';')
+                    .map((s) => s.trim())
+                    .filter(Boolean);
+                  if (parts.includes(tag)) {
+                    return parts.filter((s) => s !== tag).join('; ');
+                  }
+                  return [...parts, tag].join('; ');
+                });
+              };
+              const activeParts = learnedSummary
+                .split(';')
+                .map((s) => s.trim())
+                .filter(Boolean);
 
-                <div className="flex flex-wrap gap-2">
-                  {REFLECT_TAGS.map((tag) => (
+              return (
+                <form
+                  onSubmit={handleSubmitReflect}
+                  className="rounded-3xl border border-emerald-200/90 bg-white shadow-xs overflow-hidden"
+                >
+                  {/* Header Banner */}
+                  <div className="flex flex-wrap items-center justify-between gap-3 px-5 sm:px-6 py-4 bg-gradient-to-r from-emerald-50 via-teal-50/70 to-white border-b border-emerald-100">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-10 h-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shadow-xs shrink-0">
+                        <Award className="w-5 h-5" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-[11px] font-black uppercase tracking-wider text-emerald-700">
+                            Pha R • Reflect
+                          </span>
+                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-extrabold text-emerald-800">
+                            <CheckCircle2 className="w-3 h-3" />
+                            Vượt mục tiêu 85%
+                          </span>
+                        </div>
+                        <h3 className="text-sm sm:text-base font-black text-slate-900 mt-0.5">
+                          Phản Tư Nhận Thức &amp; Mở Khóa Chặng Kế Tiếp
+                        </h3>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 rounded-2xl bg-white border border-emerald-200 px-3.5 py-2 shadow-2xs">
+                      <span className="text-[11px] font-bold text-slate-500">Thành thạo</span>
+                      <span className="text-lg font-black text-emerald-600 tabular-nums leading-none">
+                        {masteryPct}%
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Body */}
+                  <div className="p-5 sm:p-6 space-y-5">
+                    {/* Confidence Rating Row */}
+                    <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200/80 bg-slate-50/70 px-4 py-3.5">
+                      <div>
+                        <div className="text-xs font-extrabold text-slate-800">
+                          Mức độ tự tin của bạn với dạng bài này
+                        </div>
+                        <div className="text-[11px] text-slate-500 mt-0.5">
+                          Hệ thống dùng mức tự tin để gợi ý tần suất ôn tập lại phù hợp
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <button
+                            key={star}
+                            type="button"
+                            onClick={() => setConfidenceRating(star)}
+                            className={`p-2 rounded-xl border transition-all cursor-pointer ${
+                              star <= confidenceRating
+                                ? 'border-amber-300 bg-amber-50 text-amber-500 shadow-2xs scale-105'
+                                : 'border-slate-200 bg-white text-slate-300 hover:border-amber-200 hover:text-amber-300'
+                            }`}
+                            aria-label={`${star} sao`}
+                          >
+                            <Star className={`w-4 h-4 ${star <= confidenceRating ? 'fill-amber-400' : ''}`} />
+                          </button>
+                        ))}
+                        <span className="ml-2 inline-flex items-center rounded-lg bg-amber-50 border border-amber-200/80 px-2.5 py-1 text-xs font-extrabold text-amber-800 whitespace-nowrap">
+                          {confidenceRating}/5 • {CONFIDENCE_LABELS[confidenceRating]}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Quick Tags */}
+                    <div className="space-y-2">
+                      <div className="text-xs font-extrabold text-slate-700">
+                        Chọn nhanh ghi nhận (bấm để thêm / bỏ)
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {reflectPreset.tags.map((tag) => {
+                          const isPicked = activeParts.includes(tag);
+                          return (
+                            <button
+                              key={tag}
+                              type="button"
+                              onClick={() => toggleReflectTag(tag)}
+                              className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-bold transition-all cursor-pointer ${
+                                isPicked
+                                  ? 'border-emerald-500 bg-emerald-600 text-white shadow-2xs'
+                                  : 'border-slate-200 bg-slate-50 hover:bg-emerald-50 hover:border-emerald-300 text-slate-700 hover:text-emerald-800'
+                              }`}
+                            >
+                              {isPicked ? <CheckCircle2 className="w-3.5 h-3.5" /> : <span>+</span>}
+                              <span>{tag}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Two-Column Reflection Notes */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <label className="block space-y-1.5">
+                        <span className="flex items-center gap-1.5 text-xs font-extrabold text-slate-800">
+                          <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                          Kiến thức cốt lõi em rút ra được
+                        </span>
+                        <textarea
+                          rows={3}
+                          value={learnedSummary}
+                          onChange={(e) => setLearnedSummary(e.target.value)}
+                          placeholder={reflectPreset.summaryPlaceholder}
+                          className="w-full rounded-2xl border border-slate-200 bg-slate-50/50 p-3.5 text-sm text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 focus:outline-none transition-all resize-none"
+                        />
+                      </label>
+                      <label className="block space-y-1.5">
+                        <span className="flex items-center gap-1.5 text-xs font-extrabold text-slate-800">
+                          <span className="w-2 h-2 rounded-full bg-amber-500" />
+                          Bẫy / Lỗi sai cần tránh lần sau
+                        </span>
+                        <textarea
+                          rows={3}
+                          value={mistakeNotes}
+                          onChange={(e) => setMistakeNotes(e.target.value)}
+                          placeholder={reflectPreset.mistakePlaceholder}
+                          className="w-full rounded-2xl border border-slate-200 bg-slate-50/50 p-3.5 text-sm text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-amber-500 focus:ring-2 focus:ring-amber-100 focus:outline-none transition-all resize-none"
+                        />
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Footer CTA Bar */}
+                  <div className="flex flex-wrap items-center justify-between gap-3 px-5 sm:px-6 py-3.5 bg-slate-50/90 border-t border-slate-100">
+                    <span className="text-xs text-slate-500">
+                      Nhật ký được lưu vào hồ sơ năng lực &amp; tự động mở khóa chặng kế tiếp.
+                    </span>
                     <button
-                      key={tag}
-                      type="button"
-                      onClick={() => setLearnedSummary((prev) => prev ? `${prev}; ${tag}` : tag)}
-                      className="rounded-full border border-emerald-200 bg-white hover:bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800 cursor-pointer"
+                      type="submit"
+                      disabled={reflectBusy}
+                      className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 disabled:opacity-50 px-5 py-2.5 text-sm font-extrabold text-white shadow-sm cursor-pointer transition-all"
                     >
-                      + {tag}
+                      <CheckCircle2 className="w-4 h-4" />
+                      <span>{reflectBusy ? 'Đang lưu & mở khóa...' : 'Hoàn Thành Chặng & Mở Khóa Chặng Kế Tiếp'}</span>
                     </button>
-                  ))}
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <label className="block space-y-1.5">
-                    <span className="text-xs font-extrabold text-slate-700">Kiến thức cốt lõi em rút ra được</span>
-                    <textarea
-                      rows={3}
-                      value={learnedSummary}
-                      onChange={(e) => setLearnedSummary(e.target.value)}
-                      placeholder="Ví dụ: Nhớ kiểm tra điều kiện xác định trước khi rút gọn và đối chiếu nghiệm..."
-                      className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm focus:border-emerald-500 focus:outline-none"
-                    />
-                  </label>
-                  <label className="block space-y-1.5">
-                    <span className="text-xs font-extrabold text-slate-700">Bẫy / Lỗi sai cần tránh lần sau</span>
-                    <textarea
-                      rows={3}
-                      value={mistakeNotes}
-                      onChange={(e) => setMistakeNotes(e.target.value)}
-                      placeholder="Ví dụ: Dễ nhầm dấu đạo hàm hàm hợp hoặc đọc sót từ KHÔNG trong đề..."
-                      className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm focus:border-emerald-500 focus:outline-none"
-                    />
-                  </label>
-                </div>
-
-                <div className="flex justify-end">
-                  <button
-                    type="submit"
-                    disabled={reflectBusy}
-                    className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 disabled:opacity-50 px-6 py-3 text-sm font-extrabold text-white shadow-md cursor-pointer"
-                  >
-                    <CheckCircle2 className="w-4 h-4" />
-                    <span>{reflectBusy ? 'Đang lưu & mở khóa chặng tiếp theo...' : 'Hoàn Thành Chặng & Mở Khóa Chặng Kế Tiếp'}</span>
-                  </button>
-                </div>
-              </form>
-            )}
+                  </div>
+                </form>
+              );
+            })()}
           </div>
         )}
       </div>
