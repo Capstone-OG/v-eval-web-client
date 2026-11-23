@@ -199,7 +199,7 @@ export function normalizeMathString(text) {
     '$1$2 - $3$4'
   );
   str = str.replace(
-    /([àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ])\s*\$([bcdfghjklmnpqrstvwxz])\$/gi,
+    /([àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ])\s*\$([cmnptgh])\$/g,
     '$1$2'
   );
 
@@ -257,6 +257,20 @@ export function normalizeMathString(text) {
       return inner;
     }
     return match;
+  });
+
+  // Tự động bọc từ nối tiếng Việt ngắn (hoặc, và, với, nếu, khi) nằm trần trong công thức LaTeX $...$
+  str = str.replace(/\$([^\$\r\n]+?)\$/g, (match, inner) => {
+    if (!/\\[a-zA-Z]+/.test(inner)) return match;
+    const segments = inner.split(/(\\text\{[^{}]*\})/g);
+    const fixed = segments
+      .map((seg, idx) =>
+        idx % 2 === 1
+          ? seg
+          : seg.replace(/(?<![A-Za-zÀ-ỹ\\])(hoặc|và|với|nếu|khi|hay)(?![A-Za-zÀ-ỹ])/gi, '\\text{ $1 }')
+      )
+      .join('');
+    return `$${fixed}$`;
   });
 
   str = str.replace(/\$([^\$\r\n]+?)\$/g, (match, inner) => {
@@ -582,6 +596,9 @@ export function normalizeMathString(text) {
         return part;
       }
     }
+
+    // Loại bỏ mọi dấu $ mồ côi còn sót trong textChunk trước khi auto-wrap để tuyệt đối không bị đảo cặp $...$
+    textChunk = textChunk.replace(/(?<!\\)\$/g, '');
 
     function wrapUntouchedMath(s, regex, replacer) {
       const chunks = s.split(/(\$[^\$\r\n]+?\$)/);

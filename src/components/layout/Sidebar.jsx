@@ -139,6 +139,15 @@ export default function Sidebar({
                 onClick: () => setActiveTab('dashboard')
               },
               {
+                id: 'roadmap_approval',
+                label: 'Duyệt lộ trình học sinh',
+                sublabel: 'Rà soát bản nháp & trình Giám đốc',
+                icon: ClipboardCheck,
+                active: activeTab === 'roadmap_approval',
+                onClick: () => setActiveTab('roadmap_approval'),
+                badge: 'Duyệt'
+              },
+              {
                 id: 'schedule',
                 label: 'Thời khóa biểu & Điểm danh',
                 sublabel: 'Lịch dạy, phòng học & điểm danh',
@@ -162,71 +171,31 @@ export default function Sidebar({
               {
                 id: 'roadmap',
                 label: 'Khung chương trình',
-                sublabel: 'Cây kiến thức & Ma trận Bloom',
+                sublabel: 'Tra cứu cây kiến thức & Bloom',
                 icon: Network,
                 active: activeTab === 'roadmap',
                 onClick: () => setActiveTab('roadmap'),
-                badge: 'Studio'
+                badge: 'Tra cứu'
               },
               {
-                id: 'textbook-group',
+                id: 'textbook-standard',
                 label: 'Sách giáo khoa (SGK)',
-                sublabel: 'Chuẩn, Nạp & Studio',
+                sublabel: 'Tra cứu SGK chuẩn GDPT 2018',
                 icon: BookOpen,
                 iconColor: 'from-emerald-500 to-teal-700',
-                children: [
-                  {
-                    id: 'textbook-standard',
-                    label: '1. Sách Giáo Khoa Chuẩn',
-                    badge: 'Khung',
-                    active: activeTab === 'textbook-standard',
-                    onClick: () => setActiveTab('textbook-standard')
-                  },
-                  {
-                    id: 'textbook-ingest',
-                    label: '2. Nạp Tài Liệu SGK',
-                    badge: '3 Phần',
-                    active: activeTab === 'textbook-ingest',
-                    onClick: () => setActiveTab('textbook-ingest')
-                  },
-                  {
-                    id: 'textbook-studio',
-                    label: '3. Studio Biên Soạn SGK',
-                    badge: 'Studio',
-                    active: activeTab === 'textbook-studio',
-                    onClick: () => setActiveTab('textbook-studio')
-                  }
-                ]
+                active: activeTab === 'textbook-standard',
+                onClick: () => setActiveTab('textbook-standard'),
+                badge: 'Chuẩn'
               },
               {
-                id: 'exam-group',
-                label: 'Đề thi & AI Bloom',
-                sublabel: 'Kho đề, Parse & Studio',
+                id: 'exam-bank',
+                label: 'Kho đề thi đã xuất bản',
+                sublabel: 'Tra cứu & xem đề khảo thí',
                 icon: FileSpreadsheet,
                 iconColor: 'from-indigo-500 to-blue-700',
-                children: [
-                  {
-                    id: 'exam-bank',
-                    label: '1. Kho Đề & Xem Đề Thi',
-                    badge: 'Kho Đề',
-                    active: activeTab === 'exam-bank',
-                    onClick: () => setActiveTab('exam-bank')
-                  },
-                  {
-                    id: 'exam-ingest',
-                    label: '2. Parse PDF & AI Bloom',
-                    badge: '2 Phần',
-                    active: activeTab === 'exam-ingest',
-                    onClick: () => setActiveTab('exam-ingest')
-                  },
-                  {
-                    id: 'exam-studio',
-                    label: '3. Studio Biên Soạn Đề',
-                    badge: 'Studio',
-                    active: activeTab === 'exam-studio',
-                    onClick: () => setActiveTab('exam-studio')
-                  }
-                ]
+                active: activeTab === 'exam-bank',
+                onClick: () => setActiveTab('exam-bank'),
+                badge: 'Kho Đề'
               }
             ]
           },
@@ -236,10 +205,11 @@ export default function Sidebar({
               {
                 id: 'ai_moderation',
                 label: 'Kiểm duyệt gia sư AI',
-                sublabel: 'Góp ý câu trả lời trợ lý AI',
+                sublabel: 'Đề xuất sửa & Bẫy tư duy lớp mình',
                 icon: Bot,
                 active: activeTab === 'ai_moderation',
-                onClick: () => setActiveTab('ai_moderation')
+                onClick: () => setActiveTab('ai_moderation'),
+                badge: 'Đề xuất'
               }
             ]
           }
@@ -267,6 +237,15 @@ export default function Sidebar({
                   icon: Building2,
                   active: activeTab === 'dashboard',
                   onClick: () => setActiveTab('dashboard')
+                },
+                {
+                  id: 'roadmap_approval',
+                  label: 'Phê duyệt Lộ trình HS',
+                  sublabel: 'Duyệt cuối & kích hoạt ACTIVE',
+                  icon: ClipboardCheck,
+                  active: activeTab === 'roadmap_approval',
+                  onClick: () => setActiveTab('roadmap_approval'),
+                  badge: 'Duyệt'
                 },
                 {
                   id: 'ai_moderation',
@@ -368,6 +347,15 @@ export default function Sidebar({
                 icon: Calendar,
                 active: activeTab === 'classes_schedule',
                 onClick: () => setActiveTab('classes_schedule')
+              },
+              {
+                id: 'roadmap_approval',
+                label: 'Phê duyệt Lộ trình HS',
+                sublabel: 'Duyệt cuối & kích hoạt ACTIVE',
+                icon: ClipboardCheck,
+                active: activeTab === 'roadmap_approval',
+                onClick: () => setActiveTab('roadmap_approval'),
+                badge: 'Duyệt'
               },
               {
                 id: 'clustering',
@@ -546,6 +534,15 @@ export default function Sidebar({
                 activeGlow: 'shadow-blue-500/30',
                 active: activeTab === 'roadmap',
                 onClick: () => setActiveTab('roadmap')
+              },
+              {
+                id: 'roadmap_approval',
+                label: 'Duyệt lộ trình học sinh',
+                sublabel: 'Rà soát bản nháp & trình Giám đốc',
+                icon: ClipboardCheck,
+                active: activeTab === 'roadmap_approval',
+                onClick: () => setActiveTab('roadmap_approval'),
+                badge: 'Duyệt'
               },
               {
                 id: 'schedule',
@@ -1048,7 +1045,7 @@ export default function Sidebar({
             <div className="text-[11px] text-blue-100 flex items-center justify-between">
               <span>{teacherHeatmap ? 'Kỹ năng theo dõi:' : 'Học liệu · Đề thi · Học sinh'}</span>
               <strong className="text-[#FACC15] font-black">
-                {teacherHeatmap ? `${teacherHeatmap.columns?.length ?? 0} chuyên đề` : 'Studio'}
+                {teacherHeatmap ? `${teacherHeatmap.columns?.length ?? 0} chuyên đề` : 'Tra cứu'}
               </strong>
             </div>
           </>

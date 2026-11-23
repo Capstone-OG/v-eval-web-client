@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import katex from 'katex';
 import {
   Bookmark,
@@ -175,6 +175,33 @@ export default function StudentBookmarkDrawer() {
   // Graph state (student-friendly input!)
   const [graphInput, setGraphInput] = useState('x³ - 3x + 1');
   const [graphFormula, setGraphFormula] = useState('y = x^3 - 3x + 1');
+
+  // Listen for 1-click "Mở bảng nháp trực quan" shortcuts from Math questions & theory pages
+  useEffect(() => {
+    const handleOpenScratchpad = (event) => {
+      const detail = event?.detail || {};
+      setIsOpen(true);
+      setMainTab('simulations');
+      if (detail.simMode) setSimMode(detail.simMode);
+      if (detail.shape3D) {
+        setSelected3D(detail.shape3D);
+        setExtraPoints([]);
+        setAuxLines([]);
+        setAuxPolygons([]);
+      }
+      if (detail.shape2D) setSelected2D(detail.shape2D);
+      if (detail.graphPreset) {
+        const preset = GRAPH_2D_PRESETS.find((g) => g.id === detail.graphPreset);
+        if (preset) {
+          setGraphInput(preset.input);
+          setGraphFormula(preset.formula);
+        }
+      }
+    };
+
+    window.addEventListener('veval:open-math-scratchpad', handleOpenScratchpad);
+    return () => window.removeEventListener('veval:open-math-scratchpad', handleOpenScratchpad);
+  }, []);
 
   // 3D derived config
   const active3DMeta = useMemo(
@@ -373,9 +400,8 @@ export default function StudentBookmarkDrawer() {
     <>
       {/* Right-Edge Vertical Bookmark Tabs (Tra cứu + Casio 580) */}
       <div
-        className={`fixed right-0 top-1/2 -translate-y-1/2 z-40 flex flex-col gap-2 transition-all duration-200 ${
-          isOpen ? 'translate-x-full opacity-0 pointer-events-none' : 'translate-x-0 opacity-100'
-        }`}
+        className={`fixed right-0 top-1/2 -translate-y-1/2 z-40 flex flex-col gap-2 transition-all duration-200 ${isOpen ? 'translate-x-full opacity-0 pointer-events-none' : 'translate-x-0 opacity-100'
+          }`}
       >
         <button
           type="button"
@@ -424,9 +450,8 @@ export default function StudentBookmarkDrawer() {
         >
           <aside
             onClick={(e) => e.stopPropagation()}
-            className={`relative h-full bg-white shadow-2xl border-l border-slate-200 flex flex-col transition-all duration-200 ${
-              isWide ? 'w-full max-w-[97vw]' : 'w-full max-w-5xl'
-            }`}
+            className={`relative h-full bg-white shadow-2xl border-l border-slate-200 flex flex-col transition-all duration-200 ${isWide ? 'w-full max-w-[97vw]' : 'w-full max-w-5xl'
+              }`}
           >
             {/* Header */}
             <div className="flex items-center justify-between gap-3 px-5 py-3.5 border-b border-slate-200/80 bg-white shrink-0">
@@ -469,11 +494,10 @@ export default function StudentBookmarkDrawer() {
               <button
                 type="button"
                 onClick={() => setMainTab('formulas')}
-                className={`inline-flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
-                  mainTab === 'formulas'
+                className={`inline-flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${mainTab === 'formulas'
                     ? 'bg-indigo-600 text-white shadow-xs'
                     : 'bg-white text-slate-600 border border-slate-200 hover:border-indigo-300 hover:text-indigo-700'
-                }`}
+                  }`}
               >
                 <BookMarked className="w-4 h-4" />
                 <span>1. Công thức &amp; Tra cứu</span>
@@ -481,11 +505,10 @@ export default function StudentBookmarkDrawer() {
               <button
                 type="button"
                 onClick={() => setMainTab('simulations')}
-                className={`inline-flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
-                  mainTab === 'simulations'
+                className={`inline-flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${mainTab === 'simulations'
                     ? 'bg-indigo-600 text-white shadow-xs'
                     : 'bg-white text-slate-600 border border-slate-200 hover:border-indigo-300 hover:text-indigo-700'
-                }`}
+                  }`}
               >
                 <Cpu className="w-4 h-4" />
                 <span>2. Mô phỏng (Toán · Lý · Hóa)</span>
@@ -493,11 +516,10 @@ export default function StudentBookmarkDrawer() {
               <button
                 type="button"
                 onClick={() => setMainTab('calculator')}
-                className={`inline-flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
-                  mainTab === 'calculator'
+                className={`inline-flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${mainTab === 'calculator'
                     ? 'bg-slate-900 text-white shadow-xs'
                     : 'bg-white text-slate-600 border border-slate-200 hover:border-slate-400 hover:text-slate-900'
-                }`}
+                  }`}
               >
                 <Calculator className="w-4 h-4" />
                 <span>3. Máy tính Casio 580</span>
@@ -525,11 +547,10 @@ export default function StudentBookmarkDrawer() {
                       key={s.id}
                       type="button"
                       onClick={() => { setFormulaSubject(s.id); setFormulaSearch(''); }}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all cursor-pointer ${
-                        formulaSubject === s.id
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all cursor-pointer ${formulaSubject === s.id
                           ? 'bg-slate-900 text-white border-slate-900'
                           : 'bg-white text-slate-700 border-slate-200 hover:border-indigo-300'
-                      }`}
+                        }`}
                     >
                       {s.label}
                     </button>
@@ -567,9 +588,8 @@ export default function StudentBookmarkDrawer() {
                           key={t.id}
                           type="button"
                           onClick={() => setChemSubTab(t.id)}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                            chemSubTab === t.id ? 'bg-white text-indigo-700 shadow-2xs' : 'text-slate-600 hover:text-slate-900'
-                          }`}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${chemSubTab === t.id ? 'bg-white text-indigo-700 shadow-2xs' : 'text-slate-600 hover:text-slate-900'
+                            }`}
                         >
                           {t.label}
                         </button>
@@ -606,9 +626,8 @@ export default function StudentBookmarkDrawer() {
                         {selectedElement && (
                           <div className="rounded-2xl border border-slate-200/90 bg-white p-4 shadow-2xs flex flex-col sm:flex-row items-start sm:items-center gap-4">
                             <div
-                              className={`w-20 h-20 rounded-2xl border-2 flex flex-col items-center justify-center shrink-0 ${
-                                (ELEMENT_CATEGORIES[selectedElement.category] || ELEMENT_CATEGORIES.nonmetal).bg
-                              } ${(ELEMENT_CATEGORIES[selectedElement.category] || ELEMENT_CATEGORIES.nonmetal).border}`}
+                              className={`w-20 h-20 rounded-2xl border-2 flex flex-col items-center justify-center shrink-0 ${(ELEMENT_CATEGORIES[selectedElement.category] || ELEMENT_CATEGORIES.nonmetal).bg
+                                } ${(ELEMENT_CATEGORIES[selectedElement.category] || ELEMENT_CATEGORIES.nonmetal).border}`}
                             >
                               <span className="text-[10px] font-bold text-slate-500">{selectedElement.z}</span>
                               <span className={`text-2xl font-black leading-none ${(ELEMENT_CATEGORIES[selectedElement.category] || ELEMENT_CATEGORIES.nonmetal).text}`}>
@@ -758,9 +777,8 @@ export default function StudentBookmarkDrawer() {
                             key={cat.id}
                             type="button"
                             onClick={() => setEngCategory(cat.id)}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all cursor-pointer ${
-                              engCategory === cat.id ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-700 border-slate-200 hover:border-indigo-300'
-                            }`}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all cursor-pointer ${engCategory === cat.id ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-700 border-slate-200 hover:border-indigo-300'
+                              }`}
                           >
                             {cat.label}
                           </button>
@@ -914,9 +932,8 @@ export default function StudentBookmarkDrawer() {
                         key={m.id}
                         type="button"
                         onClick={() => setSimMode(m.id)}
-                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-all cursor-pointer ${
-                          simMode === m.id ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-700 border-slate-200 hover:border-indigo-300'
-                        }`}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-all cursor-pointer ${simMode === m.id ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-700 border-slate-200 hover:border-indigo-300'
+                          }`}
                       >
                         <Icon className="w-3.5 h-3.5" />
                         <span>{m.label}</span>
@@ -934,9 +951,8 @@ export default function StudentBookmarkDrawer() {
                           key={m.id}
                           type="button"
                           onClick={() => handleSelect3DModel(m.id)}
-                          className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
-                            selected3D === m.id ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-700 border-slate-200 hover:border-indigo-300'
-                          }`}
+                          className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${selected3D === m.id ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-700 border-slate-200 hover:border-indigo-300'
+                            }`}
                         >
                           {m.label}
                         </button>
@@ -1093,9 +1109,8 @@ export default function StudentBookmarkDrawer() {
                           key={s.id}
                           type="button"
                           onClick={() => setSelected2D(s.id)}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold border cursor-pointer ${
-                            selected2D === s.id ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-700 border-slate-200 hover:border-indigo-300'
-                          }`}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold border cursor-pointer ${selected2D === s.id ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-700 border-slate-200 hover:border-indigo-300'
+                            }`}
                         >
                           {s.label}
                         </button>
@@ -1147,9 +1162,8 @@ export default function StudentBookmarkDrawer() {
                           key={g.id}
                           type="button"
                           onClick={() => { setGraphInput(g.input); setGraphFormula(g.formula); }}
-                          className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border cursor-pointer ${
-                            graphInput === g.input ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-700 border-slate-200 hover:border-indigo-300'
-                          }`}
+                          className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border cursor-pointer ${graphInput === g.input ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-700 border-slate-200 hover:border-indigo-300'
+                            }`}
                         >
                           {g.label}
                         </button>

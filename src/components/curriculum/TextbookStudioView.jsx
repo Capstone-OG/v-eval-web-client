@@ -15,7 +15,7 @@ import {
 } from './textbookStateBridge';
 import aiService from '../../services/aiService';
 
-export default function TextbookStudioView({ onBack, onNavigateTab }) {
+export default function TextbookStudioView({ onBack, onNavigateTab, role = 'director' }) {
   const initCtx = getStoredTextbookContext();
 
   const [activeContext, setActiveContext] = useState(initCtx);
@@ -214,6 +214,7 @@ export default function TextbookStudioView({ onBack, onNavigateTab }) {
       <div className="flex-1 min-h-0">
         <CurriculumStudioEditor
           mode="textbook"
+          role={role}
           headerActions={headerActions}
           pattern={
             activePattern || {
