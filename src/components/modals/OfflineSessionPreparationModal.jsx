@@ -61,17 +61,37 @@ export default function OfflineSessionPreparationModal({
           if (r.studentId && r.studentName) nameMap.set(r.studentId, r.studentName);
         });
 
+        // Đếm họ tên trùng lặp trong lớp để đánh dấu mã định danh phân biệt
+        const nameCountMap = new Map();
+        rows.forEach((r) => {
+          const n = (r.studentName || '').trim();
+          if (n) nameCountMap.set(n, (nameCountMap.get(n) || 0) + 1);
+        });
+        attRecords.forEach((a) => {
+          const n = (a.studentName || nameMap.get(a.studentId) || '').trim();
+          if (n) nameCountMap.set(n, (nameCountMap.get(n) || 0) + 1);
+        });
+
+        const formatStudentDisplayName = (rawName, studentId) => {
+          const trimmed = (rawName || '').trim();
+          if (!trimmed) return studentId ? `Học sinh #${String(studentId).slice(-4).toUpperCase()}` : 'Học sinh';
+          if ((nameCountMap.get(trimmed) || 0) > 1 && studentId) {
+            return `${trimmed} (#${String(studentId).slice(-4).toUpperCase()})`;
+          }
+          return trimmed;
+        };
+
         let realStudents = [];
         if (rows.length > 0) {
           realStudents = rows.map((r) => ({
             id: r.studentId,
-            name: r.studentName || `Học sinh ${String(r.studentId).slice(0, 6)}`,
+            name: formatStudentDisplayName(r.studentName, r.studentId),
             currentScore: r.overallMastery != null ? `${Math.round(r.overallMastery * 100)}%` : '0%'
           }));
         } else if (attRecords.length > 0) {
           realStudents = attRecords.map((r) => ({
             id: r.studentId,
-            name: r.studentName || nameMap.get(r.studentId) || `Học sinh ${String(r.studentId).slice(0, 6)}`,
+            name: formatStudentDisplayName(r.studentName || nameMap.get(r.studentId), r.studentId),
             currentScore: '0%'
           }));
         }
@@ -164,6 +184,39 @@ export default function OfflineSessionPreparationModal({
         focusTopics: plan.part1.focusTopics.filter((t) => t.id !== topicId)
       }
     });
+  };
+
+  // Giảng viên chủ động đổi bàn cho học sinh trong kế hoạch buổi học
+  const handleMoveStudentInPlan = (studentId, fromGroupId, toGroupId) => {
+    if (!plan?.part2?.microGroups) return;
+    const fromGroup = plan.part2.microGroups.find((g) => g.groupId === fromGroupId);
+    const toGroup = plan.part2.microGroups.find((g) => g.groupId === toGroupId);
+    if (!fromGroup || !toGroup) return;
+
+    const studentToMove = (fromGroup.students || []).find((s) => s.id === studentId);
+    if (!studentToMove) return;
+
+    const updatedGroups = plan.part2.microGroups.map((g) => {
+      if (g.groupId === fromGroupId) {
+        const nextStudents = (g.students || []).filter((s) => s.id !== studentId);
+        return { ...g, students: nextStudents, studentCount: nextStudents.length };
+      }
+      if (g.groupId === toGroupId) {
+        const nextStudents = [...(g.students || []), studentToMove];
+        return { ...g, students: nextStudents, studentCount: nextStudents.length };
+      }
+      return g;
+    });
+
+    setPlan({
+      ...plan,
+      part2: {
+        ...plan.part2,
+        microGroups: updatedGroups
+      }
+    });
+
+    toast.success(`Đã chuyển ${studentToMove.name} sang ${toGroup.tableName}!`);
   };
 
   // Lưu kế hoạch buổi học
@@ -401,10 +454,31 @@ export default function OfflineSessionPreparationModal({
                       {group.students.map((st) => (
                         <div
                           key={st.id}
-                          className="flex items-center justify-between text-[11px] font-semibold text-slate-700"
+                          className="flex items-center justify-between text-[11px] font-semibold text-slate-700 py-0.5"
                         >
-                          <span>{st.name}</span>
-                          <span className="text-slate-400 font-normal">Đạt: {st.currentScore}</span>
+                          <span className="truncate max-w-[150px] sm:max-w-[180px]" title={st.name}>{st.name}</span>
+                          <div className="flex items-center gap-1.5 shrink-0 ml-1">
+                            <span className="text-slate-400 font-normal">Đạt: {st.currentScore}</span>
+                            {plan.part2.microGroups.length > 1 && (
+                              <select
+                                value=""
+                                onChange={(e) => {
+                                  if (e.target.value) handleMoveStudentInPlan(st.id, group.groupId, e.target.value);
+                                }}
+                                className="text-[10px] font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded px-1 py-0.5 cursor-pointer transition-colors"
+                                title="Chuyển học sinh này sang bàn khác"
+                              >
+                                <option value="" disabled>⇄</option>
+                                {plan.part2.microGroups
+                                  .filter((other) => other.groupId !== group.groupId)
+                                  .map((other) => (
+                                    <option key={other.groupId} value={other.groupId}>
+                                      Sang {other.tableName}
+                                    </option>
+                                  ))}
+                              </select>
+                            )}
+                          </div>
                         </div>
                       ))}
                     </div>

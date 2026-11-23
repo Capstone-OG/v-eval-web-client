@@ -2,6 +2,25 @@
 
 ---
 
+## [23/11/2026] - Khoan Sâu Danh Sách Học Sinh Yếu Theo Kỹ Năng, Lên Lịch Học Nhóm Phụ Đạo & Tự Chủ Giảng Viên (`TeacherDashboardView.jsx`, `ClassMicroGroupsModal.jsx`, `OfflineSessionPreparationModal.jsx`, `remedialSessionStore.js`)
+
+- **Khoan Sâu Danh Sách Học Sinh Yếu & Ngữ Cảnh Lớp Học ([`TeacherDashboardView.jsx`](../src/components/dashboard/TeacherDashboardView.jsx))**:
+  - *Ngữ cảnh lớp học rõ ràng*: Bổ sung header modal định danh lớp học: `Lớp: [Tên lớp] • Mã: [Mã lớp] • Sĩ số: [Sĩ số] học sinh`, giúp Giảng viên nhận diện tức thì phạm vi lớp học đang theo dõi thay vì một danh sách không rõ bối cảnh.
+  - *Accordion xem chi tiết học sinh chưa đạt*: Bổ sung cơ chế mở rộng trực tiếp `Xem chi tiết [X] học sinh chưa đạt chuyên đề này ▼` hiển thị chi tiết từng em (avatar, họ tên, phần trăm hiểu bài < 50%), đáp ứng đúng yêu cầu sư phạm khoan sâu từ chuyên đề xuống học sinh.
+  - *Tạo nhóm bồi dưỡng có chủ đích*: Nút `Tạo Nhóm Bồi Dưỡng` truyền thẳng chuyên đề trọng tâm (`focusSkill`, `focusSkillId`) và danh sách học sinh cần hỗ trợ sang `ClassMicroGroupsModal`, gom nhóm học sinh có cùng điểm trũng kiến thức.
+- **Hệ Thống Lên Lịch Học Nhóm Phụ Đạo / Bồi Dưỡng Chuyên Biệt ([`ClassMicroGroupsModal.jsx`](../src/components/modals/ClassMicroGroupsModal.jsx), [`remedialSessionStore.js`](../src/utils/remedialSessionStore.js), [`tests/remedialSessionStore.test.js`](../tests/remedialSessionStore.test.js))**:
+  - *Store quản lý lịch phụ đạo vi mô (`remedialSessionStore.js`)*: Xây dựng store chuyên dụng lưu trữ lịch học kèm cơ chế CustomEvent `veval:remedial-session-scheduled` đồng bộ dữ liệu.
+  - *Modal lên lịch phụ đạo linh hoạt*: Cho phép Giảng viên cấu hình Ngày học, Khung giờ/Ca học (sáng, chiều, tối hoặc tùy chỉnh), Hình thức (Tại phòng học Offline hoặc Live Q&A Trực tuyến), và Ghi chú dặn dò học sinh.
+  - *Huy hiệu lịch học trên thẻ nhóm bàn*: Thẻ nhóm hiển thị rõ ràng ngày học và hình thức phụ đạo đã lên lịch, hỗ trợ Giảng viên mở lại để cập nhật hoặc hủy lịch học.
+  - *Quyền tự chủ chuyển bàn học cho Giảng viên*: Thêm menu chuyển bàn nhanh (`⇄ Sang Bàn X`) trên từng hàng học sinh kèm cảnh báo sư phạm mềm (nhắc nhở giữ sĩ số tối thiểu 3 bạn và tối đa 5 bạn mỗi bàn).
+  - *Giải thích toán học & sư phạm*: Thông báo xếp bàn hiển thị chi tiết số lượng bạn mỗi bàn (ví dụ: `Đã xếp thành công 2 nhóm bàn (Bàn 1: 4 bạn, Bàn 2: 3 bạn) cho 7 học sinh theo chuẩn sư phạm 3 – 5 bạn/bàn!`), giải thích lý do không thể chia 5 + 2 vì vi phạm sĩ số tối thiểu 3 bạn/bàn.
+- **Nâng Cấp Quyền Tự Chủ & Xử Lý Học Sinh Trùng Tên Trong Buổi Học Offline ([`OfflineSessionPreparationModal.jsx`](../src/components/modals/OfflineSessionPreparationModal.jsx))**:
+  - Tự động gắn hậu tố định danh phân biệt (`#8A51`, `#B099`) cho học sinh trùng họ tên (như 2 bạn cùng tên "Phạm Tấn Lộc") từ dữ liệu điểm danh và ma trận nhiệt thực tế.
+  - Bổ sung thao tác đổi bàn học trực tiếp (`⇄ Sang Bàn X`) trong Tab 2 "Nhóm học tập tại bàn", trao trọn quyền tự chủ cho Giảng viên sắp xếp học sinh theo năng lực quan sát tại lớp.
+- **Kiểm Thử & Biên Dịch**:
+  - 31/31 unit tests passed 100% (`tests/remedialSessionStore.test.js`, `tests/classMicroGroups.test.js`, ...).
+  - `npm run build`: Hoàn thành 100% trong 1.25s (`3086 modules transformed`, `0 Error`).
+
 ## [23/11/2026] - Triệt Tiêu Rò Rỉ UUID & Phân Giải Dữ Liệu Thực Tế Cho Nhóm Bàn Học Vi Mô (`ClassMicroGroupsModal.jsx`)
 
 - **Triệt Tiêu Rò Rỉ Mã Định Danh UUID & Đồng Bộ Dữ Liệu Thực Tế Cho Sơ Đồ Nhóm Bàn Học Vi Mô ([`ClassMicroGroupsModal.jsx`](../src/components/modals/ClassMicroGroupsModal.jsx), [`offlineSessionStore.js`](../src/utils/offlineSessionStore.js), [`tests/classMicroGroups.test.js`](../tests/classMicroGroups.test.js))**:

@@ -3308,3 +3308,18 @@ The Parent Companion Portal was completely redesigned and hardened according to 
       - New test suite `tests/classMicroGroups.test.js` verified UUID detection, skill name mapping, and homonym disambiguation.
       - Unit test suite: 29/29 tests passed 100% (`node --test tests/*.test.js`).
       - Production build: `npm run build` completed in 1.23s (3085 modules transformed, 0 errors).
+
+42. **Skill-to-Student Drill-down, Targeted Remedial Group Scheduling & Instructor Autonomy (`TeacherDashboardView.jsx`, `ClassMicroGroupsModal.jsx`, `OfflineSessionPreparationModal.jsx`, `remedialSessionStore.js`, `tests/remedialSessionStore.test.js`) [23/11/2026]**:
+    - **Architectural Motivation**:
+      - In pedagogical active learning and flipped classrooms, instructors must not be presented with generic or uncontextualized clusters. The workflow must seamlessly bridge: **Classroom Context Identification -> Struggling Skill Analysis -> Granular Student Drill-down -> Intentional Micro-Group Partitioning -> Remedial Study Session Scheduling (Offline or Live Q&A)**.
+      - Furthermore, instructors require full pedagogical autonomy to reassign students between tables based on in-person classroom observations, and the system must clearly explain mathematical partitioning constraints (e.g. why $N=7$ students partitions into $4 + 3$ instead of $5 + 2$, adhering to the strict pedagogical bounds of $3 \le \text{size} \le 5$).
+    - **Implementation Details**:
+      - *Pedagogical Alert Drill-down*: Enhanced `TeacherDashboardView.jsx` with class identification metadata (`Lớp: [Tên lớp] • Mã: [Mã lớp] • Sĩ số: [Sĩ số] học sinh`) and student drill-down accordions rendering individual struggling students with avatar, name, and comprehension percentage (< 50%). Passes focus skill and student IDs directly to `ClassMicroGroupsModal`.
+      - *Remedial Study Session Subsystem*: Created `remedialSessionStore.js` with CustomEvent bus `veval:remedial-session-scheduled`. Supports configuring session date, time slot presets (morning, afternoon, evening, custom), delivery format (Offline classroom or Live Q&A Online), and instructor guidance notes.
+      - *Instructor Table Reassignment Autonomy*: Added quick table switchers (`⇄ Sang Bàn X`) on each student row in both `ClassMicroGroupsModal.jsx` and `OfflineSessionPreparationModal.jsx` with soft capacity warnings.
+      - *Mathematical Breakdown Explanation*: Upgraded auto-partition notices to display exact table breakdowns (e.g. `Đã xếp thành công 2 nhóm bàn (Bàn 1: 4 bạn, Bàn 2: 3 bạn) cho 7 học sinh theo chuẩn sư phạm 3 – 5 bạn/bàn!`).
+    - **Verification & Acceptance Metrics**:
+      - New test suite `tests/remedialSessionStore.test.js` verified storage, multi-group scheduling, and deletion.
+      - Total test suite: 31/31 unit tests passed 100% (`node --test tests/*.test.js`).
+      - Production build: `npm run build` completed in 1.25s with 3086 modules transformed and 0 errors.
+
