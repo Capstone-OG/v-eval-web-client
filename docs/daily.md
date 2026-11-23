@@ -2,6 +2,15 @@
 
 ---
 
+## [23/11/2026] - Triệt Tiêu Rò Rỉ UUID & Phân Giải Dữ Liệu Thực Tế Cho Nhóm Bàn Học Vi Mô (`ClassMicroGroupsModal.jsx`)
+
+- **Triệt Tiêu Rò Rỉ Mã Định Danh UUID & Đồng Bộ Dữ Liệu Thực Tế Cho Sơ Đồ Nhóm Bàn Học Vi Mô ([`ClassMicroGroupsModal.jsx`](../src/components/modals/ClassMicroGroupsModal.jsx), [`offlineSessionStore.js`](../src/utils/offlineSessionStore.js), [`tests/classMicroGroups.test.js`](../tests/classMicroGroups.test.js))**:
+  - *Đồng bộ song song 3 nguồn dữ liệu thật*: Nạp song song ma trận nhiệt năng lực lớp (`practiceService.getClassHeatmap`), danh sách nhóm bàn vi mô (`practiceService.getClassMicroGroups`), và cây kỹ năng chuẩn (`contentService.getSkillsTree`) từ CSDL Backend.
+  - *Ánh xạ tên chuyên đề tiếng Việt & lọc bỏ raw GUID*: Tự động đối chiếu `CommonWeakSkillIds` sang tên chuyên đề tiếng Việt chuẩn (`skillNameMap`), kiểm tra regex loại bỏ 100% các chuỗi UUID thô khỏi giao diện người dùng.
+  - *Giới hạn hiển thị thẻ chuyên đề chống tràn layout*: Chỉ hiển thị tối đa 2 thẻ chuyên đề trọng tâm mỗi bàn học kèm huy hiệu rút gọn `+X chuyên đề khác` (hiển thị danh sách đầy đủ khi rê chuột), bảo đảm danh sách học sinh luôn hiển thị rõ ràng, không bị đẩy lệch khỏi màn hình.
+  - *Phân giải danh tính học sinh thực tế & xử lý trùng họ tên*: Phân giải họ tên từ CSDL và ma trận lớp; tự động gắn hậu tố định danh ngắn gọn (`#8A51`, `#B099`) khi trong lớp có nhiều học sinh trùng họ tên (như trường hợp 2 học sinh cùng tên "Phạm Tấn Lộc"), giúp Giảng viên phân biệt chuẩn xác 100%.
+  - *Bổ sung bộ unit test chuyên sâu*: Thêm 3 test cases mới trong `tests/classMicroGroups.test.js`, xác nhận 29/29 tests passed 100%.
+
 ## [23/11/2026] - Hoàn Thiện Bộ 3 Nghiệp Vụ Cổng Giảng Viên (TCH-03, TCH-04, TCH-05), Tối Ưu Khung Chương Trình & Lịch Dạy Offline (TCH-02)
 
 - **Tra Cứu Lịch Sử Làm Bài & Phân Tích Lỗ Hổng Kiến Thức Học Viên Đa Lớp (TCH-03) ([`TeacherSubmissionHistoryView.jsx`](../src/components/dashboard/TeacherSubmissionHistoryView.jsx), [`App.jsx`](../src/App.jsx), [`TeacherPortalView.jsx`](../src/components/dashboard/TeacherPortalView.jsx))**:

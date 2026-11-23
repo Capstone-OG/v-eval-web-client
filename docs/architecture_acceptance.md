@@ -3294,3 +3294,17 @@ The Parent Companion Portal was completely redesigned and hardened according to 
         - Test suite `tests/parentTeacherMessagingStore.test.js` verified 100% pass across all messaging and reply flows.
         - Total unit test coverage: 26/26 tests passing in 169ms.
         - Production build: `npm run build` completed in 1.25s (3085 modules transformed, 0 warnings/errors).
+
+41. **Zero Raw GUID Leakage & Real Identity Resolution in Class Micro-Groups Architecture (`ClassMicroGroupsModal.jsx`, `offlineSessionStore.js`, `tests/classMicroGroups.test.js`) [23/11/2026]**:
+    - **Architectural Motivation**:
+      - Automatic table clustering algorithms partition students into homogeneous capability clusters (3–5 students per table). However, returning raw UUID strings for `CommonWeakSkillIds` caused cards to overflow vertically with dozens of red GUID tags, obscuring student rosters and breaking modal responsiveness.
+      - Furthermore, student names must be resolved from real system identities in PostgreSQL via gRPC, and classes containing homonymous students (such as two distinct students sharing the name "Phạm Tấn Lộc") require transparent disambiguation suffixes (`#8A51` vs `#B099`) to prevent instructor confusion.
+    - **Implementation Details**:
+      - *Concurrent Multi-Source Data Hydration*: In `ClassMicroGroupsModal.jsx`, fetches class micro-groups (`practiceService.getClassMicroGroups`), class heatmap (`practiceService.getClassHeatmap`), and curriculum tree (`contentService.getSkillsTree`) in parallel.
+      - *GUID Suppression & Vietnamese Skill Name Resolution*: Built `skillNameMap` resolving GUIDs to clean pedagogical names. Implemented regex check `isRawGuid` ensuring zero raw UUIDs leak into the interface.
+      - *Ergonomic Weakness Tag Capping*: Weak skill tags are strictly capped at 2 per table card, with a subtle `+X chuyên đề khác` badge showing all remaining skills on tooltip hover.
+      - *Homonym Student Disambiguation*: Built `nameFrequencyMap`; when multiple enrolled students share identical full names, attaches short unique 4-character ID suffixes derived from their PostgreSQL `StudentId` (e.g. `Phạm Tấn Lộc (#8A51)` and `Phạm Tấn Lộc (#B099)`).
+    - **Verification & Acceptance Metrics**:
+      - New test suite `tests/classMicroGroups.test.js` verified UUID detection, skill name mapping, and homonym disambiguation.
+      - Unit test suite: 29/29 tests passed 100% (`node --test tests/*.test.js`).
+      - Production build: `npm run build` completed in 1.23s (3085 modules transformed, 0 errors).

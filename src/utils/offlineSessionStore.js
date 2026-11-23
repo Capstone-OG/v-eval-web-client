@@ -133,6 +133,22 @@ export function buildMicroGroupsFromStudents(realStudents = [], focusSkills = []
     return [];
   }
 
+  // Đếm tần suất họ tên để gắn định danh phân biệt khi lớp có nhiều học sinh trùng tên
+  const nameCounts = new Map();
+  realStudents.forEach((st) => {
+    const n = (st.name || st.studentName || '').trim();
+    if (n) nameCounts.set(n, (nameCounts.get(n) || 0) + 1);
+  });
+
+  const getFormatName = (st) => {
+    const raw = (st.name || st.studentName || 'Học sinh').trim();
+    const id = st.id || st.studentId;
+    if (nameCounts.get(raw) > 1 && id) {
+      return `${raw} (#${String(id).slice(-4).toUpperCase()})`;
+    }
+    return raw;
+  };
+
   const sortedSkills = Array.isArray(focusSkills)
     ? focusSkills.slice().sort((a, b) => {
         const pltA = a.classAveragePlt ?? a.ClassAveragePlt ?? a.averagePlt ?? 0.5;
@@ -158,7 +174,7 @@ export function buildMicroGroupsFromStudents(realStudents = [], focusSkills = []
       studentCount: g1.length,
       students: g1.map((st) => ({
         id: st.id || st.studentId,
-        name: st.name || st.studentName || 'Học sinh',
+        name: getFormatName(st),
         currentScore: st.currentScore || (st.overallMastery != null ? `${Math.round(st.overallMastery * 100)}%` : '0%')
       })),
       worksheet: {
@@ -178,7 +194,7 @@ export function buildMicroGroupsFromStudents(realStudents = [], focusSkills = []
       studentCount: g2.length,
       students: g2.map((st) => ({
         id: st.id || st.studentId,
-        name: st.name || st.studentName || 'Học sinh',
+        name: getFormatName(st),
         currentScore: st.currentScore || (st.overallMastery != null ? `${Math.round(st.overallMastery * 100)}%` : '0%')
       })),
       worksheet: {

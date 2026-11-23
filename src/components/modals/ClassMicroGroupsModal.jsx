@@ -17,6 +17,7 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { practiceService } from '../../services/practiceService';
+import { contentService } from '../../services/contentService';
 import { toast } from '../../context/ToastContext';
 
 export default function ClassMicroGroupsModal({ isOpen, onClose, classData }) {
@@ -26,31 +27,174 @@ export default function ClassMicroGroupsModal({ isOpen, onClose, classData }) {
   const [successNotice, setSuccessNotice] = useState('');
   const [assigningGroupId, setAssigningGroupId] = useState(null);
 
-  // Nạp danh sách nhóm thực tế từ Backend khi mở modal
+  // Từ điển ánh xạ dữ liệu thật từ Backend (Không hardcode)
+  const [skillNameMap, setSkillNameMap] = useState(new Map());
+  const [studentInfoMap, setStudentInfoMap] = useState(new Map());
+  const [nameFrequencyMap, setNameFrequencyMap] = useState(new Map());
+
+  // Nạp danh sách nhóm và ma trận năng lực thực tế từ Backend khi mở modal
   useEffect(() => {
     if (!isOpen || !classData) return;
 
-    const fetchGroups = async () => {
+    let isMounted = true;
+
+    const loadData = async () => {
       try {
         setLoading(true);
-        const data = await practiceService.getClassMicroGroups(classData.id);
-        if (data && Array.isArray(data)) {
-          setGroups(data);
-        } else if (data && Array.isArray(data.groups)) {
-          setGroups(data.groups);
-        } else {
-          setGroups([]);
+        // Tải đồng thời: nhóm vi mô, ma trận nhiệt của lớp và cây kỹ năng từ Backend
+        const [groupsRes, heatmapRes, skillsTreeRes] = await Promise.allSettled([
+          practiceService.getClassMicroGroups(classData.id),
+          practiceService.getClassHeatmap(classData.id),
+          contentService.getSkillsTree().catch(() => null)
+        ]);
+
+        if (!isMounted) return;
+
+        // 1. Xử lý nhóm vi mô
+        let loadedGroups = [];
+        if (groupsRes.status === 'fulfilled' && groupsRes.value) {
+          const val = groupsRes.value;
+          loadedGroups = Array.isArray(val) ? val : (Array.isArray(val?.groups) ? val.groups : []);
         }
+        setGroups(loadedGroups);
+
+        // 2. Xây dựng bản đồ tên kỹ năng từ heatmap và cây kỹ năng Content Service
+        const nextSkillMap = new Map();
+
+        // Từ cây kỹ năng
+        if (skillsTreeRes.status === 'fulfilled' && skillsTreeRes.value) {
+          const tree = Array.isArray(skillsTreeRes.value) ? skillsTreeRes.value : [];
+          tree.forEach((node) => {
+            const id = node.skillId || node.SkillId || node.id;
+            const name = node.name || node.Name || node.skillName;
+            if (id && name) {
+              nextSkillMap.set(String(id).toLowerCase(), name);
+            }
+          });
+        }
+
+        // Từ cột Heatmap của lớp
+        let heatmapData = null;
+        if (heatmapRes.status === 'fulfilled' && heatmapRes.value) {
+          heatmapData = heatmapRes.value;
+          const cols = heatmapData?.columns || heatmapData?.Columns || [];
+          cols.forEach((col) => {
+            const id = col.skillId || col.SkillId || col.id;
+            const name = col.skillName || col.SkillName || col.name;
+            if (id && name) {
+              nextSkillMap.set(String(id).toLowerCase(), name);
+            }
+          });
+        }
+
+        setSkillNameMap(nextSkillMap);
+
+        // 3. Xây dựng bản đồ học sinh (họ tên, điểm mastery) từ Heatmap rows
+        const nextStudentMap = new Map();
+        const nextFreqMap = new Map();
+
+        const rows = heatmapData?.rows || heatmapData?.Rows || [];
+        rows.forEach((r) => {
+          const sId = r.studentId || r.StudentId || r.id;
+          const sName = r.studentName || r.StudentName || r.name;
+          const mastery = r.thetaScore ?? r.ThetaScore ?? r.overallMastery ?? r.OverallMastery;
+          if (sId) {
+            nextStudentMap.set(String(sId).toLowerCase(), {
+              name: sName || '',
+              mastery: typeof mastery === 'number' ? mastery : null
+            });
+          }
+          if (sName) {
+            const trimmedName = sName.trim();
+            nextFreqMap.set(trimmedName, (nextFreqMap.get(trimmedName) || 0) + 1);
+          }
+        });
+
+        setStudentInfoMap(nextStudentMap);
+        setNameFrequencyMap(nextFreqMap);
       } catch (err) {
-        console.warn('[ClassMicroGroupsModal] Error fetching micro groups from backend:', err.message);
-        setGroups([]);
+        console.warn('[ClassMicroGroupsModal] Error fetching data:', err.message);
+        if (isMounted) setGroups([]);
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     };
 
-    fetchGroups();
+    loadData();
+
+    return () => {
+      isMounted = false;
+    };
   }, [isOpen, classData]);
+
+  // Kiểm tra chuỗi có phải là raw UUID không để loại bỏ rò rỉ mã GUID lên UI
+  const isRawGuid = (str) => {
+    if (typeof str !== 'string') return false;
+    const clean = str.trim().replace(/^\{|\}$/g, '');
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(clean);
+  };
+
+  // Định dạng tên học sinh kèm định danh phân biệt khi lớp có trùng họ tên (ví dụ: 2 bạn cùng tên Phạm Tấn Lộc)
+  const getDisplayStudentName = (member) => {
+    const sId = member.studentId || member.StudentId || member.id;
+    const lookup = sId ? studentInfoMap.get(String(sId).toLowerCase()) : null;
+    const baseName = member.name || member.Name || lookup?.name || '';
+
+    if (!baseName) {
+      return sId ? `Học sinh #${String(sId).slice(-4).toUpperCase()}` : 'Học sinh';
+    }
+
+    // Nếu trong lớp có từ 2 học sinh trở lên trùng đúng họ tên này -> gắn hậu tố mã định danh ngắn gọn
+    const freq = nameFrequencyMap.get(baseName.trim()) || 0;
+    if (freq > 1 && sId) {
+      return `${baseName} (#${String(sId).slice(-4).toUpperCase()})`;
+    }
+
+    return baseName;
+  };
+
+  // Lấy độ làm chủ thực tế của học sinh từ CSDL
+  const getDisplayMastery = (member) => {
+    if (typeof member.mastery === 'number') return member.mastery;
+    const sId = member.studentId || member.StudentId || member.id;
+    if (sId) {
+      const lookup = studentInfoMap.get(String(sId).toLowerCase());
+      if (typeof lookup?.mastery === 'number') return lookup.mastery;
+    }
+    return null;
+  };
+
+  // Ánh xạ danh sách điểm yếu sang tên chuyên đề tiếng Việt chuẩn, tuyệt đối không lộ raw UUID
+  const getResolvedWeakSkills = (grp) => {
+    // 1. Ưu tiên danh sách tên chuyên đề đã được Backend xử lý
+    if (Array.isArray(grp.commonWeakSkillNames) && grp.commonWeakSkillNames.length > 0) {
+      const validNames = grp.commonWeakSkillNames.filter((n) => n && !isRawGuid(n));
+      if (validNames.length > 0) return Array.from(new Set(validNames));
+    }
+
+    // 2. Tra cứu từ CommonWeakSkillIds
+    const rawIds = Array.isArray(grp.commonWeakSkillIds) ? grp.commonWeakSkillIds : [];
+    const resolved = [];
+
+    for (const item of rawIds) {
+      if (!item) continue;
+      const str = String(item).trim();
+      const lower = str.toLowerCase();
+      if (skillNameMap.has(lower)) {
+        resolved.push(skillNameMap.get(lower));
+      } else if (!isRawGuid(str)) {
+        // Bản thân chuỗi đã là tên kỹ năng (không phải UUID)
+        resolved.push(str);
+      }
+    }
+
+    // 3. Fallback an toàn: Nếu không tìm thấy tên trong từ điển, dùng FocusArea của nhóm
+    if (resolved.length === 0 && grp.focusArea && !isRawGuid(grp.focusArea)) {
+      resolved.push(grp.focusArea);
+    }
+
+    return Array.from(new Set(resolved));
+  };
 
   // Xử lý tự động chia nhóm vi mô trên Backend
   const handleAutoPartition = async () => {
@@ -58,7 +202,7 @@ export default function ClassMicroGroupsModal({ isOpen, onClose, classData }) {
     try {
       setLoading(true);
       const res = await practiceService.autoPartitionMicroGroups(classData.id, preferredGroupSize);
-      const nextGroups = Array.isArray(res?.groups) ? res.groups : Array.isArray(res) ? res : [];
+      const nextGroups = Array.isArray(res?.groups) ? res.groups : (Array.isArray(res) ? res : []);
       setGroups(nextGroups);
       setSuccessNotice(
         `Đã xếp thành công ${res?.totalGroups ?? nextGroups.length} nhóm học tập (${preferredGroupSize} bạn/nhóm) theo chuyên đề cần củng cố!`
@@ -209,14 +353,14 @@ export default function ClassMicroGroupsModal({ isOpen, onClose, classData }) {
               <span>Sơ đồ {groups.length} Nhóm Bàn Học Cần Hỗ Trợ</span>
             </div>
             <span className="text-slate-400 font-normal">
-              Phân nhóm học tập theo năng lực
+              Phân nhóm học tập theo năng lực & vùng trũng kiến thức
             </span>
           </div>
 
           {loading ? (
             <div className="py-16 text-center space-y-3">
               <RotateCw className="w-8 h-8 text-indigo-600 animate-spin mx-auto" />
-              <p className="text-xs font-bold text-slate-600">Đang tải danh sách nhóm học tập...</p>
+              <p className="text-xs font-bold text-slate-600">Đang đồng bộ dữ liệu nhóm học tập từ hệ thống...</p>
             </div>
           ) : groups.length === 0 ? (
             <div className="p-8 text-center bg-slate-50 rounded-3xl border border-dashed border-slate-300 space-y-3">
@@ -262,19 +406,37 @@ export default function ClassMicroGroupsModal({ isOpen, onClose, classData }) {
                       <span className="truncate">{grp.focusArea || 'Củng cố kiến thức trọng tâm'}</span>
                     </div>
 
-                    {/* Common Deficiencies Tags */}
-                    {grp.commonWeakSkillIds && grp.commonWeakSkillIds.length > 0 && (
-                      <div className="flex flex-wrap gap-1 pt-1">
-                        {grp.commonWeakSkillIds.map((skill, sIdx) => (
-                          <span 
-                            key={sIdx}
-                            className="px-2 py-0.5 bg-rose-50 border border-rose-200 text-rose-700 text-[10px] font-bold rounded-md"
-                          >
-                            ⚠️ {skill}
-                          </span>
-                        ))}
-                      </div>
-                    )}
+                    {/* Common Deficiencies Tags (Tối đa 2 thẻ chuyên đề, kèm badge rút gọn chống tràn UI) */}
+                    {(() => {
+                      const weakSkills = getResolvedWeakSkills(grp);
+                      if (weakSkills.length === 0) return null;
+
+                      const maxVisibleTags = 2;
+                      const visibleTags = weakSkills.slice(0, maxVisibleTags);
+                      const hiddenCount = weakSkills.length - maxVisibleTags;
+
+                      return (
+                        <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                          {visibleTags.map((skill, sIdx) => (
+                            <span 
+                              key={sIdx}
+                              className="px-2 py-0.5 bg-rose-50 border border-rose-200 text-rose-700 text-[10px] font-bold rounded-md max-w-full truncate"
+                              title={skill}
+                            >
+                              ⚠️ {skill}
+                            </span>
+                          ))}
+                          {hiddenCount > 0 && (
+                            <span 
+                              className="px-1.5 py-0.5 bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-600 text-[10px] font-bold rounded-md transition-colors cursor-help"
+                              title={`Các chuyên đề củng cố thêm:\n• ${weakSkills.slice(maxVisibleTags).join('\n• ')}`}
+                            >
+                              +{hiddenCount} chuyên đề khác
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   {/* Members List */}
@@ -284,31 +446,36 @@ export default function ClassMicroGroupsModal({ isOpen, onClose, classData }) {
                     </div>
 
                     <div className="space-y-1.5">
-                      {members.map((m, mIdx) => (
-                        <div 
-                          key={m.studentId || mIdx}
-                          className="flex items-center justify-between p-2 rounded-xl bg-slate-50 hover:bg-slate-100/80 transition-all text-xs"
-                        >
-                          <div className="flex items-center gap-2 min-w-0">
-                            <div className={`w-6 h-6 rounded-full ${m.avatarColor || 'bg-indigo-500'} text-white text-[10px] font-black flex items-center justify-center shrink-0`}>
-                              {(m.name || 'H').charAt(0)}
-                            </div>
-                            <span className="font-bold text-slate-800 truncate">
-                              {m.name || `Học sinh ${m.studentId?.substring(0, 6)}`}
-                            </span>
-                          </div>
+                      {members.map((m, mIdx) => {
+                        const displayName = getDisplayStudentName(m);
+                        const mastery = getDisplayMastery(m);
 
-                          <div className="text-[11px] font-black text-slate-500 shrink-0 ml-2">
-                            {m.mastery ? (
-                              <span className={m.mastery >= 0.7 ? 'text-emerald-600' : 'text-amber-600'}>
-                                {Math.round(m.mastery * 100)}%
+                        return (
+                          <div 
+                            key={m.studentId || m.id || mIdx}
+                            className="flex items-center justify-between p-2 rounded-xl bg-slate-50 hover:bg-slate-100/80 transition-all text-xs"
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <div className={`w-6 h-6 rounded-full ${m.avatarColor || 'bg-indigo-500'} text-white text-[10px] font-black flex items-center justify-center shrink-0`}>
+                                {displayName.charAt(0)}
+                              </div>
+                              <span className="font-bold text-slate-800 truncate" title={displayName}>
+                                {displayName}
                               </span>
-                            ) : (
-                              <span className="text-slate-400">Đang luyện</span>
-                            )}
+                            </div>
+
+                            <div className="text-[11px] font-black text-slate-500 shrink-0 ml-2">
+                              {mastery != null ? (
+                                <span className={mastery >= 0.7 ? 'text-emerald-600' : 'text-amber-600'}>
+                                  {Math.round(mastery <= 1 ? mastery * 100 : mastery)}%
+                                </span>
+                              ) : (
+                                <span className="text-slate-400">Đang luyện</span>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
 
@@ -329,7 +496,7 @@ export default function ClassMicroGroupsModal({ isOpen, onClose, classData }) {
                         </div>
                         <button 
                           onClick={() => handleAssignWorksheet(grp)}
-                          className="text-[11px] text-emerald-700 hover:underline shrink-0 ml-2"
+                          className="text-[11px] text-emerald-700 hover:underline shrink-0 ml-2 cursor-pointer"
                         >
                           Đổi đề
                         </button>
