@@ -3902,3 +3902,7 @@ Preserved the remaining 24 modified frontend files: simplified Vietnamese copy a
 - [24/11/2026] Added persistent white surfaces and shadows to unselected report navigation cards; active cards retain stronger colored shadows. Verified inactive class branch; display-only change.
 
 - [24/11/2026] Unified the four student summary cards between overview and reports using StudentSummaryCards: score, target gap, roadmap and streak, with matching colored strips, badges, values and footer panels. Preserved report topic navigation and all overview navigation callbacks in their corresponding cards. Build passed with native config loader; targeted lint zero errors with existing hook warnings; browser review pending. No new fixed student data introduced.
+
+## [24/11/2026] - Develop merge resolution
+
+Resolved the active frontend UPDATE.md conflict with upstream develop 47b7d27. Preserved local student timetable, report navigation and summary cards; integrated upstream roadmap approval, study workspace, scratchpad and CD workflow changes. Ten targeted tests and native-loader production build passed. Conflict-marker scan found no remaining source/document markers in the active frontend. Browser and deployment acceptance remain pending. The separate legacy V-Eval-Web_Client checkout has pre-existing merge conflicts and was not modified in this resolution.

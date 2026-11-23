@@ -16,3 +16,7 @@
 - Report navigation cards now retain shadows while unselected.
 
 - Unified four overview/report metric cards with the reference layout and retained navigation actions.
+
+- Integrated upstream develop 47b7d27: CD workflow, roadmap approval workspace, roadmap/study updates and math scratchpad. Preserved local report navigation, shared summary cards, prescription eligibility and timetable changes. Earlier upstream deployment notes remain in daily/process history.
+
+- Resolved active frontend merge with develop 47b7d27; preserved local UI and recorded upstream progress. Ten targeted tests and production build passed; browser/deployment verification pending.

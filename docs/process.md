@@ -1545,6 +1545,8 @@ All roles require full name, login email, contact phone and initial password. Sh
 | **Khắc Phục Giới Hạn Chiều Cao & Khơi Thông Toàn Văn Lý Thuyết SGK Trong Pha Learn PLAR** | `PlarNodeStudioPanel.jsx`, CSDL PostgreSQL `v_eval_content."Materials"` | 🟢 Hoàn thành | Tích hợp trực tiếp module tri thức SGK `getDefaultLessonTheory` & `getSavedTextbookData` vào Pha Learn PLAR; loại bỏ giới hạn chiều cao `overflow-visible`; nâng cấp `PassageContextBox` nút mở rộng và max-h-460px; nâng cấp CSDL chuyên đề Toán 10 từ 722 ký tự lên 4,270 ký tự toàn văn; build và deploy Docker hoàn tất. |
 | Dedicated Full-Page PLAR Studio (4 Phase Tabs) + Sticky Sidebar + 9-Subject SGK Hydration [22/11/2026] | `ConnectedRoadmapPage.jsx`, `PlarNodeStudioPanel.jsx`, `Sidebar.jsx` | 🟢 Hoàn thành | 100% | Tách PLAR thành trang học chuyên biệt toàn màn hình với 4 tab chu trình ngang, sửa `resolveSubjectCode` nạp đủ lý thuyết SGK 9 môn, cố định Sticky Sidebar khi cuộn trang; `npm run build` 0 Error. |
 
+| **Continuous Deployment (Auto-CD)** | `.github/workflows/cd-main.yml` | Hoàn thành (100%) | Tự động hóa triển khai lên máy chủ Ubuntu (`veval-prod`) qua script trung tâm `/data/Capstone/Scripts/deploy_service.sh web-client` khi merge `main`. |
+
 ## [23/11/2026] - Khoan Sâu Học Sinh Theo Kỹ Năng, Lên Lịch Học Nhóm Phụ Đạo & Tự Chủ Giảng Viên
 
 | Hạng Mục Triển Khai | Vị Trí Triển Khai | Trạng Thái | Chi Tiết Nghiệm Thu |
@@ -1678,3 +1680,9 @@ Reminder messages in StudentEarlyWarningsCard come from getMyAlerts; repeated da
 - [24/11/2026] Unselected report card shadows: implemented persistent elevation without requiring hover/selection.
 
 - [24/11/2026] Shared StudentSummaryCards now supplies overview and report metrics; existing navigation callbacks retained; production build passed.
+
+## [24/11/2026] - Active frontend integration
+
+| Item | Status | Verification |
+| --- | --- | --- |
+| Upstream develop 47b7d27 | Integrated | UPDATE.md combined under current date; local UI retained; ten tests and build pass. |

@@ -19,6 +19,7 @@ import {
 import aiService from '../../services/aiService';
 import contentService from '../../services/contentService';
 import MathText from '../common/MathText';
+import MathScratchpadButton from '../common/MathScratchpadButton';
 import {
   isNonPedagogical,
   cleanPrefix,
@@ -595,22 +596,29 @@ export default function StudentFoundationKnowledgeView({ onOpenAiTutorWithContex
                       </h2>
                     </div>
 
-                    {onOpenAiTutorWithContext && (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          onOpenAiTutorWithContext({
-                            topic: activePattern.name,
-                            subject: `${subjectLabel} Lớp ${selectedGrade}`,
-                            questionContent: `Giải thích chi tiết kiến thức nền & ví dụ cho dạng bài: ${activePattern.name}`
-                          })
-                        }
-                        className="px-3.5 py-2 rounded-xl border border-violet-200 bg-violet-50 hover:bg-violet-100 text-violet-800 text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer shrink-0"
-                      >
-                        <Bot className="w-4 h-4" />
-                        <span>Hỏi Gia sư AI</span>
-                      </button>
-                    )}
+                    <div className="flex flex-wrap items-center gap-2 shrink-0">
+                      <MathScratchpadButton
+                        text={`${activePattern.name || ''} ${activePattern.lessonName || ''} ${activePattern.chapterName || ''}`}
+                        subjectHint={subjectLabel}
+                        className="py-2"
+                      />
+                      {onOpenAiTutorWithContext && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            onOpenAiTutorWithContext({
+                              topic: activePattern.name,
+                              subject: `${subjectLabel} Lớp ${selectedGrade}`,
+                              questionContent: `Giải thích chi tiết kiến thức nền & ví dụ cho dạng bài: ${activePattern.name}`
+                            })
+                          }
+                          className="px-3.5 py-2 rounded-xl border border-violet-200 bg-violet-50 hover:bg-violet-100 text-violet-800 text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer shrink-0"
+                        >
+                          <Bot className="w-4 h-4" />
+                          <span>Hỏi Gia sư AI</span>
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   {/* 3 Clean Reading Tabs */}
