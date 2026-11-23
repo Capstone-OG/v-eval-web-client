@@ -1,6 +1,9 @@
 # UPDATE - V-EVAL WEB CLIENT
 
 ## [23/11/2026]
+- **Sửa Lỗi Tràn Layout & Co Chữ Dọc Trên Thẻ Cảnh Báo Sớm (`EarlyWarningsMentorPanel.jsx`)**:
+  - Triệt tiêu hoàn toàn class `whitespace-nowrap` trên dòng thông điệp cảnh báo dài (`alert.message`) gây chèn ép chiều ngang làm cột hướng dẫn sư phạm bên cạnh bị bóp nghẹt thành 1–2 chữ mỗi dòng.
+  - Tách riêng thông điệp cảnh báo hiển thị chuẩn độ giãn dòng tự nhiên (`leading-relaxed`), đưa banner hướng dẫn phân cấp sư phạm xuống thành một dải phụ trợ bên dưới với cơ chế `flex-wrap` chống tràn tuyệt đối.
   - **Hoàn Thiện Bộ 3 Nghiệp Vụ Cổng Giảng Viên (TCH-03, TCH-04, TCH-05)**:
     + **TCH-03 — Tra Cứu Lịch Sử Làm Bài & Phân Tích Lỗ Hổng Kiến Thức Học Viên Đa Lớp (`TeacherSubmissionHistoryView.jsx`, `App.jsx`, `TeacherPortalView.jsx`)**:
       * Đồng bộ bộ chọn lớp động đa lớp (`assignedClasses`) qua API `practiceService.getClasses({ teacherId })`, cho phép Giảng viên chuyển đổi tức thời giữa các lớp phụ trách và tải danh sách học sinh thực tế từ Heatmap ma trận lớp.
