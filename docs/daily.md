@@ -2,8 +2,15 @@
 
 ---
 
-## [23/11/2026] - Tối Ưu Hóa Giao Diện Khung Chương Trình Học Liệu & Đồng Bộ Dữ Liệu Học Sinh Thực Tế Buổi Học Offline (TCH-02)
+## [23/11/2026] - Tối Ưu Hóa Chiều Dài Cuộn Khung Chương Trình & Đồng Bộ Dữ Liệu Học Sinh Thực Tế Buổi Học Offline (TCH-02)
 
+- **Tối Ưu Hóa Chiều Dài Cuộn & Công Thái Học Tra Cứu Khung Chương Trình Cho Giảng Viên ([`CurriculumExplorerView.jsx`](../src/components/curriculum/CurriculumExplorerView.jsx))**:
+  - *Tích hợp thanh Tab chọn nhanh Khối lớp (Lớp 10 • 11 • 12)*: Đặt 4 tab chuyển đổi ngay đỉnh danh sách chương kèm số lượng chương thực tế (`Tất cả`, `Lớp 12`, `Lớp 11`, `Lớp 10`), lọc ngay lập tức danh sách từ 14+ chương xuống còn 2–7 chương theo đúng khối lớp giảng dạy, triệt tiêu 70% độ dài phải cuộn trang.
+  - *Cơ chế Khung cuộn độc lập (Split Independent Scroll) & Cố định khung chi tiết (Sticky View)*:
+    + Cột trái (Danh sách chương) được cấu hình `lg:sticky lg:top-4 lg:max-h-[calc(100vh-100px)]` kèm vùng cuộn nội bộ `overflow-y-auto scrollbar-thin`, giúp cuộn mượt mà không làm trôi giao diện tổng thể.
+    + Cột phải (Khung chi tiết sư phạm 3 tầng) được gắn `lg:sticky lg:top-4 lg:max-h-[calc(100vh-100px)] lg:overflow-y-auto`, luôn cố định vững chãi ngay tầm mắt, bấm chọn chương/bài/dạng ở cột trái là chi tiết xuất hiện ngay lập tức bên cạnh mà không bao giờ bị khuất màn hình hay phải cuộn ngược lên tìm kiếm.
+  - *Nút công thái học Mở rộng / Thu gọn tất cả*: Bổ sung nút chuyển đổi 1-chạm `Thu gọn hết / Mở tất cả` giúp giáo viên đóng/mở toàn bộ các chương chỉ với 1 click.
+  - *Tinh giản mật độ hiển thị thẻ chương (Compact Density)*: Tối ưu padding (`p-2.5 sm:px-3`), thu nhỏ icon `w-7 h-7` và tinh gọn khoảng cách giữa các thẻ, tăng gấp đôi số lượng chương hiển thị trên cùng một tầm nhìn màn hình.
 - **Tối Ưu Hóa Trải Nghiệm Người Dùng & Loại Bỏ Thuật Ngữ Kỹ Thuật Khung Chương Trình Cho Phân Hệ Giảng Viên ([`CurriculumExplorerView.jsx`](../src/components/curriculum/CurriculumExplorerView.jsx), [`UnifiedNodeDetailView.jsx`](../src/components/curriculum/UnifiedNodeDetailView.jsx), [`ExamBankView.jsx`](../src/components/curriculum/ExamBankView.jsx), [`ExamWorkspaceHeader.jsx`](../src/components/curriculum/ExamWorkspaceHeader.jsx), [`TextbookStandardView.jsx`](../src/components/curriculum/TextbookStandardView.jsx), [`TextbookIngestView.jsx`](../src/components/curriculum/TextbookIngestView.jsx))**:
   - *Tái cấu trúc giao diện Tra cứu Khung chương trình (`CurriculumExplorerView.jsx`)*:
     + Loại bỏ nhãn kỹ thuật `(Read-only)`, thay thế badge thành `Khung chương trình chuẩn` với biểu tượng trực quan, thanh nhã.

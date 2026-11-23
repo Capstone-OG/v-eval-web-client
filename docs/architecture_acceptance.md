@@ -3265,8 +3265,11 @@ The Parent Companion Portal was completely redesigned and hardened according to 
     - **Implementation Details**:
       - *Curriculum Explorer (`CurriculumExplorerView.jsx`)*:
         - Replaced technical `(Read-only)` status badges with an intuitive `Khung chương trình chuẩn` tag.
+        - Integrated quick Grade selection pills (`Tất cả`, `Lớp 12`, `Lớp 11`, `Lớp 10`) at the top of the chapter hierarchy, immediately reducing list length from 14+ chapters down to 2–7 chapters for active grade teaching.
+        - Engineered Split Independent Scroll architecture (`lg:sticky lg:top-4 lg:max-h-[calc(100vh-100px)] lg:overflow-y-auto`): left chapter navigation and right 3-tier pedagogical detail view scroll independently, guaranteeing that detail content is never dragged out of sight.
+        - Added an ergonomic 1-click `Thu gọn hết / Mở tất cả` toggle and compacted chapter card density (`p-2.5 sm:px-3`, `w-7 h-7` badges).
         - Streamlined chapter cards by removing internal weight percentages and raw ingested page counts; replaced with a clean `Sách giáo khoa` indicator and lesson tally.
-        - Renamed tree heading to `Danh sách chương & bài học` and hid administrator creation buttons (`+ Thêm Chương`) from teacher views.
+        - Renamed tree heading to `Danh sách chương` and hid administrator creation buttons (`+ Thêm Chương`) from teacher views.
         - Simplified lesson pattern items by removing `pat.weight` and adopting human-readable mastery categories (`Cần bổ trợ`, `Cần củng cố`, `Đã vững`).
       - *Pedagogical Node Details (`UnifiedNodeDetailView.jsx`)*:
         - Harmonized the 3 knowledge blocks into intuitive pedagogical layers: Core Textbook Theory (`Khối 1: Lý Thuyết Trọng Tâm Chuẩn SGK`), Problem-Solving Methods & Visual Lab (`Khối 2: Phương Pháp Giải & Mô Hình Minh Họa Trực Quan`), and Practice Question Bank (`Khối 3: Ngân Hàng Câu Hỏi Luyện Tập`).

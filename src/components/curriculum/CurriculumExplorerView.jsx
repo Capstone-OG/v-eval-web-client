@@ -1095,6 +1095,18 @@ export default function CurriculumExplorerView({
     return result;
   }, [chapters, selectedGrade, selectedAcademicYear, selectedSubSubject, selectedBloomFilter, domainKey, searchQuery]);
 
+  // Đếm số lượng chương theo từng khối lớp để hiển thị trên Tab chọn nhanh
+  const gradeCounts = useMemo(() => {
+    const counts = { all: chapters.length, '12': 0, '11': 0, '10': 0 };
+    chapters.forEach(chap => {
+      const text = `${chap.name} ${chap.description || ''} ${(chap.lessons || []).map(l => l.name).join(' ')}`;
+      const g = detectGrade(text, '12');
+      if (counts[g] !== undefined) counts[g]++;
+      else counts['12']++;
+    });
+    return counts;
+  }, [chapters]);
+
   // Helper to get Mastery percentage for a Pattern
   const getPatternMastery = (pattern) => {
     if (!pattern) return undefined;
@@ -2425,32 +2437,81 @@ export default function CurriculumExplorerView({
       </div>
 
       {/* 3. MAIN 2-COLUMN VIEW: (Left: 3-Level Tree Accordion | Right: 4 Pedagogical Layers) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
         {/* Left Column: 3-Level Hierarchical Accordion (5 Cols) */}
-        <div className="min-w-0 lg:col-span-5 space-y-4">
-          <div className="flex items-center justify-between text-xs font-bold text-slate-600 px-1">
+        <div className="min-w-0 lg:col-span-5 bg-white rounded-3xl border border-slate-200/90 shadow-sm p-4 flex flex-col space-y-3 lg:sticky lg:top-4 lg:max-h-[calc(100vh-100px)]">
+          <div className="flex items-center justify-between text-xs font-bold text-slate-600 pb-2.5 border-b border-slate-100">
             <div className="flex items-center gap-2">
               <Layers className="w-3.5 h-3.5 text-blue-600" />
-              <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">Danh sách chương & bài học</span>
-              <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[10px] font-bold">
+              <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">Danh sách chương</span>
+              <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 text-[10px] font-bold border border-blue-200">
                 {filteredChapters.length} Chương
               </span>
             </div>
-            {/* Nút Thêm Chương Mới - Chỉ dành cho Director/Manager */}
-            {!isReadOnly && (
+            <div className="flex items-center gap-2">
               <button
-                onClick={handleOpenCreateChapterModal}
-                className="px-2.5 py-1 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold flex items-center gap-1 shadow-sm transition-all hover:scale-105 active:scale-95 cursor-pointer"
-                title="Thêm một Chương mới vào miền tri thức này"
+                type="button"
+                onClick={() => {
+                  const anyOpen = Object.values(expandedChapters).some(Boolean);
+                  if (anyOpen) {
+                    setExpandedChapters({});
+                  } else {
+                    const all = {};
+                    filteredChapters.forEach(c => { all[c.chapterId] = true; });
+                    setExpandedChapters(all);
+                  }
+                }}
+                className="text-[11px] text-blue-600 hover:text-blue-800 font-semibold cursor-pointer"
               >
-                <Plus className="w-3.5 h-3.5" />
-                <span>+ Thêm Chương</span>
+                {Object.values(expandedChapters).some(Boolean) ? 'Thu gọn hết' : 'Mở tất cả'}
               </button>
-            )}
+              {/* Nút Thêm Chương Mới - Chỉ dành cho Director/Manager */}
+              {!isReadOnly && (
+                <button
+                  onClick={handleOpenCreateChapterModal}
+                  className="px-2.5 py-1 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold flex items-center gap-1 shadow-sm transition-all hover:scale-105 active:scale-95 cursor-pointer"
+                  title="Thêm một Chương mới vào miền tri thức này"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>+ Thêm</span>
+                </button>
+              )}
+            </div>
           </div>
 
-          <div className="space-y-3">
+          {/* Quick Grade Selector Tabs */}
+          <div className="grid grid-cols-4 gap-1 p-1 bg-slate-100/80 rounded-xl text-xs font-bold border border-slate-200/60">
+            {[
+              { id: 'all', label: 'Tất cả', count: gradeCounts.all },
+              { id: '12', label: 'Lớp 12', count: gradeCounts['12'] },
+              { id: '11', label: 'Lớp 11', count: gradeCounts['11'] },
+              { id: '10', label: 'Lớp 10', count: gradeCounts['10'] }
+            ].map(g => {
+              const isActive = selectedGrade === g.id;
+              return (
+                <button
+                  key={g.id}
+                  type="button"
+                  onClick={() => setSelectedGrade(g.id)}
+                  className={`py-1.5 px-1 rounded-lg text-center transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                    isActive
+                      ? 'bg-white text-blue-700 shadow-xs font-black ring-1 ring-slate-200/80'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+                  }`}
+                >
+                  <span className="text-[11px]">{g.label}</span>
+                  <span className={`text-[9.5px] px-1 py-0.2 rounded-full font-bold ${
+                    isActive ? 'bg-blue-100 text-blue-800' : 'bg-slate-200 text-slate-600'
+                  }`}>
+                    {g.count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="space-y-2 overflow-y-auto pr-1 flex-1 min-h-0 scrollbar-thin">
             {filteredChapters.map((chap) => {
               const isChapExpanded = Boolean(expandedChapters[chap.chapterId]);
               const chapSgkChunks = getMatchedChunksForChapter(chap);
@@ -2458,36 +2519,36 @@ export default function CurriculumExplorerView({
               return (
                 <div
                   key={chap.chapterId}
-                  className={`rounded-2xl border overflow-hidden shadow-sm transition-all ${
+                  className={`rounded-xl border overflow-hidden shadow-2xs transition-all ${
                     hasChapSgk ? 'border-emerald-300/90 bg-white' : 'border-slate-200/90 bg-white'
                   }`}
                 >
                   {/* Chapter Header */}
                   <div
                     onClick={() => toggleChapter(chap.chapterId)}
-                    className={`p-3.5 flex items-center justify-between cursor-pointer border-b transition-colors group/chap ${
+                    className={`p-2.5 sm:px-3 flex items-center justify-between cursor-pointer border-b transition-colors group/chap ${
                       hasChapSgk ? 'bg-emerald-50/40 hover:bg-emerald-50/80 border-emerald-100' : 'bg-slate-50/90 hover:bg-slate-100/90 border-slate-100'
                     }`}
                   >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs shrink-0 shadow-2xs ${
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-[11px] shrink-0 shadow-2xs ${
                         hasChapSgk ? 'bg-emerald-600 text-white' : 'bg-blue-100 text-blue-700'
                       }`}>
-                        {hasChapSgk ? <BookOpen className="w-4 h-4" /> : (chap.code?.slice(-2) || "CH")}
+                        {hasChapSgk ? <BookOpen className="w-3.5 h-3.5" /> : (chap.code?.slice(-2) || "CH")}
                       </div>
                       <div className="min-w-0">
                         <div className="flex items-center gap-1.5 flex-wrap">
-                          <h3 className="text-xs font-black text-slate-900 leading-tight truncate">
+                          <h3 className="text-xs font-bold text-slate-900 leading-tight truncate">
                             {chap.name}
                           </h3>
                           {hasChapSgk && (
-                            <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold shrink-0 flex items-center gap-1">
+                            <span className="px-1.5 py-0.2 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[9.5px] font-bold shrink-0 flex items-center gap-0.5">
                               <Check className="w-2.5 h-2.5 text-emerald-600" />
-                              <span>Sách giáo khoa</span>
+                              <span>SGK</span>
                             </span>
                           )}
                         </div>
-                        <div className="text-[11px] text-slate-500 font-medium mt-0.5 flex items-center gap-2">
+                        <div className="text-[10px] text-slate-500 font-medium mt-0.5 flex items-center gap-2">
                           <span>{chap.lessons?.length || 0} bài học</span>
                         </div>
                       </div>
@@ -2759,7 +2820,7 @@ export default function CurriculumExplorerView({
         </div>
 
         {/* Right Column: 3 Pedagogical Layers for the Selected Node (7 Cols) */}
-        <div className="min-w-0 lg:col-span-7">
+        <div className="min-w-0 lg:col-span-7 lg:sticky lg:top-4 lg:max-h-[calc(100vh-100px)] lg:overflow-y-auto pr-1 scrollbar-thin">
           {selectedPattern ? (
             <UnifiedNodeDetailView
               selectedPattern={selectedPattern}
