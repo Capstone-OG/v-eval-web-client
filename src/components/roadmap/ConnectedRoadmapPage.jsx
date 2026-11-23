@@ -15,6 +15,7 @@ import {
   Target
 } from 'lucide-react';
 import { practiceService } from '../../services/practiceService';
+import { contentService } from '../../services/contentService';
 import paymentService from '../../services/paymentService';
 import { authService } from '../../services/authService';
 import { tokenStorage } from '../../services/apiClient';
@@ -209,7 +210,7 @@ export default function ConnectedRoadmapPage({
   const [isPaid, setIsPaid] = useState(false);
 
   const [workspaceMode, setWorkspaceMode] = useState(viewMode);
-  const [zoneFilter, setZoneFilter] = useState('WEAK'); // WEAK | UNASSESSED | MASTERED
+  const [zoneFilter, setZoneFilter] = useState('ALL'); // ALL | COMPLETED | WEAK | UNASSESSED | MASTERED
   const [selectedSubjectFilter, setSelectedSubjectFilter] = useState('ALL');
   const [selectedGradeFilter, setSelectedGradeFilter] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
@@ -259,7 +260,68 @@ export default function ConnectedRoadmapPage({
         paymentService.getStudentTuitionStatus(studentId).catch(() => ({ isPaid: false }))
       ]);
 
-      const current = roadmapRes ? validateRoadmap(roadmapRes, studentId) : null;
+      let current = roadmapRes ? validateRoadmap(roadmapRes, studentId) : null;
+
+      // Tự động bù đắp tên dạng bài / chương / môn thật từ Content Curriculum nếu gRPC trả về nhãn mặc định "Kỹ năng chuyên đề"
+      if (
+        current?.nodes?.some(
+          (n) => !n.skillName || n.skillName === 'Kỹ năng chuyên đề' || !n.chapterName || n.chapterName === 'Chuyên đề tổng hợp'
+        )
+      ) {
+        try {
+          const curriculumRes = await contentService.getCurriculum();
+          const domains = Array.isArray(curriculumRes) ? curriculumRes : (curriculumRes?.domains || curriculumRes?.data || []);
+          const skillLookup = new Map();
+          domains.forEach((dom) => {
+            const domName = dom.title || dom.name || '';
+            (dom.chapters || []).forEach((ch) => {
+              const chName = ch.name || '';
+              const chGrade = inferGradeFromText(chName, '', domName);
+              const subjMatch = chName.match(/\(([^–\-()]+)/);
+              const inferredSubject = subjMatch ? subjMatch[1].trim() : domName;
+              (ch.lessons || []).forEach((les) => {
+                (les.patterns || []).forEach((pat) => {
+                  const sid = String(pat.patternId || pat.skillId || pat.id || '').toLowerCase();
+                  if (!sid) return;
+                  skillLookup.set(sid, {
+                    skillName: pat.name || '',
+                    lessonName: les.name || '',
+                    chapterName: chName,
+                    subjectName: inferredSubject || domName,
+                    domainName: domName,
+                    gradeLevel: Number(pat.gradeLevel || chGrade || 0)
+                  });
+                });
+              });
+            });
+          });
+
+          if (skillLookup.size > 0) {
+            current = {
+              ...current,
+              nodes: current.nodes.map((n) => {
+                const meta = skillLookup.get(String(n.skillId || '').toLowerCase());
+                if (!meta) return n;
+                const needsSkill = !n.skillName || n.skillName === 'Kỹ năng chuyên đề';
+                const needsChapter = !n.chapterName || n.chapterName === 'Chuyên đề tổng hợp';
+                const needsSubject = !n.subjectName || n.subjectName === 'Lĩnh vực chung' || n.subjectName === 'Chuyên đề chung';
+                return {
+                  ...n,
+                  skillName: needsSkill && meta.skillName ? meta.skillName : n.skillName,
+                  lessonName: (!n.lessonName && meta.lessonName) ? meta.lessonName : n.lessonName,
+                  chapterName: needsChapter && meta.chapterName ? meta.chapterName : n.chapterName,
+                  subjectName: needsSubject && meta.subjectName ? meta.subjectName : n.subjectName,
+                  domainName: (!n.domainName || n.domainName === 'Lĩnh vực chung') && meta.domainName ? meta.domainName : n.domainName,
+                  gradeLevel: Number(n.gradeLevel || 0) || meta.gradeLevel
+                };
+              })
+            };
+          }
+        } catch {
+          // non-fatal fallback
+        }
+      }
+
       setRoadmap(current);
 
       const serverPaid = Boolean(
@@ -278,14 +340,13 @@ export default function ConnectedRoadmapPage({
       setSubmissionId(current?.diagnosticSubmissionId || completed[0]?.submissionId || '');
 
       if (current?.nodes?.length > 0) {
-        const hasWeak = current.nodes.some((n) => resolveAssessmentStatus(n) === 'WEAK');
-        if (!hasWeak) setZoneFilter('UNASSESSED');
-
+        const sortedNodes = [...current.nodes].sort((a, b) => a.stepOrder - b.stepOrder);
         setSelectedNodeId((prev) => {
-          if (prev && current.nodes.some((n) => n.nodeId === prev)) return prev;
-          const firstWeak = current.nodes.find((n) => resolveAssessmentStatus(n) === 'WEAK');
-          const active = current.nodes.find((n) => n.status === 'IN_PROGRESS' || n.status === 'UNLOCKED');
-          return firstWeak?.nodeId || active?.nodeId || current.nodes[0].nodeId;
+          if (prev && sortedNodes.some((n) => n.nodeId === prev)) return prev;
+          const firstActive = sortedNodes.find(
+            (n) => n.status !== 'COMPLETED' && resolveAssessmentStatus(n) !== 'COMPLETED' && n.status !== 'SKIPPED_PRUNED'
+          );
+          return firstActive?.nodeId || sortedNodes[0].nodeId;
         });
       }
 
@@ -384,20 +445,30 @@ export default function ConnectedRoadmapPage({
 
     // Áp dụng chặt cơ chế mở khóa tuần tự theo đúng thứ tự Chặng #1 -> #2 -> #3... (FSM):
     // - COMPLETED: đã hoàn thành (được mở để Xem lại)
-    // - IN_PROGRESS: chặng chưa hoàn thành ĐẦU TIÊN theo thứ tự stepOrder (bắt đầu từ Chặng #1, không nhảy cóc sang Chặng #13)
+    // - IN_PROGRESS: chặng đang học dở P-L-A-R (LEARN/APPLY/REFLECT/REMEDIAL) hoặc chặng chưa hoàn thành ĐẦU TIÊN theo stepOrder
     // - LOCKED: toàn bộ các chặng sau đều bị khóa cho tới khi hoàn thành đủ 4 bước P-L-A-R chặng hiện tại
-    const firstActiveNode = sorted.find(
-      (n) => n.status !== 'COMPLETED' && n._assessmentStatus !== 'COMPLETED' && n.status !== 'SKIPPED_PRUNED'
-    );
+    const isRoadmapApproved = String(roadmap?.status || 'ACTIVE').toUpperCase() === 'ACTIVE';
+    const ACTIVE_PLAR_STEPS = new Set(['LEARN', 'APPLY', 'REFLECT', 'REMEDIAL']);
+    const firstActiveNode = isRoadmapApproved
+      ? sorted.find(
+          (n) => !n.isPruned && n.status !== 'COMPLETED' && n._assessmentStatus !== 'COMPLETED' && n.status !== 'SKIPPED_PRUNED'
+        )
+      : null;
 
-    return sorted.map((n) => {
-      const isDone = n.status === 'COMPLETED' || n._assessmentStatus === 'COMPLETED';
-      const isCurrent = firstActiveNode && n.nodeId === firstActiveNode.nodeId;
-      return {
-        ...n,
-        _fsmStatus: isDone ? 'COMPLETED' : isCurrent ? 'IN_PROGRESS' : 'LOCKED'
-      };
-    });
+    return sorted
+      .filter((n) => !n.isPruned && n.status !== 'SKIPPED_PRUNED')
+      .map((n) => {
+        if (!isRoadmapApproved) {
+          return { ...n, _fsmStatus: 'LOCKED' };
+        }
+        const isDone = n.status === 'COMPLETED' || n._assessmentStatus === 'COMPLETED';
+        const hasOngoingPlar = !isDone && ACTIVE_PLAR_STEPS.has(String(n.currentPlarStep || '').toUpperCase());
+        const isCurrent = (firstActiveNode && n.nodeId === firstActiveNode.nodeId) || hasOngoingPlar;
+        return {
+          ...n,
+          _fsmStatus: isDone ? 'COMPLETED' : isCurrent ? 'IN_PROGRESS' : 'LOCKED'
+        };
+      });
   }, [roadmap]);
 
   const activeFsmNode = useMemo(
@@ -409,12 +480,14 @@ export default function ConnectedRoadmapPage({
     let weak = 0;
     let ok = 0;
     let unassessed = 0;
+    let completed = 0;
     allNodes.forEach((n) => {
+      if (n._fsmStatus === 'COMPLETED') completed++;
       if (n._assessmentStatus === 'WEAK') weak++;
       else if (n._assessmentStatus === 'MASTERED' || n._assessmentStatus === 'COMPLETED') ok++;
       else unassessed++;
     });
-    return { weak, ok, unassessed };
+    return { all: allNodes.length, completed, weak, ok, unassessed };
   }, [allNodes]);
 
   const availableSubjects = useMemo(() => {
@@ -437,6 +510,7 @@ export default function ConnectedRoadmapPage({
   const filteredNodes = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     return allNodes.filter((n) => {
+      if (zoneFilter === 'COMPLETED' && n._fsmStatus !== 'COMPLETED') return false;
       if (zoneFilter === 'WEAK' && n._assessmentStatus !== 'WEAK') return false;
       if (zoneFilter === 'MASTERED' && n._assessmentStatus !== 'MASTERED' && n._assessmentStatus !== 'COMPLETED') return false;
       if (zoneFilter === 'UNASSESSED' && n._assessmentStatus !== 'UNASSESSED') return false;
@@ -504,7 +578,7 @@ export default function ConnectedRoadmapPage({
                   </p>
                 </div>
               </div>
-              {activeFsmNode && (
+              {activeFsmNode && String(roadmap?.status || 'ACTIVE').toUpperCase() === 'ACTIVE' && (
                 <button
                   type="button"
                   onClick={() => handleOpenNodeStudio(activeFsmNode.nodeId)}
@@ -513,6 +587,16 @@ export default function ConnectedRoadmapPage({
                   <Play className="w-3.5 h-3.5 fill-white" />
                   <span>Học ngay Chặng #{activeFsmNode.stepOrder}</span>
                 </button>
+              )}
+              {roadmap && String(roadmap.status || '').toUpperCase() !== 'ACTIVE' && (
+                <span className="inline-flex items-center gap-1.5 rounded-xl bg-amber-50 border border-amber-200 px-3 py-1.5 text-xs font-extrabold text-amber-800">
+                  <Lock className="w-3.5 h-3.5 text-amber-600" />
+                  <span>
+                    {roadmap.status === 'PENDING_DIRECTOR_APPROVAL'
+                      ? 'Chờ Giám đốc phê duyệt'
+                      : 'Bản nháp • Chờ Giảng viên duyệt'}
+                  </span>
+                </span>
               )}
             </>
           ) : (
@@ -550,21 +634,10 @@ export default function ConnectedRoadmapPage({
               <span>Mở Khóa</span>
             </button>
           )}
-          {roadmap && history.length > 0 && (
-            <button
-              type="button"
-              onClick={() => setShowRegenerateForm((v) => !v)}
-              title="Cập nhật / Sinh lại lộ trình"
-              className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 px-2.5 py-1.5 text-xs font-bold text-slate-600 cursor-pointer"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
-              <span className="hidden sm:inline">Cập nhật</span>
-            </button>
-          )}
           <button
             type="button"
             onClick={load}
-            disabled={loading || creating}
+            disabled={loading}
             title="Làm mới dữ liệu"
             className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white hover:bg-slate-50 p-1.5 text-slate-600 disabled:opacity-50 cursor-pointer"
           >
@@ -579,72 +652,88 @@ export default function ConnectedRoadmapPage({
         </div>
       )}
 
-      {/* REGENERATE ROADMAP DRAWER (Only shown when explicitly clicked or no roadmap yet) */}
-      {!loading && history.length > 0 && (!roadmap || showRegenerateForm) && workspaceMode !== 'curriculum' && (
-        <form onSubmit={generate} className="rounded-2xl border border-indigo-200 bg-indigo-50/40 p-5 space-y-4">
-          <div className="flex items-center justify-between gap-2">
-            <h2 className="font-black text-sm sm:text-base text-indigo-950">
-              {roadmap ? 'Cập Nhật Lộ Trình Học' : 'Khởi Tạo Lộ Trình Cá Nhân Hóa'}
-            </h2>
-            {showRegenerateForm && (
-              <button
-                type="button"
-                onClick={() => setShowRegenerateForm(false)}
-                className="text-xs font-bold text-slate-500 hover:text-slate-800 cursor-pointer"
-              >
-                Đóng
-              </button>
-            )}
+      {/* APPROVAL WORKFLOW TRACKER BANNER (Học sinh không tự tạo lộ trình: Hệ thống tạo nháp -> Giảng viên duyệt -> Giám đốc phê duyệt) */}
+      {!loading && workspaceMode !== 'curriculum' && roadmap && String(roadmap.status || '').toUpperCase() !== 'ACTIVE' && (
+        <section className="rounded-3xl border border-amber-200 bg-gradient-to-br from-amber-50/90 via-white to-blue-50/50 p-5 sm:p-6 space-y-4 shadow-2xs">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="space-y-1">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 border border-amber-200 px-3 py-0.5 text-[11px] font-black uppercase text-amber-800">
+                <Sparkles className="w-3 h-3" />
+                {roadmap.status === 'PENDING_DIRECTOR_APPROVAL'
+                  ? 'Bước 3/3 • Đang chờ Ban Giám đốc phê duyệt cuối cùng'
+                  : 'Bước 2/3 • Bản nháp đang chờ Giảng viên rà soát & tinh chỉnh'}
+              </span>
+              <h2 className="text-base sm:text-lg font-black text-slate-900">
+                Lộ trình cá nhân hóa của bạn đang trong quy trình kiểm duyệt học thuật
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-600 max-w-2xl">
+                Sau bài kiểm tra đầu vào 30 câu, hệ thống đã tự động sinh bản nháp lộ trình dựa trên năng lực của bạn. Giảng viên sẽ rà soát, thêm/bớt chặng phù hợp và trình Ban Giám đốc phê duyệt trước khi mở khóa học P-L-A-R.
+              </p>
+            </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <label className="block text-xs font-bold text-slate-700">
-              Bài test đầu vào
-              <select
-                required
-                value={submissionId}
-                onChange={(e) => setSubmissionId(e.target.value)}
-                className="mt-1 block w-full rounded-xl border border-slate-200 bg-white p-2.5 text-sm"
-              >
-                {history.map((item) => (
-                  <option key={item.submissionId} value={item.submissionId}>
-                    {new Date(item.completedAt).toLocaleString('vi-VN')} · {item.totalCorrect}/{item.totalQuestions} câu
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="block text-xs font-bold text-slate-700">
-              Ngày thi dự kiến
-              <input
-                required
-                type="date"
-                value={examDate}
-                onChange={(e) => setExamDate(e.target.value)}
-                className="mt-1 block w-full rounded-xl border border-slate-200 bg-white p-2.5 text-sm"
-              />
-            </label>
-            <label className="block text-xs font-bold text-slate-700">
-              Giờ học / ngày
-              <input
-                required
-                type="number"
-                min="0.5"
-                max="16"
-                step="0.5"
-                value={hours}
-                onChange={(e) => setHours(e.target.value)}
-                className="mt-1 block w-full rounded-xl border border-slate-200 bg-white p-2.5 text-sm"
-              />
-            </label>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50/70 px-4 py-3 flex items-center gap-3">
+              <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+              <div>
+                <div className="text-xs font-black text-emerald-900">1. Thi đầu vào 30 câu</div>
+                <div className="text-[11px] text-emerald-700">Đã sinh bản nháp tự động</div>
+              </div>
+            </div>
+            <div className={`rounded-2xl border px-4 py-3 flex items-center gap-3 ${
+              roadmap.status === 'PENDING_DIRECTOR_APPROVAL'
+                ? 'border-emerald-200 bg-emerald-50/70'
+                : 'border-amber-300 bg-amber-50 ring-1 ring-amber-200'
+            }`}>
+              {roadmap.status === 'PENDING_DIRECTOR_APPROVAL' ? (
+                <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+              ) : (
+                <RefreshCw className="w-4 h-4 text-amber-600 shrink-0" />
+              )}
+              <div>
+                <div className="text-xs font-black text-slate-900">2. Giảng viên tinh chỉnh</div>
+                <div className="text-[11px] text-slate-600">
+                  {roadmap.status === 'PENDING_DIRECTOR_APPROVAL' ? 'Đã duyệt & gửi lên Giám đốc' : 'Đang rà soát & điều chỉnh chặng'}
+                </div>
+              </div>
+            </div>
+            <div className={`rounded-2xl border px-4 py-3 flex items-center gap-3 ${
+              roadmap.status === 'PENDING_DIRECTOR_APPROVAL'
+                ? 'border-blue-300 bg-blue-50 ring-1 ring-blue-200'
+                : 'border-slate-200 bg-slate-50/80 opacity-75'
+            }`}>
+              <Lock className={`w-4 h-4 shrink-0 ${roadmap.status === 'PENDING_DIRECTOR_APPROVAL' ? 'text-blue-600' : 'text-slate-400'}`} />
+              <div>
+                <div className="text-xs font-black text-slate-900">3. Giám đốc phê duyệt</div>
+                <div className="text-[11px] text-slate-600">
+                  {roadmap.status === 'PENDING_DIRECTOR_APPROVAL' ? 'Đang chờ duyệt kích hoạt ACTIVE' : 'Chờ bước 2 hoàn tất'}
+                </div>
+              </div>
+            </div>
           </div>
-          <button
-            type="submit"
-            disabled={creating}
-            className="inline-flex items-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 px-5 py-2.5 text-xs sm:text-sm font-extrabold text-white shadow-sm disabled:opacity-50 cursor-pointer"
-          >
-            <Sparkles className="w-4 h-4" />
-            <span>{creating ? 'Đang khởi tạo...' : 'Tạo Lộ Trình Ngay'}</span>
-          </button>
-        </form>
+
+          {roadmap.prunedReason && (
+            <div className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs text-slate-700">
+              <strong className="text-slate-900">Ghi chú chuyên môn: </strong>
+              {roadmap.prunedReason}
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* COMPLETED DIAGNOSTIC BUT DRAFT NOT YET GENERATED */}
+      {!loading && workspaceMode !== 'curriculum' && !roadmap && history.length > 0 && (
+        <section className="rounded-3xl border border-blue-200 bg-blue-50/50 p-6 sm:p-8 text-center space-y-3">
+          <div className="w-12 h-12 rounded-2xl bg-blue-100 text-blue-600 flex items-center justify-center mx-auto">
+            <Sparkles className="w-6 h-6" />
+          </div>
+          <h2 className="text-base sm:text-lg font-black text-slate-900">
+            Bài thi đầu vào 30 câu của bạn đã được ghi nhận
+          </h2>
+          <p className="text-xs sm:text-sm text-slate-600 max-w-lg mx-auto">
+            Hệ thống sẽ khởi tạo bản nháp lộ trình cá nhân hóa gửi Giảng viên rà soát và Ban Giám đốc phê duyệt. Học sinh không cần tự tạo lộ trình — bạn chỉ cần bấm làm mới sau ít phút hoặc liên hệ Giảng viên phụ trách.
+          </p>
+        </section>
       )}
 
       {/* TAB 3: CURRICULUM EXPLORER (SGK 9 MÔN) */}
@@ -682,71 +771,81 @@ export default function ConnectedRoadmapPage({
       )}
 
       {/* CORE FLOW 3: FULL-WIDTH DEDICATED P-L-A-R PRACTICE STUDIO */}
-      {workspaceMode === 'study' && !loading && roadmap && (selectedNode || activeFsmNode) && (
-        <PlarNodeStudioPanel
-          node={selectedNode || activeFsmNode}
-          studentId={studentId}
-          isPaid={isPaid}
-          onBackToMap={() => (onBackToRoadmap ? onBackToRoadmap() : setWorkspaceMode('map'))}
-          onNavigateTuition={onNavigateTuition}
-          onOpenAiTutorWithContext={onOpenAiTutorWithContext}
-          onNodeCompleted={() => load({ silent: true })}
-          onNodeEvaluated={() => load({ silent: true })}
-          onSelectNextNode={(nextId) => {
-            setSelectedNodeId(nextId);
-            load({ silent: true });
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-          }}
-        />
-      )}
+      {workspaceMode === 'study' && !loading && roadmap && (selectedNode || activeFsmNode) && (() => {
+        const currentStudyNode = selectedNode || activeFsmNode;
+        const currentIdx = allNodes.findIndex((n) => n.nodeId === currentStudyNode.nodeId);
+        const nextSequentialNode =
+          (currentIdx >= 0
+            ? allNodes.slice(currentIdx + 1).find((n) => n.status !== 'SKIPPED_PRUNED')
+            : null)
+          || allNodes.find((n) => n.nodeId !== currentStudyNode.nodeId && n._fsmStatus === 'IN_PROGRESS')
+          || null;
+        return (
+          <PlarNodeStudioPanel
+            node={currentStudyNode}
+            nextNode={nextSequentialNode}
+            studentId={studentId}
+            isPaid={isPaid}
+            onBackToMap={() => (onBackToRoadmap ? onBackToRoadmap() : setWorkspaceMode('map'))}
+            onNavigateTuition={onNavigateTuition}
+            onOpenAiTutorWithContext={onOpenAiTutorWithContext}
+            onNodeCompleted={() => load({ silent: true })}
+            onNodeEvaluated={() => load({ silent: true })}
+            onSelectNextNode={(nextId) => {
+              setSelectedNodeId(nextId);
+              load({ silent: true });
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+          />
+        );
+      })()}
 
       {/* TAB 2: COMPACT, DEDUPLICATED CHAPTER-GROUPED ROADMAP BROWSER */}
       {workspaceMode === 'map' && !loading && roadmap && (
         <div className="rounded-3xl border border-slate-200 bg-white p-4 sm:p-5 shadow-2xs space-y-4">
           {/* Single Compact Filter Bar */}
-          <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-100">
-            <div className="flex flex-wrap items-center gap-1.5">
-              <button
-                type="button"
-                onClick={() => setZoneFilter('WEAK')}
-                className={`rounded-xl px-3 py-1.5 text-xs font-extrabold cursor-pointer transition-colors ${
-                  zoneFilter === 'WEAK'
-                    ? 'bg-rose-600 text-white'
-                    : 'bg-rose-50 text-rose-700 hover:bg-rose-100'
-                }`}
-              >
-                Ưu tiên học ({zoneCounts.weak})
-              </button>
-              <button
-                type="button"
-                onClick={() => setZoneFilter('UNASSESSED')}
-                className={`rounded-xl px-3 py-1.5 text-xs font-extrabold cursor-pointer transition-colors ${
-                  zoneFilter === 'UNASSESSED'
-                    ? 'bg-slate-900 text-white'
-                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                }`}
-              >
-                Chưa đánh giá ({zoneCounts.unassessed})
-              </button>
-              <button
-                type="button"
-                onClick={() => setZoneFilter('MASTERED')}
-                className={`rounded-xl px-3 py-1.5 text-xs font-extrabold cursor-pointer transition-colors ${
-                  zoneFilter === 'MASTERED'
-                    ? 'bg-emerald-600 text-white'
-                    : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
-                }`}
-              >
-                Đã đạt OK ({zoneCounts.ok})
-              </button>
+          <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-2.5 pb-3 border-b border-slate-100">
+            {/* Unified Segmented Status Tabs */}
+            <div className="inline-flex flex-wrap items-center gap-1 rounded-xl bg-slate-100/90 p-1 border border-slate-200/70">
+              {[
+                { key: 'WEAK', label: 'Ưu tiên', count: zoneCounts.weak, activeCls: 'bg-white text-rose-700 shadow-xs ring-1 ring-rose-200/80', badgeCls: 'bg-rose-50 text-rose-700' },
+                { key: 'UNASSESSED', label: 'Chưa đánh giá', count: zoneCounts.unassessed, activeCls: 'bg-white text-slate-900 shadow-xs ring-1 ring-slate-300/80', badgeCls: 'bg-slate-200/80 text-slate-700' },
+                { key: 'MASTERED', label: 'Đã đạt OK', count: zoneCounts.ok, activeCls: 'bg-white text-teal-700 shadow-xs ring-1 ring-teal-200/80', badgeCls: 'bg-teal-50 text-teal-700' },
+                { key: 'COMPLETED', label: 'Đã hoàn thành', count: zoneCounts.completed, activeCls: 'bg-white text-emerald-700 shadow-xs ring-1 ring-emerald-200/80', badgeCls: 'bg-emerald-50 text-emerald-700' },
+                { key: 'ALL', label: 'Tất cả', count: zoneCounts.all, activeCls: 'bg-white text-blue-700 shadow-xs ring-1 ring-blue-200/80', badgeCls: 'bg-blue-50 text-blue-700' },
+              ].map((tab) => {
+                const isActive = zoneFilter === tab.key;
+                return (
+                  <button
+                    key={tab.key}
+                    type="button"
+                    onClick={() => setZoneFilter(tab.key)}
+                    className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-bold cursor-pointer transition-all whitespace-nowrap ${
+                      isActive
+                        ? tab.activeCls
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                    }`}
+                  >
+                    <span>{tab.label}</span>
+                    <span
+                      className={`rounded-md px-1.5 py-0.5 text-[10px] font-extrabold leading-none ${
+                        isActive ? tab.badgeCls : 'bg-slate-200/70 text-slate-600'
+                      }`}
+                    >
+                      {tab.count}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
 
-            <div className="flex flex-wrap items-center gap-2 flex-1 sm:flex-initial justify-end">
+            {/* Right Controls: Subject, Grade & Search */}
+            <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 shrink-0">
               <select
                 value={selectedSubjectFilter}
                 onChange={(e) => setSelectedSubjectFilter(e.target.value)}
                 aria-label="Lọc theo môn học"
-                className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-700 focus:bg-white focus:border-blue-500 focus:outline-none cursor-pointer"
+                className="h-8.5 rounded-xl border border-slate-200 bg-slate-50 px-2.5 text-xs font-bold text-slate-700 hover:border-slate-300 focus:bg-white focus:border-blue-500 focus:outline-none cursor-pointer"
               >
                 <option value="ALL">Tất cả môn</option>
                 {availableSubjects.map((s) => (
@@ -759,7 +858,7 @@ export default function ConnectedRoadmapPage({
                   value={selectedGradeFilter}
                   onChange={(e) => setSelectedGradeFilter(Number(e.target.value))}
                   aria-label="Lọc theo khối lớp"
-                  className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-700 focus:bg-white focus:border-blue-500 focus:outline-none cursor-pointer"
+                  className="h-8.5 rounded-xl border border-slate-200 bg-slate-50 px-2.5 text-xs font-bold text-slate-700 hover:border-slate-300 focus:bg-white focus:border-blue-500 focus:outline-none cursor-pointer"
                 >
                   <option value={0}>Lớp 10–12</option>
                   {availableGrades.map((g) => (
@@ -768,15 +867,25 @@ export default function ConnectedRoadmapPage({
                 </select>
               )}
 
-              <div className="relative min-w-[180px] flex-1 sm:w-52 sm:flex-initial">
-                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <div className="relative min-w-[170px] flex-1 sm:w-48 sm:flex-initial">
+                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Tìm nhanh bài học..."
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 pl-8 pr-3 py-1.5 text-xs text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-blue-500 focus:outline-none"
+                  className="h-8.5 w-full rounded-xl border border-slate-200 bg-slate-50 pl-8 pr-7 text-xs text-slate-800 placeholder:text-slate-400 hover:border-slate-300 focus:bg-white focus:border-blue-500 focus:outline-none"
                 />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    aria-label="Xóa từ khóa tìm kiếm"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs font-bold cursor-pointer"
+                  >
+                    ×
+                  </button>
+                )}
               </div>
             </div>
           </div>

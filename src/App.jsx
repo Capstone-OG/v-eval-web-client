@@ -39,6 +39,7 @@ import TeacherPortalView from './components/dashboard/TeacherPortalView';
 import CampusManagerDashboardView from './components/dashboard/CampusManagerDashboardView';
 import AcademicManagerDashboardView from './components/dashboard/AcademicManagerDashboardView';
 import AiTutorModerationView from './components/dashboard/AiTutorModerationView';
+import RoadmapApprovalStudioView from './components/dashboard/RoadmapApprovalStudioView';
 import LearningAnalyticsView from './components/dashboard/LearningAnalyticsView';
 import StudentScheduleView from './components/dashboard/StudentScheduleView';
 import TeacherScheduleView from './components/dashboard/TeacherScheduleView';
@@ -519,6 +520,9 @@ export default function App() {
           <TeacherScheduleView currentUser={currentUser} />
         );
       }
+      if (activeTab === 'roadmap_approval') {
+        return <RoadmapApprovalStudioView mode="teacher" />;
+      }
       if (activeTab === 'ai_moderation') {
         return (
           <AiTutorModerationView
@@ -773,6 +777,10 @@ export default function App() {
           onBackToDashboard={() => setActiveTab('dashboard')}
         />
       );
+    }
+
+    if (activeTab === 'roadmap_approval') {
+      return <RoadmapApprovalStudioView mode="director" />;
     }
 
     if (activeTab === 'ai_moderation') {
