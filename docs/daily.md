@@ -3421,3 +3421,53 @@
 Resolved frontend merge with develop ed26426. Preserved local admin workspace, validation, activation gate, API-backed mock exams, schedule subtitle and payment monitoring; integrated upstream teacher tools, student roadmap workspace, reference drawer and textbook tabs. Adopted compact navbar and synchronized mock-exam menu selection.
 
 Verification: Production build passed with Vite runner/createRequire; all 20 test files passed. Targeted Oxlint returned no errors with existing warnings. Browser/live API acceptance remains pending.
+
+
+## [23/11/2026] - Sidebar summary clipping
+
+- Restored the earlier sidebar flow: role summary follows navigation without justify-between; navigation and expanded/collapsed summary cards use shrink-0 to prevent clipping in short viewports. Independent sidebar scrolling and collapse controls are preserved.
+- Validation: Sidebar Oxlint completed with 0 errors and 7 existing warnings; git diff --check passed. Production build blocked during Vite configuration loading by Tailwind native dependency bundling and spawn EPERM; runner fallback also failed on CommonJS require resolution. Browser verification remains pending.
+
+- [23/11/2026] Simplified parent linking instructions in AccountSettingsPage.jsx to plain Vietnamese. Removed redundant English, app reference and real-time wording. Oxlint: no errors, existing warnings only; diff check passed.
+
+
+## [23/11/2026] - Plain-language interface copy
+
+- Reviewed and simplified 70+ interface text passages across landing/footer, login, dashboards, parent linking, diagnostics, mock exams, tuition, curriculum, roadmap and administration. Replaced promotional wording, unexplained algorithm names and inflated promises with clear actions and outcomes. Preserved application behavior and required academic terms; attributed testimonials were not rewritten.
+- Changed JSX files: Oxlint completed with 0 errors and 249 warnings; git diff --check passed. Wider components scan found an existing conditional useMemo error in untouched AdaptiveQuizModal.jsx (783 warnings). Production build remains blocked by the previously observed local Vite/Tailwind configuration errors. Browser verification pending.
+
+## [24/11/2026] - Student timetable on the running frontend
+
+- Confirmed the active Vite process runs from v-eval-web-client. Applied the student weekly calendar, teacher plan projection, membership filtering and room/teacher/group details to this checkout.
+- Three new tests passed; targeted lint has zero errors and one warning. Build blocked by existing Vite/Tailwind config loading errors. Browser acceptance pending; existing localStorage synchronization limits remain.
+
+## [24/11/2026] - Compact session dialog
+
+- Restored the previous dialog layout: date/time first, class card, compact room/teacher rows, attendance and worksheet. Removed the added large metadata panel and duplicate group display. Shortened the unassigned-session header while retaining the assignment status in the body. Targeted Oxlint passed without errors or warnings; browser visual review pending.
+
+## [24/11/2026] - Frontend prescription eligibility
+
+- Full/compact prescriptions and modal are gated on the real roadmap API: positive total, completed count equals total, valid original backend scores and prediction below target. Missing data, API failure or student mismatch keeps the section hidden. Forecast charts remain visible.
+- Added original-score validation before normalization defaults and request-version handling for stale results. No BE changes; existing quiz navigation unchanged.
+- Verification: three policy tests and two Flow 6 contract tests pass. Production build passed with configLoader native. Targeted lint: zero errors, two effect/ref warnings. Live browser verification pending.
+
+## [24/11/2026] - API-only forecast ranges
+
+- Removed SEM/plus-minus text from full and compact forecast UI. Removed client SEM-based range calculation and default SEM from forecast normalization. Only valid API ranges are displayed; absent/invalid ranges and their bands are hidden.
+- Two range tests and two existing Flow 6 tests passed; native-loader production build passed. Targeted lint zero errors with existing effect/ref warnings. No BE changes; browser review pending.
+
+## [24/11/2026] - Score unit wording
+
+Expanded abbreviated score units to the full Vietnamese word 'điểm' across report and forecast labels, ranges, targets and prescription estimates. Targeted lint has zero errors with existing hook warnings. Display-only change; no calculation or BE changes.
+
+## [24/11/2026] - Report sections and reminder redesign
+
+- Removed the combined all-content report view. Added separate Năng lực & Tiến độ, Dự báo & Đơn học tập, and Nhắc nhở học tập sections; default to progress.
+- Replaced large colored reminder cards with compact expandable rows, dates, unread badges, support notes and read actions. Show five reminders initially with load-more, preserving each API history record. Added refresh and explicit load-error/neutral empty states; student wording no longer addresses parents.
+- Production build passed with configLoader native. Targeted lint zero errors with hook warnings. Browser visual review pending. No BE changes and no broad removal of legacy score defaults in this task.
+
+- [24/11/2026] Simplified the report refresh button label to 'Làm mới'. Text-only change; refresh behavior unchanged. Verified old label is absent.
+
+## [24/11/2026] - Pre-commit validation
+
+Validated the current student timetable and report changes: ten targeted tests passed across range validation, prescription eligibility, student schedule projection and existing Flow 6 API contracts. Production build passed using configLoader native, with existing chunk-size and dependency eval warnings. Browser/live acceptance remains pending; no BE changes. Unrelated working-tree files remain outside this commit.

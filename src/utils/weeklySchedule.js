@@ -3,10 +3,10 @@ import { parseCalendarDate, serializeCalendarDate } from './calendarDate.js';
 export const DEFAULT_SCHEDULE_SLOTS = [
   { number: 1, start: '07:30', end: '09:30' },
   { number: 2, start: '09:45', end: '11:45' },
-  { number: 3, start: '13:30', end: '15:30' },
-  { number: 4, start: '15:45', end: '17:45' },
+  { number: 3, start: '13:00', end: '15:00' },
+  { number: 4, start: '15:15', end: '17:15' },
   { number: 5, start: '18:00', end: '20:00' },
-  { number: 6, start: '20:00', end: '21:30' }
+  { number: 6, start: '20:15', end: '22:30' }
 ];
 
 export const ATTENDANCE_LABELS = {

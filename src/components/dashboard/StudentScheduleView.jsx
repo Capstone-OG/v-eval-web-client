@@ -1,6 +1,9 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { practiceService } from '../../services/practiceService';
 import WeeklyScheduleCalendar from './WeeklyScheduleCalendar';
+import { getOfflineSessionPlan } from '../../utils/offlineSessionStore';
+import { getAllRemedialSessions } from '../../utils/remedialSessionStore';
+import { studentOfflineSessions } from '../../utils/studentOfflineSchedule';
 export default function StudentScheduleView({
   studentId = null,
   onOpenPracticeModal,
@@ -16,6 +19,13 @@ export default function StudentScheduleView({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const requestVersion = useRef(0);
+  const [planVersion, setPlanVersion] = useState(0);
+  useEffect(() => {
+    const refresh = () => { setPlanVersion((value) => value + 1); setSelectedSession(null); };
+    const events = ['storage', 'veval:offline-session-updated', 'veval:remedial-session-scheduled', 'veval:remedial-session-deleted'];
+    events.forEach((event) => window.addEventListener(event, refresh));
+    return () => events.forEach((event) => window.removeEventListener(event, refresh));
+  }, []);
 
   const loadScheduleData = useCallback(async (termIdFilter) => {
     const request = ++requestVersion.current;
@@ -77,7 +87,8 @@ export default function StudentScheduleView({
 
 
   const filteredSessions = useMemo(() => {
-    const all = Array.isArray(timetable?.sessions) ? timetable.sessions : [];
+    const all = studentOfflineSessions(timetable, studentId, getOfflineSessionPlan, getAllRemedialSessions());
+    void planVersion; // Local storage events invalidate the derived teacher plan.
     return all.filter((s) => {
       if (selectedCourseCode !== 'ALL' && s.courseCode !== selectedCourseCode) {
         return false;
@@ -94,7 +105,7 @@ export default function StudentScheduleView({
       }
       return true;
     });
-  }, [timetable, selectedCourseCode, statusFilter]);
+  }, [timetable, studentId, selectedCourseCode, statusFilter, planVersion]);
 
   return (
     <WeeklyScheduleCalendar

@@ -1563,3 +1563,102 @@ All roles require full name, login email, contact phone and initial password. Sh
 | Local admin, activation and payment flows | Preserved | Retain local behavior alongside upstream features. |
 | Upstream teacher and student workspace | Integrated | Resolved frontend merge with develop ed26426. Preserved local admin workspace, validation, activation gate, API-backed mock exams, schedule subtitle and payment monitoring; integrated upstream teacher tools, student roadmap workspace, reference drawer and textbook tabs. Adopted compact navbar and synchronized mock-exam menu selection. |
 | Verification | Passed with limits | Production build passed with Vite runner/createRequire; all 20 test files passed. Targeted Oxlint returned no errors with existing warnings. Browser/live API acceptance remains pending. |
+
+
+## [23/11/2026] - Sidebar layout
+
+Architecture: navigation and role summary share the existing sidebar scroll container and retain their natural heights.
+
+| Component | Status | Detail |
+| --- | --- | --- |
+| Sidebar role summary | Implemented | Restored the earlier sidebar flow: role summary follows navigation without justify-between; navigation and expanded/collapsed summary cards use shrink-0 to prevent clipping in short viewports. Independent sidebar scrolling and collapse controls are preserved. |
+| Verification | Partial | Validation: Sidebar Oxlint completed with 0 errors and 7 existing warnings; git diff --check passed. Production build blocked during Vite configuration loading by Tailwind native dependency bundling and spawn EPERM; runner fallback also failed on CommonJS require resolution. Browser verification remains pending. |
+
+| Parent linking instructions (23/11/2026) | Complete | Plain Vietnamese copy in AccountSettingsPage.jsx; linking behavior unchanged; lint has no errors. |
+
+
+## [23/11/2026] - Interface wording
+
+UI copy remains in existing React components; no API or state changes.
+
+| Item | Status | Detail |
+| --- | --- | --- |
+| Plain-language interface copy | Implemented | Reviewed and simplified 70+ interface text passages across landing/footer, login, dashboards, parent linking, diagnostics, mock exams, tuition, curriculum, roadmap and administration. Replaced promotional wording, unexplained algorithm names and inflated promises with clear actions and outcomes. Preserved application behavior and required academic terms; attributed testimonials were not rewritten. |
+| Validation | Partial | Changed JSX files: Oxlint completed with 0 errors and 249 warnings; git diff --check passed. Wider components scan found an existing conditional useMemo error in untouched AdaptiveQuizModal.jsx (783 warnings). Production build remains blocked by the previously observed local Vite/Tailwind configuration errors. Browser verification pending. |
+
+## [24/11/2026] - Active student timetable
+
+The active frontend composes timetable API data with saved local teacher plans and student-specific remedial membership.
+
+| Component | Status | Details |
+| --- | --- | --- |
+| Student schedule | Implemented | Applied to the checkout used by the running Vite process. |
+| Verification | Partial | Three tests pass; lint zero errors, one warning; build configuration failure; browser pending. |
+| Backend delivery | Pending | Teacher names unavailable in current API; plans remain local to the browser. |
+
+## [24/11/2026] - Session dialog presentation
+
+The existing dialog structure renders new offline-session fields without a separate large metadata card.
+
+| Item | Status | Verification |
+| --- | --- | --- |
+| Original dialog layout with new content | Implemented | Targeted Oxlint passed; browser visual review pending. |
+
+## [24/11/2026] - Prescription eligibility architecture and progress
+
+The forecast panel fetches the existing roadmap and prediction endpoints. A shared frontend policy validates student identity, authoritative completion counters and original forecast scores. Dashboard-derived progress is not used. Both full and compact recommendation displays use the same eligibility.
+
+| Item | Status | Verification |
+| --- | --- | --- |
+| Prescription visibility | Implemented | Three policy tests pass; missing/failed data hides recommendations. |
+| API contract compatibility | Passed | Two existing Flow 6 tests. |
+| Build | Passed | Vite configLoader native; existing bundle/dependency warnings. |
+| Browser acceptance | Pending | See service docs/prescription_eligibility_test.md. |
+
+## [24/11/2026] - Forecast range presentation
+
+The API owns forecast range calculation. FE validates returned endpoints and renders them without SEM or local range estimation.
+
+| Item | Status | Verification |
+| --- | --- | --- |
+| API-only score ranges | Implemented | Two validation tests and two API contract tests pass. |
+| Full/compact SEM labels | Removed | Production build passed with native config loader. |
+| Remaining fixed defaults | Audited, pending | Prediction/target defaults, dates/source labels, prescription estimates and recalculate seed fallback remain. |
+
+## [24/11/2026] - Score labels
+
+| Item | Status | Verification |
+| --- | --- | --- |
+| Full Vietnamese score units | Implemented | Report/forecast UI uses 'điểm'; targeted lint zero errors, existing warnings. |
+
+## [24/11/2026] - Report sections and reminder presentation
+
+Each report section mounts only its own content. Reminder rows display API messages with expandable details and existing read actions; display pagination does not discard history or combine separate alerts.
+
+| Item | Status | Detail |
+| --- | --- | --- |
+| Separate report sections | Implemented | Progress, forecast/prescriptions, reminders; no combined all-content tab. |
+| Reminder design | Implemented | Compact rows, expand/collapse, five initial records, load-more, refresh and neutral error/empty states. |
+| Verification | Build passed | Native config loader; lint zero errors, hook warnings remain; visual review pending. |
+
+### Remaining fixed-value locations in the active frontend
+
+These legacy defaults are not removed by this presentation change and normally activate when API fields are missing or requests fail.
+
+| Location | Remaining defaults |
+| --- | --- |
+| src/services/practiceService.js: normalizeForecastResponse | Prediction 845, target 920, confidence 0.95, current timestamp, MOCK_EXAM source. |
+| src/services/practiceService.js: normalizePrescriptionItem | Delta 25, hours 2.5, generated pattern IDs and fixed skill ID. |
+| src/services/practiceService.js: recalculatePrediction catch | Seed forecast and locally decreasing SEM on failed requests. |
+| src/components/dashboard/ScorePredictionPanel.jsx | Prediction 0, target 900, ROI 14, generated subject titles and source/date labels. |
+| src/components/dashboard/LearningAnalyticsView.jsx | Target 900, domain target 80, zero-valued absent metrics and seven-day streak policy copy. |
+
+Reminder messages in StudentEarlyWarningsCard come from getMyAlerts; repeated dates are separate returned history items, not hardcoded alert paragraphs in that component. Live backend response content was not audited in a browser.
+
+- [24/11/2026] Report refresh label: completed; 'Làm mới' replaces backend terminology; behavior unchanged.
+
+## [24/11/2026] - Commit readiness
+
+| Scope | Status | Verification |
+| --- | --- | --- |
+| Student timetable and report frontend | Ready | Ten targeted tests pass; native-loader production build passes; browser acceptance pending. |

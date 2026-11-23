@@ -3838,3 +3838,53 @@ This checkpoint preserves the existing implementation before further remote inte
 Resolved frontend merge with develop ed26426. Preserved local admin workspace, validation, activation gate, API-backed mock exams, schedule subtitle and payment monitoring; integrated upstream teacher tools, student roadmap workspace, reference drawer and textbook tabs. Adopted compact navbar and synchronized mock-exam menu selection.
 
 Verification: Production build passed with Vite runner/createRequire; all 20 test files passed. Targeted Oxlint returned no errors with existing warnings. Browser/live API acceptance remains pending.
+
+
+## [23/11/2026] - Sidebar summary layout acceptance
+
+Restored the earlier sidebar flow: role summary follows navigation without justify-between; navigation and expanded/collapsed summary cards use shrink-0 to prevent clipping in short viewports. Independent sidebar scrolling and collapse controls are preserved.
+
+Validation: Sidebar Oxlint completed with 0 errors and 7 existing warnings; git diff --check passed. Production build blocked during Vite configuration loading by Tailwind native dependency bundling and spawn EPERM; runner fallback also failed on CommonJS require resolution. Browser verification remains pending.
+
+### Parent linking copy - 23/11/2026
+
+Updated account settings instructions to explain sharing the code and viewing academic results in plain Vietnamese. No changes to linking APIs or account behavior. Oxlint completed without errors; existing warnings remain.
+
+
+## [23/11/2026] - Plain-language UI acceptance
+
+Reviewed and simplified 70+ interface text passages across landing/footer, login, dashboards, parent linking, diagnostics, mock exams, tuition, curriculum, roadmap and administration. Replaced promotional wording, unexplained algorithm names and inflated promises with clear actions and outcomes. Preserved application behavior and required academic terms; attributed testimonials were not rewritten.
+
+Changed JSX files: Oxlint completed with 0 errors and 249 warnings; git diff --check passed. Wider components scan found an existing conditional useMemo error in untouched AdaptiveQuizModal.jsx (783 warnings). Production build remains blocked by the previously observed local Vite/Tailwind configuration errors. Browser verification pending.
+
+## [24/11/2026] - Running frontend timetable acceptance
+
+Verified the Vite process uses v-eval-web-client and applied the student timetable changes there. Weekly navigation, six slots, student-specific teacher plan topics, classroom details and remedial membership filtering are implemented. Three targeted tests pass; lint has zero errors and one warning. Build remains blocked by existing Vite/Tailwind configuration loading errors. No live browser acceptance claimed. Teacher plans remain browser-local and the timetable API does not return teacher names.
+
+## [24/11/2026] - Compact session dialog acceptance
+
+Restored the prior dialog hierarchy while retaining offline-session content. Date and time precede the class card; room and teacher use compact rows; micro-group appears once beside the worksheet. Unassigned sessions use a short heading with explicit assignment status in the body. No data or scheduling behavior changed. Targeted Oxlint passed; visual browser acceptance remains pending.
+
+## [24/11/2026] - Frontend prescription eligibility acceptance
+
+Only the active frontend was changed. Existing roadmap and forecast APIs determine eligibility: totalMilestones must be positive and equal completedMilestones, original scores must be valid and predicted score must be strictly below target. Normalization records original-score validity before legacy defaults. Identity and request-version checks prevent stale account responses from unlocking the UI. Full/compact prescription sections and modal share the guard; forecast charts remain visible. Existing quiz navigation is unchanged; P-L-A-R integration remains separate.
+
+Three policy tests and two Flow 6 contract tests pass. Production build passes with configLoader native. Targeted lint reports zero errors and two effect/ref warnings. Live browser acceptance is pending; no backend contract or persistence changed.
+
+## [24/11/2026] - Forecast range acceptance
+
+Removed SEM presentation from both forecast modes and removed the SEM-based range synthesis in frontend normalization and rendering. A shared validator accepts ordered finite API endpoints within the 0-1200 scale, preserving legitimate zero ranges. Missing or invalid ranges render no interval card/text/band. Backend computation is unchanged. Two new tests and two existing API contract tests pass; production build passes with configLoader native; lint has zero errors with existing effect/ref warnings. Browser verification is pending. Legacy fixed prediction/target defaults and seed recalculation fallback remain separately identified for future cleanup.
+
+## [24/11/2026] - Score unit wording
+
+Expanded abbreviated score units to the full Vietnamese word 'điểm' across report and forecast labels, ranges, targets and prescription estimates. Targeted lint has zero errors with existing hook warnings. Display-only change; no calculation or BE changes.
+
+## [24/11/2026] - Report information hierarchy acceptance
+
+Separated reports into progress, forecast/prescription and reminder sections, removing the combined view. Reminder presentation uses native expandable rows with keyboard-accessible summaries, newest-first ordering, initial five-item display and load-more. Read actions, exact message history and support notes remain available. Request failures are distinct from an empty result; empty results no longer imply good performance. No backend changes or new score estimates were introduced. Native-loader production build passes; targeted lint has zero errors with hook warnings. Browser visual verification remains pending. Existing score defaults are documented in process.md and remain pending separate cleanup.
+
+- [24/11/2026] Simplified the report refresh button label to 'Làm mới'. Text-only change; refresh behavior unchanged. Verified old label is absent.
+
+## [24/11/2026] - Pre-commit validation
+
+Validated the current student timetable and report changes: ten targeted tests passed across range validation, prescription eligibility, student schedule projection and existing Flow 6 API contracts. Production build passed using configLoader native, with existing chunk-size and dependency eval warnings. Browser/live acceptance remains pending; no BE changes. Unrelated working-tree files remain outside this commit.

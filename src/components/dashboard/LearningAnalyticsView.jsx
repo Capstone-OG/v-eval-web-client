@@ -82,7 +82,7 @@ export default function LearningAnalyticsView({
   const [dashboard, setDashboard] = useState(initialData);
   const [loading, setLoading] = useState(!initialData);
   const [refreshing, setRefreshing] = useState(false);
-  const [analyticsSubTab, setAnalyticsSubTab] = useState('all'); // 'all' | 'flow6' | 'flow5'
+  const [analyticsSubTab, setAnalyticsSubTab] = useState('flow5');
 
   const loadAnalytics = useCallback(
     async (isRefresh = false) => {
@@ -202,7 +202,7 @@ export default function LearningAnalyticsView({
           </div>
 
           <h1 className="text-2xl lg:text-3xl font-extrabold tracking-tight">
-            Tổng Quan Học Tập & Tiến Độ Luyện Thi ĐGNL
+            Báo cáo học tập của bạn
           </h1>
           <p className="text-xs lg:text-sm text-slate-300 max-w-3xl leading-relaxed">
             Theo dõi điểm thi dự kiến, mức độ nắm vững 4 lĩnh vực kiến thức ĐGNL, tiến độ lộ trình ôn tập và thói quen học tập hằng ngày của{' '}
@@ -228,7 +228,7 @@ export default function LearningAnalyticsView({
             className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-60 text-white text-xs font-extrabold flex items-center gap-2 transition-all shadow-lg shadow-blue-600/25 cursor-pointer"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
-            <span>Làm mới số liệu từ Backend</span>
+            <span>Làm mới</span>
           </button>
         </div>
       </div>
@@ -268,9 +268,9 @@ export default function LearningAnalyticsView({
           <div className="flex flex-wrap items-center justify-between gap-2 bg-white p-2 rounded-2xl border border-slate-200/80 shadow-xs">
             <div className="flex flex-wrap items-center gap-2">
               {[
-                { id: 'all', label: 'Tất cả tổng quan' },
-                { id: 'flow6', label: 'Dự báo điểm & Bài tập tăng điểm' },
-                { id: 'flow5', label: 'Năng lực các môn & Chuyên cần' }
+                { id: 'flow5', label: 'Năng lực & Tiến độ' },
+                { id: 'flow6', label: 'Dự báo & Đơn học tập' },
+                { id: 'alerts', label: 'Nhắc nhở học tập' }
               ].map((tab) => (
                 <button
                   key={tab.id}
@@ -299,18 +299,20 @@ export default function LearningAnalyticsView({
             )}
           </div>
 
-          {analyticsSubTab !== 'flow5' && (
+          {analyticsSubTab === 'flow6' && (
             <div className="space-y-6">
               <ScorePredictionPanel
-                studentId={currentUser?.id}
+                studentId={currentUser?.id || currentUser?.userId}
                 mode="full"
                 onOpenAiTutorWithContext={onOpenAiTutor}
               />
-              <StudentEarlyWarningsCard studentId={currentUser?.id} />
+
             </div>
           )}
 
-          {analyticsSubTab !== 'flow6' && (
+          {analyticsSubTab === 'alerts' && <StudentEarlyWarningsCard studentId={currentUser?.id || currentUser?.userId} />}
+
+          {analyticsSubTab === 'flow5' && (
             <>
               {/* TOP 4 SUMMARY CARDS */}
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
@@ -352,7 +354,7 @@ export default function LearningAnalyticsView({
                             : 'bg-rose-50 text-rose-700 border-rose-200'
                       }`}
                     >
-                      {scoreGap <= 0 ? 'Đạt mục tiêu' : `Cần thêm +${scoreGap}đ`}
+                      {scoreGap <= 0 ? 'Đạt mục tiêu' : `Cần thêm +${scoreGap} điểm`}
                     </span>
                   </div>
                   <div className="flex items-baseline gap-2 my-1">
@@ -669,7 +671,7 @@ export default function LearningAnalyticsView({
                               </div>
 
                               <div className="text-right shrink-0">
-                                <div className="text-base font-black text-indigo-700">{exam.score}đ</div>
+                                <div className="text-base font-black text-indigo-700">{exam.score} điểm</div>
                                 <button
                                   onClick={onOpenHistory}
                                   className="text-[10px] font-extrabold text-blue-600 hover:underline"
