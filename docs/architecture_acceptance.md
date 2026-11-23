@@ -3484,3 +3484,69 @@ The Parent Companion Portal was completely redesigned and hardened according to 
 ### [21/11/2026] - Resolve frontend pull conflicts against 682c9e2
 Merged incoming textbook/exam workspace tooling, parent tuition targeting, API course catalog and collapsible navigation with the local weekly calendar, mock exam room, profile prerequisites and server-authoritative payment/resume logic. Retained the user-requested single student curriculum view and deletion of the obsolete ConnectedRoadmapPage/StudentRoadmapWorkspace; removed their incoming route/import. Kept the schedule navbar subtitle and non-wrapping theta summary. Both payment completion and failure callbacks are preserved. Added stale-request protection when changing the selected student and used the incoming dynamic course catalog for resumed invoices.
 Validation: 119 unit tests passed, production build passed, five sidebar/navbar/student-parent payment render checks passed, and Chrome mocked-API exam scenarios passed (passages, flags, resume, third-violation and timeout submissions). Both documentation histories retained. Separately resolved documentation-only stash conflicts in the legacy V-Eval-Web_Client copy without committing its staged source or untracked environment/settings files. Backend repositories remained unchanged. The system root already had a separate pending merge without unmerged paths; it is outside this frontend merge commit.
+
+
+## [22/11/2026] Admin frontend acceptance
+
+The Admin workspace now separates platform administration from academic management. Its six sections cover overview, accounts, role descriptions, campus directory, general/AI setting drafts, and operations readiness. The legacy app role `admin` is retained for compatibility with the current authentication service.
+
+Account and campus data use existing Identity contracts through `userService`. Account pagination is server-driven with 50 entries per page. Search and campus filters are submitted to the existing query endpoint. A request version prevents stale account-list responses from replacing a newer result. Self-deactivation is blocked in the frontend only; server authorization remains authoritative.
+
+Settings are clearly labeled drafts stored in per-user session storage; they never apply runtime settings or persist API secrets. Campus mutations, existing-user role changes, granular permissions, audit retrieval, infrastructure health and backup/restore are not represented as completed integrations. The Identity controller currently marks user-list, provisioning and status endpoints with `AllowAnonymous`; backend authorization must be addressed separately before production use.
+
+Validation: `npm run build -- --configLoader runner` passed, and `node --test tests/*.test.js` passed 79 tests. The default bundled config loader encountered native-module/sandbox issues; the runner loader succeeded. Existing bundle-size and JSXGraph eval warnings remain. No browser automation or live administrative mutation was performed.
+
+
+### [22/11/2026] Dedicated dashboard acceptance
+
+AdminDashboard replaces the initial overview with account metrics, a six-role distribution, activation ratio visualization, active campus preview and administration shortcuts. Role totals come from independent filtered queries rather than counting a paginated sample. Each request fetches at most one user record. Multi-role totals may overlap and are labeled accordingly. The component cancels state updates after unmount; failed role counts remain unavailable. Account activation is explicitly distinguished from online presence. Operations remain labeled as not connected. The production build passed with `npm run build -- --configLoader runner`; browser interaction and live API behavior were not verified.
+
+### [22/11/2026] Admin Enterprise UI & Workspace Modernization Acceptance
+
+The Admin interface (`AdminDashboard.jsx` and `AdminWorkspace.jsx`) has been elevated into an Enterprise-grade Command Center:
+- **Executive Hero Hub**: Styled with an executive dark ambient gradient (`from-slate-900 via-indigo-950 to-slate-900`), live pulse telemetry ("100% Microservices Online"), real-time synchronization clock, and direct quick-action buttons.
+- **KPI Metrics**: 4 elevated cards with hover elevation, vibrant gradient icon backdrops, micro-trend badges, and dynamic active ratio percentages.
+- **Role IAM Distribution**: Dedicated visual role cards for all 6 system roles (Student, Parent, Teacher, Academic Manager, Academic Director, Administrator) with role code badges, live count tabular numerals, and individual gradient meter bars.
+- **Radial Account Health Gauge**: SVG circular gauge showing active vs inactive accounts alongside actionable IAM security guidance notes.
+- **RBAC Matrix Dossier**: Detailed inspection panel for the 6 roles covering authority tiers, core mission, data boundary policy (campus-scoped vs global), permitted capabilities checklist, and a 1-click bridge to account provisioning.
+- **Multi-Campus Directory**: Card grid with real-time text filter, campus code mono badges, phone hotline, address, and personnel lookup links.
+- **System Settings Console**: High-tech configuration console covering platform identity, Google Gemini / OpenAI LLM selection, token and rate limit policies, and maintenance mode toggle with session persistence and toast feedback.
+- **Telemetry & Disaster Recovery Hub**: Real-time status cards for 5 microservices + PostgreSQL/Redis with simulated latency metrics, automated daily 02:00 AM backup schedule details, and an interactive snapshot trigger.
+- **Validation**: Full production build `npm run build` completed cleanly in 2.12s (`3343 modules transformed`, 0 compilation errors).
+
+
+
+### [22/11/2026] Form validation acceptance
+
+The student profile previously relied on backend phone validation and frontend nonempty name checks. Shared contact validation now rejects invalid or blank names/phones before profile requests. Parent and account-creation services reuse the same Vietnamese telephone format as Identity. FormValidationBoundary checks native form required values after trimming, phone/email formats and numeric constraints before submit handlers. Required passwords reject whitespace-only values without modifying password bytes.
+
+The shared API client trims JSON string values recursively and multipart metadata on writes. Password/token/secret/API-key fields and uploaded file content remain unchanged. Optional fields are not globally made mandatory. This is a common form and transport layer, not a complete audit of every custom button-driven business rule. Five focused tests cover invalid contacts, optional email behavior, immutable nested normalization, native field checks and multipart preservation. Build passed with the runner config loader; all 84 frontend tests passed. Browser/live API verification is pending.
+
+
+### [22/11/2026] Provisioning field policy
+
+Provisioning now reflects the Identity handler profile model. Teacher and Academic Manager profiles require campus association, and Student requires a study campus. Parent, Academic Director and Administrator profiles have no campus requirement. Specialty belongs only to Teacher. The UI and service use a shared role policy, ensuring hidden stale values cannot leak into requests. Role-specific labels and a neutral login email replace staff-only labels. The account activation note no longer exposes database internals. Production build and two focused role-policy tests passed. Browser/live API creation was not performed; backend validation behavior is unchanged.
+
+
+### [22/11/2026] Provisioning password acceptance
+
+Initial passwords no longer default to a shared value. The modal starts and reopens with an empty password; successful creation also clears it. The payload builder rejects blank/weak passwords and leading/trailing whitespace, avoiding mismatches with the existing backend provisioning handler which trims passwords. Password generation is explicit and guarantees uppercase, lowercase and numeric characters. Production build and all three provisioning-policy tests passed. No backend mutation or browser-based account creation was performed.
+
+
+### [22/11/2026] Account dialog keyboard acceptance
+
+AccountProvisioningView now registers an Escape key handler only while a dialog is open and cleans it up on close/unmount. It ignores IME composition and prevents dismissal during account creation or status mutation. Provisioning close/cancel buttons use the same guard. The production build passed. Browser keyboard behavior was not directly verified.
+
+
+### [22/11/2026] Account role display acceptance
+
+Status dialogs previously rendered only roles?.join, leaving empty arrays or missing roles blank. Shared accountRoles normalization now supports plural and singular role representations and renders Vietnamese labels. Missing roles are explicitly unavailable, never inferred as Student. Backend query includes UserRoles/Role, but the affected live account response and database assignments were not inspected. Production build passed.
+
+
+## [23/11/2026] - Local checkpoint acceptance
+
+Checkpoint current admin workspace, account provisioning, role labels, modal dismissal, profile/contact validation, request normalization and related tests.
+
+Verification: Production build passed using Vite runner with createRequire. Validation tests: 8/8 passed. Browser and live API checks not performed.
+
+This checkpoint preserves the existing implementation before further remote integration; it does not claim live API or browser acceptance.

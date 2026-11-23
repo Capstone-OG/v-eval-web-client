@@ -350,8 +350,8 @@ export default function WebLoginPage({
     if (!regPhone.trim()) {
       errs.regPhone = "Vui lòng nhập Số điện thoại liên hệ.";
     } else {
-      const phoneRegex = /^(0[3|5|7|8|9])[0-9]{8}$/;
-      const cleanPhone = regPhone.trim().replace(/\s/g, "");
+      const phoneRegex = /^(0|\+84)[35789][0-9]{8}$/;
+      const cleanPhone = regPhone.trim().replace(/[\s.-]/g, "");
       if (!phoneRegex.test(cleanPhone)) {
         errs.regPhone =
           "SĐT không hợp lệ (10 chữ số, bắt đầu bằng 03, 05, 07, 08, 09).";

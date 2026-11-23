@@ -1,4 +1,5 @@
 import apiClient, { tokenStorage } from './apiClient.js';
+import { validateContact, normalizePhone, normalizeFormPayload } from '../utils/formValidation.js';
 
 /**
  * Authentication and User Identity Service
@@ -6,6 +7,9 @@ import apiClient, { tokenStorage } from './apiClient.js';
  */
 export const authService = {
   async updateParentInfo(parentData) {
+    const validationError = validateContact({ fullName: parentData?.parentName, phone: parentData?.parentPhone, email: parentData?.parentEmail });
+    if (validationError) throw new Error(validationError);
+    parentData = { ...normalizeFormPayload(parentData), parentPhone: normalizePhone(parentData.parentPhone) };
     const user = tokenStorage.getUser();
     const userId = user?.userId || user?.id || user?.studentId;
     if (!userId) throw new Error('Vui lòng đăng nhập để cập nhật phụ huynh.');
@@ -159,11 +163,13 @@ export const authService = {
    * @param {Object} userData - { email, password, fullName, phone, roleName, campusId }
    */
   async register(userData) {
+    const validationError = validateContact(userData, { requireEmail: true });
+    if (validationError) throw new Error(validationError);
     const payload = {
       email: (userData.email || '').trim().toLowerCase(),
       password: userData.password || '',
       fullName: (userData.fullName || '').trim(),
-      phone: (userData.phone || '').trim(),
+      phone: normalizePhone(userData.phone),
       roleName: userData.roleName || 'STUDENT',
       campusId: userData.campusId || undefined
     };
@@ -318,6 +324,8 @@ export const authService = {
    * @param {Object} profileData - { fullName, phone, avatarUrl }
    */
   async updateProfile(profileData) {
+    const validationError = validateContact(profileData || {});
+    if (validationError) throw new Error(validationError);
     const cleanPhone = (profileData?.phone || '').trim().replace(/[\s.-]/g, '');
     const payload = {
       fullName: (profileData?.fullName || '').trim(),

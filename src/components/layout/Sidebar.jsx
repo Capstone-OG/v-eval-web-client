@@ -387,114 +387,14 @@ export default function Sidebar({
       }
 
       case 'admin':
-        return [
-          {
-            sectionTitle: 'Quản Trị Hệ Thống & IAM',
-            items: [
-              {
-                id: 'provision',
-                label: 'Quản trị Định danh & IAM',
-                sublabel: 'Cấp phát tài khoản đa vai trò',
-                icon: ShieldCheck,
-                active: activeTab === 'provision',
-                onClick: () => setActiveTab('provision'),
-                badge: 'Core'
-              },
-              {
-                id: 'dashboard',
-                label: 'Giám sát Đa Cơ sở (Multi-Campus)',
-                sublabel: 'Bản đồ nhiệt & Phân cụm AI',
-                icon: Building2,
-                active: activeTab === 'dashboard',
-                onClick: () => setActiveTab('dashboard')
-              },
-              {
-                id: 'teacher_heatmap',
-                label: 'Ma trận Nhiệt Toàn Hệ thống',
-                sublabel: 'Kiểm soát chất lượng giảng dạy',
-                icon: LayoutGrid,
-                active: activeTab === 'teacher_heatmap',
-                onClick: () => setActiveTab('teacher_heatmap')
-              },
-              {
-                id: 'roadmap',
-                label: 'Cây Tri thức Quốc gia & Đề thi',
-                sublabel: 'Cấu trúc chương trình V-ACT',
-                icon: Network,
-                active: activeTab === 'roadmap',
-                onClick: () => setActiveTab('roadmap')
-              },
-              {
-                id: 'textbook-group',
-                label: 'Sách giáo khoa (SGK)',
-                sublabel: 'Chuẩn, Nạp & Studio',
-                icon: BookOpen,
-                iconColor: 'from-emerald-500 to-teal-700',
-                children: [
-                  {
-                    id: 'textbook-standard',
-                    label: '1. Sách Giáo Khoa Chuẩn',
-                    badge: 'Khung',
-                    active: activeTab === 'textbook-standard',
-                    onClick: () => setActiveTab('textbook-standard')
-                  },
-                  {
-                    id: 'textbook-ingest',
-                    label: '2. Nạp Tài Liệu SGK',
-                    badge: '3 Phần',
-                    active: activeTab === 'textbook-ingest',
-                    onClick: () => setActiveTab('textbook-ingest')
-                  },
-                  {
-                    id: 'textbook-studio',
-                    label: '3. Studio Biên Soạn SGK',
-                    badge: 'Studio',
-                    active: activeTab === 'textbook-studio',
-                    onClick: () => setActiveTab('textbook-studio')
-                  }
-                ]
-              },
-              {
-                id: 'exam-group',
-                label: 'Đề thi & AI Bloom',
-                sublabel: 'Kho đề, Parse & Studio',
-                icon: FileSpreadsheet,
-                iconColor: 'from-indigo-500 to-blue-700',
-                children: [
-                  {
-                    id: 'exam-bank',
-                    label: '1. Kho Đề & Xem Đề Thi',
-                    badge: 'Kho Đề',
-                    active: activeTab === 'exam-bank',
-                    onClick: () => setActiveTab('exam-bank')
-                  },
-                  {
-                    id: 'exam-ingest',
-                    label: '2. Parse PDF & AI Bloom',
-                    badge: '2 Phần',
-                    active: activeTab === 'exam-ingest',
-                    onClick: () => setActiveTab('exam-ingest')
-                  },
-                  {
-                    id: 'exam-studio',
-                    label: '3. Studio Biên Soạn Đề',
-                    badge: 'Studio',
-                    active: activeTab === 'exam-studio',
-                    onClick: () => setActiveTab('exam-studio')
-                  }
-                ]
-              },
-              {
-                id: 'tuition',
-                label: 'Đối soát Cổng Thanh toán PayOS',
-                sublabel: 'Quản lý gói học & Giao dịch',
-                icon: CreditCard,
-                active: activeTab === 'tuition',
-                onClick: () => setActiveTab('tuition')
-              }
-            ]
-          }
-        ];
+        return [{ sectionTitle: 'Quản trị hệ thống', items: [
+          ['dashboard', 'Tổng quan hệ thống', 'Dữ liệu tài khoản & cơ sở', BarChart3],
+          ['provision', 'Quản lý tài khoản', 'Cấp tài khoản, bật / tắt truy cập', Users],
+          ['user_roles', 'Vai trò & Phân quyền', 'Phạm vi của 6 vai trò', ShieldCheck],
+          ['campuses', 'Cơ sở đào tạo', 'Danh mục & thông tin liên hệ', Building2],
+          ['system_settings', 'Cấu hình hệ thống', 'Thông tin chung & dịch vụ AI', Sparkles],
+          ['operations', 'Giám sát & Sao lưu', 'Nhật ký, dịch vụ & dữ liệu', Activity]
+        ].map(([id, label, sublabel, icon]) => ({ id, label, sublabel, icon, active: activeTab === id, onClick: () => setActiveTab(id) })) }];
 
       case 'student':
       default:
@@ -1029,7 +929,7 @@ export default function Sidebar({
                 <span>Bảo Mật IAM & CSDL</span>
               </span>
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-mono font-bold">
-                ONLINE
+                CH?A GI?M S?T
               </span>
             </div>
             <div className="text-xs font-extrabold text-white">

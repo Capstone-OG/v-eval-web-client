@@ -1,5 +1,6 @@
 import { clearLegacyDiagnosticData } from './diagnosticPrivacy.js';
 import { formatApiError } from '../utils/apiErrorHandler.js';
+import { prepareFormBody } from '../utils/formValidation.js';
 /**
  * V-Eval API Gateway Client
  *
@@ -305,14 +306,14 @@ export const apiClient = {
   post: (endpoint, body = {}, options = {}) =>
     request(endpoint, {
       method: 'POST',
-      body: body instanceof FormData ? body : JSON.stringify(body),
+      body: prepareFormBody(body),
       ...options
     }),
 
   put: (endpoint, body = {}, options = {}) =>
     request(endpoint, {
       method: 'PUT',
-      body: body instanceof FormData ? body : JSON.stringify(body),
+      body: prepareFormBody(body),
       ...options
     }),
 
@@ -320,7 +321,7 @@ export const apiClient = {
     request(endpoint, {
       method: 'PATCH',
       ...(body !== null && body !== undefined
-        ? { body: body instanceof FormData ? body : JSON.stringify(body) }
+        ? { body: prepareFormBody(body) }
         : {}),
       ...options
     }),
@@ -331,7 +332,7 @@ export const apiClient = {
   upload: (endpoint, formData, options = {}) =>
     request(endpoint, {
       method: 'POST',
-      body: formData,
+      body: prepareFormBody(formData),
       ...options
     })
 };

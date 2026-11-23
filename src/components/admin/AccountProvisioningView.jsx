@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Users, 
   UserPlus, 
@@ -31,6 +31,9 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import { userService } from '../../services/userService';
+import { validateContact } from '../../utils/formValidation';
+import { PROVISIONING_FIELDS, buildProvisioningPayload } from '../../utils/provisioningFields';
+import { getAccountRoles, accountRoleLabel } from '../../utils/accountRoles';
 import { authService } from '../../services/authService';
 import { validateEmailComprehensive } from '../../utils/emailValidator';
 import { toast } from '../../context/ToastContext';
@@ -141,9 +144,14 @@ const getUnitDisplay = (user, primaryRole) => {
   };
 };
 
-export default function AccountProvisioningView({ onBackToDashboard }) {
+export default function AccountProvisioningView({ onBackToDashboard, currentUser }) {
   const [users, setUsers] = useState([]);
   const [totalCount, setTotalCount] = useState(0);
+  const [page, setPage] = useState(1);
+  const [campusFilter, setCampusFilter] = useState('');
+  const [appliedSearch, setAppliedSearch] = useState('');
+  const [loadError, setLoadError] = useState('');
+  const requestVersion = useRef(0);
   const [isLoading, setIsLoading] = useState(true);
   const [campuses, setCampuses] = useState([]);
 
@@ -167,10 +175,26 @@ export default function AccountProvisioningView({ onBackToDashboard }) {
     email: '',
     phone: '',
     campusId: '',
-    specialty: 'Toán & Tư duy Logic',
-    password: 'Password123@'
+    specialty: '',
+    password: ''
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  useEffect(() => {
+    if (!showModal && !deactivateModalUser && !reactivateModalUser) return;
+    const handleEscape = (event) => {
+      if (event.key !== 'Escape' || event.isComposing) return;
+      event.preventDefault();
+      event.stopPropagation();
+      if (showModal) {
+        if (!isSubmitting) setShowModal(false);
+      } else if (!isUpdatingStatus) {
+        if (reactivateModalUser) setReactivateModalUser(null);
+        else setDeactivateModalUser(null);
+      }
+    };
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [showModal, deactivateModalUser, reactivateModalUser, isSubmitting, isUpdatingStatus]);
   const [errorMsg, setErrorMsg] = useState('');
   const [successInfo, setSuccessInfo] = useState(null);
   const [copiedKey, setCopiedKey] = useState(false);
@@ -217,20 +241,18 @@ export default function AccountProvisioningView({ onBackToDashboard }) {
   // Load Campuses & Users
   useEffect(() => {
     loadCampuses();
-    loadUsers();
   }, []);
 
   useEffect(() => {
     loadUsers();
-  }, [selectedRole, statusTab]);
+  }, [selectedRole, statusTab, page, campusFilter, appliedSearch]);
+
 
   const loadCampuses = async () => {
     try {
       const data = await userService.getCampuses();
       setCampuses(data || []);
-      if (data?.length > 0 && !formData.campusId) {
-        setFormData(prev => ({ ...prev, campusId: data[0].campusId }));
-      }
+
     } catch (err) {
       console.warn('Lỗi tải cơ sở:', err);
       toast.error('Không tải được danh sách cơ sở. Vui lòng thử lại.');
@@ -238,44 +260,53 @@ export default function AccountProvisioningView({ onBackToDashboard }) {
   };
 
   const loadUsers = async () => {
+    const version = ++requestVersion.current;
     setIsLoading(true);
+    setLoadError('');
     try {
       const params = {
         role: selectedRole === 'ALL' ? undefined : selectedRole,
-        search: searchQuery.trim() || undefined,
+        search: appliedSearch || undefined,
+        campusId: campusFilter || undefined,
         isActive: statusTab === 'ALL' ? undefined : (statusTab === 'ACTIVE'),
-        page: 1,
+        page,
         pageSize: 50
       };
       const res = await userService.getUsers(params);
+      if (version !== requestVersion.current) return;
       setUsers(res.items || []);
       setTotalCount(res.totalCount || 0);
       if (typeof res.activeCount === 'number') setActiveCount(res.activeCount);
       if (typeof res.inactiveCount === 'number') setInactiveCount(res.inactiveCount);
     } catch (err) {
+      if (version !== requestVersion.current) return;
+      setUsers([]);
+      setLoadError('Không tải được danh sách tài khoản. Vui lòng thử lại.');
       console.warn('Lỗi tải danh sách người dùng:', err);
       toast.error('Không tải được danh sách tài khoản. Vui lòng thử lại.');
     } finally {
-      setIsLoading(false);
+      if (version === requestVersion.current) setIsLoading(false);
     }
   };
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
-    loadUsers();
+    setPage(1);
+    setAppliedSearch(searchQuery.trim());
   };
 
   const handleGeneratePassword = () => {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%';
-    let pass = '';
-    for (let i = 0; i < 12; i++) {
-      pass += chars.charAt(Math.floor(Math.random() * chars.length));
+    let pass = 'Aa1@';
+    for (let i = 0; i < 8; i++) {
+      pass += chars.charAt(crypto.getRandomValues(new Uint32Array(1))[0] % chars.length);
     }
     setFormData(prev => ({ ...prev, password: pass }));
   };
 
   const handleConfirmDeactivate = async () => {
     if (!deactivateModalUser) return;
+    if (deactivateModalUser.userId === (currentUser?.userId || currentUser?.id)) return;
     setIsUpdatingStatus(true);
     try {
       await userService.toggleUserStatus(deactivateModalUser.userId, false);
@@ -309,6 +340,14 @@ export default function AccountProvisioningView({ onBackToDashboard }) {
   const handleSubmitProvision = async (e) => {
     e.preventDefault();
     setErrorMsg('');
+    const validationError = validateContact(formData, { requireEmail: true });
+    if (validationError) {
+      setErrorMsg(validationError);
+      toast.error(validationError);
+      return;
+    }
+    try { buildProvisioningPayload(formData); }
+    catch (error) { setErrorMsg(error.message); toast.error(error.message); return; }
 
     const trimmedEmail = (formData.email || '').trim().toLowerCase();
     if (!trimmedEmail) {
@@ -361,9 +400,9 @@ export default function AccountProvisioningView({ onBackToDashboard }) {
         fullName: '',
         email: '',
         phone: '',
-        campusId: campuses[0]?.campusId || '',
-        specialty: 'Toán & Tư duy Logic',
-        password: 'Password123@'
+        campusId: '',
+        specialty: '',
+        password: ''
       });
       setEmailValidationStatus('idle');
       setEmailValidationMsg('');
@@ -408,7 +447,7 @@ export default function AccountProvisioningView({ onBackToDashboard }) {
           <h1 className="text-2xl lg:text-3xl font-black tracking-tight text-white flex items-center gap-3">
             <span>Cấp Phát Tài Khoản Nội Bộ Đa Vai Trò</span>
             <span className="px-2.5 py-0.5 rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-mono font-bold">
-              PostgreSQL Direct
+              Quản lý truy cập
             </span>
           </h1>
           <p className="text-slate-300 text-xs lg:text-sm max-w-2xl leading-relaxed">
@@ -429,6 +468,7 @@ export default function AccountProvisioningView({ onBackToDashboard }) {
             onClick={() => {
               setErrorMsg('');
               setShowModal(true);
+              setFormData(prev => ({ ...prev, password: '' }));
             }}
             className="px-5 py-2.5 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-600 hover:from-blue-500 hover:to-indigo-500 text-white font-extrabold text-xs rounded-2xl shadow-lg shadow-blue-600/30 hover:shadow-blue-600/50 flex items-center gap-2 transition-all transform hover:-translate-y-0.5 cursor-pointer"
           >
@@ -441,7 +481,7 @@ export default function AccountProvisioningView({ onBackToDashboard }) {
       {/* Real-time Stat Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div 
-          onClick={() => setStatusTab('ACTIVE')}
+          onClick={() => { setStatusTab('ACTIVE'); setPage(1); }}
           className={`bg-white rounded-2xl p-5 border shadow-xs flex items-center gap-4 cursor-pointer transition-all ${
             statusTab === 'ACTIVE' ? 'ring-2 ring-emerald-500 border-emerald-300' : 'border-slate-200/80 hover:border-emerald-300'
           }`}
@@ -487,7 +527,7 @@ export default function AccountProvisioningView({ onBackToDashboard }) {
         </div>
 
         <div 
-          onClick={() => setStatusTab('INACTIVE')}
+          onClick={() => { setStatusTab('INACTIVE'); setPage(1); }}
           className={`bg-white rounded-2xl p-5 border shadow-xs flex items-center gap-4 cursor-pointer transition-all ${
             statusTab === 'INACTIVE' ? 'ring-2 ring-rose-500 border-rose-300' : 'border-slate-200/80 hover:border-rose-300'
           }`}
@@ -554,7 +594,7 @@ export default function AccountProvisioningView({ onBackToDashboard }) {
           <div className="inline-flex p-1 bg-slate-100/90 rounded-2xl border border-slate-200/70 max-w-full overflow-x-auto scrollbar-none">
             <button
               type="button"
-              onClick={() => setStatusTab('ACTIVE')}
+              onClick={() => { setStatusTab('ACTIVE'); setPage(1); }}
               className={`px-3.5 py-2 rounded-xl text-xs font-extrabold flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap shrink-0 ${
                 statusTab === 'ACTIVE'
                   ? 'bg-white text-emerald-700 shadow-xs ring-1 ring-slate-200/80'
@@ -570,7 +610,7 @@ export default function AccountProvisioningView({ onBackToDashboard }) {
 
             <button
               type="button"
-              onClick={() => setStatusTab('INACTIVE')}
+              onClick={() => { setStatusTab('INACTIVE'); setPage(1); }}
               className={`px-3.5 py-2 rounded-xl text-xs font-extrabold flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap shrink-0 ${
                 statusTab === 'INACTIVE'
                   ? 'bg-white text-rose-700 shadow-xs ring-1 ring-slate-200/80'
@@ -586,7 +626,7 @@ export default function AccountProvisioningView({ onBackToDashboard }) {
 
             <button
               type="button"
-              onClick={() => setStatusTab('ALL')}
+              onClick={() => { setStatusTab('ALL'); setPage(1); }}
               className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
                 statusTab === 'ALL'
                   ? 'bg-white text-slate-800 shadow-xs ring-1 ring-slate-200/80'
@@ -631,7 +671,7 @@ export default function AccountProvisioningView({ onBackToDashboard }) {
         <div className="flex items-center gap-2 overflow-x-auto pt-3 border-t border-slate-100 scrollbar-none">
           <button
             type="button"
-            onClick={() => setSelectedRole('ALL')}
+            onClick={() => { setSelectedRole('ALL'); setPage(1); }}
             className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
               selectedRole === 'ALL'
                 ? 'bg-blue-600 text-white shadow-xs'
@@ -647,7 +687,7 @@ export default function AccountProvisioningView({ onBackToDashboard }) {
               <button
                 type="button"
                 key={roleKey}
-                onClick={() => setSelectedRole(roleKey)}
+                onClick={() => { setSelectedRole(roleKey); setPage(1); }}
                 className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap shrink-0 ${
                   isSelected
                     ? 'bg-blue-600 text-white shadow-xs'
@@ -713,9 +753,9 @@ export default function AccountProvisioningView({ onBackToDashboard }) {
                 </tr>
               ) : (
                 users.map((user) => {
-                  const primaryRole = user.roles?.[0] || 'STUDENT';
+                  const primaryRole = getAccountRoles(user)[0] || '';
                   const roleConf = ROLE_CONFIG[primaryRole] || {
-                    label: primaryRole,
+                    label: primaryRole || 'Chưa có thông tin vai trò',
                     badgeClass: 'bg-slate-100 text-slate-700 border-slate-200',
                     avatarClass: 'from-slate-600 to-slate-800',
                     icon: Users
@@ -807,6 +847,7 @@ export default function AccountProvisioningView({ onBackToDashboard }) {
                         {user.isActive ? (
                           <button
                             type="button"
+                            disabled={user.userId === (currentUser?.userId || currentUser?.id)}
                             onClick={() => setDeactivateModalUser(user)}
                             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-rose-50 hover:border-rose-200 text-slate-600 hover:text-rose-600 font-bold text-xs transition-all cursor-pointer whitespace-nowrap shrink-0 shadow-2xs"
                             title="Ngừng hoạt động (Ẩn tài khoản khỏi hệ thống)"
@@ -835,6 +876,21 @@ export default function AccountProvisioningView({ onBackToDashboard }) {
         </div>
       </div>
 
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4 text-sm">
+        <label className="flex items-center gap-2">Cơ sở
+          <select aria-label="Lọc tài khoản theo cơ sở" value={campusFilter} onChange={e => { setCampusFilter(e.target.value); setPage(1); }} className="rounded-lg border border-slate-300 p-2">
+            <option value="">Tất cả cơ sở</option>
+            {campuses.map(c => <option key={c.campusId} value={c.campusId}>{c.name}</option>)}
+          </select>
+        </label>
+        <div className="flex items-center gap-3">
+          <button type="button" disabled={page <= 1 || isLoading} onClick={() => setPage(p => p - 1)} className="rounded-lg border px-3 py-2 disabled:opacity-40">Trang trước</button>
+          <span>Trang {page} / {Math.max(1, Math.ceil(totalCount / 50))}</span>
+          <button type="button" disabled={page * 50 >= totalCount || isLoading} onClick={() => setPage(p => p + 1)} className="rounded-lg border px-3 py-2 disabled:opacity-40">Trang sau</button>
+        </div>
+      </div>
+      {loadError && <p role="alert" className="rounded-xl bg-rose-50 p-4 text-sm text-rose-700">{loadError}</p>}
+
       {/* Provision New Account Modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-fade-in overflow-y-auto">
@@ -848,15 +904,18 @@ export default function AccountProvisioningView({ onBackToDashboard }) {
                 </div>
                 <div>
                   <h3 className="text-base font-extrabold text-slate-900">
-                    Cấp Phát Tài Khoản Nội Bộ Mới
+                    Cấp Tài Khoản Mới
                   </h3>
                   <p className="text-xs text-slate-500">
-                    Kích hoạt ngay lập tức vào CSDL PostgreSQL mà không cần qua OTP.
+                    Tài khoản được kích hoạt ngay sau khi cấp thành công.
                   </p>
                 </div>
               </div>
-              <button 
-                onClick={() => setShowModal(false)}
+              <button
+                type="button"
+                aria-label="Đóng form cấp tài khoản"
+                disabled={isSubmitting}
+                onClick={() => { if (!isSubmitting) setShowModal(false); }}
                 className="p-1.5 text-slate-400 hover:text-slate-600 rounded-xl"
               >
                 <X className="w-5 h-5" />
@@ -885,7 +944,12 @@ export default function AccountProvisioningView({ onBackToDashboard }) {
                       <button
                         type="button"
                         key={roleKey}
-                        onClick={() => setFormData(prev => ({ ...prev, roleName: roleKey }))}
+                        onClick={() => {
+                          setFormData(prev => ({ ...prev, roleName: roleKey,
+                            campusId: PROVISIONING_FIELDS[roleKey].campus ? prev.campusId : '',
+                            specialty: '' }));
+                          setErrorMsg('');
+                        }}
                         className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
                           isSelected
                             ? 'bg-blue-50/80 border-blue-500 ring-2 ring-blue-500/20 shadow-xs'
@@ -902,35 +966,38 @@ export default function AccountProvisioningView({ onBackToDashboard }) {
                 </div>
               </div>
 
+              {PROVISIONING_FIELDS[formData.roleName].note && <p className="rounded-xl bg-blue-50 p-3 text-sm text-blue-800">{PROVISIONING_FIELDS[formData.roleName].note}</p>}
               {/* Campus Selector */}
-              <div>
+              {PROVISIONING_FIELDS[formData.roleName].campus && <div>
                 <label className="block text-xs font-extrabold text-slate-700 mb-1">
-                  2. Cơ sở học vụ công tác <span className="text-rose-500">*</span>
+                  {PROVISIONING_FIELDS[formData.roleName].campusLabel} <span className="text-rose-500">*</span>
                 </label>
                 <select
                   value={formData.campusId}
+                  required
                   onChange={(e) => setFormData(prev => ({ ...prev, campusId: e.target.value }))}
                   className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
+                  <option value="">Chọn cơ sở</option>
                   {campuses.map(c => (
                     <option key={c.campusId} value={c.campusId}>
                       {c.name} ({c.code})
                     </option>
                   ))}
                 </select>
-              </div>
+              </div>}
 
               {/* Full Name & Email */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-extrabold text-slate-700 mb-1">
-                    Họ và tên cán bộ <span className="text-rose-500">*</span>
+                    {PROVISIONING_FIELDS[formData.roleName].nameLabel} <span className="text-rose-500">*</span>
                   </label>
                   <input
                     type="text"
                     value={formData.fullName}
                     onChange={(e) => setFormData(prev => ({ ...prev, fullName: e.target.value }))}
-                    placeholder="Ví dụ: Thầy Trần Quang Đức"
+                    placeholder="Ví dụ: Nguyễn Văn An"
                     className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     required
                   />
@@ -938,7 +1005,7 @@ export default function AccountProvisioningView({ onBackToDashboard }) {
 
                 <div>
                   <label className="block text-xs font-extrabold text-slate-700 mb-1">
-                    Email công tác <span className="text-rose-500">*</span>
+                    Email đăng nhập <span className="text-rose-500">*</span>
                   </label>
                   <div className="relative">
                     <input
@@ -952,7 +1019,7 @@ export default function AccountProvisioningView({ onBackToDashboard }) {
                         setErrorMsg('');
                       }}
                       onBlur={() => handleEmailBlur(formData.email)}
-                      placeholder="canbo@veval.edu.vn hoặc hoten@gmail.com"
+                      placeholder="hoten@example.com"
                       className={`w-full pl-3 pr-8 py-2 text-xs bg-slate-50 border rounded-xl font-semibold text-slate-800 focus:outline-none transition-all ${
                         emailValidationStatus === 'invalid'
                           ? 'border-rose-400 bg-rose-50/50 text-rose-900 focus:ring-2 focus:ring-rose-400/30'
@@ -1015,10 +1082,11 @@ export default function AccountProvisioningView({ onBackToDashboard }) {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-extrabold text-slate-700 mb-1">
-                    Số điện thoại liên lạc
+                    Số điện thoại liên lạc <span className="text-rose-500">*</span>
                   </label>
                   <input
                     type="tel"
+                    required
                     value={formData.phone}
                     onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
                     placeholder="0912345678"
@@ -1026,22 +1094,24 @@ export default function AccountProvisioningView({ onBackToDashboard }) {
                   />
                 </div>
 
-                <div>
+                {PROVISIONING_FIELDS[formData.roleName].specialty && <div>
                   <label className="block text-xs font-extrabold text-slate-700 mb-1">
-                    Bộ môn / Chuyên môn
+                    Bộ môn / Chuyên môn <span className="text-rose-500">*</span>
                   </label>
                   <select
                     value={formData.specialty}
+                    required
                     onChange={(e) => setFormData(prev => ({ ...prev, specialty: e.target.value }))}
                     className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
+                    <option value="">Chọn bộ môn / chuyên môn</option>
                     <option value="Toán & Tư duy Logic">Toán & Tư duy Logic</option>
                     <option value="Ngôn ngữ Tiếng Việt & Đọc hiểu">Ngôn ngữ Tiếng Việt & Đọc hiểu</option>
                     <option value="Tiếng Anh Học thuật">Tiếng Anh Học thuật</option>
                     <option value="Khoa học Tự nhiên & Số liệu">Khoa học Tự nhiên & Số liệu</option>
                     <option value="Khoa học Xã hội">Khoa học Xã hội</option>
                   </select>
-                </div>
+                </div>}
               </div>
 
               {/* Password Initial Setup */}
@@ -1064,23 +1134,28 @@ export default function AccountProvisioningView({ onBackToDashboard }) {
                   <input
                     type="text"
                     value={formData.password}
+                    autoComplete="new-password"
+                    minLength={8}
+                    placeholder="Nhập mật khẩu khởi tạo"
                     onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
                     className="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl font-mono font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     required
                   />
                 </div>
+                <p className="mt-2 text-xs text-slate-500">Ít nhất 8 ký tự, có chữ hoa, chữ thường và chữ số. Không có khoảng trắng ở đầu/cuối.</p>
               </div>
 
               {/* Notice */}
               <div className="p-3.5 bg-blue-50 border border-blue-100 rounded-2xl text-[11px] text-blue-800 font-medium leading-relaxed">
-                💡 <strong>Kích hoạt trực tiếp:</strong> Tài khoản này sẽ được nạp thẳng vào bảng <code>v_eval_identity."Users"</code> và liên kết hồ sơ chuyên môn với trạng thái <code>IsActive = true</code>. Cán bộ có thể đăng nhập ngay lập tức.
+                <strong>Kích hoạt trực tiếp:</strong> Tài khoản được cấp theo vai trò đã chọn và có thể đăng nhập ngay sau khi tạo thành công.
               </div>
 
               {/* Action Buttons */}
               <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
                 <button
                   type="button"
-                  onClick={() => setShowModal(false)}
+                  disabled={isSubmitting}
+                  onClick={() => { if (!isSubmitting) setShowModal(false); }}
                   className="px-4 py-2 text-xs font-bold text-slate-500 hover:text-slate-800 rounded-xl cursor-pointer"
                 >
                   Hủy bỏ
@@ -1134,7 +1209,7 @@ export default function AccountProvisioningView({ onBackToDashboard }) {
                 <span>{deactivateModalUser.email}</span>
               </div>
               <div className="text-[11px] text-slate-500">
-                Vai trò: <span className="font-bold text-slate-700">{deactivateModalUser.roles?.join(', ')}</span>
+                Vai trò: <span className="font-bold text-slate-700">{accountRoleLabel(deactivateModalUser)}</span>
               </div>
             </div>
 
@@ -1201,7 +1276,7 @@ export default function AccountProvisioningView({ onBackToDashboard }) {
                 <span>{reactivateModalUser.email}</span>
               </div>
               <div className="text-[11px] text-slate-500">
-                Vai trò: <span className="font-bold text-slate-700">{reactivateModalUser.roles?.join(', ')}</span>
+                Vai trò: <span className="font-bold text-slate-700">{accountRoleLabel(reactivateModalUser)}</span>
               </div>
             </div>
 

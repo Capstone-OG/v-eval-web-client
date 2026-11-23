@@ -1,3 +1,4 @@
+import AdminWorkspace from './components/admin/AdminWorkspace';
 import { toast } from './context/ToastContext';
 import React, { useState, useEffect, useCallback } from 'react';
 import {
@@ -164,24 +165,19 @@ const ROLE_PORTAL_DEFINITIONS = {
     ]
   },
   admin: {
-    code: 'SYSTEM IAM ADMIN PORTAL',
-    title: 'Cổng Quản Trị Viên Hệ Thống & Định Danh IAM',
-    subtitle: 'Quản trị tài khoản đa vai trò PostgreSQL Direct, Giám sát liên cơ sở & Đối soát PayOS',
-    defaultTab: 'provision',
+    code: 'SYSTEM ADMIN PORTAL',
+    title: 'Quản trị hệ thống V-Eval',
+    subtitle: 'Tài khoản, phân quyền, cơ sở đào tạo & cấu hình vận hành',
+    defaultTab: 'dashboard',
     icon: ShieldCheck,
     accentBadge: 'bg-rose-50 text-rose-700 border-rose-200',
     tabs: [
-      { id: 'provision', label: 'Quản trị Định danh IAM', icon: ShieldCheck },
-      { id: 'dashboard', label: 'Giám sát Đa Cơ sở', icon: Building2 },
-      { id: 'teacher_heatmap', label: 'Ma trận Nhiệt Hệ thống', icon: LayoutGrid },
-      { id: 'roadmap', label: 'Cây Tri thức Quốc gia', icon: Network },
-      { id: 'textbook-standard', label: '1. Sách Giáo Khoa Chuẩn', icon: BookOpen },
-      { id: 'textbook-ingest', label: '2. Nạp Tài Liệu SGK', icon: BookOpenCheck },
-      { id: 'textbook-studio', label: '3. Studio Biên Soạn SGK', icon: BookOpenCheck },
-      { id: 'exam-bank', label: '1. Kho Đề & Xem Đề Thi', icon: FileSpreadsheet },
-      { id: 'exam-ingest', label: '2. Parse PDF & AI Bloom', icon: Sparkles },
-      { id: 'exam-studio', label: '3. Studio Biên Soạn Đề', icon: FileSpreadsheet },
-      { id: 'tuition', label: 'Đối soát Cổng PayOS', icon: CreditCard }
+      { id: 'dashboard', label: 'Tổng quan', icon: BarChart3 },
+      { id: 'provision', label: 'Tài khoản', icon: Users },
+      { id: 'user_roles', label: 'Vai trò & Phân quyền', icon: ShieldCheck },
+      { id: 'campuses', label: 'Cơ sở đào tạo', icon: Building2 },
+      { id: 'system_settings', label: 'Cấu hình hệ thống', icon: Sparkles },
+      { id: 'operations', label: 'Giám sát & Sao lưu', icon: LayoutGrid }
     ]
   }
 };
@@ -525,6 +521,7 @@ export default function App() {
   const activeChildId = activeChild?.studentId || null;
 
   const renderRolePortalContent = () => {
+    if (role === 'admin' && activeTab !== 'settings') return <AdminWorkspace activeTab={activeTab} currentUser={currentUser} onNavigate={setActiveTab} />;
     if (activeTab === 'mock') return <MockAssessmentPage currentUser={currentUser} onClose={() => setActiveTab('dashboard')} />;
     if (activeTab === 'settings') {
       return <AccountSettingsPage currentUser={currentUser} onUpdateUser={setCurrentUser}
@@ -918,7 +915,7 @@ export default function App() {
 
                 {/* Main Workspace Container */}
                 <main className="min-w-0 flex-1 p-4 sm:p-6 w-full max-w-full">
-                  {role !== 'student' && role !== 'parent' && role !== 'manager' && activeTab === currentPortal.defaultTab && (
+                  {role !== 'student' && role !== 'parent' && role !== 'manager' && role !== 'admin' && activeTab === currentPortal.defaultTab && (
                     <h1 className="mb-5 text-xl font-bold tracking-tight text-slate-900">{accountGreeting(role, currentUser)}</h1>
                   )}
                   {renderRolePortalContent()}

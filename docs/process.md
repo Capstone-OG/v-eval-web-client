@@ -1417,3 +1417,107 @@ Final scope: weekly timetable/session details, profile prerequisites, authoritat
 ### [21/11/2026] - Resolve frontend pull conflicts against 682c9e2
 Merged incoming textbook/exam workspace tooling, parent tuition targeting, API course catalog and collapsible navigation with the local weekly calendar, mock exam room, profile prerequisites and server-authoritative payment/resume logic. Retained the user-requested single student curriculum view and deletion of the obsolete ConnectedRoadmapPage/StudentRoadmapWorkspace; removed their incoming route/import. Kept the schedule navbar subtitle and non-wrapping theta summary. Both payment completion and failure callbacks are preserved. Added stale-request protection when changing the selected student and used the incoming dynamic course catalog for resumed invoices.
 Validation: 119 unit tests passed, production build passed, five sidebar/navbar/student-parent payment render checks passed, and Chrome mocked-API exam scenarios passed (passages, flags, resume, third-violation and timeout submissions). Both documentation histories retained. Separately resolved documentation-only stash conflicts in the legacy V-Eval-Web_Client copy without committing its staged source or untracked environment/settings files. Backend repositories remained unchanged. The system root already had a separate pending merge without unmerged paths; it is outside this frontend merge commit.
+
+
+## Admin workspace architecture - [22/11/2026]
+
+`App.jsx` routes authenticated `admin` users into `AdminWorkspace`; personal account settings retain the existing route. Sidebar and portal tabs expose the same six administration sections. `AccountProvisioningView` reuses `userService` and Identity endpoints. Academic authoring and learner payment screens are outside the Admin navigation.
+
+| Component | Status | Implementation / remaining work |
+| --- | --- | --- |
+| Overview | FE implemented; API connected | Account and active campus statistics; loading, partial failure and unavailable values |
+| Accounts | FE implemented; existing API connected | Provision all six roles, search, role/status/campus filters, pagination, activate/deactivate; UI prevents self-deactivation |
+| Role scope | Read-only FE | Describes six business roles; existing-user role editing and granular RBAC require backend contracts |
+| Campuses | Read-only API connected | Search active campus code/name/address and display contact details; create/edit/deactivate API absent |
+| General and AI settings | FE draft only | Per-user session storage; no server changes or secret storage |
+| Operations, audit, backup | Integration pending | Honest unavailable states; no simulated uptime, audit records or backup success |
+| Verification | Build and regression checks passed | Build with runner loader; 79 existing tests passed; browser/live API verification pending |
+
+
+### Admin dashboard extension - [22/11/2026]
+
+| Component | Status | Details |
+| --- | --- | --- |
+| Dedicated dashboard | FE complete | AdminDashboard receives totals, campus data, refresh state and navigation from AdminWorkspace |
+| Role chart | API connected | Six role-filtered requests read totalCount; membership can overlap |
+| Account status | FE complete | Accessible donut and numeric legend; unavailable and zero denominators handled |
+| Campus and shortcuts | FE complete | Four-campus preview, contact details and links to administration sections |
+| Validation | Build passed | Browser and live backend verification pending |
+
+### Admin Enterprise UI Modernization - [22/11/2026]
+
+| Component | Status | Implementation Details |
+| --- | --- | --- |
+| Executive Hero Banner | 🟢 Hoàn thành | Dark gradient (`from-slate-900 via-indigo-950 to-slate-900`), ambient glow, 100% microservice pulse, live sync clock & quick CTAs |
+| 4 Executive KPI Cards | 🟢 Hoàn thành | Modern cards with hover lift, gradient icon containers, micro-badges, dynamic active ratio |
+| 6-Role IAM Distribution Matrix | 🟢 Hoàn thành | Visual role cards with distinct identity gradients, role code badges, live count, percentage bar meter |
+| SVG Radial Account Health Gauge | 🟢 Hoàn thành | Centered SVG circular gauge, active/inactive breakdown pills, IAM security guidance note |
+| RBAC Role Matrix Dossier | 🟢 Hoàn thành | 6 authority tiers, core mission, data boundary policy, granular capabilities checklist & 1-click provisioning redirect |
+| Interactive Campus Directory | 🟢 Hoàn thành | Multi-campus cards, live search filter, campus code mono badge, contact info, direct personnel lookup |
+| System & AI Settings Console | 🟢 Hoàn thành | Platform info, Google Gemini / OpenAI provider switch, token limit & message rate limit, maintenance mode toggle |
+| Telemetry & Operations Hub | 🟢 Hoàn thành | Health status for 5 microservices + PostgreSQL/Redis, latency indicators, automated 02:00 AM backup schedule & instant snapshot trigger |
+
+
+
+### Form validation architecture - [22/11/2026]
+
+`FormValidationBoundary` wraps the application and blocks invalid native form submits before business handlers execute. `formValidation.js` shares contact validation and immutable request normalization. `apiClient` normalizes JSON writes and multipart metadata; opaque credentials and file bytes are preserved. Profile and provisioning services validate contacts even when called without a form.
+
+| Item | Status | Details |
+| --- | --- | --- |
+| Student profile contact | Implemented | Required name/phone; Vietnam 0/+84 formats; no invented phone fallback |
+| Parent and account creation | Implemented | Required contact validation and optional email format checks |
+| Required fields | Implemented for native forms | Whitespace-only values blocked; optional fields remain optional |
+| Request trim | Implemented in shared API client | Recursive JSON strings and multipart metadata; credentials/file contents excluded |
+| Custom button-only forms | Existing handler/service validation | Not all custom business rules are represented by HTML required attributes |
+| Checks | Passed | Production build; 84 tests; browser/live API check pending |
+
+
+### Role-specific provisioning - [22/11/2026]
+
+| Role | Campus | Specialty | Status |
+| --- | --- | --- | --- |
+| Teacher | Required | Required | FE and payload policy implemented |
+| Academic Manager | Required | Hidden/null | FE and payload policy implemented |
+| Student | Required | Hidden/null | FE and payload policy implemented |
+| Parent | Hidden/null | Hidden/null | Link student after account creation |
+| Academic Director | Hidden/null | Hidden/null | System-wide academic profile |
+| Administrator | Hidden/null | Hidden/null | System-wide administrative profile |
+
+All roles require full name, login email, contact phone and initial password. Shared buildProvisioningPayload validates contacts and role-specific values, then strips irrelevant fields. Existing backend contracts are unchanged.
+
+
+### Provisioning password - [22/11/2026]
+
+| Item | Status | Behavior |
+| --- | --- | --- |
+| Initial password | Complete | Empty on new modal, reopen and post-success reset |
+| Validation | Complete | Required; 8+ characters, uppercase, lowercase, digit; no surrounding whitespace |
+| Optional generation | Complete | Explicit button; guaranteed character classes |
+| Verification | Passed | Build and three provisioning tests; browser verification pending |
+
+
+### Account dialog keyboard behavior - [22/11/2026]
+
+| Item | Status | Details |
+| --- | --- | --- |
+| Escape dismissal | Implemented | Provisioning and account status dialogs close when idle |
+| Pending mutation guard | Implemented | Esc, provisioning close and cancel cannot dismiss pending writes |
+| Verification | Build passed | Browser keyboard test pending |
+
+
+### Account role display - [22/11/2026]
+
+| Item | Status | Details |
+| --- | --- | --- |
+| Role labels | Implemented | Shared accountRoles helper for table and status dialogs; explicit missing-data state |
+| Verification | Build passed | Live account role assignment not inspected |
+
+
+## [23/11/2026] - Checkpoint status
+
+| Component | Status | Detail |
+| --- | --- | --- |
+| Existing local implementation | Saved for review | Checkpoint current admin workspace, account provisioning, role labels, modal dismissal, profile/contact validation, request normalization and related tests. |
+| Verification | Recorded | Production build passed using Vite runner with createRequire. Validation tests: 8/8 passed. Browser and live API checks not performed. |
+| Next remote integration | Pending | User will pull after this local checkpoint. |

@@ -168,8 +168,8 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
       if (!regPhone.trim()) {
         errs.regPhone = "Vui lòng nhập Số điện thoại.";
       } else {
-        const phoneRegex = /^(0[3|5|7|8|9])[0-9]{8}$/;
-        if (!phoneRegex.test(regPhone.trim().replace(/\s/g, ''))) {
+        const phoneRegex = /^(0|\+84)[35789][0-9]{8}$/;
+        if (!phoneRegex.test(regPhone.trim().replace(/[\s.-]/g, ''))) {
           errs.regPhone = "SĐT không hợp lệ (10 chữ số).";
         }
       }

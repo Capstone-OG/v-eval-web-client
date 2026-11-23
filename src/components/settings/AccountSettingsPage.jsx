@@ -1,4 +1,5 @@
 import { ROLE_LABELS } from '../../config/roles';
+import { validateContact, normalizePhone } from '../../utils/formValidation';
 import DatePicker from '../common/DatePicker';
 import { toast } from '../../context/ToastContext';
 import { validatePasswordChange, passwordApiFieldErrors } from '../../utils/passwordValidation';
@@ -197,7 +198,7 @@ export default function AccountSettingsPage({
       const storedUser = currentUser || tokenStorage.getUser() || mockUser;
       setJoinedAt((currentUser || tokenStorage.getUser())?.createdAt || null);
       let initialName = storedUser.fullName || storedUser.name || mockUser.name;
-      let initialPhone = storedUser.phone || '0988123456';
+      let initialPhone = storedUser.phone || '';
       let initialEmail = storedUser.email || mockUser.email;
       let initialAvatar = storedUser.avatarUrl || storedUser.avatar || mockUser.avatar;
       let initialCampus = storedUser.campusId || 'campus-1';
@@ -354,14 +355,19 @@ export default function AccountSettingsPage({
   const handleSaveProfile = async (e) => {
     if (e) e.preventDefault();
     if (isLoading || isSavingProfile || !hasAnyProfileChanges) return;
-    if (!fullName.trim()) {
-      showAlert('error', 'Họ và tên không được để trống.');
+    const validationError = validateContact({ fullName, phone });
+    if (validationError) {
+      showAlert('error', validationError);
+      return;
+    }
+    if (activeRole === 'student' && (!schoolName.trim() || !campusId || !examDate || !Number.isFinite(Number(targetScore)) || Number(targetScore) < 300 || Number(targetScore) > 1200 || !Number.isFinite(Number(studyHoursDay)) || Number(studyHoursDay) < 0.5 || Number(studyHoursDay) > 8)) {
+      showAlert('error', 'Vui lòng chọn cơ sở, nhập tên trường, ngày thi, điểm mục tiêu từ 300–1200 và thời gian học từ 0.5–8 giờ/ngày.');
       return;
     }
 
     setIsSavingProfile(true);
     try {
-      const cleanPhone = phone.trim().replace(/[\s.-]/g, '');
+      const cleanPhone = normalizePhone(phone);
       const updatedProfile = await authService.updateProfile({
         fullName: fullName.trim(),
         phone: cleanPhone,
@@ -442,12 +448,9 @@ export default function AccountSettingsPage({
       showAlert('error', 'Vui lòng chọn cha, mẹ hoặc người giám hộ.');
       return;
     }
-    if (!parentName.trim()) {
-      showAlert('error', 'Vui lòng nhập họ và tên của Cha hoặc Mẹ.');
-      return;
-    }
-    if (!parentPhone.trim()) {
-      showAlert('error', 'Vui lòng nhập số điện thoại của Cha hoặc Mẹ.');
+    const validationError = validateContact({ fullName: parentName, phone: parentPhone, email: parentEmail });
+    if (validationError) {
+      showAlert('error', validationError);
       return;
     }
 
@@ -455,7 +458,7 @@ export default function AccountSettingsPage({
     const parentPayload = {
       parentRelation,
       parentName: parentName.trim(),
-      parentPhone: parentPhone.trim(),
+      parentPhone: normalizePhone(parentPhone),
       parentEmail: parentEmail.trim(),
       parentConnectCode,
       isParentLinked
