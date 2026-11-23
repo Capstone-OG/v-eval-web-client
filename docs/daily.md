@@ -3475,3 +3475,13 @@ Validated the current student timetable and report changes: ten targeted tests p
 ## [24/11/2026] - Remaining frontend checkpoint
 
 Preserved the remaining 24 modified frontend files: simplified Vietnamese copy across public/auth, curriculum, student/parent/admin views; revised sidebar/navigation styling and contextual history headings; added scrollbar styling. These existing changes were excluded from the previous scoped commit and are now included at user request. The successful production build and ten targeted tests from this session already covered this working tree; no source changes were made afterward. Diff formatting checks pass. Browser verification remains pending; no BE files changed.
+
+- [24/11/2026] Changed report tab toolbar and capsule to light backgrounds while retaining the selected blue tab. Inactive text/badges now use readable slate colors. Targeted lint: zero errors, existing warnings; visual review pending.
+
+- [24/11/2026] Redesigned report navigation as three balanced responsive cards with individual blue/teal/violet accents, icon tiles, brief descriptions and selected indicators. Removed nested capsules, technical badges and dark toolbar decoration. Native-loader production build passed; browser visual acceptance pending.
+
+- [24/11/2026] Increased report navigation depth using explicit colored selected-card shadows, gradient icon shadows and a light inset track. Reduced border prominence; hover shadows remain subtle. Native-loader production build passed; visual browser review pending.
+
+- [24/11/2026] Added persistent white surfaces and shadows to unselected report navigation cards; active cards retain stronger colored shadows. Verified inactive class branch; display-only change.
+
+- [24/11/2026] Unified the four student summary cards between overview and reports using StudentSummaryCards: score, target gap, roadmap and streak, with matching colored strips, badges, values and footer panels. Preserved report topic navigation and all overview navigation callbacks in their corresponding cards. Build passed with native config loader; targeted lint zero errors with existing hook warnings; browser review pending. No new fixed student data introduced.

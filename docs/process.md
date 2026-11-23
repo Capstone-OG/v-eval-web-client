@@ -1668,3 +1668,13 @@ Reminder messages in StudentEarlyWarningsCard come from getMyAlerts; repeated da
 | Scope | Status | Verification |
 | --- | --- | --- |
 | Existing copy, navigation and history presentation changes | Included in checkpoint | Previous successful build covered these exact sources; diff check passes; browser pending. |
+
+- [24/11/2026] Report tab colors: implemented light container with colored active button; targeted lint zero errors, existing warnings.
+
+- [24/11/2026] Report navigation redesign: three responsive topic cards implemented; native-loader build passed; visual review pending.
+
+- [24/11/2026] Navigation shadows: implemented selected-card elevation and gradient icon shadows; build passed.
+
+- [24/11/2026] Unselected report card shadows: implemented persistent elevation without requiring hover/selection.
+
+- [24/11/2026] Shared StudentSummaryCards now supplies overview and report metrics; existing navigation callbacks retained; production build passed.
