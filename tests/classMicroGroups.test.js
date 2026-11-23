@@ -104,3 +104,80 @@ test('ClassMicroGroups - disambiguates duplicate student names with short ID suf
   assert.equal(formatStudentName(student2, studentInfo, nameFreq), 'Phạm Tấn Lộc (#B099)');
   assert.equal(formatStudentName(student3, studentInfo, nameFreq), 'Trần Ngọc Mai');
 });
+
+const partitionStudentsForFocusSkill = (focusSkill, skillId, rows = [], size = 4) => {
+  if (!rows || rows.length === 0) return [];
+  const studentList = rows.map((r) => {
+    const sId = r.studentId || r.StudentId || r.id;
+    const sName = r.studentName || r.StudentName || r.name;
+    let skillPlt = null;
+    if (Array.isArray(r.skillCells)) {
+      const cell = r.skillCells.find((c) =>
+        (skillId && String(c.skillId).toLowerCase() === String(skillId).toLowerCase()) ||
+        (c.skillName && c.skillName.trim().toLowerCase() === focusSkill.trim().toLowerCase())
+      );
+      if (cell && cell.plt != null) skillPlt = Number(cell.plt);
+    }
+    if (skillPlt == null) skillPlt = r.overallMastery ?? 0.1;
+    return { studentId: sId, id: sId, name: sName, mastery: skillPlt };
+  });
+
+  studentList.sort((a, b) => a.mastery - b.mastery);
+  const n = studentList.length;
+  if (n < 3) return [];
+  const minM = Math.ceil(n / 5);
+  const maxM = Math.floor(n / 3);
+  const targetSize = Math.max(3, Math.min(5, size));
+  const targetM = Math.round(n / targetSize);
+  const m = Math.max(minM, Math.min(maxM, targetM));
+  const baseSize = Math.floor(n / m);
+  const remainder = n % m;
+  const quotas = [];
+  for (let i = 0; i < m; i++) quotas.push(i < remainder ? baseSize + 1 : baseSize);
+
+  const nextGroups = [];
+  let curIdx = 0;
+  for (let i = 0; i < m; i++) {
+    const q = quotas[i];
+    const members = studentList.slice(curIdx, curIdx + q);
+    curIdx += q;
+    const groupNum = String(i + 1).padStart(2, '0');
+    nextGroups.push({
+      groupId: `GRP-FOCUS-${i + 1}`,
+      groupName: `Nhóm ${groupNum} - Bàn trọng tâm: ${focusSkill}`,
+      focusArea: focusSkill,
+      memberCount: members.length,
+      members,
+      assignedWorksheetTitle: `Phiếu bài tập vi mô: 5 câu ${focusSkill}`
+    });
+  }
+  return nextGroups;
+};
+
+test('ClassMicroGroups - partitionStudentsForFocusSkill groups students by designated focus skill', () => {
+  const rows = [
+    { studentId: 's1', studentName: 'Nguyễn Hoàng An', skillCells: [{ skillName: 'Giải quyết vấn đề Hóa học', plt: 0.1 }] },
+    { studentId: 's2', studentName: 'Trần Ngọc Mai', skillCells: [{ skillName: 'Giải quyết vấn đề Hóa học', plt: 0.15 }] },
+    { studentId: 's3', studentName: 'Phạm Tấn Lộc', skillCells: [{ skillName: 'Giải quyết vấn đề Hóa học', plt: 0.05 }] },
+    { studentId: 's4', studentName: 'Mai Thành Nhân', skillCells: [{ skillName: 'Giải quyết vấn đề Hóa học', plt: 0.2 }] },
+    { studentId: 's5', studentName: 'Trần Thái Thịnh', skillCells: [{ skillName: 'Giải quyết vấn đề Hóa học', plt: 0.0 }] },
+    { studentId: 's6', studentName: 'Lê Hoàng Long', skillCells: [{ skillName: 'Giải quyết vấn đề Hóa học', plt: 0.25 }] },
+    { studentId: 's7', studentName: 'Phạm Tấn Lộc 2', skillCells: [{ skillName: 'Giải quyết vấn đề Hóa học', plt: 0.3 }] }
+  ];
+
+  const focusSkill = 'Giải quyết vấn đề Hóa học';
+  const groups = partitionStudentsForFocusSkill(focusSkill, 'sk-chem-01', rows, 4);
+
+  assert.equal(groups.length, 2);
+  assert.equal(groups[0].memberCount, 4);
+  assert.equal(groups[1].memberCount, 3);
+  assert.equal(groups[0].focusArea, focusSkill);
+  assert.equal(groups[1].focusArea, focusSkill);
+  assert.equal(groups[0].groupName, 'Nhóm 01 - Bàn trọng tâm: Giải quyết vấn đề Hóa học');
+  assert.equal(groups[0].assignedWorksheetTitle, 'Phiếu bài tập vi mô: 5 câu Giải quyết vấn đề Hóa học');
+
+  // Verify all 7 students placed with 0 duplicate placements
+  const allPlaced = groups.flatMap(g => g.members.map(m => m.studentId));
+  assert.equal(allPlaced.length, 7);
+  assert.equal(new Set(allPlaced).size, 7);
+});

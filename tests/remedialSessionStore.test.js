@@ -59,3 +59,4 @@ test('remedialSessionStore - deletes session cleanly', () => {
   assert.equal(remaining.length, 1);
   assert.equal(remaining[0].groupId, 'g2');
 });
+

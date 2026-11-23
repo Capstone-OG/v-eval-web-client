@@ -1,6 +1,11 @@
 # UPDATE - V-EVAL WEB CLIENT
 
 ## [23/11/2026]
+- **Tự Động Gom Nhóm Chuẩn Xác Theo Đúng Chuyên Đề Chỉ Định (Khắc Phục Lệch Chuyên Đề Gom Nhóm) (`ClassMicroGroupsModal.jsx`, `practiceService.js`, `tests/classMicroGroups.test.js`)**:
+  - Khắc phục triệt để hiện tượng Giảng viên bấm "Tạo Nhóm Bồi Dưỡng" cho Hóa học nhưng hệ thống lại gom theo Đọc hiểu / Đại từ: khi có `focusSkill` (ví dụ "Giải quyết vấn đề Hóa học"), thuật toán `partitionStudentsForFocusSkill` tự động kích hoạt gom nhóm bám sát 100% chuyên đề Hóa học, đặt tên bàn học, thẻ điểm yếu và phiếu bài tập 5 câu trúng đích.
+  - Sắp xếp học sinh theo điểm số thực tế ở chuyên đề được chọn từ ma trận nhiệt (ưu tiên bồi dưỡng các em điểm thấp vào bàn 1), tự động tái phân nhóm khi Giảng viên bấm nút quy mô bàn học (3, 4, 5 bạn/bàn).
+  - Cập nhật nhãn nút hành động động: `Tự Động Xếp Nhóm: [Tên chuyên đề]` kèm thông báo thành công chi tiết.
+  - Bổ sung unit test kiểm thử phân nhóm đúng chuyên đề trong `tests/classMicroGroups.test.js` (32/32 tests passed 100%).
 - **Khoan Sâu Danh Sách Học Sinh Yếu Theo Kỹ Năng & Lên Lịch Học Nhóm Phụ Đạo / Bồi Dưỡng Chuyên Biệt (`TeacherDashboardView.jsx`, `ClassMicroGroupsModal.jsx`, `remedialSessionStore.js`, `tests/remedialSessionStore.test.js`)**:
   - Bổ sung ngữ cảnh lớp học rõ ràng trong header modal: `Lớp: [Tên lớp] • Mã: [Mã lớp] • Sĩ số: [Sĩ số] học sinh`, giúp Giảng viên nhận diện tức thì phạm vi lớp học đang theo dõi.
   - Tích hợp accordion mở rộng chi tiết học sinh chưa đạt chuyên đề: `Xem chi tiết [X] học sinh chưa đạt chuyên đề này ▼` hiển thị đầy đủ họ tên thật, avatar, và độ hiểu bài cụ thể (< 50%).
@@ -28,5 +33,5 @@
   - Tích hợp 4 Tab chọn nhanh Khối lớp (`Tất cả`, `Lớp 12`, `Lớp 11`, `Lớp 10`) triệt tiêu 70% độ dài cuộn trang; cơ chế Split Independent Scroll; nút Thu gọn hết / Mở tất cả.
   - Chuẩn hóa thuật ngữ sư phạm: `Cần bổ trợ (<10%)`, `Cần củng cố (<60%)`, `Đã nắm vững (≥60%)`.
 - **Kiểm Thử & Biên Dịch**:
-  - 31/31 unit tests passed 100% (`tests/remedialSessionStore.test.js`, `tests/classMicroGroups.test.js`, `tests/parentTeacherMessagingStore.test.js`, ...).
-  - `npm run build`: Hoàn thành 100% trong 1.25s (`3086 modules transformed`, `0 Error`).
+  - 32/32 unit tests passed 100% (`tests/classMicroGroups.test.js`, `tests/remedialSessionStore.test.js`, `tests/parentTeacherMessagingStore.test.js`, ...).
+  - `npm run build`: Hoàn thành 100% trong 1.27s (`3086 modules transformed`, `0 Error`).

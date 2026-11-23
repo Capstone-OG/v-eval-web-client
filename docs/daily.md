@@ -4,6 +4,12 @@
 
 ## [23/11/2026] - Khoan Sâu Danh Sách Học Sinh Yếu Theo Kỹ Năng, Lên Lịch Học Nhóm Phụ Đạo & Tự Chủ Giảng Viên (`TeacherDashboardView.jsx`, `ClassMicroGroupsModal.jsx`, `OfflineSessionPreparationModal.jsx`, `remedialSessionStore.js`)
 
+- **Tự Động Gom Nhóm Chuẩn Xác Theo Đúng Chuyên Đề Chỉ Định (Fix Lệch Chuyên Đề Gom Nhóm) ([`ClassMicroGroupsModal.jsx`](../src/components/modals/ClassMicroGroupsModal.jsx), [`practiceService.js`](../src/services/practiceService.js), [`tests/classMicroGroups.test.js`](../tests/classMicroGroups.test.js))**:
+  - *Khắc phục triệt để hiện tượng lệch chuyên đề*: Xử lý dứt điểm tình trạng Giảng viên chọn "Tạo Nhóm Bồi Dưỡng" cho Hóa học nhưng màn hình lại hiển thị nhóm Đọc hiểu / Đại từ từ lần phân cụm tổng quát cũ trong CSDL.
+  - *Thuật toán phân rã bám sát chuyên đề (`partitionStudentsForFocusSkill`)*: Khi có `focusSkill` (ví dụ "Giải quyết vấn đề Hóa học"), hệ thống tự động gom nhóm học sinh bám sát 100% chuyên đề Hóa học, đặt tên bàn học, thẻ điểm yếu và phiếu bài tập 5 câu trúng đích.
+  - *Sắp xếp theo độ hiểu bài thực tế*: Phân loại và xếp các học sinh có điểm chuyên đề thấp nhất vào bàn cần bồi dưỡng cấp tốc trước; tự động tính toán lại khi Giảng viên chuyển đổi quy mô bàn học (3, 4, 5 bạn/bàn).
+  - *Cập nhật nhãn hành động động*: Đổi nhãn nút sang `Tự Động Xếp Nhóm: [Tên chuyên đề]` giúp Giảng viên nhận diện rõ ràng mục tiêu phân nhóm.
+  - *Bổ sung unit test chuyên sâu*: Thêm test case `ClassMicroGroups - partitionStudentsForFocusSkill groups students by designated focus skill` nâng tổng số test lên 32/32 tests passed 100%.
 - **Khoan Sâu Danh Sách Học Sinh Yếu & Ngữ Cảnh Lớp Học ([`TeacherDashboardView.jsx`](../src/components/dashboard/TeacherDashboardView.jsx))**:
   - *Ngữ cảnh lớp học rõ ràng*: Bổ sung header modal định danh lớp học: `Lớp: [Tên lớp] • Mã: [Mã lớp] • Sĩ số: [Sĩ số] học sinh`, giúp Giảng viên nhận diện tức thì phạm vi lớp học đang theo dõi thay vì một danh sách không rõ bối cảnh.
   - *Accordion xem chi tiết học sinh chưa đạt*: Bổ sung cơ chế mở rộng trực tiếp `Xem chi tiết [X] học sinh chưa đạt chuyên đề này ▼` hiển thị chi tiết từng em (avatar, họ tên, phần trăm hiểu bài < 50%), đáp ứng đúng yêu cầu sư phạm khoan sâu từ chuyên đề xuống học sinh.

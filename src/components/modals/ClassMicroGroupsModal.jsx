@@ -41,6 +41,7 @@ export default function ClassMicroGroupsModal({ isOpen, onClose, classData }) {
   const [skillNameMap, setSkillNameMap] = useState(new Map());
   const [studentInfoMap, setStudentInfoMap] = useState(new Map());
   const [nameFrequencyMap, setNameFrequencyMap] = useState(new Map());
+  const [heatmapRows, setHeatmapRows] = useState([]);
 
   // Quản lý lịch học nhóm phụ đạo / bồi dưỡng (Remedial Study Sessions)
   const [scheduledSessions, setScheduledSessions] = useState([]);
@@ -51,6 +52,86 @@ export default function ClassMicroGroupsModal({ isOpen, onClose, classData }) {
     format: 'OFFLINE',
     notes: 'Ôn tập phương pháp giải & củng cố các câu hay làm sai'
   });
+
+  // Phân nhóm học sinh tập trung bồi dưỡng đúng chuyên đề được chỉ định (Focus Skill)
+  const partitionStudentsForFocusSkill = (focusSkill, skillId, rows = [], size = 4) => {
+    if (!rows || rows.length === 0) return [];
+
+    const studentList = rows.map((r) => {
+      const sId = r.studentId || r.StudentId || r.id;
+      const sName = r.studentName || r.StudentName || r.name;
+
+      // Tìm cell của chuyên đề này trong row
+      let skillPlt = null;
+      if (Array.isArray(r.skillCells)) {
+        const cell = r.skillCells.find((c) =>
+          (skillId && String(c.skillId).toLowerCase() === String(skillId).toLowerCase()) ||
+          (c.skillName && c.skillName.trim().toLowerCase() === focusSkill.trim().toLowerCase())
+        );
+        if (cell && cell.plt != null) {
+          skillPlt = Number(cell.plt);
+        }
+      }
+      if (skillPlt == null) {
+        skillPlt = r.thetaScore ?? r.overallMastery ?? 0.1;
+      }
+
+      return {
+        studentId: sId,
+        id: sId,
+        name: sName,
+        mastery: skillPlt,
+        overallMastery: r.overallMastery
+      };
+    });
+
+    // Sắp xếp học sinh theo độ hiểu chuyên đề này từ thấp đến cao (bồi dưỡng các bạn yếu nhất trước)
+    studentList.sort((a, b) => a.mastery - b.mastery);
+
+    const n = studentList.length;
+    if (n < 3) return [];
+
+    // Tính số lượng nhóm m (đảm bảo 3 <= n/m <= 5)
+    const minM = Math.ceil(n / 5);
+    const maxM = Math.floor(n / 3);
+    const targetSize = Math.max(3, Math.min(5, size));
+    const targetM = Math.round(n / targetSize);
+    const m = Math.max(minM, Math.min(maxM, targetM));
+
+    const baseSize = Math.floor(n / m);
+    const remainder = n % m;
+    const quotas = [];
+    for (let i = 0; i < m; i++) {
+      quotas.push(i < remainder ? baseSize + 1 : baseSize);
+    }
+
+    const nextGroups = [];
+    let curIdx = 0;
+    for (let i = 0; i < m; i++) {
+      const q = quotas[i];
+      const members = studentList.slice(curIdx, curIdx + q);
+      curIdx += q;
+
+      const groupNum = String(i + 1).padStart(2, '0');
+      const tierTag = m > 1
+        ? (i === 0 ? ' (Bồi dưỡng cấp tốc)' : ' (Củng cố & Luyện tập)')
+        : '';
+
+      nextGroups.push({
+        groupId: `GRP-FOCUS-${i + 1}`,
+        groupName: `Nhóm ${groupNum} - Bàn trọng tâm: ${focusSkill}${tierTag}`,
+        focusArea: focusSkill,
+        memberCount: members.length,
+        members: members,
+        commonWeakSkillIds: skillId ? [skillId] : [],
+        commonWeakSkillNames: [focusSkill],
+        assignedWorksheetTitle: `Phiếu bài tập vi mô: 5 câu ${focusSkill}`,
+        recommendedWorksheetTitle: `Phiếu bài tập vi mô: 5 câu ${focusSkill}`
+      });
+    }
+
+    return nextGroups;
+  };
 
   // Nạp danh sách nhóm và ma trận năng lực thực tế từ Backend khi mở modal
   useEffect(() => {
@@ -69,14 +150,6 @@ export default function ClassMicroGroupsModal({ isOpen, onClose, classData }) {
         ]);
 
         if (!isMounted) return;
-
-        // 1. Xử lý nhóm vi mô
-        let loadedGroups = [];
-        if (groupsRes.status === 'fulfilled' && groupsRes.value) {
-          const val = groupsRes.value;
-          loadedGroups = Array.isArray(val) ? val : (Array.isArray(val?.groups) ? val.groups : []);
-        }
-        setGroups(loadedGroups);
 
         // 2. Xây dựng bản đồ tên kỹ năng từ heatmap và cây kỹ năng Content Service
         const nextSkillMap = new Map();
@@ -114,6 +187,8 @@ export default function ClassMicroGroupsModal({ isOpen, onClose, classData }) {
         const nextFreqMap = new Map();
 
         const rows = heatmapData?.rows || heatmapData?.Rows || [];
+        setHeatmapRows(rows);
+
         rows.forEach((r) => {
           const sId = r.studentId || r.StudentId || r.id;
           const sName = r.studentName || r.StudentName || r.name;
@@ -132,6 +207,32 @@ export default function ClassMicroGroupsModal({ isOpen, onClose, classData }) {
 
         setStudentInfoMap(nextStudentMap);
         setNameFrequencyMap(nextFreqMap);
+
+        // 1. Xử lý nhóm vi mô
+        let loadedGroups = [];
+        if (groupsRes.status === 'fulfilled' && groupsRes.value) {
+          const val = groupsRes.value;
+          loadedGroups = Array.isArray(val) ? val : (Array.isArray(val?.groups) ? val.groups : []);
+        }
+
+        // Nếu mở modal có chỉ định chuyên đề bồi dưỡng trọng tâm (Focus Skill):
+        // Kiểm tra xem nhóm từ CSDL có khớp đúng chuyên đề này không. Nếu không, gom nhóm bồi dưỡng chuẩn xác chuyên đề này.
+        if (classData.focusSkill) {
+          const isMatchingFocus = loadedGroups.length > 0 && loadedGroups.every((g) =>
+            g.focusArea && g.focusArea.toLowerCase().includes(classData.focusSkill.toLowerCase())
+          );
+
+          if (!isMatchingFocus && rows.length > 0) {
+            loadedGroups = partitionStudentsForFocusSkill(
+              classData.focusSkill,
+              classData.focusSkillId,
+              rows,
+              preferredGroupSize
+            );
+          }
+        }
+
+        setGroups(loadedGroups);
 
         // 4. Nạp lịch phụ đạo đã lên cho lớp
         const sessions = getRemedialSessions(classData.id);
@@ -190,6 +291,17 @@ export default function ClassMicroGroupsModal({ isOpen, onClose, classData }) {
 
   // Ánh xạ danh sách điểm yếu sang tên chuyên đề tiếng Việt chuẩn, tuyệt đối không lộ raw UUID
   const getResolvedWeakSkills = (grp) => {
+    // 0. Nếu đang trong ngữ cảnh bồi dưỡng chuyên đề trọng tâm, luôn ưu tiên chuyên đề này
+    if (classData?.focusSkill) {
+      const list = [classData.focusSkill];
+      if (Array.isArray(grp.commonWeakSkillNames)) {
+        grp.commonWeakSkillNames.forEach((n) => {
+          if (n && n !== classData.focusSkill && !isRawGuid(n)) list.push(n);
+        });
+      }
+      return Array.from(new Set(list));
+    }
+
     // 1. Ưu tiên danh sách tên chuyên đề đã được Backend xử lý
     if (Array.isArray(grp.commonWeakSkillNames) && grp.commonWeakSkillNames.length > 0) {
       const validNames = grp.commonWeakSkillNames.filter((n) => n && !isRawGuid(n));
@@ -220,13 +332,56 @@ export default function ClassMicroGroupsModal({ isOpen, onClose, classData }) {
     return Array.from(new Set(resolved));
   };
 
-  // Xử lý tự động chia nhóm vi mô trên Backend
-  const handleAutoPartition = async () => {
+  // Xử lý tự động chia nhóm vi mô trên Backend hoặc tập trung bồi dưỡng Focus Skill
+  const handleAutoPartition = async (overrideSize = null) => {
     if (!classData) return;
+    const targetGroupSize = overrideSize || preferredGroupSize;
     try {
       setLoading(true);
-      const res = await practiceService.autoPartitionMicroGroups(classData.id, preferredGroupSize);
-      const nextGroups = Array.isArray(res?.groups) ? res.groups : (Array.isArray(res) ? res : []);
+
+      let nextGroups = [];
+      if (classData.focusSkill) {
+        // Ưu tiên gọi Backend API kèm focusSkill parameters
+        try {
+          const res = await practiceService.autoPartitionMicroGroups(classData.id, targetGroupSize, {
+            focusSkillId: classData.focusSkillId,
+            focusSkillName: classData.focusSkill,
+            targetStudentIds: classData.targetStudentIds
+          });
+          const rawGroups = Array.isArray(res?.groups) ? res.groups : (Array.isArray(res) ? res : []);
+          const isMatching = rawGroups.length > 0 && rawGroups.every((g) =>
+            g.focusArea && g.focusArea.toLowerCase().includes(classData.focusSkill.toLowerCase())
+          );
+          if (isMatching) {
+            nextGroups = rawGroups;
+          }
+        } catch (apiErr) {
+          console.warn('[ClassMicroGroupsModal] Backend focus partition fallback:', apiErr.message);
+        }
+
+        // Nếu Backend chưa có nhóm riêng cho chuyên đề này, phân nhóm bám sát chuyên đề focusSkill
+        if (nextGroups.length === 0) {
+          const activeRows = heatmapRows.length > 0
+            ? heatmapRows
+            : Array.from(studentInfoMap.entries()).map(([id, info]) => ({
+                studentId: id,
+                studentName: info.name,
+                overallMastery: info.mastery,
+                skillCells: [{ skillName: classData.focusSkill, skillId: classData.focusSkillId, plt: info.mastery ?? 0.1 }]
+              }));
+
+          nextGroups = partitionStudentsForFocusSkill(
+            classData.focusSkill,
+            classData.focusSkillId,
+            activeRows,
+            targetGroupSize
+          );
+        }
+      } else {
+        const res = await practiceService.autoPartitionMicroGroups(classData.id, targetGroupSize);
+        nextGroups = Array.isArray(res?.groups) ? res.groups : (Array.isArray(res) ? res : []);
+      }
+
       setGroups(nextGroups);
 
       // Sinh thông báo giải thích toán học & sư phạm rõ ràng
@@ -234,14 +389,38 @@ export default function ClassMicroGroupsModal({ isOpen, onClose, classData }) {
       const breakdownText = studentCounts.map((cnt, i) => `Bàn ${i + 1}: ${cnt} bạn`).join(', ');
       const totalPlaced = studentCounts.reduce((a, b) => a + b, 0);
 
+      const focusLabel = classData.focusSkill ? ` chuyên đề "${classData.focusSkill}"` : '';
       setSuccessNotice(
-        `Đã xếp thành công ${nextGroups.length} nhóm bàn (${breakdownText}) cho ${totalPlaced} học sinh theo chuẩn sư phạm 3 – 5 bạn/bàn!`
+        `Đã xếp thành công ${nextGroups.length} nhóm bàn (${breakdownText})${focusLabel} cho ${totalPlaced} học sinh theo chuẩn sư phạm 3 – 5 bạn/bàn!`
       );
       setTimeout(() => setSuccessNotice(''), 7000);
     } catch (err) {
       toast.error('Không thể phân nhóm vi mô: ' + (err?.message || 'Lỗi kết nối Backend'));
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Chọn quy mô bàn học và tự động cập nhật phân nhóm
+  const handleSelectGroupSize = (size) => {
+    setPreferredGroupSize(size);
+    if (classData.focusSkill && heatmapRows.length > 0) {
+      const nextGroups = partitionStudentsForFocusSkill(
+        classData.focusSkill,
+        classData.focusSkillId,
+        heatmapRows,
+        size
+      );
+      setGroups(nextGroups);
+      const studentCounts = nextGroups.map(g => (g.members || []).length || g.memberCount || 0);
+      const breakdownText = studentCounts.map((cnt, i) => `Bàn ${i + 1}: ${cnt} bạn`).join(', ');
+      const totalPlaced = studentCounts.reduce((a, b) => a + b, 0);
+      setSuccessNotice(
+        `Đã xếp lại ${nextGroups.length} nhóm bàn (${breakdownText}) chuyên đề "${classData.focusSkill}" theo quy mô ${size} bạn/bàn!`
+      );
+      setTimeout(() => setSuccessNotice(''), 7000);
+    } else {
+      handleAutoPartition(size);
     }
   };
 
@@ -428,7 +607,7 @@ export default function ClassMicroGroupsModal({ isOpen, onClose, classData }) {
               {[3, 4, 5].map((size) => (
                 <button
                   key={size}
-                  onClick={() => setPreferredGroupSize(size)}
+                  onClick={() => handleSelectGroupSize(size)}
                   className={`px-3 py-1 rounded-lg font-extrabold text-xs transition-all cursor-pointer ${
                     preferredGroupSize === size
                       ? 'bg-indigo-600 text-white shadow-xs'
@@ -446,7 +625,7 @@ export default function ClassMicroGroupsModal({ isOpen, onClose, classData }) {
 
           <div className="flex flex-wrap items-center gap-2.5">
             <button
-              onClick={handleAutoPartition}
+              onClick={() => handleAutoPartition()}
               disabled={loading}
               className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white font-extrabold text-xs rounded-xl shadow-md shadow-indigo-600/20 transition-all cursor-pointer disabled:opacity-50"
             >
@@ -455,7 +634,11 @@ export default function ClassMicroGroupsModal({ isOpen, onClose, classData }) {
               ) : (
                 <Sparkles className="w-4 h-4 text-amber-300" />
               )}
-              <span>Tự Động Xếp Nhóm Theo Chuyên Đề</span>
+              <span>
+                {classData.focusSkill
+                  ? `Tự Động Xếp Nhóm: ${classData.focusSkill}`
+                  : 'Tự Động Xếp Nhóm Theo Chuyên Đề'}
+              </span>
             </button>
 
             <button
