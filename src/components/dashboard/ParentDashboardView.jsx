@@ -310,7 +310,7 @@ export default function ParentDashboardView({
             Kết Nối Để Theo Dõi Tiến Độ Học Tập Của Con
           </h2>
           <p className="text-xs text-slate-500 font-medium">
-            Nhập mã liên kết 6 ký tự do con cung cấp từ Cổng Học Sinh để bắt đầu đồng hành.
+            Nhập mã liên kết gồm 6 ký tự từ tài khoản của con để xem kết quả học tập.
           </p>
         </div>
 

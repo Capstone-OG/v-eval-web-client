@@ -3888,3 +3888,7 @@ Separated reports into progress, forecast/prescription and reminder sections, re
 ## [24/11/2026] - Pre-commit validation
 
 Validated the current student timetable and report changes: ten targeted tests passed across range validation, prescription eligibility, student schedule projection and existing Flow 6 API contracts. Production build passed using configLoader native, with existing chunk-size and dependency eval warnings. Browser/live acceptance remains pending; no BE changes. Unrelated working-tree files remain outside this commit.
+
+## [24/11/2026] - Remaining frontend checkpoint
+
+Preserved the remaining 24 modified frontend files: simplified Vietnamese copy across public/auth, curriculum, student/parent/admin views; revised sidebar/navigation styling and contextual history headings; added scrollbar styling. These existing changes were excluded from the previous scoped commit and are now included at user request. The successful production build and ten targeted tests from this session already covered this working tree; no source changes were made afterward. Diff formatting checks pass. Browser verification remains pending; no BE files changed.

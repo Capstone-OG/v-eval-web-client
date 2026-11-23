@@ -84,7 +84,7 @@ export default function Sidebar({
             items: [
               {
                 id: 'dashboard',
-                label: 'Tổng quan đồng hành',
+                label: 'Tổng quan',
                 sublabel: 'Điểm dự kiến & Sẵn sàng thi',
                 icon: HeartHandshake,
                 active: activeTab === 'dashboard',
@@ -351,13 +351,13 @@ export default function Sidebar({
 
       case 'admin':
         return [{ sectionTitle: 'Quản trị hệ thống', items: [
-          ['dashboard', 'Tổng quan hệ thống', 'Dữ liệu tài khoản & cơ sở', BarChart3],
-          ['provision', 'Quản lý tài khoản', 'Cấp tài khoản, bật / tắt truy cập', Users],
-          ['user_roles', 'Vai trò & Phân quyền', 'Phạm vi của 6 vai trò', ShieldCheck],
-          ['campuses', 'Cơ sở đào tạo', 'Danh mục & thông tin liên hệ', Building2],
-          ['system_settings', 'Cấu hình hệ thống', 'Thông tin chung & dịch vụ AI', Sparkles],
-          ['operations', 'Giám sát & Sao lưu', 'Nhật ký, dịch vụ & dữ liệu', Activity]
-        ].map(([id, label, sublabel, icon]) => ({ id, label, sublabel, icon, active: activeTab === id, onClick: () => setActiveTab(id) })) }];
+          ['dashboard', 'Tổng quan hệ thống', 'Dữ liệu tài khoản & cơ sở', BarChart3, 'from-blue-600 to-indigo-600'],
+          ['provision', 'Quản lý tài khoản', 'Cấp tài khoản, bật / tắt truy cập', Users, 'from-emerald-500 to-teal-600'],
+          ['user_roles', 'Vai trò & Phân quyền', 'Phạm vi của 6 vai trò', ShieldCheck, 'from-purple-600 to-indigo-700'],
+          ['campuses', 'Cơ sở đào tạo', 'Danh mục & thông tin liên hệ', Building2, 'from-amber-500 to-orange-600'],
+          ['system_settings', 'Cấu hình hệ thống', 'Thông tin chung & dịch vụ AI', Sparkles, 'from-indigo-500 to-violet-600'],
+          ['operations', 'Giám sát & Sao lưu', 'Nhật ký, dịch vụ & dữ liệu', Activity, 'from-rose-500 to-red-600']
+        ].map(([id, label, sublabel, icon, iconColor]) => ({ id, label, sublabel, icon, iconColor, active: activeTab === id, onClick: () => setActiveTab(id) })) }];
 
       case 'student':
       default:
@@ -370,7 +370,7 @@ export default function Sidebar({
                 label: 'Tổng quan Học tập',
                 sublabel: 'Tiến độ cá nhân & Lộ trình hôm nay',
                 icon: LayoutGrid,
-                iconColor: 'from-slate-500 to-slate-700',
+                iconColor: 'from-slate-700 to-slate-900',
                 activeGlow: 'shadow-slate-500/30',
                 active: activeTab === 'dashboard',
                 onClick: () => setActiveTab('dashboard')
@@ -411,6 +411,8 @@ export default function Sidebar({
                 label: 'Thời khóa biểu & Điểm danh',
                 sublabel: 'Lịch học theo kỳ, khóa & chuyên cần',
                 icon: Calendar,
+                iconColor: 'from-blue-600 via-indigo-600 to-cyan-500',
+                activeGlow: 'shadow-blue-500/30',
                 active: activeTab === 'schedule',
                 onClick: () => setActiveTab('schedule')
               },
@@ -442,7 +444,7 @@ export default function Sidebar({
               {
                 id: 'mock',
                 label: 'Phòng Thi thử V-ACT',
-                sublabel: 'Mô phỏng áp lực thời gian thực',
+                sublabel: 'Luyện làm bài có bấm giờ',
                 icon: FileCheck2,
                 iconColor: 'from-cyan-400 to-blue-500',
                 activeGlow: 'shadow-cyan-500/30',
@@ -575,8 +577,8 @@ export default function Sidebar({
   }
 
   return (
-    <aside className={`${mobile ? 'flex w-full min-h-full p-5' : (isCollapsed ? 'hidden lg:flex w-20 p-3 h-full sticky top-0 overflow-y-auto' : 'hidden lg:flex w-72 p-5 h-full sticky top-0 overflow-y-auto')} flex-col justify-between border-r border-slate-200/80 bg-gradient-to-b from-slate-50/80 to-white select-none shrink-0 transition-all duration-200`}>
-      <div className="space-y-6">
+    <aside className={`${mobile ? 'flex w-full min-h-full p-5' : (isCollapsed ? 'hidden lg:flex w-20 p-3 h-full sticky top-0 overflow-y-auto' : 'hidden lg:flex w-72 p-5 h-full sticky top-0 overflow-y-auto')} flex-col border-r border-slate-200/80 bg-gradient-to-b from-slate-50/80 to-white select-none shrink-0 transition-all duration-200`}>
+      <div className="space-y-6 shrink-0">
         {/* Brand Identity Header - Synchronized with Home Page (PublicHeader.jsx) */}
         <div className={`flex items-center px-1 ${!isCollapsed ? 'justify-between gap-2' : 'justify-center'}`}>
           {!isCollapsed ? (
@@ -782,28 +784,49 @@ export default function Sidebar({
                         onNavigate?.();
                       }}
                       title={item.sublabel ? `${item.label} (${item.sublabel})` : item.label}
-                      className={`w-full flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-xl text-left transition-all duration-150 cursor-pointer group ${
+                      className={`w-full flex items-center justify-between gap-3 px-3 py-2 rounded-2xl text-left transition-all duration-150 cursor-pointer group border ${
                         item.active
-                          ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-sm shadow-blue-500/20 font-bold'
-                          : 'text-slate-600 hover:text-blue-700 hover:bg-blue-50/60 font-medium'
+                          ? 'bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-600 border-transparent text-white shadow-md shadow-blue-500/25 font-bold'
+                          : 'border-transparent text-slate-700 hover:text-slate-900 hover:bg-slate-100/70 hover:border-slate-200/60 font-medium'
                       }`}
                     >
-                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                        <Icon
-                          className={`w-4.5 h-4.5 shrink-0 transition-colors ${
-                            item.active ? 'text-white' : 'text-slate-400 group-hover:text-blue-600'
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <span
+                          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl transition-all shadow-sm ${
+                            item.active
+                              ? `bg-gradient-to-br ${iconGradient} text-white ring-2 ring-white/60 shadow-md scale-105`
+                              : `bg-gradient-to-br ${iconGradient} text-white shadow-2xs group-hover:scale-105`
                           }`}
-                        />
-                        <span className="text-xs sm:text-sm truncate">
-                          {item.label}
+                        >
+                          <Icon className="h-4 w-4" />
                         </span>
+                        <div className="min-w-0 flex-1">
+                          <span
+                            className={`block text-xs sm:text-sm truncate ${
+                              item.active
+                                ? 'font-black text-white'
+                                : 'font-bold text-slate-800 group-hover:text-slate-900'
+                            }`}
+                          >
+                            {item.label}
+                          </span>
+                          {item.sublabel && (
+                            <span
+                              className={`block text-[10px] truncate ${
+                                item.active ? 'text-blue-100 font-medium' : 'text-slate-400 font-medium'
+                              }`}
+                            >
+                              {item.sublabel}
+                            </span>
+                          )}
+                        </div>
                       </div>
 
                       {item.badge && (
                         <span
                           className={`text-[10px] font-bold px-2 py-0.5 rounded-md shrink-0 ${
                             item.active
-                              ? 'bg-white/20 text-white'
+                              ? 'bg-white/20 text-white border border-white/20'
                               : 'bg-blue-50 text-blue-700 border border-blue-200/80'
                           }`}
                         >
@@ -822,7 +845,7 @@ export default function Sidebar({
       {/* Role-Specific Footer Card (Matches Home Page Deep Royal Blue-Indigo Gradient) */}
       {isCollapsed ? (
         <div
-          className="mt-6 flex flex-col items-center justify-center p-2.5 rounded-2xl bg-gradient-to-br from-blue-700 via-indigo-800 to-slate-900 text-white shadow-md border border-blue-600/30 cursor-pointer"
+          className="mt-6 shrink-0 flex flex-col items-center justify-center p-2.5 rounded-2xl bg-gradient-to-br from-blue-700 via-indigo-800 to-slate-900 text-white shadow-md border border-blue-600/30 cursor-pointer"
           title={`Vai trò: ${role.toUpperCase()}`}
           onClick={onToggleCollapse}
         >
@@ -830,7 +853,7 @@ export default function Sidebar({
           <span className="text-[9px] font-mono font-bold uppercase mt-1 text-cyan-200">{role.slice(0, 3)}</span>
         </div>
       ) : (
-      <div className="mt-6 p-4 rounded-3xl bg-gradient-to-br from-blue-700 via-indigo-800 to-slate-900 text-white space-y-3 shadow-lg border border-blue-600/30 relative overflow-hidden">
+      <div className="mt-6 shrink-0 p-4 rounded-3xl bg-gradient-to-br from-blue-700 via-indigo-800 to-slate-900 text-white space-y-3 shadow-lg border border-blue-600/30 relative overflow-hidden">
         <div className="absolute -right-6 -bottom-6 w-24 h-24 rounded-full bg-[#FACC15]/15 blur-xl pointer-events-none"></div>
 
         {role === 'student' && (

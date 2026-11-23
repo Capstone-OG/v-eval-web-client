@@ -511,7 +511,7 @@ export default function UnifiedNodeDetailView({
                   <InteractiveMathRenderer rawTag={embeddedGraphTag} />
                 </div>
                 <p className="text-[10.5px] text-slate-400 italic text-center">
-                  Học sinh có thể kéo thả chuột để xoay mô hình 3D, thay đổi tham số hoặc thu phóng đồ thị tương tác thời gian thực.
+                  Kéo chuột để xoay mô hình 3D. Bạn có thể đổi tham số và thu phóng đồ thị.
                 </p>
               </div>
             ) : null}

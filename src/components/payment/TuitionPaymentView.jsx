@@ -178,7 +178,7 @@ export default function TuitionPaymentView({
       'Khảo sát chẩn đoán năng lực 30 câu chuẩn hóa 4 miền',
       'Xếp lớp phân tầng 4 Miền × 3 Cấp bậc phù hợp năng lực',
       'Lộ trình học tập thích ứng & Kho bài giảng chuẩn V-ACT',
-      'Gia sư AI Socratic đồng hành giải đáp 24/7',
+      'Hỏi gia sư AI khi cần gợi ý cách giải',
       'Thi thử 120 câu chuẩn cấu trúc ĐHQG-HCM & Sổ tay lỗi sai'
     ];
 
@@ -375,7 +375,7 @@ export default function TuitionPaymentView({
     {
       id: 'ai_tutor',
       title: 'Gia Sư AI Đồng Hành Kèm 24/7',
-      desc: 'Hỏi đáp tương tác thời gian thực, gợi mở tư duy logic đa bước hỗ trợ con học tập.',
+      desc: 'Gia sư AI gợi ý từng bước khi con gặp bài khó.',
       icon: MessageSquare,
       color: 'text-purple-600 bg-purple-50 border-purple-200',
       action: isParent ? undefined : onNavigateAiTutor,

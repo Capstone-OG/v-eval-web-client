@@ -83,47 +83,47 @@ export default function PublicLandingPage({ currentUser, onOpenLogin, onOpenRegi
   const techCards = [
     {
       id: 'dag',
-      title: 'Cây Tri Thức Định Hướng (DAG): Không Học Thừa Một Dạng Bài',
+      title: 'Học theo thứ tự, tập trung vào phần còn yếu',
       icon: GitFork,
-      badge: 'BỐC TÁCH MA TRẬN 120 CÂU',
+      badge: 'SẮP XẾP NỘI DUNG ÔN TẬP',
       badgeColor: 'bg-blue-100 text-blue-800 border-blue-200',
       color: 'from-blue-600 to-indigo-600',
-      desc: 'Ma trận bài học được sắp xếp theo Đồ thị DAG không chu trình. Thuật toán Topo Sort xác định chính xác kiến thức mấu chốt, tự động chèn Remedial Node khi bạn sai để lấp lỗ hổng nhanh nhất mà không mất thời gian học lại kiến thức đã vững.',
-      subTag1: '✓ Sắp xếp Topo Sort tối ưu',
-      subTag2: '✓ Tự động khắc phục lún kiến thức'
+      desc: 'Các bài học được sắp xếp từ nền tảng đến nâng cao. Khi bạn gặp khó ở một dạng bài, lộ trình sẽ bổ sung phần kiến thức cần ôn lại.',
+      subTag1: '✓ Học nền tảng trước, nâng cao sau',
+      subTag2: '✓ Ôn lại phần kiến thức còn yếu'
     },
     {
       id: 'irt',
-      title: 'Đo Lường Chuẩn IRT: Ước Tính Độ Khó & Năng Lực Thí Sinh',
+      title: 'Biết mình đang mạnh và yếu ở đâu',
       icon: Target,
-      badge: 'IRT 3PL & BKT MODEL',
+      badge: 'ĐÁNH GIÁ NĂNG LỰC',
       badgeColor: 'bg-emerald-100 text-emerald-800 border-emerald-200',
       color: 'from-emerald-500 to-teal-600',
-      desc: 'Mô phỏng đo lường điểm năng lực thí sinh Theta 0 chuẩn xác theo 3 tham số (Độ khó a, Độ phân hóa b, Yếu tố đoán mò c). Đánh giá đúng thực lực điểm sàn trúng tuyển thực tế của bạn tại các trường đại học TOP đầu.',
-      subTag1: '✓ Mô hình IRT 3PL chuẩn quốc tế',
-      subTag2: '✓ Ước tính Theta 0 real-time'
+      desc: 'Kết quả làm bài giúp bạn nhận biết phần đã nắm vững và phần cần luyện thêm, từ đó chọn nội dung ôn tập phù hợp.',
+      subTag1: '✓ Đánh giá từ kết quả làm bài',
+      subTag2: '✓ Theo dõi kết quả qua từng lần làm bài'
     },
     {
       id: 'socratic',
-      title: 'AI Socratic Tutor: Hướng Dẫn Tư Duy Phản Biện 24/7',
+      title: 'Gợi ý khi bạn chưa biết cách giải',
       icon: Bot,
-      badge: 'RAG POWERED & SOCRATIC',
+      badge: 'HỎI ĐÁP KHI HỌC',
       badgeColor: 'bg-amber-100 text-amber-800 border-amber-200',
       color: 'from-amber-500 to-orange-600',
-      desc: 'Không cho sẵn đáp án để học vẹt! Trợ lý AI dựa trên gợi mở Socratic đặt những câu hỏi phản biện từng bước, hỗ trợ bạn tự nghĩ ra hướng giải đúng với chỉ số tương đồng tri thức Cosine Similarity ≥ 0.78.',
-      subTag1: '✓ Phản hồi trong 2 giây',
-      subTag2: '✓ Bám sát giáo trình ĐHQG'
+      desc: 'Gia sư AI gợi ý từng bước và đặt câu hỏi để bạn tự tìm cách giải. Bạn có thể hỏi lại nếu chưa hiểu.',
+      subTag1: '✓ Gợi ý từng bước',
+      subTag2: '✓ Giải thích theo nội dung bài học'
     },
     {
       id: 'lockdown',
-      title: 'Chống Gian Lận & Lockdown Exam: 100% Áp Lực Phòng Thi Thật',
+      title: 'Làm quen với thời gian và cách làm bài thi',
       icon: Lock,
       badge: 'BẢO MẬT & MÔ PHỎNG THI',
       badgeColor: 'bg-indigo-100 text-indigo-800 border-indigo-200',
       color: 'from-indigo-600 to-violet-600',
-      desc: 'Trải nghiệm thi thử với khóa màn hình Fullscreen, chống chuyển tab linh hoạt, bấm giờ đếm ngược 150 phút và xáo trộn mã đề tự động giúp học sinh rèn luyện tâm lý vững vàng nhất trước kỳ thi chính thức.',
+      desc: 'Thi thử có bấm giờ, chế độ toàn màn hình và ghi nhận việc chuyển tab để bạn tập trung làm bài như khi đi thi.',
       subTag1: '✓ 120 câu / 150 phút chuẩn đợt 1 & 2',
-      subTag2: '✓ Báo cáo vi phạm realtime'
+      subTag2: '✓ Ghi nhận việc chuyển tab'
     }
   ];
 
@@ -131,26 +131,26 @@ export default function PublicLandingPage({ currentUser, onOpenLogin, onOpenRegi
   const processSteps = [
     {
       step: '01',
-      title: 'Chẩn Đoán Năng Lực IRT',
-      desc: 'Thi bài test 15-30 câu chẩn đoán đầu vào để hệ thống tính toán ngay lập tức Vector Năng lực Theta 0 của bạn.',
+      title: 'Kiểm tra đầu vào',
+      desc: 'Làm bài kiểm tra đầu vào để biết những phần bạn đã nắm vững và những phần cần ôn thêm.',
       linkText: 'Khảo sát năng lực ngay →'
     },
     {
       step: '02',
-      title: 'Ải Lập Cây DAG Cá Nhân',
-      desc: 'Hệ thống tự động vẽ ra cây lộ trình tự học gồm các chặng kiến thức tối ưu theo thứ tự ưu tiên nhất.',
+      title: 'Nhận lộ trình học',
+      desc: 'Lộ trình được sắp xếp theo kết quả đầu vào, ưu tiên những phần bạn cần luyện thêm.',
       linkText: 'Khám phá sơ đồ lộ trình →'
     },
     {
       step: '03',
-      title: 'Luyện ZPD & Hỏi AI Socratic',
-      desc: 'Làm bài tập vừa tầm P(Correct) 0.65-0.75 kết hợp sự trợ giúp gợi mở 24/7 từ AI Tutor.',
+      title: 'Luyện tập và hỏi khi chưa hiểu',
+      desc: 'Làm bài tập phù hợp với trình độ của bạn. Nếu gặp khó, bạn có thể nhờ gia sư AI gợi ý.',
       linkText: 'Trải nghiệm AI Tutor →'
     },
     {
       step: '04',
-      title: 'Thi Thử Tổng Hợp & Đỗ NV1',
-      desc: 'Cọ xát với phòng thi thật 120 câu, nhận dự báo tỷ lệ trúng tuyển nguyện vọng vào trường mơ ước.',
+      title: 'Thi thử và xem lại kết quả',
+      desc: 'Làm đề thi thử, xem điểm và chữa lại những câu sai để chuẩn bị cho kỳ thi.',
       linkText: 'Tự tin bước vào phòng thi →'
     }
   ];
@@ -235,22 +235,22 @@ export default function PublicLandingPage({ currentUser, onOpenLogin, onOpenRegi
             {/* Top Tagline Badge */}
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-50/90 border border-blue-200 text-blue-900 text-xs font-extrabold uppercase tracking-wider shadow-xs backdrop-blur-md">
               <span className="w-2 h-2 rounded-full bg-blue-600 animate-ping"></span>
-              <span>KHẢO THÍ ĐỀ THI ĐHQG | Nền tảng khảo thí ĐGNL hàng đầu TP.HCM</span>
+              <span>V-EVAL | Ôn thi ĐGNL ĐHQG TP.HCM</span>
             </div>
 
             {/* Huge Headline */}
             <div className="space-y-2">
               <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[1.12] text-slate-950 font-sans">
-                Chinh Phục Kỳ Thi ĐGNL ĐHQG Với <br />
+                Ôn thi ĐGNL ĐHQG <br />
                 <span className="bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 bg-clip-text text-transparent">
-                  Trí Tuệ Nhân Tạo & Chuẩn Khảo Thí IRT
+                  theo trình độ của bạn
                 </span>
               </h1>
             </div>
 
             {/* Subtitle */}
             <p className="text-sm sm:text-base text-slate-600 font-medium leading-relaxed max-w-2xl">
-              Tối ưu hóa điểm số với thuật toán Vùng phát triển gần nhất (ZPD), cây tri thức DAG cá nhân hóa và AI Socratic hướng dẫn tư duy phản biện 24/7. Không học vẹt, rèn bản lĩnh thi thật.
+              Biết mình cần ôn gì, luyện từng dạng bài và thi thử để theo dõi kết quả. Khi gặp bài khó, bạn có thể hỏi gia sư AI để được gợi ý cách giải.
             </p>
 
             {/* Action Buttons Row */}
@@ -352,7 +352,7 @@ export default function PublicLandingPage({ currentUser, onOpenLogin, onOpenRegi
               {/* Vector Theta Score Meter */}
               <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-200/80">
                 <div>
-                  <div className="text-[11px] text-slate-400 font-bold uppercase">Ước tính Vector Theta 0</div>
+                  <div className="text-[11px] text-slate-400 font-bold uppercase">Năng lực ước tính</div>
                   <div className="text-xl font-black text-blue-600 font-sans mt-0.5 flex items-center gap-1">
                     <span>+1.84</span>
                     <span className="text-[11px] font-extrabold text-emerald-600 bg-emerald-100 px-1.5 py-0.5 rounded">Top 1.2%</span>
@@ -398,7 +398,7 @@ export default function PublicLandingPage({ currentUser, onOpenLogin, onOpenRegi
               <div className="p-3.5 rounded-2xl bg-amber-50/90 border border-amber-200 text-amber-900 text-xs font-semibold flex items-center gap-2.5">
                 <Bot className="w-5 h-5 text-amber-600 shrink-0 animate-bounce" />
                 <div>
-                  <strong className="text-amber-950 font-extrabold">AI Socratic gợi ý:</strong> Luyện Tốc Độ — Khảo sát thêm 3 đề phân tích số liệu để đạt mốc 980+!
+                  <strong className="text-amber-950 font-extrabold">Gợi ý ôn tập:</strong> Luyện thêm phần phân tích số liệu và chú ý thời gian làm bài.
                 </div>
               </div>
 
@@ -537,10 +537,10 @@ export default function PublicLandingPage({ currentUser, onOpenLogin, onOpenRegi
               KHOA HỌC KHẢO THÍ HIỆN ĐẠI
             </span>
             <h2 className="text-3xl lg:text-4xl font-black text-slate-950 font-sans tracking-tight">
-              Bộ Tứ Công Nghệ Độc Quyền Dẫn Lối Điểm 900+
+              Bạn có thể học gì với V-Eval?
             </h2>
             <p className="text-sm text-slate-600 font-medium leading-relaxed">
-              Không còn phương pháp học tràn lan, ngập tràn đề thi; kho dữ liệu thông minh và thuật toán gợi ý tuyến tính sẽ dẫn bạn tới từng cột mốc điểm số.
+              Bắt đầu từ bài kiểm tra đầu vào, ôn những phần còn yếu rồi thi thử để xem mình đã tiến bộ đến đâu.
             </p>
           </motion.div>
 
@@ -642,7 +642,7 @@ export default function PublicLandingPage({ currentUser, onOpenLogin, onOpenRegi
               SỐ HÓA TỰ HỌC TỔNG THỂ 4 BƯỚC
             </span>
             <h2 className="text-3xl lg:text-4xl font-black text-slate-950 font-sans tracking-tight">
-              4 Bước Chinh Phục Điểm Số 900+ Mục Tiêu
+              4 bước để bắt đầu ôn tập
             </h2>
             <p className="text-sm text-slate-600 font-medium">
               Khoa học giáo dục đã chứng minh học có phương pháp rút ngắn 65% thời gian so với tập đề làm tự do.
@@ -809,7 +809,7 @@ export default function PublicLandingPage({ currentUser, onOpenLogin, onOpenRegi
               </h2>
 
               <p className="text-sm text-blue-100 font-medium leading-relaxed max-w-2xl mx-auto">
-                Tham gia khảo sát chẩn đoán trình độ ngay hôm nay để nhận báo cáo năng lực IRT chi tiết và mở khóa lộ trình tự học cá nhân hóa hoàn toàn miễn phí.
+                Làm bài kiểm tra đầu vào để xem kết quả và nhận gợi ý ôn tập phù hợp với bạn.
               </p>
 
               <div className="flex flex-wrap items-center justify-center gap-4 pt-4">

@@ -83,7 +83,7 @@ export default function MilestoneCard({ currentUser, studentDashboard, onStartTa
               Khởi tạo Lộ trình Ôn luyện Thích ứng 120 câu
             </h3>
             <p className="text-xs text-slate-600 leading-relaxed font-medium">
-              Bạn hãy hoàn thành bài khảo sát chẩn đoán 30 câu chuẩn khoa học khảo thí IRT. Hệ thống AI sẽ phân tích ma trận năng lực và quy hoạch lộ trình học tập tối ưu theo Vùng phát triển ZPD.
+              Hoàn thành bài kiểm tra đầu vào gồm 30 câu để nhận kết quả đánh giá và lộ trình ôn tập phù hợp.
             </p>
           </div>
         </div>

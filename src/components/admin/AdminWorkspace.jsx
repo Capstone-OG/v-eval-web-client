@@ -616,7 +616,7 @@ export default function AdminWorkspace({ activeTab, currentUser, onNavigate }) {
                   Ma trận Phân quyền & Giám sát Vai trò Hệ thống
                 </h1>
                 <p className="text-xs leading-relaxed text-slate-300 sm:text-sm">
-                  Khung phân quyền Role-Based Access Control (RBAC) 6 cấp bậc thẩm quyền: Tách biệt ranh giới bảo mật dữ liệu, phạm vi chuyên môn và thẩm quyền hành chính toàn hệ sinh thái V-Eval.
+                  Quản lý quyền của 6 vai trò trong V-Eval: mỗi vai trò được truy cập dữ liệu và sử dụng các chức năng phù hợp với công việc.
                 </p>
               </div>
 
@@ -1001,7 +1001,7 @@ export default function AdminWorkspace({ activeTab, currentUser, onNavigate }) {
                 <div className="flex flex-wrap items-center gap-3">
                   <span className="inline-flex items-center gap-1.5 rounded-full border border-indigo-400/30 bg-indigo-500/10 px-3 py-1 text-xs font-semibold text-indigo-300 backdrop-blur-sm">
                     <Activity size={14} className="text-indigo-400" />
-                    GIÁM SÁT HẠ TẦNG & TELEMETRY · 24/7 ACTIVE
+                    GIÁM SÁT HỆ THỐNG
                   </span>
                   <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/30 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-300">
                     <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
@@ -1017,7 +1017,7 @@ export default function AdminWorkspace({ activeTab, currentUser, onNavigate }) {
                   Trung tâm Giám sát Hạ tầng & Sao lưu Dữ liệu
                 </h1>
                 <p className="text-xs leading-relaxed text-slate-300 sm:text-sm">
-                  Theo dõi độ trễ thời gian thực, độ sẵn sàng (uptime 99.98%), kết nối cơ sở dữ liệu quan hệ ACID PostgreSQL và quản trị bản sao lưu định kỳ.
+                  Theo dõi tình trạng dịch vụ, độ trễ, kết nối cơ sở dữ liệu và các bản sao lưu.
                 </p>
               </div>
 

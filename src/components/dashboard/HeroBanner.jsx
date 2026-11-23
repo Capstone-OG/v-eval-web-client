@@ -40,8 +40,8 @@ export default function HeroBanner({
     estimatedScore > 0
       ? `Điểm dự báo hiện tại: ${estimatedScore}/1200 điểm (Dải dự báo: ${confidenceInterval}).`
       : 'Hoàn thành bài đánh giá 30 câu đầu vào để nhận dự báo điểm thi và lộ trình ôn tập phù hợp.',
-    'Lộ trình ôn luyện được cá nhân hóa theo điểm mạnh và vùng kiến thức cần bổ trợ.',
-    'Trợ lý Gia sư AI sẵn sàng gợi mở phương pháp tư duy và hướng dẫn giải chi tiết 24/7.',
+    'Lộ trình ôn tập dựa trên phần bạn đã nắm vững và phần cần luyện thêm.',
+    'Bạn có thể hỏi gia sư AI để được gợi ý cách giải và giải thích phần chưa hiểu.',
     currentStreak > 0
       ? `Bạn đang duy trì chuỗi ${currentStreak} ngày học liên tục. Hãy tiếp tục giữ vững phong độ!`
       : 'Học tập đều đặn mỗi ngày để xây dựng phản xạ làm bài thi nhanh và chuẩn xác!'
@@ -150,7 +150,7 @@ export default function HeroBanner({
               className="flex items-center justify-center gap-2 px-5 py-3.5 rounded-2xl bg-blue-950/60 hover:bg-blue-950/80 border border-blue-400/30 backdrop-blur-md text-white font-bold text-sm transition-all hover:scale-[1.02] cursor-pointer"
             >
               <Bot className="w-4 h-4 text-[#FACC15]" />
-              <span>Hỏi Gia sư AI 24/7</span>
+              <span>Hỏi gia sư AI</span>
             </button>
           </div>
         </div>

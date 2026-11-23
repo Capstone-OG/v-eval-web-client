@@ -4558,7 +4558,7 @@ export default function CurriculumExplorerView({
                                     <span className="text-[9.5px] font-bold text-indigo-600 bg-indigo-100 px-1.5 py-0.2 rounded">Toàn diện 60+ trang</span>
                                   </h4>
                                   <p className="text-[10px] text-indigo-800 font-semibold mt-0.5">
-                                    Quét toàn diện SGK GDPT 2018 & giáo trình dày, nhiều lý thuyết và bài tập mở rộng
+                                    Nhập nội dung từ SGK GDPT 2018 và giáo trình, gồm lý thuyết và bài tập
                                   </p>
                                 </div>
 
@@ -4926,7 +4926,7 @@ export default function CurriculumExplorerView({
                     onChange={(e) => setSgkOcrMode(e.target.value)}
                     className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white font-semibold text-slate-800"
                   >
-                    <option value="TEXT_HUMANITIES">Tự động thông minh</option>
+                    <option value="TEXT_HUMANITIES">Tự động nhận diện</option>
                     <option value="VISION_AI">Vision AI 100% (PDF Scan)</option>
                     <option value="STEM_FORMULAS">Toán / Lý / Hóa (KaTeX)</option>
                     <option value="AUTO_LOCAL">Chỉ đọc chữ số hóa</option>

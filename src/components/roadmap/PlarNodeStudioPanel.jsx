@@ -927,7 +927,7 @@ export default function PlarNodeStudioPanel({
           <div className="rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 p-8 text-center space-y-3">
             <Lock className="w-9 h-9 text-slate-400 mx-auto" />
             <h3 className="text-base font-extrabold text-slate-800">
-              Chặng học đã được tối ưu rút gọn
+              Chặng học đã được rút gọn
             </h3>
             <p className="text-sm text-slate-600 max-w-md mx-auto">
               Chặng #{node.stepOrder} nằm ngoài danh sách đang kích hoạt trên lộ trình hiện tại.
@@ -943,13 +943,13 @@ export default function PlarNodeStudioPanel({
             </div>
             <div className="space-y-1.5 max-w-lg mx-auto">
               <span className="inline-block px-3 py-1 rounded-full bg-amber-100 text-amber-800 text-[11px] font-black uppercase tracking-wider">
-                Yêu cầu kích hoạt khóa học (Backend Verified)
+                Cần kích hoạt khóa học
               </span>
               <h3 className="text-lg font-black text-slate-900">
-                Đóng học phí PayOS để mở khóa Chu Trình Tự Học Thích Ứng P-L-A-R
+                Thanh toán học phí để bắt đầu học
               </h3>
               <p className="text-sm text-slate-600">
-                Lộ trình cá nhân hóa của bạn đã được khởi tạo xong từ bài kiểm tra đầu vào. Sau khi thanh toán học phí qua VietQR PayOS, toàn bộ 4 pha <strong>Preview → Learn → Apply (ZPD/BKT) → Reflect</strong> và Gia sư AI Socratic sẽ mở khóa ngay lập tức.
+                Lộ trình của bạn đã sẵn sàng dựa trên kết quả đầu vào. Sau khi thanh toán được xác nhận, bạn có thể <strong>xem trước bài, học, luyện tập và ôn lại</strong>, cùng với gia sư AI.
               </p>
             </div>
             {materials.length > 0 && (
@@ -1429,7 +1429,7 @@ export default function PlarNodeStudioPanel({
               <div>
                 <h3 className="text-sm font-black text-cyan-950">Pha A — Apply: Luyện Tập Thích Ứng (IRT ZPD + BKT Mastery)</h3>
                 <p className="text-xs text-cyan-800 mt-0.5">
-                  Hệ thống tự chọn câu hỏi tối ưu vùng ZPD <code>[0.60 – 0.75]</code> và chấm trực tiếp với ngân hàng câu hỏi thật. Đạt <strong>P(Lt) ≥ 85%</strong> (BR-01) để mở khóa Pha Reflect.
+                  Bài tập được chọn theo trình độ của bạn và chấm sau khi trả lời. Khi mức độ nắm vững kiến thức đạt <strong>85%</strong>, bạn có thể chuyển sang bước ôn lại.
                 </p>
               </div>
               {currentQuestion && (
@@ -1462,7 +1462,7 @@ export default function PlarNodeStudioPanel({
             {applyBusy && !currentQuestion && (
               <div className="py-10 text-center text-sm text-slate-500">
                 <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-blue-600" />
-                Đang chọn câu hỏi tối ưu theo năng lực ZPD...
+                Đang chọn câu hỏi phù hợp với bạn...
               </div>
             )}
 

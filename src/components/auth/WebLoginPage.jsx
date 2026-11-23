@@ -655,9 +655,9 @@ export default function WebLoginPage({
                 </span>
 
                 <h1 className="text-2xl sm:text-[27px] font-black leading-tight tracking-tight text-slate-900">
-                  Khám phá Năng lực &{" "}
+                  Biết mình cần ôn gì để{" "}
                   <span className="bg-gradient-to-r from-blue-700 via-indigo-700 to-cyan-600 bg-clip-text text-transparent">
-                    Bứt phá 900+ Điểm
+                    học có kế hoạch
                   </span>
                 </h1>
 
@@ -707,7 +707,7 @@ export default function WebLoginPage({
                 </div>
                 <div className="flex items-center gap-2 bg-white/80 backdrop-blur-xs border border-slate-200/70 rounded-xl px-3 py-2">
                   <Bot className="w-4 h-4 text-indigo-600 shrink-0" />
-                  <span className="truncate">Hỗ trợ giải đáp 24/7</span>
+                  <span className="truncate">Hỏi đáp khi học</span>
                 </div>
                 <div className="flex items-center gap-2 bg-white/80 backdrop-blur-xs border border-slate-200/70 rounded-xl px-3 py-2">
                   <Users className="w-4 h-4 text-emerald-600 shrink-0" />
@@ -904,7 +904,7 @@ export default function WebLoginPage({
 
             {/* Bottom Footer Note */}
             <div className="pt-2.5 border-t border-slate-100 text-center text-[11px] text-slate-400 font-medium">
-              Hỗ trợ học viên 24/7
+              Hỗ trợ học viên
             </div>
           </div>
         </div>

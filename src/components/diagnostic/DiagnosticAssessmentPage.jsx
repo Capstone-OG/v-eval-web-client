@@ -103,7 +103,7 @@ const EXAM_LIST = [
     defaultCode: 'VACT2026',
     badge: 'ĐỀ MẪU NỔI BẬT',
     badgeColor: 'bg-blue-600 text-white',
-    description: 'Đánh giá 5 miền năng lực (Ngôn ngữ, Logic, Toán học, KHTN, KHXH) nhằm ước lượng năng lực IRT theta_0 và gợi ý lộ trình bứt phá điểm số 900+.'
+    description: 'Kiểm tra kiến thức Ngôn ngữ, Logic, Toán học, KHTN và KHXH để nhận kết quả đánh giá cùng gợi ý ôn tập.'
   },
   {
     id: 'full_120_mock',
@@ -120,7 +120,7 @@ const EXAM_LIST = [
     defaultCode: 'HCM120',
     badge: 'ĐỀ THI THỬ TỔNG HỢP',
     badgeColor: 'bg-purple-600 text-white',
-    description: 'Mô phỏng 100% cấu trúc 120 câu ĐGNL chính thức ĐHQG-HCM. Đánh giá toàn diện 3 phần thi với thang điểm 1200.'
+    description: 'Đề thi thử gồm 120 câu, chia thành 3 phần theo cấu trúc ĐGNL ĐHQG-HCM, chấm trên thang điểm 1200.'
   },
   {
     id: 'logic_15_quick',
@@ -2061,7 +2061,7 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
                     <div className="text-2xl font-black text-blue-900 font-mono">
                       {currentDisplayResult.pacing?.normalCount || 0}<span className="text-xs font-semibold text-slate-500"> câu</span>
                     </div>
-                    <div className="text-[11px] text-blue-700 font-semibold">Kiểm soát tiến độ 45 phút tối ưu</div>
+                    <div className="text-[11px] text-blue-700 font-semibold">Theo dõi thời gian làm bài: 45 phút</div>
                   </div>
 
                   {/* Slow (>90s) */}
@@ -2094,7 +2094,7 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
                     </h3>
                   </div>
                   <span className="text-xs text-slate-500 font-medium">
-                    Theo dõi tiến trình bứt phá năng lực từ bài khảo sát đầu vào đến hiện tại
+                    So sánh kết quả các lần kiểm tra từ đầu khóa đến nay
                   </span>
                 </div>
 
@@ -2391,7 +2391,7 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
                     </h3>
                   </div>
                   <span className="text-xs text-slate-500 font-medium">
-                    Đo lường sự bứt phá sau mỗi đợt làm bài khảo sát
+                    Xem sự thay đổi qua từng lần kiểm tra
                   </span>
                 </div>
 
@@ -3231,7 +3231,7 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
                 <div className="text-2xl font-black text-blue-900 font-mono">
                   {resultData.pacing?.normalCount || 0}<span className="text-xs font-semibold text-slate-500"> câu</span>
                 </div>
-                <div className="text-[11px] text-blue-700 font-semibold">Kiểm soát tiến độ 45 phút tối ưu</div>
+                <div className="text-[11px] text-blue-700 font-semibold">Theo dõi thời gian làm bài: 45 phút</div>
               </div>
 
               {/* Slow (>90s) */}

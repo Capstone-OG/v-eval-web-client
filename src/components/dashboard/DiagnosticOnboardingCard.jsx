@@ -122,7 +122,7 @@ export default function DiagnosticOnboardingCard({ currentUser, onOpenDiagnostic
                 Chặng 1: Luyện Tập Chuyên Đề & Vùng Phát Triển ZPD
               </h2>
               <p className="max-w-xl text-xs sm:text-sm leading-relaxed text-slate-600 font-medium">
-                Hệ thống đã phân hóa các nút bài tập thích ứng từ bài đánh giá đầu vào. Hãy bắt đầu chinh phục các chuyên đề ưu tiên để nâng điểm mục tiêu!
+                Lộ trình đã được sắp xếp theo kết quả đầu vào của bạn. Hãy bắt đầu với những chuyên đề cần ôn trước.
               </p>
 
               <div className="flex flex-wrap items-center gap-3 pt-1 text-xs font-semibold text-slate-500">

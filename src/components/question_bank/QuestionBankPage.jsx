@@ -53,7 +53,7 @@ export const EXAM_CATALOG = [
     defaultCode: 'HCM120',
     badge: 'ĐỀ THI THỬ TỔNG HỢP',
     badgeColor: 'bg-purple-600 text-white',
-    description: 'Mô phỏng 100% cấu trúc 120 câu ĐGNL chính thức ĐHQG-HCM. Đánh giá toàn diện 3 phần thi với thang điểm 1200.'
+    description: 'Đề thi thử gồm 120 câu, chia thành 3 phần theo cấu trúc ĐGNL ĐHQG-HCM, chấm trên thang điểm 1200.'
   },
   {
     id: 'logic_15_quick',

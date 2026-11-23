@@ -41,7 +41,7 @@ export default function PublicFooter({ onOpenLogin, onOpenDiagnostic }) {
             <BrandLogo className="w-44" inverted />
 
             <p className="text-slate-400 leading-relaxed font-medium">
-              Hệ thống khảo thí & luyện thi thích ứng ĐGNL ĐHQG TP.HCM hàng đầu Việt Nam. Tự động hóa lộ trình cá nhân hóa bằng thuật toán <strong className="text-white">IRT 3PL</strong>, cây tri thức <strong className="text-white">DAG Topo</strong> và trợ lý <strong className="text-[#FACC15]">AI Socratic 24/7</strong>.
+              Ôn thi ĐGNL ĐHQG TP.HCM với lộ trình theo năng lực, bài tập theo chuyên đề và đề thi thử. Bạn có thể hỏi gia sư AI khi cần gợi ý cách giải.
             </p>
 
             <div className="flex flex-wrap items-center gap-2 pt-1 text-slate-400">
@@ -64,7 +64,7 @@ export default function PublicFooter({ onOpenLogin, onOpenDiagnostic }) {
             <ul className="space-y-2.5 text-slate-400 font-semibold">
               <li><a href="#hero-stats" className="hover:text-blue-400 transition-colors flex items-center gap-1.5">➔ Đề thi thử IRT 120 câu chuẩn ĐHQG</a></li>
               <li><a href="#hero-stats" className="hover:text-blue-400 transition-colors flex items-center gap-1.5">➔ Bài khảo sát chẩn đoán 30 câu</a></li>
-              <li><a href="#tech-grid" className="hover:text-blue-400 transition-colors flex items-center gap-1.5">➔ Luyện tập ZPD thích ứng theo năng lực</a></li>
+              <li><a href="#tech-grid" className="hover:text-blue-400 transition-colors flex items-center gap-1.5">➔ Bài tập theo năng lực</a></li>
               <li><a href="#tech-grid" className="hover:text-blue-400 transition-colors flex items-center gap-1.5">➔ Ma trận lỗ hổng kiến thức 5 miền</a></li>
               <li>
                 <button onClick={onOpenDiagnostic} className="hover:text-blue-400 text-left transition-colors flex items-center gap-1.5">
@@ -81,8 +81,8 @@ export default function PublicFooter({ onOpenLogin, onOpenDiagnostic }) {
             </div>
             <ul className="space-y-2.5 text-slate-400 font-semibold">
               <li><a href="#tech-grid" className="hover:text-blue-400 transition-colors flex items-center gap-1.5">➔ Mô hình Tâm trắc học IRT 3PL</a></li>
-              <li><a href="#tech-grid" className="hover:text-blue-400 transition-colors flex items-center gap-1.5">➔ Cây tri thức định hướng Đồ thị DAG</a></li>
-              <li><a href="#tech-grid" className="hover:text-blue-400 transition-colors flex items-center gap-1.5">➔ Trợ lý AI Socratic Tutor 24/7</a></li>
+              <li><a href="#tech-grid" className="hover:text-blue-400 transition-colors flex items-center gap-1.5">➔ Lộ trình ôn tập</a></li>
+              <li><a href="#tech-grid" className="hover:text-blue-400 transition-colors flex items-center gap-1.5">➔ Gia sư AI</a></li>
               <li><a href="#tech-grid" className="hover:text-blue-400 transition-colors flex items-center gap-1.5">➔ Chuỗi kỹ năng Bayesian Knowledge Tracing</a></li>
               <li><a href="#tech-grid" className="hover:text-blue-400 transition-colors flex items-center gap-1.5">➔ Dự báo dải điểm & Tỷ lệ trúng tuyển NV1</a></li>
             </ul>
@@ -91,7 +91,7 @@ export default function PublicFooter({ onOpenLogin, onOpenDiagnostic }) {
           {/* Column 4: Support & Contact */}
           <div className="space-y-3">
             <div className="font-black text-white text-sm tracking-wide uppercase border-b border-slate-800 pb-2">
-              Hỗ Trợ Thí Sinh 24/7
+              Hỗ trợ học viên
             </div>
             <ul className="space-y-2.5 text-slate-400 font-semibold">
               <li className="flex items-center gap-2">
@@ -111,7 +111,7 @@ export default function PublicFooter({ onOpenLogin, onOpenDiagnostic }) {
                   onClick={onOpenDiagnostic} 
                   className="w-full py-2.5 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-bold hover:from-blue-700 hover:to-indigo-700 transition-all shadow-md flex items-center justify-center gap-2"
                 >
-                  <span>🎧 Trợ Lý AI Trực Tuyến 24/7</span>
+                  <span>🎧 Hỏi gia sư AI</span>
                 </button>
               </li>
             </ul>

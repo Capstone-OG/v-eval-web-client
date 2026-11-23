@@ -1222,7 +1222,7 @@ export default function AccountSettingsPage({
                 </div>
 
                 <p className="text-[11px] text-slate-300 leading-relaxed pt-1">
-                  💡 Ba hoặc Mẹ mở Cổng Phụ huynh (Parent Portal) hoặc App V-Eval, nhập mã này để liên kết và đồng hành theo dõi điểm thi & học bạ của con trong thời gian thực.
+                  Gửi mã này cho ba mẹ để liên kết tài khoản trên Cổng Phụ huynh. Sau khi liên kết, ba mẹ có thể xem điểm thi và kết quả học tập của bạn.
                 </p>
               </div>
 

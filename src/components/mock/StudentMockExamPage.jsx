@@ -557,7 +557,7 @@ export default function StudentMockExamPage({ onOpenAiTutorWithContext, onNaviga
             <div>
               <h1 className="text-xl sm:text-2xl font-black text-slate-900">Phòng Thi Thử ĐGNL V-ACT</h1>
               <p className="text-xs sm:text-sm text-slate-600 mt-0.5">
-                Mô phỏng áp lực thời gian thực, quy đổi thang điểm 1200 và chữa chi tiết từng câu sau khi nộp bài.
+                Luyện làm bài có bấm giờ, quy đổi thang điểm 1200 và chữa chi tiết từng câu sau khi nộp bài.
               </p>
             </div>
           </div>

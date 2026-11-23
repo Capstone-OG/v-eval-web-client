@@ -1662,3 +1662,9 @@ Reminder messages in StudentEarlyWarningsCard come from getMyAlerts; repeated da
 | Scope | Status | Verification |
 | --- | --- | --- |
 | Student timetable and report frontend | Ready | Ten targeted tests pass; native-loader production build passes; browser acceptance pending. |
+
+## [24/11/2026] - Remaining frontend progress
+
+| Scope | Status | Verification |
+| --- | --- | --- |
+| Existing copy, navigation and history presentation changes | Included in checkpoint | Previous successful build covered these exact sources; diff check passes; browser pending. |

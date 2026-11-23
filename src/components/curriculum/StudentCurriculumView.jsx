@@ -432,7 +432,7 @@ export default function StudentCurriculumView({
                     <div className="max-w-md mx-auto space-y-1.5">
                       <h3 className="text-base font-extrabold text-slate-900">Phương Pháp Giải Chi Tiết Đang Bị Khóa</h3>
                       <p className="text-xs text-slate-500 leading-relaxed">
-                        Các bước tư duy tối ưu, công thức then chốt và các biến thể bẫy đề thi ĐGNL chỉ dành cho học viên đã kích hoạt khóa học.
+                        Kích hoạt khóa học để xem cách giải, công thức cần nhớ và những lỗi thường gặp khi làm bài ĐGNL.
                       </p>
                     </div>
                     <button
