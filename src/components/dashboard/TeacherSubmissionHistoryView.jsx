@@ -808,3 +808,4 @@ export default function TeacherSubmissionHistoryView({ currentUser, onNavigate }
     </div>
   );
 }
+

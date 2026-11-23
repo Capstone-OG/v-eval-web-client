@@ -77,3 +77,4 @@ test('parentTeacherMessagingStore - teacher replies to message', () => {
   const teacherUnread = parentTeacherMessagingStore.getUnreadCountForTeacher('tch_001');
   assert.equal(teacherUnread, 0);
 });
+
