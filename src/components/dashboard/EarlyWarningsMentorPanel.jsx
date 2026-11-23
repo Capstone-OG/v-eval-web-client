@@ -14,26 +14,46 @@ import {
 } from 'lucide-react';
 import { practiceService, FLOW5_DEFAULTS } from '../../services/practiceService';
 import { userService } from '../../services/userService';
+import { parentTeacherMessagingStore } from '../../utils/parentTeacherMessagingStore';
+import { Building2, MessageSquare, Send, ArrowUpRight } from 'lucide-react';
 import { toast } from '../../context/ToastContext';
 
 const ALERT_BADGE_META = {
   RED: {
-    label: 'Cảnh Báo Nguy Cơ Cao',
+    tierLabel: 'Cấp 3 — Nguy cơ cao',
+    handlerLabel: 'Quản lý cơ sở chủ trì họp 3 bên',
+    handlerDesc: 'Học sinh sa sút nghiêm trọng (> 7 ngày). Giảng viên chuyển cấp hồ sơ để Quản lý cơ sở tổ chức Họp 3 bên.',
+    label: 'Cấp 3 — Nguy Cơ Cao',
     badgeCls: 'bg-rose-600 text-white',
-    rowCls: 'border-rose-200 bg-rose-50/35',
+    rowCls: 'border-rose-300 bg-rose-50/40',
     icon: AlertOctagon
   },
   YELLOW: {
-    label: 'Nhắc Nhở Cần Theo Dõi',
+    tierLabel: 'Cấp 1 — Nhắc nhở',
+    handlerLabel: 'Giảng viên trực tiếp kèm cặp',
+    handlerDesc: 'Học sinh giảm nhịp tự học hoặc chuyên cần. Giảng viên trực tiếp kèm cặp và giao bài tập củng cố tại lớp.',
+    label: 'Cấp 1 — Nhắc Nhở',
     badgeCls: 'bg-amber-500 text-white',
     rowCls: 'border-amber-200 bg-amber-50/35',
     icon: AlertTriangle
   },
   UNREALISTIC_GOAL: {
-    label: 'Mục Tiêu Cần Hiệu Chỉnh',
+    tierLabel: 'Cấp 2 — Lệch mục tiêu',
+    handlerLabel: 'Tư vấn điều chỉnh sư phạm',
+    handlerDesc: 'Điểm dự kiến chênh lệch với mục tiêu. Giảng viên tư vấn điều chỉnh phương pháp học tập.',
+    label: 'Cấp 2 — Lệch Mục Tiêu',
     badgeCls: 'bg-purple-600 text-white',
     rowCls: 'border-purple-200 bg-purple-50/40',
     icon: Compass
+  }
+};
+
+const getStoredEscalations = () => {
+  try {
+    const raw = localStorage.getItem('veval_alert_escalations');
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
   }
 };
 
@@ -76,6 +96,68 @@ export default function EarlyWarningsMentorPanel({
   const [proposedTargetScore, setProposedTargetScore] = useState(850);
   const [mentorNotes, setMentorNotes] = useState('');
   const [submittingCounseling, setSubmittingCounseling] = useState(false);
+
+  // TCH-05: Escalation state to Branch Manager
+  const [escalations, setEscalations] = useState(getStoredEscalations);
+  const [escalateTarget, setEscalateTarget] = useState(null);
+  const [escalateNotes, setEscalateNotes] = useState('');
+  const [submittingEscalate, setSubmittingEscalate] = useState(false);
+
+  // TCH-04: Parent-Teacher Two-Way Messaging
+  const [parentMessages, setParentMessages] = useState(() => parentTeacherMessagingStore.getAllMessages());
+  const [activeMessageTarget, setActiveMessageTarget] = useState(null); // student object or null for all
+  const [isMessageModalOpen, setIsMessageModalOpen] = useState(false);
+  const [teacherReplyText, setTeacherReplyText] = useState('');
+  const [replyingMsgId, setReplyingMsgId] = useState(null);
+
+  useEffect(() => {
+    const unsubscribe = parentTeacherMessagingStore.subscribe(() => {
+      setParentMessages(parentTeacherMessagingStore.getAllMessages());
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const handleConfirmEscalate = (e) => {
+    e.preventDefault();
+    if (!escalateTarget || !escalateNotes.trim()) return;
+    setSubmittingEscalate(true);
+
+    const alertId = String(escalateTarget.alertId);
+    const newRecord = {
+      alertId,
+      studentId: escalateTarget.studentId,
+      studentName: escalateTarget.studentName,
+      escalatedAt: new Date().toISOString(),
+      notes: escalateNotes.trim(),
+      mentorName: currentUser?.fullName || 'Giảng viên phụ trách'
+    };
+
+    const updated = { ...escalations, [alertId]: newRecord };
+    setEscalations(updated);
+    try {
+      localStorage.setItem('veval_alert_escalations', JSON.stringify(updated));
+      toast.success('Đã chuyển cấp cảnh báo lên Quản lý cơ sở thành công! Quản lý cơ sở sẽ chủ trì buổi họp 3 bên.');
+      setEscalateTarget(null);
+      setEscalateNotes('');
+    } catch {
+      toast.error('Không thể lưu trạng thái chuyển cấp.');
+    } finally {
+      setSubmittingEscalate(false);
+    }
+  };
+
+  const handleSendTeacherReply = (msgId) => {
+    if (!teacherReplyText.trim() || !msgId) return;
+    parentTeacherMessagingStore.replyToMessage(msgId, {
+      text: teacherReplyText.trim(),
+      teacherName: currentUser?.fullName || 'Giảng viên phụ trách',
+      teacherId: currentUser?.id || currentUser?.userId
+    });
+    toast.success('Đã gửi phản hồi thành công tới Phụ huynh!');
+    setTeacherReplyText('');
+    setReplyingMsgId(null);
+    setParentMessages(parentTeacherMessagingStore.getAllMessages());
+  };
 
   useEffect(() => {
     if (defaultClassId) {
@@ -268,14 +350,32 @@ export default function EarlyWarningsMentorPanel({
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={() => loadAlertsDashboard(false)}
-            className="px-4 py-2.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-black flex items-center gap-2 self-start lg:self-auto transition-all shadow-xs cursor-pointer"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-            <span>Làm mới cảnh báo</span>
-          </button>
+          <div className="flex items-center gap-2 self-start lg:self-auto">
+            <button
+              type="button"
+              onClick={() => {
+                setActiveMessageTarget(null);
+                setIsMessageModalOpen(true);
+              }}
+              className="px-4 py-2.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black flex items-center gap-2 transition-all shadow-xs cursor-pointer"
+              title="Xem và phản hồi tin nhắn từ Phụ huynh học sinh"
+            >
+              <MessageSquare className="w-3.5 h-3.5" />
+              <span>Hộp Thư Phụ Huynh</span>
+              {parentMessages.filter((m) => m.status === 'unread' || !m.reply).length > 0 && (
+                <span className="w-2 h-2 rounded-full bg-amber-300 animate-ping" />
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => loadAlertsDashboard(false)}
+              className="px-4 py-2.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-black flex items-center gap-2 transition-all shadow-xs cursor-pointer"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+              <span>Làm mới cảnh báo</span>
+            </button>
+          </div>
         </div>
 
         {/* 6 KPI Summary Cards - Modern Card Shadow */}
@@ -439,31 +539,90 @@ export default function EarlyWarningsMentorPanel({
                         </span>
                       ) : (
                         <>
+                          {/* Nút xem tin nhắn từ phụ huynh nếu có */}
+                          {(() => {
+                            const studentMsgs = parentMessages.filter((m) => String(m.studentId) === String(alert.studentId));
+                            if (studentMsgs.length === 0) return null;
+                            const hasUnreplied = studentMsgs.some((m) => !m.reply);
+                            return (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setActiveMessageTarget({ studentId: alert.studentId, studentName: alert.studentName });
+                                  setIsMessageModalOpen(true);
+                                }}
+                                className={`px-3 py-1.5 rounded-xl text-xs font-extrabold flex items-center gap-1.5 border transition-all cursor-pointer ${
+                                  hasUnreplied
+                                    ? 'bg-blue-600 text-white border-blue-600 shadow-xs animate-pulse'
+                                    : 'bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200'
+                                }`}
+                              >
+                                <MessageSquare className="w-3.5 h-3.5" />
+                                <span>Phụ huynh nhắn ({studentMsgs.length})</span>
+                              </button>
+                            );
+                          })()}
+
+                          {/* Cảnh báo Cấp 3 (RED): Phân định quyền chuyển Quản lý cơ sở */}
                           {alert.alertType === 'RED' && (
-                            <button
-                              type="button"
-                              onClick={() => openCounselingModal(alert)}
-                              className="px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-extrabold flex items-center gap-1.5 shadow-xs transition-all"
-                            >
-                              <CalendarClock className="w-3.5 h-3.5" />
-                              <span>Hẹn Tư Vấn 3 Bên</span>
-                            </button>
+                            escalations[alert.alertId] ? (
+                              <span className="px-3 py-1.5 rounded-xl bg-purple-100 text-purple-800 text-xs font-extrabold flex items-center gap-1.5 border border-purple-200">
+                                <CheckCircle2 className="w-3.5 h-3.5 text-purple-700" />
+                                <span>Đã chuyển Quản lý cơ sở (Chờ họp 3 bên)</span>
+                              </span>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEscalateTarget(alert);
+                                  setEscalateNotes(`Học sinh sa sút nghiêm trọng kéo dài (>7 ngày). Đã can thiệp sư phạm tại lớp nhưng chưa cải thiện, đề nghị Quản lý cơ sở triệu tập cuộc họp 3 bên với Phụ huynh.`);
+                                }}
+                                className="px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-extrabold flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
+                              >
+                                <Building2 className="w-3.5 h-3.5" />
+                                <span>Chuyển Lên Quản Lý Cơ Sở (Họp 3 Bên)</span>
+                              </button>
+                            )
                           )}
 
                           <button
                             type="button"
                             onClick={() => openResolveModal(alert)}
-                            className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-extrabold flex items-center gap-1.5 shadow-xs transition-all"
+                            className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-extrabold flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
                           >
                             <FileCheck2 className="w-3.5 h-3.5" />
-                            <span>Ghi Nhận Can Thiệp</span>
+                            <span>{alert.alertType === 'RED' ? 'Ghi Nhận Can Thiệp' : 'Ghi Nhận Can Thiệp Sư Phạm'}</span>
                           </button>
                         </>
                       )}
                     </div>
                   </div>
 
-                  <p className="text-xs text-slate-800 font-medium leading-relaxed">{alert.message}</p>
+                  {/* Banner hướng dẫn phân cấp xử lý sư phạm */}
+                  <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <span className="text-slate-700 font-medium">
+                      <strong className="text-slate-900">{meta.handlerLabel || 'Phân công'}:</strong> {meta.handlerDesc || alert.message}
+                    </span>
+                    <span className="text-[11px] font-bold text-slate-500 whitespace-nowrap">
+                      {alert.message}
+                    </span>
+                  </div>
+
+                  {/* Hiển thị ghi chú bàn giao nếu đã chuyển Quản lý cơ sở */}
+                  {escalations[alert.alertId] && (
+                    <div className="p-3 rounded-xl bg-purple-50 border border-purple-200 text-xs text-purple-900 space-y-1">
+                      <div className="flex items-center justify-between font-extrabold">
+                        <span className="flex items-center gap-1.5">
+                          <Building2 className="w-3.5 h-3.5 text-purple-700" />
+                          <span>Hồ sơ đã bàn giao lên Quản lý cơ sở để tổ chức Họp 3 bên:</span>
+                        </span>
+                        <span className="text-[10px] text-purple-600 font-normal">
+                          {new Date(escalations[alert.alertId].escalatedAt).toLocaleString('vi-VN')}
+                        </span>
+                      </div>
+                      <p className="italic">"{escalations[alert.alertId].notes}"</p>
+                    </div>
+                  )}
 
                   {alert.resolutionNotes && (
                     <div className="p-3 rounded-xl bg-white border border-emerald-200 text-xs text-slate-700">
@@ -668,6 +827,208 @@ export default function EarlyWarningsMentorPanel({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* MODAL 3: ESCALATE TO BRANCH MANAGER (TCH-05) */}
+      {escalateTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/65 backdrop-blur-xs animate-fade">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-lg w-full p-6 space-y-4">
+            <div className="flex items-start justify-between gap-3 pb-3 border-b border-slate-100">
+              <div>
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-rose-700 flex items-center gap-1.5">
+                  <Building2 className="w-3.5 h-3.5" />
+                  Chuyển Cấp Cảnh Báo Lên Quản Lý Cơ Sở (Cấp 3)
+                </span>
+                <h3 className="text-base font-extrabold text-slate-900 mt-0.5">
+                  Bàn giao hồ sơ: <span className="text-rose-700">{escalateTarget.studentName}</span>
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEscalateTarget(null)}
+                className="p-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-xs text-rose-900 space-y-1">
+              <p><strong>Lý do chuyển cấp:</strong> {escalateTarget.message}</p>
+              <p className="text-[11px] text-rose-700">
+                Theo quy trình Core Flow 6, các ca cảnh báo Cấp 3 (nguy cơ cao, sa sút &gt; 7 ngày) sẽ do Quản lý cơ sở chủ trì triệu tập phiên họp 3 bên với Phụ huynh.
+              </p>
+            </div>
+
+            <form onSubmit={handleConfirmEscalate} className="space-y-3.5">
+              <div>
+                <label className="block text-xs font-extrabold text-slate-700 mb-1">
+                  Ghi chú bàn giao &amp; Đề xuất giải pháp cho Quản lý cơ sở <span className="text-rose-500">*</span>
+                </label>
+                <textarea
+                  rows={4}
+                  required
+                  value={escalateNotes}
+                  onChange={(e) => setEscalateNotes(e.target.value)}
+                  placeholder="Ghi rõ tình hình học sinh, các biện pháp kèm cặp sư phạm đã thực hiện tại lớp và nội dung cần trao đổi trong phiên họp 3 bên..."
+                  className="w-full p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-rose-500/25 resize-none"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setEscalateTarget(null)}
+                  className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-bold text-slate-700 cursor-pointer"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingEscalate || !escalateNotes.trim()}
+                  className="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white text-xs font-extrabold flex items-center gap-1.5 shadow-md cursor-pointer"
+                >
+                  <ArrowUpRight className="w-4 h-4" />
+                  <span>{submittingEscalate ? 'Đang bàn giao...' : 'Xác Nhận Bàn Giao Quản Lý Cơ Sở'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 4: PARENT MESSAGES & TWO-WAY REPLY (TCH-04) */}
+      {isMessageModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/65 backdrop-blur-xs animate-fade">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-2xl w-full p-6 space-y-4 max-h-[90vh] flex flex-col">
+            <div className="flex items-start justify-between gap-3 pb-3 border-b border-slate-100 shrink-0">
+              <div>
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-blue-700 flex items-center gap-1.5">
+                  <MessageSquare className="w-3.5 h-3.5" />
+                  Kênh Trao Đổi 2 Chiều Với Phụ Huynh Học Sinh (TCH-04)
+                </span>
+                <h3 className="text-base font-extrabold text-slate-900 mt-0.5">
+                  {activeMessageTarget ? `Hộp thư: ${activeMessageTarget.studentName}` : 'Tất cả tin nhắn từ Phụ huynh'}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsMessageModalOpen(false);
+                  setActiveMessageTarget(null);
+                  setReplyingMsgId(null);
+                  setTeacherReplyText('');
+                }}
+                className="p-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Danh sách tin nhắn */}
+            <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+              {(() => {
+                const targetMsgs = activeMessageTarget
+                  ? parentMessages.filter((m) => String(m.studentId) === String(activeMessageTarget.studentId))
+                  : parentMessages;
+
+                if (targetMsgs.length === 0) {
+                  return (
+                    <div className="p-8 rounded-2xl bg-slate-50 border border-slate-200 text-center text-xs text-slate-500">
+                      Chưa có tin nhắn trao đổi nào từ Phụ huynh.
+                    </div>
+                  );
+                }
+
+                return targetMsgs.map((msg) => (
+                  <div key={msg.id} className="p-4 rounded-2xl border border-slate-200 bg-white space-y-2.5 shadow-2xs">
+                    <div className="flex items-center justify-between text-xs">
+                      <div>
+                        <strong className="text-blue-900">{msg.parentName || 'Phụ huynh'}</strong>
+                        <span className="text-slate-500 ml-1.5">(Học sinh: <strong>{msg.studentName}</strong>)</span>
+                      </div>
+                      <span className="text-[10px] text-slate-400">
+                        {new Date(msg.createdAt).toLocaleString('vi-VN')}
+                      </span>
+                    </div>
+
+                    {msg.alertTitle && (
+                      <div className="text-[10px] text-amber-900 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200 w-fit">
+                        Đính kèm cảnh báo: <strong>{msg.alertTitle}</strong>
+                      </div>
+                    )}
+
+                    <p className="text-xs text-slate-800 leading-relaxed font-medium bg-slate-50 p-3 rounded-xl border border-slate-100">
+                      {msg.content}
+                    </p>
+
+                    {/* Phản hồi từ Giảng viên */}
+                    {msg.reply ? (
+                      <div className="p-3 rounded-xl bg-indigo-50 border border-indigo-200 text-xs space-y-1">
+                        <div className="flex items-center justify-between text-[11px] font-black text-indigo-900">
+                          <span>Phản hồi của Thầy/Cô ({msg.reply.teacherName}):</span>
+                          <span className="text-[10px] text-indigo-400 font-normal">
+                            {new Date(msg.reply.repliedAt).toLocaleString('vi-VN')}
+                          </span>
+                        </div>
+                        <p className="text-indigo-950 font-medium">{msg.reply.text}</p>
+                      </div>
+                    ) : (
+                      replyingMsgId === msg.id ? (
+                        <div className="space-y-2 pt-2 border-t border-slate-100">
+                          <textarea
+                            rows={3}
+                            value={teacherReplyText}
+                            onChange={(e) => setTeacherReplyText(e.target.value)}
+                            placeholder="Nhập nội dung phản hồi sư phạm tới Phụ huynh..."
+                            className="w-full p-2.5 rounded-xl border border-slate-300 text-xs focus:outline-none focus:border-blue-500 resize-none"
+                          />
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setReplyingMsgId(null);
+                                setTeacherReplyText('');
+                              }}
+                              className="px-3 py-1.5 rounded-lg bg-slate-100 text-xs font-bold text-slate-700"
+                            >
+                              Hủy
+                            </button>
+                            <button
+                              type="button"
+                              disabled={!teacherReplyText.trim()}
+                              onClick={() => handleSendTeacherReply(msg.id)}
+                              className="px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                            >
+                              <Send className="w-3 h-3" />
+                              <span>Gửi phản hồi</span>
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-between pt-1">
+                          <span className="text-[11px] text-amber-700 font-bold flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                            <span>Chưa phản hồi</span>
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setReplyingMsgId(msg.id);
+                              setTeacherReplyText('');
+                            }}
+                            className="px-3 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold flex items-center gap-1 cursor-pointer"
+                          >
+                            <Send className="w-3 h-3" />
+                            <span>Soạn phản hồi</span>
+                          </button>
+                        </div>
+                      )
+                    )}
+                  </div>
+                ));
+              })()}
+            </div>
           </div>
         </div>
       )}

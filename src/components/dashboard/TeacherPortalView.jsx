@@ -4,6 +4,7 @@ import apiClient from '../../services/apiClient';
 import contentService from '../../services/contentService';
 import { accountGreeting } from '../../utils/accountPresentation';
 import { teacherPortalRequests } from '../../services/teacherPortalRequests';
+import TeacherSubmissionHistoryView from './TeacherSubmissionHistoryView';
 
 const dateLabel = (value) => value ? new Date(value).toLocaleString('vi-VN') : '—';
 
@@ -115,6 +116,9 @@ export default function TeacherPortalView({ currentUser, section = 'dashboard', 
     : resources[key].error ? <Notice>Không tải được dữ liệu: {resources[key].error} Bạn có thể bấm làm mới để thử lại.</Notice> : null;
 
   if (!mentorId) return <Notice>Chưa xác định được tài khoản giáo viên. Vui lòng đăng nhập lại.</Notice>;
+  if (section === 'history') {
+    return <TeacherSubmissionHistoryView currentUser={currentUser} onNavigate={onNavigate} />;
+  }
 
   return <div className="space-y-6 animate-fade">
     <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-950 via-indigo-800 to-blue-600 p-7 text-white shadow-lg md:p-9">

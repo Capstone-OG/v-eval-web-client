@@ -1,26 +1,32 @@
-# UPDATE — V-Eval-Web_Client
+# UPDATE - V-EVAL WEB CLIENT
 
 ## [23/11/2026]
-- **Chuẩn Hóa Điều Kiện Hiển Thị Nút Hẹn Tư Vấn 3 Bên Trong Danh Sách Học Sinh Cần Hỗ Trợ (`EarlyWarningsMentorPanel.jsx`)**:
-  - *Tinh chỉnh điều kiện kích hoạt*: Chỉ hiển thị nút `Hẹn Tư Vấn 3 Bên` đối với học sinh có mức độ **Cảnh báo Đỏ** (`alert.alertType === 'RED'`).
-  - *Tối ưu quy trình can thiệp*: Đối với các mức độ cảnh báo khác (như `UNREALISTIC_GOAL` — Mục tiêu cần hiệu chỉnh hoặc `YELLOW` — Nhắc nhở cần theo dõi), hệ thống chỉ hiển thị duy nhất nút `Ghi Nhận Can Thiệp`, ngăn ngừa tình trạng kích hoạt lịch tư vấn 3 bên khi chưa thực sự có nguy cơ cao.
-- **Tối Ưu Hóa Chiều Dài Cuộn & Công Thái Học Tra Cứu Khung Chương Trình Cho Giảng Viên (`CurriculumExplorerView.jsx`)**:
-  - *Tích hợp thanh Tab chọn nhanh Khối lớp (Lớp 10 • 11 • 12)*: Đặt 4 tab chuyển đổi ngay đỉnh danh sách chương kèm số lượng chương thực tế (`Tất cả`, `Lớp 12`, `Lớp 11`, `Lớp 10`), lọc ngay lập tức danh sách từ 14+ chương xuống còn 2–7 chương theo đúng khối lớp giảng dạy, triệt tiêu 70% độ dài phải cuộn trang.
-  - *Cơ chế Khung cuộn độc lập (Split Independent Scroll) & Cố định khung chi tiết (Sticky View)*:
-    + Cột trái (Danh sách chương) được cấu hình `lg:sticky lg:top-4 lg:max-h-[calc(100vh-100px)]` kèm vùng cuộn nội bộ `overflow-y-auto scrollbar-thin`, giúp cuộn mượt mà không làm trôi giao diện tổng thể.
-    + Cột phải (Khung chi tiết sư phạm 3 tầng) được gắn `lg:sticky lg:top-4 lg:max-h-[calc(100vh-100px)] lg:overflow-y-auto`, luôn cố định vững chãi ngay tầm mắt, bấm chọn chương/bài/dạng ở cột trái là chi tiết xuất hiện ngay lập tức bên cạnh mà không bao giờ bị khuất màn hình hay phải cuộn ngược lên tìm kiếm.
-  - *Nút công thái học Mở rộng / Thu gọn tất cả*: Bổ sung nút chuyển đổi 1-chạm `Thu gọn hết / Mở tất cả` giúp giáo viên đóng/mở toàn bộ các chương chỉ với 1 click.
-  - *Tinh giản mật độ hiển thị thẻ chương (Compact Density)*: Tối ưu padding (`p-2.5 sm:px-3`), thu nhỏ icon `w-7 h-7` và tinh gọn khoảng cách giữa các thẻ, tăng gấp đôi số lượng chương hiển thị trên cùng một tầm nhìn màn hình.
-- **Tối Ưu Hóa Trải Nghiệm Người Dùng & Loại Bỏ Thuật Ngữ Kỹ Thuật Khung Chương Trình Cho Phân Hệ Giảng Viên (`CurriculumExplorerView.jsx`, `UnifiedNodeDetailView.jsx`, `ExamBankView.jsx`, `ExamWorkspaceHeader.jsx`, `TextbookStandardView.jsx`, `TextbookIngestView.jsx`)**:
-  - *Tái cấu trúc giao diện Tra cứu Khung chương trình*: Loại bỏ nhãn kỹ thuật `(Read-only)`, thay thế badge thành `Khung chương trình chuẩn`; đổi thanh tìm kiếm sang `Tìm kiếm chương, bài học, dạng bài...`; chuyển đổi nhãn phân loại năng lực sang thuật ngữ sư phạm (`Cần bổ trợ`, `Cần củng cố`, `Đã nắm vững`).
-  - *Chuẩn hóa danh sách chương & bài học*: Đổi tiêu đề thành `Danh sách chương`, ẩn nút quản trị `+ Thêm Chương` với role Giảng viên, loại bỏ hoàn toàn các thông số kỹ thuật nội bộ như trọng số phần trăm `Trọng số: ...%` và số trang phân đoạn `Đã nạp SGK (x trang)`.
-  - *Chuẩn hóa hiển thị chi tiết sư phạm*: Loại bỏ nhãn kỹ thuật trọng số và khớp trang SGK DB; chuẩn hóa 3 khối kiến thức thành `Lý Thuyết Trọng Tâm Chuẩn SGK`, `Phương Pháp Giải & Mô Hình Minh Họa Trực Quan`, `Ngân Hàng Câu Hỏi Luyện Tập`; bộ lọc nhận thức hiển thị nhãn sư phạm đầy đủ (`Tất cả`, `Nhận biết`, `Thông hiểu`, `Vận dụng`, `Vận dụng cao`) thay vì mã kỹ thuật L1-L4.
-  - *Đồng bộ loại bỏ nhãn `(Read-only)`*: Cập nhật đồng bộ trên Kho đề thi (`ExamBankView.jsx`), Xem đề thi (`ExamWorkspaceHeader.jsx`), SGK chuẩn (`TextbookStandardView.jsx`) và Tra cứu tài liệu (`TextbookIngestView.jsx`).
-- **Tối Ưu Hóa Giao Diện & Đồng Bộ 100% Dữ Liệu Học Sinh Thực Tế Cho Buổi Học Offline (TCH-02) (`TeacherScheduleView.jsx`, `OfflineSessionPreparationModal.jsx`, `offlineSessionStore.js`, `tests/offlineSessionStore.test.js`)**:
-  - Tái thiết kế Modal Chuẩn bị Buổi học, loại bỏ toàn bộ thuật ngữ kỹ thuật nội bộ (`Mô hình lớp học đảo ngược`, `ZPD`, `Vi mô`, `Heatmap`).
-  - Đồng bộ 100% danh sách học sinh thật từ CSDL (`Trần Thái Thịnh`, `Trần Ngọc Mai`, `Mai Thành Nhân`, `Lê Hoàng Long`, `Nguyễn Hoàng An`, `Phạm Tấn Lộc`), chia bàn học cân đối; tự động thanh lọc cache cũ.
-- **Chuẩn Hóa Phân Quyền Maker - Checker Học Liệu & Đề Thi Cho Role Teacher (`TextbookIngestView.jsx`, `TextbookStudioView.jsx`, `CurriculumStudioEditor.jsx`, `ExamWorkspaceHeader.jsx`, `App.jsx`)**:
-  - Áp dụng cơ chế phân quyền Maker cho Giảng viên: Cho phép biên soạn bản nháp và gửi duyệt (`PENDING_REVIEW`), ẩn nút xuất bản và xóa học liệu cấp hệ thống.
-- **Kiểm Thử & Biên Dịch**:
-  - `npm run build`: Hoàn thành 100% trong 1.17s (`3083 modules transformed`, `0 Error`).
-  - Unit tests: **24/24 unit tests passed 100%** (`tests/*.test.js`).
+  - **Hoàn Thiện Bộ 3 Nghiệp Vụ Cổng Giảng Viên (TCH-03, TCH-04, TCH-05)**:
+    + **TCH-03 — Tra Cứu Lịch Sử Làm Bài & Phân Tích Lỗ Hổng Kiến Thức Học Viên Đa Lớp (`TeacherSubmissionHistoryView.jsx`, `App.jsx`, `TeacherPortalView.jsx`)**:
+      * Đồng bộ bộ chọn lớp động đa lớp (`assignedClasses`) qua API `practiceService.getClasses({ teacherId })`, cho phép Giảng viên chuyển đổi tức thời giữa các lớp phụ trách và tải danh sách học sinh thực tế từ Heatmap ma trận lớp.
+      * Tích hợp đầy đủ 3 nhóm bài làm chuẩn hóa: (1) Thi đầu vào (30 câu - phân tích Theta 0, điểm số, tỷ lệ đúng theo miền); (2) Luyện tập thích ứng ZPD & Topic Quiz; (3) Thi thử V-ACT (120 câu chuẩn hóa kèm trạng thái giám sát liêm chính Proctoring).
+      * Chức năng xem chi tiết từng câu làm sai: hiển thị đề bài toán học (KaTeX/MathText), phương án học sinh chọn, đáp án đúng và lời giải chi tiết giúp Giảng viên chuẩn bị giáo án chữa đề sát lỗ hổng thực tế; tích hợp form lưu ghi chú sư phạm nhanh theo từng học sinh.
+    + **TCH-04 — Kênh Nhận & Phản Hồi Tin Nhắn Trao Đổi 2 Chiều Phụ Huynh - Giảng Viên (`parentTeacherMessagingStore.js`, `ParentEarlyWarningsAndTeacherView.jsx`, `EarlyWarningsMentorPanel.jsx`, `tests/parentTeacherMessagingStore.test.js`)**:
+      * Xây dựng module lưu trữ và đồng bộ trạng thái phản ứng hai chiều `parentTeacherMessagingStore.js` với cơ chế CustomEvent `veval:parent-teacher-message`.
+      * Phía Phụ huynh: Lưu trữ lịch sử tin nhắn kèm liên kết cảnh báo học tập, hiển thị luồng trao đổi dạng hội thoại trực quan kèm phản hồi của Giảng viên ngay khi có.
+      * Phía Giảng viên: Bổ sung nút truy cập nhanh "Hộp Thư Phụ Huynh" với chỉ báo tin nhắn mới tại header, gắn nhãn thông báo tin nhắn phụ huynh trên từng thẻ học sinh cảnh báo, mở hộp thoại xem chi tiết và gửi phản hồi sư phạm tức thì về Cổng Phụ huynh.
+    + **TCH-05 — Phân Định Rõ Ràng Thẩm Quyền Xử Lý Cảnh Báo Cấp 1–2 (Giảng Viên) vs Cấp 3 (Quản Lý Cơ Sở) (`EarlyWarningsMentorPanel.jsx`)**:
+      * Chuẩn hóa nhãn phân cấp trên từng thẻ cảnh báo sớm: Cấp 1 (Nhắc nhở tự học / chuyên cần - Giảng viên trực tiếp kèm cặp), Cấp 2 (Lệch mục tiêu - Giảng viên tư vấn sư phạm), Cấp 3 (Nguy cơ cao, sa sút kéo dài > 7 ngày - Quản lý cơ sở chủ trì).
+      * Bổ sung nút action **`Chuyển Lên Quản Lý Cơ Sở (Họp 3 Bên)`** cho toàn bộ cảnh báo Cấp 3 (Đỏ) thay thế việc Giảng viên tự ý đặt lịch; tích hợp modal bàn giao hồ sơ học tập và lưu vết trạng thái chuyển cấp vào bộ nhớ hệ thống.
+  - **Chuẩn Hóa Điều Kiện Hiển Thị Nút Hẹn Tư Vấn 3 Bên Trong Danh Sách Học Sinh Cần Hỗ Trợ (`EarlyWarningsMentorPanel.jsx`)**:
+    + Siết chặt điều kiện: Nút `Hẹn Tư Vấn 3 Bên` chỉ hiển thị cho Cảnh báo Đỏ (`alert.alertType === 'RED'`).
+    + Các trường hợp lệch mục tiêu (`UNREALISTIC_GOAL`) hoặc nhắc nhở (`YELLOW`) chỉ hiển thị `Ghi Nhận Can Thiệp`.
+  - **Tối Ưu Hóa Chiều Dài Cuộn & Công Thái Học Tra Cứu Khung Chương Trình Cho Giảng Viên (`CurriculumExplorerView.jsx`)**:
+    + Tích hợp 4 Tab chọn nhanh Khối lớp (`Tất cả`, `Lớp 12`, `Lớp 11`, `Lớp 10`) triệt tiêu 70% độ dài cuộn trang.
+    + Khung cuộn độc lập Split Independent Scroll và cố định khung chi tiết (Sticky View).
+    + Nút công thái học 1-chạm `Thu gọn hết / Mở tất cả` và tinh giản mật độ thẻ chương.
+  - **Tối Ưu Hóa Trải Nghiệm Người Dùng & Loại Bỏ Thuật Ngữ Kỹ Thuật Khung Chương Trình Cho Phân Hệ Giảng Viên (`CurriculumExplorerView.jsx`, `UnifiedNodeDetailView.jsx`, `ExamBankView.jsx`, `ExamWorkspaceHeader.jsx`, `TextbookStandardView.jsx`, `TextbookIngestView.jsx`)**:
+    + Loại bỏ toàn bộ nhãn kỹ thuật `(Read-only)`, `Trọng số: ...%`, `Đã nạp SGK (x trang)`.
+    + Chuẩn hóa thuật ngữ sư phạm: `Cần bổ trợ (<10%)`, `Cần củng cố (<60%)`, `Đã nắm vững (≥60%)`.
+    + Chuẩn hóa 3 khối kiến thức: Lý thuyết trọng tâm, Phương pháp giải & Mô hình minh họa, Ngân hàng câu hỏi theo Bloom sư phạm.
+  - **Tối Ưu Hóa Giao Diện & Đồng Bộ 100% Dữ Liệu Học Sinh Thực Tế Cho Buổi Học Offline (TCH-02) (`TeacherScheduleView.jsx`, `OfflineSessionPreparationModal.jsx`, `offlineSessionStore.js`, `tests/offlineSessionStore.test.js`)**:
+    + Tái thiết kế Modal Chuẩn bị buổi học Offline gồm 2 phần (Chữa bài chung cả lớp từ Heatmap + Nhóm học tập tại bàn kèm bài tập ZPD).
+    + Đồng bộ 100% học sinh thật từ CSDL PostgreSQL, hiển thị rõ ràng tên kỹ năng và tỷ lệ làm sai.
+  - **Kiểm Thử & Biên Dịch**:
+    + Bổ sung 2 test suites mới (`tests/parentTeacherMessagingStore.test.js`), 26/26 unit tests passed 100%.
+    + `npm run build`: Hoàn thành 100% trong 1.25s (`3085 modules transformed`, `0 Error`).

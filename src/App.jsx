@@ -36,6 +36,7 @@ import ParentChildResultsView from './components/dashboard/ParentChildResultsVie
 import ParentEarlyWarningsAndTeacherView from './components/dashboard/ParentEarlyWarningsAndTeacherView';
 import TeacherDashboardView from './components/dashboard/TeacherDashboardView';
 import TeacherPortalView from './components/dashboard/TeacherPortalView';
+import TeacherSubmissionHistoryView from './components/dashboard/TeacherSubmissionHistoryView';
 import CampusManagerDashboardView from './components/dashboard/CampusManagerDashboardView';
 import AcademicManagerDashboardView from './components/dashboard/AcademicManagerDashboardView';
 import AiTutorModerationView from './components/dashboard/AiTutorModerationView';
@@ -524,10 +525,9 @@ export default function App() {
       }
       if (activeTab === 'history') {
         return (
-          <TeacherPortalView
-            key={`${currentUser?.userId || currentUser?.id}:${currentUser?.classId || ''}:${activeTab}`}
+          <TeacherSubmissionHistoryView
+            key={`${currentUser?.userId || currentUser?.id}:${activeTab}`}
             currentUser={currentUser}
-            section={activeTab}
             onNavigate={setActiveTab}
           />
         );

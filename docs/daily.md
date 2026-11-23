@@ -2,6 +2,26 @@
 
 ---
 
+## [23/11/2026] - Hoàn Thiện Bộ 3 Nghiệp Vụ Cổng Giảng Viên (TCH-03, TCH-04, TCH-05), Tối Ưu Khung Chương Trình & Lịch Dạy Offline (TCH-02)
+
+- **Tra Cứu Lịch Sử Làm Bài & Phân Tích Lỗ Hổng Kiến Thức Học Viên Đa Lớp (TCH-03) ([`TeacherSubmissionHistoryView.jsx`](../src/components/dashboard/TeacherSubmissionHistoryView.jsx), [`App.jsx`](../src/App.jsx), [`TeacherPortalView.jsx`](../src/components/dashboard/TeacherPortalView.jsx))**:
+  - *Bộ chọn lớp động đa lớp (`assignedClasses`)*: Tự động lấy danh sách lớp giảng viên phụ trách từ `practiceService.getClasses({ teacherId })`, cho phép giáo viên chuyển đổi linh hoạt giữa các lớp và hiển thị danh sách học sinh thật từ Heatmap ma trận lớp.
+  - *Hỗ trợ toàn diện 3 nhóm bài làm*:
+    + **1. Thi đầu vào (30 câu)**: Tải lịch sử làm bài khảo sát chẩn đoán, phân tích chỉ số năng lực IRT Theta 0, điểm số, tỷ lệ đúng từng miền kiến thức và radar chart.
+    + **2. Luyện tập thích ứng (ZPD & Topic Quiz)**: Tải lịch sử làm bài theo phiên luyện tập thích ứng của học sinh, tỷ lệ chính xác và thời gian hoàn thành.
+    + **3. Thi thử V-ACT (120 câu chuẩn hóa)**: Tải kết quả thi thử chuẩn cấu trúc ĐGNL ĐHQG-HCM, điểm số quy đổi thang 1200 và trạng thái giám sát liêm chính Proctoring (cảnh báo rời tab, vi phạm webcam).
+  - *Phân tích chi tiết từng câu hỏi làm sai*: Hiển thị đề bài định dạng toán học MathText (KaTeX), phương án học sinh chọn, đáp án chuẩn xác và lời giải chi tiết giúp giảng viên chuẩn bị nội dung chữa bài sát thực tế; tích hợp form lưu ghi chú sư phạm nhanh theo từng học sinh.
+- **Kênh Nhận & Phản Hồi Tin Nhắn Trao Đổi 2 Chiều Phụ Huynh - Giảng Viên (TCH-04) ([`parentTeacherMessagingStore.js`](../src/utils/parentTeacherMessagingStore.js), [`ParentEarlyWarningsAndTeacherView.jsx`](../src/components/dashboard/ParentEarlyWarningsAndTeacherView.jsx), [`EarlyWarningsMentorPanel.jsx`](../src/components/dashboard/EarlyWarningsMentorPanel.jsx), [`tests/parentTeacherMessagingStore.test.js`](../tests/parentTeacherMessagingStore.test.js))**:
+  - *Module lưu trữ phản ứng 2 chiều (`parentTeacherMessagingStore.js`)*: Thiết kế store quản lý tin nhắn phụ huynh - giáo viên với cơ chế CustomEvent `veval:parent-teacher-message` đồng bộ tức thời giữa hai cổng.
+  - *Phía Cổng Phụ huynh*: Lưu trữ và hiển thị toàn bộ lịch sử tin nhắn trao đổi theo học sinh, hiển thị trạng thái phản hồi của giáo viên (Đang chờ Thầy/Cô phản hồi / Thầy/Cô đã phản hồi) kèm bong bóng hội thoại trực quan.
+  - *Phía Cổng Giảng viên*: Thêm nút "Hộp Thư Phụ Huynh" kèm chỉ báo tin nhắn mới trên header; gắn nút huy hiệu tin nhắn phụ huynh trên từng thẻ cảnh báo học sinh; mở modal đọc nội dung và gửi phản hồi sư phạm ngược lại cho phụ huynh tức thì.
+- **Phân Định Rõ Ràng Thẩm Quyền Xử Lý Cảnh Báo Cấp 1–2 (Giảng Viên) vs Cấp 3 (Quản Lý Cơ Sở) (TCH-05) ([`EarlyWarningsMentorPanel.jsx`](../src/components/dashboard/EarlyWarningsMentorPanel.jsx))**:
+  - *Chuẩn hóa nhãn phân cấp xử lý*:
+    + **Cấp 1 — Nhắc nhở**: Giảng viên trực tiếp kèm cặp và giao bài tập củng cố tại lớp.
+    + **Cấp 2 — Lệch mục tiêu**: Giảng viên tư vấn sư phạm điều chỉnh phương pháp học tập.
+    + **Cấp 3 — Nguy cơ cao**: Học sinh sa sút nghiêm trọng (> 7 ngày), Giảng viên bàn giao hồ sơ để Quản lý cơ sở chủ trì triệu tập phiên Họp 3 bên.
+  - *Nút bàn giao Quản lý cơ sở (`Chuyển Lên Quản Lý Cơ Sở (Họp 3 Bên)`)*: Thay thế việc giảng viên tự đặt lịch tư vấn cho ca Cấp 3; tích hợp modal bàn giao sư phạm, ghi chú đề xuất giải pháp và lưu vết trạng thái chuyển cấp vào bộ nhớ hệ thống.
+
 ## [23/11/2026] - Chuẩn Hóa Điều Kiện Hẹn Tư Vấn 3 Bên, Tối Ưu Chiều Dài Cuộn Khung Chương Trình & Đồng Bộ Dữ Liệu Học Sinh Thực Tế (TCH-02)
 
 - **Chuẩn Hóa Điều Kiện Hiển Thị Nút Hẹn Tư Vấn 3 Bên Trong Danh Sách Học Sinh Cần Hỗ Trợ ([`EarlyWarningsMentorPanel.jsx`](../src/components/dashboard/EarlyWarningsMentorPanel.jsx))**:
