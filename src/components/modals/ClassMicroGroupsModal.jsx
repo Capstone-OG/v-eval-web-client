@@ -53,11 +53,44 @@ export default function ClassMicroGroupsModal({ isOpen, onClose, classData }) {
     notes: 'Ôn tập phương pháp giải & củng cố các câu hay làm sai'
   });
 
+  // Chế độ hiển thị danh sách học sinh khi bồi dưỡng chuyên đề
+  const [remedialScope, setRemedialScope] = useState('STRUGGLING_ONLY'); // 'STRUGGLING_ONLY' | 'ALL_CLASS'
+
   // Phân nhóm học sinh tập trung bồi dưỡng đúng chuyên đề được chỉ định (Focus Skill)
-  const partitionStudentsForFocusSkill = (focusSkill, skillId, rows = [], size = 4) => {
+  const partitionStudentsForFocusSkill = (focusSkill, skillId, rows = [], size = 4, scope = remedialScope) => {
     if (!rows || rows.length === 0) return [];
 
-    const studentList = rows.map((r) => {
+    // 1. Xác định tập hợp học sinh cần xếp nhóm
+    let targetRows = rows;
+
+    if (scope === 'STRUGGLING_ONLY') {
+      // Ưu tiên danh sách targetStudentIds truyền từ ngoài vào (học sinh thực tế < 50%)
+      if (Array.isArray(classData?.targetStudentIds) && classData.targetStudentIds.length > 0) {
+        const targetIdSet = new Set(classData.targetStudentIds.map(id => String(id).toLowerCase()));
+        const matched = rows.filter(r => {
+          const sId = r.studentId || r.StudentId || r.id;
+          return sId && targetIdSet.has(String(sId).toLowerCase());
+        });
+        if (matched.length > 0) {
+          targetRows = matched;
+        }
+      } else {
+        // Fallback: Lọc những học sinh có điểm làm bài ở chuyên đề này < 50%
+        const struggling = rows.filter(r => {
+          if (!Array.isArray(r.skillCells)) return false;
+          const cell = r.skillCells.find(c =>
+            (skillId && String(c.skillId).toLowerCase() === String(skillId).toLowerCase()) ||
+            (c.skillName && c.skillName.trim().toLowerCase() === focusSkill.trim().toLowerCase())
+          );
+          return cell && cell.plt != null ? Number(cell.plt) < 0.5 : false;
+        });
+        if (struggling.length > 0) {
+          targetRows = struggling;
+        }
+      }
+    }
+
+    const studentList = targetRows.map((r) => {
       const sId = r.studentId || r.StudentId || r.id;
       const sName = r.studentName || r.StudentName || r.name;
 
@@ -73,7 +106,7 @@ export default function ClassMicroGroupsModal({ isOpen, onClose, classData }) {
         }
       }
       if (skillPlt == null) {
-        skillPlt = r.thetaScore ?? r.overallMastery ?? 0.1;
+        skillPlt = r.thetaScore ?? r.overallMastery ?? 0.08;
       }
 
       return {
@@ -89,9 +122,24 @@ export default function ClassMicroGroupsModal({ isOpen, onClose, classData }) {
     studentList.sort((a, b) => a.mastery - b.mastery);
 
     const n = studentList.length;
-    if (n < 3) return [];
+    if (n === 0) return [];
 
-    // Tính số lượng nhóm m (đảm bảo 3 <= n/m <= 5)
+    // Nếu số lượng học sinh bồi dưỡng từ 1 đến 5 em: Xếp đúng 1 bàn học vi mô kèm riêng
+    if (n <= 5) {
+      return [{
+        groupId: 'GRP-FOCUS-01',
+        groupName: `Nhóm 01 - Bàn trọng tâm: ${focusSkill}`,
+        focusArea: focusSkill,
+        memberCount: n,
+        members: studentList,
+        commonWeakSkillIds: skillId ? [skillId] : [],
+        commonWeakSkillNames: [focusSkill],
+        assignedWorksheetTitle: `Phiếu bài tập vi mô: 5 câu ${focusSkill}`,
+        recommendedWorksheetTitle: `Phiếu bài tập vi mô: 5 câu ${focusSkill}`
+      }];
+    }
+
+    // Nếu sĩ số > 5 em: Tách thành các bàn học vi mô chuẩn sư phạm 3 - 5 em/bàn
     const minM = Math.ceil(n / 5);
     const maxM = Math.floor(n / 3);
     const targetSize = Math.max(3, Math.min(5, size));
@@ -409,7 +457,8 @@ export default function ClassMicroGroupsModal({ isOpen, onClose, classData }) {
         classData.focusSkill,
         classData.focusSkillId,
         heatmapRows,
-        size
+        size,
+        remedialScope
       );
       setGroups(nextGroups);
       const studentCounts = nextGroups.map(g => (g.members || []).length || g.memberCount || 0);
@@ -593,9 +642,56 @@ export default function ClassMicroGroupsModal({ isOpen, onClose, classData }) {
                 </span>
               </div>
             </div>
-            <span className="px-3 py-1 rounded-xl bg-amber-100 border border-amber-300 text-amber-900 text-[11px] font-extrabold shrink-0 self-start sm:self-center">
-              🎯 Đang ưu tiên gom các học sinh chưa đạt chuyên đề này
-            </span>
+            <div className="flex flex-wrap items-center gap-2 self-start sm:self-center">
+              <button
+                type="button"
+                onClick={() => {
+                  setRemedialScope('STRUGGLING_ONLY');
+                  if (heatmapRows.length > 0) {
+                    const g = partitionStudentsForFocusSkill(
+                      classData.focusSkill,
+                      classData.focusSkillId,
+                      heatmapRows,
+                      preferredGroupSize,
+                      'STRUGGLING_ONLY'
+                    );
+                    setGroups(g);
+                  }
+                }}
+                className={`px-3 py-1 rounded-xl text-[11px] font-extrabold transition-all cursor-pointer ${
+                  remedialScope === 'STRUGGLING_ONLY'
+                    ? 'bg-amber-600 text-white shadow-xs'
+                    : 'bg-white text-amber-900 border border-amber-300 hover:bg-amber-100'
+                }`}
+                title="Chỉ xếp các bạn có điểm kiểm tra chưa đạt chuyên đề này"
+              >
+                🎯 Chỉ {groups.reduce((a, g) => a + (g.members?.length || 0), 0)} học sinh chưa đạt
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setRemedialScope('ALL_CLASS');
+                  if (heatmapRows.length > 0) {
+                    const g = partitionStudentsForFocusSkill(
+                      classData.focusSkill,
+                      classData.focusSkillId,
+                      heatmapRows,
+                      preferredGroupSize,
+                      'ALL_CLASS'
+                    );
+                    setGroups(g);
+                  }
+                }}
+                className={`px-3 py-1 rounded-xl text-[11px] font-extrabold transition-all cursor-pointer ${
+                  remedialScope === 'ALL_CLASS'
+                    ? 'bg-indigo-600 text-white shadow-xs'
+                    : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-100'
+                }`}
+                title="Xếp toàn bộ học sinh trong lớp theo các mức độ bồi dưỡng khác nhau"
+              >
+                👥 Cả lớp ({totalStudents} học sinh)
+              </button>
+            </div>
           </div>
         )}
 

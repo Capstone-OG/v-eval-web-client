@@ -2,6 +2,25 @@
 
 ---
 
+## [23/11/2026] - Khắc Phục Hiện Tượng Gom Cả Lớp Vào Nhóm Bồi Dưỡng Chuyên Đề, Đồng Bộ Số Liệu Thống Kê & Cấu Hình Pooler Supabase (`ClassMicroGroupsModal.jsx`, `TeacherDashboardView.jsx`, `EarlyWarningsMentorPanel.jsx`, `rag-service/.env`, `tests/classMicroGroups.test.js`)
+
+- **Khắc Phục Triệt Để Hiện Tượng Gom Cả Lớp Vào Nhóm Bồi Dưỡng Chuyên Đề ([`ClassMicroGroupsModal.jsx`](../src/components/modals/ClassMicroGroupsModal.jsx), [`tests/classMicroGroups.test.js`](../tests/classMicroGroups.test.js))**:
+  - *Lọc đối tượng trọng tâm*: Khắc phục hiện tượng khi có 4 học sinh chưa đạt môn Hóa học nhưng hệ thống lại gom cả 7 học sinh cả lớp vào chia thành 2 bàn. Hàm `partitionStudentsForFocusSkill` ưu tiên lọc chuẩn xác theo `targetStudentIds` (hoặc các học sinh có điểm < 50% ở chuyên đề bồi dưỡng).
+  - *Tự động gom nhóm chuẩn sư phạm*: Với 4 học sinh chưa đạt, hệ thống tạo đúng **1 bàn học vi mô kèm riêng (4 bạn)** với trọng tâm chuyên đề "Giải quyết vấn đề Hóa học", không kéo các học sinh khác vào bàn bồi dưỡng.
+  - *Cung cấp tùy chọn phạm vi linh hoạt cho Giảng viên*: Bổ sung nút chuyển đổi nhanh trên banner: `🎯 Chỉ [X] học sinh chưa đạt` (mặc định) và `👥 Cả lớp ([Y] học sinh)`, cho phép Giảng viên chủ động linh hoạt giữa việc chỉ xếp nhóm phụ đạo hoặc xếp toàn bộ lớp theo phân hóa năng lực.
+- **Đồng Bộ Số Liệu Thống Kê Cảnh Báo Sư Phạm ([`TeacherDashboardView.jsx`](../src/components/dashboard/TeacherDashboardView.jsx))**:
+  - Khắc phục tình trạng tiêu đề ngoài ghi `Chưa đạt: 100% (7 học sinh)` nhưng danh sách khoan sâu lại chỉ hiển thị `4 học sinh`.
+  - Cập nhật công thức tính hiển thị: Ưu tiên đếm theo số lượng học sinh thực tế làm bài bị điểm dưới 50% (`strugglingStudents.length`), hiển thị chuẩn xác `57% (4 học sinh)`, đồng bộ 100% giữa tiêu đề ngoài và danh sách mở rộng.
+- **Sửa Lỗi Tràn Layout & Co Hẹp Dải Phân Cấp Sư Phạm ([`EarlyWarningsMentorPanel.jsx`](../src/components/dashboard/EarlyWarningsMentorPanel.jsx))**:
+  - Khắc phục lỗi co hẹp dải hướng dẫn phân cấp sư phạm trên thẻ cảnh báo mục tiêu sớm, thêm `w-full` và `flex-col sm:flex-row`, đảm bảo nội dung mô tả hiển thị giãn dòng tự nhiên (`leading-relaxed`), chống bóp nghẹt thành cột hẹp.
+- **Cấu Hình Supabase Transaction Mode Pooler Cho RAG Service ([`All Services/V-Eval-Ai_Engine/rag-service/.env`](../../V-Eval-Ai_Engine/rag-service/.env))**:
+  - Chuyển đổi cổng kết nối `DATABASE_URL` từ cổng `5432` (Session Mode - giới hạn 15 kết nối) sang cổng `6543` (Transaction Mode), khắc phục triệt để lỗi `FATAL: (EMAXCONNSESSION) max clients reached in session mode - max clients are limited to pool_size: 15` khi chạy FastAPI song song các microservice .NET.
+- **Kiểm Thử & Biên Dịch**:
+  - 33/33 unit tests passed 100% (`tests/classMicroGroups.test.js`, `tests/remedialSessionStore.test.js`, ...).
+  - `npm run build`: Hoàn thành 100% trong 1.24s (`3086 modules transformed`, `0 Error`).
+
+---
+
 ## [23/11/2026] - Khoan Sâu Danh Sách Học Sinh Yếu Theo Kỹ Năng, Lên Lịch Học Nhóm Phụ Đạo & Tự Chủ Giảng Viên (`TeacherDashboardView.jsx`, `ClassMicroGroupsModal.jsx`, `OfflineSessionPreparationModal.jsx`, `remedialSessionStore.js`)
 
 - **Tự Động Gom Nhóm Chuẩn Xác Theo Đúng Chuyên Đề Chỉ Định (Fix Lệch Chuyên Đề Gom Nhóm) ([`ClassMicroGroupsModal.jsx`](../src/components/modals/ClassMicroGroupsModal.jsx), [`practiceService.js`](../src/services/practiceService.js), [`tests/classMicroGroups.test.js`](../tests/classMicroGroups.test.js))**:

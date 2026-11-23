@@ -991,7 +991,9 @@ export default function TeacherDashboardView({ currentUser, onOpenAdaptiveQuiz, 
                           <span>
                             Chưa đạt:{' '}
                             <strong className="text-rose-600">
-                              {(Number(alert.strugglingRate || 0) * 100).toFixed(0)}% ({alert.strugglingCount || strugglingStudents.length} học sinh)
+                              {strugglingStudents.length > 0
+                                ? `${((strugglingStudents.length / (heatmap?.totalStudents || (heatmap?.rows || []).length || 1)) * 100).toFixed(0)}% (${strugglingStudents.length} học sinh)`
+                                : `${(Number(alert.strugglingRate || 0) * 100).toFixed(0)}% (${alert.strugglingCount || 0} học sinh)`}
                             </strong>
                           </span>
                         </div>
@@ -1007,7 +1009,7 @@ export default function TeacherDashboardView({ currentUser, onOpenAdaptiveQuiz, 
                           <span>
                             {isExpanded 
                               ? 'Thu gọn danh sách học sinh ▲' 
-                              : `Xem ${strugglingStudents.length || alert.strugglingCount} học sinh chưa đạt chuyên đề này ▼`}
+                              : `Xem ${strugglingStudents.length} học sinh chưa đạt chuyên đề này ▼`}
                           </span>
                         </button>
                       </div>

@@ -3335,4 +3335,19 @@ The Parent Companion Portal was completely redesigned and hardened according to 
       - Total test suite: 32/32 unit tests passed 100% (`node --test tests/*.test.js`).
       - Production build: `npm run build` completed in 1.27s with 3086 modules transformed and 0 errors.
 
+44. **Precision Remedial Candidate Filtering, Class-vs-Remedial Scope Toggle & Metric Harmonization (`ClassMicroGroupsModal.jsx`, `TeacherDashboardView.jsx`, `EarlyWarningsMentorPanel.jsx`, `rag-service/.env`, `tests/classMicroGroups.test.js`) [23/11/2026]**:
+    - **Architectural Motivation**:
+      - When instructors click "Tạo Nhóm Bồi Dưỡng" for a designated skill (such as "Giải quyết vấn đề Hóa học" with 4 struggling students), the system must strictly filter down to candidates needing remediation rather than coercing the entire class (7 students) into multiple remedial stations. Pulling non-struggling or unexamined students into remedial tables violates pedagogical zoning principles.
+      - Furthermore, the dashboard header alert ("Chưa đạt: 100% (7 học sinh)") was mathematically disjoint from the drill-down list ("Học sinh chưa đạt (4 em)") because backend aggregation defaulted unexamined students to 0.1 mastery.
+    - **Implementation Details**:
+      - *Targeted Candidate Roster Isolation*: In `ClassMicroGroupsModal.jsx`, `partitionStudentsForFocusSkill` checks `classData.targetStudentIds` and filters down to the exact subset of struggling candidates ($N = 4$). When $N \le 5$, creates exactly 1 micro-station (`GRP-FOCUS-01`) targeting only the 4 students, leaving other students unbothered.
+      - *Remedial Scope Switcher*: Added dual-scope toggle on the modal banner: `🎯 Chỉ [X] học sinh chưa đạt` (default) vs `👥 Cả lớp ([Y] học sinh)`, giving instructors complete autonomy to toggle between specialized remediation and whole-class differentiated instruction.
+      - *Metric Harmonization*: In `TeacherDashboardView.jsx`, updated calculation to prioritize actual struggling students count derived from student submissions (`strugglingStudents.length`), presenting a consistent `57% (4 học sinh)` aligned across both the summary card and the drill-down accordion.
+      - *Responsive Early Warning Strip Layout*: In `EarlyWarningsMentorPanel.jsx`, updated tier banner container with `w-full` and `flex-col sm:flex-row`, preventing pedagogical tier guidelines from collapsing into vertical single-word columns.
+      - *Supabase Pooler Transaction Port Configuration*: Switched `DATABASE_URL` in `rag-service/.env` from port `5432` (Session mode, max 15 clients) to port `6543` (Transaction mode), eliminating `EMAXCONNSESSION` pool exhaustion when running alongside .NET EF Core microservices.
+    - **Verification & Acceptance Metrics**:
+      - Verified with unit test `ClassMicroGroups - partitionStudentsForFocusSkill filters strictly to target struggling students` in `tests/classMicroGroups.test.js`.
+      - Unit test suite: 33/33 tests passed 100% (`node --test tests/*.test.js`).
+      - Production build: `npm run build` completed in 1.24s with 3086 modules transformed and 0 errors.
+
 

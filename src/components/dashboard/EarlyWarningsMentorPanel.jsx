@@ -603,14 +603,14 @@ export default function EarlyWarningsMentorPanel({
                   </p>
 
                   {/* Banner hướng dẫn phân cấp xử lý sư phạm */}
-                  <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 text-xs text-slate-600 flex flex-wrap items-center gap-2">
-                    <span className="px-2 py-0.5 rounded-md bg-slate-200 text-slate-800 text-[10px] font-extrabold uppercase">
+                  <div className="w-full p-3 rounded-xl bg-slate-50 border border-slate-200/80 text-xs text-slate-600 flex flex-col sm:flex-row sm:items-center gap-2">
+                    <span className="px-2 py-0.5 rounded-md bg-slate-200 text-slate-800 text-[10px] font-extrabold uppercase shrink-0 w-fit">
                       {meta.tierLabel || 'Phân cấp'}
                     </span>
-                    <span className="font-bold text-slate-900">
+                    <span className="font-bold text-slate-900 shrink-0">
                       {meta.handlerLabel}:
                     </span>
-                    <span className="text-slate-600">
+                    <span className="text-slate-600 flex-1 leading-relaxed">
                       {meta.handlerDesc}
                     </span>
                   </div>

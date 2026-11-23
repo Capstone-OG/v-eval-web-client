@@ -105,9 +105,32 @@ test('ClassMicroGroups - disambiguates duplicate student names with short ID suf
   assert.equal(formatStudentName(student3, studentInfo, nameFreq), 'Trần Ngọc Mai');
 });
 
-const partitionStudentsForFocusSkill = (focusSkill, skillId, rows = [], size = 4) => {
+const partitionStudentsForFocusSkill = (focusSkill, skillId, rows = [], size = 4, targetStudentIds = null, scope = 'STRUGGLING_ONLY') => {
   if (!rows || rows.length === 0) return [];
-  const studentList = rows.map((r) => {
+
+  let targetRows = rows;
+  if (scope === 'STRUGGLING_ONLY') {
+    if (Array.isArray(targetStudentIds) && targetStudentIds.length > 0) {
+      const targetIdSet = new Set(targetStudentIds.map(id => String(id).toLowerCase()));
+      const matched = rows.filter(r => {
+        const sId = r.studentId || r.StudentId || r.id;
+        return sId && targetIdSet.has(String(sId).toLowerCase());
+      });
+      if (matched.length > 0) targetRows = matched;
+    } else {
+      const struggling = rows.filter(r => {
+        if (!Array.isArray(r.skillCells)) return false;
+        const cell = r.skillCells.find(c =>
+          (skillId && String(c.skillId).toLowerCase() === String(skillId).toLowerCase()) ||
+          (c.skillName && c.skillName.trim().toLowerCase() === focusSkill.trim().toLowerCase())
+        );
+        return cell && cell.plt != null ? Number(cell.plt) < 0.5 : false;
+      });
+      if (struggling.length > 0) targetRows = struggling;
+    }
+  }
+
+  const studentList = targetRows.map((r) => {
     const sId = r.studentId || r.StudentId || r.id;
     const sName = r.studentName || r.StudentName || r.name;
     let skillPlt = null;
@@ -118,13 +141,24 @@ const partitionStudentsForFocusSkill = (focusSkill, skillId, rows = [], size = 4
       );
       if (cell && cell.plt != null) skillPlt = Number(cell.plt);
     }
-    if (skillPlt == null) skillPlt = r.overallMastery ?? 0.1;
+    if (skillPlt == null) skillPlt = r.overallMastery ?? 0.08;
     return { studentId: sId, id: sId, name: sName, mastery: skillPlt };
   });
 
   studentList.sort((a, b) => a.mastery - b.mastery);
   const n = studentList.length;
-  if (n < 3) return [];
+  if (n === 0) return [];
+  if (n <= 5) {
+    return [{
+      groupId: 'GRP-FOCUS-01',
+      groupName: `Nhóm 01 - Bàn trọng tâm: ${focusSkill}`,
+      focusArea: focusSkill,
+      memberCount: n,
+      members: studentList,
+      assignedWorksheetTitle: `Phiếu bài tập vi mô: 5 câu ${focusSkill}`
+    }];
+  }
+
   const minM = Math.ceil(n / 5);
   const maxM = Math.floor(n / 3);
   const targetSize = Math.max(3, Math.min(5, size));
@@ -153,6 +187,32 @@ const partitionStudentsForFocusSkill = (focusSkill, skillId, rows = [], size = 4
   }
   return nextGroups;
 };
+
+test('ClassMicroGroups - partitionStudentsForFocusSkill filters strictly to target struggling students', () => {
+  const rows = [
+    { studentId: 's1', studentName: 'Nguyễn Hoàng An', overallMastery: 0.5 }, // Did not take Chem or passed
+    { studentId: 's2', studentName: 'Trần Ngọc Mai', overallMastery: 0.5 },   // Did not take Chem or passed
+    { studentId: 's3', studentName: 'Phạm Tấn Lộc', skillCells: [{ skillName: 'Giải quyết vấn đề Hóa học', plt: 0.08 }] },
+    { studentId: 's4', studentName: 'Mai Thành Nhân', skillCells: [{ skillName: 'Giải quyết vấn đề Hóa học', plt: 0.08 }] },
+    { studentId: 's5', studentName: 'Trần Thái Thịnh', overallMastery: 0.27 }, // Passed or missing
+    { studentId: 's6', studentName: 'Lê Hoàng Long', skillCells: [{ skillName: 'Giải quyết vấn đề Hóa học', plt: 0.08 }] },
+    { studentId: 's7', studentName: 'Phạm Tấn Lộc 2', skillCells: [{ skillName: 'Giải quyết vấn đề Hóa học', plt: 0.08 }] }
+  ];
+
+  const focusSkill = 'Giải quyết vấn đề Hóa học';
+  const targetStudentIds = ['s3', 's4', 's6', 's7'];
+
+  // Only the 4 struggling students are partitioned into 1 remedial table
+  const groups = partitionStudentsForFocusSkill(focusSkill, 'sk-chem-01', rows, 4, targetStudentIds, 'STRUGGLING_ONLY');
+
+  assert.equal(groups.length, 1);
+  assert.equal(groups[0].memberCount, 4);
+  assert.equal(groups[0].groupName, 'Nhóm 01 - Bàn trọng tâm: Giải quyết vấn đề Hóa học');
+  assert.deepEqual(groups[0].members.map(m => m.studentId), ['s3', 's4', 's6', 's7']);
+
+  // Verify non-struggling students (s1, s2, s5) are NOT pulled into the remedial table
+  assert.equal(groups[0].members.some(m => ['s1', 's2', 's5'].includes(m.studentId)), false);
+});
 
 test('ClassMicroGroups - partitionStudentsForFocusSkill groups students by designated focus skill', () => {
   const rows = [
