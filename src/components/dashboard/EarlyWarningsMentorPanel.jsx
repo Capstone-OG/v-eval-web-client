@@ -598,13 +598,20 @@ export default function EarlyWarningsMentorPanel({
                     </div>
                   </div>
 
+                  <p className="text-xs text-slate-800 font-medium leading-relaxed">
+                    {alert.message}
+                  </p>
+
                   {/* Banner hướng dẫn phân cấp xử lý sư phạm */}
-                  <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                    <span className="text-slate-700 font-medium">
-                      <strong className="text-slate-900">{meta.handlerLabel || 'Phân công'}:</strong> {meta.handlerDesc || alert.message}
+                  <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 text-xs text-slate-600 flex flex-wrap items-center gap-2">
+                    <span className="px-2 py-0.5 rounded-md bg-slate-200 text-slate-800 text-[10px] font-extrabold uppercase">
+                      {meta.tierLabel || 'Phân cấp'}
                     </span>
-                    <span className="text-[11px] font-bold text-slate-500 whitespace-nowrap">
-                      {alert.message}
+                    <span className="font-bold text-slate-900">
+                      {meta.handlerLabel}:
+                    </span>
+                    <span className="text-slate-600">
+                      {meta.handlerDesc}
                     </span>
                   </div>
 
