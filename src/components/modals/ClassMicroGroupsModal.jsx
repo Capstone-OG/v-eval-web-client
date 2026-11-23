@@ -26,7 +26,8 @@ import { contentService } from '../../services/contentService';
 import { 
   getRemedialSessions, 
   saveRemedialSession, 
-  deleteRemedialSession 
+  deleteRemedialSession,
+  STANDARD_ACADEMIC_SLOTS
 } from '../../utils/remedialSessionStore';
 import { toast } from '../../context/ToastContext';
 
@@ -48,8 +49,12 @@ export default function ClassMicroGroupsModal({ isOpen, onClose, classData }) {
   const [schedulingGroup, setSchedulingGroup] = useState(null);
   const [scheduleForm, setScheduleForm] = useState({
     sessionDate: '',
-    timeSlot: '14:00 - 15:30',
+    slotNo: 3,
+    timeSlot: 'Slot 3: 13:00 - 15:00',
+    startTime: '13:00',
+    endTime: '15:00',
     format: 'OFFLINE',
+    room: 'Phòng phụ đạo vi mô P.204',
     notes: 'Ôn tập phương pháp giải & củng cố các câu hay làm sai'
   });
 
@@ -124,10 +129,21 @@ export default function ClassMicroGroupsModal({ isOpen, onClose, classData }) {
     const n = studentList.length;
     if (n === 0) return [];
 
+    // Tạo mã định danh duy nhất theo chuyên đề để không bao giờ bị đụng lịch giữa các chuyên đề khác nhau!
+    const skillSlug = (focusSkill || skillId || 'GEN')
+      .toLowerCase()
+      .replace(/[đĐ]/g, 'd')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '')
+      .slice(0, 24);
+
     // Nếu số lượng học sinh bồi dưỡng từ 1 đến 5 em: Xếp đúng 1 bàn học vi mô kèm riêng
     if (n <= 5) {
       return [{
-        groupId: 'GRP-FOCUS-01',
+        groupId: `GRP-${skillSlug}-01`,
         groupName: `Nhóm 01 - Bàn trọng tâm: ${focusSkill}`,
         focusArea: focusSkill,
         memberCount: n,
@@ -166,7 +182,7 @@ export default function ClassMicroGroupsModal({ isOpen, onClose, classData }) {
         : '';
 
       nextGroups.push({
-        groupId: `GRP-FOCUS-${i + 1}`,
+        groupId: `GRP-${skillSlug}-${groupNum}`,
         groupName: `Nhóm ${groupNum} - Bàn trọng tâm: ${focusSkill}${tierTag}`,
         focusArea: focusSkill,
         memberCount: members.length,
@@ -516,10 +532,17 @@ export default function ClassMicroGroupsModal({ isOpen, onClose, classData }) {
 
     const existing = scheduledSessions.find(s => s.groupId === group.groupId);
     setSchedulingGroup(group);
+
+    const defaultSlot = STANDARD_ACADEMIC_SLOTS[2]; // Slot 3: 13:00 - 15:00
+
     setScheduleForm({
       sessionDate: existing?.sessionDate || defaultDate,
-      timeSlot: existing?.timeSlot || '14:00 - 15:30',
+      slotNo: existing?.slotNo || defaultSlot.slot,
+      timeSlot: existing?.timeSlot || `${defaultSlot.label}: ${defaultSlot.timeRange}`,
+      startTime: existing?.startTime || defaultSlot.startTime,
+      endTime: existing?.endTime || defaultSlot.endTime,
       format: existing?.format || 'OFFLINE',
+      room: existing?.room || (existing?.format === 'ONLINE' ? 'Trực tuyến' : 'Phòng phụ đạo vi mô P.204'),
       notes: existing?.notes || `Bồi dưỡng chuyên đề: ${group.focusArea || classData.focusSkill || 'Kiến thức trọng tâm'}`
     });
   };
@@ -532,23 +555,39 @@ export default function ClassMicroGroupsModal({ isOpen, onClose, classData }) {
       return;
     }
 
+    const currentSlot = STANDARD_ACADEMIC_SLOTS.find(s => s.slot === scheduleForm.slotNo) || STANDARD_ACADEMIC_SLOTS[2];
+
     const payload = {
       groupId: schedulingGroup.groupId,
       groupName: schedulingGroup.groupName,
       topic: schedulingGroup.focusArea || classData.focusSkill || 'Củng cố kiến thức trọng tâm',
+      focusSkill: classData.focusSkill || schedulingGroup.focusArea,
+      focusSkillId: classData.focusSkillId,
       sessionDate: scheduleForm.sessionDate,
-      timeSlot: scheduleForm.timeSlot,
+      slotNo: currentSlot.slot,
+      timeSlot: `${currentSlot.label}: ${currentSlot.timeRange}`,
+      startTime: currentSlot.startTime,
+      endTime: currentSlot.endTime,
       format: scheduleForm.format,
+      room: scheduleForm.format === 'ONLINE' ? 'Trực tuyến (Google Meet / Zoom)' : (scheduleForm.room || 'Phòng phụ đạo vi mô P.204'),
       studentCount: (schedulingGroup.members || []).length,
+      members: (schedulingGroup.members || []).map(m => ({
+        studentId: m.studentId || m.id,
+        name: m.name,
+        mastery: m.mastery
+      })),
+      className: classData.name,
+      teacherName: classData.assignedTeacher || 'Giảng viên phụ trách',
+      isRemedial: true,
       notes: scheduleForm.notes
     };
 
     const saved = saveRemedialSession(classData.id, payload);
     if (saved) {
       setScheduledSessions(getRemedialSessions(classData.id));
-      setSuccessNotice(`Đã lên lịch phụ đạo ngày ${saved.sessionDate} (${saved.timeSlot}) cho ${schedulingGroup.groupName}!`);
+      setSuccessNotice(`Đã lên lịch phụ đạo ${currentSlot.label} (${currentSlot.timeRange}) ngày ${saved.sessionDate} cho ${schedulingGroup.groupName}!`);
       setTimeout(() => setSuccessNotice(''), 6000);
-      toast.success('Đã lưu lịch học nhóm phụ đạo thành công!');
+      toast.success(`Đã lưu lịch phụ đạo (${currentSlot.label}) và đồng bộ sang Thời Khóa Biểu!`);
       setSchedulingGroup(null);
     }
   };
@@ -1093,35 +1132,37 @@ export default function ClassMicroGroupsModal({ isOpen, onClose, classData }) {
 
               <div>
                 <label className="font-bold text-slate-700 block mb-1">
-                  Khung giờ / Ca học:
+                  Chọn Ca học (Khung 6 Slot chuẩn của Thời Khóa Biểu):
                 </label>
-                <div className="grid grid-cols-3 gap-1.5 mb-1.5">
-                  {[
-                    '08:00 - 09:30',
-                    '14:00 - 15:30',
-                    '18:00 - 19:30'
-                  ].map((slot) => (
-                    <button
-                      key={slot}
-                      type="button"
-                      onClick={() => setScheduleForm(prev => ({ ...prev, timeSlot: slot }))}
-                      className={`py-1.5 px-2 rounded-lg text-[11px] font-bold border transition-all cursor-pointer ${
-                        scheduleForm.timeSlot === slot
-                          ? 'border-indigo-600 bg-indigo-50 text-indigo-700'
-                          : 'border-slate-200 text-slate-600 hover:bg-slate-50'
-                      }`}
-                    >
-                      {slot}
-                    </button>
-                  ))}
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-1.5">
+                  {STANDARD_ACADEMIC_SLOTS.map((slotObj) => {
+                    const isSelected = scheduleForm.slotNo === slotObj.slot;
+                    return (
+                      <button
+                        key={slotObj.slot}
+                        type="button"
+                        onClick={() => setScheduleForm(prev => ({
+                          ...prev,
+                          slotNo: slotObj.slot,
+                          timeSlot: `${slotObj.label}: ${slotObj.timeRange}`,
+                          startTime: slotObj.startTime,
+                          endTime: slotObj.endTime
+                        }))}
+                        className={`p-2 rounded-xl text-left border transition-all cursor-pointer ${
+                          isSelected
+                            ? 'border-indigo-600 bg-indigo-50 text-indigo-900 ring-2 ring-indigo-500/20 shadow-xs'
+                            : 'border-slate-200 text-slate-700 hover:bg-slate-50'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-extrabold text-xs">{slotObj.label}</span>
+                          <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 font-bold">{slotObj.period}</span>
+                        </div>
+                        <div className="text-[11px] font-mono font-medium text-slate-600 mt-0.5">{slotObj.timeRange}</div>
+                      </button>
+                    );
+                  })}
                 </div>
-                <input
-                  type="text"
-                  placeholder="Hoặc nhập giờ tùy chỉnh (VD: 15:45 - 17:00)..."
-                  value={scheduleForm.timeSlot}
-                  onChange={(e) => setScheduleForm(prev => ({ ...prev, timeSlot: e.target.value }))}
-                  className="w-full p-2 rounded-xl border border-slate-300 focus:border-indigo-500 text-xs font-medium text-slate-800"
-                />
               </div>
 
               <div>

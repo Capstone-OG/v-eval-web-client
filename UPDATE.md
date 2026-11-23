@@ -1,17 +1,20 @@
 # UPDATE - V-EVAL WEB CLIENT
 
 ## [23/11/2026]
-- **Lọc Chuẩn Xác Đối Tượng Học Sinh Bồi Dưỡng Chuyên Đề & Cơ Chế Chuyển Đổi Phạm Vi (`ClassMicroGroupsModal.jsx`, `tests/classMicroGroups.test.js`)**:
-  - Khắc phục triệt để hiện tượng cả lớp 7 học sinh bị kéo vào nhóm bồi dưỡng Hóa học dù chỉ có 4 bạn chưa đạt: hàm `partitionStudentsForFocusSkill` ưu tiên lọc chuẩn xác theo `targetStudentIds` (học sinh có điểm bài làm < 50%).
-  - Khi sĩ số cần bồi dưỡng $\le 5$ bạn (4 bạn), hệ thống tự động tạo đúng **1 bàn học vi mô kèm riêng (4 bạn)** với trọng tâm chuyên đề "Giải quyết vấn đề Hóa học", không kéo các bạn khác vào bàn.
-  - Tích hợp bộ chuyển đổi phạm vi linh hoạt trên banner chuyên đề: `🎯 Chỉ [X] học sinh chưa đạt` (mặc định) và `👥 Cả lớp ([Y] học sinh)`, trao toàn quyền tự chủ cho Giảng viên.
-  - Bổ sung test case `ClassMicroGroups - partitionStudentsForFocusSkill filters strictly to target struggling students` (33/33 tests passed 100%).
-- **Đồng Bộ Số Liệu Thống Kê Cảnh Báo Sư Phạm (`TeacherDashboardView.jsx`)**:
-  - Đồng bộ con số hiển thị giữa thẻ tóm tắt và danh sách khoan sâu: ưu tiên tính tỷ lệ chưa đạt theo số lượng học sinh thực tế làm bài bị điểm < 50% (`57% (4 học sinh)`), triệt tiêu sự mâu thuẫn hiển thị `100% (7 học sinh)`.
-- **Sửa Lỗi Tràn Layout & Co Hẹp Dải Phân Cấp Sư Phạm (`EarlyWarningsMentorPanel.jsx`)**:
-  - Cải tiến container dải phân cấp sư phạm với `w-full` và `flex-col sm:flex-row`, đảm bảo mô tả hướng dẫn hiển thị giãn dòng tự nhiên (`leading-relaxed`), chống bóp nghẹt thành cột hẹp.
-- **Cấu Hình Supabase Transaction Mode Pooler Cho RAG Service (`All Services/V-Eval-Ai_Engine/rag-service/.env`)**:
-  - Chuyển đổi cổng `DATABASE_URL` từ `5432` sang `6543`, giải quyết triệt để lỗi `FATAL: (EMAXCONNSESSION) max clients reached in session mode - max clients are limited to pool_size: 15`.
+- **Cô Lập Hoàn Toàn Lịch Học Nhóm Phụ Đạo Giữa Các Chuyên Đề Khác Nhau (`ClassMicroGroupsModal.jsx`, `remedialSessionStore.js`, `tests/classMicroGroups.test.js`, `tests/remedialSessionStore.test.js`)**:
+  - Khắc phục triệt để lỗi xung đột và rò rỉ lịch phụ đạo: trước đây khi lên lịch cho chuyên đề Hóa học, chuyên đề Sinh học cũng bị dính lịch tương tự do cả hai đều dùng chung mã nhóm `GRP-FOCUS-01`.
+  - Chuẩn hóa chuỗi slug tiếng Việt (`skillSlug`) từ tên chuyên đề để tạo mã nhóm định danh riêng biệt `GRP-${skillSlug}-01` (ví dụ: `GRP-giai-quyet-van-de-h-01` tách biệt tuyệt đối với `GRP-dang-1-co-che-sinh-h-01`).
+  - Đảm bảo dữ liệu lịch phụ đạo lưu trữ trong Local Storage được cô lập 100% theo từng chuyên đề kỹ năng, không bao giờ bị ghi đè hay hiển thị chéo.
+- **Chuẩn Hóa Khung 6 Slot Thời Khóa Biểu Đồng Bộ Hệ Thống (`ClassMicroGroupsModal.jsx`, `remedialSessionStore.js`)**:
+  - Khai báo bộ hằng số `STANDARD_ACADEMIC_SLOTS` đồng bộ với 6 ca học chuẩn của trung tâm: Slot 1 (07:30–09:30), Slot 2 (09:45–11:45), Slot 3 (13:00–15:00), Slot 4 (15:15–17:15), Slot 5 (18:00–20:00), Slot 6 (20:15–22:30).
+  - Thay thế các nút ca học tự do bằng lưới chọn 6 Slot học chuẩn (3x2), tự động điền `startTime`, `endTime`, `slotNo` và gợi ý phòng phụ đạo P.204.
+- **Đồng Bộ Hai Chiều & Hiển Thị Thẻ Phụ Đạo Chuyên Biệt Trên Thời Khóa Biểu Giảng Viên (`TeacherScheduleView.jsx`)**:
+  - Hàm `loadSchedule` tự động nạp các ca phụ đạo từ `remedialSessionStore` (hỗ trợ xem theo từng lớp hoặc toàn trường `ALL`), ánh xạ chính xác vào ngày học và slot tương ứng.
+  - Tích hợp event listener phản ứng tức thời (`veval:remedial-session-scheduled`, `veval:remedial-session-deleted`), tự động cập nhật thời khóa biểu ngay khi Giảng viên tạo hoặc hủy lịch mà không cần tải lại trang.
+  - Thiết kế thẻ phụ đạo màu tím Pastel nổi bật với huy hiệu `⚡ Phụ đạo vi mô`, hiển thị chuyên đề, lớp, nhóm bàn, giờ học, phòng học, hình thức (Live Q&A / Tại lớp) và nút truy cập nhanh nhóm phụ đạo ở cả 2 chế độ Weekly Grid và Agenda View.
+- **Lọc Chuẩn Xác Đối Tượng Học Sinh Bồi Dưỡng Chuyên Đề & Ngăn Ngừa Gom Cả Lớp (`ClassMicroGroupsModal.jsx`, `TeacherDashboardView.jsx`)**:
+  - Lọc chuẩn xác theo học sinh thực tế chưa đạt (< 50%) thay vì kéo cả lớp; với 4 học sinh chưa đạt tự động tạo đúng 1 bàn bồi dưỡng 4 bạn; tích hợp nút chuyển đổi phạm vi `🎯 Chỉ học sinh chưa đạt` vs `👥 Cả lớp`.
+  - Đồng bộ số liệu hiển thị cảnh báo sư phạm ngoài danh sách (`57% (4 học sinh)`), triệt tiêu mâu thuẫn số liệu.
 - **Kiểm Thử & Biên Dịch**:
-  - 33/33 unit tests passed 100%.
-  - `npm run build`: Hoàn thành 100% trong 1.24s, 3086 modules transformed, 0 lỗi.
+  - 36/36 unit tests passed 100% (`tests/classMicroGroups.test.js`, `tests/remedialSessionStore.test.js`, ...).
+  - `npm run build`: Hoàn thành 100% trong 1.13s (`3086 modules transformed`, `0 Error`).

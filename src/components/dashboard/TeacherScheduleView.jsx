@@ -30,6 +30,7 @@ import { practiceService } from '../../services/practiceService';
 import ClassMicroGroupsModal from '../modals/ClassMicroGroupsModal';
 import OfflineSessionPreparationModal from '../modals/OfflineSessionPreparationModal';
 import { getOfflineSessionPlan } from '../../utils/offlineSessionStore';
+import { getRemedialSessions, getAllRemedialSessions } from '../../utils/remedialSessionStore';
 import { toast } from '../../context/ToastContext';
 
 const ATTENDANCE_BADGE_MAP = {
@@ -161,28 +162,54 @@ export default function TeacherScheduleView({ currentUser }) {
     return () => { active = false; };
   }, []);
 
-  // 2. Load Teacher Schedule
+  // 2. Load Teacher Schedule (Kết hợp lịch chính khóa & các buổi phụ đạo nhóm vi mô đã lên)
   const loadSchedule = useCallback(async () => {
     setLoading(true);
     try {
+      // Nạp các buổi phụ đạo vi mô từ remedialSessionStore
+      const remedialList = selectedClassId && selectedClassId !== 'ALL'
+        ? getRemedialSessions(selectedClassId)
+        : getAllRemedialSessions();
+
+      const mappedRemedial = remedialList.map((rs) => ({
+        sessionId: rs.id || `RS-${rs.groupId}`,
+        id: rs.id || `RS-${rs.groupId}`,
+        sessionNo: 'Phụ đạo',
+        sessionDate: rs.sessionDate,
+        slotNo: rs.slotNo || getSessionSlot({ startTime: rs.startTime || rs.timeSlot?.split(' - ')[0] }),
+        startTime: rs.startTime || '13:00',
+        endTime: rs.endTime || '15:00',
+        className: rs.className || (classesList.find(c => (c.classId || c.id) === rs.classId)?.name) || 'Lớp phụ trách',
+        classId: rs.classId,
+        topicTitle: `Phụ đạo: ${rs.topic || rs.focusSkill || 'Bồi dưỡng chuyên đề'}`,
+        skillName: rs.focusSkill || rs.topic || 'Bồi dưỡng chuyên đề',
+        room: rs.room || (rs.format === 'ONLINE' ? 'Trực tuyến (Live Q&A)' : 'Phòng phụ đạo P.204'),
+        deliveryMode: rs.format === 'ONLINE' ? 'ONLINE' : 'OFFLINE',
+        sessionStatus: 'SCHEDULED',
+        isRemedial: true,
+        groupId: rs.groupId,
+        groupName: rs.groupName,
+        enrolledStudentsCount: rs.studentCount || (rs.members || []).length || 0,
+        totalStudentsCount: rs.studentCount || (rs.members || []).length || 0,
+        presentCount: 0,
+        absentCount: 0,
+        lateCount: 0,
+        primaryTeacherName: rs.teacherName || currentUser?.fullName || currentUser?.name || 'Giảng viên phụ trách',
+        notes: rs.notes
+      }));
+
+      let regularSessions = [];
+
       if (selectedClassId && selectedClassId !== 'ALL') {
         const classSessions = await practiceService.getClassSessions(selectedClassId);
         const list = Array.isArray(classSessions) ? classSessions : [];
         const currentClass = classesList.find((c) => (c.classId || c.id) === selectedClassId);
-        setScheduleData({
-          totalAssignedClasses: 1,
-          totalSessionsInView: list.length,
-          completedSessionsCount: list.filter((s) => (s.sessionStatus || s.status) === 'COMPLETED').length,
-          substituteSessionsCount: list.filter((s) => s.isSubstituteTeacher).length,
-          upcomingSessionsCount: list.filter((s) => (s.sessionStatus || s.status) !== 'COMPLETED').length,
-          availableTerms: [],
-          sessions: list.map((s) => ({
-            ...s,
-            className: s.className || currentClass?.name || 'Lớp học',
-            sessionStatus: s.sessionStatus || s.status || 'SCHEDULED',
-            enrolledStudentsCount: s.enrolledStudentsCount ?? s.totalStudentsCount ?? 0
-          }))
-        });
+        regularSessions = list.map((s) => ({
+          ...s,
+          className: s.className || currentClass?.name || 'Lớp học',
+          sessionStatus: s.sessionStatus || s.status || 'SCHEDULED',
+          enrolledStudentsCount: s.enrolledStudentsCount ?? s.totalStudentsCount ?? 0
+        }));
       } else {
         const data = await practiceService.getTeacherSchedule({
           teacherId,
@@ -190,14 +217,11 @@ export default function TeacherScheduleView({ currentUser }) {
         });
 
         if (data?.sessions && data.sessions.length > 0) {
-          setScheduleData({
-            ...data,
-            sessions: data.sessions.map((s) => ({
-              ...s,
-              sessionStatus: s.sessionStatus || s.status || 'SCHEDULED',
-              enrolledStudentsCount: s.enrolledStudentsCount ?? s.totalStudentsCount ?? 0
-            }))
-          });
+          regularSessions = data.sessions.map((s) => ({
+            ...s,
+            sessionStatus: s.sessionStatus || s.status || 'SCHEDULED',
+            enrolledStudentsCount: s.enrolledStudentsCount ?? s.totalStudentsCount ?? 0
+          }));
         } else {
           // If teacher has no directly mapped sessions, aggregate sessions from the active classes
           const allClasses = await practiceService.getClasses();
@@ -222,18 +246,20 @@ export default function TeacherScheduleView({ currentUser }) {
               // skip
             }
           }
-
-          setScheduleData({
-            totalAssignedClasses: validClasses.length,
-            totalSessionsInView: aggregatedSessions.length,
-            completedSessionsCount: aggregatedSessions.filter((s) => (s.sessionStatus || s.status) === 'COMPLETED').length,
-            substituteSessionsCount: aggregatedSessions.filter((s) => s.isSubstituteTeacher).length,
-            upcomingSessionsCount: aggregatedSessions.filter((s) => (s.sessionStatus || s.status) !== 'COMPLETED').length,
-            availableTerms: [],
-            sessions: aggregatedSessions
-          });
+          regularSessions = aggregatedSessions;
         }
       }
+
+      const combined = [...regularSessions, ...mappedRemedial];
+      setScheduleData({
+        totalAssignedClasses: classesList.length || 1,
+        totalSessionsInView: combined.length,
+        completedSessionsCount: combined.filter((s) => (s.sessionStatus || s.status) === 'COMPLETED').length,
+        substituteSessionsCount: combined.filter((s) => s.isSubstituteTeacher).length,
+        upcomingSessionsCount: combined.filter((s) => (s.sessionStatus || s.status) !== 'COMPLETED').length,
+        availableTerms: [],
+        sessions: combined
+      });
     } catch (err) {
       console.warn('[TeacherScheduleView] Error loading teacher schedule:', err.message);
       setScheduleData({
@@ -249,10 +275,23 @@ export default function TeacherScheduleView({ currentUser }) {
     } finally {
       setLoading(false);
     }
-  }, [teacherId, selectedClassId, selectedTermId, classesList]);
+  }, [teacherId, selectedClassId, selectedTermId, classesList, currentUser]);
 
   useEffect(() => {
     loadSchedule();
+  }, [loadSchedule]);
+
+  // Đồng bộ tức thời khi có lịch phụ đạo mới được lên hoặc bị xóa từ ClassMicroGroupsModal
+  useEffect(() => {
+    const handleRemedialChange = () => {
+      loadSchedule();
+    };
+    window.addEventListener('veval:remedial-session-scheduled', handleRemedialChange);
+    window.addEventListener('veval:remedial-session-deleted', handleRemedialChange);
+    return () => {
+      window.removeEventListener('veval:remedial-session-scheduled', handleRemedialChange);
+      window.removeEventListener('veval:remedial-session-deleted', handleRemedialChange);
+    };
   }, [loadSchedule]);
 
   // Filtered Sessions
@@ -760,6 +799,78 @@ export default function TeacherScheduleView({ currentUser }) {
                             /* Sessions Cell: Structured Card like in Image 2 */
                             <div className="space-y-2">
                               {cellSessions.map((s) => {
+                                if (s.isRemedial) {
+                                  return (
+                                    <div
+                                      key={s.sessionId}
+                                      className="p-3 rounded-xl bg-purple-50/90 border border-purple-200 hover:border-purple-400 hover:shadow-md transition-all space-y-2 text-xs relative overflow-hidden"
+                                    >
+                                      {/* Header: Badge & Group */}
+                                      <div className="space-y-1">
+                                        <div className="flex items-start justify-between gap-1.5">
+                                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 text-[10px] font-black border border-purple-200">
+                                            <Sparkles className="w-3 h-3 text-purple-600 shrink-0" />
+                                            <span>Phụ đạo vi mô</span>
+                                          </span>
+                                          <span className="text-[10px] font-bold text-purple-700 bg-white/90 px-1.5 py-0.5 rounded border border-purple-100">
+                                            {s.enrolledStudentsCount || s.totalStudentsCount || 0} HS
+                                          </span>
+                                        </div>
+
+                                        <div
+                                          className="font-black text-xs text-purple-950 line-clamp-2 leading-tight pt-0.5"
+                                          title={s.topicTitle || s.skillName}
+                                        >
+                                          {s.topicTitle || s.skillName}
+                                        </div>
+
+                                        <div className="text-[10px] font-semibold text-purple-700 truncate">
+                                          {s.className} • {s.groupName || 'Nhóm học tập'}
+                                        </div>
+                                      </div>
+
+                                      {/* Time & Room & Mode */}
+                                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-purple-900 bg-white/70 p-1.5 rounded-lg border border-purple-100">
+                                        <span className="flex items-center gap-1 font-bold">
+                                          <Clock className="w-3 h-3 text-purple-600" />
+                                          <span>
+                                            {String(s.startTime).slice(0, 5)} - {String(s.endTime).slice(0, 5)}
+                                          </span>
+                                        </span>
+                                        <span className="flex items-center gap-1 font-semibold truncate max-w-[120px]" title={s.room}>
+                                          <MapPin className="w-3 h-3 text-purple-500 shrink-0" />
+                                          <span className="truncate">{s.room || 'Phòng P.204'}</span>
+                                        </span>
+                                        <span className={`px-1.5 py-0.2 rounded text-[9px] font-black uppercase ${
+                                          s.deliveryMode === 'ONLINE' ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'
+                                        }`}>
+                                          {s.deliveryMode === 'ONLINE' ? 'Live Q&A' : 'Tại lớp'}
+                                        </span>
+                                      </div>
+
+                                      {/* Teacher info */}
+                                      <div className="flex items-center gap-1 text-[10px] text-slate-600">
+                                        <UserCheck className="w-3 h-3 text-purple-500 shrink-0" />
+                                        <span className="font-semibold truncate">
+                                          {s.primaryTeacherName || 'Thầy/Cô phụ trách'}
+                                        </span>
+                                      </div>
+
+                                      {/* Action: Open Micro-groups modal */}
+                                      <div className="pt-1">
+                                        <button
+                                          type="button"
+                                          onClick={() => handleOpenMicroGroups(s)}
+                                          className="w-full py-1.5 px-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-bold text-[11px] flex items-center justify-center gap-1 transition-all cursor-pointer shadow-xs"
+                                        >
+                                          <Users className="w-3 h-3" />
+                                          <span>Xem nhóm phụ đạo</span>
+                                        </button>
+                                      </div>
+                                    </div>
+                                  );
+                                }
+
                                 const hasAttendance = s.presentCount > 0 || s.absentCount > 0 || s.lateCount > 0;
                                 const studentCount = s.enrolledStudentsCount ?? s.totalStudentsCount ?? 0;
                                 const attendancePct =
@@ -929,6 +1040,79 @@ export default function TeacherScheduleView({ currentUser }) {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5">
                   {sessions.map((s) => {
+                    if (s.isRemedial) {
+                      return (
+                        <div
+                          key={s.sessionId}
+                          className="p-4 rounded-2xl bg-purple-50/80 border border-purple-200 hover:border-purple-300 hover:shadow-md transition-all flex flex-col justify-between gap-4"
+                        >
+                          <div className="space-y-2.5">
+                            {/* Time & Room & Mode */}
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-purple-100 border border-purple-200 text-purple-900 text-xs font-black">
+                                <Clock className="w-3.5 h-3.5 text-purple-600" />
+                                <span>
+                                  {String(s.startTime).slice(0, 5)} - {String(s.endTime).slice(0, 5)}
+                                </span>
+                              </span>
+
+                              <span className="inline-flex items-center gap-1 text-xs font-extrabold text-purple-800 bg-white px-2.5 py-1 rounded-xl border border-purple-100">
+                                <MapPin className="w-3.5 h-3.5 text-purple-500" />
+                                <span>{s.room || 'Phòng P.204'}</span>
+                              </span>
+                            </div>
+
+                            {/* Title & Class */}
+                            <div>
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-purple-200 text-purple-800">
+                                  ⚡ Phụ đạo vi mô
+                                </span>
+                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                  s.deliveryMode === 'ONLINE' ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'
+                                }`}>
+                                  {s.deliveryMode === 'ONLINE' ? 'Trực tuyến (Live Q&A)' : 'Tại lớp học'}
+                                </span>
+                              </div>
+                              <div className="font-black text-sm text-purple-950 line-clamp-1">
+                                {s.topicTitle || s.skillName}
+                              </div>
+                              <div className="text-[11px] text-purple-700 font-semibold line-clamp-1">
+                                {s.className} • {s.groupName || 'Nhóm học tập 3–5 em'}
+                              </div>
+                            </div>
+
+                            {/* Student List preview */}
+                            <div className="p-2.5 rounded-xl bg-white border border-purple-100 space-y-1.5">
+                              <div className="flex items-center justify-between text-[11px]">
+                                <span className="font-bold text-purple-900 flex items-center gap-1.5">
+                                  <Users className="w-3.5 h-3.5 text-purple-600" />
+                                  <span>Thành viên nhóm ({s.enrolledStudentsCount || s.students?.length || 0} em):</span>
+                                </span>
+                              </div>
+                              <div className="text-[11px] font-medium text-slate-700 line-clamp-2">
+                                {Array.isArray(s.students) && s.students.length > 0
+                                  ? s.students.map((st) => st.name || st.studentName || 'Học sinh').join(', ')
+                                  : 'Đã phân nhóm theo năng lực chuyên đề'}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Actions */}
+                          <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-purple-100">
+                            <button
+                              type="button"
+                              onClick={() => handleOpenMicroGroups(s)}
+                              className="flex-1 py-2 px-3 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-black text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
+                            >
+                              <Users className="w-3.5 h-3.5" />
+                              <span>Quản lý sơ đồ nhóm</span>
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    }
+
                     const hasAttendance = s.presentCount > 0 || s.absentCount > 0 || s.lateCount > 0;
                     const studentCount = s.enrolledStudentsCount ?? s.totalStudentsCount ?? 0;
                     const attendancePct =

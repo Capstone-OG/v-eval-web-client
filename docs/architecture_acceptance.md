@@ -3350,4 +3350,20 @@ The Parent Companion Portal was completely redesigned and hardened according to 
       - Unit test suite: 33/33 tests passed 100% (`node --test tests/*.test.js`).
       - Production build: `npm run build` completed in 1.24s with 3086 modules transformed and 0 errors.
 
+45. **Remedial Schedule Isolation Across Focus Skills, Standard 6-Slot Timetable Harmonization & Bi-directional Reactive Calendar Sync (`ClassMicroGroupsModal.jsx`, `TeacherScheduleView.jsx`, `remedialSessionStore.js`, `tests/remedialSessionStore.test.js`, `tests/classMicroGroups.test.js`) [23/11/2026]**:
+    - **Architectural Motivation**:
+      - When scheduling remedial sessions across multiple focus skills (e.g. "Giải quyết vấn đề Hóa học" vs "Dạng 1: Cơ chế sinh học trọng tâm"), generic station IDs (`GRP-FOCUS-01`) previously resulted in namespace collision in persistent local storage. Consequently, setting an offline remedial date and ca for Chemistry erroneously leaked and appeared as the active schedule for Biology.
+      - Furthermore, arbitrary unstructured time strings (such as "14:00 - 15:30") clashed with the institution's official 6-slot timetable grid. Pedagogical remedial sessions must align with the standardized academic slot periods (Slot 1–6) and immediately project into the Instructor Timetable (`TeacherScheduleView.jsx`) with dedicated visual differentiation without requiring manual page reload.
+    - **Implementation Details**:
+      - *Deterministic Skill-Slug Namespacing*: In `ClassMicroGroupsModal.jsx`, sanitizes Vietnamese skill names (`replace(/[đĐ]/g, 'd')`, Unicode NFD normalization, hyphen cleanup) to generate unique station IDs: `GRP-${skillSlug}-01` (e.g. `GRP-giai-quyet-van-de-h-01` strictly isolated from `GRP-dang-1-co-che-sinh-h-01`). This eliminates cross-skill data collisions.
+      - *Standard 6-Slot Timetable Harmonization*: Defined `STANDARD_ACADEMIC_SLOTS` in `remedialSessionStore.js` with exact time ranges and periods (Slot 1: 07:30–09:30, Slot 2: 09:45–11:45, Slot 3: 13:00–15:00, Slot 4: 15:15–17:15, Slot 5: 18:00–20:00, Slot 6: 20:15–22:30). Replaced freeform buttons in `ClassMicroGroupsModal.jsx` with an interactive 3x2 academic slot grid that binds explicit `slotNo`, `startTime`, and `endTime`.
+      - *Bi-directional Reactive Timetable Projection*: In `TeacherScheduleView.jsx`, `loadSchedule` dynamically queries all remedial sessions (`getAllRemedialSessions`) and merges them into the weekly matrix based on date and `slotNo`. Added real-time CustomEvent listeners for `veval:remedial-session-scheduled` and `veval:remedial-session-deleted`.
+      - *Dedicated Pastel Purple Remedial Card UI*:
+        - *Weekly Timetable Grid Mode*: Renders high-visibility pastel purple cards with a `⚡ Phụ đạo vi mô` badge, focus skill topic, class/station name, enrolled student count, exact slot time range, room, online/offline mode badge, and a direct 1-click CTA `Xem nhóm phụ đạo`.
+        - *Agenda / Timeline Mode*: Extends card with detailed participating student rosters and direct access to micro-group station layouts.
+    - **Verification & Acceptance Metrics**:
+      - Unit test suite: Added 3 new test cases verifying `STANDARD_ACADEMIC_SLOTS`, cross-class aggregation `getAllRemedialSessions`, and schedule collision prevention between Chemistry and Biology; 36/36 tests passed 100% (`node --test tests/*.test.js`).
+      - Production build: `npm run build` completed in 1.13s with 3086 modules transformed and 0 errors.
+
+
 

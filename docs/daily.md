@@ -2,6 +2,33 @@
 
 ---
 
+## [23/11/2026] - Cô Lập Lịch Học Nhóm Phụ Đạo Theo Chuyên Đề, Chuẩn Hóa Khung 6 Slot & Đồng Bộ Thời Khóa Biểu Giảng Viên (`ClassMicroGroupsModal.jsx`, `TeacherScheduleView.jsx`, `remedialSessionStore.js`, `tests/remedialSessionStore.test.js`, `tests/classMicroGroups.test.js`)
+
+- **Cô Lập Hoàn Toàn Lịch Phụ Đạo Giữa Các Chuyên Đề Khác Nhau ([`ClassMicroGroupsModal.jsx`](../src/components/modals/ClassMicroGroupsModal.jsx), [`remedialSessionStore.js`](../src/utils/remedialSessionStore.js), [`tests/remedialSessionStore.test.js`](../tests/remedialSessionStore.test.js), [`tests/classMicroGroups.test.js`](../tests/classMicroGroups.test.js))**:
+  - *Xử lý triệt để xung đột lịch giữa các nhóm bồi dưỡng*: Trước đây khi lên lịch phụ đạo cho chuyên đề "Giải quyết vấn đề Hóa học", lịch lại bị hiển thị chéo sang chuyên đề "Dạng 1: Cơ chế sinh học trọng tâm" do cả 2 nhóm đều tạo mã nhóm chung chung `GRP-FOCUS-01`.
+  - *Không gian định danh slug độc lập (`skillSlug`)*: Chuẩn hóa chuỗi slug tiếng Việt (`replace(/[đĐ]/g, 'd')`, khử dấu Unicode NFD, chuẩn hóa ký tự gạch nối) để tạo mã nhóm độc lập theo từng chuyên đề: `GRP-${skillSlug}-01` (ví dụ: `GRP-giai-quyet-van-de-h-01` tách biệt tuyệt đối với `GRP-dang-1-co-che-sinh-h-01`).
+  - *Ngăn chặn ghi đè lịch*: Khi mở modal bồi dưỡng cho từng chuyên đề, hệ thống chỉ tra cứu và tải đúng lịch phụ đạo của chuyên đề đó, chấm dứt 100% tình trạng lịch nhóm này bị dính sang nhóm khác.
+- **Chuẩn Hóa Khung 6 Slot Học Trùng Khớp Thời Khóa Biểu Trung Tâm ([`ClassMicroGroupsModal.jsx`](../src/components/modals/ClassMicroGroupsModal.jsx), [`remedialSessionStore.js`](../src/utils/remedialSessionStore.js))**:
+  - *Khai báo bộ hằng số `STANDARD_ACADEMIC_SLOTS`*: Tích hợp đầy đủ 6 ca học chuẩn của trung tâm:
+    - **Slot 1**: 07:30 - 09:30 (Sáng)
+    - **Slot 2**: 09:45 - 11:45 (Sáng)
+    - **Slot 3**: 13:00 - 15:00 (Chiều)
+    - **Slot 4**: 15:15 - 17:15 (Chiều)
+    - **Slot 5**: 18:00 - 20:00 (Tối)
+    - **Slot 6**: 20:15 - 22:30 (Tối)
+  - *Giao diện chọn slot trực quan*: Thay thế bộ nút ca học cũ bằng lưới chọn 6 Slot học chuẩn (3x2), tự động điền `startTime`, `endTime`, `slotNo` và gợi ý phòng phụ đạo vi mô P.204.
+- **Đồng Bộ Hai Chiều & Hiển Thị Thẻ Phụ Đạo Trên Thời Khóa Biểu Giảng Viên ([`TeacherScheduleView.jsx`](../src/components/dashboard/TeacherScheduleView.jsx))**:
+  - *Nạp và hòa trộn lịch phụ đạo*: Hàm `loadSchedule` tự động nạp các ca phụ đạo từ `remedialSessionStore` (hỗ trợ lọc theo từng lớp hoặc xem toàn bộ `ALL`), gán đúng ngày và slot vào lưới thời khóa biểu.
+  - *Lắng nghe sự kiện đồng bộ tức thời*: Đăng ký event listener `veval:remedial-session-scheduled` và `veval:remedial-session-deleted`, tự động cập nhật ngay trên giao diện thời khóa biểu khi Giảng viên tạo hoặc hủy lịch mà không cần tải lại trang.
+  - *Thiết kế thẻ phụ đạo chuyên biệt (Màu tím Pastel sang trọng)*:
+    - **Chế độ Lưới Tuần (Weekly Grid View)**: Thẻ phụ đạo màu tím với huy hiệu `⚡ Phụ đạo vi mô`, hiển thị tên chuyên đề trọng tâm, lớp học, tên nhóm bàn, khung giờ, phòng học, hình thức (Live Q&A / Tại lớp) và nút xem nhanh nhóm phụ đạo.
+    - **Chế độ Danh Sách / Dòng Thời Gian (Agenda View)**: Thẻ phụ đạo mở rộng với danh sách học sinh tham gia bồi dưỡng và nút mở trực tiếp bảng phân nhóm vi mô.
+- **Kiểm Thử & Biên Dịch**:
+  - 36/36 unit tests passed 100% (bổ sung test case cách ly lịch theo chuyên đề và chuẩn hóa 6 slot).
+  - `npm run build`: Hoàn thành 100% trong 1.13s (`3086 modules transformed`, `0 Error`).
+
+---
+
 ## [23/11/2026] - Khắc Phục Hiện Tượng Gom Cả Lớp Vào Nhóm Bồi Dưỡng Chuyên Đề, Đồng Bộ Số Liệu Thống Kê & Cấu Hình Pooler Supabase (`ClassMicroGroupsModal.jsx`, `TeacherDashboardView.jsx`, `EarlyWarningsMentorPanel.jsx`, `rag-service/.env`, `tests/classMicroGroups.test.js`)
 
 - **Khắc Phục Triệt Để Hiện Tượng Gom Cả Lớp Vào Nhóm Bồi Dưỡng Chuyên Đề ([`ClassMicroGroupsModal.jsx`](../src/components/modals/ClassMicroGroupsModal.jsx), [`tests/classMicroGroups.test.js`](../tests/classMicroGroups.test.js))**:

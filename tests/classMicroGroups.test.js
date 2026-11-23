@@ -148,9 +148,20 @@ const partitionStudentsForFocusSkill = (focusSkill, skillId, rows = [], size = 4
   studentList.sort((a, b) => a.mastery - b.mastery);
   const n = studentList.length;
   if (n === 0) return [];
+
+  const skillSlug = (focusSkill || skillId || 'GEN')
+    .toLowerCase()
+    .replace(/[đĐ]/g, 'd')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 24);
+
   if (n <= 5) {
     return [{
-      groupId: 'GRP-FOCUS-01',
+      groupId: `GRP-${skillSlug}-01`,
       groupName: `Nhóm 01 - Bàn trọng tâm: ${focusSkill}`,
       focusArea: focusSkill,
       memberCount: n,
@@ -177,7 +188,7 @@ const partitionStudentsForFocusSkill = (focusSkill, skillId, rows = [], size = 4
     curIdx += q;
     const groupNum = String(i + 1).padStart(2, '0');
     nextGroups.push({
-      groupId: `GRP-FOCUS-${i + 1}`,
+      groupId: `GRP-${skillSlug}-${String(groupNum).padStart(2, '0')}`,
       groupName: `Nhóm ${groupNum} - Bàn trọng tâm: ${focusSkill}`,
       focusArea: focusSkill,
       memberCount: members.length,
@@ -240,4 +251,27 @@ test('ClassMicroGroups - partitionStudentsForFocusSkill groups students by desig
   const allPlaced = groups.flatMap(g => g.members.map(m => m.studentId));
   assert.equal(allPlaced.length, 7);
   assert.equal(new Set(allPlaced).size, 7);
+
+  // Verify group IDs are properly namespaced by skill slug
+  assert.ok(groups[0].groupId.startsWith('GRP-giai-quyet-van-de-h'));
+  assert.ok(groups[1].groupId.startsWith('GRP-giai-quyet-van-de-h'));
+});
+
+test('ClassMicroGroups - guarantees distinct group IDs between Chemistry and Biology to prevent schedule collisions', () => {
+  const rows = [
+    { studentId: 's1', studentName: 'Học sinh 1', overallMastery: 0.1 },
+    { studentId: 's2', studentName: 'Học sinh 2', overallMastery: 0.1 },
+    { studentId: 's3', studentName: 'Học sinh 3', overallMastery: 0.1 }
+  ];
+
+  const chemGroups = partitionStudentsForFocusSkill('Giải quyết vấn đề Hóa học', 'sk-chem', rows, 3);
+  const bioGroups = partitionStudentsForFocusSkill('Dạng 1: Cơ chế sinh học trọng tâm', 'sk-bio', rows, 3);
+
+  assert.equal(chemGroups.length, 1);
+  assert.equal(bioGroups.length, 1);
+
+  // Group IDs must NEVER collide across different focus skills
+  assert.notEqual(chemGroups[0].groupId, bioGroups[0].groupId);
+  assert.ok(chemGroups[0].groupId.includes('hoa'));
+  assert.ok(bioGroups[0].groupId.includes('sinh'));
 });
