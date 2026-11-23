@@ -25,6 +25,7 @@ import { practiceService } from '../../services/practiceService';
 import { contentService } from '../../services/contentService';
 import { 
   getRemedialSessions, 
+  getAllRemedialSessions,
   saveRemedialSession, 
   deleteRemedialSession,
   STANDARD_ACADEMIC_SLOTS
@@ -286,20 +287,43 @@ export default function ClassMicroGroupsModal({ isOpen, onClose, classData }) {
             g.focusArea && g.focusArea.toLowerCase().includes(classData.focusSkill.toLowerCase())
           );
 
-          if (!isMatchingFocus && rows.length > 0) {
-            loadedGroups = partitionStudentsForFocusSkill(
-              classData.focusSkill,
-              classData.focusSkillId,
-              rows,
-              preferredGroupSize
-            );
+          if (!isMatchingFocus) {
+            const partitionRows = rows.length > 0
+              ? rows
+              : (Array.isArray(classData.initialMembers) && classData.initialMembers.length > 0
+                  ? classData.initialMembers.map(m => ({
+                      studentId: m.studentId || m.id,
+                      studentName: m.name,
+                      overallMastery: m.mastery || 0.1
+                    }))
+                  : []);
+
+            if (partitionRows.length > 0) {
+              loadedGroups = partitionStudentsForFocusSkill(
+                classData.focusSkill,
+                classData.focusSkillId,
+                partitionRows,
+                preferredGroupSize
+              );
+            }
           }
         }
 
         setGroups(loadedGroups);
 
-        // 4. Nạp lịch phụ đạo đã lên cho lớp
-        const sessions = getRemedialSessions(classData.id);
+        // 4. Nạp lịch phụ đạo đã lên cho lớp (hỗ trợ tra cứu fallback toàn hệ thống nếu có targetGroupId/focusSkill)
+        const classIdToUse = classData.id || classData.classId;
+        let sessions = getRemedialSessions(classIdToUse);
+        if ((!sessions || sessions.length === 0) && classData.focusSkill) {
+          const allSessions = getAllRemedialSessions();
+          const matched = allSessions.filter(s =>
+            (s.classId === classIdToUse) ||
+            (classData.targetGroupId && s.groupId === classData.targetGroupId) ||
+            (s.focusSkill && s.focusSkill.toLowerCase().trim() === classData.focusSkill.toLowerCase().trim()) ||
+            (s.topic && s.topic.toLowerCase().replace(/^phụ đạo:\s*/i, '').trim() === classData.focusSkill.toLowerCase().trim())
+          );
+          if (matched.length > 0) sessions = matched;
+        }
         setScheduledSessions(sessions);
       } catch (err) {
         console.warn('[ClassMicroGroupsModal] Error fetching data:', err.message);
@@ -530,7 +554,14 @@ export default function ClassMicroGroupsModal({ isOpen, onClose, classData }) {
     tomorrow.setDate(tomorrow.getDate() + 1);
     const defaultDate = tomorrow.toISOString().split('T')[0];
 
-    const existing = scheduledSessions.find(s => s.groupId === group.groupId);
+    const existing = scheduledSessions.find(s => 
+      s.groupId === group.groupId ||
+      (classData?.targetGroupId && s.groupId === classData.targetGroupId) ||
+      (group.focusArea && (
+        (s.focusSkill && s.focusSkill.toLowerCase().trim() === group.focusArea.toLowerCase().trim()) ||
+        (s.topic && s.topic.toLowerCase().replace(/^phụ đạo:\s*/i, '').trim() === group.focusArea.toLowerCase().trim())
+      ))
+    );
     setSchedulingGroup(group);
 
     const defaultSlot = STANDARD_ACADEMIC_SLOTS[2]; // Slot 3: 13:00 - 15:00
@@ -834,7 +865,14 @@ export default function ClassMicroGroupsModal({ isOpen, onClose, classData }) {
             {groups.map((grp, idx) => {
               const members = grp.members || [];
               const isWorksheetAssigned = !!grp.assignedWorksheetTitle;
-              const scheduledSession = scheduledSessions.find(s => s.groupId === grp.groupId);
+              const scheduledSession = scheduledSessions.find(s => 
+                s.groupId === grp.groupId ||
+                (classData?.targetGroupId && s.groupId === classData.targetGroupId) ||
+                (grp.focusArea && (
+                  (s.focusSkill && s.focusSkill.toLowerCase().trim() === grp.focusArea.toLowerCase().trim()) ||
+                  (s.topic && s.topic.toLowerCase().replace(/^phụ đạo:\s*/i, '').trim() === grp.focusArea.toLowerCase().trim())
+                ))
+              );
 
               return (
                 <div 

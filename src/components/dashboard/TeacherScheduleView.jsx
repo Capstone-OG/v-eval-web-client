@@ -171,32 +171,45 @@ export default function TeacherScheduleView({ currentUser }) {
         ? getRemedialSessions(selectedClassId)
         : getAllRemedialSessions();
 
-      const mappedRemedial = remedialList.map((rs) => ({
-        sessionId: rs.id || `RS-${rs.groupId}`,
-        id: rs.id || `RS-${rs.groupId}`,
-        sessionNo: 'Phụ đạo',
-        sessionDate: rs.sessionDate,
-        slotNo: rs.slotNo || getSessionSlot({ startTime: rs.startTime || rs.timeSlot?.split(' - ')[0] }),
-        startTime: rs.startTime || '13:00',
-        endTime: rs.endTime || '15:00',
-        className: rs.className || (classesList.find(c => (c.classId || c.id) === rs.classId)?.name) || 'Lớp phụ trách',
-        classId: rs.classId,
-        topicTitle: `Phụ đạo: ${rs.topic || rs.focusSkill || 'Bồi dưỡng chuyên đề'}`,
-        skillName: rs.focusSkill || rs.topic || 'Bồi dưỡng chuyên đề',
-        room: rs.room || (rs.format === 'ONLINE' ? 'Trực tuyến (Live Q&A)' : 'Phòng phụ đạo P.204'),
-        deliveryMode: rs.format === 'ONLINE' ? 'ONLINE' : 'OFFLINE',
-        sessionStatus: 'SCHEDULED',
-        isRemedial: true,
-        groupId: rs.groupId,
-        groupName: rs.groupName,
-        enrolledStudentsCount: rs.studentCount || (rs.members || []).length || 0,
-        totalStudentsCount: rs.studentCount || (rs.members || []).length || 0,
-        presentCount: 0,
-        absentCount: 0,
-        lateCount: 0,
-        primaryTeacherName: rs.teacherName || currentUser?.fullName || currentUser?.name || 'Giảng viên phụ trách',
-        notes: rs.notes
-      }));
+      const mappedRemedial = remedialList.map((rs) => {
+        const rawSkill = rs.focusSkill || rs.topic?.replace(/^Phụ đạo:\s*/i, '') || rs.skillName || 'Bồi dưỡng chuyên đề';
+        const currentCls = classesList.find(c => (c.classId || c.id) === rs.classId);
+        const enrolledCount = rs.studentCount || (rs.members || rs.students || []).length || 0;
+        const studentIds = (rs.members || rs.students || []).map(m => m.studentId || m.id).filter(Boolean);
+
+        return {
+          sessionId: rs.id || `RS-${rs.groupId}`,
+          id: rs.id || `RS-${rs.groupId}`,
+          sessionNo: 'Phụ đạo',
+          sessionDate: rs.sessionDate,
+          slotNo: rs.slotNo || getSessionSlot({ startTime: rs.startTime || rs.timeSlot?.split(' - ')[0] }),
+          startTime: rs.startTime || '13:00',
+          endTime: rs.endTime || '15:00',
+          className: rs.className || currentCls?.name || 'Lớp phụ trách',
+          classId: rs.classId,
+          classCode: currentCls?.code || `CLS-${String(rs.classId || '').slice(0, 8)}`,
+          topicTitle: `Phụ đạo: ${rawSkill}`,
+          skillName: rawSkill,
+          focusSkill: rawSkill,
+          focusSkillId: rs.focusSkillId || null,
+          room: rs.room || (rs.format === 'ONLINE' ? 'Trực tuyến (Live Q&A)' : 'Phòng phụ đạo P.204'),
+          deliveryMode: rs.format === 'ONLINE' ? 'ONLINE' : 'OFFLINE',
+          sessionStatus: 'SCHEDULED',
+          isRemedial: true,
+          groupId: rs.groupId,
+          groupName: rs.groupName,
+          enrolledStudentsCount: enrolledCount,
+          totalStudentsCount: enrolledCount,
+          presentCount: 0,
+          absentCount: 0,
+          lateCount: 0,
+          targetStudentIds: studentIds,
+          members: rs.members || rs.students || [],
+          students: rs.members || rs.students || [],
+          primaryTeacherName: rs.teacherName || currentUser?.fullName || currentUser?.name || 'Giảng viên phụ trách',
+          notes: rs.notes
+        };
+      });
 
       let regularSessions = [];
 
@@ -462,11 +475,24 @@ export default function TeacherScheduleView({ currentUser }) {
 
   // Open Micro Groups Modal
   const handleOpenMicroGroups = (session) => {
+    const focusSkillName = session.focusSkill || session.skillName || (session.isRemedial ? session.topicTitle?.replace(/^Phụ đạo:\s*/i, '') : null);
+    const targetStudentIds = (session.targetStudentIds && session.targetStudentIds.length > 0)
+      ? session.targetStudentIds
+      : ((session.members || session.students || []).map(m => m.studentId || m.id).filter(Boolean));
+
     setMicroGroupClass({
       id: session.classId,
+      classId: session.classId,
       name: session.className,
+      code: session.classCode || `CLS-${String(session.classId || '').slice(0, 8)}`,
       totalStudents: session.enrolledStudentsCount ?? session.totalStudentsCount ?? 0,
-      assignedTeacher: session.primaryTeacherName || currentUser?.fullName || 'Thầy/Cô phụ trách'
+      assignedTeacher: session.primaryTeacherName || currentUser?.fullName || 'Thầy/Cô phụ trách',
+      focusSkill: focusSkillName || null,
+      focusSkillId: session.focusSkillId || null,
+      targetGroupId: session.groupId || null,
+      targetStudentIds: targetStudentIds || [],
+      initialMembers: session.members || session.students || [],
+      isRemedial: !!session.isRemedial
     });
     setIsMicroGroupsOpen(true);
   };

@@ -17,12 +17,13 @@
     - **Slot 5**: 18:00 - 20:00 (Tối)
     - **Slot 6**: 20:15 - 22:30 (Tối)
   - *Giao diện chọn slot trực quan*: Thay thế bộ nút ca học cũ bằng lưới chọn 6 Slot học chuẩn (3x2), tự động điền `startTime`, `endTime`, `slotNo` và gợi ý phòng phụ đạo vi mô P.204.
-- **Đồng Bộ Hai Chiều & Hiển Thị Thẻ Phụ Đạo Trên Thời Khóa Biểu Giảng Viên ([`TeacherScheduleView.jsx`](../src/components/dashboard/TeacherScheduleView.jsx))**:
+- **Đồng Bộ Hai Chiều & Hiển Thị Thẻ Phụ Đạo Trên Thời Khóa Biểu Giảng Viên ([`TeacherScheduleView.jsx`](../src/components/dashboard/TeacherScheduleView.jsx), [`ClassMicroGroupsModal.jsx`](../src/components/modals/ClassMicroGroupsModal.jsx))**:
   - *Nạp và hòa trộn lịch phụ đạo*: Hàm `loadSchedule` tự động nạp các ca phụ đạo từ `remedialSessionStore` (hỗ trợ lọc theo từng lớp hoặc xem toàn bộ `ALL`), gán đúng ngày và slot vào lưới thời khóa biểu.
   - *Lắng nghe sự kiện đồng bộ tức thời*: Đăng ký event listener `veval:remedial-session-scheduled` và `veval:remedial-session-deleted`, tự động cập nhật ngay trên giao diện thời khóa biểu khi Giảng viên tạo hoặc hủy lịch mà không cần tải lại trang.
   - *Thiết kế thẻ phụ đạo chuyên biệt (Màu tím Pastel sang trọng)*:
     - **Chế độ Lưới Tuần (Weekly Grid View)**: Thẻ phụ đạo màu tím với huy hiệu `⚡ Phụ đạo vi mô`, hiển thị tên chuyên đề trọng tâm, lớp học, tên nhóm bàn, khung giờ, phòng học, hình thức (Live Q&A / Tại lớp) và nút xem nhanh nhóm phụ đạo.
     - **Chế độ Danh Sách / Dòng Thời Gian (Agenda View)**: Thẻ phụ đạo mở rộng với danh sách học sinh tham gia bồi dưỡng và nút mở trực tiếp bảng phân nhóm vi mô.
+  - *Khắc phục lỗi mất thông tin khi nhấn "Xem nhóm phụ đạo"*: Xử lý dứt điểm lỗi `handleOpenMicroGroups` làm rơi mất `focusSkill`, `targetGroupId` và `targetStudentIds`. Truyền toàn vẹn ngữ cảnh chuyên đề và học sinh, tích hợp thuật toán so khớp lịch linh hoạt (`s.groupId === grp.groupId` hoặc `s.focusSkill === grp.focusArea`), đảm bảo khi nhấn xem nhóm phụ đạo từ TKB, modal mở ra chính xác 100% chuyên đề đã bồi dưỡng, đúng danh sách học sinh và hiển thị đầy đủ thông tin ca học đã lên lịch.
 - **Kiểm Thử & Biên Dịch**:
   - 36/36 unit tests passed 100% (bổ sung test case cách ly lịch theo chuyên đề và chuẩn hóa 6 slot).
   - `npm run build`: Hoàn thành 100% trong 1.13s (`3086 modules transformed`, `0 Error`).
