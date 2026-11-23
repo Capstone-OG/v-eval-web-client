@@ -1,13 +1,9 @@
 # UPDATE — V-Eval-Web_Client
 
-## [22/11/2026]
-- **Tái Cấu Trúc & Tối Ưu Hóa Toàn Diện Trải Nghiệm Học Viên (`Sidebar.jsx`, `AccountNavbar.jsx`, `App.jsx`, `ConnectedRoadmapPage.jsx`, `PlarNodeStudioPanel.jsx`, `StudentMockExamPage.jsx`, `StudentHistoryPage.jsx`)**:
-  - Tinh giản thanh `AccountNavbar.jsx` (bỏ breadcrumb, ngày tháng & chip cơ sở thừa; rút gọn pill đếm ngược ĐGNL 1 dòng), di chuyển nút đóng/mở Sidebar về `Sidebar.jsx`.
-  - Gom nhóm menu **`Lộ trình của tôi`** thành toggle 4 mục: **Lộ trình cá nhân hóa** (khóa tuần tự FSM theo `stepOrder` từ Chặng #1, tách bạch Core Flow 2), **Luyện tập (P-L-A-R)** (Core Flow 3, giao diện sáng gọn), **Kiến thức nền** (`StudentFoundationKnowledgeView.jsx` — kho SGK đọc-hiểu & tự luyện nhanh cho học sinh), và **Sổ tay lỗi sai (SM-2)** (`MistakeNotebookSM2View.jsx` — dạng cuốn sổ 2 trang trắng tinh, nạp đề thật qua `contentService.getQuestionById`, kèm số Chặng, dropdown nguyên nhân sai, công thức chỉnh sửa tay & ghi chú thu gọn).
-  - Bổ sung trang **Luyện tập Quiz** tối đa **60 câu** (thiết kế mới 2 cột trong `AdaptiveQuizModal.jsx`, chọn 1 môn / nhiều môn / tổng hợp 8 môn, batch tải đề nhanh) và tập trung **Phòng Thi thử V-ACT** 100% vào 4 bộ đề chuẩn ĐHQG-HCM 120 câu / 150 phút có giám sát.
-- **Sổ Tay Công Thức, Phòng Mô Phỏng Tương Tác & Máy Tính Casio FX-580 (`StudentBookmarkDrawer.jsx`, `ConstantsReferencePanel.jsx`, `UnitConverterPanel.jsx`, `UnitCircleSimulator.jsx`, `NativePhysicsLab.jsx`, `InteractiveMathRenderer.jsx`, `mathGraphUtils.js`, `referenceFormulasData.js`, `periodicTableData.js`, `englishGrammarData.js`)**:
-  - Thêm cụm nút bookmark cạnh phải **`Tra cứu`** & **`FX-580`** hiển thị riêng trong **Lộ trình của tôi** và **Luyện tập Quiz** với 3 tab chính:
-    1. **Công thức & Tra cứu (GDPT 2018 Lớp 10–12)**: Toán, Vật lý, Hóa học (Bảng tuần hoàn 118 nguyên tố, Công thức bảo toàn/đkc, Kết tủa màu & Phản ứng đặc trưng), Tiếng Anh (8 nhóm ngữ pháp), Sinh học, Lịch sử (Mốc 10–12 & Bạn có biết), Địa lý (Công thức, Vùng kinh tế & Bạn có biết), **Hằng số & Góc π** (48 hằng số lưới 2 cột + 17 góc lượng giác đặc biệt), và **Đổi đơn vị SI**.
-    2. **Mô phỏng Tương tác**: Toán 3D tùy biến (11 khối gồm đa diện + Nón/Trụ/Cầu; dựng Trung tuyến, Trọng tâm, điểm chia cạnh, đoạn phụ, mặt phẳng thiết diện `polygon3d`), Toán 2D kéo-thả (sửa `shapeType` & bật/tắt đường cao/trung tuyến/ngoại tiếp), Đồ thị hàm số (12 mẫu + bàn phím Toán + sửa lỗi nhân ẩn `2sin(x)` & `sqrt/abs/exp/ln`), Đường tròn Lượng giác & Pha Dao động Vật lý, và **Phòng thí nghiệm PhET** (10 mô phỏng Lý–Hóa).
-    3. **Máy tính Casio fx-580VN X**: Cắt gọn viewport hiển thị trực tiếp thân máy tính Casio 580 sạch gọn.
-- **Kiểm Thử**: `npm run build` đạt `3094 modules`, `1.30s`, `0 Error`.
+## [23/11/2026]
+- **Tích Hợp Continuous Deployment (Auto-CD) Lên Máy Chủ Ubuntu Docker Server (`veval.io.vn`)**:
+  - Bổ sung file workflow [`.github/workflows/cd-main.yml`](./.github/workflows/cd-main.yml) kích hoạt tự động mỗi khi có Pull Request được merge vào nhánh `main`.
+  - Cấu hình 2 job tuần tự:
+    1. **`ci-verify` (`runs-on: ubuntu-latest`)**: Chạy kiểm tra lint, build và automated tests trên hạ tầng GitHub Cloud.
+    2. **`deploy-ubuntu` (`runs-on: [self-hosted, veval-prod]`)**: Gọi script `/data/Capstone/Scripts/deploy_service.sh web-client` trên máy chủ Ubuntu production.
+  - Áp dụng cơ chế selective rebuild (`--no-deps`), đồng bộ Git hard reset nhánh `main` và bảo toàn kết nối Zero-Downtime của Cloudflare Tunnel.

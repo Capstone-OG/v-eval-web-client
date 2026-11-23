@@ -2,6 +2,12 @@
 
 ---
 
+## [23/11/2026]
+- **Tích Hợp Continuous Deployment (Auto-CD) Lên Máy Chủ Ubuntu Docker Server (`veval.io.vn`)**:
+  - Bổ sung file workflow [`.github/workflows/cd-main.yml`](../.github/workflows/cd-main.yml) kích hoạt tự động mỗi khi merge PR vào nhánh `main`.
+  - Thiết lập 2 stage: `ci-verify` (GitHub Cloud Runner) và `deploy-ubuntu` (Self-Hosted Runner mang nhãn `[self-hosted, veval-prod]`) gọi `/data/Capstone/Scripts/deploy_service.sh web-client`.
+  - Vận hành cơ chế rebuild độc lập (`--no-deps`), đảm bảo Zero-Downtime, bảo vệ `veval-tunnel` và tự động thu hồi tài nguyên với `docker image prune -f`.
+
 ## [22/11/2026] - Hoàn Thiện UX Học Viên (Kiến Thức Nền, Quiz 60 Câu, Sổ Tay Lỗi Sai 2 Trang) & Sổ Tay Tra Cứu / Mô Phỏng 3D-2D-PhET / Casio FX-580
 
 - **Tinh Giản Header, Phân Tách Lộ Trình & Kiến Thức Nền ([`AccountNavbar.jsx`](../src/components/layout/AccountNavbar.jsx), [`Sidebar.jsx`](../src/components/layout/Sidebar.jsx), [`StudentFoundationKnowledgeView.jsx`](../src/components/curriculum/StudentFoundationKnowledgeView.jsx), [`ConnectedRoadmapPage.jsx`](../src/components/roadmap/ConnectedRoadmapPage.jsx), [`PlarNodeStudioPanel.jsx`](../src/components/roadmap/PlarNodeStudioPanel.jsx))**:
