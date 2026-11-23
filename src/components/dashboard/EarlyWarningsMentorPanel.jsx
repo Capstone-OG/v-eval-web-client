@@ -439,7 +439,7 @@ export default function EarlyWarningsMentorPanel({
                         </span>
                       ) : (
                         <>
-                          {(alert.alertType === 'UNREALISTIC_GOAL' || alert.alertType === 'RED') && (
+                          {alert.alertType === 'RED' && (
                             <button
                               type="button"
                               onClick={() => openCounselingModal(alert)}

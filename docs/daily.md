@@ -2,8 +2,11 @@
 
 ---
 
-## [23/11/2026] - Tối Ưu Hóa Chiều Dài Cuộn Khung Chương Trình & Đồng Bộ Dữ Liệu Học Sinh Thực Tế Buổi Học Offline (TCH-02)
+## [23/11/2026] - Chuẩn Hóa Điều Kiện Hẹn Tư Vấn 3 Bên, Tối Ưu Chiều Dài Cuộn Khung Chương Trình & Đồng Bộ Dữ Liệu Học Sinh Thực Tế (TCH-02)
 
+- **Chuẩn Hóa Điều Kiện Hiển Thị Nút Hẹn Tư Vấn 3 Bên Trong Danh Sách Học Sinh Cần Hỗ Trợ ([`EarlyWarningsMentorPanel.jsx`](../src/components/dashboard/EarlyWarningsMentorPanel.jsx))**:
+  - *Chỉ hiển thị nút Hẹn Tư Vấn 3 Bên cho Cảnh báo Đỏ*: Điều chỉnh điều kiện ràng buộc trong giao diện danh sách học sinh cần hỗ trợ để nút `Hẹn Tư Vấn 3 Bên` chỉ xuất hiện duy nhất khi học sinh thuộc diện **Cảnh báo Đỏ** (`alert.alertType === 'RED'`).
+  - *Phân hóa quy trình can thiệp*: Với các trường hợp lệch mục tiêu (`UNREALISTIC_GOAL`) hoặc nhắc nhở (`YELLOW`), hệ thống chỉ hiển thị nút `Ghi Nhận Can Thiệp`, ngăn ngừa việc đặt lịch tư vấn 3 bên khi chưa có nguy cơ cao.
 - **Tối Ưu Hóa Chiều Dài Cuộn & Công Thái Học Tra Cứu Khung Chương Trình Cho Giảng Viên ([`CurriculumExplorerView.jsx`](../src/components/curriculum/CurriculumExplorerView.jsx))**:
   - *Tích hợp thanh Tab chọn nhanh Khối lớp (Lớp 10 • 11 • 12)*: Đặt 4 tab chuyển đổi ngay đỉnh danh sách chương kèm số lượng chương thực tế (`Tất cả`, `Lớp 12`, `Lớp 11`, `Lớp 10`), lọc ngay lập tức danh sách từ 14+ chương xuống còn 2–7 chương theo đúng khối lớp giảng dạy, triệt tiêu 70% độ dài phải cuộn trang.
   - *Cơ chế Khung cuộn độc lập (Split Independent Scroll) & Cố định khung chi tiết (Sticky View)*:

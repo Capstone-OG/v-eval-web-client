@@ -3276,3 +3276,11 @@ The Parent Companion Portal was completely redesigned and hardened according to 
         - Replaced cognitive taxonomy acronyms (L1–L4) with standard educational terms (`Nhận biết`, `Thông hiểu`, `Vận dụng`, `Vận dụng cao`).
       - *System-wide Read-only Badge Harmonization*: Synchronized non-technical, user-friendly labels across `ExamBankView.jsx`, `ExamWorkspaceHeader.jsx`, `TextbookStandardView.jsx`, and `TextbookIngestView.jsx`.
     - **Verification**: `npm run build` compiled 3083 modules in 1.18s with zero errors; unit tests passed **24/24 passed 100%** (`tests/*.test.js`).
+
+40. **3-Way Parent-Teacher-Student Counseling Action Gate Refinement (`EarlyWarningsMentorPanel.jsx`) [23/11/2026]**:
+    - **Architectural Motivation**:
+      - Initiating formal 3-way pedagogical counseling (`Hẹn Tư Vấn 3 Bên`) requires teacher, student, and parent synchronization. It should be reserved strictly for high-risk critical alerts (Red Alerts) rather than minor weekly pace lags or moderate score target recalibrations (`UNREALISTIC_GOAL`).
+    - **Implementation Details**:
+      - Constrained the `Hẹn Tư Vấn 3 Bên` action trigger to evaluate `alert.alertType === 'RED'`, removing redundant exposure on goal misalignment alerts.
+      - Non-critical alerts now cleanly provide `Ghi Nhận Can Thiệp` to document pedagogical intervention without creating premature calendar commitments.
+    - **Verification**: `npm run build` compiled 3083 modules in 1.17s with zero errors; unit tests passed **24/24 passed 100%** (`tests/*.test.js`).

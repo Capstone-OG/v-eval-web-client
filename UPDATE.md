@@ -1,6 +1,9 @@
 # UPDATE — V-Eval-Web_Client
 
 ## [23/11/2026]
+- **Chuẩn Hóa Điều Kiện Hiển Thị Nút Hẹn Tư Vấn 3 Bên Trong Danh Sách Học Sinh Cần Hỗ Trợ (`EarlyWarningsMentorPanel.jsx`)**:
+  - *Tinh chỉnh điều kiện kích hoạt*: Chỉ hiển thị nút `Hẹn Tư Vấn 3 Bên` đối với học sinh có mức độ **Cảnh báo Đỏ** (`alert.alertType === 'RED'`).
+  - *Tối ưu quy trình can thiệp*: Đối với các mức độ cảnh báo khác (như `UNREALISTIC_GOAL` — Mục tiêu cần hiệu chỉnh hoặc `YELLOW` — Nhắc nhở cần theo dõi), hệ thống chỉ hiển thị duy nhất nút `Ghi Nhận Can Thiệp`, ngăn ngừa tình trạng kích hoạt lịch tư vấn 3 bên khi chưa thực sự có nguy cơ cao.
 - **Tối Ưu Hóa Chiều Dài Cuộn & Công Thái Học Tra Cứu Khung Chương Trình Cho Giảng Viên (`CurriculumExplorerView.jsx`)**:
   - *Tích hợp thanh Tab chọn nhanh Khối lớp (Lớp 10 • 11 • 12)*: Đặt 4 tab chuyển đổi ngay đỉnh danh sách chương kèm số lượng chương thực tế (`Tất cả`, `Lớp 12`, `Lớp 11`, `Lớp 10`), lọc ngay lập tức danh sách từ 14+ chương xuống còn 2–7 chương theo đúng khối lớp giảng dạy, triệt tiêu 70% độ dài phải cuộn trang.
   - *Cơ chế Khung cuộn độc lập (Split Independent Scroll) & Cố định khung chi tiết (Sticky View)*:
@@ -19,5 +22,5 @@
 - **Chuẩn Hóa Phân Quyền Maker - Checker Học Liệu & Đề Thi Cho Role Teacher (`TextbookIngestView.jsx`, `TextbookStudioView.jsx`, `CurriculumStudioEditor.jsx`, `ExamWorkspaceHeader.jsx`, `App.jsx`)**:
   - Áp dụng cơ chế phân quyền Maker cho Giảng viên: Cho phép biên soạn bản nháp và gửi duyệt (`PENDING_REVIEW`), ẩn nút xuất bản và xóa học liệu cấp hệ thống.
 - **Kiểm Thử & Biên Dịch**:
-  - `npm run build`: Hoàn thành 100% trong 1.14s (`3083 modules transformed`, `0 Error`).
+  - `npm run build`: Hoàn thành 100% trong 1.17s (`3083 modules transformed`, `0 Error`).
   - Unit tests: **24/24 unit tests passed 100%** (`tests/*.test.js`).
