@@ -3512,12 +3512,15 @@ Preserved the remaining 24 modified frontend files: simplified Vietnamese copy a
 
 Resolved the active frontend UPDATE.md conflict with upstream develop 47b7d27. Preserved local student timetable, report navigation and summary cards; integrated upstream roadmap approval, study workspace, scratchpad and CD workflow changes. Ten targeted tests and native-loader production build passed. Conflict-marker scan found no remaining source/document markers in the active frontend. Browser and deployment acceptance remain pending. The separate legacy V-Eval-Web_Client checkout has pre-existing merge conflicts and was not modified in this resolution.
 
-## [24/11/2026]
+## [24/11/2026] (Roadmap Approval 3-Tier, Timetable Scoping & Role Profile Fixes)
+- Updated `ConnectedRoadmapPage.jsx` to enrich roadmap nodes from `dom.skills[]` as well as `chapters[].lessons[].patterns[]`.
+- Scoped `StudentScheduleView.jsx` dropdowns to enrolled/paid courses and terms, and scoped `TeacherScheduleView.jsx` class dropdown to `teacherId` + `termId`.
+- Implemented 3-tier roadmap approval UI in `RoadmapApprovalStudioView.jsx` (`teacher`, `manager` with `campusId` + escalation, `director` cross-campus).
+- Cleaned up role-specific profile visibility in `AccountSettingsPage.jsx` (hid `Phụ huynh đại diện` and `Tùy chọn Học tập & AI` for non-student roles; locked campus for staff).
+
+## [24/11/2026] (MUI Feedback, Full Studio & MathLive WYSIWYG)
 - Cài đặt MUI (`@mui/material`, `@emotion/react`, `@emotion/styled`), cấu hình `src/theme/muiTheme.js` và nâng cấp `GlobalToastContainer.jsx`.
 - Hoàn thiện trọn bộ 10 hạng mục feedback học sinh/giáo viên/phụ huynh: làm sạch ngôn ngữ chấm bài & `DiagnosticSkillOverviewCard.jsx`, mở khóa `Đã nắm vững` & chế độ xem lại đầy đủ chặng PLAR, toast xác nhận Báo cáo lỗi, Sổ tay lỗi sai ôn theo từng dạng, `AttemptAnswerReviewList.jsx` phân cụm 7 câu cho Lịch sử & Phòng thi thử, Camera giám sát phòng thi (`upload-snapshot`), Sổ tay Gia sư AI dạng MUI Drawer hỗ trợ kéo-thả câu hỏi, và giao diện 3 cổng cho Non-Blocking Teacher Roadmap Approval.
-- Build kiểm thử `vite build` pass 100%.
-
-### [24/11/2026 - Cập nhật chiều] Tinh giản UI, Kiểm duyệt Studio & MathLive WYSIWYG
 - Lưu/khôi phục trạng thái Preview theo DB, giữ trang khi F5 (`sessionStorage`), đồng bộ danh sách câu hỏi bị gắn cờ với DB & mở thẳng Full Studio (`CurriculumStudioEditor`) từ `FlaggedQuestionsReviewPanel.jsx` và `ExamStudioView.jsx`.
 - Tinh giản `Sidebar.jsx` (icon trơn khi thu gọn, ẩn khi mở rộng), bỏ nền màu icon `AccountNavbar.jsx`, xóa footer toàn trang ở `App.jsx`, tự động thu gọn sidebar khi vào `exam-studio`/`textbook-studio`.
 - Tinh giản `CurriculumExplorerView.jsx` & `UnifiedNodeDetailView.jsx` (full-view không cuộn lồng, `borderRadius: 10px`, bỏ Bloom, tự mở Lý thuyết trọng tâm).

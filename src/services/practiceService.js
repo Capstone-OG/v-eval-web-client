@@ -1770,9 +1770,12 @@ export const practiceService = {
     return (await apiClient.get(`/api/practice/roadmaps/nodes/${nodeId}`, { headers })).data;
   },
 
-  async getRoadmapReviewQueue(status = 'ALL') {
-    const query = status ? `?status=${encodeURIComponent(status)}` : '';
-    return (await apiClient.get(`/api/practice/roadmaps/review-queue${query}`)).data;
+  async getRoadmapReviewQueue(status = 'ALL', { campusId = null } = {}) {
+    const params = new URLSearchParams();
+    if (status) params.set('status', status);
+    if (campusId && campusId !== 'ALL') params.set('campusId', campusId);
+    const qs = params.toString();
+    return (await apiClient.get(`/api/practice/roadmaps/review-queue${qs ? `?${qs}` : ''}`)).data;
   },
 
   async getRoadmapById(roadmapId) {

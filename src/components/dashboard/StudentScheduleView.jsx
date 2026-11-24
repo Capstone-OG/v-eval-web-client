@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { practiceService } from '../../services/practiceService';
+import { paymentService } from '../../services/paymentService';
 import WeeklyScheduleCalendar from './WeeklyScheduleCalendar';
 import { getOfflineSessionPlan } from '../../utils/offlineSessionStore';
 import { getAllRemedialSessions } from '../../utils/remedialSessionStore';
@@ -39,18 +40,68 @@ export default function StudentScheduleView({
       return;
     }
     try {
-      const [termsData, coursesData, timetableData] = await Promise.all([
-        practiceService.getAcademicTerms().catch(() => []),
-        practiceService.getCourses().catch(() => []),
+      const [timetableData, tuitionStatus] = await Promise.all([
         practiceService.getStudentTimetable({
           studentId,
           termId: termIdFilter !== 'ALL' ? termIdFilter : null
-        })
+        }),
+        paymentService.getStudentTuitionStatus(studentId).catch(() => null)
       ]);
 
       if (request !== requestVersion.current) return;
-      setTerms(Array.isArray(termsData) ? termsData : []);
-      setCourses(Array.isArray(coursesData) ? coursesData : []);
+
+      // Chỉ giữ các Đợt học thực sự gắn với lớp đang học / khóa học đã mua của học sinh
+      const termMap = new Map();
+      (timetableData?.availableTerms || []).forEach((t) => {
+        if (t?.termId) termMap.set(t.termId, t);
+      });
+      (timetableData?.enrolledClasses || []).forEach((cls) => {
+        if (cls.termId && !termMap.has(cls.termId)) {
+          termMap.set(cls.termId, {
+            termId: cls.termId,
+            code: cls.termCode || 'TERM',
+            name: cls.termName || cls.academicYear || 'Đợt học hiện tại'
+          });
+        }
+      });
+
+      // Chỉ giữ các Khóa học mà học sinh thực sự đang ghi danh hoặc đã thanh toán (không kéo toàn bộ catalog 4 khóa)
+      const courseMap = new Map();
+      (timetableData?.enrolledClasses || []).forEach((cls) => {
+        const key = cls.courseCode || cls.courseId;
+        if (key && !courseMap.has(key)) {
+          courseMap.set(key, {
+            courseId: cls.courseId,
+            code: cls.courseCode || cls.courseId,
+            name: cls.courseName || cls.courseCode || 'Khóa học đang theo học'
+          });
+        }
+      });
+      if (tuitionStatus?.isPaid && (tuitionStatus.courseCode || tuitionStatus.courseName || tuitionStatus.courseId)) {
+        const key = tuitionStatus.courseCode || tuitionStatus.courseId || tuitionStatus.courseName;
+        if (key && !courseMap.has(key)) {
+          courseMap.set(key, {
+            courseId: tuitionStatus.courseId || null,
+            code: tuitionStatus.courseCode || key,
+            name: tuitionStatus.courseName || tuitionStatus.courseCode || key
+          });
+        }
+      }
+      (tuitionStatus?.payments || [])
+        .filter((p) => p?.status === 'SUCCESS' || p?.status === 'PAID')
+        .forEach((p) => {
+          const key = p.courseCode || p.courseId || p.courseName;
+          if (key && !courseMap.has(key)) {
+            courseMap.set(key, {
+              courseId: p.courseId || null,
+              code: p.courseCode || key,
+              name: p.courseName || p.courseCode || key
+            });
+          }
+        });
+
+      setTerms(Array.from(termMap.values()));
+      setCourses(Array.from(courseMap.values()));
       setTimetable(timetableData);
 
     } catch {

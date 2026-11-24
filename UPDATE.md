@@ -11,4 +11,5 @@
   - `Sidebar.jsx`, `AccountNavbar.jsx`, `App.jsx`: Icon sidebar trơn không nền khi thu gọn (ẩn khi mở rộng), bỏ nền màu icon Navbar, bỏ thanh footer toàn trang, tự động thu gọn sidebar khi vào `exam-studio` / `textbook-studio`.
   - `CurriculumExplorerView.jsx` & `UnifiedNodeDetailView.jsx`: Rút gọn hàng bài học (icon sách xanh/xám biểu trưng SGK, hover chạy ngang tên bài), cột xem bài học bên phải full-view không cuộn lồng (`borderRadius: 10px`), bỏ nhãn Bloom & mở mặc định khối Lý thuyết trọng tâm.
   - `ExamStudioView.jsx`, `ExamQuestionStudioTab.jsx`, `WordStyleFormulaCanvas.jsx`, `VisualMathField.jsx`: Vào thẳng Full Studio kèm thanh chuyển câu nhanh; cài đặt `mathlive` sửa trực tiếp trên công thức WYSIWYG ở thanh công thức cố định không che chữ, sửa regex nhận diện nhầm phương trình dài thành chỉ số, tắt spellcheck tiếng Việt, đồng bộ màu bàn phím MathLive và thêm nút đóng bàn phím nổi.
-- **Kiểm thử**: `npm run build` (`vite build`) thành công 100% (`4271 modules transformed`, 0 errors).
+- **Đồng bộ từ `develop`**: Phân quyền 3 cấp phê duyệt lộ trình (`RoadmapApprovalStudioView.jsx`), lọc thời khóa biểu theo lớp/học kỳ thực tế (`StudentScheduleView.jsx`, `TeacherScheduleView.jsx`), và hiển thị trường hồ sơ theo vai trò (`AccountSettingsPage.jsx`).
+- **Kiểm thử**: `npm run build` (`vite build`) thành công 100% (0 errors).
