@@ -1,4 +1,5 @@
 import { ExamRoomBody, ExamRoomHeader, ExamSubmitConfirmation } from './ExamRoom';
+import DiagnosticSkillOverviewCard from './DiagnosticSkillOverviewCard';
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import confetti from 'canvas-confetti';
@@ -1177,7 +1178,7 @@ export default function DiagnosticAssessmentPage({
     setSubmissionError('');
     setStage('analyzing');
     setIsLoading(true);
-    setLoadingMsg('Đang gửi bài nộp đến Practice Service (Port 5261) để chấm điểm IRT 2PL Theta_0 & xếp lớp...');
+    setLoadingMsg('Đang chấm bài và phân tích năng lực cá nhân hóa cho bạn...');
 
     try {
       const user = tokenStorage.getUser();
@@ -1662,7 +1663,7 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
                       </ResponsiveContainer>
                     ) : (
                       <div className="flex h-full items-center justify-center text-center text-sm text-slate-500">
-                        API chưa trả dữ liệu radar cho lần thi này.
+                        Chưa có dữ liệu biểu đồ cho lần thi này.
                       </div>
                     )}
                   </div>
@@ -1685,7 +1686,7 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
                   <div className="p-6 bg-linear-to-br from-purple-50/90 to-indigo-50/80 border border-purple-200/80 rounded-3xl shadow-xl space-y-3 text-slate-900">
                     <div className="flex items-center gap-2 text-sm font-black text-purple-900">
                       <Bot className="w-4 h-4 text-purple-600" />
-                      <span>Lời Khuyên Sư Phạm Từ Cố Vấn AI (Gemini Commentary)</span>
+                      <span>Nhận Xét &amp; Gợi Ý Học Tập Từ Cố Vấn AI</span>
                     </div>
                     <p className="text-xs sm:text-sm text-slate-800 leading-relaxed italic bg-white p-4 rounded-2xl border border-purple-200 shadow-xs whitespace-pre-line">
                       "{currentDisplayResult.ai_commentary || 'Chưa có nhận xét AI cho bài kiểm tra này.'}"
@@ -1714,86 +1715,9 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
               </div>
 
               {/* ================================================================= */}
-              {/* BẢNG TIÊN NGHIỆM KỸ NĂNG BKT P(L0) & THAM SỐ THETA_SKILL          */}
+              {/* ĐÁNH GIÁ CHI TIẾT CÁC DẠNG BÀI (MUI - ĐỒNG BỘ LỊCH SỬ & KẾT QUẢ)  */}
               {/* ================================================================= */}
-              {Array.isArray(currentDisplayResult.skill_priors) && currentDisplayResult.skill_priors.length > 0 && (
-                <div className="p-6 sm:p-7 bg-white border border-slate-200/90 rounded-3xl shadow-xl space-y-4 text-slate-900">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
-                    <div className="flex items-center gap-2">
-                      <Brain className="w-5 h-5 text-indigo-600" />
-                      <h3 className="text-base font-black text-slate-900">
-                        Ma Trận Tiên Nghiệm Kỹ Năng BKT P(L₀) &amp; Tham Số Năng Lực θ_skill ({currentDisplayResult.skill_priors.length} kỹ năng)
-                      </h3>
-                    </div>
-                    <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-200">
-                      Bayesian Knowledge Tracing Prior • Đồng bộ Lịch sử &amp; Kết quả Thi
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
-                    {currentDisplayResult.skill_priors.map((sp, idx) => {
-                      const pl0Pct = Math.round((Number(sp.p_l0 ?? sp.pL0 ?? 0.5)) * 100);
-                      const thetaVal = Number(sp.theta_skill ?? sp.thetaSkill ?? 0);
-                      const isMastered = pl0Pct >= 75;
-                      const isWeak = pl0Pct < 55;
-
-                      return (
-                        <div
-                          key={`${sp.skill_id || idx}`}
-                          className={`p-4 rounded-2xl border space-y-2.5 transition-all ${
-                            isMastered
-                              ? 'bg-emerald-50/40 border-emerald-200'
-                              : isWeak
-                              ? 'bg-amber-50/50 border-amber-200'
-                              : 'bg-slate-50/70 border-slate-200'
-                          }`}
-                        >
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="min-w-0">
-                              <div className="text-xs sm:text-sm font-black text-slate-900 truncate">
-                                {sp.skill_name || sp.skillName}
-                              </div>
-                              <div className="text-[11px] font-semibold text-slate-500 truncate">
-                                {sp.domain_name || sp.domainName}
-                              </div>
-                            </div>
-                            <span
-                              className={`px-2 py-0.5 rounded-md text-[10px] font-black shrink-0 ${
-                                sp.source === 'measured'
-                                  ? 'bg-blue-100 text-blue-800 border border-blue-200'
-                                  : 'bg-purple-100 text-purple-800 border border-purple-200'
-                              }`}
-                            >
-                              {sp.source === 'measured' ? 'Đo trực tiếp' : 'Suy diễn DAG'}
-                            </span>
-                          </div>
-
-                          <div className="flex items-center justify-between text-xs font-bold pt-1">
-                            <span className="text-slate-600">
-                              Xác suất làm chủ P(L₀):{' '}
-                              <strong className={isMastered ? 'text-emerald-700' : isWeak ? 'text-amber-800' : 'text-blue-700'}>
-                                {pl0Pct}% ({Number(sp.p_l0 ?? sp.pL0 ?? 0.5).toFixed(2)})
-                              </strong>
-                            </span>
-                            <span className="font-mono text-xs font-black text-indigo-700">
-                              θ = {thetaVal > 0 ? `+${thetaVal.toFixed(2)}` : thetaVal.toFixed(2)}
-                            </span>
-                          </div>
-
-                          <div className="w-full bg-slate-200/80 h-2 rounded-full overflow-hidden">
-                            <div
-                              className={`h-full rounded-full ${
-                                isMastered ? 'bg-emerald-500' : isWeak ? 'bg-amber-500' : 'bg-blue-600'
-                              }`}
-                              style={{ width: `${Math.min(100, Math.max(5, pl0Pct))}%` }}
-                            />
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
+              <DiagnosticSkillOverviewCard skillPriors={currentDisplayResult.skill_priors} />
 
 </DiagnosticReportPanel>
 <DiagnosticReportPanel id="answers" active={reportTab}>
@@ -2819,7 +2743,7 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
                     </ResponsiveContainer>
                   ) : (
                     <div className="flex h-full items-center justify-center text-center text-sm text-slate-500">
-                      API chưa trả dữ liệu radar cho lần thi này.
+                      Chưa có dữ liệu biểu đồ cho lần thi này.
                     </div>
                   )}
               </div>
@@ -2843,7 +2767,7 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
               <div className="p-6 bg-linear-to-br from-purple-50/90 to-indigo-50/80 border border-purple-200/80 rounded-3xl shadow-xl space-y-3 text-slate-900">
                 <div className="flex items-center gap-2 text-sm font-black text-purple-900">
                   <Bot className="w-4 h-4 text-purple-600" />
-                  <span>Lời Khuyên Sư Phạm Từ Cố Vấn AI (Gemini Commentary)</span>
+                  <span>Nhận Xét &amp; Gợi Ý Học Tập Từ Cố Vấn AI</span>
                 </div>
                 <p className="text-xs sm:text-sm text-slate-800 leading-relaxed italic bg-white p-4 rounded-2xl border border-purple-200 shadow-xs">
                   "{resultData.ai_commentary || 'Chưa có nhận xét AI cho bài kiểm tra này.'}"
@@ -2876,86 +2800,9 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
           </div>
 
           {/* ===================================================================== */}
-          {/* BẢNG TIÊN NGHIỆM KỸ NĂNG BKT P(L0) & THAM SỐ THETA_SKILL              */}
+          {/* ĐÁNH GIÁ CHI TIẾT CÁC DẠNG BÀI (MUI - ĐỒNG BỘ LỊCH SỬ & KẾT QUẢ)      */}
           {/* ===================================================================== */}
-          {Array.isArray(resultData.skill_priors) && resultData.skill_priors.length > 0 && (
-            <div className="p-6 sm:p-7 bg-white border border-slate-200/90 rounded-3xl shadow-xl space-y-4 text-slate-900">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
-                <div className="flex items-center gap-2">
-                  <Brain className="w-5 h-5 text-indigo-600" />
-                  <h3 className="text-base font-black text-slate-900">
-                    Ma Trận Tiên Nghiệm Kỹ Năng BKT P(L₀) &amp; Tham Số Năng Lực θ_skill ({resultData.skill_priors.length} kỹ năng)
-                  </h3>
-                </div>
-                <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-200">
-                  Bayesian Knowledge Tracing Prior • Khởi tạo Đồ thị Lộ trình Học tập
-                </span>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
-                {resultData.skill_priors.map((sp, idx) => {
-                  const pl0Pct = Math.round((Number(sp.p_l0 ?? sp.pL0 ?? 0.5)) * 100);
-                  const thetaVal = Number(sp.theta_skill ?? sp.thetaSkill ?? 0);
-                  const isMastered = pl0Pct >= 75;
-                  const isWeak = pl0Pct < 55;
-
-                  return (
-                    <div
-                      key={`${sp.skill_id || idx}`}
-                      className={`p-4 rounded-2xl border space-y-2.5 transition-all ${
-                        isMastered
-                          ? 'bg-emerald-50/40 border-emerald-200'
-                          : isWeak
-                          ? 'bg-amber-50/50 border-amber-200'
-                          : 'bg-slate-50/70 border-slate-200'
-                      }`}
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <div className="text-xs sm:text-sm font-black text-slate-900 truncate">
-                            {sp.skill_name || sp.skillName}
-                          </div>
-                          <div className="text-[11px] font-semibold text-slate-500 truncate">
-                            {sp.domain_name || sp.domainName}
-                          </div>
-                        </div>
-                        <span
-                          className={`px-2 py-0.5 rounded-md text-[10px] font-black shrink-0 ${
-                            sp.source === 'measured'
-                              ? 'bg-blue-100 text-blue-800 border border-blue-200'
-                              : 'bg-purple-100 text-purple-800 border border-purple-200'
-                          }`}
-                        >
-                          {sp.source === 'measured' ? 'Đo trực tiếp' : 'Suy diễn DAG'}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center justify-between text-xs font-bold pt-1">
-                        <span className="text-slate-600">
-                          Xác suất làm chủ P(L₀):{' '}
-                          <strong className={isMastered ? 'text-emerald-700' : isWeak ? 'text-amber-800' : 'text-blue-700'}>
-                            {pl0Pct}% ({Number(sp.p_l0 ?? sp.pL0 ?? 0.5).toFixed(2)})
-                          </strong>
-                        </span>
-                        <span className="font-mono text-xs font-black text-indigo-700">
-                          θ = {thetaVal > 0 ? `+${thetaVal.toFixed(2)}` : thetaVal.toFixed(2)}
-                        </span>
-                      </div>
-
-                      <div className="w-full bg-slate-200/80 h-2 rounded-full overflow-hidden">
-                        <div
-                          className={`h-full rounded-full ${
-                            isMastered ? 'bg-emerald-500' : isWeak ? 'bg-amber-500' : 'bg-blue-600'
-                          }`}
-                          style={{ width: `${Math.min(100, Math.max(5, pl0Pct))}%` }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
+          <DiagnosticSkillOverviewCard skillPriors={resultData.skill_priors} />
 
           {/* ===================================================================== */}
           {/* BẢNG ĐÁNH GIÁ CHI TIẾT & ĐÁP ÁN 30 CÂU (ANSWER KEY & EXPLANATIONS)    */}
@@ -3424,7 +3271,7 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
               : 'bg-amber-50 text-amber-800 border-amber-200'
               }`}>
               {tabSwitchCount >= 3
-                ? '⏳ Hệ thống đang tự động nộp bài và tính điểm năng lực IRT θ₀ trong giây lát...'
+                ? '⏳ Hệ thống đang tự động nộp bài và phân tích kết quả của bạn trong giây lát...'
                 : '💡 Lưu ý: Nếu tiếp tục rời màn hình đủ 3 lần, bài thi sẽ bị TỰ ĐỘNG KHÓA VÀ NỘP BÀI NGAY LẬP TỨC!'}
             </div>
 
@@ -3506,7 +3353,7 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
                 </div>
                 <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200">
                   <div className="text-[10px] font-bold uppercase text-slate-600">Động cơ chấm điểm</div>
-                  <div className="text-xs font-black text-indigo-600 mt-0.5">IRT 2PL & Theta 0</div>
+                  <div className="text-xs font-black text-indigo-600 mt-0.5">Phân tích năng lực chuẩn hóa</div>
                 </div>
               </div>
 

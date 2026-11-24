@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Alert, Box, Button, Chip, Paper, Stack, TextField, Typography } from '@mui/material';
 import {
   User,
   X,
@@ -13,6 +14,7 @@ import {
   Award
 } from 'lucide-react';
 import apiClient from '../../services/apiClient';
+import { practiceService } from '../../services/practiceService';
 import { toast } from '../../context/ToastContext';
 
 export default function TeacherStudentDrillDownModal({
@@ -27,6 +29,10 @@ export default function TeacherStudentDrillDownModal({
   const [pedagogicalNote, setPedagogicalNote] = useState('');
   const [submittingNote, setSubmittingNote] = useState(false);
   const [savedNotes, setSavedNotes] = useState([]);
+  const [studentRoadmap, setStudentRoadmap] = useState(null);
+  const [loadingRoadmap, setLoadingRoadmap] = useState(false);
+  const [kickoffNote, setKickoffNote] = useState('');
+  const [approvingRoadmap, setApprovingRoadmap] = useState(false);
 
   // Load existing pedagogical notes from storage
   useEffect(() => {
@@ -48,7 +54,23 @@ export default function TeacherStudentDrillDownModal({
 
     let active = true;
     setLoadingHistory(true);
+    setLoadingRoadmap(true);
     setPedagogicalNote('');
+
+    practiceService.getMyRoadmap(student.studentId)
+      .then((rm) => {
+        if (!active) return;
+        setStudentRoadmap(rm || null);
+        setKickoffNote(rm?.teacherKickoffNote || '');
+      })
+      .catch(() => {
+        if (!active) return;
+        setStudentRoadmap(null);
+        setKickoffNote('');
+      })
+      .finally(() => {
+        if (active) setLoadingRoadmap(false);
+      });
 
     apiClient.get(`/api/practice/diagnostic-submissions/student/${encodeURIComponent(student.studentId)}`)
       .then((res) => {
@@ -266,6 +288,102 @@ export default function TeacherStudentDrillDownModal({
               </div>
             )}
           </div>
+
+          {/* Non-Blocking Roadmap Approval & Kickoff Note (MUI) */}
+          <Paper
+            variant="outlined"
+            sx={{
+              p: 2.25,
+              borderRadius: 3,
+              borderColor: studentRoadmap?.isTeacherApproved ? 'success.light' : 'primary.light',
+              bgcolor: studentRoadmap?.isTeacherApproved ? 'rgba(16,185,129,0.04)' : 'rgba(79,70,229,0.03)',
+            }}
+          >
+            <Stack spacing={1.5}>
+              <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }} spacing={1}>
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <CheckCircle2 size={18} color={studentRoadmap?.isTeacherApproved ? '#059669' : '#4f46e5'} />
+                  <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>
+                    Xác nhận Lộ trình &amp; Viết mô tả định hướng
+                  </Typography>
+                </Stack>
+                {studentRoadmap && (
+                  <Chip
+                    size="small"
+                    color={studentRoadmap.isTeacherApproved ? 'success' : 'warning'}
+                    label={studentRoadmap.isTeacherApproved ? 'Đã được Giáo viên xác nhận' : 'Đang chờ Giáo viên xác nhận'}
+                    sx={{ fontWeight: 800 }}
+                  />
+                )}
+              </Stack>
+
+              {loadingRoadmap ? (
+                <Typography variant="caption" color="text.secondary">
+                  Đang tải lộ trình cá nhân của học sinh...
+                </Typography>
+              ) : !studentRoadmap?.roadmapId ? (
+                <Alert severity="info" sx={{ py: 0.5, borderRadius: 2 }}>
+                  Học sinh chưa có lộ trình học tập (cần hoàn thành bài thi chẩn đoán đầu vào trước).
+                </Alert>
+              ) : (
+                <>
+                  <Typography variant="caption" color="text.secondary">
+                    Lộ trình gồm <strong>{studentRoadmap.totalMilestones ?? 0}</strong> chặng (đã hoàn thành{' '}
+                    <strong>{studentRoadmap.completedMilestones ?? 0}</strong> chặng) • Mục tiêu{' '}
+                    <strong>{studentRoadmap.targetScore ?? 800}/1200</strong>. Học sinh đã có thể học ngay không bị chặn.
+                    {studentRoadmap.approvedAt && ` • Đã duyệt lúc ${new Date(studentRoadmap.approvedAt).toLocaleString('vi-VN')}.`}
+                  </Typography>
+                  <TextField
+                    multiline
+                    minRows={3}
+                    fullWidth
+                    size="small"
+                    value={kickoffNote}
+                    onChange={(e) => setKickoffNote(e.target.value)}
+                    placeholder="Nhập mô tả định hướng học tập (trọng tâm cần cải thiện, cách phối hợp giữa tự học online và chữa đề offline) để gửi đồng bộ tới Học sinh & Phụ huynh..."
+                    sx={{ bgcolor: '#fff' }}
+                  />
+                  <Stack direction="row" justifyContent="flex-end">
+                    <Button
+                      variant="contained"
+                      color={studentRoadmap.isTeacherApproved ? 'success' : 'primary'}
+                      size="small"
+                      disabled={approvingRoadmap || !kickoffNote.trim()}
+                      onClick={async () => {
+                        setApprovingRoadmap(true);
+                        try {
+                          const res = await practiceService.approveRoadmap(studentRoadmap.roadmapId, {
+                            teacherKickoffNote: kickoffNote.trim(),
+                          });
+                          setStudentRoadmap((prev) => ({
+                            ...prev,
+                            isTeacherApproved: true,
+                            approvedAt: res?.approvedAt || new Date().toISOString(),
+                            teacherKickoffNote: res?.teacherKickoffNote || kickoffNote.trim(),
+                            status: res?.status || 'ACTIVE',
+                          }));
+                          toast.success(
+                            res?.message || 'Đã phê duyệt lộ trình và đồng bộ định hướng tới Học sinh & Phụ huynh!',
+                            'Phê duyệt Lộ trình thành công'
+                          );
+                        } catch (err) {
+                          toast.error(err?.message || 'Không thể phê duyệt lộ trình lúc này.');
+                        } finally {
+                          setApprovingRoadmap(false);
+                        }
+                      }}
+                    >
+                      {approvingRoadmap
+                        ? 'Đang lưu...'
+                        : studentRoadmap.isTeacherApproved
+                        ? 'Cập nhật lời dặn định hướng'
+                        : 'Phê duyệt Lộ trình'}
+                    </Button>
+                  </Stack>
+                </>
+              )}
+            </Stack>
+          </Paper>
 
           {/* Pedagogical Note Form */}
           <form onSubmit={handleSendNote} className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">

@@ -23,6 +23,9 @@ export function createMockExamService(client = apiClient) {
     },
     async logTabDeparture(submissionId, reason = 'Học sinh chuyển sang tab hoặc ứng dụng khác.') {
       return (await client.post(`/api/practice/mock-exams/${encodeURIComponent(submissionId)}/log-tab-departure`, { reason })).data;
+    },
+    async uploadSnapshot(submissionId, payload) {
+      return (await client.post(`/api/practice/mock-exams/${encodeURIComponent(submissionId)}/upload-snapshot`, payload)).data;
     }
   };
 }

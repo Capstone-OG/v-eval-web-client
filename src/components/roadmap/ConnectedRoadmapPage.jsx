@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Box, Chip, Paper, Stack, Typography } from '@mui/material';
 import {
   ArrowRight,
   Award,
@@ -471,7 +472,8 @@ export default function ConnectedRoadmapPage({
     // - COMPLETED: đã hoàn thành (được mở để Xem lại)
     // - IN_PROGRESS: chặng đang học dở P-L-A-R (LEARN/APPLY/REFLECT/REMEDIAL) hoặc chặng chưa hoàn thành ĐẦU TIÊN theo stepOrder
     // - LOCKED: toàn bộ các chặng sau đều bị khóa cho tới khi hoàn thành đủ 4 bước P-L-A-R chặng hiện tại
-    const isRoadmapApproved = String(roadmap?.status || 'ACTIVE').toUpperCase() === 'ACTIVE';
+    // Non-blocking approval: Học sinh luôn có thể học ngay chặng đầu tiên trừ khi lộ trình đã bị lưu trữ (ARCHIVED)
+    const isRoadmapApproved = String(roadmap?.status || 'ACTIVE').toUpperCase() !== 'ARCHIVED';
     const ACTIVE_PLAR_STEPS = new Set(['LEARN', 'APPLY', 'REFLECT', 'REMEDIAL']);
     const firstActiveNode = isRoadmapApproved
       ? sorted.find(
@@ -485,7 +487,10 @@ export default function ConnectedRoadmapPage({
         if (!isRoadmapApproved) {
           return { ...n, _fsmStatus: 'LOCKED' };
         }
-        const isDone = n.status === 'COMPLETED' || n._assessmentStatus === 'COMPLETED';
+        const isDone =
+          n.status === 'COMPLETED' ||
+          n._assessmentStatus === 'COMPLETED' ||
+          n._assessmentStatus === 'MASTERED';
         const hasOngoingPlar = !isDone && ACTIVE_PLAR_STEPS.has(String(n.currentPlarStep || '').toUpperCase());
         const isCurrent = (firstActiveNode && n.nodeId === firstActiveNode.nodeId) || hasOngoingPlar;
         return {
@@ -596,13 +601,10 @@ export default function ConnectedRoadmapPage({
                   <Compass className="w-4 h-4" />
                 </span>
                 <div>
-                  <h1 className="text-sm font-black text-slate-900">Lộ Trình Cá Nhân Hóa (Mở Khóa Tuần Tự)</h1>
-                  <p className="text-[11px] text-slate-500 font-medium">
-                    Hoàn thành đủ 4 bước P-L-A-R của chặng đang học để mở khóa chặng tiếp theo
-                  </p>
+                  <h1 className="text-sm font-black text-slate-900">Lộ Trình Cá Nhân Hóa</h1>
                 </div>
               </div>
-              {activeFsmNode && String(roadmap?.status || 'ACTIVE').toUpperCase() === 'ACTIVE' && (
+              {activeFsmNode && String(roadmap?.status || 'ACTIVE').toUpperCase() !== 'ARCHIVED' && (
                 <button
                   type="button"
                   onClick={() => handleOpenNodeStudio(activeFsmNode.nodeId)}
@@ -612,15 +614,23 @@ export default function ConnectedRoadmapPage({
                   <span>Học ngay Chặng #{activeFsmNode.stepOrder}</span>
                 </button>
               )}
-              {roadmap && String(roadmap.status || '').toUpperCase() !== 'ACTIVE' && (
-                <span className="inline-flex items-center gap-1.5 rounded-xl bg-amber-50 border border-amber-200 px-3 py-1.5 text-xs font-extrabold text-amber-800">
-                  <Lock className="w-3.5 h-3.5 text-amber-600" />
-                  <span>
-                    {roadmap.status === 'PENDING_DIRECTOR_APPROVAL'
-                      ? 'Chờ Giám đốc phê duyệt'
-                      : 'Bản nháp • Chờ Giảng viên duyệt'}
-                  </span>
-                </span>
+              {roadmap && (
+                roadmap.isTeacherApproved ? (
+                  <Chip
+                    label="Đã được Giáo viên xác nhận"
+                    color="success"
+                    size="small"
+                    sx={{ fontWeight: 700 }}
+                  />
+                ) : (
+                  <Chip
+                    label="Đang chờ Giáo viên xác nhận"
+                    color="warning"
+                    variant="outlined"
+                    size="small"
+                    sx={{ fontWeight: 700 }}
+                  />
+                )
               )}
             </>
           ) : (
@@ -824,7 +834,36 @@ export default function ConnectedRoadmapPage({
         );
       })()}
 
-      {/* TAB 2: COMPACT, DEDUPLICATED CHAPTER-GROUPED ROADMAP BROWSER */}
+      {/* BANNER ĐỊNH HƯỚNG LỘ TRÌNH TỪ GIÁO VIÊN (CHỈ HIỆN KHI ĐÃ CÓ ĐỊNH HƯỚNG / XÁC NHẬN) */}
+      {workspaceMode === 'map' && !loading && roadmap && (roadmap.teacherKickoffNote || roadmap.isTeacherApproved) && (
+        <Paper
+          variant="outlined"
+          sx={{
+            px: 2.25,
+            py: 1.5,
+            borderRadius: 3,
+            borderColor: 'success.light',
+            bgcolor: 'rgba(16,185,129,0.05)',
+          }}
+        >
+          <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }} spacing={1}>
+            <Box>
+              <Typography variant="body2" sx={{ color: 'text.primary', fontWeight: 500, whiteSpace: 'pre-line' }}>
+                {roadmap.teacherKickoffNote ? (
+                  <><strong>Định hướng từ Giáo viên phụ trách:</strong> {roadmap.teacherKickoffNote}</>
+                ) : (
+                  'Giáo viên phụ trách đã rà soát và xác nhận lộ trình học tập cá nhân hóa này cho bạn.'
+                )}
+              </Typography>
+            </Box>
+            {roadmap.approvedAt && (
+              <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, flexShrink: 0 }}>
+                Xác nhận: {new Date(roadmap.approvedAt).toLocaleString('vi-VN')}
+              </Typography>
+            )}
+          </Stack>
+        </Paper>
+      )}
       {workspaceMode === 'map' && !loading && roadmap && (
         <div className="rounded-3xl border border-slate-200 bg-white p-4 sm:p-5 shadow-2xs space-y-4">
           {/* Single Compact Filter Bar */}
@@ -834,7 +873,7 @@ export default function ConnectedRoadmapPage({
               {[
                 { key: 'WEAK', label: 'Ưu tiên', count: zoneCounts.weak, activeCls: 'bg-white text-rose-700 shadow-xs ring-1 ring-rose-200/80', badgeCls: 'bg-rose-50 text-rose-700' },
                 { key: 'UNASSESSED', label: 'Chưa đánh giá', count: zoneCounts.unassessed, activeCls: 'bg-white text-slate-900 shadow-xs ring-1 ring-slate-300/80', badgeCls: 'bg-slate-200/80 text-slate-700' },
-                { key: 'MASTERED', label: 'Đã đạt OK', count: zoneCounts.ok, activeCls: 'bg-white text-teal-700 shadow-xs ring-1 ring-teal-200/80', badgeCls: 'bg-teal-50 text-teal-700' },
+                { key: 'MASTERED', label: 'Đã nắm vững', count: zoneCounts.ok, activeCls: 'bg-white text-teal-700 shadow-xs ring-1 ring-teal-200/80', badgeCls: 'bg-teal-50 text-teal-700' },
                 { key: 'COMPLETED', label: 'Đã hoàn thành', count: zoneCounts.completed, activeCls: 'bg-white text-emerald-700 shadow-xs ring-1 ring-emerald-200/80', badgeCls: 'bg-emerald-50 text-emerald-700' },
                 { key: 'ALL', label: 'Tất cả', count: zoneCounts.all, activeCls: 'bg-white text-blue-700 shadow-xs ring-1 ring-blue-200/80', badgeCls: 'bg-blue-50 text-blue-700' },
               ].map((tab) => {

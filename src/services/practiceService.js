@@ -1790,6 +1790,17 @@ export const practiceService = {
     return (await apiClient.post(`/api/practice/roadmaps/${encodeURIComponent(roadmapId)}/director-decision`, payload)).data;
   },
 
+  async approveRoadmap(roadmapId, payload) {
+    try {
+      return (await apiClient.put(`/api/v1/roadmaps/${encodeURIComponent(roadmapId)}/approve`, payload)).data;
+    } catch (err) {
+      if (err?.status === 404) {
+        return (await apiClient.put(`/api/practice/roadmaps/${encodeURIComponent(roadmapId)}/approve`, payload)).data;
+      }
+      throw err;
+    }
+  },
+
   // =========================================================================
   // Core Flow 3: Chu Trình Tự Học Thích Ứng P-L-A-R (StagesController - Đủ 8 APIs)
   // =========================================================================

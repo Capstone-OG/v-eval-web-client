@@ -8,20 +8,18 @@ import {
   Sparkles,
   GitBranch,
   ImagePlus,
-  Sigma,
   Shuffle,
   BookOpen,
   Search,
   X,
   CheckCircle2,
   Lightbulb,
-  Table2,
   FileText,
   Lock
 } from 'lucide-react';
 import ExamRichContent from './ExamRichContent';
+import MathText from '../common/MathText';
 import { ExamFigureBox } from './ExamMediaLightbox';
-import { KATEX_QUICK_SNIPPETS } from '../../utils/examParserUtils';
 import { BLOOM_LEVEL_DETAILS, shuffleOptionsForQuestion } from '../../utils/examOrganizerUtils';
 
 const OPTION_KEYS = ['A', 'B', 'C', 'D'];
@@ -246,9 +244,9 @@ export default function ExamQuestionStudioTab({
                     </span>
                   </div>
 
-                  <p className={`text-[11.5px] line-clamp-2 leading-snug ${isSelected ? 'text-slate-100' : 'text-slate-600'}`}>
-                    {q.content || '(Chưa nhập nội dung)'}
-                  </p>
+                  <div className={`text-[11.5px] line-clamp-2 leading-snug ${isSelected ? 'text-slate-100' : 'text-slate-600'}`}>
+                    <MathText text={q.content || '(Chưa nhập nội dung)'} inline />
+                  </div>
 
                   <div className="flex items-center justify-between gap-1 text-[10px]">
                     <span className={`truncate ${isSelected ? 'text-cyan-200' : 'text-indigo-700 font-medium'}`}>
@@ -330,7 +328,7 @@ export default function ExamQuestionStudioTab({
                     className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-[#1E3A5F] to-[#2C4C7E] hover:opacity-95 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs cursor-pointer"
                   >
                     <Sparkles className="w-3.5 h-3.5" />
-                    <span>Mở Full Studio (838 Ký Hiệu & 3D)</span>
+                    <span>Chỉnh sửa trong Full Studio</span>
                   </button>
 
                   <button
@@ -473,89 +471,49 @@ export default function ExamQuestionStudioTab({
                 </div>
               </div>
 
-              {/* Row 2: Question Stem + Live KaTeX Preview */}
+              {/* Row 2: Question Stem — Hiển thị thuần công thức, bấm để vào thẳng Full Studio */}
               <div className="space-y-2">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <label className="text-xs font-extrabold text-[#1E3A5F]">
-                    Nội dung câu hỏi (KaTeX, Bảng Markdown, Biểu đồ)
+                    Nội dung câu hỏi
                   </label>
 
                   {!isLocked && (
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <label className="px-2.5 py-1 rounded-lg border border-[#E5E3DC] bg-[#FAF9F6] hover:bg-[#EEF2F7] text-[11px] font-bold text-[#1E3A5F] flex items-center gap-1 cursor-pointer">
-                        <ImagePlus className="w-3.5 h-3.5" />
-                        <span>Đính kèm ảnh / đồ thị</span>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={(e) => {
-                            const f = e.target.files?.[0];
-                            if (f) {
-                              readImageAsDataUrl(f, (dataUrl) => {
-                                updateActive((q) => ({ ...q, imageUrl: dataUrl, imageUserAttached: true }));
-                              });
-                            }
-                            e.target.value = '';
-                          }}
-                        />
-                      </label>
-
-                      <button
-                        type="button"
-                        onClick={() =>
-                          updateActive((q) => ({
-                            ...q,
-                            content: `${q.content || ''}\n| Cột 1 | Cột 2 |\n| --- | --- |\n| Giá trị 1 | Giá trị 2 |`
-                          }))
-                        }
-                        className="px-2.5 py-1 rounded-lg border border-[#E5E3DC] bg-[#FAF9F6] hover:bg-[#EEF2F7] text-[11px] font-bold text-slate-700 flex items-center gap-1 cursor-pointer"
-                      >
-                        <Table2 className="w-3.5 h-3.5" />
-                        <span>+ Bảng</span>
-                      </button>
-                    </div>
+                    <label className="px-2.5 py-1 rounded-lg border border-[#E5E3DC] bg-[#FAF9F6] hover:bg-[#EEF2F7] text-[11px] font-bold text-[#1E3A5F] flex items-center gap-1 cursor-pointer">
+                      <ImagePlus className="w-3.5 h-3.5" />
+                      <span>Đính kèm ảnh / đồ thị</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) {
+                            readImageAsDataUrl(f, (dataUrl) => {
+                              updateActive((q) => ({ ...q, imageUrl: dataUrl, imageUserAttached: true }));
+                            });
+                          }
+                          e.target.value = '';
+                        }}
+                      />
+                    </label>
                   )}
                 </div>
 
-                {/* Quick KaTeX Strip */}
-                {!isLocked && (
-                  <div className="flex flex-wrap items-center gap-1">
-                    <Sigma className="w-3.5 h-3.5 text-[#2C4C7E] mr-0.5" />
-                    {KATEX_QUICK_SNIPPETS.map((s, idx) => (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={() =>
-                          updateActive((q) => ({
-                            ...q,
-                            content: `${q.content || ''} ${s.code}`.trim()
-                          }))
-                        }
-                        className="px-2 py-0.5 rounded-md bg-[#FAF9F6] hover:bg-[#EEF2F7] border border-[#E5E3DC] text-[10.5px] font-semibold text-[#1E3A5F] cursor-pointer"
-                      >
-                        {s.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
-
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
-                  <textarea
-                    disabled={isLocked}
-                    rows={6}
-                    value={activeQuestion.content}
-                    onChange={(e) => updateActive((q) => ({ ...q, content: e.target.value }))}
-                    placeholder="Nhập đề bài câu hỏi (hỗ trợ $...$ KaTeX và bảng Markdown)..."
-                    className="w-full p-3.5 rounded-xl border border-[#DCD9D0] bg-[#FAF9F6] focus:bg-white text-xs font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#2C4C7E]/25 disabled:opacity-75"
-                  />
-
-                  <div className="p-3.5 rounded-xl border border-[#E7E5DF] bg-[#FCFCFA] min-h-[140px] space-y-1.5">
-                    <div className="text-[10.5px] font-bold uppercase tracking-wider text-slate-400">
-                      Xem trước trực quan
-                    </div>
+                <div
+                  onClick={() =>
+                    !isLocked && onOpenFullStudio?.(activeQuestion, activeQuestion.parentPassageLocalId || null)
+                  }
+                  title={isLocked ? undefined : 'Nhấn để mở Full Studio chỉnh sửa'}
+                  className={`p-4 rounded-xl border border-[#DCD9D0] bg-white text-sm text-slate-900 leading-relaxed min-h-[84px] transition-all ${
+                    isLocked ? '' : 'cursor-pointer hover:border-[#2C4C7E] hover:bg-[#FAFBFD]'
+                  }`}
+                >
+                  {activeQuestion.content ? (
                     <ExamRichContent text={activeQuestion.content} onImageClick={onZoomImage} />
-                  </div>
+                  ) : (
+                    <span className="text-xs italic text-slate-400">(Chưa nhập nội dung — nhấn để mở Full Studio)</span>
+                  )}
                 </div>
 
                 <ExamFigureBox
@@ -572,7 +530,7 @@ export default function ExamQuestionStudioTab({
                 />
               </div>
 
-              {/* Row 3: 4 Options Editor (A / B / C / D) */}
+              {/* Row 3: 4 Options (A / B / C / D) — Thuần công thức */}
               <div className="space-y-2.5">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <label className="text-xs font-extrabold text-[#1E3A5F]">
@@ -596,13 +554,13 @@ export default function ExamQuestionStudioTab({
                     return (
                       <div
                         key={key}
-                        className={`p-3 rounded-xl border transition-all space-y-2 ${
+                        className={`p-3 rounded-xl border transition-all ${
                           isCorrect
                             ? 'border-emerald-400 bg-emerald-50/55 ring-1 ring-emerald-500/15'
-                            : 'border-[#E7E5DF] bg-[#FCFCFA]'
+                            : 'border-[#DCD9D0] bg-white'
                         }`}
                       >
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2.5">
                           <button
                             type="button"
                             disabled={isLocked}
@@ -616,63 +574,51 @@ export default function ExamQuestionStudioTab({
                             {key}
                           </button>
 
-                          <input
-                            type="text"
-                            disabled={isLocked}
-                            value={activeQuestion.options?.[key] || ''}
-                            onChange={(e) =>
-                              updateActive((q) => ({
-                                ...q,
-                                options: { ...(q.options || {}), [key]: e.target.value }
-                              }))
+                          <div
+                            onClick={() =>
+                              !isLocked && onOpenFullStudio?.(activeQuestion, activeQuestion.parentPassageLocalId || null)
                             }
-                            placeholder={`Nhập nội dung phương án ${key}...`}
-                            className="flex-1 px-2.5 py-1.5 rounded-lg border border-[#E5E3DC] bg-white text-xs font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#2C4C7E]/20 disabled:opacity-75"
-                          />
+                            title={isLocked ? undefined : 'Nhấn để mở Full Studio chỉnh sửa'}
+                            className={`flex-1 min-w-0 py-0.5 text-sm text-slate-900 ${isLocked ? '' : 'cursor-pointer'}`}
+                          >
+                            {activeQuestion.options?.[key] ? (
+                              <ExamRichContent text={activeQuestion.options[key]} inline onImageClick={onZoomImage} />
+                            ) : (
+                              <span className="text-xs italic text-slate-400">(Trống)</span>
+                            )}
+                          </div>
 
                           {isCorrect && (
                             <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" title="Đáp án đúng" />
                           )}
                         </div>
-
-                        {activeQuestion.options?.[key] && (
-                          <div className="pl-9 text-xs text-slate-800">
-                            <ExamRichContent text={activeQuestion.options[key]} inline onImageClick={onZoomImage} />
-                          </div>
-                        )}
                       </div>
                     );
                   })}
                 </div>
               </div>
 
-              {/* Row 4: Detailed Explanation */}
+              {/* Row 4: Detailed Explanation — Thuần công thức */}
               <div className="space-y-2 pt-1">
                 <label className="text-xs font-extrabold text-[#1E3A5F] flex items-center gap-1.5">
                   <Lightbulb className="w-3.5 h-3.5 text-amber-600" />
-                  <span>Lời giải chi tiết & Giải thích đáp án</span>
+                  <span>Lời giải chi tiết &amp; Giải thích đáp án</span>
                 </label>
 
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
-                  <textarea
-                    disabled={isLocked}
-                    rows={4}
-                    value={activeQuestion.explanation}
-                    onChange={(e) => updateActive((q) => ({ ...q, explanation: e.target.value }))}
-                    placeholder="Nhập hướng dẫn giải từng bước (hỗ trợ KaTeX)..."
-                    className="w-full p-3 rounded-xl border border-[#DCD9D0] bg-[#FAF9F6] focus:bg-white text-xs font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#2C4C7E]/25 disabled:opacity-75"
-                  />
-
-                  <div className="p-3 rounded-xl border border-amber-200/70 bg-amber-50/40 min-h-[96px] space-y-1">
-                    <div className="text-[10.5px] font-bold uppercase tracking-wider text-amber-800/70">
-                      Xem trước lời giải
-                    </div>
-                    {activeQuestion.explanation ? (
-                      <ExamRichContent text={activeQuestion.explanation} onImageClick={onZoomImage} />
-                    ) : (
-                      <div className="text-xs italic text-slate-400">Chưa có lời giải cho câu hỏi này.</div>
-                    )}
-                  </div>
+                <div
+                  onClick={() =>
+                    !isLocked && onOpenFullStudio?.(activeQuestion, activeQuestion.parentPassageLocalId || null)
+                  }
+                  title={isLocked ? undefined : 'Nhấn để mở Full Studio chỉnh sửa lời giải'}
+                  className={`p-3.5 rounded-xl border border-amber-200/90 bg-amber-50/30 text-sm text-slate-800 min-h-[72px] transition-all ${
+                    isLocked ? '' : 'cursor-pointer hover:border-amber-400 hover:bg-amber-50/60'
+                  }`}
+                >
+                  {activeQuestion.explanation ? (
+                    <ExamRichContent text={activeQuestion.explanation} onImageClick={onZoomImage} />
+                  ) : (
+                    <span className="text-xs italic text-slate-400">(Chưa có lời giải — nhấn để mở Full Studio)</span>
+                  )}
                 </div>
               </div>
             </div>

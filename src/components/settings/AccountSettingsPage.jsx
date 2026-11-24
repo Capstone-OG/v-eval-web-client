@@ -360,9 +360,26 @@ export default function AccountSettingsPage({
       showAlert('error', validationError);
       return;
     }
-    if (activeRole === 'student' && (!schoolName.trim() || !campusId || !examDate || !Number.isFinite(Number(targetScore)) || Number(targetScore) < 300 || Number(targetScore) > 1200 || !Number.isFinite(Number(studyHoursDay)) || Number(studyHoursDay) < 0.5 || Number(studyHoursDay) > 8)) {
-      showAlert('error', 'Vui lòng chọn cơ sở, nhập tên trường, ngày thi, điểm mục tiêu từ 300–1200 và thời gian học từ 0.5–8 giờ/ngày.');
-      return;
+    if (activeRole === 'student') {
+      const missingFields = [];
+      if (!campusId) missingFields.push('Cơ sở học tập');
+      if (!schoolName.trim()) missingFields.push('Tên trường THPT');
+      if (!examDate) missingFields.push('Ngày thi dự kiến');
+      if (!Number.isFinite(Number(targetScore)) || Number(targetScore) < 300 || Number(targetScore) > 1200) {
+        missingFields.push('Điểm mục tiêu (từ 300 đến 1200)');
+      }
+      if (!Number.isFinite(Number(studyHoursDay)) || Number(studyHoursDay) < 0.5 || Number(studyHoursDay) > 8) {
+        missingFields.push('Thời gian học mỗi ngày (từ 0.5 đến 8 giờ)');
+      }
+      if (missingFields.length > 0) {
+        showAlert(
+          'error',
+          missingFields.length === 1
+            ? `Vui lòng kiểm tra lại: ${missingFields[0]}.`
+            : `Vui lòng bổ sung/kiểm tra lại các mục sau: ${missingFields.join(', ')}.`
+        );
+        return;
+      }
     }
 
     setIsSavingProfile(true);

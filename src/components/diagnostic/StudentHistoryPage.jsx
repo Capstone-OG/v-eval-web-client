@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { BookOpen, ClipboardCheck, FileCheck2, History, ArrowLeft, Brain } from 'lucide-react';
 import DiagnosticAssessmentPage from './DiagnosticAssessmentPage';
 import MistakeNotebookSM2View from '../dashboard/MistakeNotebookSM2View';
+import AttemptAnswerReviewList from '../common/AttemptAnswerReviewList';
 import { practiceService } from '../../services/practiceService';
-import MathText from '../common/MathText';
 
 const categories = [
   { id: 'diagnostic', label: 'Đầu vào', icon: ClipboardCheck },
@@ -32,10 +32,10 @@ export default function StudentHistoryPage({ currentUser, onOpenDiagnostic, onOp
       tag: 'Khảo thí ĐGNL'
     },
     practice: {
-      title: 'Luyện tập cá nhân (P-L-A-R)',
-      subtitle: 'Các bài luyện tập thích ứng ZPD & câu hỏi đã lưu',
+      title: 'Luyện tập theo lộ trình',
+      subtitle: 'Các bài luyện tập thích ứng & chi tiết đáp án đã làm',
       icon: BookOpen,
-      tag: 'Tự luyện ZPD'
+      tag: 'Luyện tập cá nhân'
     },
     mock: {
       title: 'Phòng thi thử V-ACT',
@@ -44,8 +44,8 @@ export default function StudentHistoryPage({ currentUser, onOpenDiagnostic, onOp
       tag: 'Thi thử chuẩn hóa'
     },
     mistakes: {
-      title: 'Sổ tay lỗi sai (SM-2)',
-      subtitle: 'Gắn nhãn nguyên nhân & ôn tập lặp lại ngắt quãng mỗi ngày',
+      title: 'Sổ tay lỗi sai',
+      subtitle: 'Gắn nhãn nguyên nhân & ôn tập từng dạng bài theo lịch nhắc',
       icon: Brain,
       tag: 'Phân tích sai lầm'
     }
@@ -133,13 +133,14 @@ export default function StudentHistoryPage({ currentUser, onOpenDiagnostic, onOp
       {category === 'practice' && <div className="space-y-4 rounded-3xl border border-slate-200 bg-white p-5 sm:p-6">
         <div><h2 className="font-black text-slate-900 tracking-tight">Kết quả luyện tập</h2><p className="mt-1 text-sm text-slate-500">Các bài dưới đây được lưu trên trình duyệt này, chưa phải lịch sử đồng bộ giữa các thiết bị.</p></div>
         {selected ? <>
-          <button type="button" onClick={() => setSelected(null)} className="flex items-center gap-2 text-sm font-semibold text-blue-600 hover:text-blue-700"><ArrowLeft className="h-4 w-4" />Quay lại danh sách</button>
-          <h3 className="font-semibold">{selected.title || 'Bài luyện tập'}</h3>
-          {(selected.reviewedQuestions || []).map((q, i) => <div key={q.id || i} className="rounded-2xl border border-slate-100 p-4 text-sm">
-            <p className="mb-2 text-xs font-bold text-slate-500">Câu {q.question_number || i + 1}</p>
-            <MathText text={q.content || 'Chưa có nội dung câu hỏi.'} />
-            <p className="mt-3 text-slate-600">Bạn chọn: <strong>{q.studentChoice || 'Chưa trả lời'}</strong>{q.correctChoice && <> · Đáp án: <strong>{q.correctChoice}</strong></>}</p>
-          </div>)}
+          <button type="button" onClick={() => setSelected(null)} className="flex items-center gap-2 text-sm font-semibold text-blue-600 hover:text-blue-700 cursor-pointer"><ArrowLeft className="h-4 w-4" />Quay lại danh sách</button>
+          <h3 className="font-bold text-slate-900">{selected.title || 'Bài luyện tập'}</h3>
+          <AttemptAnswerReviewList
+            questions={selected.reviewedQuestions || []}
+            chunkSize={7}
+            onAskAiTutor={onOpenAiTutorWithContext}
+            allowAiTutor
+          />
         </> : localPractice.length ? <ul className="divide-y divide-slate-100">
           {localPractice.map((item) => <li key={item.id} className="flex flex-wrap items-center justify-between gap-3 py-4">
             <div><p className="font-semibold text-slate-800">{item.title || 'Bài luyện tập'}</p>
@@ -157,11 +158,12 @@ export default function StudentHistoryPage({ currentUser, onOpenDiagnostic, onOp
           <button type="button" onClick={() => setSelected(null)} className="flex items-center gap-2 text-sm font-semibold text-blue-600 hover:text-blue-700 cursor-pointer"><ArrowLeft className="h-4 w-4" />Quay lại danh sách</button>
           <h3 className="font-bold text-slate-900">{selected.title || 'Đề thi thử V-ACT'}</h3>
           <p className="text-xs text-slate-500">{selected.ai_commentary}</p>
-          {(selected.reviewedQuestions || []).map((q, i) => <div key={q.id || i} className="rounded-2xl border border-slate-100 p-4 text-sm space-y-2">
-            <p className="text-xs font-bold text-slate-500">Câu {q.question_number || i + 1}</p>
-            <MathText text={q.content || 'Chưa có nội dung câu hỏi.'} />
-            <p className="text-slate-600 text-xs">Bạn chọn: <strong>{q.studentChoice || 'Bỏ trống'}</strong>{q.correctChoice && <> · Đáp án đúng: <strong className="text-emerald-700">{q.correctChoice}</strong></>}</p>
-          </div>)}
+          <AttemptAnswerReviewList
+            questions={selected.reviewedQuestions || []}
+            chunkSize={7}
+            onAskAiTutor={onOpenAiTutorWithContext}
+            allowAiTutor
+          />
         </> : localMocks.length ? <ul className="divide-y divide-slate-100">
           {localMocks.map((item) => <li key={item.id} className="flex flex-wrap items-center justify-between gap-3 py-4">
             <div>

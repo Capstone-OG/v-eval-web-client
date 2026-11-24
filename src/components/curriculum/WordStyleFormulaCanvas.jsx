@@ -12,7 +12,9 @@ import {
   Zap,
   Plus,
   Minus,
-  SlidersHorizontal
+  SlidersHorizontal,
+  Keyboard,
+  X
 } from 'lucide-react';
 import {
   renderKatexHtml,
@@ -25,6 +27,7 @@ import AcademicChartBlock, {
   parseDataChartString,
   serializeDataChart
 } from '../common/AcademicChartBlock';
+import VisualMathField from './VisualMathField';
 
 /* ============================================================================
  * 1. VISUAL FORMULA STRUCTURE PARSING & NATURAL UNICODE CONVERSION (0% RAW CODE)
@@ -141,12 +144,12 @@ export function parseEquationStructure(latex) {
     return { type: 'SQRT', deg: sqrtMatch[1] || '2', expr: sqrtMatch[2], result: (sqrtMatch[3] || '').trim() };
   }
 
-  const powMatch = s.match(/^([a-zA-Z0-9()]+)\^\{?([^{}]+)\}?$/);
+  const powMatch = s.match(/^([a-zA-Z0-9()]+)\^(?:\{([^{}]+)\}|([a-zA-Z0-9]+))$/);
   if (powMatch) {
-    return { type: 'POWER', base: powMatch[1], exp: powMatch[2] };
+    return { type: 'POWER', base: powMatch[1], exp: powMatch[2] || powMatch[3] };
   }
 
-  const subMatch = s.match(/^([a-zA-Z0-9]+)_\{?([^{}]+)\}?$/);
+  const subMatch = s.match(/^([a-zA-Z0-9]+)_\{([^{}]+)\}$/) || s.match(/^([a-zA-Z0-9]+)_([a-zA-Z0-9]+)$/);
   if (subMatch) {
     return { type: 'SUBSCRIPT', base: subMatch[1], sub: subMatch[2] };
   }
@@ -210,8 +213,8 @@ export function latexToNaturalMath(latex) {
 
   out = out
     .replace(/\\rightleftharpoons/g, '⇌')
-    .replace(/\\Leftrightarrow/g, '⇔')
-    .replace(/\\Rightarrow/g, '⇒')
+    .replace(/\\Longleftrightarrow|\\Leftrightarrow|\\iff/g, '⇔')
+    .replace(/\\Longrightarrow|\\Rightarrow|\\implies/g, '⇒')
     .replace(/\\rightarrow|\\to/g, '→')
     .replace(/\\uparrow/g, '↑')
     .replace(/\\downarrow/g, '↓')
@@ -1263,6 +1266,7 @@ const RichTextBlock = forwardRef(function RichTextBlock(
       ref={editorRef}
       contentEditable
       suppressContentEditableWarning
+      spellCheck={false}
       data-placeholder={placeholder}
       onFocus={() => {
         onFocusBlock?.();
@@ -1355,6 +1359,30 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas(
   // Active formula chip popover state
   const [activeFormula, setActiveFormula] = useState(null); // { blockId, chipEl, latex, struct, top, left }
   const popoverRef = useRef(null);
+  const visualMathRef = useRef(null);
+  const [mathKbVisible, setMathKbVisible] = useState(false);
+  const [mathKbHeight, setMathKbHeight] = useState(290);
+
+  // Theo dõi trạng thái mở/đóng và chiều cao bàn phím ảo MathLive để đặt nút Đóng ngay trên mép trên bàn phím
+  useEffect(() => {
+    const kb = window.mathVirtualKeyboard;
+    if (!kb) return undefined;
+    const syncKb = () => {
+      const visible = Boolean(kb.visible);
+      setMathKbVisible(visible);
+      const h = kb.boundingRect?.height;
+      if (visible && h > 50) {
+        setMathKbHeight(Math.round(h));
+      }
+    };
+    syncKb();
+    kb.addEventListener?.('virtual-keyboard-toggle', syncKb);
+    kb.addEventListener?.('geometrychange', syncKb);
+    return () => {
+      kb.removeEventListener?.('virtual-keyboard-toggle', syncKb);
+      kb.removeEventListener?.('geometrychange', syncKb);
+    };
+  }, [activeFormula]);
 
   // Sync external content changes (e.g., AI enrich, switching tabs, loading pattern)
   useEffect(() => {
@@ -1375,6 +1403,8 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas(
     const handleOutside = (e) => {
       if (popoverRef.current?.contains(e.target)) return;
       if (e.target?.closest?.('.veval-formula-chip')) return;
+      if (e.target?.closest?.('.ML__keyboard, math-virtual-keyboard, [data-mathlive-keyboard-close]')) return;
+      if (window.mathVirtualKeyboard?.container?.contains?.(e.target)) return;
       setActiveFormula(null);
     };
     const handleEsc = (e) => {
@@ -1575,6 +1605,16 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas(
     commitBlocks(filtered);
   };
 
+  // Highlight công thức đang sửa ngay trong dòng văn bản
+  useEffect(() => {
+    const chipEl = activeFormula?.chipEl;
+    if (!chipEl) return undefined;
+    chipEl.classList.add('veval-formula-chip-active');
+    return () => {
+      chipEl.classList.remove('veval-formula-chip-active');
+    };
+  }, [activeFormula?.chipEl]);
+
   return (
     <div ref={containerRef} className="relative font-sans text-slate-800">
       {/* Scoped editorial styling for Word-like editing & atomic KaTeX chips */}
@@ -1633,38 +1673,88 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas(
           background: #E8EEF8;
           border-color: #2C4C7E;
         }
+        .veval-formula-chip-active {
+          background: #E0E7FF !important;
+          border-color: #4F46E5 !important;
+          box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.2);
+        }
       `}</style>
 
-      {/* VISUAL FORMULA SLOT POPOVER (ZERO RAW \frac OR /// EVER SHOWN) */}
+      {/* DOCKED EQUATION BAR (Cố định phía trên tài liệu, KHÔNG che nội dung đang soạn, cập nhật trực tiếp tại chỗ) */}
       {activeFormula && (
         <div
           ref={popoverRef}
-          style={{ top: `${activeFormula.top}px`, left: `${activeFormula.left}px` }}
-          className="absolute z-50 w-[340px] sm:w-[400px] bg-white rounded-2xl border border-[#DCE4F0] shadow-[0_12px_36px_rgba(15,23,42,0.14)] p-3.5 space-y-3 animate-in fade-in zoom-in-95 duration-100"
+          className="mb-2.5 rounded-xl border border-indigo-200/90 bg-[#F8FAFF] px-3 py-2.5 shadow-2xs space-y-2"
         >
-          {/* Header */}
-          <div className="flex items-center justify-between gap-2 pb-2 border-b border-[#ECEAE4]">
-            <span className="text-[11px] font-bold text-[#1E3A5F] bg-[#EEF2F7] px-2.5 py-0.5 rounded-full">
-              {activeFormula.struct.type === 'FRACTION' ? 'Phân số' :
-               activeFormula.struct.type === 'SQRT' ? 'Căn thức' :
-               activeFormula.struct.type === 'POWER' ? 'Lũy thừa' :
-               activeFormula.struct.type === 'SUBSCRIPT' ? 'Chỉ số' :
-               activeFormula.struct.type === 'INTEGRAL' ? 'Tích phân' :
-               activeFormula.struct.type === 'LIMIT' ? 'Giới hạn' :
-               activeFormula.struct.type === 'CHEM_CM' ? 'Nồng độ CM' :
-               activeFormula.struct.type === 'CHEM_CPERCENT' ? 'Nồng độ C%' :
-               'Công thức'}
-            </span>
-            <div className="flex items-center gap-1">
+          {/* Row 1: Loại công thức + Hành động nhanh */}
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-bold text-indigo-800 bg-indigo-100/80 px-2.5 py-0.5 rounded-full">
+                {activeFormula.struct.type === 'FRACTION' ? 'Phân số' :
+                 activeFormula.struct.type === 'SQRT' ? 'Căn thức' :
+                 activeFormula.struct.type === 'POWER' ? 'Lũy thừa' :
+                 activeFormula.struct.type === 'SUBSCRIPT' ? 'Chỉ số' :
+                 activeFormula.struct.type === 'INTEGRAL' ? 'Tích phân' :
+                 activeFormula.struct.type === 'LIMIT' ? 'Giới hạn' :
+                 activeFormula.struct.type === 'CHEM_CM' ? 'Nồng độ CM' :
+                 activeFormula.struct.type === 'CHEM_CPERCENT' ? 'Nồng độ C%' :
+                 'Thanh sửa công thức'}
+              </span>
+              <span className="text-[11px] text-slate-500 hidden sm:inline">
+                Cập nhật trực tiếp ngay trong dòng • Enter để xong
+              </span>
+            </div>
+            <div className="flex items-center gap-1 flex-wrap">
+              <button
+                type="button"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => {
+                  const kb = window.mathVirtualKeyboard;
+                  if (!kb) return;
+                  if (kb.visible) {
+                    kb.hide();
+                    setMathKbVisible(false);
+                  } else {
+                    visualMathRef.current?.focus();
+                    requestAnimationFrame(() => {
+                      try { kb.show(); } catch { /* ignore */ }
+                      setMathKbVisible(true);
+                    });
+                  }
+                }}
+                className={`px-2 py-1 rounded-lg border text-[11px] font-semibold flex items-center gap-1 cursor-pointer transition-colors ${
+                  mathKbVisible
+                    ? 'bg-rose-50 hover:bg-rose-100 text-rose-700 border-rose-200'
+                    : 'bg-white hover:bg-indigo-50 text-indigo-700 border-indigo-200'
+                }`}
+                title={mathKbVisible ? 'Đóng bàn phím toán MathLive' : 'Mở bàn phím toán MathLive'}
+              >
+                {mathKbVisible ? <X className="w-3 h-3" /> : <Keyboard className="w-3 h-3" />}
+                <span>{mathKbVisible ? 'Đóng bàn phím' : 'Bàn phím toán'}</span>
+              </button>
               <button
                 type="button"
                 onClick={handleFormulaAutoCalc}
-                className="px-2 py-1 rounded-lg bg-[#F7F6F2] hover:bg-[#EEF2F7] text-[#1E3A5F] border border-[#E5E3DC] text-[11px] font-semibold flex items-center gap-1 cursor-pointer"
+                className="px-2 py-1 rounded-lg bg-white hover:bg-indigo-50 text-[#1E3A5F] border border-slate-200 text-[11px] font-semibold flex items-center gap-1 cursor-pointer"
                 title="Tự tính kết quả"
               >
                 <Zap className="w-3 h-3" />
                 <span>Tính</span>
               </button>
+              {onOpenAdvancedModal && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveFormula(null);
+                    onOpenAdvancedModal();
+                  }}
+                  className="px-2 py-1 rounded-lg bg-white hover:bg-indigo-50 text-[#1E3A5F] border border-slate-200 text-[11px] font-semibold flex items-center gap-1 cursor-pointer"
+                  title="Mở bộ dựng công thức trực quan"
+                >
+                  <SlidersHorizontal className="w-3 h-3" />
+                  <span>Bộ dựng</span>
+                </button>
+              )}
               <button
                 type="button"
                 onClick={handleDeleteFormulaChip}
@@ -1684,199 +1774,67 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas(
             </div>
           </div>
 
-          {/* Large Live Rendered KaTeX Preview */}
-          <div className="py-3 px-4 rounded-xl bg-[#FAF9F6] border border-[#ECEAE4] flex items-center justify-center min-h-[54px] overflow-x-auto">
-            <div
-              className="text-lg text-slate-900"
-              dangerouslySetInnerHTML={{ __html: renderKatexHtml(activeFormula.latex || '\\square', false) }}
+          {/* Sửa trực tiếp trên công thức hiển thị (WYSIWYG MathLive — không hiện text thô 2x^2 hay x_2) */}
+          <div className="space-y-1.5">
+            <VisualMathField
+              ref={visualMathRef}
+              value={activeFormula.latex || ''}
+              onChange={(nextLatex) => {
+                applyActiveFormulaLatex(nextLatex, { type: 'GENERAL', raw: nextLatex });
+              }}
+              onDone={() => setActiveFormula(null)}
             />
+            <div className="flex flex-wrap gap-1">
+              {[
+                { label: 'Phân số', preview: '\\frac{a}{b}', snippet: '\\frac{#0}{#?}' },
+                { label: 'Căn bậc 2', preview: '\\sqrt{x}', snippet: '\\sqrt{#0}' },
+                { label: 'Lũy thừa', preview: 'x^2', snippet: '^{#?}' },
+                { label: 'Chỉ số dưới', preview: 'x_0', snippet: '_{#?}' },
+                { label: 'Cộng trừ', preview: '\\pm', snippet: '\\pm ' },
+                { label: 'Nhân', preview: '\\times', snippet: '\\times ' },
+                { label: 'Chấm nhân', preview: '\\cdot', snippet: '\\cdot ' },
+                { label: 'Khác', preview: '\\neq', snippet: '\\neq ' },
+                { label: 'Nhỏ hơn bằng', preview: '\\le', snippet: '\\le ' },
+                { label: 'Lớn hơn bằng', preview: '\\ge', snippet: '\\ge ' },
+                { label: 'Mũi tên', preview: '\\to', snippet: '\\to ' },
+                { label: 'Suy ra', preview: '\\Rightarrow', snippet: '\\Rightarrow ' },
+                { label: 'Tương đương', preview: '\\Leftrightarrow', snippet: '\\Leftrightarrow ' },
+                { label: 'Delta', preview: '\\Delta', snippet: '\\Delta ' },
+                { label: 'Pi', preview: '\\pi', snippet: '\\pi ' },
+                { label: 'Vô cực', preview: '\\infty', snippet: '\\infty ' }
+              ].map((k, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  title={k.label}
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => visualMathRef.current?.insertLatex(k.snippet)}
+                  className="px-2 py-0.5 rounded-md bg-white hover:bg-indigo-50 border border-slate-200 text-slate-800 text-xs cursor-pointer"
+                >
+                  <span dangerouslySetInnerHTML={{ __html: renderKatexHtml(k.preview, false) }} />
+                </button>
+              ))}
+            </div>
           </div>
-
-          {/* Structured Visual Slots */}
-          {activeFormula.struct.type === 'FRACTION' && (
-            <div className="flex items-center justify-center gap-3 py-1">
-              <div className="flex flex-col items-center gap-1">
-                <input
-                  type="text"
-                  value={activeFormula.struct.num ?? ''}
-                  onChange={(e) => handleSlotFieldChange('num', e.target.value)}
-                  placeholder="Tử số"
-                  className="w-24 px-2 py-1 text-center text-xs font-semibold rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#2C4C7E]/30"
-                />
-                <div className="w-24 h-0.5 bg-slate-700 rounded-full" />
-                <input
-                  type="text"
-                  value={activeFormula.struct.den ?? ''}
-                  onChange={(e) => handleSlotFieldChange('den', e.target.value)}
-                  placeholder="Mẫu số"
-                  className="w-24 px-2 py-1 text-center text-xs font-semibold rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#2C4C7E]/30"
-                />
-              </div>
-              <span className="text-slate-400 font-bold">=</span>
-              <input
-                type="text"
-                value={activeFormula.struct.result ?? ''}
-                onChange={(e) => handleSlotFieldChange('result', e.target.value)}
-                placeholder="Kết quả"
-                className="w-20 px-2 py-1.5 text-center text-xs font-semibold rounded-lg border border-emerald-200 bg-emerald-50/40 text-emerald-900 focus:outline-none focus:ring-2 focus:ring-emerald-400/40"
-              />
-            </div>
-          )}
-
-          {activeFormula.struct.type === 'SQRT' && (
-            <div className="flex items-center justify-center gap-2 py-1">
-              <input
-                type="text"
-                value={activeFormula.struct.deg ?? '2'}
-                onChange={(e) => handleSlotFieldChange('deg', e.target.value)}
-                placeholder="Bậc"
-                className="w-12 px-2 py-1 text-center text-xs font-semibold rounded-lg border border-slate-200"
-              />
-              <span className="text-lg font-serif text-slate-700">√</span>
-              <input
-                type="text"
-                value={activeFormula.struct.expr ?? ''}
-                onChange={(e) => handleSlotFieldChange('expr', e.target.value)}
-                placeholder="Biểu thức"
-                className="w-28 px-2 py-1 text-center text-xs font-semibold rounded-lg border border-slate-200"
-              />
-              <span className="text-slate-400 font-bold">=</span>
-              <input
-                type="text"
-                value={activeFormula.struct.result ?? ''}
-                onChange={(e) => handleSlotFieldChange('result', e.target.value)}
-                placeholder="Kết quả"
-                className="w-16 px-2 py-1 text-center text-xs font-semibold rounded-lg border border-emerald-200 bg-emerald-50/40"
-              />
-            </div>
-          )}
-
-          {activeFormula.struct.type === 'POWER' && (
-            <div className="flex items-center justify-center gap-2 py-1">
-              <input
-                type="text"
-                value={activeFormula.struct.base ?? ''}
-                onChange={(e) => handleSlotFieldChange('base', e.target.value)}
-                placeholder="Cơ số"
-                className="w-24 px-2 py-1 text-center text-xs font-semibold rounded-lg border border-slate-200"
-              />
-              <span className="text-xs text-slate-400">mũ</span>
-              <input
-                type="text"
-                value={activeFormula.struct.exp ?? ''}
-                onChange={(e) => handleSlotFieldChange('exp', e.target.value)}
-                placeholder="Số mũ"
-                className="w-20 px-2 py-1 text-center text-xs font-semibold rounded-lg border border-slate-200"
-              />
-            </div>
-          )}
-
-          {activeFormula.struct.type === 'SUBSCRIPT' && (
-            <div className="flex items-center justify-center gap-2 py-1">
-              <input
-                type="text"
-                value={activeFormula.struct.base ?? ''}
-                onChange={(e) => handleSlotFieldChange('base', e.target.value)}
-                placeholder="Ký hiệu"
-                className="w-24 px-2 py-1 text-center text-xs font-semibold rounded-lg border border-slate-200"
-              />
-              <span className="text-xs text-slate-400">chỉ số</span>
-              <input
-                type="text"
-                value={activeFormula.struct.sub ?? ''}
-                onChange={(e) => handleSlotFieldChange('sub', e.target.value)}
-                placeholder="0"
-                className="w-20 px-2 py-1 text-center text-xs font-semibold rounded-lg border border-slate-200"
-              />
-            </div>
-          )}
-
-          {activeFormula.struct.type === 'INTEGRAL' && (
-            <div className="grid grid-cols-3 gap-2">
-              <input type="text" value={activeFormula.struct.lower ?? ''} onChange={(e) => handleSlotFieldChange('lower', e.target.value)} placeholder="Cận dưới" className="px-2 py-1 text-center text-xs rounded-lg border border-slate-200" />
-              <input type="text" value={activeFormula.struct.upper ?? ''} onChange={(e) => handleSlotFieldChange('upper', e.target.value)} placeholder="Cận trên" className="px-2 py-1 text-center text-xs rounded-lg border border-slate-200" />
-              <input type="text" value={activeFormula.struct.expr ?? ''} onChange={(e) => handleSlotFieldChange('expr', e.target.value)} placeholder="f(x)" className="px-2 py-1 text-center text-xs rounded-lg border border-slate-200" />
-            </div>
-          )}
-
-          {activeFormula.struct.type === 'LIMIT' && (
-            <div className="grid grid-cols-3 gap-2">
-              <input type="text" value={activeFormula.struct.variable ?? ''} onChange={(e) => handleSlotFieldChange('variable', e.target.value)} placeholder="Biến" className="px-2 py-1 text-center text-xs rounded-lg border border-slate-200" />
-              <input type="text" value={activeFormula.struct.target ?? ''} onChange={(e) => handleSlotFieldChange('target', e.target.value)} placeholder="Tiến tới" className="px-2 py-1 text-center text-xs rounded-lg border border-slate-200" />
-              <input type="text" value={activeFormula.struct.expr ?? ''} onChange={(e) => handleSlotFieldChange('expr', e.target.value)} placeholder="f(x)" className="px-2 py-1 text-center text-xs rounded-lg border border-slate-200" />
-            </div>
-          )}
-
-          {(activeFormula.struct.type === 'CHEM_CM' || activeFormula.struct.type === 'CHEM_CPERCENT') && (
-            <div className="flex items-center justify-center gap-2 py-1">
-              <div className="flex flex-col items-center gap-1">
-                <input type="text" value={activeFormula.struct.num ?? ''} onChange={(e) => handleSlotFieldChange('num', e.target.value)} placeholder={activeFormula.struct.type === 'CHEM_CM' ? 'n' : 'mct'} className="w-20 px-2 py-1 text-center text-xs rounded-lg border border-slate-200" />
-                <div className="w-20 h-0.5 bg-slate-700 rounded-full" />
-                <input type="text" value={activeFormula.struct.den ?? ''} onChange={(e) => handleSlotFieldChange('den', e.target.value)} placeholder={activeFormula.struct.type === 'CHEM_CM' ? 'V' : 'mdd'} className="w-20 px-2 py-1 text-center text-xs rounded-lg border border-slate-200" />
-              </div>
-              <span className="text-slate-400 font-bold">=</span>
-              <input type="text" value={activeFormula.struct.result ?? ''} onChange={(e) => handleSlotFieldChange('result', e.target.value)} placeholder="Kết quả" className="w-20 px-2 py-1 text-center text-xs rounded-lg border border-emerald-200 bg-emerald-50/40" />
-            </div>
-          )}
-
-          {activeFormula.struct.type === 'GENERAL' && (
-            <div className="space-y-2">
-              <input
-                type="text"
-                value={latexToNaturalMath(activeFormula.latex)}
-                onChange={(e) => {
-                  const nextLatex = naturalMathToLatex(e.target.value);
-                  applyActiveFormulaLatex(nextLatex, { type: 'GENERAL', raw: nextLatex });
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    setActiveFormula(null);
-                  }
-                }}
-                placeholder="Nhập biểu thức (vd: x² + 2x - 1, H2SO4)..."
-                className="w-full px-3 py-1.5 rounded-lg border border-slate-200 bg-[#FAF9F6] focus:bg-white text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#2C4C7E]/30"
-              />
-              <div className="flex flex-wrap gap-1">
-                {POPOVER_VISUAL_KEYS.map((k, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    title={k.label}
-                    onClick={() => {
-                      if (k.isTemplate) {
-                        applyActiveFormulaLatex(k.code);
-                      } else {
-                        const curNat = latexToNaturalMath(activeFormula.latex);
-                        const nextLatex = naturalMathToLatex(`${curNat} ${k.insert}`);
-                        applyActiveFormulaLatex(nextLatex, { type: 'GENERAL', raw: nextLatex });
-                      }
-                    }}
-                    className="px-2 py-1 rounded-md bg-[#FAF9F6] hover:bg-[#EEF2F7] border border-[#E5E3DC] text-slate-800 text-xs cursor-pointer"
-                  >
-                    <span dangerouslySetInnerHTML={{ __html: renderKatexHtml(k.preview || k.code, false) }} />
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {onOpenAdvancedModal && (
-            <div className="flex justify-end pt-1 border-t border-[#ECEAE4]">
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveFormula(null);
-                  onOpenAdvancedModal();
-                }}
-                className="text-[11px] font-semibold text-[#1E3A5F] hover:underline flex items-center gap-1 cursor-pointer"
-              >
-                <SlidersHorizontal className="w-3 h-3" />
-                <span>Mở bộ dựng công thức</span>
-              </button>
-            </div>
-          )}
         </div>
+      )}
+
+      {/* Nút Đóng bàn phím toán nằm ngay trên mép trên cùng bên phải của bàn phím MathLive */}
+      {mathKbVisible && (
+        <button
+          type="button"
+          data-mathlive-keyboard-close="1"
+          style={{ bottom: `${mathKbHeight + 10}px`, right: '16px', zIndex: 2147483647 }}
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => {
+            try { window.mathVirtualKeyboard?.hide?.(); } catch { /* ignore */ }
+            setMathKbVisible(false);
+          }}
+          className="fixed px-3.5 py-1.5 rounded-full bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold shadow-lg border border-white/20 flex items-center gap-1.5 cursor-pointer"
+        >
+          <X className="w-3.5 h-3.5" />
+          <span>Đóng bàn phím toán</span>
+        </button>
       )}
 
       {/* DOCUMENT SURFACE */}

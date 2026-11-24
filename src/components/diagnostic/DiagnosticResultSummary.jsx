@@ -1,66 +1,235 @@
-import { ArrowUpRight, Brain, CheckCircle2, Clock, FileText } from 'lucide-react';
+import React from 'react';
+import { Box, Chip, LinearProgress, Paper, Stack, Typography } from '@mui/material';
+import { ArrowUpRight, Award, CheckCircle2, Clock, FileText } from 'lucide-react';
+
+function getAbilityBand(theta, accuracy) {
+  if (Number.isFinite(theta)) {
+    if (theta >= 0.8) return { label: 'Rất tốt', detail: 'Đủ nền tảng chinh phục mục tiêu 900+', color: 'success' };
+    if (theta >= 0.2) return { label: 'Khá vững', detail: 'Sẵn sàng tăng tốc luyện chuyên sâu', color: 'primary' };
+    if (theta >= -0.4) return { label: 'Trung bình khá', detail: 'Cần củng cố các mảng kiến thức trọng tâm', color: 'info' };
+    return { label: 'Cần củng cố nền tảng', detail: 'Ưu tiên xây chắc kiến thức cơ bản trước', color: 'warning' };
+  }
+  if (accuracy >= 80) return { label: 'Rất tốt', detail: 'Nền tảng kiến thức rất vững', color: 'success' };
+  if (accuracy >= 60) return { label: 'Khá vững', detail: 'Đang tiến bộ tốt, tiếp tục rèn luyện', color: 'primary' };
+  return { label: 'Cần củng cố nền tảng', detail: 'Tập trung ôn tập các dạng bài ưu tiên', color: 'warning' };
+}
 
 export default function DiagnosticResultSummary({ result, compact = false }) {
   const correct = result.pacing?.totalCorrect ?? 0;
   const total = result.pacing?.totalQuestions ?? 0;
-  const accuracy = total > 0 ? Math.round(correct / total * 100) : 0;
+  const accuracy = total > 0 ? Math.round((correct / total) * 100) : 0;
   const seconds = result.pacing?.totalTimeSpent ?? 0;
   const theta = Number(result.theta_0);
+  const band = getAbilityBand(theta, accuracy);
+
   if (compact) {
     const metrics = [
-      { label: 'Kết quả bài làm', icon: CheckCircle2, color: 'text-emerald-700', badge: 'bg-emerald-100 text-emerald-600', tint: 'from-emerald-100/80', edge: 'border-emerald-300 border-t-4 border-t-emerald-500',
-        value: <>{correct}<span className="ml-1 text-base font-medium text-slate-400">/ {total} câu</span></>,
-        detail: `${accuracy}% câu trả lời đúng`, progress: accuracy },
-      { label: 'Năng lực IRT θ', icon: Brain, color: 'text-indigo-700', badge: 'bg-indigo-100 text-indigo-600', tint: 'from-indigo-100/80', edge: 'border-indigo-300 border-t-4 border-t-indigo-500',
-        value: Number.isFinite(theta) ? `${theta > 0 ? '+' : ''}${theta.toFixed(2)}` : '—',
-        detail: 'Ước lượng từ bài đầu vào' },
-      { label: 'Thời gian làm bài', icon: Clock, color: 'text-violet-700', badge: 'bg-violet-100 text-violet-600', tint: 'from-violet-100/80', edge: 'border-violet-300 border-t-4 border-t-violet-500',
-        value: <>{Math.floor(seconds / 60)}<span className="mx-1 text-base font-medium text-slate-400">phút</span>{String(seconds % 60).padStart(2, '0')}<span className="ml-1 text-base font-medium text-slate-400">giây</span></>,
-        detail: `Trung bình ${total > 0 ? Math.round(seconds / total) : 0} giây / câu` },
+      {
+        label: 'Kết quả bài làm',
+        icon: CheckCircle2,
+        accent: '#10b981',
+        value: (
+          <>
+            {correct}
+            <Typography component="span" sx={{ ml: 0.75, fontSize: '0.95rem', fontWeight: 500, color: 'text.secondary' }}>
+              / {total} câu
+            </Typography>
+          </>
+        ),
+        detail: `${accuracy}% câu trả lời đúng`,
+        progress: accuracy,
+      },
+      {
+        label: 'Đánh giá mức năng lực',
+        icon: Award,
+        accent: '#4f46e5',
+        value: band.label,
+        detail: band.detail,
+        chipColor: band.color,
+      },
+      {
+        label: 'Thời gian làm bài',
+        icon: Clock,
+        accent: '#7c3aed',
+        value: (
+          <>
+            {Math.floor(seconds / 60)}
+            <Typography component="span" sx={{ mx: 0.5, fontSize: '0.95rem', fontWeight: 500, color: 'text.secondary' }}>
+              phút
+            </Typography>
+            {String(seconds % 60).padStart(2, '0')}
+            <Typography component="span" sx={{ ml: 0.5, fontSize: '0.95rem', fontWeight: 500, color: 'text.secondary' }}>
+              giây
+            </Typography>
+          </>
+        ),
+        detail: `Trung bình ${total > 0 ? Math.round(seconds / total) : 0} giây / câu`,
+      },
     ];
-    return <section aria-label="Tóm tắt kết quả" className="grid gap-3 sm:grid-cols-3">
-      {metrics.map(({ label, icon: Icon, color, badge, tint, edge, value, detail, progress }) => <div key={label}
-        className={`relative overflow-hidden rounded-2xl border ${edge} bg-gradient-to-br ${tint} to-white p-4 shadow-[0_3px_18px_-8px_rgba(15,23,42,0.15)] sm:p-5`}>
-        <div className="flex items-center justify-between gap-3">
-          <span className="text-xs font-bold text-slate-700">{label}</span>
-          <span className={`flex h-9 w-9 items-center justify-center rounded-xl ${badge}`}><Icon className="h-[18px] w-[18px]" /></span>
-        </div>
-        <div className={`mt-1 text-3xl font-extrabold tracking-tight tabular-nums ${color}`}>{value}</div>
-        <p className="mt-2 text-xs text-slate-500">{detail}</p>
-        {progress !== undefined && <div className="absolute inset-x-0 bottom-0 h-0.5 bg-emerald-100/60"><div className="h-full bg-emerald-400" style={{ width: `${Math.max(0, Math.min(progress, 100))}%` }} /></div>}
-      </div>)}
-    </section>;
+
+    return (
+      <Box
+        component="section"
+        aria-label="Tóm tắt kết quả"
+        sx={{ display: 'grid', gap: 1.5, gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' } }}
+      >
+        {metrics.map(({ label, icon: Icon, accent, value, detail, progress }) => (
+          <Paper
+            key={label}
+            variant="outlined"
+            sx={{
+              position: 'relative',
+              overflow: 'hidden',
+              borderRadius: 3,
+              p: 2.25,
+              borderTop: `4px solid ${accent}`,
+              borderColor: 'divider',
+            }}
+          >
+            <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
+              <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: 0.4 }}>
+                {label}
+              </Typography>
+              <Box sx={{ width: 34, height: 34, borderRadius: 2, bgcolor: `${accent}18`, color: accent, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Icon size={18} />
+              </Box>
+            </Stack>
+            <Typography variant="h5" sx={{ mt: 1, fontWeight: 800, color: 'text.primary', fontVariantNumeric: 'tabular-nums' }}>
+              {value}
+            </Typography>
+            <Typography variant="caption" sx={{ mt: 0.75, display: 'block', color: 'text.secondary' }}>
+              {detail}
+            </Typography>
+            {progress !== undefined && (
+              <LinearProgress
+                variant="determinate"
+                value={Math.max(0, Math.min(progress, 100))}
+                color="success"
+                sx={{ mt: 1.25, height: 5, borderRadius: 3, bgcolor: 'rgba(16,185,129,0.14)' }}
+              />
+            )}
+          </Paper>
+        ))}
+      </Box>
+    );
   }
+
   return (
-    <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm">
-      {!compact && <div className="relative overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 px-6 py-6 sm:px-8 sm:py-8">
-        <div aria-hidden="true" className="absolute -right-16 -top-32 h-80 w-80 rounded-full bg-blue-500/20 blur-3xl" />
-        <div className="relative flex items-start justify-between gap-6">
-          <div className="max-w-2xl">
-            <span className="inline-flex items-center gap-2 text-xs font-bold tracking-widest text-blue-300 uppercase"><FileText className="h-4 w-4" /> Báo cáo đầu vào</span>
-            <h2 className="mt-3 text-2xl sm:text-3xl font-black tracking-tight text-white">Kết quả khảo sát <span className="text-blue-300">năng lực đầu vào</span></h2>
-            <p className="mt-3 text-sm leading-6 text-slate-400">Nhìn lại bài làm, nhận diện thế mạnh và những kỹ năng cần cải thiện.</p>
-          </div>
-          <span className="hidden sm:flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-white/15 bg-white/5 text-blue-300"><ArrowUpRight className="h-7 w-7" /></span>
-        </div>
-      </div>}
-      <div className="grid grid-cols-1 divide-y divide-slate-100 sm:grid-cols-3 sm:divide-y-0 sm:divide-x">
-        <div className={compact ? "p-4 sm:px-5 sm:py-4" : "p-6 sm:p-8"}>
-          <div className="flex items-center gap-2 text-xs font-bold text-slate-500"><CheckCircle2 className="h-4 w-4 text-emerald-600" /> KẾT QUẢ BÀI LÀM</div>
-          <div className={`${compact ? 'mt-2 text-2xl' : 'mt-4 text-4xl'} font-black tracking-tight text-slate-900`}>{correct}<span className="text-lg font-medium text-slate-400"> / {total} câu</span></div>
-          <div className="mt-4 flex items-center gap-3"><div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-emerald-500" style={{ width: `${Math.max(0, Math.min(accuracy, 100))}%` }} /></div><span className="text-sm font-bold text-emerald-700">{accuracy}%</span></div>
-        </div>
-        <div className={compact ? "p-4 sm:px-5 sm:py-4" : "p-6 sm:p-8"}>
-          <div className="flex items-center gap-2 text-xs font-bold text-slate-500"><Brain className="h-4 w-4 text-blue-600" /> CHỈ SỐ NĂNG LỰC IRT θ</div>
-          <div className={`${compact ? 'mt-2 text-2xl' : 'mt-4 text-4xl'} font-black tracking-tight text-blue-700 tabular-nums`}>{Number.isFinite(theta) ? `${theta > 0 ? '+' : ''}${theta.toFixed(2)}` : '—'}</div>
-          <p className="mt-3 text-xs leading-5 text-slate-500">Ước lượng năng lực từ bài khảo sát này.</p>
-        </div>
-        <div className={compact ? "p-4 sm:px-5 sm:py-4" : "p-6 sm:p-8"}>
-          <div className="flex items-center gap-2 text-xs font-bold text-slate-500"><Clock className="h-4 w-4 text-violet-600" /> THỜI GIAN HOÀN THÀNH</div>
-          <div className={`${compact ? 'mt-2 text-2xl' : 'mt-4 text-4xl'} font-black tracking-tight text-slate-900 tabular-nums`}>{Math.floor(seconds / 60)}<span className="text-lg font-medium text-slate-400"> phút </span>{String(seconds % 60).padStart(2, '0')}<span className="text-lg font-medium text-slate-400"> giây</span></div>
-          <p className="mt-3 text-xs leading-5 text-slate-500">Trung bình {total > 0 ? Math.round(seconds / total) : 0} giây mỗi câu.</p>
-        </div>
-      </div>
-    </section>
+    <Paper variant="outlined" sx={{ overflow: 'hidden', borderRadius: 4, borderColor: 'divider' }}>
+      <Box
+        sx={{
+          position: 'relative',
+          overflow: 'hidden',
+          background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 55%, #1e3a8a 100%)',
+          px: { xs: 3, sm: 4 },
+          py: { xs: 3, sm: 4 },
+          color: '#fff',
+        }}
+      >
+        <Stack direction="row" alignItems="flex-start" justifyContent="space-between" spacing={2}>
+          <Box sx={{ maxWidth: 640 }}>
+            <Chip
+              icon={<FileText size={14} color="#93c5fd" />}
+              label="Báo cáo kết quả đầu vào"
+              size="small"
+              sx={{ bgcolor: 'rgba(59,130,246,0.18)', color: '#bfdbfe', fontWeight: 700, mb: 1.5 }}
+            />
+            <Typography variant="h5" sx={{ fontWeight: 900, letterSpacing: -0.4 }}>
+              Kết quả khảo sát năng lực đầu vào
+            </Typography>
+            <Typography variant="body2" sx={{ mt: 1, color: '#cbd5e1' }}>
+              Tổng hợp chi tiết bài làm, thế mạnh nổi bật và các dạng bài cần ưu tiên trong lộ trình học của bạn.
+            </Typography>
+          </Box>
+          <Box
+            sx={{
+              display: { xs: 'none', sm: 'flex' },
+              width: 52,
+              height: 52,
+              borderRadius: 3,
+              border: '1px solid rgba(255,255,255,0.16)',
+              bgcolor: 'rgba(255,255,255,0.06)',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#93c5fd',
+              flexShrink: 0,
+            }}
+          >
+            <ArrowUpRight size={26} />
+          </Box>
+        </Stack>
+      </Box>
+
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' },
+          divideY: { xs: 1, sm: 0 },
+        }}
+      >
+        <Box sx={{ p: { xs: 3, sm: 3.5 }, borderRight: { sm: '1px solid' }, borderBottom: { xs: '1px solid', sm: 'none' }, borderColor: 'divider' }}>
+          <Stack direction="row" spacing={1} alignItems="center">
+            <CheckCircle2 size={16} color="#059669" />
+            <Typography variant="caption" sx={{ fontWeight: 800, color: 'text.secondary' }}>
+              KẾT QUẢ BÀI LÀM
+            </Typography>
+          </Stack>
+          <Typography variant="h4" sx={{ mt: 1.5, fontWeight: 900, color: 'text.primary' }}>
+            {correct}
+            <Typography component="span" sx={{ fontSize: '1.05rem', fontWeight: 500, color: 'text.secondary' }}>
+              {' '}/ {total} câu
+            </Typography>
+          </Typography>
+          <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mt: 2 }}>
+            <LinearProgress
+              variant="determinate"
+              value={Math.max(0, Math.min(accuracy, 100))}
+              color="success"
+              sx={{ flex: 1, height: 7, borderRadius: 4 }}
+            />
+            <Typography variant="body2" sx={{ fontWeight: 800, color: 'success.dark' }}>
+              {accuracy}%
+            </Typography>
+          </Stack>
+        </Box>
+
+        <Box sx={{ p: { xs: 3, sm: 3.5 }, borderRight: { sm: '1px solid' }, borderBottom: { xs: '1px solid', sm: 'none' }, borderColor: 'divider' }}>
+          <Stack direction="row" spacing={1} alignItems="center">
+            <Award size={16} color="#4f46e5" />
+            <Typography variant="caption" sx={{ fontWeight: 800, color: 'text.secondary' }}>
+              ĐÁNH GIÁ NĂNG LỰC
+            </Typography>
+          </Stack>
+          <Box sx={{ mt: 1.5 }}>
+            <Chip label={band.label} color={band.color} sx={{ fontWeight: 800, fontSize: '0.95rem', px: 1, py: 2 }} />
+          </Box>
+          <Typography variant="caption" sx={{ mt: 1.5, display: 'block', color: 'text.secondary' }}>
+            {band.detail}
+          </Typography>
+        </Box>
+
+        <Box sx={{ p: { xs: 3, sm: 3.5 } }}>
+          <Stack direction="row" spacing={1} alignItems="center">
+            <Clock size={16} color="#7c3aed" />
+            <Typography variant="caption" sx={{ fontWeight: 800, color: 'text.secondary' }}>
+              THỜI GIAN HOÀN THÀNH
+            </Typography>
+          </Stack>
+          <Typography variant="h4" sx={{ mt: 1.5, fontWeight: 900, color: 'text.primary', fontVariantNumeric: 'tabular-nums' }}>
+            {Math.floor(seconds / 60)}
+            <Typography component="span" sx={{ fontSize: '1.05rem', fontWeight: 500, color: 'text.secondary' }}>
+              {' '}phút{' '}
+            </Typography>
+            {String(seconds % 60).padStart(2, '0')}
+            <Typography component="span" sx={{ fontSize: '1.05rem', fontWeight: 500, color: 'text.secondary' }}>
+              {' '}giây
+            </Typography>
+          </Typography>
+          <Typography variant="caption" sx={{ mt: 1.5, display: 'block', color: 'text.secondary' }}>
+            Trung bình {total > 0 ? Math.round(seconds / total) : 0} giây mỗi câu.
+          </Typography>
+        </Box>
+      </Box>
+    </Paper>
   );
 }

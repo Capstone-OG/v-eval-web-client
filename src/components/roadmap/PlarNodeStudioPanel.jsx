@@ -1,5 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  Accordion,
+  AccordionDetails,
+  AccordionSummary,
+  Alert,
+  Box,
+  Button,
+  Chip,
+  Paper,
+  Stack,
+  Typography
+} from '@mui/material';
 import confetti from 'canvas-confetti';
+import { toast } from '../../context/ToastContext';
 import {
   AlertTriangle,
   ArrowLeft,
@@ -8,6 +21,7 @@ import {
   BookOpen,
   Bot,
   CheckCircle2,
+  ChevronDown,
   ChevronRight,
   Clock,
   FileText,
@@ -49,10 +63,10 @@ const resolveSubjectCode = (subjectName = '', domainCode = '') => {
 };
 
 const PLAR_STEPS = [
-  { key: 'PREVIEW', code: 'P', label: 'Preview', subtitle: 'Khởi động 3 câu' },
-  { key: 'LEARN', code: 'L', label: 'Learn', subtitle: 'Lý thuyết SGK ≥80%' },
-  { key: 'APPLY', code: 'A', label: 'Apply', subtitle: 'Luyện tập ZPD + BKT' },
-  { key: 'REFLECT', code: 'R', label: 'Reflect', subtitle: 'Phản tư & Mở khóa' }
+  { key: 'PREVIEW', code: 'P', label: 'Khởi động', subtitle: '3 câu làm quen' },
+  { key: 'LEARN', code: 'L', label: 'Lý thuyết', subtitle: 'Kiến thức trọng tâm' },
+  { key: 'APPLY', code: 'A', label: 'Luyện tập', subtitle: 'Bài tập thích ứng' },
+  { key: 'REFLECT', code: 'R', label: 'Tổng kết', subtitle: 'Ghi nhớ & Mở khóa' }
 ];
 
 const BLOOM_LABELS = {
@@ -110,10 +124,10 @@ const getReflectPresets = (subjectCode = 'MATH') => {
 };
 
 const ASSESSMENT_BADGES = {
-  WEAK: { label: 'Ưu tiên cải thiện', cls: 'bg-rose-500/25 text-rose-100 border-rose-400/40' },
-  MASTERED: { label: 'Đã đạt chuẩn OK', cls: 'bg-emerald-500/25 text-emerald-100 border-emerald-400/40' },
-  COMPLETED: { label: 'Đã hoàn thành PLAR', cls: 'bg-emerald-500/30 text-emerald-100 border-emerald-300/50' },
-  UNASSESSED: { label: 'Chưa đánh giá', cls: 'bg-white/15 text-slate-200 border-white/25' }
+  WEAK: { label: 'Ưu tiên cải thiện', cls: 'bg-rose-50 text-rose-700 border-rose-200' },
+  MASTERED: { label: 'Đã nắm vững', cls: 'bg-teal-50 text-teal-700 border-teal-200' },
+  COMPLETED: { label: 'Đã hoàn thành', cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+  UNASSESSED: { label: 'Chưa đánh giá', cls: 'bg-slate-100 text-slate-600 border-slate-200' }
 };
 
 function PassageContextBox({ title, content, imageUrl }) {
@@ -301,6 +315,20 @@ export default function PlarNodeStudioPanel({
   const [flagTarget, setFlagTarget] = useState(null); // { mode: 'preview' | 'apply', question }
   const [flagBusy, setFlagBusy] = useState(false);
   const [flagNotice, setFlagNotice] = useState('');
+  const [holdPreviewReview, setHoldPreviewReview] = useState(false);
+
+  const isValidOptionText = (txt = '') => {
+    const clean = String(txt || '').trim();
+    return clean.length > 0 && !/^[.\u2026\s\-_]+$/.test(clean);
+  };
+
+  const looksLikeEnglishQuestion = (text = '') => {
+    const clean = String(text || '').trim();
+    if (clean.length < 20) return false;
+    const hasVietnameseDiacritics = /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(clean);
+    if (hasVietnameseDiacritics) return false;
+    return /\b(the|and|for|with|that|this|from|have|has|was|were|said|asked|told|she|her|his|before|after|which|what|choose)\b/i.test(clean);
+  };
 
   const handleConfirmFlagPlarQuestion = async ({ reasonCode, note }) => {
     if (!flagTarget?.question) return;
@@ -324,12 +352,25 @@ export default function PlarNodeStudioPanel({
 
     if (flagTarget.mode === 'preview') {
       const usedIds = new Set([...(stage?.previewQuestions || []).map((x) => String(x.questionId)), ...getFlaggedQuestionIdSet()]);
+      const currentSubj = resolveSubjectCode(detail?.subjectName || node?.subjectName, detail?.domainCode || node?.domainCode);
       let swapped = false;
       if (node?.skillId) {
         try {
           const res = await contentService.getQuestionsBySkill(node.skillId);
           const rawList = Array.isArray(res) ? res : (res?.questions || res?.data?.questions || []);
-          const found = rawList.find((item) => !usedIds.has(String(item.questionId || item.id || '')));
+          const found = rawList.find((item) => {
+            const qid = String(item.questionId || item.id || '');
+            if (!qid || usedIds.has(qid)) return false;
+            const stem = item.contentLatex || item.content || '';
+            if (!stem.trim()) return false;
+            if (currentSubj !== 'ENG' && looksLikeEnglishQuestion(stem)) return false;
+            const candidateOpts = Array.isArray(item.options) && item.options.length > 0
+              ? item.options.map((o) => o.content || '')
+              : [item.optionA || '', item.optionB || '', item.optionC || '', item.optionD || ''];
+            const validOptCount = candidateOpts.filter(isValidOptionText).length;
+            if (validOptCount < 2) return false;
+            return true;
+          });
           if (found) {
             const newOpts = Array.isArray(found.options) && found.options.length > 0
               ? found.options.map((o, idx) => ({
@@ -349,37 +390,58 @@ export default function PlarNodeStudioPanel({
               difficultyLevel: Number(found.difficultyLevel || 2),
               options: newOpts
             };
-            setStage((prev) => ({
-              ...prev,
-              previewQuestions: (prev?.previewQuestions || []).map((item) =>
+            setStage((prev) => {
+              const nextQs = (prev?.previewQuestions || []).map((item) =>
                 item.questionId === q.questionId ? replacement : item
-              )
-            }));
+              );
+              if (studentId && node?.nodeId) {
+                try {
+                  const nextAns = { ...previewAnswers };
+                  delete nextAns[q.questionId];
+                  localStorage.setItem(
+                    `veval_plar_preview_${studentId}_${node.nodeId}`,
+                    JSON.stringify({
+                      previewQuestions: nextQs,
+                      previewAnswers: nextAns,
+                      previewResult: null,
+                      savedAt: new Date().toISOString()
+                    })
+                  );
+                } catch { /* ignore */ }
+              }
+              return { ...prev, previewQuestions: nextQs };
+            });
             setPreviewAnswers((prev) => {
               const next = { ...prev };
               delete next[q.questionId];
               return next;
             });
+            // Mở khóa lại để học sinh có thể chọn đáp án trên câu mới vừa đổi và nộp lại bài khởi động
+            setPreviewResult(null);
             swapped = true;
           }
         } catch {
           // ignore
         }
       }
-      setFlagNotice(
-        swapped
-          ? 'Đã gửi báo lỗi câu hỏi cho Giảng viên / Ban quản lý và tự động đổi sang câu hỏi mới!'
-          : 'Đã gửi báo lỗi câu hỏi tới Giảng viên / Ban quản lý để xét duyệt.'
-      );
+      const msg = swapped
+        ? 'Đã gửi báo cáo lỗi thành công và tự động đổi sang câu hỏi mới!'
+        : 'Đã gửi báo cáo lỗi thành công tới Giảng viên / Ban quản lý để xét duyệt.';
+      setFlagNotice(msg);
+      toast.success(msg, 'Báo cáo lỗi thành công');
     } else {
       // Pha Apply: đổi ngay sang câu hỏi thích ứng kế tiếp
       setSelectedOption('');
       setAnswerFeedback(null);
       try {
         await loadNextAdaptiveQuestion(stage.stageProgressId);
-        setFlagNotice('Đã gửi báo lỗi câu hỏi cho Giảng viên / Ban quản lý và tự động đổi sang câu hỏi mới!');
+        const msg = 'Đã gửi báo cáo lỗi thành công và tự động đổi sang câu hỏi mới!';
+        setFlagNotice(msg);
+        toast.success(msg, 'Báo cáo lỗi thành công');
       } catch {
-        setFlagNotice('Đã gửi báo lỗi câu hỏi tới Giảng viên / Ban quản lý để xét duyệt.');
+        const msg = 'Đã gửi báo cáo lỗi thành công tới Giảng viên / Ban quản lý để xét duyệt.';
+        setFlagNotice(msg);
+        toast.success(msg, 'Báo cáo lỗi thành công');
       }
     }
 
@@ -548,7 +610,48 @@ export default function PlarNodeStudioPanel({
         const started = await practiceService.startRoadmapStage(node.nodeId, studentId);
         if (reqId !== requestSeqRef.current) return;
 
-        setStage(started);
+        // Ưu tiên khôi phục bài Khởi động (P) đã lưu trong PostgreSQL DB,
+        // nhưng nếu bản DB có chứa câu vừa bị báo lỗi (flagged) thì ưu tiên bản mới đã đổi câu trong localStorage (hoặc bộ mới từ BE)
+        const flaggedIds = getFlaggedQuestionIdSet();
+        const hasFlaggedQ = (qs) => Array.isArray(qs) && qs.some((x) => flaggedIds.has(String(x?.questionId || '')));
+
+        let dbPreview = null;
+        if (started.previewSubmissionJson) {
+          try {
+            dbPreview = JSON.parse(started.previewSubmissionJson);
+          } catch {
+            // ignore malformed DB json
+          }
+        }
+
+        let localPreview = null;
+        const previewStorageKey = studentId && node?.nodeId ? `veval_plar_preview_${studentId}_${node.nodeId}` : null;
+        if (previewStorageKey) {
+          try {
+            const rawSaved = localStorage.getItem(previewStorageKey);
+            if (rawSaved) localPreview = JSON.parse(rawSaved);
+          } catch {
+            // ignore corrupted storage
+          }
+        }
+
+        let restoredPreview = null;
+        if (dbPreview && !hasFlaggedQ(dbPreview.previewQuestions)) {
+          restoredPreview = dbPreview;
+        } else if (localPreview && !hasFlaggedQ(localPreview.previewQuestions)) {
+          restoredPreview = localPreview;
+        }
+
+        const mergedStage = restoredPreview?.previewQuestions?.length
+          ? { ...started, previewQuestions: restoredPreview.previewQuestions }
+          : {
+              ...started,
+              previewQuestions: (started.previewQuestions || []).filter((x) => !flaggedIds.has(String(x?.questionId || '')))
+            };
+
+        setStage(mergedStage);
+        if (restoredPreview?.previewAnswers) setPreviewAnswers(restoredPreview.previewAnswers);
+        if (restoredPreview?.previewResult) setPreviewResult(restoredPreview.previewResult);
         setLearnProgressPct(Number(started.videoWatchPercentage || 0));
         if (started.confidenceRating) setConfidenceRating(started.confidenceRating);
         if (started.learnedSummary) setLearnedSummary(started.learnedSummary);
@@ -574,6 +677,26 @@ export default function PlarNodeStudioPanel({
       }
     })();
   }, [node?.nodeId, node?.skillId, studentId, isPaid, loadNextAdaptiveQuestion, loadRemedialPackage]);
+
+  // Lưu tự động câu hỏi, đáp án & kết quả pha Khởi động (P) vào localStorage để F5/refresh không bị mất
+  useEffect(() => {
+    if (!studentId || !node?.nodeId || !stage?.previewQuestions?.length) return;
+    const hasAnswers = previewAnswers && Object.keys(previewAnswers).length > 0;
+    if (!hasAnswers && !previewResult) return;
+    try {
+      localStorage.setItem(
+        `veval_plar_preview_${studentId}_${node.nodeId}`,
+        JSON.stringify({
+          previewQuestions: stage.previewQuestions,
+          previewAnswers,
+          previewResult,
+          savedAt: new Date().toISOString()
+        })
+      );
+    } catch {
+      // ignore storage quota errors
+    }
+  }, [studentId, node?.nodeId, stage?.previewQuestions, previewAnswers, previewResult]);
 
   // Real study reading timer during Phase L (LEARN)
   useEffect(() => {
@@ -601,6 +724,8 @@ export default function PlarNodeStudioPanel({
 
       const res = await practiceService.submitRoadmapPreview(stage.stageProgressId, answers);
       setPreviewResult(res);
+      setHoldPreviewReview(true);
+      setSelectedTab('PREVIEW');
       const totalQ = Number(res.totalQuestions || previewQs.length || 0);
       const totalRight = Number(res.totalCorrect || 0);
       const acc = totalQ > 0 ? totalRight / totalQ : 0;
@@ -679,6 +804,39 @@ export default function PlarNodeStudioPanel({
       });
 
       setAnswerFeedback(res);
+
+      // Lưu vết câu hỏi luyện tập PLAR vào lịch sử bài làm (đầy đủ 4 đáp án, đáp án chọn, đáp án đúng & lời giải)
+      try {
+        const historyId = `plar_${node?.nodeId || stage.stageProgressId}`;
+        const existingList = practiceService.getSubmissionHistory() || [];
+        const existingEntry = existingList.find((it) => it.id === historyId);
+        const prevQuestions = Array.isArray(existingEntry?.reviewedQuestions) ? existingEntry.reviewedQuestions : [];
+        const newQ = {
+          id: currentQuestion.questionId,
+          question_number: prevQuestions.length + 1,
+          content: currentQuestion.content || '',
+          skillName: detail?.skillName || node?.skillName || '',
+          options: (currentQuestion.options || []).map((o) => ({ optionId: o.optionId, content: o.content })),
+          studentChoice: selectedOption,
+          correctChoice: res.correctOption || '',
+          isCorrect: Boolean(res.isCorrect),
+          explanation: res.explanation || res.feedbackMessage || ''
+        };
+        const updatedQuestions = [...prevQuestions.filter((q) => q.id !== newQ.id), newQ];
+        const correctCnt = updatedQuestions.filter((q) => q.isCorrect).length;
+        practiceService.saveSubmissionToHistory({
+          id: historyId,
+          studentId,
+          examType: 'ZPD_QUIZ',
+          title: `Chặng #${node?.stepOrder || ''} — ${cleanPatternTitle(detail?.skillName || node?.skillName || 'Luyện tập theo lộ trình')}`,
+          completedAt: new Date().toISOString(),
+          totalQuestions: updatedQuestions.length,
+          totalCorrect: correctCnt,
+          reviewedQuestions: updatedQuestions
+        });
+      } catch {
+        // ignore storage quota errors
+      }
       setStage((prev) => prev ? {
         ...prev,
         bktMasteryPlt: res.posteriorPlt,
@@ -779,10 +937,12 @@ export default function PlarNodeStudioPanel({
   const visibleTab = selectedTab || activeStepKey;
   const masteryPct = Math.round(Number(stage?.bktMasteryPlt ?? node?.masteryPlt ?? 0) * 100);
 
-  // Tự động đồng bộ tab khi học sinh mở khóa pha mới
+  // Tự động đồng bộ tab khi học sinh mở khóa pha mới (trừ khi vừa nộp Khởi động và đang xem lại đáp án ở pha P)
   useEffect(() => {
-    setSelectedTab(null);
-  }, [stage?.currentStep, stage?.status]);
+    if (!holdPreviewReview) {
+      setSelectedTab(null);
+    }
+  }, [stage?.currentStep, stage?.status, holdPreviewReview]);
 
   const primaryVideoUrl = stage?.resolvedVideoUrl || detail?.videoUrl || materials.find((m) => m.videoUrl)?.videoUrl || '';
   const hasAnyVideo = Boolean(primaryVideoUrl);
@@ -826,7 +986,7 @@ export default function PlarNodeStudioPanel({
                 </span>
               )}
               {ASSESSMENT_BADGES[node.assessmentStatus] && (
-                <span className="px-2.5 py-0.5 rounded-lg bg-rose-50 text-rose-700 border border-rose-200 font-bold">
+                <span className={`px-2.5 py-0.5 rounded-lg border font-bold ${ASSESSMENT_BADGES[node.assessmentStatus].cls}`}>
                   {ASSESSMENT_BADGES[node.assessmentStatus].label}
                 </span>
               )}
@@ -855,9 +1015,13 @@ export default function PlarNodeStudioPanel({
               <button
                 type="button"
                 onClick={() => onOpenAiTutorWithContext({
-                  topic: detail?.skillName || node.skillName,
+                  questionId: currentQuestion?.questionId || stage?.previewQuestions?.[0]?.questionId || null,
+                  skill: detail?.skillName || node.skillName,
                   subject: detail?.subjectName || node.subjectName || detail?.domainName,
-                  questionContent: currentQuestion?.content || `Giải thích phương pháp giải dạng bài: ${detail?.skillName || node.skillName}`
+                  question: currentQuestion?.content || stage?.previewQuestions?.[0]?.content || `Giải thích phương pháp giải dạng bài: ${detail?.skillName || node.skillName}`,
+                  options: (currentQuestion?.options || stage?.previewQuestions?.[0]?.options || []).map((o) => `${o.optionId}. ${o.content}`),
+                  selectedWrong: answerFeedback && !answerFeedback.isCorrect ? selectedOption : undefined,
+                  correctOption: answerFeedback?.correctOption || undefined
                 })}
                 className="inline-flex items-center gap-1.5 rounded-xl bg-violet-50 hover:bg-violet-100 border border-violet-200 px-3.5 py-2 text-xs font-bold text-violet-800 transition-colors cursor-pointer"
               >
@@ -1018,6 +1182,12 @@ export default function PlarNodeStudioPanel({
           </div>
         )}
 
+        {!loading && !tuitionBlocked && stage && (stage.status === 'COMPLETED' || node.status === 'COMPLETED' || node.assessmentStatus === 'MASTERED') && (
+          <Alert severity="success" sx={{ borderRadius: 3 }}>
+            <strong>Chặng học đã hoàn thành:</strong> Bạn có toàn quyền xem lại tự do tất cả các phần (Khởi động, Lý thuyết, Luyện tập, Tổng kết) mà không cần đi lại từng bước.
+          </Alert>
+        )}
+
         {/* =============================================================== */}
         {/* PHASE P: PREVIEW (3 QUICK CHECK QUESTIONS)                       */}
         {/* =============================================================== */}
@@ -1025,15 +1195,21 @@ export default function PlarNodeStudioPanel({
           <div className="space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-indigo-50 border border-indigo-100 p-4">
               <div>
-                <h3 className="text-sm font-black text-indigo-950">Pha P — Preview: Khởi Động Phản Xạ (3 Câu Quick Check)</h3>
+                <h3 className="text-sm font-black text-indigo-950">Khởi Động Nhanh (3 Câu Làm Quen)</h3>
                 <p className="text-xs text-indigo-700 mt-0.5">
-                  Đánh giá nhanh trực giác ban đầu (không trừ điểm BKT) để kích hoạt nhận thức trước khi học Lý thuyết SGK.
+                  Kiểm tra nhanh kiến thức nền ban đầu (không ảnh hưởng điểm tiến độ) trước khi vào phần Lý thuyết trọng tâm.
                 </p>
               </div>
               <span className="px-3 py-1 rounded-full bg-white text-indigo-700 text-xs font-extrabold border border-indigo-200">
-                {(stage.previewQuestions || []).length} câu hỏi thật
+                {(stage.previewQuestions || []).length} câu hỏi
               </span>
             </div>
+
+            {flagNotice && (
+              <Alert severity="success" onClose={() => setFlagNotice('')} sx={{ borderRadius: 2.5 }}>
+                {flagNotice}
+              </Alert>
+            )}
 
             {(stage.previewQuestions || []).length === 0 ? (
               <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 flex items-center justify-between gap-3">
@@ -1093,6 +1269,7 @@ export default function PlarNodeStudioPanel({
                               name={`preview-${q.questionId}`}
                               value={opt.optionId}
                               checked={checked}
+                              disabled={Boolean(previewResult)}
                               onChange={() => setPreviewAnswers((prev) => ({ ...prev, [q.questionId]: opt.optionId }))}
                               className="mt-1 accent-indigo-600"
                             />
@@ -1108,16 +1285,122 @@ export default function PlarNodeStudioPanel({
                 ))}
 
                 <div className="flex justify-end">
-                  <button
-                    type="button"
-                    onClick={handleSubmitPreview}
-                    disabled={previewBusy || (stage.previewQuestions || []).some((q) => !previewAnswers[q.questionId])}
-                    className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 disabled:opacity-50 px-6 py-3 text-sm font-extrabold text-white shadow-md cursor-pointer"
-                  >
-                    <span>{previewBusy ? 'Đang chấm bài khởi động...' : 'Nộp Quick Check & Sang Pha Learn'}</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
+                  {stage.status === 'COMPLETED' || node.status === 'COMPLETED' || node.assessmentStatus === 'MASTERED' ? (
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      onClick={() => {
+                        setHoldPreviewReview(false);
+                        setSelectedTab('LEARN');
+                      }}
+                    >
+                      Chuyển nhanh sang Lý thuyết
+                    </Button>
+                  ) : !previewResult ? (
+                    <button
+                      type="button"
+                      onClick={handleSubmitPreview}
+                      disabled={previewBusy || (stage.previewQuestions || []).some((q) => !previewAnswers[q.questionId])}
+                      className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 disabled:opacity-50 px-6 py-3 text-sm font-extrabold text-white shadow-md cursor-pointer"
+                    >
+                      <span>{previewBusy ? 'Đang chấm bài khởi động...' : 'Nộp bài khởi động'}</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                  ) : null}
                 </div>
+
+                {/* Kết quả bài khởi động & Dropdown (MUI Accordion) xem lại đáp án ngay trong pha P */}
+                {previewResult && (
+                  <Paper
+                    variant="outlined"
+                    sx={{
+                      p: 2.5,
+                      borderRadius: 3,
+                      borderColor: 'success.light',
+                      bgcolor: 'rgba(16,185,129,0.05)',
+                    }}
+                  >
+                    <Stack spacing={1.75}>
+                      <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }} spacing={1}>
+                        <Stack direction="row" spacing={1} alignItems="center">
+                          <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                          <Typography variant="subtitle2" sx={{ fontWeight: 800, color: 'success.dark' }}>
+                            Hoàn thành bài khởi động: Đúng {previewResult.totalCorrect}/{previewResult.totalQuestions} câu
+                          </Typography>
+                        </Stack>
+                        <Button
+                          variant="contained"
+                          color="primary"
+                          endIcon={<ArrowRight size={16} />}
+                          onClick={() => {
+                            setHoldPreviewReview(false);
+                            setSelectedTab('LEARN');
+                          }}
+                        >
+                          Tiếp tục sang Lý thuyết
+                        </Button>
+                      </Stack>
+
+                      <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                        Bạn có thể mở mục bên dưới để xem lại đáp án và lời giải chi tiết của bài khởi động trước khi chuyển sang phần Lý thuyết trọng tâm.
+                      </Typography>
+
+                      {Array.isArray(previewResult.feedbacks) && previewResult.feedbacks.length > 0 && (
+                        <Accordion
+                          disableGutters
+                          elevation={0}
+                          sx={{
+                            border: '1px solid',
+                            borderColor: 'divider',
+                            borderRadius: '12px !important',
+                            bgcolor: '#fff',
+                            '&:before': { display: 'none' },
+                          }}
+                        >
+                          <AccordionSummary expandIcon={<ChevronDown size={18} />}>
+                            <Typography variant="body2" sx={{ fontWeight: 700, color: 'text.primary' }}>
+                              Xem lại chi tiết đáp án &amp; lời giải ({previewResult.feedbacks.length} câu)
+                            </Typography>
+                          </AccordionSummary>
+                          <AccordionDetails>
+                            <Stack spacing={1.25}>
+                              {previewResult.feedbacks.map((fb, idx) => (
+                                <Paper
+                                  key={fb.questionId || idx}
+                                  variant="outlined"
+                                  sx={{
+                                    p: 1.75,
+                                    borderRadius: 2.5,
+                                    borderColor: fb.isCorrect ? 'success.light' : 'error.light',
+                                    bgcolor: fb.isCorrect ? 'rgba(16,185,129,0.04)' : 'rgba(239,68,68,0.04)',
+                                  }}
+                                >
+                                  <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" sx={{ mb: 0.75 }}>
+                                    <Chip
+                                      size="small"
+                                      label={`Câu ${idx + 1}`}
+                                      color={fb.isCorrect ? 'success' : 'error'}
+                                      sx={{ fontWeight: 800, height: 22 }}
+                                    />
+                                    <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary' }}>
+                                      Bạn chọn: <strong>{fb.selectedOption || '—'}</strong> • Đáp án đúng:{' '}
+                                      <strong style={{ color: '#047857' }}>{fb.correctOption || '?'}</strong>
+                                    </Typography>
+                                  </Stack>
+                                  {fb.explanation && (
+                                    <Box sx={{ fontSize: '0.82rem', color: 'text.secondary', lineHeight: 1.6 }}>
+                                      <MathText text={fb.explanation} />
+                                    </Box>
+                                  )}
+                                </Paper>
+                              ))}
+                            </Stack>
+                          </AccordionDetails>
+                        </Accordion>
+                      )}
+                    </Stack>
+                  </Paper>
+                )}
               </div>
             )}
           </div>
@@ -1128,29 +1411,6 @@ export default function PlarNodeStudioPanel({
         {/* =============================================================== */}
         {!loading && !tuitionBlocked && stage && visibleTab === 'LEARN' && (
           <div className="space-y-5">
-            {previewResult && (
-              <div className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-4 space-y-2.5">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 text-sm font-extrabold text-emerald-900">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                    <span>Kết quả Preview: Đúng {previewResult.totalCorrect}/{previewResult.totalQuestions} câu</span>
-                  </div>
-                </div>
-                <p className="text-xs text-emerald-800">{previewResult.message}</p>
-                {Array.isArray(previewResult.feedbacks) && previewResult.feedbacks.length > 0 && (
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2 pt-1">
-                    {previewResult.feedbacks.map((fb, idx) => (
-                      <div key={fb.questionId || idx} className={`rounded-xl border p-2.5 text-xs ${fb.isCorrect ? 'bg-white border-emerald-200' : 'bg-rose-50/70 border-rose-200'}`}>
-                        <div className="font-bold">
-                          Câu {idx + 1}: Chọn {fb.selectedOption || '—'} • Đáp án <strong className="text-emerald-700">{fb.correctOption || '?'}</strong>
-                        </div>
-                        {fb.explanation && <p className="mt-1 text-slate-600 line-clamp-3"><MathText text={fb.explanation} /></p>}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
 
             <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-blue-50 border border-blue-100 p-4">
               <div>
@@ -1274,10 +1534,9 @@ export default function PlarNodeStudioPanel({
                           sec.examples ? (
                             <StructuredTheoryRenderer content={sec.examples} />
                           ) : (
-                            <div className="p-6 rounded-2xl bg-amber-50/60 border border-dashed border-amber-300 text-center text-xs text-amber-900 space-y-1.5">
-                              <div className="font-black text-sm">Ví dụ mẫu đang tích hợp ngay trong mục Lý thuyết</div>
-                              <p>Bạn có thể xem nhanh ở tab <strong>1. Lý Thuyết &amp; Công Thức</strong> hoặc bấm sang <strong>Pha 3. Apply</strong> để luyện trực tiếp các câu hỏi có lời giải chi tiết.</p>
-                            </div>
+                            <Alert severity="info" sx={{ borderRadius: 2.5 }}>
+                              Chuyên đề này chưa có mục Ví dụ mẫu riêng trong học liệu. Bạn có thể xem ở tab <strong>1. Lý Thuyết &amp; Công Thức</strong> hoặc chuyển sang phần <strong>Luyện tập</strong>.
+                            </Alert>
                           )
                         )}
 
@@ -1285,10 +1544,9 @@ export default function PlarNodeStudioPanel({
                           sec.traps ? (
                             <StructuredTheoryRenderer content={sec.traps} />
                           ) : (
-                            <div className="p-6 rounded-2xl bg-blue-50/60 border border-dashed border-blue-200 text-center text-xs text-blue-900 space-y-1.5">
-                              <div className="font-black text-sm">Mẹo tránh bẫy đề thi ĐGNL V-ACT</div>
-                              <p>Kiểm tra kỹ điều kiện xác định, đơn vị đo lường và từ khóa phủ định (KHÔNG, NGOẠI TRỪ) trước khi chọn đáp án.</p>
-                            </div>
+                            <Alert severity="info" sx={{ borderRadius: 2.5 }}>
+                              Chuyên đề này chưa có mục Bẫy đề thi riêng trong học liệu.
+                            </Alert>
                           )
                         )}
                       </div>
@@ -1328,18 +1586,31 @@ export default function PlarNodeStudioPanel({
             )}
 
             <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-100">
-              <span className="text-xs text-slate-500">
-                Xác nhận tiến độ ≥ 80% qua API <code>POST /stages/track-video</code> để mở khóa Pha APPLY.
-              </span>
-              <button
-                type="button"
-                disabled={learnBusy}
-                onClick={() => reportLearnProgress(Math.max(100, learnSeconds), 100)}
-                className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 disabled:opacity-50 px-6 py-3 text-sm font-extrabold text-white shadow-md cursor-pointer"
-              >
-                <Play className="w-4 h-4 fill-white" />
-                <span>{learnBusy ? 'Đang xác nhận tiến độ...' : 'Đã Nắm Vững Lý Thuyết (Mở Khóa Pha APPLY)'}</span>
-              </button>
+              {stage.status === 'COMPLETED' || node.status === 'COMPLETED' || node.assessmentStatus === 'MASTERED' ? (
+                <>
+                  <span className="text-xs font-semibold text-emerald-700">
+                    Bạn đã hoàn thành phần Lý thuyết của chặng này.
+                  </span>
+                  <Button variant="contained" color="success" onClick={() => setSelectedTab('APPLY')}>
+                    Chuyển nhanh sang Luyện tập
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <span className="text-xs text-slate-500">
+                    Hoàn thành ít nhất 80% nội dung lý thuyết để mở khóa phần Luyện tập.
+                  </span>
+                  <button
+                    type="button"
+                    disabled={learnBusy}
+                    onClick={() => reportLearnProgress(Math.max(100, learnSeconds), 100)}
+                    className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 disabled:opacity-50 px-6 py-3 text-sm font-extrabold text-white shadow-md cursor-pointer"
+                  >
+                    <Play className="w-4 h-4 fill-white" />
+                    <span>{learnBusy ? 'Đang xác nhận tiến độ...' : 'Đã Nắm Vững Lý Thuyết (Sang Luyện Tập)'}</span>
+                  </button>
+                </>
+              )}
             </div>
           </div>
         )}
@@ -1352,7 +1623,7 @@ export default function PlarNodeStudioPanel({
             <div className="rounded-2xl border border-amber-300 bg-amber-50 p-5 space-y-2">
               <div className="flex items-center gap-2 text-amber-900 font-black text-sm">
                 <ShieldAlert className="w-5 h-5 text-amber-600" />
-                <span>Kích Hoạt Cứu Trợ Phụ Đạo (Quy tắc BR-03: Sai 3 câu liên tiếp)</span>
+                <span>Gói Bổ Trợ Nền Tảng (khi sai 3 câu liên tiếp)</span>
               </div>
               <p className="text-xs text-amber-800">
                 {remedialPkg?.instruction || 'Hãy xem lại tóm tắt công thức nền tảng và hoàn thành 3 câu hỏi cơ bản dưới đây để khôi phục pha Luyện tập thích ứng APPLY.'}
@@ -1472,7 +1743,7 @@ export default function PlarNodeStudioPanel({
           <div className="space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-cyan-50 border border-cyan-100 p-4">
               <div>
-                <h3 className="text-sm font-black text-cyan-950">Pha A — Apply: Luyện Tập Thích Ứng (IRT ZPD + BKT Mastery)</h3>
+                <h3 className="text-sm font-black text-cyan-950">Luyện Tập Thích Ứng</h3>
                 <p className="text-xs text-cyan-800 mt-0.5">
                   Bài tập được chọn theo trình độ của bạn và chấm sau khi trả lời. Khi mức độ nắm vững kiến thức đạt <strong>85%</strong>, bạn có thể chuyển sang bước ôn lại.
                 </p>
@@ -1492,7 +1763,7 @@ export default function PlarNodeStudioPanel({
                     Câu #{currentQuestion.attemptOrder}
                   </span>
                   <span className="px-2.5 py-1 rounded-lg bg-white border border-cyan-200 text-indigo-700">
-                    {BLOOM_LABELS[currentQuestion.difficultyLevel] || `Bloom L${currentQuestion.difficultyLevel}`} (b={Number(currentQuestion.itemDifficultyB ?? 0).toFixed(1)})
+                    {BLOOM_LABELS[currentQuestion.difficultyLevel] || `Mức độ ${currentQuestion.difficultyLevel}`}
                   </span>
                 </div>
               )}
@@ -1512,7 +1783,23 @@ export default function PlarNodeStudioPanel({
             )}
 
             {currentQuestion && (
-              <div className="rounded-2xl border border-slate-200 bg-white p-5 space-y-4 shadow-2xs">
+              <div
+                draggable
+                onDragStart={(e) => {
+                  const payload = {
+                    questionId: currentQuestion.questionId,
+                    skill: detail?.skillName || node.skillName,
+                    question: currentQuestion.content || '',
+                    options: (currentQuestion.options || []).map((o) => `${o.optionId}. ${o.content}`),
+                    selectedWrong: answerFeedback && !answerFeedback.isCorrect ? selectedOption : undefined,
+                    correctOption: answerFeedback?.correctOption || undefined,
+                  };
+                  e.dataTransfer.setData('application/x-veval-question', JSON.stringify(payload));
+                  e.dataTransfer.setData('text/plain', payload.question);
+                }}
+                title="Bạn có thể kéo thả câu hỏi này sang Sổ tay Gia sư AI để phân tích"
+                className="rounded-2xl border border-slate-200 bg-white p-5 space-y-4 shadow-2xs cursor-grab active:cursor-grabbing"
+              >
                 <PassageContextBox
                   title={currentQuestion.passageTitle}
                   content={currentQuestion.passageContent}
@@ -1563,7 +1850,7 @@ export default function PlarNodeStudioPanel({
                       disabled={!selectedOption || applyBusy}
                       className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 px-6 py-3 text-sm font-extrabold text-white shadow-md cursor-pointer"
                     >
-                      <span>{applyBusy ? 'Đang chấm & cập nhật BKT...' : 'Kiểm Tra Đáp Án'}</span>
+                      <span>{applyBusy ? 'Đang chấm đáp án...' : 'Kiểm Tra Đáp Án'}</span>
                       <ChevronRight className="w-4 h-4" />
                     </button>
                   </div>
@@ -1576,7 +1863,7 @@ export default function PlarNodeStudioPanel({
                         {answerFeedback.isCorrect ? '✓ Chính xác!' : `✗ Chưa chính xác (Đáp án đúng: ${answerFeedback.correctOption})`}
                       </span>
                       <span className="text-xs font-extrabold px-2.5 py-1 rounded-full bg-white border border-slate-200 text-slate-700">
-                        BKT P(Lt): {(answerFeedback.priorPlt * 100).toFixed(1)}% → <strong>{(answerFeedback.posteriorPlt * 100).toFixed(1)}%</strong>
+                        Mức độ nắm vững: {(answerFeedback.priorPlt * 100).toFixed(0)}% → <strong>{(answerFeedback.posteriorPlt * 100).toFixed(0)}%</strong>
                       </span>
                     </div>
                     <p className="text-xs text-slate-700">{answerFeedback.feedbackMessage}</p>
@@ -1596,10 +1883,10 @@ export default function PlarNodeStudioPanel({
                       >
                         <span>
                           {answerFeedback.isRemedialTriggered
-                            ? 'Vào Gói Cứu Trợ Phụ Đạo BR-03'
+                            ? 'Vào Gói Bổ Trợ Nền Tảng'
                             : answerFeedback.isMasteryAchieved
-                            ? 'Chuyển Sang Pha REFLECT Tổng Kết'
-                            : 'Câu Hỏi Thích Ứng Tiếp Theo'}
+                            ? 'Chuyển Sang Tổng Kết Chặng'
+                            : 'Câu Hỏi Tiếp Theo'}
                         </span>
                         <ArrowRight className="w-4 h-4" />
                       </button>
@@ -1607,6 +1894,25 @@ export default function PlarNodeStudioPanel({
                   </div>
                 )}
               </div>
+            )}
+
+            {!applyBusy && !currentQuestion && !applyFinishedMsg && (stage.status === 'COMPLETED' || node.status === 'COMPLETED' || node.assessmentStatus === 'MASTERED') && (
+              <Alert
+                severity="info"
+                sx={{ borderRadius: 3 }}
+                action={
+                  <Button
+                    color="primary"
+                    variant="contained"
+                    size="small"
+                    onClick={() => loadNextAdaptiveQuestion(stage.stageProgressId)}
+                  >
+                    Luyện ôn thêm câu hỏi
+                  </Button>
+                }
+              >
+                Bạn đã hoàn thành mục tiêu luyện tập của chặng này. Bạn có thể bấm <strong>Luyện ôn thêm câu hỏi</strong> bất cứ lúc nào để củng cố lại kiến thức.
+              </Alert>
             )}
 
             {!applyBusy && !currentQuestion && applyFinishedMsg && (

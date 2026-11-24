@@ -626,7 +626,7 @@ export default function Sidebar({
                   onClick={onToggleCollapse}
                   aria-label="Thu gọn thanh bên"
                   title="Thu gọn thanh bên"
-                  className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors cursor-pointer shrink-0"
+                  className="inline-flex items-center justify-center rounded-xl p-2 text-slate-500 hover:text-slate-900 transition-colors cursor-pointer shrink-0"
                 >
                   <PanelLeftClose className="h-4 w-4" />
                 </button>
@@ -643,7 +643,7 @@ export default function Sidebar({
                   onClick={onToggleCollapse}
                   aria-label="Mở rộng thanh bên"
                   title="Mở rộng thanh bên"
-                  className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors cursor-pointer"
+                  className="inline-flex items-center justify-center rounded-xl p-2 text-slate-500 hover:text-slate-900 transition-colors cursor-pointer"
                 >
                   <PanelLeftOpen className="h-4 w-4" />
                 </button>
@@ -693,19 +693,13 @@ export default function Sidebar({
                               onToggleCollapse?.();
                               toggleGroup(item.id);
                             }}
-                            className={`flex w-full items-center justify-center rounded-2xl p-2 transition-all cursor-pointer ${
+                            className={`flex w-full items-center justify-center rounded-xl p-2.5 transition-colors cursor-pointer bg-transparent ${
                               activeGroup
-                                ? isTextbookGroup
-                                  ? 'bg-gradient-to-br from-emerald-600 to-teal-600 text-white shadow-md'
-                                  : isExamGroup
-                                  ? 'bg-gradient-to-br from-[#1E3A5F] to-indigo-600 text-white shadow-md'
-                                  : 'bg-gradient-to-br from-orange-500 to-rose-500 text-white shadow-md'
-                                : 'text-slate-700 hover:bg-white hover:border-slate-200 hover:shadow-xs'
+                                ? 'text-indigo-600'
+                                : 'text-slate-500 hover:text-slate-900'
                             }`}
                           >
-                            <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${groupIconGradient} text-white shadow-sm`}>
-                              <Icon className="h-4.5 w-4.5" />
-                            </span>
+                            <Icon className="h-5 w-5 shrink-0" />
                           </button>
                         </div>
                       );
@@ -718,27 +712,24 @@ export default function Sidebar({
                           aria-expanded={isExpanded}
                           aria-controls={`nav-group-${item.id}-${mobile ? 'mobile' : 'desktop'}`}
                           onClick={() => toggleGroup(item.id)}
-                          className={`flex w-full items-center gap-3 rounded-2xl border px-3.5 py-2.5 text-left transition-all cursor-pointer ${
+                          className={`flex w-full items-center gap-2 rounded-2xl border px-3.5 py-2.5 text-left transition-all cursor-pointer ${
                             activeGroup
                               ? isTextbookGroup
                                 ? 'border-emerald-200 bg-emerald-50 text-emerald-950 font-bold'
                                 : isExamGroup
                                 ? 'border-indigo-200 bg-indigo-50 text-indigo-950 font-bold'
-                                : 'border-orange-100 bg-orange-50 text-orange-700'
+                                : 'border-indigo-100 bg-indigo-50/70 text-indigo-700'
                               : 'border-transparent text-slate-700 hover:border-slate-200 hover:bg-slate-50'
                           }`}
                         >
-                          <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${groupIconGradient} text-white shadow-sm`}>
-                            <Icon className="h-4 w-4" />
-                          </span>
                           <div className="flex-1 min-w-0">
                             <span className="block text-xs font-extrabold truncate">{item.label}</span>
                             {item.sublabel && <span className="block text-[10px] text-slate-400 font-medium truncate">{item.sublabel}</span>}
                           </div>
-                          <ChevronDown className={`h-3.5 w-3.5 shrink-0 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''} ${activeGroup ? (isTextbookGroup ? 'text-emerald-700' : isExamGroup ? 'text-indigo-700' : 'text-orange-500') : 'text-slate-400'}`} />
+                          <ChevronDown className={`h-3.5 w-3.5 shrink-0 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''} ${activeGroup ? (isTextbookGroup ? 'text-emerald-700' : 'text-indigo-600') : 'text-slate-400'}`} />
                         </button>
                         <div id={`nav-group-${item.id}-${mobile ? 'mobile' : 'desktop'}`} hidden={!isExpanded}>
-                          <div className={`mb-2 ml-7 mt-1 space-y-1 border-l-2 pl-3 ${isTextbookGroup ? 'border-emerald-200' : isExamGroup ? 'border-indigo-200' : 'border-orange-100'}`}>
+                          <div className={`mb-2 ml-3.5 mt-1 space-y-1 border-l-2 pl-3 ${isTextbookGroup ? 'border-emerald-200' : isExamGroup ? 'border-indigo-200' : 'border-indigo-100'}`}>
                             {item.children.map((child) => (
                               <button
                                 key={child.id}
@@ -782,8 +773,6 @@ export default function Sidebar({
                   }
 
                   if (isCollapsed) {
-                    const iconGradient = item.iconColor || 'from-blue-500 to-indigo-600';
-                    const glowClass = item.activeGlow || 'shadow-blue-500/30';
                     return (
                       <button
                         key={item.id}
@@ -791,21 +780,13 @@ export default function Sidebar({
                         title={item.label}
                         aria-current={item.active ? 'page' : undefined}
                         onClick={() => { item.onClick?.(); onNavigate?.(); }}
-                        className={`w-full flex items-center justify-center p-2 rounded-2xl transition-all cursor-pointer group ${
+                        className={`w-full flex items-center justify-center p-2.5 rounded-xl transition-colors cursor-pointer bg-transparent ${
                           item.active
-                            ? `bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 text-white shadow-md ${glowClass}`
-                            : 'text-slate-700 hover:bg-white hover:shadow-xs border border-transparent hover:border-slate-200/80'
+                            ? 'text-indigo-600'
+                            : 'text-slate-500 hover:text-slate-900'
                         }`}
                       >
-                        <div
-                          className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-all ${
-                            item.active
-                              ? 'bg-white/20 text-white'
-                              : `bg-gradient-to-br ${iconGradient} text-white shadow-sm group-hover:scale-110`
-                          }`}
-                        >
-                          <Icon className="w-4.5 h-4.5" />
-                        </div>
+                        <Icon className="w-5 h-5 shrink-0" />
                       </button>
                     );
                   }
@@ -820,42 +801,31 @@ export default function Sidebar({
                         onNavigate?.();
                       }}
                       title={item.sublabel ? `${item.label} (${item.sublabel})` : item.label}
-                      className={`w-full flex items-center justify-between gap-3 px-3 py-2 rounded-2xl text-left transition-all duration-150 cursor-pointer group border ${
+                      className={`w-full flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-2xl text-left transition-all duration-150 cursor-pointer group border ${
                         item.active
                           ? 'bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-600 border-transparent text-white shadow-md shadow-blue-500/25 font-bold'
                           : 'border-transparent text-slate-700 hover:text-slate-900 hover:bg-slate-100/70 hover:border-slate-200/60 font-medium'
                       }`}
                     >
-                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className="min-w-0 flex-1">
                         <span
-                          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl transition-all shadow-sm ${
+                          className={`block text-xs sm:text-sm truncate ${
                             item.active
-                              ? `bg-gradient-to-br ${iconGradient} text-white ring-2 ring-white/60 shadow-md scale-105`
-                              : `bg-gradient-to-br ${iconGradient} text-white shadow-2xs group-hover:scale-105`
+                              ? 'font-black text-white'
+                              : 'font-bold text-slate-800 group-hover:text-slate-900'
                           }`}
                         >
-                          <Icon className="h-4 w-4" />
+                          {item.label}
                         </span>
-                        <div className="min-w-0 flex-1">
+                        {item.sublabel && (
                           <span
-                            className={`block text-xs sm:text-sm truncate ${
-                              item.active
-                                ? 'font-black text-white'
-                                : 'font-bold text-slate-800 group-hover:text-slate-900'
+                            className={`block text-[10px] truncate ${
+                              item.active ? 'text-blue-100 font-medium' : 'text-slate-400 font-medium'
                             }`}
                           >
-                            {item.label}
+                            {item.sublabel}
                           </span>
-                          {item.sublabel && (
-                            <span
-                              className={`block text-[10px] truncate ${
-                                item.active ? 'text-blue-100 font-medium' : 'text-slate-400 font-medium'
-                              }`}
-                            >
-                              {item.sublabel}
-                            </span>
-                          )}
-                        </div>
+                        )}
                       </div>
 
                       {item.badge && (
