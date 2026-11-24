@@ -1688,3 +1688,4 @@ Reminder messages in StudentEarlyWarningsCard come from getMyAlerts; repeated da
 | Upstream develop 47b7d27 | Integrated | UPDATE.md combined under current date; local UI retained; ten tests and build pass. |
 
 | [24/11/2026] 3-Tier Roadmap Approval UI, Timetable Scoping & Role Profile Cleanup | `RoadmapApprovalStudioView`, `StudentScheduleView`, `TeacherScheduleView`, `ConnectedRoadmapPage`, `AccountSettingsPage` | Done (100%) |
+| [24/11/2026] AI Tutor Moderation Class-Level Scoping & Teacher Role Isolation | `AiTutorModerationView.jsx`, `aiTutorScoping.js`, `tests/aiTutorScoping.test.js` | 🟢 Hoàn thành (100%) | Giới hạn đàm thoại Gia sư AI bị báo cáo theo đúng lớp và học sinh phụ trách; ẩn xét duyệt câu hỏi gắn cờ khỏi GV; 114 tests pass |

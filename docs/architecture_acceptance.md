@@ -3911,3 +3911,8 @@ Resolved the active frontend UPDATE.md conflict with upstream develop 47b7d27. P
 - Aligned `StudentScheduleView` and `TeacherScheduleView` filter dropdowns with actual user enrollments, paid courses, and teacher assignments.
 - Implemented 3-mode `RoadmapApprovalStudioView` (`teacher`, `manager` campus-scoped with director escalation, `director` cross-campus).
 - Enforced strict role-based profile presentation in `AccountSettingsPage`.
+
+## [24/11/2026] AI Tutor Moderation Class-Level Scoping & Teacher Role Isolation Acceptance
+- **Class & Student Scoping**: Restricted AI Tutor interaction reports for teachers (`role === 'teacher'`) strictly to classes dynamically assigned by the campus manager (`practiceService.getClasses({ teacherId })`) and student rosters fetched via `practiceService.getClassHeatmap(selectedClassId)`. Teachers no longer have access to system-wide or cross-class student conversations.
+- **Role Isolation**: Hidden the Academic Director's flagged exam questions review panel (`FlaggedQuestionsReviewPanel`) and mode switcher tab from teachers, keeping their workspace dedicated solely to pedagogical review and proposal submissions (exemplars and cognitive traps).
+- **Telemetry & Verification**: Synchronized banner telemetry, KPI metrics, search queries, and active selection state with scoped interactions. Added comprehensive unit tests in `tests/aiTutorScoping.test.js` (114/114 total test suite pass rate, clean Vite 8 production build).

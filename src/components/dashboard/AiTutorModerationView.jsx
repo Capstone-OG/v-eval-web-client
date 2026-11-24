@@ -27,6 +27,7 @@ import MathText from '../common/MathText';
 import FlaggedQuestionsReviewPanel from './FlaggedQuestionsReviewPanel';
 import { getPendingFlagCount } from '../../utils/questionFlagStore';
 import { practiceService } from '../../services/practiceService';
+import { scopeInteractions } from '../../utils/aiTutorScoping';
 import { toast } from '../../context/ToastContext';
 
 const TUTOR_PROPOSALS_STORAGE_KEY = 'veval_tutor_proposals';
@@ -56,20 +57,25 @@ export default function AiTutorModerationView({ currentUser, onBackToDashboard, 
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState(null);
   const [pendingQuestionFlags, setPendingQuestionFlags] = useState(() => getPendingFlagCount());
-  const [workspaceSection, setWorkspaceSection] = useState(() => (getPendingFlagCount() > 0 ? 'flagged_questions' : 'flagged_questions')); // 'flagged_questions' | 'ai_tutor'
+  // Teachers are strictly dedicated to AI Tutor conversation review; Directors can access question flag review
+  const [workspaceSection, setWorkspaceSection] = useState(() => (isTeacher ? 'ai_tutor' : (getPendingFlagCount() > 0 ? 'flagged_questions' : 'ai_tutor')));
   const [filterMode, setFilterMode] = useState('pending'); // 'pending' | 'proposals' | 'all' | 'resolved' | 'reported'
-
-  useEffect(() => {
-    const refreshFlags = () => setPendingQuestionFlags(getPendingFlagCount());
-    window.addEventListener('veval:question-flags-updated', refreshFlags);
-    window.addEventListener('storage', refreshFlags);
-    return () => {
-      window.removeEventListener('veval:question-flags-updated', refreshFlags);
-      window.removeEventListener('storage', refreshFlags);
-    };
-  }, []);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedClassFilter, setSelectedClassFilter] = useState('all');
+
+  // Listen for question flag count changes
+  useEffect(() => {
+    const handleFlagChange = () => {
+      setPendingQuestionFlags(getPendingFlagCount());
+    };
+    window.addEventListener('storage', handleFlagChange);
+    return () => window.removeEventListener('storage', handleFlagChange);
+  }, []);
+
+  // Teacher dynamic classes and student roster mapping
+  const [teacherClasses, setTeacherClasses] = useState([]);
+  const [loadingTeacherClasses, setLoadingTeacherClasses] = useState(false);
+  const [classStudentsMap, setClassStudentsMap] = useState({}); // { [classId]: Set<studentId> }
+  const [selectedClassFilter, setSelectedClassFilter] = useState(() => (isTeacher ? '' : 'all'));
 
   // Persistent proposals from Teachers (Hybrid localStorage + runtime state)
   const [proposals, setProposals] = useState(getStoredProposals);
@@ -142,42 +148,213 @@ export default function AiTutorModerationView({ currentUser, onBackToDashboard, 
       });
 
       setInteractions(list);
-
-      // Select first item by default
-      if (list.length > 0 && !selectedId) {
-        const firstPending = list.find((i) => (i.student_reported && !i.mentor_resolution) || Boolean(i.proposal));
-        setSelectedId(firstPending ? firstPending.id : list[0].id);
-      }
     } catch (err) {
       console.warn('[AiTutorModerationView] Error loading interactions:', err?.message);
       setInteractions([]);
     } finally {
       setLoading(false);
     }
-  }, [selectedId]);
+  }, []);
 
   useEffect(() => {
     loadInteractions();
   }, [loadInteractions]);
 
-  // Extract distinct classes for class filter dropdown
+  // 1. Fetch Dynamic Classes assigned to this Teacher
+  useEffect(() => {
+    if (!isTeacher) return;
+    let isMounted = true;
+    const fetchTeacherClasses = async () => {
+      setLoadingTeacherClasses(true);
+      try {
+        const teacherId = currentUser?.id || currentUser?.teacherId || currentUser?.userId;
+        const classes = await practiceService.getClasses({ teacherId });
+        if (isMounted) {
+          let formatted = (classes || []).map((c) => ({
+            id: c.classId || c.id || c.class_id,
+            name: c.className || c.name || c.class_name || `Lớp ${c.classId || c.id}`
+          })).filter((c) => Boolean(c.id));
+
+          // Fallback if no classes returned from API
+          if (formatted.length === 0) {
+            if (currentUser?.classId) {
+              formatted = [{
+                id: currentUser.classId,
+                name: currentUser.className || 'Lớp phụ trách'
+              }];
+            } else if (interactions.length > 0) {
+              const classMap = new Map();
+              interactions.forEach((item) => {
+                const cId = item.class_id || item.classId || 'class_01';
+                const cName = item.class_name || item.className || 'Lớp phụ trách';
+                if (!classMap.has(cId)) {
+                  classMap.set(cId, { id: cId, name: cName });
+                }
+              });
+              formatted = Array.from(classMap.values());
+            } else {
+              formatted = [{ id: 'class_01', name: 'Lớp Nền tảng (Foundation) 01' }];
+            }
+          }
+
+          setTeacherClasses(formatted);
+          if (formatted.length > 0) {
+            setSelectedClassFilter((prev) => {
+              const exists = formatted.some((c) => String(c.id).toLowerCase() === String(prev).toLowerCase());
+              return exists ? prev : formatted[0].id;
+            });
+          }
+        }
+      } catch (err) {
+        console.warn('[AiTutorModerationView] Failed to fetch teacher classes:', err?.message);
+        if (isMounted) {
+          const fallbackId = currentUser?.classId || 'class_01';
+          const fallbackName = currentUser?.className || 'Lớp Nền tảng (Foundation) 01';
+          setTeacherClasses([{ id: fallbackId, name: fallbackName }]);
+          setSelectedClassFilter(fallbackId);
+        }
+      } finally {
+        if (isMounted) setLoadingTeacherClasses(false);
+      }
+    };
+    fetchTeacherClasses();
+    return () => {
+      isMounted = false;
+    };
+  }, [isTeacher, currentUser, interactions]);
+
+  // 2. Fetch Class Roster (Student IDs) via Class Heatmap for Active Class
+  useEffect(() => {
+    if (!isTeacher || !selectedClassFilter || selectedClassFilter === 'all') return;
+    if (classStudentsMap[selectedClassFilter]) return;
+
+    let isMounted = true;
+    const fetchClassRoster = async () => {
+      try {
+        const data = await practiceService.getClassHeatmap(selectedClassFilter);
+        if (isMounted && data?.rows && Array.isArray(data.rows)) {
+          const studentIds = new Set(
+            data.rows.map((r) => String(r.student_id || r.studentId || '').toLowerCase()).filter(Boolean)
+          );
+          setClassStudentsMap((prev) => ({
+            ...prev,
+            [selectedClassFilter]: studentIds
+          }));
+        }
+      } catch (err) {
+        console.warn('[AiTutorModerationView] Failed to fetch class roster:', err?.message);
+      }
+    };
+    fetchClassRoster();
+    return () => {
+      isMounted = false;
+    };
+  }, [isTeacher, selectedClassFilter, classStudentsMap]);
+
+  // Active class object and student roster
+  const selectedClassObj = useMemo(() => {
+    if (!isTeacher) return null;
+    return (
+      teacherClasses.find((c) => String(c.id).toLowerCase() === String(selectedClassFilter).toLowerCase()) ||
+      teacherClasses[0] ||
+      null
+    );
+  }, [isTeacher, teacherClasses, selectedClassFilter]);
+
+  const activeRosterSet = useMemo(() => {
+    if (!isTeacher || !selectedClassFilter) return null;
+    return classStudentsMap[selectedClassFilter] || null;
+  }, [isTeacher, selectedClassFilter, classStudentsMap]);
+
+  // Extract distinct classes for Director class filter dropdown
   const availableClasses = useMemo(() => {
+    if (isTeacher) return [];
     const classSet = new Set();
     interactions.forEach((item) => {
       if (item.class_name) classSet.add(item.class_name);
     });
     return Array.from(classSet);
-  }, [interactions]);
+  }, [isTeacher, interactions]);
+
+  // Scoped interactions based on Role, Selected Class, and Student Roster
+  const scopedInteractions = useMemo(() => {
+    return scopeInteractions({
+      interactions,
+      isTeacher,
+      selectedClassId: selectedClassFilter,
+      selectedClassName: selectedClassObj?.name || '',
+      classStudentIds: activeRosterSet,
+      teacherClasses
+    });
+  }, [interactions, isTeacher, selectedClassFilter, selectedClassObj, activeRosterSet, teacherClasses]);
+
+  // Filtered interaction list based on Role, Class, Status Tab, Search
+  const filteredList = useMemo(() => {
+    return scopedInteractions.filter((item) => {
+      const itemProposal = proposals[item.id] || item.proposal;
+
+      // 1. Tab filter
+      if (filterMode === 'pending') {
+        if (item.mentor_resolution || !item.student_reported) return false;
+      } else if (filterMode === 'proposals') {
+        if (!itemProposal) return false;
+      } else if (filterMode === 'resolved') {
+        if (!item.mentor_resolution) return false;
+      } else if (filterMode === 'reported') {
+        if (!item.student_reported) return false;
+      }
+
+      // 2. Search query
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const matchesName = (item.student_name || '').toLowerCase().includes(q);
+        const matchesQuestion = (item.question_latex || '').toLowerCase().includes(q);
+        const matchesPattern = (item.pattern_name || '').toLowerCase().includes(q) || (item.pattern_code || '').toLowerCase().includes(q);
+        const matchesTrap = (item.trap_name || '').toLowerCase().includes(q);
+        if (!matchesName && !matchesQuestion && !matchesPattern && !matchesTrap) return false;
+      }
+      return true;
+    });
+  }, [scopedInteractions, proposals, filterMode, searchQuery]);
+
+  // Status counts & dynamic telemetry strictly derived from scopedInteractions
+  const counts = useMemo(() => {
+    const pending = scopedInteractions.filter((i) => i.student_reported && !i.mentor_resolution).length;
+    const resolved = scopedInteractions.filter((i) => Boolean(i.mentor_resolution)).length;
+    const reported = scopedInteractions.filter((i) => Boolean(i.student_reported)).length;
+    const proposalsCount = scopedInteractions.filter((i) => Boolean(proposals[i.id] || i.proposal)).length;
+
+    return {
+      total: scopedInteractions.length,
+      pending,
+      resolved,
+      reported,
+      proposalsCount
+    };
+  }, [scopedInteractions, proposals]);
 
   // Selected item reference enriched with latest proposal
   const selectedItem = useMemo(() => {
-    const found = interactions.find((item) => item.id === selectedId) || interactions[0] || null;
+    const found = filteredList.find((item) => item.id === selectedId) || filteredList[0] || null;
     if (!found) return null;
     return {
       ...found,
       proposal: proposals[found.id] || found.proposal || null
     };
-  }, [interactions, selectedId, proposals]);
+  }, [filteredList, selectedId, proposals]);
+
+  // Synchronize selectedId with filteredList
+  useEffect(() => {
+    if (filteredList.length > 0) {
+      const exists = filteredList.some((item) => item.id === selectedId);
+      if (!exists) {
+        const firstPending = filteredList.find((i) => (i.student_reported && !i.mentor_resolution) || Boolean(proposals[i.id] || i.proposal));
+        setSelectedId(firstPending ? firstPending.id : filteredList[0].id);
+      }
+    } else {
+      setSelectedId(null);
+    }
+  }, [filteredList, selectedId, proposals]);
 
   // Pre-fill action forms when selected item changes
   useEffect(() => {
@@ -210,61 +387,6 @@ export default function AiTutorModerationView({ currentUser, onBackToDashboard, 
     }
   }, [selectedItem]);
 
-  // Filtered interaction list based on Role, Class, Status Tab, Search
-  const filteredList = useMemo(() => {
-    return interactions.filter((item) => {
-      const itemProposal = proposals[item.id] || item.proposal;
-
-      // 0. Class Filter (Active for Teacher or when selected)
-      if (selectedClassFilter !== 'all' && item.class_name !== selectedClassFilter) {
-        return false;
-      }
-
-      // 1. Tab filter
-      if (filterMode === 'pending') {
-        if (item.mentor_resolution || !item.student_reported) return false;
-      } else if (filterMode === 'proposals') {
-        if (!itemProposal) return false;
-      } else if (filterMode === 'resolved') {
-        if (!item.mentor_resolution) return false;
-      } else if (filterMode === 'reported') {
-        if (!item.student_reported) return false;
-      }
-
-      // 2. Search query
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        const matchesName = (item.student_name || '').toLowerCase().includes(q);
-        const matchesQuestion = (item.question_latex || '').toLowerCase().includes(q);
-        const matchesPattern = (item.pattern_name || '').toLowerCase().includes(q) || (item.pattern_code || '').toLowerCase().includes(q);
-        const matchesTrap = (item.trap_name || '').toLowerCase().includes(q);
-        if (!matchesName && !matchesQuestion && !matchesPattern && !matchesTrap) return false;
-      }
-      return true;
-    });
-  }, [interactions, proposals, selectedClassFilter, filterMode, searchQuery]);
-
-  // Status counts & dynamic telemetry
-  const counts = useMemo(() => {
-    // Filter base by class if teacher has a class filter
-    const baseList = selectedClassFilter !== 'all'
-      ? interactions.filter((i) => i.class_name === selectedClassFilter)
-      : interactions;
-
-    const pending = baseList.filter((i) => i.student_reported && !i.mentor_resolution).length;
-    const resolved = baseList.filter((i) => Boolean(i.mentor_resolution)).length;
-    const reported = baseList.filter((i) => Boolean(i.student_reported)).length;
-    const proposalsCount = baseList.filter((i) => Boolean(proposals[i.id] || i.proposal)).length;
-
-    return {
-      total: baseList.length,
-      pending,
-      resolved,
-      reported,
-      proposalsCount
-    };
-  }, [interactions, proposals, selectedClassFilter]);
-
   const socraticReliability = useMemo(() => {
     if (counts.total === 0) return '100.0';
     const accurateCount = counts.total - counts.pending;
@@ -272,12 +394,12 @@ export default function AiTutorModerationView({ currentUser, onBackToDashboard, 
   }, [counts]);
 
   const exemplarsCount = useMemo(() => {
-    return interactions.filter((i) => i.mentor_resolution === 'OVERRIDDEN_EXEMPLAR_SAVED').length;
-  }, [interactions]);
+    return scopedInteractions.filter((i) => i.mentor_resolution === 'OVERRIDDEN_EXEMPLAR_SAVED').length;
+  }, [scopedInteractions]);
 
   const trapsCount = useMemo(() => {
-    return interactions.filter((i) => i.mentor_resolution === 'NEW_TRAP_ADDED' || Boolean(i.matched_trap_id)).length;
-  }, [interactions]);
+    return scopedInteractions.filter((i) => i.mentor_resolution === 'NEW_TRAP_ADDED' || Boolean(i.matched_trap_id)).length;
+  }, [scopedInteractions]);
 
   // --- TEACHER ACTIONS: Gửi Đề Xuất (Chờ Director duyệt) ---
   const handleTeacherProposeExemplar = (e) => {
@@ -621,27 +743,49 @@ export default function AiTutorModerationView({ currentUser, onBackToDashboard, 
                 <Layers className="w-3.5 h-3.5 text-cyan-300" />
                 {isTeacher ? 'Phạm vi lớp:' : 'CSDL PostgreSQL:'}{' '}
                 <strong className="text-white font-extrabold">{counts.total} đàm thoại</strong>
+                {isTeacher && selectedClassObj?.name && (
+                  <span className="text-slate-300 font-normal">({selectedClassObj.name})</span>
+                )}
               </span>
             </div>
 
             {/* Banner Action Buttons & Teacher Class Filter */}
             <div className="flex flex-wrap items-center gap-3 pt-2">
-              {availableClasses.length > 0 && (
-                <div className="flex items-center gap-2 bg-white/15 backdrop-blur-md px-3.5 py-2 rounded-2xl border border-white/20">
-                  <span className="text-xs font-bold text-[#FACC15]">Lớp:</span>
-                  <select
-                    value={selectedClassFilter}
-                    onChange={(e) => setSelectedClassFilter(e.target.value)}
-                    className="bg-slate-900/80 text-white border border-white/20 text-xs font-bold px-2.5 py-1 rounded-xl outline-none cursor-pointer"
-                  >
-                    <option value="all">Tất cả lớp ({availableClasses.length} lớp)</option>
-                    {availableClasses.map((cls) => (
-                      <option key={cls} value={cls}>
-                        {cls}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+              {isTeacher ? (
+                teacherClasses.length > 0 && (
+                  <div className="flex items-center gap-2 bg-white/15 backdrop-blur-md px-3.5 py-2 rounded-2xl border border-white/20">
+                    <span className="text-xs font-bold text-[#FACC15]">Lớp phụ trách:</span>
+                    <select
+                      value={selectedClassFilter}
+                      onChange={(e) => setSelectedClassFilter(e.target.value)}
+                      className="bg-slate-900/80 text-white border border-white/20 text-xs font-bold px-2.5 py-1 rounded-xl outline-none cursor-pointer"
+                    >
+                      {teacherClasses.map((cls) => (
+                        <option key={cls.id} value={cls.id}>
+                          {cls.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )
+              ) : (
+                availableClasses.length > 0 && (
+                  <div className="flex items-center gap-2 bg-white/15 backdrop-blur-md px-3.5 py-2 rounded-2xl border border-white/20">
+                    <span className="text-xs font-bold text-[#FACC15]">Lớp:</span>
+                    <select
+                      value={selectedClassFilter}
+                      onChange={(e) => setSelectedClassFilter(e.target.value)}
+                      className="bg-slate-900/80 text-white border border-white/20 text-xs font-bold px-2.5 py-1 rounded-xl outline-none cursor-pointer"
+                    >
+                      <option value="all">Tất cả lớp ({availableClasses.length} lớp)</option>
+                      {availableClasses.map((cls) => (
+                        <option key={cls} value={cls}>
+                          {cls}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )
               )}
 
               <button
@@ -708,45 +852,47 @@ export default function AiTutorModerationView({ currentUser, onBackToDashboard, 
         </div>
       </div>
 
-      {/* Mode Switcher: Flagged Questions Review vs AI Tutor Moderation */}
-      <div className="flex items-center gap-2 flex-wrap bg-white p-1.5 rounded-2xl border border-slate-200 shadow-2xs">
-        <button
-          type="button"
-          onClick={() => setWorkspaceSection('flagged_questions')}
-          className={`px-4 py-2.5 rounded-xl text-xs font-black flex items-center gap-2 cursor-pointer transition-all ${
-            workspaceSection === 'flagged_questions'
-              ? 'bg-rose-600 text-white shadow-xs'
-              : 'text-slate-600 hover:bg-slate-100'
-          }`}
-        >
-          <Flag className="w-4 h-4" />
-          <span>Xét Duyệt Câu Hỏi Bị Gắn Cờ</span>
-          <span
-            className={`px-2 py-0.5 rounded-full text-[10.5px] font-black ${
+      {/* Mode Switcher: Flagged Questions Review vs AI Tutor Moderation (Academic Director only) */}
+      {isDirector && (
+        <div className="flex items-center gap-2 flex-wrap bg-white p-1.5 rounded-2xl border border-slate-200 shadow-2xs">
+          <button
+            type="button"
+            onClick={() => setWorkspaceSection('flagged_questions')}
+            className={`px-4 py-2.5 rounded-xl text-xs font-black flex items-center gap-2 cursor-pointer transition-all ${
               workspaceSection === 'flagged_questions'
-                ? 'bg-white/20 text-white'
-                : 'bg-rose-100 text-rose-700'
+                ? 'bg-rose-600 text-white shadow-xs'
+                : 'text-slate-600 hover:bg-slate-100'
             }`}
           >
-            {pendingQuestionFlags} chờ duyệt
-          </span>
-        </button>
+            <Flag className="w-4 h-4" />
+            <span>Xét Duyệt Câu Hỏi Bị Gắn Cờ</span>
+            <span
+              className={`px-2 py-0.5 rounded-full text-[10.5px] font-black ${
+                workspaceSection === 'flagged_questions'
+                  ? 'bg-white/20 text-white'
+                  : 'bg-rose-100 text-rose-700'
+              }`}
+            >
+              {pendingQuestionFlags} chờ duyệt
+            </span>
+          </button>
 
-        <button
-          type="button"
-          onClick={() => setWorkspaceSection('ai_tutor')}
-          className={`px-4 py-2.5 rounded-xl text-xs font-black flex items-center gap-2 cursor-pointer transition-all ${
-            workspaceSection === 'ai_tutor'
-              ? 'bg-blue-700 text-white shadow-xs'
-              : 'text-slate-600 hover:bg-slate-100'
-          }`}
-        >
-          <Bot className="w-4 h-4" />
-          <span>Kiểm Duyệt Phản Hồi Gia Sư AI ({counts.pending})</span>
-        </button>
-      </div>
+          <button
+            type="button"
+            onClick={() => setWorkspaceSection('ai_tutor')}
+            className={`px-4 py-2.5 rounded-xl text-xs font-black flex items-center gap-2 cursor-pointer transition-all ${
+              workspaceSection === 'ai_tutor'
+                ? 'bg-blue-700 text-white shadow-xs'
+                : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            <Bot className="w-4 h-4" />
+            <span>Kiểm Duyệt Phản Hồi Gia Sư AI ({counts.pending})</span>
+          </button>
+        </div>
+      )}
 
-      {workspaceSection === 'flagged_questions' ? (
+      {isDirector && workspaceSection === 'flagged_questions' ? (
         <FlaggedQuestionsReviewPanel
           currentUser={currentUser}
           onPendingCountChange={setPendingQuestionFlags}
@@ -1016,8 +1162,16 @@ export default function AiTutorModerationView({ currentUser, onBackToDashboard, 
               {filteredList.length === 0 ? (
                 <div className="p-8 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200 text-slate-500 text-xs space-y-2">
                   <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto opacity-70" />
-                  <p className="font-extrabold text-slate-700">Không có phản hồi nào trong danh sách</p>
-                  <p className="text-[11px] text-slate-400">Các báo cáo đã được giải quyết hoặc không khớp với bộ lọc hiện tại.</p>
+                  <p className="font-extrabold text-slate-700">
+                    {isTeacher
+                      ? `Không có báo cáo nào trong ${selectedClassObj?.name || 'lớp này'}`
+                      : 'Không có phản hồi nào trong danh sách'}
+                  </p>
+                  <p className="text-[11px] text-slate-400">
+                    {isTeacher
+                      ? 'Học sinh lớp bạn đang tương tác tốt với Gia sư AI hoặc các báo cáo đã được giải quyết.'
+                      : 'Các báo cáo đã được giải quyết hoặc không khớp với bộ lọc hiện tại.'}
+                  </p>
                 </div>
               ) : (
                 filteredList.map((item) => {

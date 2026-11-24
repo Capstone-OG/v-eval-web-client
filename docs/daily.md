@@ -1,5 +1,22 @@
 # NHẬT KÝ TIẾN ĐỘ HẰNG NGÀY (DAILY LOG) - V-EVAL WEB CLIENT
 
+## [24/11/2026] - Phân Quyền & Giới Hạn Phạm Vi Kiểm Duyệt Gia Sư AI Cấp Lớp Cho Giảng Viên (AiTutorModerationView)
+
+- **Giới Hạn Phạm Vi Dữ Liệu Theo Lớp Phụ Trách & Học Sinh Của Lớp (`AiTutorModerationView.jsx`, `aiTutorScoping.js`)**:
+  - Loại bỏ hoàn toàn lựa chọn "Tất cả lớp" đối với vai trò Giảng viên (`role === 'teacher'`). Giảng viên chỉ được xem và chuyển đổi giữa các lớp thực tế mà Quản lý cơ sở phân công (`practiceService.getClasses({ teacherId })`).
+  - Lấy danh sách học sinh của lớp thông qua ma trận nhiệt (`practiceService.getClassHeatmap(selectedClassId)`), lưu bộ tập hợp `student_id` và lọc chặt chẽ các phiên đàm thoại Gia sư AI bị báo cáo (`scopedInteractions`) đảm bảo Giảng viên chỉ xem đúng học sinh thuộc lớp mình giảng dạy.
+  - Toàn bộ các chỉ số KPI trên banner (Báo cáo lớp cần xem, Đề xuất đã gửi, Đã giải quyết, Phạm vi lớp) và danh sách đàm thoại bên trái được tính toán đồng bộ theo lớp phụ trách.
+  - Tự động đồng bộ item được chọn (`selectedId`) và hiển thị thông báo trạng thái lớp trống rõ ràng khi cả lớp không có báo cáo vi phạm nào.
+- **Tách Rời Hoàn Toàn Quyền Xét Duyệt Câu Hỏi Khảo Thí (`FlaggedQuestionsReviewPanel`)**:
+  - Giảng viên chỉ tập trung vào phân hệ Kiểm duyệt phản hồi Gia sư AI và gửi đề xuất sư phạm 2 tầng (Lời giải mẫu hoặc Bẫy tư duy); ẩn thanh chuyển đổi chế độ ("Xét Duyệt Câu Hỏi Bị Gắn Cờ") khỏi giao diện Giảng viên.
+  - Giữ nguyên toàn quyền cho Giám đốc Học thuật (`director`) để xem xét câu hỏi bị gắn cờ hệ thống và quản trị kho tri thức toàn trường.
+- **Kiểm Thử & Biên Dịch Tự Động**:
+  - Bổ sung bộ kiểm thử `tests/aiTutorScoping.test.js` (5 kịch bản kiểm thử phân quyền Teacher/Director, lọc theo danh sách lớp và học sinh).
+  - Toàn bộ 114 bài kiểm thử unit tests chạy thông qua 100% (`pass 114, fail 0`).
+  - Lệnh build `npm run build` hoàn thành trong 1.65s với 0 lỗi cú pháp hoặc runtime.
+
+---
+
 ## [22/11/2026] - Nâng Cấp Toàn Diện & Đồng Bộ Hóa Toàn Bộ 6 Phân Hệ Quản Trị Chuẩn Executive Dark
 
 - **Đồng Bộ Hóa Toàn Diện 100% Giao Diện Cả 6 Trang Quản Trị (`AdminWorkspace.jsx`, `AdminDashboard.jsx`, `AccountProvisioningView.jsx`)**:
