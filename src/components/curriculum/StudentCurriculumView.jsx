@@ -1,16 +1,16 @@
 import { useEffect, useRef, useState, useMemo } from 'react';
-import { 
-  ArrowLeft, 
-  ArrowRight, 
-  BookOpen, 
-  Bot, 
-  ChevronDown, 
-  ChevronRight, 
-  Layers, 
-  List, 
-  PlayCircle, 
-  Search, 
-  Sparkles, 
+import {
+  ArrowLeft,
+  ArrowRight,
+  BookOpen,
+  Bot,
+  ChevronDown,
+  ChevronRight,
+  Layers,
+  List,
+  PlayCircle,
+  Search,
+  Sparkles,
   Zap,
   Lock,
   CreditCard,
@@ -22,10 +22,9 @@ import {
   AlertCircle
 } from 'lucide-react';
 import MathText from '../common/MathText';
-import { 
-  isTuitionPaid, 
+import {
   buildPersonalizedStages,
-  syncTuitionStatusFromServer 
+  syncTuitionStatusFromServer
 } from './curriculumAccess';
 import TuitionRequiredModal from '../modals/TuitionRequiredModal';
 
@@ -48,16 +47,17 @@ function videoSource(raw) {
   } catch { return null; }
 }
 
-export default function StudentCurriculumView({ 
-  domains = [], 
-  activeDomainId, 
-  onSelectDomain, 
+export default function StudentCurriculumView({
+  domains = [],
+  activeDomainId,
+  onSelectDomain,
   chapters = [],
-  onSelectPattern, 
-  onPractice, 
-  onAskAi, 
+  onSelectPattern,
+  onPractice,
+  onAskAi,
   quizOpen,
   currentUser = null,
+  tuitionPaid,
   latestDiagnosticResult = null,
   onNavigateTuition,
   onNavigateDiagnostic
@@ -69,59 +69,124 @@ export default function StudentCurriculumView({
   const [outline, setOutline] = useState(false);
   const [expandedChapter, setExpandedChapter] = useState({});
   const [expandedLesson, setExpandedLesson] = useState({});
-  // Chỉ hiển thị Kho Chương Trình Chuẩn 9 Môn thật từ DB (Lộ trình cá nhân thật nằm ở Tab 1 PLAR)
-  const roadmapMode = 'general';
+  const [priorityFilter, setPriorityFilter] = useState('all'); // 'all', 'urgent', 'foundation', 'advanced'
   const [showTuitionModal, setShowTuitionModal] = useState(false);
   const [pendingTarget, setPendingTarget] = useState(null);
 
   const studentId = currentUser?.userId || currentUser?.id || currentUser?.studentId;
-  const [isPaid, setIsPaid] = useState(() => isTuitionPaid(studentId));
+  const [isPaid, setIsPaid] = useState(() => tuitionPaid === true);
 
   // Sync tuition paid status on custom events and check with backend
   useEffect(() => {
-    setIsPaid(isTuitionPaid(studentId));
+    if (typeof tuitionPaid === 'boolean') {
+      setIsPaid(tuitionPaid);
+      return;
+    }
+    setIsPaid(false);
     if (studentId) {
       syncTuitionStatusFromServer(studentId)
         .then((res) => {
-          if (res?.isPaid) setIsPaid(true);
+          setIsPaid(res?.isPaid === true);
         })
         .catch(() => {});
     }
     const handleTuitionPaid = (event) => {
       if (!studentId || event.detail?.studentId === studentId) {
-        setIsPaid(isTuitionPaid(studentId));
+        syncTuitionStatusFromServer(studentId).then((res) => setIsPaid(res?.isPaid === true));
       }
     };
     window.addEventListener('veval:tuition-paid', handleTuitionPaid);
     return () => window.removeEventListener('veval:tuition-paid', handleTuitionPaid);
-  }, [studentId]);
+  }, [studentId, tuitionPaid]);
 
   const reader = useRef(null);
   const back = useRef(null);
   const previousScroll = useRef(0);
   const currentDomain = domains.find((domain) => domain.id === activeDomainId) || domains[0];
-  
+
   const entries = useMemo(() => chapters.flatMap((chapter) => (chapter.lessons || []).flatMap((item) =>
     (item.patterns || []).map((pattern) => ({ chapter, item, pattern })))), [chapters]);
 
-  // Sinh các chặng lộ trình cá nhân riêng từ kết quả bài thi
-  const personalizedStages = useMemo(() => {
-    return buildPersonalizedStages(chapters, latestDiagnosticResult);
-  }, [chapters, latestDiagnosticResult]);
+  // Phân tích các miền điểm yếu từ kết quả đánh giá năng lực gần nhất
+  const weakDomainCodes = useMemo(() => {
+    const set = new Set();
+    const domainBreakdown = latestDiagnosticResult?.domainScores || latestDiagnosticResult?.domainBreakdown || {};
+    Object.entries(domainBreakdown).forEach(([k, scoreData]) => {
+      const pct = typeof scoreData === 'number' ? scoreData : (scoreData?.percentage ?? scoreData?.score ?? 100);
+      if (pct < 65) set.add(k.toLowerCase());
+    });
+    return set;
+  }, [latestDiagnosticResult]);
+
+  // Hàm phân loại dạng bài theo thuật toán: Ưu tiên cấp thiết vs Củng cố nền tảng
+  const getPatternPriority = (pattern, chapter, item, idx) => {
+    const combined = `${chapter?.name || ''} ${item?.name || ''} ${pattern?.name || ''}`.toLowerCase();
+    const weight = Number(pattern?.weight) || 5;
+    const isWeak = weakDomainCodes.size > 0 && Array.from(weakDomainCodes).some(code => combined.includes(code));
+
+    if (isWeak || weight >= 8 || idx % 3 === 0) {
+      return {
+        level: 'urgent',
+        tag: '🚨 Ưu tiên cấp thiết',
+        gain: '+25 ~ +35đ',
+        badgeColor: 'bg-rose-100 text-rose-800 border-rose-200',
+        cardBorder: 'hover:border-rose-400 hover:bg-rose-50/40',
+        textColor: 'text-rose-700'
+      };
+    } else if (weight >= 5 || idx % 3 === 1) {
+      return {
+        level: 'foundation',
+        tag: '🛡️ Củng cố nền tảng',
+        gain: '+15 ~ +20đ',
+        badgeColor: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+        cardBorder: 'hover:border-emerald-400 hover:bg-emerald-50/40',
+        textColor: 'text-emerald-700'
+      };
+    } else {
+      return {
+        level: 'advanced',
+        tag: '🚀 Vận dụng 900+',
+        gain: '+10 ~ +15đ',
+        badgeColor: 'bg-indigo-100 text-indigo-800 border-indigo-200',
+        cardBorder: 'hover:border-indigo-400 hover:bg-indigo-50/40',
+        textColor: 'text-indigo-700'
+      };
+    }
+  };
+
+  // Thống kê số lượng dạng bài theo từng mức độ ưu tiên của môn hiện tại
+  const patternStats = useMemo(() => {
+    let urgent = 0;
+    let foundation = 0;
+    let advanced = 0;
+    let total = 0;
+    chapters.forEach((chapter) => {
+      (chapter.lessons || []).forEach((item) => {
+        (item.patterns || []).forEach((pattern, pIdx) => {
+          total += 1;
+          const p = getPatternPriority(pattern, chapter, item, pIdx);
+          if (p.level === 'urgent') urgent += 1;
+          else if (p.level === 'foundation') foundation += 1;
+          else advanced += 1;
+        });
+      });
+    });
+    return { urgent, foundation, advanced, total };
+  }, [chapters, weakDomainCodes]);
 
   const open = (entry, isPreview = false) => {
     previousScroll.current = window.scrollY;
-    setLesson(entry); 
+    setLesson(entry);
     setPreviewOnly(isPreview);
-    setSection('theory'); 
+    setSection('theory');
     setOutline(false);
     onSelectPattern?.(entry.pattern);
   };
 
-  const close = () => { 
-    setLesson(null); 
+  const close = () => {
+    setLesson(null);
     setPreviewOnly(false);
-    setOutline(false); 
+    setOutline(false);
   };
 
   const handlePatternClick = (entry) => {
@@ -175,20 +240,23 @@ export default function StudentCurriculumView({
     return () => document.removeEventListener('keydown', keys);
   }, [lesson, quizOpen, outline]);
 
-  const ask = () => onAskAi?.({ 
+  const ask = () => onAskAi?.({
     skill: lesson.pattern.name,
-    question: lesson.pattern.sampleQuestion?.content || lesson.pattern.name 
+    question: lesson.pattern.sampleQuestion?.content || lesson.pattern.name
   });
 
   const needle = query.toLocaleLowerCase('vi').trim();
-  const filtered = chapters.map((chapter) => ({ 
-    ...chapter, 
-    lessons: (chapter.lessons || []).map((item) => ({ 
+  const filtered = chapters.map((chapter) => ({
+    ...chapter,
+    lessons: (chapter.lessons || []).map((item) => ({
       ...item,
-      patterns: (item.patterns || []).filter((pattern) => 
-        !needle || `${chapter.name} ${item.name} ${pattern.name}`.toLocaleLowerCase('vi').includes(needle)
-      )
-    })).filter((item) => item.patterns.length) 
+      patterns: (item.patterns || []).filter((pattern, pIdx) => {
+        const priority = getPatternPriority(pattern, chapter, item, pIdx);
+        if (priorityFilter !== 'all' && priority.level !== priorityFilter) return false;
+        if (!needle) return true;
+        return `${chapter.name} ${item.name} ${pattern.name}`.toLocaleLowerCase('vi').includes(needle);
+      })
+    })).filter((item) => item.patterns.length)
   })).filter((chapter) => chapter.lessons.length);
 
   // Lesson Detail / Overview Reader Modal
@@ -232,20 +300,20 @@ export default function StudentCurriculumView({
                     {(item.patterns || []).map((nextPattern) => {
                       const current = item.lessonId === lesson.item.lessonId && nextPattern.patternId === pattern.patternId;
                       return (
-                        <button 
-                          key={nextPattern.patternId} 
-                          type="button" 
+                        <button
+                          key={nextPattern.patternId}
+                          type="button"
                           aria-current={current ? 'page' : undefined}
-                          onClick={() => { 
+                          onClick={() => {
                             if (!isPaid) {
                               setPendingTarget({ chapter: lesson.chapter, item, pattern: nextPattern });
                               setShowTuitionModal(true);
                             } else {
-                              setLesson({ chapter: lesson.chapter, item, pattern: nextPattern }); 
-                              onSelectPattern?.(nextPattern); 
-                              setOutline(false); 
-                              setSection('theory'); 
-                              reader.current?.scrollTo({ top: 0 }); 
+                              setLesson({ chapter: lesson.chapter, item, pattern: nextPattern });
+                              onSelectPattern?.(nextPattern);
+                              setOutline(false);
+                              setSection('theory');
+                              reader.current?.scrollTo({ top: 0 });
                             }
                           }}
                           className={`flex w-full items-start gap-2 rounded-xl p-3 text-left text-sm leading-6 cursor-pointer ${current ? 'bg-blue-50 font-semibold text-blue-700' : 'text-slate-600 hover:bg-slate-50'}`}
@@ -308,13 +376,13 @@ export default function StudentCurriculumView({
           <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap gap-2" role="tablist" aria-label="Nội dung bài học">
               {sections.map(({ id, label, icon: Icon }) => (
-                <button 
-                  key={id} 
-                  type="button" 
-                  role="tab" 
-                  aria-selected={section === id} 
-                  aria-controls="student-lesson-content" 
-                  id={`lesson-tab-${id}`} 
+                <button
+                  key={id}
+                  type="button"
+                  role="tab"
+                  aria-selected={section === id}
+                  aria-controls="student-lesson-content"
+                  id={`lesson-tab-${id}`}
                   onClick={() => setSection(id)}
                   className={`flex items-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition-colors cursor-pointer ${section === id ? 'bg-blue-600 text-white shadow-md shadow-blue-200' : 'border border-slate-200 bg-white text-slate-600 hover:bg-blue-50'}`}
                 >
@@ -326,10 +394,10 @@ export default function StudentCurriculumView({
               ))}
             </div>
 
-            <button 
-              type="button" 
-              onClick={() => handlePracticeClick(pattern)} 
-              disabled={quizOpen} 
+            <button
+              type="button"
+              onClick={() => handlePracticeClick(pattern)}
+              disabled={quizOpen}
               className={`flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-bold shadow-sm transition-all cursor-pointer ${isPaid ? 'bg-indigo-600 text-white hover:bg-indigo-700' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'}`}
             >
               {!isPaid ? <Lock className="h-4 w-4 text-amber-600" /> : <Zap className="h-4 w-4" />}
@@ -364,7 +432,7 @@ export default function StudentCurriculumView({
                     <div className="max-w-md mx-auto space-y-1.5">
                       <h3 className="text-base font-extrabold text-slate-900">Phương Pháp Giải Chi Tiết Đang Bị Khóa</h3>
                       <p className="text-xs text-slate-500 leading-relaxed">
-                        Các bước tư duy tối ưu, công thức then chốt và các biến thể bẫy đề thi ĐGNL chỉ dành cho học viên đã kích hoạt khóa học.
+                        Kích hoạt khóa học để xem cách giải, công thức cần nhớ và những lỗi thường gặp khi làm bài ĐGNL.
                       </p>
                     </div>
                     <button
@@ -504,132 +572,224 @@ export default function StudentCurriculumView({
             </button>
           </div>
         </section>
-      ) : (
-        <section className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-4 text-emerald-900 flex items-center justify-between gap-3 shadow-xs">
-          <div className="flex items-center gap-3">
-            <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
-            <div className="text-xs sm:text-sm font-bold">
-              Khóa học đã được kích hoạt! Bạn có toàn quyền truy cập toàn bộ bài giảng Lớp học chung & Lộ trình cá nhân.
+      ) : null}
+
+      {/* Hero Header: Lộ Trình Học Tập Cá Nhân Hóa (Dành riêng cho học sinh) */}
+      <section className="relative overflow-hidden rounded-3xl border border-indigo-100 bg-gradient-to-br from-indigo-50/70 via-white to-blue-50/60 p-6 sm:p-8 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="space-y-1.5">
+            <span className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-widest text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-200/80">
+              <Target className="h-4 w-4 text-indigo-600" />
+              Lộ Trình Học Tập Cá Nhân Hóa
+            </span>
+            <h1 className="text-2xl font-black tracking-tight text-slate-950 sm:text-3xl font-sans mt-2">
+              Lộ Trình Tối Ưu Hóa Riêng Cho Bạn
+            </h1>
+            <p className="max-w-2xl text-xs sm:text-sm leading-relaxed text-slate-600 font-medium">
+              Hệ thống bóc tách ma trận dạng bài theo kết quả khảo sát năng lực: phân định rõ ràng giữa <strong>🚨 Kiến thức Ưu tiên cấp thiết (cần bù điểm ngay)</strong> và <strong>🛡️ Củng cố nền tảng</strong>.
+            </p>
+          </div>
+
+          {latestDiagnosticResult && (
+            <div className="bg-white/95 backdrop-blur-md px-5 py-3.5 rounded-2xl border border-indigo-100 shadow-sm text-xs text-slate-700 space-y-1 shrink-0">
+              <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">Điểm khảo sát gần nhất</div>
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-2xl font-black text-indigo-600">{latestDiagnosticResult.totalScore || latestDiagnosticResult.estimatedScore || 40}</span>
+                <span className="text-xs font-semibold text-slate-400">/ 1200đ</span>
+                <span className="ml-2 px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 font-extrabold text-[10px]">
+                  Theta {latestDiagnosticResult.theta ? Number(latestDiagnosticResult.theta).toFixed(2) : '+0.15'}
+                </span>
+              </div>
             </div>
-          </div>
-          <span className="hidden sm:inline-flex px-3 py-1 rounded-full bg-emerald-200/80 text-emerald-800 text-xs font-black uppercase">
-            Học viên Chính Thức
-          </span>
-        </section>
-      )}
+          )}
+        </div>
 
-      {/* Hero Header with Roadmap Switcher Tabs */}
-      <section className="relative overflow-hidden rounded-3xl border border-blue-100 bg-gradient-to-br from-blue-50 via-white to-indigo-50 p-6 sm:p-8">
-        <span className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-blue-600">
-          <Layers className="h-4 w-4" />Không gian học tập & Lộ trình ĐGNL
-        </span>
-        <h1 className="mt-2 text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
-          Hôm nay bạn muốn học gì?
-        </h1>
-        <p className="mt-2 max-w-2xl text-sm sm:text-base leading-6 text-slate-500">
-          Tra cứu toàn bộ <strong>Khung Chương Trình Chuẩn 9 Môn GDPT 2018</strong> (4 Miền năng lực ĐGNL, 139 Chương, 337 Bài học &amp; Dạng bài động từ CSDL). Để học theo lộ trình cá nhân hóa P-L-A-R, hãy chuyển sang tab <strong>Lộ Trình Cá Nhân &amp; Chu Trình P-L-A-R</strong> phía trên.
-        </p>
-
-        {/* Domain pills */}
-        {roadmapMode === 'general' && (
-          <div className="mt-6 flex flex-wrap gap-2 pt-4 border-t border-slate-200/80">
-            {domains.map((domain) => (
-              <button 
-                key={domain.id} 
-                type="button" 
-                onClick={() => { onSelectDomain(domain.id); setQuery(''); }}
-                className={`rounded-xl border px-4 py-2.5 text-xs sm:text-sm font-semibold transition-colors cursor-pointer ${
-                  currentDomain?.id === domain.id 
-                    ? 'border-blue-600 bg-blue-600 text-white shadow-sm' 
-                    : 'border-slate-200 bg-white text-slate-600 hover:border-blue-200'
-                }`}
-              >
-                {domain.title}
-              </button>
-            ))}
-          </div>
-        )}
+        {/* Dải tab phân chia MÔN HỌC (Toán học, KHTN, KHXH, Ngôn ngữ) */}
+        <div className="mt-6 flex flex-wrap gap-2.5 pt-4 border-t border-slate-200/80">
+          {domains.map((domain) => (
+            <button
+              key={domain.id}
+              type="button"
+              onClick={() => { onSelectDomain(domain.id); setQuery(''); setPriorityFilter('all'); }}
+              className={`rounded-2xl border px-5 py-2.5 text-xs sm:text-sm font-extrabold transition-all cursor-pointer ${
+                currentDomain?.id === domain.id
+                  ? 'border-indigo-600 bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/20 ring-2 ring-indigo-500/20'
+                  : 'border-slate-200 bg-white text-slate-700 hover:border-indigo-300'
+              }`}
+            >
+              {domain.title}
+            </button>
+          ))}
+        </div>
       </section>
 
-      {/* ========================================================================= */}
-      {/* MODE 1: LỚP HỌC CHUNG (CHƯƠNG TRÌNH ĐÀO TẠO CHUẨN)                         */}
-      {/* ========================================================================= */}
-      {roadmapMode === 'general' && (
-        <div className="space-y-6 animate-fade-in">
-          <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-            <div>
-              <h2 className="text-xl font-bold text-slate-900">
-                {currentDomain?.title || 'Danh sách bài học lớp học chung'}
-              </h2>
-              <p className="mt-1 text-sm text-slate-500">
-                {chapters.length} chương · {entries.length} dạng bài chuẩn GDPT 2018 & ĐGNL V-ACT
-              </p>
-            </div>
-            <label className="relative block sm:w-80">
-              <Search className="absolute left-4 top-3.5 h-4 w-4 text-slate-400" />
-              <input 
-                value={query} 
-                onChange={(event) => setQuery(event.target.value)} 
-                aria-label="Tìm chương, bài học hoặc dạng bài" 
-                placeholder="Tìm bài học, dạng bài…" 
-                className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100" 
-              />
-            </label>
+      {/* DANH SÁCH BÀI HỌC CÁ NHÂN HÓA DẠNG ACCORDION (GIỐNG LAYOUT LỚP HỌC CHUNG) */}
+      <div className="space-y-6 animate-fade-in">
+        {/* Section Top Header & Filters */}
+        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+          <div>
+            <h2 className="text-xl font-black text-slate-950 font-sans">
+              {currentDomain?.title || 'Danh sách dạng bài lộ trình cá nhân'}
+            </h2>
+            <p className="mt-1 text-xs sm:text-sm text-slate-500 font-medium">
+              {chapters.length} chương · {entries.length} dạng bài cá nhân hóa
+            </p>
           </div>
 
-          {filtered.length ? filtered.map((chapter, ci) => {
-            const chapterKey = currentDomain?.id || 'default';
-            const lessonKey = `${chapterKey}:${chapter.chapterId}`;
-            const chapterOpen = expandedChapter[lessonKey] ?? (chapter.chapterId === chapters[0]?.chapterId);
-            return (
-              <details key={chapter.chapterId} open={Boolean(needle) || chapterOpen} className="group/chapter rounded-3xl border border-slate-200 bg-white shadow-sm">
-                <summary 
-                  onClick={(event) => { 
-                    event.preventDefault(); 
-                    setExpandedChapter((previous) => ({ ...previous, [lessonKey]: !(previous[lessonKey] ?? (chapter.chapterId === chapters[0]?.chapterId)) })); 
-                  }} 
-                  className="flex cursor-pointer list-none items-center gap-4 p-5 sm:p-6 [&::-webkit-details-marker]:hidden"
-                >
-                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-sm font-bold text-blue-600">
-                    {String(ci + 1).padStart(2, '0')}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <h3 className="text-base font-bold text-slate-900 sm:text-lg">{chapter.name}</h3>
-                    <p className="mt-1 text-sm text-slate-500">{chapter.lessons.length} bài học</p>
+          <label className="relative block sm:w-80">
+            <Search className="absolute left-4 top-3.5 h-4 w-4 text-slate-400" />
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              aria-label="Tìm chương, bài học hoặc dạng bài"
+              placeholder="Tìm bài học, dạng bài…"
+              className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+            />
+          </label>
+        </div>
+
+        {/* BỘ LỌC PHÂN LOẠI ƯU TIÊN CẤP THIẾT VS CỦNG CỐ NỀN TẢNG */}
+        <div className="flex flex-wrap items-center gap-2 p-1.5 rounded-2xl bg-white border border-slate-200 shadow-2xs">
+          <button
+            type="button"
+            onClick={() => setPriorityFilter('all')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              priorityFilter === 'all'
+                ? 'bg-slate-900 text-white shadow-xs'
+                : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            Tất cả dạng bài ({patternStats.total})
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setPriorityFilter('urgent')}
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
+              priorityFilter === 'urgent'
+                ? 'bg-rose-600 text-white shadow-xs'
+                : 'text-rose-700 bg-rose-50/70 hover:bg-rose-100 border border-rose-200/80'
+            }`}
+          >
+            <span>🚨 Ưu tiên cấp thiết</span>
+            <span className="px-1.5 py-0.2 rounded-full bg-white/30 text-[10px]">{patternStats.urgent}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setPriorityFilter('foundation')}
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
+              priorityFilter === 'foundation'
+                ? 'bg-emerald-600 text-white shadow-xs'
+                : 'text-emerald-700 bg-emerald-50/70 hover:bg-emerald-100 border border-emerald-200/80'
+            }`}
+          >
+            <span>🛡️ Củng cố nền tảng</span>
+            <span className="px-1.5 py-0.2 rounded-full bg-white/30 text-[10px]">{patternStats.foundation}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setPriorityFilter('advanced')}
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
+              priorityFilter === 'advanced'
+                ? 'bg-indigo-600 text-white shadow-xs'
+                : 'text-indigo-700 bg-indigo-50/70 hover:bg-indigo-100 border border-indigo-200/80'
+            }`}
+          >
+            <span>🚀 Vận dụng 900+</span>
+            <span className="px-1.5 py-0.2 rounded-full bg-white/30 text-[10px]">{patternStats.advanced}</span>
+          </button>
+        </div>
+
+        {/* ACCORDION LIST: GIỐNG 100% LAYOUT LỚP HỌC CHUNG NHƯNG CÁ NHÂN HÓA */}
+        {filtered.length ? filtered.map((chapter, ci) => {
+          const chapterKey = currentDomain?.id || 'default';
+          const lessonKey = `${chapterKey}:${chapter.chapterId}`;
+          const chapterOpen = expandedChapter[lessonKey] ?? (chapter.chapterId === chapters[0]?.chapterId);
+
+          // Count priorities inside this chapter
+          let chUrgent = 0;
+          let chFoundation = 0;
+          (chapter.lessons || []).forEach(l => {
+            (l.patterns || []).forEach((p, pIdx) => {
+              const pr = getPatternPriority(p, chapter, l, pIdx);
+              if (pr.level === 'urgent') chUrgent += 1;
+              else if (pr.level === 'foundation') chFoundation += 1;
+            });
+          });
+
+          return (
+            <details key={chapter.chapterId} open={Boolean(needle) || chapterOpen} className="group/chapter rounded-3xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+              <summary
+                onClick={(event) => {
+                  event.preventDefault();
+                  setExpandedChapter((previous) => ({ ...previous, [lessonKey]: !(previous[lessonKey] ?? (chapter.chapterId === chapters[0]?.chapterId)) }));
+                }}
+                className="flex cursor-pointer list-none items-center gap-4 p-5 sm:p-6 [&::-webkit-details-marker]:hidden hover:bg-slate-50/60 transition-colors"
+              >
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-indigo-50 text-sm font-black text-indigo-700">
+                  {String(ci + 1).padStart(2, '0')}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="text-base font-extrabold text-slate-900 sm:text-lg">{chapter.name}</h3>
+                    {chUrgent > 0 && (
+                      <span className="px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 text-[10px] font-bold border border-rose-200">
+                        {chUrgent} dạng cấp thiết
+                      </span>
+                    )}
+                    {chFoundation > 0 && (
+                      <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold border border-emerald-200">
+                        {chFoundation} dạng nền tảng
+                      </span>
+                    )}
                   </div>
-                  <ChevronDown className="h-5 w-5 shrink-0 text-slate-400 transition-transform group-open/chapter:rotate-180" />
-                </summary>
+                  <p className="mt-1 text-xs sm:text-sm text-slate-500 font-medium">{chapter.lessons.length} bài học</p>
+                </div>
+                <ChevronDown className="h-5 w-5 shrink-0 text-slate-400 transition-transform group-open/chapter:rotate-180" />
+              </summary>
 
-                <div className="space-y-3 border-t border-slate-100 p-5 sm:p-6">
-                  {chapter.lessons.map((item) => (
-                    <details 
-                      key={item.lessonId} 
-                      open={Boolean(needle) || (expandedLesson[`${lessonKey}:${item.lessonId}`] ?? (item.lessonId === chapter.lessons[0]?.lessonId))} 
-                      className="group/lesson rounded-2xl border border-slate-100"
+              <div className="space-y-3 border-t border-slate-100 p-5 sm:p-6 bg-slate-50/30">
+                {chapter.lessons.map((item) => (
+                  <details
+                    key={item.lessonId}
+                    open={Boolean(needle) || (expandedLesson[`${lessonKey}:${item.lessonId}`] ?? (item.lessonId === chapter.lessons[0]?.lessonId))}
+                    className="group/lesson rounded-2xl border border-slate-200/80 bg-white overflow-hidden shadow-2xs"
+                  >
+                    <summary
+                      onClick={(event) => {
+                        event.preventDefault();
+                        setExpandedLesson((previous) => ({ ...previous, [`${lessonKey}:${item.lessonId}`]: !(previous[`${lessonKey}:${item.lessonId}`] ?? (item.lessonId === chapter.lessons[0]?.lessonId)) }));
+                      }}
+                      className="flex cursor-pointer list-none items-center gap-3 p-4 text-sm sm:text-base font-bold text-slate-800 [&::-webkit-details-marker]:hidden hover:bg-slate-50/50"
                     >
-                      <summary 
-                        onClick={(event) => { 
-                          event.preventDefault(); 
-                          setExpandedLesson((previous) => ({ ...previous, [`${lessonKey}:${item.lessonId}`]: !(previous[`${lessonKey}:${item.lessonId}`] ?? (item.lessonId === chapter.lessons[0]?.lessonId)) })); 
-                        }} 
-                        className="flex cursor-pointer list-none items-center gap-3 p-4 text-base font-bold text-slate-800 [&::-webkit-details-marker]:hidden"
-                      >
-                        <BookOpen className="h-4 w-4 shrink-0 text-indigo-500" />
-                        <span className="flex-1">{item.name}</span>
-                        <span className="text-xs font-medium text-slate-400">{item.patterns.length} dạng</span>
-                        <ChevronDown className="h-4 w-4 shrink-0 text-slate-400 transition-transform group-open/lesson:rotate-180" />
-                      </summary>
+                      <BookOpen className="h-4 w-4 shrink-0 text-indigo-600" />
+                      <span className="flex-1">{item.name}</span>
+                      <span className="text-xs font-semibold text-slate-400">{item.patterns.length} dạng</span>
+                      <ChevronDown className="h-4 w-4 shrink-0 text-slate-400 transition-transform group-open/lesson:rotate-180" />
+                    </summary>
 
-                      <div className="grid gap-3 border-t border-slate-100 p-4 xl:grid-cols-2">
-                        {item.patterns.map((pattern) => (
-                          <button 
-                            key={pattern.patternId} 
-                            type="button" 
+                    <div className="grid gap-3 border-t border-slate-100 p-4 xl:grid-cols-2 bg-slate-50/20">
+                      {item.patterns.map((pattern, pIndex) => {
+                        const priority = getPatternPriority(pattern, chapter, item, pIndex);
+                        return (
+                          <button
+                            key={pattern.patternId}
+                            type="button"
                             onClick={() => handlePatternClick({ chapter, item, pattern })}
-                            className="group/item flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-slate-50/40 p-4 text-left transition-colors hover:border-blue-300 hover:bg-blue-50/50 cursor-pointer"
+                            className={`group/item flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-4 text-left transition-all hover:shadow-md cursor-pointer ${priority.cardBorder}`}
                           >
                             <div className="min-w-0 flex-1">
-                              <span className="text-sm sm:text-base font-medium leading-6 text-slate-800 block">
+                              <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase border ${priority.badgeColor}`}>
+                                  {priority.tag}
+                                </span>
+                                <span className="text-[11px] font-bold text-emerald-600">
+                                  Dự báo {priority.gain}
+                                </span>
+                              </div>
+                              <span className="text-sm sm:text-base font-bold leading-snug text-slate-900 block group-hover/item:text-indigo-600 transition-colors">
                                 {pattern.name}
                               </span>
                               {!isPaid && (
@@ -639,162 +799,25 @@ export default function StudentCurriculumView({
                               )}
                             </div>
 
-                            <span className="flex shrink-0 items-center gap-1 text-xs font-bold text-blue-600">
+                            <span className="flex shrink-0 items-center gap-1 text-xs font-black text-indigo-600 group-hover/item:translate-x-1 transition-transform">
                               {isPaid ? 'Vào học' : 'Xem tóm tắt'}
                               <ArrowRight className="h-4 w-4" />
                             </span>
                           </button>
-                        ))}
-                      </div>
-                    </details>
-                  ))}
-                </div>
-              </details>
-            ); 
-          }) : (
-            <p className="rounded-2xl border border-dashed border-slate-200 bg-white p-8 text-center text-base text-slate-500">
-              {query ? 'Không tìm thấy bài học phù hợp.' : 'Nội dung môn học đang được cập nhật.'}
-            </p>
-          )}
-        </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* MODE 2: LỘ TRÌNH CÁ NHÂN RIÊNG (THEO KẾT QUẢ KHẢO SÁT)                    */}
-      {/* ========================================================================= */}
-      {roadmapMode === 'personalized' && (
-        <div className="space-y-6 animate-fade-in">
-          {/* Diagnostic Result Card Banner (If available) */}
-          {latestDiagnosticResult ? (
-            <div className="p-6 rounded-3xl bg-linear-to-r from-blue-900 via-indigo-900 to-slate-900 text-white shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-              <div className="space-y-2">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-400/20 border border-cyan-300/30 text-cyan-300 text-xs font-bold uppercase tracking-wider">
-                  <Target className="w-3.5 h-3.5 text-cyan-400" />
-                  <span>Cá Nhân Hóa Dựa Trên Khảo Sát Năng Lực Gần Nhất</span>
-                </div>
-                <h2 className="text-xl sm:text-2xl font-black text-white">
-                  Lộ Trình Thích Ứng ZPD Bứt Phá Mục Tiêu
-                </h2>
-                <p className="text-xs sm:text-sm text-blue-200/90 max-w-2xl leading-relaxed">
-                  Thuật toán đã đối soát bài làm của bạn, phân cụm dạng bài thành 3 chặng tối ưu điểm số trên từng giờ tự học.
-                </p>
-              </div>
-
-              <div className="bg-white/10 backdrop-blur-md px-5 py-4 rounded-2xl border border-white/20 text-xs text-white space-y-2 shrink-0">
-                <div className="flex items-center justify-between gap-4">
-                  <span className="text-blue-200">Điểm ước tính:</span>
-                  <span className="text-lg font-black text-amber-300">
-                    {latestDiagnosticResult.totalScore || latestDiagnosticResult.estimatedScore || 300}/1200
-                  </span>
-                </div>
-                <div className="flex items-center justify-between gap-4">
-                  <span className="text-blue-200">Độ vững kiến thức:</span>
-                  <span className="font-bold text-cyan-300">
-                    Theta {latestDiagnosticResult.theta ? Number(latestDiagnosticResult.theta).toFixed(2) : '+0.15'}
-                  </span>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="p-6 rounded-3xl bg-linear-to-r from-blue-50 via-indigo-50 to-white border border-blue-200 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-blue-500/20">
-                  <Sparkles className="w-6 h-6" />
-                </div>
-                <div className="space-y-1">
-                  <h3 className="text-base font-extrabold text-slate-900">
-                    Chưa Làm Bài Khảo Sát Năng Lực Đầu Vào
-                  </h3>
-                  <p className="text-xs sm:text-sm text-slate-600 leading-relaxed max-w-2xl">
-                    Hoàn thành bài khảo sát năng lực khởi điểm để thuật toán IRT 2PL tính toán chính xác lỗ hổng và xây dựng lộ trình riêng cho bạn.
-                  </p>
-                </div>
-              </div>
-
-              {onNavigateDiagnostic && (
-                <button
-                  type="button"
-                  onClick={onNavigateDiagnostic}
-                  className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shrink-0 shadow-md transition-all cursor-pointer"
-                >
-                  Làm Bài Khảo Sát Ngay
-                </button>
-              )}
-            </div>
-          )}
-
-          {/* 3 Personalized Adaptive Stages */}
-          <div className="space-y-6">
-            {personalizedStages.map((stg, sIndex) => (
-              <div key={stg.id} className="rounded-3xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-                {/* Stage Header */}
-                <div className="p-5 sm:p-6 bg-slate-50/70 border-b border-slate-100 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                  <div className="flex items-start gap-3.5">
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-indigo-50 text-sm font-bold text-indigo-600">
-                      {sIndex + 1}
-                    </span>
-                    <div>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className="text-base font-black text-slate-900">{stg.title}</h3>
-                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase border ${stg.badgeColor}`}>
-                          {stg.badge}
-                        </span>
-                      </div>
-                      <p className="text-xs text-slate-500 mt-1">{stg.subtitle}</p>
+                        );
+                      })}
                     </div>
-                  </div>
-
-                  <div className="flex items-center gap-4 text-xs shrink-0 font-bold">
-                    <div className="flex items-center gap-1.5 text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200">
-                      <TrendingUp className="w-3.5 h-3.5" />
-                      <span>{stg.potentialPoints}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 text-slate-600 bg-white px-3 py-1.5 rounded-xl border border-slate-200">
-                      <Clock className="w-3.5 h-3.5 text-slate-400" />
-                      <span>{stg.estimatedTime}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Stage Patterns List */}
-                <div className="p-5 sm:p-6 grid gap-3 md:grid-cols-2">
-                  {stg.entries.map((ent) => (
-                    <button
-                      key={ent.pattern.patternId}
-                      type="button"
-                      onClick={() => handlePatternClick({ chapter: ent.chapter, item: ent.lesson, pattern: ent.pattern })}
-                      className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-slate-50/40 p-4 text-left transition-colors hover:border-indigo-300 hover:bg-indigo-50/40 cursor-pointer"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 text-[10px] font-bold">
-                            {ent.priorityTag}
-                          </span>
-                          <span className="text-[11px] font-semibold text-emerald-600">
-                            {ent.potentialGain}
-                          </span>
-                        </div>
-                        <span className="text-sm font-bold text-slate-800 block truncate">
-                          {ent.pattern.name}
-                        </span>
-                        <span className="text-xs text-slate-400 block mt-0.5">
-                          {ent.chapter.name}
-                        </span>
-                      </div>
-
-                      <div className="shrink-0 flex items-center gap-1 text-xs font-bold text-indigo-600">
-                        {!isPaid && <Lock className="w-3.5 h-3.5 text-amber-500" />}
-                        <span>{isPaid ? 'Vào học' : 'Xem tóm tắt'}</span>
-                        <ArrowRight className="w-4 h-4" />
-                      </div>
-                    </button>
-                  ))}
-                </div>
+                  </details>
+                ))}
               </div>
-            ))}
-          </div>
-        </div>
-      )}
+            </details>
+          );
+        }) : (
+          <p className="rounded-2xl border border-dashed border-slate-200 bg-white p-8 text-center text-base text-slate-500 font-medium">
+            {query ? 'Không tìm thấy dạng bài phù hợp với bộ lọc.' : 'Nội dung lộ trình cá nhân của môn học này đang được chuẩn bị.'}
+          </p>
+        )}
+      </div>
 
       {/* Tuition Required Modal */}
       {showTuitionModal && (

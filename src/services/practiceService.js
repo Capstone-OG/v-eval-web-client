@@ -1,4 +1,6 @@
 import apiClient, { tokenStorage } from './apiClient.js';
+import { hasValidForecastScores } from '../utils/prescriptionEligibility.js';
+import { readForecastRange } from '../utils/forecastRange.js';
 
 const GUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -246,10 +248,8 @@ const normalizePrescriptionItem = (item, idx = 0) => {
 const normalizeForecastResponse = (raw, fallbackStudentId) => {
   const studentId = ensureGuid(raw?.studentId, fallbackStudentId);
   const predictedScore = Number(raw?.forecast?.predictedScore ?? raw?.predictedScore ?? 845);
-  const sem = Number(raw?.forecast?.sem ?? raw?.semScore ?? 24.5);
-  const margin = Math.round(1.96 * sem);
-  const minScore = Number(raw?.forecast?.scoreRange?.min ?? Math.max(0, predictedScore - margin));
-  const maxScore = Number(raw?.forecast?.scoreRange?.max ?? Math.min(1200, predictedScore + margin));
+  const sem = raw?.forecast?.sem ?? raw?.semScore ?? null;
+  const scoreRange = readForecastRange(raw);
   const targetScore = Number(raw?.balanceSheet?.targetScore ?? raw?.targetScore ?? 920);
   const deficitScore = Number(
     raw?.balanceSheet?.deficitScore ?? raw?.deficitScore ?? Math.max(0, targetScore - predictedScore)
@@ -265,9 +265,10 @@ const normalizeForecastResponse = (raw, fallbackStudentId) => {
 
   return {
     studentId,
+    _hasValidScores: hasValidForecastScores(raw),
     forecast: {
       predictedScore,
-      scoreRange: { min: minScore, max: maxScore },
+      scoreRange,
       sem,
       confidenceRate: Number(raw?.forecast?.confidenceRate ?? raw?.confidenceRate ?? 0.95),
       lastUpdated: raw?.forecast?.lastUpdated || raw?.createdAt || new Date().toISOString(),
@@ -1769,9 +1770,12 @@ export const practiceService = {
     return (await apiClient.get(`/api/practice/roadmaps/nodes/${nodeId}`, { headers })).data;
   },
 
-  async getRoadmapReviewQueue(status = 'ALL') {
-    const query = status ? `?status=${encodeURIComponent(status)}` : '';
-    return (await apiClient.get(`/api/practice/roadmaps/review-queue${query}`)).data;
+  async getRoadmapReviewQueue(status = 'ALL', { campusId = null } = {}) {
+    const params = new URLSearchParams();
+    if (status) params.set('status', status);
+    if (campusId && campusId !== 'ALL') params.set('campusId', campusId);
+    const qs = params.toString();
+    return (await apiClient.get(`/api/practice/roadmaps/review-queue${qs ? `?${qs}` : ''}`)).data;
   },
 
   async getRoadmapById(roadmapId) {
@@ -1784,6 +1788,17 @@ export const practiceService = {
 
   async submitDirectorRoadmapDecision(roadmapId, payload) {
     return (await apiClient.post(`/api/practice/roadmaps/${encodeURIComponent(roadmapId)}/director-decision`, payload)).data;
+  },
+
+  async approveRoadmap(roadmapId, payload) {
+    try {
+      return (await apiClient.put(`/api/v1/roadmaps/${encodeURIComponent(roadmapId)}/approve`, payload)).data;
+    } catch (err) {
+      if (err?.status === 404) {
+        return (await apiClient.put(`/api/practice/roadmaps/${encodeURIComponent(roadmapId)}/approve`, payload)).data;
+      }
+      throw err;
+    }
   },
 
   // =========================================================================
@@ -3175,6 +3190,7 @@ export const practiceService = {
       endTime: String(s.endTime || '').slice(0, 5),
       room: s.room || '',
       teacherId: s.teacherId || null,
+      teacherName: s.teacherName || s.primaryTeacherName || '',
       isSubstituteTeacher: Boolean(s.isSubstituteTeacher),
       skillId: s.skillId || null,
       skillName: s.skillName || '',

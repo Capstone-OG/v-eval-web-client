@@ -1,4 +1,5 @@
 import apiClient from './apiClient.js';
+import { normalizeTuitionStatus } from '../utils/tuitionStatus.js';
 
 /**
  * Payment & Tuition Service (PayOS VietQR Integration)
@@ -61,19 +62,23 @@ export const paymentService = {
    * @param {string} studentId
    * @returns {Promise<{ isPaid: boolean, activeCourseId, courseName, planType, durationWeeks, startDate, endDate, assignedClassName, unlockedFeatures: string[], payments: Array }>}
    */
-  async getStudentTuitionStatus(studentId) {
+  async getStudentTuitionStatus(studentId, { throwOnError = false } = {}) {
     if (!studentId) return { isPaid: false, unlockedFeatures: [], payments: [] };
+    let status;
     try {
       const response = await apiClient.get(`/api/practice/payments/status-by-student/${studentId}`);
-      return response.data;
+      status = response.data;
     } catch (err) {
       try {
         const fallbackRes = await apiClient.get(`/api/practice/payments/my-status?studentId=${studentId}`);
-        return fallbackRes.data;
-      } catch {
+        status = fallbackRes.data;
+      } catch (fallbackError) {
+        if (throwOnError) throw fallbackError;
         return { isPaid: false, unlockedFeatures: [], payments: [] };
       }
     }
+    const payments = Array.isArray(status?.payments) ? status.payments : [];
+    return normalizeTuitionStatus(status, payments, studentId);
   }
 };
 

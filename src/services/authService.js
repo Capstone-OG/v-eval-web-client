@@ -1,4 +1,5 @@
 import apiClient, { tokenStorage } from './apiClient.js';
+import { validateContact, normalizePhone, normalizeFormPayload } from '../utils/formValidation.js';
 
 /**
  * Authentication and User Identity Service
@@ -6,22 +7,32 @@ import apiClient, { tokenStorage } from './apiClient.js';
  */
 export const authService = {
   async updateParentInfo(parentData) {
+    const validationError = validateContact({ fullName: parentData?.parentName, phone: parentData?.parentPhone, email: parentData?.parentEmail });
+    if (validationError) throw new Error(validationError);
+    parentData = { ...normalizeFormPayload(parentData), parentPhone: normalizePhone(parentData.parentPhone) };
+    const user = tokenStorage.getUser();
+    const userId = user?.userId || user?.id || user?.studentId;
+    if (!userId) throw new Error('Vui lòng đăng nhập để cập nhật phụ huynh.');
+    const cacheKey = `veval_parent_info:${userId}`;
     try {
       const res = await apiClient.put('/api/v1/students/me/parent', parentData);
-      localStorage.setItem('veval_parent_info', JSON.stringify(parentData));
+      localStorage.setItem(cacheKey, JSON.stringify(parentData));
       return res.data;
     } catch (err) {
-      localStorage.setItem('veval_parent_info', JSON.stringify(parentData));
+      localStorage.setItem(cacheKey, JSON.stringify(parentData));
       return parentData;
     }
   },
 
   async getParentInfo() {
+    const user = tokenStorage.getUser();
+    const userId = user?.userId || user?.id || user?.studentId;
+    if (!userId) return null;
     try {
       const res = await apiClient.get('/api/v1/students/me/parent');
       return res.data;
     } catch (err) {
-      const cached = localStorage.getItem('veval_parent_info');
+      const cached = localStorage.getItem(`veval_parent_info:${userId}`);
       if (cached) {
         try { return JSON.parse(cached); } catch { return null; }
       }
@@ -152,11 +163,13 @@ export const authService = {
    * @param {Object} userData - { email, password, fullName, phone, roleName, campusId }
    */
   async register(userData) {
+    const validationError = validateContact(userData, { requireEmail: true });
+    if (validationError) throw new Error(validationError);
     const payload = {
       email: (userData.email || '').trim().toLowerCase(),
       password: userData.password || '',
       fullName: (userData.fullName || '').trim(),
-      phone: (userData.phone || '').trim(),
+      phone: normalizePhone(userData.phone),
       roleName: userData.roleName || 'STUDENT',
       campusId: userData.campusId || undefined
     };
@@ -201,14 +214,7 @@ export const authService = {
    */
   async forgotPassword(email) {
     const cleanEmail = (email || '').trim().toLowerCase();
-    try {
-      return (await apiClient.post('/api/auth/forgot-password', { email: cleanEmail })).data;
-    } catch (err) {
-      if (err.status === 404) {
-        return (await apiClient.post('/api/v1/identity/auth/forgot-password', { email: cleanEmail })).data;
-      }
-      throw err;
-    }
+    return (await apiClient.post('/api/auth/forgot-password', { email: cleanEmail })).data;
   },
 
   /**
@@ -221,14 +227,7 @@ export const authService = {
       email: (email || '').trim().toLowerCase(),
       otpCode: (otpCode || '').trim()
     };
-    try {
-      return (await apiClient.post('/api/auth/verify-reset-otp', payload)).data;
-    } catch (err) {
-      if (err.status === 404) {
-        return (await apiClient.post('/api/v1/identity/auth/verify-reset-otp', payload)).data;
-      }
-      throw err;
-    }
+    return (await apiClient.post('/api/auth/verify-reset-otp', payload)).data;
   },
 
   /**
@@ -241,14 +240,7 @@ export const authService = {
       email: (data?.email || '').trim().toLowerCase(),
       otpCode: (data?.otpCode || '').trim()
     };
-    try {
-      return (await apiClient.post('/api/auth/reset-password', payload)).data;
-    } catch (err) {
-      if (err.status === 404) {
-        return (await apiClient.post('/api/v1/identity/auth/reset-password', payload)).data;
-      }
-      throw err;
-    }
+    return (await apiClient.post('/api/auth/reset-password', payload)).data;
   },
 
   /**
@@ -328,16 +320,24 @@ export const authService = {
   },
 
   /**
-   * Cập nhật hồ sơ học sinh (thang điểm 1200, giờ học, trường THPT)
-   * @param {Object} profileData
+   * Cập nhật thông tin hồ sơ người dùng (Họ tên, SĐT, Avatar) (UC 04 Extend)
+   * @param {Object} profileData - { fullName, phone, avatarUrl }
    */
   async updateProfile(profileData) {
+    const validationError = validateContact(profileData || {});
+    if (validationError) throw new Error(validationError);
+    const cleanPhone = (profileData?.phone || '').trim().replace(/[\s.-]/g, '');
+    const payload = {
+      fullName: (profileData?.fullName || '').trim(),
+      phone: cleanPhone,
+      avatarUrl: profileData?.avatarUrl || null
+    };
     try {
-      const res = await apiClient.put('/api/v1/users/profile', profileData);
+      const res = await apiClient.put('/api/v1/users/me/profile', payload);
       return res.data;
     } catch (err) {
       if (err.status === 404) {
-        const res = await apiClient.put('/api/v1/identity/users/profile', profileData);
+        const res = await apiClient.put('/api/v1/users/profile', payload);
         return res.data;
       }
       throw err;
@@ -349,7 +349,14 @@ export const authService = {
    * @param {Object} passwordData - { currentPassword, newPassword }
    */
   async changePassword(passwordData) {
-    return (await apiClient.put('/api/v1/users/change-password', passwordData)).data;
+    try {
+      return (await apiClient.post('/api/v1/users/me/change-password', passwordData)).data;
+    } catch (err) {
+      if (err.status === 404) {
+        return (await apiClient.post('/api/v1/users/change-password', passwordData)).data;
+      }
+      throw err;
+    }
   },
 
   /**

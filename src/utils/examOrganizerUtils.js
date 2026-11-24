@@ -430,4 +430,3 @@ export function convertDraftToExamQuestion(draft, questionNumber) {
     curriculumNode: draft.curriculumNode ? { ...draft.curriculumNode, matchSource: 'manual' } : null
   };
 }
-

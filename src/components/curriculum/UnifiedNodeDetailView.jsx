@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { Box, Button, Chip, IconButton, Stack, Tooltip, Typography } from '@mui/material';
 import {
   BookOpen,
   Compass,
@@ -53,11 +54,16 @@ export default function UnifiedNodeDetailView({
   onSelectPattern,
   instructorMode = true
 }) {
-  // 1. Quản lý trạng thái đóng/mở 3 tầng sư phạm (mặc định đóng)
-  const [isTheoryExpanded, setIsTheoryExpanded] = useState(false);
+  // 1. Quản lý trạng thái đóng/mở 3 tầng sư phạm (Lý thuyết trọng tâm mặc định mở)
+  const [isTheoryExpanded, setIsTheoryExpanded] = useState(true);
   const [isMethodExpanded, setIsMethodExpanded] = useState(false);
   const [isQuestionsExpanded, setIsQuestionsExpanded] = useState(false);
   const [syncVersion, setSyncVersion] = useState(0);
+
+  // Luôn tự mở khối Lý thuyết trọng tâm khi chuyển sang dạng bài khác
+  useEffect(() => {
+    setIsTheoryExpanded(true);
+  }, [selectedPattern?.patternId]);
 
   // Lắng nghe sự kiện đồng bộ real-time khi bên SGK lưu/sửa/xóa sách
   useEffect(() => {
@@ -271,32 +277,42 @@ export default function UnifiedNodeDetailView({
   };
 
   return (
-    <div className="bg-white rounded-3xl border border-slate-200/90 shadow-md p-6 lg:p-8 space-y-6 animate-fade">
-      
-      {/* ========================================================================= */}
-      {/* HEADER: ĐỊNH DANH NODE & THANH TÁC VỤ                                    */}
-      {/* ========================================================================= */}
-      <div className="pb-5 border-b border-slate-100 space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-700 text-[11px] font-black font-mono">
-              {selectedPattern?.code || 'PATTERN'}
-            </span>
-            <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[11px] font-bold">
-              {selectedPattern?.level || 'Vận dụng'}
-            </span>
-            {matchedSgkChunks.length > 0 && (
-              <span className="px-2.5 py-0.5 rounded-full bg-teal-50 text-teal-800 border border-teal-200 text-[11px] font-bold flex items-center gap-1">
-                <CheckCircle2 className="w-3 h-3 text-teal-600" />
-                <span>Nội dung chuẩn SGK</span>
-              </span>
-            )}
-          </div>
+    <div className="bg-white rounded-2xl border border-slate-300 shadow-xs p-5 lg:p-6 space-y-5 animate-fade">
 
-          {/* Action buttons */}
-          <div className="flex items-center gap-2 shrink-0 flex-wrap">
+      {/* HEADER TỐI GIẢN (MUI) */}
+      <Box sx={{ pb: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
+        <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems="flex-start" spacing={1.5}>
+          <Box sx={{ minWidth: 0 }}>
+            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, display: 'block', mb: 0.5 }}>
+              {parentChapter?.name && `${parentChapter.name} • `}
+              {parentLesson?.name || ''}
+            </Typography>
+            <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+              <Typography variant="subtitle1" sx={{ fontWeight: 800, color: 'text.primary', lineHeight: 1.35 }}>
+                {selectedPattern?.name}
+              </Typography>
+              {(() => {
+                const raw = String(selectedPattern?.level || '').trim();
+                const num = Number(selectedPattern?.bloomLevel || selectedPattern?.difficultyLevel || (raw.match(/(\d)/)?.[1] || 0));
+                const levelText =
+                  num === 1 || /nhận biết/i.test(raw) ? 'Nhận biết' :
+                  num === 2 || /thông hiểu/i.test(raw) ? 'Thông hiểu' :
+                  num === 3 || /vận dụng(?!\s*cao)/i.test(raw) ? 'Vận dụng' :
+                  num >= 4 || /vận dụng cao/i.test(raw) ? 'Vận dụng cao' :
+                  raw.replace(/bloom\s*l?\d*\s*[:•\-–]?\s*/gi, '').replace(/^l\d+\s*[:•\-–]?\s*/i, '').trim() || 'Vận dụng';
+                return <Chip size="small" color="primary" variant="outlined" label={levelText} sx={{ height: 22, fontSize: '0.72rem' }} />;
+              })()}
+            </Stack>
+          </Box>
+
+          <Stack direction="row" spacing={0.75} alignItems="center" sx={{ flexShrink: 0, pt: 0.25 }}>
             {onOpenStudio && (
-              <button
+              <Button
+                size="small"
+                variant="outlined"
+                color="primary"
+                startIcon={<Sparkles size={13} />}
+                sx={{ height: 30, px: 1.25, py: 0, fontSize: '0.74rem' }}
                 onClick={() =>
                   onOpenStudio({
                     ...selectedPattern,
@@ -304,107 +320,54 @@ export default function UnifiedNodeDetailView({
                     solutionMethod: synthesizedMethod || selectedPattern?.solutionMethod || ''
                   })
                 }
-                className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-black flex items-center gap-2 shadow-md shadow-blue-500/25 transition-all hover:scale-105 active:scale-95 cursor-pointer"
-                title="Mở Studio sư phạm chuyên sâu"
               >
-                <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-                <span>Mở Studio Sư Phạm</span>
-              </button>
+                Studio
+              </Button>
             )}
-
             {instructorMode && (
-              <button
-                onClick={() => onOpenQuickEdit && onOpenQuickEdit(selectedPattern)}
-                className="p-2 rounded-xl bg-slate-100 hover:bg-indigo-50 hover:border-indigo-300 border border-slate-200 text-slate-600 hover:text-indigo-600 transition-all shadow-2xs cursor-pointer"
-                title="Sửa thông tin dạng bài"
-              >
-                <Pencil className="w-4 h-4" />
-              </button>
+              <Tooltip title="Sửa nhanh dạng bài">
+                <IconButton
+                  size="small"
+                  onClick={() => onOpenQuickEdit && onOpenQuickEdit(selectedPattern)}
+                  sx={{ width: 30, height: 30, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}
+                >
+                  <Pencil size={14} />
+                </IconButton>
+              </Tooltip>
             )}
-
-            <button
+            <Button
+              size="small"
+              variant="contained"
+              color="primary"
+              startIcon={<Zap size={13} />}
+              sx={{ height: 30, px: 1.5, py: 0, fontSize: '0.74rem' }}
               onClick={() => onLaunchAdaptiveQuiz && onLaunchAdaptiveQuiz(selectedPattern)}
-              className="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-bold flex items-center gap-2 shadow-lg shadow-blue-500/25 hover:scale-105 active:scale-95 transition-all shrink-0 cursor-pointer"
             >
-              <Zap className="w-4 h-4 text-amber-300 fill-amber-300" />
-              <span>Luyện tập củng cố (5 câu)</span>
-            </button>
-          </div>
-        </div>
+              Luyện tập (5 câu)
+            </Button>
+          </Stack>
+        </Stack>
+      </Box>
 
-        {/* Tiêu đề Node bài học / dạng bài */}
-        <div>
-          <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">
-            {parentChapter?.name && <span>{parentChapter.name} • </span>}
-            {parentLesson?.name && <span>{parentLesson.name}</span>}
-          </div>
-          <h2 className="text-xl lg:text-2xl font-black text-slate-900 leading-tight">
-            {selectedPattern?.name}
-          </h2>
-
-          {/* Quick Pattern Switcher pills (Nếu bài học có nhiều hơn 1 dạng bài) */}
-          {parentLesson?.patterns && parentLesson.patterns.length > 1 && (
-            <div className="pt-2.5 flex items-center gap-1.5 flex-wrap">
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider mr-1">
-                Các Dạng Bài:
-              </span>
-              {parentLesson.patterns.map((pat, pIdx) => {
-                const isSelected = (selectedPattern?.patternId && selectedPattern.patternId === pat.patternId) ||
-                                  (selectedPattern?.name && selectedPattern.name === pat.name);
-                return (
-                  <button
-                    key={pat.patternId || pIdx}
-                    type="button"
-                    onClick={() => onSelectPattern && onSelectPattern({ ...pat, _parentLesson: parentLesson, _parentChapter: parentChapter })}
-                    className={`px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                      isSelected
-                        ? 'bg-blue-600 text-white shadow-xs'
-                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                    }`}
-                  >
-                    <span className={`w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-amber-300' : 'bg-slate-400'}`}></span>
-                    <span>{pat.name.replace(/^(dạng\s*\d+\s*[:\.\-–]\s*)/i, `Dạng ${pIdx + 1}: `)}</span>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* ========================================================================= */}
-      {/* [TẦNG 1] 📚 LÝ THUYẾT TRỌNG TÂM TỪ SÁCH GIÁO KHOA CHUẨN                  */}
-      {/* ========================================================================= */}
-      <div className="rounded-2xl border border-cyan-200/80 bg-cyan-50/20 overflow-hidden transition-all shadow-2xs">
-        <div 
+      {/* 1. LÝ THUYẾT TRỌNG TÂM */}
+      <div className="rounded-xl border border-slate-300 bg-white overflow-hidden transition-all">
+        <div
           onClick={() => setIsTheoryExpanded(!isTheoryExpanded)}
-          className="p-4 bg-gradient-to-r from-cyan-50/80 via-blue-50/40 to-white flex items-center justify-between cursor-pointer border-b border-cyan-100/80 hover:bg-cyan-50 transition-colors select-none"
+          className="px-4 py-2.5 bg-slate-50 flex items-center justify-between cursor-pointer border-b border-slate-200 hover:bg-slate-100/70 transition-colors select-none"
         >
           <div className="flex items-center gap-2.5">
-            <span className="w-6 h-6 rounded-lg bg-cyan-600 text-white flex items-center justify-center text-xs font-black shadow-xs">
+            <span className="w-6 h-6 rounded-lg bg-indigo-600 text-white flex items-center justify-center text-xs font-bold">
               1
             </span>
-            <div>
-              <h3 className="text-xs font-extrabold text-cyan-950 uppercase tracking-wider flex items-center gap-2">
-                <span>Khối 1: Lý Thuyết Trọng Tâm Chuẩn SGK</span>
-                {matchedSgkChunks.length > 0 && (
-                  <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold">
-                    Kiến thức cốt lõi
-                  </span>
-                )}
-              </h3>
-              <p className="text-[11px] text-cyan-800 font-medium">
-                Khái niệm cốt lõi, hiện tượng khoa học và công thức định lý trọng tâm theo chương trình giáo dục phổ thông
-              </p>
-            </div>
+            <h3 className="text-sm font-bold text-slate-800">
+              Lý thuyết trọng tâm
+            </h3>
           </div>
-          <div className="flex items-center gap-2">
-            {isTheoryExpanded ? (
-              <ChevronUp className="w-4 h-4 text-cyan-700" />
-            ) : (
-              <ChevronDown className="w-4 h-4 text-cyan-700" />
-            )}
-          </div>
+          {isTheoryExpanded ? (
+            <ChevronUp className="w-4 h-4 text-slate-500" />
+          ) : (
+            <ChevronDown className="w-4 h-4 text-slate-500" />
+          )}
         </div>
 
         {isTheoryExpanded && (
@@ -448,25 +411,17 @@ export default function UnifiedNodeDetailView({
       {/* [TẦNG 2] 💡 DẠNG ĐỀ & PHƯƠNG PHÁP GIẢI CHUYÊN SÂU (NATIVE JSXGRAPH)        */}
       {/* ========================================================================= */}
       <div className="rounded-2xl border border-amber-200/80 bg-amber-50/20 overflow-hidden transition-all shadow-2xs">
-        <div 
+        <div
           onClick={() => setIsMethodExpanded(!isMethodExpanded)}
           className="p-4 bg-gradient-to-r from-amber-50/80 via-orange-50/40 to-white flex items-center justify-between cursor-pointer border-b border-amber-100/80 hover:bg-amber-50 transition-colors select-none"
         >
           <div className="flex items-center gap-2.5">
-            <span className="w-6 h-6 rounded-lg bg-amber-600 text-white flex items-center justify-center text-xs font-black shadow-xs">
+            <span className="w-6 h-6 rounded-lg bg-amber-600 text-white flex items-center justify-center text-xs font-bold">
               2
             </span>
-            <div>
-              <h3 className="text-xs font-extrabold text-amber-950 uppercase tracking-wider flex items-center gap-2">
-                <span>Khối 2: Phương Pháp Giải & Mô Hình Minh Họa Trực Quan</span>
-                <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-bold">
-                  Mô hình trực quan
-                </span>
-              </h3>
-              <p className="text-[11px] text-amber-800 font-medium">
-                Quy trình giải quyết vấn đề từng bước, bẫy tư duy thường gặp và mô hình minh họa trực quan
-              </p>
-            </div>
+            <h3 className="text-sm font-bold text-slate-800">
+              Phương pháp giải &amp; Ví dụ minh họa
+            </h3>
           </div>
           <div className="flex items-center gap-2">
             {isMethodExpanded ? (
@@ -511,7 +466,7 @@ export default function UnifiedNodeDetailView({
                   <InteractiveMathRenderer rawTag={embeddedGraphTag} />
                 </div>
                 <p className="text-[10.5px] text-slate-400 italic text-center">
-                  Học sinh có thể kéo thả chuột để xoay mô hình 3D, thay đổi tham số hoặc thu phóng đồ thị tương tác thời gian thực.
+                  Kéo chuột để xoay mô hình 3D. Bạn có thể đổi tham số và thu phóng đồ thị.
                 </p>
               </div>
             ) : null}
@@ -534,25 +489,20 @@ export default function UnifiedNodeDetailView({
       {/* [TẦNG 3] 🎯 KHO CÂU HỎI THỰC TẾ & ĐỀ THI ĐGNL CỦA NODE                      */}
       {/* ========================================================================= */}
       <div className="rounded-2xl border border-indigo-200/80 bg-indigo-50/20 overflow-hidden transition-all shadow-2xs">
-        <div 
+        <div
           onClick={() => setIsQuestionsExpanded(!isQuestionsExpanded)}
           className="p-4 bg-gradient-to-r from-indigo-50/80 via-blue-50/40 to-white flex items-center justify-between cursor-pointer border-b border-indigo-100/80 hover:bg-indigo-50 transition-colors select-none"
         >
           <div className="flex items-center gap-2.5">
-            <span className="w-6 h-6 rounded-lg bg-indigo-600 text-white flex items-center justify-center text-xs font-black shadow-xs">
+            <span className="w-6 h-6 rounded-lg bg-emerald-600 text-white flex items-center justify-center text-xs font-bold">
               3
             </span>
-            <div>
-              <h3 className="text-xs font-extrabold text-indigo-950 uppercase tracking-wider flex items-center gap-2">
-                <span>Khối 3: Ngân Hàng Câu Hỏi Luyện Tập</span>
-                <span className="px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 text-[10px] font-bold">
-                  {loadingQuestions ? 'Đang tải...' : `${questions.length} câu hỏi`}
-                </span>
-              </h3>
-              <p className="text-[11px] text-indigo-800 font-medium">
-                Tập hợp câu hỏi trắc nghiệm bám sát cấu trúc đề thi ĐGNL phân hóa theo các mức độ nhận thức
-              </p>
-            </div>
+            <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+              <span>Câu hỏi luyện tập</span>
+              <span className="text-xs font-semibold text-slate-500">
+                ({loadingQuestions ? 'Đang tải...' : `${questions.length} câu`})
+              </span>
+            </h3>
           </div>
           <div className="flex items-center gap-2">
             {isQuestionsExpanded ? (
@@ -640,8 +590,8 @@ export default function UnifiedNodeDetailView({
                   const correct = (q.correctOption || 'A').toUpperCase();
 
                   return (
-                    <div 
-                      key={qId} 
+                    <div
+                      key={qId}
                       className="p-4 rounded-xl border border-slate-200 bg-white shadow-2xs hover:border-slate-300 transition-all space-y-3"
                     >
                       {/* Tiêu đề câu hỏi & Badge Bloom */}
@@ -731,4 +681,3 @@ export default function UnifiedNodeDetailView({
     </div>
   );
 }
-

@@ -453,4 +453,3 @@ export default function ExamBankView({ onNavigateTab, role = 'director' }) {
     </div>
   );
 }
-

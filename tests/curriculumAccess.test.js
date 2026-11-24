@@ -6,6 +6,22 @@ import {
   buildPersonalizedStages, 
   TUITION_STORAGE_PREFIX 
 } from '../src/components/curriculum/curriculumAccess.js';
+import { syncTuitionStatusFromServer } from '../src/components/curriculum/curriculumAccess.js';
+
+test('server unpaid clears a stale test activation flag', async () => {
+  const storage = makeStorage();
+  setTuitionPaid('student-1', true, storage);
+  const result = await syncTuitionStatusFromServer('student-1', { getStudentTuitionStatus: async () => ({ isPaid: false, payments: [{ status: 'PENDING' }] }) }, storage);
+  assert.equal(result.isPaid, false);
+  assert.equal(isTuitionPaid('student-1', storage), false);
+});
+
+test('server failure never authorizes using the old local flag', async () => {
+  const storage = makeStorage();
+  setTuitionPaid('student-1', true, storage);
+  const result = await syncTuitionStatusFromServer('student-1', { getStudentTuitionStatus: async () => { throw new Error('Offline'); } }, storage);
+  assert.equal(result.isPaid, false);
+});
 
 const makeStorage = () => {
   const data = new Map();
@@ -32,6 +48,26 @@ test('isTuitionPaid returns false by default and true when tuition is recorded',
   setTuitionPaid('student-1', false, storage);
   assert.equal(isTuitionPaid('student-1', storage), false);
   assert.equal(storage.getItem(`${TUITION_STORAGE_PREFIX}student-1`), null);
+});
+
+test('reopening and syncing paid roadmap repeatedly emits no duplicate paid event', () => {
+  const storage = makeStorage();
+  const originalWindow = globalThis.window;
+  const events = [];
+  globalThis.window = { dispatchEvent: (event) => events.push(event.detail) };
+  try {
+    setTuitionPaid('student-1', true, storage);
+    for (let index = 0; index < 20; index++) setTuitionPaid('student-1', true, storage);
+    assert.equal(events.length, 1);
+    assert.equal(isTuitionPaid('student-1', storage), true);
+    assert.equal(isTuitionPaid('student-2', storage), false);
+    setTuitionPaid('student-1', false, storage);
+    setTuitionPaid('student-1', false, storage);
+    assert.equal(events.length, 2);
+  } finally {
+    if (originalWindow === undefined) delete globalThis.window;
+    else globalThis.window = originalWindow;
+  }
 });
 
 test('buildPersonalizedStages clusters chapters into 3 adaptive stages with priority tags', () => {

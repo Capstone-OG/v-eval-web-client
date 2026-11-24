@@ -370,9 +370,13 @@ export default function AdaptiveQuizModal({ isOpen, isEmbedded = false, onClose,
       setQuizItems((prev) => prev.map((it, idx) => (idx === itemIndex ? replacement : it)));
       setSelectedOpt(null);
       setFeedback(null);
-      setFlagNotice('Đã gửi báo lỗi và tự động đổi sang câu hỏi mới.');
+      const msg = 'Đã gửi báo cáo lỗi thành công và tự động đổi sang câu hỏi mới.';
+      setFlagNotice(msg);
+      if (window.toast?.success) window.toast.success(msg, 'Báo cáo lỗi thành công');
     } else {
-      setFlagNotice('Đã gửi báo lỗi tới hệ thống xét duyệt.');
+      const msg = 'Đã gửi báo cáo lỗi thành công tới hệ thống xét duyệt.';
+      setFlagNotice(msg);
+      if (window.toast?.success) window.toast.success(msg, 'Báo cáo lỗi thành công');
     }
     setFlagBusy(false);
     setFlagModalOpen(false);
@@ -772,8 +776,24 @@ export default function AdaptiveQuizModal({ isOpen, isEmbedded = false, onClose,
               </div>
             </div>
 
-            {/* Question Stem */}
-            <div className="p-5 rounded-2xl bg-slate-50/70 border border-slate-200/80 text-sm sm:text-[15px] font-medium text-slate-900 leading-relaxed">
+            {/* Question Stem (hỗ trợ kéo thả vào Sổ tay Gia sư AI) */}
+            <div
+              draggable
+              onDragStart={(e) => {
+                const payload = {
+                  questionId: currentItem.id,
+                  skill: currentItem.skillName || selectedSkillObj?.name || 'Luyện tập tự chọn',
+                  question: currentItem.question || '',
+                  options: (currentItem.options || []).map((opt, idx) => `${['A', 'B', 'C', 'D'][idx]}. ${opt}`),
+                  selectedWrong: selectedOpt !== null && selectedOpt !== currentItem.correct ? ['A', 'B', 'C', 'D'][selectedOpt] : undefined,
+                  correctOption: selectedOpt !== null ? ['A', 'B', 'C', 'D'][currentItem.correct] : undefined,
+                };
+                e.dataTransfer.setData('application/x-veval-question', JSON.stringify(payload));
+                e.dataTransfer.setData('text/plain', payload.question);
+              }}
+              title="Kéo thả câu hỏi này sang Sổ tay Gia sư AI để được phân tích từng bước"
+              className="p-5 rounded-2xl bg-slate-50/70 border border-slate-200/80 text-sm sm:text-[15px] font-medium text-slate-900 leading-relaxed cursor-grab active:cursor-grabbing"
+            >
               <MathText text={currentItem.question} />
             </div>
 

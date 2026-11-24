@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   TrendingUp,
   Target,
@@ -15,6 +15,8 @@ import {
 import { practiceService } from '../../services/practiceService';
 import PrescriptionPracticeModal from '../modals/PrescriptionPracticeModal';
 import { toast } from '../../context/ToastContext';
+import { canShowPrescription } from '../../utils/prescriptionEligibility';
+import { readForecastRange } from '../../utils/forecastRange';
 
 const STATUS_META = {
   ON_TRACK: {
@@ -66,15 +68,28 @@ export default function ScorePredictionPanel({
   const [loading, setLoading] = useState(true);
   const [recalculating, setRecalculating] = useState(false);
   const [activePrescription, setActivePrescription] = useState(null);
+  const [eligibility, setEligibility] = useState({ studentId: null, allowed: false });
+  const requestVersion = useRef(0);
 
   const loadForecast = useCallback(
     async (silent = false) => {
+      const version = ++requestVersion.current;
+      setEligibility({ studentId, allowed: false });
+      setActivePrescription(null);
       if (!silent) setLoading(true);
       try {
-        const data = await practiceService.getMyForecast(studentId);
+        const [data, roadmap] = await Promise.all([
+          practiceService.getMyForecast(studentId),
+          studentId ? practiceService.getMyRoadmap(studentId).catch(() => null) : Promise.resolve(null)
+        ]);
+        if (version !== requestVersion.current) return;
         setForecastData(data);
+        setEligibility({ studentId, allowed: canShowPrescription(roadmap, data, studentId) });
+      } catch {
+        if (version !== requestVersion.current) return;
+        setForecastData(null);
       } finally {
-        setLoading(false);
+        if (version === requestVersion.current) setLoading(false);
       }
     },
     [studentId]
@@ -82,6 +97,7 @@ export default function ScorePredictionPanel({
 
   useEffect(() => {
     loadForecast(false);
+    return () => { requestVersion.current++; };
   }, [loadForecast]);
 
   useEffect(() => {
@@ -124,6 +140,7 @@ export default function ScorePredictionPanel({
   }
 
   const forecast = forecastData?.forecast || {};
+  const showPrescription = eligibility.studentId === studentId && eligibility.allowed;
   const balance = forecastData?.balanceSheet || {};
   const prescriptions = (forecastData?.prescriptions || []).map((item, idx) => ({
     ...item,
@@ -131,16 +148,16 @@ export default function ScorePredictionPanel({
   }));
 
   const predictedScore = Number(forecast.predictedScore ?? 0);
-  const sem = Number(forecast.sem ?? 0);
-  const minScore = Number(forecast.scoreRange?.min ?? Math.max(0, Math.round(predictedScore - 1.96 * sem)));
-  const maxScore = Number(forecast.scoreRange?.max ?? Math.min(1200, Math.round(predictedScore + 1.96 * sem)));
+  const scoreRange = forecastData?._source === 'backend' ? readForecastRange(forecastData) : null;
+  const minScore = scoreRange?.min;
+  const maxScore = scoreRange?.max;
   const targetScore = Number(balance.targetScore ?? 900);
   const deficitScore = Number(balance.deficitScore ?? Math.max(0, targetScore - predictedScore));
   const statusKey = STATUS_META[balance.status] ? balance.status : deficitScore <= 0 ? 'ON_TRACK' : deficitScore <= 80 ? 'AT_RISK' : 'CRITICAL';
   const statusInfo = STATUS_META[statusKey];
 
-  const minPct = Math.min(100, Math.max(0, (minScore / 1200) * 100));
-  const maxPct = Math.min(100, Math.max(minPct + 2, (maxScore / 1200) * 100));
+  const minPct = scoreRange ? (minScore / 1200) * 100 : 0;
+  const maxPct = scoreRange ? (maxScore / 1200) * 100 : 0;
   const predPct = Math.min(100, Math.max(0, (predictedScore / 1200) * 100));
   const targetPct = Math.min(100, Math.max(0, (targetScore / 1200) * 100));
 
@@ -163,7 +180,7 @@ export default function ScorePredictionPanel({
               </div>
             </div>
             <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${statusInfo.badgeCls}`}>
-              {deficitScore <= 0 ? 'Đạt mục tiêu' : `Cần thêm ${deficitScore}đ`}
+              {deficitScore <= 0 ? 'Đạt mục tiêu' : `Cần thêm ${deficitScore} điểm`}
             </span>
           </div>
 
@@ -175,22 +192,22 @@ export default function ScorePredictionPanel({
                 </div>
                 <div className="flex items-baseline gap-1.5 mt-0.5">
                   <span className="text-2xl font-black">{predictedScore}</span>
-                  <span className="text-xs text-slate-300">/ 1200đ</span>
+                  <span className="text-xs text-slate-300">/ 1200 điểm</span>
                 </div>
               </div>
-              <div className="text-right">
+              {scoreRange && <div className="text-right">
                 <div className="text-[10px] text-slate-300 font-semibold">Khoảng điểm dự kiến</div>
                 <div className="text-xs font-extrabold text-amber-300">
-                  {minScore} — {maxScore}đ
+                  {minScore} — {maxScore} điểm
                 </div>
-              </div>
+              </div>}
             </div>
 
             <div className="relative h-2.5 rounded-full bg-white/15 overflow-hidden">
-              <div
+              {scoreRange && <div
                 className="absolute top-0 bottom-0 bg-cyan-400/45 rounded-full"
                 style={{ left: `${minPct}%`, width: `${Math.max(3, maxPct - minPct)}%` }}
-              />
+              />}
               <div
                 className="absolute top-0 bottom-0 w-1.5 bg-white rounded-full"
                 style={{ left: `calc(${predPct}% - 3px)` }}
@@ -201,19 +218,18 @@ export default function ScorePredictionPanel({
               />
             </div>
             <div className="flex items-center justify-between text-[10px] text-slate-300">
-              <span>Dao động: ±{Math.round(sem)}đ</span>
-              <span>Mục tiêu: {targetScore}đ</span>
+              <span>Mục tiêu: {targetScore} điểm</span>
             </div>
           </div>
 
-          {topPrescription && (
+          {showPrescription && topPrescription && (
             <div className="p-3.5 rounded-2xl bg-indigo-50/60 border border-indigo-200/80 space-y-2">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-[10px] font-extrabold uppercase tracking-wider text-indigo-700 flex items-center gap-1">
                   <Zap className="w-3 h-3 text-amber-500" />
                   Ưu tiên ôn #{topPrescription.priorityRank}
                 </span>
-                <span className="text-[11px] font-black text-emerald-700">+{topPrescription.deltaScore}đ</span>
+                <span className="text-[11px] font-black text-emerald-700">+{topPrescription.deltaScore} điểm</span>
               </div>
               <div className="text-xs font-bold text-slate-900 line-clamp-2">{topPrescription.displayTitle}</div>
               <div className="flex items-center gap-2 pt-1">
@@ -239,7 +255,7 @@ export default function ScorePredictionPanel({
         </div>
 
         <PrescriptionPracticeModal
-          isOpen={Boolean(activePrescription)}
+          isOpen={showPrescription && Boolean(activePrescription)}
           onClose={() => setActivePrescription(null)}
           prescription={activePrescription}
           studentId={studentId}
@@ -300,33 +316,30 @@ export default function ScorePredictionPanel({
                 </div>
               </div>
 
-              <div className="p-3 rounded-2xl bg-white/10 border border-white/15 text-right">
+              {scoreRange && <div className="p-3 rounded-2xl bg-white/10 border border-white/15 text-right">
                 <div className="text-[10px] font-bold uppercase tracking-wider text-slate-300">
                   Khoảng điểm dự kiến
                 </div>
                 <div className="text-base font-black text-amber-300 mt-0.5">
-                  {minScore}đ — {maxScore}đ
+                  {minScore} điểm — {maxScore} điểm
                 </div>
-                <div className="text-[10px] text-cyan-200 font-semibold">
-                  Biên độ dao động khoảng ±{Math.round(sem)}đ
-                </div>
-              </div>
+              </div>}
             </div>
 
             {/* Interactive Scale Bar */}
             <div className="space-y-2">
               <div className="flex items-center justify-between text-[11px] text-slate-300 font-semibold">
-                <span>0đ</span>
-                <span className="text-cyan-300">Khoảng điểm có thể đạt: {minScore} — {maxScore} điểm</span>
-                <span>1200đ</span>
+                <span>0 điểm</span>
+                {scoreRange && <span className="text-cyan-300">Khoảng điểm có thể đạt: {minScore} — {maxScore} điểm</span>}
+                <span>1200 điểm</span>
               </div>
 
               <div className="relative h-4 rounded-full bg-white/10 border border-white/15 overflow-hidden">
-                <div
+                {scoreRange && <div
                   className="absolute top-0 bottom-0 bg-gradient-to-r from-cyan-400/40 via-blue-400/60 to-cyan-400/40 rounded-full"
                   style={{ left: `${minPct}%`, width: `${Math.max(3, maxPct - minPct)}%` }}
                   title={`Khoảng điểm dự kiến: ${minScore} - ${maxScore} điểm`}
-                />
+                />}
                 <div
                   className="absolute top-0 bottom-0 w-2 bg-white rounded-full shadow"
                   style={{ left: `calc(${predPct}% - 4px)` }}
@@ -342,11 +355,11 @@ export default function ScorePredictionPanel({
               <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-300 pt-1">
                 <span className="flex items-center gap-1.5">
                   <span className="w-2.5 h-2.5 rounded-full bg-white inline-block" />
-                  Dự kiến hiện tại: <strong className="text-white">{predictedScore}đ</strong>
+                  Dự kiến hiện tại: <strong className="text-white">{predictedScore} điểm</strong>
                 </span>
                 <span className="flex items-center gap-1.5">
                   <span className="w-2.5 h-2.5 rounded-xs bg-amber-400 inline-block" />
-                  Mục tiêu đăng ký: <strong className="text-amber-300">{targetScore}đ</strong>
+                  Mục tiêu đăng ký: <strong className="text-amber-300">{targetScore} điểm</strong>
                 </span>
                 <span className="text-slate-300">
                   Cơ sở tính: <strong className="text-white">{formatCalculationSource(forecast.calculationSource)}</strong>
@@ -374,7 +387,7 @@ export default function ScorePredictionPanel({
                 <div className="text-[10px] font-bold uppercase text-slate-400">Mục tiêu nguyện vọng</div>
                 <div className="text-2xl font-black text-indigo-700 mt-0.5 flex items-baseline gap-1">
                   <Target className="w-4 h-4 text-indigo-500 self-center" />
-                  <span>{targetScore}đ</span>
+                  <span>{targetScore} điểm</span>
                 </div>
               </div>
 
@@ -389,7 +402,7 @@ export default function ScorePredictionPanel({
                         : 'text-rose-600'
                   }`}
                 >
-                  {deficitScore <= 0 ? 'Đã đạt' : `-${deficitScore}đ`}
+                  {deficitScore <= 0 ? 'Đã đạt' : `-${deficitScore} điểm`}
                 </div>
               </div>
             </div>
@@ -401,24 +414,24 @@ export default function ScorePredictionPanel({
                   <span>
                     Điểm dự kiến của bạn đã <strong className="text-emerald-700">đạt hoặc vượt mục tiêu</strong>. Hãy duy trì ôn tập đều đặn để giữ vững phong độ nhé!
                   </span>
-                ) : (
+                ) : showPrescription ? (
                   <span>
                     Hoàn thành <strong className="text-indigo-800">{unRemediedList.length} chủ đề gợi ý</strong> bên dưới sẽ giúp bạn tăng thêm khoảng{' '}
                     <strong className="text-emerald-700">+{potentialRecovery} điểm</strong> trong thời gian ôn tập ngắn nhất.
                   </span>
-                )}
+                ) : <span>Tiếp tục học theo lộ trình cá nhân và theo dõi điểm dự báo sau mỗi bài làm.</span>}
               </div>
             </div>
           </div>
         </div>
 
         {/* Recommended Topics List */}
-        <div className="space-y-3.5">
+        {showPrescription && <div className="space-y-3.5">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
               <h3 className="text-sm lg:text-base font-extrabold text-slate-900 flex items-center gap-2">
                 <Zap className="w-4 h-4 text-amber-500 fill-amber-500" />
-                <span>Chủ Đề Cần Ôn Ngay Để Tăng Điểm Nhanh</span>
+                <span>Đơn học tập cải thiện điểm</span>
               </h3>
               <p className="text-xs text-slate-500">
                 Được sắp xếp theo những phần dễ gỡ điểm nhất trong thời gian ngắn — làm đúng từ 2/3 số câu để hoàn thành chủ đề
@@ -462,7 +475,7 @@ export default function ScorePredictionPanel({
                           {isDone ? 'Đã hoàn thành' : `Ưu tiên #${item.priorityRank}`}
                         </span>
                         <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[11px] font-extrabold border border-slate-200">
-                          ~+{Math.round(Number(item.roiScore || 14))}đ / giờ học
+                          ~+{Math.round(Number(item.roiScore || 14))} điểm / giờ học
                         </span>
                       </div>
 
@@ -504,7 +517,7 @@ export default function ScorePredictionPanel({
                       ) : (
                         <>
                           <Zap className="w-4 h-4 text-amber-300" />
-                          <span>Luyện tập ngay (+{item.deltaScore}đ)</span>
+                          <span>Luyện tập ngay (+{item.deltaScore} điểm)</span>
                         </>
                       )}
                     </button>
@@ -513,11 +526,11 @@ export default function ScorePredictionPanel({
               })}
             </div>
           )}
-        </div>
+        </div>}
       </div>
 
       <PrescriptionPracticeModal
-        isOpen={Boolean(activePrescription)}
+        isOpen={showPrescription && Boolean(activePrescription)}
         onClose={() => setActivePrescription(null)}
         prescription={activePrescription}
         studentId={studentId}

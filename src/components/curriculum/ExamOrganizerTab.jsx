@@ -494,4 +494,3 @@ export default function ExamOrganizerTab({
     </div>
   );
 }
-

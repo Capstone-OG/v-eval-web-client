@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { Box, Chip, Paper, Stack, Typography } from '@mui/material';
 import {
   AlertCircle,
   AlertTriangle,
@@ -310,7 +311,7 @@ export default function ParentDashboardView({
             Kết Nối Để Theo Dõi Tiến Độ Học Tập Của Con
           </h2>
           <p className="text-xs text-slate-500 font-medium">
-            Nhập mã liên kết 6 ký tự do con cung cấp từ Cổng Học Sinh để bắt đầu đồng hành.
+            Nhập mã liên kết gồm 6 ký tự từ tài khoản của con để xem kết quả học tập.
           </p>
         </div>
 
@@ -604,6 +605,45 @@ export default function ParentDashboardView({
       </div>
 
       {showLinkPanel && renderStudentLinkingCenter()}
+
+      {/* THẺ ĐỊNH HƯỚNG LỘ TRÌNH TỪ GIÁO VIÊN PHỤ TRÁCH (NON-BLOCKING APPROVAL - MUI) */}
+      <Paper
+        variant="outlined"
+        sx={{
+          p: { xs: 2.25, sm: 2.75 },
+          borderRadius: 4,
+          borderColor: currentChild.isTeacherApproved ? 'success.light' : 'warning.light',
+          bgcolor: currentChild.isTeacherApproved ? 'rgba(16,185,129,0.05)' : 'rgba(245,158,11,0.05)',
+        }}
+      >
+        <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }} spacing={1.5}>
+          <Box sx={{ flex: 1 }}>
+            <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+              <Typography variant="subtitle2" sx={{ fontWeight: 800, color: 'text.primary' }}>
+                Định hướng Lộ trình từ Giáo viên phụ trách
+              </Typography>
+              <Chip
+                size="small"
+                color={currentChild.isTeacherApproved ? 'success' : 'warning'}
+                label={currentChild.isTeacherApproved ? 'Đã được Giáo viên xác nhận' : 'Đang chờ Giáo viên xác nhận'}
+                sx={{ fontWeight: 700 }}
+              />
+              {currentChild.approvedAt && (
+                <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                  Cập nhật: {new Date(currentChild.approvedAt).toLocaleString('vi-VN')}
+                </Typography>
+              )}
+            </Stack>
+            <Typography variant="body2" sx={{ mt: 1, color: 'text.primary', whiteSpace: 'pre-line', lineHeight: 1.6 }}>
+              {currentChild.teacherKickoffNote
+                ? currentChild.teacherKickoffNote
+                : currentChild.isTeacherApproved
+                ? `Thầy/Cô ${assignedTeacherDisplay} đã rà soát và phê duyệt lộ trình học tập cá nhân hóa của ${currentChild.studentName}.`
+                : `Hệ thống đã khởi tạo sẵn lộ trình học tập để ${currentChild.studentName} có thể bắt đầu học ngay không bị gián đoạn. Thầy/Cô ${assignedTeacherDisplay} sẽ sớm gửi mô tả định hướng chi tiết cho gia đình.`}
+            </Typography>
+          </Box>
+        </Stack>
+      </Paper>
 
       {/* THANH THÔNG BÁO HỌC PHÍ (CÓ ĐIỀU KIỆN: CHỈ HIỆN KHI CHƯA ĐÓNG HỌC PHÍ) */}
       {!isTuitionPaid && (

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { Box, Button, Chip, Paper, Stack, Typography } from '@mui/material';
 import {
   BookOpen,
   Cpu,
@@ -408,14 +409,15 @@ const getEmbedVideoUrl = (url) => {
   }
 };
 
-export default function CurriculumExplorerView({ 
-  role = 'student', 
+export default function CurriculumExplorerView({
+  role = 'student',
   currentUser = null,
   latestDiagnosticResult = null,
   onNavigateTuition,
-  onStartQuizModal, 
-  onNavigateDiagnostic, 
-  onOpenAiTutorWithContext 
+  tuitionPaid,
+  onStartQuizModal,
+  onNavigateDiagnostic,
+  onOpenAiTutorWithContext
 }) {
   const [domains, setDomains] = useState([]);
   const [loadingCurriculum, setLoadingCurriculum] = useState(true);
@@ -426,6 +428,18 @@ export default function CurriculumExplorerView({
   const [expandedChapters, setExpandedChapters] = useState({});
   const [expandedLessons, setExpandedLessons] = useState({});
   const [selectedPattern, setSelectedPattern] = useState(null);
+  const [selectedLessonPreview, setSelectedLessonPreview] = useState(null);
+
+  const formatPatternLevelLabel = (pat) => {
+    const raw = String(pat?.level || '').trim();
+    const lvlNum = Number(pat?.bloomLevel || pat?.difficultyLevel || (raw.match(/(\d)/)?.[1] || 0));
+    if (lvlNum === 1 || /nhận biết/i.test(raw)) return 'Nhận biết';
+    if (lvlNum === 2 || /thông hiểu/i.test(raw)) return 'Thông hiểu';
+    if (lvlNum === 3 || /vận dụng(?!\s*cao)/i.test(raw)) return 'Vận dụng';
+    if (lvlNum >= 4 || /vận dụng cao|phân tích|đánh giá|sáng tạo/i.test(raw)) return 'Vận dụng cao';
+    if (!raw) return 'Vận dụng';
+    return raw.replace(/bloom\s*l?\d*\s*[:•\-–]?\s*/gi, '').replace(/^l\d+\s*[:•\-–]?\s*/i, '').trim() || 'Vận dụng';
+  };
 
   // Ingested Textbooks Matching State (Đồng bộ tự động từ V-Eval-Ai_Engine)
   const [ingestedTextbooks, setIngestedTextbooks] = useState([]);
@@ -2041,16 +2055,17 @@ export default function CurriculumExplorerView({
 
   if (role === 'student') {
     return <>
-      <StudentCurriculumView 
-        domains={domains} 
+      <StudentCurriculumView
+        domains={domains}
         activeDomainId={activeDomainId}
-        onSelectDomain={setActiveDomainId} 
+        onSelectDomain={setActiveDomainId}
         chapters={chapters}
-        onSelectPattern={setSelectedPattern} 
+        onSelectPattern={setSelectedPattern}
         onPractice={handleLaunchAdaptiveQuiz}
-        onAskAi={onOpenAiTutorWithContext} 
+        onAskAi={onOpenAiTutorWithContext}
         quizOpen={isQuizModalOpen}
         currentUser={currentUser}
+        tuitionPaid={tuitionPaid}
         latestDiagnosticResult={latestDiagnosticResult}
         onNavigateTuition={onNavigateTuition}
         onNavigateDiagnostic={onNavigateDiagnostic}
@@ -2216,7 +2231,7 @@ export default function CurriculumExplorerView({
       {/* 2. BỘ LỌC ĐA CHIỀU CÔNG THÁI HỌC (THU GỌN / MỞ RỘNG • KHỐI LỚP • ĐỘ KHÓ BLOOM THỰC TẾ • PHÂN MÔN) */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden transition-all">
         {/* Header Bộ Lọc kèm nút Thu gọn */}
-        <div 
+        <div
           onClick={() => setIsFilterCollapsed(!isFilterCollapsed)}
           className="p-3.5 px-4 bg-slate-50/60 flex items-center justify-between cursor-pointer hover:bg-slate-100/60 transition-colors select-none border-b border-slate-100"
         >
@@ -2226,9 +2241,6 @@ export default function CurriculumExplorerView({
             </div>
             <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wide flex items-center gap-2">
               <span>Bộ Lọc Khung Tri Thức</span>
-              <span className="text-[10px] text-slate-400 font-medium normal-case">
-                (Khối lớp • Cấp độ Bloom L1-L4 • Phân môn)
-              </span>
             </h4>
           </div>
 
@@ -2300,19 +2312,19 @@ export default function CurriculumExplorerView({
                 </div>
               </div>
 
-              {/* Độ khó thực tế Bloom L1 - L4 */}
+              {/* Mức độ nhận thức */}
               <div className="flex items-center gap-2 text-xs">
                 <span className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider shrink-0 w-24 flex items-center gap-1.5">
                   <Target className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>Độ khó Bloom:</span>
+                  <span>Độ khó:</span>
                 </span>
                 <div className="flex items-center gap-1.5 flex-wrap">
                   {[
-                    { id: 'all', label: 'Tất cả cấp độ' },
-                    { id: '1', label: 'L1: Nhận biết' },
-                    { id: '2', label: 'L2: Thông hiểu' },
-                    { id: '3', label: 'L3: Vận dụng' },
-                    { id: '4', label: 'L4: Vận dụng cao' }
+                    { id: 'all', label: 'Tất cả mức độ' },
+                    { id: '1', label: 'Nhận biết' },
+                    { id: '2', label: 'Thông hiểu' },
+                    { id: '3', label: 'Vận dụng' },
+                    { id: '4', label: 'Vận dụng cao' }
                   ].map(b => {
                     const isActive = selectedBloomFilter === b.id;
                     return (
@@ -2405,34 +2417,6 @@ export default function CurriculumExplorerView({
               <span>AI Bóc Tách Tài Liệu & Dạng Bài</span>
             </button>
           )}
-
-          {/* Badge Chế độ */}
-          {isReadOnly ? (
-            <div className="px-3.5 py-1.5 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-800 text-xs font-bold flex items-center gap-2 shadow-2xs">
-              <BookOpen className="w-3.5 h-3.5 text-indigo-600" />
-              <span>Khung chương trình chuẩn</span>
-            </div>
-          ) : (
-            <div className="px-3.5 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-2 shadow-2xs">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              <span>Chế độ Hiệu đính Sư phạm: BẬT</span>
-            </div>
-          )}
-
-          <div className="hidden lg:flex items-center gap-3 text-xs text-slate-500 font-medium pl-2 border-l border-slate-200">
-            <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-rose-600"></span>
-              <span>Cần bổ trợ (&lt;10%)</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
-              <span>Cần củng cố (&lt;60%)</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-              <span>Đã nắm vững (≥60%)</span>
-            </div>
-          </div>
         </div>
       </div>
 
@@ -2440,7 +2424,7 @@ export default function CurriculumExplorerView({
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
         {/* Left Column: 3-Level Hierarchical Accordion (5 Cols) */}
-        <div className="min-w-0 lg:col-span-5 bg-white rounded-3xl border border-slate-200/90 shadow-sm p-4 flex flex-col space-y-3 lg:sticky lg:top-4 lg:max-h-[calc(100vh-100px)]">
+        <div className="min-w-0 lg:col-span-5 bg-white rounded-2xl border border-slate-300 shadow-xs p-4 flex flex-col space-y-3 lg:sticky lg:top-4 lg:max-h-[calc(100vh-100px)]">
           <div className="flex items-center justify-between text-xs font-bold text-slate-600 pb-2.5 border-b border-slate-100">
             <div className="flex items-center gap-2">
               <Layers className="w-3.5 h-3.5 text-blue-600" />
@@ -2617,80 +2601,49 @@ export default function CurriculumExplorerView({
                                 hasLesSgk ? 'border-emerald-200 bg-white' : 'border-slate-200/60 bg-white'
                               }`}
                             >
-                              {/* Lesson Header */}
+                              {/* Lesson Header — Tinh giản: Icon vở xanh = đã nạp SGK, hover tên bài chạy ngang, bấm mở Review bên phải */}
                               <div
-                                onClick={() => toggleLesson(les.lessonId)}
-                              className={`p-3 flex items-center justify-between cursor-pointer transition-colors group/les ${
-                                hasLesSgk ? 'hover:bg-emerald-50/40' : 'hover:bg-slate-50'
-                              }`}
-                            >
-                              <div className="flex items-center gap-2 truncate">
-                                <BookOpen className={`w-3.5 h-3.5 shrink-0 ${hasLesSgk ? 'text-emerald-600' : 'text-indigo-500'}`} />
-                                <span className="text-xs font-extrabold text-slate-800 truncate">
-                                  {les.name}
-                                </span>
-                                {hasLesSgk && (
-                                  <span className="px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[9.5px] font-bold shrink-0 flex items-center gap-0.5">
-                                    <Check className="w-2.5 h-2.5 text-emerald-600" />
-                                    <span>SGK</span>
+                                onClick={() => {
+                                  toggleLesson(les.lessonId);
+                                  setSelectedPattern(null);
+                                  setSelectedLessonPreview({
+                                    lesson: les,
+                                    chapter: chap,
+                                    hasSgk: hasLesSgk,
+                                    sgkChunks: lesSgkChunks
+                                  });
+                                }}
+                                title={les.name}
+                                className={`p-3 flex items-center justify-between gap-2 cursor-pointer transition-colors group/les ${
+                                  selectedLessonPreview?.lesson?.lessonId === les.lessonId && !selectedPattern
+                                    ? 'bg-indigo-50/70'
+                                    : hasLesSgk
+                                    ? 'hover:bg-emerald-50/40'
+                                    : 'hover:bg-slate-50'
+                                }`}
+                              >
+                                <div className="flex items-center gap-2 min-w-0 flex-1">
+                                  <BookOpen
+                                    className={`w-4 h-4 shrink-0 ${hasLesSgk ? 'text-emerald-600' : 'text-slate-400'}`}
+                                    title={hasLesSgk ? 'Đã nạp học liệu SGK' : 'Chưa nạp học liệu SGK'}
+                                  />
+                                  <div className="lesson-marquee-wrap min-w-0 flex-1">
+                                    <span className="lesson-marquee-text text-xs font-extrabold text-slate-800">
+                                      {les.name}
+                                    </span>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-1.5 shrink-0">
+                                  <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[10px] font-bold">
+                                    {les.patterns?.length || 0} dạng bài
                                   </span>
-                                )}
+                                  {isLesExpanded ? (
+                                    <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                                  ) : (
+                                    <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+                                  )}
+                                </div>
                               </div>
-                              <div className="flex items-center gap-1.5 shrink-0">
-                                {!isReadOnly && (
-                                  <>
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleOpenCreatePatternModal(les.lessonId, les.name);
-                                      }}
-                                      title="Thêm Dạng bài mới vào bài học này"
-                                      className="px-2 py-0.5 rounded-md bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[10px] font-bold flex items-center gap-1 border border-indigo-200/60 transition-colors cursor-pointer"
-                                    >
-                                      <Plus className="w-3 h-3" />
-                                      <span>Thêm dạng</span>
-                                    </button>
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleOpenStudio(null, chap, les);
-                                      }}
-                                      title="Mở Studio thiết kế dạng bài mới toàn diện với đồ thị và phương pháp"
-                                      className="px-2 py-0.5 rounded-md bg-blue-50 hover:bg-blue-100 text-blue-700 text-[10px] font-bold flex items-center gap-1 border border-blue-200/60 transition-colors cursor-pointer"
-                                    >
-                                      <Sparkles className="w-2.5 h-2.5 text-amber-500" />
-                                      <span>+ Studio</span>
-                                    </button>
-
-                                    {/* Nút Xóa Bài Học */}
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleDeleteLesson(les, chap.name);
-                                      }}
-                                      disabled={deletingNodeId === les.lessonId}
-                                      title="Xóa bài học này và toàn bộ dạng bài bên trong"
-                                      className="p-1 rounded-md bg-white hover:bg-rose-50 border border-slate-200 hover:border-rose-300 text-slate-400 hover:text-rose-600 transition-all disabled:opacity-50 cursor-pointer"
-                                    >
-                                      {deletingNodeId === les.lessonId ? (
-                                        <RefreshCw className="w-2.5 h-2.5 animate-spin text-rose-500" />
-                                      ) : (
-                                        <Trash2 className="w-2.5 h-2.5" />
-                                      )}
-                                    </button>
-                                  </>
-                                )}
-
-                                <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[10px] font-bold">
-                                  {les.patterns?.length || 0} dạng bài
-                                </span>
-                                {isLesExpanded ? (
-                                  <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
-                                ) : (
-                                  <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-                                )}
-                              </div>
-                            </div>
 
                             {/* Patterns List (Level 3 - Selectable Leaves) */}
                             {isLesExpanded && (
@@ -2762,8 +2715,8 @@ export default function CurriculumExplorerView({
                                               <span>Đã vững ({mastery}%)</span>
                                             </span>
                                           ) : (
-                                            <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[10px] font-medium">
-                                              {pat.level || "Vận dụng"}
+                                            <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[10px] font-semibold">
+                                              {formatPatternLevelLabel(pat)}
                                             </span>
                                           )}
                                         </div>
@@ -2819,8 +2772,8 @@ export default function CurriculumExplorerView({
           </div>
         </div>
 
-        {/* Right Column: 3 Pedagogical Layers for the Selected Node (7 Cols) */}
-        <div className="min-w-0 lg:col-span-7 lg:sticky lg:top-4 lg:max-h-[calc(100vh-100px)] lg:overflow-y-auto pr-1 scrollbar-thin">
+        {/* Right Column: Full-view (không cuộn lồng bên trong) */}
+        <div className="min-w-0 lg:col-span-7">
           {selectedPattern ? (
             <UnifiedNodeDetailView
               selectedPattern={selectedPattern}
@@ -2834,6 +2787,115 @@ export default function CurriculumExplorerView({
               onSelectPattern={(pat) => setSelectedPattern(pat)}
               instructorMode={!isReadOnly && instructorMode}
             />
+          ) : selectedLessonPreview?.lesson ? (
+            <Paper variant="outlined" sx={{ p: { xs: 2.25, sm: 3 }, borderRadius: '12px', borderColor: 'divider' }}>
+              <Stack spacing={2}>
+                {/* Header tổng quan bài học */}
+                <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems="flex-start" spacing={1.5} sx={{ pb: 1.75, borderBottom: '1px solid', borderColor: 'divider' }}>
+                  <Box sx={{ minWidth: 0, flex: 1 }}>
+                    <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap sx={{ mb: 0.5 }}>
+                      <BookOpen className={`w-4 h-4 ${selectedLessonPreview.hasSgk ? 'text-emerald-600' : 'text-slate-400'}`} />
+                      <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary' }}>
+                        {selectedLessonPreview.chapter?.name || 'Chương học'}
+                      </Typography>
+                      {selectedLessonPreview.hasSgk && (
+                        <Chip
+                          size="small"
+                          color="success"
+                          variant="outlined"
+                          label="SGK"
+                          sx={{ height: 20, fontSize: '0.68rem' }}
+                        />
+                      )}
+                    </Stack>
+                    <Typography variant="h6" sx={{ fontWeight: 800, color: 'text.primary', lineHeight: 1.35 }}>
+                      {selectedLessonPreview.lesson.name}
+                    </Typography>
+                  </Box>
+
+                  {!isReadOnly && (
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      size="small"
+                      startIcon={<Plus size={14} />}
+                      onClick={() => handleOpenCreatePatternModal(selectedLessonPreview.lesson.lessonId, selectedLessonPreview.lesson.name)}
+                      sx={{ flexShrink: 0, alignSelf: 'flex-start', height: 30, px: 1.5, py: 0.25, fontSize: '0.75rem' }}
+                    >
+                      Thêm dạng bài
+                    </Button>
+                  )}
+                </Stack>
+
+                {/* Tóm tắt nội dung tổng quát bài học */}
+                {selectedLessonPreview.sgkChunks?.length > 0 && (
+                  <Paper variant="outlined" sx={{ p: 2, borderRadius: '10px', bgcolor: 'rgba(16,185,129,0.04)', borderColor: 'success.light' }}>
+                    <Typography variant="caption" sx={{ fontWeight: 800, color: 'success.dark', display: 'block', mb: 0.75, textTransform: 'uppercase' }}>
+                      Tổng quan nội dung bài học
+                    </Typography>
+                    <Typography variant="body2" sx={{ color: 'text.secondary', lineHeight: 1.6, display: '-webkit-box', WebkitLineClamp: 5, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                      {String(selectedLessonPreview.sgkChunks[0]?.content || selectedLessonPreview.sgkChunks[0]?.text || '')
+                        .replace(/#+\s*/g, '')
+                        .replace(/\*\*/g, '')}
+                    </Typography>
+                  </Paper>
+                )}
+
+                {/* Danh sách các dạng bài bên trong bài học */}
+                <Box>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 800, color: 'text.primary', mb: 1.25 }}>
+                    Các dạng bài trong bài học ({selectedLessonPreview.lesson.patterns?.length || 0})
+                  </Typography>
+                  {(selectedLessonPreview.lesson.patterns || []).length === 0 ? (
+                    <Paper variant="outlined" sx={{ p: 3, borderRadius: '10px', borderStyle: 'dashed', textAlign: 'center' }}>
+                      <Typography variant="body2" color="text.secondary">
+                        Chưa có dạng bài nào trong bài học này.
+                      </Typography>
+                    </Paper>
+                  ) : (
+                    <Stack spacing={1}>
+                      {(selectedLessonPreview.lesson.patterns || []).map((pat, pIdx) => (
+                        <Paper
+                          key={pat.patternId || pIdx}
+                          variant="outlined"
+                          onClick={() =>
+                            setSelectedPattern({
+                              ...pat,
+                              _parentLesson: selectedLessonPreview.lesson,
+                              _parentChapter: selectedLessonPreview.chapter
+                            })
+                          }
+                          sx={{
+                            p: 1.5,
+                            borderRadius: '10px',
+                            cursor: 'pointer',
+                            transition: 'all 0.15s',
+                            '&:hover': { borderColor: 'primary.main', bgcolor: 'rgba(79,70,229,0.03)' }
+                          }}
+                        >
+                          <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={1.5}>
+                            <Box sx={{ minWidth: 0, flex: 1 }}>
+                              <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 0.5 }}>
+                                <Chip size="small" label={formatPatternLevelLabel(pat)} color="primary" variant="outlined" sx={{ height: 20, fontSize: '0.68rem' }} />
+                                {pat.questionCount > 0 && (
+                                  <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+                                    {pat.questionCount} câu hỏi
+                                  </Typography>
+                                )}
+                              </Stack>
+                              <Typography variant="body2" sx={{ fontWeight: 700, color: 'text.primary' }}>
+                                {pat.name}
+                              </Typography>
+                            </Box>
+                            <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
+                          </Stack>
+                        </Paper>
+                      ))}
+                    </Stack>
+                  )}
+                </Box>
+              </Stack>
+            </Paper>
           ) : (
             <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm p-12 text-center text-slate-400 space-y-4">
               <div className="w-16 h-16 rounded-2xl bg-indigo-50 text-indigo-500 flex items-center justify-center mx-auto shadow-2xs">
@@ -4301,7 +4363,7 @@ export default function CurriculumExplorerView({
                   <div className="space-y-5">
                     {/* WIDESCREEN 2-COLUMN LAYOUT (5 COLS / 7 COLS) */}
                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-                      
+
                       {/* CỘT TRÁI (5 COLS): NGUỒN TÀI LIỆU & PHẠM VI TRANG */}
                       <div className="lg:col-span-5 space-y-4">
                         {/* 1. Chọn Miền Năng Lực Mục Tiêu */}
@@ -4556,7 +4618,7 @@ export default function CurriculumExplorerView({
                                     <span className="text-[9.5px] font-bold text-indigo-600 bg-indigo-100 px-1.5 py-0.2 rounded">Toàn diện 60+ trang</span>
                                   </h4>
                                   <p className="text-[10px] text-indigo-800 font-semibold mt-0.5">
-                                    Quét toàn diện SGK GDPT 2018 & giáo trình dày, nhiều lý thuyết và bài tập mở rộng
+                                    Nhập nội dung từ SGK GDPT 2018 và giáo trình, gồm lý thuyết và bài tập
                                   </p>
                                 </div>
 
@@ -4924,7 +4986,7 @@ export default function CurriculumExplorerView({
                     onChange={(e) => setSgkOcrMode(e.target.value)}
                     className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white font-semibold text-slate-800"
                   >
-                    <option value="TEXT_HUMANITIES">Tự động thông minh</option>
+                    <option value="TEXT_HUMANITIES">Tự động nhận diện</option>
                     <option value="VISION_AI">Vision AI 100% (PDF Scan)</option>
                     <option value="STEM_FORMULAS">Toán / Lý / Hóa (KaTeX)</option>
                     <option value="AUTO_LOCAL">Chỉ đọc chữ số hóa</option>

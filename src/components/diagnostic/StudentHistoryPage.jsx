@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { BookOpen, ClipboardCheck, FileCheck2, History, ArrowLeft, Brain } from 'lucide-react';
 import DiagnosticAssessmentPage from './DiagnosticAssessmentPage';
 import MistakeNotebookSM2View from '../dashboard/MistakeNotebookSM2View';
+import AttemptAnswerReviewList from '../common/AttemptAnswerReviewList';
 import { practiceService } from '../../services/practiceService';
-import MathText from '../common/MathText';
 
 const categories = [
   { id: 'diagnostic', label: 'Đầu vào', icon: ClipboardCheck },
@@ -24,12 +24,35 @@ export default function StudentHistoryPage({ currentUser, onOpenDiagnostic, onOp
   const localMocks = allLocal.filter((item) =>
     (!item.studentId || item.studentId === owner) && item.examType === 'MOCK_EXAM');
 
-  const subtitleMap = {
-    diagnostic: 'Kết quả đánh giá đầu vào',
-    practice: 'Các bài luyện tập đã lưu',
-    mock: 'Kết quả các lần thi thử V-ACT',
-    mistakes: 'Sổ tay lỗi sai SM-2: gắn nhãn nguyên nhân & ôn tập biến thể mỗi ngày'
+  const categoryMeta = {
+    diagnostic: {
+      title: 'Khảo thí & Chẩn đoán đầu vào',
+      subtitle: 'Kết quả đánh giá năng lực ban đầu & xếp lớp chuẩn ĐGNL',
+      icon: ClipboardCheck,
+      tag: 'Khảo thí ĐGNL'
+    },
+    practice: {
+      title: 'Luyện tập theo lộ trình',
+      subtitle: 'Các bài luyện tập thích ứng & chi tiết đáp án đã làm',
+      icon: BookOpen,
+      tag: 'Luyện tập cá nhân'
+    },
+    mock: {
+      title: 'Phòng thi thử V-ACT',
+      subtitle: 'Kết quả các đợt thi thử bấm giờ chuẩn cấu trúc ĐHQG-HCM',
+      icon: FileCheck2,
+      tag: 'Thi thử chuẩn hóa'
+    },
+    mistakes: {
+      title: 'Sổ tay lỗi sai',
+      subtitle: 'Gắn nhãn nguyên nhân & ôn tập từng dạng bài theo lịch nhắc',
+      icon: Brain,
+      tag: 'Phân tích sai lầm'
+    }
   };
+
+  const currentMeta = categoryMeta[category] || categoryMeta.diagnostic;
+  const CategoryIcon = currentMeta.icon;
 
   const accentMap = {
     diagnostic: { from: 'from-indigo-500', to: 'to-blue-500', light: 'bg-indigo-50', text: 'text-indigo-600', ring: 'ring-indigo-200', active: 'text-indigo-700', indicator: 'bg-indigo-500' },
@@ -46,16 +69,25 @@ export default function StudentHistoryPage({ currentUser, onOpenDiagnostic, onOp
         <div className={`h-1 w-full bg-gradient-to-r ${accent.from} ${accent.to}`} />
 
         <div className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-5">
-          {/* Left: icon + title */}
-          <div className="flex items-center gap-3.5">
-            <div className={`relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br ${accent.from} ${accent.to} shadow-sm`}>
-              <History className="h-5 w-5 text-white" />
+          {/* Left: Dynamic icon + contextual title */}
+          <div className="flex items-center gap-3.5 min-w-0">
+            <div className={`relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br ${accent.from} ${accent.to} shadow-sm transition-all duration-300`}>
+              <CategoryIcon className="h-5 w-5 text-white" />
               {/* Live dot */}
               <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-emerald-400 animate-pulse" />
             </div>
-            <div>
-              <h1 className="text-sm font-black text-slate-900 leading-tight tracking-tight">Lịch sử & Lỗi sai</h1>
-              <p className={`text-xs font-semibold ${accent.text} transition-all mt-0.5`}>{subtitleMap[category]}</p>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <h2 className="text-sm sm:text-base font-black text-slate-900 leading-tight tracking-tight truncate">
+                  {currentMeta.title}
+                </h2>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border hidden min-[480px]:inline-block ${accent.light} ${accent.active} border-slate-200/60 shadow-2xs`}>
+                  {currentMeta.tag}
+                </span>
+              </div>
+              <p className={`text-xs font-semibold ${accent.text} transition-all mt-0.5 truncate`}>
+                {currentMeta.subtitle}
+              </p>
             </div>
           </div>
 
@@ -101,13 +133,14 @@ export default function StudentHistoryPage({ currentUser, onOpenDiagnostic, onOp
       {category === 'practice' && <div className="space-y-4 rounded-3xl border border-slate-200 bg-white p-5 sm:p-6">
         <div><h2 className="font-black text-slate-900 tracking-tight">Kết quả luyện tập</h2><p className="mt-1 text-sm text-slate-500">Các bài dưới đây được lưu trên trình duyệt này, chưa phải lịch sử đồng bộ giữa các thiết bị.</p></div>
         {selected ? <>
-          <button type="button" onClick={() => setSelected(null)} className="flex items-center gap-2 text-sm font-semibold text-blue-600 hover:text-blue-700"><ArrowLeft className="h-4 w-4" />Quay lại danh sách</button>
-          <h3 className="font-semibold">{selected.title || 'Bài luyện tập'}</h3>
-          {(selected.reviewedQuestions || []).map((q, i) => <div key={q.id || i} className="rounded-2xl border border-slate-100 p-4 text-sm">
-            <p className="mb-2 text-xs font-bold text-slate-500">Câu {q.question_number || i + 1}</p>
-            <MathText text={q.content || 'Chưa có nội dung câu hỏi.'} />
-            <p className="mt-3 text-slate-600">Bạn chọn: <strong>{q.studentChoice || 'Chưa trả lời'}</strong>{q.correctChoice && <> · Đáp án: <strong>{q.correctChoice}</strong></>}</p>
-          </div>)}
+          <button type="button" onClick={() => setSelected(null)} className="flex items-center gap-2 text-sm font-semibold text-blue-600 hover:text-blue-700 cursor-pointer"><ArrowLeft className="h-4 w-4" />Quay lại danh sách</button>
+          <h3 className="font-bold text-slate-900">{selected.title || 'Bài luyện tập'}</h3>
+          <AttemptAnswerReviewList
+            questions={selected.reviewedQuestions || []}
+            chunkSize={7}
+            onAskAiTutor={onOpenAiTutorWithContext}
+            allowAiTutor
+          />
         </> : localPractice.length ? <ul className="divide-y divide-slate-100">
           {localPractice.map((item) => <li key={item.id} className="flex flex-wrap items-center justify-between gap-3 py-4">
             <div><p className="font-semibold text-slate-800">{item.title || 'Bài luyện tập'}</p>
@@ -125,11 +158,12 @@ export default function StudentHistoryPage({ currentUser, onOpenDiagnostic, onOp
           <button type="button" onClick={() => setSelected(null)} className="flex items-center gap-2 text-sm font-semibold text-blue-600 hover:text-blue-700 cursor-pointer"><ArrowLeft className="h-4 w-4" />Quay lại danh sách</button>
           <h3 className="font-bold text-slate-900">{selected.title || 'Đề thi thử V-ACT'}</h3>
           <p className="text-xs text-slate-500">{selected.ai_commentary}</p>
-          {(selected.reviewedQuestions || []).map((q, i) => <div key={q.id || i} className="rounded-2xl border border-slate-100 p-4 text-sm space-y-2">
-            <p className="text-xs font-bold text-slate-500">Câu {q.question_number || i + 1}</p>
-            <MathText text={q.content || 'Chưa có nội dung câu hỏi.'} />
-            <p className="text-slate-600 text-xs">Bạn chọn: <strong>{q.studentChoice || 'Bỏ trống'}</strong>{q.correctChoice && <> · Đáp án đúng: <strong className="text-emerald-700">{q.correctChoice}</strong></>}</p>
-          </div>)}
+          <AttemptAnswerReviewList
+            questions={selected.reviewedQuestions || []}
+            chunkSize={7}
+            onAskAiTutor={onOpenAiTutorWithContext}
+            allowAiTutor
+          />
         </> : localMocks.length ? <ul className="divide-y divide-slate-100">
           {localMocks.map((item) => <li key={item.id} className="flex flex-wrap items-center justify-between gap-3 py-4">
             <div>

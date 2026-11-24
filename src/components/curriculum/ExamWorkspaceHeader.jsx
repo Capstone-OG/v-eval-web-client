@@ -384,4 +384,3 @@ export default function ExamWorkspaceHeader({
     </header>
   );
 }
-

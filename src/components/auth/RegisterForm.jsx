@@ -1,10 +1,10 @@
+import StudentRegistrationFields from './StudentRegistrationFields';
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   User, 
   Mail, 
   Phone, 
-  School, 
   Target, 
   ChevronDown, 
   CheckCircle2, 
@@ -29,14 +29,10 @@ export default function RegisterForm({
   setRegPassword,
   regConfirmPassword,
   setRegConfirmPassword,
-  regGrade,
-  setRegGrade,
   regTargetScore,
   setRegTargetScore,
   regAgreeTerms,
   setRegAgreeTerms,
-  gradeDropdownOpen,
-  setGradeDropdownOpen,
   targetDropdownOpen,
   setTargetDropdownOpen,
   regShowPassword,
@@ -44,7 +40,6 @@ export default function RegisterForm({
   regShowConfirmPassword,
   setRegShowConfirmPassword,
   passStrength,
-  gradeOptions,
   targetOptions,
   campuses = [],
   selectedCampusId,
@@ -62,7 +57,7 @@ export default function RegisterForm({
   onApplySuggestedEmail = null
 }) {
   return (
-    <form onSubmit={handleRegisterSubmit} className="space-y-3" noValidate>
+    <form onSubmit={handleRegisterSubmit} className="space-y-3.5" noValidate>
       
       {/* Full Name */}
       <div>
@@ -95,7 +90,7 @@ export default function RegisterForm({
       </div>
 
       {/* SEPARATE EMAIL & PHONE FIELDS */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <label className="block text-xs font-extrabold text-slate-700 mb-1">
             Địa chỉ Email <span className="text-rose-500">*</span>
@@ -197,52 +192,12 @@ export default function RegisterForm({
         </div>
       </div>
 
-      {/* Grade & Target Grid (DISPLAYED ONLY FOR STUDENT REGISTER, HIDDEN FOR PARENT) */}
-      {role === 'student' && (
-        <div className="grid grid-cols-2 gap-2">
-          {/* CUSTOM ROUNDED GRADE DROPDOWN */}
-          <div className="relative">
-            <label className="block text-xs font-extrabold text-slate-700 mb-1">
-              Khối Lớp
-            </label>
-            <button
-              type="button"
-              onClick={() => { setGradeDropdownOpen(!gradeDropdownOpen); setTargetDropdownOpen(false); }}
-              className="w-full pl-8 pr-7 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-between font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all shadow-2xs text-left relative"
-            >
-              <div className="flex items-center gap-1.5 truncate">
-                <School className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                <span className="truncate">{gradeOptions.find(o => o.value === regGrade)?.label}</span>
-              </div>
-              <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${gradeDropdownOpen ? 'rotate-180' : ''}`} />
-            </button>
+      <StudentRegistrationFields visible={role === 'student'}>
 
-            <AnimatePresence>
-              {gradeDropdownOpen && (
-                <motion.div
-                  initial={{ opacity: 0, y: -5, scale: 0.95 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: -5, scale: 0.95 }}
-                  className="absolute left-0 right-0 top-full mt-1.5 z-50 bg-white border border-slate-200/90 rounded-2xl shadow-xl p-1.5 space-y-1"
-                >
-                  {gradeOptions.map((opt) => (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      onClick={() => { setRegGrade(opt.value); setGradeDropdownOpen(false); }}
-                      className={`w-full text-left px-3 py-2 text-xs rounded-xl font-bold transition-all flex items-center justify-between ${
-                        regGrade === opt.value ? 'bg-blue-50 text-blue-700' : 'text-slate-700 hover:bg-slate-100'
-                      }`}
-                    >
-                      <span>{opt.label}</span>
-                      {regGrade === opt.value && <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" />}
-                    </button>
-                  ))}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
 
+      {/* Student target spans the full row so option labels remain readable. */}
+
+        <div>
           {/* CUSTOM ROUNDED TARGET DROPDOWN */}
           <div className="relative">
             <label className="block text-xs font-extrabold text-slate-700 mb-1">
@@ -250,10 +205,10 @@ export default function RegisterForm({
             </label>
             <button
               type="button"
-              onClick={() => { setTargetDropdownOpen(!targetDropdownOpen); setGradeDropdownOpen(false); }}
-              className="w-full pl-8 pr-7 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-between font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all shadow-2xs text-left relative"
+              onClick={() => { setTargetDropdownOpen(!targetDropdownOpen); setCampusDropdownOpen?.(false); }}
+              className="w-full px-3 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between gap-2 font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all text-left relative"
             >
-              <div className="flex items-center gap-1.5 truncate">
+              <div className="flex items-center gap-2.5 min-w-0">
                 <Target className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                 <span className="truncate">{targetOptions.find(o => o.value === regTargetScore)?.label}</span>
               </div>
@@ -282,11 +237,13 @@ export default function RegisterForm({
                     </button>
                   ))}
                 </motion.div>
-              )}
+            )}
             </AnimatePresence>
           </div>
         </div>
-      )}
+
+
+      </StudentRegistrationFields>
 
       {/* Cơ Sở Đào Tạo (Campuses from Backend API) */}
       {campuses && campuses.length > 0 && (
@@ -298,12 +255,11 @@ export default function RegisterForm({
             type="button"
             onClick={() => {
               if (setCampusDropdownOpen) setCampusDropdownOpen(!campusDropdownOpen);
-              if (setGradeDropdownOpen) setGradeDropdownOpen(false);
               if (setTargetDropdownOpen) setTargetDropdownOpen(false);
             }}
-            className="w-full pl-8 pr-7 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-between font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all shadow-2xs text-left relative"
+            className="w-full px-3 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between gap-2 font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all text-left relative"
           >
-            <div className="flex items-center gap-1.5 truncate">
+            <div className="flex items-center gap-2.5 min-w-0">
               <Building2 className="w-3.5 h-3.5 text-slate-400 shrink-0" />
               <span className="truncate">
                 {campuses.find(c => (c.campusId || c.id) === selectedCampusId)?.name || 'Chọn cơ sở theo học'}
@@ -350,7 +306,7 @@ export default function RegisterForm({
       )}
 
       {/* Password & Confirm Password */}
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <label className="block text-xs font-extrabold text-slate-700 mb-1">
             Mật khẩu <span className="text-rose-500">*</span>

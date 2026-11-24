@@ -362,7 +362,7 @@ export default function StudentParentLinkCard({ currentUser }) {
             <div className="pt-3 border-t border-slate-200 space-y-2">
               <div className="text-xs font-extrabold text-slate-700 flex items-center gap-1.5">
                 <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                <span>Phụ huynh đang đồng hành ({linkedParents.length})</span>
+                <span>Phụ huynh đã liên kết ({linkedParents.length})</span>
               </div>
               {linkedParents.length === 0 ? (
                 <p className="text-xs text-slate-400 italic">

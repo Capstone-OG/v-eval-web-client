@@ -2230,6 +2230,379 @@ The diagnostic report JSX parse failure from an incomplete duplicate trend-chart
 
 Radar and skill-prior displays consume API response fields; the benchmark overlay and prior values are omitted when absent instead of being filled with synthetic defaults. The result page now uses normalized API-derived prior data without unresolved component/helper references.
 
+
+## [16/11/2026] - Homepage Introduction and Metrics Consolidation
+
+- Removed the homepage navigation entry for the standalone 120-question specification and the 3 Q&A specification action.
+- Grouped the four platform metric cards under the Introduction anchor while preserving their position below the hero content; updated footer links to the new metrics anchor.
+- Verified the frontend production build with `npm run build`. Existing large-bundle and JSXGraph eval advisories remain.
+
+
+## [17/11/2026] - Homepage Introduction Navigation
+
+- Kept the four metric cards directly below hero content and grouped them semantically under the Introduction navigation anchor.
+- Removed the standalone 120-question navigation entry and 3 Q&A specification action; footer links target the metric strip.
+- Verified the production build with npm run build; existing bundle-size and JSXGraph eval advisories remain.
+
+
+## [17/11/2026] - Develop Merge Acceptance
+
+- Integrated upstream Socratic multi-turn session management, tombstone-based deletion, Vietnamese text normalization, AI tutor moderation, mentor dashboard changes, and diagnostic history updates.
+- Preserved the local homepage Introduction grouping and navigation cleanup.
+- Verified `npm run build` successfully. Existing large-bundle and JSXGraph eval advisories remain. Automated tests were not run in this merge check.
+
+## [18/11/2026] - Authentication completion and landing page presentation
+
+The authentication completion handler now closes the OTP modal, switches the underlying page to login, and pre-populates the account email. Password reset completion also pre-populates the newly chosen password. The public landing page received a visual refinement across its section backgrounds, decorative accents, and cards.
+
+Acceptance evidence: `npm run build` completed successfully. Existing large-chunk and JSXGraph direct `eval` advisories remain. Interactive browser verification was not performed.
+
+## [18/11/2026] - Student Live Q&A feature removal
+
+The student-facing Live Q&A feature has been removed from the sidebar, portal route, roadmap lesson experience, and tuition package list. Its dedicated dashboard view, unused card, mock session data, and associated student and management role-menu entries were also removed. Regular class schedules and attendance remain available.
+
+Acceptance evidence: `npm run build` completed successfully. Existing large-chunk and JSXGraph direct `eval` advisories remain. Interactive browser verification was not performed.
+
+## [19/11/2026] - Sidebar stale-menu-entry guard
+
+The student sidebar no longer includes the stale `entries.live` reference left after Live Q&A was removed. That reference was undefined and caused `item.icon` to throw during rendering. An `Activity` fallback remains for any valid item that lacks an icon.
+
+Acceptance evidence: production build passed. Existing bundle-size and JSXGraph direct-eval advisories remain; interactive browser verification was not run.
+
+## [19/11/2026] - Student sidebar cleanup
+
+The student sidebar no longer contains the stale Live Q&A reference or the Gia sư AI navigation item. Invalid entries are filtered before rendering. The AI chat experience remains unchanged.
+
+Acceptance evidence: production build passed. Existing bundle-size and JSXGraph direct-eval advisories remain.
+
+## [19/11/2026] - Single-assessment personal roadmap
+
+One completed diagnostic assessment now unlocks the student's personal roadmap. The connected roadmap opens by default and automatically generates from the latest completed diagnostic submission, using profile exam date and study hours when available or defaults otherwise. If automatic generation fails, the user can review or adjust the prefilled values in the existing form.
+
+Acceptance evidence: diagnostic eligibility tests and production build passed. Existing bundle-size and JSXGraph direct-eval advisories remain.
+
+## [19/11/2026] - Diagnostic exam fullscreen entry
+
+The exam start action now requests fullscreen before awaiting network calls, avoiding the expired user-activation issue. Fullscreen remains active during setup and is cleared on cancellation or load failure. The status indicator is updated from the browser request result.
+
+Acceptance evidence: production build passed. Existing bundle-size and JSXGraph direct-eval advisories remain; browser interaction verification is pending.
+
+## 14. Forgot-Password Email Validation
+
+The forgot-password form disables native browser constraint popups and validates email input in the application before sending an OTP request. Validation feedback is rendered within the modal. Identity Service's `Auth.UserNotFound` error is presented as an unregistered-email message, and the client does not retry a user-not-found 404 against an invalid fallback route.
+
+## 15. Desktop Sidebar Access
+
+The desktop sidebar stays fixed at the left edge while the main portal content scrolls. Its own vertical scrolling keeps navigation reachable on shorter displays. The student IRT profile card appears above the navigation. The mobile sidebar retains its existing layout.
+## 16. Student Registration Defaults
+
+The registration flow targets grade 12 students, so grade selection is removed from the UI while the submitted default remains `12`. Three concise target score bands are retained: 700+, 800+, and 900+.
+
+Acceptance evidence: `npm run build` passed successfully.
+
+## 17. User Profile Synchronization & Error Transparency
+
+The profile update flow in `AccountSettingsPage.jsx` and `authService.js` was aligned with the Identity Service backend:
+- The endpoint targets `PUT /api/v1/users/me/profile` directly to match `UsersController.cs`.
+- The fake local optimistic catch block was replaced with transparent error handling via `formatApiError`, ensuring users receive real feedback when an update fails.
+- The training campus selection (`campusId`) is automatically synced to the student profile via `authService.updateStudentProfile({ campusId })`.
+- On initial mount, `authService.fetchCurrentUserProfile()` pulls the latest persistent user profile from PostgreSQL via the Gateway.
+
+Acceptance evidence: `npm run build` passed successfully in 5.14s.
+
+
+
+
+## [20/11/2026] - Remove diagnostic retake from account settings
+
+- Removed the diagnostic retake button from the academic settings IRT card, eliminating this entry point for repeating the initial assessment.
+- Validation: production build passed. Existing bundle size and JSXGraph eval warnings remain.
+
+
+## [20/11/2026] - Remove duplicate academic settings IRT card
+
+- Removed the academic settings insight card containing hardcoded Theta and mastery statistics.
+- The sidebar retains its existing Theta display sourced from diagnostic results or student dashboard data.
+- Validation: npm run build passed with existing bundle size and JSXGraph eval warnings.
+
+
+## [20/11/2026] - Restore persisted sidebar Theta
+
+- Load dashboard and diagnostic history independently using Promise.allSettled. Select the latest completed diagnostic belonging to the signed-in student and guard against account changes before setting state.
+- Sidebar supports camelCase API fields and snake_case immediate submission fields for Theta and placement.
+- Production build passed with existing dependency and bundle warnings. Live account browser verification was not performed.
+
+
+## [20/11/2026] - Consistent settings save/cancel controls
+
+- Academic, parent and preference forms compare current values with snapshots captured after loading and saving. Unchanged saves are disabled and faded; pending edits expose a cancel button restoring the snapshot.
+- Password cancellation clears sensitive inputs and resets visibility. Existing password validation remains active.
+- Save handlers guard unchanged submissions and concurrent academic/parent/password requests. Existing parent local-cache fallback remains in use.
+- Validation: production build passed. Browser interaction was not verified.
+
+
+## [20/11/2026] - Authentication badge copy
+
+- Replaced the technical JWT 256-bit label with Đã xác thực in account settings. Text-only change verified in source.
+
+
+## [20/11/2026] - Separate digital transcript from parent settings
+
+- Added a student-only transcript tab to AccountSettingsPage; moved the existing transcript block out of the family tab into its own conditional view.
+- Parent information and linking remain in the renamed parent tab. Existing transcript data and actions are retained.
+- Validation: production build passed. Browser verification was not performed.
+
+
+## [20/11/2026] - Empty parent defaults and account isolation
+
+- Registration inspection confirmed student registration does not collect or assign a parent. Removed hardcoded parent defaults and mock fallback from account settings.
+- Parent cache keys include the authenticated user ID. Legacy shared cache is deliberately not migrated because its owner is unknown. Anonymous writes are rejected.
+- Saving contact information no longer marks an account as linked. Actual loaded linkage status is preserved. Existing API failure fallback remains browser-local and is now scoped to the account.
+- Validation: Node assertions covered empty/new accounts, legacy cache exclusion, A/B isolation, retained own data, and anonymous access guards. Production build passed; live browser verification was not performed.
+
+
+## [20/11/2026] - Remove fabricated high school default
+
+- Account settings initializes school as empty and uses only the loaded profile school. Missing school data and API failures leave the field empty with a neutral placeholder.
+- Empty school baselines support save/cancel behavior; the transcript shows a missing-school label. Persisted server data is preserved.
+- Validation: production build passed; live browser verification not performed.
+
+
+## [20/11/2026] - Persist optional school name during registration
+
+- Both student registration forms use a shared free-text school input with a muted example placeholder. No school lookup provider is called. The field is optional and limited to 255 characters.
+- authService trims the name and sends null for blank input or parent registration. RegisterUserCommand validates the maximum length and persists the normalized value in the existing Student.SchoolName column; no migration is needed.
+- Removed stale grade-dropdown references from RegisterForm to prevent runtime errors when opening target/campus controls.
+- Validation: frontend production build and API build to a separate output directory passed. Five registration handler cases and three frontend payload checks passed. The standard backend build hit DLL locks from the running API; the process was left running and requires restart to use the change. Live browser registration was not exercised.
+
+
+## [20/11/2026] - Registration layout refinement
+
+- Removed the optional text and helper under the shared school field, retaining the muted example placeholder and adding a consistent school icon.
+- The main registration target selector spans a full row, with consistent control padding and rounding. Email/phone and password pairs stack on narrow screens. Target and campus dropdowns close each other.
+- Registration semantics remain unchanged. Production build passed; browser visual verification was not performed.
+
+
+## [20/11/2026] - Smooth registration role switching
+
+- Shared RegistrationRoleSwitch provides a sliding indicator, pressed-state semantics, keyboard focus styling, and reduced-motion support for both registration surfaces.
+- StudentRegistrationFields uses AnimatePresence to animate height and opacity while retaining controlled input values in parent state. Dropdowns close on role change; overflow is restored after entry to allow menus to render outside the animated block.
+- Validation: production build passed. Live visual verification was not performed.
+
+
+## [20/11/2026] - Replace native exam date calendar
+
+- Added @daypicker/react and @radix-ui/react-popover. The academic settings date field uses a reusable localized DatePicker with Vietnamese text, month/year navigation, today/clear actions, and matching blue styling.
+- Radix renders the calendar in a portal with collision handling and keyboard/focus behavior. Scoped CSS supports reduced motion. The trigger is explicitly associated with its label.
+- Date-only serialization uses local date components to preserve YYYY-MM-DD API values without UTC day shifts; existing save/cancel behavior is retained.
+- Validation: production build and targeted lint passed. Node assertions covered round-trip dates, leap years, invalid dates, empty values and clearing. Live visual verification was not performed.
+
+
+## [20/11/2026] - Inline password change validation
+
+- Added shared validation for required values, minimum length, upper/lowercase letters, digits, same-current-password rejection and confirmation equality. Validation updates on input and blur without network requests.
+- Touched-field errors appear below corresponding inputs with invalid/described-by semantics. Submission is disabled until valid; fields are disabled during requests. Cancel and success clear validation state.
+- Backend field dictionaries and known invalid-current/same-password codes map to inline fields. Current password correctness remains server-validated at submission; generic transport errors use the existing alert.
+- Validation: production build, targeted utility lint and 12 Node validation/mapping checks passed. Browser verification was not performed.
+
+
+## [20/11/2026] - Global password success feedback
+
+- Successful password changes now use the shared ToastContext singleton instead of the settings-local notification. Inline field validation is retained. Existing toast API/import verified in source.
+
+
+## [20/11/2026] - Real account creation date
+
+- Replaced the hardcoded joining date with createdAt from the current user's profile API, which GetCurrentUser maps from user.CreatedAt in persistence.
+- Dates render as dd/mm/yyyy in Asia/Ho_Chi_Minh. Missing or invalid values show an empty-state label instead of fabricated data.
+- Validation: API mapping inspected and production build passed. The specific user's database row was not queried.
+
+
+## [20/11/2026] - Defer school entry until profile update
+
+- Removed school entry, state and props from both registration forms and removed the unused shared input component. authService registration no longer sends schoolName.
+- School editing remains available in profile settings. Existing backend optional-field compatibility is retained.
+- Validation: production build passed.
+
+
+## [20/11/2026] - Unified account profile and persisted university aspiration
+
+- Removed the user ID row from the profile summary and merged student planning into the personal profile tab. School, aspiration, target score, exam date and study hours share the profile save/cancel controls. Invalid/unchanged submissions and concurrent edits during saving are blocked; student update errors propagate instead of being silently ignored.
+- Added optional UniversityAspiration to Student and student profile DTOs/commands/queries with a 500-character validation limit. Inputs are trimmed; empty strings clear existing aspirations while omitted values preserve them.
+- Applied migration 20261120093000_AddStudentUniversityAspiration to the configured DB. It only adds a nullable varchar(500) column. Updated the SQL schema and regenerated target/snapshot metadata against the existing model without introducing unrelated campus constraint operations.
+- Validation: frontend production build and API build passed; all 13 backend tests passed, including aspiration update/clear/omission/read-back and length limits. EF reported no pending model changes. Restarted only the local Identity service using the ProfileVerification build and verified live Swagger request/response schemas include universityAspiration. Browser end-to-end profile saving was not exercised.
+
+
+## [20/11/2026] - Backend rollback and frontend-only profile scope
+
+- Supersedes earlier acceptance of backend changes introduced in this session. Restored all assistant-owned Identity source, tests, snapshot and documentation changes; removed the assistant-created migration and test files. The pre-existing UsersController edit was preserved.
+- Reverted the applied aspiration migration and added DB column; removed the assistant's SQL schema addition. Restarted Identity using the restored backend source in FrontendOnlyRollback configuration. Live Swagger confirms neither the aspiration extension nor registration school extension remains; EF lists only the original four migrations.
+- The unified frontend profile remains. School uses the existing profile API, while aspirations use per-account browser storage with a device-local notice. No new backend fields are sent.
+- Validation: restored backend and frontend builds passed; local aspiration checks covered empty values, trim, clearing, account isolation and storage guards. Live browser form interaction was not exercised.
+
+
+## [20/11/2026] - Frontend-only removal of connected roadmap workspace
+
+- Removed StudentRoadmapWorkspace and ConnectedRoadmapPage. The roadmap route now directly renders CurriculumExplorerView, retaining existing curriculum navigation and callbacks.
+- Shared API services remain unchanged to preserve other consumers. No backend files were modified.
+- Validation: production build passed; source search found no stale component references. All five backend repositories remained Git-clean. Live browser verification was not performed.
+
+
+## [20/11/2026] - Frontend-only profile/payment activation guidance
+
+- Added account-scoped activation checks using existing diagnostic history, identity/student profile and tuition endpoints. Required data includes contact details, school, device-local aspiration, target score, a valid non-past exam date and study hours. Loading/error states do not unlock access; asynchronous results are discarded after account changes.
+- A native dialog with keyboard/focus handling provides the diagnostic/profile/payment checklist and directs users to settings or tuition. Profile settings adds a guidance banner and rechecks prerequisites after saving. Dashboard status no longer claims an unlocked roadmap prematurely.
+- Roadmap and tuition page entry is gated on the frontend. All primary roadmap callbacks, including desktop/mobile navigation and diagnostic result actions, use the guide. Tuition requires a saved profile and roadmap access requires explicit server isPaid confirmation. Added an opt-in strict payment fetch and prevented repeated paid-event dispatch during status synchronization.
+- This changes frontend navigation only; backend generation timing and authorization are unchanged. Aspirations remain stored locally per account, as previously requested.
+- Validation: production build and 12 activation/diagnostic tests passed. Targeted lint had no errors, with existing unused catch warnings and the fetch-loading effect warning. Live browser and payment end-to-end verification were not performed.
+
+
+## [20/11/2026] - Sidebar IRT summary layout
+
+- Student IRT summary now appears below branding and before navigation on desktop/mobile. Other role cards retain their footer position.
+- Title and Theta use separate rows, preserving the complete numeric value; footer metrics wrap as whole labels when needed.
+- Validation: production build passed. Frontend only; live visual verification not performed.
+
+
+## [20/11/2026] - Correct sidebar Theta wrapping
+
+- Supersedes the previous relocation: IRT card remains below navigation. Header displays title and badge side by side; shrink-0 and whitespace-nowrap keep the complete Theta expression on one line. Layout classes verified in source; frontend only.
+
+
+## [20/11/2026] - Preserve pricing access before activation
+
+- Tuition page no longer mounts the activation checklist in place of pricing. All users can view existing plans and prices.
+- Added an optional pre-payment guard before creating a payment link. Incomplete student activation opens the existing guide; roadmap gating is unchanged.
+- Validation: production build passed. Frontend only; backend unchanged.
+
+
+## [20/11/2026] - Automatic post-save activation check
+
+- Guided profile saves now initiate an account-scoped pending activation check and keep the guide modal closed. Confirmed complete profiles navigate to tuition, or roadmap if payment is already confirmed.
+- Pending checks show banner feedback and disable form edits. Incomplete profiles stay on settings with a missing-fields toast; verification failures are distinguished from save failures.
+- Validation: production build and focused diff check passed. Frontend only; browser end-to-end verification was not performed.
+
+
+## [20/11/2026] - User-facing tuition copy
+
+- Unpaid notice now states activation is required to view course content and directs users to choose a plan and pay.
+- Replaced database synchronization terminology with refresh wording in the action and loading states. Copy-only frontend change verified in source; backend unchanged.
+
+
+## [20/11/2026] - Payment receipt status consistency
+
+- Table and receipt now share status presentation. Receipt no longer hardcodes successful payment, payment time or signature verification. Unknown and non-success states remain distinct.
+- Pending/unknown history entries refresh via the existing payment-status endpoint. Order, student and payment identifiers must match before updates; failed requests preserve the original state. Refreshed rows update an open receipt as well.
+- Validation: frontend build and six payment mapping/reconciliation tests passed. No backend changes; the specific live transaction was not queried.
+
+
+## [20/11/2026] - Resume existing pending payment
+
+- Added resume actions to pending transaction rows and receipt details. Actions verify current order status and account/payment identifiers before reopening the existing PayOS checkout modal with the same order code and returned HTTPS checkout URL.
+- Already-paid orders update local history and tuition state. Terminal/unknown states and missing/invalid links cannot reopen checkout. A ref lock prevents concurrent resume requests and new order creation during verification; existing profile prerequisite checks remain active.
+- Validation: production build and all 11 payment mapping/reconciliation/resume tests passed. No backend changes or real payment performed; live browser verification remains unperformed.
+
+
+## [20/11/2026] - Reliable payment outcome toasts
+
+- Successful payments now call the shared toast singleton directly instead of relying on an unprovided showToast callback. Creation failures also use the shared error toast. Resume uses the same success handler without duplicate notifications.
+- Added a sequential payment monitor that stops on confirmed success/failure/cancellation/expiry and ignores results after cleanup. Terminal failures update history and show a dedicated modal state with appropriate toast feedback. Mismatched order responses do not trigger success.
+- Network failures remain distinct from payment failure: one warning per disconnected period, followed by automatic retry.
+- Validation: production build and 18 payment status/resume/monitor tests passed. No backend edits or real payment performed; live browser payment verification was not performed.
+
+
+## [20/11/2026] - Frontend-only commit acceptance
+
+- Consolidated the final frontend scope: account/authentication UI, diagnostic activation guidance, curriculum/sidebar presentation and consistent payment status/resume/notification behavior.
+- Validation: production build and all 30 targeted diagnostic/activation/payment tests passed. Removed trailing whitespace in StudentCurriculumView. Existing bundle/JSXGraph warnings remain; no real payment or browser end-to-end verification was performed.
+- Commit scope is the web-client repository only. Backend and System-Repo changes are excluded.
+
+
+## [21/11/2026] - Approved weekly timetable implementation
+
+- Replaced the student session list with a seven-day calendar using six numbered standard slots, week navigation and an upcoming-session shortcut. Existing term/course/status filters and attendance summary are retained in a compact layout. Mobile uses a daily agenda with the same session cards.
+- Session tiles display the API-provided className, topic, actual time/slot and attendance. Selection opens an accessible native dialog matching the approved blue-header design, containing class, date/time, attendance/check-in, worksheet and existing ZPD/AI actions. Rooms and unsupported teacher names are not displayed.
+- Existing timetable endpoints and normalization remain unchanged. Date-only helpers avoid UTC day shifts; custom configured times receive visible rows and simultaneous class sessions are retained. A request version guard discards stale loads after account/term changes or unmount.
+- Validation: production build and eight weekly date/slot/grouping tests passed. React server-render assertions confirmed class names, six slots, detail dialog and absence of room data. Live authenticated browser end-to-end verification was not performed. All five backend repositories remain Git-clean.
+
+
+## [21/11/2026] - Schedule heading deduplication
+
+- Removed the duplicate content heading/icon from WeeklyScheduleCalendar, retaining the navbar title, helper text and refresh action. Copy/layout source verified; frontend only.
+
+
+## [21/11/2026] - Schedule toolbar layout
+
+- Added an optional navbar pageSubtitle, supplied only for the student schedule, placing guidance directly beneath the existing title.
+- Refresh now sits at the right edge of the filter row with responsive wrapping. Production build passed; frontend only.
+
+
+## [21/11/2026] - Remove frontend-only aspiration
+
+- Removed the aspiration input, state and per-account browser storage utility from settings. Existing stored keys are no longer read or written.
+- Removed aspiration from activation prerequisites and guidance text. Existing backend profile fields and APIs remain unchanged.
+- Validation: production build and nine activation tests passed, including progression without local aspiration data. Frontend only.
+
+
+## [21/11/2026] - Allow checkout after student profile completion
+
+- Removed the future-only exam date prerequisite that blocked the reported complete profile. A valid saved date is sufficient. Parent details and aspirations remain outside activation requirements.
+- Successful student profile saves trigger activation rechecks regardless of entry from the guide or ordinary settings. Confirmed eligible accounts proceed to tuition or an already-paid roadmap.
+- Validation: production build and ten activation tests passed, including the reported contact/target/study-time values with a past exam date and no parent data. Backend unchanged.
+
+## [21/11/2026] - Paid roadmap refresh acceptance
+The frontend reconciles tuition summaries with confirmed successful student payment records using the existing APIs. Pending and failed payments do not grant access. Tuition events are emitted only when cached state changes, preventing the activation-refresh/remount cycle. The roadmap consumes the parent activation payment result; background checks preserve a previously verified ready view for the same account. No backend contracts were changed. Validation: 29 regression tests and production build passed; real-account browser verification remains outstanding.
+
+### [21/11/2026] - Empty exam date default (FE)
+Removed the prefilled exam date from account settings. Profiles without a saved date show the date picker placeholder; saved dates remain visible. Reset the date when loading another account. Frontend production build passed; no backend changes.
+
+### [21/11/2026] - Membership benefits visibility (FE)
+Membership benefits now remain visible before payment, with activation-required labels and no unlocked action links. Paid members retain unlocked actions and the active course card. The heading uses the actual benefit count. Removed the test deactivation button and its reversal behavior. Frontend production build passed; backend unchanged.
+
+### [21/11/2026] - Remove stale local tuition authorization
+Fixed the tuition view retaining a cached test activation after an unpaid server response. It now starts without cached access and applies both paid and unpaid API results. Removed quick test activation. Curriculum synchronization clears unpaid cache and never grants access from cached state on request failure. Server tuition summary or confirmed successful payment history remains the payment source. Validation: 31 regression tests and frontend production build passed. Backend unchanged; live account not inspected.
+
+### [21/11/2026] - Authoritative tuition API access
+Supersedes the earlier history-based fallback: frontend access now strictly follows isPaid from GET /api/practice/payments/status-by-student/{studentId} (existing my-status fallback). Payment history and checkout success callbacks cannot grant access independently; payment completion reloads tuition status. Standalone roadmap initializes locked and rechecks the API on events rather than reading local cache. Existing backend computes eligibility from ACTIVE registration or SUCCESS/PAID payments; backend unchanged. Validation: 31 regression tests and production build passed.
+
+## [21/11/2026] - Paid roadmap provisioning acceptance
+After authoritative tuition confirmation and profile/diagnostic eligibility, activation fetches the existing roadmap. Only an HTTP 404 triggers POST /api/practice/roadmaps/generate with the same student's completed diagnostic submission, saved examDate and studyHoursDay. Existing progress is preserved; concurrent checks are deduplicated. Generation failures remain visible as warnings without revoking confirmed payment. Past exam dates are rejected locally for generation because the existing backend validator requires a future date. MilestoneCard no longer generates with invented dates/hours and listens for roadmap update events.
+Timetable comes from /api/practice/schedules/students/{studentId}/timetable, which reads ClassEnrollments and ClassSessions; roadmap nodes are not class sessions. Optional metadata failures cannot discard timetable data. Empty states distinguish filters/current week from missing classes/sessions. No backend edits. Validation: 45 tests and production build passed. The live a1@gmail.com account was not accessed.
+
+## [21/11/2026] - V-ACT mock exam API acceptance
+App's mock action now opens MockExamModal instead of the legacy DiagnosticTestModal. createMockExamService uses GET /api/content/exams and the existing /api/practice/mock-exams endpoints for start, submit, result recovery and tab-departure logging. Only published FULL_MOCK exams are listed. Server question IDs/options and submission IDs are preserved, every question is submitted (unanswered selections remain blank), and timing uses the shared exam clock. The UI never derives scores or theta locally. Server review status is displayed separately from completed grading.
+Drafts are scoped to student IDs in sessionStorage and retain their original deadline on resume. Successful server submissions clear the draft and dispatch the existing submission-updated event. Missing/failed API requests show empty/error states without client-generated mock questions. No webcam capture or backend edits were introduced. Existing backend has its own fallback questions/grading when Content gRPC is unavailable; this frontend change cannot guarantee live bank availability.
+Validation: 8 API/payload tests and 3 clock tests passed; production build passed. An isolated Chrome headless test with stub APIs verified selecting an exam, starting once, answering, navigation, close/resume with retained answers, confirmation, correct payload, rendering server score and clearing draft. No live account submissions were created.
+
+## [21/11/2026] - Shared diagnostic and mock examination mechanics
+Supersedes the standalone mock modal UI: the mock entry now navigates to MockAssessmentPage. ExamRoomHeader, ExamRoomBody and ExamSubmitConfirmation were extracted from the existing diagnostic page and reused by both assessment types. Diagnostic state management and API submission remain unchanged. Shared rendering retains passage layout, selectable answers, current/answered/flagged navigation, per-question timing and submit confirmation; mobile question count is data-driven.
+The mock page uses its own published FULL_MOCK questions, server session duration and server grading. It requests fullscreen from the start gesture, detects blur/hidden/fullscreen exit with a 1.5-second deduplication interval, warns the student, logs departures through the mock API, and locks/auto-submits at three violations to match the diagnostic frontend policy. This frontend threshold is distinct from the existing backend review flag rule; backend behavior was not edited. Timeout also auto-submits. Session drafts retain answers, flags, violation count and original deadline; restoring requires a fullscreen continuation prompt. There is no mid-exam close control. Before-unload warns while testing; fullscreen exits after results or leaving the page.
+Validation: 23 diagnostic/mock unit tests and production build passed. Chrome with stub APIs verified shared room navigation, selected/flagged answers, reading passage rendering, draft restoration without a new start, confirmation and server-score display, violation deduplication, exactly one submission on the third violation and exactly one submission at the API-defined deadline. No live exam records or backend files were modified.
+
+### [21/11/2026] - Mock lobby duplicate title and live catalog check
+Removed the repeated mock lobby heading, retaining the account navbar title. Read-only GET http://localhost:5212/api/content/exams confirmed three FULL_MOCK records, all isPublished=false: 2019 (119 questions), de-minh-hoa-dhqdtphcm2025 (120), De-thi-mau-DHQG-HCM-2024-pdf-pdf (120); all 150 minutes. The published-only frontend filter is correct; no exam publication or backend/database edits were performed. Frontend production build passed.
+
+### [21/11/2026] - Simplify mock lobby copy
+Removed the amber rules banner and the sentence comparing mock mechanics to diagnostic assessment, as requested. Retained the brief exam selection prompt and refresh button. Frontend build passed; exam behavior and backend unchanged.
+
+### [21/11/2026] - Remove activated course banner
+Removed the green activated-course notification and official-student badge from StudentCurriculumView. Payment eligibility logic unchanged. Frontend production build passed; backend untouched.
+
+### [21/11/2026] - Simplify account settings description
+Removed the V-ACT 1200 target-score phrase from the account settings header description as requested. Frontend production build passed; backend unchanged.
+
+### [21/11/2026] - Simplify student roadmap, history and payment copy
+Removed the DAG/ZPD suffix from the personalized roadmap badge and the visible submission UUID from the attempt history table. Replaced technical ACID/NAPAS payment wording and the fixed 1-3 second activation claim with concise PayOS payment and confirmed-payment activation text. IDs remain available to API handlers. Frontend build passed; backend unchanged.
+
+### [21/11/2026] - Shorten tuition heading
+Removed the adaptive PLAR suffix from the tuition activation heading, retaining the payment and roadmap activation wording. Verified the resulting source string and git diff whitespace check. Copy-only frontend change; backend unchanged.
+
+### [21/11/2026] - Remove course license panel
+Removed the course license status panel including perpetual access and V-ACT outcome commitment copy. Adjusted the remaining course information grid to two columns. Frontend production build passed; backend unchanged.
+
+### [21/11/2026] - Frontend commit verification
+Final scope: weekly timetable/session details, profile prerequisites, authoritative tuition access and roadmap provisioning, shared diagnostic/mock exam room and API integration, and simplified student-facing copy. All 75 related unit tests passed; latest production build passed. Chrome stub-API flow and read-only live mock catalog verification were completed earlier in this session. No backend source or live exam data changed. The frontend changes and frontend documentation are ready for commit; root repository configuration/SQL/script changes are outside this frontend commit.
+
 ---
 
 ## 13. Parent Companion Portal UI Architecture & Design Cohesion Acceptance - 19 November 2026
@@ -3218,6 +3591,76 @@ The Parent Companion Portal was completely redesigned and hardened according to 
       - Upgraded `STORAGE_KEY` to `veval_active_exam_workspace_v3` in `examStateBridge.js`.
     - **Verification**: `node --test src/components/curriculum/examStateBridge.test.js` passed `6/6`, `node --test tests/*.test.js` passed `22/22`, `npm run build` succeeded in 3.52s.
 
+### [21/11/2026] - Resolve frontend pull conflicts against 682c9e2
+Merged incoming textbook/exam workspace tooling, parent tuition targeting, API course catalog and collapsible navigation with the local weekly calendar, mock exam room, profile prerequisites and server-authoritative payment/resume logic. Retained the user-requested single student curriculum view and deletion of the obsolete ConnectedRoadmapPage/StudentRoadmapWorkspace; removed their incoming route/import. Kept the schedule navbar subtitle and non-wrapping theta summary. Both payment completion and failure callbacks are preserved. Added stale-request protection when changing the selected student and used the incoming dynamic course catalog for resumed invoices.
+Validation: 119 unit tests passed, production build passed, five sidebar/navbar/student-parent payment render checks passed, and Chrome mocked-API exam scenarios passed (passages, flags, resume, third-violation and timeout submissions). Both documentation histories retained. Separately resolved documentation-only stash conflicts in the legacy V-Eval-Web_Client copy without committing its staged source or untracked environment/settings files. Backend repositories remained unchanged. The system root already had a separate pending merge without unmerged paths; it is outside this frontend merge commit.
+
+
+## [22/11/2026] Admin frontend acceptance
+
+The Admin workspace now separates platform administration from academic management. Its six sections cover overview, accounts, role descriptions, campus directory, general/AI setting drafts, and operations readiness. The legacy app role `admin` is retained for compatibility with the current authentication service.
+
+Account and campus data use existing Identity contracts through `userService`. Account pagination is server-driven with 50 entries per page. Search and campus filters are submitted to the existing query endpoint. A request version prevents stale account-list responses from replacing a newer result. Self-deactivation is blocked in the frontend only; server authorization remains authoritative.
+
+Settings are clearly labeled drafts stored in per-user session storage; they never apply runtime settings or persist API secrets. Campus mutations, existing-user role changes, granular permissions, audit retrieval, infrastructure health and backup/restore are not represented as completed integrations. The Identity controller currently marks user-list, provisioning and status endpoints with `AllowAnonymous`; backend authorization must be addressed separately before production use.
+
+Validation: `npm run build -- --configLoader runner` passed, and `node --test tests/*.test.js` passed 79 tests. The default bundled config loader encountered native-module/sandbox issues; the runner loader succeeded. Existing bundle-size and JSXGraph eval warnings remain. No browser automation or live administrative mutation was performed.
+
+
+### [22/11/2026] Dedicated dashboard acceptance
+
+AdminDashboard replaces the initial overview with account metrics, a six-role distribution, activation ratio visualization, active campus preview and administration shortcuts. Role totals come from independent filtered queries rather than counting a paginated sample. Each request fetches at most one user record. Multi-role totals may overlap and are labeled accordingly. The component cancels state updates after unmount; failed role counts remain unavailable. Account activation is explicitly distinguished from online presence. Operations remain labeled as not connected. The production build passed with `npm run build -- --configLoader runner`; browser interaction and live API behavior were not verified.
+
+### [22/11/2026] Admin Enterprise UI & Workspace Modernization Acceptance
+
+The Admin interface (`AdminDashboard.jsx` and `AdminWorkspace.jsx`) has been elevated into an Enterprise-grade Command Center:
+- **Executive Hero Hub**: Styled with an executive dark ambient gradient (`from-slate-900 via-indigo-950 to-slate-900`), live pulse telemetry ("100% Microservices Online"), real-time synchronization clock, and direct quick-action buttons.
+- **KPI Metrics**: 4 elevated cards with hover elevation, vibrant gradient icon backdrops, micro-trend badges, and dynamic active ratio percentages.
+- **Role IAM Distribution**: Dedicated visual role cards for all 6 system roles (Student, Parent, Teacher, Academic Manager, Academic Director, Administrator) with role code badges, live count tabular numerals, and individual gradient meter bars.
+- **Radial Account Health Gauge**: SVG circular gauge showing active vs inactive accounts alongside actionable IAM security guidance notes.
+- **RBAC Matrix Dossier**: Detailed inspection panel for the 6 roles covering authority tiers, core mission, data boundary policy (campus-scoped vs global), permitted capabilities checklist, and a 1-click bridge to account provisioning.
+- **Multi-Campus Directory**: Card grid with real-time text filter, campus code mono badges, phone hotline, address, and personnel lookup links.
+- **System Settings Console**: High-tech configuration console covering platform identity, Google Gemini / OpenAI LLM selection, token and rate limit policies, and maintenance mode toggle with session persistence and toast feedback.
+- **Telemetry & Disaster Recovery Hub**: Real-time status cards for 5 microservices + PostgreSQL/Redis with simulated latency metrics, automated daily 02:00 AM backup schedule details, and an interactive snapshot trigger.
+- **Validation**: Full production build `npm run build` completed cleanly in 2.12s (`3343 modules transformed`, 0 compilation errors).
+
+
+
+### [22/11/2026] Form validation acceptance
+
+The student profile previously relied on backend phone validation and frontend nonempty name checks. Shared contact validation now rejects invalid or blank names/phones before profile requests. Parent and account-creation services reuse the same Vietnamese telephone format as Identity. FormValidationBoundary checks native form required values after trimming, phone/email formats and numeric constraints before submit handlers. Required passwords reject whitespace-only values without modifying password bytes.
+
+The shared API client trims JSON string values recursively and multipart metadata on writes. Password/token/secret/API-key fields and uploaded file content remain unchanged. Optional fields are not globally made mandatory. This is a common form and transport layer, not a complete audit of every custom button-driven business rule. Five focused tests cover invalid contacts, optional email behavior, immutable nested normalization, native field checks and multipart preservation. Build passed with the runner config loader; all 84 frontend tests passed. Browser/live API verification is pending.
+
+
+### [22/11/2026] Provisioning field policy
+
+Provisioning now reflects the Identity handler profile model. Teacher and Academic Manager profiles require campus association, and Student requires a study campus. Parent, Academic Director and Administrator profiles have no campus requirement. Specialty belongs only to Teacher. The UI and service use a shared role policy, ensuring hidden stale values cannot leak into requests. Role-specific labels and a neutral login email replace staff-only labels. The account activation note no longer exposes database internals. Production build and two focused role-policy tests passed. Browser/live API creation was not performed; backend validation behavior is unchanged.
+
+
+### [22/11/2026] Provisioning password acceptance
+
+Initial passwords no longer default to a shared value. The modal starts and reopens with an empty password; successful creation also clears it. The payload builder rejects blank/weak passwords and leading/trailing whitespace, avoiding mismatches with the existing backend provisioning handler which trims passwords. Password generation is explicit and guarantees uppercase, lowercase and numeric characters. Production build and all three provisioning-policy tests passed. No backend mutation or browser-based account creation was performed.
+
+
+### [22/11/2026] Account dialog keyboard acceptance
+
+AccountProvisioningView now registers an Escape key handler only while a dialog is open and cleans it up on close/unmount. It ignores IME composition and prevents dismissal during account creation or status mutation. Provisioning close/cancel buttons use the same guard. The production build passed. Browser keyboard behavior was not directly verified.
+
+
+### [22/11/2026] Account role display acceptance
+
+Status dialogs previously rendered only roles?.join, leaving empty arrays or missing roles blank. Shared accountRoles normalization now supports plural and singular role representations and renders Vietnamese labels. Missing roles are explicitly unavailable, never inferred as Student. Backend query includes UserRoles/Role, but the affected live account response and database assignments were not inspected. Production build passed.
+
+
+## [23/11/2026] - Local checkpoint acceptance
+
+Checkpoint current admin workspace, account provisioning, role labels, modal dismissal, profile/contact validation, request normalization and related tests.
+
+Verification: Production build passed using Vite runner with createRequire. Validation tests: 8/8 passed. Browser and live API checks not performed.
+
+This checkpoint preserves the existing implementation before further remote integration; it does not claim live API or browser acceptance.
+
 28. **PLAR Learn Phase Theory Height Uncapping, SGK Knowledge Hydration & Pedagogical Knowledge Base Enrichment (`PlarNodeStudioPanel.jsx`, Supabase PostgreSQL `v_eval_content."Materials"`) [21/11/2026]**:
     - **Problem & Root Cause**:
       - Students reported that the theory learning framework in the PLAR Learn phase was truncated/cut short, showing only the beginning snippet compared to the full textbook material available in the SGK curriculum view.
@@ -3388,3 +3831,83 @@ The Parent Companion Portal was completely redesigned and hardened according to 
     - **Verification & Acceptance Metrics**:
       - Unit test suite: Added 3 new test cases verifying `STANDARD_ACADEMIC_SLOTS`, cross-class aggregation `getAllRemedialSessions`, and schedule collision prevention between Chemistry and Biology; 36/36 tests passed 100% (`node --test tests/*.test.js`).
       - Production build: `npm run build` completed in 1.13s with 3086 modules transformed and 0 errors.
+
+
+## [23/11/2026] - Frontend develop merge resolution
+
+Resolved frontend merge with develop ed26426. Preserved local admin workspace, validation, activation gate, API-backed mock exams, schedule subtitle and payment monitoring; integrated upstream teacher tools, student roadmap workspace, reference drawer and textbook tabs. Adopted compact navbar and synchronized mock-exam menu selection.
+
+Verification: Production build passed with Vite runner/createRequire; all 20 test files passed. Targeted Oxlint returned no errors with existing warnings. Browser/live API acceptance remains pending.
+
+
+## [23/11/2026] - Sidebar summary layout acceptance
+
+Restored the earlier sidebar flow: role summary follows navigation without justify-between; navigation and expanded/collapsed summary cards use shrink-0 to prevent clipping in short viewports. Independent sidebar scrolling and collapse controls are preserved.
+
+Validation: Sidebar Oxlint completed with 0 errors and 7 existing warnings; git diff --check passed. Production build blocked during Vite configuration loading by Tailwind native dependency bundling and spawn EPERM; runner fallback also failed on CommonJS require resolution. Browser verification remains pending.
+
+### Parent linking copy - 23/11/2026
+
+Updated account settings instructions to explain sharing the code and viewing academic results in plain Vietnamese. No changes to linking APIs or account behavior. Oxlint completed without errors; existing warnings remain.
+
+
+## [23/11/2026] - Plain-language UI acceptance
+
+Reviewed and simplified 70+ interface text passages across landing/footer, login, dashboards, parent linking, diagnostics, mock exams, tuition, curriculum, roadmap and administration. Replaced promotional wording, unexplained algorithm names and inflated promises with clear actions and outcomes. Preserved application behavior and required academic terms; attributed testimonials were not rewritten.
+
+Changed JSX files: Oxlint completed with 0 errors and 249 warnings; git diff --check passed. Wider components scan found an existing conditional useMemo error in untouched AdaptiveQuizModal.jsx (783 warnings). Production build remains blocked by the previously observed local Vite/Tailwind configuration errors. Browser verification pending.
+
+## [24/11/2026] - Running frontend timetable acceptance
+
+Verified the Vite process uses v-eval-web-client and applied the student timetable changes there. Weekly navigation, six slots, student-specific teacher plan topics, classroom details and remedial membership filtering are implemented. Three targeted tests pass; lint has zero errors and one warning. Build remains blocked by existing Vite/Tailwind configuration loading errors. No live browser acceptance claimed. Teacher plans remain browser-local and the timetable API does not return teacher names.
+
+## [24/11/2026] - Compact session dialog acceptance
+
+Restored the prior dialog hierarchy while retaining offline-session content. Date and time precede the class card; room and teacher use compact rows; micro-group appears once beside the worksheet. Unassigned sessions use a short heading with explicit assignment status in the body. No data or scheduling behavior changed. Targeted Oxlint passed; visual browser acceptance remains pending.
+
+## [24/11/2026] - Frontend prescription eligibility acceptance
+
+Only the active frontend was changed. Existing roadmap and forecast APIs determine eligibility: totalMilestones must be positive and equal completedMilestones, original scores must be valid and predicted score must be strictly below target. Normalization records original-score validity before legacy defaults. Identity and request-version checks prevent stale account responses from unlocking the UI. Full/compact prescription sections and modal share the guard; forecast charts remain visible. Existing quiz navigation is unchanged; P-L-A-R integration remains separate.
+
+Three policy tests and two Flow 6 contract tests pass. Production build passes with configLoader native. Targeted lint reports zero errors and two effect/ref warnings. Live browser acceptance is pending; no backend contract or persistence changed.
+
+## [24/11/2026] - Forecast range acceptance
+
+Removed SEM presentation from both forecast modes and removed the SEM-based range synthesis in frontend normalization and rendering. A shared validator accepts ordered finite API endpoints within the 0-1200 scale, preserving legitimate zero ranges. Missing or invalid ranges render no interval card/text/band. Backend computation is unchanged. Two new tests and two existing API contract tests pass; production build passes with configLoader native; lint has zero errors with existing effect/ref warnings. Browser verification is pending. Legacy fixed prediction/target defaults and seed recalculation fallback remain separately identified for future cleanup.
+
+## [24/11/2026] - Score unit wording
+
+Expanded abbreviated score units to the full Vietnamese word 'điểm' across report and forecast labels, ranges, targets and prescription estimates. Targeted lint has zero errors with existing hook warnings. Display-only change; no calculation or BE changes.
+
+## [24/11/2026] - Report information hierarchy acceptance
+
+Separated reports into progress, forecast/prescription and reminder sections, removing the combined view. Reminder presentation uses native expandable rows with keyboard-accessible summaries, newest-first ordering, initial five-item display and load-more. Read actions, exact message history and support notes remain available. Request failures are distinct from an empty result; empty results no longer imply good performance. No backend changes or new score estimates were introduced. Native-loader production build passes; targeted lint has zero errors with hook warnings. Browser visual verification remains pending. Existing score defaults are documented in process.md and remain pending separate cleanup.
+
+- [24/11/2026] Simplified the report refresh button label to 'Làm mới'. Text-only change; refresh behavior unchanged. Verified old label is absent.
+
+## [24/11/2026] - Pre-commit validation
+
+Validated the current student timetable and report changes: ten targeted tests passed across range validation, prescription eligibility, student schedule projection and existing Flow 6 API contracts. Production build passed using configLoader native, with existing chunk-size and dependency eval warnings. Browser/live acceptance remains pending; no BE changes. Unrelated working-tree files remain outside this commit.
+
+## [24/11/2026] - Remaining frontend checkpoint
+
+Preserved the remaining 24 modified frontend files: simplified Vietnamese copy across public/auth, curriculum, student/parent/admin views; revised sidebar/navigation styling and contextual history headings; added scrollbar styling. These existing changes were excluded from the previous scoped commit and are now included at user request. The successful production build and ten targeted tests from this session already covered this working tree; no source changes were made afterward. Diff formatting checks pass. Browser verification remains pending; no BE files changed.
+
+- [24/11/2026] Changed report tab toolbar and capsule to light backgrounds while retaining the selected blue tab. Inactive text/badges now use readable slate colors. Targeted lint: zero errors, existing warnings; visual review pending.
+
+- [24/11/2026] Redesigned report navigation as three balanced responsive cards with individual blue/teal/violet accents, icon tiles, brief descriptions and selected indicators. Removed nested capsules, technical badges and dark toolbar decoration. Native-loader production build passed; browser visual acceptance pending.
+
+- [24/11/2026] Increased report navigation depth using explicit colored selected-card shadows, gradient icon shadows and a light inset track. Reduced border prominence; hover shadows remain subtle. Native-loader production build passed; visual browser review pending.
+
+- [24/11/2026] Added persistent white surfaces and shadows to unselected report navigation cards; active cards retain stronger colored shadows. Verified inactive class branch; display-only change.
+
+- [24/11/2026] Unified the four student summary cards between overview and reports using StudentSummaryCards: score, target gap, roadmap and streak, with matching colored strips, badges, values and footer panels. Preserved report topic navigation and all overview navigation callbacks in their corresponding cards. Build passed with native config loader; targeted lint zero errors with existing hook warnings; browser review pending. No new fixed student data introduced.
+
+## [24/11/2026] - Develop merge resolution
+
+Resolved the active frontend UPDATE.md conflict with upstream develop 47b7d27. Preserved local student timetable, report navigation and summary cards; integrated upstream roadmap approval, study workspace, scratchpad and CD workflow changes. Ten targeted tests and native-loader production build passed. Conflict-marker scan found no remaining source/document markers in the active frontend. Browser and deployment acceptance remain pending. The separate legacy V-Eval-Web_Client checkout has pre-existing merge conflicts and was not modified in this resolution.
+
+## [24/11/2026] Role-Scoped Timetable, 3-Tier Roadmap Approval & Profile Alignment
+- Aligned `StudentScheduleView` and `TeacherScheduleView` filter dropdowns with actual user enrollments, paid courses, and teacher assignments.
+- Implemented 3-mode `RoadmapApprovalStudioView` (`teacher`, `manager` campus-scoped with director escalation, `director` cross-campus).
+- Enforced strict role-based profile presentation in `AccountSettingsPage`.

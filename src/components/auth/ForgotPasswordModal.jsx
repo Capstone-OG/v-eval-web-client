@@ -24,6 +24,7 @@ export default function ForgotPasswordModal(props) {
     setForgotStep = () => { },
     forgotEmail = '',
     setForgotEmail = () => { },
+    onEmailChange = null,
     otpCode = '',
     setOtpCode = () => { },
     newPassword = '',
@@ -348,7 +349,7 @@ export default function ForgotPasswordModal(props) {
           </div>
         ) : null}
 
-        <form onSubmit={handleForgotSubmit} className="space-y-5">
+        <form onSubmit={handleForgotSubmit} className="space-y-5" noValidate>
 
           {/* STEP 1: EMAIL INPUT */}
           {forgotStep === 1 ? (
@@ -363,9 +364,19 @@ export default function ForgotPasswordModal(props) {
                 <input
                   type="email"
                   value={forgotEmail}
-                  onChange={(e) => setForgotEmail(e.target.value)}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setForgotEmail(value);
+                    onEmailChange?.(value);
+                  }}
                   placeholder="ví dụ: hocsinh.dgnl@gmail.com"
-                  className="w-full pl-10 pr-4 py-3 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 font-semibold text-slate-800 transition-all placeholder:text-slate-400"
+                  autoComplete="email"
+                  maxLength={150}
+                  className={`w-full pl-10 pr-4 py-3 text-xs sm:text-sm bg-slate-50 border rounded-2xl focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 font-semibold text-slate-800 transition-all placeholder:text-slate-400 ${
+                    modalError && forgotStep === 1
+                      ? 'border-rose-400 bg-rose-50/20 ring-2 ring-rose-100'
+                      : 'border-slate-200'
+                  }`}
                   autoFocus
                   required
                 />
@@ -542,7 +553,7 @@ export default function ForgotPasswordModal(props) {
           ) : (
             <button
               type="submit"
-              disabled={isSubmitting || (forgotStep === 2 && !isAllOtpFilled)}
+              disabled={isSubmitting || (forgotStep === 1 && !forgotEmail.trim()) || (forgotStep === 2 && !isAllOtpFilled)}
               className="w-full py-3.5 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-700 hover:to-indigo-700 text-white font-black text-xs uppercase tracking-wider rounded-2xl shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/35 active:scale-[0.99] transition-all flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
             >
               {isSubmitting ? (

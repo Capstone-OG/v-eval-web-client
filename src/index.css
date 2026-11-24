@@ -72,6 +72,15 @@ textarea,
   background: #94A3B8;
 }
 
+/* Hide scrollbar while maintaining scrollability */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
 /* KaTeX Theme Tuning (Full High-Contrast Rendering) */
 .katex {
   color: inherit !important;
@@ -208,3 +217,26 @@ textarea,
   }
 }
 
+
+/* Smooth horizontal marquee on hover for long curriculum lesson titles */
+.lesson-marquee-wrap {
+  overflow: hidden;
+  white-space: nowrap;
+  position: relative;
+}
+.lesson-marquee-text {
+  display: inline-block;
+  padding-right: 24px;
+  transition: transform 0.3s ease;
+}
+.group\/les:hover .lesson-marquee-text {
+  animation: vevalMarquee 7s linear infinite;
+}
+@keyframes vevalMarquee {
+  0%, 12% {
+    transform: translateX(0%);
+  }
+  85%, 100% {
+    transform: translateX(-55%);
+  }
+}

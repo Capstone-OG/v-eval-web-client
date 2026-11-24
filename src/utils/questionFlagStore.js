@@ -1,3 +1,5 @@
+import apiClient from '../services/apiClient';
+
 const STORAGE_KEY = 'veval_flagged_questions_v1';
 
 export const FLAG_REASONS = [
@@ -84,12 +86,26 @@ export function addFlaggedQuestion({
     resolvedAt: null
   };
   safeWrite([entry, ...list]);
+  // Khóa câu hỏi ngay trên Content Service DB để không xuất hiện lại ở bất kỳ màn hình nào cho đến khi được duyệt
+  if (entry.questionId && /^[0-9a-f-]{36}$/i.test(entry.questionId)) {
+    apiClient
+      .post(`/api/content/questions/${encodeURIComponent(entry.questionId)}/flag`, {
+        reasonCode: entry.reasonCode,
+        note: entry.note || entry.reasonLabel
+      })
+      .catch(() => { /* keep local flag if offline */ });
+  }
   return entry;
 }
 
-export function resolveFlaggedQuestion(flagId, { status, resolutionNote = '', resolvedBy = 'Giảng viên', newSkillName = '' }) {
-  const list = safeRead().map((item) =>
-    item.flagId === flagId
+export function resolveFlaggedQuestion(flagId, { status, resolutionNote = '', resolvedBy = 'Giảng viên', newSkillName = '', questionId = '' }) {
+  const current = safeRead();
+  const targetItem = current.find((it) => it.flagId === flagId);
+  const resolvedQId = String(questionId || targetItem?.questionId || '');
+  const list = current.map((item) => {
+    const isSameFlag = item.flagId === flagId;
+    const isSamePendingQuestion = resolvedQId && item.status === 'PENDING' && String(item.questionId || '') === resolvedQId;
+    return isSameFlag || isSamePendingQuestion
       ? {
           ...item,
           status,
@@ -97,8 +113,14 @@ export function resolveFlaggedQuestion(flagId, { status, resolutionNote = '', re
           resolvedBy,
           resolvedAt: new Date().toISOString()
         }
-      : item
-  );
+      : item;
+  });
   safeWrite(list);
+  // Mở khóa lại câu hỏi trên Content Service DB nếu Giảng viên/Quản trị xác nhận giữ lại hoặc chuyển chuyên đề
+  if (resolvedQId && (status === 'KEPT' || status === 'REASSIGNED') && /^[0-9a-f-]{36}$/i.test(resolvedQId)) {
+    apiClient
+      .post(`/api/content/questions/${encodeURIComponent(resolvedQId)}/unflag`, {})
+      .catch(() => { /* ignore */ });
+  }
   return list;
 }

@@ -20,10 +20,50 @@ import {
   Sparkles,
   Target,
   UserCheck,
-  X
+  X,
+  History,
+  LayoutGrid,
+  ClipboardCheck,
+  Network,
+  BarChart3,
+  Zap,
+  FileCheck2,
+  CreditCard,
+  BookOpen,
+  Building2,
+  ShieldCheck,
+  Activity,
+  Users
 } from 'lucide-react';
 import { accountRoleLabel } from '../../utils/accountPresentation';
 import practiceService from '../../services/practiceService';
+
+const TAB_ICON_MAP = {
+  dashboard: { icon: LayoutGrid, color: 'from-slate-700 to-slate-900', label: 'Tổng quan' },
+  diagnostic: { icon: ClipboardCheck, color: 'from-orange-400 to-rose-500', label: 'Khảo thí & Chẩn đoán' },
+  history: { icon: History, color: 'from-amber-400 to-orange-500', label: 'Lịch sử làm bài' },
+  roadmap: { icon: Network, color: 'from-blue-500 to-indigo-600', label: 'Dàn kiến thức & Lộ trình' },
+  schedule: { icon: CalendarDays, color: 'from-blue-600 via-indigo-600 to-cyan-500', label: 'Thời khóa biểu' },
+  analytics: { icon: BarChart3, color: 'from-emerald-400 to-teal-600', label: 'Báo cáo học tập' },
+  'adaptive-practice': { icon: Zap, color: 'from-yellow-400 to-amber-500', label: 'Luyện tập thích ứng' },
+  mock: { icon: FileCheck2, color: 'from-cyan-400 to-blue-500', label: 'Thi thử V-ACT' },
+  tuition: { icon: CreditCard, color: 'from-indigo-400 to-blue-600', label: 'Học phí & Gói học' },
+  settings: { icon: Settings, color: 'from-slate-600 to-slate-800', label: 'Cài đặt tài khoản' },
+  user_roles: { icon: ShieldCheck, color: 'from-purple-600 to-indigo-700', label: 'Vai trò & Phân quyền' },
+  campuses: { icon: Building2, color: 'from-amber-500 to-orange-600', label: 'Cơ sở đào tạo' },
+  system_settings: { icon: Sparkles, color: 'from-indigo-500 to-violet-600', label: 'Cấu hình hệ thống' },
+  operations: { icon: Activity, color: 'from-rose-500 to-red-600', label: 'Giám sát & Ops' },
+  provision: { icon: Users, color: 'from-emerald-500 to-teal-600', label: 'Cấp tài khoản' },
+};
+
+const ROLE_BREADCRUMB_MAP = {
+  student: 'Học viên ĐGNL',
+  teacher: 'Giảng viên Cơ sở',
+  parent: 'Phụ huynh Học sinh',
+  admin: 'Quản trị viên Hệ thống',
+  manager: 'Quản lý Học vụ',
+  director: 'Giám đốc Học thuật',
+};
 
 function formatExamDate(dateInput) {
   if (!dateInput) return '';
@@ -131,7 +171,9 @@ function getUpcomingExam(terms = [], studentDash = null, user = null) {
 
 export default function AccountNavbar({
   role = 'student',
+  activeTab = 'dashboard',
   pageTitle = 'Tổng quan',
+  pageSubtitle,
   currentUser,
   portalMetrics = {},
   onLogout,
@@ -142,6 +184,9 @@ export default function AccountNavbar({
   onToggleSidebar,
   onSelectChildId
 }) {
+  const tabMeta = TAB_ICON_MAP[activeTab] || { icon: LayoutGrid, color: 'from-blue-600 to-indigo-600' };
+  const TabIcon = tabMeta.icon;
+
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [alertsOpen, setAlertsOpen] = useState(false);
   const [examModalOpen, setExamModalOpen] = useState(false);
@@ -339,20 +384,36 @@ export default function AccountNavbar({
     <>
       <header className="sticky top-0 z-30 border-b border-slate-200/70 bg-white/95 backdrop-blur-md transition-all">
         <div className="flex h-14 items-center justify-between gap-3 px-4 sm:h-16 sm:gap-4 sm:px-6 lg:px-8">
-          {/* 1. LEFT: Minimal Page Title */}
+          {/* 1. LEFT: Executive Breadcrumb & Styled Page Title */}
           <div className="flex items-center gap-3 shrink-0 min-w-0">
             <button
               type="button"
               onClick={onOpenNavigation}
               aria-label="Mở menu điều hướng"
-              className="rounded-xl border border-slate-200 bg-white p-2 text-slate-600 hover:bg-slate-100 lg:hidden"
+              className="rounded-xl border border-slate-200 bg-white p-2 text-slate-600 hover:bg-slate-100 lg:hidden cursor-pointer"
             >
               <Menu className="h-5 w-5" />
             </button>
 
-            <h1 className="text-base font-bold tracking-tight text-slate-900 sm:text-lg whitespace-nowrap truncate">
-              {pageTitle}
-            </h1>
+            {/* Plain minimalist Page Icon (no colored background) */}
+            <div className="hidden sm:flex h-8 w-8 shrink-0 items-center justify-center text-slate-600">
+              <TabIcon className="h-5 w-5" />
+            </div>
+
+            <div className="min-w-0 flex flex-col justify-center">
+              {/* Breadcrumb line */}
+              <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-400 leading-none mb-1">
+                <span className="hover:text-slate-600 transition-colors">V-Eval</span>
+                <ChevronRight className="h-2.5 w-2.5 text-slate-300" />
+                <span className="text-slate-500 font-medium">{ROLE_BREADCRUMB_MAP[role] || 'Cổng thông tin'}</span>
+              </div>
+
+              {/* Main Title */}
+              <h1 className="text-sm sm:text-base font-black tracking-tight text-slate-900 leading-tight truncate">
+                {pageTitle}
+              </h1>
+              {pageSubtitle && <p className="mt-0.5 text-[11px] text-slate-500">{pageSubtitle}</p>}
+            </div>
           </div>
 
           {/* 2. RIGHT: Streamlined Controls */}

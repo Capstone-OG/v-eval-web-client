@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { Box, Button, Chip, Paper, Stack, Typography } from '@mui/material';
 import confetti from 'canvas-confetti';
 import {
   CalendarClock,
@@ -106,6 +107,8 @@ export default function MistakeNotebookSM2View({
 
   // Active SM-2 Review Runner State
   const [isReviewMode, setIsReviewMode] = useState(false);
+  const [reviewQueue, setReviewQueue] = useState([]);
+  const [reviewSkillLabel, setReviewSkillLabel] = useState('');
   const [reviewIdx, setReviewIdx] = useState(0);
   const [selectedOption, setSelectedOption] = useState(null);
   const [submittingReview, setSubmittingReview] = useState(false);
@@ -227,7 +230,43 @@ export default function MistakeNotebookSM2View({
   }, [notebookData, roadmapNodeBySkill, questionDetailsById]);
 
   const dueQuestions = dailyReviewData?.questions || [];
-  const activeReviewQ = dueQuestions[reviewIdx] || null;
+  const activeReviewList = reviewQueue.length > 0 ? reviewQueue : dueQuestions;
+  const activeReviewQ = activeReviewList[reviewIdx] || null;
+
+  const skillReviewGroups = useMemo(() => {
+    const map = new Map();
+    enrichedItems.forEach((item) => {
+      const key = item.skillId || item._skillName;
+      if (!map.has(key)) {
+        map.set(key, {
+          skillId: item.skillId,
+          skillName: item._skillName,
+          subjectName: item._subjectName,
+          totalCount: 0,
+          unmasteredCount: 0,
+          dueItems: [],
+        });
+      }
+      const g = map.get(key);
+      g.totalCount += 1;
+      if (!item.isMastered) g.unmasteredCount += 1;
+    });
+    dueQuestions.forEach((dq) => {
+      const key = dq.skillId || dq.skillName;
+      if (!map.has(key)) {
+        map.set(key, {
+          skillId: dq.skillId,
+          skillName: dq.skillName || 'Dạng bài trọng tâm',
+          subjectName: 'Chuyên đề ĐGNL',
+          totalCount: 0,
+          unmasteredCount: 0,
+          dueItems: [],
+        });
+      }
+      map.get(key).dueItems.push(dq);
+    });
+    return Array.from(map.values()).sort((a, b) => b.dueItems.length - a.dueItems.length || b.unmasteredCount - a.unmasteredCount);
+  }, [enrichedItems, dueQuestions]);
 
   const openIndex = enrichedItems.findIndex((i) => i.id === openMistakeId);
   const activeBookItem = openIndex >= 0 ? enrichedItems[openIndex] : null;
@@ -290,11 +329,20 @@ export default function MistakeNotebookSM2View({
     }
   };
 
-  const handleStartReviewSession = () => {
-    if (dueQuestions.length === 0) {
-      toast.info('Hôm nay chưa có câu hỏi nào đến lịch ôn lại!');
+  const handleStartReviewSession = (specificSkillGroup = null) => {
+    const targetList = specificSkillGroup
+      ? specificSkillGroup.dueItems
+      : dueQuestions;
+    if (!targetList || targetList.length === 0) {
+      toast.info(
+        specificSkillGroup
+          ? `Dạng "${specificSkillGroup.skillName}" hiện chưa có câu nào đến hạn ôn tập hôm nay!`
+          : 'Hôm nay chưa có câu hỏi nào đến lịch ôn lại!'
+      );
       return;
     }
+    setReviewQueue(targetList);
+    setReviewSkillLabel(specificSkillGroup ? specificSkillGroup.skillName : '');
     setReviewIdx(0);
     setSelectedOption(null);
     setReviewFeedback(null);
@@ -721,11 +769,11 @@ export default function MistakeNotebookSM2View({
           </span>
           <button
             type="button"
-            onClick={handleStartReviewSession}
+            onClick={() => handleStartReviewSession(null)}
             className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black inline-flex items-center gap-1.5 shadow-xs cursor-pointer"
           >
             <Play className="w-3.5 h-3.5 fill-white" />
-            <span>Ôn tập đến hạn hôm nay ({dueQuestions.length})</span>
+            <span>Ôn tập tất cả đến hạn ({dueQuestions.length})</span>
           </button>
           <button
             type="button"
@@ -737,6 +785,46 @@ export default function MistakeNotebookSM2View({
           </button>
         </div>
       </div>
+
+      {/* Ôn tập riêng theo từng dạng bài (MUI) */}
+      {!loading && skillReviewGroups.length > 0 && (
+        <Paper variant="outlined" sx={{ p: 2, borderRadius: 3.5, borderColor: 'divider' }}>
+          <Typography variant="caption" sx={{ fontWeight: 800, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: 0.4, display: 'block', mb: 1.25 }}>
+            Ôn tập riêng theo từng dạng bài ({skillReviewGroups.length} dạng)
+          </Typography>
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' }, gap: 1.25 }}>
+            {skillReviewGroups.map((grp) => (
+              <Paper
+                key={grp.skillId || grp.skillName}
+                variant="outlined"
+                sx={{ p: 1.5, borderRadius: 2.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5 }}
+              >
+                <Box sx={{ minWidth: 0 }}>
+                  <Typography variant="body2" sx={{ fontWeight: 700, color: 'text.primary' }} noWrap title={grp.skillName}>
+                    {grp.skillName}
+                  </Typography>
+                  <Stack direction="row" spacing={0.75} alignItems="center" sx={{ mt: 0.5 }}>
+                    <Chip size="small" label={`${grp.unmasteredCount} câu cần ôn`} color={grp.unmasteredCount > 0 ? 'warning' : 'success'} variant="outlined" sx={{ height: 20, fontSize: '0.68rem' }} />
+                    {grp.dueItems.length > 0 && (
+                      <Chip size="small" label={`${grp.dueItems.length} đến hạn hôm nay`} color="primary" sx={{ height: 20, fontSize: '0.68rem' }} />
+                    )}
+                  </Stack>
+                </Box>
+                <Button
+                  size="small"
+                  variant={grp.dueItems.length > 0 ? 'contained' : 'outlined'}
+                  color="primary"
+                  disabled={grp.dueItems.length === 0}
+                  onClick={() => handleStartReviewSession(grp)}
+                  sx={{ flexShrink: 0, fontSize: '0.74rem' }}
+                >
+                  Ôn tập dạng này
+                </Button>
+              </Paper>
+            ))}
+          </Box>
+        </Paper>
+      )}
 
       {/* Filter Bar */}
       <div className="flex flex-wrap items-center justify-between gap-2.5">
@@ -870,9 +958,9 @@ export default function MistakeNotebookSM2View({
             <div className="px-6 py-4 border-b border-slate-100 bg-slate-50 flex items-center justify-between gap-3">
               <div>
                 <h3 className="text-sm sm:text-base font-black text-slate-900">
-                  Ôn Tập Biến Thể SM-2 • Câu {reviewIdx + 1} / {dueQuestions.length}
+                  Ôn Tập Lỗi Sai • Câu {reviewIdx + 1} / {activeReviewList.length}
                 </h3>
-                <p className="text-xs text-slate-500">{activeReviewQ.skillName}</p>
+                <p className="text-xs text-slate-500">{reviewSkillLabel || activeReviewQ.skillName}</p>
               </div>
               <button
                 type="button"

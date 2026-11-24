@@ -168,4 +168,3 @@ test('normalizeGeneratedExerciseToDraft and convertDraftToExamQuestion keep Bloo
   assert.equal(examQ.difficultyLevel, 5);
   assert.equal(examQ.curriculumNode?.matchSource, 'manual');
 });
-

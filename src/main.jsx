@@ -3,7 +3,10 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import 'katex/dist/katex.min.css'
 import App from './App.jsx'
+import { ThemeProvider } from '@mui/material/styles'
+import vevalMuiTheme from './theme/muiTheme.js'
 import { ToastProvider } from './context/ToastContext.jsx'
+import FormValidationBoundary from './components/common/FormValidationBoundary.jsx'
 
 class RootErrorBoundary extends Component {
   constructor(props) {
@@ -60,9 +63,11 @@ class RootErrorBoundary extends Component {
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <RootErrorBoundary>
-      <ToastProvider>
-        <App />
-      </ToastProvider>
+      <ThemeProvider theme={vevalMuiTheme}>
+        <ToastProvider>
+          <FormValidationBoundary><App /></FormValidationBoundary>
+        </ToastProvider>
+      </ThemeProvider>
     </RootErrorBoundary>
   </StrictMode>,
 )

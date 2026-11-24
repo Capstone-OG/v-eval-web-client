@@ -70,19 +70,6 @@ export const mockMilestone = {
   nextMilestoneTitle: "Kỹ thuật giải nhanh Đọc hiểu & Phân tích số liệu biểu đồ"
 };
 
-export const mockLiveSession = {
-  id: "live-2001",
-  title: "Chữa đề thi mẫu: Kỹ thuật xử lý bẫy Logic & Bảng ma trận",
-  time: "TRỰC TIẾP TỐI NAY • 20:00",
-  duration: "60p",
-  teacherName: "Thầy Phạm Duy",
-  teacherTitle: "Chuyên gia khảo thí Tư duy Logic ĐGNL",
-  teacherAvatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=250",
-  registeredCount: 142,
-  description: "Giải đáp trực tiếp phương pháp loại trừ phương án nhiễu trong đề ĐGNL ĐHQG-HCM.",
-  link: "#"
-};
-
 export const mockWeakSkills = [
   {
     id: "SKILL-LOGIC-04",

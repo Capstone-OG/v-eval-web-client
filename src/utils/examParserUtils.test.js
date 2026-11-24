@@ -185,4 +185,3 @@ test('splitExamContentBlocks parses HTML rowspan/colspan tables and preserves [V
   assert.equal(htmlTableBlock.table.rows[0].cells[1].colSpan, 2);
   assert.equal(htmlTableBlock.table.rows[2].cells[2].content, '150');
 });
-

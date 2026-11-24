@@ -747,7 +747,10 @@ export default function AiTutorModerationView({ currentUser, onBackToDashboard, 
       </div>
 
       {workspaceSection === 'flagged_questions' ? (
-        <FlaggedQuestionsReviewPanel currentUser={currentUser} />
+        <FlaggedQuestionsReviewPanel
+          currentUser={currentUser}
+          onPendingCountChange={setPendingQuestionFlags}
+        />
       ) : (
       <>
       {/* 2. MetricsGrid: 4 High-End KPI Cards (Exact Student MetricsGrid Styling) */}

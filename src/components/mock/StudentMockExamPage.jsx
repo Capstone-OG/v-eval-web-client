@@ -22,6 +22,7 @@ import {
   Lock
 } from 'lucide-react';
 import MathText from '../common/MathText';
+import AttemptAnswerReviewList from '../common/AttemptAnswerReviewList';
 import FlagQuestionModal from '../common/FlagQuestionModal';
 import { addFlaggedQuestion, getFlaggedQuestionIdSet } from '../../utils/questionFlagStore';
 import { contentService } from '../../services/contentService';
@@ -452,9 +453,13 @@ export default function StudentMockExamPage({ onOpenAiTutorWithContext, onNaviga
         delete next[q.id];
         return next;
       });
-      setFlagNotice(`Đã gửi báo lỗi Câu ${q.number} cho Giảng viên / Ban quản lý và đổi sang câu hỏi mới!`);
+      const msg = `Đã gửi báo cáo lỗi Câu ${q.number} thành công và đổi sang câu hỏi mới!`;
+      setFlagNotice(msg);
+      if (window.toast?.success) window.toast.success(msg, 'Báo cáo lỗi thành công');
     } else {
-      setFlagNotice(`Đã gửi báo lỗi Câu ${q.number} tới Giảng viên / Ban quản lý để xét duyệt.`);
+      const msg = `Đã gửi báo cáo lỗi Câu ${q.number} thành công tới Giảng viên / Ban quản lý.`;
+      setFlagNotice(msg);
+      if (window.toast?.success) window.toast.success(msg, 'Báo cáo lỗi thành công');
     }
     setFlagBusy(false);
     setFlagModalOpen(false);
@@ -557,7 +562,7 @@ export default function StudentMockExamPage({ onOpenAiTutorWithContext, onNaviga
             <div>
               <h1 className="text-xl sm:text-2xl font-black text-slate-900">Phòng Thi Thử ĐGNL V-ACT</h1>
               <p className="text-xs sm:text-sm text-slate-600 mt-0.5">
-                Mô phỏng áp lực thời gian thực, quy đổi thang điểm 1200 và chữa chi tiết từng câu sau khi nộp bài.
+                Luyện làm bài có bấm giờ, quy đổi thang điểm 1200 và chữa chi tiết từng câu sau khi nộp bài.
               </p>
             </div>
           </div>
@@ -999,114 +1004,28 @@ export default function StudentMockExamPage({ onOpenAiTutorWithContext, onNaviga
         )}
       </div>
 
-      {/* Review Filter Bar */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
+      {/* Review Filter Bar & 7-Question Chunked Answer Review (MUI) */}
+      <div className="space-y-4">
         <h2 className="text-sm font-black text-slate-800 flex items-center gap-2">
           <BookOpen className="w-4 h-4 text-blue-600" />
-          Chữa Đề & Lời Giải Chi Tiết ({filteredReviewList.length} câu)
+          Chữa Đề &amp; Lời Giải Chi Tiết ({questions.length} câu — chia cụm 7 câu dễ tra cứu)
         </h2>
-        <div className="flex items-center gap-1.5 bg-white p-1 rounded-xl border border-slate-200 text-xs font-bold">
-          {[
-            { id: 'ALL', label: `Tất cả (${questions.length})` },
-            { id: 'WRONG', label: `Câu sai (${questions.filter((q) => answers[q.id] && answers[q.id] !== q.correct).length})` },
-            { id: 'CORRECT', label: `Câu đúng (${correctCount})` },
-            { id: 'UNANSWERED', label: `Bỏ trống (${questions.length - answeredCount})` }
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setReviewFilter(tab.id)}
-              className={`px-3 py-1.5 rounded-lg cursor-pointer transition-colors ${
-                reviewFilter === tab.id ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Question Review Cards */}
-      <div className="space-y-4">
-        {filteredReviewList.map((q) => {
-          const chosen = answers[q.id];
-          const isCorrect = chosen === q.correct;
-          return (
-            <div key={q.id} className="p-5 rounded-3xl bg-white border border-slate-200 shadow-2xs space-y-3">
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <div className="flex items-center gap-2">
-                  <span className={`px-2.5 py-1 rounded-lg text-xs font-black text-white ${isCorrect ? 'bg-emerald-600' : 'bg-rose-600'}`}>
-                    Câu {q.number}
-                  </span>
-                  <span className="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 text-xs font-bold">
-                    {q.subjectLabel}
-                  </span>
-                  <span className="text-xs font-bold text-slate-500">
-                    {chosen ? `Bạn chọn: ${chosen}` : 'Chưa trả lời'} • Đáp án đúng: <strong className="text-emerald-700">{q.correct}</strong>
-                  </span>
-                </div>
-                {onOpenAiTutorWithContext && (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      onOpenAiTutorWithContext({
-                        questionContent: q.content,
-                        skillName: q.skillName,
-                        studentChoice: chosen || '',
-                        correctChoice: q.correct,
-                        explanation: q.explanation
-                      })
-                    }
-                    className="px-3 py-1.5 rounded-xl border border-violet-200 bg-violet-50 hover:bg-violet-100 text-violet-800 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
-                  >
-                    <Bot className="w-3.5 h-3.5" />
-                    <span>Hỏi Gia sư AI</span>
-                  </button>
-                )}
-              </div>
-
-              <div className="text-sm font-medium text-slate-900 leading-relaxed">
-                <MathText text={q.content} />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {q.options.map((opt, idx) => {
-                  const letter = ['A', 'B', 'C', 'D'][idx];
-                  const isRight = letter === q.correct;
-                  const isUserPick = letter === chosen;
-                  return (
-                    <div
-                      key={idx}
-                      className={`p-2.5 rounded-xl border text-xs flex items-start gap-2 ${
-                        isRight
-                          ? 'bg-emerald-50 border-emerald-300 text-emerald-950 font-bold'
-                          : isUserPick && !isRight
-                            ? 'bg-rose-50 border-rose-300 text-rose-950'
-                            : 'bg-slate-50/50 border-slate-200 text-slate-700'
-                      }`}
-                    >
-                      <span className={`w-5 h-5 rounded flex items-center justify-center text-[10.5px] font-black shrink-0 ${
-                        isRight ? 'bg-emerald-600 text-white' : isUserPick ? 'bg-rose-600 text-white' : 'bg-slate-200 text-slate-700'
-                      }`}>
-                        {letter}
-                      </span>
-                      <div className="flex-1 min-w-0 overflow-x-auto break-words"><MathText text={opt} /></div>
-                      {isRight && <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />}
-                      {isUserPick && !isRight && <XCircle className="w-4 h-4 text-rose-600 shrink-0" />}
-                    </div>
-                  );
-                })}
-              </div>
-
-              <div className="p-3.5 rounded-2xl bg-amber-50/70 border border-amber-200 text-xs text-slate-800 leading-relaxed">
-                <div className="text-[10.5px] font-black uppercase tracking-wider text-amber-800 mb-1">
-                  Lời giải chi tiết:
-                </div>
-                <MathText text={q.explanation} />
-              </div>
-            </div>
-          );
-        })}
+        <AttemptAnswerReviewList
+          questions={questions.map((q) => ({
+            id: q.id,
+            question_number: q.number,
+            content: q.content,
+            skillName: q.skillName || q.subjectLabel,
+            options: q.options,
+            studentChoice: answers[q.id] || '',
+            correctChoice: q.correct,
+            isCorrect: answers[q.id] === q.correct,
+            explanation: q.explanation,
+          }))}
+          chunkSize={7}
+          onAskAiTutor={onOpenAiTutorWithContext}
+          allowAiTutor={Boolean(onOpenAiTutorWithContext)}
+        />
       </div>
     </div>
   );
