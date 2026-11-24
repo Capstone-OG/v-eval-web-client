@@ -1686,3 +1686,5 @@ Reminder messages in StudentEarlyWarningsCard come from getMyAlerts; repeated da
 | Item | Status | Verification |
 | --- | --- | --- |
 | Upstream develop 47b7d27 | Integrated | UPDATE.md combined under current date; local UI retained; ten tests and build pass. |
+
+| [24/11/2026] 3-Tier Roadmap Approval UI, Timetable Scoping & Role Profile Cleanup | `RoadmapApprovalStudioView`, `StudentScheduleView`, `TeacherScheduleView`, `ConnectedRoadmapPage`, `AccountSettingsPage` | Done (100%) |

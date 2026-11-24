@@ -26,8 +26,12 @@ const STATUS_META = {
     label: 'Bản nháp • Chờ GV duyệt',
     cls: 'bg-amber-50 text-amber-800 border-amber-200'
   },
+  PENDING_MANAGER_APPROVAL: {
+    label: 'Chờ Quản lý cơ sở duyệt',
+    cls: 'bg-sky-50 text-sky-800 border-sky-200'
+  },
   PENDING_DIRECTOR_APPROVAL: {
-    label: 'Chờ Giám đốc phê duyệt',
+    label: 'Ngoại lệ • Chờ Giám đốc duyệt',
     cls: 'bg-indigo-50 text-indigo-800 border-indigo-200'
   },
   ACTIVE: {
@@ -38,10 +42,12 @@ const STATUS_META = {
 
 const formatDate = (val) => (val ? new Date(val).toLocaleString('vi-VN') : '—');
 
-export default function RoadmapApprovalStudioView({ mode = 'teacher' }) {
+export default function RoadmapApprovalStudioView({ mode = 'teacher', campusId = null }) {
   const isDirector = mode === 'director';
+  const isManager = mode === 'manager';
+  const isApprover = isDirector || isManager;
   const [statusTab, setStatusTab] = useState(
-    isDirector ? 'PENDING_DIRECTOR_APPROVAL' : 'DRAFT_PENDING_TEACHER'
+    isDirector ? 'PENDING_DIRECTOR_APPROVAL' : isManager ? 'PENDING_MANAGER_APPROVAL' : 'DRAFT_PENDING_TEACHER'
   );
   const [queue, setQueue] = useState([]);
   const [queueLoading, setQueueLoading] = useState(true);
@@ -74,7 +80,9 @@ export default function RoadmapApprovalStudioView({ mode = 'teacher' }) {
     setQueueLoading(true);
     setQueueError('');
     try {
-      const data = await practiceService.getRoadmapReviewQueue('ALL');
+      const data = await practiceService.getRoadmapReviewQueue('ALL', {
+        campusId: isManager ? campusId : null
+      });
       const list = Array.isArray(data) ? data : [];
       setQueue(list);
     } catch (err) {
@@ -82,14 +90,14 @@ export default function RoadmapApprovalStudioView({ mode = 'teacher' }) {
     } finally {
       setQueueLoading(false);
     }
-  }, []);
+  }, [isManager, campusId]);
 
   useEffect(() => {
     loadQueue();
   }, [loadQueue]);
 
   useEffect(() => {
-    if (!isDirector) {
+    if (!isApprover) {
       contentService.getCurriculum().then((res) => {
         const domains = Array.isArray(res) ? res : (res?.domains || res?.data || []);
         const flat = [];
@@ -149,14 +157,16 @@ export default function RoadmapApprovalStudioView({ mode = 'teacher' }) {
 
   const counts = useMemo(() => {
     let draft = 0;
+    let pendingManager = 0;
     let pendingDirector = 0;
     let active = 0;
     queue.forEach((item) => {
       if (item.status === 'DRAFT_PENDING_TEACHER') draft++;
+      else if (item.status === 'PENDING_MANAGER_APPROVAL') pendingManager++;
       else if (item.status === 'PENDING_DIRECTOR_APPROVAL') pendingDirector++;
       else if (item.status === 'ACTIVE') active++;
     });
-    return { draft, pendingDirector, active, all: queue.length };
+    return { draft, pendingManager, pendingDirector, active, all: queue.length };
   }, [queue]);
 
   const filteredQueue = useMemo(() => {
@@ -247,16 +257,27 @@ export default function RoadmapApprovalStudioView({ mode = 'teacher' }) {
     }
   };
 
-  const handleDirectorDecision = async (approve) => {
+  const handleApproverDecision = async ({ approve = false, escalateToDirector = false }) => {
     if (!selectedId || actionBusy) return;
     setActionBusy(true);
     setActionBanner(null);
     try {
       const res = await practiceService.submitDirectorRoadmapDecision(selectedId, {
         approve,
+        escalateToDirector,
+        reviewerRole: isManager ? 'manager' : 'director',
         directorNote: directorNote.trim() || null
       });
-      setActionBanner({ type: 'success', text: res?.message || (approve ? 'Đã phê duyệt lộ trình!' : 'Đã trả lại Giảng viên chỉnh sửa.') });
+      setActionBanner({
+        type: 'success',
+        text: res?.message || (
+          escalateToDirector
+            ? 'Đã chuyển lộ trình lên Giám đốc Học thuật xem xét.'
+            : approve
+              ? 'Đã phê duyệt và kích hoạt lộ trình!'
+              : 'Đã trả lại Giảng viên chỉnh sửa.'
+        )
+      });
       await loadQueue();
       await loadRoadmapDetail(selectedId);
     } catch (err) {
@@ -278,7 +299,7 @@ export default function RoadmapApprovalStudioView({ mode = 'teacher' }) {
       .slice(0, 20);
   }, [curriculumSkills, editNodes, pendingAddSkillIds, skillSearch]);
 
-  const canTeacherEdit = !isDirector && detail?.status !== 'ARCHIVED';
+  const canTeacherEdit = !isApprover && detail?.status !== 'ARCHIVED';
 
   return (
     <div className="space-y-5">
@@ -286,18 +307,28 @@ export default function RoadmapApprovalStudioView({ mode = 'teacher' }) {
       <section className="rounded-3xl border border-slate-200 bg-white p-5 sm:p-6 shadow-2xs flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3.5">
           <div className={`w-11 h-11 rounded-2xl flex items-center justify-center text-white shadow-sm ${
-            isDirector ? 'bg-gradient-to-br from-indigo-600 to-blue-700' : 'bg-gradient-to-br from-emerald-600 to-teal-700'
+            isDirector
+              ? 'bg-gradient-to-br from-indigo-600 to-blue-700'
+              : isManager
+                ? 'bg-gradient-to-br from-sky-600 to-blue-600'
+                : 'bg-gradient-to-br from-emerald-600 to-teal-700'
           }`}>
-            {isDirector ? <ShieldCheck className="w-6 h-6" /> : <ClipboardCheck className="w-6 h-6" />}
+            {isApprover ? <ShieldCheck className="w-6 h-6" /> : <ClipboardCheck className="w-6 h-6" />}
           </div>
           <div>
             <h1 className="text-lg sm:text-xl font-black text-slate-900">
-              {isDirector ? 'Phê Duyệt Lộ Trình Học Sinh (Cấp Giám Đốc)' : 'Duyệt & Tinh Chỉnh Bản Nháp Lộ Trình Học Sinh'}
+              {isDirector
+                ? 'Giám Sát & Phê Duyệt Lộ Trình (Liên Cơ Sở)'
+                : isManager
+                  ? 'Phê Duyệt Lộ Trình Học Sinh (Cấp Cơ Sở)'
+                  : 'Tinh Chỉnh & Gửi Duyệt Bản Nháp Lộ Trình Học Sinh'}
             </h1>
             <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
               {isDirector
-                ? 'Kiểm tra lộ trình sau khi Giảng viên tinh chỉnh và bấm Phê duyệt để kích hoạt (ACTIVE) cho học sinh.'
-                : 'Hệ thống tự tạo bản nháp sau bài thi đầu vào 30 câu. Giảng viên rà soát, thêm/ẩn/đổi thứ tự chặng rồi trình Giám đốc duyệt.'}
+                ? 'Duyệt các ca ngoại lệ được Quản lý cơ sở chuyển lên và hậu kiểm chất lượng lộ trình ACTIVE trên toàn hệ thống.'
+                : isManager
+                  ? 'Phê duyệt thường quy lộ trình của học sinh thuộc cơ sở mình để kích hoạt (ACTIVE) ngay, hoặc chuyển ca ngoại lệ lên Giám đốc.'
+                  : 'Hệ thống tự tạo bản nháp sau bài thi đầu vào 30 câu. Giảng viên rà soát, thêm/ẩn/đổi thứ tự chặng rồi gửi Quản lý cơ sở duyệt.'}
             </p>
           </div>
         </div>
@@ -318,7 +349,8 @@ export default function RoadmapApprovalStudioView({ mode = 'teacher' }) {
         <div className="inline-flex flex-wrap items-center gap-1 rounded-xl bg-slate-100 p-1 border border-slate-200/70">
           {[
             { key: 'DRAFT_PENDING_TEACHER', label: 'Chờ GV rà soát', count: counts.draft },
-            { key: 'PENDING_DIRECTOR_APPROVAL', label: 'Chờ Giám đốc duyệt', count: counts.pendingDirector },
+            { key: 'PENDING_MANAGER_APPROVAL', label: 'Chờ Quản lý cơ sở', count: counts.pendingManager },
+            { key: 'PENDING_DIRECTOR_APPROVAL', label: 'Ngoại lệ (Giám đốc)', count: counts.pendingDirector },
             { key: 'ACTIVE', label: 'Đã kích hoạt', count: counts.active },
             { key: 'ALL', label: 'Tất cả', count: counts.all }
           ].map((tab) => {
@@ -672,14 +704,14 @@ export default function RoadmapApprovalStudioView({ mode = 'teacher' }) {
                     className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 px-5 py-2.5 text-xs font-extrabold text-white shadow-sm cursor-pointer disabled:opacity-50"
                   >
                     <Send className="w-4 h-4" />
-                    <span>{actionBusy ? 'Đang gửi...' : 'Duyệt & Gửi Giám Đốc Phê Duyệt'}</span>
+                    <span>{actionBusy ? 'Đang gửi...' : 'Gửi Quản Lý Cơ Sở Phê Duyệt'}</span>
                   </button>
                 </div>
               ) : (
                 <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 space-y-3">
                   <label className="block space-y-1.5">
                     <span className="text-xs font-extrabold text-slate-800">
-                      Nhận xét / Lý do phê duyệt (hoặc yêu cầu Giảng viên chỉnh lại)
+                      Nhận xét / Lý do phê duyệt (hoặc chuyển Giám đốc / yêu cầu Giảng viên chỉnh lại)
                     </span>
                     <textarea
                       rows={2}
@@ -693,16 +725,27 @@ export default function RoadmapApprovalStudioView({ mode = 'teacher' }) {
                     <button
                       type="button"
                       disabled={actionBusy}
-                      onClick={() => handleDirectorDecision(false)}
+                      onClick={() => handleApproverDecision({ approve: false })}
                       className="inline-flex items-center gap-1.5 rounded-xl border border-rose-200 bg-white hover:bg-rose-50 px-4 py-2.5 text-xs font-extrabold text-rose-700 cursor-pointer disabled:opacity-50"
                     >
                       <RotateCcw className="w-4 h-4" />
                       <span>Trả lại Giảng viên sửa</span>
                     </button>
+                    {isManager && detail?.status !== 'PENDING_DIRECTOR_APPROVAL' && (
+                      <button
+                        type="button"
+                        disabled={actionBusy}
+                        onClick={() => handleApproverDecision({ escalateToDirector: true })}
+                        className="inline-flex items-center gap-1.5 rounded-xl border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 px-4 py-2.5 text-xs font-extrabold text-indigo-700 cursor-pointer disabled:opacity-50"
+                      >
+                        <Send className="w-4 h-4" />
+                        <span>Chuyển Giám Đốc Duyệt (Ngoại lệ)</span>
+                      </button>
+                    )}
                     <button
                       type="button"
                       disabled={actionBusy}
-                      onClick={() => handleDirectorDecision(true)}
+                      onClick={() => handleApproverDecision({ approve: true })}
                       className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 px-5 py-2.5 text-xs font-extrabold text-white shadow-sm cursor-pointer disabled:opacity-50"
                     >
                       <UserCheck className="w-4 h-4" />
