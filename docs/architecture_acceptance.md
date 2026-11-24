@@ -3906,3 +3906,8 @@ Preserved the remaining 24 modified frontend files: simplified Vietnamese copy a
 ## [24/11/2026] - Develop merge resolution
 
 Resolved the active frontend UPDATE.md conflict with upstream develop 47b7d27. Preserved local student timetable, report navigation and summary cards; integrated upstream roadmap approval, study workspace, scratchpad and CD workflow changes. Ten targeted tests and native-loader production build passed. Conflict-marker scan found no remaining source/document markers in the active frontend. Browser and deployment acceptance remain pending. The separate legacy V-Eval-Web_Client checkout has pre-existing merge conflicts and was not modified in this resolution.
+
+## [24/11/2026] Role-Scoped Timetable, 3-Tier Roadmap Approval & Profile Alignment
+- Aligned `StudentScheduleView` and `TeacherScheduleView` filter dropdowns with actual user enrollments, paid courses, and teacher assignments.
+- Implemented 3-mode `RoadmapApprovalStudioView` (`teacher`, `manager` campus-scoped with director escalation, `director` cross-campus).
+- Enforced strict role-based profile presentation in `AccountSettingsPage`.

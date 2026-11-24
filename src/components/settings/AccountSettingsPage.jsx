@@ -762,18 +762,20 @@ export default function AccountSettingsPage({
           <span>Bảo mật & Đổi Mật khẩu</span>
         </button>
 
-        <button
-          type="button"
-          onClick={() => setActiveTab('preferences')}
-          className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-            activeTab === 'preferences'
-              ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25'
-              : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-          }`}
-        >
-          <Sliders className="w-4 h-4" />
-          <span>Tùy chọn Học tập & AI</span>
-        </button>
+        {activeRole === 'student' && (
+          <button
+            type="button"
+            onClick={() => setActiveTab('preferences')}
+            className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              activeTab === 'preferences'
+                ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25'
+                : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+            }`}
+          >
+            <Sliders className="w-4 h-4" />
+            <span>Tùy chọn Học tập & AI</span>
+          </button>
+        )}
       </div>
 
       {/* Tab 1: Thông tin Cá nhân */}
@@ -875,18 +877,30 @@ export default function AccountSettingsPage({
                   {ROLE_LABELS[activeRole]}
                 </span>
               </div>
-              <div className="flex items-center justify-between py-1.5 border-b border-slate-50">
-                <span className="text-slate-500">Phụ huynh đại diện:</span>
-                <span className="font-bold text-emerald-700 text-right truncate max-w-[170px]">
-                  {parentName ? `${parentName} (${parentRelation === 'father' ? 'Cha' : parentRelation === 'mother' ? 'Mẹ' : 'Giám hộ'})` : 'Chưa cập nhật'}
-                </span>
-              </div>
-              <div className="flex items-center justify-between py-1.5 border-b border-slate-50">
-                <span className="text-slate-500">Cơ sở đăng ký:</span>
-                <span className="font-bold text-slate-800 text-right truncate max-w-[170px]">
-                  {campuses.find((c) => (c.id || c.campusId) === campusId)?.name || 'Cơ sở 1: ĐHQG TP.HCM'}
-                </span>
-              </div>
+              {activeRole === 'student' && (
+                <div className="flex items-center justify-between py-1.5 border-b border-slate-50">
+                  <span className="text-slate-500">Phụ huynh đại diện:</span>
+                  <span className="font-bold text-emerald-700 text-right truncate max-w-[170px]">
+                    {parentName ? `${parentName} (${parentRelation === 'father' ? 'Cha' : parentRelation === 'mother' ? 'Mẹ' : 'Giám hộ'})` : 'Chưa cập nhật'}
+                  </span>
+                </div>
+              )}
+              {activeRole !== 'parent' && (
+                <div className="flex items-center justify-between py-1.5 border-b border-slate-50">
+                  <span className="text-slate-500">
+                    {activeRole === 'director' || activeRole === 'admin'
+                      ? 'Phạm vi phụ trách:'
+                      : activeRole === 'teacher' || activeRole === 'manager'
+                        ? 'Cơ sở công tác:'
+                        : 'Cơ sở đăng ký:'}
+                  </span>
+                  <span className="font-bold text-slate-800 text-right truncate max-w-[170px]">
+                    {activeRole === 'director' || activeRole === 'admin'
+                      ? 'Toàn hệ thống (Liên cơ sở)'
+                      : campuses.find((c) => (c.id || c.campusId) === campusId)?.name || 'Cơ sở 1: ĐHQG TP.HCM'}
+                  </span>
+                </div>
+              )}
               <div className="flex items-center justify-between py-1.5">
                 <span className="text-slate-500">Ngày gia nhập:</span>
                 <span className="font-bold text-slate-800">{joinedDateDisplay}</span>
@@ -899,7 +913,15 @@ export default function AccountSettingsPage({
             <div className="mb-6 pb-4 border-b border-slate-100 flex items-center justify-between">
               <div>
                 <h3 className="text-base font-extrabold text-slate-800">Hồ sơ cá nhân</h3>
-                <p className="text-xs text-slate-500 mt-0.5">Thông tin này được dùng để hiển thị trên chứng nhận, bảng điểm và học bạ.</p>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  {activeRole === 'student'
+                    ? 'Thông tin này được dùng để hiển thị trên chứng nhận, bảng điểm và học bạ.'
+                    : activeRole === 'parent'
+                      ? 'Thông tin liên hệ dùng để nhận cảnh báo sớm và trao đổi cùng giảng viên.'
+                      : activeRole === 'director' || activeRole === 'admin'
+                        ? 'Thông tin định danh tài khoản quản trị trên toàn hệ thống V-Eval.'
+                        : 'Thông tin này hiển thị trên lịch giảng dạy, danh sách lớp và trao đổi với học sinh/phụ huynh.'}
+                </p>
               </div>
               <span className="text-xs px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 font-bold">
                 Identity Service
@@ -963,26 +985,36 @@ export default function AccountSettingsPage({
                   <p className="text-[11px] text-slate-400 mt-1">Liên hệ quản trị viên cơ sở nếu bạn cần thay đổi email tài khoản.</p>
                 </div>
 
-                {/* Campus Dropdown */}
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                    Cơ sở Đào tạo Trực thuộc
-                  </label>
-                  <div className="relative">
-                    <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                    <select
-                      value={campusId}
-                      onChange={(e) => setCampusId(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2.5 text-xs font-semibold bg-slate-50/80 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all text-slate-800 cursor-pointer"
-                    >
-                      {campuses.map((c) => (
-                        <option key={c.id || c.campusId} value={c.id || c.campusId}>
-                          {c.name}
-                        </option>
-                      ))}
-                    </select>
+                {/* Campus Dropdown (Student có thể chọn; Teacher/Manager chỉ xem; Director/Admin/Parent ẩn) */}
+                {(activeRole === 'student' || activeRole === 'teacher' || activeRole === 'manager') && (
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                      {activeRole === 'student' ? 'Cơ sở Đào tạo Trực thuộc' : 'Cơ sở Công tác'}
+                    </label>
+                    <div className="relative">
+                      <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <select
+                        value={campusId}
+                        onChange={(e) => setCampusId(e.target.value)}
+                        disabled={activeRole !== 'student'}
+                        className={`w-full pl-10 pr-4 py-2.5 text-xs font-semibold border border-slate-200 rounded-xl transition-all ${
+                          activeRole === 'student'
+                            ? 'bg-slate-50/80 text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 cursor-pointer'
+                            : 'bg-slate-100 text-slate-500 cursor-not-allowed'
+                        }`}
+                      >
+                        {campuses.map((c) => (
+                          <option key={c.id || c.campusId} value={c.id || c.campusId}>
+                            {c.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    {activeRole !== 'student' && (
+                      <p className="text-[11px] text-slate-400 mt-1">Liên hệ Quản trị viên nếu bạn cần điều chuyển cơ sở công tác.</p>
+                    )}
                   </div>
-                </div>
+                )}
 
               </div>
 

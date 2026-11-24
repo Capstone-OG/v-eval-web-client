@@ -1,22 +1,8 @@
 # [24/11/2026]
 
-- Student timetable: teacher-plan topics, student-specific remedial membership, classroom/group details and compact session dialog.
-- Reports: separate progress, forecast/prescription and reminder sections; redesigned expandable reminders; simplified refresh and score unit labels.
-- Prescription visibility uses actual roadmap completion and valid below-target forecast data. SEM text and client range synthesis removed; valid API ranges only.
-- Verification: ten targeted tests passed; production build passed with configLoader native. Browser/live acceptance pending. No BE changes.
-- Limits: existing local teacher-plan storage, missing teacher names and legacy score defaults remain documented. Remaining frontend presentation changes are included in a follow-up checkpoint.
-- Follow-up checkpoint includes remaining 24 frontend files: Vietnamese copy, sidebar/navbar styling, contextual history headings and scrollbar styles. Previously verified build covers these changes; no BE changes.
-
-- Report tabs: light toolbar/capsule with blue selected button; removed dark full-container background.
-
-- Redesigned report topic navigation with three responsive cards and individual color accents; production build passed.
-
-- Added visible colored shadows to active report cards/icons and softened navigation borders; production build passed.
-
-- Report navigation cards now retain shadows while unselected.
-
-- Unified four overview/report metric cards with the reference layout and retained navigation actions.
-
-- Integrated upstream develop 47b7d27: CD workflow, roadmap approval workspace, roadmap/study updates and math scratchpad. Preserved local report navigation, shared summary cards, prescription eligibility and timetable changes. Earlier upstream deployment notes remain in daily/process history.
-
-- Resolved active frontend merge with develop 47b7d27; preserved local UI and recorded upstream progress. Ten targeted tests and production build passed; browser/deployment verification pending.
+- Fixed `ConnectedRoadmapPage.jsx` fallback skill-name hydration by indexing `dom.skills[]` in addition to `dom.chapters[].lessons[].patterns[]`.
+- Fixed `StudentScheduleView.jsx` to filter Term & Course dropdowns strictly by the student's enrolled classes and paid tuition (`paymentService.getStudentTuitionStatus`) instead of showing all global catalog courses.
+- Fixed `TeacherScheduleView.jsx` to load only the logged-in teacher's assigned classes (`getClasses({ teacherId, termId })`), matching the KPI card and Academic Manager's class list.
+- Upgraded `RoadmapApprovalStudioView.jsx`, `Sidebar.jsx`, `App.jsx`, and `practiceService.js` to support the 3-tier roadmap approval workflow (`Teacher` -> `Academic Manager` scoped by `campusId` with `Escalate to Director` -> `Academic Director` cross-campus).
+- Refined `AccountSettingsPage.jsx` so student-only fields (`Phụ huynh đại diện`, `Tùy chọn Học tập & AI`) are hidden for Teacher/Manager/Director/Admin/Parent, and campus scope labels/editability match each role.
+- Verified with `npm run build` (0 errors).

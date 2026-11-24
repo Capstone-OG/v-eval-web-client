@@ -348,12 +348,12 @@ export default function Sidebar({
               },
               {
                 id: 'roadmap_approval',
-                label: 'Phê duyệt Lộ trình HS',
-                sublabel: 'Duyệt cuối & kích hoạt ACTIVE',
+                label: 'Duyệt Lộ Trình Cơ Sở',
+                sublabel: 'Duyệt lộ trình HS & chuyển ngoại lệ',
                 icon: ClipboardCheck,
                 active: activeTab === 'roadmap_approval',
                 onClick: () => setActiveTab('roadmap_approval'),
-                badge: 'Duyệt'
+                badge: 'Cơ sở'
               },
               {
                 id: 'clustering',

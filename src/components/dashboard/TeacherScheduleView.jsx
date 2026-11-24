@@ -142,25 +142,34 @@ export default function TeacherScheduleView({ currentUser }) {
 
   const teacherId = currentUser?.id || currentUser?.userId;
 
-  // 1. Fetch available classes for filtering
+  // 1. Fetch ONLY classes assigned to this teacher (không kéo toàn bộ lớp các cơ sở khác)
   useEffect(() => {
+    if (!teacherId) {
+      setClassesList([]);
+      return;
+    }
     let active = true;
-    practiceService.getClasses()
+    practiceService.getClasses({
+      teacherId,
+      termId: selectedTermId !== 'ALL' ? selectedTermId : null
+    })
       .then((res) => {
         if (!active) return;
         const raw = Array.isArray(res) ? res : Array.isArray(res?.data) ? res.data : [];
-        const mapped = raw.map((c) => ({
-          ...c,
-          id: c.classId || c.id,
-          classId: c.classId || c.id
-        }));
+        const mapped = raw
+          .filter((c) => !c.teacherId || String(c.teacherId).toLowerCase() === String(teacherId).toLowerCase())
+          .map((c) => ({
+            ...c,
+            id: c.classId || c.id,
+            classId: c.classId || c.id
+          }));
         setClassesList(mapped);
       })
       .catch((err) => {
         console.warn('[TeacherScheduleView] Error loading classes:', err.message);
       });
     return () => { active = false; };
-  }, []);
+  }, [teacherId, selectedTermId]);
 
   // 2. Load Teacher Schedule (Kết hợp lịch chính khóa & các buổi phụ đạo nhóm vi mô đã lên)
   const loadSchedule = useCallback(async () => {
@@ -212,6 +221,8 @@ export default function TeacherScheduleView({ currentUser }) {
       });
 
       let regularSessions = [];
+      let assignedFromSchedule = [];
+      let availableTermsFromSchedule = [];
 
       if (selectedClassId && selectedClassId !== 'ALL') {
         const classSessions = await practiceService.getClassSessions(selectedClassId);
@@ -229,19 +240,21 @@ export default function TeacherScheduleView({ currentUser }) {
           termId: selectedTermId !== 'ALL' ? selectedTermId : null
         });
 
+        assignedFromSchedule = Array.isArray(data?.assignedClassesByTermAndCourse)
+          ? data.assignedClassesByTermAndCourse
+          : [];
+        availableTermsFromSchedule = Array.isArray(data?.availableTerms) ? data.availableTerms : [];
+
         if (data?.sessions && data.sessions.length > 0) {
           regularSessions = data.sessions.map((s) => ({
             ...s,
             sessionStatus: s.sessionStatus || s.status || 'SCHEDULED',
             enrolledStudentsCount: s.enrolledStudentsCount ?? s.totalStudentsCount ?? 0
           }));
-        } else {
-          // If teacher has no directly mapped sessions, aggregate sessions from the active classes
-          const allClasses = await practiceService.getClasses();
-          const validClasses = (Array.isArray(allClasses) ? allClasses : []).slice(0, 5);
+        } else if (classesList.length > 0) {
+          // Chỉ tổng hợp lịch từ các lớp thực sự thuộc giảng viên này (không lấy lớp toàn hệ thống)
           const aggregatedSessions = [];
-
-          for (const cls of validClasses) {
+          for (const cls of classesList) {
             const cid = cls.classId || cls.id;
             try {
               const cs = await practiceService.getClassSessions(cid);
@@ -264,13 +277,15 @@ export default function TeacherScheduleView({ currentUser }) {
       }
 
       const combined = [...regularSessions, ...mappedRemedial];
+      const assignedCount = assignedFromSchedule.length > 0 ? assignedFromSchedule.length : classesList.length;
       setScheduleData({
-        totalAssignedClasses: classesList.length || 1,
+        totalAssignedClasses: assignedCount,
         totalSessionsInView: combined.length,
         completedSessionsCount: combined.filter((s) => (s.sessionStatus || s.status) === 'COMPLETED').length,
         substituteSessionsCount: combined.filter((s) => s.isSubstituteTeacher).length,
         upcomingSessionsCount: combined.filter((s) => (s.sessionStatus || s.status) !== 'COMPLETED').length,
-        availableTerms: [],
+        availableTerms: availableTermsFromSchedule,
+        assignedClassesByTermAndCourse: assignedFromSchedule,
         sessions: combined
       });
     } catch (err) {

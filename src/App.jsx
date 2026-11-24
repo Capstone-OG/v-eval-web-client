@@ -868,7 +868,12 @@ export default function App() {
     }
 
     if (activeTab === 'roadmap_approval') {
-      return <RoadmapApprovalStudioView mode="director" />;
+      return (
+        <RoadmapApprovalStudioView
+          mode={isDirectorUser ? 'director' : 'manager'}
+          campusId={isDirectorUser ? null : (currentUser?.campusId || null)}
+        />
+      );
     }
 
     if (activeTab === 'ai_moderation') {

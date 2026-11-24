@@ -262,12 +262,14 @@ export default function ConnectedRoadmapPage({
 
       let current = roadmapRes ? validateRoadmap(roadmapRes, studentId) : null;
 
-      // Tự động bù đắp tên dạng bài / chương / môn thật từ Content Curriculum nếu gRPC trả về nhãn mặc định "Kỹ năng chuyên đề"
-      if (
-        current?.nodes?.some(
-          (n) => !n.skillName || n.skillName === 'Kỹ năng chuyên đề' || !n.chapterName || n.chapterName === 'Chuyên đề tổng hợp'
-        )
-      ) {
+      const enrichRoadmapNodes = async (targetRoadmap) => {
+        if (
+          !targetRoadmap?.nodes?.some(
+            (n) => !n.skillName || n.skillName === 'Kỹ năng chuyên đề' || !n.chapterName || n.chapterName === 'Chuyên đề tổng hợp'
+          )
+        ) {
+          return targetRoadmap;
+        }
         try {
           const curriculumRes = await contentService.getCurriculum();
           const domains = Array.isArray(curriculumRes) ? curriculumRes : (curriculumRes?.domains || curriculumRes?.data || []);
@@ -294,12 +296,30 @@ export default function ConnectedRoadmapPage({
                 });
               });
             });
+            // Bổ sung cả danh sách dom.skills[] phòng trường hợp skillId không nằm trong chapters[].lessons[].patterns[]
+            (dom.skills || []).forEach((sk) => {
+              const sid = String(sk.skillId || sk.patternId || sk.id || '').toLowerCase();
+              if (!sid || skillLookup.has(sid)) return;
+              const chName = sk.chapterName || '';
+              const lesName = sk.lessonName || '';
+              const skGrade = Number(sk.gradeLevel || inferGradeFromText(chName, lesName, sk.name || domName) || 0);
+              const subjMatch = chName.match(/\(([^–\-()]+)/);
+              const inferredSubject = sk.subjectName || (subjMatch ? subjMatch[1].trim() : domName);
+              skillLookup.set(sid, {
+                skillName: sk.name || '',
+                lessonName: lesName,
+                chapterName: chName || domName || 'Chuyên đề tổng hợp',
+                subjectName: inferredSubject || domName,
+                domainName: domName,
+                gradeLevel: skGrade
+              });
+            });
           });
 
           if (skillLookup.size > 0) {
-            current = {
-              ...current,
-              nodes: current.nodes.map((n) => {
+            return {
+              ...targetRoadmap,
+              nodes: targetRoadmap.nodes.map((n) => {
                 const meta = skillLookup.get(String(n.skillId || '').toLowerCase());
                 if (!meta) return n;
                 const needsSkill = !n.skillName || n.skillName === 'Kỹ năng chuyên đề';
@@ -320,7 +340,11 @@ export default function ConnectedRoadmapPage({
         } catch {
           // non-fatal fallback
         }
-      }
+        return targetRoadmap;
+      };
+
+      // Tự động bù đắp tên dạng bài / chương / môn thật từ Content Curriculum nếu gRPC trả về nhãn mặc định "Kỹ năng chuyên đề"
+      current = await enrichRoadmapNodes(current);
 
       setRoadmap(current);
 
