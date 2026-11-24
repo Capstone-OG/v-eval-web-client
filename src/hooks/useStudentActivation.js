@@ -7,10 +7,22 @@ import { getStudentActivation } from '../utils/studentActivation';
 import { ensurePaidRoadmap } from '../utils/paidRoadmap';
 import { toast } from '../context/ToastContext';
 
+const READY_CACHE_KEY = (uid) => `veval_activation_ready_${uid}`;
+
+function readCachedReady(uid) {
+  if (!uid) return null;
+  try {
+    if (sessionStorage.getItem(READY_CACHE_KEY(uid)) === '1') {
+      return { step: 'ready', missing: [], diagnosticComplete: true, paid: true, owner: uid };
+    }
+  } catch { /* ignore */ }
+  return null;
+}
+
 export default function useStudentActivation(user, enabled) {
   const userId = user?.userId || user?.id || user?.studentId;
   const [revision, setRevision] = useState(0);
-  const [state, setState] = useState({ step: 'loading', missing: [] });
+  const [state, setState] = useState(() => readCachedReady(userId) || { step: 'loading', missing: [] });
   const refresh = useCallback(({ background = false } = {}) => {
     if (!background) setState({ step: 'loading', missing: [] });
     setRevision((value) => value + 1);
@@ -18,8 +30,10 @@ export default function useStudentActivation(user, enabled) {
   useEffect(() => {
     if (!enabled || !userId) return;
     let active = true;
-    setState((previous) => previous.owner === userId && previous.step === 'ready'
-      ? previous : { step: 'loading', missing: [], owner: userId });
+    setState((previous) => {
+      if (previous.owner === userId && previous.step === 'ready') return previous;
+      return readCachedReady(userId) || { step: 'loading', missing: [], owner: userId };
+    });
     const isCurrent = () => {
       const current = authService.getCurrentUser();
       return active && (current?.userId || current?.id || current?.studentId) === userId;
@@ -52,7 +66,14 @@ export default function useStudentActivation(user, enabled) {
             if (isCurrent()) toast.warning(error.message || 'Chưa thể tạo lộ trình. Vui lòng làm mới để thử lại.');
           }
         }
-        if (isCurrent()) setState({ ...getStudentActivation({ ...base, paid: payment?.isPaid }), roadmapError, owner: userId });
+        if (isCurrent()) {
+          const finalActivation = getStudentActivation({ ...base, paid: payment?.isPaid });
+          try {
+            if (finalActivation.step === 'ready') sessionStorage.setItem(READY_CACHE_KEY(userId), '1');
+            else sessionStorage.removeItem(READY_CACHE_KEY(userId));
+          } catch { /* ignore */ }
+          setState({ ...finalActivation, roadmapError, owner: userId });
+        }
       } catch (error) {
         if (isCurrent()) setState((previous) => previous.owner === userId && previous.step === 'ready'
           ? { ...previous, refreshError: error.message }

@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { Box, Chip, Drawer, Paper, Typography } from '@mui/material';
 import {
   Bot,
   Send,
@@ -36,8 +37,9 @@ export default function AISocraticTutorModal({ isOpen, onClose, initialContext =
 
   const [sessions, setSessions] = useState([]);
   const [activeSessionId, setActiveSessionId] = useState(null);
-  const [isHistoryOpen, setIsHistoryOpen] = useState(true);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [historySearchTerm, setHistorySearchTerm] = useState('');
+  const [isDragOver, setIsDragOver] = useState(false);
 
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -389,11 +391,119 @@ export default function AISocraticTutorModal({ isOpen, onClose, initialContext =
     'Em chưa biết bắt đầu từ dữ kiện nào của đề bài'
   ];
 
+  // Helper: Ghim một câu hỏi (từ nút Hỏi Gia sư AI hoặc Kéo-Thả) vào Sổ tay AI
+  const attachQuestionToNotebook = (ctx) => {
+    const qText = ctx?.question || ctx?.questionContent || ctx?.content || '';
+    if (!qText) return;
+    const skillLabel = ctx?.skill || ctx?.skillName || ctx?.topic || 'Ôn tập ĐGNL';
+    const wrongChoice = ctx?.selectedWrong || ctx?.studentWrongOption || ctx?.studentChoice || undefined;
+    const correctChoice = ctx?.correctOption || ctx?.correctChoice || undefined;
+    const targetQuestionId = ctx?.questionId ? String(ctx.questionId) : null;
+
+    let loaded = aiSessionManager.getSessions(currentUserId);
+    let existingSession = targetQuestionId
+      ? loaded.find((s) => s.questionId === targetQuestionId)
+      : null;
+
+    if (!existingSession) {
+      const wrongText = wrongChoice ? `\n> **Phương án em vừa chọn:** ${wrongChoice}` : '';
+      const contextGreeting = {
+        sender: 'ai',
+        text: `Chào em! Thầy đã ghim câu hỏi thuộc chủ đề **${skillLabel}** vào Sổ tay AI.\n\n> **Câu hỏi:** ${qText}${wrongText}\n\nĐể giúp em nhớ bài thật kỹ, thầy sẽ gợi ý từng bước thay vì đưa đáp án sẵn. Em hãy cho thầy biết: **Dữ kiện nào trong đề là quan trọng nhất theo em?**`,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        topicLabel: skillLabel,
+        interactionId: null
+      };
+
+      const newSess = aiSessionManager.createSession(currentUserId, {
+        questionId: targetQuestionId,
+        questionLatex: qText,
+        skill: skillLabel,
+        skillId: ctx?.skillId || ctx?.skill_id || null,
+        selectedWrong: wrongChoice,
+        correctOption: correctChoice,
+        options: ctx?.options,
+        initialMessages: [contextGreeting]
+      });
+
+      loaded = [newSess, ...loaded];
+      setSessions(loaded);
+      setActiveSessionId(newSess.id);
+    } else {
+      setSessions(loaded);
+      setActiveSessionId(existingSession.id);
+    }
+  };
+
+  const handleDropQuestion = (e) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    try {
+      const rawJson = e.dataTransfer.getData('application/x-veval-question');
+      if (rawJson) {
+        const parsed = JSON.parse(rawJson);
+        attachQuestionToNotebook(parsed);
+        return;
+      }
+      const plainText = e.dataTransfer.getData('text/plain');
+      if (plainText && plainText.trim()) {
+        attachQuestionToNotebook({ question: plainText.trim(), skill: 'Phân tích câu hỏi vừa kéo vào' });
+      }
+    } catch {
+      // ignore malformed drop
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/75 backdrop-blur-md animate-fade-in">
-      <div className={`relative w-full ${isHistoryOpen ? 'max-w-5xl' : 'max-w-3xl'} bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col my-auto h-[90vh] max-h-[860px] transition-all duration-300`}>
+    <Drawer
+      anchor="right"
+      variant="persistent"
+      open={isOpen}
+      PaperProps={{
+        onDragOver: (e) => { e.preventDefault(); setIsDragOver(true); },
+        onDragLeave: () => setIsDragOver(false),
+        onDrop: handleDropQuestion,
+        sx: {
+          width: isHistoryOpen ? { xs: '100vw', md: 760 } : { xs: '100vw', sm: 480 },
+          maxWidth: '100vw',
+          zIndex: 1300,
+          boxShadow: '-12px 0 36px -8px rgba(15, 23, 42, 0.25)',
+          borderLeft: isDragOver ? '3px dashed #4f46e5' : '1px solid #e2e8f0',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+          transition: 'width 0.25s ease',
+        },
+      }}
+    >
+      <div className="relative w-full h-full bg-white flex flex-col overflow-hidden">
+        {isDragOver && (
+          <Box
+            sx={{
+              position: 'absolute',
+              inset: 0,
+              zIndex: 40,
+              bgcolor: 'rgba(79,70,229,0.12)',
+              backdropFilter: 'blur(2px)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              p: 3,
+              pointerEvents: 'none',
+            }}
+          >
+            <Paper elevation={6} sx={{ p: 3, borderRadius: 3, textAlign: 'center', border: '2px dashed #4f46e5' }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 800, color: 'primary.main' }}>
+                Thả câu hỏi vào đây để Gia sư AI phân tích ngay!
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Không cần sao chép — Sổ tay AI sẽ tự ghim đề bài và hướng dẫn từng bước.
+              </Typography>
+            </Paper>
+          </Box>
+        )}
 
         {/* Modal Top Header */}
         <div className="p-3.5 sm:p-4 border-b border-slate-800 bg-gradient-to-r from-slate-950 via-blue-950 to-slate-900 text-white flex items-center justify-between gap-3 shrink-0">
@@ -789,6 +899,6 @@ export default function AISocraticTutorModal({ isOpen, onClose, initialContext =
         </div>
       )}
 
-    </div>
+    </Drawer>
   );
 }

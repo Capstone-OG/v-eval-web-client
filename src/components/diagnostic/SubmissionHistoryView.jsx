@@ -639,10 +639,10 @@ export default function SubmissionHistoryView({
                 <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                   <div className="flex items-center gap-2 text-sm font-black text-slate-900">
                     <Brain className="w-4 h-4 text-indigo-600" />
-                    <span>Ma Trận Tiên Nghiệm Kỹ Năng BKT P(L₀) &amp; θ_skill</span>
+                    <span>Đánh Giá Mức Độ Nắm Vững Theo Dạng Bài</span>
                   </div>
                   <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2.5 py-0.5 rounded-full border border-indigo-200">
-                    {selectedSubmission.skill_priors.length} kỹ năng
+                    {selectedSubmission.skill_priors.length} dạng bài
                   </span>
                 </div>
 
@@ -650,7 +650,6 @@ export default function SubmissionHistoryView({
                   {selectedSubmission.skill_priors.map((sp, idx) => {
                     const rawPL0 = optionalNumber(sp.p_l0 ?? sp.pL0);
                     const pl0Pct = Number.isFinite(rawPL0) ? Math.round(rawPL0 * 100) : undefined;
-                    const thetaVal = optionalNumber(sp.theta_skill ?? sp.thetaSkill);
                     return (
                       <div
                         key={sp.skill_id || idx}
@@ -660,13 +659,15 @@ export default function SubmissionHistoryView({
                           <div className="text-xs font-black text-slate-900 line-clamp-1">
                             {sp.skill_name || sp.skillName}
                           </div>
-                          <span className="font-mono text-[11px] font-black text-indigo-700 shrink-0">
-                            &#952;={Number.isFinite(thetaVal) ? `${thetaVal > 0 ? `+${thetaVal.toFixed(2)}` : thetaVal.toFixed(2)}` : "?"}
+                          <span className="text-[11px] font-black text-indigo-700 shrink-0">
+                            {Number.isFinite(pl0Pct) ? `${pl0Pct}%` : '?'}
                           </span>
                         </div>
                         <div className="flex items-center justify-between text-[11px] font-bold text-slate-600">
                           <span>{sp.domain_name || sp.domainName}</span>
-                          <span className="text-blue-700">P(L₀) = {Number.isFinite(pl0Pct) ? `${pl0Pct}%` : '?'}</span>
+                          <span className="text-blue-700">
+                            {Number.isFinite(pl0Pct) ? (pl0Pct >= 75 ? 'Vững kiến thức' : pl0Pct >= 55 ? 'Khá ổn' : 'Cần ôn tập') : '—'}
+                          </span>
                         </div>
                         {Number.isFinite(pl0Pct) && <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
                           <div

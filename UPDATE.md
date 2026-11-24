@@ -1,22 +1,14 @@
-# [24/11/2026]
+# UPDATE LOG — V-Eval Web Client
 
-- Student timetable: teacher-plan topics, student-specific remedial membership, classroom/group details and compact session dialog.
-- Reports: separate progress, forecast/prescription and reminder sections; redesigned expandable reminders; simplified refresh and score unit labels.
-- Prescription visibility uses actual roadmap completion and valid below-target forecast data. SEM text and client range synthesis removed; valid API ranges only.
-- Verification: ten targeted tests passed; production build passed with configLoader native. Browser/live acceptance pending. No BE changes.
-- Limits: existing local teacher-plan storage, missing teacher names and legacy score defaults remain documented. Remaining frontend presentation changes are included in a follow-up checkpoint.
-- Follow-up checkpoint includes remaining 24 frontend files: Vietnamese copy, sidebar/navbar styling, contextual history headings and scrollbar styles. Previously verified build covers these changes; no BE changes.
-
-- Report tabs: light toolbar/capsule with blue selected button; removed dark full-container background.
-
-- Redesigned report topic navigation with three responsive cards and individual color accents; production build passed.
-
-- Added visible colored shadows to active report cards/icons and softened navigation borders; production build passed.
-
-- Report navigation cards now retain shadows while unselected.
-
-- Unified four overview/report metric cards with the reference layout and retained navigation actions.
-
-- Integrated upstream develop 47b7d27: CD workflow, roadmap approval workspace, roadmap/study updates and math scratchpad. Preserved local report navigation, shared summary cards, prescription eligibility and timetable changes. Earlier upstream deployment notes remain in daily/process history.
-
-- Resolved active frontend merge with develop 47b7d27; preserved local UI and recorded upstream progress. Ten targeted tests and production build passed; browser/deployment verification pending.
+## [24/11/2026] Nâng cấp toàn diện UI/UX bằng MUI, tinh giản Khung chương trình, Full Studio & MathLive WYSIWYG
+- **MUI & 10 hạng mục Feedback**:
+  - Tích hợp `@mui/material` (`src/theme/muiTheme.js`, `GlobalToastContainer.jsx`), thiết kế lại `DiagnosticResultSummary.jsx` & `DiagnosticSkillOverviewCard.jsx`, bỏ thuật ngữ kỹ thuật (`IRT`, `BKT`, `BR-03`, `Bloom`).
+  - Mở khóa chặng `Đã nắm vững`, chế độ Xem lại toàn bộ PLAR, lưu & khôi phục trạng thái Preview theo DB (`previewSubmissionJson`), giữ nguyên trang/chặng khi F5 (`sessionStorage`), và kiểm tra chi tiết từng trường hồ sơ học sinh (`AccountSettingsPage.jsx`).
+  - Sổ tay lỗi sai ôn theo từng dạng (`MistakeNotebookSM2View.jsx`), xem đáp án chia cụm 7 câu (`AttemptAnswerReviewList.jsx`), Camera giám sát thi thử (`MockAssessmentPage.jsx`), Sổ tay Gia sư AI kéo-thả (`AISocraticTutorModal.jsx`), và 3 cổng Non-Blocking Roadmap Approval.
+- **Kiểm duyệt câu hỏi lỗi & đồng bộ DB**:
+  - Kết nối `questionFlagStore.js` và `FlaggedQuestionsReviewPanel.jsx` với API DB `/flag`, `/unflag`, `/flagged`, dọn log mồ côi khi câu đã xóa và mở thẳng `CurriculumStudioEditor` (Full Studio) để sửa câu bị báo cáo.
+- **Tinh giản giao diện & Full Studio + MathLive WYSIWYG**:
+  - `Sidebar.jsx`, `AccountNavbar.jsx`, `App.jsx`: Icon sidebar trơn không nền khi thu gọn (ẩn khi mở rộng), bỏ nền màu icon Navbar, bỏ thanh footer toàn trang, tự động thu gọn sidebar khi vào `exam-studio` / `textbook-studio`.
+  - `CurriculumExplorerView.jsx` & `UnifiedNodeDetailView.jsx`: Rút gọn hàng bài học (icon sách xanh/xám biểu trưng SGK, hover chạy ngang tên bài), cột xem bài học bên phải full-view không cuộn lồng (`borderRadius: 10px`), bỏ nhãn Bloom & mở mặc định khối Lý thuyết trọng tâm.
+  - `ExamStudioView.jsx`, `ExamQuestionStudioTab.jsx`, `WordStyleFormulaCanvas.jsx`, `VisualMathField.jsx`: Vào thẳng Full Studio kèm thanh chuyển câu nhanh; cài đặt `mathlive` sửa trực tiếp trên công thức WYSIWYG ở thanh công thức cố định không che chữ, sửa regex nhận diện nhầm phương trình dài thành chỉ số, tắt spellcheck tiếng Việt, đồng bộ màu bàn phím MathLive và thêm nút đóng bàn phím nổi.
+- **Kiểm thử**: `npm run build` (`vite build`) thành công 100% (`4271 modules transformed`, 0 errors).

@@ -3511,3 +3511,14 @@ Preserved the remaining 24 modified frontend files: simplified Vietnamese copy a
 ## [24/11/2026] - Develop merge resolution
 
 Resolved the active frontend UPDATE.md conflict with upstream develop 47b7d27. Preserved local student timetable, report navigation and summary cards; integrated upstream roadmap approval, study workspace, scratchpad and CD workflow changes. Ten targeted tests and native-loader production build passed. Conflict-marker scan found no remaining source/document markers in the active frontend. Browser and deployment acceptance remain pending. The separate legacy V-Eval-Web_Client checkout has pre-existing merge conflicts and was not modified in this resolution.
+
+## [24/11/2026]
+- Cài đặt MUI (`@mui/material`, `@emotion/react`, `@emotion/styled`), cấu hình `src/theme/muiTheme.js` và nâng cấp `GlobalToastContainer.jsx`.
+- Hoàn thiện trọn bộ 10 hạng mục feedback học sinh/giáo viên/phụ huynh: làm sạch ngôn ngữ chấm bài & `DiagnosticSkillOverviewCard.jsx`, mở khóa `Đã nắm vững` & chế độ xem lại đầy đủ chặng PLAR, toast xác nhận Báo cáo lỗi, Sổ tay lỗi sai ôn theo từng dạng, `AttemptAnswerReviewList.jsx` phân cụm 7 câu cho Lịch sử & Phòng thi thử, Camera giám sát phòng thi (`upload-snapshot`), Sổ tay Gia sư AI dạng MUI Drawer hỗ trợ kéo-thả câu hỏi, và giao diện 3 cổng cho Non-Blocking Teacher Roadmap Approval.
+- Build kiểm thử `vite build` pass 100%.
+
+### [24/11/2026 - Cập nhật chiều] Tinh giản UI, Kiểm duyệt Studio & MathLive WYSIWYG
+- Lưu/khôi phục trạng thái Preview theo DB, giữ trang khi F5 (`sessionStorage`), đồng bộ danh sách câu hỏi bị gắn cờ với DB & mở thẳng Full Studio (`CurriculumStudioEditor`) từ `FlaggedQuestionsReviewPanel.jsx` và `ExamStudioView.jsx`.
+- Tinh giản `Sidebar.jsx` (icon trơn khi thu gọn, ẩn khi mở rộng), bỏ nền màu icon `AccountNavbar.jsx`, xóa footer toàn trang ở `App.jsx`, tự động thu gọn sidebar khi vào `exam-studio`/`textbook-studio`.
+- Tinh giản `CurriculumExplorerView.jsx` & `UnifiedNodeDetailView.jsx` (full-view không cuộn lồng, `borderRadius: 10px`, bỏ Bloom, tự mở Lý thuyết trọng tâm).
+- Cài đặt `mathlive`, tạo `VisualMathField.jsx`, chuyển `WordStyleFormulaCanvas.jsx` sang thanh công thức cố định WYSIWYG, fix regex chỉ số, tắt spellcheck, đồng bộ màu bàn phím MathLive & thêm nút đóng nổi (`vite build` pass).

@@ -217,3 +217,26 @@ textarea,
   }
 }
 
+
+/* Smooth horizontal marquee on hover for long curriculum lesson titles */
+.lesson-marquee-wrap {
+  overflow: hidden;
+  white-space: nowrap;
+  position: relative;
+}
+.lesson-marquee-text {
+  display: inline-block;
+  padding-right: 24px;
+  transition: transform 0.3s ease;
+}
+.group\/les:hover .lesson-marquee-text {
+  animation: vevalMarquee 7s linear infinite;
+}
+@keyframes vevalMarquee {
+  0%, 12% {
+    transform: translateX(0%);
+  }
+  85%, 100% {
+    transform: translateX(-55%);
+  }
+}

@@ -205,12 +205,28 @@ export default function App() {
     return authService.resolveAppRole(savedUser);
   });
 
-  // Active Tab inside the current role's portal
+  // Active Tab inside the current role's portal (persist in sessionStorage so F5 stays on current page)
   const [activeTab, setActiveTab] = useState(() => {
     const savedUser = authService.getCurrentUser();
     const initialRole = authService.resolveAppRole(savedUser);
-    return ROLE_PORTAL_DEFINITIONS[initialRole]?.defaultTab || 'dashboard';
+    const uid = savedUser?.userId || savedUser?.id || savedUser?.studentId;
+    const defaultTab = ROLE_PORTAL_DEFINITIONS[initialRole]?.defaultTab || 'dashboard';
+    if (!uid) return defaultTab;
+    try {
+      const savedTab = sessionStorage.getItem(`veval_active_tab_${uid}`);
+      if (savedTab && savedTab !== 'login' && savedTab !== 'landing') {
+        return savedTab;
+      }
+    } catch { /* ignore */ }
+    return defaultTab;
   });
+
+  // Tự động thu gọn sidebar khi vào các màn hình Studio để tối đa không gian soạn thảo
+  useEffect(() => {
+    if (activeTab === 'exam-studio' || activeTab === 'textbook-studio') {
+      setIsSidebarCollapsed(true);
+    }
+  }, [activeTab]);
 
   // Latest diagnostic assessment result
   const [latestDiagnosticResult, setLatestDiagnosticResult] = useState(null);
@@ -241,6 +257,12 @@ export default function App() {
     if (role === 'student' && activation.step !== 'ready') setShowActivationGuide(true);
     else setActiveTab('roadmap');
   };
+  useEffect(() => {
+    if (showActivationGuide && role === 'student' && activation.step === 'ready') {
+      setShowActivationGuide(false);
+      setActiveTab('roadmap');
+    }
+  }, [showActivationGuide, role, activation.step]);
   const continueActivation = () => {
     if (activation.step === 'error') { activation.refresh(); return; }
     setShowActivationGuide(false);
@@ -253,7 +275,29 @@ export default function App() {
   // Interactive Modal States: 'adaptive' | 'mock' | 'ai' | 'radar' | null
   const [activeModal, setActiveModal] = useState(null);
   const [aiTutorInitialContext, setAiTutorInitialContext] = useState(null);
-  const [selectedPlarNodeId, setSelectedPlarNodeId] = useState(null);
+  const [selectedPlarNodeId, setSelectedPlarNodeId] = useState(() => {
+    const savedUser = authService.getCurrentUser();
+    const uid = savedUser?.userId || savedUser?.id || savedUser?.studentId;
+    if (!uid) return null;
+    try {
+      return sessionStorage.getItem(`veval_plar_node_${uid}`) || null;
+    } catch {
+      return null;
+    }
+  });
+
+  useEffect(() => {
+    const uid = currentUser?.userId || currentUser?.id || currentUser?.studentId;
+    if (!uid || appView !== 'dashboard') return;
+    try {
+      sessionStorage.setItem(`veval_active_tab_${uid}`, activeTab);
+      if (selectedPlarNodeId) {
+        sessionStorage.setItem(`veval_plar_node_${uid}`, selectedPlarNodeId);
+      } else {
+        sessionStorage.removeItem(`veval_plar_node_${uid}`);
+      }
+    } catch { /* ignore */ }
+  }, [currentUser, appView, activeTab, selectedPlarNodeId]);
 
   // Real Backend Portal Metrics State
   const [studentDashboard, setStudentDashboard] = useState(null);
@@ -384,13 +428,44 @@ export default function App() {
   };
 
   const handleOpenAiTutorWithQuestion = (questionContext) => {
+    // Không mở Gia sư AI trong khi đang ở phòng thi chẩn đoán hoặc phòng thi thử
+    if (activeTab === 'diagnostic' || activeTab === 'mock' || activeTab === 'mock-exam') {
+      return;
+    }
     if (typeof questionContext === 'string') {
       setAiTutorInitialContext({
         skill: 'Giải đáp Tư duy ĐGNL',
         question: questionContext
       });
+    } else if (questionContext && typeof questionContext === 'object') {
+      const normalizedQuestion =
+        questionContext.question ||
+        questionContext.questionContent ||
+        questionContext.content ||
+        '';
+      const normalizedSkill =
+        questionContext.skill ||
+        questionContext.skillName ||
+        questionContext.topic ||
+        'Giải đáp Tư duy ĐGNL';
+      const normalizedWrong =
+        questionContext.selectedWrong ||
+        questionContext.studentWrongOption ||
+        questionContext.studentChoice ||
+        undefined;
+      const normalizedCorrect =
+        questionContext.correctOption ||
+        questionContext.correctChoice ||
+        undefined;
+      setAiTutorInitialContext({
+        ...questionContext,
+        question: normalizedQuestion,
+        skill: normalizedSkill,
+        selectedWrong: normalizedWrong,
+        correctOption: normalizedCorrect
+      });
     } else {
-      setAiTutorInitialContext(questionContext || null);
+      setAiTutorInitialContext(null);
     }
     setActiveModal('ai');
   };
@@ -1042,27 +1117,6 @@ export default function App() {
                   )}
                   {renderRolePortalContent()}
                 </main>
-
-                {/* Unified Home-Style Footer Strip */}
-                <footer className="border-t border-slate-200/80 bg-white/90 px-4 sm:px-6 py-4 mt-auto">
-                  <div className="w-full flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-500 font-medium">
-                    <div className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-[#FACC15]"></span>
-                      <span className="font-extrabold text-slate-800">ĐGNL AI Platform</span>
-                      <span>• Hệ sinh thái Khảo thí & Học tập Thích ứng ĐHQG TP.HCM</span>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <span>Vai trò hiện tại: <strong className="text-blue-700 uppercase">{role}</strong></span>
-                      <button
-                        type="button"
-                        onClick={() => setAppView('landing')}
-                        className="text-blue-600 hover:underline font-bold cursor-pointer"
-                      >
-                        Về Trang Chủ
-                      </button>
-                    </div>
-                  </div>
-                </footer>
               </div>
             </div>
 

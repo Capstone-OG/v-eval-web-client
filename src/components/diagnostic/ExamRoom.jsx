@@ -5,7 +5,7 @@ import { cleanVietnameseDiacritics } from '../../utils/vietnameseUtils';
 
 export function ExamRoomHeader({examData, questionCount, timeRemaining, isFullscreen, tabSwitchCount, requestFullScreenMode, handlePromptSubmitExam}) {
   const formatTime = (seconds) => `${Math.floor(seconds / 60).toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`;
-  return (<header className="border-b border-slate-200/80 bg-white/95 backdrop-blur-md sticky top-0 z-40 px-3 sm:px-6 lg:px-8 py-2.5 sm:py-3.5 flex items-center justify-between shadow-sm gap-2">
+  return (<header className={`border-b border-slate-200/80 bg-white/95 backdrop-blur-md sticky top-0 z-40 px-3 sm:px-6 lg:px-8 ${isFullscreen ? 'pt-9 pb-2.5 sm:pt-10 sm:pb-3.5' : 'py-2.5 sm:py-3.5'} flex items-center justify-between shadow-sm gap-2 transition-all`}>
           <div className="flex items-center gap-2 min-w-0">
             <span className="px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-xl bg-slate-900 text-white text-[11px] sm:text-xs font-black tracking-wide shadow-sm truncate">
               <span className="sm:hidden">V-ACT • {questionCount} CÂU</span>

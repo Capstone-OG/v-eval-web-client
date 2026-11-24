@@ -1,17 +1,23 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   ArrowUpDown,
   BookOpen,
+  ChevronLeft,
+  ChevronRight,
   Edit3,
+  GitBranch,
   PenTool,
+  Plus,
   Sparkles,
   UploadCloud
 } from 'lucide-react';
 import { ExamDatabaseCardsGrid } from './ExamDatabaseModal';
 import ExamQuestionStudioTab from './ExamQuestionStudioTab';
+import CurriculumStudioEditor from './CurriculumStudioEditor';
 import ExamWorkspaceHeader, { ExamPageFlowBar } from './ExamWorkspaceHeader';
 import ExamSharedModals from './ExamSharedModals';
 import { useExamWorkspaceController } from './useExamWorkspaceController';
+import { formatSubjectLabel, normalizeOptionLetter } from '../../utils/examParserUtils';
 
 /**
  * Trang 3 (exam-studio) — Studio Biên Soạn Từng Câu Hỏi Đề Thi (2-Pane Editor + Full 838-Item Studio)
@@ -53,6 +59,14 @@ export default function ExamStudioView({ onNavigateTab }) {
     setBankSubView,
     setIngestPart
   } = controller;
+
+  const allQuestions = orderedView?.allQuestions || [];
+  const activeIndex = useMemo(() => {
+    if (allQuestions.length === 0) return -1;
+    const idx = allQuestions.findIndex((q) => q.localId === selectedQuestionLocalId);
+    return idx >= 0 ? idx : 0;
+  }, [allQuestions, selectedQuestionLocalId]);
+  const activeQuestion = activeIndex >= 0 ? allQuestions[activeIndex] : null;
 
   return (
     <div className="min-h-[calc(100vh-120px)] bg-[#F6F5F1] -m-4 sm:-m-6 p-4 sm:p-6 text-slate-900 space-y-4">
@@ -174,32 +188,178 @@ export default function ExamStudioView({ onNavigateTab }) {
             }
           />
 
-          <ExamQuestionStudioTab
-            exam={currentExam}
-            orderedView={orderedView}
-            isLocked={isLocked}
-            selectedQuestionLocalId={selectedQuestionLocalId}
-            onSelectQuestionLocalId={setSelectedQuestionLocalId}
-            onUpdateQuestion={handleUpdateQuestion}
-            onUpdatePassage={handleUpdatePassage}
-            onAddSingleQuestion={handleAddSingleQuestion}
-            onAddPassageCluster={handleAddPassageCluster}
-            onDuplicateQuestion={handleDuplicateQuestion}
-            onDeleteQuestion={requestDeleteQuestion}
-            onOpenNodePicker={(q, passageId, passageContent) =>
-              setNodePickerState({
-                mode: 'question',
-                question: q,
-                parentPassageLocalId: passageId,
-                passageContent: passageContent || ''
-              })
-            }
-            onOpenFullStudio={(questionObj, passageId) =>
-              setFullStudioTarget({ question: questionObj, parentPassageLocalId: passageId })
-            }
-            onZoomImage={(src, caption) => setLightboxImage({ src, caption })}
-            onHoverTarget={setPasteTarget}
-          />
+          {activeQuestion && !isLocked ? (
+            <div className="space-y-3">
+              {/* Thanh chuyển câu nhanh ngay phía trên Full Studio */}
+              <div className="rounded-xl border border-[#E5E3DC] bg-white px-4 py-2.5 flex flex-wrap items-center justify-between gap-2.5 shadow-2xs">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <div className="flex items-center bg-[#FAF9F6] border border-[#E5E3DC] rounded-lg p-0.5">
+                    <button
+                      type="button"
+                      disabled={activeIndex <= 0}
+                      onClick={() => setSelectedQuestionLocalId(allQuestions[activeIndex - 1].localId)}
+                      title="Câu trước"
+                      className="p-1 rounded-md text-slate-600 hover:bg-[#EEF2F7] disabled:opacity-30 cursor-pointer"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    <span className="px-2.5 text-xs font-extrabold text-[#1E3A5F]">
+                      Câu {activeQuestion.questionNumber}{' '}
+                      <span className="font-semibold text-slate-400">
+                        ({activeIndex + 1}/{allQuestions.length})
+                      </span>
+                    </span>
+                    <button
+                      type="button"
+                      disabled={activeIndex >= allQuestions.length - 1}
+                      onClick={() => setSelectedQuestionLocalId(allQuestions[activeIndex + 1].localId)}
+                      title="Câu sau"
+                      className="p-1 rounded-md text-slate-600 hover:bg-[#EEF2F7] disabled:opacity-30 cursor-pointer"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <select
+                    value={activeQuestion.localId}
+                    onChange={(e) => setSelectedQuestionLocalId(e.target.value)}
+                    className="px-2.5 py-1.5 rounded-lg border border-[#E5E3DC] bg-white text-xs font-bold text-slate-800 max-w-[300px] truncate outline-none focus:border-indigo-400"
+                  >
+                    {allQuestions.map((q) => (
+                      <option key={q.localId} value={q.localId}>
+                        Câu {q.questionNumber} (ĐA: {q.correctOption || 'A'}) — {(q.content || '').replace(/\$[^$]*\$/g, '[CT]').slice(0, 55)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setNodePickerState({
+                        mode: 'question',
+                        question: activeQuestion,
+                        parentPassageLocalId: activeQuestion.parentPassageLocalId || null,
+                        passageContent: ''
+                      })
+                    }
+                    className="px-2.5 py-1.5 rounded-lg border border-indigo-200 bg-indigo-50/70 hover:bg-indigo-100 text-indigo-800 text-xs font-bold flex items-center gap-1 cursor-pointer"
+                  >
+                    <GitBranch className="w-3.5 h-3.5" />
+                    <span>{activeQuestion.curriculumNode?.chapterName ? 'Đổi Node' : 'Gắn Node'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleAddSingleQuestion}
+                    className="px-2.5 py-1.5 rounded-lg bg-[#1E3A5F] hover:bg-[#162C49] text-white text-xs font-bold flex items-center gap-1 cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Thêm câu</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Vào thẳng Full Studio (CurriculumStudioEditor) không qua màn hình trung gian */}
+              <div className="rounded-2xl border border-[#E5E3DC] bg-white overflow-hidden shadow-2xs">
+                <CurriculumStudioEditor
+                  key={activeQuestion.localId}
+                  mode="exam"
+                  pattern={{
+                    patternId: `EXAM_Q${activeQuestion.questionNumber}`,
+                    name: `Câu ${activeQuestion.questionNumber} · ${
+                      activeQuestion.suggestedSkillName || formatSubjectLabel(currentExam.subjectCode)
+                    }`,
+                    theoryRecap: activeQuestion.content || '',
+                    solutionMethod: activeQuestion.explanation || '',
+                    level: `L${activeQuestion.difficultyLevel || 2}`,
+                    sampleQuestion: {
+                      questionId: activeQuestion.questionId,
+                      difficultyLevel: activeQuestion.difficultyLevel || 2,
+                      content: activeQuestion.content || '',
+                      options: [
+                        `A. ${activeQuestion.options?.A || ''}`,
+                        `B. ${activeQuestion.options?.B || ''}`,
+                        `C. ${activeQuestion.options?.C || ''}`,
+                        `D. ${activeQuestion.options?.D || ''}`
+                      ],
+                      correct: Math.max(0, ['A', 'B', 'C', 'D'].indexOf(activeQuestion.correctOption || 'A')),
+                      explanation: activeQuestion.explanation || ''
+                    }
+                  }}
+                  domain={{
+                    name: formatSubjectLabel(currentExam.subjectCode),
+                    code: currentExam.subjectCode || 'MATH'
+                  }}
+                  chapter={{ name: currentExam.title || 'Đề thi thực tế' }}
+                  lesson={{ name: `Câu ${activeQuestion.questionNumber}` }}
+                  onClose={() => {
+                    setBankSubView('paper');
+                    onNavigateTab?.('exam-bank');
+                  }}
+                  onSaveSuccess={(updated) => {
+                    if (!updated) return;
+                    const sq = updated.sampleQuestion;
+                    const bloomFromLevel = (() => {
+                      const m = String(updated.level || '').match(/L([1-6])/i);
+                      return m ? Number(m[1]) : null;
+                    })();
+                    handleUpdateQuestion(
+                      activeQuestion.localId,
+                      activeQuestion.parentPassageLocalId || null,
+                      (q) => ({
+                        ...q,
+                        content: updated.theoryRecap !== undefined ? updated.theoryRecap : q.content,
+                        explanation: updated.solutionMethod !== undefined ? updated.solutionMethod : q.explanation,
+                        difficultyLevel: bloomFromLevel || Number(sq?.difficultyLevel) || q.difficultyLevel,
+                        ...(sq
+                          ? {
+                              options: {
+                                A: sq.optionA !== undefined ? sq.optionA : q.options?.A || '',
+                                B: sq.optionB !== undefined ? sq.optionB : q.options?.B || '',
+                                C: sq.optionC !== undefined ? sq.optionC : q.options?.C || '',
+                                D: sq.optionD !== undefined ? sq.optionD : q.options?.D || ''
+                              },
+                              correctOption: sq.correctOption
+                                ? normalizeOptionLetter(sq.correctOption)
+                                : q.correctOption
+                            }
+                          : {})
+                      })
+                    );
+                  }}
+                />
+              </div>
+            </div>
+          ) : (
+            <ExamQuestionStudioTab
+              exam={currentExam}
+              orderedView={orderedView}
+              isLocked={isLocked}
+              selectedQuestionLocalId={selectedQuestionLocalId}
+              onSelectQuestionLocalId={setSelectedQuestionLocalId}
+              onUpdateQuestion={handleUpdateQuestion}
+              onUpdatePassage={handleUpdatePassage}
+              onAddSingleQuestion={handleAddSingleQuestion}
+              onAddPassageCluster={handleAddPassageCluster}
+              onDuplicateQuestion={handleDuplicateQuestion}
+              onDeleteQuestion={requestDeleteQuestion}
+              onOpenNodePicker={(q, passageId, passageContent) =>
+                setNodePickerState({
+                  mode: 'question',
+                  question: q,
+                  parentPassageLocalId: passageId,
+                  passageContent: passageContent || ''
+                })
+              }
+              onOpenFullStudio={(questionObj, passageId) =>
+                setFullStudioTarget({ question: questionObj, parentPassageLocalId: passageId })
+              }
+              onZoomImage={(src, caption) => setLightboxImage({ src, caption })}
+              onHoverTarget={setPasteTarget}
+            />
+          )}
         </div>
       )}
 

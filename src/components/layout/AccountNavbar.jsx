@@ -395,9 +395,9 @@ export default function AccountNavbar({
               <Menu className="h-5 w-5" />
             </button>
 
-            {/* Page Icon in matching vibrant rounded box */}
-            <div className={`hidden sm:flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${tabMeta.color} text-white shadow-sm shadow-slate-900/10`}>
-              <TabIcon className="h-4.5 w-4.5" />
+            {/* Plain minimalist Page Icon (no colored background) */}
+            <div className="hidden sm:flex h-8 w-8 shrink-0 items-center justify-center text-slate-600">
+              <TabIcon className="h-5 w-5" />
             </div>
 
             <div className="min-w-0 flex flex-col justify-center">
