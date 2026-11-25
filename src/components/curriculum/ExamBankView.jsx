@@ -209,25 +209,20 @@ export default function ExamBankView({ onNavigateTab, role = 'director' }) {
 
       {!currentExam ? (
         <div className="max-w-7xl mx-auto space-y-5 pb-8">
-          {/* Scholarly Bank Header */}
-          <div className="rounded-2xl border border-[#E7E5DF] bg-white shadow-[0_2px_12px_rgba(15,23,42,0.03)] p-6">
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
-              <div className="space-y-2 max-w-2xl">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#EEF2F7] border border-[#D4DFED] text-[#1E3A5F] text-[11px] font-extrabold">
-                  <Database className="w-3.5 h-3.5 text-indigo-600" />
-                  <span>Trang 1 / 3 · Kho Đề Chuẩn, Xem Đề Thi & Sắp Xếp Mã Đề</span>
-                </div>
-                <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">
-                  Kho Đề Thi & Trình Xem Đề Chuẩn In
+          {/* Compact Bank Header */}
+          <div className="rounded-2xl border border-[#E7E5DF] bg-white shadow-[0_2px_12px_rgba(15,23,42,0.03)] p-4 sm:p-5">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+              <div className="space-y-1 max-w-2xl">
+                <h1 className="text-xl font-extrabold tracking-tight text-slate-900">
+                  Kho Đề Thi
                 </h1>
-                <p className="text-xs sm:text-[13.5px] text-slate-600 leading-relaxed">
-                  Mở bất kỳ đề thi nào từ Supabase để xem dạng tờ đề học thuật chuẩn in, thi thử chấm nhanh,
-                  kiểm tra <strong>Ma trận Chương / Bài</strong>, hoặc kéo-thả <strong>Sắp xếp & Trộn mã đề</strong>.
+                <p className="text-xs sm:text-[13px] text-slate-500 leading-relaxed">
+                  Xem đề thi, kiểm tra <strong>Ma trận Chương / Bài</strong> và <strong>Sắp xếp &amp; Trộn mã đề</strong>.
                 </p>
               </div>
 
               {isReadOnly ? (
-                <div className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-900 text-xs font-bold shadow-2xs">
+                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-900 text-xs font-bold shadow-2xs">
                   <BookOpen className="w-4 h-4 text-indigo-600" />
                   <span>Kho đề thi chuẩn đã xuất bản</span>
                 </div>
@@ -239,10 +234,10 @@ export default function ExamBankView({ onNavigateTab, role = 'director' }) {
                       setIngestPart('pdf');
                       onNavigateTab?.('exam-ingest');
                     }}
-                    className="px-4 py-2.5 rounded-xl bg-[#1E3A5F] hover:bg-[#162C49] text-white text-xs font-extrabold flex items-center gap-2 shadow-xs cursor-pointer"
+                    className="px-3.5 py-2 rounded-xl bg-[#1E3A5F] hover:bg-[#162C49] text-white text-xs font-extrabold flex items-center gap-1.5 shadow-xs cursor-pointer"
                   >
                     <UploadCloud className="w-4 h-4" />
-                    <span>Parse PDF (Trang 2)</span>
+                    <span>Phân Tích Đề</span>
                   </button>
 
                   <button
@@ -251,16 +246,16 @@ export default function ExamBankView({ onNavigateTab, role = 'director' }) {
                       setIngestPart('bloom');
                       onNavigateTab?.('exam-ingest');
                     }}
-                    className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-cyan-600 hover:opacity-95 text-white text-xs font-extrabold flex items-center gap-2 shadow-xs cursor-pointer"
+                    className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-extrabold flex items-center gap-1.5 shadow-xs cursor-pointer"
                   >
                     <Sparkles className="w-4 h-4" />
-                    <span>AI Bloom L1–L6</span>
+                    <span>Tạo Câu Hỏi</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => handleCreateBlankExam({ navigateTo: 'exam-studio' })}
-                    className="px-3.5 py-2.5 rounded-xl border border-[#DCD9D0] bg-[#FAF9F6] hover:bg-[#EEF2F7] text-[#1E3A5F] text-xs font-bold flex items-center gap-2 cursor-pointer"
+                    className="px-3.5 py-2 rounded-xl border border-[#DCD9D0] bg-[#FAF9F6] hover:bg-[#EEF2F7] text-[#1E3A5F] text-xs font-bold flex items-center gap-1.5 cursor-pointer"
                   >
                     <PenTool className="w-4 h-4" />
                     <span>Soạn Trong Studio</span>
@@ -270,41 +265,41 @@ export default function ExamBankView({ onNavigateTab, role = 'director' }) {
             </div>
 
             {/* Compact KPI Row */}
-            <div className="mt-5 pt-4 border-t border-[#ECEAE4] grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div className="p-3 rounded-xl border border-[#ECEAE4] bg-[#FCFCFA] flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-[#EEF2F7] text-[#1E3A5F] flex items-center justify-center shrink-0">
+            <div className="mt-4 pt-3.5 border-t border-[#ECEAE4] grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="p-2.5 rounded-xl border border-[#ECEAE4] bg-[#FCFCFA] flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-[#EEF2F7] text-[#1E3A5F] flex items-center justify-center shrink-0">
                   <FileText className="w-4 h-4" />
                 </div>
                 <div>
-                  <div className="text-lg font-extrabold text-slate-900 leading-none">{dbExams.length}</div>
+                  <div className="text-base font-extrabold text-slate-900 leading-none">{dbExams.length}</div>
                   <div className="text-[11px] text-slate-500 mt-0.5">Tổng đề trong Kho</div>
                 </div>
               </div>
-              <div className="p-3 rounded-xl border border-[#ECEAE4] bg-[#FCFCFA] flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0">
+              <div className="p-2.5 rounded-xl border border-[#ECEAE4] bg-[#FCFCFA] flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0">
                   <CheckCircle2 className="w-4 h-4" />
                 </div>
                 <div>
-                  <div className="text-lg font-extrabold text-emerald-700 leading-none">{publishedCount}</div>
+                  <div className="text-base font-extrabold text-emerald-700 leading-none">{publishedCount}</div>
                   <div className="text-[11px] text-slate-500 mt-0.5">Đề đã phê duyệt</div>
                 </div>
               </div>
-              <div className="p-3 rounded-xl border border-[#ECEAE4] bg-[#FCFCFA] flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-amber-50 text-amber-700 flex items-center justify-center shrink-0">
+              <div className="p-2.5 rounded-xl border border-[#ECEAE4] bg-[#FCFCFA] flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-700 flex items-center justify-center shrink-0">
                   <BookOpen className="w-4 h-4" />
                 </div>
                 <div>
-                  <div className="text-lg font-extrabold text-amber-700 leading-none">{draftCount}</div>
+                  <div className="text-base font-extrabold text-amber-700 leading-none">{draftCount}</div>
                   <div className="text-[11px] text-slate-500 mt-0.5">Bản nháp chờ duyệt</div>
                 </div>
               </div>
-              <div className="p-3 rounded-xl border border-[#ECEAE4] bg-[#FCFCFA] flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-indigo-50 text-indigo-700 flex items-center justify-center shrink-0">
+              <div className="p-2.5 rounded-xl border border-[#ECEAE4] bg-[#FCFCFA] flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-700 flex items-center justify-center shrink-0">
                   <GitBranch className="w-4 h-4" />
                 </div>
                 <div>
-                  <div className="text-lg font-extrabold text-indigo-700 leading-none">{flatCurriculumNodes.length}</div>
-                  <div className="text-[11px] text-slate-500 mt-0.5">Node Khung chương trình</div>
+                  <div className="text-base font-extrabold text-indigo-700 leading-none">{flatCurriculumNodes.length}</div>
+                  <div className="text-[11px] text-slate-500 mt-0.5">Dạng bài chương trình</div>
                 </div>
               </div>
             </div>
@@ -349,14 +344,7 @@ export default function ExamBankView({ onNavigateTab, role = 'director' }) {
                     }`}
                   >
                     <BookOpen className="w-3.5 h-3.5" />
-                    <span>Xem Đề Thi</span>
-                    <span
-                      className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${
-                        bankSubView === 'paper' ? 'bg-white/20 text-white' : 'bg-[#E7E5DF] text-slate-700'
-                      }`}
-                    >
-                      {orderedView.stats.totalQuestions}
-                    </span>
+                    <span>Xem Đề</span>
                   </button>
 
                   <button
@@ -369,7 +357,7 @@ export default function ExamBankView({ onNavigateTab, role = 'director' }) {
                     }`}
                   >
                     <ArrowUpDown className="w-3.5 h-3.5" />
-                    <span>Sắp Xếp & Trộn Đề</span>
+                    <span>Sắp Xếp</span>
                   </button>
                 </nav>
 
@@ -380,7 +368,7 @@ export default function ExamBankView({ onNavigateTab, role = 'director' }) {
                     className="px-3 py-1.5 rounded-xl border border-[#D4DFED] bg-[#EEF2F7] hover:bg-[#E2EAF4] text-[#1E3A5F] text-xs font-bold flex items-center gap-1.5 cursor-pointer"
                   >
                     <Edit3 className="w-3.5 h-3.5" />
-                    <span>Sửa Từng Câu (Trang 3)</span>
+                    <span>Sửa Từng Câu</span>
                   </button>
                 )}
               </>
