@@ -46,6 +46,21 @@ export function scopeInteractions({
     : null;
 
   return interactions.filter((item) => {
+    // CRITICAL SECURITY & PEDAGOGICAL BOUNDARY:
+    // Teachers are strictly restricted to interactions that have been flagged/reported by students
+    // (student_reported === true) or have active pedagogical proposals / resolutions.
+    // Unreported/normal chat interactions between student and AI are strictly private and hidden from teachers.
+    const isReportedOrProposed = Boolean(
+      item.student_reported ||
+      item.studentReported ||
+      item.proposal ||
+      item.mentor_resolution ||
+      item.mentorResolution
+    );
+    if (!isReportedOrProposed) {
+      return false;
+    }
+
     const itemClassId = String(item.class_id || item.classId || '').toLowerCase();
     const itemClassName = String(item.class_name || item.className || '').toLowerCase();
     const itemStudentId = String(item.student_id || item.studentId || '').toLowerCase();

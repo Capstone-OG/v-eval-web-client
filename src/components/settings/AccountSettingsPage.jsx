@@ -1484,12 +1484,12 @@ export default function AccountSettingsPage({
             <div className="p-4 sm:p-5 rounded-2xl bg-slate-50 border border-slate-200/80 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-xs">
               <div>
                 <span className="text-slate-500 block">Học sinh:</span>
-                <strong className="text-slate-900 font-extrabold text-sm">{fullName || mockUser.name}</strong>
-                <span className="text-slate-500 block text-[11px]">Mã HS: {currentUser?.id || mockUser.id}</span>
+                <strong className="text-slate-900 font-extrabold text-sm">{fullName || currentUser?.fullName || currentUser?.name || 'Học viên'}</strong>
+                <span className="text-slate-500 block text-[11px]">Mã HS: {currentUser?.id || currentUser?.userId || '—'}</span>
               </div>
               <div>
                 <span className="text-slate-500 block">Lớp & Trường THPT:</span>
-                <strong className="text-slate-900 font-bold">{mockUser.grade}</strong>
+                <strong className="text-slate-900 font-bold">{currentUser?.grade || 'Khối 12'}</strong>
                 <span className="text-slate-500 block text-[11px] truncate">{schoolName || 'Chưa cập nhật trường THPT'}</span>
               </div>
               <div>
@@ -1501,7 +1501,7 @@ export default function AccountSettingsPage({
               </div>
               <div>
                 <span className="text-slate-500 block">Giáo viên chủ nhiệm:</span>
-                <strong className="text-blue-700 font-bold">{mockUser.assignedTeacher}</strong>
+                <strong className="text-blue-700 font-bold">{currentUser?.assignedTeacher || 'Cố vấn Chuyên môn ĐGNL'}</strong>
                 <span className="text-slate-500 block text-[11px]">Cố vấn Chuyên môn ĐGNL</span>
               </div>
             </div>
@@ -1630,7 +1630,7 @@ export default function AccountSettingsPage({
               <div className="p-4 rounded-2xl bg-amber-50/60 border border-amber-200/80 text-xs space-y-1.5">
                 <div className="font-extrabold text-amber-900 flex items-center gap-1.5">
                   <GraduationCap className="w-4 h-4 text-amber-600" />
-                  <span>Lời Phê Của Giáo Viên Chủ Nhiệm ({mockUser.assignedTeacher}):</span>
+                  <span>Lời Phê Của Giáo Viên Chủ Nhiệm {currentUser?.assignedTeacher ? `(${currentUser.assignedTeacher})` : ''}:</span>
                 </div>
                 <p className="text-amber-800/90 leading-relaxed italic">
                   "Em Hoàng có tư duy logic và kỹ năng phân tích số liệu rất nổi trội (đạt 85%). Tuy nhiên miền Khoa học Tự nhiên (Hóa - Sinh) còn để mất điểm đáng tiếc ở các câu đọc hiểu văn bản dài. Gia đình cần nhắc em duy trì 30 phút tự học mỗi tối trên hệ thống để cán mốc 850+ vững vàng."

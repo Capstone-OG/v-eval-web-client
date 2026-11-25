@@ -91,9 +91,9 @@ export default function EarlyWarningsMentorPanel({
   const [counselingTarget, setCounselingTarget] = useState(null);
   const [counselingDate, setCounselingDate] = useState(getDefaultFutureDateTimeLocal);
   const [counselingLocation, setCounselingLocation] = useState(
-    'Phòng Tư Vấn Học Đường - Cơ sở chính (hoặc Google Meet)'
+    'Phòng tư vấn học đường (hoặc Trực tuyến Google Meet)'
   );
-  const [proposedTargetScore, setProposedTargetScore] = useState(850);
+  const [proposedTargetScore, setProposedTargetScore] = useState(900);
   const [mentorNotes, setMentorNotes] = useState('');
   const [submittingCounseling, setSubmittingCounseling] = useState(false);
 
@@ -204,12 +204,16 @@ export default function EarlyWarningsMentorPanel({
   const openCounselingModal = (alert) => {
     setCounselingTarget(alert);
     setCounselingDate(getDefaultFutureDateTimeLocal());
-    const suggested = alert.currentPredictedScore
-      ? Math.min(1200, Math.round((alert.currentPredictedScore + 140) / 10) * 10)
-      : 820;
+    const suggested = alert.targetScore
+      ? alert.targetScore
+      : alert.currentPredictedScore
+        ? Math.min(1200, Math.round((alert.currentPredictedScore + 100) / 10) * 10)
+        : (alert.predictedScore || 900);
     setProposedTargetScore(suggested);
     setMentorNotes(
-      `Đề xuất lộ trình 2 giai đoạn: Chốt mốc khả thi ${suggested}đ trong 4 tuần tới dựa trên tốc độ tích lũy SEM hiện tại (${alert.currentPredictedScore ?? 610}đ).`
+      alert.currentPredictedScore
+        ? `Đề xuất lộ trình củng cố mốc khả thi ${suggested}đ dựa trên kết quả tích lũy hiện tại (${alert.currentPredictedScore}đ).`
+        : `Đề xuất lộ trình củng cố mốc mục tiêu ${suggested}đ.`
     );
   };
 

@@ -53,6 +53,13 @@ export default function AiTutorModerationView({ currentUser, onBackToDashboard, 
   const isTeacher = role === 'teacher';
   const isDirector = !isTeacher;
 
+  // Clean class name helper to prevent duplicate prefixes (e.g. "Lớp Lớp...")
+  const formatClassName = (name) => {
+    if (!name) return 'Lớp phụ trách';
+    const trimmed = String(name).trim();
+    return trimmed.toLowerCase().startsWith('lớp') ? trimmed : `Lớp ${trimmed}`;
+  };
+
   const [interactions, setInteractions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState(null);
@@ -117,7 +124,7 @@ export default function AiTutorModerationView({ currentUser, onBackToDashboard, 
           student_id: item.student_id || 'unknown',
           student_name: item.student_name || item.studentName || (item.student_id ? `Học sinh ${sid}` : 'Học sinh'),
           class_name: item.class_name || item.className || 'Lớp phụ trách',
-          class_id: item.class_id || item.classId || 'class_01',
+          class_id: item.class_id || item.classId || null,
           question_id: item.question_id,
           question_latex:
             item.question_latex ||
@@ -127,11 +134,11 @@ export default function AiTutorModerationView({ currentUser, onBackToDashboard, 
           options: item.options || null,
           student_selected_option: item.student_selected_option || item.studentSelectedOption || 'Chưa chọn',
           correct_option: item.correct_option || item.correctOption || 'Chưa xác định',
-          pattern_code: item.pattern_code || item.patternCode || 'PAT_DEFAULT',
-          pattern_name: item.pattern_name || item.patternName || 'Chuyên đề kiến thức trọng tâm',
-          matched_trap_id: item.matched_trap_id || item.matchedTrapId,
-          trap_code: item.trap_code || item.trapCode || 'TRAP_LOGIC',
-          trap_name: item.trap_name || item.trapName || 'Lỗ hổng tư duy học sinh',
+          pattern_code: item.pattern_code || item.patternCode || null,
+          pattern_name: item.pattern_name || item.patternName || 'Chuyên đề ôn tập',
+          matched_trap_id: item.matched_trap_id || item.matchedTrapId || null,
+          trap_code: item.trap_code || item.trapCode || null,
+          trap_name: item.trap_name || item.trapName || (item.trap_code ? 'Bẫy tư duy' : null),
           misconception_explanation: item.misconception_explanation || item.misconceptionExplanation || '',
           ai_guidance_transcript: Array.isArray(item.ai_guidance_transcript) ? item.ai_guidance_transcript : [],
           student_reported: Boolean(item.student_reported ?? item.studentReported),
@@ -293,14 +300,15 @@ export default function AiTutorModerationView({ currentUser, onBackToDashboard, 
     return scopedInteractions.filter((item) => {
       const itemProposal = proposals[item.id] || item.proposal;
 
-      // 1. Tab filter
-      if (filterMode === 'pending') {
+      // 1. Tab filter (Teachers never fall into 'all'; fallback to 'pending')
+      const effectiveMode = isTeacher && filterMode === 'all' ? 'pending' : filterMode;
+      if (effectiveMode === 'pending') {
         if (item.mentor_resolution || !item.student_reported) return false;
-      } else if (filterMode === 'proposals') {
+      } else if (effectiveMode === 'proposals') {
         if (!itemProposal) return false;
-      } else if (filterMode === 'resolved') {
+      } else if (effectiveMode === 'resolved') {
         if (!item.mentor_resolution) return false;
-      } else if (filterMode === 'reported') {
+      } else if (effectiveMode === 'reported') {
         if (!item.student_reported) return false;
       }
 
@@ -703,51 +711,64 @@ export default function AiTutorModerationView({ currentUser, onBackToDashboard, 
               <Bot className="w-4 h-4 text-[#FACC15]" />
               <span>
                 {isTeacher
-                  ? 'Phân hệ Giảng viên • Đề xuất Sư phạm Gia sư AI'
+                  ? 'Không Gian Giảng Viên • Đồng Hành Cùng Gia Sư AI'
                   : 'Phân hệ Quản trị Học thuật • Core Flow 4: Socratic AI & GraphRAG'}
               </span>
             </div>
 
             <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-white leading-tight font-sans">
               {isTeacher
-                ? 'Kiểm Duyệt Gia Sư AI — Lớp Phụ Trách & Đề Xuất Sư Phạm'
+                ? 'Hỗ Trợ & Đóng Góp Sư Phạm — Gia Sư AI'
                 : 'Trung Tâm Kiểm Duyệt Phản Hồi Gia Sư AI & Báo Cáo Học Sinh'}
             </h1>
 
             <p className="text-sm text-slate-200 font-medium leading-relaxed">
               {isTeacher
-                ? 'Theo dõi tương tác của Gia sư AI với học sinh trong các lớp bạn giảng dạy. Đóng góp đề xuất Lời giải chuẩn hoặc Bẫy tư duy mới để Giám đốc Học thuật thẩm định & ghi đè vào kho tri thức RAG.'
+                ? 'Theo dõi các câu hỏi học sinh trong lớp phản ánh khó hiểu hoặc lời giải chưa tối ưu. Đóng góp phương pháp giải hay để Ban Chuyên môn cập nhật cho Gia sư AI toàn trường.'
                 : 'Tiếp nhận các phiên trả lời bị học sinh báo cáo sai hoặc ảo giác kiến thức. Ban Chuyên môn thẩm định đề xuất từ Giảng viên hoặc trực tiếp can thiệp sư phạm vào Knowledge Graph.'}
             </p>
 
             {/* Quick Status Chips */}
-            <div className="flex flex-wrap items-center gap-2.5 text-xs font-semibold pt-1">
-              <span className="flex items-center gap-1.5 font-extrabold text-slate-950 bg-[#FACC15] px-3 py-1.5 rounded-xl shadow-sm">
-                <Clock className="w-3.5 h-3.5 text-slate-950" />
-                {isTeacher ? 'Báo cáo lớp cần xem:' : 'Chờ thẩm định:'}{' '}
-                <strong className="font-black">{counts.pending} báo cáo</strong>
-              </span>
+            {isTeacher ? (
+              <div className="flex flex-wrap items-center gap-2.5 text-xs font-semibold pt-1">
+                <span className="flex items-center gap-1.5 font-extrabold text-slate-950 bg-[#FACC15] px-3 py-1.5 rounded-xl shadow-sm">
+                  <Clock className="w-3.5 h-3.5 text-slate-950" />
+                  Báo cáo cần xem: <strong className="font-black">{counts.pending} câu</strong>
+                </span>
 
-              <span className="flex items-center gap-1.5 text-amber-200 bg-amber-500/20 px-3 py-1.5 rounded-xl border border-amber-400/30 font-bold">
-                <Award className="w-3.5 h-3.5 text-amber-300" />
-                {isTeacher ? 'Đề xuất đã gửi:' : 'Đề xuất từ GV:'}{' '}
-                <strong className="text-white font-extrabold">{counts.proposalsCount} đề xuất</strong>
-              </span>
+                <span className="flex items-center gap-1.5 text-amber-200 bg-amber-500/20 px-3 py-1.5 rounded-xl border border-amber-400/30 font-bold">
+                  <Award className="w-3.5 h-3.5 text-amber-300" />
+                  Đề xuất đã gửi: <strong className="text-white font-extrabold">{counts.proposalsCount} đề xuất</strong>
+                </span>
 
-              <span className="flex items-center gap-1.5 text-emerald-200 bg-emerald-500/20 px-3 py-1.5 rounded-xl border border-emerald-400/30 font-bold">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-300" />
-                Đã giải quyết: <strong className="text-white font-extrabold">{counts.resolved} phiên</strong>
-              </span>
+                <span className="flex items-center gap-1.5 text-emerald-200 bg-emerald-500/20 px-3 py-1.5 rounded-xl border border-emerald-400/30 font-bold">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-300" />
+                  Đã hoàn tất: <strong className="text-white font-extrabold">{counts.resolved} câu</strong>
+                </span>
+              </div>
+            ) : (
+              <div className="flex flex-wrap items-center gap-2.5 text-xs font-semibold pt-1">
+                <span className="flex items-center gap-1.5 font-extrabold text-slate-950 bg-[#FACC15] px-3 py-1.5 rounded-xl shadow-sm">
+                  <Clock className="w-3.5 h-3.5 text-slate-950" />
+                  Chờ thẩm định: <strong className="font-black">{counts.pending} báo cáo</strong>
+                </span>
 
-              <span className="flex items-center gap-1.5 text-slate-200 bg-white/10 px-3 py-1.5 rounded-xl border border-white/10">
-                <Layers className="w-3.5 h-3.5 text-cyan-300" />
-                {isTeacher ? 'Phạm vi lớp:' : 'CSDL PostgreSQL:'}{' '}
-                <strong className="text-white font-extrabold">{counts.total} đàm thoại</strong>
-                {isTeacher && selectedClassObj?.name && (
-                  <span className="text-slate-300 font-normal">({selectedClassObj.name})</span>
-                )}
-              </span>
-            </div>
+                <span className="flex items-center gap-1.5 text-amber-200 bg-amber-500/20 px-3 py-1.5 rounded-xl border border-amber-400/30 font-bold">
+                  <Award className="w-3.5 h-3.5 text-amber-300" />
+                  Đề xuất từ GV: <strong className="text-white font-extrabold">{counts.proposalsCount} đề xuất</strong>
+                </span>
+
+                <span className="flex items-center gap-1.5 text-emerald-200 bg-emerald-500/20 px-3 py-1.5 rounded-xl border border-emerald-400/30 font-bold">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-300" />
+                  Đã giải quyết: <strong className="text-white font-extrabold">{counts.resolved} phiên</strong>
+                </span>
+
+                <span className="flex items-center gap-1.5 text-slate-200 bg-white/10 px-3 py-1.5 rounded-xl border border-white/10">
+                  <Layers className="w-3.5 h-3.5 text-cyan-300" />
+                  CSDL PostgreSQL: <strong className="text-white font-extrabold">{counts.total} đàm thoại</strong>
+                </span>
+              </div>
+            )}
 
             {/* Banner Action Buttons & Teacher Class Filter */}
             <div className="flex flex-wrap items-center gap-3 pt-2">
@@ -795,7 +816,7 @@ export default function AiTutorModerationView({ currentUser, onBackToDashboard, 
                 className="flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-[#FACC15] text-slate-950 font-black text-xs hover:bg-[#eab308] transition-all shadow-xl shadow-yellow-500/10 hover:scale-[1.02] active:scale-[0.98] cursor-pointer disabled:opacity-50"
               >
                 <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-                <span>Đồng bộ CSDL Supabase</span>
+                <span>{isTeacher ? 'Làm mới dữ liệu' : 'Đồng bộ CSDL Supabase'}</span>
               </button>
 
               {onBackToDashboard && (
@@ -811,7 +832,7 @@ export default function AiTutorModerationView({ currentUser, onBackToDashboard, 
             </div>
           </div>
 
-          {/* Right Column: GraphRAG Operational Monitor Highlight Card */}
+          {/* Right Column: Card on Banner (Teacher Class Summary vs Director GraphRAG Monitor) */}
           <div className="relative shrink-0 w-full sm:w-72 lg:w-80 group">
             <div className="absolute -inset-1 rounded-3xl bg-gradient-to-r from-[#FACC15]/30 to-cyan-400/30 blur-lg opacity-40 group-hover:opacity-70 transition-opacity pointer-events-none" />
 
@@ -819,32 +840,45 @@ export default function AiTutorModerationView({ currentUser, onBackToDashboard, 
               <div className="flex items-center justify-between pb-2 border-b border-white/10">
                 <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#FACC15] flex items-center gap-1.5">
                   <Sparkles className="w-3.5 h-3.5" />
-                  <span>GraphRAG Monitor</span>
+                  <span>{isTeacher ? 'Tình Trạng Lớp Học' : 'GraphRAG Monitor'}</span>
                 </span>
                 <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-[10px] font-bold flex items-center gap-1">
-                  <Activity className="w-3 h-3 text-emerald-300" />
-                  Live Active
+                  {isTeacher ? (
+                    <>
+                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-300" />
+                      Sư phạm chuẩn
+                    </>
+                  ) : (
+                    <>
+                      <Activity className="w-3 h-3 text-emerald-300" />
+                      Live Active
+                    </>
+                  )}
                 </span>
               </div>
 
               <div className="space-y-2 text-xs">
                 <div className="flex items-center justify-between text-slate-200">
-                  <span>Độ tin cậy Socratic:</span>
+                  <span>{isTeacher ? 'Độ tin cậy gợi mở Socratic:' : 'Độ tin cậy Socratic:'}</span>
                   <strong className="text-white font-black text-sm">{socraticReliability}%</strong>
                 </div>
                 <div className="w-full bg-slate-950/40 h-2 rounded-full overflow-hidden">
                   <div className="bg-gradient-to-r from-[#FACC15] to-emerald-400 h-full rounded-full" style={{ width: `${socraticReliability}%` }} />
                 </div>
                 <div className="flex items-center justify-between text-[11px] text-blue-100 pt-1">
-                  <span>Knowledge Graph:</span>
-                  <span className="text-[#FACC15] font-black">{exemplarsCount} Lời giải mẫu • {trapsCount} Bẫy tư duy</span>
+                  <span>{isTeacher ? 'Đóng góp chuyên môn:' : 'Knowledge Graph:'}</span>
+                  <span className="text-[#FACC15] font-black">
+                    {isTeacher
+                      ? `${counts.proposalsCount} đề xuất đã gửi`
+                      : `${exemplarsCount} Lời giải mẫu • ${trapsCount} Bẫy tư duy`}
+                  </span>
                 </div>
               </div>
 
               <div className="p-2.5 rounded-2xl bg-slate-900/40 border border-white/10 flex items-center justify-between text-xs font-bold text-slate-200">
-                <span>Cơ chế thẩm duyệt:</span>
+                <span>{isTeacher ? 'Thẩm định & Phê duyệt:' : 'Cơ chế thẩm duyệt:'}</span>
                 <span className="text-cyan-300 font-extrabold">
-                  {isTeacher ? 'Đề xuất 2 tầng' : 'Human-in-the-Loop'}
+                  {isTeacher ? 'Ban Chuyên Môn' : 'Human-in-the-Loop'}
                 </span>
               </div>
             </div>
@@ -899,146 +933,258 @@ export default function AiTutorModerationView({ currentUser, onBackToDashboard, 
         />
       ) : (
       <>
-      {/* 2. MetricsGrid: 4 High-End KPI Cards (Exact Student MetricsGrid Styling) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-5 my-6">
-        {/* CARD 1: Pending Reports */}
-        <div className="bg-white rounded-2xl p-5 border border-slate-200/80 card-shadow flex flex-col justify-between hover:border-rose-300 transition-all group">
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[11px] font-bold tracking-wider uppercase text-slate-400">
-                {isTeacher ? 'Báo cáo lớp phụ trách' : 'Yêu cầu cần xử lý'}
-              </span>
-              <span className="px-2 py-0.5 rounded-md bg-rose-50 text-rose-700 text-xs font-bold border border-rose-200 flex items-center gap-1">
-                <AlertTriangle className="w-3 h-3 text-rose-600" />
-                Cần xem xét
-              </span>
+      {/* 2. MetricsGrid: 3 Teacher Pedagogical Cards vs 4 High-End Director KPI Cards */}
+      {isTeacher ? (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-5 my-6">
+          {/* TEACHER CARD 1: Pending Reports */}
+          <div className="bg-white rounded-2xl p-5 border border-slate-200/80 card-shadow flex flex-col justify-between hover:border-rose-300 transition-all group">
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[11px] font-bold tracking-wider uppercase text-slate-400">
+                  Báo cáo lớp phụ trách
+                </span>
+                <span className="px-2 py-0.5 rounded-md bg-rose-50 text-rose-700 text-xs font-bold border border-rose-200 flex items-center gap-1">
+                  <AlertTriangle className="w-3 h-3 text-rose-600" />
+                  Cần xem xét
+                </span>
+              </div>
+
+              <div className="flex items-baseline gap-2 mb-1">
+                <span className="text-3xl font-extrabold text-slate-900 tracking-tight">{counts.pending}</span>
+                <span className="text-sm font-semibold text-slate-400">/ {counts.reported} câu phản ánh</span>
+              </div>
+
+              <div className="text-xs font-semibold text-slate-600 bg-slate-50 p-2 rounded-xl border border-slate-100 mb-4 flex items-center justify-between">
+                <span>Tình trạng lớp học:</span>
+                <strong className={counts.pending > 0 ? 'text-rose-600 font-bold' : 'text-emerald-600 font-bold'}>
+                  {counts.pending > 0 ? 'Có câu hỏi cần hỗ trợ' : 'Lớp học ổn định'}
+                </strong>
+              </div>
             </div>
 
-            <div className="flex items-baseline gap-2 mb-1">
-              <span className="text-3xl font-extrabold text-slate-900 tracking-tight">{counts.pending}</span>
-              <span className="text-sm font-semibold text-slate-400">/ {counts.reported} báo cáo</span>
-            </div>
-
-            <div className="text-xs font-semibold text-slate-600 bg-slate-50 p-2 rounded-xl border border-slate-100 mb-4 flex items-center justify-between">
-              <span>Trạng thái hàng đợi:</span>
-              <strong className={counts.pending > 0 ? 'text-rose-600 font-bold' : 'text-emerald-600 font-bold'}>
-                {counts.pending > 0 ? 'Có báo cáo chờ duyệt' : 'Đã xử lý sạch'}
-              </strong>
-            </div>
+            <button
+              type="button"
+              onClick={() => setFilterMode('pending')}
+              className="w-full flex items-center justify-between text-xs font-bold text-rose-600 group-hover:text-rose-700 pt-2 border-t border-slate-100 cursor-pointer"
+            >
+              <span>Lọc danh sách chờ xem</span>
+              <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+            </button>
           </div>
 
-          <button
-            type="button"
-            onClick={() => setFilterMode('pending')}
-            className="w-full flex items-center justify-between text-xs font-bold text-rose-600 group-hover:text-rose-700 pt-2 border-t border-slate-100 cursor-pointer"
-          >
-            <span>Lọc danh sách chờ duyệt</span>
-            <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-          </button>
-        </div>
+          {/* TEACHER CARD 2: Teacher Proposals */}
+          <div className="bg-white rounded-2xl p-5 border border-slate-200/80 card-shadow flex flex-col justify-between hover:border-amber-300 transition-all group">
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[11px] font-bold tracking-wider uppercase text-slate-400">
+                  Đề xuất của bạn
+                </span>
+                <span className="px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 text-xs font-bold border border-amber-200 flex items-center gap-1">
+                  <Award className="w-3 h-3 text-amber-600" />
+                  Chờ Ban Chuyên Môn duyệt
+                </span>
+              </div>
 
-        {/* CARD 2: Proposals (GV: Đã gửi / Director: Chờ phê duyệt) */}
-        <div className="bg-white rounded-2xl p-5 border border-slate-200/80 card-shadow flex flex-col justify-between hover:border-amber-300 transition-all group">
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[11px] font-bold tracking-wider uppercase text-slate-400">
-                {isTeacher ? 'Đề xuất của bạn' : 'Đề xuất từ Giảng viên'}
-              </span>
-              <span className="px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 text-xs font-bold border border-amber-200 flex items-center gap-1">
-                <Award className="w-3 h-3 text-amber-600" />
-                {isTeacher ? 'Chờ Director duyệt' : 'Cần thẩm định'}
-              </span>
+              <div className="flex items-baseline gap-2 mb-1">
+                <span className="text-3xl font-extrabold text-amber-600 tracking-tight">{counts.proposalsCount}</span>
+                <span className="text-sm font-semibold text-slate-400">đề xuất đã gửi</span>
+              </div>
+
+              <div className="text-xs font-semibold text-slate-600 bg-slate-50 p-2 rounded-xl border border-slate-100 mb-4 flex items-center justify-between">
+                <span>Phân loại đóng góp:</span>
+                <strong className="text-amber-700 font-bold">Lời giải chuẩn & Bẫy tư duy</strong>
+              </div>
             </div>
 
-            <div className="flex items-baseline gap-2 mb-1">
-              <span className="text-3xl font-extrabold text-amber-600 tracking-tight">{counts.proposalsCount}</span>
-              <span className="text-sm font-semibold text-slate-400">đề xuất</span>
-            </div>
-
-            <div className="text-xs font-semibold text-slate-600 bg-slate-50 p-2 rounded-xl border border-slate-100 mb-4 flex items-center justify-between">
-              <span>Phân loại:</span>
-              <strong className="text-amber-700 font-bold">Lời giải mẫu & Bẫy tư duy</strong>
-            </div>
+            <button
+              type="button"
+              onClick={() => setFilterMode('proposals')}
+              className="w-full flex items-center justify-between text-xs font-bold text-amber-600 group-hover:text-amber-700 pt-2 border-t border-slate-100 cursor-pointer"
+            >
+              <span>Xem các đề xuất của tôi</span>
+              <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+            </button>
           </div>
 
-          <button
-            type="button"
-            onClick={() => setFilterMode('proposals')}
-            className="w-full flex items-center justify-between text-xs font-bold text-amber-600 group-hover:text-amber-700 pt-2 border-t border-slate-100 cursor-pointer"
-          >
-            <span>{isTeacher ? 'Xem các đề xuất của tôi' : 'Xem đề xuất từ Giảng viên'}</span>
-            <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-          </button>
+          {/* TEACHER CARD 3: Resolved & Pedagogically Closed */}
+          <div className="bg-white rounded-2xl p-5 border border-slate-200/80 card-shadow flex flex-col justify-between hover:border-emerald-300 transition-all group">
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[11px] font-bold tracking-wider uppercase text-slate-400">
+                  Đã hoàn tất
+                </span>
+                <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 text-xs font-bold border border-emerald-200 flex items-center gap-1">
+                  <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                  Sư phạm chuẩn
+                </span>
+              </div>
+
+              <div className="flex items-baseline gap-2 mb-1">
+                <span className="text-3xl font-extrabold text-slate-900 tracking-tight">{counts.resolved}</span>
+                <span className="text-sm font-semibold text-slate-400">câu đã xử lý</span>
+              </div>
+
+              <div className="text-xs font-semibold text-slate-600 bg-slate-50 p-2 rounded-xl border border-slate-100 mb-4 flex items-center justify-between">
+                <span>Hướng dẫn học sinh:</span>
+                <strong className="text-emerald-700 font-bold">Phương pháp gợi mở chuẩn</strong>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setFilterMode('resolved')}
+              className="w-full flex items-center justify-between text-xs font-bold text-emerald-600 group-hover:text-emerald-700 pt-2 border-t border-slate-100 cursor-pointer"
+            >
+              <span>Xem các câu đã hoàn tất</span>
+              <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+            </button>
+          </div>
         </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-5 my-6">
+          {/* DIRECTOR CARD 1: Pending Reports */}
+          <div className="bg-white rounded-2xl p-5 border border-slate-200/80 card-shadow flex flex-col justify-between hover:border-rose-300 transition-all group">
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[11px] font-bold tracking-wider uppercase text-slate-400">
+                  Yêu cầu cần xử lý
+                </span>
+                <span className="px-2 py-0.5 rounded-md bg-rose-50 text-rose-700 text-xs font-bold border border-rose-200 flex items-center gap-1">
+                  <AlertTriangle className="w-3 h-3 text-rose-600" />
+                  Cần xem xét
+                </span>
+              </div>
 
-        {/* CARD 3: Resolved & Ingested into Graph */}
-        <div className="bg-white rounded-2xl p-5 border border-slate-200/80 card-shadow flex flex-col justify-between hover:border-emerald-300 transition-all group">
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[11px] font-bold tracking-wider uppercase text-slate-400">
-                Đã xử lý & Lưu Graph
-              </span>
-              <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 text-xs font-bold border border-emerald-200 flex items-center gap-1">
-                <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                Đã lưu Graph
-              </span>
+              <div className="flex items-baseline gap-2 mb-1">
+                <span className="text-3xl font-extrabold text-slate-900 tracking-tight">{counts.pending}</span>
+                <span className="text-sm font-semibold text-slate-400">/ {counts.reported} báo cáo</span>
+              </div>
+
+              <div className="text-xs font-semibold text-slate-600 bg-slate-50 p-2 rounded-xl border border-slate-100 mb-4 flex items-center justify-between">
+                <span>Trạng thái hàng đợi:</span>
+                <strong className={counts.pending > 0 ? 'text-rose-600 font-bold' : 'text-emerald-600 font-bold'}>
+                  {counts.pending > 0 ? 'Có báo cáo chờ duyệt' : 'Đã xử lý sạch'}
+                </strong>
+              </div>
             </div>
 
-            <div className="flex items-baseline gap-2 mb-1">
-              <span className="text-3xl font-extrabold text-slate-900 tracking-tight">{counts.resolved}</span>
-              <span className="text-sm font-semibold text-slate-400">phiên hoàn tất</span>
-            </div>
-
-            <div className="text-xs font-semibold text-slate-600 bg-slate-50 p-2 rounded-xl border border-slate-100 mb-4 flex items-center justify-between">
-              <span>Knowledge Graph:</span>
-              <strong className="text-emerald-700 font-bold">Node Exemplar & Trap</strong>
-            </div>
+            <button
+              type="button"
+              onClick={() => setFilterMode('pending')}
+              className="w-full flex items-center justify-between text-xs font-bold text-rose-600 group-hover:text-rose-700 pt-2 border-t border-slate-100 cursor-pointer"
+            >
+              <span>Lọc danh sách chờ duyệt</span>
+              <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+            </button>
           </div>
 
-          <button
-            type="button"
-            onClick={() => setFilterMode('resolved')}
-            className="w-full flex items-center justify-between text-xs font-bold text-emerald-600 group-hover:text-emerald-700 pt-2 border-t border-slate-100 cursor-pointer"
-          >
-            <span>Xem lịch sử can thiệp</span>
-            <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-          </button>
-        </div>
+          {/* DIRECTOR CARD 2: Proposals from Teachers */}
+          <div className="bg-white rounded-2xl p-5 border border-slate-200/80 card-shadow flex flex-col justify-between hover:border-amber-300 transition-all group">
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[11px] font-bold tracking-wider uppercase text-slate-400">
+                  Đề xuất từ Giảng viên
+                </span>
+                <span className="px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 text-xs font-bold border border-amber-200 flex items-center gap-1">
+                  <Award className="w-3 h-3 text-amber-600" />
+                  Cần thẩm định
+                </span>
+              </div>
 
-        {/* CARD 4: Total System AI Interactions Monitored */}
-        <div className="bg-white rounded-2xl p-5 border border-slate-200/80 card-shadow flex flex-col justify-between hover:border-blue-300 transition-all group">
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[11px] font-bold tracking-wider uppercase text-slate-400">
-                {isTeacher ? 'Giám sát lớp mình' : 'Giám sát hệ thống'}
-              </span>
-              <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 text-xs font-bold border border-blue-200 flex items-center gap-1">
-                <Bot className="w-3 h-3 text-blue-600" />
-                {isTeacher ? 'Lớp Phụ Trách' : 'Supabase Pooler'}
-              </span>
+              <div className="flex items-baseline gap-2 mb-1">
+                <span className="text-3xl font-extrabold text-amber-600 tracking-tight">{counts.proposalsCount}</span>
+                <span className="text-sm font-semibold text-slate-400">đề xuất</span>
+              </div>
+
+              <div className="text-xs font-semibold text-slate-600 bg-slate-50 p-2 rounded-xl border border-slate-100 mb-4 flex items-center justify-between">
+                <span>Phân loại:</span>
+                <strong className="text-amber-700 font-bold">Lời giải mẫu & Bẫy tư duy</strong>
+              </div>
             </div>
 
-            <div className="flex items-baseline gap-2 mb-1">
-              <span className="text-3xl font-extrabold text-slate-900 tracking-tight">{counts.total}</span>
-              <span className="text-sm font-semibold text-slate-400">phiên đàm thoại</span>
-            </div>
-
-            <div className="text-xs font-semibold text-slate-600 bg-slate-50 p-2 rounded-xl border border-slate-100 mb-4 flex items-center justify-between">
-              <span>CSDL đàm thoại:</span>
-              <strong className="text-blue-700 font-bold">ai_tutor_interaction_logs</strong>
-            </div>
+            <button
+              type="button"
+              onClick={() => setFilterMode('proposals')}
+              className="w-full flex items-center justify-between text-xs font-bold text-amber-600 group-hover:text-amber-700 pt-2 border-t border-slate-100 cursor-pointer"
+            >
+              <span>Xem đề xuất từ Giảng viên</span>
+              <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+            </button>
           </div>
 
-          <button
-            type="button"
-            onClick={() => setFilterMode('all')}
-            className="w-full flex items-center justify-between text-xs font-bold text-blue-600 group-hover:text-blue-700 pt-2 border-t border-slate-100 cursor-pointer"
-          >
-            <span>Xem toàn bộ đàm thoại</span>
-            <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-          </button>
+          {/* DIRECTOR CARD 3: Resolved & Ingested into Graph */}
+          <div className="bg-white rounded-2xl p-5 border border-slate-200/80 card-shadow flex flex-col justify-between hover:border-emerald-300 transition-all group">
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[11px] font-bold tracking-wider uppercase text-slate-400">
+                  Đã xử lý & Lưu Graph
+                </span>
+                <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 text-xs font-bold border border-emerald-200 flex items-center gap-1">
+                  <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                  Đã lưu Graph
+                </span>
+              </div>
+
+              <div className="flex items-baseline gap-2 mb-1">
+                <span className="text-3xl font-extrabold text-slate-900 tracking-tight">{counts.resolved}</span>
+                <span className="text-sm font-semibold text-slate-400">phiên hoàn tất</span>
+              </div>
+
+              <div className="text-xs font-semibold text-slate-600 bg-slate-50 p-2 rounded-xl border border-slate-100 mb-4 flex items-center justify-between">
+                <span>Knowledge Graph:</span>
+                <strong className="text-emerald-700 font-bold">Node Exemplar & Trap</strong>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setFilterMode('resolved')}
+              className="w-full flex items-center justify-between text-xs font-bold text-emerald-600 group-hover:text-emerald-700 pt-2 border-t border-slate-100 cursor-pointer"
+            >
+              <span>Xem lịch sử can thiệp</span>
+              <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+            </button>
+          </div>
+
+          {/* DIRECTOR CARD 4: Total System AI Interactions Monitored */}
+          <div className="bg-white rounded-2xl p-5 border border-slate-200/80 card-shadow flex flex-col justify-between hover:border-blue-300 transition-all group">
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[11px] font-bold tracking-wider uppercase text-slate-400">
+                  Giám sát hệ thống
+                </span>
+                <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 text-xs font-bold border border-blue-200 flex items-center gap-1">
+                  <Bot className="w-3 h-3 text-blue-600" />
+                  Supabase Pooler
+                </span>
+              </div>
+
+              <div className="flex items-baseline gap-2 mb-1">
+                <span className="text-3xl font-extrabold text-slate-900 tracking-tight">{counts.total}</span>
+                <span className="text-sm font-semibold text-slate-400">
+                  phiên đàm thoại
+                </span>
+              </div>
+
+              <div className="text-xs font-semibold text-slate-600 bg-slate-50 p-2 rounded-xl border border-slate-100 mb-4 flex items-center justify-between">
+                <span>CSDL đàm thoại:</span>
+                <strong className="text-blue-700 font-bold">
+                  ai_tutor_interaction_logs
+                </strong>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setFilterMode('all')}
+              className="w-full flex items-center justify-between text-xs font-bold text-blue-600 group-hover:text-blue-700 pt-2 border-t border-slate-100 cursor-pointer"
+            >
+              <span>Xem toàn bộ đàm thoại</span>
+              <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* 3. Main Workspace: Split Pane (Left: Interaction Queue, Right: Inspector & Workbench) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
@@ -1085,7 +1231,7 @@ export default function AiTutorModerationView({ currentUser, onBackToDashboard, 
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                <span>{isTeacher ? 'Đề xuất GV' : 'Đề xuất GV'}</span>
+                <span>{isTeacher ? 'Đề xuất của bạn' : 'Đề xuất GV'}</span>
                 {counts.proposalsCount > 0 && (
                   <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${filterMode === 'proposals' ? 'bg-white text-amber-700' : 'bg-amber-100 text-amber-700'}`}>
                     {counts.proposalsCount}
@@ -1093,20 +1239,22 @@ export default function AiTutorModerationView({ currentUser, onBackToDashboard, 
                 )}
               </button>
 
-              <button
-                type="button"
-                onClick={() => setFilterMode('reported')}
-                className={`flex-1 min-w-[75px] py-2 px-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                  filterMode === 'reported'
-                    ? 'bg-indigo-600 text-white shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                <span>Báo cáo</span>
-                <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${filterMode === 'reported' ? 'bg-white text-indigo-700' : 'bg-indigo-100 text-indigo-700'}`}>
-                  {counts.reported}
-                </span>
-              </button>
+              {isDirector && (
+                <button
+                  type="button"
+                  onClick={() => setFilterMode('reported')}
+                  className={`flex-1 min-w-[75px] py-2 px-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                    filterMode === 'reported'
+                      ? 'bg-indigo-600 text-white shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <span>Báo cáo</span>
+                  <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${filterMode === 'reported' ? 'bg-white text-indigo-700' : 'bg-indigo-100 text-indigo-700'}`}>
+                    {counts.reported}
+                  </span>
+                </button>
+              )}
 
               <button
                 type="button"
@@ -1123,17 +1271,19 @@ export default function AiTutorModerationView({ currentUser, onBackToDashboard, 
                 </span>
               </button>
 
-              <button
-                type="button"
-                onClick={() => setFilterMode('all')}
-                className={`flex-1 min-w-[60px] py-2 px-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                  filterMode === 'all'
-                    ? 'bg-slate-900 text-white shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                <span>Toàn bộ</span>
-              </button>
+              {isDirector && (
+                <button
+                  type="button"
+                  onClick={() => setFilterMode('all')}
+                  className={`flex-1 min-w-[60px] py-2 px-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                    filterMode === 'all'
+                      ? 'bg-slate-900 text-white shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <span>Toàn bộ</span>
+                </button>
+              )}
             </div>
 
             {/* Search Input */}
@@ -1164,12 +1314,12 @@ export default function AiTutorModerationView({ currentUser, onBackToDashboard, 
                   <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto opacity-70" />
                   <p className="font-extrabold text-slate-700">
                     {isTeacher
-                      ? `Không có báo cáo nào trong ${selectedClassObj?.name || 'lớp này'}`
+                      ? `${formatClassName(selectedClassObj?.name)} không có báo cáo nào`
                       : 'Không có phản hồi nào trong danh sách'}
                   </p>
                   <p className="text-[11px] text-slate-400">
                     {isTeacher
-                      ? 'Học sinh lớp bạn đang tương tác tốt với Gia sư AI hoặc các báo cáo đã được giải quyết.'
+                      ? 'Học sinh lớp bạn đang tương tác tốt với Gia sư AI. Mọi câu trả lời của trợ lý AI đều đạt độ tin cậy sư phạm.'
                       : 'Các báo cáo đã được giải quyết hoặc không khớp với bộ lọc hiện tại.'}
                   </p>
                 </div>
@@ -1283,8 +1433,16 @@ export default function AiTutorModerationView({ currentUser, onBackToDashboard, 
           {!selectedItem ? (
             <div className="bg-white rounded-3xl p-12 text-center border border-slate-200/80 card-shadow text-slate-400 space-y-3">
               <Bot className="w-12 h-12 mx-auto text-blue-400 opacity-60" />
-              <p className="font-extrabold text-slate-700 text-sm">Vui lòng chọn một phiên tương tác bên trái để xem chi tiết</p>
-              <p className="text-xs text-slate-400">Hệ thống sẽ hiển thị toàn bộ đề bài, đáp án đối soát, nhật ký đối thoại và bàn làm việc can thiệp sư phạm.</p>
+              <p className="font-extrabold text-slate-700 text-sm">
+                {isTeacher
+                  ? 'Không gian làm việc sư phạm sẵn sàng'
+                  : 'Vui lòng chọn một phiên tương tác bên trái để xem chi tiết'}
+              </p>
+              <p className="text-xs text-slate-400">
+                {isTeacher
+                  ? 'Vui lòng chọn một câu hỏi bị phản ánh từ danh sách bên trái để xem chi tiết đề bài, nhật ký đàm thoại và gửi đề xuất sư phạm.'
+                  : 'Hệ thống sẽ hiển thị toàn bộ đề bài, đáp án đối soát, nhật ký đối thoại và bàn làm việc can thiệp sư phạm.'}
+              </p>
             </div>
           ) : (
             <div className="space-y-6">
@@ -1354,7 +1512,7 @@ export default function AiTutorModerationView({ currentUser, onBackToDashboard, 
                       </div>
 
                       <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-amber-200 text-amber-900 border border-amber-300">
-                        ⏳ Chờ Giám đốc phê duyệt
+                        {isDirector ? '⏳ Chờ Giám đốc phê duyệt' : '⏳ Chờ Ban Chuyên môn duyệt'}
                       </span>
                     </div>
 
@@ -1423,7 +1581,9 @@ export default function AiTutorModerationView({ currentUser, onBackToDashboard, 
                       ) : (
                         <div className="flex items-center justify-between w-full">
                           <span className="text-[11px] text-amber-800 italic">
-                            Đề xuất của bạn đã được chuyển tới hàng đợi thẩm định của Giám đốc Học thuật.
+                            {isTeacher
+                              ? 'Đề xuất của bạn đã được chuyển tới hàng đợi thẩm định của Ban Chuyên môn / Giám đốc Học thuật.'
+                              : 'Đề xuất của bạn đã được chuyển tới hàng đợi thẩm định của Giám đốc Học thuật.'}
                           </span>
                           <button
                             type="button"
@@ -1442,7 +1602,11 @@ export default function AiTutorModerationView({ currentUser, onBackToDashboard, 
                 <div className="space-y-3.5">
                   <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-2">
                     <FileText className="w-4 h-4 text-blue-600" />
-                    <span>Nội dung Câu Hỏi & Đối Soát Đáp Án (Ground Truth)</span>
+                    <span>
+                      {isTeacher
+                        ? 'Nội Dung Câu Hỏi & Đáp Án Chuẩn Của Đề Thi'
+                        : 'Nội dung Câu Hỏi & Đối Soát Đáp Án (Ground Truth)'}
+                    </span>
                   </h4>
 
                   <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-sm font-medium text-slate-900 leading-relaxed">
@@ -1478,7 +1642,11 @@ export default function AiTutorModerationView({ currentUser, onBackToDashboard, 
                             <div className="min-w-0 flex-1">
                               <MathText text={optionText} />
                               <div className="flex items-center gap-2 mt-1.5 text-[10px] font-black">
-                                {isCorrect && <span className="text-emerald-700">✓ ĐÁP ÁN ĐÚNG CSDL</span>}
+                                {isCorrect && (
+                                  <span className="text-emerald-700">
+                                    {isTeacher ? '✓ ĐÁP ÁN ĐÚNG CỦA ĐỀ' : '✓ ĐÁP ÁN ĐÚNG CSDL'}
+                                  </span>
+                                )}
                                 {isStudentSelected && (
                                   <span className={isCorrect ? 'text-emerald-700' : 'text-rose-700'}>
                                     (Học sinh chọn {isCorrect ? 'đúng' : 'sai'})
@@ -1508,13 +1676,15 @@ export default function AiTutorModerationView({ currentUser, onBackToDashboard, 
                   )}
 
                   {/* Identified Cognitive Trap Tag */}
-                  {selectedItem.trap_name && (
+                  {selectedItem.trap_code && (
                     <div className="p-3.5 bg-amber-50/90 border border-amber-200 rounded-2xl flex items-start gap-2.5 text-xs">
                       <Zap className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                       <div>
                         <span className="font-extrabold text-amber-900">Bẫy tư duy được gắn mã ({selectedItem.trap_code}): </span>
-                        <span className="font-bold text-amber-800">{selectedItem.trap_name}. </span>
-                        <p className="text-[11px] text-amber-700 mt-1 leading-relaxed">{selectedItem.misconception_explanation}</p>
+                        <span className="font-bold text-amber-800">{selectedItem.trap_name || 'Lỗ hổng tư duy'}. </span>
+                        {selectedItem.misconception_explanation && (
+                          <p className="text-[11px] text-amber-700 mt-1 leading-relaxed">{selectedItem.misconception_explanation}</p>
+                        )}
                       </div>
                     </div>
                   )}
@@ -1562,12 +1732,12 @@ export default function AiTutorModerationView({ currentUser, onBackToDashboard, 
                     <Sparkles className="w-5 h-5 text-indigo-600" />
                     <h3 className="text-sm sm:text-base font-black text-slate-900">
                       {isTeacher
-                        ? 'Bàn Làm Việc Đề Xuất Sư Phạm (Chờ Director duyệt)'
+                        ? 'Bàn Làm Việc Đóng Góp Sư Phạm (Chờ Ban Chuyên Môn duyệt)'
                         : 'Bàn Làm Việc Thẩm Định & Can Thiệp Sư Phạm (Human-in-the-Loop)'}
                     </h3>
                   </div>
                   <span className="text-[11px] font-black text-indigo-700 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-200">
-                    {isTeacher ? 'Đề xuất nâng cấp RAG' : 'GraphRAG Knowledge Update'}
+                    {isTeacher ? 'Đóng góp chuyên môn' : 'GraphRAG Knowledge Update'}
                   </span>
                 </div>
 
@@ -1626,7 +1796,7 @@ export default function AiTutorModerationView({ currentUser, onBackToDashboard, 
                       <div>
                         <strong>Mục tiêu:</strong>{' '}
                         {isTeacher
-                          ? 'Soạn thảo lời giải chuẩn và các bước tư duy gợi mở Socratic gửi lên Giám đốc Học thuật thẩm duyệt trước khi ghi đè vào Knowledge Graph toàn trường.'
+                          ? 'Soạn thảo lời giải chuẩn và các bước tư duy gợi mở Socratic gửi lên Ban Chuyên môn / Giám đốc Học thuật thẩm định trước khi cập nhật cho Gia sư AI toàn trường.'
                           : 'Soạn thảo lời giải chuẩn và các bước tư duy gợi mở Socratic. Hệ thống sẽ lưu trực tiếp vào node PatternExemplar trong Knowledge Graph làm dữ liệu mẫu (few-shot) tối ưu cho các lần đàm thoại tiếp theo.'}
                       </div>
                     </div>
@@ -1671,7 +1841,7 @@ export default function AiTutorModerationView({ currentUser, onBackToDashboard, 
                           {isSubmitting
                             ? 'Đang xử lý...'
                             : isTeacher
-                            ? 'Gửi Đề Xuất Lời Giải Cho Giám Đốc Duyệt'
+                            ? 'Gửi Đề Xuất Lời Giải Cho Ban Chuyên Môn'
                             : 'Ghi Đè Lời Giải Mẫu Chuẩn Vào Graph'}
                         </span>
                       </button>
@@ -1690,7 +1860,7 @@ export default function AiTutorModerationView({ currentUser, onBackToDashboard, 
                       <div>
                         <strong>Mục tiêu:</strong>{' '}
                         {isTeacher
-                          ? 'Đề xuất gắn nhãn một bẫy tư duy mới phát hiện từ phản ánh của học sinh lớp bạn để Giám đốc Học thuật thẩm định & bổ sung vào Knowledge Graph.'
+                          ? 'Đề xuất gắn nhãn một bẫy tư duy mới phát hiện từ phản ánh của học sinh lớp bạn để Ban Chuyên môn thẩm định & bổ sung vào kho tri thức Gia sư AI toàn trường.'
                           : 'Gắn nhãn một bẫy tư duy mới phát hiện từ phản ánh của học sinh, lưu vào node PatternTrap trong Knowledge Graph để RAG tự động nhận diện sai lầm này ở các học sinh khác.'}
                       </div>
                     </div>
@@ -1768,7 +1938,7 @@ export default function AiTutorModerationView({ currentUser, onBackToDashboard, 
                           {isSubmitting
                             ? 'Đang xử lý...'
                             : isTeacher
-                            ? 'Gửi Đề Xuất Bẫy Cho Giám Đốc Duyệt'
+                            ? 'Gửi Đề Xuất Bẫy Cho Ban Chuyên Môn'
                             : 'Bổ Sung Bẫy Tư Duy Mới Vào Graph'}
                         </span>
                       </button>

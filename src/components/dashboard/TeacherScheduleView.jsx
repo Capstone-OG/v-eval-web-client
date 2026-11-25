@@ -201,7 +201,7 @@ export default function TeacherScheduleView({ currentUser }) {
           skillName: rawSkill,
           focusSkill: rawSkill,
           focusSkillId: rs.focusSkillId || null,
-          room: rs.room || (rs.format === 'ONLINE' ? 'Trực tuyến (Live Q&A)' : 'Phòng phụ đạo P.204'),
+          room: rs.room || (rs.format === 'ONLINE' ? 'Trực tuyến (Live Q&A)' : 'Chưa xếp phòng'),
           deliveryMode: rs.format === 'ONLINE' ? 'ONLINE' : 'OFFLINE',
           sessionStatus: 'SCHEDULED',
           isRemedial: true,
@@ -880,7 +880,7 @@ export default function TeacherScheduleView({ currentUser }) {
                                         </span>
                                         <span className="flex items-center gap-1 font-semibold truncate max-w-[120px]" title={s.room}>
                                           <MapPin className="w-3 h-3 text-purple-500 shrink-0" />
-                                          <span className="truncate">{s.room || 'Phòng P.204'}</span>
+                                          <span className="truncate">{s.room || (s.deliveryMode === 'ONLINE' ? 'Trực tuyến' : 'Chưa xếp phòng')}</span>
                                         </span>
                                         <span className={`px-1.5 py-0.2 rounded text-[9px] font-black uppercase ${
                                           s.deliveryMode === 'ONLINE' ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'
@@ -1099,7 +1099,7 @@ export default function TeacherScheduleView({ currentUser }) {
 
                               <span className="inline-flex items-center gap-1 text-xs font-extrabold text-purple-800 bg-white px-2.5 py-1 rounded-xl border border-purple-100">
                                 <MapPin className="w-3.5 h-3.5 text-purple-500" />
-                                <span>{s.room || 'Phòng P.204'}</span>
+                                <span>{s.room || (s.deliveryMode === 'ONLINE' ? 'Trực tuyến' : 'Chưa xếp phòng')}</span>
                               </span>
                             </div>
 
