@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { MenuItem, Select } from '@mui/material';
 import {
   ArrowUpDown,
   BookOpen,
@@ -116,7 +117,7 @@ export default function ExamStudioView({ onNavigateTab }) {
                   className="px-3.5 py-2.5 rounded-xl border border-[#DCD9D0] bg-[#FAF9F6] hover:bg-[#EEF2F7] text-[#1E3A5F] text-xs font-bold flex items-center gap-2 cursor-pointer"
                 >
                   <UploadCloud className="w-4 h-4" />
-                  <span>Parse PDF (Trang 2)</span>
+                  <span>Phân Tích Đề</span>
                 </button>
 
                 <button
@@ -128,7 +129,7 @@ export default function ExamStudioView({ onNavigateTab }) {
                   className="px-3.5 py-2.5 rounded-xl border border-indigo-200 bg-indigo-50/70 hover:bg-indigo-100 text-indigo-800 text-xs font-bold flex items-center gap-2 cursor-pointer"
                 >
                   <Sparkles className="w-4 h-4" />
-                  <span>AI Bloom L1–L6</span>
+                  <span>Tạo Câu Hỏi</span>
                 </button>
               </div>
             </div>
@@ -170,7 +171,7 @@ export default function ExamStudioView({ onNavigateTab }) {
                   className="px-3 py-1.5 rounded-xl border border-[#E5E3DC] bg-[#FAF9F6] hover:bg-[#EEF2F7] text-[#1E3A5F] text-xs font-bold flex items-center gap-1.5 cursor-pointer"
                 >
                   <BookOpen className="w-3.5 h-3.5" />
-                  <span>Xem Tờ Đề (Trang 1)</span>
+                  <span>Xem Đề Thi</span>
                 </button>
 
                 <button
@@ -220,17 +221,32 @@ export default function ExamStudioView({ onNavigateTab }) {
                     </button>
                   </div>
 
-                  <select
+                  <Select
+                    size="small"
                     value={activeQuestion.localId}
                     onChange={(e) => setSelectedQuestionLocalId(e.target.value)}
-                    className="px-2.5 py-1.5 rounded-lg border border-[#E5E3DC] bg-white text-xs font-bold text-slate-800 max-w-[300px] truncate outline-none focus:border-indigo-400"
+                    sx={{
+                      height: 30,
+                      maxWidth: 320,
+                      fontSize: '0.75rem',
+                      fontWeight: 700,
+                      bgcolor: '#fff',
+                      borderRadius: '10px',
+                      '& .MuiOutlinedInput-notchedOutline': { borderColor: '#cbd5e1' },
+                      '& .MuiSelect-select': { py: 0.5, pl: 1.25, pr: '28px !important' }
+                    }}
+                    MenuProps={{
+                      PaperProps: {
+                        sx: { borderRadius: '10px', mt: 0.5, maxWidth: 420, border: '1px solid #cbd5e1', boxShadow: '0 8px 24px rgba(15,23,42,0.1)' }
+                      }
+                    }}
                   >
                     {allQuestions.map((q) => (
-                      <option key={q.localId} value={q.localId}>
+                      <MenuItem key={q.localId} value={q.localId} sx={{ fontSize: '0.76rem' }}>
                         Câu {q.questionNumber} (ĐA: {q.correctOption || 'A'}) — {(q.content || '').replace(/\$[^$]*\$/g, '[CT]').slice(0, 55)}
-                      </option>
+                      </MenuItem>
                     ))}
-                  </select>
+                  </Select>
                 </div>
 
                 <div className="flex items-center gap-2 flex-wrap">
