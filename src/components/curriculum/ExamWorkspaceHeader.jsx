@@ -153,7 +153,7 @@ export default function ExamWorkspaceHeader({
   };
 
   return (
-    <header className="sticky top-0 z-30 rounded-2xl border border-[#E7E5DF] bg-white/95 backdrop-blur-md shadow-[0_2px_10px_rgba(15,23,42,0.04)] px-4 py-2.5 space-y-2 print:hidden">
+    <header className="rounded-2xl border border-[#E7E5DF] bg-white shadow-[0_2px_10px_rgba(15,23,42,0.04)] px-4 py-2.5 space-y-2 print:hidden">
       {/* Row 1: Back + Title + Primary Actions */}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0 flex-1">

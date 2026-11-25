@@ -43,6 +43,7 @@ import {
   CaseSensitive,
   PanelRight,
   Sigma,
+  Keyboard,
   Search,
   Layers,
   Activity,
@@ -669,10 +670,56 @@ function WordFormattingRibbon({
   onInsertChart,
   onOpenFormulaBuilder,
   onTriggerUpload,
-  extraActions = null
+  extraActions = null,
+  stickyTopClass = 'top-0'
 }) {
   const [caseMenuOpen, setCaseMenuOpen] = useState(false);
   const caseMenuRef = useRef(null);
+  const [activeFormats, setActiveFormats] = useState({
+    bold: false,
+    italic: false,
+    underline: false,
+    strikeThrough: false,
+    justifyLeft: false,
+    justifyCenter: false,
+    justifyRight: false,
+    insertUnorderedList: false,
+    insertOrderedList: false
+  });
+
+  const syncFormatStates = () => {
+    try {
+      setActiveFormats({
+        bold: document.queryCommandState('bold'),
+        italic: document.queryCommandState('italic'),
+        underline: document.queryCommandState('underline'),
+        strikeThrough: document.queryCommandState('strikeThrough'),
+        justifyLeft: document.queryCommandState('justifyLeft'),
+        justifyCenter: document.queryCommandState('justifyCenter'),
+        justifyRight: document.queryCommandState('justifyRight'),
+        insertUnorderedList: document.queryCommandState('insertUnorderedList'),
+        insertOrderedList: document.queryCommandState('insertOrderedList')
+      });
+    } catch {
+      // ignore if browser blocks queryCommandState
+    }
+  };
+
+  useEffect(() => {
+    document.addEventListener('selectionchange', syncFormatStates);
+    document.addEventListener('keyup', syncFormatStates);
+    document.addEventListener('mouseup', syncFormatStates);
+    return () => {
+      document.removeEventListener('selectionchange', syncFormatStates);
+      document.removeEventListener('keyup', syncFormatStates);
+      document.removeEventListener('mouseup', syncFormatStates);
+    };
+  }, []);
+
+  const triggerFormat = (cmd, val) => {
+    onExecFormat(cmd, val);
+    setTimeout(syncFormatStates, 0);
+  };
 
   useEffect(() => {
     if (!caseMenuOpen) return;
@@ -687,18 +734,20 @@ function WordFormattingRibbon({
 
   const iconBtn =
     'h-7 min-w-[28px] px-1.5 rounded-lg text-slate-600 hover:text-[#1E3A5F] hover:bg-[#EEF2F7] transition-colors flex items-center justify-center cursor-pointer';
+  const activeIconBtn =
+    'h-7 min-w-[28px] px-1.5 rounded-lg bg-[#1E3A5F] text-white shadow-2xs transition-colors flex items-center justify-center cursor-pointer';
   const textBtn =
     'h-7 px-2 rounded-lg text-[11.5px] font-medium text-slate-600 hover:text-[#1E3A5F] hover:bg-[#EEF2F7] transition-colors flex items-center gap-1 cursor-pointer';
   const divider = <span className="w-px h-4 bg-[#E2DFD7] mx-0.5 shrink-0" />;
 
   return (
-    <div className="sticky top-0 z-20 px-3 sm:px-4 py-2 bg-[#FAF9F6]/95 backdrop-blur border-b border-[#EAE8E1] rounded-t-2xl flex flex-wrap items-center justify-between gap-y-1.5 gap-x-1">
+    <div className={`sticky ${stickyTopClass} z-20 px-3 sm:px-4 py-2 bg-[#FAF9F6]/95 backdrop-blur border-b border-[#EAE8E1] rounded-t-2xl flex flex-wrap items-center justify-between gap-y-1.5 gap-x-1 shadow-[0_1px_4px_rgba(15,23,42,0.04)]`}>
       <div className="flex flex-wrap items-center gap-0.5">
         {/* Paragraph / Headings */}
         <button
           type="button"
           onMouseDown={(e) => e.preventDefault()}
-          onClick={() => onExecFormat('paragraph')}
+          onClick={() => triggerFormat('paragraph')}
           className={textBtn}
           title="Đoạn văn bản thường"
         >
@@ -707,7 +756,7 @@ function WordFormattingRibbon({
         <button
           type="button"
           onMouseDown={(e) => e.preventDefault()}
-          onClick={() => onExecFormat('heading2')}
+          onClick={() => triggerFormat('heading2')}
           className={`${textBtn} font-semibold`}
           title="Tiêu đề mục lớn (H2)"
         >
@@ -716,7 +765,7 @@ function WordFormattingRibbon({
         <button
           type="button"
           onMouseDown={(e) => e.preventDefault()}
-          onClick={() => onExecFormat('heading3')}
+          onClick={() => triggerFormat('heading3')}
           className={`${textBtn} font-semibold`}
           title="Tiêu đề mục phụ (H3)"
         >
@@ -729,8 +778,9 @@ function WordFormattingRibbon({
         <button
           type="button"
           onMouseDown={(e) => e.preventDefault()}
-          onClick={() => onExecFormat('bold')}
-          className={iconBtn}
+          onClick={() => triggerFormat('bold')}
+          className={activeFormats.bold ? activeIconBtn : iconBtn}
+          aria-pressed={activeFormats.bold}
           title="In đậm (Ctrl+B)"
         >
           <Bold className="w-3.5 h-3.5" />
@@ -738,8 +788,9 @@ function WordFormattingRibbon({
         <button
           type="button"
           onMouseDown={(e) => e.preventDefault()}
-          onClick={() => onExecFormat('italic')}
-          className={iconBtn}
+          onClick={() => triggerFormat('italic')}
+          className={activeFormats.italic ? activeIconBtn : iconBtn}
+          aria-pressed={activeFormats.italic}
           title="In nghiêng (Ctrl+I)"
         >
           <Italic className="w-3.5 h-3.5" />
@@ -747,8 +798,9 @@ function WordFormattingRibbon({
         <button
           type="button"
           onMouseDown={(e) => e.preventDefault()}
-          onClick={() => onExecFormat('underline')}
-          className={iconBtn}
+          onClick={() => triggerFormat('underline')}
+          className={activeFormats.underline ? activeIconBtn : iconBtn}
+          aria-pressed={activeFormats.underline}
           title="Gạch chân (Ctrl+U)"
         >
           <Underline className="w-3.5 h-3.5" />
@@ -756,8 +808,9 @@ function WordFormattingRibbon({
         <button
           type="button"
           onMouseDown={(e) => e.preventDefault()}
-          onClick={() => onExecFormat('strikeThrough')}
-          className={iconBtn}
+          onClick={() => triggerFormat('strikeThrough')}
+          className={activeFormats.strikeThrough ? activeIconBtn : iconBtn}
+          aria-pressed={activeFormats.strikeThrough}
           title="Gạch ngang chữ"
         >
           <Strikethrough className="w-3.5 h-3.5" />
@@ -820,8 +873,9 @@ function WordFormattingRibbon({
         <button
           type="button"
           onMouseDown={(e) => e.preventDefault()}
-          onClick={() => onExecFormat('justifyLeft')}
-          className={iconBtn}
+          onClick={() => triggerFormat('justifyLeft')}
+          className={activeFormats.justifyLeft ? activeIconBtn : iconBtn}
+          aria-pressed={activeFormats.justifyLeft}
           title="Căn trái"
         >
           <AlignLeft className="w-3.5 h-3.5" />
@@ -829,8 +883,9 @@ function WordFormattingRibbon({
         <button
           type="button"
           onMouseDown={(e) => e.preventDefault()}
-          onClick={() => onExecFormat('justifyCenter')}
-          className={iconBtn}
+          onClick={() => triggerFormat('justifyCenter')}
+          className={activeFormats.justifyCenter ? activeIconBtn : iconBtn}
+          aria-pressed={activeFormats.justifyCenter}
           title="Căn giữa"
         >
           <AlignCenter className="w-3.5 h-3.5" />
@@ -838,8 +893,9 @@ function WordFormattingRibbon({
         <button
           type="button"
           onMouseDown={(e) => e.preventDefault()}
-          onClick={() => onExecFormat('justifyRight')}
-          className={iconBtn}
+          onClick={() => triggerFormat('justifyRight')}
+          className={activeFormats.justifyRight ? activeIconBtn : iconBtn}
+          aria-pressed={activeFormats.justifyRight}
           title="Căn phải"
         >
           <AlignRight className="w-3.5 h-3.5" />
@@ -851,8 +907,9 @@ function WordFormattingRibbon({
         <button
           type="button"
           onMouseDown={(e) => e.preventDefault()}
-          onClick={() => onExecFormat('insertUnorderedList')}
-          className={iconBtn}
+          onClick={() => triggerFormat('insertUnorderedList')}
+          className={activeFormats.insertUnorderedList ? activeIconBtn : iconBtn}
+          aria-pressed={activeFormats.insertUnorderedList}
           title="Danh sách gạch đầu dòng"
         >
           <List className="w-3.5 h-3.5" />
@@ -860,8 +917,9 @@ function WordFormattingRibbon({
         <button
           type="button"
           onMouseDown={(e) => e.preventDefault()}
-          onClick={() => onExecFormat('insertOrderedList')}
-          className={iconBtn}
+          onClick={() => triggerFormat('insertOrderedList')}
+          className={activeFormats.insertOrderedList ? activeIconBtn : iconBtn}
+          aria-pressed={activeFormats.insertOrderedList}
           title="Danh sách đánh số"
         >
           <ListOrdered className="w-3.5 h-3.5" />
@@ -894,11 +952,11 @@ function WordFormattingRibbon({
           type="button"
           onMouseDown={(e) => e.preventDefault()}
           onClick={onOpenFormulaBuilder}
-          className={textBtn}
-          title="Mở bộ dựng công thức trực quan"
+          className="h-7 px-2.5 rounded-lg text-[11.5px] font-semibold text-[#1E3A5F] bg-indigo-50 hover:bg-indigo-100 border border-indigo-200/90 transition-colors flex items-center gap-1.5 cursor-pointer"
+          title="Mở bàn phím soạn thảo công thức và chèn tại vị trí con trỏ"
         >
-          <Sigma className="w-3.5 h-3.5 text-[#2C4C7E]" />
-          <span className="hidden sm:inline">Công thức</span>
+          <Keyboard className="w-4 h-4 text-indigo-700" />
+          <span>Bàn phím soạn thảo</span>
         </button>
         <button
           type="button"
@@ -1046,43 +1104,6 @@ function StemModelsPanel({
         ]
       },
       {
-        title: 'Bộ dựng công thức',
-        items: [
-          {
-            id: 'fraction',
-            title: 'Phân số, Căn & Lũy thừa',
-            desc: 'Điền trực quan từng ô số học',
-            icon: Divide,
-            keywords: 'phan so can thuc luy thua so mu chi so',
-            action: () => onOpenFormulaBuilder('fraction')
-          },
-          {
-            id: 'limit',
-            title: 'Giới hạn & Đạo hàm',
-            desc: 'Biểu thức giới hạn, đạo hàm',
-            icon: Activity,
-            keywords: 'gioi han dao ham lim f phay',
-            action: () => onOpenFormulaBuilder('limit')
-          },
-          {
-            id: 'integral',
-            title: 'Tích phân & Nguyên hàm',
-            desc: 'Tích phân xác định có cận',
-            icon: Sigma,
-            keywords: 'tich phan nguyen ham can a b',
-            action: () => onOpenFormulaBuilder('integral')
-          },
-          {
-            id: 'system',
-            title: 'Hệ phương trình',
-            desc: 'Hệ phương trình dấu ngoặc nhọn',
-            icon: Layers,
-            keywords: 'he phuong trinh ngoac nhon 2 an 3 an',
-            action: () => onOpenFormulaBuilder('system')
-          }
-        ]
-      },
-      {
         title: 'Mô hình Toán học',
         items: [
           {
@@ -1122,14 +1143,6 @@ function StemModelsPanel({
       {
         title: 'Hóa · Sinh · Vật lí',
         items: [
-          {
-            id: 'chemistry',
-            title: 'Nồng độ & Hiệu suất',
-            desc: 'Nồng độ mol, phần trăm, khối lượng',
-            icon: FlaskConical,
-            keywords: 'hoa hoc nong do mol c% cm hieu suat khoi luong',
-            action: () => onOpenFormulaBuilder('chemistry')
-          },
           {
             id: 'lab_table',
             title: 'Bảng số liệu thí nghiệm',
@@ -1223,7 +1236,7 @@ function StemModelsPanel({
   if (!isOpen) return null;
 
   return (
-    <aside className="w-[268px] shrink-0 h-full bg-white border-l border-[#E7E5DF] flex flex-col select-none z-20">
+    <aside className="w-[268px] shrink-0 h-full min-h-0 overflow-hidden bg-white border-l border-[#E7E5DF] flex flex-col select-none z-10">
       {/* Header */}
       <div className="px-3.5 pt-3 pb-2.5 border-b border-[#ECEAE4] space-y-2.5 shrink-0">
         <div className="flex items-center justify-between">
@@ -1323,6 +1336,7 @@ export default function CurriculumStudioEditor({
   mode = 'pattern',
   role = 'director',
   headerActions = null,
+  embedded = false,
   onClose,
   onSaveSuccess
 }) {
@@ -1560,6 +1574,16 @@ export default function CurriculumStudioEditor({
     if (canvas?.execFormat) {
       canvas.execFormat(cmd, value);
     }
+  };
+
+  const handleOpenMathKeyboard = (targetField) => {
+    const field = targetField || getEffectiveTargetField();
+    const canvas = getCanvasRefByField(field);
+    if (canvas?.openMathComposer) {
+      canvas.openMathComposer(true);
+      return;
+    }
+    handleOpenFormulaBuilder('fraction', field);
   };
 
   // Insert Excel-like Editable Table
@@ -2063,9 +2087,9 @@ export default function CurriculumStudioEditor({
   const effectiveTarget = getEffectiveTargetField();
 
   return (
-    <div className="w-full h-full flex flex-col bg-[#F6F5F1] text-slate-800 overflow-hidden font-sans">
+    <div className="w-full min-h-full flex flex-col bg-[#F6F5F1] text-slate-800 font-sans">
       {/* 1. REFINED ACADEMIC TOP BAR */}
-      <header className="h-[54px] bg-white border-b border-[#E7E5DF] px-4 sm:px-5 flex items-center justify-between gap-3 shrink-0 z-30">
+      <header className="h-[54px] bg-white border-b border-[#E7E5DF] px-4 sm:px-5 flex items-center justify-between gap-3 shrink-0 z-10">
         <div className="flex items-center gap-3 flex-1 min-w-0">
           <button
             type="button"
@@ -2251,19 +2275,23 @@ export default function CurriculumStudioEditor({
         </div>
       </nav>
 
-      {/* 3. MAIN 3-COLUMN STUDIO BODY */}
-      <div className="flex-1 flex overflow-hidden relative">
+      {/* 3. MAIN 3-COLUMN STUDIO BODY (2 cột bên tự giãn khớp 100% chiều cao khung nội dung giữa) */}
+      <div className="flex-1 flex items-stretch relative">
         {/* LEFT SIDEBAR: SUBJECT -> KÝ HIỆU | CÔNG THỨC */}
-        <HierarchicalMathPalette
-          initialSubject={detectedSubject}
-          isCollapsed={isPaletteCollapsed}
-          onToggleCollapse={() => setIsPaletteCollapsed(prev => !prev)}
-          activeTarget={effectiveTarget}
-          onInsertSnippet={(target, snippet) => handleInsertMath(target, snippet, false)}
-        />
+        <div className={`relative shrink-0 ${isPaletteCollapsed ? 'w-11' : 'w-64 sm:w-[272px]'}`}>
+          <div className="absolute inset-0">
+            <HierarchicalMathPalette
+              initialSubject={detectedSubject}
+              isCollapsed={isPaletteCollapsed}
+              onToggleCollapse={() => setIsPaletteCollapsed(prev => !prev)}
+              activeTarget={effectiveTarget}
+              onInsertSnippet={(target, snippet) => handleInsertMath(target, snippet, false)}
+            />
+          </div>
+        </div>
 
         {/* CENTER DOCUMENT WORKSPACE */}
-        <main className="flex-1 overflow-y-auto px-4 sm:px-7 py-5 space-y-4">
+        <main className="flex-1 min-w-0 px-4 sm:px-7 py-5 space-y-4">
           {/* Calm Status Banners */}
           {aiIdentificationResult && (
             <div className="max-w-4xl mx-auto px-4 py-2.5 rounded-xl bg-[#EEF2F7] border border-[#CFD9E8] text-[#1E3A5F] flex items-center justify-between gap-3">
@@ -2312,10 +2340,11 @@ export default function CurriculumStudioEditor({
                   className="bg-white rounded-2xl border border-[#E7E5DF] shadow-[0_2px_16px_rgba(15,23,42,0.04)] flex flex-col"
                 >
                   <WordFormattingRibbon
+                    stickyTopClass={embedded ? 'top-14 sm:top-16' : 'top-0'}
                     onExecFormat={(cmd, val) => handleExecFormat('theoryRecap', cmd, val)}
                     onInsertTable={() => handleInsertTable(3, 3, null, 'theoryRecap')}
                     onInsertChart={() => handleInsertChart('bar', null, 'theoryRecap')}
-                    onOpenFormulaBuilder={() => handleOpenFormulaBuilder('fraction', 'theoryRecap')}
+                    onOpenFormulaBuilder={() => handleOpenMathKeyboard('theoryRecap')}
                     onTriggerUpload={() => handleTriggerUpload('theoryRecap')}
                     extraActions={
                       <button
@@ -2376,10 +2405,11 @@ export default function CurriculumStudioEditor({
                     className="bg-white rounded-2xl border border-[#E7E5DF] shadow-[0_2px_16px_rgba(15,23,42,0.04)] flex flex-col"
                   >
                     <WordFormattingRibbon
+                      stickyTopClass={embedded ? 'top-14 sm:top-16' : 'top-0'}
                       onExecFormat={(cmd, val) => handleExecFormat('solutionMethod', cmd, val)}
                       onInsertTable={() => handleInsertTable(3, 3, null, 'solutionMethod')}
                       onInsertChart={() => handleInsertChart('bar', null, 'solutionMethod')}
-                      onOpenFormulaBuilder={() => handleOpenFormulaBuilder('fraction', 'solutionMethod')}
+                      onOpenFormulaBuilder={() => handleOpenMathKeyboard('solutionMethod')}
                       onTriggerUpload={() => handleTriggerUpload('solutionMethod')}
                       extraActions={
                         <>
@@ -3113,16 +3143,22 @@ export default function CurriculumStudioEditor({
         </main>
 
         {/* RIGHT DOCKABLE STEM MODELS PANEL */}
-        <StemModelsPanel
-          isOpen={isStemPanelOpen}
-          onClose={() => setIsStemPanelOpen(false)}
-          onInsertTable={(r, c, preset) => handleInsertTable(r, c, preset, effectiveTarget)}
-          onInsertChart={(type, preset) => handleInsertChart(type, preset, effectiveTarget)}
-          onOpenFormulaBuilder={(tplId) => handleOpenFormulaBuilder(tplId, effectiveTarget)}
-          onOpenMathWorkbench={(engine) => handleOpenMathWorkbench(engine, effectiveTarget)}
-          onTriggerUpload={() => handleTriggerUpload(effectiveTarget)}
-          onOpenImageModal={() => setImageModalTarget(effectiveTarget)}
-        />
+        {isStemPanelOpen && (
+          <div className="relative shrink-0 w-[268px]">
+            <div className="absolute inset-0">
+              <StemModelsPanel
+                isOpen={isStemPanelOpen}
+                onClose={() => setIsStemPanelOpen(false)}
+                onInsertTable={(r, c, preset) => handleInsertTable(r, c, preset, effectiveTarget)}
+                onInsertChart={(type, preset) => handleInsertChart(type, preset, effectiveTarget)}
+                onOpenFormulaBuilder={(tplId) => handleOpenFormulaBuilder(tplId, effectiveTarget)}
+                onOpenMathWorkbench={(engine) => handleOpenMathWorkbench(engine, effectiveTarget)}
+                onTriggerUpload={() => handleTriggerUpload(effectiveTarget)}
+                onOpenImageModal={() => setImageModalTarget(effectiveTarget)}
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* IMAGE URL / SAMPLE MODAL */}

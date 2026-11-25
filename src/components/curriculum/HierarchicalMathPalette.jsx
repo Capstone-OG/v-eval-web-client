@@ -1552,9 +1552,12 @@ export default function HierarchicalMathPalette({
     return [...subjectGroups, ...otherSubjectGroups];
   }, [currentSubject, selectedSubject, activeTab, searchQuery]);
 
-  const handleToggleGroup = (groupTitle) => {
+  const handleToggleGroup = (groupTitle, gIdx = 0) => {
     const key = `${selectedSubject}-${activeTab}-${groupTitle}`;
-    setCollapsedGroups(prev => ({ ...prev, [key]: !prev[key] }));
+    setCollapsedGroups(prev => {
+      const currentCollapsed = prev[key] !== undefined ? Boolean(prev[key]) : gIdx !== 0;
+      return { ...prev, [key]: !currentCollapsed };
+    });
   };
 
   const handleExpandCollapseAll = (collapse) => {
@@ -1606,7 +1609,7 @@ export default function HierarchicalMathPalette({
   // Collapsed slim rail
   if (isCollapsed) {
     return (
-      <aside className="w-11 bg-white border-r border-[#E7E5DF] flex flex-col items-center py-3 gap-2 shrink-0 select-none z-20">
+      <aside className="w-11 bg-white border-r border-[#E7E5DF] flex flex-col items-center py-3 gap-2 shrink-0 select-none z-10">
         <button
           type="button"
           onClick={onToggleCollapse}
@@ -1646,7 +1649,7 @@ export default function HierarchicalMathPalette({
   }
 
   return (
-    <aside className="w-64 sm:w-[272px] bg-white border-r border-[#E7E5DF] flex flex-col shrink-0 select-none h-full z-20">
+    <aside className="w-64 sm:w-[272px] bg-white border-r border-[#E7E5DF] flex flex-col shrink-0 select-none h-full min-h-0 overflow-hidden z-10">
       {/* 1. TOP: SUBJECT SELECTOR */}
       <div className="px-3 pt-3 pb-2.5 border-b border-[#ECEAE4] space-y-2 shrink-0">
         <div className="flex items-center justify-between gap-1.5">
@@ -1757,7 +1760,7 @@ export default function HierarchicalMathPalette({
       </div>
 
       {/* 4. CATEGORIZED ACCORDION BODY */}
-      <div className="flex-1 overflow-y-auto p-2.5 space-y-2 scrollbar-thin">
+      <div className="flex-1 min-h-0 overflow-y-auto p-2.5 space-y-2 scrollbar-thin">
         {activeGroups.length === 0 ? (
           <div className="py-10 px-4 text-center text-xs text-slate-400">
             Không tìm thấy ký hiệu, hợp chất hoặc công thức phù hợp.
@@ -1765,7 +1768,9 @@ export default function HierarchicalMathPalette({
         ) : (
           activeGroups.map((group, gIdx) => {
             const collapseKey = `${selectedSubject}-${activeTab}-${group.title}`;
-            const isGroupCollapsed = searchQuery ? false : Boolean(collapsedGroups[collapseKey]);
+            const isGroupCollapsed = searchQuery
+              ? false
+              : (collapsedGroups[collapseKey] !== undefined ? Boolean(collapsedGroups[collapseKey]) : gIdx !== 0);
             const renderAsGrid = (group.tabType || activeTab) === 'symbols';
 
             return (
@@ -1777,7 +1782,7 @@ export default function HierarchicalMathPalette({
                 <button
                   type="button"
                   onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => handleToggleGroup(group.title)}
+                  onClick={() => handleToggleGroup(group.title, gIdx)}
                   className="w-full px-2.5 py-2 bg-[#FAF9F6] hover:bg-[#F3F2EC] flex items-center justify-between gap-1.5 text-left transition-colors cursor-pointer"
                 >
                   <div className="flex items-center gap-1.5 min-w-0">

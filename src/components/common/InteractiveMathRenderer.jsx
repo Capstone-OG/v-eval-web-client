@@ -437,6 +437,42 @@ export default function InteractiveMathRenderer({
                 });
                 coordMap[pt.id] = [gx, gy, gz];
               }
+            } else if (pt.isPerpendicularFoot && pt.fromPoint && pt.edge && pt.edge.length === 2) {
+              const cFrom = coordMap[pt.fromPoint];
+              const c1 = coordMap[pt.edge[0]];
+              const c2 = coordMap[pt.edge[1]];
+              if (cFrom && c1 && c2) {
+                const vx = c2[0] - c1[0], vy = c2[1] - c1[1], vz = c2[2] - c1[2];
+                const lenSq = vx * vx + vy * vy + vz * vz;
+                const t = lenSq > 1e-6
+                  ? ((cFrom[0] - c1[0]) * vx + (cFrom[1] - c1[1]) * vy + (cFrom[2] - c1[2]) * vz) / lenSq
+                  : 0.5;
+                const fx = c1[0] + t * vx;
+                const fy = c1[1] + t * vy;
+                const fz = c1[2] + t * vz;
+                ptsMap[pt.id] = view.create('point3d', [fx, fy, fz], { name: pt.name ?? pt.id, size: 4, color: pt.color || '#ef4444' });
+                coordMap[pt.id] = [fx, fy, fz];
+                // Ký hiệu góc vuông 3D tại chân đường cao
+                const u1x = cFrom[0] - fx, u1y = cFrom[1] - fy, u1z = cFrom[2] - fz;
+                const n1 = Math.hypot(u1x, u1y, u1z);
+                const n2 = Math.hypot(vx, vy, vz);
+                if (n1 > 1e-4 && n2 > 1e-4) {
+                  const dirSign = t > 0.5 ? -1 : 1;
+                  const s = Math.min(0.32, n1 * 0.25, n2 * 0.25);
+                  const a1 = [fx + (u1x / n1) * s, fy + (u1y / n1) * s, fz + (u1z / n1) * s];
+                  const a2 = [fx + dirSign * (vx / n2) * s, fy + dirSign * (vy / n2) * s, fz + dirSign * (vz / n2) * s];
+                  const corner = [
+                    a1[0] + dirSign * (vx / n2) * s,
+                    a1[1] + dirSign * (vy / n2) * s,
+                    a1[2] + dirSign * (vz / n2) * s
+                  ];
+                  const pA1 = view.create('point3d', a1, { visible: false });
+                  const pA2 = view.create('point3d', a2, { visible: false });
+                  const pC = view.create('point3d', corner, { visible: false });
+                  view.create('line3d', [pA1, pC], { straightFirst: false, straightLast: false, strokeColor: pt.color || '#ef4444', strokeWidth: 1.5 });
+                  view.create('line3d', [pA2, pC], { straightFirst: false, straightLast: false, strokeColor: pt.color || '#ef4444', strokeWidth: 1.5 });
+                }
+              }
             } else if (pt.isPresetProjection && ptsMap['S'] && ptsMap['B']) {
               const cS = coordMap['S'] || [0, 0, config.dimensions?.h || 4];
               const cB = coordMap['B'] || [config.dimensions?.w || 4, 0, 0];
@@ -444,7 +480,7 @@ export default function InteractiveMathRenderer({
               const hVal = cS[2];
               const kX = (aVal * (hVal ** 2)) / (aVal ** 2 + hVal ** 2);
               const kZ = ((aVal ** 2) * hVal) / (aVal ** 2 + hVal ** 2);
-              ptsMap[pt.id] = view.create('point3d', [kX, 0, kZ], { name: pt.name || pt.id, size: 4, color: pt.color || '#ef4444' });
+              ptsMap[pt.id] = view.create('point3d', [kX, 0, kZ], { name: pt.name ?? pt.id, size: 4, color: pt.color || '#ef4444' });
               coordMap[pt.id] = [kX, 0, kZ];
             } else if (pt.edge && pt.edge.length === 2) {
               const c1 = coordMap[pt.edge[0]];
@@ -454,7 +490,7 @@ export default function InteractiveMathRenderer({
                 const px = (1 - k) * c1[0] + k * c2[0];
                 const py = (1 - k) * c1[1] + k * c2[1];
                 const pz = (1 - k) * c1[2] + k * c2[2];
-                ptsMap[pt.id] = view.create('point3d', [px, py, pz], { name: pt.name || pt.id, size: 3.5, color: pt.color || '#ec4899' });
+                ptsMap[pt.id] = view.create('point3d', [px, py, pz], { name: pt.name ?? pt.id, size: 3.5, color: pt.color || '#ec4899' });
                 coordMap[pt.id] = [px, py, pz];
               }
             }

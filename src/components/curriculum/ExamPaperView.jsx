@@ -1,6 +1,7 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { MenuItem, Select } from '@mui/material';
 import {
+  ArrowDown,
   FileSpreadsheet,
   Search,
   X,
@@ -67,6 +68,9 @@ export default function ExamPaperView({
   const [pickedAnswers, setPickedAnswers] = useState({});
   const [gradedResult, setGradedResult] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [editingPageSlot, setEditingPageSlot] = useState(null);
+  const [pageInputVal, setPageInputVal] = useState('');
+  const bottomPaginationRef = useRef(null);
 
   const { stats, questionMap, passageQuestionNumbers, allQuestions } = orderedView;
   const categoryLabel =
@@ -392,59 +396,134 @@ export default function ExamPaperView({
     );
   };
 
-  const renderPaginationBar = () => {
+  const commitPageInput = () => {
+    const parsed = parseInt(String(pageInputVal).trim(), 10);
+    if (!Number.isNaN(parsed) && parsed >= 1 && parsed <= totalPages) {
+      setCurrentPage(parsed);
+    }
+    setEditingPageSlot(null);
+    setPageInputVal('');
+  };
+
+  const getVisiblePageItems = () => {
+    if (totalPages <= 7) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+    if (currentPage <= 4) {
+      return [1, 2, 3, 4, 5, 'ellipsis-end', totalPages];
+    }
+    if (currentPage >= totalPages - 3) {
+      return [1, 'ellipsis-start', totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
+    }
+    return [1, 'ellipsis-start', currentPage - 1, currentPage, currentPage + 1, 'ellipsis-end', totalPages];
+  };
+
+  const renderPaginationBar = (barId = 'top') => {
     if (filteredFlatQuestions.length <= QUESTIONS_PER_PAGE) return null;
-    const firstNum = pageQuestions[0]?.questionNumber ?? pageStartIdx + 1;
-    const lastNum = pageQuestions[pageQuestions.length - 1]?.questionNumber ?? pageStartIdx + pageQuestions.length;
+    const pageItems = getVisiblePageItems();
 
     return (
-      <div className="flex flex-wrap items-center justify-between gap-2 py-2 px-3 rounded-xl bg-[#FAF9F6] border border-[#E7E5DF] print:hidden">
-        <div className="text-xs font-bold text-slate-600">
-          Hiển thị <span className="text-[#1E3A5F]">Câu {firstNum}–{lastNum}</span> / {filteredFlatQuestions.length} câu (Trang {currentPage}/{totalPages})
-        </div>
-        <div className="flex items-center gap-1 flex-wrap">
-          <button
-            type="button"
-            disabled={currentPage <= 1}
-            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-            className="px-2.5 py-1 rounded-lg border border-[#DCD9D0] bg-white hover:bg-[#EEF2F7] text-xs font-bold text-slate-700 disabled:opacity-40 flex items-center gap-1 cursor-pointer"
-          >
-            <ChevronLeft className="w-3.5 h-3.5" />
-            <span>Trước</span>
-          </button>
+      <div className="flex items-center justify-center gap-1.5 py-1 print:hidden">
+        <button
+          type="button"
+          disabled={currentPage <= 1}
+          onClick={() => {
+            setEditingPageSlot(null);
+            setCurrentPage((p) => Math.max(1, p - 1));
+          }}
+          title="Trang trước"
+          aria-label="Trang trước"
+          className="w-8 h-8 rounded-lg border border-[#DCD9D0] bg-white hover:bg-[#EEF2F7] text-slate-700 disabled:opacity-40 flex items-center justify-center cursor-pointer transition-colors"
+        >
+          <ChevronLeft className="w-4 h-4" />
+        </button>
 
-          {Array.from({ length: totalPages }, (_, idx) => {
-            const p = idx + 1;
-            const slice = filteredFlatQuestions.slice(idx * QUESTIONS_PER_PAGE, (idx + 1) * QUESTIONS_PER_PAGE);
-            const startN = slice[0]?.questionNumber ?? idx * QUESTIONS_PER_PAGE + 1;
-            const endN = slice[slice.length - 1]?.questionNumber ?? startN;
-            const active = p === currentPage;
+        {pageItems.map((item) => {
+          const slotKey = `${barId}-${item}`;
+          const isEditingThis = editingPageSlot === slotKey;
+
+          if (isEditingThis) {
+            return (
+              <input
+                key={slotKey}
+                type="number"
+                min={1}
+                max={totalPages}
+                autoFocus
+                value={pageInputVal}
+                onChange={(e) => setPageInputVal(e.target.value)}
+                onBlur={commitPageInput}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    commitPageInput();
+                  } else if (e.key === 'Escape') {
+                    setEditingPageSlot(null);
+                    setPageInputVal('');
+                  }
+                }}
+                className="w-11 h-8 px-1.5 rounded-lg border-2 border-[#1E3A5F] bg-white text-center text-xs font-extrabold text-[#1E3A5F] outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                aria-label="Nhập số trang"
+              />
+            );
+          }
+
+          if (item === 'ellipsis-start' || item === 'ellipsis-end') {
             return (
               <button
-                key={p}
+                key={slotKey}
                 type="button"
-                onClick={() => setCurrentPage(p)}
-                className={`px-2.5 py-1 rounded-lg border text-xs font-bold cursor-pointer transition-colors ${
-                  active
-                    ? 'bg-[#1E3A5F] border-[#1E3A5F] text-white'
-                    : 'bg-white border-[#DCD9D0] text-slate-700 hover:bg-[#EEF2F7]'
-                }`}
+                onClick={() => {
+                  setEditingPageSlot(slotKey);
+                  setPageInputVal(String(currentPage));
+                }}
+                title="Bấm để nhập số trang"
+                className="w-8 h-8 rounded-lg border border-transparent hover:border-[#DCD9D0] hover:bg-white text-xs font-bold text-slate-500 flex items-center justify-center cursor-pointer transition-colors"
               >
-                {startN === endN ? `Câu ${startN}` : `Câu ${startN}–${endN}`}
+                …
               </button>
             );
-          })}
+          }
 
-          <button
-            type="button"
-            disabled={currentPage >= totalPages}
-            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-            className="px-2.5 py-1 rounded-lg border border-[#DCD9D0] bg-white hover:bg-[#EEF2F7] text-xs font-bold text-slate-700 disabled:opacity-40 flex items-center gap-1 cursor-pointer"
-          >
-            <span>Sau</span>
-            <ChevronRight className="w-3.5 h-3.5" />
-          </button>
-        </div>
+          const active = item === currentPage;
+          return (
+            <button
+              key={slotKey}
+              type="button"
+              onClick={() => {
+                if (active) {
+                  setEditingPageSlot(slotKey);
+                  setPageInputVal(String(currentPage));
+                } else {
+                  setEditingPageSlot(null);
+                  setCurrentPage(item);
+                }
+              }}
+              title={active ? 'Bấm để nhập số trang muốn đến' : `Trang ${item}`}
+              className={`min-w-8 h-8 px-2 rounded-lg border text-xs font-bold flex items-center justify-center cursor-pointer transition-colors ${
+                active
+                  ? 'bg-[#1E3A5F] border-[#1E3A5F] text-white'
+                  : 'bg-white border-[#DCD9D0] text-slate-700 hover:bg-[#EEF2F7]'
+              }`}
+            >
+              {item}
+            </button>
+          );
+        })}
+
+        <button
+          type="button"
+          disabled={currentPage >= totalPages}
+          onClick={() => {
+            setEditingPageSlot(null);
+            setCurrentPage((p) => Math.min(totalPages, p + 1));
+          }}
+          title="Trang sau"
+          aria-label="Trang sau"
+          className="w-8 h-8 rounded-lg border border-[#DCD9D0] bg-white hover:bg-[#EEF2F7] text-slate-700 disabled:opacity-40 flex items-center justify-center cursor-pointer transition-colors"
+        >
+          <ChevronRight className="w-4 h-4" />
+        </button>
       </div>
     );
   };
@@ -841,8 +920,6 @@ export default function ExamPaperView({
 
         {/* Academic Exam Paper Sheet (Phân trang 5 câu / trang) */}
         <div className="rounded-2xl border border-[#E7E5DF] bg-white shadow-[0_2px_12px_rgba(15,23,42,0.04)] p-4 sm:p-6 space-y-4">
-          {renderPaginationBar()}
-
           {/* Exam Body Items */}
           {paginatedItems.length === 0 ? (
             <div className="py-14 text-center space-y-2">
@@ -923,10 +1000,29 @@ export default function ExamPaperView({
             </div>
           )}
 
-          {renderPaginationBar()}
+          <div ref={bottomPaginationRef}>
+            {renderPaginationBar('bottom')}
+          </div>
         </div>
       </div>
       </div>
+
+      {/* Nút cuộn nhanh xuống cuối trang (mờ mờ ở góc dưới bên phải) */}
+      <button
+        type="button"
+        onClick={() => {
+          if (bottomPaginationRef.current) {
+            bottomPaginationRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+          } else {
+            window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' });
+          }
+        }}
+        title="Xuống cuối trang"
+        aria-label="Xuống cuối trang"
+        className="fixed bottom-5 right-5 z-40 w-9 h-9 rounded-full bg-[#1E3A5F]/80 text-white shadow-md border border-white/25 flex items-center justify-center opacity-40 hover:opacity-100 hover:bg-[#1E3A5F] transition-all cursor-pointer print:hidden"
+      >
+        <ArrowDown className="w-4 h-4" />
+      </button>
     </div>
   );
 }
