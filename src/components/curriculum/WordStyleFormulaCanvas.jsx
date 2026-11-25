@@ -364,6 +364,36 @@ function buildFormulaChipHtml(latex, displayMode = false) {
   return `<span class="veval-formula-chip" contenteditable="false" data-latex="${encoded}" data-display="${displayMode ? '1' : '0'}">${rendered}</span>`;
 }
 
+/**
+ * Phát hiện chuỗi LaTeX thực chất chỉ là văn bản tiếng Việt thuần (vd: \text{Ẩn dụ (...)},
+ * hoặc \text{Nói quá (Phóng đại)} \leftrightarrow \text{Nói giảm nói tránh (Tế nhị)} từ bảng Ngữ văn)
+ * để giữ là chữ thường chỉnh sửa trực tiếp thay vì biến thành formula-chip bị khóa.
+ */
+function unwrapPureVietnameseTextLatex(latex) {
+  if (!latex || typeof latex !== 'string') return null;
+  let inner = latex.trim();
+
+  // Giải nén tất cả các cụm \text{...}, \textbf{...}, \textit{...} và mũi tên nối đơn giản
+  inner = inner
+    .replace(/\\(?:text|textbf|textit|textrm|mathrm)\{([^{}]*)\}/g, '$1')
+    .replace(/\\(?:Longleftrightarrow|Leftrightarrow|iff)\b/g, '⇔')
+    .replace(/\\(?:longleftrightarrow|leftrightarrow)\b/g, '↔')
+    .replace(/\\(?:Longrightarrow|Rightarrow|implies)\b/g, '⇒')
+    .replace(/\\(?:longrightarrow|rightarrow|to)\b/g, '→')
+    .replace(/\\,/g, ' ')
+    .replace(/\\;/g, ' ')
+    .replace(/\\quad/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  const hasVietnameseDiacritics = /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(inner);
+  const hasMathSyntax = /\\[a-zA-Z]+|[\^_{}=<>±×÷∑∫√∞≤≥≠≈]/.test(inner);
+  if (hasVietnameseDiacritics && !hasMathSyntax) {
+    return inner;
+  }
+  return null;
+}
+
 function inlineMarkdownToHtml(rawLine) {
   if (!rawLine) return '';
   // Normalize math safely so bare formulas never leak raw \frac into the editor
@@ -373,10 +403,15 @@ function inlineMarkdownToHtml(rawLine) {
   }
 
   // 1. Extract explicit $...$ and $$...$$ formulas into placeholders first
+  // (Tránh biến văn bản tiếng Việt thuần như \text{Ẩn dụ (...)} thành formula-chip bị bôi xanh cả đoạn khi click)
   const formulas = [];
   const withPlaceholders = prepared.replace(/(\$\$[\s\S]*?\$\$|\$[^$\r\n]+?\$)/g, (match) => {
     const isDisplay = match.startsWith('$$') && match.endsWith('$$');
     const latex = (isDisplay ? match.slice(2, -2) : match.slice(1, -1)).trim();
+    const plainVi = unwrapPureVietnameseTextLatex(latex);
+    if (plainVi !== null) {
+      return plainVi;
+    }
     const idx = formulas.length;
     formulas.push({ latex, isDisplay });
     return `@@VF${idx}@@`;
@@ -752,7 +787,10 @@ function EditableTableBlock({ block, onChange, onDelete }) {
       const el = cellInputRefs.current[`${section}-${r}-${c}`];
       if (el) {
         el.focus();
-        el.select?.();
+        const len = typeof el.value === 'string' ? el.value.length : 0;
+        if (typeof el.setSelectionRange === 'function') {
+          el.setSelectionRange(len, len);
+        }
       }
     }, 0);
   };
@@ -1485,10 +1523,22 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas(
       return;
     }
 
-    // Inline KaTeX formula
+    // Inline KaTeX formula (hoặc văn bản tiếng Việt thuần từ bảng Ngữ văn)
     const isDisplay = trimmed.startsWith('$$') && trimmed.endsWith('$$');
     const cleanLatex = trimmed.replace(/^\$+|\$+$/g, '').trim();
+    const plainVi = unwrapPureVietnameseTextLatex(cleanLatex);
     const richId = getTargetRichBlockId();
+    if (plainVi !== null) {
+      const escapedPlain = `${escapeHtml(plainVi)} `;
+      if (richId && richRefs.current[richId]) {
+        richRefs.current[richId].insertHtmlFragment(escapedPlain);
+      } else {
+        const newRich = { id: nextUid('rich'), type: 'rich', html: `<p>${escapedPlain}</p>` };
+        commitBlocks([...blocksRef.current, newRich]);
+        activeBlockIdRef.current = newRich.id;
+      }
+      return;
+    }
     if (richId && richRefs.current[richId]) {
       richRefs.current[richId].insertFormula(cleanLatex, isDisplay);
     } else {
@@ -1547,6 +1597,31 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas(
       if (richId && richRefs.current[richId]) {
         richRefs.current[richId].insertHtmlFragment(htmlFragment);
       }
+    },
+    openMathComposer: (openKeyboard = true) => {
+      const blockId = getTargetRichBlockId();
+      setActiveFormula({
+        blockId,
+        chipEl: null,
+        isNew: true,
+        latex: '',
+        struct: parseEquationStructure(''),
+        top: 40,
+        left: 12
+      });
+      if (openKeyboard) {
+        setTimeout(() => {
+          visualMathRef.current?.focus?.();
+          requestAnimationFrame(() => {
+            try {
+              window.mathVirtualKeyboard?.show?.();
+              setMathKbVisible(true);
+            } catch {
+              // ignore
+            }
+          });
+        }, 60);
+      }
     }
   }));
 
@@ -1568,8 +1643,10 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas(
 
   const applyActiveFormulaLatex = (nextLatex, nextStruct = null) => {
     if (!activeFormula) return;
-    const richApi = richRefs.current[activeFormula.blockId];
-    richApi?.updateFormulaChipElement(activeFormula.chipEl, nextLatex);
+    if (!activeFormula.isNew && activeFormula.chipEl) {
+      const richApi = richRefs.current[activeFormula.blockId];
+      richApi?.updateFormulaChipElement(activeFormula.chipEl, nextLatex);
+    }
     setActiveFormula(prev =>
       prev
         ? {
@@ -1579,6 +1656,36 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas(
           }
         : null
     );
+  };
+
+  const commitActiveFormula = () => {
+    if (!activeFormula) return;
+    if (activeFormula.isNew) {
+      const cleanLatex = (activeFormula.latex || '').trim();
+      if (cleanLatex) {
+        const plainVi = unwrapPureVietnameseTextLatex(cleanLatex);
+        const richId = activeFormula.blockId || getTargetRichBlockId();
+        if (plainVi !== null) {
+          const escapedPlain = `${escapeHtml(plainVi)} `;
+          if (richId && richRefs.current[richId]) {
+            richRefs.current[richId].insertHtmlFragment(escapedPlain);
+          } else {
+            const newRich = { id: nextUid('rich'), type: 'rich', html: `<p>${escapedPlain}</p>` };
+            commitBlocks([...blocksRef.current, newRich]);
+            activeBlockIdRef.current = newRich.id;
+          }
+        } else if (richId && richRefs.current[richId]) {
+          richRefs.current[richId].insertFormula(cleanLatex, false);
+        } else {
+          const newRich = { id: nextUid('rich'), type: 'rich', html: `<p>${buildFormulaChipHtml(cleanLatex, false)}&nbsp;</p>` };
+          commitBlocks([...blocksRef.current, newRich]);
+          activeBlockIdRef.current = newRich.id;
+        }
+      }
+    }
+    try { window.mathVirtualKeyboard?.hide?.(); } catch { /* ignore */ }
+    setMathKbVisible(false);
+    setActiveFormula(null);
   };
 
   const handleSlotFieldChange = (field, val) => {
@@ -1596,7 +1703,11 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas(
 
   const handleDeleteFormulaChip = () => {
     if (!activeFormula) return;
-    richRefs.current[activeFormula.blockId]?.deleteFormulaChipElement(activeFormula.chipEl);
+    if (!activeFormula.isNew && activeFormula.chipEl) {
+      richRefs.current[activeFormula.blockId]?.deleteFormulaChipElement(activeFormula.chipEl);
+    }
+    try { window.mathVirtualKeyboard?.hide?.(); } catch { /* ignore */ }
+    setMathKbVisible(false);
     setActiveFormula(null);
   };
 
@@ -1690,18 +1801,22 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas(
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <span className="text-[11px] font-bold text-indigo-800 bg-indigo-100/80 px-2.5 py-0.5 rounded-full">
-                {activeFormula.struct.type === 'FRACTION' ? 'Phân số' :
-                 activeFormula.struct.type === 'SQRT' ? 'Căn thức' :
-                 activeFormula.struct.type === 'POWER' ? 'Lũy thừa' :
-                 activeFormula.struct.type === 'SUBSCRIPT' ? 'Chỉ số' :
-                 activeFormula.struct.type === 'INTEGRAL' ? 'Tích phân' :
-                 activeFormula.struct.type === 'LIMIT' ? 'Giới hạn' :
-                 activeFormula.struct.type === 'CHEM_CM' ? 'Nồng độ CM' :
-                 activeFormula.struct.type === 'CHEM_CPERCENT' ? 'Nồng độ C%' :
-                 'Thanh sửa công thức'}
+                {activeFormula.isNew
+                  ? 'Soạn công thức mới'
+                  : activeFormula.struct.type === 'FRACTION' ? 'Phân số' :
+                    activeFormula.struct.type === 'SQRT' ? 'Căn thức' :
+                    activeFormula.struct.type === 'POWER' ? 'Lũy thừa' :
+                    activeFormula.struct.type === 'SUBSCRIPT' ? 'Chỉ số' :
+                    activeFormula.struct.type === 'INTEGRAL' ? 'Tích phân' :
+                    activeFormula.struct.type === 'LIMIT' ? 'Giới hạn' :
+                    activeFormula.struct.type === 'CHEM_CM' ? 'Nồng độ CM' :
+                    activeFormula.struct.type === 'CHEM_CPERCENT' ? 'Nồng độ C%' :
+                    'Thanh sửa công thức'}
               </span>
               <span className="text-[11px] text-slate-500 hidden sm:inline">
-                Cập nhật trực tiếp ngay trong dòng • Enter để xong
+                {activeFormula.isNew
+                  ? 'Gõ hoặc dùng bàn phím toán • Bấm Xong (Enter) để chèn vào vị trí con trỏ'
+                  : 'Cập nhật trực tiếp ngay trong dòng • Enter để xong'}
               </span>
             </div>
             <div className="flex items-center gap-1 flex-wrap">
@@ -1765,11 +1880,11 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas(
               </button>
               <button
                 type="button"
-                onClick={() => setActiveFormula(null)}
+                onClick={commitActiveFormula}
                 className="px-2.5 py-1 rounded-lg bg-[#1E3A5F] hover:bg-[#162C49] text-white text-[11px] font-semibold flex items-center gap-1 cursor-pointer"
               >
                 <Check className="w-3 h-3" />
-                <span>Xong</span>
+                <span>{activeFormula.isNew ? 'Chèn' : 'Xong'}</span>
               </button>
             </div>
           </div>
@@ -1782,7 +1897,7 @@ const WordStyleFormulaCanvas = forwardRef(function WordStyleFormulaCanvas(
               onChange={(nextLatex) => {
                 applyActiveFormulaLatex(nextLatex, { type: 'GENERAL', raw: nextLatex });
               }}
-              onDone={() => setActiveFormula(null)}
+              onDone={commitActiveFormula}
             />
             <div className="flex flex-wrap gap-1">
               {[

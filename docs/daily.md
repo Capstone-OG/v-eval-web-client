@@ -1,13 +1,16 @@
 # NHẬT KÝ TIẾN ĐỘ HẰNG NGÀY (DAILY LOG) - V-EVAL WEB CLIENT
 
-## [25/11/2026] - Tối Ưu Egress (Cache & Gộp Request API) & Hoàn Thiện UX Kho Đề / Xem Đề MUI
+## [25/11/2026] - Hoàn Thiện Studio Soạn Thảo, MathLab 2D/3D, Phân Trang & Tối Ưu Egress
 
 - **Cache & In-Flight Request Deduplication ([`contentService.js`](../src/services/contentService.js), [`practiceService.js`](../src/services/practiceService.js))**:
-  - Thêm cache bộ nhớ 15 phút + gộp Promise đang chạy cho `getCurriculum()` / `getSkillsTree()` (tự động xóa cache khi gọi các API tạo/sửa/xóa câu hỏi hoặc cây tri thức).
-  - Thêm cache bộ nhớ 30 giây + gộp Promise đang chạy cho `getMyRoadmap()` và `getStudentDashboard()`, tránh gọi lặp đồng thời từ nhiều component khi chuyển tab.
-- **Cải Tiến Giao Diện Kho Đề & Xem Đề Thi**:
-  - Tách thẻ tiêu đề đề lên đầu trang, phân trang 5 câu/trang có nhảy trang theo ma trận, nút tắt bộ lọc ma trận, chuyển các dropdown sang MUI `Select` và popup đổi đề sang MUI `Dialog`, bổ sung nút Tạo lời giải AI.
-- **Kiểm Thử**: `npm run build` đạt 0 lỗi (`4271 modules transformed`, 2.18s).
+  - Thêm cache bộ nhớ 15 phút + gộp Promise đang chạy cho `getCurriculum()` / `getSkillsTree()` và cache 30 giây cho `getMyRoadmap()` / `getStudentDashboard()`.
+- **Cải Tiến Kho Đề, Xem Đề & Studio Soạn Thảo ([`ExamPaperView.jsx`](../src/components/curriculum/ExamPaperView.jsx), [`ExamWorkspaceHeader.jsx`](../src/components/curriculum/ExamWorkspaceHeader.jsx), [`CurriculumStudioEditor.jsx`](../src/components/curriculum/CurriculumStudioEditor.jsx), [`WordStyleFormulaCanvas.jsx`](../src/components/curriculum/WordStyleFormulaCanvas.jsx), [`VisualMathField.jsx`](../src/components/curriculum/VisualMathField.jsx), [`HierarchicalMathPalette.jsx`](../src/components/curriculum/HierarchicalMathPalette.jsx), [`InteractiveFormulaBuilderModal.jsx`](../src/components/curriculum/InteractiveFormulaBuilderModal.jsx))**:
+  - Phân trang số gọn 1 hàng dưới cùng có nhập trực tiếp số trang + nút cuộn nhanh góc dưới phải.
+  - Thay nút Công thức thành **Bàn phím soạn thảo** chèn trực tiếp tại vị trí con trỏ; hiển thị trạng thái `active` cho `B/I/U/S`/căn lề/danh sách; tắt tự động bôi xanh 100% khi focus MathLive và giải nén `\text{...}` tiếng Việt thuần; đồng bộ chiều cao 3 cột và thứ tự `z-index` sticky.
+  - Dọn gọn bảng `Mô hình STEM` và giữ duy nhất `Bảng biến thiên` + `Đồ thị Oxy` trong modal dựng bảng.
+- **Thiết Kế Lại Phòng Dựng Hình 2D/3D ([`InteractiveMathWorkbenchModal.jsx`](../src/components/curriculum/InteractiveMathWorkbenchModal.jsx), [`mathGraphUtils.js`](../src/utils/mathGraphUtils.js), [`InteractiveMathRenderer.jsx`](../src/components/common/InteractiveMathRenderer.jsx))**:
+  - Render 100% KaTeX (không lộ text thô), MUI `Select`, tổ chức tab con tùy biến đầy đủ kích thước/góc xoay/hệ số, cho phép sửa trực tiếp nhãn điểm phụ và bổ sung công cụ 1-click hạ đường vuông góc 3D kèm ký hiệu góc vuông.
+- **Kiểm Thử**: `npm run build` đạt 0 lỗi (`4271 modules transformed`, 1.74s).
 
 ## [22/11/2026] - Nâng Cấp Toàn Diện & Đồng Bộ Hóa Toàn Bộ 6 Phân Hệ Quản Trị Chuẩn Executive Dark
 

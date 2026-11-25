@@ -278,10 +278,11 @@ export default function ExamStudioView({ onNavigateTab }) {
               </div>
 
               {/* Vào thẳng Full Studio (CurriculumStudioEditor) không qua màn hình trung gian */}
-              <div className="rounded-2xl border border-[#E5E3DC] bg-white overflow-hidden shadow-2xs">
+              <div className="rounded-2xl border border-[#E5E3DC] bg-white overflow-x-clip shadow-2xs">
                 <CurriculumStudioEditor
                   key={activeQuestion.localId}
                   mode="exam"
+                  embedded
                   pattern={{
                     patternId: `EXAM_Q${activeQuestion.questionNumber}`,
                     name: `Câu ${activeQuestion.questionNumber} · ${

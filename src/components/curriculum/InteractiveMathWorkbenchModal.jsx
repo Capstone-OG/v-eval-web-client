@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { MenuItem, Select } from '@mui/material';
 import JXG from 'jsxgraph';
 import {
   formatMathGraphTag,
@@ -11,43 +12,50 @@ import {
   mount2DGeometryBoard,
   SHAPES_2D_META
 } from '../../utils/mathGraphUtils';
-import { 
-  X, 
-  Sparkles, 
-  Check, 
-  RotateCcw, 
-  Layers, 
-  Compass, 
-  Eye, 
-  Copy, 
-  Sliders, 
-  Info,
+import {
+  X,
+  Check,
+  RotateCcw,
+  Compass,
+  Eye,
+  Copy,
   Box,
   TrendingUp,
   Triangle,
-  Circle,
-  Shapes,
-  Maximize2,
-  ChevronRight,
-  Split,
-  Edit2,
-  Crosshair,
-  Percent,
-  Calculator,
   Plus,
   Trash2,
-  Wand2,
-  Zap,
-  Activity,
-  Maximize,
-  ArrowRight,
-  CheckCircle2,
-  Bookmark,
-  Share2,
   SlidersHorizontal,
-  Move
+  GitBranch,
+  MapPin
 } from 'lucide-react';
-import MathText from '../common/MathText';
+import MathText, { renderKatexHtml } from '../common/MathText';
+
+const COLOR_SWATCHES = [
+  { hex: '#ef4444', label: 'Đỏ' },
+  { hex: '#f59e0b', label: 'Cam' },
+  { hex: '#10b981', label: 'Xanh lá' },
+  { hex: '#2563eb', label: 'Xanh dương' },
+  { hex: '#6366f1', label: 'Chàm' },
+  { hex: '#ec4899', label: 'Hồng' },
+  { hex: '#0f172a', label: 'Đen' }
+];
+
+const COMPACT_MUI_SELECT_SX = {
+  borderRadius: '10px',
+  backgroundColor: '#ffffff',
+  fontSize: '12px',
+  fontWeight: 600,
+  color: '#1e293b',
+  '& .MuiOutlinedInput-notchedOutline': { borderColor: '#cbd5e1' },
+  '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#64748b' },
+  '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#1E3A5F', borderWidth: '1.5px' },
+  '& .MuiSelect-select': { py: '5px', px: '10px', minHeight: 'unset' }
+};
+
+function KatexInline({ latex, className = '' }) {
+  const html = useMemo(() => renderKatexHtml(latex || '', false), [latex]);
+  return <span className={className} dangerouslySetInnerHTML={{ __html: html }} />;
+}
 
 /**
  * Robust compiler from user math expressions to JavaScript callable functions
@@ -192,6 +200,11 @@ function OpenMathWorkbench({
   // Flow 3 Student Simulation Drawer
   const [showStudentPreview, setShowStudentPreview] = useState(false);
 
+  // Left Inspector Sub-Tabs for clean organization
+  const [panel3DTab, setPanel3DTab] = useState('shape'); // 'shape' | 'aux' | 'vertices'
+  const [panel2DFuncTab, setPanel2DFuncTab] = useState('function'); // 'function' | 'analysis'
+  const [panel2DGeoTab, setPanel2DGeoTab] = useState('shape'); // 'shape' | 'aux'
+
   // Copy toast state
   const [copiedText, setCopiedText] = useState('');
 
@@ -327,18 +340,28 @@ function OpenMathWorkbench({
   // =============================================================
   // DYNAMIC AUXILIARY VERTICES & SEGMENT STUDIO (TỰ DO KẺ THÊM ĐƯỜNG)
   // =============================================================
-  // Danh sách các ĐIỂM PHỤ do người dùng thêm vào (trên cạnh hoặc tự do)
+  // Danh sách các ĐIỂM PHỤ do người dùng thêm vào (trên cạnh, chân đường vuông góc, hoặc tự do — đều sửa được nhãn trực tiếp!)
   const [extraPoints, setExtraPoints] = useState([
-    { id: 'M', name: 'M (Trung điểm SC)', edge: ['S', 'C'], ratio: 0.5, color: '#ec4899' },
-    { id: 'K', name: 'K (AK ⊥ SH)', isPresetProjection: true, color: '#ef4444' }
+    { id: 'M', name: 'M', edge: ['S', 'C'], ratio: 0.5, color: '#ec4899' },
+    { id: 'K', name: 'K', isPerpendicularFoot: true, fromPoint: 'A', edge: ['S', 'B'], color: '#ef4444' }
   ]);
 
-  // Form tạo điểm phụ mới
+  // Form tạo điểm phụ mới trên cạnh
   const [newPtName, setNewPtName] = useState('N');
+  const [newPtLabel, setNewPtLabel] = useState('');
   const [newPtEdge1, setNewPtEdge1] = useState('S');
   const [newPtEdge2, setNewPtEdge2] = useState('B');
   const [newPtRatio, setNewPtRatio] = useState(0.5);
-  const [newPtColor, setNewPtColor] = useState('#8b5cf6');
+  const [newPtColor, setNewPtColor] = useState('#6366f1');
+
+  // Form hạ đường vuông góc 3D (Chân đường cao + đoạn vuông góc + ký hiệu ⊥ trong 1 click)
+  const [perpFromPt, setPerpFromPt] = useState('A');
+  const [perpEdge1, setPerpEdge1] = useState('S');
+  const [perpEdge2, setPerpEdge2] = useState('C');
+  const [perpFootName, setPerpFootName] = useState('H');
+  const [perpFootLabel, setPerpFootLabel] = useState('');
+  const [perpDash, setPerpDash] = useState(2);
+  const [perpColor, setPerpColor] = useState('#ef4444');
 
   // Danh sách các ĐƯỜNG KẺ PHỤ TỰ DO (Arbitrary Auxiliary Lines)
   const [customAuxLines, setCustomAuxLines] = useState([
@@ -559,23 +582,79 @@ function OpenMathWorkbench({
   // Thêm ĐIỂM PHỤ MỚI vào danh sách
   const handleAddExtraPoint = () => {
     if (!newPtName.trim()) return;
-    const cleanName = newPtName.trim().toUpperCase();
-    if (extraPoints.some(p => p.id === cleanName)) return;
+    const cleanId = newPtName.trim().toUpperCase();
+    if (extraPoints.some(p => p.id === cleanId)) return;
 
+    const displayLabel = newPtLabel.trim() || cleanId;
     setExtraPoints(prev => [
       ...prev,
       {
-        id: cleanName,
-        name: `${cleanName} (∈ ${newPtEdge1}${newPtEdge2}, k=${newPtRatio})`,
+        id: cleanId,
+        name: displayLabel,
         edge: [newPtEdge1, newPtEdge2],
         ratio: newPtRatio,
         color: newPtColor
       }
     ]);
-    // Tự động gợi ý tên điểm tiếp theo
+    setNewPtLabel('');
     const nextChars = ['P', 'Q', 'I', 'J', 'E', 'F', 'H', 'K', 'T'];
-    const available = nextChars.find(c => !extraPoints.some(p => p.id === c) && c !== cleanName);
+    const available = nextChars.find(c => !extraPoints.some(p => p.id === c) && c !== cleanId);
     if (available) setNewPtName(available);
+  };
+
+  // Hạ đường vuông góc 3D: tự tính chân đường cao + kẻ đoạn thẳng + vẽ ký hiệu góc vuông ⊥
+  const handleAddPerpendicular3D = () => {
+    const cleanId = perpFootName.trim().toUpperCase();
+    if (!cleanId || !perpFromPt || perpEdge1 === perpEdge2) return;
+    if (extraPoints.some(p => p.id === cleanId)) return;
+
+    const cFrom = customBasePoints[perpFromPt];
+    const c1 = customBasePoints[perpEdge1];
+    const c2 = customBasePoints[perpEdge2];
+    let ratio = 0.5;
+    if (cFrom && c1 && c2) {
+      const vx = c2.x - c1.x, vy = c2.y - c1.y, vz = c2.z - c1.z;
+      const lenSq = vx * vx + vy * vy + vz * vz;
+      if (lenSq > 1e-6) {
+        ratio = ((cFrom.x - c1.x) * vx + (cFrom.y - c1.y) * vy + (cFrom.z - c1.z) * vz) / lenSq;
+      }
+    }
+
+    const displayLabel = perpFootLabel.trim() || cleanId;
+    setExtraPoints(prev => [
+      ...prev,
+      {
+        id: cleanId,
+        name: displayLabel,
+        isPerpendicularFoot: true,
+        fromPoint: perpFromPt,
+        edge: [perpEdge1, perpEdge2],
+        ratio,
+        color: perpColor
+      }
+    ]);
+
+    setCustomAuxLines(prev => [
+      ...prev,
+      {
+        id: `perp-${Date.now()}`,
+        from: perpFromPt,
+        to: cleanId,
+        dash: perpDash,
+        color: perpColor,
+        name: `${perpFromPt}${cleanId} ⊥ ${perpEdge1}${perpEdge2}`
+      }
+    ]);
+
+    setPerpFootLabel('');
+    const nextChars = ['H', 'K', 'I', 'E', 'F', 'P', 'Q'];
+    const available = nextChars.find(c => !extraPoints.some(p => p.id === c) && c !== cleanId);
+    if (available) setPerpFootName(available);
+  };
+
+  // Cập nhật trực tiếp nhãn / tỷ lệ / màu của điểm phụ đã có
+  const handleUpdateExtraPoint = (id, patch) => {
+    setExtraPoints(prev => prev.map(p => (p.id === id ? { ...p, ...patch } : p)));
   };
 
   const handleRemoveExtraPoint = (id) => {
@@ -610,72 +689,132 @@ function OpenMathWorkbench({
     setCustomAuxLines(prev => prev.filter(l => l.id !== id));
   };
 
-  // Danh sách tất cả các điểm có thể kẻ nối (bao gồm đỉnh gốc và điểm phụ với nhãn tùy biến)
+  // Danh sách tất cả các điểm có thể kẻ nối (hiển thị gọn đẹp không bị cắt chữ)
   const availablePointsList = useMemo(() => {
     const baseList = Object.entries(customBasePoints).map(([key, data]) => ({
       id: key,
-      label: `${data.label} (Gốc ${key})`
+      shortLabel: data.label || key,
+      label: `${data.label || key}${data.desc ? ` · ${data.desc}` : ''}`
     }));
     const extraList = extraPoints.map(p => ({
       id: p.id,
-      label: `${p.name} (Điểm phụ)`
+      shortLabel: p.id,
+      label: `${p.id} · Điểm phụ`
     }));
     return [...baseList, ...extraList];
   }, [customBasePoints, extraPoints]);
 
-  // Generate Current Formula String LaTeX
-  const getCurrentFormulaString = () => {
+  // Chuyển chuỗi biểu thức người dùng (x^3 - 3*x + 1, sqrt(...), abs(...)) sang LaTeX đẹp để hiển thị KaTeX
+  const exprToCleanLatex = (expr = '') =>
+    String(expr)
+      .replace(/\*/g, ' \\cdot ')
+      .replace(/sqrt\(([^)]+)\)/gi, '\\sqrt{$1}')
+      .replace(/abs\(([^)]+)\)/gi, '|$1|')
+      .replace(/exp\(([^)]+)\)/gi, 'e^{$1}')
+      .replace(/\bpi\b/gi, '\\pi');
+
+  // Trả về { prefix, latex } tách biệt để render 100% KaTeX (TUYỆT ĐỐI không hiện mã \frac/\sqrt thô)
+  const getCurrentFormulaDisplay = () => {
     if (jsxSubTab === '2d_function') {
       if (exam2DMode === 'area_integral') {
-        return `S = \\int_{x_1}^{x_2} |(${integralUpperExpr}) - (${integralLowerExpr})| dx \\approx ${calculatedArea.toFixed(2)}`;
+        return {
+          prefix: 'Diện tích miền phẳng',
+          latex: `S = \\int_{x_1}^{x_2} \\left|(${exprToCleanLatex(integralUpperExpr)}) - (${exprToCleanLatex(integralLowerExpr)})\\right|\\,dx \\approx ${calculatedArea.toFixed(2)}`
+        };
       }
       if (exam2DMode === 'three_curves_recognition') {
-        return `C_1: f(x) = x^3 - 3x,\\ C_2: f'(x) = 3x^2 - 3,\\ C_3: F(x) = \\frac{x^4}{4} - \\frac{3x^2}{2}`;
+        return {
+          prefix: 'Bộ 3 đồ thị',
+          latex: `f(x)=x^3-3x,\\; f'(x)=3x^2-3,\\; F(x)=\\frac{x^4}{4}-\\frac{3x^2}{2}`
+        };
       }
       if (exam2DMode === 'derivative_fprime') {
-        return `y = f'(x),\\ Tương\\ giao\\ với\\ d: y = ${auxiliaryExpr}`;
+        return {
+          prefix: 'Tương giao đạo hàm',
+          latex: `y = f'(x) \\cap d: y = ${exprToCleanLatex(auxiliaryExpr)}`
+        };
       }
 
       let baseFormula = '';
       if (funcInputMode === 'custom') {
-        baseFormula = customExpr;
+        baseFormula = exprToCleanLatex(customExpr);
       } else if (funcType === 'cubic') {
         baseFormula = `${paramA === 1 ? '' : paramA === -1 ? '-' : paramA}x^3 ${paramB !== 0 ? (paramB > 0 ? `+ ${paramB}x^2` : `- ${Math.abs(paramB)}x^2`) : ''} ${paramC !== 0 ? (paramC > 0 ? `+ ${paramC}x` : `- ${Math.abs(paramC)}x`) : ''} ${paramD !== 0 ? (paramD > 0 ? `+ ${paramD}` : `- ${Math.abs(paramD)}`) : ''}`.trim();
+      } else if (funcType === 'quartic') {
+        baseFormula = `${paramA === 1 ? '' : paramA === -1 ? '-' : paramA}x^4 ${paramB !== 0 ? (paramB > 0 ? `+ ${paramB}x^2` : `- ${Math.abs(paramB)}x^2`) : ''} ${paramC !== 0 ? (paramC > 0 ? `+ ${paramC}` : `- ${Math.abs(paramC)}`) : ''}`.trim();
       } else if (funcType === 'rational_1_1') {
         baseFormula = `\\frac{${paramA}x ${paramB >= 0 ? `+ ${paramB}` : `- ${Math.abs(paramB)}`}}{${paramC}x ${paramD >= 0 ? `+ ${paramD}` : `- ${Math.abs(paramD)}`}}`;
       } else if (funcType === 'rational_2_1') {
         baseFormula = `\\frac{${paramA}x^2 ${paramB >= 0 ? `+ ${paramB}x` : `- ${Math.abs(paramB)}x`} ${paramC >= 0 ? `+ ${paramC}` : `- ${Math.abs(paramC)}`}}{${paramD}x ${paramE >= 0 ? `+ ${paramE}` : `- ${Math.abs(paramE)}`}}`;
+      } else if (funcType === 'trig') {
+        baseFormula = `${paramA === 1 ? '' : paramA}\\sin(${paramB === 1 ? '' : paramB}x ${paramC !== 0 ? (paramC > 0 ? `+ ${paramC}` : `- ${Math.abs(paramC)}`) : ''})`;
       } else {
-        baseFormula = `${paramA}x^2 ${paramB >= 0 ? `+ ${paramB}x` : `- ${Math.abs(paramB)}x`} ${paramC >= 0 ? `+ ${paramC}` : `- ${Math.abs(paramC)}`}`;
+        baseFormula = `${paramA === 1 ? '' : paramA === -1 ? '-' : paramA}x^2 ${paramB !== 0 ? (paramB > 0 ? `+ ${paramB}x` : `- ${Math.abs(paramB)}x`) : ''} ${paramC !== 0 ? (paramC > 0 ? `+ ${paramC}` : `- ${Math.abs(paramC)}`) : ''}`.trim();
       }
 
-      if (absTransformType === 'abs_total') return `y = |${baseFormula}|`;
-      if (absTransformType === 'abs_x') return `y = f(|x|)`;
-      if (absTransformType === 'abs_both') return `y = |f(|x|)|`;
-      if (absTransformType === 'abs_shifted') return `y = |f(x) ${paramShiftM >= 0 ? `+ ${paramShiftM}` : `- ${Math.abs(paramShiftM)}`}|`;
-      if (absTransformType === 'abs_half') return `y = f(x) + |f(x)|`;
-      if (exam2DMode === 'parametric_line') return `f(x) = ${baseFormula},\\ d: y = ${slopeM !== 0 ? `${slopeM}x + ` : ''}${paramM}`;
-      return `y = ${baseFormula}`;
+      if (absTransformType === 'abs_total') return { prefix: '', latex: `y = \\left|${baseFormula}\\right|` };
+      if (absTransformType === 'abs_x') return { prefix: '', latex: `y = f(|x|)` };
+      if (absTransformType === 'abs_both') return { prefix: '', latex: `y = |f(|x|)|` };
+      if (absTransformType === 'abs_shifted') return { prefix: '', latex: `y = \\left|f(x) ${paramShiftM >= 0 ? `+ ${paramShiftM}` : `- ${Math.abs(paramShiftM)}`}\\right|` };
+      if (absTransformType === 'abs_half') return { prefix: '', latex: `y = f(x) + |f(x)|` };
+      if (exam2DMode === 'parametric_line') {
+        return {
+          prefix: '',
+          latex: `f(x) = ${baseFormula},\\quad d: y = ${slopeM !== 0 ? `${slopeM}x + ` : ''}${paramM}`
+        };
+      }
+      return { prefix: '', latex: `y = ${baseFormula}` };
     }
+
     if (jsxSubTab === '3d_space') {
       const topLabel = customBasePoints['S']?.label || 'S';
-      const baseLabels = ['A', 'B', 'C', 'D'].map(k => customBasePoints[k]?.label || k).join('');
-      if (exam3DConstructionPreset === 'distance_model') return `Khoảng cách $d(${customBasePoints['A']?.label || 'A'}, (${topLabel}BC)) = AK = \\frac{SA \\cdot AB}{\\sqrt{SA^2 + AB^2}}$`;
-      if (exam3DConstructionPreset === 'angle_line_plane') return `Góc giữa $${topLabel}C$ và $(${baseLabels})$: $\\widehat{${topLabel}CA}$`;
-      if (exam3DConstructionPreset === 'cross_section_mid') return `Thiết diện qua các trung điểm $(MNPQ)$`;
-      if (shape3DType === 'solid_revolution') return `Khối nón tròn xoay $(S, R=${shape3dRadius}, h=${shape3dHeight})$`;
-      if (shape3DType === 'sphere_plane') return `Mặt cầu cắt mặt phẳng theo đường tròn $r = \\sqrt{R^2 - d^2}$`;
-      return `Mô hình không gian đa diện $${topLabel}.${baseLabels}$`;
+      const aLabel = customBasePoints['A']?.label || 'A';
+      const bLabel = customBasePoints['B']?.label || 'B';
+      const cLabel = customBasePoints['C']?.label || 'C';
+      const baseLabels = Object.entries(customBasePoints)
+        .filter(([k]) => !['S', 'O', 'G', 'H', "A'", "B'", "C'", "D'"].includes(k))
+        .map(([, v]) => v.label)
+        .join('') || 'ABCD';
+      if (shape3DType === 'solid_revolution') {
+        return { prefix: 'Khối nón tròn xoay', latex: `R = ${shape3dRadius},\\; h = ${shape3dHeight}` };
+      }
+      if (shape3DType === 'sphere_plane') {
+        return { prefix: 'Mặt cầu cắt phẳng', latex: `r = \\sqrt{R^2 - d^2},\\; R = ${shape3dRadius},\\; d = ${planeD}` };
+      }
+      if (exam3DConstructionPreset === 'distance_model') {
+        return {
+          prefix: 'Khoảng cách',
+          latex: `d(${aLabel}, (${topLabel}${bLabel}${cLabel})) = AK = \\frac{${topLabel}${aLabel} \\cdot ${aLabel}${bLabel}}{\\sqrt{${topLabel}${aLabel}^2 + ${aLabel}${bLabel}^2}}`
+        };
+      }
+      if (exam3DConstructionPreset === 'angle_line_plane') {
+        return {
+          prefix: 'Góc đường – mặt',
+          latex: `(${topLabel}${cLabel}, (${baseLabels})) = \\widehat{${topLabel}${cLabel}${aLabel}}`
+        };
+      }
+      if (exam3DConstructionPreset === 'cross_section_mid') {
+        return { prefix: 'Thiết diện qua trung điểm', latex: `(MNPQ)` };
+      }
+      return { prefix: 'Đa diện không gian', latex: `${topLabel}.${baseLabels}` };
     }
+
     if (jsxSubTab === '2d_geometry') {
-      if (shape2DType === 'acute_triangle') return 'Tam giác nhọn $ABC$ nội tiếp $(O)$ (Trực tâm $H$, Trọng tâm $G$)';
-      if (shape2DType === 'circle_tangent') return 'Đường tròn $(O; R)$ & Hai tiếp tuyến cắt nhau $MA, MB$';
-      if (shape2DType === 'quadrilateral_cyclic') return 'Tứ giác $ABCD$ nội tiếp đường tròn $(O)$';
-      if (shape2DType === 'parallelogram_rhombus') return 'Hình bình hành $ABCD$ (Tâm đối xứng $O$, đường cao $DH$)';
-      if (shape2DType === 'trapezoid_right') return 'Hình thang vuông $ABCD$ (vuông tại $A, D$, đường cao $BH$)';
-      return 'Tam giác vuông $ABC$ tại $A$ ($AH \\perp BC$, trung tuyến $AM$)';
+      if (shape2DType === 'acute_triangle') return { prefix: 'Tam giác nhọn nội tiếp', latex: `\\triangle ABC \\subset (O),\\; H, G` };
+      if (shape2DType === 'circle_tangent') return { prefix: 'Đường tròn & 2 tiếp tuyến', latex: `(O; R),\\; MA = MB` };
+      if (shape2DType === 'quadrilateral_cyclic') return { prefix: 'Tứ giác nội tiếp', latex: `ABCD \\subset (O)` };
+      if (shape2DType === 'parallelogram_rhombus') return { prefix: 'Hình bình hành', latex: `ABCD,\\; O = AC \\cap BD,\\; DH \\perp AB` };
+      if (shape2DType === 'trapezoid_right') return { prefix: 'Hình thang vuông', latex: `ABCD\\; (\\widehat{A} = \\widehat{D} = 90^\\circ)` };
+      return { prefix: 'Tam giác vuông tại A', latex: `\\triangle ABC,\\; AH \\perp BC,\\; AM = \\frac{BC}{2}` };
     }
-    return 'Tam giác vuông $ABC$ tại $A$';
+    return { prefix: '', latex: '' };
+  };
+
+  // Generate Current Formula String LaTeX (for tag serialization & copy)
+  const getCurrentFormulaString = () => {
+    const { prefix, latex } = getCurrentFormulaDisplay();
+    if (!latex) return prefix;
+    return prefix ? `${prefix}: $${latex}$` : `$${latex}$`;
   };
 
   // -------------------------------------------------------------
@@ -1286,16 +1425,53 @@ function OpenMathWorkbench({
         view.create('line3d', [ptI, ptH], { straightFirst: false, straightLast: false, strokeColor: '#dc2626', strokeWidth: 2, dash: 2 });
       }
 
-      // 3. DỰNG TẤT CẢ CÁC ĐIỂM PHỤ TÙY Ý (EXTRA POINTS)
+      // 3. DỰNG TẤT CẢ CÁC ĐIỂM PHỤ TÙY Ý (EXTRA POINTS + CHÂN ĐƯỜNG VUÔNG GÓC 3D KÈM KÝ HIỆU ⊥)
       extraPoints.forEach(pt => {
-        if (pt.isPresetProjection && ptsMap['S'] && ptsMap['B']) {
+        if (pt.isPerpendicularFoot && pt.fromPoint && pt.edge && pt.edge.length === 2) {
+          const cFrom = coordMap[pt.fromPoint];
+          const c1 = coordMap[pt.edge[0]];
+          const c2 = coordMap[pt.edge[1]];
+          if (cFrom && c1 && c2) {
+            const vx = c2[0] - c1[0], vy = c2[1] - c1[1], vz = c2[2] - c1[2];
+            const lenSq = vx * vx + vy * vy + vz * vz;
+            const t = lenSq > 1e-6
+              ? ((cFrom[0] - c1[0]) * vx + (cFrom[1] - c1[1]) * vy + (cFrom[2] - c1[2]) * vz) / lenSq
+              : 0.5;
+            const fx = c1[0] + t * vx;
+            const fy = c1[1] + t * vy;
+            const fz = c1[2] + t * vz;
+            ptsMap[pt.id] = view.create('point3d', [fx, fy, fz], { name: pt.name ?? pt.id, size: 4, color: pt.color || '#ef4444' });
+            coordMap[pt.id] = [fx, fy, fz];
+
+            // Vẽ ký hiệu góc vuông 3D (⊥) ngay tại chân đường cao
+            const u1x = cFrom[0] - fx, u1y = cFrom[1] - fy, u1z = cFrom[2] - fz;
+            const n1 = Math.hypot(u1x, u1y, u1z);
+            const n2 = Math.hypot(vx, vy, vz);
+            if (n1 > 1e-4 && n2 > 1e-4) {
+              const dirSign = t > 0.5 ? -1 : 1;
+              const s = Math.min(0.32, n1 * 0.25, n2 * 0.25);
+              const a1 = [fx + (u1x / n1) * s, fy + (u1y / n1) * s, fz + (u1z / n1) * s];
+              const a2 = [fx + dirSign * (vx / n2) * s, fy + dirSign * (vy / n2) * s, fz + dirSign * (vz / n2) * s];
+              const corner = [
+                a1[0] + dirSign * (vx / n2) * s,
+                a1[1] + dirSign * (vy / n2) * s,
+                a1[2] + dirSign * (vz / n2) * s
+              ];
+              const pA1 = view.create('point3d', a1, { visible: false });
+              const pA2 = view.create('point3d', a2, { visible: false });
+              const pC = view.create('point3d', corner, { visible: false });
+              view.create('line3d', [pA1, pC], { straightFirst: false, straightLast: false, strokeColor: pt.color || '#ef4444', strokeWidth: 1.5 });
+              view.create('line3d', [pA2, pC], { straightFirst: false, straightLast: false, strokeColor: pt.color || '#ef4444', strokeWidth: 1.5 });
+            }
+          }
+        } else if (pt.isPresetProjection && ptsMap['S'] && ptsMap['B']) {
           const cS = coordMap['S'] || [0, 0, shape3dHeight];
           const cB = coordMap['B'] || [shape3dWidth, 0, 0];
           const aVal = cB[0];
           const hVal = cS[2];
           const kX = (aVal * (hVal ** 2)) / (aVal ** 2 + hVal ** 2);
           const kZ = ((aVal ** 2) * hVal) / (aVal ** 2 + hVal ** 2);
-          ptsMap[pt.id] = view.create('point3d', [kX, 0, kZ], { name: pt.name, size: 4, color: pt.color || '#ef4444' });
+          ptsMap[pt.id] = view.create('point3d', [kX, 0, kZ], { name: pt.name ?? pt.id, size: 4, color: pt.color || '#ef4444' });
           coordMap[pt.id] = [kX, 0, kZ];
         } else if (pt.edge && pt.edge.length === 2) {
           const c1 = coordMap[pt.edge[0]];
@@ -1305,7 +1481,7 @@ function OpenMathWorkbench({
             const px = (1 - k) * c1[0] + k * c2[0];
             const py = (1 - k) * c1[1] + k * c2[1];
             const pz = (1 - k) * c1[2] + k * c2[2];
-            ptsMap[pt.id] = view.create('point3d', [px, py, pz], { name: pt.name, size: 3.5, color: pt.color || '#ec4899' });
+            ptsMap[pt.id] = view.create('point3d', [px, py, pz], { name: pt.name ?? pt.id, size: 3.5, color: pt.color || '#ec4899' });
             coordMap[pt.id] = [px, py, pz];
           }
         }
@@ -1528,157 +1704,183 @@ function OpenMathWorkbench({
     onClose();
   };
 
+  const formulaDisplay = getCurrentFormulaDisplay();
+
+  const isRevolutionOrSphere = shape3DType === 'solid_revolution' || shape3DType === 'sphere_plane';
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-7xl max-h-[96vh] flex flex-col bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden text-slate-800">
-        
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/55 backdrop-blur-xs animate-in fade-in duration-150">
+      <div className="relative w-full max-w-[1360px] h-[92vh] max-h-[860px] flex flex-col bg-[#F8F7F4] rounded-2xl shadow-2xl border border-[#E2DFD7] overflow-hidden text-slate-800">
+
         {/* MODAL HEADER */}
-        <div className="px-5 py-3 border-b border-slate-200 bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <header className="px-5 py-3 border-b border-[#E5E3DC] bg-white flex flex-wrap items-center justify-between gap-3 shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
+            <div className="w-8 h-8 rounded-xl bg-[#1E3A5F] text-white flex items-center justify-center shadow-2xs">
               <Compass className="w-4 h-4" />
             </div>
-            <h2 className="text-sm font-extrabold text-slate-900">MathLab 2D / 3D</h2>
+            <div>
+              <h2 className="text-sm font-extrabold text-[#1E3A5F] leading-tight">Phòng Dựng Hình & Đồ Thị 2D / 3D</h2>
+              <p className="text-[11px] text-slate-500">Tùy biến tham số, tọa độ đỉnh, điểm phụ, đường phụ và góc nhìn trực quan</p>
+            </div>
           </div>
 
-          <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-2xl border border-slate-200 self-start sm:self-auto">
-            <button
-              type="button"
-              onClick={() => setJsxSubTab('2d_function')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                jsxSubTab === '2d_function'
-                  ? 'bg-white text-indigo-700 shadow-sm border border-slate-200'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <TrendingUp className="w-3.5 h-3.5 text-indigo-600" />
-              <span>Đồ thị 2D</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setJsxSubTab('3d_space')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                jsxSubTab === '3d_space'
-                  ? 'bg-white text-indigo-700 shadow-sm border border-slate-200'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <Box className="w-3.5 h-3.5 text-indigo-600" />
-              <span>Không gian 3D</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setJsxSubTab('2d_geometry')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                jsxSubTab === '2d_geometry'
-                  ? 'bg-white text-indigo-700 shadow-sm border border-slate-200'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <Triangle className="w-3.5 h-3.5 text-indigo-600" />
-              <span>Hình phẳng 2D</span>
-            </button>
+          <div className="flex items-center gap-1 bg-[#F2F1EC] p-1 rounded-xl border border-[#E5E3DC]">
+            {[
+              { id: '2d_function', label: 'Đồ thị 2D', Icon: TrendingUp },
+              { id: '3d_space', label: 'Không gian 3D', Icon: Box },
+              { id: '2d_geometry', label: 'Hình phẳng 2D', Icon: Triangle }
+            ].map(({ id, label, Icon }) => {
+              const active = jsxSubTab === id;
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setJsxSubTab(id)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                    active
+                      ? 'bg-[#1E3A5F] text-white shadow-2xs'
+                      : 'text-slate-600 hover:text-[#1E3A5F] hover:bg-white/70'
+                  }`}
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                  <span>{label}</span>
+                </button>
+              );
+            })}
 
             <button
               type="button"
               onClick={onClose}
-              className="p-1.5 ml-1 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-200 transition-colors cursor-pointer"
+              className="p-1.5 ml-1 rounded-lg text-slate-400 hover:text-slate-800 hover:bg-white transition-colors cursor-pointer"
               title="Đóng"
             >
               <X className="w-4 h-4" />
             </button>
           </div>
-        </div>
+        </header>
 
         {/* Copy toast */}
         {copiedText && (
-          <div className="absolute top-16 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-bold shadow-lg flex items-center gap-2 animate-in fade-in slide-in-from-top-2">
+          <div className="absolute top-16 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-xl bg-[#1E3A5F] text-white text-xs font-bold shadow-lg flex items-center gap-2">
             <Check className="w-4 h-4 text-emerald-400" />
             <span>{copiedText}</span>
           </div>
         )}
 
-        {/* BODY CONTENT */}
-        <div className="flex-1 overflow-y-auto p-4 bg-slate-50/50 flex flex-col gap-3">
-          <div className="flex flex-col gap-3 flex-1">
-            {/* Main Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 flex-1 min-h-[520px]">
+        {/* MAIN 2-PANE STUDIO BODY */}
+        <div className="flex-1 min-h-0 flex flex-col lg:flex-row gap-3.5 p-3.5 overflow-hidden">
 
-              {/* LEFT COLUMN */}
-              <div className="lg:col-span-5 flex flex-col gap-3 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm overflow-y-auto max-h-[660px]">
+          {/* LEFT INSPECTOR PANEL */}
+          <aside className="w-full lg:w-[410px] xl:w-[430px] shrink-0 bg-white rounded-2xl border border-[#E5E3DC] shadow-[0_1px_6px_rgba(15,23,42,0.03)] flex flex-col min-h-0 overflow-hidden">
 
-                {/* A. 2D FUNCTION CONTROLS */}
-                {jsxSubTab === '2d_function' && (
-                  <div className="flex flex-col gap-3">
-                    <div>
-                      <label className="text-xs font-bold text-slate-700 mb-1.5 block">Chuyên đề đồ thị</label>
-                      <div className="grid grid-cols-2 gap-1.5">
-                        {[
-                          { id: 'standard', label: 'Khảo sát & Tiệm cận' },
-                          { id: 'absolute_transform', label: 'Trị tuyệt đối' },
-                          { id: 'derivative_fprime', label: "Đạo hàm f'(x)" },
-                          { id: 'parametric_line', label: 'Đường thẳng y = ax + m' },
-                          { id: 'area_integral', label: 'Tích phân 2 đường cong' },
-                          { id: 'three_curves_recognition', label: "Nhận dạng f, f', F" }
-                        ].map((item) => (
-                          <button
-                            key={item.id}
-                            type="button"
-                            onClick={() => setExam2DMode(item.id)}
-                            className={`px-2.5 py-1.5 rounded-xl text-left text-xs font-bold border transition-all cursor-pointer ${
-                              exam2DMode === item.id
-                                ? 'bg-indigo-50 border-indigo-500 text-indigo-700'
-                                : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
-                            }`}
-                          >
-                            {item.label}
-                          </button>
-                        ))}
+            {/* === A. 2D FUNCTION INSPECTOR === */}
+            {jsxSubTab === '2d_function' && (
+              <>
+                <div className="p-2.5 border-b border-[#ECEAE4] bg-[#FAF9F6] shrink-0">
+                  <div className="grid grid-cols-2 p-0.5 rounded-xl bg-[#EFECE6] border border-[#E5E3DC]">
+                    {[
+                      { id: 'function', label: 'Hàm số & Hệ số', Icon: SlidersHorizontal },
+                      { id: 'analysis', label: 'Tương giao & Tiếp tuyến', Icon: TrendingUp }
+                    ].map(({ id, label, Icon }) => (
+                      <button
+                        key={id}
+                        type="button"
+                        onClick={() => setPanel2DFuncTab(id)}
+                        className={`py-1.5 px-2 rounded-lg text-[11.5px] font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                          panel2DFuncTab === id
+                            ? 'bg-white text-[#1E3A5F] shadow-2xs'
+                            : 'text-slate-500 hover:text-slate-800'
+                        }`}
+                      >
+                        <Icon className="w-3.5 h-3.5" />
+                        <span>{label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex-1 min-h-0 overflow-y-auto p-3.5 space-y-3.5">
+                  {panel2DFuncTab === 'function' ? (
+                    <>
+                      {/* Chuyên đề đồ thị */}
+                      <div className="space-y-1.5">
+                        <label className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500">
+                          Chuyên đề đồ thị
+                        </label>
+                        <div className="grid grid-cols-2 gap-1.5">
+                          {[
+                            { id: 'standard', label: 'Khảo sát & Tiệm cận' },
+                            { id: 'absolute_transform', label: 'Biến đổi trị tuyệt đối' },
+                            { id: 'derivative_fprime', label: 'Đạo hàm', latex: "f'(x)" },
+                            { id: 'parametric_line', label: 'Tương giao', latex: 'y=ax+m' },
+                            { id: 'area_integral', label: 'Tích phân 2 đường cong' },
+                            { id: 'three_curves_recognition', label: 'Nhận dạng', latex: "f,\\,f',\\,F" }
+                          ].map((item) => {
+                            const active = exam2DMode === item.id;
+                            return (
+                              <button
+                                key={item.id}
+                                type="button"
+                                onClick={() => {
+                                  setExam2DMode(item.id);
+                                  if (item.id !== 'standard') setPanel2DFuncTab('analysis');
+                                }}
+                                className={`px-2.5 py-2 rounded-xl text-left text-xs font-bold border transition-all cursor-pointer flex items-center justify-between gap-1 ${
+                                  active
+                                    ? 'bg-[#EEF2F7] border-[#1E3A5F] text-[#1E3A5F]'
+                                    : 'bg-white border-[#E5E3DC] text-slate-700 hover:border-[#2C4C7E]/50 hover:bg-[#FAF9F6]'
+                                }`}
+                              >
+                                <span className="truncate">{item.label}</span>
+                                {item.latex && <KatexInline latex={item.latex} className="text-[11px] shrink-0" />}
+                              </button>
+                            );
+                          })}
+                        </div>
                       </div>
-                    </div>
 
-                    {exam2DMode === 'standard' && (
-                      <div className="flex flex-col gap-2.5 p-3 rounded-xl bg-slate-50 border border-slate-200">
-                        <div className="flex p-0.5 bg-slate-200 rounded-lg text-xs font-bold">
+                      {/* Nguồn hàm số */}
+                      <div className="p-3 rounded-xl bg-[#FAF9F6] border border-[#E7E5DF] space-y-3">
+                        <div className="grid grid-cols-2 p-0.5 bg-[#EBE8E1] rounded-lg text-xs font-bold">
                           <button
                             type="button"
                             onClick={() => setFuncInputMode('preset')}
-                            className={`flex-1 py-1 rounded-md transition-all cursor-pointer ${
-                              funcInputMode === 'preset' ? 'bg-white text-indigo-700 shadow-2xs' : 'text-slate-600'
+                            className={`py-1 rounded-md transition-all cursor-pointer ${
+                              funcInputMode === 'preset' ? 'bg-white text-[#1E3A5F] shadow-2xs' : 'text-slate-600'
                             }`}
                           >
-                            Hàm mẫu
+                            Hàm mẫu chuẩn
                           </button>
                           <button
                             type="button"
                             onClick={() => setFuncInputMode('custom')}
-                            className={`flex-1 py-1 rounded-md transition-all cursor-pointer ${
-                              funcInputMode === 'custom' ? 'bg-white text-indigo-700 shadow-2xs' : 'text-slate-600'
+                            className={`py-1 rounded-md transition-all cursor-pointer ${
+                              funcInputMode === 'custom' ? 'bg-white text-[#1E3A5F] shadow-2xs' : 'text-slate-600'
                             }`}
                           >
-                            Nhập tự do
+                            Nhập biểu thức tự do
                           </button>
                         </div>
 
                         {funcInputMode === 'preset' ? (
-                          <div className="flex flex-col gap-2">
-                            <div className="grid grid-cols-3 gap-1">
+                          <div className="space-y-3">
+                            <div className="grid grid-cols-3 gap-1.5">
                               {[
-                                { id: 'cubic', label: 'Bậc 3' },
-                                { id: 'rational_2_1', label: 'Phân thức 2/1' },
-                                { id: 'rational_1_1', label: 'Phân thức 1/1' },
-                                { id: 'quartic', label: 'Trùng phương' },
-                                { id: 'quadratic', label: 'Parabol' },
-                                { id: 'trig', label: 'Lượng giác' }
+                                { id: 'cubic', label: 'Bậc 3', latex: 'ax^3+\\dots' },
+                                { id: 'rational_2_1', label: 'Phân thức 2/1', latex: '\\frac{ax^2}{dx+e}' },
+                                { id: 'rational_1_1', label: 'Phân thức 1/1', latex: '\\frac{ax+b}{cx+d}' },
+                                { id: 'quartic', label: 'Trùng phương', latex: 'ax^4+bx^2' },
+                                { id: 'quadratic', label: 'Parabol', latex: 'ax^2+bx' },
+                                { id: 'trig', label: 'Lượng giác', latex: 'a\\sin(bx)' }
                               ].map((t) => (
                                 <button
                                   key={t.id}
                                   type="button"
                                   onClick={() => handleSelectFuncPreset(t.id)}
-                                  className={`px-2 py-1 rounded-lg text-[11px] font-bold border transition-all cursor-pointer ${
-                                    funcType === t.id ? 'bg-indigo-600 text-white' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
+                                  className={`px-2 py-1.5 rounded-lg text-[11px] font-bold border transition-all cursor-pointer text-center ${
+                                    funcType === t.id
+                                      ? 'bg-[#1E3A5F] border-[#1E3A5F] text-white'
+                                      : 'bg-white border-[#E5E3DC] text-slate-700 hover:bg-[#EEF2F7]'
                                   }`}
                                 >
                                   {t.label}
@@ -1686,718 +1888,1277 @@ function OpenMathWorkbench({
                               ))}
                             </div>
 
-                            <div className="flex flex-col gap-1.5 text-xs font-bold text-slate-600">
-                              <div className="flex items-center gap-2">
-                                <span className="w-8">a:</span>
-                                <input type="range" min="-4" max="4" step="0.5" value={paramA} onChange={(e) => setParamA(parseFloat(e.target.value) || 0)} className="flex-1 accent-indigo-600" />
-                                <span className="w-6 text-right">{paramA}</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <span className="w-8">b:</span>
-                                <input type="range" min="-4" max="4" step="0.5" value={paramB} onChange={(e) => setParamB(parseFloat(e.target.value) || 0)} className="flex-1 accent-indigo-600" />
-                                <span className="w-6 text-right">{paramB}</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <span className="w-8">c:</span>
-                                <input type="range" min="-4" max="4" step="0.5" value={paramC} onChange={(e) => setParamC(parseFloat(e.target.value) || 0)} className="flex-1 accent-indigo-600" />
-                                <span className="w-6 text-right">{paramC}</span>
-                              </div>
+                            {/* Full parameter sliders a, b, c, d, e */}
+                            <div className="space-y-2 pt-1">
+                              {[
+                                { key: 'a', val: paramA, set: setParamA, min: -4, max: 4, step: 0.5, show: true },
+                                { key: 'b', val: paramB, set: setParamB, min: -5, max: 5, step: 0.5, show: true },
+                                { key: 'c', val: paramC, set: setParamC, min: -5, max: 5, step: 0.5, show: true },
+                                { key: 'd', val: paramD, set: setParamD, min: -5, max: 5, step: 0.5, show: funcType === 'cubic' || funcType === 'rational_1_1' || funcType === 'rational_2_1' },
+                                { key: 'e', val: paramE, set: setParamE, min: -4, max: 4, step: 0.5, show: funcType === 'rational_2_1' }
+                              ].filter((p) => p.show).map((p) => (
+                                <div key={p.key} className="flex items-center gap-2.5 text-xs font-bold text-slate-700">
+                                  <span className="w-7 text-center py-0.5 rounded bg-white border border-[#E5E3DC] text-[#1E3A5F]">
+                                    <KatexInline latex={p.key} />
+                                  </span>
+                                  <input
+                                    type="range"
+                                    min={p.min}
+                                    max={p.max}
+                                    step={p.step}
+                                    value={p.val}
+                                    onChange={(e) => p.set(parseFloat(e.target.value) || 0)}
+                                    className="flex-1 accent-[#1E3A5F] cursor-pointer"
+                                  />
+                                  <span className="w-9 text-right tabular-nums text-[#1E3A5F]">{p.val}</span>
+                                </div>
+                              ))}
                             </div>
                           </div>
                         ) : (
-                          <div className="flex flex-col gap-1.5">
+                          <div className="space-y-2">
                             <input
                               type="text"
                               value={customExpr}
                               onChange={(e) => setCustomExpr(e.target.value)}
-                              className="w-full px-2.5 py-1.5 text-xs font-mono font-bold border border-indigo-300 rounded-lg bg-white"
-                              placeholder="x^3 - 3*x + 1"
+                              className="w-full px-3 py-2 text-xs font-semibold border border-[#CBD5E1] focus:border-[#1E3A5F] rounded-xl bg-white outline-none"
+                              placeholder="Ví dụ: x^3 - 3*x + 1"
                             />
-                            <div className="flex flex-wrap gap-1">
-                              {['abs(x^2 - 4)', '(x^2 - 2*x + 3)/(x - 1)', 'sqrt(9 - x^2)', 'sin(2*x) + cos(x)', 'x * exp(-x)'].map((ex, i) => (
+                            <div className="flex flex-wrap gap-1.5">
+                              {[
+                                { expr: 'abs(x^2 - 4)', latex: '|x^2 - 4|' },
+                                { expr: '(x^2 - 2*x + 3)/(x - 1)', latex: '\\frac{x^2-2x+3}{x-1}' },
+                                { expr: 'sqrt(9 - x^2)', latex: '\\sqrt{9-x^2}' },
+                                { expr: 'sin(2*x) + cos(x)', latex: '\\sin 2x + \\cos x' },
+                                { expr: 'x * exp(-x)', latex: 'x e^{-x}' }
+                              ].map((ex, i) => (
                                 <button
                                   key={i}
                                   type="button"
-                                  onClick={() => setCustomExpr(ex)}
-                                  className="px-2 py-0.5 rounded bg-white text-[10px] font-bold border hover:bg-indigo-50 cursor-pointer"
+                                  onClick={() => setCustomExpr(ex.expr)}
+                                  className="px-2.5 py-1 rounded-lg bg-white border border-[#E5E3DC] hover:border-[#1E3A5F] hover:bg-[#EEF2F7] text-xs text-slate-800 cursor-pointer transition-colors"
                                 >
-                                  {ex}
+                                  <KatexInline latex={ex.latex} />
                                 </button>
                               ))}
                             </div>
                           </div>
                         )}
                       </div>
-                    )}
-
-                    {exam2DMode === 'absolute_transform' && (
-                      <div className="p-3 rounded-xl bg-purple-50/80 border border-purple-200 flex flex-col gap-2">
-                        <span className="text-xs font-bold text-purple-900">Biến đổi trị tuyệt đối</span>
-                        <div className="grid grid-cols-2 gap-1.5">
+                    </>
+                  ) : (
+                    <>
+                      {/* Biến đổi trị tuyệt đối */}
+                      <div className="p-3 rounded-xl bg-[#FAF9F6] border border-[#E7E5DF] space-y-2.5">
+                        <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500">
+                          Phép biến đổi trị tuyệt đối
+                        </span>
+                        <div className="grid grid-cols-3 gap-1.5">
                           {[
-                            { id: 'none', label: 'f(x)' },
-                            { id: 'abs_total', label: '|f(x)|' },
-                            { id: 'abs_x', label: 'f(|x|)' },
-                            { id: 'abs_both', label: '|f(|x|)|' },
-                            { id: 'abs_shifted', label: '|f(x) + m|' },
-                            { id: 'abs_half', label: 'f(x) + |f(x)|' }
+                            { id: 'none', latex: 'f(x)' },
+                            { id: 'abs_total', latex: '|f(x)|' },
+                            { id: 'abs_x', latex: 'f(|x|)' },
+                            { id: 'abs_both', latex: '|f(|x|)|' },
+                            { id: 'abs_shifted', latex: '|f(x)+m|' },
+                            { id: 'abs_half', latex: 'f(x)+|f(x)|' }
                           ].map((abs) => (
                             <button
                               key={abs.id}
                               type="button"
-                              onClick={() => setAbsTransformType(abs.id)}
-                              className={`px-2 py-1.5 rounded-lg text-left text-xs font-bold border cursor-pointer ${
+                              onClick={() => {
+                                setAbsTransformType(abs.id);
+                                if (abs.id !== 'none') setExam2DMode('absolute_transform');
+                              }}
+                              className={`px-2 py-1.5 rounded-lg text-xs font-bold border transition-all cursor-pointer ${
                                 absTransformType === abs.id
-                                  ? 'bg-purple-600 text-white'
-                                  : 'bg-white border-purple-200 text-purple-900 hover:bg-purple-100'
+                                  ? 'bg-[#1E3A5F] border-[#1E3A5F] text-white'
+                                  : 'bg-white border-[#E5E3DC] text-slate-700 hover:bg-[#EEF2F7]'
                               }`}
                             >
-                              {abs.label}
+                              <KatexInline latex={abs.latex} />
                             </button>
                           ))}
                         </div>
 
                         {absTransformType === 'abs_shifted' && (
-                          <div className="p-2 bg-white rounded-lg border border-purple-200 flex flex-col gap-1">
-                            <div className="flex items-center justify-between text-xs font-bold text-purple-900">
-                              <span>m</span>
-                              <span className="px-2 py-0.5 rounded bg-purple-100 text-purple-700">{paramShiftM}</span>
-                            </div>
+                          <div className="flex items-center gap-2.5 pt-1 text-xs font-bold text-slate-700">
+                            <span className="w-8"><KatexInline latex="m" /></span>
                             <input
-                              type="range" min="-5" max="5" step="0.5" value={paramShiftM}
+                              type="range"
+                              min="-5"
+                              max="5"
+                              step="0.5"
+                              value={paramShiftM}
                               onChange={(e) => setParamShiftM(parseFloat(e.target.value) || 0)}
-                              className="w-full accent-purple-600"
+                              className="flex-1 accent-[#1E3A5F] cursor-pointer"
                             />
+                            <span className="w-8 text-right tabular-nums text-[#1E3A5F]">{paramShiftM}</span>
                           </div>
                         )}
                       </div>
-                    )}
 
-                    {exam2DMode === 'derivative_fprime' && (
-                      <div className="p-3 rounded-xl bg-rose-50/80 border border-rose-200 flex flex-col gap-2">
-                        <label className="flex items-center gap-2 text-xs font-bold text-rose-900 cursor-pointer">
-                          <input type="checkbox" checked={showDerivativeCurve} onChange={(e) => setShowDerivativeCurve(e.target.checked)} className="rounded text-rose-600" />
-                          <span>Hiện f'(x)</span>
+                      {/* Tương giao đường thẳng y = ax + m */}
+                      {exam2DMode === 'parametric_line' && (
+                        <div className="p-3 rounded-xl bg-[#EEF2F7]/70 border border-[#D4DFED] space-y-2.5">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-extrabold text-[#1E3A5F]">
+                              <KatexInline latex={`d: y = ${slopeM !== 0 ? `${slopeM}x + ` : ''}m`} />
+                            </span>
+                            <span className="px-2 py-0.5 rounded-full text-[11px] font-extrabold bg-[#1E3A5F] text-white">
+                              {foundRoots.length} nghiệm
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2.5 text-xs font-bold text-slate-700">
+                            <span className="w-8"><KatexInline latex="a" /></span>
+                            <input type="range" min="-2" max="2" step="0.5" value={slopeM} onChange={(e) => setSlopeM(parseFloat(e.target.value) || 0)} className="flex-1 accent-[#1E3A5F]" />
+                            <span className="w-8 text-right tabular-nums">{slopeM}</span>
+                          </div>
+                          <div className="flex items-center gap-2.5 text-xs font-bold text-slate-700">
+                            <span className="w-8"><KatexInline latex="m" /></span>
+                            <input type="range" min="-5" max="5" step="0.2" value={paramM} onChange={(e) => setParamM(parseFloat(e.target.value) || 0)} className="flex-1 accent-[#1E3A5F]" />
+                            <span className="w-8 text-right tabular-nums">{paramM}</span>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Đạo hàm f'(x) */}
+                      {exam2DMode === 'derivative_fprime' && (
+                        <div className="p-3 rounded-xl bg-[#FAF9F6] border border-[#E7E5DF] space-y-2 text-xs font-bold text-slate-700">
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" checked={showDerivativeCurve} onChange={(e) => setShowDerivativeCurve(e.target.checked)} className="rounded accent-[#1E3A5F]" />
+                            <span>Hiện đồ thị <KatexInline latex="f'(x)" /></span>
+                          </label>
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" checked={showAuxiliaryCurve} onChange={(e) => setShowAuxiliaryCurve(e.target.checked)} className="rounded accent-[#1E3A5F]" />
+                            <span>Hiện đường phụ <KatexInline latex="h(x)" /></span>
+                          </label>
+                          <div className="flex items-center gap-2">
+                            <span className="shrink-0"><KatexInline latex="h(x) =" /></span>
+                            <input
+                              type="text"
+                              value={auxiliaryExpr}
+                              onChange={(e) => setAuxiliaryExpr(e.target.value)}
+                              className="flex-1 px-2.5 py-1 text-xs font-semibold border border-[#CBD5E1] rounded-lg bg-white"
+                              placeholder="-x + 1"
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Tích phân 2 đường cong */}
+                      {exam2DMode === 'area_integral' && (
+                        <div className="p-3 rounded-xl bg-[#FAF9F6] border border-[#E7E5DF] space-y-2 text-xs font-bold text-slate-700">
+                          <div className="flex items-center gap-2">
+                            <span className="w-16 shrink-0">Đường 1</span>
+                            <input type="text" value={integralUpperExpr} onChange={(e) => setIntegralUpperExpr(e.target.value)} className="flex-1 px-2.5 py-1 border border-[#CBD5E1] rounded-lg bg-white" placeholder="4 - x^2" />
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="w-16 shrink-0">Đường 2</span>
+                            <input type="text" value={integralLowerExpr} onChange={(e) => setIntegralLowerExpr(e.target.value)} className="flex-1 px-2.5 py-1 border border-[#CBD5E1] rounded-lg bg-white" placeholder="x + 2" />
+                          </div>
+                          <div className="px-3 py-2 rounded-lg bg-white border border-[#E5E3DC] flex items-center justify-between">
+                            <span>Diện tích hình phẳng</span>
+                            <span className="text-sm font-extrabold text-[#1E3A5F]">
+                              <KatexInline latex={`S \\approx ${calculatedArea.toFixed(3)}`} />
+                            </span>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Nhận dạng 3 đồ thị */}
+                      {exam2DMode === 'three_curves_recognition' && (
+                        <div className="p-3 rounded-xl bg-[#FAF9F6] border border-[#E7E5DF] space-y-2 text-xs font-bold text-slate-700">
+                          <label className="flex items-center gap-2 cursor-pointer text-blue-700">
+                            <input type="checkbox" checked={showC1} onChange={(e) => setShowC1(e.target.checked)} className="rounded accent-[#1E3A5F]" />
+                            <KatexInline latex="C_1: f(x) = x^3 - 3x" />
+                          </label>
+                          <label className="flex items-center gap-2 cursor-pointer text-rose-700">
+                            <input type="checkbox" checked={showC2} onChange={(e) => setShowC2(e.target.checked)} className="rounded accent-[#1E3A5F]" />
+                            <KatexInline latex="C_2: f'(x) = 3x^2 - 3" />
+                          </label>
+                          <label className="flex items-center gap-2 cursor-pointer text-emerald-700">
+                            <input type="checkbox" checked={showC3} onChange={(e) => setShowC3(e.target.checked)} className="rounded accent-[#1E3A5F]" />
+                            <KatexInline latex="C_3: F(x) = \frac{x^4}{4} - \frac{3x^2}{2}" />
+                          </label>
+                          <label className="flex items-center gap-2 cursor-pointer pt-1.5 border-t border-[#E5E3DC] text-slate-700">
+                            <input type="checkbox" checked={hideCurveLabels} onChange={(e) => setHideCurveLabels(e.target.checked)} className="rounded accent-[#1E3A5F]" />
+                            <span>Ẩn công thức trên nhãn (chế độ đố học sinh)</span>
+                          </label>
+                        </div>
+                      )}
+
+                      {/* Tiếp tuyến động & Đường cực trị */}
+                      <div className="p-3 rounded-xl bg-[#FAF9F6] border border-[#E7E5DF] space-y-2.5 text-xs font-semibold text-slate-700">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input type="checkbox" checked={showInflectionLine} onChange={(e) => setShowInflectionLine(e.target.checked)} className="rounded accent-[#1E3A5F]" />
+                          <span>Đường thẳng qua 2 điểm cực trị</span>
                         </label>
-                        <label className="flex items-center gap-2 text-xs font-bold text-rose-900 cursor-pointer">
-                          <input type="checkbox" checked={showAuxiliaryCurve} onChange={(e) => setShowAuxiliaryCurve(e.target.checked)} className="rounded text-rose-600" />
-                          <span>Hiện đường phụ h(x)</span>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input type="checkbox" checked={showTangent} onChange={(e) => setShowTangent(e.target.checked)} className="rounded accent-[#1E3A5F]" />
+                          <span>Tiếp tuyến động tại <KatexInline latex="M(x_0;\,f(x_0))" /></span>
                         </label>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-rose-900">h(x):</span>
+                        {showTangent && (
+                          <div className="flex items-center gap-2.5 pt-1 pl-5">
+                            <span className="w-8"><KatexInline latex="x_0" /></span>
+                            <input
+                              type="range"
+                              min="-4"
+                              max="4"
+                              step="0.25"
+                              value={tangentX0}
+                              onChange={(e) => setTangentX0(parseFloat(e.target.value) || 0)}
+                              className="flex-1 accent-[#1E3A5F] cursor-pointer"
+                            />
+                            <span className="w-9 text-right tabular-nums text-[#1E3A5F]">{tangentX0}</span>
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
+              </>
+            )}
+
+            {/* === B. 3D SPATIAL GEOMETRY INSPECTOR === */}
+            {jsxSubTab === '3d_space' && (
+              <>
+                <div className="p-2.5 border-b border-[#ECEAE4] bg-[#FAF9F6] shrink-0">
+                  <div className="grid grid-cols-3 p-0.5 rounded-xl bg-[#EFECE6] border border-[#E5E3DC]">
+                    {[
+                      { id: 'shape', label: 'Hình khối', Icon: Box },
+                      { id: 'aux', label: 'Điểm & Đường', Icon: GitBranch },
+                      { id: 'vertices', label: 'Tọa độ đỉnh', Icon: MapPin }
+                    ].map(({ id, label, Icon }) => (
+                      <button
+                        key={id}
+                        type="button"
+                        onClick={() => setPanel3DTab(id)}
+                        className={`py-1.5 px-1.5 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 transition-all cursor-pointer ${
+                          panel3DTab === id
+                            ? 'bg-white text-[#1E3A5F] shadow-2xs'
+                            : 'text-slate-500 hover:text-slate-800'
+                        }`}
+                      >
+                        <Icon className="w-3.5 h-3.5" />
+                        <span>{label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex-1 min-h-0 overflow-y-auto p-3.5 space-y-3.5">
+                  {panel3DTab === 'shape' && (
+                    <>
+                      {/* 9 Hình khối 3D */}
+                      <div className="space-y-1.5">
+                        <label className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500">
+                          Chọn hình khối 3D
+                        </label>
+                        <div className="grid grid-cols-2 gap-1.5">
+                          {[
+                            { id: 'pyramid_rect_sa', label: 'Chóp S.ABCD (SA ⊥)' },
+                            { id: 'pyramid_tri_sa', label: 'Chóp S.ABC (SA ⊥)' },
+                            { id: 'pyramid_regular_quad', label: 'Chóp tứ giác đều' },
+                            { id: 'pyramid_regular_tri', label: 'Chóp tam giác đều' },
+                            { id: 'pyramid_side_perp', label: 'Mặt bên vuông đáy' },
+                            { id: 'prism_tri', label: "Lăng trụ ABC.A'B'C'" },
+                            { id: 'box_cube', label: 'Hình hộp / Lập phương' },
+                            { id: 'solid_revolution', label: 'Nón / Trụ tròn xoay' },
+                            { id: 'sphere_plane', label: 'Cầu cắt mặt phẳng' }
+                          ].map((item) => (
+                            <button
+                              key={item.id}
+                              type="button"
+                              onClick={() => handleSelectShape3D(item.id)}
+                              className={`px-2.5 py-2 rounded-xl text-left text-[11.5px] font-bold border transition-all cursor-pointer ${
+                                shape3DType === item.id
+                                  ? 'bg-[#EEF2F7] border-[#1E3A5F] text-[#1E3A5F]'
+                                  : 'bg-white border-[#E5E3DC] text-slate-700 hover:border-[#2C4C7E]/50 hover:bg-[#FAF9F6]'
+                              }`}
+                            >
+                              {item.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Đường phụ mẫu */}
+                      {!isRevolutionOrSphere && (
+                        <div className="space-y-1.5">
+                          <label className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500">
+                            Mô hình đường phụ mẫu
+                          </label>
+                          <div className="grid grid-cols-2 gap-1.5">
+                            {[
+                              { id: 'distance_model', label: 'Khoảng cách', latex: 'd(A,(SBC))' },
+                              { id: 'angle_line_plane', label: 'Góc đường – mặt' },
+                              { id: 'cross_section_mid', label: 'Thiết diện (MNPQ)' },
+                              { id: 'none', label: 'Khung tự do' }
+                            ].map((m) => (
+                              <button
+                                key={m.id}
+                                type="button"
+                                onClick={() => setExam3DConstructionPreset(m.id)}
+                                className={`px-2.5 py-1.5 rounded-xl text-left text-xs font-bold border transition-all cursor-pointer flex items-center justify-between gap-1 ${
+                                  exam3DConstructionPreset === m.id
+                                    ? 'bg-amber-50 border-amber-400 text-amber-900'
+                                    : 'bg-white border-[#E5E3DC] text-slate-600 hover:bg-[#FAF9F6]'
+                                }`}
+                              >
+                                <span className="truncate">{m.label}</span>
+                                {m.latex && <KatexInline latex={m.latex} className="text-[11px] shrink-0" />}
+                              </button>
+                            ))}
+                          </div>
+
+                          <div className="flex flex-wrap gap-3 pt-1 text-xs font-semibold text-slate-700">
+                            {exam3DConstructionPreset === 'distance_model' && (
+                              <label className="flex items-center gap-1.5 cursor-pointer">
+                                <input type="checkbox" checked={showPresetAuxLine2} onChange={(e) => setShowPresetAuxLine2(e.target.checked)} className="rounded accent-[#1E3A5F]" />
+                                <span>Hiện đường vuông góc <KatexInline latex="AK" /></span>
+                              </label>
+                            )}
+                            {exam3DConstructionPreset === 'cross_section_mid' && (
+                              <label className="flex items-center gap-1.5 cursor-pointer">
+                                <input type="checkbox" checked={showCrossSectionPlane} onChange={(e) => setShowCrossSectionPlane(e.target.checked)} className="rounded accent-[#1E3A5F]" />
+                                <span>Tô bóng mặt thiết diện</span>
+                              </label>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Kích thước khối */}
+                      <div className="p-3 rounded-xl bg-[#FAF9F6] border border-[#E7E5DF] space-y-2.5">
+                        <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500">
+                          Kích thước hình khối
+                        </span>
+                        {!isRevolutionOrSphere ? (
+                          <div className="space-y-2 text-xs font-bold text-slate-700">
+                            <div className="flex items-center gap-2.5">
+                              <span className="w-14 shrink-0">Cao <KatexInline latex="h" /></span>
+                              <input type="range" min="1.5" max="7" step="0.5" value={shape3dHeight} onChange={(e) => setShape3dHeight(parseFloat(e.target.value) || 4)} className="flex-1 accent-[#1E3A5F] cursor-pointer" />
+                              <span className="w-8 text-right tabular-nums text-[#1E3A5F]">{shape3dHeight}</span>
+                            </div>
+                            <div className="flex items-center gap-2.5">
+                              <span className="w-14 shrink-0">Rộng <KatexInline latex="a" /></span>
+                              <input type="range" min="1.5" max="6.5" step="0.5" value={shape3dWidth} onChange={(e) => setShape3dWidth(parseFloat(e.target.value) || 4)} className="flex-1 accent-[#1E3A5F] cursor-pointer" />
+                              <span className="w-8 text-right tabular-nums text-[#1E3A5F]">{shape3dWidth}</span>
+                            </div>
+                            <div className="flex items-center gap-2.5">
+                              <span className="w-14 shrink-0">Sâu <KatexInline latex="b" /></span>
+                              <input type="range" min="1.5" max="6.5" step="0.5" value={shape3dDepth} onChange={(e) => setShape3dDepth(parseFloat(e.target.value) || 3.5)} className="flex-1 accent-[#1E3A5F] cursor-pointer" />
+                              <span className="w-8 text-right tabular-nums text-[#1E3A5F]">{shape3dDepth}</span>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="space-y-2 text-xs font-bold text-slate-700">
+                            <div className="flex items-center gap-2.5">
+                              <span className="w-16 shrink-0">Bán kính <KatexInline latex="R" /></span>
+                              <input type="range" min="1.5" max="5" step="0.2" value={shape3dRadius} onChange={(e) => setShape3dRadius(parseFloat(e.target.value) || 3)} className="flex-1 accent-[#1E3A5F] cursor-pointer" />
+                              <span className="w-8 text-right tabular-nums text-[#1E3A5F]">{shape3dRadius}</span>
+                            </div>
+                            {shape3DType === 'solid_revolution' ? (
+                              <div className="flex items-center gap-2.5">
+                                <span className="w-16 shrink-0">Cao <KatexInline latex="h" /></span>
+                                <input type="range" min="2" max="7" step="0.5" value={shape3dHeight} onChange={(e) => setShape3dHeight(parseFloat(e.target.value) || 4)} className="flex-1 accent-[#1E3A5F] cursor-pointer" />
+                                <span className="w-8 text-right tabular-nums text-[#1E3A5F]">{shape3dHeight}</span>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-2.5">
+                                <span className="w-16 shrink-0">Cắt <KatexInline latex="d" /></span>
+                                <input type="range" min="0" max={Math.max(0.5, shape3dRadius - 0.3)} step="0.2" value={planeD} onChange={(e) => setPlaneD(parseFloat(e.target.value) || 0)} className="flex-1 accent-[#1E3A5F] cursor-pointer" />
+                                <span className="w-8 text-right tabular-nums text-[#1E3A5F]">{planeD}</span>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Góc nhìn 3D */}
+                      <div className="p-3 rounded-xl bg-[#FAF9F6] border border-[#E7E5DF] space-y-2.5">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500">
+                            Góc xoay không gian
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => { setAzimuthAngle(0.85); setElevationAngle(0.35); }}
+                            className="text-[11px] font-bold text-[#2C4C7E] hover:underline flex items-center gap-1 cursor-pointer"
+                          >
+                            <RotateCcw className="w-3 h-3" />
+                            <span>Đặt lại</span>
+                          </button>
+                        </div>
+
+                        <div className="space-y-2 text-xs font-bold text-slate-700">
+                          <div className="flex items-center gap-2.5">
+                            <span className="w-16 shrink-0">Xoay ngang</span>
+                            <input type="range" min="-3.14" max="3.14" step="0.05" value={azimuthAngle} onChange={(e) => setAzimuthAngle(parseFloat(e.target.value))} className="flex-1 accent-[#1E3A5F] cursor-pointer" />
+                            <span className="w-9 text-right tabular-nums text-[#1E3A5F]">{Math.round((azimuthAngle * 180) / Math.PI)}°</span>
+                          </div>
+                          <div className="flex items-center gap-2.5">
+                            <span className="w-16 shrink-0">Góc nghiêng</span>
+                            <input type="range" min="-1.2" max="1.4" step="0.05" value={elevationAngle} onChange={(e) => setElevationAngle(parseFloat(e.target.value))} className="flex-1 accent-[#1E3A5F] cursor-pointer" />
+                            <span className="w-9 text-right tabular-nums text-[#1E3A5F]">{Math.round((elevationAngle * 180) / Math.PI)}°</span>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-4 gap-1.5 pt-0.5">
+                          {[
+                            { label: 'Chuẩn', az: 0.85, el: 0.35 },
+                            { label: 'Chính diện', az: 0.25, el: 0.2 },
+                            { label: 'Từ trên', az: 0.85, el: 1.05 },
+                            { label: 'Trái', az: 2.2, el: 0.35 }
+                          ].map((cam) => (
+                            <button
+                              key={cam.label}
+                              type="button"
+                              onClick={() => { setAzimuthAngle(cam.az); setElevationAngle(cam.el); }}
+                              className="py-1 rounded-lg bg-white border border-[#E5E3DC] hover:border-[#1E3A5F] hover:bg-[#EEF2F7] text-[11px] font-bold text-slate-700 cursor-pointer transition-colors"
+                            >
+                              {cam.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {panel3DTab === 'aux' && (
+                    <>
+                      {/* 1. HẠ ĐƯỜNG VUÔNG GÓC 3D (CHÂN ĐƯỜNG CAO + KÝ HIỆU ⊥ TRONG 1 CLICK) */}
+                      <div className="p-3 rounded-xl bg-amber-50/55 border border-amber-200/90 space-y-2.5">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-extrabold text-[#1E3A5F]">Hạ đường vuông góc (<KatexInline latex="\perp" />)</span>
+                          <span className="text-[10.5px] font-semibold text-amber-800">Tự vẽ ký hiệu góc vuông</span>
+                        </div>
+
+                        <div className="grid grid-cols-12 gap-1.5 items-end">
+                          <div className="col-span-3">
+                            <label className="text-[10.5px] font-bold text-slate-500 block mb-1">Từ điểm</label>
+                            <Select
+                              size="small"
+                              fullWidth
+                              value={perpFromPt}
+                              onChange={(e) => setPerpFromPt(e.target.value)}
+                              sx={COMPACT_MUI_SELECT_SX}
+                              renderValue={(v) => availablePointsList.find((p) => p.id === v)?.shortLabel || v}
+                            >
+                              {availablePointsList.map((p) => (
+                                <MenuItem key={p.id} value={p.id} sx={{ fontSize: '12px', fontWeight: 600 }}>
+                                  {p.label}
+                                </MenuItem>
+                              ))}
+                            </Select>
+                          </div>
+                          <div className="col-span-3">
+                            <label className="text-[10.5px] font-bold text-slate-500 block mb-1">⊥ Cạnh (đầu)</label>
+                            <Select
+                              size="small"
+                              fullWidth
+                              value={perpEdge1}
+                              onChange={(e) => setPerpEdge1(e.target.value)}
+                              sx={COMPACT_MUI_SELECT_SX}
+                              renderValue={(v) => availablePointsList.find((p) => p.id === v)?.shortLabel || v}
+                            >
+                              {availablePointsList.map((p) => (
+                                <MenuItem key={p.id} value={p.id} sx={{ fontSize: '12px', fontWeight: 600 }}>
+                                  {p.label}
+                                </MenuItem>
+                              ))}
+                            </Select>
+                          </div>
+                          <div className="col-span-3">
+                            <label className="text-[10.5px] font-bold text-slate-500 block mb-1">⊥ Cạnh (cuối)</label>
+                            <Select
+                              size="small"
+                              fullWidth
+                              value={perpEdge2}
+                              onChange={(e) => setPerpEdge2(e.target.value)}
+                              sx={COMPACT_MUI_SELECT_SX}
+                              renderValue={(v) => availablePointsList.find((p) => p.id === v)?.shortLabel || v}
+                            >
+                              {availablePointsList.map((p) => (
+                                <MenuItem key={p.id} value={p.id} sx={{ fontSize: '12px', fontWeight: 600 }}>
+                                  {p.label}
+                                </MenuItem>
+                              ))}
+                            </Select>
+                          </div>
+                          <div className="col-span-3">
+                            <label className="text-[10.5px] font-bold text-slate-500 block mb-1">Tên chân</label>
+                            <input
+                              type="text"
+                              value={perpFootName}
+                              onChange={(e) => setPerpFootName(e.target.value.toUpperCase())}
+                              placeholder="H"
+                              maxLength={3}
+                              className="w-full h-[31px] px-2 rounded-[10px] border border-[#cbd5e1] bg-white text-xs font-extrabold text-center text-[#1E3A5F] uppercase outline-none focus:border-[#1E3A5F]"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="grid grid-cols-2 p-0.5 rounded-lg bg-[#EBE8E1] text-[11px] font-bold shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => setPerpDash(2)}
+                              className={`px-2 py-1 rounded-md cursor-pointer ${perpDash === 2 ? 'bg-white text-[#1E3A5F] shadow-2xs' : 'text-slate-600'}`}
+                            >
+                              Nét đứt
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setPerpDash(0)}
+                              className={`px-2 py-1 rounded-md cursor-pointer ${perpDash === 0 ? 'bg-white text-[#1E3A5F] shadow-2xs' : 'text-slate-600'}`}
+                            >
+                              Nét liền
+                            </button>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            {COLOR_SWATCHES.slice(0, 5).map((sw) => (
+                              <button
+                                key={sw.hex}
+                                type="button"
+                                title={sw.label}
+                                onClick={() => setPerpColor(sw.hex)}
+                                className={`w-4.5 h-4.5 rounded-full cursor-pointer transition-transform ${
+                                  perpColor === sw.hex ? 'ring-2 ring-offset-1 ring-[#1E3A5F] scale-110' : 'opacity-80 hover:opacity-100'
+                                }`}
+                                style={{ backgroundColor: sw.hex }}
+                              />
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-1.5">
                           <input
                             type="text"
-                            value={auxiliaryExpr}
-                            onChange={(e) => setAuxiliaryExpr(e.target.value)}
-                            className="flex-1 px-2.5 py-1 text-xs font-mono font-bold border border-rose-300 rounded-lg bg-white"
-                            placeholder="-x + 1"
+                            value={perpFootLabel}
+                            onChange={(e) => setPerpFootLabel(e.target.value)}
+                            placeholder={`Nhãn hiển thị (mặc định: ${perpFootName || 'H'})`}
+                            className="flex-1 h-[31px] px-2.5 rounded-lg border border-[#cbd5e1] bg-white text-xs text-slate-700 outline-none focus:border-[#1E3A5F]"
                           />
-                        </div>
-                      </div>
-                    )}
-
-                    {exam2DMode === 'parametric_line' && (
-                      <div className="p-3 rounded-xl bg-pink-50/80 border border-pink-200 flex flex-col gap-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-black text-pink-950">
-                            y = {slopeM !== 0 ? `${slopeM}x + ` : ''}m
-                          </span>
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-pink-200 text-pink-900">
-                            {foundRoots.length} nghiệm
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2 text-xs font-bold text-pink-900">
-                          <span className="w-8">a:</span>
-                          <input type="range" min="-2" max="2" step="0.5" value={slopeM} onChange={(e) => setSlopeM(parseFloat(e.target.value) || 0)} className="flex-1 accent-pink-600" />
-                          <span className="w-8 text-right">{slopeM}</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-xs font-bold text-pink-900">
-                          <span className="w-8">m:</span>
-                          <input type="range" min="-5" max="5" step="0.2" value={paramM} onChange={(e) => setParamM(parseFloat(e.target.value) || 0)} className="flex-1 accent-pink-600" />
-                          <span className="w-8 text-right">{paramM}</span>
-                        </div>
-                      </div>
-                    )}
-
-                    {exam2DMode === 'area_integral' && (
-                      <div className="p-3 rounded-xl bg-cyan-50/80 border border-cyan-200 flex flex-col gap-2">
-                        <div className="flex items-center gap-2 text-xs font-bold text-cyan-900">
-                          <span className="w-16">Đường 1</span>
-                          <input type="text" value={integralUpperExpr} onChange={(e) => setIntegralUpperExpr(e.target.value)} className="flex-1 px-2 py-1 text-xs font-mono font-bold border border-cyan-300 rounded-lg bg-white" placeholder="4 - x^2" />
-                        </div>
-                        <div className="flex items-center gap-2 text-xs font-bold text-cyan-900">
-                          <span className="w-16">Đường 2</span>
-                          <input type="text" value={integralLowerExpr} onChange={(e) => setIntegralLowerExpr(e.target.value)} className="flex-1 px-2 py-1 text-xs font-mono font-bold border border-cyan-300 rounded-lg bg-white" placeholder="x + 2" />
-                        </div>
-                        <div className="p-2 rounded bg-white border border-cyan-200 text-xs font-bold text-cyan-800 flex items-center justify-between">
-                          <span>Diện tích S</span>
-                          <span className="text-sm font-black text-cyan-600">≈ {calculatedArea.toFixed(3)}</span>
-                        </div>
-                      </div>
-                    )}
-
-                    {exam2DMode === 'three_curves_recognition' && (
-                      <div className="p-3 rounded-xl bg-emerald-50/80 border border-emerald-200 flex flex-col gap-2 text-xs font-bold text-emerald-950">
-                        <div className="flex flex-col gap-1.5">
-                          <label className="flex items-center gap-2 cursor-pointer">
-                            <input type="checkbox" checked={showC1} onChange={(e) => setShowC1(e.target.checked)} className="rounded text-blue-600" />
-                            <span className="text-blue-700">C₁: f(x) = x³ - 3x</span>
-                          </label>
-                          <label className="flex items-center gap-2 cursor-pointer">
-                            <input type="checkbox" checked={showC2} onChange={(e) => setShowC2(e.target.checked)} className="rounded text-red-600" />
-                            <span className="text-red-700">C₂: f'(x) = 3x² - 3</span>
-                          </label>
-                          <label className="flex items-center gap-2 cursor-pointer">
-                            <input type="checkbox" checked={showC3} onChange={(e) => setShowC3(e.target.checked)} className="rounded text-emerald-600" />
-                            <span className="text-emerald-700">C₃: F(x) = x⁴/4 - 3x²/2</span>
-                          </label>
-                        </div>
-                        <label className="flex items-center gap-2 cursor-pointer pt-1 border-t border-emerald-200/60">
-                          <input type="checkbox" checked={hideCurveLabels} onChange={(e) => setHideCurveLabels(e.target.checked)} className="rounded text-emerald-600" />
-                          <span>Ẩn nhãn hàm</span>
-                        </label>
-                      </div>
-                    )}
-
-                    <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 flex flex-col gap-2 text-xs font-medium text-slate-700">
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" checked={showInflectionLine} onChange={(e) => setShowInflectionLine(e.target.checked)} className="rounded text-indigo-600" />
-                        <span>Đường qua 2 cực trị</span>
-                      </label>
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" checked={showTangent} onChange={(e) => setShowTangent(e.target.checked)} className="rounded text-amber-600" />
-                        <span>Tiếp tuyến tại M(x₀)</span>
-                      </label>
-                    </div>
-                  </div>
-                )}
-
-                {/* B. 3D SPATIAL GEOMETRY */}
-                {jsxSubTab === '3d_space' && (
-                  <div className="flex flex-col gap-3">
-                    <div>
-                      <label className="text-xs font-bold text-slate-700 mb-1.5 block">Hình khối 3D</label>
-                      <div className="grid grid-cols-2 gap-1.5">
-                        {[
-                          { id: 'pyramid_rect_sa', label: 'Chóp S.ABCD (SA ⊥)' },
-                          { id: 'pyramid_tri_sa', label: 'Chóp S.ABC (SA ⊥)' },
-                          { id: 'pyramid_regular_quad', label: 'Chóp tứ giác đều' },
-                          { id: 'pyramid_regular_tri', label: 'Chóp tam giác đều' },
-                          { id: 'pyramid_side_perp', label: 'Mặt bên vuông đáy' },
-                          { id: 'prism_tri', label: "Lăng trụ ABC.A'B'C'" },
-                          { id: 'box_cube', label: 'Hình hộp / Lập phương' },
-                          { id: 'solid_revolution', label: 'Nón / Trụ tròn xoay' },
-                          { id: 'sphere_plane', label: 'Cầu cắt phẳng' }
-                        ].map((item) => (
                           <button
-                            key={item.id}
                             type="button"
-                            onClick={() => handleSelectShape3D(item.id)}
-                            className={`px-2.5 py-1.5 rounded-xl text-left text-[11px] font-bold border transition-all cursor-pointer ${
-                              shape3DType === item.id
-                                ? 'bg-indigo-50 border-indigo-500 text-indigo-700'
-                                : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
-                            }`}
+                            onClick={handleAddPerpendicular3D}
+                            className="px-3 h-[31px] rounded-lg bg-[#1E3A5F] hover:bg-[#162C49] text-white text-xs font-bold flex items-center gap-1 cursor-pointer shrink-0"
                           >
-                            {item.label}
+                            <Plus className="w-3.5 h-3.5" />
+                            <span>Hạ {perpFromPt}{perpFootName || 'H'} ⊥ {perpEdge1}{perpEdge2}</span>
                           </button>
-                        ))}
+                        </div>
                       </div>
-                    </div>
 
-                    <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-100/90 border border-slate-200">
-                      <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-800">
-                        <input
-                          type="checkbox"
-                          checked={isCustomizingBasePoints}
-                          onChange={(e) => setIsCustomizingBasePoints(e.target.checked)}
-                          className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 accent-indigo-600"
-                        />
-                        <span>Sửa tọa độ & tên đỉnh</span>
-                      </label>
-                      {isCustomizingBasePoints && (
+                      {/* 2. THÊM ĐIỂM PHỤ TRÊN CẠNH & SỬA TRỰC TIẾP NHÃN ĐIỂM */}
+                      <div className="p-3 rounded-xl bg-[#FAF9F6] border border-[#E7E5DF] space-y-2.5">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-extrabold text-[#1E3A5F]">Điểm phụ trên cạnh</span>
+                          <span className="text-[11px] font-bold text-slate-500">{extraPoints.length} điểm</span>
+                        </div>
+
+                        <div className="grid grid-cols-12 gap-2 items-end">
+                          <div className="col-span-3">
+                            <label className="text-[10.5px] font-bold text-slate-500 block mb-1">Mã điểm</label>
+                            <input
+                              type="text"
+                              value={newPtName}
+                              onChange={(e) => setNewPtName(e.target.value.toUpperCase())}
+                              className="w-full h-[31px] px-2 rounded-[10px] border border-[#cbd5e1] bg-white text-xs font-extrabold text-center text-[#1E3A5F] uppercase outline-none focus:border-[#1E3A5F]"
+                              placeholder="N"
+                              maxLength={3}
+                            />
+                          </div>
+                          <div className="col-span-4">
+                            <label className="text-[10.5px] font-bold text-slate-500 block mb-1">Đầu cạnh 1</label>
+                            <Select
+                              size="small"
+                              fullWidth
+                              value={newPtEdge1}
+                              onChange={(e) => setNewPtEdge1(e.target.value)}
+                              sx={COMPACT_MUI_SELECT_SX}
+                              renderValue={(v) => availablePointsList.find((p) => p.id === v)?.shortLabel || v}
+                            >
+                              {availablePointsList.map((p) => (
+                                <MenuItem key={p.id} value={p.id} sx={{ fontSize: '12px', fontWeight: 600 }}>
+                                  {p.label}
+                                </MenuItem>
+                              ))}
+                            </Select>
+                          </div>
+                          <div className="col-span-5">
+                            <label className="text-[10.5px] font-bold text-slate-500 block mb-1">Đầu cạnh 2</label>
+                            <Select
+                              size="small"
+                              fullWidth
+                              value={newPtEdge2}
+                              onChange={(e) => setNewPtEdge2(e.target.value)}
+                              sx={COMPACT_MUI_SELECT_SX}
+                              renderValue={(v) => availablePointsList.find((p) => p.id === v)?.shortLabel || v}
+                            >
+                              {availablePointsList.map((p) => (
+                                <MenuItem key={p.id} value={p.id} sx={{ fontSize: '12px', fontWeight: 600 }}>
+                                  {p.label}
+                                </MenuItem>
+                              ))}
+                            </Select>
+                          </div>
+                        </div>
+
+                        {/* Tỷ lệ k & Chọn màu điểm */}
+                        <div className="space-y-2 pt-0.5">
+                          <div className="flex items-center gap-2 text-xs font-bold text-slate-700">
+                            <span className="shrink-0"><KatexInline latex={`k = ${newPtRatio}`} /></span>
+                            <div className="flex items-center gap-1">
+                              {[
+                                { v: 0.5, lbl: '1/2' },
+                                { v: 0.33, lbl: '1/3' },
+                                { v: 0.67, lbl: '2/3' }
+                              ].map((r) => (
+                                <button
+                                  key={r.lbl}
+                                  type="button"
+                                  onClick={() => setNewPtRatio(r.v)}
+                                  className={`px-1.5 py-0.5 rounded-md border text-[10.5px] font-bold cursor-pointer ${
+                                    Math.abs(newPtRatio - r.v) < 0.02
+                                      ? 'bg-[#1E3A5F] border-[#1E3A5F] text-white'
+                                      : 'bg-white border-[#DCD9D0] text-slate-600 hover:bg-[#EEF2F7]'
+                                  }`}
+                                >
+                                  {r.lbl}
+                                </button>
+                              ))}
+                            </div>
+                            <input
+                              type="range"
+                              min="0.1"
+                              max="0.9"
+                              step="0.05"
+                              value={newPtRatio}
+                              onChange={(e) => setNewPtRatio(parseFloat(e.target.value))}
+                              className="flex-1 accent-[#1E3A5F] cursor-pointer"
+                            />
+                          </div>
+
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-1.5">
+                              {COLOR_SWATCHES.slice(0, 6).map((sw) => (
+                                <button
+                                  key={sw.hex}
+                                  type="button"
+                                  title={sw.label}
+                                  onClick={() => setNewPtColor(sw.hex)}
+                                  className={`w-4.5 h-4.5 rounded-full cursor-pointer transition-transform ${
+                                    newPtColor === sw.hex ? 'ring-2 ring-offset-1 ring-[#1E3A5F] scale-110' : 'opacity-80 hover:opacity-100'
+                                  }`}
+                                  style={{ backgroundColor: sw.hex }}
+                                />
+                              ))}
+                            </div>
+                            <button
+                              type="button"
+                              onClick={handleAddExtraPoint}
+                              className="px-3 py-1.5 rounded-lg bg-[#1E3A5F] hover:bg-[#162C49] text-white text-xs font-bold flex items-center gap-1 cursor-pointer shrink-0"
+                            >
+                              <Plus className="w-3.5 h-3.5" />
+                              <span>Thêm {newPtName || 'điểm'}</span>
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Danh sách điểm phụ — Sửa trực tiếp nhãn hiển thị trên hình 3D */}
+                        {extraPoints.length > 0 && (
+                          <div className="space-y-1.5 pt-2 border-t border-[#ECEAE4]">
+                            <div className="text-[10.5px] font-bold text-slate-500">
+                              Sửa trực tiếp nhãn hiển thị trên hình (xóa trống để ẩn chữ):
+                            </div>
+                            {extraPoints.map((pt) => (
+                              <div key={pt.id} className="p-2 rounded-lg bg-white border border-[#E5E3DC] space-y-1.5">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: pt.color }} />
+                                  <span className="text-[11px] font-extrabold text-[#1E3A5F] w-6 shrink-0">{pt.id}</span>
+                                  <input
+                                    type="text"
+                                    value={pt.name ?? ''}
+                                    onChange={(e) => handleUpdateExtraPoint(pt.id, { name: e.target.value })}
+                                    placeholder="Nhãn trên hình..."
+                                    className="flex-1 min-w-0 px-2 py-0.5 rounded-md border border-[#CBD5E1] focus:border-[#1E3A5F] bg-[#FAF9F6] focus:bg-white text-[11.5px] font-semibold text-slate-800 outline-none"
+                                  />
+                                  <span className="text-[10px] font-semibold text-slate-400 shrink-0">
+                                    {pt.isPerpendicularFoot
+                                      ? `${pt.fromPoint}${pt.id}⊥${pt.edge?.join('')}`
+                                      : pt.edge
+                                      ? `∈${pt.edge.join('')}`
+                                      : ''}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveExtraPoint(pt.id)}
+                                    title="Xóa điểm này"
+                                    className="text-slate-400 hover:text-rose-600 p-0.5 cursor-pointer shrink-0"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                                {!pt.isPerpendicularFoot && !pt.isPresetProjection && pt.edge && (
+                                  <div className="flex items-center gap-2 pl-4 text-[10.5px] font-semibold text-slate-500">
+                                    <span>Tỷ lệ k:</span>
+                                    <input
+                                      type="range"
+                                      min="0.05"
+                                      max="0.95"
+                                      step="0.05"
+                                      value={pt.ratio ?? 0.5}
+                                      onChange={(e) => handleUpdateExtraPoint(pt.id, { ratio: parseFloat(e.target.value) })}
+                                      className="flex-1 accent-[#1E3A5F] cursor-pointer"
+                                    />
+                                    <span className="w-7 text-right tabular-nums text-[#1E3A5F]">{pt.ratio ?? 0.5}</span>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Kẻ đường phụ */}
+                      <div className="p-3 rounded-xl bg-[#FAF9F6] border border-[#E7E5DF] space-y-2.5">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-extrabold text-[#1E3A5F]">Kẻ đoạn thẳng / Đường phụ</span>
+                          <span className="text-[11px] font-bold text-slate-500">{customAuxLines.length} đường</span>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="text-[10.5px] font-bold text-slate-500 block mb-1">Từ điểm</label>
+                            <Select
+                              size="small"
+                              fullWidth
+                              value={newLineFrom}
+                              onChange={(e) => setNewLineFrom(e.target.value)}
+                              sx={COMPACT_MUI_SELECT_SX}
+                              renderValue={(v) => availablePointsList.find((p) => p.id === v)?.shortLabel || v}
+                            >
+                              {availablePointsList.map((p) => (
+                                <MenuItem key={p.id} value={p.id} sx={{ fontSize: '12px', fontWeight: 600 }}>
+                                  {p.label}
+                                </MenuItem>
+                              ))}
+                            </Select>
+                          </div>
+                          <div>
+                            <label className="text-[10.5px] font-bold text-slate-500 block mb-1">Đến điểm</label>
+                            <Select
+                              size="small"
+                              fullWidth
+                              value={newLineTo}
+                              onChange={(e) => setNewLineTo(e.target.value)}
+                              sx={COMPACT_MUI_SELECT_SX}
+                              renderValue={(v) => availablePointsList.find((p) => p.id === v)?.shortLabel || v}
+                            >
+                              {availablePointsList.map((p) => (
+                                <MenuItem key={p.id} value={p.id} sx={{ fontSize: '12px', fontWeight: 600 }}>
+                                  {p.label}
+                                </MenuItem>
+                              ))}
+                            </Select>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="grid grid-cols-2 p-0.5 rounded-lg bg-[#EBE8E1] text-[11px] font-bold shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => setNewLineDash(2)}
+                              className={`px-2.5 py-1 rounded-md cursor-pointer ${
+                                newLineDash === 2 ? 'bg-white text-[#1E3A5F] shadow-2xs' : 'text-slate-600'
+                              }`}
+                            >
+                              Nét đứt
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setNewLineDash(0)}
+                              className={`px-2.5 py-1 rounded-md cursor-pointer ${
+                                newLineDash === 0 ? 'bg-white text-[#1E3A5F] shadow-2xs' : 'text-slate-600'
+                              }`}
+                            >
+                              Nét liền
+                            </button>
+                          </div>
+
+                          <div className="flex items-center gap-1">
+                            {COLOR_SWATCHES.slice(0, 5).map((sw) => (
+                              <button
+                                key={sw.hex}
+                                type="button"
+                                title={sw.label}
+                                onClick={() => setNewLineColor(sw.hex)}
+                                className={`w-5 h-5 rounded-full cursor-pointer transition-transform ${
+                                  newLineColor === sw.hex ? 'ring-2 ring-offset-1 ring-[#1E3A5F] scale-110' : 'opacity-80 hover:opacity-100'
+                                }`}
+                                style={{ backgroundColor: sw.hex }}
+                              />
+                            ))}
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={handleAddCustomLine}
+                          className="w-full py-1.5 rounded-xl bg-[#1E3A5F] hover:bg-[#162C49] text-white text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>Kẻ đoạn {newLineFrom}{newLineTo}</span>
+                        </button>
+
+                        {customAuxLines.length > 0 && (
+                          <div className="space-y-1 max-h-36 overflow-y-auto pt-1 border-t border-[#ECEAE4]">
+                            {customAuxLines.map((line) => (
+                              <div key={line.id} className="flex items-center justify-between px-2.5 py-1.5 bg-white rounded-lg border border-[#E5E3DC] text-xs font-bold text-slate-700">
+                                <span className="flex items-center gap-2">
+                                  <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: line.color }} />
+                                  <span>{line.from}{line.to}</span>
+                                  <span className="text-[10.5px] font-medium text-slate-400">({line.dash === 2 ? 'Nét đứt' : 'Nét liền'})</span>
+                                </span>
+                                <button type="button" onClick={() => handleRemoveCustomLine(line.id)} className="text-slate-400 hover:text-rose-600 p-0.5 cursor-pointer">
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
+
+                  {panel3DTab === 'vertices' && (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#FAF9F6] border border-[#E7E5DF]">
+                        <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-[#1E3A5F]">
+                          <input
+                            type="checkbox"
+                            checked={isCustomizingBasePoints}
+                            onChange={(e) => setIsCustomizingBasePoints(e.target.checked)}
+                            className="w-4 h-4 rounded accent-[#1E3A5F]"
+                          />
+                          <span>Bật chỉnh tọa độ & đổi tên đỉnh</span>
+                        </label>
                         <button
                           type="button"
                           onClick={handleResetBasePoints}
-                          className="px-2 py-0.5 rounded text-[11px] font-bold text-slate-500 hover:text-indigo-600 flex items-center gap-1 cursor-pointer"
+                          className="px-2 py-1 rounded-lg bg-white border border-[#E5E3DC] text-[11px] font-bold text-slate-600 hover:text-[#1E3A5F] flex items-center gap-1 cursor-pointer"
                         >
                           <RotateCcw className="w-3 h-3" />
                           <span>Mặc định</span>
                         </button>
-                      )}
-                    </div>
+                      </div>
 
-                    {isCustomizingBasePoints && (
-                      <div className="p-3 rounded-xl bg-indigo-50/60 border border-indigo-200 flex flex-col gap-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold text-indigo-950">Tọa độ đỉnh</span>
-                          <span className="text-[10px] text-indigo-700 font-bold">
-                            {Object.keys(customBasePoints).length} đỉnh
-                          </span>
+                      {Object.keys(customBasePoints).length === 0 ? (
+                        <div className="py-8 text-center text-xs text-slate-400">
+                          Hình khối tròn xoay / mặt cầu điều chỉnh qua bán kính và chiều cao ở tab Hình khối.
                         </div>
-
-                        <div className="flex flex-col gap-2 max-h-56 overflow-y-auto pr-1">
+                      ) : (
+                        <div className="space-y-2">
                           {Object.entries(customBasePoints).map(([key, pt]) => (
-                            <div key={key} className="p-2 bg-white rounded-lg border border-slate-200 flex flex-col gap-1.5 text-xs">
-                              <div className="flex items-center justify-between">
+                            <div key={key} className="p-2.5 bg-[#FAF9F6] rounded-xl border border-[#E7E5DF] space-y-2 text-xs">
+                              <div className="flex items-center justify-between gap-2">
                                 <span className="font-bold text-slate-700 flex items-center gap-1.5">
                                   <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: pt.color || '#0f172a' }} />
-                                  <span>{key}</span>
+                                  <span>Đỉnh {key}</span>
+                                  {pt.desc && <span className="text-[10.5px] font-normal text-slate-400">· {pt.desc}</span>}
                                 </span>
                                 <input
                                   type="text"
                                   value={pt.label}
-                                  onChange={(e) => handleUpdateBasePoint(key, 'label', e.target.value)}
-                                  className="w-16 px-1.5 py-0.5 font-bold text-xs text-indigo-700 border border-indigo-200 rounded bg-indigo-50/50 text-center uppercase"
+                                  onChange={(e) => {
+                                    setIsCustomizingBasePoints(true);
+                                    handleUpdateBasePoint(key, 'label', e.target.value);
+                                  }}
+                                  className="w-16 px-2 py-0.5 font-extrabold text-xs text-[#1E3A5F] border border-[#CBD5E1] rounded-lg bg-white text-center uppercase"
                                   maxLength={6}
+                                  title="Đổi tên hiển thị của đỉnh"
                                 />
                               </div>
 
                               <div className="grid grid-cols-3 gap-2 text-[11px] font-bold text-slate-600">
-                                <div className="flex items-center gap-1">
-                                  <span className="text-red-600">X</span>
-                                  <input type="number" step="0.2" value={pt.x} onChange={(e) => handleUpdateBasePoint(key, 'x', e.target.value)} className="w-full px-1 py-0.5 border rounded bg-slate-50 text-slate-800 text-center" />
-                                </div>
-                                <div className="flex items-center gap-1">
-                                  <span className="text-emerald-600">Y</span>
-                                  <input type="number" step="0.2" value={pt.y} onChange={(e) => handleUpdateBasePoint(key, 'y', e.target.value)} className="w-full px-1 py-0.5 border rounded bg-slate-50 text-slate-800 text-center" />
-                                </div>
-                                <div className="flex items-center gap-1">
-                                  <span className="text-blue-600">Z</span>
-                                  <input type="number" step="0.2" value={pt.z} onChange={(e) => handleUpdateBasePoint(key, 'z', e.target.value)} className="w-full px-1 py-0.5 border rounded bg-slate-50 text-slate-800 text-center" />
-                                </div>
+                                {[
+                                  { axis: 'x', label: 'X', cls: 'text-rose-600' },
+                                  { axis: 'y', label: 'Y', cls: 'text-emerald-600' },
+                                  { axis: 'z', label: 'Z', cls: 'text-blue-600' }
+                                ].map(({ axis, label, cls }) => (
+                                  <div key={axis} className="flex items-center gap-1">
+                                    <span className={cls}>{label}</span>
+                                    <input
+                                      type="number"
+                                      step="0.2"
+                                      value={pt[axis]}
+                                      onChange={(e) => {
+                                        setIsCustomizingBasePoints(true);
+                                        handleUpdateBasePoint(key, axis, e.target.value);
+                                      }}
+                                      className="w-full px-1.5 py-1 border border-[#CBD5E1] rounded-lg bg-white text-slate-800 text-center"
+                                    />
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+
+            {/* === C. 2D PLANE GEOMETRY INSPECTOR === */}
+            {jsxSubTab === '2d_geometry' && (
+              <>
+                <div className="p-2.5 border-b border-[#ECEAE4] bg-[#FAF9F6] shrink-0">
+                  <div className="grid grid-cols-2 p-0.5 rounded-xl bg-[#EFECE6] border border-[#E5E3DC]">
+                    {[
+                      { id: 'shape', label: 'Hình & Tọa độ đỉnh', Icon: Triangle },
+                      { id: 'aux', label: 'Điểm & Đoạn phụ', Icon: GitBranch }
+                    ].map(({ id, label, Icon }) => (
+                      <button
+                        key={id}
+                        type="button"
+                        onClick={() => setPanel2DGeoTab(id)}
+                        className={`py-1.5 px-2 rounded-lg text-[11.5px] font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                          panel2DGeoTab === id
+                            ? 'bg-white text-[#1E3A5F] shadow-2xs'
+                            : 'text-slate-500 hover:text-slate-800'
+                        }`}
+                      >
+                        <Icon className="w-3.5 h-3.5" />
+                        <span>{label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex-1 min-h-0 overflow-y-auto p-3.5 space-y-3.5">
+                  {panel2DGeoTab === 'shape' ? (
+                    <>
+                      <div className="space-y-1.5">
+                        <label className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500">
+                          Chọn mẫu hình phẳng
+                        </label>
+                        <div className="grid grid-cols-2 gap-1.5">
+                          {Object.values(SHAPES_2D_META).map((item) => (
+                            <button
+                              key={item.id}
+                              type="button"
+                              onClick={() => handleSelectShape2D(item.id)}
+                              className={`px-2.5 py-2 rounded-xl border text-left text-[11.5px] font-bold transition-all cursor-pointer ${
+                                shape2DType === item.id
+                                  ? 'bg-[#EEF2F7] border-[#1E3A5F] text-[#1E3A5F]'
+                                  : 'bg-white border-[#E5E3DC] text-slate-700 hover:bg-[#FAF9F6]'
+                              }`}
+                            >
+                              {item.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="p-3 bg-[#FAF9F6] rounded-xl border border-[#E7E5DF] space-y-2">
+                        <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500">Yếu tố hiển thị</span>
+                        <div className="grid grid-cols-2 gap-2 text-xs font-semibold text-slate-700">
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" checked={show2DAltitude} onChange={(e) => setShow2DAltitude(e.target.checked)} className="rounded accent-[#1E3A5F]" />
+                            <span>Đường cao (H)</span>
+                          </label>
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" checked={show2DMedian} onChange={(e) => setShow2DMedian(e.target.checked)} className="rounded accent-[#1E3A5F]" />
+                            <span>Trung tuyến (M, G, O)</span>
+                          </label>
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" checked={show2DCircumcircle} onChange={(e) => setShow2DCircumcircle(e.target.checked)} className="rounded accent-[#1E3A5F]" />
+                            <span>Đường tròn ngoại tiếp</span>
+                          </label>
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" checked={show2DAxes} onChange={(e) => setShow2DAxes(e.target.checked)} className="rounded accent-[#1E3A5F]" />
+                            <span>Hệ trục Oxy</span>
+                          </label>
+                        </div>
+                      </div>
+
+                      <div className="p-3 bg-[#FAF9F6] rounded-xl border border-[#E7E5DF] space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500">Tọa độ đỉnh (x; y)</span>
+                          <button
+                            type="button"
+                            onClick={() => setCustom2DPoints(getDefault2DGeometryPoints(shape2DType))}
+                            className="text-[11px] font-bold text-[#2C4C7E] hover:underline flex items-center gap-1 cursor-pointer"
+                          >
+                            <RotateCcw className="w-3 h-3" />
+                            <span>Mặc định</span>
+                          </button>
+                        </div>
+                        <div className="space-y-1.5">
+                          {Object.entries(custom2DPoints || {}).map(([key, pt]) => (
+                            <div key={key} className="grid grid-cols-12 gap-1.5 items-center text-xs">
+                              <span className="col-span-2 font-extrabold text-[#1E3A5F] bg-[#EEF2F7] px-2 py-1 rounded-lg text-center border border-[#D4DFED]">
+                                {key}
+                              </span>
+                              <input
+                                type="text"
+                                value={pt.name ?? key}
+                                onChange={(e) => handleUpdate2DPoint(key, 'name', e.target.value)}
+                                className="col-span-4 px-2 py-1 rounded-lg border border-[#CBD5E1] bg-white text-xs font-bold text-slate-800"
+                                placeholder="Tên"
+                              />
+                              <div className="col-span-3 flex items-center gap-1">
+                                <span className="text-[10px] text-slate-400 font-bold">X</span>
+                                <input type="number" step="0.5" value={pt.x ?? 0} onChange={(e) => handleUpdate2DPoint(key, 'x', e.target.value)} className="w-full px-1.5 py-1 rounded-lg border border-[#CBD5E1] bg-white text-xs text-slate-800 text-center" />
+                              </div>
+                              <div className="col-span-3 flex items-center gap-1">
+                                <span className="text-[10px] text-slate-400 font-bold">Y</span>
+                                <input type="number" step="0.5" value={pt.y ?? 0} onChange={(e) => handleUpdate2DPoint(key, 'y', e.target.value)} className="w-full px-1.5 py-1 rounded-lg border border-[#CBD5E1] bg-white text-xs text-slate-800 text-center" />
                               </div>
                             </div>
                           ))}
                         </div>
                       </div>
-                    )}
-
-                    <div>
-                      <label className="text-xs font-bold text-slate-700 mb-1.5 block">Đường phụ mẫu</label>
-                      <div className="grid grid-cols-2 gap-1.5">
-                        {[
-                          { id: 'distance_model', label: 'd(A, (SBC))' },
-                          { id: 'angle_line_plane', label: 'Góc đường – mặt' },
-                          { id: 'cross_section_mid', label: 'Thiết diện (MNPQ)' },
-                          { id: 'none', label: 'Tự do' }
-                        ].map((m) => (
-                          <button
-                            key={m.id}
-                            type="button"
-                            onClick={() => setExam3DConstructionPreset(m.id)}
-                            className={`px-2 py-1 rounded-lg text-left text-xs font-bold border cursor-pointer ${
-                              exam3DConstructionPreset === m.id
-                                ? 'bg-amber-50 border-amber-500 text-amber-800'
-                                : 'bg-white border-slate-200 text-slate-600'
-                            }`}
-                          >
-                            {m.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {exam3DConstructionPreset === 'distance_model' && (
-                      <div className="p-2.5 rounded-xl bg-amber-50/80 border border-amber-200 text-xs">
-                        <label className="flex items-center gap-2 font-bold text-amber-900 cursor-pointer">
-                          <input type="checkbox" checked={showPresetAuxLine2} onChange={(e) => setShowPresetAuxLine2(e.target.checked)} className="rounded text-amber-600" />
-                          <span>Hiện đường vuông góc AK</span>
-                        </label>
-                      </div>
-                    )}
-
-                    {/* Điểm phụ */}
-                    <div className="p-3 rounded-xl bg-purple-50/70 border border-purple-200 flex flex-col gap-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-purple-950">Thêm điểm phụ</span>
-                        <span className="text-[10px] text-purple-700 font-bold">{extraPoints.length} điểm</span>
-                      </div>
-
-                      <div className="grid grid-cols-3 gap-1.5 text-xs font-bold text-slate-700">
-                        <div>
-                          <span>Tên</span>
-                          <input
-                            type="text"
-                            value={newPtName}
-                            onChange={(e) => setNewPtName(e.target.value.toUpperCase())}
-                            className="w-full mt-1 p-1 border rounded-lg bg-white text-xs font-bold uppercase"
-                            placeholder="M"
-                            maxLength={3}
-                          />
-                        </div>
-                        <div>
-                          <span>Cạnh</span>
-                          <div className="flex items-center gap-1 mt-1">
-                            <select value={newPtEdge1} onChange={(e) => setNewPtEdge1(e.target.value)} className="w-1/2 p-1 border rounded bg-white text-xs">
-                              {availablePointsList.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
-                            </select>
-                            <select value={newPtEdge2} onChange={(e) => setNewPtEdge2(e.target.value)} className="w-1/2 p-1 border rounded bg-white text-xs">
-                              {availablePointsList.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
-                            </select>
-                          </div>
-                        </div>
-                        <div>
-                          <span>k = {newPtRatio}</span>
-                          <div className="flex items-center gap-1 mt-1">
-                            <button type="button" onClick={() => setNewPtRatio(0.5)} className="px-1 py-1 rounded bg-white border text-[10px] hover:bg-purple-100 cursor-pointer">1/2</button>
-                            <button type="button" onClick={() => setNewPtRatio(0.33)} className="px-1 py-1 rounded bg-white border text-[10px] hover:bg-purple-100 cursor-pointer">1/3</button>
-                            <input type="range" min="0.1" max="0.9" step="0.1" value={newPtRatio} onChange={(e) => setNewPtRatio(parseFloat(e.target.value))} className="w-12 accent-purple-600" />
-                          </div>
-                        </div>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={handleAddExtraPoint}
-                        className="w-full py-1 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold flex items-center justify-center gap-1 cursor-pointer"
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                        <span>Thêm điểm {newPtName}</span>
-                      </button>
-
-                      {extraPoints.length > 0 && (
-                        <div className="flex flex-wrap gap-1 pt-1">
-                          {extraPoints.map((pt) => (
-                            <span key={pt.id} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white border border-purple-200 text-[10px] font-bold text-purple-900">
-                              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: pt.color }} />
-                              <span>{pt.name}</span>
-                              <button type="button" onClick={() => handleRemoveExtraPoint(pt.id)} className="text-slate-400 hover:text-rose-600 ml-1 cursor-pointer">×</button>
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Đường phụ */}
-                    <div className="p-3 rounded-xl bg-indigo-50/70 border border-indigo-200 flex flex-col gap-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-indigo-950">Kẻ đường phụ</span>
-                        <span className="text-[10px] text-indigo-700 font-bold">{customAuxLines.length} đường</span>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-2 text-xs font-bold text-slate-700">
-                        <select value={newLineFrom} onChange={(e) => setNewLineFrom(e.target.value)} className="w-full p-1.5 border rounded-lg bg-white">
-                          {availablePointsList.map(p => <option key={p.id} value={p.id}>Từ {p.label}</option>)}
-                        </select>
-                        <select value={newLineTo} onChange={(e) => setNewLineTo(e.target.value)} className="w-full p-1.5 border rounded-lg bg-white">
-                          {availablePointsList.map(p => <option key={p.id} value={p.id}>Đến {p.label}</option>)}
-                        </select>
-                      </div>
-
-                      <div className="flex items-center gap-2 text-xs font-bold text-slate-700">
-                        <select value={newLineDash} onChange={(e) => setNewLineDash(parseInt(e.target.value, 10))} className="flex-1 p-1.5 border rounded-lg bg-white text-xs">
-                          <option value={2}>Nét đứt</option>
-                          <option value={0}>Nét liền</option>
-                        </select>
-                        <select value={newLineColor} onChange={(e) => setNewLineColor(e.target.value)} className="w-24 p-1.5 border rounded-lg bg-white text-xs">
-                          <option value="#ef4444">Đỏ</option>
-                          <option value="#f59e0b">Cam</option>
-                          <option value="#8b5cf6">Tím</option>
-                          <option value="#10b981">Xanh lá</option>
-                          <option value="#2563eb">Xanh dương</option>
-                        </select>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={handleAddCustomLine}
-                        className="w-full py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center justify-center gap-1 cursor-pointer"
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                        <span>Kẻ {newLineFrom}{newLineTo}</span>
-                      </button>
-
-                      {customAuxLines.length > 0 && (
-                        <div className="flex flex-col gap-1 max-h-28 overflow-y-auto pt-1">
-                          {customAuxLines.map((line) => (
-                            <div key={line.id} className="flex items-center justify-between px-2 py-1 bg-white rounded border border-slate-200 text-[11px] font-bold">
-                              <span className="flex items-center gap-1.5">
-                                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: line.color }} />
-                                <span>{line.from}{line.to} ({line.dash === 2 ? 'đứt' : 'liền'})</span>
-                              </span>
-                              <button type="button" onClick={() => handleRemoveCustomLine(line.id)} className="text-slate-400 hover:text-rose-600 p-0.5 cursor-pointer">
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Kích thước */}
-                    <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex flex-col gap-1.5 text-xs font-bold text-slate-600">
-                      <div className="flex items-center gap-2">
-                        <span className="w-12">Cao h</span>
-                        <input type="range" min="2" max="7" step="0.5" value={shape3dHeight} onChange={(e) => setShape3dHeight(parseFloat(e.target.value) || 4)} className="flex-1 accent-indigo-600" />
-                        <span className="w-6 text-right">{shape3dHeight}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="w-12">Đáy a</span>
-                        <input type="range" min="2" max="6" step="0.5" value={shape3dWidth} onChange={(e) => setShape3dWidth(parseFloat(e.target.value) || 4)} className="flex-1 accent-indigo-600" />
-                        <span className="w-6 text-right">{shape3dWidth}</span>
-                      </div>
-                    </div>
-
-                    <div className="flex justify-end">
-                      <button
-                        type="button"
-                        onClick={() => { setAzimuthAngle(0.85); setElevationAngle(0.35); }}
-                        className="text-xs text-indigo-600 font-bold hover:underline cursor-pointer"
-                      >
-                        Đặt lại góc nhìn
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* C. 2D PLANE GEOMETRY */}
-                {jsxSubTab === '2d_geometry' && (
-                  <div className="flex flex-col gap-3">
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-xs font-bold text-slate-700">Hình phẳng</label>
-                      <div className="grid grid-cols-2 gap-1.5">
-                        {Object.values(SHAPES_2D_META).map((item) => (
-                          <button
-                            key={item.id}
-                            type="button"
-                            onClick={() => handleSelectShape2D(item.id)}
-                            className={`px-2.5 py-2 rounded-xl border text-left text-[11px] font-bold transition-all cursor-pointer ${
-                              shape2DType === item.id
-                                ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
-                                : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-indigo-50/50 hover:border-indigo-200'
-                            }`}
-                          >
-                            {item.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="flex flex-col gap-1.5 p-3 bg-slate-50 rounded-xl border border-slate-200">
-                      <span className="text-xs font-bold text-slate-800">Hiển thị</span>
-                      <div className="grid grid-cols-2 gap-2 pt-1">
-                        <label className="flex items-center gap-2 text-xs text-slate-700 cursor-pointer">
-                          <input type="checkbox" checked={show2DAltitude} onChange={(e) => setShow2DAltitude(e.target.checked)} className="rounded border-slate-300 text-indigo-600" />
-                          <span>Đường cao (H)</span>
-                        </label>
-                        <label className="flex items-center gap-2 text-xs text-slate-700 cursor-pointer">
-                          <input type="checkbox" checked={show2DMedian} onChange={(e) => setShow2DMedian(e.target.checked)} className="rounded border-slate-300 text-indigo-600" />
-                          <span>Trung tuyến (M, G, O)</span>
-                        </label>
-                        <label className="flex items-center gap-2 text-xs text-slate-700 cursor-pointer">
-                          <input type="checkbox" checked={show2DCircumcircle} onChange={(e) => setShow2DCircumcircle(e.target.checked)} className="rounded border-slate-300 text-indigo-600" />
-                          <span>Đường tròn ngoại tiếp</span>
-                        </label>
-                        <label className="flex items-center gap-2 text-xs text-slate-700 cursor-pointer">
-                          <input type="checkbox" checked={show2DAxes} onChange={(e) => setShow2DAxes(e.target.checked)} className="rounded border-slate-300 text-indigo-600" />
-                          <span>Hệ trục Oxy</span>
-                        </label>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-col gap-2 p-3 bg-slate-50 rounded-xl border border-slate-200">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-slate-800">Tọa độ đỉnh (x; y)</span>
-                        <button
-                          type="button"
-                          onClick={() => setCustom2DPoints(getDefault2DGeometryPoints(shape2DType))}
-                          className="text-[11px] font-bold text-indigo-600 hover:underline flex items-center gap-1 cursor-pointer"
-                        >
-                          <RotateCcw className="w-3 h-3" />
-                          <span>Mặc định</span>
-                        </button>
-                      </div>
-                      <div className="space-y-1.5">
-                        {Object.entries(custom2DPoints || {}).map(([key, pt]) => (
-                          <div key={key} className="grid grid-cols-12 gap-1.5 items-center text-xs">
-                            <span className="col-span-2 font-extrabold text-indigo-700 bg-indigo-50 px-2 py-1 rounded-lg text-center border border-indigo-100">
-                              {key}
-                            </span>
+                    </>
+                  ) : (
+                    <>
+                      {/* Điểm phụ 2D */}
+                      <div className="p-3 bg-[#FAF9F6] rounded-xl border border-[#E7E5DF] space-y-2.5">
+                        <span className="text-xs font-extrabold text-[#1E3A5F]">Thêm điểm phụ trên cạnh</span>
+                        <div className="grid grid-cols-12 gap-2 items-end">
+                          <div className="col-span-3">
+                            <label className="text-[10.5px] font-bold text-slate-500 block mb-1">Tên</label>
                             <input
                               type="text"
-                              value={pt.name ?? key}
-                              onChange={(e) => handleUpdate2DPoint(key, 'name', e.target.value)}
-                              className="col-span-4 px-2 py-1 rounded-lg border border-slate-200 bg-white text-xs font-bold text-slate-800"
-                              placeholder="Tên"
+                              value={new2DPtName}
+                              onChange={(e) => setNew2DPtName(e.target.value.toUpperCase())}
+                              placeholder="E"
+                              maxLength={3}
+                              className="w-full h-[31px] px-2 rounded-[10px] border border-[#cbd5e1] bg-white text-xs font-extrabold text-center text-[#1E3A5F] uppercase"
                             />
-                            <div className="col-span-3 flex items-center gap-1">
-                              <span className="text-[10px] text-slate-400 font-bold">X</span>
-                              <input type="number" step="0.5" value={pt.x ?? 0} onChange={(e) => handleUpdate2DPoint(key, 'x', e.target.value)} className="w-full px-1.5 py-1 rounded-lg border border-slate-200 bg-white text-xs text-slate-800" />
-                            </div>
-                            <div className="col-span-3 flex items-center gap-1">
-                              <span className="text-[10px] text-slate-400 font-bold">Y</span>
-                              <input type="number" step="0.5" value={pt.y ?? 0} onChange={(e) => handleUpdate2DPoint(key, 'y', e.target.value)} className="w-full px-1.5 py-1 rounded-lg border border-slate-200 bg-white text-xs text-slate-800" />
-                            </div>
                           </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="flex flex-col gap-2 p-3 bg-slate-50 rounded-xl border border-slate-200">
-                      <span className="text-xs font-bold text-slate-800">Điểm & đoạn phụ</span>
-                      <div className="grid grid-cols-12 gap-1.5 items-center text-xs">
-                        <input type="text" value={new2DPtName} onChange={(e) => setNew2DPtName(e.target.value)} placeholder="E" className="col-span-2 px-2 py-1 rounded-lg border border-slate-200 bg-white text-xs font-bold" />
-                        <select value={new2DPtParentA} onChange={(e) => setNew2DPtParentA(e.target.value)} className="col-span-3 px-1.5 py-1 rounded-lg border border-slate-200 bg-white text-xs">
-                          {Object.keys(custom2DPoints || {}).map((k) => (<option key={k} value={k}>Từ {k}</option>))}
-                        </select>
-                        <select value={new2DPtParentB} onChange={(e) => setNew2DPtParentB(e.target.value)} className="col-span-3 px-1.5 py-1 rounded-lg border border-slate-200 bg-white text-xs">
-                          {Object.keys(custom2DPoints || {}).map((k) => (<option key={k} value={k}>Đến {k}</option>))}
-                        </select>
-                        <input type="number" step="0.1" min="0.1" max="0.9" value={new2DPtRatio} onChange={(e) => setNew2DPtRatio(parseFloat(e.target.value) || 0.5)} className="col-span-2 px-1.5 py-1 rounded-lg border border-slate-200 bg-white text-xs" />
-                        <button type="button" onClick={handleAdd2DExtraPoint} className="col-span-2 px-2 py-1 rounded-lg bg-indigo-600 text-white font-bold text-[11px] hover:bg-indigo-700 cursor-pointer">+ Điểm</button>
-                      </div>
-
-                      {extra2DPoints.length > 0 && (
-                        <div className="flex flex-wrap gap-1.5 pt-1">
-                          {extra2DPoints.map((ep) => (
-                            <span key={ep.id} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-pink-50 border border-pink-200 text-pink-700 text-[11px] font-bold">
-                              <span>{ep.name} ({ep.parentA}{ep.parentB}, k={ep.ratio})</span>
-                              <button type="button" onClick={() => handleRemove2DExtraPoint(ep.id)} className="text-pink-400 hover:text-pink-700 cursor-pointer"><X className="w-3 h-3" /></button>
-                            </span>
-                          ))}
+                          <div className="col-span-4">
+                            <label className="text-[10.5px] font-bold text-slate-500 block mb-1">Từ đỉnh</label>
+                            <Select size="small" fullWidth value={new2DPtParentA} onChange={(e) => setNew2DPtParentA(e.target.value)} sx={COMPACT_MUI_SELECT_SX}>
+                              {Object.keys(custom2DPoints || {}).map((k) => (
+                                <MenuItem key={k} value={k} sx={{ fontSize: '12px', fontWeight: 600 }}>{k}</MenuItem>
+                              ))}
+                            </Select>
+                          </div>
+                          <div className="col-span-5">
+                            <label className="text-[10.5px] font-bold text-slate-500 block mb-1">Đến đỉnh</label>
+                            <Select size="small" fullWidth value={new2DPtParentB} onChange={(e) => setNew2DPtParentB(e.target.value)} sx={COMPACT_MUI_SELECT_SX}>
+                              {Object.keys(custom2DPoints || {}).map((k) => (
+                                <MenuItem key={k} value={k} sx={{ fontSize: '12px', fontWeight: 600 }}>{k}</MenuItem>
+                              ))}
+                            </Select>
+                          </div>
                         </div>
-                      )}
 
-                      <div className="grid grid-cols-12 gap-1.5 items-center text-xs pt-1 border-t border-slate-200/70">
-                        <select value={new2DLineFrom} onChange={(e) => setNew2DLineFrom(e.target.value)} className="col-span-3 px-1.5 py-1 rounded-lg border border-slate-200 bg-white text-xs">
-                          {available2DPointKeys.map((k) => (<option key={k} value={k}>Nối {k}</option>))}
-                        </select>
-                        <select value={new2DLineTo} onChange={(e) => setNew2DLineTo(e.target.value)} className="col-span-3 px-1.5 py-1 rounded-lg border border-slate-200 bg-white text-xs">
-                          {available2DPointKeys.map((k) => (<option key={k} value={k}>Tới {k}</option>))}
-                        </select>
-                        <select value={new2DLineStyle} onChange={(e) => setNew2DLineStyle(e.target.value)} className="col-span-3 px-1.5 py-1 rounded-lg border border-slate-200 bg-white text-xs">
-                          <option value="dashed">Nét đứt</option>
-                          <option value="solid">Nét liền</option>
-                        </select>
-                        <button type="button" onClick={handleAdd2DAuxLine} className="col-span-3 px-2 py-1 rounded-lg bg-amber-500 text-white font-bold text-[11px] hover:bg-amber-600 cursor-pointer">+ Đoạn</button>
+                        <div className="flex items-center justify-between gap-2 text-xs font-bold text-slate-700">
+                          <div className="flex items-center gap-1.5 flex-1">
+                            <span><KatexInline latex={`k = ${new2DPtRatio}`} /></span>
+                            {[
+                              { v: 0.5, lbl: '1/2' },
+                              { v: 0.33, lbl: '1/3' },
+                              { v: 0.67, lbl: '2/3' }
+                            ].map((r) => (
+                              <button
+                                key={r.lbl}
+                                type="button"
+                                onClick={() => setNew2DPtRatio(r.v)}
+                                className={`px-1.5 py-0.5 rounded-md border text-[10.5px] font-bold cursor-pointer ${
+                                  Math.abs(new2DPtRatio - r.v) < 0.02
+                                    ? 'bg-[#1E3A5F] border-[#1E3A5F] text-white'
+                                    : 'bg-white border-[#DCD9D0] text-slate-600'
+                                }`}
+                              >
+                                {r.lbl}
+                              </button>
+                            ))}
+                            <input type="range" min="0.1" max="0.9" step="0.05" value={new2DPtRatio} onChange={(e) => setNew2DPtRatio(parseFloat(e.target.value))} className="flex-1 accent-[#1E3A5F]" />
+                          </div>
+                          <button type="button" onClick={handleAdd2DExtraPoint} className="px-3 py-1.5 rounded-lg bg-[#1E3A5F] hover:bg-[#162C49] text-white font-bold text-xs flex items-center gap-1 cursor-pointer shrink-0">
+                            <Plus className="w-3.5 h-3.5" />
+                            <span>Thêm</span>
+                          </button>
+                        </div>
+
+                        {extra2DPoints.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5 pt-1 border-t border-[#ECEAE4]">
+                            {extra2DPoints.map((ep) => (
+                              <span key={ep.id} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white border border-[#E5E3DC] text-slate-700 text-[11px] font-bold">
+                                <span>{ep.name} ({ep.parentA}{ep.parentB}, k={ep.ratio})</span>
+                                <button type="button" onClick={() => handleRemove2DExtraPoint(ep.id)} className="text-slate-400 hover:text-rose-600 cursor-pointer"><X className="w-3 h-3" /></button>
+                              </span>
+                            ))}
+                          </div>
+                        )}
                       </div>
 
-                      {custom2DAuxLines.length > 0 && (
-                        <div className="flex flex-wrap gap-1.5 pt-1">
-                          {custom2DAuxLines.map((line, idx) => (
-                            <span key={`${line.from}-${line.to}-${idx}`} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-[11px] font-bold">
-                              <span>{line.from}{line.to} ({line.style === 'solid' ? 'liền' : 'đứt'})</span>
-                              <button type="button" onClick={() => handleRemove2DAuxLine(idx)} className="text-amber-500 hover:text-amber-800 cursor-pointer"><X className="w-3 h-3" /></button>
-                            </span>
-                          ))}
+                      {/* Đoạn phụ 2D */}
+                      <div className="p-3 bg-[#FAF9F6] rounded-xl border border-[#E7E5DF] space-y-2.5">
+                        <span className="text-xs font-extrabold text-[#1E3A5F]">Kẻ đoạn thẳng phụ</span>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="text-[10.5px] font-bold text-slate-500 block mb-1">Nối từ</label>
+                            <Select size="small" fullWidth value={new2DLineFrom} onChange={(e) => setNew2DLineFrom(e.target.value)} sx={COMPACT_MUI_SELECT_SX}>
+                              {available2DPointKeys.map((k) => (
+                                <MenuItem key={k} value={k} sx={{ fontSize: '12px', fontWeight: 600 }}>{k}</MenuItem>
+                              ))}
+                            </Select>
+                          </div>
+                          <div>
+                            <label className="text-[10.5px] font-bold text-slate-500 block mb-1">Tới điểm</label>
+                            <Select size="small" fullWidth value={new2DLineTo} onChange={(e) => setNew2DLineTo(e.target.value)} sx={COMPACT_MUI_SELECT_SX}>
+                              {available2DPointKeys.map((k) => (
+                                <MenuItem key={k} value={k} sx={{ fontSize: '12px', fontWeight: 600 }}>{k}</MenuItem>
+                              ))}
+                            </Select>
+                          </div>
                         </div>
-                      )}
-                    </div>
-                  </div>
-                )}
 
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="grid grid-cols-2 p-0.5 rounded-lg bg-[#EBE8E1] text-[11px] font-bold">
+                            <button type="button" onClick={() => setNew2DLineStyle('dashed')} className={`px-2.5 py-1 rounded-md cursor-pointer ${new2DLineStyle === 'dashed' ? 'bg-white text-[#1E3A5F] shadow-2xs' : 'text-slate-600'}`}>Nét đứt</button>
+                            <button type="button" onClick={() => setNew2DLineStyle('solid')} className={`px-2.5 py-1 rounded-md cursor-pointer ${new2DLineStyle === 'solid' ? 'bg-white text-[#1E3A5F] shadow-2xs' : 'text-slate-600'}`}>Nét liền</button>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            {COLOR_SWATCHES.slice(0, 5).map((sw) => (
+                              <button
+                                key={sw.hex}
+                                type="button"
+                                title={sw.label}
+                                onClick={() => setNew2DLineColor(sw.hex)}
+                                className={`w-5 h-5 rounded-full cursor-pointer transition-transform ${
+                                  new2DLineColor === sw.hex ? 'ring-2 ring-offset-1 ring-[#1E3A5F] scale-110' : 'opacity-80 hover:opacity-100'
+                                }`}
+                                style={{ backgroundColor: sw.hex }}
+                              />
+                            ))}
+                          </div>
+                        </div>
+
+                        <button type="button" onClick={handleAdd2DAuxLine} className="w-full py-1.5 rounded-xl bg-[#1E3A5F] hover:bg-[#162C49] text-white font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer">
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>Kẻ đoạn {new2DLineFrom}{new2DLineTo}</span>
+                        </button>
+
+                        {custom2DAuxLines.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5 pt-1 border-t border-[#ECEAE4]">
+                            {custom2DAuxLines.map((line, idx) => (
+                              <span key={`${line.from}-${line.to}-${idx}`} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white border border-[#E5E3DC] text-slate-700 text-[11px] font-bold">
+                                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: line.color || '#f97316' }} />
+                                <span>{line.from}{line.to} ({line.style === 'solid' ? 'liền' : 'đứt'})</span>
+                                <button type="button" onClick={() => handleRemove2DAuxLine(idx)} className="text-slate-400 hover:text-rose-600 cursor-pointer"><X className="w-3 h-3" /></button>
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
+              </>
+            )}
+          </aside>
+
+          {/* RIGHT CANVAS WORKSPACE */}
+          <section className="flex-1 min-w-0 min-h-0 flex flex-col bg-white rounded-2xl border border-[#E5E3DC] shadow-[0_1px_6px_rgba(15,23,42,0.03)] p-3 overflow-hidden">
+            {/* Formula & Canvas Toolbar (100% Rendered KaTeX — Zero raw \frac text) */}
+            <div className="flex flex-wrap items-center justify-between gap-2 pb-2.5 mb-2.5 border-b border-[#ECEAE4] px-1 shrink-0">
+              <div className="flex items-center gap-2 min-w-0 flex-wrap">
+                <span className="text-xs font-extrabold text-[#1E3A5F] shrink-0">
+                  {jsxSubTab === '2d_function' && 'Hệ trục Oxy'}
+                  {jsxSubTab === '3d_space' && 'Không gian Oxyz'}
+                  {jsxSubTab === '2d_geometry' && 'Hình phẳng 2D'}
+                </span>
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-[#F4F6FA] border border-[#DCE4F0] text-xs font-semibold text-[#1E3A5F] max-w-full overflow-x-auto">
+                  {formulaDisplay.prefix && (
+                    <span className="text-slate-600 font-bold shrink-0">{formulaDisplay.prefix}:</span>
+                  )}
+                  {formulaDisplay.latex && <KatexInline latex={formulaDisplay.latex} className="text-[13px] text-[#1E3A5F]" />}
+                </div>
               </div>
 
-              {/* RIGHT COLUMN: CANVAS */}
-              <div className="lg:col-span-7 flex flex-col bg-white rounded-2xl border border-slate-300 shadow-sm p-3 relative">
-                <div className="flex items-center justify-between gap-2 pb-2 mb-2 border-b border-slate-100 px-1 flex-wrap">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className="text-xs font-extrabold text-slate-800 shrink-0">
-                      {jsxSubTab === '2d_function' && 'Đồ thị Oxy'}
-                      {jsxSubTab === '3d_space' && 'Không gian Oxyz'}
-                      {jsxSubTab === '2d_geometry' && 'Hình phẳng 2D'}
-                    </span>
-                    <span className="text-xs font-bold text-indigo-700 bg-slate-50 px-2.5 py-0.5 rounded-lg border border-slate-200 truncate">
-                      <MathText
-                        text={
-                          getCurrentFormulaString().includes('$')
-                            ? getCurrentFormulaString()
-                            : `$${getCurrentFormulaString()}$`
-                        }
-                      />
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    {jsxSubTab === '3d_space' && (
-                      <button
-                        type="button"
-                        onClick={() => setShow3DAxes(!show3DAxes)}
-                        className={`px-2 py-1 rounded-lg border text-[11px] font-bold flex items-center gap-1 transition-all cursor-pointer ${
-                          show3DAxes
-                            ? 'bg-indigo-600 border-indigo-600 text-white shadow-xs'
-                            : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
-                        }`}
-                      >
-                        <Compass className={`w-3.5 h-3.5 ${show3DAxes ? 'text-white' : 'text-indigo-600'}`} />
-                        <span>Trục Oxyz</span>
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => handleCopyCode(getCurrentFormulaString(), 'công thức')}
-                      className="px-2 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-bold flex items-center gap-1 transition-colors cursor-pointer"
-                    >
-                      <Copy className="w-3.5 h-3.5" />
-                      <span>Sao chép LaTeX</span>
-                    </button>
-                  </div>
-                </div>
-
-                <div className={`flex-1 w-full min-h-[460px] relative rounded-xl overflow-hidden border border-slate-200 ${
-                  jsxSubTab === '3d_space' ? 'bg-grid-notebook' : 'bg-white'
-                }`}>
-                  <div
-                    id="jsxgraph_board_container"
-                    ref={jxgContainerRef}
-                    className={`jxgbox w-full h-full min-h-[460px] ${
-                      jsxSubTab === '3d_space' ? 'jxgbox-3d-grid' : ''
+              <div className="flex items-center gap-1.5 shrink-0">
+                {jsxSubTab === '3d_space' && (
+                  <button
+                    type="button"
+                    onClick={() => setShow3DAxes(!show3DAxes)}
+                    className={`px-2.5 py-1.5 rounded-lg border text-[11px] font-bold flex items-center gap-1 transition-all cursor-pointer ${
+                      show3DAxes
+                        ? 'bg-[#1E3A5F] border-[#1E3A5F] text-white'
+                        : 'bg-white border-[#DCD9D0] text-slate-700 hover:bg-[#EEF2F7]'
                     }`}
-                  />
-                </div>
-              </div>
-
-            </div>
-          </div>
-
-          {/* PREVIEW DRAWER */}
-          {showStudentPreview && (
-            <div className="p-3.5 rounded-2xl bg-indigo-50/80 border border-indigo-200 flex flex-col gap-2.5 animate-in fade-in slide-in-from-bottom-2">
-              <div className="flex items-center justify-between border-b border-indigo-200/60 pb-1.5">
-                <span className="text-xs font-bold text-indigo-950">Xem trước câu hỏi</span>
+                  >
+                    <Compass className="w-3.5 h-3.5" />
+                    <span>Trục Oxyz</span>
+                  </button>
+                )}
                 <button
                   type="button"
-                  onClick={() => setShowStudentPreview(false)}
-                  className="text-xs font-bold text-indigo-600 hover:underline cursor-pointer"
+                  onClick={() => handleCopyCode(getCurrentFormulaString(), 'công thức')}
+                  className="px-2.5 py-1.5 rounded-lg border border-[#DCD9D0] bg-white hover:bg-[#EEF2F7] text-slate-700 text-[11px] font-bold flex items-center gap-1 transition-colors cursor-pointer"
                 >
-                  Đóng
+                  <Copy className="w-3.5 h-3.5" />
+                  <span>Sao chép công thức</span>
                 </button>
               </div>
+            </div>
 
-              <div className="bg-white p-3.5 rounded-xl border border-indigo-100 shadow-sm flex flex-col gap-2.5">
-                <div className="text-xs font-bold text-slate-800">
-                  <MathText text="Cho hình chóp $S.ABCD$ có đáy là hình vuông cạnh $a$, $SA \perp (ABCD)$. Kẻ $AK \perp SB$. Tính $d(A, (SBC))$." />
+            {/* Interactive JSXGraph Board */}
+            <div
+              className={`flex-1 min-h-0 w-full relative rounded-xl overflow-hidden border border-[#E5E3DC] ${
+                jsxSubTab === '3d_space' ? 'bg-grid-notebook' : 'bg-white'
+              }`}
+            >
+              <div
+                id="jsxgraph_board_container"
+                ref={jxgContainerRef}
+                className={`jxgbox w-full h-full min-h-[420px] ${
+                  jsxSubTab === '3d_space' ? 'jxgbox-3d-grid' : ''
+                }`}
+              />
+            </div>
+
+            {/* Optional Student Preview Overlay Drawer */}
+            {showStudentPreview && (
+              <div className="mt-2.5 p-3 rounded-xl bg-[#FAF9F6] border border-[#DCE4F0] space-y-2 shrink-0 max-h-[210px] overflow-y-auto">
+                <div className="flex items-center justify-between border-b border-[#ECEAE4] pb-1.5">
+                  <span className="text-xs font-extrabold text-[#1E3A5F]">Xem trước hiển thị trong đề thi</span>
+                  <button
+                    type="button"
+                    onClick={() => setShowStudentPreview(false)}
+                    className="text-xs font-bold text-[#2C4C7E] hover:underline cursor-pointer"
+                  >
+                    Đóng
+                  </button>
                 </div>
-                <div className="rounded-xl border border-indigo-100 overflow-hidden shadow-xs">
-                  <MathText text={currentSnippetTag} />
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                  <div className="p-2 rounded-lg border border-slate-200 bg-white font-medium">
-                    A. <MathText text="$d(A, (SBC)) = AK = \frac{SA \cdot AB}{\sqrt{SA^2 + AB^2}}$" />
+                <div className="bg-white p-3 rounded-lg border border-[#E5E3DC] space-y-2">
+                  <div className="text-xs font-semibold text-slate-800 flex flex-wrap items-center gap-1">
+                    {formulaDisplay.prefix && <span>{formulaDisplay.prefix}:</span>}
+                    {formulaDisplay.latex && <KatexInline latex={formulaDisplay.latex} />}
                   </div>
-                  <div className="p-2 rounded-lg border border-slate-200 bg-white font-medium">
-                    B. <MathText text="$d(A, (SBC)) = \frac{1}{2} SC$" />
-                  </div>
-                  <div className="p-2 rounded-lg border border-slate-200 bg-white font-medium">
-                    C. <MathText text="$d(A, (SBC)) = SB$" />
-                  </div>
-                  <div className="p-2 rounded-lg border border-slate-200 bg-white font-medium">
-                    D. <MathText text="$d(A, (SBC)) = \frac{a \sqrt{3}}{2}$" />
+                  <div className="rounded-lg border border-[#E5E3DC] overflow-hidden">
+                    <MathText text={currentSnippetTag} />
                   </div>
                 </div>
               </div>
-            </div>
-          )}
-
+            )}
+          </section>
         </div>
 
         {/* MODAL FOOTER */}
-        <div className="px-5 py-3 border-t border-slate-200 bg-white flex items-center justify-between gap-3">
+        <footer className="px-5 py-3 border-t border-[#E5E3DC] bg-white flex items-center justify-between gap-3 shrink-0">
           <button
             type="button"
             onClick={() => setShowStudentPreview(!showStudentPreview)}
-            className="px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold border border-indigo-200 transition-colors flex items-center gap-1.5 cursor-pointer"
+            className="px-3 py-1.5 rounded-xl bg-[#FAF9F6] hover:bg-[#EEF2F7] text-[#1E3A5F] text-xs font-bold border border-[#DCD9D0] transition-colors flex items-center gap-1.5 cursor-pointer"
           >
             <Eye className="w-4 h-4" />
             <span>{showStudentPreview ? 'Ẩn xem trước' : 'Xem trước'}</span>
@@ -2414,13 +3175,13 @@ function OpenMathWorkbench({
             <button
               type="button"
               onClick={handleInsertToStudio}
-              className="px-5 py-1.5 rounded-xl text-xs font-extrabold text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
+              className="px-5 py-1.5 rounded-xl text-xs font-extrabold text-white bg-[#1E3A5F] hover:bg-[#162C49] shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
             >
               <Check className="w-4 h-4" />
               <span>Chèn mô hình</span>
             </button>
           </div>
-        </div>
+        </footer>
 
       </div>
     </div>
