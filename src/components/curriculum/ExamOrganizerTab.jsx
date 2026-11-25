@@ -85,7 +85,7 @@ export default function ExamOrganizerTab({
               Sắp Xếp Cấu Trúc & Xáo Trộn Mã Đề
             </h2>
             <p className="text-xs text-slate-500">
-              Kéo thả thẻ câu hỏi / chùm đọc hiểu để đổi vị trí, hoặc dùng các nút sắp xếp tự động theo Bloom & Khung chương trình.
+              Kéo thả thẻ câu hỏi / chùm đọc hiểu để đổi vị trí, hoặc dùng các nút sắp xếp tự động theo Độ khó & Khung chương trình.
             </p>
           </div>
 
@@ -124,13 +124,13 @@ export default function ExamOrganizerTab({
               onClick={() =>
                 runTransform(
                   (cur) => sortExamByBloom(cur, true),
-                  'Đã sắp xếp toàn bộ đề theo độ khó Bloom tăng dần (L1 → L6).'
+                  'Đã sắp xếp toàn bộ đề theo độ khó tăng dần.'
                 )
               }
               className="px-3 py-1.5 rounded-xl border border-emerald-200 bg-emerald-50/70 hover:bg-emerald-100 text-emerald-900 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
             >
               <TrendingUp className="w-3.5 h-3.5" />
-              <span>Xếp theo Bloom (L1 → L6)</span>
+              <span>Xếp theo Độ khó</span>
             </button>
 
             <button
@@ -297,7 +297,7 @@ export default function ExamOrganizerTab({
                                 Câu {q.questionNumber}
                               </span>
                               <span className={`px-1.5 py-0.2 rounded text-[10px] font-bold border shrink-0 ${bloom.chipClass}`}>
-                                {bloom.code}
+                                {bloom.name}
                               </span>
                               <span className="text-xs text-slate-700 truncate">{q.content}</span>
                             </div>
@@ -400,7 +400,7 @@ export default function ExamOrganizerTab({
                     Câu {q.questionNumber}
                   </span>
                   <span className={`px-2 py-0.5 rounded-md text-[10.5px] font-bold border shrink-0 ${bloom.chipClass}`}>
-                    {bloom.code} · {bloom.name}
+                    {bloom.name}
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="text-xs font-semibold text-slate-800 truncate">

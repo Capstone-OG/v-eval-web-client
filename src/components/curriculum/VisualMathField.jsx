@@ -65,12 +65,42 @@ const VisualMathField = forwardRef(function VisualMathField(
       requestAnimationFrame(() => {
         try {
           mf.focus();
-          mf.executeCommand('moveToMathfieldEnd');
+          setTimeout(() => {
+            try {
+              mf.executeCommand('moveToMathfieldEnd');
+            } catch {
+              // ignore
+            }
+          }, 0);
         } catch {
           // ignore
         }
       });
     }
+
+    // Chặn hành vi mặc định của MathLive tự động bôi xanh 100% nội dung khi focus
+    const handleFocus = () => {
+      setTimeout(() => {
+        try {
+          const last = mf.lastOffset ?? 0;
+          const ranges = mf.selection?.ranges;
+          if (
+            last > 0 &&
+            Array.isArray(ranges) &&
+            ranges.length === 1 &&
+            ((ranges[0][0] === 0 && ranges[0][1] === last) || (ranges[0][0] === last && ranges[0][1] === 0))
+          ) {
+            mf.executeCommand('moveToMathfieldEnd');
+          }
+        } catch {
+          // ignore
+        }
+      }, 0);
+    };
+    mf.addEventListener('focus', handleFocus);
+    return () => {
+      mf.removeEventListener('focus', handleFocus);
+    };
   }, [autoFocus]);
 
   useEffect(() => {
@@ -164,6 +194,8 @@ const VisualMathField = forwardRef(function VisualMathField(
           outline: 'none',
           '--caret-color': '#4F46E5',
           '--selection-background-color': 'rgba(79, 70, 229, 0.16)',
+        '--contains-highlight-background-color': 'transparent',
+        '--text-highlight-background-color': 'transparent',
           '--contains-highlight-background-color': 'rgba(79, 70, 229, 0.06)'
         }}
       />

@@ -1,5 +1,19 @@
 # NHẬT KÝ TIẾN ĐỘ HẰNG NGÀY (DAILY LOG) - V-EVAL WEB CLIENT
 
+## [25/11/2026] - Hoàn Thiện Studio Soạn Thảo, MathLab 2D/3D, Phân Trang & Tối Ưu Egress
+
+- **Cache & In-Flight Request Deduplication (`contentService.js`, `practiceService.js`)**:
+  - Thêm cache bộ nhớ 15 phút + gộp Promise đang chạy cho `getCurriculum()` / `getSkillsTree()` và cache 30 giây cho `getMyRoadmap()` / `getStudentDashboard()`.
+- **Cải Tiến Kho Đề, Xem Đề & Studio Soạn Thảo (`ExamPaperView.jsx`, `ExamWorkspaceHeader.jsx`, `CurriculumStudioEditor.jsx`, `WordStyleFormulaCanvas.jsx`, `VisualMathField.jsx`, `HierarchicalMathPalette.jsx`, `InteractiveFormulaBuilderModal.jsx`)**:
+  - Phân trang số gọn 1 hàng dưới cùng có nhập trực tiếp số trang + nút cuộn nhanh góc dưới phải.
+  - Thay nút Công thức thành **Bàn phím soạn thảo** chèn trực tiếp tại vị trí con trỏ; hiển thị trạng thái `active` cho `B/I/U/S`/căn lề/danh sách; tắt tự động bôi xanh 100% khi focus MathLive và giải nén `\text{...}` tiếng Việt thuần; đồng bộ chiều cao 3 cột và thứ tự `z-index` sticky.
+  - Dọn gọn bảng `Mô hình STEM` và giữ duy nhất `Bảng biến thiên` + `Đồ thị Oxy` trong modal dựng bảng.
+- **Thiết Kế Lại Phòng Dựng Hình 2D/3D (`InteractiveMathWorkbenchModal.jsx`, `mathGraphUtils.js`, `InteractiveMathRenderer.jsx`)**:
+  - Render 100% KaTeX (không lộ text thô), MUI `Select`, tổ chức tab con tùy biến đầy đủ kích thước/góc xoay/hệ số, cho phép sửa trực tiếp nhãn điểm phụ và bổ sung công cụ 1-click hạ đường vuông góc 3D kèm ký hiệu góc vuông.
+- **Kiểm Thử**: `npm run build` đạt 0 lỗi (`4271 modules transformed`, 1.74s).
+
+---
+
 ## [24/11/2026] - Phân Quyền & Giới Hạn Phạm Vi Kiểm Duyệt Gia Sư AI Cấp Lớp Cho Giảng Viên (AiTutorModerationView)
 
 - **Giới Hạn Phạm Vi Dữ Liệu Theo Lớp Phụ Trách & Học Sinh Của Lớp (`AiTutorModerationView.jsx`, `aiTutorScoping.js`)**:

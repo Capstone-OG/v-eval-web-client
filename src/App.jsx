@@ -157,9 +157,9 @@ const ROLE_PORTAL_DEFINITIONS = {
       { id: 'textbook-standard', label: '1. Sách Giáo Khoa Chuẩn', icon: BookOpen },
       { id: 'textbook-ingest', label: '2. Nạp Tài Liệu SGK', icon: BookOpenCheck },
       { id: 'textbook-studio', label: '3. Studio Biên Soạn SGK', icon: BookOpenCheck },
-      { id: 'exam-bank', label: '1. Kho Đề & Xem Đề Thi', icon: FileSpreadsheet },
-      { id: 'exam-ingest', label: '2. Parse PDF & AI Bloom', icon: Sparkles },
-      { id: 'exam-studio', label: '3. Studio Biên Soạn Đề', icon: FileSpreadsheet },
+      { id: 'exam-bank', label: 'Kho Đề', icon: FileSpreadsheet },
+      { id: 'exam-ingest', label: 'Phân Tích Đề', icon: Sparkles },
+      { id: 'exam-studio', label: 'Studio Biên Soạn', icon: FileSpreadsheet },
       { id: 'ai_moderation', label: 'Kiểm duyệt Câu hỏi & Gia sư AI', icon: Bot },
       { id: 'teacher_heatmap', label: 'Giám sát Ma trận Lớp học', icon: LayoutGrid },
       { id: 'provision', label: 'Cấp phát Tài khoản', icon: UserPlus },
@@ -221,9 +221,14 @@ export default function App() {
     return defaultTab;
   });
 
-  // Tự động thu gọn sidebar khi vào các màn hình Studio để tối đa không gian soạn thảo
+  // Tự động thu gọn sidebar khi vào Kho Đề / Phân Tích Đề / Studio để tối đa không gian làm việc
   useEffect(() => {
-    if (activeTab === 'exam-studio' || activeTab === 'textbook-studio') {
+    if (
+      activeTab === 'exam-bank' ||
+      activeTab === 'exam-ingest' ||
+      activeTab === 'exam-studio' ||
+      activeTab === 'textbook-studio'
+    ) {
       setIsSidebarCollapsed(true);
     }
   }, [activeTab]);

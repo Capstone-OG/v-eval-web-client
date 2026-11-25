@@ -293,28 +293,27 @@ export default function Sidebar({
                 },
                 {
                   id: 'exam-group',
-                  label: 'Đề thi & AI Bloom',
-                  sublabel: 'Kho đề, Parse & Studio',
+                  label: 'Kho Đề Thi',
+                  sublabel: 'Kho đề, Phân tích & Studio',
                   icon: FileSpreadsheet,
                   iconColor: 'from-indigo-500 to-blue-700',
                   children: [
                     {
                       id: 'exam-bank',
-                      label: '1. Kho Đề & Xem Đề Thi',
+                      label: '1. Kho Đề',
                       badge: 'Kho Đề',
                       active: activeTab === 'exam-bank',
                       onClick: () => setActiveTab('exam-bank')
                     },
                     {
                       id: 'exam-ingest',
-                      label: '2. Parse PDF & AI Bloom',
-                      badge: '2 Phần',
+                      label: '2. Phân Tích Đề',
                       active: activeTab === 'exam-ingest',
                       onClick: () => setActiveTab('exam-ingest')
                     },
                     {
                       id: 'exam-studio',
-                      label: '3. Studio Biên Soạn Đề',
+                      label: '3. Studio Biên Soạn',
                       badge: 'Studio',
                       active: activeTab === 'exam-studio',
                       onClick: () => setActiveTab('exam-studio')
