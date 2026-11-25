@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { MenuItem, Select } from '@mui/material';
 import {
   FileSpreadsheet,
   Search,
@@ -16,7 +17,9 @@ import {
   Award,
   RotateCcw,
   FileText,
-  Clock
+  Clock,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import ExamRichContent from './ExamRichContent';
 import { ExamFigureBox } from './ExamMediaLightbox';
@@ -27,6 +30,7 @@ import {
 import { BLOOM_LEVEL_DETAILS } from '../../utils/examOrganizerUtils';
 
 const OPTION_KEYS = ['A', 'B', 'C', 'D'];
+const QUESTIONS_PER_PAGE = 5;
 
 /**
  * ExamPaperView — Scholarly Print-Ready Exam Paper View + Sticky Navigator + Quick Practice Grading
@@ -62,10 +66,71 @@ export default function ExamPaperView({
   const [practiceMode, setPracticeMode] = useState(false);
   const [pickedAnswers, setPickedAnswers] = useState({});
   const [gradedResult, setGradedResult] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const { stats, questionMap, passageQuestionNumbers, allQuestions } = orderedView;
   const categoryLabel =
     EXAM_CATEGORY_OPTIONS.find((c) => c.value === exam.examCategory)?.label || exam.examCategory;
+
+  // Danh sách câu hỏi phẳng sau khi lọc để phân trang cố định 5 câu / trang
+  const filteredFlatQuestions = useMemo(() => {
+    const out = [];
+    for (const item of filteredItems || []) {
+      if (item.type === 'passage') {
+        for (const q of item.data?.questions || []) out.push(q);
+      } else if (item.data) {
+        out.push(item.data);
+      }
+    }
+    return out;
+  }, [filteredItems]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredFlatQuestions.length / QUESTIONS_PER_PAGE));
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [exam?.examId, exam?.title, searchQuery, matrixFilter, chapterFilter]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) setCurrentPage(totalPages);
+  }, [currentPage, totalPages]);
+
+  const pageStartIdx = (currentPage - 1) * QUESTIONS_PER_PAGE;
+  const pageQuestions = useMemo(
+    () => filteredFlatQuestions.slice(pageStartIdx, pageStartIdx + QUESTIONS_PER_PAGE),
+    [filteredFlatQuestions, pageStartIdx]
+  );
+
+  const paginatedItems = useMemo(() => {
+    const pageIds = new Set(pageQuestions.map((q) => q.localId));
+    const result = [];
+    for (const item of filteredItems || []) {
+      if (item.type === 'passage') {
+        const subQs = (item.data?.questions || []).filter((q) => pageIds.has(q.localId));
+        if (subQs.length > 0) {
+          result.push({ type: 'passage', data: { ...item.data, questions: subQs } });
+        }
+      } else if (item.data && pageIds.has(item.data.localId)) {
+        result.push(item);
+      }
+    }
+    return result;
+  }, [filteredItems, pageQuestions]);
+
+  const handleMatrixJumpWithPagination = (num) => {
+    const idx = filteredFlatQuestions.findIndex((q) => Number(q.questionNumber) === Number(num));
+    if (idx >= 0) {
+      const targetPage = Math.floor(idx / QUESTIONS_PER_PAGE) + 1;
+      if (targetPage !== currentPage) {
+        setCurrentPage(targetPage);
+        setTimeout(() => {
+          document.getElementById(`exam-q-${num}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 80);
+        return;
+      }
+    }
+    onJumpToQuestion?.(num);
+  };
 
   const handleTogglePractice = () => {
     setPracticeMode((prev) => {
@@ -141,7 +206,7 @@ export default function ExamPaperView({
             {showMetadataTags && (
               <>
                 <span className={`px-2 py-0.5 rounded-md text-[10.5px] font-bold border ${bloom.chipClass}`}>
-                  {bloom.code} · {bloom.name}
+                  {bloom.name}
                 </span>
 
                 {(() => {
@@ -327,8 +392,83 @@ export default function ExamPaperView({
     );
   };
 
+  const renderPaginationBar = () => {
+    if (filteredFlatQuestions.length <= QUESTIONS_PER_PAGE) return null;
+    const firstNum = pageQuestions[0]?.questionNumber ?? pageStartIdx + 1;
+    const lastNum = pageQuestions[pageQuestions.length - 1]?.questionNumber ?? pageStartIdx + pageQuestions.length;
+
+    return (
+      <div className="flex flex-wrap items-center justify-between gap-2 py-2 px-3 rounded-xl bg-[#FAF9F6] border border-[#E7E5DF] print:hidden">
+        <div className="text-xs font-bold text-slate-600">
+          Hiển thị <span className="text-[#1E3A5F]">Câu {firstNum}–{lastNum}</span> / {filteredFlatQuestions.length} câu (Trang {currentPage}/{totalPages})
+        </div>
+        <div className="flex items-center gap-1 flex-wrap">
+          <button
+            type="button"
+            disabled={currentPage <= 1}
+            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+            className="px-2.5 py-1 rounded-lg border border-[#DCD9D0] bg-white hover:bg-[#EEF2F7] text-xs font-bold text-slate-700 disabled:opacity-40 flex items-center gap-1 cursor-pointer"
+          >
+            <ChevronLeft className="w-3.5 h-3.5" />
+            <span>Trước</span>
+          </button>
+
+          {Array.from({ length: totalPages }, (_, idx) => {
+            const p = idx + 1;
+            const slice = filteredFlatQuestions.slice(idx * QUESTIONS_PER_PAGE, (idx + 1) * QUESTIONS_PER_PAGE);
+            const startN = slice[0]?.questionNumber ?? idx * QUESTIONS_PER_PAGE + 1;
+            const endN = slice[slice.length - 1]?.questionNumber ?? startN;
+            const active = p === currentPage;
+            return (
+              <button
+                key={p}
+                type="button"
+                onClick={() => setCurrentPage(p)}
+                className={`px-2.5 py-1 rounded-lg border text-xs font-bold cursor-pointer transition-colors ${
+                  active
+                    ? 'bg-[#1E3A5F] border-[#1E3A5F] text-white'
+                    : 'bg-white border-[#DCD9D0] text-slate-700 hover:bg-[#EEF2F7]'
+                }`}
+              >
+                {startN === endN ? `Câu ${startN}` : `Câu ${startN}–${endN}`}
+              </button>
+            );
+          })}
+
+          <button
+            type="button"
+            disabled={currentPage >= totalPages}
+            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+            className="px-2.5 py-1 rounded-lg border border-[#DCD9D0] bg-white hover:bg-[#EEF2F7] text-xs font-bold text-slate-700 disabled:opacity-40 flex items-center gap-1 cursor-pointer"
+          >
+            <span>Sau</span>
+            <ChevronRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </div>
+    );
+  };
+
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+    <div className="space-y-4">
+      {/* Tách riêng phần tiêu đề đề thi lên trên cùng (không gộp chung trong khung phân trang câu hỏi) */}
+      <div className="rounded-2xl border border-[#E7E5DF] bg-white shadow-[0_2px_10px_rgba(15,23,42,0.03)] px-5 py-4 text-center space-y-1.5">
+        <h1 className="text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight">
+          {exam.title || 'Đề thi trắc nghiệm'}
+        </h1>
+        <div className="flex flex-wrap items-center justify-center gap-3 text-xs font-semibold text-slate-600 pt-0.5">
+          <span>Môn: <strong className="text-slate-900">{formatSubjectLabel(exam.subjectCode)}</strong></span>
+          <span>•</span>
+          <span className="inline-flex items-center gap-1">
+            <Clock className="w-3.5 h-3.5 text-[#2C4C7E]" />
+            Thời gian: <strong className="text-slate-900">{exam.durationMinutes} phút</strong>
+          </span>
+          <span>•</span>
+          <span>Tổng số: <strong className="text-slate-900">{stats.totalQuestions} câu hỏi</strong></span>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
       {/* LEFT STICKY MATRIX NAVIGATOR */}
       <aside className="lg:col-span-4 xl:col-span-3 lg:sticky lg:top-[136px] space-y-3 print:hidden">
         <div className="rounded-2xl border border-[#E7E5DF] bg-white shadow-[0_1px_4px_rgba(15,23,42,0.03)] p-4 space-y-3.5">
@@ -389,20 +529,51 @@ export default function ExamPaperView({
             ))}
           </div>
 
-          {/* Chapter Filter */}
+          {/* Chapter Filter (MUI Select) + Nút tắt lọc nhanh */}
           {blueprintStats.byChapter.length > 0 && (
-            <select
-              value={chapterFilter}
-              onChange={(e) => setChapterFilter(e.target.value)}
-              className="w-full px-2.5 py-1.5 rounded-xl border border-[#E5E3DC] bg-[#FAF9F6] text-[11px] font-bold text-[#1E3A5F] focus:outline-none focus:ring-2 focus:ring-[#2C4C7E]/20"
-            >
-              <option value="">Tất cả Chương ({blueprintStats.byChapter.length} chương)</option>
-              {blueprintStats.byChapter.map((ch) => (
-                <option key={ch.chapterKey} value={ch.chapterName}>
-                  {ch.chapterName} ({ch.count} câu)
-                </option>
-              ))}
-            </select>
+            <div className="flex items-center gap-1.5">
+              <Select
+                size="small"
+                fullWidth
+                displayEmpty
+                value={chapterFilter || ''}
+                onChange={(e) => setChapterFilter(e.target.value)}
+                sx={{
+                  height: 32,
+                  fontSize: '0.73rem',
+                  fontWeight: 700,
+                  color: '#1E3A5F',
+                  bgcolor: '#FAF9F6',
+                  borderRadius: '10px',
+                  '& .MuiOutlinedInput-notchedOutline': { borderColor: '#cbd5e1' },
+                  '& .MuiSelect-select': { py: 0.5, pl: 1.25, pr: '28px !important' }
+                }}
+                MenuProps={{
+                  PaperProps: {
+                    sx: { borderRadius: '10px', mt: 0.5, maxWidth: 340, border: '1px solid #cbd5e1', boxShadow: '0 8px 24px rgba(15,23,42,0.1)' }
+                  }
+                }}
+              >
+                <MenuItem value="" sx={{ fontSize: '0.76rem', fontWeight: 700 }}>
+                  Tất cả Chương ({blueprintStats.byChapter.length} chương)
+                </MenuItem>
+                {blueprintStats.byChapter.map((ch) => (
+                  <MenuItem key={ch.chapterKey} value={ch.chapterName} sx={{ fontSize: '0.76rem', whiteSpace: 'normal' }}>
+                    {ch.chapterName} ({ch.count} câu)
+                  </MenuItem>
+                ))}
+              </Select>
+              {chapterFilter && (
+                <button
+                  type="button"
+                  onClick={() => setChapterFilter('')}
+                  title="Tắt lọc chương"
+                  className="p-1.5 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-600 shrink-0 cursor-pointer"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
           )}
 
           {/* Question Matrix */}
@@ -423,7 +594,7 @@ export default function ExamPaperView({
                     <button
                       key={num}
                       type="button"
-                      onClick={() => onJumpToQuestion?.(num)}
+                      onClick={() => handleMatrixJumpWithPagination(num)}
                       title={
                         exists
                           ? `Câu ${num}${qObj.curriculumNode?.chapterName ? ` · ${qObj.curriculumNode.chapterName}` : ''}`
@@ -533,7 +704,7 @@ export default function ExamPaperView({
               }`}
             >
               <GitBranch className="w-3.5 h-3.5" />
-              <span>Nhãn Chương/Bloom</span>
+              <span>Nhãn Chương/Độ khó</span>
             </button>
           </div>
 
@@ -608,41 +779,77 @@ export default function ExamPaperView({
           </div>
         )}
 
-        {/* Academic Exam Paper Sheet */}
-        <div className="rounded-2xl border border-[#E7E5DF] bg-white shadow-[0_2px_12px_rgba(15,23,42,0.04)] p-5 sm:p-8 space-y-6">
-          {/* Formal Exam Paper Header */}
-          <div className="pb-5 border-b-2 border-[#1E3A5F]/15 text-center space-y-2">
-            <div className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-[#2C4C7E]">
-              HỆ THỐNG KHẢO THÍ V-EVAL · {categoryLabel}
-            </div>
-            <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
-              {exam.title || 'Đề thi trắc nghiệm'}
-            </h1>
-            <div className="flex flex-wrap items-center justify-center gap-3 text-xs font-semibold text-slate-600 pt-1">
-              <span>Môn: <strong className="text-slate-900">{formatSubjectLabel(exam.subjectCode)}</strong></span>
-              <span>•</span>
-              <span className="inline-flex items-center gap-1">
-                <Clock className="w-3.5 h-3.5 text-[#2C4C7E]" />
-                Thời gian: <strong className="text-slate-900">{exam.durationMinutes} phút</strong>
-              </span>
-              <span>•</span>
-              <span>Tổng số: <strong className="text-slate-900">{stats.totalQuestions} câu hỏi</strong></span>
-              {stats.totalPassages > 0 && (
-                <>
-                  <span>•</span>
-                  <span><strong className="text-slate-900">{stats.totalPassages}</strong> chùm đọc hiểu</span>
-                </>
+        {/* Active Filter Banner (khi lọc từ Ma Trận hoặc Bộ lọc -> có nút Tắt lọc 1 bấm) */}
+        {(chapterFilter || matrixFilter !== 'all' || searchQuery.trim()) && (
+          <div className="rounded-xl border border-indigo-200 bg-indigo-50/70 px-4 py-2.5 flex flex-wrap items-center justify-between gap-2 print:hidden">
+            <div className="flex flex-wrap items-center gap-2 text-xs font-bold text-indigo-900">
+              <span>Đang lọc đề:</span>
+              {chapterFilter && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-white border border-indigo-200 text-indigo-800">
+                  <span>Chương: {chapterFilter}</span>
+                  <button
+                    type="button"
+                    onClick={() => setChapterFilter('')}
+                    className="hover:text-rose-600 cursor-pointer"
+                    title="Bỏ lọc chương"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              )}
+              {matrixFilter !== 'all' && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-white border border-indigo-200 text-indigo-800">
+                  <span>Phân loại: {matrixFilter}</span>
+                  <button
+                    type="button"
+                    onClick={() => setMatrixFilter('all')}
+                    className="hover:text-rose-600 cursor-pointer"
+                    title="Bỏ lọc phân loại"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              )}
+              {searchQuery.trim() && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-white border border-indigo-200 text-indigo-800">
+                  <span>Từ khóa: "{searchQuery.trim()}"</span>
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    className="hover:text-rose-600 cursor-pointer"
+                    title="Xóa từ khóa"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
               )}
             </div>
+            <button
+              type="button"
+              onClick={() => {
+                setChapterFilter('');
+                setMatrixFilter('all');
+                setSearchQuery('');
+              }}
+              className="px-2.5 py-1 rounded-lg bg-white hover:bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold flex items-center gap-1 cursor-pointer"
+            >
+              <X className="w-3.5 h-3.5" />
+              <span>Tắt bộ lọc</span>
+            </button>
           </div>
+        )}
+
+        {/* Academic Exam Paper Sheet (Phân trang 5 câu / trang) */}
+        <div className="rounded-2xl border border-[#E7E5DF] bg-white shadow-[0_2px_12px_rgba(15,23,42,0.04)] p-4 sm:p-6 space-y-4">
+          {renderPaginationBar()}
 
           {/* Exam Body Items */}
-          {filteredItems.length === 0 ? (
+          {paginatedItems.length === 0 ? (
             <div className="py-14 text-center space-y-2">
               <FileText className="w-10 h-10 text-slate-300 mx-auto" />
               <div className="text-sm font-bold text-slate-600">
                 {stats.totalQuestions === 0
-                  ? 'Đề thi chưa có câu hỏi nào. Chuyển sang Tab "AI Sinh Câu (6 Mức Bloom)" hoặc bấm "Thêm câu" để bắt đầu!'
+                  ? 'Đề thi chưa có câu hỏi nào. Chuyển sang mục "Tạo Câu Hỏi" hoặc bấm "Thêm câu" để bắt đầu!'
                   : 'Không có câu hỏi nào khớp với bộ lọc hiện tại.'}
               </div>
               {(searchQuery || matrixFilter !== 'all' || chapterFilter) && (
@@ -661,7 +868,7 @@ export default function ExamPaperView({
             </div>
           ) : (
             <div className="space-y-4">
-              {filteredItems.map((item) => {
+              {paginatedItems.map((item) => {
                 if (item.type === 'passage') {
                   const p = item.data;
                   return (
@@ -715,7 +922,10 @@ export default function ExamPaperView({
               })}
             </div>
           )}
+
+          {renderPaginationBar()}
         </div>
+      </div>
       </div>
     </div>
   );

@@ -1,5 +1,14 @@
 # NHẬT KÝ TIẾN ĐỘ HẰNG NGÀY (DAILY LOG) - V-EVAL WEB CLIENT
 
+## [25/11/2026] - Tối Ưu Egress (Cache & Gộp Request API) & Hoàn Thiện UX Kho Đề / Xem Đề MUI
+
+- **Cache & In-Flight Request Deduplication ([`contentService.js`](../src/services/contentService.js), [`practiceService.js`](../src/services/practiceService.js))**:
+  - Thêm cache bộ nhớ 15 phút + gộp Promise đang chạy cho `getCurriculum()` / `getSkillsTree()` (tự động xóa cache khi gọi các API tạo/sửa/xóa câu hỏi hoặc cây tri thức).
+  - Thêm cache bộ nhớ 30 giây + gộp Promise đang chạy cho `getMyRoadmap()` và `getStudentDashboard()`, tránh gọi lặp đồng thời từ nhiều component khi chuyển tab.
+- **Cải Tiến Giao Diện Kho Đề & Xem Đề Thi**:
+  - Tách thẻ tiêu đề đề lên đầu trang, phân trang 5 câu/trang có nhảy trang theo ma trận, nút tắt bộ lọc ma trận, chuyển các dropdown sang MUI `Select` và popup đổi đề sang MUI `Dialog`, bổ sung nút Tạo lời giải AI.
+- **Kiểm Thử**: `npm run build` đạt 0 lỗi (`4271 modules transformed`, 2.18s).
+
 ## [22/11/2026] - Nâng Cấp Toàn Diện & Đồng Bộ Hóa Toàn Bộ 6 Phân Hệ Quản Trị Chuẩn Executive Dark
 
 - **Đồng Bộ Hóa Toàn Diện 100% Giao Diện Cả 6 Trang Quản Trị (`AdminWorkspace.jsx`, `AdminDashboard.jsx`, `AccountProvisioningView.jsx`)**:

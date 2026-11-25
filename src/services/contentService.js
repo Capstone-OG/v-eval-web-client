@@ -1,10 +1,19 @@
 import apiClient from './apiClient';
 
+// In-memory TTL + in-flight deduplication cache for static/semi-static curriculum catalog
+const CURRICULUM_CACHE_TTL_MS = 15 * 60 * 1000;
+let curriculumCacheEntry = { data: null, expiresAt: 0, promise: null };
+
+const invalidateCurriculumCache = () => {
+  curriculumCacheEntry = { data: null, expiresAt: 0, promise: null };
+};
+
 /**
  * Content Management Service
  * Routed through V-Eval API Gateway (:5212) -> Content Service (:5249)
  */
 export const contentService = {
+  invalidateCurriculumCache,
   /**
    * Core Flow 1 - Lấy bộ đề thi khảo sát chẩn đoán năng lực ban đầu (30 câu hỏi chuẩn V-ACT)
    * @param {string} [excludeExamId] - ID đề thi muốn bỏ qua khi làm lại đề mới
@@ -26,8 +35,8 @@ export const contentService = {
   /**
    * Core Flow 2 - Lấy toàn bộ cây kỹ năng DAG kèm trọng số (12 kỹ năng chuẩn ĐGNL)
    */
-  async getSkillsTree() {
-    return (await apiClient.get('/api/content/curriculum')).data;
+  async getSkillsTree(options = {}) {
+    return this.getCurriculum(options);
   },
 
   /**
@@ -160,7 +169,9 @@ export const contentService = {
     if (cleanPayload.correctOption !== undefined) {
       cleanPayload.correctOption = normalizeCorrectOption(cleanPayload.correctOption);
     }
-    return (await apiClient.post('/api/content/questions', cleanPayload)).data;
+    const res = (await apiClient.post('/api/content/questions', cleanPayload)).data;
+    invalidateCurriculumCache();
+    return res;
   },
 
   /**
@@ -173,7 +184,9 @@ export const contentService = {
     if (cleanPayload.correctOption !== undefined) {
       cleanPayload.correctOption = normalizeCorrectOption(cleanPayload.correctOption);
     }
-    return (await apiClient.put(`/api/content/questions/${encodeURIComponent(questionId)}`, cleanPayload)).data;
+    const res = (await apiClient.put(`/api/content/questions/${encodeURIComponent(questionId)}`, cleanPayload)).data;
+    invalidateCurriculumCache();
+    return res;
   },
 
   /**
@@ -181,14 +194,45 @@ export const contentService = {
    * @param {string} questionId 
    */
   async deleteQuestion(questionId) {
-    return (await apiClient.delete(`/api/content/questions/${encodeURIComponent(questionId)}`)).data;
+    const res = (await apiClient.delete(`/api/content/questions/${encodeURIComponent(questionId)}`)).data;
+    invalidateCurriculumCache();
+    return res;
   },
 
   /**
    * Lấy toàn bộ cây dàn kiến thức 4 miền và các kỹ năng chuẩn từ Backend Content Service (Database Dynamic)
+   * Có cache bộ nhớ 15 phút + gộp request đang chạy để tránh gọi lặp từ nhiều màn hình
    */
-  async getCurriculum() {
-    return (await apiClient.get('/api/content/curriculum')).data;
+  async getCurriculum(options = {}) {
+    const forceRefresh = Boolean(options?.forceRefresh);
+    const now = Date.now();
+
+    if (!forceRefresh) {
+      if (curriculumCacheEntry.data !== null && curriculumCacheEntry.expiresAt > now) {
+        return curriculumCacheEntry.data;
+      }
+      if (curriculumCacheEntry.promise) {
+        return curriculumCacheEntry.promise;
+      }
+    }
+
+    const promise = apiClient
+      .get('/api/content/curriculum')
+      .then((res) => {
+        curriculumCacheEntry = {
+          data: res.data,
+          expiresAt: Date.now() + CURRICULUM_CACHE_TTL_MS,
+          promise: null
+        };
+        return res.data;
+      })
+      .catch((err) => {
+        curriculumCacheEntry = { data: null, expiresAt: 0, promise: null };
+        throw err;
+      });
+
+    curriculumCacheEntry = { data: null, expiresAt: 0, promise };
+    return promise;
   },
 
   /**
@@ -198,7 +242,9 @@ export const contentService = {
    */
   async importCurriculum(payload) {
     const cleanPayload = sanitizeCurriculumPayload(payload);
-    return (await apiClient.post('/api/content/curriculum/import', cleanPayload)).data;
+    const res = (await apiClient.post('/api/content/curriculum/import', cleanPayload)).data;
+    invalidateCurriculumCache();
+    return res;
   },
 
   /**
@@ -207,7 +253,9 @@ export const contentService = {
    * @param {Object} payload 
    */
   async updatePattern(patternId, payload) {
-    return (await apiClient.put(`/api/content/curriculum/patterns/${encodeURIComponent(patternId)}`, payload)).data;
+    const res = (await apiClient.put(`/api/content/curriculum/patterns/${encodeURIComponent(patternId)}`, payload)).data;
+    invalidateCurriculumCache();
+    return res;
   },
 
   /**
@@ -216,7 +264,9 @@ export const contentService = {
    * @param {Object} payload 
    */
   async updateNode(nodeId, payload) {
-    return (await apiClient.put(`/api/content/curriculum/nodes/${encodeURIComponent(nodeId)}`, payload)).data;
+    const res = (await apiClient.put(`/api/content/curriculum/nodes/${encodeURIComponent(nodeId)}`, payload)).data;
+    invalidateCurriculumCache();
+    return res;
   },
 
   /**
@@ -224,7 +274,9 @@ export const contentService = {
    * @param {Object} payload 
    */
   async createNode(payload) {
-    return (await apiClient.post('/api/content/curriculum/nodes', payload)).data;
+    const res = (await apiClient.post('/api/content/curriculum/nodes', payload)).data;
+    invalidateCurriculumCache();
+    return res;
   },
 
   /**
@@ -232,7 +284,9 @@ export const contentService = {
    * @param {string} nodeId 
    */
   async deleteNode(nodeId) {
-    return (await apiClient.delete(`/api/content/curriculum/nodes/${encodeURIComponent(nodeId)}`)).data;
+    const res = (await apiClient.delete(`/api/content/curriculum/nodes/${encodeURIComponent(nodeId)}`)).data;
+    invalidateCurriculumCache();
+    return res;
   }
 };
 

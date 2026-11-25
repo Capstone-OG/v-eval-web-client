@@ -163,6 +163,21 @@ const buildRichSocraticFallback = ({ questionLatex, options, studentWrongOption,
 
 const HISTORY_STORAGE_KEY = 'veval_submission_history_v1';
 
+// Short-TTL + in-flight deduplication cache to stop duplicate Dashboard/Roadmap bursts
+const PRACTICE_READ_CACHE_TTL_MS = 30 * 1000;
+const roadmapReadCache = new Map(); // studentId -> { data, expiresAt, promise }
+const dashboardReadCache = new Map(); // studentId -> { data, expiresAt, promise }
+
+const invalidatePracticeReadCaches = (studentId = null) => {
+  if (studentId) {
+    roadmapReadCache.delete(String(studentId));
+    dashboardReadCache.delete(String(studentId));
+  } else {
+    roadmapReadCache.clear();
+    dashboardReadCache.clear();
+  }
+};
+
 // =========================================================================
 // Core Flow 5 Standard Seed Identifiers & Fallback Builders (Offline-Resilient)
 // =========================================================================
@@ -1745,19 +1760,55 @@ export const practiceService = {
   // Core Flow 2: Quy Hoạch Lộ Trình & Máy Trạng Thái FSM (APIs 1 - 7)
   // =========================================================================
 
-  async generateRoadmap(data) {
-    return (await apiClient.post('/api/practice/roadmaps/generate', data)).data;
+  invalidateStudentCaches(studentId = null) {
+    invalidatePracticeReadCaches(studentId);
   },
 
-  async getMyRoadmap(studentId = null) {
+  async generateRoadmap(data) {
+    const res = (await apiClient.post('/api/practice/roadmaps/generate', data)).data;
+    invalidatePracticeReadCaches(data?.studentId);
+    return res;
+  },
+
+  async getMyRoadmap(studentId = null, options = {}) {
     const resolvedStudentId =
       studentId ||
       tokenStorage.getUser()?.id ||
       tokenStorage.getUser()?.userId ||
       FLOW5_DEFAULTS.STUDENT_ID;
+    const cacheKey = String(resolvedStudentId || 'default');
+    const forceRefresh = Boolean(options?.forceRefresh);
+    const now = Date.now();
+    const entry = roadmapReadCache.get(cacheKey);
+
+    if (!forceRefresh && entry) {
+      if (entry.data !== undefined && entry.expiresAt > now) {
+        return entry.data;
+      }
+      if (entry.promise) {
+        return entry.promise;
+      }
+    }
+
     const query = resolvedStudentId ? `?studentId=${resolvedStudentId}` : '';
     const headers = resolvedStudentId ? { 'X-User-Id': resolvedStudentId } : {};
-    return (await apiClient.get(`/api/practice/roadmaps/my-roadmap${query}`, { headers })).data;
+    const promise = apiClient
+      .get(`/api/practice/roadmaps/my-roadmap${query}`, { headers })
+      .then((res) => {
+        roadmapReadCache.set(cacheKey, {
+          data: res.data,
+          expiresAt: Date.now() + PRACTICE_READ_CACHE_TTL_MS,
+          promise: null
+        });
+        return res.data;
+      })
+      .catch((err) => {
+        roadmapReadCache.delete(cacheKey);
+        throw err;
+      });
+
+    roadmapReadCache.set(cacheKey, { data: undefined, expiresAt: 0, promise });
+    return promise;
   },
 
   async getRoadmapNodeDetail(nodeId, studentId = null) {
@@ -1783,19 +1834,27 @@ export const practiceService = {
   },
 
   async submitTeacherRoadmapReview(roadmapId, payload) {
-    return (await apiClient.put(`/api/practice/roadmaps/${encodeURIComponent(roadmapId)}/teacher-review`, payload)).data;
+    const res = (await apiClient.put(`/api/practice/roadmaps/${encodeURIComponent(roadmapId)}/teacher-review`, payload)).data;
+    invalidatePracticeReadCaches();
+    return res;
   },
 
   async submitDirectorRoadmapDecision(roadmapId, payload) {
-    return (await apiClient.post(`/api/practice/roadmaps/${encodeURIComponent(roadmapId)}/director-decision`, payload)).data;
+    const res = (await apiClient.post(`/api/practice/roadmaps/${encodeURIComponent(roadmapId)}/director-decision`, payload)).data;
+    invalidatePracticeReadCaches();
+    return res;
   },
 
   async approveRoadmap(roadmapId, payload) {
     try {
-      return (await apiClient.put(`/api/v1/roadmaps/${encodeURIComponent(roadmapId)}/approve`, payload)).data;
+      const res = (await apiClient.put(`/api/v1/roadmaps/${encodeURIComponent(roadmapId)}/approve`, payload)).data;
+      invalidatePracticeReadCaches();
+      return res;
     } catch (err) {
       if (err?.status === 404) {
-        return (await apiClient.put(`/api/practice/roadmaps/${encodeURIComponent(roadmapId)}/approve`, payload)).data;
+        const res = (await apiClient.put(`/api/practice/roadmaps/${encodeURIComponent(roadmapId)}/approve`, payload)).data;
+        invalidatePracticeReadCaches();
+        return res;
       }
       throw err;
     }
@@ -2220,20 +2279,45 @@ export const practiceService = {
   // Core Flow 5: Phân Tích Học Tập, Ma Trận Nhiệt Lớp Học & Cổng Phụ Huynh
   // =========================================================================
 
-  async getStudentDashboard(studentId) {
+  async getStudentDashboard(studentId, options = {}) {
     const currentUser = tokenStorage.getUser();
     const resolvedStudentId = ensureGuid(
       studentId || currentUser?.id || currentUser?.userId,
       FLOW5_DEFAULTS.STUDENT_ID
     );
+    const cacheKey = String(resolvedStudentId);
+    const forceRefresh = Boolean(options?.forceRefresh);
+    const now = Date.now();
+    const entry = dashboardReadCache.get(cacheKey);
 
-    try {
-      const data = (await apiClient.get(`/api/practice/analytics/student/${resolvedStudentId}/dashboard`)).data;
-      return { ...data, _source: 'backend' };
-    } catch (err) {
-      console.warn('[Core Flow 5] getStudentDashboard backend error (returning clean empty state, zero mock):', err?.message);
-      return buildEmptyStudentDashboard(resolvedStudentId);
+    if (!forceRefresh && entry) {
+      if (entry.data !== undefined && entry.expiresAt > now) {
+        return entry.data;
+      }
+      if (entry.promise) {
+        return entry.promise;
+      }
     }
+
+    const promise = apiClient
+      .get(`/api/practice/analytics/student/${resolvedStudentId}/dashboard`)
+      .then((res) => {
+        const result = { ...res.data, _source: 'backend' };
+        dashboardReadCache.set(cacheKey, {
+          data: result,
+          expiresAt: Date.now() + PRACTICE_READ_CACHE_TTL_MS,
+          promise: null
+        });
+        return result;
+      })
+      .catch((err) => {
+        dashboardReadCache.delete(cacheKey);
+        console.warn('[Core Flow 5] getStudentDashboard backend error (returning clean empty state, zero mock):', err?.message);
+        return buildEmptyStudentDashboard(resolvedStudentId);
+      });
+
+    dashboardReadCache.set(cacheKey, { data: undefined, expiresAt: 0, promise });
+    return promise;
   },
 
   async getClassHeatmap(classId, { domainCode = '', minMastery = null } = {}) {
