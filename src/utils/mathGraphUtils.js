@@ -351,7 +351,9 @@ export function parseMathGraph3DTag(tagString) {
             edge: Array.isArray(p.edge) ? p.edge : (typeof p.edge === 'string' ? p.edge.split(',') : ['S', 'C']),
             ratio: p.ratio !== undefined ? Number(p.ratio) : 0.5,
             color: p.color || '#ec4899',
-            isPresetProjection: Boolean(p.isPresetProjection || p.projection)
+            isPresetProjection: Boolean(p.isPresetProjection || p.projection),
+            isPerpendicularFoot: Boolean(p.isPerpendicularFoot || p.perp),
+            fromPoint: p.fromPoint || p.from || ''
           }));
         }
         // Aux lines
@@ -450,6 +452,8 @@ export function parseMathGraph3DTag(tagString) {
               else if (pk === 'ratio') ptObj.ratio = parseFloat(pv) || 0.5;
               else if (pk === 'color') ptObj.color = pv;
               else if (pk === 'projection') ptObj.isPresetProjection = pv === 'true';
+              else if (pk === 'perp') ptObj.isPerpendicularFoot = pv === 'true';
+              else if (pk === 'from') ptObj.fromPoint = pv;
             });
             config.extraPoints.push(ptObj);
           });
@@ -551,11 +555,16 @@ export function formatMathGraph3DTag({
     .join(';');
 
   const extraPointsSummary = extraPoints.map(p => {
+    const safeName = String(p.name ?? p.id).replace(/[;:]/g, ' ').trim();
+    if (p.isPerpendicularFoot && p.fromPoint && p.edge && p.edge.length === 2) {
+      const edgeStr = p.edge.join(',');
+      return `${p.id}:name=${safeName}:edge=${edgeStr}:from=${p.fromPoint}:perp=true:ratio=${p.ratio !== undefined ? Number(p.ratio).toFixed(4) : 0.5}:color=${p.color || '#ef4444'}`;
+    }
     if (p.isPresetProjection) {
-      return `${p.id}:name=${p.name || p.id}:projection=true:color=${p.color || '#ef4444'}`;
+      return `${p.id}:name=${safeName}:projection=true:color=${p.color || '#ef4444'}`;
     }
     const edgeStr = p.edge ? p.edge.join(',') : 'S,C';
-    return `${p.id}:name=${p.name || p.id}:edge=${edgeStr}:ratio=${p.ratio !== undefined ? p.ratio : 0.5}:color=${p.color || '#ec4899'}`;
+    return `${p.id}:name=${safeName}:edge=${edgeStr}:ratio=${p.ratio !== undefined ? p.ratio : 0.5}:color=${p.color || '#ec4899'}`;
   }).join(';');
 
   const auxLinesSummary = auxLines
