@@ -25,7 +25,12 @@ import {
   CheckCircle2,
   XCircle,
   X,
-  LayoutGrid
+  LayoutGrid,
+  Table,
+  Flame,
+  BookOpen,
+  BarChart3,
+  SlidersHorizontal
 } from 'lucide-react';
 import { practiceService } from '../../services/practiceService';
 import ClassMicroGroupsModal from '../modals/ClassMicroGroupsModal';
@@ -41,6 +46,13 @@ const DOMAIN_OPTIONS = [
   { code: 'DOM_NAT_SCI', label: 'Khoa học Tự nhiên' },
   { code: 'DOM_SOC_SCI', label: 'Khoa học Xã hội' }
 ];
+
+const DOMAIN_LABELS_MAP = {
+  DOM_MATH: { label: 'Toán & Tư duy Logic', shortLabel: 'Toán & Logic', icon: '📐', bg: 'bg-blue-50 text-blue-700 border-blue-200' },
+  DOM_LANG: { label: 'Sử dụng Ngôn ngữ', shortLabel: 'Ngôn ngữ', icon: '📖', bg: 'bg-amber-50 text-amber-800 border-amber-200' },
+  DOM_NAT_SCI: { label: 'Khoa học Tự nhiên', shortLabel: 'KHTN', icon: '🔬', bg: 'bg-emerald-50 text-emerald-800 border-emerald-200' },
+  DOM_SOC_SCI: { label: 'Khoa học Xã hội', shortLabel: 'KHXH', icon: '🌍', bg: 'bg-purple-50 text-purple-800 border-purple-200' }
+};
 
 const RISK_BADGE_MAP = {
   HIGH_RISK: { label: 'Cần kèm cặp', cls: 'bg-rose-600 text-white shadow-xs' },
@@ -60,6 +72,15 @@ const formatStudentProficiency = (theta) => {
 export default function TeacherDashboardView({ currentUser, onOpenAdaptiveQuiz, initialView = 'heatmap' }) {
   // Navigation tabs inside Teacher Dashboard
   const [activeView, setActiveView] = useState(initialView || 'heatmap'); // 'heatmap' | 'warnings' | 'proctoring'
+
+  // View Format: 'table' (Ma trận nhiệt) | 'cards' (Thẻ học sinh trực quan)
+  const [viewFormat, setViewFormat] = useState('table');
+
+  // Column View Mode: 'focus' (Mặc định: Top chuyên đề yếu cần cứu trợ) | 'domain' (Gom theo 4 Miền) | 'all' (Tất cả chuyên đề)
+  const [columnViewMode, setColumnViewMode] = useState('focus');
+
+  // Domain được bung ra khi ở chế độ 'domain'
+  const [expandedDomain, setExpandedDomain] = useState(null);
 
   useEffect(() => {
     if (initialView) {
@@ -278,14 +299,87 @@ export default function TeacherDashboardView({ currentUser, onOpenAdaptiveQuiz, 
     });
   }, [heatmap?.rows, riskFilter, searchQuery]);
 
+  // 1. Top chuyên đề lớp yếu nhất cần can thiệp gấp (Focus: classAveragePlt < 0.5 hoặc Top 8 thấp nhất)
+  const focusColumns = useMemo(() => {
+    if (!columns || columns.length === 0) return [];
+    const struggling = columns.filter(
+      (c) => c.alertStatus === 'CRITICAL_RED' || c.alertStatus === 'WARNING_AMBER' || Number(c.classAveragePlt || 0) < 0.5
+    );
+    if (struggling.length > 0) {
+      return [...struggling].sort((a, b) => Number(a.classAveragePlt || 0) - Number(b.classAveragePlt || 0)).slice(0, 8);
+    }
+    return [...columns].sort((a, b) => Number(a.classAveragePlt || 0) - Number(b.classAveragePlt || 0)).slice(0, 6);
+  }, [columns]);
+
+  // 2. Gom nhóm các cột theo 4 Miền năng lực
+  const domainColumnsMap = useMemo(() => {
+    const map = {
+      DOM_MATH: { domainCode: 'DOM_MATH', label: 'Toán & Tư duy Logic', shortLabel: 'Toán & Logic', icon: '📐', columns: [], color: 'blue' },
+      DOM_LANG: { domainCode: 'DOM_LANG', label: 'Sử dụng Ngôn ngữ', shortLabel: 'Ngôn ngữ', icon: '📖', columns: [], color: 'amber' },
+      DOM_NAT_SCI: { domainCode: 'DOM_NAT_SCI', label: 'Khoa học Tự nhiên', shortLabel: 'KHTN', icon: '🔬', columns: [], color: 'emerald' },
+      DOM_SOC_SCI: { domainCode: 'DOM_SOC_SCI', label: 'Khoa học Xã hội', shortLabel: 'KHXH', icon: '🌍', columns: [], color: 'purple' },
+      OTHER: { domainCode: 'OTHER', label: 'Chuyên đề khác', shortLabel: 'Khác', icon: '📑', columns: [], color: 'slate' }
+    };
+    columns.forEach((col) => {
+      const code = col.domainCode && map[col.domainCode] ? col.domainCode : 'OTHER';
+      map[code].columns.push(col);
+    });
+    return map;
+  }, [columns]);
+
+  // 3. Danh sách cột hiệu dụng sẽ render trên bảng
+  const effectiveColumns = useMemo(() => {
+    if (columnViewMode === 'focus') {
+      return focusColumns;
+    }
+    if (columnViewMode === 'domain') {
+      if (expandedDomain && domainColumnsMap[expandedDomain]?.columns?.length > 0) {
+        return domainColumnsMap[expandedDomain].columns;
+      }
+      return focusColumns;
+    }
+    return columns; // 'all': đầy đủ toàn bộ cột
+  }, [columnViewMode, focusColumns, columns, expandedDomain, domainColumnsMap]);
+
+  // 4. Dữ liệu học sinh phong phú cho Cards View
+  const studentCardsData = useMemo(() => {
+    return filteredRows.map((row) => {
+      const cellMap = new Map((row.skillCells || []).map((c) => [c.skillId, c]));
+      const allPlts = (row.skillCells || []).map((c) => Number(c.plt || 0));
+      const avgPlt = allPlts.length > 0 ? Math.round((allPlts.reduce((a, b) => a + b, 0) / allPlts.length) * 100) : 0;
+
+      // Tìm 3 chuyên đề yếu nhất của em này (< 50% hoặc thấp nhất)
+      const weakSkills = (row.skillCells || [])
+        .map((cell) => {
+          const colInfo = columns.find((c) => c.skillId === cell.skillId);
+          return {
+            skillId: cell.skillId,
+            skillName: colInfo?.skillName || cell.skillId,
+            plt: Number(cell.plt || 0),
+            pct: Math.round(Number(cell.plt || 0) * 100)
+          };
+        })
+        .filter((s) => s.pct < 50)
+        .sort((a, b) => a.pct - b.pct)
+        .slice(0, 3);
+
+      return {
+        ...row,
+        avgPlt,
+        weakSkills,
+        cellMap
+      };
+    });
+  }, [filteredRows, columns]);
+
   const highRiskCount = (heatmap?.rows || []).filter((r) => r.riskStatus === 'HIGH_RISK').length;
   const bimodalCount = columns.filter((c) => c.isBimodal).length;
 
   return (
     <div className="space-y-6 animate-fade">
       {/* Header Info Banner */}
-      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-950 rounded-3xl p-6 lg:p-7 text-white border border-indigo-900/50 shadow-xl flex flex-col lg:flex-row lg:items-center justify-between gap-5">
-        <div className="space-y-2">
+      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-950 rounded-3xl p-5 lg:p-6 text-white border border-indigo-900/50 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="space-y-1">
           <div className="flex flex-wrap items-center gap-2">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-300 text-[11px] font-extrabold uppercase tracking-wider">
               <Sparkles className="w-3.5 h-3.5 text-blue-400" />
@@ -296,11 +390,11 @@ export default function TeacherDashboardView({ currentUser, onOpenAdaptiveQuiz, 
             </span>
           </div>
 
-          <h1 className="text-2xl lg:text-3xl font-extrabold text-white tracking-tight">
+          <h1 className="text-xl lg:text-2xl font-extrabold text-white tracking-tight">
             Theo Dõi Tiến Độ & Mức Độ Hiểu Bài Của Lớp
           </h1>
-          <p className="text-xs lg:text-sm text-indigo-100/90 max-w-2xl leading-relaxed">
-            Nắm bắt tình hình học tập của từng học sinh theo chuyên đề, nhanh chóng phát hiện các em gặp khó khăn để xếp nhóm kèm cặp và hỗ trợ kịp thời.
+          <p className="text-xs text-indigo-200/90 max-w-xl">
+            Nắm bắt tình hình học tập của từng học sinh, phát hiện nhanh các em gặp khó khăn để xếp nhóm bồi dưỡng kịp thời.
           </p>
         </div>
 
@@ -308,17 +402,17 @@ export default function TeacherDashboardView({ currentUser, onOpenAdaptiveQuiz, 
           <button
             onClick={handleForceAggregate}
             disabled={aggregating || !selectedClassId}
-            className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/20 text-white font-extrabold text-xs transition-all disabled:opacity-50 cursor-pointer"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/20 text-white font-extrabold text-xs transition-all disabled:opacity-50 cursor-pointer"
             title="Cập nhật kết quả bài làm mới nhất của học sinh"
           >
-            <RefreshCw className={`w-4 h-4 text-cyan-300 ${aggregating ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 text-cyan-300 ${aggregating ? 'animate-spin' : ''}`} />
             <span>{aggregating ? 'Đang cập nhật...' : 'Cập Nhật Dữ Liệu'}</span>
           </button>
 
           <button
             onClick={() => handleOpenMicroGroups(null)}
             disabled={!selectedClassId}
-            className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-[#FACC15] hover:bg-[#eab308] text-slate-950 font-black text-xs shadow-lg shadow-yellow-500/20 transition-all cursor-pointer disabled:opacity-50"
+            className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-[#FACC15] hover:bg-[#eab308] text-slate-950 font-black text-xs shadow-lg shadow-yellow-500/20 transition-all cursor-pointer disabled:opacity-50"
           >
             <Layers className="w-4 h-4" />
             <span>Xếp Nhóm Học Tập (3–5 Em)</span>
@@ -373,42 +467,42 @@ export default function TeacherDashboardView({ currentUser, onOpenAdaptiveQuiz, 
       {/* VIEW 1: HEATMAP & MICRO-GROUPS */}
       {activeView === 'heatmap' && (
         <>
-          {/* Quick KPI Strip */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs flex items-center justify-between">
+          {/* Quick KPI Strip: 4 ô nhỏ gọn, hiện đại */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="bg-white rounded-2xl p-3.5 px-4 border border-slate-200/80 shadow-2xs flex items-center justify-between">
               <div>
-                <div className="text-[11px] font-bold uppercase text-slate-400">Sĩ số lớp</div>
-                <div className="text-2xl font-black text-slate-900 mt-0.5">{heatmap?.totalStudents ?? 0} học sinh</div>
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Sĩ số lớp</span>
+                <div className="text-xl font-black text-slate-900 mt-0.5">{heatmap?.totalStudents ?? 0} học sinh</div>
               </div>
-              <div className="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
-                <Users className="w-5 h-5" />
+              <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                <Users className="w-4 h-4" />
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs flex items-center justify-between">
+            <div className="bg-white rounded-2xl p-3.5 px-4 border border-slate-200/80 shadow-2xs flex items-center justify-between">
               <div>
-                <div className="text-[11px] font-bold uppercase text-slate-400">Học sinh cần hỗ trợ</div>
-                <div className="text-2xl font-black text-rose-600 mt-0.5">{highRiskCount} em</div>
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Cần hỗ trợ</span>
+                <div className="text-xl font-black text-rose-600 mt-0.5">{highRiskCount} em</div>
               </div>
-              <div className="w-10 h-10 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center">
-                <AlertTriangle className="w-5 h-5" />
+              <div className="w-9 h-9 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center">
+                <AlertTriangle className="w-4 h-4" />
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs flex items-center justify-between">
+            <div className="bg-white rounded-2xl p-3.5 px-4 border border-slate-200/80 shadow-2xs flex items-center justify-between">
               <div>
-                <div className="text-[11px] font-bold uppercase text-slate-400">Chuyên đề cần củng cố</div>
-                <div className="text-2xl font-black text-indigo-600 mt-0.5">{bimodalCount} chuyên đề</div>
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Cần củng cố</span>
+                <div className="text-xl font-black text-indigo-600 mt-0.5">{bimodalCount} chuyên đề</div>
               </div>
-              <div className="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
-                <Split className="w-5 h-5" />
+              <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                <Split className="w-4 h-4" />
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs flex items-center justify-between">
+            <div className="bg-white rounded-2xl p-3.5 px-4 border border-slate-200/80 shadow-2xs flex items-center justify-between">
               <div>
-                <div className="text-[11px] font-bold uppercase text-slate-400">Cập nhật lúc</div>
-                <div className="text-sm font-extrabold text-slate-800 mt-1">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Dữ liệu lúc</span>
+                <div className="text-xs font-black text-emerald-700 mt-1">
                   {heatmap?.lastAggregatedAt
                     ? new Date(heatmap.lastAggregatedAt).toLocaleTimeString('vi-VN', {
                         hour: '2-digit',
@@ -418,83 +512,205 @@ export default function TeacherDashboardView({ currentUser, onOpenAdaptiveQuiz, 
                     : '--:--'}
                 </div>
               </div>
-              <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                <Clock className="w-5 h-5" />
+              <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                <Clock className="w-4 h-4" />
               </div>
             </div>
           </div>
 
-          {/* Compact Pedagogical Alerts Strip (Gom thành 1 nút bấm mở danh sách) */}
+          {/* Compact Pedagogical Alerts Strip (Thu gọn thành Alert Bar tinh tế) */}
           {(heatmap?.pedagogicalAlerts || []).length > 0 && (
-            <div className="p-3.5 px-4 rounded-2xl bg-rose-50/80 border border-rose-200/90 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-xl bg-rose-600 text-white flex items-center justify-center shrink-0 shadow-xs">
-                  <AlertTriangle className="w-4 h-4" />
-                </div>
-                <div>
-                  <div className="text-xs font-black text-rose-950 flex flex-wrap items-center gap-2">
-                    <span>Cảnh báo sư phạm: Phát hiện {heatmap.pedagogicalAlerts.length} chuyên đề cần bồi dưỡng</span>
-                    <span className="px-2 py-0.5 rounded-full bg-rose-200 text-rose-900 text-[10px] font-extrabold">
-                      {heatmap.pedagogicalAlerts.filter(a => a.alertLevel === 'CRITICAL_RED').length} khẩn cấp
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-rose-800/80 font-medium">
-                    Hệ thống phát hiện các chuyên đề có tỷ lệ hiểu bài thấp (chưa đạt ≥ 40%). Bấm xem danh sách để tổ chức ôn tập hoặc chia nhóm vi mô.
-                  </p>
-                </div>
+            <div className="px-4 py-2.5 rounded-2xl bg-rose-50 border border-rose-200/90 flex flex-wrap items-center justify-between gap-3 shadow-2xs">
+              <div className="flex items-center gap-2.5 text-xs">
+                <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                <span className="font-extrabold text-rose-950">
+                  Phát hiện {heatmap.pedagogicalAlerts.length} chuyên đề cần bồi dưỡng
+                </span>
+                <span className="px-2 py-0.5 rounded-full bg-rose-200 text-rose-900 text-[10px] font-black">
+                  {heatmap.pedagogicalAlerts.filter(a => a.alertLevel === 'CRITICAL_RED').length} khẩn cấp (&lt; 40%)
+                </span>
+                <span className="text-[11px] text-rose-700 hidden lg:inline">
+                  — Hệ thống đã tự động lọc các chuyên đề này vào chế độ trọng tâm bên dưới.
+                </span>
               </div>
 
               <button
                 type="button"
                 onClick={() => setIsAlertsModalOpen(true)}
-                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs shrink-0 flex items-center gap-2 transition-all shadow-xs cursor-pointer self-start sm:self-auto"
+                className="px-3 py-1 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-[11px] flex items-center gap-1.5 transition-all shadow-xs cursor-pointer ml-auto"
               >
-                <Zap className="w-3.5 h-3.5" />
-                <span>Xem danh sách chuyên đề ({heatmap.pedagogicalAlerts.length})</span>
+                <Zap className="w-3 h-3" />
+                <span>Xem danh sách ({heatmap.pedagogicalAlerts.length})</span>
               </button>
             </div>
           )}
 
           {/* Table Container */}
-          <div className="bg-white rounded-3xl p-6 border border-slate-200/80 card-shadow space-y-5">
-            {/* Toolbar */}
-            <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 pb-4 border-b border-slate-100">
-              <div>
-                <h2 className="text-lg font-extrabold text-slate-900 tracking-tight">
-                  {heatmap?.className || 'Bảng Theo Dõi Mức Độ Hiểu Bài Của Học Sinh'}
+          <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200/80 card-shadow space-y-4">
+            {/* Toolbar: Tiêu đề lớp + Bộ điều khiển chế độ hiển thị & View format */}
+            <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 pb-3 border-b border-slate-100">
+              <div className="space-y-0.5">
+                <h2 className="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
+                  <span>{heatmap?.className || 'Lớp phụ trách'}</span>
+                  <span className="text-xs font-bold text-slate-400">({filteredRows.length} học sinh)</span>
                 </h2>
                 <p className="text-xs text-slate-500">
-                  Bấm vào tên học sinh để xem chi tiết quá trình làm bài và gửi nhận xét cho em.
+                  {viewFormat === 'table'
+                    ? 'Bấm vào tên học sinh để xem chi tiết quá trình làm bài và gửi nhận xét.'
+                    : 'Theo dõi từng học sinh cùng các điểm yếu hổng kiến thức cần hỗ trợ kịp thời.'}
                 </p>
               </div>
 
-              {/* Action Buttons: Legend & Export */}
-              <div className="flex flex-wrap items-center gap-2.5">
-                <div className="flex flex-wrap items-center gap-2 mr-2">
-                  <span className="flex items-center gap-1.5 text-[11px] font-bold text-rose-700 bg-rose-50 border border-rose-200 px-2.5 py-1 rounded-lg">
-                    <span className="w-2.5 h-2.5 rounded-full bg-rose-500" /> &lt; 50% (Chưa nắm vững)
-                  </span>
-                  <span className="flex items-center gap-1.5 text-[11px] font-bold text-amber-800 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-lg">
-                    <span className="w-2.5 h-2.5 rounded-full bg-amber-500" /> 50% – 74% (Đang tiến bộ)
-                  </span>
-                  <span className="flex items-center gap-1.5 text-[11px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-lg">
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" /> ≥ 75% (Đã nắm chắc)
-                  </span>
+              {/* Action Controls Toolbar: Column View Modes & View Format & Legend */}
+              <div className="flex flex-wrap items-center gap-2">
+                {/* 1. Toggle Column Filter Mode (Chỉ hiện khi ở chế độ table) */}
+                {viewFormat === 'table' && (
+                  <div className="flex flex-wrap items-center gap-1 p-1 bg-slate-100 rounded-xl border border-slate-200">
+                    <button
+                      type="button"
+                      onClick={() => setColumnViewMode('focus')}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-black text-xs transition-all cursor-pointer ${
+                        columnViewMode === 'focus'
+                          ? 'bg-rose-600 text-white shadow-xs'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                      title="Chỉ hiển thị Top các chuyên đề lớp đang yếu nhất để tập trung bồi dưỡng"
+                    >
+                      <Flame className="w-3.5 h-3.5" />
+                      <span>Trọng tâm yếu ({focusColumns.length})</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setColumnViewMode('domain')}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-black text-xs transition-all cursor-pointer ${
+                        columnViewMode === 'domain'
+                          ? 'bg-indigo-600 text-white shadow-xs'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                      title={`Gom nhóm ${columns.length || 0} chuyên đề theo 4 Miền năng lực`}
+                    >
+                      <BookOpen className="w-3.5 h-3.5" />
+                      <span>Theo 4 Miền</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setColumnViewMode('all')}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-black text-xs transition-all cursor-pointer ${
+                        columnViewMode === 'all'
+                          ? 'bg-slate-900 text-white shadow-xs'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                      title={`Xem toàn bộ ${columns.length || 0} chuyên đề của chương trình`}
+                    >
+                      <Layers className="w-3.5 h-3.5" />
+                      <span>Tất cả ({columns.length})</span>
+                    </button>
+                  </div>
+                )}
+
+                {/* 2. Toggle View Format (Ma Trận Nhiệt vs Thẻ Học Sinh) */}
+                <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-xl border border-slate-200">
+                  <button
+                    type="button"
+                    onClick={() => setViewFormat('table')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-black text-xs transition-all cursor-pointer ${
+                      viewFormat === 'table'
+                        ? 'bg-white text-indigo-950 shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                    title="Xem dạng ma trận nhiệt truyền thống"
+                  >
+                    <Table className="w-3.5 h-3.5 text-indigo-600" />
+                    <span>Ma trận</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setViewFormat('cards')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-black text-xs transition-all cursor-pointer ${
+                      viewFormat === 'cards'
+                        ? 'bg-white text-indigo-950 shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                    title="Xem dạng thẻ học sinh trực quan"
+                  >
+                    <LayoutGrid className="w-3.5 h-3.5 text-indigo-600" />
+                    <span>Thẻ học sinh</span>
+                  </button>
                 </div>
 
+                {/* 3. Export CSV */}
                 <button
                   onClick={handleExportCSV}
-                  className="flex items-center gap-1.5 px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl transition-all cursor-pointer shadow-2xs"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl transition-all cursor-pointer shadow-2xs"
                   title="Xuất bảng dữ liệu học sinh dạng CSV/Excel"
                 >
                   <Download className="w-3.5 h-3.5" />
-                  <span>Xuất Báo Cáo (CSV)</span>
+                  <span>Xuất CSV</span>
                 </button>
               </div>
             </div>
 
+            {/* Dải hướng dẫn chế độ Domain Drill-Down */}
+            {viewFormat === 'table' && columnViewMode === 'domain' && (
+              <div className="p-3 bg-indigo-50/80 border border-indigo-100 rounded-2xl flex flex-wrap items-center justify-between gap-2.5 text-xs animate-fade">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-extrabold text-indigo-950 flex items-center gap-1.5">
+                    <BookOpen className="w-4 h-4 text-indigo-600" />
+                    Bấm vào từng miền để mở rộng chi tiết các chuyên đề con:
+                  </span>
+                  {Object.entries(domainColumnsMap).filter(([_, d]) => d.columns.length > 0).map(([domCode, d]) => {
+                    const isExpanded = expandedDomain === domCode;
+                    return (
+                      <button
+                        key={domCode}
+                        type="button"
+                        onClick={() => setExpandedDomain(isExpanded ? null : domCode)}
+                        className={`px-3 py-1.5 rounded-xl font-extrabold text-xs transition-all flex items-center gap-1.5 cursor-pointer border ${
+                          isExpanded
+                            ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
+                            : 'bg-white text-slate-700 border-slate-200 hover:border-indigo-300'
+                        }`}
+                      >
+                        <span>{d.icon}</span>
+                        <span>{d.shortLabel} ({d.columns.length})</span>
+                        <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${isExpanded ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'}`}>
+                          {isExpanded ? '▲ Thu gọn' : '▼ Mở rộng'}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Ghi chú màu sắc nhỏ gọn khi ở chế độ table */}
+            {viewFormat === 'table' && (
+              <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500 pt-1">
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <span className="flex items-center gap-1 font-bold text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-md">
+                    <span className="w-2 h-2 rounded-full bg-rose-500" /> &lt; 50% (Chưa nắm vững)
+                  </span>
+                  <span className="flex items-center gap-1 font-bold text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md">
+                    <span className="w-2 h-2 rounded-full bg-amber-500" /> 50% – 74% (Đang tiến bộ)
+                  </span>
+                  <span className="flex items-center gap-1 font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500" /> ≥ 75% (Đã nắm chắc)
+                  </span>
+                </div>
+
+                {columnViewMode === 'focus' && (
+                  <span className="text-amber-800 font-bold bg-amber-50 px-2.5 py-0.5 rounded-md border border-amber-200">
+                    🔥 Đang tập trung Top {effectiveColumns.length} chuyên đề cần bồi dưỡng nhất
+                  </span>
+                )}
+              </div>
+            )}
+
             {/* Multi-Dimensional Filter Controls */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 pt-1">
               {/* Dynamic Class Selector */}
               <div className="lg:col-span-2">
                 <label className="block text-[10px] font-extrabold uppercase text-slate-400 mb-1">
@@ -593,7 +809,7 @@ export default function TeacherDashboardView({ currentUser, onOpenAdaptiveQuiz, 
               </div>
             </div>
 
-            {/* Table */}
+            {/* DỮ LIỆU CHÍNH: BẢNG MA TRẬN HOẶC THẺ HỌC SINH */}
             {loadingHeatmap ? (
               <div className="py-16 text-center space-y-3 animate-pulse">
                 <RefreshCw className="w-7 h-7 text-indigo-600 animate-spin mx-auto" />
@@ -631,7 +847,130 @@ export default function TeacherDashboardView({ currentUser, onOpenAdaptiveQuiz, 
                   </button>
                 )}
               </div>
+            ) : viewFormat === 'cards' ? (
+              /* ĐỊNH DẠNG 1: THẺ HỌC SINH TRỰC QUAN (STUDENT CARDS) */
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-2">
+                {studentCardsData.map((st) => {
+                  const riskInfo = RISK_BADGE_MAP[st.riskStatus] || RISK_BADGE_MAP.SAFE;
+                  const isCriticalRisk = st.riskStatus === 'HIGH_RISK';
+                  const profLabel = formatStudentProficiency(st.thetaScore);
+
+                  return (
+                    <div
+                      key={st.studentId}
+                      className={`bg-white rounded-2xl p-5 border transition-all duration-200 shadow-2xs hover:shadow-md flex flex-col justify-between space-y-4 group ${
+                        isCriticalRisk
+                          ? 'border-rose-200 hover:border-rose-300 bg-gradient-to-b from-white to-rose-50/20'
+                          : 'border-slate-200/90 hover:border-indigo-300'
+                      }`}
+                    >
+                      <div className="space-y-3.5">
+                        {/* Card Header: Avatar, Name, Risk & Theta */}
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white font-black text-sm flex items-center justify-center shrink-0 shadow-xs">
+                              {String(st.studentName || 'H').charAt(0)}
+                            </div>
+                            <div className="min-w-0">
+                              <h3
+                                onClick={() => setDrillDownStudent(st)}
+                                className="font-extrabold text-slate-900 text-sm truncate hover:text-indigo-600 transition-colors cursor-pointer"
+                              >
+                                {st.studentName}
+                              </h3>
+                              <div className="flex items-center gap-1.5 mt-0.5">
+                                <span className="text-[11px] font-bold text-slate-500">Đánh giá:</span>
+                                <span className="text-[11px] font-extrabold text-indigo-700">{profLabel}</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold shrink-0 ${riskInfo.cls}`}>
+                            {riskInfo.label}
+                          </span>
+                        </div>
+
+                        {/* Overall Mastery Progress Bar */}
+                        <div className="space-y-1.5 bg-slate-50 p-3 rounded-xl border border-slate-100">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="font-bold text-slate-600">Độ hiểu bài toàn diện:</span>
+                            <strong className={`font-black text-xs ${
+                              st.avgPlt < 50 ? 'text-rose-600' : st.avgPlt < 75 ? 'text-amber-700' : 'text-emerald-700'
+                            }`}>
+                              {st.avgPlt}%
+                            </strong>
+                          </div>
+                          <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all duration-500 ${
+                                st.avgPlt < 50
+                                  ? 'bg-rose-500'
+                                  : st.avgPlt < 75
+                                  ? 'bg-amber-500'
+                                  : 'bg-emerald-500'
+                              }`}
+                              style={{ width: `${Math.max(5, st.avgPlt)}%` }}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Weak Spots / Gaps */}
+                        <div className="space-y-1.5">
+                          <div className="text-[11px] font-extrabold text-slate-600 flex items-center gap-1">
+                            <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
+                            <span>Chuyên đề cần hỗ trợ ({st.weakSkills.length}):</span>
+                          </div>
+
+                          {st.weakSkills.length === 0 ? (
+                            <p className="text-[11px] text-emerald-700 font-semibold italic bg-emerald-50/60 p-2 rounded-lg border border-emerald-100">
+                              ✓ Em đang nắm vững tốt các chuyên đề đã học.
+                            </p>
+                          ) : (
+                            <div className="flex flex-wrap gap-1.5">
+                              {st.weakSkills.map((sk) => (
+                                <span
+                                  key={sk.skillId}
+                                  title={sk.skillName}
+                                  className="px-2.5 py-1 rounded-lg text-[10.5px] font-bold bg-rose-50 border border-rose-200 text-rose-800 flex items-center gap-1.5 truncate max-w-[210px]"
+                                >
+                                  <span className="truncate">{sk.skillName}</span>
+                                  <span className="font-black text-rose-600 bg-rose-100 px-1 py-0.2 rounded text-[10px]">
+                                    {sk.pct}%
+                                  </span>
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div className="flex items-center gap-2 pt-3 border-t border-slate-100">
+                        <button
+                          type="button"
+                          onClick={() => setDrillDownStudent(st)}
+                          className="flex-1 py-2 px-3 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-extrabold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          <span>Chi tiết bài làm</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleOpenMicroGroups(st.weakSkills[0]?.skillName || null, st.weakSkills[0]?.skillId || null, [st.studentId])}
+                          className="py-2 px-3 rounded-xl bg-[#FACC15] hover:bg-[#eab308] text-slate-950 font-black text-xs transition-all flex items-center justify-center gap-1 cursor-pointer shadow-xs"
+                          title="Xếp nhóm bồi dưỡng riêng cho em này"
+                        >
+                          <Zap className="w-3.5 h-3.5" />
+                          <span>Kèm cặp</span>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             ) : (
+              /* ĐỊNH DẠNG 2: BẢNG MA TRẬN NHIỆT (HEATMAP TABLE VỚI CỘT HIỆU DỤNG GỌN GÀNG) */
               <div className="overflow-x-auto rounded-2xl border border-slate-200/80">
                 <table className="w-full text-left text-xs border-collapse">
                   <thead>
@@ -639,7 +978,7 @@ export default function TeacherDashboardView({ currentUser, onOpenAdaptiveQuiz, 
                       <th className="p-3.5 font-extrabold min-w-[200px] sticky left-0 bg-slate-50 z-10">
                         Học sinh
                       </th>
-                      {columns.map((col) => {
+                      {effectiveColumns.map((col) => {
                         const avgPct = Math.round(Number(col.classAveragePlt || 0) * 100);
                         const colPill =
                           col.alertStatus === 'CRITICAL_RED'
@@ -702,7 +1041,7 @@ export default function TeacherDashboardView({ currentUser, onOpenAdaptiveQuiz, 
                             </div>
                           </td>
 
-                          {columns.map((col) => {
+                          {effectiveColumns.map((col) => {
                             const cell = cellMap.get(col.skillId);
                             const plt = Number(cell?.plt ?? 0);
                             const pct = Math.round(plt * 100);

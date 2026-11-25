@@ -1,20 +1,23 @@
 # UPDATE LOG — V-Eval Web Client
 
-## [24/11/2026] Phân quyền phạm vi Gia sư AI theo lớp phụ trách, UI/UX MUI, Full Studio & MathLive WYSIWYG
-- **Kiểm duyệt Gia sư AI phân quyền theo lớp phụ trách (`AiTutorModerationView.jsx`, `aiTutorScoping.js`)**:
-  - Giới hạn phạm vi hiển thị đàm thoại Gia sư AI bị báo cáo strictly theo lớp và danh sách học sinh phụ trách (`practiceService.getClasses({ teacherId })` & `getClassHeatmap(classId)`).
-  - Loại bỏ hoàn toàn tùy chọn "Tất cả lớp" đối với Giảng viên, đồng bộ toàn bộ bộ đếm KPI, dải chip trạng thái và danh sách đàm thoại theo lớp học thực tế.
-  - Tách rời tính năng Xét duyệt câu hỏi khảo thí bị gắn cờ (`FlaggedQuestionsReviewPanel`), ẩn thanh chuyển chế độ khỏi Giảng viên để chỉ phục vụ Giám đốc Học thuật.
-  - Bổ sung `tests/aiTutorScoping.test.js` kiểm thử độc lập 5 kịch bản phân quyền, đảm bảo 114/114 unit tests pass 100%.
-- **MUI & 10 hạng mục Feedback**:
-  - Tích hợp `@mui/material` (`src/theme/muiTheme.js`, `GlobalToastContainer.jsx`), thiết kế lại `DiagnosticResultSummary.jsx` & `DiagnosticSkillOverviewCard.jsx`, bỏ thuật ngữ kỹ thuật (`IRT`, `BKT`, `BR-03`, `Bloom`).
-  - Mở khóa chặng `Đã nắm vững`, chế độ Xem lại toàn bộ PLAR, lưu & khôi phục trạng thái Preview theo DB (`previewSubmissionJson`), giữ nguyên trang/chặng khi F5 (`sessionStorage`), và kiểm tra chi tiết từng trường hồ sơ học sinh (`AccountSettingsPage.jsx`).
-  - Sổ tay lỗi sai ôn theo từng dạng (`MistakeNotebookSM2View.jsx`), xem đáp án chia cụm 7 câu (`AttemptAnswerReviewList.jsx`), Camera giám sát thi thử (`MockAssessmentPage.jsx`), Sổ tay Gia sư AI kéo-thả (`AISocraticTutorModal.jsx`), và 3 cổng Non-Blocking Roadmap Approval.
-- **Kiểm duyệt câu hỏi lỗi & đồng bộ DB**:
-  - Kết nối `questionFlagStore.js` và `FlaggedQuestionsReviewPanel.jsx` với API DB `/flag`, `/unflag`, `/flagged`, dọn log mồ côi khi câu đã xóa và mở thẳng `CurriculumStudioEditor` (Full Studio) để sửa câu bị báo cáo.
-- **Tinh giản giao diện & Full Studio + MathLive WYSIWYG**:
-  - `Sidebar.jsx`, `AccountNavbar.jsx`, `App.jsx`: Icon sidebar trơn không nền khi thu gọn (ẩn khi mở rộng), bỏ nền màu icon Navbar, bỏ thanh footer toàn trang, tự động thu gọn sidebar khi vào `exam-studio` / `textbook-studio`.
-  - `CurriculumExplorerView.jsx` & `UnifiedNodeDetailView.jsx`: Rút gọn hàng bài học (icon sách xanh/xám biểu trưng SGK, hover chạy ngang tên bài), cột xem bài học bên phải full-view không cuộn lồng (`borderRadius: 10px`), bỏ nhãn Bloom & mở mặc định khối Lý thuyết trọng tâm.
-  - `ExamStudioView.jsx`, `ExamQuestionStudioTab.jsx`, `WordStyleFormulaCanvas.jsx`, `VisualMathField.jsx`: Vào thẳng Full Studio kèm thanh chuyển câu nhanh; cài đặt `mathlive` sửa trực tiếp trên công thức WYSIWYG ở thanh công thức cố định không che chữ, sửa regex nhận diện nhầm phương trình dài thành chỉ số, tắt spellcheck tiếng Việt, đồng bộ màu bàn phím MathLive và thêm nút đóng bàn phím nổi.
-- **Đồng bộ từ `develop`**: Phân quyền 3 cấp phê duyệt lộ trình (`RoadmapApprovalStudioView.jsx`), lọc thời khóa biểu theo lớp/học kỳ thực tế (`StudentScheduleView.jsx`, `TeacherScheduleView.jsx`), và hiển thị trường hồ sơ theo vai trò (`AccountSettingsPage.jsx`).
-- **Kiểm thử**: `114/114 unit tests pass` (0 fail), `npm run build` (`vite build`) thành công 100% trong 1.65s (0 errors).
+## [24/11/2026] Thanh lọc toàn diện dữ liệu hardcode phân hệ Giảng viên (100% Real Data), Tinh gọn Dashboard & Sư phạm hóa Gia sư AI
+- **Thanh lọc triệt để 100% dữ liệu hardcode và fallback tĩnh trong toàn bộ phân hệ Giảng viên (Teacher Role)**:
+  - **`TeacherDashboardView.jsx`**: Thay thế các chuỗi tooltip gán cứng số 66 chuyên đề bằng số lượng chuyên đề thực tế động: `${columns.length || 0}`.
+  - **`AiTutorModerationView.jsx`**: Xóa bỏ fallback gán cứng `'class_01'` (`class_id: item.class_id || item.classId || null`) tránh rò rỉ đàm thoại vào lớp đầu tiên; xóa bỏ các mã kỹ thuật tiếng Anh giả lập `'PAT_DEFAULT'` và `'TRAP_LOGIC'`; ẩn hoàn toàn thẻ bẫy khi câu hỏi thực tế chưa được phân loại bẫy tư duy.
+  - **`TeacherScheduleView.jsx`**: Xóa bỏ fallback phòng học cứng `'Phòng phụ đạo P.204'` và `'Phòng P.204'`; hiển thị trung thực `'Chưa xếp phòng'` hoặc `'Trực tuyến'` khi cơ sở chưa phân bổ phòng.
+  - **`ClassMicroGroupsModal.jsx`**: Xóa bỏ phòng học mặc định `'Phòng phụ đạo vi mô P.204'`; tự động liên kết với phòng học thực tế của lớp (`classData?.room`).
+  - **`EarlyWarningsMentorPanel.jsx`**: Xóa bỏ địa điểm và điểm mục tiêu đề xuất cứng 850; tự động đề xuất dựa trên điểm mục tiêu thực tế của học sinh (`alert.targetScore` hoặc `alert.currentPredictedScore`).
+  - **`TeacherSubmissionHistoryView.jsx`**: Xóa bỏ fallback tên lớp tĩnh `'Lớp nền tảng'` và điểm giả lập 780; hiển thị trung thực `'Lớp phụ trách'` và điểm số thực từ bài làm (`f.score ?? f.rawScore`).
+  - **`RoadmapApprovalStudioView.jsx`**: Khởi tạo điểm mục tiêu theo dữ liệu lộ trình thực tế của học sinh (`data?.targetScore`), loại bỏ hoàn toàn số 850 tĩnh.
+  - **`AccountSettingsPage.jsx`**: Thay thế toàn bộ các tham chiếu tĩnh từ `mockUser` trong bản xem trước Học bạ điện tử bằng thông tin tài khoản thực tế (`currentUser`).
+- **Tối ưu hóa Bảng điều khiển Giảng viên (`TeacherDashboardView.jsx`)**:
+  - Thu gọn tầng trên thành **Compact Executive Header** và **Quick Stats Strip** 4 ô; thu gọn cảnh báo đỏ thành Alert Bar thanh lịch.
+  - Bộ lọc chuyên đề thông minh chống cuộn ngang 66 cột: Mặc định chế độ **`🔥 Trọng tâm bồi dưỡng`** (Top 8 chuyên đề yếu nhất), chế độ **`🌐 4 Miền Năng Lực`** và chế độ **`📋 Tất cả`**.
+  - Bổ sung chế độ xem **Thẻ Học Sinh Trực Quan (`viewFormat === 'cards'`)** kèm nút 1-chạm `[Kèm cặp]` và `[Chi tiết bài làm]`.
+- **Sư phạm hóa giao diện Kiểm duyệt Gia sư AI cho Giảng viên (`AiTutorModerationView.jsx`)**:
+  - Dọn sạch 100% thuật ngữ kỹ thuật, tinh giản mạng lưới KPI còn 3 thẻ sư phạm thuần Việt cho Giảng viên; giữ nguyên 100% giao diện kỹ thuật cho Giám đốc Học thuật (`isDirector === true`).
+  - Phân quyền giới hạn phạm vi đàm thoại strictly theo lớp và học sinh phụ trách; ẩn tab "Toàn bộ" và ẩn hoàn toàn panel xét duyệt câu hỏi bị gắn cờ khỏi Giảng viên.
+- **Tối ưu hóa Vite Dev Server (`vite.config.js`)**: Loại bỏ `optimizeDeps.include` thủ công, triệt tiêu lỗi quét dependency scan trên Vite 8, đảm bảo HMR và reload tức thì.
+- **Kiểm thử & Biên dịch**:
+  - 115/115 unit tests pass 100% (`pass 115, fail 0`).
+  - `npm run build` (`vite build`) hoàn thành thành công trong 1.59s (0 errors).

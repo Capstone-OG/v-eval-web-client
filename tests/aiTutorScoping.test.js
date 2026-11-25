@@ -65,8 +65,33 @@ test('teacher role scopes strictly to their assigned class and does not leak oth
     teacherClasses: [{ id: 'cls-1', name: 'Lớp 12A1' }]
   });
 
-  assert.equal(result.length, 2);
-  assert.deepEqual(result.map(i => i.id), ['int-1', 'int-2']);
+  // Only reported interaction int-1 is returned; int-2 is unreported so it is hidden
+  assert.equal(result.length, 1);
+  assert.deepEqual(result.map(i => i.id), ['int-1']);
+});
+
+test('teacher role never sees unreported normal student chats while director sees all', () => {
+  const classInteractions = [
+    { id: 'rep-1', class_id: 'cls-1', student_reported: true },
+    { id: 'norm-1', class_id: 'cls-1', student_reported: false },
+    { id: 'norm-2', class_id: 'cls-1', student_reported: false }
+  ];
+  const teacherResult = scopeInteractions({
+    interactions: classInteractions,
+    isTeacher: true,
+    selectedClassId: 'cls-1',
+    teacherClasses: [{ id: 'cls-1', name: 'Lớp 12A1' }]
+  });
+  assert.equal(teacherResult.length, 1);
+  assert.equal(teacherResult[0].id, 'rep-1');
+
+  // Academic Director retains full audit visibility across all chats
+  const directorResult = scopeInteractions({
+    interactions: classInteractions,
+    isTeacher: false,
+    selectedClassId: 'cls-1'
+  });
+  assert.equal(directorResult.length, 3);
 });
 
 test('teacher role matches interactions by class student roster', () => {
@@ -75,13 +100,15 @@ test('teacher role matches interactions by class student roster', () => {
       id: 'int-gen-1',
       student_id: 'std-class-1-a',
       class_id: 'unknown_class',
-      class_name: 'Lớp phụ trách'
+      class_name: 'Lớp phụ trách',
+      student_reported: true
     },
     {
       id: 'int-gen-2',
       student_id: 'std-other-student',
       class_id: 'unknown_class',
-      class_name: 'Lớp phụ trách'
+      class_name: 'Lớp phụ trách',
+      student_reported: true
     }
   ];
 

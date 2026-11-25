@@ -1,19 +1,93 @@
 # NHẬT KÝ TIẾN ĐỘ HẰNG NGÀY (DAILY LOG) - V-EVAL WEB CLIENT
 
+## [24/11/2026] - Loại Bỏ Triệt Để Dữ Liệu Hardcode & Fallback Giả Lập Trên Toàn Bộ Giao Diện Giảng Viên (Teacher Role 100% Real Data)
+
+- **Thanh Lọc Toàn Diện Dữ Liệu Hardcode & Fallback Giả Lập Trong Phân Hệ Giảng Viên**:
+  - **`TeacherDashboardView.jsx`**: Thay thế toàn bộ chuỗi hardcode số 66 chuyên đề (`title="Gom nhóm 66 chuyên đề..."`, `title="Xem toàn bộ 66 chuyên đề..."`) bằng giá trị số lượng chuyên đề thực tế động: `${columns.length || 0}`.
+  - **`AiTutorModerationView.jsx`**:
+    - Xóa bỏ fallback gán cứng `'class_01'` (`class_id: item.class_id || item.classId || null`) để ngăn chặn việc gom nhầm các đàm thoại chưa định danh vào lớp đầu tiên.
+    - Xóa bỏ hoàn toàn các mã kỹ thuật tiếng Anh giả lập (`'PAT_DEFAULT'`, `'TRAP_LOGIC'`). Khi dữ liệu câu hỏi từ CSDL chưa có bẫy tư duy, `trap_code` được giữ `null` và hệ thống tự động ẩn thẻ bẫy thay vì hiển thị nhãn giả.
+  - **`TeacherScheduleView.jsx`**: Xóa bỏ phòng học fallback cứng `'Phòng phụ đạo P.204'` và `'Phòng P.204'`. Khi một buổi học hoặc nhóm phụ đạo chưa được xếp phòng, giao diện hiển thị trung thực là `'Chưa xếp phòng'` hoặc `'Trực tuyến'`.
+  - **`ClassMicroGroupsModal.jsx`**: Xóa bỏ phòng phụ đạo mặc định `'Phòng phụ đạo vi mô P.204'`. Thay bằng phòng học thực tế của lớp (`classData?.room || 'Phòng học của lớp'`).
+  - **`EarlyWarningsMentorPanel.jsx`**: Xóa bỏ địa điểm và điểm mục tiêu đề xuất tĩnh (`850`). Tự động khởi tạo theo điểm mục tiêu thực tế của học sinh (`alert.targetScore` hoặc `alert.currentPredictedScore`).
+  - **`TeacherSubmissionHistoryView.jsx`**: Xóa bỏ tên lớp tĩnh `'Lớp nền tảng'` và điểm giả lập `780` trong hàng đợi thi thử. Hiển thị trung thực `'Lớp phụ trách'` và điểm số thực từ bài làm (`f.score ?? f.rawScore`).
+  - **`RoadmapApprovalStudioView.jsx`**: Khởi tạo điểm mục tiêu theo dữ liệu lộ trình thực tế của học sinh (`data?.targetScore`), không gán cứng `850`.
+  - **`AccountSettingsPage.jsx`**: Thay thế các fallback tĩnh từ `mockUser` ("Thầy Nguyễn Minh Trí", streak 15 ngày...) trong bản xem trước Học bạ điện tử bằng thông tin tài khoản thực tế (`currentUser`).
+- **Kiểm Thử & Biên Dịch Tự Động**:
+  - Toàn bộ 115/115 unit tests pass 100% (`pass 115, fail 0`).
+  - `npm run build` (`vite build`) thành công trong 1.59s (0 errors).
+
+---
+
+## [24/11/2026] - Tối Ưu Hóa Bảng Điều Khiển Giảng Viên (TeacherDashboardView) - Tinh Gọn Chỉ Số, Lọc Chuyên Đề Trọng Tâm & Chế Độ Thẻ Học Sinh
+
+- **Tối Ưu Hóa Bảng Điều Khiển Giảng Viên (`TeacherDashboardView.jsx`) — Tinh Gọn Giao Diện & Chống Ngợp Dữ Liệu**:
+  - **Thu gọn tầng trên (Compact Executive Header)**:
+    - Rút gọn Hero Banner thành thanh tiêu đề nhỏ gọn: Lời chào giảng viên, huy hiệu trạng thái dữ liệu lớp, nút làm mới dữ liệu và nút xếp nhóm học tập nhanh (3–5 em).
+    - Thu gọn 4 thẻ KPI cồng kềnh thành **Quick Stats Strip** (4 ô thống kê súc tích: Sĩ số lớp, Học sinh cần hỗ trợ, Chuyên đề cần củng cố, Thời gian cập nhật) giảm hơn 60% diện tích chiếm dụng màn hình.
+    - Chuyển đổi khung cảnh báo đỏ 66 chuyên đề cồng kềnh thành **Alert Bar** thanh lịch có nút xem nhanh danh sách chuyên đề cần bồi dưỡng.
+  - **Bộ Lọc Chuyên Đề Thông Minh — Giải Quyết Triệt Để Lỗi Cuộn Ngang 66 Cột Ma Trận**:
+    - **Chế độ Mặc định `🔥 Trọng tâm bồi dưỡng`**: Tự động tính toán các chuyên đề có tỷ lệ nắm bắt lớp yếu nhất (tỷ lệ hiểu bài `< 50%` hoặc cảnh báo `CRITICAL_RED`/`WARNING_AMBER`, tối đa 8 chuyên đề trọng điểm). Nhờ đó, bảng ma trận nhiệt tự động vừa khít 100% khung nhìn, giáo viên nhìn thấy ngay các điểm nghẽn học tập mà không cần cuộn ngang qua 66 cột.
+    - **Chế độ `🌐 4 Miền Năng Lực`**: Gom 66 chuyên đề theo 4 miền năng lực chính (Toán học, Văn học, Khoa học tự nhiên, Khoa học xã hội). Tích hợp thanh pill mở rộng nhanh chuyên đề của từng miền khi giáo viên muốn đi sâu vào một miền cụ thể.
+    - **Chế độ `📋 Tất cả (66)`**: Giữ nguyên danh sách đầy đủ 66 chuyên đề khi giáo viên cần tra cứu toàn diện.
+  - **Chế Độ Xem Thẻ Học Sinh Trực Quan (`viewFormat === 'cards'`)**:
+    - Bổ sung thanh chuyển đổi linh hoạt giữa **`[📊 Ma trận]`** và **`[🔲 Thẻ học sinh]`** ngay trên toolbar chính.
+    - Mỗi thẻ học sinh trực quan bao gồm: Avatar, Họ tên, Đánh giá phân loại (Giỏi/Khá/Cần bồi dưỡng), thanh tiến trình **Độ hiểu bài toàn diện (%)**, danh sách 2–3 **Chuyên đề cần hỗ trợ** kèm % nắm bắt nổi bật bằng pill đỏ.
+    - Tích hợp 2 nút hành động trực tiếp trên thẻ: `[Chi tiết bài làm]` (mở modal Drill-down quá trình làm bài) và `[Kèm cặp]` (1-chạm mở ngay phân nhóm vi mô 3–5 em ôn tập chuyên đề đó).
+- **Kiểm Thử & Biên Dịch Tự Động**:
+  - Toàn bộ 115/115 unit tests pass 100% (`pass 115, fail 0`).
+  - Lệnh build production `npm run build` thành công trong 1.61s (0 errors).
+
+---
+
+## [24/11/2026] - Sư Phạm Hóa Toàn Diện Giao Diện Giảng Viên (AiTutorModerationView) & Tối Ưu Hóa Vite Dev Server
+
+- **Sư Phạm Hóa Toàn Diện Giao Diện Giảng Viên (`AiTutorModerationView.jsx`)**:
+  - **Dọn dẹp thuật ngữ kỹ thuật**: Loại bỏ 100% các từ ngữ và nhãn công nghệ phía Giảng viên:
+    - Tiêu đề & Badge Hero: Chuyển sang *"Không Gian Giảng Viên • Đồng Hành Cùng Gia Sư AI"*, *"Hỗ Trợ & Đóng Góp Sư Phạm — Gia Sư AI"*.
+    - Banner bên phải: Thay *"GraphRAG Monitor"* bằng *"Tình Trạng Lớp Học"* (Sư phạm chuẩn, Độ tin cậy gợi mở Socratic, Thẩm định & Phê duyệt bởi Ban Chuyên Môn).
+    - Nút thao tác: Thay *"Đồng bộ CSDL Supabase"* thành *"Làm mới dữ liệu"*.
+    - Thẩm định đề bài & đáp án: Thay *"Nội dung Câu Hỏi & Đối Soát Đáp Án (Ground Truth)"* bằng *"Nội Dung Câu Hỏi & Đáp Án Chuẩn Của Đề Thi"*; thay *"✓ ĐÁP ÁN ĐÚNG CSDL"* bằng *"✓ ĐÁP ÁN ĐÚNG CỦA ĐỀ"*.
+    - Bàn làm việc sư phạm: Thay *"Bàn Làm Việc Đề Xuất Sư Phạm (Chờ Director duyệt)"* bằng *"Bàn Làm Việc Đóng Góp Sư Phạm (Chờ Ban Chuyên Môn duyệt)"*; nhãn *"Đóng góp chuyên môn"* thay cho *"GraphRAG Knowledge Update"*; các nút submit *"Gửi Đề Xuất Lời Giải Cho Ban Chuyên Môn"* và *"Gửi Đề Xuất Bẫy Cho Ban Chuyên Môn"*.
+  - **Tinh giản mạng lưới KPI cho Giảng viên (3 thẻ sư phạm)**:
+    - Thu gọn lưới 4 thẻ thành đúng 3 thẻ sư phạm ngắn gọn, thuần Việt:
+      1. *Báo cáo lớp phụ trách* (Cần xem xét, Tình trạng lớp học).
+      2. *Đề xuất của bạn* (Chờ Ban Chuyên Môn duyệt, Lời giải chuẩn & Bẫy tư duy).
+      3. *Đã hoàn tất* (Sư phạm chuẩn, Hướng dẫn học sinh).
+    - Loại bỏ triệt để Thẻ 4 (*Supabase Pooler*, *CSDL đàm thoại `ai_tutor_interaction_logs`*, và nút *"Xem toàn bộ đàm thoại"*) khỏi tầm nhìn của Giảng viên.
+  - **Bảo toàn 100% giao diện cho Giám đốc Học thuật (`isDirector === true`)**:
+    - Giữ nguyên cấu hình 4 thẻ KPI kỹ thuật, bảng điều khiển GraphRAG Monitor, cơ chế lưu Knowledge Graph (Node Exemplar & Trap), và nút "Toàn bộ" xem toàn trường.
+  - **Sửa triệt để lỗi trùng lặp tiêu đề lớp**: Bổ sung hàm tiện ích `formatClassName(name)` giúp chuẩn hóa không bị lặp chữ *"Lớp Lớp..."* khi tên lớp đã mang sẵn tiền tố.
+
+- **Tối Ưu Hóa Cấu Hình Vite Dev Server (`vite.config.js`)**:
+  - Khắc phục lỗi `Failed to run dependency scan. Skipping dependency pre-bundling` trên Vite 8 bằng cách loại bỏ khối `optimizeDeps.include` thủ công đối với `@mui/material`, `@emotion/react`, `@emotion/styled`.
+  - Để cơ chế ESM automatic dependency discovery của Vite tự động xử lý mượt mà, triệt tiêu nguy cơ nghẽn cache pre-bundling `.vite`.
+
+- **Kiểm Thử & Biên Dịch Tự Động**:
+  - `node --test tests/aiTutorScoping.test.js`: Hoàn thành 6/6 kịch bản phân quyền Teacher/Director.
+  - Toàn bộ test suite `tests/*.test.js`: 115/115 unit tests pass 100% (`pass 115, fail 0`).
+  - `npm run build`: Hoàn thành biên dịch production trong 1.61s với 0 lỗi (0 errors).
+
+---
+
 ## [24/11/2026] - Phân Quyền & Giới Hạn Phạm Vi Kiểm Duyệt Gia Sư AI Cấp Lớp Cho Giảng Viên (AiTutorModerationView)
 
 - **Giới Hạn Phạm Vi Dữ Liệu Theo Lớp Phụ Trách & Học Sinh Của Lớp (`AiTutorModerationView.jsx`, `aiTutorScoping.js`)**:
   - Loại bỏ hoàn toàn lựa chọn "Tất cả lớp" đối với vai trò Giảng viên (`role === 'teacher'`). Giảng viên chỉ được xem và chuyển đổi giữa các lớp thực tế mà Quản lý cơ sở phân công (`practiceService.getClasses({ teacherId })`).
   - Lấy danh sách học sinh của lớp thông qua ma trận nhiệt (`practiceService.getClassHeatmap(selectedClassId)`), lưu bộ tập hợp `student_id` và lọc chặt chẽ các phiên đàm thoại Gia sư AI bị báo cáo (`scopedInteractions`) đảm bảo Giảng viên chỉ xem đúng học sinh thuộc lớp mình giảng dạy.
-  - Toàn bộ các chỉ số KPI trên banner (Báo cáo lớp cần xem, Đề xuất đã gửi, Đã giải quyết, Phạm vi lớp) và danh sách đàm thoại bên trái được tính toán đồng bộ theo lớp phụ trách.
+  - **Bảo mật quyền riêng tư học sinh & Loại bỏ nút "Toàn bộ" khỏi Giảng viên**:
+    - Giảng viên chỉ được xem các đàm thoại **thực sự bị học sinh báo cáo** (`student_reported === true`) hoặc **đã có đề xuất sư phạm** (`proposal`). Tuyệt đối loại bỏ các đàm thoại mang nhãn "Bình thường" (unreported) khỏi tầm nhìn của Giảng viên.
+    - Xóa bỏ hoàn toàn tab nút bấm **"Toàn bộ"** và nút **"Xem toàn bộ đàm thoại"** khỏi giao diện Giảng viên; thay thế bằng dải nút nghiệp vụ tinh gọn (`Chờ xử lý`, `Đề xuất của bạn`, `Đã xử lý`).
+    - Giữ nguyên 100% quyền hạn và tab "Toàn bộ" cho Giám đốc Học thuật (`director`) để phục vụ kiểm toán mô hình (Model Audit) trên toàn trường.
+  - Toàn bộ các chỉ số KPI trên banner (Báo cáo lớp cần xem, Đề xuất đã gửi, Đã giải quyết, Báo cáo lớp) và danh sách đàm thoại bên trái được tính toán đồng bộ theo lớp phụ trách.
   - Tự động đồng bộ item được chọn (`selectedId`) và hiển thị thông báo trạng thái lớp trống rõ ràng khi cả lớp không có báo cáo vi phạm nào.
 - **Tách Rời Hoàn Toàn Quyền Xét Duyệt Câu Hỏi Khảo Thí (`FlaggedQuestionsReviewPanel`)**:
   - Giảng viên chỉ tập trung vào phân hệ Kiểm duyệt phản hồi Gia sư AI và gửi đề xuất sư phạm 2 tầng (Lời giải mẫu hoặc Bẫy tư duy); ẩn thanh chuyển đổi chế độ ("Xét Duyệt Câu Hỏi Bị Gắn Cờ") khỏi giao diện Giảng viên.
   - Giữ nguyên toàn quyền cho Giám đốc Học thuật (`director`) để xem xét câu hỏi bị gắn cờ hệ thống và quản trị kho tri thức toàn trường.
 - **Kiểm Thử & Biên Dịch Tự Động**:
-  - Bổ sung bộ kiểm thử `tests/aiTutorScoping.test.js` (5 kịch bản kiểm thử phân quyền Teacher/Director, lọc theo danh sách lớp và học sinh).
-  - Toàn bộ 114 bài kiểm thử unit tests chạy thông qua 100% (`pass 114, fail 0`).
-  - Lệnh build `npm run build` hoàn thành trong 1.65s với 0 lỗi cú pháp hoặc runtime.
+  - Bổ sung bộ kiểm thử `tests/aiTutorScoping.test.js` (6 kịch bản kiểm thử phân quyền Teacher/Director, lọc theo danh sách lớp, học sinh và ngăn chặn rò rỉ chat thường).
+  - Toàn bộ 115 bài kiểm thử unit tests chạy thông qua 100% (`pass 115, fail 0`).
+  - Lệnh build `npm run build` hoàn thành trong 1.50s với 0 lỗi cú pháp hoặc runtime.
 
 ---
 

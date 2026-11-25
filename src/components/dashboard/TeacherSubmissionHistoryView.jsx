@@ -117,7 +117,7 @@ export default function TeacherSubmissionHistoryView({ currentUser, onNavigate }
           studentName: r.studentName,
           targetScore: r.targetScore,
           predictedScore: r.predictedScore,
-          placementClass: data?.className || 'Lớp nền tảng'
+          placementClass: data?.className || 'Lớp phụ trách'
         }));
 
         setStudents(studentRoster);
@@ -203,10 +203,10 @@ export default function TeacherSubmissionHistoryView({ currentUser, onNavigate }
         if (!mockMerged.some((m) => String(m.id) === String(f.submissionId || f.id))) {
           mockMerged.push({
             id: f.submissionId || f.id,
-            title: f.examTitle || 'Thi thử V-ACT 120 câu chuẩn hóa',
+            title: f.examTitle || 'Bài thi thử V-ACT 120 câu',
             examType: 'MOCK_EXAM',
             completedAt: f.submittedAt || new Date().toISOString(),
-            score: f.score ?? 780,
+            score: f.score ?? (f.rawScore != null ? f.rawScore : null),
             maxScore: 1200,
             proctoringStatus: f.status || 'FLAGGED',
             flagReasons: f.flagReasons || ['Rời khỏi tab thi quá 3 lần'],
