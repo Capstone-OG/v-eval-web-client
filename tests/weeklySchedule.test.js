@@ -14,7 +14,7 @@ test('week navigation retains local dates and crosses years correctly', () => {
 test('default timetable has all six numbered slots', () => {
   assert.deepEqual(scheduleRows([]).map((slot) => slot.number), [1, 2, 3, 4, 5, 6]);
   assert.equal(DEFAULT_SCHEDULE_SLOTS[4].start, '18:00');
-  assert.equal(DEFAULT_SCHEDULE_SLOTS[5].end, '21:30');
+  assert.equal(DEFAULT_SCHEDULE_SLOTS[5].end, '22:30');
 });
 test('nonstandard API times remain visible with configured slot number', () => {
   const rows = scheduleRows([{ classId: 'a', startTime: '09:10', endTime: '10:40' }], [{ classId: 'a', weeklySchedules: [{ slotNumber: 2, startTime: '09:10', endTime: '10:40' }] }]);

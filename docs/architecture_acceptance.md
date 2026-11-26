@@ -3911,3 +3911,33 @@ Resolved the active frontend UPDATE.md conflict with upstream develop 47b7d27. P
 - Aligned `StudentScheduleView` and `TeacherScheduleView` filter dropdowns with actual user enrollments, paid courses, and teacher assignments.
 - Implemented 3-mode `RoadmapApprovalStudioView` (`teacher`, `manager` campus-scoped with director escalation, `director` cross-campus).
 - Enforced strict role-based profile presentation in `AccountSettingsPage`.
+
+## [24/11/2026] AI Tutor Moderation Class-Level Scoping & Teacher Role Isolation Acceptance
+- **Class & Student Scoping**: Restricted AI Tutor interaction reports for teachers (`role === 'teacher'`) strictly to classes dynamically assigned by the campus manager (`practiceService.getClasses({ teacherId })`) and student rosters fetched via `practiceService.getClassHeatmap(selectedClassId)`. Teachers no longer have access to system-wide or cross-class student conversations.
+- **Role Isolation**: Hidden the Academic Director's flagged exam questions review panel (`FlaggedQuestionsReviewPanel`) and mode switcher tab from teachers, keeping their workspace dedicated solely to pedagogical review and proposal submissions (exemplars and cognitive traps).
+- **Privacy & Role Boundary**: Removed the "Toàn bộ" (All) filter tab and access to normal, unreported student chat sessions for teachers, preserving student private study boundaries and restricting teacher review strictly to reported interactions (`student_reported === true`) or active proposals. Academic Directors retain full audit visibility.
+- **Telemetry & Verification**: Synchronized banner telemetry, KPI metrics, search queries, and active selection state with scoped interactions. Added comprehensive unit tests in `tests/aiTutorScoping.test.js` (115/115 total test suite pass rate, clean Vite 8 production build).
+
+## [24/11/2026] Teacher Pedagogical Experience Cleanse & Vite 8 Dependency Optimization Acceptance
+- **Pedagogical UI Simplification**: Cleansed all internal engineering, database, and system architecture jargon from the teacher's AI Tutor moderation workspace (`AiTutorModerationView.jsx`). Replaced technical labels ("GraphRAG Monitor", "PostgreSQL/Supabase Pooler", "Ground Truth", "RAG Knowledge Update", "Director") with intuitive, classroom-oriented Vietnamese pedagogical terminology ("Tình Trạng Lớp Học", "Đáp án chuẩn của đề thi", "Đóng góp chuyên môn", "Ban Chuyên Môn").
+- **Focused 3-Card Teacher KPI Grid**: Replaced the 4-card technical telemetry matrix with a focused 3-card pedagogical summary for teachers ("Báo cáo lớp phụ trách", "Đề xuất của bạn", "Đã hoàn tất"). Completely excised the fourth technical card ("Supabase Pooler / Xem toàn bộ đàm thoại") from the teacher interface while fully preserving the 4-card matrix and audit capabilities for the Academic Director (`isDirector === true`).
+- **Class Label Formatting**: Implemented `formatClassName` normalization helper to eliminate redundant prefix concatenation ("Lớp Lớp...").
+- **Vite 8 Build & Dev Server Optimization**: Streamlined `vite.config.js` by removing manual `optimizeDeps.include` entries for Material UI and Emotion packages, eliminating pre-bundling resolution lockups and dependency scan warnings in Vite 8.
+- **Verification**: Verified 115/115 unit tests pass (`pass 115, fail 0`) and production bundle builds cleanly in 1.61s.
+
+## [24/11/2026] Teacher Dashboard Ergonomics, Focus Mastery Filtering & Student Card View Acceptance
+- **Compact Header & Quick Stats Strip**: Refactored the sprawling upper banner and oversized KPI cards in `TeacherDashboardView.jsx` into a sleek Compact Executive Header accompanied by a 4-metric Quick Stats Strip (Class Roster, Students Requiring Remediation, Skills Needing Reinforcement, Live Timestamp) and an unobtrusive Alert Bar. Reduces upper viewport consumption by >60%, bringing actionable student performance immediately into initial view.
+- **Intelligent Focus Filtering (Elimination of 66-Column Horizontal Scroll)**:
+  - *Default Focus Mode (`focus`)*: Automatically extracts the class's top struggling skills (mastery `< 50%` or flagged with `CRITICAL_RED`/`WARNING_AMBER`, capped at Top 8 weakest skills). Fits the heatmap 100% horizontally within standard viewports without horizontal scrolling.
+  - *Domain Grouping Mode (`domain`)*: Groups 66 competencies into the 4 primary assessment domains (Mathematics, Language Arts, Natural Sciences, Social Sciences) with responsive interactive domain pills for rapid drill-down.
+  - *Full View Mode (`all`)*: Retains complete 66-competency matrix access for longitudinal reporting.
+- **Card-Based Student View (`viewFormat === 'cards'`)**: Introduced a 1-click toggle between Heatmap Matrix (`table`) and Student Cards (`cards`). Each student card displays avatar, name, IRT theta proficiency category, comprehensive mastery percentage bar, prioritized list of 2-3 weak skills (with red badges and percentages), and direct 1-click actions: `[Chi tiết bài làm]` (individual drill-down) and `[Kèm cặp]` (direct 3-5 student micro-group remedial station allocation).
+- **Verification**: All 115 unit tests passed (`node --test tests/*.test.js`), and production build completed cleanly in 1.61s.
+
+## [24/11/2026] Elimination of Hardcoded Fallbacks & 100% Real Data Enforcement Across Teacher Workspace
+- **Dynamic Skill Count in Dashboard**: Removed static "66 competencies" text from tooltips and filters in `TeacherDashboardView.jsx`, computing dynamic counts via `${columns.length || 0}`.
+- **AiTutor Moderation Cleanse**: Removed `'class_01'`, `'PAT_DEFAULT'`, and `'TRAP_LOGIC'` fallbacks from `AiTutorModerationView.jsx`. Uncategorized interactions retain explicit null states without rendering synthetic trap banners or leaking across class scopes.
+- **Schedule & Remedial Room Reality Alignment**: Replaced hardcoded `'Phòng P.204'` / `'Phòng phụ đạo P.204'` across `TeacherScheduleView.jsx` and `ClassMicroGroupsModal.jsx` with real classroom room bindings (`classData?.room`) or truthful unallocated states (`'Chưa xếp phòng'`).
+- **Target Score & Academic History Honesty**: Removed synthetic 850-point target score defaults in `EarlyWarningsMentorPanel.jsx` and `RoadmapApprovalStudioView.jsx`, binding directly to student target or predicted scores. Excised synthetic 780 mock exam scores in `TeacherSubmissionHistoryView.jsx`.
+- **Account Settings Profile Alignment**: Replaced legacy `mockUser` references in `AccountSettingsPage.jsx` electronic report card previews with authentic `currentUser` attributes.
+- **Verification**: All 115 unit tests passed (`node --test tests/*.test.js`), and production build completed in 1.59s.

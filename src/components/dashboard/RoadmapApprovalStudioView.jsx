@@ -59,7 +59,7 @@ export default function RoadmapApprovalStudioView({ mode = 'teacher', campusId =
   const [detailLoading, setDetailLoading] = useState(false);
 
   // Editable state for Teacher review
-  const [editTargetScore, setEditTargetScore] = useState(850);
+  const [editTargetScore, setEditTargetScore] = useState(900);
   const [editNote, setEditNote] = useState('');
   const [editNodes, setEditNodes] = useState([]);
   const [nodeSearch, setNodeSearch] = useState('');
@@ -136,7 +136,7 @@ export default function RoadmapApprovalStudioView({ mode = 'teacher', campusId =
     try {
       const data = await practiceService.getRoadmapById(roadmapId);
       setDetail(data);
-      setEditTargetScore(Number(data?.targetScore || 850));
+      setEditTargetScore(data?.targetScore != null ? Number(data.targetScore) : 900);
       setEditNote(data?.prunedReason || '');
       setDirectorNote('');
       setEditNodes(

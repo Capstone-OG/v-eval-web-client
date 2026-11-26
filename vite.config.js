@@ -11,9 +11,6 @@ export default defineConfig({
   resolve: {
     dedupe: ['react', 'react-dom', '@emotion/react', '@emotion/styled'],
   },
-  optimizeDeps: {
-    include: ['react', 'react-dom', '@mui/material', '@emotion/react', '@emotion/styled'],
-  },
   server: {
     watch: {
       usePolling: true,

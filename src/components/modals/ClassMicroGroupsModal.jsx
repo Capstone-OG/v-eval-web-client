@@ -55,7 +55,7 @@ export default function ClassMicroGroupsModal({ isOpen, onClose, classData }) {
     startTime: '13:00',
     endTime: '15:00',
     format: 'OFFLINE',
-    room: 'Phòng phụ đạo vi mô P.204',
+    room: classData?.room || 'Phòng học của lớp',
     notes: 'Ôn tập phương pháp giải & củng cố các câu hay làm sai'
   });
 
@@ -600,7 +600,7 @@ export default function ClassMicroGroupsModal({ isOpen, onClose, classData }) {
       startTime: currentSlot.startTime,
       endTime: currentSlot.endTime,
       format: scheduleForm.format,
-      room: scheduleForm.format === 'ONLINE' ? 'Trực tuyến (Google Meet / Zoom)' : (scheduleForm.room || 'Phòng phụ đạo vi mô P.204'),
+      room: scheduleForm.format === 'ONLINE' ? 'Trực tuyến (Google Meet / Zoom)' : (scheduleForm.room || classData?.room || 'Phòng học của lớp'),
       studentCount: (schedulingGroup.members || []).length,
       members: (schedulingGroup.members || []).map(m => ({
         studentId: m.studentId || m.id,
