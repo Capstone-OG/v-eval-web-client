@@ -504,8 +504,8 @@ export default function Sidebar({
             items: [
               {
                 id: 'tuition',
-                label: 'Học phí & Gói học',
-                sublabel: 'Nâng cấp gói luyện thi PayOS',
+                label: 'Học phí theo đợt',
+                sublabel: 'Đóng học phí Đợt 1 & Đợt 2 qua PayOS',
                 icon: CreditCard,
                 iconColor: 'from-indigo-400 to-blue-600',
                 activeGlow: 'shadow-indigo-500/30',
@@ -589,7 +589,6 @@ export default function Sidebar({
           ]
         },
         { ...entries.schedule, label: 'Thời khóa biểu & Điểm danh' },
-        { ...entries.adaptive, label: 'Luyện tập' } ,
         { ...entries.ai, label: 'Gia sư AI' }
       ] },
       { sectionTitle: 'Đánh giá', items: [

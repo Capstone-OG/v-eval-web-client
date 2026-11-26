@@ -1,5 +1,17 @@
 # NHẬT KÝ TIẾN ĐỘ HẰNG NGÀY (DAILY LOG) - V-EVAL WEB CLIENT
 
+## [26/11/2026] - Chuyển Học Phí Sang Đóng Theo 2 Đợt & Dọn Mục Luyện Tập Dư Trong Sidebar
+
+- **Tinh Gọn Sidebar Học Viên ([`Sidebar.jsx`](../src/components/layout/Sidebar.jsx))**:
+  - Loại bỏ mục `Luyện tập` trùng lặp ngay dưới nhóm `Lộ trình của tôi` (đã có `Luyện tập (P-L-A-R)` bên trong nhóm).
+  - Đổi nhãn mục học phí từ `Học phí & Gói học` sang `Học phí theo đợt` (`Đóng học phí Đợt 1 & Đợt 2 qua PayOS`).
+- **Chuyển Đổi Đóng Học Phí Sang Mô Hình 2 Đợt ([`TuitionPaymentView.jsx`](../src/components/payment/TuitionPaymentView.jsx))**:
+  - Sửa bộ lọc gọi `getAcademicTerms` bỏ điều kiện cứng `status: 'ACTIVE'` để hiển thị đầy đủ cả 2 đợt học mở (`ONGOING` Đợt 1 & `UPCOMING` Đợt 2) theo thứ tự `termOrder`.
+  - Đồng bộ thẻ hiển thị học phí theo từng đợt (kèm thời gian `startDate -> endDate`), truyền `termId` khi tạo link thanh toán PayOS và cập nhật toàn bộ nhãn giao diện từ "gói học" sang "đợt học".
+- **Kiểm Thử**: `npm run build` đạt 0 lỗi (`4272 modules transformed`, 5.36s).
+
+---
+
 ## [25/11/2026] - Hoàn Thiện Studio Soạn Thảo, MathLab 2D/3D, Phân Trang & Tối Ưu Egress
 
 - **Cache & In-Flight Request Deduplication (`contentService.js`, `practiceService.js`)**:
