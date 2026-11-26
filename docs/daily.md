@@ -1,5 +1,15 @@
 # NHẬT KÝ TIẾN ĐỘ HẰNG NGÀY (DAILY LOG) - V-EVAL WEB CLIENT
 
+## [26/11/2026] - Khắc Phục Hiển Thị Tên Thí Sinh, Tên Đề Thi & Thời Gian Nộp Tại Tab Kiểm Tra Bài Thi Bất Thường (Teacher Proctoring)
+
+- **Hiển Thị Chính Xác Danh Tính Thí Sinh & Thông Tin Bài Thi (`TeacherDashboardView.jsx`, `TeacherProctoringReviewModal.jsx`)**:
+  - **Họ tên thí sinh**: Kết hợp dữ liệu `exam.studentName` trả về từ Practice Service (qua Identity gRPC) với bản đồ tra cứu dự phòng `studentNameMap` từ ma trận lớp `heatmap.rows`, thay thế hiển thị GUID thô bằng họ tên thí sinh kèm mã rút gọn `Mã HS: #...`.
+  - **Tên đề thi & Thời gian nộp**: Tự động đối chiếu `exam.examTitle` hoặc ánh xạ từ `contentService.getMockExams()` (`examTitleMap`), đồng thời đọc `exam.submittedAt || exam.completedAt || exam.startedAt` để hiển thị đúng thời điểm nộp/làm bài thay vì `—`.
+  - **Modal duyệt bài (`TeacherProctoringReviewModal.jsx`)**: Truyền `fallbackStudentName`, `fallbackExamTitle` và sửa đọc trường điểm `detail?.score ?? detail?.totalScore`.
+- **Kiểm Thử**: `node --test tests/*.test.js` pass 100% (`pass 115, fail 0`); `npm run build` đạt 0 lỗi (`3.84s`).
+
+---
+
 ## [26/11/2026] - Chuyển Học Phí Sang Đóng Theo 2 Đợt & Dọn Mục Luyện Tập Dư Trong Sidebar
 
 - **Tinh Gọn Sidebar Học Viên ([`Sidebar.jsx`](../src/components/layout/Sidebar.jsx))**:

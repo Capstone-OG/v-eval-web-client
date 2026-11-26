@@ -42,7 +42,7 @@
 | 3 | **Trang Chủ Công Khai (Landing Page)** | `src/components/landing/` | 🟢 Hoàn thành | 100% | Hero section, tính năng nổi bật, lộ trình cá nhân hóa |
 | 4 | **Xác Thực Đăng Nhập (Web Login)** | `src/components/auth/` | 🟢 Hoàn thành | 100% | Chọn vai trò Học sinh, Giáo viên, Điều phối học vụ |
 | 5 | **Bảng Điều Khiển Học Sinh (Dashboard)** | `src/components/dashboard/` | 🟢 Hoàn thành | 100% | `HeroBanner`, `MetricsGrid`, `MilestoneCard` |
-| 6 | **Bảng Điều Khiển Giáo Viên (Teacher Dashboard)** | `TeacherDashboardView.jsx` | 🟢 Hoàn thành | 100% | Tinh gọn Header & KPI strip, bộ lọc Top 8 chuyên đề trọng tâm bồi dưỡng, gom 4 miền năng lực, chế độ xem Thẻ học sinh, dọn sạch 100% hardcode & fallback tĩnh |
+| 6 | **Bảng Điều Khiển Giáo Viên (Teacher Dashboard)** | `TeacherDashboardView.jsx` | 🟢 Hoàn thành | 100% | Tinh gọn Header & KPI strip, bộ lọc Top 8 chuyên đề trọng tâm bồi dưỡng, gom 4 miền năng lực, chế độ xem Thẻ học sinh, hiển thị tên thí sinh & thời gian nộp tại tab Kiểm tra bất thường, dọn sạch 100% hardcode & fallback tĩnh |
 | 7 | **Gia Sư AI Socratic Widget** | `AISocraticTutorWidget.jsx` | 🟢 Hoàn thành | 100% | Giao diện chat gợi mở phương pháp tư duy theo RAG |
 | 8 | **Modal Khảo Thí Chẩn Đoán (Flow 1)** | `DiagnosticTestModal.jsx` | 🟢 Hoàn thành | 100% | Giao diện làm bài thi chẩn đoán theo mô hình IRT 2PL |
 | 9 | **Modal Luyện Tập Thích Ứng ZPD (Flow 3)** | `AdaptiveQuizModal.jsx` | 🟢 Hoàn thành | 100% | Đề xuất bài tập theo vùng phát triển gần nhất `[0.60, 0.75]` |
@@ -376,7 +376,7 @@
 | 3 | **Trang Chủ Công Khai (Landing Page)** | `src/components/landing/` | 🟢 Hoàn thành | 100% | Hero section, tính năng nổi bật, lộ trình cá nhân hóa |
 | 4 | **Xác Thực Đăng Nhập (Web Login)** | `src/components/auth/` | 🟢 Hoàn thành | 100% | Chọn vai trò Học sinh, Giáo viên, Điều phối học vụ |
 | 5 | **Bảng Điều Khiển Học Sinh (Dashboard)** | `src/components/dashboard/` | 🟢 Hoàn thành | 100% | `HeroBanner`, `MetricsGrid`, `MilestoneCard` |
-| 6 | **Bảng Điều Khiển Giáo Viên (Teacher Dashboard)** | `TeacherDashboardView.jsx` | 🟢 Hoàn thành | 100% | Tinh gọn Header & KPI strip, bộ lọc Top 8 chuyên đề trọng tâm bồi dưỡng, gom 4 miền năng lực, chế độ xem Thẻ học sinh, dọn sạch 100% hardcode & fallback tĩnh |
+| 6 | **Bảng Điều Khiển Giáo Viên (Teacher Dashboard)** | `TeacherDashboardView.jsx` | 🟢 Hoàn thành | 100% | Tinh gọn Header & KPI strip, bộ lọc Top 8 chuyên đề trọng tâm bồi dưỡng, gom 4 miền năng lực, chế độ xem Thẻ học sinh, hiển thị tên thí sinh & thời gian nộp tại tab Kiểm tra bất thường, dọn sạch 100% hardcode & fallback tĩnh |
 | 7 | **Gia Sư AI Socratic Widget** | `AISocraticTutorWidget.jsx` | 🟢 Hoàn thành | 100% | Giao diện chat gợi mở phương pháp tư duy theo RAG |
 | 8 | **Modal Khảo Thí Chẩn Đoán (Flow 1)** | `DiagnosticTestModal.jsx` | 🟢 Hoàn thành | 100% | Giao diện làm bài thi chẩn đoán theo mô hình IRT 2PL |
 | 9 | **Modal Luyện Tập Thích Ứng ZPD (Flow 3)** | `AdaptiveQuizModal.jsx` | 🟢 Hoàn thành | 100% | Đề xuất bài tập theo vùng phát triển gần nhất `[0.60, 0.75]` |

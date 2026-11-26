@@ -21,6 +21,8 @@ export default function TeacherProctoringReviewModal({
   isOpen,
   onClose,
   submissionId,
+  fallbackStudentName = '',
+  fallbackExamTitle = '',
   onReviewSubmitted
 }) {
   const [detail, setDetail] = useState(null);
@@ -154,21 +156,21 @@ export default function TeacherProctoringReviewModal({
                 <div className="p-3.5 bg-slate-50 border border-slate-200/80 rounded-2xl">
                   <div className="text-[11px] font-bold text-slate-400 uppercase">Thí sinh</div>
                   <div className="text-sm font-black text-slate-900 mt-1 truncate">
-                    {detail?.studentName || detail?.studentId || 'Thí sinh'}
+                    {detail?.studentName || fallbackStudentName || detail?.studentId || 'Thí sinh'}
                   </div>
                 </div>
 
                 <div className="p-3.5 bg-slate-50 border border-slate-200/80 rounded-2xl">
                   <div className="text-[11px] font-bold text-slate-400 uppercase">Đề thi</div>
-                  <div className="text-sm font-black text-slate-900 mt-1 truncate" title={detail?.examTitle}>
-                    {detail?.examTitle || 'Đề thi thử chuẩn hóa'}
+                  <div className="text-sm font-black text-slate-900 mt-1 truncate" title={detail?.examTitle || fallbackExamTitle}>
+                    {detail?.examTitle || fallbackExamTitle || 'Đề thi thử chuẩn hóa'}
                   </div>
                 </div>
 
                 <div className="p-3.5 bg-slate-50 border border-slate-200/80 rounded-2xl">
                   <div className="text-[11px] font-bold text-slate-400 uppercase">Điểm số ước tính</div>
                   <div className="text-sm font-black text-indigo-700 mt-1">
-                    {detail?.score != null ? `${detail.score}đ` : '—'}
+                    {(detail?.score ?? detail?.totalScore) != null ? `${detail?.score ?? detail?.totalScore}đ` : '—'}
                     <span className="text-xs font-normal text-slate-500 ml-1.5">
                       ({detail?.totalCorrect ?? 0}/{detail?.totalQuestions ?? 120} câu)
                     </span>

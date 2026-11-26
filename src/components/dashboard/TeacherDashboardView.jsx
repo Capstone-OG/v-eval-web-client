@@ -33,6 +33,7 @@ import {
   SlidersHorizontal
 } from 'lucide-react';
 import { practiceService } from '../../services/practiceService';
+import contentService from '../../services/contentService';
 import ClassMicroGroupsModal from '../modals/ClassMicroGroupsModal';
 import EarlyWarningsMentorPanel from './EarlyWarningsMentorPanel';
 import TeacherProctoringReviewModal from '../modals/TeacherProctoringReviewModal';
@@ -119,6 +120,18 @@ export default function TeacherDashboardView({ currentUser, onOpenAdaptiveQuiz, 
   const [flaggedExams, setFlaggedExams] = useState([]);
   const [loadingFlagged, setLoadingFlagged] = useState(false);
   const [selectedReviewId, setSelectedReviewId] = useState(null);
+  const [selectedReviewMeta, setSelectedReviewMeta] = useState({ studentName: '', examTitle: '' });
+  const [examTitleMap, setExamTitleMap] = useState(() => new Map());
+
+  const studentNameMap = useMemo(() => {
+    const map = new Map();
+    (heatmap?.rows || []).forEach((r) => {
+      if (r.studentId && r.studentName) {
+        map.set(String(r.studentId).toLowerCase(), r.studentName);
+      }
+    });
+    return map;
+  }, [heatmap]);
 
   // 1. Fetch Dynamic Classes assigned to this Teacher
   useEffect(() => {
@@ -189,7 +202,26 @@ export default function TeacherDashboardView({ currentUser, onOpenAdaptiveQuiz, 
   const loadFlaggedExams = useCallback(async () => {
     setLoadingFlagged(true);
     try {
-      const data = await practiceService.getFlaggedMockExams(selectedClassId || null);
+      const [data, examsRes] = await Promise.all([
+        practiceService.getFlaggedMockExams(selectedClassId || null),
+        contentService.getMockExams().catch(() => [])
+      ]);
+      const examsList = Array.isArray(examsRes)
+        ? examsRes
+        : Array.isArray(examsRes?.value)
+          ? examsRes.value
+          : Array.isArray(examsRes?.data)
+            ? examsRes.data
+            : [];
+      const nextExamMap = new Map();
+      examsList.forEach((ex) => {
+        const eid = ex.examId || ex.id;
+        const title = ex.title || ex.examTitle || ex.name;
+        if (eid && title) {
+          nextExamMap.set(String(eid).toLowerCase(), title);
+        }
+      });
+      setExamTitleMap(nextExamMap);
       setFlaggedExams(data);
     } catch (err) {
       console.warn('[TeacherDashboardView] Error loading flagged exams:', err?.message);
@@ -1163,26 +1195,45 @@ export default function TeacherDashboardView({ currentUser, onOpenAdaptiveQuiz, 
                 <tbody className="divide-y divide-slate-100">
                   {flaggedExams.map((exam) => {
                     const tabDepartures = exam.tabDepartureCount ?? 0;
+                    const resolvedStudentName =
+                      exam.studentName ||
+                      studentNameMap.get(String(exam.studentId || '').toLowerCase()) ||
+                      '';
+                    const resolvedExamTitle =
+                      exam.examTitle ||
+                      examTitleMap.get(String(exam.examId || '').toLowerCase()) ||
+                      'Đề thi thử ĐGNL';
+                    const submittedTime =
+                      exam.submittedAt ||
+                      (exam.status !== 'IN_PROGRESS' ? exam.completedAt : null) ||
+                      exam.startedAt;
+                    const shortStudentCode = exam.studentId
+                      ? `#${String(exam.studentId).slice(-6).toUpperCase()}`
+                      : '';
                     return (
                       <tr key={exam.submissionId} className="hover:bg-rose-50/20 transition-all">
                         <td className="p-3.5 font-bold text-slate-900">
                           <div className="flex items-center gap-2">
                             <div className="w-7 h-7 rounded-full bg-rose-100 text-rose-700 flex items-center justify-center font-extrabold text-xs shrink-0">
-                              {String(exam.studentName || 'H').charAt(0)}
+                              {String(resolvedStudentName || 'H').charAt(0).toUpperCase()}
                             </div>
                             <div>
-                              <div className="font-extrabold text-slate-900">{exam.studentName}</div>
-                              <div className="text-[10px] text-slate-500 font-mono">{exam.studentId}</div>
+                              <div className="font-extrabold text-slate-900">
+                                {resolvedStudentName || (shortStudentCode ? `Học sinh ${shortStudentCode}` : 'Thí sinh')}
+                              </div>
+                              {shortStudentCode && (
+                                <div className="text-[10px] text-slate-500 font-mono">Mã HS: {shortStudentCode}</div>
+                              )}
                             </div>
                           </div>
                         </td>
 
                         <td className="p-3.5 font-semibold text-slate-800">
-                          {exam.examTitle || 'Đề thi thử'}
+                          {resolvedExamTitle}
                         </td>
 
                         <td className="p-3.5 text-center text-slate-500 font-medium">
-                          {exam.submittedAt ? new Date(exam.submittedAt).toLocaleString('vi-VN') : '—'}
+                          {submittedTime ? new Date(submittedTime).toLocaleString('vi-VN') : '—'}
                         </td>
 
                         <td className="p-3.5 text-center">
@@ -1206,7 +1257,13 @@ export default function TeacherDashboardView({ currentUser, onOpenAdaptiveQuiz, 
 
                         <td className="p-3.5 text-right">
                           <button
-                            onClick={() => setSelectedReviewId(exam.submissionId)}
+                            onClick={() => {
+                              setSelectedReviewMeta({
+                                studentName: resolvedStudentName || (shortStudentCode ? `Học sinh ${shortStudentCode}` : ''),
+                                examTitle: resolvedExamTitle
+                              });
+                              setSelectedReviewId(exam.submissionId);
+                            }}
                             className="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-black rounded-xl text-xs transition-all shadow-xs inline-flex items-center gap-1 cursor-pointer"
                           >
                             <ShieldAlert className="w-3.5 h-3.5" />
@@ -1242,8 +1299,13 @@ export default function TeacherDashboardView({ currentUser, onOpenAdaptiveQuiz, 
       {/* Flagged Mock Exam Proctoring Review Modal (TCH_19 - TCH_27) */}
       <TeacherProctoringReviewModal
         isOpen={Boolean(selectedReviewId)}
-        onClose={() => setSelectedReviewId(null)}
+        onClose={() => {
+          setSelectedReviewId(null);
+          setSelectedReviewMeta({ studentName: '', examTitle: '' });
+        }}
         submissionId={selectedReviewId}
+        fallbackStudentName={selectedReviewMeta.studentName}
+        fallbackExamTitle={selectedReviewMeta.examTitle}
         onReviewSubmitted={() => {
           loadFlaggedExams();
         }}

@@ -3941,3 +3941,8 @@ Resolved the active frontend UPDATE.md conflict with upstream develop 47b7d27. P
 - **Target Score & Academic History Honesty**: Removed synthetic 850-point target score defaults in `EarlyWarningsMentorPanel.jsx` and `RoadmapApprovalStudioView.jsx`, binding directly to student target or predicted scores. Excised synthetic 780 mock exam scores in `TeacherSubmissionHistoryView.jsx`.
 - **Account Settings Profile Alignment**: Replaced legacy `mockUser` references in `AccountSettingsPage.jsx` electronic report card previews with authentic `currentUser` attributes.
 - **Verification**: All 115 unit tests passed (`node --test tests/*.test.js`), and production build completed in 1.59s.
+
+## [26/11/2026] Teacher Proctoring Queue Student Name, Exam Title & Timestamp Resolution Acceptance
+- **Candidate Name & Metadata Resolution (`TeacherDashboardView.jsx`)**: Combined backend-resolved `exam.studentName` with a local `studentNameMap` derived from the active class heatmap (`heatmap.rows`) and an `examTitleMap` fetched from `contentService.getMockExams()`. Replaced raw UUID rendering in the proctoring table with real Vietnamese student names and compact short codes (`Mã HS: #...`), and fixed submission timestamp parsing across `submittedAt`, `completedAt`, and `startedAt`.
+- **Proctoring Modal Alignment (`TeacherProctoringReviewModal.jsx`)**: Added `fallbackStudentName` and `fallbackExamTitle` props and corrected score reading (`detail?.score ?? detail?.totalScore`).
+- **Verification**: `node --test tests/*.test.js` passed 115/115 tests; `npm run build` completed cleanly in 3.84s.
