@@ -139,15 +139,18 @@ export default function TuitionPaymentView({
         ? { campusId: studentCampusId, isActive: true }
         : { isActive: true };
       const termParams = studentCampusId
-        ? { campusId: studentCampusId, status: 'ACTIVE' }
-        : { status: 'ACTIVE' };
+        ? { campusId: studentCampusId }
+        : {};
 
       const [termsRes, coursesRes] = await Promise.all([
         practiceService.getAcademicTerms(termParams).catch(() => []),
         practiceService.getCourses(courseParams).catch(() => [])
       ]);
 
-      const termsArr = Array.isArray(termsRes) ? termsRes : [];
+      const rawTerms = Array.isArray(termsRes) ? termsRes : [];
+      const termsArr = rawTerms
+        .filter((t) => t?.isActive !== false && !['COMPLETED', 'ARCHIVED'].includes(String(t?.status || '').toUpperCase()))
+        .sort((a, b) => Number(a?.termOrder || 0) - Number(b?.termOrder || 0));
       let coursesArr = Array.isArray(coursesRes) ? coursesRes : [];
 
       // Nếu tài khoản chưa có campusId hoặc cơ sở chưa tạo khóa riêng, kiểm tra khóa chung đang active
@@ -172,34 +175,45 @@ export default function TuitionPaymentView({
     loadCampusTermsAndCourses();
   }, [loadCampusTermsAndCourses]);
 
-  // Chuẩn hóa danh sách Khóa học theo đợt trực tiếp từ Database (Zero Hardcode)
+  // Chuẩn hóa danh sách Học phí theo đợt (2 đợt: Đợt 1 & Đợt 2) trực tiếp từ Database (Zero Hardcode)
   const resolvedPackages = useMemo(() => {
     const standardFeatures = [
       'Khảo sát chẩn đoán năng lực 30 câu chuẩn hóa 4 miền',
       'Xếp lớp phân tầng 4 Miền × 3 Cấp bậc phù hợp năng lực',
-      'Lộ trình học tập thích ứng & Kho bài giảng chuẩn V-ACT',
-      'Hỏi gia sư AI khi cần gợi ý cách giải',
-      'Thi thử 120 câu chuẩn cấu trúc ĐHQG-HCM & Sổ tay lỗi sai'
+      'Lộ trình học tập thích ứng P-L-A-R & Kho bài giảng chuẩn V-ACT',
+      'Hỏi gia sư AI Socratic khi cần gợi ý cách giải',
+      'Thi thử 120 câu chuẩn cấu trúc ĐHQG-HCM & Sổ tay lỗi sai SM-2'
     ];
 
-    return dbCourses.map((c, idx) => ({
-      id: c.courseId,
-      courseId: c.courseId,
-      code: c.code,
-      name: c.name,
-      planType: c.planType || 'STANDARD',
-      durationWeeks: c.durationWeeks || 12,
-      maxClassSize: c.maxClassSize || 20,
-      price: Number(c.tuitionFee || 0),
-      totalClassesCount: c.totalClassesCount || 0,
-      badge: activeTerms[idx]?.name
-        ? `Đợt ${activeTerms[idx].termOrder || idx + 1}`
-        : c.code || 'Đang mở đăng ký',
-      isPopular: idx === 0,
-      highlightColor: idx % 2 === 0 ? 'from-blue-600 to-indigo-600' : 'from-indigo-600 to-purple-600',
-      description: `Khóa luyện thi ĐGNL theo đợt tuyển sinh của cơ sở • Trần sĩ số chuẩn tối đa ${c.maxClassSize || 20} học sinh/lớp.`,
-      features: standardFeatures
-    }));
+    return dbCourses.map((c, idx) => {
+      const matchedTerm =
+        activeTerms.find((t) => Number(t.termOrder) === idx + 1) ||
+        activeTerms[idx] ||
+        null;
+      const dotNumber = matchedTerm?.termOrder || idx + 1;
+      const dateRangeText =
+        matchedTerm?.startDate && matchedTerm?.endDate
+          ? `Thời gian: ${matchedTerm.startDate} → ${matchedTerm.endDate}`
+          : `Thời lượng ${c.durationWeeks || 14} tuần học tập`;
+
+      return {
+        id: c.courseId,
+        courseId: c.courseId,
+        termId: matchedTerm?.termId || null,
+        code: c.code,
+        name: c.name,
+        planType: c.planType || `TERM_${dotNumber}`,
+        durationWeeks: c.durationWeeks || 14,
+        maxClassSize: c.maxClassSize || 20,
+        price: Number(c.tuitionFee || 0),
+        totalClassesCount: c.totalClassesCount || 0,
+        badge: `Đợt ${dotNumber}`,
+        isPopular: dotNumber === 1,
+        highlightColor: dotNumber === 1 ? 'from-blue-600 to-indigo-600' : 'from-indigo-600 to-purple-600',
+        description: `${dateRangeText} • Trần sĩ số chuẩn tối đa ${c.maxClassSize || 20} học sinh/lớp.`,
+        features: standardFeatures
+      };
+    });
   }, [dbCourses, activeTerms]);
 
   // Nạp dữ liệu học phí và lịch sử thanh toán thực tế từ Database Backend
@@ -262,6 +276,7 @@ export default function TuitionPaymentView({
         studentId,
         parentId,
         courseId: pkg.courseId,
+        termId: pkg.termId || undefined,
         returnUrl: window.location.origin + '/payment/success',
         cancelUrl: window.location.origin + '/payment/cancel'
       };
@@ -497,7 +512,7 @@ export default function TuitionPaymentView({
             <p className="text-xs text-slate-600 mt-1 leading-relaxed max-w-2xl font-medium">
               {isPaid 
                 ? 'Tài khoản của bạn đã được mở khóa toàn bộ bài giảng chi tiết, video lý thuyết và bài tập củng cố của Lớp học chung & Lộ trình cá nhân.' 
-                : 'Chọn gói học phù hợp bên dưới và hoàn tất thanh toán để mở khóa bài giảng, bài tập và lộ trình học cá nhân.'}
+                : 'Chọn đợt học phù hợp (Đợt 1 hoặc Đợt 2) bên dưới và hoàn tất thanh toán để mở khóa bài giảng, bài tập và lộ trình học cá nhân.'}
             </p>
           </div>
         </div>
@@ -530,7 +545,7 @@ export default function TuitionPaymentView({
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 text-xs font-black uppercase tracking-wider flex items-center gap-1.5">
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>Gói Đào Tạo Đang Kích Hoạt</span>
+                    <span>Đợt Học Đang Kích Hoạt</span>
                   </span>
                   <span className="px-2.5 py-1 rounded-full bg-blue-500/20 text-cyan-300 text-xs font-bold border border-cyan-400/30">
                     Mã: {tuitionStatus?.courseCode || 'CRS_STD'}
@@ -773,7 +788,7 @@ export default function TuitionPaymentView({
                         : 'bg-slate-900 hover:bg-slate-800 text-white'
                     }`}
                   >
-                    <span>{isPaid ? 'Đăng Ký Khóa Này Qua PayOS' : 'Nộp Học Phí Qua PayOS'}</span>
+                    <span>{isPaid ? 'Nộp Học Phí Đợt Này Qua PayOS' : 'Nộp Học Phí Đợt Này Qua PayOS'}</span>
                     <ArrowRight className="w-4 h-4" />
                   </button>
                 </div>
@@ -947,9 +962,9 @@ export default function TuitionPaymentView({
 
               <div className="space-y-2.5 divide-y divide-slate-100">
                 <div className="pt-2 flex justify-between text-slate-600">
-                  <span className="font-medium">Khóa học / Gói:</span>
+                  <span className="font-medium">Đợt học / Khóa:</span>
                   <span className="font-extrabold text-slate-900 text-right">
-                    {selectedReceipt.courseName || 'Khóa Luyện Thi Chuẩn (Standard Adaptive)'}
+                    {selectedReceipt.courseName || 'Khóa Luyện Thi ĐGNL Theo Đợt'}
                   </span>
                 </div>
 
