@@ -3946,3 +3946,7 @@ Resolved the active frontend UPDATE.md conflict with upstream develop 47b7d27. P
 - **Candidate Name & Metadata Resolution (`TeacherDashboardView.jsx`)**: Combined backend-resolved `exam.studentName` with a local `studentNameMap` derived from the active class heatmap (`heatmap.rows`) and an `examTitleMap` fetched from `contentService.getMockExams()`. Replaced raw UUID rendering in the proctoring table with real Vietnamese student names and compact short codes (`Mã HS: #...`), and fixed submission timestamp parsing across `submittedAt`, `completedAt`, and `startedAt`.
 - **Proctoring Modal Alignment (`TeacherProctoringReviewModal.jsx`)**: Added `fallbackStudentName` and `fallbackExamTitle` props and corrected score reading (`detail?.score ?? detail?.totalScore`).
 - **Verification**: `node --test tests/*.test.js` passed 115/115 tests; `npm run build` completed cleanly in 3.84s.
+
+## [26/11/2026] Sidebar Section Header Single-Line Flex Layout Acceptance
+- **Section Title Flex Fix (`Sidebar.jsx`)**: Replaced `flex-1` on `section.sectionTitle` with `truncate` alongside `h-px flex-1 min-w-3 bg-slate-100` on the trailing divider, preventing 50/50 split wrapping on multi-word section headers such as "Quản Lý Lớp Học" and "Học Liệu & Đề Thi".
+- **Verification**: `node --test tests/*.test.js` passed 115/115 tests; `npm run build` completed cleanly in 1.68s.

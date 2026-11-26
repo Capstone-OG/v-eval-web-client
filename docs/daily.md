@@ -1,5 +1,14 @@
 # NHẬT KÝ TIẾN ĐỘ HẰNG NGÀY (DAILY LOG) - V-EVAL WEB CLIENT
 
+## [26/11/2026] - Sửa Lỗi Xuống Dòng Tiêu Đề Nhóm Menu Sidebar (`Sidebar.jsx`)
+
+- **Sửa CSS Flexbox Header Nhóm Menu (`src/components/layout/Sidebar.jsx`)**:
+  - Loại bỏ `flex-1` khỏi thẻ chứa `section.sectionTitle` (nguyên nhân chia đôi 50% chiều rộng với đường kẻ ngang khiến *"QUẢN LÝ LỚP HỌC"* và *"HỌC LIỆU & ĐỀ THI"* bị rớt 1 chữ xuống dòng).
+  - Thay bằng `truncate` kết hợp đường kẻ `h-px flex-1 min-w-3 bg-slate-100` để tiêu đề nhóm luôn nằm gọn trên 1 hàng duy nhất.
+- **Kiểm Thử**: `node --test tests/*.test.js` pass 115/115; `npm run build` đạt 0 lỗi (`1.68s`).
+
+---
+
 ## [26/11/2026] - Khắc Phục Hiển Thị Tên Thí Sinh, Tên Đề Thi & Thời Gian Nộp Tại Tab Kiểm Tra Bài Thi Bất Thường (Teacher Proctoring)
 
 - **Hiển Thị Chính Xác Danh Tính Thí Sinh & Thông Tin Bài Thi (`TeacherDashboardView.jsx`, `TeacherProctoringReviewModal.jsx`)**:
