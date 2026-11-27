@@ -1,8 +1,13 @@
 # CẬP NHẬT TIẾN ĐỘ - V-EVAL WEB CLIENT
 
-## [26/11/2026] - Sửa Tiêu Đề Nhóm Sidebar Xuống Dòng, Tên Thí Sinh Kiểm Tra Bất Thường & Học Phí Theo 2 Đợt
+## [27/11/2026] - Nâng Cấp Giao Diện Phòng Thi, Bảng Số Liệu Markdown, Kết Quả Đánh Giá & Khung Chat Gia Sư AI
 
-- **Sidebar Nhóm Menu (`src/components/layout/Sidebar.jsx`)**: Sửa lỗi `flex-1` chia đôi chiều rộng làm tiêu đề *"QUẢN LÝ LỚP HỌC"* và *"HỌC LIỆU & ĐỀ THI"* bị xuống dòng, chuyển sang `truncate` + đường kẻ `flex-1 min-w-3` giữ gọn 1 hàng.
-- **Tab Kiểm Tra Bài Thi Bất Thường (`TeacherDashboardView.jsx`, `TeacherProctoringReviewModal.jsx`)**: Hiển thị họ tên thí sinh thực tế (nhận `studentName` từ API và đối chiếu dự phòng qua `heatmap.rows`) thay cho GUID thô, ánh xạ tên đề thi từ `contentService.getMockExams()`, sửa hiển thị thời gian nộp (`submittedAt` / `completedAt` / `startedAt`) và điểm số (`score` / `totalScore`).
-- **Sidebar Học Viên & Học Phí Theo 2 Đợt (`Sidebar.jsx`, `TuitionPaymentView.jsx`)**: Xóa mục `Luyện tập` trùng lặp, hiển thị đủ Đợt 1 (`ONGOING`) và Đợt 2 (`UPCOMING`), truyền `termId` sang PayOS.
-- **Kiểm thử**: `node --test tests/*.test.js` pass 115/115; `npm run build` đạt 0 lỗi (`1.68s`).
+- **Phòng Thi & Bảng Số Liệu (`src/components/diagnostic/ExamRoom.jsx`, `src/components/common/MathText.jsx`)**:
+  - Tinh gọn header `AppBar` (không icon dư thừa, đồng bộ kiểu chữ bộ đếm giờ & `Rời tab`), cố định chiều cao khung thi (`lg:h-[calc(100vh-61px)]`) để không bị nhảy nút điều hướng giữa các câu, bỏ nhãn `Bloom X/6`, tách rõ 3 vùng màu nền dịu mắt.
+  - Bổ sung `splitMarkdownTables()` tự động tách bảng Markdown trong đề thành dropdown `Bảng số liệu` đóng mặc định; chuẩn hóa `renderKatexHtml` hỗ trợ ký hiệu Unicode toán học & công thức hóa học `\ce{...}`.
+  - Tinh gọn hộp thoại xác nhận nộp bài (`ExamSubmitConfirmation`) và overlay tải chấm bài (`DiagnosticAssessmentPage.jsx`).
+- **Thẻ Đánh Giá Chi Tiết Kỹ Năng (`src/components/diagnostic/DiagnosticSkillOverviewCard.jsx`)**:
+  - Khắc phục tràn lề phải bằng lưới `minmax(0, 1fr)` + cắt tối đa 2 dòng, sửa tương thích `@mui/material` v9 (`sx` flex) hết lỗi dính chữ `Mức độ nắm vững8%`, gộp trùng lặp kỹ năng và cập nhật `DOMAIN_FALLBACK_MAP`.
+- **Khung Chat Gia Sư AI (`src/components/modals/AISocraticTutorModal.jsx`, `src/components/dashboard/AISocraticTutorWidget.jsx`)**:
+  - Chuyển sang `slotProps={{ paper: ... }}` tương thích MUI v9, cố định tỷ lệ cột chat `34vw` + cột lịch sử `16vw` (tổng `50vw` đúng nửa màn hình) với hoạt ảnh trượt mượt cả 2 chiều đóng/mở mà không reflow header/chat; dọn sạch icon thừa, footer, badge nhiễu và gợi ý KaTeX ở ô nhập.
+- **Kiểm thử**: `node --test tests/*.test.js` pass 100%; `npm run build` đạt 0 lỗi (`1.94s`).

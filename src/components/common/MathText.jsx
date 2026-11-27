@@ -36,6 +36,27 @@ export function renderKatexHtml(latex, displayMode = false) {
       .trim();
     if (!clean) return '';
 
+    // Chuyển đổi ký tự Unicode toán học (dấu trừ, mũi tên, nhân, chia) và công thức hóa học \ce{...} sang chuẩn KaTeX
+    clean = clean
+      .replace(/\u2212/g, '-')
+      .replace(/→/g, '\\rightarrow ')
+      .replace(/↔|⇌/g, '\\rightleftharpoons ')
+      .replace(/⇒/g, '\\Rightarrow ')
+      .replace(/⇔/g, '\\Leftrightarrow ')
+      .replace(/≤/g, '\\le ')
+      .replace(/≥/g, '\\ge ')
+      .replace(/≠/g, '\\neq ')
+      .replace(/±/g, '\\pm ')
+      .replace(/×/g, '\\times ')
+      .replace(/·/g, '\\cdot ')
+      .replace(/\\ce\{([^{}]*(?:\{[^{}]*\}[^{}]*)*)\}/g, (_, chem) => {
+        return chem
+          .replace(/<->|<=>/g, ' \\rightleftharpoons ')
+          .replace(/->/g, ' \\rightarrow ')
+          .replace(/([A-Za-z\)])(\d+)/g, '$1_{$2}')
+          .replace(/\^(\d*[+-])/g, '^{$1}');
+      });
+
     // Chuẩn hóa khoảng trắng trong \frac và \text
     clean = clean.replace(/\\(text|mathrm|mathbf|mathit|mathsf|mathtt|mathbb|frac|sqrt)\s+\{/g, '\\$1{');
     clean = clean.replace(/(\\frac\s*\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\})\s+(\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\})/g, '$1$2');
