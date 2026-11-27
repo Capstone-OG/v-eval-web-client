@@ -3950,3 +3950,9 @@ Resolved the active frontend UPDATE.md conflict with upstream develop 47b7d27. P
 ## [26/11/2026] Sidebar Section Header Single-Line Flex Layout Acceptance
 - **Section Title Flex Fix (`Sidebar.jsx`)**: Replaced `flex-1` on `section.sectionTitle` with `truncate` alongside `h-px flex-1 min-w-3 bg-slate-100` on the trailing divider, preventing 50/50 split wrapping on multi-word section headers such as "Quản Lý Lớp Học" and "Học Liệu & Đề Thi".
 - **Verification**: `node --test tests/*.test.js` passed 115/115 tests; `npm run build` completed cleanly in 1.68s.
+
+## [27/11/2026] Academic Manager Class Coordination Ergonomics, Role-Scoped Roadmap Tabs & Tier-3 Early Warning Separation Acceptance
+- **Class Roster & Timetable Layout (`AcademicManagerDashboardView.jsx`)**: Added domain quick-filter pills and bounded scroll containers (`max-h-[540px]` on the comparative matrix and `max-h-[620px]` on the offline class coordination list), moved the weekly timetable summary onto a dedicated full-width row above the action buttons, and removed duplicate `+` prefixes across 4 action buttons.
+- **Role-Scoped Roadmap Approval Tabs (`RoadmapApprovalStudioView.jsx`)**: Scoped status tabs and queue counts strictly by `mode` (`teacher`, `manager`, `director`) so Academic Managers only see `Chờ Quản lý cơ sở duyệt`, `Đã chuyển Giám đốc (Ngoại lệ)`, and `Đã kích hoạt` without exposing internal teacher drafts (`DRAFT_PENDING_TEACHER`).
+- **Tier-3 Early Warning & Tripartite Counseling Separation (`EarlyWarningsMentorPanel.jsx`)**: Added `mode="manager"` and `campusStudentIds` scoping so Academic Managers only view Tier-3 (`RED`) alerts belonging to their assigned campus and can directly trigger `"Lập Lịch Họp 3 Bên"` (`openCounselingModal`), while preserving the full Tier 1–3 and escalation workflow for Teachers (`mode="teacher"`).
+- **Verification**: `node --test tests/*.test.js` passed 115/115 tests.

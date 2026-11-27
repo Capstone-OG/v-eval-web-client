@@ -166,12 +166,24 @@ export default function RoadmapApprovalStudioView({ mode = 'teacher', campusId =
       else if (item.status === 'PENDING_DIRECTOR_APPROVAL') pendingDirector++;
       else if (item.status === 'ACTIVE') active++;
     });
-    return { draft, pendingManager, pendingDirector, active, all: queue.length };
-  }, [queue]);
+    const roleScopedTotal = isDirector
+      ? pendingDirector + active
+      : isManager
+        ? pendingManager + pendingDirector + active
+        : draft + pendingManager + active;
+    return { draft, pendingManager, pendingDirector, active, all: roleScopedTotal };
+  }, [queue, isDirector, isManager]);
+
+  const roleAllowedStatuses = useMemo(() => {
+    if (isDirector) return new Set(['PENDING_DIRECTOR_APPROVAL', 'ACTIVE']);
+    if (isManager) return new Set(['PENDING_MANAGER_APPROVAL', 'PENDING_DIRECTOR_APPROVAL', 'ACTIVE']);
+    return new Set(['DRAFT_PENDING_TEACHER', 'PENDING_MANAGER_APPROVAL', 'ACTIVE']);
+  }, [isDirector, isManager]);
 
   const filteredQueue = useMemo(() => {
     const q = queueSearch.trim().toLowerCase();
     return queue.filter((item) => {
+      if (!roleAllowedStatuses.has(item.status)) return false;
       if (statusTab !== 'ALL' && item.status !== statusTab) return false;
       if (q) {
         const hay = `${item.studentName || ''} ${item.placementClass || ''} ${item.reviewNote || ''}`.toLowerCase();
@@ -179,7 +191,7 @@ export default function RoadmapApprovalStudioView({ mode = 'teacher', campusId =
       }
       return true;
     });
-  }, [queue, statusTab, queueSearch]);
+  }, [queue, statusTab, queueSearch, roleAllowedStatuses]);
 
   useEffect(() => {
     if (filteredQueue.length === 0) {
@@ -347,13 +359,26 @@ export default function RoadmapApprovalStudioView({ mode = 'teacher', campusId =
       {/* Filter Bar */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="inline-flex flex-wrap items-center gap-1 rounded-xl bg-slate-100 p-1 border border-slate-200/70">
-          {[
-            { key: 'DRAFT_PENDING_TEACHER', label: 'Chờ GV rà soát', count: counts.draft },
-            { key: 'PENDING_MANAGER_APPROVAL', label: 'Chờ Quản lý cơ sở', count: counts.pendingManager },
-            { key: 'PENDING_DIRECTOR_APPROVAL', label: 'Ngoại lệ (Giám đốc)', count: counts.pendingDirector },
-            { key: 'ACTIVE', label: 'Đã kích hoạt', count: counts.active },
-            { key: 'ALL', label: 'Tất cả', count: counts.all }
-          ].map((tab) => {
+          {(isDirector
+            ? [
+                { key: 'PENDING_DIRECTOR_APPROVAL', label: 'Ngoại lệ chờ Giám đốc', count: counts.pendingDirector },
+                { key: 'ACTIVE', label: 'Đã kích hoạt', count: counts.active },
+                { key: 'ALL', label: 'Tất cả', count: counts.all }
+              ]
+            : isManager
+              ? [
+                  { key: 'PENDING_MANAGER_APPROVAL', label: 'Chờ Quản lý cơ sở duyệt', count: counts.pendingManager },
+                  { key: 'PENDING_DIRECTOR_APPROVAL', label: 'Đã chuyển Giám đốc (Ngoại lệ)', count: counts.pendingDirector },
+                  { key: 'ACTIVE', label: 'Đã kích hoạt', count: counts.active },
+                  { key: 'ALL', label: 'Tất cả', count: counts.all }
+                ]
+              : [
+                  { key: 'DRAFT_PENDING_TEACHER', label: 'Chờ GV rà soát', count: counts.draft },
+                  { key: 'PENDING_MANAGER_APPROVAL', label: 'Đã trình Quản lý cơ sở', count: counts.pendingManager },
+                  { key: 'ACTIVE', label: 'Đã kích hoạt', count: counts.active },
+                  { key: 'ALL', label: 'Tất cả', count: counts.all }
+                ]
+          ).map((tab) => {
             const active = statusTab === tab.key;
             return (
               <button
