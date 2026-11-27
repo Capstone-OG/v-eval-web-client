@@ -1646,9 +1646,9 @@ export default function AcademicManagerDashboardView({
             )}
 
             {/* Comparative Class Table */}
-            <div className="overflow-x-auto rounded-2xl border border-slate-200/90">
+            <div className="overflow-x-auto max-h-[540px] overflow-y-auto rounded-2xl border border-slate-200/90">
               <table className="w-full text-left text-xs border-collapse">
-                <thead>
+                <thead className="sticky top-0 z-10 shadow-2xs">
                   <tr className="bg-slate-50 border-b border-slate-200 text-slate-700">
                     <th className="p-4 font-extrabold min-w-[230px]">Lớp học, Đợt học & Giảng viên</th>
                     <th className="p-3.5 font-extrabold text-center min-w-[110px]">Sĩ số (Trần 20)</th>
@@ -1826,7 +1826,7 @@ export default function AcademicManagerDashboardView({
                   className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold flex items-center gap-1.5 cursor-pointer"
                 >
                   <Plus className="w-3.5 h-3.5" />
-                  <span>+ Tạo Đợt Học</span>
+                  <span>Tạo Đợt Học</span>
                 </button>
               </div>
 
@@ -1893,7 +1893,7 @@ export default function AcademicManagerDashboardView({
                   className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-extrabold flex items-center gap-1.5 cursor-pointer"
                 >
                   <Plus className="w-3.5 h-3.5" />
-                  <span>+ Tạo Khóa Học</span>
+                  <span>Tạo Khóa Học</span>
                 </button>
               </div>
 
@@ -1979,17 +1979,50 @@ export default function AcademicManagerDashboardView({
                   className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold flex items-center gap-1.5 shrink-0 cursor-pointer"
                 >
                   <Plus className="w-4 h-4" />
-                  <span>+ Mở Lớp Học Mới</span>
+                  <span>Mở Lớp Học Mới</span>
                 </button>
               </div>
 
-              <div className="space-y-3">
-                {mergedClasses.length === 0 ? (
+              {/* Quick Domain Filter Pills for Offline Classes */}
+              <div className="flex flex-wrap items-center gap-1.5 pb-1">
+                <button
+                  type="button"
+                  onClick={() => setFilterDomainCode('ALL')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
+                    filterDomainCode === 'ALL'
+                      ? 'bg-slate-900 text-white shadow-2xs'
+                      : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                  }`}
+                >
+                  Tất cả ({mergedClasses.length})
+                </button>
+                {DOMAIN_ORDER.map((dom) => {
+                  const cnt = mergedClasses.filter((c) => c.focusDomain === dom.code).length;
+                  const active = filterDomainCode === dom.code;
+                  return (
+                    <button
+                      key={dom.code}
+                      type="button"
+                      onClick={() => setFilterDomainCode(dom.code)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
+                        active
+                          ? 'bg-blue-600 text-white shadow-2xs'
+                          : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                      }`}
+                    >
+                      {dom.short} ({cnt})
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="space-y-3 max-h-[620px] overflow-y-auto pr-1">
+                {filteredClasses.length === 0 ? (
                   <p className="text-xs text-slate-500 py-8 text-center">
-                    Chưa có lớp học nào tại cơ sở này.
+                    Chưa có lớp học nào khớp bộ lọc tại cơ sở này.
                   </p>
                 ) : (
-                  mergedClasses.map((cls) => {
+                  filteredClasses.map((cls) => {
                     const isFull = cls.studentCount >= cls.maxCapacity;
                     const isNear = cls.studentCount >= 15 && cls.studentCount < cls.maxCapacity;
                     const barColor = isFull
@@ -2061,13 +2094,13 @@ export default function AcademicManagerDashboardView({
                           </div>
                         )}
 
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2 border-t border-slate-200/80 text-xs">
-                          <div className="text-slate-600 flex items-center gap-1.5">
-                            <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                            <span>{cls.scheduleSummary}</span>
+                        <div className="flex flex-col gap-2.5 pt-2.5 border-t border-slate-200/80 text-xs">
+                          <div className="text-slate-700 bg-white px-3 py-2 rounded-xl border border-slate-200/80 flex items-center gap-2 font-semibold">
+                            <Clock className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                            <span className="leading-relaxed">{cls.scheduleSummary}</span>
                           </div>
 
-                          <div className="flex flex-wrap items-center gap-2 shrink-0">
+                          <div className="flex flex-wrap items-center justify-end gap-2">
                             <button
                               type="button"
                               onClick={() => {
@@ -2078,7 +2111,7 @@ export default function AcademicManagerDashboardView({
                               className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs flex items-center gap-1.5 cursor-pointer"
                             >
                               <Plus className="w-3.5 h-3.5" />
-                              <span>+ Xếp / Chuyển HS</span>
+                              <span>Xếp / Chuyển HS</span>
                             </button>
                             <button
                               type="button"
@@ -2454,6 +2487,12 @@ export default function AcademicManagerDashboardView({
         <EarlyWarningsMentorPanel
           currentUser={currentUser}
           defaultClassId="ALL"
+          classesList={mergedClasses}
+          mode="manager"
+          campusId={selectedCampus}
+          campusStudentIds={campusStudentsList
+            .filter((s) => !s.campusId || !selectedCampus || String(s.campusId) === String(selectedCampus))
+            .map((s) => s.id)}
           roleLabel="Quản Lý Học Thuật Cơ Sở (Điều Phối Họp 3 Bên & Cảnh Báo Cấp 3)"
         />
       )}

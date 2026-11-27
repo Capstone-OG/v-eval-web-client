@@ -1,6 +1,6 @@
 # NHẬT KÝ TIẾN ĐỘ HẰNG NGÀY (DAILY LOG) - V-EVAL WEB CLIENT
 
-## [27/11/2026] - Nâng Cấp Phòng Thi, Bảng Số Liệu Markdown, Kết Quả Đánh Giá Kỹ Năng & Khung Chat Gia Sư AI
+## [27/11/2026] - Nâng Cấp Phòng Thi, Bảng Số Liệu Markdown, Kết Quả Đánh Giá Kỹ Năng, Khung Chat Gia Sư AI & Phân Tách Giao Diện Quản Lý Cơ Sở / Giáo Viên
 
 - **Phòng Thi & KaTeX (`src/components/diagnostic/ExamRoom.jsx`, `src/components/common/MathText.jsx`, `src/components/diagnostic/DiagnosticAssessmentPage.jsx`)**:
   - Thiết kế lại header `AppBar` tối giản (bỏ icon thừa, đồng bộ `fontWeight: 500`), cố định chiều cao khung bài thi (`lg:h-[calc(100vh-61px)]`) chống nhảy nút `Câu trước` / `Câu kế tiếp`, bỏ badge `Bloom X/6` và phân tách sắc độ rõ giữa nền/card.
@@ -10,7 +10,11 @@
   - Sửa tràn lề phải lưới 3 cột bằng `minmax(0, 1fr)` + `minWidth: 0`, sửa tương thích MUI v9 (`sx` flex `justifyContent: 'space-between'`) khắc phục lỗi dính chữ `Mức độ nắm vững8%`, bổ sung `deduplicateSkills()` gộp kỹ năng trùng tên và chuẩn hóa `DOMAIN_FALLBACK_MAP`.
 - **Khung Chat Gia Sư AI (`src/components/modals/AISocraticTutorModal.jsx`, `src/components/dashboard/AISocraticTutorWidget.jsx`)**:
   - Chuyển `PaperProps` sang `slotProps={{ paper: ... }}` cho MUI v9, khóa cố định khung chat + header ở `34vw` và cột lịch sử trượt mượt 2 chiều `16vw` (tổng đúng `50vw` nửa màn hình, không giật hay reflow giao diện); gỡ icon robot, badge thừa, footer và dòng gợi ý KaTeX ở ô nhập.
-- **Kiểm Thử**: `node --test tests/*.test.js` pass 100%; `npm run build` đạt 0 lỗi (`1.94s`).
+- **Điều Phối Học Thuật Cơ Sở, Duyệt Lộ Trình 3 Cấp & Cảnh Báo Sớm Cấp 3 (`src/components/dashboard/AcademicManagerDashboardView.jsx`, `src/components/dashboard/RoadmapApprovalStudioView.jsx`, `src/components/dashboard/EarlyWarningsMentorPanel.jsx`)**:
+  - **Tinh gọn danh sách 12 lớp & thời khóa biểu**: Bổ sung bộ lọc nhanh 4 miền năng lực, khung cuộn cố định (`max-h-[540px]` cho bảng đối sánh và `max-h-[620px]` cho danh sách thẻ lớp), tách dòng hiển thị thời khóa biểu lên một hàng ngang riêng phía trên 3 nút thao tác và loại bỏ ký tự `+` bị lặp ở 4 nút (`Tạo Đợt Học`, `Tạo Khóa Học`, `Mở Lớp Học Mới`, `Xếp / Chuyển HS`).
+  - **Phân tách tab Duyệt lộ trình theo vai trò (`RoadmapApprovalStudioView.jsx`)**: Ẩn tab `Chờ GV rà soát` khỏi giao diện Quản lý cơ sở (`mode="manager"`) và Giám đốc học thuật (`mode="director"`), đảm bảo mỗi vai trò chỉ hiển thị đúng các tab thuộc thẩm quyền phê duyệt của mình.
+  - **Phân định rõ Cảnh báo Cấp 3 giữa Quản lý cơ sở và Giáo viên (`EarlyWarningsMentorPanel.jsx`)**: Khi ở chế độ Quản lý cơ sở (`mode="manager"`), chỉ lọc các hồ sơ Cảnh báo Cấp 3 (`RED`) thuộc đúng cơ sở phụ trách (`campusId` / `campusStudentIds`) và hiển thị trực tiếp nút `Lập Lịch Họp 3 Bên` + `Ghi Nhận Biên Bản Họp`, đồng thời giữ nguyên 100% luồng xử lý Cấp 1–2 và chuyển cấp của Giáo viên (`mode="teacher"`).
+- **Kiểm Thử**: `node --test tests/*.test.js` pass 100% (`115/115`); `npm run build` đạt 0 lỗi.
 
 ---
 
