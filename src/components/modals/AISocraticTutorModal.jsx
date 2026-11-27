@@ -73,7 +73,7 @@ export default function AISocraticTutorModal({ isOpen, onClose, initialContext =
         const wrongText = initialContext.selectedWrong ? `\n> **Phương án em vừa chọn:** ${initialContext.selectedWrong}` : '';
         const contextGreeting = {
           sender: 'ai',
-          text: `Chào em! Thầy thấy em đang xem lại câu hỏi thuộc chủ đề: **${initialContext.skill || 'Ôn tập ĐGNL'}**.\n\n> **Câu hỏi:** ${initialContext.question || ''}${wrongText}\n\nThầy là **Gia Sư AI Đồng Hành**. Để giúp em nhớ bài thật kỹ, thầy sẽ gợi ý từng bước thay vì đưa đáp án sẵn. Em hãy chia sẻ với thầy: **Theo đề bài, dữ kiện nào là quan trọng nhất và vì sao em lại chọn phương án trên?**`,
+          text: `Chào em! Thầy thấy em đang xem lại câu hỏi thuộc chủ đề: **${initialContext.skill || 'Ôn tập ĐGNL'}**.\n\n> **Câu hỏi:** ${initialContext.question || ''}${wrongText}\n\nThầy là **Gia Sư AI**. Để giúp em nhớ bài thật kỹ, thầy sẽ gợi ý từng bước thay vì đưa đáp án sẵn. Em hãy chia sẻ với thầy: **Theo đề bài, dữ kiện nào là quan trọng nhất và vì sao em lại chọn phương án trên?**`,
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           topicLabel: initialContext.skill || null,
           interactionId: null
@@ -100,7 +100,7 @@ export default function AISocraticTutorModal({ isOpen, onClose, initialContext =
       if (loaded.length === 0) {
         const defaultGreeting = {
           sender: 'ai',
-          text: 'Chào em! Thầy là **Gia Sư AI Đồng Hành**. Thầy sẽ gợi mở từng bước dễ hiểu để em tự tìm ra cách giải và nắm chắc kiến thức.\n\nEm đang gặp khó khăn ở câu hỏi hay chủ đề nào?',
+          text: 'Chào em! Thầy là **Gia Sư AI**. Thầy sẽ gợi mở từng bước dễ hiểu để em tự tìm ra cách giải và nắm chắc kiến thức.\n\nEm đang gặp khó khăn ở câu hỏi hay chủ đề nào?',
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           topicLabel: null,
           interactionId: null
@@ -162,7 +162,7 @@ export default function AISocraticTutorModal({ isOpen, onClose, initialContext =
   const handleCreateNewSession = () => {
     const defaultGreeting = {
       sender: 'ai',
-      text: 'Chào em! Thầy là **Gia Sư AI Đồng Hành**. Thầy sẽ gợi mở từng bước dễ hiểu để em tự tìm ra cách giải và nắm chắc kiến thức.\n\nEm đang gặp khó khăn ở câu hỏi hay chủ đề nào?',
+      text: 'Chào em! Thầy là **Gia Sư AI**. Thầy sẽ gợi mở từng bước dễ hiểu để em tự tìm ra cách giải và nắm chắc kiến thức.\n\nEm đang gặp khó khăn ở câu hỏi hay chủ đề nào?',
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       topicLabel: null,
       interactionId: null
@@ -190,7 +190,7 @@ export default function AISocraticTutorModal({ isOpen, onClose, initialContext =
         } else {
           const defaultGreeting = {
             sender: 'ai',
-            text: 'Chào em! Thầy là **Gia Sư AI Đồng Hành**. Thầy sẽ gợi mở từng bước dễ hiểu để em tự tìm ra cách giải và nắm chắc kiến thức.\n\nEm đang gặp khó khăn ở câu hỏi hay chủ đề nào?',
+            text: 'Chào em! Thầy là **Gia Sư AI**. Thầy sẽ gợi mở từng bước dễ hiểu để em tự tìm ra cách giải và nắm chắc kiến thức.\n\nEm đang gặp khó khăn ở câu hỏi hay chủ đề nào?',
             timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
             topicLabel: null,
             interactionId: null
@@ -461,24 +461,26 @@ export default function AISocraticTutorModal({ isOpen, onClose, initialContext =
       anchor="right"
       variant="persistent"
       open={isOpen}
-      PaperProps={{
-        onDragOver: (e) => { e.preventDefault(); setIsDragOver(true); },
-        onDragLeave: () => setIsDragOver(false),
-        onDrop: handleDropQuestion,
-        sx: {
-          width: isHistoryOpen ? { xs: '100vw', md: 760 } : { xs: '100vw', sm: 480 },
-          maxWidth: '100vw',
-          zIndex: 1300,
-          boxShadow: '-12px 0 36px -8px rgba(15, 23, 42, 0.25)',
-          borderLeft: isDragOver ? '3px dashed #4f46e5' : '1px solid #e2e8f0',
-          display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden',
-          transition: 'width 0.25s ease',
+      slotProps={{
+        paper: {
+          onDragOver: (e) => { e.preventDefault(); setIsDragOver(true); },
+          onDragLeave: () => setIsDragOver(false),
+          onDrop: handleDropQuestion,
+          sx: {
+            width: isHistoryOpen ? { xs: '100vw', md: '50vw' } : { xs: '100vw', md: '34vw' },
+            maxWidth: { xs: '100vw', md: '50vw' },
+            zIndex: 1300,
+            boxShadow: '-12px 0 36px -8px rgba(15, 23, 42, 0.25)',
+            borderLeft: isDragOver ? '3px dashed #4f46e5' : '1px solid #e2e8f0',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+            transition: 'width 0.3s cubic-bezier(0.22, 1, 0.36, 1)',
+          },
         },
       }}
     >
-      <div className="relative w-full h-full bg-white flex flex-col overflow-hidden">
+      <div className="relative w-full h-full bg-white flex overflow-hidden">
         {isDragOver && (
           <Box
             sx={{
@@ -505,162 +507,143 @@ export default function AISocraticTutorModal({ isOpen, onClose, initialContext =
           </Box>
         )}
 
-        {/* Modal Top Header */}
-        <div className="p-3.5 sm:p-4 border-b border-slate-800 bg-gradient-to-r from-slate-950 via-blue-950 to-slate-900 text-white flex items-center justify-between gap-3 shrink-0">
-          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-            {/* Toggle History Drawer Button */}
-            <button
-              onClick={() => setIsHistoryOpen(!isHistoryOpen)}
-              className="p-2 bg-white/10 hover:bg-white/20 text-cyan-200 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 text-xs font-semibold shrink-0"
-              title={isHistoryOpen ? 'Thu gọn lịch sử' : 'Mở lịch sử phiên hỏi'}
-            >
-              {isHistoryOpen ? <PanelLeftClose className="w-4 h-4" /> : <PanelLeftOpen className="w-4 h-4" />}
-              <span className="hidden sm:inline">Lịch Sử</span>
-              <span className="px-1.5 py-0.2 bg-blue-500/30 text-[10px] rounded-full border border-blue-400/30 font-bold">
-                {sessions.length}
-              </span>
-            </button>
+        {/* Left History Drawer (Always mounted for smooth open & close animation) */}
+        <aside
+          className={`h-full bg-slate-50 flex flex-col shrink-0 overflow-hidden transition-[width,opacity] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+            isHistoryOpen
+              ? 'w-56 md:w-[16vw] opacity-100 border-r border-slate-200/90'
+              : 'w-0 opacity-0 border-r-0 pointer-events-none'
+          }`}
+        >
+          <div className="w-56 md:w-[16vw] h-full flex flex-col shrink-0">
+            {/* Top Drawer Controls */}
+            <div className="p-3 border-b border-slate-200/80 space-y-2">
+              <button
+                onClick={handleCreateNewSession}
+                className="w-full flex items-center justify-center gap-2 py-2.5 px-3 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-2xl shadow-xs transition-all cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Bắt đầu phiên hỏi mới</span>
+              </button>
 
-            <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-blue-500/30 shrink-0">
-              <Bot className="w-5 h-5 text-cyan-200" />
-            </div>
-
-            <div className="min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h2 className="text-sm sm:text-base font-extrabold tracking-tight text-white truncate">
-                  Gia Sư AI Đồng Hành
-                </h2>
-                {activeSession?.skill ? (
-                  <span className="px-2.5 py-0.5 rounded-full bg-indigo-500/30 text-cyan-300 border border-cyan-400/30 text-[10px] font-bold truncate max-w-[160px]">
-                    {activeSession.skill}
-                  </span>
-                ) : (
-                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-[10px] font-bold">
-                    Trực tuyến 24/7
-                  </span>
-                )}
-                <span className="hidden md:inline-block px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-400/30 text-[10px] font-bold">
-                  10 lượt/phút
-                </span>
+              <div className="relative">
+                <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  value={historySearchTerm}
+                  onChange={(e) => setHistorySearchTerm(e.target.value)}
+                  placeholder="Tìm theo chủ đề, câu hỏi..."
+                  className="w-full pl-8 pr-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
               </div>
-              <p className="text-[11px] text-slate-300 font-medium truncate">
-                {activeSession?.title || 'Hướng dẫn tư duy phản biện từng bước • Không đưa sẵn đáp án'}
-              </p>
             </div>
-          </div>
 
-          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-            <button
-              onClick={handleCreateNewSession}
-              className="hidden sm:flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl text-xs font-bold shadow-xs transition-all cursor-pointer"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Phiên Mới</span>
-            </button>
-            <button
-              onClick={onClose}
-              className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-full transition-all cursor-pointer"
-              title="Đóng khung chat"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
-
-        {/* Modal Main Area: Left Sidebar (History) + Right Workspace (Chat) */}
-        <div className="flex-1 flex overflow-hidden min-h-0">
-
-          {/* Left History Drawer */}
-          {isHistoryOpen && (
-            <aside className="w-64 sm:w-72 md:w-80 bg-slate-50 border-r border-slate-200/90 flex flex-col shrink-0 animate-fade-in">
-              {/* Top Drawer Controls */}
-              <div className="p-3 border-b border-slate-200/80 space-y-2">
-                <button
-                  onClick={handleCreateNewSession}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 px-3 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-2xl shadow-xs transition-all cursor-pointer"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>+ Bắt đầu phiên hỏi mới</span>
-                </button>
-
-                <div className="relative">
-                  <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                  <input
-                    type="text"
-                    value={historySearchTerm}
-                    onChange={(e) => setHistorySearchTerm(e.target.value)}
-                    placeholder="Tìm theo chủ đề, câu hỏi..."
-                    className="w-full pl-8 pr-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  />
+            {/* Sessions List */}
+            <div className="flex-1 overflow-y-auto p-2 space-y-1.5">
+              {filteredSessions.length === 0 ? (
+                <div className="p-6 text-center text-slate-400 space-y-2">
+                  <MessageSquare className="w-8 h-8 mx-auto opacity-40 text-slate-400" />
+                  <p className="text-xs">Không tìm thấy phiên hỏi nào.</p>
                 </div>
-              </div>
+              ) : (
+                filteredSessions.map((s) => {
+                  const isActive = s.id === activeSession?.id;
+                  const msgCount = s.messages?.length || 0;
+                  return (
+                    <div
+                      key={s.id}
+                      onClick={() => setActiveSessionId(s.id)}
+                      className={`group relative p-2.5 rounded-2xl transition-all cursor-pointer border ${
+                        isActive
+                          ? 'bg-white border-blue-500 shadow-xs ring-1 ring-blue-500/20'
+                          : 'bg-white/60 hover:bg-white border-slate-200/70 hover:border-slate-300'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-1.5">
+                        <h4 className={`text-xs font-bold truncate flex-1 ${isActive ? 'text-blue-900' : 'text-slate-700'}`}>
+                          {s.title}
+                        </h4>
+                        <button
+                          onClick={(e) => handleDeleteSession(e, s.id)}
+                          className="opacity-0 group-hover:opacity-100 p-1 hover:text-rose-600 text-slate-400 rounded-md transition-all cursor-pointer shrink-0"
+                          title="Xóa phiên hỏi này"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
 
-              {/* Sessions List */}
-              <div className="flex-1 overflow-y-auto p-2 space-y-1.5">
-                {filteredSessions.length === 0 ? (
-                  <div className="p-6 text-center text-slate-400 space-y-2">
-                    <MessageSquare className="w-8 h-8 mx-auto opacity-40 text-slate-400" />
-                    <p className="text-xs">Không tìm thấy phiên hỏi nào.</p>
-                  </div>
-                ) : (
-                  filteredSessions.map((s) => {
-                    const isActive = s.id === activeSession?.id;
-                    const msgCount = s.messages?.length || 0;
-                    return (
-                      <div
-                        key={s.id}
-                        onClick={() => setActiveSessionId(s.id)}
-                        className={`group relative p-2.5 rounded-2xl transition-all cursor-pointer border ${
-                          isActive
-                            ? 'bg-white border-blue-500 shadow-xs ring-1 ring-blue-500/20'
-                            : 'bg-white/60 hover:bg-white border-slate-200/70 hover:border-slate-300'
-                        }`}
-                      >
-                        <div className="flex items-start justify-between gap-1.5">
-                          <h4 className={`text-xs font-bold truncate flex-1 ${isActive ? 'text-blue-900' : 'text-slate-700'}`}>
-                            {s.title}
-                          </h4>
-                          <button
-                            onClick={(e) => handleDeleteSession(e, s.id)}
-                            className="opacity-0 group-hover:opacity-100 p-1 hover:text-rose-600 text-slate-400 rounded-md transition-all cursor-pointer shrink-0"
-                            title="Xóa phiên hỏi này"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-
-                        <div className="mt-1 flex items-center justify-between text-[10px] text-slate-400 gap-1">
-                          <span className="truncate max-w-[120px] font-semibold text-slate-500">
-                            {s.skill || 'Tự do'}
-                          </span>
-                          <div className="flex items-center gap-1.5 shrink-0">
-                            {s.isSynced && (
-                              <span title="Đã đồng bộ máy chủ">
-                                <Cloud className="w-3 h-3 text-emerald-500" />
-                              </span>
-                            )}
-                            <span className="bg-slate-100 text-slate-600 px-1.5 py-0.2 rounded-md font-bold">
-                              {msgCount} tin
+                      <div className="mt-1 flex items-center justify-between text-[10px] text-slate-400 gap-1">
+                        <span className="truncate max-w-[120px] font-semibold text-slate-500">
+                          {s.skill || 'Tự do'}
+                        </span>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          {s.isSynced && (
+                            <span title="Đã đồng bộ máy chủ">
+                              <Cloud className="w-3 h-3 text-emerald-500" />
                             </span>
-                            <span>{formatSessionTime(s.updatedAt || s.createdAt)}</span>
-                          </div>
+                          )}
+                          <span className="bg-slate-100 text-slate-600 px-1.5 py-0.2 rounded-md font-bold">
+                            {msgCount} tin
+                          </span>
+                          <span>{formatSessionTime(s.updatedAt || s.createdAt)}</span>
                         </div>
                       </div>
-                    );
-                  })
-                )}
-              </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        </aside>
 
-              {/* Bottom Drawer Telemetry / Local Storage Indicator */}
-              <div className="p-2.5 border-t border-slate-200/80 bg-white/50 px-3 flex items-center justify-between text-[11px] text-slate-500">
-                <div className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                  <span className="font-semibold text-slate-600">Lưu phiên tự động</span>
+        {/* Right Fixed-Width Column: Header + Chat Workspace (Never resizes or reflows when toggling History) */}
+        <div className="flex-1 md:w-[34vw] md:flex-none flex flex-col h-full min-w-0 overflow-hidden">
+          {/* Modal Top Header */}
+          <div className="p-3.5 sm:p-4 border-b border-slate-800 bg-gradient-to-r from-slate-950 via-blue-950 to-slate-900 text-white flex items-center justify-between gap-3 shrink-0">
+            <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+              {/* Toggle History Drawer Button */}
+              <button
+                onClick={() => setIsHistoryOpen(!isHistoryOpen)}
+                className="p-2 bg-white/10 hover:bg-white/20 text-cyan-200 rounded-xl transition-all cursor-pointer flex items-center justify-center shrink-0"
+                title={isHistoryOpen ? 'Thu gọn lịch sử' : 'Mở lịch sử phiên hỏi'}
+              >
+                {isHistoryOpen ? <PanelLeftOpen className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
+              </button>
+
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h2 className="text-sm sm:text-base font-extrabold tracking-tight text-white truncate">
+                    Gia Sư AI
+                  </h2>
+                  {activeSession?.skill && (
+                    <span className="px-2.5 py-0.5 rounded-full bg-indigo-500/30 text-cyan-300 border border-cyan-400/30 text-[10px] font-bold truncate max-w-[160px]">
+                      {activeSession.skill}
+                    </span>
+                  )}
                 </div>
-                <span className="text-[10px] text-slate-400 font-medium">Bảo mật riêng tư</span>
+                <p className="text-[11px] text-slate-300 font-medium truncate">
+                  {activeSession?.title || 'Hướng dẫn tư duy phản biện từng bước • Không đưa sẵn đáp án'}
+                </p>
               </div>
-            </aside>
-          )}
+            </div>
+
+            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+              <button
+                onClick={handleCreateNewSession}
+                className="hidden sm:flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl text-xs font-bold shadow-xs transition-all cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Phiên Mới</span>
+              </button>
+              <button
+                onClick={onClose}
+                className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-full transition-all cursor-pointer"
+                title="Đóng khung chat"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
 
           {/* Right Main Chat Panel */}
           <main className="flex-1 flex flex-col justify-between bg-slate-50/30 overflow-hidden min-h-0">
@@ -703,12 +686,6 @@ export default function AISocraticTutorModal({ isOpen, onClose, initialContext =
                 return (
                   <div key={idx} className={`flex flex-col ${isAI ? 'items-start' : 'items-end'}`}>
                     <div className="flex items-start gap-2.5 max-w-[94%] sm:max-w-[85%]">
-                      {isAI && (
-                        <div className="w-7 h-7 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center shrink-0 mt-1 shadow-2xs">
-                          <Bot className="w-4 h-4" />
-                        </div>
-                      )}
-
                       <div className={`p-3.5 sm:p-4 rounded-2xl text-xs sm:text-sm font-medium leading-relaxed ${
                         isAI
                           ? 'bg-white text-slate-800 border border-slate-200/90 rounded-tl-none shadow-xs'
@@ -746,7 +723,7 @@ export default function AISocraticTutorModal({ isOpen, onClose, initialContext =
                         )}
                       </div>
                     </div>
-                    <span className="text-[10px] text-slate-400 mt-1 px-9">{m.timestamp}</span>
+                    <span className="text-[10px] text-slate-400 mt-1 px-1">{m.timestamp}</span>
                   </div>
                 );
               })}
@@ -791,7 +768,7 @@ export default function AISocraticTutorModal({ isOpen, onClose, initialContext =
                   type="text"
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
-                  placeholder="Nhập thắc mắc hoặc hướng giải của bạn (hỗ trợ công thức: $x^2 + 2x = 0$)..."
+                  placeholder="Nhập thắc mắc hoặc hướng giải của bạn..."
                   disabled={isTyping}
                   className="w-full pl-4 pr-12 py-3 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-slate-800 disabled:opacity-60"
                 />
@@ -806,20 +783,6 @@ export default function AISocraticTutorModal({ isOpen, onClose, initialContext =
             </form>
 
           </main>
-        </div>
-
-        {/* Modal Footer */}
-        <div className="p-3 bg-slate-50 border-t border-slate-200/80 px-4 sm:px-6 flex items-center justify-between gap-3 text-xs text-slate-500 shrink-0">
-          <div className="flex items-center gap-2 truncate">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping shrink-0"></span>
-            <span className="truncate">Nếu AI đưa sẵn đáp án thay vì gợi mở tư duy, hãy bấm nút <strong>Góp ý</strong> trên tin nhắn.</span>
-          </div>
-          <button
-            onClick={onClose}
-            className="px-4 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl transition-all cursor-pointer shrink-0"
-          >
-            Đóng
-          </button>
         </div>
 
       </div>

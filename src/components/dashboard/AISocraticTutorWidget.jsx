@@ -222,7 +222,7 @@ export default function AISocraticTutorWidget({ onOpenFullChat }) {
           type="text"
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
-          placeholder="Nhập thắc mắc tư duy bài tập (KaTeX: $x^2$)..."
+          placeholder="Nhập thắc mắc hoặc hướng giải của bạn..."
           disabled={isTyping}
           className="w-full pl-3.5 pr-10 py-2.5 text-xs bg-slate-100 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-slate-800 disabled:opacity-60"
         />

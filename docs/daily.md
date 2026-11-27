@@ -1,5 +1,19 @@
 # NHẬT KÝ TIẾN ĐỘ HẰNG NGÀY (DAILY LOG) - V-EVAL WEB CLIENT
 
+## [27/11/2026] - Nâng Cấp Phòng Thi, Bảng Số Liệu Markdown, Kết Quả Đánh Giá Kỹ Năng & Khung Chat Gia Sư AI
+
+- **Phòng Thi & KaTeX (`src/components/diagnostic/ExamRoom.jsx`, `src/components/common/MathText.jsx`, `src/components/diagnostic/DiagnosticAssessmentPage.jsx`)**:
+  - Thiết kế lại header `AppBar` tối giản (bỏ icon thừa, đồng bộ `fontWeight: 500`), cố định chiều cao khung bài thi (`lg:h-[calc(100vh-61px)]`) chống nhảy nút `Câu trước` / `Câu kế tiếp`, bỏ badge `Bloom X/6` và phân tách sắc độ rõ giữa nền/card.
+  - Bổ sung `splitMarkdownTables()` tách chuẩn Markdown table thành dropdown `Bảng số liệu` mặc định đóng; tăng cường `renderKatexHtml` hỗ trợ ký hiệu toán học Unicode và `\ce{...}`.
+  - Tinh gọn modal xác nhận nộp bài (`ExamSubmitConfirmation`) và overlay tải chấm bài (`LinearProgress`).
+- **Thẻ Đánh Giá Chi Tiết Kỹ Năng (`src/components/diagnostic/DiagnosticSkillOverviewCard.jsx`)**:
+  - Sửa tràn lề phải lưới 3 cột bằng `minmax(0, 1fr)` + `minWidth: 0`, sửa tương thích MUI v9 (`sx` flex `justifyContent: 'space-between'`) khắc phục lỗi dính chữ `Mức độ nắm vững8%`, bổ sung `deduplicateSkills()` gộp kỹ năng trùng tên và chuẩn hóa `DOMAIN_FALLBACK_MAP`.
+- **Khung Chat Gia Sư AI (`src/components/modals/AISocraticTutorModal.jsx`, `src/components/dashboard/AISocraticTutorWidget.jsx`)**:
+  - Chuyển `PaperProps` sang `slotProps={{ paper: ... }}` cho MUI v9, khóa cố định khung chat + header ở `34vw` và cột lịch sử trượt mượt 2 chiều `16vw` (tổng đúng `50vw` nửa màn hình, không giật hay reflow giao diện); gỡ icon robot, badge thừa, footer và dòng gợi ý KaTeX ở ô nhập.
+- **Kiểm Thử**: `node --test tests/*.test.js` pass 100%; `npm run build` đạt 0 lỗi (`1.94s`).
+
+---
+
 ## [26/11/2026] - Sửa Lỗi Xuống Dòng Tiêu Đề Nhóm Menu Sidebar (`Sidebar.jsx`)
 
 - **Sửa CSS Flexbox Header Nhóm Menu (`src/components/layout/Sidebar.jsx`)**:
