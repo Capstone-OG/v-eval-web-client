@@ -1,4 +1,5 @@
 import { ExamRoomBody, ExamRoomHeader, ExamSubmitConfirmation } from './ExamRoom';
+import { LinearProgress } from '@mui/material';
 import DiagnosticSkillOverviewCard from './DiagnosticSkillOverviewCard';
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
@@ -3437,14 +3438,29 @@ Bạn hãy tự tin chọn phương án mình thấy hợp lý nhất nhé!`);
       {recovering && <div role="status" className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60"><p className="rounded-2xl bg-white p-6">Đang kiểm tra và khôi phục bài...</p></div>}
       {/* Fullscreen Loading Overlay */}
       {isLoading && (
-        <div className="fixed inset-0 z-[220] bg-white/95 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="p-6 bg-white rounded-3xl shadow-2xl border border-slate-200 flex flex-col items-center gap-4 text-center max-w-sm text-slate-900 animate-fade-in">
-            <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-200 flex items-center justify-center">
-              <Sparkles className="w-6 h-6 text-blue-600 animate-spin" />
+        <div className="fixed inset-0 z-[220] bg-slate-900/30 backdrop-blur-xs flex items-center justify-center p-6">
+          <div className="w-full max-w-[440px] px-8 py-7 bg-white rounded-2xl shadow-xl border border-slate-200 space-y-4 text-left text-slate-900 animate-fade-in">
+            <div className="space-y-1.5">
+              <div className="text-[11px] font-semibold uppercase tracking-widest text-blue-600">
+                V-Eval Assessment
+              </div>
+              <div className="text-base font-semibold text-slate-900 tracking-tight">
+                {loadingMsg || 'Đang xử lý dữ liệu...'}
+              </div>
             </div>
-            <div className="space-y-1">
-              <div className="text-sm font-black text-slate-900">V-Eval Diagnostic</div>
-              <div className="text-xs font-semibold text-slate-600">{loadingMsg || 'Đang xử lý dữ liệu...'}</div>
+            <LinearProgress
+              sx={{
+                height: 4,
+                borderRadius: 99,
+                bgcolor: '#e2e8f0',
+                '& .MuiLinearProgress-bar': {
+                  borderRadius: 99,
+                  bgcolor: '#2563eb'
+                }
+              }}
+            />
+            <div className="text-xs text-slate-400">
+              Vui lòng giữ nguyên trang trong giây lát.
             </div>
           </div>
         </div>

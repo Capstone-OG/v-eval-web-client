@@ -656,8 +656,8 @@ export default function Sidebar({
             <div key={section.sectionTitle} className="space-y-1.5">
               {!isCollapsed ? (
                 <div className="px-3 text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
-                  <span className="flex-1">{section.sectionTitle}</span>
-                  <span className="h-px flex-1 bg-slate-100" />
+                  <span className="truncate">{section.sectionTitle}</span>
+                  <span className="h-px flex-1 min-w-3 bg-slate-100" />
                 </div>
               ) : (
                 <div className="h-px w-8 mx-auto bg-slate-200 my-2" />
