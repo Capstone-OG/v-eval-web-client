@@ -74,10 +74,19 @@ export default function EarlyWarningsMentorPanel({
   currentUser,
   defaultClassId = 'ALL',
   classesList = [],
-  roleLabel = 'Giáo Viên & Cố Vấn Học Tập'
+  roleLabel = 'Giáo Viên & Cố Vấn Học Tập',
+  mode = 'teacher',
+  campusId = null,
+  campusStudentIds = null
 }) {
+  const isManagerMode =
+    mode === 'manager' ||
+    String(roleLabel || '').toLowerCase().includes('quản lý') ||
+    (Array.isArray(currentUser?.roles) &&
+      currentUser.roles.some((r) => String(r).toUpperCase().includes('MANAGER')));
+
   const [classFilter, setClassFilter] = useState(defaultClassId || 'ALL');
-  const [alertTypeFilter, setAlertTypeFilter] = useState('ALL');
+  const [alertTypeFilter, setAlertTypeFilter] = useState(isManagerMode ? 'RED' : 'ALL');
   const [statusFilter, setStatusFilter] = useState('ALL'); // 'ALL' | 'ACTIVE' | 'RESOLVED'
   const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -274,8 +283,9 @@ export default function EarlyWarningsMentorPanel({
     }
   };
 
-  // Nạp danh sách User từ Identity Service để liên kết FullName động (Không hardcode)
+  // Nạp danh sách User từ Identity Service để liên kết FullName động & lọc theo cơ sở (Không hardcode)
   const [identityUsersMap, setIdentityUsersMap] = useState({});
+  const [identityCampusMap, setIdentityCampusMap] = useState({});
 
   useEffect(() => {
     let isMounted = true;
@@ -285,13 +295,16 @@ export default function EarlyWarningsMentorPanel({
         if (!isMounted || !data) return;
         const items = data.items || data.Items || [];
         const map = {};
+        const cMap = {};
         for (const u of items) {
           const id = String(u.userId || u.id || '').toLowerCase();
-          if (id && u.fullName) {
-            map[id] = u.fullName;
+          if (id) {
+            if (u.fullName) map[id] = u.fullName;
+            if (u.campusId) cMap[id] = String(u.campusId).toLowerCase();
           }
         }
         setIdentityUsersMap(map);
+        setIdentityCampusMap(cMap);
       })
       .catch((err) => {
         console.warn('[EarlyWarningsMentorPanel] Không thể nạp danh sách user từ Identity Service:', err);
@@ -302,10 +315,31 @@ export default function EarlyWarningsMentorPanel({
   }, []);
 
   const rawAlerts = dashboardData?.alerts || [];
+  const effectiveCampusId = String(campusId || currentUser?.campusId || '').toLowerCase();
+
+  const campusScopedRawAlerts = useMemo(() => {
+    return rawAlerts.filter((a) => {
+      const idLower = String(a.studentId || '').toLowerCase();
+      // Khi ở chế độ Quản lý cơ sở:
+      // 1) Chỉ lấy học sinh thuộc đúng cơ sở của Manager đang phụ trách
+      if (isManagerMode) {
+        if (Array.isArray(campusStudentIds) && campusStudentIds.length > 0) {
+          const allowedSet = new Set(campusStudentIds.map((x) => String(x).toLowerCase()));
+          if (!allowedSet.has(idLower)) return false;
+        } else if (effectiveCampusId && Object.keys(identityCampusMap).length > 0) {
+          const stuCampus = identityCampusMap[idLower];
+          if (!stuCampus || stuCampus !== effectiveCampusId) return false;
+        }
+        // 2) Quản lý cơ sở chỉ xử lý Cảnh báo Cấp 3 (Mức Đỏ - RED), còn Cấp 1 & 2 thuộc trách nhiệm của Teacher
+        if (String(a.alertType || '').toUpperCase() !== 'RED') return false;
+      }
+      return true;
+    });
+  }, [rawAlerts, isManagerMode, campusStudentIds, effectiveCampusId, identityCampusMap]);
 
   const alerts = useMemo(() => {
     const seen = new Set();
-    return rawAlerts
+    return campusScopedRawAlerts
       .map((a) => {
         const idLower = String(a.studentId || '').toLowerCase();
         // 1. Ưu tiên lấy studentName đã resolve từ Backend (qua Identity gRPC)
@@ -329,7 +363,31 @@ export default function EarlyWarningsMentorPanel({
         seen.add(key);
         return true;
       });
-  }, [rawAlerts, identityUsersMap]);
+  }, [campusScopedRawAlerts, identityUsersMap]);
+
+  const kpiStats = useMemo(() => {
+    if (!isManagerMode) {
+      return {
+        total: dashboardData?.totalAlerts ?? 0,
+        active: dashboardData?.activeAlertsCount ?? 0,
+        red: dashboardData?.redAlertsCount ?? 0,
+        yellow: dashboardData?.yellowAlertsCount ?? 0,
+        goal: dashboardData?.unrealisticGoalCount ?? 0,
+        resolved: dashboardData?.resolvedAlertsCount ?? 0
+      };
+    }
+    const redList = alerts;
+    const activeRed = redList.filter((a) => !a.resolvedAt).length;
+    const resolvedRed = redList.filter((a) => Boolean(a.resolvedAt)).length;
+    return {
+      total: redList.length,
+      active: activeRed,
+      red: redList.length,
+      yellow: 0,
+      goal: 0,
+      resolved: resolvedRed
+    };
+  }, [isManagerMode, dashboardData, alerts]);
 
   return (
     <>
@@ -382,52 +440,66 @@ export default function EarlyWarningsMentorPanel({
           </div>
         </div>
 
-        {/* 6 KPI Summary Cards - Modern Card Shadow */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3.5">
-          <div className="p-4 rounded-2xl bg-white border border-slate-200/90 card-shadow hover:border-slate-400 transition-all">
-            <div className="text-[10px] font-black tracking-wider uppercase text-slate-400">Tổng cảnh báo</div>
-            <div className="text-2xl font-black text-slate-900 mt-1">
-              {dashboardData?.totalAlerts ?? 0}
+        {/* KPI Summary Cards */}
+        <div className={`grid grid-cols-2 ${isManagerMode ? 'sm:grid-cols-3' : 'sm:grid-cols-3 xl:grid-cols-6'} gap-3.5`}>
+          <div className="p-4 rounded-2xl bg-white border border-rose-200 card-shadow hover:border-rose-400 transition-all">
+            <div className="text-[10px] font-black tracking-wider uppercase text-rose-700">
+              {isManagerMode ? 'Cảnh báo Cấp 3 (Mức Đỏ)' : 'Tổng cảnh báo'}
             </div>
-            <div className="text-[10px] text-slate-400 font-semibold mt-0.5">Toàn cơ sở</div>
+            <div className="text-2xl font-black text-rose-600 mt-1">
+              {kpiStats.total}
+            </div>
+            <div className="text-[10px] text-rose-600 font-semibold mt-0.5">
+              {isManagerMode ? 'Thuộc cơ sở phụ trách' : 'Toàn lớp / cơ sở'}
+            </div>
           </div>
 
           <div className="p-4 rounded-2xl bg-white border border-indigo-200 card-shadow hover:border-indigo-400 transition-all">
-            <div className="text-[10px] font-black tracking-wider uppercase text-indigo-700">Chờ can thiệp</div>
+            <div className="text-[10px] font-black tracking-wider uppercase text-indigo-700">
+              {isManagerMode ? 'Chờ Họp 3 Bên' : 'Chờ can thiệp'}
+            </div>
             <div className="text-2xl font-black text-indigo-700 mt-1">
-              {dashboardData?.activeAlertsCount ?? 0}
+              {kpiStats.active}
             </div>
-            <div className="text-[10px] text-indigo-600 font-semibold mt-0.5">Cần xử lý gấp</div>
+            <div className="text-[10px] text-indigo-600 font-semibold mt-0.5">
+              {isManagerMode ? 'Cần triệu tập Phụ huynh' : 'Cần xử lý gấp'}
+            </div>
           </div>
 
-          <div className="p-4 rounded-2xl bg-white border border-rose-200 card-shadow hover:border-rose-400 transition-all">
-            <div className="text-[10px] font-black tracking-wider uppercase text-rose-700">Cảnh báo Đỏ</div>
-            <div className="text-2xl font-black text-rose-600 mt-1">
-              {dashboardData?.redAlertsCount ?? 0}
-            </div>
-            <div className="text-[10px] text-rose-600 font-semibold mt-0.5">Nguy cơ cao</div>
-          </div>
+          {!isManagerMode && (
+            <>
+              <div className="p-4 rounded-2xl bg-white border border-rose-200 card-shadow hover:border-rose-400 transition-all">
+                <div className="text-[10px] font-black tracking-wider uppercase text-rose-700">Cảnh báo Đỏ</div>
+                <div className="text-2xl font-black text-rose-600 mt-1">
+                  {kpiStats.red}
+                </div>
+                <div className="text-[10px] text-rose-600 font-semibold mt-0.5">Nguy cơ cao</div>
+              </div>
 
-          <div className="p-4 rounded-2xl bg-white border border-amber-200 card-shadow hover:border-amber-400 transition-all">
-            <div className="text-[10px] font-black tracking-wider uppercase text-amber-800">Nhắc nhở Vàng</div>
-            <div className="text-2xl font-black text-amber-600 mt-1">
-              {dashboardData?.yellowAlertsCount ?? 0}
-            </div>
-            <div className="text-[10px] text-amber-700 font-semibold mt-0.5">Chậm tiến độ tuần</div>
-          </div>
+              <div className="p-4 rounded-2xl bg-white border border-amber-200 card-shadow hover:border-amber-400 transition-all">
+                <div className="text-[10px] font-black tracking-wider uppercase text-amber-800">Nhắc nhở Vàng</div>
+                <div className="text-2xl font-black text-amber-600 mt-1">
+                  {kpiStats.yellow}
+                </div>
+                <div className="text-[10px] text-amber-700 font-semibold mt-0.5">Chậm tiến độ tuần</div>
+              </div>
 
-          <div className="p-4 rounded-2xl bg-white border border-purple-200 card-shadow hover:border-purple-400 transition-all">
-            <div className="text-[10px] font-black tracking-wider uppercase text-purple-800">Mục tiêu lệch</div>
-            <div className="text-2xl font-black text-purple-700 mt-1">
-              {dashboardData?.unrealisticGoalCount ?? 0}
-            </div>
-            <div className="text-[10px] text-purple-700 font-semibold mt-0.5">Cần điều chỉnh</div>
-          </div>
+              <div className="p-4 rounded-2xl bg-white border border-purple-200 card-shadow hover:border-purple-400 transition-all">
+                <div className="text-[10px] font-black tracking-wider uppercase text-purple-800">Mục tiêu lệch</div>
+                <div className="text-2xl font-black text-purple-700 mt-1">
+                  {kpiStats.goal}
+                </div>
+                <div className="text-[10px] text-purple-700 font-semibold mt-0.5">Cần điều chỉnh</div>
+              </div>
+            </>
+          )}
 
           <div className="p-4 rounded-2xl bg-white border border-emerald-200 card-shadow hover:border-emerald-400 transition-all">
-            <div className="text-[10px] font-black tracking-wider uppercase text-emerald-700">Đã xử lý</div>
+            <div className="text-[10px] font-black tracking-wider uppercase text-emerald-700">
+              {isManagerMode ? 'Đã Họp & Lưu Biên Bản' : 'Đã xử lý'}
+            </div>
             <div className="text-2xl font-black text-emerald-600 mt-1">
-              {dashboardData?.resolvedAlertsCount ?? 0}
+              {kpiStats.resolved}
             </div>
             <div className="text-[10px] text-emerald-700 font-semibold mt-0.5">Đã lưu biên bản</div>
           </div>
@@ -449,12 +521,15 @@ export default function EarlyWarningsMentorPanel({
               ))}
             </select>
 
-            {[
-              { id: 'ALL', label: 'Tất cả mức độ' },
-              { id: 'RED', label: 'Cảnh báo Đỏ' },
-              { id: 'UNREALISTIC_GOAL', label: 'Mục tiêu cần hiệu chỉnh' },
-              { id: 'YELLOW', label: 'Nhắc nhở Vàng' }
-            ].map((item) => (
+            {(isManagerMode
+              ? [{ id: 'RED', label: 'Cảnh báo Cấp 3 — Nguy Cơ Cao (Quản lý cơ sở chủ trì Họp 3 bên)' }]
+              : [
+                  { id: 'ALL', label: 'Tất cả mức độ' },
+                  { id: 'RED', label: 'Cảnh báo Đỏ' },
+                  { id: 'UNREALISTIC_GOAL', label: 'Mục tiêu cần hiệu chỉnh' },
+                  { id: 'YELLOW', label: 'Nhắc nhở Vàng' }
+                ]
+            ).map((item) => (
               <button
                 key={item.id}
                 type="button"
@@ -567,9 +642,20 @@ export default function EarlyWarningsMentorPanel({
                             );
                           })()}
 
-                          {/* Cảnh báo Cấp 3 (RED): Phân định quyền chuyển Quản lý cơ sở */}
+                          {/* Cảnh báo Cấp 3 (RED):
+                              - Nếu là Quản lý cơ sở (isManagerMode): Hiển thị trực tiếp nút "Lập Lịch Họp 3 Bên"
+                              - Nếu là Giảng viên (!isManagerMode): Hiển thị nút "Chuyển Lên Quản Lý Cơ Sở (Họp 3 Bên)" */}
                           {alert.alertType === 'RED' && (
-                            escalations[alert.alertId] ? (
+                            isManagerMode ? (
+                              <button
+                                type="button"
+                                onClick={() => openCounselingModal(alert)}
+                                className="px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-extrabold flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
+                              >
+                                <CalendarClock className="w-3.5 h-3.5" />
+                                <span>Lập Lịch Họp 3 Bên</span>
+                              </button>
+                            ) : escalations[alert.alertId] ? (
                               <span className="px-3 py-1.5 rounded-xl bg-purple-100 text-purple-800 text-xs font-extrabold flex items-center gap-1.5 border border-purple-200">
                                 <CheckCircle2 className="w-3.5 h-3.5 text-purple-700" />
                                 <span>Đã chuyển Quản lý cơ sở (Chờ họp 3 bên)</span>
@@ -595,7 +681,13 @@ export default function EarlyWarningsMentorPanel({
                             className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-extrabold flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
                           >
                             <FileCheck2 className="w-3.5 h-3.5" />
-                            <span>{alert.alertType === 'RED' ? 'Ghi Nhận Can Thiệp' : 'Ghi Nhận Can Thiệp Sư Phạm'}</span>
+                            <span>
+                              {isManagerMode
+                                ? 'Ghi Nhận Biên Bản Họp'
+                                : alert.alertType === 'RED'
+                                  ? 'Ghi Nhận Can Thiệp'
+                                  : 'Ghi Nhận Can Thiệp Sư Phạm'}
+                            </span>
                           </button>
                         </>
                       )}
